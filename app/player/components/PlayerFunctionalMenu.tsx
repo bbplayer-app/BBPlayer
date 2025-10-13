@@ -74,24 +74,26 @@ export function PlayerFunctionalMenu({
 				leadingIcon='account-music'
 			/>
 			<Divider />
-			<Menu.Item
-				onPress={() => {
-					setMenuVisible(false)
-					if (!currentTrack) return
-					WebBrowser.openBrowserAsync(
-						`https://www.bilibili.com/video/${currentTrack.id}`,
-					).catch((e) => {
-						void Clipboard.setStringAsync(
-							`https://www.bilibili.com/video/${currentTrack.id}`,
-						)
-						toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
-							description: String(e),
+			{currentTrack?.source === 'bilibili' && (
+				<Menu.Item
+					onPress={() => {
+						setMenuVisible(false)
+						if (!currentTrack) return
+						WebBrowser.openBrowserAsync(
+							`https://www.bilibili.com/video/${currentTrack.bilibiliMetadata.bvid}`,
+						).catch((e) => {
+							void Clipboard.setStringAsync(
+								`https://www.bilibili.com/video/${currentTrack.bilibiliMetadata.bvid}`,
+							)
+							toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
+								description: String(e),
+							})
 						})
-					})
-				}}
-				title='查看原视频'
-				leadingIcon='share-variant'
-			/>
+					}}
+					title='查看原视频'
+					leadingIcon='share-variant'
+				/>
+			)}
 			<Menu.Item
 				onPress={() => {
 					setMenuVisible(false)
