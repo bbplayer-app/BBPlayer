@@ -15,6 +15,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
+import * as Haptics from '@/utils/haptics'
 import { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
 import {
@@ -24,7 +25,6 @@ import {
 	useRoute,
 } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import * as Haptics from 'expo-haptics'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'

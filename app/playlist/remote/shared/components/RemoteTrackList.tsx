@@ -2,8 +2,8 @@ import { TrackListItem } from '@/app/playlist/remote/shared/components/PlaylistI
 import FunctionalMenu from '@/components/commonUIs/FunctionalMenu'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { BilibiliTrack } from '@/types/core/media'
+import * as Haptics from '@/utils/haptics'
 import { FlashList } from '@shopify/flash-list'
-import * as Haptics from 'expo-haptics'
 import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 import {

@@ -1,5 +1,5 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import * as Haptics from 'expo-haptics'
+import * as Haptics from '@/utils/haptics'
 import { View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 import { RepeatMode } from 'react-native-track-player'

@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics'
+import * as Haptics from '@/utils/haptics'
 import type { ToastShowParams } from 'react-native-toast-message'
 import Toast from 'react-native-toast-message'
 

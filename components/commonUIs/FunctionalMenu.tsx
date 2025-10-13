@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics'
+import * as Haptics from '@/utils/haptics'
 import type { PropsWithChildren } from 'react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
