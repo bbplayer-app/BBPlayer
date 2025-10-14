@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       buildType:
-        description: '构建类型'
+        description: "构建类型"
         required: true
-        default: 'prod-universal'
+        default: "prod-universal"
         type: choice
         options:
           - prod-v8a
@@ -23,6 +23,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v3
