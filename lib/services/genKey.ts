@@ -13,6 +13,9 @@ export default function generateUniqueTrackKey(
 	switch (payload.source) {
 		case 'bilibili': {
 			const biliMeta = payload.bilibiliMetadata
+			if (!biliMeta.bvid) {
+				return err(createValidationError('bvid 不存在'))
+			}
 			return biliMeta.isMultiPage
 				? ok(`${payload.source}::${biliMeta.bvid}::${biliMeta.cid}`)
 				: ok(`${payload.source}::${biliMeta.bvid}`)
