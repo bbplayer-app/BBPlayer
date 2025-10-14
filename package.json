@@ -60,6 +60,7 @@
 		"expo-font": "~14.0.9",
 		"expo-haptics": "~15.0.7",
 		"expo-image": "~3.0.9",
+		"expo-insights": "~0.10.7",
 		"expo-linear-gradient": "~15.0.7",
 		"expo-linking": "~8.0.8",
 		"expo-network": "~8.0.7",
