@@ -1,5 +1,5 @@
 import type { PlayerError } from '@/lib/errors/player'
-import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { artistService } from '@/lib/services/artistService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track, TrackDownloadRecord } from '@/types/core/media'
@@ -623,9 +623,18 @@ export const usePlayerStore = create<PlayerStore>()(
 							)
 						) {
 							// 网络请求失败就不用报错了
-							toast.error('播放失败: 网络请求失败', {
-								description: flatErrorMessage(updatedTrackResult.error),
-							})
+							toastAndLogError(
+								'播放失败: 网络请求失败',
+								updatedTrackResult.error,
+								'Player',
+							)
+							return
+						} else if (updatedTrackResult.error instanceof BilibiliApiError) {
+							toastAndLogError(
+								'播放失败: B 站音频流获取失败',
+								updatedTrackResult.error,
+								'Player',
+							)
 							return
 						}
 						toastAndLogError(
