@@ -9,7 +9,7 @@ interface NeteaseLyricResponse {
 }
 
 interface NeteaseSearchResponse {
-	result: {
+	result?: {
 		songs?: NeteaseSong[]
 		songCount: number
 	}

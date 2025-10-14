@@ -56,7 +56,7 @@ export class NeteaseApi {
 			data,
 			requestOptions,
 		).map((res) => {
-			if (!res.body.result.songs) return []
+			if (!res.body.result?.songs) return []
 			return res.body.result.songs.map((song) => ({
 				source: 'netease',
 				duration: song.dt / 1000,
