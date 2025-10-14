@@ -1,6 +1,6 @@
 {
-	"version": "1.3.1",
-	"url": "https://github.com/roitium/BBPlayer/releases/download/v1.3.1/bbplayer-v1.3.1-prod-v8a.apk",
-	"notes": "增加了下载功能，现在你可以下载歌曲并离线播放了！",
+	"version": "1.3.2",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/download/v1.3.2/bbplayer-v1.3.2-prod-v8a.apk",
+	"notes": "更新了一部分原生依赖库版本，并没有什么太大的变化。",
 	"forced": false
 }
