@@ -1,3 +1,4 @@
+import importAlias from '@dword-design/eslint-plugin-import-alias'
 import js from '@eslint/js'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import eslintConfigPrettier from 'eslint-config-prettier/flat'
@@ -8,7 +9,7 @@ import reactHooksExtra from 'eslint-plugin-react-hooks-extra'
 import reactYouMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need-an-effect'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
-import modalPlugin from './eslint-plugin-modal/index.js'
+import modalPlugin from './eslint-plugins/eslint-plugin-modal/index.js'
 
 export default defineConfig([
 	{
@@ -58,7 +59,6 @@ export default defineConfig([
 		},
 	},
 	reactCompiler.configs.recommended,
-	eslintConfigPrettier,
 	tseslint.configs.recommended,
 	tseslint.configs.recommendedTypeChecked,
 	tseslint.configs.stylisticTypeChecked,
@@ -101,4 +101,19 @@ export default defineConfig([
 		},
 	},
 	reactYouMightNotNeedAnEffect.configs.recommended,
+	importAlias.configs.recommended,
+	{
+		rules: {
+			'@dword-design/import-alias/prefer-alias': [
+				'error',
+				{
+					alias: {
+						'@': './src',
+					},
+					aliasForSubpaths: true,
+				},
+			],
+		},
+	},
+	eslintConfigPrettier,
 ])
