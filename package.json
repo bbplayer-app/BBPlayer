@@ -20,6 +20,7 @@
 	"dependencies": {
 		"@babel/runtime": "^7.27.1",
 		"@bottom-tabs/react-navigation": "^0.10.2",
+		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@expo/metro-runtime": "~6.1.2",
 		"@gorhom/bottom-sheet": "^5.2.6",
 		"@jest/globals": "^29.7.0",
