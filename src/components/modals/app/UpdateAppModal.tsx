@@ -10,6 +10,7 @@ import { Button, Dialog, Text } from 'react-native-paper'
 export interface UpdateModalProps {
 	version: string
 	notes: string
+	listed_notes?: string[]
 	url: string
 	forced?: boolean
 }
@@ -17,6 +18,7 @@ export interface UpdateModalProps {
 export default function UpdateAppModal({
 	version,
 	notes,
+	listed_notes,
 	url,
 	forced = false,
 }: UpdateModalProps) {
@@ -49,19 +51,36 @@ export default function UpdateAppModal({
 			<Dialog.Title>发现新版本 {version}</Dialog.Title>
 			<Dialog.Content>
 				{forced ? (
-					<Text style={{ marginBottom: 8, fontWeight: 'bold' }}>
+					<Text style={{ marginBottom: 8, fontWeight: 'bold', color: 'red' }}>
 						此更新为强制更新，必须安装后继续使用。
 					</Text>
 				) : null}
-				<Text selectable>
-					{/* 小米对联，偷了！ */}
-					{notes?.trim() || '提高软件稳定性，优化软件流畅度'}
-				</Text>
+				{listed_notes && listed_notes.length > 0 ? (
+					listed_notes.map((note, index) => (
+						<Text
+							selectable
+							key={index}
+							style={{ marginBottom: 4 }}
+						>
+							{`• ${note}`}
+						</Text>
+					))
+				) : (
+					<Text selectable>
+						{/* 小米对联，偷了！ */}
+						{notes?.trim() || '提高软件稳定性，优化软件流畅度'}
+					</Text>
+				)}
 			</Dialog.Content>
 			<Dialog.Actions style={{ justifyContent: 'space-between' }}>
-				{forced ? <Button onPress={onSkip}>跳过此版本</Button> : <View />}
+				{!forced ? <Button onPress={onSkip}>跳过此版本</Button> : <View />}
 				<View style={{ flexDirection: 'row' }}>
-					<Button onPress={onCancel}>取消</Button>
+					<Button
+						onPress={onCancel}
+						disabled={forced}
+					>
+						取消
+					</Button>
 					<Button onPress={onUpdate}>去更新</Button>
 				</View>
 			</Dialog.Actions>
