@@ -1,20 +1,20 @@
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useModalStore } from './stores/useModalStore'
 
 export default function useCheckUpdate() {
-	const isMounted = useRef(true)
 	const open = useModalStore((state) => state.open)
 
 	useEffect(() => {
 		if (__DEV__) {
 			return
 		}
+		let isMounted = true
 		const run = async () => {
 			const skipped = storage.getString('skip_version') ?? ''
 			const result = await checkForAppUpdate()
-			if (!isMounted.current) return
+			if (!isMounted) return
 			if (result.isErr()) return
 			const { update } = result.value
 			if (!update) return
@@ -27,7 +27,7 @@ export default function useCheckUpdate() {
 		}
 		void run()
 		return () => {
-			isMounted.current = false
+			isMounted = false
 		}
 	}, [open])
 }

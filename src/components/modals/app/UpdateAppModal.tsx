@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
 import { View } from 'react-native'
-import { Button, Dialog, Text } from 'react-native-paper'
+import { Button, Dialog, Text, useTheme } from 'react-native-paper'
 
 export interface UpdateModalProps {
 	version: string
@@ -22,6 +22,7 @@ export default function UpdateAppModal({
 	url,
 	forced = false,
 }: UpdateModalProps) {
+	const colors = useTheme().colors
 	const _close = useModalStore((state) => state.close)
 	const close = useCallback(() => _close('UpdateApp'), [_close])
 
@@ -51,7 +52,9 @@ export default function UpdateAppModal({
 			<Dialog.Title>发现新版本 {version}</Dialog.Title>
 			<Dialog.Content>
 				{forced ? (
-					<Text style={{ marginBottom: 8, fontWeight: 'bold', color: 'red' }}>
+					<Text
+						style={{ marginBottom: 8, fontWeight: 'bold', color: colors.error }}
+					>
 						此更新为强制更新，必须安装后继续使用。
 					</Text>
 				) : null}
