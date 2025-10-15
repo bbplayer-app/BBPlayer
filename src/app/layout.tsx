@@ -7,7 +7,7 @@ import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
 import * as Network from 'expo-network'
-import * as SplashScreen from 'expo-splash-screen'
+import { SplashScreen } from 'expo-router'
 
 import { toastConfig } from '@/components/toast/ToastConfig'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -39,11 +39,6 @@ const logger = log.extend('UI.RootLayout')
 
 // 在获取资源时保持启动画面可见
 void SplashScreen.preventAutoHideAsync()
-
-SplashScreen.setOptions({
-	duration: 200,
-	fade: true,
-})
 
 // 初始化 Sentry
 initializeSentry()
