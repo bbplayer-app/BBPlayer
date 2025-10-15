@@ -232,9 +232,6 @@ importers:
       react-native-gradle-plugin:
         specifier: ^0.71.19
         version: 0.71.19
-      react-native-legal:
-        specifier: ^1.6.0
-        version: 1.6.0(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))
       react-native-logs:
         specifier: github:yanyao2333/react-native-logs#v5.6.2
         version: https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
@@ -923,9 +920,6 @@ packages:
       react: '*'
       react-native: '*'
       react-native-bottom-tabs: '*'
-
-  '@callstack/licenses@0.3.0':
-    resolution: {integrity: sha512-dughpfGB8j6IcIdcxGoJr4HnlVGFQuZ/IsQs3XUbc8a+mw/sds5Lb0bTNkA6qdpRuJiITNrO51WFtFwGApfPzQ==}
 
   '@callstack/react-theme-provider@3.0.9':
     resolution: {integrity: sha512-tTQ0uDSCL0ypeMa8T/E9wAZRGKWj8kXP7+6RYgPTfOPs9N07C9xM8P02GJ3feETap4Ux5S69D9nteq9mEj86NA==}
@@ -5937,15 +5931,6 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-legal@1.6.0:
-    resolution: {integrity: sha512-JLGEzVIXRDmBQbIb8rzu6qvohh98xo67noFxyR2AzVN+cvcnFul0r71LeiXou1TJzpMlOGIw1E1Mktns69YfAA==}
-    peerDependencies:
-      expo: '>=52.0.0'
-      react-native: '>=0.76.0'
-    peerDependenciesMeta:
-      expo:
-        optional: true
-
   react-native-logs@https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4:
     resolution: {tarball: https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4}
     version: 5.5.0
@@ -7094,10 +7079,6 @@ packages:
     resolution: {integrity: sha512-eLTh0kA8uHceqesPqSE+VvO1CDDJWMwlQfB6LuN6T8w6MaDJ8Txm8P7s5cHD0miF0V+GGTZrDQfxPZQVsur33w==}
     engines: {node: '>=4.0.0'}
 
-  xml2js@0.6.2:
-    resolution: {integrity: sha512-T4rieHaC1EXcES0Kxxj4JWgaUQHDk+qwHcYOCFHfiwKz7tOVPLq7Hjq9dM1WCMhylqMEfP7hMcOIChvotiZegA==}
-    engines: {node: '>=4.0.0'}
-
   xmlbuilder@11.0.1:
     resolution: {integrity: sha512-fDlsI/kFEx7gLvbecc0/ohLG50fugQp8ryHzMTuW9vSa1GJ0XYWKnhsUx7oie3G98+r56aTQIUB4kht42R3JvA==}
     engines: {node: '>=4.0'}
@@ -7822,10 +7803,6 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
       react-native-bottom-tabs: 0.10.2(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
-
-  '@callstack/licenses@0.3.0':
-    dependencies:
-      glob: 7.2.3
 
   '@callstack/react-theme-provider@3.0.9(react@19.1.0)':
     dependencies:
@@ -13902,16 +13879,6 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
 
-  react-native-legal@1.6.0(expo@54.0.13)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)):
-    dependencies:
-      '@callstack/licenses': 0.3.0
-      glob: 7.2.3
-      react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
-      xcode: 3.0.1
-      xml2js: 0.6.2
-    optionalDependencies:
-      expo: 54.0.13(@babel/core@7.28.4)(@expo/metro-runtime@6.1.2)(expo-router@6.0.4)(react-native-webview@13.15.0(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
-
   react-native-logs@https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
 
   react-native-mmkv@3.3.3(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
@@ -15196,11 +15163,6 @@ snapshots:
   xml-name-validator@4.0.0: {}
 
   xml2js@0.6.0:
-    dependencies:
-      sax: 1.4.1
-      xmlbuilder: 11.0.1
-
-  xml2js@0.6.2:
     dependencies:
       sax: 1.4.1
       xmlbuilder: 11.0.1

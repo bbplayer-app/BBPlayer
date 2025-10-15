@@ -9,7 +9,6 @@ import toast from '@/utils/toast'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { ReactNativeLegal } from 'react-native-legal'
 import { Button, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -157,16 +156,6 @@ export default function TestPage() {
 						style={{ marginBottom: 8 }}
 					>
 						清空下载缓存
-					</Button>
-					<Button
-						mode='outlined'
-						onPress={() =>
-							ReactNativeLegal.launchLicenseListScreen('OSS Notice')
-						}
-						loading={loading}
-						style={{ marginBottom: 8 }}
-					>
-						查看项目使用的所有开源库许可证列表
 					</Button>
 				</View>
 			</ScrollView>

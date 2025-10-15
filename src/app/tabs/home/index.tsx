@@ -215,7 +215,7 @@ function HomePage() {
 								!personalInfoPending && !personalInfoError && personalInfo?.face
 									? { uri: personalInfo.face }
 									: // eslint-disable-next-line @typescript-eslint/no-require-imports
-										require('@/assets/images/bilibili-default-avatar.jpg')
+										require('../../../../assets/images/bilibili-default-avatar.jpg')
 							}
 						/>
 					</RectButton>
