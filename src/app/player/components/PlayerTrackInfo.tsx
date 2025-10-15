@@ -53,6 +53,7 @@ export function TrackInfo({
 							borderRadius: 16,
 						}}
 						recyclingKey={currentTrack.uniqueKey}
+						cachePolicy={'none'}
 					/>
 				</TouchableOpacity>
 			</View>

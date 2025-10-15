@@ -35,6 +35,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 							recyclingKey={item.id.toString()}
 							style={{ width: 48, height: 48, borderRadius: 4 }}
 							transition={300}
+							cachePolicy={'none'}
 						/>
 						<View style={{ marginLeft: 12, flex: 1 }}>
 							<Text

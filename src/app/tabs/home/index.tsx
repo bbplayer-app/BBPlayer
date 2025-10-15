@@ -217,6 +217,7 @@ function HomePage() {
 									: // eslint-disable-next-line @typescript-eslint/no-require-imports
 										require('../../../../assets/images/bilibili-default-avatar.jpg')
 							}
+							cachePolicy={'disk'}
 						/>
 					</RectButton>
 				</View>

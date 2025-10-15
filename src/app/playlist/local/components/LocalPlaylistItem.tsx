@@ -150,7 +150,7 @@ export const TrackListItem = memo(function TrackListItem({
 							}}
 							recyclingKey={data.uniqueKey}
 							style={{ width: 45, height: 45, borderRadius: 4 }}
-							cachePolicy={'memory'}
+							cachePolicy={'none'}
 						/>
 					) : null}
 
