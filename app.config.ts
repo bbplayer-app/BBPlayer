@@ -22,6 +22,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		versionCode: versionCode,
 		edgeToEdgeEnabled: true,
 		runtimeVersion: version,
+		intentFilters: [
+			{
+				action: 'VIEW',
+				autoVerify: true,
+				data: [
+					{
+						scheme: 'https',
+						pathPrefix: '/app/link-to',
+						pathPrefix: '/link-to',
+					},
+				],
+				category: ['BROWSABLE', 'DEFAULT'],
+			},
+		],
 	},
 	plugins: [
 		'./expo-plugins/withAndroidPlugin',
