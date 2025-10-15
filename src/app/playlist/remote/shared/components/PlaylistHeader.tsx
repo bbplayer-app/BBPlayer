@@ -51,6 +51,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					source={{ uri: coverUri }}
 					contentFit='cover'
 					style={{ width: 120, height: 120, borderRadius: 8 }}
+					cachePolicy={'none'}
 				/>
 				<View style={{ marginLeft: 16, flex: 1, justifyContent: 'center' }}>
 					<TouchableRipple
