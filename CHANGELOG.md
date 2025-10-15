@@ -23,7 +23,10 @@
 - 修改一部分组件使其符合 React Compiler 规范
 - 升级了一些依赖包
 - 移除了页面加载时强制显示的 ActivityIndicator
-- 更新音频流时出现的 BilibiliApiError 现在不会上报
+
+### Fixed
+
+- 修复了更新音频流时抛出的 BilibiliApiError 会被错误上报的问题
 
 <!-- Links -->
 
@@ -33,5 +36,5 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/Author/Repository/compare/v1.3.2...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
