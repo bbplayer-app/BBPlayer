@@ -30,7 +30,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					{
 						scheme: 'https',
 						pathPrefix: '/app/link-to',
-						pathPrefix: '/link-to',
 					},
 				],
 				category: ['BROWSABLE', 'DEFAULT'],
