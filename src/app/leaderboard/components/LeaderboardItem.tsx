@@ -58,6 +58,7 @@ export const LeaderboardListItem = memo(function LeaderboardListItem({
 						uri: item.track.coverUrl ?? undefined,
 					}}
 					style={{ width: 45, height: 45, borderRadius: 4 }}
+					cachePolicy={'none'}
 				/>
 
 				<View style={{ marginLeft: 12, flex: 1, marginRight: 4 }}>

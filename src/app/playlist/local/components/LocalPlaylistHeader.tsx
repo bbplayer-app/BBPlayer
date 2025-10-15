@@ -116,6 +116,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					source={{ uri: playlist.coverUrl ?? undefined }}
 					contentFit='cover'
 					style={{ width: 120, height: 120, borderRadius: 8 }}
+					cachePolicy={'disk'}
 				/>
 
 				<View
