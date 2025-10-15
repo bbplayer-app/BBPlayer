@@ -22,7 +22,7 @@ export default (api) => {
 								}
 								case 'CompileError': {
 									console.log(
-										`❌ Skipped: ${filename} [reason: ${event.detail.reason}] [description: ${event.detail.description}] [loc: ${event.detail.loc.start}] [suggestion: ${event.detail.suggestions}]`,
+										`❌ Skipped: ${filename} [reason: ${event.detail.reason}] [description: ${event.detail.description}] [loc: ${event.detail.loc.start.line}, ${event.detail.loc.start.column}] [suggestion: ${event.detail.suggestions}]`,
 									)
 									break
 								}

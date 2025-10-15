@@ -2,5 +2,6 @@
 	"version": "1.3.2",
 	"url": "https://github.com/bbplayer-app/BBPlayer/releases/download/v1.3.2/bbplayer-v1.3.2-prod-v8a.apk",
 	"notes": "更新了一部分原生依赖库版本，并没有什么太大的变化。",
+	"listed_notes": [],
 	"forced": false
 }

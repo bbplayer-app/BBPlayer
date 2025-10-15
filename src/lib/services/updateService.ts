@@ -5,6 +5,7 @@ import { err, ok, type Result } from 'neverthrow'
 export interface ReleaseInfo {
 	version: string
 	notes: string
+	listed_notes?: string[]
 	url: string
 	forced: boolean
 }
@@ -12,6 +13,7 @@ export interface ReleaseInfo {
 export interface UpdateManifest {
 	version: string
 	notes?: string
+	listed_notes?: string[]
 	url: string
 	forced?: boolean
 }
@@ -70,13 +72,28 @@ export async function fetchLatestRelease(): Promise<
 			return err(new Error('更新信息格式错误'))
 		}
 		const notes = typeof obj.notes === 'string' ? obj.notes : ''
+		const listed_notes =
+			Array.isArray(obj.listed_notes) &&
+			obj.listed_notes.every((i) => typeof i === 'string')
+				? obj.listed_notes
+				: undefined
 		const forced = typeof obj.forced === 'boolean' ? obj.forced : false
-		return ok({ version: normalizeVersion(version), url, notes, forced })
+		return ok({
+			version: normalizeVersion(version),
+			url,
+			notes,
+			listed_notes,
+			forced,
+		})
 	} catch (e) {
 		return err(toError(e))
 	}
 }
 
+/**
+ * 检查是否有新版本
+ * @returns 如果没有新的版本，返回的 update 为 null
+ */
 export async function checkForAppUpdate(): Promise<
 	Result<{ update: ReleaseInfo | null; currentVersion: string }, Error>
 > {

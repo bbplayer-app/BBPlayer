@@ -10,20 +10,24 @@ export default function useCheckUpdate() {
 		if (__DEV__) {
 			return
 		}
-		let canceled = false
+		let isMounted = true
 		const run = async () => {
 			const skipped = storage.getString('skip_version') ?? ''
 			const result = await checkForAppUpdate()
-			if (canceled) return
+			if (!isMounted) return
 			if (result.isErr()) return
 			const { update } = result.value
 			if (!update) return
-			if (!update.forced && skipped && skipped === update.version) return
-			open('UpdateApp', update)
+			if (skipped && skipped === update.version) return
+			if (update.forced) {
+				open('UpdateApp', update, { dismissible: false })
+			} else {
+				open('UpdateApp', update)
+			}
 		}
 		void run()
 		return () => {
-			canceled = true
+			isMounted = false
 		}
 	}, [open])
 }

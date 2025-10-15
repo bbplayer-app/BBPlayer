@@ -7,10 +7,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- 手动检查更新
+- 增加 `CHANGELOG.md` 文件
+
 ### Changed
 
 - 将所有源代码移入 `src` 目录
-- 增加 `CHANGELOG.md` 文件
+- `update.json` 中增加一个 `listed_notes` 字段，用于更清晰展示更新日志
+
+### Fixed
+
+- 修复了强制更新不生效的问题
 
 ## [1.3.2] - 2025-10-14
 
