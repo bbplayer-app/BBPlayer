@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [1.3.3] - 2025-10-15
+
 ### Added
 
 - 手动检查更新
@@ -47,3 +49,4 @@
 
 [unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
+[1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
