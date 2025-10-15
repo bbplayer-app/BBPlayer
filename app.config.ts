@@ -94,7 +94,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 				disableIOS: true,
 			},
 		],
-		'react-native-legal',
 	],
 	experiments: {
 		reactCompiler: true,
