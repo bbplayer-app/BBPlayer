@@ -7,7 +7,11 @@ import {
 } from 'expo-share-intent'
 
 export const linking = {
-	prefixes: ['bbplayer://', 'trackplayer://'],
+	prefixes: [
+		'bbplayer://',
+		'trackplayer://',
+		'https://bbplayer.roitium.com/app/link-to',
+	],
 	config: {
 		screens: {
 			Player: 'player',
