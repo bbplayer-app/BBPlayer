@@ -29,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 				data: [
 					{
 						scheme: 'https',
+						host: 'bbplayer.roitium.com',
 						pathPrefix: '/app/link-to',
 					},
 				],
