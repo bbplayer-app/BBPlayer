@@ -1,17 +1,18 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+项目的所有显著更改都将记录在这个文件中。
 
-The format is based on [Keep a Changelog],
-and this project adheres to [Semantic Versioning].
+项目的 CHANGELOG 格式符合 [Keep a Changelog]，
+且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
 ## [Unreleased]
 
 ### Changed
 
 - 将所有源代码移入 `src` 目录
+- 增加 `CHANGELOG.md` 文件
 
-## [1.3.2] - 2025-10-15
+## [1.3.2] - 2025-10-14
 
 ### Added
 
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning].
 
 [keep a changelog]: https://keepachangelog.com/en/1.0.0/
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
+[pride versioning]: https://pridever.org/
 
 <!-- Versions -->
 
