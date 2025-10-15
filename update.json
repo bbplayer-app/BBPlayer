@@ -1,7 +1,11 @@
 {
-	"version": "1.3.3",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.3.3",
+	"version": "1.3.4",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.3.4",
 	"notes": "支持手动检查更新，优化了更新模态框的使用体验。",
-	"listed_notes": ["支持手动检查更新", "支持 Android App Linking", "优化更新模态框的使用体验"],
+	"listed_notes": [
+		"支持手动检查更新",
+		"支持 Android App Linking",
+		"优化更新模态框的使用体验"
+	],
 	"forced": false
 }
