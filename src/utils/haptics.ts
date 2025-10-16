@@ -1,44 +1,27 @@
 import * as ExpoHaptics from 'expo-haptics'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+import { errAsync, ResultAsync } from 'neverthrow'
+import { reportErrorToSentry } from './log'
 
-// Cache for haptics support check
-let hapticsSupported: boolean | null = null
-
-/**
- * Checks if the device supports haptics and caches the result.
- * This prevents repeated checks and failed calls on unsupported devices.
- */
-const checkHapticsSupportAsync = async (): Promise<boolean> => {
-	if (hapticsSupported !== null) {
-		return hapticsSupported
-	}
-
-	try {
-		// Try to perform a minimal haptic feedback to test if the device supports it
-		await ExpoHaptics.performAndroidHapticsAsync(
-			ExpoHaptics.AndroidHaptics.Context_Click,
-		)
-		hapticsSupported = true
-		return true
-	} catch (error) {
-		// If haptics fail (e.g., "A haptics engine is not available on this device"),
-		// cache that this device doesn't support haptics
-		hapticsSupported = false
-		return false
-	}
-}
+let hapticsSupported = true
 
 export const performAndroidHapticsAsync = (type: ExpoHaptics.AndroidHaptics) =>
 	ResultAsync.fromPromise(
 		(async () => {
-			// Check if haptics are supported before attempting
-			const supported = await checkHapticsSupportAsync()
-			if (!supported) {
-				// Silently succeed without performing haptics on unsupported devices
-				return
+			if (!hapticsSupported) return
+			try {
+				await ExpoHaptics.performAndroidHapticsAsync(type)
+			} catch (e) {
+				if (e instanceof Error && e.message.includes('is not available')) {
+					// 这用户的手机有点老
+					hapticsSupported = false
+					return
+				}
+				reportErrorToSentry(
+					e,
+					'performAndroidHapticsAsync 出错',
+					'Utils.Haptics',
+				)
 			}
-			// Only perform haptics on supported devices
-			await ExpoHaptics.performAndroidHapticsAsync(type)
 		})(),
 		(e) => errAsync(e),
 	)
