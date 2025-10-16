@@ -1,9 +1,22 @@
 import * as ExpoHaptics from 'expo-haptics'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { reportErrorToSentry } from './log'
 
-export const performAndroidHapticsAsync = (type: ExpoHaptics.AndroidHaptics) =>
-	ResultAsync.fromPromise(ExpoHaptics.performAndroidHapticsAsync(type), (e) =>
-		errAsync(e),
-	)
+let hapticsSupported = true
+
+export const performAndroidHapticsAsync = async (
+	type: ExpoHaptics.AndroidHaptics,
+): Promise<void> => {
+	if (!hapticsSupported) return
+
+	try {
+		await ExpoHaptics.performAndroidHapticsAsync(type)
+	} catch (e) {
+		if (e instanceof Error && e.message.includes('is not available')) {
+			hapticsSupported = false
+			return
+		}
+		reportErrorToSentry(e, 'performAndroidHapticsAsync 出错', 'Utils.Haptics')
+	}
+}
 
 export const AndroidHaptics = ExpoHaptics.AndroidHaptics

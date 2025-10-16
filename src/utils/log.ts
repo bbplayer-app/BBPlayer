@@ -139,7 +139,7 @@ export function flatErrorMessage(
 export function reportErrorToSentry(
 	error: unknown,
 	message?: string,
-	scope?: ProjectScope,
+	scope?: ProjectScope | string,
 ) {
 	const _error =
 		error instanceof Error

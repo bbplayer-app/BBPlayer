@@ -7,4 +7,5 @@ export enum ProjectScope {
 	Facade = 'Facade',
 	UI = 'UI',
 	Player = 'Player',
+	Utils = 'Utils',
 }
