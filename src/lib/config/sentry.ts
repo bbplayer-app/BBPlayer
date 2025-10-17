@@ -2,6 +2,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import log from '@/utils/log'
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
+import * as Application from 'expo-application'
 import * as Updates from 'expo-updates'
 
 const logger = log.extend('Utils.Sentry')
@@ -12,7 +13,20 @@ const extra = 'extra' in manifest ? manifest.extra : undefined
 const updateGroup =
 	metadata && 'updateGroup' in metadata ? metadata.updateGroup : undefined
 
+const identifier = Application.applicationId
 const developement = process.env.NODE_ENV === 'development'
+
+const getEnv = () => {
+	if (developement) {
+		return 'development'
+	}
+	if (identifier === 'com.roitium.bbplayer.dev') {
+		return 'development'
+	} else if (identifier === 'com.roitium.bbplayer.preview') {
+		return 'preview'
+	}
+	return 'production'
+}
 
 export const navigationIntegration = Sentry.reactNavigationIntegration({
 	enableTimeToInitialDisplay: !isRunningInExpoGo(),
@@ -33,7 +47,8 @@ export function initializeSentry() {
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		enabled:
 			!developement && useAppStore.getState().settings.enableSentryReport,
-		environment: developement ? 'development' : 'production',
+		enableLogs: false,
+		environment: getEnv(),
 	})
 
 	const scope = Sentry.getGlobalScope()
