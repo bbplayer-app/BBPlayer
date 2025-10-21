@@ -1,0 +1,21 @@
+name: '🚀 功能请求'
+description: '为项目建议一个新功能或改进'
+title: '[Feature] <title>'
+labels: ['enhancement']
+type: Feature
+body:
+  - type: checkboxes
+    attributes:
+      label: '功能请求是否已存在？'
+      description: '在提交前，请确保您已经搜索过现有的 issues，确认相关功能请求尚未被提出。'
+      options:
+        - label: '我搜索过了'
+          required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: '建议内容'
+      description: '详细描述您想要的功能或改进，以及需要该功能的原因。如果可以，请附上截图或使用场景描述来帮助我们理解需求。'
+    validations:
+      required: true
