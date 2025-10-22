@@ -160,7 +160,7 @@ export default function LeaderboardPage() {
 						marginHorizontal: 16,
 						marginTop: 16,
 						marginBottom: 8,
-						padding: 16,
+						paddingVertical: 16,
 						borderRadius: 12,
 						alignItems: 'center',
 					}}

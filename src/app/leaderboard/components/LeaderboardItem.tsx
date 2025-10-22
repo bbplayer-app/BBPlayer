@@ -1,9 +1,11 @@
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Image } from 'expo-image'
 import { memo } from 'react'
 import { View } from 'react-native'
-import { Surface, Text, useTheme } from 'react-native-paper'
+import { RectButton } from 'react-native-gesture-handler'
+import { Text, useTheme } from 'react-native-paper'
 
 interface LeaderboardItemProps {
 	item: {
@@ -18,16 +20,30 @@ export const LeaderboardListItem = memo(function LeaderboardListItem({
 	index,
 }: LeaderboardItemProps) {
 	const { colors } = useTheme()
+	const addToQueue = usePlayerStore((state) => state.addToQueue)
+	const isCurrentTrack = usePlayerStore(
+		(state) => state.currentTrackUniqueKey === item.track.uniqueKey,
+	)
 
 	return (
-		<Surface
+		<RectButton
 			style={{
-				borderRadius: 8,
-				backgroundColor: 'transparent',
-				marginVertical: 4,
-				marginHorizontal: 8,
+				backgroundColor: isCurrentTrack
+					? colors.elevation.level5
+					: 'transparent',
+				paddingVertical: 4,
+				paddingHorizontal: 8,
 			}}
-			elevation={0}
+			onPress={() =>
+				usePlayerStore.getState().currentTrackUniqueKey !==
+					item.track.uniqueKey &&
+				void addToQueue({
+					tracks: [item.track],
+					clearQueue: false,
+					playNow: true,
+					playNext: false,
+				})
+			}
 		>
 			<View
 				style={{
@@ -114,6 +130,6 @@ export const LeaderboardListItem = memo(function LeaderboardListItem({
 					</Text>
 				</View>
 			</View>
-		</Surface>
+		</RectButton>
 	)
 })
