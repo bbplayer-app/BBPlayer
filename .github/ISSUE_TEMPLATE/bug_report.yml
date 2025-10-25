@@ -1,0 +1,58 @@
+name: '🐞 Bug 报告'
+description: '提交 Bug 报告以帮助我们改进 BBPlayer'
+title: '[Bug] <title>'
+labels: ['bug']
+type: Bug
+body:
+  - type: checkboxes
+    attributes:
+      label: '问题是否已存在？'
+      description: '在提交前，请确保您已经搜索过现有的 issues，确认问题尚未被报告。'
+      options:
+        - label: '我搜索过了'
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 'App 版本'
+      description: '当前你使用的 BBPlayer 版本号（建议优先升级最新版本尝试，我们不会对旧版本做 backport 修复）'
+      placeholder: '例如：v1.2.3'
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: '问题描述'
+      description: '请清晰地描述该 Bug。如果可以，请附上详细错误日志（可通过设置页面「打开 Debug 日志」按钮开启详细日志后重新操作复现问题，并通过「分享今日运行日志」按钮导出）或截图'
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: '复现步骤'
+      description: '请提供重现该问题的具体步骤。如果问题较简单，上面「问题描述」中足够描述清楚，可选择不填'
+      placeholder: |
+        1. 前往 '...'
+        2. 点击 '....'
+        3. 滚动到 '....'
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: '期望行为'
+      description: '请描述这里正确的行为应该是什么。'
+    validations:
+      required: true
+
+  - type: input
+    id: device-info
+    attributes:
+      label: '设备型号 + 操作系统（可选）'
+      placeholder: '例如: Xiaomi 10 + Android 14'
+    validations:
+      required: false

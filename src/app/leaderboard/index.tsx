@@ -1,10 +1,13 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
+import {
+	usePlayCountLeaderboard,
+	useTotalPlaybackDuration,
+} from '@/hooks/queries/db/track'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
-import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -40,43 +43,31 @@ const formatDurationToWords = (seconds: number) => {
 export default function LeaderboardPage() {
 	const { colors } = useTheme()
 	const navigation = useNavigation()
-	const [data, setData] = useState<LeaderboardItemData[]>([])
-	const [isLoading, setIsLoading] = useState(true)
-	const [isError, setIsError] = useState(false)
-	const [totalDurationNumber, setTotalDurationNumber] = useState(0)
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
 
-	useFocusEffect(() => {
-		const fetchLeaderboard = async () => {
-			setIsLoading(true)
-			setIsError(false)
-			const result = await trackService.getPlayCountLeaderboard(50, {
-				onlyCompleted: true,
-			})
-			if (result.isOk()) {
-				setData(result.value)
-			} else {
-				setIsError(true)
-			}
-			const totalDurationResult = await trackService.getTotalPlaybackDuration({
-				onlyCompleted: true,
-			})
-			if (totalDurationResult.isOk()) {
-				setTotalDurationNumber(totalDurationResult.value)
-			} else {
-				setIsError(true)
-			}
-			setIsLoading(false)
-		}
-
-		void fetchLeaderboard()
+	const {
+		data: leaderboardData,
+		isLoading: isLeaderboardLoading,
+		isError: isLeaderboardError,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+	} = usePlayCountLeaderboard({
+		limit: 30,
+		onlyCompleted: true,
 	})
+	const { data: totalDurationData, isError: isTotalDurationError } =
+		useTotalPlaybackDuration(true)
+
+	const allTracks = useMemo(() => {
+		return leaderboardData?.pages.flatMap((page) => page.items) ?? []
+	}, [leaderboardData])
 
 	const totalDuration = useMemo(() => {
-		if (!data) return '0秒'
-		return formatDurationToWords(totalDurationNumber)
-	}, [data, totalDurationNumber])
+		if (isTotalDurationError || !totalDurationData) return '0秒'
+		return formatDurationToWords(totalDurationData)
+	}, [totalDurationData, isTotalDurationError])
 
 	const renderItem = useCallback(
 		({ item, index }: { item: LeaderboardItemData; index: number }) => (
@@ -93,8 +84,14 @@ export default function LeaderboardPage() {
 		[],
 	)
 
+	const onEndReached = () => {
+		if (hasNextPage && !isFetchingNextPage) {
+			void fetchNextPage()
+		}
+	}
+
 	const renderContent = () => {
-		if (isLoading) {
+		if (isLeaderboardLoading) {
 			return (
 				<ActivityIndicator
 					animating={true}
@@ -103,7 +100,7 @@ export default function LeaderboardPage() {
 			)
 		}
 
-		if (isError) {
+		if (isLeaderboardError) {
 			return (
 				<View
 					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
@@ -113,7 +110,7 @@ export default function LeaderboardPage() {
 			)
 		}
 
-		if (data.length === 0) {
+		if (allTracks.length === 0) {
 			return (
 				<View
 					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
@@ -125,24 +122,27 @@ export default function LeaderboardPage() {
 
 		return (
 			<FlashList
-				data={data}
+				data={allTracks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
 				contentContainerStyle={{
 					paddingBottom: currentTrack ? 70 + insets.bottom : insets.bottom,
 				}}
+				onEndReached={onEndReached}
+				onEndReachedThreshold={0.8}
 				ListFooterComponent={
-					data.length === 50 ? (
-						<Text
-							variant='bodyMedium'
-							style={{
-								textAlign: 'center',
-								padding: 16,
-							}}
-						>
-							以下省略...
-						</Text>
-					) : null
+					<View style={{ paddingVertical: 32, alignItems: 'center' }}>
+						{isFetchingNextPage ? (
+							<ActivityIndicator />
+						) : !hasNextPage ? (
+							<Text
+								variant='bodyMedium'
+								style={{ color: colors.onSurfaceVariant }}
+							>
+								已经到底啦
+							</Text>
+						) : null}
+					</View>
 				}
 			/>
 		)
@@ -154,13 +154,13 @@ export default function LeaderboardPage() {
 				<Appbar.BackAction onPress={() => navigation.goBack()} />
 				<Appbar.Content title='统计' />
 			</Appbar.Header>
-			{data.length > 0 && (
+			{allTracks.length > 0 && !isTotalDurationError && (
 				<Surface
 					style={{
 						marginHorizontal: 16,
 						marginTop: 16,
 						marginBottom: 8,
-						padding: 16,
+						paddingVertical: 16,
 						borderRadius: 12,
 						alignItems: 'center',
 					}}
@@ -181,7 +181,9 @@ export default function LeaderboardPage() {
 					</Text>
 				</Surface>
 			)}
+
 			<View style={{ flex: 1 }}>{renderContent()}</View>
+
 			<View
 				style={{
 					position: 'absolute',
