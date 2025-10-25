@@ -23,7 +23,8 @@ import type {
 	UpdateTrackPayloadBase,
 } from '@/types/services/track'
 import log from '@/utils/log'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
 import generateUniqueTrackKey from './genKey'
@@ -578,64 +579,93 @@ export class TrackService {
 	}
 
 	/**
-	 * 获取播放次数排行榜（按播放次数降序）。
-	 * @param limit 返回的最大条目数，默认 50
-	 * @param options.onlyCompleted 是否仅统计完整播放（completed=true），默认 false
+	 * 基于游标分页的播放次数排行榜获取
+	 *
+	 * @param {object} options - 参数对象
+	 * @param {number} [options.limit=20] - 每页数量
+	 * @param {boolean} [options.onlyCompleted=true] - 是否仅统计完整播放
+	 * @param {string} [options.cursor] - 上一页的最后一个项目的游标 (第一页时传 undefined)
+	 *
+	 * @returns {object} 分页结果
+	 * @property {string | undefined} nextCursor - 用于获取下一页的游标。如果为 undefined，表示没有更多数据。
+	 * @property {Array<object>} items - 播放次数排行榜的项目列表
 	 */
-	public getPlayCountLeaderboard(
-		limit = 20,
-		options?: { onlyCompleted?: boolean },
-	): ResultAsync<
-		{ track: Track; playCount: number }[],
+	public getPlayCountLeaderboard(options?: {
+		limit?: number
+		onlyCompleted?: boolean
+		cursor?: { lastPlayCount: number; lastUpdatedAt: number }
+	}): ResultAsync<
+		{
+			items: { track: Track; playCount: number }[]
+			nextCursor?: { lastPlayCount: number; lastUpdatedAt: number }
+		},
 		DatabaseError | ServiceError
 	> {
-		const onlyCompleted = options?.onlyCompleted ?? true
+		const { limit = 20, onlyCompleted = true, cursor } = options ?? {}
+
+		const playCountSql = onlyCompleted
+			? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
+			: sql<number>`json_array_length(${schema.tracks.playHistory})`
+
+		const whereConditions: (SQL | undefined)[] = [gt(playCountSql, 0)]
+
+		if (cursor) {
+			const cursorUpdatedAt = new Date(cursor.lastUpdatedAt)
+			whereConditions.push(
+				or(
+					lt(playCountSql, cursor.lastPlayCount),
+					and(
+						eq(playCountSql, cursor.lastPlayCount),
+						lt(schema.tracks.updatedAt, cursorUpdatedAt),
+					),
+				),
+			)
+		}
+
+		const leaderboardQuery = this.db.query.tracks.findMany({
+			columns: { playHistory: false },
+			with: {
+				artist: true,
+				bilibiliMetadata: true,
+				localMetadata: true,
+				trackDownloads: true,
+			},
+			extras: {
+				playCount: playCountSql.mapWith(Number).as('play_count'),
+			},
+			where: and(...whereConditions),
+			orderBy: [desc(playCountSql), desc(schema.tracks.updatedAt)],
+			limit: limit + 1,
+		})
+
 		return ResultAsync.fromPromise(
-			this.db.query.tracks.findMany({
-				columns: { playHistory: false },
-				with: {
-					artist: true,
-					bilibiliMetadata: true,
-					localMetadata: true,
-					trackDownloads: true,
-				},
-			}),
+			leaderboardQuery,
 			(e) => new DatabaseError('获取播放次数排行榜失败', { cause: e }),
 		).andThen((rows) => {
-			const ids = rows.map((r) => r.id)
-			if (ids.length === 0)
-				return okAsync([] as { track: Track; playCount: number }[])
+			const hasNextPage = rows.length > limit
+			const resultItems = hasNextPage ? rows.slice(0, limit) : rows
 
-			return ResultAsync.fromPromise(
-				this.db
-					.select({
-						id: schema.tracks.id,
-						playCount: onlyCompleted
-							? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
-							: sql<number>`json_array_length(${schema.tracks.playHistory})`,
-					})
-					.from(schema.tracks)
-					.where(inArray(schema.tracks.id, ids)),
-				(e) => new DatabaseError('统计播放次数失败', { cause: e }),
-			).andThen((counts) => {
-				const countMap = new Map<number, number>(
-					counts.map((c) => [c.id, c.playCount ?? 0]),
-				)
-				const items: { track: Track; playCount: number }[] = []
-				for (const row of rows) {
-					const track = this.formatTrack(row)
-					if (!track) continue
-					const count = countMap.get(track.id) ?? 0
-					if (count > 0) items.push({ track, playCount: count })
+			const items: { track: Track; playCount: number }[] = []
+			for (const row of resultItems) {
+				const track = this.formatTrack(row)
+				if (!track) continue
+				items.push({ track, playCount: row.playCount })
+			}
+
+			let nextCursor
+			if (hasNextPage) {
+				const lastItem = items[items.length - 1]
+				if (lastItem) {
+					nextCursor = {
+						lastPlayCount: lastItem.playCount,
+						lastUpdatedAt: lastItem.track.updatedAt.getTime(),
+					}
 				}
-				items.sort((a, b) => {
-					if (b.playCount !== a.playCount) return b.playCount - a.playCount
-					return (
-						new Date(b.track.updatedAt).getTime() -
-						new Date(a.track.updatedAt).getTime()
-					)
-				})
-				return okAsync(items.slice(0, Math.max(0, limit)))
+			}
+
+			return okAsync({
+				items: items,
+				nextCursor,
 			})
 		})
 	}

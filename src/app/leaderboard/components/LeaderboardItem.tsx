@@ -74,6 +74,7 @@ export const LeaderboardListItem = memo(function LeaderboardListItem({
 					}}
 					style={{ width: 45, height: 45, borderRadius: 4 }}
 					cachePolicy={'none'}
+					recyclingKey={item.track.uniqueKey}
 				/>
 
 				<View style={{ marginLeft: 12, flex: 1, marginRight: 4 }}>
