@@ -1,3 +1,5 @@
+import { trackKeys } from '@/hooks/queries/db/track'
+import { queryClient } from '@/lib/config/queryClient'
 import type { PlayerError } from '@/lib/errors/player'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { artistService } from '@/lib/services/artistService'
@@ -172,6 +174,10 @@ export const usePlayerStore = create<PlayerStore>()(
 						logger.debug('增加播放记录成功', {
 							trackKey: trackResult.value.uniqueKey,
 							title: track.title,
+						})
+
+						void queryClient.invalidateQueries({
+							queryKey: trackKeys.leaderBoard(),
 						})
 					} catch (error) {
 						logger.debug('增加播放记录异常', error)
