@@ -668,12 +668,12 @@ export class TrackService {
 
 			let nextCursor
 			if (hasNextPage) {
-				const lastItem = items[items.length - 1]
-				if (lastItem) {
+				const lastRow = resultItems[resultItems.length - 1]
+				if (lastRow) {
 					nextCursor = {
-						lastPlayCount: lastItem.playCount,
-						lastUpdatedAt: lastItem.track.updatedAt.getTime(),
-						lastId: lastItem.track.id,
+						lastPlayCount: lastRow.playCount,
+						lastUpdatedAt: lastRow.updatedAt.getTime(),
+						lastId: lastRow.id,
 					}
 				}
 			}
