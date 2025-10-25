@@ -10,16 +10,15 @@ queryClient.setQueryDefaults(['db', 'tracks'], {
 
 export const trackKeys = {
 	all: ['db', 'tracks'] as const,
+	leaderBoard: () => [...trackKeys.all, 'leaderBoard'] as const,
 	leaderBoardPaged: (limit: number, onlyCompleted: boolean) =>
+		[...trackKeys.leaderBoard(), limit, onlyCompleted] as const,
+	totalPlaybackDuration: (onlyCompleted: boolean) =>
 		[
-			...trackKeys.all,
-			'leaderBoard',
-			'pagination',
-			limit,
+			...trackKeys.leaderBoard(),
+			'totalPlaybackDuration',
 			onlyCompleted,
 		] as const,
-	totalPlaybackDuration: (onlyCompleted: boolean) =>
-		[...trackKeys.all, 'totalPlaybackDuration', onlyCompleted] as const,
 }
 
 export function usePlayCountLeaderboard(
