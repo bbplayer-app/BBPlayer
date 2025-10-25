@@ -1,9 +1,36 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 import { version, versionCode } from './package.json'
 
+const IS_DEV = process.env.APP_VARIANT === 'development'
+const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+
+const getUniqueIdentifier = () => {
+	if (IS_DEV) {
+		return 'com.roitium.bbplayer.dev'
+	}
+
+	if (IS_PREVIEW) {
+		return 'com.roitium.bbplayer.preview'
+	}
+
+	return 'com.roitium.bbplayer'
+}
+
+const getAppName = () => {
+	if (IS_DEV) {
+		return 'BBPlayer (Dev)'
+	}
+
+	if (IS_PREVIEW) {
+		return 'BBPlayer (Preview)'
+	}
+
+	return 'BBPlayer'
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default ({ config }: ConfigContext): ExpoConfig => ({
-	name: 'BBPlayer',
+	name: getAppName(),
 	slug: 'bbplayer',
 	version: version,
 	orientation: 'portrait',
@@ -18,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			monochromeImage: './assets/images/adaptive-icon.png',
 			backgroundColor: '#ffffff',
 		},
-		package: 'com.roitium.bbplayer',
+		package: getUniqueIdentifier(),
 		versionCode: versionCode,
 		edgeToEdgeEnabled: true,
 		runtimeVersion: version,

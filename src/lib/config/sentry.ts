@@ -2,6 +2,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import log from '@/utils/log'
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
+import * as Application from 'expo-application'
 import * as Updates from 'expo-updates'
 
 const logger = log.extend('Utils.Sentry')
@@ -12,7 +13,24 @@ const extra = 'extra' in manifest ? manifest.extra : undefined
 const updateGroup =
 	metadata && 'updateGroup' in metadata ? metadata.updateGroup : undefined
 
-const developement = process.env.NODE_ENV === 'development'
+const identifier = Application.applicationId
+const development = process.env.NODE_ENV === 'development'
+
+const getEnv = () => {
+	if (development) {
+		return 'development'
+	}
+	// 这不可能发生，只在 web 端会是 null
+	if (!identifier) {
+		return 'development'
+	}
+	if (identifier === 'com.roitium.bbplayer.dev') {
+		return 'development'
+	} else if (identifier === 'com.roitium.bbplayer.preview') {
+		return 'preview'
+	}
+	return 'production'
+}
 
 export const navigationIntegration = Sentry.reactNavigationIntegration({
 	enableTimeToInitialDisplay: !isRunningInExpoGo(),
@@ -20,7 +38,7 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 
 logger.info(
 	'Sentry 启用状态为：',
-	!developement && useAppStore.getState().settings.enableSentryReport,
+	!development && useAppStore.getState().settings.enableSentryReport,
 )
 
 export function initializeSentry() {
@@ -31,9 +49,9 @@ export function initializeSentry() {
 		sendDefaultPii: false,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
-		enabled:
-			!developement && useAppStore.getState().settings.enableSentryReport,
-		environment: developement ? 'development' : 'production',
+		enabled: !development && useAppStore.getState().settings.enableSentryReport,
+		enableLogs: false,
+		environment: getEnv(),
 	})
 
 	const scope = Sentry.getGlobalScope()
@@ -55,7 +73,7 @@ export function initializeSentry() {
 	}
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
-	if (!developement) {
+	if (!development) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const errorUtils = (global as any).ErrorUtils
 		if (errorUtils) {
