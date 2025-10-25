@@ -537,7 +537,14 @@ export class TrackService {
 					}
 				}
 
-				return finalUniqueKeyToIdMap
+				const orderedMap = new Map<string, number>()
+
+				for (const uniqueKey of uniqueKeys) {
+					// 前面做过一致性检查了，这里不可能不存在
+					orderedMap.set(uniqueKey, finalUniqueKeyToIdMap.get(uniqueKey)!)
+				}
+
+				return orderedMap
 			})(),
 			(e) =>
 				e instanceof ServiceError
