@@ -2,7 +2,7 @@ name: Hot Update
 on: workflow_dispatch
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v4
