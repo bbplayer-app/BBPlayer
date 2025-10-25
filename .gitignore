@@ -44,12 +44,9 @@ app-example
 
 app-example
 temp-builds
-.env.local
 .yarn/install-state.gz
 .vscode
 .zed
 
 .gemini/
 gha-creds-*.json
-
-.env.local

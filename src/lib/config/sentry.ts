@@ -14,10 +14,14 @@ const updateGroup =
 	metadata && 'updateGroup' in metadata ? metadata.updateGroup : undefined
 
 const identifier = Application.applicationId
-const developement = process.env.NODE_ENV === 'development'
+const development = process.env.NODE_ENV === 'development'
 
 const getEnv = () => {
-	if (developement) {
+	if (development) {
+		return 'development'
+	}
+	// 这不可能发生，只在 web 端会是 null
+	if (!identifier) {
 		return 'development'
 	}
 	if (identifier === 'com.roitium.bbplayer.dev') {
@@ -34,7 +38,7 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 
 logger.info(
 	'Sentry 启用状态为：',
-	!developement && useAppStore.getState().settings.enableSentryReport,
+	!development && useAppStore.getState().settings.enableSentryReport,
 )
 
 export function initializeSentry() {
@@ -45,8 +49,7 @@ export function initializeSentry() {
 		sendDefaultPii: false,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
-		enabled:
-			!developement && useAppStore.getState().settings.enableSentryReport,
+		enabled: !development && useAppStore.getState().settings.enableSentryReport,
 		enableLogs: false,
 		environment: getEnv(),
 	})
@@ -70,7 +73,7 @@ export function initializeSentry() {
 	}
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
-	if (!developement) {
+	if (!development) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const errorUtils = (global as any).ErrorUtils
 		if (errorUtils) {
