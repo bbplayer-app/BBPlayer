@@ -34,16 +34,15 @@ export const LeaderboardListItem = memo(function LeaderboardListItem({
 				paddingVertical: 4,
 				paddingHorizontal: 8,
 			}}
-			onPress={() =>
-				usePlayerStore.getState().currentTrackUniqueKey !==
-					item.track.uniqueKey &&
+			onPress={() => {
+				if (isCurrentTrack) return
 				void addToQueue({
 					tracks: [item.track],
 					clearQueue: false,
 					playNow: true,
 					playNext: false,
 				})
-			}
+			}}
 		>
 			<View
 				style={{
