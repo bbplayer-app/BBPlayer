@@ -3,7 +3,7 @@ import { trackService } from '@/lib/services/trackService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
-queryClient.setQueryDefaults(['db', 'playlists'], {
+queryClient.setQueryDefaults(['db', 'tracks'], {
 	retry: false,
 	staleTime: 0,
 })
@@ -42,7 +42,7 @@ export function usePlayCountLeaderboard(
 				}),
 			),
 		initialPageParam: undefined as
-			| { lastPlayCount: number; lastUpdatedAt: number }
+			| { lastPlayCount: number; lastUpdatedAt: number; lastId: number }
 			| undefined,
 		getNextPageParam: (lastPage) => {
 			return lastPage.nextCursor

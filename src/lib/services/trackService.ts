@@ -579,25 +579,29 @@ export class TrackService {
 	}
 
 	/**
-	 * 基于游标分页的播放次数排行榜获取
+	 * 获取播放次数排行榜（游标分页）。
 	 *
-	 * @param {object} options - 参数对象
-	 * @param {number} [options.limit=20] - 每页数量
-	 * @param {boolean} [options.onlyCompleted=true] - 是否仅统计完整播放
-	 * @param {string} [options.cursor] - 上一页的最后一个项目的游标 (第一页时传 undefined)
-	 *
-	 * @returns {object} 分页结果
-	 * @property {string | undefined} nextCursor - 用于获取下一页的游标。如果为 undefined，表示没有更多数据。
-	 * @property {Array<object>} items - 播放次数排行榜的项目列表
+	 * @param {object} [options] 配置项
+	 * @param {number} [options.limit=20] 每页返回的数量。
+	 * @param {boolean} [options.onlyCompleted=true] 是否只统计完整播放。
+	 * @param {object} [options.cursor] 上一页的游标（来自上一页的 `nextCursor`）。
+	 * @param {number} [options.cursor.lastPlayCount] 上一页最后一个项目的播放量。
+	 * @param {number} [options.cursor.lastUpdatedAt] 上一页最后一个项目的更新时间戳。
+	 * @param {number} [options.cursor.lastId] 上一页最后一个项目的 ID。
+	 * @returns 播放次数排行榜及下一页游标的异步结果。
 	 */
 	public getPlayCountLeaderboard(options?: {
 		limit?: number
 		onlyCompleted?: boolean
-		cursor?: { lastPlayCount: number; lastUpdatedAt: number }
+		cursor?: { lastPlayCount: number; lastUpdatedAt: number; lastId: number }
 	}): ResultAsync<
 		{
 			items: { track: Track; playCount: number }[]
-			nextCursor?: { lastPlayCount: number; lastUpdatedAt: number }
+			nextCursor?: {
+				lastPlayCount: number
+				lastUpdatedAt: number
+				lastId: number
+			}
 		},
 		DatabaseError | ServiceError
 	> {
@@ -616,7 +620,13 @@ export class TrackService {
 					lt(playCountSql, cursor.lastPlayCount),
 					and(
 						eq(playCountSql, cursor.lastPlayCount),
-						lt(schema.tracks.updatedAt, cursorUpdatedAt),
+						or(
+							lt(schema.tracks.updatedAt, cursorUpdatedAt),
+							and(
+								eq(schema.tracks.updatedAt, cursorUpdatedAt),
+								lt(schema.tracks.id, cursor.lastId),
+							),
+						),
 					),
 				),
 			)
@@ -634,7 +644,11 @@ export class TrackService {
 				playCount: playCountSql.mapWith(Number).as('play_count'),
 			},
 			where: and(...whereConditions),
-			orderBy: [desc(playCountSql), desc(schema.tracks.updatedAt)],
+			orderBy: [
+				desc(playCountSql),
+				desc(schema.tracks.updatedAt),
+				desc(schema.tracks.id),
+			],
 			limit: limit + 1,
 		})
 
@@ -659,6 +673,7 @@ export class TrackService {
 					nextCursor = {
 						lastPlayCount: lastItem.playCount,
 						lastUpdatedAt: lastItem.track.updatedAt.getTime(),
+						lastId: lastItem.track.id,
 					}
 				}
 			}
