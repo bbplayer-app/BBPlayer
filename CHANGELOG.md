@@ -21,6 +21,7 @@
 
 - 增加了 issue 模板
 - 支持构建 preview 版本，并分离了不同版本的包名
+- 删除了 gemini-cli 的 workflow
 
 ## [1.3.4] - 2025-10-15
 
