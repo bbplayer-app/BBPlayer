@@ -238,7 +238,11 @@ const PlayerLogic = {
 					})
 					.catch((error) => {
 						toastAndLogError('定时时间到了，但暂停播放失败', error, 'Player')
-						reportErrorToSentry(error, '暂停播放失败', ProjectScope.Player)
+						reportErrorToSentry(
+							error,
+							'定时时间到了，但暂停播放失败',
+							ProjectScope.Player,
+						)
 						isResettingSleepTimer = false
 						return
 					})
