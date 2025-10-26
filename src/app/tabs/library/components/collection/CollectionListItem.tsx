@@ -4,7 +4,8 @@ import type { RootStackParamList } from '@/types/navigation'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { memo } from 'react'
-import { TouchableOpacity, View } from 'react-native'
+import { View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
@@ -13,20 +14,20 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 
 	return (
 		<View>
-			<View style={{ marginVertical: 8, overflow: 'hidden' }}>
-				<TouchableOpacity
-					activeOpacity={0.7}
-					disabled={item.state === 1}
-					onPress={() => {
-						if (item.attr === 0) {
-							navigation.navigate('PlaylistCollection', {
-								id: String(item.id),
-							})
-						} else {
-							navigation.navigate('PlaylistFavorite', { id: String(item.id) })
-						}
-					}}
-				>
+			<RectButton
+				enabled={item.state !== 1}
+				onPress={() => {
+					if (item.attr === 0) {
+						navigation.navigate('PlaylistCollection', {
+							id: String(item.id),
+						})
+					} else {
+						navigation.navigate('PlaylistFavorite', { id: String(item.id) })
+					}
+				}}
+				style={{ paddingVertical: 8, overflow: 'hidden' }}
+			>
+				<View>
 					<View
 						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 					>
@@ -53,8 +54,8 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 							size={24}
 						/>
 					</View>
-				</TouchableOpacity>
-			</View>
+				</View>
+			</RectButton>
 			<Divider />
 		</View>
 	)
