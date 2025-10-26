@@ -57,7 +57,10 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
 
-	const { color1, color2 } = getGradientColors(title, isDark)
+	const { color1, color2 } = getGradientColors(
+		title.trim() ? title : String(id),
+		isDark,
+	)
 
 	const firstChar = title.length > 0 ? title.charAt(0).toUpperCase() : undefined
 

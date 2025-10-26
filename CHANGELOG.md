@@ -5,6 +5,18 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 给视频/播放列表封面加了个渐变 placeholder
+- 本地播放列表使用基于游标的无限滚动
+
+### Fixed
+
+- 对 NowPlayingBar 的 ProgressBar 的颜色和位置进行一点修复，更符合直觉
+- 直接在 Sentry.init 中忽略 ExpoHaptics 的错误
+
 ## [1.3.5] - 2025-10-26
 
 ### Fixed

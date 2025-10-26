@@ -73,6 +73,7 @@ export default function LocalPlaylistPage() {
 		isError: isPlaylistDataError,
 		fetchNextPage: fetchNextPagePlaylistData,
 		hasNextPage: hasNextPagePlaylistData,
+		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks =
 		playlistData?.pages.flatMap((page) => page.tracks) ?? []
@@ -304,7 +305,9 @@ export default function LocalPlaylistPage() {
 					enterSelectMode(trackId)
 				}}
 				onEndReached={
-					hasNextPagePlaylistData && !startSearch
+					hasNextPagePlaylistData &&
+					!startSearch &&
+					!isFetchingNextPagePlaylistData
 						? () => fetchNextPagePlaylistData()
 						: undefined
 				}
