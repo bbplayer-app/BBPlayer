@@ -217,26 +217,28 @@ const PlayerLogic = {
 		)
 
 		TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, () => {
-			if (isResettingSleepTimer) return
-			isResettingSleepTimer = true
 			const { sleepTimerEndAt, setSleepTimer } = usePlayerStore.getState()
-			if (sleepTimerEndAt && Date.now() >= sleepTimerEndAt) {
+			if (
+				sleepTimerEndAt &&
+				Date.now() >= sleepTimerEndAt &&
+				!isResettingSleepTimer
+			) {
+				isResettingSleepTimer = true
 				logger.info('定时器时间到，暂停播放')
-				usePlayerStore.setState((state) => ({
-					...state,
-					isPlaying: false,
-					isBuffering: false,
-				}))
-				TrackPlayer.pause()
+				setSleepTimer(null, true)
+				void TrackPlayer.pause()
 					.then(() => {
 						toast.success('已根据您的设置自动暂停播放')
-						setSleepTimer(null, true)
+						usePlayerStore.setState((state) => ({
+							...state,
+							isPlaying: false,
+							isBuffering: false,
+						}))
 						isResettingSleepTimer = false
 					})
 					.catch((error) => {
 						toastAndLogError('定时时间到了，但暂停播放失败', error, 'Player')
 						reportErrorToSentry(error, '暂停播放失败', ProjectScope.Player)
-						setSleepTimer(null, true)
 						isResettingSleepTimer = false
 						return
 					})
