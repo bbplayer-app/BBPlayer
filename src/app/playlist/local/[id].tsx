@@ -26,7 +26,7 @@ import {
 	useRoute,
 } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
@@ -74,16 +74,12 @@ export default function LocalPlaylistPage() {
 		fetchNextPage: fetchNextPagePlaylistData,
 		hasNextPage: hasNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
-	const filteredPlaylistData = useMemo(
-		() =>
-			playlistData?.pages
-				.flatMap((page) => page.tracks)
-				.filter(
-					(item) =>
-						item.source === 'bilibili' && item.bilibiliMetadata.videoIsValid,
-				) ?? [],
-		[playlistData],
-	)
+	const allLoadedTracks =
+		playlistData?.pages.flatMap((page) => page.tracks) ?? []
+	const filteredPlaylistData =
+		allLoadedTracks.filter((item) =>
+			item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+		) ?? []
 
 	const {
 		data: searchData,
@@ -91,9 +87,9 @@ export default function LocalPlaylistPage() {
 		error: searchError,
 	} = useSearchTracksInPlaylist(Number(id), debouncedQuery, startSearch)
 
-	const finalPlaylistData = useMemo(() => {
+	const finalPlaylistData = (() => {
 		if (!startSearch || !debouncedQuery.trim()) {
-			return playlistData?.pages.flatMap((page) => page.tracks) ?? []
+			return allLoadedTracks
 		}
 
 		if (isSearchError) {
@@ -102,14 +98,7 @@ export default function LocalPlaylistPage() {
 		}
 
 		return searchData ?? []
-	}, [
-		startSearch,
-		debouncedQuery,
-		playlistData,
-		isSearchError,
-		searchData,
-		searchError,
-	])
+	})()
 
 	const {
 		data: playlistMetadata,

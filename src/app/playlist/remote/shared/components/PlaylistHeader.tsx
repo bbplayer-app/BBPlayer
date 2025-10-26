@@ -1,9 +1,9 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Clipboard from 'expo-clipboard'
-import { Image } from 'expo-image'
 import { memo, useState } from 'react'
 import { View } from 'react-native'
 import {
@@ -23,6 +23,7 @@ interface PlaylistHeaderProps {
 	onClickMainButton?: () => void
 	mainButtonIcon: IconSource
 	linkedPlaylistId?: number
+	id: string | number
 }
 
 /**
@@ -36,6 +37,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	onClickMainButton,
 	mainButtonIcon,
 	linkedPlaylistId,
+	id,
 }: PlaylistHeaderProps) {
 	const navigation = useNavigation<
 		NativeStackNavigationProp<RootStackParamList, 'PlaylistMultipage'> // 这里的泛型参数随便写一个好了
@@ -47,11 +49,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		<View style={{ position: 'relative', flexDirection: 'column' }}>
 			{/* 收藏夹信息 */}
 			<View style={{ flexDirection: 'row', padding: 16, alignItems: 'center' }}>
-				<Image
-					source={{ uri: coverUri }}
-					contentFit='cover'
-					style={{ width: 120, height: 120, borderRadius: 8 }}
-					cachePolicy={'none'}
+				<CoverWithPlaceHolder
+					id={id}
+					coverUrl={coverUri}
+					title={title}
+					size={120}
+					borderRadius={8}
 				/>
 				<View style={{ marginLeft: 16, flex: 1, justifyContent: 'center' }}>
 					<TouchableRipple

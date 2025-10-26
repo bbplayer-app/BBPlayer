@@ -1,8 +1,8 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Image } from 'expo-image'
 import { memo } from 'react'
 import { TouchableOpacity, View } from 'react-native'
 import { Divider, Icon, Text } from 'react-native-paper'
@@ -12,7 +12,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
 	return (
-		<View key={item.id}>
+		<View>
 			<View style={{ marginVertical: 8, overflow: 'hidden' }}>
 				<TouchableOpacity
 					activeOpacity={0.7}
@@ -30,12 +30,11 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 					<View
 						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 					>
-						<Image
-							source={{ uri: item.cover }}
-							recyclingKey={item.id.toString()}
-							style={{ width: 48, height: 48, borderRadius: 4 }}
-							transition={300}
-							cachePolicy={'none'}
+						<CoverWithPlaceHolder
+							id={item.id}
+							coverUrl={item.cover}
+							title={item.title}
+							size={48}
 						/>
 						<View style={{ marginLeft: 12, flex: 1 }}>
 							<Text

@@ -1,3 +1,4 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -6,7 +7,6 @@ import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
 import { useNavigation } from '@react-navigation/native'
 import * as Clipboard from 'expo-clipboard'
-import { Image } from 'expo-image'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {
@@ -109,11 +109,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		<View style={{ position: 'relative', flexDirection: 'column' }}>
 			{/* 顶部信息 */}
 			<View style={{ flexDirection: 'row', margin: 16, alignItems: 'center' }}>
-				<Image
-					source={{ uri: playlist.coverUrl ?? undefined }}
-					contentFit='cover'
-					style={{ width: 120, height: 120, borderRadius: 8 }}
-					cachePolicy={'disk'}
+				<CoverWithPlaceHolder
+					id={playlist.id}
+					coverUrl={playlist.coverUrl}
+					title={playlist.title}
+					size={120}
+					borderRadius={8}
 				/>
 
 				<View

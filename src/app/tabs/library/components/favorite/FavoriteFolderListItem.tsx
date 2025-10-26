@@ -1,3 +1,4 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { useNavigation } from '@react-navigation/native'
@@ -11,7 +12,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
 	return (
-		<View key={item.id}>
+		<View>
 			<View style={{ marginVertical: 8, overflow: 'hidden' }}>
 				<TouchableOpacity
 					activeOpacity={0.7}
@@ -22,6 +23,12 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 					<View
 						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 					>
+						<CoverWithPlaceHolder
+							id={item.id}
+							coverUrl={undefined}
+							title={item.title}
+							size={48}
+						/>
 						<View style={{ marginLeft: 12, flex: 1 }}>
 							<Text
 								variant='titleMedium'

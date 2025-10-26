@@ -194,6 +194,7 @@ export default function FavoritePage() {
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
+							id={id}
 						/>
 					}
 					refreshControl={
