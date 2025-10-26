@@ -26,7 +26,7 @@ export type RootStackParamList = {
 	PlaylistUploader: { mid: string }
 	PlaylistLocal: { id: string }
 	SearchResultFav: { query: string }
-	Leaderboard: undefined
+	LeaderBoard: undefined
 	ModalHost: undefined
 	Download: undefined
 }

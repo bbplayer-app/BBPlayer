@@ -11,8 +11,18 @@ queryClient.setQueryDefaults(['db', 'tracks'], {
 export const trackKeys = {
 	all: ['db', 'tracks'] as const,
 	leaderBoard: () => [...trackKeys.all, 'leaderBoard'] as const,
-	leaderBoardPaged: (limit: number, onlyCompleted: boolean) =>
-		[...trackKeys.leaderBoard(), limit, onlyCompleted] as const,
+	leaderBoardContentPaginated: (
+		limit: number,
+		onlyCompleted: boolean,
+		initialLimit?: number,
+	) =>
+		[
+			...trackKeys.leaderBoard(),
+			'contentPaginated',
+			limit,
+			onlyCompleted,
+			initialLimit,
+		] as const,
 	totalPlaybackDuration: (onlyCompleted: boolean) =>
 		[
 			...trackKeys.leaderBoard(),
@@ -21,22 +31,24 @@ export const trackKeys = {
 		] as const,
 }
 
-export function usePlayCountLeaderboard(
-	props: {
-		limit?: number
-		onlyCompleted?: boolean
-	} = {},
+export function usePlayCountLeaderBoardPaginated(
+	limit: number,
+	onlyCompleted: boolean,
+	initialLimit?: number,
 ) {
-	const { limit = 20, onlyCompleted = true } = props
-
 	return useInfiniteQuery({
-		queryKey: trackKeys.leaderBoardPaged(limit, onlyCompleted),
+		queryKey: trackKeys.leaderBoardContentPaginated(
+			limit,
+			onlyCompleted,
+			initialLimit,
+		),
 
 		queryFn: async ({ pageParam }) =>
 			returnOrThrowAsync(
-				trackService.getPlayCountLeaderboard({
+				trackService.getPlayCountLeaderBoardPaginated({
 					limit,
 					onlyCompleted,
+					initialLimit,
 					cursor: pageParam,
 				}),
 			),
@@ -46,6 +58,8 @@ export function usePlayCountLeaderboard(
 		getNextPageParam: (lastPage) => {
 			return lastPage.nextCursor
 		},
+		// 每次打开页面都重新获取数据，避免直接加载缓存中的大量数据导致卡顿
+		gcTime: 0,
 	})
 }
 

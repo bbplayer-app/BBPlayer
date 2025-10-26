@@ -3,7 +3,14 @@ import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useState } from 'react'
-import { Divider, Menu, Text, useTheme } from 'react-native-paper'
+import { View } from 'react-native'
+import {
+	ActivityIndicator,
+	Divider,
+	Menu,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
@@ -18,6 +25,9 @@ interface LocalTrackListProps {
 	toggle: (id: number) => void
 	enterSelectMode: (id: number) => void
 	ListHeaderComponent: Parameters<typeof FlashList>[0]['ListHeaderComponent']
+	onEndReached?: () => void
+	hasNextPage?: boolean
+	isFetchingNextPage?: boolean
 }
 
 export function LocalTrackList({
@@ -30,6 +40,9 @@ export function LocalTrackList({
 	toggle,
 	enterSelectMode,
 	ListHeaderComponent,
+	onEndReached,
+	isFetchingNextPage,
+	hasNextPage,
 }: LocalTrackListProps) {
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
@@ -105,16 +118,31 @@ export function LocalTrackList({
 				}}
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
-					<Text
-						variant='titleMedium'
-						style={{
-							textAlign: 'center',
-							paddingTop: 10,
-						}}
-					>
-						•
-					</Text>
+					isFetchingNextPage ? (
+						<View
+							style={{
+								flexDirection: 'row',
+								alignItems: 'center',
+								justifyContent: 'center',
+								padding: 16,
+							}}
+						>
+							<ActivityIndicator size='small' />
+						</View>
+					) : hasNextPage ? (
+						<Text
+							variant='titleMedium'
+							style={{
+								textAlign: 'center',
+								paddingTop: 10,
+							}}
+						>
+							•
+						</Text>
+					) : null
 				}
+				onEndReached={onEndReached}
+				onEndReachedThreshold={0.8}
 			/>
 			{menuState.track && (
 				<FunctionalMenu

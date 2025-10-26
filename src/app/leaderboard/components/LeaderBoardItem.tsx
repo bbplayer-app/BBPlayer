@@ -7,7 +7,7 @@ import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
-interface LeaderboardItemProps {
+interface LeaderBoardItemProps {
 	item: {
 		track: Track
 		playCount: number
@@ -15,10 +15,10 @@ interface LeaderboardItemProps {
 	index: number
 }
 
-export const LeaderboardListItem = memo(function LeaderboardListItem({
+export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 	item,
 	index,
-}: LeaderboardItemProps) {
+}: LeaderBoardItemProps) {
 	const { colors } = useTheme()
 	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const isCurrentTrack = usePlayerStore(

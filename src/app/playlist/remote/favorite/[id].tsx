@@ -77,6 +77,7 @@ export default function FavoritePage() {
 		fetchNextPage,
 		refetch,
 		hasNextPage,
+		isFetchingNextPage,
 	} = useInfiniteFavoriteList(Number(id))
 	const tracks = useMemo(() => {
 		return (
@@ -208,7 +209,7 @@ export default function FavoritePage() {
 						/>
 					}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-					hasNextPage={hasNextPage}
+					isFetchingNextPage={isFetchingNextPage}
 				/>
 			</View>
 			<View

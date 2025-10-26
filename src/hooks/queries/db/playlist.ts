@@ -1,7 +1,12 @@
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistService } from '@/lib/services/playlistService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	skipToken,
+	useInfiniteQuery,
+	useQuery,
+} from '@tanstack/react-query'
 
 queryClient.setQueryDefaults(['db', 'playlists'], {
 	retry: false,
@@ -13,12 +18,25 @@ export const playlistKeys = {
 	playlistLists: () => [...playlistKeys.all, 'playlistLists'] as const,
 	playlistContents: (playlistId: number) =>
 		[...playlistKeys.all, 'playlistContents', playlistId] as const,
+	playlistAllContents: (playlistId: number) =>
+		[...playlistKeys.playlistContents(playlistId), 'all'] as const,
 	playlistMetadata: (playlistId: number) =>
 		[...playlistKeys.all, 'playlistMetadata', playlistId] as const,
 	playlistsContainingTrack: (id: number | string | undefined) =>
 		[...playlistKeys.all, 'playlistsContainingTrack', id] as const,
 	searchTracksInPlaylist: (playlistId: number, query: string) =>
 		[...playlistKeys.all, 'searchTracksInPlaylist', playlistId, query] as const,
+	playlistContentsInfinite: (
+		playlistId: number,
+		limit: number,
+		initialLimit?: number,
+	) =>
+		[
+			...playlistKeys.playlistContents(playlistId),
+			'infinite',
+			limit,
+			initialLimit,
+		] as const,
 }
 
 export const usePlaylistLists = () => {
@@ -30,7 +48,7 @@ export const usePlaylistLists = () => {
 
 export const usePlaylistContents = (playlistId: number) => {
 	return useQuery({
-		queryKey: playlistKeys.playlistContents(playlistId),
+		queryKey: playlistKeys.playlistAllContents(playlistId),
 		queryFn: () =>
 			returnOrThrowAsync(playlistService.getPlaylistTracks(playlistId)),
 	})
@@ -73,5 +91,33 @@ export const useSearchTracksInPlaylist = (
 			),
 		enabled: !!query.trim() && startSearch,
 		placeholderData: keepPreviousData,
+	})
+}
+
+export const usePlaylistContentsInfinite = (
+	playlistId: number,
+	limit: number,
+	initialLimit?: number,
+) => {
+	return useInfiniteQuery({
+		queryKey: playlistKeys.playlistContentsInfinite(
+			playlistId,
+			limit,
+			initialLimit,
+		),
+		queryFn: ({ pageParam }) =>
+			returnOrThrowAsync(
+				playlistService.getPlaylistTracksPaginated({
+					playlistId,
+					limit,
+					initialLimit,
+					cursor: pageParam,
+				}),
+			),
+		getNextPageParam: (lastPage) => lastPage.nextCursor,
+		initialPageParam: undefined as
+			| { lastOrder: number; createdAt: number; lastId: number }
+			| undefined,
+		gcTime: 0,
 	})
 }

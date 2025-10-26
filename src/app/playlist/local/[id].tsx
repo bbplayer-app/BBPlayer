@@ -7,7 +7,7 @@ import {
 	usePlaylistSync,
 } from '@/hooks/mutations/db/playlist'
 import {
-	usePlaylistContents,
+	usePlaylistContentsInfinite,
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
@@ -71,13 +71,17 @@ export default function LocalPlaylistPage() {
 		data: playlistData,
 		isPending: isPlaylistDataPending,
 		isError: isPlaylistDataError,
-	} = usePlaylistContents(Number(id))
+		fetchNextPage: fetchNextPagePlaylistData,
+		hasNextPage: hasNextPagePlaylistData,
+	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const filteredPlaylistData = useMemo(
 		() =>
-			playlistData?.filter(
-				(item) =>
-					item.source === 'bilibili' && item.bilibiliMetadata.videoIsValid,
-			) ?? [],
+			playlistData?.pages
+				.flatMap((page) => page.tracks)
+				.filter(
+					(item) =>
+						item.source === 'bilibili' && item.bilibiliMetadata.videoIsValid,
+				) ?? [],
 		[playlistData],
 	)
 
@@ -88,7 +92,9 @@ export default function LocalPlaylistPage() {
 	} = useSearchTracksInPlaylist(Number(id), debouncedQuery, startSearch)
 
 	const finalPlaylistData = useMemo(() => {
-		if (!startSearch || !debouncedQuery.trim()) return playlistData ?? []
+		if (!startSearch || !debouncedQuery.trim()) {
+			return playlistData?.pages.flatMap((page) => page.tracks) ?? []
+		}
 
 		if (isSearchError) {
 			toastAndLogError('搜索失败', searchError, SCOPE)
@@ -191,7 +197,9 @@ export default function LocalPlaylistPage() {
 	useEffect(() => {
 		const payloads = []
 		for (const trackId of selected) {
-			const track = playlistData?.find((t) => t.id === trackId)
+			const track = playlistData?.pages
+				.flatMap((page) => page.tracks)
+				.find((t) => t.id === trackId)
 			if (!track) {
 				toast.error(`批量添加歌曲失败：未找到 track: ${trackId}`)
 				return
@@ -306,12 +314,16 @@ export default function LocalPlaylistPage() {
 					)
 					enterSelectMode(trackId)
 				}}
+				onEndReached={
+					hasNextPagePlaylistData && !startSearch
+						? () => fetchNextPagePlaylistData()
+						: undefined
+				}
 				ListHeaderComponent={
 					<PlaylistHeader
 						playlist={playlistMetadata}
 						onClickPlayAll={playAll}
 						onClickSync={handleSync}
-						validTrackCount={filteredPlaylistData.length}
 						playlistContents={filteredPlaylistData}
 						onClickCopyToLocalPlaylist={() =>
 							openModal('DuplicateLocalPlaylist', {
