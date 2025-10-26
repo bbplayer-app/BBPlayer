@@ -11,7 +11,13 @@ on:
         options:
           - prod-v8a
           - dev
+          - preview
           - blank-test
+
+  pull_request:
+    types: [closed]
+    branches:
+      - master
 
 env:
   NODE_VERSION: 22.x
@@ -19,15 +25,32 @@ env:
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MENTION_USER: "@roitium"
 
 jobs:
   build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
+      pull-requests: write
+    env:
+      BUILD_TYPE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.buildType) || 'prod-v8a' }}
+
+    environment: ${{ (github.event_name == 'pull_request' && 'production') || null }}
+
+    outputs:
+      BUILD_STATUS: ${{ job.status }}
+      BUILD_TYPE: ${{ env.BUILD_TYPE }}
+      COMMIT_SHA: ${{ (github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha) || github.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      EVENT_TYPE: ${{ github.event_name }}
+
     steps:
       - name: 🏗 Setup repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ (github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha) || github.sha }}
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4
@@ -35,7 +58,7 @@ jobs:
           version: ${{ env.PNPM_VERSION }}
 
       - name: 🏗 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -55,7 +78,7 @@ jobs:
         run: |
           APP_VERSION=$(node -p "require('./package.json').version")
 
-          APK_NAME="bbplayer-v${APP_VERSION}-${{ github.event.inputs.buildType }}.zip"
+          APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}"
           RELEASE_TAG="v${APP_VERSION}"
 
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
@@ -63,28 +86,74 @@ jobs:
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           echo "APK_TEMP_PATH=${{runner.temp}}/app.apk" >> $GITHUB_ENV
 
-      - name: 🚀 Build ${{ github.event.inputs.buildType }} APK
-        if: github.event.inputs.buildType != 'blank-test'
-        run: eas build --platform android --profile ${{ github.event.inputs.buildType }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
+      - name: 🚀 Build ${{ env.BUILD_TYPE }} APK
+        if: env.BUILD_TYPE != 'blank-test'
+        run: eas build --platform android --profile ${{ env.BUILD_TYPE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
 
       - name: 🧪 Create Dummy APK for Blank Test
-        if: github.event.inputs.buildType == 'blank-test'
+        if: env.BUILD_TYPE == 'blank-test'
         run: |
-          echo "This is a dummy APK for testing workflow. BuildType: ${{ github.event.inputs.buildType }}" > ${{ env.APK_TEMP_PATH }}
+          echo "This is a dummy APK for testing workflow. BuildType: ${{ env.BUILD_TYPE }}" > ${{ env.APK_TEMP_PATH }}
           echo "Created a dummy file at ${{ env.APK_TEMP_PATH }}"
 
       - name: 🚀 Upload APK as Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ env.APK_NAME }}
           path: ${{ env.APK_TEMP_PATH }}
           if-no-files-found: error
 
       - name: 🎁 Draft Release
-        if: startsWith(github.event.inputs.buildType, 'prod') || github.event.inputs.buildType == 'blank-test'
+        if: startsWith(env.BUILD_TYPE, 'prod') || env.BUILD_TYPE == 'blank-test'
         run: |
           gh release create ${{ env.RELEASE_TAG }} \
-            "${{ env.APK_TEMP_PATH }}#${{ env.APK_NAME }}" \
+            "${{ env.APK_TEMP_PATH }}#${{ env.APK_NAME }}.apk" \
             --title "${{ env.RELEASE_TAG }}" \
             --draft \
             --notes "auto release by GitHub Actions"
+
+  notify:
+    needs: build
+    if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: 💬 Send build status notification
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const buildStatus = "${{ needs.build.outputs.BUILD_STATUS }}";
+            const buildType = "${{ needs.build.outputs.BUILD_TYPE }}";
+            const commitSha = "${{ needs.build.outputs.COMMIT_SHA }}";
+            const prNumber = "${{ needs.build.outputs.PR_NUMBER }}";
+            const runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";
+            const mention = "${{ env.MENTION_USER }}";
+
+            const icon = buildStatus == 'success' ? '✅' : '❌';
+            const title = buildStatus == 'success' ? `构建软件包成功` : `构建软件包失败`;
+
+            let body = `
+            ## ${icon} ${title} (${buildType})
+
+            ${mention}, 新版触发的构建已经完成
+
+            - **状态:** ${buildStatus}
+            - **提交:** \`${commitSha.substring(0, 7)}\`
+            - **详细信息:** [Workflow](${runUrl})
+            `;
+
+            if (prNumber) {
+              body += `\n- **触发事件:** PR #${prNumber}`;
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: body
+                });
+                return;
+              } catch (e) {
+                console.error(`Failed to comment on PR: ${e.message}.`);
+              }
+            }
