@@ -48,6 +48,7 @@ export type ModalPropsMap = {
 	ManualSearchLyrics: { uniqueKey: string; initialQuery: string }
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
+	SleepTimer: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

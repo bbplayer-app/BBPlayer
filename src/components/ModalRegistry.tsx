@@ -9,6 +9,7 @@ import CookieLoginModal from './modals/login/CookieLoginModal'
 import QrCodeLoginModal from './modals/login/QRCodeLoginModal'
 import EditLyricsModal from './modals/lyrics/EditLyrics'
 import ManualSearchLyricsModal from './modals/lyrics/ManualSearchLyrics'
+import SleepTimerModal from './modals/player/SleepTimerModal'
 import BatchAddTracksToLocalPlaylistModal from './modals/playlist/BatchAddTracksToLocalPlaylist'
 import CreatePlaylistModal from './modals/playlist/CreatePlaylistModal'
 import DuplicateLocalPlaylistModal from './modals/playlist/DuplicateLocalPlaylistModal'
@@ -33,4 +34,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	ManualSearchLyrics: ManualSearchLyricsModal,
 	Alert: AlertModal,
 	EditLyrics: EditLyricsModal,
+	SleepTimer: SleepTimerModal,
 }

@@ -1,3 +1,4 @@
+import navigationRef from '@/app/navigationRef'
 import { downloadService } from '@/lib/services/downloadService'
 import type {
 	DownloadActions,
@@ -9,6 +10,7 @@ import createStickyEmitter from '@/utils/sticky-mitt'
 import notifee, {
 	AndroidImportance,
 	AuthorizationStatus,
+	EventType,
 } from '@notifee/react-native'
 import { AppState } from 'react-native'
 import { create } from 'zustand'
@@ -35,6 +37,14 @@ AppState.addEventListener('change', async (state) => {
 		const settings = await notifee.getNotificationSettings()
 		disableNotification =
 			settings.authorizationStatus !== AuthorizationStatus.AUTHORIZED
+	}
+})
+
+notifee.onForegroundEvent(({ type }) => {
+	switch (type) {
+		case EventType.PRESS:
+			navigationRef.current?.navigate('Download')
+			break
 	}
 })
 
@@ -90,6 +100,9 @@ async function updateSummaryNotification(
 				ongoing: true,
 				autoCancel: false,
 				onlyAlertOnce: true,
+				pressAction: {
+					id: 'default',
+				},
 			},
 		})
 	} catch (e) {
