@@ -226,6 +226,9 @@ importers:
       react-native-edge-to-edge:
         specifier: ^1.7.0
         version: 1.7.0(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
+      react-native-fast-shimmer:
+        specifier: ^1.3.4
+        version: 1.3.4(react-native-reanimated@4.1.3(@babel/core@7.28.4)(react-native-worklets@0.5.1(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native-svg@15.12.1(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       react-native-gesture-handler:
         specifier: ~2.28.0
         version: 2.28.0(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
@@ -5915,6 +5918,14 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-fast-shimmer@1.3.4:
+    resolution: {integrity: sha512-YGld+8f2Md7cwoo2nDkURFuBRHrOIdC6S5n5avDXGr/qPjL7PwydccOmU+zCl21it4cf8v7gUH3zdfozHeDSvA==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-reanimated: ^3.0.0 || ^4.0.0
+      react-native-svg: ^14.0.0 || ^15.0.0
 
   react-native-gesture-handler@2.28.0:
     resolution: {integrity: sha512-0msfJ1vRxXKVgTgvL+1ZOoYw3/0z1R+Ked0+udoJhyplC2jbVKIJ8Z1bzWdpQRCV3QcQ87Op0zJVE5DhKK2A0A==}
@@ -13863,6 +13874,13 @@ snapshots:
     dependencies:
       react: 19.1.0
       react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
+
+  react-native-fast-shimmer@1.3.4(react-native-reanimated@4.1.3(@babel/core@7.28.4)(react-native-worklets@0.5.1(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native-svg@15.12.1(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
+      react-native-reanimated: 4.1.3(@babel/core@7.28.4)(react-native-worklets@0.5.1(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
+      react-native-svg: 15.12.1(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
 
   react-native-gesture-handler@2.28.0(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
     dependencies:

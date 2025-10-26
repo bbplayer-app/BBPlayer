@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, inArray, like, sql } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
@@ -463,6 +464,8 @@ export class PlaylistService {
 	public getPlaylistMetadata(playlistId: number): ResultAsync<
 		| (typeof schema.playlists.$inferSelect & {
 				author: typeof schema.artists.$inferSelect | null
+		  } & {
+				validTrackCount: number
 		  })
 		| undefined,
 		DatabaseError
@@ -472,6 +475,16 @@ export class PlaylistService {
 				where: eq(schema.playlists.id, playlistId),
 				with: {
 					author: true,
+				},
+				extras: {
+					validTrackCount: sql<number>`(
+            SELECT COUNT(pt.track_id)
+            FROM ${schema.playlistTracks} AS pt
+            LEFT JOIN ${schema.bilibiliMetadata} AS bm
+              ON pt.track_id = bm.track_id
+            WHERE pt.playlist_id = ${schema.playlists.id}
+              AND (bm.video_is_valid IS NOT false)
+          )`.as('valid_track_count'),
 				},
 			}),
 			(e) => new DatabaseError('获取 playlist 元数据失败', { cause: e }),
@@ -735,6 +748,143 @@ export class PlaylistService {
 					? e
 					: new DatabaseError('搜索歌曲失败', { cause: e }),
 		)
+	}
+
+	/**
+	 * 游标分页的获取播放列表中歌曲
+	 *
+	 * @param options - 分页选项
+	 * @param options.playlistId - 目标播放列表的 ID。
+	 * @param options.initialLimit - 如果是第一页，使用的数量限制（如无则为 limit）
+	 * @param options.limit - 每次获取的数量
+	 * @param options.cursor - 上一页最后一条记录的游标。
+	 * 如果是第一页，则为 undefined。
+	 * @returns ResultAsync 包含歌曲列表和下一个游标
+	 */
+	public getPlaylistTracksPaginated(options: {
+		playlistId: number
+		initialLimit?: number
+		limit: number
+		cursor:
+			| {
+					lastOrder: number
+					createdAt: number
+					lastId: number
+			  }
+			| undefined
+	}): ResultAsync<
+		{
+			tracks: Track[]
+			nextCursor?: {
+				lastOrder: number
+				createdAt: number
+				lastId: number
+			}
+		},
+		DatabaseError | ServiceError
+	> {
+		const { limit, cursor, playlistId, initialLimit } = options
+
+		const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				const playlist = await this.db.query.playlists.findFirst({
+					columns: { type: true },
+					where: eq(schema.playlists.id, playlistId),
+				})
+				if (!playlist) throw createPlaylistNotFound(playlistId)
+
+				const isDesc = playlist.type === 'local'
+				const sortDirection = isDesc ? desc : asc
+				const operator = isDesc ? lt : gt
+
+				const orderBy = [
+					sortDirection(schema.playlistTracks.order),
+					sortDirection(schema.playlistTracks.createdAt),
+					sortDirection(schema.playlistTracks.trackId),
+				]
+
+				const whereClauses: (SQL | undefined)[] = [
+					eq(schema.playlistTracks.playlistId, playlistId),
+				]
+
+				if (cursor) {
+					const { lastOrder, createdAt, lastId } = cursor
+					const dateObj = new Date(createdAt)
+
+					whereClauses.push(
+						or(
+							operator(schema.playlistTracks.order, lastOrder),
+							and(
+								eq(schema.playlistTracks.order, lastOrder),
+								operator(schema.playlistTracks.createdAt, dateObj),
+							),
+							and(
+								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.createdAt, dateObj),
+								operator(schema.playlistTracks.trackId, lastId),
+							),
+						),
+					)
+				}
+
+				const data = await this.db.query.playlistTracks.findMany({
+					where: and(...whereClauses),
+					orderBy: orderBy,
+					limit: effectiveLimit + 1,
+					with: {
+						track: {
+							with: {
+								artist: true,
+								bilibiliMetadata: true,
+								localMetadata: true,
+								trackDownloads: true,
+							},
+							columns: {
+								playHistory: false,
+							},
+						},
+					},
+				})
+
+				return data
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('分页获取播放列表歌曲的事务失败', { cause: e }),
+		).andThen((data) => {
+			const newTracks: Track[] = []
+			for (const pt of data) {
+				const t = this.trackService.formatTrack(pt.track)
+				if (!t) {
+					return errAsync(
+						new ServiceError(
+							`在格式化歌曲：${pt.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
+						),
+					)
+				}
+				newTracks.push(t)
+			}
+
+			let nextCursor
+			const hasMore = data.length === effectiveLimit + 1
+
+			if (hasMore) {
+				const lastItem = data[effectiveLimit - 1]
+				nextCursor = {
+					lastOrder: lastItem.order,
+					createdAt: lastItem.createdAt.getTime(),
+					lastId: lastItem.trackId,
+				}
+			}
+
+			return okAsync({
+				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				nextCursor,
+			})
+		})
 	}
 }
 

@@ -1,11 +1,12 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Image } from 'expo-image'
 import { memo } from 'react'
-import { TouchableOpacity, View } from 'react-native'
+import { View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const MultiPageVideosItem = memo(
@@ -14,23 +15,22 @@ const MultiPageVideosItem = memo(
 			useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
 		return (
-			<View key={item.bvid}>
-				<View style={{ marginVertical: 8, overflow: 'hidden' }}>
-					<TouchableOpacity
-						activeOpacity={0.7}
+			<>
+				<View>
+					<RectButton
 						onPress={() => {
 							navigation.navigate('PlaylistMultipage', { bvid: item.bvid })
 						}}
+						style={{ paddingVertical: 8, overflow: 'hidden' }}
 					>
 						<View
 							style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 						>
-							<Image
-								source={{ uri: item.cover ?? undefined }}
-								recyclingKey={item.bvid}
-								style={{ width: 48, height: 48, borderRadius: 4 }}
-								transition={300}
-								cachePolicy={'none'}
+							<CoverWithPlaceHolder
+								id={item.bvid}
+								coverUrl={item.cover}
+								title={item.title}
+								size={48}
 							/>
 							<View style={{ marginLeft: 12, flex: 1 }}>
 								<Text
@@ -49,10 +49,10 @@ const MultiPageVideosItem = memo(
 								size={24}
 							/>
 						</View>
-					</TouchableOpacity>
+					</RectButton>
 				</View>
 				<Divider />
-			</View>
+			</>
 		)
 	},
 )

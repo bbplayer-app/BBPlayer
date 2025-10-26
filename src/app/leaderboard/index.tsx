@@ -1,6 +1,6 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import {
-	usePlayCountLeaderboard,
+	usePlayCountLeaderBoardPaginated,
 	useTotalPlaybackDuration,
 } from '@/hooks/queries/db/track'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
@@ -17,9 +17,9 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LeaderboardListItem } from './components/LeaderboardItem'
+import { LeaderBoardListItem } from './components/LeaderBoardItem'
 
-interface LeaderboardItemData {
+interface LeaderBoardItemData {
 	track: Track
 	playCount: number
 }
@@ -40,29 +40,26 @@ const formatDurationToWords = (seconds: number) => {
 	return parts.join(' ')
 }
 
-export default function LeaderboardPage() {
+export default function LeaderBoardPage() {
 	const { colors } = useTheme()
 	const navigation = useNavigation()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
 
 	const {
-		data: leaderboardData,
-		isLoading: isLeaderboardLoading,
-		isError: isLeaderboardError,
+		data: leaderBoardData,
+		isLoading: isLeaderBoardLoading,
+		isError: isLeaderBoardError,
 		fetchNextPage,
 		hasNextPage,
 		isFetchingNextPage,
-	} = usePlayCountLeaderboard({
-		limit: 30,
-		onlyCompleted: true,
-	})
+	} = usePlayCountLeaderBoardPaginated(30, true, 15)
 	const { data: totalDurationData, isError: isTotalDurationError } =
 		useTotalPlaybackDuration(true)
 
 	const allTracks = useMemo(() => {
-		return leaderboardData?.pages.flatMap((page) => page.items) ?? []
-	}, [leaderboardData])
+		return leaderBoardData?.pages.flatMap((page) => page.items) ?? []
+	}, [leaderBoardData])
 
 	const totalDuration = useMemo(() => {
 		if (isTotalDurationError || !totalDurationData) return '0秒'
@@ -70,8 +67,8 @@ export default function LeaderboardPage() {
 	}, [totalDurationData, isTotalDurationError])
 
 	const renderItem = useCallback(
-		({ item, index }: { item: LeaderboardItemData; index: number }) => (
-			<LeaderboardListItem
+		({ item, index }: { item: LeaderBoardItemData; index: number }) => (
+			<LeaderBoardListItem
 				item={item}
 				index={index}
 			/>
@@ -80,7 +77,7 @@ export default function LeaderboardPage() {
 	)
 
 	const keyExtractor = useCallback(
-		(item: LeaderboardItemData) => item.track.uniqueKey,
+		(item: LeaderBoardItemData) => item.track.uniqueKey,
 		[],
 	)
 
@@ -91,7 +88,7 @@ export default function LeaderboardPage() {
 	}
 
 	const renderContent = () => {
-		if (isLeaderboardLoading) {
+		if (isLeaderBoardLoading) {
 			return (
 				<ActivityIndicator
 					animating={true}
@@ -100,7 +97,7 @@ export default function LeaderboardPage() {
 			)
 		}
 
-		if (isLeaderboardError) {
+		if (isLeaderBoardError) {
 			return (
 				<View
 					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
@@ -130,19 +127,31 @@ export default function LeaderboardPage() {
 				}}
 				onEndReached={onEndReached}
 				onEndReachedThreshold={0.8}
+				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
-					<View style={{ paddingVertical: 32, alignItems: 'center' }}>
-						{isFetchingNextPage ? (
-							<ActivityIndicator />
-						) : !hasNextPage ? (
-							<Text
-								variant='bodyMedium'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								已经到底啦
-							</Text>
-						) : null}
-					</View>
+					isFetchingNextPage ? (
+						<View
+							style={{
+								flexDirection: 'row',
+								alignItems: 'center',
+								justifyContent: 'center',
+								padding: 16,
+							}}
+						>
+							<ActivityIndicator size='small' />
+						</View>
+					) : !hasNextPage ? (
+						<Text
+							variant='bodyMedium'
+							style={{
+								color: colors.onSurfaceVariant,
+								textAlign: 'center',
+								paddingTop: 10,
+							}}
+						>
+							已经到底啦
+						</Text>
+					) : null
 				}
 			/>
 		)

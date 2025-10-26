@@ -1,7 +1,7 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import { Image } from 'expo-image'
 import { memo, useCallback, useRef } from 'react'
 import { Easing, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
@@ -144,13 +144,11 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Cover Image */}
 					{showCoverImage ? (
-						<Image
-							source={{
-								uri: data.coverUrl ?? data.artist?.avatarUrl ?? undefined,
-							}}
-							recyclingKey={data.uniqueKey}
-							style={{ width: 45, height: 45, borderRadius: 4 }}
-							cachePolicy={'none'}
+						<CoverWithPlaceHolder
+							id={data.id}
+							coverUrl={data.coverUrl ?? data.artist?.avatarUrl}
+							title={data.title}
+							size={48}
 						/>
 					) : null}
 

@@ -5,6 +5,7 @@ import * as Haptics from '@/utils/haptics'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useImage } from 'expo-image'
 import { useRef, useState } from 'react'
 import { Dimensions, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
@@ -28,6 +29,8 @@ export default function PlayerPage() {
 
 	const [viewMode, setViewMode] = useState<'cover' | 'lyrics'>('cover')
 	const [menuVisible, setMenuVisible] = useState(false)
+
+	const coverRef = useImage(currentTrack?.coverUrl ?? '')
 
 	if (!currentTrack) {
 		return (
@@ -86,6 +89,7 @@ export default function PlayerPage() {
 								)
 								setViewMode('lyrics')
 							}}
+							coverRef={coverRef}
 						/>
 					) : (
 						<Lyrics

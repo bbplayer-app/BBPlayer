@@ -26,7 +26,7 @@ export type RootStackParamList = {
 	PlaylistUploader: { mid: string }
 	PlaylistLocal: { id: string }
 	SearchResultFav: { query: string }
-	Leaderboard: undefined
+	LeaderBoard: undefined
 	ModalHost: undefined
 	Download: undefined
 }
@@ -48,6 +48,7 @@ export type ModalPropsMap = {
 	ManualSearchLyrics: { uniqueKey: string; initialQuery: string }
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
+	SleepTimer: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

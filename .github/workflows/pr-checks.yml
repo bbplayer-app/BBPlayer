@@ -1,0 +1,67 @@
+name: "PR Checks"
+
+on: pull_request
+
+jobs:
+  lint:
+    name: 🚨 Lint Codebase
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+
+      - name: 🏗 Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+          cache: "pnpm"
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: 🚀 Run Lint
+        run: pnpm lint
+
+  version-check:
+    name: ✏️ Check Version Bump in package.json
+    runs-on: ubuntu-latest
+
+    if: github.base_ref == 'master'
+
+    steps:
+      - name: 🏗 Setup current pr branch
+        uses: actions/checkout@v5
+
+      - name: 🏗 Setup master branch
+        uses: actions/checkout@v5
+        with:
+          ref: "master"
+          path: "master_code"
+
+      - name: 🔍 Compare package.json versions
+        run: |
+          PR_VERSION=$(jq -r '.version' package.json)
+          PR_VERSION_CODE=$(jq -r '.versionCode' package.json)
+
+          MASTER_VERSION=$(jq -r '.version' master_code/package.json)
+          MASTER_VERSION_CODE=$(jq -r '.versionCode' master_code/package.json)
+
+          echo "---"
+          echo "PR Branch:     version='${PR_VERSION}', versionCode='${PR_VERSION_CODE}'"
+          echo "Master Branch: version='${MASTER_VERSION}', versionCode='${MASTER_VERSION_CODE}'"
+          echo "---"
+
+          if [ "$PR_VERSION" == "$MASTER_VERSION" ]; then
+            echo "::error::Validation Failed: 'version' ($PR_VERSION) in package.json has not been updated. It is the same as master."
+            exit 1
+          fi
+
+          if [ "$PR_VERSION_CODE" -le "$MASTER_VERSION_CODE" ]; then
+            echo "::error::Validation Failed: 'versionCode' ($PR_VERSION_CODE) in package.json has not been updated. It is the same as or less than master."
+            exit 1
+          fi

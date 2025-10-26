@@ -30,8 +30,9 @@ interface TrackListProps {
 	ListEmptyComponent?: Parameters<typeof FlashList>[0]['ListEmptyComponent']
 	refreshControl: Parameters<typeof FlashList>[0]['refreshControl']
 	onEndReached?: () => void
-	hasNextPage?: boolean
 	showItemCover?: boolean
+	isFetchingNextPage?: boolean
+	hasNextPage?: boolean
 }
 
 export function TrackList({
@@ -47,8 +48,9 @@ export function TrackList({
 	ListEmptyComponent,
 	refreshControl,
 	onEndReached,
-	hasNextPage,
 	showItemCover,
+	isFetchingNextPage,
+	hasNextPage,
 }: TrackListProps) {
 	const colors = useTheme().colors
 	const currentTrack = useCurrentTrack()
@@ -141,8 +143,7 @@ export function TrackList({
 				}}
 				onEndReached={onEndReached}
 				ListFooterComponent={
-					ListFooterComponent ??
-					(hasNextPage ? (
+					(isFetchingNextPage ? (
 						<View
 							style={{
 								flexDirection: 'row',
@@ -153,7 +154,7 @@ export function TrackList({
 						>
 							<ActivityIndicator size='small' />
 						</View>
-					) : (
+					) : hasNextPage ? (
 						<Text
 							variant='titleMedium'
 							style={{
@@ -163,7 +164,7 @@ export function TrackList({
 						>
 							•
 						</Text>
-					))
+					) : null) ?? ListFooterComponent
 				}
 				ListEmptyComponent={
 					ListEmptyComponent ?? (

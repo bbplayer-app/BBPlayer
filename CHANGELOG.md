@@ -5,6 +5,21 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 给视频/播放列表封面加了个渐变 placeholder
+- 本地播放列表使用基于游标的无限滚动
+- 定时关闭功能
+- 点击通知可跳转到下载页面
+
+### Fixed
+
+- 对 NowPlayingBar 的 ProgressBar 的颜色和位置进行一点修复，更符合直觉
+- 直接在 Sentry.init 中忽略 ExpoHaptics 的错误
+- 这次真的修复了模态框错位的问题（确信）
+
 ## [1.3.5] - 2025-10-26
 
 ### Fixed
@@ -70,7 +85,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.4...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.5...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4

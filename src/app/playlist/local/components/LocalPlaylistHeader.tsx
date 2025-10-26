@@ -1,3 +1,4 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -6,7 +7,6 @@ import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
 import { useNavigation } from '@react-navigation/native'
 import * as Clipboard from 'expo-clipboard'
-import { Image } from 'expo-image'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {
@@ -19,11 +19,10 @@ import {
 } from 'react-native-paper'
 
 interface PlaylistHeaderProps {
-	playlist: Playlist
+	playlist: Playlist & { validTrackCount: number }
 	playlistContents: Track[]
 	onClickPlayAll: () => void
 	onClickSync: () => void
-	validTrackCount: number
 	onClickCopyToLocalPlaylist: () => void
 	/** 当作者为 bilibili 时触发。可选，未提供时仅视觉提示不响应 */
 	onPressAuthor?: (author: NonNullable<Playlist['author']>) => void
@@ -39,17 +38,16 @@ interface SubtitlePieces {
 
 // 三元运算符过于难懂，还是用函数好一些
 function buildSubtitlePieces(
-	playlist: Playlist,
-	validTrackCount: number,
+	playlist: Playlist & { validTrackCount: number },
 ): SubtitlePieces {
 	const isLocal = playlist.type === 'local'
 
 	const countRaw =
-		validTrackCount !== playlist.itemCount
-			? `${playlist.itemCount}(${validTrackCount})`
-			: `${playlist.itemCount}`
+		playlist.validTrackCount !== playlist.itemCount
+			? `${playlist.itemCount} 首 ( ${playlist.itemCount - playlist.validTrackCount} 首失效) `
+			: `${playlist.itemCount} 首`
 
-	const countText = `${countRaw} 首歌曲`
+	const countText = `${countRaw}歌曲`
 
 	const authorName = !isLocal
 		? (playlist.author?.name ?? '未知作者')
@@ -73,7 +71,6 @@ function buildSubtitlePieces(
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
-	validTrackCount,
 	playlistContents,
 	onClickPlayAll,
 	onClickSync,
@@ -87,8 +84,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const navigation = useNavigation()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
-		() => buildSubtitlePieces(playlist, validTrackCount),
-		[playlist, validTrackCount],
+		() => buildSubtitlePieces(playlist),
+		[playlist],
 	)
 	const onClickDownloadAll = useCallback(() => {
 		if (!playlistContents) return
@@ -112,11 +109,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		<View style={{ position: 'relative', flexDirection: 'column' }}>
 			{/* 顶部信息 */}
 			<View style={{ flexDirection: 'row', margin: 16, alignItems: 'center' }}>
-				<Image
-					source={{ uri: playlist.coverUrl ?? undefined }}
-					contentFit='cover'
-					style={{ width: 120, height: 120, borderRadius: 8 }}
-					cachePolicy={'disk'}
+				<CoverWithPlaceHolder
+					id={playlist.id}
+					coverUrl={playlist.coverUrl}
+					title={playlist.title}
+					size={120}
+					borderRadius={8}
 				/>
 
 				<View
@@ -140,7 +138,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					>
 						<Text
 							variant='titleLarge'
-							style={{ fontWeight: 'bold' }}
+							style={{ fontWeight: 'bold', marginBottom: 8 }}
 							numberOfLines={showFullTitle ? undefined : 2}
 						>
 							{playlist.title}
@@ -148,17 +146,18 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					</TouchableRipple>
 
 					<Text
-						variant='bodyMedium'
-						style={{ fontWeight: '100' }}
-						numberOfLines={2}
+						variant='bodySmall'
+						style={{ fontWeight: '100', lineHeight: 18 }}
+						numberOfLines={3}
 					>
 						{isLocal ? (
 							<>{countText}</>
 						) : (
 							<>
 								{/* 作者名 */}
+								{'创建者：'}
 								<Text
-									variant='bodyMedium'
+									variant='bodySmall'
 									onPress={
 										authorClickable && playlist.author
 											? () => onPressAuthor?.(playlist.author!)
@@ -170,7 +169,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 								>
 									{authorName}
 								</Text>
-								{' • '}
+								{'\n'}
 								{countText}
 								{syncLine ? '\n' : ''}
 								{syncLine}
