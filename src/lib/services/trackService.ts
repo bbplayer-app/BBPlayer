@@ -589,16 +589,18 @@ export class TrackService {
 	 * 获取播放次数排行榜（游标分页）。
 	 *
 	 * @param {object} [options] 配置项
-	 * @param {number} [options.limit=20] 每页返回的数量。
+	 * @param {number} [options.limit] 每页返回的数量。
 	 * @param {boolean} [options.onlyCompleted=true] 是否只统计完整播放。
+	 * @param {number} [options.initialLimit] 如果是第一页，使用的数量限制（如无则为 limit）
 	 * @param {object} [options.cursor] 上一页的游标（来自上一页的 `nextCursor`）。
 	 * @param {number} [options.cursor.lastPlayCount] 上一页最后一个项目的播放量。
 	 * @param {number} [options.cursor.lastUpdatedAt] 上一页最后一个项目的更新时间戳。
 	 * @param {number} [options.cursor.lastId] 上一页最后一个项目的 ID。
 	 * @returns 播放次数排行榜及下一页游标的异步结果。
 	 */
-	public getPlayCountLeaderboard(options?: {
-		limit?: number
+	public getPlayCountLeaderBoardPaginated(options: {
+		limit: number
+		initialLimit?: number
 		onlyCompleted?: boolean
 		cursor?: { lastPlayCount: number; lastUpdatedAt: number; lastId: number }
 	}): ResultAsync<
@@ -612,7 +614,9 @@ export class TrackService {
 		},
 		DatabaseError | ServiceError
 	> {
-		const { limit = 20, onlyCompleted = true, cursor } = options ?? {}
+		const { limit, onlyCompleted = true, cursor, initialLimit } = options
+
+		const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
 
 		const playCountSql = onlyCompleted
 			? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
@@ -656,15 +660,15 @@ export class TrackService {
 				desc(schema.tracks.updatedAt),
 				desc(schema.tracks.id),
 			],
-			limit: limit + 1,
+			limit: effectiveLimit + 1,
 		})
 
 		return ResultAsync.fromPromise(
 			leaderboardQuery,
 			(e) => new DatabaseError('获取播放次数排行榜失败', { cause: e }),
 		).andThen((rows) => {
-			const hasNextPage = rows.length > limit
-			const resultItems = hasNextPage ? rows.slice(0, limit) : rows
+			const hasNextPage = rows.length > effectiveLimit
+			const resultItems = hasNextPage ? rows.slice(0, effectiveLimit) : rows
 
 			const items: { track: Track; playCount: number }[] = []
 			for (const row of resultItems) {

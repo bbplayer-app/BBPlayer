@@ -88,7 +88,7 @@ export default function Library() {
 						/>
 						<IconButton
 							icon='trophy'
-							onPress={() => navigation.navigate('Leaderboard')}
+							onPress={() => navigation.navigate('LeaderBoard')}
 						/>
 					</View>
 				</View>

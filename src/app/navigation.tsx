@@ -1,5 +1,5 @@
 import DownloadPage from '@/app/download'
-import LeaderboardPage from '@/app/leaderboard'
+import LeaderBoardPage from '@/app/leaderboard'
 import NotFoundScreen from '@/app/not-found'
 import PlayerPage from '@/app/player/player'
 import LocalPlaylistPage from '@/app/playlist/local/[id]'
@@ -69,8 +69,8 @@ export function RootLayoutNav() {
 					component={LocalPlaylistPage}
 				/>
 				<RootStack.Screen
-					name='Leaderboard'
-					component={LeaderboardPage}
+					name='LeaderBoard'
+					component={LeaderBoardPage}
 				/>
 				<RootStack.Screen
 					name='Download'

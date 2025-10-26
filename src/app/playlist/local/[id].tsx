@@ -7,7 +7,7 @@ import {
 	usePlaylistSync,
 } from '@/hooks/mutations/db/playlist'
 import {
-	usePlaylistContents,
+	usePlaylistContentsInfinite,
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
@@ -26,7 +26,7 @@ import {
 	useRoute,
 } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
@@ -71,15 +71,16 @@ export default function LocalPlaylistPage() {
 		data: playlistData,
 		isPending: isPlaylistDataPending,
 		isError: isPlaylistDataError,
-	} = usePlaylistContents(Number(id))
-	const filteredPlaylistData = useMemo(
-		() =>
-			playlistData?.filter(
-				(item) =>
-					item.source === 'bilibili' && item.bilibiliMetadata.videoIsValid,
-			) ?? [],
-		[playlistData],
-	)
+		fetchNextPage: fetchNextPagePlaylistData,
+		hasNextPage: hasNextPagePlaylistData,
+		isFetchingNextPage: isFetchingNextPagePlaylistData,
+	} = usePlaylistContentsInfinite(Number(id), 30, 15)
+	const allLoadedTracks =
+		playlistData?.pages.flatMap((page) => page.tracks) ?? []
+	const filteredPlaylistData =
+		allLoadedTracks.filter((item) =>
+			item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+		) ?? []
 
 	const {
 		data: searchData,
@@ -87,8 +88,10 @@ export default function LocalPlaylistPage() {
 		error: searchError,
 	} = useSearchTracksInPlaylist(Number(id), debouncedQuery, startSearch)
 
-	const finalPlaylistData = useMemo(() => {
-		if (!startSearch || !debouncedQuery.trim()) return playlistData ?? []
+	const finalPlaylistData = (() => {
+		if (!startSearch || !debouncedQuery.trim()) {
+			return allLoadedTracks
+		}
 
 		if (isSearchError) {
 			toastAndLogError('搜索失败', searchError, SCOPE)
@@ -96,14 +99,7 @@ export default function LocalPlaylistPage() {
 		}
 
 		return searchData ?? []
-	}, [
-		startSearch,
-		debouncedQuery,
-		playlistData,
-		isSearchError,
-		searchData,
-		searchError,
-	])
+	})()
 
 	const {
 		data: playlistMetadata,
@@ -191,7 +187,9 @@ export default function LocalPlaylistPage() {
 	useEffect(() => {
 		const payloads = []
 		for (const trackId of selected) {
-			const track = playlistData?.find((t) => t.id === trackId)
+			const track = playlistData?.pages
+				.flatMap((page) => page.tracks)
+				.find((t) => t.id === trackId)
 			if (!track) {
 				toast.error(`批量添加歌曲失败：未找到 track: ${trackId}`)
 				return
@@ -306,12 +304,18 @@ export default function LocalPlaylistPage() {
 					)
 					enterSelectMode(trackId)
 				}}
+				onEndReached={
+					hasNextPagePlaylistData &&
+					!startSearch &&
+					!isFetchingNextPagePlaylistData
+						? () => fetchNextPagePlaylistData()
+						: undefined
+				}
 				ListHeaderComponent={
 					<PlaylistHeader
 						playlist={playlistMetadata}
 						onClickPlayAll={playAll}
 						onClickSync={handleSync}
-						validTrackCount={filteredPlaylistData.length}
 						playlistContents={filteredPlaylistData}
 						onClickCopyToLocalPlaylist={() =>
 							openModal('DuplicateLocalPlaylist', {
