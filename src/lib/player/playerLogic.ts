@@ -1,6 +1,6 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { ProjectScope } from '@/types/core/scope'
-import log, { reportErrorToSentry } from '@/utils/log'
+import log, { reportErrorToSentry, toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
 import TrackPlayer, {
 	AppKilledPlaybackBehavior,
@@ -61,7 +61,6 @@ const PlayerLogic = {
 				android: {
 					appKilledPlaybackBehavior: AppKilledPlaybackBehavior.PausePlayback,
 				},
-				// FIXME: wtf??? rntp 5.0 没法设置 icon 了
 			})
 			// 设置重复模式为 Off
 			await TrackPlayer.setRepeatMode(RepeatMode.Off)
@@ -214,6 +213,29 @@ const PlayerLogic = {
 				// }
 			},
 		)
+
+		TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, () => {
+			const { sleepTimerEndAt, setSleepTimer } = usePlayerStore.getState()
+			if (sleepTimerEndAt && Date.now() >= sleepTimerEndAt) {
+				logger.info('定时器时间到，暂停播放')
+				usePlayerStore.setState((state) => ({
+					...state,
+					isPlaying: false,
+					isBuffering: false,
+				}))
+				void TrackPlayer.pause()
+					.catch((error) => {
+						toastAndLogError('定时时间到了，但暂停播放失败', error, 'Player')
+						reportErrorToSentry(error, '暂停播放失败', ProjectScope.Player)
+						setSleepTimer(null)
+						return
+					})
+					.then(() => {
+						toast.success('已根据您的设置自动暂停播放')
+						setSleepTimer(null)
+					})
+			}
+		})
 	},
 }
 

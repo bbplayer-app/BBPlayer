@@ -1,31 +1,11 @@
 import navigationRef from '@/app/navigationRef'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { ModalKey } from '@/types/navigation'
 import { usePreventRemove } from '@react-navigation/native'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { useShallow } from 'zustand/shallow'
 import AnimatedModalOverlay from './commonUIs/AnimatedModalOverlay'
 import { modalRegistry } from './ModalRegistry'
-
-function closeWithKeyboardDismiss(key: ModalKey) {
-	if (!Keyboard.isVisible()) {
-		useModalStore.getState().close(key)
-		return
-	}
-
-	Keyboard.dismiss()
-
-	const sub = Keyboard.addListener('keyboardDidHide', () => {
-		sub.remove()
-		useModalStore.getState().close(key)
-	})
-
-	setTimeout(() => {
-		sub.remove()
-		useModalStore.getState().close(key)
-	}, 1500)
-}
 
 export default function ModalHost() {
 	const { modals } = useModalStore(
@@ -35,6 +15,7 @@ export default function ModalHost() {
 	)
 	const closeTop = useModalStore((s) => s.closeTop)
 	const eventEmitter = useModalStore((s) => s.eventEmitter)
+	const [canUnmountHost, setCanUnmountHost] = useState(modals.length > 0)
 
 	usePreventRemove(modals.length > 0, () => {
 		if (modals[modals.length - 1].options?.dismissible === false) {
@@ -44,9 +25,16 @@ export default function ModalHost() {
 	})
 
 	useEffect(() => {
-		if (modals.length === 0 && navigationRef.current) {
+		if (modals.length === 0) return
+		setCanUnmountHost(false)
+	}, [modals])
+
+	useEffect(() => {
+		const closeAction = () => {
+			if (!navigationRef.current) return
 			const cur = navigationRef.current.getCurrentRoute?.()
 			if (cur?.name === 'ModalHost' && navigationRef.current.canGoBack?.()) {
+				setCanUnmountHost(true)
 				navigationRef.current.goBack()
 				// 确保在 ModalHost 关闭后再执行回调，避免其他导航操作与 ModalHost 关闭发生竞态
 				setImmediate(() => {
@@ -54,9 +42,13 @@ export default function ModalHost() {
 				})
 			}
 		}
+		if (modals.length === 0 && navigationRef.current) {
+			Keyboard.dismiss()
+			closeAction()
+		}
 	}, [eventEmitter, modals])
 
-	if (!modals.length) return null
+	if (canUnmountHost) return null
 
 	return (
 		<View
@@ -76,7 +68,7 @@ export default function ModalHost() {
 								m.options?.dismissible === undefined ||
 								m.options?.dismissible
 							) {
-								closeWithKeyboardDismiss(m.key)
+								useModalStore.getState().close(m.key)
 							}
 						}}
 						contentStyle={{ zIndex }}

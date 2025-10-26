@@ -21,6 +21,9 @@ interface PlayerState {
 
 	// 播放统计
 	currentPlayStartAt: number | null // 当前曲目开始播放的时间戳(ms)
+
+	// 定时关闭
+	sleepTimerEndAt: number | null
 }
 
 interface addToQueueParams {
@@ -64,6 +67,7 @@ interface PlayerActions {
 	// 模式控制
 	toggleRepeatMode: () => void
 	toggleShuffleMode: () => void
+	setSleepTimer: (durationInSeconds: number | null) => void
 
 	// 音频流处理
 	patchAudio: (
