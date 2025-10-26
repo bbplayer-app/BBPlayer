@@ -125,6 +125,14 @@ export function PlayerFunctionalMenu({
 				title='搜索歌词'
 				leadingIcon='magnify'
 			/>
+			<Menu.Item
+				onPress={() => {
+					setMenuVisible(false)
+					openModal('SleepTimer', undefined)
+				}}
+				title='定时关闭'
+				leadingIcon='timer-outline'
+			/>
 		</FunctionalMenu>
 	)
 }
