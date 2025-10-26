@@ -67,7 +67,7 @@ interface PlayerActions {
 	// 模式控制
 	toggleRepeatMode: () => void
 	toggleShuffleMode: () => void
-	setSleepTimer: (durationInSeconds: number | null) => void
+	setSleepTimer: (durationInSeconds: number | null, silent?: boolean) => void
 
 	// 音频流处理
 	patchAudio: (

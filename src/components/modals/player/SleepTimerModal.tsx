@@ -74,7 +74,7 @@ const SleepTimerModal = () => {
 							key={minutes}
 							mode='contained-tonal'
 							onPress={() => handleSetTimer(minutes)}
-							style={{ width: '48%' }}
+							style={{ flexBasis: '45%', flexGrow: 1 }}
 						>
 							{minutes} 分钟
 						</Button>

@@ -64,15 +64,16 @@ export const usePlayerStore = create<PlayerStore>()(
 			const store = {
 				...initialState,
 
-				setSleepTimer: (durationInSeconds: number | null) => {
+				setSleepTimer: (durationInSeconds: number | null, silent = false) => {
 					if (durationInSeconds === null) {
 						set({ sleepTimerEndAt: null })
-						toast.success('已取消定时关闭')
+						if (!silent) toast.success('已取消定时关闭')
 						return
 					}
 					const sleepTimerEndAt = Date.now() + durationInSeconds * 1000
 					set({ sleepTimerEndAt })
-					toast.success(`播放器将在 ${durationInSeconds / 60} 分钟后停止`)
+					if (!silent)
+						toast.success(`播放器将在 ${durationInSeconds / 60} 分钟后停止`)
 				},
 
 				_getActiveList: () => {
@@ -576,7 +577,11 @@ export const usePlayerStore = create<PlayerStore>()(
 					if (!checkPlayerReady()) return
 					await get()._finalizeAndRecordCurrentPlay('stop')
 					await TrackPlayer.reset()
-					set((state) => ({ ...initialState, repeatMode: state.repeatMode }))
+					set((state) => ({
+						...initialState,
+						repeatMode: state.repeatMode,
+						sleepTimerEndAt: state.sleepTimerEndAt,
+					}))
 					logger.info('已重置 store')
 				},
 

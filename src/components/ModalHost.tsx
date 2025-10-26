@@ -15,7 +15,7 @@ export default function ModalHost() {
 	)
 	const closeTop = useModalStore((s) => s.closeTop)
 	const eventEmitter = useModalStore((s) => s.eventEmitter)
-	const [canUnmountHost, setCanUnmountHost] = useState(modals.length > 0)
+	const [canUnmountHost, setCanUnmountHost] = useState(modals.length === 0)
 
 	usePreventRemove(modals.length > 0, () => {
 		if (modals[modals.length - 1].options?.dismissible === false) {
