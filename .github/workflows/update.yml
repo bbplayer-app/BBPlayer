@@ -2,10 +2,10 @@ name: Hot Update
 on: workflow_dispatch
 jobs:
   update:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: 🏗 Setup repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4
@@ -13,7 +13,7 @@ jobs:
           version: 10
 
       - name: 🏗 Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
           cache: pnpm
