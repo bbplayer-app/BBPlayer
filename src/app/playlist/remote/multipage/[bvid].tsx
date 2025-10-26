@@ -192,6 +192,7 @@ export default function MultipagePage() {
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
+							id={bv2av(bvid)}
 						/>
 					}
 					refreshControl={

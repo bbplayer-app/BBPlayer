@@ -55,8 +55,8 @@ const ProgressBar = memo(function ProgressBar() {
 			<View
 				ref={trackViewRef}
 				style={{
-					height: 0.8,
-					backgroundColor: colors.elevation.level2,
+					height: 1,
+					backgroundColor: colors.outlineVariant,
 					overflow: 'hidden',
 					position: 'relative',
 				}}
@@ -65,7 +65,7 @@ const ProgressBar = memo(function ProgressBar() {
 					style={[
 						animatedStyle,
 						{
-							height: 0.8,
+							height: 1,
 							backgroundColor: colors.primary,
 							position: 'absolute',
 							left: 0,
@@ -182,7 +182,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 									height: 48,
 									width: 48,
 									borderRadius: 24,
-									borderWidth: 0.8,
+									borderWidth: 1,
 									borderColor: colors.primary,
 								}}
 								recyclingKey={currentTrack.uniqueKey}
@@ -252,10 +252,11 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 						</View>
 						<View
 							style={{
-								width: '83%',
+								width: '86%',
 								alignSelf: 'center',
 								position: 'absolute',
 								bottom: 0,
+								left: 25,
 							}}
 						>
 							<ProgressBar />

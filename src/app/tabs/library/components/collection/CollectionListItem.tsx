@@ -1,10 +1,11 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { Image } from 'expo-image'
 import { memo } from 'react'
-import { TouchableOpacity, View } from 'react-native'
+import { View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
@@ -12,30 +13,29 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
 	return (
-		<View key={item.id}>
-			<View style={{ marginVertical: 8, overflow: 'hidden' }}>
-				<TouchableOpacity
-					activeOpacity={0.7}
-					disabled={item.state === 1}
-					onPress={() => {
-						if (item.attr === 0) {
-							navigation.navigate('PlaylistCollection', {
-								id: String(item.id),
-							})
-						} else {
-							navigation.navigate('PlaylistFavorite', { id: String(item.id) })
-						}
-					}}
-				>
+		<View>
+			<RectButton
+				enabled={item.state !== 1}
+				onPress={() => {
+					if (item.attr === 0) {
+						navigation.navigate('PlaylistCollection', {
+							id: String(item.id),
+						})
+					} else {
+						navigation.navigate('PlaylistFavorite', { id: String(item.id) })
+					}
+				}}
+				style={{ paddingVertical: 8, overflow: 'hidden' }}
+			>
+				<View>
 					<View
 						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 					>
-						<Image
-							source={{ uri: item.cover }}
-							recyclingKey={item.id.toString()}
-							style={{ width: 48, height: 48, borderRadius: 4 }}
-							transition={300}
-							cachePolicy={'none'}
+						<CoverWithPlaceHolder
+							id={item.id}
+							coverUrl={item.cover}
+							title={item.title}
+							size={48}
 						/>
 						<View style={{ marginLeft: 12, flex: 1 }}>
 							<Text
@@ -54,8 +54,8 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 							size={24}
 						/>
 					</View>
-				</TouchableOpacity>
-			</View>
+				</View>
+			</RectButton>
 			<Divider />
 		</View>
 	)

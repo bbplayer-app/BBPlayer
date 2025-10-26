@@ -1,9 +1,11 @@
+import CoverWithPlaceHolder from '@/components/commonUIs/CoverWithPlaceHolder'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { memo } from 'react'
-import { TouchableOpacity, View } from 'react-native'
+import { View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
@@ -11,17 +13,23 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
 	return (
-		<View key={item.id}>
-			<View style={{ marginVertical: 8, overflow: 'hidden' }}>
-				<TouchableOpacity
-					activeOpacity={0.7}
-					onPress={() => {
-						navigation.navigate('PlaylistFavorite', { id: String(item.id) })
-					}}
-				>
+		<View>
+			<RectButton
+				onPress={() => {
+					navigation.navigate('PlaylistFavorite', { id: String(item.id) })
+				}}
+				style={{ paddingVertical: 8, overflow: 'hidden' }}
+			>
+				<View>
 					<View
 						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
 					>
+						<CoverWithPlaceHolder
+							id={item.id}
+							coverUrl={undefined}
+							title={item.title}
+							size={48}
+						/>
 						<View style={{ marginLeft: 12, flex: 1 }}>
 							<Text
 								variant='titleMedium'
@@ -36,8 +44,8 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 							size={24}
 						/>
 					</View>
-				</TouchableOpacity>
-			</View>
+				</View>
+			</RectButton>
 			<Divider />
 		</View>
 	)

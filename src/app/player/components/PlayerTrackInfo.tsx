@@ -1,21 +1,45 @@
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import { getGradientColors } from '@/utils/color'
+import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
-import { Dimensions, TouchableOpacity, View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import type { ColorSchemeName } from 'react-native'
+import {
+	Dimensions,
+	TouchableOpacity,
+	useColorScheme,
+	View,
+} from 'react-native'
 import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
 
 export function TrackInfo({
 	onArtistPress,
 	onPressCover,
+	coverRef,
 }: {
 	onArtistPress: () => void
 	onPressCover: () => void
+	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
 	const currentTrack = useCurrentTrack()
 	const { width: screenWidth } = Dimensions.get('window')
 	const isBilibiliVideo = currentTrack?.source === 'bilibili'
+	const colorScheme: ColorSchemeName = useColorScheme()
+	const isDark: boolean = colorScheme === 'dark'
+
+	const { color1, color2 } = getGradientColors(
+		currentTrack?.title ?? '',
+		isDark,
+	)
+
+	const firstChar =
+		currentTrack &&
+		(currentTrack.title.length > 0
+			? currentTrack?.title.charAt(0).toUpperCase()
+			: undefined)
 
 	const { data: isThumbUp, isPending: isThumbUpPending } = useGetVideoIsThumbUp(
 		isBilibiliVideo ? currentTrack?.bilibiliMetadata.bvid : undefined,
@@ -44,17 +68,45 @@ export function TrackInfo({
 				<TouchableOpacity
 					activeOpacity={0.8}
 					onPress={onPressCover}
+					style={{
+						width: screenWidth - 80,
+						height: screenWidth - 80,
+						borderRadius: 16,
+					}}
 				>
-					<Image
-						source={{ uri: currentTrack.coverUrl ?? undefined }}
-						style={{
-							width: screenWidth - 80,
-							height: screenWidth - 80,
-							borderRadius: 16,
-						}}
-						recyclingKey={currentTrack.uniqueKey}
-						cachePolicy={'none'}
-					/>
+					{!coverRef ? (
+						<LinearGradient
+							colors={[color1, color2]}
+							style={{
+								flex: 1,
+								justifyContent: 'center',
+								alignItems: 'center',
+							}}
+							start={{ x: 0, y: 0 }}
+							end={{ x: 1, y: 1 }}
+						>
+							<Text
+								style={{
+									fontSize: (screenWidth - 80) * 0.45,
+									fontWeight: 'bold',
+									color: 'rgba(255, 255, 255, 0.7)',
+								}}
+							>
+								{firstChar}
+							</Text>
+						</LinearGradient>
+					) : (
+						<Image
+							source={coverRef}
+							style={{
+								width: screenWidth - 80,
+								height: screenWidth - 80,
+							}}
+							recyclingKey={currentTrack.uniqueKey}
+							cachePolicy={'none'}
+							transition={300}
+						/>
+					)}
 				</TouchableOpacity>
 			</View>
 

@@ -188,6 +188,7 @@ export default function CollectionPage() {
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
+							id={id}
 						/>
 					}
 					refreshControl={
