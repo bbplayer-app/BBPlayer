@@ -5,6 +5,13 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 清除所有歌词缓存（在「开发者页面」）
+- 基于 B 站视频 bgm 识别结果精准搜索歌词
+
 ## [1.3.6] - 2025-10-26
 
 ### Added
