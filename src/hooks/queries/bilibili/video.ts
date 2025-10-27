@@ -11,6 +11,8 @@ export const videoDataQueryKeys = {
 		[...videoDataQueryKeys.all, 'getVideoDetails', bvid] as const,
 	getVideoIsThumbUp: (bvid?: string) =>
 		[...videoDataQueryKeys.all, 'getVideoIsThumbUp', bvid] as const,
+	getWebPlayerInfo: (bvid?: string, cid?: number) =>
+		[...videoDataQueryKeys.all, 'getWebPlayerInfo', bvid, cid] as const,
 } as const
 
 /**
@@ -50,5 +52,22 @@ export const useGetVideoIsThumbUp = (bvid: string | undefined) => {
 		queryFn: () => returnOrThrowAsync(bilibiliApi.checkVideoIsThumbUp(bvid!)),
 		enabled,
 		staleTime: 0,
+	})
+}
+
+/**
+ * 获取 web 播放器信息
+ */
+export const useGetWebPlayerInfo = (
+	bvid: string | undefined,
+	cid: number | undefined,
+) => {
+	const enabled = !!bvid && !!cid
+	return useQuery({
+		queryKey: videoDataQueryKeys.getWebPlayerInfo(bvid, cid),
+		queryFn: () =>
+			returnOrThrowAsync(bilibiliApi.getWebPlayerInfo(bvid!, cid!)),
+		enabled,
+		staleTime: 5 * 60 * 1000,
 	})
 }

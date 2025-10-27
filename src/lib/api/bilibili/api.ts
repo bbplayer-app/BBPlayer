@@ -1,6 +1,9 @@
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import type { BilibiliSearchSuggestionItem } from '@/types/apis/bilibili'
+import type {
+	BilibiliSearchSuggestionItem,
+	BilibiliWebPlayerInfo,
+} from '@/types/apis/bilibili'
 import {
 	type BilibiliAudioStreamParams,
 	type BilibiliAudioStreamResponse,
@@ -744,6 +747,25 @@ export const createBilibiliApi = () => ({
 						return errAsync(err)
 				}
 			})
+	},
+
+	/**
+	 * web 播放器信息
+	 */
+	getWebPlayerInfo: (
+		bvid: string,
+		cid: number,
+	): ResultAsync<BilibiliWebPlayerInfo, BilibiliApiError> => {
+		const params = getWbiEncodedParams({
+			bvid,
+			cid: String(cid),
+		})
+		return params.andThen((params) => {
+			return bilibiliApiClient.get<BilibiliWebPlayerInfo>(
+				'/x/player/wbi/v2',
+				params,
+			)
+		})
 	},
 })
 
