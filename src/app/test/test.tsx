@@ -4,6 +4,7 @@ import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { downloadService } from '@/lib/services/downloadService'
+import lyricService from '@/lib/services/lyricService'
 import log, { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
 import * as Updates from 'expo-updates'
@@ -112,6 +113,33 @@ export default function TestPage() {
 		)
 	}
 
+	const clearAllLyrcis = () => {
+		const clearAction = () => {
+			const result = lyricService.clearAllLyrics()
+			if (result.isOk()) {
+				toast.success('清除成功')
+			} else {
+				toast.error('清除歌词失败', {
+					description:
+						result.error instanceof Error ? result.error.message : '未知错误',
+				})
+			}
+		}
+		alert(
+			'清除所有歌词',
+			'是否清除所有已保存的歌词？下次播放时将重新从网络获取歌词',
+			[
+				{
+					text: '取消',
+				},
+				{
+					text: '确定',
+					onPress: clearAction,
+				},
+			],
+		)
+	}
+
 	return (
 		<View
 			style={{
@@ -156,6 +184,14 @@ export default function TestPage() {
 						style={{ marginBottom: 8 }}
 					>
 						清空下载缓存
+					</Button>
+					<Button
+						mode='outlined'
+						onPress={clearAllLyrcis}
+						loading={loading}
+						style={{ marginBottom: 8 }}
+					>
+						清空所有歌词缓存
 					</Button>
 				</View>
 			</ScrollView>

@@ -6,7 +6,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import log, { toastAndLogError } from '@/utils/log'
 import * as FileSystem from 'expo-file-system'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Service.Lyric')
 type lyricFileType =
@@ -230,6 +230,31 @@ class LyricService {
 			return undefined
 		}
 		return result.value
+	}
+
+	/**
+	 * 清除所有已缓存的歌词
+	 * @returns
+	 */
+	public clearAllLyrics(): Result<true, unknown> {
+		const lyricsDir = new FileSystem.Directory(
+			FileSystem.Paths.document,
+			'lyrics',
+		)
+
+		return Result.fromThrowable(() => {
+			if (!lyricsDir.exists) {
+				logger.debug('歌词目录不存在，无需清理')
+				return true as const
+			}
+			lyricsDir.delete()
+			lyricsDir.create({
+				intermediates: true,
+				idempotent: true,
+			})
+			logger.info('歌词缓存已清理')
+			return true as const
+		})()
 	}
 }
 
