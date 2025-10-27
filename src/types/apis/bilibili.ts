@@ -343,6 +343,14 @@ interface BilibiliSearchSuggestionItem {
 	type: string
 }
 
+interface BilibiliWebPlayerInfo {
+	bgm_info?: {
+		music_id: number
+		music_title: string
+		jump_url: string
+	}
+}
+
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
@@ -364,6 +372,7 @@ export type {
 	BilibiliUserInfo,
 	BilibiliUserUploadedVideosResponse,
 	BilibiliVideoDetails,
+	BilibiliWebPlayerInfo,
 }
 
 export { BilibiliQrCodeLoginStatus }
