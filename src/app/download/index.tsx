@@ -1,4 +1,6 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
+import DownloadHeader from '@/features/downloads/DownloadHeader'
+import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import type { DownloadTask } from '@/types/core/downloadManagerStore'
@@ -9,8 +11,6 @@ import { View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/shallow'
-import DownloadHeader from './components/DownloadHeader'
-import DownloadTaskItem from './components/DownloadTaskItem'
 
 export default function DownloadPage() {
 	const { colors } = useTheme()

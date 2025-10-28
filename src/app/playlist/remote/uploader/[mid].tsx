@@ -1,11 +1,11 @@
-import { PlaylistError } from '@/app/playlist/remote/shared/components/PlaylistError'
-import { PlaylistHeader } from '@/app/playlist/remote/shared/components/PlaylistHeader'
-import { PlaylistLoading } from '@/app/playlist/remote/shared/components/PlaylistLoading'
-import { TrackList } from '@/app/playlist/remote/shared/components/RemoteTrackList'
-import { usePlaylistMenu } from '@/app/playlist/remote/shared/hooks/usePlaylistMenu'
-import { useRemotePlaylist } from '@/app/playlist/remote/shared/hooks/useRemotePlaylist'
-import { useTrackSelection } from '@/app/playlist/remote/shared/hooks/useTrackSelection'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
+import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
+import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
+import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
+import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
+import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
+import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import {
 	useInfiniteGetUserUploadedVideos,
 	useOtherUserInfo,

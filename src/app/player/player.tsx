@@ -10,12 +10,12 @@ import { useRef, useState } from 'react'
 import { Dimensions, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { PlayerControls } from './components/PlayerControls'
-import { PlayerFunctionalMenu } from './components/PlayerFunctionalMenu'
-import { PlayerHeader } from './components/PlayerHeader'
-import Lyrics from './components/PlayerLyrics'
-import { PlayerSlider } from './components/PlayerSlider'
-import { TrackInfo } from './components/PlayerTrackInfo'
+import { PlayerControls } from '@/features/player/components/PlayerControls'
+import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
+import { PlayerHeader } from '@/features/player/components/PlayerHeader'
+import Lyrics from '@/features/player/components/PlayerLyrics'
+import { PlayerSlider } from '@/features/player/components/PlayerSlider'
+import { TrackInfo } from '@/features/player/components/PlayerTrackInfo'
 
 export default function PlayerPage() {
 	const navigation =

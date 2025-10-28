@@ -4,16 +4,12 @@ import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistL
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
-import {
-	useGetFavoritePlaylists,
-	useInfiniteSearchFavoriteItems,
-} from '@/hooks/queries/bilibili/favorite'
-import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { bv2av } from '@/lib/api/bilibili/utils'
-import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
+import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
+import { formatMMSSToSeconds } from '@/utils/time'
 import {
 	type RouteProp,
 	useNavigation,
@@ -22,29 +18,26 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
-import { ActivityIndicator, Appbar, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 
-const mapApiItemToTrack = (
-	apiItem: BilibiliFavoriteListContent,
-): BilibiliTrack => {
+const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 	return {
-		id: bv2av(apiItem.bvid),
+		id: apiItem.aid,
 		uniqueKey: `bilibili::${apiItem.bvid}`,
 		source: 'bilibili',
-		title: apiItem.title,
+		title: apiItem.title.replace(/<em[^>]*>|<\/em>/g, ''),
 		artist: {
-			id: apiItem.upper.mid,
-			name: apiItem.upper.name,
-			remoteId: apiItem.upper.mid.toString(),
+			id: apiItem.mid,
+			name: apiItem.author,
+			remoteId: apiItem.mid.toString(),
 			source: 'bilibili',
-			avatarUrl: apiItem.upper.face,
-			createdAt: new Date(apiItem.pubdate),
-			updatedAt: new Date(apiItem.pubdate),
+			createdAt: new Date(apiItem.senddate),
+			updatedAt: new Date(apiItem.senddate),
 		},
-		coverUrl: apiItem.cover,
-		duration: apiItem.duration,
-		createdAt: new Date(apiItem.pubdate),
-		updatedAt: new Date(apiItem.pubdate),
+		coverUrl: `https:${apiItem.pic}`,
+		duration: apiItem.duration ? formatMMSSToSeconds(apiItem.duration) : 0,
+		createdAt: new Date(apiItem.senddate),
+		updatedAt: new Date(apiItem.senddate),
 		bilibiliMetadata: {
 			bvid: apiItem.bvid,
 			cid: null,
@@ -57,7 +50,7 @@ const mapApiItemToTrack = (
 
 export default function SearchResultsPage() {
 	const { colors } = useTheme()
-	const route = useRoute<RouteProp<RootStackParamList, 'SearchResultFav'>>()
+	const route = useRoute<RouteProp<RootStackParamList, 'SearchResult'>>()
 	const { query } = route.params
 	const navigation =
 		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
@@ -66,29 +59,27 @@ export default function SearchResultsPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
-	const { data: userData } = usePersonalInformation()
-	const { data: favoriteFolderList } = useGetFavoritePlaylists(userData?.mid)
 	const {
 		data: searchData,
 		isPending: isPendingSearchData,
 		isError: isErrorSearchData,
 		hasNextPage,
-		fetchNextPage,
 		refetch,
-	} = useInfiniteSearchFavoriteItems(
-		'all',
-		query,
-		favoriteFolderList?.at(0)?.id,
-	)
-	const tracks = useMemo(
-		() =>
-			searchData?.pages
-				.flatMap((page) => page.medias ?? [])
-				.map(mapApiItemToTrack) ?? [],
-		[searchData],
-	)
+		fetchNextPage,
+	} = useSearchResults(query)
 
 	const { trackMenuItems, playTrack } = useSearchInteractions()
+
+	const uniqueSearchData = useMemo(() => {
+		if (!searchData?.pages) {
+			return []
+		}
+
+		const allTracks = searchData.pages.flatMap((page) => page.result)
+		const uniqueMap = new Map(allTracks.map((track) => [track.bvid, track]))
+		const uniqueTracks = [...uniqueMap.values()]
+		return uniqueTracks.map(mapApiItemToTrack)
+	}, [searchData])
 
 	if (isPendingSearchData) {
 		return <PlaylistLoading />
@@ -117,7 +108,7 @@ export default function SearchResultsPage() {
 						onPress={() => {
 							const payloads = []
 							for (const id of selected) {
-								const track = tracks.find((t) => t.id === id)
+								const track = uniqueSearchData.find((t) => t.id === id)
 								if (track) {
 									payloads.push({
 										track: track as Track,
@@ -141,7 +132,7 @@ export default function SearchResultsPage() {
 				}}
 			>
 				<TrackList
-					tracks={tracks}
+					tracks={uniqueSearchData ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
 					selectMode={selectMode}
@@ -151,27 +142,6 @@ export default function SearchResultsPage() {
 					hasNextPage={hasNextPage}
 					enterSelectMode={enterSelectMode}
 					ListHeaderComponent={null}
-					ListFooterComponent={
-						hasNextPage ? (
-							<View
-								style={{
-									flexDirection: 'row',
-									alignItems: 'center',
-									justifyContent: 'center',
-									padding: 16,
-								}}
-							>
-								<ActivityIndicator size='small' />
-							</View>
-						) : (
-							<Text
-								variant='titleMedium'
-								style={{ textAlign: 'center', paddingTop: 10 }}
-							>
-								•
-							</Text>
-						)
-					}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
@@ -192,7 +162,7 @@ export default function SearchResultsPage() {
 								color: colors.onSurfaceVariant,
 							}}
 						>
-							没有在收藏中找到与 &quot;{query}&rdquo; 相关的内容
+							没有找到与 &quot;{query}&rdquo; 相关的内容
 						</Text>
 					}
 				/>

@@ -1,4 +1,5 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
 import {
 	usePlayCountLeaderBoardPaginated,
 	useTotalPlaybackDuration,
@@ -17,7 +18,6 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { LeaderBoardListItem } from './components/LeaderBoardItem'
 
 interface LeaderBoardItemData {
 	track: Track

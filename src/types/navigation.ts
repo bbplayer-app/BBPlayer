@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 /* react-navigation 指明了 RootStackParamList 必须使用 type alias */
-import type { Tabs } from '@/app/tabs/library/[tab]'
+import type { Tabs } from '@/app/(tabs)/library/[tab]'
 import type { AlertModalProps } from '@/components/modals/AlertModal'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ParsedLrc } from '@/types/player/lyrics'

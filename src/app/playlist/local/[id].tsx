@@ -1,6 +1,13 @@
-import FunctionalMenu from '@/components/commonUIs/FunctionalMenu'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
+import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
+import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
+import { PlaylistLoading } from '@/features/playlist/local/components/PlaylistLoading'
+import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
+import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
+import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
@@ -35,13 +42,6 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { PlaylistHeader } from './components/LocalPlaylistHeader'
-import { LocalTrackList } from './components/LocalTrackList'
-import { PlaylistError } from './components/PlaylistError'
-import { PlaylistLoading } from './components/PlaylistLoading'
-import { useLocalPlaylistMenu } from './hooks/useLocalPlaylistMenu'
-import { useLocalPlaylistPlayer } from './hooks/useLocalPlaylistPlayer'
-import { useTrackSelection } from './hooks/useTrackSelection'
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'

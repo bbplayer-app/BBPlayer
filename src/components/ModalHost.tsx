@@ -4,7 +4,7 @@ import { usePreventRemove } from '@react-navigation/native'
 import { useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { useShallow } from 'zustand/shallow'
-import AnimatedModalOverlay from './commonUIs/AnimatedModalOverlay'
+import AnimatedModalOverlay from './common/AnimatedModalOverlay'
 import { modalRegistry } from './ModalRegistry'
 
 export default function ModalHost() {
