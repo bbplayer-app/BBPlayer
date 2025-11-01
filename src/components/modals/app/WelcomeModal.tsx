@@ -1,7 +1,7 @@
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'
 import notifee, { AuthorizationStatus } from '@notifee/react-native'
-import { usePreventRemove } from '@react-navigation/native'
 import {
 	useCallback,
 	useEffect,

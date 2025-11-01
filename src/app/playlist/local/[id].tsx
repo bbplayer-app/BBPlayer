@@ -1,6 +1,13 @@
-import FunctionalMenu from '@/components/commonUIs/FunctionalMenu'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
+import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
+import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
+import { PlaylistLoading } from '@/features/playlist/local/components/PlaylistLoading'
+import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
+import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
+import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
@@ -11,21 +18,15 @@ import {
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
-import type { RootStackParamList } from '@/types/navigation'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import * as Haptics from '@/utils/haptics'
 import { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
-import {
-	type RouteProp,
-	useNavigation,
-	usePreventRemove,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
@@ -35,25 +36,14 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { PlaylistHeader } from './components/LocalPlaylistHeader'
-import { LocalTrackList } from './components/LocalTrackList'
-import { PlaylistError } from './components/PlaylistError'
-import { PlaylistLoading } from './components/PlaylistLoading'
-import { useLocalPlaylistMenu } from './hooks/useLocalPlaylistMenu'
-import { useLocalPlaylistPlayer } from './hooks/useLocalPlaylistPlayer'
-import { useTrackSelection } from './hooks/useTrackSelection'
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'
 
 export default function LocalPlaylistPage() {
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistLocal'>>()
-	const { id } = route.params
+	const { id } = useLocalSearchParams<{ id: string }>()
 	const { colors } = useTheme()
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistLocal'>
-		>()
+	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const dimensions = useWindowDimensions()
 	const [searchQuery, setSearchQuery] = useState('')
@@ -118,11 +108,10 @@ export default function LocalPlaylistPage() {
 				playlistId: Number(id),
 			},
 			{
-				onSuccess: () => navigation.goBack(),
+				onSuccess: () => router.back(),
 			},
 		)
-		navigation.goBack()
-	}, [deletePlaylist, id, navigation])
+	}, [deletePlaylist, id, router])
 
 	const handleSync = useCallback(() => {
 		if (!playlistMetadata || !playlistMetadata.remoteSyncId) {
@@ -169,9 +158,9 @@ export default function LocalPlaylistPage() {
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/+not-found')
 		}
-	}, [id, navigation])
+	}, [id, router])
 
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
@@ -228,7 +217,7 @@ export default function LocalPlaylistPage() {
 	return (
 		<View style={{ flex: 1, backgroundColor: colors.background }}>
 			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => navigation.goBack()} />
+				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content
 					title={
 						selectMode ? `已选择 ${selected.size} 首` : playlistMetadata.title
@@ -325,7 +314,10 @@ export default function LocalPlaylistPage() {
 						}
 						onPressAuthor={(author) =>
 							author.remoteId &&
-							navigation.navigate('PlaylistUploader', { mid: author.remoteId })
+							router.push({
+								pathname: '/playlist/remote/uploader/[mid]',
+								params: { mid: author.remoteId },
+							})
 						}
 					/>
 				}

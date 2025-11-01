@@ -1,9 +1,9 @@
 import { useCreateNewLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
+import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
@@ -20,7 +20,7 @@ export default function CreatePlaylistModal({
 	const _close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
 	const close = useCallback(() => _close('CreatePlaylist'), [_close])
-	const navigation = useNavigation()
+	const router = useRouter()
 
 	const handleConfirm = useCallback(() => {
 		if (title.trim().length === 0) {
@@ -38,7 +38,10 @@ export default function CreatePlaylistModal({
 					if (redirectToNewPlaylist) {
 						closeAll()
 						useModalStore.getState().doAfterModalHostClosed(() => {
-							navigation.navigate('PlaylistLocal', { id: String(playlist.id) })
+							router.push({
+								pathname: '/playlist/local/[id]',
+								params: { id: String(playlist.id) },
+							})
 						})
 					} else {
 						closeAll()
@@ -51,7 +54,7 @@ export default function CreatePlaylistModal({
 		coverUrl,
 		createNewPlaylist,
 		description,
-		navigation,
+		router,
 		redirectToNewPlaylist,
 		title,
 	])
