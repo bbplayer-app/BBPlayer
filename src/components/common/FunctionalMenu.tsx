@@ -32,6 +32,7 @@ const FunctionalMenu = memo(function FunctionalMenu({
 				{...props}
 				onDismiss={onClose}
 				visible={visible}
+				key={String(visible)}
 				style={{
 					opacity: showContent ? 1 : 0,
 				}}

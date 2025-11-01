@@ -13,6 +13,11 @@
 - 基于 B 站视频 bgm 识别结果精准搜索歌词
 - 切换到 expo-router
 
+### Fixed
+
+- 一些减少 rerender 次数的优化
+- 使用 [react-native-paper/4807](https://github.com/callstack/react-native-paper/issues/4807) 中提到的 Menu 组件修复方法，移除 patch
+
 ## [1.3.6] - 2025-10-26
 
 ### Added
