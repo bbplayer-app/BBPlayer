@@ -1,4 +1,4 @@
-import navigationRef from '@/app/navigationRef'
+import { NavigationService } from '@/lib/router/NavigationService'
 import { downloadService } from '@/lib/services/downloadService'
 import type {
 	DownloadActions,
@@ -43,7 +43,7 @@ AppState.addEventListener('change', async (state) => {
 notifee.onForegroundEvent(({ type }) => {
 	switch (type) {
 		case EventType.PRESS:
-			navigationRef.current?.navigate('Download')
+			NavigationService.navigate('/download')
 			break
 	}
 })

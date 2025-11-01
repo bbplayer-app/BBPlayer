@@ -1,8 +1,6 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Clipboard from 'expo-clipboard'
 import { memo, useState } from 'react'
 import { View } from 'react-native'
@@ -39,9 +37,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	linkedPlaylistId,
 	id,
 }: PlaylistHeaderProps) {
-	const navigation = useNavigation<
-		NativeStackNavigationProp<RootStackParamList, 'PlaylistMultipage'> // 这里的泛型参数随便写一个好了
-	>()
+	const router = useRouter()
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	if (!title) return null
 
@@ -109,8 +105,9 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						icon={'arrow-right'}
 						size={20}
 						onPress={() =>
-							navigation.navigate('PlaylistLocal', {
-								id: linkedPlaylistId.toString(),
+							router.push({
+								pathname: 'playlist/local/[id]',
+								params: { id: linkedPlaylistId.toString() },
 							})
 						}
 					/>

@@ -1,22 +1,22 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 
 	return (
 		<View>
 			<RectButton
 				onPress={() => {
-					navigation.navigate('PlaylistFavorite', { id: String(item.id) })
+					router.push({
+						pathname: 'playlist/remote/favorite/[id]',
+						params: { id: String(item.id) },
+					})
 				}}
 				style={{ paddingVertical: 8, overflow: 'hidden' }}
 			>

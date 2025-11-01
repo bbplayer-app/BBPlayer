@@ -1,4 +1,4 @@
-import navigationRef from '@/app/navigationRef'
+import { NavigationService } from '@/lib/router/NavigationService'
 import type { ModalInstance, ModalKey, ModalPropsMap } from '@/types/navigation'
 import toast from '@/utils/toast'
 import type { Emitter } from 'mitt'
@@ -43,15 +43,9 @@ export const useModalStore = create<ModalState>()(
 				modals: [...state.modals, { key, props, options }],
 			}))
 
-			if (navigationRef.current?.isReady()) {
-				navigationRef.current.navigate('ModalHost')
-			} else {
-				toast.error('导航尚未准备好，无法打开模态框')
-			}
+			NavigationService.navigate('/modal-host')
 		},
 
-		// 所有对于 ModalHost 的关闭操作（goBack）都在 ModalHost 内完成
-		// 我不懂为什么在这里调用 navigationRef.current.goBack() 没有效果
 		close: (key) => {
 			set((state) => ({ modals: state.modals.filter((m) => m.key !== key) }))
 		},

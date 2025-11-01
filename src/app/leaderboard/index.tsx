@@ -6,7 +6,6 @@ import {
 } from '@/hooks/queries/db/track'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { Track } from '@/types/core/media'
-import { useNavigation } from '@react-navigation/native'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo } from 'react'
 import { View } from 'react-native'
@@ -42,7 +41,7 @@ const formatDurationToWords = (seconds: number) => {
 
 export default function LeaderBoardPage() {
 	const { colors } = useTheme()
-	const navigation = useNavigation()
+	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
 
@@ -160,7 +159,7 @@ export default function LeaderBoardPage() {
 	return (
 		<View style={{ flex: 1, backgroundColor: colors.background }}>
 			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => navigation.goBack()} />
+				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='统计' />
 			</Appbar.Header>
 			{allTracks.length > 0 && !isTotalDurationError && (

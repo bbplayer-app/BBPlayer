@@ -3,15 +3,8 @@ import CollectionListComponent from '@/features/library/collection/CollectionLis
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
 import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
-import useResetScreenOnBlur from '@/hooks/utils/useResetScreenOnBlur'
 import type { BottomTabParamList } from '@/types/navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
-import type { RouteProp } from '@react-navigation/native'
-import {
-	useFocusEffect,
-	useNavigation,
-	useRoute,
-} from '@react-navigation/native'
 import { useState } from 'react'
 import { Dimensions, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
@@ -43,15 +36,13 @@ export default function Library() {
 	const [index, setIndex] = useState(Tabs.Local)
 	const insets = useSafeAreaInsets()
 	const colors = useTheme().colors
-	const router = useRoute<RouteProp<BottomTabParamList, 'Library'>>()
-	const tab = router.params?.tab
-	const navigation = useNavigation()
+	const router = useRouter()
+	const { tab } = useLocalSearchParams<{ tab: string }>()
 
 	useFocusEffect(() => {
 		if (tab === undefined) return
 		setIndex(tab)
 	})
-	useResetScreenOnBlur()
 
 	return (
 		<View
@@ -84,11 +75,11 @@ export default function Library() {
 					<View style={{ flexDirection: 'row' }}>
 						<IconButton
 							icon='progress-download'
-							onPress={() => navigation.navigate('Download')}
+							onPress={() => router.push('download')}
 						/>
 						<IconButton
 							icon='trophy'
-							onPress={() => navigation.navigate('LeaderBoard')}
+							onPress={() => router.push('leaderboard')}
 						/>
 					</View>
 				</View>

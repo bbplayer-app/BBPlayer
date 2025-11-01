@@ -15,12 +15,6 @@ import type { BilibiliMediaItemInCollection } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import {
-	type RouteProp,
-	useNavigation,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
@@ -56,12 +50,8 @@ const mapApiItemToTrack = (
 }
 
 export default function CollectionPage() {
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistCollection'>
-		>()
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistCollection'>>()
-	const { id } = route.params
+	const router = useRouter()
+	const { id } = useLocalSearchParams<{ id: string }>()
 	const { colors } = useTheme()
 	const [refreshing, setRefreshing] = useState(false)
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'collection')
@@ -97,18 +87,21 @@ export default function CollectionPage() {
 			{
 				onSuccess: (id) => {
 					if (!id) return
-					navigation.replace('PlaylistLocal', { id: String(id) })
+					router.replace({
+						pathname: 'playlist/local/[id]',
+						params: { id: String(id) },
+					})
 				},
 			},
 		)
 		setRefreshing(false)
-	}, [id, navigation, syncCollection])
+	}, [id, router, syncCollection])
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/not-found')
 		}
-	}, [id, navigation])
+	}, [id, router])
 
 	if (typeof id !== 'string') {
 		return null
@@ -162,7 +155,7 @@ export default function CollectionPage() {
 						}}
 					/>
 				) : (
-					<Appbar.BackAction onPress={() => navigation.goBack()} />
+					<Appbar.BackAction onPress={() => router.back()} />
 				)}
 			</Appbar.Header>
 

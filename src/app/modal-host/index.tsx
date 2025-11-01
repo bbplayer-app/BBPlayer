@@ -1,6 +1,6 @@
-import navigationRef from '@/app/navigationRef'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePreventRemove } from '@react-navigation/native'
+import { useNavigation, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { useShallow } from 'zustand/shallow'
@@ -16,6 +16,8 @@ export default function ModalHost() {
 	const closeTop = useModalStore((s) => s.closeTop)
 	const eventEmitter = useModalStore((s) => s.eventEmitter)
 	const [canUnmountHost, setCanUnmountHost] = useState(modals.length === 0)
+	const router = useRouter()
+	const navigation = useNavigation()
 
 	usePreventRemove(modals.length > 0, () => {
 		if (modals[modals.length - 1].options?.dismissible === false) {
@@ -31,22 +33,20 @@ export default function ModalHost() {
 
 	useEffect(() => {
 		const closeAction = () => {
-			if (!navigationRef.current) return
-			const cur = navigationRef.current.getCurrentRoute?.()
-			if (cur?.name === 'ModalHost' && navigationRef.current.canGoBack?.()) {
+			if (navigation.canGoBack()) {
 				setCanUnmountHost(true)
-				navigationRef.current.goBack()
+				router.back()
 				// 确保在 ModalHost 关闭后再执行回调，避免其他导航操作与 ModalHost 关闭发生竞态
 				setImmediate(() => {
 					eventEmitter.emit('modalHostDidClose')
 				})
 			}
 		}
-		if (modals.length === 0 && navigationRef.current) {
+		if (modals.length === 0) {
 			Keyboard.dismiss()
 			closeAction()
 		}
-	}, [eventEmitter, modals])
+	}, [eventEmitter, modals, navigation, router])
 
 	if (canUnmountHost) return null
 

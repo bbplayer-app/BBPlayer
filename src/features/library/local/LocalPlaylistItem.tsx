@@ -1,23 +1,23 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { Playlist } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 const LocalPlaylistItem = memo(({ item }: { item: Playlist }) => {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 
 	return (
 		<View>
 			<RectButton
 				style={{ paddingVertical: 8, overflow: 'hidden' }}
 				onPress={() => {
-					navigation.navigate('PlaylistLocal', { id: String(item.id) })
+					router.push({
+						pathname: 'playlist/local/[id]',
+						params: { id: String(item.id) },
+					})
 				}}
 			>
 				<View>

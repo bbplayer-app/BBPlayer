@@ -9,8 +9,6 @@ import type { Playlist, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Clipboard from 'expo-clipboard'
 import { useCallback } from 'react'
 
@@ -29,8 +27,7 @@ export function useLocalPlaylistMenu({
 	openEditTrackModal,
 	playlist,
 }: LocalPlaylistMenuProps) {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const queueDownloads = useDownloadManagerStore(
 		(state) => state.queueDownloads,
@@ -72,8 +69,9 @@ export function useLocalPlaylistMenu({
 					title: '查看详细信息',
 					leadingIcon: 'file-document-outline',
 					onPress: () =>
-						navigation.navigate('PlaylistMultipage', {
-							bvid: item.bilibiliMetadata.bvid,
+						router.push({
+							pathname: 'playlist/remote/multipage/[bvid]',
+							params: { bvid: item.bilibiliMetadata.bvid },
 						}),
 				},
 				{
@@ -83,8 +81,9 @@ export function useLocalPlaylistMenu({
 						if (!item.artist?.remoteId) {
 							return
 						}
-						navigation.navigate('PlaylistUploader', {
-							mid: item.artist?.remoteId,
+						router.push({
+							pathname: 'playlist/remote/uploader/[mid]',
+							params: { mid: item.artist?.remoteId },
 						})
 					},
 				},

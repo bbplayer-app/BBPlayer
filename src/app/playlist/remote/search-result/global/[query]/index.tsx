@@ -10,12 +10,6 @@ import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import { formatMMSSToSeconds } from '@/utils/time'
-import {
-	type RouteProp,
-	useNavigation,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
@@ -50,10 +44,8 @@ const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 
 export default function SearchResultsPage() {
 	const { colors } = useTheme()
-	const route = useRoute<RouteProp<RootStackParamList, 'SearchResult'>>()
-	const { query } = route.params
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const { query } = useLocalSearchParams<{ query: string }>()
+	const router = useRouter()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const [refreshing, setRefreshing] = useState(false)
@@ -122,7 +114,7 @@ export default function SearchResultsPage() {
 						}}
 					/>
 				) : (
-					<Appbar.BackAction onPress={() => navigation.goBack()} />
+					<Appbar.BackAction onPress={() => router.back()} />
 				)}
 			</Appbar.Header>
 

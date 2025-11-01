@@ -2,8 +2,6 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
@@ -11,15 +9,17 @@ import { Divider, Icon, Text } from 'react-native-paper'
 
 const MultiPageVideosItem = memo(
 	({ item }: { item: BilibiliFavoriteListContent }) => {
-		const navigation =
-			useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+		const router = useRouter()
 
 		return (
 			<>
 				<View>
 					<RectButton
 						onPress={() => {
-							navigation.navigate('PlaylistMultipage', { bvid: item.bvid })
+							router.push({
+								pathname: 'playlist/remote/multipage/[bvid]',
+								params: { bvid: item.bvid },
+							})
 						}}
 						style={{ paddingVertical: 8, overflow: 'hidden' }}
 					>

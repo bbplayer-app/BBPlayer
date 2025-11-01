@@ -1,6 +1,5 @@
 import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useNavigation } from '@react-navigation/native'
 import { useCallback, useState } from 'react'
 import { Button, Dialog, TextInput } from 'react-native-paper'
 
@@ -17,7 +16,7 @@ export default function DuplicateLocalPlaylistModal({
 	const { mutate: duplicatePlaylist } = useDuplicatePlaylist()
 	const close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
-	const navigation = useNavigation()
+	const router = useRouter()
 
 	const handleDuplicatePlaylist = useCallback(() => {
 		if (!duplicatePlaylistName) return
@@ -30,7 +29,10 @@ export default function DuplicateLocalPlaylistModal({
 				onSuccess: (id) => {
 					closeAll()
 					useModalStore.getState().doAfterModalHostClosed(() => {
-						navigation.navigate('PlaylistLocal', { id: String(id) })
+						router.push({
+							pathname: 'playlist/local/[id]',
+							params: { id: String(id) },
+						})
 					})
 				},
 			},

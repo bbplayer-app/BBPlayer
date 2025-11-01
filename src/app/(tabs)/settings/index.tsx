@@ -6,8 +6,6 @@ import { checkForAppUpdate } from '@/lib/services/updateService'
 import type { RootStackParamList } from '@/types/navigation'
 import { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system'
@@ -88,21 +86,20 @@ export default function SettingsPage() {
 }
 
 const AboutSection = memo(function AboutSection() {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const [clickTimes, setClickTimes] = useState(0)
 
 	const handlePress = useCallback(() => {
 		const next = clickTimes + 1
 		setClickTimes(next)
 		if (next >= CLICK_TIMES) {
-			navigation.navigate('Test')
+			router.push('/test')
 			setTimeout(() => {
 				setClickTimes(0)
 			}, 200)
 			return
 		}
-	}, [clickTimes, navigation])
+	}, [clickTimes, router])
 
 	return (
 		<View style={{ paddingBottom: 15 }}>
@@ -158,7 +155,7 @@ const AboutSection = memo(function AboutSection() {
 AboutSection.displayName = 'AboutSection'
 
 const SettingsSection = memo(function SettingsSection() {
-	const navigation = useNavigation()
+	const router = useRouter()
 	const setSendPlayHistory = useAppStore(
 		(state) => state.setEnableSendPlayHistory,
 	)
@@ -332,7 +329,7 @@ const SettingsSection = memo(function SettingsSection() {
 				<IconButton
 					icon='open-in-new'
 					size={20}
-					onPress={() => navigation.navigate('Test')}
+					onPress={() => router.push('/test')}
 				/>
 			</View>
 		</View>

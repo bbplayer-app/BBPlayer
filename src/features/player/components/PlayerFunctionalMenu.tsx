@@ -5,8 +5,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { Divider, Menu } from 'react-native-paper'
@@ -25,8 +23,7 @@ export function PlayerFunctionalMenu({
 	uploaderMid: number | undefined
 	track: Track
 }) {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList, 'Player'>>()
+	const router = useRouter()
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
@@ -65,8 +62,9 @@ export function PlayerFunctionalMenu({
 					if (!uploaderMid) {
 						toast.error('获取视频详细信息失败')
 					} else {
-						navigation.navigate('PlaylistUploader', {
-							mid: String(uploaderMid),
+						router.push({
+							pathname: 'playlist/remote/uploader/[mid]',
+							params: { mid: String(uploaderMid) },
 						})
 					}
 				}}

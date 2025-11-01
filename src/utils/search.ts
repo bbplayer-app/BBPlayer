@@ -1,7 +1,6 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
 import type { RootStackParamList } from '@/types/navigation'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import log, { toastAndLogError } from './log'
 import toast from './toast'
 
@@ -230,37 +229,55 @@ export async function matchSearchStrategies(
  */
 export function navigateWithSearchStrategy(
 	strategy: SearchStrategy,
-	navigation: NativeStackNavigationProp<RootStackParamList>,
+	router: ReturnType<typeof useRouter>,
 ) {
 	switch (strategy.type) {
 		case 'BVID':
 			logger.debug('Navigating to PlaylistMultipage with bvid', {
 				bvid: strategy.bvid,
 			})
-			navigation.navigate('PlaylistMultipage', { bvid: strategy.bvid })
+			router.push({
+				pathname: 'playlist/remote/multipage/[bvid]',
+				params: { bvid: strategy.bvid },
+			})
 			return 0
 		case 'FAVORITE':
 			logger.debug('Navigating to PlaylistFavorite', { id: strategy.id })
-			navigation.navigate('PlaylistFavorite', { id: strategy.id })
+			router.push({
+				pathname: 'playlist/remote/favorite/[id]',
+				params: { id: strategy.id },
+			})
 			return 0
 		case 'COLLECTION':
 			logger.debug('Navigating to PlaylistCollection', { id: strategy.id })
-			navigation.navigate('PlaylistCollection', { id: strategy.id })
+			router.push({
+				pathname: 'playlist/remote/collection/[id]',
+				params: { id: strategy.id },
+			})
 			return 0
 		case 'UPLOADER':
 			logger.debug('Navigating to PlaylistUploader', { mid: strategy.mid })
-			navigation.navigate('PlaylistUploader', { mid: strategy.mid })
+			router.push({
+				pathname: 'playlist/remote/uploader/[mid]',
+				params: { mid: strategy.mid },
+			})
 			return 0
 		case 'SEARCH':
 			logger.debug('Navigating to SearchResult', { query: strategy.query })
-			navigation.navigate('SearchResult', { query: strategy.query })
+			router.push({
+				pathname: 'playlist/remote/search-result/global/[query]',
+				params: { query: strategy.query },
+			})
 			return 1
 		case 'INVALID_URL_NO_CTYPE':
 			toast.error('链接中未找到 ctype 参数，你确定复制全了吗？')
 			return 0
 		case 'B23_RESOLVE_ERROR':
 			toastAndLogError('解析 b23.tv 短链接失败', strategy.error, 'Utils.Search')
-			navigation.navigate('SearchResult', { query: strategy.query })
+			router.push({
+				pathname: 'playlist/remote/search-result/global/[query]',
+				params: { query: strategy.query },
+			})
 			return 1
 		case 'B23_NO_BVID_ERROR':
 			toastAndLogError(
@@ -268,7 +285,10 @@ export function navigateWithSearchStrategy(
 				new Error(strategy.resolvedUrl),
 				'Utils.Search',
 			)
-			navigation.navigate('SearchResult', { query: strategy.query })
+			router.push({
+				pathname: 'playlist/remote/search-result/global/[query]',
+				params: { query: strategy.query },
+			})
 			return 1
 		case 'AV_PARSE_ERROR':
 			toastAndLogError(
@@ -276,7 +296,10 @@ export function navigateWithSearchStrategy(
 				new Error(strategy.query),
 				'Utils.Search',
 			)
-			navigation.navigate('SearchResult', { query: strategy.query })
+			router.push({
+				pathname: 'playlist/remote/search-result/global/[query]',
+				params: { query: strategy.query },
+			})
 			return 1
 	}
 }

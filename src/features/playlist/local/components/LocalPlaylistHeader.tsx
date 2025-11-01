@@ -5,7 +5,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
 import * as Clipboard from 'expo-clipboard'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
@@ -81,7 +80,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const queueDownloads = useDownloadManagerStore(
 		(state) => state.queueDownloads,
 	)
-	const navigation = useNavigation()
+	const router = useRouter()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
 		() => buildSubtitlePieces(playlist),
@@ -99,9 +98,9 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				})),
 		)
 		useModalStore.getState().doAfterModalHostClosed(() => {
-			navigation.navigate('Download')
+			router.push('/download')
 		})
-	}, [navigation, playlistContents, queueDownloads])
+	}, [router, playlistContents, queueDownloads])
 
 	if (!playlist.title) return null
 

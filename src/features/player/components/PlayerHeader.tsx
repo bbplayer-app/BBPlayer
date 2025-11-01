@@ -1,5 +1,4 @@
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
-import { useNavigation } from '@react-navigation/native'
 import { View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
 
@@ -12,7 +11,7 @@ export function PlayerHeader({
 	viewMode: 'lyrics' | 'cover'
 	trackTitle?: string
 }) {
-	const navigation = useNavigation()
+	const router = useRouter()
 	const currentTrack = useCurrentTrack()
 
 	return (
@@ -28,7 +27,7 @@ export function PlayerHeader({
 			<IconButton
 				icon='chevron-down'
 				size={24}
-				onPress={() => navigation.goBack()}
+				onPress={() => router.back()}
 			/>
 			<Text
 				variant='titleMedium'

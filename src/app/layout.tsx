@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, View } from 'react-native'
 
-import { useLogger } from '@react-navigation/devtools'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
@@ -32,7 +31,6 @@ import Toast from 'react-native-toast-message'
 
 import migrations from '../../drizzle/migrations'
 
-import navigationRef from './navigationRef'
 import { AppProviders } from './providers'
 
 const logger = log.extend('UI.RootLayout')
@@ -62,7 +60,6 @@ export default Sentry.wrap(function RootLayout() {
 
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 	useSQLiteDevTools(expoDb)
-	useLogger(navigationRef)
 
 	onlineManager.setEventListener((setOnline) => {
 		const eventSubscription = Network.addNetworkStateListener((state) => {
@@ -71,11 +68,6 @@ export default Sentry.wrap(function RootLayout() {
 		return eventSubscription.remove.bind(eventSubscription)
 	})
 
-	useEffect(() => {
-		if (navigationRef?.current) {
-			navigationIntegration.registerNavigationContainer(navigationRef)
-		}
-	}, [])
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', onAppStateChange)
@@ -159,15 +151,7 @@ export default Sentry.wrap(function RootLayout() {
 			// 如果是第一次打开，则显示欢迎对话框
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
-				const tryOpenWelcome = () => {
-					// 大概率打开时 navigationRef 还没准备好
-					if (navigationRef.isReady()) {
-						open('Welcome', undefined, { dismissible: false })
-						return
-					}
-					setImmediate(tryOpenWelcome)
-				}
-				tryOpenWelcome()
+				open('Welcome', undefined, { dismissible: false })
 			}
 		}
 	}, [appIsReady, migrationsError, migrationsSuccess, open])
@@ -191,7 +175,6 @@ export default Sentry.wrap(function RootLayout() {
 			<AppProviders
 				appIsReady={appIsReady}
 				onLayoutRootView={onLayoutRootView}
-				navRef={navigationRef}
 			/>
 			<Toast config={toastConfig} />
 		</>

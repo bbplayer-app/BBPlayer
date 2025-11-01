@@ -1,7 +1,6 @@
 import GlobalErrorFallback from '@/components/ErrorBoundary'
 import { queryClient } from '@/lib/config/queryClient'
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme'
-import { NavigationContainer } from '@react-navigation/native'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ShareIntentProvider } from 'expo-share-intent'
@@ -16,18 +15,14 @@ import {
 	PaperProvider,
 } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { linking } from './linking'
-import { RootLayoutNav } from './navigation'
+import { Slot } from 'expo-router'
 
 export function AppProviders({
 	onLayoutRootView,
 	appIsReady,
-	navRef,
 }: {
 	onLayoutRootView: () => void
 	appIsReady: boolean
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	navRef: React.RefObject<any>
 }) {
 	const colorScheme = useColorScheme()
 	const { theme } = useMaterial3Theme()
@@ -62,17 +57,7 @@ export function AppProviders({
 						<GestureHandlerRootView style={{ flex: 1 }}>
 							<QueryClientProvider client={queryClient}>
 								<PaperProvider theme={paperTheme}>
-									<NavigationContainer
-										ref={navRef}
-										linking={linking}
-										fallback={
-											<View style={{ flex: 1, justifyContent: 'center' }}>
-												<ActivityIndicator size={'large'} />
-											</View>
-										}
-									>
-										<RootLayoutNav />
-									</NavigationContainer>
+									<Slot />
 								</PaperProvider>
 							</QueryClientProvider>
 						</GestureHandlerRootView>

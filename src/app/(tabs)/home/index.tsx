@@ -11,8 +11,6 @@ import {
 	navigateWithSearchStrategy,
 } from '@/utils/search'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Image } from 'expo-image'
 import { useShareIntentContext } from 'expo-share-intent'
 import { useCallback, useEffect, useState } from 'react'
@@ -35,8 +33,7 @@ interface SearchHistoryItem {
 function HomePage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const [searchQuery, setSearchQuery] = useState('')
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
@@ -118,10 +115,7 @@ function HomePage() {
 			Keyboard.dismiss()
 			setIsLoading(true)
 			const addToHistory = await matchSearchStrategies(query)
-			const needAddToHistory = navigateWithSearchStrategy(
-				addToHistory,
-				navigation,
-			)
+			const needAddToHistory = navigateWithSearchStrategy(addToHistory, router)
 			if (needAddToHistory === 1) {
 				addSearchHistory(query)
 			}
@@ -137,7 +131,10 @@ function HomePage() {
 
 	const handleSearchItemClick = (query: string) => {
 		// 直接跳转到搜索页面，我们可以确定，所有保存的搜索历史都是有效的关键词，而非 url/id 什么的
-		navigation.navigate('SearchResult', { query })
+		router.push({
+			pathname: 'playlist/remote/search-result/global/[query]',
+			params: { query },
+		})
 	}
 
 	useEffect(() => {
@@ -150,7 +147,7 @@ function HomePage() {
 
 		resetShareIntent()
 		void handleEnter(query)
-	}, [hasShareIntent, shareIntent, navigation, resetShareIntent, handleEnter])
+	}, [hasShareIntent, shareIntent, router, resetShareIntent, handleEnter])
 
 	return (
 		<View style={{ flex: 1, backgroundColor: colors.background }}>

@@ -7,8 +7,6 @@ import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import type { RootStackParamList } from '@/types/navigation'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
@@ -16,8 +14,7 @@ import { Searchbar, Text, useTheme } from 'react-native-paper'
 import FavoriteFolderListItem from './FavoriteFolderListItem'
 
 const FavoriteFolderListComponent = memo(() => {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const { colors } = useTheme()
 	const currentTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
@@ -106,7 +103,10 @@ const FavoriteFolderListComponent = memo(() => {
 				}}
 				onSubmitEditing={() => {
 					setQuery('')
-					navigation.navigate('SearchResultFav', { query })
+					router.push({
+						pathname: 'playlist/remote/search-result/fav/[query]',
+						params: { query },
+					})
 				}}
 			/>
 			<FlashList

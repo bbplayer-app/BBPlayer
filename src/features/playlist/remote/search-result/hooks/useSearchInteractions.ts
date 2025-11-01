@@ -3,13 +3,10 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useCallback } from 'react'
 
 export function useSearchInteractions() {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const openModal = useModalStore((state) => state.open)
 
@@ -20,8 +17,9 @@ export function useSearchInteractions() {
 					track.title?.includes(keyword),
 				)
 			) {
-				navigation.navigate('PlaylistMultipage', {
-					bvid: track.bilibiliMetadata.bvid,
+				router.push({
+					pathname: 'playlist/remote/multipage/[bvid]',
+					params: { bvid: track.bilibiliMetadata.bvid },
 				})
 				return
 			}
@@ -33,7 +31,7 @@ export function useSearchInteractions() {
 				startFromKey: track.uniqueKey,
 			})
 		},
-		[addToQueue, navigation],
+		[addToQueue, router],
 	)
 
 	const trackMenuItems = useCallback(
@@ -47,8 +45,9 @@ export function useSearchInteractions() {
 				title: '查看详细信息',
 				leadingIcon: 'file-document-outline',
 				onPress: () => {
-					navigation.navigate('PlaylistMultipage', {
-						bvid: item.bilibiliMetadata.bvid,
+					router.push({
+						pathname: 'playlist/remote/multipage/[bvid]',
+						params: { bvid: item.bilibiliMetadata.bvid },
 					})
 				},
 			},
@@ -66,13 +65,14 @@ export function useSearchInteractions() {
 					if (!item.artist?.remoteId) {
 						return
 					}
-					navigation.navigate('PlaylistUploader', {
-						mid: item.artist?.remoteId,
+					router.push({
+						pathname: 'playlist/remote/uploader/[mid]',
+						params: { mid: item.artist?.remoteId },
 					})
 				},
 			},
 		],
-		[navigation, openModal, playTrack],
+		[router, openModal, playTrack],
 	)
 
 	return {

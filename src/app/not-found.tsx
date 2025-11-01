@@ -1,20 +1,17 @@
-import type { RootStackParamList } from '@/types/navigation'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Link, Stack } from 'expo-router'
 import { Button, StyleSheet, Text, View } from 'react-native'
 
 const NotFoundScreen: React.FC = () => {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
-
+	const router = useRouter()
 	const handleGoHome = () => {
-		navigation.navigate('MainTabs', { screen: 'Home' })
+		router.replace('/(tabs)/home')
 	}
 
 	return (
 		<View style={styles.container}>
 			<Text style={styles.title}>404</Text>
 			<Text style={styles.message}>你正在找的页面不见了！</Text>
+			<Stack.Screen options={{ title: 'Oops!' }} />
 			<Button
 				title='Go to Home Screen'
 				onPress={handleGoHome}

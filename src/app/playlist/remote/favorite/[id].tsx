@@ -15,12 +15,6 @@ import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import {
-	type RouteProp,
-	useNavigation,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
@@ -57,13 +51,9 @@ const mapApiItemToTrack = (
 }
 
 export default function FavoritePage() {
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistFavorite'>>()
-	const { id } = route.params
+	const { id } = useLocalSearchParams<{ id: string }>()
 	const { colors } = useTheme()
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistFavorite'>
-		>()
+	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
 
@@ -108,18 +98,21 @@ export default function FavoritePage() {
 			{
 				onSuccess: (id) => {
 					if (!id) return
-					navigation.replace('PlaylistLocal', { id: String(id) })
+					router.replace({
+						pathname: 'playlist/local/[id]',
+						params: { id: String(id) },
+					})
 				},
 			},
 		)
 		setRefreshing(false)
-	}, [favoriteData?.pages, id, navigation, syncFavorite])
+	}, [favoriteData?.pages, id, router, syncFavorite])
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/not-found')
 		}
-	}, [id, navigation])
+	}, [id, router])
 
 	if (typeof id !== 'string') {
 		return null
@@ -168,7 +161,7 @@ export default function FavoritePage() {
 						}}
 					/>
 				) : (
-					<Appbar.BackAction onPress={() => navigation.goBack()} />
+					<Appbar.BackAction onPress={() => router.back()} />
 				)}
 			</Appbar.Header>
 

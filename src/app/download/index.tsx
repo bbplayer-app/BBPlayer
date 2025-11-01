@@ -4,7 +4,6 @@ import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import type { DownloadTask } from '@/types/core/downloadManagerStore'
-import { useNavigation } from '@react-navigation/native'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback } from 'react'
 import { View } from 'react-native'
@@ -14,7 +13,7 @@ import { useShallow } from 'zustand/shallow'
 
 export default function DownloadPage() {
 	const { colors } = useTheme()
-	const navigation = useNavigation()
+	const router = useRouter()
 	const insets = useSafeAreaInsets()
 
 	const tasks = useDownloadManagerStore(
@@ -34,7 +33,7 @@ export default function DownloadPage() {
 	return (
 		<View style={{ flex: 1, backgroundColor: colors.background }}>
 			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => navigation.goBack()} />
+				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='下载任务' />
 			</Appbar.Header>
 

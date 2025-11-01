@@ -21,13 +21,7 @@ import type {
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import { formatMMSSToSeconds } from '@/utils/time'
-import {
-	type RouteProp,
-	useNavigation,
-	usePreventRemove,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useFocusEffect } from '@react-navigation/native'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
@@ -71,13 +65,9 @@ const mapApiItemToTrack = (
 }
 
 export default function UploaderPage() {
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistUploader'>>()
-	const { mid } = route.params
+	const { mid } = useLocalSearchParams<{ mid: string }>()
 	const { colors } = useTheme()
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistUploader'>
-		>()
+	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
@@ -129,15 +119,13 @@ export default function UploaderPage() {
 
 	useEffect(() => {
 		if (typeof mid !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/not-found')
 		}
-	}, [mid, navigation])
+	}, [mid, router])
 
-	useEffect(() => {
-		navigation.addListener('transitionEnd', () => {
-			setTransitionDone(true)
-		})
-	}, [navigation])
+	useFocusEffect(() => {
+		setTransitionDone(true)
+	})
 
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
@@ -201,7 +189,7 @@ export default function UploaderPage() {
 						selectMode ? `已选择 ${selected.size} 首` : uploaderUserInfo.name
 					}
 				/>
-				<Appbar.BackAction onPress={() => navigation.goBack()} />
+				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
 					<Appbar.Action
 						icon='playlist-plus'

@@ -1,0 +1,3 @@
+
+> bbplayer@1.3.6 start /app
+> APP_VARIANT=development expo start

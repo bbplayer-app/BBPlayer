@@ -21,12 +21,6 @@ import type {
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import {
-	type RouteProp,
-	useNavigation,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
@@ -64,12 +58,8 @@ const mapApiItemToTrack = (
 }
 
 export default function MultipagePage() {
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistMultipage'>
-		>()
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistMultipage'>>()
-	const { bvid } = route.params
+	const router = useRouter()
+	const { bvid } = useLocalSearchParams<{ bvid: string }>()
 	const [refreshing, setRefreshing] = useState(false)
 	const { colors } = useTheme()
 	const linkedPlaylistId = useCheckLinkedToPlaylist(bv2av(bvid), 'multi_page')
@@ -114,18 +104,21 @@ export default function MultipagePage() {
 			{
 				onSuccess: (id) => {
 					if (!id) return
-					navigation.replace('PlaylistLocal', { id: String(id) })
+					router.replace({
+						pathname: 'playlist/local/[id]',
+						params: { id: String(id) },
+					})
 				},
 			},
 		)
 		setRefreshing(false)
-	}, [bvid, navigation, syncMultipage])
+	}, [bvid, router, syncMultipage])
 
 	useEffect(() => {
 		if (typeof bvid !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/not-found')
 		}
-	}, [bvid, navigation])
+	}, [bvid, router])
 
 	if (typeof bvid !== 'string') {
 		return null
@@ -165,7 +158,7 @@ export default function MultipagePage() {
 						}}
 					/>
 				) : (
-					<Appbar.BackAction onPress={() => navigation.goBack()} />
+					<Appbar.BackAction onPress={() => router.back()} />
 				)}
 			</Appbar.Header>
 

@@ -2,15 +2,13 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useCallback } from 'react'
 
 export function usePlaylistMenu(
 	playTrack: (track: BilibiliTrack, playNext: boolean) => void,
 ) {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
+	const pathname = usePathname()
 	const openModal = useModalStore((state) => state.open)
 
 	return useCallback(
@@ -24,13 +22,13 @@ export function usePlaylistMenu(
 				title: '查看详细信息',
 				leadingIcon: 'file-document-outline',
 				onPress: () => {
-					const state = navigation.getState()
-					if (state.routes[state.index].name === 'PlaylistMultipage') {
+					if (pathname.includes('multipage')) {
 						toast.info('你已经在这里了，没法更深入了！')
 						return
 					}
-					navigation.navigate('PlaylistMultipage', {
-						bvid: item.bilibiliMetadata.bvid,
+					router.push({
+						pathname: 'playlist/remote/multipage/[bvid]',
+						params: { bvid: item.bilibiliMetadata.bvid },
 					})
 				},
 			},
@@ -49,12 +47,13 @@ export function usePlaylistMenu(
 						toast.error('未找到 up 主信息')
 						return
 					}
-					navigation.navigate('PlaylistUploader', {
-						mid: item.artist?.remoteId,
+					router.push({
+						pathname: 'playlist/remote/uploader/[mid]',
+						params: { mid: item.artist?.remoteId },
 					})
 				},
 			},
 		],
-		[navigation, openModal, playTrack],
+		[router, openModal, playTrack, pathname],
 	)
 }

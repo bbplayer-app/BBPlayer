@@ -3,8 +3,6 @@ import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { RootStackParamList } from '@/types/navigation'
 import * as Haptics from '@/utils/haptics'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useImage } from 'expo-image'
 import { useRef, useState } from 'react'
 import { Dimensions, View } from 'react-native'
@@ -18,8 +16,7 @@ import { PlayerSlider } from '@/features/player/components/PlayerSlider'
 import { TrackInfo } from '@/features/player/components/PlayerTrackInfo'
 
 export default function PlayerPage() {
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList, 'Player'>>()
+	const router = useRouter()
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const { width: screenWidth } = Dimensions.get('window')
@@ -45,7 +42,7 @@ export default function PlayerPage() {
 				<Text style={{ color: colors.onBackground }}>没有正在播放的曲目</Text>
 				<IconButton
 					icon='arrow-left'
-					onPress={() => navigation.goBack()}
+					onPress={() => router.back()}
 				/>
 			</View>
 		)
@@ -78,8 +75,9 @@ export default function PlayerPage() {
 						<TrackInfo
 							onArtistPress={() =>
 								currentTrack.artist?.remoteId
-									? navigation.navigate('PlaylistUploader', {
-											mid: currentTrack.artist?.remoteId,
+									? router.push({
+											pathname: 'playlist/remote/uploader/[mid]',
+											params: { mid: currentTrack.artist?.remoteId },
 										})
 									: void 0
 							}
