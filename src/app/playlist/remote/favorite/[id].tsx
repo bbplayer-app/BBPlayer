@@ -110,7 +110,7 @@ export default function FavoritePage() {
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			router.replace('/not-found')
+			router.replace('/+not-found')
 		}
 	}, [id, router])
 

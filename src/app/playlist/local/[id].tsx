@@ -111,7 +111,6 @@ export default function LocalPlaylistPage() {
 				onSuccess: () => router.back(),
 			},
 		)
-		router.back()
 	}, [deletePlaylist, id, router])
 
 	const handleSync = useCallback(() => {
@@ -159,7 +158,7 @@ export default function LocalPlaylistPage() {
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			router.replace('/not-found')
+			router.replace('/+not-found')
 		}
 	}, [id, router])
 

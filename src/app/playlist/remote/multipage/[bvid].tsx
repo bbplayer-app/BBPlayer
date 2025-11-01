@@ -116,7 +116,7 @@ export default function MultipagePage() {
 
 	useEffect(() => {
 		if (typeof bvid !== 'string') {
-			router.replace('/not-found')
+			router.replace('/+not-found')
 		}
 	}, [bvid, router])
 

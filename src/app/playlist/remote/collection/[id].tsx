@@ -99,7 +99,7 @@ export default function CollectionPage() {
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
-			router.replace('/not-found')
+			router.replace('/+not-found')
 		}
 	}, [id, router])
 
