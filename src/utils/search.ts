@@ -1,6 +1,6 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
-import type { useRouter } from 'expo-router'
+import type { Router } from 'expo-router'
 import log, { toastAndLogError } from './log'
 import toast from './toast'
 
@@ -229,7 +229,7 @@ export async function matchSearchStrategies(
  */
 export function navigateWithSearchStrategy(
 	strategy: SearchStrategy,
-	router: ReturnType<typeof useRouter>,
+	router: Router,
 ) {
 	switch (strategy.type) {
 		case 'BVID':

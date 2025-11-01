@@ -1,9 +1,18 @@
+import type { EventArg, NavigationAction } from '@react-navigation/native'
 import { useNavigation } from 'expo-router'
 import { useEffect, useRef } from 'react'
 
 export default function usePreventRemove(
 	shouldPrevent: boolean,
-	callback: () => void,
+	callback: (
+		e: EventArg<
+			'beforeRemove',
+			true,
+			{
+				action: NavigationAction
+			}
+		>,
+	) => void,
 ) {
 	const navigation = useNavigation()
 	const callbackRef = useRef(callback)
@@ -20,7 +29,7 @@ export default function usePreventRemove(
 		const unsubscribe = navigation.addListener('beforeRemove', (e) => {
 			if (shouldPreventRef.current) {
 				e.preventDefault()
-				callbackRef.current?.()
+				callbackRef.current?.(e)
 			}
 		})
 		return unsubscribe
