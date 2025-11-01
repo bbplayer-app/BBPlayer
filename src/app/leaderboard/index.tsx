@@ -7,6 +7,7 @@ import {
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
+import { useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { View } from 'react-native'
 import {

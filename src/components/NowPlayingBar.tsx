@@ -1,9 +1,9 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import type { RootStackParamList } from '@/types/navigation'
 import * as Haptics from '@/utils/haptics'
 import { Image } from 'expo-image'
+import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
 import { View } from 'react-native'
 import {

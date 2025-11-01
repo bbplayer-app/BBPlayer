@@ -3,19 +3,14 @@ import { queryClient } from '@/lib/config/queryClient'
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { Slot } from 'expo-router'
 import { ShareIntentProvider } from 'expo-share-intent'
 import { useMemo } from 'react'
 import { useColorScheme, View } from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import {
-	ActivityIndicator,
-	MD3DarkTheme,
-	MD3LightTheme,
-	PaperProvider,
-} from 'react-native-paper'
+import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { Slot } from 'expo-router'
 
 export function AppProviders({
 	onLayoutRootView,

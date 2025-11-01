@@ -3,6 +3,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
+import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
@@ -53,7 +54,7 @@ export default function CreatePlaylistModal({
 		coverUrl,
 		createNewPlaylist,
 		description,
-		navigation,
+		router,
 		redirectToNewPlaylist,
 		title,
 	])

@@ -6,6 +6,7 @@ import type { Playlist, Track } from '@/types/core/media'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
+import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {

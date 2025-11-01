@@ -1,12 +1,24 @@
-import type { BottomTabParamList } from '@/types/navigation'
+import type {
+	NativeBottomTabNavigationEventMap,
+	NativeBottomTabNavigationOptions,
+} from '@bottom-tabs/react-navigation'
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
+import type {
+	ParamListBase,
+	TabNavigationState,
+} from '@react-navigation/native'
+import { withLayoutContext } from 'expo-router'
 import { useTheme } from 'react-native-paper'
-import HomePage from './home/index'
-import LibraryScreen from './library/[tab]'
-import SettingsPage from './settings/index'
 
-const Tab = createNativeBottomTabNavigator<BottomTabParamList>()
+const BottomTabNavigator = createNativeBottomTabNavigator().Navigator
+
+const Tabs = withLayoutContext<
+	NativeBottomTabNavigationOptions,
+	typeof BottomTabNavigator,
+	TabNavigationState<ParamListBase>,
+	NativeBottomTabNavigationEventMap
+>(BottomTabNavigator)
 
 interface nonNullableIcon {
 	uri: string
@@ -21,16 +33,15 @@ export default function TabLayout() {
 	const themes = useTheme().colors
 
 	return (
-		<Tab.Navigator
+		<Tabs
 			disablePageAnimations
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={themes.primaryContainer}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
 			initialRouteName='Home'
 		>
-			<Tab.Screen
+			<Tabs.Screen
 				name='Home'
-				component={HomePage}
 				options={{
 					title: '主页',
 					tabBarIcon: () => homeIcon,
@@ -38,9 +49,8 @@ export default function TabLayout() {
 					lazy: false,
 				}}
 			/>
-			<Tab.Screen
+			<Tabs.Screen
 				name='Library'
-				component={LibraryScreen}
 				options={{
 					title: '音乐库',
 					tabBarIcon: () => libraryIcon,
@@ -48,9 +58,8 @@ export default function TabLayout() {
 					lazy: false,
 				}}
 			/>
-			<Tab.Screen
+			<Tabs.Screen
 				name='Settings'
-				component={SettingsPage}
 				options={{
 					title: '设置',
 					tabBarIcon: () => settingsIcon,
@@ -58,6 +67,6 @@ export default function TabLayout() {
 					lazy: false,
 				}}
 			/>
-		</Tab.Navigator>
+		</Tabs>
 	)
 }

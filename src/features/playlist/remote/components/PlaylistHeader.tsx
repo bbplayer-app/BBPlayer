@@ -1,7 +1,7 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
+import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
 import { View } from 'react-native'
 import {

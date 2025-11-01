@@ -1,5 +1,5 @@
-import { DataFetchingError } from '@/app/(tabs)/library/components/shared/DataFetchingError'
-import { DataFetchingPending } from '@/app/(tabs)/library/components/shared/DataFetchingPending'
+import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
+import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'

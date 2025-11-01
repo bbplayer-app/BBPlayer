@@ -12,7 +12,7 @@ import { toastConfig } from '@/components/toast/ToastConfig'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
-import { initializeSentry, navigationIntegration } from '@/lib/config/sentry'
+import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb, { expoDb } from '@/lib/db/db'
 import { initPlayer } from '@/lib/player/playerLogic'
 import lyricService from '@/lib/services/lyricService'
@@ -67,7 +67,6 @@ export default Sentry.wrap(function RootLayout() {
 		})
 		return eventSubscription.remove.bind(eventSubscription)
 	})
-
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', onAppStateChange)

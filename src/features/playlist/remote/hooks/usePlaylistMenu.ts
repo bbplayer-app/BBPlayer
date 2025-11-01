@@ -1,7 +1,7 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliTrack } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
+import { usePathname, useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
 export function usePlaylistMenu(

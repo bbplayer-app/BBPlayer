@@ -1,6 +1,6 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
-import type { RootStackParamList } from '@/types/navigation'
+import type { useRouter } from 'expo-router'
 import log, { toastAndLogError } from './log'
 import toast from './toast'
 

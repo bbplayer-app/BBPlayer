@@ -1,22 +1,6 @@
-import { Stack, useRouter } from 'expo-router'
-import { useEffect } from 'react'
-import { NavigationService } from '@/lib/router/NavigationService'
+import { Stack } from 'expo-router'
 
 export default function RootLayout() {
-	const router = useRouter()
-
-	useEffect(() => {
-		const onNavigate = ({ path, params }: { path: string; params?: Record<string, any> }) => {
-			router.push({ pathname: path, params });
-		};
-
-		NavigationService.events.on('navigate', onNavigate);
-
-		return () => {
-			NavigationService.events.off('navigate', onNavigate);
-		};
-	}, [router]);
-
 	return (
 		<Stack>
 			<Stack.Screen

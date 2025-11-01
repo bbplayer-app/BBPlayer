@@ -1,11 +1,11 @@
+import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
+import { modalRegistry } from '@/components/ModalRegistry'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePreventRemove } from '@react-navigation/native'
 import { useNavigation, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { useShallow } from 'zustand/shallow'
-import AnimatedModalOverlay from './common/AnimatedModalOverlay'
-import { modalRegistry } from './ModalRegistry'
 
 export default function ModalHost() {
 	const { modals } = useModalStore(

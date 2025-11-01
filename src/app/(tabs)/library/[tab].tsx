@@ -3,8 +3,8 @@ import CollectionListComponent from '@/features/library/collection/CollectionLis
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
 import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
-import type { BottomTabParamList } from '@/types/navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Dimensions, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
@@ -41,7 +41,9 @@ export default function Library() {
 
 	useFocusEffect(() => {
 		if (tab === undefined) return
-		setIndex(tab)
+		const numTab = Number(tab)
+		if (isNaN(numTab)) return
+		setIndex(numTab)
 	})
 
 	return (

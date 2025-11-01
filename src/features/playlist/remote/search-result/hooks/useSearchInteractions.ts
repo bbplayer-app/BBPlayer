@@ -2,7 +2,7 @@ import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-resu
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
+import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
 export function useSearchInteractions() {

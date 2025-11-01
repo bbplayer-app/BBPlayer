@@ -1,6 +1,6 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { Playlist } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
+import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'

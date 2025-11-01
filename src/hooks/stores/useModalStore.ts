@@ -1,6 +1,6 @@
-import { NavigationService } from '@/lib/router/NavigationService'
 import type { ModalInstance, ModalKey, ModalPropsMap } from '@/types/navigation'
 import toast from '@/utils/toast'
+import { router } from 'expo-router'
 import type { Emitter } from 'mitt'
 import mitt from 'mitt'
 import { create } from 'zustand'
@@ -43,7 +43,7 @@ export const useModalStore = create<ModalState>()(
 				modals: [...state.modals, { key, props, options }],
 			}))
 
-			NavigationService.navigate('/modal-host')
+			router.navigate('/modal-host')
 		},
 
 		close: (key) => {

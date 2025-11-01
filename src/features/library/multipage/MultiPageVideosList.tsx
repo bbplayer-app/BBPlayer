@@ -1,6 +1,6 @@
-import { DataFetchingError } from '@/app/(tabs)/library/components/shared/DataFetchingError'
-import { DataFetchingPending } from '@/app/(tabs)/library/components/shared/DataFetchingPending'
-import TabDisable from '@/app/(tabs)/library/components/shared/TabDisabled'
+import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
+import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
+import TabDisable from '@/features/library/shared/TabDisabled'
 import {
 	useGetFavoritePlaylists,
 	useInfiniteFavoriteList,

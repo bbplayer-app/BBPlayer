@@ -1,4 +1,3 @@
-import { NavigationService } from '@/lib/router/NavigationService'
 import { downloadService } from '@/lib/services/downloadService'
 import type {
 	DownloadActions,
@@ -12,6 +11,7 @@ import notifee, {
 	AuthorizationStatus,
 	EventType,
 } from '@notifee/react-native'
+import { router } from 'expo-router'
 import { AppState } from 'react-native'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
@@ -43,7 +43,7 @@ AppState.addEventListener('change', async (state) => {
 notifee.onForegroundEvent(({ type }) => {
 	switch (type) {
 		case EventType.PRESS:
-			NavigationService.navigate('/download')
+			router.navigate('/download')
 			break
 	}
 })

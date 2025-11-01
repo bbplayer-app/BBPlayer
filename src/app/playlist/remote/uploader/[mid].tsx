@@ -10,6 +10,7 @@ import {
 	useInfiniteGetUserUploadedVideos,
 	useOtherUserInfo,
 } from '@/hooks/queries/bilibili/user'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
@@ -19,9 +20,9 @@ import type {
 	BilibiliUserUploadedVideosResponse,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
 import { formatMMSSToSeconds } from '@/utils/time'
 import { useFocusEffect } from '@react-navigation/native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
@@ -61,6 +62,7 @@ const mapApiItemToTrack = (
 		},
 		createdAt: new Date(apiItem.created),
 		updatedAt: new Date(apiItem.created),
+		trackDownloads: null,
 	}
 }
 
@@ -248,6 +250,7 @@ export default function UploaderPage() {
 							description={uploaderUserInfo.sign}
 							onClickMainButton={undefined}
 							mainButtonIcon={'sync'}
+							id={Number(mid)}
 						/>
 					}
 					refreshControl={

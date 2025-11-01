@@ -1,4 +1,4 @@
-import { Link, Stack } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { Button, StyleSheet, Text, View } from 'react-native'
 
 const NotFoundScreen: React.FC = () => {
@@ -11,9 +11,8 @@ const NotFoundScreen: React.FC = () => {
 		<View style={styles.container}>
 			<Text style={styles.title}>404</Text>
 			<Text style={styles.message}>你正在找的页面不见了！</Text>
-			<Stack.Screen options={{ title: 'Oops!' }} />
 			<Button
-				title='Go to Home Screen'
+				title='回到主页'
 				onPress={handleGoHome}
 			/>
 		</View>

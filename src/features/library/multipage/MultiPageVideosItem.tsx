@@ -1,7 +1,7 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
-import type { RootStackParamList } from '@/types/navigation'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'

@@ -1,4 +1,4 @@
-import { usePreventRemove } from '@react-navigation/native'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useCallback, useState } from 'react'
 
 export function useTrackSelection() {

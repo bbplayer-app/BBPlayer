@@ -19,8 +19,8 @@ import type {
 	BilibiliVideoDetails,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
 import toast from '@/utils/toast'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'

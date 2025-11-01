@@ -4,7 +4,6 @@ import SearchSuggestions from '@/features/home/SearchSuggestions'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
-import type { RootStackParamList } from '@/types/navigation'
 import { toastAndLogError } from '@/utils/log'
 import {
 	matchSearchStrategies,
@@ -12,6 +11,7 @@ import {
 } from '@/utils/search'
 import toast from '@/utils/toast'
 import { Image } from 'expo-image'
+import { useRouter } from 'expo-router'
 import { useShareIntentContext } from 'expo-share-intent'
 import { useCallback, useEffect, useState } from 'react'
 import { Keyboard, View } from 'react-native'
@@ -122,7 +122,7 @@ function HomePage() {
 			setIsLoading(false)
 			setSearchQuery('')
 		},
-		[addSearchHistory, navigation],
+		[addSearchHistory, router],
 	)
 
 	const handleSuggestionPress = (query: string) => {
