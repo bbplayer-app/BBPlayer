@@ -69,6 +69,8 @@ export default function SettingsPage() {
 					<SettingsSection />
 					<Divider style={{ marginTop: 16, marginBottom: 16 }} />
 					<AboutSection />
+					<Divider style={{ marginTop: 16, marginBottom: 16 }} />
+					<AboutSection />
 				</ScrollView>
 			</View>
 			<View
@@ -169,6 +171,33 @@ const SettingsSection = memo(function SettingsSection() {
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 	const openModal = useModalStore((state) => state.open)
+	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
+
+	const handleCheckForUpdate = async () => {
+		setIsCheckingForUpdate(true)
+		try {
+			const result = await checkForAppUpdate()
+			if (result.isErr()) {
+				toast.error('检查更新失败', { description: result.error.message })
+				setIsCheckingForUpdate(false)
+				return
+			}
+
+			const { update } = result.value
+			if (update) {
+				if (update.forced) {
+					openModal('UpdateApp', update, { dismissible: false })
+				} else {
+					openModal('UpdateApp', update)
+				}
+			} else {
+				toast.success('已是最新版本')
+			}
+		} catch (e) {
+			toast.error('检查更新时发生未知错误', { description: String(e) })
+		}
+		setIsCheckingForUpdate(false)
+	}
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
 
 	const handleCheckForUpdate = async () => {
@@ -299,6 +328,22 @@ const SettingsSection = memo(function SettingsSection() {
 					icon='share-variant'
 					size={20}
 					onPress={shareLogFile}
+				/>
+			</View>
+			<View
+				style={{
+					flexDirection: 'row',
+					alignItems: 'center',
+					justifyContent: 'space-between',
+					marginTop: 16,
+				}}
+			>
+				<Text>检查更新</Text>
+				<IconButton
+					icon='update'
+					size={20}
+					loading={isCheckingForUpdate}
+					onPress={handleCheckForUpdate}
 				/>
 			</View>
 			<View
