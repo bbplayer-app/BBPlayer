@@ -198,33 +198,6 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 		setIsCheckingForUpdate(false)
 	}
-	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
-
-	const handleCheckForUpdate = async () => {
-		setIsCheckingForUpdate(true)
-		try {
-			const result = await checkForAppUpdate()
-			if (result.isErr()) {
-				toast.error('检查更新失败', { description: result.error.message })
-				setIsCheckingForUpdate(false)
-				return
-			}
-
-			const { update } = result.value
-			if (update) {
-				if (update.forced) {
-					openModal('UpdateApp', update, { dismissible: false })
-				} else {
-					openModal('UpdateApp', update)
-				}
-			} else {
-				toast.success('已是最新版本')
-			}
-		} catch (e) {
-			toast.error('检查更新时发生未知错误', { description: String(e) })
-		}
-		setIsCheckingForUpdate(false)
-	}
 
 	const shareLogFile = async () => {
 		const d = new Date()
