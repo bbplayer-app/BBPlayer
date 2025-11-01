@@ -132,7 +132,7 @@ function HomePage() {
 	const handleSearchItemClick = (query: string) => {
 		// 直接跳转到搜索页面，我们可以确定，所有保存的搜索历史都是有效的关键词，而非 url/id 什么的
 		router.push({
-			pathname: 'playlist/remote/search-result/global/[query]',
+			pathname: '/playlist/remote/search-result/global/[query]',
 			params: { query },
 		})
 	}

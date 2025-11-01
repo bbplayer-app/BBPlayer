@@ -70,7 +70,7 @@ export function useLocalPlaylistMenu({
 					leadingIcon: 'file-document-outline',
 					onPress: () =>
 						router.push({
-							pathname: 'playlist/remote/multipage/[bvid]',
+							pathname: '/playlist/remote/multipage/[bvid]',
 							params: { bvid: item.bilibiliMetadata.bvid },
 						}),
 				},
@@ -82,7 +82,7 @@ export function useLocalPlaylistMenu({
 							return
 						}
 						router.push({
-							pathname: 'playlist/remote/uploader/[mid]',
+							pathname: '/playlist/remote/uploader/[mid]',
 							params: { mid: item.artist?.remoteId },
 						})
 					},

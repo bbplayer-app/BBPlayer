@@ -63,7 +63,7 @@ export function PlayerFunctionalMenu({
 						toast.error('获取视频详细信息失败')
 					} else {
 						router.push({
-							pathname: 'playlist/remote/uploader/[mid]',
+							pathname: '/playlist/remote/uploader/[mid]',
 							params: { mid: String(uploaderMid) },
 						})
 					}

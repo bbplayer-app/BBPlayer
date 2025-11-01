@@ -14,7 +14,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 			<RectButton
 				onPress={() => {
 					router.push({
-						pathname: 'playlist/remote/favorite/[id]',
+						pathname: '/playlist/remote/favorite/[id]',
 						params: { id: String(item.id) },
 					})
 				}}

@@ -237,35 +237,35 @@ export function navigateWithSearchStrategy(
 				bvid: strategy.bvid,
 			})
 			router.push({
-				pathname: 'playlist/remote/multipage/[bvid]',
+				pathname: '/playlist/remote/multipage/[bvid]',
 				params: { bvid: strategy.bvid },
 			})
 			return 0
 		case 'FAVORITE':
 			logger.debug('Navigating to PlaylistFavorite', { id: strategy.id })
 			router.push({
-				pathname: 'playlist/remote/favorite/[id]',
+				pathname: '/playlist/remote/favorite/[id]',
 				params: { id: strategy.id },
 			})
 			return 0
 		case 'COLLECTION':
 			logger.debug('Navigating to PlaylistCollection', { id: strategy.id })
 			router.push({
-				pathname: 'playlist/remote/collection/[id]',
+				pathname: '/playlist/remote/collection/[id]',
 				params: { id: strategy.id },
 			})
 			return 0
 		case 'UPLOADER':
 			logger.debug('Navigating to PlaylistUploader', { mid: strategy.mid })
 			router.push({
-				pathname: 'playlist/remote/uploader/[mid]',
+				pathname: '/playlist/remote/uploader/[mid]',
 				params: { mid: strategy.mid },
 			})
 			return 0
 		case 'SEARCH':
 			logger.debug('Navigating to SearchResult', { query: strategy.query })
 			router.push({
-				pathname: 'playlist/remote/search-result/global/[query]',
+				pathname: '/playlist/remote/search-result/global/[query]',
 				params: { query: strategy.query },
 			})
 			return 1
@@ -275,7 +275,7 @@ export function navigateWithSearchStrategy(
 		case 'B23_RESOLVE_ERROR':
 			toastAndLogError('解析 b23.tv 短链接失败', strategy.error, 'Utils.Search')
 			router.push({
-				pathname: 'playlist/remote/search-result/global/[query]',
+				pathname: '/playlist/remote/search-result/global/[query]',
 				params: { query: strategy.query },
 			})
 			return 1
@@ -286,7 +286,7 @@ export function navigateWithSearchStrategy(
 				'Utils.Search',
 			)
 			router.push({
-				pathname: 'playlist/remote/search-result/global/[query]',
+				pathname: '/playlist/remote/search-result/global/[query]',
 				params: { query: strategy.query },
 			})
 			return 1
@@ -297,7 +297,7 @@ export function navigateWithSearchStrategy(
 				'Utils.Search',
 			)
 			router.push({
-				pathname: 'playlist/remote/search-result/global/[query]',
+				pathname: '/playlist/remote/search-result/global/[query]',
 				params: { query: strategy.query },
 			})
 			return 1

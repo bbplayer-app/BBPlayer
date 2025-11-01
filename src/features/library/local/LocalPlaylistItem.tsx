@@ -15,7 +15,7 @@ const LocalPlaylistItem = memo(({ item }: { item: Playlist }) => {
 				style={{ paddingVertical: 8, overflow: 'hidden' }}
 				onPress={() => {
 					router.push({
-						pathname: 'playlist/local/[id]',
+						pathname: '/playlist/local/[id]',
 						params: { id: String(item.id) },
 					})
 				}}

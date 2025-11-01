@@ -77,11 +77,11 @@ export default function Library() {
 					<View style={{ flexDirection: 'row' }}>
 						<IconButton
 							icon='progress-download'
-							onPress={() => router.push('download')}
+							onPress={() => router.push('/download')}
 						/>
 						<IconButton
 							icon='trophy'
-							onPress={() => router.push('leaderboard')}
+							onPress={() => router.push('/leaderboard')}
 						/>
 					</View>
 				</View>

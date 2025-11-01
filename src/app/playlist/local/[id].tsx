@@ -316,7 +316,7 @@ export default function LocalPlaylistPage() {
 						onPressAuthor={(author) =>
 							author.remoteId &&
 							router.push({
-								pathname: 'playlist/remote/uploader/[mid]',
+								pathname: '/playlist/remote/uploader/[mid]',
 								params: { mid: author.remoteId },
 							})
 						}

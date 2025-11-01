@@ -139,6 +139,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 	],
 	experiments: {
 		reactCompiler: true,
+		typedRoutes: true,
 	},
 	extra: {
 		eas: {

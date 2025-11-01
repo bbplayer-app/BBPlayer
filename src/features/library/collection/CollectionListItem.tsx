@@ -16,12 +16,12 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 				onPress={() => {
 					if (item.attr === 0) {
 						router.push({
-							pathname: 'playlist/remote/collection/[id]',
+							pathname: '/playlist/remote/collection/[id]',
 							params: { id: String(item.id) },
 						})
 					} else {
 						router.push({
-							pathname: 'playlist/remote/favorite/[id]',
+							pathname: '/playlist/remote/favorite/[id]',
 							params: { id: String(item.id) },
 						})
 					}

@@ -99,7 +99,7 @@ export default function FavoritePage() {
 				onSuccess: (id) => {
 					if (!id) return
 					router.replace({
-						pathname: 'playlist/local/[id]',
+						pathname: '/playlist/local/[id]',
 						params: { id: String(id) },
 					})
 				},

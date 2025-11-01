@@ -31,7 +31,7 @@ export default function DuplicateLocalPlaylistModal({
 					closeAll()
 					useModalStore.getState().doAfterModalHostClosed(() => {
 						router.push({
-							pathname: 'playlist/local/[id]',
+							pathname: '/playlist/local/[id]',
 							params: { id: String(id) },
 						})
 					})

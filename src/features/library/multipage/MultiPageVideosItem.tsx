@@ -17,7 +17,7 @@ const MultiPageVideosItem = memo(
 					<RectButton
 						onPress={() => {
 							router.push({
-								pathname: 'playlist/remote/multipage/[bvid]',
+								pathname: '/playlist/remote/multipage/[bvid]',
 								params: { bvid: item.bvid },
 							})
 						}}

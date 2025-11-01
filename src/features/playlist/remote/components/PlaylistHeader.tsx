@@ -106,7 +106,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						size={20}
 						onPress={() =>
 							router.push({
-								pathname: 'playlist/local/[id]',
+								pathname: '/playlist/local/[id]',
 								params: { id: linkedPlaylistId.toString() },
 							})
 						}

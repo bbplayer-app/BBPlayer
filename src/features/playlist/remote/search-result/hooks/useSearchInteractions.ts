@@ -18,7 +18,7 @@ export function useSearchInteractions() {
 				)
 			) {
 				router.push({
-					pathname: 'playlist/remote/multipage/[bvid]',
+					pathname: '/playlist/remote/multipage/[bvid]',
 					params: { bvid: track.bilibiliMetadata.bvid },
 				})
 				return
@@ -46,7 +46,7 @@ export function useSearchInteractions() {
 				leadingIcon: 'file-document-outline',
 				onPress: () => {
 					router.push({
-						pathname: 'playlist/remote/multipage/[bvid]',
+						pathname: '/playlist/remote/multipage/[bvid]',
 						params: { bvid: item.bilibiliMetadata.bvid },
 					})
 				},
@@ -66,7 +66,7 @@ export function useSearchInteractions() {
 						return
 					}
 					router.push({
-						pathname: 'playlist/remote/uploader/[mid]',
+						pathname: '/playlist/remote/uploader/[mid]',
 						params: { mid: item.artist?.remoteId },
 					})
 				},

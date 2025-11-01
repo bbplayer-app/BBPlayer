@@ -76,7 +76,7 @@ export default function PlayerPage() {
 							onArtistPress={() =>
 								currentTrack.artist?.remoteId
 									? router.push({
-											pathname: 'playlist/remote/uploader/[mid]',
+											pathname: '/playlist/remote/uploader/[mid]',
 											params: { mid: currentTrack.artist?.remoteId },
 										})
 									: void 0

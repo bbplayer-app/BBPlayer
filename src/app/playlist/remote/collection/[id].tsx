@@ -88,7 +88,7 @@ export default function CollectionPage() {
 				onSuccess: (id) => {
 					if (!id) return
 					router.replace({
-						pathname: 'playlist/local/[id]',
+						pathname: '/playlist/local/[id]',
 						params: { id: String(id) },
 					})
 				},

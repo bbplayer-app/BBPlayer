@@ -21,7 +21,6 @@ import type {
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
-import { useFocusEffect } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
@@ -80,7 +79,6 @@ export default function UploaderPage() {
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const debouncedQuery = useDebouncedValue(searchQuery, 200)
-	const [transitionDone, setTransitionDone] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
@@ -125,10 +123,6 @@ export default function UploaderPage() {
 		}
 	}, [mid, router])
 
-	useFocusEffect(() => {
-		setTransitionDone(true)
-	})
-
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
 		if (selectMode) exitSelectMode()
@@ -171,7 +165,7 @@ export default function UploaderPage() {
 		)
 	}
 
-	if (isUserInfoPending || !transitionDone) {
+	if (isUserInfoPending) {
 		return <PlaylistLoading />
 	}
 
