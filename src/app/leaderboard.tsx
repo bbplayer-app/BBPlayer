@@ -1,10 +1,10 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	usePlayCountLeaderBoardPaginated,
 	useTotalPlaybackDuration,
 } from '@/hooks/queries/db/track'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import type { Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'

@@ -3,8 +3,8 @@ import { DataFetchingPending } from '@/features/library/shared/DataFetchingPendi
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { useGetFavoritePlaylists } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
@@ -16,7 +16,7 @@ import FavoriteFolderListItem from './FavoriteFolderListItem'
 const FavoriteFolderListComponent = memo(() => {
 	const router = useRouter()
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const [refreshing, setRefreshing] = useState(false)
 	const [query, setQuery] = useState('')
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
@@ -110,7 +110,7 @@ const FavoriteFolderListComponent = memo(() => {
 				}}
 			/>
 			<FlashList
-				contentContainerStyle={{ paddingBottom: currentTrack ? 70 : 10 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={filteredPlaylists}
 				renderItem={renderPlaylistItem}

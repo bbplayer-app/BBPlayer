@@ -1,5 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Track } from '@/types/core/media'

@@ -1,7 +1,7 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/log'
 import toast from '@/utils/toast'
@@ -24,7 +24,7 @@ const updateTime = Updates.createdAt
 
 export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const colors = useTheme().colors
 
 	return (
@@ -38,7 +38,7 @@ export default function SettingsPage() {
 				style={{
 					flex: 1,
 					paddingTop: insets.top + 8,
-					paddingBottom: currentTrack ? 70 : insets.bottom,
+					paddingBottom: haveTrack ? 70 : insets.bottom,
 				}}
 			>
 				<View

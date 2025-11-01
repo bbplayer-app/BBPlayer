@@ -1,5 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import * as Haptics from '@/utils/haptics'
 import { FlashList } from '@shopify/flash-list'
@@ -53,7 +53,7 @@ export function TrackList({
 	hasNextPage,
 }: TrackListProps) {
 	const colors = useTheme().colors
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const insets = useSafeAreaInsets()
 
 	const [menuState, setMenuState] = useState<{
@@ -139,7 +139,7 @@ export function TrackList({
 				contentContainerStyle={{
 					// 实现一个在 menu 弹出时，列表不可触摸的效果
 					pointerEvents: menuState.visible ? 'none' : 'auto',
-					paddingBottom: currentTrack ? 70 + insets.bottom : insets.bottom,
+					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 				}}
 				onEndReached={onEndReached}
 				ListFooterComponent={

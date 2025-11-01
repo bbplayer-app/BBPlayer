@@ -1,6 +1,5 @@
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { downloadService } from '@/lib/services/downloadService'
@@ -21,7 +20,7 @@ export default function TestPage() {
 	const { isUpdatePending } = Updates.useUpdates()
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 
 	const testCheckUpdate = async () => {
 		try {
@@ -149,7 +148,7 @@ export default function TestPage() {
 		>
 			<ScrollView
 				style={{ flex: 1, padding: 16, paddingTop: insets.top + 30 }}
-				contentContainerStyle={{ paddingBottom: currentTrack ? 80 : 20 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 80 : 20 }}
 				contentInsetAdjustmentBehavior='automatic'
 			>
 				<View style={{ marginBottom: 16 }}>

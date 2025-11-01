@@ -1,6 +1,6 @@
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { getGradientColors } from '@/utils/color'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'

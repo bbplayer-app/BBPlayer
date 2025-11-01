@@ -1,8 +1,8 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
@@ -12,7 +12,7 @@ import LocalPlaylistItem from './LocalPlaylistItem'
 
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
@@ -77,7 +77,7 @@ const LocalPlaylistListComponent = memo(() => {
 				</View>
 			</View>
 			<FlashList
-				contentContainerStyle={{ paddingBottom: currentTrack ? 70 : 10 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={playlists ?? []}
 				renderItem={renderPlaylistItem}

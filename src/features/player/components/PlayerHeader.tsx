@@ -1,4 +1,4 @@
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useRouter } from 'expo-router'
 import { View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'

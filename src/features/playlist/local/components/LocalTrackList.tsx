@@ -1,5 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist, Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useState } from 'react'
@@ -44,7 +44,7 @@ export function LocalTrackList({
 	isFetchingNextPage,
 	hasNextPage,
 }: LocalTrackListProps) {
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 
@@ -114,7 +114,7 @@ export function LocalTrackList({
 				keyExtractor={keyExtractor}
 				contentContainerStyle={{
 					pointerEvents: menuState.visible ? 'none' : 'auto',
-					paddingBottom: currentTrack ? 70 + insets.bottom : insets.bottom,
+					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 				}}
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={

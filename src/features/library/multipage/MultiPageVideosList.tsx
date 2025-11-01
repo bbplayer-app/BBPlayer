@@ -6,8 +6,8 @@ import {
 	useInfiniteFavoriteList,
 } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
@@ -17,7 +17,7 @@ import MultiPageVideosItem from './MultiPageVideosItem'
 
 const MultiPageVideosListComponent = memo(() => {
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
@@ -109,7 +109,7 @@ const MultiPageVideosListComponent = memo(() => {
 				</Text>
 			</View>
 			<FlashList
-				contentContainerStyle={{ paddingBottom: currentTrack ? 70 : 10 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={favoriteData.pages.flatMap((page) => page.medias ?? []) ?? []}
 				renderItem={renderPlaylistItem}
