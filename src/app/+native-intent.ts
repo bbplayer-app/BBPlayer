@@ -11,10 +11,7 @@ export function redirectSystemPath({
 	try {
 		const shareKey = getShareExtensionKey?.()
 		if (shareKey && path.includes(`dataUrl=${shareKey}`)) {
-			console.debug(
-				'[expo-router-native-intent] redirect to ShareIntent screen',
-			)
-			return '/(tabs)/home'
+			return '/(tabs)/index'
 		}
 
 		let url: URL | null = null

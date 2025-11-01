@@ -4,7 +4,7 @@ import { Button, StyleSheet, Text, View } from 'react-native'
 const NotFoundScreen: React.FC = () => {
 	const router = useRouter()
 	const handleGoHome = () => {
-		router.replace('/(tabs)/home')
+		router.replace('/(tabs)')
 	}
 
 	return (

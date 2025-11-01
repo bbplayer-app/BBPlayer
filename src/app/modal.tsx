@@ -2,22 +2,16 @@ import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { modalRegistry } from '@/components/ModalRegistry'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useNavigation, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
-import { useShallow } from 'zustand/shallow'
 
 export default function ModalHost() {
-	const { modals } = useModalStore(
-		useShallow((state) => ({
-			modals: state.modals,
-		})),
-	)
+	const modals = useModalStore((state) => state.modals)
 	const closeTop = useModalStore((s) => s.closeTop)
 	const eventEmitter = useModalStore((s) => s.eventEmitter)
 	const [canUnmountHost, setCanUnmountHost] = useState(modals.length === 0)
 	const router = useRouter()
-	const navigation = useNavigation()
 
 	usePreventRemove(modals.length > 0, () => {
 		if (modals[modals.length - 1].options?.dismissible === false) {
@@ -33,7 +27,7 @@ export default function ModalHost() {
 
 	useEffect(() => {
 		const closeAction = () => {
-			if (navigation.canGoBack()) {
+			if (router.canGoBack()) {
 				setCanUnmountHost(true)
 				router.back()
 				// 确保在 ModalHost 关闭后再执行回调，避免其他导航操作与 ModalHost 关闭发生竞态
@@ -46,7 +40,7 @@ export default function ModalHost() {
 			Keyboard.dismiss()
 			closeAction()
 		}
-	}, [eventEmitter, modals, navigation, router])
+	}, [eventEmitter, modals, router])
 
 	if (canUnmountHost) return null
 

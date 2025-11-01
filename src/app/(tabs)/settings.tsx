@@ -69,8 +69,6 @@ export default function SettingsPage() {
 					<SettingsSection />
 					<Divider style={{ marginTop: 16, marginBottom: 16 }} />
 					<AboutSection />
-					<Divider style={{ marginTop: 16, marginBottom: 16 }} />
-					<AboutSection />
 				</ScrollView>
 			</View>
 			<View
@@ -301,22 +299,6 @@ const SettingsSection = memo(function SettingsSection() {
 					icon='share-variant'
 					size={20}
 					onPress={shareLogFile}
-				/>
-			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
-				<Text>检查更新</Text>
-				<IconButton
-					icon='update'
-					size={20}
-					loading={isCheckingForUpdate}
-					onPress={handleCheckForUpdate}
 				/>
 			</View>
 			<View

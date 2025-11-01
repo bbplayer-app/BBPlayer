@@ -43,7 +43,7 @@ export const useModalStore = create<ModalState>()(
 				modals: [...state.modals, { key, props, options }],
 			}))
 
-			router.navigate('/modal-host')
+			router.navigate('/modal')
 		},
 
 		close: (key) => {

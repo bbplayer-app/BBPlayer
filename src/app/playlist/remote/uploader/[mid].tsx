@@ -119,7 +119,7 @@ export default function UploaderPage() {
 
 	useEffect(() => {
 		if (typeof mid !== 'string') {
-			router.replace('/not-found')
+			router.replace('/+not-found')
 		}
 	}, [mid, router])
 

@@ -13,10 +13,6 @@ import { useTheme } from 'react-native-paper'
 
 const BottomTabNavigator = createNativeBottomTabNavigator().Navigator
 
-export const unstable_settings = {
-	initialRouteName: 'home',
-}
-
 const Tabs = withLayoutContext<
 	NativeBottomTabNavigationOptions,
 	typeof BottomTabNavigator,
@@ -42,10 +38,10 @@ export default function TabLayout() {
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={themes.primaryContainer}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
-			initialRouteName='Home'
+			initialRouteName='index'
 		>
 			<Tabs.Screen
-				name='Home'
+				name='index'
 				options={{
 					title: '主页',
 					tabBarIcon: () => homeIcon,
@@ -54,7 +50,7 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name='Library'
+				name='library/[tab]'
 				options={{
 					title: '音乐库',
 					tabBarIcon: () => libraryIcon,
@@ -63,7 +59,7 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name='Settings'
+				name='settings'
 				options={{
 					title: '设置',
 					tabBarIcon: () => settingsIcon,

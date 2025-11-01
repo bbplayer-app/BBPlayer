@@ -1,3 +1,4 @@
+import AppProviders from '@/components/providers'
 import { toastConfig } from '@/components/toast/ToastConfig'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -14,11 +15,12 @@ import log, {
 } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
+import { useLogger } from '@react-navigation/devtools'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
 import * as Network from 'expo-network'
-import { SplashScreen, Stack } from 'expo-router'
+import { SplashScreen, Stack, useNavigationContainerRef } from 'expo-router'
 import { useSQLiteDevTools } from 'expo-sqlite-devtools'
 import * as Updates from 'expo-updates'
 import { useCallback, useEffect, useState } from 'react'
@@ -27,7 +29,6 @@ import { AppState, Platform, View } from 'react-native'
 import { Text } from 'react-native-paper'
 import Toast from 'react-native-toast-message'
 import migrations from '../../drizzle/migrations'
-import { AppProviders } from './providers'
 
 const logger = log.extend('UI.RootLayout')
 
@@ -52,7 +53,10 @@ export default Sentry.wrap(function RootLayout() {
 		migrations,
 	)
 	const open = useModalStore((state) => state.open)
+	const ref = useNavigationContainerRef()
 	useCheckUpdate()
+
+	useLogger(ref)
 
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 	useSQLiteDevTools(expoDb)
@@ -166,19 +170,22 @@ export default Sentry.wrap(function RootLayout() {
 
 	return (
 		<AppProviders onLayoutRootView={onLayoutRootView}>
-			<Stack>
+			<Stack screenOptions={{ headerShown: false }}>
 				<Stack.Screen
 					name='(tabs)'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='player'
 					options={{ animation: 'slide_from_bottom', headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='test'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='playlist/remote/search-result/global/[query]'
 					options={{ headerShown: false }}
@@ -203,10 +210,12 @@ export default Sentry.wrap(function RootLayout() {
 					name='playlist/remote/search-result/fav/[query]'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='playlist/local/[id]'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='leaderboard'
 					options={{ headerShown: false }}
@@ -215,12 +224,14 @@ export default Sentry.wrap(function RootLayout() {
 					name='download'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
 					name='+not-found'
 					options={{ headerShown: false }}
 				/>
+
 				<Stack.Screen
-					name='modal-host'
+					name='modal'
 					options={{
 						presentation: 'transparentModal',
 						gestureEnabled: false,

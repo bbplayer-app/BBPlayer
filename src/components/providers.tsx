@@ -12,7 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
-export function AppProviders({
+export default function AppProviders({
 	onLayoutRootView,
 	children,
 }: {

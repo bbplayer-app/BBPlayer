@@ -28,5 +28,5 @@ export default function useCheckUpdate() {
 		return () => {
 			isMounted = false
 		}
-	}, [])
+	}, [open])
 }
