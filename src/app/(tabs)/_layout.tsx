@@ -13,6 +13,10 @@ import { useTheme } from 'react-native-paper'
 
 const BottomTabNavigator = createNativeBottomTabNavigator().Navigator
 
+export const unstable_settings = {
+	initialRouteName: 'home',
+}
+
 const Tabs = withLayoutContext<
 	NativeBottomTabNavigationOptions,
 	typeof BottomTabNavigator,
