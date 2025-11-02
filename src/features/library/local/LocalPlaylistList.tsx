@@ -1,24 +1,28 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
-const renderPlaylistItem = ({ item }: { item: Playlist }) => (
-	<LocalPlaylistItem item={item} />
-)
+const renderPlaylistItem = ({
+	item,
+}: {
+	item: Playlist & { isToView?: boolean }
+}) => <LocalPlaylistItem item={item} />
 
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
+	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 
 	const {
 		data: playlists,
@@ -27,6 +31,28 @@ const LocalPlaylistListComponent = memo(() => {
 		refetch,
 		isError: playlistsIsError,
 	} = usePlaylistLists()
+	const finalPlaylists = useMemo(() => {
+		if (!playlists) return []
+
+		if (!hasBilibiliCookie()) return playlists
+		return [
+			{
+				id: 1145141919810,
+				title: '稍后再看',
+				author: null,
+				description: null,
+				coverUrl: null,
+				itemCount: 0,
+				type: 'favorite',
+				remoteSyncId: null,
+				lastSyncedAt: null,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				isToView: true,
+			},
+			...playlists,
+		] as (Playlist & { isToView?: boolean })[]
+	}, [hasBilibiliCookie, playlists])
 
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
@@ -79,7 +105,7 @@ const LocalPlaylistListComponent = memo(() => {
 			<FlashList
 				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
-				data={playlists ?? []}
+				data={finalPlaylists ?? []}
 				renderItem={renderPlaylistItem}
 				refreshControl={
 					<RefreshControl

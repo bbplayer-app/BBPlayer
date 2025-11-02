@@ -2,6 +2,7 @@ import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
 	BilibiliSearchSuggestionItem,
+	BilibiliToViewVideoList,
 	BilibiliWebPlayerInfo,
 } from '@/types/apis/bilibili'
 import {
@@ -530,6 +531,7 @@ export const createBilibiliApi = () => ({
 	reportPlaybackHistory: (
 		bvid: string,
 		cid: number,
+		progress: number,
 	): ResultAsync<0, BilibiliApiError> => {
 		const avid = bv2av(bvid)
 		const csrfToken = getCsrfToken()
@@ -538,7 +540,7 @@ export const createBilibiliApi = () => ({
 		const data = {
 			aid: String(avid),
 			cid: String(cid),
-			progress: '0', // 咱们只是为了上报播放记录，而非具体进度
+			progress: Math.floor(progress).toString(),
 			csrf: csrfToken.value,
 		}
 		return bilibiliApiClient.post<0>(
@@ -766,6 +768,19 @@ export const createBilibiliApi = () => ({
 				params,
 			)
 		})
+	},
+
+	/**
+	 * 获取稍后再看视频列表
+	 */
+	getToViewVideoList: (): ResultAsync<
+		BilibiliToViewVideoList,
+		BilibiliApiError
+	> => {
+		return bilibiliApiClient.get<BilibiliToViewVideoList>(
+			'/x/v2/history/toview',
+			undefined,
+		)
 	},
 })
 

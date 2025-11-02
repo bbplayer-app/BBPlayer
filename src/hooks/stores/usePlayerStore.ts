@@ -190,6 +190,10 @@ export const usePlayerStore = create<PlayerStore>()(
 						void queryClient.invalidateQueries({
 							queryKey: trackKeys.leaderBoard(),
 						})
+
+						void reportPlaybackHistory(track, effectivePlayed).catch((error) =>
+							logger.error('上报播放历史失败', error),
+						)
 					} catch (error) {
 						logger.debug('增加播放记录异常', error)
 					} finally {
@@ -694,9 +698,6 @@ export const usePlayerStore = create<PlayerStore>()(
 
 					await TrackPlayer.load(rntpTrackResult.value)
 					await TrackPlayer.play()
-					reportPlaybackHistory(finalTrack).catch((error) =>
-						logger.error('上报播放历史失败', error),
-					)
 
 					set({
 						currentTrackUniqueKey: String(finalTrack.uniqueKey),
