@@ -1,10 +1,11 @@
 import { useFetchLyrics } from '@/hooks/mutations/lyrics'
 import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricSearchResult } from '@/types/player/lyrics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -17,6 +18,26 @@ import {
 
 const SOURCE_MAP = {
 	netease: '网易云',
+}
+
+const renderItem = ({
+	item,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	LyricSearchResult[0],
+	{
+		isFetchingLyrics: boolean
+		handlePressItem: (item: LyricSearchResult[0]) => void
+	}
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	return (
+		<SearchItem
+			item={item}
+			onPress={extraData.handlePressItem}
+			disabled={extraData.isFetchingLyrics}
+		/>
+	)
 }
 
 const SearchItem = memo(function SearchItem({
@@ -70,17 +91,8 @@ const ManualSearchLyricsModal = ({
 		},
 		[close, fetchLyrics, uniqueKey],
 	)
-
-	const renderItem = useCallback(
-		({ item }: { item: LyricSearchResult[0] }) => {
-			return (
-				<SearchItem
-					item={item}
-					onPress={handlePressItem}
-					disabled={isFetchingLyrics}
-				/>
-			)
-		},
+	const extraData = useMemo(
+		() => ({ isFetchingLyrics, handlePressItem }),
 		[handlePressItem, isFetchingLyrics],
 	)
 
@@ -116,6 +128,7 @@ const ManualSearchLyricsModal = ({
 					data={searchResult}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
+					extraData={extraData}
 				/>
 			)
 		}

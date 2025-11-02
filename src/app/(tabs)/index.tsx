@@ -4,7 +4,7 @@ import SearchSuggestions from '@/features/home/SearchSuggestions'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
-import { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
 import {
 	matchSearchStrategies,
 	navigateWithSearchStrategy,

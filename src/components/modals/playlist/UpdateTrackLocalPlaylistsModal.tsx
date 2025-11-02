@@ -10,8 +10,35 @@ import {
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { Playlist, Track } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import toast from '@/utils/toast'
 import { FlashList } from '@shopify/flash-list'
+
+const renderPlaylistItem = ({
+	item,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	Playlist,
+	{
+		checkedPlaylistIds: number[]
+		handleCheckboxPress: (id: number) => void
+	}
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const { checkedPlaylistIds, handleCheckboxPress } = extraData
+	const isChecked = checkedPlaylistIds.includes(item.id)
+	const isDisabled = item.type !== 'local'
+
+	return (
+		<PlaylistListItem
+			id={item.id}
+			title={item.title}
+			onPress={handleCheckboxPress}
+			isChecked={isChecked}
+			isDisabled={isDisabled}
+		/>
+	)
+}
 
 const PlaylistListItem = memo(function PlaylistListItem({
 	id,
@@ -136,6 +163,14 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			close,
 		])
 
+		const extraData = useMemo(
+			() => ({
+				checkedPlaylistIds,
+				handleCheckboxPress,
+			}),
+			[checkedPlaylistIds, handleCheckboxPress],
+		)
+
 		const handleDismiss = () => {
 			if (isMutating) return
 			close()
@@ -145,24 +180,6 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			if (isPlaylistsError) void refetchPlaylists()
 			if (isContainingTrackError) void refetchContainingTrack()
 		}
-
-		const renderPlaylistItem = useCallback(
-			({ item }: { item: Playlist }) => {
-				const isChecked = checkedPlaylistIds.includes(item.id)
-				const isDisabled = item.type !== 'local'
-
-				return (
-					<PlaylistListItem
-						id={item.id}
-						title={item.title}
-						onPress={handleCheckboxPress}
-						isChecked={isChecked}
-						isDisabled={isDisabled}
-					/>
-				)
-			},
-			[checkedPlaylistIds, handleCheckboxPress],
-		)
 
 		const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
@@ -198,7 +215,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
 							keyExtractor={keyExtractor}
-							extraData={checkedPlaylistIds}
+							extraData={extraData}
 							ListEmptyComponent={
 								<View
 									style={{

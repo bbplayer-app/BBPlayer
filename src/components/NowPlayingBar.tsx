@@ -1,5 +1,5 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import * as Haptics from '@/utils/haptics'
 import { Image } from 'expo-image'

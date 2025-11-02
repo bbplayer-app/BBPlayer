@@ -1,7 +1,8 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
 import type { Router } from 'expo-router'
-import log, { toastAndLogError } from './log'
+import { toastAndLogError } from './error-handling'
+import log from './log'
 import toast from './toast'
 
 const logger = log.extend('Utils.Search')

@@ -1,6 +1,6 @@
+import useCurrentQueue from '@/hooks/player/useCurrentQueue'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
-import useCurrentQueue from '@/hooks/stores/playerHooks/useCurrentQueue'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
 import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'

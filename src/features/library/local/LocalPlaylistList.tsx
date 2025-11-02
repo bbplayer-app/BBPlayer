@@ -1,8 +1,8 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
@@ -10,9 +10,13 @@ import { RefreshControl, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
+const renderPlaylistItem = ({ item }: { item: Playlist }) => (
+	<LocalPlaylistItem item={item} />
+)
+
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
+	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
@@ -24,10 +28,6 @@ const LocalPlaylistListComponent = memo(() => {
 		isError: playlistsIsError,
 	} = usePlaylistLists()
 
-	const renderPlaylistItem = useCallback(
-		({ item }: { item: Playlist }) => <LocalPlaylistItem item={item} />,
-		[],
-	)
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
 	const onRefresh = async () => {
@@ -77,7 +77,7 @@ const LocalPlaylistListComponent = memo(() => {
 				</View>
 			</View>
 			<FlashList
-				contentContainerStyle={{ paddingBottom: currentTrack ? 70 : 10 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={playlists ?? []}
 				renderItem={renderPlaylistItem}

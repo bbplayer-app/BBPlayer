@@ -1,6 +1,7 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { ProjectScope } from '@/types/core/scope'
-import log, { reportErrorToSentry, toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 import TrackPlayer, {
 	AppKilledPlaybackBehavior,
@@ -14,10 +15,6 @@ const logger = log.extend('Player.Init')
 
 const initPlayer = async () => {
 	logger.info('开始初始化播放器')
-	if (global.playerIsReady) {
-		logger.warning('播放器已经初始化过了')
-		return
-	}
 	await PlayerLogic.preparePlayer()
 	PlayerLogic.setupEventListeners()
 	// 初始化后强制将 RNTP 重复模式设为 Off，循环由我们内部管理
@@ -27,6 +24,7 @@ const initPlayer = async () => {
 }
 
 let isResettingSleepTimer = false
+let listenersAttached = false
 
 const PlayerLogic = {
 	// 初始化播放器
@@ -74,6 +72,10 @@ const PlayerLogic = {
 
 	// 设置事件监听器
 	setupEventListeners(): void {
+		if (listenersAttached) {
+			logger.debug('事件监听器已经设置过了，跳过。')
+			return // 关键！防止重复绑定
+		}
 		// 监听播放状态变化
 		TrackPlayer.addEventListener(
 			Event.PlaybackState,
@@ -248,6 +250,8 @@ const PlayerLogic = {
 					})
 			}
 		})
+
+		listenersAttached = true
 	},
 }
 

@@ -7,7 +7,7 @@ import type { Playlist } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { UpdatePlaylistPayload } from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
-import { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import { useMutation } from '@tanstack/react-query'
 

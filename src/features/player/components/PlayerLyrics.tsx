@@ -5,12 +5,20 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import type { Track } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
-import { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { LinearGradient } from 'expo-linear-gradient'
-import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import {
+	memo,
+	useCallback,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 import { Dimensions, ScrollView, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
@@ -158,6 +166,29 @@ const LyricLineItem = memo(function LyricLineItem({
 	)
 })
 
+const renderItem = ({
+	item,
+	index,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	LyricLine,
+	{
+		currentLyricIndex: number
+		handleJumpToLyric: (index: number) => void
+	}
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const { currentLyricIndex, handleJumpToLyric } = extraData
+	return (
+		<LyricLineItem
+			item={item}
+			isHighlighted={index === currentLyricIndex}
+			index={index}
+			jumpToThisLyric={handleJumpToLyric}
+		/>
+	)
+}
+
 export default function Lyrics({
 	onBackPress,
 	track,
@@ -239,15 +270,11 @@ export default function Lyrics({
 		[],
 	)
 
-	const renderItem = useCallback(
-		({ item, index }: { item: LyricLine; index: number }) => (
-			<LyricLineItem
-				item={item}
-				isHighlighted={index === currentLyricIndex}
-				index={index}
-				jumpToThisLyric={handleJumpToLyric}
-			/>
-		),
+	const extraData = useMemo(
+		() => ({
+			currentLyricIndex,
+			handleJumpToLyric,
+		}),
 		[currentLyricIndex, handleJumpToLyric],
 	)
 
@@ -352,6 +379,7 @@ export default function Lyrics({
 				ref={flashListRef}
 				data={lyrics.lyrics}
 				renderItem={renderItem}
+				extraData={extraData}
 				keyExtractor={keyExtractor}
 				contentContainerStyle={{
 					justifyContent: 'center',
