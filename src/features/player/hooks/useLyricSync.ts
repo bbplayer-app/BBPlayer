@@ -13,7 +13,7 @@ export default function useLyricSync(
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
-	const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const manualScrollTimeoutRef = useRef<number | null>(null)
 	const [isActive, setIsActive] = useState(true)
 
 	const findIndexForTime = useCallback(
@@ -53,6 +53,7 @@ export default function useLyricSync(
 			manualScrollTimeoutRef.current = null
 			isManualScrollingRef.current = false
 
+			console.log('scroll by user')
 			void flashListRef.current?.scrollToIndex({
 				animated: true,
 				index: currentLyricIndex,
@@ -117,6 +118,7 @@ export default function useLyricSync(
 	// 当歌词发生变化且用户没自己滚时，滚动到当前歌词
 	useEffect(() => {
 		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
+		console.log('scroll by flashlist')
 		// eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
 		void flashListRef.current?.scrollToIndex({
 			animated: true,

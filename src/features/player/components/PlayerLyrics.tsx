@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import {
 	memo,
 	useCallback,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -34,6 +35,7 @@ import Animated, {
 	useAnimatedScrollHandler,
 	useAnimatedStyle,
 	useSharedValue,
+	withTiming,
 } from 'react-native-reanimated'
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient)
@@ -129,38 +131,77 @@ const LyricLineItem = memo(function LyricLineItem({
 	jumpToThisLyric: (index: number) => void
 	index: number
 }) {
-	const colors = useTheme().colors
+	const theme = useTheme()
+	const isHighlightedShared = useSharedValue(isHighlighted)
+
+	useEffect(() => {
+		isHighlightedShared.value = isHighlighted
+	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+
+	const animatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				opacity: withTiming(1, { duration: 300 }),
+				transform: [
+					{ scale: withTiming(1.05, { duration: 300 }) },
+					{ translateX: withTiming(12, { duration: 300 }) },
+				],
+				color: withTiming(theme.colors.primary, { duration: 300 }),
+			}
+		}
+
+		return {
+			opacity: withTiming(0.7, { duration: 300 }),
+			transform: [
+				{ scale: withTiming(1, { duration: 300 }) },
+				{ translateX: withTiming(0, { duration: 300 }) },
+			],
+			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
+		}
+	})
+
 	return (
 		<RectButton
 			style={{
 				flexDirection: 'column',
-				alignItems: 'center',
+				alignItems: 'flex-start',
 				gap: 4,
-				borderRadius: 16,
-				paddingVertical: 8,
+				borderRadius: 8,
+				marginVertical: 4,
+				paddingVertical: 6,
 				marginHorizontal: 30,
+				paddingLeft: 8,
+				paddingRight: 8,
 			}}
 			onPress={() => jumpToThisLyric(index)}
 		>
-			<Text
-				variant='bodyMedium'
-				style={{
-					color: isHighlighted ? colors.primary : colors.onSurfaceDisabled,
-					textAlign: 'center',
-				}}
+			<Animated.Text
+				style={[
+					{
+						textAlign: 'left',
+						fontSize: 20,
+						letterSpacing: 0,
+						lineHeight: 28,
+					},
+					animatedStyle,
+				]}
 			>
 				{item.text}
-			</Text>
+			</Animated.Text>
 			{item.translation && (
-				<Text
-					variant='bodySmall'
-					style={{
-						color: isHighlighted ? colors.primary : colors.onSurfaceDisabled,
-						textAlign: 'center',
-					}}
+				<Animated.Text
+					style={[
+						{
+							textAlign: 'left',
+							fontSize: 20,
+							letterSpacing: 0,
+							lineHeight: 28,
+						},
+						animatedStyle,
+					]}
 				>
 					{item.translation}
-				</Text>
+				</Animated.Text>
 			)}
 		</RectButton>
 	)
@@ -386,7 +427,6 @@ export default function Lyrics({
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
 				}}
 				showsVerticalScrollIndicator={false}
-				onMomentumScrollEnd={onUserScrollEnd}
 				onScrollEndDrag={onUserScrollEnd}
 				onScrollBeginDrag={onUserScrollStart}
 				scrollEventThrottle={16}
