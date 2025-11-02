@@ -1,10 +1,11 @@
 import useLyricSync from '@/features/player/hooks/useLyricSync'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
-import type { Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -14,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import {
 	memo,
 	useCallback,
+	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -34,6 +36,7 @@ import Animated, {
 	useAnimatedScrollHandler,
 	useAnimatedStyle,
 	useSharedValue,
+	withTiming,
 } from 'react-native-reanimated'
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient)
@@ -49,7 +52,7 @@ interface LyricsOffsetControlProps {
 	onClose: () => void
 }
 
-const { height: windowHeight } = Dimensions.get('window')
+const { height: windowHeight, width: windowWidth } = Dimensions.get('window')
 
 export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	visible,
@@ -64,8 +67,8 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 		<View
 			style={{
 				position: 'absolute',
-				left: anchor ? anchor.x : 0,
-				top: anchor ? windowHeight - anchor.y - 60 : 0,
+				right: anchor ? windowWidth - (anchor.x + anchor.width) : 0,
+				bottom: anchor ? windowHeight - anchor.y : 0,
 				backgroundColor: colors.elevation.level2,
 				gap: 8,
 				borderRadius: 12,
@@ -118,7 +121,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	)
 })
 
-const LyricLineItem = memo(function LyricLineItem({
+const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	item,
 	isHighlighted,
 	jumpToThisLyric,
@@ -130,6 +133,25 @@ const LyricLineItem = memo(function LyricLineItem({
 	index: number
 }) {
 	const colors = useTheme().colors
+	const isHighlightedShared = useSharedValue(isHighlighted)
+
+	useEffect(() => {
+		isHighlightedShared.value = isHighlighted
+	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+
+	const animatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				opacity: withTiming(1, { duration: 300 }),
+				color: withTiming(colors.primary, { duration: 300 }),
+			}
+		}
+
+		return {
+			opacity: withTiming(0.7, { duration: 300 }),
+			color: withTiming(colors.onSurfaceDisabled, { duration: 300 }),
+		}
+	})
 	return (
 		<RectButton
 			style={{
@@ -142,25 +164,122 @@ const LyricLineItem = memo(function LyricLineItem({
 			}}
 			onPress={() => jumpToThisLyric(index)}
 		>
-			<Text
-				variant='bodyMedium'
-				style={{
-					color: isHighlighted ? colors.primary : colors.onSurfaceDisabled,
-					textAlign: 'center',
-				}}
+			<Animated.Text
+				style={[
+					{
+						textAlign: 'center',
+						fontSize: 14,
+						fontWeight: '400',
+						letterSpacing: 0.25,
+						lineHeight: 20,
+					},
+					animatedStyle,
+				]}
 			>
 				{item.text}
-			</Text>
+			</Animated.Text>
 			{item.translation && (
-				<Text
-					variant='bodySmall'
-					style={{
-						color: isHighlighted ? colors.primary : colors.onSurfaceDisabled,
-						textAlign: 'center',
-					}}
+				<Animated.Text
+					style={[
+						{
+							textAlign: 'center',
+							fontSize: 12,
+							fontWeight: '400',
+							letterSpacing: 0.4,
+							lineHeight: 16,
+						},
+						animatedStyle,
+					]}
 				>
 					{item.translation}
-				</Text>
+				</Animated.Text>
+			)}
+		</RectButton>
+	)
+})
+
+const ModernLyricLineItem = memo(function ModernLyricLineItem({
+	item,
+	isHighlighted,
+	jumpToThisLyric,
+	index,
+}: {
+	item: LyricLine
+	isHighlighted: boolean
+	jumpToThisLyric: (index: number) => void
+	index: number
+}) {
+	const theme = useTheme()
+	const isHighlightedShared = useSharedValue(isHighlighted)
+
+	useEffect(() => {
+		isHighlightedShared.value = isHighlighted
+	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+
+	const animatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				opacity: withTiming(1, { duration: 300 }),
+				transform: [
+					{ scale: withTiming(1.05, { duration: 300 }) },
+					{ translateX: withTiming(12, { duration: 300 }) },
+				],
+				color: withTiming(theme.colors.primary, { duration: 300 }),
+			}
+		}
+
+		return {
+			opacity: withTiming(0.7, { duration: 300 }),
+			transform: [
+				{ scale: withTiming(1, { duration: 300 }) },
+				{ translateX: withTiming(0, { duration: 300 }) },
+			],
+			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
+		}
+	})
+
+	return (
+		<RectButton
+			style={{
+				flexDirection: 'column',
+				alignItems: 'flex-start',
+				gap: 4,
+				borderRadius: 8,
+				marginVertical: 4,
+				paddingVertical: 6,
+				marginHorizontal: 30,
+				paddingLeft: 8,
+				paddingRight: 8,
+			}}
+			onPress={() => jumpToThisLyric(index)}
+		>
+			<Animated.Text
+				style={[
+					{
+						textAlign: 'left',
+						fontSize: 20,
+						letterSpacing: 0,
+						lineHeight: 28,
+					},
+					animatedStyle,
+				]}
+			>
+				{item.text}
+			</Animated.Text>
+			{item.translation && (
+				<Animated.Text
+					style={[
+						{
+							textAlign: 'left',
+							fontSize: 20,
+							letterSpacing: 0,
+							lineHeight: 28,
+						},
+						animatedStyle,
+					]}
+				>
+					{item.translation}
+				</Animated.Text>
 			)}
 		</RectButton>
 	)
@@ -175,12 +294,24 @@ const renderItem = ({
 	{
 		currentLyricIndex: number
 		handleJumpToLyric: (index: number) => void
+		enableOldSchoolStyleLyric: boolean
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { currentLyricIndex, handleJumpToLyric } = extraData
+	const { currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric } =
+		extraData
+	if (enableOldSchoolStyleLyric) {
+		return (
+			<OldSchoolLyricLineItem
+				item={item}
+				isHighlighted={index === currentLyricIndex}
+				index={index}
+				jumpToThisLyric={handleJumpToLyric}
+			/>
+		)
+	}
 	return (
-		<LyricLineItem
+		<ModernLyricLineItem
 			item={item}
 			isHighlighted={index === currentLyricIndex}
 			index={index}
@@ -189,13 +320,7 @@ const renderItem = ({
 	)
 }
 
-export default function Lyrics({
-	onBackPress,
-	track,
-}: {
-	onBackPress: () => void
-	track: Track
-}) {
+const Lyrics = memo(function Lyrics() {
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
 	const seekTo = usePlayerStore((state) => state.seekTo)
@@ -207,12 +332,20 @@ export default function Lyrics({
 		height: number
 	} | null>(null)
 	const offsetMenuAnchorRef = useRef<View>(null)
-	const containerRef = useRef<View>(null)
 	const scrollY = useSharedValue(0)
 	const contentHeight = useSharedValue(0)
 	const viewportHeight = useSharedValue(0)
+	const track = useCurrentTrack()
+	const enableOldSchoolStyleLyric = useAppStore(
+		(state) => state.settings.enableOldSchoolStyleLyric,
+	)
 
-	const { data: lyrics, isPending, isError, error } = useSmartFetchLyrics(track)
+	const {
+		data: lyrics,
+		isPending,
+		isError,
+		error,
+	} = useSmartFetchLyrics(track ?? undefined)
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
@@ -235,7 +368,7 @@ export default function Lyrics({
 
 	// 我们不在本地创建 offset state，而是直接调用 queryClient 来更新 smartFetchLyrics 的缓存。当用户点击确认时，再保存到本地
 	const handleChangeOffset = (delta: number) => {
-		if (!lyrics) return
+		if (!lyrics || !track) return
 		const newOffset = (lyrics.offset ?? 0) + delta
 		queryClient.setQueryData(
 			lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
@@ -250,7 +383,7 @@ export default function Lyrics({
 
 	const handleCloseOffsetMenu = async () => {
 		setOffsetMenuVisible(false)
-		if (!lyrics) return
+		if (!lyrics || !track) return
 		const saveResult = await lyricService.saveLyricsToFile(
 			{
 				...lyrics,
@@ -274,18 +407,16 @@ export default function Lyrics({
 		() => ({
 			currentLyricIndex,
 			handleJumpToLyric,
+			enableOldSchoolStyleLyric,
 		}),
-		[currentLyricIndex, handleJumpToLyric],
+		[currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric],
 	)
 
 	useLayoutEffect(() => {
-		if (offsetMenuAnchorRef.current && containerRef.current) {
-			offsetMenuAnchorRef.current.measureLayout(
-				containerRef.current,
-				(x, y, width, height) => {
-					setOffsetMenuAnchor({ x, y, width, height })
-				},
-			)
+		if (offsetMenuAnchorRef.current) {
+			offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
+				setOffsetMenuAnchor({ x, y, width, height })
+			})
 		}
 	}, [offsetMenuVisible])
 
@@ -319,6 +450,8 @@ export default function Lyrics({
 			),
 		}
 	})
+
+	if (!track) return null
 
 	if (isPending) {
 		return (
@@ -384,9 +517,9 @@ export default function Lyrics({
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+					paddingBottom: windowHeight / 2,
 				}}
 				showsVerticalScrollIndicator={false}
-				onMomentumScrollEnd={onUserScrollEnd}
 				onScrollEndDrag={onUserScrollEnd}
 				onScrollBeginDrag={onUserScrollStart}
 				scrollEventThrottle={16}
@@ -396,10 +529,7 @@ export default function Lyrics({
 	}
 
 	return (
-		<View
-			style={{ flex: 1 }}
-			ref={containerRef}
-		>
+		<View style={{ flex: 1 }}>
 			<View style={{ flex: 1, flexDirection: 'column' }}>
 				{renderLyrics()}
 				{/* 顶部渐变遮罩 */}
@@ -435,70 +565,48 @@ export default function Lyrics({
 				/>
 			</View>
 
+			{/* 歌词偏移量调整显示按钮 */}
 			<View
 				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
 					paddingHorizontal: 16,
+					position: 'absolute',
+					bottom: 20,
+					right: 0,
 				}}
 			>
-				<View style={{ flex: 1 }} />
-
-				<RectButton
-					onPress={onBackPress}
-					style={{ borderRadius: 99999, padding: 10 }}
-					enabled={!offsetMenuVisible}
-				>
-					<Text
-						variant='titleSmall'
-						style={{
-							color: offsetMenuVisible
-								? colors.onSurfaceDisabled
-								: colors.primary,
-							textAlign: 'center',
-						}}
+				<View style={{ flexDirection: 'column' }}>
+					<RectButton
+						style={{ borderRadius: 99999, padding: 10 }}
+						enabled={!offsetMenuVisible}
+						onPress={() =>
+							useModalStore
+								.getState()
+								.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+						}
 					>
-						返回
-					</Text>
-				</RectButton>
-
-				{/* 歌词偏移量调整显示按钮 */}
-				<View style={{ flex: 1, alignItems: 'flex-end' }}>
-					<View style={{ flex: 1, flexDirection: 'row' }}>
-						<RectButton
-							style={{ borderRadius: 99999, padding: 10 }}
-							enabled={!offsetMenuVisible}
-							onPress={() =>
-								useModalStore
-									.getState()
-									.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+						<Icon
+							source='pencil'
+							size={20}
+							color={
+								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
 							}
-						>
-							<Icon
-								source='pencil'
-								size={20}
-								color={
-									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-								}
-							/>
-						</RectButton>
-						<RectButton
-							style={{ borderRadius: 99999, padding: 10 }}
-							// @ts-expect-error -- 不想管
-							ref={offsetMenuAnchorRef}
-							enabled={!offsetMenuVisible}
-							onPress={() => setOffsetMenuVisible(true)}
-						>
-							<Icon
-								source='swap-vertical-circle-outline'
-								size={20}
-								color={
-									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-								}
-							/>
-						</RectButton>
-					</View>
+						/>
+					</RectButton>
+					<RectButton
+						style={{ borderRadius: 99999, padding: 10 }}
+						// @ts-expect-error -- 不想管
+						ref={offsetMenuAnchorRef}
+						enabled={!offsetMenuVisible}
+						onPress={() => setOffsetMenuVisible(true)}
+					>
+						<Icon
+							source='swap-vertical-circle-outline'
+							size={20}
+							color={
+								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
+							}
+						/>
+					</RectButton>
 				</View>
 			</View>
 
@@ -512,4 +620,8 @@ export default function Lyrics({
 			/>
 		</View>
 	)
-}
+})
+
+Lyrics.displayName = 'Lyrics'
+
+export default Lyrics

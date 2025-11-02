@@ -1,20 +1,22 @@
+import playerProgressEmitter from '@/lib/player/progressListener'
 import type { LyricLine } from '@/types/player/lyrics'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer from 'react-native-track-player'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
 	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
-	seekTo: (position: number) => void,
+	seekTo: (position: number) => Promise<void>,
 	offset: number, // 单位秒
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
-	const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const manualScrollTimeoutRef = useRef<number | null>(null)
 	const [isActive, setIsActive] = useState(true)
+	const latestJumpRequestRef = useRef(0)
 
 	const findIndexForTime = useCallback(
 		(timestamp: number) => {
@@ -62,10 +64,13 @@ export default function useLyricSync(
 	}
 
 	const handleJumpToLyric = useCallback(
-		(index: number) => {
+		async (index: number) => {
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
-			seekTo(lyrics[index].timestamp)
+			const requestId = ++latestJumpRequestRef.current
+			await seekTo(lyrics[index].timestamp)
+			if (latestJumpRequestRef.current !== requestId) return
+			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
 				manualScrollTimeoutRef.current = null
@@ -84,20 +89,17 @@ export default function useLyricSync(
 				}
 			},
 		)
-		const handler = TrackPlayer.addEventListener(
-			Event.PlaybackProgressUpdated,
-			(data) => {
-				const offsetedPosition = data.position + offset
-				if (!isActive || offsetedPosition <= 0) {
-					return
-				}
-				const index = findIndexForTime(offsetedPosition)
-				if (index === currentLyricIndex) return
-				setCurrentLyricIndex(index)
-			},
-		)
+		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			const offsetedPosition = data.position + offset
+			if (!isActive || offsetedPosition <= 0) {
+				return
+			}
+			const index = findIndexForTime(offsetedPosition)
+			if (index === currentLyricIndex) return
+			setCurrentLyricIndex(index)
+		})
 		return () => {
-			handler.remove()
+			handler()
 			appStateSubscription.remove()
 		}
 	}, [currentLyricIndex, findIndexForTime, isActive, offset])

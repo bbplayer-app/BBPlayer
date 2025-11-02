@@ -13,6 +13,10 @@ interface Settings {
 	 * 打开 DEBUG 等级日志
 	 */
 	enableDebugLog: boolean
+	/**
+	 * 恢复旧版歌词样式
+	 */
+	enableOldSchoolStyleLyric: boolean
 }
 
 interface AppState {
@@ -29,6 +33,7 @@ interface AppState {
 	setEnableSendPlayHistory: (value: boolean) => void
 	setEnableSentryReport: (value: boolean) => void
 	setEnableDebugLog: (value: boolean) => void
+	setEnableOldSchoolStyleLyric: (value: boolean) => void
 }
 
 export type { AppState, Settings }

@@ -1,13 +1,15 @@
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import playerProgressEmitter from '@/lib/player/progressListener'
 import * as Haptics from '@/utils/haptics'
 import { useCallback, useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer from 'react-native-track-player'
 
 export function usePlayerSlider() {
 	// 为了避免释放时闪烁
 	const overridePosition = useSharedValue<number | null>(null)
-	const resyncTimer = useRef<NodeJS.Timeout | null>(null)
+	const resyncTimer = useRef<number | null>(null)
 	const sharedPosition = useSharedValue(0)
 	const sharedDuration = useSharedValue(0)
 	const isActive = useSharedValue(true)
@@ -21,17 +23,14 @@ export function usePlayerSlider() {
 				}
 			},
 		)
-		const handler = TrackPlayer.addEventListener(
-			Event.PlaybackProgressUpdated,
-			(data) => {
-				if (overridePosition.get() === null && isActive.value) {
-					sharedPosition.set(data.position)
-					sharedDuration.set(data.duration)
-				}
-			},
-		)
+		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			if (overridePosition.get() === null && isActive.value) {
+				sharedPosition.set(data.position)
+				sharedDuration.set(data.duration)
+			}
+		})
 		return () => {
-			handler.remove()
+			handler()
 			appStateSubscription.remove()
 		}
 	}, [isActive, overridePosition, sharedDuration, sharedPosition])
@@ -61,7 +60,7 @@ export function usePlayerSlider() {
 				Haptics.AndroidHaptics.Gesture_End,
 			)
 			overridePosition.set(value)
-			await TrackPlayer.seekTo(value)
+			await usePlayerStore.getState().seekTo(value)
 
 			sharedPosition.set(value)
 

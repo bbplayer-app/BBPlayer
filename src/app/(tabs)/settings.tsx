@@ -169,6 +169,12 @@ const SettingsSection = memo(function SettingsSection() {
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 	const openModal = useModalStore((state) => state.open)
+	const setEnableOldSchoolStyleLyric = useAppStore(
+		(state) => state.setEnableOldSchoolStyleLyric,
+	)
+	const enableOldSchoolStyleLyric = useAppStore(
+		(state) => state.settings.enableOldSchoolStyleLyric,
+	)
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
 
 	const handleCheckForUpdate = async () => {
@@ -254,6 +260,20 @@ const SettingsSection = memo(function SettingsSection() {
 				<Switch
 					value={enableDebugLog}
 					onValueChange={setEnableDebugLog}
+				/>
+			</View>
+			<View
+				style={{
+					flexDirection: 'row',
+					alignItems: 'center',
+					justifyContent: 'space-between',
+					marginTop: 16,
+				}}
+			>
+				<Text>恢复旧版歌词样式</Text>
+				<Switch
+					value={enableOldSchoolStyleLyric}
+					onValueChange={setEnableOldSchoolStyleLyric}
 				/>
 			</View>
 			<View

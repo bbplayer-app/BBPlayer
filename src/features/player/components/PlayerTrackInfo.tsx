@@ -71,7 +71,6 @@ export function TrackInfo({
 					style={{
 						width: screenWidth - 80,
 						height: screenWidth - 80,
-						borderRadius: 16,
 					}}
 				>
 					{!coverRef ? (
@@ -81,6 +80,7 @@ export function TrackInfo({
 								flex: 1,
 								justifyContent: 'center',
 								alignItems: 'center',
+								borderRadius: 16,
 							}}
 							start={{ x: 0, y: 0 }}
 							end={{ x: 1, y: 1 }}
@@ -101,6 +101,7 @@ export function TrackInfo({
 							style={{
 								width: screenWidth - 80,
 								height: screenWidth - 80,
+								borderRadius: 16,
 							}}
 							recyclingKey={currentTrack.uniqueKey}
 							cachePolicy={'none'}

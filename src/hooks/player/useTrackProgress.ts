@@ -1,6 +1,7 @@
+import playerProgressEmitter from '@/lib/player/progressListener'
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer from 'react-native-track-player'
 
 interface Progress {
 	position: number
@@ -17,7 +18,7 @@ const INITIAL: Progress = { position: 0, duration: 0, buffered: 0 }
 export default function useTrackProgress(background = false) {
 	const [state, setState] = useState<Progress>(INITIAL)
 	const mountedRef = useRef(true)
-	const trackSubRef = useRef<{ remove?: () => void } | null>(null)
+	const trackSubRef = useRef<(() => void) | null>(null)
 	const appSubRef = useRef<{ remove?: () => void } | null>(null)
 
 	useEffect(() => {
@@ -29,27 +30,25 @@ export default function useTrackProgress(background = false) {
 
 	const addTrackListener = () => {
 		if (trackSubRef.current) return
-		trackSubRef.current = TrackPlayer.addEventListener(
-			Event.PlaybackProgressUpdated,
-			(e) => {
-				if (!mountedRef.current) return
-				setState((prev) =>
-					prev.position === e.position &&
-					prev.duration === e.duration &&
-					prev.buffered === e.buffered
-						? prev
-						: {
-								position: e.position,
-								duration: e.duration,
-								buffered: e.buffered,
-							},
-				)
-			},
-		)
+		const handler = (e: Progress) => {
+			if (!mountedRef.current) return
+			setState((prev) =>
+				prev.position === e.position &&
+				prev.duration === e.duration &&
+				prev.buffered === e.buffered
+					? prev
+					: {
+							position: e.position,
+							duration: e.duration,
+							buffered: e.buffered,
+						},
+			)
+		}
+		trackSubRef.current = playerProgressEmitter.subscribe('progress', handler)
 	}
 
 	const removeTrackListener = () => {
-		trackSubRef.current?.remove?.()
+		trackSubRef.current?.()
 		trackSubRef.current = null
 	}
 
