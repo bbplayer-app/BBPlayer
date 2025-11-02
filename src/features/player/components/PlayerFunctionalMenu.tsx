@@ -3,9 +3,7 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
-import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
-import * as WebBrowser from 'expo-web-browser'
 import { Dimensions } from 'react-native'
 import { Divider, Menu } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -74,19 +72,13 @@ export function PlayerFunctionalMenu({
 					onPress={() => {
 						setMenuVisible(false)
 						if (!currentTrack) return
-						WebBrowser.openBrowserAsync(
-							`https://www.bilibili.com/video/${currentTrack.bilibiliMetadata.bvid}`,
-						).catch((e) => {
-							void Clipboard.setStringAsync(
-								`https://www.bilibili.com/video/${currentTrack.bilibiliMetadata.bvid}`,
-							)
-							toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
-								description: String(e),
-							})
+						router.push({
+							pathname: '/playlist/remote/multipage/[bvid]',
+							params: { bvid: currentTrack.bilibiliMetadata.bvid },
 						})
 					}}
-					title='查看原视频'
-					leadingIcon='share-variant'
+					title='查看视频详情'
+					leadingIcon='open-in-new'
 				/>
 			)}
 			<Menu.Item
