@@ -52,7 +52,7 @@ const LocalPlaylistListComponent = memo(() => {
 			},
 			...playlists,
 		] as (Playlist & { isToView?: boolean })[]
-	}, [playlists])
+	}, [hasBilibiliCookie, playlists])
 
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
