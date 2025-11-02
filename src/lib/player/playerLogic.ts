@@ -24,6 +24,7 @@ const initPlayer = async () => {
 }
 
 let isResettingSleepTimer = false
+let listenersAttached = false
 
 const PlayerLogic = {
 	// 初始化播放器
@@ -71,6 +72,10 @@ const PlayerLogic = {
 
 	// 设置事件监听器
 	setupEventListeners(): void {
+		if (listenersAttached) {
+			logger.debug('事件监听器已经设置过了，跳过。')
+			return // 关键！防止重复绑定
+		}
 		// 监听播放状态变化
 		TrackPlayer.addEventListener(
 			Event.PlaybackState,
@@ -245,6 +250,8 @@ const PlayerLogic = {
 					})
 			}
 		})
+
+		listenersAttached = true
 	},
 }
 
