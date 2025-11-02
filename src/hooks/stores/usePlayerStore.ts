@@ -2,6 +2,7 @@ import { trackKeys } from '@/hooks/queries/db/track'
 import { queryClient } from '@/lib/config/queryClient'
 import type { PlayerError } from '@/lib/errors/player'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import playerProgressEmitter from '@/lib/player/progressListener'
 import { artistService } from '@/lib/services/artistService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track, TrackDownloadRecord } from '@/types/core/media'
@@ -502,7 +503,13 @@ export const usePlayerStore = create<PlayerStore>()(
 
 				seekTo: async (position: number) => {
 					if (!checkPlayerReady()) return
+					const progress = await TrackPlayer.getProgress()
 					await TrackPlayer.seekTo(position)
+					playerProgressEmitter.emitSticky('progress', {
+						position,
+						duration: progress.duration,
+						buffered: progress.buffered,
+					})
 				},
 
 				toggleRepeatMode: async () => {

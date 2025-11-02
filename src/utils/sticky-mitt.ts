@@ -8,7 +8,8 @@ const logger = log.extend('Utils.StickyMitt')
  *
  * @returns 一个支持粘性事件的 Emitter 实例。
  */
-function createStickyEmitter<Events extends Record<string, unknown>>() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createStickyEmitter<Events extends Record<string, any>>() {
 	const emitter: Emitter<Events> = mitt<Events>()
 
 	const stickyEvents = new Map<keyof Events, Events[keyof Events]>()
@@ -84,6 +85,21 @@ function createStickyEmitter<Events extends Record<string, unknown>>() {
 		 */
 		get all() {
 			return emitter.all
+		},
+
+		/**
+		 * 订阅事件，返回一个取消函数。
+		 * 取消函数可以在事件处理器中调用，以取消订阅。
+		 */
+		subscribe<Key extends keyof Events>(
+			type: Key,
+			handler: Handler<Events[Key]>,
+		): () => void {
+			emitter.on(type, handler)
+
+			return () => {
+				emitter.off(type, handler)
+			}
 		},
 	}
 }

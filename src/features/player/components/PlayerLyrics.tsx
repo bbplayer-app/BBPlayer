@@ -1,10 +1,10 @@
 import useLyricSync from '@/features/player/hooks/useLyricSync'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
-import type { Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -51,7 +51,7 @@ interface LyricsOffsetControlProps {
 	onClose: () => void
 }
 
-const { height: windowHeight } = Dimensions.get('window')
+const { height: windowHeight, width: windowWidth } = Dimensions.get('window')
 
 export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	visible,
@@ -66,8 +66,8 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 		<View
 			style={{
 				position: 'absolute',
-				left: anchor ? anchor.x : 0,
-				top: anchor ? windowHeight - anchor.y - 60 : 0,
+				right: anchor ? windowWidth - (anchor.x + anchor.width) : 0,
+				bottom: anchor ? windowHeight - anchor.y : 0,
 				backgroundColor: colors.elevation.level2,
 				gap: 8,
 				borderRadius: 12,
@@ -230,13 +230,7 @@ const renderItem = ({
 	)
 }
 
-export default function Lyrics({
-	onBackPress,
-	track,
-}: {
-	onBackPress: () => void
-	track: Track
-}) {
+const Lyrics = memo(function Lyrics() {
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
 	const seekTo = usePlayerStore((state) => state.seekTo)
@@ -248,12 +242,17 @@ export default function Lyrics({
 		height: number
 	} | null>(null)
 	const offsetMenuAnchorRef = useRef<View>(null)
-	const containerRef = useRef<View>(null)
 	const scrollY = useSharedValue(0)
 	const contentHeight = useSharedValue(0)
 	const viewportHeight = useSharedValue(0)
+	const track = useCurrentTrack()
 
-	const { data: lyrics, isPending, isError, error } = useSmartFetchLyrics(track)
+	const {
+		data: lyrics,
+		isPending,
+		isError,
+		error,
+	} = useSmartFetchLyrics(track ?? undefined)
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
@@ -276,7 +275,7 @@ export default function Lyrics({
 
 	// 我们不在本地创建 offset state，而是直接调用 queryClient 来更新 smartFetchLyrics 的缓存。当用户点击确认时，再保存到本地
 	const handleChangeOffset = (delta: number) => {
-		if (!lyrics) return
+		if (!lyrics || !track) return
 		const newOffset = (lyrics.offset ?? 0) + delta
 		queryClient.setQueryData(
 			lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
@@ -291,7 +290,7 @@ export default function Lyrics({
 
 	const handleCloseOffsetMenu = async () => {
 		setOffsetMenuVisible(false)
-		if (!lyrics) return
+		if (!lyrics || !track) return
 		const saveResult = await lyricService.saveLyricsToFile(
 			{
 				...lyrics,
@@ -320,13 +319,10 @@ export default function Lyrics({
 	)
 
 	useLayoutEffect(() => {
-		if (offsetMenuAnchorRef.current && containerRef.current) {
-			offsetMenuAnchorRef.current.measureLayout(
-				containerRef.current,
-				(x, y, width, height) => {
-					setOffsetMenuAnchor({ x, y, width, height })
-				},
-			)
+		if (offsetMenuAnchorRef.current) {
+			offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
+				setOffsetMenuAnchor({ x, y, width, height })
+			})
 		}
 	}, [offsetMenuVisible])
 
@@ -360,6 +356,8 @@ export default function Lyrics({
 			),
 		}
 	})
+
+	if (!track) return null
 
 	if (isPending) {
 		return (
@@ -425,6 +423,7 @@ export default function Lyrics({
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+					paddingBottom: windowHeight / 2,
 				}}
 				showsVerticalScrollIndicator={false}
 				onScrollEndDrag={onUserScrollEnd}
@@ -436,10 +435,7 @@ export default function Lyrics({
 	}
 
 	return (
-		<View
-			style={{ flex: 1 }}
-			ref={containerRef}
-		>
+		<View style={{ flex: 1 }}>
 			<View style={{ flex: 1, flexDirection: 'column' }}>
 				{renderLyrics()}
 				{/* 顶部渐变遮罩 */}
@@ -475,70 +471,48 @@ export default function Lyrics({
 				/>
 			</View>
 
+			{/* 歌词偏移量调整显示按钮 */}
 			<View
 				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
 					paddingHorizontal: 16,
+					position: 'absolute',
+					bottom: 20,
+					right: 0,
 				}}
 			>
-				<View style={{ flex: 1 }} />
-
-				<RectButton
-					onPress={onBackPress}
-					style={{ borderRadius: 99999, padding: 10 }}
-					enabled={!offsetMenuVisible}
-				>
-					<Text
-						variant='titleSmall'
-						style={{
-							color: offsetMenuVisible
-								? colors.onSurfaceDisabled
-								: colors.primary,
-							textAlign: 'center',
-						}}
+				<View style={{ flexDirection: 'column' }}>
+					<RectButton
+						style={{ borderRadius: 99999, padding: 10 }}
+						enabled={!offsetMenuVisible}
+						onPress={() =>
+							useModalStore
+								.getState()
+								.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+						}
 					>
-						返回
-					</Text>
-				</RectButton>
-
-				{/* 歌词偏移量调整显示按钮 */}
-				<View style={{ flex: 1, alignItems: 'flex-end' }}>
-					<View style={{ flex: 1, flexDirection: 'row' }}>
-						<RectButton
-							style={{ borderRadius: 99999, padding: 10 }}
-							enabled={!offsetMenuVisible}
-							onPress={() =>
-								useModalStore
-									.getState()
-									.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+						<Icon
+							source='pencil'
+							size={20}
+							color={
+								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
 							}
-						>
-							<Icon
-								source='pencil'
-								size={20}
-								color={
-									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-								}
-							/>
-						</RectButton>
-						<RectButton
-							style={{ borderRadius: 99999, padding: 10 }}
-							// @ts-expect-error -- 不想管
-							ref={offsetMenuAnchorRef}
-							enabled={!offsetMenuVisible}
-							onPress={() => setOffsetMenuVisible(true)}
-						>
-							<Icon
-								source='swap-vertical-circle-outline'
-								size={20}
-								color={
-									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-								}
-							/>
-						</RectButton>
-					</View>
+						/>
+					</RectButton>
+					<RectButton
+						style={{ borderRadius: 99999, padding: 10 }}
+						// @ts-expect-error -- 不想管
+						ref={offsetMenuAnchorRef}
+						enabled={!offsetMenuVisible}
+						onPress={() => setOffsetMenuVisible(true)}
+					>
+						<Icon
+							source='swap-vertical-circle-outline'
+							size={20}
+							color={
+								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
+							}
+						/>
+					</RectButton>
 				</View>
 			</View>
 
@@ -552,4 +526,8 @@ export default function Lyrics({
 			/>
 		</View>
 	)
-}
+})
+
+Lyrics.displayName = 'Lyrics'
+
+export default Lyrics

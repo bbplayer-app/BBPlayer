@@ -2,32 +2,29 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { Track } from '@/types/core/media'
 import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
+import { Dimensions } from 'react-native'
 import { Divider, Menu } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+const screenWidth = Dimensions.get('window').width
 
 export function PlayerFunctionalMenu({
 	menuVisible,
 	setMenuVisible,
-	screenWidth,
-	uploaderMid,
-	track,
 }: {
 	menuVisible: boolean
 	setMenuVisible: (visible: boolean) => void
-	screenWidth: number
-	uploaderMid: number | undefined
-	track: Track
 }) {
 	const router = useRouter()
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
 	const download = useDownloadManagerStore((state) => state.queueDownloads)
+	const uploaderMid = Number(currentTrack?.artist?.remoteId ?? undefined)
 
 	return (
 		<FunctionalMenu
@@ -94,18 +91,23 @@ export function PlayerFunctionalMenu({
 			)}
 			<Menu.Item
 				onPress={() => {
+					if (!currentTrack) {
+						setMenuVisible(false)
+						toast.error('为什么 currentTrack 不存在？')
+						return
+					}
 					setMenuVisible(false)
 					download([
 						{
-							uniqueKey: track.uniqueKey,
-							title: track.title,
-							coverUrl: track.coverUrl ?? undefined,
+							uniqueKey: currentTrack.uniqueKey,
+							title: currentTrack.title,
+							coverUrl: currentTrack.coverUrl ?? undefined,
 						},
 					])
 					toast.info('已添加到下载队列')
 				}}
 				title={
-					track.trackDownloads?.status === 'downloaded'
+					currentTrack?.trackDownloads?.status === 'downloaded'
 						? '重新下载音频'
 						: '下载音频'
 				}

@@ -1,14 +1,15 @@
+import playerProgressEmitter from '@/lib/player/progressListener'
 import type { LyricLine } from '@/types/player/lyrics'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer from 'react-native-track-player'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
 	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
-	seekTo: (position: number) => void,
+	seekTo: (position: number) => Promise<void>,
 	offset: number, // 单位秒
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
@@ -53,7 +54,6 @@ export default function useLyricSync(
 			manualScrollTimeoutRef.current = null
 			isManualScrollingRef.current = false
 
-			console.log('scroll by user')
 			void flashListRef.current?.scrollToIndex({
 				animated: true,
 				index: currentLyricIndex,
@@ -63,10 +63,11 @@ export default function useLyricSync(
 	}
 
 	const handleJumpToLyric = useCallback(
-		(index: number) => {
+		async (index: number) => {
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
-			seekTo(lyrics[index].timestamp)
+			await seekTo(lyrics[index].timestamp)
+			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
 				manualScrollTimeoutRef.current = null
@@ -85,20 +86,17 @@ export default function useLyricSync(
 				}
 			},
 		)
-		const handler = TrackPlayer.addEventListener(
-			Event.PlaybackProgressUpdated,
-			(data) => {
-				const offsetedPosition = data.position + offset
-				if (!isActive || offsetedPosition <= 0) {
-					return
-				}
-				const index = findIndexForTime(offsetedPosition)
-				if (index === currentLyricIndex) return
-				setCurrentLyricIndex(index)
-			},
-		)
+		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			const offsetedPosition = data.position + offset
+			if (!isActive || offsetedPosition <= 0) {
+				return
+			}
+			const index = findIndexForTime(offsetedPosition)
+			if (index === currentLyricIndex) return
+			setCurrentLyricIndex(index)
+		})
 		return () => {
-			handler.remove()
+			handler()
 			appStateSubscription.remove()
 		}
 	}, [currentLyricIndex, findIndexForTime, isActive, offset])
@@ -118,7 +116,6 @@ export default function useLyricSync(
 	// 当歌词发生变化且用户没自己滚时，滚动到当前歌词
 	useEffect(() => {
 		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
-		console.log('scroll by flashlist')
 		// eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
 		void flashListRef.current?.scrollToIndex({
 			animated: true,

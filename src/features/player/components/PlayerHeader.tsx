@@ -5,12 +5,10 @@ import { IconButton, Text } from 'react-native-paper'
 
 export function PlayerHeader({
 	onMorePress,
-	viewMode,
-	trackTitle,
+	index,
 }: {
 	onMorePress: () => void
-	viewMode: 'lyrics' | 'cover'
-	trackTitle?: string
+	index: number
 }) {
 	const router = useRouter()
 	const currentTrack = useCurrentTrack()
@@ -38,8 +36,8 @@ export function PlayerHeader({
 				}}
 				numberOfLines={1}
 			>
-				{viewMode === 'lyrics'
-					? (trackTitle ?? '正在播放')
+				{index === 1
+					? (currentTrack?.title ?? '正在播放')
 					: currentTrack?.trackDownloads?.status === 'downloaded'
 						? '正在播放 (已缓存)'
 						: '正在播放'}
