@@ -2,6 +2,7 @@ import { trackKeys } from '@/hooks/queries/db/track'
 import { queryClient } from '@/lib/config/queryClient'
 import type { PlayerError } from '@/lib/errors/player'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import playerProgressEmitter from '@/lib/player/progressListener'
 import { artistService } from '@/lib/services/artistService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track, TrackDownloadRecord } from '@/types/core/media'
@@ -12,11 +13,8 @@ import type {
 } from '@/types/core/playerStore'
 import { ProjectScope } from '@/types/core/scope'
 import type { RNTPTrack } from '@/types/rntp'
-import log, {
-	flatErrorMessage,
-	reportErrorToSentry,
-	toastAndLogError,
-} from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log, { flatErrorMessage, reportErrorToSentry } from '@/utils/log'
 import { zustandStorage } from '@/utils/mmkv'
 import {
 	checkAndUpdateAudioStream,
@@ -192,6 +190,10 @@ export const usePlayerStore = create<PlayerStore>()(
 						void queryClient.invalidateQueries({
 							queryKey: trackKeys.leaderBoard(),
 						})
+
+						void reportPlaybackHistory(track, effectivePlayed).catch((error) =>
+							logger.error('上报播放历史失败', error),
+						)
 					} catch (error) {
 						logger.debug('增加播放记录异常', error)
 					} finally {
@@ -505,7 +507,13 @@ export const usePlayerStore = create<PlayerStore>()(
 
 				seekTo: async (position: number) => {
 					if (!checkPlayerReady()) return
+					const progress = await TrackPlayer.getProgress()
 					await TrackPlayer.seekTo(position)
+					playerProgressEmitter.emitSticky('progress', {
+						position,
+						duration: progress.duration,
+						buffered: progress.buffered,
+					})
 				},
 
 				toggleRepeatMode: async () => {
@@ -690,9 +698,6 @@ export const usePlayerStore = create<PlayerStore>()(
 
 					await TrackPlayer.load(rntpTrackResult.value)
 					await TrackPlayer.play()
-					reportPlaybackHistory(finalTrack).catch((error) =>
-						logger.error('上报播放历史失败', error),
-					)
 
 					set({
 						currentTrackUniqueKey: String(finalTrack.uniqueKey),

@@ -45,3 +45,16 @@
 - 不会包含可反查或追溯到具体用户的身份信息；已关闭默认 PII 采集（sendDefaultPii=false），因此不会上传其他个人信息。
 - 目前这方面实现较为粗略，欢迎 review 相关代码并就隐私保护提出意见或 PR。
 - 支持关闭 Sentry：在设置中关闭错误上报后将不再上传任何信息。
+
+## 感谢
+
+本项目开发过程中很多功能和设计的灵感都来自前辈们，包括但不限于：
+
+- [AzusaPlayer](https://github.com/lovegaoshi/azusa-player-mobile)
+- [BiliSound](https://github.com/bilisound/client-mobile)
+- [Salt Player](https://github.com/Moriafly/SaltPlayerSource)
+- [Spotify](https://spotify.com)
+
+以及最重要的：[Bilibili](https://www.bilibili.com/)
+
+在此表示感谢！（鞠躬）

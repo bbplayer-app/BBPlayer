@@ -1,10 +1,10 @@
-import useCurrentQueue from '@/hooks/stores/playerHooks/useCurrentQueue'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import useCurrentQueue from '@/hooks/player/useCurrentQueue'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
 import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
-import { usePreventRemove } from '@react-navigation/native'
 import {
 	memo,
 	type RefObject,

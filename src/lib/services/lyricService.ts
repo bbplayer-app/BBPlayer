@@ -1,11 +1,13 @@
+import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import type { CustomError } from '@/lib/errors'
 import { DataParsingError, FileSystemError } from '@/lib/errors'
-import type { Track } from '@/types/core/media'
+import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
-import log, { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log from '@/utils/log'
 import * as FileSystem from 'expo-file-system'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Service.Lyric')
 type lyricFileType =
@@ -37,10 +39,16 @@ class LyricService {
 		return result
 	}
 
-	public getBestMatchedLyrics(track: Track) {
+	/**
+	 * 从多个数据源中获取最佳匹配的歌词
+	 * @param track
+	 * @param preciseKeyword 在提供该项时，将直接使用这个关键词搜索
+	 * @returns
+	 */
+	public getBestMatchedLyrics(track: Track, preciseKeyword?: string) {
 		const providers = [
 			this.neteaseApi.searchBestMatchedLyrics(
-				this.cleanKeyword(track.title),
+				preciseKeyword ?? this.cleanKeyword(track.title),
 				track.duration * 1000,
 			),
 		]
@@ -84,6 +92,22 @@ class LyricService {
 						)
 					}
 				})
+			}
+
+			if (
+				track.source === 'bilibili' &&
+				track.bilibiliMetadata.bvid &&
+				track.bilibiliMetadata.cid
+			) {
+				return ResultAsync.fromSafePromise(
+					this.getPreciseMusicNameOnBilibiliVideo(track.bilibiliMetadata),
+				)
+					.andThen((musicName) => this.getBestMatchedLyrics(track, musicName))
+					.andThen((lyrics) => {
+						logger.info('自动搜索最佳匹配的歌词完成')
+						lyricFile.write(JSON.stringify(lyrics))
+						return okAsync(lyrics)
+					})
 			}
 
 			return this.getBestMatchedLyrics(track).andThen((lyrics) => {
@@ -184,6 +208,54 @@ class LyricService {
 		} catch (e) {
 			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
 		}
+	}
+
+	public async getPreciseMusicNameOnBilibiliVideo(
+		metadata: BilibiliTrack['bilibiliMetadata'],
+	) {
+		if (!metadata.cid || !metadata.bvid) return undefined
+		const result = await bilibiliApi
+			.getWebPlayerInfo(metadata.bvid, metadata.cid)
+			.andThen((res) => {
+				if (!res.bgm_info) return errAsync(new Error('没有获取到歌曲信息'))
+				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
+				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
+					music_title: res.bgm_info.music_title,
+				})
+				if (filteredResult?.[1]) {
+					return okAsync(filteredResult[1])
+				}
+				return okAsync(res.bgm_info.music_title)
+			})
+		if (result.isErr()) {
+			return undefined
+		}
+		return result.value
+	}
+
+	/**
+	 * 清除所有已缓存的歌词
+	 * @returns
+	 */
+	public clearAllLyrics(): Result<true, unknown> {
+		const lyricsDir = new FileSystem.Directory(
+			FileSystem.Paths.document,
+			'lyrics',
+		)
+
+		return Result.fromThrowable(() => {
+			if (!lyricsDir.exists) {
+				logger.debug('歌词目录不存在，无需清理')
+				return true as const
+			}
+			lyricsDir.delete()
+			lyricsDir.create({
+				intermediates: true,
+				idempotent: true,
+			})
+			logger.info('歌词缓存已清理')
+			return true as const
+		})()
 	}
 }
 

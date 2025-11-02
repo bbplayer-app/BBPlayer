@@ -10,8 +10,9 @@
 			"@/app/*": ["app/*"],
 			"@/components/*": ["components/*"],
 			"@/hooks/*": ["hooks/*"],
-			"@/utils/*": ["utils/*"]
+			"@/utils/*": ["utils/*"],
+			"@/features/*": ["features/*"]
 		}
 	},
-	"include": ["**/*.ts", "**/*.tsx"]
+	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

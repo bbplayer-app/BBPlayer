@@ -343,6 +343,33 @@ interface BilibiliSearchSuggestionItem {
 	type: string
 }
 
+interface BilibiliWebPlayerInfo {
+	bgm_info?: {
+		music_id: number
+		music_title: string
+		jump_url: string
+	}
+}
+
+interface BilibiliToViewVideoList {
+	count: number
+	list: {
+		aid: number
+		bvid: string
+		count: number // 分 p 数
+		pubdate: number
+		owner: {
+			mid: number
+			name: string
+			face: string
+		}
+		cid: number
+		title: string
+		duration: number
+		pic: string
+	}[]
+}
+
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
@@ -361,9 +388,11 @@ export type {
 	BilibiliPlaylist,
 	BilibiliSearchSuggestionItem,
 	BilibiliSearchVideo,
+	BilibiliToViewVideoList,
 	BilibiliUserInfo,
 	BilibiliUserUploadedVideosResponse,
 	BilibiliVideoDetails,
+	BilibiliWebPlayerInfo,
 }
 
 export { BilibiliQrCodeLoginStatus }

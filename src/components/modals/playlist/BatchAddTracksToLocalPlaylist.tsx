@@ -6,9 +6,33 @@ import { useBatchAddTracksToLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { FlashList } from '@shopify/flash-list'
+
+const renderPlaylistItem = ({
+	item,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	Playlist,
+	{ selectedPlaylistId: number; setSelectedPlaylistId: (id: number) => void }
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const isChecked = extraData.selectedPlaylistId === item.id
+	const isDisabled = item.type !== 'local'
+	const setSelectedPlaylistId = extraData.setSelectedPlaylistId
+
+	return (
+		<RadioButton.Item
+			label={item.title}
+			value={String(item.id)}
+			status={isChecked ? 'checked' : 'unchecked'}
+			onPress={() => !isDisabled && setSelectedPlaylistId(item.id)}
+			disabled={isDisabled}
+		/>
+	)
+}
 
 const BatchAddTracksToLocalPlaylistModal = memo(
 	function AddTracksToLocalPlaylistModal({
@@ -68,25 +92,15 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 			)
 		}, [batchAdd, close, isMutating, payloads, selectedPlaylistId])
 
-		const renderPlaylistItem = useCallback(
-			({ item }: { item: Playlist }) => {
-				const isChecked = selectedPlaylistId === item.id
-				const isDisabled = item.type !== 'local'
-
-				return (
-					<RadioButton.Item
-						label={item.title}
-						value={String(item.id)}
-						status={isChecked ? 'checked' : 'unchecked'}
-						onPress={() => !isDisabled && setSelectedPlaylistId(item.id)}
-						disabled={isDisabled}
-					/>
-				)
-			},
-			[selectedPlaylistId],
-		)
-
 		const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
+
+		const extraData = useMemo(
+			() => ({
+				selectedPlaylistId,
+				setSelectedPlaylistId,
+			}),
+			[selectedPlaylistId, setSelectedPlaylistId],
+		)
 
 		const renderContent = () => {
 			if (isLoading) {
@@ -120,7 +134,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
 							keyExtractor={keyExtractor}
-							extraData={selectedPlaylistId}
+							extraData={extraData}
 							showsVerticalScrollIndicator={false}
 							ListEmptyComponent={
 								<View

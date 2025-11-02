@@ -1,11 +1,9 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import useCurrentTrack from '@/hooks/stores/playerHooks/useCurrentTrack'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import type { RootStackParamList } from '@/types/navigation'
 import * as Haptics from '@/utils/haptics'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Image } from 'expo-image'
+import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
 import { View } from 'react-native'
 import {
@@ -87,8 +85,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	const togglePlay = usePlayerStore((state) => state.togglePlay)
 	const skipToNext = usePlayerStore((state) => state.skipToNext)
 	const skipToPrevious = usePlayerStore((state) => state.skipToPrevious)
-	const navigation =
-		useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
@@ -129,7 +126,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			opacity.value = withTiming(1, { duration: 100 })
 
 			if (success) {
-				scheduleOnRN(navigation.navigate, { name: 'Player', params: undefined })
+				scheduleOnRN(router.push, '/player')
 			}
 		})
 

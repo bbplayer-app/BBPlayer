@@ -1,15 +1,16 @@
-import { PlaylistError } from '@/app/playlist/remote/shared/components/PlaylistError'
-import { PlaylistHeader } from '@/app/playlist/remote/shared/components/PlaylistHeader'
-import { PlaylistLoading } from '@/app/playlist/remote/shared/components/PlaylistLoading'
-import { TrackList } from '@/app/playlist/remote/shared/components/RemoteTrackList'
-import { usePlaylistMenu } from '@/app/playlist/remote/shared/hooks/usePlaylistMenu'
-import { useRemotePlaylist } from '@/app/playlist/remote/shared/hooks/useRemotePlaylist'
-import { useTrackSelection } from '@/app/playlist/remote/shared/hooks/useTrackSelection'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
+import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
+import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
+import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
+import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
+import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
+import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import {
 	useInfiniteGetUserUploadedVideos,
 	useOtherUserInfo,
 } from '@/hooks/queries/bilibili/user'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
@@ -19,15 +20,8 @@ import type {
 	BilibiliUserUploadedVideosResponse,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { RootStackParamList } from '@/types/navigation'
 import { formatMMSSToSeconds } from '@/utils/time'
-import {
-	type RouteProp,
-	useNavigation,
-	usePreventRemove,
-	useRoute,
-} from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, View } from 'react-native'
 import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
@@ -67,17 +61,14 @@ const mapApiItemToTrack = (
 		},
 		createdAt: new Date(apiItem.created),
 		updatedAt: new Date(apiItem.created),
+		trackDownloads: null,
 	}
 }
 
 export default function UploaderPage() {
-	const route = useRoute<RouteProp<RootStackParamList, 'PlaylistUploader'>>()
-	const { mid } = route.params
+	const { mid } = useLocalSearchParams<{ mid: string }>()
 	const { colors } = useTheme()
-	const navigation =
-		useNavigation<
-			NativeStackNavigationProp<RootStackParamList, 'PlaylistUploader'>
-		>()
+	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
@@ -88,7 +79,6 @@ export default function UploaderPage() {
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const debouncedQuery = useDebouncedValue(searchQuery, 200)
-	const [transitionDone, setTransitionDone] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
@@ -129,15 +119,9 @@ export default function UploaderPage() {
 
 	useEffect(() => {
 		if (typeof mid !== 'string') {
-			navigation.replace('NotFound')
+			router.replace('/+not-found')
 		}
-	}, [mid, navigation])
-
-	useEffect(() => {
-		navigation.addListener('transitionEnd', () => {
-			setTransitionDone(true)
-		})
-	}, [navigation])
+	}, [mid, router])
 
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
@@ -181,7 +165,7 @@ export default function UploaderPage() {
 		)
 	}
 
-	if (isUserInfoPending || !transitionDone) {
+	if (isUserInfoPending) {
 		return <PlaylistLoading />
 	}
 
@@ -201,7 +185,7 @@ export default function UploaderPage() {
 						selectMode ? `已选择 ${selected.size} 首` : uploaderUserInfo.name
 					}
 				/>
-				<Appbar.BackAction onPress={() => navigation.goBack()} />
+				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
 					<Appbar.Action
 						icon='playlist-plus'
@@ -260,6 +244,7 @@ export default function UploaderPage() {
 							description={uploaderUserInfo.sign}
 							onClickMainButton={undefined}
 							mainButtonIcon={'sync'}
+							id={Number(mid)}
 						/>
 					}
 					refreshControl={

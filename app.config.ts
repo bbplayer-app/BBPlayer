@@ -135,9 +135,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 				disableIOS: true,
 			},
 		],
+		'expo-router',
 	],
 	experiments: {
 		reactCompiler: true,
+		typedRoutes: true,
 	},
 	extra: {
 		eas: {

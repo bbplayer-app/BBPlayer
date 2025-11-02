@@ -358,7 +358,10 @@ async function checkAndUpdateAudioStream(
  * 上报播放记录
  * 由于这只是一个非常边缘的功能，我们不关心他是否出错，所以发生报错时只写个 log，返回 void
  */
-async function reportPlaybackHistory(track: Track): Promise<void> {
+async function reportPlaybackHistory(
+	track: Track,
+	position: number,
+): Promise<void> {
 	if (!useAppStore.getState().settings.sendPlayHistory) return
 	if (!useAppStore.getState().hasBilibiliCookie()) return
 	if (
@@ -370,10 +373,12 @@ async function reportPlaybackHistory(track: Track): Promise<void> {
 	logger.debug('上报播放记录', {
 		bvid: track.bilibiliMetadata.bvid,
 		cid: track.bilibiliMetadata.cid,
+		position,
 	})
 	const result = await bilibiliApi.reportPlaybackHistory(
 		track.bilibiliMetadata.bvid,
 		track.bilibiliMetadata.cid,
+		position,
 	)
 	if (result.isErr()) {
 		logger.warning('上报播放记录到 bilibili 失败', {

@@ -1,7 +1,8 @@
+import playerProgressEmitter from '@/lib/player/progressListener'
 import { useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer from 'react-native-track-player'
 
 /**
  * Reanimated shared values 版的 useTrackProgress
@@ -22,18 +23,15 @@ export default function useAnimatedTrackProgress(background = false) {
 				}
 			},
 		)
-		const handler = TrackPlayer.addEventListener(
-			Event.PlaybackProgressUpdated,
-			(data) => {
-				if (isActive.value || background) {
-					position.value = data.position
-					duration.value = data.duration
-					buffered.value = data.buffered
-				}
-			},
-		)
+		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			if (isActive.value || background) {
+				position.value = data.position
+				duration.value = data.duration
+				buffered.value = data.buffered
+			}
+		})
 		return () => {
-			handler.remove()
+			handler()
 			appStateSubscription.remove()
 		}
 	}, [isActive, position, duration, buffered, background])

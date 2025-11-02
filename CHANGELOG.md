@@ -5,6 +5,22 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [1.4.0] - 2025-11-02
+
+### Added
+
+- 清除所有歌词缓存（在「开发者页面」）
+- 基于 B 站视频 bgm 识别结果精准搜索歌词
+- 切换到 expo-router
+- 改进了歌词页面与交互逻辑（灵感来自 Salt Player + Spotify，给前辈们磕头了咚咚咚）
+- 可通过播放器页的下拉菜单跳转视频详情页
+- 将 B 站「稍后再看」作为播放列表（置顶在「播放列表」页面）
+
+### Fixed
+
+- 一些减少 rerender 次数的优化
+- 使用 [react-native-paper/4807](https://github.com/callstack/react-native-paper/issues/4807) 中提到的 Menu 组件修复方法，移除 patch
+
 ## [1.3.6] - 2025-10-26
 
 ### Added
@@ -85,9 +101,10 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.6...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.0...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
 [1.3.5]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.4...v1.3.5
 [1.3.6]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.5...v1.3.6
+[1.4.0]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.6...v1.4.0
