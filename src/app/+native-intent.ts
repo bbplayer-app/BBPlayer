@@ -24,6 +24,12 @@ export function redirectSystemPath({
 			if (url.hostname === 'notification.click') {
 				return '/player'
 			}
+			if (url.hostname === 'bbplayer.roitium.com') {
+				const result = url.href.split('/link-to/')[1]
+				if (result) {
+					return result
+				}
+			}
 		}
 		return path
 	} catch {
