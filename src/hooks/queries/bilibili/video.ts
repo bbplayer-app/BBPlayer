@@ -13,6 +13,7 @@ export const videoDataQueryKeys = {
 		[...videoDataQueryKeys.all, 'getVideoIsThumbUp', bvid] as const,
 	getWebPlayerInfo: (bvid?: string, cid?: number) =>
 		[...videoDataQueryKeys.all, 'getWebPlayerInfo', bvid, cid] as const,
+	getToViewVideoList: ['bilibili', 'getToViewVideoList'] as const,
 } as const
 
 /**
@@ -69,5 +70,19 @@ export const useGetWebPlayerInfo = (
 			returnOrThrowAsync(bilibiliApi.getWebPlayerInfo(bvid!, cid!)),
 		enabled,
 		staleTime: 5 * 60 * 1000,
+	})
+}
+
+/**
+ * 获取稍后再看视频列表
+ */
+export const useGetToViewVideoList = () => {
+	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
+	const enabled = hasCookie
+	return useQuery({
+		queryKey: videoDataQueryKeys.getToViewVideoList,
+		queryFn: () => returnOrThrowAsync(bilibiliApi.getToViewVideoList()),
+		enabled,
+		staleTime: 0,
 	})
 }

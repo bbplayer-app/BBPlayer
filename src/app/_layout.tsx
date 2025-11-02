@@ -236,6 +236,10 @@ export default Sentry.wrap(function RootLayout() {
 						headerShown: false,
 					}}
 				/>
+				<Stack.Screen
+					name='playlist/remote/toview'
+					options={{ headerShown: false }}
+				/>
 			</Stack>
 			<Toast config={toastConfig} />
 		</AppProviders>

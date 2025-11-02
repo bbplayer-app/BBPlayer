@@ -14,7 +14,7 @@
 		"preset": "jest-expo",
 		"testPathIgnorePatterns": [
 			"/node_modules/",
-			"app/test/test.tsx"
+			"app/test.tsx"
 		]
 	},
 	"dependencies": {

@@ -22,6 +22,7 @@ interface PlaylistHeaderProps {
 	mainButtonIcon: IconSource
 	linkedPlaylistId?: number
 	id: string | number
+	mainButtonText?: string
 }
 
 /**
@@ -34,6 +35,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	description,
 	onClickMainButton,
 	mainButtonIcon,
+	mainButtonText,
 	linkedPlaylistId,
 	id,
 }: PlaylistHeaderProps) {
@@ -96,7 +98,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						icon={mainButtonIcon}
 						onPress={() => onClickMainButton()}
 					>
-						{linkedPlaylistId ? '重新同步' : '同步到本地'}
+						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
 					</Button>
 				)}
 				{linkedPlaylistId && (
