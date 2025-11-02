@@ -1,7 +1,7 @@
 import { alert } from '@/components/modals/AlertModal'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
-import { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
 import { useCallback } from 'react'
 import type { MMKV } from 'react-native-mmkv'

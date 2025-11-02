@@ -13,6 +13,10 @@ import { RefreshControl, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
 import FavoriteFolderListItem from './FavoriteFolderListItem'
 
+const renderPlaylistItem = ({ item }: { item: BilibiliPlaylist }) => (
+	<FavoriteFolderListItem item={item} />
+)
+
 const FavoriteFolderListComponent = memo(() => {
 	const router = useRouter()
 	const { colors } = useTheme()
@@ -30,12 +34,6 @@ const FavoriteFolderListComponent = memo(() => {
 		isError: playlistsIsError,
 	} = useGetFavoritePlaylists(userInfo?.mid)
 
-	const renderPlaylistItem = useCallback(
-		({ item }: { item: BilibiliPlaylist }) => (
-			<FavoriteFolderListItem item={item} />
-		),
-		[],
-	)
 	const keyExtractor = useCallback(
 		(item: BilibiliPlaylist) => item.id.toString(),
 		[],

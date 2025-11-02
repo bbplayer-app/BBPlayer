@@ -12,6 +12,10 @@ import { Appbar, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/shallow'
 
+const renderItem = ({ item }: { item: DownloadTask }) => {
+	return <DownloadTaskItem task={item} />
+}
+
 export default function DownloadPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
@@ -24,10 +28,6 @@ export default function DownloadPage() {
 	const clearAll = useDownloadManagerStore((state) => state.clearAll)
 
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
-
-	const renderItem = useCallback(({ item }: { item: DownloadTask }) => {
-		return <DownloadTaskItem task={item} />
-	}, [])
 
 	const keyExtractor = useCallback((item: DownloadTask) => item.uniqueKey, [])
 

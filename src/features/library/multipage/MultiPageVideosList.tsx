@@ -15,6 +15,12 @@ import { RefreshControl, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import MultiPageVideosItem from './MultiPageVideosItem'
 
+const renderPlaylistItem = ({
+	item,
+}: {
+	item: BilibiliFavoriteListContent
+}) => <MultiPageVideosItem item={item} />
+
 const MultiPageVideosListComponent = memo(() => {
 	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
@@ -41,12 +47,6 @@ const MultiPageVideosListComponent = memo(() => {
 		playlists?.find((item) => item.title.startsWith('[mp]'))?.id,
 	)
 
-	const renderPlaylistItem = useCallback(
-		({ item }: { item: BilibiliFavoriteListContent }) => (
-			<MultiPageVideosItem item={item} />
-		),
-		[],
-	)
 	const keyExtractor = useCallback(
 		(item: BilibiliFavoriteListContent) => item.bvid,
 		[],

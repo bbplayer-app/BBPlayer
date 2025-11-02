@@ -12,11 +12,8 @@ import type {
 } from '@/types/core/playerStore'
 import { ProjectScope } from '@/types/core/scope'
 import type { RNTPTrack } from '@/types/rntp'
-import log, {
-	flatErrorMessage,
-	reportErrorToSentry,
-	toastAndLogError,
-} from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log, { flatErrorMessage, reportErrorToSentry } from '@/utils/log'
 import { zustandStorage } from '@/utils/mmkv'
 import {
 	checkAndUpdateAudioStream,

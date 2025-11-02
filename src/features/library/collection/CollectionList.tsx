@@ -12,6 +12,10 @@ import { RefreshControl, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import CollectionListItem from './CollectionListItem'
 
+const renderCollectionItem = ({ item }: { item: BilibiliCollection }) => (
+	<CollectionListItem item={item} />
+)
+
 const CollectionListComponent = memo(() => {
 	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
@@ -29,12 +33,6 @@ const CollectionListComponent = memo(() => {
 		fetchNextPage,
 	} = useInfiniteCollectionsList(Number(userInfo?.mid))
 
-	const renderCollectionItem = useCallback(
-		({ item }: { item: BilibiliCollection }) => (
-			<CollectionListItem item={item} />
-		),
-		[],
-	)
 	const keyExtractor = useCallback(
 		(item: BilibiliCollection) => item.id.toString(),
 		[],

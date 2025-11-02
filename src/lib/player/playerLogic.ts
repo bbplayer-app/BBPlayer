@@ -1,6 +1,7 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { ProjectScope } from '@/types/core/scope'
-import log, { reportErrorToSentry, toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 import TrackPlayer, {
 	AppKilledPlaybackBehavior,

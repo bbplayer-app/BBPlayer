@@ -1,8 +1,9 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist, Track } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -28,6 +29,52 @@ interface LocalTrackListProps {
 	onEndReached?: () => void
 	hasNextPage?: boolean
 	isFetchingNextPage?: boolean
+}
+
+const renderItem = ({
+	item,
+	index,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	Track,
+	{
+		handleTrackPress: (track: Track) => void
+		handleMenuPress: (track: Track, anchor: { x: number; y: number }) => void
+		toggle: (id: number) => void
+		enterSelectMode: (id: number) => void
+		selected: Set<number>
+		selectMode: boolean
+		playlist: Playlist
+	}
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const {
+		handleTrackPress,
+		handleMenuPress,
+		toggle,
+		enterSelectMode,
+		selected,
+		selectMode,
+		playlist,
+	} = extraData
+	return (
+		<TrackListItem
+			index={index}
+			onTrackPress={() => handleTrackPress(item)}
+			onMenuPress={(anchor) => {
+				handleMenuPress(item, anchor)
+			}}
+			disabled={
+				item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
+			}
+			data={item}
+			playlist={playlist}
+			toggleSelected={toggle}
+			isSelected={selected.has(item.id)}
+			selectMode={selectMode}
+			enterSelectMode={enterSelectMode}
+		/>
+	)
 }
 
 export function LocalTrackList({
@@ -69,46 +116,35 @@ export function LocalTrackList({
 		setMenuState((prev) => ({ ...prev, visible: false }))
 	}, [])
 
-	const renderItem = useCallback(
-		({ item, index }: { item: Track; index: number }) => {
-			return (
-				<TrackListItem
-					index={index}
-					onTrackPress={() => handleTrackPress(item)}
-					onMenuPress={(anchor) => {
-						handleMenuPress(item, anchor)
-					}}
-					disabled={
-						item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
-					}
-					data={item}
-					playlist={playlist}
-					toggleSelected={toggle}
-					isSelected={selected.has(item.id)}
-					selectMode={selectMode}
-					enterSelectMode={enterSelectMode}
-				/>
-			)
-		},
-		[
-			enterSelectMode,
-			handleTrackPress,
-			playlist,
+	const keyExtractor = useCallback((item: Track) => String(item.id), [])
+
+	const extraData = useMemo(
+		() => ({
 			selectMode,
 			selected,
-			toggle,
+			handleTrackPress,
 			handleMenuPress,
+			toggle,
+			enterSelectMode,
+			playlist,
+		}),
+		[
+			selectMode,
+			selected,
+			handleTrackPress,
+			handleMenuPress,
+			toggle,
+			enterSelectMode,
+			playlist,
 		],
 	)
-
-	const keyExtractor = useCallback((item: Track) => String(item.id), [])
 
 	return (
 		<>
 			<FlashList
 				data={tracks}
 				renderItem={renderItem}
-				extraData={{ selectMode, selected }}
+				extraData={extraData}
 				ItemSeparatorComponent={() => <Divider />}
 				ListHeaderComponent={ListHeaderComponent}
 				keyExtractor={keyExtractor}

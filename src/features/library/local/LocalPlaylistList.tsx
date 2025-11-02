@@ -10,6 +10,10 @@ import { RefreshControl, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
+const renderPlaylistItem = ({ item }: { item: Playlist }) => (
+	<LocalPlaylistItem item={item} />
+)
+
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
@@ -24,10 +28,6 @@ const LocalPlaylistListComponent = memo(() => {
 		isError: playlistsIsError,
 	} = usePlaylistLists()
 
-	const renderPlaylistItem = useCallback(
-		({ item }: { item: Playlist }) => <LocalPlaylistItem item={item} />,
-		[],
-	)
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
 	const onRefresh = async () => {

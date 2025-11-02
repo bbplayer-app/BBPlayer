@@ -1,7 +1,7 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { ThirdPartyError } from '@/lib/errors'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { toastAndLogError } from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import * as Sentry from '@sentry/react-native'
 import { QueryCache, QueryClient } from '@tanstack/react-query'

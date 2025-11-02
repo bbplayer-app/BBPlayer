@@ -1,9 +1,10 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -33,6 +34,67 @@ interface TrackListProps {
 	showItemCover?: boolean
 	isFetchingNextPage?: boolean
 	hasNextPage?: boolean
+}
+
+const renderItem = ({
+	item,
+	index,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	BilibiliTrack,
+	{
+		toggle: (id: number) => void
+		playTrack: (track: BilibiliTrack) => void
+		handleMenuPress: (
+			track: BilibiliTrack,
+			anchor: { x: number; y: number },
+		) => void
+		selected: Set<number>
+		selectMode: boolean
+		enterSelectMode: (id: number) => void
+		showItemCover?: boolean
+	}
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const {
+		toggle,
+		playTrack,
+		handleMenuPress,
+		selected,
+		selectMode,
+		enterSelectMode,
+		showItemCover,
+	} = extraData
+	return (
+		<TrackListItem
+			index={index}
+			onTrackPress={() => playTrack(item)}
+			onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+			showCoverImage={showItemCover ?? true}
+			data={{
+				cover: item.coverUrl ?? undefined,
+				title: item.title,
+				duration: item.duration,
+				id: item.id,
+				artistName: item.artist?.name,
+				uniqueKey: item.uniqueKey,
+			}}
+			toggleSelected={() => {
+				void Haptics.performAndroidHapticsAsync(
+					Haptics.AndroidHaptics.Clock_Tick,
+				)
+				toggle(item.id)
+			}}
+			isSelected={selected.has(item.id)}
+			selectMode={selectMode}
+			enterSelectMode={() => {
+				void Haptics.performAndroidHapticsAsync(
+					Haptics.AndroidHaptics.Long_Press,
+				)
+				enterSelectMode(item.id)
+			}}
+		/>
+	)
 }
 
 export function TrackList({
@@ -77,59 +139,36 @@ export function TrackList({
 		setMenuState((prev) => ({ ...prev, visible: false }))
 	}, [])
 
-	const renderItem = useCallback(
-		({ item, index }: { item: BilibiliTrack; index: number }) => {
-			return (
-				<TrackListItem
-					index={index}
-					onTrackPress={() => playTrack(item)}
-					onMenuPress={(anchor) => handleMenuPress(item, anchor)}
-					showCoverImage={showItemCover ?? true}
-					data={{
-						cover: item.coverUrl ?? undefined,
-						title: item.title,
-						duration: item.duration,
-						id: item.id,
-						artistName: item.artist?.name,
-						uniqueKey: item.uniqueKey,
-					}}
-					toggleSelected={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Clock_Tick,
-						)
-						toggle(item.id)
-					}}
-					isSelected={selected.has(item.id)}
-					selectMode={selectMode}
-					enterSelectMode={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Long_Press,
-						)
-						enterSelectMode(item.id)
-					}}
-				/>
-			)
-		},
-		[
-			playTrack,
-			toggle,
-			selected,
-			selectMode,
-			enterSelectMode,
-			handleMenuPress,
-			showItemCover,
-		],
-	)
-
 	const keyExtractor = useCallback((item: BilibiliTrack) => {
 		return String(item.id)
 	}, [])
+
+	const extraData = useMemo(
+		() => ({
+			selectMode,
+			selected,
+			toggle,
+			playTrack,
+			handleMenuPress,
+			enterSelectMode,
+			showItemCover,
+		}),
+		[
+			selectMode,
+			selected,
+			toggle,
+			playTrack,
+			handleMenuPress,
+			enterSelectMode,
+			showItemCover,
+		],
+	)
 
 	return (
 		<>
 			<FlashList
 				data={tracks}
-				extraData={{ selectMode, selected }}
+				extraData={extraData}
 				renderItem={renderItem}
 				ItemSeparatorComponent={() => <Divider />}
 				ListHeaderComponent={ListHeaderComponent}

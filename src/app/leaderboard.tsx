@@ -40,6 +40,19 @@ const formatDurationToWords = (seconds: number) => {
 	return parts.join(' ')
 }
 
+const renderItem = ({
+	item,
+	index,
+}: {
+	item: LeaderBoardItemData
+	index: number
+}) => (
+	<LeaderBoardListItem
+		item={item}
+		index={index}
+	/>
+)
+
 export default function LeaderBoardPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
@@ -65,16 +78,6 @@ export default function LeaderBoardPage() {
 		if (isTotalDurationError || !totalDurationData) return '0秒'
 		return formatDurationToWords(totalDurationData)
 	}, [totalDurationData, isTotalDurationError])
-
-	const renderItem = useCallback(
-		({ item, index }: { item: LeaderBoardItemData; index: number }) => (
-			<LeaderBoardListItem
-				item={item}
-				index={index}
-			/>
-		),
-		[],
-	)
 
 	const keyExtractor = useCallback(
 		(item: LeaderBoardItemData) => item.track.uniqueKey,

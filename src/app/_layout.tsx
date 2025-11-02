@@ -8,11 +8,8 @@ import drizzleDb, { expoDb } from '@/lib/db/db'
 import { initPlayer } from '@/lib/player/playerLogic'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
-import log, {
-	cleanOldLogFiles,
-	reportErrorToSentry,
-	toastAndLogError,
-} from '@/utils/log'
+import { toastAndLogError } from '@/utils/error-handling'
+import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 import { useLogger } from '@react-navigation/devtools'
