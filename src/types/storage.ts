@@ -9,6 +9,7 @@ export interface AppStorageSchema {
 	'download-manager-storage-v2': string
 	'player-storage-full': string
 	wbi_keys: string
+	enable_old_school_style_lyric: boolean
 }
 
 export type StorageKey = keyof AppStorageSchema

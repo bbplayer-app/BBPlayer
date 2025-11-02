@@ -50,6 +50,8 @@ export const useAppStore = create<AppState>()(
 		log.setSeverity(enableDebugLog ? 'debug' : 'info')
 		const initialCookieString = storage.getString('bilibili_cookie')
 		let initialCookie: Record<string, string> | null = null
+		const enableOldSchoolStyleLyric =
+			storage.getBoolean('enable_old_school_style_lyric') ?? false
 
 		if (initialCookieString) {
 			const result = parseCookieToObject(initialCookieString)
@@ -65,11 +67,17 @@ export const useAppStore = create<AppState>()(
 			sendPlayHistory,
 			enableSentryReport,
 			enableDebugLog,
+			enableOldSchoolStyleLyric,
 		})
 
 		return {
 			bilibiliCookie: initialCookie,
-			settings: { sendPlayHistory, enableSentryReport, enableDebugLog },
+			settings: {
+				sendPlayHistory,
+				enableSentryReport,
+				enableDebugLog,
+				enableOldSchoolStyleLyric,
+			},
 
 			hasBilibiliCookie: () => {
 				const { bilibiliCookie } = get()
@@ -131,6 +139,13 @@ export const useAppStore = create<AppState>()(
 				}))
 				storage.set('enable_debug_log', value)
 				log.setSeverity(value ? 'debug' : 'info')
+			},
+
+			setEnableOldSchoolStyleLyric: (value) => {
+				set((state) => ({
+					settings: { ...state.settings, enableOldSchoolStyleLyric: value },
+				}))
+				storage.set('enable_old_school_style_lyric', value)
 			},
 		}
 	}),

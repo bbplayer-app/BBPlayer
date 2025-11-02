@@ -1,6 +1,7 @@
 import useLyricSync from '@/features/player/hooks/useLyricSync'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
@@ -120,7 +121,84 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	)
 })
 
-const LyricLineItem = memo(function LyricLineItem({
+const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
+	item,
+	isHighlighted,
+	jumpToThisLyric,
+	index,
+}: {
+	item: LyricLine
+	isHighlighted: boolean
+	jumpToThisLyric: (index: number) => void
+	index: number
+}) {
+	const colors = useTheme().colors
+	const isHighlightedShared = useSharedValue(isHighlighted)
+
+	useEffect(() => {
+		isHighlightedShared.value = isHighlighted
+	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+
+	const animatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				opacity: withTiming(1, { duration: 300 }),
+				color: withTiming(colors.primary, { duration: 300 }),
+			}
+		}
+
+		return {
+			opacity: withTiming(0.7, { duration: 300 }),
+			color: withTiming(colors.onSurfaceDisabled, { duration: 300 }),
+		}
+	})
+	return (
+		<RectButton
+			style={{
+				flexDirection: 'column',
+				alignItems: 'center',
+				gap: 4,
+				borderRadius: 16,
+				paddingVertical: 8,
+				marginHorizontal: 30,
+			}}
+			onPress={() => jumpToThisLyric(index)}
+		>
+			<Animated.Text
+				style={[
+					{
+						textAlign: 'center',
+						fontSize: 14,
+						fontWeight: '400',
+						letterSpacing: 0.25,
+						lineHeight: 20,
+					},
+					animatedStyle,
+				]}
+			>
+				{item.text}
+			</Animated.Text>
+			{item.translation && (
+				<Animated.Text
+					style={[
+						{
+							textAlign: 'center',
+							fontSize: 12,
+							fontWeight: '400',
+							letterSpacing: 0.4,
+							lineHeight: 16,
+						},
+						animatedStyle,
+					]}
+				>
+					{item.translation}
+				</Animated.Text>
+			)}
+		</RectButton>
+	)
+})
+
+const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	item,
 	isHighlighted,
 	jumpToThisLyric,
@@ -216,12 +294,24 @@ const renderItem = ({
 	{
 		currentLyricIndex: number
 		handleJumpToLyric: (index: number) => void
+		enableOldSchoolStyleLyric: boolean
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { currentLyricIndex, handleJumpToLyric } = extraData
+	const { currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric } =
+		extraData
+	if (enableOldSchoolStyleLyric) {
+		return (
+			<OldSchoolLyricLineItem
+				item={item}
+				isHighlighted={index === currentLyricIndex}
+				index={index}
+				jumpToThisLyric={handleJumpToLyric}
+			/>
+		)
+	}
 	return (
-		<LyricLineItem
+		<ModernLyricLineItem
 			item={item}
 			isHighlighted={index === currentLyricIndex}
 			index={index}
@@ -246,6 +336,9 @@ const Lyrics = memo(function Lyrics() {
 	const contentHeight = useSharedValue(0)
 	const viewportHeight = useSharedValue(0)
 	const track = useCurrentTrack()
+	const enableOldSchoolStyleLyric = useAppStore(
+		(state) => state.settings.enableOldSchoolStyleLyric,
+	)
 
 	const {
 		data: lyrics,
@@ -314,8 +407,9 @@ const Lyrics = memo(function Lyrics() {
 		() => ({
 			currentLyricIndex,
 			handleJumpToLyric,
+			enableOldSchoolStyleLyric,
 		}),
-		[currentLyricIndex, handleJumpToLyric],
+		[currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric],
 	)
 
 	useLayoutEffect(() => {

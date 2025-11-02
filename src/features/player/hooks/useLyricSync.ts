@@ -16,6 +16,7 @@ export default function useLyricSync(
 	const isManualScrollingRef = useRef(false)
 	const manualScrollTimeoutRef = useRef<number | null>(null)
 	const [isActive, setIsActive] = useState(true)
+	const latestJumpRequestRef = useRef(0)
 
 	const findIndexForTime = useCallback(
 		(timestamp: number) => {
@@ -66,7 +67,9 @@ export default function useLyricSync(
 		async (index: number) => {
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
+			const requestId = ++latestJumpRequestRef.current
 			await seekTo(lyrics[index].timestamp)
+			if (latestJumpRequestRef.current !== requestId) return
 			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
