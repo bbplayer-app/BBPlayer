@@ -3,6 +3,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Track } from '@/types/core/media'
 import toast from '@/utils/toast'
 import { useCallback, useState } from 'react'
+import { StyleSheet } from 'react-native'
 import { Button, Dialog, TextInput } from 'react-native-paper'
 
 export default function EditTrackMetadataModal({ track }: { track: Track }) {
@@ -33,7 +34,7 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 	return (
 		<>
 			<Dialog.Title>改名</Dialog.Title>
-			<Dialog.Content style={{ gap: 5 }}>
+			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='标题'
 					value={title}
@@ -50,3 +51,9 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	content: {
+		gap: 5,
+	},
+})

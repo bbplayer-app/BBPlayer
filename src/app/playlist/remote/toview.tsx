@@ -14,7 +14,7 @@ import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
@@ -98,7 +98,7 @@ export default function ToViewPage() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={selectMode ? `已选择 ${selected.size} 首` : '稍后再看'}
@@ -127,11 +127,7 @@ export default function ToViewPage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracksData}
 					playTrack={handlePlayAll}
@@ -167,16 +163,24 @@ export default function ToViewPage() {
 					}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

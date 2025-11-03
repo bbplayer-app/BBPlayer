@@ -6,7 +6,7 @@ import MultiPageVideosListComponent from '@/features/library/multipage/MultiPage
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Dimensions, View } from 'react-native'
+import { Dimensions, StyleSheet, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
@@ -47,12 +47,7 @@ export default function Library() {
 	})
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<View
 				style={{
 					paddingBottom: 8,
@@ -60,21 +55,14 @@ export default function Library() {
 					paddingTop: insets.top + 8,
 				}}
 			>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-						marginHorizontal: 16,
-						justifyContent: 'space-between',
-					}}
-				>
+				<View style={styles.header}>
 					<Text
 						variant='headlineSmall'
-						style={{ fontWeight: 'bold' }}
+						style={styles.title}
 					>
 						音乐库
 					</Text>
-					<View style={{ flexDirection: 'row' }}>
+					<View style={styles.headerIcons}>
 						<IconButton
 							icon='progress-download'
 							onPress={() => router.push('/download')}
@@ -86,22 +74,14 @@ export default function Library() {
 					</View>
 				</View>
 				<TabView
-					style={{ flex: 1, backgroundColor: colors.background }}
+					style={[styles.tabView, { backgroundColor: colors.background }]}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
 					overScrollMode={'never'}
 					renderTabBar={(props) => (
 						<TabBar
 							{...props}
-							style={{
-								backgroundColor: colors.background,
-								overflow: 'hidden',
-								justifyContent: 'center',
-								maxHeight: 70,
-								marginBottom: 20,
-								marginTop: 20,
-								elevation: 0,
-							}}
+							style={[styles.tabBar, { backgroundColor: colors.background }]}
 							indicatorStyle={{ backgroundColor: colors.onSecondaryContainer }}
 							activeColor={colors.onSecondaryContainer}
 							inactiveColor={colors.onSurface}
@@ -159,16 +139,44 @@ export default function Library() {
 					}}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	header: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginHorizontal: 16,
+		justifyContent: 'space-between',
+	},
+	title: {
+		fontWeight: 'bold',
+	},
+	headerIcons: {
+		flexDirection: 'row',
+	},
+	tabView: {
+		flex: 1,
+	},
+	tabBar: {
+		overflow: 'hidden',
+		justifyContent: 'center',
+		maxHeight: 70,
+		marginBottom: 20,
+		marginTop: 20,
+		elevation: 0,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

@@ -6,6 +6,7 @@ import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
+import { StyleSheet } from 'react-native'
 import { Button, Dialog, Divider, Text, TextInput } from 'react-native-paper'
 
 export default function CookieLoginModal() {
@@ -80,16 +81,16 @@ export default function CookieLoginModal() {
 					mode='outlined'
 					numberOfLines={5}
 					multiline
-					style={{ maxHeight: 200 }}
+					style={styles.cookieInput}
 					textAlignVertical='top'
 				/>
 				<Text
 					variant='bodySmall'
-					style={{ marginTop: 8 }}
+					style={styles.cookieDescription}
 				>
 					请在此处粘贴您的 Bilibili Cookie 以使用完整 BBPlayer 功能。
 				</Text>
-				<Divider style={{ marginTop: 16, marginBottom: 16 }} />
+				<Divider style={styles.divider} />
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
@@ -98,3 +99,16 @@ export default function CookieLoginModal() {
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	cookieInput: {
+		maxHeight: 200,
+	},
+	cookieDescription: {
+		marginTop: 8,
+	},
+	divider: {
+		marginTop: 16,
+		marginBottom: 16,
+	},
+})

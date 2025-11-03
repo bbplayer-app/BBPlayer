@@ -65,10 +65,7 @@ export default function AnimatedModalOverlay({
 					{
 						backgroundColor: theme.colors.surface,
 						marginHorizontal: Math.max(insets.left, insets.right, 26),
-						elevation: 24,
-						borderRadius: 24,
 						opacity: showContent ? 1 : 0,
-						maxHeight: '85%',
 					},
 					contentStyle,
 				]}
@@ -94,5 +91,8 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingTop: 10,
+		elevation: 24,
+		borderRadius: 24,
+		maxHeight: '85%',
 	},
 })

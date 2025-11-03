@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useEffect, useReducer } from 'react'
-import { Pressable } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import { Button, Dialog, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import * as setCookieParser from 'set-cookie-parser'
@@ -174,7 +174,7 @@ const QrCodeLoginModal = () => {
 		if (status === 'prompting') {
 			return (
 				<>
-					<Text style={{ textAlign: 'center', padding: 16 }}>{statusText}</Text>
+					<Text style={styles.statusText}>{statusText}</Text>
 					<Button
 						mode='contained'
 						onPress={() => dispatch({ type: 'START_LOGIN' })}
@@ -186,14 +186,12 @@ const QrCodeLoginModal = () => {
 		}
 
 		if (status === 'generating' || status === 'error' || status === 'expired') {
-			return (
-				<Text style={{ textAlign: 'center', padding: 16 }}>{statusText}</Text>
-			)
+			return <Text style={styles.statusText}>{statusText}</Text>
 		}
 
 		return (
 			<>
-				<Text style={{ textAlign: 'center', padding: 16 }}>
+				<Text style={styles.statusText}>
 					{statusText}
 					{'（点击二维码可直接跳转登录）'}
 				</Text>
@@ -219,13 +217,22 @@ const QrCodeLoginModal = () => {
 	return (
 		<>
 			<Dialog.Title>扫码登录</Dialog.Title>
-			<Dialog.Content
-				style={{ justifyContent: 'center', alignItems: 'center' }}
-			>
+			<Dialog.Content style={styles.content}>
 				{renderDialogContent()}
 			</Dialog.Content>
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	content: {
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	statusText: {
+		textAlign: 'center',
+		padding: 16,
+	},
+})
 
 export default QrCodeLoginModal

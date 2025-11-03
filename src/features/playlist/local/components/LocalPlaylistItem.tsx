@@ -3,7 +3,7 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { memo, useCallback, useRef } from 'react'
-import { Easing, View } from 'react-native'
+import { Easing, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
@@ -68,7 +68,7 @@ export const TrackListItem = memo(function TrackListItem({
 		}
 
 		return (
-			<View style={{ paddingLeft: 4 }}>
+			<View style={styles.downloadStatusContainer}>
 				<Icon
 					source={iconConfig.source}
 					size={12}
@@ -80,12 +80,14 @@ export const TrackListItem = memo(function TrackListItem({
 
 	return (
 		<RectButton
-			style={{
-				paddingVertical: 4,
-				backgroundColor: highlighted
-					? theme.colors.elevation.level5
-					: 'transparent',
-			}}
+			style={[
+				styles.rectButton,
+				{
+					backgroundColor: highlighted
+						? theme.colors.elevation.level5
+						: 'transparent',
+				},
+			]}
 			delayLongPress={500}
 			enabled={!disabled}
 			onPress={() => {
@@ -102,32 +104,19 @@ export const TrackListItem = memo(function TrackListItem({
 			}}
 		>
 			<Surface
-				style={{
-					overflow: 'hidden',
-					borderRadius: 8,
-					backgroundColor: 'transparent',
-				}}
+				style={styles.surface}
 				elevation={0}
 			>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-						paddingHorizontal: 8,
-						paddingVertical: 6,
-					}}
-				>
+				<View style={styles.itemContainer}>
 					{/* Index Number & Checkbox Container */}
-					<View
-						style={{
-							width: 35,
-							marginRight: 8,
-							alignItems: 'center',
-							justifyContent: 'center',
-						}}
-					>
+					<View style={styles.indexContainer}>
 						{/* 始终渲染，或许能降低一点性能开销？ */}
-						<View style={{ position: 'absolute', opacity: selectMode ? 1 : 0 }}>
+						<View
+							style={[
+								styles.checkboxContainer,
+								{ opacity: selectMode ? 1 : 0 },
+							]}
+						>
 							<Checkbox status={isSelected ? 'checked' : 'unchecked'} />
 						</View>
 
@@ -153,15 +142,9 @@ export const TrackListItem = memo(function TrackListItem({
 					) : null}
 
 					{/* Title and Details */}
-					<View style={{ marginLeft: 12, flex: 1, marginRight: 4 }}>
+					<View style={styles.titleContainer}>
 						<Text variant='bodySmall'>{data.title}</Text>
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								marginTop: 2,
-							}}
-						>
+						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artist && (
 								<>
@@ -172,7 +155,7 @@ export const TrackListItem = memo(function TrackListItem({
 										{data.artist.name ?? '未知'}
 									</Text>
 									<Text
-										style={{ marginHorizontal: 4 }}
+										style={styles.dotSeparator}
 										variant='bodySmall'
 									>
 										•
@@ -207,7 +190,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{!disabled && (
 						<View ref={menuAnchorRef}>
 							<RectButton
-								style={{ borderRadius: 99999, padding: 10 }}
+								style={styles.menuButton}
 								onPress={() => {
 									menuAnchorRef.current?.measure(
 										(_x, _y, _width, _height, pageX, pageY) => {
@@ -233,4 +216,50 @@ export const TrackListItem = memo(function TrackListItem({
 			</Surface>
 		</RectButton>
 	)
+})
+
+const styles = StyleSheet.create({
+	rectButton: {
+		paddingVertical: 4,
+	},
+	surface: {
+		overflow: 'hidden',
+		borderRadius: 8,
+		backgroundColor: 'transparent',
+	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 8,
+		paddingVertical: 6,
+	},
+	indexContainer: {
+		width: 35,
+		marginRight: 8,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	checkboxContainer: {
+		position: 'absolute',
+	},
+	titleContainer: {
+		marginLeft: 12,
+		flex: 1,
+		marginRight: 4,
+	},
+	detailsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginTop: 2,
+	},
+	dotSeparator: {
+		marginHorizontal: 4,
+	},
+	menuButton: {
+		borderRadius: 99999,
+		padding: 10,
+	},
+	downloadStatusContainer: {
+		paddingLeft: 4,
+	},
 })

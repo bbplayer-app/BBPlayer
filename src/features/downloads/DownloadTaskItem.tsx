@@ -4,7 +4,7 @@ import useDownloadManagerStore, {
 } from '@/hooks/stores/useDownloadManagerStore'
 import type { DownloadTask } from '@/types/core/downloadManagerStore'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Icon, IconButton, Surface, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -125,12 +125,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 
 		return (
 			<>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-					}}
-				>
+				<View style={styles.iconsContainer}>
 					{task.status === 'failed' && (
 						<IconButton
 							icon='reload'
@@ -153,45 +148,18 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 		<>
 			<Surface
 				ref={containerRef}
-				style={{
-					borderRadius: 8,
-					backgroundColor: 'transparent',
-					marginVertical: 4,
-					marginHorizontal: 8,
-					position: 'relative',
-					width: '100%',
-				}}
+				style={styles.surface}
 				elevation={0}
 			>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-						paddingHorizontal: 8,
-						paddingVertical: 8,
-					}}
-				>
-					<View
-						style={{
-							marginLeft: 12,
-							flex: 1,
-							marginRight: 4,
-							justifyContent: 'center',
-						}}
-					>
+				<View style={styles.itemContainer}>
+					<View style={styles.textContainer}>
 						<Text
 							variant='bodyMedium'
 							numberOfLines={1}
 						>
 							{task.title}
 						</Text>
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								marginTop: 2,
-							}}
-						>
+						<View style={styles.statusContainer}>
 							<Text
 								variant='bodySmall'
 								style={{ color: colors.onSurfaceVariant }}
@@ -201,34 +169,64 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 						</View>
 					</View>
 
-					<View
-						style={{
-							flexDirection: 'row',
-							alignItems: 'center',
-							justifyContent: 'flex-end',
-						}}
-					>
-						{icons}
-					</View>
+					<View style={styles.iconsOuterContainer}>{icons}</View>
 				</View>
 			</Surface>
 			<Animated.View
 				style={[
 					progressBackgroundAnimatedStyle,
-					{
-						position: 'absolute',
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0,
-						backgroundColor: colors.surfaceVariant,
-						zIndex: -100,
-						width: '100%',
-					},
+					styles.progressBackground,
+					{ backgroundColor: colors.surfaceVariant },
 				]}
 			></Animated.View>
 		</>
 	)
+})
+
+const styles = StyleSheet.create({
+	surface: {
+		borderRadius: 8,
+		backgroundColor: 'transparent',
+		marginVertical: 4,
+		marginHorizontal: 8,
+		position: 'relative',
+		width: '100%',
+	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 8,
+		paddingVertical: 8,
+	},
+	textContainer: {
+		marginLeft: 12,
+		flex: 1,
+		marginRight: 4,
+		justifyContent: 'center',
+	},
+	statusContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginTop: 2,
+	},
+	iconsOuterContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'flex-end',
+	},
+	iconsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	progressBackground: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		zIndex: -100,
+		width: '100%',
+	},
 })
 
 export default DownloadTaskItem

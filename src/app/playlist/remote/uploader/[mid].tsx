@@ -23,7 +23,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -135,18 +135,11 @@ export default function UploaderPage() {
 	if (!enable) {
 		return (
 			<View
-				style={{
-					flex: 1,
-					alignItems: 'center',
-					justifyContent: 'center',
-					backgroundColor: colors.background,
-					gap: 16,
-					paddingHorizontal: 25,
-				}}
+				style={[styles.loginContainer, { backgroundColor: colors.background }]}
 			>
 				<Text
 					variant='titleMedium'
-					style={{ textAlign: 'center' }}
+					style={styles.loginText}
 				>
 					登录 bilibili 账号后才能查看 up 主作品
 					{'\n\n'}
@@ -178,7 +171,7 @@ export default function UploaderPage() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
@@ -214,7 +207,9 @@ export default function UploaderPage() {
 			</Appbar.Header>
 
 			{/* 搜索框 */}
-			<Animated.View style={[{ overflow: 'hidden' }, searchbarAnimatedStyle]}>
+			<Animated.View
+				style={[styles.searchbarContainer, searchbarAnimatedStyle]}
+			>
 				<Searchbar
 					mode='view'
 					placeholder='搜索歌曲'
@@ -223,11 +218,7 @@ export default function UploaderPage() {
 				/>
 			</Animated.View>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracks ?? []}
 					playTrack={playTrack}
@@ -263,16 +254,37 @@ export default function UploaderPage() {
 					hasNextPage={hasNextPage}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	loginContainer: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 16,
+		paddingHorizontal: 25,
+	},
+	loginText: {
+		textAlign: 'center',
+	},
+	container: {
+		flex: 1,
+	},
+	searchbarContainer: {
+		overflow: 'hidden',
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

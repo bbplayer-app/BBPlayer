@@ -7,6 +7,7 @@ import { toastAndLogError } from '@/utils/error-handling'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
 import toast from '@/utils/toast'
 import { useState } from 'react'
+import { StyleSheet } from 'react-native'
 import { Button, Dialog, TextInput } from 'react-native-paper'
 
 export default function EditLyricsModal({
@@ -65,7 +66,7 @@ export default function EditLyricsModal({
 	return (
 		<>
 			<Dialog.Title>编辑歌词</Dialog.Title>
-			<Dialog.Content style={{ gap: 8 }}>
+			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='原始歌词'
 					value={original}
@@ -73,7 +74,7 @@ export default function EditLyricsModal({
 					mode='outlined'
 					numberOfLines={5}
 					multiline
-					style={{ maxHeight: 200 }}
+					style={styles.textInput}
 					textAlignVertical='top'
 				/>
 				{lyrics.rawTranslatedLyrics && (
@@ -84,7 +85,7 @@ export default function EditLyricsModal({
 						mode='outlined'
 						numberOfLines={5}
 						multiline
-						style={{ maxHeight: 200 }}
+						style={styles.textInput}
 						textAlignVertical='top'
 						disabled={!original}
 					/>
@@ -97,3 +98,12 @@ export default function EditLyricsModal({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	content: {
+		gap: 8,
+	},
+	textInput: {
+		maxHeight: 200,
+	},
+})

@@ -2,7 +2,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
@@ -18,19 +18,17 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 						params: { id: String(item.id) },
 					})
 				}}
-				style={{ paddingVertical: 8, overflow: 'hidden' }}
+				style={styles.rectButton}
 			>
 				<View>
-					<View
-						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
-					>
+					<View style={styles.itemContainer}>
 						<CoverWithPlaceHolder
 							id={item.id}
 							coverUrl={undefined}
 							title={item.title}
 							size={48}
 						/>
-						<View style={{ marginLeft: 12, flex: 1 }}>
+						<View style={styles.textContainer}>
 							<Text
 								variant='titleMedium'
 								numberOfLines={1}
@@ -49,6 +47,22 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 			<Divider />
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	rectButton: {
+		paddingVertical: 8,
+		overflow: 'hidden',
+	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		padding: 8,
+	},
+	textContainer: {
+		marginLeft: 12,
+		flex: 1,
+	},
 })
 
 FavoriteFolderListItem.displayName = 'FavoriteFolderListItem'

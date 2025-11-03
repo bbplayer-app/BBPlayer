@@ -33,9 +33,7 @@ const FunctionalMenu = memo(function FunctionalMenu({
 				onDismiss={onClose}
 				visible={visible}
 				key={String(visible)}
-				style={{
-					opacity: showContent ? 1 : 0,
-				}}
+				style={[{ opacity: showContent ? 1 : 0 }, props.style]}
 			>
 				<View
 					// new arch issue: 第一次打开 Menu 时会有闪烁，采用这种方法躲闪...

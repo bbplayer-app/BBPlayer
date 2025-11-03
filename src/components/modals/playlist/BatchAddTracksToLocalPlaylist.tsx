@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Button, Dialog, RadioButton, Text, useTheme } from 'react-native-paper'
 
 import { useBatchAddTracksToLocalPlaylist } from '@/hooks/mutations/db/playlist'
@@ -105,7 +105,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 		const renderContent = () => {
 			if (isLoading) {
 				return (
-					<Dialog.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
+					<Dialog.Content style={styles.loadingContainer}>
 						<ActivityIndicator size={'large'} />
 					</Dialog.Content>
 				)
@@ -115,7 +115,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 				return (
 					<>
 						<Dialog.Content>
-							<Text style={{ textAlign: 'center', color: colors.error }}>
+							<Text style={[styles.errorText, { color: colors.error }]}>
 								加载歌单列表失败
 							</Text>
 						</Dialog.Content>
@@ -129,7 +129,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 
 			return (
 				<>
-					<Dialog.ScrollArea style={{ minHeight: 300 }}>
+					<Dialog.ScrollArea style={styles.listContainer}>
 						<FlashList
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
@@ -137,13 +137,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 							extraData={extraData}
 							showsVerticalScrollIndicator={false}
 							ListEmptyComponent={
-								<View
-									style={{
-										flex: 1,
-										justifyContent: 'center',
-										alignItems: 'center',
-									}}
-								>
+								<View style={styles.emptyListContainer}>
 									<Text>你还没有创建任何歌单</Text>
 								</View>
 							}
@@ -152,7 +146,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 					<Dialog.Content>
 						<Text variant='bodySmall'>* 与远程同步的播放列表不会显示</Text>
 					</Dialog.Content>
-					<Dialog.Actions style={{ justifyContent: 'space-between' }}>
+					<Dialog.Actions style={styles.actionsContainer}>
 						<Button
 							onPress={() =>
 								openModal('CreatePlaylist', { redirectToNewPlaylist: false })
@@ -160,7 +154,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 						>
 							创建歌单
 						</Button>
-						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+						<View style={styles.rightActionsContainer}>
 							<Button
 								onPress={handleDismiss}
 								disabled={isMutating}
@@ -188,6 +182,31 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 		)
 	},
 )
+
+const styles = StyleSheet.create({
+	loadingContainer: {
+		alignItems: 'center',
+		paddingVertical: 20,
+	},
+	errorText: {
+		textAlign: 'center',
+	},
+	listContainer: {
+		minHeight: 300,
+	},
+	emptyListContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	actionsContainer: {
+		justifyContent: 'space-between',
+	},
+	rightActionsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+})
 
 BatchAddTracksToLocalPlaylistModal.displayName = 'AddTracksToLocalPlaylistModal'
 
