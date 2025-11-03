@@ -9,7 +9,7 @@ import log from '@/utils/log'
 import toast from '@/utils/toast'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
-import { ScrollView, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import { Button, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -141,23 +141,18 @@ export default function TestPage() {
 	}
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<ScrollView
-				style={{ flex: 1, padding: 16, paddingTop: insets.top + 30 }}
+				style={[styles.scrollView, { paddingTop: insets.top + 30 }]}
 				contentContainerStyle={{ paddingBottom: haveTrack ? 80 : 20 }}
 				contentInsetAdjustmentBehavior='automatic'
 			>
-				<View style={{ marginBottom: 16 }}>
+				<View style={styles.buttonContainer}>
 					<Button
 						mode='outlined'
 						onPress={handleClearQueue}
 						loading={loading}
-						style={{ marginBottom: 8 }}
+						style={styles.button}
 					>
 						清空队列
 					</Button>
@@ -165,7 +160,7 @@ export default function TestPage() {
 						mode='outlined'
 						onPress={testCheckUpdate}
 						loading={loading}
-						style={{ marginBottom: 8 }}
+						style={styles.button}
 					>
 						查询是否有可热更新的包
 					</Button>
@@ -173,7 +168,7 @@ export default function TestPage() {
 						mode='outlined'
 						onPress={testUpdatePackage}
 						loading={loading}
-						style={{ marginBottom: 8 }}
+						style={styles.button}
 					>
 						拉取热更新并重载
 					</Button>
@@ -181,7 +176,7 @@ export default function TestPage() {
 						mode='outlined'
 						onPress={handleDeleteAllDownloadRecords}
 						loading={loading}
-						style={{ marginBottom: 8 }}
+						style={styles.button}
 					>
 						清空下载缓存
 					</Button>
@@ -189,22 +184,37 @@ export default function TestPage() {
 						mode='outlined'
 						onPress={clearAllLyrcis}
 						loading={loading}
-						style={{ marginBottom: 8 }}
+						style={styles.button}
 					>
 						清空所有歌词缓存
 					</Button>
 				</View>
 			</ScrollView>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	scrollView: {
+		flex: 1,
+		padding: 16,
+	},
+	buttonContainer: {
+		marginBottom: 16,
+	},
+	button: {
+		marginBottom: 8,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

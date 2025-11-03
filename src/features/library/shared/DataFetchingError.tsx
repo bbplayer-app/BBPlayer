@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Text, useTheme } from 'react-native-paper'
 
 interface DataFetchingErrorProps {
@@ -12,18 +12,10 @@ export function DataFetchingError({
 }: DataFetchingErrorProps) {
 	const { colors } = useTheme()
 	return (
-		<View
-			style={{
-				flex: 1,
-				alignItems: 'center',
-				justifyContent: 'center',
-				padding: 16,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Text
 				variant='titleMedium'
-				style={{ textAlign: 'center', marginBottom: 16 }}
+				style={styles.text}
 			>
 				{text}
 			</Text>
@@ -38,3 +30,16 @@ export function DataFetchingError({
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	text: {
+		textAlign: 'center',
+		marginBottom: 16,
+	},
+})

@@ -5,7 +5,7 @@ import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Divider,
@@ -114,7 +114,7 @@ export function TrackList({
 	isFetchingNextPage,
 	hasNextPage,
 }: TrackListProps) {
-	const colors = useTheme().colors
+	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const insets = useSafeAreaInsets()
 
@@ -183,23 +183,13 @@ export function TrackList({
 				onEndReached={onEndReached}
 				ListFooterComponent={
 					(isFetchingNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : hasNextPage ? (
 						<Text
 							variant='titleMedium'
-							style={{
-								textAlign: 'center',
-								paddingTop: 10,
-							}}
+							style={styles.footerReachedEnd}
 						>
 							•
 						</Text>
@@ -208,11 +198,7 @@ export function TrackList({
 				ListEmptyComponent={
 					ListEmptyComponent ?? (
 						<Text
-							style={{
-								paddingVertical: 32,
-								textAlign: 'center',
-								color: colors.onSurfaceVariant,
-							}}
+							style={[styles.emptyList, { color: colors.onSurfaceVariant }]}
 						>
 							什么都没找到哦~
 						</Text>
@@ -242,3 +228,20 @@ export function TrackList({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerReachedEnd: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	emptyList: {
+		paddingVertical: 32,
+		textAlign: 'center',
+	},
+})

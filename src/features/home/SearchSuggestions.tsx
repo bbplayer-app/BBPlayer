@@ -1,7 +1,7 @@
 import { useSearchSuggestions } from '@/hooks/queries/bilibili/search'
 import type { BilibiliSearchSuggestionItem } from '@/types/apis/bilibili'
 import { useCallback, useEffect, useMemo } from 'react'
-import { Dimensions, FlatList, Keyboard, View } from 'react-native'
+import { Dimensions, FlatList, Keyboard, StyleSheet, View } from 'react-native'
 import { useBottomTabBarHeight } from 'react-native-bottom-tabs'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Text, useTheme } from 'react-native-paper'
@@ -158,11 +158,7 @@ export default function SearchSuggestions({
 						Keyboard.dismiss()
 						onSuggestionPress(item.value)
 					}}
-					style={{
-						paddingVertical: 12,
-						paddingHorizontal: 14,
-						backgroundColor: colors.surface,
-					}}
+					style={[styles.itemButton, { backgroundColor: colors.surface }]}
 				>
 					<Text
 						numberOfLines={1}
@@ -172,11 +168,10 @@ export default function SearchSuggestions({
 							(seg, i) => (
 								<Text
 									key={i}
-									style={
-										seg.emphasized
-											? { fontWeight: 'bold', color: colors.primary }
-											: undefined
-									}
+									style={[
+										styles.itemText,
+										seg.emphasized && { color: colors.primary },
+									]}
 								>
 									{seg.text}
 								</Text>
@@ -192,22 +187,9 @@ export default function SearchSuggestions({
 	return (
 		<Animated.View
 			pointerEvents={visible ? 'auto' : 'none'}
-			style={[
-				{
-					position: 'absolute',
-					zIndex: 9999,
-					borderRadius: 12,
-					overflow: 'hidden',
-					backgroundColor: colors.surface,
-					shadowColor: '#000',
-					shadowOpacity: 0.08,
-					shadowRadius: 10,
-					elevation: 6,
-				},
-				aStyle,
-			]}
+			style={[styles.container, { backgroundColor: colors.surface }, aStyle]}
 		>
-			<View style={{ flex: 1 }}>
+			<View style={styles.listContainer}>
 				<FlatList
 					data={parsedItems ?? []}
 					keyExtractor={keyExtractor}
@@ -219,3 +201,26 @@ export default function SearchSuggestions({
 		</Animated.View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		position: 'absolute',
+		zIndex: 9999,
+		borderRadius: 12,
+		overflow: 'hidden',
+		shadowColor: '#000',
+		shadowOpacity: 0.08,
+		shadowRadius: 10,
+		elevation: 6,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	itemButton: {
+		paddingVertical: 12,
+		paddingHorizontal: 14,
+	},
+	itemText: {
+		fontWeight: 'bold',
+	},
+})

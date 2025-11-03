@@ -6,7 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ShareIntentProvider } from 'expo-share-intent'
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
-import { useColorScheme, View } from 'react-native'
+import { StyleSheet, useColorScheme, View } from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
@@ -34,7 +34,7 @@ export default function AppProviders({
 			<SafeAreaProvider>
 				<View
 					onLayout={onLayoutRootView}
-					style={{ flex: 1 }}
+					style={styles.container}
 				>
 					<Sentry.ErrorBoundary
 						// eslint-disable-next-line @typescript-eslint/unbound-method
@@ -45,7 +45,7 @@ export default function AppProviders({
 							/>
 						)}
 					>
-						<GestureHandlerRootView style={{ flex: 1 }}>
+						<GestureHandlerRootView style={styles.container}>
 							<QueryClientProvider client={queryClient}>
 								<PaperProvider theme={paperTheme}>{children}</PaperProvider>
 							</QueryClientProvider>
@@ -57,3 +57,9 @@ export default function AppProviders({
 		</ShareIntentProvider>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+})

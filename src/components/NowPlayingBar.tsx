@@ -5,7 +5,7 @@ import * as Haptics from '@/utils/haptics'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	Gesture,
 	GestureDetector,
@@ -49,28 +49,19 @@ const ProgressBar = memo(function ProgressBar() {
 	}, [sharedTrackViewWidth, trackViewRef])
 
 	return (
-		<View style={{ width: '100%' }}>
+		<View style={styles.progressBarContainer}>
 			<View
 				ref={trackViewRef}
-				style={{
-					height: 1,
-					backgroundColor: colors.outlineVariant,
-					overflow: 'hidden',
-					position: 'relative',
-				}}
+				style={[
+					styles.progressBarTrack,
+					{ backgroundColor: colors.outlineVariant },
+				]}
 			>
 				<Animated.View
 					style={[
 						animatedStyle,
-						{
-							height: 1,
-							backgroundColor: colors.primary,
-							position: 'absolute',
-							left: 0,
-							top: 0,
-							bottom: 0,
-							right: 0,
-						},
+						styles.progressBarIndicator,
+						{ backgroundColor: colors.primary },
 					]}
 				/>
 			</View>
@@ -139,61 +130,32 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	return (
 		<View
 			pointerEvents='box-none'
-			style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+			style={styles.nowPlayingBarContainer}
 		>
 			{isVisible && (
 				<GestureDetector gesture={outerTap}>
 					<Animated.View
 						style={[
+							styles.nowPlayingBar,
 							{
-								flex: 1,
-								alignItems: 'center',
-								justifyContent: 'center',
-								borderRadius: 24,
-								marginHorizontal: 20,
-								position: 'relative',
-								height: 48,
 								backgroundColor: colors.elevation.level2,
-								shadowColor: '#000',
-								shadowOffset: {
-									width: 0,
-									height: 3,
-								},
-								shadowOpacity: 0.29,
-								shadowRadius: 4.65,
-								elevation: 7,
 								marginBottom: insets.bottom + 10,
 							},
 							animatedStyle,
 						]}
 					>
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-							}}
-						>
+						<View style={styles.nowPlayingBarContent}>
 							<Image
 								source={{ uri: currentTrack.coverUrl ?? undefined }}
-								style={{
-									height: 48,
-									width: 48,
-									borderRadius: 24,
-									borderWidth: 1,
-									borderColor: colors.primary,
-								}}
+								style={[
+									styles.nowPlayingBarImage,
+									{ borderColor: colors.primary },
+								]}
 								recyclingKey={currentTrack.uniqueKey}
 								cachePolicy={'none'}
 							/>
 
-							<View
-								style={{
-									marginLeft: 12,
-									flex: 1,
-									justifyContent: 'center',
-									marginRight: 8,
-								}}
-							>
+							<View style={styles.nowPlayingBarTextContainer}>
 								<Text
 									variant='titleSmall'
 									numberOfLines={1}
@@ -210,14 +172,9 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</Text>
 							</View>
 
-							<View
-								style={{
-									flexDirection: 'row',
-									alignItems: 'center',
-								}}
-							>
+							<View style={styles.nowPlayingBarControls}>
 								<GestureDetector gesture={prevTap}>
-									<RectButton style={{ borderRadius: 99999, padding: 10 }}>
+									<RectButton style={styles.nowPlayingBarControlButton}>
 										<Icon
 											source='skip-previous'
 											size={16}
@@ -227,7 +184,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</GestureDetector>
 
 								<GestureDetector gesture={playTap}>
-									<RectButton style={{ borderRadius: 99999, padding: 10 }}>
+									<RectButton style={styles.nowPlayingBarControlButton}>
 										<Icon
 											source={isPlaying ? 'pause' : 'play'}
 											size={24}
@@ -237,7 +194,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</GestureDetector>
 
 								<GestureDetector gesture={nextTap}>
-									<RectButton style={{ borderRadius: 99999, padding: 10 }}>
+									<RectButton style={styles.nowPlayingBarControlButton}>
 										<Icon
 											source='skip-next'
 											size={16}
@@ -247,15 +204,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</GestureDetector>
 							</View>
 						</View>
-						<View
-							style={{
-								width: '86%',
-								alignSelf: 'center',
-								position: 'absolute',
-								bottom: 0,
-								left: 25,
-							}}
-						>
+						<View style={styles.nowPlayingBarProgressContainer}>
 							<ProgressBar />
 						</View>
 					</Animated.View>
@@ -263,6 +212,79 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			)}
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	progressBarContainer: {
+		width: '100%',
+	},
+	progressBarTrack: {
+		height: 1,
+		overflow: 'hidden',
+		position: 'relative',
+	},
+	progressBarIndicator: {
+		height: 1,
+		position: 'absolute',
+		left: 0,
+		top: 0,
+		bottom: 0,
+		right: 0,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
+	},
+	nowPlayingBar: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		borderRadius: 24,
+		marginHorizontal: 20,
+		position: 'relative',
+		height: 48,
+		shadowColor: '#000',
+		shadowOffset: {
+			width: 0,
+			height: 3,
+		},
+		shadowOpacity: 0.29,
+		shadowRadius: 4.65,
+		elevation: 7,
+	},
+	nowPlayingBarContent: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	nowPlayingBarImage: {
+		height: 48,
+		width: 48,
+		borderRadius: 24,
+		borderWidth: 1,
+	},
+	nowPlayingBarTextContainer: {
+		marginLeft: 12,
+		flex: 1,
+		justifyContent: 'center',
+		marginRight: 8,
+	},
+	nowPlayingBarControls: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	nowPlayingBarControlButton: {
+		borderRadius: 99999,
+		padding: 10,
+	},
+	nowPlayingBarProgressContainer: {
+		width: '86%',
+		alignSelf: 'center',
+		position: 'absolute',
+		bottom: 0,
+		left: 25,
+	},
 })
 
 NowPlayingBar.displayName = 'NowPlayingBar'

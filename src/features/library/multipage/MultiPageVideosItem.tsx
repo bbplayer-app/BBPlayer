@@ -3,7 +3,7 @@ import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
@@ -21,21 +21,19 @@ const MultiPageVideosItem = memo(
 								params: { bvid: item.bvid },
 							})
 						}}
-						style={{ paddingVertical: 8, overflow: 'hidden' }}
+						style={styles.rectButton}
 					>
-						<View
-							style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
-						>
+						<View style={styles.itemContainer}>
 							<CoverWithPlaceHolder
 								id={item.bvid}
 								coverUrl={item.cover}
 								title={item.title}
 								size={48}
 							/>
-							<View style={{ marginLeft: 12, flex: 1 }}>
+							<View style={styles.textContainer}>
 								<Text
 									variant='titleMedium'
-									style={{ paddingRight: 8 }}
+									style={styles.title}
 								>
 									{item.title}
 								</Text>
@@ -56,6 +54,25 @@ const MultiPageVideosItem = memo(
 		)
 	},
 )
+
+const styles = StyleSheet.create({
+	rectButton: {
+		paddingVertical: 8,
+		overflow: 'hidden',
+	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		padding: 8,
+	},
+	textContainer: {
+		marginLeft: 12,
+		flex: 1,
+	},
+	title: {
+		paddingRight: 8,
+	},
+})
 
 MultiPageVideosItem.displayName = 'MultiPageVideosItem'
 

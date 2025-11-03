@@ -11,7 +11,7 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import MultiPageVideosItem from './MultiPageVideosItem'
 
@@ -77,10 +77,10 @@ const MultiPageVideosListComponent = memo(() => {
 
 	if (!playlists?.find((item) => item.title.startsWith('[mp]'))) {
 		return (
-			<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+			<View style={styles.noMpContainer}>
 				<Text
 					variant='titleMedium'
-					style={{ textAlign: 'center' }}
+					style={styles.noMpText}
 				>
 					未找到分 p 视频收藏夹，请先创建一个收藏夹，并以 [mp] 开头
 				</Text>
@@ -89,18 +89,11 @@ const MultiPageVideosListComponent = memo(() => {
 	}
 
 	return (
-		<View style={{ flex: 1, marginHorizontal: 16 }}>
-			<View
-				style={{
-					marginBottom: 8,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-				}}
-			>
+		<View style={styles.container}>
+			<View style={styles.headerContainer}>
 				<Text
 					variant='titleMedium'
-					style={{ fontWeight: 'bold' }}
+					style={styles.headerTitle}
 				>
 					分P视频
 				</Text>
@@ -124,26 +117,17 @@ const MultiPageVideosListComponent = memo(() => {
 						progressViewOffset={50}
 					/>
 				}
-				ListEmptyComponent={
-					<Text style={{ textAlign: 'center' }}>没有分P视频</Text>
-				}
+				ListEmptyComponent={<Text style={styles.emptyList}>没有分P视频</Text>}
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 				ListFooterComponent={
 					hasNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : (
 						<Text
 							variant='titleMedium'
-							style={{ textAlign: 'center', paddingTop: 10 }}
+							style={styles.footerReachedEnd}
 						>
 							•
 						</Text>
@@ -152,6 +136,43 @@ const MultiPageVideosListComponent = memo(() => {
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		marginHorizontal: 16,
+	},
+	headerContainer: {
+		marginBottom: 8,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headerTitle: {
+		fontWeight: 'bold',
+	},
+	noMpContainer: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	noMpText: {
+		textAlign: 'center',
+	},
+	emptyList: {
+		textAlign: 'center',
+	},
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerReachedEnd: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
 })
 
 MultiPageVideosListComponent.displayName = 'MultiPageVideosListComponent'

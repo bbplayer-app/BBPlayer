@@ -5,7 +5,7 @@ import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
 import { useMemo, useRef, useState } from 'react'
-import { Dimensions, View } from 'react-native'
+import { Dimensions, StyleSheet, View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { TabView } from 'react-native-tab-view'
@@ -52,27 +52,26 @@ export default function PlayerPage() {
 
 	return (
 		<View
-			style={{
-				flex: 1,
-				height: '100%',
-				width: '100%',
-				backgroundColor: colors.background,
-				paddingTop: insets.top,
-			}}
+			style={[
+				styles.container,
+				{
+					backgroundColor: colors.background,
+					paddingTop: insets.top,
+				},
+			]}
 		>
 			<View
-				style={{
-					flex: 1,
-					marginBottom: 16,
-					pointerEvents: menuVisible ? 'none' : 'auto',
-				}}
+				style={[
+					styles.innerContainer,
+					{ pointerEvents: menuVisible ? 'none' : 'auto' },
+				]}
 			>
 				<PlayerHeader
 					onMorePress={() => setMenuVisible(true)}
 					index={index}
 				/>
 				<TabView
-					style={{ flex: 1 }}
+					style={styles.tabView}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
 					onIndexChange={setIndex}
@@ -91,3 +90,18 @@ export default function PlayerPage() {
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		height: '100%',
+		width: '100%',
+	},
+	innerContainer: {
+		flex: 1,
+		marginBottom: 16,
+	},
+	tabView: {
+		flex: 1,
+	},
+})

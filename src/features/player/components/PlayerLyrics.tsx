@@ -21,7 +21,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { Dimensions, ScrollView, View } from 'react-native'
+import { Dimensions, ScrollView, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
@@ -65,23 +65,19 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 
 	return (
 		<View
-			style={{
-				position: 'absolute',
-				right: anchor ? windowWidth - (anchor.x + anchor.width) : 0,
-				bottom: anchor ? windowHeight - anchor.y : 0,
-				backgroundColor: colors.elevation.level2,
-				gap: 8,
-				borderRadius: 12,
-				elevation: 10,
-				paddingHorizontal: 2,
-				paddingVertical: 4,
-				opacity: visible ? 1 : 0,
-				pointerEvents: visible ? 'auto' : 'none',
-				zIndex: 99999,
-			}}
+			style={[
+				styles.offsetControlContainer,
+				{
+					right: anchor ? windowWidth - (anchor.x + anchor.width) : 0,
+					bottom: anchor ? windowHeight - anchor.y : 0,
+					backgroundColor: colors.elevation.level2,
+					opacity: visible ? 1 : 0,
+					pointerEvents: visible ? 'auto' : 'none',
+				},
+			]}
 		>
 			<RectButton
-				style={{ borderRadius: 99999, padding: 10 }}
+				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(0.5)}
 			>
 				<Icon
@@ -92,12 +88,12 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 			</RectButton>
 			<Text
 				variant='titleSmall'
-				style={{ color: colors.onSurface, textAlign: 'center' }}
+				style={[styles.offsetControlText, { color: colors.onSurface }]}
 			>
 				{offset.toFixed(1)}s
 			</Text>
 			<RectButton
-				style={{ borderRadius: 99999, padding: 10 }}
+				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(-0.5)}
 			>
 				<Icon
@@ -108,7 +104,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 			</RectButton>
 			<Divider />
 			<RectButton
-				style={{ borderRadius: 99999, padding: 10 }}
+				style={styles.offsetControlButton}
 				onPress={onClose}
 			>
 				<Icon
@@ -154,43 +150,14 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	})
 	return (
 		<RectButton
-			style={{
-				flexDirection: 'column',
-				alignItems: 'center',
-				gap: 4,
-				borderRadius: 16,
-				paddingVertical: 8,
-				marginHorizontal: 30,
-			}}
+			style={styles.oldSchoolItemButton}
 			onPress={() => jumpToThisLyric(index)}
 		>
-			<Animated.Text
-				style={[
-					{
-						textAlign: 'center',
-						fontSize: 14,
-						fontWeight: '400',
-						letterSpacing: 0.25,
-						lineHeight: 20,
-					},
-					animatedStyle,
-				]}
-			>
+			<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
 				{item.text}
 			</Animated.Text>
 			{item.translation && (
-				<Animated.Text
-					style={[
-						{
-							textAlign: 'center',
-							fontSize: 12,
-							fontWeight: '400',
-							letterSpacing: 0.4,
-							lineHeight: 16,
-						},
-						animatedStyle,
-					]}
-				>
+				<Animated.Text style={[styles.oldSchoolItemTranslation, animatedStyle]}>
 					{item.translation}
 				</Animated.Text>
 			)}
@@ -240,44 +207,14 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 
 	return (
 		<RectButton
-			style={{
-				flexDirection: 'column',
-				alignItems: 'flex-start',
-				gap: 4,
-				borderRadius: 8,
-				marginVertical: 4,
-				paddingVertical: 6,
-				marginHorizontal: 30,
-				paddingLeft: 8,
-				paddingRight: 8,
-			}}
+			style={styles.modernItemButton}
 			onPress={() => jumpToThisLyric(index)}
 		>
-			<Animated.Text
-				style={[
-					{
-						textAlign: 'left',
-						fontSize: 20,
-						letterSpacing: 0,
-						lineHeight: 28,
-					},
-					animatedStyle,
-				]}
-			>
+			<Animated.Text style={[styles.modernItemText, animatedStyle]}>
 				{item.text}
 			</Animated.Text>
 			{item.translation && (
-				<Animated.Text
-					style={[
-						{
-							textAlign: 'left',
-							fontSize: 20,
-							letterSpacing: 0,
-							lineHeight: 28,
-						},
-						animatedStyle,
-					]}
-				>
+				<Animated.Text style={[styles.modernItemText, animatedStyle]}>
 					{item.translation}
 				</Animated.Text>
 			)}
@@ -455,7 +392,7 @@ const Lyrics = memo(function Lyrics() {
 
 	if (isPending) {
 		return (
-			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+			<View style={styles.pendingContainer}>
 				<ActivityIndicator size={'large'} />
 			</View>
 		)
@@ -464,18 +401,12 @@ const Lyrics = memo(function Lyrics() {
 	if (isError) {
 		return (
 			<ScrollView
-				style={{
-					flex: 1,
-					marginHorizontal: 30,
-				}}
-				contentContainerStyle={{
-					justifyContent: 'center',
-					alignItems: 'center',
-				}}
+				style={styles.errorScrollView}
+				contentContainerStyle={styles.errorContentContainer}
 			>
 				<Text
 					variant='bodyMedium'
-					style={{ textAlign: 'center' }}
+					style={styles.errorText}
 				>
 					歌词加载失败：{error.message}
 				</Text>
@@ -487,16 +418,13 @@ const Lyrics = memo(function Lyrics() {
 		if (!lyrics.lyrics) {
 			return (
 				<Animated.ScrollView
-					contentContainerStyle={{
-						justifyContent: 'center',
-						alignItems: 'center',
-					}}
+					contentContainerStyle={styles.rawLyricsScrollViewContainer}
 					scrollEventThrottle={16}
 					onScroll={scrollHandler}
 				>
 					<Text
 						variant='bodyMedium'
-						style={{ textAlign: 'center' }}
+						style={styles.rawLyricsText}
 					>
 						{lyrics.rawTranslatedLyrics ? '原始歌词：' : ''}
 						{lyrics.rawOriginalLyrics}
@@ -529,54 +457,29 @@ const Lyrics = memo(function Lyrics() {
 	}
 
 	return (
-		<View style={{ flex: 1 }}>
-			<View style={{ flex: 1, flexDirection: 'column' }}>
+		<View style={styles.lyricsContainer}>
+			<View style={styles.lyricsContent}>
 				{renderLyrics()}
 				{/* 顶部渐变遮罩 */}
 				<AnimatedLinearGradient
 					colors={[colors.background, 'transparent']}
-					style={[
-						{
-							position: 'absolute',
-							top: 0,
-							left: 0,
-							right: 0,
-							height: 60,
-						},
-						topFadeAnimatedStyle,
-					]}
+					style={[styles.topGradient, topFadeAnimatedStyle]}
 					pointerEvents='none'
 				/>
 
 				{/* 底部渐变遮罩 */}
 				<AnimatedLinearGradient
 					colors={['transparent', colors.background]}
-					style={[
-						{
-							position: 'absolute',
-							bottom: 0,
-							left: 0,
-							right: 0,
-							height: 60,
-						},
-						bottomFadeAnimatedStyle,
-					]}
+					style={[styles.bottomGradient, bottomFadeAnimatedStyle]}
 					pointerEvents='none'
 				/>
 			</View>
 
 			{/* 歌词偏移量调整显示按钮 */}
-			<View
-				style={{
-					paddingHorizontal: 16,
-					position: 'absolute',
-					bottom: 20,
-					right: 0,
-				}}
-			>
-				<View style={{ flexDirection: 'column' }}>
+			<View style={styles.controlsContainer}>
+				<View style={styles.controlsButtonContainer}>
 					<RectButton
-						style={{ borderRadius: 99999, padding: 10 }}
+						style={styles.controlButton}
 						enabled={!offsetMenuVisible}
 						onPress={() =>
 							useModalStore
@@ -593,7 +496,7 @@ const Lyrics = memo(function Lyrics() {
 						/>
 					</RectButton>
 					<RectButton
-						style={{ borderRadius: 99999, padding: 10 }}
+						style={styles.controlButton}
 						// @ts-expect-error -- 不想管
 						ref={offsetMenuAnchorRef}
 						enabled={!offsetMenuVisible}
@@ -620,6 +523,121 @@ const Lyrics = memo(function Lyrics() {
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	offsetControlContainer: {
+		position: 'absolute',
+		gap: 8,
+		borderRadius: 12,
+		elevation: 10,
+		paddingHorizontal: 2,
+		paddingVertical: 4,
+		zIndex: 99999,
+	},
+	offsetControlButton: {
+		borderRadius: 99999,
+		padding: 10,
+	},
+	offsetControlText: {
+		textAlign: 'center',
+	},
+	oldSchoolItemButton: {
+		flexDirection: 'column',
+		alignItems: 'center',
+		gap: 4,
+		borderRadius: 16,
+		paddingVertical: 8,
+		marginHorizontal: 30,
+	},
+	oldSchoolItemText: {
+		textAlign: 'center',
+		fontSize: 14,
+		fontWeight: '400',
+		letterSpacing: 0.25,
+		lineHeight: 20,
+	},
+	oldSchoolItemTranslation: {
+		textAlign: 'center',
+		fontSize: 12,
+		fontWeight: '400',
+		letterSpacing: 0.4,
+		lineHeight: 16,
+	},
+	modernItemButton: {
+		flexDirection: 'column',
+		alignItems: 'flex-start',
+		gap: 4,
+		borderRadius: 8,
+		marginVertical: 4,
+		paddingVertical: 6,
+		marginHorizontal: 30,
+		paddingLeft: 8,
+		paddingRight: 8,
+	},
+	modernItemText: {
+		textAlign: 'left',
+		fontSize: 20,
+		letterSpacing: 0,
+		lineHeight: 28,
+	},
+	pendingContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	errorScrollView: {
+		flex: 1,
+		marginHorizontal: 30,
+	},
+	errorContentContainer: {
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	errorText: {
+		textAlign: 'center',
+	},
+	rawLyricsScrollViewContainer: {
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	rawLyricsText: {
+		textAlign: 'center',
+	},
+	lyricsContainer: {
+		flex: 1,
+	},
+	lyricsContent: {
+		flex: 1,
+		flexDirection: 'column',
+	},
+	topGradient: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		height: 60,
+	},
+	bottomGradient: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+		height: 60,
+	},
+	controlsContainer: {
+		paddingHorizontal: 16,
+		position: 'absolute',
+		bottom: 20,
+		right: 0,
+	},
+	controlsButtonContainer: {
+		flexDirection: 'column',
+	},
+	controlButton: {
+		borderRadius: 99999,
+		padding: 10,
+	},
 })
 
 Lyrics.displayName = 'Lyrics'

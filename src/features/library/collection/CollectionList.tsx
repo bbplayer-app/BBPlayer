@@ -8,7 +8,7 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import CollectionListItem from './CollectionListItem'
 
@@ -62,18 +62,11 @@ const CollectionListComponent = memo(() => {
 	}
 
 	return (
-		<View style={{ flex: 1, marginHorizontal: 16 }}>
-			<View
-				style={{
-					marginBottom: 8,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-				}}
-			>
+		<View style={styles.container}>
+			<View style={styles.headerContainer}>
 				<Text
 					variant='titleMedium'
-					style={{ fontWeight: 'bold' }}
+					style={styles.headerTitle}
 				>
 					我的合集/收藏夹追更
 				</Text>
@@ -98,20 +91,13 @@ const CollectionListComponent = memo(() => {
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 				ListFooterComponent={
 					hasNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : (
 						<Text
 							variant='titleMedium'
-							style={{ textAlign: 'center', paddingTop: 10 }}
+							style={styles.footerReachedEnd}
 						>
 							•
 						</Text>
@@ -120,6 +106,32 @@ const CollectionListComponent = memo(() => {
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		marginHorizontal: 16,
+	},
+	headerContainer: {
+		marginBottom: 8,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headerTitle: {
+		fontWeight: 'bold',
+	},
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerReachedEnd: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
 })
 
 CollectionListComponent.displayName = 'CollectionListComponent'

@@ -14,7 +14,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useShareIntentContext } from 'expo-share-intent'
 import { useCallback, useEffect, useState } from 'react'
-import { Keyboard, View } from 'react-native'
+import { Keyboard, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
 import { Chip, IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
@@ -150,7 +150,7 @@ function HomePage() {
 	}, [hasShareIntent, shareIntent, router, resetShareIntent, handleEnter])
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/*顶部欢迎区域*/}
 			<View
 				style={{
@@ -158,17 +158,11 @@ function HomePage() {
 					paddingTop: insets.top + 8,
 				}}
 			>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-						justifyContent: 'space-between',
-					}}
-				>
+				<View style={styles.greetingContainer}>
 					<View>
 						<Text
 							variant='headlineSmall'
-							style={{ fontWeight: 'bold' }}
+							style={styles.headline}
 						>
 							BBPlayer
 						</Text>
@@ -203,10 +197,10 @@ function HomePage() {
 								{ cancelable: true },
 							)
 						}
-						style={{ borderRadius: 20, overflow: 'hidden' }}
+						style={styles.avatarButton}
 					>
 						<Image
-							style={{ width: 40, height: 40, borderRadius: 20 }}
+							style={styles.avatarImage}
 							source={
 								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 								!personalInfoPending && !personalInfoError && personalInfo?.face
@@ -220,15 +214,9 @@ function HomePage() {
 				</View>
 			</View>
 
-			<View style={{ marginTop: 16 }}>
+			<View style={styles.searchSection}>
 				{/* 搜索栏 */}
-				<View
-					style={{
-						paddingTop: 10,
-						paddingHorizontal: 16,
-						paddingBottom: 8,
-					}}
-				>
+				<View style={styles.searchbarContainer}>
 					<View ref={searchBarRef}>
 						<Searchbar
 							placeholder='关键词 / b23.tv 或完整网址 / bv / av'
@@ -239,10 +227,10 @@ function HomePage() {
 							onSubmitEditing={() => handleEnter(searchQuery)}
 							elevation={0}
 							mode='bar'
-							style={{
-								borderRadius: 9999,
-								backgroundColor: colors.surfaceVariant,
-							}}
+							style={[
+								styles.searchbar,
+								{ backgroundColor: colors.surfaceVariant },
+							]}
 						/>
 					</View>
 					<SearchSuggestions
@@ -254,18 +242,11 @@ function HomePage() {
 				</View>
 
 				{/* 搜索历史 */}
-				<View style={{ marginTop: 16, marginBottom: 24, marginHorizontal: 16 }}>
-					<View
-						style={{
-							marginBottom: 8,
-							flexDirection: 'row',
-							alignItems: 'center',
-							justifyContent: 'space-between',
-						}}
-					>
+				<View style={styles.historySection}>
+					<View style={styles.historyHeader}>
 						<Text
 							variant='titleMedium'
-							style={{ fontWeight: 'bold' }}
+							style={styles.historyTitle}
 						>
 							最近搜索
 						</Text>
@@ -293,13 +274,7 @@ function HomePage() {
 						)}
 					</View>
 					{searchHistory && searchHistory.length > 0 ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								flexWrap: 'wrap',
-								marginHorizontal: 5,
-							}}
-						>
+						<View style={styles.historyChipsContainer}>
 							{searchHistory.map((item) => (
 								<Chip
 									key={item.id}
@@ -324,7 +299,7 @@ function HomePage() {
 											{ cancelable: true },
 										)
 									}
-									style={{ marginRight: 8, marginBottom: 8 }}
+									style={styles.chip}
 									mode='outlined'
 								>
 									{item.text}
@@ -333,29 +308,85 @@ function HomePage() {
 						</View>
 					) : (
 						<Text
-							style={{
-								paddingVertical: 8,
-								textAlign: 'center',
-								color: colors.onSurfaceVariant,
-							}}
+							style={[styles.noHistoryText, { color: colors.onSurfaceVariant }]}
 						>
 							暂无搜索历史
 						</Text>
 					)}
 				</View>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	greetingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headline: {
+		fontWeight: 'bold',
+	},
+	avatarButton: {
+		borderRadius: 20,
+		overflow: 'hidden',
+	},
+	avatarImage: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+	},
+	searchSection: {
+		marginTop: 16,
+	},
+	searchbarContainer: {
+		paddingTop: 10,
+		paddingHorizontal: 16,
+		paddingBottom: 8,
+	},
+	searchbar: {
+		borderRadius: 9999,
+	},
+	historySection: {
+		marginTop: 16,
+		marginBottom: 24,
+		marginHorizontal: 16,
+	},
+	historyHeader: {
+		marginBottom: 8,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	historyTitle: {
+		fontWeight: 'bold',
+	},
+	historyChipsContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		marginHorizontal: 5,
+	},
+	chip: {
+		marginRight: 8,
+		marginBottom: 8,
+	},
+	noHistoryText: {
+		paddingVertical: 8,
+		textAlign: 'center',
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})
 
 export default HomePage

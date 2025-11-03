@@ -1,6 +1,6 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import * as Haptics from '@/utils/haptics'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 import { RepeatMode } from 'react-native-track-player'
 
@@ -17,15 +17,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 
 	return (
 		<View>
-			<View
-				style={{
-					marginTop: 24,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'center',
-					gap: 40,
-				}}
-			>
+			<View style={styles.mainControlsContainer}>
 				<IconButton
 					icon='skip-previous'
 					size={32}
@@ -58,15 +50,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					}}
 				/>
 			</View>
-			<View
-				style={{
-					marginTop: 12,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'center',
-					gap: 32,
-				}}
-			>
+			<View style={styles.secondaryControlsContainer}>
 				<Tooltip title='切换随机播放模式'>
 					<IconButton
 						icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
@@ -120,3 +104,20 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	mainControlsContainer: {
+		marginTop: 24,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 40,
+	},
+	secondaryControlsContainer: {
+		marginTop: 12,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 32,
+	},
+})

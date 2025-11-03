@@ -7,7 +7,7 @@ import type { DownloadTask } from '@/types/core/downloadManagerStore'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useShallow } from 'zustand/shallow'
@@ -32,7 +32,7 @@ export default function DownloadPage() {
 	const keyExtractor = useCallback((item: DownloadTask) => item.uniqueKey, [])
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='下载任务' />
@@ -44,7 +44,7 @@ export default function DownloadPage() {
 				onClearAll={clearAll}
 			/>
 
-			<View style={{ flex: 1 }}>
+			<View style={styles.listContainer}>
 				<FlashList
 					data={tasks}
 					renderItem={renderItem}
@@ -54,16 +54,24 @@ export default function DownloadPage() {
 					}}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

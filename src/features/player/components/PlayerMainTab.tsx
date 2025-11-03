@@ -4,7 +4,7 @@ import type BottomSheet from '@gorhom/bottom-sheet'
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PlayerControls } from './PlayerControls'
 import { PlayerSlider } from './PlayerSlider'
@@ -26,7 +26,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 	if (!currentTrack) return null
 	return (
-		<View style={{ flex: 1, justifyContent: 'space-between' }}>
+		<View style={styles.container}>
 			<TrackInfo
 				onArtistPress={() =>
 					currentTrack.artist?.remoteId
@@ -46,10 +46,10 @@ const PlayerMainTab = memo(function PlayerMainTab({
 			/>
 
 			<View
-				style={{
-					paddingHorizontal: 24,
-					paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
-				}}
+				style={[
+					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+					styles.controlsContainer,
+				]}
 			>
 				<PlayerSlider />
 				<PlayerControls
@@ -58,6 +58,16 @@ const PlayerMainTab = memo(function PlayerMainTab({
 			</View>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		justifyContent: 'space-between',
+	},
+	controlsContainer: {
+		paddingHorizontal: 24,
+	},
 })
 
 PlayerMainTab.displayName = 'PlayerMainTab'

@@ -9,7 +9,7 @@ import type { Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Appbar,
@@ -95,16 +95,14 @@ export default function LeaderBoardPage() {
 			return (
 				<ActivityIndicator
 					animating={true}
-					style={{ marginTop: 20 }}
+					style={styles.loadingIndicator}
 				/>
 			)
 		}
 
 		if (isLeaderBoardError) {
 			return (
-				<View
-					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-				>
+				<View style={styles.centeredContainer}>
 					<Text>加载失败</Text>
 				</View>
 			)
@@ -112,9 +110,7 @@ export default function LeaderBoardPage() {
 
 		if (allTracks.length === 0) {
 			return (
-				<View
-					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-				>
+				<View style={styles.centeredContainer}>
 					<Text>暂无数据</Text>
 				</View>
 			)
@@ -133,24 +129,13 @@ export default function LeaderBoardPage() {
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
 					isFetchingNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : !hasNextPage ? (
 						<Text
 							variant='bodyMedium'
-							style={{
-								color: colors.onSurfaceVariant,
-								textAlign: 'center',
-								paddingTop: 10,
-							}}
+							style={[styles.footerText, { color: colors.onSurfaceVariant }]}
 						>
 							已经到底啦
 						</Text>
@@ -161,51 +146,87 @@ export default function LeaderBoardPage() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='统计' />
 			</Appbar.Header>
 			{allTracks.length > 0 && !isTotalDurationError && (
 				<Surface
-					style={{
-						marginHorizontal: 16,
-						marginTop: 16,
-						marginBottom: 8,
-						paddingVertical: 16,
-						borderRadius: 12,
-						alignItems: 'center',
-					}}
+					style={styles.totalDurationSurface}
 					elevation={2}
 				>
 					<Text variant='titleMedium'>总计听歌时长</Text>
 					<Text
 						variant='headlineMedium'
-						style={{ marginTop: 8, color: colors.primary }}
+						style={[styles.totalDurationText, { color: colors.primary }]}
 					>
 						{totalDuration}
 					</Text>
 					<Text
 						variant='bodySmall'
-						style={{ marginTop: 4, color: colors.onSurfaceVariant }}
+						style={[
+							styles.totalDurationSubText,
+							{ color: colors.onSurfaceVariant },
+						]}
 					>
 						（仅统计完整播放的歌曲）
 					</Text>
 				</Surface>
 			)}
 
-			<View style={{ flex: 1 }}>{renderContent()}</View>
+			<View style={styles.contentContainer}>{renderContent()}</View>
 
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	loadingIndicator: {
+		marginTop: 20,
+	},
+	centeredContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerText: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	totalDurationSurface: {
+		marginHorizontal: 16,
+		marginTop: 16,
+		marginBottom: 8,
+		paddingVertical: 16,
+		borderRadius: 12,
+		alignItems: 'center',
+	},
+	totalDurationText: {
+		marginTop: 8,
+	},
+	totalDurationSubText: {
+		marginTop: 4,
+	},
+	contentContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

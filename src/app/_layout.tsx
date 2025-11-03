@@ -22,7 +22,7 @@ import { useSQLiteDevTools } from 'expo-sqlite-devtools'
 import * as Updates from 'expo-updates'
 import { useCallback, useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
-import { AppState, Platform, View } from 'react-native'
+import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
 import Toast from 'react-native-toast-message'
 import migrations from '../../drizzle/migrations'
@@ -154,7 +154,7 @@ export default Sentry.wrap(function RootLayout() {
 	if (migrationsError) {
 		logger.error('数据库迁移失败:', migrationsError)
 		return (
-			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+			<View style={styles.errorContainer}>
 				<Text>数据库迁移失败: {migrationsError?.message}</Text>
 				<Text>建议截图报错信息，发到项目 issues 反馈</Text>
 			</View>
@@ -244,4 +244,12 @@ export default Sentry.wrap(function RootLayout() {
 			<Toast config={toastConfig} />
 		</AppProviders>
 	)
+})
+
+const styles = StyleSheet.create({
+	errorContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
 })

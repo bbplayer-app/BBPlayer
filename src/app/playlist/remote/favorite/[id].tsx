@@ -16,7 +16,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import toast from '@/utils/toast'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
@@ -132,7 +132,7 @@ export default function FavoritePage() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
@@ -165,11 +165,7 @@ export default function FavoritePage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracks}
 					playTrack={playTrack}
@@ -206,16 +202,24 @@ export default function FavoritePage() {
 					isFetchingNextPage={isFetchingNextPage}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

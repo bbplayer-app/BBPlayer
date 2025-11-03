@@ -11,7 +11,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
@@ -82,12 +82,7 @@ export default function SearchResultsPage() {
 	}
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
@@ -118,11 +113,7 @@ export default function SearchResultsPage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={uniqueSearchData ?? []}
 					playTrack={playTrack}
@@ -148,27 +139,35 @@ export default function SearchResultsPage() {
 					}
 					ListEmptyComponent={
 						<Text
-							style={{
-								paddingVertical: 32,
-								textAlign: 'center',
-								color: colors.onSurfaceVariant,
-							}}
+							style={[styles.emptyListText, { color: colors.onSurfaceVariant }]}
 						>
 							没有找到与 &quot;{query}&rdquo; 相关的内容
 						</Text>
 					}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	emptyListText: {
+		paddingVertical: 32,
+		textAlign: 'center',
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

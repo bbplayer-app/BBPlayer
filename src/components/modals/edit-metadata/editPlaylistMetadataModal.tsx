@@ -8,7 +8,7 @@ import toast from '@/utils/toast'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useCallback, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
 
 const logger = log.extend('Components.EditPlaylistMetadataModal')
@@ -99,7 +99,7 @@ export default function EditPlaylistMetadataModal({
 	return (
 		<>
 			<Dialog.Title>编辑信息</Dialog.Title>
-			<Dialog.Content style={{ gap: 5 }}>
+			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='标题'
 					value={title}
@@ -114,10 +114,10 @@ export default function EditPlaylistMetadataModal({
 					value={description ?? undefined}
 					mode='outlined'
 					multiline
-					style={{ maxHeight: 150 }}
+					style={styles.descriptionInput}
 					textAlignVertical='top'
 				/>
-				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+				<View style={styles.coverUrlContainer}>
 					<TextInput
 						label='封面'
 						onChangeText={setCoverUrl}
@@ -125,23 +125,23 @@ export default function EditPlaylistMetadataModal({
 						mode='outlined'
 						numberOfLines={1}
 						textAlignVertical='top'
-						style={{ flex: 1 }}
+						style={styles.coverUrlInput}
 					/>
 					<IconButton
 						icon='image-plus'
 						size={20}
-						style={{ marginTop: 13 }} // 让按钮看起来像居中
+						style={styles.imagePickerButton}
 						onPress={handleImagePicker}
 					/>
 				</View>
 			</Dialog.Content>
-			<Dialog.Actions style={{ justifyContent: 'space-between' }}>
+			<Dialog.Actions style={styles.actionsContainer}>
 				{playlist.type !== 'local' ? (
 					<Button onPress={fetchRemoteMetadata}>获取远程数据</Button>
 				) : (
 					<View />
 				)}
-				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+				<View style={styles.rightActionsContainer}>
 					<Button onPress={handleDismiss}>取消</Button>
 					<Button onPress={handleConfirm}>确定</Button>
 				</View>
@@ -149,3 +149,29 @@ export default function EditPlaylistMetadataModal({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	content: {
+		gap: 5,
+	},
+	descriptionInput: {
+		maxHeight: 150,
+	},
+	coverUrlContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	coverUrlInput: {
+		flex: 1,
+	},
+	imagePickerButton: {
+		marginTop: 13,
+	},
+	actionsContainer: {
+		justifyContent: 'space-between',
+	},
+	rightActionsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+})

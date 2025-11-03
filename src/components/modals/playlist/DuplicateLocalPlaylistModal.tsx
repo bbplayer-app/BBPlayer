@@ -2,6 +2,7 @@ import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
+import { StyleSheet } from 'react-native'
 import { Button, Dialog, TextInput } from 'react-native-paper'
 
 export default function DuplicateLocalPlaylistModal({
@@ -56,7 +57,7 @@ export default function DuplicateLocalPlaylistModal({
 					onChangeText={setDuplicatePlaylistName}
 					mode='outlined'
 					numberOfLines={1}
-					style={{ maxHeight: 200 }}
+					style={styles.textInput}
 					textAlignVertical='top'
 				/>
 			</Dialog.Content>
@@ -67,3 +68,9 @@ export default function DuplicateLocalPlaylistModal({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	textInput: {
+		maxHeight: 200,
+	},
+})

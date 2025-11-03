@@ -1,7 +1,7 @@
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
-import { Text, useColorScheme, View } from 'react-native'
+import { StyleSheet, Text, useColorScheme, View } from 'react-native'
 
 import { getGradientColors } from '@/utils/color'
 import { memo } from 'react'
@@ -67,32 +67,18 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	return (
 		<View
 			style={[
-				{
-					width: size,
-					height: size,
-					borderRadius: borderRadius,
-					overflow: 'hidden',
-				},
+				styles.container,
+				{ width: size, height: size, borderRadius },
 				style,
 			]}
 		>
 			<LinearGradient
 				colors={[color1, color2]}
-				style={{
-					flex: 1,
-					justifyContent: 'center',
-					alignItems: 'center',
-				}}
+				style={styles.gradient}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 1, y: 1 }}
 			>
-				<Text
-					style={{
-						fontSize: size * 0.45,
-						fontWeight: 'bold',
-						color: 'rgba(255, 255, 255, 0.7)',
-					}}
-				>
+				<Text style={[styles.placeholderText, { fontSize: size * 0.45 }]}>
 					{firstChar}
 				</Text>
 			</LinearGradient>
@@ -100,19 +86,32 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 			<Image
 				source={{ uri: coverUrl ?? undefined }}
 				recyclingKey={String(id)}
-				style={{
-					position: 'absolute',
-					width: size,
-					height: size,
-					borderRadius: borderRadius,
-					left: 0,
-					top: 0,
-				}}
+				style={[styles.image, { width: size, height: size, borderRadius }]}
 				transition={300}
 				cachePolicy={cachePolicy}
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		overflow: 'hidden',
+	},
+	gradient: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	placeholderText: {
+		fontWeight: 'bold',
+		color: 'rgba(255, 255, 255, 0.7)',
+	},
+	image: {
+		position: 'absolute',
+		left: 0,
+		top: 0,
+	},
 })
 
 CoverWithPlaceHolder.displayName = 'CoverWithPlaceHolder'
