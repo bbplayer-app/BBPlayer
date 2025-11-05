@@ -201,7 +201,7 @@ export const createBilibiliApi = () => ({
 		const wbiParams = getWbiEncodedParams({
 			bvid,
 			cid: String(cid),
-			fnval: '16', // 16 表示 dash 格式
+			fnval: '4048',
 			fnver: '0',
 			fourk: '1',
 			qlt: String(audioQuality),
@@ -215,7 +215,25 @@ export const createBilibiliApi = () => ({
 				)
 			})
 			.andThen((response) => {
-				const { dash } = response
+				const { dash, durl } = response
+
+				if (!dash) {
+					if (!durl?.[0]) {
+						return errAsync(
+							new BilibiliApiError({
+								message: '请求到的流数据不包含 dash 或 durl 任一字段',
+								type: 'AudioStreamError',
+							}),
+						)
+					}
+					logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
+					return okAsync({
+						url: durl[0].url,
+						quality: 114514,
+						getTime: Date.now() + 60 * 1000, // Add 60s buffer
+						type: 'mp4' as const,
+					})
+				}
 
 				if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
 					logger.debug('优先使用 Dolby 音频流')
