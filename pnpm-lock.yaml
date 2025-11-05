@@ -11,6 +11,9 @@ importers:
       '@babel/runtime':
         specifier: ^7.27.1
         version: 7.28.4
+      '@bbplayer-app/expo-image-theme-colors':
+        specifier: 0.1.0
+        version: 0.1.0(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       '@bottom-tabs/react-navigation':
         specifier: ^0.10.2
         version: 0.10.2(@react-navigation/native@7.1.19(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native-bottom-tabs@0.10.2(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
@@ -935,6 +938,13 @@ packages:
   '@babel/types@7.28.5':
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
+
+  '@bbplayer-app/expo-image-theme-colors@0.1.0':
+    resolution: {integrity: sha512-JcO/CqsIyBMbI+rwithOoIkc241uVV9zng3KjUskFw+q1iY4CsIYGTCbw9uBJ4GtuN9nWvLd5KXo0hr8PU2BTA==, tarball: https://npm.pkg.github.com/download/@bbplayer-app/expo-image-theme-colors/0.1.0/6a54debfe2a15915d8880a8c53577839ef7f7c54}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
 
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
@@ -8134,6 +8144,12 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@bbplayer-app/expo-image-theme-colors@0.1.0(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      expo: 54.0.21(@babel/core@7.28.4)(@expo/metro-runtime@6.1.2)(expo-router@6.0.14)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
 
   '@bcoe/v8-coverage@0.2.3': {}
 

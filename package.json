@@ -19,6 +19,7 @@
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.27.1",
+		"@bbplayer-app/expo-image-theme-colors": "0.1.0",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@expo/metro-runtime": "~6.1.2",
