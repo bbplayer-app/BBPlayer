@@ -1,7 +1,7 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import * as Haptics from '@/utils/haptics'
 import type BottomSheet from '@gorhom/bottom-sheet'
-import { useImage } from 'expo-image'
+import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -13,16 +13,17 @@ import { TrackInfo } from './PlayerTrackInfo'
 interface PlayerMainTabProps {
 	sheetRef: RefObject<BottomSheet | null>
 	jumpTo: (key: string) => void
+	imageRef: ImageRef | null
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
 	sheetRef,
 	jumpTo,
+	imageRef,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '')
 
 	if (!currentTrack) return null
 	return (
@@ -42,7 +43,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					)
 					jumpTo('lyrics')
 				}}
-				coverRef={coverRef}
+				coverRef={imageRef}
 			/>
 
 			<View
