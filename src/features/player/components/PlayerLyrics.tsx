@@ -445,7 +445,6 @@ const Lyrics = memo(function Lyrics() {
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
-					paddingBottom: windowHeight / 2,
 				}}
 				showsVerticalScrollIndicator={false}
 				onScrollEndDrag={onUserScrollEnd}
@@ -606,6 +605,7 @@ const styles = StyleSheet.create({
 	},
 	lyricsContainer: {
 		flex: 1,
+		paddingBottom: 10,
 	},
 	lyricsContent: {
 		flex: 1,

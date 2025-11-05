@@ -66,7 +66,7 @@ function reducer(state: State, action: Action): State {
 			return {
 				...state,
 				status: 'error',
-				statusText: `获取二维码失败: ${action.payload}`,
+				statusText: `获取二维码失败:\u2009${action.payload}`,
 			}
 		case 'POLL_UPDATE':
 			switch (action.payload.code as BilibiliQrCodeLoginStatus) {

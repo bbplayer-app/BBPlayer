@@ -136,7 +136,11 @@ export default function MultipagePage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
-					title={selectMode ? `已选择 ${selected.size} 首` : videoData.title}
+					title={
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: videoData.title
+					}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -176,7 +180,7 @@ export default function MultipagePage() {
 						<PlaylistHeader
 							coverUri={videoData.pic}
 							title={videoData.title}
-							subtitles={`${videoData.owner.name} • ${tracksData.length} 首歌曲`}
+							subtitles={`${videoData.owner.name}\u2009•\u2009${tracksData.length}\u2009首歌曲`}
 							description={videoData.desc}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}

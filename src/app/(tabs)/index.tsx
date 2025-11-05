@@ -190,7 +190,7 @@ function HomePage() {
 											clearBilibiliCookie()
 											await queryClient.cancelQueries()
 											queryClient.clear()
-											toast.success('Cookie 已清除')
+											toast.success('Cookie\u2009已清除')
 										},
 									},
 								],
@@ -219,7 +219,9 @@ function HomePage() {
 				<View style={styles.searchbarContainer}>
 					<View ref={searchBarRef}>
 						<Searchbar
-							placeholder='关键词 / b23.tv 或完整网址 / bv / av'
+							placeholder={
+								'关键词\u2009/\u2009b23.tv\u2009/\u2009完整网址\u2009/\u2009av\u2009/\u2009bv'
+							}
 							onChangeText={setSearchQuery}
 							value={searchQuery}
 							icon={isLoading ? 'loading' : 'magnify'}

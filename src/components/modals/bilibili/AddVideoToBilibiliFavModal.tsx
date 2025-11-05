@@ -164,7 +164,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 						variant='titleMedium'
 						style={styles.loginPromptText}
 					>
-						登录 bilibili 账号后才能查看收藏夹
+						登录{'\u2009bilibili\u2009'}账号后才能查看收藏夹
 					</Text>
 					<Button
 						mode='contained'

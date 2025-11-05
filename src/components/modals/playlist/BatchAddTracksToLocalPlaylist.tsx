@@ -144,7 +144,9 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 						/>
 					</Dialog.ScrollArea>
 					<Dialog.Content>
-						<Text variant='bodySmall'>* 与远程同步的播放列表不会显示</Text>
+						<Text variant='bodySmall'>
+							*{'\u2009'}与远程同步的播放列表不会显示
+						</Text>
 					</Dialog.Content>
 					<Dialog.Actions style={styles.actionsContainer}>
 						<Button

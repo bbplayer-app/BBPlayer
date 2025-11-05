@@ -82,7 +82,7 @@ const MultiPageVideosListComponent = memo(() => {
 					variant='titleMedium'
 					style={styles.noMpText}
 				>
-					未找到分 p 视频收藏夹，请先创建一个收藏夹，并以 [mp] 开头
+					未找到分&thinsp;P&thinsp;视频收藏夹，请先创建一个收藏夹，并以&thinsp;[mp]&thinsp;开头
 				</Text>
 			</View>
 		)
@@ -98,7 +98,8 @@ const MultiPageVideosListComponent = memo(() => {
 					分P视频
 				</Text>
 				<Text variant='bodyMedium'>
-					{favoriteData.pages[0]?.info?.media_count ?? 0} 个分P视频
+					{favoriteData.pages[0]?.info?.media_count ?? 0}
+					&thinsp;个分&thinsp;P&thinsp;视频
 				</Text>
 			</View>
 			<FlashList
@@ -117,7 +118,9 @@ const MultiPageVideosListComponent = memo(() => {
 						progressViewOffset={50}
 					/>
 				}
-				ListEmptyComponent={<Text style={styles.emptyList}>没有分P视频</Text>}
+				ListEmptyComponent={
+					<Text style={styles.emptyList}>没有分&thinsp;P&thinsp;视频</Text>
+				}
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 				ListFooterComponent={
 					hasNextPage ? (

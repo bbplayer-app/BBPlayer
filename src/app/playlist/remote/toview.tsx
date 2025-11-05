@@ -1,3 +1,5 @@
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -6,6 +8,11 @@ import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import renderToViewItem from '@/features/playlist/remote/toview/components/Item'
+import {
+	useClearToViewVideoList,
+	useDeleteToViewVideo,
+} from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
@@ -14,12 +21,13 @@ import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
+import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const mapApiItemToTrack = (
 	apiItem: BilibiliToViewVideoList['list'][0],
-): BilibiliTrack => {
+): BilibiliTrack & { progress: number } => {
 	return {
 		id: bv2av(apiItem.bvid),
 		uniqueKey: `bilibili::${apiItem.bvid}`,
@@ -45,13 +53,18 @@ const mapApiItemToTrack = (
 			videoIsValid: true,
 		},
 		trackDownloads: null,
+		progress: apiItem.progress,
 	}
 }
+
+const dimensions = Dimensions.get('window')
 
 export default function ToViewPage() {
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const { colors } = useTheme()
+	const [menuVisiable, setMenuVisiable] = useState(false)
+	const insets = useSafeAreaInsets()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const openModal = useModalStore((state) => state.open)
@@ -63,6 +76,8 @@ export default function ToViewPage() {
 		isError: isToViewDataError,
 		refetch,
 	} = useGetToViewVideoList()
+	const { mutate: deleteToViewVideo } = useDeleteToViewVideo()
+	const { mutate: clearToViewVideoList } = useClearToViewVideoList()
 
 	const tracksData = useMemo(() => {
 		if (!rawToViewData) {
@@ -101,7 +116,9 @@ export default function ToViewPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
-					title={selectMode ? `已选择 ${selected.size} 首` : '稍后再看'}
+					title={
+						selectMode ? `已选择\u2009${selected.size}\u2009首` : '稍后再看'
+					}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -125,6 +142,10 @@ export default function ToViewPage() {
 				) : (
 					<Appbar.BackAction onPress={() => router.back()} />
 				)}
+				<Appbar.Action
+					icon='dots-vertical'
+					onPress={() => setMenuVisiable(true)}
+				/>
 			</Appbar.Header>
 
 			<View style={styles.listContainer}>
@@ -140,7 +161,7 @@ export default function ToViewPage() {
 						<PlaylistHeader
 							coverUri={undefined}
 							title={'稍后再看'}
-							subtitles={`有 ${tracksData.length} 首待播放的歌曲`}
+							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}
 							onClickMainButton={handlePlayAll}
 							mainButtonIcon={'play'}
@@ -161,11 +182,60 @@ export default function ToViewPage() {
 							progressViewOffset={50}
 						/>
 					}
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- renderToViewItem 需要一个特化属性 progress，就用 any hack 一下
+					renderCustomItem={renderToViewItem as any}
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
+
+			<Portal>
+				<FunctionalMenu
+					visible={menuVisiable}
+					onDismiss={() => setMenuVisiable(false)}
+					anchor={{
+						x: dimensions.width - 10,
+						y: 60 + insets.top,
+					}}
+				>
+					<Menu.Item
+						onPress={() => {
+							setMenuVisiable(false)
+							deleteToViewVideo({
+								deleteAllViewed: true,
+								avid: undefined,
+							})
+						}}
+						title='清除所有已播放歌曲'
+						leadingIcon='trash-can'
+					/>
+					<Menu.Item
+						onPress={() => {
+							setMenuVisiable(false)
+							alert(
+								'清除所有稍后再看歌曲',
+								'确定要清除所有稍后再看的歌曲吗？',
+								[
+									{
+										text: '取消',
+									},
+									{
+										text: '确定',
+										onPress: () => {
+											clearToViewVideoList()
+										},
+									},
+								],
+								{ cancelable: true },
+							)
+						}}
+						title='清除所有歌曲'
+						leadingIcon='delete'
+						titleStyle={{ color: colors.error }}
+					/>
+				</FunctionalMenu>
+			</Portal>
 		</View>
 	)
 }

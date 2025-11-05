@@ -44,10 +44,10 @@ function buildSubtitlePieces(
 
 	const countRaw =
 		playlist.validTrackCount !== playlist.itemCount
-			? `${playlist.itemCount} 首 ( ${playlist.itemCount - playlist.validTrackCount} 首失效) `
-			: `${playlist.itemCount} 首`
+			? `${playlist.itemCount}\u2009首\u2009(\u2009${playlist.itemCount - playlist.validTrackCount}\u2009首失效) `
+			: `${playlist.itemCount}\u2009首`
 
-	const countText = `${countRaw}歌曲`
+	const countText = `${countRaw}\u2009歌曲`
 
 	const authorName = !isLocal
 		? (playlist.author?.name ?? '未知作者')
