@@ -35,7 +35,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 							>
 								{item.title}
 							</Text>
-							<Text variant='bodySmall'>{item.media_count} 首歌曲</Text>
+							<Text variant='bodySmall'>{item.media_count}&thinsp;首歌曲</Text>
 						</View>
 						<Icon
 							source='arrow-right'

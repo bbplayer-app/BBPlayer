@@ -3,6 +3,7 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
+import type { ListRenderItem } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -34,27 +35,27 @@ interface TrackListProps {
 	showItemCover?: boolean
 	isFetchingNextPage?: boolean
 	hasNextPage?: boolean
+	renderCustomItem?: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>
 }
 
-const renderItem = ({
+export interface ExtraData {
+	toggle: (id: number) => void
+	playTrack: (track: BilibiliTrack) => void
+	handleMenuPress: (
+		track: BilibiliTrack,
+		anchor: { x: number; y: number },
+	) => void
+	selected: Set<number>
+	selectMode: boolean
+	enterSelectMode: (id: number) => void
+	showItemCover?: boolean
+}
+
+const renderItemDefault = ({
 	item,
 	index,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
-	BilibiliTrack,
-	{
-		toggle: (id: number) => void
-		playTrack: (track: BilibiliTrack) => void
-		handleMenuPress: (
-			track: BilibiliTrack,
-			anchor: { x: number; y: number },
-		) => void
-		selected: Set<number>
-		selectMode: boolean
-		enterSelectMode: (id: number) => void
-		showItemCover?: boolean
-	}
->) => {
+}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		toggle,
@@ -113,6 +114,7 @@ export function TrackList({
 	showItemCover,
 	isFetchingNextPage,
 	hasNextPage,
+	renderCustomItem,
 }: TrackListProps) {
 	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
@@ -164,12 +166,14 @@ export function TrackList({
 		],
 	)
 
+	const renderItem = renderCustomItem ?? renderItemDefault
+
 	return (
 		<>
 			<FlashList
 				data={tracks}
 				extraData={extraData}
-				renderItem={renderItem}
+				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
 				ItemSeparatorComponent={() => <Divider />}
 				ListHeaderComponent={ListHeaderComponent}
 				refreshControl={refreshControl}

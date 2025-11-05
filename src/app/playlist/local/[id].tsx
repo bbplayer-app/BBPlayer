@@ -115,7 +115,9 @@ export default function LocalPlaylistPage() {
 
 	const handleSync = useCallback(() => {
 		if (!playlistMetadata || !playlistMetadata.remoteSyncId) {
-			toast.error('无法同步，因为未找到播放列表元数据或 remoteSyncId 为空')
+			toast.error(
+				'无法同步，因为未找到播放列表元数据或\u2009remoteSyncId\u2009为空',
+			)
 			return
 		}
 		toast.show('同步中...')
@@ -180,7 +182,7 @@ export default function LocalPlaylistPage() {
 				.flatMap((page) => page.tracks)
 				.find((t) => t.id === trackId)
 			if (!track) {
-				toast.error(`批量添加歌曲失败：未找到 track: ${trackId}`)
+				toast.error(`批量添加歌曲失败：未找到\u2009track: ${trackId}`)
 				return
 			}
 			payloads.push({
@@ -220,7 +222,9 @@ export default function LocalPlaylistPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content
 					title={
-						selectMode ? `已选择 ${selected.size} 首` : playlistMetadata.title
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: playlistMetadata.title
 					}
 				/>
 				{selectMode ? (

@@ -38,7 +38,8 @@ const MultiPageVideosItem = memo(
 									{item.title}
 								</Text>
 								<Text variant='bodySmall'>
-									{item.upper.name} •{''}
+									{item.upper.name}
+									{'\u2009'}•{''}
 									{item.duration ? formatDurationToHHMMSS(item.duration) : ''}
 								</Text>
 							</View>

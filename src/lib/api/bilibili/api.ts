@@ -27,7 +27,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { bilibiliApiClient } from './client'
-import { bv2av, getCsrfToken } from './utils'
+import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
 const logger = log.extend('3Party.Bilibili.Api')
@@ -410,23 +410,11 @@ export const createBilibiliApi = () => ({
 		bvids: string[],
 	): ResultAsync<0, BilibiliApiError> {
 		const resourcesIds = bvids.map((bvid) => `${bv2av(bvid)}:2`)
-
-		const csrfToken = getCsrfToken()
-		if (csrfToken.isErr()) return errAsync(csrfToken.error)
-
-		const data = {
+		return bilibiliApiClient.postWithCsrf<0>('/x/v3/fav/resource/batch-del', {
 			resources: resourcesIds.join(','),
 			media_id: String(favoriteId),
 			platform: 'web',
-			csrf: csrfToken.value,
-		}
-
-		logger.debug('批量删除收藏', new URLSearchParams(data).toString())
-
-		return bilibiliApiClient.post<0>(
-			'/x/v3/fav/resource/batch-del',
-			new URLSearchParams(data).toString(),
-		)
+		})
 	},
 
 	/**
@@ -484,19 +472,16 @@ export const createBilibiliApi = () => ({
 		const avid = bv2av(bvid)
 		const addToFavoriteIdsCombined = addToFavoriteIds.join(',')
 		const delInFavoriteIdsCombined = delInFavoriteIds.join(',')
-		const csrfToken = getCsrfToken()
-		if (csrfToken.isErr()) return errAsync(csrfToken.error)
 
 		const data = {
 			rid: String(avid),
 			add_media_ids: addToFavoriteIdsCombined,
 			del_media_ids: delInFavoriteIdsCombined,
-			csrf: csrfToken.value,
 			type: '2',
 		}
-		return bilibiliApiClient.post<BilibiliDealFavoriteForOneVideoResponse>(
+		return bilibiliApiClient.postWithCsrf<BilibiliDealFavoriteForOneVideoResponse>(
 			'/x/v3/fav/resource/deal',
-			new URLSearchParams(data).toString(),
+			data,
 		)
 	},
 
@@ -534,19 +519,13 @@ export const createBilibiliApi = () => ({
 		progress: number,
 	): ResultAsync<0, BilibiliApiError> => {
 		const avid = bv2av(bvid)
-		const csrfToken = getCsrfToken()
-		if (csrfToken.isErr()) return errAsync(csrfToken.error)
 
 		const data = {
 			aid: String(avid),
 			cid: String(cid),
 			progress: Math.floor(progress).toString(),
-			csrf: csrfToken.value,
 		}
-		return bilibiliApiClient.post<0>(
-			'/x/v2/history/report',
-			new URLSearchParams(data).toString(),
-		)
+		return bilibiliApiClient.postWithCsrf<0>('/x/v2/history/report', data)
 	},
 
 	/**
@@ -723,20 +702,13 @@ export const createBilibiliApi = () => ({
 		bvid: string,
 		like: boolean,
 	): ResultAsync<0, BilibiliApiError> => {
-		const csrfToken = getCsrfToken()
-		if (csrfToken.isErr()) return errAsync(csrfToken.error)
-
 		const data = {
 			bvid,
 			like: like ? '1' : '2',
-			csrf: csrfToken.value,
 		}
 
 		return bilibiliApiClient
-			.post<undefined>(
-				'/x/web-interface/archive/like',
-				new URLSearchParams(data).toString(),
-			)
+			.postWithCsrf<undefined>('/x/web-interface/archive/like', data)
 			.andThen(() => {
 				return okAsync(0 as const)
 			})
@@ -780,6 +752,53 @@ export const createBilibiliApi = () => ({
 		return bilibiliApiClient.get<BilibiliToViewVideoList>(
 			'/x/v2/history/toview',
 			undefined,
+		)
+	},
+
+	/**
+	 * 删除稍后再看列表中的视频
+	 * @param deleteAllViewed 如果为 true，则删除所有已播放的视频
+	 * @param avid 要删除的视频 avid
+	 * @returns 如果删除成功，返回 0，否则返回 1
+	 */
+	deleteToViewVideo: (
+		deleteAllViewed?: boolean,
+		avid?: number,
+	): ResultAsync<undefined, BilibiliApiError> => {
+		if (deleteAllViewed && avid) {
+			return errAsync(
+				new BilibiliApiError({
+					message: '只能指定一个值',
+					type: 'InvalidArgument',
+				}),
+			)
+		}
+		if (!deleteAllViewed && !avid) {
+			return errAsync(
+				new BilibiliApiError({
+					message: '你没提供任何参数',
+					type: 'InvalidArgument',
+				}),
+			)
+		}
+		const data: Record<string, string> = {}
+		if (deleteAllViewed) {
+			data.viewed = 'true'
+		} else if (avid) {
+			data.aid = avid.toString()
+		}
+		return bilibiliApiClient.postWithCsrf<undefined>(
+			'/x/v2/history/toview/del',
+			data,
+		)
+	},
+
+	/**
+	 * 清除稍后再看列表中的所有视频
+	 */
+	clearToViewVideoList: (): ResultAsync<undefined, BilibiliApiError> => {
+		return bilibiliApiClient.postWithCsrf<undefined>(
+			'/x/v2/history/toview/clear',
 		)
 	},
 })

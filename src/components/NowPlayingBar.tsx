@@ -263,6 +263,7 @@ const styles = StyleSheet.create({
 		width: 48,
 		borderRadius: 24,
 		borderWidth: 1,
+		zIndex: 2,
 	},
 	nowPlayingBarTextContainer: {
 		marginLeft: 12,
@@ -284,6 +285,7 @@ const styles = StyleSheet.create({
 		position: 'absolute',
 		bottom: 0,
 		left: 25,
+		zIndex: 1,
 	},
 })
 

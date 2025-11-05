@@ -13,7 +13,8 @@ export const videoDataQueryKeys = {
 		[...videoDataQueryKeys.all, 'getVideoIsThumbUp', bvid] as const,
 	getWebPlayerInfo: (bvid?: string, cid?: number) =>
 		[...videoDataQueryKeys.all, 'getWebPlayerInfo', bvid, cid] as const,
-	getToViewVideoList: ['bilibili', 'getToViewVideoList'] as const,
+	getToViewVideoList: () =>
+		[...videoDataQueryKeys.all, 'getToViewVideoList'] as const,
 } as const
 
 /**
@@ -80,7 +81,7 @@ export const useGetToViewVideoList = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
 	return useQuery({
-		queryKey: videoDataQueryKeys.getToViewVideoList,
+		queryKey: videoDataQueryKeys.getToViewVideoList(),
 		queryFn: () => returnOrThrowAsync(bilibiliApi.getToViewVideoList()),
 		enabled,
 		staleTime: 0,

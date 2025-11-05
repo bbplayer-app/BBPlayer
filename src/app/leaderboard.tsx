@@ -26,18 +26,18 @@ interface LeaderBoardItemData {
 
 const formatDurationToWords = (seconds: number) => {
 	if (isNaN(seconds) || seconds < 0) {
-		return '0秒'
+		return '0\u2009秒'
 	}
 	const h = Math.floor(seconds / 3600)
 	const m = Math.floor((seconds % 3600) / 60)
 	const s = Math.floor(seconds % 60)
 
 	const parts = []
-	if (h > 0) parts.push(`${h}时`)
-	if (m > 0) parts.push(`${m}分`)
-	if (s > 0 || parts.length === 0) parts.push(`${s}秒`)
+	if (h > 0) parts.push(`${h}\u2009时`)
+	if (m > 0) parts.push(`${m}\u2009分`)
+	if (s > 0 || parts.length === 0) parts.push(`${s}\u2009秒`)
 
-	return parts.join(' ')
+	return parts.join('\u2009')
 }
 
 const renderItem = ({
@@ -75,7 +75,7 @@ export default function LeaderBoardPage() {
 	}, [leaderBoardData])
 
 	const totalDuration = useMemo(() => {
-		if (isTotalDurationError || !totalDurationData) return '0秒'
+		if (isTotalDurationError || !totalDurationData) return '0\u2009秒'
 		return formatDurationToWords(totalDurationData)
 	}, [totalDurationData, isTotalDurationError])
 

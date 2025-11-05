@@ -126,7 +126,7 @@ export default function CollectionPage() {
 				<Appbar.Content
 					title={
 						selectMode
-							? `已选择 ${selected.size} 首`
+							? `已选择\u2009${selected.size}\u2009首`
 							: collectionData.info.title
 					}
 				/>
@@ -167,7 +167,7 @@ export default function CollectionPage() {
 						<PlaylistHeader
 							coverUri={collectionData.info.cover}
 							title={collectionData.info.title}
-							subtitles={`${collectionData.info.upper.name} • ${collectionData.info.media_count} 首歌曲`}
+							subtitles={`${collectionData.info.upper.name}\u2009•\u2009${collectionData.info.media_count}\u2009首歌曲`}
 							description={collectionData.info.intro}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}

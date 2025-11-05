@@ -100,7 +100,7 @@ const AboutSection = memo(function AboutSection() {
 				variant='bodyMedium'
 				style={styles.aboutSubtitle}
 			>
-				又一个 BiliBili 音乐播放器
+				又一个{'\u2009Bilibili\u2009'}音乐播放器
 			</Text>
 			<Text
 				variant='bodyMedium'
@@ -197,21 +197,21 @@ const SettingsSection = memo(function SettingsSection() {
 	return (
 		<View style={styles.settingsSectionContainer}>
 			<View style={styles.settingRow}>
-				<Text>向 bilibili 上报观看进度</Text>
+				<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
 				<Switch
 					value={sendPlayHistory}
 					onValueChange={setSendPlayHistory}
 				/>
 			</View>
 			<View style={styles.settingRow}>
-				<Text>向 Sentry 上报错误</Text>
+				<Text>向{'\u2009Sentry\u2009'}上报错误</Text>
 				<Switch
 					value={enableSentryReport}
 					onValueChange={setEnableSentryReport}
 				/>
 			</View>
 			<View style={styles.settingRow}>
-				<Text>打开 Debug 日志</Text>
+				<Text>打开{'\u2009Debug\u2009'}日志</Text>
 				<Switch
 					value={enableDebugLog}
 					onValueChange={setEnableDebugLog}
@@ -225,7 +225,7 @@ const SettingsSection = memo(function SettingsSection() {
 				/>
 			</View>
 			<View style={styles.settingRow}>
-				<Text>手动设置 Cookie</Text>
+				<Text>手动设置{'\u2009Cookie'}</Text>
 				<IconButton
 					icon='open-in-new'
 					size={20}

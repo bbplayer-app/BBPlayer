@@ -141,7 +141,7 @@ export default function UploaderPage() {
 					variant='titleMedium'
 					style={styles.loginText}
 				>
-					登录 bilibili 账号后才能查看 up 主作品
+					登录{'\u2009bilibili\u2009'}账号后才能查看{'\u2009up\u2009'}主作品
 					{'\n\n'}
 					为什么：bilibili
 					对访问用户个人空间和上传的视频接口有莫名其妙的风控校验
@@ -175,7 +175,9 @@ export default function UploaderPage() {
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
-						selectMode ? `已选择 ${selected.size} 首` : uploaderUserInfo.name
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: uploaderUserInfo.name
 					}
 				/>
 				<Appbar.BackAction onPress={() => router.back()} />
@@ -231,7 +233,7 @@ export default function UploaderPage() {
 						<PlaylistHeader
 							coverUri={uploaderUserInfo.face}
 							title={uploaderUserInfo.name}
-							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0} 首歌曲`}
+							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
 							description={uploaderUserInfo.sign}
 							onClickMainButton={undefined}
 							mainButtonIcon={'sync'}
