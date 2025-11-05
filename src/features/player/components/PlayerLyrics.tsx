@@ -332,7 +332,6 @@ const Lyrics = memo(function Lyrics() {
 			toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
 			return
 		}
-		console.log('保存歌词偏移量成功:', lyrics.offset)
 	}
 
 	const keyExtractor = useCallback(
@@ -496,8 +495,6 @@ const Lyrics = memo(function Lyrics() {
 					</RectButton>
 					<RectButton
 						style={styles.controlButton}
-						// @ts-expect-error -- 不想管
-						ref={offsetMenuAnchorRef}
 						enabled={!offsetMenuVisible}
 						onPress={() => setOffsetMenuVisible(true)}
 					>

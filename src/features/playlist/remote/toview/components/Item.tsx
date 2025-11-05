@@ -169,7 +169,6 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 					{/* Context Menu */}
 					{!disabled && (
 						<RectButton
-							// @ts-expect-error -- 不理解
 							ref={menuRef}
 							style={styles.menuButton}
 							onPress={() =>

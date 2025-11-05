@@ -1,3 +1,4 @@
+import type React from 'react'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
@@ -35,7 +36,7 @@ interface TrackListProps {
 	showItemCover?: boolean
 	isFetchingNextPage?: boolean
 	hasNextPage?: boolean
-	renderCustomItem?: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>
+	renderCustomItem?: (info: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => React.ReactElement | null
 }
 
 export interface ExtraData {
