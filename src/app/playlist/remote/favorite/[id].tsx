@@ -137,7 +137,7 @@ export default function FavoritePage() {
 				<Appbar.Content
 					title={
 						selectMode
-							? `已选择 ${selected.size} 首`
+							? `已选择\u2009${selected.size}\u2009首`
 							: favoriteData.pages[0].info.title
 					}
 				/>
@@ -178,7 +178,7 @@ export default function FavoritePage() {
 						<PlaylistHeader
 							coverUri={favoriteData.pages[0].info.cover}
 							title={favoriteData.pages[0].info.title}
-							subtitles={`${favoriteData.pages[0].info.upper.name} • ${favoriteData.pages[0].info.media_count} 首歌曲`}
+							subtitles={`${favoriteData.pages[0].info.upper.name}\u2009•\u2009${favoriteData.pages[0].info.media_count}\u2009首歌曲`}
 							description={favoriteData.pages[0].info.intro}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}

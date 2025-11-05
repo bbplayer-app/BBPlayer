@@ -86,7 +86,9 @@ export default function SearchResultsPage() {
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
-						selectMode ? `已选择 ${selected.size} 首` : `搜索结果 - ${query}`
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: `搜索结果\u2009-\u2009${query}`
 					}
 				/>
 				{selectMode ? (
@@ -141,7 +143,7 @@ export default function SearchResultsPage() {
 						<Text
 							style={[styles.emptyListText, { color: colors.onSurfaceVariant }]}
 						>
-							没有找到与 &quot;{query}&rdquo; 相关的内容
+							没有找到与&thinsp;&ldquo;{query}&rdquo;&thinsp;相关的内容
 						</Text>
 					}
 				/>

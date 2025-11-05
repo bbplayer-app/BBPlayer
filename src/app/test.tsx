@@ -91,7 +91,7 @@ export default function TestPage() {
 						setLoading(true)
 						try {
 							useDownloadManagerStore.getState().clearAll()
-							logger.info('清除 zustand store 数据成功')
+							logger.info('清除\u2009zustand store\u2009数据成功')
 							const result = await downloadService.deleteAll()
 							if (result.isErr()) {
 								toast.error('清除下载缓存失败', {

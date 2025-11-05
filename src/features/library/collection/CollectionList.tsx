@@ -71,7 +71,8 @@ const CollectionListComponent = memo(() => {
 					我的合集/收藏夹追更
 				</Text>
 				<Text variant='bodyMedium'>
-					{collections.pages[0]?.count ?? 0} 个追更
+					{collections.pages[0]?.count ?? 0}
+					{'\u2009'}个追更
 				</Text>
 			</View>
 			<FlashList

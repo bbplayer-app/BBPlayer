@@ -66,7 +66,8 @@ const SleepTimerModal = () => {
 							onPress={() => handleSetTimer(minutes)}
 							style={styles.presetButton}
 						>
-							{minutes} 分钟
+							{minutes}
+							{'\u2009'}分钟
 						</Button>
 					))}
 				</View>

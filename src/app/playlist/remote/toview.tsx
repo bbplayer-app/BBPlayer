@@ -116,7 +116,9 @@ export default function ToViewPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
-					title={selectMode ? `已选择 ${selected.size} 首` : '稍后再看'}
+					title={
+						selectMode ? `已选择\u2009${selected.size}\u2009首` : '稍后再看'
+					}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -159,7 +161,7 @@ export default function ToViewPage() {
 						<PlaylistHeader
 							coverUri={undefined}
 							title={'稍后再看'}
-							subtitles={`有 ${tracksData.length} 首待播放的歌曲`}
+							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}
 							onClickMainButton={handlePlayAll}
 							mainButtonIcon={'play'}

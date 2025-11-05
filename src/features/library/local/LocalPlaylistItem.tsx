@@ -37,7 +37,7 @@ const LocalPlaylistItem = memo(
 									<Text variant='bodySmall'>
 										{item.isToView
 											? '与\u2009B\u2009站「稍后再看」同步'
-											: `${item.itemCount} 首歌曲`}
+											: `${item.itemCount}\u2009首歌曲`}
 									</Text>
 									{item.type === 'local' || (
 										<Icon

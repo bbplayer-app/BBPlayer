@@ -100,10 +100,11 @@ export default function WelcomeModal() {
 	const Step0 = () => (
 		<View>
 			<Text>
-				看起来你是第一次打开 BBPlayer，容我介绍一下：BBPlayer
-				是一款开源、简洁的音乐播放器，你可以使用他播放来自 BiliBili 的歌曲。
+				看起来你是第一次打开{'\u2009'}BBPlayer，容我介绍一下：BBPlayer
+				是一款开源、简洁的音乐播放器，你可以使用他播放来自
+				{'\u2009BiliBili\u2009'}的歌曲。
 				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用 BiliBili API，但
+				风险声明：虽然开发者尽力负责任地调用{'\u2009BiliBili\u2009API'}，但
 				<Text style={styles.boldText}>仍不保证</Text>
 				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
 				{'\n\n'}
@@ -117,7 +118,7 @@ export default function WelcomeModal() {
 			<Text>
 				{haveNotificationPermission
 					? '看起来你已经打开通知权限了，点击下一步吧！'
-					: 'BBPlayer 会使用通知显示下载进度，建议打开通知权限。当然，我们也尊重您的选择，不会强制要求。'}
+					: 'BBPlayer\u2009会使用通知显示下载进度，建议打开通知权限。当然，我们也尊重您的选择，不会强制要求。'}
 			</Text>
 
 			{haveNotificationPermission || (

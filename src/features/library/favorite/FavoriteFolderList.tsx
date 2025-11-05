@@ -75,7 +75,9 @@ const FavoriteFolderListComponent = memo(() => {
 				>
 					我的收藏夹
 				</Text>
-				<Text variant='bodyMedium'>{playlists.length ?? 0} 个收藏夹</Text>
+				<Text variant='bodyMedium'>
+					{playlists.length ?? 0}&thinsp;个收藏夹
+				</Text>
 			</View>
 			<Searchbar
 				placeholder='搜索我的收藏夹内容'

@@ -88,7 +88,8 @@ export default function CookieLoginModal() {
 					variant='bodySmall'
 					style={styles.cookieDescription}
 				>
-					请在此处粘贴您的 Bilibili Cookie 以使用完整 BBPlayer 功能。
+					请在此处粘贴您的{'\u2009Bilibili\u2009Cookie\u2009'}以使用完整
+					{'\u2009BBPlayer\u2009'}功能。
 				</Text>
 				<Divider style={styles.divider} />
 			</Dialog.Content>

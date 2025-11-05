@@ -85,7 +85,9 @@ const LocalPlaylistListComponent = memo(() => {
 					播放列表
 				</Text>
 				<View style={styles.headerActionsContainer}>
-					<Text variant='bodyMedium'>{playlists.length ?? 0} 个播放列表</Text>
+					<Text variant='bodyMedium'>
+						{playlists.length ?? 0}&thinsp;个播放列表
+					</Text>
 					<IconButton
 						icon='plus'
 						size={20}
