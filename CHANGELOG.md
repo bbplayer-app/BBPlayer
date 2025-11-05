@@ -5,6 +5,16 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 完善「稍后再看」页面功能
+
+### Changed
+
+- 优化歌词页面
+
 ## [1.4.0] - 2025-11-02
 
 ### Added

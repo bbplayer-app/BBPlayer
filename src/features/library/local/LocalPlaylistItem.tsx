@@ -32,13 +32,11 @@ const LocalPlaylistItem = memo(
 								size={48}
 							/>
 							<View style={styles.textContainer}>
-								<Text variant='titleMedium'>
-									{item.isToView ? '📌 稍后再看' : item.title}
-								</Text>
+								<Text variant='titleMedium'>{item.title}</Text>
 								<View style={styles.subtitleContainer}>
 									<Text variant='bodySmall'>
 										{item.isToView
-											? '与 B 站「稍后再看」同步'
+											? '与\u2009B\u2009站「稍后再看」同步'
 											: `${item.itemCount} 首歌曲`}
 									</Text>
 									{item.type === 'local' || (

@@ -367,6 +367,7 @@ interface BilibiliToViewVideoList {
 		title: string
 		duration: number
 		pic: string
+		progress: number
 	}[]
 }
 

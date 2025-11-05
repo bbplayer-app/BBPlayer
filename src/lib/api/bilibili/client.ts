@@ -1,6 +1,7 @@
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+import { getCsrfToken } from './utils'
 
 export interface ReqResponse<T> {
 	code: number
@@ -140,6 +141,27 @@ class ApiClient {
 			fullUrl,
 		)
 	}
-}
 
+	/**
+	 * 自动处理 CSRF token 并发送 POST 请求 (x-www-form-urlencoded)
+	 * @param url 请求的 URL
+	 * @param payload 请求体数据
+	 * @returns
+	 */
+	public postWithCsrf<T>(
+		url: string,
+		payload: Record<string, string> = {},
+	): ResultAsync<T, BilibiliApiError> {
+		return getCsrfToken().asyncAndThen((csrfToken) => {
+			const dataWithCsrf = {
+				...payload,
+				csrf: csrfToken,
+			}
+
+			const body = new URLSearchParams(dataWithCsrf).toString()
+
+			return this.post<T>(url, body)
+		})
+	}
+}
 export const bilibiliApiClient = new ApiClient()
