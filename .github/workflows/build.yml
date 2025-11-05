@@ -34,6 +34,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: read
     env:
       BUILD_TYPE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.buildType) || 'prod-v8a' }}
 
@@ -62,6 +63,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@bbplayer-app"
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
@@ -71,9 +74,9 @@ jobs:
           packager: pnpm
 
       - name: 📦 Install dependencies
-        run: |
-          printf "\n//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}\n" >> ./.npmrc
-          pnpm install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm install
 
       - name: ⚙️ Prepare Variables
         id: prep
