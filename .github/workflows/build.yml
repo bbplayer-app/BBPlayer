@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       buildType:
-        description: '构建类型'
+        description: "构建类型"
         required: true
-        default: 'prod-universal'
+        default: "prod-universal"
         type: choice
         options:
           - prod-v8a
@@ -25,7 +25,7 @@ env:
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  MENTION_USER: '@roitium'
+  MENTION_USER: "@roitium"
 
 jobs:
   build:
@@ -71,7 +71,9 @@ jobs:
           packager: pnpm
 
       - name: 📦 Install dependencies
-        run: pnpm install
+        run: |
+          echo -e "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ./.npmrc
+          pnpm install
 
       - name: ⚙️ Prepare Variables
         id: prep
