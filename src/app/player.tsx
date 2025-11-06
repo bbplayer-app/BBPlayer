@@ -1,10 +1,13 @@
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
+import backgroundStreamerShader from '@/features/player/components/BGStreamerShader'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
+import toast from '@/utils/toast'
 import ImageThemeColors from '@bbplayer-app/expo-image-theme-colors'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
 import {
@@ -12,6 +15,8 @@ import {
 	Group,
 	LinearGradient,
 	Rect,
+	Shader,
+	Skia,
 	vec,
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
@@ -25,9 +30,10 @@ import {
 import { useTheme } from 'react-native-paper'
 import {
 	Easing,
-	interpolateColor,
 	useDerivedValue,
+	useFrameCallback,
 	useSharedValue,
+	withRepeat,
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -49,47 +55,107 @@ export default function PlayerPage() {
 	const coverRef = useImage(currentTrack?.coverUrl ?? '')
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
+	const playerBackgroundStyle = useAppStore(
+		(state) => state.settings.playerBackgroundStyle,
+	)
+	const setPlayerBackgroundStyle = useAppStore(
+		(state) => state.setPlayerBackgroundStyle,
+	)
 
 	const realHeight = useMemo(() => {
 		return height + insets.top + insets.bottom
 	}, [height, insets.bottom, insets.top])
 
 	const gradientMainColor = useSharedValue(colors.background)
-	const gradientBottomColor = useSharedValue(colors.background)
+
+	const shaderTime = useSharedValue(0)
+	const streamerColor1 = useSharedValue(colors.background)
+	const streamerColor2 = useSharedValue(colors.background)
 
 	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
 
+	useFrameCallback(() => {
+		if (playerBackgroundStyle !== 'streamer') {
+			shaderTime.value = 0
+			return
+		}
+		shaderTime.value = withRepeat(
+			withTiming(30000, { duration: 30000, easing: Easing.linear }),
+			-1,
+			false,
+		)
+	}, true)
+
 	const gradientColors = useDerivedValue(() => {
-		return [gradientMainColor.value, gradientBottomColor.value]
+		if (playerBackgroundStyle !== 'gradient') {
+			return [colors.background, colors.background]
+		}
+		return [gradientMainColor.value, colors.background]
 	})
 
+	const streamerUniforms = useDerivedValue(() => {
+		const shaderTimeValue = shaderTime.value / 1000.0
+		return {
+			time: shaderTimeValue,
+			resolution: [width, realHeight],
+			color1: Skia.Color(streamerColor1.value),
+			color2: Skia.Color(streamerColor2.value),
+		}
+	}, [shaderTime, streamerColor1, streamerColor2, width, realHeight])
+
 	useEffect(() => {
-		if (!coverRef) return
+		if (!coverRef || playerBackgroundStyle === 'md3') {
+			if (playerBackgroundStyle !== 'gradient') {
+				gradientMainColor.set(colors.background)
+			}
+			if (playerBackgroundStyle !== 'streamer') {
+				streamerColor1.set(colors.background)
+				streamerColor2.set(colors.background)
+			}
+			return
+		}
 		ImageThemeColors.extractThemeColorAsync(coverRef)
 			.then((palette) => {
-				let topColor: string
-				if (colorScheme === 'dark') {
-					topColor =
-						palette.darkMuted?.hex ?? palette.muted?.hex ?? colors.background
-				} else {
-					topColor =
-						palette.lightMuted?.hex ?? palette.muted?.hex ?? colors.background
-				}
-
-				const bottomColor = interpolateColor(
-					0.3,
-					[0, 1],
-					[colors.background, topColor],
-				)
-
+				const md3Bg = colors.background
 				const animationConfig = {
 					duration: 400,
 					easing: Easing.out(Easing.quad),
 				}
 
-				gradientMainColor.set(withTiming(topColor, animationConfig))
-				gradientBottomColor.set(withTiming(bottomColor, animationConfig))
+				if (playerBackgroundStyle === 'gradient') {
+					let topColor: string
+					if (colorScheme === 'dark') {
+						topColor =
+							palette.darkMuted?.hex ?? palette.muted?.hex ?? colors.background
+					} else {
+						topColor =
+							palette.lightMuted?.hex ?? palette.muted?.hex ?? colors.background
+					}
+
+					gradientMainColor.set(withTiming(topColor, animationConfig))
+				}
+
+				if (playerBackgroundStyle === 'streamer') {
+					let c1_hex: string, c2_hex: string
+					if (colorScheme === 'dark') {
+						c1_hex = palette.darkMuted?.hex ?? palette.muted?.hex ?? md3Bg
+						c2_hex =
+							palette.lightVibrant?.hex ??
+							palette.vibrant?.hex ??
+							palette.dominant?.hex ??
+							md3Bg
+					} else {
+						c1_hex = palette.lightMuted?.hex ?? palette.muted?.hex ?? md3Bg
+						c2_hex =
+							palette.dominant?.hex ??
+							palette.vibrant?.hex ??
+							palette.darkVibrant?.hex ??
+							md3Bg
+					}
+					streamerColor1.set(withTiming(c1_hex, animationConfig))
+					streamerColor2.set(withTiming(c2_hex, animationConfig))
+				}
 			})
 			.catch((e) => {
 				logger.error('提取封面图片主题色失败', e)
@@ -124,48 +190,81 @@ export default function PlayerPage() {
 	)
 
 	const scrimColors = useMemo(() => {
+		if (playerBackgroundStyle !== 'gradient')
+			return ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']
 		if (colorScheme === 'dark') {
 			return ['rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0)']
 		} else {
 			return ['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0)']
 		}
-	}, [colorScheme])
+	}, [colorScheme, playerBackgroundStyle])
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
+
+	if (!backgroundStreamerShader) {
+		toast.error('无法加载流光效果着色器，已自动回退到渐变模式')
+		setPlayerBackgroundStyle('gradient')
+		return null
+	}
 
 	return (
 		<>
 			<Canvas style={StyleSheet.absoluteFill}>
-				<Group>
-					<Rect
-						x={0}
-						y={0}
-						width={width}
-						height={realHeight}
-					>
-						<LinearGradient
-							start={vec(0, 0)}
-							end={vec(0, realHeight)}
-							colors={gradientColors}
-						/>
-					</Rect>
+				<Rect
+					x={0}
+					y={0}
+					width={width}
+					height={realHeight}
+					color={colors.background}
+				/>
 
-					<Rect
-						x={0}
-						y={0}
-						width={width}
-						height={realHeight}
-					>
-						<LinearGradient
-							start={vec(0, 0)}
-							end={scrimEndVec}
-							colors={scrimColors}
-						/>
-					</Rect>
-				</Group>
+				{playerBackgroundStyle === 'gradient' && (
+					<Group>
+						<Rect
+							x={0}
+							y={0}
+							width={width}
+							height={realHeight}
+						>
+							<LinearGradient
+								start={vec(0, 0)}
+								end={vec(0, realHeight)}
+								colors={gradientColors}
+								positions={[0, 0.9]}
+							/>
+						</Rect>
+						<Rect
+							x={0}
+							y={0}
+							width={width}
+							height={realHeight}
+						>
+							<LinearGradient
+								start={vec(0, 0)}
+								end={scrimEndVec}
+								colors={scrimColors}
+							/>
+						</Rect>
+					</Group>
+				)}
+
+				{playerBackgroundStyle === 'streamer' && (
+					<Group opacity={0.25}>
+						<Rect
+							x={0}
+							y={0}
+							width={width}
+							height={realHeight}
+						>
+							<Shader
+								source={backgroundStreamerShader}
+								uniforms={streamerUniforms}
+							/>
+						</Rect>
+					</Group>
+				)}
 			</Canvas>
 
-			{/* ... 你的其他 UI (View, TabView, etc.) ... */}
 			<View
 				style={[
 					styles.container,

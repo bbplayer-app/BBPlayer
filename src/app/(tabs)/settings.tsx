@@ -1,3 +1,4 @@
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -14,7 +15,14 @@ import * as Updates from 'expo-updates'
 import * as WebBrowser from 'expo-web-browser'
 import { memo, useCallback, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Divider, IconButton, Switch, Text, useTheme } from 'react-native-paper'
+import {
+	Checkbox,
+	Divider,
+	IconButton,
+	Switch,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CLICK_TIMES = 3
@@ -152,6 +160,10 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
+	const playerBackgroundStyle = useAppStore(
+		(state) => state.settings.playerBackgroundStyle,
+	)
+	const [setPlayerBGMenuVisible, setSetPlayerBGMenuVisible] = useState(false)
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -194,6 +206,10 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 	}
 
+	const setPlayerBackgroundStyle = useAppStore(
+		(state) => state.setPlayerBackgroundStyle,
+	)
+
 	return (
 		<View style={styles.settingsSectionContainer}>
 			<View style={styles.settingRow}>
@@ -223,6 +239,43 @@ const SettingsSection = memo(function SettingsSection() {
 					value={enableOldSchoolStyleLyric}
 					onValueChange={setEnableOldSchoolStyleLyric}
 				/>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>选择播放器背景样式</Text>
+				<FunctionalMenu
+					visible={setPlayerBGMenuVisible}
+					onDismiss={() => setSetPlayerBGMenuVisible(false)}
+					anchor={
+						<IconButton
+							icon='palette'
+							size={20}
+							onPress={() => setSetPlayerBGMenuVisible(true)}
+						/>
+					}
+				>
+					<Checkbox.Item
+						mode='ios'
+						label='渐变'
+						status={
+							playerBackgroundStyle === 'gradient' ? 'checked' : 'unchecked'
+						}
+						onPress={() => setPlayerBackgroundStyle('gradient')}
+					/>
+					<Checkbox.Item
+						mode='ios'
+						label='动态流光'
+						status={
+							playerBackgroundStyle === 'streamer' ? 'checked' : 'unchecked'
+						}
+						onPress={() => setPlayerBackgroundStyle('streamer')}
+					/>
+					<Checkbox.Item
+						mode='ios'
+						label='默认背景'
+						status={playerBackgroundStyle === 'md3' ? 'checked' : 'unchecked'}
+						onPress={() => setPlayerBackgroundStyle('md3')}
+					/>
+				</FunctionalMenu>
 			</View>
 			<View style={styles.settingRow}>
 				<Text>手动设置{'\u2009Cookie'}</Text>
