@@ -96,6 +96,7 @@ export default function PlayerPage() {
 
 	const streamerUniforms = useDerivedValue(() => {
 		const shaderTimeValue = shaderTime.value / 1000.0
+
 		return {
 			time: shaderTimeValue,
 			resolution: [width, realHeight],
@@ -139,19 +140,11 @@ export default function PlayerPage() {
 				if (playerBackgroundStyle === 'streamer') {
 					let c1_hex: string, c2_hex: string
 					if (colorScheme === 'dark') {
-						c1_hex = palette.darkMuted?.hex ?? palette.muted?.hex ?? md3Bg
-						c2_hex =
-							palette.lightVibrant?.hex ??
-							palette.vibrant?.hex ??
-							palette.dominant?.hex ??
-							md3Bg
+						c2_hex = palette.darkMuted?.hex ?? palette.muted?.hex ?? md3Bg
+						c1_hex = md3Bg
 					} else {
-						c1_hex = palette.lightMuted?.hex ?? palette.muted?.hex ?? md3Bg
-						c2_hex =
-							palette.dominant?.hex ??
-							palette.vibrant?.hex ??
-							palette.darkVibrant?.hex ??
-							md3Bg
+						c2_hex = palette.lightMuted?.hex ?? palette.muted?.hex ?? md3Bg
+						c1_hex = md3Bg
 					}
 					streamerColor1.set(withTiming(c1_hex, animationConfig))
 					streamerColor2.set(withTiming(c2_hex, animationConfig))
@@ -161,7 +154,15 @@ export default function PlayerPage() {
 				logger.error('提取封面图片主题色失败', e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
-	})
+	}, [
+		colorScheme,
+		colors.background,
+		coverRef,
+		gradientMainColor,
+		playerBackgroundStyle,
+		streamerColor1,
+		streamerColor2,
+	])
 
 	const renderScene = useMemo(
 		() =>
@@ -183,10 +184,10 @@ export default function PlayerPage() {
 							/>
 						)
 					case 'lyrics':
-						return <Lyrics />
+						return <Lyrics currentIndex={index} />
 				}
 			},
-		[coverRef],
+		[coverRef, index],
 	)
 
 	const scrimColors = useMemo(() => {
@@ -230,7 +231,7 @@ export default function PlayerPage() {
 								start={vec(0, 0)}
 								end={vec(0, realHeight)}
 								colors={gradientColors}
-								positions={[0, 0.9]}
+								positions={[0, 1]}
 							/>
 						</Rect>
 						<Rect
@@ -249,7 +250,7 @@ export default function PlayerPage() {
 				)}
 
 				{playerBackgroundStyle === 'streamer' && (
-					<Group opacity={0.25}>
+					<Group opacity={0.3}>
 						<Rect
 							x={0}
 							y={0}

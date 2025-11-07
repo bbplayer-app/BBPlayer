@@ -257,7 +257,11 @@ const renderItem = ({
 	)
 }
 
-const Lyrics = memo(function Lyrics() {
+const Lyrics = memo(function Lyrics({
+	currentIndex,
+}: {
+	currentIndex: number
+}) {
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
 	const seekTo = usePlayerStore((state) => state.seekTo)
@@ -282,7 +286,7 @@ const Lyrics = memo(function Lyrics() {
 		isPending,
 		isError,
 		error,
-	} = useSmartFetchLyrics(track ?? undefined)
+	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
@@ -445,6 +449,7 @@ const Lyrics = memo(function Lyrics() {
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+					paddingBottom: 20,
 				}}
 				showsVerticalScrollIndicator={false}
 				onScrollEndDrag={onUserScrollEnd}
@@ -460,18 +465,18 @@ const Lyrics = memo(function Lyrics() {
 			<View style={styles.lyricsContent}>
 				{renderLyrics()}
 				{/* 顶部渐变遮罩 */}
-				<AnimatedLinearGradient
+				{/* <AnimatedLinearGradient
 					colors={[colors.background, 'transparent']}
 					style={[styles.topGradient, topFadeAnimatedStyle]}
 					pointerEvents='none'
-				/>
+				/> */}
 
 				{/* 底部渐变遮罩 */}
-				<AnimatedLinearGradient
+				{/* <AnimatedLinearGradient
 					colors={['transparent', colors.background]}
 					style={[styles.bottomGradient, bottomFadeAnimatedStyle]}
 					pointerEvents='none'
-				/>
+				/> */}
 			</View>
 
 			{/* 歌词偏移量调整显示按钮 */}
