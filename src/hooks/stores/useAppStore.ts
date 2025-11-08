@@ -52,6 +52,11 @@ export const useAppStore = create<AppState>()(
 		let initialCookie: Record<string, string> | null = null
 		const enableOldSchoolStyleLyric =
 			storage.getBoolean('enable_old_school_style_lyric') ?? false
+		const playerBackgroundStyle =
+			(storage.getString('player_background_style') as
+				| 'gradient'
+				| 'md3'
+				| 'streamer') ?? 'gradient'
 
 		if (initialCookieString) {
 			const result = parseCookieToObject(initialCookieString)
@@ -68,6 +73,7 @@ export const useAppStore = create<AppState>()(
 			enableSentryReport,
 			enableDebugLog,
 			enableOldSchoolStyleLyric,
+			playerBackgroundStyle,
 		})
 
 		return {
@@ -77,6 +83,7 @@ export const useAppStore = create<AppState>()(
 				enableSentryReport,
 				enableDebugLog,
 				enableOldSchoolStyleLyric,
+				playerBackgroundStyle,
 			},
 
 			hasBilibiliCookie: () => {
@@ -146,6 +153,13 @@ export const useAppStore = create<AppState>()(
 					settings: { ...state.settings, enableOldSchoolStyleLyric: value },
 				}))
 				storage.set('enable_old_school_style_lyric', value)
+			},
+
+			setPlayerBackgroundStyle: (value) => {
+				set((state) => ({
+					settings: { ...state.settings, playerBackgroundStyle: value },
+				}))
+				storage.set('player_background_style', value)
 			},
 		}
 	}),

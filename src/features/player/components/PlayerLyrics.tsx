@@ -9,6 +9,7 @@ import lyricService from '@/lib/services/lyricService'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
+import MaskedView from '@react-native-masked-view/masked-view'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -31,18 +32,15 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import Animated, {
-	Extrapolation,
-	interpolate,
 	useAnimatedScrollHandler,
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient)
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,
-) as typeof FlashList<LyricLine>
+) as typeof FlashList<LyricLine & { isPaddingItem?: boolean }>
 
 interface LyricsOffsetControlProps {
 	visible: boolean
@@ -123,7 +121,7 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	jumpToThisLyric,
 	index,
 }: {
-	item: LyricLine
+	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
@@ -171,7 +169,7 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	jumpToThisLyric,
 	index,
 }: {
-	item: LyricLine
+	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
@@ -227,13 +225,16 @@ const renderItem = ({
 	index,
 	extraData,
 }: ListRenderItemInfoWithExtraData<
-	LyricLine,
+	LyricLine & { isPaddingItem?: boolean },
 	{
 		currentLyricIndex: number
 		handleJumpToLyric: (index: number) => void
 		enableOldSchoolStyleLyric: boolean
 	}
 >) => {
+	if (item.isPaddingItem) {
+		return <View style={{ height: windowHeight / 2 }} />
+	}
 	if (!extraData) throw new Error('Extradata 不存在')
 	const { currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric } =
 		extraData
@@ -257,7 +258,11 @@ const renderItem = ({
 	)
 }
 
-const Lyrics = memo(function Lyrics() {
+const Lyrics = memo(function Lyrics({
+	currentIndex,
+}: {
+	currentIndex: number
+}) {
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
 	const seekTo = usePlayerStore((state) => state.seekTo)
@@ -282,7 +287,20 @@ const Lyrics = memo(function Lyrics() {
 		isPending,
 		isError,
 		error,
-	} = useSmartFetchLyrics(track ?? undefined)
+	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
+	const finalLyrics = useMemo(() => {
+		if (!lyrics?.lyrics) return []
+		const paddingTimestamp =
+			(lyrics.lyrics.at(-1)?.timestamp ?? 0) + Number.EPSILON
+		return [
+			...lyrics.lyrics,
+			{
+				timestamp: paddingTimestamp,
+				text: '',
+				isPaddingItem: true,
+			},
+		]
+	}, [lyrics])
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
@@ -357,37 +375,6 @@ const Lyrics = memo(function Lyrics() {
 		}
 	}, [offsetMenuVisible])
 
-	const topFadeAnimatedStyle = useAnimatedStyle(() => {
-		return {
-			opacity: interpolate(scrollY.value, [0, 60], [0, 1], Extrapolation.CLAMP),
-		}
-	})
-
-	const bottomFadeAnimatedStyle = useAnimatedStyle(() => {
-		// 初始化时默认显示
-		if (
-			scrollY.value === 0 &&
-			viewportHeight.value === 0 &&
-			contentHeight.value === 0
-		) {
-			return { opacity: 1 }
-		}
-		const distanceFromEnd =
-			contentHeight.value - (scrollY.value + viewportHeight.value)
-		if (distanceFromEnd <= 0) {
-			return { opacity: 0 }
-		}
-
-		return {
-			opacity: interpolate(
-				distanceFromEnd,
-				[0, 60],
-				[0, 1],
-				Extrapolation.CLAMP,
-			),
-		}
-	})
-
 	if (!track) return null
 
 	if (isPending) {
@@ -438,19 +425,21 @@ const Lyrics = memo(function Lyrics() {
 		return (
 			<AnimatedFlashList
 				ref={flashListRef}
-				data={lyrics.lyrics}
+				data={finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]}
 				renderItem={renderItem}
 				extraData={extraData}
 				keyExtractor={keyExtractor}
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+					paddingTop: windowHeight / 2,
 				}}
 				showsVerticalScrollIndicator={false}
 				onScrollEndDrag={onUserScrollEnd}
 				onScrollBeginDrag={onUserScrollStart}
-				scrollEventThrottle={16}
+				scrollEventThrottle={30}
 				onScroll={scrollHandler}
+				getItemType={(item) => (item.isPaddingItem ? 'padding' : 'lyric')}
 			/>
 		)
 	}
@@ -458,20 +447,41 @@ const Lyrics = memo(function Lyrics() {
 	return (
 		<View style={styles.lyricsContainer}>
 			<View style={styles.lyricsContent}>
-				{renderLyrics()}
-				{/* 顶部渐变遮罩 */}
-				<AnimatedLinearGradient
-					colors={[colors.background, 'transparent']}
-					style={[styles.topGradient, topFadeAnimatedStyle]}
-					pointerEvents='none'
-				/>
+				<MaskedView
+					style={{ flex: 1 }}
+					maskElement={
+						<View
+							style={{ flex: 1 }}
+							pointerEvents='none'
+						>
+							<LinearGradient
+								style={[styles.gradient]}
+								start={{ x: 0, y: 0 }}
+								end={{ x: 0, y: 1 }}
+								colors={['transparent', colors.background]}
+								locations={[0, 1]}
+							/>
 
-				{/* 底部渐变遮罩 */}
-				<AnimatedLinearGradient
-					colors={['transparent', colors.background]}
-					style={[styles.bottomGradient, bottomFadeAnimatedStyle]}
-					pointerEvents='none'
-				/>
+							<View
+								style={{
+									flex: 1,
+									backgroundColor: colors.background,
+								}}
+							/>
+
+							<LinearGradient
+								style={[styles.gradient]}
+								start={{ x: 0, y: 0 }}
+								end={{ x: 0, y: 1 }}
+								colors={[colors.background, 'transparent']}
+								locations={[0, 1]}
+							/>
+						</View>
+					}
+				>
+					{/* 你要显示的内容放在这里 */}
+					{renderLyrics()}
+				</MaskedView>
 			</View>
 
 			{/* 歌词偏移量调整显示按钮 */}
@@ -611,20 +621,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		flexDirection: 'column',
 	},
-	topGradient: {
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		height: 60,
-	},
-	bottomGradient: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
-		height: 60,
-	},
 	controlsContainer: {
 		paddingHorizontal: 16,
 		position: 'absolute',
@@ -637,6 +633,9 @@ const styles = StyleSheet.create({
 	controlButton: {
 		borderRadius: 99999,
 		padding: 10,
+	},
+	gradient: {
+		height: 60,
 	},
 })
 

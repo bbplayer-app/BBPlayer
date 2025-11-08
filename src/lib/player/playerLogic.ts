@@ -59,7 +59,8 @@ const PlayerLogic = {
 				],
 				progressUpdateEventInterval: 0.2,
 				android: {
-					appKilledPlaybackBehavior: AppKilledPlaybackBehavior.PausePlayback,
+					appKilledPlaybackBehavior:
+						AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
 				},
 			})
 			// 设置重复模式为 Off

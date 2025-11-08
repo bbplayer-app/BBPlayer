@@ -10,6 +10,7 @@ import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { decode } from 'he'
 import { useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
@@ -68,7 +69,15 @@ export default function SearchResultsPage() {
 		}
 
 		const allTracks = searchData.pages.flatMap((page) => page.result)
-		const uniqueMap = new Map(allTracks.map((track) => [track.bvid, track]))
+		const uniqueMap = new Map(
+			allTracks.map((track) => [
+				track.bvid,
+				{
+					...track,
+					title: decode(track.title),
+				},
+			]),
+		)
 		const uniqueTracks = [...uniqueMap.values()]
 		return uniqueTracks.map(mapApiItemToTrack)
 	}, [searchData])
