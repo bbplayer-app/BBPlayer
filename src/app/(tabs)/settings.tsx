@@ -163,7 +163,7 @@ const SettingsSection = memo(function SettingsSection() {
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
-	const [setPlayerBGMenuVisible, setSetPlayerBGMenuVisible] = useState(false)
+	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -206,9 +206,14 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 	}
 
-	const setPlayerBackgroundStyle = useAppStore(
+	const setPlayerBackgroundStyleAction = useAppStore(
 		(state) => state.setPlayerBackgroundStyle,
 	)
+
+	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
+		setPlayerBackgroundStyleAction(style)
+		setPlayerBGMenuVisible(false)
+	}
 
 	return (
 		<View style={styles.settingsSectionContainer}>
@@ -243,13 +248,13 @@ const SettingsSection = memo(function SettingsSection() {
 			<View style={styles.settingRow}>
 				<Text>选择播放器背景样式</Text>
 				<FunctionalMenu
-					visible={setPlayerBGMenuVisible}
-					onDismiss={() => setSetPlayerBGMenuVisible(false)}
+					visible={playerBGMenuVisible}
+					onDismiss={() => setPlayerBGMenuVisible(false)}
 					anchor={
 						<IconButton
 							icon='palette'
 							size={20}
-							onPress={() => setSetPlayerBGMenuVisible(true)}
+							onPress={() => setPlayerBGMenuVisible(true)}
 						/>
 					}
 				>

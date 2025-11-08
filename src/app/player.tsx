@@ -218,7 +218,6 @@ export default function PlayerPage() {
 					height={realHeight}
 					color={colors.background}
 				/>
-
 				{playerBackgroundStyle === 'gradient' && (
 					<Group>
 						<Rect

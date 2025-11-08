@@ -14,7 +14,7 @@ export default function useLyricSync(
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
-	const manualScrollTimeoutRef = useRef<number | null>(null)
+	const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 	const [isActive, setIsActive] = useState(true)
 	const latestJumpRequestRef = useRef(0)
 
@@ -68,7 +68,7 @@ export default function useLyricSync(
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
-			await seekTo(lyrics[index].timestamp)
+			await seekTo(lyrics[index].timestamp - offset)
 			if (latestJumpRequestRef.current !== requestId) return
 			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
@@ -77,7 +77,7 @@ export default function useLyricSync(
 			}
 			isManualScrollingRef.current = false
 		},
-		[lyrics, seekTo],
+		[lyrics, seekTo, offset],
 	)
 
 	useEffect(() => {
@@ -125,7 +125,7 @@ export default function useLyricSync(
 			index: currentLyricIndex,
 			viewPosition: 0.4,
 		})
-	}, [currentLyricIndex, flashListRef])
+	}, [currentLyricIndex, flashListRef, lyrics.length])
 
 	useEffect(() => {
 		return () => {
