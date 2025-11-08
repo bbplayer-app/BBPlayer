@@ -452,7 +452,7 @@ export const createBilibiliApi = () => ({
 				has_more: boolean
 			}>('/x/v3/fav/folder/collected/list', {
 				pn: pageNumber.toString(),
-				ps: '70', // Page size
+				ps: '20', // Page size
 				up_mid: mid.toString(),
 				platform: 'web',
 			})
