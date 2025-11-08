@@ -1,4 +1,4 @@
-name: 'PR Checks'
+name: "PR Checks"
 
 on: pull_request
 
@@ -6,6 +6,8 @@ jobs:
   lint:
     name: 🚨 Lint Codebase
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
@@ -18,10 +20,14 @@ jobs:
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@bbplayer-app"
 
       - name: 📦 Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install
 
       - name: 🚀 Run Lint
@@ -40,8 +46,8 @@ jobs:
       - name: 🏗 Setup master branch
         uses: actions/checkout@v5
         with:
-          ref: 'master'
-          path: 'master_code'
+          ref: "master"
+          path: "master_code"
 
       - name: 🔍 Compare package.json versions
         run: |
