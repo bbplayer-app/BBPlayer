@@ -290,12 +290,16 @@ const Lyrics = memo(function Lyrics({
 	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
 	const finalLyrics = useMemo(() => {
 		if (!lyrics?.lyrics) return []
-		lyrics.lyrics.push({
-			text: '',
-			// @ts-expect-error -- 我们在这里做了一个 hack
-			isPaddingItem: true,
-		})
-		return lyrics.lyrics
+		const paddingTimestamp =
+			(lyrics.lyrics.at(-1)?.timestamp ?? 0) + Number.EPSILON
+		return [
+			...lyrics.lyrics,
+			{
+				timestamp: paddingTimestamp,
+				text: '',
+				isPaddingItem: true,
+			},
+		]
 	}, [lyrics])
 	const {
 		currentLyricIndex,
@@ -454,14 +458,14 @@ const Lyrics = memo(function Lyrics({
 								style={[styles.gradient]}
 								start={{ x: 0, y: 0 }}
 								end={{ x: 0, y: 1 }}
-								colors={['transparent', '#FFFFFF']}
+								colors={['transparent', colors.background]}
 								locations={[0, 1]}
 							/>
 
 							<View
 								style={{
 									flex: 1,
-									backgroundColor: '#FFFFFF',
+									backgroundColor: colors.background,
 								}}
 							/>
 
@@ -469,7 +473,7 @@ const Lyrics = memo(function Lyrics({
 								style={[styles.gradient]}
 								start={{ x: 0, y: 0 }}
 								end={{ x: 0, y: 1 }}
-								colors={['#FFFFFF', 'transparent']}
+								colors={[colors.background, 'transparent']}
 								locations={[0, 1]}
 							/>
 						</View>

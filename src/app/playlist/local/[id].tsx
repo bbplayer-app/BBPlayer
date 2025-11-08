@@ -26,7 +26,6 @@ import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
-import { ImageBackground } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { StyleSheet, useWindowDimensions, View } from 'react-native'
@@ -219,7 +218,6 @@ export default function LocalPlaylistPage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<ImageBackground source={playlistMetadata.coverUrl} />
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content

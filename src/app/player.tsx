@@ -29,9 +29,9 @@ import {
 } from 'react-native'
 import { useTheme } from 'react-native-paper'
 import {
+	cancelAnimation,
 	Easing,
 	useDerivedValue,
-	useFrameCallback,
 	useSharedValue,
 	withRepeat,
 	withTiming,
@@ -75,8 +75,9 @@ export default function PlayerPage() {
 	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
 
-	useFrameCallback(() => {
+	useEffect(() => {
 		if (playerBackgroundStyle !== 'streamer') {
+			cancelAnimation(shaderTime)
 			shaderTime.value = 0
 			return
 		}
@@ -85,7 +86,9 @@ export default function PlayerPage() {
 			-1,
 			false,
 		)
-	}, true)
+
+		return () => cancelAnimation(shaderTime)
+	}, [playerBackgroundStyle, shaderTime])
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -202,10 +205,10 @@ export default function PlayerPage() {
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
+	const shaderUnavailable = !backgroundStreamerShader
 	if (!backgroundStreamerShader) {
 		toast.error('无法加载流光效果着色器，已自动回退到渐变模式')
 		setPlayerBackgroundStyle('gradient')
-		return null
 	}
 
 	return (
@@ -248,7 +251,7 @@ export default function PlayerPage() {
 					</Group>
 				)}
 
-				{playerBackgroundStyle === 'streamer' && (
+				{playerBackgroundStyle === 'streamer' && !shaderUnavailable && (
 					<Group opacity={0.3}>
 						<Rect
 							x={0}
@@ -257,7 +260,7 @@ export default function PlayerPage() {
 							height={realHeight}
 						>
 							<Shader
-								source={backgroundStreamerShader}
+								source={backgroundStreamerShader!}
 								uniforms={streamerUniforms}
 							/>
 						</Rect>

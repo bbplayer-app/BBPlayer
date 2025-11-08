@@ -14,7 +14,9 @@ export default function useLyricSync(
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
-	const manualScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+	const manualScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	)
 	const [isActive, setIsActive] = useState(true)
 	const latestJumpRequestRef = useRef(0)
 

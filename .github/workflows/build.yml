@@ -6,7 +6,7 @@ on:
       buildType:
         description: "构建类型"
         required: true
-        default: "prod-universal"
+        default: "prod-v8a"
         type: choice
         options:
           - prod-v8a

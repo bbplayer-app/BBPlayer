@@ -18,7 +18,6 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
-			console.log('start fetch lyrics:', track?.uniqueKey)
 			if (result.isErr()) {
 				if (result.error.type === 'SearchResultNoMatch') {
 					return {
