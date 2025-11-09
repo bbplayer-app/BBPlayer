@@ -23,6 +23,7 @@ import type { CreateArtistPayload } from '@/types/services/artist'
 import log from '@/utils/log'
 import { diffSets } from '@/utils/set'
 import toast from '@/utils/toast'
+import * as Sentry from '@sentry/react-native'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
 
@@ -48,36 +49,44 @@ export class SyncFacade {
 		bvid: string,
 		cid?: number,
 	): ResultAsync<Track, BilibiliApiError | DatabaseError | ServiceError> {
-		logger.info('开始添加 Track（Bilibili）', { bvid, cid })
-		const apiData = this.bilibiliApi.getVideoDetails(bvid)
-		return apiData.andThen((data) => {
-			const trackPayload = {
-				title: data.title,
-				source: 'bilibili' as const,
-				bilibiliMetadata: {
-					bvid,
-					cid,
-					isMultiPage: cid !== undefined,
-					videoIsValid: true,
-				},
-				coverUrl: data.pic,
-				duration: data.duration,
-				artist: {
-					id: data.owner.mid,
-					name: data.owner.name,
-					source: 'bilibili' as const,
-				},
-			}
-			return this.trackService
-				.findOrCreateTrack(trackPayload)
-				.andTee((track) => {
-					logger.info('添加 Track 成功', {
-						trackId: track.id,
-						title: track.title,
-						source: track.source,
-					})
+		return Sentry.startSpan(
+			{
+				name: 'SyncFacade.addTrackFromBilibiliApi',
+				op: 'function',
+			},
+			() => {
+				logger.info('开始添加 Track（Bilibili）', { bvid, cid })
+				const apiData = this.bilibiliApi.getVideoDetails(bvid)
+				return apiData.andThen((data) => {
+					const trackPayload = {
+						title: data.title,
+						source: 'bilibili' as const,
+						bilibiliMetadata: {
+							bvid,
+							cid,
+							isMultiPage: cid !== undefined,
+							videoIsValid: true,
+						},
+						coverUrl: data.pic,
+						duration: data.duration,
+						artist: {
+							id: data.owner.mid,
+							name: data.owner.name,
+							source: 'bilibili' as const,
+						},
+					}
+					return this.trackService
+						.findOrCreateTrack(trackPayload)
+						.andTee((track) => {
+							logger.info('添加 Track 成功', {
+								trackId: track.id,
+								title: track.title,
+								source: track.source,
+							})
+						})
 				})
-		})
+			},
+		)
 	}
 
 	/**
@@ -88,132 +97,150 @@ export class SyncFacade {
 	public syncCollection(
 		collectionId: number,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
-		if (this.syncingIds.has(`collection::${collectionId}`)) {
-			logger.info('已有同步任务在进行，跳过', {
-				type: 'collection',
-				id: collectionId,
-			})
-			return errAsync(createSyncTaskAlreadyRunningError())
-		}
-		try {
-			this.syncingIds.add(`collection::${collectionId}`)
-			logger = log.extend('[Facade/SyncCollection: ' + collectionId + ']')
-			logger.info('开始同步合集', { collectionId })
-			logger.debug('syncCollection', { collectionId })
-			return this.bilibiliApi
-				.getCollectionAllContents(collectionId)
-				.andTee(() =>
-					logger.debug(
-						'step 1: 调用 bilibiliapi getCollectionAllContents 完成',
-					),
-				)
-				.andThen((contents) => {
-					logger.info('获取合集详情成功', {
-						title: contents.info.title,
-						total: contents.medias?.length ?? 0,
+		return Sentry.startSpan(
+			{
+				name: 'SyncFacade.syncCollection',
+				op: 'function',
+			},
+			(span) => {
+				if (this.syncingIds.has(`collection::${collectionId}`)) {
+					logger.info('已有同步任务在进行，跳过', {
+						type: 'collection',
+						id: collectionId,
 					})
-					const medias = contents.medias ?? []
-					if (medias.length === 0) {
-						return errAsync(
-							createFacadeError(
-								'SyncCollectionFailed',
-								'同步合集失败，该合集中没有任何 track',
+					return errAsync(createSyncTaskAlreadyRunningError())
+				}
+				try {
+					this.syncingIds.add(`collection::${collectionId}`)
+					logger = log.extend('[Facade/SyncCollection: ' + collectionId + ']')
+					logger.info('开始同步合集', { collectionId })
+					logger.debug('syncCollection', { collectionId })
+					return this.bilibiliApi
+						.getCollectionAllContents(collectionId)
+						.andTee(() =>
+							logger.debug(
+								'step 1: 调用 bilibiliapi getCollectionAllContents 完成',
 							),
 						)
-					}
-					return ResultAsync.fromPromise(
-						this.db.transaction(async (tx) => {
-							const playlistSvc = this.playlistService.withDB(tx)
-							const trackSvc = this.trackService.withDB(tx)
-							const artistSvc = this.artistService.withDB(tx)
-
-							const playlistArtistId = await artistSvc.findOrCreateArtist({
-								name: contents.info.upper.name,
-								source: 'bilibili',
-								remoteId: String(contents.info.upper.mid),
-							})
-							if (playlistArtistId.isErr()) throw playlistArtistId.error
-
-							const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
+						.andThen((contents) => {
+							span?.setAttribute('bilibili.trackCount', contents.medias?.length)
+							logger.info('获取合集详情成功', {
 								title: contents.info.title,
-								description: contents.info.intro,
-								coverUrl: contents.info.cover,
-								type: 'collection',
-								remoteSyncId: collectionId,
-								authorId: playlistArtistId.value.id,
+								total: contents.medias?.length ?? 0,
 							})
-							if (playlistRes.isErr()) throw playlistRes.error
-							logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-								id: playlistRes.value.id,
-							})
-
-							const uniqueArtists = new Map<number, { name: string }>()
-							for (const media of medias) {
-								if (!uniqueArtists.has(media.upper.mid)) {
-									uniqueArtists.set(media.upper.mid, { name: media.upper.name })
-								}
+							const medias = contents.medias ?? []
+							if (medias.length === 0) {
+								return errAsync(
+									createFacadeError(
+										'SyncCollectionFailed',
+										'同步合集失败，该合集中没有任何 track',
+									),
+								)
 							}
+							return ResultAsync.fromPromise(
+								this.db.transaction(async (tx) => {
+									const playlistSvc = this.playlistService.withDB(tx)
+									const trackSvc = this.trackService.withDB(tx)
+									const artistSvc = this.artistService.withDB(tx)
 
-							const artistRes = await artistSvc.findOrCreateManyRemoteArtists(
-								Array.from(uniqueArtists, ([remoteId, artistInfo]) => ({
-									name: artistInfo.name,
-									source: 'bilibili',
-									remoteId: String(remoteId),
-									avatarUrl: undefined,
-								})),
-							)
-							if (artistRes.isErr()) throw artistRes.error
-							const localArtistIdMap = artistRes.value
-							logger.debug('step 3: 创建 artist 完成', {
-								uniqueCount: uniqueArtists.size,
-							})
+									const playlistArtistId = await artistSvc.findOrCreateArtist({
+										name: contents.info.upper.name,
+										source: 'bilibili',
+										remoteId: String(contents.info.upper.mid),
+									})
+									if (playlistArtistId.isErr()) throw playlistArtistId.error
 
-							const tracksCreateResult = await trackSvc.findOrCreateManyTracks(
-								medias.map((v) => ({
-									title: v.title,
-									source: 'bilibili',
-									bilibiliMetadata: {
-										bvid: v.bvid,
-										isMultiPage: false,
-										cid: undefined,
-										videoIsValid: true,
-									},
-									coverUrl: v.cover,
-									duration: v.duration,
-									artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
-								})),
-								'bilibili',
-							)
-							if (tracksCreateResult.isErr()) throw tracksCreateResult.error
-							const trackIds = Array.from(tracksCreateResult.value.values())
-							logger.debug('step 4: 创建 tracks 完成', {
-								total: trackIds.length,
-							})
+									const playlistRes =
+										await playlistSvc.findOrCreateRemotePlaylist({
+											title: contents.info.title,
+											description: contents.info.intro,
+											coverUrl: contents.info.cover,
+											type: 'collection',
+											remoteSyncId: collectionId,
+											authorId: playlistArtistId.value.id,
+										})
+									if (playlistRes.isErr()) throw playlistRes.error
+									logger.debug(
+										'step 2: 创建 playlist 和其对应的 artist 信息完成',
+										{
+											id: playlistRes.value.id,
+										},
+									)
 
-							// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
-							const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-								playlistRes.value.id,
-								trackIds,
+									const uniqueArtists = new Map<number, { name: string }>()
+									for (const media of medias) {
+										if (!uniqueArtists.has(media.upper.mid)) {
+											uniqueArtists.set(media.upper.mid, {
+												name: media.upper.name,
+											})
+										}
+									}
+
+									const artistRes =
+										await artistSvc.findOrCreateManyRemoteArtists(
+											Array.from(uniqueArtists, ([remoteId, artistInfo]) => ({
+												name: artistInfo.name,
+												source: 'bilibili',
+												remoteId: String(remoteId),
+												avatarUrl: undefined,
+											})),
+										)
+									if (artistRes.isErr()) throw artistRes.error
+									const localArtistIdMap = artistRes.value
+									logger.debug('step 3: 创建 artist 完成', {
+										uniqueCount: uniqueArtists.size,
+									})
+
+									const tracksCreateResult =
+										await trackSvc.findOrCreateManyTracks(
+											medias.map((v) => ({
+												title: v.title,
+												source: 'bilibili',
+												bilibiliMetadata: {
+													bvid: v.bvid,
+													isMultiPage: false,
+													cid: undefined,
+													videoIsValid: true,
+												},
+												coverUrl: v.cover,
+												duration: v.duration,
+												artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
+											})),
+											'bilibili',
+										)
+									if (tracksCreateResult.isErr()) throw tracksCreateResult.error
+									const trackIds = Array.from(tracksCreateResult.value.values())
+									logger.debug('step 4: 创建 tracks 完成', {
+										total: trackIds.length,
+									})
+
+									// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
+									const replaceResult =
+										await playlistSvc.replacePlaylistAllTracks(
+											playlistRes.value.id,
+											trackIds,
+										)
+									if (replaceResult.isErr()) {
+										throw replaceResult.error
+									}
+									logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
+									logger.info('同步合集完成', {
+										remoteId: contents.info.id,
+										playlistId: playlistRes.value.id,
+									})
+									return playlistRes.value.id
+								}),
+								(e) =>
+									createFacadeError('SyncCollectionFailed', '同步合集失败', {
+										cause: e,
+									}),
 							)
-							if (replaceResult.isErr()) {
-								throw replaceResult.error
-							}
-							logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
-							logger.info('同步合集完成', {
-								remoteId: contents.info.id,
-								playlistId: playlistRes.value.id,
-							})
-							return playlistRes.value.id
-						}),
-						(e) =>
-							createFacadeError('SyncCollectionFailed', '同步合集失败', {
-								cause: e,
-							}),
-					)
-				})
-		} finally {
-			this.syncingIds.delete(`collection::${collectionId}`)
-		}
+						})
+				} finally {
+					this.syncingIds.delete(`collection::${collectionId}`)
+				}
+			},
+		)
 	}
 
 	/**
@@ -223,99 +250,117 @@ export class SyncFacade {
 	public syncMultiPageVideo(
 		bvid: string,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
-		if (this.syncingIds.has(`multiPage::${bvid}`)) {
-			logger.info('已有同步任务在进行，跳过', { type: 'multi_page', bvid })
-			return errAsync(createSyncTaskAlreadyRunningError())
-		}
-		try {
-			this.syncingIds.add(`multiPage::${bvid}`)
-			logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
-			logger.info('开始同步多集视频', { bvid })
-			return this.bilibiliApi
-				.getVideoDetails(bvid)
-				.andTee(() =>
-					logger.debug('step 1: 调用 bilibiliapi getVideoDetails 完成'),
-				)
-				.andThen((data) => {
-					logger.info('获取多集视频详情成功', {
-						title: data.title,
-						pages: data.pages.length,
+		return Sentry.startSpan(
+			{
+				name: 'SyncFacade.syncMultiPageVideo',
+				op: 'function',
+			},
+			(span) => {
+				if (this.syncingIds.has(`multiPage::${bvid}`)) {
+					logger.info('已有同步任务在进行，跳过', {
+						type: 'multi_page',
+						bvid,
 					})
-					return ResultAsync.fromPromise(
-						this.db.transaction(async () => {
-							const playlistSvc = this.playlistService.withDB(this.db)
-							const trackSvc = this.trackService.withDB(this.db)
-							const artistSvc = this.artistService.withDB(this.db)
-
-							const playlistAuthor = await artistSvc.findOrCreateArtist({
-								name: data.owner.name,
-								source: 'bilibili',
-								remoteId: String(data.owner.mid),
-								avatarUrl: data.owner.face,
-							})
-							if (playlistAuthor.isErr()) throw playlistAuthor.error
-
-							const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
+					return errAsync(createSyncTaskAlreadyRunningError())
+				}
+				try {
+					this.syncingIds.add(`multiPage::${bvid}`)
+					logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
+					logger.info('开始同步多集视频', { bvid })
+					return this.bilibiliApi
+						.getVideoDetails(bvid)
+						.andTee(() =>
+							logger.debug('step 1: 调用 bilibiliapi getVideoDetails 完成'),
+						)
+						.andThen((data) => {
+							span?.setAttribute('bilibili.pageCount', data.pages.length)
+							logger.info('获取多集视频详情成功', {
 								title: data.title,
-								description: data.desc,
-								coverUrl: data.pic,
-								type: 'multi_page',
-								remoteSyncId: bv2av(bvid),
-								authorId: playlistAuthor.value.id,
+								pages: data.pages.length,
 							})
-							if (playlistRes.isErr()) throw playlistRes.error
-							logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-								id: playlistRes.value.id,
-							})
+							return ResultAsync.fromPromise(
+								this.db.transaction(async () => {
+									const playlistSvc = this.playlistService.withDB(this.db)
+									const trackSvc = this.trackService.withDB(this.db)
+									const artistSvc = this.artistService.withDB(this.db)
 
-							const trackCreateResult = await trackSvc.findOrCreateManyTracks(
-								data.pages.map((page) => ({
-									title: page.part,
-									source: 'bilibili',
-									bilibiliMetadata: {
-										bvid: bvid,
-										isMultiPage: true,
-										cid: page.cid,
-										videoIsValid: true,
-										mainTrackTitle: data.title,
-									},
-									coverUrl: data.pic,
-									duration: page.duration,
-									artistId: playlistAuthor.value.id,
-								})),
-								'bilibili',
+									const playlistAuthor = await artistSvc.findOrCreateArtist({
+										name: data.owner.name,
+										source: 'bilibili',
+										remoteId: String(data.owner.mid),
+										avatarUrl: data.owner.face,
+									})
+									if (playlistAuthor.isErr()) throw playlistAuthor.error
+
+									const playlistRes =
+										await playlistSvc.findOrCreateRemotePlaylist({
+											title: data.title,
+											description: data.desc,
+											coverUrl: data.pic,
+											type: 'multi_page',
+											remoteSyncId: bv2av(bvid),
+											authorId: playlistAuthor.value.id,
+										})
+									if (playlistRes.isErr()) throw playlistRes.error
+									logger.debug(
+										'step 2: 创建 playlist 和其对应的 artist 信息完成',
+										{
+											id: playlistRes.value.id,
+										},
+									)
+
+									const trackCreateResult =
+										await trackSvc.findOrCreateManyTracks(
+											data.pages.map((page) => ({
+												title: page.part,
+												source: 'bilibili',
+												bilibiliMetadata: {
+													bvid: bvid,
+													isMultiPage: true,
+													cid: page.cid,
+													videoIsValid: true,
+													mainTrackTitle: data.title,
+												},
+												coverUrl: data.pic,
+												duration: page.duration,
+												artistId: playlistAuthor.value.id,
+											})),
+											'bilibili',
+										)
+									if (trackCreateResult.isErr()) throw trackCreateResult.error
+									const trackIds = Array.from(trackCreateResult.value.values())
+									logger.debug('step 3: 创建 tracks 完成', {
+										total: trackIds.length,
+									})
+
+									// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
+									const replaceResult =
+										await playlistSvc.replacePlaylistAllTracks(
+											playlistRes.value.id,
+											trackIds,
+										)
+									if (replaceResult.isErr()) {
+										throw replaceResult.error
+									}
+									logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
+									logger.info('同步合集完成', {
+										remoteId: bv2av(bvid),
+										playlistId: playlistRes.value.id,
+									})
+
+									return playlistRes.value.id
+								}),
+								(e) =>
+									createFacadeError('SyncMultiPageFailed', '同步多集视频失败', {
+										cause: e,
+									}),
 							)
-							if (trackCreateResult.isErr()) throw trackCreateResult.error
-							const trackIds = Array.from(trackCreateResult.value.values())
-							logger.debug('step 3: 创建 tracks 完成', {
-								total: trackIds.length,
-							})
-
-							// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
-							const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-								playlistRes.value.id,
-								trackIds,
-							)
-							if (replaceResult.isErr()) {
-								throw replaceResult.error
-							}
-							logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
-							logger.info('同步合集完成', {
-								remoteId: bv2av(bvid),
-								playlistId: playlistRes.value.id,
-							})
-
-							return playlistRes.value.id
-						}),
-						(e) =>
-							createFacadeError('SyncMultiPageFailed', '同步多集视频失败', {
-								cause: e,
-							}),
-					)
-				})
-		} finally {
-			this.syncingIds.delete(`multiPage::${bvid}`)
-		}
+						})
+				} finally {
+					this.syncingIds.delete(`multiPage::${bvid}`)
+				}
+			},
+		)
 	}
 
 	/**
@@ -326,326 +371,354 @@ export class SyncFacade {
 	public async syncFavorite(
 		favoriteId: number,
 	): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
-		// getFavoriteListAllContents 获取到的 bvid 中会包含被 up 隐藏的视频，但这部分视频在 getFavoriteListContents 中是找不到的，也就无法添加到本地数据库。这导致对于包含这种视频的收藏夹，每次同步都会重新「同步」这些视频，但咱们没办法......
-		if (this.syncingIds.has(`favorite::${favoriteId}`)) {
-			return err(createSyncTaskAlreadyRunningError())
-		}
-		try {
-			this.syncingIds.add(`favorite::${favoriteId}`)
-			logger = log.extend('[Facade/SyncFavorite: ' + favoriteId + ']')
-			logger.info('开始同步收藏夹', { favoriteId })
-			logger.debug('syncFavorite', { favoriteId })
-
-			// 从 bilibili 获取基本元数据和收藏夹所有 bvid
-			const bilibiliResult = await ResultAsync.combine([
-				this.bilibiliApi.getFavoriteListAllContents(favoriteId),
-				this.bilibiliApi.getFavoriteListContents(favoriteId, 1),
-			])
-			if (bilibiliResult.isErr()) {
-				return err(bilibiliResult.error)
-			}
-			const bilibiliFavoriteListMetadata = bilibiliResult.value[1]
-			const bilibiliFavoriteListAllBvids = bilibiliResult.value[0].filter(
-				(item) => item.type === 2, // 过滤非视频稿件 (type 2 is video)
-			)
-			logger.debug('step 1: 调用 bilibiliapi getFavoriteListAllContents 完成', {
-				total: bilibiliFavoriteListAllBvids.length,
-			})
-
-			// 查询本地收藏夹元数据
-			const localPlaylist =
-				await this.playlistService.findPlaylistByTypeAndRemoteId(
-					'favorite',
-					favoriteId,
-				)
-			if (localPlaylist.isErr()) {
-				return err(localPlaylist.error)
-			}
-			logger.debug('step 2: 查询本地收藏夹元数据完成', {
-				localPlaylistId: localPlaylist.value?.id ?? '不存在',
-			})
-
-			// 开始计算 diff
-			let bvidsToAddSet: Set<string>
-			let bvidsToRemoveSet: Set<string>
-			const afterRemovedHiddenBvidsAllBvids = new Set<string>(
-				bilibiliFavoriteListAllBvids.map((item) => item.bvid),
-			) // 删除被隐藏的视频后的所有 bvid（在元数据请求完成后处理删除逻辑）
-
-			if (!localPlaylist.value || localPlaylist.value.itemCount === 0) {
-				// 本地收藏夹为空或没创建过，则全部添加
-				bvidsToAddSet = new Set(
-					bilibiliFavoriteListAllBvids.map((item) => item.bvid),
-				)
-				bvidsToRemoveSet = new Set()
-			} else {
-				const existTracks = await this.playlistService.getPlaylistTracks(
-					localPlaylist.value.id,
-				)
-				if (existTracks.isErr()) {
-					return err(existTracks.error)
+		return await Sentry.startSpan(
+			{
+				name: 'SyncFacade.syncFavorite',
+				op: 'function',
+			},
+			async (span) => {
+				// getFavoriteListAllContents 获取到的 bvid 中会包含被 up 隐藏的视频，但这部分视频在 getFavoriteListContents 中是找不到的，也就无法添加到本地数据库。这导致对于包含这种视频的收藏夹，每次同步都会重新「同步」这些视频，但咱们没办法......
+				if (this.syncingIds.has(`favorite::${favoriteId}`)) {
+					return err(createSyncTaskAlreadyRunningError())
 				}
-				if (existTracks.value.find((item) => item.source !== 'bilibili')) {
-					return err(
-						createFacadeError(
-							'SyncFavoriteFailed',
-							'同步收藏夹失败，收藏夹中存在非 Bilibili 的 Track，你的数据库似乎已经坏掉惹。',
-						),
-					)
-				}
-				const biliTracks = existTracks.value as BilibiliTrack[]
-				const diff = diffSets(
-					new Set(bilibiliFavoriteListAllBvids.map((item) => item.bvid)),
-					new Set(biliTracks.map((item) => item.bilibiliMetadata.bvid)),
-				)
-				// 注意，这里是相反的
-				bvidsToAddSet = diff.removed
-				bvidsToRemoveSet = diff.added
-			}
-			logger.debug('step 3: 对远程和本地的 tracks 进行 diff 完成', {
-				added: bvidsToAddSet.size,
-				removed: bvidsToRemoveSet.size,
-			})
-			logger.info('收藏夹变更统计', {
-				added: bvidsToAddSet.size,
-				removed: bvidsToRemoveSet.size,
-			})
-			if (bvidsToAddSet.size === 0 && bvidsToRemoveSet.size === 0) {
-				logger.info('收藏夹为空或与上次相比无变化，无需同步')
-				return ok(localPlaylist.value?.id)
-			}
+				try {
+					this.syncingIds.add(`favorite::${favoriteId}`)
+					logger = log.extend('[Facade/SyncFavorite: ' + favoriteId + ']')
+					logger.info('开始同步收藏夹', { favoriteId })
+					logger.debug('syncFavorite', { favoriteId })
 
-			// 开始获取收藏夹新增部分 bvid 的详细元数据
-			// 从第一页（最新）开始获取，直到所有新增的 bvid 都获取完成
-			const addedTracksMetadata = new Set<BilibiliFavoriteListContent>()
-			let nowPageNumber = 0
-			let hasMore = true
-
-			while (hasMore) {
-				if (bvidsToAddSet.size === 0) {
-					break
-				}
-				nowPageNumber += 1
-				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
-				const pageResult = await this.bilibiliApi.getFavoriteListContents(
-					favoriteId,
-					nowPageNumber,
-				)
-				if (pageResult.isErr()) {
-					return errAsync(pageResult.error)
-				}
-				const page = pageResult.value
-				if (!page.medias) {
-					return errAsync(
-						createFacadeError(
-							'SyncFavoriteFailed',
-							'同步收藏夹失败，该收藏夹中没有任何 track',
-						),
-					)
-				}
-				logger.debug(page.medias.length)
-				hasMore = page.has_more
-				for (const item of page.medias) {
-					if (bvidsToAddSet.has(item.bvid)) {
-						addedTracksMetadata.add(item)
-						bvidsToAddSet.delete(item.bvid)
+					// 从 bilibili 获取基本元数据和收藏夹所有 bvid
+					const bilibiliResult = await ResultAsync.combine([
+						this.bilibiliApi.getFavoriteListAllContents(favoriteId),
+						this.bilibiliApi.getFavoriteListContents(favoriteId, 1),
+					])
+					if (bilibiliResult.isErr()) {
+						return err(bilibiliResult.error)
 					}
-				}
-			}
-			if (bvidsToAddSet.size > 0) {
-				const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${[...bvidsToAddSet].join(',')}`
-				logger.warning(tip)
-				toast.info(tip)
-				// 在复制的 allBvids Set 中删除隐藏的视频
-				for (const bvid of bvidsToAddSet) {
-					afterRemovedHiddenBvidsAllBvids.delete(bvid)
-				}
-			}
-			logger.debug('step 4: 获取要添加的 tracks 元数据完成', {
-				added: addedTracksMetadata.size,
-				requestApiTimes: nowPageNumber,
-			})
+					const bilibiliFavoriteListMetadata = bilibiliResult.value[1]
+					const bilibiliFavoriteListAllBvids = bilibiliResult.value[0].filter(
+						(item) => item.type === 2, // 过滤非视频稿件 (type 2 is video)
+					)
+					span?.setAttribute(
+						'bilibili.trackCount',
+						bilibiliFavoriteListAllBvids.length,
+					)
+					logger.debug(
+						'step 1: 调用 bilibiliapi getFavoriteListAllContents 完成',
+						{
+							total: bilibiliFavoriteListAllBvids.length,
+						},
+					)
 
-			const txResult = await ResultAsync.fromPromise(
-				this.db.transaction(async (tx) => {
-					const playlistSvc = this.playlistService.withDB(tx)
-					const trackSvc = this.trackService.withDB(tx)
-					const artistSvc = this.artistService.withDB(tx)
-
-					const playlistAuthor = await artistSvc.findOrCreateArtist({
-						name: bilibiliFavoriteListMetadata.info.upper.name,
-						source: 'bilibili',
-						remoteId: String(bilibiliFavoriteListMetadata.info.upper.mid),
-						avatarUrl: bilibiliFavoriteListMetadata.info.upper.face,
-					})
-					if (playlistAuthor.isErr()) {
-						throw playlistAuthor.error
-					}
-
-					const localPlaylist = await playlistSvc.findOrCreateRemotePlaylist({
-						title: bilibiliFavoriteListMetadata.info.title,
-						description: bilibiliFavoriteListMetadata.info.intro,
-						coverUrl: bilibiliFavoriteListMetadata.info.cover,
-						type: 'favorite',
-						remoteSyncId: favoriteId,
-						authorId: playlistAuthor.value.id,
-					})
+					// 查询本地收藏夹元数据
+					const localPlaylist =
+						await this.playlistService.findPlaylistByTypeAndRemoteId(
+							'favorite',
+							favoriteId,
+						)
 					if (localPlaylist.isErr()) {
-						throw localPlaylist.error
+						return err(localPlaylist.error)
 					}
-					logger.debug('step 5: 创建 playlist 和其对应的 author 信息完成', {
-						localPlaylistId: localPlaylist.value.id,
-						artistId: playlistAuthor.value.id,
+					logger.debug('step 2: 查询本地收藏夹元数据完成', {
+						localPlaylistId: localPlaylist.value?.id ?? '不存在',
 					})
 
-					const uniqueArtistPayloadsMap = new Map<string, CreateArtistPayload>()
-					for (const trackMeta of addedTracksMetadata) {
-						const remoteId = String(trackMeta.upper.mid)
-						if (!uniqueArtistPayloadsMap.has(remoteId)) {
-							uniqueArtistPayloadsMap.set(remoteId, {
-								name: trackMeta.upper.name,
-								source: 'bilibili',
-								remoteId: remoteId,
-								avatarUrl: trackMeta.upper.face,
-							})
+					// 开始计算 diff
+					let bvidsToAddSet: Set<string>
+					let bvidsToRemoveSet: Set<string>
+					const afterRemovedHiddenBvidsAllBvids = new Set<string>(
+						bilibiliFavoriteListAllBvids.map((item) => item.bvid),
+					) // 删除被隐藏的视频后的所有 bvid（在元数据请求完成后处理删除逻辑）
+
+					if (!localPlaylist.value || localPlaylist.value.itemCount === 0) {
+						// 本地收藏夹为空或没创建过，则全部添加
+						bvidsToAddSet = new Set(
+							bilibiliFavoriteListAllBvids.map((item) => item.bvid),
+						)
+						bvidsToRemoveSet = new Set()
+					} else {
+						const existTracks = await this.playlistService.getPlaylistTracks(
+							localPlaylist.value.id,
+						)
+						if (existTracks.isErr()) {
+							return err(existTracks.error)
+						}
+						if (existTracks.value.find((item) => item.source !== 'bilibili')) {
+							return err(
+								createFacadeError(
+									'SyncFavoriteFailed',
+									'同步收藏夹失败，收藏夹中存在非 Bilibili 的 Track，你的数据库似乎已经坏掉惹。',
+								),
+							)
+						}
+						const biliTracks = existTracks.value as BilibiliTrack[]
+						const diff = diffSets(
+							new Set(bilibiliFavoriteListAllBvids.map((item) => item.bvid)),
+							new Set(biliTracks.map((item) => item.bilibiliMetadata.bvid)),
+						)
+						// 注意，这里是相反的
+						bvidsToAddSet = diff.removed
+						bvidsToRemoveSet = diff.added
+					}
+					span?.setAttribute('diff.added', bvidsToAddSet.size)
+					span?.setAttribute('diff.removed', bvidsToRemoveSet.size)
+					logger.debug('step 3: 对远程和本地的 tracks 进行 diff 完成', {
+						added: bvidsToAddSet.size,
+						removed: bvidsToRemoveSet.size,
+					})
+					logger.info('收藏夹变更统计', {
+						added: bvidsToAddSet.size,
+						removed: bvidsToRemoveSet.size,
+					})
+					if (bvidsToAddSet.size === 0 && bvidsToRemoveSet.size === 0) {
+						logger.info('收藏夹为空或与上次相比无变化，无需同步')
+						return ok(localPlaylist.value?.id)
+					}
+
+					// 开始获取收藏夹新增部分 bvid 的详细元数据
+					// 从第一页（最新）开始获取，直到所有新增的 bvid 都获取完成
+					const addedTracksMetadata = new Set<BilibiliFavoriteListContent>()
+					let nowPageNumber = 0
+					let hasMore = true
+
+					while (hasMore) {
+						if (bvidsToAddSet.size === 0) {
+							break
+						}
+						nowPageNumber += 1
+						logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+						const pageResult = await this.bilibiliApi.getFavoriteListContents(
+							favoriteId,
+							nowPageNumber,
+						)
+						if (pageResult.isErr()) {
+							return errAsync(pageResult.error)
+						}
+						const page = pageResult.value
+						if (!page.medias) {
+							return errAsync(
+								createFacadeError(
+									'SyncFavoriteFailed',
+									'同步收藏夹失败，该收藏夹中没有任何 track',
+								),
+							)
+						}
+						logger.debug(page.medias.length)
+						hasMore = page.has_more
+						for (const item of page.medias) {
+							if (bvidsToAddSet.has(item.bvid)) {
+								addedTracksMetadata.add(item)
+								bvidsToAddSet.delete(item.bvid)
+							}
 						}
 					}
-
-					const uniqueArtistPayloads = Array.from(
-						uniqueArtistPayloadsMap.values(),
-					)
-					const artistsMap =
-						await artistSvc.findOrCreateManyRemoteArtists(uniqueArtistPayloads)
-					if (artistsMap.isErr()) {
-						throw artistsMap.error
+					if (bvidsToAddSet.size > 0) {
+						const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${[...bvidsToAddSet].join(',')}`
+						logger.warning(tip)
+						toast.info(tip)
+						// 在复制的 allBvids Set 中删除隐藏的视频
+						for (const bvid of bvidsToAddSet) {
+							afterRemovedHiddenBvidsAllBvids.delete(bvid)
+						}
 					}
-					logger.debug('step 6: 创建 artist 完成', {
-						total: artistsMap.value.size,
+					span?.setAttribute('added.metadata.count', addedTracksMetadata.size)
+					logger.debug('step 4: 获取要添加的 tracks 元数据完成', {
+						added: addedTracksMetadata.size,
+						requestApiTimes: nowPageNumber,
 					})
 
-					const addedTrackPayloads = Array.from(addedTracksMetadata).map(
-						(v) => ({
-							title: v.title,
-							source: 'bilibili' as const,
-							bilibiliMetadata: {
-								bvid: v.bvid,
-								isMultiPage: false,
-								cid: undefined,
-								videoIsValid: v.attr === 0,
-							},
-							coverUrl: v.cover,
-							duration: v.duration,
-							artistId: artistsMap.value.get(String(v.upper.mid))?.id,
-						}),
-					)
+					const txResult = await ResultAsync.fromPromise(
+						this.db.transaction(async (tx) => {
+							const playlistSvc = this.playlistService.withDB(tx)
+							const trackSvc = this.trackService.withDB(tx)
+							const artistSvc = this.artistService.withDB(tx)
 
-					const trackPayloadsWithKeysResult = Result.combine(
-						addedTrackPayloads.map((p) =>
-							generateUniqueTrackKey(p).map((uniqueKey) => ({
-								payload: p,
-								uniqueKey,
-							})),
-						),
-					)
-					if (trackPayloadsWithKeysResult.isErr()) {
-						throw trackPayloadsWithKeysResult.error
-					}
-					const trackPayloadsWithKeys = trackPayloadsWithKeysResult.value
-
-					const createdTracksMapResult = await trackSvc.findOrCreateManyTracks(
-						trackPayloadsWithKeys.map((p) => p.payload),
-						'bilibili',
-					)
-
-					if (createdTracksMapResult.isErr()) {
-						throw createdTracksMapResult.error
-					}
-					logger.debug(
-						'step 7: 创建或查找 tracks 并获取 uniqueKey->id 映射完成',
-						{
-							total: createdTracksMapResult.value.size,
-						},
-					)
-
-					// 在这里我们使用清洗过后的 afterRemovedHiddenBvidsAllBvids，而非原始的 bilibiliFavoriteListAllBvids
-					// 因为在原始数据中，可能存在隐藏的视频，但是在清洗后，这些视频已经被删除了
-					const orderedUniqueKeysResult = Result.combine(
-						Array.from(afterRemovedHiddenBvidsAllBvids).map((bvid) =>
-							generateUniqueTrackKey({
+							const playlistAuthor = await artistSvc.findOrCreateArtist({
+								name: bilibiliFavoriteListMetadata.info.upper.name,
 								source: 'bilibili',
-								bilibiliMetadata: {
-									bvid: bvid,
-									isMultiPage: false,
-									videoIsValid: true,
-								},
-							}),
-						),
-					)
-					if (orderedUniqueKeysResult.isErr()) {
-						throw orderedUniqueKeysResult.error
-					}
-					const orderedUniqueKeys = orderedUniqueKeysResult.value
-					logger.debug(
-						'step 8: 为远程所有 tracks 生成了其对应的 uniqueKey 顺序列表',
-						{
-							total: orderedUniqueKeys.length,
-						},
-					)
+								remoteId: String(bilibiliFavoriteListMetadata.info.upper.mid),
+								avatarUrl: bilibiliFavoriteListMetadata.info.upper.face,
+							})
+							if (playlistAuthor.isErr()) {
+								throw playlistAuthor.error
+							}
 
-					const uniqueKeyToIdMapResult =
-						await trackSvc.findTrackIdsByUniqueKeys(orderedUniqueKeys)
-					if (uniqueKeyToIdMapResult.isErr()) {
-						throw uniqueKeyToIdMapResult.error
-					}
-					const uniqueKeyToIdMap = uniqueKeyToIdMapResult.value
-					logger.debug(
-						'step 9: 一次性获取所有 uniqueKey 到本地 ID 的映射完成',
-						{
-							total: uniqueKeyToIdMap.size,
-						},
-					)
+							const localPlaylist =
+								await playlistSvc.findOrCreateRemotePlaylist({
+									title: bilibiliFavoriteListMetadata.info.title,
+									description: bilibiliFavoriteListMetadata.info.intro,
+									coverUrl: bilibiliFavoriteListMetadata.info.cover,
+									type: 'favorite',
+									remoteSyncId: favoriteId,
+									authorId: playlistAuthor.value.id,
+								})
+							if (localPlaylist.isErr()) {
+								throw localPlaylist.error
+							}
+							logger.debug('step 5: 创建 playlist 和其对应的 author 信息完成', {
+								localPlaylistId: localPlaylist.value.id,
+								artistId: playlistAuthor.value.id,
+							})
 
-					const finalOrderedTrackIds = orderedUniqueKeys
-						.map((key) => uniqueKeyToIdMap.get(key))
-						.filter((id) => {
-							if (id === undefined)
-								throw createFacadeError(
-									'SyncFavoriteFailed',
-									'已完成 tracks 创建后，却依然没有找到 uniqueKey 对应的 ID',
+							const uniqueArtistPayloadsMap = new Map<
+								string,
+								CreateArtistPayload
+							>()
+							for (const trackMeta of addedTracksMetadata) {
+								const remoteId = String(trackMeta.upper.mid)
+								if (!uniqueArtistPayloadsMap.has(remoteId)) {
+									uniqueArtistPayloadsMap.set(remoteId, {
+										name: trackMeta.upper.name,
+										source: 'bilibili',
+										remoteId: remoteId,
+										avatarUrl: trackMeta.upper.face,
+									})
+								}
+							}
+
+							const uniqueArtistPayloads = Array.from(
+								uniqueArtistPayloadsMap.values(),
+							)
+							const artistsMap =
+								await artistSvc.findOrCreateManyRemoteArtists(
+									uniqueArtistPayloads,
 								)
-							return id !== undefined
-						})
-					logger.debug('step 10: 按 Bilibili 收藏夹顺序重排所有 tracks 完成', {
-						total: finalOrderedTrackIds.length,
-					})
+							if (artistsMap.isErr()) {
+								throw artistsMap.error
+							}
+							logger.debug('step 6: 创建 artist 完成', {
+								total: artistsMap.value.size,
+							})
 
-					const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-						localPlaylist.value.id,
-						finalOrderedTrackIds,
+							const addedTrackPayloads = Array.from(addedTracksMetadata).map(
+								(v) => ({
+									title: v.title,
+									source: 'bilibili' as const,
+									bilibiliMetadata: {
+										bvid: v.bvid,
+										isMultiPage: false,
+										cid: undefined,
+										videoIsValid: v.attr === 0,
+									},
+									coverUrl: v.cover,
+									duration: v.duration,
+									artistId: artistsMap.value.get(String(v.upper.mid))?.id,
+								}),
+							)
+
+							const trackPayloadsWithKeysResult = Result.combine(
+								addedTrackPayloads.map((p) =>
+									generateUniqueTrackKey(p).map((uniqueKey) => ({
+										payload: p,
+										uniqueKey,
+									})),
+								),
+							)
+							if (trackPayloadsWithKeysResult.isErr()) {
+								throw trackPayloadsWithKeysResult.error
+							}
+							const trackPayloadsWithKeys = trackPayloadsWithKeysResult.value
+
+							const createdTracksMapResult =
+								await trackSvc.findOrCreateManyTracks(
+									trackPayloadsWithKeys.map((p) => p.payload),
+									'bilibili',
+								)
+
+							if (createdTracksMapResult.isErr()) {
+								throw createdTracksMapResult.error
+							}
+							logger.debug(
+								'step 7: 创建或查找 tracks 并获取 uniqueKey->id 映射完成',
+								{
+									total: createdTracksMapResult.value.size,
+								},
+							)
+
+							// 在这里我们使用清洗过后的 afterRemovedHiddenBvidsAllBvids，而非原始的 bilibiliFavoriteListAllBvids
+							// 因为在原始数据中，可能存在隐藏的视频，但是在清洗后，这些视频已经被删除了
+							const orderedUniqueKeysResult = Result.combine(
+								Array.from(afterRemovedHiddenBvidsAllBvids).map((bvid) =>
+									generateUniqueTrackKey({
+										source: 'bilibili',
+										bilibiliMetadata: {
+											bvid: bvid,
+											isMultiPage: false,
+											videoIsValid: true,
+										},
+									}),
+								),
+							)
+							if (orderedUniqueKeysResult.isErr()) {
+								throw orderedUniqueKeysResult.error
+							}
+							const orderedUniqueKeys = orderedUniqueKeysResult.value
+							logger.debug(
+								'step 8: 为远程所有 tracks 生成了其对应的 uniqueKey 顺序列表',
+								{
+									total: orderedUniqueKeys.length,
+								},
+							)
+
+							const uniqueKeyToIdMapResult =
+								await trackSvc.findTrackIdsByUniqueKeys(orderedUniqueKeys)
+							if (uniqueKeyToIdMapResult.isErr()) {
+								throw uniqueKeyToIdMapResult.error
+							}
+							const uniqueKeyToIdMap = uniqueKeyToIdMapResult.value
+							logger.debug(
+								'step 9: 一次性获取所有 uniqueKey 到本地 ID 的映射完成',
+								{
+									total: uniqueKeyToIdMap.size,
+								},
+							)
+
+							const finalOrderedTrackIds = orderedUniqueKeys
+								.map((key) => uniqueKeyToIdMap.get(key))
+								.filter((id) => {
+									if (id === undefined)
+										throw createFacadeError(
+											'SyncFavoriteFailed',
+											'已完成 tracks 创建后，却依然没有找到 uniqueKey 对应的 ID',
+										)
+									return id !== undefined
+								})
+							logger.debug(
+								'step 10: 按 Bilibili 收藏夹顺序重排所有 tracks 完成',
+								{
+									total: finalOrderedTrackIds.length,
+								},
+							)
+
+							const replaceResult = await playlistSvc.replacePlaylistAllTracks(
+								localPlaylist.value.id,
+								finalOrderedTrackIds,
+							)
+							if (replaceResult.isErr()) {
+								throw replaceResult.error
+							}
+							logger.debug('step 11: 替换 playlist 中所有 tracks 完成')
+							logger.info('同步收藏夹完成', {
+								remoteId: favoriteId,
+								playlistId: localPlaylist.value.id,
+							})
+
+							return localPlaylist.value.id
+						}),
+						(e) =>
+							createFacadeError('SyncFavoriteFailed', '同步收藏夹失败', {
+								cause: e,
+							}),
 					)
-					if (replaceResult.isErr()) {
-						throw replaceResult.error
+					if (txResult.isErr()) {
+						return err(txResult.error)
 					}
-					logger.debug('step 11: 替换 playlist 中所有 tracks 完成')
-					logger.info('同步收藏夹完成', {
-						remoteId: favoriteId,
-						playlistId: localPlaylist.value.id,
-					})
-
-					return localPlaylist.value.id
-				}),
-				(e) =>
-					createFacadeError('SyncFavoriteFailed', '同步收藏夹失败', {
-						cause: e,
-					}),
-			)
-			if (txResult.isErr()) {
-				return err(txResult.error)
-			}
-			return ok(txResult.value)
-		} finally {
-			this.syncingIds.delete(`favorite::${favoriteId}`)
-		}
+					return ok(txResult.value)
+				} finally {
+					this.syncingIds.delete(`favorite::${favoriteId}`)
+				}
+			},
+		)
 	}
 
 	/**
@@ -655,20 +728,31 @@ export class SyncFacade {
 	 * @returns
 	 */
 	public sync(remoteSyncId: number, type: Playlist['type']) {
-		switch (type) {
-			case 'favorite': {
-				return this.syncFavorite(remoteSyncId)
-			}
-			case 'collection': {
-				return this.syncCollection(remoteSyncId)
-			}
-			case 'multi_page': {
-				return this.syncMultiPageVideo(av2bv(remoteSyncId))
-			}
-			case 'local': {
-				return okAsync(undefined)
-			}
-		}
+		return Sentry.startSpan(
+			{
+				name: 'SyncFacade.sync',
+				op: 'function',
+				attributes: {
+					type,
+				},
+			},
+			() => {
+				switch (type) {
+					case 'favorite': {
+						return this.syncFavorite(remoteSyncId)
+					}
+					case 'collection': {
+						return this.syncCollection(remoteSyncId)
+					}
+					case 'multi_page': {
+						return this.syncMultiPageVideo(av2bv(remoteSyncId))
+					}
+					case 'local': {
+						return okAsync(undefined)
+					}
+				}
+			},
+		)
 	}
 }
 

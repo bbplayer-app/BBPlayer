@@ -15,6 +15,7 @@ import { trackService, type TrackService } from '@/lib/services/trackService'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import log from '@/utils/log'
+import * as Sentry from '@sentry/react-native'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { errAsync, ResultAsync } from 'neverthrow'
 
@@ -36,74 +37,88 @@ export class PlaylistFacade {
 	 * @returns 如果成功，则为 local playlist 的 ID
 	 */
 	public async duplicatePlaylist(playlistId: number, name: string) {
-		logger.info('开始复制播放列表', { playlistId, name })
-		return ResultAsync.fromPromise(
-			this.db.transaction(async (tx) => {
-				const playlistSvc = this.playlistService.withDB(tx)
+		return await Sentry.startSpan(
+			{
+				name: 'PlaylistFacade.duplicatePlaylist',
+				op: 'function',
+			},
+			async (span) => {
+				logger.info('开始复制播放列表', { playlistId, name })
+				return ResultAsync.fromPromise(
+					this.db.transaction(async (tx) => {
+						const playlistSvc = this.playlistService.withDB(tx)
 
-				const playlist = await playlistSvc.getPlaylistById(playlistId)
-				if (playlist.isErr()) {
-					throw playlist.error
-				}
-				const playlistMetadata = playlist.value
+						const playlist = await playlistSvc.getPlaylistById(playlistId)
+						if (playlist.isErr()) {
+							throw playlist.error
+						}
+						const playlistMetadata = playlist.value
 
-				if (!playlistMetadata)
-					throw createValidationError(`未找到播放列表：${playlistId}`)
+						if (!playlistMetadata)
+							throw createValidationError(`未找到播放列表：${playlistId}`)
+						span?.setAttribute(
+							'playlist.trackCount',
+							playlistMetadata.itemCount,
+						)
 
-				logger.debug('step1: 获取播放列表', playlistMetadata.id)
+						logger.debug('step1: 获取播放列表', playlistMetadata.id)
 
-				const localPlaylistResult = await playlistSvc.createPlaylist({
-					title: name,
-					description: playlistMetadata.description ?? undefined,
-					coverUrl: playlistMetadata.coverUrl ?? undefined,
-					authorId: null,
-					type: 'local',
-					remoteSyncId: null,
-				})
-				if (localPlaylistResult.isErr()) {
-					throw localPlaylistResult.error
-				}
-				const localPlaylist = localPlaylistResult.value
-				logger.debug('step2: 创建本地播放列表', localPlaylist)
-				logger.info('创建本地播放列表成功', {
-					localPlaylistId: localPlaylist.id,
-				})
+						const localPlaylistResult = await playlistSvc.createPlaylist({
+							title: name,
+							description: playlistMetadata.description ?? undefined,
+							coverUrl: playlistMetadata.coverUrl ?? undefined,
+							authorId: null,
+							type: 'local',
+							remoteSyncId: null,
+						})
+						if (localPlaylistResult.isErr()) {
+							throw localPlaylistResult.error
+						}
+						const localPlaylist = localPlaylistResult.value
+						logger.debug('step2: 创建本地播放列表', localPlaylist)
+						logger.info('创建本地播放列表成功', {
+							localPlaylistId: localPlaylist.id,
+						})
 
-				const tracksMetadata = await playlistSvc.getPlaylistTracks(playlistId)
-				if (tracksMetadata.isErr()) {
-					throw tracksMetadata.error
-				}
-				const finalIds = tracksMetadata.value
-					.filter((t) => {
-						if (t.source === 'bilibili' && !t.bilibiliMetadata.videoIsValid)
-							return false
-						return true
-					})
-					.map((t) => t.id)
-				logger.debug(
-					'step3: 获取播放列表中的所有歌曲并清洗完成（对于 bilibili 音频，去除掉失效视频）',
+						const tracksMetadata =
+							await playlistSvc.getPlaylistTracks(playlistId)
+						if (tracksMetadata.isErr()) {
+							throw tracksMetadata.error
+						}
+						const finalIds = tracksMetadata.value
+							.filter((t) => {
+								if (t.source === 'bilibili' && !t.bilibiliMetadata.videoIsValid)
+									return false
+								return true
+							})
+							.map((t) => t.id)
+						span?.setAttribute('finalTrackCount', finalIds.length)
+						logger.debug(
+							'step3: 获取播放列表中的所有歌曲并清洗完成（对于 bilibili 音频，去除掉失效视频）',
+						)
+
+						const replaceResult = await playlistSvc.replacePlaylistAllTracks(
+							localPlaylist.id,
+							finalIds,
+						)
+						if (replaceResult.isErr()) {
+							throw replaceResult.error
+						}
+						logger.debug('step4: 替换本地播放列表中的所有歌曲')
+						logger.info('复制播放列表成功', {
+							sourcePlaylistId: playlistId,
+							targetPlaylistId: localPlaylist.id,
+							trackCount: finalIds.length,
+						})
+
+						return localPlaylist.id
+					}),
+					(e) =>
+						createFacadeError('PlaylistDuplicateFailed', '复制播放列表失败', {
+							cause: e,
+						}),
 				)
-
-				const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-					localPlaylist.id,
-					finalIds,
-				)
-				if (replaceResult.isErr()) {
-					throw replaceResult.error
-				}
-				logger.debug('step4: 替换本地播放列表中的所有歌曲')
-				logger.info('复制播放列表成功', {
-					sourcePlaylistId: playlistId,
-					targetPlaylistId: localPlaylist.id,
-					trackCount: finalIds.length,
-				})
-
-				return localPlaylist.id
-			}),
-			(e) =>
-				createFacadeError('PlaylistDuplicateFailed', '复制播放列表失败', {
-					cause: e,
-				}),
+			},
 		)
 	}
 
@@ -119,76 +134,93 @@ export class PlaylistFacade {
 		trackPayload: CreateTrackPayload
 		artistPayload?: CreateArtistPayload | null
 	}) {
-		const {
-			toAddPlaylistIds,
-			toRemovePlaylistIds,
-			trackPayload,
-			artistPayload,
-		} = params
+		return await Sentry.startSpan(
+			{
+				name: 'PlaylistFacade.updateTrackLocalPlaylists',
+				op: 'function',
+				attributes: {
+					toAddCount: params.toAddPlaylistIds.length,
+					toRemoveCount: params.toRemovePlaylistIds.length,
+				},
+			},
+			async () => {
+				const {
+					toAddPlaylistIds,
+					toRemovePlaylistIds,
+					trackPayload,
+					artistPayload,
+				} = params
 
-		logger.info('开始更新 Track 在本地播放列表', {
-			toAdd: toAddPlaylistIds.length,
-			toRemove: toRemovePlaylistIds.length,
-			source: trackPayload.source,
-			title: trackPayload.title,
-		})
-		return ResultAsync.fromPromise(
-			this.db.transaction(async (tx) => {
-				const playlistSvc = this.playlistService.withDB(tx)
-				const trackSvc = this.trackService.withDB(tx)
-				const artistSvc = this.artistService.withDB(tx)
-
-				// step1: 解析/创建 Artist（如需要）
-				let finalArtistId: number | undefined =
-					trackPayload.artistId ?? undefined
-				if (finalArtistId === undefined && artistPayload) {
-					const artistIdRes = await artistSvc.findOrCreateArtist(artistPayload)
-					if (artistIdRes.isErr()) throw artistIdRes.error
-					finalArtistId = artistIdRes.value.id
-				}
-				logger.debug('step1: 解析/创建 Artist 完成', finalArtistId ?? '(无)')
-
-				// step2: 解析/创建 Track
-				const trackRes = await trackSvc.findOrCreateTrack({
-					...trackPayload,
-					artistId: finalArtistId ?? undefined,
+				logger.info('开始更新 Track 在本地播放列表', {
+					toAdd: toAddPlaylistIds.length,
+					toRemove: toRemovePlaylistIds.length,
+					source: trackPayload.source,
+					title: trackPayload.title,
 				})
-				if (trackRes.isErr()) throw trackRes.error
-				const trackId = trackRes.value.id
-				logger.debug('step2: 解析/创建 Track 完成', trackId)
+				return ResultAsync.fromPromise(
+					this.db.transaction(async (tx) => {
+						const playlistSvc = this.playlistService.withDB(tx)
+						const trackSvc = this.trackService.withDB(tx)
+						const artistSvc = this.artistService.withDB(tx)
 
-				// step3: 执行增删
-				for (const pid of toAddPlaylistIds) {
-					const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
-						trackId,
-					])
-					if (r.isErr()) throw r.error
-				}
-				for (const pid of toRemovePlaylistIds) {
-					const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [
-						trackId,
-					])
-					if (r.isErr()) throw r.error
-				}
-				logger.debug('step3: 更新本地播放列表完成', {
-					added: toAddPlaylistIds,
-					removed: toRemovePlaylistIds,
-				})
+						// step1: 解析/创建 Artist（如需要）
+						let finalArtistId: number | undefined =
+							trackPayload.artistId ?? undefined
+						if (finalArtistId === undefined && artistPayload) {
+							const artistIdRes =
+								await artistSvc.findOrCreateArtist(artistPayload)
+							if (artistIdRes.isErr()) throw artistIdRes.error
+							finalArtistId = artistIdRes.value.id
+						}
+						logger.debug(
+							'step1: 解析/创建 Artist 完成',
+							finalArtistId ?? '(无)',
+						)
 
-				logger.debug('更新 Track 在本地播放列表成功')
-				logger.info('更新 Track 在本地播放列表成功', {
-					trackId,
-					added: toAddPlaylistIds.length,
-					removed: toRemovePlaylistIds.length,
-				})
-				return trackId
-			}),
-			(e) =>
-				createFacadeError(
-					'UpdateTrackLocalPlaylistsFailed',
-					'更新 Track 在本地播放列表失败',
-					{ cause: e },
-				),
+						// step2: 解析/创建 Track
+						const trackRes = await trackSvc.findOrCreateTrack({
+							...trackPayload,
+							artistId: finalArtistId ?? undefined,
+						})
+						if (trackRes.isErr()) throw trackRes.error
+						const trackId = trackRes.value.id
+						logger.debug('step2: 解析/创建 Track 完成', trackId)
+
+						// step3: 执行增删
+						for (const pid of toAddPlaylistIds) {
+							const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
+								trackId,
+							])
+							if (r.isErr()) throw r.error
+						}
+						for (const pid of toRemovePlaylistIds) {
+							const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(
+								pid,
+								[trackId],
+							)
+							if (r.isErr()) throw r.error
+						}
+						logger.debug('step3: 更新本地播放列表完成', {
+							added: toAddPlaylistIds,
+							removed: toRemovePlaylistIds,
+						})
+
+						logger.debug('更新 Track 在本地播放列表成功')
+						logger.info('更新 Track 在本地播放列表成功', {
+							trackId,
+							added: toAddPlaylistIds.length,
+							removed: toRemovePlaylistIds.length,
+						})
+						return trackId
+					}),
+					(e) =>
+						createFacadeError(
+							'UpdateTrackLocalPlaylistsFailed',
+							'更新 Track 在本地播放列表失败',
+							{ cause: e },
+						),
+				)
+			},
 		)
 	}
 
@@ -202,64 +234,77 @@ export class PlaylistFacade {
 		playlistId: number,
 		payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[],
 	) {
-		logger.info('开始批量添加 tracks 到本地播放列表', {
-			playlistId,
-			count: payloads.length,
-		})
-		for (const payload of payloads) {
-			if (payload.artist.source === 'local') {
-				return errAsync(
-					createValidationError(
-						'批量添加 tracks 到本地播放列表时，artist 只能为 remote 来源',
-					),
-				)
-			}
-		}
-		return ResultAsync.fromPromise(
-			(async () => {
-				const playlistSvc = this.playlistService.withDB(this.db)
-				const trackSvc = this.trackService.withDB(this.db)
-				const artistSvc = this.artistService.withDB(this.db)
-
-				const artistResult = await artistSvc.findOrCreateManyRemoteArtists(
-					payloads.map((p) => p.artist),
-				)
-				if (artistResult.isErr()) {
-					throw artistResult.error
-				}
-				const artistMap = artistResult.value
-				logger.debug('step1: 批量创建 artist 完成')
-
-				const trackResult = await trackSvc.findOrCreateManyTracks(
-					payloads.map((p) => ({
-						...p.track,
-						artistId: artistMap.get(p.artist.remoteId!)?.id,
-					})),
-					'bilibili',
-				)
-				if (trackResult.isErr()) throw trackResult.error
-				const trackIds = Array.from(trackResult.value.values())
-				logger.debug('step2: 批量创建 track 完成')
-
-				const addResult = await playlistSvc.addManyTracksToLocalPlaylist(
+		return await Sentry.startSpan(
+			{
+				name: 'PlaylistFacade.batchAddTracksToLocalPlaylist',
+				op: 'function',
+				attributes: {
+					payloadCount: payloads.length,
+				},
+			},
+			async (span) => {
+				logger.info('开始批量添加 tracks 到本地播放列表', {
 					playlistId,
-					trackIds,
-				)
-				if (addResult.isErr()) throw addResult.error
-				logger.debug('step3: 批量将 track 添加到本地播放列表完成')
-				logger.info('批量添加 tracks 到本地播放列表成功', {
-					playlistId,
-					added: trackIds.length,
+					count: payloads.length,
 				})
+				for (const payload of payloads) {
+					if (payload.artist.source === 'local') {
+						return errAsync(
+							createValidationError(
+								'批量添加 tracks 到本地播放列表时，artist 只能为 remote 来源',
+							),
+						)
+					}
+				}
+				return ResultAsync.fromPromise(
+					(async () => {
+						const playlistSvc = this.playlistService.withDB(this.db)
+						const trackSvc = this.trackService.withDB(this.db)
+						const artistSvc = this.artistService.withDB(this.db)
 
-				return trackIds
-			})(),
-			(e) =>
-				createFacadeError(
-					'BatchAddTracksToLocalPlaylistFailed',
-					'批量添加 tracks 到本地播放列表失败',
-					{ cause: e },
-				),
+						const artistResult = await artistSvc.findOrCreateManyRemoteArtists(
+							payloads.map((p) => p.artist),
+						)
+						if (artistResult.isErr()) {
+							throw artistResult.error
+						}
+						const artistMap = artistResult.value
+						span?.setAttribute('artist.count', artistMap.size)
+						logger.debug('step1: 批量创建 artist 完成')
+
+						const trackResult = await trackSvc.findOrCreateManyTracks(
+							payloads.map((p) => ({
+								...p.track,
+								artistId: artistMap.get(p.artist.remoteId!)?.id,
+							})),
+							'bilibili',
+						)
+						if (trackResult.isErr()) throw trackResult.error
+						const trackIds = Array.from(trackResult.value.values())
+						span?.setAttribute('track.count', trackIds.length)
+						logger.debug('step2: 批量创建 track 完成')
+
+						const addResult = await playlistSvc.addManyTracksToLocalPlaylist(
+							playlistId,
+							trackIds,
+						)
+						if (addResult.isErr()) throw addResult.error
+						logger.debug('step3: 批量将 track 添加到本地播放列表完成')
+						logger.info('批量添加 tracks 到本地播放列表成功', {
+							playlistId,
+							added: trackIds.length,
+						})
+
+						return trackIds
+					})(),
+					(e) =>
+						createFacadeError(
+							'BatchAddTracksToLocalPlaylistFailed',
+							'批量添加 tracks 到本地播放列表失败',
+							{ cause: e },
+						),
+				)
+			},
 		)
 	}
 }

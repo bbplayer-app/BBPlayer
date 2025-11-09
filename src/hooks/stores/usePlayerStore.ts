@@ -23,6 +23,7 @@ import {
 	reportPlaybackHistory,
 } from '@/utils/player'
 import toast from '@/utils/toast'
+import * as Sentry from '@sentry/react-native'
 import { err, ok, type Result } from 'neverthrow'
 import TrackPlayer, { RepeatMode } from 'react-native-track-player'
 import { create } from 'zustand'
@@ -95,110 +96,131 @@ export const usePlayerStore = create<PlayerStore>()(
 				_finalizeAndRecordCurrentPlay: async (
 					reason: 'skip' | 'ended' | 'stop' = 'skip',
 				) => {
-					try {
-						const { currentPlayStartAt } = get()
-						const track = get()._getCurrentTrack()
-						logger.debug('调用 _finalizeAndRecordCurrentPlay', {
-							currentPlayStartAt,
-							reason,
-							trackTitle: track?.title,
-						})
-						if (!track || !currentPlayStartAt) return
-
-						const { position, duration: realDuration } =
-							await TrackPlayer.getProgress()
-						const playedSeconds = Math.max(0, Math.floor(position))
-						// HACK: 我们直接使用 player 的真实 duration，不管数据库内的数据
-						// 但后期一定是要去给数据库内数据做修正的
-						const effectiveDuration =
-							realDuration > 0 ? realDuration : track.duration
-						// duration 可能为 0 吗？理论上不应该，但为了保险起见，最小值设为 1
-						// 否则会导致计算完成阈值时出现问题
-						const duration = Math.max(1, Math.floor(effectiveDuration))
-						const elapsedSeconds = Math.max(
-							0,
-							Math.floor((Date.now() - currentPlayStartAt) / 1000),
-						)
-						const effectivePlayed = Math.min(
-							playedSeconds,
-							elapsedSeconds,
-							duration,
-						)
-						const threshold = Math.max(Math.floor(duration * 0.9), duration - 2)
-						const completed = effectivePlayed >= threshold
-						logger.debug('完成播放标记', {
-							currentPlayStartAt,
-							reason,
-							trackTitle: track?.title,
-							playedSeconds,
-							elapsedSeconds,
-							duration,
-							effectivePlayed,
-							threshold,
-							completed,
-						})
-
-						if (!track.artist) {
-							logger.error(
-								'添加播放记录失败：track 中不包含 artist？？？',
-								track,
-							)
-							return
-						}
-						const artistResult = await artistService.findOrCreateArtist(
-							track.artist,
-						)
-						if (artistResult.isErr()) {
-							logger.error('添加播放记录失败：未找到或创建 artist 失败', {
-								remoteId: track.artist.remoteId,
-								message: flatErrorMessage(artistResult.error),
-							})
-							return
-						}
-						const trackResult = await trackService.findOrCreateTrack({
-							...track,
-							artistId: artistResult.value.id,
-						})
-						if (trackResult.isErr()) {
-							logger.error('添加播放记录失败：未找到或创建 track 失败', {
-								trackKey: track.uniqueKey,
-								message: flatErrorMessage(trackResult.error),
-							})
-							return
-						}
-						const res = await trackService.addPlayRecordFromUniqueKey(
-							trackResult.value.uniqueKey,
-							{
-								startTime: currentPlayStartAt,
-								durationPlayed: effectivePlayed,
-								completed,
-							},
-						)
-
-						if (res.isErr()) {
-							logger.debug('增加播放记录失败', {
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore._finalizeAndRecordCurrentPlay',
+							op: 'function',
+							attributes: {
 								reason,
-								trackKey: trackResult.value.uniqueKey,
-								message: flatErrorMessage(res.error),
-							})
-						}
-						logger.debug('增加播放记录成功', {
-							trackKey: trackResult.value.uniqueKey,
-							title: track.title,
-						})
+							},
+						},
+						async (span) => {
+							try {
+								const { currentPlayStartAt } = get()
+								const track = get()._getCurrentTrack()
+								logger.debug('调用 _finalizeAndRecordCurrentPlay', {
+									currentPlayStartAt,
+									reason,
+									trackTitle: track?.title,
+								})
+								if (!track || !currentPlayStartAt) return
 
-						void queryClient.invalidateQueries({
-							queryKey: trackKeys.leaderBoard(),
-						})
+								const { position, duration: realDuration } =
+									await TrackPlayer.getProgress()
+								const playedSeconds = Math.max(0, Math.floor(position))
+								// HACK: 我们直接使用 player 的真实 duration，不管数据库内的数据
+								// 但后期一定是要去给数据库内数据做修正的
+								const effectiveDuration =
+									realDuration > 0 ? realDuration : track.duration
+								// duration 可能为 0 吗？理论上不应该，但为了保险起见，最小值设为 1
+								// 否则会导致计算完成阈值时出现问题
+								const duration = Math.max(1, Math.floor(effectiveDuration))
+								const elapsedSeconds = Math.max(
+									0,
+									Math.floor((Date.now() - currentPlayStartAt) / 1000),
+								)
+								const effectivePlayed = Math.min(
+									playedSeconds,
+									elapsedSeconds,
+									duration,
+								)
+								const threshold = Math.max(
+									Math.floor(duration * 0.9),
+									duration - 2,
+								)
+								const completed = effectivePlayed >= threshold
+								span?.setAttributes({
+									'track.playedSeconds': playedSeconds,
+									'track.elapsedSeconds': elapsedSeconds,
+									'track.duration': duration,
+									'track.effectivePlayed': effectivePlayed,
+									'track.completed': completed,
+								})
+								logger.debug('完成播放标记', {
+									currentPlayStartAt,
+									reason,
+									trackTitle: track?.title,
+									playedSeconds,
+									elapsedSeconds,
+									duration,
+									effectivePlayed,
+									threshold,
+									completed,
+								})
 
-						void reportPlaybackHistory(track, effectivePlayed).catch((error) =>
-							logger.error('上报播放历史失败', error),
-						)
-					} catch (error) {
-						logger.debug('增加播放记录异常', error)
-					} finally {
-						set({ currentPlayStartAt: null })
-					}
+								if (!track.artist) {
+									logger.error(
+										'添加播放记录失败：track 中不包含 artist？？？',
+										track,
+									)
+									return
+								}
+								const artistResult = await artistService.findOrCreateArtist(
+									track.artist,
+								)
+								if (artistResult.isErr()) {
+									logger.error('添加播放记录失败：未找到或创建 artist 失败', {
+										remoteId: track.artist.remoteId,
+										message: flatErrorMessage(artistResult.error),
+									})
+									return
+								}
+								const trackResult = await trackService.findOrCreateTrack({
+									...track,
+									artistId: artistResult.value.id,
+								})
+								if (trackResult.isErr()) {
+									logger.error('添加播放记录失败：未找到或创建 track 失败', {
+										trackKey: track.uniqueKey,
+										message: flatErrorMessage(trackResult.error),
+									})
+									return
+								}
+								const res = await trackService.addPlayRecordFromUniqueKey(
+									trackResult.value.uniqueKey,
+									{
+										startTime: currentPlayStartAt,
+										durationPlayed: effectivePlayed,
+										completed,
+									},
+								)
+
+								if (res.isErr()) {
+									logger.debug('增加播放记录失败', {
+										reason,
+										trackKey: trackResult.value.uniqueKey,
+										message: flatErrorMessage(res.error),
+									})
+								}
+								logger.debug('增加播放记录成功', {
+									trackKey: trackResult.value.uniqueKey,
+									title: track.title,
+								})
+
+								void queryClient.invalidateQueries({
+									queryKey: trackKeys.leaderBoard(),
+								})
+
+								void reportPlaybackHistory(track, effectivePlayed).catch(
+									(error) => logger.error('上报播放历史失败', error),
+								)
+							} catch (error) {
+								logger.debug('增加播放记录异常', error)
+							} finally {
+								set({ currentPlayStartAt: null })
+							}
+						},
+					)
 				},
 
 				rntpQueue: async () => {
@@ -208,70 +230,80 @@ export const usePlayerStore = create<PlayerStore>()(
 				},
 
 				removeTrack: async (uniqueKey: string) => {
-					logger.debug('removeTrack()', { id: uniqueKey })
-					const { tracks, currentTrackUniqueKey: initialCurrentUniqueKey } =
-						get()
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.removeTrack',
+							op: 'function',
+						},
+						async () => {
+							logger.debug('removeTrack()', { id: uniqueKey })
+							const { tracks, currentTrackUniqueKey: initialCurrentUniqueKey } =
+								get()
 
-					const keyToRemove = Object.keys(tracks).find((key) => {
-						const track = tracks[key]
-						return track.uniqueKey === uniqueKey
-					})
+							const keyToRemove = Object.keys(tracks).find((key) => {
+								const track = tracks[key]
+								return track.uniqueKey === uniqueKey
+							})
 
-					if (!keyToRemove) {
-						toast.error('播放器异常', { description: '找不到该曲目' })
-						return
-					}
+							if (!keyToRemove) {
+								toast.error('播放器异常', { description: '找不到该曲目' })
+								return
+							}
 
-					if (initialCurrentUniqueKey !== keyToRemove) {
-						set((state) => {
-							delete state.tracks[keyToRemove]
-							const orderedIndex = state.orderedList.indexOf(keyToRemove)
-							if (orderedIndex > -1) state.orderedList.splice(orderedIndex, 1)
-							const shuffledIndex = state.shuffledList.indexOf(keyToRemove)
-							if (shuffledIndex > -1)
-								state.shuffledList.splice(shuffledIndex, 1)
-						})
-						return
-					}
+							if (initialCurrentUniqueKey !== keyToRemove) {
+								set((state) => {
+									delete state.tracks[keyToRemove]
+									const orderedIndex = state.orderedList.indexOf(keyToRemove)
+									if (orderedIndex > -1)
+										state.orderedList.splice(orderedIndex, 1)
+									const shuffledIndex = state.shuffledList.indexOf(keyToRemove)
+									if (shuffledIndex > -1)
+										state.shuffledList.splice(shuffledIndex, 1)
+								})
+								return
+							}
 
-					// 只有在删除当前正在播放的歌曲时，才需要复杂的处理
-					const activeList = get()._getActiveList()
+							// 只有在删除当前正在播放的歌曲时，才需要复杂的处理
+							const activeList = get()._getActiveList()
 
-					// 如果是最后一首歌
-					if (activeList.length === 1) {
-						await get().resetStore()
-						return
-					}
+							// 如果是最后一首歌
+							if (activeList.length === 1) {
+								await get().resetStore()
+								return
+							}
 
-					const currentIndex = activeList.indexOf(keyToRemove)
-					const isLastTrack = currentIndex === activeList.length - 1
+							const currentIndex = activeList.indexOf(keyToRemove)
+							const isLastTrack = currentIndex === activeList.length - 1
 
-					const nextIndexToPlayInOldList = isLastTrack
-						? currentIndex - 1
-						: currentIndex + 1
-					const nextTrackKeyToPlay = activeList[nextIndexToPlayInOldList]
+							const nextIndexToPlayInOldList = isLastTrack
+								? currentIndex - 1
+								: currentIndex + 1
+							const nextTrackKeyToPlay = activeList[nextIndexToPlayInOldList]
 
-					set((state) => {
-						// 删除 track 数据
-						delete state.tracks[keyToRemove]
+							set((state) => {
+								// 删除 track 数据
+								delete state.tracks[keyToRemove]
 
-						// 从顺序列表中删除
-						const orderedIndex = state.orderedList.indexOf(keyToRemove)
-						if (orderedIndex > -1) state.orderedList.splice(orderedIndex, 1)
+								// 从顺序列表中删除
+								const orderedIndex = state.orderedList.indexOf(keyToRemove)
+								if (orderedIndex > -1) state.orderedList.splice(orderedIndex, 1)
 
-						// 从随机列表中删除
-						const shuffledIndex = state.shuffledList.indexOf(keyToRemove)
-						if (shuffledIndex > -1) state.shuffledList.splice(shuffledIndex, 1)
-					})
+								// 从随机列表中删除
+								const shuffledIndex = state.shuffledList.indexOf(keyToRemove)
+								if (shuffledIndex > -1)
+									state.shuffledList.splice(shuffledIndex, 1)
+							})
 
-					const newActiveList = get()._getActiveList()
-					const finalIndexToPlay = newActiveList.indexOf(nextTrackKeyToPlay)
+							const newActiveList = get()._getActiveList()
+							const finalIndexToPlay = newActiveList.indexOf(nextTrackKeyToPlay)
 
-					if (finalIndexToPlay !== -1) {
-						await get().skipToTrack(finalIndexToPlay)
-					} else {
-						await get().resetStore()
-					}
+							if (finalIndexToPlay !== -1) {
+								await get().skipToTrack(finalIndexToPlay)
+							} else {
+								await get().resetStore()
+							}
+						},
+					)
 				},
 
 				/**
@@ -292,228 +324,281 @@ export const usePlayerStore = create<PlayerStore>()(
 					startFromKey,
 					playNext,
 				}: addToQueueParams) => {
-					if (!checkPlayerReady() || tracks.length === 0) return
-					if (clearQueue) await get().resetStore()
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.addToQueue',
+							op: 'function',
+							attributes: {
+								trackCount: tracks.length,
+								playNow,
+								clearQueue,
+								startFromKey: '***',
+								playNext,
+							},
+						},
+						async () => {
+							if (!checkPlayerReady() || tracks.length === 0) return
+							if (clearQueue) await get().resetStore()
 
-					logger.info('加入队列', {
-						count: tracks.length,
-						playNow,
-						clearQueue,
-						playNext,
-						startFromKey: startFromKey ?? null,
-					})
-
-					const existingTracks = get().tracks
-					// 找出需要新加入的 tracks
-					const newTracks = tracks.filter(
-						(track) => !existingTracks[track.uniqueKey],
-					)
-
-					// 没有新歌加入，但需要跳转播放
-					if (newTracks.length === 0) {
-						console.log('没有新歌加入，但需要跳转播放')
-						if (playNow && startFromKey) {
-							// 直接在当前播放列表中找到 key 对应的索引
-							const targetIndex = get()._getActiveList().indexOf(startFromKey)
-							if (targetIndex !== -1) {
-								await get().skipToTrack(targetIndex)
-								console.log('直接在当前播放列表中找到 key 对应的索引')
-							} else {
-								logger.warning('指定的 startFromId 在当前队列中不存在', {
-									key: startFromKey,
-								})
-							}
-						} else if (playNext) {
-							console.log('没有新歌加入，但需要跳转播放 - playNext')
-							const filteredQueue = get()
-								._getActiveList()
-								.filter((key) => !tracks.find((t) => t.uniqueKey === key))
-							const currentKey = get().currentTrackUniqueKey
-							console.log('播放列表中没有找到 key 对应的索引', {
-								currentKey: currentKey ?? '无',
-								filteredQueue: filteredQueue ?? [],
+							logger.info('加入队列', {
+								count: tracks.length,
+								playNow,
+								clearQueue,
+								playNext,
+								startFromKey: startFromKey ?? null,
 							})
-							if (filteredQueue.length > 0 && currentKey) {
-								filteredQueue.splice(
-									filteredQueue.indexOf(currentKey) + 1,
-									0,
-									...tracks.map((t) => t.uniqueKey),
-								)
-								if (get().shuffleMode) {
-									set({ shuffledList: filteredQueue })
-								} else {
-									set({ orderedList: filteredQueue })
+
+							const existingTracks = get().tracks
+							// 找出需要新加入的 tracks
+							const newTracks = tracks.filter(
+								(track) => !existingTracks[track.uniqueKey],
+							)
+
+							// 没有新歌加入，但需要跳转播放
+							if (newTracks.length === 0) {
+								console.log('没有新歌加入，但需要跳转播放')
+								if (playNow && startFromKey) {
+									// 直接在当前播放列表中找到 key 对应的索引
+									const targetIndex = get()
+										._getActiveList()
+										.indexOf(startFromKey)
+									if (targetIndex !== -1) {
+										await get().skipToTrack(targetIndex)
+										console.log('直接在当前播放列表中找到 key 对应的索引')
+									} else {
+										logger.warning('指定的 startFromId 在当前队列中不存在', {
+											key: startFromKey,
+										})
+									}
+								} else if (playNext) {
+									console.log('没有新歌加入，但需要跳转播放 - playNext')
+									const filteredQueue = get()
+										._getActiveList()
+										.filter((key) => !tracks.find((t) => t.uniqueKey === key))
+									const currentKey = get().currentTrackUniqueKey
+									console.log('播放列表中没有找到 key 对应的索引', {
+										currentKey: currentKey ?? '无',
+										filteredQueue: filteredQueue ?? [],
+									})
+									if (filteredQueue.length > 0 && currentKey) {
+										filteredQueue.splice(
+											filteredQueue.indexOf(currentKey) + 1,
+											0,
+											...tracks.map((t) => t.uniqueKey),
+										)
+										if (get().shuffleMode) {
+											set({ shuffledList: filteredQueue })
+										} else {
+											set({ orderedList: filteredQueue })
+										}
+									}
+								}
+								return
+							}
+
+							// 有新歌加入
+							const newKeys = newTracks.map((track) => String(track.uniqueKey))
+							set((state) => {
+								// 1. 把新歌数据加进去
+								newTracks.forEach((track, i) => {
+									state.tracks[newKeys[i]] = track
+								})
+
+								// 2. 计算插入位置
+								const currentKey = state.currentTrackUniqueKey
+								let orderedInsertIdx = state.orderedList.length
+								let shuffledInsertIdx = state.shuffledList.length
+								if (playNext && currentKey) {
+									orderedInsertIdx = state.orderedList.indexOf(currentKey) + 1
+									shuffledInsertIdx = state.shuffledList.indexOf(currentKey) + 1
+								}
+
+								// 3. 插入 key 列表
+								state.orderedList.splice(orderedInsertIdx, 0, ...newKeys)
+								state.shuffledList.splice(shuffledInsertIdx, 0, ...newKeys)
+
+								// 4. 决定当前播放的 key
+								if (playNow) {
+									// 默认播放新列表的第一首
+									let keyToPlay = newKeys[0]
+
+									// 如果提供了 startFromKey，并且这个 key 属于本次新添加的歌曲，则使用它
+									if (startFromKey && newKeys.includes(startFromKey)) {
+										keyToPlay = startFromKey
+									}
+									state.currentTrackUniqueKey = keyToPlay
+								} else if (
+									!state.currentTrackUniqueKey &&
+									state.orderedList.length > 0
+								) {
+									state.currentTrackUniqueKey = state.orderedList[0]
+								}
+							})
+
+							if (playNow) {
+								const keyToPlay = get().currentTrackUniqueKey
+								if (!keyToPlay) {
+									logger.error('播放器异常，无法找到当前播放的 key')
+									return
+								}
+								const indexToPlay = get()._getActiveList().indexOf(keyToPlay)
+								if (indexToPlay !== -1) {
+									await get().skipToTrack(indexToPlay)
 								}
 							}
-						}
-						return
-					}
-
-					// 有新歌加入
-					const newKeys = newTracks.map((track) => String(track.uniqueKey))
-					set((state) => {
-						// 1. 把新歌数据加进去
-						newTracks.forEach((track, i) => {
-							state.tracks[newKeys[i]] = track
-						})
-
-						// 2. 计算插入位置
-						const currentKey = state.currentTrackUniqueKey
-						let orderedInsertIdx = state.orderedList.length
-						let shuffledInsertIdx = state.shuffledList.length
-						if (playNext && currentKey) {
-							orderedInsertIdx = state.orderedList.indexOf(currentKey) + 1
-							shuffledInsertIdx = state.shuffledList.indexOf(currentKey) + 1
-						}
-
-						// 3. 插入 key 列表
-						state.orderedList.splice(orderedInsertIdx, 0, ...newKeys)
-						state.shuffledList.splice(shuffledInsertIdx, 0, ...newKeys)
-
-						// 4. 决定当前播放的 key
-						if (playNow) {
-							// 默认播放新列表的第一首
-							let keyToPlay = newKeys[0]
-
-							// 如果提供了 startFromKey，并且这个 key 属于本次新添加的歌曲，则使用它
-							if (startFromKey && newKeys.includes(startFromKey)) {
-								keyToPlay = startFromKey
-							}
-							state.currentTrackUniqueKey = keyToPlay
-						} else if (
-							!state.currentTrackUniqueKey &&
-							state.orderedList.length > 0
-						) {
-							state.currentTrackUniqueKey = state.orderedList[0]
-						}
-					})
-
-					if (playNow) {
-						const keyToPlay = get().currentTrackUniqueKey
-						if (!keyToPlay) {
-							logger.error('播放器异常，无法找到当前播放的 key')
-							return
-						}
-						const indexToPlay = get()._getActiveList().indexOf(keyToPlay)
-						if (indexToPlay !== -1) {
-							await get().skipToTrack(indexToPlay)
-						}
-					}
+						},
+					)
 				},
 
 				// 切换播放/暂停
 				togglePlay: async () => {
-					try {
-						const { isPlaying } = get()
-						const currentTrack = get()._getCurrentTrack()
-						if (!checkPlayerReady() || !currentTrack) return
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.togglePlay',
+							op: 'function',
+						},
+						async () => {
+							try {
+								const { isPlaying } = get()
+								const currentTrack = get()._getCurrentTrack()
+								if (!checkPlayerReady() || !currentTrack) return
 
-						if (!(await get().rntpQueue()).length) {
-							const currentIndex = get()._getCurrentIndex()
-							if (currentIndex !== -1) void get().skipToTrack(currentIndex)
-							return
-						}
-
-						if (isPlaying) {
-							logger.info('暂停', {
-								key: currentTrack.uniqueKey,
-								title: currentTrack.title,
-							})
-							await TrackPlayer.pause()
-						} else {
-							logger.info('播放', {
-								key: currentTrack.uniqueKey,
-								title: currentTrack.title,
-							})
-							const isExpired = checkBilibiliAudioExpiry(currentTrack)
-							if (!isExpired) {
-								await TrackPlayer.play()
-								set({ isPlaying: true })
-								return
-							}
-
-							logger.debug('音频流已过期, 正在更新...')
-							const result = await get().patchAudio(currentTrack)
-							if (result.isErr()) {
-								reportErrorToSentry(
-									result.error,
-									'更新音频流失败',
-									ProjectScope.Player,
-								)
-								return
-							}
-
-							const { needsUpdate, track } = result.value
-							if (needsUpdate) {
-								const { position } = await TrackPlayer.getProgress()
-								const rntpTrack = convertToRNTPTrack(track)
-								if (rntpTrack.isErr()) {
-									logger.error('转换为 RNTPTrack 失败', rntpTrack.error)
-									reportErrorToSentry(
-										rntpTrack.error,
-										'转换为 RNTPTrack 失败',
-										ProjectScope.Player,
-									)
+								if (!(await get().rntpQueue()).length) {
+									const currentIndex = get()._getCurrentIndex()
+									if (currentIndex !== -1) void get().skipToTrack(currentIndex)
 									return
 								}
-								await TrackPlayer.load(rntpTrack.value)
-								await get().seekTo(position)
+
+								if (isPlaying) {
+									logger.info('暂停', {
+										key: currentTrack.uniqueKey,
+										title: currentTrack.title,
+									})
+									await TrackPlayer.pause()
+								} else {
+									logger.info('播放', {
+										key: currentTrack.uniqueKey,
+										title: currentTrack.title,
+									})
+									const isExpired = checkBilibiliAudioExpiry(currentTrack)
+									if (!isExpired) {
+										await TrackPlayer.play()
+										set({ isPlaying: true })
+										return
+									}
+
+									logger.debug('音频流已过期, 正在更新...')
+									const result = await get().patchAudio(currentTrack)
+									if (result.isErr()) {
+										reportErrorToSentry(
+											result.error,
+											'更新音频流失败',
+											ProjectScope.Player,
+										)
+										return
+									}
+
+									const { needsUpdate, track } = result.value
+									if (needsUpdate) {
+										const { position } = await TrackPlayer.getProgress()
+										const rntpTrack = convertToRNTPTrack(track)
+										if (rntpTrack.isErr()) {
+											logger.error('转换为 RNTPTrack 失败', rntpTrack.error)
+											reportErrorToSentry(
+												rntpTrack.error,
+												'转换为 RNTPTrack 失败',
+												ProjectScope.Player,
+											)
+											return
+										}
+										await TrackPlayer.load(rntpTrack.value)
+										await get().seekTo(position)
+									}
+									await TrackPlayer.play()
+								}
+								set({ isPlaying: !isPlaying })
+							} catch (error) {
+								logger.error('切换播放状态失败', error)
+								reportErrorToSentry(
+									error,
+									'切换播放状态失败',
+									ProjectScope.Player,
+								)
 							}
-							await TrackPlayer.play()
-						}
-						set({ isPlaying: !isPlaying })
-					} catch (error) {
-						logger.error('切换播放状态失败', error)
-						reportErrorToSentry(error, '切换播放状态失败', ProjectScope.Player)
-					}
+						},
+					)
 				},
 
 				skipToNext: async () => {
-					const activeList = get()._getActiveList()
-					const { repeatMode, shuffleMode } = get()
-					const currentIndex = get()._getCurrentIndex()
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.skipToNext',
+							op: 'function',
+						},
+						async () => {
+							const activeList = get()._getActiveList()
+							const { repeatMode, shuffleMode } = get()
+							const currentIndex = get()._getCurrentIndex()
 
-					if (currentIndex === -1) {
-						await TrackPlayer.pause()
-						set({ isPlaying: false })
-						return
-					}
+							if (currentIndex === -1) {
+								await TrackPlayer.pause()
+								set({ isPlaying: false })
+								return
+							}
 
-					let nextIndex = currentIndex + 1
-					if (nextIndex >= activeList.length) {
-						if (repeatMode === RepeatMode.Queue) {
-							nextIndex = 0
+							let nextIndex = currentIndex + 1
+							if (nextIndex >= activeList.length) {
+								if (repeatMode === RepeatMode.Queue) {
+									nextIndex = 0
+									await get().skipToTrack(nextIndex)
+									if (shuffleMode) get().reShuffleQueue()
+									return
+								} else {
+									await TrackPlayer.pause()
+									set({ isPlaying: false })
+									return
+								}
+							}
 							await get().skipToTrack(nextIndex)
-							if (shuffleMode) get().reShuffleQueue()
-							return
-						} else {
-							await TrackPlayer.pause()
-							set({ isPlaying: false })
-							return
-						}
-					}
-					await get().skipToTrack(nextIndex)
+						},
+					)
 				},
 
 				skipToPrevious: async () => {
-					const activeList = get()._getActiveList()
-					const currentIndex = get()._getCurrentIndex()
-					if (currentIndex === -1 || activeList.length <= 1) return
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.skipToPrevious',
+							op: 'function',
+						},
+						async () => {
+							const activeList = get()._getActiveList()
+							const currentIndex = get()._getCurrentIndex()
+							if (currentIndex === -1 || activeList.length <= 1) return
 
-					const previousIndex =
-						currentIndex === 0 ? activeList.length - 1 : currentIndex - 1
-					await get().skipToTrack(previousIndex)
+							const previousIndex =
+								currentIndex === 0 ? activeList.length - 1 : currentIndex - 1
+							await get().skipToTrack(previousIndex)
+						},
+					)
 				},
 
 				seekTo: async (position: number) => {
-					if (!checkPlayerReady()) return
-					const progress = await TrackPlayer.getProgress()
-					await TrackPlayer.seekTo(position)
-					playerProgressEmitter.emitSticky('progress', {
-						position,
-						duration: progress.duration,
-						buffered: progress.buffered,
-					})
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.seekTo',
+							op: 'function',
+						},
+						async () => {
+							if (!checkPlayerReady()) return
+							const progress = await TrackPlayer.getProgress()
+							await TrackPlayer.seekTo(position)
+							playerProgressEmitter.emitSticky('progress', {
+								position,
+								duration: progress.duration,
+								buffered: progress.buffered,
+							})
+						},
+					)
 				},
 
 				toggleRepeatMode: async () => {
@@ -581,16 +666,24 @@ export const usePlayerStore = create<PlayerStore>()(
 				},
 
 				resetStore: async () => {
-					logger.debug('重置 store')
-					if (!checkPlayerReady()) return
-					await get()._finalizeAndRecordCurrentPlay('stop')
-					await TrackPlayer.reset()
-					set((state) => ({
-						...initialState,
-						repeatMode: state.repeatMode,
-						sleepTimerEndAt: state.sleepTimerEndAt,
-					}))
-					logger.info('已重置 store')
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.resetStore',
+							op: 'function',
+						},
+						async () => {
+							logger.debug('重置 store')
+							if (!checkPlayerReady()) return
+							await get()._finalizeAndRecordCurrentPlay('stop')
+							await TrackPlayer.reset()
+							set((state) => ({
+								...initialState,
+								repeatMode: state.repeatMode,
+								sleepTimerEndAt: state.sleepTimerEndAt,
+							}))
+							logger.info('已重置 store')
+						},
+					)
 				},
 
 				patchAudio: async (
@@ -601,110 +694,133 @@ export const usePlayerStore = create<PlayerStore>()(
 						BilibiliApiError | PlayerError
 					>
 				> => {
-					const result = await checkAndUpdateAudioStream(track)
-					if (result.isErr()) return err(result.error)
+					return await Sentry.startSpan(
+						{
+							name: 'PlayerStore.patchAudio',
+							op: 'function',
+						},
+						async (span) => {
+							const result = await checkAndUpdateAudioStream(track)
+							if (result.isErr()) return err(result.error)
 
-					const { track: finalTrack, needsUpdate } = result.value
-					if (needsUpdate) {
-						set((state) => {
-							state.tracks[track.uniqueKey] = finalTrack
-						})
-					}
+							const { track: finalTrack, needsUpdate } = result.value
+							span?.setAttribute('needsUpdate', needsUpdate)
+							if (needsUpdate) {
+								set((state) => {
+									state.tracks[track.uniqueKey] = finalTrack
+								})
+							}
 
-					return ok({ track: finalTrack, needsUpdate })
+							return ok({ track: finalTrack, needsUpdate })
+						},
+					)
 				},
 
 				skipToTrack: async (index: number) => {
-					const activeList = get()._getActiveList()
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.skipToTrack',
+							op: 'function',
+						},
+						async () => {
+							const activeList = get()._getActiveList()
 
-					if (!checkPlayerReady() || index < 0 || index >= activeList.length) {
-						logger.debug('skipToTrack 索引超出范围', {
-							index,
-							queueSize: activeList.length,
-						})
-						return
-					}
+							if (
+								!checkPlayerReady() ||
+								index < 0 ||
+								index >= activeList.length
+							) {
+								logger.debug('skipToTrack 索引超出范围', {
+									index,
+									queueSize: activeList.length,
+								})
+								return
+							}
 
-					const keyToPlay = activeList[index]
-					const initialTrack = get().tracks[keyToPlay]
+							const keyToPlay = activeList[index]
+							const initialTrack = get().tracks[keyToPlay]
 
-					if (!initialTrack) {
-						logger.error('未找到指定 key 的曲目', { key: keyToPlay })
-						return
-					}
+							if (!initialTrack) {
+								logger.error('未找到指定 key 的曲目', { key: keyToPlay })
+								return
+							}
 
-					logger.debug(
-						`跳转到曲目: index=${index}, key=${keyToPlay}, title=${initialTrack.title}`,
+							logger.debug(
+								`跳转到曲目: index=${index}, key=${keyToPlay}, title=${initialTrack.title}`,
+							)
+							logger.info('开始播放', {
+								index,
+								key: keyToPlay,
+								title: initialTrack.title,
+							})
+							// 先结算上一首的播放记录
+							await get()._finalizeAndRecordCurrentPlay('skip')
+							set({ currentTrackUniqueKey: keyToPlay, isBuffering: true })
+
+							// 1. 获取最新的音频流
+							const updatedTrackResult = await get().patchAudio(initialTrack)
+							if (updatedTrackResult.isErr()) {
+								if (
+									updatedTrackResult.error.message.includes(
+										'Network request failed',
+									)
+								) {
+									// 网络请求失败就不用报错了
+									toastAndLogError(
+										'播放失败: 网络请求失败',
+										updatedTrackResult.error,
+										'Player',
+									)
+									return
+								} else if (
+									updatedTrackResult.error instanceof BilibiliApiError
+								) {
+									toastAndLogError(
+										'播放失败: B 站音频流获取失败',
+										updatedTrackResult.error,
+										'Player',
+									)
+									return
+								}
+								toastAndLogError(
+									'更新音频流失败',
+									updatedTrackResult.error,
+									'Player',
+								)
+								reportErrorToSentry(
+									updatedTrackResult.error,
+									'更新音频流失败',
+									ProjectScope.Player,
+								)
+								await TrackPlayer.pause()
+								return
+							}
+
+							// 2. 使用最终的、最新的 track 对象进行播放
+							const finalTrack = updatedTrackResult.value.track
+
+							const rntpTrackResult = convertToRNTPTrack(finalTrack)
+							if (rntpTrackResult.isErr()) {
+								logger.error('转换为 RNTPTrack 失败', rntpTrackResult.error)
+								reportErrorToSentry(
+									rntpTrackResult.error,
+									'转换为 RNTPTrack 失败',
+									ProjectScope.Player,
+								)
+								return
+							}
+
+							await TrackPlayer.load(rntpTrackResult.value)
+							await TrackPlayer.play()
+
+							set({
+								currentTrackUniqueKey: String(finalTrack.uniqueKey),
+								isPlaying: true,
+								isBuffering: false,
+								currentPlayStartAt: Date.now(),
+							})
+						},
 					)
-					logger.info('开始播放', {
-						index,
-						key: keyToPlay,
-						title: initialTrack.title,
-					})
-					// 先结算上一首的播放记录
-					await get()._finalizeAndRecordCurrentPlay('skip')
-					set({ currentTrackUniqueKey: keyToPlay, isBuffering: true })
-
-					// 1. 获取最新的音频流
-					const updatedTrackResult = await get().patchAudio(initialTrack)
-					if (updatedTrackResult.isErr()) {
-						if (
-							updatedTrackResult.error.message.includes(
-								'Network request failed',
-							)
-						) {
-							// 网络请求失败就不用报错了
-							toastAndLogError(
-								'播放失败: 网络请求失败',
-								updatedTrackResult.error,
-								'Player',
-							)
-							return
-						} else if (updatedTrackResult.error instanceof BilibiliApiError) {
-							toastAndLogError(
-								'播放失败: B 站音频流获取失败',
-								updatedTrackResult.error,
-								'Player',
-							)
-							return
-						}
-						toastAndLogError(
-							'更新音频流失败',
-							updatedTrackResult.error,
-							'Player',
-						)
-						reportErrorToSentry(
-							updatedTrackResult.error,
-							'更新音频流失败',
-							ProjectScope.Player,
-						)
-						await TrackPlayer.pause()
-						return
-					}
-
-					// 2. 使用最终的、最新的 track 对象进行播放
-					const finalTrack = updatedTrackResult.value.track
-
-					const rntpTrackResult = convertToRNTPTrack(finalTrack)
-					if (rntpTrackResult.isErr()) {
-						logger.error('转换为 RNTPTrack 失败', rntpTrackResult.error)
-						reportErrorToSentry(
-							rntpTrackResult.error,
-							'转换为 RNTPTrack 失败',
-							ProjectScope.Player,
-						)
-						return
-					}
-
-					await TrackPlayer.load(rntpTrackResult.value)
-					await TrackPlayer.play()
-
-					set({
-						currentTrackUniqueKey: String(finalTrack.uniqueKey),
-						isPlaying: true,
-						isBuffering: false,
-						currentPlayStartAt: Date.now(),
-					})
 				},
 
 				updateDownloadStatus: (
