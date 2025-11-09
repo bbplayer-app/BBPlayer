@@ -115,96 +115,85 @@ export class TrackService {
 	private _createTrack(
 		payload: CreateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService._createTrack',
-				op: 'function',
-				attributes: {
-					'track.source': payload.source,
-				},
-			},
-			() => {
-				// validate
-				if (payload.source === 'bilibili' && !payload.bilibiliMetadata) {
-					return errAsync(
-						createValidationError(
-							'当 source 为 bilibili 时，bilibiliMetadata 不能为空。',
-						),
-					)
-				}
-				if (payload.source === 'local' && !payload.localMetadata) {
-					return errAsync(
-						createValidationError(
-							'当 source 为 local 时，localMetadata 不能为空。',
-						),
-					)
-				}
+		// validate
+		if (payload.source === 'bilibili' && !payload.bilibiliMetadata) {
+			return errAsync(
+				createValidationError(
+					'当 source 为 bilibili 时，bilibiliMetadata 不能为空。',
+				),
+			)
+		}
+		if (payload.source === 'local' && !payload.localMetadata) {
+			return errAsync(
+				createValidationError(
+					'当 source 为 local 时，localMetadata 不能为空。',
+				),
+			)
+		}
 
-				const uniqueKey = generateUniqueTrackKey(payload)
-				if (uniqueKey.isErr()) {
-					return errAsync(uniqueKey.error)
-				}
+		const uniqueKey = generateUniqueTrackKey(payload)
+		if (uniqueKey.isErr()) {
+			return errAsync(uniqueKey.error)
+		}
 
-				const transactionResult = ResultAsync.fromPromise(
-					(async () => {
-						// 创建 track
-						const [newTrack] = await Sentry.startSpan(
-							{ name: 'db:insert:track', op: 'db' },
-							() =>
-								this.db
-									.insert(schema.tracks)
-									.values({
-										title: payload.title,
-										source: payload.source,
-										artistId: payload.artistId,
-										coverUrl: payload.coverUrl,
-										duration: payload.duration,
-										uniqueKey: uniqueKey.value,
-									})
-									.returning({ id: schema.tracks.id }),
-						)
-
-						const trackId = newTrack.id
-
-						// 创建元数据
-						if (payload.source === 'bilibili') {
-							await Sentry.startSpan(
-								{ name: 'db:insert:bilibiliMetadata', op: 'db' },
-								() =>
-									this.db.insert(schema.bilibiliMetadata).values({
-										trackId,
-										bvid: payload.bilibiliMetadata.bvid,
-										cid: payload.bilibiliMetadata.cid,
-										isMultiPage: payload.bilibiliMetadata.isMultiPage,
-										mainTrackTitle: payload.bilibiliMetadata.mainTrackTitle,
-										videoIsValid: payload.bilibiliMetadata.videoIsValid,
-									} satisfies BilibiliMetadataPayload & {
-										trackId: number
-									}),
-							)
-						} else if (payload.source === 'local') {
-							await Sentry.startSpan(
-								{ name: 'db:insert:localMetadata', op: 'db' },
-								() =>
-									this.db.insert(schema.localMetadata).values({
-										trackId,
-										localPath: payload.localMetadata.localPath,
-									}),
-							)
-						}
-
-						return trackId
-					})(),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('创建 track 事务失败', { cause: e }),
+		const transactionResult = ResultAsync.fromPromise(
+			(async () => {
+				// 创建 track
+				const [newTrack] = await Sentry.startSpan(
+					{ name: 'db:insert:track', op: 'db' },
+					() =>
+						this.db
+							.insert(schema.tracks)
+							.values({
+								title: payload.title,
+								source: payload.source,
+								artistId: payload.artistId,
+								coverUrl: payload.coverUrl,
+								duration: payload.duration,
+								uniqueKey: uniqueKey.value,
+							})
+							.returning({ id: schema.tracks.id }),
 				)
 
-				return transactionResult.andThen((newTrackId) =>
-					this.getTrackById(newTrackId),
-				)
-			},
+				const trackId = newTrack.id
+
+				// 创建元数据
+				if (payload.source === 'bilibili') {
+					await Sentry.startSpan(
+						{ name: 'db:insert:bilibiliMetadata', op: 'db' },
+						() =>
+							this.db.insert(schema.bilibiliMetadata).values({
+								trackId,
+								bvid: payload.bilibiliMetadata.bvid,
+								cid: payload.bilibiliMetadata.cid,
+								isMultiPage: payload.bilibiliMetadata.isMultiPage,
+								mainTrackTitle: payload.bilibiliMetadata.mainTrackTitle,
+								videoIsValid: payload.bilibiliMetadata.videoIsValid,
+							} satisfies BilibiliMetadataPayload & {
+								trackId: number
+							}),
+					)
+				} else if (payload.source === 'local') {
+					await Sentry.startSpan(
+						{ name: 'db:insert:localMetadata', op: 'db' },
+						() =>
+							this.db.insert(schema.localMetadata).values({
+								trackId,
+								localPath: payload.localMetadata.localPath,
+							}),
+					)
+				}
+
+				return trackId
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('创建 track 事务失败', { cause: e }),
+		)
+
+		return transactionResult.andThen((newTrackId) =>
+			this.getTrackById(newTrackId),
 		)
 	}
 
@@ -216,35 +205,27 @@ export class TrackService {
 	public updateTrack(
 		payload: UpdateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.updateTrack',
-				op: 'function',
-			},
-			() => {
-				const { id, ...dataToUpdate } = payload
+		const { id, ...dataToUpdate } = payload
 
-				const updateResult = ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:update:track', op: 'db' }, () =>
-						this.db
-							.update(schema.tracks)
-							.set({
-								title: dataToUpdate.title ?? undefined,
-								artistId: dataToUpdate.artistId,
-								coverUrl: dataToUpdate.coverUrl,
-								duration: dataToUpdate.duration,
-							} satisfies Omit<UpdateTrackPayloadBase, 'id'>)
-							.where(eq(schema.tracks.id, id)),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError(`更新 track 失败：${id}`, { cause: e }),
-				)
-
-				return updateResult.andThen(() => this.getTrackById(id))
-			},
+		const updateResult = ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:update:track', op: 'db' }, () =>
+				this.db
+					.update(schema.tracks)
+					.set({
+						title: dataToUpdate.title ?? undefined,
+						artistId: dataToUpdate.artistId,
+						coverUrl: dataToUpdate.coverUrl,
+						duration: dataToUpdate.duration,
+					} satisfies Omit<UpdateTrackPayloadBase, 'id'>)
+					.where(eq(schema.tracks.id, id)),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`更新 track 失败：${id}`, { cause: e }),
 		)
+
+		return updateResult.andThen(() => this.getTrackById(id))
 	}
 
 	/**
@@ -255,38 +236,30 @@ export class TrackService {
 	public getTrackById(
 		id: number,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.getTrackById',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
-						this.db.query.tracks.findFirst({
-							where: eq(schema.tracks.id, id),
-							columns: { playHistory: false },
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
-								trackDownloads: true,
-							},
-						}),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError(`查找 track 失败：${id}`, { cause: e }),
-				).andThen((dbTrack) => {
-					const result = this.formatTrack(dbTrack)
-					if (!result) {
-						return errAsync(createTrackNotFound(id))
-					}
-					return okAsync(result)
-				})
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+				this.db.query.tracks.findFirst({
+					where: eq(schema.tracks.id, id),
+					columns: { playHistory: false },
+					with: {
+						artist: true,
+						bilibiliMetadata: true,
+						localMetadata: true,
+						trackDownloads: true,
+					},
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`查找 track 失败：${id}`, { cause: e }),
+		).andThen((dbTrack) => {
+			const result = this.formatTrack(dbTrack)
+			if (!result) {
+				return errAsync(createTrackNotFound(id))
+			}
+			return okAsync(result)
+		})
 	}
 
 	/**
@@ -297,32 +270,24 @@ export class TrackService {
 	public deleteTrack(
 		id: number,
 	): ResultAsync<{ deletedId: number }, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.deleteTrack',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:delete:track', op: 'db' }, () =>
-						this.db
-							.delete(schema.tracks)
-							.where(eq(schema.tracks.id, id))
-							.returning({ deletedId: schema.tracks.id }),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError(`删除 track 失败：${id}`, { cause: e }),
-				).andThen((results) => {
-					const result = results[0]
-					if (!result) {
-						return errAsync(createTrackNotFound(id))
-					}
-					return okAsync(result)
-				})
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:delete:track', op: 'db' }, () =>
+				this.db
+					.delete(schema.tracks)
+					.where(eq(schema.tracks.id, id))
+					.returning({ deletedId: schema.tracks.id }),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`删除 track 失败：${id}`, { cause: e }),
+		).andThen((results) => {
+			const result = results[0]
+			if (!result) {
+				return errAsync(createTrackNotFound(id))
+			}
+			return okAsync(result)
+		})
 	}
 
 	/**
@@ -335,41 +300,33 @@ export class TrackService {
 		trackId: number,
 		record: PlayRecord,
 	): ResultAsync<true, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.addPlayRecordFromTrackId',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					(async () => {
-						const recordJson = JSON.stringify(record)
+		return ResultAsync.fromPromise(
+			(async () => {
+				const recordJson = JSON.stringify(record)
 
-						await Sentry.startSpan(
-							{ name: 'db:update:track:playHistory', op: 'db' },
-							() =>
-								this.db
-									.update(schema.tracks)
-									.set({
-										playHistory: sql`json_insert(
+				await Sentry.startSpan(
+					{ name: 'db:update:track:playHistory', op: 'db' },
+					() =>
+						this.db
+							.update(schema.tracks)
+							.set({
+								playHistory: sql`json_insert(
               play_history,
               '$[#]',
               json(${recordJson})
             )`,
-									})
-									.where(eq(schema.tracks.id, trackId)),
-						)
-
-						return true as const
-					})(),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError(`增加播放记录失败：${trackId}`, {
-									cause: e,
-								}),
+							})
+							.where(eq(schema.tracks.id, trackId)),
 				)
-			},
+
+				return true as const
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`增加播放记录失败：${trackId}`, {
+							cause: e,
+						}),
 		)
 	}
 
@@ -377,35 +334,27 @@ export class TrackService {
 		uniqueKey: string,
 		record: PlayRecord,
 	): ResultAsync<true, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.addPlayRecordFromUniqueKey',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					(async () => {
-						const track = await this.findTrackIdsByUniqueKeys([uniqueKey])
-						if (track.isErr()) {
-							throw track.error
-						}
-						const trackId = track.value.get(uniqueKey)
-						if (!trackId) {
-							throw createTrackNotFound(uniqueKey)
-						}
+		return ResultAsync.fromPromise(
+			(async () => {
+				const track = await this.findTrackIdsByUniqueKeys([uniqueKey])
+				if (track.isErr()) {
+					throw track.error
+				}
+				const trackId = track.value.get(uniqueKey)
+				if (!trackId) {
+					throw createTrackNotFound(uniqueKey)
+				}
 
-						await this.addPlayRecordFromTrackId(trackId, record)
+				await this.addPlayRecordFromTrackId(trackId, record)
 
-						return true as const
-					})(),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError(`增加播放记录失败：${uniqueKey}`, {
-									cause: e,
-								}),
-				)
-			},
+				return true as const
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`增加播放记录失败：${uniqueKey}`, {
+							cause: e,
+						}),
 		)
 	}
 
@@ -417,58 +366,48 @@ export class TrackService {
 	public getTrackByBilibiliMetadata(
 		bilibiliMetadata: BilibiliMetadataPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.getTrackByBilibiliMetadata',
-				op: 'function',
-			},
-			() => {
-				const identifier = generateUniqueTrackKey({
-					source: 'bilibili',
-					bilibiliMetadata: bilibiliMetadata,
-				})
-				if (identifier.isErr()) {
-					return errAsync(identifier.error)
-				}
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
-						this.db.query.tracks.findFirst({
-							where: (track, { eq }) => eq(track.uniqueKey, identifier.value),
-							columns: { playHistory: false },
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
-								trackDownloads: true,
-							},
+		const identifier = generateUniqueTrackKey({
+			source: 'bilibili',
+			bilibiliMetadata: bilibiliMetadata,
+		})
+		if (identifier.isErr()) {
+			return errAsync(identifier.error)
+		}
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+				this.db.query.tracks.findFirst({
+					where: (track, { eq }) => eq(track.uniqueKey, identifier.value),
+					columns: { playHistory: false },
+					with: {
+						artist: true,
+						bilibiliMetadata: true,
+						localMetadata: true,
+						trackDownloads: true,
+					},
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('根据 Bilibili 元数据查找 track 失败', {
+							cause: e,
 						}),
+		).andThen((track) => {
+			if (!track) {
+				return errAsync(createTrackNotFound(`uniqueKey=${identifier.value}`))
+			}
+
+			const formattedTrack = this.formatTrack(track)
+			if (!formattedTrack) {
+				return errAsync(
+					createValidationError(
+						`根据 Bilibili 元数据查找 track 失败：元数据不匹配。`,
 					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('根据 Bilibili 元数据查找 track 失败', {
-									cause: e,
-								}),
-				).andThen((track) => {
-					if (!track) {
-						return errAsync(
-							createTrackNotFound(`uniqueKey=${identifier.value}`),
-						)
-					}
+				)
+			}
 
-					const formattedTrack = this.formatTrack(track)
-					if (!formattedTrack) {
-						return errAsync(
-							createValidationError(
-								`根据 Bilibili 元数据查找 track 失败：元数据不匹配。`,
-							),
-						)
-					}
-
-					return okAsync(formattedTrack)
-				})
-			},
-		)
+			return okAsync(formattedTrack)
+		})
 	}
 
 	/**
@@ -480,68 +419,52 @@ export class TrackService {
 	public findOrCreateTrack(
 		payload: CreateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.findOrCreateTrack',
-				op: 'function',
-				attributes: {
-					'track.source': payload.source,
-				},
-			},
-			(span) => {
-				const uniqueKeyResult = generateUniqueTrackKey(payload)
-				if (uniqueKeyResult.isErr()) {
-					return errAsync(uniqueKeyResult.error)
-				}
-				const uniqueKey = uniqueKeyResult.value
+		const uniqueKeyResult = generateUniqueTrackKey(payload)
+		if (uniqueKeyResult.isErr()) {
+			return errAsync(uniqueKeyResult.error)
+		}
+		const uniqueKey = uniqueKeyResult.value
 
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
-						this.db.query.tracks.findFirst({
-							where: (track, { eq }) => eq(track.uniqueKey, uniqueKey),
-							columns: { playHistory: false },
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
-								trackDownloads: true,
-							},
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+				this.db.query.tracks.findFirst({
+					where: (track, { eq }) => eq(track.uniqueKey, uniqueKey),
+					columns: { playHistory: false },
+					with: {
+						artist: true,
+						bilibiliMetadata: true,
+						localMetadata: true,
+						trackDownloads: true,
+					},
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('根据 uniqueKey 查找 track 失败', {
+							cause: e,
 						}),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('根据 uniqueKey 查找 track 失败', {
-									cause: e,
-								}),
-				)
-					.andThen((dbTrack) => {
-						if (dbTrack) {
-							span?.setAttribute('cache.hit', true)
-							const formattedTrack = this.formatTrack(dbTrack)
-							if (formattedTrack) {
-								return okAsync(formattedTrack)
-							}
-							return errAsync(
-								createValidationError(
-									`已存在的 track ${dbTrack.id} source 与 metadata 不匹配`,
-								),
-							)
-						}
-						span?.setAttribute('cache.hit', false)
-						return errAsync(createTrackNotFound(uniqueKey))
-					})
-					.orElse((error) => {
-						if (
-							error instanceof ServiceError &&
-							error.type === 'TrackNotFound'
-						) {
-							return this._createTrack(payload)
-						}
-						return errAsync(error)
-					})
-			},
 		)
+			.andThen((dbTrack) => {
+				if (dbTrack) {
+					const formattedTrack = this.formatTrack(dbTrack)
+					if (formattedTrack) {
+						return okAsync(formattedTrack)
+					}
+					return errAsync(
+						createValidationError(
+							`已存在的 track ${dbTrack.id} source 与 metadata 不匹配`,
+						),
+					)
+				}
+				return errAsync(createTrackNotFound(uniqueKey))
+			})
+			.orElse((error) => {
+				if (error instanceof ServiceError && error.type === 'TrackNotFound') {
+					return this._createTrack(payload)
+				}
+				return errAsync(error)
+			})
 	}
 
 	/**
@@ -555,146 +478,130 @@ export class TrackService {
 		payloads: CreateTrackPayload[],
 		source: Track['source'],
 	): ResultAsync<Map<string, number>, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.findOrCreateManyTracks',
-				op: 'function',
-				attributes: {
-					source,
-					payloadCount: payloads.length,
-				},
-			},
-			(span) => {
-				if (payloads.length === 0) {
-					return okAsync(new Map<string, number>())
-				}
+		if (payloads.length === 0) {
+			return okAsync(new Map<string, number>())
+		}
 
-				const processedPayloadsResult = Result.combine(
-					payloads.map((p) => {
-						if (p.source !== source)
-							return err(createValidationError('source 不一致'))
-						return generateUniqueTrackKey(p).map((uniqueKey) => ({
-							uniqueKey,
-							payload: p,
-						}))
-					}),
+		const processedPayloadsResult = Result.combine(
+			payloads.map((p) => {
+				if (p.source !== source)
+					return err(createValidationError('source 不一致'))
+				return generateUniqueTrackKey(p).map((uniqueKey) => ({
+					uniqueKey,
+					payload: p,
+				}))
+			}),
+		)
+
+		if (processedPayloadsResult.isErr()) {
+			return errAsync(processedPayloadsResult.error)
+		}
+
+		const processedPayloads = processedPayloadsResult.value
+		const uniqueKeys = processedPayloads.map((p) => p.uniqueKey)
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				const trackValuesToInsert = processedPayloads.map(
+					({ uniqueKey, payload }) =>
+						({
+							title: payload.title,
+							artistId: payload.artistId,
+							coverUrl: payload.coverUrl,
+							duration: payload.duration,
+							uniqueKey: uniqueKey,
+							source: payload.source,
+						}) satisfies CreateTrackPayloadBase & {
+							uniqueKey: string
+							source: string
+						},
 				)
 
-				if (processedPayloadsResult.isErr()) {
-					return errAsync(processedPayloadsResult.error)
+				if (trackValuesToInsert.length > 0) {
+					await Sentry.startSpan(
+						{ name: 'db:insert:many:tracks', op: 'db' },
+						() =>
+							this.db
+								.insert(schema.tracks)
+								.values(trackValuesToInsert)
+								.onConflictDoNothing(),
+					)
 				}
 
-				const processedPayloads = processedPayloadsResult.value
-				const uniqueKeys = processedPayloads.map((p) => p.uniqueKey)
+				const allTracks = await Sentry.startSpan(
+					{ name: 'db:query:many:tracks', op: 'db' },
+					() =>
+						this.db.query.tracks.findMany({
+							where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
+							columns: {
+								id: true,
+								uniqueKey: true,
+							},
+						}),
+				)
 
-				return ResultAsync.fromPromise(
-					(async () => {
-						const trackValuesToInsert = processedPayloads.map(
-							({ uniqueKey, payload }) =>
-								({
-									title: payload.title,
-									artistId: payload.artistId,
-									coverUrl: payload.coverUrl,
-									duration: payload.duration,
-									uniqueKey: uniqueKey,
-									source: payload.source,
-								}) satisfies CreateTrackPayloadBase & {
-									uniqueKey: string
-									source: string
-								},
+				const finalUniqueKeyToIdMap = new Map(
+					allTracks.map((t) => [t.uniqueKey, t.id]),
+				)
+
+				if (finalUniqueKeyToIdMap.size !== uniqueKeys.length) {
+					throw new DatabaseError(
+						'创建或查找 tracks 后数据不一致，部分 track 未能成功写入或查询。',
+					)
+				}
+
+				switch (source) {
+					case 'bilibili': {
+						const bilibiliMetadataValues = processedPayloads.map(
+							({ uniqueKey, payload }) => {
+								const trackId = finalUniqueKeyToIdMap.get(uniqueKey)
+								if (!trackId) {
+									throw new ServiceError(
+										`该错误不应该出现，无法为 ${uniqueKey} 找到 trackId`,
+									)
+								}
+								return {
+									trackId,
+									...(payload as CreateBilibiliTrackPayload).bilibiliMetadata,
+								}
+							},
 						)
 
-						if (trackValuesToInsert.length > 0) {
+						if (bilibiliMetadataValues.length > 0) {
 							await Sentry.startSpan(
-								{ name: 'db:insert:many:tracks', op: 'db' },
+								{
+									name: 'db:insert:many:bilibiliMetadata',
+									op: 'db',
+								},
 								() =>
 									this.db
-										.insert(schema.tracks)
-										.values(trackValuesToInsert)
+										.insert(schema.bilibiliMetadata)
+										.values(bilibiliMetadataValues)
 										.onConflictDoNothing(),
 							)
 						}
+						break
+					}
+					case 'local': {
+						throw createNotImplementedError('处理 local source 的逻辑尚未实现')
+					}
+				}
 
-						const allTracks = await Sentry.startSpan(
-							{ name: 'db:query:many:tracks', op: 'db' },
-							() =>
-								this.db.query.tracks.findMany({
-									where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
-									columns: {
-										id: true,
-										uniqueKey: true,
-									},
-								}),
-						)
-						span?.setAttribute('found.count', allTracks.length)
+				const orderedMap = new Map<string, number>()
 
-						const finalUniqueKeyToIdMap = new Map(
-							allTracks.map((t) => [t.uniqueKey, t.id]),
-						)
+				for (const uniqueKey of uniqueKeys) {
+					// 前面做过一致性检查了，这里不可能不存在
+					orderedMap.set(uniqueKey, finalUniqueKeyToIdMap.get(uniqueKey)!)
+				}
 
-						if (finalUniqueKeyToIdMap.size !== uniqueKeys.length) {
-							throw new DatabaseError(
-								'创建或查找 tracks 后数据不一致，部分 track 未能成功写入或查询。',
-							)
-						}
-
-						switch (source) {
-							case 'bilibili': {
-								const bilibiliMetadataValues = processedPayloads.map(
-									({ uniqueKey, payload }) => {
-										const trackId = finalUniqueKeyToIdMap.get(uniqueKey)
-										if (!trackId) {
-											throw new ServiceError(
-												`该错误不应该出现，无法为 ${uniqueKey} 找到 trackId`,
-											)
-										}
-										return {
-											trackId,
-											...(payload as CreateBilibiliTrackPayload)
-												.bilibiliMetadata,
-										}
-									},
-								)
-
-								if (bilibiliMetadataValues.length > 0) {
-									await Sentry.startSpan(
-										{
-											name: 'db:insert:many:bilibiliMetadata',
-											op: 'db',
-										},
-										() =>
-											this.db
-												.insert(schema.bilibiliMetadata)
-												.values(bilibiliMetadataValues)
-												.onConflictDoNothing(),
-									)
-								}
-								break
-							}
-							case 'local': {
-								throw createNotImplementedError(
-									'处理 local source 的逻辑尚未实现',
-								)
-							}
-						}
-
-						const orderedMap = new Map<string, number>()
-
-						for (const uniqueKey of uniqueKeys) {
-							// 前面做过一致性检查了，这里不可能不存在
-							orderedMap.set(uniqueKey, finalUniqueKeyToIdMap.get(uniqueKey)!)
-						}
-
-						return orderedMap
-					})(),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('批量查找或创建 tracks 失败', {
-									cause: e,
-								}),
-				)
-			},
+				return orderedMap
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('批量查找或创建 tracks 失败', {
+							cause: e,
+						}),
 		)
 	}
 
@@ -706,42 +613,30 @@ export class TrackService {
 	public findTrackIdsByUniqueKeys(
 		uniqueKeys: string[],
 	): ResultAsync<Map<string, number>, DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.findTrackIdsByUniqueKeys',
-				op: 'function',
-				attributes: {
-					keyCount: uniqueKeys.length,
-				},
-			},
-			(span) => {
-				if (uniqueKeys.length === 0) {
-					return okAsync(new Map<string, number>())
-				}
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:many:tracks', op: 'db' }, () =>
-						this.db.query.tracks.findMany({
-							where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
-							columns: {
-								id: true,
-								uniqueKey: true,
-							},
-						}),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('批量查找 tracks 失败', { cause: e }),
-				).andThen((existingTracks) => {
-					span?.setAttribute('found.count', existingTracks.length)
-					const uniqueKeyToIdMap = new Map<string, number>()
-					for (const track of existingTracks) {
-						uniqueKeyToIdMap.set(track.uniqueKey, track.id)
-					}
-					return okAsync(uniqueKeyToIdMap)
-				})
-			},
-		)
+		if (uniqueKeys.length === 0) {
+			return okAsync(new Map<string, number>())
+		}
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:many:tracks', op: 'db' }, () =>
+				this.db.query.tracks.findMany({
+					where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
+					columns: {
+						id: true,
+						uniqueKey: true,
+					},
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('批量查找 tracks 失败', { cause: e }),
+		).andThen((existingTracks) => {
+			const uniqueKeyToIdMap = new Map<string, number>()
+			for (const track of existingTracks) {
+				uniqueKeyToIdMap.set(track.uniqueKey, track.id)
+			}
+			return okAsync(uniqueKeyToIdMap)
+		})
 	}
 
 	/**
@@ -773,105 +668,90 @@ export class TrackService {
 		},
 		DatabaseError | ServiceError
 	> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.getPlayCountLeaderBoardPaginated',
-				op: 'function',
-				attributes: {
-					limit: options.limit,
-					onlyCompleted: options.onlyCompleted,
-				},
-			},
-			(span) => {
-				const { limit, onlyCompleted = true, cursor, initialLimit } = options
+		const { limit, onlyCompleted = true, cursor, initialLimit } = options
 
-				const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
-				span?.setAttribute('effectiveLimit', effectiveLimit)
+		const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
 
-				const playCountSql = onlyCompleted
-					? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
-					: sql<number>`json_array_length(${schema.tracks.playHistory})`
+		const playCountSql = onlyCompleted
+			? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
+			: sql<number>`json_array_length(${schema.tracks.playHistory})`
 
-				const whereConditions: (SQL | undefined)[] = [gt(playCountSql, 0)]
+		const whereConditions: (SQL | undefined)[] = [gt(playCountSql, 0)]
 
-				if (cursor) {
-					const cursorUpdatedAt = new Date(cursor.lastUpdatedAt)
-					whereConditions.push(
+		if (cursor) {
+			const cursorUpdatedAt = new Date(cursor.lastUpdatedAt)
+			whereConditions.push(
+				or(
+					lt(playCountSql, cursor.lastPlayCount),
+					and(
+						eq(playCountSql, cursor.lastPlayCount),
 						or(
-							lt(playCountSql, cursor.lastPlayCount),
+							lt(schema.tracks.updatedAt, cursorUpdatedAt),
 							and(
-								eq(playCountSql, cursor.lastPlayCount),
-								or(
-									lt(schema.tracks.updatedAt, cursorUpdatedAt),
-									and(
-										eq(schema.tracks.updatedAt, cursorUpdatedAt),
-										lt(schema.tracks.id, cursor.lastId),
-									),
-								),
+								eq(schema.tracks.updatedAt, cursorUpdatedAt),
+								lt(schema.tracks.id, cursor.lastId),
 							),
 						),
-					)
-				}
+					),
+				),
+			)
+		}
 
-				const leaderboardQuery = Sentry.startSpan(
-					{ name: 'db:query:leaderboard', op: 'db' },
-					() =>
-						this.db.query.tracks.findMany({
-							columns: { playHistory: false },
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
-								trackDownloads: true,
-							},
-							extras: {
-								playCount: playCountSql.mapWith(Number).as('play_count'),
-							},
-							where: and(...whereConditions),
-							orderBy: [
-								desc(playCountSql),
-								desc(schema.tracks.updatedAt),
-								desc(schema.tracks.id),
-							],
-							limit: effectiveLimit + 1,
-						}),
-				)
-
-				return ResultAsync.fromPromise(
-					leaderboardQuery,
-					(e) => new DatabaseError('获取播放次数排行榜失败', { cause: e }),
-				).andThen((rows) => {
-					const hasNextPage = rows.length > effectiveLimit
-					const resultItems = hasNextPage ? rows.slice(0, effectiveLimit) : rows
-					span?.setAttribute('hasNextPage', hasNextPage)
-					span?.setAttribute('itemCount', resultItems.length)
-
-					const items: { track: Track; playCount: number }[] = []
-					for (const row of resultItems) {
-						const track = this.formatTrack(row)
-						if (!track) continue
-						items.push({ track, playCount: row.playCount })
-					}
-
-					let nextCursor
-					if (hasNextPage) {
-						const lastRow = resultItems[resultItems.length - 1]
-						if (lastRow) {
-							nextCursor = {
-								lastPlayCount: lastRow.playCount,
-								lastUpdatedAt: lastRow.updatedAt.getTime(),
-								lastId: lastRow.id,
-							}
-						}
-					}
-
-					return okAsync({
-						items: items,
-						nextCursor,
-					})
-				})
-			},
+		const leaderboardQuery = Sentry.startSpan(
+			{ name: 'db:query:leaderboard', op: 'db' },
+			() =>
+				this.db.query.tracks.findMany({
+					columns: { playHistory: false },
+					with: {
+						artist: true,
+						bilibiliMetadata: true,
+						localMetadata: true,
+						trackDownloads: true,
+					},
+					extras: {
+						playCount: playCountSql.mapWith(Number).as('play_count'),
+					},
+					where: and(...whereConditions),
+					orderBy: [
+						desc(playCountSql),
+						desc(schema.tracks.updatedAt),
+						desc(schema.tracks.id),
+					],
+					limit: effectiveLimit + 1,
+				}),
 		)
+
+		return ResultAsync.fromPromise(
+			leaderboardQuery,
+			(e) => new DatabaseError('获取播放次数排行榜失败', { cause: e }),
+		).andThen((rows) => {
+			const hasNextPage = rows.length > effectiveLimit
+			const resultItems = hasNextPage ? rows.slice(0, effectiveLimit) : rows
+
+			const items: { track: Track; playCount: number }[] = []
+			for (const row of resultItems) {
+				const track = this.formatTrack(row)
+				if (!track) continue
+				items.push({ track, playCount: row.playCount })
+			}
+
+			let nextCursor
+			if (hasNextPage) {
+				const lastRow = resultItems[resultItems.length - 1]
+				if (lastRow) {
+					nextCursor = {
+						lastPlayCount: lastRow.playCount,
+						lastUpdatedAt: lastRow.updatedAt.getTime(),
+						lastId: lastRow.id,
+					}
+				}
+			}
+
+			return okAsync({
+				items: items,
+				nextCursor,
+			})
+		})
 	}
 
 	/**
@@ -884,83 +764,64 @@ export class TrackService {
 	public getTotalPlaybackDuration(options?: {
 		onlyCompleted?: boolean
 	}): ResultAsync<number, DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.getTotalPlaybackDuration',
-				op: 'function',
-				attributes: {
-					onlyCompleted: options?.onlyCompleted,
-				},
-			},
-			() => {
-				const onlyCompleted = options?.onlyCompleted ?? true
+		const onlyCompleted = options?.onlyCompleted ?? true
 
-				let totalDurationSql
+		let totalDurationSql
 
-				if (onlyCompleted) {
-					const playCountSql = sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
-					totalDurationSql = sql`sum(${schema.tracks.duration} * ${playCountSql})`
-				} else {
-					const durationPlayedSumPerTrack = sql`(select sum(cast(json_extract(value, '$.durationPlayed') as real)) from json_each(${schema.tracks.playHistory}))`
-					totalDurationSql = sql`sum(${durationPlayedSumPerTrack})`
-				}
+		if (onlyCompleted) {
+			const playCountSql = sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
+			totalDurationSql = sql`sum(${schema.tracks.duration} * ${playCountSql})`
+		} else {
+			const durationPlayedSumPerTrack = sql`(select sum(cast(json_extract(value, '$.durationPlayed') as real)) from json_each(${schema.tracks.playHistory}))`
+			totalDurationSql = sql`sum(${durationPlayedSumPerTrack})`
+		}
 
-				return ResultAsync.fromPromise(
-					Sentry.startSpan(
-						{ name: 'db:query:totalPlaybackDuration', op: 'db' },
-						() =>
-							this.db
-								.select({
-									totalDuration: totalDurationSql.mapWith(Number),
-								})
-								.from(schema.tracks),
-					),
-					(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
-				).andThen((rows) => {
-					const totalDuration = rows[0]?.totalDuration
-					return okAsync(totalDuration ?? 0)
-				})
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan(
+				{ name: 'db:query:totalPlaybackDuration', op: 'db' },
+				() =>
+					this.db
+						.select({
+							totalDuration: totalDurationSql.mapWith(Number),
+						})
+						.from(schema.tracks),
+			),
+			(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
+		).andThen((rows) => {
+			const totalDuration = rows[0]?.totalDuration
+			return okAsync(totalDuration ?? 0)
+		})
 	}
 
 	public getTrackByUniqueKey(
 		uniqueKey: string,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.getTrackByUniqueKey',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
-						this.db.query.tracks.findFirst({
-							where: eq(schema.tracks.uniqueKey, uniqueKey),
-							columns: {
-								playHistory: false,
-							},
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
-								trackDownloads: true,
-							},
-						}),
-					),
-					(e) =>
-						e instanceof ServiceError
-							? e
-							: new DatabaseError('查找 track 失败', { cause: e }),
-				).andThen((dbTrack) => {
-					const formattedTrack = this.formatTrack(dbTrack)
-					if (!formattedTrack) {
-						return errAsync(createTrackNotFound(uniqueKey))
-					}
-					return okAsync(formattedTrack)
-				})
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+				this.db.query.tracks.findFirst({
+					where: eq(schema.tracks.uniqueKey, uniqueKey),
+					columns: {
+						playHistory: false,
+					},
+					with: {
+						artist: true,
+						bilibiliMetadata: true,
+						localMetadata: true,
+						trackDownloads: true,
+					},
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('查找 track 失败', { cause: e }),
+		).andThen((dbTrack) => {
+			const formattedTrack = this.formatTrack(dbTrack)
+			if (!formattedTrack) {
+				return errAsync(createTrackNotFound(uniqueKey))
+			}
+			return okAsync(formattedTrack)
+		})
 	}
 
 	/**
@@ -973,81 +834,51 @@ export class TrackService {
 		data: Omit<TrackDownloadRecord, 'downloadedAt'>,
 		updateDownloadedAt = true,
 	): ResultAsync<true, DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.createOrUpdateTrackDownloadRecord',
-				op: 'function',
-				attributes: {
-					'download.status': data.status,
-				},
-			},
-			() => {
-				const date = new Date()
-				const conflictUpdateDate = updateDownloadedAt
-					? { downloadedAt: date }
-					: {}
-				return ResultAsync.fromPromise(
-					Sentry.startSpan(
-						{ name: 'db:insertOrUpdate:trackDownload', op: 'db' },
-						() =>
-							this.db
-								.insert(schema.trackDownloads)
-								.values({ ...data, downloadedAt: date })
-								.onConflictDoUpdate({
-									target: schema.trackDownloads.trackId,
-									set: {
-										status: data.status,
-										fileSize: data.fileSize,
-										...conflictUpdateDate,
-									},
-								}),
-					),
-					(e) =>
-						new DatabaseError('创建或更新 trackDownloads 失败', {
-							cause: e,
+		const date = new Date()
+		const conflictUpdateDate = updateDownloadedAt ? { downloadedAt: date } : {}
+		return ResultAsync.fromPromise(
+			Sentry.startSpan(
+				{ name: 'db:insertOrUpdate:trackDownload', op: 'db' },
+				() =>
+					this.db
+						.insert(schema.trackDownloads)
+						.values({ ...data, downloadedAt: date })
+						.onConflictDoUpdate({
+							target: schema.trackDownloads.trackId,
+							set: {
+								status: data.status,
+								fileSize: data.fileSize,
+								...conflictUpdateDate,
+							},
 						}),
-				).andThen(() => okAsync(true as const))
-			},
-		)
+			),
+			(e) =>
+				new DatabaseError('创建或更新 trackDownloads 失败', {
+					cause: e,
+				}),
+		).andThen(() => okAsync(true as const))
 	}
 
 	public deleteTrackDownloadRecord(
 		trackId: number,
 	): ResultAsync<true, DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.deleteTrackDownloadRecord',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:delete:trackDownload', op: 'db' }, () =>
-						this.db
-							.delete(schema.trackDownloads)
-							.where(eq(schema.trackDownloads.trackId, trackId)),
-					),
-					(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
-				).andThen(() => okAsync(true as const))
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:delete:trackDownload', op: 'db' }, () =>
+				this.db
+					.delete(schema.trackDownloads)
+					.where(eq(schema.trackDownloads.trackId, trackId)),
+			),
+			(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
+		).andThen(() => okAsync(true as const))
 	}
 
 	public deleteAllTrackDownloadRecords(): ResultAsync<true, DatabaseError> {
-		return Sentry.startSpan(
-			{
-				name: 'TrackService.deleteAllTrackDownloadRecords',
-				op: 'function',
-			},
-			() => {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan(
-						{ name: 'db:delete:all:trackDownloads', op: 'db' },
-						() => this.db.delete(schema.trackDownloads),
-					),
-					(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
-				).andThen(() => okAsync(true as const))
-			},
-		)
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:delete:all:trackDownloads', op: 'db' }, () =>
+				this.db.delete(schema.trackDownloads),
+			),
+			(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
+		).andThen(() => okAsync(true as const))
 	}
 }
 
