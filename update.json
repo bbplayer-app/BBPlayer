@@ -1,11 +1,13 @@
 {
-	"version": "1.4.0",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.4.0",
-	"notes": "新功能：初步支持将 B 站「稍后再看」作为播放列表\n\n歌词体验升级：重新设计歌词页面样式与交互逻辑，并支持基于 B 站 BGM 识别结果精确搜索歌词。\n\n性能提升：实现了一些小优化",
+	"version": "1.4.2",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.4.2",
+	"notes": "功能：完善「稍后再看」页面功能，支持查看播放进度并清除已播放内容。\n\n新增：支持多种播放器背景风格（渐变、流光、默认）。\n\n修复：合集全部失效的问题\n\n修复：播放出现 android-failed-runtime-check 报错\n\n修复：Session ID must be unique.",
 	"listed_notes": [
-		"新功能：初步支持将 B 站「稍后再看」作为播放列表",
-		"歌词体验升级：重新设计歌词页面样式与交互逻辑，并支持基于 B 站 BGM 识别结果精确搜索歌词。",
-		"性能提升：实现了一些小优化"
+		"功能：完善「稍后再看」页面功能，支持查看播放进度并清除已播放内容",
+		"新增：支持多种播放器背景风格（渐变、流光、MD3）",
+		"修复：合集全部失效的问题",
+		"修复：播放出现 android-failed-runtime-check 报错",
+		"修复：Session ID must be unique."
 	],
 	"forced": false
 }
