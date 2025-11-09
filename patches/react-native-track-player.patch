@@ -1,0 +1,36 @@
+diff --git a/android/src/main/java/com/doublesymmetry/kotlinaudio/players/BaseAudioPlayer.kt b/android/src/main/java/com/doublesymmetry/kotlinaudio/players/BaseAudioPlayer.kt
+index a0f995c621dc68d9def5aaf485b4ee00fb354714..e9a0bc97c07e7c4a4f16d2e8922b7481913fffa5 100644
+--- a/android/src/main/java/com/doublesymmetry/kotlinaudio/players/BaseAudioPlayer.kt
++++ b/android/src/main/java/com/doublesymmetry/kotlinaudio/players/BaseAudioPlayer.kt
+@@ -163,6 +163,7 @@ abstract class BaseAudioPlayer internal constructor(
+ 
+         val renderer = DefaultRenderersFactory(context)
+         renderer.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
++        renderer.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
+         exoPlayer = ExoPlayer
+             .Builder(context)
+             .setRenderersFactory(renderer)
+diff --git a/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt b/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
+index b495b5a98d36c637409e7379ccf0d0a77507f0d0..46f8d2a5f3e4fd3aa73c4d19695926a6dd3b7efa 100644
+--- a/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
++++ b/android/src/main/java/com/doublesymmetry/trackplayer/service/MusicService.kt
+@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.flow
+ import timber.log.Timber
+ import java.util.concurrent.TimeUnit
+ import kotlin.system.exitProcess
++import java.util.UUID
+ 
+ @OptIn(UnstableApi::class)
+ @MainThread
+@@ -104,9 +105,11 @@ class MusicService : HeadlessJsMediaService() {
+             data = Uri.parse("trackplayer://notification.click")
+             action = Intent.ACTION_VIEW
+         }
++        val uniqueSessionId = "TrackPlayer_${UUID.randomUUID()}"
+         mediaSession = MediaLibrarySession.Builder(this, fakePlayer,
+             InnerMediaSessionCallback()
+         )
++            .setId(uniqueSessionId)
+             .setBitmapLoader(CacheBitmapLoader(CoilBitmapLoader(this)))
+             // https://github.com/androidx/media/issues/1218
+             .setSessionActivity(
