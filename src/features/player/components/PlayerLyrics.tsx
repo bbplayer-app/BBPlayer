@@ -10,6 +10,7 @@ import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import MaskedView from '@react-native-masked-view/masked-view'
+import * as Sentry from '@sentry/react-native'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -258,281 +259,280 @@ const renderItem = ({
 	)
 }
 
-const Lyrics = memo(function Lyrics({
-	currentIndex,
-}: {
-	currentIndex: number
-}) {
-	const colors = useTheme().colors
-	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
-	const seekTo = usePlayerStore((state) => state.seekTo)
-	const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
-	const [offsetMenuAnchor, setOffsetMenuAnchor] = useState<{
-		x: number
-		y: number
-		width: number
-		height: number
-	} | null>(null)
-	const offsetMenuAnchorRef = useRef<View>(null)
-	const scrollY = useSharedValue(0)
-	const contentHeight = useSharedValue(0)
-	const viewportHeight = useSharedValue(0)
-	const track = useCurrentTrack()
-	const enableOldSchoolStyleLyric = useAppStore(
-		(state) => state.settings.enableOldSchoolStyleLyric,
-	)
-
-	const {
-		data: lyrics,
-		isPending,
-		isError,
-		error,
-	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
-	const finalLyrics = useMemo(() => {
-		if (!lyrics?.lyrics) return []
-		const paddingTimestamp =
-			(lyrics.lyrics.at(-1)?.timestamp ?? 0) + Number.EPSILON
-		return [
-			...lyrics.lyrics,
-			{
-				timestamp: paddingTimestamp,
-				text: '',
-				isPaddingItem: true,
-			},
-		]
-	}, [lyrics])
-	const {
-		currentLyricIndex,
-		onUserScrollEnd,
-		onUserScrollStart,
-		handleJumpToLyric,
-	} = useLyricSync(
-		lyrics?.lyrics ?? [],
-		flashListRef,
-		seekTo,
-		lyrics?.offset ?? 0,
-	)
-
-	const scrollHandler = useAnimatedScrollHandler({
-		onScroll: (e) => {
-			scrollY.value = e.contentOffset.y
-			contentHeight.value = e.contentSize.height
-			viewportHeight.value = e.layoutMeasurement.height
-		},
-	})
-
-	// 我们不在本地创建 offset state，而是直接调用 queryClient 来更新 smartFetchLyrics 的缓存。当用户点击确认时，再保存到本地
-	const handleChangeOffset = (delta: number) => {
-		if (!lyrics || !track) return
-		const newOffset = (lyrics.offset ?? 0) + delta
-		queryClient.setQueryData(
-			lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
-			() => {
-				return {
-					...lyrics,
-					offset: newOffset,
-				}
-			},
+const Lyrics = Sentry.withProfiler(
+	memo(function Lyrics({ currentIndex }: { currentIndex: number }) {
+		const colors = useTheme().colors
+		const flashListRef = useRef<FlashListRef<LyricLine>>(null)
+		const seekTo = usePlayerStore((state) => state.seekTo)
+		const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
+		const [offsetMenuAnchor, setOffsetMenuAnchor] = useState<{
+			x: number
+			y: number
+			width: number
+			height: number
+		} | null>(null)
+		const offsetMenuAnchorRef = useRef<View>(null)
+		const scrollY = useSharedValue(0)
+		const contentHeight = useSharedValue(0)
+		const viewportHeight = useSharedValue(0)
+		const track = useCurrentTrack()
+		const enableOldSchoolStyleLyric = useAppStore(
+			(state) => state.settings.enableOldSchoolStyleLyric,
 		)
-	}
 
-	const handleCloseOffsetMenu = async () => {
-		setOffsetMenuVisible(false)
-		if (!lyrics || !track) return
-		const saveResult = await lyricService.saveLyricsToFile(
-			{
-				...lyrics,
-				offset: lyrics.offset,
-			},
-			track.uniqueKey,
-		)
-		if (saveResult.isErr()) {
-			toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
-			return
-		}
-		console.log('保存歌词偏移量成功:', lyrics.offset)
-	}
-
-	const keyExtractor = useCallback(
-		(item: LyricLine, index: number) => `${index}_${item.timestamp * 1000}`,
-		[],
-	)
-
-	const extraData = useMemo(
-		() => ({
+		const {
+			data: lyrics,
+			isPending,
+			isError,
+			error,
+		} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
+		const finalLyrics = useMemo(() => {
+			if (!lyrics?.lyrics) return []
+			const paddingTimestamp =
+				(lyrics.lyrics.at(-1)?.timestamp ?? 0) + Number.EPSILON
+			return [
+				...lyrics.lyrics,
+				{
+					timestamp: paddingTimestamp,
+					text: '',
+					isPaddingItem: true,
+				},
+			]
+		}, [lyrics])
+		const {
 			currentLyricIndex,
+			onUserScrollEnd,
+			onUserScrollStart,
 			handleJumpToLyric,
-			enableOldSchoolStyleLyric,
-		}),
-		[currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric],
-	)
+		} = useLyricSync(
+			lyrics?.lyrics ?? [],
+			flashListRef,
+			seekTo,
+			lyrics?.offset ?? 0,
+		)
 
-	useLayoutEffect(() => {
-		if (offsetMenuAnchorRef.current) {
-			offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
-				setOffsetMenuAnchor({ x, y, width, height })
-			})
+		const scrollHandler = useAnimatedScrollHandler({
+			onScroll: (e) => {
+				scrollY.value = e.contentOffset.y
+				contentHeight.value = e.contentSize.height
+				viewportHeight.value = e.layoutMeasurement.height
+			},
+		})
+
+		// 我们不在本地创建 offset state，而是直接调用 queryClient 来更新 smartFetchLyrics 的缓存。当用户点击确认时，再保存到本地
+		const handleChangeOffset = (delta: number) => {
+			if (!lyrics || !track) return
+			const newOffset = (lyrics.offset ?? 0) + delta
+			queryClient.setQueryData(
+				lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
+				() => {
+					return {
+						...lyrics,
+						offset: newOffset,
+					}
+				},
+			)
 		}
-	}, [offsetMenuVisible])
 
-	if (!track) return null
+		const handleCloseOffsetMenu = async () => {
+			setOffsetMenuVisible(false)
+			if (!lyrics || !track) return
+			const saveResult = await lyricService.saveLyricsToFile(
+				{
+					...lyrics,
+					offset: lyrics.offset,
+				},
+				track.uniqueKey,
+			)
+			if (saveResult.isErr()) {
+				toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
+				return
+			}
+			console.log('保存歌词偏移量成功:', lyrics.offset)
+		}
 
-	if (isPending) {
-		return (
-			<View style={styles.pendingContainer}>
-				<ActivityIndicator size={'large'} />
-			</View>
+		const keyExtractor = useCallback(
+			(item: LyricLine, index: number) => `${index}_${item.timestamp * 1000}`,
+			[],
 		)
-	}
 
-	if (isError) {
-		return (
-			<ScrollView
-				style={styles.errorScrollView}
-				contentContainerStyle={styles.errorContentContainer}
-			>
-				<Text
-					variant='bodyMedium'
-					style={styles.errorText}
-				>
-					歌词加载失败：{error.message}
-				</Text>
-			</ScrollView>
+		const extraData = useMemo(
+			() => ({
+				currentLyricIndex,
+				handleJumpToLyric,
+				enableOldSchoolStyleLyric,
+			}),
+			[currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric],
 		)
-	}
 
-	const renderLyrics = () => {
-		if (!lyrics.lyrics) {
+		useLayoutEffect(() => {
+			if (offsetMenuAnchorRef.current) {
+				offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
+					setOffsetMenuAnchor({ x, y, width, height })
+				})
+			}
+		}, [offsetMenuVisible])
+
+		if (!track) return null
+
+		if (isPending) {
 			return (
-				<Animated.ScrollView
-					contentContainerStyle={styles.rawLyricsScrollViewContainer}
-					scrollEventThrottle={16}
-					onScroll={scrollHandler}
+				<View style={styles.pendingContainer}>
+					<ActivityIndicator size={'large'} />
+				</View>
+			)
+		}
+
+		if (isError) {
+			return (
+				<ScrollView
+					style={styles.errorScrollView}
+					contentContainerStyle={styles.errorContentContainer}
 				>
 					<Text
 						variant='bodyMedium'
-						style={styles.rawLyricsText}
+						style={styles.errorText}
 					>
-						{lyrics.rawTranslatedLyrics ? '原始歌词：' : ''}
-						{lyrics.rawOriginalLyrics}
-						{lyrics.rawTranslatedLyrics
-							? `\n\n翻译歌词：${lyrics.rawTranslatedLyrics}`
-							: ''}
+						歌词加载失败：{error.message}
 					</Text>
-				</Animated.ScrollView>
+				</ScrollView>
 			)
 		}
-		return (
-			<AnimatedFlashList
-				ref={flashListRef}
-				data={finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]}
-				renderItem={renderItem}
-				extraData={extraData}
-				keyExtractor={keyExtractor}
-				contentContainerStyle={{
-					justifyContent: 'center',
-					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
-					paddingTop: windowHeight / 2,
-				}}
-				showsVerticalScrollIndicator={false}
-				onScrollEndDrag={onUserScrollEnd}
-				onScrollBeginDrag={onUserScrollStart}
-				scrollEventThrottle={30}
-				onScroll={scrollHandler}
-				getItemType={(item) => (item.isPaddingItem ? 'padding' : 'lyric')}
-			/>
-		)
-	}
 
-	return (
-		<View style={styles.lyricsContainer}>
-			<View style={styles.lyricsContent}>
-				<MaskedView
-					style={{ flex: 1 }}
-					maskElement={
-						<View
-							style={{ flex: 1 }}
-							pointerEvents='none'
+		const renderLyrics = () => {
+			if (!lyrics.lyrics) {
+				return (
+					<Animated.ScrollView
+						contentContainerStyle={styles.rawLyricsScrollViewContainer}
+						scrollEventThrottle={16}
+						onScroll={scrollHandler}
+					>
+						<Text
+							variant='bodyMedium'
+							style={styles.rawLyricsText}
 						>
-							<LinearGradient
-								style={[styles.gradient]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 0, y: 1 }}
-								colors={['transparent', colors.background]}
-								locations={[0, 1]}
-							/>
+							{lyrics.rawTranslatedLyrics ? '原始歌词：' : ''}
+							{lyrics.rawOriginalLyrics}
+							{lyrics.rawTranslatedLyrics
+								? `\n\n翻译歌词：${lyrics.rawTranslatedLyrics}`
+								: ''}
+						</Text>
+					</Animated.ScrollView>
+				)
+			}
+			return (
+				<AnimatedFlashList
+					ref={flashListRef}
+					data={finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]}
+					renderItem={renderItem}
+					extraData={extraData}
+					keyExtractor={keyExtractor}
+					contentContainerStyle={{
+						justifyContent: 'center',
+						pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+						paddingTop: windowHeight / 2,
+					}}
+					showsVerticalScrollIndicator={false}
+					onScrollEndDrag={onUserScrollEnd}
+					onScrollBeginDrag={onUserScrollStart}
+					scrollEventThrottle={30}
+					onScroll={scrollHandler}
+					getItemType={(item) => (item.isPaddingItem ? 'padding' : 'lyric')}
+				/>
+			)
+		}
 
+		return (
+			<View style={styles.lyricsContainer}>
+				<View style={styles.lyricsContent}>
+					<MaskedView
+						style={{ flex: 1 }}
+						maskElement={
 							<View
-								style={{
-									flex: 1,
-									backgroundColor: colors.background,
-								}}
-							/>
+								style={{ flex: 1 }}
+								pointerEvents='none'
+							>
+								<LinearGradient
+									style={[styles.gradient]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 0, y: 1 }}
+									colors={['transparent', colors.background]}
+									locations={[0, 1]}
+								/>
 
-							<LinearGradient
-								style={[styles.gradient]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 0, y: 1 }}
-								colors={[colors.background, 'transparent']}
-								locations={[0, 1]}
-							/>
-						</View>
-					}
-				>
-					{/* 你要显示的内容放在这里 */}
-					{renderLyrics()}
-				</MaskedView>
-			</View>
+								<View
+									style={{
+										flex: 1,
+										backgroundColor: colors.background,
+									}}
+								/>
 
-			{/* 歌词偏移量调整显示按钮 */}
-			<View style={styles.controlsContainer}>
-				<View style={styles.controlsButtonContainer}>
-					<RectButton
-						style={styles.controlButton}
-						enabled={!offsetMenuVisible}
-						onPress={() =>
-							useModalStore
-								.getState()
-								.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+								<LinearGradient
+									style={[styles.gradient]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 0, y: 1 }}
+									colors={[colors.background, 'transparent']}
+									locations={[0, 1]}
+								/>
+							</View>
 						}
 					>
-						<Icon
-							source='pencil'
-							size={20}
-							color={
-								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-							}
-						/>
-					</RectButton>
-					<RectButton
-						style={styles.controlButton}
-						// @ts-expect-error -- 不想管
-						ref={offsetMenuAnchorRef}
-						enabled={!offsetMenuVisible}
-						onPress={() => setOffsetMenuVisible(true)}
-					>
-						<Icon
-							source='swap-vertical-circle-outline'
-							size={20}
-							color={
-								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-							}
-						/>
-					</RectButton>
+						{/* 你要显示的内容放在这里 */}
+						{renderLyrics()}
+					</MaskedView>
 				</View>
-			</View>
 
-			{/* 歌词偏移量调整面板 */}
-			<LyricsOffsetControl
-				visible={offsetMenuVisible}
-				anchor={offsetMenuAnchor}
-				offset={lyrics.offset ?? 0}
-				onChangeOffset={handleChangeOffset}
-				onClose={handleCloseOffsetMenu}
-			/>
-		</View>
-	)
-})
+				{/* 歌词偏移量调整显示按钮 */}
+				<View style={styles.controlsContainer}>
+					<View style={styles.controlsButtonContainer}>
+						<RectButton
+							style={styles.controlButton}
+							enabled={!offsetMenuVisible}
+							onPress={() =>
+								useModalStore
+									.getState()
+									.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+							}
+						>
+							<Icon
+								source='pencil'
+								size={20}
+								color={
+									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
+								}
+							/>
+						</RectButton>
+						<RectButton
+							style={styles.controlButton}
+							// @ts-expect-error -- 不想管
+							ref={offsetMenuAnchorRef}
+							enabled={!offsetMenuVisible}
+							onPress={() => setOffsetMenuVisible(true)}
+						>
+							<Icon
+								source='swap-vertical-circle-outline'
+								size={20}
+								color={
+									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
+								}
+							/>
+						</RectButton>
+					</View>
+				</View>
+
+				{/* 歌词偏移量调整面板 */}
+				<LyricsOffsetControl
+					visible={offsetMenuVisible}
+					anchor={offsetMenuAnchor}
+					offset={lyrics.offset ?? 0}
+					onChangeOffset={handleChangeOffset}
+					onClose={handleCloseOffsetMenu}
+				/>
+			</View>
+		)
+	}),
+	{ name: 'LyricsTab', includeUpdates: false },
+)
 
 const styles = StyleSheet.create({
 	offsetControlContainer: {
