@@ -196,6 +196,14 @@ export default function TestPage() {
 					>
 						清空所有歌词缓存
 					</Button>
+					<Button
+						mode='outlined'
+						onPress={() => usePlayerStore.getState().resetStore()}
+						loading={loading}
+						style={styles.button}
+					>
+						清空播放器队列
+					</Button>
 				</View>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>

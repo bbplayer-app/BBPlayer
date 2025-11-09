@@ -8,7 +8,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { RNTPTrack } from '@/types/rntp'
 import { File, Paths } from 'expo-file-system'
 import { produce } from 'immer'
-import { err, ok, type Result } from 'neverthrow'
+import { err, ok, ResultAsync, type Result } from 'neverthrow'
 import log from './log'
 import toast from './toast'
 
@@ -297,9 +297,12 @@ async function checkAndUpdateAudioStream(
 			bvid,
 			cid: cid,
 			audioQuality: 30280,
-			enableDolby: true,
-			enableHiRes: true,
+			enableDolby: false,
+			enableHiRes: false,
 		})
+
+		// const streamUrlResultRedirected =
+		// 	await streamUrlResult.asyncAndThen(checkIsRedirected)
 
 		return streamUrlResult.match<
 			Result<{ track: Track; needsUpdate: boolean }, BilibiliApiError>
@@ -352,6 +355,67 @@ async function checkAndUpdateAudioStream(
 			`未知的 Track source: ${(track as Track).source}`,
 		),
 	)
+}
+
+function _checkIsRedirected(stream: {
+	url: string
+	quality: number
+	getTime: number
+	type: 'mp4' | 'dash' | 'local'
+}): ResultAsync<
+	{
+		url: string
+		quality: number
+		getTime: number
+		type: 'mp4' | 'dash' | 'local'
+	},
+	BilibiliApiError
+> {
+	const url = stream.url
+	return ResultAsync.fromPromise(
+		fetch(url, {
+			method: 'GET',
+			headers: {
+				'User-Agent':
+					'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
+				Referer: 'https://www.bilibili.com',
+			},
+		}),
+		(e) => {
+			return new BilibiliApiError({
+				message: e instanceof Error ? e.message : String(e),
+				type: 'RequestFailed',
+			})
+		},
+	).andThen((response) => {
+		if (!response.ok) {
+			return err(
+				new BilibiliApiError({
+					message: `测试链接是否被重定向失败: ${response.status} ${response.statusText}`,
+					msgCode: response.status,
+					type: 'RequestFailed',
+				}),
+			)
+		}
+		console.log(response.status)
+		console.log(`raw: ${url}`)
+		const redirectUrl = response.url // react native 不支持 redirect: 'manual'，所以在这里直接获取最终跳转到的 URL
+		console.log('redirectUrl', redirectUrl)
+		if (!redirectUrl) {
+			return err(
+				new BilibiliApiError({
+					message: '未获取到测试链接的解析结果',
+					msgCode: 0,
+					rawData: null,
+					type: 'ResponseFailed',
+				}),
+			)
+		}
+		return ok({
+			...stream,
+			url: redirectUrl,
+		})
+	})
 }
 
 /**
