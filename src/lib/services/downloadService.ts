@@ -15,6 +15,7 @@ import type {
 } from '@/types/core/downloadManagerStore'
 import type { Track } from '@/types/core/media'
 import log, { flatErrorMessage } from '@/utils/log'
+import * as Sentry from '@sentry/react-native'
 import { Directory, File, Paths } from 'expo-file-system'
 import { fetch } from 'expo/fetch'
 import type { ResultAsync } from 'neverthrow'
@@ -48,47 +49,58 @@ class DownloadService {
 	}
 
 	private getDownloadUrl(track: Track): ResultAsync<string, CustomError> {
-		if (track.source !== 'bilibili') {
-			return errAsync(
-				createNotImplementedError('目前只支持下载 bilibili 来源的 track'),
-			)
-		}
-		if (!track.bilibiliMetadata.cid) {
-			return this.bilibiliApi
-				.getPageList(track.bilibiliMetadata.bvid)
-				.andThen((pages) => {
-					if (pages.length === 0) {
-						return errAsync(
-							createServiceError(
-								'FetchDownloadUrlFailed',
-								'bvid 无法获取到页面列表',
-							),
-						)
-					}
-					return this.bilibiliApi.getAudioStream({
-						bvid: track.bilibiliMetadata.bvid,
-						cid: pages[0].cid,
-						audioQuality: 30280,
-						enableDolby: true,
-						enableHiRes: true,
-					})
-				})
-				.andThen((stream) => {
-					return okAsync(stream.url)
-				})
-		} else {
-			return this.bilibiliApi
-				.getAudioStream({
-					bvid: track.bilibiliMetadata.bvid,
-					cid: track.bilibiliMetadata.cid,
-					audioQuality: 30280,
-					enableDolby: true,
-					enableHiRes: true,
-				})
-				.andThen((stream) => {
-					return okAsync(stream.url)
-				})
-		}
+		return Sentry.startSpan(
+			{
+				name: 'DownloadService.getDownloadUrl',
+				op: 'function',
+				attributes: {
+					'track.source': track.source,
+				},
+			},
+			() => {
+				if (track.source !== 'bilibili') {
+					return errAsync(
+						createNotImplementedError('目前只支持下载 bilibili 来源的 track'),
+					)
+				}
+				if (!track.bilibiliMetadata.cid) {
+					return this.bilibiliApi
+						.getPageList(track.bilibiliMetadata.bvid)
+						.andThen((pages) => {
+							if (pages.length === 0) {
+								return errAsync(
+									createServiceError(
+										'FetchDownloadUrlFailed',
+										'bvid 无法获取到页面列表',
+									),
+								)
+							}
+							return this.bilibiliApi.getAudioStream({
+								bvid: track.bilibiliMetadata.bvid,
+								cid: pages[0].cid,
+								audioQuality: 30280,
+								enableDolby: true,
+								enableHiRes: true,
+							})
+						})
+						.andThen((stream) => {
+							return okAsync(stream.url)
+						})
+				} else {
+					return this.bilibiliApi
+						.getAudioStream({
+							bvid: track.bilibiliMetadata.bvid,
+							cid: track.bilibiliMetadata.cid,
+							audioQuality: 30280,
+							enableDolby: true,
+							enableHiRes: true,
+						})
+						.andThen((stream) => {
+							return okAsync(stream.url)
+						})
+				}
+			},
+		)
 	}
 
 	/**
@@ -97,167 +109,197 @@ class DownloadService {
 	 * @param item - 从 Zustand store 获取的下载任务对象
 	 */
 	public async start(item: DownloadTask): Promise<void> {
-		if (!this.callbacks) {
-			throw new Error('DownloadService尚未初始化，请先调用 initialize()')
-		}
-		const { _setDownloadProgress, _setDownloadStatus } = this.callbacks
-		const uniqueKey = item.uniqueKey
-
-		if (this.activeTasks.has(uniqueKey)) {
-			this.cancel(uniqueKey)
-		}
-
-		const controller = new AbortController()
-		this.activeTasks.set(uniqueKey, controller)
-		const directory = new Directory(Paths.document, 'downloads')
-		const tempFile = new File(directory, `${uniqueKey}.m4s.tmp`)
-		const finalFile = new File(directory, `${uniqueKey}.m4s`)
-		const cookieList = useAppStore.getState().bilibiliCookie
-		const cookie = cookieList ? serializeCookieObject(cookieList) : ''
-		let track: Track | null = null
-		try {
-			const trackResult = await this.trackService.getTrackByUniqueKey(uniqueKey)
-			if (trackResult.isErr()) {
-				throw new Error(
-					`无法获取 track 信息 -- ${trackResult.error.type}: ` +
-						flatErrorMessage(trackResult.error),
-				)
-			}
-			track = trackResult.value
-			const downloadUrl = await this.getDownloadUrl(track)
-			if (downloadUrl.isErr()) {
-				throw new Error(
-					`无法获取下载链接 -- ${downloadUrl.error.type}: ` +
-						flatErrorMessage(downloadUrl.error),
-				)
-			}
-			const headers = {
-				'User-Agent':
-					'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-				Referer: 'https://www.bilibili.com',
-				Cookie: cookie,
-			}
-			const response = await fetch(downloadUrl.value, {
-				signal: controller.signal,
-				headers,
-			})
-
-			if (!response.ok) {
-				throw new Error(`HTTP 状态码错误: ${response.status}`)
-			}
-			if (!response.body) {
-				throw new Error('Response body 是 null')
-			}
-
-			const contentLength = response.headers.get('Content-Length')
-			const totalBytes = contentLength ? parseInt(contentLength, 10) : 0
-			let transferredBytes = 0
-			let lastProgressUpdateTime = 0
-
-			try {
-				if (!directory.exists) {
-					directory.create({ intermediates: true })
+		await Sentry.startSpan(
+			{
+				name: 'DownloadService.start',
+				op: 'function',
+			},
+			async (span) => {
+				if (!this.callbacks) {
+					throw new Error('DownloadService尚未初始化，请先调用 initialize()')
 				}
-				tempFile.create({ overwrite: true, intermediates: true })
-			} catch (e) {
-				throw new Error(
-					`无法创建下载文件或目录: ${e instanceof Error ? e.message : String(e)}`,
-				)
-			}
+				const { _setDownloadProgress, _setDownloadStatus } = this.callbacks
+				const uniqueKey = item.uniqueKey
 
-			const progressTransform = new TransformStream<Uint8Array, Uint8Array>({
-				transform(chunk, controller) {
-					transferredBytes += chunk.byteLength
+				if (this.activeTasks.has(uniqueKey)) {
+					this.cancel(uniqueKey)
+				}
 
-					const now = Date.now()
-					if (
-						totalBytes > 0 &&
-						now - lastProgressUpdateTime > PROGRESS_REPORT_THROTTLE_DELAY
-					) {
-						_setDownloadProgress(uniqueKey, transferredBytes, totalBytes)
-						lastProgressUpdateTime = now
+				const controller = new AbortController()
+				this.activeTasks.set(uniqueKey, controller)
+				const directory = new Directory(Paths.document, 'downloads')
+				const tempFile = new File(directory, `${uniqueKey}.m4s.tmp`)
+				const finalFile = new File(directory, `${uniqueKey}.m4s`)
+				const cookieList = useAppStore.getState().bilibiliCookie
+				const cookie = cookieList ? serializeCookieObject(cookieList) : ''
+				let track: Track | null = null
+				try {
+					const trackResult = await Sentry.startSpan(
+						{ name: 'db:getTrack', op: 'db' },
+						() => this.trackService.getTrackByUniqueKey(uniqueKey),
+					)
+					if (trackResult.isErr()) {
+						throw new Error(
+							`无法获取 track 信息 -- ${trackResult.error.type}: ` +
+								flatErrorMessage(trackResult.error),
+						)
+					}
+					track = trackResult.value
+
+					const downloadUrl = await this.getDownloadUrl(track)
+					if (downloadUrl.isErr()) {
+						throw new Error(
+							`无法获取下载链接 -- ${downloadUrl.error.type}: ` +
+								flatErrorMessage(downloadUrl.error),
+						)
+					}
+					const headers = {
+						'User-Agent':
+							'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
+						Referer: 'https://www.bilibili.com',
+						Cookie: cookie,
+					}
+					const response = await Sentry.startSpan(
+						{ name: 'http:fetch', op: 'http' },
+						() =>
+							fetch(downloadUrl.value, {
+								signal: controller.signal,
+								headers,
+							}),
+					)
+
+					if (!response.ok) {
+						throw new Error(`HTTP 状态码错误: ${response.status}`)
+					}
+					if (!response.body) {
+						throw new Error('Response body 是 null')
 					}
 
-					controller.enqueue(chunk)
-				},
-			})
-			const validateStream = this.createMagicNumberValidator('ftyp')
+					const contentLength = response.headers.get('Content-Length')
+					const totalBytes = contentLength ? parseInt(contentLength, 10) : 0
+					let transferredBytes = 0
+					let lastProgressUpdateTime = 0
 
-			const writable = tempFile.writableStream()
+					try {
+						if (!directory.exists) {
+							directory.create({ intermediates: true })
+						}
+						tempFile.create({ overwrite: true, intermediates: true })
+					} catch (e) {
+						throw new Error(
+							`无法创建下载文件或目录: ${e instanceof Error ? e.message : String(e)}`,
+						)
+					}
 
-			await response.body
-				.pipeThrough(validateStream)
-				.pipeThrough(progressTransform)
-				.pipeTo(writable)
-			try {
-				if (finalFile.exists) {
-					finalFile.delete()
-				}
-				tempFile.move(finalFile)
-			} catch (e) {
-				throw new Error(
-					`移动下载文件失败: ${e instanceof Error ? e.message : String(e)}`,
-				)
-			}
-			const recordResult =
-				await this.trackService.createOrUpdateTrackDownloadRecord({
-					trackId: track.id,
-					status: 'downloaded',
-					fileSize: finalFile.size,
-				})
-			if (recordResult.isErr()) {
-				throw recordResult.error
-			}
-			// 更新 player 的下载状态，方便下次切歌时直接使用本地数据
-			usePlayerStore.getState().updateDownloadStatus(uniqueKey, {
-				status: 'downloaded',
-				fileSize: finalFile.size,
-				trackId: track.id,
-				downloadedAt: Date.now(),
-			})
-			_setDownloadProgress(uniqueKey, totalBytes, totalBytes)
-			_setDownloadStatus(uniqueKey, 'completed')
-			logger.debug('下载完成', { uniqueKey })
-		} catch (error) {
-			if (error instanceof Error) {
-				if (error.name === 'AbortError') {
-					logger.info(`下载 ${uniqueKey} 已取消`)
-				} else {
-					logger.error(`下载 ${uniqueKey} 失败: ${error.message}`)
-					if (track) {
-						// 用户侧并不是很关心这个错误，所以就不再在 ui 展示，只是打印日志
-						const result =
-							await this.trackService.createOrUpdateTrackDownloadRecord({
-								trackId: track.id,
-								status: 'failed',
-								fileSize: 0,
-							})
+					const progressTransform = new TransformStream<Uint8Array, Uint8Array>(
+						{
+							transform(chunk, controller) {
+								transferredBytes += chunk.byteLength
 
-						if (result.isErr()) {
-							logger.error('更新 trackDownloads 失败: ', {
-								error: flatErrorMessage(result.error),
-							})
+								const now = Date.now()
+								if (
+									totalBytes > 0 &&
+									now - lastProgressUpdateTime > PROGRESS_REPORT_THROTTLE_DELAY
+								) {
+									_setDownloadProgress(uniqueKey, transferredBytes, totalBytes)
+									lastProgressUpdateTime = now
+								}
+
+								controller.enqueue(chunk)
+							},
+						},
+					)
+					const validateStream = this.createMagicNumberValidator('ftyp')
+
+					const writable = tempFile.writableStream()
+
+					await Sentry.startSpan({ name: 'io:stream:pipe', op: 'io' }, () =>
+						response.body
+							?.pipeThrough(validateStream)
+							.pipeThrough(progressTransform)
+							.pipeTo(writable),
+					)
+					try {
+						if (finalFile.exists) {
+							finalFile.delete()
+						}
+						Sentry.startSpan({ name: 'io:file:move', op: 'io' }, () =>
+							tempFile.move(finalFile),
+						)
+					} catch (e) {
+						throw new Error(
+							`移动下载文件失败: ${e instanceof Error ? e.message : String(e)}`,
+						)
+					}
+					const recordResult = await Sentry.startSpan(
+						{ name: 'db:update:downloadRecord', op: 'db' },
+						() =>
+							this.trackService.createOrUpdateTrackDownloadRecord({
+								trackId: track!.id,
+								status: 'downloaded',
+								fileSize: finalFile.size,
+							}),
+					)
+					if (recordResult.isErr()) {
+						throw recordResult.error
+					}
+					// 更新 player 的下载状态，方便下次切歌时直接使用本地数据
+					usePlayerStore.getState().updateDownloadStatus(uniqueKey, {
+						status: 'downloaded',
+						fileSize: finalFile.size,
+						trackId: track.id,
+						downloadedAt: Date.now(),
+					})
+					_setDownloadProgress(uniqueKey, totalBytes, totalBytes)
+					_setDownloadStatus(uniqueKey, 'completed')
+					logger.debug('下载完成', { uniqueKey })
+				} catch (error) {
+					if (error instanceof Error) {
+						if (error.name === 'AbortError') {
+							logger.info(`下载 ${uniqueKey} 已取消`)
+							span?.setStatus({ code: 1, message: 'cancelled' })
+						} else {
+							logger.error(`下载 ${uniqueKey} 失败: ${error.message}`)
+							span?.setStatus({ code: 2, message: 'internal_error' })
+							if (track) {
+								// 用户侧并不是很关心这个错误，所以就不再在 ui 展示，只是打印日志
+								const result = await Sentry.startSpan(
+									{ name: 'db:update:downloadRecord:fail', op: 'db' },
+									() =>
+										this.trackService.createOrUpdateTrackDownloadRecord({
+											trackId: track!.id,
+											status: 'failed',
+											fileSize: 0,
+										}),
+								)
+
+								if (result.isErr()) {
+									logger.error('更新 trackDownloads 失败: ', {
+										error: flatErrorMessage(result.error),
+									})
+								}
+							}
+							_setDownloadStatus(uniqueKey, 'failed', error.message)
 						}
 					}
-					_setDownloadStatus(uniqueKey, 'failed', error.message)
+					try {
+						if (tempFile.exists) {
+							tempFile.delete()
+						}
+						if (finalFile.exists) {
+							finalFile.delete()
+						}
+					} catch (e) {
+						logger.warning(
+							`删除下载文件失败: ${e instanceof Error ? e.message : String(e)}`,
+						)
+					}
+					logger.debug('删除下载文件成功')
+				} finally {
+					this.activeTasks.delete(uniqueKey)
 				}
-			}
-			try {
-				if (tempFile.exists) {
-					tempFile.delete()
-				}
-				if (finalFile.exists) {
-					finalFile.delete()
-				}
-			} catch (e) {
-				logger.warning(
-					`删除下载文件失败: ${e instanceof Error ? e.message : String(e)}`,
-				)
-			}
-			logger.debug('删除下载文件成功')
-		} finally {
-			this.activeTasks.delete(uniqueKey)
-		}
+			},
+		)
 	}
 
 	/**
@@ -334,47 +376,80 @@ class DownloadService {
 	public delete(
 		uniqueKey: string,
 	): ResultAsync<true, ServiceError | DatabaseError> {
-		return this.trackService
-			.getTrackByUniqueKey(uniqueKey)
-			.andThen((track) => {
+		return Sentry.startSpan(
+			{
+				name: 'DownloadService.delete',
+				op: 'function',
+			},
+			(span) => {
 				return this.trackService
-					.deleteTrackDownloadRecord(track.id)
-					.andTee(() => {
-						logger.info(`删除了 track ${uniqueKey} 的下载记录`)
+					.getTrackByUniqueKey(uniqueKey)
+					.andThen((track) => {
+						span?.setAttribute('track.id', track.id)
+						return this.trackService
+							.deleteTrackDownloadRecord(track.id)
+							.andTee(() => {
+								logger.info(`删除了 track ${uniqueKey} 的下载记录`)
+							})
 					})
-			})
-			.andThen(() => {
-				const file = new File(Paths.document, 'downloads', `${uniqueKey}.m4s`)
-				try {
-					file.delete()
-				} catch (e) {
-					return errAsync(
-						createServiceError('DeleteDownloadRecordFailed', '无法删除文件', {
-							cause: e,
-						}),
-					)
-				}
-				return okAsync(true as const)
-			})
+					.andThen(() => {
+						const file = new File(
+							Paths.document,
+							'downloads',
+							`${uniqueKey}.m4s`,
+						)
+						try {
+							Sentry.startSpan({ name: 'io:file:delete', op: 'io' }, () =>
+								file.delete(),
+							)
+						} catch (e) {
+							return errAsync(
+								createServiceError(
+									'DeleteDownloadRecordFailed',
+									'无法删除文件',
+									{
+										cause: e,
+									},
+								),
+							)
+						}
+						return okAsync(true as const)
+					})
+			},
+		)
 	}
 
 	/**
 	 * 删除所有下载记录及其实际文件
 	 */
 	public deleteAll() {
-		return this.trackService.deleteAllTrackDownloadRecords().andThen(() => {
-			const directory = new Directory(Paths.document, 'downloads')
-			try {
-				directory.delete()
-			} catch (e) {
-				return errAsync(
-					createServiceError('DeleteDownloadRecordFailed', '无法删除文件夹', {
-						cause: e,
-					}),
-				)
-			}
-			return okAsync(true as const)
-		})
+		return Sentry.startSpan(
+			{
+				name: 'DownloadService.deleteAll',
+				op: 'function',
+			},
+			() => {
+				return this.trackService.deleteAllTrackDownloadRecords().andThen(() => {
+					const directory = new Directory(Paths.document, 'downloads')
+					try {
+						Sentry.startSpan({ name: 'io:dir:delete', op: 'io' }, () =>
+							directory.delete(),
+						)
+					} catch (e) {
+						return errAsync(
+							createServiceError(
+								'DeleteDownloadRecordFailed',
+								'无法删除文件夹',
+								{
+									cause: e,
+								},
+							),
+						)
+					}
+					return okAsync(true as const)
+				})
+			},
+		)
 	}
 }
 

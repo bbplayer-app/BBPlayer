@@ -7,7 +7,7 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
@@ -76,23 +76,18 @@ const LocalPlaylistListComponent = memo(() => {
 	}
 
 	return (
-		<View style={{ flex: 1, marginHorizontal: 16 }}>
-			<View
-				style={{
-					marginBottom: 8,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-				}}
-			>
+		<View style={styles.container}>
+			<View style={styles.headerContainer}>
 				<Text
 					variant='titleMedium'
-					style={{ fontWeight: 'bold' }}
+					style={styles.headerTitle}
 				>
 					播放列表
 				</Text>
-				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-					<Text variant='bodyMedium'>{playlists.length ?? 0} 个播放列表</Text>
+				<View style={styles.headerActionsContainer}>
+					<Text variant='bodyMedium'>
+						{playlists.length ?? 0}&thinsp;个播放列表
+					</Text>
 					<IconButton
 						icon='plus'
 						size={20}
@@ -119,17 +114,42 @@ const LocalPlaylistListComponent = memo(() => {
 				ListFooterComponent={
 					<Text
 						variant='titleMedium'
-						style={{ textAlign: 'center', paddingTop: 10 }}
+						style={styles.listFooter}
 					>
 						•
 					</Text>
 				}
-				ListEmptyComponent={
-					<Text style={{ textAlign: 'center' }}>没有播放列表</Text>
-				}
+				ListEmptyComponent={<Text style={styles.emptyList}>没有播放列表</Text>}
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		marginHorizontal: 16,
+	},
+	headerContainer: {
+		marginBottom: 8,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headerTitle: {
+		fontWeight: 'bold',
+	},
+	headerActionsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	listFooter: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	emptyList: {
+		textAlign: 'center',
+	},
 })
 
 LocalPlaylistListComponent.displayName = 'LocalPlaylistListComponent'

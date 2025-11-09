@@ -1,6 +1,6 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useRouter } from 'expo-router'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
 
 export function PlayerHeader({
@@ -14,26 +14,17 @@ export function PlayerHeader({
 	const currentTrack = useCurrentTrack()
 
 	return (
-		<View
-			style={{
-				flexDirection: 'row',
-				alignItems: 'center',
-				justifyContent: 'space-between',
-				paddingHorizontal: 16,
-				paddingVertical: 8,
-			}}
-		>
-			<IconButton
-				icon='chevron-down'
-				size={24}
-				onPress={() => router.back()}
-			/>
+		<View style={styles.container}>
+			{
+				<IconButton
+					icon={index === 0 ? 'chevron-down' : 'chevron-left'}
+					size={24}
+					onPress={() => router.back()}
+				/>
+			}
 			<Text
 				variant='titleMedium'
-				style={{
-					flex: 1,
-					textAlign: 'center',
-				}}
+				style={styles.title}
 				numberOfLines={1}
 			>
 				{index === 1
@@ -50,3 +41,17 @@ export function PlayerHeader({
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		paddingHorizontal: 16,
+		paddingVertical: 8,
+	},
+	title: {
+		flex: 1,
+		textAlign: 'center',
+	},
+})

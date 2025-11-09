@@ -9,7 +9,7 @@ import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
 import FavoriteFolderListItem from './FavoriteFolderListItem'
 
@@ -67,38 +67,25 @@ const FavoriteFolderListComponent = memo(() => {
 	)
 
 	return (
-		<View style={{ flex: 1, marginHorizontal: 16 }}>
-			<View
-				style={{
-					marginBottom: 8,
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-				}}
-			>
+		<View style={styles.container}>
+			<View style={styles.headerContainer}>
 				<Text
 					variant='titleMedium'
-					style={{ fontWeight: 'bold' }}
+					style={styles.headerTitle}
 				>
 					我的收藏夹
 				</Text>
-				<Text variant='bodyMedium'>{playlists.length ?? 0} 个收藏夹</Text>
+				<Text variant='bodyMedium'>
+					{playlists.length ?? 0}&thinsp;个收藏夹
+				</Text>
 			</View>
 			<Searchbar
 				placeholder='搜索我的收藏夹内容'
 				value={query}
 				mode='bar'
-				inputStyle={{
-					alignSelf: 'center',
-				}}
+				inputStyle={styles.searchInput}
 				onChangeText={setQuery}
-				style={{
-					borderRadius: 9999,
-					textAlign: 'center',
-					height: 45,
-					marginBottom: 20,
-					marginTop: 10,
-				}}
+				style={styles.searchbar}
 				onSubmitEditing={() => {
 					setQuery('')
 					router.push({
@@ -124,17 +111,48 @@ const FavoriteFolderListComponent = memo(() => {
 				ListFooterComponent={
 					<Text
 						variant='titleMedium'
-						style={{ textAlign: 'center', paddingTop: 10 }}
+						style={styles.listFooter}
 					>
 						•
 					</Text>
 				}
-				ListEmptyComponent={
-					<Text style={{ textAlign: 'center' }}>没有收藏夹</Text>
-				}
+				ListEmptyComponent={<Text style={styles.emptyList}>没有收藏夹</Text>}
 			/>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		marginHorizontal: 16,
+	},
+	headerContainer: {
+		marginBottom: 8,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headerTitle: {
+		fontWeight: 'bold',
+	},
+	searchInput: {
+		alignSelf: 'center',
+	},
+	searchbar: {
+		borderRadius: 9999,
+		textAlign: 'center',
+		height: 45,
+		marginBottom: 20,
+		marginTop: 10,
+	},
+	listFooter: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	emptyList: {
+		textAlign: 'center',
+	},
 })
 
 FavoriteFolderListComponent.displayName = 'FavoriteFolderListComponent'

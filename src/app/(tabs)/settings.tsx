@@ -1,3 +1,4 @@
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -13,8 +14,15 @@ import * as Sharing from 'expo-sharing'
 import * as Updates from 'expo-updates'
 import * as WebBrowser from 'expo-web-browser'
 import { memo, useCallback, useState } from 'react'
-import { ScrollView, View } from 'react-native'
-import { Divider, IconButton, Switch, Text, useTheme } from 'react-native-paper'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import {
+	Checkbox,
+	Divider,
+	IconButton,
+	Switch,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CLICK_TIMES = 3
@@ -28,12 +36,7 @@ export default function SettingsPage() {
 	const colors = useTheme().colors
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<View
 				style={{
 					flex: 1,
@@ -41,44 +44,25 @@ export default function SettingsPage() {
 					paddingBottom: haveTrack ? 70 : insets.bottom,
 				}}
 			>
-				<View
-					style={{
-						paddingHorizontal: 25,
-						paddingBottom: 20,
-						flexDirection: 'row',
-						alignItems: 'center',
-						justifyContent: 'space-between',
-					}}
-				>
+				<View style={styles.header}>
 					<Text
 						variant='headlineSmall'
-						style={{ fontWeight: 'bold' }}
+						style={styles.title}
 					>
 						设置
 					</Text>
 				</View>
 				<ScrollView
-					style={{
-						flex: 1,
-					}}
-					contentContainerStyle={{
-						paddingHorizontal: 25,
-					}}
+					style={styles.scrollView}
+					contentContainerStyle={styles.scrollContent}
 					contentInsetAdjustmentBehavior='automatic'
 				>
 					<SettingsSection />
-					<Divider style={{ marginTop: 16, marginBottom: 16 }} />
+					<Divider style={styles.divider} />
 					<AboutSection />
 				</ScrollView>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
@@ -102,17 +86,17 @@ const AboutSection = memo(function AboutSection() {
 	}, [clickTimes, router])
 
 	return (
-		<View style={{ paddingBottom: 15 }}>
+		<View style={styles.aboutSectionContainer}>
 			<Text
 				variant='titleLarge'
-				style={{ textAlign: 'center', marginBottom: 5 }}
+				style={styles.aboutTitle}
 				onPress={handlePress}
 			>
 				BBPlayer
 			</Text>
 			<Text
 				variant='bodySmall'
-				style={{ textAlign: 'center', marginBottom: 5 }}
+				style={styles.aboutVersion}
 			>
 				v{Application.nativeApplicationVersion}:{Application.nativeBuildVersion}{' '}
 				{Updates.updateId
@@ -122,13 +106,13 @@ const AboutSection = memo(function AboutSection() {
 
 			<Text
 				variant='bodyMedium'
-				style={{ textAlign: 'center' }}
+				style={styles.aboutSubtitle}
 			>
-				又一个 BiliBili 音乐播放器
+				又一个{'\u2009Bilibili\u2009'}音乐播放器
 			</Text>
 			<Text
 				variant='bodyMedium'
-				style={{ textAlign: 'center', marginTop: 8 }}
+				style={styles.aboutWebsite}
 			>
 				官网：
 				<Text
@@ -143,7 +127,7 @@ const AboutSection = memo(function AboutSection() {
 							},
 						)
 					}
-					style={{ textDecorationLine: 'underline' }}
+					style={styles.aboutWebsiteLink}
 				>
 					https://bbplayer.roitium.com
 				</Text>
@@ -176,6 +160,10 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
+	const playerBackgroundStyle = useAppStore(
+		(state) => state.settings.playerBackgroundStyle,
+	)
+	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -218,87 +206,91 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 	}
 
+	const setPlayerBackgroundStyleAction = useAppStore(
+		(state) => state.setPlayerBackgroundStyle,
+	)
+
+	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
+		setPlayerBackgroundStyleAction(style)
+		setPlayerBGMenuVisible(false)
+	}
+
 	return (
-		<View style={{ flexDirection: 'column' }}>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
-				<Text>向 bilibili 上报观看进度</Text>
+		<View style={styles.settingsSectionContainer}>
+			<View style={styles.settingRow}>
+				<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
 				<Switch
 					value={sendPlayHistory}
 					onValueChange={setSendPlayHistory}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
-				<Text>向 Sentry 上报错误</Text>
+			<View style={styles.settingRow}>
+				<Text>向{'\u2009Sentry\u2009'}上报错误</Text>
 				<Switch
 					value={enableSentryReport}
 					onValueChange={setEnableSentryReport}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
-				<Text>打开 Debug 日志</Text>
+			<View style={styles.settingRow}>
+				<Text>打开{'\u2009Debug\u2009'}日志</Text>
 				<Switch
 					value={enableDebugLog}
 					onValueChange={setEnableDebugLog}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
+			<View style={styles.settingRow}>
 				<Text>恢复旧版歌词样式</Text>
 				<Switch
 					value={enableOldSchoolStyleLyric}
 					onValueChange={setEnableOldSchoolStyleLyric}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
-				<Text>手动设置 Cookie</Text>
+			<View style={styles.settingRow}>
+				<Text>选择播放器背景样式</Text>
+				<FunctionalMenu
+					visible={playerBGMenuVisible}
+					onDismiss={() => setPlayerBGMenuVisible(false)}
+					anchor={
+						<IconButton
+							icon='palette'
+							size={20}
+							onPress={() => setPlayerBGMenuVisible(true)}
+						/>
+					}
+				>
+					<Checkbox.Item
+						mode='ios'
+						label='渐变'
+						status={
+							playerBackgroundStyle === 'gradient' ? 'checked' : 'unchecked'
+						}
+						onPress={() => setPlayerBackgroundStyle('gradient')}
+					/>
+					<Checkbox.Item
+						mode='ios'
+						label='动态流光'
+						status={
+							playerBackgroundStyle === 'streamer' ? 'checked' : 'unchecked'
+						}
+						onPress={() => setPlayerBackgroundStyle('streamer')}
+					/>
+					<Checkbox.Item
+						mode='ios'
+						label='默认背景'
+						status={playerBackgroundStyle === 'md3' ? 'checked' : 'unchecked'}
+						onPress={() => setPlayerBackgroundStyle('md3')}
+					/>
+				</FunctionalMenu>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>手动设置{'\u2009Cookie'}</Text>
 				<IconButton
 					icon='open-in-new'
 					size={20}
 					onPress={() => openModal('CookieLogin', undefined)}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
+			<View style={styles.settingRow}>
 				<Text>重新扫码登录</Text>
 				<IconButton
 					icon='open-in-new'
@@ -306,14 +298,7 @@ const SettingsSection = memo(function SettingsSection() {
 					onPress={() => openModal('QRCodeLogin', undefined)}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
+			<View style={styles.settingRow}>
 				<Text>分享今日运行日志</Text>
 				<IconButton
 					icon='share-variant'
@@ -321,14 +306,7 @@ const SettingsSection = memo(function SettingsSection() {
 					onPress={shareLogFile}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
+			<View style={styles.settingRow}>
 				<Text>检查更新</Text>
 				<IconButton
 					icon='update'
@@ -337,14 +315,7 @@ const SettingsSection = memo(function SettingsSection() {
 					onPress={handleCheckForUpdate}
 				/>
 			</View>
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'space-between',
-					marginTop: 16,
-				}}
-			>
+			<View style={styles.settingRow}>
 				<Text>开发者页面</Text>
 				<IconButton
 					icon='open-in-new'
@@ -357,3 +328,65 @@ const SettingsSection = memo(function SettingsSection() {
 })
 
 SettingsSection.displayName = 'SettingsSection'
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	header: {
+		paddingHorizontal: 25,
+		paddingBottom: 20,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	title: {
+		fontWeight: 'bold',
+	},
+	scrollView: {
+		flex: 1,
+	},
+	scrollContent: {
+		paddingHorizontal: 25,
+	},
+	divider: {
+		marginTop: 16,
+		marginBottom: 16,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+	aboutSectionContainer: {
+		paddingBottom: 15,
+	},
+	aboutTitle: {
+		textAlign: 'center',
+		marginBottom: 5,
+	},
+	aboutVersion: {
+		textAlign: 'center',
+		marginBottom: 5,
+	},
+	aboutSubtitle: {
+		textAlign: 'center',
+	},
+	aboutWebsite: {
+		textAlign: 'center',
+		marginTop: 8,
+	},
+	aboutWebsiteLink: {
+		textDecorationLine: 'underline',
+	},
+	settingsSectionContainer: {
+		flexDirection: 'column',
+	},
+	settingRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		marginTop: 16,
+	},
+})

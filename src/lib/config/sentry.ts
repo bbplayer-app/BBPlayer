@@ -45,7 +45,7 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: 'https://893ea8eb3743da1e065f56b3aa5e96f9@o4508985265618944.ingest.us.sentry.io/4508985267191808',
 		debug: false,
-		tracesSampleRate: 0.7,
+		tracesSampleRate: 0.3,
 		sendDefaultPii: false,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),

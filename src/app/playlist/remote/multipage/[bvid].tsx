@@ -22,7 +22,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import toast from '@/utils/toast'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
@@ -133,10 +133,14 @@ export default function MultipagePage() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: colors.background }}>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
-					title={selectMode ? `已选择 ${selected.size} 首` : videoData.title}
+					title={
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: videoData.title
+					}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -162,11 +166,7 @@ export default function MultipagePage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracksData}
 					playTrack={playTrack}
@@ -180,7 +180,7 @@ export default function MultipagePage() {
 						<PlaylistHeader
 							coverUri={videoData.pic}
 							title={videoData.title}
-							subtitles={`${videoData.owner.name} • ${tracksData.length} 首歌曲`}
+							subtitles={`${videoData.owner.name}\u2009•\u2009${tracksData.length}\u2009首歌曲`}
 							description={videoData.desc}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
@@ -202,16 +202,24 @@ export default function MultipagePage() {
 					}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

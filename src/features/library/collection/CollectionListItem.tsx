@@ -2,7 +2,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
@@ -26,28 +26,28 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 						})
 					}
 				}}
-				style={{ paddingVertical: 8, overflow: 'hidden' }}
+				style={styles.rectButton}
 			>
 				<View>
-					<View
-						style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
-					>
+					<View style={styles.itemContainer}>
 						<CoverWithPlaceHolder
 							id={item.id}
 							coverUrl={item.cover}
 							title={item.title}
 							size={48}
 						/>
-						<View style={{ marginLeft: 12, flex: 1 }}>
+						<View style={styles.textContainer}>
 							<Text
 								variant='titleMedium'
-								style={{ paddingRight: 8 }}
+								style={styles.title}
 							>
 								{item.title}
 							</Text>
 							<Text variant='bodySmall'>
-								{item.state === 0 ? item.upper.name : '已失效'} •{''}
-								{item.media_count} 首歌曲
+								{item.state === 0 ? item.upper.name : '已失效'}
+								{'\u2009'}•{''}
+								{item.media_count}
+								{'\u2009'}首歌曲
 							</Text>
 						</View>
 						<Icon
@@ -60,6 +60,25 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 			<Divider />
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	rectButton: {
+		paddingVertical: 8,
+		overflow: 'hidden',
+	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		padding: 8,
+	},
+	textContainer: {
+		marginLeft: 12,
+		flex: 1,
+	},
+	title: {
+		paddingRight: 8,
+	},
 })
 
 CollectionListItem.displayName = 'CollectionListItem'

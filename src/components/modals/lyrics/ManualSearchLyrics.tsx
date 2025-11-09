@@ -6,7 +6,7 @@ import type { LyricSearchResult } from '@/types/player/lyrics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Button,
@@ -51,13 +51,15 @@ const SearchItem = memo(function SearchItem({
 }) {
 	return (
 		<TouchableRipple
-			style={{ flexDirection: 'column', paddingVertical: 8 }}
+			style={styles.searchItem}
 			onPress={() => onPress(item)}
 			disabled={disabled}
 		>
-			<View style={{ flexDirection: 'column' }}>
+			<View style={styles.searchItemContent}>
 				<Text variant='bodyMedium'>{item.title}</Text>
-				<Text variant='bodySmall'>{`${item.artist} - ${formatDurationToHHMMSS(Math.round(item.duration))} - ${SOURCE_MAP[item.source]}`}</Text>
+				<Text variant='bodySmall'>{`${item.artist} - ${formatDurationToHHMMSS(
+					Math.round(item.duration),
+				)} - ${SOURCE_MAP[item.source]}`}</Text>
 			</View>
 		</TouchableRipple>
 	)
@@ -104,21 +106,15 @@ const ManualSearchLyricsModal = ({
 	const renderContent = () => {
 		if (isSearching) {
 			return (
-				<View
-					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-				>
+				<View style={styles.centerContainer}>
 					<ActivityIndicator size={'large'} />
 				</View>
 			)
 		}
 		if (!searchResult) {
 			return (
-				<View
-					style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-				>
-					<Text style={{ textAlign: 'center' }}>
-						请修改搜索关键词并回车搜索
-					</Text>
+				<View style={styles.centerContainer}>
+					<Text style={styles.centerText}>请修改搜索关键词并回车搜索</Text>
 				</View>
 			)
 		}
@@ -133,8 +129,8 @@ const ManualSearchLyricsModal = ({
 			)
 		}
 		return (
-			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-				<Text style={{ textAlign: 'center' }}>没有找到匹配的歌词</Text>
+			<View style={styles.centerContainer}>
+				<Text style={styles.centerText}>没有找到匹配的歌词</Text>
 			</View>
 		)
 	}
@@ -150,7 +146,7 @@ const ManualSearchLyricsModal = ({
 					onSubmitEditing={() => searchIt()}
 				/>
 			</Dialog.Content>
-			<Dialog.ScrollArea style={{ height: 300 }}>
+			<Dialog.ScrollArea style={styles.scrollArea}>
 				{renderContent()}
 			</Dialog.ScrollArea>
 			<Dialog.Actions>
@@ -164,5 +160,26 @@ const ManualSearchLyricsModal = ({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	searchItem: {
+		flexDirection: 'column',
+		paddingVertical: 8,
+	},
+	searchItemContent: {
+		flexDirection: 'column',
+	},
+	centerContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	centerText: {
+		textAlign: 'center',
+	},
+	scrollArea: {
+		height: 300,
+	},
+})
 
 export default ManualSearchLyricsModal

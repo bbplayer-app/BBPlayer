@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Text, useTheme } from 'react-native-paper'
 
 interface DownloadHeaderProps {
@@ -19,16 +19,7 @@ export default function DownloadHeader({
 
 	return (
 		<View
-			style={{
-				flexDirection: 'row',
-				justifyContent: 'space-between',
-				alignItems: 'center',
-				paddingHorizontal: 16,
-				paddingVertical: 8,
-				borderBottomWidth: 1,
-				// 使用主题颜色，确保在深色/浅色模式下都好看
-				borderBottomColor: colors.outlineVariant,
-			}}
+			style={[styles.container, { borderBottomColor: colors.outlineVariant }]}
 		>
 			<Text
 				variant='bodyMedium'
@@ -36,7 +27,7 @@ export default function DownloadHeader({
 			>
 				总共 {taskCount} 个任务
 			</Text>
-			<View style={{ flexDirection: 'row', gap: 8 }}>
+			<View style={styles.buttonContainer}>
 				<Button
 					mode='outlined'
 					onPress={onClearAll}
@@ -55,3 +46,18 @@ export default function DownloadHeader({
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		paddingHorizontal: 16,
+		paddingVertical: 8,
+		borderBottomWidth: 1,
+	},
+	buttonContainer: {
+		flexDirection: 'row',
+		gap: 8,
+	},
+})

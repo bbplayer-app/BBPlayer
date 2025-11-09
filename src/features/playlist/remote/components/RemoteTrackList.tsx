@@ -3,9 +3,10 @@ import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
+import type { ListRenderItem } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Divider,
@@ -34,27 +35,27 @@ interface TrackListProps {
 	showItemCover?: boolean
 	isFetchingNextPage?: boolean
 	hasNextPage?: boolean
+	renderCustomItem?: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>
 }
 
-const renderItem = ({
+export interface ExtraData {
+	toggle: (id: number) => void
+	playTrack: (track: BilibiliTrack) => void
+	handleMenuPress: (
+		track: BilibiliTrack,
+		anchor: { x: number; y: number },
+	) => void
+	selected: Set<number>
+	selectMode: boolean
+	enterSelectMode: (id: number) => void
+	showItemCover?: boolean
+}
+
+const renderItemDefault = ({
 	item,
 	index,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
-	BilibiliTrack,
-	{
-		toggle: (id: number) => void
-		playTrack: (track: BilibiliTrack) => void
-		handleMenuPress: (
-			track: BilibiliTrack,
-			anchor: { x: number; y: number },
-		) => void
-		selected: Set<number>
-		selectMode: boolean
-		enterSelectMode: (id: number) => void
-		showItemCover?: boolean
-	}
->) => {
+}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		toggle,
@@ -113,8 +114,9 @@ export function TrackList({
 	showItemCover,
 	isFetchingNextPage,
 	hasNextPage,
+	renderCustomItem,
 }: TrackListProps) {
-	const colors = useTheme().colors
+	const { colors } = useTheme()
 	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
 	const insets = useSafeAreaInsets()
 
@@ -164,12 +166,14 @@ export function TrackList({
 		],
 	)
 
+	const renderItem = renderCustomItem ?? renderItemDefault
+
 	return (
 		<>
 			<FlashList
 				data={tracks}
 				extraData={extraData}
-				renderItem={renderItem}
+				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
 				ItemSeparatorComponent={() => <Divider />}
 				ListHeaderComponent={ListHeaderComponent}
 				refreshControl={refreshControl}
@@ -183,23 +187,13 @@ export function TrackList({
 				onEndReached={onEndReached}
 				ListFooterComponent={
 					(isFetchingNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : hasNextPage ? (
 						<Text
 							variant='titleMedium'
-							style={{
-								textAlign: 'center',
-								paddingTop: 10,
-							}}
+							style={styles.footerReachedEnd}
 						>
 							•
 						</Text>
@@ -208,11 +202,7 @@ export function TrackList({
 				ListEmptyComponent={
 					ListEmptyComponent ?? (
 						<Text
-							style={{
-								paddingVertical: 32,
-								textAlign: 'center',
-								color: colors.onSurfaceVariant,
-							}}
+							style={[styles.emptyList, { color: colors.onSurfaceVariant }]}
 						>
 							什么都没找到哦~
 						</Text>
@@ -242,3 +232,20 @@ export function TrackList({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerReachedEnd: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	emptyList: {
+		paddingVertical: 32,
+		textAlign: 'center',
+	},
+})

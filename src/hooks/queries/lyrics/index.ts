@@ -11,8 +11,8 @@ export const lyricsQueryKeys = {
 		[...lyricsQueryKeys.all, 'manualSearch', uniqueKey, query] as const,
 }
 
-export const useSmartFetchLyrics = (track?: Track) => {
-	const enabled = !!track
+export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
+	const enabled = !!track && enable
 	return useQuery({
 		// eslint-disable-next-line @tanstack/query/exhaustive-deps
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),

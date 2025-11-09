@@ -3,3 +3,6 @@ onlyBuiltDependencies:
   - esbuild
   - lefthook
   - unrs-resolver
+
+patchedDependencies:
+  react-native-track-player: patches/react-native-track-player.patch

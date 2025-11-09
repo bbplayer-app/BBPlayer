@@ -6,7 +6,7 @@ on:
       buildType:
         description: "构建类型"
         required: true
-        default: "prod-universal"
+        default: "prod-v8a"
         type: choice
         options:
           - prod-v8a
@@ -34,6 +34,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: read
     env:
       BUILD_TYPE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.buildType) || 'prod-v8a' }}
 
@@ -62,6 +63,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@bbplayer-app"
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
@@ -71,6 +74,8 @@ jobs:
           packager: pnpm
 
       - name: 📦 Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install
 
       - name: ⚙️ Prepare Variables

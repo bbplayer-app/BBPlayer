@@ -2,7 +2,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, TextInput } from 'react-native-paper'
 
 const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
@@ -50,38 +50,29 @@ const SleepTimerModal = () => {
 			<Dialog.Title>定时关闭</Dialog.Title>
 			<Dialog.Content>
 				{remainingTime ? (
-					<View style={{ alignItems: 'center', marginBottom: 16 }}>
+					<View style={styles.remainingTimeContainer}>
 						<Text variant='headlineMedium'>
 							剩余 {formatDurationToHHMMSS(remainingTime)}
 						</Text>
 					</View>
 				) : (
-					<Text style={{ textAlign: 'center', marginBottom: 16 }}>
-						选择一个预设时间或自定义
-					</Text>
+					<Text style={styles.promptText}>选择一个预设时间或自定义</Text>
 				)}
-				<View
-					style={{
-						flexDirection: 'row',
-						flexWrap: 'wrap',
-						justifyContent: 'center',
-						gap: 8,
-						marginBottom: 8,
-					}}
-				>
+				<View style={styles.presetContainer}>
 					{PRESET_DURATIONS.map((minutes) => (
 						<Button
 							key={minutes}
 							mode='contained-tonal'
 							onPress={() => handleSetTimer(minutes)}
-							style={{ flexBasis: '45%', flexGrow: 1 }}
+							style={styles.presetButton}
 						>
-							{minutes} 分钟
+							{minutes}
+							{'\u2009'}分钟
 						</Button>
 					))}
 				</View>
 				{customInputVisible ? (
-					<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+					<View style={styles.customInputContainer}>
 						<TextInput
 							label='分钟'
 							value={customMinutes}
@@ -89,7 +80,7 @@ const SleepTimerModal = () => {
 							keyboardType='numeric'
 							autoFocus
 							mode='outlined'
-							style={{ flex: 1, marginRight: 8 }}
+							style={styles.customInput}
 						/>
 						<Button
 							mode='contained'
@@ -126,5 +117,35 @@ const SleepTimerModal = () => {
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	remainingTimeContainer: {
+		alignItems: 'center',
+		marginBottom: 16,
+	},
+	promptText: {
+		textAlign: 'center',
+		marginBottom: 16,
+	},
+	presetContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		justifyContent: 'center',
+		gap: 8,
+		marginBottom: 8,
+	},
+	presetButton: {
+		flexBasis: '45%',
+		flexGrow: 1,
+	},
+	customInputContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	customInput: {
+		flex: 1,
+		marginRight: 8,
+	},
+})
 
 export default SleepTimerModal

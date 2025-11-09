@@ -3,7 +3,7 @@ import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	Button,
 	Divider,
@@ -44,9 +44,9 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	if (!title) return null
 
 	return (
-		<View style={{ position: 'relative', flexDirection: 'column' }}>
+		<View style={styles.container}>
 			{/* 收藏夹信息 */}
-			<View style={{ flexDirection: 'row', padding: 16, alignItems: 'center' }}>
+			<View style={styles.headerContainer}>
 				<CoverWithPlaceHolder
 					id={id}
 					coverUrl={coverUri}
@@ -54,7 +54,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					size={120}
 					borderRadius={8}
 				/>
-				<View style={{ marginLeft: 16, flex: 1, justifyContent: 'center' }}>
+				<View style={styles.headerTextContainer}>
 					<TouchableRipple
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {
@@ -68,7 +68,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					>
 						<Text
 							variant='titleLarge'
-							style={{ fontWeight: 'bold' }}
+							style={styles.title}
 							numberOfLines={showFullTitle ? undefined : 2}
 						>
 							{title}
@@ -84,14 +84,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			</View>
 
 			{/* 操作按钮 */}
-			<View
-				style={{
-					flexDirection: 'row',
-					alignItems: 'center',
-					justifyContent: 'flex-start',
-					marginHorizontal: 16,
-				}}
-			>
+			<View style={styles.actionsContainer}>
 				{onClickMainButton && (
 					<Button
 						mode='contained'
@@ -118,7 +111,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 			<Text
 				variant='bodyMedium'
-				style={{ margin: description ? 16 : 0 }}
+				style={[styles.description, !!description && styles.descriptionMargin]}
 			>
 				{description ?? ''}
 			</Text>
@@ -126,4 +119,36 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<Divider />
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		position: 'relative',
+		flexDirection: 'column',
+	},
+	headerContainer: {
+		flexDirection: 'row',
+		padding: 16,
+		alignItems: 'center',
+	},
+	headerTextContainer: {
+		marginLeft: 16,
+		flex: 1,
+		justifyContent: 'center',
+	},
+	title: {
+		fontWeight: 'bold',
+	},
+	actionsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'flex-start',
+		marginHorizontal: 16,
+	},
+	description: {
+		margin: 0,
+	},
+	descriptionMargin: {
+		margin: 16,
+	},
 })

@@ -9,7 +9,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, View } from 'react-native'
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
 import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
 const FavoriteListItem = memo(function FavoriteListItem({
@@ -159,19 +159,12 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 	const renderContent = () => {
 		if (!enable) {
 			return (
-				<View
-					style={{
-						paddingTop: 16,
-						alignItems: 'center',
-						justifyContent: 'center',
-						gap: 16,
-					}}
-				>
+				<View style={styles.loginPromptContainer}>
 					<Text
 						variant='titleMedium'
-						style={{ textAlign: 'center' }}
+						style={styles.loginPromptText}
 					>
-						登录 bilibili 账号后才能查看收藏夹
+						登录{'\u2009bilibili\u2009'}账号后才能查看收藏夹
 					</Text>
 					<Button
 						mode='contained'
@@ -187,7 +180,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 		}
 		if (isPending) {
 			return (
-				<Dialog.Content style={{ alignItems: 'center', paddingVertical: 20 }}>
+				<Dialog.Content style={styles.loadingContainer}>
 					<ActivityIndicator size={'large'} />
 				</Dialog.Content>
 			)
@@ -197,9 +190,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 			return (
 				<>
 					<Dialog.Content>
-						<Text
-							style={{ textAlign: 'center', color: colors.error, padding: 16 }}
-						>
+						<Text style={[styles.errorText, { color: colors.error }]}>
 							加载收藏夹失败
 						</Text>
 					</Dialog.Content>
@@ -218,29 +209,20 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 
 		return (
 			<>
-				<Dialog.ScrollArea>
+				<Dialog.ScrollArea style={styles.listContainer}>
 					<FlatList
 						data={playlists || []}
 						extraData={checkedList} // 必须添加
 						renderItem={renderFavoriteListItem}
 						keyExtractor={keyExtractor}
-						style={{
-							height: 300,
-						}}
 						ListEmptyComponent={
-							<View
-								style={{
-									flex: 1,
-									justifyContent: 'center',
-									alignItems: 'center',
-								}}
-							>
-								<Text style={{ padding: 16 }}>暂无收藏夹</Text>
+							<View style={styles.emptyListContainer}>
+								<Text style={styles.emptyListText}>暂无收藏夹</Text>
 							</View>
 						}
 					/>
 				</Dialog.ScrollArea>
-				<Dialog.Actions style={{ marginTop: 16 }}>
+				<Dialog.Actions style={styles.actionsContainer}>
 					<Button
 						onPress={close}
 						disabled={isMutating}
@@ -265,6 +247,40 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 			{renderContent()}
 		</>
 	)
+})
+
+const styles = StyleSheet.create({
+	loginPromptContainer: {
+		paddingTop: 16,
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 16,
+	},
+	loginPromptText: {
+		textAlign: 'center',
+	},
+	loadingContainer: {
+		alignItems: 'center',
+		paddingVertical: 20,
+	},
+	errorText: {
+		textAlign: 'center',
+		padding: 16,
+	},
+	listContainer: {
+		height: 300,
+	},
+	emptyListContainer: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	emptyListText: {
+		padding: 16,
+	},
+	actionsContainer: {
+		marginTop: 16,
+	},
 })
 
 AddToFavoriteListsModal.displayName = 'AddToFavoriteListsModal'

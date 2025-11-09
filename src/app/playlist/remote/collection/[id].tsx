@@ -16,7 +16,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import toast from '@/utils/toast'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
@@ -121,17 +121,12 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
 						selectMode
-							? `已选择 ${selected.size} 首`
+							? `已选择\u2009${selected.size}\u2009首`
 							: collectionData.info.title
 					}
 				/>
@@ -159,11 +154,7 @@ export default function CollectionPage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracks}
 					playTrack={playTrack}
@@ -176,7 +167,7 @@ export default function CollectionPage() {
 						<PlaylistHeader
 							coverUri={collectionData.info.cover}
 							title={collectionData.info.title}
-							subtitles={`${collectionData.info.upper.name} • ${collectionData.info.media_count} 首歌曲`}
+							subtitles={`${collectionData.info.upper.name}\u2009•\u2009${collectionData.info.media_count}\u2009首歌曲`}
 							description={collectionData.info.intro}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
@@ -197,16 +188,24 @@ export default function CollectionPage() {
 					}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

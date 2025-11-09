@@ -1,10 +1,10 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import * as Haptics from '@/utils/haptics'
 import type BottomSheet from '@gorhom/bottom-sheet'
-import { useImage } from 'expo-image'
+import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PlayerControls } from './PlayerControls'
 import { PlayerSlider } from './PlayerSlider'
@@ -13,20 +13,21 @@ import { TrackInfo } from './PlayerTrackInfo'
 interface PlayerMainTabProps {
 	sheetRef: RefObject<BottomSheet | null>
 	jumpTo: (key: string) => void
+	imageRef: ImageRef | null
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
 	sheetRef,
 	jumpTo,
+	imageRef,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '')
 
 	if (!currentTrack) return null
 	return (
-		<View style={{ flex: 1, justifyContent: 'space-between' }}>
+		<View style={styles.container}>
 			<TrackInfo
 				onArtistPress={() =>
 					currentTrack.artist?.remoteId
@@ -42,14 +43,14 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					)
 					jumpTo('lyrics')
 				}}
-				coverRef={coverRef}
+				coverRef={imageRef}
 			/>
 
 			<View
-				style={{
-					paddingHorizontal: 24,
-					paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
-				}}
+				style={[
+					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+					styles.controlsContainer,
+				]}
 			>
 				<PlayerSlider />
 				<PlayerControls
@@ -58,6 +59,16 @@ const PlayerMainTab = memo(function PlayerMainTab({
 			</View>
 		</View>
 	)
+})
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		justifyContent: 'space-between',
+	},
+	controlsContainer: {
+		paddingHorizontal: 24,
+	},
 })
 
 PlayerMainTab.displayName = 'PlayerMainTab'

@@ -9,7 +9,7 @@ import TrackPlayer from 'react-native-track-player'
 export function usePlayerSlider() {
 	// 为了避免释放时闪烁
 	const overridePosition = useSharedValue<number | null>(null)
-	const resyncTimer = useRef<number | null>(null)
+	const resyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const sharedPosition = useSharedValue(0)
 	const sharedDuration = useSharedValue(0)
 	const isActive = useSharedValue(true)

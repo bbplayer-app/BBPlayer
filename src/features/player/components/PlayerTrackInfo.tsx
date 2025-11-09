@@ -8,11 +8,15 @@ import { LinearGradient } from 'expo-linear-gradient'
 import type { ColorSchemeName } from 'react-native'
 import {
 	Dimensions,
+	StyleSheet,
 	TouchableOpacity,
 	useColorScheme,
 	View,
 } from 'react-native'
 import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
+
+const { width: screenWidth } = Dimensions.get('window')
+const coverSize = screenWidth - 80
 
 export function TrackInfo({
 	onArtistPress,
@@ -25,7 +29,6 @@ export function TrackInfo({
 }) {
 	const { colors } = useTheme()
 	const currentTrack = useCurrentTrack()
-	const { width: screenWidth } = Dimensions.get('window')
 	const isBilibiliVideo = currentTrack?.source === 'bilibili'
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
@@ -58,51 +61,25 @@ export function TrackInfo({
 
 	return (
 		<View>
-			<View
-				style={{
-					alignItems: 'center',
-					paddingHorizontal: 32,
-					paddingVertical: 24,
-				}}
-			>
+			<View style={styles.coverContainer}>
 				<TouchableOpacity
 					activeOpacity={0.8}
 					onPress={onPressCover}
-					style={{
-						width: screenWidth - 80,
-						height: screenWidth - 80,
-					}}
+					style={styles.coverTouchable}
 				>
 					{!coverRef ? (
 						<LinearGradient
 							colors={[color1, color2]}
-							style={{
-								flex: 1,
-								justifyContent: 'center',
-								alignItems: 'center',
-								borderRadius: 16,
-							}}
+							style={styles.coverGradient}
 							start={{ x: 0, y: 0 }}
 							end={{ x: 1, y: 1 }}
 						>
-							<Text
-								style={{
-									fontSize: (screenWidth - 80) * 0.45,
-									fontWeight: 'bold',
-									color: 'rgba(255, 255, 255, 0.7)',
-								}}
-							>
-								{firstChar}
-							</Text>
+							<Text style={styles.coverPlaceholderText}>{firstChar}</Text>
 						</LinearGradient>
 					) : (
 						<Image
 							source={coverRef}
-							style={{
-								width: screenWidth - 80,
-								height: screenWidth - 80,
-								borderRadius: 16,
-							}}
+							style={styles.coverImage}
 							recyclingKey={currentTrack.uniqueKey}
 							cachePolicy={'none'}
 							transition={300}
@@ -111,18 +88,12 @@ export function TrackInfo({
 				</TouchableOpacity>
 			</View>
 
-			<View style={{ paddingHorizontal: 24 }}>
-				<View
-					style={{
-						flexDirection: 'row',
-						alignItems: 'center',
-						justifyContent: 'space-between',
-					}}
-				>
-					<View style={{ flex: 1, marginRight: 8 }}>
+			<View style={styles.trackInfoContainer}>
+				<View style={styles.trackTitleContainer}>
+					<View style={styles.trackTitleTextContainer}>
 						<Text
 							variant='titleLarge'
-							style={{ fontWeight: 'bold' }}
+							style={styles.trackTitle}
 							numberOfLines={4}
 						>
 							{currentTrack.title}
@@ -152,3 +123,46 @@ export function TrackInfo({
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	coverContainer: {
+		alignItems: 'center',
+		paddingHorizontal: 32,
+		paddingVertical: 24,
+	},
+	coverTouchable: {
+		width: coverSize,
+		height: coverSize,
+	},
+	coverGradient: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		borderRadius: 16,
+	},
+	coverPlaceholderText: {
+		fontSize: coverSize * 0.45,
+		fontWeight: 'bold',
+		color: 'rgba(255, 255, 255, 0.7)',
+	},
+	coverImage: {
+		width: coverSize,
+		height: coverSize,
+		borderRadius: 16,
+	},
+	trackInfoContainer: {
+		paddingHorizontal: 24,
+	},
+	trackTitleContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	trackTitleTextContainer: {
+		flex: 1,
+		marginRight: 8,
+	},
+	trackTitle: {
+		fontWeight: 'bold',
+	},
+})

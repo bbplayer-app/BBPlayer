@@ -5,6 +5,25 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 完善「稍后再看」页面功能
+- 支持多种播放器背景风格——渐变、流光、默认 md3 固定背景
+- 支持在「开发者页面」设置热更新渠道
+- 增加了一些 Sentry Spans 埋点，试图提高项目可观测性
+
+### Changed
+
+- 优化歌词页面
+
+### Fixed
+
+- 修复合集 ps 过大，导致 api 返回数据错误的问题
+- 修复 Cover Placeholder 乱码问题
+- 不再尝试使用 dolby/hi-res 音源，避免 `android-failed-runtime-check` 错误
+
 ## [1.4.0] - 2025-11-02
 
 ### Added

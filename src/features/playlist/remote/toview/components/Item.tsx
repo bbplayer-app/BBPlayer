@@ -1,18 +1,36 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import type { Playlist, Track } from '@/types/core/media'
+import type { BilibiliTrack } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import { memo, useCallback, useRef } from 'react'
-import { Easing, StyleSheet, View } from 'react-native'
+import { memo, useRef } from 'react'
+import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
-import TextTicker from 'react-native-text-ticker'
+import ProgressRing from './ProgressRing'
 
 export interface TrackMenuItem {
 	title: string
 	leadingIcon: string
 	onPress: () => void
-	danger?: boolean
+}
+
+export const TrackMenuItemDividerToken: TrackMenuItem = {
+	title: 'divider',
+	leadingIcon: '',
+	onPress: () => void 0,
+}
+
+export interface TrackNecessaryData {
+	cover?: string
+	artistCover?: string
+	title: string
+	duration: number
+	id: number
+	artistName?: string
+	uniqueKey: string
 }
 
 interface TrackListItemProps {
@@ -20,9 +38,8 @@ interface TrackListItemProps {
 	onTrackPress: () => void
 	onMenuPress: (anchor: { x: number; y: number }) => void
 	showCoverImage?: boolean
-	data: Track
+	data: TrackNecessaryData & { progress: number }
 	disabled?: boolean
-	playlist: Playlist
 	toggleSelected: (id: number) => void
 	isSelected: boolean
 	selectMode: boolean
@@ -32,51 +49,26 @@ interface TrackListItemProps {
 /**
  * 可复用的播放列表项目组件。
  */
-export const TrackListItem = memo(function TrackListItem({
+export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 	index,
 	onTrackPress,
 	onMenuPress,
 	showCoverImage = true,
 	data,
 	disabled = false,
-	playlist,
 	toggleSelected,
 	isSelected,
 	selectMode,
 	enterSelectMode,
 }: TrackListItemProps) {
-	const theme = useTheme()
-	const menuAnchorRef = useRef<View>(null)
+	const { colors } = useTheme()
+	const menuRef = useRef<View>(null)
 	const isCurrentTrack = usePlayerStore(
 		(state) => state.currentTrackUniqueKey === data.uniqueKey,
 	)
 
+	// 在非选择模式下，当前播放歌曲高亮；在选择模式下，歌曲被选中时高亮
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
-
-	const renderDownloadStatus = useCallback(() => {
-		if (!data.trackDownloads) return null
-		const { status } = data.trackDownloads
-		const iconConfig = {
-			downloaded: {
-				source: 'check-circle-outline',
-				color: theme.colors.primary,
-			},
-			failed: { source: 'alert-circle-outline', color: theme.colors.error },
-		}[status] ?? {
-			source: 'help-circle-outline',
-			color: theme.colors.onSurfaceVariant,
-		}
-
-		return (
-			<View style={styles.downloadStatusContainer}>
-				<Icon
-					source={iconConfig.source}
-					size={12}
-					color={iconConfig.color}
-				/>
-			</View>
-		)
-	}, [data.trackDownloads, theme.colors])
 
 	return (
 		<RectButton
@@ -84,7 +76,7 @@ export const TrackListItem = memo(function TrackListItem({
 				styles.rectButton,
 				{
 					backgroundColor: highlighted
-						? theme.colors.elevation.level5
+						? colors.elevation.level5
 						: 'transparent',
 				},
 			]}
@@ -124,7 +116,7 @@ export const TrackListItem = memo(function TrackListItem({
 						<View style={{ opacity: selectMode ? 0 : 1 }}>
 							<Text
 								variant='bodyMedium'
-								style={{ color: theme.colors.onSurfaceVariant }}
+								style={{ color: colors.onSurfaceVariant }}
 							>
 								{index + 1}
 							</Text>
@@ -135,7 +127,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							coverUrl={data.coverUrl ?? data.artist?.avatarUrl}
+							coverUrl={data.cover}
 							title={data.title}
 							size={48}
 						/>
@@ -146,13 +138,13 @@ export const TrackListItem = memo(function TrackListItem({
 						<Text variant='bodySmall'>{data.title}</Text>
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
-							{data.artist && (
+							{data.artistName && (
 								<>
 									<Text
 										variant='bodySmall'
 										numberOfLines={1}
 									>
-										{data.artist.name ?? '未知'}
+										{data.artistName ?? '未知'}
 									</Text>
 									<Text
 										style={styles.dotSeparator}
@@ -166,51 +158,35 @@ export const TrackListItem = memo(function TrackListItem({
 							<Text variant='bodySmall'>
 								{data.duration ? formatDurationToHHMMSS(data.duration) : ''}
 							</Text>
-							{/* 显示下载状态 */}
-							{renderDownloadStatus()}
 						</View>
-						{/* 显示主视频标题（如果是分 p） */}
-						{data.source === 'bilibili' &&
-							data.bilibiliMetadata.mainTrackTitle &&
-							data.bilibiliMetadata.mainTrackTitle !== data.title &&
-							playlist.type !== 'multi_page' && (
-								<TextTicker
-									style={{ ...theme.fonts.bodySmall }}
-									loop
-									animationType='scroll'
-									duration={130 * data.bilibiliMetadata.mainTrackTitle.length}
-									easing={Easing.linear}
-								>
-									{data.bilibiliMetadata.mainTrackTitle}
-								</TextTicker>
-							)}
 					</View>
+
+					<ProgressRing
+						progressInSeconds={data.progress}
+						durationInSeconds={data.duration}
+					/>
 
 					{/* Context Menu */}
 					{!disabled && (
-						<View ref={menuAnchorRef}>
-							<RectButton
-								style={styles.menuButton}
-								onPress={() => {
-									menuAnchorRef.current?.measure(
-										(_x, _y, _width, _height, pageX, pageY) => {
-											onMenuPress({ x: pageX, y: pageY })
-										},
-									)
-								}}
-								enabled={!selectMode}
-							>
-								<Icon
-									source='dots-vertical'
-									size={20}
-									color={
-										selectMode
-											? theme.colors.onSurfaceDisabled
-											: theme.colors.primary
-									}
-								/>
-							</RectButton>
-						</View>
+						<RectButton
+							// @ts-expect-error -- 不理解
+							ref={menuRef}
+							style={styles.menuButton}
+							onPress={() =>
+								menuRef.current?.measure(
+									(_x, _y, _width, _height, pageX, pageY) => {
+										onMenuPress({ x: pageX, y: pageY })
+									},
+								)
+							}
+							enabled={!selectMode}
+						>
+							<Icon
+								source='dots-vertical'
+								size={20}
+								color={selectMode ? colors.onSurfaceDisabled : colors.primary}
+							/>
+						</RectButton>
 					)}
 				</View>
 			</Surface>
@@ -259,7 +235,58 @@ const styles = StyleSheet.create({
 		borderRadius: 99999,
 		padding: 10,
 	},
-	downloadStatusContainer: {
-		paddingLeft: 4,
-	},
 })
+
+const renderToViewItem = ({
+	item,
+	index,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	BilibiliTrack & { progress: number },
+	ExtraData
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const {
+		toggle,
+		playTrack,
+		handleMenuPress,
+		selected,
+		selectMode,
+		enterSelectMode,
+		showItemCover,
+	} = extraData
+
+	return (
+		<ToViewTrackListItem
+			index={index}
+			onTrackPress={() => playTrack(item)}
+			onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+			showCoverImage={showItemCover ?? true}
+			data={{
+				cover: item.coverUrl ?? undefined,
+				title: item.title,
+				duration: item.duration,
+				id: item.id,
+				artistName: item.artist?.name,
+				uniqueKey: item.uniqueKey,
+				progress: item.progress,
+			}}
+			toggleSelected={() => {
+				void Haptics.performAndroidHapticsAsync(
+					Haptics.AndroidHaptics.Clock_Tick,
+				)
+				toggle(item.id)
+			}}
+			isSelected={selected.has(item.id)}
+			selectMode={selectMode}
+			enterSelectMode={() => {
+				void Haptics.performAndroidHapticsAsync(
+					Haptics.AndroidHaptics.Long_Press,
+				)
+				enterSelectMode(item.id)
+			}}
+		/>
+	)
+}
+
+export default renderToViewItem

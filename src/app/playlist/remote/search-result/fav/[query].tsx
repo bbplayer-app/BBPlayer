@@ -15,7 +15,7 @@ import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { RefreshControl, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Appbar, Text, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
@@ -91,16 +91,13 @@ export default function SearchResultsPage() {
 	}
 
 	return (
-		<View
-			style={{
-				flex: 1,
-				backgroundColor: colors.background,
-			}}
-		>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.Content
 					title={
-						selectMode ? `已选择 ${selected.size} 首` : `搜索结果 - ${query}`
+						selectMode
+							? `已选择\u2009${selected.size}\u2009首`
+							: `搜索结果\u2009-\u2009${query}`
 					}
 				/>
 				{selectMode ? (
@@ -127,11 +124,7 @@ export default function SearchResultsPage() {
 				)}
 			</Appbar.Header>
 
-			<View
-				style={{
-					flex: 1,
-				}}
-			>
+			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracks}
 					playTrack={playTrack}
@@ -145,20 +138,13 @@ export default function SearchResultsPage() {
 					ListHeaderComponent={null}
 					ListFooterComponent={
 						hasNextPage ? (
-							<View
-								style={{
-									flexDirection: 'row',
-									alignItems: 'center',
-									justifyContent: 'center',
-									padding: 16,
-								}}
-							>
+							<View style={styles.footerLoadingContainer}>
 								<ActivityIndicator size='small' />
 							</View>
 						) : (
 							<Text
 								variant='titleMedium'
-								style={{ textAlign: 'center', paddingTop: 10 }}
+								style={styles.footerText}
 							>
 								•
 							</Text>
@@ -178,27 +164,45 @@ export default function SearchResultsPage() {
 					}
 					ListEmptyComponent={
 						<Text
-							style={{
-								paddingVertical: 32,
-								textAlign: 'center',
-								color: colors.onSurfaceVariant,
-							}}
+							style={[styles.emptyListText, { color: colors.onSurfaceVariant }]}
 						>
-							没有在收藏中找到与 &quot;{query}&rdquo; 相关的内容
+							没有在收藏中找到与&thinsp;&ldquo;{query}&rdquo;&thinsp;相关的内容
 						</Text>
 					}
 				/>
 			</View>
-			<View
-				style={{
-					position: 'absolute',
-					bottom: 0,
-					left: 0,
-					right: 0,
-				}}
-			>
+			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	listContainer: {
+		flex: 1,
+	},
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerText: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+	emptyListText: {
+		paddingVertical: 32,
+		textAlign: 'center',
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+})

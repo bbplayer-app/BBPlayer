@@ -5,7 +5,7 @@ import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
 
 export default function CreatePlaylistModal({
@@ -92,7 +92,7 @@ export default function CreatePlaylistModal({
 	return (
 		<>
 			<Dialog.Title>创建播放列表</Dialog.Title>
-			<Dialog.Content style={{ gap: 5 }}>
+			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='标题'
 					value={title}
@@ -107,10 +107,10 @@ export default function CreatePlaylistModal({
 					value={description ?? undefined}
 					mode='outlined'
 					multiline
-					style={{ maxHeight: 150 }}
+					style={styles.descriptionInput}
 					textAlignVertical='top'
 				/>
-				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+				<View style={styles.coverUrlContainer}>
 					<TextInput
 						label='封面'
 						onChangeText={setCoverUrl}
@@ -118,12 +118,12 @@ export default function CreatePlaylistModal({
 						mode='outlined'
 						numberOfLines={1}
 						textAlignVertical='top'
-						style={{ flex: 1 }}
+						style={styles.coverUrlInput}
 					/>
 					<IconButton
 						icon='image-plus'
 						size={20}
-						style={{ marginTop: 13 }} // 让按钮看起来像居中
+						style={styles.imagePickerButton}
 						onPress={handleImagePicker}
 					/>
 				</View>
@@ -135,3 +135,22 @@ export default function CreatePlaylistModal({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	content: {
+		gap: 5,
+	},
+	descriptionInput: {
+		maxHeight: 150,
+	},
+	coverUrlContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	coverUrlInput: {
+		flex: 1,
+	},
+	imagePickerButton: {
+		marginTop: 13,
+	},
+})

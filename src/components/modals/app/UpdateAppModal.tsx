@@ -4,15 +4,15 @@ import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, useTheme } from 'react-native-paper'
 
 export interface UpdateModalProps {
 	version: string
 	notes: string
 	listed_notes?: string[]
-	url: string
 	forced?: boolean
+	url: string
 }
 
 export default function UpdateAppModal({
@@ -52,9 +52,7 @@ export default function UpdateAppModal({
 			<Dialog.Title>发现新版本 {version}</Dialog.Title>
 			<Dialog.Content>
 				{forced ? (
-					<Text
-						style={{ marginBottom: 8, fontWeight: 'bold', color: colors.error }}
-					>
+					<Text style={[styles.forcedText, { color: colors.error }]}>
 						此更新为强制更新，必须安装后继续使用。
 					</Text>
 				) : null}
@@ -63,7 +61,7 @@ export default function UpdateAppModal({
 						<Text
 							selectable
 							key={index}
-							style={{ marginBottom: 4 }}
+							style={styles.noteText}
 						>
 							{`• ${note}`}
 						</Text>
@@ -75,9 +73,9 @@ export default function UpdateAppModal({
 					</Text>
 				)}
 			</Dialog.Content>
-			<Dialog.Actions style={{ justifyContent: 'space-between' }}>
+			<Dialog.Actions style={styles.actionsContainer}>
 				{!forced ? <Button onPress={onSkip}>跳过此版本</Button> : <View />}
-				<View style={{ flexDirection: 'row' }}>
+				<View style={styles.rightActionsContainer}>
 					<Button
 						onPress={onCancel}
 						disabled={forced}
@@ -90,3 +88,19 @@ export default function UpdateAppModal({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	forcedText: {
+		marginBottom: 8,
+		fontWeight: 'bold',
+	},
+	noteText: {
+		marginBottom: 4,
+	},
+	actionsContainer: {
+		justifyContent: 'space-between',
+	},
+	rightActionsContainer: {
+		flexDirection: 'row',
+	},
+})

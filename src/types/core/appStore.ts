@@ -17,6 +17,10 @@ interface Settings {
 	 * 恢复旧版歌词样式
 	 */
 	enableOldSchoolStyleLyric: boolean
+	/**
+	 * 播放器背景样式
+	 */
+	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
 }
 
 interface AppState {
@@ -34,6 +38,7 @@ interface AppState {
 	setEnableSentryReport: (value: boolean) => void
 	setEnableDebugLog: (value: boolean) => void
 	setEnableOldSchoolStyleLyric: (value: boolean) => void
+	setPlayerBackgroundStyle: (value: 'gradient' | 'md3' | 'streamer') => void
 }
 
 export type { AppState, Settings }

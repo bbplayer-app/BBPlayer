@@ -13,7 +13,14 @@ interface BilibiliAudioStreamParams {
  * 获取音频流（dash）返回值
  */
 interface BilibiliAudioStreamResponse {
-	dash: {
+	durl?: [
+		{
+			order: number // 恒为 1
+			url: string
+			backup_url: string[]
+		},
+	]
+	dash?: {
 		audio:
 			| {
 					id: number
@@ -367,6 +374,7 @@ interface BilibiliToViewVideoList {
 		title: string
 		duration: number
 		pic: string
+		progress: number
 	}[]
 }
 

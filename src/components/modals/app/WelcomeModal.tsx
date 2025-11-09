@@ -9,7 +9,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { AppState, View } from 'react-native'
+import { AppState, StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -100,11 +100,12 @@ export default function WelcomeModal() {
 	const Step0 = () => (
 		<View>
 			<Text>
-				看起来你是第一次打开 BBPlayer，容我介绍一下：BBPlayer
-				是一款开源、简洁的音乐播放器，你可以使用他播放来自 BiliBili 的歌曲。
+				看起来你是第一次打开{'\u2009'}BBPlayer，容我介绍一下：BBPlayer
+				是一款开源、简洁的音乐播放器，你可以使用他播放来自
+				{'\u2009BiliBili\u2009'}的歌曲。
 				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用 BiliBili API，但
-				<Text style={{ fontWeight: '800' }}>仍不保证</Text>
+				风险声明：虽然开发者尽力负责任地调用{'\u2009BiliBili\u2009API'}，但
+				<Text style={styles.boldText}>仍不保证</Text>
 				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
 				{'\n\n'}
 				如果您选择「游客模式」，本地播放列表、搜索、查看合集等大部分功能仍可使用，但无法访问并即时查看您自己收藏夹中的更新。
@@ -117,18 +118,11 @@ export default function WelcomeModal() {
 			<Text>
 				{haveNotificationPermission
 					? '看起来你已经打开通知权限了，点击下一步吧！'
-					: 'BBPlayer 会使用通知显示下载进度，建议打开通知权限。当然，我们也尊重您的选择，不会强制要求。'}
+					: 'BBPlayer\u2009会使用通知显示下载进度，建议打开通知权限。当然，我们也尊重您的选择，不会强制要求。'}
 			</Text>
 
 			{haveNotificationPermission || (
-				<View
-					style={{
-						flexDirection: 'row',
-						gap: 8,
-						paddingTop: 20,
-						justifyContent: 'flex-end',
-					}}
-				>
+				<View style={styles.stepButtonContainer}>
 					<Button
 						mode='contained'
 						onPress={openNotificationSettings}
@@ -144,14 +138,7 @@ export default function WelcomeModal() {
 		<View>
 			<Text>最后一步！选择登录还是游客模式？</Text>
 
-			<View
-				style={{
-					flexDirection: 'row',
-					gap: 8,
-					paddingTop: 20,
-					justifyContent: 'flex-end',
-				}}
-			>
+			<View style={styles.stepButtonContainer}>
 				<Button
 					mode='contained'
 					onPress={confirmLogin}
@@ -168,15 +155,7 @@ export default function WelcomeModal() {
 	return (
 		<>
 			<View
-				style={{
-					position: 'absolute',
-					top: 0,
-					left: 0,
-					right: 0,
-					bottom: 0,
-					pointerEvents: 'none',
-					opacity: 0,
-				}}
+				style={styles.hiddenStepsContainer}
 				accessible={false}
 			>
 				<View
@@ -253,3 +232,24 @@ export default function WelcomeModal() {
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	boldText: {
+		fontWeight: '800',
+	},
+	stepButtonContainer: {
+		flexDirection: 'row',
+		gap: 8,
+		paddingTop: 20,
+		justifyContent: 'flex-end',
+	},
+	hiddenStepsContainer: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		pointerEvents: 'none',
+		opacity: 0,
+	},
+})

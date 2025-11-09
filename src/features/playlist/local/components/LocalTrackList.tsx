@@ -4,7 +4,7 @@ import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Divider,
@@ -155,23 +155,13 @@ export function LocalTrackList({
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
 					isFetchingNextPage ? (
-						<View
-							style={{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-								padding: 16,
-							}}
-						>
+						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
 					) : hasNextPage ? (
 						<Text
 							variant='titleMedium'
-							style={{
-								textAlign: 'center',
-								paddingTop: 10,
-							}}
+							style={styles.footerReachedEnd}
 						>
 							•
 						</Text>
@@ -204,3 +194,16 @@ export function LocalTrackList({
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	footerLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 16,
+	},
+	footerReachedEnd: {
+		textAlign: 'center',
+		paddingTop: 10,
+	},
+})

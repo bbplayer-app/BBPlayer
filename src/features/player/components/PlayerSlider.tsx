@@ -2,7 +2,7 @@ import { usePlayerSlider } from '@/features/player/hooks/usePlayerSlider'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import Slider from '@react-native-community/slider'
 import { useState } from 'react'
-import { View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import type { SharedValue } from 'react-native-reanimated'
 import Animated, {
@@ -88,7 +88,7 @@ export function PlayerSlider() {
 	return (
 		<View>
 			<AnimatedSlider
-				style={{ width: '100%', height: 40, zIndex: 0 }}
+				style={styles.slider}
 				minimumValue={0}
 				minimumTrackTintColor={colors.primary}
 				maximumTrackTintColor={colors.surfaceVariant}
@@ -97,14 +97,7 @@ export function PlayerSlider() {
 				onSlidingComplete={handleSlidingComplete}
 				animatedProps={animatedProps}
 			/>
-			<View
-				style={{
-					marginTop: -8,
-					flexDirection: 'row',
-					justifyContent: 'space-between',
-					paddingHorizontal: 4,
-				}}
-			>
+			<View style={styles.timeContainer}>
 				<TextWithAnimation
 					sharedPosition={sharedPosition}
 					sharedDuration={sharedDuration}
@@ -113,3 +106,17 @@ export function PlayerSlider() {
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	slider: {
+		width: '100%',
+		height: 40,
+		zIndex: 0,
+	},
+	timeContainer: {
+		marginTop: -8,
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		paddingHorizontal: 4,
+	},
+})
