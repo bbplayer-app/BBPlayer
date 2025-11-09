@@ -47,25 +47,17 @@ class LyricService {
 	 * @returns
 	 */
 	public getBestMatchedLyrics(track: Track, preciseKeyword?: string) {
-		return Sentry.startSpan(
-			{
-				name: 'LyricService.getBestMatchedLyrics',
-				op: 'function',
-			},
-			() => {
-				const providers = [
-					this.neteaseApi.searchBestMatchedLyrics(
-						preciseKeyword ?? this.cleanKeyword(track.title),
-						track.duration * 1000,
-					),
-				]
-				return ResultAsync.combine(providers).andThen((results) => {
-					// FIXME: fuck what's this???
-					const randomIndex = Math.floor(Math.random() * results.length)
-					return okAsync(results[randomIndex])
-				})
-			},
-		)
+		const providers = [
+			this.neteaseApi.searchBestMatchedLyrics(
+				preciseKeyword ?? this.cleanKeyword(track.title),
+				track.duration * 1000,
+			),
+		]
+		return ResultAsync.combine(providers).andThen((results) => {
+			// FIXME: fuck what's this???
+			const randomIndex = Math.floor(Math.random() * results.length)
+			return okAsync(results[randomIndex])
+		})
 	}
 
 	/**
@@ -74,80 +66,65 @@ class LyricService {
 	 * @returns
 	 */
 	public smartFetchLyrics(track: Track): ResultAsync<ParsedLrc, CustomError> {
-		return Sentry.startSpan(
-			{
-				name: 'LyricService.smartFetchLyrics',
-				op: 'function',
-				attributes: {
-					'track.source': track.source,
-				},
-			},
-			(span) => {
-				try {
-					const lyricFile = new FileSystem.File(
-						FileSystem.Paths.document,
-						'lyrics',
-						`${track.uniqueKey.replaceAll('::', '--')}.json`,
-					)
-					lyricFile.parentDirectory.create({
-						intermediates: true,
-						idempotent: true,
-					})
-					if (lyricFile.exists) {
-						span?.setAttribute('cache.hit', true)
-						return ResultAsync.fromPromise(
-							Sentry.startSpan({ name: 'io:file:read', op: 'io' }, () =>
-								lyricFile.text(),
-							),
-							(e) =>
-								new FileSystemError(`读取歌词缓存失败`, {
-									cause: e,
-									data: { filePath: lyricFile.uri },
-								}),
-						).andThen((content) => {
-							try {
-								return okAsync(JSON.parse(content) as ParsedLrc)
-							} catch (e) {
-								return errAsync(
-									new DataParsingError('解析歌词缓存失败', { cause: e }),
-								)
-							}
-						})
-					}
-					span?.setAttribute('cache.hit', false)
-
-					if (
-						track.source === 'bilibili' &&
-						track.bilibiliMetadata.bvid &&
-						track.bilibiliMetadata.cid
-					) {
-						return ResultAsync.fromSafePromise(
-							this.getPreciseMusicNameOnBilibiliVideo(track.bilibiliMetadata),
+		try {
+			const lyricFile = new FileSystem.File(
+				FileSystem.Paths.document,
+				'lyrics',
+				`${track.uniqueKey.replaceAll('::', '--')}.json`,
+			)
+			lyricFile.parentDirectory.create({
+				intermediates: true,
+				idempotent: true,
+			})
+			if (lyricFile.exists) {
+				return ResultAsync.fromPromise(
+					Sentry.startSpan({ name: 'io:file:read', op: 'io' }, () =>
+						lyricFile.text(),
+					),
+					(e) =>
+						new FileSystemError(`读取歌词缓存失败`, {
+							cause: e,
+							data: { filePath: lyricFile.uri },
+						}),
+				).andThen((content) => {
+					try {
+						return okAsync(JSON.parse(content) as ParsedLrc)
+					} catch (e) {
+						return errAsync(
+							new DataParsingError('解析歌词缓存失败', { cause: e }),
 						)
-							.andThen((musicName) =>
-								this.getBestMatchedLyrics(track, musicName),
-							)
-							.andThen((lyrics) => {
-								logger.info('自动搜索最佳匹配的歌词完成')
-								Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-									lyricFile.write(JSON.stringify(lyrics)),
-								)
-								return okAsync(lyrics)
-							})
 					}
+				})
+			}
 
-					return this.getBestMatchedLyrics(track).andThen((lyrics) => {
+			if (
+				track.source === 'bilibili' &&
+				track.bilibiliMetadata.bvid &&
+				track.bilibiliMetadata.cid
+			) {
+				return ResultAsync.fromSafePromise(
+					this.getPreciseMusicNameOnBilibiliVideo(track.bilibiliMetadata),
+				)
+					.andThen((musicName) => this.getBestMatchedLyrics(track, musicName))
+					.andThen((lyrics) => {
 						logger.info('自动搜索最佳匹配的歌词完成')
 						Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
 							lyricFile.write(JSON.stringify(lyrics)),
 						)
 						return okAsync(lyrics)
 					})
-				} catch (e) {
-					return errAsync(new FileSystemError('处理歌词文件失败', { cause: e }))
-				}
-			},
-		)
+			}
+
+			return this.getBestMatchedLyrics(track).andThen((lyrics) => {
+				logger.info('自动搜索最佳匹配的歌词完成')
+				Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+					lyricFile.write(JSON.stringify(lyrics)),
+				)
+				return okAsync(lyrics)
+			})
+		} catch (e) {
+			return errAsync(new FileSystemError('处理歌词文件失败', { cause: e }))
+		}
 	}
 
 	public saveLyricsToFile(
@@ -155,37 +132,28 @@ class LyricService {
 
 		uniqueKey: string,
 	): ResultAsync<ParsedLrc, FileSystemError> {
-		return Sentry.startSpan(
-			{
-				name: 'LyricService.saveLyricsToFile',
-				op: 'function',
-			},
-			(span) => {
-				try {
-					const lyricFile = new FileSystem.File(
-						FileSystem.Paths.document,
-						'lyrics',
-						`${uniqueKey.replaceAll('::', '--')}.json`,
-					)
-					lyricFile.parentDirectory.create({
-						intermediates: true,
-						idempotent: true,
-					})
-					Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-						lyricFile.write(JSON.stringify(lyrics)),
-					)
-					return okAsync(lyrics)
-				} catch (e) {
-					span.setStatus({ code: 2, message: 'internal_error' })
-					return errAsync(
-						new FileSystemError(`保存歌词文件失败`, {
-							cause: e,
-							data: { uniqueKey },
-						}),
-					)
-				}
-			},
-		)
+		try {
+			const lyricFile = new FileSystem.File(
+				FileSystem.Paths.document,
+				'lyrics',
+				`${uniqueKey.replaceAll('::', '--')}.json`,
+			)
+			lyricFile.parentDirectory.create({
+				intermediates: true,
+				idempotent: true,
+			})
+			Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+				lyricFile.write(JSON.stringify(lyrics)),
+			)
+			return okAsync(lyrics)
+		} catch (e) {
+			return errAsync(
+				new FileSystemError(`保存歌词文件失败`, {
+					cause: e,
+					data: { uniqueKey },
+				}),
+			)
+		}
 	}
 
 	public fetchLyrics(
@@ -193,119 +161,89 @@ class LyricService {
 
 		uniqueKey: string,
 	): ResultAsync<ParsedLrc | string, Error> {
-		return Sentry.startSpan(
-			{
-				name: 'LyricService.fetchLyrics',
-				op: 'function',
-			},
-			() => {
-				switch (item.source) {
-					case 'netease':
-						return this.neteaseApi
-							.getLyrics(item.remoteId)
-							.andThen((lyrics) => okAsync(this.neteaseApi.parseLyrics(lyrics)))
-							.andThen((lyrics) => {
-								return this.saveLyricsToFile(lyrics, uniqueKey)
-							})
-					default:
-						return errAsync(new Error('未知歌曲源'))
-				}
-			},
-		)
+		switch (item.source) {
+			case 'netease':
+				return this.neteaseApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.neteaseApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
+			default:
+				return errAsync(new Error('未知歌曲源'))
+		}
 	}
 
 	/**
 	 * 迁移旧版歌词格式
 	 */
 	public async migrateFromOldFormat() {
-		await Sentry.startSpan(
-			{
-				name: 'LyricService.migrateFromOldFormat',
-				op: 'function',
-			},
-			async (span) => {
-				const lyricsDir = new FileSystem.Directory(
-					FileSystem.Paths.document,
-					'lyrics',
-				)
-				try {
-					if (!lyricsDir.exists) {
-						logger.debug('歌词缓存目录不存在，无需迁移')
-						return
-					}
-
-					const lyricFiles = lyricsDir.list()
-					span?.setAttribute('migrating.count', lyricFiles.length)
-
-					for (const file of lyricFiles) {
-						if (file instanceof FileSystem.Directory) continue
-						const content = await file.text()
-						const parsed = JSON.parse(content) as lyricFileType
-						const finalLyric: ParsedLrc = {
-							tags: parsed.tags,
-							offset: parsed.offset,
-							lyrics: parsed.lyrics,
-							rawOriginalLyrics: '',
-						}
-						if ('raw' in parsed) {
-							const trySplitIt = parsed.raw.split('\n\n')
-							if (trySplitIt.length === 2) {
-								finalLyric.rawOriginalLyrics = trySplitIt[0]
-								finalLyric.rawTranslatedLyrics = trySplitIt[1]
-							} else {
-								finalLyric.rawOriginalLyrics = parsed.raw
-							}
-						} else {
-							finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
-							finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
-						}
-
-						await this.saveLyricsToFile(
-							finalLyric,
-							file.name.replace('.json', ''),
-						)
-					}
-					logger.info('歌词格式迁移完成')
-				} catch (e) {
-					span.setStatus({ code: 2, message: 'internal_error' })
-					toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
-				}
-			},
+		const lyricsDir = new FileSystem.Directory(
+			FileSystem.Paths.document,
+			'lyrics',
 		)
+		try {
+			if (!lyricsDir.exists) {
+				logger.debug('歌词缓存目录不存在，无需迁移')
+				return
+			}
+
+			const lyricFiles = lyricsDir.list()
+
+			for (const file of lyricFiles) {
+				if (file instanceof FileSystem.Directory) continue
+				const content = await file.text()
+				const parsed = JSON.parse(content) as lyricFileType
+				const finalLyric: ParsedLrc = {
+					tags: parsed.tags,
+					offset: parsed.offset,
+					lyrics: parsed.lyrics,
+					rawOriginalLyrics: '',
+				}
+				if ('raw' in parsed) {
+					const trySplitIt = parsed.raw.split('\n\n')
+					if (trySplitIt.length === 2) {
+						finalLyric.rawOriginalLyrics = trySplitIt[0]
+						finalLyric.rawTranslatedLyrics = trySplitIt[1]
+					} else {
+						finalLyric.rawOriginalLyrics = parsed.raw
+					}
+				} else {
+					finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
+					finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
+				}
+
+				await this.saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
+			}
+			logger.info('歌词格式迁移完成')
+		} catch (e) {
+			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
+		}
 	}
 
 	public async getPreciseMusicNameOnBilibiliVideo(
 		metadata: BilibiliTrack['bilibiliMetadata'],
 	) {
-		return await Sentry.startSpan(
-			{
-				name: 'LyricService.getPreciseMusicNameOnBilibiliVideo',
-				op: 'function',
-			},
-			async (span) => {
-				if (!metadata.cid || !metadata.bvid) return undefined
-				const result = await bilibiliApi
-					.getWebPlayerInfo(metadata.bvid, metadata.cid)
-					.andThen((res) => {
-						if (!res.bgm_info) {
-							span.setStatus({ code: 2, message: 'not_found' })
-							return errAsync(new Error('没有获取到歌曲信息'))
-						}
-						const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
-						logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
-							music_title: res.bgm_info.music_title,
-						})
-						if (filteredResult?.[1]) {
-							return okAsync(filteredResult[1])
-						}
-						return okAsync(res.bgm_info.music_title)
-					})
-				if (result.isErr()) {
-					return undefined
+		if (!metadata.cid || !metadata.bvid) return undefined
+		const result = await bilibiliApi
+			.getWebPlayerInfo(metadata.bvid, metadata.cid)
+			.andThen((res) => {
+				if (!res.bgm_info) {
+					return errAsync(new Error('没有获取到歌曲信息'))
 				}
-				return result.value
-			},
-		)
+				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
+				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
+					music_title: res.bgm_info.music_title,
+				})
+				if (filteredResult?.[1]) {
+					return okAsync(filteredResult[1])
+				}
+				return okAsync(res.bgm_info.music_title)
+			})
+		if (result.isErr()) {
+			return undefined
+		}
+		return result.value
 	}
 
 	/**
@@ -313,32 +251,24 @@ class LyricService {
 	 * @returns
 	 */
 	public clearAllLyrics(): Result<true, unknown> {
-		return Sentry.startSpan(
-			{
-				name: 'LyricService.clearAllLyrics',
-				op: 'function',
-			},
-			() => {
-				const lyricsDir = new FileSystem.Directory(
-					FileSystem.Paths.document,
-					'lyrics',
-				)
-
-				return Result.fromThrowable(() => {
-					if (!lyricsDir.exists) {
-						logger.debug('歌词目录不存在，无需清理')
-						return true as const
-					}
-					lyricsDir.delete()
-					lyricsDir.create({
-						intermediates: true,
-						idempotent: true,
-					})
-					logger.info('歌词缓存已清理')
-					return true as const
-				})()
-			},
+		const lyricsDir = new FileSystem.Directory(
+			FileSystem.Paths.document,
+			'lyrics',
 		)
+
+		return Result.fromThrowable(() => {
+			if (!lyricsDir.exists) {
+				logger.debug('歌词目录不存在，无需清理')
+				return true as const
+			}
+			lyricsDir.delete()
+			lyricsDir.create({
+				intermediates: true,
+				idempotent: true,
+			})
+			logger.info('歌词缓存已清理')
+			return true as const
+		})()
 	}
 }
 
