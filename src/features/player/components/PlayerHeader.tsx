@@ -15,11 +15,13 @@ export function PlayerHeader({
 
 	return (
 		<View style={styles.container}>
-			<IconButton
-				icon='chevron-down'
-				size={24}
-				onPress={() => router.back()}
-			/>
+			{
+				<IconButton
+					icon={index === 0 ? 'chevron-down' : 'chevron-left'}
+					size={24}
+					onPress={() => router.back()}
+				/>
+			}
 			<Text
 				variant='titleMedium'
 				style={styles.title}

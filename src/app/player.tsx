@@ -5,6 +5,7 @@ import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
@@ -202,6 +203,8 @@ export default function PlayerPage() {
 			return ['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0)']
 		}
 	}, [colorScheme, playerBackgroundStyle])
+
+	usePreventRemove(index === 1, () => setIndex(0))
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
