@@ -1,6 +1,7 @@
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
+import * as Sentry from '@sentry/react-native'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 queryClient.setQueryDefaults(['db', 'tracks'], {
@@ -44,13 +45,20 @@ export function usePlayCountLeaderBoardPaginated(
 		),
 
 		queryFn: async ({ pageParam }) =>
-			returnOrThrowAsync(
-				trackService.getPlayCountLeaderBoardPaginated({
-					limit,
-					onlyCompleted,
-					initialLimit,
-					cursor: pageParam,
-				}),
+			Sentry.startSpan(
+				{
+					name: 'query:db:tracks:leaderBoardContentPaginated',
+					op: 'function',
+				},
+				async () =>
+					returnOrThrowAsync(
+						trackService.getPlayCountLeaderBoardPaginated({
+							limit,
+							onlyCompleted,
+							initialLimit,
+							cursor: pageParam,
+						}),
+					),
 			),
 		initialPageParam: undefined as
 			| { lastPlayCount: number; lastUpdatedAt: number; lastId: number }
@@ -67,8 +75,15 @@ export function useTotalPlaybackDuration(onlyCompleted = true) {
 	return useQuery({
 		queryKey: trackKeys.totalPlaybackDuration(onlyCompleted),
 		queryFn: () =>
-			returnOrThrowAsync(
-				trackService.getTotalPlaybackDuration({ onlyCompleted }),
+			Sentry.startSpan(
+				{
+					name: 'query:db:tracks:totalPlaybackDuration',
+					op: 'function',
+				},
+				async () =>
+					returnOrThrowAsync(
+						trackService.getTotalPlaybackDuration({ onlyCompleted }),
+					),
 			),
 	})
 }

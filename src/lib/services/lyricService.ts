@@ -129,7 +129,6 @@ class LyricService {
 
 	public saveLyricsToFile(
 		lyrics: ParsedLrc,
-
 		uniqueKey: string,
 	): ResultAsync<ParsedLrc, FileSystemError> {
 		try {
@@ -158,7 +157,6 @@ class LyricService {
 
 	public fetchLyrics(
 		item: LyricSearchResult[0],
-
 		uniqueKey: string,
 	): ResultAsync<ParsedLrc | string, Error> {
 		switch (item.source) {
@@ -178,72 +176,88 @@ class LyricService {
 	 * 迁移旧版歌词格式
 	 */
 	public async migrateFromOldFormat() {
-		const lyricsDir = new FileSystem.Directory(
-			FileSystem.Paths.document,
-			'lyrics',
-		)
-		try {
-			if (!lyricsDir.exists) {
-				logger.debug('歌词缓存目录不存在，无需迁移')
-				return
-			}
-
-			const lyricFiles = lyricsDir.list()
-
-			for (const file of lyricFiles) {
-				if (file instanceof FileSystem.Directory) continue
-				const content = await file.text()
-				const parsed = JSON.parse(content) as lyricFileType
-				const finalLyric: ParsedLrc = {
-					tags: parsed.tags,
-					offset: parsed.offset,
-					lyrics: parsed.lyrics,
-					rawOriginalLyrics: '',
-				}
-				if ('raw' in parsed) {
-					const trySplitIt = parsed.raw.split('\n\n')
-					if (trySplitIt.length === 2) {
-						finalLyric.rawOriginalLyrics = trySplitIt[0]
-						finalLyric.rawTranslatedLyrics = trySplitIt[1]
-					} else {
-						finalLyric.rawOriginalLyrics = parsed.raw
+		await Sentry.startSpan(
+			{ name: 'MigrateFromOldFormat', op: 'function' },
+			async () => {
+				const lyricsDir = new FileSystem.Directory(
+					FileSystem.Paths.document,
+					'lyrics',
+				)
+				try {
+					if (!lyricsDir.exists) {
+						logger.debug('歌词缓存目录不存在，无需迁移')
+						return
 					}
-				} else {
-					finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
-					finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
-				}
 
-				await this.saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
-			}
-			logger.info('歌词格式迁移完成')
-		} catch (e) {
-			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
-		}
+					const lyricFiles = lyricsDir.list()
+
+					for (const file of lyricFiles) {
+						if (file instanceof FileSystem.Directory) continue
+						const content = await file.text()
+						const parsed = JSON.parse(content) as lyricFileType
+						const finalLyric: ParsedLrc = {
+							tags: parsed.tags,
+							offset: parsed.offset,
+							lyrics: parsed.lyrics,
+							rawOriginalLyrics: '',
+						}
+						if ('raw' in parsed) {
+							const trySplitIt = parsed.raw.split('\n\n')
+							if (trySplitIt.length === 2) {
+								finalLyric.rawOriginalLyrics = trySplitIt[0]
+								finalLyric.rawTranslatedLyrics = trySplitIt[1]
+							} else {
+								finalLyric.rawOriginalLyrics = parsed.raw
+							}
+						} else {
+							finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
+							finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
+						}
+
+						await this.saveLyricsToFile(
+							finalLyric,
+							file.name.replace('.json', ''),
+						)
+					}
+					logger.info('歌词格式迁移完成')
+				} catch (e) {
+					toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
+				}
+			},
+		)
 	}
 
 	public async getPreciseMusicNameOnBilibiliVideo(
 		metadata: BilibiliTrack['bilibiliMetadata'],
 	) {
-		if (!metadata.cid || !metadata.bvid) return undefined
-		const result = await bilibiliApi
-			.getWebPlayerInfo(metadata.bvid, metadata.cid)
-			.andThen((res) => {
-				if (!res.bgm_info) {
-					return errAsync(new Error('没有获取到歌曲信息'))
+		return Sentry.startSpan(
+			{
+				name: 'LyricService.getPreciseMusicNameOnBilibiliVideo',
+				op: 'function',
+			},
+			async () => {
+				if (!metadata.cid || !metadata.bvid) return undefined
+				const result = await bilibiliApi
+					.getWebPlayerInfo(metadata.bvid, metadata.cid)
+					.andThen((res) => {
+						if (!res.bgm_info) {
+							return errAsync(new Error('没有获取到歌曲信息'))
+						}
+						const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
+						logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
+							music_title: res.bgm_info.music_title,
+						})
+						if (filteredResult?.[1]) {
+							return okAsync(filteredResult[1])
+						}
+						return okAsync(res.bgm_info.music_title)
+					})
+				if (result.isErr()) {
+					return undefined
 				}
-				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
-				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
-					music_title: res.bgm_info.music_title,
-				})
-				if (filteredResult?.[1]) {
-					return okAsync(filteredResult[1])
-				}
-				return okAsync(res.bgm_info.music_title)
-			})
-		if (result.isErr()) {
-			return undefined
-		}
-		return result.value
+				return result.value
+			},
+		)
 	}
 
 	/**
@@ -251,24 +265,29 @@ class LyricService {
 	 * @returns
 	 */
 	public clearAllLyrics(): Result<true, unknown> {
-		const lyricsDir = new FileSystem.Directory(
-			FileSystem.Paths.document,
-			'lyrics',
-		)
+		return Sentry.startSpan(
+			{ name: 'LyricService.clearAllLyrics', op: 'function' },
+			() => {
+				const lyricsDir = new FileSystem.Directory(
+					FileSystem.Paths.document,
+					'lyrics',
+				)
 
-		return Result.fromThrowable(() => {
-			if (!lyricsDir.exists) {
-				logger.debug('歌词目录不存在，无需清理')
-				return true as const
-			}
-			lyricsDir.delete()
-			lyricsDir.create({
-				intermediates: true,
-				idempotent: true,
-			})
-			logger.info('歌词缓存已清理')
-			return true as const
-		})()
+				return Result.fromThrowable(() => {
+					if (!lyricsDir.exists) {
+						logger.debug('歌词目录不存在，无需清理')
+						return true as const
+					}
+					lyricsDir.delete()
+					lyricsDir.create({
+						intermediates: true,
+						idempotent: true,
+					})
+					logger.info('歌词缓存已清理')
+					return true as const
+				})()
+			},
+		)
 	}
 }
 

@@ -117,10 +117,7 @@ class DownloadService {
 		const cookie = cookieList ? serializeCookieObject(cookieList) : ''
 		let track: Track | null = null
 		try {
-			const trackResult = await Sentry.startSpan(
-				{ name: 'db:getTrack', op: 'db' },
-				() => this.trackService.getTrackByUniqueKey(uniqueKey),
-			)
+			const trackResult = await this.trackService.getTrackByUniqueKey(uniqueKey)
 			if (trackResult.isErr()) {
 				throw new Error(
 					`无法获取 track 信息 -- ${trackResult.error.type}: ` +
@@ -194,33 +191,31 @@ class DownloadService {
 
 			const writable = tempFile.writableStream()
 
-			await Sentry.startSpan({ name: 'io:stream:pipe', op: 'io' }, () =>
-				response.body
-					?.pipeThrough(validateStream)
-					.pipeThrough(progressTransform)
-					.pipeTo(writable),
+			await Sentry.startSpan(
+				{ name: 'io:stream:pipe', op: 'io' },
+				async () =>
+					await response.body
+						?.pipeThrough(validateStream)
+						.pipeThrough(progressTransform)
+						.pipeTo(writable),
 			)
+
 			try {
 				if (finalFile.exists) {
 					finalFile.delete()
 				}
-				Sentry.startSpan({ name: 'io:file:move', op: 'io' }, () =>
-					tempFile.move(finalFile),
-				)
+				tempFile.move(finalFile)
 			} catch (e) {
 				throw new Error(
 					`移动下载文件失败: ${e instanceof Error ? e.message : String(e)}`,
 				)
 			}
-			const recordResult = await Sentry.startSpan(
-				{ name: 'db:update:downloadRecord', op: 'db' },
-				() =>
-					this.trackService.createOrUpdateTrackDownloadRecord({
-						trackId: track!.id,
-						status: 'downloaded',
-						fileSize: finalFile.size,
-					}),
-			)
+			const recordResult =
+				await this.trackService.createOrUpdateTrackDownloadRecord({
+					trackId: track.id,
+					status: 'downloaded',
+					fileSize: finalFile.size,
+				})
 			if (recordResult.isErr()) {
 				throw recordResult.error
 			}
@@ -242,15 +237,12 @@ class DownloadService {
 					logger.error(`下载 ${uniqueKey} 失败: ${error.message}`)
 					if (track) {
 						// 用户侧并不是很关心这个错误，所以就不再在 ui 展示，只是打印日志
-						const result = await Sentry.startSpan(
-							{ name: 'db:update:downloadRecord:fail', op: 'db' },
-							() =>
-								this.trackService.createOrUpdateTrackDownloadRecord({
-									trackId: track!.id,
-									status: 'failed',
-									fileSize: 0,
-								}),
-						)
+						const result =
+							await this.trackService.createOrUpdateTrackDownloadRecord({
+								trackId: track.id,
+								status: 'failed',
+								fileSize: 0,
+							})
 
 						if (result.isErr()) {
 							logger.error('更新 trackDownloads 失败: ', {
@@ -386,7 +378,7 @@ class DownloadService {
 		return this.trackService.deleteAllTrackDownloadRecords().andThen(() => {
 			const directory = new Directory(Paths.document, 'downloads')
 			try {
-				Sentry.startSpan({ name: 'io:dir:delete', op: 'io' }, () =>
+				Sentry.startSpan({ name: 'io:dir:delete', op: 'file.delete' }, () =>
 					directory.delete(),
 				)
 			} catch (e) {
