@@ -59,9 +59,7 @@ export default function PlayerPage() {
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
-	const setPlayerBackgroundStyle = useAppStore(
-		(state) => state.setPlayerBackgroundStyle,
-	)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const realHeight = useMemo(() => {
 		return height + insets.top + insets.bottom
@@ -211,7 +209,7 @@ export default function PlayerPage() {
 	const shaderUnavailable = !backgroundStreamerShader
 	if (!backgroundStreamerShader) {
 		toast.error('无法加载流光效果着色器，已自动回退到渐变模式')
-		setPlayerBackgroundStyle('gradient')
+		setSettings({ playerBackgroundStyle: 'gradient' })
 	}
 
 	return (

@@ -140,9 +140,6 @@ AboutSection.displayName = 'AboutSection'
 
 const SettingsSection = memo(function SettingsSection() {
 	const router = useRouter()
-	const setSendPlayHistory = useAppStore(
-		(state) => state.setEnableSendPlayHistory,
-	)
 	const sendPlayHistory = useAppStore((state) => state.settings.sendPlayHistory)
 	const setEnableSentryReport = useAppStore(
 		(state) => state.setEnableSentryReport,
@@ -153,9 +150,6 @@ const SettingsSection = memo(function SettingsSection() {
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 	const openModal = useModalStore((state) => state.open)
-	const setEnableOldSchoolStyleLyric = useAppStore(
-		(state) => state.setEnableOldSchoolStyleLyric,
-	)
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
@@ -164,6 +158,10 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
+	const enablePersistCurrentPosition = useAppStore(
+		(state) => state.settings.enablePersistCurrentPosition,
+	)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -206,12 +204,8 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 	}
 
-	const setPlayerBackgroundStyleAction = useAppStore(
-		(state) => state.setPlayerBackgroundStyle,
-	)
-
 	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
-		setPlayerBackgroundStyleAction(style)
+		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}
 
@@ -221,7 +215,9 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
 				<Switch
 					value={sendPlayHistory}
-					onValueChange={setSendPlayHistory}
+					onValueChange={() =>
+						setSettings({ sendPlayHistory: !sendPlayHistory })
+					}
 				/>
 			</View>
 			<View style={styles.settingRow}>
@@ -242,7 +238,22 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>恢复旧版歌词样式</Text>
 				<Switch
 					value={enableOldSchoolStyleLyric}
-					onValueChange={setEnableOldSchoolStyleLyric}
+					onValueChange={() =>
+						setSettings({
+							enableOldSchoolStyleLyric: !enableOldSchoolStyleLyric,
+						})
+					}
+				/>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>在应用启动时恢复上次播放进度</Text>
+				<Switch
+					value={enablePersistCurrentPosition}
+					onValueChange={() =>
+						setSettings({
+							enablePersistCurrentPosition: !enablePersistCurrentPosition,
+						})
+					}
 				/>
 			</View>
 			<View style={styles.settingRow}>

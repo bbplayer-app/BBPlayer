@@ -43,7 +43,9 @@ try {
 		'无法加载流光效果着色器',
 		'Features.Player.BGStreamerShader',
 	)
-	useAppStore.getState().setPlayerBackgroundStyle('gradient')
+	useAppStore.getState().setSettings({
+		playerBackgroundStyle: 'gradient',
+	})
 }
 
 export default backgroundStreamerShader
