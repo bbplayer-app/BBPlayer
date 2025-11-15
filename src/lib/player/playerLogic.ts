@@ -65,9 +65,6 @@ const PlayerLogic = {
 
 			AppState.addEventListener('change', () => {
 				console.log('AppState.change')
-				console.log(
-					useAppStore.getState().settings.enablePersistCurrentPosition,
-				)
 				if (useAppStore.getState().settings.enablePersistCurrentPosition) {
 					const currentPosition =
 						playerProgressEmitter.allEvents.get('progress')
@@ -80,8 +77,9 @@ const PlayerLogic = {
 
 			const lastCurrentPosition = storage.getNumber('current_position')
 			if (
-				lastCurrentPosition &&
-				usePlayerStore.getState().currentTrackUniqueKey
+				lastCurrentPosition !== undefined &&
+				usePlayerStore.getState().currentTrackUniqueKey &&
+				useAppStore.getState().settings.enablePersistCurrentPosition
 			) {
 				const reloadIt = async () => {
 					if (!global.playerIsReady) {

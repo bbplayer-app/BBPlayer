@@ -53,11 +53,7 @@ interface PlayerActions {
 		playNext,
 	}: addToQueueParams) => Promise<void>
 	resetStore: () => Promise<void>
-	skipToTrack: (
-		index: number,
-		position?: number,
-		autoPlay?: number,
-	) => Promise<void>
+	skipToTrack: (index: number) => Promise<void>
 	rntpQueue: () => Promise<RNTPTrack[]>
 	removeTrack: (id: string) => Promise<void>
 	reShuffleQueue: () => void

@@ -849,13 +849,14 @@ export const usePlayerStore = create<PlayerStore>()(
 						},
 						async () => {
 							if (!checkPlayerReady()) return
-							const initialTrack = get()._getCurrentTrack()
+							let initialTrack = get()._getCurrentTrack()
 							if (!initialTrack) {
 								logger.warning('无法重新加载，当前没有播放的歌曲')
 								return
 							}
 							if (initialTrack.source === 'bilibili') {
 								// 重新获取
+								initialTrack = structuredClone(initialTrack)
 								initialTrack.bilibiliMetadata.bilibiliStreamUrl = undefined
 							}
 

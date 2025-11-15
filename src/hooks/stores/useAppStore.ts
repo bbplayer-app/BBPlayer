@@ -151,7 +151,6 @@ export const useAppStore = create<AppState>()(
 
 			merge: (persistedState, currentState) => {
 				if (persistedState) {
-					console.log(persistedState)
 					return { ...currentState, ...(persistedState as Partial<AppState>) }
 				}
 
