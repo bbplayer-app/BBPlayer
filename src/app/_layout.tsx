@@ -2,6 +2,7 @@ import AppProviders from '@/components/providers'
 import { toastConfig } from '@/components/toast/ToastConfig'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb, { expoDb } from '@/lib/db/db'
@@ -108,7 +109,9 @@ export default Sentry.wrap(function RootLayout() {
 							}
 						}
 					}
-					void initializePlayer()
+					usePlayerStore.persist.onFinishHydration(() => {
+						void initializePlayer()
+					})
 				})
 			}
 		}

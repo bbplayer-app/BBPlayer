@@ -833,6 +833,98 @@ export const usePlayerStore = create<PlayerStore>()(
 						track.trackDownloads = status
 					})
 				},
+
+				/**
+				 * 重新加载当前播放歌曲
+				 * @param startAtPosition 从何处开始（默认为当前播放位置）
+				 */
+				reloadCurrentTrack: async (startAtPosition?: number) => {
+					await Sentry.startSpan(
+						{
+							name: 'PlayerStore.reloadCurrentTrack',
+							op: 'function',
+							attributes: {
+								startAtPosition,
+							},
+						},
+						async () => {
+							if (!checkPlayerReady()) return
+							let initialTrack = get()._getCurrentTrack()
+							if (!initialTrack) {
+								logger.warning('无法重新加载，当前没有播放的歌曲')
+								return
+							}
+							if (initialTrack.source === 'bilibili') {
+								// 重新获取
+								initialTrack = structuredClone(initialTrack)
+								initialTrack.bilibiliMetadata.bilibiliStreamUrl = undefined
+							}
+
+							set({ isBuffering: true })
+
+							const updatedTrackResult = await get().patchAudio(initialTrack)
+							if (updatedTrackResult.isErr()) {
+								if (
+									updatedTrackResult.error.message.includes(
+										'Network request failed',
+									)
+								) {
+									// 网络请求失败就不用报错了
+									toastAndLogError(
+										'播放失败: 网络请求失败',
+										updatedTrackResult.error,
+										'Player',
+									)
+									return
+								} else if (
+									updatedTrackResult.error instanceof BilibiliApiError
+								) {
+									toastAndLogError(
+										'播放失败: B 站音频流获取失败',
+										updatedTrackResult.error,
+										'Player',
+									)
+									return
+								}
+								toastAndLogError(
+									'更新音频流失败',
+									updatedTrackResult.error,
+									'Player',
+								)
+								reportErrorToSentry(
+									updatedTrackResult.error,
+									'更新音频流失败',
+									ProjectScope.Player,
+								)
+								await TrackPlayer.pause()
+								return
+							}
+
+							const finalTrack = updatedTrackResult.value.track
+
+							const rntpTrackResult = convertToRNTPTrack(finalTrack)
+							if (rntpTrackResult.isErr()) {
+								logger.error('转换为 RNTPTrack 失败', rntpTrackResult.error)
+								reportErrorToSentry(
+									rntpTrackResult.error,
+									'转换为 RNTPTrack 失败',
+									ProjectScope.Player,
+								)
+								return
+							}
+
+							await TrackPlayer.load(rntpTrackResult.value)
+							if (startAtPosition !== undefined) {
+								await get().seekTo(startAtPosition)
+							}
+
+							set(() => ({
+								isBuffering: false,
+								currentPlayStartAt: Date.now(),
+							}))
+						},
+					)
+				},
 			}
 
 			return store

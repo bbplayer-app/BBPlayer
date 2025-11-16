@@ -11,7 +11,7 @@ interface Events {
 const playerProgressEmitter = createStickyEmitter<Events>()
 
 TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (e) => {
-	playerProgressEmitter.emit('progress', {
+	playerProgressEmitter.emitSticky('progress', {
 		position: e.position,
 		duration: e.duration,
 		buffered: e.buffered,

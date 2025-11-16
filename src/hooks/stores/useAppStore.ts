@@ -1,11 +1,14 @@
 import { alert } from '@/components/modals/AlertModal'
-import type { AppState } from '@/types/core/appStore'
+import { expoDb } from '@/lib/db/db'
+import type { AppState, Settings } from '@/types/core/appStore'
+import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
-import { storage } from '@/utils/mmkv'
+import { storage, zustandStorage } from '@/utils/mmkv'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'
 import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
 const logger = log.extend('Store.App')
@@ -41,128 +44,207 @@ export const serializeCookieObject = (
 		.join('; ')
 }
 
+const OLD_KEYS: Record<string, StorageKey> = {
+	COOKIE: 'bilibili_cookie',
+	SEND_HISTORY: 'send_play_history',
+	SENTRY: 'enable_sentry_report',
+	DEBUG_LOG: 'enable_debug_log',
+	OLD_LYRIC: 'enable_old_school_style_lyric',
+	BG_STYLE: 'player_background_style',
+	PERSIST_POSITION: 'enable_persist_current_position',
+}
+
 export const useAppStore = create<AppState>()(
-	immer((set, get) => {
-		const sendPlayHistory = storage.getBoolean('send_play_history') ?? true
-		const enableSentryReport =
-			storage.getBoolean('enable_sentry_report') ?? true
-		const enableDebugLog = storage.getBoolean('enable_debug_log') ?? false
-		log.setSeverity(enableDebugLog ? 'debug' : 'info')
-		const initialCookieString = storage.getString('bilibili_cookie')
-		let initialCookie: Record<string, string> | null = null
-		const enableOldSchoolStyleLyric =
-			storage.getBoolean('enable_old_school_style_lyric') ?? false
-		const playerBackgroundStyle =
-			(storage.getString('player_background_style') as
-				| 'gradient'
-				| 'md3'
-				| 'streamer') ?? 'gradient'
+	persist(
+		immer((set, get) => {
+			return {
+				bilibiliCookie: null,
+				settings: {
+					sendPlayHistory: false,
+					enableSentryReport: true,
+					enableDebugLog: false,
+					enableOldSchoolStyleLyric: false,
+					playerBackgroundStyle: 'gradient',
+					enablePersistCurrentPosition: false,
+				},
 
-		if (initialCookieString) {
-			const result = parseCookieToObject(initialCookieString)
-			if (result.isOk()) {
-				initialCookie = result.value
-			} else {
-				logger.error('从 storage 中读取 cookie 失败', result.error)
+				hasBilibiliCookie: () => {
+					const { bilibiliCookie } = get()
+					return !!bilibiliCookie && Object.keys(bilibiliCookie).length > 0
+				},
+
+				setBilibiliCookie: (cookieString) => {
+					const result = parseCookieToObject(cookieString)
+					if (result.isErr()) {
+						return err(result.error)
+					}
+
+					const cookieObj = result.value
+					set((state) => {
+						state.bilibiliCookie = cookieObj
+					})
+					return ok(undefined)
+				},
+
+				updateBilibiliCookie: (updates) => {
+					const currentCookie = get().bilibiliCookie ?? {}
+					const newCookie = { ...currentCookie, ...updates }
+
+					set((state) => {
+						state.bilibiliCookie = newCookie
+					})
+					return ok(undefined)
+				},
+
+				clearBilibiliCookie: () => {
+					set((state) => {
+						state.bilibiliCookie = null
+					})
+				},
+
+				setSettings: (updates) => {
+					set((state) => {
+						Object.assign(state.settings, updates)
+					})
+				},
+
+				setEnableSentryReport: (value) => {
+					set((state) => {
+						state.settings.enableSentryReport = value
+					})
+
+					alert(
+						'重启？',
+						'切换 Sentry 上报后，需要重启应用才能生效。',
+						[
+							{ text: '取消' },
+							{
+								text: '确定',
+								onPress: () => {
+									expoDb.closeSync()
+									void Expo.reloadAppAsync()
+								},
+							},
+						],
+						{ cancelable: true },
+					)
+				},
+
+				setEnableDebugLog: (value) => {
+					set((state) => {
+						state.settings.enableDebugLog = value
+					})
+
+					log.setSeverity(value ? 'debug' : 'info')
+				},
+
+				setEnablePersistCurrentPosition: (value) => {
+					set((state) => {
+						state.settings.enablePersistCurrentPosition = value
+					})
+					storage.delete('current_position')
+					return
+				},
 			}
-		}
+		}),
+		{
+			name: 'app-storage',
+			storage: createJSONStorage(() => zustandStorage),
+			version: 1,
 
-		logger.info('初始化 AppStore', {
-			hasCookie: !!initialCookie,
-			sendPlayHistory,
-			enableSentryReport,
-			enableDebugLog,
-			enableOldSchoolStyleLyric,
-			playerBackgroundStyle,
-		})
+			partialize: (state) => ({
+				bilibiliCookie: state.bilibiliCookie,
+				settings: state.settings,
+			}),
 
-		return {
-			bilibiliCookie: initialCookie,
-			settings: {
-				sendPlayHistory,
-				enableSentryReport,
-				enableDebugLog,
-				enableOldSchoolStyleLyric,
-				playerBackgroundStyle,
-			},
-
-			hasBilibiliCookie: () => {
-				const { bilibiliCookie } = get()
-				return !!bilibiliCookie && Object.keys(bilibiliCookie).length > 0
-			},
-
-			setEnableSendPlayHistory: (value) => {
-				set((state) => ({
-					settings: { ...state.settings, sendPlayHistory: value },
-				}))
-				storage.set('send_play_history', value)
-			},
-
-			setBilibiliCookie: (cookieString) => {
-				const result = parseCookieToObject(cookieString)
-				if (result.isErr()) {
-					return err(result.error)
+			merge: (persistedState, currentState) => {
+				if (persistedState) {
+					return { ...currentState, ...(persistedState as Partial<AppState>) }
 				}
 
-				const cookieObj = result.value
-				set({ bilibiliCookie: cookieObj })
-				storage.set('bilibili_cookie', cookieString)
-				return ok(undefined)
-			},
+				logger.info('没找到 "app-storage" 存储项. 检查旧的 MMKV 键并尝试迁移')
+				let hasOldData = false
+				const migratedState = { ...currentState }
 
-			updateBilibiliCookie: (updates) => {
-				const currentCookie = get().bilibiliCookie ?? {}
-				const newCookie = { ...currentCookie, ...updates }
+				try {
+					const oldCookieStr = storage.getString('bilibili_cookie')
+					if (oldCookieStr) {
+						const cookieResult = parseCookieToObject(oldCookieStr)
+						if (cookieResult.isOk()) {
+							migratedState.bilibiliCookie = cookieResult.value
+							hasOldData = true
+						}
+					}
+				} catch (e) {
+					logger.error('解析并迁移旧的 bilibili cookie 失败', e)
+				}
 
-				set({ bilibiliCookie: newCookie })
-				storage.set('bilibili_cookie', serializeCookieObject(newCookie))
-				return ok(undefined)
-			},
+				const migratedSettings = { ...currentState.settings }
+				let hasOldSettings = false
 
-			clearBilibiliCookie: () => {
-				set({ bilibiliCookie: null })
-				storage.delete('bilibili_cookie')
-			},
+				try {
+					const checkAndSet = (
+						key: StorageKey,
+						settingName: keyof Settings,
+						type: 'boolean' | 'string' | 'number',
+					) => {
+						let value
+						switch (type) {
+							case 'boolean':
+								// @ts-expect-error -- ts 无法理解这里
+								value = storage.getBoolean(key)
+								break
+							case 'string':
+								// @ts-expect-error -- ts 无法理解这里
+								value = storage.getString(key)
+								break
+							case 'number':
+								// @ts-expect-error -- ts 无法理解这里
+								value = storage.getNumber(key)
+								break
+							default:
+								break
+						}
+						if (value !== undefined && value !== null) {
+							// @ts-expect-error -- ts 无法理解这里
+							migratedSettings[settingName] = value
+							hasOldSettings = true
+						}
+					}
 
-			setEnableSentryReport: (value) => {
-				set((state) => ({
-					settings: { ...state.settings, enableSentryReport: value },
-				}))
-				storage.set('enable_sentry_report', value)
-				alert(
-					'重启？',
-					'切换 Sentry 上报后，需要重启应用才能生效。',
-					[
-						{ text: '取消' },
-						{ text: '确定', onPress: () => Expo.reloadAppAsync() },
-					],
-					{ cancelable: true },
-				)
-			},
+					checkAndSet(OLD_KEYS.SEND_HISTORY, 'sendPlayHistory', 'boolean')
+					checkAndSet(OLD_KEYS.SENTRY, 'enableSentryReport', 'boolean')
+					checkAndSet(OLD_KEYS.DEBUG_LOG, 'enableDebugLog', 'boolean')
+					checkAndSet(
+						OLD_KEYS.OLD_LYRIC,
+						'enableOldSchoolStyleLyric',
+						'boolean',
+					)
+					checkAndSet(OLD_KEYS.BG_STYLE, 'playerBackgroundStyle', 'string')
+					checkAndSet(
+						OLD_KEYS.PERSIST_POSITION,
+						'enablePersistCurrentPosition',
+						'boolean',
+					)
+				} catch (e) {
+					logger.error('迁移设置项失败', e)
+				}
 
-			setEnableDebugLog: (value) => {
-				set((state) => ({
-					settings: { ...state.settings, enableDebugLog: value },
-				}))
-				storage.set('enable_debug_log', value)
-				log.setSeverity(value ? 'debug' : 'info')
-			},
+				if (hasOldSettings) {
+					migratedState.settings = migratedSettings
+					hasOldData = true
+				}
 
-			setEnableOldSchoolStyleLyric: (value) => {
-				set((state) => ({
-					settings: { ...state.settings, enableOldSchoolStyleLyric: value },
-				}))
-				storage.set('enable_old_school_style_lyric', value)
-			},
+				if (!hasOldData) {
+					logger.info('没有旧数据，使用默认值')
+					return currentState
+				}
 
-			setPlayerBackgroundStyle: (value) => {
-				set((state) => ({
-					settings: { ...state.settings, playerBackgroundStyle: value },
-				}))
-				storage.set('player_background_style', value)
+				logger.info('迁移旧数据成功！')
+				return migratedState
 			},
-		}
-	}),
+		},
+	),
 )
 
 export default useAppStore

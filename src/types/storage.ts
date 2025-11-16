@@ -11,6 +11,9 @@ export interface AppStorageSchema {
 	wbi_keys: string
 	enable_old_school_style_lyric: boolean
 	player_background_style: 'gradient' | 'md3' | 'streamer'
+	enable_persist_current_position: boolean
+	'app-storage': string
+	current_position: number
 }
 
 export type StorageKey = keyof AppStorageSchema

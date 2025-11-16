@@ -59,9 +59,7 @@ export default function PlayerPage() {
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
-	const setPlayerBackgroundStyle = useAppStore(
-		(state) => state.setPlayerBackgroundStyle,
-	)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const realHeight = useMemo(() => {
 		return height + insets.top + insets.bottom
@@ -208,11 +206,12 @@ export default function PlayerPage() {
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
-	const shaderUnavailable = !backgroundStreamerShader
-	if (!backgroundStreamerShader) {
+	useEffect(() => {
+		if (backgroundStreamerShader || playerBackgroundStyle !== 'streamer') return
+
 		toast.error('无法加载流光效果着色器，已自动回退到渐变模式')
-		setPlayerBackgroundStyle('gradient')
-	}
+		setSettings({ playerBackgroundStyle: 'gradient' })
+	}, [playerBackgroundStyle, setSettings])
 
 	return (
 		<>
@@ -254,7 +253,7 @@ export default function PlayerPage() {
 					</Group>
 				)}
 
-				{playerBackgroundStyle === 'streamer' && !shaderUnavailable && (
+				{playerBackgroundStyle === 'streamer' && backgroundStreamerShader && (
 					<Group opacity={0.3}>
 						<Rect
 							x={0}
@@ -263,7 +262,7 @@ export default function PlayerPage() {
 							height={realHeight}
 						>
 							<Shader
-								source={backgroundStreamerShader!}
+								source={backgroundStreamerShader}
 								uniforms={streamerUniforms}
 							/>
 						</Rect>
