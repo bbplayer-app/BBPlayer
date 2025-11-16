@@ -250,9 +250,9 @@ const SettingsSection = memo(function SettingsSection() {
 				<Switch
 					value={enablePersistCurrentPosition}
 					onValueChange={() =>
-						setSettings({
-							enablePersistCurrentPosition: !enablePersistCurrentPosition,
-						})
+						useAppStore
+							.getState()
+							.setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
 					}
 				/>
 			</View>

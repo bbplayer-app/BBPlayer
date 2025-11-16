@@ -253,7 +253,7 @@ export default function PlayerPage() {
 					</Group>
 				)}
 
-				{playerBackgroundStyle === 'streamer' && !backgroundStreamerShader && (
+				{playerBackgroundStyle === 'streamer' && backgroundStreamerShader && (
 					<Group opacity={0.3}>
 						<Rect
 							x={0}
@@ -262,7 +262,7 @@ export default function PlayerPage() {
 							height={realHeight}
 						>
 							<Shader
-								source={backgroundStreamerShader!}
+								source={backgroundStreamerShader}
 								uniforms={streamerUniforms}
 							/>
 						</Rect>

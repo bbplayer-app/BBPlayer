@@ -64,7 +64,6 @@ const PlayerLogic = {
 			await TrackPlayer.setRepeatMode(RepeatMode.Off)
 
 			AppState.addEventListener('change', () => {
-				console.log('AppState.change')
 				if (useAppStore.getState().settings.enablePersistCurrentPosition) {
 					const currentPosition =
 						playerProgressEmitter.allEvents.get('progress')

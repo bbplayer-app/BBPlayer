@@ -137,6 +137,14 @@ export const useAppStore = create<AppState>()(
 
 					log.setSeverity(value ? 'debug' : 'info')
 				},
+
+				setEnablePersistCurrentPosition: (value) => {
+					set((state) => {
+						state.settings.enablePersistCurrentPosition = value
+					})
+					storage.delete('current_position')
+					return
+				},
 			}
 		}),
 		{
