@@ -32,11 +32,21 @@ function convertToRNTPTrack(
 	})
 
 	let url = ''
+	let volume = {
+		measured_i: 0,
+		target_i: 0,
+	}
 	if (track.source === 'bilibili' && track.bilibiliMetadata.bilibiliStreamUrl) {
 		url = track.bilibiliMetadata.bilibiliStreamUrl.url
 		logger.debug('使用 B 站音频流 URL', {
 			quality: track.bilibiliMetadata.bilibiliStreamUrl.quality,
+			volume: track.bilibiliMetadata.bilibiliStreamUrl.volume,
 		})
+		volume = {
+			measured_i:
+				track.bilibiliMetadata.bilibiliStreamUrl.volume?.measured_i ?? 0,
+			target_i: track.bilibiliMetadata.bilibiliStreamUrl.volume?.target_i ?? 0,
+		}
 	} else if (track.source === 'local' && track.localMetadata) {
 		url = track.localMetadata.localPath
 		logger.debug('使用本地音频流 URL', { url })
@@ -63,6 +73,7 @@ function convertToRNTPTrack(
 		headers: {
 			referer: 'https://www.bilibili.com',
 		},
+		loudness: volume,
 	}
 
 	logger.debug('RNTPTrack 转换完成', {

@@ -215,7 +215,7 @@ export const createBilibiliApi = () => ({
 				)
 			})
 			.andThen((response) => {
-				const { dash, durl } = response
+				const { dash, durl, volume } = response
 
 				if (!dash) {
 					if (!durl?.[0]) {
@@ -281,6 +281,7 @@ export const createBilibiliApi = () => ({
 						quality: targetAudio.id,
 						getTime,
 						type: 'dash',
+						volume,
 					}
 					logger.debug('找到指定质量音频流', { quality: audioQuality })
 				} else {
@@ -296,6 +297,7 @@ export const createBilibiliApi = () => ({
 							quality: highestQualityAudio.id,
 							getTime,
 							type: 'dash',
+							volume,
 						}
 					}
 				}

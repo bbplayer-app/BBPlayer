@@ -1,10 +1,10 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
 import type { LyricLine } from '@/types/player/lyrics'
+import TrackPlayer from '@roitium/react-native-track-player'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import TrackPlayer from 'react-native-track-player'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],

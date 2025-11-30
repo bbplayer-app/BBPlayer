@@ -49,6 +49,15 @@ export interface BilibiliTrack extends BaseTrack {
 			quality: number
 			getTime: number
 			type: 'mp4' | 'dash' | 'local'
+			volume?: {
+				measured_i: number
+				target_i: number
+				multi_scene_args: {
+					high_dynamic_target_i: '-24'
+					normal_target_i: '-14'
+					undersized_target_i: '-28'
+				}
+			}
 		}
 	}
 }

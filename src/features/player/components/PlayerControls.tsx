@@ -1,8 +1,8 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import * as Haptics from '@/utils/haptics'
+import { RepeatMode } from '@roitium/react-native-track-player'
 import { StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
-import { RepeatMode } from 'react-native-track-player'
 
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()

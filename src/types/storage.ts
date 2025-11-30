@@ -14,6 +14,7 @@ export interface AppStorageSchema {
 	enable_persist_current_position: boolean
 	'app-storage': string
 	current_position: number
+	enable_loudness_normalization: boolean
 }
 
 export type StorageKey = keyof AppStorageSchema

@@ -1,8 +1,8 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
+import TrackPlayer from '@roitium/react-native-track-player'
 import { useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
-import TrackPlayer from 'react-native-track-player'
 
 /**
  * Reanimated shared values 版的 useTrackProgress
