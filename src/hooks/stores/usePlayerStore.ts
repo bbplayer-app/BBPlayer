@@ -23,9 +23,9 @@ import {
 	reportPlaybackHistory,
 } from '@/utils/player'
 import toast from '@/utils/toast'
+import TrackPlayer, { RepeatMode } from '@roitium/react-native-track-player'
 import * as Sentry from '@sentry/react-native'
 import { err, ok, type Result } from 'neverthrow'
-import TrackPlayer, { RepeatMode } from 'react-native-track-player'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'

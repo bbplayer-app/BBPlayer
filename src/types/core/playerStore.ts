@@ -1,7 +1,7 @@
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type { RNTPTrack } from '@/types/rntp'
+import type { RepeatMode } from '@roitium/react-native-track-player'
 import type { Result } from 'neverthrow'
-import type { RepeatMode } from 'react-native-track-player'
 import type { Track, TrackDownloadRecord } from './media'
 
 // 播放器状态接口

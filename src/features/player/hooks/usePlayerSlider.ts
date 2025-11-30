@@ -1,10 +1,10 @@
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import playerProgressEmitter from '@/lib/player/progressListener'
 import * as Haptics from '@/utils/haptics'
+import TrackPlayer from '@roitium/react-native-track-player'
 import { useCallback, useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
-import TrackPlayer from 'react-native-track-player'
 
 export function usePlayerSlider() {
 	// 为了避免释放时闪烁

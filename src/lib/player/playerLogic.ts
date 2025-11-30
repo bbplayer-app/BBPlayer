@@ -4,12 +4,12 @@ import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
-import { AppState } from 'react-native'
 import TrackPlayer, {
 	AppKilledPlaybackBehavior,
 	Capability,
 	RepeatMode,
-} from 'react-native-track-player'
+} from '@roitium/react-native-track-player'
+import { AppState } from 'react-native'
 import playerProgressEmitter from './progressListener'
 
 const logger = log.extend('Player.Init')
@@ -44,6 +44,10 @@ const PlayerLogic = {
 				await new Promise<void>((resolve) => setTimeout(resolve, 1))
 			}
 
+			logger.debug('响度均衡：', {
+				loudness: storage.getBoolean('enable_loudness_normalization'),
+			})
+
 			// 设置播放器能力（怕自己忘了记一下：如果想修改这些能力对应的函数调用，要去 /lib/services/playbackService 里改）
 			await TrackPlayer.updateOptions({
 				capabilities: [
@@ -58,6 +62,10 @@ const PlayerLogic = {
 				android: {
 					appKilledPlaybackBehavior:
 						AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+					fadeEnabled: true,
+					loudnessNormalizationEnabled: storage.getBoolean(
+						'enable_loudness_normalization',
+					),
 				},
 			})
 			// 设置重复模式为 Off

@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  react-native-track-player:
-    hash: df6b2bf6e44ead7f92a6df8ff971b8c5d5cc5da28ca1822beeb05b0bc8d328a3
-    path: patches/react-native-track-player.patch
-
 importers:
 
   .:
@@ -61,6 +56,9 @@ importers:
       '@react-navigation/native':
         specifier: ^7.1.8
         version: 7.1.19(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
+      '@roitium/react-native-track-player':
+        specifier: ^1.1.1
+        version: 1.1.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)
       '@sentry/cli':
         specifier: ^2.56.1
         version: 2.56.1
@@ -277,9 +275,6 @@ importers:
       react-native-toast-message:
         specifier: ^2.3.3
         version: 2.3.3(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
-      react-native-track-player:
-        specifier: ^5.0.0-alpha0
-        version: 5.0.0-alpha0-nightly-cad7f4b0cdea1ab20fd988debcfdbdced7907a39(patch_hash=df6b2bf6e44ead7f92a6df8ff971b8c5d5cc5da28ca1822beeb05b0bc8d328a3)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)
       react-native-web:
         specifier: ~0.21.0
         version: 0.21.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -2156,6 +2151,16 @@ packages:
 
   '@react-navigation/routers@7.5.1':
     resolution: {integrity: sha512-pxipMW/iEBSUrjxz2cDD7fNwkqR4xoi0E/PcfTQGCcdJwLoaxzab5kSadBLj1MTJyT0YRrOXL9umHpXtp+Dv4w==}
+
+  '@roitium/react-native-track-player@1.1.1':
+    resolution: {integrity: sha512-r6ITLUgnd3Iwt1Gx+DqQOef1/P2L+3sUxYMbX7/DT/u0RzUeTMXaKLOVIE4WEYvjT35uHKBwYSzFbKkra2x3RQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      shaka-player: ^4.7.9
+    peerDependenciesMeta:
+      shaka-player:
+        optional: true
 
   '@rollup/rollup-linux-x64-gnu@4.50.1':
     resolution: {integrity: sha512-MCgtFB2+SVNuQmmjHf+wfI4CMxy3Tk8XjA5Z//A0AKD7QXUYFMQcns91K6dEHBvZPCnhJSyDWLApk40Iq/H3tA==}
@@ -6056,16 +6061,6 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-track-player@5.0.0-alpha0-nightly-cad7f4b0cdea1ab20fd988debcfdbdced7907a39:
-    resolution: {integrity: sha512-b1SIqntB0Wkn53EWdCi76SlPm1wZMIzKZxfMFrsc6bROQJrWbSQeG2YHeVFyZFP6WMOCxY0sQk8aKCcy9dcznw==}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-      shaka-player: ^4.7.9
-    peerDependenciesMeta:
-      shaka-player:
-        optional: true
-
   react-native-web@0.21.1:
     resolution: {integrity: sha512-BeNsgwwe4AXUFPAoFU+DKjJ+CVQa3h54zYX77p7GVZrXiiNo3vl03WYDYVEy5R2J2HOPInXtQZB5gmj3vuzrKg==}
     peerDependencies:
@@ -9643,6 +9638,13 @@ snapshots:
   '@react-navigation/routers@7.5.1':
     dependencies:
       nanoid: 3.3.11
+
+  '@roitium/react-native-track-player@1.1.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)':
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
+    optionalDependencies:
+      shaka-player: 4.16.1
 
   '@rollup/rollup-linux-x64-gnu@4.50.1':
     optional: true
@@ -14203,13 +14205,6 @@ snapshots:
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
-
-  react-native-track-player@5.0.0-alpha0-nightly-cad7f4b0cdea1ab20fd988debcfdbdced7907a39(patch_hash=df6b2bf6e44ead7f92a6df8ff971b8c5d5cc5da28ca1822beeb05b0bc8d328a3)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1):
-    dependencies:
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
-    optionalDependencies:
-      shaka-player: 4.16.1
 
   react-native-web@0.21.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:

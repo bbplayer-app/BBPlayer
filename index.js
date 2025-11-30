@@ -1,4 +1,4 @@
-import TrackPlayer from 'react-native-track-player'
+import TrackPlayer from '@roitium/react-native-track-player'
 import { PlaybackService } from './src/lib/player/playbackService'
 
 // 定义一个全局变量，避免二次初始化 player
