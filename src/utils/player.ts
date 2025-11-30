@@ -40,7 +40,7 @@ function convertToRNTPTrack(
 		url = track.bilibiliMetadata.bilibiliStreamUrl.url
 		logger.debug('使用 B 站音频流 URL', {
 			quality: track.bilibiliMetadata.bilibiliStreamUrl.quality,
-			volume: track.bilibiliMetadata.bilibiliStreamUrl.volume,
+			volume: track.bilibiliMetadata.bilibiliStreamUrl.volume ?? {},
 		})
 		volume = {
 			measured_i:
@@ -347,6 +347,7 @@ async function checkAndUpdateAudioStream(
 							quality: streamInfo.quality || 0,
 							getTime: Date.now(),
 							type: streamInfo.type || 'dash',
+							volume: streamInfo.volume,
 						},
 					},
 				}

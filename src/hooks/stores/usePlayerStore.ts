@@ -511,6 +511,7 @@ export const usePlayerStore = create<PlayerStore>()(
 											)
 											return
 										}
+										console.log(rntpTrack.value)
 										await TrackPlayer.load(rntpTrack.value)
 										await get().seekTo(position)
 									}
@@ -810,6 +811,7 @@ export const usePlayerStore = create<PlayerStore>()(
 								return
 							}
 
+							console.log(rntpTrackResult.value)
 							await TrackPlayer.load(rntpTrackResult.value)
 							await TrackPlayer.play()
 
@@ -913,6 +915,7 @@ export const usePlayerStore = create<PlayerStore>()(
 								return
 							}
 
+							console.log(rntpTrackResult.value)
 							await TrackPlayer.load(rntpTrackResult.value)
 							if (startAtPosition !== undefined) {
 								await get().seekTo(startAtPosition)

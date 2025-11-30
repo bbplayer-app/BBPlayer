@@ -205,6 +205,7 @@ export const createBilibiliApi = () => ({
 			fnver: '0',
 			fourk: '1',
 			qlt: String(audioQuality),
+			voice_balance: '1',
 		})
 
 		return wbiParams
@@ -232,6 +233,7 @@ export const createBilibiliApi = () => ({
 						quality: 114514,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'mp4' as const,
+						volume,
 					})
 				}
 
@@ -242,6 +244,7 @@ export const createBilibiliApi = () => ({
 						quality: dash.dolby.audio[0].id,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'dash' as const,
+						volume,
 					})
 				}
 
@@ -252,6 +255,7 @@ export const createBilibiliApi = () => ({
 						quality: dash.flac.audio.id,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'dash' as const,
+						volume,
 					})
 				}
 
