@@ -57,8 +57,8 @@ importers:
         specifier: ^7.1.8
         version: 7.1.19(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       '@roitium/react-native-track-player':
-        specifier: ^1.1.4
-        version: 1.1.4(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)
+        specifier: ^1.1.5
+        version: 1.1.5(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)
       '@sentry/cli':
         specifier: ^2.56.1
         version: 2.56.1
@@ -2152,8 +2152,8 @@ packages:
   '@react-navigation/routers@7.5.1':
     resolution: {integrity: sha512-pxipMW/iEBSUrjxz2cDD7fNwkqR4xoi0E/PcfTQGCcdJwLoaxzab5kSadBLj1MTJyT0YRrOXL9umHpXtp+Dv4w==}
 
-  '@roitium/react-native-track-player@1.1.4':
-    resolution: {integrity: sha512-Sh+EdO3PYOXP5f16ZcItw+NP8StlpysE427552ARxpFGPDHfPBD91+Wgjc3gLzm6oWbCu6BJ7DLg+Mi3WCIV5w==}
+  '@roitium/react-native-track-player@1.1.5':
+    resolution: {integrity: sha512-iNGADk4QtbS4kLYH4bnFNIo5UdJ8OBjVZ3m10HfEuXt2WhGS2TfFTWzvtXoI86d23C6toUuXAZt5Wesap2ZNug==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -9639,7 +9639,7 @@ snapshots:
     dependencies:
       nanoid: 3.3.11
 
-  '@roitium/react-native-track-player@1.1.4(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)':
+  '@roitium/react-native-track-player@1.1.5(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)(shaka-player@4.16.1)':
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
