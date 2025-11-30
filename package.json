@@ -34,7 +34,7 @@
 		"@react-navigation/devtools": "^7.0.39",
 		"@react-navigation/elements": "^2.6.3",
 		"@react-navigation/native": "^7.1.8",
-		"@roitium/react-native-track-player": "^1.1.2",
+		"@roitium/react-native-track-player": "^1.1.4",
 		"@sentry/cli": "^2.56.1",
 		"@sentry/react-native": "~7.2.0",
 		"@shopify/flash-list": "^2.2.0",
