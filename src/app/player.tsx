@@ -9,8 +9,8 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
-import ImageThemeColors from '@bbplayer-app/expo-image-theme-colors'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
+import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import {
 	Canvas,
 	Group,

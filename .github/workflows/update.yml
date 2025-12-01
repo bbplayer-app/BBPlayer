@@ -19,8 +19,6 @@ jobs:
         with:
           node-version: 22.x
           cache: pnpm
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@bbplayer-app"
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
@@ -30,8 +28,6 @@ jobs:
           packager: pnpm
 
       - name: 📦 Install dependencies
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install
 
       - name: 🚀 Create update
