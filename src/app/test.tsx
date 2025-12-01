@@ -225,8 +225,8 @@ export default function TestPage() {
 						</Text>
 						<Text>
 							{'\n'}
-							（注意：所设置的 channel 是持久化的，如果需要恢复要设置为
-							`production`）
+							（注意：所设置的 channel
+							是持久化的，如果需要恢复请点击下面的按钮）
 						</Text>
 						<TextInput
 							style={{ marginTop: 16 }}
@@ -238,6 +238,16 @@ export default function TestPage() {
 					<Dialog.Actions>
 						<Button onPress={() => setUpdateChannelModalVisible(false)}>
 							取消
+						</Button>
+						<Button
+							onPress={() => {
+								setUpdateChannelModalVisible(false)
+								Updates.setUpdateRequestHeadersOverride({
+									'expo-channel-name': 'production',
+								})
+							}}
+						>
+							恢复默认
 						</Button>
 						<Button
 							onPress={() => {

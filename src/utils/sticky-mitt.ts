@@ -81,7 +81,6 @@ function createStickyEmitter<Events extends Record<string, any>>() {
 
 		/**
 		 * 获取所有事件监听器的 Map。
-		 * 使用 getter 属性来代理，这是一种更优雅且不会引发 `this` 问题的方式。
 		 */
 		get all() {
 			return emitter.all
@@ -100,6 +99,10 @@ function createStickyEmitter<Events extends Record<string, any>>() {
 			return () => {
 				emitter.off(type, handler)
 			}
+		},
+
+		get allEvents() {
+			return stickyEvents
 		},
 	}
 }

@@ -1,10 +1,16 @@
+import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { ProjectScope } from '@/types/core/scope'
+import { toastAndLogError } from '@/utils/error-handling'
 import log, { reportErrorToSentry } from '@/utils/log'
+import { storage } from '@/utils/mmkv'
 import TrackPlayer, {
 	AppKilledPlaybackBehavior,
 	Capability,
 	RepeatMode,
-} from 'react-native-track-player'
+} from '@roitium/react-native-track-player'
+import { AppState } from 'react-native'
+import playerProgressEmitter from './progressListener'
 
 const logger = log.extend('Player.Init')
 
@@ -38,6 +44,10 @@ const PlayerLogic = {
 				await new Promise<void>((resolve) => setTimeout(resolve, 1))
 			}
 
+			logger.debug('响度均衡：', {
+				loudness: useAppStore.getState().settings.enableLoudnessNormalization,
+			})
+
 			// 设置播放器能力（怕自己忘了记一下：如果想修改这些能力对应的函数调用，要去 /lib/services/playbackService 里改）
 			await TrackPlayer.updateOptions({
 				capabilities: [
@@ -52,10 +62,48 @@ const PlayerLogic = {
 				android: {
 					appKilledPlaybackBehavior:
 						AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+					fadeEnabled: true,
+					loudnessNormalizationEnabled:
+						useAppStore.getState().settings.enableLoudnessNormalization,
 				},
 			})
 			// 设置重复模式为 Off
 			await TrackPlayer.setRepeatMode(RepeatMode.Off)
+
+			AppState.addEventListener('change', () => {
+				if (useAppStore.getState().settings.enablePersistCurrentPosition) {
+					const currentPosition =
+						playerProgressEmitter.allEvents.get('progress')
+					if (currentPosition) {
+						const { position } = currentPosition
+						storage.set('current_position', position)
+					}
+				}
+			})
+
+			const lastCurrentPosition = storage.getNumber('current_position')
+			if (
+				lastCurrentPosition !== undefined &&
+				usePlayerStore.getState().currentTrackUniqueKey &&
+				useAppStore.getState().settings.enablePersistCurrentPosition
+			) {
+				const reloadIt = async () => {
+					if (!global.playerIsReady) {
+						setTimeout(reloadIt, 50)
+					} else {
+						try {
+							await usePlayerStore
+								.getState()
+								.reloadCurrentTrack(lastCurrentPosition)
+							logger.debug('恢复上一次播放位置成功')
+						} catch (e) {
+							toastAndLogError('恢复播放位置失败', e, 'Player')
+							return
+						}
+					}
+				}
+				void reloadIt()
+			}
 		} catch (error: unknown) {
 			logger.error('初始化播放器失败', error)
 			reportErrorToSentry(error, '初始化播放器失败', ProjectScope.Player)

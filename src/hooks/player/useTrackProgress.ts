@@ -1,7 +1,7 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
+import TrackPlayer from '@roitium/react-native-track-player'
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import TrackPlayer from 'react-native-track-player'
 
 interface Progress {
 	position: number

@@ -108,6 +108,7 @@ export default Sentry.wrap(function RootLayout() {
 							}
 						}
 					}
+
 					void initializePlayer()
 				})
 			}

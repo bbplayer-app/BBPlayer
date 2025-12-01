@@ -1,5 +1,5 @@
 import createStickyEmitter from '@/utils/sticky-mitt'
-import TrackPlayer, { Event } from 'react-native-track-player'
+import TrackPlayer, { Event } from '@roitium/react-native-track-player'
 
 interface Events {
 	progress: {
@@ -11,7 +11,7 @@ interface Events {
 const playerProgressEmitter = createStickyEmitter<Events>()
 
 TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (e) => {
-	playerProgressEmitter.emit('progress', {
+	playerProgressEmitter.emitSticky('progress', {
 		position: e.position,
 		duration: e.duration,
 		buffered: e.buffered,

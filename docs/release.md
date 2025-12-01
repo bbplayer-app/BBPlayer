@@ -9,10 +9,9 @@
 
 ## 2. 发起更新
 
-- 手动发起 `Build and Release` GitHub Actions 任务，目前我们只会构建 v8a 版本。
-- 构建完成后会自动生成 draft release，并上传构建的 apk 文件。
-- 参照 `CHANGELOG.md` 中的更新说明，填写 release 页面的内容。
-- 发布！
+- 提一个 PR，从 `dev` 分支合并到 `master` 分支。
+- PR 合并后，Action 会自动触发。在 Approve 后，CI 会开始运行构建及 Draft Release 流程。
+- 在 Draft Release 中添加发布说明，发布即可。
 
 ## 3. 更新 update.json
 

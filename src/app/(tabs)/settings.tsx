@@ -1,4 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -140,9 +141,6 @@ AboutSection.displayName = 'AboutSection'
 
 const SettingsSection = memo(function SettingsSection() {
 	const router = useRouter()
-	const setSendPlayHistory = useAppStore(
-		(state) => state.setEnableSendPlayHistory,
-	)
 	const sendPlayHistory = useAppStore((state) => state.settings.sendPlayHistory)
 	const setEnableSentryReport = useAppStore(
 		(state) => state.setEnableSentryReport,
@@ -153,9 +151,6 @@ const SettingsSection = memo(function SettingsSection() {
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 	const openModal = useModalStore((state) => state.open)
-	const setEnableOldSchoolStyleLyric = useAppStore(
-		(state) => state.setEnableOldSchoolStyleLyric,
-	)
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
@@ -164,6 +159,13 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
+	const enablePersistCurrentPosition = useAppStore(
+		(state) => state.settings.enablePersistCurrentPosition,
+	)
+	const enableLoudnessNormalization = useAppStore(
+		(state) => state.settings.enableLoudnessNormalization,
+	)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -206,12 +208,8 @@ const SettingsSection = memo(function SettingsSection() {
 		}
 	}
 
-	const setPlayerBackgroundStyleAction = useAppStore(
-		(state) => state.setPlayerBackgroundStyle,
-	)
-
 	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
-		setPlayerBackgroundStyleAction(style)
+		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}
 
@@ -221,7 +219,9 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
 				<Switch
 					value={sendPlayHistory}
-					onValueChange={setSendPlayHistory}
+					onValueChange={() =>
+						setSettings({ sendPlayHistory: !sendPlayHistory })
+					}
 				/>
 			</View>
 			<View style={styles.settingRow}>
@@ -242,7 +242,22 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>恢复旧版歌词样式</Text>
 				<Switch
 					value={enableOldSchoolStyleLyric}
-					onValueChange={setEnableOldSchoolStyleLyric}
+					onValueChange={() =>
+						setSettings({
+							enableOldSchoolStyleLyric: !enableOldSchoolStyleLyric,
+						})
+					}
+				/>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>在应用启动时恢复上次播放进度</Text>
+				<Switch
+					value={enablePersistCurrentPosition}
+					onValueChange={() =>
+						useAppStore
+							.getState()
+							.setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
+					}
 				/>
 			</View>
 			<View style={styles.settingRow}>
@@ -281,6 +296,35 @@ const SettingsSection = memo(function SettingsSection() {
 						onPress={() => setPlayerBackgroundStyle('md3')}
 					/>
 				</FunctionalMenu>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>响度均衡（实验性）</Text>
+				<Switch
+					value={enableLoudnessNormalization}
+					onValueChange={() => {
+						if (enableLoudnessNormalization === true) {
+							setSettings({ enableLoudnessNormalization: false })
+						} else {
+							alert(
+								'启用响度均衡',
+								'（重启应用后生效）该功能使用 bilibili 提供的响度均衡数据，对缓存后的歌曲无效。启用后音量可能会偏小。',
+								[
+									{
+										text: '取消',
+									},
+									{
+										text: '确定',
+										onPress: () => {
+											setSettings({ enableLoudnessNormalization: true })
+											toast.success('重启应用后生效')
+										},
+									},
+								],
+								{ cancelable: true },
+							)
+						}
+					}}
+				/>
 			</View>
 			<View style={styles.settingRow}>
 				<Text>手动设置{'\u2009Cookie'}</Text>

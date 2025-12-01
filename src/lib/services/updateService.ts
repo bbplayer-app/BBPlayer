@@ -53,60 +53,46 @@ export const compareSemver = (a: string, b: string): number => {
 export async function fetchLatestRelease(): Promise<
 	Result<ReleaseInfo, Error>
 > {
-	return await Sentry.startSpan(
-		{
-			name: 'UpdateService.fetchLatestRelease',
-			op: 'function',
-		},
-		async (span) => {
-			try {
-				const manifestUrl = getManifestUrl()
-				span?.setAttribute('manifestUrl', manifestUrl)
-				if (!manifestUrl) {
-					return err(
-						new Error('未在 app.config 中配置更新渠道 updateManifestUrl'),
-					)
-				}
-				const res = await Sentry.startSpan(
-					{ name: 'http:fetch:update-manifest', op: 'http' },
-					() => fetch(manifestUrl, { cache: 'no-store' }),
-				)
-				span?.setAttribute('http.status_code', res.status)
-				if (!res.ok) {
-					return err(new Error(`拉取更新信息: ${res.status} ${res.statusText}`))
-				}
-				const json: unknown = await res.json()
-				if (typeof json !== 'object' || json === null) {
-					return err(new Error('更新信息格式错误'))
-				}
-				const obj = json as Record<string, unknown>
-				const version = obj.version
-				const url = obj.url
-				if (typeof version !== 'string' || typeof url !== 'string') {
-					return err(new Error('更新信息格式错误'))
-				}
-				const notes = typeof obj.notes === 'string' ? obj.notes : ''
-				const listed_notes =
-					Array.isArray(obj.listed_notes) &&
-					obj.listed_notes.every((i) => typeof i === 'string')
-						? obj.listed_notes
-						: undefined
-				const forced = typeof obj.forced === 'boolean' ? obj.forced : false
-				const releaseInfo = {
-					version: normalizeVersion(version),
-					url,
-					notes,
-					listed_notes,
-					forced,
-				}
-				span?.setAttribute('latest.version', releaseInfo.version)
-				span?.setAttribute('forced', releaseInfo.forced)
-				return ok(releaseInfo)
-			} catch (e) {
-				return err(toError(e))
-			}
-		},
-	)
+	try {
+		const manifestUrl = getManifestUrl()
+		if (!manifestUrl) {
+			return err(new Error('未在 app.config 中配置更新渠道 updateManifestUrl'))
+		}
+		const res = await Sentry.startSpan(
+			{ name: 'http:fetch:update-manifest', op: 'http' },
+			() => fetch(manifestUrl, { cache: 'no-store' }),
+		)
+		if (!res.ok) {
+			return err(new Error(`拉取更新信息: ${res.status} ${res.statusText}`))
+		}
+		const json: unknown = await res.json()
+		if (typeof json !== 'object' || json === null) {
+			return err(new Error('更新信息格式错误'))
+		}
+		const obj = json as Record<string, unknown>
+		const version = obj.version
+		const url = obj.url
+		if (typeof version !== 'string' || typeof url !== 'string') {
+			return err(new Error('更新信息格式错误'))
+		}
+		const notes = typeof obj.notes === 'string' ? obj.notes : ''
+		const listed_notes =
+			Array.isArray(obj.listed_notes) &&
+			obj.listed_notes.every((i) => typeof i === 'string')
+				? obj.listed_notes
+				: undefined
+		const forced = typeof obj.forced === 'boolean' ? obj.forced : false
+		const releaseInfo = {
+			version: normalizeVersion(version),
+			url,
+			notes,
+			listed_notes,
+			forced,
+		}
+		return ok(releaseInfo)
+	} catch (e) {
+		return err(toError(e))
+	}
 }
 
 /**
@@ -116,26 +102,14 @@ export async function fetchLatestRelease(): Promise<
 export async function checkForAppUpdate(): Promise<
 	Result<{ update: ReleaseInfo | null; currentVersion: string }, Error>
 > {
-	return await Sentry.startSpan(
-		{
-			name: 'UpdateService.checkForAppUpdate',
-			op: 'function',
-		},
-		async (span) => {
-			const currentVersion = normalizeVersion(
-				Application.nativeApplicationVersion ?? '0.0.0',
-			)
-			span?.setAttribute('current.version', currentVersion)
-			const latest = await fetchLatestRelease()
-			if (latest.isErr()) return err(latest.error)
-			const info = latest.value
-			span?.setAttribute('latest.version', info.version)
-			if (compareSemver(info.version, currentVersion) <= 0) {
-				span?.setAttribute('hasUpdate', false)
-				return ok({ update: null, currentVersion })
-			}
-			span?.setAttribute('hasUpdate', true)
-			return ok({ update: info, currentVersion })
-		},
+	const currentVersion = normalizeVersion(
+		Application.nativeApplicationVersion ?? '0.0.0',
 	)
+	const latest = await fetchLatestRelease()
+	if (latest.isErr()) return err(latest.error)
+	const info = latest.value
+	if (compareSemver(info.version, currentVersion) <= 0) {
+		return ok({ update: null, currentVersion })
+	}
+	return ok({ update: info, currentVersion })
 }

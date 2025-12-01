@@ -7,7 +7,7 @@ import TrackPlayer, {
 	Event,
 	RepeatMode,
 	State as TrackPlayerState,
-} from 'react-native-track-player'
+} from '@roitium/react-native-track-player'
 
 const logger = log.extend('Player.PlaybackService')
 let isResettingSleepTimer = false
@@ -189,6 +189,7 @@ export const PlaybackService = async () => {
 
 	TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, () => {
 		const { sleepTimerEndAt, setSleepTimer } = usePlayerStore.getState()
+
 		if (
 			sleepTimerEndAt &&
 			Date.now() >= sleepTimerEndAt &&
