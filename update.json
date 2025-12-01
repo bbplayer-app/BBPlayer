@@ -1,10 +1,13 @@
 {
-	"version": "1.4.3",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.4.3",
-	"notes": "你版本太老了！！！赶紧更新！！！",
+	"version": "1.4.2",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v1.4.2",
+	"notes": "功能：完善「稍后再看」页面功能，支持查看播放进度并清除已播放内容。\n\n新增：支持多种播放器背景风格（渐变、流光、默认）。\n\n修复：合集全部失效的问题\n\n修复：播放出现 android-failed-runtime-check 报错\n\n修复：Session ID must be unique.",
 	"listed_notes": [
-		"功能：实验性支持响度均衡（默认关闭）",
-		"功能：软件启动时自动恢复上一次播放进度（默认关闭）"
+		"功能：完善「稍后再看」页面功能，支持查看播放进度并清除已播放内容",
+		"新增：支持多种播放器背景风格（渐变、流光、MD3）",
+		"修复：合集全部失效的问题",
+		"修复：播放出现 android-failed-runtime-check 报错",
+		"修复：Session ID must be unique."
 	],
 	"forced": false
 }
