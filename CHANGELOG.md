@@ -5,13 +5,14 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [1.4.3] - 2025-12-01
 
 ### Added
 
-- 支持在「开发者页面」设置是否启用响度均衡
+- 支持实验性响度均衡（默认不启用）
+- 支持在软件启动时恢复上次播放进度（默认不启用）
 
-## [1.4.2] - 2025-11-9
+## [1.4.2] - 2025-11-09
 
 ### Added
 
@@ -126,7 +127,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.2...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.3...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -134,3 +135,4 @@
 [1.3.6]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.5...v1.3.6
 [1.4.0]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.6...v1.4.0
 [1.4.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.0...v1.4.2
+[1.4.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.2...v1.4.3
