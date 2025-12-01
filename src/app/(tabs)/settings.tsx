@@ -1,4 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -161,6 +162,9 @@ const SettingsSection = memo(function SettingsSection() {
 	const enablePersistCurrentPosition = useAppStore(
 		(state) => state.settings.enablePersistCurrentPosition,
 	)
+	const enableLoudnessNormalization = useAppStore(
+		(state) => state.settings.enableLoudnessNormalization,
+	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const handleCheckForUpdate = async () => {
@@ -292,6 +296,35 @@ const SettingsSection = memo(function SettingsSection() {
 						onPress={() => setPlayerBackgroundStyle('md3')}
 					/>
 				</FunctionalMenu>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>响度均衡（实验性）</Text>
+				<Switch
+					value={enableLoudnessNormalization}
+					onValueChange={() => {
+						if (enableLoudnessNormalization === true) {
+							setSettings({ enableLoudnessNormalization: false })
+						} else {
+							alert(
+								'启用响度均衡',
+								'（重启应用后生效）该功能使用 bilibili 提供的响度均衡数据，对缓存后的歌曲无效。启用后音量可能会偏小。',
+								[
+									{
+										text: '取消',
+									},
+									{
+										text: '确定',
+										onPress: () => {
+											setSettings({ enableLoudnessNormalization: true })
+											toast.success('重启应用后生效')
+										},
+									},
+								],
+								{ cancelable: true },
+							)
+						}
+					}}
+				/>
 			</View>
 			<View style={styles.settingRow}>
 				<Text>手动设置{'\u2009Cookie'}</Text>

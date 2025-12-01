@@ -7,6 +7,7 @@ interface Settings {
 	enableOldSchoolStyleLyric: boolean
 	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
 	enablePersistCurrentPosition: boolean
+	enableLoudnessNormalization: boolean
 }
 
 interface AppState {

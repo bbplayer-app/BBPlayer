@@ -45,7 +45,7 @@ const PlayerLogic = {
 			}
 
 			logger.debug('响度均衡：', {
-				loudness: storage.getBoolean('enable_loudness_normalization'),
+				loudness: useAppStore.getState().settings.enableLoudnessNormalization,
 			})
 
 			// 设置播放器能力（怕自己忘了记一下：如果想修改这些能力对应的函数调用，要去 /lib/services/playbackService 里改）
@@ -63,9 +63,8 @@ const PlayerLogic = {
 					appKilledPlaybackBehavior:
 						AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
 					fadeEnabled: true,
-					loudnessNormalizationEnabled: storage.getBoolean(
-						'enable_loudness_normalization',
-					),
+					loudnessNormalizationEnabled:
+						useAppStore.getState().settings.enableLoudnessNormalization,
 				},
 			})
 			// 设置重复模式为 Off

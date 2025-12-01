@@ -8,18 +8,14 @@ import { downloadService } from '@/lib/services/downloadService'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
-import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import type { MMKV } from 'react-native-mmkv'
-import { useMMKVBoolean } from 'react-native-mmkv'
 import {
 	Button,
 	Dialog,
 	Portal,
-	Switch,
 	Text,
 	TextInput,
 	useTheme,
@@ -37,8 +33,6 @@ export default function TestPage() {
 	const [updateChannel, setUpdateChannel] = useState('')
 	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
 		useState(false)
-	const [enableLoudnessNormalization, setEnableLoudnessNormalization] =
-		useMMKVBoolean('enable_loudness_normalization', storage as MMKV)
 
 	const testCheckUpdate = async () => {
 		setLoading(true)
@@ -210,24 +204,6 @@ export default function TestPage() {
 					>
 						清空播放器队列
 					</Button>
-					<View
-						style={[
-							styles.button,
-							{
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'space-between',
-							},
-						]}
-					>
-						<Text>启用响度均衡</Text>
-						<Switch
-							value={enableLoudnessNormalization}
-							onValueChange={() =>
-								setEnableLoudnessNormalization(!enableLoudnessNormalization)
-							}
-						/>
-					</View>
 				</View>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>

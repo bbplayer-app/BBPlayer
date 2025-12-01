@@ -66,6 +66,7 @@ export const useAppStore = create<AppState>()(
 					enableOldSchoolStyleLyric: false,
 					playerBackgroundStyle: 'gradient',
 					enablePersistCurrentPosition: false,
+					enableLoudnessNormalization: false,
 				},
 
 				hasBilibiliCookie: () => {
