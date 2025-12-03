@@ -2,7 +2,7 @@
 	"name": "bbplayer",
 	"main": "index.js",
 	"version": "1.4.3",
-	"versionCode": 80,
+	"versionCode": 81,
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
 		"android": "expo run:android",
@@ -19,7 +19,6 @@
 	},
 	"dependencies": {
 		"@babel/runtime": "^7.27.1",
-		"@roitium/expo-image-theme-colors": "^0.1.0",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@expo/metro-runtime": "~6.1.2",
@@ -34,6 +33,7 @@
 		"@react-navigation/devtools": "^7.0.39",
 		"@react-navigation/elements": "^2.6.3",
 		"@react-navigation/native": "^7.1.8",
+		"@roitium/expo-image-theme-colors": "^0.1.0",
 		"@roitium/react-native-track-player": "^1.1.5",
 		"@sentry/cli": "^2.56.1",
 		"@sentry/react-native": "~7.2.0",
@@ -75,7 +75,7 @@
 		"expo-sqlite-devtools": "^0.0.2",
 		"expo-symbols": "~1.0.7",
 		"expo-system-ui": "~6.0.8",
-		"expo-updates": "~29.0.12",
+		"expo-updates": "~29.0.13",
 		"expo-web-browser": "~15.0.8",
 		"he": "^1.2.0",
 		"immer": "^10.2.0",
