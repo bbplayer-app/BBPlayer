@@ -241,7 +241,7 @@ importers:
         version: 0.71.19
       react-native-logs:
         specifier: github:yanyao2333/react-native-logs#v5.6.2
-        version: https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
+        version: git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
       react-native-mmkv:
         specifier: ^3.3.3
         version: 3.3.3(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
@@ -5994,8 +5994,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-logs@https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4:
-    resolution: {tarball: https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4}
+  react-native-logs@git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4:
+    resolution: {commit: b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4, repo: git@github.com:yanyao2333/react-native-logs.git, type: git}
     version: 5.5.0
 
   react-native-mmkv@3.3.3:
@@ -6129,6 +6129,7 @@ packages:
   react-server-dom-webpack@19.0.0:
     resolution: {integrity: sha512-hLug9KEXLc8vnU9lDNe2b2rKKDaqrp5gNiES4uyu2Up3FZfZJZmdwLFXlWzdA9gTB/6/cWduSB2K1Lfag2pSvw==}
     engines: {node: '>=0.10.0'}
+    deprecated: Critical Security Vulnerability in React Server Components
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
@@ -6383,6 +6384,7 @@ packages:
 
   shaka-player@4.16.1:
     resolution: {integrity: sha512-ieaC0pcn7EPMSXzTi5aXho7gFg2OlduKRgzKPSEMauJMe/pkt6mTWLmVqSsCH7jTRPpiuzF7pFB+/ZHCTWqgHA==}
+    engines: {node: '>=18'}
 
   shallowequal@1.1.0:
     resolution: {integrity: sha512-y0m1JoUZSlPAjXVtPPW70aZWfIL/dSP7AFkRnniLCrK/8MDKog3TySTBmckD+RObVxH0v4Tox67+F14PdED2oQ==}
@@ -6667,6 +6669,11 @@ packages:
 
   terser@5.44.0:
     resolution: {integrity: sha512-nIVck8DK+GM/0Frwd+nIhZ84pR/BX7rmXMfYwyg+Sri5oGVE99/E3KvXqpC2xHFxyqXyGHTKBSioxxplrO4I4w==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  terser@5.44.1:
+    resolution: {integrity: sha512-t/R3R/n0MSwnnazuPpPNVO60LX0SKL45pyl9YlvxIdkH0Of7D5qM2EVe+yASRIlY5pZ73nclYJfNANGWPwFDZw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -7427,7 +7434,7 @@ snapshots:
     dependencies:
       '@babel/template': 7.27.2
       '@babel/traverse': 7.28.4
-      '@babel/types': 7.28.4
+      '@babel/types': 7.28.5
     transitivePeerDependencies:
       - supports-color
 
@@ -11553,7 +11560,7 @@ snapshots:
       eslint: 9.36.0
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint@9.36.0))(eslint@9.36.0)
       eslint-plugin-expo: 1.0.0(eslint@9.36.0)(typescript@5.9.2)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint@9.36.0))(eslint@9.36.0))(eslint@9.36.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.36.0)
       eslint-plugin-react: 7.37.5(eslint@9.36.0)
       eslint-plugin-react-hooks: 5.2.0(eslint@9.36.0)
       globals: 16.4.0
@@ -11586,7 +11593,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint@9.36.0))(eslint@9.36.0))(eslint@9.36.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.36.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -11614,7 +11621,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint@9.36.0))(eslint@9.36.0))(eslint@9.36.0):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.44.0(eslint@9.36.0)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.36.0):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -14145,7 +14152,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
 
-  react-native-logs@https://codeload.github.com/yanyao2333/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
+  react-native-logs@git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
 
   react-native-mmkv@3.3.3(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -14914,12 +14921,19 @@ snapshots:
       jest-worker: 27.5.1
       schema-utils: 4.3.3
       serialize-javascript: 6.0.2
-      terser: 5.44.0
+      terser: 5.44.1
       webpack: 5.101.3(esbuild@0.25.9)
     optionalDependencies:
       esbuild: 0.25.9
 
   terser@5.44.0:
+    dependencies:
+      '@jridgewell/source-map': 0.3.11
+      acorn: 8.15.0
+      commander: 2.20.3
+      source-map-support: 0.5.21
+
+  terser@5.44.1:
     dependencies:
       '@jridgewell/source-map': 0.3.11
       acorn: 8.15.0
