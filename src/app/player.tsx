@@ -10,7 +10,6 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import {
 	Canvas,
 	Group,
@@ -21,6 +20,7 @@ import {
 	vec,
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
+import ImageThemeColors from 'expo-image-theme-colors'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	StyleSheet,

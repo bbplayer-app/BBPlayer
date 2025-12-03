@@ -33,7 +33,7 @@
 		"@react-navigation/devtools": "^7.0.39",
 		"@react-navigation/elements": "^2.6.3",
 		"@react-navigation/native": "^7.1.8",
-		"@roitium/expo-image-theme-colors": "^0.1.0",
+		"expo-image-theme-colors": "^0.1.0",
 		"@roitium/react-native-track-player": "^1.1.5",
 		"@sentry/cli": "^2.56.1",
 		"@sentry/react-native": "~7.2.0",
