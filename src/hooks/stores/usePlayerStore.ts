@@ -241,7 +241,7 @@ export const usePlayerStore = create<PlayerStore>()(
 								get()
 
 							const keyToRemove = Object.keys(tracks).find((key) => {
-								const track = tracks[key]
+								const track = tracks[key] as unknown as Track
 								return track.uniqueKey === uniqueKey
 							})
 
@@ -279,6 +279,12 @@ export const usePlayerStore = create<PlayerStore>()(
 								? currentIndex - 1
 								: currentIndex + 1
 							const nextTrackKeyToPlay = activeList[nextIndexToPlayInOldList]
+
+							// 这理论上不会发生
+							if (!nextTrackKeyToPlay) {
+								logger.error('未找到下一首歌曲，跳过删除操作')
+								return
+							}
 
 							set((state) => {
 								// 删除 track 数据
@@ -401,7 +407,7 @@ export const usePlayerStore = create<PlayerStore>()(
 							set((state) => {
 								// 1. 把新歌数据加进去
 								newTracks.forEach((track, i) => {
-									state.tracks[newKeys[i]] = track
+									state.tracks[newKeys[i]!] = track
 								})
 
 								// 2. 计算插入位置
@@ -421,6 +427,10 @@ export const usePlayerStore = create<PlayerStore>()(
 								if (playNow) {
 									// 默认播放新列表的第一首
 									let keyToPlay = newKeys[0]
+									if (!keyToPlay) {
+										logger.error('没找到第一首歌曲，跳过播放')
+										return
+									}
 
 									// 如果提供了 startFromKey，并且这个 key 属于本次新添加的歌曲，则使用它
 									if (startFromKey && newKeys.includes(startFromKey)) {
@@ -431,7 +441,9 @@ export const usePlayerStore = create<PlayerStore>()(
 									!state.currentTrackUniqueKey &&
 									state.orderedList.length > 0
 								) {
-									state.currentTrackUniqueKey = state.orderedList[0]
+									if (state.orderedList.length > 0) {
+										state.currentTrackUniqueKey = state.orderedList[0]!
+									}
 								}
 							})
 
@@ -630,8 +642,8 @@ export const usePlayerStore = create<PlayerStore>()(
 					for (let i = newShuffledList.length - 1; i > 0; i--) {
 						const j = Math.floor(Math.random() * (i + 1))
 						;[newShuffledList[i], newShuffledList[j]] = [
-							newShuffledList[j],
-							newShuffledList[i],
+							newShuffledList[j]!,
+							newShuffledList[i]!,
 						]
 					}
 
@@ -640,8 +652,8 @@ export const usePlayerStore = create<PlayerStore>()(
 						const idx = newShuffledList.indexOf(currentTrackKey)
 						if (idx !== -1) {
 							;[newShuffledList[0], newShuffledList[idx]] = [
-								newShuffledList[idx],
-								newShuffledList[0],
+								newShuffledList[idx]!,
+								newShuffledList[0]!,
 							]
 						}
 					}
@@ -739,6 +751,10 @@ export const usePlayerStore = create<PlayerStore>()(
 							}
 
 							const keyToPlay = activeList[index]
+							if (!keyToPlay) {
+								logger.error('未找到指定索引的曲目', { index })
+								return
+							}
 							const initialTrack = get().tracks[keyToPlay]
 
 							if (!initialTrack) {

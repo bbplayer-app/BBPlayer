@@ -14,7 +14,7 @@ export default function ModalHost() {
 	const router = useRouter()
 
 	usePreventRemove(modals.length > 0, () => {
-		if (modals[modals.length - 1].options?.dismissible === false) {
+		if (modals[modals.length - 1]!.options?.dismissible === false) {
 			return
 		}
 		closeTop()

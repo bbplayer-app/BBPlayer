@@ -37,13 +37,13 @@ export function parseLrc(lrcString: string): ParsedLrc {
 			const metadataMatch = tagRegex.exec(trimmedLine)
 			if (metadataMatch) {
 				const [, key, value] = metadataMatch
-				parsedResult.tags[key] = value.trim()
+				parsedResult.tags[key!] = value!.trim()
 				continue
 			}
 
 			const timestampMatches = [...trimmedLine.matchAll(timestampRegex)]
 			if (timestampMatches.length > 0) {
-				const lastTimestamp = timestampMatches[timestampMatches.length - 1]
+				const lastTimestamp = timestampMatches[timestampMatches.length - 1]!
 				const textContent = trimmedLine
 					.substring(lastTimestamp.index + lastTimestamp[0].length)
 					.trim()
@@ -52,9 +52,9 @@ export function parseLrc(lrcString: string): ParsedLrc {
 				if (!textContent) continue
 
 				for (const match of timestampMatches) {
-					const minutes = parseInt(match[1], 10)
-					const seconds = parseInt(match[2], 10)
-					const fractionalPart = match[3] || '0'
+					const minutes = parseInt(match[1]!, 10)
+					const seconds = parseInt(match[2]!, 10)
+					const fractionalPart = match[3] ?? '0'
 					const milliseconds = parseInt(fractionalPart.padEnd(3, '0'), 10)
 
 					const timestamp = minutes * 60 + seconds + milliseconds / 1000

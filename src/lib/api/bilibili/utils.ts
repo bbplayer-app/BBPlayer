@@ -14,8 +14,8 @@ export function bv2av(bvid: string): number {
 
 	const data = 'FcwAPNKTMug3GV5Lj7EJnHpWsx4tb8haYeviqBz6rkCy12mUSDQX9RdoZf'
 	const bvidArr = Array.from(bvid)
-	;[bvidArr[3], bvidArr[9]] = [bvidArr[9], bvidArr[3]]
-	;[bvidArr[4], bvidArr[7]] = [bvidArr[7], bvidArr[4]]
+	;[bvidArr[3], bvidArr[9]] = [bvidArr[9]!, bvidArr[3]!]
+	;[bvidArr[4], bvidArr[7]] = [bvidArr[7]!, bvidArr[4]!]
 	bvidArr.splice(0, 3)
 	const tmp = bvidArr.reduce(
 		(pre, bvidChar) => pre * BASE + BigInt(data.indexOf(bvidChar)),
@@ -40,12 +40,12 @@ export function av2bv(avid: number | bigint): string {
 	const resultArray = Array.from('BV1000000000')
 
 	for (let i = 11; i >= 3; i--) {
-		resultArray[i] = MAGIC_STR[Number(tempNum % BASE)]
+		resultArray[i] = MAGIC_STR[Number(tempNum % BASE)]!
 		tempNum /= BASE
 	}
 
-	;[resultArray[3], resultArray[9]] = [resultArray[9], resultArray[3]]
-	;[resultArray[4], resultArray[7]] = [resultArray[7], resultArray[4]]
+	;[resultArray[3], resultArray[9]] = [resultArray[9]!, resultArray[3]!]
+	;[resultArray[4], resultArray[7]] = [resultArray[7]!, resultArray[4]!]
 
 	return resultArray.join('')
 }

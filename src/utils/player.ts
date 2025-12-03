@@ -270,7 +270,7 @@ async function checkAndUpdateAudioStream(
 			const cidResult = pageListResult.match<Result<number, BilibiliApiError>>(
 				(pages) => {
 					if (pages.length > 0) {
-						const firstPageCid = pages[0].cid
+						const firstPageCid = pages[0]!.cid
 						logger.debug('使用第一个分 P 的 CID', {
 							bvid,
 							cid: firstPageCid,

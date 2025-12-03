@@ -240,8 +240,8 @@ export const createBilibiliApi = () => ({
 				if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
 					logger.debug('优先使用 Dolby 音频流')
 					return okAsync({
-						url: dash.dolby.audio[0].baseUrl,
-						quality: dash.dolby.audio[0].id,
+						url: dash.dolby.audio[0]!.baseUrl,
+						quality: dash.dolby.audio[0]!.id,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'dash' as const,
 						volume,

@@ -30,7 +30,7 @@ class LyricService {
 				priorityMatch[1],
 				priorityMatch[2],
 			)
-			return priorityMatch[1] || priorityMatch[2]
+			return priorityMatch[1] ?? priorityMatch[2] ?? keyword
 		}
 
 		const replacedKeyword = keyword.replace(/【.*?】|“.*?”/g, '').trim()
@@ -56,7 +56,11 @@ class LyricService {
 		return ResultAsync.combine(providers).andThen((results) => {
 			// FIXME: fuck what's this???
 			const randomIndex = Math.floor(Math.random() * results.length)
-			return okAsync(results[randomIndex])
+			const result = results[randomIndex]
+			if (!result) {
+				return errAsync(new Error('没有找到歌词'))
+			}
+			return okAsync(result)
 		})
 	}
 
@@ -203,8 +207,8 @@ class LyricService {
 				if ('raw' in parsed) {
 					const trySplitIt = parsed.raw.split('\n\n')
 					if (trySplitIt.length === 2) {
-						finalLyric.rawOriginalLyrics = trySplitIt[0]
-						finalLyric.rawTranslatedLyrics = trySplitIt[1]
+						finalLyric.rawOriginalLyrics = trySplitIt[0] ?? ''
+						finalLyric.rawTranslatedLyrics = trySplitIt[1] ?? ''
 					} else {
 						finalLyric.rawOriginalLyrics = parsed.raw
 					}

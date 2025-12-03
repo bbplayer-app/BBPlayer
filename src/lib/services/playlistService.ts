@@ -67,7 +67,7 @@ export class PlaylistService {
 			),
 			(e) => new DatabaseError('创建播放列表失败', { cause: e }),
 		).andThen((result) => {
-			return okAsync(result[0])
+			return okAsync(result[0]!)
 		})
 	}
 
@@ -115,7 +115,7 @@ export class PlaylistService {
 							.returning(),
 				)
 
-				return updated
+				return updated!
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -158,7 +158,7 @@ export class PlaylistService {
 							.returning({ deletedId: schema.playlists.id }),
 				)
 
-				return deleted
+				return deleted!
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -214,7 +214,7 @@ export class PlaylistService {
 							.from(schema.playlistTracks)
 							.where(eq(schema.playlistTracks.playlistId, playlistId)),
 				)
-				let nextOrder = (maxOrderResult[0].maxOrder ?? -1) + 1
+				let nextOrder = (maxOrderResult[0]!.maxOrder ?? -1) + 1
 
 				// 构造批量插入的行
 				const values = trackIds.map((tid) => ({
@@ -313,7 +313,7 @@ export class PlaylistService {
 				const removedCount = removedTrackIds.length
 
 				if (removedCount === 0) {
-					throw createTrackNotInPlaylist(trackIdList[0], playlistId)
+					throw createTrackNotInPlaylist(trackIdList[0]!, playlistId)
 				}
 
 				// 更新 itemCount（不小于 0）
@@ -638,7 +638,7 @@ export class PlaylistService {
 							.returning(),
 				)
 
-				return newPlaylist
+				return newPlaylist!
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -1024,7 +1024,7 @@ export class PlaylistService {
 			const hasMore = data.length === effectiveLimit + 1
 
 			if (hasMore) {
-				const lastItem = data[effectiveLimit - 1]
+				const lastItem = data[effectiveLimit - 1]!
 				nextCursor = {
 					lastOrder: lastItem.order,
 					createdAt: lastItem.createdAt.getTime(),

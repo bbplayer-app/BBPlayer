@@ -78,7 +78,7 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 			const m = re.exec(name)
 			if (!m) continue
 
-			const fileDate = new Date(m[1])
+			const fileDate = new Date(m[1]!)
 			if (Number.isNaN(fileDate.getTime())) continue
 
 			if (fileDate < cutoffDate) {

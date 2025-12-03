@@ -27,7 +27,8 @@ const chooseUserAgent = (uaType: 'pc' | 'linux' | 'iphone' = 'pc'): string => {
 			'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
 		iphone: 'NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)',
 	}
-	return userAgentMap[uaType] || userAgentMap.pc
+	// @ts-expect-error -- 不想管
+	return userAgentMap[uaType] ?? userAgentMap.pc
 }
 
 export interface RequestOptions {
@@ -56,7 +57,7 @@ const buildRequestPayload = <T extends object>(
 			? cookieToJson(options.cookie)
 			: (options.cookie ?? {})
 
-	const csrfToken = cookie.__csrf || ''
+	const csrfToken = cookie.__csrf ?? ''
 	let url = ''
 	const headers: Record<string, string> = {
 		'User-Agent':
@@ -86,10 +87,10 @@ const buildRequestPayload = <T extends object>(
 		}
 		case 'eapi': {
 			const header = {
-				osver: cookie.osver || '',
-				deviceId: cookie.deviceId || '',
-				os: cookie.os || 'iphone',
-				appver: cookie.appver || '9.0.90',
+				osver: cookie.osver ?? '',
+				deviceId: cookie.deviceId ?? '',
+				os: cookie.os ?? 'iphone',
+				appver: cookie.appver ?? '9.0.90',
 				__csrf: csrfToken,
 			}
 			const eapiData = {

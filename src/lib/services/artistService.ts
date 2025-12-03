@@ -60,7 +60,7 @@ export class ArtistService {
 			),
 			(e) => new DatabaseError('创建artist失败', { cause: e }),
 		).andThen((result) => {
-			return okAsync(result[0])
+			return okAsync(result[0]!)
 		})
 	}
 
@@ -117,7 +117,7 @@ export class ArtistService {
 							.returning(),
 				)
 
-				return newArtist
+				return newArtist!
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -168,7 +168,7 @@ export class ArtistService {
 							.returning(),
 				)
 
-				return updated
+				return updated!
 			})(),
 			(e) =>
 				e instanceof ServiceError
@@ -211,7 +211,7 @@ export class ArtistService {
 							.returning({ deletedId: schema.artists.id }),
 				)
 
-				return deleted
+				return deleted!
 			})(),
 			(e) =>
 				e instanceof ServiceError

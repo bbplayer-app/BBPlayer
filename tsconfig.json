@@ -12,7 +12,8 @@
 			"@/hooks/*": ["hooks/*"],
 			"@/utils/*": ["utils/*"],
 			"@/features/*": ["features/*"]
-		}
+		},
+		"noUncheckedIndexedAccess": true
 	},
 	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

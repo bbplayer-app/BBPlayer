@@ -233,7 +233,7 @@ export default function UploaderPage() {
 						<PlaylistHeader
 							coverUri={uploaderUserInfo.face}
 							title={uploaderUserInfo.name}
-							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
+							subtitles={`${uploadedVideos?.pages[0]?.page.count ?? 0}\u2009首歌曲`}
 							description={uploaderUserInfo.sign}
 							onClickMainButton={undefined}
 							mainButtonIcon={'sync'}

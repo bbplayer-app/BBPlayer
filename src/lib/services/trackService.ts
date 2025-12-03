@@ -155,7 +155,7 @@ export class TrackService {
 							.returning({ id: schema.tracks.id }),
 				)
 
-				const trackId = newTrack.id
+				const trackId = newTrack!.id
 
 				// 创建元数据
 				if (payload.source === 'bilibili') {
