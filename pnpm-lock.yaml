@@ -240,8 +240,8 @@ importers:
         specifier: ^0.71.19
         version: 0.71.19
       react-native-logs:
-        specifier: github:yanyao2333/react-native-logs#v5.6.2
-        version: git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
+        specifier: git+https://github.com/bbplayer-app/react-native-logs.git#v5.6.2
+        version: https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
       react-native-mmkv:
         specifier: ^3.3.3
         version: 3.3.3(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
@@ -5991,8 +5991,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-logs@git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4:
-    resolution: {commit: b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4, repo: git@github.com:yanyao2333/react-native-logs.git, type: git}
+  react-native-logs@https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4:
+    resolution: {tarball: https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4}
     version: 5.5.0
 
   react-native-mmkv@3.3.3:
@@ -14147,7 +14147,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
 
-  react-native-logs@git+https://git@github.com:yanyao2333/react-native-logs.git#b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
+  react-native-logs@https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
 
   react-native-mmkv@3.3.3(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
     dependencies:
