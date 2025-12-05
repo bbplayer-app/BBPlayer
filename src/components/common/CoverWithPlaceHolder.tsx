@@ -64,7 +64,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	)
 
 	const firstChar =
-		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
+		validTitle.length > 0 ? [...validTitle][0]!.toUpperCase() : undefined
 
 	return (
 		<View

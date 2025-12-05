@@ -66,7 +66,7 @@ export default function CreatePlaylistModal({
 			multiple: false,
 		})
 		if (result.canceled || result.assets.length === 0) return
-		const assetFile = new FileSystem.File(result.assets[0].uri)
+		const assetFile = new FileSystem.File(result.assets[0]!.uri)
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',

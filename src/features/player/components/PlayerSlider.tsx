@@ -41,10 +41,10 @@ function TextWithAnimation({
 				scheduleOnRN(setPosition, position ?? 0)
 				return
 			}
-			if (duration !== null && duration !== prev[0]) {
+			if (duration && duration !== prev[0]) {
 				scheduleOnRN(setDuration, duration)
 			}
-			if (position !== null && position !== prev[1]) {
+			if (position && position !== prev[1]) {
 				scheduleOnRN(setPosition, position)
 			}
 		},

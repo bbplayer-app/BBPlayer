@@ -4,7 +4,7 @@ export function cookieToJson(cookie: string): Record<string, string> {
 	const obj: Record<string, string> = {}
 	cookieArr.forEach((i) => {
 		const arr = i.trim().split('=')
-		obj[arr[0]] = arr[1]
+		obj[arr[0]!] = arr[1]!
 	})
 	return obj
 }

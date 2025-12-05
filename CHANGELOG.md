@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- TypeScript 启用 `noUncheckedIndexedAccess` 选项
+
 ## [1.4.3] - 2025-12-01
 
 ### Added

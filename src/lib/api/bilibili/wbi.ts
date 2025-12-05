@@ -38,7 +38,7 @@ function encWbi(
 		.map((key) => {
 			// 过滤 value 中的 "!'()*" 字符
 			// eslint-disable-next-line @typescript-eslint/no-base-to-string
-			const value = params[key].toString().replace(chr_filter, '')
+			const value = params[key]!.toString().replace(chr_filter, '')
 			return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 		})
 		.join('&')

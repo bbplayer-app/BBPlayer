@@ -96,7 +96,7 @@ export async function matchSearchStrategies(
 		const pathname = urlObj.pathname || ''
 		const spaceMatch = SPACE_REGEX.exec(pathname)
 		if (spaceMatch) {
-			const mid = spaceMatch[1]
+			const mid = spaceMatch[1]!
 			logger.debug('parseUrlToStrategy: 匹配 space/<mid>', { mid })
 			return { type: 'UPLOADER', mid }
 		}
@@ -198,7 +198,7 @@ export async function matchSearchStrategies(
 	// 2. 任意位置提取 BV
 	const mBV = BV_REGEX.exec(query)
 	if (mBV) {
-		const bvid = 'BV' + mBV[1].slice(2)
+		const bvid = 'BV' + mBV[1]!.slice(2)
 		logger.debug('2 匹配 BV 号', { bvid })
 		return { type: 'BVID', bvid }
 	}

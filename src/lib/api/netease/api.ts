@@ -57,13 +57,18 @@ export class NeteaseApi {
 			requestOptions,
 		).map((res) => {
 			if (!res.body.result?.songs) return []
-			return res.body.result.songs.map((song) => ({
-				source: 'netease',
-				duration: song.dt / 1000,
-				title: song.name,
-				artist: song.ar[0].name,
-				remoteId: song.id,
-			}))
+			return res.body.result.songs.map((song) => {
+				if (!song.ar || song.ar.length === 0) {
+					song.ar = [{ name: '未知艺术家', id: 0, alias: [], tns: [] }]
+				}
+				return {
+					source: 'netease',
+					duration: song.dt / 1000,
+					title: song.name,
+					artist: song.ar[0]!.name,
+					remoteId: song.id,
+				}
+			})
 		})
 	}
 
@@ -115,7 +120,7 @@ export class NeteaseApi {
 			return current.score > best.score ? current : best
 		})
 
-		return bestMatch.score > 0 ? bestMatch.song : songs[0]
+		return bestMatch.score > 0 ? bestMatch.song : songs[0]!
 	}
 
 	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
@@ -151,7 +156,7 @@ export class NeteaseApi {
 
 				// const bestMatch = this.findBestMatch(songs, keyword, targetDurationMs)
 				// 相信网易云... 哥们儿写的规则太屎了
-				const bestMatch = searchResult[0]
+				const bestMatch = searchResult[0]!
 
 				return this.getLyrics(bestMatch.remoteId).andThen((lyricsResponse) => {
 					const lyricData = this.parseLyrics(lyricsResponse)

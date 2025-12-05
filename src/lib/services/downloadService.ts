@@ -68,7 +68,7 @@ class DownloadService {
 					}
 					return this.bilibiliApi.getAudioStream({
 						bvid: track.bilibiliMetadata.bvid,
-						cid: pages[0].cid,
+						cid: pages[0]!.cid,
 						audioQuality: 30280,
 						enableDolby: true,
 						enableHiRes: true,

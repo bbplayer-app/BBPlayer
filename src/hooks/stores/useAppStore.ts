@@ -213,17 +213,17 @@ export const useAppStore = create<AppState>()(
 						}
 					}
 
-					checkAndSet(OLD_KEYS.SEND_HISTORY, 'sendPlayHistory', 'boolean')
-					checkAndSet(OLD_KEYS.SENTRY, 'enableSentryReport', 'boolean')
-					checkAndSet(OLD_KEYS.DEBUG_LOG, 'enableDebugLog', 'boolean')
+					checkAndSet(OLD_KEYS.SEND_HISTORY!, 'sendPlayHistory', 'boolean')
+					checkAndSet(OLD_KEYS.SENTRY!, 'enableSentryReport', 'boolean')
+					checkAndSet(OLD_KEYS.DEBUG_LOG!, 'enableDebugLog', 'boolean')
 					checkAndSet(
-						OLD_KEYS.OLD_LYRIC,
+						OLD_KEYS.OLD_LYRIC!,
 						'enableOldSchoolStyleLyric',
 						'boolean',
 					)
-					checkAndSet(OLD_KEYS.BG_STYLE, 'playerBackgroundStyle', 'string')
+					checkAndSet(OLD_KEYS.BG_STYLE!, 'playerBackgroundStyle', 'string')
 					checkAndSet(
-						OLD_KEYS.PERSIST_POSITION,
+						OLD_KEYS.PERSIST_POSITION!,
 						'enablePersistCurrentPosition',
 						'boolean',
 					)

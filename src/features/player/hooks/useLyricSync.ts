@@ -27,7 +27,7 @@ export default function useLyricSync(
 				ans = 0
 			while (lo <= hi) {
 				const mid = Math.floor((lo + hi) / 2)
-				if (lyrics[mid].timestamp <= timestamp) {
+				if (lyrics[mid]!.timestamp <= timestamp) {
 					ans = mid
 					lo = mid + 1
 				} else {
