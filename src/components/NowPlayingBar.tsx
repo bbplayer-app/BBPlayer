@@ -1,7 +1,7 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import * as Haptics from '@/utils/haptics'
+import { Orpheus, useIsPlaying } from '@roitium/expo-orpheus'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
@@ -71,11 +71,8 @@ const ProgressBar = memo(function ProgressBar() {
 
 const NowPlayingBar = memo(function NowPlayingBar() {
 	const { colors } = useTheme()
+	const isPlaying = useIsPlaying()
 	const currentTrack = useCurrentTrack()
-	const isPlaying = usePlayerStore((state) => state.isPlaying)
-	const togglePlay = usePlayerStore((state) => state.togglePlay)
-	const skipToNext = usePlayerStore((state) => state.skipToNext)
-	const skipToPrevious = usePlayerStore((state) => state.skipToPrevious)
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const opacity = useSharedValue(1)
@@ -87,7 +84,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Context_Click,
 			)
-			scheduleOnRN(skipToPrevious)
+			scheduleOnRN(() => Orpheus.skipToPrevious())
 		}
 	})
 	const playTap = Gesture.Tap().onEnd((_e, success) => {
@@ -96,7 +93,13 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Context_Click,
 			)
-			scheduleOnRN(togglePlay)
+			scheduleOnRN((_isPlaying) => {
+				if (_isPlaying) {
+					void Orpheus.pause()
+				} else {
+					void Orpheus.play()
+				}
+			}, isPlaying)
 		}
 	})
 	const nextTap = Gesture.Tap().onEnd((_e, success) => {
@@ -105,7 +108,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Context_Click,
 			)
-			scheduleOnRN(skipToNext)
+			scheduleOnRN(() => Orpheus.skipToNext())
 		}
 	})
 	const outerTap = Gesture.Tap()
@@ -161,7 +164,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 									numberOfLines={1}
 									style={{ color: colors.onSurface }}
 								>
-									{currentTrack.title}
+									{currentTrack.title ?? '未知曲目'}
 								</Text>
 								<Text
 									variant='bodySmall'

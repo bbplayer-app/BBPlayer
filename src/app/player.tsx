@@ -4,13 +4,13 @@ import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctio
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import { useCurrentTrack } from '@roitium/expo-orpheus'
 import {
 	Canvas,
 	Group,
@@ -53,7 +53,9 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const sheetRef = useRef<BottomSheetMethods>(null)
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '')
+	const coverRef = useImage(currentTrack?.track?.artwork ?? '', {
+		onError: () => void 0,
+	})
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(

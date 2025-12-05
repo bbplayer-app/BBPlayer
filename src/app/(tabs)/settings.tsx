@@ -1,9 +1,9 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
@@ -33,7 +33,7 @@ const updateTime = Updates.createdAt
 
 export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const colors = useTheme().colors
 
 	return (

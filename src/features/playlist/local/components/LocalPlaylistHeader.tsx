@@ -183,7 +183,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					<Button
 						mode='contained'
 						icon='play'
-						onPress={onClickPlayAll}
+						onPress={() => onClickPlayAll()}
 					>
 						播放全部
 					</Button>

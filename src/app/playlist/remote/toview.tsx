@@ -15,10 +15,10 @@ import {
 } from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import { addToQueue } from '@/utils/player'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
@@ -68,7 +68,6 @@ export default function ToViewPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const openModal = useModalStore((state) => state.open)
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 
 	const {
 		data: rawToViewData,
@@ -101,7 +100,7 @@ export default function ToViewPage() {
 				playNext: false,
 			})
 		},
-		[tracksData, addToQueue],
+		[tracksData],
 	)
 
 	if (isToViewDataPending) {

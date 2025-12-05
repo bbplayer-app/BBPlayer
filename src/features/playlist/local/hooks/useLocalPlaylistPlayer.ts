@@ -1,8 +1,8 @@
 import { alert } from '@/components/modals/AlertModal'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
+import { addToQueue } from '@/utils/player'
 import { useCallback } from 'react'
 import type { MMKV } from 'react-native-mmkv'
 import { useMMKVBoolean } from 'react-native-mmkv'
@@ -10,7 +10,6 @@ import { useMMKVBoolean } from 'react-native-mmkv'
 const SCOPE = 'UI.Playlist.Local.Player'
 
 export function useLocalPlaylistPlayer(tracks: Track[]) {
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
 
@@ -32,7 +31,7 @@ export function useLocalPlaylistPlayer(tracks: Track[]) {
 				toastAndLogError('播放全部失败', error, SCOPE)
 			}
 		},
-		[addToQueue, tracks],
+		[tracks],
 	)
 
 	const handleTrackPress = useCallback(

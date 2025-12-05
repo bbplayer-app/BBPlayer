@@ -1,5 +1,5 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { memo, useCallback, useRef } from 'react'
@@ -47,9 +47,7 @@ export const TrackListItem = memo(function TrackListItem({
 }: TrackListItemProps) {
 	const theme = useTheme()
 	const menuAnchorRef = useRef<View>(null)
-	const isCurrentTrack = usePlayerStore(
-		(state) => state.currentTrackUniqueKey === data.uniqueKey,
-	)
+	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
 

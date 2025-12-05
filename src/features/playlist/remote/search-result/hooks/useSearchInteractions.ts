@@ -1,13 +1,12 @@
 import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-result/constants'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliTrack } from '@/types/core/media'
+import { addToQueue } from '@/utils/player'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
 export function useSearchInteractions() {
 	const router = useRouter()
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const openModal = useModalStore((state) => state.open)
 
 	const playTrack = useCallback(
@@ -31,7 +30,7 @@ export function useSearchInteractions() {
 				startFromKey: track.uniqueKey,
 			})
 		},
-		[addToQueue, router],
+		[router],
 	)
 
 	const trackMenuItems = useCallback(

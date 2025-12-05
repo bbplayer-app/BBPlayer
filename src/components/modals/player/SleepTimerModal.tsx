@@ -1,55 +1,55 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, Text, TextInput } from 'react-native-paper'
+import { Button, Dialog, TextInput } from 'react-native-paper'
 
 const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 
 const SleepTimerModal = () => {
 	const close = useModalStore((state) => state.close)
-	const sleepTimerEndAt = usePlayerStore((state) => state.sleepTimerEndAt)
-	const setSleepTimer = usePlayerStore((state) => state.setSleepTimer)
-	const [remainingTime, setRemainingTime] = useState<number | null>(null)
+	// const sleepTimerEndAt = usePlayerStore((state) => state.sleepTimerEndAt)
+	// const setSleepTimer = usePlayerStore((state) => state.setSleepTimer)
+	// const [remainingTime, setRemainingTime] = useState<number | null>(null)
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customMinutes, setCustomMinutes] = useState('')
 
 	useEffect(() => {
-		if (sleepTimerEndAt) {
-			const interval = setInterval(() => {
-				const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
-				if (remaining > 0) {
-					setRemainingTime(remaining)
-				} else {
-					setRemainingTime(null)
-					clearInterval(interval)
-				}
-			}, 1000)
-			const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
-			setRemainingTime(remaining > 0 ? remaining : null)
+		toast.error('暂未实现')
+		// if (sleepTimerEndAt) {
+		// 	const interval = setInterval(() => {
+		// 		const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+		// 		if (remaining > 0) {
+		// 			setRemainingTime(remaining)
+		// 		} else {
+		// 			setRemainingTime(null)
+		// 			clearInterval(interval)
+		// 		}
+		// 	}, 1000)
+		// 	const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+		// 	setRemainingTime(remaining > 0 ? remaining : null)
 
-			return () => clearInterval(interval)
-		} else {
-			setRemainingTime(null)
-		}
-	}, [sleepTimerEndAt])
+		// return () => clearInterval(interval)
+		// } else {
+		// 	setRemainingTime(null)
+		// }
+	}, [])
 
-	const handleSetTimer = (minutes: number) => {
-		setSleepTimer(minutes * 60)
+	const handleSetTimer = (_minutes: number) => {
+		// setSleepTimer(minutes * 60)
 		close('SleepTimer')
 	}
 
-	const handleCancelTimer = () => {
-		setSleepTimer(null)
-		close('SleepTimer')
-	}
+	// const handleCancelTimer = () => {
+	// 	// setSleepTimer(null)
+	// 	close('SleepTimer')
+	// }
 
 	return (
 		<>
 			<Dialog.Title>定时关闭</Dialog.Title>
 			<Dialog.Content>
-				{remainingTime ? (
+				{/* {remainingTime ? (
 					<View style={styles.remainingTimeContainer}>
 						<Text variant='headlineMedium'>
 							剩余 {formatDurationToHHMMSS(remainingTime)}
@@ -57,7 +57,7 @@ const SleepTimerModal = () => {
 					</View>
 				) : (
 					<Text style={styles.promptText}>选择一个预设时间或自定义</Text>
-				)}
+				)} */}
 				<View style={styles.presetContainer}>
 					{PRESET_DURATIONS.map((minutes) => (
 						<Button
@@ -104,14 +104,14 @@ const SleepTimerModal = () => {
 				)}
 			</Dialog.Content>
 			<Dialog.Actions>
-				{sleepTimerEndAt && (
+				{/* {sleepTimerEndAt && (
 					<Button
 						onPress={handleCancelTimer}
 						textColor='red'
 					>
 						取消定时器
 					</Button>
-				)}
+				)} */}
 				<Button onPress={() => close('SleepTimer')}>关闭</Button>
 			</Dialog.Actions>
 		</>

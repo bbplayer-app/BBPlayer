@@ -5,10 +5,11 @@ import { createPlayerError } from '@/lib/errors/player'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { trackService } from '@/lib/services/trackService'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { RNTPTrack } from '@/types/rntp'
+import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
 import { File, Paths } from 'expo-file-system'
 import { produce } from 'immer'
 import { err, ok, ResultAsync, type Result } from 'neverthrow'
+import { toastAndLogError } from './error-handling'
 import log from './log'
 import toast from './toast'
 
@@ -18,35 +19,36 @@ const logger = log.extend('Utils.Player')
 const STREAM_EXPIRY_TIME = 120 * 60 * 1000
 
 /**
- * 将内部 Track 类型转换为 react-native-track-player 的 Track 类型。
+ * 将内部 Track 类型转换为 Orpheus 的 Track 类型。
  * @param track - 内部 Track 对象。
- * @returns 一个 Result 对象，成功时包含 RNTPTrack，失败时包含 Error。
+ * @returns 一个 Result 对象，成功时包含 OrpheusTrack，失败时包含 Error。
  */
-function convertToRNTPTrack(
+function convertToOrpheusTrack(
 	track: Track,
-): Result<RNTPTrack, BilibiliApiError | PlayerError> {
-	logger.debug('转换 Track 为 RNTPTrack', {
-		trackId: track.id,
-		title: track.title,
-		artist: track.artist,
-	})
+): Result<OrpheusTrack, BilibiliApiError | PlayerError> {
+	// logger.debug('转换 Track 为 OrpheusTrack', {
+	// 	trackId: track.id,
+	// 	title: track.title,
+	// 	artist: track.artist,
+	// })
 
 	let url = ''
-	let volume = {
+	const volume = {
 		measured_i: 0,
 		target_i: 0,
 	}
-	if (track.source === 'bilibili' && track.bilibiliMetadata.bilibiliStreamUrl) {
-		url = track.bilibiliMetadata.bilibiliStreamUrl.url
-		logger.debug('使用 B 站音频流 URL', {
-			quality: track.bilibiliMetadata.bilibiliStreamUrl.quality,
-			volume: track.bilibiliMetadata.bilibiliStreamUrl.volume ?? {},
-		})
-		volume = {
-			measured_i:
-				track.bilibiliMetadata.bilibiliStreamUrl.volume?.measured_i ?? 0,
-			target_i: track.bilibiliMetadata.bilibiliStreamUrl.volume?.target_i ?? 0,
-		}
+	if (track.source === 'bilibili') {
+		url = track.bilibiliMetadata.cid
+			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
+			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
+		// logger.debug('使用 B 站音频流 URL', {
+		// 	url,
+		// })
+		// volume = {
+		// 	measured_i:
+		// 		track.bilibiliMetadata.bilibiliStreamUrl.volume?.measured_i ?? 0,
+		// 	target_i: track.bilibiliMetadata.bilibiliStreamUrl.volume?.target_i ?? 0,
+		// }
 	} else if (track.source === 'local' && track.localMetadata) {
 		url = track.localMetadata.localPath
 		logger.debug('使用本地音频流 URL', { url })
@@ -61,26 +63,21 @@ function convertToRNTPTrack(
 		)
 	}
 
-	const rnTrack: RNTPTrack = {
-		id: track.id,
+	const orpheusTrack: OrpheusTrack = {
+		id: track.uniqueKey,
 		url,
 		title: track.title,
 		artist: track.artist?.name,
 		artwork: track.coverUrl ?? undefined,
 		duration: track.duration,
-		userAgent:
-			'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-		headers: {
-			referer: 'https://www.bilibili.com',
-		},
 		loudness: volume,
 	}
 
-	logger.debug('RNTPTrack 转换完成', {
-		title: rnTrack.title,
-		id: rnTrack.id,
-	})
-	return ok(rnTrack) // 使用 ok 包装成功结果
+	// logger.debug('OrpheusTrack 转换完成', {
+	// 	title: orpheusTrack.title,
+	// 	id: orpheusTrack.id,
+	// })
+	return ok(orpheusTrack)
 }
 
 /**
@@ -251,121 +248,8 @@ async function checkAndUpdateAudioStream(
 		return ok({ track, needsUpdate: localValue.needsUpdate })
 	}
 
-	if (track.source === 'bilibili') {
-		const needsUpdate = checkBilibiliAudioExpiry(track)
-
-		if (!needsUpdate) {
-			return ok({ track, needsUpdate: false }) // 流有效，返回 ok
-		}
-
-		logger.debug('需要更新 B 站音频流', { trackId: track.id })
-		const bvid = track.bilibiliMetadata.bvid
-		let cid = track.bilibiliMetadata.cid
-
-		// 获取 CID (如果需要)
-		if (!cid) {
-			logger.debug('尝试获取视频分 P 列表以确定 CID', { bvid })
-			const pageListResult = await bilibiliApi.getPageList(bvid)
-
-			const cidResult = pageListResult.match<Result<number, BilibiliApiError>>(
-				(pages) => {
-					if (pages.length > 0) {
-						const firstPageCid = pages[0].cid
-						logger.debug('使用第一个分 P 的 CID', {
-							bvid,
-							cid: firstPageCid,
-						})
-						return ok(firstPageCid)
-					}
-					logger.debug('警告：视频没有分 P 信息，无法获取 CID', {
-						bvid,
-					})
-					return err(
-						new BilibiliApiError({
-							message: `视频 ${bvid} 没有分 P 信息`,
-							rawData: pages,
-							type: 'AudioStreamError',
-						}),
-					)
-				},
-				(error) => {
-					error.message = `获取视频分 P 列表失败: ${error.message}`
-					return err(error)
-				},
-			)
-
-			if (cidResult.isErr()) {
-				return err(cidResult.error)
-			}
-			cid = cidResult.value
-		} else {
-			logger.debug('使用已有的 CID', { bvid, cid })
-		}
-
-		// 获取新的音频流
-		logger.debug('开始获取新的音频流', { bvid, cid })
-		const streamUrlResult = await bilibiliApi.getAudioStream({
-			bvid,
-			cid: cid,
-			audioQuality: 30280,
-			enableDolby: false,
-			enableHiRes: false,
-		})
-
-		// const streamUrlResultRedirected =
-		// 	await streamUrlResult.asyncAndThen(checkIsRedirected)
-
-		return streamUrlResult.match<
-			Result<{ track: Track; needsUpdate: boolean }, BilibiliApiError>
-		>(
-			(streamInfo) => {
-				if (!streamInfo?.url) {
-					const errorMsg = `${track.bilibiliMetadata.bvid} 获取音频流成功但没有有效的 URL`
-					return err(
-						new BilibiliApiError({
-							message: errorMsg,
-							type: 'AudioStreamError',
-							rawData: streamInfo,
-						}),
-					)
-				}
-
-				logger.debug('音频流获取成功', {
-					bvid,
-					cid,
-					quality: streamInfo.quality,
-					type: streamInfo.type,
-				})
-
-				const updatedTrack = {
-					...track,
-					bilibiliMetadata: {
-						...track.bilibiliMetadata,
-						cid: cid,
-						bilibiliStreamUrl: {
-							url: streamInfo.url,
-							quality: streamInfo.quality || 0,
-							getTime: Date.now(),
-							type: streamInfo.type || 'dash',
-							volume: streamInfo.volume,
-						},
-					},
-				}
-
-				return ok({ track: updatedTrack, needsUpdate: true })
-			},
-			(error) => {
-				error.message = `获取音频流失败: ${error.message}`
-				return err(error)
-			},
-		)
-	}
-
 	return err(
-		createPlayerError(
-			'UnknownSource',
-			`未知的 Track source: ${(track as Track).source}`,
-		),
+		createPlayerError('UnknownSource', `未知的 Track source: ${track.source}`),
 	)
 }
 
@@ -468,9 +352,88 @@ async function reportPlaybackHistory(
 	return
 }
 
+/**
+ *
+ * @param playNow 是否立即播放
+ * @param clearQueue 是否清空队列
+ * @param startFromKey 从指定的 key 开始播放（并立即开始播放，无视 playNow）
+ * @param playNext 是否插入到下一首播放
+ * @returns
+ */
+async function addToQueue({
+	tracks,
+	playNow,
+	clearQueue,
+	startFromKey,
+	playNext,
+}: {
+	tracks: Track[]
+	playNow: boolean
+	clearQueue: boolean
+	startFromKey?: string
+	playNext: boolean
+}) {
+	if (!tracks || tracks.length === 0) {
+		return
+	}
+	if (playNext && tracks.length > 1) {
+		toastAndLogError(
+			'AddToQueueError',
+			'只能将单曲插入到下一首播放，已取消本次操作。',
+			'Utils.Player',
+		)
+		return
+	}
+	logger.debug('添加曲目到播放队列', {
+		trackCount: tracks.length,
+		playNow,
+		clearQueue,
+		startFromKey,
+		playNext,
+	})
+
+	try {
+		if (clearQueue) {
+			await Orpheus.clear()
+		}
+		const orpheusTracks: OrpheusTrack[] = []
+		for (const track of tracks) {
+			const result = convertToOrpheusTrack(track)
+			if (result.isOk()) {
+				orpheusTracks.push(result.value)
+			} else {
+				logger.error('转换为 OrpheusTrack 失败，跳过该曲目', {
+					trackId: track.id,
+					error: result.error,
+				})
+			}
+		}
+		if (orpheusTracks.length === 0) {
+			return
+		}
+		if (playNext) {
+			// 前面已经做过长度检查，这里直接取第一个
+			await Orpheus.playNext(orpheusTracks[0])
+			if (playNow) {
+				await Orpheus.play()
+				return
+			}
+			return
+		}
+		await Orpheus.addToEnd(orpheusTracks, startFromKey)
+		if (playNow && !startFromKey) {
+			await Orpheus.play()
+			return
+		}
+	} catch (e) {
+		logger.error('添加到队列失败：', { error: e })
+	}
+}
+
 export {
+	addToQueue,
 	checkAndUpdateAudioStream,
 	checkBilibiliAudioExpiry,
-	convertToRNTPTrack,
+	convertToOrpheusTrack,
 	reportPlaybackHistory,
 }

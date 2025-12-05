@@ -2,12 +2,13 @@ import { alert } from '@/components/modals/AlertModal'
 import type { TrackMenuItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
 import { downloadService } from '@/lib/services/downloadService'
 import type { Playlist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
+import { convertToOrpheusTrack } from '@/utils/player'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
@@ -28,27 +29,23 @@ export function useLocalPlaylistMenu({
 	playlist,
 }: LocalPlaylistMenuProps) {
 	const router = useRouter()
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const queueDownloads = useDownloadManagerStore(
 		(state) => state.queueDownloads,
 	)
 
-	const playNext = useCallback(
-		async (track: Track) => {
-			try {
-				await addToQueue({
-					tracks: [track],
-					playNow: false,
-					clearQueue: false,
-					playNext: true,
-				})
-				toast.success('添加到下一首播放成功')
-			} catch (error) {
-				toastAndLogError('添加到队列失败', error, SCOPE)
+	const playNext = useCallback(async (track: Track) => {
+		try {
+			const oTrack = convertToOrpheusTrack(track)
+			if (oTrack.isErr()) {
+				toastAndLogError('转换 Track 失败', oTrack.error, SCOPE)
+				return
 			}
-		},
-		[addToQueue],
-	)
+			await Orpheus.playNext(oTrack.value)
+			toast.success('添加到下一首播放成功')
+		} catch (error) {
+			toastAndLogError('添加到队列失败', error, SCOPE)
+		}
+	}, [])
 
 	const menuFunctions = (item: Track): TrackMenuItem[] => {
 		const menuItems: TrackMenuItem[] = [
