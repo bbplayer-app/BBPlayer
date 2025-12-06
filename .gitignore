@@ -40,7 +40,6 @@ app-example
 
 # generated native folders
 /ios
-/android
 
 app-example
 temp-builds

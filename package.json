@@ -8,7 +8,8 @@
 		"android": "expo run:android",
 		"test": "jest --watchAll",
 		"lint": "eslint .",
-		"format": "eslint . --fix && prettier --write ."
+		"format": "eslint . --fix && prettier --write .",
+		"ios": "expo run:ios"
 	},
 	"jest": {
 		"preset": "jest-expo",
