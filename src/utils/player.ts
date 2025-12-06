@@ -8,7 +8,8 @@ import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import { err, ok, type Result } from 'neverthrow'
+import type { Result } from 'neverthrow'
+import { err, ok } from 'neverthrow'
 import { toastAndLogError } from './error-handling'
 import log, { flatErrorMessage } from './log'
 import toast from './toast'
@@ -162,9 +163,6 @@ async function addToQueue({
 	})
 
 	try {
-		if (clearQueue) {
-			await Orpheus.clear()
-		}
 		const orpheusTracks: OrpheusTrack[] = []
 		for (const track of tracks) {
 			const result = convertToOrpheusTrack(track)
@@ -189,8 +187,9 @@ async function addToQueue({
 			}
 			return
 		}
-		await Orpheus.addToEnd(orpheusTracks, startFromKey)
-		if (playNow || startFromKey) {
+		await Orpheus.addToEnd(orpheusTracks, startFromKey, clearQueue)
+		// 原生层已经处理了 startFromKey 的播放逻辑，会在添加后直接播放，这里只需要处理 playNow 即可
+		if (playNow && !startFromKey) {
 			await Orpheus.play()
 			return
 		}
@@ -199,12 +198,12 @@ async function addToQueue({
 	}
 }
 
-async function finalizeAndRecordCurrentTrack(uniqueKey: string) {
+async function finalizeAndRecordCurrentTrack(
+	uniqueKey: string,
+	realDuration: number,
+	position: number,
+) {
 	try {
-		const [position, realDuration] = await Promise.all([
-			Orpheus.getPosition(),
-			Orpheus.getDuration(),
-		])
 		const playedSeconds = Math.max(0, Math.floor(position))
 		const duration = Math.max(1, Math.floor(realDuration))
 		const effectivePlayed = Math.min(playedSeconds, duration)
@@ -256,9 +255,12 @@ Orpheus.addListener('onPlayerError', (error) => {
 	})
 })
 
-Orpheus.addListener('onTrackTransition', (event) => {
-	if (!event.previousTrackId) return
-	void finalizeAndRecordCurrentTrack(event.previousTrackId)
+Orpheus.addListener('onTrackFinished', (event) => {
+	void finalizeAndRecordCurrentTrack(
+		event.trackId,
+		event.duration,
+		event.finalPosition,
+	)
 })
 
 export {
