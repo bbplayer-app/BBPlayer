@@ -430,6 +430,13 @@ async function addToQueue({
 	}
 }
 
+Orpheus.addListener('onPlayerError', (error) => {
+	logger.error('播放器错误事件：', { error })
+	toast.error(`播放器发生错误: ${error.message || '未知错误'}`, {
+		description: error.code,
+	})
+})
+
 export {
 	addToQueue,
 	checkAndUpdateAudioStream,
