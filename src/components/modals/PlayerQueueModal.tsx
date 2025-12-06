@@ -116,9 +116,9 @@ function PlayerQueueModal({
 			const q = await Orpheus.getQueue()
 			return q
 		},
-		refetchOnWindowFocus: false,
-		staleTime: Infinity,
+		staleTime: 0,
 		enabled: isVisible,
+		gcTime: 0,
 	})
 	const currentIndex = useMemo(() => {
 		if (!currentTrack || !queue) return -1
@@ -185,6 +185,9 @@ function PlayerQueueModal({
 			onChange={(index) => {
 				const nextVisible = index !== -1
 				setIsVisible(nextVisible)
+				if (nextVisible) {
+					void refetch()
+				}
 				if (!nextVisible) {
 					setDidInitialScroll(false)
 				}

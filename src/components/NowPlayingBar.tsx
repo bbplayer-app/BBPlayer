@@ -1,7 +1,12 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import * as Haptics from '@/utils/haptics'
-import { Orpheus, useIsPlaying } from '@roitium/expo-orpheus'
+import {
+	Orpheus,
+	PlaybackState,
+	useIsPlaying,
+	usePlaybackState,
+} from '@roitium/expo-orpheus'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
@@ -72,11 +77,15 @@ const ProgressBar = memo(function ProgressBar() {
 const NowPlayingBar = memo(function NowPlayingBar() {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
+	const state = usePlaybackState()
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
+
+	const finalPlayingIndicator =
+		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
 
 	const prevTap = Gesture.Tap().onEnd((_e, success) => {
 		if (success) {
@@ -189,7 +198,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								<GestureDetector gesture={playTap}>
 									<RectButton style={styles.nowPlayingBarControlButton}>
 										<Icon
-											source={isPlaying ? 'pause' : 'play'}
+											source={finalPlayingIndicator}
 											size={24}
 											color={colors.primary}
 										/>

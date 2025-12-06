@@ -1,22 +1,19 @@
+import { trackKeys } from '@/hooks/queries/db/track'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import { queryClient } from '@/lib/config/queryClient'
 import type { PlayerError } from '@/lib/errors/player'
 import { createPlayerError } from '@/lib/errors/player'
-import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { trackService } from '@/lib/services/trackService'
-import type { BilibiliTrack, Track } from '@/types/core/media'
+import type { Track } from '@/types/core/media'
 import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import { File, Paths } from 'expo-file-system'
-import { produce } from 'immer'
-import { err, ok, ResultAsync, type Result } from 'neverthrow'
+import { err, ok, type Result } from 'neverthrow'
 import { toastAndLogError } from './error-handling'
-import log from './log'
+import log, { flatErrorMessage } from './log'
 import toast from './toast'
 
 const logger = log.extend('Utils.Player')
-
-// 音频流过期时间 120 分钟
-const STREAM_EXPIRY_TIME = 120 * 60 * 1000
 
 /**
  * 将内部 Track 类型转换为 Orpheus 的 Track 类型。
@@ -81,249 +78,21 @@ function convertToOrpheusTrack(
 }
 
 /**
- * 检查 Bilibili 音频流是否过期。
- * @param track - 内部 Track 对象。
- * @returns 如果音频流不存在或已过期，则返回 true，否则返回 false。
- */
-function checkBilibiliAudioExpiry(_track: Track): boolean {
-	const now = Date.now()
-	const track = _track as BilibiliTrack
-	const isExpired =
-		!track.bilibiliMetadata.bilibiliStreamUrl ||
-		now - track.bilibiliMetadata.bilibiliStreamUrl.getTime > STREAM_EXPIRY_TIME
-	logger.debug('检查 B 站音频流过期状态', {
-		trackId: track.id,
-		hasStream: !!track.bilibiliMetadata.bilibiliStreamUrl,
-		// streamAge: track.bilibiliStreamUrl ? now - track.bilibiliStreamUrl.getTime : 'N/A',
-		isExpired,
-		// expiryTime: STREAM_EXPIRY_TIME,
-	})
-	return isExpired
-}
-
-interface LocalCheckResult {
-	track: Track
-	handledLocally: boolean
-	needsUpdate: boolean
-}
-
-/**
- * - 如果 source === 'local'：直接 handledLocally = true
- * - 如果 source === 'bilibili' 且 trackDownloads.status === 'downloaded'：
- *    - 本地文件存在且与当前 streamUrl 匹配 -> handledLocally = true, needsUpdate = false
- *    - 本地文件存在但与当前 streamUrl 不同 -> 返回一个 updatedTrack（指向本地），handledLocally = true, needsUpdate = true
- *    - 本地文件不存在但 DB 标记为 downloaded -> 修正 DB 为 failed、清除 streamUrl，handledLocally = false, needsUpdate = true
- * - 其它情况：handledLocally = false, needsUpdate = false（继续远程检查/获取）
- */
-async function tryUseLocalStream(
-	track: Track,
-): Promise<Result<LocalCheckResult, BilibiliApiError | PlayerError>> {
-	logger.debug('尝试检查本地播放可用性', {
-		trackId: track.id,
-		source: track.source,
-	})
-
-	// 1) 真正的本地 source，直接返回（无需后续远程处理）
-	if (track.source === 'local') {
-		logger.debug('本地音频，无需更新流', { trackId: track.id })
-		return ok({ track, handledLocally: true, needsUpdate: false })
-	}
-
-	// 2) 仅处理 bilibili 源的“已下载”情况；其它来源不在本函数内处理
-	if (track.source !== 'bilibili') {
-		logger.debug('非 B 站音源，跳过本地检查', {
-			trackId: (track as Track).id,
-			source: (track as Track).source,
-		})
-		return ok({ track, handledLocally: false, needsUpdate: false })
-	}
-
-	// source === 'bilibili'
-	if (track.trackDownloads && track.trackDownloads.status === 'downloaded') {
-		const file = new File(Paths.document, 'downloads', `${track.uniqueKey}.m4s`)
-
-		// 本地文件存在 -> 优先使用本地
-		if (file.exists) {
-			logger.debug('已下载的音频，本地文件存在，尝试使用本地文件', {
-				trackId: track.id,
-				path: file.uri,
-			})
-
-			// 如果已经指向相同本地 uri，则无需修改
-			if (track.bilibiliMetadata.bilibiliStreamUrl?.url === file.uri) {
-				return ok({ track, handledLocally: true, needsUpdate: false })
-			}
-
-			// 否则把 track 更新为使用本地流（quality / getTime 保持原行为）
-			const updatedTrack: Track = {
-				...track,
-				bilibiliMetadata: {
-					...track.bilibiliMetadata,
-					bilibiliStreamUrl: {
-						url: file.uri,
-						quality: 114514,
-						getTime: Number.POSITIVE_INFINITY,
-						type: 'local' as const,
-					},
-				},
-			}
-
-			logger.debug('将 track 的流切换为本地文件', {
-				trackId: track.id,
-				path: file.uri,
-			})
-			return ok({
-				track: updatedTrack,
-				handledLocally: true,
-				needsUpdate: true,
-			})
-		} else {
-			logger.warning(
-				'数据库中将该音频标记为已下载，但本地文件不存在，移除数据库标记并尝试从远程获取流',
-			)
-			toast.error('本地文件不存在，移除数据库下载标记并尝试从网络播放')
-			const result = await trackService.createOrUpdateTrackDownloadRecord({
-				trackId: track.id,
-				status: 'failed',
-				fileSize: 0,
-			})
-
-			if (result.isErr()) {
-				logger.error('删除数据库下载记录失败：', { error: result.error })
-			}
-
-			// 修改 track，保证能顺利进入下面的刷新流逻辑
-			const updatedTrack = produce(track, (draft) => {
-				draft.trackDownloads = {
-					status: 'failed',
-					fileSize: 0,
-					trackId: track.id,
-					downloadedAt: Date.now(),
-				}
-				draft.bilibiliMetadata.bilibiliStreamUrl = undefined
-			})
-
-			return ok({
-				track: updatedTrack,
-				handledLocally: false,
-				needsUpdate: true,
-			})
-		}
-	}
-
-	// 没有下载记录，或不是已下载状态：让调用方继续走远程流的过期检查/获取
-	return ok({ track, handledLocally: false, needsUpdate: false })
-}
-
-/**
- * 先调用 tryUseLocalStream 做本地检查；如果本地已处理完则直接返回；
- * 否则继续原来的 B 站流刷新逻辑（CID 获取 + getAudioStream 等）。
- */
-async function checkAndUpdateAudioStream(
-	track: Track,
-): Promise<
-	Result<{ track: Track; needsUpdate: boolean }, BilibiliApiError | PlayerError>
-> {
-	logger.debug('开始检查并更新音频流', {
-		trackId: track.id,
-		title: track.title,
-	})
-
-	// 先把本地播放检查逻辑剥离出去
-	const localCheck = await tryUseLocalStream(track)
-	if (localCheck.isErr()) {
-		return err(localCheck.error)
-	}
-
-	const localValue = localCheck.value
-	// 使用可能被更新过的 track 继续后续逻辑
-	track = localValue.track
-
-	// 若本地已经处理（包含 source === 'local' 情况）则直接返回
-	if (localValue.handledLocally) {
-		logger.debug('本地检查已处理音频（无需远端刷新）', {
-			trackId: track.id,
-			needsUpdate: localValue.needsUpdate,
-		})
-		return ok({ track, needsUpdate: localValue.needsUpdate })
-	}
-
-	return err(
-		createPlayerError('UnknownSource', `未知的 Track source: ${track.source}`),
-	)
-}
-
-function _checkIsRedirected(stream: {
-	url: string
-	quality: number
-	getTime: number
-	type: 'mp4' | 'dash' | 'local'
-}): ResultAsync<
-	{
-		url: string
-		quality: number
-		getTime: number
-		type: 'mp4' | 'dash' | 'local'
-	},
-	BilibiliApiError
-> {
-	const url = stream.url
-	return ResultAsync.fromPromise(
-		fetch(url, {
-			method: 'GET',
-			headers: {
-				'User-Agent':
-					'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-				Referer: 'https://www.bilibili.com',
-			},
-		}),
-		(e) => {
-			return new BilibiliApiError({
-				message: e instanceof Error ? e.message : String(e),
-				type: 'RequestFailed',
-			})
-		},
-	).andThen((response) => {
-		if (!response.ok) {
-			return err(
-				new BilibiliApiError({
-					message: `测试链接是否被重定向失败: ${response.status} ${response.statusText}`,
-					msgCode: response.status,
-					type: 'RequestFailed',
-				}),
-			)
-		}
-		console.log(response.status)
-		console.log(`raw: ${url}`)
-		const redirectUrl = response.url // react native 不支持 redirect: 'manual'，所以在这里直接获取最终跳转到的 URL
-		console.log('redirectUrl', redirectUrl)
-		if (!redirectUrl) {
-			return err(
-				new BilibiliApiError({
-					message: '未获取到测试链接的解析结果',
-					msgCode: 0,
-					rawData: null,
-					type: 'ResponseFailed',
-				}),
-			)
-		}
-		return ok({
-			...stream,
-			url: redirectUrl,
-		})
-	})
-}
-
-/**
  * 上报播放记录
  * 由于这只是一个非常边缘的功能，我们不关心他是否出错，所以发生报错时只写个 log，返回 void
  */
 async function reportPlaybackHistory(
-	track: Track,
+	uniqueKey: string,
 	position: number,
 ): Promise<void> {
 	if (!useAppStore.getState().settings.sendPlayHistory) return
 	if (!useAppStore.getState().hasBilibiliCookie()) return
+	const trackResult = await trackService.getTrackByUniqueKey(uniqueKey)
+	if (trackResult.isErr()) {
+		toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
+		return
+	}
+	const track = trackResult.value
 	if (
 		track.source !== 'bilibili' ||
 		!track.bilibiliMetadata.cid ||
@@ -421,12 +190,62 @@ async function addToQueue({
 			return
 		}
 		await Orpheus.addToEnd(orpheusTracks, startFromKey)
-		if (playNow && !startFromKey) {
+		if (playNow || startFromKey) {
 			await Orpheus.play()
 			return
 		}
 	} catch (e) {
 		logger.error('添加到队列失败：', { error: e })
+	}
+}
+
+async function finalizeAndRecordCurrentTrack(uniqueKey: string) {
+	try {
+		const [position, realDuration] = await Promise.all([
+			Orpheus.getPosition(),
+			Orpheus.getDuration(),
+		])
+		const playedSeconds = Math.max(0, Math.floor(position))
+		const duration = Math.max(1, Math.floor(realDuration))
+		const effectivePlayed = Math.min(playedSeconds, duration)
+		const threshold = Math.max(Math.floor(duration * 0.9), duration - 2)
+		const completed = effectivePlayed >= threshold
+		logger.info('完成播放', { uniqueKey })
+		logger.debug('完成播放标记', {
+			playedSeconds,
+			duration,
+			effectivePlayed,
+			threshold,
+			completed,
+			uniqueKey,
+		})
+
+		const res = await trackService.addPlayRecordFromUniqueKey(uniqueKey, {
+			startTime: (Date.now() - playedSeconds * 1000) / 1000,
+			durationPlayed: effectivePlayed,
+			completed,
+		})
+
+		if (res.isErr()) {
+			logger.debug('增加播放记录失败', {
+				uniqueKey,
+				message: flatErrorMessage(res.error),
+			})
+			return
+		}
+		logger.debug('增加播放记录成功', {
+			uniqueKey,
+		})
+
+		void queryClient.invalidateQueries({
+			queryKey: trackKeys.leaderBoard(),
+		})
+
+		void reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
+			logger.error('上报播放历史失败', error),
+		)
+	} catch (error) {
+		logger.debug('增加播放记录异常', error)
 	}
 }
 
@@ -437,10 +256,14 @@ Orpheus.addListener('onPlayerError', (error) => {
 	})
 })
 
+Orpheus.addListener('onTrackTransition', (event) => {
+	if (!event.previousTrackId) return
+	void finalizeAndRecordCurrentTrack(event.previousTrackId)
+})
+
 export {
 	addToQueue,
-	checkAndUpdateAudioStream,
-	checkBilibiliAudioExpiry,
 	convertToOrpheusTrack,
+	finalizeAndRecordCurrentTrack,
 	reportPlaybackHistory,
 }

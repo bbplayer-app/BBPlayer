@@ -1,8 +1,10 @@
 import * as Haptics from '@/utils/haptics'
 import {
 	Orpheus,
+	PlaybackState,
 	RepeatMode,
 	useIsPlaying,
+	usePlaybackState,
 	useShuffleMode,
 } from '@roitium/expo-orpheus'
 import { useEffect, useState } from 'react'
@@ -12,8 +14,12 @@ import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
+	const state = usePlaybackState()
 	const shuffleMode = useShuffleMode()
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
+
+	const finalPlayingIndicator =
+		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
 
 	useEffect(() => {
 		void Orpheus.getRepeatMode().then(setRepeatMode)
@@ -41,7 +47,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					}}
 				/>
 				<IconButton
-					icon={isPlaying ? 'pause' : 'play'}
+					icon={finalPlayingIndicator}
 					size={48}
 					onPress={() => {
 						void Haptics.performAndroidHapticsAsync(
