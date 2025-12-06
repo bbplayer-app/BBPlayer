@@ -1,9 +1,9 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
@@ -19,7 +19,7 @@ const renderPlaylistItem = ({
 
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)

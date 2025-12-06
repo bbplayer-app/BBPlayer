@@ -1,13 +1,15 @@
 import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-result/constants'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliTrack } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+import { reportErrorToSentry } from '@/utils/log'
+import { addToQueue } from '@/utils/player'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
 export function useSearchInteractions() {
 	const router = useRouter()
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 	const openModal = useModalStore((state) => state.open)
 
 	const playTrack = useCallback(
@@ -23,6 +25,20 @@ export function useSearchInteractions() {
 				})
 				return
 			}
+			const createIt = await syncFacade.addTrackToLocal(track)
+			if (createIt.isErr()) {
+				toastAndLogError(
+					'将 track 录入本地失败',
+					createIt.error,
+					'UI.Playlist.Remote',
+				)
+				reportErrorToSentry(
+					createIt.error,
+					'将 track 录入本地失败',
+					'UI.Playlist.Remote',
+				)
+				return
+			}
 			await addToQueue({
 				tracks: [track],
 				playNow: !playNext,
@@ -31,7 +47,7 @@ export function useSearchInteractions() {
 				startFromKey: track.uniqueKey,
 			})
 		},
-		[addToQueue, router],
+		[router],
 	)
 
 	const trackMenuItems = useCallback(

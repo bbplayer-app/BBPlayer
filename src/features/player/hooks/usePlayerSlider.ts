@@ -1,7 +1,6 @@
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import playerProgressEmitter from '@/lib/player/progressListener'
 import * as Haptics from '@/utils/haptics'
-import TrackPlayer from '@roitium/react-native-track-player'
+import { Orpheus } from '@roitium/expo-orpheus'
 import { useCallback, useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
@@ -36,10 +35,12 @@ export function usePlayerSlider() {
 	}, [isActive, overridePosition, sharedDuration, sharedPosition])
 
 	useEffect(() => {
-		void TrackPlayer.getProgress().then((data) => {
-			sharedPosition.set(data.position)
-			sharedDuration.set(data.duration)
-		})
+		void Promise.all([Orpheus.getPosition(), Orpheus.getDuration()]).then(
+			([position, duration]) => {
+				sharedPosition.set(position)
+				sharedDuration.set(duration)
+			},
+		)
 	}, [sharedDuration, sharedPosition])
 
 	const handleSlidingStart = useCallback(
@@ -60,7 +61,7 @@ export function usePlayerSlider() {
 				Haptics.AndroidHaptics.Gesture_End,
 			)
 			overridePosition.set(value)
-			await usePlayerStore.getState().seekTo(value)
+			await Orpheus.seekTo(value)
 
 			sharedPosition.set(value)
 

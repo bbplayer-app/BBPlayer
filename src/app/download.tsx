@@ -1,8 +1,8 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { DownloadTask } from '@/types/core/downloadManagerStore'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
@@ -27,7 +27,7 @@ export default function DownloadPage() {
 	const start = useDownloadManagerStore((state) => state.startDownload)
 	const clearAll = useDownloadManagerStore((state) => state.clearAll)
 
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 
 	const keyExtractor = useCallback((item: DownloadTask) => item.uniqueKey, [])
 

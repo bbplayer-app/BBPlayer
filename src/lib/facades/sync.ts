@@ -9,6 +9,7 @@ import {
 	createFacadeError,
 	createSyncTaskAlreadyRunningError,
 } from '@/lib/errors/facade'
+import { createValidationError } from '@/lib/errors/service'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type { ArtistService } from '@/lib/services/artistService'
 import { artistService } from '@/lib/services/artistService'
@@ -78,6 +79,28 @@ export class SyncFacade {
 					})
 				})
 		})
+	}
+
+	/**
+	 * 将单一 track 录入到本地数据库
+	 * @param track Track 对象
+	 */
+	public addTrackToLocal(track: Track) {
+		if (!track.artist) return errAsync(createValidationError('artist 不存在'))
+		return this.artistService
+			.findOrCreateArtist({
+				name: track.artist.name,
+				source: track.artist.source,
+				remoteId: track.artist.remoteId,
+				avatarUrl: track.artist.avatarUrl,
+				signature: track.artist.signature,
+			})
+			.andThen((artist) => {
+				return this.trackService.findOrCreateTrack({
+					...track,
+					artistId: artist.id,
+				})
+			})
 	}
 
 	/**

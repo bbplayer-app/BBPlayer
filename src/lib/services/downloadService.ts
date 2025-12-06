@@ -1,5 +1,4 @@
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import {
 	bilibiliApi,
 	type bilibiliApi as BilibiliApiService,
@@ -225,12 +224,6 @@ class DownloadService {
 				throw recordResult.error
 			}
 			// 更新 player 的下载状态，方便下次切歌时直接使用本地数据
-			usePlayerStore.getState().updateDownloadStatus(uniqueKey, {
-				status: 'downloaded',
-				fileSize: finalFile.size,
-				trackId: track.id,
-				downloadedAt: Date.now(),
-			})
 			_setDownloadProgress(uniqueKey, totalBytes, totalBytes)
 			_setDownloadStatus(uniqueKey, 'completed')
 			logger.debug('下载完成', { uniqueKey })

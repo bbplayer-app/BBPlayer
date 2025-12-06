@@ -1,5 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { FlashList } from '@shopify/flash-list'
@@ -91,7 +91,7 @@ export function LocalTrackList({
 	isFetchingNextPage,
 	hasNextPage,
 }: LocalTrackListProps) {
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 

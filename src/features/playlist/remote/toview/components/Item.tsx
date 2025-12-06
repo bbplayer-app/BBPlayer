@@ -1,6 +1,6 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
@@ -63,11 +63,8 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 }: TrackListItemProps) {
 	const { colors } = useTheme()
 	const menuRef = useRef<View>(null)
-	const isCurrentTrack = usePlayerStore(
-		(state) => state.currentTrackUniqueKey === data.uniqueKey,
-	)
+	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
-	// 在非选择模式下，当前播放歌曲高亮；在选择模式下，歌曲被选中时高亮
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
 
 	return (

@@ -1,10 +1,10 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useInfiniteCollectionsList } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
@@ -18,7 +18,7 @@ const renderCollectionItem = ({ item }: { item: BilibiliCollection }) => (
 
 const CollectionListComponent = memo(() => {
 	const { colors } = useTheme()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 

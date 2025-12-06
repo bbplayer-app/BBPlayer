@@ -1,5 +1,5 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
@@ -117,7 +117,7 @@ export function TrackList({
 	renderCustomItem,
 }: TrackListProps) {
 	const { colors } = useTheme()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 
 	const [menuState, setMenuState] = useState<{

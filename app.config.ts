@@ -102,6 +102,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					usesCleartextTraffic: true,
 					enableMinifyInReleaseBuilds: true,
 					enableShrinkResourcesInReleaseBuilds: true,
+					extraProguardRules: `
+-keep class androidx.media3.** { *; }
+-keep interface androidx.media3.** { *; }
+
+-dontwarn okhttp3.**
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+
+-keep class androidx.media3.datasource.**.Factory { *; }
+-keep class androidx.media3.datasource.okhttp.** { *; }
+					`,
 				},
 			},
 		],

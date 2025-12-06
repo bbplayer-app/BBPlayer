@@ -1,5 +1,5 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
-import TrackPlayer from '@roitium/react-native-track-player'
+import { Orpheus } from '@roitium/expo-orpheus'
 import { useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useSharedValue } from 'react-native-reanimated'
@@ -37,10 +37,14 @@ export default function useAnimatedTrackProgress(background = false) {
 	}, [isActive, position, duration, buffered, background])
 
 	useEffect(() => {
-		void TrackPlayer.getProgress().then((data) => {
-			position.set(data.position)
-			duration.set(data.duration)
-			buffered.set(data.buffered)
+		void Promise.all([
+			Orpheus.getPosition(),
+			Orpheus.getDuration(),
+			Orpheus.getBuffered(),
+		]).then(([pos, dur, buf]) => {
+			position.set(pos)
+			duration.set(dur)
+			buffered.set(buf)
 		})
 	}, [buffered, duration, position])
 
