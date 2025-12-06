@@ -100,8 +100,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: true,
-					enableShrinkResourcesInReleaseBuilds: true,
+					enableMinifyInReleaseBuilds: false,
+					enableShrinkResourcesInReleaseBuilds: false,
 				},
 			},
 		],
