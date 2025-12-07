@@ -12,7 +12,6 @@ import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 import { toastAndLogError } from './error-handling'
 import log, { flatErrorMessage } from './log'
-import toast from './toast'
 
 const logger = log.extend('Utils.Player')
 
@@ -247,21 +246,6 @@ async function finalizeAndRecordCurrentTrack(
 		logger.debug('增加播放记录异常', error)
 	}
 }
-
-Orpheus.addListener('onPlayerError', (error) => {
-	logger.error('播放器错误事件：', { error })
-	toast.error(`播放器发生错误: ${error.message || '未知错误'}`, {
-		description: error.code,
-	})
-})
-
-Orpheus.addListener('onTrackFinished', (event) => {
-	void finalizeAndRecordCurrentTrack(
-		event.trackId,
-		event.duration,
-		event.finalPosition,
-	)
-})
 
 export {
 	addToQueue,
