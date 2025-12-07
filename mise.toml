@@ -6,5 +6,9 @@ run = 'eas build --profile prod-v8a --platform android --local --output=./temp-b
 description = "Build BBPlayer development release"
 env = { NODE_ENV = "development", BUILD_MODE = "v8a" }
 run = 'eas build --profile dev --platform android --local --output=./temp-builds/{{arg(name="version")}}-dev.apk'
+[tasks.buildpreview]
+description = "Build BBPlayer preview release"
+env = { NODE_ENV = "development", BUILD_MODE = "v8a" }
+run = 'eas build --profile preview --platform android --local --output=./temp-builds/{{arg(name="version")}}-preview.apk'
 [env]
 _.file = {path = ".env.local", redact = true}
