@@ -1,8 +1,10 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
 import { Dimensions } from 'react-native'
 import { Divider, Menu } from 'react-native-paper'
@@ -21,8 +23,10 @@ export function PlayerFunctionalMenu({
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
-	const download = useDownloadManagerStore((state) => state.queueDownloads)
 	const uploaderMid = Number(currentTrack?.artist?.remoteId ?? undefined)
+	const { data: downloadStatus } = useBatchDownloadStatus([
+		currentTrack?.uniqueKey ?? '',
+	])
 
 	return (
 		<FunctionalMenu
@@ -82,24 +86,31 @@ export function PlayerFunctionalMenu({
 				/>
 			)}
 			<Menu.Item
-				onPress={() => {
+				onPress={async () => {
 					if (!currentTrack) {
 						setMenuVisible(false)
 						toast.error('为什么 currentTrack 不存在？')
 						return
 					}
 					setMenuVisible(false)
-					download([
-						{
-							uniqueKey: currentTrack.uniqueKey,
-							title: currentTrack.title,
-							coverUrl: currentTrack.coverUrl ?? undefined,
-						},
-					])
+					const url = getInternalPlayUri(currentTrack)
+					if (!url) {
+						toast.error('获取内部播放地址失败')
+						return
+					}
+					await Orpheus.downloadTrack({
+						id: currentTrack.uniqueKey,
+						url: url,
+						title: currentTrack.title,
+						artist: currentTrack.artist?.name,
+						artwork: currentTrack.coverUrl ?? undefined,
+						duration: currentTrack.duration,
+					})
 					toast.info('已添加到下载队列')
 				}}
 				title={
-					currentTrack?.trackDownloads?.status === 'downloaded'
+					downloadStatus?.[currentTrack?.uniqueKey ?? ''] ===
+					DownloadState.COMPLETED
 						? '重新下载音频'
 						: '下载音频'
 				}

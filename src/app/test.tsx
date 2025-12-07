@@ -2,9 +2,7 @@ import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { expoDb } from '@/lib/db/db'
-import { downloadService } from '@/lib/services/downloadService'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -97,16 +95,7 @@ export default function TestPage() {
 					onPress: async () => {
 						setLoading(true)
 						try {
-							useDownloadManagerStore.getState().clearAll()
-							logger.info('清除\u2009zustand store\u2009数据成功')
-							const result = await downloadService.deleteAll()
-							if (result.isErr()) {
-								toast.error('清除下载缓存失败', {
-									description: result.error.message,
-								})
-								setLoading(false)
-								return
-							}
+							await Orpheus.removeAllDownloads()
 							logger.info('清除数据库下载记录及实际文件成功')
 							toast.success('清除下载缓存成功')
 						} catch (error) {

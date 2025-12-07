@@ -2,6 +2,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import { DownloadState } from '@roitium/expo-orpheus'
 import { memo, useCallback, useRef } from 'react'
 import { Easing, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
@@ -27,6 +28,7 @@ interface TrackListItemProps {
 	isSelected: boolean
 	selectMode: boolean
 	enterSelectMode: (id: number) => void
+	downloadState?: DownloadState
 }
 
 /**
@@ -44,6 +46,7 @@ export const TrackListItem = memo(function TrackListItem({
 	isSelected,
 	selectMode,
 	enterSelectMode,
+	downloadState,
 }: TrackListItemProps) {
 	const theme = useTheme()
 	const menuAnchorRef = useRef<View>(null)
@@ -52,17 +55,26 @@ export const TrackListItem = memo(function TrackListItem({
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
 
 	const renderDownloadStatus = useCallback(() => {
-		if (!data.trackDownloads) return null
-		const { status } = data.trackDownloads
-		const iconConfig = {
-			downloaded: {
-				source: 'check-circle-outline',
-				color: theme.colors.primary,
-			},
-			failed: { source: 'alert-circle-outline', color: theme.colors.error },
-		}[status] ?? {
-			source: 'help-circle-outline',
-			color: theme.colors.onSurfaceVariant,
+		if (!downloadState) return null
+		let iconConfig
+		switch (downloadState) {
+			case DownloadState.COMPLETED:
+				iconConfig = {
+					source: 'check-circle-outline',
+					color: theme.colors.primary,
+				}
+				break
+			case DownloadState.FAILED:
+				iconConfig = {
+					source: 'alert-circle-outline',
+					color: theme.colors.error,
+				}
+				break
+			default:
+				iconConfig = {
+					source: 'help-circle-outline',
+					color: theme.colors.onSurfaceVariant,
+				}
 		}
 
 		return (
@@ -74,7 +86,12 @@ export const TrackListItem = memo(function TrackListItem({
 				/>
 			</View>
 		)
-	}, [data.trackDownloads, theme.colors])
+	}, [
+		downloadState,
+		theme.colors.error,
+		theme.colors.onSurfaceVariant,
+		theme.colors.primary,
+	])
 
 	return (
 		<RectButton

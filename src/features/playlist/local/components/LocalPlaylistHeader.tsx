@@ -1,10 +1,11 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist, Track } from '@/types/core/media'
+import { getInternalPlayUri } from '@/utils/player'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
@@ -78,9 +79,6 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	onPressAuthor,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
-	const queueDownloads = useDownloadManagerStore(
-		(state) => state.queueDownloads,
-	)
 	const router = useRouter()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
@@ -89,19 +87,26 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	)
 	const onClickDownloadAll = useCallback(() => {
 		if (!playlistContents) return
-		queueDownloads(
+		void Orpheus.multiDownload(
 			playlistContents
-				.filter((t) => t.trackDownloads?.status !== 'downloaded')
-				.map((t) => ({
-					uniqueKey: t.uniqueKey,
-					title: t.title,
-					coverUrl: t.coverUrl ?? undefined,
-				})),
+				.map((t) => {
+					const url = getInternalPlayUri(t)
+					if (!url) return
+					return {
+						id: t.uniqueKey,
+						title: t.title,
+						url: url,
+						artist: t.artist?.name,
+						artwork: t.coverUrl ?? undefined,
+						duration: t.duration,
+					}
+				})
+				.filter((t) => !!t),
 		)
 		useModalStore.getState().doAfterModalHostClosed(() => {
 			router.push('/download')
 		})
-	}, [router, playlistContents, queueDownloads])
+	}, [router, playlistContents])
 
 	if (!playlist.title) return null
 

@@ -1,55 +1,66 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { formatDurationToHHMMSS } from '@/utils/time'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
+import { Button, Dialog, Text, TextInput } from 'react-native-paper'
 
 const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 
 const SleepTimerModal = () => {
 	const close = useModalStore((state) => state.close)
-	// const sleepTimerEndAt = usePlayerStore((state) => state.sleepTimerEndAt)
-	// const setSleepTimer = usePlayerStore((state) => state.setSleepTimer)
-	// const [remainingTime, setRemainingTime] = useState<number | null>(null)
+	const [remainingTime, setRemainingTime] = useState<number | null>(null)
+	const { data: sleepTimerEndAt, refetch } = useQuery({
+		queryFn: async () => {
+			return await Orpheus.getSleepTimerEndTime()
+		},
+		queryKey: ['sleepTimerEndAt'],
+		gcTime: 0,
+		staleTime: 0,
+	})
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customMinutes, setCustomMinutes] = useState('')
 
 	useEffect(() => {
 		toast.error('暂未实现')
-		// if (sleepTimerEndAt) {
-		// 	const interval = setInterval(() => {
-		// 		const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
-		// 		if (remaining > 0) {
-		// 			setRemainingTime(remaining)
-		// 		} else {
-		// 			setRemainingTime(null)
-		// 			clearInterval(interval)
-		// 		}
-		// 	}, 1000)
-		// 	const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
-		// 	setRemainingTime(remaining > 0 ? remaining : null)
+		if (sleepTimerEndAt) {
+			const interval = setInterval(() => {
+				const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+				if (remaining > 0) {
+					setRemainingTime(remaining)
+				} else {
+					setRemainingTime(null)
+					clearInterval(interval)
+				}
+			}, 1000)
+			const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+			setRemainingTime(remaining > 0 ? remaining : null)
 
-		// return () => clearInterval(interval)
-		// } else {
-		// 	setRemainingTime(null)
-		// }
-	}, [])
+			return () => clearInterval(interval)
+		} else {
+			setRemainingTime(null)
+		}
+	}, [sleepTimerEndAt])
 
-	const handleSetTimer = (_minutes: number) => {
-		// setSleepTimer(minutes * 60)
+	const handleSetTimer = async (minutes: number) => {
+		await Orpheus.setSleepTimer(minutes * 60 * 1000)
+		void refetch()
 		close('SleepTimer')
 	}
 
-	// const handleCancelTimer = () => {
-	// 	// setSleepTimer(null)
-	// 	close('SleepTimer')
-	// }
+	const handleCancelTimer = async () => {
+		await Orpheus.cancelSleepTimer()
+		void refetch()
+		close('SleepTimer')
+	}
 
 	return (
 		<>
 			<Dialog.Title>定时关闭</Dialog.Title>
 			<Dialog.Content>
-				{/* {remainingTime ? (
+				{remainingTime ? (
 					<View style={styles.remainingTimeContainer}>
 						<Text variant='headlineMedium'>
 							剩余 {formatDurationToHHMMSS(remainingTime)}
@@ -57,7 +68,7 @@ const SleepTimerModal = () => {
 					</View>
 				) : (
 					<Text style={styles.promptText}>选择一个预设时间或自定义</Text>
-				)} */}
+				)}
 				<View style={styles.presetContainer}>
 					{PRESET_DURATIONS.map((minutes) => (
 						<Button
@@ -84,10 +95,10 @@ const SleepTimerModal = () => {
 						/>
 						<Button
 							mode='contained'
-							onPress={() => {
+							onPress={async () => {
 								const minutes = parseInt(customMinutes, 10)
 								if (!isNaN(minutes) && minutes > 0) {
-									handleSetTimer(minutes)
+									await handleSetTimer(minutes)
 								}
 							}}
 						>
@@ -104,14 +115,14 @@ const SleepTimerModal = () => {
 				)}
 			</Dialog.Content>
 			<Dialog.Actions>
-				{/* {sleepTimerEndAt && (
+				{sleepTimerEndAt && (
 					<Button
 						onPress={handleCancelTimer}
 						textColor='red'
 					>
 						取消定时器
 					</Button>
-				)} */}
+				)}
 				<Button onPress={() => close('SleepTimer')}>关闭</Button>
 			</Dialog.Actions>
 		</>

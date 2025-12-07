@@ -197,6 +197,18 @@ async function addToQueue({
 	}
 }
 
+function getInternalPlayUri(track: Track) {
+	if (track.source === 'bilibili') {
+		return track.bilibiliMetadata.cid
+			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
+			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
+	}
+	if (track.source === 'local' && track.localMetadata) {
+		return track.localMetadata.localPath
+	}
+	return undefined
+}
+
 async function finalizeAndRecordCurrentTrack(
 	uniqueKey: string,
 	realDuration: number,
@@ -251,5 +263,6 @@ export {
 	addToQueue,
 	convertToOrpheusTrack,
 	finalizeAndRecordCurrentTrack,
+	getInternalPlayUri,
 	reportPlaybackHistory,
 }

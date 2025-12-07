@@ -1,7 +1,9 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { DownloadState } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -45,6 +47,7 @@ const renderItem = ({
 		selected: Set<number>
 		selectMode: boolean
 		playlist: Playlist
+		downloadStatus: Record<string, DownloadState>
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -56,6 +59,7 @@ const renderItem = ({
 		selected,
 		selectMode,
 		playlist,
+		downloadStatus,
 	} = extraData
 	return (
 		<TrackListItem
@@ -73,6 +77,7 @@ const renderItem = ({
 			isSelected={selected.has(item.id)}
 			selectMode={selectMode}
 			enterSelectMode={enterSelectMode}
+			downloadState={downloadStatus[item.uniqueKey]}
 		/>
 	)
 }
@@ -94,6 +99,8 @@ export function LocalTrackList({
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+	const ids = tracks.map((t) => t.uniqueKey)
+	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
@@ -127,6 +134,7 @@ export function LocalTrackList({
 			toggle,
 			enterSelectMode,
 			playlist,
+			downloadStatus,
 		}),
 		[
 			selectMode,
@@ -136,6 +144,7 @@ export function LocalTrackList({
 			toggle,
 			enterSelectMode,
 			playlist,
+			downloadStatus,
 		],
 	)
 

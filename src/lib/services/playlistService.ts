@@ -497,7 +497,6 @@ export class PlaylistService {
 										artist: true,
 										bilibiliMetadata: true,
 										localMetadata: true,
-										trackDownloads: true,
 									},
 								},
 							},
@@ -866,7 +865,6 @@ export class PlaylistService {
 										artist: true,
 										bilibiliMetadata: true,
 										localMetadata: true,
-										trackDownloads: true,
 									},
 								},
 							},
@@ -988,7 +986,6 @@ export class PlaylistService {
 										artist: true,
 										bilibiliMetadata: true,
 										localMetadata: true,
-										trackDownloads: true,
 									},
 									columns: {
 										playHistory: false,

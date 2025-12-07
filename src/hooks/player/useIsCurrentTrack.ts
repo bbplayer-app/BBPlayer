@@ -35,7 +35,7 @@ export function useIsCurrentTrack(trackUniqueKey: string) {
 				// ignore
 			})
 
-		const sub = Orpheus.addListener('onTrackTransition', async () => {
+		const sub = Orpheus.addListener('onTrackStarted', async () => {
 			const { currentTrack } = await fetchTrack()
 			if (isMounted) {
 				if (!currentTrack) {

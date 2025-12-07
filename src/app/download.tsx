@@ -2,18 +2,18 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import type { DownloadTask } from '@/types/core/downloadManagerStore'
+import type { DownloadTask } from '@roitium/expo-orpheus'
+import { Orpheus } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
+import { ActivityIndicator, Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useShallow } from 'zustand/shallow'
 
 const renderItem = ({ item }: { item: DownloadTask }) => {
-	return <DownloadTaskItem task={item} />
+	return <DownloadTaskItem initTask={item} />
 }
 
 export default function DownloadPage() {
@@ -21,15 +21,47 @@ export default function DownloadPage() {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 
-	const tasks = useDownloadManagerStore(
-		useShallow((state) => Object.values(state.downloads)),
-	)
-	const start = useDownloadManagerStore((state) => state.startDownload)
-	const clearAll = useDownloadManagerStore((state) => state.clearAll)
+	const {
+		data: tasks,
+		isPending,
+		isError,
+		error,
+	} = useQuery({
+		queryKey: ['downloadTasks'],
+		queryFn: async () => {
+			return await Orpheus.getUncompletedDownloadTasks()
+		},
+		staleTime: 0,
+	})
 
 	const haveTrack = useCurrentTrack()
 
-	const keyExtractor = useCallback((item: DownloadTask) => item.uniqueKey, [])
+	const keyExtractor = useCallback((item: DownloadTask) => item.id, [])
+
+	if (isPending) {
+		return (
+			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				<ActivityIndicator
+					size='large'
+					color={colors.primary}
+					style={{ marginTop: insets.top }}
+				/>
+			</View>
+		)
+	}
+
+	if (isError) {
+		return (
+			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				<Text
+					variant='bodyMedium'
+					style={{ color: colors.error }}
+				>
+					加载下载任务失败: {error.message}
+				</Text>
+			</View>
+		)
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -40,8 +72,7 @@ export default function DownloadPage() {
 
 			<DownloadHeader
 				taskCount={tasks.length}
-				onStartAll={start}
-				onClearAll={clearAll}
+				onClearAll={() => Orpheus.clearUncompletedDownloadTasks()}
 			/>
 
 			<View style={styles.listContainer}>
