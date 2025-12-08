@@ -20,6 +20,7 @@ export function useLocalPlaylistPlayer(tracks: Track[]) {
 			}
 
 			try {
+				console.log(tracks[0])
 				await addToQueue({
 					tracks: tracks,
 					playNow: true,

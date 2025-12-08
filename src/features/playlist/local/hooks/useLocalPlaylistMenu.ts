@@ -43,7 +43,7 @@ export function useLocalPlaylistMenu({
 
 	const menuFunctions = (
 		item: Track,
-		downloadState: DownloadState,
+		downloadState?: DownloadState,
 	): TrackMenuItem[] => {
 		const menuItems: TrackMenuItem[] = [
 			{
