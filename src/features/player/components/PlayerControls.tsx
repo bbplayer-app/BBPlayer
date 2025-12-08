@@ -5,8 +5,8 @@ import {
 	RepeatMode,
 	useIsPlaying,
 	usePlaybackState,
-	useShuffleMode,
 } from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
@@ -15,7 +15,12 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
-	const shuffleMode = useShuffleMode()
+	const { data: shuffleMode, refetch: refetchShuffleMode } = useQuery({
+		queryKey: ['shuffleMode'],
+		queryFn: () => Orpheus.getShuffleMode(),
+		gcTime: 0,
+		staleTime: 0,
+	})
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
 
 	const finalPlayingIndicator =
@@ -74,13 +79,14 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
 						size={24}
 						iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
-						onPress={() => {
+						onPress={async () => {
 							void Haptics.performAndroidHapticsAsync(
 								Haptics.AndroidHaptics.Confirm,
 							)
-							void (shuffleMode
+							await (shuffleMode
 								? Orpheus.setShuffleMode(false)
 								: Orpheus.setShuffleMode(true))
+							await refetchShuffleMode()
 						}}
 					/>
 				</Tooltip>

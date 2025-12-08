@@ -1,5 +1,4 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -7,6 +6,8 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system'
@@ -159,12 +160,18 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
-	const enablePersistCurrentPosition = useAppStore(
-		(state) => state.settings.enablePersistCurrentPosition,
-	)
-	const enableLoudnessNormalization = useAppStore(
-		(state) => state.settings.enableLoudnessNormalization,
-	)
+	const {
+		data: enablePersistCurrentPosition,
+		refetch: refetchEnablePersistCurrentPosition,
+	} = useQuery({
+		queryKey: ['enablePersistCurrentPosition'],
+		queryFn: () => Orpheus.restorePlaybackPositionEnabled,
+		staleTime: 0,
+		gcTime: 0,
+	})
+	// const enableLoudnessNormalization = useAppStore(
+	// 	(state) => state.settings.enableLoudnessNormalization,
+	// )
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const handleCheckForUpdate = async () => {
@@ -253,11 +260,12 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>在应用启动时恢复上次播放进度</Text>
 				<Switch
 					value={enablePersistCurrentPosition}
-					onValueChange={() =>
-						useAppStore
-							.getState()
-							.setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
-					}
+					onValueChange={async () => {
+						Orpheus.setRestorePlaybackPositionEnabled(
+							!enablePersistCurrentPosition,
+						)
+						await refetchEnablePersistCurrentPosition()
+					}}
 				/>
 			</View>
 			<View style={styles.settingRow}>
@@ -297,7 +305,7 @@ const SettingsSection = memo(function SettingsSection() {
 					/>
 				</FunctionalMenu>
 			</View>
-			<View style={styles.settingRow}>
+			{/* <View style={styles.settingRow}>
 				<Text>响度均衡（实验性）</Text>
 				<Switch
 					value={enableLoudnessNormalization}
@@ -325,7 +333,7 @@ const SettingsSection = memo(function SettingsSection() {
 						}
 					}}
 				/>
-			</View>
+			</View> */}
 			<View style={styles.settingRow}>
 				<Text>手动设置{'\u2009Cookie'}</Text>
 				<IconButton
