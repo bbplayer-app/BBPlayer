@@ -7,7 +7,6 @@ import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useQuery } from '@tanstack/react-query'
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system'
@@ -160,15 +159,9 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
-	const {
-		data: enablePersistCurrentPosition,
-		refetch: refetchEnablePersistCurrentPosition,
-	} = useQuery({
-		queryKey: ['enablePersistCurrentPosition'],
-		queryFn: () => Orpheus.restorePlaybackPositionEnabled,
-		staleTime: 0,
-		gcTime: 0,
-	})
+	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
+		useState(Orpheus.restorePlaybackPositionEnabled)
+
 	// const enableLoudnessNormalization = useAppStore(
 	// 	(state) => state.settings.enableLoudnessNormalization,
 	// )
@@ -260,11 +253,11 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>在应用启动时恢复上次播放进度</Text>
 				<Switch
 					value={enablePersistCurrentPosition}
-					onValueChange={async () => {
+					onValueChange={() => {
 						Orpheus.setRestorePlaybackPositionEnabled(
 							!enablePersistCurrentPosition,
 						)
-						await refetchEnablePersistCurrentPosition()
+						setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
 					}}
 				/>
 			</View>
