@@ -1,7 +1,9 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { Playlist, Track } from '@/types/core/media'
+import { playlistService } from '@/lib/services/playlistService'
+import type { Playlist } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
@@ -21,7 +23,6 @@ import {
 
 interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }
-	playlistContents: Track[]
 	onClickPlayAll: () => void
 	onClickSync: () => void
 	onClickCopyToLocalPlaylist: () => void
@@ -72,7 +73,6 @@ function buildSubtitlePieces(
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
-	playlistContents,
 	onClickPlayAll,
 	onClickSync,
 	onClickCopyToLocalPlaylist,
@@ -85,10 +85,23 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		() => buildSubtitlePieces(playlist),
 		[playlist],
 	)
-	const onClickDownloadAll = useCallback(() => {
-		if (!playlistContents) return
+	const onClickDownloadAll = useCallback(async () => {
+		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
+		if (tracksResult.isErr()) {
+			toastAndLogError(
+				'获取播放列表内容失败',
+				tracksResult.error,
+				'UI.Playlist.Local.Header',
+			)
+			return
+		}
 		void Orpheus.multiDownload(
-			playlistContents
+			tracksResult.value
+				.filter((item) =>
+					item.source === 'bilibili'
+						? item.bilibiliMetadata.videoIsValid
+						: true,
+				)
 				.map((t) => {
 					const url = getInternalPlayUri(t)
 					if (!url) return
@@ -106,7 +119,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		useModalStore.getState().doAfterModalHostClosed(() => {
 			router.push('/download')
 		})
-	}, [router, playlistContents])
+	}, [playlist.id, router])
 
 	if (!playlist.title) return null
 

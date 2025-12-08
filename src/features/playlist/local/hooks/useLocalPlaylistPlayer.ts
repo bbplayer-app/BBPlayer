@@ -1,4 +1,5 @@
 import { alert } from '@/components/modals/AlertModal'
+import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
@@ -9,18 +10,25 @@ import { useMMKVBoolean } from 'react-native-mmkv'
 
 const SCOPE = 'UI.Playlist.Local.Player'
 
-export function useLocalPlaylistPlayer(tracks: Track[]) {
+export function useLocalPlaylistPlayer(playlistId: number) {
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
 
 	const playAll = useCallback(
 		async (startFromId?: string) => {
+			const tracksResult = await playlistService.getPlaylistTracks(playlistId)
+			if (tracksResult.isErr()) {
+				toastAndLogError('获取播放列表内容失败', tracksResult.error, SCOPE)
+				return
+			}
+			const tracks = tracksResult.value.filter((item) =>
+				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+			)
 			if (!tracks || tracks.length === 0) {
 				return
 			}
 
 			try {
-				console.log(tracks[0])
 				await addToQueue({
 					tracks: tracks,
 					playNow: true,
@@ -32,7 +40,7 @@ export function useLocalPlaylistPlayer(tracks: Track[]) {
 				toastAndLogError('播放全部失败', error, SCOPE)
 			}
 		},
-		[tracks],
+		[playlistId],
 	)
 
 	const handleTrackPress = useCallback(

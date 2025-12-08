@@ -67,10 +67,6 @@ export default function LocalPlaylistPage() {
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks =
 		playlistData?.pages.flatMap((page) => page.tracks) ?? []
-	const filteredPlaylistData =
-		allLoadedTracks.filter((item) =>
-			item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
-		) ?? []
 
 	const {
 		data: searchData,
@@ -127,8 +123,7 @@ export default function LocalPlaylistPage() {
 		})
 	}, [playlistMetadata, syncPlaylist])
 
-	const { playAll, handleTrackPress } =
-		useLocalPlaylistPlayer(filteredPlaylistData)
+	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
 	const deleteTrack = useCallback(
 		(trackId: number) => {
@@ -311,7 +306,6 @@ export default function LocalPlaylistPage() {
 						playlist={playlistMetadata}
 						onClickPlayAll={playAll}
 						onClickSync={handleSync}
-						playlistContents={filteredPlaylistData}
 						onClickCopyToLocalPlaylist={() =>
 							openModal('DuplicateLocalPlaylist', {
 								sourcePlaylistId: Number(id),
