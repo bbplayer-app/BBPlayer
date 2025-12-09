@@ -57,8 +57,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       '@roitium/expo-orpheus':
-        specifier: ^0.4.6
-        version: 0.4.6(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
+        specifier: ^0.4.7
+        version: 0.4.7(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       '@sentry/cli':
         specifier: ^2.56.1
         version: 2.56.1
@@ -2152,8 +2152,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  '@roitium/expo-orpheus@0.4.6':
-    resolution: {integrity: sha512-Osy+FC4KzJgz1Kg3RNd+aTWEJ4rukQgHTgwRo4azJhQ8OHftPwpPjd/EVvG/X2EZ5eP99Ct0VXVKA/zsQf2KJA==}
+  '@roitium/expo-orpheus@0.4.7':
+    resolution: {integrity: sha512-ACkMWcciK2IYTMUHTpK9H/o95t4pzQk7vl/Aw7cq2gPldh+hPLAuu613lJkKnyZcf9YVWb9csVk+DVq+ntfNig==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -9647,7 +9647,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0)
 
-  '@roitium/expo-orpheus@0.4.6(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)':
+  '@roitium/expo-orpheus@0.4.7(expo@54.0.21)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)':
     dependencies:
       expo: 54.0.21(@babel/core@7.28.4)(@expo/metro-runtime@6.1.2)(expo-router@6.0.14)(react-native-webview@13.15.0(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
       react: 19.1.0

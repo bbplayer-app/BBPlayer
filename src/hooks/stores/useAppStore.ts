@@ -4,6 +4,7 @@ import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
 import { storage, zustandStorage } from '@/utils/mmkv'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'
@@ -83,6 +84,8 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.bilibiliCookie = cookieObj
 					})
+					Orpheus.setBilibiliCookie(serializeCookieObject(cookieObj))
+					logger.info('设置 cookie 到 orpheus')
 					return ok(undefined)
 				},
 
@@ -93,6 +96,8 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.bilibiliCookie = newCookie
 					})
+					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
+					logger.info('更新 cookie 到 orpheus')
 					return ok(undefined)
 				},
 
@@ -233,5 +238,12 @@ export const useAppStore = create<AppState>()(
 		},
 	),
 )
+
+useAppStore.persist.onFinishHydration((state) => {
+	if (state.bilibiliCookie) {
+		Orpheus.setBilibiliCookie(serializeCookieObject(state.bilibiliCookie))
+	}
+	logger.info('应用启动时自动设置 cookie 到 orpheus')
+})
 
 export default useAppStore
