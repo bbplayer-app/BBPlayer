@@ -6,7 +6,6 @@ interface Settings {
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
 	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
-	enableLoudnessNormalization: boolean
 }
 
 interface AppState {
