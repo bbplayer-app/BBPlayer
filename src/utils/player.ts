@@ -170,7 +170,6 @@ async function addToQueue({
 			}
 			return
 		}
-		console.log(orpheusTracks[0], startFromKey, clearQueue)
 		await Orpheus.addToEnd(orpheusTracks, startFromKey, clearQueue)
 		// 原生层已经处理了 startFromKey 的播放逻辑，会在添加后直接播放，这里只需要处理 playNow 即可
 		if (playNow && !startFromKey) {
