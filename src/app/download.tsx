@@ -37,15 +37,23 @@ export default function DownloadPage() {
 
 	const haveTrack = useCurrentTrack()
 
+	const header = (
+		<Appbar.Header elevated>
+			<Appbar.BackAction onPress={() => router.back()} />
+			<Appbar.Content title='下载任务' />
+		</Appbar.Header>
+	)
+
 	const keyExtractor = useCallback((item: DownloadTask) => item.id, [])
 
 	if (isPending) {
 		return (
 			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				{header}
 				<ActivityIndicator
 					size='large'
 					color={colors.primary}
-					style={{ marginTop: insets.top }}
+					style={{ flex: 1 }}
 				/>
 			</View>
 		)
@@ -54,9 +62,10 @@ export default function DownloadPage() {
 	if (isError) {
 		return (
 			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				{header}
 				<Text
 					variant='bodyMedium'
-					style={{ color: colors.error }}
+					style={{ color: colors.error, padding: 16 }}
 				>
 					加载下载任务失败: {error.message}
 				</Text>
@@ -66,10 +75,7 @@ export default function DownloadPage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='下载任务' />
-			</Appbar.Header>
+			{header}
 
 			<DownloadHeader
 				taskCount={tasks.length}

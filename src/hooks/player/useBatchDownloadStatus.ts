@@ -9,5 +9,6 @@ export function useBatchDownloadStatus(ids: string[]) {
 		},
 		staleTime: 0,
 		gcTime: 0,
+		enabled: ids.length > 0,
 	})
 }

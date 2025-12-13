@@ -29,26 +29,10 @@ function convertToOrpheusTrack(
 	// 	artist: track.artist,
 	// })
 
-	let url = ''
+	const url = getInternalPlayUri(track)
 	const volume = {
 		measured_i: 0,
 		target_i: 0,
-	}
-	if (track.source === 'bilibili') {
-		url = track.bilibiliMetadata.cid
-			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
-			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
-		// logger.debug('使用 B 站音频流 URL', {
-		// 	url,
-		// })
-		// volume = {
-		// 	measured_i:
-		// 		track.bilibiliMetadata.bilibiliStreamUrl.volume?.measured_i ?? 0,
-		// 	target_i: track.bilibiliMetadata.bilibiliStreamUrl.volume?.target_i ?? 0,
-		// }
-	} else if (track.source === 'local' && track.localMetadata) {
-		url = track.localMetadata.localPath
-		logger.debug('使用本地音频流 URL', { url })
 	}
 
 	// 如果没有有效的 URL，返回错误
@@ -200,7 +184,7 @@ async function addToQueue({
 
 function getInternalPlayUri(track: Track) {
 	if (track.source === 'bilibili') {
-		return track.bilibiliMetadata.cid
+		return track.bilibiliMetadata.isMultiPage
 			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
 			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
 	}

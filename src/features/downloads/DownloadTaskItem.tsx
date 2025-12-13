@@ -148,11 +148,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							}}
 						/>
 					)}
-					<View
-						style={{ marginRight: task.state === DownloadState.FAILED ? 0 : 0 }}
-					>
-						{icon}
-					</View>
+					<View>{icon}</View>
 					<IconButton
 						icon='close'
 						onPress={async () => {
