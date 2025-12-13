@@ -23,6 +23,7 @@ import {
 import { useImage } from 'expo-image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+	AppState,
 	StyleSheet,
 	useColorScheme,
 	useWindowDimensions,
@@ -62,6 +63,19 @@ export default function PlayerPage() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
+	const [isForeground, setIsForeground] = useState(
+		AppState.currentState === 'active',
+	)
+
+	useEffect(() => {
+		const subscription = AppState.addEventListener('change', (nextAppState) => {
+			setIsForeground(nextAppState === 'active')
+		})
+
+		return () => {
+			subscription.remove()
+		}
+	}, [])
 
 	const realHeight = useMemo(() => {
 		return height + insets.top + insets.bottom
@@ -77,9 +91,8 @@ export default function PlayerPage() {
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	useEffect(() => {
-		if (playerBackgroundStyle !== 'streamer') {
+		if (playerBackgroundStyle !== 'streamer' || !isForeground) {
 			cancelAnimation(shaderTime)
-			shaderTime.value = 0
 			return
 		}
 		shaderTime.value = withRepeat(
@@ -89,7 +102,7 @@ export default function PlayerPage() {
 		)
 
 		return () => cancelAnimation(shaderTime)
-	}, [playerBackgroundStyle, shaderTime])
+	}, [isForeground, playerBackgroundStyle, shaderTime])
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -110,8 +123,8 @@ export default function PlayerPage() {
 	}, [shaderTime, streamerColor1, streamerColor2, width, realHeight])
 
 	useEffect(() => {
-		if (!coverRef || playerBackgroundStyle === 'md3') {
-			if (playerBackgroundStyle !== 'gradient') {
+		if (!coverRef || playerBackgroundStyle === 'md3' || !isForeground) {
+			if (playerBackgroundStyle !== 'gradient' && !isForeground) {
 				gradientMainColor.set(colors.background)
 			}
 			if (playerBackgroundStyle !== 'streamer') {
@@ -163,6 +176,7 @@ export default function PlayerPage() {
 		colors.background,
 		coverRef,
 		gradientMainColor,
+		isForeground,
 		playerBackgroundStyle,
 		streamerColor1,
 		streamerColor2,
