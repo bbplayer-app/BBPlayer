@@ -1,19 +1,42 @@
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import * as Haptics from '@/utils/haptics'
-import { RepeatMode } from '@roitium/react-native-track-player'
-import { StyleSheet, View } from 'react-native'
+import {
+	Orpheus,
+	PlaybackState,
+	RepeatMode,
+	useIsPlaying,
+	usePlaybackState,
+} from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
-	const togglePlay = usePlayerStore((state) => state.togglePlay)
-	const toggleShuffleMode = usePlayerStore((state) => state.toggleShuffleMode)
-	const toggleRepeatMode = usePlayerStore((state) => state.toggleRepeatMode)
-	const skipToPrevious = usePlayerStore((state) => state.skipToPrevious)
-	const skipToNext = usePlayerStore((state) => state.skipToNext)
-	const isPlaying = usePlayerStore((state) => state.isPlaying)
-	const repeatMode = usePlayerStore((state) => state.repeatMode)
-	const shuffleMode = usePlayerStore((state) => state.shuffleMode)
+	const isPlaying = useIsPlaying()
+	const state = usePlaybackState()
+	const { data: shuffleMode, refetch: refetchShuffleMode } = useQuery({
+		queryKey: ['shuffleMode'],
+		queryFn: () => Orpheus.getShuffleMode(),
+		gcTime: 0,
+		staleTime: 0,
+	})
+	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
+
+	const finalPlayingIndicator =
+		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
+
+	useEffect(() => {
+		void Orpheus.getRepeatMode().then(setRepeatMode)
+		const listener = AppState.addEventListener('change', (nextAppState) => {
+			if (nextAppState === 'active') {
+				void Orpheus.getRepeatMode().then(setRepeatMode)
+			}
+		})
+		return () => {
+			listener.remove()
+		}
+	}, [])
 
 	return (
 		<View>
@@ -25,17 +48,17 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						void Haptics.performAndroidHapticsAsync(
 							Haptics.AndroidHaptics.Context_Click,
 						)
-						void skipToPrevious()
+						void Orpheus.skipToPrevious()
 					}}
 				/>
 				<IconButton
-					icon={isPlaying ? 'pause' : 'play'}
+					icon={finalPlayingIndicator}
 					size={48}
 					onPress={() => {
 						void Haptics.performAndroidHapticsAsync(
 							Haptics.AndroidHaptics.Context_Click,
 						)
-						void togglePlay()
+						void (isPlaying ? Orpheus.pause() : Orpheus.play())
 					}}
 					mode='contained'
 				/>
@@ -46,7 +69,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						void Haptics.performAndroidHapticsAsync(
 							Haptics.AndroidHaptics.Context_Click,
 						)
-						void skipToNext()
+						void Orpheus.skipToNext()
 					}}
 				/>
 			</View>
@@ -56,26 +79,29 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
 						size={24}
 						iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
-						onPress={() => {
+						onPress={async () => {
 							void Haptics.performAndroidHapticsAsync(
 								Haptics.AndroidHaptics.Confirm,
 							)
-							void toggleShuffleMode()
+							await (shuffleMode
+								? Orpheus.setShuffleMode(false)
+								: Orpheus.setShuffleMode(true))
+							await refetchShuffleMode()
 						}}
 					/>
 				</Tooltip>
 				<Tooltip title='切换循环播放模式'>
 					<IconButton
 						icon={
-							repeatMode === RepeatMode.Off
+							repeatMode === RepeatMode.OFF
 								? 'repeat-off'
-								: repeatMode === RepeatMode.Track
+								: repeatMode === RepeatMode.TRACK
 									? 'repeat-once'
 									: 'repeat'
 						}
 						size={24}
 						iconColor={
-							repeatMode !== RepeatMode.Off
+							repeatMode !== RepeatMode.OFF
 								? colors.primary
 								: colors.onSurfaceVariant
 						}
@@ -83,7 +109,14 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 							void Haptics.performAndroidHapticsAsync(
 								Haptics.AndroidHaptics.Confirm,
 							)
-							void toggleRepeatMode()
+							const nextMode =
+								repeatMode === RepeatMode.OFF
+									? RepeatMode.TRACK
+									: repeatMode === RepeatMode.TRACK
+										? RepeatMode.QUEUE
+										: RepeatMode.OFF
+							void Orpheus.setRepeatMode(nextMode)
+							setRepeatMode(nextMode)
 						}}
 					/>
 				</Tooltip>

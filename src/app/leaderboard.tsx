@@ -1,10 +1,10 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	usePlayCountLeaderBoardPaginated,
 	useTotalPlaybackDuration,
 } from '@/hooks/queries/db/track'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import type { Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
@@ -57,7 +57,7 @@ export default function LeaderBoardPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 
 	const {
 		data: leaderBoardData,

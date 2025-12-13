@@ -1,5 +1,5 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
-import TrackPlayer from '@roitium/react-native-track-player'
+import { Orpheus } from '@roitium/expo-orpheus'
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
@@ -59,14 +59,14 @@ export default function useTrackProgress(background = false) {
 
 				void (async () => {
 					try {
-						const p = await TrackPlayer.getProgress()
+						const p = await Orpheus.getPosition()
+						const d = await Orpheus.getDuration()
+						const b = await Orpheus.getBuffered()
 						if (!mountedRef.current) return
 						setState((prev) =>
-							prev.position === p.position &&
-							prev.duration === p.duration &&
-							prev.buffered === p.buffered
+							prev.position === p && prev.duration === d && prev.buffered === b
 								? prev
-								: p,
+								: { position: p, duration: d, buffered: prev.buffered },
 						)
 					} catch {
 						// ignore
@@ -85,14 +85,14 @@ export default function useTrackProgress(background = false) {
 
 			void (async () => {
 				try {
-					const p = await TrackPlayer.getProgress()
+					const p = await Orpheus.getPosition()
+					const d = await Orpheus.getDuration()
+					const b = await Orpheus.getBuffered()
 					if (!mountedRef.current) return
 					setState((prev) =>
-						prev.position === p.position &&
-						prev.duration === p.duration &&
-						prev.buffered === p.buffered
+						prev.position === p && prev.duration === d && prev.buffered === b
 							? prev
-							: p,
+							: { position: p, duration: d, buffered: prev.buffered },
 					)
 				} catch {
 					// ignore

@@ -1,21 +1,29 @@
 import { alert } from '@/components/modals/AlertModal'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
+import { addToQueue } from '@/utils/player'
 import { useCallback } from 'react'
 import type { MMKV } from 'react-native-mmkv'
 import { useMMKVBoolean } from 'react-native-mmkv'
 
 const SCOPE = 'UI.Playlist.Local.Player'
 
-export function useLocalPlaylistPlayer(tracks: Track[]) {
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
+export function useLocalPlaylistPlayer(playlistId: number) {
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
 
 	const playAll = useCallback(
 		async (startFromId?: string) => {
+			const tracksResult = await playlistService.getPlaylistTracks(playlistId)
+			if (tracksResult.isErr()) {
+				toastAndLogError('获取播放列表内容失败', tracksResult.error, SCOPE)
+				return
+			}
+			const tracks = tracksResult.value.filter((item) =>
+				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+			)
 			if (!tracks || tracks.length === 0) {
 				return
 			}
@@ -32,7 +40,7 @@ export function useLocalPlaylistPlayer(tracks: Track[]) {
 				toastAndLogError('播放全部失败', error, SCOPE)
 			}
 		},
-		[addToQueue, tracks],
+		[playlistId],
 	)
 
 	const handleTrackPress = useCallback(

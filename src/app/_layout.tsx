@@ -1,11 +1,10 @@
 import AppProviders from '@/components/providers'
 import { toastConfig } from '@/components/toast/ToastConfig'
-import useAppStore from '@/hooks/stores/useAppStore'
+import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb, { expoDb } from '@/lib/db/db'
-import { initPlayer } from '@/lib/player/playerLogic'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -13,6 +12,7 @@ import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 import { useLogger } from '@react-navigation/devtools'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
@@ -93,10 +93,16 @@ export default Sentry.wrap(function RootLayout() {
 
 					void lyricService.migrateFromOldFormat()
 
-					const initializePlayer = async () => {
+					const initializePlayer = () => {
 						if (!global.playerIsReady) {
 							try {
-								await initPlayer()
+								const cookie = useAppStore.getState().bilibiliCookie
+								if (!cookie) {
+									logger.info('没有 bilibili cookie，跳过播放器初始化')
+									return
+								}
+								logger.debug('初始化 orpheus bilibili cookie')
+								Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
 							} catch (error) {
 								logger.error('播放器初始化失败: ', error)
 								reportErrorToSentry(

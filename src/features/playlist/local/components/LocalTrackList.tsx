@@ -1,7 +1,9 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { DownloadState } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -20,7 +22,10 @@ interface LocalTrackListProps {
 	tracks: Track[]
 	playlist: Playlist
 	handleTrackPress: (track: Track) => void
-	trackMenuItems: (track: Track) => TrackMenuItem[]
+	trackMenuItems: (
+		track: Track,
+		downloadState?: DownloadState,
+	) => TrackMenuItem[]
 	selectMode: boolean
 	selected: Set<number>
 	toggle: (id: number) => void
@@ -39,12 +44,17 @@ const renderItem = ({
 	Track,
 	{
 		handleTrackPress: (track: Track) => void
-		handleMenuPress: (track: Track, anchor: { x: number; y: number }) => void
+		handleMenuPress: (
+			track: Track,
+			anchor: { x: number; y: number },
+			downloadState?: DownloadState,
+		) => void
 		toggle: (id: number) => void
 		enterSelectMode: (id: number) => void
 		selected: Set<number>
 		selectMode: boolean
 		playlist: Playlist
+		downloadStatus: Record<string, DownloadState>
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -56,13 +66,17 @@ const renderItem = ({
 		selected,
 		selectMode,
 		playlist,
+		downloadStatus,
 	} = extraData
+	const downloadState = downloadStatus
+		? downloadStatus[item.uniqueKey]
+		: undefined
 	return (
 		<TrackListItem
 			index={index}
 			onTrackPress={() => handleTrackPress(item)}
 			onMenuPress={(anchor) => {
-				handleMenuPress(item, anchor)
+				handleMenuPress(item, anchor, downloadState)
 			}}
 			disabled={
 				item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
@@ -73,6 +87,7 @@ const renderItem = ({
 			isSelected={selected.has(item.id)}
 			selectMode={selectMode}
 			enterSelectMode={enterSelectMode}
+			downloadState={downloadState}
 		/>
 	)
 }
@@ -91,23 +106,31 @@ export function LocalTrackList({
 	isFetchingNextPage,
 	hasNextPage,
 }: LocalTrackListProps) {
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+	const ids = tracks.map((t) => t.uniqueKey)
+	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
 		anchor: { x: number; y: number }
 		track: Track | null
+		downloadState?: DownloadState
 	}>({
 		visible: false,
 		anchor: { x: 0, y: 0 },
 		track: null,
+		downloadState: undefined,
 	})
 
 	const handleMenuPress = useCallback(
-		(track: Track, anchor: { x: number; y: number }) => {
-			setMenuState({ visible: true, anchor, track })
+		(
+			track: Track,
+			anchor: { x: number; y: number },
+			downloadState?: DownloadState,
+		) => {
+			setMenuState({ visible: true, anchor, track, downloadState })
 		},
 		[],
 	)
@@ -127,6 +150,7 @@ export function LocalTrackList({
 			toggle,
 			enterSelectMode,
 			playlist,
+			downloadStatus,
 		}),
 		[
 			selectMode,
@@ -136,6 +160,7 @@ export function LocalTrackList({
 			toggle,
 			enterSelectMode,
 			playlist,
+			downloadStatus,
 		],
 	)
 
@@ -177,18 +202,22 @@ export function LocalTrackList({
 					anchor={menuState.anchor}
 					anchorPosition='bottom'
 				>
-					{trackMenuItems(menuState.track).map((menuItem) => (
-						<Menu.Item
-							key={menuItem.title}
-							titleStyle={menuItem.danger ? { color: theme.colors.error } : {}}
-							leadingIcon={menuItem.leadingIcon}
-							onPress={() => {
-								menuItem.onPress()
-								handleDismissMenu()
-							}}
-							title={menuItem.title}
-						/>
-					))}
+					{trackMenuItems(menuState.track, menuState.downloadState).map(
+						(menuItem) => (
+							<Menu.Item
+								key={menuItem.title}
+								titleStyle={
+									menuItem.danger ? { color: theme.colors.error } : {}
+								}
+								leadingIcon={menuItem.leadingIcon}
+								onPress={() => {
+									menuItem.onPress()
+									handleDismissMenu()
+								}}
+								title={menuItem.title}
+							/>
+						),
+					)}
 				</FunctionalMenu>
 			)}
 		</>

@@ -1,13 +1,11 @@
 import { alert } from '@/components/modals/AlertModal'
 import type { TrackMenuItem } from '@/features/playlist/local/components/LocalPlaylistItem'
-import { playlistKeys } from '@/hooks/queries/db/playlist'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
-import { downloadService } from '@/lib/services/downloadService'
 import type { Playlist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
+import { convertToOrpheusTrack, getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
@@ -28,29 +26,25 @@ export function useLocalPlaylistMenu({
 	playlist,
 }: LocalPlaylistMenuProps) {
 	const router = useRouter()
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
-	const queueDownloads = useDownloadManagerStore(
-		(state) => state.queueDownloads,
-	)
 
-	const playNext = useCallback(
-		async (track: Track) => {
-			try {
-				await addToQueue({
-					tracks: [track],
-					playNow: false,
-					clearQueue: false,
-					playNext: true,
-				})
-				toast.success('添加到下一首播放成功')
-			} catch (error) {
-				toastAndLogError('添加到队列失败', error, SCOPE)
+	const playNext = useCallback(async (track: Track) => {
+		try {
+			const oTrack = convertToOrpheusTrack(track)
+			if (oTrack.isErr()) {
+				toastAndLogError('转换 Track 失败', oTrack.error, SCOPE)
+				return
 			}
-		},
-		[addToQueue],
-	)
+			await Orpheus.playNext(oTrack.value)
+			toast.success('添加到下一首播放成功')
+		} catch (error) {
+			toastAndLogError('添加到队列失败', error, SCOPE)
+		}
+	}, [])
 
-	const menuFunctions = (item: Track): TrackMenuItem[] => {
+	const menuFunctions = (
+		item: Track,
+		downloadState?: DownloadState,
+	): TrackMenuItem[] => {
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',
@@ -89,34 +83,40 @@ export function useLocalPlaylistMenu({
 				},
 				{
 					title:
-						item.trackDownloads?.status === 'downloaded'
-							? '删除缓存'
-							: '缓存音频',
+						downloadState === DownloadState.COMPLETED ? '删除缓存' : '缓存音频',
 					leadingIcon:
-						item.trackDownloads?.status === 'downloaded'
+						downloadState === DownloadState.COMPLETED
 							? 'delete-sweep'
 							: 'download',
 					onPress: async () => {
-						if (item.trackDownloads?.status === 'downloaded') {
-							const result = await downloadService.delete(item.uniqueKey)
-							if (result.isErr()) {
-								toastAndLogError('删除缓存失败', result.error, SCOPE)
-								return
-							}
+						if (downloadState === DownloadState.COMPLETED) {
+							await Orpheus.removeDownload(item.uniqueKey)
 							toast.success('删除缓存成功')
 							await queryClient.invalidateQueries({
-								queryKey: playlistKeys.playlistContents(playlist.id),
+								queryKey: ['batchDownloadStatus'],
 							})
 							return
 						}
+						const url = getInternalPlayUri(item)
+						if (!url) {
+							toastAndLogError(
+								'获取内部播放地址失败',
+								'失败了！',
+								'UI.Playlist.Local.Menu',
+							)
+							return
+						}
 
-						queueDownloads([
-							{
-								uniqueKey: item.uniqueKey,
-								title: item.title,
-								coverUrl: item.coverUrl ?? undefined,
-							},
-						])
+						await Orpheus.downloadTrack({
+							id: item.uniqueKey,
+							url: url,
+							title: item.title,
+							artist: item.artist?.name,
+							artwork: item.coverUrl ?? undefined,
+							duration: item.duration,
+						})
+
+						toast.success('已开始下载')
 					},
 				},
 			)

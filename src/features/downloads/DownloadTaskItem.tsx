@@ -1,8 +1,14 @@
-import type { ProgressEvent } from '@/hooks/stores/useDownloadManagerStore'
-import useDownloadManagerStore, {
+import {
 	eventListner,
+	type ProgressEvent,
 } from '@/hooks/stores/useDownloadManagerStore'
-import type { DownloadTask } from '@/types/core/downloadManagerStore'
+import { toastAndLogError } from '@/utils/error-handling'
+import {
+	DownloadState,
+	Orpheus,
+	type DownloadTask,
+} from '@roitium/expo-orpheus'
+import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Icon, IconButton, Surface, Text, useTheme } from 'react-native-paper'
@@ -10,34 +16,33 @@ import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 } from 'react-native-reanimated'
-import { useShallow } from 'zustand/shallow'
 
 const DownloadTaskItem = memo(function DownloadTaskItem({
-	task,
+	initTask,
 }: {
-	task: DownloadTask
+	initTask: DownloadTask
 }) {
 	const { colors } = useTheme()
-	const { retry, cancel } = useDownloadManagerStore(
-		useShallow((state) => ({
-			retry: state.retryDownload,
-			cancel: state.cancelDownload,
-		})),
-	)
+	const [task, setTask] = useRecyclingState<DownloadTask>(initTask, [
+		initTask.id,
+	])
 	const sharedProgress = useSharedValue(0)
 	const progressBackgroundWidth = useSharedValue(0)
 	const containerRef = useRef<View>(null)
 
 	useEffect(() => {
 		const handler = (e: ProgressEvent['progress:uniqueKey']) => {
-			sharedProgress.value = Math.max(Math.min(e.current / e.total, 1), 0)
+			sharedProgress.value = e.percent
+			if (e.state !== task.state) {
+				setTask((task) => ({ ...task, state: e.state }))
+			}
 		}
-		eventListner.on(`progress:${task.uniqueKey}`, handler)
+		eventListner.on(`progress:${task.id}`, handler)
 
 		return () => {
-			eventListner.off(`progress:${task.uniqueKey}`, handler)
+			eventListner.off(`progress:${task.id}`, handler)
 		}
-	}, [task.uniqueKey, sharedProgress])
+	}, [task.id, sharedProgress, task.state, setTask])
 
 	useLayoutEffect(() => {
 		if (!containerRef.current) return
@@ -49,7 +54,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	useEffect(() => {
 		// 只清除当前任务的进度，而不清除 progressBackgroundWidth
 		sharedProgress.set(0)
-	}, [sharedProgress, task.uniqueKey])
+	}, [sharedProgress, task.id])
 
 	const progressBackgroundAnimatedStyle = useAnimatedStyle(() => {
 		return {
@@ -63,14 +68,14 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	})
 
 	const getStatusText = () => {
-		switch (task.status) {
-			case 'queued':
+		switch (task.state) {
+			case DownloadState.QUEUED:
 				return '等待下载...'
-			case 'downloading':
+			case DownloadState.DOWNLOADING:
 				return '正在下载...'
-			case 'failed':
-				return '下载失败' + (task.error ? `: ${task.error}` : '')
-			case 'completed':
+			case DownloadState.FAILED:
+				return '下载失败'
+			case DownloadState.COMPLETED:
 				return '下载完成'
 			default:
 				return '未知状态'
@@ -79,8 +84,8 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 
 	const icons = useMemo(() => {
 		let icon = null
-		switch (task.status) {
-			case 'queued':
+		switch (task.state) {
+			case DownloadState.QUEUED:
 				icon = (
 					<Icon
 						source='human-queue'
@@ -88,7 +93,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					/>
 				)
 				break
-			case 'downloading':
+			case DownloadState.DOWNLOADING:
 				icon = (
 					<Icon
 						source='progress-download'
@@ -96,7 +101,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					/>
 				)
 				break
-			case 'failed':
+			case DownloadState.FAILED:
 				icon = (
 					<Icon
 						source='close-circle-outline'
@@ -105,7 +110,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					/>
 				)
 				break
-			case 'completed':
+			case DownloadState.COMPLETED:
 				icon = (
 					<Icon
 						source='check-circle-outline'
@@ -126,23 +131,42 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 		return (
 			<>
 				<View style={styles.iconsContainer}>
-					{task.status === 'failed' && (
+					{task.state === DownloadState.FAILED && (
 						<IconButton
 							icon='reload'
-							onPress={() => retry(task.uniqueKey)}
+							onPress={async () => {
+								if (!task.track) return
+								try {
+									await Orpheus.downloadTrack(task.track)
+								} catch (e) {
+									toastAndLogError(
+										'重新下载失败',
+										e,
+										'Features.Downloads.DownloadTaskItem',
+									)
+								}
+							}}
 						/>
 					)}
-					<View style={{ marginRight: task.status === 'failed' ? 0 : 0 }}>
-						{icon}
-					</View>
+					<View>{icon}</View>
 					<IconButton
 						icon='close'
-						onPress={() => cancel(task.uniqueKey)}
+						onPress={async () => {
+							try {
+								await Orpheus.removeDownload(task.id)
+							} catch (e) {
+								toastAndLogError(
+									'删除任务失败',
+									e,
+									'Features.Downloads.DownloadTaskItem',
+								)
+							}
+						}}
 					/>
 				</View>
 			</>
 		)
-	}, [cancel, colors.error, retry, task.status, task.uniqueKey])
+	}, [colors.error, task.id, task.state, task.track])
 
 	return (
 		<>
@@ -157,7 +181,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							variant='bodyMedium'
 							numberOfLines={1}
 						>
-							{task.title}
+							{task.track?.title ?? '未知任务'}
 						</Text>
 						<View style={styles.statusContainer}>
 							<Text

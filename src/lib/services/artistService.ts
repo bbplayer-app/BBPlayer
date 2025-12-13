@@ -238,7 +238,6 @@ export class ArtistService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 				}),
 			),

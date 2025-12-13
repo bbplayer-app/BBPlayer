@@ -4,6 +4,7 @@ import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
 import { storage, zustandStorage } from '@/utils/mmkv'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'
@@ -65,8 +66,6 @@ export const useAppStore = create<AppState>()(
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
 					playerBackgroundStyle: 'gradient',
-					enablePersistCurrentPosition: false,
-					enableLoudnessNormalization: false,
 				},
 
 				hasBilibiliCookie: () => {
@@ -84,6 +83,8 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.bilibiliCookie = cookieObj
 					})
+					Orpheus.setBilibiliCookie(serializeCookieObject(cookieObj))
+					logger.info('设置 cookie 到 orpheus')
 					return ok(undefined)
 				},
 
@@ -94,6 +95,8 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.bilibiliCookie = newCookie
 					})
+					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
+					logger.info('更新 cookie 到 orpheus')
 					return ok(undefined)
 				},
 
@@ -137,14 +140,6 @@ export const useAppStore = create<AppState>()(
 					})
 
 					log.setSeverity(value ? 'debug' : 'info')
-				},
-
-				setEnablePersistCurrentPosition: (value) => {
-					set((state) => {
-						state.settings.enablePersistCurrentPosition = value
-					})
-					storage.delete('current_position')
-					return
 				},
 			}
 		}),
@@ -222,11 +217,6 @@ export const useAppStore = create<AppState>()(
 						'boolean',
 					)
 					checkAndSet(OLD_KEYS.BG_STYLE, 'playerBackgroundStyle', 'string')
-					checkAndSet(
-						OLD_KEYS.PERSIST_POSITION,
-						'enablePersistCurrentPosition',
-						'boolean',
-					)
 				} catch (e) {
 					logger.error('迁移设置项失败', e)
 				}

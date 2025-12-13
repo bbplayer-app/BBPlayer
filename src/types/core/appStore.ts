@@ -6,8 +6,6 @@ interface Settings {
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
 	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
-	enablePersistCurrentPosition: boolean
-	enableLoudnessNormalization: boolean
 }
 
 interface AppState {
@@ -25,7 +23,6 @@ interface AppState {
 
 	setEnableSentryReport: (value: boolean) => void
 	setEnableDebugLog: (value: boolean) => void
-	setEnablePersistCurrentPosition: (value: boolean) => void
 }
 
 export type { AppState, Settings }

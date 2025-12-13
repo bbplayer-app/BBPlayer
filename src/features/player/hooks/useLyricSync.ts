@@ -1,6 +1,6 @@
 import playerProgressEmitter from '@/lib/player/progressListener'
 import type { LyricLine } from '@/types/player/lyrics'
-import TrackPlayer from '@roitium/react-native-track-player'
+import { Orpheus } from '@roitium/expo-orpheus'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -9,7 +9,6 @@ import { AppState } from 'react-native'
 export default function useLyricSync(
 	lyrics: LyricLine[],
 	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
-	seekTo: (position: number) => Promise<void>,
 	offset: number, // 单位秒
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
@@ -70,7 +69,7 @@ export default function useLyricSync(
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
-			await seekTo(lyrics[index].timestamp - offset)
+			await Orpheus.seekTo(lyrics[index].timestamp - offset)
 			if (latestJumpRequestRef.current !== requestId) return
 			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
@@ -79,7 +78,7 @@ export default function useLyricSync(
 			}
 			isManualScrollingRef.current = false
 		},
-		[lyrics, seekTo, offset],
+		[lyrics, offset],
 	)
 
 	useEffect(() => {
@@ -107,8 +106,8 @@ export default function useLyricSync(
 	}, [currentLyricIndex, findIndexForTime, isActive, offset])
 
 	useEffect(() => {
-		void TrackPlayer.getProgress().then((data) => {
-			const offsetedPosition = data.position + offset
+		void Orpheus.getPosition().then((data) => {
+			const offsetedPosition = data + offset
 			if (!isActive || offsetedPosition <= 0) {
 				return
 			}

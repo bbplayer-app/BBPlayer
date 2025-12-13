@@ -3,7 +3,6 @@ import { Button, Text, useTheme } from 'react-native-paper'
 
 interface DownloadHeaderProps {
 	taskCount: number
-	onStartAll: () => void
 	onClearAll: () => void
 }
 
@@ -12,7 +11,6 @@ interface DownloadHeaderProps {
  */
 export default function DownloadHeader({
 	taskCount,
-	onStartAll,
 	onClearAll,
 }: DownloadHeaderProps) {
 	const { colors } = useTheme()
@@ -34,13 +32,6 @@ export default function DownloadHeader({
 					disabled={taskCount === 0}
 				>
 					全部清除
-				</Button>
-				<Button
-					mode='contained-tonal'
-					onPress={onStartAll}
-					disabled={taskCount === 0}
-				>
-					全部开始
 				</Button>
 			</View>
 		</View>

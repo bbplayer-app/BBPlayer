@@ -1,10 +1,10 @@
-import useCurrentQueue from '@/hooks/player/useCurrentQueue'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import type { Track } from '@/types/core/media'
 import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
+import type { Track as OrpheusTrack } from '@roitium/expo-orpheus'
+import { Orpheus } from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
 import {
 	memo,
 	type RefObject,
@@ -30,15 +30,17 @@ const TrackItem = memo(
 		onSwitchTrack,
 		onRemoveTrack,
 		isCurrentTrack,
+		index,
 	}: {
-		track: Track
-		onSwitchTrack: (track: Track) => void
-		onRemoveTrack: (track: Track) => void
+		track: OrpheusTrack
+		onSwitchTrack: (index: number) => void
+		onRemoveTrack: (index: number) => void
 		isCurrentTrack: boolean
+		index: number
 	}) => {
 		const colors = useTheme().colors
 		return (
-			<TouchableRipple onPress={() => onSwitchTrack(track)}>
+			<TouchableRipple onPress={() => onSwitchTrack(index)}>
 				<Surface
 					style={{
 						backgroundColor: isCurrentTrack
@@ -78,7 +80,7 @@ const TrackItem = memo(
 								style={{ fontWeight: 'thin' }}
 								numberOfLines={1}
 							>
-								{track.artist?.name ?? '未知作者'}
+								{track.artist ?? '未知作者'}
 							</Text>
 						</View>
 						<IconButton
@@ -86,7 +88,7 @@ const TrackItem = memo(
 							size={24}
 							onPress={(e) => {
 								e.stopPropagation()
-								onRemoveTrack(track)
+								onRemoveTrack(index)
 							}}
 						/>
 					</View>
@@ -103,18 +105,25 @@ function PlayerQueueModal({
 }: {
 	sheetRef: RefObject<BottomSheet | null>
 }) {
-	const queue = useCurrentQueue()
-	const removeTrack = usePlayerStore((state) => state.removeTrack)
 	const currentTrack = useCurrentTrack()
-	const skipToTrack = usePlayerStore((state) => state.skipToTrack)
 	const theme = useTheme()
 	const [isVisible, setIsVisible] = useState(false)
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<BottomSheetFlatListMethods>(null)
+	const { data: queue, refetch } = useQuery<OrpheusTrack[]>({
+		queryKey: ['player', 'queue'],
+		queryFn: async () => {
+			const q = await Orpheus.getQueue()
+			return q
+		},
+		staleTime: 0,
+		enabled: isVisible,
+		gcTime: 0,
+	})
 	const currentIndex = useMemo(() => {
-		if (!currentTrack || !queue.length) return -1
-		return queue.findIndex((t) => t.uniqueKey === currentTrack.uniqueKey)
-	}, [queue, currentTrack])
+		if (!currentTrack || !queue) return -1
+		return queue.findIndex((t) => t.id === currentTrack.uniqueKey)
+	}, [currentTrack, queue])
 	const insets = useSafeAreaInsets()
 
 	usePreventRemove(isVisible, () => {
@@ -122,33 +131,36 @@ function PlayerQueueModal({
 	})
 
 	const switchTrackHandler = useCallback(
-		(track: Track) => {
-			const index = queue.findIndex((t) => t.uniqueKey === track.uniqueKey)
+		async (index: number) => {
+			if (!queue) return
 			if (index === -1) return
-			void skipToTrack(index)
+			await Orpheus.skipTo(index)
+			void refetch()
 		},
-		[skipToTrack, queue],
+		[queue, refetch],
 	)
 
 	const removeTrackHandler = useCallback(
-		async (track: Track) => {
-			await removeTrack(track.uniqueKey)
+		async (index: number) => {
+			await Orpheus.removeTrack(index)
+			void refetch()
 		},
-		[removeTrack],
+		[refetch],
 	)
 
-	const keyExtractor = useCallback((item: Track) => item.uniqueKey, [])
+	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
 
 	const renderItem = useCallback(
-		({ item }: { item: Track }) => (
+		({ item, index }: { item: OrpheusTrack; index: number }) => (
 			<TrackItem
 				track={item}
 				onSwitchTrack={switchTrackHandler}
 				onRemoveTrack={removeTrackHandler}
-				isCurrentTrack={item.uniqueKey === currentTrack?.uniqueKey}
+				isCurrentTrack={item.id === currentTrack?.uniqueKey}
+				index={index}
 			/>
 		),
-		[switchTrackHandler, removeTrackHandler, currentTrack],
+		[switchTrackHandler, removeTrackHandler, currentTrack?.uniqueKey],
 	)
 
 	useLayoutEffect(() => {
@@ -173,6 +185,9 @@ function PlayerQueueModal({
 			onChange={(index) => {
 				const nextVisible = index !== -1
 				setIsVisible(nextVisible)
+				if (nextVisible) {
+					void refetch()
+				}
 				if (!nextVisible) {
 					setDidInitialScroll(false)
 				}

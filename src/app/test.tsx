@@ -1,14 +1,13 @@
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { expoDb } from '@/lib/db/db'
-import { downloadService } from '@/lib/services/downloadService'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -29,7 +28,7 @@ export default function TestPage() {
 	const { isUpdatePending } = Updates.useUpdates()
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const [updateChannel, setUpdateChannel] = useState('')
 	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
 		useState(false)
@@ -96,16 +95,7 @@ export default function TestPage() {
 					onPress: async () => {
 						setLoading(true)
 						try {
-							useDownloadManagerStore.getState().clearAll()
-							logger.info('清除\u2009zustand store\u2009数据成功')
-							const result = await downloadService.deleteAll()
-							if (result.isErr()) {
-								toast.error('清除下载缓存失败', {
-									description: result.error.message,
-								})
-								setLoading(false)
-								return
-							}
+							await Orpheus.removeAllDownloads()
 							logger.info('清除数据库下载记录及实际文件成功')
 							toast.success('清除下载缓存成功')
 						} catch (error) {
@@ -198,7 +188,7 @@ export default function TestPage() {
 					</Button>
 					<Button
 						mode='outlined'
-						onPress={() => usePlayerStore.getState().resetStore()}
+						onPress={() => Orpheus.clear()}
 						loading={loading}
 						style={styles.button}
 					>

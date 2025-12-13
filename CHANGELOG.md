@@ -12,6 +12,10 @@
 - 支持实验性响度均衡（默认不启用）
 - 支持在软件启动时恢复上次播放进度（默认不启用）
 
+### Fixed
+
+- 修复 `DatabaseLauncher has already started. Create a new instance in order to launch a new version.` 错误
+
 ## [1.4.2] - 2025-11-09
 
 ### Added

@@ -15,10 +15,13 @@ import {
 } from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
+import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+import { reportErrorToSentry } from '@/utils/log'
+import { addToQueue } from '@/utils/player'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
@@ -52,7 +55,6 @@ const mapApiItemToTrack = (
 			isMultiPage: false,
 			videoIsValid: true,
 		},
-		trackDownloads: null,
 		progress: apiItem.progress,
 	}
 }
@@ -68,7 +70,6 @@ export default function ToViewPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const openModal = useModalStore((state) => state.open)
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
 
 	const {
 		data: rawToViewData,
@@ -90,19 +91,28 @@ export default function ToViewPage() {
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
-	const handlePlayAll = useCallback(
-		(track?: BilibiliTrack) => {
-			if (!tracksData.length) return
-			void addToQueue({
-				tracks: tracksData,
-				playNow: true,
-				clearQueue: true,
-				startFromKey: track?.uniqueKey,
-				playNext: false,
-			})
-		},
-		[tracksData, addToQueue],
-	)
+	const handlePlay = useCallback(async (track: BilibiliTrack) => {
+		const createIt = await syncFacade.addTrackToLocal(track)
+		if (createIt.isErr()) {
+			toastAndLogError(
+				'将 track 录入本地失败',
+				createIt.error,
+				'UI.Playlist.Remote',
+			)
+			reportErrorToSentry(
+				createIt.error,
+				'将 track 录入本地失败',
+				'UI.Playlist.Remote',
+			)
+			return
+		}
+		void addToQueue({
+			tracks: [track],
+			playNow: true,
+			clearQueue: false,
+			playNext: false,
+		})
+	}, [])
 
 	if (isToViewDataPending) {
 		return <PlaylistLoading />
@@ -151,7 +161,7 @@ export default function ToViewPage() {
 			<View style={styles.listContainer}>
 				<TrackList
 					tracks={tracksData}
-					playTrack={handlePlayAll}
+					playTrack={handlePlay}
 					trackMenuItems={trackMenuItems}
 					selectMode={selectMode}
 					selected={selected}
@@ -163,7 +173,7 @@ export default function ToViewPage() {
 							title={'稍后再看'}
 							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}
-							onClickMainButton={handlePlayAll}
+							// onClickMainButton={handlePlayAll}
 							mainButtonIcon={'play'}
 							linkedPlaylistId={undefined}
 							mainButtonText='播放全部'

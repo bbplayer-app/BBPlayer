@@ -4,13 +4,13 @@ import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctio
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import { useCurrentTrack } from '@roitium/expo-orpheus'
 import {
 	Canvas,
 	Group,
@@ -23,6 +23,7 @@ import {
 import { useImage } from 'expo-image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+	AppState,
 	StyleSheet,
 	useColorScheme,
 	useWindowDimensions,
@@ -53,13 +54,28 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const sheetRef = useRef<BottomSheetMethods>(null)
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '')
+	const coverRef = useImage(currentTrack?.track?.artwork ?? '', {
+		onError: () => void 0,
+	})
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
+	const [isForeground, setIsForeground] = useState(
+		AppState.currentState === 'active',
+	)
+
+	useEffect(() => {
+		const subscription = AppState.addEventListener('change', (nextAppState) => {
+			setIsForeground(nextAppState === 'active')
+		})
+
+		return () => {
+			subscription.remove()
+		}
+	}, [])
 
 	const realHeight = useMemo(() => {
 		return height + insets.top + insets.bottom
@@ -75,9 +91,8 @@ export default function PlayerPage() {
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	useEffect(() => {
-		if (playerBackgroundStyle !== 'streamer') {
+		if (playerBackgroundStyle !== 'streamer' || !isForeground) {
 			cancelAnimation(shaderTime)
-			shaderTime.value = 0
 			return
 		}
 		shaderTime.value = withRepeat(
@@ -87,7 +102,7 @@ export default function PlayerPage() {
 		)
 
 		return () => cancelAnimation(shaderTime)
-	}, [playerBackgroundStyle, shaderTime])
+	}, [isForeground, playerBackgroundStyle, shaderTime])
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -108,8 +123,8 @@ export default function PlayerPage() {
 	}, [shaderTime, streamerColor1, streamerColor2, width, realHeight])
 
 	useEffect(() => {
-		if (!coverRef || playerBackgroundStyle === 'md3') {
-			if (playerBackgroundStyle !== 'gradient') {
+		if (!coverRef || playerBackgroundStyle === 'md3' || !isForeground) {
+			if (playerBackgroundStyle !== 'gradient' && !isForeground) {
 				gradientMainColor.set(colors.background)
 			}
 			if (playerBackgroundStyle !== 'streamer') {
@@ -161,6 +176,7 @@ export default function PlayerPage() {
 		colors.background,
 		coverRef,
 		gradientMainColor,
+		isForeground,
 		playerBackgroundStyle,
 		streamerColor1,
 		streamerColor2,
