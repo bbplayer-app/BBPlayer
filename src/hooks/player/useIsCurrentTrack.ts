@@ -11,21 +11,22 @@ export function useIsCurrentTrack(trackUniqueKey: string) {
 
 		const checkCurrentStatus = async () => {
 			const currentRequestId = ++lastRequestIdRef.current
+			let currentTrack = null
 
 			try {
-				const currentTrack = await Orpheus.getCurrentTrack()
-				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
-					return
-				}
-
-				const isMatch = currentTrack?.id === trackUniqueKey
-				setIsCurrent(isMatch)
+				currentTrack = await Orpheus.getCurrentTrack()
 			} catch (e) {
 				if (isMounted && currentRequestId === lastRequestIdRef.current) {
 					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useIsCurrentTrack')
 					setIsCurrent(false)
 				}
 			}
+			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+				return
+			}
+
+			const isMatch = currentTrack?.id === trackUniqueKey
+			setIsCurrent(isMatch)
 		}
 
 		void checkCurrentStatus()

@@ -101,6 +101,7 @@ export default Sentry.wrap(function RootLayout() {
 									logger.info('没有 bilibili cookie，跳过播放器初始化')
 									return
 								}
+								logger.debug('初始化 orpheus bilibili cookie')
 								Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
 							} catch (error) {
 								logger.error('播放器初始化失败: ', error)

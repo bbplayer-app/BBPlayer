@@ -136,6 +136,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			},
 		],
 		'expo-router',
+		'@rnrepo/expo-config-plugin',
 	],
 	experiments: {
 		reactCompiler: true,

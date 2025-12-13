@@ -238,11 +238,4 @@ export const useAppStore = create<AppState>()(
 	),
 )
 
-useAppStore.persist.onFinishHydration((state) => {
-	if (state.bilibiliCookie) {
-		Orpheus.setBilibiliCookie(serializeCookieObject(state.bilibiliCookie))
-	}
-	logger.info('应用启动时自动设置 cookie 到 orpheus')
-})
-
 export default useAppStore

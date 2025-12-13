@@ -14,37 +14,44 @@ export function useCurrentTrack() {
 		const fetchAndUpdate = async () => {
 			const currentRequestId = ++lastRequestIdRef.current
 
-			try {
-				const currentTrack = await Orpheus.getCurrentTrack()
-				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
-					return
-				}
-				if (!currentTrack) {
-					setTrack(null)
-					return
-				}
-				const internalTrack = await trackService.getTrackByUniqueKey(
-					currentTrack.id,
-				)
-				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
-					return
-				}
-				if (internalTrack.isErr()) {
-					setTrack(null)
-					toastAndLogError(
-						'读取当前曲目信息失败',
-						internalTrack.error,
-						'Hooks.useCurrentTrack',
-					)
-					return
-				}
-				setTrack(internalTrack.value)
-			} catch (e) {
+			const handleFetchError = (e: unknown) => {
 				if (isMounted && currentRequestId === lastRequestIdRef.current) {
 					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useCurrentTrack')
 					setTrack(null)
 				}
 			}
+
+			let currentTrack
+			try {
+				currentTrack = await Orpheus.getCurrentTrack()
+			} catch (e) {
+				return handleFetchError(e)
+			}
+
+			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+				return
+			}
+			if (!currentTrack) {
+				setTrack(null)
+				return
+			}
+
+			const internalTrack = await trackService.getTrackByUniqueKey(
+				currentTrack.id,
+			)
+			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+				return
+			}
+			if (internalTrack.isErr()) {
+				setTrack(null)
+				toastAndLogError(
+					'读取当前曲目信息失败',
+					internalTrack.error,
+					'Hooks.useCurrentTrack',
+				)
+				return
+			}
+			setTrack(internalTrack.value)
 		}
 
 		void fetchAndUpdate()

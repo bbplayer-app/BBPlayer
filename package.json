@@ -33,6 +33,7 @@
 		"@react-navigation/devtools": "^7.0.39",
 		"@react-navigation/elements": "^2.6.3",
 		"@react-navigation/native": "^7.1.8",
+		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
 		"@roitium/expo-image-theme-colors": "^0.1.1",
 		"@roitium/expo-orpheus": "^0.5.0",
 		"@sentry/cli": "^2.56.1",
