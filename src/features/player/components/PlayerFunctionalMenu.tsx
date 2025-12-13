@@ -131,8 +131,7 @@ export function PlayerFunctionalMenu({
 			<Menu.Item
 				onPress={() => {
 					setMenuVisible(false)
-					toast.info('定时关闭功能尚未实现')
-					// openModal('SleepTimer', undefined)
+					openModal('SleepTimer', undefined)
 				}}
 				title='定时关闭'
 				leadingIcon='timer-outline'

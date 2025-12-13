@@ -1,6 +1,5 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -24,7 +23,6 @@ const SleepTimerModal = () => {
 	const [customMinutes, setCustomMinutes] = useState('')
 
 	useEffect(() => {
-		toast.error('暂未实现')
 		if (sleepTimerEndAt) {
 			const interval = setInterval(() => {
 				const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
