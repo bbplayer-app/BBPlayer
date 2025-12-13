@@ -2,6 +2,7 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
@@ -24,9 +25,10 @@ export function PlayerFunctionalMenu({
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
 	const uploaderMid = Number(currentTrack?.artist?.remoteId ?? undefined)
-	const { data: downloadStatus } = useBatchDownloadStatus([
-		currentTrack?.uniqueKey ?? '',
-	])
+	const trackId = currentTrack?.uniqueKey
+	const { data: downloadStatus } = useBatchDownloadStatus(
+		trackId ? [trackId] : [],
+	)
 
 	return (
 		<FunctionalMenu
@@ -98,15 +100,23 @@ export function PlayerFunctionalMenu({
 						toast.error('获取内部播放地址失败')
 						return
 					}
-					await Orpheus.downloadTrack({
-						id: currentTrack.uniqueKey,
-						url: url,
-						title: currentTrack.title,
-						artist: currentTrack.artist?.name,
-						artwork: currentTrack.coverUrl ?? undefined,
-						duration: currentTrack.duration,
-					})
-					toast.info('已添加到下载队列')
+					try {
+						await Orpheus.downloadTrack({
+							id: currentTrack.uniqueKey,
+							url: url,
+							title: currentTrack.title,
+							artist: currentTrack.artist?.name,
+							artwork: currentTrack.coverUrl ?? undefined,
+							duration: currentTrack.duration,
+						})
+						toast.success('已添加到下载队列')
+					} catch (e) {
+						toastAndLogError(
+							'下载音频失败',
+							e,
+							'Features.Player.PlayerFunctionalMenu',
+						)
+					}
 				}}
 				title={
 					downloadStatus?.[currentTrack?.uniqueKey ?? ''] ===

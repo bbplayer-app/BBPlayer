@@ -2,6 +2,7 @@ import {
 	eventListner,
 	type ProgressEvent,
 } from '@/hooks/stores/useDownloadManagerStore'
+import { toastAndLogError } from '@/utils/error-handling'
 import {
 	DownloadState,
 	Orpheus,
@@ -135,7 +136,15 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							icon='reload'
 							onPress={async () => {
 								if (!task.track) return
-								await Orpheus.downloadTrack(task.track)
+								try {
+									await Orpheus.downloadTrack(task.track)
+								} catch (e) {
+									toastAndLogError(
+										'重新下载失败',
+										e,
+										'Features.Downloads.DownloadTaskItem',
+									)
+								}
 							}}
 						/>
 					)}
@@ -146,7 +155,17 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					</View>
 					<IconButton
 						icon='close'
-						onPress={() => Orpheus.removeDownload(task.id)}
+						onPress={async () => {
+							try {
+								await Orpheus.removeDownload(task.id)
+							} catch (e) {
+								toastAndLogError(
+									'删除任务失败',
+									e,
+									'Features.Downloads.DownloadTaskItem',
+								)
+							}
+						}}
 					/>
 				</View>
 			</>

@@ -1,5 +1,7 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { toastAndLogError } from '@/utils/error-handling'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -11,7 +13,7 @@ const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 const SleepTimerModal = () => {
 	const close = useModalStore((state) => state.close)
 	const [remainingTime, setRemainingTime] = useState<number | null>(null)
-	const { data: sleepTimerEndAt, refetch } = useQuery({
+	const { data: sleepTimerEndAt } = useQuery({
 		queryFn: async () => {
 			return await Orpheus.getSleepTimerEndTime()
 		},
@@ -43,14 +45,18 @@ const SleepTimerModal = () => {
 	}, [sleepTimerEndAt])
 
 	const handleSetTimer = async (minutes: number) => {
-		await Orpheus.setSleepTimer(minutes * 60 * 1000)
-		void refetch()
-		close('SleepTimer')
+		try {
+			await Orpheus.setSleepTimer(minutes * 60 * 1000)
+			toast.success('设置定时器成功')
+			close('SleepTimer')
+		} catch (e) {
+			toastAndLogError('设置定时器失败', e, 'Modal.SleepTimer')
+		}
 	}
 
 	const handleCancelTimer = async () => {
 		await Orpheus.cancelSleepTimer()
-		void refetch()
+		toast.success('取消定时器成功')
 		close('SleepTimer')
 	}
 

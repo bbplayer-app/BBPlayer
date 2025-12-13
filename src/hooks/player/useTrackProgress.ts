@@ -61,11 +61,10 @@ export default function useTrackProgress(background = false) {
 					try {
 						const p = await Orpheus.getPosition()
 						const d = await Orpheus.getDuration()
+						const b = await Orpheus.getBuffered()
 						if (!mountedRef.current) return
 						setState((prev) =>
-							prev.position === p &&
-							prev.duration === d &&
-							prev.buffered === prev.buffered
+							prev.position === p && prev.duration === d && prev.buffered === b
 								? prev
 								: { position: p, duration: d, buffered: prev.buffered },
 						)
@@ -88,11 +87,10 @@ export default function useTrackProgress(background = false) {
 				try {
 					const p = await Orpheus.getPosition()
 					const d = await Orpheus.getDuration()
+					const b = await Orpheus.getBuffered()
 					if (!mountedRef.current) return
 					setState((prev) =>
-						prev.position === p &&
-						prev.duration === d &&
-						prev.buffered === prev.buffered
+						prev.position === p && prev.duration === d && prev.buffered === b
 							? prev
 							: { position: p, duration: d, buffered: prev.buffered },
 					)

@@ -14,9 +14,9 @@ export function PlayerHeader({
 }) {
 	const router = useRouter()
 	const currentTrack = useCurrentTrack()
-	const { data: downloadStatus } = useBatchDownloadStatus([
-		currentTrack?.uniqueKey ?? '',
-	])
+	const { data: downloadStatus } = useBatchDownloadStatus(
+		currentTrack?.uniqueKey ? [currentTrack.uniqueKey] : [],
+	)
 
 	return (
 		<View style={styles.container}>

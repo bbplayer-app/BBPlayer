@@ -1,15 +1,14 @@
 {
 	"name": "bbplayer",
 	"main": "index.js",
-	"version": "2.1.0",
-	"versionCode": 88,
+	"version": "2.1.1",
+	"versionCode": 89,
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
 		"android": "expo run:android",
 		"test": "jest --watchAll",
 		"lint": "eslint .",
-		"format": "eslint . --fix && prettier --write .",
-		"ios": "expo run:ios"
+		"format": "eslint . --fix && prettier --write ."
 	},
 	"jest": {
 		"preset": "jest-expo",

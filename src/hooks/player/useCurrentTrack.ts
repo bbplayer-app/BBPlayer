@@ -2,53 +2,23 @@ import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function useCurrentTrack() {
 	const [track, setTrack] = useState<Track | null>(null)
-
-	const fetchTrack = async () => {
-		try {
-			const currentTrack = await Orpheus.getCurrentTrack()
-			return { currentTrack }
-		} catch (e) {
-			console.warn('Failed to fetch current track', e)
-			return { currentTrack: null }
-		}
-	}
+	const lastRequestIdRef = useRef(0)
 
 	useEffect(() => {
 		let isMounted = true
 
-		fetchTrack()
-			.then(async ({ currentTrack }) => {
-				if (isMounted) {
-					if (!currentTrack) {
-						setTrack(null)
-						return
-					}
-					const internalTrack = await trackService.getTrackByUniqueKey(
-						currentTrack.id,
-					)
-					if (internalTrack.isErr()) {
-						setTrack(null)
-						toastAndLogError(
-							'读取当前曲目信息失败',
-							internalTrack.error,
-							'Hooks.useCurrentTrack',
-						)
-						return
-					}
-					setTrack(internalTrack.value)
-				}
-			})
-			.catch(() => {
-				// ignore
-			})
+		const fetchAndUpdate = async () => {
+			const currentRequestId = ++lastRequestIdRef.current
 
-		const sub = Orpheus.addListener('onTrackStarted', async () => {
-			const { currentTrack } = await fetchTrack()
-			if (isMounted) {
+			try {
+				const currentTrack = await Orpheus.getCurrentTrack()
+				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+					return
+				}
 				if (!currentTrack) {
 					setTrack(null)
 					return
@@ -56,6 +26,9 @@ export function useCurrentTrack() {
 				const internalTrack = await trackService.getTrackByUniqueKey(
 					currentTrack.id,
 				)
+				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+					return
+				}
 				if (internalTrack.isErr()) {
 					setTrack(null)
 					toastAndLogError(
@@ -66,7 +39,18 @@ export function useCurrentTrack() {
 					return
 				}
 				setTrack(internalTrack.value)
+			} catch (e) {
+				if (isMounted && currentRequestId === lastRequestIdRef.current) {
+					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useCurrentTrack')
+					setTrack(null)
+				}
 			}
+		}
+
+		void fetchAndUpdate()
+
+		const sub = Orpheus.addListener('onTrackStarted', () => {
+			void fetchAndUpdate()
 		})
 
 		return () => {

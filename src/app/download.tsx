@@ -2,6 +2,7 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { queryClient } from '@/lib/config/queryClient'
 import type { DownloadTask } from '@roitium/expo-orpheus'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
@@ -72,7 +73,10 @@ export default function DownloadPage() {
 
 			<DownloadHeader
 				taskCount={tasks.length}
-				onClearAll={() => Orpheus.clearUncompletedDownloadTasks()}
+				onClearAll={async () => {
+					await Orpheus.clearUncompletedDownloadTasks()
+					await queryClient.invalidateQueries({ queryKey: ['downloadTasks'] })
+				}}
 			/>
 
 			<View style={styles.listContainer}>

@@ -1,53 +1,37 @@
+import { toastAndLogError } from '@/utils/error-handling'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function useIsCurrentTrack(trackUniqueKey: string) {
 	const [isCurrent, setIsCurrent] = useState(false)
-
-	const fetchTrack = async () => {
-		try {
-			const currentTrack = await Orpheus.getCurrentTrack()
-			return { currentTrack }
-		} catch (e) {
-			console.warn('Failed to fetch current track', e)
-			return { currentTrack: null }
-		}
-	}
+	const lastRequestIdRef = useRef(0)
 
 	useEffect(() => {
 		let isMounted = true
 
-		fetchTrack()
-			.then(({ currentTrack }) => {
-				if (isMounted) {
-					if (!currentTrack) {
-						setIsCurrent(false)
-						return
-					}
-					if (currentTrack.id === trackUniqueKey) {
-						setIsCurrent(true)
-					} else {
-						setIsCurrent(false)
-					}
-				}
-			})
-			.catch(() => {
-				// ignore
-			})
+		const checkCurrentStatus = async () => {
+			const currentRequestId = ++lastRequestIdRef.current
 
-		const sub = Orpheus.addListener('onTrackStarted', async () => {
-			const { currentTrack } = await fetchTrack()
-			if (isMounted) {
-				if (!currentTrack) {
-					setIsCurrent(false)
+			try {
+				const currentTrack = await Orpheus.getCurrentTrack()
+				if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
 					return
 				}
-				if (currentTrack.id === trackUniqueKey) {
-					setIsCurrent(true)
-				} else {
+
+				const isMatch = currentTrack?.id === trackUniqueKey
+				setIsCurrent(isMatch)
+			} catch (e) {
+				if (isMounted && currentRequestId === lastRequestIdRef.current) {
+					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useIsCurrentTrack')
 					setIsCurrent(false)
 				}
 			}
+		}
+
+		void checkCurrentStatus()
+
+		const sub = Orpheus.addListener('onTrackStarted', () => {
+			void checkCurrentStatus()
 		})
 
 		return () => {
