@@ -1,6 +1,9 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { toastAndLogError } from '@/utils/error-handling'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, TextInput } from 'react-native-paper'
@@ -9,9 +12,15 @@ const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 
 const SleepTimerModal = () => {
 	const close = useModalStore((state) => state.close)
-	const sleepTimerEndAt = usePlayerStore((state) => state.sleepTimerEndAt)
-	const setSleepTimer = usePlayerStore((state) => state.setSleepTimer)
 	const [remainingTime, setRemainingTime] = useState<number | null>(null)
+	const { data: sleepTimerEndAt } = useQuery({
+		queryFn: async () => {
+			return await Orpheus.getSleepTimerEndTime()
+		},
+		queryKey: ['sleepTimerEndAt'],
+		gcTime: 0,
+		staleTime: 0,
+	})
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customMinutes, setCustomMinutes] = useState('')
 
@@ -35,13 +44,19 @@ const SleepTimerModal = () => {
 		}
 	}, [sleepTimerEndAt])
 
-	const handleSetTimer = (minutes: number) => {
-		setSleepTimer(minutes * 60)
-		close('SleepTimer')
+	const handleSetTimer = async (minutes: number) => {
+		try {
+			await Orpheus.setSleepTimer(minutes * 60 * 1000)
+			toast.success('设置定时器成功')
+			close('SleepTimer')
+		} catch (e) {
+			toastAndLogError('设置定时器失败', e, 'Modal.SleepTimer')
+		}
 	}
 
-	const handleCancelTimer = () => {
-		setSleepTimer(null)
+	const handleCancelTimer = async () => {
+		await Orpheus.cancelSleepTimer()
+		toast.success('取消定时器成功')
 		close('SleepTimer')
 	}
 
@@ -84,10 +99,10 @@ const SleepTimerModal = () => {
 						/>
 						<Button
 							mode='contained'
-							onPress={() => {
+							onPress={async () => {
 								const minutes = parseInt(customMinutes, 10)
 								if (!isNaN(minutes) && minutes > 0) {
-									handleSetTimer(minutes)
+									await handleSetTimer(minutes)
 								}
 							}}
 						>

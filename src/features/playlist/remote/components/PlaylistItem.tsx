@@ -1,5 +1,5 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { memo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -58,9 +58,7 @@ export const TrackListItem = memo(function TrackListItem({
 }: TrackListItemProps) {
 	const { colors } = useTheme()
 	const menuRef = useRef<View>(null)
-	const isCurrentTrack = usePlayerStore(
-		(state) => state.currentTrackUniqueKey === data.uniqueKey,
-	)
+	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	// 在非选择模式下，当前播放歌曲高亮；在选择模式下，歌曲被选中时高亮
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected

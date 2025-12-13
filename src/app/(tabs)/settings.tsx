@@ -1,12 +1,12 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import * as FileSystem from 'expo-file-system'
@@ -33,7 +33,7 @@ const updateTime = Updates.createdAt
 
 export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const haveTrack = useCurrentTrack()
 	const colors = useTheme().colors
 
 	return (
@@ -159,12 +159,11 @@ const SettingsSection = memo(function SettingsSection() {
 		(state) => state.settings.playerBackgroundStyle,
 	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
-	const enablePersistCurrentPosition = useAppStore(
-		(state) => state.settings.enablePersistCurrentPosition,
-	)
-	const enableLoudnessNormalization = useAppStore(
-		(state) => state.settings.enableLoudnessNormalization,
-	)
+	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
+		useState(Orpheus.restorePlaybackPositionEnabled)
+	const [enableLoudnessNormalization, setEnableLoudnessNormalization] =
+		useState(Orpheus.loudnessNormalizationEnabled)
+
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const handleCheckForUpdate = async () => {
@@ -253,11 +252,12 @@ const SettingsSection = memo(function SettingsSection() {
 				<Text>在应用启动时恢复上次播放进度</Text>
 				<Switch
 					value={enablePersistCurrentPosition}
-					onValueChange={() =>
-						useAppStore
-							.getState()
-							.setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
-					}
+					onValueChange={() => {
+						Orpheus.setRestorePlaybackPositionEnabled(
+							!enablePersistCurrentPosition,
+						)
+						setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
+					}}
 				/>
 			</View>
 			<View style={styles.settingRow}>
@@ -302,27 +302,10 @@ const SettingsSection = memo(function SettingsSection() {
 				<Switch
 					value={enableLoudnessNormalization}
 					onValueChange={() => {
-						if (enableLoudnessNormalization === true) {
-							setSettings({ enableLoudnessNormalization: false })
-						} else {
-							alert(
-								'启用响度均衡',
-								'（重启应用后生效）该功能使用 bilibili 提供的响度均衡数据，对缓存后的歌曲无效。启用后音量可能会偏小。',
-								[
-									{
-										text: '取消',
-									},
-									{
-										text: '确定',
-										onPress: () => {
-											setSettings({ enableLoudnessNormalization: true })
-											toast.success('重启应用后生效')
-										},
-									},
-								],
-								{ cancelable: true },
-							)
-						}
+						Orpheus.setLoudnessNormalizationEnabled(
+							!enableLoudnessNormalization,
+						)
+						setEnableLoudnessNormalization(!enableLoudnessNormalization)
 					}}
 				/>
 			</View>

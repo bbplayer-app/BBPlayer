@@ -1,5 +1,5 @@
 import createStickyEmitter from '@/utils/sticky-mitt'
-import TrackPlayer, { Event } from '@roitium/react-native-track-player'
+import { Orpheus } from '@roitium/expo-orpheus'
 
 interface Events {
 	progress: {
@@ -10,7 +10,7 @@ interface Events {
 }
 const playerProgressEmitter = createStickyEmitter<Events>()
 
-TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (e) => {
+Orpheus.addListener('onPositionUpdate', (e) => {
 	playerProgressEmitter.emitSticky('progress', {
 		position: e.position,
 		duration: e.duration,

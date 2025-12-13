@@ -45,7 +45,6 @@ const mapApiItemToTrack = (
 			isMultiPage: false,
 			videoIsValid: true,
 		},
-		trackDownloads: null,
 	}
 }
 

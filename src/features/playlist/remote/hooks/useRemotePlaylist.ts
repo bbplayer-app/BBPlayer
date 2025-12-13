@@ -1,12 +1,27 @@
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliTrack } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+import { reportErrorToSentry } from '@/utils/log'
+import { addToQueue } from '@/utils/player'
 import { useCallback } from 'react'
 
 export function useRemotePlaylist() {
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
-
 	const playTrack = useCallback(
-		(track: BilibiliTrack, playNext = false) => {
+		async (track: BilibiliTrack, playNext = false) => {
+			const createIt = await syncFacade.addTrackToLocal(track)
+			if (createIt.isErr()) {
+				toastAndLogError(
+					'将 track 录入本地失败',
+					createIt.error,
+					'UI.Playlist.Remote',
+				)
+				reportErrorToSentry(
+					createIt.error,
+					'将 track 录入本地失败',
+					'UI.Playlist.Remote',
+				)
+				return
+			}
 			void addToQueue({
 				tracks: [track],
 				playNow: !playNext,
@@ -15,7 +30,7 @@ export function useRemotePlaylist() {
 				startFromKey: track.uniqueKey,
 			})
 		},
-		[addToQueue],
+		[],
 	)
 
 	return { playTrack }

@@ -100,8 +100,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: true,
-					enableShrinkResourcesInReleaseBuilds: true,
+					enableMinifyInReleaseBuilds: false,
+					enableShrinkResourcesInReleaseBuilds: false,
 				},
 			},
 		],
@@ -136,6 +136,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			},
 		],
 		'expo-router',
+		'@rnrepo/expo-config-plugin',
 	],
 	experiments: {
 		reactCompiler: true,

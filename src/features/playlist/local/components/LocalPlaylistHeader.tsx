@@ -1,10 +1,13 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { Playlist, Track } from '@/types/core/media'
+import { playlistService } from '@/lib/services/playlistService'
+import type { Playlist } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+import { getInternalPlayUri } from '@/utils/player'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
+import { Orpheus } from '@roitium/expo-orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
@@ -20,7 +23,6 @@ import {
 
 interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }
-	playlistContents: Track[]
 	onClickPlayAll: () => void
 	onClickSync: () => void
 	onClickCopyToLocalPlaylist: () => void
@@ -71,37 +73,53 @@ function buildSubtitlePieces(
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
-	playlistContents,
 	onClickPlayAll,
 	onClickSync,
 	onClickCopyToLocalPlaylist,
 	onPressAuthor,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
-	const queueDownloads = useDownloadManagerStore(
-		(state) => state.queueDownloads,
-	)
 	const router = useRouter()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
 		() => buildSubtitlePieces(playlist),
 		[playlist],
 	)
-	const onClickDownloadAll = useCallback(() => {
-		if (!playlistContents) return
-		queueDownloads(
-			playlistContents
-				.filter((t) => t.trackDownloads?.status !== 'downloaded')
-				.map((t) => ({
-					uniqueKey: t.uniqueKey,
-					title: t.title,
-					coverUrl: t.coverUrl ?? undefined,
-				})),
+	const onClickDownloadAll = useCallback(async () => {
+		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
+		if (tracksResult.isErr()) {
+			toastAndLogError(
+				'获取播放列表内容失败',
+				tracksResult.error,
+				'UI.Playlist.Local.Header',
+			)
+			return
+		}
+		void Orpheus.multiDownload(
+			tracksResult.value
+				.filter((item) =>
+					item.source === 'bilibili'
+						? item.bilibiliMetadata.videoIsValid
+						: true,
+				)
+				.map((t) => {
+					const url = getInternalPlayUri(t)
+					if (!url) return
+					return {
+						id: t.uniqueKey,
+						title: t.title,
+						url: url,
+						artist: t.artist?.name,
+						artwork: t.coverUrl ?? undefined,
+						duration: t.duration,
+					}
+				})
+				.filter((t) => !!t),
 		)
 		useModalStore.getState().doAfterModalHostClosed(() => {
 			router.push('/download')
 		})
-	}, [router, playlistContents, queueDownloads])
+	}, [playlist.id, router])
 
 	if (!playlist.title) return null
 
@@ -183,7 +201,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					<Button
 						mode='contained'
 						icon='play'
-						onPress={onClickPlayAll}
+						onPress={() => onClickPlayAll()}
 					>
 						播放全部
 					</Button>

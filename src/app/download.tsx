@@ -1,19 +1,20 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
-import useDownloadManagerStore from '@/hooks/stores/useDownloadManagerStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import type { DownloadTask } from '@/types/core/downloadManagerStore'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { queryClient } from '@/lib/config/queryClient'
+import type { DownloadTask } from '@roitium/expo-orpheus'
+import { Orpheus } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
+import { ActivityIndicator, Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useShallow } from 'zustand/shallow'
 
 const renderItem = ({ item }: { item: DownloadTask }) => {
-	return <DownloadTaskItem task={item} />
+	return <DownloadTaskItem initTask={item} />
 }
 
 export default function DownloadPage() {
@@ -21,27 +22,67 @@ export default function DownloadPage() {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 
-	const tasks = useDownloadManagerStore(
-		useShallow((state) => Object.values(state.downloads)),
+	const {
+		data: tasks,
+		isPending,
+		isError,
+		error,
+	} = useQuery({
+		queryKey: ['downloadTasks'],
+		queryFn: async () => {
+			return await Orpheus.getUncompletedDownloadTasks()
+		},
+		staleTime: 0,
+	})
+
+	const haveTrack = useCurrentTrack()
+
+	const header = (
+		<Appbar.Header elevated>
+			<Appbar.BackAction onPress={() => router.back()} />
+			<Appbar.Content title='下载任务' />
+		</Appbar.Header>
 	)
-	const start = useDownloadManagerStore((state) => state.startDownload)
-	const clearAll = useDownloadManagerStore((state) => state.clearAll)
 
-	const haveTrack = usePlayerStore((state) => !!state.currentTrackUniqueKey)
+	const keyExtractor = useCallback((item: DownloadTask) => item.id, [])
 
-	const keyExtractor = useCallback((item: DownloadTask) => item.uniqueKey, [])
+	if (isPending) {
+		return (
+			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				{header}
+				<ActivityIndicator
+					size='large'
+					color={colors.primary}
+					style={{ flex: 1 }}
+				/>
+			</View>
+		)
+	}
+
+	if (isError) {
+		return (
+			<View style={[styles.container, { backgroundColor: colors.background }]}>
+				{header}
+				<Text
+					variant='bodyMedium'
+					style={{ color: colors.error, padding: 16 }}
+				>
+					加载下载任务失败: {error.message}
+				</Text>
+			</View>
+		)
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='下载任务' />
-			</Appbar.Header>
+			{header}
 
 			<DownloadHeader
 				taskCount={tasks.length}
-				onStartAll={start}
-				onClearAll={clearAll}
+				onClearAll={async () => {
+					await Orpheus.clearUncompletedDownloadTasks()
+					await queryClient.invalidateQueries({ queryKey: ['downloadTasks'] })
+				}}
 			/>
 
 			<View style={styles.listContainer}>

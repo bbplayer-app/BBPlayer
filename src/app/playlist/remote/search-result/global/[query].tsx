@@ -39,7 +39,6 @@ const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 			isMultiPage: false,
 			videoIsValid: true,
 		},
-		trackDownloads: null,
 	}
 }
 

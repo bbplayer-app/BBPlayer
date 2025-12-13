@@ -1,0 +1,1 @@
+DROP TABLE `track_downloads`;

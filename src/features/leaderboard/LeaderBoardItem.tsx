@@ -1,5 +1,6 @@
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import type { Track } from '@/types/core/media'
+import { addToQueue } from '@/utils/player'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Image } from 'expo-image'
 import { memo } from 'react'
@@ -20,10 +21,7 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 	index,
 }: LeaderBoardItemProps) {
 	const { colors } = useTheme()
-	const addToQueue = usePlayerStore((state) => state.addToQueue)
-	const isCurrentTrack = usePlayerStore(
-		(state) => state.currentTrackUniqueKey === item.track.uniqueKey,
-	)
+	const isCurrentTrack = useIsCurrentTrack(item.track.uniqueKey)
 
 	return (
 		<RectButton
@@ -41,6 +39,7 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 					clearQueue: false,
 					playNow: true,
 					playNext: false,
+					startFromKey: item.track.uniqueKey,
 				})
 			}}
 		>

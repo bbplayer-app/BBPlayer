@@ -12,7 +12,6 @@ import type {
 	LocalTrack,
 	PlayRecord,
 	Track,
-	TrackDownloadRecord,
 } from '@/types/core/media'
 import type {
 	BilibiliMetadataPayload,
@@ -43,13 +42,11 @@ type SelectTrackWithMetadata =
 			artist: typeof schema.artists.$inferSelect | null
 			bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
 			localMetadata: typeof schema.localMetadata.$inferSelect | null
-			trackDownloads: typeof schema.trackDownloads.$inferSelect | null
 	  })
 	| (SelectTrackBaseSlim & {
 			artist: typeof schema.artists.$inferSelect | null
 			bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
 			localMetadata: typeof schema.localMetadata.$inferSelect | null
-			trackDownloads: typeof schema.trackDownloads.$inferSelect | null
 	  })
 
 export class TrackService {
@@ -85,7 +82,6 @@ export class TrackService {
 			duration: dbTrack.duration,
 			createdAt: dbTrack.createdAt,
 			source: dbTrack.source,
-			trackDownloads: dbTrack.trackDownloads,
 			updatedAt: dbTrack.updatedAt,
 		}
 
@@ -245,7 +241,6 @@ export class TrackService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 				}),
 			),
@@ -382,7 +377,6 @@ export class TrackService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 				}),
 			),
@@ -434,7 +428,6 @@ export class TrackService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 				}),
 			),
@@ -706,7 +699,6 @@ export class TrackService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 					extras: {
 						playCount: playCountSql.mapWith(Number).as('play_count'),
@@ -807,7 +799,6 @@ export class TrackService {
 						artist: true,
 						bilibiliMetadata: true,
 						localMetadata: true,
-						trackDownloads: true,
 					},
 				}),
 			),
@@ -822,63 +813,6 @@ export class TrackService {
 			}
 			return okAsync(formattedTrack)
 		})
-	}
-
-	/**
-	 * 创建或更新 trackDownloads 表数据
-	 * @param data
-	 * @param updateDownloadedAt 是否更新 downloadedAt 字段，默认为 true
-	 * @returns
-	 */
-	public createOrUpdateTrackDownloadRecord(
-		data: Omit<TrackDownloadRecord, 'downloadedAt'>,
-		updateDownloadedAt = true,
-	): ResultAsync<true, DatabaseError> {
-		const date = new Date()
-		const conflictUpdateDate = updateDownloadedAt ? { downloadedAt: date } : {}
-		return ResultAsync.fromPromise(
-			Sentry.startSpan(
-				{ name: 'db:insertOrUpdate:trackDownload', op: 'db' },
-				() =>
-					this.db
-						.insert(schema.trackDownloads)
-						.values({ ...data, downloadedAt: date })
-						.onConflictDoUpdate({
-							target: schema.trackDownloads.trackId,
-							set: {
-								status: data.status,
-								fileSize: data.fileSize,
-								...conflictUpdateDate,
-							},
-						}),
-			),
-			(e) =>
-				new DatabaseError('创建或更新 trackDownloads 失败', {
-					cause: e,
-				}),
-		).andThen(() => okAsync(true as const))
-	}
-
-	public deleteTrackDownloadRecord(
-		trackId: number,
-	): ResultAsync<true, DatabaseError> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:delete:trackDownload', op: 'db' }, () =>
-				this.db
-					.delete(schema.trackDownloads)
-					.where(eq(schema.trackDownloads.trackId, trackId)),
-			),
-			(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
-		).andThen(() => okAsync(true as const))
-	}
-
-	public deleteAllTrackDownloadRecords(): ResultAsync<true, DatabaseError> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:delete:all:trackDownloads', op: 'db' }, () =>
-				this.db.delete(schema.trackDownloads),
-			),
-			(e) => new DatabaseError('删除 trackDownloads 失败', { cause: e }),
-		).andThen(() => okAsync(true as const))
 	}
 }
 

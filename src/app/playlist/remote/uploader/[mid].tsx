@@ -61,7 +61,6 @@ const mapApiItemToTrack = (
 		},
 		createdAt: new Date(apiItem.created),
 		updatedAt: new Date(apiItem.created),
-		trackDownloads: null,
 	}
 }
 

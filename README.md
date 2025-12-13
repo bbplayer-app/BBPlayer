@@ -32,7 +32,7 @@
 - **状态管理**: Zustand
 - **数据请求**: React Query
 - **UI**: Material Design 3 (React Native Paper)
-- **播放库**: React Native Track Player
+- **播放库**: [Orpheus](https://github.com/bbplayer-app/orpheus)
 - **ORM**: Drizzle ORM
 
 ## 开源许可

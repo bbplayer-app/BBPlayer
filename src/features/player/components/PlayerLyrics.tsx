@@ -3,7 +3,6 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
@@ -263,7 +262,6 @@ const Lyrics = Sentry.withProfiler(
 	memo(function Lyrics({ currentIndex }: { currentIndex: number }) {
 		const colors = useTheme().colors
 		const flashListRef = useRef<FlashListRef<LyricLine>>(null)
-		const seekTo = usePlayerStore((state) => state.seekTo)
 		const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
 		const [offsetMenuAnchor, setOffsetMenuAnchor] = useState<{
 			x: number
@@ -304,12 +302,7 @@ const Lyrics = Sentry.withProfiler(
 			onUserScrollEnd,
 			onUserScrollStart,
 			handleJumpToLyric,
-		} = useLyricSync(
-			lyrics?.lyrics ?? [],
-			flashListRef,
-			seekTo,
-			lyrics?.offset ?? 0,
-		)
+		} = useLyricSync(lyrics?.lyrics ?? [], flashListRef, lyrics?.offset ?? 0)
 
 		const scrollHandler = useAnimatedScrollHandler({
 			onScroll: (e) => {
