@@ -21,4 +21,8 @@ Orpheus.addListener('onTrackFinished', (event) => {
 	)
 })
 
+Orpheus.addListener('onTrackStarted', (event) => {
+	log.info('onTrackStarted', event)
+})
+
 import 'expo-router/entry'
