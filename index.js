@@ -22,7 +22,7 @@ Orpheus.addListener('onTrackFinished', (event) => {
 })
 
 Orpheus.addListener('onTrackStarted', (event) => {
-	log.info('onTrackStarted', event)
+	log.debug('onTrackStarted', event)
 })
 
 import 'expo-router/entry'
