@@ -1,10 +1,10 @@
 {
-	"version": "2.1.2",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.2",
+	"version": "2.1.4",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.4",
 	"notes": "你版本太低了！赶紧更新！",
 	"listed_notes": [
-		"重构：完全重构播放模块，新版更省电、更流畅，切歌更丝滑",
-		"注意：该版本存在一些破坏性更新，请务必先阅读 Github Release 页面的更新日志"
+		"修复：单曲循环时有概率无法记录播放次数的问题",
+		"注意❗：该版本存在一些破坏性更新，请务必先阅读 Github Release 页面的更新日志"
 	],
 	"forced": false
 }
