@@ -283,14 +283,6 @@ const SettingsSection = memo(function SettingsSection() {
 					/>
 					<Checkbox.Item
 						mode='ios'
-						label='动态流光'
-						status={
-							playerBackgroundStyle === 'streamer' ? 'checked' : 'unchecked'
-						}
-						onPress={() => setPlayerBackgroundStyle('streamer')}
-					/>
-					<Checkbox.Item
-						mode='ios'
 						label='默认背景'
 						status={playerBackgroundStyle === 'md3' ? 'checked' : 'unchecked'}
 						onPress={() => setPlayerBackgroundStyle('md3')}

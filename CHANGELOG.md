@@ -5,6 +5,16 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.1.3] - 2025-12-20
+
+### Added
+
+- 切换到 Orpheus 音频库，取代 RNTP
+
+### Fixed
+
+- 尝试修复播放器页面卡顿的问题
+
 ## [1.4.3] - 2025-12-01
 
 ### Added

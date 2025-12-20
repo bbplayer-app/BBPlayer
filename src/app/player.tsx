@@ -1,5 +1,4 @@
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
-import backgroundStreamerShader from '@/features/player/components/BGStreamerShader'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
@@ -16,8 +15,6 @@ import {
 	Group,
 	LinearGradient,
 	Rect,
-	Shader,
-	Skia,
 	vec,
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
@@ -31,11 +28,9 @@ import {
 } from 'react-native'
 import { useTheme } from 'react-native-paper'
 import {
-	cancelAnimation,
 	Easing,
 	useDerivedValue,
 	useSharedValue,
-	withRepeat,
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -83,26 +78,8 @@ export default function PlayerPage() {
 
 	const gradientMainColor = useSharedValue(colors.background)
 
-	const shaderTime = useSharedValue(0)
-	const streamerColor1 = useSharedValue(colors.background)
-	const streamerColor2 = useSharedValue(colors.background)
-
 	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
-
-	useEffect(() => {
-		if (playerBackgroundStyle !== 'streamer' || !isForeground) {
-			cancelAnimation(shaderTime)
-			return
-		}
-		shaderTime.value = withRepeat(
-			withTiming(30000, { duration: 30000, easing: Easing.linear }),
-			-1,
-			false,
-		)
-
-		return () => cancelAnimation(shaderTime)
-	}, [isForeground, playerBackgroundStyle, shaderTime])
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -111,31 +88,15 @@ export default function PlayerPage() {
 		return [gradientMainColor.value, colors.background]
 	})
 
-	const streamerUniforms = useDerivedValue(() => {
-		const shaderTimeValue = shaderTime.value / 1000.0
-
-		return {
-			time: shaderTimeValue,
-			resolution: [width, realHeight],
-			color1: Skia.Color(streamerColor1.value),
-			color2: Skia.Color(streamerColor2.value),
-		}
-	}, [shaderTime, streamerColor1, streamerColor2, width, realHeight])
-
 	useEffect(() => {
 		if (!coverRef || playerBackgroundStyle === 'md3' || !isForeground) {
 			if (playerBackgroundStyle !== 'gradient' && !isForeground) {
 				gradientMainColor.set(colors.background)
 			}
-			if (playerBackgroundStyle !== 'streamer') {
-				streamerColor1.set(colors.background)
-				streamerColor2.set(colors.background)
-			}
 			return
 		}
 		ImageThemeColors.extractThemeColorAsync(coverRef)
 			.then((palette) => {
-				const md3Bg = colors.background
 				const animationConfig = {
 					duration: 400,
 					easing: Easing.out(Easing.quad),
@@ -153,19 +114,6 @@ export default function PlayerPage() {
 
 					gradientMainColor.set(withTiming(topColor, animationConfig))
 				}
-
-				if (playerBackgroundStyle === 'streamer') {
-					let c1_hex: string, c2_hex: string
-					if (colorScheme === 'dark') {
-						c2_hex = palette.darkMuted?.hex ?? palette.muted?.hex ?? md3Bg
-						c1_hex = md3Bg
-					} else {
-						c2_hex = palette.lightMuted?.hex ?? palette.muted?.hex ?? md3Bg
-						c1_hex = md3Bg
-					}
-					streamerColor1.set(withTiming(c1_hex, animationConfig))
-					streamerColor2.set(withTiming(c2_hex, animationConfig))
-				}
 			})
 			.catch((e) => {
 				logger.error('提取封面图片主题色失败', e)
@@ -178,8 +126,6 @@ export default function PlayerPage() {
 		gradientMainColor,
 		isForeground,
 		playerBackgroundStyle,
-		streamerColor1,
-		streamerColor2,
 	])
 
 	const renderScene = useMemo(
@@ -223,11 +169,13 @@ export default function PlayerPage() {
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
 	useEffect(() => {
-		if (backgroundStreamerShader || playerBackgroundStyle !== 'streamer') return
-
-		toast.error('无法加载流光效果着色器，已自动回退到渐变模式')
-		setSettings({ playerBackgroundStyle: 'gradient' })
-	}, [playerBackgroundStyle, setSettings])
+		if (playerBackgroundStyle === 'streamer') {
+			toast.show(
+				'因为会对性能造成较大影响，并且也不好看，所以我们移除了流光效果，已为您回退到渐变模式',
+			)
+			setSettings({ playerBackgroundStyle: 'gradient' })
+		}
+	})
 
 	return (
 		<>
@@ -264,22 +212,6 @@ export default function PlayerPage() {
 								start={vec(0, 0)}
 								end={scrimEndVec}
 								colors={scrimColors}
-							/>
-						</Rect>
-					</Group>
-				)}
-
-				{playerBackgroundStyle === 'streamer' && backgroundStreamerShader && (
-					<Group opacity={0.3}>
-						<Rect
-							x={0}
-							y={0}
-							width={width}
-							height={realHeight}
-						>
-							<Shader
-								source={backgroundStreamerShader}
-								uniforms={streamerUniforms}
 							/>
 						</Rect>
 					</Group>

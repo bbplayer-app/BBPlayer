@@ -1,8 +1,8 @@
 {
 	"name": "bbplayer",
 	"main": "index.js",
-	"version": "2.1.2",
-	"versionCode": 90,
+	"version": "2.1.4",
+	"versionCode": 92,
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
 		"android": "expo run:android",
@@ -35,7 +35,7 @@
 		"@react-navigation/native": "^7.1.8",
 		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
 		"@roitium/expo-image-theme-colors": "^0.1.1",
-		"@roitium/expo-orpheus": "^0.5.1",
+		"@roitium/expo-orpheus": "^0.6.0",
 		"@sentry/cli": "^2.56.1",
 		"@sentry/react-native": "~7.2.0",
 		"@shopify/flash-list": "^2.2.0",
@@ -85,7 +85,7 @@
 		"md5": "^2.3.0",
 		"mitt": "^3.0.1",
 		"neverthrow": "^8.2.0",
-		"node-forge": "^1.3.1",
+		"node-forge": "1.3.2",
 		"prettier-plugin-organize-imports": "^4.3.0",
 		"promise": "^8.3.0",
 		"react": "19.1.0",
