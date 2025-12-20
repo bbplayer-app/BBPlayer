@@ -3,3 +3,4 @@ onlyBuiltDependencies:
   - esbuild
   - lefthook
   - unrs-resolver
+  - react-native-logs
