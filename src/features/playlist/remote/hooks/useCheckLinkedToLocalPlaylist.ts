@@ -33,7 +33,7 @@ export default function useCheckLinkedToPlaylist(
 				)
 				return
 			}
-			setLinkedPlaylistId(playlist.id)
+			setLinkedPlaylistId(playlist ? playlist.id : undefined)
 		}
 		void check()
 	}, [remoteId, type])

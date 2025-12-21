@@ -22,7 +22,7 @@ import type { CreateArtistPayload } from '@/types/services/artist'
 import log from '@/utils/log'
 import { diffSets } from '@/utils/set'
 import toast from '@/utils/toast'
-import { Context, Effect, Layer } from 'effect'
+import { Context, Effect, Layer, Runtime } from 'effect'
 
 let logger = log.extend('Facade')
 
@@ -88,6 +88,7 @@ export const SyncFacadeLive = Layer.effect(
 		const playlistService = yield* PlaylistService
 		const artistService = yield* ArtistService
 		const db = yield* DrizzleDB
+		const runtime = yield* Effect.runtime()
 
 		const syncingIds = new Set<string>()
 
@@ -100,7 +101,7 @@ export const SyncFacadeLive = Layer.effect(
 						const runnable = effect.pipe(
 							Effect.provideService(DrizzleDB, tx as unknown as typeof db),
 						)
-						return Effect.runPromise(runnable)
+						return Runtime.runPromise(runtime)(runnable)
 					}),
 				catch: (e) => {
 					return e as E

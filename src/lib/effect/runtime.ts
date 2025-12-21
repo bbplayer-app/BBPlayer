@@ -19,7 +19,7 @@ const PlaylistServiceLiveReady = PlaylistServiceLive.pipe(
 	Layer.provide(DBLayer),
 	Layer.provide(TrackServiceLiveReady),
 )
-const LyricServiceLiveReady = LyricServiceLive.pipe()
+const LyricServiceLiveReady = LyricServiceLive
 
 const ServicesLayer = Layer.mergeAll(
 	ArtistServiceLiveReady,

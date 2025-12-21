@@ -90,8 +90,14 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			[allPlaylists],
 		)
 
-		const uniqueKey = AppRuntime.runSync(generateUniqueTrackKey(track))
-		if (!uniqueKey) toast.error('无法生成 uniqueKey')
+		let uniqueKey
+		try {
+			uniqueKey = AppRuntime.runSync(generateUniqueTrackKey(track))
+		} catch (e) {
+			toast.error('无法生成 uniqueKey', {
+				description: String(e),
+			})
+		}
 		const {
 			data: playlistsContainingTrack,
 			isPending: isContainingTrackPending,

@@ -90,11 +90,13 @@ export const BilibiliFacadeLive = Layer.succeed(
 						}
 					}
 					default:
-						return yield* new FetchRemotePlaylistMetadataFailedError({
-							source: 'bilibili',
-							remoteId: String(remoteId),
-							cause: `获取播放列表元数据失败：未知的播放列表类型：${type}`,
-						})
+						return yield* Effect.fail(
+							new FetchRemotePlaylistMetadataFailedError({
+								source: 'bilibili',
+								remoteId: String(remoteId),
+								cause: `获取播放列表元数据失败：未知的播放列表类型：${type}`,
+							}),
+						)
 				}
 			}),
 	}),
