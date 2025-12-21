@@ -1,43 +1,47 @@
-export class CustomError extends Error {
-	readonly type?: string
+import { Data } from 'effect'
+
+interface BaseErrorPayload {
+	readonly message: string
+	readonly cause?: unknown
 	readonly data?: unknown
-	constructor(
-		message: string,
-		opts?: { type?: string; data?: unknown; cause?: unknown },
-	) {
-		super(message, { cause: opts?.cause })
-		this.name = this.constructor.name
-		this.type = opts?.type
-		this.data = opts?.data
-	}
 }
 
-export class ServiceError extends CustomError {}
+export class ServiceError extends Data.TaggedError(
+	'ServiceError',
+)<BaseErrorPayload> {}
 
-export class FacadeError extends CustomError {}
+export class FacadeError extends Data.TaggedError(
+	'FacadeError',
+)<BaseErrorPayload> {}
 
-export class UIError extends CustomError {}
+export class UIError extends Data.TaggedError('UIError')<BaseErrorPayload> {}
 
-export class ThirdPartyError extends CustomError {
-	readonly vendor?: string
-	readonly type?: string
-	readonly data?: unknown
-	constructor(
-		message: string,
-		opts?: { vendor?: string; type?: string; data?: unknown; cause?: unknown },
-	) {
-		super(message, { type: opts?.type, data: opts?.data, cause: opts?.cause })
-		this.vendor = opts?.vendor
-		this.type = opts?.type
-		this.data = opts?.data
-	}
-}
+export class ThirdPartyError extends Data.TaggedError('ThirdPartyError')<
+	BaseErrorPayload & { readonly vendor: string }
+> {}
 
-export class DatabaseError extends CustomError {}
-export class DataParsingError extends CustomError {}
-export class FileSystemError extends CustomError {}
-export class LrcParseError extends CustomError {
-	constructor(message: string) {
-		super(message, { type: 'LrcParseError' })
-	}
-}
+export class DatabaseError extends Data.TaggedError(
+	'DatabaseError',
+)<BaseErrorPayload> {}
+
+export class DataParsingError extends Data.TaggedError(
+	'DataParsingError',
+)<BaseErrorPayload> {}
+
+export class FileSystemError extends Data.TaggedError(
+	'FileSystemError',
+)<BaseErrorPayload> {}
+
+export class LrcParseError extends Data.TaggedError('LrcParseError')<
+	Omit<BaseErrorPayload, 'data'>
+> {}
+
+export type AppError =
+	| ServiceError
+	| FacadeError
+	| UIError
+	| ThirdPartyError
+	| DatabaseError
+	| DataParsingError
+	| FileSystemError
+	| LrcParseError

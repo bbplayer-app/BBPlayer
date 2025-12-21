@@ -1,50 +1,75 @@
-import { ThirdPartyError } from '@/lib/errors'
+import { Data } from 'effect'
 
-export type BilibiliApiErrorType =
-	| 'RequestFailed'
-	| 'ResponseFailed'
-	| 'NoCookie'
-	| 'CsrfError'
-	| 'AudioStreamError'
-	| 'RequestAborted'
-	| 'InvalidArgument'
+export class BilibiliRequestFailedError extends Data.TaggedError(
+	'BilibiliRequestFailed',
+)<{
+	message: string
+	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
 
-interface BilibiliApiErrorDetails {
+export class BilibiliRequestAbortedError extends Data.TaggedError(
+	'BilibiliRequestAborted',
+)<{
+	message?: string
+	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
+
+export class BilibiliResponseFailedError extends Data.TaggedError(
+	'BilibiliResponseFailed',
+)<{
+	message: string
+	msgCode: number
+	rawData?: unknown
+	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
+
+export class BilibiliNoCookieError extends Data.TaggedError(
+	'BilibiliNoCookie',
+)<{
+	message?: string
+	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
+
+export class BilibiliCsrfError extends Data.TaggedError('BilibiliCsrfError')<{
+	message?: string
+	rawData?: unknown
+	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
+
+export class BilibiliInvalidArgumentError extends Data.TaggedError(
+	'BilibiliInvalidArgument',
+)<{
+	message: string
+	rawData?: unknown
+}> {
+	readonly vendor = 'Bilibili'
+}
+
+export class BilibiliAudioStreamError extends Data.TaggedError(
+	'BilibiliAudioStreamError',
+)<{
 	message: string
 	msgCode?: number
-	rawData?: unknown
-	type?: BilibiliApiErrorType
 	cause?: unknown
+}> {
+	readonly vendor = 'Bilibili'
 }
 
-interface BilibiliErrorData {
-	msgCode: number
-	rawData: unknown
-}
-
-export class BilibiliApiError extends ThirdPartyError {
-	readonly data: BilibiliErrorData
-	readonly type?: BilibiliApiErrorType
-	constructor({
-		message,
-		msgCode,
-		rawData,
-		type,
-		cause,
-	}: BilibiliApiErrorDetails) {
-		super(message, {
-			vendor: 'Bilibili',
-			type,
-			data: {
-				rawData,
-				msgCode,
-			},
-			cause,
-		})
-		this.data = {
-			rawData,
-			msgCode: msgCode ?? 0,
-		}
-		this.type = type
-	}
-}
+export type BilibiliApiError =
+	| BilibiliRequestFailedError
+	| BilibiliRequestAbortedError
+	| BilibiliResponseFailedError
+	| BilibiliNoCookieError
+	| BilibiliCsrfError
+	| BilibiliInvalidArgumentError
+	| BilibiliAudioStreamError
