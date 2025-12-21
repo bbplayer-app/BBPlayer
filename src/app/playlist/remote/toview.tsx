@@ -67,7 +67,7 @@ const handlePlay = (track: BilibiliTrack) => {
 	const program = Effect.gen(function* () {
 		yield* syncFacade.addTrackToLocal(track)
 
-		yield* Effect.promise(() =>
+		yield* Effect.tryPromise(() =>
 			addToQueue({
 				tracks: [track],
 				playNow: true,
