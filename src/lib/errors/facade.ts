@@ -2,9 +2,7 @@ import { Data } from 'effect'
 
 export class SyncTaskAlreadyRunningError extends Data.TaggedError(
 	'SyncTaskAlreadyRunning',
-)<{
-	cause?: unknown
-}> {}
+) {}
 
 export class SyncCollectionFailedError extends Data.TaggedError(
 	'SyncCollectionFailed',
@@ -26,6 +24,7 @@ export class SyncFavoriteFailedError extends Data.TaggedError(
 )<{
 	userId?: string | number
 	cause?: unknown
+	message?: string
 }> {}
 
 export class FetchRemotePlaylistMetadataFailedError extends Data.TaggedError(
@@ -54,7 +53,7 @@ export class BatchAddTracksToLocalPlaylistFailedError extends Data.TaggedError(
 	'BatchAddTracksToLocalPlaylistFailed',
 )<{
 	playlistId?: number | string
-	failedTrackIds?: (number | string)[]
+	trackCount?: number
 	cause?: unknown
 }> {}
 

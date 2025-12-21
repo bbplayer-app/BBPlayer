@@ -6,12 +6,8 @@ interface BaseErrorPayload {
 	readonly data?: unknown
 }
 
-export class ServiceError extends Data.TaggedError(
-	'ServiceError',
-)<BaseErrorPayload> {}
-
-export class FacadeError extends Data.TaggedError(
-	'FacadeError',
+export class TransactionFailedError extends Data.TaggedError(
+	'TransactionFailedError',
 )<BaseErrorPayload> {}
 
 export class UIError extends Data.TaggedError('UIError')<BaseErrorPayload> {}
@@ -37,8 +33,6 @@ export class LrcParseError extends Data.TaggedError('LrcParseError')<
 > {}
 
 export type AppError =
-	| ServiceError
-	| FacadeError
 	| UIError
 	| ThirdPartyError
 	| DatabaseError

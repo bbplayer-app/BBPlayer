@@ -1,11 +1,10 @@
-import type { ServiceError } from '@/lib/errors'
 import { NotImplementedError, ValidationError } from '@/lib/errors/service'
 import type { TrackSourceData } from '@/types/services/track'
 import { Effect } from 'effect'
 
 export default function generateUniqueTrackKey(
 	payload: TrackSourceData,
-): Effect.Effect<string, ServiceError | ValidationError | NotImplementedError> {
+): Effect.Effect<string, ValidationError | NotImplementedError> {
 	switch (payload.source) {
 		case 'bilibili': {
 			const biliMeta = payload.bilibiliMetadata

@@ -71,6 +71,13 @@ export class DeleteDownloadRecordFailedError extends Data.TaggedError(
 	cause?: unknown
 }> {}
 
+export class PlaylistServiceError extends Data.TaggedError(
+	'PlaylistServiceError',
+)<{
+	message: string
+	cause?: unknown
+}> {}
+
 export type ServiceError =
 	| TrackNotFoundError
 	| ArtistNotFoundError
@@ -83,3 +90,4 @@ export type ServiceError =
 	| NotImplementedError
 	| FetchDownloadUrlFailedError
 	| DeleteDownloadRecordFailedError
+	| PlaylistServiceError

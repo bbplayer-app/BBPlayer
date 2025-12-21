@@ -1,7 +1,7 @@
 import { DrizzleDB } from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import type { ServiceError } from '@/lib/errors'
 import { DatabaseError } from '@/lib/errors'
+import type { ServiceError } from '@/lib/errors/service'
 import { ArtistNotFoundError, ValidationError } from '@/lib/errors/service'
 import type { Track } from '@/types/core/media'
 import type {

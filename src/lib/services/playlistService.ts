@@ -1,8 +1,10 @@
 import { DrizzleDB } from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import { DatabaseError, ServiceError } from '@/lib/errors'
+import { DatabaseError } from '@/lib/errors'
+import type { ServiceError } from '@/lib/errors/service'
 import {
 	PlaylistNotFoundError,
+	PlaylistServiceError,
 	TrackNotInPlaylistError,
 	ValidationError,
 } from '@/lib/errors/service'
@@ -444,7 +446,7 @@ export const PlaylistServiceLive = Layer.effect(
 					).pipe(Effect.withSpan('db:query:playlistTrack'))
 
 					if (!trackToMove) {
-						return yield* new ServiceError({
+						return yield* new PlaylistServiceError({
 							message: `数据不一致：歌曲 ${trackId} 不在播放列表 ${playlistId} 的 ${fromOrder} 位置。`,
 						})
 					}
@@ -546,7 +548,7 @@ export const PlaylistServiceLive = Layer.effect(
 						trackService.formatTrack(trackLink.track).pipe(
 							Effect.mapError(
 								(e) =>
-									new ServiceError({
+									new PlaylistServiceError({
 										message: `在格式化歌曲：${trackLink.track.id} 时出错`,
 										cause: e,
 									}),
@@ -812,7 +814,7 @@ export const PlaylistServiceLive = Layer.effect(
 						trackService.formatTrack(row.track).pipe(
 							Effect.mapError(
 								(e) =>
-									new ServiceError({
+									new PlaylistServiceError({
 										message: `在格式化歌曲：${row.track.id} 时出错`,
 										cause: e,
 									}),
@@ -899,7 +901,7 @@ export const PlaylistServiceLive = Layer.effect(
 						trackService.formatTrack(pt.track).pipe(
 							Effect.mapError(
 								(e) =>
-									new ServiceError({
+									new PlaylistServiceError({
 										message: `在格式化歌曲：${pt.track.id} 时出错`,
 										cause: e,
 									}),

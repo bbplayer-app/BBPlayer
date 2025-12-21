@@ -23,6 +23,7 @@
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@effect/experimental": "^0.58.0",
+		"@effect/opentelemetry": "^0.60.0",
 		"@effect/sql-drizzle": "^0.48.0",
 		"@expo/metro-runtime": "~6.1.2",
 		"@gorhom/bottom-sheet": "^5.2.6",
