@@ -1,7 +1,10 @@
 import useAppStore from '@/hooks/stores/useAppStore'
-import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
+import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import {
+	BilibiliCsrfError,
+	BilibiliNoCookieError,
+} from '@/lib/errors/thirdparty/bilibili'
+import { Effect } from 'effect'
 
 /**
  * 转换B站bvid为avid
@@ -50,23 +53,21 @@ export function av2bv(avid: number | bigint): string {
 	return resultArray.join('')
 }
 
-export function getCsrfToken(): Result<string, BilibiliApiError> {
+export function getCsrfToken(): Effect.Effect<string, BilibiliApiError> {
 	const cookieList = useAppStore.getState().bilibiliCookie
 	if (!cookieList)
-		return err(
-			new BilibiliApiError({
+		return Effect.fail(
+			new BilibiliNoCookieError({
 				message: '未找到 Cookie',
-				type: 'NoCookie',
 			}),
 		)
 	const csrfToken = cookieList.bili_jct as string | undefined
 	if (!csrfToken) {
-		return err(
-			new BilibiliApiError({
+		return Effect.fail(
+			new BilibiliCsrfError({
 				message: '未找到 CSRF Token',
-				type: 'CsrfError',
 			}),
 		)
 	}
-	return ok(csrfToken)
+	return Effect.succeed(csrfToken)
 }

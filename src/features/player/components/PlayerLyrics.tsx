@@ -4,9 +4,10 @@ import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
-import lyricService from '@/lib/services/lyricService'
+import { lyricService } from '@/lib/services/lyricService'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import type { LyricLine } from '@/types/player/lyrics'
+import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import MaskedView from '@react-native-masked-view/masked-view'
 import type { FlashListRef } from '@shopify/flash-list'
@@ -332,18 +333,20 @@ const Lyrics = memo(function Lyrics({
 	const handleCloseOffsetMenu = async () => {
 		setOffsetMenuVisible(false)
 		if (!lyrics || !track) return
-		const saveResult = await lyricService.saveLyricsToFile(
-			{
-				...lyrics,
-				offset: lyrics.offset,
-			},
-			track.uniqueKey,
-		)
-		if (saveResult.isErr()) {
-			toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
+		try {
+			await effectToPromise(
+				lyricService.saveLyricsToFile(
+					{
+						...lyrics,
+						offset: lyrics.offset,
+					},
+					track.uniqueKey,
+				),
+			)
+		} catch (e) {
+			toastAndLogError('保存歌词偏移量失败', e, 'Lyrics')
 			return
 		}
-		console.log('保存歌词偏移量成功:', lyrics.offset)
 	}
 
 	const keyExtractor = useCallback(

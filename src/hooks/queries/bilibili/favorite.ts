@@ -1,6 +1,6 @@
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
+import { effectToPromise } from '@/utils/effect'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 export const favoriteListQueryKeys = {
@@ -60,8 +60,9 @@ export const useInfiniteFavoriteList = (favoriteId?: number) => {
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteFavoriteList(favoriteId),
 		queryFn: ({ pageParam }) =>
-			returnOrThrowAsync(
+			effectToPromise(
 				bilibiliApi.getFavoriteListContents(favoriteId!, pageParam),
+				true,
 			),
 		enabled,
 		initialPageParam: 1,
@@ -82,7 +83,7 @@ export const useGetFavoritePlaylists = (userMid?: number) => {
 	return useQuery({
 		queryKey: favoriteListQueryKeys.allFavoriteList(userMid),
 		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getFavoritePlaylists(userMid!)),
+			effectToPromise(bilibiliApi.getFavoritePlaylists(userMid!), true),
 		enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	})
@@ -97,7 +98,7 @@ export const useInfiniteCollectionsList = (mid?: number) => {
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteCollectionList(mid),
 		queryFn: ({ pageParam }) =>
-			returnOrThrowAsync(bilibiliApi.getCollectionsList(pageParam, mid!)),
+			effectToPromise(bilibiliApi.getCollectionsList(pageParam, mid!), true),
 		enabled,
 		initialPageParam: 1,
 		getNextPageParam: (lastPage, _allPages, lastPageParam) =>
@@ -114,7 +115,7 @@ export const useCollectionAllContents = (collectionId: number) => {
 	return useQuery({
 		queryKey: favoriteListQueryKeys.collectionAllContents(collectionId),
 		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getCollectionAllContents(collectionId)),
+			effectToPromise(bilibiliApi.getCollectionAllContents(collectionId), true),
 		staleTime: 1,
 	})
 }
@@ -128,8 +129,9 @@ export const useGetFavoriteForOneVideo = (bvid: string, userMid?: number) => {
 	return useQuery({
 		queryKey: favoriteListQueryKeys.favoriteForOneVideo(bvid, userMid),
 		queryFn: () =>
-			returnOrThrowAsync(
+			effectToPromise(
 				bilibiliApi.getTargetVideoFavoriteStatus(userMid!, bvid),
+				true,
 			),
 		enabled,
 		staleTime: 0,
@@ -155,13 +157,14 @@ export const useInfiniteSearchFavoriteItems = (
 			favoriteId,
 		),
 		queryFn: ({ pageParam }) =>
-			returnOrThrowAsync(
+			effectToPromise(
 				bilibiliApi.searchFavoriteListContents(
 					favoriteId!,
 					scope,
 					pageParam,
 					keyword!,
 				),
+				true,
 			),
 		enabled,
 		initialPageParam: 1,

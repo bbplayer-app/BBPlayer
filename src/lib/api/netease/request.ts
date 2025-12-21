@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，但做了进一步封装和解耦，凑合着用 */
-import type { Result } from 'neverthrow'
-import { ResultAsync, err, ok } from 'neverthrow'
 import * as setCookie from 'set-cookie-parser'
 
-import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
+import type { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
+import {
+	NeteaseRequestFailedError,
+	NeteaseResponseFailedError,
+} from '@/lib/errors/thirdparty/netease'
+import { Effect } from 'effect'
 import * as Encrypt from './crypto'
 import { cookieObjToString, cookieToJson, toBoolean } from './utils'
 
@@ -117,7 +120,7 @@ interface FetchResult<TReturnBody> {
 
 const executeFetch = <TReturnBody>(
 	payload: RequestPayload,
-): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
+): Effect.Effect<FetchResult<TReturnBody>, NeteaseApiError> => {
 	const { url, headers, body, e_r } = payload
 	const settings = {
 		method: 'POST',
@@ -125,53 +128,52 @@ const executeFetch = <TReturnBody>(
 		body: new URLSearchParams(body as Record<string, string>).toString(),
 	}
 
-	return ResultAsync.fromPromise(
-		fetch(url, settings).then(async (res) => {
-			if (!res.ok) {
-				return err(
-					new NeteaseApiError({
+	return Effect.tryPromise({
+		try: () =>
+			fetch(url, settings).then(async (res) => {
+				if (!res.ok) {
+					throw new NeteaseResponseFailedError({
 						message: '请求失败！http 状态码不符合预期！',
-						type: 'ResponseFailed',
 						msgCode: res.status,
 						rawData: res.statusText,
-					}),
+					})
+				}
+
+				const responseBody = e_r
+					? Encrypt.eapiResDecrypt(
+							Buffer.from(await res.arrayBuffer())
+								.toString('hex')
+								.toUpperCase(),
+						)
+					: await res.json()
+
+				const parsedCookies = setCookie.parse(
+					res.headers.get('set-cookie') ?? '',
 				)
-			}
+				const cookies = parsedCookies.map(
+					(cookie) => `${cookie.name}=${cookie.value}`,
+				)
 
-			const responseBody = e_r
-				? Encrypt.eapiResDecrypt(
-						Buffer.from(await res.arrayBuffer())
-							.toString('hex')
-							.toUpperCase(),
-					)
-				: await res.json()
-
-			const parsedCookies = setCookie.parse(res.headers.get('set-cookie') ?? '')
-			const cookies = parsedCookies.map(
-				(cookie) => `${cookie.name}=${cookie.value}`,
-			)
-
-			return ok({
-				body: responseBody,
-				cookie: cookies,
-			})
-		}),
-		(e: unknown) =>
-			// 按理来说不应该发生
-			new NeteaseApiError({
-				message: '请求失败！',
-				type: 'RequestFailed',
-				msgCode: 500,
-				cause: e,
+				return {
+					body: responseBody as TReturnBody,
+					cookie: cookies,
+				}
 			}),
-	).andThen((res) => res as Result<FetchResult<TReturnBody>, NeteaseApiError>)
+		catch: (e) =>
+			e instanceof NeteaseResponseFailedError
+				? e
+				: new NeteaseRequestFailedError({
+						message: '请求失败！',
+						cause: e,
+					}),
+	})
 }
 
 export const createRequest = <TData extends object, TReturnBody>(
 	uri: string,
 	data: TData,
 	options: RequestOptions,
-): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
+): Effect.Effect<FetchResult<TReturnBody>, NeteaseApiError> => {
 	const payloadResult = buildRequestPayload(uri, data, options)
 
 	return executeFetch(payloadResult)

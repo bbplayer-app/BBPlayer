@@ -1,276 +1,358 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
-import type { CustomError } from '@/lib/errors'
+import { neteaseApi } from '@/lib/api/netease/api'
 import { DataParsingError, FileSystemError } from '@/lib/errors'
+import type { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
-import * as Sentry from '@sentry/react-native'
+import { Context, Effect, Layer } from 'effect'
 import * as FileSystem from 'expo-file-system'
-import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Service.Lyric')
-type lyricFileType =
+
+type LyricFileType =
 	| ParsedLrc
 	| (Omit<ParsedLrc, 'rawOriginalLyrics' | 'rawTranslatedLyrics'> & {
 			raw: string
 	  })
 
-class LyricService {
-	constructor(readonly neteaseApi: NeteaseApi) {}
+export class LyricService extends Context.Tag('LyricService')<
+	LyricService,
+	{
+		getBestMatchedLyrics: (
+			track: Track,
+			preciseKeyword?: string,
+		) => Effect.Effect<
+			ParsedLrc,
+			FileSystemError | DataParsingError | NeteaseApiError
+		>
 
-	private cleanKeyword(keyword: string): string {
-		const priorityRegex = /《(.+?)》|「(.+?)」/
-		const priorityMatch = priorityRegex.exec(keyword)
+		smartFetchLyrics: (
+			track: Track,
+		) => Effect.Effect<
+			ParsedLrc,
+			FileSystemError | DataParsingError | NeteaseApiError
+		>
 
-		if (priorityMatch) {
-			logger.debug(
-				'匹配到优先提取的标记，直接返回这段字符串作为 keyword：',
-				priorityMatch[1],
-				priorityMatch[2],
-			)
-			return priorityMatch[1] || priorityMatch[2]
-		}
+		saveLyricsToFile: (
+			lyrics: ParsedLrc,
+			uniqueKey: string,
+		) => Effect.Effect<ParsedLrc, FileSystemError>
 
-		const replacedKeyword = keyword.replace(/【.*?】|“.*?”/g, '').trim()
-		const result = replacedKeyword.length > 0 ? replacedKeyword : keyword
-		logger.debug('最终 keyword 清洗后：', result)
+		fetchLyrics: (
+			item: LyricSearchResult[0],
+			uniqueKey: string,
+		) => Effect.Effect<ParsedLrc, Error | FileSystemError>
 
-		return result
+		migrateFromOldFormat: () => Effect.Effect<void>
+
+		getPreciseMusicNameOnBilibiliVideo: (
+			metadata: BilibiliTrack['bilibiliMetadata'],
+		) => Effect.Effect<string | undefined, Error>
+
+		clearAllLyrics: () => Effect.Effect<true, FileSystemError>
 	}
+>() {}
 
-	/**
-	 * 从多个数据源中获取最佳匹配的歌词
-	 * @param track
-	 * @param preciseKeyword 在提供该项时，将直接使用这个关键词搜索
-	 * @returns
-	 */
-	public getBestMatchedLyrics(track: Track, preciseKeyword?: string) {
-		const providers = [
-			this.neteaseApi.searchBestMatchedLyrics(
-				preciseKeyword ?? this.cleanKeyword(track.title),
-				track.duration * 1000,
-			),
-		]
-		return ResultAsync.combine(providers).andThen((results) => {
-			// FIXME: fuck what's this???
-			const randomIndex = Math.floor(Math.random() * results.length)
-			return okAsync(results[randomIndex])
-		})
-	}
+export const LyricServiceLive = Layer.effect(
+	LyricService,
+	// eslint-disable-next-line require-yield
+	Effect.gen(function* () {
+		const cleanKeyword = (keyword: string): string => {
+			const priorityRegex = /《(.+?)》|「(.+?)」/
+			const priorityMatch = priorityRegex.exec(keyword)
 
-	/**
-	 * 优先从本地缓存中获取歌词，如果没有则从多个数据源并行查找，返回最匹配的歌词并进行缓存。
-	 * @param track
-	 * @returns
-	 */
-	public smartFetchLyrics(track: Track): ResultAsync<ParsedLrc, CustomError> {
-		try {
-			const lyricFile = new FileSystem.File(
-				FileSystem.Paths.document,
-				'lyrics',
-				`${track.uniqueKey.replaceAll('::', '--')}.json`,
-			)
-			lyricFile.parentDirectory.create({
-				intermediates: true,
-				idempotent: true,
-			})
-			if (lyricFile.exists) {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'io:file:read', op: 'io' }, () =>
-						lyricFile.text(),
-					),
-					(e) =>
-						new FileSystemError(`读取歌词缓存失败`, {
-							cause: e,
-							data: { filePath: lyricFile.uri },
-						}),
-				).andThen((content) => {
-					try {
-						return okAsync(JSON.parse(content) as ParsedLrc)
-					} catch (e) {
-						return errAsync(
-							new DataParsingError('解析歌词缓存失败', { cause: e }),
-						)
-					}
-				})
-			}
-
-			if (
-				track.source === 'bilibili' &&
-				track.bilibiliMetadata.bvid &&
-				track.bilibiliMetadata.cid
-			) {
-				return ResultAsync.fromSafePromise(
-					this.getPreciseMusicNameOnBilibiliVideo(track.bilibiliMetadata),
+			if (priorityMatch) {
+				logger.debug(
+					'匹配到优先提取的标记，直接返回这段字符串作为 keyword：',
+					priorityMatch[1],
+					priorityMatch[2],
 				)
-					.andThen((musicName) => this.getBestMatchedLyrics(track, musicName))
-					.andThen((lyrics) => {
-						logger.info('自动搜索最佳匹配的歌词完成')
-						Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-							lyricFile.write(JSON.stringify(lyrics)),
-						)
-						return okAsync(lyrics)
-					})
+				return priorityMatch[1] || priorityMatch[2]
 			}
 
-			return this.getBestMatchedLyrics(track).andThen((lyrics) => {
-				logger.info('自动搜索最佳匹配的歌词完成')
-				Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-					lyricFile.write(JSON.stringify(lyrics)),
+			const replacedKeyword = keyword.replace(/【.*?】|“.*?”/g, '').trim()
+			const result = replacedKeyword.length > 0 ? replacedKeyword : keyword
+			logger.debug('最终 keyword 清洗后：', result)
+
+			return result
+		}
+
+		const getBestMatchedLyrics = (track: Track, preciseKeyword?: string) =>
+			Effect.gen(function* () {
+				const keyword = preciseKeyword ?? cleanKeyword(track.title)
+
+				const searchEffect = neteaseApi.searchBestMatchedLyrics(
+					keyword,
+					track.duration * 1000,
 				)
-				return okAsync(lyrics)
-			})
-		} catch (e) {
-			return errAsync(new FileSystemError('处理歌词文件失败', { cause: e }))
-		}
-	}
 
-	public saveLyricsToFile(
-		lyrics: ParsedLrc,
+				const results = yield* Effect.all([searchEffect])
 
-		uniqueKey: string,
-	): ResultAsync<ParsedLrc, FileSystemError> {
-		try {
-			const lyricFile = new FileSystem.File(
-				FileSystem.Paths.document,
-				'lyrics',
-				`${uniqueKey.replaceAll('::', '--')}.json`,
-			)
-			lyricFile.parentDirectory.create({
-				intermediates: true,
-				idempotent: true,
-			})
-			Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-				lyricFile.write(JSON.stringify(lyrics)),
-			)
-			return okAsync(lyrics)
-		} catch (e) {
-			return errAsync(
-				new FileSystemError(`保存歌词文件失败`, {
-					cause: e,
-					data: { uniqueKey },
-				}),
-			)
-		}
-	}
+				// FIXME: fuck what's this???
+				const randomIndex = Math.floor(Math.random() * results.length)
+				return results[randomIndex]
+			}).pipe(Effect.withSpan('LyricService.getBestMatchedLyrics'))
 
-	public fetchLyrics(
-		item: LyricSearchResult[0],
+		const getPreciseMusicNameOnBilibiliVideo = (
+			metadata: BilibiliTrack['bilibiliMetadata'],
+		) =>
+			Effect.gen(function* () {
+				if (!metadata.cid || !metadata.bvid) return undefined
 
-		uniqueKey: string,
-	): ResultAsync<ParsedLrc | string, Error> {
-		switch (item.source) {
-			case 'netease':
-				return this.neteaseApi
-					.getLyrics(item.remoteId)
-					.andThen((lyrics) => okAsync(this.neteaseApi.parseLyrics(lyrics)))
-					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+				const res = yield* bilibiliApi.getWebPlayerInfo(
+					metadata.bvid,
+					metadata.cid,
+				)
+
+				const bgm = res.bgm_info
+
+				if (!bgm) {
+					return yield* Effect.fail(new Error('没有获取到歌曲信息'))
+				}
+
+				const filteredResult = /《(.+?)》/.exec(bgm.music_title)
+
+				yield* Effect.sync(() => {
+					logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
+						music_title: bgm.music_title,
 					})
-			default:
-				return errAsync(new Error('未知歌曲源'))
-		}
-	}
-
-	/**
-	 * 迁移旧版歌词格式
-	 */
-	public async migrateFromOldFormat() {
-		const lyricsDir = new FileSystem.Directory(
-			FileSystem.Paths.document,
-			'lyrics',
-		)
-		try {
-			if (!lyricsDir.exists) {
-				logger.debug('歌词缓存目录不存在，无需迁移')
-				return
-			}
-
-			const lyricFiles = lyricsDir.list()
-
-			for (const file of lyricFiles) {
-				if (file instanceof FileSystem.Directory) continue
-				const content = await file.text()
-				const parsed = JSON.parse(content) as lyricFileType
-				const finalLyric: ParsedLrc = {
-					tags: parsed.tags,
-					offset: parsed.offset,
-					lyrics: parsed.lyrics,
-					rawOriginalLyrics: '',
-				}
-				if ('raw' in parsed) {
-					const trySplitIt = parsed.raw.split('\n\n')
-					if (trySplitIt.length === 2) {
-						finalLyric.rawOriginalLyrics = trySplitIt[0]
-						finalLyric.rawTranslatedLyrics = trySplitIt[1]
-					} else {
-						finalLyric.rawOriginalLyrics = parsed.raw
-					}
-				} else {
-					finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
-					finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
-				}
-
-				await this.saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
-			}
-			logger.info('歌词格式迁移完成')
-		} catch (e) {
-			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
-		}
-	}
-
-	public async getPreciseMusicNameOnBilibiliVideo(
-		metadata: BilibiliTrack['bilibiliMetadata'],
-	) {
-		if (!metadata.cid || !metadata.bvid) return undefined
-		const result = await bilibiliApi
-			.getWebPlayerInfo(metadata.bvid, metadata.cid)
-			.andThen((res) => {
-				if (!res.bgm_info) {
-					return errAsync(new Error('没有获取到歌曲信息'))
-				}
-				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
-				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
-					music_title: res.bgm_info.music_title,
 				})
+
 				if (filteredResult?.[1]) {
-					return okAsync(filteredResult[1])
+					return filteredResult[1]
 				}
-				return okAsync(res.bgm_info.music_title)
-			})
-		if (result.isErr()) {
-			return undefined
-		}
-		return result.value
-	}
+				return bgm.music_title
+			}).pipe(
+				Effect.catchAll(() => Effect.succeed(undefined)),
+				Effect.withSpan('LyricService.getPreciseMusicNameOnBilibiliVideo'),
+			)
 
-	/**
-	 * 清除所有已缓存的歌词
-	 * @returns
-	 */
-	public clearAllLyrics(): Result<true, unknown> {
-		const lyricsDir = new FileSystem.Directory(
-			FileSystem.Paths.document,
-			'lyrics',
-		)
+		const saveLyricsToFile = (lyrics: ParsedLrc, uniqueKey: string) =>
+			Effect.gen(function* () {
+				try {
+					const lyricFile = new FileSystem.File(
+						FileSystem.Paths.document,
+						'lyrics',
+						`${uniqueKey.replaceAll('::', '--')}.json`,
+					)
 
-		return Result.fromThrowable(() => {
-			if (!lyricsDir.exists) {
-				logger.debug('歌词目录不存在，无需清理')
+					// 同步执行副作用，用 Effect.sync 包裹
+					yield* Effect.sync(() => {
+						lyricFile.parentDirectory.create({
+							intermediates: true,
+							idempotent: true,
+						})
+					})
+
+					// 写入操作，原代码使用了 Sentry span，现在替换为 Effect span
+					yield* Effect.try({
+						try: () => lyricFile.write(JSON.stringify(lyrics)),
+						catch: (e) =>
+							new FileSystemError({
+								message: `保存歌词文件失败`,
+								cause: e,
+								data: { uniqueKey },
+							}),
+					}).pipe(Effect.withSpan('io:file:write'))
+
+					return lyrics
+				} catch (e) {
+					// 捕获 new FileSystem.File 可能抛出的同步错误
+					return yield* new FileSystemError({
+						message: `保存歌词文件失败 (Init)`,
+						cause: e,
+						data: { uniqueKey },
+					})
+				}
+			}).pipe(Effect.withSpan('LyricService.saveLyricsToFile'))
+
+		const smartFetchLyrics = (track: Track) =>
+			Effect.gen(function* () {
+				// 1. 尝试从本地缓存读取
+				try {
+					const lyricFile = new FileSystem.File(
+						FileSystem.Paths.document,
+						'lyrics',
+						`${track.uniqueKey.replaceAll('::', '--')}.json`,
+					)
+
+					yield* Effect.sync(() => {
+						lyricFile.parentDirectory.create({
+							intermediates: true,
+							idempotent: true,
+						})
+					})
+
+					if (lyricFile.exists) {
+						const content = yield* Effect.tryPromise({
+							try: () => lyricFile.text(),
+							catch: (e) =>
+								new FileSystemError({
+									message: `读取歌词缓存失败`,
+									cause: e,
+									data: { filePath: lyricFile.uri },
+								}),
+						}).pipe(Effect.withSpan('io:file:read'))
+
+						return yield* Effect.try({
+							try: () => JSON.parse(content) as ParsedLrc,
+							catch: (e) =>
+								new DataParsingError({
+									message: `解析歌词文件失败`,
+									cause: e,
+									data: { filePath: lyricFile.uri },
+								}),
+						})
+					}
+				} catch (e) {
+					return yield* Effect.fail(
+						new FileSystemError({
+							message: `读取歌词缓存失败 (Init)`,
+							cause: e,
+							data: { uniqueKey: track.uniqueKey },
+						}),
+					)
+				}
+
+				// 2. 本地没有，尝试 Bilibili 精确搜索
+				if (
+					track.source === 'bilibili' &&
+					track.bilibiliMetadata.bvid &&
+					track.bilibiliMetadata.cid
+				) {
+					const musicName = yield* getPreciseMusicNameOnBilibiliVideo(
+						track.bilibiliMetadata,
+					)
+
+					const lyrics = yield* getBestMatchedLyrics(track, musicName)
+
+					yield* Effect.sync(() => logger.info('自动搜索最佳匹配的歌词完成'))
+
+					yield* saveLyricsToFile(lyrics, track.uniqueKey)
+					return lyrics
+				}
+
+				// 3. 最后尝试默认搜索
+				const lyrics = yield* getBestMatchedLyrics(track)
+				yield* Effect.sync(() => logger.info('自动搜索最佳匹配的歌词完成'))
+				yield* saveLyricsToFile(lyrics, track.uniqueKey)
+
+				return lyrics
+			}).pipe(Effect.withSpan('LyricService.smartFetchLyrics'))
+
+		const fetchLyrics = (item: LyricSearchResult[0], uniqueKey: string) =>
+			Effect.gen(function* () {
+				switch (item.source) {
+					case 'netease': {
+						const rawLyrics = yield* neteaseApi.getLyrics(item.remoteId)
+						// neteaseApi.parseLyrics 是同步纯函数，直接调用或用 sync 包裹
+						const parsedLyrics = neteaseApi.parseLyrics(rawLyrics)
+						return yield* saveLyricsToFile(parsedLyrics, uniqueKey)
+					}
+					default:
+						return yield* Effect.fail(new Error('未知歌曲源'))
+				}
+			}).pipe(Effect.withSpan('LyricService.fetchLyrics'))
+
+		const migrateFromOldFormat = () =>
+			Effect.gen(function* () {
+				const lyricsDir = new FileSystem.Directory(
+					FileSystem.Paths.document,
+					'lyrics',
+				)
+
+				const exists = yield* Effect.sync(() => lyricsDir.exists)
+				if (!exists) {
+					yield* Effect.logDebug('歌词缓存目录不存在，无需迁移')
+					return
+				}
+
+				const lyricFiles = yield* Effect.sync(() => lyricsDir.list())
+
+				for (const file of lyricFiles) {
+					if (file instanceof FileSystem.Directory) continue
+
+					const content = yield* Effect.tryPromise(() => file.text())
+					const parsed = JSON.parse(content) as LyricFileType
+
+					const finalLyric: ParsedLrc = {
+						tags: parsed.tags,
+						offset: parsed.offset,
+						lyrics: parsed.lyrics,
+						rawOriginalLyrics: '',
+					}
+
+					if ('raw' in parsed) {
+						const trySplitIt = parsed.raw.split('\n\n')
+						if (trySplitIt.length === 2) {
+							finalLyric.rawOriginalLyrics = trySplitIt[0]
+							finalLyric.rawTranslatedLyrics = trySplitIt[1]
+						} else {
+							finalLyric.rawOriginalLyrics = parsed.raw
+						}
+					} else {
+						finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
+						finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
+					}
+
+					yield* saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
+				}
+				yield* Effect.sync(() => logger.info('歌词格式迁移完成'))
+			}).pipe(
+				Effect.catchAll((e) =>
+					Effect.sync(() => {
+						// 保持原来的 UI 反馈逻辑
+						toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')
+					}),
+				),
+				Effect.withSpan('LyricService.migrateFromOldFormat'),
+			)
+
+		const clearAllLyrics = () =>
+			Effect.gen(function* () {
+				const lyricsDir = new FileSystem.Directory(
+					FileSystem.Paths.document,
+					'lyrics',
+				)
+
+				const exists = yield* Effect.sync(() => lyricsDir.exists)
+
+				if (!exists) {
+					yield* Effect.sync(() => logger.debug('歌词目录不存在，无需清理'))
+					return true
+				}
+
+				yield* Effect.try(() => {
+					lyricsDir.delete()
+					lyricsDir.create({
+						intermediates: true,
+						idempotent: true,
+					})
+				}).pipe(
+					Effect.catchAll((e) => {
+						return new FileSystemError({
+							message: '清理歌词缓存失败',
+							cause: e,
+						})
+					}),
+				)
+
+				yield* Effect.sync(() => logger.info('歌词缓存已清理'))
 				return true as const
-			}
-			lyricsDir.delete()
-			lyricsDir.create({
-				intermediates: true,
-				idempotent: true,
-			})
-			logger.info('歌词缓存已清理')
-			return true as const
-		})()
-	}
-}
+			}).pipe(Effect.withSpan('LyricService.clearAllLyrics'))
 
-const lyricService = new LyricService(neteaseApi)
-export default lyricService
+		return {
+			getBestMatchedLyrics,
+			smartFetchLyrics,
+			saveLyricsToFile,
+			fetchLyrics,
+			migrateFromOldFormat,
+			getPreciseMusicNameOnBilibiliVideo,
+			clearAllLyrics,
+		}
+	}),
+)
+
+export const lyricService = Effect.serviceFunctions(LyricService)

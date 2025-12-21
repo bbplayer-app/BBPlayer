@@ -8,6 +8,7 @@ import {
 	usePlaylistsContainingTrack,
 } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { AppRuntime } from '@/lib/effect/runtime'
 import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
@@ -89,8 +90,14 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			[allPlaylists],
 		)
 
-		const uniqueKey = generateUniqueTrackKey(track).unwrapOr(undefined)
-		if (!uniqueKey) toast.error('无法生成 uniqueKey')
+		let uniqueKey
+		try {
+			uniqueKey = AppRuntime.runSync(generateUniqueTrackKey(track))
+		} catch (e) {
+			toast.error('无法生成 uniqueKey', {
+				description: String(e),
+			})
+		}
 		const {
 			data: playlistsContainingTrack,
 			isPending: isContainingTrackPending,

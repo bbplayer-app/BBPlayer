@@ -1,11 +1,11 @@
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
-import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import toast from '@/utils/toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Effect } from 'effect'
 
 const logger = log.extend('Mutation.Bilibili.Favorite')
 
@@ -20,14 +20,27 @@ export const useDealFavoriteForOneVideo = () => {
 			bvid: string
 			addToFavoriteIds: string[]
 			delInFavoriteIds: string[]
-		}) =>
-			await returnOrThrowAsync(
-				bilibiliApi.dealFavoriteForOneVideo(
+		}) => {
+			const program = bilibiliApi
+				.dealFavoriteForOneVideo(
 					params.bvid,
 					params.addToFavoriteIds,
 					params.delInFavoriteIds,
-				),
-			),
+				)
+				.pipe(
+					Effect.catchTag('BilibiliCsrfError', () =>
+						Effect.fail(new Error('CSRF token 过期，请检查 cookie 后重试')),
+					),
+					Effect.mapError((e) => {
+						if (e instanceof Error)
+							return new Error(
+								`操作失败: ${e.message} (${(e as Error & { _tag?: string })._tag ?? 'UnknownError'})`,
+							)
+					}),
+				)
+
+			return await effectToPromise(program)
+		},
 		onSuccess: async (_data, _value) => {
 			toast.success('操作成功', {
 				description:
@@ -42,17 +55,8 @@ export const useDealFavoriteForOneVideo = () => {
 			})
 		},
 		onError: (error) => {
-			let errorMessage = '删除失败，请稍后重试'
-			if (error instanceof BilibiliApiError) {
-				if (error.type === 'CsrfError') {
-					errorMessage = '删除失败：csrf token 过期，请检查 cookie 后重试'
-				} else {
-					errorMessage = `删除失败：${error.message} (${error.data.msgCode})`
-				}
-			}
-
 			toast.error('操作失败', {
-				description: errorMessage,
+				description: error.message,
 				duration: Number.POSITIVE_INFINITY,
 			})
 			logger.error('删除收藏夹内容失败:', error)
@@ -67,13 +71,23 @@ export const useBatchDeleteFavoriteListContents = () => {
 	const queryClient = useQueryClient()
 
 	return useMutation({
-		mutationFn: (params: { bvids: string[]; favoriteId: number }) =>
-			returnOrThrowAsync(
-				bilibiliApi.batchDeleteFavoriteListContents(
-					params.favoriteId,
-					params.bvids,
-				),
-			),
+		mutationFn: async (params: { bvids: string[]; favoriteId: number }) => {
+			const program = bilibiliApi
+				.batchDeleteFavoriteListContents(params.favoriteId, params.bvids)
+				.pipe(
+					Effect.catchTag('BilibiliCsrfError', () =>
+						Effect.fail(new Error('CSRF token 过期，请检查 cookie 后重试')),
+					),
+					Effect.mapError((e) => {
+						if (e instanceof Error)
+							return new Error(
+								`删除失败: ${e.message} (${(e as Error & { _tag?: string })._tag ?? 'UnknownError'})`,
+							)
+					}),
+				)
+
+			return await effectToPromise(program)
+		},
 		onSuccess: async (_data, variables) => {
 			toast.success('删除成功')
 			await queryClient.refetchQueries({
@@ -83,16 +97,7 @@ export const useBatchDeleteFavoriteListContents = () => {
 			})
 		},
 		onError: (error) => {
-			let errorMessage = '删除失败，请稍后重试'
-			if (error instanceof BilibiliApiError) {
-				if (error.type === 'CsrfError') {
-					errorMessage = '删除失败：csrf token 过期，请检查 cookie 后重试'
-				} else {
-					errorMessage = `删除失败：${error.message} (${error.data.msgCode})`
-				}
-			}
-
-			toastAndLogError(errorMessage, error, 'Query.Bilibili.Favorite')
+			toastAndLogError(error.message, error, 'Query.Bilibili.Favorite')
 		},
 	})
 }

@@ -16,14 +16,16 @@ import {
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
+import { AppRuntime } from '@/lib/effect/runtime'
 import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
+import { Effect } from 'effect'
 import { useRouter } from 'expo-router'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -61,6 +63,34 @@ const mapApiItemToTrack = (
 
 const dimensions = Dimensions.get('window')
 
+const handlePlay = (track: BilibiliTrack) => {
+	const program = Effect.gen(function* () {
+		yield* syncFacade.addTrackToLocal(track)
+
+		yield* Effect.tryPromise(() =>
+			addToQueue({
+				tracks: [track],
+				playNow: true,
+				clearQueue: false,
+				playNext: false,
+			}),
+		)
+	}).pipe(
+		Effect.catchAll((error) => {
+			return Effect.sync(() => {
+				toastAndLogError('将 track 录入本地失败', error, 'UI.Playlist.Remote')
+				reportErrorToSentry(
+					error,
+					'将 track 录入本地失败',
+					'UI.Playlist.Remote',
+				)
+			})
+		}),
+	)
+
+	void AppRuntime.runPromise(program)
+}
+
 export default function ToViewPage() {
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
@@ -90,29 +120,6 @@ export default function ToViewPage() {
 	const { playTrack } = useRemotePlaylist()
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
-
-	const handlePlay = useCallback(async (track: BilibiliTrack) => {
-		const createIt = await syncFacade.addTrackToLocal(track)
-		if (createIt.isErr()) {
-			toastAndLogError(
-				'将 track 录入本地失败',
-				createIt.error,
-				'UI.Playlist.Remote',
-			)
-			reportErrorToSentry(
-				createIt.error,
-				'将 track 录入本地失败',
-				'UI.Playlist.Remote',
-			)
-			return
-		}
-		void addToQueue({
-			tracks: [track],
-			playNow: true,
-			clearQueue: false,
-			playNext: false,
-		})
-	}, [])
 
 	if (isToViewDataPending) {
 		return <PlaylistLoading />

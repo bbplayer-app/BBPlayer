@@ -1,402 +1,312 @@
-import * as Sentry from '@sentry/react-native'
-import { and, eq, or } from 'drizzle-orm'
-import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { ResultAsync, errAsync, okAsync } from 'neverthrow'
-
-import db from '@/lib/db/db'
+import { DrizzleDB } from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import { ServiceError } from '@/lib/errors'
-import {
-	DatabaseError,
-	createArtistNotFound,
-	createValidationError,
-} from '@/lib/errors/service'
+import { DatabaseError } from '@/lib/errors'
+import type { ServiceError } from '@/lib/errors/service'
+import { ArtistNotFoundError, ValidationError } from '@/lib/errors/service'
 import type { Track } from '@/types/core/media'
 import type {
 	CreateArtistPayload,
 	UpdateArtistPayload,
 } from '@/types/services/artist'
-import type { TrackService } from './trackService'
-import { trackService } from './trackService'
+import { and, eq, or } from 'drizzle-orm'
+import { Context, Effect, Layer, Option } from 'effect'
+import { TrackService } from './trackService'
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
-type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
-
-export class ArtistService {
-	constructor(
-		private readonly db: DBLike,
-		private readonly trackService: TrackService,
-	) {}
-
-	/**
-	 * 返回一个使用新数据库连接（例如事务）的新实例。
-	 * @param conn - 新的数据库连接或事务。
-	 * @returns 一个新的实例。
-	 */
-	public withDB(conn: DBLike) {
-		return new ArtistService(conn, this.trackService.withDB(conn))
-	}
-
-	/**
-	 * 创建一个新的artist。
-	 * @param payload - 创建artist所需的数据。
-	 * @returns ResultAsync 包含成功创建的 Artist 或一个 DatabaseError。
-	 */
-	public createArtist(
+export interface ArtistServiceSignature {
+	readonly createArtist: (
 		payload: CreateArtistPayload,
-	): ResultAsync<typeof schema.artists.$inferSelect, DatabaseError> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:insert:artist', op: 'db' }, () =>
-				this.db
-					.insert(schema.artists)
-					.values({
-						name: payload.name,
-						source: payload.source,
-						remoteId: payload.remoteId,
-						avatarUrl: payload.avatarUrl,
-						signature: payload.signature,
-					} satisfies CreateArtistPayload)
-					.returning(),
-			),
-			(e) => new DatabaseError('创建artist失败', { cause: e }),
-		).andThen((result) => {
-			return okAsync(result[0])
-		})
-	}
+	) => Effect.Effect<typeof schema.artists.$inferSelect, DatabaseError>
 
-	/**
-	 * 根据 source 和 remoteId 查找或创建一个artist。
-	 * 主要适用于外部源的数据
-	 * @param payload - 用于查找或创建artist的数据，必须包含 source 和 remoteId。
-	 * @returns ResultAsync 包含找到的或新创建的 Artist，或一个错误。
-	 */
-	public findOrCreateArtist(
+	readonly findOrCreateArtist: (
 		payload: CreateArtistPayload,
-	): ResultAsync<
+	) => Effect.Effect<
 		typeof schema.artists.$inferSelect,
-		DatabaseError | ServiceError
-	> {
-		const { source, remoteId } = payload
-		if (!source || !remoteId) {
-			return errAsync(
-				createValidationError('source 和 remoteId 在此方法中是必需的'),
-			)
-		}
+		DatabaseError | ValidationError
+	>
 
-		return ResultAsync.fromPromise(
-			(async () => {
-				// 尝试查找已存在的artist
-				const existingArtist = await Sentry.startSpan(
-					{ name: 'db:query:artist', op: 'db' },
-					() =>
-						this.db.query.artists.findFirst({
-							where: and(
-								eq(schema.artists.source, source),
-								eq(schema.artists.remoteId, remoteId),
-							),
-						}),
-				)
-
-				if (existingArtist) {
-					return existingArtist
-				}
-
-				// 如果不存在，则创建新的artist
-				const [newArtist] = await Sentry.startSpan(
-					{ name: 'db:insert:artist', op: 'db' },
-					() =>
-						this.db
-							.insert(schema.artists)
-							.values({
-								name: payload.name,
-								source: payload.source,
-								remoteId: payload.remoteId,
-								avatarUrl: payload.avatarUrl,
-								signature: payload.signature,
-							} satisfies CreateArtistPayload)
-							.returning(),
-				)
-
-				return newArtist
-			})(),
-			(e) =>
-				e instanceof ServiceError
-					? e
-					: new DatabaseError('查找或创建artist的事务失败', { cause: e }),
-		)
-	}
-
-	/**
-	 * 更新一个artist的信息。
-	 * @param artistId - 要更新的artist的 ID。
-	 * @param payload - 更新所需的数据。
-	 * @returns ResultAsync 包含更新后的 Artist 或一个错误。
-	 */
-	public updateArtist(
+	readonly updateArtist: (
 		artistId: number,
 		payload: UpdateArtistPayload,
-	): ResultAsync<
+	) => Effect.Effect<
 		typeof schema.artists.$inferSelect,
-		DatabaseError | ServiceError
-	> {
-		return ResultAsync.fromPromise(
-			(async () => {
-				// 首先验证artist是否存在
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:artist:exist', op: 'db' },
-					() =>
-						this.db.query.artists.findFirst({
-							where: eq(schema.artists.id, artistId),
-							columns: { id: true },
-						}),
-				)
-				if (!existing) {
-					throw createArtistNotFound(artistId)
-				}
+		DatabaseError | ArtistNotFoundError
+	>
 
-				const [updated] = await Sentry.startSpan(
-					{ name: 'db:update:artist', op: 'db' },
-					() =>
-						this.db
-							.update(schema.artists)
-							.set({
-								name: payload.name ?? undefined,
-								avatarUrl: payload.avatarUrl,
-								signature: payload.signature,
-							} satisfies UpdateArtistPayload)
-							.where(eq(schema.artists.id, artistId))
-							.returning(),
-				)
-
-				return updated
-			})(),
-			(e) =>
-				e instanceof ServiceError
-					? e
-					: new DatabaseError(`更新artist ${artistId} 失败`, {
-							cause: e,
-						}),
-		)
-	}
-
-	/**
-	 * 删除一个artist（与之关联的 track 的 artistId 会被设为 null）
-	 * @param artistId - 要删除的artist的 ID。
-	 * @returns ResultAsync 包含被删除的 ID 或一个错误。
-	 */
-	public deleteArtist(
+	readonly deleteArtist: (
 		artistId: number,
-	): ResultAsync<{ deletedId: number }, DatabaseError | ServiceError> {
-		return ResultAsync.fromPromise(
-			(async () => {
-				// 验证artist是否存在
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:artist:exist', op: 'db' },
-					() =>
-						this.db.query.artists.findFirst({
-							where: eq(schema.artists.id, artistId),
-							columns: { id: true },
-						}),
-				)
-				if (!existing) {
-					throw createArtistNotFound(artistId)
-				}
+	) => Effect.Effect<{ deletedId: number }, DatabaseError | ArtistNotFoundError>
 
-				const [deleted] = await Sentry.startSpan(
-					{ name: 'db:delete:artist', op: 'db' },
-					() =>
-						this.db
-							.delete(schema.artists)
-							.where(eq(schema.artists.id, artistId))
-							.returning({ deletedId: schema.artists.id }),
-				)
-
-				return deleted
-			})(),
-			(e) =>
-				e instanceof ServiceError
-					? e
-					: new DatabaseError(`删除artist ${artistId} 失败`, {
-							cause: e,
-						}),
-		)
-	}
-
-	/**
-	 * 获取指定artist创作的所有歌曲。
-	 * @param artistId - artist的 ID。
-	 * @returns ResultAsync 包含一个 Track 数组或一个错误。
-	 */
-	public getArtistTracks(
+	readonly getArtistTracks: (
 		artistId: number,
-	): ResultAsync<Track[], DatabaseError | ServiceError> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:tracks', op: 'db' }, () =>
-				this.db.query.tracks.findMany({
-					where: eq(schema.tracks.artistId, artistId),
-					with: {
-						artist: true,
-						bilibiliMetadata: true,
-						localMetadata: true,
-					},
-				}),
-			),
-			(e) =>
-				new DatabaseError(`获取artist ${artistId} 的歌曲失败`, {
-					cause: e,
-				}),
-		).andThen((dbTracks) => {
-			const formattedTracks: Track[] = []
-			for (const dbTrack of dbTracks) {
-				const formatted = this.trackService.formatTrack(dbTrack)
-				if (!formatted) {
-					return errAsync(
-						new ServiceError(
-							`格式化歌曲 ${dbTrack.id} 时发生错误，可能是原数据不存在或 source & metadata 不匹配`,
-						),
-					)
-				}
-				formattedTracks.push(formatted)
-			}
-			return okAsync(formattedTracks)
-		})
-	}
+	) => Effect.Effect<Track[], DatabaseError | ServiceError>
 
-	/**
-	 * 获取所有artist。
-	 * @returns ResultAsync 包含所有 Artist 的数组或一个 DatabaseError。
-	 */
-	public getAllArtists(): ResultAsync<
+	readonly getAllArtists: () => Effect.Effect<
 		(typeof schema.artists.$inferSelect)[],
 		DatabaseError
-	> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:artists', op: 'db' }, () =>
-				this.db.query.artists.findMany(),
-			),
-			(e) => new DatabaseError('获取所有artist列表失败', { cause: e }),
-		)
-	}
+	>
 
-	/**
-	 * 根据 ID 获取单个artist的详细信息。
-	 * @param artistId - artist的 ID。
-	 * @returns ResultAsync 包含 Artist 或 undefined (如果未找到)，或一个 DatabaseError。
-	 */
-	public getArtistById(
+	readonly getArtistById: (
 		artistId: number,
-	): ResultAsync<
-		typeof schema.artists.$inferSelect | undefined,
+	) => Effect.Effect<
+		Option.Option<typeof schema.artists.$inferSelect>,
 		DatabaseError
-	> {
-		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:artist', op: 'db' }, () =>
-				this.db.query.artists.findFirst({
-					where: eq(schema.artists.id, artistId),
-				}),
-			),
-			(e) =>
-				new DatabaseError(`通过 ID ${artistId} 获取artist失败`, {
-					cause: e,
-				}),
-		)
-	}
+	>
 
-	/**
-	 * 批量查找或创建 remote artist。
-	 * 接收一个 artist 数据数组，返回一个 remoteId -> artist 对象的映射。
-	 *
-	 * @param payloads - 一个包含多个 artist 创建信息的数组。
-	 */
-	public findOrCreateManyRemoteArtists(
+	readonly findOrCreateManyRemoteArtists: (
 		payloads: CreateArtistPayload[],
-	): ResultAsync<
+	) => Effect.Effect<
 		Map<string, typeof schema.artists.$inferSelect>,
-		ServiceError
-	> {
-		if (payloads.length === 0) {
-			return okAsync(new Map<string, typeof schema.artists.$inferSelect>())
-		}
-
-		for (const p of payloads) {
-			if (!p.source || !p.remoteId) {
-				return errAsync(
-					createValidationError(
-						'payloads 中存在 source 或 remoteId 为空的对象，该方法仅用于处理 remote artist',
-					),
-				)
-			}
-		}
-
-		return ResultAsync.fromPromise(
-			(async () => {
-				if (payloads.length > 0) {
-					await Sentry.startSpan(
-						{ name: 'db:insert:many:artists', op: 'db' },
-						() =>
-							this.db
-								.insert(schema.artists)
-								.values(
-									payloads.map(
-										(p) =>
-											({
-												name: p.name,
-												source: p.source,
-												remoteId: p.remoteId,
-												avatarUrl: p.avatarUrl,
-												signature: p.signature,
-											}) satisfies CreateArtistPayload,
-									),
-								)
-								.onConflictDoNothing(),
-					)
-				}
-
-				const findConditions = payloads.map((p) =>
-					and(
-						eq(schema.artists.source, p.source),
-						eq(schema.artists.remoteId, p.remoteId!),
-					),
-				)
-
-				const allArtists = await Sentry.startSpan(
-					{ name: 'db:query:many:artists', op: 'db' },
-					() =>
-						this.db.query.artists.findMany({
-							where: or(...findConditions),
-						}),
-				)
-
-				const fullArtists = payloads.map((p) => {
-					const existing = allArtists.find(
-						(a) =>
-							`${a.source}::${a.remoteId}` === `${p.source}::${p.remoteId}`,
-					)
-					if (existing) {
-						return existing
-					}
-					throw new DatabaseError(
-						`批量查找或创建 artists 后数据不一致，未找到 artist: ${p.source}::${p.remoteId}`,
-					)
-				})
-				if (fullArtists.length !== payloads.length) {
-					throw new DatabaseError(
-						'创建或查找 artists 后数据不一致，部分 artist 未能成功写入或查询。',
-					)
-				}
-
-				const finalResultMap = new Map(
-					fullArtists.map((artist) => [artist.remoteId!, artist]),
-				)
-
-				return finalResultMap
-			})(),
-			(e) =>
-				e instanceof ServiceError
-					? e
-					: new DatabaseError('批量查找或创建 artist 失败', { cause: e }),
-		)
-	}
+		DatabaseError | ValidationError
+	>
 }
 
-export const artistService = new ArtistService(db, trackService)
+export class ArtistService extends Context.Tag('ArtistService')<
+	ArtistService,
+	ArtistServiceSignature
+>() {}
+
+export const ArtistServiceLive = Layer.effect(
+	ArtistService,
+	Effect.gen(function* () {
+		const db = yield* DrizzleDB
+		const trackService = yield* TrackService
+
+		const runDb = <A>(
+			operation: () => Promise<A>,
+			errorDetails = '数据库操作失败',
+		) =>
+			Effect.tryPromise({
+				try: operation,
+				catch: (e) =>
+					new DatabaseError({
+						message: errorDetails,
+						cause: e,
+					}),
+			})
+
+		return {
+			createArtist: (payload) =>
+				runDb(
+					() => db.insert(schema.artists).values(payload).returning(),
+					'创建 artist 失败',
+				)
+					.pipe(
+						Effect.map((rows) => rows[0]),
+						Effect.withSpan('db:insert:artist'),
+					)
+					.pipe(Effect.withSpan('service:artist:createArtist')),
+
+			findOrCreateArtist: (payload) =>
+				Effect.gen(function* () {
+					const { source, remoteId } = payload
+
+					if (!source || !remoteId) {
+						return yield* new ValidationError({
+							message: 'source 和 remoteId 在此方法中是必需的',
+						})
+					}
+
+					const existingArtist = yield* runDb(
+						() =>
+							db.query.artists.findFirst({
+								where: and(
+									eq(schema.artists.source, source),
+									eq(schema.artists.remoteId, remoteId),
+								),
+							}),
+						'查找 artist 失败',
+					).pipe(Effect.withSpan('db:query:artist'))
+
+					if (existingArtist) {
+						return existingArtist
+					}
+
+					const newArtists = yield* runDb(
+						() => db.insert(schema.artists).values(payload).returning(),
+						'创建 artist 事务失败',
+					).pipe(Effect.withSpan('db:insert:artist'))
+
+					return newArtists[0]
+				}).pipe(Effect.withSpan('service:artist:findOrCreateArtist')),
+
+			updateArtist: (artistId, payload) =>
+				Effect.gen(function* () {
+					const existing = yield* runDb(
+						() =>
+							db.query.artists.findFirst({
+								where: eq(schema.artists.id, artistId),
+								columns: { id: true },
+							}),
+						'检查 artist 是否存在失败',
+					).pipe(Effect.withSpan('db:query:artist:exist'))
+
+					if (!existing) {
+						return yield* Effect.fail(new ArtistNotFoundError({ artistId }))
+					}
+
+					const updated = yield* runDb(
+						() =>
+							db
+								.update(schema.artists)
+								.set({
+									name: payload.name ?? undefined,
+									avatarUrl: payload.avatarUrl,
+									signature: payload.signature,
+								})
+								.where(eq(schema.artists.id, artistId))
+								.returning(),
+						`更新 artist ${artistId} 失败`,
+					).pipe(Effect.withSpan('db:update:artist'))
+
+					return updated[0]
+				}).pipe(Effect.withSpan('service:artist:updateArtist')),
+
+			deleteArtist: (artistId) =>
+				Effect.gen(function* () {
+					// 检查是否存在
+					const existing = yield* runDb(
+						() =>
+							db.query.artists.findFirst({
+								where: eq(schema.artists.id, artistId),
+								columns: { id: true },
+							}),
+						'检查 artist 是否存在失败',
+					)
+
+					if (!existing) {
+						return yield* Effect.fail(new ArtistNotFoundError({ artistId }))
+					}
+
+					const deleted = yield* runDb(
+						() =>
+							db
+								.delete(schema.artists)
+								.where(eq(schema.artists.id, artistId))
+								.returning({ deletedId: schema.artists.id }),
+						`删除 artist ${artistId} 失败`,
+					).pipe(Effect.withSpan('db:delete:artist'))
+
+					return deleted[0]
+				}).pipe(Effect.withSpan('service:artist:deleteArtist')),
+
+			getArtistTracks: (artistId) =>
+				Effect.gen(function* () {
+					const dbTracks = yield* runDb(
+						() =>
+							db.query.tracks.findMany({
+								where: eq(schema.tracks.artistId, artistId),
+								with: {
+									artist: true,
+									bilibiliMetadata: true,
+									localMetadata: true,
+								},
+							}),
+						`获取 artist ${artistId} 的歌曲失败`,
+					).pipe(Effect.withSpan('db:query:tracks:byArtist'))
+
+					const formattedTracks = yield* Effect.forEach(dbTracks, (track) =>
+						trackService.formatTrack(track).pipe(
+							Effect.mapError(
+								(e) =>
+									new DatabaseError({
+										message: `格式化失败: ${e.message}`,
+										cause: e,
+									}),
+							),
+						),
+					)
+
+					return formattedTracks
+				}).pipe(Effect.withSpan('service:artist:getArtistTracks')),
+
+			getAllArtists: () =>
+				runDb(() => db.query.artists.findMany(), '获取所有 artist 列表失败')
+					.pipe(Effect.withSpan('db:query:artists'))
+					.pipe(Effect.withSpan('service:artist:getAllArtists')),
+
+			getArtistById: (artistId) =>
+				runDb(
+					() =>
+						db.query.artists.findFirst({
+							where: eq(schema.artists.id, artistId),
+						}),
+					`通过 ID ${artistId} 获取 artist 失败`,
+				)
+					.pipe(
+						Effect.map(Option.fromNullable),
+						Effect.withSpan('db:query:artist'),
+					)
+					.pipe(Effect.withSpan('service:artist:getArtistById')),
+
+			findOrCreateManyRemoteArtists: (payloads) =>
+				Effect.gen(function* () {
+					if (payloads.length === 0) {
+						return new Map()
+					}
+
+					for (const p of payloads) {
+						if (!p.source || !p.remoteId) {
+							return yield* Effect.fail(
+								new ValidationError({
+									message: 'payloads 中存在 source 或 remoteId 为空的对象',
+								}),
+							)
+						}
+					}
+
+					yield* runDb(
+						() =>
+							db.insert(schema.artists).values(payloads).onConflictDoNothing(),
+						'批量插入 artists 失败',
+					).pipe(Effect.withSpan('db:insert:many:artists'))
+
+					const findConditions = payloads.map((p) =>
+						and(
+							eq(schema.artists.source, p.source),
+							eq(schema.artists.remoteId, p.remoteId!),
+						),
+					)
+
+					const allArtists = yield* runDb(
+						() =>
+							db.query.artists.findMany({
+								where: or(...findConditions),
+							}),
+						'批量查询 artists 失败',
+					).pipe(Effect.withSpan('db:query:many:artists'))
+
+					return yield* Effect.try({
+						try: () => {
+							const resultMap = new Map<
+								string,
+								typeof schema.artists.$inferSelect
+							>()
+							for (const p of payloads) {
+								const existing = allArtists.find(
+									(a) =>
+										`${a.source}::${a.remoteId}` ===
+										`${p.source}::${p.remoteId}`,
+								)
+								if (!existing) {
+									throw new Error(
+										`数据不一致，未找到 artist: ${p.source}::${p.remoteId}`,
+									)
+								}
+								resultMap.set(p.remoteId!, existing)
+							}
+							return resultMap
+						},
+						catch: (e) =>
+							new DatabaseError({
+								message: '批量处理后数据校验失败',
+								cause: e,
+							}),
+					})
+				}).pipe(
+					Effect.withSpan('service:artist:findOrCreateManyRemoteArtists'),
+				),
+		}
+	}),
+)
+
+export const artistService = Effect.serviceFunctions(ArtistService)

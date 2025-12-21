@@ -1,39 +1,68 @@
-import { FacadeError as BaseFacadeError } from '.'
+import { Data } from 'effect'
 
-export type FacadeErrorType =
-	| 'SyncTaskAlreadyRunning'
-	| 'SyncCollectionFailed'
-	| 'SyncMultiPageFailed'
-	| 'SyncFavoriteFailed'
-	| 'fetchRemotePlaylistMetadataFailed'
-	| 'PlaylistDuplicateFailed'
-	| 'UpdateTrackLocalPlaylistsFailed'
-	| 'BatchAddTracksToLocalPlaylistFailed'
+export class SyncTaskAlreadyRunningError extends Data.TaggedError(
+	'SyncTaskAlreadyRunning',
+) {}
 
-export class FacadeError extends BaseFacadeError {
-	constructor(
-		message: string,
-		opts?: { type?: FacadeErrorType; data?: unknown; cause?: unknown },
-	) {
-		super(message, { type: opts?.type, data: opts?.data, cause: opts?.cause })
-	}
-}
+export class SyncCollectionFailedError extends Data.TaggedError(
+	'SyncCollectionFailed',
+)<{
+	message?: string
+	cause?: unknown
+}> {}
 
-export function createSyncTaskAlreadyRunningError(cause?: unknown) {
-	return new FacadeError('同步任务正在进行中，请稍后再试', {
-		type: 'SyncTaskAlreadyRunning',
-		cause,
-	})
-}
+export class SyncMultiPageFailedError extends Data.TaggedError(
+	'SyncMultiPageFailed',
+)<{
+	pageIndex?: number
+	message?: string
+	cause?: unknown
+}> {}
 
-export function createFacadeError(
-	type: FacadeErrorType,
-	message: string,
-	options?: { data?: unknown; cause?: unknown },
-) {
-	return new FacadeError(message, {
-		type,
-		data: options?.data,
-		cause: options?.cause,
-	})
-}
+export class SyncFavoriteFailedError extends Data.TaggedError(
+	'SyncFavoriteFailed',
+)<{
+	userId?: string | number
+	cause?: unknown
+	message?: string
+}> {}
+
+export class FetchRemotePlaylistMetadataFailedError extends Data.TaggedError(
+	'FetchRemotePlaylistMetadataFailed',
+)<{
+	source?: string
+	remoteId?: string
+	cause?: unknown
+}> {}
+
+export class PlaylistDuplicateFailedError extends Data.TaggedError(
+	'PlaylistDuplicateFailed',
+)<{
+	playlistName?: string
+	cause?: unknown
+}> {}
+
+export class UpdateTrackLocalPlaylistsFailedError extends Data.TaggedError(
+	'UpdateTrackLocalPlaylistsFailed',
+)<{
+	trackId?: number | string
+	cause?: unknown
+}> {}
+
+export class BatchAddTracksToLocalPlaylistFailedError extends Data.TaggedError(
+	'BatchAddTracksToLocalPlaylistFailed',
+)<{
+	playlistId?: number | string
+	trackCount?: number
+	cause?: unknown
+}> {}
+
+export type FacadeError =
+	| SyncTaskAlreadyRunningError
+	| SyncCollectionFailedError
+	| SyncMultiPageFailedError
+	| SyncFavoriteFailedError
+	| FetchRemotePlaylistMetadataFailedError
+	| PlaylistDuplicateFailedError
+	| UpdateTrackLocalPlaylistsFailedError
+	| BatchAddTracksToLocalPlaylistFailedError

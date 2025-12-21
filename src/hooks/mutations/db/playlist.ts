@@ -7,6 +7,7 @@ import type { Playlist } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { UpdatePlaylistPayload } from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
+import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import { useMutation } from '@tanstack/react-query'
@@ -28,13 +29,7 @@ export const usePlaylistSync = () => {
 		}: {
 			remoteSyncId: number
 			type: Playlist['type']
-		}) => {
-			const result = await syncFacade.sync(remoteSyncId, type)
-			if (result.isErr()) {
-				throw result.error
-			}
-			return result.value
-		},
+		}) => effectToPromise(syncFacade.sync(remoteSyncId, type)),
 		onSuccess: async (id) => {
 			toast.success('同步成功')
 			if (!id) return
@@ -73,11 +68,7 @@ export const useUpdateTrackLocalPlaylists = () => {
 			toRemovePlaylistIds: number[]
 			trackPayload: CreateTrackPayload
 			artistPayload?: CreateArtistPayload | null
-		}) => {
-			const res = await playlistFacade.updateTrackLocalPlaylists(args)
-			if (res.isErr()) throw res.error
-			return res.value
-		},
+		}) => effectToPromise(playlistFacade.updateTrackLocalPlaylists(args)),
 		onSuccess: async (trackId, { toAddPlaylistIds, toRemovePlaylistIds }) => {
 			toast.success('操作成功')
 			const promises: Promise<unknown>[] = []
@@ -123,13 +114,7 @@ export const useDuplicatePlaylist = () => {
 		}: {
 			playlistId: number
 			name: string
-		}) => {
-			const result = await playlistFacade.duplicatePlaylist(playlistId, name)
-			if (result.isErr()) {
-				throw result.error
-			}
-			return result.value
-		},
+		}) => effectToPromise(playlistFacade.duplicatePlaylist(playlistId, name)),
 		onSuccess: async () => {
 			toast.success('复制成功')
 			await queryClient.invalidateQueries({
@@ -156,14 +141,9 @@ export const useEditPlaylistMetadata = () => {
 			payload: UpdatePlaylistPayload
 		}) => {
 			if (playlistId === 0) return
-			const result = await playlistService.updatePlaylistMetadata(
-				playlistId,
-				payload,
+			return effectToPromise(
+				playlistService.updatePlaylistMetadata(playlistId, payload),
 			)
-			if (result.isErr()) {
-				throw result.error
-			}
-			return result.value
 		},
 		onSuccess: async (_, variables) => {
 			toast.success('操作成功')
@@ -188,13 +168,8 @@ export const useEditPlaylistMetadata = () => {
 export const useDeletePlaylist = () => {
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'deletePlaylist'],
-		mutationFn: async ({ playlistId }: { playlistId: number }) => {
-			const result = await playlistService.deletePlaylist(playlistId)
-			if (result.isErr()) {
-				throw result.error
-			}
-			return result.value
-		},
+		mutationFn: async ({ playlistId }: { playlistId: number }) =>
+			effectToPromise(playlistService.deletePlaylist(playlistId)),
 		onSuccess: async () => {
 			toast.success('删除成功')
 			await queryClient.invalidateQueries({
@@ -219,16 +194,13 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 		}: {
 			trackIds: number[]
 			playlistId: number
-		}) => {
-			const result = await playlistService.batchRemoveTracksFromLocalPlaylist(
-				playlistId,
-				trackIds,
-			)
-			if (result.isErr()) {
-				throw result.error
-			}
-			return result.value
-		},
+		}) =>
+			effectToPromise(
+				playlistService.batchRemoveTracksFromLocalPlaylist(
+					playlistId,
+					trackIds,
+				),
+			),
 		onSuccess: async (data, variables) => {
 			toast.success('删除成功', {
 				description:
@@ -268,14 +240,13 @@ export const useCreateNewLocalPlaylist = () => {
 			title: string
 			description?: string
 			coverUrl?: string
-		}) => {
-			const result = await playlistService.createPlaylist({
-				...payload,
-				type: 'local',
-			})
-			if (result.isErr()) throw result.error
-			return result.value
-		},
+		}) =>
+			effectToPromise(
+				playlistService.createPlaylist({
+					...payload,
+					type: 'local',
+				}),
+			),
 		onSuccess: async (playlist) => {
 			toast.success('创建播放列表成功')
 			await Promise.all([
@@ -309,14 +280,10 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 		}: {
 			playlistId: number
 			payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
-		}) => {
-			const result = await playlistFacade.batchAddTracksToLocalPlaylist(
-				playlistId,
-				payloads,
-			)
-			if (result.isErr()) throw result.error
-			return result.value
-		},
+		}) =>
+			effectToPromise(
+				playlistFacade.batchAddTracksToLocalPlaylist(playlistId, payloads),
+			),
 		onSuccess: async (trackIds, { playlistId }) => {
 			toast.success('添加成功')
 			const promises = [

@@ -2,6 +2,7 @@ import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
+import { effectToPromise } from '@/utils/effect'
 import { useMutation } from '@tanstack/react-query'
 
 queryClient.setMutationDefaults(['db', 'track'], {
@@ -19,15 +20,14 @@ export const useRenameTrack = () => {
 			trackId: number
 			newTitle: string
 			source: Track['source']
-		}) => {
-			const result = await trackService.updateTrack({
-				id: trackId,
-				title: newTitle,
-				source,
-			})
-			if (result.isErr()) throw result.error
-			return result.value
-		},
+		}) =>
+			effectToPromise(
+				trackService.updateTrack({
+					id: trackId,
+					title: newTitle,
+					source,
+				}),
+			),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
 				queryKey: [...playlistKeys.all, 'playlistContents'],

@@ -12,7 +12,12 @@
 			"@/hooks/*": ["hooks/*"],
 			"@/utils/*": ["utils/*"],
 			"@/features/*": ["features/*"]
-		}
+		},
+		"plugins": [
+			{
+				"name": "@effect/language-service"
+			}
+		]
 	},
 	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

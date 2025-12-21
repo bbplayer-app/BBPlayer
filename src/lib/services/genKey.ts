@@ -1,38 +1,33 @@
-import type { ServiceError } from '@/lib/errors'
-import {
-	createNotImplementedError,
-	createValidationError,
-} from '@/lib/errors/service'
+import { NotImplementedError, ValidationError } from '@/lib/errors/service'
 import type { TrackSourceData } from '@/types/services/track'
-import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
+import { Effect } from 'effect'
 
 export default function generateUniqueTrackKey(
 	payload: TrackSourceData,
-): Result<string, ServiceError> {
+): Effect.Effect<string, ValidationError | NotImplementedError> {
 	switch (payload.source) {
 		case 'bilibili': {
 			const biliMeta = payload.bilibiliMetadata
 			if (!biliMeta.bvid) {
-				return err(createValidationError('bvid 不存在'))
+				return Effect.fail(new ValidationError({ message: 'bvid 不存在' }))
 			}
 			return biliMeta.isMultiPage
-				? ok(`${payload.source}::${biliMeta.bvid}::${biliMeta.cid}`)
-				: ok(`${payload.source}::${biliMeta.bvid}`)
+				? Effect.succeed(`${payload.source}::${biliMeta.bvid}::${biliMeta.cid}`)
+				: Effect.succeed(`${payload.source}::${biliMeta.bvid}`)
 		}
 		case 'local': {
-			// const localMeta = payload.localMetadata
-			// return ok(`${payload.source}::${localMeta.localPath}`)
 			// 基于 localPath 的业务主键太不可靠，考虑基于文件生成 hash
-			return err(
-				createNotImplementedError(`未实现 local source 的 uniqueKey 生成`),
+			return Effect.fail(
+				new NotImplementedError({
+					message: '本地文件曲目的唯一标识生成尚未实现',
+				}),
 			)
 		}
 		default:
-			return err(
-				createValidationError(
-					`未知的 Track source: ${(payload as TrackSourceData).source}}`,
-				),
+			return Effect.fail(
+				new ValidationError({
+					message: `不支持的曲目来源：${String(payload)}`,
+				}),
 			)
 	}
 }

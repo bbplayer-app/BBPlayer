@@ -1,6 +1,7 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
 import type { Router } from 'expo-router'
+import { effectToPromise } from './effect'
 import { toastAndLogError } from './error-handling'
 import log from './log'
 import toast from './toast'
@@ -136,19 +137,23 @@ export async function matchSearchStrategies(
 
 			// 1.1 如果是 b23.tv 短链的话，去解析并把解析结果当作完整 URL 继续解析
 			if (/(^|\.)b23\.tv$/i.test(url.hostname)) {
-				const resolved = await bilibiliApi.getB23ResolvedUrl(url.toString())
-				if (resolved.isErr()) {
+				let resolved = null
+				try {
+					resolved = await effectToPromise(
+						bilibiliApi.getB23ResolvedUrl(url.toString()),
+					)
+				} catch (e) {
 					logger.debug('1.1 短链解析失败', { query })
-					return { type: 'B23_RESOLVE_ERROR', query, error: resolved.error }
+					return { type: 'B23_RESOLVE_ERROR', query, error: e as Error }
 				}
 
 				try {
-					const resolvedUrlObj = new URL(resolved.value)
+					const resolvedUrlObj = new URL(resolved)
 					const parsed = parseUrlToStrategy(resolvedUrlObj)
 					if (parsed) {
 						logger.debug('1.1 短链解析并作为完整 URL 继续解析', {
 							original: url.toString(),
-							resolved: resolved.value,
+							resolved: resolved,
 							strategy: parsed.type,
 						})
 						return parsed
@@ -157,7 +162,7 @@ export async function matchSearchStrategies(
 					// 继续后面检查一下 Bvid
 				}
 
-				const bvid = BV_REGEX.exec(resolved.value)?.[1]
+				const bvid = BV_REGEX.exec(resolved)?.[1]
 				if (bvid) {
 					const normalized = 'BV' + bvid.slice(2)
 					logger.debug('1.1 短链解析后在 resolved 字符串中匹配到 BV', {
@@ -168,12 +173,12 @@ export async function matchSearchStrategies(
 
 				logger.debug('1.1 短链解析出错（无已识别内容）', {
 					original: url.toString(),
-					resolved: resolved.value,
+					resolved: resolved,
 				})
 				return {
 					type: 'B23_NO_BVID_ERROR',
 					query,
-					resolvedUrl: resolved.value,
+					resolvedUrl: resolved,
 				}
 			}
 
