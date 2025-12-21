@@ -5,6 +5,7 @@ export class BilibiliRequestFailedError extends Data.TaggedError(
 )<{
 	message: string
 	cause?: unknown
+	msgCode?: number
 }> {
 	readonly vendor = 'Bilibili'
 }

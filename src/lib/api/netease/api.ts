@@ -1,4 +1,5 @@
-import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
+import type { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
+import { NeteaseSearchResultNoMatchError } from '@/lib/errors/thirdparty/netease'
 import type {
 	NeteaseLyricResponse,
 	NeteaseSearchResponse,
@@ -6,7 +7,7 @@ import type {
 } from '@/types/apis/netease'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
-import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
+import { Effect } from 'effect'
 import type { RequestOptions } from './request'
 import { createRequest } from './request'
 import { createOption } from './utils'
@@ -19,7 +20,7 @@ interface SearchParams {
 }
 
 export class NeteaseApi {
-	getLyrics(id: number): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
+	getLyrics(id: number): Effect.Effect<NeteaseLyricResponse, NeteaseApiError> {
 		const data = {
 			id: id,
 			lv: -1,
@@ -31,12 +32,12 @@ export class NeteaseApi {
 			'/api/song/lyric',
 			data,
 			requestOptions,
-		).map((res) => res.body)
+		).pipe(Effect.map((res) => res.body))
 	}
 
 	search(
 		params: SearchParams,
-	): ResultAsync<LyricSearchResult, NeteaseApiError> {
+	): Effect.Effect<LyricSearchResult, NeteaseApiError> {
 		const type = params.type ?? 1
 		const endpoint =
 			type == '2000' ? '/api/search/voice/get' : '/api/cloudsearch/pc'
@@ -55,16 +56,18 @@ export class NeteaseApi {
 			endpoint,
 			data,
 			requestOptions,
-		).map((res) => {
-			if (!res.body.result?.songs) return []
-			return res.body.result.songs.map((song) => ({
-				source: 'netease',
-				duration: song.dt / 1000,
-				title: song.name,
-				artist: song.ar[0].name,
-				remoteId: song.id,
-			}))
-		})
+		).pipe(
+			Effect.map((res) => {
+				if (!res.body.result?.songs) return []
+				return res.body.result.songs.map((song) => ({
+					source: 'netease',
+					duration: song.dt / 1000,
+					title: song.name,
+					artist: song.ar[0].name,
+					remoteId: song.id,
+				}))
+			}),
+		)
 	}
 
 	/**
@@ -137,14 +140,13 @@ export class NeteaseApi {
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
-	): ResultAsync<ParsedLrc, NeteaseApiError> {
-		return this.search({ keywords: keyword, limit: 10 }).andThen(
-			(searchResult) => {
+	): Effect.Effect<ParsedLrc, NeteaseApiError> {
+		return this.search({ keywords: keyword, limit: 10 }).pipe(
+			Effect.flatMap((searchResult) => {
 				if (searchResult.length === 0) {
-					return errAsync(
-						new NeteaseApiError({
+					return Effect.fail(
+						new NeteaseSearchResultNoMatchError({
 							message: '未搜索到相关歌曲\n\n搜索关键词：' + keyword,
-							type: 'SearchResultNoMatch',
 						}),
 					)
 				}
@@ -153,11 +155,13 @@ export class NeteaseApi {
 				// 相信网易云... 哥们儿写的规则太屎了
 				const bestMatch = searchResult[0]
 
-				return this.getLyrics(bestMatch.remoteId).andThen((lyricsResponse) => {
-					const lyricData = this.parseLyrics(lyricsResponse)
-					return okAsync(lyricData)
-				})
-			},
+				return this.getLyrics(bestMatch.remoteId).pipe(
+					Effect.map((lyricsResponse) => {
+						const lyricData = this.parseLyrics(lyricsResponse)
+						return lyricData
+					}),
+				)
+			}),
 		)
 	}
 }
