@@ -4,6 +4,8 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { BilibiliQrCodeLoginStatus } from '@/types/apis/bilibili'
+import { effectToPromise } from '@/utils/effect'
+import { flatErrorMessage } from '@/utils/log'
 import toast from '@/utils/toast'
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
@@ -105,16 +107,16 @@ const QrCodeLoginModal = () => {
 		if (status !== 'generating') return
 
 		const generateQrCode = async () => {
-			const response = await bilibiliApi.getLoginQrCode()
-			if (response.isErr()) {
+			try {
+				const response = await effectToPromise(bilibiliApi.getLoginQrCode())
+				dispatch({ type: 'GENERATE_SUCCESS', payload: response })
+			} catch (error) {
 				dispatch({
 					type: 'GENERATE_FAILURE',
-					payload: String(response.error.message),
+					payload: String(error),
 				})
 				toast.error('获取二维码失败', { id: 'bilibili-qrcode-login-error' })
 				setTimeout(() => close(), 2000)
-			} else {
-				dispatch({ type: 'GENERATE_SUCCESS', payload: response.value })
 			}
 		}
 		void generateQrCode()
@@ -124,15 +126,19 @@ const QrCodeLoginModal = () => {
 		if (status !== 'polling' || !qrcodeKey) return
 
 		const interval = setInterval(async () => {
-			const response = await bilibiliApi.pollQrCodeLoginStatus(qrcodeKey)
-			if (response.isErr()) {
-				toast.error('获取二维码登录状态失败', {
+			let response
+			try {
+				response = await effectToPromise(
+					bilibiliApi.pollQrCodeLoginStatus(qrcodeKey),
+				)
+			} catch (error) {
+				toast.error(`获取二维码登录状态失败: ${flatErrorMessage(error)}`, {
 					id: 'bilibili-qrcode-login-status-error',
 				})
 				return
 			}
 
-			const pollData = response.value
+			const pollData = response
 			if (
 				pollData.status ===
 				BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS
