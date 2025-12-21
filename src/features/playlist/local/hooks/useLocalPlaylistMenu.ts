@@ -2,6 +2,7 @@ import { alert } from '@/components/modals/AlertModal'
 import type { TrackMenuItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { queryClient } from '@/lib/config/queryClient'
 import type { Playlist, Track } from '@/types/core/media'
+import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import { convertToOrpheusTrack, getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
@@ -29,12 +30,8 @@ export function useLocalPlaylistMenu({
 
 	const playNext = useCallback(async (track: Track) => {
 		try {
-			const oTrack = convertToOrpheusTrack(track)
-			if (oTrack.isErr()) {
-				toastAndLogError('转换 Track 失败', oTrack.error, SCOPE)
-				return
-			}
-			await Orpheus.playNext(oTrack.value)
+			const oTrack = await effectToPromise(convertToOrpheusTrack(track))
+			await Orpheus.playNext(oTrack)
 			toast.success('添加到下一首播放成功')
 		} catch (error) {
 			toastAndLogError('添加到队列失败', error, SCOPE)

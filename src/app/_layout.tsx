@@ -4,9 +4,10 @@ import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
 import { initializeSentry } from '@/lib/config/sentry'
-import drizzleDb, { expoDb } from '@/lib/db/db'
-import lyricService from '@/lib/services/lyricService'
+import { dbClient, expoDb } from '@/lib/db/db'
+import { lyricService } from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
+import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
@@ -16,6 +17,7 @@ import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
+import { Effect } from 'effect'
 import * as Network from 'expo-network'
 import { SplashScreen, Stack, useNavigationContainerRef } from 'expo-router'
 import { useSQLiteDevTools } from 'expo-sqlite-devtools'
@@ -46,7 +48,7 @@ function onAppStateChange(status: AppStateStatus) {
 export default Sentry.wrap(function RootLayout() {
 	const [appIsReady, setAppIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } = useMigrations(
-		drizzleDb,
+		dbClient,
 		migrations,
 	)
 	const open = useModalStore((state) => state.open)
@@ -81,17 +83,18 @@ export default Sentry.wrap(function RootLayout() {
 				setAppIsReady(true)
 
 				setImmediate(() => {
-					void cleanOldLogFiles(7)
-						.andTee((deleted) => {
-							if (deleted > 0) {
-								logger.info(`已清理 ${deleted} 个旧日志文件`)
-							}
-						})
-						.orTee((e) => {
-							logger.warning('清理旧日志失败', { error: e.message })
-						})
+					void effectToPromise(
+						cleanOldLogFiles(7).pipe(
+							Effect.tap((deleted) => {
+								if (deleted > 0) {
+									logger.info(`已清理 ${deleted} 个旧日志文件`)
+								}
+							}),
+						),
+						true,
+					)
 
-					void lyricService.migrateFromOldFormat()
+					void effectToPromise(lyricService.migrateFromOldFormat())
 
 					const initializePlayer = () => {
 						if (!global.playerIsReady) {

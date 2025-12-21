@@ -670,3 +670,5 @@ export const TrackServiceLive = Layer.effect(
 		}
 	}),
 )
+
+export const trackService = Effect.serviceFunctions(TrackService)

@@ -1,6 +1,7 @@
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { alert } from '@/components/modals/AlertModal'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { AppRuntime } from '@/lib/effect/runtime'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -8,7 +9,9 @@ import { getInternalPlayUri } from '@/utils/player'
 import { formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
+import { Effect } from 'effect'
 import * as Clipboard from 'expo-clipboard'
+import type { Router } from 'expo-router'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -68,6 +71,55 @@ function buildSubtitlePieces(
 	return { isLocal, authorName, authorClickable, countText, syncLine }
 }
 
+const onClickDownloadAllProgram = (playlistId: number, router: Router) => {
+	const program = Effect.gen(function* () {
+		const tracks = yield* playlistService.getPlaylistTracks(playlistId)
+		const downloadTasks = tracks
+			.filter((item) =>
+				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+			)
+			.map((t) => {
+				const url = getInternalPlayUri(t)
+				if (!url) return null
+				return {
+					id: t.uniqueKey,
+					title: t.title,
+					url: url,
+					artist: t.artist?.name,
+					artwork: t.coverUrl ?? undefined,
+					duration: t.duration,
+				}
+			})
+			.filter((t): t is NonNullable<typeof t> => t !== null)
+
+		if (downloadTasks.length === 0) {
+			return
+		}
+
+		yield* Effect.sync(() => {
+			void Orpheus.multiDownload(downloadTasks)
+		})
+
+		yield* Effect.sync(() => {
+			useModalStore.getState().doAfterModalHostClosed(() => {
+				router.push('/download')
+			})
+		})
+	}).pipe(
+		Effect.catchAll((error) =>
+			Effect.sync(() => {
+				toastAndLogError(
+					'获取播放列表内容失败',
+					error,
+					'UI.Playlist.Local.Header',
+				)
+			}),
+		),
+	)
+
+	return program
+}
+
 /**
  * 播放列表头部组件。
  */
@@ -85,40 +137,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		() => buildSubtitlePieces(playlist),
 		[playlist],
 	)
-	const onClickDownloadAll = useCallback(async () => {
-		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
-		if (tracksResult.isErr()) {
-			toastAndLogError(
-				'获取播放列表内容失败',
-				tracksResult.error,
-				'UI.Playlist.Local.Header',
-			)
-			return
-		}
-		void Orpheus.multiDownload(
-			tracksResult.value
-				.filter((item) =>
-					item.source === 'bilibili'
-						? item.bilibiliMetadata.videoIsValid
-						: true,
-				)
-				.map((t) => {
-					const url = getInternalPlayUri(t)
-					if (!url) return
-					return {
-						id: t.uniqueKey,
-						title: t.title,
-						url: url,
-						artist: t.artist?.name,
-						artwork: t.coverUrl ?? undefined,
-						duration: t.duration,
-					}
-				})
-				.filter((t) => !!t),
-		)
-		useModalStore.getState().doAfterModalHostClosed(() => {
-			router.push('/download')
-		})
+	const onClickDownloadAll = useCallback(() => {
+		void AppRuntime.runPromise(onClickDownloadAllProgram(playlist.id, router))
 	}, [playlist.id, router])
 
 	if (!playlist.title) return null

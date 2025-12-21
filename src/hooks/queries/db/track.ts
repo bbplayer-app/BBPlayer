@@ -1,6 +1,6 @@
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
-import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
+import { effectToPromise } from '@/utils/effect'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 queryClient.setQueryDefaults(['db', 'tracks'], {
@@ -44,13 +44,14 @@ export function usePlayCountLeaderBoardPaginated(
 		),
 
 		queryFn: async ({ pageParam }) =>
-			returnOrThrowAsync(
+			effectToPromise(
 				trackService.getPlayCountLeaderBoardPaginated({
 					limit,
 					onlyCompleted,
 					initialLimit,
 					cursor: pageParam,
 				}),
+				true,
 			),
 		initialPageParam: undefined as
 			| { lastPlayCount: number; lastUpdatedAt: number; lastId: number }
@@ -67,8 +68,9 @@ export function useTotalPlaybackDuration(onlyCompleted = true) {
 	return useQuery({
 		queryKey: trackKeys.totalPlaybackDuration(onlyCompleted),
 		queryFn: () =>
-			returnOrThrowAsync(
+			effectToPromise(
 				trackService.getTotalPlaybackDuration({ onlyCompleted }),
+				true,
 			),
 	})
 }

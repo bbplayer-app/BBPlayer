@@ -311,3 +311,5 @@ export const PlaylistFacadeLive = Layer.effect(
 		}
 	}),
 )
+
+export const playlistFacade = Effect.serviceFunctions(PlaylistFacade)

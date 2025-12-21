@@ -704,3 +704,5 @@ export const SyncFacadeLive = Layer.effect(
 		}
 	}),
 )
+
+export const syncFacade = Effect.serviceFunctions(SyncFacade)

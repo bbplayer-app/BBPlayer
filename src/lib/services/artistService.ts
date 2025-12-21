@@ -308,3 +308,5 @@ export const ArtistServiceLive = Layer.effect(
 		}
 	}),
 )
+
+export const artistService = Effect.serviceFunctions(ArtistService)

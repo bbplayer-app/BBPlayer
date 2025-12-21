@@ -99,3 +99,5 @@ export const BilibiliFacadeLive = Layer.succeed(
 			}),
 	}),
 )
+
+export const bilibiliFacade = Effect.serviceFunctions(BilibiliFacade)

@@ -13,3 +13,5 @@ export class PlayerAudioUrlNotFoundError extends Data.TaggedError(
 	source: string
 	cause?: unknown
 }> {}
+
+export type PlayerError = PlayerUnknownSourceError | PlayerAudioUrlNotFoundError

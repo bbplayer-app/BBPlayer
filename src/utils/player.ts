@@ -2,14 +2,17 @@ import { trackKeys } from '@/hooks/queries/db/track'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
-import type { PlayerError } from '@/lib/errors/player'
-import { createPlayerError } from '@/lib/errors/player'
+import { AppRuntime } from '@/lib/effect/runtime'
+import {
+	PlayerAudioUrlNotFoundError,
+	type PlayerError,
+} from '@/lib/errors/player'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import type { TrackService } from '@/lib/services/trackService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
+import { Effect, Array as EffectArray, Option } from 'effect'
 import { toastAndLogError } from './error-handling'
 import log, { flatErrorMessage } from './log'
 
@@ -22,87 +25,91 @@ const logger = log.extend('Utils.Player')
  */
 function convertToOrpheusTrack(
 	track: Track,
-): Result<OrpheusTrack, BilibiliApiError | PlayerError> {
-	// logger.debug('转换 Track 为 OrpheusTrack', {
-	// 	trackId: track.id,
-	// 	title: track.title,
-	// 	artist: track.artist,
-	// })
-
+): Effect.Effect<OrpheusTrack, BilibiliApiError | PlayerError> {
 	const url = getInternalPlayUri(track)
-	const volume = {
-		measured_i: 0,
-		target_i: 0,
-	}
 
-	// 如果没有有效的 URL，返回错误
-	if (!url) {
-		const errorMsg = '没有找到有效的音频流 URL'
-		logger.warning(`${errorMsg}`, track)
-		return err(
-			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
-		)
-	}
-
-	const orpheusTrack: OrpheusTrack = {
-		id: track.uniqueKey,
-		url,
-		title: track.title,
-		artist: track.artist?.name,
-		artwork: track.coverUrl ?? undefined,
-		duration: track.duration,
-		loudness: volume,
-	}
-
-	// logger.debug('OrpheusTrack 转换完成', {
-	// 	title: orpheusTrack.title,
-	// 	id: orpheusTrack.id,
-	// })
-	return ok(orpheusTrack)
+	return Effect.fromNullable(url).pipe(
+		Effect.mapError(
+			() => new PlayerAudioUrlNotFoundError({ source: track.source }),
+		),
+		Effect.tapError(() =>
+			Effect.sync(() => logger.warning('没有找到有效的音频流 URL', track)),
+		),
+		Effect.map((validUrl) => ({
+			id: track.uniqueKey,
+			url: validUrl,
+			title: track.title,
+			artist: track.artist?.name,
+			artwork: track.coverUrl ?? undefined,
+			duration: track.duration,
+		})),
+	)
 }
 
 /**
  * 上报播放记录
  * 由于这只是一个非常边缘的功能，我们不关心他是否出错，所以发生报错时只写个 log，返回 void
  */
-async function reportPlaybackHistory(
+function reportPlaybackHistory(
 	uniqueKey: string,
 	position: number,
-): Promise<void> {
-	if (!useAppStore.getState().settings.sendPlayHistory) return
-	if (!useAppStore.getState().hasBilibiliCookie()) return
-	const trackResult = await trackService.getTrackByUniqueKey(uniqueKey)
-	if (trackResult.isErr()) {
-		toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
-		return
-	}
-	const track = trackResult.value
-	if (
-		track.source !== 'bilibili' ||
-		!track.bilibiliMetadata.cid ||
-		!track.bilibiliMetadata.bvid
-	)
-		return
-	logger.debug('上报播放记录', {
-		bvid: track.bilibiliMetadata.bvid,
-		cid: track.bilibiliMetadata.cid,
-		position,
-	})
-	const result = await bilibiliApi.reportPlaybackHistory(
-		track.bilibiliMetadata.bvid,
-		track.bilibiliMetadata.cid,
-		position,
-	)
-	if (result.isErr()) {
-		logger.warning('上报播放记录到 bilibili 失败', {
-			params: {
+): Effect.Effect<void, BilibiliApiError | PlayerError, TrackService> {
+	return Effect.gen(function* () {
+		const shouldReport = yield* Effect.sync(() => {
+			const state = useAppStore.getState()
+			return state.settings.sendPlayHistory && state.hasBilibiliCookie()
+		})
+
+		if (!shouldReport) return
+
+		const track = yield* trackService.getTrackByUniqueKey(uniqueKey).pipe(
+			Effect.catchAll((error) =>
+				Effect.sync(() => {
+					toastAndLogError('查询 track 失败：', error, 'Utils.Player')
+					return null
+				}),
+			),
+		)
+
+		if (!track) return
+
+		const { source } = track
+		if (
+			source !== 'bilibili' ||
+			!track.bilibiliMetadata.cid ||
+			!track.bilibiliMetadata.bvid
+		) {
+			return
+		}
+
+		yield* Effect.sync(() =>
+			logger.debug('上报播放记录', {
 				bvid: track.bilibiliMetadata.bvid,
 				cid: track.bilibiliMetadata.cid,
-			},
-			error: result.error,
-		})
-	}
-	return
+				position,
+			}),
+		)
+
+		yield* bilibiliApi
+			.reportPlaybackHistory(
+				track.bilibiliMetadata.bvid,
+				track.bilibiliMetadata.cid,
+				position,
+			)
+			.pipe(
+				Effect.catchAll((error) =>
+					Effect.sync(() => {
+						logger.warning('上报播放记录到 bilibili 失败', {
+							params: {
+								bvid: track.bilibiliMetadata.bvid,
+								cid: track.bilibiliMetadata.cid,
+							},
+							error,
+						})
+					}),
+				),
+			)
+	})
 }
 
 /**
@@ -126,59 +133,79 @@ async function addToQueue({
 	startFromKey?: string
 	playNext: boolean
 }) {
-	if (!tracks || tracks.length === 0) {
-		return
-	}
-	if (playNext && tracks.length > 1) {
-		toastAndLogError(
-			'AddToQueueError',
-			'只能将单曲插入到下一首播放，已取消本次操作。',
-			'Utils.Player',
-		)
-		return
-	}
-	logger.debug('添加曲目到播放队列', {
-		trackCount: tracks.length,
-		playNow,
-		clearQueue,
-		startFromKey,
-		playNext,
-	})
+	const program = Effect.gen(function* () {
+		if (!tracks || tracks.length === 0) {
+			return
+		}
 
-	try {
-		const orpheusTracks: OrpheusTrack[] = []
-		for (const track of tracks) {
-			const result = convertToOrpheusTrack(track)
-			if (result.isOk()) {
-				orpheusTracks.push(result.value)
-			} else {
-				logger.error('转换为 OrpheusTrack 失败，跳过该曲目', {
-					trackId: track.id,
-					error: result.error,
-				})
-			}
+		if (playNext && tracks.length > 1) {
+			return yield* Effect.sync(() => {
+				toastAndLogError(
+					'AddToQueueError',
+					'只能将单曲插入到下一首播放，已取消本次操作。',
+					'Utils.Player',
+				)
+			})
 		}
-		if (orpheusTracks.length === 0) {
+
+		yield* Effect.sync(() =>
+			logger.debug('添加曲目到播放队列', {
+				trackCount: tracks.length,
+				playNow,
+				clearQueue,
+				startFromKey,
+				playNext,
+			}),
+		)
+
+		const maybeOrpheusTracks = yield* Effect.forEach(tracks, (track) =>
+			convertToOrpheusTrack(track).pipe(
+				Effect.map((t) => Option.some(t)),
+				Effect.catchAll((error) =>
+					Effect.sync(() => {
+						logger.error('转换为 OrpheusTrack 失败，跳过该曲目', {
+							trackId: track.id,
+							error,
+						})
+						return Option.none()
+					}),
+				),
+			),
+		)
+
+		const validTracks = EffectArray.getSomes(maybeOrpheusTracks)
+
+		if (validTracks.length === 0) {
 			return
 		}
+
 		if (playNext) {
-			// 前面已经做过长度检查，这里直接取第一个
-			await Orpheus.playNext(orpheusTracks[0])
+			const firstTrack = validTracks[0]
+
+			yield* Effect.promise(() => Orpheus.playNext(firstTrack))
+
 			if (playNow) {
-				await Orpheus.play()
-				return
+				yield* Effect.promise(() => Orpheus.play())
 			}
 			return
 		}
-		await Orpheus.addToEnd(orpheusTracks, startFromKey, clearQueue)
-		// 原生层已经处理了 startFromKey 的播放逻辑，会在添加后直接播放，这里只需要处理 playNow 即可
+
+		yield* Effect.tryPromise(() =>
+			Orpheus.addToEnd(validTracks, startFromKey, clearQueue),
+		)
+
 		if (playNow && !startFromKey) {
-			await Orpheus.play()
-			return
+			yield* Effect.tryPromise(() => Orpheus.play())
 		}
-	} catch (e) {
-		logger.error('添加到队列失败：', { error: e })
-	}
+	}).pipe(
+		Effect.catchAll((e) =>
+			Effect.sync(() => {
+				logger.error('添加到队列失败：', { error: e })
+			}),
+		),
+	)
+
+	await AppRuntime.runPromise(program)
 }
 
 function getInternalPlayUri(track: Track) {
@@ -193,54 +220,78 @@ function getInternalPlayUri(track: Track) {
 	return undefined
 }
 
-async function finalizeAndRecordCurrentTrack(
+function finalizeAndRecordCurrentTrack(
 	uniqueKey: string,
 	realDuration: number,
 	position: number,
 ) {
-	try {
+	const program = Effect.gen(function* () {
 		const playedSeconds = Math.max(0, Math.floor(position))
 		const duration = Math.max(1, Math.floor(realDuration))
 		const effectivePlayed = Math.min(playedSeconds, duration)
 		const threshold = Math.max(Math.floor(duration * 0.9), duration - 2)
 		const completed = effectivePlayed >= threshold
-		logger.info('完成播放', { uniqueKey })
-		logger.debug('完成播放标记', {
-			playedSeconds,
-			duration,
-			effectivePlayed,
-			threshold,
-			completed,
-			uniqueKey,
-		})
 
-		const res = await trackService.addPlayRecordFromUniqueKey(uniqueKey, {
-			startTime: (Date.now() - playedSeconds * 1000) / 1000,
-			durationPlayed: effectivePlayed,
-			completed,
-		})
-
-		if (res.isErr()) {
-			logger.debug('增加播放记录失败', {
+		yield* Effect.sync(() => {
+			logger.info('完成播放', { uniqueKey })
+			logger.debug('完成播放标记', {
+				playedSeconds,
+				duration,
+				effectivePlayed,
+				threshold,
+				completed,
 				uniqueKey,
-				message: flatErrorMessage(res.error),
 			})
+		})
+
+		const now = yield* Effect.sync(() => Date.now())
+
+		const addRecordResult = yield* trackService
+			.addPlayRecordFromUniqueKey(uniqueKey, {
+				startTime: (now - playedSeconds * 1000) / 1000,
+				durationPlayed: effectivePlayed,
+				completed,
+			})
+			.pipe(
+				Effect.andThen(() =>
+					Effect.sync(() => {
+						logger.debug('增加播放记录成功', { uniqueKey })
+						return true
+					}),
+				),
+				Effect.catchAll((error) =>
+					Effect.sync(() => {
+						logger.debug('增加播放记录失败', {
+							uniqueKey,
+							message: flatErrorMessage(error),
+						})
+						return false
+					}),
+				),
+			)
+
+		if (!addRecordResult) {
 			return
 		}
-		logger.debug('增加播放记录成功', {
-			uniqueKey,
-		})
 
-		void queryClient.invalidateQueries({
-			queryKey: trackKeys.leaderBoard(),
-		})
-
-		void reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
-			logger.error('上报播放历史失败', error),
+		yield* Effect.promise(() =>
+			queryClient.invalidateQueries({
+				queryKey: trackKeys.leaderBoard(),
+			}),
 		)
-	} catch (error) {
-		logger.debug('增加播放记录异常', error)
-	}
+
+		yield* reportPlaybackHistory(uniqueKey, effectivePlayed).pipe(
+			Effect.catchAll((error) =>
+				Effect.sync(() => logger.error('上报播放历史失败', error)),
+			),
+		)
+	}).pipe(
+		Effect.catchAllCause((cause) =>
+			Effect.sync(() => logger.debug('增加播放记录异常', cause)),
+		),
+	)
+
+	void AppRuntime.runPromise(program)
 }
 
 export {

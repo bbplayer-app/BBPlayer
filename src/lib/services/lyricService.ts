@@ -51,7 +51,7 @@ export class LyricService extends Context.Tag('LyricService')<
 			metadata: BilibiliTrack['bilibiliMetadata'],
 		) => Effect.Effect<string | undefined, Error>
 
-		clearAllLyrics: () => Effect.Effect<true>
+		clearAllLyrics: () => Effect.Effect<true, FileSystemError>
 	}
 >() {}
 
@@ -226,23 +226,17 @@ export const LyricServiceLive = Layer.effect(
 						track.bilibiliMetadata,
 					)
 
-					// 如果获取到了精确歌名，或者没获取到（undefined），这里逻辑是串行的
-					// 原逻辑: if Bilibili meta exists -> getPrecise -> (if success) getBestMatched -> save
-					// 注意：原逻辑 result.isErr() 会导致 undefined，然后 undefined 传给 preciseKeyword 会导致 fallback 到 title
-					// 这里的 musicName 可能是 undefined，符合原逻辑
-
 					const lyrics = yield* getBestMatchedLyrics(track, musicName)
 
-					yield* Effect.logInfo('自动搜索最佳匹配的歌词完成')
+					yield* Effect.sync(() => logger.info('自动搜索最佳匹配的歌词完成'))
 
-					// 这里需要手动构造 uniqueKey，因为 getBestMatchedLyrics 没传
 					yield* saveLyricsToFile(lyrics, track.uniqueKey)
 					return lyrics
 				}
 
 				// 3. 最后尝试默认搜索
 				const lyrics = yield* getBestMatchedLyrics(track)
-				yield* Effect.logInfo('自动搜索最佳匹配的歌词完成')
+				yield* Effect.sync(() => logger.info('自动搜索最佳匹配的歌词完成'))
 				yield* saveLyricsToFile(lyrics, track.uniqueKey)
 
 				return lyrics
@@ -305,7 +299,7 @@ export const LyricServiceLive = Layer.effect(
 
 					yield* saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
 				}
-				yield* Effect.logInfo('歌词格式迁移完成')
+				yield* Effect.sync(() => logger.info('歌词格式迁移完成'))
 			}).pipe(
 				Effect.catchAll((e) =>
 					Effect.sync(() => {
@@ -326,19 +320,26 @@ export const LyricServiceLive = Layer.effect(
 				const exists = yield* Effect.sync(() => lyricsDir.exists)
 
 				if (!exists) {
-					yield* Effect.logDebug('歌词目录不存在，无需清理')
+					yield* Effect.sync(() => logger.debug('歌词目录不存在，无需清理'))
 					return true
 				}
 
-				yield* Effect.sync(() => {
+				yield* Effect.try(() => {
 					lyricsDir.delete()
 					lyricsDir.create({
 						intermediates: true,
 						idempotent: true,
 					})
-				})
+				}).pipe(
+					Effect.catchAll((e) => {
+						return new FileSystemError({
+							message: '清理歌词缓存失败',
+							cause: e,
+						})
+					}),
+				)
 
-				yield* Effect.logInfo('歌词缓存已清理')
+				yield* Effect.sync(() => logger.info('歌词缓存已清理'))
 				return true as const
 			}).pipe(Effect.withSpan('LyricService.clearAllLyrics'))
 
@@ -353,3 +354,5 @@ export const LyricServiceLive = Layer.effect(
 		}
 	}),
 )
+
+export const lyricService = Effect.serviceFunctions(LyricService)

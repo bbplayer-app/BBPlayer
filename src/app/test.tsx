@@ -3,11 +3,13 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { expoDb } from '@/lib/db/db'
-import lyricService from '@/lib/services/lyricService'
+import { AppRuntime } from '@/lib/effect/runtime'
+import { lyricService } from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
 import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
+import { Effect } from 'effect'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -111,17 +113,24 @@ export default function TestPage() {
 
 	const clearAllLyrcis = () => {
 		const clearAction = () => {
-			setLoading(true)
-			const result = lyricService.clearAllLyrics()
-			if (result.isOk()) {
-				toast.success('清除成功')
-			} else {
-				toast.error('清除歌词失败', {
-					description:
-						result.error instanceof Error ? result.error.message : '未知错误',
-				})
-			}
-			setLoading(false)
+			const program = Effect.gen(function* () {
+				yield* Effect.sync(() => setLoading(true))
+
+				yield* lyricService.clearAllLyrics()
+
+				yield* Effect.sync(() => toast.success('清除成功'))
+			}).pipe(
+				Effect.catchAll((error) =>
+					Effect.sync(() => {
+						toast.error('清除歌词失败', {
+							description: error instanceof Error ? error.message : '未知错误',
+						})
+					}),
+				),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			)
+
+			void AppRuntime.runPromise(program)
 		}
 		alert(
 			'清除所有歌词',

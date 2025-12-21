@@ -929,3 +929,5 @@ export const PlaylistServiceLive = Layer.effect(
 		}
 	}),
 )
+
+export const playlistService = Effect.serviceFunctions(PlaylistService)
