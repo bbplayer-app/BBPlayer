@@ -39,7 +39,7 @@ type SelectTrackWithMetadata = Omit<
 export interface TrackServiceSignature {
 	readonly formatTrack: (
 		dbTrack: SelectTrackWithMetadata | undefined | null,
-	) => Effect.Effect<Track, ServiceError | ValidationError>
+	) => Effect.Effect<Track, ServiceError | ValidationError, DrizzleDB>
 
 	readonly createTrack: (
 		payload: CreateTrackPayload,
@@ -49,30 +49,43 @@ export interface TrackServiceSignature {
 		| ServiceError
 		| ValidationError
 		| TrackNotFoundError
-		| NotImplementedError
+		| NotImplementedError,
+		DrizzleDB
 	>
 
 	readonly updateTrack: (
 		payload: UpdateTrackPayload,
-	) => Effect.Effect<Track, DatabaseError | ServiceError | TrackNotFoundError>
+	) => Effect.Effect<
+		Track,
+		DatabaseError | ServiceError | TrackNotFoundError,
+		DrizzleDB
+	>
 
 	readonly getTrackById: (
 		id: number,
-	) => Effect.Effect<Track, DatabaseError | TrackNotFoundError | ServiceError>
+	) => Effect.Effect<
+		Track,
+		DatabaseError | TrackNotFoundError | ServiceError,
+		DrizzleDB
+	>
 
 	readonly deleteTrack: (
 		id: number,
-	) => Effect.Effect<{ deletedId: number }, DatabaseError | TrackNotFoundError>
+	) => Effect.Effect<
+		{ deletedId: number },
+		DatabaseError | TrackNotFoundError,
+		DrizzleDB
+	>
 
 	readonly addPlayRecordFromTrackId: (
 		trackId: number,
 		record: PlayRecord,
-	) => Effect.Effect<true, DatabaseError>
+	) => Effect.Effect<true, DatabaseError, DrizzleDB>
 
 	readonly addPlayRecordFromUniqueKey: (
 		uniqueKey: string,
 		record: PlayRecord,
-	) => Effect.Effect<true, DatabaseError | TrackNotFoundError>
+	) => Effect.Effect<true, DatabaseError | TrackNotFoundError, DrizzleDB>
 
 	readonly getTrackByBilibiliMetadata: (
 		bilibiliMetadata: BilibiliMetadataPayload,
@@ -82,7 +95,8 @@ export interface TrackServiceSignature {
 		| TrackNotFoundError
 		| ServiceError
 		| ValidationError
-		| NotImplementedError
+		| NotImplementedError,
+		DrizzleDB
 	>
 
 	readonly findOrCreateTrack: (
@@ -93,7 +107,8 @@ export interface TrackServiceSignature {
 		| ServiceError
 		| ValidationError
 		| TrackNotFoundError
-		| NotImplementedError
+		| NotImplementedError,
+		DrizzleDB
 	>
 
 	readonly findOrCreateManyTracks: (
@@ -101,12 +116,13 @@ export interface TrackServiceSignature {
 		source: Track['source'],
 	) => Effect.Effect<
 		Map<string, number>,
-		DatabaseError | ServiceError | ValidationError | NotImplementedError
+		DatabaseError | ServiceError | ValidationError | NotImplementedError,
+		DrizzleDB
 	>
 
 	readonly findTrackIdsByUniqueKeys: (
 		uniqueKeys: string[],
-	) => Effect.Effect<Map<string, number>, DatabaseError>
+	) => Effect.Effect<Map<string, number>, DatabaseError, DrizzleDB>
 
 	readonly getPlayCountLeaderBoardPaginated: (options: {
 		limit: number
@@ -122,16 +138,21 @@ export interface TrackServiceSignature {
 				lastId: number
 			}
 		},
-		DatabaseError | ServiceError
+		DatabaseError | ServiceError,
+		DrizzleDB
 	>
 
 	readonly getTotalPlaybackDuration: (options?: {
 		onlyCompleted?: boolean
-	}) => Effect.Effect<number, DatabaseError>
+	}) => Effect.Effect<number, DatabaseError, DrizzleDB>
 
 	readonly getTrackByUniqueKey: (
 		uniqueKey: string,
-	) => Effect.Effect<Track, DatabaseError | TrackNotFoundError | ServiceError>
+	) => Effect.Effect<
+		Track,
+		DatabaseError | TrackNotFoundError | ServiceError,
+		DrizzleDB
+	>
 }
 
 export class TrackService extends Context.Tag('TrackService')<
@@ -141,9 +162,8 @@ export class TrackService extends Context.Tag('TrackService')<
 
 export const TrackServiceLive = Layer.effect(
 	TrackService,
+	// eslint-disable-next-line require-yield
 	Effect.gen(function* () {
-		const db = yield* DrizzleDB
-
 		const runDb = <A>(
 			operation: () => Promise<A>,
 			message = '数据库操作失败',
@@ -190,6 +210,7 @@ export const TrackServiceLive = Layer.effect(
 
 		const findTrackIdsByUniqueKeysHelper = (uniqueKeys: string[]) =>
 			Effect.gen(function* () {
+				const db = yield* DrizzleDB
 				if (uniqueKeys.length === 0) {
 					return new Map<string, number>()
 				}
@@ -211,6 +232,7 @@ export const TrackServiceLive = Layer.effect(
 
 		const getTrackById = (id: number) =>
 			Effect.gen(function* () {
+				const db = yield* DrizzleDB
 				const dbTrack = yield* runDb(
 					() =>
 						db.query.tracks.findFirst({
@@ -233,6 +255,7 @@ export const TrackServiceLive = Layer.effect(
 
 		const _createTrack = (payload: CreateTrackPayload) =>
 			Effect.gen(function* () {
+				const db = yield* DrizzleDB
 				if (payload.source === 'bilibili' && !payload.bilibiliMetadata) {
 					return yield* new ValidationError({
 						message: '当 source 为 bilibili 时，bilibiliMetadata 不能为空。',
@@ -298,6 +321,7 @@ export const TrackServiceLive = Layer.effect(
 
 			updateTrack: (payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { id, ...dataToUpdate } = payload
 
 					yield* runDb(
@@ -321,6 +345,7 @@ export const TrackServiceLive = Layer.effect(
 
 			deleteTrack: (id) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const results = yield* runDb(
 						() =>
 							db
@@ -338,6 +363,7 @@ export const TrackServiceLive = Layer.effect(
 
 			addPlayRecordFromTrackId: (trackId, record) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const recordJson = JSON.stringify(record)
 					yield* runDb(
 						() =>
@@ -354,6 +380,7 @@ export const TrackServiceLive = Layer.effect(
 
 			addPlayRecordFromUniqueKey: (uniqueKey, record) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const trackIds = yield* findTrackIdsByUniqueKeysHelper([uniqueKey])
 
 					const trackId = trackIds.get(uniqueKey)
@@ -378,6 +405,7 @@ export const TrackServiceLive = Layer.effect(
 
 			getTrackByBilibiliMetadata: (bilibiliMetadata) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const uniqueKey = yield* generateUniqueTrackKey({
 						source: 'bilibili',
 						bilibiliMetadata,
@@ -408,6 +436,7 @@ export const TrackServiceLive = Layer.effect(
 
 			findOrCreateTrack: (payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const uniqueKey = yield* generateUniqueTrackKey(payload)
 
 					const dbTrack = yield* runDb(
@@ -441,6 +470,7 @@ export const TrackServiceLive = Layer.effect(
 
 			findOrCreateManyTracks: (payloads, source) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					if (payloads.length === 0) {
 						return new Map<string, number>()
 					}
@@ -550,6 +580,7 @@ export const TrackServiceLive = Layer.effect(
 
 			getPlayCountLeaderBoardPaginated: (options) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { limit, onlyCompleted = true, cursor, initialLimit } = options
 					const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
 
@@ -629,6 +660,7 @@ export const TrackServiceLive = Layer.effect(
 
 			getTotalPlaybackDuration: (options) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const onlyCompleted = options?.onlyCompleted ?? true
 					let totalDurationSql
 
@@ -655,6 +687,7 @@ export const TrackServiceLive = Layer.effect(
 
 			getTrackByUniqueKey: (uniqueKey) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const dbTrack = yield* runDb(
 						() =>
 							db.query.tracks.findFirst({

@@ -1,5 +1,5 @@
 import { DrizzleDB } from '@/lib/db/db'
-import { TransactionFailedError } from '@/lib/errors'
+import type { TransactionFailedError } from '@/lib/errors'
 import type { FacadeError } from '@/lib/errors/facade'
 import {
 	BatchAddTracksToLocalPlaylistFailedError,
@@ -66,26 +66,24 @@ export const PlaylistFacadeLive = Layer.effect(
 		const playlistService = yield* PlaylistService
 		const artistService = yield* ArtistService
 		const db = yield* DrizzleDB
-		const runtime = yield* Effect.runtime()
 
 		const runInTransaction = <A, E>(
-			effect: Effect.Effect<A, E>,
-		): Effect.Effect<A, E | TransactionFailedError> => {
-			return Effect.tryPromise({
-				try: () =>
-					db.transaction(async (tx) => {
-						const runnable = effect.pipe(
-							Effect.provideService(DrizzleDB, tx as unknown as typeof db),
-						)
-						return Runtime.runPromise(runtime)(runnable)
-					}),
-				catch: (e) => {
-					return new TransactionFailedError({
-						message: 'Transaction failed',
-						cause: e,
-					})
-				},
-			}) as Effect.Effect<A, E | TransactionFailedError>
+			effect: Effect.Effect<A, E, DrizzleDB>,
+		): Effect.Effect<A, E> => {
+			return Effect.flatMap(Effect.runtime(), (currentRuntime) =>
+				Effect.tryPromise({
+					try: () =>
+						db.transaction(async (tx) => {
+							const runnable = effect.pipe(
+								Effect.provideService(DrizzleDB, tx as unknown as typeof db),
+							)
+							return Runtime.runPromise(currentRuntime)(runnable)
+						}),
+					catch: (e) => {
+						return e as E
+					},
+				}),
+			)
 		}
 
 		return {

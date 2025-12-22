@@ -30,11 +30,19 @@ export interface SyncFacadeSignature {
 	readonly addTrackFromBilibiliApi: (
 		bvid: string,
 		cid?: number,
-	) => Effect.Effect<Track, BilibiliApiError | DatabaseError | ServiceError>
+	) => Effect.Effect<
+		Track,
+		BilibiliApiError | DatabaseError | ServiceError,
+		DrizzleDB
+	>
 
 	readonly addTrackToLocal: (
 		track: Track,
-	) => Effect.Effect<Track, DatabaseError | ServiceError | ValidationError>
+	) => Effect.Effect<
+		Track,
+		DatabaseError | ServiceError | ValidationError,
+		DrizzleDB
+	>
 
 	readonly syncCollection: (
 		collectionId: number,
@@ -59,7 +67,8 @@ export interface SyncFacadeSignature {
 		| SyncTaskAlreadyRunningError
 		| DatabaseError
 		| TransactionFailedError
-		| ServiceError
+		| ServiceError,
+		DrizzleDB
 	>
 
 	readonly sync: (
@@ -72,7 +81,8 @@ export interface SyncFacadeSignature {
 		| SyncTaskAlreadyRunningError
 		| DatabaseError
 		| TransactionFailedError
-		| ServiceError
+		| ServiceError,
+		DrizzleDB
 	>
 }
 
@@ -88,25 +98,26 @@ export const SyncFacadeLive = Layer.effect(
 		const playlistService = yield* PlaylistService
 		const artistService = yield* ArtistService
 		const db = yield* DrizzleDB
-		const runtime = yield* Effect.runtime()
 
 		const syncingIds = new Set<string>()
 
 		const runInTransactionPreservingError = <A, E>(
-			effect: Effect.Effect<A, E>,
+			effect: Effect.Effect<A, E, DrizzleDB>,
 		): Effect.Effect<A, E> => {
-			return Effect.tryPromise({
-				try: () =>
-					db.transaction(async (tx) => {
-						const runnable = effect.pipe(
-							Effect.provideService(DrizzleDB, tx as unknown as typeof db),
-						)
-						return Runtime.runPromise(runtime)(runnable)
-					}),
-				catch: (e) => {
-					return e as E
-				},
-			})
+			return Effect.flatMap(Effect.runtime(), (currentRuntime) =>
+				Effect.tryPromise({
+					try: () =>
+						db.transaction(async (tx) => {
+							const runnable = effect.pipe(
+								Effect.provideService(DrizzleDB, tx as unknown as typeof db),
+							)
+							return Runtime.runPromise(currentRuntime)(runnable)
+						}),
+					catch: (e) => {
+						return e as E
+					},
+				}),
+			)
 		}
 
 		const addTrackFromBilibiliApi = (bvid: string, cid?: number) =>
@@ -217,9 +228,12 @@ export const SyncFacadeLive = Layer.effect(
 							remoteSyncId: collectionId,
 							authorId: playlistArtist.id,
 						})
-						logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-							id: playlist.id,
-						})
+						yield* Effect.logInfo(
+							'step 2: 创建 playlist 和其对应的 artist 信息完成',
+							{
+								id: playlist.id,
+							},
+						)
 
 						const uniqueArtists = new Map<number, { name: string }>()
 						for (const media of medias) {

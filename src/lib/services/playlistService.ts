@@ -33,21 +33,27 @@ import { TrackService } from './trackService'
 export interface PlaylistServiceSignature {
 	readonly createPlaylist: (
 		payload: CreatePlaylistPayload,
-	) => Effect.Effect<typeof schema.playlists.$inferSelect, DatabaseError>
+	) => Effect.Effect<
+		typeof schema.playlists.$inferSelect,
+		DatabaseError,
+		DrizzleDB
+	>
 
 	readonly updatePlaylistMetadata: (
 		playlistId: number,
 		payload: UpdatePlaylistPayload,
 	) => Effect.Effect<
 		typeof schema.playlists.$inferSelect,
-		DatabaseError | PlaylistNotFoundError
+		DatabaseError | PlaylistNotFoundError,
+		DrizzleDB
 	>
 
 	readonly deletePlaylist: (
 		playlistId: number,
 	) => Effect.Effect<
 		{ deletedId: number },
-		DatabaseError | PlaylistNotFoundError
+		DatabaseError | PlaylistNotFoundError,
+		DrizzleDB
 	>
 
 	readonly addManyTracksToLocalPlaylist: (
@@ -55,7 +61,8 @@ export interface PlaylistServiceSignature {
 		trackIds: number[],
 	) => Effect.Effect<
 		(typeof schema.playlistTracks.$inferSelect)[],
-		DatabaseError | PlaylistNotFoundError
+		DatabaseError | PlaylistNotFoundError,
+		DrizzleDB
 	>
 
 	readonly batchRemoveTracksFromLocalPlaylist: (
@@ -63,26 +70,33 @@ export interface PlaylistServiceSignature {
 		trackIdList: number[],
 	) => Effect.Effect<
 		{ removedTrackIds: number[]; missingTrackIds: number[] },
-		DatabaseError | PlaylistNotFoundError | TrackNotInPlaylistError
+		DatabaseError | PlaylistNotFoundError | TrackNotInPlaylistError,
+		DrizzleDB
 	>
 
 	readonly reorderSingleLocalPlaylistTrack: (
 		playlistId: number,
 		payload: ReorderSingleTrackPayload,
-	) => Effect.Effect<true, DatabaseError | PlaylistNotFoundError | ServiceError>
+	) => Effect.Effect<
+		true,
+		DatabaseError | PlaylistNotFoundError | ServiceError,
+		DrizzleDB
+	>
 
 	readonly getPlaylistTracks: (
 		playlistId: number,
 	) => Effect.Effect<
 		Track[],
-		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError
+		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError,
+		DrizzleDB
 	>
 
 	readonly getAllPlaylists: () => Effect.Effect<
 		(typeof schema.playlists.$inferSelect & {
 			author: typeof schema.artists.$inferSelect | null
 		})[],
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly getPlaylistMetadata: (playlistId: number) => Effect.Effect<
@@ -92,20 +106,22 @@ export interface PlaylistServiceSignature {
 				validTrackCount: number
 		  })
 		| undefined,
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly findOrCreateRemotePlaylist: (
 		payload: CreatePlaylistPayload,
 	) => Effect.Effect<
 		typeof schema.playlists.$inferSelect,
-		DatabaseError | ValidationError
+		DatabaseError | ValidationError,
+		DrizzleDB
 	>
 
 	readonly replacePlaylistAllTracks: (
 		playlistId: number,
 		trackIds: number[],
-	) => Effect.Effect<true, DatabaseError>
+	) => Effect.Effect<true, DatabaseError, DrizzleDB>
 
 	readonly findPlaylistByTypeAndRemoteId: (
 		type: Playlist['type'],
@@ -115,7 +131,8 @@ export interface PlaylistServiceSignature {
 				trackLinks: (typeof schema.playlistTracks.$inferSelect)[]
 		  })
 		| undefined,
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly getPlaylistById: (playlistId: number) => Effect.Effect<
@@ -124,21 +141,34 @@ export interface PlaylistServiceSignature {
 				trackLinks: (typeof schema.playlistTracks.$inferSelect)[]
 		  })
 		| undefined,
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly getLocalPlaylistsContainingTrackByUniqueKey: (
 		uniqueKey: string,
-	) => Effect.Effect<(typeof schema.playlists.$inferSelect)[], DatabaseError>
+	) => Effect.Effect<
+		(typeof schema.playlists.$inferSelect)[],
+		DatabaseError,
+		DrizzleDB
+	>
 
 	readonly getLocalPlaylistsContainingTrackById: (
 		trackId: number,
-	) => Effect.Effect<(typeof schema.playlists.$inferSelect)[], DatabaseError>
+	) => Effect.Effect<
+		(typeof schema.playlists.$inferSelect)[],
+		DatabaseError,
+		DrizzleDB
+	>
 
 	readonly searchTrackInPlaylist: (
 		playlistId: number,
 		query: string,
-	) => Effect.Effect<Track[], DatabaseError | ServiceError | ValidationError>
+	) => Effect.Effect<
+		Track[],
+		DatabaseError | ServiceError | ValidationError,
+		DrizzleDB
+	>
 
 	readonly getPlaylistTracksPaginated: (options: {
 		playlistId: number
@@ -160,7 +190,8 @@ export interface PlaylistServiceSignature {
 				lastId: number
 			}
 		},
-		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError
+		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError,
+		DrizzleDB
 	>
 }
 
@@ -172,7 +203,6 @@ export class PlaylistService extends Context.Tag('PlaylistService')<
 export const PlaylistServiceLive = Layer.effect(
 	PlaylistService,
 	Effect.gen(function* () {
-		const db = yield* DrizzleDB
 		const trackService = yield* TrackService
 
 		const runDb = <A>(
@@ -186,21 +216,24 @@ export const PlaylistServiceLive = Layer.effect(
 
 		return {
 			createPlaylist: (payload) =>
-				runDb(
-					() =>
-						db
-							.insert(schema.playlists)
-							.values({
-								title: payload.title,
-								authorId: payload.authorId,
-								description: payload.description,
-								coverUrl: payload.coverUrl,
-								type: payload.type,
-								remoteSyncId: payload.remoteSyncId,
-							} satisfies CreatePlaylistPayload)
-							.returning(),
-					'创建播放列表失败',
-				).pipe(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db
+									.insert(schema.playlists)
+									.values({
+										title: payload.title,
+										authorId: payload.authorId,
+										description: payload.description,
+										coverUrl: payload.coverUrl,
+										type: payload.type,
+										remoteSyncId: payload.remoteSyncId,
+									} satisfies CreatePlaylistPayload)
+									.returning(),
+							'创建播放列表失败',
+						),
+					),
 					Effect.map((rows) => rows[0]),
 					Effect.withSpan('db:insert:playlist'),
 					Effect.withSpan('service:playlist:createPlaylist'),
@@ -208,6 +241,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			updatePlaylistMetadata: (playlistId, payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const existing = yield* runDb(
 						() =>
 							db.query.playlists.findFirst({
@@ -239,6 +273,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			deletePlaylist: (playlistId) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const existing = yield* runDb(
 						() =>
 							db.query.playlists.findFirst({
@@ -266,6 +301,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			addManyTracksToLocalPlaylist: (playlistId, trackIds) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					if (trackIds.length === 0) {
 						return []
 					}
@@ -342,6 +378,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			batchRemoveTracksFromLocalPlaylist: (playlistId, trackIdList) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					if (trackIdList.length === 0) {
 						return { removedTrackIds: [], missingTrackIds: [] }
 					}
@@ -411,6 +448,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			reorderSingleLocalPlaylistTrack: (playlistId, payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { trackId, fromOrder, toOrder } = payload
 
 					if (fromOrder === toOrder) {
@@ -508,6 +546,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			getPlaylistTracks: (playlistId) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const type = yield* runDb(
 						() =>
 							db.query.playlists.findFirst({
@@ -560,30 +599,35 @@ export const PlaylistServiceLive = Layer.effect(
 				}).pipe(Effect.withSpan('service:playlist:getPlaylistTracks')),
 
 			getAllPlaylists: () =>
-				runDb(
-					() =>
-						db.query.playlists.findMany({
-							orderBy: desc(schema.playlists.updatedAt),
-							with: {
-								author: true,
-							},
-						}),
-					'获取所有 playlists 失败',
-				).pipe(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.playlists.findMany({
+									orderBy: desc(schema.playlists.updatedAt),
+									with: {
+										author: true,
+									},
+								}),
+							'获取所有 playlists 失败',
+						),
+					),
 					Effect.withSpan('db:query:playlists'),
 					Effect.withSpan('service:playlist:getAllPlaylists'),
 				),
 
 			getPlaylistMetadata: (playlistId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: eq(schema.playlists.id, playlistId),
-							with: {
-								author: true,
-							},
-							extras: {
-								validTrackCount: sql<number>`(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.playlists.findFirst({
+									where: eq(schema.playlists.id, playlistId),
+									with: {
+										author: true,
+									},
+									extras: {
+										validTrackCount: sql<number>`(
             SELECT COUNT(pt.track_id)
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
@@ -591,16 +635,18 @@ export const PlaylistServiceLive = Layer.effect(
             WHERE pt.playlist_id = ${schema.playlists.id}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
-							},
-						}),
-					'获取 playlist 元数据失败',
-				).pipe(
+									},
+								}),
+							'获取 playlist 元数据失败',
+						),
+					),
 					Effect.withSpan('db:query:playlist'),
 					Effect.withSpan('service:playlist:getPlaylistMetadata'),
 				),
 
 			findOrCreateRemotePlaylist: (payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { remoteSyncId, type } = payload
 					if (!remoteSyncId || type === 'local') {
 						return yield* new ValidationError({
@@ -645,6 +691,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			replacePlaylistAllTracks: (playlistId, trackIds) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					yield* runDb(
 						() =>
 							db
@@ -681,41 +728,48 @@ export const PlaylistServiceLive = Layer.effect(
 				}).pipe(Effect.withSpan('service:playlist:replacePlaylistAllTracks')),
 
 			findPlaylistByTypeAndRemoteId: (type, remoteId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: and(
-								eq(schema.playlists.type, type),
-								eq(schema.playlists.remoteSyncId, remoteId),
-							),
-							with: {
-								trackLinks: true,
-							},
-						}),
-					'查询播放列表失败',
-				).pipe(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.playlists.findFirst({
+									where: and(
+										eq(schema.playlists.type, type),
+										eq(schema.playlists.remoteSyncId, remoteId),
+									),
+									with: {
+										trackLinks: true,
+									},
+								}),
+							'查找播放列表失败',
+						),
+					),
 					Effect.withSpan('db:query:playlist'),
 					Effect.withSpan('service:playlist:findPlaylistByTypeAndRemoteId'),
 				),
 
 			getPlaylistById: (playlistId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: eq(schema.playlists.id, playlistId),
-							with: {
-								author: true,
-								trackLinks: true,
-							},
-						}),
-					'查询播放列表失败',
-				).pipe(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.playlists.findFirst({
+									where: eq(schema.playlists.id, playlistId),
+									with: {
+										author: true,
+										trackLinks: true,
+									},
+								}),
+							'查询播放列表失败',
+						),
+					),
 					Effect.withSpan('db:query:playlist'),
 					Effect.withSpan('service:playlist:getPlaylistById'),
 				),
 
 			getLocalPlaylistsContainingTrackByUniqueKey: (uniqueKey) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const trackIds = yield* trackService.findTrackIdsByUniqueKeys([
 						uniqueKey,
 					])
@@ -749,24 +803,27 @@ export const PlaylistServiceLive = Layer.effect(
 				),
 
 			getLocalPlaylistsContainingTrackById: (trackId) =>
-				runDb(
-					() =>
-						db.query.playlists.findMany({
-							where: and(
-								eq(schema.playlists.type, 'local'),
-								inArray(
-									schema.playlists.id,
-									db
-										.select({
-											playlistId: schema.playlistTracks.playlistId,
-										})
-										.from(schema.playlistTracks)
-										.where(eq(schema.playlistTracks.trackId, trackId)),
-								),
-							),
-						}),
-					'获取包含该歌曲的本地播放列表失败',
-				).pipe(
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.playlists.findMany({
+									where: and(
+										eq(schema.playlists.type, 'local'),
+										inArray(
+											schema.playlists.id,
+											db
+												.select({
+													playlistId: schema.playlistTracks.playlistId,
+												})
+												.from(schema.playlistTracks)
+												.where(eq(schema.playlistTracks.trackId, trackId)),
+										),
+									),
+								}),
+							'获取包含该歌曲的本地播放列表失败',
+						),
+					),
 					Effect.withSpan('db:query:playlists'),
 					Effect.withSpan(
 						'service:playlist:getLocalPlaylistsContainingTrackById',
@@ -775,6 +832,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			searchTrackInPlaylist: (playlistId, query) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const q = `%${query.trim().toLowerCase()}%`
 
 					const trackIdSubq = db
@@ -825,6 +883,7 @@ export const PlaylistServiceLive = Layer.effect(
 
 			getPlaylistTracksPaginated: (options) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { limit, cursor, playlistId, initialLimit } = options
 					const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
 

@@ -15,13 +15,18 @@ import { TrackService } from './trackService'
 export interface ArtistServiceSignature {
 	readonly createArtist: (
 		payload: CreateArtistPayload,
-	) => Effect.Effect<typeof schema.artists.$inferSelect, DatabaseError>
+	) => Effect.Effect<
+		typeof schema.artists.$inferSelect,
+		DatabaseError,
+		DrizzleDB
+	>
 
 	readonly findOrCreateArtist: (
 		payload: CreateArtistPayload,
 	) => Effect.Effect<
 		typeof schema.artists.$inferSelect,
-		DatabaseError | ValidationError
+		DatabaseError | ValidationError,
+		DrizzleDB
 	>
 
 	readonly updateArtist: (
@@ -29,34 +34,42 @@ export interface ArtistServiceSignature {
 		payload: UpdateArtistPayload,
 	) => Effect.Effect<
 		typeof schema.artists.$inferSelect,
-		DatabaseError | ArtistNotFoundError
+		DatabaseError | ArtistNotFoundError,
+		DrizzleDB
 	>
 
 	readonly deleteArtist: (
 		artistId: number,
-	) => Effect.Effect<{ deletedId: number }, DatabaseError | ArtistNotFoundError>
+	) => Effect.Effect<
+		{ deletedId: number },
+		DatabaseError | ArtistNotFoundError,
+		DrizzleDB
+	>
 
 	readonly getArtistTracks: (
 		artistId: number,
-	) => Effect.Effect<Track[], DatabaseError | ServiceError>
+	) => Effect.Effect<Track[], DatabaseError | ServiceError, DrizzleDB>
 
 	readonly getAllArtists: () => Effect.Effect<
 		(typeof schema.artists.$inferSelect)[],
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly getArtistById: (
 		artistId: number,
 	) => Effect.Effect<
 		Option.Option<typeof schema.artists.$inferSelect>,
-		DatabaseError
+		DatabaseError,
+		DrizzleDB
 	>
 
 	readonly findOrCreateManyRemoteArtists: (
 		payloads: CreateArtistPayload[],
 	) => Effect.Effect<
 		Map<string, typeof schema.artists.$inferSelect>,
-		DatabaseError | ValidationError
+		DatabaseError | ValidationError,
+		DrizzleDB
 	>
 }
 
@@ -68,7 +81,6 @@ export class ArtistService extends Context.Tag('ArtistService')<
 export const ArtistServiceLive = Layer.effect(
 	ArtistService,
 	Effect.gen(function* () {
-		const db = yield* DrizzleDB
 		const trackService = yield* TrackService
 
 		const runDb = <A>(
@@ -86,18 +98,21 @@ export const ArtistServiceLive = Layer.effect(
 
 		return {
 			createArtist: (payload) =>
-				runDb(
-					() => db.insert(schema.artists).values(payload).returning(),
-					'创建 artist 失败',
-				)
-					.pipe(
-						Effect.map((rows) => rows[0]),
-						Effect.withSpan('db:insert:artist'),
-					)
-					.pipe(Effect.withSpan('service:artist:createArtist')),
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() => db.insert(schema.artists).values(payload).returning(),
+							'创建 artist 失败',
+						),
+					),
+					Effect.map((rows) => rows[0]),
+					Effect.withSpan('db:insert:artist'),
+					Effect.withSpan('service:artist:createArtist'),
+				),
 
 			findOrCreateArtist: (payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const { source, remoteId } = payload
 
 					if (!source || !remoteId) {
@@ -105,6 +120,8 @@ export const ArtistServiceLive = Layer.effect(
 							message: 'source 和 remoteId 在此方法中是必需的',
 						})
 					}
+
+					yield* Effect.logDebug('正在查找 artist', { source, remoteId })
 
 					const existingArtist = yield* runDb(
 						() =>
@@ -131,6 +148,7 @@ export const ArtistServiceLive = Layer.effect(
 
 			updateArtist: (artistId, payload) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const existing = yield* runDb(
 						() =>
 							db.query.artists.findFirst({
@@ -163,6 +181,7 @@ export const ArtistServiceLive = Layer.effect(
 
 			deleteArtist: (artistId) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					// 检查是否存在
 					const existing = yield* runDb(
 						() =>
@@ -191,6 +210,7 @@ export const ArtistServiceLive = Layer.effect(
 
 			getArtistTracks: (artistId) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					const dbTracks = yield* runDb(
 						() =>
 							db.query.tracks.findMany({
@@ -220,26 +240,36 @@ export const ArtistServiceLive = Layer.effect(
 				}).pipe(Effect.withSpan('service:artist:getArtistTracks')),
 
 			getAllArtists: () =>
-				runDb(() => db.query.artists.findMany(), '获取所有 artist 列表失败')
-					.pipe(Effect.withSpan('db:query:artists'))
-					.pipe(Effect.withSpan('service:artist:getAllArtists')),
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() => db.query.artists.findMany(),
+							'获取所有 artist 列表失败',
+						),
+					),
+					Effect.withSpan('db:query:artists'),
+					Effect.withSpan('service:artist:getAllArtists'),
+				),
 
 			getArtistById: (artistId) =>
-				runDb(
-					() =>
-						db.query.artists.findFirst({
-							where: eq(schema.artists.id, artistId),
-						}),
-					`通过 ID ${artistId} 获取 artist 失败`,
-				)
-					.pipe(
-						Effect.map(Option.fromNullable),
-						Effect.withSpan('db:query:artist'),
-					)
-					.pipe(Effect.withSpan('service:artist:getArtistById')),
+				DrizzleDB.pipe(
+					Effect.flatMap((db) =>
+						runDb(
+							() =>
+								db.query.artists.findFirst({
+									where: eq(schema.artists.id, artistId),
+								}),
+							`通过 ID ${artistId} 获取 artist 失败`,
+						),
+					),
+					Effect.map(Option.fromNullable),
+					Effect.withSpan('db:query:artist'),
+					Effect.withSpan('service:artist:getArtistById'),
+				),
 
 			findOrCreateManyRemoteArtists: (payloads) =>
 				Effect.gen(function* () {
+					const db = yield* DrizzleDB
 					if (payloads.length === 0) {
 						return new Map()
 					}

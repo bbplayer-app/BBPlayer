@@ -7,12 +7,12 @@ import { LyricServiceLive } from '@/lib/services/lyricService'
 import { PlaylistServiceLive } from '@/lib/services/playlistService'
 import { TrackServiceLive } from '@/lib/services/trackService'
 import { Layer, ManagedRuntime } from 'effect'
+import { makeExpoFileLogger } from './logger/fs'
 
 const DBLayer = DatabaseLive
 
 const TrackServiceLiveReady = TrackServiceLive.pipe(Layer.provide(DBLayer))
 const ArtistServiceLiveReady = ArtistServiceLive.pipe(
-	Layer.provide(DBLayer),
 	Layer.provide(TrackServiceLiveReady),
 )
 const PlaylistServiceLiveReady = PlaylistServiceLive.pipe(
@@ -44,6 +44,13 @@ const FacadesLayer = Layer.mergeAll(
 	BilibiliFacadeLiveReady,
 )
 
-const AppLive = Layer.mergeAll(FacadesLayer, DBLayer, ServicesLayer)
+const FileLoggerLayer = makeExpoFileLogger()
+
+const AppLive = Layer.mergeAll(
+	FacadesLayer,
+	DBLayer,
+	ServicesLayer,
+	FileLoggerLayer,
+)
 
 export const AppRuntime = ManagedRuntime.make(AppLive)
