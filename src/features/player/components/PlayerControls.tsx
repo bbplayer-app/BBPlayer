@@ -1,4 +1,5 @@
 import * as Haptics from '@/utils/haptics'
+import logInstance from '@/utils/log'
 import {
 	Orpheus,
 	PlaybackState,
@@ -59,6 +60,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 							Haptics.AndroidHaptics.Context_Click,
 						)
 						const isPlaying = await Orpheus.getIsPlaying()
+						logInstance.debug('isPlaying', isPlaying)
 						void (isPlaying ? Orpheus.pause() : Orpheus.play())
 					}}
 					mode='contained'
