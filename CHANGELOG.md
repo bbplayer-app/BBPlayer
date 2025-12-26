@@ -12,6 +12,11 @@
 - remove unexpected white space above bottom tabs (Thanks to @imoyy #107)
 - 修复歌曲播放完成后点击播放，无法重新播放的问题
 
+### Added
+
+- 增加 NowPlayingBar 底部沉浸样式
+- 增加 NowPlayingBar 滑动手势操作
+
 ### Changed
 
 - 切换到 Effect-TS
