@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
+	Directions,
 	Gesture,
 	GestureDetector,
 	RectButton,
@@ -125,8 +126,34 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			scheduleOnRN(() => Orpheus.skipToNext())
 		}
 	})
+
+	const navigateOnPlayerUpFling = Gesture.Fling()
+		.direction(Directions.UP)
+		.onStart(() => {
+			scheduleOnRN(router.navigate, '/player')
+		})
+
+	const preFling = Gesture.Fling()
+		.direction(Directions.LEFT)
+		.onStart(() => {
+			scheduleOnRN(() => Orpheus.skipToPrevious())
+		})
+
+	const nextFling = Gesture.Fling()
+		.direction(Directions.RIGHT)
+		.onStart(() => {
+			scheduleOnRN(() => Orpheus.skipToNext())
+		})
+
 	const outerTap = Gesture.Tap()
-		.requireExternalGestureToFail(prevTap, playTap, nextTap)
+		.requireExternalGestureToFail(
+			prevTap,
+			playTap,
+			nextTap,
+			navigateOnPlayerUpFling,
+			preFling,
+			nextFling,
+		)
 		.onBegin(() => {
 			opacity.value = withTiming(0.7, { duration: 100 })
 		})
@@ -134,9 +161,16 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			opacity.value = withTiming(1, { duration: 100 })
 
 			if (success) {
-				scheduleOnRN(router.push, '/player')
+				scheduleOnRN(router.navigate, '/player')
 			}
 		})
+
+	const combinedGesture = Gesture.Race(
+		navigateOnPlayerUpFling,
+		preFling,
+		nextFling,
+		outerTap,
+	)
 
 	const playerStyle =
 		nowPlayingBarStyle === 'bottom'
@@ -155,7 +189,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			style={styles.nowPlayingBarContainer}
 		>
 			{isVisible && (
-				<GestureDetector gesture={outerTap}>
+				<GestureDetector gesture={combinedGesture}>
 					<Animated.View
 						style={[
 							playerStyle,
