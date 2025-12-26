@@ -212,7 +212,7 @@ const SettingsSection = memo(function SettingsSection() {
 	}
 	const setNowPlayingBarStyle = (style: 'float' | 'bottom') => {
 		setSettings({ nowPlayingBarStyle: style })
-		setPlayerBGMenuVisible(false)
+		setNowPlayerBarMenuVisible(false)
 	}
 
 	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {

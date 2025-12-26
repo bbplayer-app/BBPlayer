@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
 		borderTopRightRadius: 24,
 		paddingHorizontal: 20,
 		position: 'relative',
-		height: 64,
+		height: 70,
 	},
 	nowPlayingBarFloat: {
 		flex: 1,
