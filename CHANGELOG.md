@@ -5,6 +5,17 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- remove unexpected white space above bottom tabs (Thanks to @imoyy #107)
+- 修复歌曲播放完成后点击播放，无法重新播放的问题
+
+### Changed
+
+- 切换到 Effect-TS
+
 ## [2.1.4] - 2025-12-20
 
 ### Added
