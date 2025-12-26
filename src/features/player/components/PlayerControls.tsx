@@ -62,9 +62,11 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						const isPlaying = await Orpheus.getIsPlaying()
 						logInstance.debug('isPlaying', isPlaying)
 						if (isPlaying) {
-							void Orpheus.pause().catch((e) => logInstance.error('pause', e))
+							await Orpheus.pause()
 						} else {
-							void Orpheus.play().catch((e) => logInstance.error('play', e))
+							// 或许可以解决 play 无响应的问题？
+							await Orpheus.pause()
+							await Orpheus.play()
 						}
 					}}
 					mode='contained'

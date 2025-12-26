@@ -113,7 +113,9 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				if (isPlaying) {
 					void Orpheus.pause()
 				} else {
-					void Orpheus.play()
+					// 或许可以解决 play 无响应的问题？
+					await Orpheus.pause()
+					await Orpheus.play()
 				}
 			}, isPlaying)
 		}
