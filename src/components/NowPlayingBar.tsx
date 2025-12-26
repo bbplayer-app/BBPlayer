@@ -172,7 +172,10 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								source={{ uri: currentTrack.coverUrl ?? undefined }}
 								style={[
 									styles.nowPlayingBarImage,
-									{ borderColor: colors.primary },
+									{
+										borderColor: colors.primary,
+										borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
+									},
 								]}
 								recyclingKey={currentTrack.uniqueKey}
 								cachePolicy={'none'}
@@ -227,7 +230,14 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</GestureDetector>
 							</View>
 						</View>
-						<View style={styles.nowPlayingBarProgressContainer}>
+						<View
+							style={[
+								styles.nowPlayingBarProgressContainer,
+								nowPlayingBarStyle === 'bottom'
+									? { left: 0, right: 0 }
+									: { width: '88%', left: 26, right: 0 },
+							]}
+						>
 							<ProgressBar />
 						</View>
 					</Animated.View>
@@ -242,7 +252,7 @@ const styles = StyleSheet.create({
 		width: '100%',
 	},
 	progressBarTrack: {
-		height: 1,
+		height: 2,
 		overflow: 'hidden',
 		position: 'relative',
 	},
@@ -294,7 +304,6 @@ const styles = StyleSheet.create({
 	nowPlayingBarImage: {
 		height: 48,
 		width: 48,
-		borderRadius: 24,
 		borderWidth: 1,
 		zIndex: 2,
 	},
@@ -313,11 +322,9 @@ const styles = StyleSheet.create({
 		padding: 10,
 	},
 	nowPlayingBarProgressContainer: {
-		width: '86%',
 		alignSelf: 'center',
 		position: 'absolute',
 		bottom: 0,
-		left: 25,
 		zIndex: 1,
 	},
 })
