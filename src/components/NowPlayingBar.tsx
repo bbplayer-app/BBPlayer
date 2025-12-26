@@ -1,5 +1,6 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
 import {
 	Orpheus,
@@ -84,6 +85,10 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
 
+	const nowPlayingBarStyle = useAppStore(
+		(state) => state.settings.nowPlayingBarStyle,
+	)
+
 	const finalPlayingIndicator =
 		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
 
@@ -133,6 +138,11 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			}
 		})
 
+	const playerStyle =
+		nowPlayingBarStyle === 'bottom'
+			? [styles.nowPlayingBarBottom]
+			: [styles.nowPlayingBarFloat]
+
 	const animatedStyle = useAnimatedStyle(() => {
 		return {
 			opacity: opacity.get(),
@@ -148,10 +158,11 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				<GestureDetector gesture={outerTap}>
 					<Animated.View
 						style={[
-							styles.nowPlayingBar,
+							playerStyle,
 							{
 								backgroundColor: colors.elevation.level2,
-								marginBottom: insets.bottom + 10,
+								marginBottom:
+									nowPlayingBarStyle === 'bottom' ? 0 : insets.bottom + 10,
 							},
 							animatedStyle,
 						]}
@@ -249,7 +260,17 @@ const styles = StyleSheet.create({
 		right: 0,
 		bottom: 0,
 	},
-	nowPlayingBar: {
+	nowPlayingBarBottom: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		borderTopLeftRadius: 24,
+		borderTopRightRadius: 24,
+		paddingHorizontal: 20,
+		position: 'relative',
+		height: 64,
+	},
+	nowPlayingBarFloat: {
 		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',

@@ -47,6 +47,7 @@ temp-builds
 .yarn/install-state.gz
 .vscode
 .zed
+.idea
 
 .gemini/
 gha-creds-*.json
