@@ -61,7 +61,11 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						)
 						const isPlaying = await Orpheus.getIsPlaying()
 						logInstance.debug('isPlaying', isPlaying)
-						void (isPlaying ? Orpheus.pause() : Orpheus.play())
+						if (isPlaying) {
+							void Orpheus.pause().catch((e) => logInstance.error('pause', e))
+						} else {
+							void Orpheus.play().catch((e) => logInstance.error('play', e))
+						}
 					}}
 					mode='contained'
 				/>
