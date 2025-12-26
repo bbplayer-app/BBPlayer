@@ -50,7 +50,7 @@ export default function Library() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<View
 				style={{
-					paddingBottom: 8,
+					paddingBottom: 0,
 					flex: 1,
 					paddingTop: insets.top + 8,
 				}}

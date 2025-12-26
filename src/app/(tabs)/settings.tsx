@@ -42,7 +42,7 @@ export default function SettingsPage() {
 				style={{
 					flex: 1,
 					paddingTop: insets.top + 8,
-					paddingBottom: haveTrack ? 70 : insets.bottom,
+					paddingBottom: haveTrack ? 70 : 0,
 				}}
 			>
 				<View style={styles.header}>
