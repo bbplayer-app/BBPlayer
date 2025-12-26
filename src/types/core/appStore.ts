@@ -6,6 +6,7 @@ interface Settings {
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
 	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
+	nowPlayingBarStyle: 'float' | 'bottom'
 }
 
 interface AppState {
