@@ -54,10 +54,11 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 				<IconButton
 					icon={finalPlayingIndicator}
 					size={48}
-					onPress={() => {
+					onPress={async () => {
 						void Haptics.performAndroidHapticsAsync(
 							Haptics.AndroidHaptics.Context_Click,
 						)
+						const isPlaying = await Orpheus.getIsPlaying()
 						void (isPlaying ? Orpheus.pause() : Orpheus.play())
 					}}
 					mode='contained'

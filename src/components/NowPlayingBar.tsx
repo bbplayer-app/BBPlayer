@@ -102,8 +102,9 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Context_Click,
 			)
-			scheduleOnRN((_isPlaying) => {
-				if (_isPlaying) {
+			scheduleOnRN(async (_isPlaying) => {
+				const isPlaying = await Orpheus.getIsPlaying()
+				if (isPlaying) {
 					void Orpheus.pause()
 				} else {
 					void Orpheus.play()
