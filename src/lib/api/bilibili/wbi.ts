@@ -1,8 +1,8 @@
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
-import { Effect } from 'effect'
 import md5 from 'md5'
+import { okAsync, type ResultAsync } from 'neverthrow'
 import { bilibiliApiClient } from './client'
 
 const logger = log.extend('3Party.Bilibili.Wbi')
@@ -85,7 +85,7 @@ function getWbiKeysFromStorage() {
 /**
  * 获取最新的 img_key 和 sub_key
  */
-function getWbiKeys(): Effect.Effect<
+function getWbiKeys(): ResultAsync<
 	{
 		img_key: string
 		sub_key: string
@@ -95,38 +95,34 @@ function getWbiKeys(): Effect.Effect<
 	const localKeys = getWbiKeysFromStorage()
 	if (localKeys) {
 		if (isSameDayAsToday(localKeys.timestamp)) {
-			return Effect.succeed(localKeys)
+			return okAsync(localKeys)
 		}
 		logger.debug('本地 wbi_keys 已过期，重新获取')
 	}
 	const result = bilibiliApiClient.get<{
 		wbi_img: { img_url: string; sub_url: string }
 	}>('/x/web-interface/nav', undefined)
-	return result.pipe(
-		Effect.map(({ wbi_img: { img_url, sub_url } }) => {
-			const img_key = img_url.slice(
-				img_url.lastIndexOf('/') + 1,
-				img_url.lastIndexOf('.'),
-			)
-			const sub_key = sub_url.slice(sub_url.lastIndexOf('/') + 1)
-			storage.set(
-				'wbi_keys',
-				JSON.stringify({
-					img_key: img_key,
-					sub_key: sub_key,
-					timestamp: Date.now(),
-				}),
-			)
-			return { img_key: img_key, sub_key: sub_key }
-		}),
-	)
+	return result.map(({ wbi_img: { img_url, sub_url } }) => {
+		const img_key = img_url.slice(
+			img_url.lastIndexOf('/') + 1,
+			img_url.lastIndexOf('.'),
+		)
+		const sub_key = sub_url.slice(sub_url.lastIndexOf('/') + 1)
+		storage.set(
+			'wbi_keys',
+			JSON.stringify({
+				img_key: img_key,
+				sub_key: sub_key,
+				timestamp: Date.now(),
+			}),
+		)
+		return { img_key: img_key, sub_key: sub_key }
+	})
 }
 
 export default function getWbiEncodedParams(
 	params: Record<string, string | number | object>,
 ) {
 	const result = getWbiKeys()
-	return result.pipe(
-		Effect.map(({ img_key, sub_key }) => encWbi(params, img_key, sub_key)),
-	)
+	return result.map(({ img_key, sub_key }) => encWbi(params, img_key, sub_key))
 }

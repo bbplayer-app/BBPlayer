@@ -2,7 +2,6 @@ import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-resu
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliTrack } from '@/types/core/media'
-import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
@@ -27,11 +26,18 @@ export function useSearchInteractions() {
 				})
 				return
 			}
-			try {
-				await effectToPromise(syncFacade.addTrackToLocal(track))
-			} catch (e) {
-				toastAndLogError('将 track 录入本地失败', e, 'UI.Playlist.Remote')
-				reportErrorToSentry(e, '将 track 录入本地失败', 'UI.Playlist.Remote')
+			const createIt = await syncFacade.addTrackToLocal(track)
+			if (createIt.isErr()) {
+				toastAndLogError(
+					'将 track 录入本地失败',
+					createIt.error,
+					'UI.Playlist.Remote',
+				)
+				reportErrorToSentry(
+					createIt.error,
+					'将 track 录入本地失败',
+					'UI.Playlist.Remote',
+				)
 				return
 			}
 			await addToQueue({

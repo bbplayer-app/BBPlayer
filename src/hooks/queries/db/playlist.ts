@@ -1,6 +1,6 @@
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistService } from '@/lib/services/playlistService'
-import { effectToPromise } from '@/utils/effect'
+import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import {
 	keepPreviousData,
 	skipToken,
@@ -42,7 +42,7 @@ export const playlistKeys = {
 export const usePlaylistLists = () => {
 	return useQuery({
 		queryKey: playlistKeys.playlistLists(),
-		queryFn: () => effectToPromise(playlistService.getAllPlaylists()),
+		queryFn: () => returnOrThrowAsync(playlistService.getAllPlaylists()),
 	})
 }
 
@@ -50,7 +50,7 @@ export const usePlaylistContents = (playlistId: number) => {
 	return useQuery({
 		queryKey: playlistKeys.playlistAllContents(playlistId),
 		queryFn: () =>
-			effectToPromise(playlistService.getPlaylistTracks(playlistId)),
+			returnOrThrowAsync(playlistService.getPlaylistTracks(playlistId)),
 	})
 }
 
@@ -58,7 +58,7 @@ export const usePlaylistMetadata = (playlistId: number) => {
 	return useQuery({
 		queryKey: playlistKeys.playlistMetadata(playlistId),
 		queryFn: () =>
-			effectToPromise(playlistService.getPlaylistMetadata(playlistId), true),
+			returnOrThrowAsync(playlistService.getPlaylistMetadata(playlistId)),
 	})
 }
 
@@ -68,11 +68,10 @@ export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
 		queryFn:
 			uniqueKey !== undefined
 				? () =>
-						effectToPromise(
+						returnOrThrowAsync(
 							playlistService.getLocalPlaylistsContainingTrackByUniqueKey(
 								uniqueKey,
 							),
-							true,
 						)
 				: skipToken,
 		enabled: uniqueKey !== undefined,
@@ -87,9 +86,8 @@ export const useSearchTracksInPlaylist = (
 	return useQuery({
 		queryKey: playlistKeys.searchTracksInPlaylist(playlistId, query),
 		queryFn: () =>
-			effectToPromise(
+			returnOrThrowAsync(
 				playlistService.searchTrackInPlaylist(playlistId, query),
-				true,
 			),
 		enabled: !!query.trim() && startSearch,
 		placeholderData: keepPreviousData,
@@ -108,14 +106,13 @@ export const usePlaylistContentsInfinite = (
 			initialLimit,
 		),
 		queryFn: ({ pageParam }) =>
-			effectToPromise(
+			returnOrThrowAsync(
 				playlistService.getPlaylistTracksPaginated({
 					playlistId,
 					limit,
 					initialLimit,
 					cursor: pageParam,
 				}),
-				true,
 			),
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
 		initialPageParam: undefined as

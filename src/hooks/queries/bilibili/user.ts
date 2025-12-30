@@ -1,6 +1,6 @@
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { effectToPromise } from '@/utils/effect'
+import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 export const userQueryKeys = {
@@ -19,7 +19,7 @@ export const usePersonalInformation = () => {
 	const enabled = hasCookie
 	return useQuery({
 		queryKey: userQueryKeys.personalInformation(),
-		queryFn: () => effectToPromise(bilibiliApi.getUserInfo(), true),
+		queryFn: () => returnOrThrowAsync(bilibiliApi.getUserInfo()),
 		enabled,
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})
@@ -30,7 +30,7 @@ export const useRecentlyPlayed = () => {
 	const enabled = hasCookie
 	return useQuery({
 		queryKey: userQueryKeys.recentlyPlayed(),
-		queryFn: () => effectToPromise(bilibiliApi.getHistory(), true),
+		queryFn: () => returnOrThrowAsync(bilibiliApi.getHistory()),
 		enabled,
 		staleTime: 1 * 60 * 1000,
 	})
@@ -46,9 +46,8 @@ export const useInfiniteGetUserUploadedVideos = (
 	return useInfiniteQuery({
 		queryKey: userQueryKeys.uploadedVideos(mid, keyword),
 		queryFn: ({ pageParam }) =>
-			effectToPromise(
+			returnOrThrowAsync(
 				bilibiliApi.getUserUploadedVideos(mid, pageParam, keyword),
-				true,
 			),
 		enabled,
 		getNextPageParam: (lastPage) => {
@@ -69,7 +68,7 @@ export const useOtherUserInfo = (mid: number) => {
 	const enabled = !!mid && hasCookie
 	return useQuery({
 		queryKey: userQueryKeys.otherUserInfo(mid),
-		queryFn: () => effectToPromise(bilibiliApi.getOtherUserInfo(mid), true),
+		queryFn: () => returnOrThrowAsync(bilibiliApi.getOtherUserInfo(mid)),
 		enabled,
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})

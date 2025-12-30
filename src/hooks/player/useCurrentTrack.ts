@@ -1,6 +1,5 @@
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
-import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useEffect, useRef, useState } from 'react'
@@ -37,20 +36,22 @@ export function useCurrentTrack() {
 				return
 			}
 
-			let internalTrack
-			try {
-				internalTrack = await effectToPromise(
-					trackService.getTrackByUniqueKey(currentTrack.id),
-				)
-			} catch (e) {
-				setTrack(null)
-				toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useCurrentTrack')
-				return
-			}
+			const internalTrack = await trackService.getTrackByUniqueKey(
+				currentTrack.id,
+			)
 			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
 				return
 			}
-			setTrack(internalTrack)
+			if (internalTrack.isErr()) {
+				setTrack(null)
+				toastAndLogError(
+					'读取当前曲目信息失败',
+					internalTrack.error,
+					'Hooks.useCurrentTrack',
+				)
+				return
+			}
+			setTrack(internalTrack.value)
 		}
 
 		void fetchAndUpdate()

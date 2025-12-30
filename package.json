@@ -8,8 +8,7 @@
 		"android": "expo run:android",
 		"test": "jest --watchAll",
 		"lint": "eslint .",
-		"format": "eslint . --fix && prettier --write .",
-		"prepare": "effect-language-service patch"
+		"format": "eslint . --fix && prettier --write ."
 	},
 	"jest": {
 		"preset": "jest-expo",
@@ -22,9 +21,6 @@
 		"@babel/runtime": "^7.27.1",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
-		"@effect/experimental": "^0.58.0",
-		"@effect/opentelemetry": "^0.60.0",
-		"@effect/sql-drizzle": "^0.48.0",
 		"@expo/metro-runtime": "~6.1.2",
 		"@gorhom/bottom-sheet": "^5.2.6",
 		"@jest/globals": "^29.7.0",
@@ -53,7 +49,6 @@
 		"crypto-js": "^4.2.0",
 		"dayjs": "^1.11.19",
 		"drizzle-orm": "^0.44.7",
-		"effect": "^3.19.13",
 		"eslint-plugin-drizzle": "^0.2.3",
 		"eslint-plugin-react-hooks-extra": "^1.53.1",
 		"expo": "~54.0.21",
@@ -123,7 +118,6 @@
 	},
 	"devDependencies": {
 		"@babel/core": "^7.27.1",
-		"@effect/language-service": "^0.62.4",
 		"@eslint/js": "^9.36.0",
 		"@faker-js/faker": "^9.9.0",
 		"@react-native-community/cli": "latest",

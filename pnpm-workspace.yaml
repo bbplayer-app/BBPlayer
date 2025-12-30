@@ -2,6 +2,5 @@ onlyBuiltDependencies:
   - '@sentry/cli'
   - esbuild
   - lefthook
-  - msgpackr-extract
-  - react-native-logs
   - unrs-resolver
+  - react-native-logs

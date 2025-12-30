@@ -1,6 +1,5 @@
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
-import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import { useEffect, useState } from 'react'
 
@@ -20,20 +19,19 @@ export default function useCheckLinkedToPlaylist(
 
 	useEffect(() => {
 		const check = async () => {
-			let playlist
-			try {
-				playlist = await effectToPromise(
-					playlistService.findPlaylistByTypeAndRemoteId(type, remoteId),
-				)
-			} catch (e) {
+			const playlist = await playlistService.findPlaylistByTypeAndRemoteId(
+				type,
+				remoteId,
+			)
+			if (playlist.isErr()) {
 				toastAndLogError(
 					`查询 ${type}-${remoteId} 是否在本地存在失败`,
-					e,
+					playlist.error,
 					'UI.Playlist.Remote',
 				)
 				return
 			}
-			setLinkedPlaylistId(playlist ? playlist.id : undefined)
+			setLinkedPlaylistId(playlist.value ? playlist.value.id : undefined)
 		}
 		void check()
 	}, [remoteId, type])

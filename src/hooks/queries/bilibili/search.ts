@@ -1,6 +1,6 @@
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { effectToPromise } from '@/utils/effect'
 import log from '@/utils/log'
+import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 const logger = log.extend('Queries.SearchQueries')
@@ -20,7 +20,7 @@ export const useSearchResults = (query: string) => {
 	return useInfiniteQuery({
 		queryKey: searchQueryKeys.results(query),
 		queryFn: ({ pageParam = 1 }) =>
-			effectToPromise(bilibiliApi.searchVideos(query, pageParam), true),
+			returnOrThrowAsync(bilibiliApi.searchVideos(query, pageParam)),
 		enabled,
 		staleTime: 5 * 60 * 1000,
 		initialPageParam: 1,
@@ -40,7 +40,7 @@ export const useSearchResults = (query: string) => {
 export const useHotSearches = () => {
 	return useQuery({
 		queryKey: searchQueryKeys.hotSearches(),
-		queryFn: () => effectToPromise(bilibiliApi.getHotSearches(), true),
+		queryFn: () => returnOrThrowAsync(bilibiliApi.getHotSearches()),
 		staleTime: 15 * 60 * 1000,
 	})
 }
@@ -51,16 +51,12 @@ export const useSearchSuggestions = (query: string) => {
 	return useQuery({
 		queryKey: searchQueryKeys.suggestions(query),
 		queryFn: async () => {
-			try {
-				const result = await effectToPromise(
-					bilibiliApi.getSearchSuggestions(query),
-					true,
-				)
-				return result
-			} catch (_e) {
+			const result = await bilibiliApi.getSearchSuggestions(query)
+			if (result.isErr()) {
 				logger.warning('搜索建议查询失败，但无关紧要', { query })
 				return []
 			}
+			return result.value
 		},
 		enabled,
 		staleTime: 0,

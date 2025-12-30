@@ -1,5 +1,6 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { BilibiliResponseFailedError } from '@/lib/errors/thirdparty/bilibili'
+import { ThirdPartyError } from '@/lib/errors'
+import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import * as Sentry from '@sentry/react-native'
@@ -19,16 +20,13 @@ export const queryClient = new QueryClient({
 		onError: (error, query) => {
 			toastAndLogError('查询失败: ' + query.queryKey.toString(), error, 'Query')
 
-			if (
-				error instanceof BilibiliResponseFailedError &&
-				error.msgCode === -101
-			) {
+			if (error instanceof BilibiliApiError && error.data.msgCode === -101) {
 				toast.error('登录状态失效，请重新登录')
 				useModalStore.getState().open('QRCodeLogin', undefined)
 			}
 
 			// 这个错误属于三方依赖的错误，不应该报告到 Sentry
-			if ('vendor' in error) {
+			if (error instanceof ThirdPartyError) {
 				return
 			}
 

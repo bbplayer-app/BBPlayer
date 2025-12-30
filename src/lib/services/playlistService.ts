@@ -1,12 +1,17 @@
-import { DrizzleDB } from '@/lib/db/db'
+import * as Sentry from '@sentry/react-native'
+import type { SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from 'drizzle-orm'
+import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { ResultAsync, errAsync, okAsync } from 'neverthrow'
+
+import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import { DatabaseError } from '@/lib/errors'
-import type { ServiceError } from '@/lib/errors/service'
+import { ServiceError } from '@/lib/errors'
 import {
-	PlaylistNotFoundError,
-	PlaylistServiceError,
-	TrackNotInPlaylistError,
-	ValidationError,
+	DatabaseError,
+	createPlaylistNotFound,
+	createTrackNotInPlaylist,
+	createValidationError,
 } from '@/lib/errors/service'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -14,78 +19,541 @@ import type {
 	ReorderSingleTrackPayload,
 	UpdatePlaylistPayload,
 } from '@/types/services/playlist'
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	gt,
-	inArray,
-	like,
-	lt,
-	or,
-	sql,
-	type SQL,
-} from 'drizzle-orm'
-import { Context, Effect, Layer } from 'effect'
-import { TrackService } from './trackService'
+import type { TrackService } from './trackService'
+import { trackService } from './trackService'
 
-export interface PlaylistServiceSignature {
-	readonly createPlaylist: (
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
+
+/**
+ * 对于内部 tracks 的增删改操作只有 local playlist 才可以，注意方法名。
+ */
+export class PlaylistService {
+	constructor(
+		private readonly db: DBLike,
+		private readonly trackService: TrackService,
+	) {}
+
+	/**
+	 * 返回一个使用新数据库连接（例如事务）的新实例。
+	 * @param conn - 新的数据库连接或事务。
+	 * @returns 一个新的实例。
+	 */
+	withDB(conn: DBLike) {
+		return new PlaylistService(conn, this.trackService.withDB(conn))
+	}
+
+	/**
+	 * 创建一个新的播放列表。
+	 * @param payload - 创建播放列表所需的数据。
+	 * @returns ResultAsync 包含成功创建的 Playlist 或一个错误。
+	 */
+	public createPlaylist(
 		payload: CreatePlaylistPayload,
-	) => Effect.Effect<typeof schema.playlists.$inferSelect, DatabaseError>
+	): ResultAsync<typeof schema.playlists.$inferSelect, DatabaseError> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:insert:playlist', op: 'db' }, () =>
+				this.db
+					.insert(schema.playlists)
+					.values({
+						title: payload.title,
+						authorId: payload.authorId,
+						description: payload.description,
+						coverUrl: payload.coverUrl,
+						type: payload.type,
+						remoteSyncId: payload.remoteSyncId,
+					} satisfies CreatePlaylistPayload)
+					.returning(),
+			),
+			(e) => new DatabaseError('创建播放列表失败', { cause: e }),
+		).andThen((result) => {
+			return okAsync(result[0])
+		})
+	}
 
-	readonly updatePlaylistMetadata: (
+	/**
+	 * 更新一个播放列表元数据。
+	 * @param playlistId - 要更新的播放列表的 ID。
+	 * @param payload - 更新所需的数据。
+	 * @returns ResultAsync 包含更新后的 Playlist 或一个错误。
+	 */
+	public updatePlaylistMetadata(
 		playlistId: number,
 		payload: UpdatePlaylistPayload,
-	) => Effect.Effect<
+	): ResultAsync<
 		typeof schema.playlists.$inferSelect,
-		DatabaseError | PlaylistNotFoundError
-	>
+		DatabaseError | ServiceError
+	> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				// 验证播放列表是否存在
+				const existing = await Sentry.startSpan(
+					{ name: 'db:query:playlist:exist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: and(
+								eq(schema.playlists.id, playlistId),
+								// eq(schema.playlists.type, 'local'),
+							),
+						}),
+				)
+				if (!existing) {
+					throw createPlaylistNotFound(playlistId)
+				}
 
-	readonly deletePlaylist: (
+				const [updated] = await Sentry.startSpan(
+					{ name: 'db:update:playlist', op: 'db' },
+					() =>
+						this.db
+							.update(schema.playlists)
+							.set({
+								title: payload.title ?? undefined,
+								description: payload.description,
+								coverUrl: payload.coverUrl,
+							} satisfies UpdatePlaylistPayload)
+							.where(eq(schema.playlists.id, playlistId))
+							.returning(),
+				)
+
+				return updated
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`更新播放列表 ${playlistId} 失败`, {
+							cause: e,
+						}),
+		)
+	}
+
+	/**
+	 * 删除一个播放列表。
+	 * @param playlistId - 要删除的播放列表的 ID。
+	 * @returns ResultAsync 包含删除的 ID 或一个错误。
+	 */
+	public deletePlaylist(
 		playlistId: number,
-	) => Effect.Effect<
-		{ deletedId: number },
-		DatabaseError | PlaylistNotFoundError
-	>
+	): ResultAsync<{ deletedId: number }, DatabaseError | ServiceError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				// 验证播放列表是否存在
+				const existing = await Sentry.startSpan(
+					{ name: 'db:query:playlist:exist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: and(eq(schema.playlists.id, playlistId)),
+							columns: { id: true },
+						}),
+				)
+				if (!existing) {
+					throw createPlaylistNotFound(playlistId)
+				}
 
-	readonly addManyTracksToLocalPlaylist: (
+				const [deleted] = await Sentry.startSpan(
+					{ name: 'db:delete:playlist', op: 'db' },
+					() =>
+						this.db
+							.delete(schema.playlists)
+							.where(eq(schema.playlists.id, playlistId))
+							.returning({ deletedId: schema.playlists.id }),
+				)
+
+				return deleted
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`删除播放列表 ${playlistId} 失败`, {
+							cause: e,
+						}),
+		)
+	}
+
+	/**
+	 * 批量添加 tracks 到本地播放列表。
+	 */
+	public addManyTracksToLocalPlaylist(
 		playlistId: number,
 		trackIds: number[],
-	) => Effect.Effect<
+	): ResultAsync<
 		(typeof schema.playlistTracks.$inferSelect)[],
-		DatabaseError | PlaylistNotFoundError
-	>
+		DatabaseError | ServiceError
+	> {
+		if (trackIds.length === 0) {
+			return okAsync([])
+		}
 
-	readonly batchRemoveTracksFromLocalPlaylist: (
+		return ResultAsync.fromPromise(
+			(async () => {
+				// 验证播放列表是否存在且为 local
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist:exist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: and(
+								eq(schema.playlists.id, playlistId),
+								eq(schema.playlists.type, 'local'),
+							),
+							columns: { id: true, itemCount: true },
+						}),
+				)
+				if (!playlist) {
+					throw createPlaylistNotFound(playlistId)
+				}
+
+				// 获取当前最大 order
+				const maxOrderResult = await Sentry.startSpan(
+					{ name: 'db:query:max_order', op: 'db' },
+					() =>
+						this.db
+							.select({
+								maxOrder: sql<
+									number | null
+								>`MAX(${schema.playlistTracks.order})`,
+							})
+							.from(schema.playlistTracks)
+							.where(eq(schema.playlistTracks.playlistId, playlistId)),
+				)
+				let nextOrder = (maxOrderResult[0].maxOrder ?? -1) + 1
+
+				// 构造批量插入的行
+				const values = trackIds.map((tid) => ({
+					playlistId,
+					trackId: tid,
+					order: nextOrder++,
+				}))
+
+				// 批量插入（忽略已存在的）
+				const inserted = await Sentry.startSpan(
+					{ name: 'db:insert:playlistTracks', op: 'db' },
+					() =>
+						this.db
+							.insert(schema.playlistTracks)
+							.values(values)
+							.onConflictDoNothing({
+								target: [
+									schema.playlistTracks.playlistId,
+									schema.playlistTracks.trackId,
+								],
+							})
+							.returning(),
+				)
+
+				// 更新播放列表的 itemCount（+ 成功插入的数量）
+				if (inserted.length > 0) {
+					await Sentry.startSpan(
+						{ name: 'db:update:playlist:itemCount', op: 'db' },
+						() =>
+							this.db
+								.update(schema.playlists)
+								.set({
+									itemCount: sql`${schema.playlists.itemCount} + ${inserted.length}`,
+								})
+								.where(eq(schema.playlists.id, playlistId)),
+					)
+				}
+
+				return inserted
+			})(),
+			(e) => new DatabaseError('批量添加歌曲到播放列表失败', { cause: e }),
+		)
+	}
+
+	/**
+	 * 从本地播放列表批量移除歌曲
+	 * @param playlistId - 目标播放列表的 ID。
+	 * @param trackIdList - 要移除的歌曲的 ID 们
+	 * @returns [removedTrackIds, missingTrackIds] 分别为被移除的 ID 和不在播放列表中的 ID
+	 */
+	public batchRemoveTracksFromLocalPlaylist(
 		playlistId: number,
 		trackIdList: number[],
-	) => Effect.Effect<
+	): ResultAsync<
 		{ removedTrackIds: number[]; missingTrackIds: number[] },
-		DatabaseError | PlaylistNotFoundError | TrackNotInPlaylistError
-	>
+		DatabaseError | ServiceError
+	> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				if (trackIdList.length === 0) {
+					return { removedTrackIds: [], missingTrackIds: [] }
+				}
 
-	readonly reorderSingleLocalPlaylistTrack: (
+				// 验证播放列表是否存在且为 'local'
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist:exist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: and(
+								eq(schema.playlists.id, playlistId),
+								eq(schema.playlists.type, 'local'),
+							),
+							columns: { id: true },
+						}),
+				)
+				if (!playlist) {
+					throw createPlaylistNotFound(playlistId)
+				}
+
+				// 2) 批量删除关联记录，并拿到实际删除的 trackId
+				const deletedLinks = await Sentry.startSpan(
+					{ name: 'db:delete:playlistTracks', op: 'db' },
+					() =>
+						this.db
+							.delete(schema.playlistTracks)
+							.where(
+								and(
+									eq(schema.playlistTracks.playlistId, playlistId),
+									inArray(schema.playlistTracks.trackId, trackIdList),
+								),
+							)
+							.returning({ trackId: schema.playlistTracks.trackId }),
+				)
+
+				const removedTrackIds = deletedLinks.map((x) => x.trackId)
+				const removedCount = removedTrackIds.length
+
+				if (removedCount === 0) {
+					throw createTrackNotInPlaylist(trackIdList[0], playlistId)
+				}
+
+				// 更新 itemCount（不小于 0）
+				await Sentry.startSpan(
+					{ name: 'db:update:playlist:itemCount', op: 'db' },
+					() =>
+						this.db
+							.update(schema.playlists)
+							.set({
+								itemCount: sql`MAX(0, ${schema.playlists.itemCount} - ${removedCount})`,
+							})
+							.where(eq(schema.playlists.id, playlistId)),
+				)
+
+				// 计算 missing 列表（传入但未删除，说明本就不在该列表）
+				const removedSet = new Set(removedTrackIds)
+				const missingTrackIds = trackIdList.filter((id) => !removedSet.has(id))
+
+				return { removedTrackIds, missingTrackIds }
+			})(),
+			(e) => {
+				if (e instanceof ServiceError) return e
+				return new DatabaseError('从播放列表批量移除歌曲的事务失败', {
+					cause: e,
+				})
+			},
+		)
+	}
+
+	/**
+	 * 在本地播放列表中移动单个歌曲的位置。
+	 * @param playlistId - 目标播放列表的 ID。
+	 * @param payload - 包含歌曲ID、原始位置和目标位置的对象。
+	 * @returns ResultAsync
+	 */
+	public reorderSingleLocalPlaylistTrack(
 		playlistId: number,
 		payload: ReorderSingleTrackPayload,
-	) => Effect.Effect<true, DatabaseError | PlaylistNotFoundError | ServiceError>
+	): ResultAsync<true, DatabaseError | ServiceError> {
+		const { trackId, fromOrder, toOrder } = payload
 
-	readonly getPlaylistTracks: (
+		if (fromOrder === toOrder) {
+			return okAsync(true)
+		}
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist:exist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: and(
+								eq(schema.playlists.id, playlistId),
+								eq(schema.playlists.type, 'local'),
+							),
+							columns: { id: true },
+						}),
+				)
+				if (!playlist) {
+					throw createPlaylistNotFound(playlistId)
+				}
+
+				// 验证要移动的歌曲确实在 fromOrder 位置
+				const trackToMove = await Sentry.startSpan(
+					{ name: 'db:query:playlistTrack', op: 'db' },
+					() =>
+						this.db.query.playlistTracks.findFirst({
+							where: and(
+								eq(schema.playlistTracks.playlistId, playlistId),
+								eq(schema.playlistTracks.trackId, trackId),
+								eq(schema.playlistTracks.order, fromOrder),
+							),
+						}),
+				)
+				if (!trackToMove) {
+					// 这也太操蛋了，我觉得我不可能写出这种前后端不一致的代码
+					throw new ServiceError(
+						`数据不一致：歌曲 ${trackId} 不在播放列表 ${playlistId} 的 ${fromOrder} 位置。`,
+					)
+				}
+
+				if (toOrder > fromOrder) {
+					// 往列表尾部移动
+					// 把从 fromOrder+1 到 toOrder 的所有歌曲的 order 都减 1 (向上挪一位)
+					await Sentry.startSpan(
+						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
+						() =>
+							this.db
+								.update(schema.playlistTracks)
+								.set({
+									order: sql`${schema.playlistTracks.order} - 1`,
+								})
+								.where(
+									and(
+										eq(schema.playlistTracks.playlistId, playlistId),
+										sql`${schema.playlistTracks.order} > ${fromOrder}`,
+										sql`${schema.playlistTracks.order} <= ${toOrder}`,
+									),
+								),
+					)
+				} else {
+					// 往列表头部移动
+					// 把从 toOrder 到 fromOrder-1 的所有歌曲的 order 都加 1 (向下挪一位)
+					await Sentry.startSpan(
+						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
+						() =>
+							this.db
+								.update(schema.playlistTracks)
+								.set({
+									order: sql`${schema.playlistTracks.order} + 1`,
+								})
+								.where(
+									and(
+										eq(schema.playlistTracks.playlistId, playlistId),
+										sql`${schema.playlistTracks.order} >= ${toOrder}`,
+										sql`${schema.playlistTracks.order} < ${fromOrder}`,
+									),
+								),
+					)
+				}
+
+				// 把被移动的歌曲放到目标位置
+				await Sentry.startSpan(
+					{ name: 'db:update:playlistTrack:order', op: 'db' },
+					() =>
+						this.db
+							.update(schema.playlistTracks)
+							.set({ order: toOrder })
+							.where(
+								and(
+									eq(schema.playlistTracks.playlistId, playlistId),
+									eq(schema.playlistTracks.trackId, trackId),
+								),
+							),
+				)
+
+				return true as const
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('重排序播放列表歌曲的事务失败', {
+							cause: e,
+						}),
+		)
+	}
+
+	/**
+	 * 获取播放列表中的所有歌曲
+	 * @param playlistId - 目标播放列表的 ID。
+	 * @returns ResultAsync
+	 */
+	public getPlaylistTracks(
 		playlistId: number,
-	) => Effect.Effect<
-		Track[],
-		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError
-	>
+	): ResultAsync<Track[], DatabaseError | ServiceError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const type = await Sentry.startSpan(
+					{ name: 'db:query:playlist:type', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							columns: { type: true },
+							where: eq(schema.playlists.id, playlistId),
+						}),
+				)
+				if (!type) throw createPlaylistNotFound(playlistId)
+				const orderBy =
+					type.type === 'local'
+						? desc(schema.playlistTracks.order)
+						: asc(schema.playlistTracks.order)
 
-	readonly getAllPlaylists: () => Effect.Effect<
+				return Sentry.startSpan(
+					{ name: 'db:query:playlistTracks', op: 'db' },
+					() =>
+						this.db.query.playlistTracks.findMany({
+							where: eq(schema.playlistTracks.playlistId, playlistId),
+							orderBy: orderBy,
+							with: {
+								track: {
+									with: {
+										artist: true,
+										bilibiliMetadata: true,
+										localMetadata: true,
+									},
+								},
+							},
+						}),
+				)
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('获取播放列表歌曲的事务失败', {
+							cause: e,
+						}),
+		).andThen((data) => {
+			const newTracks = []
+			for (const track of data) {
+				const t = this.trackService.formatTrack(track.track)
+				if (!t)
+					return errAsync(
+						new ServiceError(
+							`在格式化歌曲：${track.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
+						),
+					)
+				newTracks.push(t)
+			}
+			return okAsync(newTracks)
+		})
+	}
+
+	/**
+	 * 获取所有 playlists
+	 */
+	public getAllPlaylists(): ResultAsync<
 		(typeof schema.playlists.$inferSelect & {
 			author: typeof schema.artists.$inferSelect | null
 		})[],
 		DatabaseError
-	>
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
+				this.db.query.playlists.findMany({
+					orderBy: desc(schema.playlists.updatedAt),
+					with: {
+						author: true,
+					},
+				}),
+			),
+			(e) => new DatabaseError('获取所有 playlists 失败', { cause: e }),
+		).andThen((playlists) => {
+			return okAsync(playlists)
+		})
+	}
 
-	readonly getPlaylistMetadata: (playlistId: number) => Effect.Effect<
+	/**
+	 * 获取指定 playlist 的元数据
+	 * @param playlistId
+	 */
+	public getPlaylistMetadata(playlistId: number): ResultAsync<
 		| (typeof schema.playlists.$inferSelect & {
 				author: typeof schema.artists.$inferSelect | null
 		  } & {
@@ -93,102 +561,70 @@ export interface PlaylistServiceSignature {
 		  })
 		| undefined,
 		DatabaseError
-	>
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+				this.db.query.playlists.findFirst({
+					where: eq(schema.playlists.id, playlistId),
+					with: {
+						author: true,
+					},
+					extras: {
+						validTrackCount: sql<number>`(
+            SELECT COUNT(pt.track_id)
+            FROM ${schema.playlistTracks} AS pt
+            LEFT JOIN ${schema.bilibiliMetadata} AS bm
+              ON pt.track_id = bm.track_id
+            WHERE pt.playlist_id = ${schema.playlists.id}
+              AND (bm.video_is_valid IS NOT false)
+          )`.as('valid_track_count'),
+					},
+				}),
+			),
+			(e) => new DatabaseError('获取 playlist 元数据失败', { cause: e }),
+		)
+	}
 
-	readonly findOrCreateRemotePlaylist: (
+	/**
+	 * 根据 remoteSyncId 和 type 查找或创建一个本地同步的远程播放列表。
+	 * @param payload - 创建播放列表所需的数据。
+	 * @returns ResultAsync 包含找到的或新创建的 Playlist，或一个 DatabaseError。
+	 */
+	public findOrCreateRemotePlaylist(
 		payload: CreatePlaylistPayload,
-	) => Effect.Effect<
+	): ResultAsync<
 		typeof schema.playlists.$inferSelect,
-		DatabaseError | ValidationError
-	>
-
-	readonly replacePlaylistAllTracks: (
-		playlistId: number,
-		trackIds: number[],
-	) => Effect.Effect<true, DatabaseError>
-
-	readonly findPlaylistByTypeAndRemoteId: (
-		type: Playlist['type'],
-		remoteId: number,
-	) => Effect.Effect<
-		| (typeof schema.playlists.$inferSelect & {
-				trackLinks: (typeof schema.playlistTracks.$inferSelect)[]
-		  })
-		| undefined,
-		DatabaseError
-	>
-
-	readonly getPlaylistById: (playlistId: number) => Effect.Effect<
-		| (typeof schema.playlists.$inferSelect & {
-				author: typeof schema.artists.$inferSelect | null
-				trackLinks: (typeof schema.playlistTracks.$inferSelect)[]
-		  })
-		| undefined,
-		DatabaseError
-	>
-
-	readonly getLocalPlaylistsContainingTrackByUniqueKey: (
-		uniqueKey: string,
-	) => Effect.Effect<(typeof schema.playlists.$inferSelect)[], DatabaseError>
-
-	readonly getLocalPlaylistsContainingTrackById: (
-		trackId: number,
-	) => Effect.Effect<(typeof schema.playlists.$inferSelect)[], DatabaseError>
-
-	readonly searchTrackInPlaylist: (
-		playlistId: number,
-		query: string,
-	) => Effect.Effect<Track[], DatabaseError | ServiceError | ValidationError>
-
-	readonly getPlaylistTracksPaginated: (options: {
-		playlistId: number
-		initialLimit?: number
-		limit: number
-		cursor:
-			| {
-					lastOrder: number
-					createdAt: number
-					lastId: number
-			  }
-			| undefined
-	}) => Effect.Effect<
-		{
-			tracks: Track[]
-			nextCursor?: {
-				lastOrder: number
-				createdAt: number
-				lastId: number
-			}
-		},
-		DatabaseError | PlaylistNotFoundError | ServiceError | ValidationError
-	>
-}
-
-export class PlaylistService extends Context.Tag('PlaylistService')<
-	PlaylistService,
-	PlaylistServiceSignature
->() {}
-
-export const PlaylistServiceLive = Layer.effect(
-	PlaylistService,
-	Effect.gen(function* () {
-		const db = yield* DrizzleDB
-		const trackService = yield* TrackService
-
-		const runDb = <A>(
-			operation: () => Promise<A>,
-			message = '数据库操作失败',
-		) =>
-			Effect.tryPromise({
-				try: operation,
-				catch: (e) => new DatabaseError({ message, cause: e }),
-			})
-
-		return {
-			createPlaylist: (payload) =>
-				runDb(
+		DatabaseError | ServiceError
+	> {
+		const { remoteSyncId, type } = payload
+		if (!remoteSyncId || type === 'local') {
+			return errAsync(
+				createValidationError(
+					'无效的 remoteSyncId 或 type，调用 findOrCreateRemotePlaylist 时必须提供 remoteSyncId 和非 local 的 type',
+				),
+			)
+		}
+		return ResultAsync.fromPromise(
+			(async () => {
+				const existingPlaylist = await Sentry.startSpan(
+					{ name: 'db:query:playlist', op: 'db' },
 					() =>
-						db
+						this.db.query.playlists.findFirst({
+							where: and(
+								eq(schema.playlists.remoteSyncId, remoteSyncId),
+								eq(schema.playlists.type, type),
+							),
+						}),
+				)
+
+				if (existingPlaylist) {
+					return existingPlaylist
+				}
+
+				const [newPlaylist] = await Sentry.startSpan(
+					{ name: 'db:insert:playlist', op: 'db' },
+					() =>
+						this.db
 							.insert(schema.playlists)
 							.values({
 								title: payload.title,
@@ -199,735 +635,406 @@ export const PlaylistServiceLive = Layer.effect(
 								remoteSyncId: payload.remoteSyncId,
 							} satisfies CreatePlaylistPayload)
 							.returning(),
-					'创建播放列表失败',
-				).pipe(
-					Effect.map((rows) => rows[0]),
-					Effect.withSpan('db:insert:playlist'),
-					Effect.withSpan('service:playlist:createPlaylist'),
-				),
+				)
 
-			updatePlaylistMetadata: (playlistId, payload) =>
-				Effect.gen(function* () {
-					const existing = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(eq(schema.playlists.id, playlistId)),
-							}),
-						'检查播放列表是否存在失败',
-					).pipe(Effect.withSpan('db:query:playlist:exist'))
+				return newPlaylist
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('查找或创建播放列表的事务失败', {
+							cause: e,
+						}),
+		)
+	}
 
-					if (!existing) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
+	/**
+	 * 使用一个 track ID 数组**完全替换**一个播放列表的内容。并会更新播放列表的 itemCount 和 lastSyncedAt。
+	 * @param playlistId 要设置的播放列表 ID。
+	 * @param trackIds 有序的歌曲 ID 数组。
+	 * @returns ResultAsync
+	 */
+	public replacePlaylistAllTracks(
+		playlistId: number,
+		trackIds: number[],
+	): ResultAsync<true, DatabaseError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				await Sentry.startSpan(
+					{ name: 'db:delete:playlistTracks', op: 'db' },
+					() =>
+						this.db
+							.delete(schema.playlistTracks)
+							.where(eq(schema.playlistTracks.playlistId, playlistId)),
+				)
 
-					const updated = yield* runDb(
-						() =>
-							db
-								.update(schema.playlists)
-								.set({
-									title: payload.title ?? undefined,
-									description: payload.description,
-									coverUrl: payload.coverUrl,
-								} satisfies UpdatePlaylistPayload)
-								.where(eq(schema.playlists.id, playlistId))
-								.returning(),
-						`更新播放列表 ${playlistId} 失败`,
-					).pipe(Effect.withSpan('db:update:playlist'))
-
-					return updated[0]
-				}).pipe(Effect.withSpan('service:playlist:updatePlaylistMetadata')),
-
-			deletePlaylist: (playlistId) =>
-				Effect.gen(function* () {
-					const existing = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(eq(schema.playlists.id, playlistId)),
-								columns: { id: true },
-							}),
-						'检查播放列表是否存在失败',
-					).pipe(Effect.withSpan('db:query:playlist:exist'))
-
-					if (!existing) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const deleted = yield* runDb(
-						() =>
-							db
-								.delete(schema.playlists)
-								.where(eq(schema.playlists.id, playlistId))
-								.returning({ deletedId: schema.playlists.id }),
-						`删除播放列表 ${playlistId} 失败`,
-					).pipe(Effect.withSpan('db:delete:playlist'))
-
-					return deleted[0]
-				}).pipe(Effect.withSpan('service:playlist:deletePlaylist')),
-
-			addManyTracksToLocalPlaylist: (playlistId, trackIds) =>
-				Effect.gen(function* () {
-					if (trackIds.length === 0) {
-						return []
-					}
-
-					const playlist = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(
-									eq(schema.playlists.id, playlistId),
-									eq(schema.playlists.type, 'local'),
-								),
-								columns: { id: true, itemCount: true },
-							}),
-						'检查播放列表是否存在失败',
-					).pipe(Effect.withSpan('db:query:playlist:exist'))
-
-					if (!playlist) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const maxOrderResult = yield* runDb(
-						() =>
-							db
-								.select({
-									maxOrder: sql<
-										number | null
-									>`MAX(${schema.playlistTracks.order})`,
-								})
-								.from(schema.playlistTracks)
-								.where(eq(schema.playlistTracks.playlistId, playlistId)),
-						'获取最大 order 失败',
-					).pipe(Effect.withSpan('db:query:max_order'))
-
-					let nextOrder = (maxOrderResult[0].maxOrder ?? -1) + 1
-
-					const values = trackIds.map((tid) => ({
-						playlistId,
-						trackId: tid,
-						order: nextOrder++,
+				if (trackIds.length > 0) {
+					const newPlaylistTracks = trackIds.map((id, index) => ({
+						playlistId: playlistId,
+						trackId: id,
+						order: index,
 					}))
-
-					const inserted = yield* runDb(
+					await Sentry.startSpan(
+						{ name: 'db:insert:playlistTracks', op: 'db' },
 						() =>
-							db
-								.insert(schema.playlistTracks)
-								.values(values)
-								.onConflictDoNothing({
-									target: [
-										schema.playlistTracks.playlistId,
-										schema.playlistTracks.trackId,
-									],
-								})
-								.returning(),
-						'批量添加歌曲到播放列表失败',
-					).pipe(Effect.withSpan('db:insert:playlistTracks'))
-
-					if (inserted.length > 0) {
-						yield* runDb(
-							() =>
-								db
-									.update(schema.playlists)
-									.set({
-										itemCount: sql`${schema.playlists.itemCount} + ${inserted.length}`,
-									})
-									.where(eq(schema.playlists.id, playlistId)),
-							'更新播放列表 itemCount 失败',
-						).pipe(Effect.withSpan('db:update:playlist:itemCount'))
-					}
-
-					return inserted
-				}).pipe(
-					Effect.withSpan('service:playlist:addManyTracksToLocalPlaylist'),
-				),
-
-			batchRemoveTracksFromLocalPlaylist: (playlistId, trackIdList) =>
-				Effect.gen(function* () {
-					if (trackIdList.length === 0) {
-						return { removedTrackIds: [], missingTrackIds: [] }
-					}
-
-					const playlist = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(
-									eq(schema.playlists.id, playlistId),
-									eq(schema.playlists.type, 'local'),
-								),
-								columns: { id: true },
-							}),
-						'检查播放列表是否存在失败',
-					).pipe(Effect.withSpan('db:query:playlist:exist'))
-
-					if (!playlist) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const deletedLinks = yield* runDb(
-						() =>
-							db
-								.delete(schema.playlistTracks)
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										inArray(schema.playlistTracks.trackId, trackIdList),
-									),
-								)
-								.returning({ trackId: schema.playlistTracks.trackId }),
-						'批量删除播放列表歌曲失败',
-					).pipe(Effect.withSpan('db:delete:playlistTracks'))
-
-					const removedTrackIds = deletedLinks.map((x) => x.trackId)
-					const removedCount = removedTrackIds.length
-
-					if (removedCount === 0) {
-						return yield* new TrackNotInPlaylistError({
-							trackId: trackIdList[0],
-							playlistId,
-						})
-					}
-
-					yield* runDb(
-						() =>
-							db
-								.update(schema.playlists)
-								.set({
-									itemCount: sql`MAX(0, ${schema.playlists.itemCount} - ${removedCount})`,
-								})
-								.where(eq(schema.playlists.id, playlistId)),
-						'更新播放列表 itemCount 失败',
-					).pipe(Effect.withSpan('db:update:playlist:itemCount'))
-
-					const removedSet = new Set(removedTrackIds)
-					const missingTrackIds = trackIdList.filter(
-						(id) => !removedSet.has(id),
+							this.db.insert(schema.playlistTracks).values(newPlaylistTracks),
 					)
+				}
 
-					return { removedTrackIds, missingTrackIds }
-				}).pipe(
-					Effect.withSpan(
-						'service:playlist:batchRemoveTracksFromLocalPlaylist',
-					),
-				),
-
-			reorderSingleLocalPlaylistTrack: (playlistId, payload) =>
-				Effect.gen(function* () {
-					const { trackId, fromOrder, toOrder } = payload
-
-					if (fromOrder === toOrder) {
-						return true as const
-					}
-
-					const playlist = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(
-									eq(schema.playlists.id, playlistId),
-									eq(schema.playlists.type, 'local'),
-								),
-								columns: { id: true },
-							}),
-						'检查播放列表是否存在失败',
-					).pipe(Effect.withSpan('db:query:playlist:exist'))
-
-					if (!playlist) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const trackToMove = yield* runDb(
-						() =>
-							db.query.playlistTracks.findFirst({
-								where: and(
-									eq(schema.playlistTracks.playlistId, playlistId),
-									eq(schema.playlistTracks.trackId, trackId),
-									eq(schema.playlistTracks.order, fromOrder),
-								),
-							}),
-						'获取待移动歌曲失败',
-					).pipe(Effect.withSpan('db:query:playlistTrack'))
-
-					if (!trackToMove) {
-						return yield* new PlaylistServiceError({
-							message: `数据不一致：歌曲 ${trackId} 不在播放列表 ${playlistId} 的 ${fromOrder} 位置。`,
+				await Sentry.startSpan({ name: 'db:update:playlist', op: 'db' }, () =>
+					this.db
+						.update(schema.playlists)
+						.set({
+							itemCount: trackIds.length,
+							lastSyncedAt: new Date(),
 						})
-					}
+						.where(eq(schema.playlists.id, playlistId)),
+				)
 
-					if (toOrder > fromOrder) {
-						yield* runDb(
-							() =>
-								db
-									.update(schema.playlistTracks)
-									.set({
-										order: sql`${schema.playlistTracks.order} - 1`,
-									})
-									.where(
-										and(
-											eq(schema.playlistTracks.playlistId, playlistId),
-											sql`${schema.playlistTracks.order} > ${fromOrder}`,
-											sql`${schema.playlistTracks.order} <= ${toOrder}`,
-										),
-									),
-							'更新歌曲顺序失败 (Up)',
-						).pipe(Effect.withSpan('db:update:playlistTracks:reorder'))
-					} else {
-						yield* runDb(
-							() =>
-								db
-									.update(schema.playlistTracks)
-									.set({
-										order: sql`${schema.playlistTracks.order} + 1`,
-									})
-									.where(
-										and(
-											eq(schema.playlistTracks.playlistId, playlistId),
-											sql`${schema.playlistTracks.order} >= ${toOrder}`,
-											sql`${schema.playlistTracks.order} < ${fromOrder}`,
-										),
-									),
-							'更新歌曲顺序失败 (Down)',
-						).pipe(Effect.withSpan('db:update:playlistTracks:reorder'))
-					}
+				return true as const
+			})(),
+			(e) =>
+				new DatabaseError(`设置播放列表歌曲失败 (ID: ${playlistId})`, {
+					cause: e,
+				}),
+		)
+	}
 
-					yield* runDb(
-						() =>
-							db
-								.update(schema.playlistTracks)
-								.set({ order: toOrder })
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										eq(schema.playlistTracks.trackId, trackId),
-									),
-								),
-						'更新目标歌曲顺序失败',
-					).pipe(Effect.withSpan('db:update:playlistTrack:order'))
-
-					return true as const
-				}).pipe(
-					Effect.withSpan('service:playlist:reorderSingleLocalPlaylistTrack'),
-				),
-
-			getPlaylistTracks: (playlistId) =>
-				Effect.gen(function* () {
-					const type = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								columns: { type: true },
-								where: eq(schema.playlists.id, playlistId),
-							}),
-						'检查播放列表类型失败',
-					).pipe(Effect.withSpan('db:query:playlist:type'))
-
-					if (!type) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const orderBy =
-						type.type === 'local'
-							? desc(schema.playlistTracks.order)
-							: asc(schema.playlistTracks.order)
-
-					const data = yield* runDb(
-						() =>
-							db.query.playlistTracks.findMany({
-								where: eq(schema.playlistTracks.playlistId, playlistId),
-								orderBy: orderBy,
-								with: {
-									track: {
-										with: {
-											artist: true,
-											bilibiliMetadata: true,
-											localMetadata: true,
-										},
-									},
-								},
-							}),
-						'获取播放列表歌曲失败',
-					).pipe(Effect.withSpan('db:query:playlistTracks'))
-
-					const newTracks = yield* Effect.forEach(data, (trackLink) =>
-						trackService.formatTrack(trackLink.track).pipe(
-							Effect.mapError(
-								(e) =>
-									new PlaylistServiceError({
-										message: `在格式化歌曲：${trackLink.track.id} 时出错`,
-										cause: e,
-									}),
-							),
-						),
-					)
-
-					return newTracks
-				}).pipe(Effect.withSpan('service:playlist:getPlaylistTracks')),
-
-			getAllPlaylists: () =>
-				runDb(
-					() =>
-						db.query.playlists.findMany({
-							orderBy: desc(schema.playlists.updatedAt),
-							with: {
-								author: true,
-							},
-						}),
-					'获取所有 playlists 失败',
-				).pipe(
-					Effect.withSpan('db:query:playlists'),
-					Effect.withSpan('service:playlist:getAllPlaylists'),
-				),
-
-			getPlaylistMetadata: (playlistId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: eq(schema.playlists.id, playlistId),
-							with: {
-								author: true,
-							},
-							extras: {
-								validTrackCount: sql<number>`(
-            SELECT COUNT(pt.track_id)
-            FROM ${schema.playlistTracks} AS pt
-            LEFT JOIN ${schema.bilibiliMetadata} AS bm
-              ON pt.track_id = bm.track_id
-            WHERE pt.playlist_id = ${schema.playlists.id}
-              AND (bm.video_is_valid IS NOT false)
-          )`.as('valid_track_count'),
-							},
-						}),
-					'获取 playlist 元数据失败',
-				).pipe(
-					Effect.withSpan('db:query:playlist'),
-					Effect.withSpan('service:playlist:getPlaylistMetadata'),
-				),
-
-			findOrCreateRemotePlaylist: (payload) =>
-				Effect.gen(function* () {
-					const { remoteSyncId, type } = payload
-					if (!remoteSyncId || type === 'local') {
-						return yield* new ValidationError({
-							message:
-								'无效的 remoteSyncId 或 type，调用 findOrCreateRemotePlaylist 时必须提供 remoteSyncId 和非 local 的 type',
-						})
-					}
-
-					const existingPlaylist = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								where: and(
-									eq(schema.playlists.remoteSyncId, remoteSyncId),
-									eq(schema.playlists.type, type),
-								),
-							}),
-						'查找播放列表失败',
-					).pipe(Effect.withSpan('db:query:playlist'))
-
-					if (existingPlaylist) {
-						return existingPlaylist
-					}
-
-					const newPlaylist = yield* runDb(
-						() =>
-							db
-								.insert(schema.playlists)
-								.values({
-									title: payload.title,
-									authorId: payload.authorId,
-									description: payload.description,
-									coverUrl: payload.coverUrl,
-									type: payload.type,
-									remoteSyncId: payload.remoteSyncId,
-								} satisfies CreatePlaylistPayload)
-								.returning(),
-						'创建播放列表失败',
-					).pipe(Effect.withSpan('db:insert:playlist'))
-
-					return newPlaylist[0]
-				}).pipe(Effect.withSpan('service:playlist:findOrCreateRemotePlaylist')),
-
-			replacePlaylistAllTracks: (playlistId, trackIds) =>
-				Effect.gen(function* () {
-					yield* runDb(
-						() =>
-							db
-								.delete(schema.playlistTracks)
-								.where(eq(schema.playlistTracks.playlistId, playlistId)),
-						'删除旧歌曲链接失败',
-					).pipe(Effect.withSpan('db:delete:playlistTracks'))
-
-					if (trackIds.length > 0) {
-						const newPlaylistTracks = trackIds.map((id, index) => ({
-							playlistId: playlistId,
-							trackId: id,
-							order: index,
-						}))
-						yield* runDb(
-							() => db.insert(schema.playlistTracks).values(newPlaylistTracks),
-							'插入新歌曲链接失败',
-						).pipe(Effect.withSpan('db:insert:playlistTracks'))
-					}
-
-					yield* runDb(
-						() =>
-							db
-								.update(schema.playlists)
-								.set({
-									itemCount: trackIds.length,
-									lastSyncedAt: new Date(),
-								})
-								.where(eq(schema.playlists.id, playlistId)),
-						'更新播放列表元数据失败',
-					).pipe(Effect.withSpan('db:update:playlist'))
-
-					return true as const
-				}).pipe(Effect.withSpan('service:playlist:replacePlaylistAllTracks')),
-
-			findPlaylistByTypeAndRemoteId: (type, remoteId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: and(
-								eq(schema.playlists.type, type),
-								eq(schema.playlists.remoteSyncId, remoteId),
-							),
-							with: {
-								trackLinks: true,
-							},
-						}),
-					'查询播放列表失败',
-				).pipe(
-					Effect.withSpan('db:query:playlist'),
-					Effect.withSpan('service:playlist:findPlaylistByTypeAndRemoteId'),
-				),
-
-			getPlaylistById: (playlistId) =>
-				runDb(
-					() =>
-						db.query.playlists.findFirst({
-							where: eq(schema.playlists.id, playlistId),
-							with: {
-								author: true,
-								trackLinks: true,
-							},
-						}),
-					'查询播放列表失败',
-				).pipe(
-					Effect.withSpan('db:query:playlist'),
-					Effect.withSpan('service:playlist:getPlaylistById'),
-				),
-
-			getLocalPlaylistsContainingTrackByUniqueKey: (uniqueKey) =>
-				Effect.gen(function* () {
-					const trackIds = yield* trackService.findTrackIdsByUniqueKeys([
-						uniqueKey,
-					])
-					if (!trackIds.has(uniqueKey)) {
-						return []
-					}
-					const trackId = trackIds.get(uniqueKey)!
-
-					return yield* runDb(
-						() =>
-							db.query.playlists.findMany({
-								where: and(
-									eq(schema.playlists.type, 'local'),
-									inArray(
-										schema.playlists.id,
-										db
-											.select({
-												playlistId: schema.playlistTracks.playlistId,
-											})
-											.from(schema.playlistTracks)
-											.where(eq(schema.playlistTracks.trackId, trackId)),
-									),
-								),
-							}),
-						'获取包含该歌曲的本地播放列表失败',
-					).pipe(Effect.withSpan('db:query:playlists'))
-				}).pipe(
-					Effect.withSpan(
-						'service:playlist:getLocalPlaylistsContainingTrackByUniqueKey',
+	/**
+	 * 基于 type & remoteId 查询一个播放列表
+	 * @param type
+	 * @param remoteId
+	 */
+	public findPlaylistByTypeAndRemoteId(
+		type: Playlist['type'],
+		remoteId: number,
+	): ResultAsync<
+		| (typeof schema.playlists.$inferSelect & {
+				trackLinks: (typeof schema.playlistTracks.$inferSelect)[]
+		  })
+		| undefined,
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+				this.db.query.playlists.findFirst({
+					where: and(
+						eq(schema.playlists.type, type),
+						eq(schema.playlists.remoteSyncId, remoteId),
 					),
-				),
+					with: {
+						trackLinks: true,
+					},
+				}),
+			),
+			(e) => new DatabaseError('查询播放列表失败', { cause: e }),
+		)
+	}
 
-			getLocalPlaylistsContainingTrackById: (trackId) =>
-				runDb(
-					() =>
-						db.query.playlists.findMany({
+	/**
+	 * 根据 ID 获取播放列表
+	 * @param playlistId
+	 */
+	public getPlaylistById(playlistId: number) {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+				this.db.query.playlists.findFirst({
+					where: eq(schema.playlists.id, playlistId),
+					with: {
+						author: true,
+						trackLinks: true,
+					},
+				}),
+			),
+			(e) => new DatabaseError('查询播放列表失败', { cause: e }),
+		)
+	}
+
+	/**
+	 * 通过 uniqueKey 获取包含指定歌曲的所有本地播放列表
+	 * @param uniqueKey:  track uniqueKey
+	 */
+	public getLocalPlaylistsContainingTrackByUniqueKey(
+		uniqueKey: string,
+	): ResultAsync<(typeof schema.playlists.$inferSelect)[], DatabaseError> {
+		return this.trackService
+			.findTrackIdsByUniqueKeys([uniqueKey])
+			.andThen((trackIds) => {
+				if (!trackIds.has(uniqueKey)) return okAsync([])
+				return ResultAsync.fromPromise(
+					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
+						this.db.query.playlists.findMany({
 							where: and(
 								eq(schema.playlists.type, 'local'),
 								inArray(
 									schema.playlists.id,
-									db
+									this.db
 										.select({
 											playlistId: schema.playlistTracks.playlistId,
 										})
 										.from(schema.playlistTracks)
-										.where(eq(schema.playlistTracks.trackId, trackId)),
+										.where(
+											eq(
+												schema.playlistTracks.trackId,
+												trackIds.get(uniqueKey)!,
+											),
+										),
 								),
 							),
 						}),
-					'获取包含该歌曲的本地播放列表失败',
-				).pipe(
-					Effect.withSpan('db:query:playlists'),
-					Effect.withSpan(
-						'service:playlist:getLocalPlaylistsContainingTrackById',
 					),
-				),
+					(e) =>
+						new DatabaseError('获取包含该歌曲的本地播放列表失败', {
+							cause: e,
+						}),
+				).andThen((playlists) => {
+					return okAsync(playlists)
+				})
+			})
+	}
 
-			searchTrackInPlaylist: (playlistId, query) =>
-				Effect.gen(function* () {
-					const q = `%${query.trim().toLowerCase()}%`
+	/**
+	 * 获取包含指定歌曲的所有本地播放列表
+	 * @param trackId:  track id（number）
+	 */
+	public getLocalPlaylistsContainingTrackById(
+		trackId: number,
+	): ResultAsync<(typeof schema.playlists.$inferSelect)[], DatabaseError> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
+				this.db.query.playlists.findMany({
+					where: and(
+						eq(schema.playlists.type, 'local'),
+						inArray(
+							schema.playlists.id,
+							this.db
+								.select({
+									playlistId: schema.playlistTracks.playlistId,
+								})
+								.from(schema.playlistTracks)
+								.where(eq(schema.playlistTracks.trackId, trackId)),
+						),
+					),
+				}),
+			),
+			(e) =>
+				new DatabaseError('获取包含该歌曲的本地播放列表失败', {
+					cause: e,
+				}),
+		).andThen((playlists) => {
+			return okAsync(playlists)
+		})
+	}
 
-					const trackIdSubq = db
-						.select({ id: schema.tracks.id })
-						.from(schema.tracks)
-						.leftJoin(
-							schema.artists,
-							eq(schema.tracks.artistId, schema.artists.id),
-						)
-						.where(like(sql`lower(${schema.tracks.title})`, q))
+	/**
+	 * 在某个 playlist 中依据名字搜索歌曲
+	 * @param playlistId
+	 * @param query
+	 */
+	public searchTrackInPlaylist(
+		playlistId: number,
+		query: string,
+	): ResultAsync<Track[], DatabaseError | ServiceError> {
+		const q = `%${query.trim().toLowerCase()}%`
 
-					const rows = yield* runDb(
-						() =>
-							db.query.playlistTracks.findMany({
-								where: and(
-									eq(schema.playlistTracks.playlistId, playlistId),
-									inArray(schema.playlistTracks.trackId, trackIdSubq),
-								),
-								with: {
-									track: {
-										columns: {
-											playHistory: false,
-										},
-										with: {
-											artist: true,
-											bilibiliMetadata: true,
-											localMetadata: true,
-										},
+		return ResultAsync.fromPromise(
+			(async () => {
+				const trackIdSubq = db
+					.select({ id: schema.tracks.id })
+					.from(schema.tracks)
+					.leftJoin(
+						schema.artists,
+						eq(schema.tracks.artistId, schema.artists.id),
+					)
+					.where(like(sql`lower(${schema.tracks.title})`, q))
+
+				const rows = await Sentry.startSpan(
+					{ name: 'db:query:playlistTracks', op: 'db' },
+					() =>
+						db.query.playlistTracks.findMany({
+							where: and(
+								eq(schema.playlistTracks.playlistId, playlistId),
+								inArray(schema.playlistTracks.trackId, trackIdSubq),
+							),
+							with: {
+								track: {
+									columns: {
+										playHistory: false,
+									},
+									with: {
+										artist: true,
+										bilibiliMetadata: true,
+										localMetadata: true,
 									},
 								},
-								orderBy: asc(schema.playlistTracks.order),
-							}),
-						'搜索歌曲失败',
-					).pipe(Effect.withSpan('db:query:playlistTracks'))
+							},
+							orderBy: asc(schema.playlistTracks.order),
+						}),
+				)
 
-					return yield* Effect.forEach(rows, (row) =>
-						trackService.formatTrack(row.track).pipe(
-							Effect.mapError(
-								(e) =>
-									new PlaylistServiceError({
-										message: `在格式化歌曲：${row.track.id} 时出错`,
-										cause: e,
-									}),
+				const newTracks = []
+				for (const row of rows) {
+					const t = this.trackService.formatTrack(row.track)
+					if (!t)
+						throw new ServiceError(
+							`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
+						)
+					newTracks.push(t)
+				}
+				return newTracks
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('搜索歌曲失败', { cause: e }),
+		)
+	}
+
+	/**
+	 * 游标分页的获取播放列表中歌曲
+	 *
+	 * @param options - 分页选项
+	 * @param options.playlistId - 目标播放列表的 ID。
+	 * @param options.initialLimit - 如果是第一页，使用的数量限制（如无则为 limit）
+	 * @param options.limit - 每次获取的数量
+	 * @param options.cursor - 上一页最后一条记录的游标。
+	 * 如果是第一页，则为 undefined。
+	 * @returns ResultAsync 包含歌曲列表和下一个游标
+	 */
+	public getPlaylistTracksPaginated(options: {
+		playlistId: number
+		initialLimit?: number
+		limit: number
+		cursor:
+			| {
+					lastOrder: number
+					createdAt: number
+					lastId: number
+			  }
+			| undefined
+	}): ResultAsync<
+		{
+			tracks: Track[]
+			nextCursor?: {
+				lastOrder: number
+				createdAt: number
+				lastId: number
+			}
+		},
+		DatabaseError | ServiceError
+	> {
+		const { limit, cursor, playlistId, initialLimit } = options
+
+		const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist:type', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							columns: { type: true },
+							where: eq(schema.playlists.id, playlistId),
+						}),
+				)
+				if (!playlist) throw createPlaylistNotFound(playlistId)
+
+				const isDesc = playlist.type === 'local'
+				const sortDirection = isDesc ? desc : asc
+				const operator = isDesc ? lt : gt
+
+				const orderBy = [
+					sortDirection(schema.playlistTracks.order),
+					sortDirection(schema.playlistTracks.createdAt),
+					sortDirection(schema.playlistTracks.trackId),
+				]
+
+				const whereClauses: (SQL | undefined)[] = [
+					eq(schema.playlistTracks.playlistId, playlistId),
+				]
+
+				if (cursor) {
+					const { lastOrder, createdAt, lastId } = cursor
+					const dateObj = new Date(createdAt)
+
+					whereClauses.push(
+						or(
+							operator(schema.playlistTracks.order, lastOrder),
+							and(
+								eq(schema.playlistTracks.order, lastOrder),
+								operator(schema.playlistTracks.createdAt, dateObj),
+							),
+							and(
+								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.createdAt, dateObj),
+								operator(schema.playlistTracks.trackId, lastId),
 							),
 						),
 					)
-				}).pipe(Effect.withSpan('service:playlist:searchTrackInPlaylist')),
+				}
 
-			getPlaylistTracksPaginated: (options) =>
-				Effect.gen(function* () {
-					const { limit, cursor, playlistId, initialLimit } = options
-					const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
-
-					const playlist = yield* runDb(
-						() =>
-							db.query.playlists.findFirst({
-								columns: { type: true },
-								where: eq(schema.playlists.id, playlistId),
-							}),
-						'检查播放列表类型失败',
-					).pipe(Effect.withSpan('db:query:playlist:type'))
-
-					if (!playlist) {
-						return yield* new PlaylistNotFoundError({ playlistId })
-					}
-
-					const isDesc = playlist.type === 'local'
-					const sortDirection = isDesc ? desc : asc
-					const operator = isDesc ? lt : gt
-
-					const orderBy = [
-						sortDirection(schema.playlistTracks.order),
-						sortDirection(schema.playlistTracks.createdAt),
-						sortDirection(schema.playlistTracks.trackId),
-					]
-
-					const whereClauses: (SQL | undefined)[] = [
-						eq(schema.playlistTracks.playlistId, playlistId),
-					]
-
-					if (cursor) {
-						const { lastOrder, createdAt, lastId } = cursor
-						const dateObj = new Date(createdAt)
-
-						whereClauses.push(
-							or(
-								operator(schema.playlistTracks.order, lastOrder),
-								and(
-									eq(schema.playlistTracks.order, lastOrder),
-									operator(schema.playlistTracks.createdAt, dateObj),
-								),
-								and(
-									eq(schema.playlistTracks.order, lastOrder),
-									eq(schema.playlistTracks.createdAt, dateObj),
-									operator(schema.playlistTracks.trackId, lastId),
-								),
-							),
-						)
-					}
-
-					const data = yield* runDb(
-						() =>
-							db.query.playlistTracks.findMany({
-								where: and(...whereClauses),
-								orderBy: orderBy,
-								limit: effectiveLimit + 1,
-								with: {
-									track: {
-										with: {
-											artist: true,
-											bilibiliMetadata: true,
-											localMetadata: true,
-										},
-										columns: {
-											playHistory: false,
-										},
+				const data = await Sentry.startSpan(
+					{ name: 'db:query:playlistTracks:paginated', op: 'db' },
+					() =>
+						this.db.query.playlistTracks.findMany({
+							where: and(...whereClauses),
+							orderBy: orderBy,
+							limit: effectiveLimit + 1,
+							with: {
+								track: {
+									with: {
+										artist: true,
+										bilibiliMetadata: true,
+										localMetadata: true,
+									},
+									columns: {
+										playHistory: false,
 									},
 								},
-							}),
-						'分页获取播放列表歌曲失败',
-					).pipe(Effect.withSpan('db:query:playlistTracks:paginated'))
+							},
+						}),
+				)
 
-					const newTracks = yield* Effect.forEach(data, (pt) =>
-						trackService.formatTrack(pt.track).pipe(
-							Effect.mapError(
-								(e) =>
-									new PlaylistServiceError({
-										message: `在格式化歌曲：${pt.track.id} 时出错`,
-										cause: e,
-									}),
-							),
+				return data
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('分页获取播放列表歌曲的事务失败', {
+							cause: e,
+						}),
+		).andThen((data) => {
+			const newTracks: Track[] = []
+			for (const pt of data) {
+				const t = this.trackService.formatTrack(pt.track)
+				if (!t) {
+					return errAsync(
+						new ServiceError(
+							`在格式化歌曲：${pt.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
 						),
 					)
+				}
+				newTracks.push(t)
+			}
 
-					let nextCursor
-					const hasMore = data.length === effectiveLimit + 1
+			let nextCursor
+			const hasMore = data.length === effectiveLimit + 1
 
-					if (hasMore) {
-						const lastItem = data[effectiveLimit - 1]
-						nextCursor = {
-							lastOrder: lastItem.order,
-							createdAt: lastItem.createdAt.getTime(),
-							lastId: lastItem.trackId,
-						}
-					}
+			if (hasMore) {
+				const lastItem = data[effectiveLimit - 1]
+				nextCursor = {
+					lastOrder: lastItem.order,
+					createdAt: lastItem.createdAt.getTime(),
+					lastId: lastItem.trackId,
+				}
+			}
 
-					return {
-						tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
-						nextCursor,
-					}
-				}).pipe(Effect.withSpan('service:playlist:getPlaylistTracksPaginated')),
-		}
-	}),
-)
+			return okAsync({
+				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				nextCursor,
+			})
+		})
+	}
+}
 
-export const playlistService = Effect.serviceFunctions(PlaylistService)
+export const playlistService = new PlaylistService(db, trackService)

@@ -1,9 +1,8 @@
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
-import { lyricService } from '@/lib/services/lyricService'
+import lyricService from '@/lib/services/lyricService'
 import type { ParsedLrc } from '@/types/player/lyrics'
-import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
 import toast from '@/utils/toast'
@@ -25,18 +24,21 @@ export default function EditLyricsModal({
 	const handleConfirm = async () => {
 		const parsedOriginal = parseLrc(original)
 		if (!translated) {
-			let result
-			try {
-				result = await effectToPromise(
-					lyricService.saveLyricsToFile(parsedOriginal, uniqueKey),
+			const result = await lyricService.saveLyricsToFile(
+				parsedOriginal,
+				uniqueKey,
+			)
+			if (result.isErr()) {
+				toastAndLogError(
+					'保存歌词失败',
+					result.error,
+					'Components.EditLyricsModal',
 				)
-			} catch (error) {
-				toastAndLogError('保存歌词失败', error, 'Components.EditLyricsModal')
 				return
 			}
 			queryClient.setQueryData(
 				lyricsQueryKeys.smartFetchLyrics(uniqueKey),
-				result,
+				result.value,
 			)
 			toast.success('歌词保存成功')
 			close('EditLyrics')
@@ -44,18 +46,18 @@ export default function EditLyricsModal({
 		}
 		const parsedTranslated = parseLrc(translated)
 		const merged = mergeLrc(parsedOriginal, parsedTranslated)
-		let result
-		try {
-			result = await effectToPromise(
-				lyricService.saveLyricsToFile(merged, uniqueKey),
+		const result = await lyricService.saveLyricsToFile(merged, uniqueKey)
+		if (result.isErr()) {
+			toastAndLogError(
+				'保存歌词失败',
+				result.error,
+				'Components.EditLyricsModal',
 			)
-		} catch (error) {
-			toastAndLogError('保存歌词失败', error, 'Components.EditLyricsModal')
 			return
 		}
 		queryClient.setQueryData(
 			lyricsQueryKeys.smartFetchLyrics(uniqueKey),
-			result,
+			result.value,
 		)
 		toast.success('歌词保存成功')
 		close('EditLyrics')

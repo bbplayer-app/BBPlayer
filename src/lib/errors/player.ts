@@ -1,17 +1,29 @@
-import { Data } from 'effect'
+import { UIError } from '.'
 
-export class PlayerUnknownSourceError extends Data.TaggedError(
-	'PlayerUnknownSourceError',
-)<{
-	source: string
-	cause?: unknown
-}> {}
+// export enum PlayerErrorType {
+// 	UnknownSource = 'UnknownSource',
+// 	AudioUrlNotFound = 'AudioUrlNotFound',
+// }
 
-export class PlayerAudioUrlNotFoundError extends Data.TaggedError(
-	'PlayerAudioUrlNotFoundError',
-)<{
-	source: string
-	cause?: unknown
-}> {}
+export type PlayerErrorType = 'UnknownSource' | 'AudioUrlNotFound'
 
-export type PlayerError = PlayerUnknownSourceError | PlayerAudioUrlNotFoundError
+export class PlayerError extends UIError {
+	constructor(
+		message: string,
+		opts?: { type?: PlayerErrorType; data?: unknown; cause?: unknown },
+	) {
+		super(message, { type: opts?.type, data: opts?.data, cause: opts?.cause })
+	}
+}
+
+export function createPlayerError(
+	type: PlayerErrorType,
+	message: string,
+	options?: { data?: unknown; cause?: unknown },
+) {
+	return new PlayerError(message, {
+		type,
+		data: options?.data,
+		cause: options?.cause,
+	})
+}

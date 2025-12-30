@@ -1,7 +1,8 @@
+import { CustomError } from '@/lib/errors'
 import type { ProjectScope } from '@/types/core/scope'
 import * as Sentry from '@sentry/react-native'
-import { Cause, Effect, Option } from 'effect'
 import * as EXPOFS from 'expo-file-system'
+import { err, ok, type Result } from 'neverthrow'
 import type { transportFunctionType } from 'react-native-logs'
 import {
 	fileAsyncTransport,
@@ -19,6 +20,7 @@ const sentryBreadcrumbTransport: transportFunctionType<object> = (props) => {
 	})
 }
 
+// 创建 Logger 实例
 const config = {
 	severity: isDev ? 'debug' : 'info',
 	transport: isDev
@@ -33,6 +35,7 @@ const config = {
 	transportOptions: {
 		FS: EXPOFS,
 		fileName: '{date-today}.log',
+		// 日期命名格式 YYYY-M-D（**无零填充**）
 		fileNameDateType: 'iso' as const,
 		filePath: `${EXPOFS.Paths.document.uri}logs`,
 		mapLevels: {
@@ -46,138 +49,32 @@ const config = {
 	async: true,
 }
 
-const logInstance = logger.createLogger(config)
-
-const isTaggedError = (u: unknown): u is { _tag: string } & Error => {
-	return u instanceof Error && '_tag' in u
-}
-
-/**
- * 递归展平错误信息，专门适配 TaggedError
- * 格式示例: [UserNotFoundError] id=123 :: [DatabaseError] connection failed
- */
-export function flatErrorMessage(
-	error: unknown,
-	separator = ' :: ',
-	_temp: string[] = [],
-	_depth = 0,
-	maxDepth = 10,
-): string {
-	if (_depth >= maxDepth) {
-		_temp.push('[error depth exceeded]')
-		return _temp.join(separator)
-	}
-
-	if (error instanceof Error) {
-		let msg = error.message
-
-		if (isTaggedError(error)) {
-			msg = `[${error._tag}] ${msg}`
-		}
-
-		_temp.push(msg)
-
-		if (error.cause) {
-			return flatErrorMessage(error.cause, separator, _temp, _depth + 1)
-		}
-	} else {
-		_temp.push(String(error))
-	}
-
-	return _temp.join(separator)
-}
-
-/**
- * 提取 TaggedError 的有效载荷用于 Sentry Extra
- */
-function extractErrorExtras(error: unknown): Record<string, unknown> {
-	if (isTaggedError(error)) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-		const { name, message, stack, cause, _tag, ...rest } = error as any
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-		return rest
-	}
-	return {}
-}
-
-/**
- * 将 Error 上报到 Sentry
- * 支持传入 Error, TaggedError
- */
-export function reportErrorToSentry(
-	errorOrCause: unknown,
-	message?: string,
-	scope?: ProjectScope | string,
-) {
-	if (Cause.isCause(errorOrCause)) {
-		logInstance.error(`[Cause] ${message ?? ''}`, Cause.pretty(errorOrCause))
-
-		const failureOption = Cause.failureOption(errorOrCause)
-		if (Option.isSome(failureOption)) {
-			reportErrorToSentry(failureOption.value, message, scope)
-			return
-		}
-		const defectOption = Cause.dieOption(errorOrCause)
-		if (Option.isSome(defectOption)) {
-			reportErrorToSentry(defectOption.value, `[Defect] ${message}`, scope)
-			return
-		}
-		return
-	}
-
-	const _error =
-		errorOrCause instanceof Error
-			? errorOrCause
-			: new Error(`非 Error 类型错误：${String(errorOrCause)}`, {
-					cause: errorOrCause,
-				})
-
-	const tags: Record<string, string | number | boolean | undefined> = {
-		appScope: scope,
-	}
-
-	if (isTaggedError(_error)) {
-		tags.errorType = _error._tag
-	}
-
-	const extra: Record<string, unknown> = {
-		message,
-		...extractErrorExtras(_error),
-	}
-
-	const id = Sentry.captureException(_error, { tags, extra })
-	if (isDev) logInstance.debug(`[Sentry] Error reported, id: ${id}`)
-}
-
 /**
  * 清理 {keepDays} 天之前的日志文件
+ * @param keepDays 保留最近几天的日志，默认为 7 天
  */
-export const cleanOldLogFiles = (keepDays = 7) =>
-	Effect.gen(function* () {
+export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
+	try {
 		const logDir = new EXPOFS.Directory(EXPOFS.Paths.document, 'logs')
 
-		const exists = yield* Effect.try(() => logDir.exists)
-
-		if (!exists) {
-			logInstance.debug('日志目录不存在，无需清理')
-			return 0
+		if (!logDir.exists) {
+			log.debug('日志目录不存在，无需清理')
+			return ok(0)
 		}
 
-		const fileNames = yield* Effect.try(() =>
-			logDir
-				.list()
-				.filter((f) => f instanceof EXPOFS.File)
-				.map((f) => f.name),
-		)
+		const list = logDir
+			.list()
+			.filter((f) => f instanceof EXPOFS.File)
+			.map((f) => f.name)
 
 		const cutoffDate = new Date()
 		cutoffDate.setHours(0, 0, 0, 0)
 		cutoffDate.setDate(cutoffDate.getDate() - keepDays + 1)
+
 		const re = /^(\d{4}-\d{1,2}-\d{1,2})\.log$/
 
-		let deletedCount = 0
-
-		for (const name of fileNames) {
+		let deleted = 0
+		for (const name of list) {
 			const m = re.exec(name)
 			if (!m) continue
 
@@ -185,42 +82,96 @@ export const cleanOldLogFiles = (keepDays = 7) =>
 			if (Number.isNaN(fileDate.getTime())) continue
 
 			if (fileDate < cutoffDate) {
-				// 单个文件删除失败不应该阻断整个流程，所以我们在内部处理错误
-				yield* Effect.try(() => {
-					const file = new EXPOFS.File(logDir, name)
+				const file = new EXPOFS.File(logDir, name)
+				try {
 					file.delete()
-					deletedCount++
-				}).pipe(
-					Effect.catchAll((e) =>
-						Effect.sync(() => {
-							logInstance.warning('删除旧日志文件失败', {
-								file: name,
-								error: String(e),
-							})
-						}),
-					),
-				)
+					deleted += 1
+				} catch (e) {
+					log.warning('删除旧日志文件失败', {
+						file: file.uri,
+						error: String(e),
+					})
+				}
 			}
 		}
-
-		return deletedCount
-	}).pipe(
-		Effect.catchAll((e) =>
-			Effect.sync(() => {
-				logInstance.error('清理日志流程异常', { error: String(e) })
-				return 0
-			}),
-		),
-	)
-
-try {
-	const dir = new EXPOFS.Directory(EXPOFS.Paths.document, 'logs')
-	if (!dir.exists) {
-		dir.create()
-		logInstance.debug('成功创建日志目录')
+		return ok(deleted)
+	} catch (e) {
+		return err(e instanceof Error ? e : new Error(String(e)))
 	}
-} catch (e) {
-	logInstance.error('创建日志目录失败', { error: String(e) })
 }
 
-export default logInstance
+/**
+ * 将 Error 对象的 message、cause 递归展开为字符串，类似于 golang 的错误链
+ * @param error 任何 Error 的子类
+ * @param separator 分隔符
+ * @param maxDepth 最大递归深度
+ * @returns 一个用 separator 拼接的字符串
+ */
+
+export function flatErrorMessage(
+	error: Error,
+	separator = ':: ',
+	_temp: string[] = [],
+	_depth = 0,
+	maxDepth = 10,
+) {
+	_temp.push(error.message)
+	if (_depth >= maxDepth) {
+		_temp.push('[error depth exceeded]')
+		return _temp.join(separator)
+	}
+	if (error.cause) {
+		if (error.cause instanceof Error) {
+			flatErrorMessage(error.cause, separator, _temp, _depth + 1)
+		}
+	}
+	return _temp.join(separator)
+}
+
+/**
+ * 将 Error 上报到 Sentry
+ * @param error
+ * @param scope 项目不同分区
+ * @param message 附加信息
+ */
+
+export function reportErrorToSentry(
+	error: unknown,
+	message?: string,
+	scope?: ProjectScope | string,
+) {
+	const _error =
+		error instanceof Error
+			? error
+			: new Error(`非 Error 类型错误：${String(error)}`, { cause: error })
+
+	const isCustom = _error instanceof CustomError
+
+	const tags: Record<string, string | number | boolean | undefined> = {
+		appScope: scope,
+	}
+	if (isCustom && typeof _error.type === 'string') {
+		tags.errorType = _error.type
+	}
+
+	const extra: Record<string, unknown> = { message }
+	if (isCustom && _error.data !== undefined) {
+		extra.errorData = _error.data
+	}
+
+	const id = Sentry.captureException(_error, { tags, extra })
+	log.error(`已上报错误到 sentry，id: ${id}`)
+}
+
+try {
+	new EXPOFS.Directory(EXPOFS.Paths.document, 'logs').create({
+		intermediates: true,
+		idempotent: true,
+	})
+	console.log('成功创建日志目录')
+} catch (e) {
+	console.log('创建日志目录失败', e)
+}
+const log = logger.createLogger(config)
+
+export default log

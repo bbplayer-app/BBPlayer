@@ -2,7 +2,6 @@ import { useEditPlaylistMetadata } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bilibiliFacade } from '@/lib/facades/bilibili'
 import type { Playlist } from '@/types/core/media'
-import { effectToPromise } from '@/utils/effect'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
 import toast from '@/utils/toast'
@@ -31,23 +30,19 @@ export default function EditPlaylistMetadataModal({
 			toast.error('播放列表的 remoteSyncId 为空，无法获取远程数据')
 			return
 		}
-		let result
-		try {
-			result = await effectToPromise(
-				bilibiliFacade.fetchRemotePlaylistMetadata(
-					playlist.remoteSyncId,
-					playlist.type,
-				),
-			)
-		} catch (error) {
+		const result = await bilibiliFacade.fetchRemotePlaylistMetadata(
+			playlist.remoteSyncId,
+			playlist.type,
+		)
+		if (result.isErr()) {
 			toastAndLogError(
 				'获取远程播放列表元数据失败',
-				error,
+				result.error,
 				'Components.EditPlaylistMetadataModal',
 			)
 			return
 		}
-		const metadata = result
+		const metadata = result.value
 		setTitle(metadata.title)
 		setDescription(metadata.description)
 		setCoverUrl(metadata.coverUrl)
