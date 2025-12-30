@@ -14,12 +14,9 @@
 
 ### Added
 
-- 增加 NowPlayingBar 底部沉浸样式
-- 增加 NowPlayingBar 滑动手势操作
-
-### Changed
-
-- 切换到 Effect-TS
+- 增加 NowPlayingBar 底部沉浸样式 (Thanks to @imoyy #110)
+- 增加 NowPlayingBar 滑动手势操作 (Thanks to @imoyy #110)
+- 支持边下边播缓存
 
 ## [2.1.4] - 2025-12-20
 
