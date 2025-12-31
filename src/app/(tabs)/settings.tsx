@@ -42,7 +42,7 @@ export default function SettingsPage() {
 				style={{
 					flex: 1,
 					paddingTop: insets.top + 8,
-					paddingBottom: haveTrack ? 70 : insets.bottom,
+					paddingBottom: haveTrack ? 70 : 0,
 				}}
 			>
 				<View style={styles.header}>
@@ -158,7 +158,11 @@ const SettingsSection = memo(function SettingsSection() {
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
+	const nowPlayingBarStyle = useAppStore(
+		(state) => state.settings.nowPlayingBarStyle,
+	)
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
+	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
 	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
 		useState(Orpheus.restorePlaybackPositionEnabled)
 	const [enableLoudnessNormalization, setEnableLoudnessNormalization] =
@@ -205,6 +209,10 @@ const SettingsSection = memo(function SettingsSection() {
 		} else {
 			toastAndLogError('', new Error('无法分享日志：未找到日志文件'), 'UI.Test')
 		}
+	}
+	const setNowPlayingBarStyle = (style: 'float' | 'bottom') => {
+		setSettings({ nowPlayingBarStyle: style })
+		setNowPlayerBarMenuVisible(false)
 	}
 
 	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
@@ -259,6 +267,33 @@ const SettingsSection = memo(function SettingsSection() {
 						setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
 					}}
 				/>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>选择底部播放条样式</Text>
+				<FunctionalMenu
+					visible={nowPlayerBarMenuVisible}
+					onDismiss={() => setNowPlayerBarMenuVisible(false)}
+					anchor={
+						<IconButton
+							icon='palette'
+							size={20}
+							onPress={() => setNowPlayerBarMenuVisible(true)}
+						/>
+					}
+				>
+					<Checkbox.Item
+						mode='ios'
+						label='悬浮（默认）'
+						status={nowPlayingBarStyle === 'float' ? 'checked' : 'unchecked'}
+						onPress={() => setNowPlayingBarStyle('float')}
+					/>
+					<Checkbox.Item
+						mode='ios'
+						label='沉浸'
+						status={nowPlayingBarStyle === 'bottom' ? 'checked' : 'unchecked'}
+						onPress={() => setNowPlayingBarStyle('bottom')}
+					/>
+				</FunctionalMenu>
 			</View>
 			<View style={styles.settingRow}>
 				<Text>选择播放器背景样式</Text>

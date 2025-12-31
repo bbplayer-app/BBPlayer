@@ -1,5 +1,6 @@
 import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
 import {
 	Orpheus,
@@ -12,6 +13,7 @@ import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
+	Directions,
 	Gesture,
 	GestureDetector,
 	RectButton,
@@ -84,6 +86,10 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
 
+	const nowPlayingBarStyle = useAppStore(
+		(state) => state.settings.nowPlayingBarStyle,
+	)
+
 	const finalPlayingIndicator =
 		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
 
@@ -102,11 +108,14 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Context_Click,
 			)
-			scheduleOnRN((_isPlaying) => {
-				if (_isPlaying) {
+			scheduleOnRN(async (_isPlaying) => {
+				const isPlaying = await Orpheus.getIsPlaying()
+				if (isPlaying) {
 					void Orpheus.pause()
 				} else {
-					void Orpheus.play()
+					// 或许可以解决 play 无响应的问题？
+					await Orpheus.pause()
+					await Orpheus.play()
 				}
 			}, isPlaying)
 		}
@@ -120,8 +129,34 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			scheduleOnRN(() => Orpheus.skipToNext())
 		}
 	})
+
+	const navigateOnPlayerUpFling = Gesture.Fling()
+		.direction(Directions.UP)
+		.onStart(() => {
+			scheduleOnRN(router.navigate, '/player')
+		})
+
+	const preFling = Gesture.Fling()
+		.direction(Directions.LEFT)
+		.onStart(() => {
+			scheduleOnRN(() => Orpheus.skipToPrevious())
+		})
+
+	const nextFling = Gesture.Fling()
+		.direction(Directions.RIGHT)
+		.onStart(() => {
+			scheduleOnRN(() => Orpheus.skipToNext())
+		})
+
 	const outerTap = Gesture.Tap()
-		.requireExternalGestureToFail(prevTap, playTap, nextTap)
+		.requireExternalGestureToFail(
+			prevTap,
+			playTap,
+			nextTap,
+			navigateOnPlayerUpFling,
+			preFling,
+			nextFling,
+		)
 		.onBegin(() => {
 			opacity.value = withTiming(0.7, { duration: 100 })
 		})
@@ -129,9 +164,21 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			opacity.value = withTiming(1, { duration: 100 })
 
 			if (success) {
-				scheduleOnRN(router.push, '/player')
+				scheduleOnRN(router.navigate, '/player')
 			}
 		})
+
+	const combinedGesture = Gesture.Race(
+		navigateOnPlayerUpFling,
+		preFling,
+		nextFling,
+		outerTap,
+	)
+
+	const playerStyle =
+		nowPlayingBarStyle === 'bottom'
+			? [styles.nowPlayingBarBottom]
+			: [styles.nowPlayingBarFloat]
 
 	const animatedStyle = useAnimatedStyle(() => {
 		return {
@@ -145,13 +192,14 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 			style={styles.nowPlayingBarContainer}
 		>
 			{isVisible && (
-				<GestureDetector gesture={outerTap}>
+				<GestureDetector gesture={combinedGesture}>
 					<Animated.View
 						style={[
-							styles.nowPlayingBar,
+							playerStyle,
 							{
 								backgroundColor: colors.elevation.level2,
-								marginBottom: insets.bottom + 10,
+								marginBottom:
+									nowPlayingBarStyle === 'bottom' ? 0 : insets.bottom + 10,
 							},
 							animatedStyle,
 						]}
@@ -161,7 +209,10 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								source={{ uri: currentTrack.coverUrl ?? undefined }}
 								style={[
 									styles.nowPlayingBarImage,
-									{ borderColor: colors.primary },
+									{
+										borderColor: colors.primary,
+										borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
+									},
 								]}
 								recyclingKey={currentTrack.uniqueKey}
 								cachePolicy={'none'}
@@ -216,7 +267,14 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 								</GestureDetector>
 							</View>
 						</View>
-						<View style={styles.nowPlayingBarProgressContainer}>
+						<View
+							style={[
+								styles.nowPlayingBarProgressContainer,
+								nowPlayingBarStyle === 'bottom'
+									? { left: 0, right: 0 }
+									: { width: '88%', left: 26, right: 0 },
+							]}
+						>
 							<ProgressBar />
 						</View>
 					</Animated.View>
@@ -231,7 +289,7 @@ const styles = StyleSheet.create({
 		width: '100%',
 	},
 	progressBarTrack: {
-		height: 1,
+		height: 2,
 		overflow: 'hidden',
 		position: 'relative',
 	},
@@ -249,7 +307,17 @@ const styles = StyleSheet.create({
 		right: 0,
 		bottom: 0,
 	},
-	nowPlayingBar: {
+	nowPlayingBarBottom: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		borderTopLeftRadius: 24,
+		borderTopRightRadius: 24,
+		paddingHorizontal: 20,
+		position: 'relative',
+		height: 70,
+	},
+	nowPlayingBarFloat: {
 		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',
@@ -273,7 +341,6 @@ const styles = StyleSheet.create({
 	nowPlayingBarImage: {
 		height: 48,
 		width: 48,
-		borderRadius: 24,
 		borderWidth: 1,
 		zIndex: 2,
 	},
@@ -292,11 +359,9 @@ const styles = StyleSheet.create({
 		padding: 10,
 	},
 	nowPlayingBarProgressContainer: {
-		width: '86%',
 		alignSelf: 'center',
 		position: 'absolute',
 		bottom: 0,
-		left: 25,
 		zIndex: 1,
 	},
 })

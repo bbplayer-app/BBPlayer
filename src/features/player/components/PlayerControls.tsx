@@ -1,4 +1,5 @@
 import * as Haptics from '@/utils/haptics'
+import logInstance from '@/utils/log'
 import {
 	Orpheus,
 	PlaybackState,
@@ -54,11 +55,19 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 				<IconButton
 					icon={finalPlayingIndicator}
 					size={48}
-					onPress={() => {
+					onPress={async () => {
 						void Haptics.performAndroidHapticsAsync(
 							Haptics.AndroidHaptics.Context_Click,
 						)
-						void (isPlaying ? Orpheus.pause() : Orpheus.play())
+						const isPlaying = await Orpheus.getIsPlaying()
+						logInstance.debug('isPlaying', isPlaying)
+						if (isPlaying) {
+							await Orpheus.pause()
+						} else {
+							// 或许可以解决 play 无响应的问题？
+							await Orpheus.pause()
+							await Orpheus.play()
+						}
 					}}
 					mode='contained'
 				/>
