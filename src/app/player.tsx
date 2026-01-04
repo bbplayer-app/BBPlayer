@@ -177,46 +177,62 @@ export default function PlayerPage() {
 		}
 	})
 
+	const FallbackBackground = useMemo(
+		() => (
+			<View
+				style={[
+					StyleSheet.absoluteFill,
+					{ backgroundColor: colors.background },
+				]}
+			/>
+		),
+		[colors.background],
+	)
+
 	return (
 		<>
-			<Canvas style={StyleSheet.absoluteFill}>
-				<Rect
-					x={0}
-					y={0}
-					width={width}
-					height={realHeight}
-					color={colors.background}
-				/>
-				{playerBackgroundStyle === 'gradient' && (
-					<Group>
-						<Rect
-							x={0}
-							y={0}
-							width={width}
-							height={realHeight}
-						>
-							<LinearGradient
-								start={vec(0, 0)}
-								end={vec(0, realHeight)}
-								colors={gradientColors}
-								positions={[0, 1]}
-							/>
-						</Rect>
-						<Rect
-							x={0}
-							y={0}
-							width={width}
-							height={realHeight}
-						>
-							<LinearGradient
-								start={vec(0, 0)}
-								end={scrimEndVec}
-								colors={scrimColors}
-							/>
-						</Rect>
-					</Group>
-				)}
-			</Canvas>
+			{isForeground ? (
+				<Canvas style={StyleSheet.absoluteFill}>
+					<Rect
+						x={0}
+						y={0}
+						width={width}
+						height={realHeight}
+						color={colors.background}
+					/>
+					{playerBackgroundStyle === 'gradient' && (
+						<Group>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={vec(0, realHeight)}
+									colors={gradientColors}
+									positions={[0, 1]}
+								/>
+							</Rect>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={scrimEndVec}
+									colors={scrimColors}
+								/>
+							</Rect>
+						</Group>
+					)}
+				</Canvas>
+			) : (
+				FallbackBackground
+			)}
 
 			<View
 				style={[

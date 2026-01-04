@@ -167,6 +167,9 @@ const SettingsSection = memo(function SettingsSection() {
 		useState(Orpheus.restorePlaybackPositionEnabled)
 	const [enableLoudnessNormalization, setEnableLoudnessNormalization] =
 		useState(Orpheus.loudnessNormalizationEnabled)
+	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
+		Orpheus.autoplayOnStartEnabled,
+	)
 
 	const setSettings = useAppStore((state) => state.setSettings)
 
@@ -333,6 +336,16 @@ const SettingsSection = memo(function SettingsSection() {
 							!enableLoudnessNormalization,
 						)
 						setEnableLoudnessNormalization(!enableLoudnessNormalization)
+					}}
+				/>
+			</View>
+			<View style={styles.settingRow}>
+				<Text>软件启动时自动播放（易社死）</Text>
+				<Switch
+					value={enableAutostartPlayOnStart}
+					onValueChange={() => {
+						Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
+						setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
 					}}
 				/>
 			</View>
