@@ -344,7 +344,7 @@ const SettingsSection = memo(function SettingsSection() {
 				<Switch
 					value={enableAutostartPlayOnStart}
 					onValueChange={() => {
-						Orpheus.setAutoplayOnStartEnabled(!enableLoudnessNormalization)
+						Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
 						setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
 					}}
 				/>
