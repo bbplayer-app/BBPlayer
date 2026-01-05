@@ -5,7 +5,7 @@ interface Settings {
 	enableSentryReport: boolean
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
-	playerBackgroundStyle: 'gradient' | 'md3' | 'streamer'
+	playerBackgroundStyle: 'gradient' | 'md3'
 	nowPlayingBarStyle: 'float' | 'bottom'
 }
 

@@ -37,7 +37,7 @@ export default function AppearanceSettingsPage() {
 		setNowPlayerBarMenuVisible(false)
 	}
 
-	const setPlayerBackgroundStyle = (style: 'gradient' | 'streamer' | 'md3') => {
+	const setPlayerBackgroundStyle = (style: 'gradient' | 'md3') => {
 		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}

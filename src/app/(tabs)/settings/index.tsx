@@ -6,12 +6,11 @@ import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import * as Updates from 'expo-updates'
 import * as WebBrowser from 'expo-web-browser'
-import { memo, useCallback, useState } from 'react'
+import { memo } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const CLICK_TIMES = 3
 const updateTime = Updates.createdAt
 	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`
 	: ''
@@ -109,27 +108,11 @@ export default function SettingsPage() {
 }
 
 const AboutSection = memo(function AboutSection() {
-	const router = useRouter()
-	const [clickTimes, setClickTimes] = useState(0)
-
-	const handlePress = useCallback(() => {
-		const next = clickTimes + 1
-		setClickTimes(next)
-		if (next >= CLICK_TIMES) {
-			router.push('/test')
-			setTimeout(() => {
-				setClickTimes(0)
-			}, 200)
-			return
-		}
-	}, [clickTimes, router])
-
 	return (
 		<View style={styles.aboutSectionContainer}>
 			<Text
 				variant='titleLarge'
 				style={styles.aboutTitle}
-				onPress={handlePress}
 			>
 				BBPlayer
 			</Text>

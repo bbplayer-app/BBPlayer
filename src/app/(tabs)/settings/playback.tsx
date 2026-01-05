@@ -1,3 +1,4 @@
+import { toastAndLogError } from '@/utils/error-handling'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
@@ -36,9 +37,14 @@ export default function PlaybackSettingsPage() {
 					<Switch
 						value={enablePersistCurrentPosition}
 						onValueChange={() => {
-							Orpheus.setRestorePlaybackPositionEnabled(
-								!enablePersistCurrentPosition,
-							)
+							try {
+								Orpheus.setRestorePlaybackPositionEnabled(
+									!enablePersistCurrentPosition,
+								)
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
 							setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
 						}}
 					/>
@@ -48,9 +54,14 @@ export default function PlaybackSettingsPage() {
 					<Switch
 						value={enableLoudnessNormalization}
 						onValueChange={() => {
-							Orpheus.setLoudnessNormalizationEnabled(
-								!enableLoudnessNormalization,
-							)
+							try {
+								Orpheus.setLoudnessNormalizationEnabled(
+									!enableLoudnessNormalization,
+								)
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
 							setEnableLoudnessNormalization(!enableLoudnessNormalization)
 						}}
 					/>
@@ -60,7 +71,12 @@ export default function PlaybackSettingsPage() {
 					<Switch
 						value={enableAutostartPlayOnStart}
 						onValueChange={() => {
-							Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
+							try {
+								Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
 						}}
 					/>
