@@ -6,7 +6,7 @@ import { FlashList } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Appbar, Divider, useTheme } from 'react-native-paper'
+import { Appbar, Divider, Text, useTheme } from 'react-native-paper'
 
 const renderItem = ({
 	item,
@@ -63,6 +63,14 @@ export default function CommentsPage() {
 	)
 
 	const ItemSeparatorComponent = useCallback(() => <Divider />, [])
+
+	if (!bvid) {
+		return (
+			<View style={styles.center}>
+				<Text>参数错误</Text>
+			</View>
+		)
+	}
 
 	return (
 		<View

@@ -134,7 +134,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						}}
 					/>
 				</Tooltip>
-				<Tooltip title='切换循环播放模式'>
+				<Tooltip title='查看评论'>
 					<IconButton
 						icon='comment-text-outline'
 						size={24}

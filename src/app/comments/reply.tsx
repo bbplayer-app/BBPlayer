@@ -6,7 +6,7 @@ import { FlashList } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
+import { Appbar, Divider, Text, useTheme } from 'react-native-paper'
 
 const renderItem = ({
 	item,
@@ -45,6 +45,25 @@ export default function ReplyCommentsPage() {
 		(item: BilibiliCommentItem) => item.rpid.toString(),
 		[],
 	)
+
+	const divider = useCallback(() => <Divider />, [])
+
+	if (!bvid || !rpid) {
+		return (
+			<View style={styles.center}>
+				<Text>参数错误</Text>
+			</View>
+		)
+	}
+
+	const rpidNumber = Number(rpid)
+	if (isNaN(rpidNumber)) {
+		return (
+			<View style={styles.center}>
+				<Text>无效的评论ID</Text>
+			</View>
+		)
+	}
 
 	return (
 		<View
@@ -94,6 +113,7 @@ export default function ReplyCommentsPage() {
 							/>
 						) : null
 					}
+					ItemSeparatorComponent={divider}
 					refreshing={isRefetching}
 					onRefresh={refetch}
 					contentContainerStyle={{ paddingBottom: 20 }}
