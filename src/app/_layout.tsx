@@ -247,6 +247,14 @@ export default Sentry.wrap(function RootLayout() {
 					name='playlist/remote/toview'
 					options={{ headerShown: false }}
 				/>
+				<Stack.Screen
+					name='comments/[bvid]'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='comments/reply'
+					options={{ headerShown: false }}
+				/>
 			</Stack>
 			<Toast config={toastConfig} />
 		</AppProviders>

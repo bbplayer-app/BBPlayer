@@ -1,3 +1,4 @@
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import * as Haptics from '@/utils/haptics'
 import logInstance from '@/utils/log'
 import {
@@ -8,6 +9,7 @@ import {
 	usePlaybackState,
 } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
@@ -23,6 +25,8 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 		staleTime: 0,
 	})
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
+	const currentTrack = useCurrentTrack()
+	const router = useRouter()
 
 	const finalPlayingIndicator =
 		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
@@ -65,6 +69,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 							await Orpheus.pause()
 						} else {
 							// 或许可以解决 play 无响应的问题？
+							// 好吧并不能，我是小丑
 							await Orpheus.pause()
 							await Orpheus.play()
 						}
@@ -126,6 +131,21 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 										: RepeatMode.OFF
 							void Orpheus.setRepeatMode(nextMode)
 							setRepeatMode(nextMode)
+						}}
+					/>
+				</Tooltip>
+				<Tooltip title='查看评论'>
+					<IconButton
+						icon='comment-text-outline'
+						size={24}
+						disabled={currentTrack?.source !== 'bilibili'}
+						onPress={() => {
+							if (currentTrack?.source === 'bilibili') {
+								router.push({
+									pathname: '/comments/[bvid]',
+									params: { bvid: currentTrack.bilibiliMetadata.bvid },
+								})
+							}
 						}}
 					/>
 				</Tooltip>
