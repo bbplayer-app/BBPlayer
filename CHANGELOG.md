@@ -5,6 +5,23 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- 再次尝试修复播放器页面卡顿问题（😭）
+- 尝试修复 `cannot use a recycled source in createBitmap` 错误（expo-orpheus@0.7.2）(然而问题依然存在)
+
+### Added
+
+- 新增启动时自动播放功能
+- 重构设置页面，增加二级目录，更简洁
+- 评论区功能
+
+### Changed
+
+- 升级了 expo 相关依赖库版本
+
 ## [2.1.5] - 2025-12-31
 
 ### Fixed
@@ -154,7 +171,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.4...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.5...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
