@@ -1,6 +1,8 @@
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
+	BilibiliCommentsResponse,
+	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliToViewVideoList,
 	BilibiliWebPlayerInfo,
@@ -572,6 +574,71 @@ export const createBilibiliApi = () => ({
 				'/x/space/wbi/arc/search',
 				params,
 			)
+		})
+	},
+
+	/**
+	 * 获取评论区列表
+	 * @param bvid 视频 BV 号
+	 * @param next 加载游标，第一页为 0
+	 * @param mode 排序方式 3: 热度, 2: 时间
+	 */
+	getComments(
+		bvid: string,
+		next: number,
+		mode = 3,
+	): ResultAsync<BilibiliCommentsResponse, BilibiliApiError> {
+		const avid = bv2av(bvid)
+		return bilibiliApiClient.get<BilibiliCommentsResponse>('/x/v2/reply/main', {
+			oid: String(avid),
+			type: '1', // 1 for video
+			mode: String(mode),
+			next: String(next),
+			plat: '1',
+		})
+	},
+
+	/**
+	 * 获取楼中楼（子评论）列表
+	 * @param bvid 视频 BV 号
+	 * @param rpid 根评论 ID
+	 * @param pn 页码，从 1 开始
+	 */
+	getReplyComments(
+		bvid: string,
+		rpid: number,
+		pn: number,
+	): ResultAsync<BilibiliReplyCommentsResponse, BilibiliApiError> {
+		const avid = bv2av(bvid)
+		return bilibiliApiClient.get<BilibiliReplyCommentsResponse>(
+			'/x/v2/reply/reply',
+			{
+				oid: String(avid),
+				type: '1',
+				root: String(rpid),
+				pn: String(pn),
+				ps: '20',
+			},
+		)
+	},
+
+	/**
+	 * 点赞/取消点赞评论
+	 * @param bvid 视频 BV 号
+	 * @param rpid 评论 ID
+	 * @param action 1: 点赞, 0: 取消点赞
+	 */
+	likeComment(
+		bvid: string,
+		rpid: number,
+		action: 0 | 1,
+	): ResultAsync<0, BilibiliApiError> {
+		const avid = bv2av(bvid)
+		return bilibiliApiClient.postWithCsrf<0>('/x/v2/reply/action', {
+			oid: String(avid),
+			type: '1',
+			rpid: String(rpid),
+			action: String(action),
 		})
 	},
 

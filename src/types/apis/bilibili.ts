@@ -387,6 +387,108 @@ interface BilibiliToViewVideoList {
 	}[]
 }
 
+/**
+ * 评论区用户信息
+ */
+interface BilibiliCommentMember {
+	mid: string
+	uname: string
+	sex: string
+	sign: string
+	avatar: string
+	rank: string
+	level_info: {
+		current_level: number
+	}
+}
+
+/**
+ * 评论内容
+ */
+interface BilibiliCommentContent {
+	message: string
+	plat: number
+	device: string
+	members: unknown[]
+	jump_url: Record<string, unknown>
+	max_line: number
+	pictures?: {
+		img_src: string
+		img_width: number
+		img_height: number
+		img_size: number
+	}[]
+}
+
+/**
+ * 单条评论信息
+ */
+interface BilibiliCommentItem {
+	rpid: number
+	oid: number
+	type: number
+	mid: number
+	root: number
+	parent: number
+	dialog: number
+	count: number
+	rcount: number
+	state: number
+	fansgrade: number
+	attr: number
+	ctime: number
+	rpid_str: string
+	root_str: string
+	parent_str: string
+	like: number
+	action: number
+	member: BilibiliCommentMember
+	content: BilibiliCommentContent
+	replies: BilibiliCommentItem[] | null
+	assist: number
+	folder: {
+		has_folded: boolean
+		is_folded: boolean
+		rule: string
+	}
+	invisible: boolean
+}
+
+/**
+ * 获取评论区列表返回值
+ */
+interface BilibiliCommentsResponse {
+	cursor: {
+		is_begin: boolean
+		prev: number
+		next: number
+		is_end: boolean
+		mode: number
+		show_header: number
+		all_count: number
+		support_mode: number[]
+		name: string
+	}
+	replies: BilibiliCommentItem[] | null
+	top: {
+		upper: BilibiliCommentItem | null
+		admin: BilibiliCommentItem | null
+	}
+}
+
+/**
+ * 获取楼中楼（子评论）返回值
+ */
+interface BilibiliReplyCommentsResponse {
+	page: {
+		num: number
+		size: number
+		count: number
+	}
+	replies: BilibiliCommentItem[] | null
+	root: BilibiliCommentItem
+}
+
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
@@ -394,6 +496,10 @@ export type {
 	BilibiliCollectionAllContents,
 	BilibiliCollectionContent,
 	BilibiliCollectionInfo,
+	BilibiliCommentContent,
+	BilibiliCommentItem,
+	BilibiliCommentMember,
+	BilibiliCommentsResponse,
 	BilibiliDealFavoriteForOneVideoResponse,
 	BilibiliFavoriteListAllContents,
 	BilibiliFavoriteListContent,
@@ -403,6 +509,7 @@ export type {
 	BilibiliMediaItemInCollection,
 	BilibiliMultipageVideo,
 	BilibiliPlaylist,
+	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliSearchVideo,
 	BilibiliToViewVideoList,
