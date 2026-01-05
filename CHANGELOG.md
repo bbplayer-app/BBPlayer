@@ -10,11 +10,12 @@
 ### Fixed
 
 - 再次尝试修复播放器页面卡顿问题（😭）
-- 尝试修复 `cannot use a recycled source in createBitmap` 错误（expo-orpheus@0.7.2）
+- 尝试修复 `cannot use a recycled source in createBitmap` 错误（expo-orpheus@0.7.2）(然而问题依然存在)
 
 ### Added
 
 - 新增启动时自动播放功能
+- 重构设置页面，增加二级目录，更简洁
 
 ### Changed
 

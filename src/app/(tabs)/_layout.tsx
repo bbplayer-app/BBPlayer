@@ -62,6 +62,7 @@ export default function TabLayout() {
 				name='settings'
 				options={{
 					title: '设置',
+					headerShown: false,
 					tabBarIcon: () => settingsIcon,
 					tabBarLabel: '设置',
 					lazy: false,
