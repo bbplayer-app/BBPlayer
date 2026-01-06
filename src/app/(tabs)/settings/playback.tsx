@@ -18,6 +18,12 @@ export default function PlaybackSettingsPage() {
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
+	const [isDesktopLyricsShown, setIsDesktopLyricsShown] = useState(
+		Orpheus.isDesktopLyricsShown,
+	)
+	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
+		Orpheus.isDesktopLyricsLocked,
+	)
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -78,6 +84,40 @@ export default function PlaybackSettingsPage() {
 								return
 							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>桌面歌词</Text>
+					<Switch
+						value={isDesktopLyricsShown}
+						onValueChange={async () => {
+							try {
+								if (isDesktopLyricsShown) {
+									await Orpheus.hideDesktopLyrics()
+								} else {
+									await Orpheus.showDesktopLyrics()
+								}
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
+							setIsDesktopLyricsShown(!isDesktopLyricsShown)
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>桌面歌词锁定</Text>
+					<Switch
+						value={isDesktopLyricsLocked}
+						onValueChange={async () => {
+							try {
+								await Orpheus.setDesktopLyricsLocked(!isDesktopLyricsLocked)
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
+							setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
 						}}
 					/>
 				</View>

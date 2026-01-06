@@ -1,6 +1,9 @@
 import { Orpheus } from '@roitium/expo-orpheus'
 import log from './src/utils/log'
-import { finalizeAndRecordCurrentTrack } from './src/utils/player'
+import {
+	finalizeAndRecordCurrentTrack,
+	setDesktopLyrics,
+} from './src/utils/player'
 import toast from './src/utils/toast'
 
 // 定义一个全局变量，避免二次初始化 player
@@ -22,7 +25,7 @@ Orpheus.addListener('onTrackFinished', (event) => {
 })
 
 Orpheus.addListener('onTrackStarted', (event) => {
-	log.debug('onTrackStarted', event)
+	setDesktopLyrics(event.trackId, event.transitionReason)
 })
 
 import 'expo-router/entry'
