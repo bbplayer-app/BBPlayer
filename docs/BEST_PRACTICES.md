@@ -6,30 +6,9 @@
 
 项目中大量使用了 `FlashList` 进行列表渲染。为了保证滚动性能，请严格遵守以下规范：
 
-1.  **renderItem 定义**: `renderItem` 函数**必须**在组件函数外部定义，或者是使用 `useCallback` 记忆化的稳定函数。
+1.  **renderItem 定义**: `renderItem` 函数**必须**在组件函数外部定义（并不推荐使用 `useCallback`）
 2.  **extraData 使用**: 所有 `renderItem` 依赖的外部变量（除了 `item` 本身），都必须放入 `extraData` 属性中。
 3.  **Memoization**: `extraData` 对象必须使用 `useMemo` 包裹，避免因引用变化导致不必要的重渲染。
-
-```tsx
-// ✅ 推荐做法
-const renderItem = useCallback(({ item }) => <MyComponent item={item} />, [])
-
-const extraData = useMemo(
-	() => ({
-		theme: currentTheme,
-		selection: currentSelection,
-	}),
-	[currentTheme, currentSelection],
-)
-
-return (
-	<FlashList
-		data={data}
-		renderItem={renderItem}
-		extraData={extraData}
-	/>
-)
-```
 
 ## 📝 代码风格
 

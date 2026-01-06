@@ -4,7 +4,7 @@ BBPlayer 是一个基于 **React Native (Expo)** 的现代化移动端应用。�
 
 ## 🛠 技术栈概览
 
-- **核心框架**: [Expo](https://expo.dev) (SDK 54), [React Native](https://reactnative.dev)
+- **核心框架**: [Expo](https://expo.dev), [React Native](https://reactnative.dev)
 - **路由导航**: [Expo Router](https://docs.expo.dev/router/introduction/) (文件系统路由)
 - **状态管理**:
   - [Zustand](https://github.com/pmndrs/zustand) (全局客户端状态)
@@ -77,27 +77,6 @@ src/
 
 - **原则**: 函数应返回 `Result<T, E>` 或 `ResultAsync<T, E>`。
 - **优势**: 强制调用方处理错误，类型安全，避免隐式崩溃。
-
-```typescript
-// ❌ 避免这样做
-async function getUser(id: string) {
-  const user = await db.query(...);
-  if (!user) throw new Error("User not found");
-  return user;
-}
-
-// ✅ 推荐做法 (Service/Facade 层)
-import { ok, err, ResultAsync } from 'neverthrow';
-
-function getUser(id: string): ResultAsync<User, NotFoundError> {
-  return ResultAsync.fromPromise(
-    db.query(...),
-    () => new DatabaseError()
-  ).andThen(user =>
-    user ? ok(user) : err(new NotFoundError())
-  );
-}
-```
 
 ## 💾 数据与播放器设计说明
 

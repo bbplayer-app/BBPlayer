@@ -30,4 +30,4 @@
 
 更新 `update.json` 后，需要刷新 CDN 缓存以确保用户能立即检测到更新。
 
-- **操作**：访问 purge 工具刷新 JSDelivr 上 `update.json` 的缓存。
+- **操作**：使用 `https://www.jsdelivr.com/tools/purge` 刷新 `update.json` 的缓存。

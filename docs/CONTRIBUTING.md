@@ -8,14 +8,9 @@
 
 本项目的开发环境基于 Node.js 和 React Native (Expo)。
 
-1.  **Node.js**: 推荐使用 LTS 版本 (v18+)。
-2.  **包管理器**: 必须使用 **pnpm**。
-    ```bash
-    npm install -g pnpm
-    ```
-3.  **移动开发环境**:
+1.  **包管理器**: 必须使用 **pnpm**。
+2.  **移动开发环境**:
     - **Android**: 安装 Android Studio 并配置 Android SDK。
-    - **iOS** (仅 macOS): 安装 Xcode 和 CocoaPods。
 
 ### 安装依赖
 
@@ -33,9 +28,6 @@ pnpm start
 
 # 运行 Android 模拟器
 pnpm android
-
-# 运行 iOS 模拟器 (仅 macOS)
-pnpm ios
 ```
 
 ## 📂 文档导航
@@ -51,7 +43,7 @@ pnpm ios
 
 ### 分支管理
 
-- **master**: 主分支，对应稳定版本。
+- **master**: 主分支，对应最新版本的代码。
 - **dev**: 开发分支，所有的 PR 请提交到此分支。
 - **feat/xyz**: 新功能分支。
 - **fix/xyz**: 问题修复分支。
@@ -69,15 +61,7 @@ pnpm ios
 
 ### 代码质量
 
-在提交代码前，请确保通过了 lint 检查和类型检查：
-
-```bash
-# 类型检查
-pnpm type-check
-
-# Lint 检查
-pnpm lint
-```
+我们使用 lefthook 来自动执行代码检查和格式化，请确保你配置好了 lefthook。
 
 ## 🤝 贡献代码
 
