@@ -1,10 +1,11 @@
 {
-	"version": "2.1.5",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.5",
+	"version": "2.1.6",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.6",
 	"notes": "你版本太低了！赶紧更新！",
 	"listed_notes": [
-		"新增：优化「正在播放」进度条样式",
-		"新增：边下边播缓存，更省流量"
+		"新增：支持在软件内查看 B 站评论区",
+		"新增：「启动时自动播放」功能",
+		"修复：修复播放器页面卡顿问题"
 	],
 	"forced": false
 }
