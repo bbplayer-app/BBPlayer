@@ -252,6 +252,7 @@ function setDesktopLyrics(
 	trackId: string,
 	_transitionReason: TransitionReason,
 ) {
+	if (!Orpheus.isDesktopLyricsShown) return
 	const currentTimestamp = Date.now()
 	lastSetDesktopLyricsTimestamp = currentTimestamp
 
@@ -261,6 +262,7 @@ function setDesktopLyrics(
 	const setIt = async () => {
 		try {
 			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+			await Orpheus.setDesktopLyrics(JSON.stringify({ lyrics: [] }))
 			const trackResult = await trackService.getTrackByUniqueKey(trackId)
 			if (trackResult.isErr()) {
 				toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
@@ -280,7 +282,7 @@ function setDesktopLyrics(
 			return
 		}
 	}
-	debouncedSetDesktopLyrics = setTimeout(setIt, 1000)
+	void setIt()
 }
 
 export {

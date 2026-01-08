@@ -1,8 +1,9 @@
+import { alert } from '@/components/modals/AlertModal'
 import { toastAndLogError } from '@/utils/error-handling'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { AppState, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -24,6 +25,50 @@ export default function PlaybackSettingsPage() {
 	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
 		Orpheus.isDesktopLyricsLocked,
 	)
+
+	const enableDesktopLyrics = async () => {
+		try {
+			const hadPermission = await Orpheus.checkOverlayPermission()
+			if (hadPermission) {
+				await Orpheus.showDesktopLyrics()
+				setIsDesktopLyricsShown(true)
+				return
+			}
+			alert(
+				'桌面歌词',
+				'启用桌面歌词需要启用悬浮窗权限。跳转到设置后，请找到 BBPlayer，并允许显示悬浮窗',
+				[
+					{
+						text: '去设置',
+						onPress: async () => {
+							await Orpheus.requestOverlayPermission()
+							setIsDesktopLyricsShown(true)
+						},
+					},
+					{ text: '取消' },
+				],
+				{ cancelable: true },
+			)
+		} catch (e) {
+			toastAndLogError('设置桌面歌词失败', e, 'Settings')
+			return
+		}
+	}
+
+	useEffect(() => {
+		const listener = AppState.addEventListener('change', () => {
+			setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
+			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+		})
+		return () => {
+			listener.remove()
+		}
+	}, [])
+
+	useFocusEffect(() => {
+		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
+		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+	})
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -96,7 +141,7 @@ export default function PlaybackSettingsPage() {
 								if (isDesktopLyricsShown) {
 									await Orpheus.hideDesktopLyrics()
 								} else {
-									await Orpheus.showDesktopLyrics()
+									await enableDesktopLyrics()
 								}
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
