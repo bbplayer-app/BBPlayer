@@ -205,10 +205,14 @@ const QrCodeLoginModal = () => {
 						})
 					}}
 				>
-					<QRCode
-						value={qrcodeUrl}
-						size={200}
-					/>
+					{qrcodeUrl ? (
+						<QRCode
+							value={qrcodeUrl}
+							size={200}
+						/>
+					) : (
+						<Text style={styles.statusText}>正在生成二维码...</Text>
+					)}
 				</Pressable>
 			</>
 		)
