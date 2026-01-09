@@ -57,8 +57,8 @@ export const createBilibiliApi = () => ({
 		return bilibiliApiClient
 			.get<{
 				list: BilibiliVideoDetails[]
-			}>(`/x/web-interface/ranking/v2?rid=${partition}`, undefined)
-			.map((response) => response.list)
+			} | null>(`/x/web-interface/ranking/v2?rid=${partition}`, undefined)
+			.map((response) => response?.list ?? [])
 	},
 
 	/**
@@ -70,9 +70,11 @@ export const createBilibiliApi = () => ({
 		return bilibiliApiClient
 			.get<{
 				list: BilibiliPlaylist[] | null
-			}>(`/x/v3/fav/folder/created/list-all?up_mid=${userMid}`, undefined)
-			.map((response) => response.list)
-			.map((list) => list ?? [])
+			} | null>(
+				`/x/v3/fav/folder/created/list-all?up_mid=${userMid}`,
+				undefined,
+			)
+			.map((response) => response?.list ?? [])
 	},
 
 	/**
@@ -113,10 +115,10 @@ export const createBilibiliApi = () => ({
 		return bilibiliApiClient
 			.get<{
 				trending: { list: BilibiliHotSearch[] }
-			}>('/x/web-interface/search/square', {
+			} | null>('/x/web-interface/search/square', {
 				limit: '10',
 			})
-			.map((response) => response.trending.list)
+			.map((response) => response?.trending.list ?? [])
 	},
 
 	/**
