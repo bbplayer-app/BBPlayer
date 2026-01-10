@@ -102,6 +102,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					usesCleartextTraffic: true,
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
+					packagingOptions: {
+						pickFirst: [
+							'lib/arm64-v8a/libworklets.so',
+							'lib/armeabi-v7a/libworklets.so',
+							'lib/x86/libworklets.so',
+							'lib/x86_64/libworklets.so',
+						],
+					},
 				},
 			},
 		],
