@@ -5,6 +5,17 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- 修复登录时因二维码链接为空导致的报错
+- 修复 bilibili 部分 api data 为 null 导致的报错
+
+## Added
+
+- 启用 reanimated shared element transition
+
 ## [2.1.6] - 2026-01-06
 
 ### Fixed

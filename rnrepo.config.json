@@ -1,0 +1,3 @@
+{
+	"denyList": ["react-native-reanimated"]
+}
