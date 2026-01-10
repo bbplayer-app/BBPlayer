@@ -66,7 +66,7 @@ jobs:
           packager: npm
 
       - name: 📦 Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install
 
       - name: ⚙️ Prepare Variables
         id: prep
