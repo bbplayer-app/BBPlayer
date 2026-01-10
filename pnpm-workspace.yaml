@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@sentry/cli'
+  - esbuild
+  - lefthook
+  - unrs-resolver
+  - react-native-logs

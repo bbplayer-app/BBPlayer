@@ -9,21 +9,26 @@ jobs:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
 
+      - name: 🤖 Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: 🏗 Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 22.x
-          cache: npm
+          cache: pnpm
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          packager: npm
+          packager: pnpm
 
       - name: 📦 Install dependencies
-        run: npm install --legacy-peer-deps
+        run: pnpm install
 
       - name: 🚀 Create update
         run: eas update --auto --platform=android

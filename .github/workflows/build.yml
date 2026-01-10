@@ -21,6 +21,7 @@ on:
 
 env:
   NODE_VERSION: 22.x
+  PNPM_VERSION: 10
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,21 +53,26 @@ jobs:
         with:
           ref: ${{ (github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha) || github.sha }}
 
+      - name: 🤖 Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: 🏗 Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          cache: pnpm
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
-          packager: npm
+          packager: pnpm
 
       - name: 📦 Install dependencies
-        run: npm install --legacy-peer-deps
+        run: pnpm install
 
       - name: ⚙️ Prepare Variables
         id: prep
