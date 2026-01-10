@@ -12,22 +12,17 @@ jobs:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
 
-      - name: 🏗 Setup PNPM
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: "22.x"
-          cache: "pnpm"
+          cache: "npm"
 
       - name: 📦 Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: 🚀 Run Lint
-        run: pnpm lint
+        run: npm run lint
 
   version-check:
     name: ✏️ Check Version Bump in package.json
