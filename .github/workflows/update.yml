@@ -23,7 +23,7 @@ jobs:
           packager: npm
 
       - name: 📦 Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: 🚀 Create update
         run: eas update --auto --platform=android
