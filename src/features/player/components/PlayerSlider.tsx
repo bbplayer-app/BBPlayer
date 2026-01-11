@@ -99,7 +99,6 @@ export function PlayerSlider() {
 		void Orpheus.seekTo(time)
 		// Prevent jump-back by keeping isSeeking true for a short duration
 		setTimeout(() => {
-			// eslint-disable-next-line react-compiler/react-compiler
 			isSeeking.value = false
 		}, 500)
 	}
@@ -127,7 +126,6 @@ export function PlayerSlider() {
 			// eslint-disable-next-line react-compiler/react-compiler
 			isScrubbing.value = true
 			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			// eslint-disable-next-line react-compiler/react-compiler
 			scrubPosition.value = newProgress * (duration.value || 1)
 			runOnJS(Haptics.performAndroidHapticsAsync)(
 				Haptics.AndroidHaptics.Drag_Start,
@@ -136,7 +134,6 @@ export function PlayerSlider() {
 		.onUpdate((e) => {
 			if (containerWidth.value === 0) return
 			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			// eslint-disable-next-line react-compiler/react-compiler
 			scrubPosition.value = newProgress * (duration.value || 1)
 		})
 		.onFinalize(() => {
@@ -144,9 +141,7 @@ export function PlayerSlider() {
 			const targetTime = scrubPosition.value
 
 			// Optimistic update locally
-			// eslint-disable-next-line react-compiler/react-compiler
 			seekPosition.value = targetTime
-			// eslint-disable-next-line react-compiler/react-compiler
 			isSeeking.value = true
 
 			void runOnJS(handleSeek)(targetTime)
@@ -154,8 +149,7 @@ export function PlayerSlider() {
 				Haptics.AndroidHaptics.Gesture_End,
 			)
 
-			// eslint-disable-next-line react-compiler/react-compiler
-			isScrubbing.value = false
+			isScrubbing.value = false // eslint-disable-line react-compiler/react-compiler
 		})
 		// Expand touch area
 		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
