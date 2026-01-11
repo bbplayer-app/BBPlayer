@@ -149,7 +149,7 @@ export function PlayerSlider() {
 				Haptics.AndroidHaptics.Gesture_End,
 			)
 
-			isScrubbing.value = false // eslint-disable-line react-compiler/react-compiler
+			isScrubbing.value = false
 		})
 		// Expand touch area
 		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
