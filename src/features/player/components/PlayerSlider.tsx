@@ -79,25 +79,30 @@ function TextWithAnimation({
 	)
 }
 
-function ReanimatedSlider({
-	position,
-	duration,
-	isScrubbing,
-	scrubPosition,
-	isSeeking,
-	seekPosition,
-	onSeek,
-}: {
-	position: SharedValue<number>
-	duration: SharedValue<number>
-	isScrubbing: SharedValue<boolean>
-	scrubPosition: SharedValue<number>
-	isSeeking: SharedValue<boolean>
-	seekPosition: SharedValue<number>
-	onSeek: (time: number) => void
-}) {
+export function PlayerSlider() {
 	const { colors } = useTheme()
+	const { position, duration } = useAnimatedTrackProgress()
+
 	const containerWidth = useSharedValue(0)
+	const isScrubbing = useSharedValue(false)
+	const scrubPosition = useSharedValue(0)
+	const isSeeking = useSharedValue(false)
+	const seekPosition = useSharedValue(0)
+
+	const displayPosition = useDerivedValue(() => {
+		if (isScrubbing.value) return scrubPosition.value
+		if (isSeeking.value) return seekPosition.value
+		return position.value
+	})
+
+	const handleSeek = (time: number) => {
+		void Orpheus.seekTo(time)
+		// Prevent jump-back by keeping isSeeking true for a short duration
+		setTimeout(() => {
+			// eslint-disable-next-line react-compiler/react-compiler
+			isSeeking.value = false
+		}, 500)
+	}
 
 	const progress = useDerivedValue(() => {
 		const dur = duration.value || 1
@@ -144,7 +149,7 @@ function ReanimatedSlider({
 			// eslint-disable-next-line react-compiler/react-compiler
 			isSeeking.value = true
 
-			void runOnJS(onSeek)(targetTime)
+			void runOnJS(handleSeek)(targetTime)
 			void runOnJS(Haptics.performAndroidHapticsAsync)(
 				Haptics.AndroidHaptics.Gesture_End,
 			)
@@ -182,78 +187,42 @@ function ReanimatedSlider({
 	})
 
 	return (
-		<GestureDetector gesture={pan}>
-			<View
-				style={styles.sliderContainer}
-				onLayout={(e) => {
-					containerWidth.value = e.nativeEvent.layout.width
-				}}
-			>
-				{/* Background Track */}
-				<Animated.View
-					style={[
-						styles.track,
-						{ backgroundColor: colors.surfaceVariant },
-						trackAnimatedStyle,
-					]}
-				/>
-
-				{/* Active Track */}
-				<Animated.View
-					style={[
-						styles.activeTrack,
-						{ backgroundColor: colors.primary },
-						activeTrackAnimatedStyle,
-					]}
-				/>
-
-				{/* Thumb */}
-				<Animated.View
-					style={[
-						styles.thumb,
-						{ backgroundColor: colors.primary },
-						thumbAnimatedStyle,
-					]}
-				/>
-			</View>
-		</GestureDetector>
-	)
-}
-
-export function PlayerSlider() {
-	const { position, duration } = useAnimatedTrackProgress()
-
-	const isScrubbing = useSharedValue(false)
-	const scrubPosition = useSharedValue(0)
-	const isSeeking = useSharedValue(false)
-	const seekPosition = useSharedValue(0)
-
-	const displayPosition = useDerivedValue(() => {
-		if (isScrubbing.value) return scrubPosition.value
-		if (isSeeking.value) return seekPosition.value
-		return position.value
-	})
-
-	const handleSeek = (time: number) => {
-		void Orpheus.seekTo(time)
-		// Prevent jump-back by keeping isSeeking true for a short duration
-		setTimeout(() => {
-			// eslint-disable-next-line react-compiler/react-compiler
-			isSeeking.value = false
-		}, 500)
-	}
-
-	return (
 		<View>
-			<ReanimatedSlider
-				position={position}
-				duration={duration}
-				isScrubbing={isScrubbing}
-				scrubPosition={scrubPosition}
-				isSeeking={isSeeking}
-				seekPosition={seekPosition}
-				onSeek={handleSeek}
-			/>
+			<GestureDetector gesture={pan}>
+				<View
+					style={styles.sliderContainer}
+					onLayout={(e) => {
+						containerWidth.value = e.nativeEvent.layout.width
+					}}
+				>
+					{/* Background Track */}
+					<Animated.View
+						style={[
+							styles.track,
+							{ backgroundColor: colors.surfaceVariant },
+							trackAnimatedStyle,
+						]}
+					/>
+
+					{/* Active Track */}
+					<Animated.View
+						style={[
+							styles.activeTrack,
+							{ backgroundColor: colors.primary },
+							activeTrackAnimatedStyle,
+						]}
+					/>
+
+					{/* Thumb */}
+					<Animated.View
+						style={[
+							styles.thumb,
+							{ backgroundColor: colors.primary },
+							thumbAnimatedStyle,
+						]}
+					/>
+				</View>
+			</GestureDetector>
 			<View style={styles.timeContainer}>
 				<TextWithAnimation
 					sharedPosition={displayPosition}
@@ -290,7 +259,6 @@ const styles = StyleSheet.create({
 		height: 20,
 		borderRadius: 10,
 		left: 0,
-		marginLeft: 0, // We handle centering in calculation (-10) or here?
-		// If we use translateX with `progress * width - 10`, then `left: 0` is correct.
+		marginLeft: 0,
 	},
 })
