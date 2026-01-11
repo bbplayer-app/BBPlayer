@@ -7,7 +7,6 @@ import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 import Animated, {
-	runOnJS,
 	useAnimatedReaction,
 	useAnimatedStyle,
 	useDerivedValue,
@@ -97,15 +96,15 @@ export function PlayerSlider() {
 
 	const handleSeek = (time: number) => {
 		void Orpheus.seekTo(time)
-		// Prevent jump-back by keeping isSeeking true for a short duration
 		setTimeout(() => {
-			isSeeking.value = false
-		}, 500)
+			isSeeking.set(false)
+		}, 1000)
 	}
+
+	console.log('rerender')
 
 	const progress = useDerivedValue(() => {
 		const dur = duration.value || 1
-		// Use display logic locally for smooth animations
 		let pos = position.value
 		if (isScrubbing.value) {
 			pos = scrubPosition.value
@@ -123,35 +122,34 @@ export function PlayerSlider() {
 	const pan = Gesture.Pan()
 		.onBegin((e) => {
 			if (containerWidth.value === 0) return
-			// eslint-disable-next-line react-compiler/react-compiler
-			isScrubbing.value = true
+			isScrubbing.set(true)
 			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.value = newProgress * (duration.value || 1)
-			runOnJS(Haptics.performAndroidHapticsAsync)(
+			scrubPosition.set(newProgress * (duration.value || 1))
+			scheduleOnRN(
+				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Drag_Start,
 			)
 		})
 		.onUpdate((e) => {
 			if (containerWidth.value === 0) return
 			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.value = newProgress * (duration.value || 1)
+			scrubPosition.set(newProgress * (duration.value || 1))
 		})
 		.onFinalize(() => {
 			if (containerWidth.value === 0) return
 			const targetTime = scrubPosition.value
 
-			// Optimistic update locally
-			seekPosition.value = targetTime
-			isSeeking.value = true
+			seekPosition.set(targetTime)
+			isSeeking.set(true)
 
-			void runOnJS(handleSeek)(targetTime)
-			void runOnJS(Haptics.performAndroidHapticsAsync)(
+			void scheduleOnRN(handleSeek, targetTime)
+			scheduleOnRN(
+				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Gesture_End,
 			)
 
-			isScrubbing.value = false
+			isScrubbing.set(false)
 		})
-		// Expand touch area
 		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
 
 	const trackAnimatedStyle = useAnimatedStyle(() => {
@@ -176,7 +174,7 @@ export function PlayerSlider() {
 				{ translateX },
 				{ scale: withSpring(isScrubbing.value ? 1.5 : 1) },
 			],
-			opacity: 1, // Always visible
+			opacity: 1,
 		}
 	})
 
