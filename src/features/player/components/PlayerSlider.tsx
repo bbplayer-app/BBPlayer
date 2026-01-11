@@ -2,7 +2,7 @@ import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
@@ -87,6 +87,7 @@ export function PlayerSlider() {
 	const scrubPosition = useSharedValue(0)
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
+	const seekTimeoutRef = useRef<number | null>(null)
 
 	const displayPosition = useDerivedValue(() => {
 		if (isScrubbing.value) return scrubPosition.value
@@ -94,14 +95,26 @@ export function PlayerSlider() {
 		return position.value
 	})
 
-	const handleSeek = (time: number) => {
-		void Orpheus.seekTo(time)
-		setTimeout(() => {
-			isSeeking.set(false)
-		}, 1000)
-	}
+	const handleSeek = useCallback(
+		(time: number) => {
+			if (seekTimeoutRef.current) {
+				clearTimeout(seekTimeoutRef.current)
+			}
+			void Orpheus.seekTo(time)
+			seekTimeoutRef.current = setTimeout(() => {
+				isSeeking.set(false)
+			}, 1000)
+		},
+		[isSeeking],
+	)
 
-	console.log('rerender')
+	useEffect(() => {
+		return () => {
+			if (seekTimeoutRef.current) {
+				clearTimeout(seekTimeoutRef.current)
+			}
+		}
+	}, [])
 
 	const progress = useDerivedValue(() => {
 		const dur = duration.value || 1
@@ -174,7 +187,7 @@ export function PlayerSlider() {
 				{ translateX },
 				{ scale: withSpring(isScrubbing.value ? 1.5 : 1) },
 			],
-			opacity: 1,
+			opacity: containerWidth.value > 0 ? 1 : 0,
 		}
 	})
 
@@ -247,8 +260,8 @@ const styles = StyleSheet.create({
 	},
 	thumb: {
 		position: 'absolute',
-		width: 20,
-		height: 20,
+		width: 15,
+		height: 15,
 		borderRadius: 10,
 		left: 0,
 		marginLeft: 0,
