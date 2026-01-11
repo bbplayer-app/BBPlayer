@@ -2,7 +2,7 @@ import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
@@ -78,6 +78,8 @@ function TextWithAnimation({
 	)
 }
 
+const THUMB_SIZE = 12
+
 export function PlayerSlider() {
 	const { colors } = useTheme()
 	const { position, duration } = useAnimatedTrackProgress()
@@ -88,6 +90,7 @@ export function PlayerSlider() {
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
 	const seekTimeoutRef = useRef<number | null>(null)
+	const sliderContainerRef = useRef<View>(null)
 
 	const displayPosition = useDerivedValue(() => {
 		if (isScrubbing.value) return scrubPosition.value
@@ -97,24 +100,35 @@ export function PlayerSlider() {
 
 	const handleSeek = useCallback(
 		(time: number) => {
-			if (seekTimeoutRef.current) {
-				clearTimeout(seekTimeoutRef.current)
-			}
+			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
+			isSeeking.set(true)
 			void Orpheus.seekTo(time)
+			// 在这里只作为一个兜底
 			seekTimeoutRef.current = setTimeout(() => {
 				isSeeking.set(false)
-			}, 1000)
+				seekTimeoutRef.current = null
+			}, 5000)
 		},
 		[isSeeking],
 	)
 
-	useEffect(() => {
-		return () => {
-			if (seekTimeoutRef.current) {
-				clearTimeout(seekTimeoutRef.current)
+	// 其实这里处理防闪烁的最佳方法是原生层发个 onSeekComplete 事件，但我懒得去改 Orpheus 代码了，就先这么用着吧，，，
+	useAnimatedReaction(
+		() => position.value,
+		(currentPosition, _previousPosition) => {
+			if (!isSeeking.value) return
+
+			const target = seekPosition.value
+			const threshold = 1 // 在 1s 内我们就差不多认为过来了
+
+			const diff = Math.abs(currentPosition - target)
+
+			if (diff < threshold) {
+				isSeeking.set(false)
 			}
-		}
-	}, [])
+		},
+		[position, isSeeking, seekPosition],
+	)
 
 	const progress = useDerivedValue(() => {
 		const dur = duration.value || 1
@@ -172,16 +186,27 @@ export function PlayerSlider() {
 		}
 	})
 
-	const activeTrackAnimatedStyle = useAnimatedStyle(() => {
+	const activeTrackMaskStyle = useAnimatedStyle(() => {
 		return {
-			width: `${progress.value * 100}%`,
+			width: '100%',
 			height: trackHeight.value,
 			borderRadius: trackHeight.value / 2,
+			overflow: 'hidden',
+		}
+	})
+
+	const activeTrackInnerStyle = useAnimatedStyle(() => {
+		const translateX = (progress.value - 1) * containerWidth.value
+
+		return {
+			transform: [{ translateX }],
+			width: containerWidth.value,
+			height: '100%',
 		}
 	})
 
 	const thumbAnimatedStyle = useAnimatedStyle(() => {
-		const translateX = progress.value * containerWidth.value - 10
+		const translateX = progress.value * containerWidth.value - THUMB_SIZE / 2
 		return {
 			transform: [
 				{ translateX },
@@ -191,14 +216,20 @@ export function PlayerSlider() {
 		}
 	})
 
+	useLayoutEffect(() => {
+		if (sliderContainerRef.current) {
+			sliderContainerRef.current.measure((_x, _y, width) => {
+				containerWidth.set(width)
+			})
+		}
+	}, [containerWidth])
+
 	return (
 		<View>
 			<GestureDetector gesture={pan}>
 				<View
 					style={styles.sliderContainer}
-					onLayout={(e) => {
-						containerWidth.value = e.nativeEvent.layout.width
-					}}
+					ref={sliderContainerRef}
 				>
 					{/* Background Track */}
 					<Animated.View
@@ -210,13 +241,14 @@ export function PlayerSlider() {
 					/>
 
 					{/* Active Track */}
-					<Animated.View
-						style={[
-							styles.activeTrack,
-							{ backgroundColor: colors.primary },
-							activeTrackAnimatedStyle,
-						]}
-					/>
+					<Animated.View style={[styles.activeTrackMask, activeTrackMaskStyle]}>
+						<Animated.View
+							style={[
+								{ backgroundColor: colors.primary },
+								activeTrackInnerStyle,
+							]}
+						/>
+					</Animated.View>
 
 					{/* Thumb */}
 					<Animated.View
@@ -248,20 +280,21 @@ const styles = StyleSheet.create({
 	sliderContainer: {
 		height: 40,
 		justifyContent: 'center',
-		width: '100%',
+		width: '90%',
+		alignSelf: 'center',
 	},
 	track: {
 		position: 'absolute',
 		width: '100%',
 	},
-	activeTrack: {
+	activeTrackMask: {
 		position: 'absolute',
 		left: 0,
 	},
 	thumb: {
 		position: 'absolute',
-		width: 15,
-		height: 15,
+		width: THUMB_SIZE,
+		height: THUMB_SIZE,
 		borderRadius: 10,
 		left: 0,
 		marginLeft: 0,
