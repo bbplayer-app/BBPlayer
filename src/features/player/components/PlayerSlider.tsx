@@ -1,17 +1,12 @@
+import { CustomSlider } from '@/features/player/components/CustomSlider'
 import { usePlayerSlider } from '@/features/player/hooks/usePlayerSlider'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import Slider from '@react-native-community/slider'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import type { SharedValue } from 'react-native-reanimated'
-import Animated, {
-	useAnimatedProps,
-	useAnimatedReaction,
-} from 'react-native-reanimated'
+import { useAnimatedReaction } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
-
-const AnimatedSlider = Animated.createAnimatedComponent(Slider)
 
 function TextWithAnimation({
 	sharedPosition,
@@ -69,7 +64,6 @@ function TextWithAnimation({
 }
 
 export function PlayerSlider() {
-	const { colors } = useTheme()
 	const {
 		handleSlidingStart,
 		handleSlidingComplete,
@@ -77,25 +71,16 @@ export function PlayerSlider() {
 		sharedPosition,
 	} = usePlayerSlider()
 
-	const animatedProps = useAnimatedProps(() => {
-		return {
-			value: sharedPosition.value,
-			disabled: sharedDuration.value <= 0,
-			maximumValue: Math.max(sharedDuration.value, 1),
-		}
-	})
-
 	return (
 		<View>
-			<AnimatedSlider
-				style={styles.slider}
+			<CustomSlider
 				minimumValue={0}
-				minimumTrackTintColor={colors.primary}
-				maximumTrackTintColor={colors.surfaceVariant}
-				thumbTintColor={colors.primary}
+				maximumValue={sharedDuration.value || 1}
 				onSlidingStart={handleSlidingStart}
 				onSlidingComplete={handleSlidingComplete}
-				animatedProps={animatedProps}
+				disabled={sharedDuration.value <= 0}
+				value={sharedPosition}
+				duration={sharedDuration}
 			/>
 			<View style={styles.timeContainer}>
 				<TextWithAnimation
@@ -108,11 +93,6 @@ export function PlayerSlider() {
 }
 
 const styles = StyleSheet.create({
-	slider: {
-		width: '100%',
-		height: 40,
-		zIndex: 0,
-	},
 	timeContainer: {
 		marginTop: -8,
 		flexDirection: 'row',
