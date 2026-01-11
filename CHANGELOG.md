@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+## Added
+
+- 重新设计播放器进度条
+
 ## [2.1.6] - 2026-01-06
 
 ### Fixed
