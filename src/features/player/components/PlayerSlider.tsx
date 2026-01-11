@@ -2,7 +2,7 @@ import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
@@ -77,6 +77,8 @@ function TextWithAnimation({
 		</>
 	)
 }
+
+const THUMB_SIZE = 12
 
 export function PlayerSlider() {
 	const { colors } = useTheme()
@@ -204,7 +206,7 @@ export function PlayerSlider() {
 	})
 
 	const thumbAnimatedStyle = useAnimatedStyle(() => {
-		const translateX = progress.value * containerWidth.value - 10
+		const translateX = progress.value * containerWidth.value - THUMB_SIZE / 2
 		return {
 			transform: [
 				{ translateX },
@@ -214,7 +216,7 @@ export function PlayerSlider() {
 		}
 	})
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (sliderContainerRef.current) {
 			sliderContainerRef.current.measure((_x, _y, width) => {
 				containerWidth.set(width)
@@ -278,7 +280,8 @@ const styles = StyleSheet.create({
 	sliderContainer: {
 		height: 40,
 		justifyContent: 'center',
-		width: '100%',
+		width: '90%',
+		alignSelf: 'center',
 	},
 	track: {
 		position: 'absolute',
@@ -290,8 +293,8 @@ const styles = StyleSheet.create({
 	},
 	thumb: {
 		position: 'absolute',
-		width: 15,
-		height: 15,
+		width: THUMB_SIZE,
+		height: THUMB_SIZE,
 		borderRadius: 10,
 		left: 0,
 		marginLeft: 0,
