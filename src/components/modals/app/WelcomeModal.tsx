@@ -1,7 +1,6 @@
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'
-import notifee, { AuthorizationStatus } from '@notifee/react-native'
 import {
 	useCallback,
 	useEffect,
@@ -9,7 +8,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { AppState, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -17,7 +16,7 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated'
 
-const titles = ['欢迎使用 BBPlayer', '建议开启通知', '登录？']
+const titles = ['欢迎使用 BBPlayer', '登录？']
 
 export default function WelcomeModal() {
 	const _close = useModalStore((s) => s.close)
@@ -25,14 +24,10 @@ export default function WelcomeModal() {
 	const open = useModalStore((s) => s.open)
 
 	const [step, setStep] = useState(0)
-	const [haveNotificationPermission, setHaveNotificationPermission] =
-		useState(false)
 
 	const containerRef = useRef<View>(null)
 	const [measuredWidth, setMeasuredWidth] = useState(0)
-	const [stepHeights, setStepHeights] = useState<[number, number, number]>([
-		0, 0, 0,
-	])
+	const [stepHeights, setStepHeights] = useState<[number, number]>([0, 0])
 
 	const translateX = useSharedValue(0)
 	const containerHeight = useSharedValue(0)
@@ -59,24 +54,8 @@ export default function WelcomeModal() {
 		})
 	}, [containerRef])
 
-	useEffect(() => {
-		const check = async () => {
-			const settings = await notifee.getNotificationSettings()
-			setHaveNotificationPermission(
-				settings.authorizationStatus === AuthorizationStatus.AUTHORIZED,
-			)
-		}
-		void check()
-		const cancel = AppState.addEventListener('change', (state) => {
-			if (state === 'active') {
-				void check()
-			}
-		})
-		return () => cancel.remove()
-	}, [])
-
 	const goToStep = (index: number) => {
-		const idx = Math.max(0, Math.min(3 - 1, index))
+		const idx = Math.max(0, Math.min(2 - 1, index))
 		setStep(idx)
 	}
 
@@ -89,22 +68,15 @@ export default function WelcomeModal() {
 		open('QRCodeLogin', undefined)
 		close()
 	}
-	const openNotificationSettings = async () => {
-		try {
-			await notifee.openNotificationSettings()
-		} catch (err) {
-			console.warn('无法打开应用设置：', err)
-		}
-	}
 
 	const Step0 = () => (
 		<View>
 			<Text>
-				看起来你是第一次打开{'\u2009'}BBPlayer，容我介绍一下：BBPlayer
+				看起来你是第一次打开{' '}BBPlayer，容我介绍一下：BBPlayer
 				是一款开源、简洁的音乐播放器，你可以使用他播放来自
-				{'\u2009BiliBili\u2009'}的歌曲。
+				{' BiliBili '}的歌曲。
 				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用{'\u2009BiliBili\u2009API'}，但
+				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
 				<Text style={styles.boldText}>仍不保证</Text>
 				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
 				{'\n\n'}
@@ -114,27 +86,6 @@ export default function WelcomeModal() {
 	)
 
 	const Step1 = () => (
-		<View>
-			<Text>
-				{haveNotificationPermission
-					? '看起来你已经打开通知权限了，点击下一步吧！'
-					: 'BBPlayer\u2009会使用通知显示下载进度，建议打开通知权限。当然，我们也尊重您的选择，不会强制要求。'}
-			</Text>
-
-			{haveNotificationPermission || (
-				<View style={styles.stepButtonContainer}>
-					<Button
-						mode='contained'
-						onPress={openNotificationSettings}
-					>
-						打开通知设置
-					</Button>
-				</View>
-			)}
-		</View>
-	)
-
-	const Step2 = () => (
 		<View>
 			<Text>最后一步！选择登录还是游客模式？</Text>
 
@@ -166,7 +117,7 @@ export default function WelcomeModal() {
 						if (height <= stepHeights[0]) {
 							return
 						}
-						setStepHeights((s) => [height, s[1], s[2]])
+						setStepHeights((s) => [height, s[1]])
 					}}
 				>
 					<Step0 />
@@ -179,23 +130,10 @@ export default function WelcomeModal() {
 						if (height <= stepHeights[1]) {
 							return
 						}
-						setStepHeights((s) => [s[0], height, s[2]])
+						setStepHeights((s) => [s[0], height])
 					}}
 				>
 					<Step1 />
-				</View>
-				<View
-					collapsable={false}
-					style={{ width: measuredWidth }}
-					onLayout={(e) => {
-						const height = e.nativeEvent.layout.height ?? 0
-						if (height <= stepHeights[2]) {
-							return
-						}
-						setStepHeights((s) => [s[0], s[1], height])
-					}}
-				>
-					<Step2 />
 				</View>
 			</View>
 			<Dialog.Title>{titles[step]}</Dialog.Title>
@@ -208,7 +146,7 @@ export default function WelcomeModal() {
 					<Animated.View
 						style={[
 							animatedRowStyle,
-							{ flexDirection: 'row', width: measuredWidth * 3 },
+							{ flexDirection: 'row', width: measuredWidth * 2 },
 						]}
 					>
 						<View style={{ width: measuredWidth }}>
@@ -217,9 +155,6 @@ export default function WelcomeModal() {
 						<View style={{ width: measuredWidth }}>
 							<Step1 />
 						</View>
-						<View style={{ width: measuredWidth }}>
-							<Step2 />
-						</View>
 					</Animated.View>
 				</Animated.View>
 			</Dialog.Content>
@@ -227,7 +162,7 @@ export default function WelcomeModal() {
 			<Dialog.Actions>
 				{step > 0 && <Button onPress={() => goToStep(step - 1)}>上一步</Button>}
 
-				{step < 2 && <Button onPress={() => goToStep(step + 1)}>下一步</Button>}
+				{step < 1 && <Button onPress={() => goToStep(step + 1)}>下一步</Button>}
 			</Dialog.Actions>
 		</>
 	)
