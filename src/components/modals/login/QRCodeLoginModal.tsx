@@ -197,6 +197,7 @@ const QrCodeLoginModal = () => {
 				</Text>
 				<Pressable
 					onPress={() => {
+						if (!qrcodeUrl) return
 						WebBrowser.openBrowserAsync(qrcodeUrl).catch((e) => {
 							void Clipboard.setStringAsync(qrcodeUrl)
 							toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
@@ -205,10 +206,14 @@ const QrCodeLoginModal = () => {
 						})
 					}}
 				>
-					<QRCode
-						value={qrcodeUrl}
-						size={200}
-					/>
+					{qrcodeUrl ? (
+						<QRCode
+							value={qrcodeUrl}
+							size={200}
+						/>
+					) : (
+						<Text style={styles.statusText}>正在生成二维码...</Text>
+					)}
 				</Pressable>
 			</>
 		)

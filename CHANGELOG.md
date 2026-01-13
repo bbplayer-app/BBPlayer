@@ -5,6 +5,25 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+## Added
+
+- 重新设计播放器进度条
+- 增加~~讨口子~~捐赠页面
+- 桌面歌词
+- 通知栏增加切换循环模式按钮
+- 尝试启用 dolby / hires 音源
+
+## Changed
+
+- 移除了未使用的依赖
+
+## Fixed
+
+- 修复登录二维码可能为空导致的报错
+- 修复部分 bilibili api 返回 data 为 null 导致的报错
+
 ## [2.1.6] - 2026-01-06
 
 ### Fixed

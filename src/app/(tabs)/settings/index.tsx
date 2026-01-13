@@ -96,6 +96,24 @@ export default function SettingsPage() {
 						)}
 						onPress={() => router.push('/settings/general')}
 					/>
+					<Divider style={styles.divider} />
+					<List.Item
+						title='捐赠支持'
+						description='请开发者喝杯咖啡'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='coffee'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/donate')}
+					/>
 				</ScrollView>
 				<Divider style={styles.sectionDivider} />
 				<AboutSection />

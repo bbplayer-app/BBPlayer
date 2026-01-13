@@ -1,17 +1,23 @@
-import { usePlayerSlider } from '@/features/player/hooks/usePlayerSlider'
+import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import Slider from '@react-native-community/slider'
-import { useState } from 'react'
+import { Orpheus } from '@roitium/expo-orpheus'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
-import type { SharedValue } from 'react-native-reanimated'
 import Animated, {
-	useAnimatedProps,
 	useAnimatedReaction,
+	useAnimatedStyle,
+	useDerivedValue,
+	useSharedValue,
+	withSpring,
+	withTiming,
+	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-const AnimatedSlider = Animated.createAnimatedComponent(Slider)
+const THUMB_SIZE = 12
 
 function TextWithAnimation({
 	sharedPosition,
@@ -28,24 +34,23 @@ function TextWithAnimation({
 		() => {
 			const truncDuration = sharedDuration.value
 				? Math.trunc(sharedDuration.value)
-				: null
-
+				: 0
 			const truncPosition = sharedPosition.value
 				? Math.trunc(sharedPosition.value)
-				: null
+				: 0
 			return [truncDuration, truncPosition]
 		},
-		([duration, position], prev) => {
+		([curDuration, curPosition], prev) => {
 			if (!prev) {
-				scheduleOnRN(setDuration, duration ?? 0)
-				scheduleOnRN(setPosition, position ?? 0)
+				scheduleOnRN(setDuration, curDuration)
+				scheduleOnRN(setPosition, curPosition)
 				return
 			}
-			if (duration !== null && duration !== prev[0]) {
-				scheduleOnRN(setDuration, duration)
+			if (curDuration !== prev[0]) {
+				scheduleOnRN(setDuration, curDuration)
 			}
-			if (position !== null && position !== prev[1]) {
-				scheduleOnRN(setPosition, position)
+			if (curPosition !== prev[1]) {
+				scheduleOnRN(setPosition, curPosition)
 			}
 		},
 	)
@@ -54,15 +59,21 @@ function TextWithAnimation({
 		<>
 			<Text
 				variant='bodySmall'
-				style={{ color: colors.onSurfaceVariant }}
+				style={{
+					color: colors.onSurfaceVariant,
+					fontVariant: ['tabular-nums'],
+				}}
 			>
-				{formatDurationToHHMMSS(Math.trunc(position))}
+				{formatDurationToHHMMSS(position)}
 			</Text>
 			<Text
 				variant='bodySmall'
-				style={{ color: colors.onSurfaceVariant }}
+				style={{
+					color: colors.onSurfaceVariant,
+					fontVariant: ['tabular-nums'],
+				}}
 			>
-				{formatDurationToHHMMSS(Math.trunc(duration ?? 0))}
+				{formatDurationToHHMMSS(duration)}
 			</Text>
 		</>
 	)
@@ -70,37 +81,172 @@ function TextWithAnimation({
 
 export function PlayerSlider() {
 	const { colors } = useTheme()
-	const {
-		handleSlidingStart,
-		handleSlidingComplete,
-		sharedDuration,
-		sharedPosition,
-	} = usePlayerSlider()
+	const { position, duration } = useAnimatedTrackProgress()
 
-	const animatedProps = useAnimatedProps(() => {
+	const containerWidth = useSharedValue(0)
+	const isScrubbing = useSharedValue(false)
+	const scrubPosition = useSharedValue(0)
+	const isSeeking = useSharedValue(false)
+	const seekPosition = useSharedValue(0)
+	const seekTimeoutRef = useRef<number | null>(null)
+	const sliderContainerRef = useRef<View>(null)
+
+	const displayPosition = useDerivedValue(() => {
+		if (isScrubbing.value) return scrubPosition.value
+		if (isSeeking.value) return seekPosition.value
+		return position.value
+	})
+
+	const handleSeek = useCallback(
+		(time: number) => {
+			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
+			isSeeking.set(true)
+			void Orpheus.seekTo(time)
+
+			seekTimeoutRef.current = setTimeout(() => {
+				isSeeking.set(false)
+				seekTimeoutRef.current = null
+			}, 5000)
+		},
+		[isSeeking],
+	)
+
+	useAnimatedReaction(
+		() => position.value,
+		(currentPosition) => {
+			if (!isSeeking.value) return
+			const target = seekPosition.value
+			const threshold = 1
+			const diff = Math.abs(currentPosition - target)
+			if (diff < threshold) {
+				isSeeking.set(false)
+			}
+		},
+		[position, isSeeking, seekPosition],
+	)
+
+	const progress = useDerivedValue(() => {
+		const dur = duration.value || 1
+		let pos = position.value
+		if (isScrubbing.value) {
+			pos = scrubPosition.value
+		} else if (isSeeking.value) {
+			pos = seekPosition.value
+		}
+		return Math.min(Math.max(pos / dur, 0), 1)
+	})
+
+	const trackHeight = useDerivedValue(() => {
+		return withTiming(isScrubbing.value ? 12 : 4, { duration: 200 })
+	})
+
+	useLayoutEffect(() => {
+		if (sliderContainerRef.current) {
+			sliderContainerRef.current.measure((_x, _y, width) => {
+				if (width > 0) {
+					containerWidth.set(width)
+				}
+			})
+		}
+	}, [containerWidth])
+
+	const pan = Gesture.Pan()
+		.onBegin((e) => {
+			if (containerWidth.value === 0) return
+			isScrubbing.set(true)
+			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
+			scrubPosition.set(newProgress * (duration.value || 1))
+			scheduleOnRN(
+				Haptics.performAndroidHapticsAsync,
+				Haptics.AndroidHaptics.Drag_Start,
+			)
+		})
+		.onUpdate((e) => {
+			if (containerWidth.value === 0) return
+			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
+			scrubPosition.set(newProgress * (duration.value || 1))
+		})
+		.onFinalize(() => {
+			if (containerWidth.value === 0) return
+			const targetTime = scrubPosition.value
+
+			seekPosition.set(targetTime)
+			isSeeking.set(true)
+
+			void scheduleOnRN(handleSeek, targetTime)
+			scheduleOnRN(
+				Haptics.performAndroidHapticsAsync,
+				Haptics.AndroidHaptics.Gesture_End,
+			)
+
+			isScrubbing.set(false)
+		})
+		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
+
+	const trackAnimatedStyle = useAnimatedStyle(() => {
 		return {
-			value: sharedPosition.value,
-			disabled: sharedDuration.value <= 0,
-			maximumValue: Math.max(sharedDuration.value, 1),
+			height: trackHeight.value,
+			borderRadius: trackHeight.value / 2,
+			overflow: 'hidden',
+		}
+	})
+
+	const activeTrackInnerStyle = useAnimatedStyle(() => {
+		const translateX = (progress.value - 1) * containerWidth.value
+		return {
+			transform: [{ translateX }],
+			width: containerWidth.value,
+			height: '100%',
+		}
+	})
+
+	const thumbAnimatedStyle = useAnimatedStyle(() => {
+		const translateX = progress.value * containerWidth.value - THUMB_SIZE / 2
+		return {
+			transform: [
+				{ translateX },
+				{ scale: withSpring(isScrubbing.value ? 1.5 : 1) },
+			],
+			opacity: containerWidth.value > 0 ? 1 : 0,
 		}
 	})
 
 	return (
-		<View>
-			<AnimatedSlider
-				style={styles.slider}
-				minimumValue={0}
-				minimumTrackTintColor={colors.primary}
-				maximumTrackTintColor={colors.surfaceVariant}
-				thumbTintColor={colors.primary}
-				onSlidingStart={handleSlidingStart}
-				onSlidingComplete={handleSlidingComplete}
-				animatedProps={animatedProps}
-			/>
+		<View style={styles.root}>
+			<GestureDetector gesture={pan}>
+				<View
+					style={styles.sliderContainer}
+					ref={sliderContainerRef}
+				>
+					<Animated.View
+						style={[
+							styles.track,
+							{ backgroundColor: colors.surfaceVariant },
+							trackAnimatedStyle,
+						]}
+					>
+						<Animated.View
+							style={[
+								{ backgroundColor: colors.primary },
+								activeTrackInnerStyle,
+							]}
+						/>
+					</Animated.View>
+
+					<Animated.View
+						style={[
+							styles.thumb,
+							{ backgroundColor: colors.primary },
+							thumbAnimatedStyle,
+						]}
+					/>
+				</View>
+			</GestureDetector>
+
 			<View style={styles.timeContainer}>
 				<TextWithAnimation
-					sharedPosition={sharedPosition}
-					sharedDuration={sharedDuration}
+					sharedPosition={displayPosition}
+					sharedDuration={duration}
 				/>
 			</View>
 		</View>
@@ -108,15 +254,33 @@ export function PlayerSlider() {
 }
 
 const styles = StyleSheet.create({
-	slider: {
+	root: {
 		width: '100%',
+		justifyContent: 'center',
+	},
+	sliderContainer: {
 		height: 40,
-		zIndex: 0,
+		justifyContent: 'center',
+		width: '90%',
+		alignSelf: 'center',
 	},
 	timeContainer: {
-		marginTop: -8,
+		marginTop: 4,
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		paddingHorizontal: 4,
+		width: '90%',
+		alignSelf: 'center',
+	},
+	track: {
+		position: 'absolute',
+		width: '100%',
+		left: 0,
+	},
+	thumb: {
+		position: 'absolute',
+		width: THUMB_SIZE,
+		height: THUMB_SIZE,
+		borderRadius: THUMB_SIZE / 2,
+		left: 0,
 	},
 })

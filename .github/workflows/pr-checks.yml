@@ -1,4 +1,4 @@
-name: "PR Checks"
+name: 'PR Checks'
 
 on: pull_request
 
@@ -20,8 +20,8 @@ jobs:
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "22.x"
-          cache: "pnpm"
+          node-version: '22.x'
+          cache: 'pnpm'
 
       - name: 📦 Install dependencies
         run: pnpm install
@@ -42,8 +42,8 @@ jobs:
       - name: 🏗 Setup master branch
         uses: actions/checkout@v5
         with:
-          ref: "master"
-          path: "master_code"
+          ref: 'master'
+          path: 'master_code'
 
       - name: 🔍 Compare package.json versions
         run: |

@@ -1,5 +1,6 @@
 import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 import AlertModal from './modals/AlertModal'
+import DonationQRModal from './modals/app/DonationQRModal'
 import UpdateAppModal from './modals/app/UpdateAppModal'
 import WelcomeModal from './modals/app/WelcomeModal'
 import AddToFavoriteListsModal from './modals/bilibili/AddVideoToBilibiliFavModal'
@@ -35,4 +36,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	Alert: AlertModal,
 	EditLyrics: EditLyricsModal,
 	SleepTimer: SleepTimerModal,
+	DonationQR: DonationQRModal,
 }

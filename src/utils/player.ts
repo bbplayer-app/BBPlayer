@@ -5,8 +5,10 @@ import { queryClient } from '@/lib/config/queryClient'
 import type { PlayerError } from '@/lib/errors/player'
 import { createPlayerError } from '@/lib/errors/player'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import lyricService from '@/lib/services/lyricService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
+import type { TransitionReason } from '@roitium/expo-orpheus'
 import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
@@ -184,8 +186,8 @@ async function addToQueue({
 function getInternalPlayUri(track: Track) {
 	if (track.source === 'bilibili') {
 		return track.bilibiliMetadata.isMultiPage
-			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
-			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
+			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=1&dolby=1`
+			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=1&dolby=1`
 	}
 	if (track.source === 'local' && track.localMetadata) {
 		return track.localMetadata.localPath
@@ -243,10 +245,54 @@ async function finalizeAndRecordCurrentTrack(
 	}
 }
 
+let debouncedSetDesktopLyrics: number | null = null
+let lastSetDesktopLyricsTimestamp: number | null = null
+
+function setDesktopLyrics(
+	trackId: string,
+	_transitionReason: TransitionReason,
+) {
+	if (!Orpheus.isDesktopLyricsShown) return
+	const currentTimestamp = Date.now()
+	lastSetDesktopLyricsTimestamp = currentTimestamp
+
+	if (debouncedSetDesktopLyrics) {
+		clearTimeout(debouncedSetDesktopLyrics)
+	}
+	const setIt = async () => {
+		try {
+			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+			await Orpheus.setDesktopLyrics(JSON.stringify({ lyrics: [] }))
+			const trackResult = await trackService.getTrackByUniqueKey(trackId)
+			if (trackResult.isErr()) {
+				toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
+				return
+			}
+			const track = trackResult.value
+			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+			const lyricsResult = await lyricService.smartFetchLyrics(track)
+			if (lyricsResult.isErr()) {
+				toastAndLogError('获取歌词失败：', lyricsResult.error, 'Utils.Player')
+				return
+			}
+			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+			await Orpheus.setDesktopLyrics(JSON.stringify(lyricsResult.value))
+		} catch (e) {
+			toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
+			return
+		}
+	}
+	debouncedSetDesktopLyrics = setTimeout(() => {
+		void setIt()
+		debouncedSetDesktopLyrics = null
+	}, 1000)
+}
+
 export {
 	addToQueue,
 	convertToOrpheusTrack,
 	finalizeAndRecordCurrentTrack,
 	getInternalPlayUri,
 	reportPlaybackHistory,
+	setDesktopLyrics,
 }
