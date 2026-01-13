@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus, registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
 import log from './src/utils/log'
 import {
 	finalizeAndRecordCurrentTrack,
@@ -24,8 +24,10 @@ Orpheus.addListener('onTrackFinished', (event) => {
 	)
 })
 
-Orpheus.addListener('onTrackStarted', (event) => {
-	setDesktopLyrics(event.trackId, event.transitionReason)
+registerOrpheusHeadlessTask(async (event) => {
+	if (event.eventName === 'onTrackStarted') {
+		setDesktopLyrics(event.trackId, event.reason)
+	}
 })
 
 import 'expo-router/entry'

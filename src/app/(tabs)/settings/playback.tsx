@@ -89,9 +89,8 @@ export default function PlaybackSettingsPage() {
 						value={enablePersistCurrentPosition}
 						onValueChange={() => {
 							try {
-								Orpheus.setRestorePlaybackPositionEnabled(
-									!enablePersistCurrentPosition,
-								)
+								Orpheus.restorePlaybackPositionEnabled =
+									!enablePersistCurrentPosition
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
@@ -106,9 +105,8 @@ export default function PlaybackSettingsPage() {
 						value={enableLoudnessNormalization}
 						onValueChange={() => {
 							try {
-								Orpheus.setLoudnessNormalizationEnabled(
-									!enableLoudnessNormalization,
-								)
+								Orpheus.loudnessNormalizationEnabled =
+									!enableLoudnessNormalization
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
@@ -123,7 +121,7 @@ export default function PlaybackSettingsPage() {
 						value={enableAutostartPlayOnStart}
 						onValueChange={() => {
 							try {
-								Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
+								Orpheus.autoplayOnStartEnabled = !enableAutostartPlayOnStart
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
@@ -155,9 +153,9 @@ export default function PlaybackSettingsPage() {
 					<Text>桌面歌词锁定</Text>
 					<Switch
 						value={isDesktopLyricsLocked}
-						onValueChange={async () => {
+						onValueChange={() => {
 							try {
-								await Orpheus.setDesktopLyricsLocked(!isDesktopLyricsLocked)
+								Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return

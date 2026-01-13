@@ -33,7 +33,7 @@
 		"@react-navigation/native": "^7.1.8",
 		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
 		"@roitium/expo-image-theme-colors": "^0.1.1",
-		"@roitium/expo-orpheus": "^0.8.0",
+		"@roitium/expo-orpheus": "^0.9.1",
 		"@sentry/cli": "^2.56.1",
 		"@sentry/react-native": "~7.2.0",
 		"@shopify/flash-list": "^2.2.0",

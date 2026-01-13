@@ -282,7 +282,10 @@ function setDesktopLyrics(
 			return
 		}
 	}
-	void setIt()
+	debouncedSetDesktopLyrics = setTimeout(() => {
+		void setIt()
+		debouncedSetDesktopLyrics = null
+	}, 1000)
 }
 
 export {
