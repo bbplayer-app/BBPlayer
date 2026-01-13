@@ -1,8 +1,10 @@
+import { alert } from '@/components/modals/AlertModal'
 import { toastAndLogError } from '@/utils/error-handling'
+import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { AppState, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -18,6 +20,56 @@ export default function PlaybackSettingsPage() {
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
+	const [isDesktopLyricsShown, setIsDesktopLyricsShown] = useState(
+		Orpheus.isDesktopLyricsShown,
+	)
+	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
+		Orpheus.isDesktopLyricsLocked,
+	)
+
+	const enableDesktopLyrics = async () => {
+		try {
+			const hadPermission = await Orpheus.checkOverlayPermission()
+			if (hadPermission) {
+				await Orpheus.showDesktopLyrics()
+				setIsDesktopLyricsShown(true)
+				toast.success('启用成功。从下一首歌开始生效')
+				return
+			}
+			alert(
+				'桌面歌词',
+				'启用桌面歌词需要启用悬浮窗权限。跳转到设置后，请找到 BBPlayer，并允许显示悬浮窗',
+				[
+					{
+						text: '去设置',
+						onPress: async () => {
+							await Orpheus.requestOverlayPermission()
+						},
+					},
+					{ text: '取消' },
+				],
+				{ cancelable: true },
+			)
+		} catch (e) {
+			toastAndLogError('设置桌面歌词失败', e, 'Settings')
+			return
+		}
+	}
+
+	useEffect(() => {
+		const listener = AppState.addEventListener('change', () => {
+			setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
+			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+		})
+		return () => {
+			listener.remove()
+		}
+	}, [])
+
+	useFocusEffect(() => {
+		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
+		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+	})
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -38,9 +90,8 @@ export default function PlaybackSettingsPage() {
 						value={enablePersistCurrentPosition}
 						onValueChange={() => {
 							try {
-								Orpheus.setRestorePlaybackPositionEnabled(
-									!enablePersistCurrentPosition,
-								)
+								Orpheus.restorePlaybackPositionEnabled =
+									!enablePersistCurrentPosition
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
@@ -55,9 +106,8 @@ export default function PlaybackSettingsPage() {
 						value={enableLoudnessNormalization}
 						onValueChange={() => {
 							try {
-								Orpheus.setLoudnessNormalizationEnabled(
-									!enableLoudnessNormalization,
-								)
+								Orpheus.loudnessNormalizationEnabled =
+									!enableLoudnessNormalization
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
@@ -72,12 +122,46 @@ export default function PlaybackSettingsPage() {
 						value={enableAutostartPlayOnStart}
 						onValueChange={() => {
 							try {
-								Orpheus.setAutoplayOnStartEnabled(!enableAutostartPlayOnStart)
+								Orpheus.autoplayOnStartEnabled = !enableAutostartPlayOnStart
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
 								return
 							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>桌面歌词</Text>
+					<Switch
+						value={isDesktopLyricsShown}
+						onValueChange={async () => {
+							try {
+								if (isDesktopLyricsShown) {
+									await Orpheus.hideDesktopLyrics()
+									setIsDesktopLyricsShown(false)
+								} else {
+									await enableDesktopLyrics()
+								}
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>桌面歌词锁定</Text>
+					<Switch
+						value={isDesktopLyricsLocked}
+						onValueChange={() => {
+							try {
+								Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
+							setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
 						}}
 					/>
 				</View>
