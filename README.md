@@ -46,6 +46,16 @@
 - 目前这方面实现较为粗略，欢迎 review 相关代码并就隐私保护提出意见或 PR。
 - 支持关闭 Sentry：在设置中关闭错误上报后将不再上传任何信息。
 
+## 捐赠支持
+
+如果你觉得 BBPlayer 对你有所帮助，欢迎考虑捐赠支持，你的所有捐赠都将用于让 Roitium 吃顿疯狂星期四或是买一部 GalGame！
+
+<details>
+<summary>点击展开查看微信收款码</summary>
+<br />
+<img src="./assets/images/wechat.png" alt="WeChat Donation" width="200" />
+</details>
+
 ## 感谢
 
 本项目开发过程中很多功能和设计的灵感都来自前辈们，包括但不限于：

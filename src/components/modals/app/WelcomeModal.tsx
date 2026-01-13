@@ -55,7 +55,7 @@ export default function WelcomeModal() {
 	}, [containerRef])
 
 	const goToStep = (index: number) => {
-		const idx = Math.max(0, Math.min(3 - 1, index))
+		const idx = Math.max(0, Math.min(2 - 1, index))
 		setStep(idx)
 	}
 
@@ -72,11 +72,11 @@ export default function WelcomeModal() {
 	const Step0 = () => (
 		<View>
 			<Text>
-				看起来你是第一次打开{'\u2009'}BBPlayer，容我介绍一下：BBPlayer
+				看起来你是第一次打开{' '}BBPlayer，容我介绍一下：BBPlayer
 				是一款开源、简洁的音乐播放器，你可以使用他播放来自
-				{'\u2009BiliBili\u2009'}的歌曲。
+				{' BiliBili '}的歌曲。
 				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用{'\u2009BiliBili\u2009API'}，但
+				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
 				<Text style={styles.boldText}>仍不保证</Text>
 				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
 				{'\n\n'}
@@ -87,7 +87,7 @@ export default function WelcomeModal() {
 
 	const Step1 = () => (
 		<View>
-			<Text>选择登录还是游客模式？</Text>
+			<Text>最后一步！选择登录还是游客模式？</Text>
 
 			<View style={styles.stepButtonContainer}>
 				<Button
@@ -146,7 +146,7 @@ export default function WelcomeModal() {
 					<Animated.View
 						style={[
 							animatedRowStyle,
-							{ flexDirection: 'row', width: measuredWidth * 3 },
+							{ flexDirection: 'row', width: measuredWidth * 2 },
 						]}
 					>
 						<View style={{ width: measuredWidth }}>
@@ -162,7 +162,7 @@ export default function WelcomeModal() {
 			<Dialog.Actions>
 				{step > 0 && <Button onPress={() => goToStep(step - 1)}>上一步</Button>}
 
-				{step < 2 && <Button onPress={() => goToStep(step + 1)}>下一步</Button>}
+				{step < 1 && <Button onPress={() => goToStep(step + 1)}>下一步</Button>}
 			</Dialog.Actions>
 		</>
 	)

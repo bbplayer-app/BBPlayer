@@ -137,6 +137,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		],
 		'expo-router',
 		'@rnrepo/expo-config-plugin',
+		[
+			'expo-media-library',
+			{
+				photosPermission: '允许 $(PRODUCT_NAME) 访问您的相册',
+				savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
+				isAccessMediaLocationEnabled: true,
+			},
+		],
 	],
 	experiments: {
 		reactCompiler: true,
