@@ -186,8 +186,8 @@ async function addToQueue({
 function getInternalPlayUri(track: Track) {
 	if (track.source === 'bilibili') {
 		return track.bilibiliMetadata.isMultiPage
-			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}`
-			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}`
+			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=1&dolby=1`
+			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=1&dolby=1`
 	}
 	if (track.source === 'local' && track.localMetadata) {
 		return track.localMetadata.localPath
