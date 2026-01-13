@@ -22,6 +22,7 @@ export interface ModalPropsMap {
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
 	SleepTimer: undefined
+	DonationQR: { type: 'wechat' }
 }
 
 export type ModalKey = keyof ModalPropsMap

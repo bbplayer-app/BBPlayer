@@ -1,8 +1,8 @@
 {
 	"name": "bbplayer",
 	"main": "index.js",
-	"version": "2.1.7",
-	"versionCode": 98,
+	"version": "2.1.8",
+	"versionCode": 99,
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
 		"android": "expo run:android",
@@ -65,6 +65,7 @@
 		"expo-insights": "~0.10.8",
 		"expo-linear-gradient": "~15.0.8",
 		"expo-linking": "~8.0.11",
+		"expo-media-library": "~18.2.1",
 		"expo-network": "~8.0.8",
 		"expo-router": "~6.0.21",
 		"expo-share-intent": "^5.0.1",
