@@ -1,5 +1,6 @@
 import { alert } from '@/components/modals/AlertModal'
 import { toastAndLogError } from '@/utils/error-handling'
+import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -32,6 +33,7 @@ export default function PlaybackSettingsPage() {
 			if (hadPermission) {
 				await Orpheus.showDesktopLyrics()
 				setIsDesktopLyricsShown(true)
+				toast.success('启用成功。从下一首歌开始生效')
 				return
 			}
 			alert(
@@ -43,6 +45,7 @@ export default function PlaybackSettingsPage() {
 						onPress: async () => {
 							await Orpheus.requestOverlayPermission()
 							setIsDesktopLyricsShown(true)
+							toast.success('启用成功。从下一首歌开始生效')
 						},
 					},
 					{ text: '取消' },
