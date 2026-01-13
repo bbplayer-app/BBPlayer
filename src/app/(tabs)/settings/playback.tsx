@@ -32,7 +32,6 @@ export default function PlaybackSettingsPage() {
 			const hadPermission = await Orpheus.checkOverlayPermission()
 			if (hadPermission) {
 				await Orpheus.showDesktopLyrics()
-				setIsDesktopLyricsShown(true)
 				toast.success('启用成功。从下一首歌开始生效')
 				return
 			}
@@ -45,7 +44,6 @@ export default function PlaybackSettingsPage() {
 						onPress: async () => {
 							await Orpheus.requestOverlayPermission()
 							setIsDesktopLyricsShown(true)
-							toast.success('启用成功。从下一首歌开始生效')
 						},
 					},
 					{ text: '取消' },
@@ -141,6 +139,7 @@ export default function PlaybackSettingsPage() {
 							try {
 								if (isDesktopLyricsShown) {
 									await Orpheus.hideDesktopLyrics()
+									setIsDesktopLyricsShown(false)
 								} else {
 									await enableDesktopLyrics()
 								}
