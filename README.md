@@ -69,3 +69,7 @@
 以及最重要的：[Bilibili](https://www.bilibili.com/)
 
 在此表示感谢！（鞠躬）
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=bbplayer-app/bbplayer&type=date&legend=top-left)](https://www.star-history.com/#bbplayer-app/bbplayer&type=date&legend=top-left)
