@@ -130,6 +130,15 @@ export default function FavoritePage() {
 		)
 	}
 
+	if (!favoriteData.pages[0].info) {
+		return (
+			<PlaylistError
+				text='收藏夹信息无效或不存在'
+				onRetry={refetch}
+			/>
+		)
+	}
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
