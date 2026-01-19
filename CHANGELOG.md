@@ -5,9 +5,15 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [Unreleased]
 
-## Added
+### Fixed
+
+- BBPLAYER-5N
+
+## [2.1.8] - 2026-01-13
+
+### Added
 
 - 重新设计播放器进度条
 - 增加~~讨口子~~捐赠页面
@@ -15,11 +21,11 @@
 - 通知栏增加切换循环模式按钮
 - 尝试启用 dolby / hires 音源
 
-## Changed
+### Changed
 
 - 移除了未使用的依赖
 
-## Fixed
+### Fixed
 
 - 修复登录二维码可能为空导致的报错
 - 修复部分 bilibili api 返回 data 为 null 导致的报错
@@ -190,7 +196,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.6...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.8...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -202,3 +208,4 @@
 [2.1.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.4.3...v2.1.4
 [2.1.5]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.4...v2.1.5
 [2.1.6]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.5...v2.1.6
+[2.1.8]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.6...v2.1.8
