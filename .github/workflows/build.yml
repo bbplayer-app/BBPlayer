@@ -34,7 +34,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       buildType: ${{ steps.set-vars.outputs.buildType }}
-      profile: ${{ steps.set-vars.outputs.profile }}
+      profile: ${{ steps.set-matrix.outputs.profile }}
       commitSha: ${{ steps.set-vars.outputs.commitSha }}
       prNumber: ${{ steps.set-vars.outputs.prNumber }}
     steps:
