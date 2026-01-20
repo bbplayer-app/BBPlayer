@@ -26,6 +26,17 @@
 				"APP_VARIANT": "production"
 			}
 		},
+		"prod-ci": {
+			"autoIncrement": false,
+			"android": {
+				"buildType": "apk",
+				"gradleCommand": ":app:assembleRelease"
+			},
+			"channel": "production",
+			"env": {
+				"APP_VARIANT": "production"
+			}
+		},
 		"prod-universal": {
 			"autoIncrement": false,
 			"android": {

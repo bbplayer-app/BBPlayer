@@ -70,7 +70,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		[
 			'./expo-plugins/withAbiFilters',
 			{
-				abiFilters: ['arm64-v8a'],
+				abiFilters: process.env.ABI_FILTERS
+					? process.env.ABI_FILTERS.split(',')
+					: ['arm64-v8a'],
 			},
 		],
 		[
