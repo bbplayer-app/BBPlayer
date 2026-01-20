@@ -55,7 +55,7 @@ jobs:
         id: set-matrix
         run: |
           BUILD_TYPE="${{ steps.set-vars.outputs.buildType }}"
-          
+
           if [[ "$BUILD_TYPE" == "prod" ]]; then
             echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"},{\"arch\":\"armeabi-v7a\"}]}" >> $GITHUB_OUTPUT
             echo "profile=prod-ci" >> $GITHUB_OUTPUT
@@ -115,10 +115,10 @@ jobs:
       - name: ⚙️ Prepare Variables
         run: |
           APP_VERSION=$(node -p "require('./package.json').version")
-          
+
           # e.g. bbplayer-v1.0.0-prod-arm64-v8a
           APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}-${{ matrix.arch }}"
-          
+
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
           echo "APK_TEMP_PATH=${{runner.temp}}/${APK_NAME}.apk" >> $GITHUB_ENV
 
@@ -149,13 +149,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ needs.setup.outputs.commitSha }}
-      
+
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
-          merge-multiple: true 
-      
+          merge-multiple: true
+
       - name: ⚙️ Prepare Release Variables
         run: |
           APP_VERSION=$(node -p "require('./package.json').version")
@@ -165,7 +165,7 @@ jobs:
       - name: 🎁 Create Release
         run: |
           FILES=$(find dist -name "*.apk" -type f) 
-          
+
           gh release create ${{ env.RELEASE_TAG }} \
             $FILES \
             --title "${{ env.RELEASE_TAG }}" \
