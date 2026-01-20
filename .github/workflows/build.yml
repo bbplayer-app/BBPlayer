@@ -205,8 +205,7 @@ jobs:
             `;
 
             if (prNumber) {
-              body += `
-- **触发事件:** PR #${prNumber}`;
+              body += `\n- **触发事件:** PR #${prNumber}`;
               try {
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
