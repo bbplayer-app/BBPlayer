@@ -58,7 +58,7 @@ export class NeteaseApi {
 		).map((res) => {
 			if (!res.body.result?.songs) return []
 			return res.body.result.songs.map((song) => ({
-				source: 'netease',
+				source: 'netease' as const,
 				duration: song.dt / 1000,
 				title: song.name,
 				artist: song.ar[0].name,
@@ -153,10 +153,12 @@ export class NeteaseApi {
 				// 相信网易云... 哥们儿写的规则太屎了
 				const bestMatch = searchResult[0]
 
-				return this.getLyrics(bestMatch.remoteId).andThen((lyricsResponse) => {
-					const lyricData = this.parseLyrics(lyricsResponse)
-					return okAsync(lyricData)
-				})
+				return this.getLyrics(bestMatch.remoteId as number).andThen(
+					(lyricsResponse) => {
+						const lyricData = this.parseLyrics(lyricsResponse)
+						return okAsync(lyricData)
+					},
+				)
 			},
 		)
 	}

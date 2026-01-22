@@ -18,6 +18,7 @@
 ### Added
 
 - 为 Playlist 和 Library 页面增加 Skeleton
+- 支持 qq 音乐作为歌词源
 
 ## [2.1.8] - 2026-01-13
 

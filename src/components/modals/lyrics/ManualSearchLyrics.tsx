@@ -18,6 +18,7 @@ import {
 
 const SOURCE_MAP = {
 	netease: '网易云',
+	qqmusic: 'QQ 音乐',
 }
 
 const renderItem = ({
@@ -76,10 +77,10 @@ const ManualSearchLyricsModal = ({
 	const close = useModalStore((state) => state.close)
 
 	const {
-		data: searchResult,
-		refetch: searchIt,
-		isFetching: isSearching,
-	} = useManualSearchLyrics(query, uniqueKey)
+		results: searchResult,
+		search: searchIt,
+		isLoading: isSearching,
+	} = useManualSearchLyrics(uniqueKey)
 	const { mutate: fetchLyrics, isPending: isFetchingLyrics } = useFetchLyrics()
 	const handlePressItem = useCallback(
 		(item: LyricSearchResult[0]) => {
@@ -143,7 +144,7 @@ const ManualSearchLyricsModal = ({
 					value={query}
 					onChangeText={setQuery}
 					placeholder='输入歌曲名'
-					onSubmitEditing={() => searchIt()}
+					onSubmitEditing={() => searchIt(query)}
 				/>
 			</Dialog.Content>
 			<Dialog.ScrollArea style={styles.scrollArea}>
