@@ -1,5 +1,7 @@
+import { useAppStore } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
+import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
 import { DataParsingError, FileSystemError } from '@/lib/errors'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -18,7 +20,10 @@ type lyricFileType =
 	  })
 
 class LyricService {
-	constructor(readonly neteaseApi: NeteaseApi) {}
+	constructor(
+		readonly neteaseApi: NeteaseApi,
+		readonly qqMusicApi: QQMusicApi,
+	) {}
 
 	private cleanKeyword(keyword: string): string {
 		const priorityRegex = /《(.+?)》|「(.+?)」/
@@ -46,18 +51,54 @@ class LyricService {
 	 * @param preciseKeyword 在提供该项时，将直接使用这个关键词搜索
 	 * @returns
 	 */
-	public getBestMatchedLyrics(track: Track, preciseKeyword?: string) {
-		const providers = [
-			this.neteaseApi.searchBestMatchedLyrics(
-				preciseKeyword ?? this.cleanKeyword(track.title),
-				track.duration * 1000,
+	public getBestMatchedLyrics(
+		track: Track,
+		preciseKeyword?: string,
+		source?: 'auto' | 'netease' | 'qqmusic',
+	) {
+		const keyword = preciseKeyword ?? this.cleanKeyword(track.title)
+		const durationMs = track.duration * 1000
+
+		const providers = []
+
+		if (source === 'netease' || source === undefined || source === 'auto') {
+			providers.push(
+				this.neteaseApi
+					.searchBestMatchedLyrics(keyword, durationMs)
+					.map((res) => {
+						logger.debug('Netease returned lyrics')
+						return res
+					}),
+			)
+		}
+
+		if (source === 'qqmusic' || source === undefined || source === 'auto') {
+			providers.push(
+				this.qqMusicApi
+					.searchBestMatchedLyrics(keyword, durationMs)
+					.map((res) => {
+						logger.debug('QQMusic returned lyrics')
+						return res
+					}),
+			)
+		}
+
+		return ResultAsync.fromPromise(
+			Promise.any(
+				providers.map((p) =>
+					// Convert ResultAsync to Promise that resolves on Ok and rejects on Err
+					p.match(
+						(v) => Promise.resolve(v),
+						(e) => Promise.reject(e),
+					),
+				),
 			),
-		]
-		return ResultAsync.combine(providers).andThen((results) => {
-			// FIXME: fuck what's this???
-			const randomIndex = Math.floor(Math.random() * results.length)
-			return okAsync(results[randomIndex])
-		})
+			(e) => {
+				// All failed
+				// e will be an AggregateError if using Promise.any
+				return new FileSystemError('All lyric providers failed', { cause: e })
+			},
+		)
 	}
 
 	/**
@@ -105,7 +146,11 @@ class LyricService {
 				return ResultAsync.fromSafePromise(
 					this.getPreciseMusicNameOnBilibiliVideo(track.bilibiliMetadata),
 				)
-					.andThen((musicName) => this.getBestMatchedLyrics(track, musicName))
+					.andThen((musicName) => {
+						const lyricSource =
+							useAppStore.getState().settings.lyricSource ?? 'auto'
+						return this.getBestMatchedLyrics(track, musicName, lyricSource)
+					})
 					.andThen((lyrics) => {
 						logger.info('自动搜索最佳匹配的歌词完成')
 						Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
@@ -115,13 +160,17 @@ class LyricService {
 					})
 			}
 
-			return this.getBestMatchedLyrics(track).andThen((lyrics) => {
-				logger.info('自动搜索最佳匹配的歌词完成')
-				Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-					lyricFile.write(JSON.stringify(lyrics)),
-				)
-				return okAsync(lyrics)
-			})
+			const lyricSource = useAppStore.getState().settings.lyricSource ?? 'auto'
+
+			return this.getBestMatchedLyrics(track, undefined, lyricSource).andThen(
+				(lyrics) => {
+					logger.info('自动搜索最佳匹配的歌词完成')
+					Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+						lyricFile.write(JSON.stringify(lyrics)),
+					)
+					return okAsync(lyrics)
+				},
+			)
 		} catch (e) {
 			return errAsync(new FileSystemError('处理歌词文件失败', { cause: e }))
 		}
@@ -158,7 +207,6 @@ class LyricService {
 
 	public fetchLyrics(
 		item: LyricSearchResult[0],
-
 		uniqueKey: string,
 	): ResultAsync<ParsedLrc | string, Error> {
 		switch (item.source) {
@@ -166,6 +214,13 @@ class LyricService {
 				return this.neteaseApi
 					.getLyrics(item.remoteId)
 					.andThen((lyrics) => okAsync(this.neteaseApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
+			case 'qqmusic':
+				return this.qqMusicApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.qqMusicApi.parseLyrics(lyrics)))
 					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
@@ -272,5 +327,5 @@ class LyricService {
 	}
 }
 
-const lyricService = new LyricService(neteaseApi)
+const lyricService = new LyricService(neteaseApi, qqMusicApi)
 export default lyricService

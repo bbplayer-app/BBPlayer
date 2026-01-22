@@ -23,10 +23,19 @@ export interface ParsedLrc {
 	offset?: number // 单位秒
 }
 
-export type LyricSearchResult = {
-	source: 'netease'
-	duration: number // 秒
-	title: string
-	artist: string
-	remoteId: number
-}[]
+export type LyricSearchResult = (
+	| {
+			source: 'netease'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: number
+	  }
+	| {
+			source: 'qqmusic'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: string
+	  }
+)[]

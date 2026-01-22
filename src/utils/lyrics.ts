@@ -27,7 +27,7 @@ export function parseLrc(lrcString: string): ParsedLrc {
 			rawOriginalLyrics: lrcString,
 		}
 
-		const tagRegex = /^\[([a-zA-Z0-9]+):(.+)\]$/
+		const tagRegex = /^\[([a-zA-Z0-9]+):(.*)\]$/
 		const timestampRegex = /\[(\d{2,}):(\d{2,})(?:[.:](\d{2,3}))?\]/g
 
 		for (const line of lines) {

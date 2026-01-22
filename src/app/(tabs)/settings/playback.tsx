@@ -1,11 +1,20 @@
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
+import { useAppStore } from '@/hooks/stores/useAppStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { AppState, ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
+import {
+	Appbar,
+	Checkbox,
+	IconButton,
+	Switch,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function PlaybackSettingsPage() {
@@ -26,6 +35,10 @@ export default function PlaybackSettingsPage() {
 	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
 		Orpheus.isDesktopLyricsLocked,
 	)
+
+	const lyricSource = useAppStore((state) => state.settings.lyricSource)
+	const setSettings = useAppStore((state) => state.setSettings)
+	const [lyricSourceMenuVisible, setLyricSourceMenuVisible] = useState(false)
 
 	const enableDesktopLyrics = async () => {
 		try {
@@ -164,6 +177,51 @@ export default function PlaybackSettingsPage() {
 							setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
 						}}
 					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>自动匹配的歌词源（不影响手动搜索）</Text>
+					<FunctionalMenu
+						visible={lyricSourceMenuVisible}
+						onDismiss={() => setLyricSourceMenuVisible(false)}
+						anchor={
+							<IconButton
+								icon='playlist-music'
+								size={20}
+								onPress={() => setLyricSourceMenuVisible(true)}
+							/>
+						}
+					>
+						<Checkbox.Item
+							mode='ios'
+							label='网易云音乐'
+							status={lyricSource === 'netease' ? 'checked' : 'unchecked'}
+							onPress={() => {
+								setSettings({ lyricSource: 'netease' })
+								setLyricSourceMenuVisible(false)
+							}}
+						/>
+						<Checkbox.Item
+							mode='ios'
+							label='QQ 音乐'
+							status={lyricSource === 'qqmusic' ? 'checked' : 'unchecked'}
+							onPress={() => {
+								setSettings({ lyricSource: 'qqmusic' })
+								setLyricSourceMenuVisible(false)
+							}}
+						/>
+						<Checkbox.Item
+							mode='ios'
+							label='自动 (选择最先返回的数据源)'
+							status={lyricSource === 'auto' ? 'checked' : 'unchecked'}
+							onPress={() => {
+								setSettings({ lyricSource: 'auto' })
+								setLyricSourceMenuVisible(false)
+								toast.info(
+									'「自动」的意思是：选择最先返回的数据源，但不会考虑匹配度，所以不保证结果一定是最好的',
+								)
+							}}
+						/>
+					</FunctionalMenu>
 				</View>
 			</ScrollView>
 		</View>
