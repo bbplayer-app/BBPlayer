@@ -79,6 +79,7 @@ const renderItemDefault = ({
 				id: item.id,
 				artistName: item.artist?.name,
 				uniqueKey: item.uniqueKey,
+				titleHtml: item.titleHtml,
 			}}
 			toggleSelected={() => {
 				void Haptics.performAndroidHapticsAsync(
