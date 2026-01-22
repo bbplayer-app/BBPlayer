@@ -14,6 +14,7 @@
 ### Changed
 
 - ci 增加构建 armabi-v7a、x86、x86_64 的工作流
+- 使用 React.lazy() 动态导入模态组件并用 Suspense 边界包装渲染
 
 ### Added
 
