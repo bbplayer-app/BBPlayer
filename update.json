@@ -1,14 +1,12 @@
 {
-	"version": "2.1.8",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.8",
-	"notes": "你版本太低了！赶紧更新！",
+	"version": "2.1.9",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.1.9",
+	"notes": "你版本太低了，赶紧更新！",
 	"listed_notes": [
-		"新增：桌面歌词",
-		"新增：重新设计播放器进度条",
-		"新增：支持边下边播缓存",
-		"新增：尝试启用 bilibili dolby/hires 音源",
-		"修复：登录二维码可能为空导致的报错",
-		"修复：修复部分 bilibili api 返回 data 为 null 导致的报错"
+		"新增：播放器支持倍速调节",
+		"新增：支持 QQ 音乐歌词源",
+		"新增：支持将播放队列保存为歌单",
+		"优化：搜索关键词高亮显示"
 	],
 	"forced": false
 }
