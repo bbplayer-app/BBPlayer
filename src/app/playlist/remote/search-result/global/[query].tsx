@@ -1,9 +1,9 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
-import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
+import { PlaylistTrackListSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
@@ -82,7 +82,7 @@ export default function SearchResultsPage() {
 	}, [searchData])
 
 	if (isPendingSearchData) {
-		return <PlaylistLoading />
+		return <PlaylistTrackListSkeleton />
 	}
 
 	if (isErrorSearchData) {

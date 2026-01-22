@@ -1,5 +1,5 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
-import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
+import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -63,7 +63,7 @@ const LocalPlaylistListComponent = memo(() => {
 	}
 
 	if (playlistsIsPending) {
-		return <DataFetchingPending />
+		return <LocalPlaylistListSkeleton />
 	}
 
 	if (playlistsIsError) {

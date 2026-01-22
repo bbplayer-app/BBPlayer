@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
+import { ShimmerProvider } from 'react-native-fast-shimmer'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -47,7 +48,9 @@ export default function AppProviders({
 					>
 						<GestureHandlerRootView style={styles.container}>
 							<QueryClientProvider client={queryClient}>
-								<PaperProvider theme={paperTheme}>{children}</PaperProvider>
+								<PaperProvider theme={paperTheme}>
+									<ShimmerProvider duration={1500}>{children}</ShimmerProvider>
+								</PaperProvider>
 							</QueryClientProvider>
 						</GestureHandlerRootView>
 					</Sentry.ErrorBoundary>
