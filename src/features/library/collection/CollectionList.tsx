@@ -1,6 +1,6 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
-import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import { CollectionListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useInfiniteCollectionsList } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
@@ -49,7 +49,7 @@ const CollectionListComponent = memo(() => {
 	}
 
 	if (collectionsIsPending) {
-		return <DataFetchingPending />
+		return <CollectionListSkeleton />
 	}
 
 	if (collectionsIsError) {

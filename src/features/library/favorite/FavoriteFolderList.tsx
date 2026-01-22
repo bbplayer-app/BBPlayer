@@ -1,6 +1,6 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
-import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import { FavoriteFolderListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetFavoritePlaylists } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
@@ -50,7 +50,7 @@ const FavoriteFolderListComponent = memo(() => {
 	}
 
 	if (playlistsIsPending) {
-		return <DataFetchingPending />
+		return <FavoriteFolderListSkeleton />
 	}
 
 	if (playlistsIsError) {
