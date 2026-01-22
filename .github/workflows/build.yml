@@ -57,7 +57,7 @@ jobs:
           BUILD_TYPE="${{ steps.set-vars.outputs.buildType }}"
 
           if [[ "$BUILD_TYPE" == "prod" ]]; then
-            echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"},{\"arch\":\"armeabi-v7a\"}]}" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"},{\"arch\":\"armeabi-v7a\"},{\"arch\":\"x86_64\"},{\"arch\":\"x86\"}]}" >> $GITHUB_OUTPUT
             echo "profile=prod-ci" >> $GITHUB_OUTPUT
           elif [[ "$BUILD_TYPE" == "blank-test" ]]; then
              echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"}]}" >> $GITHUB_OUTPUT
