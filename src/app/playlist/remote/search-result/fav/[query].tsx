@@ -1,9 +1,9 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
-import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
+import { PlaylistTrackListSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useGetFavoritePlaylists,
 	useInfiniteSearchFavoriteItems,
@@ -82,7 +82,7 @@ export default function SearchResultsPage() {
 	const { trackMenuItems, playTrack } = useSearchInteractions()
 
 	if (isPendingSearchData) {
-		return <PlaylistLoading />
+		return <PlaylistTrackListSkeleton />
 	}
 
 	if (isErrorSearchData) {
