@@ -37,10 +37,14 @@ const UpdateTrackLocalPlaylistsModal = lazy(
 const SaveQueueToPlaylistModal = lazy(
 	() => import('./modals/playlist/SaveQueueToPlaylistModal'),
 )
+const PlaybackSpeedModal = lazy(
+	() => import('./modals/player/PlaybackSpeedModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
 export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
+	PlaybackSpeed: PlaybackSpeedModal,
 	AddVideoToBilibiliFavorite: AddToFavoriteListsModal,
 	EditPlaylistMetadata: EditPlaylistMetadataModal,
 	EditTrackMetadata: EditTrackMetadataModal,

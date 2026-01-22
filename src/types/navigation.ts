@@ -24,6 +24,7 @@ export interface ModalPropsMap {
 	SleepTimer: undefined
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' }
+	PlaybackSpeed: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap
