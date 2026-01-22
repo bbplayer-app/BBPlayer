@@ -1,5 +1,6 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
 import type { Track as OrpheusTrack } from '@roitium/expo-orpheus'
@@ -200,6 +201,30 @@ function PlayerQueueModal({
 				borderBottomColor: theme.colors.elevation.level5,
 			}}
 		>
+			<View
+				style={{
+					flexDirection: 'row',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					paddingHorizontal: 16,
+					// paddingVertical: 4,
+					borderBottomWidth: 1,
+					borderBottomColor: theme.colors.elevation.level2,
+				}}
+			>
+				<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
+				<IconButton
+					icon='content-save-outline'
+					onPress={() => {
+						if (queue && queue.length > 0) {
+							useModalStore.getState().open('SaveQueueToPlaylist', {
+								trackIds: queue.map((t) => t.id),
+							})
+						}
+					}}
+					disabled={!queue || queue.length === 0}
+				/>
+			</View>
 			<BottomSheetFlatList
 				data={queue}
 				ref={flatListRef}
