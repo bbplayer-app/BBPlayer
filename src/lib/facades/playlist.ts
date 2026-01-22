@@ -262,6 +262,70 @@ export class PlaylistFacade {
 				),
 		)
 	}
+
+	/**
+	 * 将播放队列保存为新的播放列表
+	 * @param name 播放列表名称
+	 * @param uniqueKeys 队列中的 track uniqueKeys
+	 */
+	public async saveQueueAsPlaylist(name: string, uniqueKeys: string[]) {
+		logger.info('开始将队列保存为播放列表', {
+			name,
+			trackCount: uniqueKeys.length,
+		})
+		return ResultAsync.fromPromise(
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+				const trackSvc = this.trackService.withDB(tx)
+
+				// 1. 创建播放列表
+				const playlistRes = await playlistSvc.createPlaylist({
+					title: name,
+					type: 'local',
+					authorId: null,
+					remoteSyncId: null,
+				})
+				if (playlistRes.isErr()) throw playlistRes.error
+				const playlist = playlistRes.value
+
+				// 2. 验证所有 tracks 在本地存在，并获取 ID
+				const distinctKeys = Array.from(new Set(uniqueKeys))
+
+				const findRes = await trackSvc.findTrackIdsByUniqueKeys(distinctKeys)
+				if (findRes.isErr()) throw findRes.error
+				const foundMap = findRes.value
+
+				const trackIds: number[] = []
+				for (const key of uniqueKeys) {
+					const id = foundMap.get(key)
+					if (id === undefined) {
+						// 理论上不应该发生，因为进入播放队列的歌曲必须在本地 DB 有记录
+						logger.error(`保存队列时发现缺失的 track: ${key}`)
+						throw createFacadeError(
+							'PlaylistCreateFailed',
+							`无法保存队列，发现未入库的歌曲 (ID: ${key})，请向开发者反馈`,
+						)
+					}
+					trackIds.push(id)
+				}
+
+				// 3. 批量添加到播放列表
+				if (trackIds.length > 0) {
+					const addRes = await playlistSvc.addManyTracksToLocalPlaylist(
+						playlist.id,
+						trackIds,
+					)
+					if (addRes.isErr()) throw addRes.error
+				}
+
+				return playlist.id
+			}),
+			(e) =>
+				createFacadeError('PlaylistCreateFailed', '保存队列为播放列表失败', {
+					cause: e,
+				}),
+		)
+	}
 }
 
 export const playlistFacade = new PlaylistFacade(

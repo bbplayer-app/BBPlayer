@@ -22,6 +22,7 @@ export interface ModalPropsMap {
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
 	SleepTimer: undefined
+	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' }
 }
 
