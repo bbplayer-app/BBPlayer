@@ -1,3 +1,4 @@
+// eslint-disable-file @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 import { version, versionCode } from './package.json'
 
