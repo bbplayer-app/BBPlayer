@@ -296,7 +296,7 @@ export class PlaylistFacade {
 				const foundMap = findRes.value
 
 				const trackIds: number[] = []
-				for (const key of uniqueKeys) {
+				for (const key of distinctKeys) {
 					const id = foundMap.get(key)
 					if (id === undefined) {
 						// 理论上不应该发生，因为进入播放队列的歌曲必须在本地 DB 有记录
