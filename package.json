@@ -25,7 +25,6 @@
 		"@gorhom/bottom-sheet": "^5.2.6",
 		"@jest/globals": "^29.7.0",
 		"@pchmn/expo-material3-theme": "^1.3.2",
-		"@react-native-community/slider": "^5.1.2",
 		"@react-native-masked-view/masked-view": "^0.3.2",
 		"@react-native-vector-icons/get-image": "^12.2.0",
 		"@react-native-vector-icons/material-design-icons": "^12.3.0",

@@ -29,9 +29,6 @@ importers:
       '@pchmn/expo-material3-theme':
         specifier: ^1.3.2
         version: 1.3.2(expo@54.0.30)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
-      '@react-native-community/slider':
-        specifier: ^5.1.2
-        version: 5.1.2
       '@react-native-masked-view/masked-view':
         specifier: ^0.3.2
         version: 0.3.2(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)
@@ -1955,9 +1952,6 @@ packages:
     resolution: {integrity: sha512-ocgRFKRLX8b5rEK38SJfpr0AMl6SqseWljk6c5LxCG/zpCfPPNQdXq1OsDvmEwsqO4OEQ6tmOaSm9OgTm6FhbQ==}
     engines: {node: '>=20.19.4'}
     hasBin: true
-
-  '@react-native-community/slider@5.1.2':
-    resolution: {integrity: sha512-UV/MjCyCtSjS5BQDrrGIMmCXm309xEG6XbR0Dj65kzTraJSVDxSjQS2uBUXgX+5SZUOCzCxzv3OufOZBdtQY4w==}
 
   '@react-native-masked-view/masked-view@0.3.2':
     resolution: {integrity: sha512-XwuQoW7/GEgWRMovOQtX3A4PrXhyaZm0lVUiY8qJDvdngjLms9Cpdck6SmGAUNqQwcj2EadHC1HwL0bEyoa/SQ==}
@@ -9162,8 +9156,6 @@ snapshots:
       - supports-color
       - typescript
       - utf-8-validate
-
-  '@react-native-community/slider@5.1.2': {}
 
   '@react-native-masked-view/masked-view@0.3.2(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0)':
     dependencies:

@@ -1,33 +1,22 @@
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
-import Slider from '@react-native-community/slider'
+import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, IconButton, Text } from 'react-native-paper'
+import { Button, Dialog, Text, TextInput } from 'react-native-paper'
 
 const PRESET_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
 const PlaybackSpeedModal = () => {
 	const close = useModalStore((state) => state.close)
 	const [speed, setSpeed] = useState<number>(1.0)
-
-	const { data: currentSpeed } = useQuery({
-		queryKey: ['playbackSpeed'],
-		queryFn: async () => {
-			return await Orpheus.getPlaybackSpeed()
-		},
-		staleTime: 0,
-	})
+	const [customInputVisible, setCustomInputVisible] = useState(false)
+	const [customSpeed, setCustomSpeed] = useState('')
 
 	useEffect(() => {
-		if (currentSpeed) {
-			setSpeed(currentSpeed)
-		}
-	}, [currentSpeed])
+		void Orpheus.getPlaybackSpeed().then(setSpeed)
 
-	useEffect(() => {
 		const subscription = Orpheus.addListener(
 			'onPlaybackSpeedChanged',
 			(event: { speed: number }) => {
@@ -39,8 +28,7 @@ const PlaybackSpeedModal = () => {
 
 	const handleSpeedChange = async (newSpeed: number) => {
 		try {
-			// Clamp value between 0.25 and 2.0
-			const clampedSpeed = Math.max(0.25, Math.min(2.0, newSpeed))
+			const clampedSpeed = Math.max(0.1, Math.min(5.0, newSpeed))
 			await Orpheus.setPlaybackSpeed(clampedSpeed)
 			setSpeed(clampedSpeed)
 		} catch (e) {
@@ -48,58 +36,77 @@ const PlaybackSpeedModal = () => {
 		}
 	}
 
+	const handleCustomSpeedSubmit = async () => {
+		const parsedSpeed = parseFloat(customSpeed)
+		if (!isNaN(parsedSpeed) && parsedSpeed > 0) {
+			await handleSpeedChange(parsedSpeed)
+			setCustomInputVisible(false)
+		} else {
+			toast.error('请输入有效的播放速度')
+		}
+	}
+
 	return (
 		<>
 			<Dialog.Title>播放速度</Dialog.Title>
 			<Dialog.Content>
-				<View style={styles.container}>
+				<View style={styles.headerContainer}>
 					<Text
-						variant='displaySmall'
+						variant='headlineMedium'
 						style={styles.speedDisplay}
 					>
-						{speed.toFixed(2)}x
+						当前: {speed.toFixed(2)}x
 					</Text>
-
-					<View style={styles.sliderContainer}>
-						<IconButton
-							icon='minus'
-							onPress={() => handleSpeedChange(Math.max(0.25, speed - 0.1))}
-							disabled={speed <= 0.25}
-						/>
-						<Slider
-							style={styles.slider}
-							minimumValue={0.25}
-							maximumValue={2.0}
-							step={0.05}
-							value={speed}
-							onValueChange={handleSpeedChange}
-							minimumTrackTintColor='#6200ee'
-							maximumTrackTintColor='#000000'
-							thumbTintColor='#6200ee'
-						/>
-						<IconButton
-							icon='plus'
-							onPress={() => handleSpeedChange(Math.min(2.0, speed + 0.1))}
-							disabled={speed >= 2.0}
-						/>
-					</View>
-
-					<View style={styles.presetContainer}>
-						{PRESET_SPEEDS.map((preset) => (
-							<Button
-								key={preset}
-								mode={
-									Math.abs(speed - preset) < 0.05 ? 'contained' : 'outlined'
-								}
-								onPress={() => handleSpeedChange(preset)}
-								style={styles.presetButton}
-								compact
-							>
-								{preset}x
-							</Button>
-						))}
-					</View>
 				</View>
+
+				<View style={styles.presetContainer}>
+					{PRESET_SPEEDS.map((preset) => (
+						<Button
+							key={preset}
+							mode={
+								Math.abs(speed - preset) < 0.01
+									? 'contained'
+									: 'contained-tonal'
+							}
+							onPress={() => handleSpeedChange(preset)}
+							style={styles.presetButton}
+							compact
+						>
+							{preset}x
+						</Button>
+					))}
+				</View>
+
+				{customInputVisible ? (
+					<View style={styles.customInputContainer}>
+						<TextInput
+							label='自定义速度 (0.1 - 5.0)'
+							value={customSpeed}
+							onChangeText={setCustomSpeed}
+							keyboardType='numeric'
+							autoFocus
+							mode='outlined'
+							style={styles.customInput}
+							onSubmitEditing={handleCustomSpeedSubmit}
+						/>
+						<Button
+							mode='contained'
+							onPress={handleCustomSpeedSubmit}
+						>
+							设置
+						</Button>
+					</View>
+				) : (
+					<Button
+						mode='text'
+						onPress={() => {
+							setCustomSpeed(speed.toString())
+							setCustomInputVisible(true)
+						}}
+					>
+						自定义...
+					</Button>
+				)}
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => handleSpeedChange(1.0)}>重置</Button>
@@ -110,32 +117,32 @@ const PlaybackSpeedModal = () => {
 }
 
 const styles = StyleSheet.create({
-	container: {
+	headerContainer: {
 		alignItems: 'center',
-		paddingVertical: 10,
+		marginBottom: 16,
 	},
 	speedDisplay: {
-		marginBottom: 20,
 		fontWeight: 'bold',
-	},
-	sliderContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		width: '100%',
-		marginBottom: 20,
-	},
-	slider: {
-		flex: 1,
-		height: 40,
 	},
 	presetContainer: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
 		justifyContent: 'center',
 		gap: 8,
+		marginBottom: 8,
 	},
 	presetButton: {
-		minWidth: 60,
+		minWidth: '30%',
+		flexGrow: 1,
+	},
+	customInputContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginTop: 8,
+	},
+	customInput: {
+		flex: 1,
+		marginRight: 8,
 	},
 })
 
