@@ -11,6 +11,14 @@
 
 - BBPLAYER-5N
 
+### Changed
+
+- ci 增加构建 armabi-v7a、x86、x86_64 的工作流
+
+### Added
+
+- 为 Playlist 和 Library 页面增加 Skeleton
+
 ## [2.1.8] - 2026-01-13
 
 ### Added

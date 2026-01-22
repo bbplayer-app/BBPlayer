@@ -3,12 +3,12 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
-import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import renderToViewItem from '@/features/playlist/remote/toview/components/Item'
+import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useClearToViewVideoList,
 	useDeleteToViewVideo,
@@ -115,7 +115,7 @@ export default function ToViewPage() {
 	}, [])
 
 	if (isToViewDataPending) {
-		return <PlaylistLoading />
+		return <PlaylistPageSkeleton />
 	}
 
 	if (isToViewDataError) {

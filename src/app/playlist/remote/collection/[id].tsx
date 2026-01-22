@@ -1,12 +1,12 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
-import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import useCheckLinkedToPlaylist from '@/features/playlist/remote/hooks/useCheckLinkedToLocalPlaylist'
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useCollectionAllContents } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -107,7 +107,7 @@ export default function CollectionPage() {
 	}
 
 	if (isCollectionDataPending) {
-		return <PlaylistLoading />
+		return <PlaylistPageSkeleton />
 	}
 
 	if (isCollectionDataError) {
