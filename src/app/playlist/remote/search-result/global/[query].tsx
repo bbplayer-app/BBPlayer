@@ -33,6 +33,7 @@ const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 		duration: apiItem.duration ? formatMMSSToSeconds(apiItem.duration) : 0,
 		createdAt: new Date(apiItem.senddate),
 		updatedAt: new Date(apiItem.senddate),
+		titleHtml: apiItem.title,
 		bilibiliMetadata: {
 			bvid: apiItem.bvid,
 			cid: null,
