@@ -9,6 +9,7 @@ export type FacadeErrorType =
 	| 'PlaylistDuplicateFailed'
 	| 'UpdateTrackLocalPlaylistsFailed'
 	| 'BatchAddTracksToLocalPlaylistFailed'
+	| 'PlaylistCreateFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

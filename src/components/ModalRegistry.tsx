@@ -34,6 +34,9 @@ const DuplicateLocalPlaylistModal = lazy(
 const UpdateTrackLocalPlaylistsModal = lazy(
 	() => import('./modals/playlist/UpdateTrackLocalPlaylistsModal'),
 )
+const SaveQueueToPlaylistModal = lazy(
+	() => import('./modals/playlist/SaveQueueToPlaylistModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -54,4 +57,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	EditLyrics: EditLyricsModal,
 	SleepTimer: SleepTimerModal,
 	DonationQR: DonationQRModal,
+	SaveQueueToPlaylist: SaveQueueToPlaylistModal,
 }
