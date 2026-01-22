@@ -24,7 +24,8 @@
 - **全功能播放器**: 提供播放/暂停、循环、随机、播放队列等功能。
 - **搜索**: 智能搜索，随意一条链接或 b23.tv 短链，即可解析实际内容并展示。同时也有收藏夹和本地播放列表内搜索。
 - **歌词**：支持自动匹配歌词（目前仅支持「网易云音乐」来源）和手动搜索，以及手动编辑功能，并提供歌词偏移量调整。
-- **下载**：支持缓存歌曲并离线播放
+- **下载**：支持缓存歌曲并离线播放。
+- **桌面歌词**：支持启用桌面歌词功能。
 
 ## 技术栈
 
@@ -68,3 +69,7 @@
 以及最重要的：[Bilibili](https://www.bilibili.com/)
 
 在此表示感谢！（鞠躬）
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=bbplayer-app/bbplayer&type=date&legend=top-left)](https://www.star-history.com/#bbplayer-app/bbplayer&type=date&legend=top-left)

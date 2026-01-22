@@ -26,6 +26,7 @@ export interface TrackNecessaryData {
 	id: number
 	artistName?: string
 	uniqueKey: string
+	titleHtml?: string
 }
 
 interface TrackListItemProps {
@@ -39,6 +40,32 @@ interface TrackListItemProps {
 	isSelected: boolean
 	selectMode: boolean
 	enterSelectMode: (id: number) => void
+}
+
+const HighlightedText = ({
+	text,
+	...props
+}: Omit<React.ComponentProps<typeof Text>, 'children'> & { text: string }) => {
+	const { colors } = useTheme()
+	const parts = text.split(/(<em[^>]*>.*?<\/em>)/g)
+	return (
+		<Text {...props}>
+			{parts.map((part, index) => {
+				const match = /<em[^>]*>(.*?)<\/em>/.exec(part)
+				if (match) {
+					return (
+						<Text
+							key={index}
+							style={{ fontWeight: 'bold', color: colors.primary }}
+						>
+							{match[1]}
+						</Text>
+					)
+				}
+				return <Text key={index}>{part}</Text>
+			})}
+		</Text>
+	)
 }
 
 /**
@@ -128,7 +155,20 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
-						<Text variant='bodySmall'>{data.title}</Text>
+						{data.titleHtml ? (
+							<HighlightedText
+								variant='bodySmall'
+								text={data.titleHtml}
+								numberOfLines={1}
+							/>
+						) : (
+							<Text
+								variant='bodySmall'
+								numberOfLines={1}
+							>
+								{data.title}
+							</Text>
+						)}
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artistName && (

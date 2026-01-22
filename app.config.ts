@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 import { version, versionCode } from './package.json'
 
@@ -70,7 +71,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		[
 			'./expo-plugins/withAbiFilters',
 			{
-				abiFilters: ['arm64-v8a'],
+				abiFilters: process.env.ABI_FILTERS
+					? process.env.ABI_FILTERS.split(',')
+					: ['arm64-v8a'],
 			},
 		],
 		[

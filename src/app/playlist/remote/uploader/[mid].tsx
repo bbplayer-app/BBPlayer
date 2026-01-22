@@ -1,11 +1,11 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
-import { PlaylistLoading } from '@/features/playlist/remote/components/PlaylistLoading'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useInfiniteGetUserUploadedVideos,
 	useOtherUserInfo,
@@ -158,11 +158,11 @@ export default function UploaderPage() {
 	}
 
 	if (isUserInfoPending) {
-		return <PlaylistLoading />
+		return <PlaylistPageSkeleton />
 	}
 
 	if (isUploadedVideosPending && !startSearch) {
-		return <PlaylistLoading />
+		return <PlaylistPageSkeleton />
 	}
 
 	if (isUploadedVideosError || isUserInfoError) {

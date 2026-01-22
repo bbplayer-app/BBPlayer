@@ -1,6 +1,6 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
-import { DataFetchingPending } from '@/features/library/shared/DataFetchingPending'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import { LibraryTabSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	useGetFavoritePlaylists,
@@ -63,7 +63,7 @@ const MultiPageVideosListComponent = memo(() => {
 	}
 
 	if (playlistsIsPending || isFavoriteDataPending) {
-		return <DataFetchingPending />
+		return <LibraryTabSkeleton />
 	}
 
 	if (playlistsIsError || isFavoriteDataError) {

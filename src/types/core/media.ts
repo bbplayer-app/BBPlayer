@@ -29,6 +29,7 @@ interface BaseTrack {
 
 export interface BilibiliTrack extends BaseTrack {
 	source: 'bilibili'
+	titleHtml?: string // 带有高亮标签的标题
 	bilibiliMetadata: {
 		bvid: string
 		cid: number | null

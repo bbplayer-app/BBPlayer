@@ -3,7 +3,7 @@ import { modalRegistry } from '@/components/ModalRegistry'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 
 export default function ModalHost() {
@@ -67,9 +67,11 @@ export default function ModalHost() {
 						}}
 						contentStyle={{ zIndex }}
 					>
-						{/*
+						<Suspense fallback={<View />}>
+							{/*
             // @ts-expect-error -- 懒得管了*/}
-						<Component {...m.props} />
+							<Component {...m.props} />
+						</Suspense>
 					</AnimatedModalOverlay>
 				)
 			})}

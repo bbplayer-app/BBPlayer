@@ -4,10 +4,10 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
-import { PlaylistLoading } from '@/features/playlist/local/components/PlaylistLoading'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
+import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
@@ -200,7 +200,7 @@ export default function LocalPlaylistPage() {
 	}
 
 	if (isPlaylistDataPending || isPlaylistMetadataPending) {
-		return <PlaylistLoading />
+		return <PlaylistPageSkeleton />
 	}
 
 	if (isPlaylistDataError || isPlaylistMetadataError) {

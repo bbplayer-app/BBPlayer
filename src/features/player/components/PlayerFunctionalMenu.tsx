@@ -143,6 +143,14 @@ export function PlayerFunctionalMenu({
 			<Menu.Item
 				onPress={() => {
 					setMenuVisible(false)
+					openModal('PlaybackSpeed', undefined)
+				}}
+				title='播放速度'
+				leadingIcon='speedometer'
+			/>
+			<Menu.Item
+				onPress={() => {
+					setMenuVisible(false)
 					openModal('SleepTimer', undefined)
 				}}
 				title='定时关闭'

@@ -181,7 +181,7 @@ interface BilibiliFavoriteListContents {
 			face: string
 			mid: number
 		}
-	}
+	} | null
 	medias: BilibiliFavoriteListContent[] | null
 	has_more: boolean
 	ttl: number

@@ -6,10 +6,10 @@ on:
       buildType:
         description: '构建类型'
         required: true
-        default: 'prod-v8a'
+        default: 'prod'
         type: choice
         options:
-          - prod-v8a
+          - prod
           - dev
           - preview
           - blank-test
@@ -28,30 +28,68 @@ env:
   MENTION_USER: '@roitium'
 
 jobs:
-  build:
+  setup:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      buildType: ${{ steps.set-vars.outputs.buildType }}
+      profile: ${{ steps.set-matrix.outputs.profile }}
+      commitSha: ${{ steps.set-vars.outputs.commitSha }}
+      prNumber: ${{ steps.set-vars.outputs.prNumber }}
+    steps:
+      - name: Determine Variables
+        id: set-vars
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "buildType=prod" >> $GITHUB_OUTPUT
+            echo "commitSha=${{ github.event.pull_request.merge_commit_sha }}" >> $GITHUB_OUTPUT
+            echo "prNumber=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "buildType=${{ github.event.inputs.buildType }}" >> $GITHUB_OUTPUT
+            echo "commitSha=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "prNumber=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine Matrix and Profile
+        id: set-matrix
+        run: |
+          BUILD_TYPE="${{ steps.set-vars.outputs.buildType }}"
+
+          if [[ "$BUILD_TYPE" == "prod" ]]; then
+            echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"},{\"arch\":\"armeabi-v7a\"},{\"arch\":\"x86_64\"},{\"arch\":\"x86\"}]}" >> $GITHUB_OUTPUT
+            echo "profile=prod-ci" >> $GITHUB_OUTPUT
+          elif [[ "$BUILD_TYPE" == "blank-test" ]]; then
+             echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"}]}" >> $GITHUB_OUTPUT
+             echo "profile=blank-test" >> $GITHUB_OUTPUT
+          else
+            # dev, preview - default to arm64-v8a
+            echo "matrix={\"include\":[{\"arch\":\"arm64-v8a\"}]}" >> $GITHUB_OUTPUT
+            echo "profile=$BUILD_TYPE" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: setup
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     permissions:
       contents: write
       pull-requests: write
       packages: read
     env:
-      BUILD_TYPE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.buildType) || 'prod-v8a' }}
+      BUILD_TYPE: ${{ needs.setup.outputs.buildType }}
+      EAS_PROFILE: ${{ needs.setup.outputs.profile }}
+      ABI_FILTERS: ${{ matrix.arch }}
 
     environment: ${{ (github.event_name == 'pull_request' && 'production') || null }}
-
-    outputs:
-      BUILD_STATUS: ${{ job.status }}
-      BUILD_TYPE: ${{ env.BUILD_TYPE }}
-      COMMIT_SHA: ${{ (github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha) || github.sha }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      EVENT_TYPE: ${{ github.event_name }}
 
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
         with:
-          ref: ${{ (github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha) || github.sha }}
+          ref: ${{ needs.setup.outputs.commitSha }}
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4
@@ -75,46 +113,67 @@ jobs:
         run: pnpm install
 
       - name: ⚙️ Prepare Variables
-        id: prep
         run: |
           APP_VERSION=$(node -p "require('./package.json').version")
 
-          APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}"
-          RELEASE_TAG="v${APP_VERSION}"
+          # e.g. bbplayer-v1.0.0-prod-arm64-v8a
+          APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}-${{ matrix.arch }}"
 
-          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "APK_TEMP_PATH=${{runner.temp}}/app.apk" >> $GITHUB_ENV
+          echo "APK_TEMP_PATH=${{runner.temp}}/${APK_NAME}.apk" >> $GITHUB_ENV
 
-      - name: 🚀 Build ${{ env.BUILD_TYPE }} APK
+      - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
-        run: eas build --platform android --profile ${{ env.BUILD_TYPE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
+        run: eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
 
-      - name: 🧪 Create Dummy APK for Blank Test
+      - name: 🧪 Create Dummy APK
         if: env.BUILD_TYPE == 'blank-test'
         run: |
-          echo "This is a dummy APK for testing workflow. BuildType: ${{ env.BUILD_TYPE }}" > ${{ env.APK_TEMP_PATH }}
-          echo "Created a dummy file at ${{ env.APK_TEMP_PATH }}"
+          echo "Dummy APK ${{ env.APK_NAME }}" > ${{ env.APK_TEMP_PATH }}
 
-      - name: 🚀 Upload APK as Artifact
+      - name: 🚀 Upload Artifact
         uses: actions/upload-artifact@v5
         with:
           name: ${{ env.APK_NAME }}
           path: ${{ env.APK_TEMP_PATH }}
           if-no-files-found: error
 
-      - name: 🎁 Draft Release
-        if: startsWith(env.BUILD_TYPE, 'prod') || env.BUILD_TYPE == 'blank-test'
+  release:
+    needs: [setup, build]
+    if: needs.setup.outputs.buildType == 'prod' || needs.setup.outputs.buildType == 'blank-test'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.setup.outputs.commitSha }}
+
+      - name: 📥 Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: ⚙️ Prepare Release Variables
         run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "RELEASE_TAG=v${APP_VERSION}" >> $GITHUB_ENV
+          ls -R dist/
+
+      - name: 🎁 Create Release
+        run: |
+          FILES=$(find dist -name "*.apk" -type f) 
+
           gh release create ${{ env.RELEASE_TAG }} \
-            "${{ env.APK_TEMP_PATH }}#${{ env.APK_NAME }}.apk" \
+            $FILES \
             --title "${{ env.RELEASE_TAG }}" \
             --draft \
             --notes "auto release by GitHub Actions"
 
   notify:
-    needs: build
+    needs: [setup, build]
     if: always() && github.event_name == 'pull_request'
     permissions:
       pull-requests: write
@@ -124,23 +183,24 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const buildStatus = "${{ needs.build.outputs.BUILD_STATUS }}";
-            const buildType = "${{ needs.build.outputs.BUILD_TYPE }}";
-            const commitSha = "${{ needs.build.outputs.COMMIT_SHA }}";
-            const prNumber = "${{ needs.build.outputs.PR_NUMBER }}";
+            const buildResult = "${{ needs.build.result }}";
+            const buildType = "${{ needs.setup.outputs.buildType }}";
+            const commitSha = "${{ needs.setup.outputs.commitSha }}";
+            const prNumber = "${{ needs.setup.outputs.prNumber }}";
             const runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";
             const mention = "${{ env.MENTION_USER }}";
 
-            const icon = buildStatus == 'success' ? '✅' : '❌';
-            const title = buildStatus == 'success' ? `构建软件包成功` : `构建软件包失败`;
+            const icon = buildResult == 'success' ? '✅' : '❌';
+            const title = buildResult == 'success' ? `构建软件包成功` : `构建软件包失败`;
 
             let body = `
             ## ${icon} ${title} (${buildType})
 
             ${mention}, 新版触发的构建已经完成
 
-            - **状态:** ${buildStatus}
-            - **提交:** \`${commitSha.substring(0, 7)}\`
+            - **状态:** ${buildResult}
+            - **提交:** 
+            ${commitSha.substring(0, 7)}
             - **详细信息:** [Workflow](${runUrl})
             `;
 
@@ -153,7 +213,6 @@ jobs:
                   issue_number: prNumber,
                   body: body
                 });
-                return;
               } catch (e) {
                 console.error(`Failed to comment on PR: ${e.message}.`);
               }

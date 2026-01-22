@@ -63,7 +63,7 @@ export default function SettingsPage() {
 					<Divider style={styles.divider} />
 					<List.Item
 						title='播放'
-						description='播放行为、音效设置'
+						description='播放行为、音效设置、歌词'
 						left={(props) => (
 							<List.Icon
 								{...props}

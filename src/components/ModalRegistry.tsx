@@ -1,26 +1,50 @@
 import type { ModalKey, ModalPropsMap } from '@/types/navigation'
-import AlertModal from './modals/AlertModal'
-import DonationQRModal from './modals/app/DonationQRModal'
-import UpdateAppModal from './modals/app/UpdateAppModal'
-import WelcomeModal from './modals/app/WelcomeModal'
-import AddToFavoriteListsModal from './modals/bilibili/AddVideoToBilibiliFavModal'
-import EditPlaylistMetadataModal from './modals/edit-metadata/editPlaylistMetadataModal'
-import EditTrackMetadataModal from './modals/edit-metadata/editTrackMetadataModal'
-import CookieLoginModal from './modals/login/CookieLoginModal'
-import QrCodeLoginModal from './modals/login/QRCodeLoginModal'
-import EditLyricsModal from './modals/lyrics/EditLyrics'
-import ManualSearchLyricsModal from './modals/lyrics/ManualSearchLyrics'
-import SleepTimerModal from './modals/player/SleepTimerModal'
-import BatchAddTracksToLocalPlaylistModal from './modals/playlist/BatchAddTracksToLocalPlaylist'
-import CreatePlaylistModal from './modals/playlist/CreatePlaylistModal'
-import DuplicateLocalPlaylistModal from './modals/playlist/DuplicateLocalPlaylistModal'
-import UpdateTrackLocalPlaylistsModal from './modals/playlist/UpdateTrackLocalPlaylistsModal'
+import type { ComponentType } from 'react'
+import { lazy } from 'react'
 
-type ModalComponent<K extends ModalKey> = React.ComponentType<
-	ModalPropsMap[K] & {}
->
+const AlertModal = lazy(() => import('./modals/AlertModal'))
+const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
+const UpdateAppModal = lazy(() => import('./modals/app/UpdateAppModal'))
+const WelcomeModal = lazy(() => import('./modals/app/WelcomeModal'))
+const AddToFavoriteListsModal = lazy(
+	() => import('./modals/bilibili/AddVideoToBilibiliFavModal'),
+)
+const EditPlaylistMetadataModal = lazy(
+	() => import('./modals/edit-metadata/editPlaylistMetadataModal'),
+)
+const EditTrackMetadataModal = lazy(
+	() => import('./modals/edit-metadata/editTrackMetadataModal'),
+)
+const CookieLoginModal = lazy(() => import('./modals/login/CookieLoginModal'))
+const QrCodeLoginModal = lazy(() => import('./modals/login/QRCodeLoginModal'))
+const EditLyricsModal = lazy(() => import('./modals/lyrics/EditLyrics'))
+const ManualSearchLyricsModal = lazy(
+	() => import('./modals/lyrics/ManualSearchLyrics'),
+)
+const SleepTimerModal = lazy(() => import('./modals/player/SleepTimerModal'))
+const BatchAddTracksToLocalPlaylistModal = lazy(
+	() => import('./modals/playlist/BatchAddTracksToLocalPlaylist'),
+)
+const CreatePlaylistModal = lazy(
+	() => import('./modals/playlist/CreatePlaylistModal'),
+)
+const DuplicateLocalPlaylistModal = lazy(
+	() => import('./modals/playlist/DuplicateLocalPlaylistModal'),
+)
+const UpdateTrackLocalPlaylistsModal = lazy(
+	() => import('./modals/playlist/UpdateTrackLocalPlaylistsModal'),
+)
+const SaveQueueToPlaylistModal = lazy(
+	() => import('./modals/playlist/SaveQueueToPlaylistModal'),
+)
+const PlaybackSpeedModal = lazy(
+	() => import('./modals/player/PlaybackSpeedModal'),
+)
+
+type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
 export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
+	PlaybackSpeed: PlaybackSpeedModal,
 	AddVideoToBilibiliFavorite: AddToFavoriteListsModal,
 	EditPlaylistMetadata: EditPlaylistMetadataModal,
 	EditTrackMetadata: EditTrackMetadataModal,
@@ -37,4 +61,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	EditLyrics: EditLyricsModal,
 	SleepTimer: SleepTimerModal,
 	DonationQR: DonationQRModal,
+	SaveQueueToPlaylist: SaveQueueToPlaylistModal,
 }
