@@ -168,9 +168,19 @@ export default function PlayerPage() {
 			return
 		}
 		if (queueVisible) {
-			sheetRef.current?.dismiss().catch(() => {
-				// Ignore error if view not found or already dismissed
-			})
+			const sheet = sheetRef.current
+			if (!sheet) {
+				setQueueVisible(false)
+				return
+			}
+			sheet
+				.dismiss()
+				.catch(() => {
+					// Ignore error if view not found or already dismissed
+				})
+				.finally(() => {
+					setQueueVisible(false)
+				})
 			return
 		}
 		if (index === 1) {

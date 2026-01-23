@@ -6,7 +6,7 @@ import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -28,6 +28,7 @@ const SongShareModal = () => {
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(true)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+	const [colorReady, setColorReady] = useState(false)
 	const imageRef = useImage(
 		{ uri: currentTrack?.coverUrl ?? undefined },
 		{
@@ -51,18 +52,14 @@ const SongShareModal = () => {
 				})
 				.catch(() => undefined)
 				.finally(() => {
-					// 颜色提取完成后（无论成功失败）再开始生成预览
-					// 稍微延迟一点点确保状态更新导致的重渲染完成
-					setTimeout(() => {
-						void generatePreview()
-					}, 100)
+					setColorReady(true)
 				})
 		} else {
-			void generatePreview()
+			setColorReady(true)
 		}
 	}, [imageRef, theme.dark])
 
-	const generatePreview = async () => {
+	const generatePreview = useCallback(async () => {
 		if (!viewShotRef.current) {
 			setIsGenerating(false)
 			return
@@ -83,7 +80,13 @@ const SongShareModal = () => {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
-	}
+	}, [])
+
+	useEffect(() => {
+		if (colorReady) {
+			void generatePreview()
+		}
+	}, [colorReady, generatePreview])
 
 	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 

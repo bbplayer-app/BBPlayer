@@ -62,7 +62,12 @@ export function PlayerFunctionalMenu({
 
 	const onPresent = useCallback(() => {
 		isPresented.current = true
-	}, [])
+		if (!menuVisible) {
+			sheetRef.current?.dismiss().catch(() => {
+				// Ignore error
+			})
+		}
+	}, [menuVisible])
 
 	const handleAction = useCallback(
 		(action: () => void) => {

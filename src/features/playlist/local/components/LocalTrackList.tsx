@@ -179,7 +179,7 @@ export function LocalTrackList({
 		(track: Track, downloadState?: DownloadState) => {
 			setMenuState({ visible: true, track, downloadState })
 			sheetRef.current?.present().catch(() => {
-				// ignore error
+				setMenuState((prev) => ({ ...prev, visible: false }))
 			})
 		},
 		[],

@@ -3,7 +3,7 @@ import type { LyricLine } from '@/types/player/lyrics'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
-import { Text } from 'react-native-paper'
+import { Icon, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
 
@@ -61,6 +61,22 @@ export const LyricsShareCard = ({
 				</View>
 
 				<View style={styles.lyricsContainer}>
+					<View style={styles.quoteContainer}>
+						<View style={styles.quoteOpen}>
+							<Icon
+								source='format-quote-open'
+								size={120}
+								color='rgba(255,255,255,0.1)'
+							/>
+						</View>
+						<View style={styles.quoteClose}>
+							<Icon
+								source='format-quote-close'
+								size={120}
+								color='rgba(255,255,255,0.1)'
+							/>
+						</View>
+					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
 							key={`${lyric.timestamp}-${index}`}
@@ -127,13 +143,32 @@ export const LyricsShareCard = ({
 
 const styles = StyleSheet.create({
 	container: {
-		width: 375, // 固定宽度以保证生成图片的一致性
+		width: 375,
 		padding: 24,
-		borderRadius: 0, // 图片不需要圆角，或者可以要一点
+		borderRadius: 0,
+		overflow: 'hidden',
+		position: 'relative',
 	},
 	content: {
 		flexDirection: 'column',
 		gap: 24,
+		zIndex: 1,
+	},
+	quoteContainer: {
+		...StyleSheet.absoluteFillObject,
+		zIndex: 0,
+		justifyContent: 'space-between',
+		padding: 0,
+	},
+	quoteOpen: {
+		position: 'absolute',
+		top: -36,
+		left: -36,
+	},
+	quoteClose: {
+		position: 'absolute',
+		right: -36,
+		bottom: -36,
 	},
 	header: {
 		flexDirection: 'row',

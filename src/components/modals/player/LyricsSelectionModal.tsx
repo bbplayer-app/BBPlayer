@@ -114,11 +114,17 @@ const LyricsSelectionModal = () => {
 
 					if (bgColor) {
 						setCardColor(bgColor)
+					} else {
+						setCardColor(theme.colors.elevation.level3)
 					}
 				})
-				.catch(() => undefined)
+				.catch(() => {
+					setCardColor(theme.colors.elevation.level3)
+				})
+		} else {
+			setCardColor(theme.colors.elevation.level3)
 		}
-	}, [imageRef, theme.dark])
+	}, [imageRef, theme.colors.elevation.level3, theme.dark])
 
 	const toggleSelection = useCallback((index: number) => {
 		setSelectedIndices((prev) => {
