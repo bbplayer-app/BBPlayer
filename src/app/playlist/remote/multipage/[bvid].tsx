@@ -124,13 +124,16 @@ export default function MultipagePage() {
 			const index = tracksData.findIndex((track) => String(track.id) === cid)
 			if (index !== -1) {
 				// 给一点延时给列表渲染
-				setTimeout(() => {
+				const timer = setTimeout(() => {
 					void listRef.current?.scrollToIndex({
 						index,
 						animated: true,
 						viewPosition: 0.5,
 					})
 				}, 500)
+				return () => {
+					clearTimeout(timer)
+				}
 			}
 		}
 	}, [cid, tracksData])
