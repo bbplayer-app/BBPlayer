@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Changed
+
+- 升级依赖
+
 ### Added
 
 - 添加本地播放列表搜索功能
