@@ -104,11 +104,15 @@ export function PlayerSlider() {
 			void Orpheus.seekTo(time)
 
 			seekTimeoutRef.current = setTimeout(() => {
-				isSeeking.set(false)
-				seekTimeoutRef.current = null
+				// 获取实际播放位置并同步，避免暂停状态下 position 未更新导致进度条回退
+				void Orpheus.getPosition().then((actualPosition) => {
+					position.set(actualPosition)
+					isSeeking.set(false)
+					seekTimeoutRef.current = null
+				})
 			}, 5000)
 		},
-		[isSeeking],
+		[isSeeking, position],
 	)
 
 	useAnimatedReaction(
