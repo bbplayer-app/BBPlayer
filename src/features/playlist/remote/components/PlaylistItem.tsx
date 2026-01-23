@@ -159,15 +159,9 @@ export const TrackListItem = memo(function TrackListItem({
 							<HighlightedText
 								variant='bodySmall'
 								text={data.titleHtml}
-								numberOfLines={1}
 							/>
 						) : (
-							<Text
-								variant='bodySmall'
-								numberOfLines={1}
-							>
-								{data.title}
-							</Text>
+							<Text variant='bodySmall'>{data.title}</Text>
 						)}
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
