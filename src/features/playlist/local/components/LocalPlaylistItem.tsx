@@ -3,7 +3,7 @@ import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { DownloadState } from '@roitium/expo-orpheus'
-import { memo, useCallback, useRef } from 'react'
+import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
@@ -14,12 +14,13 @@ export interface TrackMenuItem {
 	leadingIcon: string
 	onPress: () => void
 	danger?: boolean
+	isHighFreq?: boolean
 }
 
 interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
-	onMenuPress: (anchor: { x: number; y: number }) => void
+	onMenuPress: () => void
 	showCoverImage?: boolean
 	data: Track
 	disabled?: boolean
@@ -49,7 +50,6 @@ export const TrackListItem = memo(function TrackListItem({
 	downloadState,
 }: TrackListItemProps) {
 	const theme = useTheme()
-	const menuAnchorRef = useRef<View>(null)
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
@@ -203,16 +203,10 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Context Menu */}
 					{!disabled && (
-						<View ref={menuAnchorRef}>
+						<View>
 							<RectButton
 								style={styles.menuButton}
-								onPress={() => {
-									menuAnchorRef.current?.measure(
-										(_x, _y, _width, _height, pageX, pageY) => {
-											onMenuPress({ x: pageX, y: pageY })
-										},
-									)
-								}}
+								onPress={() => onMenuPress()}
 								enabled={!selectMode}
 							>
 								<Icon

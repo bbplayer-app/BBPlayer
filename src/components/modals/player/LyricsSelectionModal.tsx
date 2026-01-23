@@ -4,11 +4,12 @@ import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { LyricLine } from '@/types/player/lyrics'
 import toast from '@/utils/toast'
+import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { FlashList } from '@shopify/flash-list'
-import { Image } from 'expo-image'
+import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -93,8 +94,37 @@ const LyricsSelectionModal = () => {
 	const [showPreview, setShowPreview] = useState(false)
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(false)
+	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+	const imageRef = useImage(
+		{ uri: currentTrack?.coverUrl ?? undefined },
+		{
+			onError: () => void 0,
+		},
+	)
 
 	const viewShotRef = useRef<ViewShot>(null)
+
+	useEffect(() => {
+		if (imageRef) {
+			ImageThemeColors.extractThemeColorAsync(imageRef)
+				.then((palette) => {
+					const bgColor = theme.dark
+						? (palette.darkMuted?.hex ?? palette.muted?.hex)
+						: (palette.lightMuted?.hex ?? palette.muted?.hex)
+
+					if (bgColor) {
+						setCardColor(bgColor)
+					} else {
+						setCardColor(theme.colors.elevation.level3)
+					}
+				})
+				.catch(() => {
+					setCardColor(theme.colors.elevation.level3)
+				})
+		} else {
+			setCardColor(theme.colors.elevation.level3)
+		}
+	}, [imageRef, theme.colors.elevation.level3, theme.dark])
 
 	const toggleSelection = useCallback((index: number) => {
 		setSelectedIndices((prev) => {
@@ -119,16 +149,16 @@ const LyricsSelectionModal = () => {
 		[],
 	)
 
+	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
+
 	const generatePreview = async () => {
 		if (!viewShotRef.current) {
 			toast.error('无法生成预览')
 			return
 		}
 		setIsGenerating(true)
+		const fileName = `bbplayer-share-lyrics-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 		try {
-			const sanitizeFileName = (name: string) =>
-				name.replace(/[/\\?%*:|"<>]/g, '-')
-			const fileName = `bbplayer-share-lyrics-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 			const uri = await captureRef(viewShotRef, {
 				format: 'png',
 				quality: 1,
@@ -365,6 +395,7 @@ const LyricsSelectionModal = () => {
 					data={lyrics}
 					keyExtractor={keyExtractor}
 					renderItem={renderItem}
+					showsVerticalScrollIndicator={false}
 				/>
 			</Dialog.ScrollArea>
 			<Dialog.Actions style={styles.actions}>
@@ -410,6 +441,7 @@ const LyricsSelectionModal = () => {
 						track={currentTrack}
 						selectedLyrics={lyrics.filter((_, i) => selectedIndices.has(i))}
 						viewShotRef={viewShotRef}
+						backgroundColor={cardColor}
 					/>
 				)}
 			</View>

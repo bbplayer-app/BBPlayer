@@ -1,11 +1,9 @@
 import type { Track } from '@/types/core/media'
 import type { LyricLine } from '@/types/player/lyrics'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Icon, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
 
@@ -13,38 +11,16 @@ interface LyricsShareCardProps {
 	track: Track
 	selectedLyrics: LyricLine[]
 	viewShotRef: React.RefObject<ViewShot | null>
+	backgroundColor: string
 }
 
 export const LyricsShareCard = ({
 	track,
 	selectedLyrics,
 	viewShotRef,
+	backgroundColor,
 }: LyricsShareCardProps) => {
-	const theme = useTheme()
-	const [backgroundColor, setBackgroundColor] = useState(
-		theme.colors.elevation.level3,
-	)
-
 	const shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(track.uniqueKey)}&title=${encodeURIComponent(track.title)}&cover=${encodeURIComponent(track.coverUrl ?? '')}`
-
-	useEffect(() => {
-		if (track.coverUrl) {
-			ImageThemeColors.extractThemeColorAsync(track.coverUrl)
-				.then((palette) => {
-					const bgColor = theme.dark
-						? (palette.darkMuted?.hex ?? palette.muted?.hex)
-						: (palette.lightMuted?.hex ?? palette.muted?.hex)
-
-					if (bgColor) {
-						setBackgroundColor(bgColor)
-						// 简单的对比度判断，如果背景太亮则用黑字，反之白字
-						// 这里简单起见直接根据 dark mode 和取色结果做个大概
-						// 实际可能需要更复杂的 contrast 算法，或者直接固定某种文字颜色配遮罩
-					}
-				})
-				.catch(() => undefined)
-		}
-	}, [track.coverUrl, theme.dark])
 
 	return (
 		<ViewShot
@@ -85,6 +61,22 @@ export const LyricsShareCard = ({
 				</View>
 
 				<View style={styles.lyricsContainer}>
+					<View style={styles.quoteContainer}>
+						<View style={styles.quoteOpen}>
+							<Icon
+								source='format-quote-open'
+								size={120}
+								color='rgba(255,255,255,0.1)'
+							/>
+						</View>
+						<View style={styles.quoteClose}>
+							<Icon
+								source='format-quote-close'
+								size={120}
+								color='rgba(255,255,255,0.1)'
+							/>
+						</View>
+					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
 							key={`${lyric.timestamp}-${index}`}
@@ -151,13 +143,32 @@ export const LyricsShareCard = ({
 
 const styles = StyleSheet.create({
 	container: {
-		width: 375, // 固定宽度以保证生成图片的一致性
+		width: 375,
 		padding: 24,
-		borderRadius: 0, // 图片不需要圆角，或者可以要一点
+		borderRadius: 0,
+		overflow: 'hidden',
+		position: 'relative',
 	},
 	content: {
 		flexDirection: 'column',
 		gap: 24,
+		zIndex: 1,
+	},
+	quoteContainer: {
+		...StyleSheet.absoluteFillObject,
+		zIndex: 0,
+		justifyContent: 'space-between',
+		padding: 0,
+	},
+	quoteOpen: {
+		position: 'absolute',
+		top: -36,
+		left: -36,
+	},
+	quoteClose: {
+		position: 'absolute',
+		right: -36,
+		bottom: -36,
 	},
 	header: {
 		flexDirection: 'row',
