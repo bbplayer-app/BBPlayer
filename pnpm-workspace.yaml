@@ -1,6 +1,7 @@
 onlyBuiltDependencies:
   - '@sentry/cli'
+  - '@shopify/react-native-skia'
   - esbuild
   - lefthook
-  - unrs-resolver
   - react-native-logs
+  - unrs-resolver
