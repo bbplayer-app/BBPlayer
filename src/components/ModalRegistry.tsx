@@ -40,6 +40,12 @@ const SaveQueueToPlaylistModal = lazy(
 const PlaybackSpeedModal = lazy(
 	() => import('./modals/player/PlaybackSpeedModal'),
 )
+const LyricsSelectionModal = lazy(
+	() => import('@/features/player/modals/LyricsSelectionModal'),
+)
+const SongShareModal = lazy(
+	() => import('@/features/player/modals/SongShareModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -62,4 +68,6 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	SleepTimer: SleepTimerModal,
 	DonationQR: DonationQRModal,
 	SaveQueueToPlaylist: SaveQueueToPlaylistModal,
+	LyricsSelection: LyricsSelectionModal,
+	SongShare: SongShareModal,
 }
