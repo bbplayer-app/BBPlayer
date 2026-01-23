@@ -2,23 +2,18 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'
-import BottomSheet, {
-	BottomSheetBackdrop,
-	BottomSheetFlatList,
-	useBottomSheetTimingConfigs,
-	type BottomSheetBackdropProps,
-} from '@gorhom/bottom-sheet'
+import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
 import type { Track as OrpheusTrack } from '@roitium/expo-orpheus'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import {
 	memo,
+	type RefObject,
 	useCallback,
 	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
-	type RefObject,
 } from 'react'
 import { View } from 'react-native'
 import {
@@ -28,7 +23,6 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
-import { Easing } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const TrackItem = memo(
@@ -157,23 +151,6 @@ function PlayerQueueModal({
 
 	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
 
-	const animationConfigs = useBottomSheetTimingConfigs({
-		duration: 300,
-		easing: Easing.exp,
-	})
-
-	const renderBackdrop = useCallback(
-		(props: BottomSheetBackdropProps) => (
-			<BottomSheetBackdrop
-				{...props}
-				disappearsOnIndex={-1}
-				appearsOnIndex={0}
-				pressBehavior='close'
-			/>
-		),
-		[],
-	)
-
 	const renderItem = useCallback(
 		({ item, index }: { item: OrpheusTrack; index: number }) => (
 			<TrackItem
@@ -206,7 +183,6 @@ function PlayerQueueModal({
 			enableDynamicSizing={false}
 			enablePanDownToClose={true}
 			snapPoints={['75%']}
-			backdropComponent={renderBackdrop}
 			onChange={(index) => {
 				const nextVisible = index !== -1
 				setIsVisible(nextVisible)
@@ -224,7 +200,6 @@ function PlayerQueueModal({
 				borderBottomWidth: 1,
 				borderBottomColor: theme.colors.elevation.level5,
 			}}
-			animationConfigs={animationConfigs}
 		>
 			<View
 				style={{
