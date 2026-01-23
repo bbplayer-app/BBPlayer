@@ -1,6 +1,8 @@
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
+import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import useCheckLinkedToPlaylist from '@/features/playlist/remote/hooks/useCheckLinkedToLocalPlaylist'
 import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
@@ -19,9 +21,12 @@ import type {
 	BilibiliVideoDetails,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
+import type { FlashListRef } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
@@ -58,7 +63,7 @@ const mapApiItemToTrack = (
 
 export default function MultipagePage() {
 	const router = useRouter()
-	const { bvid } = useLocalSearchParams<{ bvid: string }>()
+	const { bvid, cid } = useLocalSearchParams<{ bvid: string; cid?: string }>()
 	const [refreshing, setRefreshing] = useState(false)
 	const { colors } = useTheme()
 	const linkedPlaylistId = useCheckLinkedToPlaylist(bv2av(bvid), 'multi_page')
@@ -89,6 +94,7 @@ export default function MultipagePage() {
 	const { mutate: syncMultipage } = usePlaylistSync()
 
 	const { playTrack } = useRemotePlaylist()
+	const listRef = useRef<FlashListRef<BilibiliTrack>>(null)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
@@ -112,6 +118,77 @@ export default function MultipagePage() {
 		)
 		setRefreshing(false)
 	}, [bvid, router, syncMultipage])
+
+	useEffect(() => {
+		if (tracksData.length > 0 && cid) {
+			const index = tracksData.findIndex((track) => String(track.id) === cid)
+			if (index !== -1) {
+				// 给一点延时给列表渲染
+				setTimeout(() => {
+					void listRef.current?.scrollToIndex({
+						index,
+						animated: true,
+						viewPosition: 0.5,
+					})
+				}, 500)
+			}
+		}
+	}, [cid, tracksData])
+
+	const renderCustomItem = useCallback(
+		({
+			item,
+			index,
+			extraData,
+		}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
+			if (!extraData) throw new Error('Extradata 不存在')
+			const {
+				toggle,
+				playTrack: play,
+				handleMenuPress,
+				selected: selectedSet,
+				selectMode: isSelectMode,
+				enterSelectMode: enterMode,
+				showItemCover,
+			} = extraData
+
+			const shouldFlash = String(item.id) === cid
+
+			return (
+				<FlashingTrackListItem
+					shouldFlash={shouldFlash}
+					index={index}
+					onTrackPress={() => play(item)}
+					onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+					showCoverImage={showItemCover ?? true}
+					data={{
+						cover: item.coverUrl ?? undefined,
+						title: item.title,
+						duration: item.duration,
+						id: item.id,
+						artistName: item.artist?.name,
+						uniqueKey: item.uniqueKey,
+						titleHtml: item.titleHtml,
+					}}
+					toggleSelected={() => {
+						void Haptics.performAndroidHapticsAsync(
+							Haptics.AndroidHaptics.Clock_Tick,
+						)
+						toggle(item.id)
+					}}
+					isSelected={selectedSet.has(item.id)}
+					selectMode={isSelectMode}
+					enterSelectMode={() => {
+						void Haptics.performAndroidHapticsAsync(
+							Haptics.AndroidHaptics.Long_Press,
+						)
+						enterMode(item.id)
+					}}
+				/>
+			)
+		},
+		[cid],
+	)
 
 	useEffect(() => {
 		if (typeof bvid !== 'string') {
@@ -167,6 +244,8 @@ export default function MultipagePage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
+					renderCustomItem={renderCustomItem}
 					tracks={tracksData}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
