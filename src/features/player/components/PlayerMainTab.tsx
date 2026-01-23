@@ -1,6 +1,6 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import * as Haptics from '@/utils/haptics'
-import type BottomSheet from '@gorhom/bottom-sheet'
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
@@ -11,15 +11,17 @@ import { PlayerSlider } from './PlayerSlider'
 import { TrackInfo } from './PlayerTrackInfo'
 
 interface PlayerMainTabProps {
-	sheetRef: RefObject<BottomSheet | null>
+	sheetRef: RefObject<TrueSheet | null>
 	jumpTo: (key: string) => void
 	imageRef: ImageRef | null
+	onPresent: () => void
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
 	sheetRef,
 	jumpTo,
 	imageRef,
+	onPresent,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
@@ -54,7 +56,12 @@ const PlayerMainTab = memo(function PlayerMainTab({
 			>
 				<PlayerSlider />
 				<PlayerControls
-					onOpenQueue={() => sheetRef.current?.snapToPosition('75%')}
+					onOpenQueue={() => {
+						onPresent()
+						sheetRef.current?.present().catch(() => {
+							// Ignore error
+						})
+					}}
 				/>
 			</View>
 		</View>

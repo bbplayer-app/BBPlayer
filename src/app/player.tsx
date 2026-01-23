@@ -7,7 +7,7 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { useCurrentTrack } from '@roitium/expo-orpheus'
 import {
@@ -47,7 +47,7 @@ export default function PlayerPage() {
 	const theme = useTheme()
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
-	const sheetRef = useRef<BottomSheetMethods>(null)
+	const sheetRef = useRef<TrueSheet>(null)
 	const currentTrack = useCurrentTrack()
 	const coverRef = useImage(currentTrack?.track?.artwork ?? '', {
 		onError: () => void 0,
@@ -145,6 +145,7 @@ export default function PlayerPage() {
 								sheetRef={sheetRef}
 								jumpTo={jumpTo}
 								imageRef={coverRef}
+								onPresent={() => setQueueVisible(true)}
 							/>
 						)
 					case 'lyrics':
@@ -164,7 +165,23 @@ export default function PlayerPage() {
 		}
 	}, [colorScheme, playerBackgroundStyle])
 
-	usePreventRemove(index === 1, () => setIndex(0))
+	const [queueVisible, setQueueVisible] = useState(false)
+
+	usePreventRemove(index === 1 || menuVisible || queueVisible, () => {
+		if (menuVisible) {
+			setMenuVisible(false)
+			return
+		}
+		if (queueVisible) {
+			sheetRef.current?.dismiss().catch(() => {
+				// Ignore error if view not found or already dismissed
+			})
+			return
+		}
+		if (index === 1) {
+			setIndex(0)
+		}
+	})
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
@@ -269,7 +286,12 @@ export default function PlayerPage() {
 					setMenuVisible={setMenuVisible}
 				/>
 
-				<PlayerQueueModal sheetRef={sheetRef} />
+				<PlayerQueueModal
+					sheetRef={sheetRef}
+					isVisible={queueVisible}
+					onDidDismiss={() => setQueueVisible(false)}
+					onDidPresent={() => setQueueVisible(true)}
+				/>
 			</View>
 		</>
 	)

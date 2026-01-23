@@ -1,7 +1,7 @@
 {
 	"name": "bbplayer",
 	"main": "index.js",
-	"version": "2.1.10",
+	"version": "2.2.0",
 	"versionCode": 103,
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
@@ -24,6 +24,7 @@
 		"@expo/metro-runtime": "~6.1.2",
 		"@gorhom/bottom-sheet": "^5.2.8",
 		"@jest/globals": "^29.7.0",
+		"@lodev09/react-native-true-sheet": "^3.7.3",
 		"@pchmn/expo-material3-theme": "^1.3.2",
 		"@react-native-masked-view/masked-view": "^0.3.2",
 		"@react-native-vector-icons/get-image": "^12.3.0",
