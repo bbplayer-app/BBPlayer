@@ -169,6 +169,7 @@ export default function PlayerPage() {
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
 	useEffect(() => {
+		// @ts-expect-error -- 虽然我们项目内已经移除了 streamer 选项，但部分存量用户可能还在这个选项，需要帮他回退
 		if (playerBackgroundStyle === 'streamer') {
 			toast.show(
 				'因为会对性能造成较大影响，并且也不好看，所以我们移除了流光效果，已为您回退到渐变模式',
