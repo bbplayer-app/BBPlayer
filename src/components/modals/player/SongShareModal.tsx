@@ -2,12 +2,19 @@ import { SongShareCard } from '@/features/player/components/sharing/SongShareCar
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
-import { Image } from 'expo-image'
+import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Button, Dialog, Text } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Button,
+	Dialog,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
@@ -15,14 +22,44 @@ const SongShareModal = () => {
 	const currentTrack = useCurrentTrack()
 	const close = useModalStore((state) => state.close)
 
+	const theme = useTheme()
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 	const [isSharing, setIsSharing] = useState(false)
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(true)
+	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+	const [colorReady, setColorReady] = useState(false)
+	const imageRef = useImage(
+		{ uri: currentTrack?.coverUrl ?? undefined },
+		{
+			onError: () => void 0,
+		},
+	)
 
 	const viewShotRef = useRef<ViewShot>(null)
 
-	const generatePreview = async () => {
+	useEffect(() => {
+		if (imageRef) {
+			ImageThemeColors.extractThemeColorAsync(imageRef)
+				.then((palette) => {
+					const bgColor = theme.dark
+						? (palette.darkMuted?.hex ?? palette.muted?.hex)
+						: (palette.lightMuted?.hex ?? palette.muted?.hex)
+
+					if (bgColor) {
+						setCardColor(bgColor)
+					}
+				})
+				.catch(() => undefined)
+				.finally(() => {
+					setColorReady(true)
+				})
+		} else {
+			setColorReady(true)
+		}
+	}, [imageRef, theme.dark])
+
+	const generatePreview = useCallback(async () => {
 		if (!viewShotRef.current) {
 			setIsGenerating(false)
 			return
@@ -43,15 +80,15 @@ const SongShareModal = () => {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
-	}
-
-	// 打开时自动生成预览
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			void generatePreview()
-		}, 300) // 延迟确保组件已渲染
-		return () => clearTimeout(timer)
 	}, [])
+
+	useEffect(() => {
+		if (colorReady) {
+			void generatePreview()
+		}
+	}, [colorReady, generatePreview])
+
+	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
 	const handleShare = async (action: 'save' | 'share') => {
 		setIsSharing(true)
@@ -59,10 +96,8 @@ const SongShareModal = () => {
 		let uri = previewUri
 		const needsCapture = !uri && viewShotRef.current !== null
 		if (needsCapture) {
+			const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 			try {
-				const sanitizeFileName = (name: string) =>
-					name.replace(/[/\\?%*:|"<>]/g, '-')
-				const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 				uri = await captureRef(viewShotRef, {
 					format: 'png',
 					quality: 1,
@@ -207,6 +242,7 @@ const SongShareModal = () => {
 					<SongShareCard
 						track={currentTrack}
 						viewShotRef={viewShotRef}
+						backgroundColor={cardColor}
 					/>
 				)}
 			</View>
