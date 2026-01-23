@@ -63,8 +63,8 @@ importers:
         specifier: ^2.58.4
         version: 2.58.4
       '@sentry/react-native':
-        specifier: ~7.2.0
-        version: 7.2.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        specifier: ~7.10.0
+        version: 7.10.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@shopify/flash-list':
         specifier: ^2.2.0
         version: 2.2.0(@babel/runtime@7.28.4)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -2535,56 +2535,39 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
-  '@sentry-internal/browser-utils@10.12.0':
-    resolution: {integrity: sha512-dozbx389jhKynj0d657FsgbBVOar7pX3mb6GjqCxslXF0VKpZH2Xks0U32RgDY/nK27O+o095IWz7YvjVmPkDw==}
+  '@sentry-internal/browser-utils@10.36.0':
+    resolution: {integrity: sha512-WILVR8HQBWOxbqLRuTxjzRCMIACGsDTo6jXvzA8rz6ezElElLmIrn3CFAswrESLqEEUa4CQHl5bLgSVJCRNweA==}
     engines: {node: '>=18'}
 
-  '@sentry-internal/feedback@10.12.0':
-    resolution: {integrity: sha512-0+7ceO6yQPPqfxRc9ue/xoPHKcnB917ezPaehGQNfAFNQB9PNTG1y55+8mRu0Fw+ANbZeCt/HyoCmXuRdxmkpg==}
+  '@sentry-internal/feedback@10.36.0':
+    resolution: {integrity: sha512-zPjz7AbcxEyx8AHj8xvp28fYtPTPWU1XcNtymhAHJLS9CXOblqSC7W02Jxz6eo3eR1/pLyOo6kJBUjvLe9EoFA==}
     engines: {node: '>=18'}
 
-  '@sentry-internal/replay-canvas@10.12.0':
-    resolution: {integrity: sha512-W/z1/+69i3INNfPjD1KuinSNaRQaApjzwb37IFmiyF440F93hxmEYgXHk3poOlYYaigl2JMYbysGPWOiXnqUXA==}
+  '@sentry-internal/replay-canvas@10.36.0':
+    resolution: {integrity: sha512-DLGIwmT2LX+O6TyYPtOQL5GiTm2rN0taJPDJ/Lzg2KEJZrdd5sKkzTckhh2x+vr4JQyeaLmnb8M40Ch1hvG/vQ==}
     engines: {node: '>=18'}
 
-  '@sentry-internal/replay@10.12.0':
-    resolution: {integrity: sha512-/1093gSNGN5KlOBsuyAl33JkzGiG38kCnxswQLZWpPpR6LBbR1Ddb18HjhDpoQNNEZybJBgJC3a5NKl43C2TSQ==}
+  '@sentry-internal/replay@10.36.0':
+    resolution: {integrity: sha512-nLMkJgvHq+uCCrQKV2KgSdVHxTsmDk0r2hsAoTcKCbzUpXyW5UhCziMRS6ULjBlzt5sbxoIIplE25ZpmIEeNgg==}
     engines: {node: '>=18'}
 
-  '@sentry/babel-plugin-component-annotate@4.3.0':
-    resolution: {integrity: sha512-OuxqBprXRyhe8Pkfyz/4yHQJc5c3lm+TmYWSSx8u48g5yKewSQDOxkiLU5pAk3WnbLPy8XwU/PN+2BG0YFU9Nw==}
+  '@sentry/babel-plugin-component-annotate@4.7.0':
+    resolution: {integrity: sha512-MkyajDiO17/GaHHFgOmh05ZtOwF5hmm9KRjVgn9PXHIdpz+TFM5mkp1dABmR6Y75TyNU98Z1aOwPOgyaR5etJw==}
     engines: {node: '>= 14'}
 
-  '@sentry/browser@10.12.0':
-    resolution: {integrity: sha512-lKyaB2NFmr7SxPjmMTLLhQ7xfxaY3kdkMhpzuRI5qwOngtKt4+FtvNYHRuz+PTtEFv4OaHhNNbRn6r91gWguQg==}
+  '@sentry/browser@10.36.0':
+    resolution: {integrity: sha512-yHhXbgdGY1s+m8CdILC9U/II7gb6+s99S2Eh8VneEn/JG9wHc+UOzrQCeFN0phFP51QbLkjkiQbbanjT1HP8UQ==}
     engines: {node: '>=18'}
-
-  '@sentry/cli-darwin@2.55.0':
-    resolution: {integrity: sha512-jGHE7SHHzqXUmnsmRLgorVH6nmMmTjQQXdPZbSL5tRtH8d3OIYrVNr5D72DSgD26XAPBDMV0ibqOQ9NKoiSpfA==}
-    engines: {node: '>=10'}
-    os: [darwin]
 
   '@sentry/cli-darwin@2.58.4':
     resolution: {integrity: sha512-kbTD+P4X8O+nsNwPxCywtj3q22ecyRHWff98rdcmtRrvwz8CKi/T4Jxn/fnn2i4VEchy08OWBuZAqaA5Kh2hRQ==}
     engines: {node: '>=10'}
     os: [darwin]
 
-  '@sentry/cli-linux-arm64@2.55.0':
-    resolution: {integrity: sha512-jNB/0/gFcOuDCaY/TqeuEpsy/k52dwyk1SOV3s1ku4DUsln6govTppeAGRewY3T1Rj9B2vgIWTrnB8KVh9+Rgg==}
-    engines: {node: '>=10'}
-    cpu: [arm64]
-    os: [linux, freebsd, android]
-
   '@sentry/cli-linux-arm64@2.58.4':
     resolution: {integrity: sha512-0g0KwsOozkLtzN8/0+oMZoOuQ0o7W6O+hx+ydVU1bktaMGKEJLMAWxOQNjsh1TcBbNIXVOKM/I8l0ROhaAb8Ig==}
     engines: {node: '>=10'}
     cpu: [arm64]
-    os: [linux, freebsd, android]
-
-  '@sentry/cli-linux-arm@2.55.0':
-    resolution: {integrity: sha512-ATjU0PsiWADSPLF/kZroLZ7FPKd5W9TDWHVkKNwIUNTei702LFgTjNeRwOIzTgSvG3yTmVEqtwFQfFN/7hnVXQ==}
-    engines: {node: '>=10'}
-    cpu: [arm]
     os: [linux, freebsd, android]
 
   '@sentry/cli-linux-arm@2.58.4':
@@ -2593,22 +2576,10 @@ packages:
     cpu: [arm]
     os: [linux, freebsd, android]
 
-  '@sentry/cli-linux-i686@2.55.0':
-    resolution: {integrity: sha512-8LZjo6PncTM6bWdaggscNOi5r7F/fqRREsCwvd51dcjGj7Kp1plqo9feEzYQ+jq+KUzVCiWfHrUjddFmYyZJrg==}
-    engines: {node: '>=10'}
-    cpu: [x86, ia32]
-    os: [linux, freebsd, android]
-
   '@sentry/cli-linux-i686@2.58.4':
     resolution: {integrity: sha512-NseoIQAFtkziHyjZNPTu1Gm1opeQHt7Wm1LbLrGWVIRvUOzlslO9/8i6wETUZ6TjlQxBVRgd3Q0lRBG2A8rFYA==}
     engines: {node: '>=10'}
     cpu: [x86, ia32]
-    os: [linux, freebsd, android]
-
-  '@sentry/cli-linux-x64@2.55.0':
-    resolution: {integrity: sha512-5LUVvq74Yj2cZZy5g5o/54dcWEaX4rf3myTHy73AKhRj1PABtOkfexOLbF9xSrZy95WXWaXyeH+k5n5z/vtHfA==}
-    engines: {node: '>=10'}
-    cpu: [x64]
     os: [linux, freebsd, android]
 
   '@sentry/cli-linux-x64@2.58.4':
@@ -2617,22 +2588,10 @@ packages:
     cpu: [x64]
     os: [linux, freebsd, android]
 
-  '@sentry/cli-win32-arm64@2.55.0':
-    resolution: {integrity: sha512-cWIQdzm1pfLwPARsV6dUb8TVd6Y3V1A2VWxjTons3Ift6GvtVmiAe0OWL8t2Yt95i8v61kTD/6Tq21OAaogqzA==}
-    engines: {node: '>=10'}
-    cpu: [arm64]
-    os: [win32]
-
   '@sentry/cli-win32-arm64@2.58.4':
     resolution: {integrity: sha512-bqYrF43+jXdDBh0f8HIJU3tbvlOFtGyRjHB8AoRuMQv9TEDUfENZyCelhdjA+KwDKYl48R1Yasb4EHNzsoO83w==}
     engines: {node: '>=10'}
     cpu: [arm64]
-    os: [win32]
-
-  '@sentry/cli-win32-i686@2.55.0':
-    resolution: {integrity: sha512-ldepCn2t9r4I0wvgk7NRaA7coJyy4rTQAzM66u9j5nTEsUldf66xym6esd5ZZRAaJUjffqvHqUIr/lrieTIrVg==}
-    engines: {node: '>=10'}
-    cpu: [x86, ia32]
     os: [win32]
 
   '@sentry/cli-win32-i686@2.58.4':
@@ -2641,34 +2600,23 @@ packages:
     cpu: [x86, ia32]
     os: [win32]
 
-  '@sentry/cli-win32-x64@2.55.0':
-    resolution: {integrity: sha512-4hPc/I/9tXx+HLTdTGwlagtAfDSIa2AoTUP30tl32NAYQhx9a6niUbPAemK2qfxesiufJ7D2djX83rCw6WnJVA==}
-    engines: {node: '>=10'}
-    cpu: [x64]
-    os: [win32]
-
   '@sentry/cli-win32-x64@2.58.4':
     resolution: {integrity: sha512-cSzN4PjM1RsCZ4pxMjI0VI7yNCkxiJ5jmWncyiwHXGiXrV1eXYdQ3n1LhUYLZ91CafyprR0OhDcE+RVZ26Qb5w==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [win32]
 
-  '@sentry/cli@2.55.0':
-    resolution: {integrity: sha512-cynvcIM2xL8ddwELyFRSpZQw4UtFZzoM2rId2l9vg7+wDREPDocMJB9lEQpBIo3eqhp9JswqUT037yjO6iJ5Sw==}
-    engines: {node: '>= 10'}
-    hasBin: true
-
   '@sentry/cli@2.58.4':
     resolution: {integrity: sha512-ArDrpuS8JtDYEvwGleVE+FgR+qHaOp77IgdGSacz6SZy6Lv90uX0Nu4UrHCQJz8/xwIcNxSqnN22lq0dH4IqTg==}
     engines: {node: '>= 10'}
     hasBin: true
 
-  '@sentry/core@10.12.0':
-    resolution: {integrity: sha512-Jrf0Yo7DvmI/ZQcvBnA0xKNAFkJlVC/fMlvcin+5IrFNRcqOToZ2vtF+XqTgjRZymXQNE8s1QTD7IomPHk0TAw==}
+  '@sentry/core@10.36.0':
+    resolution: {integrity: sha512-EYJjZvofI+D93eUsPLDIUV0zQocYqiBRyXS6CCV6dHz64P/Hob5NJQOwPa8/v6nD+UvJXvwsFfvXOHhYZhZJOQ==}
     engines: {node: '>=18'}
 
-  '@sentry/react-native@7.2.0':
-    resolution: {integrity: sha512-rjqYgEjntPz1sPysud78wi4B9ui7LBVPsG6qr8s/htLMYho9GPGFA5dF+eqsQWqMX8NDReAxNkLTC4+gCNklLQ==}
+  '@sentry/react-native@7.10.0':
+    resolution: {integrity: sha512-ktYterTQgP1qi97tZ9oRAvflblVAsgUseLEq0JiCNYZyeusJeTUkm/LlaEoOGN9A3rHHpciZu8GrI+cqJzbuYg==}
     hasBin: true
     peerDependencies:
       expo: '>=49.0.0'
@@ -2678,14 +2626,14 @@ packages:
       expo:
         optional: true
 
-  '@sentry/react@10.12.0':
-    resolution: {integrity: sha512-TpqgdoYbkf5JynmmW2oQhHQ/h5w+XPYk0cEb/UrsGlvJvnBSR+5tgh0AqxCSi3gvtp82rAXI5w1TyRPBbhLDBw==}
+  '@sentry/react@10.36.0':
+    resolution: {integrity: sha512-k2GwMKgepJLXvEQffQymQyxsTVjsLiY6YXG0bcceM3vulii9Sy29uqGhpqwaPOfM4bPQzUXJzAxS/c9S7n5hTw==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^16.14.0 || 17.x || 18.x || 19.x
 
-  '@sentry/types@10.12.0':
-    resolution: {integrity: sha512-sKGj3l3V8ZKISh2Tu88bHfnm5ztkRtSLdmpZ6TmCeJdSM9pV+RRd6CMJ0RnSEXmYHselPNUod521t2NQFd4W1w==}
+  '@sentry/types@10.36.0':
+    resolution: {integrity: sha512-ihYStv8A7vxBbelVuyVwdSMrWAhYNbu/2dSAFBgxT6gRmMByutOIqTW4YNDU4Cv4nuddujiWPuPbGdVpbqEOPQ==}
     engines: {node: '>=18'}
 
   '@shopify/flash-list@2.2.0':
@@ -10077,101 +10025,57 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@sentry-internal/browser-utils@10.12.0':
+  '@sentry-internal/browser-utils@10.36.0':
     dependencies:
-      '@sentry/core': 10.12.0
+      '@sentry/core': 10.36.0
 
-  '@sentry-internal/feedback@10.12.0':
+  '@sentry-internal/feedback@10.36.0':
     dependencies:
-      '@sentry/core': 10.12.0
+      '@sentry/core': 10.36.0
 
-  '@sentry-internal/replay-canvas@10.12.0':
+  '@sentry-internal/replay-canvas@10.36.0':
     dependencies:
-      '@sentry-internal/replay': 10.12.0
-      '@sentry/core': 10.12.0
+      '@sentry-internal/replay': 10.36.0
+      '@sentry/core': 10.36.0
 
-  '@sentry-internal/replay@10.12.0':
+  '@sentry-internal/replay@10.36.0':
     dependencies:
-      '@sentry-internal/browser-utils': 10.12.0
-      '@sentry/core': 10.12.0
+      '@sentry-internal/browser-utils': 10.36.0
+      '@sentry/core': 10.36.0
 
-  '@sentry/babel-plugin-component-annotate@4.3.0': {}
+  '@sentry/babel-plugin-component-annotate@4.7.0': {}
 
-  '@sentry/browser@10.12.0':
+  '@sentry/browser@10.36.0':
     dependencies:
-      '@sentry-internal/browser-utils': 10.12.0
-      '@sentry-internal/feedback': 10.12.0
-      '@sentry-internal/replay': 10.12.0
-      '@sentry-internal/replay-canvas': 10.12.0
-      '@sentry/core': 10.12.0
-
-  '@sentry/cli-darwin@2.55.0':
-    optional: true
+      '@sentry-internal/browser-utils': 10.36.0
+      '@sentry-internal/feedback': 10.36.0
+      '@sentry-internal/replay': 10.36.0
+      '@sentry-internal/replay-canvas': 10.36.0
+      '@sentry/core': 10.36.0
 
   '@sentry/cli-darwin@2.58.4':
-    optional: true
-
-  '@sentry/cli-linux-arm64@2.55.0':
     optional: true
 
   '@sentry/cli-linux-arm64@2.58.4':
     optional: true
 
-  '@sentry/cli-linux-arm@2.55.0':
-    optional: true
-
   '@sentry/cli-linux-arm@2.58.4':
-    optional: true
-
-  '@sentry/cli-linux-i686@2.55.0':
     optional: true
 
   '@sentry/cli-linux-i686@2.58.4':
     optional: true
 
-  '@sentry/cli-linux-x64@2.55.0':
-    optional: true
-
   '@sentry/cli-linux-x64@2.58.4':
-    optional: true
-
-  '@sentry/cli-win32-arm64@2.55.0':
     optional: true
 
   '@sentry/cli-win32-arm64@2.58.4':
     optional: true
 
-  '@sentry/cli-win32-i686@2.55.0':
-    optional: true
-
   '@sentry/cli-win32-i686@2.58.4':
-    optional: true
-
-  '@sentry/cli-win32-x64@2.55.0':
     optional: true
 
   '@sentry/cli-win32-x64@2.58.4':
     optional: true
-
-  '@sentry/cli@2.55.0':
-    dependencies:
-      https-proxy-agent: 5.0.1
-      node-fetch: 2.7.0
-      progress: 2.0.3
-      proxy-from-env: 1.1.0
-      which: 2.0.2
-    optionalDependencies:
-      '@sentry/cli-darwin': 2.55.0
-      '@sentry/cli-linux-arm': 2.55.0
-      '@sentry/cli-linux-arm64': 2.55.0
-      '@sentry/cli-linux-i686': 2.55.0
-      '@sentry/cli-linux-x64': 2.55.0
-      '@sentry/cli-win32-arm64': 2.55.0
-      '@sentry/cli-win32-i686': 2.55.0
-      '@sentry/cli-win32-x64': 2.55.0
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
 
   '@sentry/cli@2.58.4':
     dependencies:
@@ -10193,16 +10097,16 @@ snapshots:
       - encoding
       - supports-color
 
-  '@sentry/core@10.12.0': {}
+  '@sentry/core@10.36.0': {}
 
-  '@sentry/react-native@7.2.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
+  '@sentry/react-native@7.10.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
     dependencies:
-      '@sentry/babel-plugin-component-annotate': 4.3.0
-      '@sentry/browser': 10.12.0
-      '@sentry/cli': 2.55.0
-      '@sentry/core': 10.12.0
-      '@sentry/react': 10.12.0(react@19.2.0)
-      '@sentry/types': 10.12.0
+      '@sentry/babel-plugin-component-annotate': 4.7.0
+      '@sentry/browser': 10.36.0
+      '@sentry/cli': 2.58.4
+      '@sentry/core': 10.36.0
+      '@sentry/react': 10.36.0(react@19.2.0)
+      '@sentry/types': 10.36.0
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
     optionalDependencies:
@@ -10211,16 +10115,15 @@ snapshots:
       - encoding
       - supports-color
 
-  '@sentry/react@10.12.0(react@19.2.0)':
+  '@sentry/react@10.36.0(react@19.2.0)':
     dependencies:
-      '@sentry/browser': 10.12.0
-      '@sentry/core': 10.12.0
-      hoist-non-react-statics: 3.3.2
+      '@sentry/browser': 10.36.0
+      '@sentry/core': 10.36.0
       react: 19.2.0
 
-  '@sentry/types@10.12.0':
+  '@sentry/types@10.36.0':
     dependencies:
-      '@sentry/core': 10.12.0
+      '@sentry/core': 10.36.0
 
   '@shopify/flash-list@2.2.0(@babel/runtime@7.28.4)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
     dependencies:

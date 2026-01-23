@@ -51,3 +51,4 @@ temp-builds
 
 .gemini/
 gha-creds-*.json
+.env
