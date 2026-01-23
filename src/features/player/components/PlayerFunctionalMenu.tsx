@@ -143,6 +143,24 @@ export function PlayerFunctionalMenu({
 			<Menu.Item
 				onPress={() => {
 					setMenuVisible(false)
+					if (!currentTrack) return
+					openModal('LyricsSelection', undefined)
+				}}
+				title='分享歌词'
+				leadingIcon='share-variant'
+			/>
+			<Menu.Item
+				onPress={() => {
+					setMenuVisible(false)
+					if (!currentTrack) return
+					openModal('SongShare', undefined)
+				}}
+				title='分享歌曲'
+				leadingIcon='share-variant-outline'
+			/>
+			<Menu.Item
+				onPress={() => {
+					setMenuVisible(false)
 					openModal('PlaybackSpeed', undefined)
 				}}
 				title='播放速度'

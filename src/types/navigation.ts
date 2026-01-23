@@ -25,6 +25,8 @@ export interface ModalPropsMap {
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' }
 	PlaybackSpeed: undefined
+	LyricsSelection: undefined
+	SongShare: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

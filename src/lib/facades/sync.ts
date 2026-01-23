@@ -373,6 +373,14 @@ export class SyncFacade {
 				return err(bilibiliResult.error)
 			}
 			const bilibiliFavoriteListMetadata = bilibiliResult.value[1]
+			if (!bilibiliFavoriteListMetadata.info) {
+				return err(
+					createFacadeError(
+						'SyncFavoriteFailed',
+						'同步收藏夹失败，数据为空，收藏夹可能不存在',
+					),
+				)
+			}
 			const bilibiliFavoriteListAllBvids = bilibiliResult.value[0].filter(
 				(item) => item.type === 2, // 过滤非视频稿件 (type 2 is video)
 			)
@@ -501,19 +509,19 @@ export class SyncFacade {
 					const artistSvc = this.artistService.withDB(tx)
 
 					const playlistAuthor = await artistSvc.findOrCreateArtist({
-						name: bilibiliFavoriteListMetadata.info.upper.name,
+						name: bilibiliFavoriteListMetadata.info!.upper.name,
 						source: 'bilibili',
-						remoteId: String(bilibiliFavoriteListMetadata.info.upper.mid),
-						avatarUrl: bilibiliFavoriteListMetadata.info.upper.face,
+						remoteId: String(bilibiliFavoriteListMetadata.info!.upper.mid),
+						avatarUrl: bilibiliFavoriteListMetadata.info!.upper.face,
 					})
 					if (playlistAuthor.isErr()) {
 						throw playlistAuthor.error
 					}
 
 					const localPlaylist = await playlistSvc.findOrCreateRemotePlaylist({
-						title: bilibiliFavoriteListMetadata.info.title,
-						description: bilibiliFavoriteListMetadata.info.intro,
-						coverUrl: bilibiliFavoriteListMetadata.info.cover,
+						title: bilibiliFavoriteListMetadata.info!.title,
+						description: bilibiliFavoriteListMetadata.info!.intro,
+						coverUrl: bilibiliFavoriteListMetadata.info!.cover,
 						type: 'favorite',
 						remoteSyncId: favoriteId,
 						authorId: playlistAuthor.value.id,

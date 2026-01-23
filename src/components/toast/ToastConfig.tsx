@@ -3,10 +3,10 @@ import type { BaseToastProps } from 'react-native-toast-message'
 import { BaseToast } from 'react-native-toast-message'
 
 const baseToastStyle = {
-	style: { minHeight: 60, height: 'auto' },
+	style: { minHeight: 60 },
 	text1Style: {
 		fontSize: 15,
-		fontWeight: 'normal',
+		fontWeight: 'normal' as const,
 	},
 	text2Style: {
 		fontSize: 10,

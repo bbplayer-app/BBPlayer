@@ -163,15 +163,16 @@ function PlayerQueueModal({
 	})
 
 	const renderBackdrop = useCallback(
-		(props: BottomSheetBackdropProps) => (
-			<BottomSheetBackdrop
-				{...props}
-				disappearsOnIndex={-1}
-				appearsOnIndex={0}
-				pressBehavior='close'
-			/>
-		),
-		[],
+		(props: BottomSheetBackdropProps) =>
+			isVisible ? (
+				<BottomSheetBackdrop
+					{...props}
+					disappearsOnIndex={-1}
+					appearsOnIndex={0}
+					pressBehavior='close'
+				/>
+			) : null,
+		[isVisible],
 	)
 
 	const renderItem = useCallback(
@@ -207,6 +208,7 @@ function PlayerQueueModal({
 			enablePanDownToClose={true}
 			snapPoints={['75%']}
 			backdropComponent={renderBackdrop}
+			animationConfigs={animationConfigs}
 			onChange={(index) => {
 				const nextVisible = index !== -1
 				setIsVisible(nextVisible)
@@ -224,7 +226,6 @@ function PlayerQueueModal({
 				borderBottomWidth: 1,
 				borderBottomColor: theme.colors.elevation.level5,
 			}}
-			animationConfigs={animationConfigs}
 		>
 			<View
 				style={{
