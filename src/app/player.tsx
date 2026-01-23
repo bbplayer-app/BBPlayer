@@ -176,7 +176,7 @@ export default function PlayerPage() {
 			)
 			setSettings({ playerBackgroundStyle: 'gradient' })
 		}
-	})
+	}, [playerBackgroundStyle, setSettings])
 
 	const FallbackBackground = useMemo(
 		() => (
