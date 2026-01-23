@@ -65,7 +65,6 @@ export const SongShareCard = ({ track, viewShotRef }: SongShareCardProps) => {
 					<Text
 						variant='headlineMedium'
 						style={[styles.title, { color: '#fff' }]}
-						numberOfLines={2}
 					>
 						{track.title}
 					</Text>
@@ -99,7 +98,7 @@ export const SongShareCard = ({ track, viewShotRef }: SongShareCardProps) => {
 							variant='labelSmall'
 							style={{ color: 'rgba(255,255,255,0.6)', marginTop: 4 }}
 						>
-							听见好音乐
+							一起来听歌！
 						</Text>
 						<View style={styles.logoContainer}>
 							<Text

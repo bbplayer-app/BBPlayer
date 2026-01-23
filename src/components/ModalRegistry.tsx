@@ -41,11 +41,9 @@ const PlaybackSpeedModal = lazy(
 	() => import('./modals/player/PlaybackSpeedModal'),
 )
 const LyricsSelectionModal = lazy(
-	() => import('@/features/player/modals/LyricsSelectionModal'),
+	() => import('./modals/player/LyricsSelectionModal'),
 )
-const SongShareModal = lazy(
-	() => import('@/features/player/modals/SongShareModal'),
-)
+const SongShareModal = lazy(() => import('./modals/player/SongShareModal'))
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 

@@ -72,7 +72,6 @@ export const LyricsShareCard = ({
 						<Text
 							variant='titleLarge'
 							style={[styles.title, { color: '#fff' }]}
-							numberOfLines={2}
 						>
 							{track.title}
 						</Text>
@@ -125,17 +124,25 @@ export const LyricsShareCard = ({
 					</View>
 					<View style={styles.footerTextContainer}>
 						<Text
-							variant='labelMedium'
-							style={{ color: 'rgba(255,255,255,0.6)' }}
+							variant='bodyMedium'
+							style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}
 						>
 							长按识别二维码查看
 						</Text>
 						<Text
 							variant='labelSmall'
-							style={{ color: 'rgba(255,255,255,0.4)', marginTop: 2 }}
+							style={{ color: 'rgba(255,255,255,0.6)', marginTop: 4 }}
 						>
-							Shared via BBPlayer
+							一起来听歌！
 						</Text>
+						<View style={styles.logoContainer}>
+							<Text
+								variant='labelLarge'
+								style={{ color: '#fff', fontWeight: '900', letterSpacing: 1 }}
+							>
+								BBPLAYER
+							</Text>
+						</View>
 					</View>
 				</View>
 			</View>
@@ -201,5 +208,13 @@ const styles = StyleSheet.create({
 	},
 	footerTextContainer: {
 		alignItems: 'flex-end',
+	},
+	logoContainer: {
+		marginTop: 8,
+		paddingHorizontal: 8,
+		paddingVertical: 2,
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.4)',
+		borderRadius: 4,
 	},
 })
