@@ -14,7 +14,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Button,
 	Checkbox,
@@ -59,6 +59,7 @@ export default function LyricsSelectionModal({
 	const viewShotRef = useRef<ViewShot>(null)
 
 	const snapPoints = useMemo(() => ['85%'], [])
+	const [showPreview, setShowPreview] = useState(false)
 
 	const animationConfigs = useBottomSheetTimingConfigs({
 		duration: 300,
@@ -252,28 +253,60 @@ export default function LyricsSelectionModal({
 				>
 					分享
 				</Button>
+				<Button
+					mode='text'
+					onPress={() => setShowPreview(!showPreview)}
+					icon={showPreview ? 'eye-off' : 'eye'}
+					compact
+				>
+					{showPreview ? '隐藏' : '预览'}
+				</Button>
 			</BottomSheetView>
 
-			{/* Hidden Capture View */}
-			<View
-				style={{
-					position: 'absolute',
-					top: 99999, // Move off-screen
-					left: 0,
-					opacity: 0, // Invisible but renderable
-				}}
-				pointerEvents='none'
-			>
-				{currentTrack && (
-					<LyricsShareCard
-						track={currentTrack}
-						selectedLyrics={(lyrics ?? []).filter((_, i) =>
-							selectedIndices.has(i),
-						)}
-						viewShotRef={viewShotRef}
-					/>
-				)}
-			</View>
+			{/* Preview / Hidden Capture View */}
+			{showPreview && selectedIndices.size > 0 && (
+				<View style={styles.previewOverlay}>
+					<ScrollView
+						contentContainerStyle={styles.previewScrollContent}
+						showsVerticalScrollIndicator={false}
+					>
+						<View style={styles.previewCardWrapper}>
+							{currentTrack && (
+								<LyricsShareCard
+									track={currentTrack}
+									selectedLyrics={(lyrics ?? []).filter((_, i) =>
+										selectedIndices.has(i),
+									)}
+									viewShotRef={viewShotRef}
+								/>
+							)}
+						</View>
+					</ScrollView>
+				</View>
+			)}
+
+			{/* Hidden Capture View (for when preview is hidden) */}
+			{!showPreview && (
+				<View
+					style={{
+						position: 'absolute',
+						top: 99999,
+						left: 0,
+						opacity: 0,
+					}}
+					pointerEvents='none'
+				>
+					{currentTrack && (
+						<LyricsShareCard
+							track={currentTrack}
+							selectedLyrics={(lyrics ?? []).filter((_, i) =>
+								selectedIndices.has(i),
+							)}
+							viewShotRef={viewShotRef}
+						/>
+					)}
+				</View>
+			)}
 		</BottomSheet>
 	)
 }
@@ -298,5 +331,29 @@ const styles = StyleSheet.create({
 		padding: 16,
 		borderTopWidth: 1,
 		borderColor: 'rgba(0,0,0,0.05)',
+		alignItems: 'center',
+	},
+	previewOverlay: {
+		position: 'absolute',
+		top: 60,
+		left: 0,
+		right: 0,
+		bottom: 80,
+		backgroundColor: 'rgba(0,0,0,0.9)',
+		zIndex: 100,
+	},
+	previewScrollContent: {
+		alignItems: 'center',
+		paddingVertical: 20,
+	},
+	previewCardWrapper: {
+		transform: [{ scale: 0.8 }],
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 8,
+		elevation: 8,
+		borderRadius: 12,
+		overflow: 'hidden',
 	},
 })

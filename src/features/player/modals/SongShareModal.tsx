@@ -12,7 +12,7 @@ import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/typ
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import { Button, IconButton, Text, useTheme } from 'react-native-paper'
 import { Easing } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -118,14 +118,20 @@ export default function SongShareModal({
 				/>
 			</View>
 
-			<View style={styles.previewContainer}>
-				<Text
-					variant='bodyMedium'
-					style={{ textAlign: 'center', opacity: 0.6 }}
-				>
-					正在生成预览... (实际点击分享时生成高清图)
-				</Text>
-			</View>
+			<ScrollView
+				style={styles.previewContainer}
+				contentContainerStyle={styles.previewContent}
+				showsVerticalScrollIndicator={false}
+			>
+				<View style={styles.previewCardWrapper}>
+					{currentTrack && (
+						<SongShareCard
+							track={currentTrack}
+							viewShotRef={viewShotRef}
+						/>
+					)}
+				</View>
+			</ScrollView>
 
 			<BottomSheetView
 				style={[
@@ -157,24 +163,6 @@ export default function SongShareModal({
 					分享
 				</Button>
 			</BottomSheetView>
-
-			{/* Render off-screen to capture */}
-			<View
-				style={{
-					position: 'absolute',
-					top: 99999,
-					left: 0,
-					opacity: 0,
-				}}
-				pointerEvents='none'
-			>
-				{currentTrack && (
-					<SongShareCard
-						track={currentTrack}
-						viewShotRef={viewShotRef}
-					/>
-				)}
-			</View>
 		</BottomSheet>
 	)
 }
@@ -189,9 +177,21 @@ const styles = StyleSheet.create({
 	},
 	previewContainer: {
 		flex: 1,
-		justifyContent: 'center',
+	},
+	previewContent: {
 		alignItems: 'center',
-		padding: 20,
+		paddingVertical: 16,
+		paddingHorizontal: 20,
+	},
+	previewCardWrapper: {
+		transform: [{ scale: 0.85 }],
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.2,
+		shadowRadius: 8,
+		elevation: 8,
+		borderRadius: 12,
+		overflow: 'hidden',
 	},
 	footer: {
 		flexDirection: 'row',
