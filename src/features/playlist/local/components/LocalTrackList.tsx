@@ -1,17 +1,21 @@
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { DownloadState } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Divider,
-	Menu,
+	Icon,
+	List,
+	Surface,
 	Text,
+	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -44,11 +48,7 @@ const renderItem = ({
 	Track,
 	{
 		handleTrackPress: (track: Track) => void
-		handleMenuPress: (
-			track: Track,
-			anchor: { x: number; y: number },
-			downloadState?: DownloadState,
-		) => void
+		handleMenuPress: (track: Track, downloadState?: DownloadState) => void
 		toggle: (id: number) => void
 		enterSelectMode: (id: number) => void
 		selected: Set<number>
@@ -75,8 +75,8 @@ const renderItem = ({
 		<TrackListItem
 			index={index}
 			onTrackPress={() => handleTrackPress(item)}
-			onMenuPress={(anchor) => {
-				handleMenuPress(item, anchor, downloadState)
+			onMenuPress={() => {
+				handleMenuPress(item, downloadState)
 			}}
 			disabled={
 				item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
@@ -89,6 +89,58 @@ const renderItem = ({
 			enterSelectMode={enterSelectMode}
 			downloadState={downloadState}
 		/>
+	)
+}
+
+const HighFreqButton = ({
+	item,
+	onDismiss,
+}: {
+	item: TrackMenuItem
+	onDismiss: () => void
+}) => {
+	const theme = useTheme()
+
+	return (
+		<Surface
+			style={{
+				borderRadius: 16,
+				overflow: 'hidden',
+				backgroundColor: theme.colors.elevation.level2,
+				flex: 1,
+				marginHorizontal: 4,
+			}}
+			elevation={0}
+		>
+			<TouchableRipple
+				onPress={() => {
+					onDismiss()
+					item.onPress()
+				}}
+				style={{ flex: 1 }}
+			>
+				<View
+					style={{
+						alignItems: 'center',
+						justifyContent: 'center',
+						paddingVertical: 16,
+						height: 80,
+					}}
+				>
+					<Icon
+						source={item.leadingIcon}
+						size={28}
+					/>
+					<Text
+						variant='labelMedium'
+						style={{ marginTop: 8 }}
+						numberOfLines={1}
+					>
+						{item.title}
+					</Text>
+				</View>
+			</TouchableRipple>
+		</Surface>
 	)
 }
 
@@ -111,33 +163,42 @@ export function LocalTrackList({
 	const theme = useTheme()
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
+	const sheetRef = useRef<TrueSheet>(null)
 
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
-		anchor: { x: number; y: number }
 		track: Track | null
 		downloadState?: DownloadState
 	}>({
 		visible: false,
-		anchor: { x: 0, y: 0 },
 		track: null,
 		downloadState: undefined,
 	})
 
 	const handleMenuPress = useCallback(
-		(
-			track: Track,
-			anchor: { x: number; y: number },
-			downloadState?: DownloadState,
-		) => {
-			setMenuState({ visible: true, anchor, track, downloadState })
+		(track: Track, downloadState?: DownloadState) => {
+			setMenuState({ visible: true, track, downloadState })
+			sheetRef.current?.present().catch(() => {
+				// ignore error
+			})
 		},
 		[],
 	)
 
-	const handleDismissMenu = useCallback(() => {
-		setMenuState((prev) => ({ ...prev, visible: false }))
+	const dismissMenu = useCallback(() => {
+		sheetRef.current?.dismiss().catch(() => {
+			// ignore error
+		})
 	}, [])
+
+	const { highFreqItems, normalItems } = (() => {
+		if (!menuState.track) return { highFreqItems: [], normalItems: [] }
+		const allItems = trackMenuItems(menuState.track, menuState.downloadState)
+		return {
+			highFreqItems: allItems.filter((i) => i.isHighFreq),
+			normalItems: allItems.filter((i) => !i.isHighFreq),
+		}
+	})()
 
 	const keyExtractor = useCallback((item: Track) => String(item.id), [])
 
@@ -163,6 +224,13 @@ export function LocalTrackList({
 			downloadStatus,
 		],
 	)
+
+	usePreventRemove(menuState.visible, () => {
+		setMenuState({ visible: false, track: null, downloadState: undefined })
+		sheetRef.current?.dismiss().catch(() => {
+			// ignore error
+		})
+	})
 
 	return (
 		<>
@@ -195,31 +263,86 @@ export function LocalTrackList({
 				onEndReached={onEndReached}
 				onEndReachedThreshold={0.8}
 			/>
-			{menuState.track && (
-				<FunctionalMenu
-					visible={menuState.visible}
-					onDismiss={handleDismissMenu}
-					anchor={menuState.anchor}
-					anchorPosition='bottom'
+			<TrueSheet
+				ref={sheetRef}
+				detents={['auto']}
+				cornerRadius={24}
+				backgroundColor={theme.colors.elevation.level1}
+				onDidDismiss={() => {
+					setMenuState((prev) => ({ ...prev, visible: false }))
+				}}
+			>
+				<ScrollView
+					style={{ maxHeight: '100%', marginTop: 32 }}
+					contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
 				>
-					{trackMenuItems(menuState.track, menuState.downloadState).map(
-						(menuItem) => (
-							<Menu.Item
-								key={menuItem.title}
-								titleStyle={
-									menuItem.danger ? { color: theme.colors.error } : {}
-								}
-								leadingIcon={menuItem.leadingIcon}
-								onPress={() => {
-									menuItem.onPress()
-									handleDismissMenu()
-								}}
-								title={menuItem.title}
-							/>
-						),
+					{menuState.track && (
+						<>
+							<View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+								<Text
+									variant='titleMedium'
+									numberOfLines={1}
+								>
+									{menuState.track.title}
+								</Text>
+								<Text
+									variant='bodySmall'
+									style={{ opacity: 0.6 }}
+									numberOfLines={1}
+								>
+									{menuState.track.artist?.name ?? '未知艺术家'}
+								</Text>
+								<Divider style={{ marginTop: 12 }} />
+								{highFreqItems.length > 0 && (
+									<View
+										style={{
+											flexDirection: 'row',
+											paddingBottom: 12,
+											paddingTop: 16,
+											width: '100%',
+										}}
+									>
+										{highFreqItems.map((item, index) => (
+											<HighFreqButton
+												key={index}
+												item={item}
+												onDismiss={dismissMenu}
+											/>
+										))}
+									</View>
+								)}
+							</View>
+
+							{normalItems.map((menuItem, index) => (
+								<List.Item
+									key={index}
+									title={menuItem.title}
+									titleStyle={
+										menuItem.danger ? { color: theme.colors.error } : {}
+									}
+									left={(props) =>
+										menuItem.leadingIcon ? (
+											<List.Icon
+												{...props}
+												icon={menuItem.leadingIcon}
+												color={
+													menuItem.danger
+														? theme.colors.error
+														: theme.colors.onSurface
+												}
+											/>
+										) : null
+									}
+									onPress={() => {
+										dismissMenu()
+										menuItem.onPress()
+									}}
+								/>
+							))}
+						</>
 					)}
-				</FunctionalMenu>
-			)}
+				</ScrollView>
+			</TrueSheet>
 		</>
 	)
 }

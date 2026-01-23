@@ -50,11 +50,13 @@ export function useLocalPlaylistMenu({
 				title: '下一首播放',
 				leadingIcon: 'skip-next-circle-outline',
 				onPress: () => playNext(item),
+				isHighFreq: true,
 			},
 			{
 				title: '添加到本地歌单',
 				leadingIcon: 'playlist-plus',
 				onPress: () => openAddToPlaylistModal(item),
+				isHighFreq: true,
 			},
 		]
 		if (item.source === 'bilibili') {
@@ -118,6 +120,7 @@ export function useLocalPlaylistMenu({
 
 						toast.success('已开始下载')
 					},
+					isHighFreq: true,
 				},
 			)
 		}
