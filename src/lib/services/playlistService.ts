@@ -836,12 +836,16 @@ export class PlaylistService {
 		})[],
 		DatabaseError
 	> {
+		const trimmed = query.trim()
+		if (!trimmed) {
+			return okAsync([])
+		}
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:searchPlaylists', op: 'db' }, () =>
 				this.db.query.playlists.findMany({
 					where: and(
 						eq(schema.playlists.type, 'local'),
-						like(schema.playlists.title, `%${query}%`),
+						like(schema.playlists.title, `%${trimmed}%`),
 					),
 					orderBy: desc(schema.playlists.updatedAt),
 					with: {
