@@ -128,32 +128,27 @@ export default function PlayerPage() {
 		playerBackgroundStyle,
 	])
 
-	const renderScene = useMemo(
-		() =>
-			// eslint-disable-next-line react/display-name
-			({
-				route,
-				jumpTo,
-			}: {
-				route: { key: string; title: string }
-				jumpTo: (key: string) => void
-			}) => {
-				switch (route.key) {
-					case 'main':
-						return (
-							<PlayerMainTab
-								sheetRef={sheetRef}
-								jumpTo={jumpTo}
-								imageRef={coverRef}
-								onPresent={() => setQueueVisible(true)}
-							/>
-						)
-					case 'lyrics':
-						return <Lyrics currentIndex={index} />
-				}
-			},
-		[coverRef, index],
-	)
+	const renderScene = ({
+		route,
+		jumpTo,
+	}: {
+		route: { key: string; title: string }
+		jumpTo: (key: string) => void
+	}) => {
+		switch (route.key) {
+			case 'main':
+				return (
+					<PlayerMainTab
+						sheetRef={sheetRef}
+						jumpTo={jumpTo}
+						imageRef={coverRef}
+						onPresent={() => setQueueVisible(true)}
+					/>
+				)
+			case 'lyrics':
+				return <Lyrics currentIndex={index} />
+		}
+	}
 
 	const scrimColors = useMemo(() => {
 		if (playerBackgroundStyle !== 'gradient')

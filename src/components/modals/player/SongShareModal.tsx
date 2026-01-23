@@ -2,12 +2,19 @@ import { SongShareCard } from '@/features/player/components/sharing/SongShareCar
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
-import { Image } from 'expo-image'
+import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Button, Dialog, Text } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Button,
+	Dialog,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
@@ -15,12 +22,45 @@ const SongShareModal = () => {
 	const currentTrack = useCurrentTrack()
 	const close = useModalStore((state) => state.close)
 
+	const theme = useTheme()
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 	const [isSharing, setIsSharing] = useState(false)
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(true)
+	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+	const imageRef = useImage(
+		{ uri: currentTrack?.coverUrl ?? undefined },
+		{
+			onError: () => void 0,
+		},
+	)
 
 	const viewShotRef = useRef<ViewShot>(null)
+
+	useEffect(() => {
+		if (imageRef) {
+			ImageThemeColors.extractThemeColorAsync(imageRef)
+				.then((palette) => {
+					const bgColor = theme.dark
+						? (palette.darkMuted?.hex ?? palette.muted?.hex)
+						: (palette.lightMuted?.hex ?? palette.muted?.hex)
+
+					if (bgColor) {
+						setCardColor(bgColor)
+					}
+				})
+				.catch(() => undefined)
+				.finally(() => {
+					// 颜色提取完成后（无论成功失败）再开始生成预览
+					// 稍微延迟一点点确保状态更新导致的重渲染完成
+					setTimeout(() => {
+						void generatePreview()
+					}, 100)
+				})
+		} else {
+			void generatePreview()
+		}
+	}, [imageRef, theme.dark])
 
 	const generatePreview = async () => {
 		if (!viewShotRef.current) {
@@ -45,13 +85,7 @@ const SongShareModal = () => {
 		}
 	}
 
-	// 打开时自动生成预览
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			void generatePreview()
-		}, 300) // 延迟确保组件已渲染
-		return () => clearTimeout(timer)
-	}, [])
+	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
 	const handleShare = async (action: 'save' | 'share') => {
 		setIsSharing(true)
@@ -59,10 +93,8 @@ const SongShareModal = () => {
 		let uri = previewUri
 		const needsCapture = !uri && viewShotRef.current !== null
 		if (needsCapture) {
+			const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 			try {
-				const sanitizeFileName = (name: string) =>
-					name.replace(/[/\\?%*:|"<>]/g, '-')
-				const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 				uri = await captureRef(viewShotRef, {
 					format: 'png',
 					quality: 1,
@@ -207,6 +239,7 @@ const SongShareModal = () => {
 					<SongShareCard
 						track={currentTrack}
 						viewShotRef={viewShotRef}
+						backgroundColor={cardColor}
 					/>
 				)}
 			</View>

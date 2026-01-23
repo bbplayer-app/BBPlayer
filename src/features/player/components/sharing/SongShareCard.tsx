@@ -1,41 +1,23 @@
 import type { Track } from '@/types/core/media'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
 
 interface SongShareCardProps {
 	track: Track
 	viewShotRef: React.RefObject<ViewShot | null>
+	backgroundColor: string
 }
 
-export const SongShareCard = ({ track, viewShotRef }: SongShareCardProps) => {
-	const theme = useTheme()
-	const [backgroundColor, setBackgroundColor] = useState(
-		theme.colors.elevation.level3,
-	)
-
+export const SongShareCard = ({
+	track,
+	viewShotRef,
+	backgroundColor,
+}: SongShareCardProps) => {
 	const shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(track.uniqueKey)}&title=${encodeURIComponent(track.title)}&cover=${encodeURIComponent(track.coverUrl ?? '')}`
-
-	useEffect(() => {
-		if (track.coverUrl) {
-			ImageThemeColors.extractThemeColorAsync(track.coverUrl)
-				.then((palette) => {
-					const bgColor = theme.dark
-						? (palette.darkMuted?.hex ?? palette.muted?.hex)
-						: (palette.lightMuted?.hex ?? palette.muted?.hex)
-
-					if (bgColor) {
-						setBackgroundColor(bgColor)
-					}
-				})
-				.catch(() => undefined)
-		}
-	}, [track.coverUrl, theme.dark])
 
 	return (
 		<ViewShot
