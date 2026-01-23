@@ -52,7 +52,6 @@ export const LyricsShareCard = ({
 			options={{
 				format: 'png',
 				quality: 1,
-				fileName: `share-${track.uniqueKey}`,
 			}}
 			style={[styles.container, { backgroundColor }]}
 		>

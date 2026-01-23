@@ -43,7 +43,6 @@ export const SongShareCard = ({ track, viewShotRef }: SongShareCardProps) => {
 			options={{
 				format: 'png',
 				quality: 1,
-				fileName: `share-song-${track.uniqueKey}`,
 			}}
 			style={[styles.container, { backgroundColor }]}
 		>

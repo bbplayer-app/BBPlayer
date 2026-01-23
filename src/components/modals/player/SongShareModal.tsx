@@ -60,7 +60,9 @@ const SongShareModal = () => {
 		const needsCapture = !uri && viewShotRef.current !== null
 		if (needsCapture) {
 			try {
-				const fileName = `bbplayer-share-song-${Date.now()}`
+				const sanitizeFileName = (name: string) =>
+					name.replace(/[/\\?%*:|"<>]/g, '-')
+				const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 				uri = await captureRef(viewShotRef, {
 					format: 'png',
 					quality: 1,
@@ -115,6 +117,25 @@ const SongShareModal = () => {
 			toast.error('操作失败')
 			setIsSharing(false)
 		}
+	}
+
+	if (!currentTrack) {
+		return (
+			<>
+				<Dialog.Title>分享歌曲</Dialog.Title>
+				<Dialog.Content style={styles.errorContainer}>
+					<Text
+						variant='bodyMedium'
+						style={styles.errorText}
+					>
+						当前没有正在播放的歌曲
+					</Text>
+				</Dialog.Content>
+				<Dialog.Actions>
+					<Button onPress={() => close('SongShare')}>关闭</Button>
+				</Dialog.Actions>
+			</>
+		)
 	}
 
 	return (
@@ -212,6 +233,15 @@ const styles = StyleSheet.create({
 		marginTop: 16,
 		marginBottom: 16,
 		opacity: 0.7,
+	},
+	errorContainer: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 40,
+	},
+	errorText: {
+		opacity: 0.7,
+		textAlign: 'center',
 	},
 	hiddenCapture: {
 		position: 'absolute',

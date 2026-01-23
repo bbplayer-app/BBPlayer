@@ -126,7 +126,9 @@ const LyricsSelectionModal = () => {
 		}
 		setIsGenerating(true)
 		try {
-			const fileName = `bbplayer-share-lyrics-${Date.now()}`
+			const sanitizeFileName = (name: string) =>
+				name.replace(/[/\\?%*:|"<>]/g, '-')
+			const fileName = `bbplayer-share-lyrics-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 			const uri = await captureRef(viewShotRef, {
 				format: 'png',
 				quality: 1,
@@ -233,6 +235,25 @@ const LyricsSelectionModal = () => {
 		],
 	)
 
+	if (!currentTrack) {
+		return (
+			<>
+				<Dialog.Title>选择歌词分享</Dialog.Title>
+				<Dialog.Content style={styles.errorContainer}>
+					<Text
+						variant='bodyMedium'
+						style={styles.errorText}
+					>
+						当前没有正在播放的歌曲
+					</Text>
+				</Dialog.Content>
+				<Dialog.Actions>
+					<Button onPress={() => close('LyricsSelection')}>关闭</Button>
+				</Dialog.Actions>
+			</>
+		)
+	}
+
 	if (isPending) {
 		return (
 			<>
@@ -336,7 +357,6 @@ const LyricsSelectionModal = () => {
 		)
 	}
 
-	// 选择模式：使用 Dialog.ScrollArea + FlashList
 	return (
 		<>
 			<Dialog.Title>选择歌词分享 ({selectedIndices.size}/5)</Dialog.Title>
