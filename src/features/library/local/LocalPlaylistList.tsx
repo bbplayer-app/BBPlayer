@@ -1,14 +1,17 @@
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { usePlaylistLists } from '@/hooks/queries/db/playlist'
+import {
+	usePlaylistLists,
+	useSearchPlaylists,
+} from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { IconButton, Text, useTheme } from 'react-native-paper'
+import { IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
 const renderPlaylistItem = ({
@@ -21,6 +24,7 @@ const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 
@@ -31,7 +35,14 @@ const LocalPlaylistListComponent = memo(() => {
 		refetch,
 		isError: playlistsIsError,
 	} = usePlaylistLists()
+
+	const { data: searchResults } = useSearchPlaylists(searchQuery, true)
+
 	const finalPlaylists = useMemo(() => {
+		if (searchQuery.trim()) {
+			return searchResults ?? []
+		}
+
 		if (!playlists) return []
 
 		if (!hasBilibiliCookie()) return playlists
@@ -52,7 +63,7 @@ const LocalPlaylistListComponent = memo(() => {
 			},
 			...playlists,
 		] as (Playlist & { isToView?: boolean })[]
-	}, [hasBilibiliCookie, playlists])
+	}, [hasBilibiliCookie, playlists, searchQuery, searchResults])
 
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 
@@ -97,6 +108,14 @@ const LocalPlaylistListComponent = memo(() => {
 					/>
 				</View>
 			</View>
+			<Searchbar
+				placeholder='搜索播放列表'
+				onChangeText={setSearchQuery}
+				value={searchQuery}
+				mode='bar'
+				style={styles.searchbar}
+				inputStyle={styles.searchInput}
+			/>
 			<FlashList
 				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
 				showsVerticalScrollIndicator={false}
@@ -142,6 +161,16 @@ const styles = StyleSheet.create({
 	headerActionsContainer: {
 		flexDirection: 'row',
 		alignItems: 'center',
+	},
+	searchInput: {
+		alignSelf: 'center',
+	},
+	searchbar: {
+		borderRadius: 9999,
+		textAlign: 'center',
+		height: 45,
+		marginBottom: 20,
+		marginTop: 10,
 	},
 	listFooter: {
 		textAlign: 'center',
