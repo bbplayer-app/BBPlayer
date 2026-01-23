@@ -10,7 +10,7 @@ import {
 } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 
@@ -28,8 +28,57 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
 
-	const finalPlayingIndicator =
-		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
+	// 对 BUFFERING 状态和 isPlaying 状态添加防抖，避免 seek 时短暂闪烁图标
+	const [debouncedBuffering, setDebouncedBuffering] = useState(false)
+	const [debouncedIsPlaying, setDebouncedIsPlaying] = useState(isPlaying)
+	const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const playingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		if (state === PlaybackState.BUFFERING) {
+			bufferingTimeoutRef.current = setTimeout(() => {
+				setDebouncedBuffering(true)
+			}, 200)
+		} else {
+			if (bufferingTimeoutRef.current) {
+				clearTimeout(bufferingTimeoutRef.current)
+				bufferingTimeoutRef.current = null
+			}
+			setDebouncedBuffering(false)
+		}
+		return () => {
+			if (bufferingTimeoutRef.current) {
+				clearTimeout(bufferingTimeoutRef.current)
+			}
+		}
+	}, [state])
+
+	useEffect(() => {
+		if (playingTimeoutRef.current) {
+			clearTimeout(playingTimeoutRef.current)
+			playingTimeoutRef.current = null
+		}
+		if (isPlaying) {
+			// 播放状态立即更新
+			setDebouncedIsPlaying(true)
+		} else {
+			// 暂停状态延迟更新，避免 seek 时短暂闪烁
+			playingTimeoutRef.current = setTimeout(() => {
+				setDebouncedIsPlaying(false)
+			}, 200)
+		}
+		return () => {
+			if (playingTimeoutRef.current) {
+				clearTimeout(playingTimeoutRef.current)
+			}
+		}
+	}, [isPlaying])
+
+	const finalPlayingIndicator = debouncedBuffering
+		? 'loading'
+		: debouncedIsPlaying
+			? 'pause'
+			: 'play'
 
 	useEffect(() => {
 		void Orpheus.getRepeatMode().then(setRepeatMode)
