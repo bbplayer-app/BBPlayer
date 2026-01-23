@@ -827,6 +827,33 @@ export class PlaylistService {
 	}
 
 	/**
+	 * 搜索本地播放列表
+	 * @param query - 搜索关键词
+	 */
+	public searchPlaylists(query: string): ResultAsync<
+		(typeof schema.playlists.$inferSelect & {
+			author: typeof schema.artists.$inferSelect | null
+		})[],
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:searchPlaylists', op: 'db' }, () =>
+				this.db.query.playlists.findMany({
+					where: and(
+						eq(schema.playlists.type, 'local'),
+						like(schema.playlists.title, `%${query}%`),
+					),
+					orderBy: desc(schema.playlists.updatedAt),
+					with: {
+						author: true,
+					},
+				}),
+			),
+			(e) => new DatabaseError('搜索播放列表失败', { cause: e }),
+		)
+	}
+
+	/**
 	 * 在某个 playlist 中依据名字搜索歌曲
 	 * @param playlistId
 	 * @param query

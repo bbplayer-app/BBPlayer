@@ -26,6 +26,8 @@ export const playlistKeys = {
 		[...playlistKeys.all, 'playlistsContainingTrack', id] as const,
 	searchTracksInPlaylist: (playlistId: number, query: string) =>
 		[...playlistKeys.all, 'searchTracksInPlaylist', playlistId, query] as const,
+	searchPlaylists: (query: string) =>
+		[...playlistKeys.all, 'searchPlaylists', query] as const,
 	playlistContentsInfinite: (
 		playlistId: number,
 		limit: number,
@@ -90,6 +92,15 @@ export const useSearchTracksInPlaylist = (
 				playlistService.searchTrackInPlaylist(playlistId, query),
 			),
 		enabled: !!query.trim() && startSearch,
+		placeholderData: keepPreviousData,
+	})
+}
+
+export const useSearchPlaylists = (query: string, enabled: boolean) => {
+	return useQuery({
+		queryKey: playlistKeys.searchPlaylists(query),
+		queryFn: () => returnOrThrowAsync(playlistService.searchPlaylists(query)),
+		enabled: enabled && !!query.trim(),
 		placeholderData: keepPreviousData,
 	})
 }
