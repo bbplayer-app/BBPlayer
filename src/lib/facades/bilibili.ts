@@ -66,6 +66,14 @@ export class BilibiliFacade {
 					)
 				}
 				const metadata = result.value.info
+				if (!metadata) {
+					return err(
+						createFacadeError(
+							'fetchRemotePlaylistMetadataFailed',
+							'获取收藏夹元数据失败，数据为空，收藏夹可能不存在',
+						),
+					)
+				}
 				return ok({
 					title: metadata.title,
 					description: metadata.intro,

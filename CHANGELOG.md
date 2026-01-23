@@ -5,6 +5,21 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- 升级依赖
+
+### Added
+
+- 添加本地播放列表搜索功能
+- 为播放列表模态框增加遮罩（Thanks to @longlin10086 #146）
+- 支持跳转到分 p 视频播放列表时滚动并高亮指定分 p
+- 支持分享歌曲、歌词卡片
+- 使用 TrueSheet 替换 @gorhom/bottom-sheet
+- 部分下拉菜单重构为 bottom sheet 样式，更清晰
+
 ## [2.1.9] - 2026-01-22
 
 ### Fixed

@@ -1,19 +1,22 @@
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { BottomSheetFlatListMethods } from '@gorhom/bottom-sheet'
-import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet'
+import {
+	TrueSheet,
+	type TrueSheetProps,
+} from '@lodev09/react-native-true-sheet'
 import type { Track as OrpheusTrack } from '@roitium/expo-orpheus'
 import { Orpheus } from '@roitium/expo-orpheus'
+import type { FlashListRef } from '@shopify/flash-list'
+import { FlashList } from '@shopify/flash-list'
 import { useQuery } from '@tanstack/react-query'
 import {
 	memo,
-	type RefObject,
 	useCallback,
-	useLayoutEffect,
+	useEffect,
 	useMemo,
 	useRef,
 	useState,
+	type RefObject,
 } from 'react'
 import { View } from 'react-native'
 import {
@@ -49,6 +52,7 @@ const TrackItem = memo(
 							: undefined,
 						overflow: 'hidden',
 						borderRadius: 8,
+						minHeight: 56, // Enforce min height for visual consistency
 					}}
 					elevation={0}
 				>
@@ -101,16 +105,21 @@ const TrackItem = memo(
 
 TrackItem.displayName = 'TrackItem'
 
+interface PlayerQueueModalProps extends TrueSheetProps {
+	sheetRef: RefObject<TrueSheet | null>
+	isVisible: boolean
+}
+
 function PlayerQueueModal({
 	sheetRef,
-}: {
-	sheetRef: RefObject<BottomSheet | null>
-}) {
+	isVisible,
+	...props
+}: PlayerQueueModalProps) {
 	const currentTrack = useCurrentTrack()
 	const theme = useTheme()
-	const [isVisible, setIsVisible] = useState(false)
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
-	const flatListRef = useRef<BottomSheetFlatListMethods>(null)
+	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
+
 	const { data: queue, refetch } = useQuery<OrpheusTrack[]>({
 		queryKey: ['player', 'queue'],
 		queryFn: async () => {
@@ -121,15 +130,13 @@ function PlayerQueueModal({
 		enabled: isVisible,
 		gcTime: 0,
 	})
+
 	const currentIndex = useMemo(() => {
 		if (!currentTrack || !queue) return -1
 		return queue.findIndex((t) => t.id === currentTrack.uniqueKey)
 	}, [currentTrack, queue])
-	const insets = useSafeAreaInsets()
 
-	usePreventRemove(isVisible, () => {
-		sheetRef.current?.close()
-	})
+	const insets = useSafeAreaInsets()
 
 	const switchTrackHandler = useCallback(
 		async (index: number) => {
@@ -164,86 +171,88 @@ function PlayerQueueModal({
 		[switchTrackHandler, removeTrackHandler, currentTrack?.uniqueKey],
 	)
 
-	useLayoutEffect(() => {
-		// 当菜单被打开时，曲目改变不应该触发滚动。
-		if (currentIndex !== -1 && isVisible && !didInitialScroll) {
-			flatListRef.current?.scrollToIndex({
-				animated: false,
-				index: currentIndex,
-				viewPosition: 0.5,
-			})
-			setDidInitialScroll(true)
+	// eslint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
+	useEffect(() => {
+		if (isVisible) {
+			void refetch()
+		} else {
+			setDidInitialScroll(false)
 		}
-	}, [isVisible, currentIndex, didInitialScroll])
+	}, [isVisible, refetch])
+
+	useEffect(() => {
+		if (
+			isVisible &&
+			currentIndex !== -1 &&
+			!didInitialScroll &&
+			queue?.length
+		) {
+			const timer = setTimeout(() => {
+				void flatListRef.current?.scrollToIndex({
+					animated: false,
+					index: currentIndex,
+					viewPosition: 0.5,
+				})
+				setDidInitialScroll(true)
+			}, 100)
+			return () => clearTimeout(timer)
+		}
+	}, [isVisible, currentIndex, didInitialScroll, queue])
 
 	return (
-		<BottomSheet
+		<TrueSheet
 			ref={sheetRef}
-			index={-1}
-			enableDynamicSizing={false}
-			enablePanDownToClose={true}
-			snapPoints={['75%']}
-			onChange={(index) => {
-				const nextVisible = index !== -1
-				setIsVisible(nextVisible)
-				if (nextVisible) {
-					void refetch()
-				}
-				if (!nextVisible) {
-					setDidInitialScroll(false)
-				}
-			}}
-			backgroundStyle={{
-				backgroundColor: theme.colors.elevation.level1,
-			}}
-			handleStyle={{
-				borderBottomWidth: 1,
-				borderBottomColor: theme.colors.elevation.level5,
-			}}
+			detents={[0.75]}
+			cornerRadius={24}
+			backgroundColor={theme.colors.elevation.level1}
+			scrollable
+			{...props}
 		>
 			<View
 				style={{
-					flexDirection: 'row',
-					justifyContent: 'space-between',
-					alignItems: 'center',
-					paddingHorizontal: 16,
-					// paddingVertical: 4,
-					borderBottomWidth: 1,
-					borderBottomColor: theme.colors.elevation.level2,
+					height: '100%',
+					paddingBottom: insets.bottom,
 				}}
 			>
-				<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
-				<IconButton
-					icon='content-save-outline'
-					onPress={() => {
-						if (queue && queue.length > 0) {
-							useModalStore.getState().open('SaveQueueToPlaylist', {
-								trackIds: queue.map((t) => t.id),
-							})
-						}
+				<View
+					style={{
+						flexDirection: 'row',
+						justifyContent: 'space-between',
+						alignItems: 'center',
+						paddingHorizontal: 16,
+						paddingTop: 8,
+						borderBottomWidth: 1,
+						borderBottomColor: theme.colors.elevation.level2,
 					}}
-					disabled={!queue || queue.length === 0}
-				/>
+				>
+					<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
+					<IconButton
+						icon='content-save-outline'
+						onPress={() => {
+							if (queue && queue.length > 0) {
+								useModalStore.getState().open('SaveQueueToPlaylist', {
+									trackIds: queue.map((t) => t.id),
+								})
+							}
+						}}
+						disabled={!queue || queue.length === 0}
+					/>
+				</View>
+				<View style={{ flex: 1, minHeight: 2 }}>
+					<FlashList
+						ref={flatListRef}
+						data={queue}
+						renderItem={renderItem}
+						keyExtractor={keyExtractor}
+						contentContainerStyle={{
+							paddingBottom: insets.bottom + 20,
+						}}
+						showsVerticalScrollIndicator={false}
+						nestedScrollEnabled
+					/>
+				</View>
 			</View>
-			<BottomSheetFlatList
-				data={queue}
-				ref={flatListRef}
-				keyExtractor={keyExtractor}
-				getItemLayout={(_: unknown, index: number) => {
-					return {
-						length: 68,
-						offset: 68 * index,
-						index,
-					}
-				}}
-				renderItem={renderItem}
-				contentContainerStyle={{
-					backgroundColor: theme.colors.elevation.level1,
-				}}
-				showsVerticalScrollIndicator={false}
-				style={{ marginBottom: insets.bottom }}
-			/>
-		</BottomSheet>
+		</TrueSheet>
 	)
 }
 

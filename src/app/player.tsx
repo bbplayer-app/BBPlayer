@@ -7,7 +7,7 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
-import type { BottomSheetMethods } from '@gorhom/bottom-sheet/lib/typescript/types'
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { useCurrentTrack } from '@roitium/expo-orpheus'
 import {
@@ -47,7 +47,7 @@ export default function PlayerPage() {
 	const theme = useTheme()
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
-	const sheetRef = useRef<BottomSheetMethods>(null)
+	const sheetRef = useRef<TrueSheet>(null)
 	const currentTrack = useCurrentTrack()
 	const coverRef = useImage(currentTrack?.track?.artwork ?? '', {
 		onError: () => void 0,
@@ -128,31 +128,27 @@ export default function PlayerPage() {
 		playerBackgroundStyle,
 	])
 
-	const renderScene = useMemo(
-		() =>
-			// eslint-disable-next-line react/display-name
-			({
-				route,
-				jumpTo,
-			}: {
-				route: { key: string; title: string }
-				jumpTo: (key: string) => void
-			}) => {
-				switch (route.key) {
-					case 'main':
-						return (
-							<PlayerMainTab
-								sheetRef={sheetRef}
-								jumpTo={jumpTo}
-								imageRef={coverRef}
-							/>
-						)
-					case 'lyrics':
-						return <Lyrics currentIndex={index} />
-				}
-			},
-		[coverRef, index],
-	)
+	const renderScene = ({
+		route,
+		jumpTo,
+	}: {
+		route: { key: string; title: string }
+		jumpTo: (key: string) => void
+	}) => {
+		switch (route.key) {
+			case 'main':
+				return (
+					<PlayerMainTab
+						sheetRef={sheetRef}
+						jumpTo={jumpTo}
+						imageRef={coverRef}
+						onPresent={() => setQueueVisible(true)}
+					/>
+				)
+			case 'lyrics':
+				return <Lyrics currentIndex={index} />
+		}
+	}
 
 	const scrimColors = useMemo(() => {
 		if (playerBackgroundStyle !== 'gradient')
@@ -164,18 +160,45 @@ export default function PlayerPage() {
 		}
 	}, [colorScheme, playerBackgroundStyle])
 
-	usePreventRemove(index === 1, () => setIndex(0))
+	const [queueVisible, setQueueVisible] = useState(false)
+
+	usePreventRemove(index === 1 || menuVisible || queueVisible, () => {
+		if (menuVisible) {
+			setMenuVisible(false)
+			return
+		}
+		if (queueVisible) {
+			const sheet = sheetRef.current
+			if (!sheet) {
+				setQueueVisible(false)
+				return
+			}
+			sheet
+				.dismiss()
+				.catch(() => {
+					// Ignore error if view not found or already dismissed
+				})
+				.finally(() => {
+					setQueueVisible(false)
+				})
+			return
+		}
+		if (index === 1) {
+			setIndex(0)
+		}
+	})
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
 
 	useEffect(() => {
+		// @ts-expect-error -- 虽然我们项目内已经移除了 streamer 选项，但部分存量用户可能还在这个选项，需要帮他回退
 		if (playerBackgroundStyle === 'streamer') {
 			toast.show(
 				'因为会对性能造成较大影响，并且也不好看，所以我们移除了流光效果，已为您回退到渐变模式',
 			)
 			setSettings({ playerBackgroundStyle: 'gradient' })
 		}
-	})
+	}, [playerBackgroundStyle, setSettings])
 
 	const FallbackBackground = useMemo(
 		() => (
@@ -268,7 +291,12 @@ export default function PlayerPage() {
 					setMenuVisible={setMenuVisible}
 				/>
 
-				<PlayerQueueModal sheetRef={sheetRef} />
+				<PlayerQueueModal
+					sheetRef={sheetRef}
+					isVisible={queueVisible}
+					onDidDismiss={() => setQueueVisible(false)}
+					onDidPresent={() => setQueueVisible(true)}
+				/>
 			</View>
 		</>
 	)

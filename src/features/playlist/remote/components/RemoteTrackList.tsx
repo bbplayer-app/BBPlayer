@@ -3,7 +3,7 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
-import type { ListRenderItem } from '@shopify/flash-list'
+import type { FlashListRef, ListRenderItem } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -35,7 +35,10 @@ interface TrackListProps {
 	showItemCover?: boolean
 	isFetchingNextPage?: boolean
 	hasNextPage?: boolean
-	renderCustomItem?: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>
+	renderCustomItem?: (
+		info: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>,
+	) => React.ReactElement | null
+	listRef?: React.Ref<FlashListRef<BilibiliTrack>>
 }
 
 export interface ExtraData {
@@ -116,6 +119,7 @@ export function TrackList({
 	isFetchingNextPage,
 	hasNextPage,
 	renderCustomItem,
+	listRef,
 }: TrackListProps) {
 	const { colors } = useTheme()
 	const haveTrack = useCurrentTrack()
@@ -172,6 +176,7 @@ export function TrackList({
 	return (
 		<>
 			<FlashList
+				ref={listRef}
 				data={tracks}
 				extraData={extraData}
 				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
