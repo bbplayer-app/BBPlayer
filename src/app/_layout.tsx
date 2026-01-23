@@ -4,7 +4,7 @@ import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
 import { initializeSentry } from '@/lib/config/sentry'
-import drizzleDb, { expoDb } from '@/lib/db/db'
+import drizzleDb from '@/lib/db/db'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -18,7 +18,6 @@ import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
 import * as Network from 'expo-network'
 import { SplashScreen, Stack, useNavigationContainerRef } from 'expo-router'
-import { useSQLiteDevTools } from 'expo-sqlite-devtools'
 import * as Updates from 'expo-updates'
 import { useCallback, useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -54,9 +53,6 @@ export default Sentry.wrap(function RootLayout() {
 	useCheckUpdate()
 
 	useLogger(ref)
-
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-call
-	useSQLiteDevTools(expoDb)
 
 	onlineManager.setEventListener((setOnline) => {
 		const eventSubscription = Network.addNetworkStateListener((state) => {

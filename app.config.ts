@@ -38,7 +38,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 	icon: './assets/images/icon.png',
 	scheme: 'bbplayer',
 	userInterfaceStyle: 'automatic',
-	newArchEnabled: true,
 	platforms: ['android'],
 	android: {
 		adaptiveIcon: {
@@ -106,6 +105,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
 				},
+				buildReactNativeFromSource: true,
+				useHermesV1: true,
 			},
 		],
 		[
