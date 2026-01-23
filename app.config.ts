@@ -105,8 +105,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
 				},
-				buildReactNativeFromSource: true,
-				useHermesV1: true,
 			},
 		],
 		[

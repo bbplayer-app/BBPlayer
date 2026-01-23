@@ -10,7 +10,6 @@
 ### Changed
 
 - 升级到 expo55-beta
-- 启用 hermes v1
 
 ### Added
 
