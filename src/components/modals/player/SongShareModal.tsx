@@ -28,7 +28,6 @@ const SongShareModal = () => {
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(true)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
-	const [colorReady, setColorReady] = useState(false)
 	const imageRef = useImage(
 		{ uri: currentTrack?.coverUrl ?? undefined },
 		{
@@ -51,11 +50,6 @@ const SongShareModal = () => {
 					}
 				})
 				.catch(() => undefined)
-				.finally(() => {
-					setColorReady(true)
-				})
-		} else {
-			setColorReady(true)
 		}
 	}, [imageRef, theme.dark])
 
@@ -82,11 +76,20 @@ const SongShareModal = () => {
 		}
 	}, [])
 
+	// 当卡片内的图片加载完成时触发预览生成
+	const onCardImageLoad = useCallback(() => {
+		void generatePreview()
+	}, [generatePreview])
+
+	// 如果没有封面图片，Image 不会触发 onLoad/onError，需要 fallback
 	useEffect(() => {
-		if (colorReady) {
-			void generatePreview()
+		if (!currentTrack?.coverUrl) {
+			const immediate = setImmediate(() => {
+				void generatePreview()
+			})
+			return () => clearImmediate(immediate)
 		}
-	}, [colorReady, generatePreview])
+	}, [currentTrack?.coverUrl, generatePreview])
 
 	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
@@ -203,7 +206,7 @@ const SongShareModal = () => {
 						</Text>
 						<Button
 							mode='outlined'
-							onPress={generatePreview}
+							onPress={() => generatePreview()}
 							icon='refresh'
 						>
 							重试
@@ -243,6 +246,7 @@ const SongShareModal = () => {
 						track={currentTrack}
 						viewShotRef={viewShotRef}
 						backgroundColor={cardColor}
+						onImageLoad={onCardImageLoad}
 					/>
 				)}
 			</View>
