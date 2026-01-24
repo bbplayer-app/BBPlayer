@@ -13,7 +13,8 @@
 
 ### Added
 
-- prevent progress bar regression & add debounce to PlayButton （Thanks to @longlin10086 #153）
+- prevent progress bar regression & add debounce to PlayButton (Thanks to @longlin10086 #153)
+- fix: update PlaySlide info after song's change (Thanks to @longlin10086 #159)
 
 ## [2.2.0] - 2026-01-23
 
