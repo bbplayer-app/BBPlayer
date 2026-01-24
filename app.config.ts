@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { execSync } from 'child_process'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 import { version } from './package.json'
