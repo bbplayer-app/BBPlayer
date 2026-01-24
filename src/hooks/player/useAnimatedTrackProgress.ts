@@ -37,15 +37,26 @@ export default function useAnimatedTrackProgress(background = false) {
 	}, [isActive, position, duration, buffered, background])
 
 	useEffect(() => {
-		void Promise.all([
-			Orpheus.getPosition(),
-			Orpheus.getDuration(),
-			Orpheus.getBuffered(),
-		]).then(([pos, dur, buf]) => {
-			position.set(pos)
-			duration.set(dur)
-			buffered.set(buf)
-		})
+		const fetchProgress = () => {
+			void Promise.all([
+				Orpheus.getPosition(),
+				Orpheus.getDuration(),
+				Orpheus.getBuffered(),
+			]).then(([pos, dur, buf]) => {
+				position.set(pos)
+				duration.set(dur)
+				buffered.set(buf)
+			})
+		}
+
+		fetchProgress()
+
+		// 监听曲目变化，重新获取进度信息
+		const trackStartedSub = Orpheus.addListener('onTrackStarted', fetchProgress)
+
+		return () => {
+			trackStartedSub.remove()
+		}
 	}, [buffered, duration, position])
 
 	return { position, duration, buffered }
