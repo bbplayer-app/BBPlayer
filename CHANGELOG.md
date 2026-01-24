@@ -10,6 +10,8 @@
 ### Changed
 
 - 升级到 expo55-beta
+- 优化 version code 逻辑，使用 commit 数量作为 version code
+- 增加 nightly 构建
 
 ### Added
 
