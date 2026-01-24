@@ -50,7 +50,7 @@ const info = (message: string, options?: Options) => {
 }
 
 const dismiss = (id?: string | number) => {
-	if (id) {
+	if (id !== undefined && id !== null) {
 		sonner.dismiss(id)
 	} else {
 		sonner.dismiss()
