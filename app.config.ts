@@ -1,9 +1,26 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+import { execSync } from 'child_process'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
-import { version, versionCode } from './package.json'
+import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+
+// 使用 git commit 数量作为 versionCode
+const getVersionCode = (): number => {
+	try {
+		const commitCount = execSync('git rev-list --count HEAD', {
+			encoding: 'utf-8',
+		}).trim()
+		return parseInt(commitCount, 10)
+	} catch (error) {
+		throw new Error(
+			`Failed to get git commit count for versionCode: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+}
+
+const versionCode = getVersionCode()
 
 const getUniqueIdentifier = () => {
 	if (IS_DEV) {
