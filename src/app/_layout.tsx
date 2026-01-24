@@ -1,5 +1,4 @@
 import AppProviders from '@/components/providers'
-import { toastConfig } from '@/components/toast/ToastConfig'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
@@ -23,7 +22,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
-import Toast from 'react-native-toast-message'
+import { Toaster } from 'sonner-native'
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
@@ -252,7 +251,7 @@ export default Sentry.wrap(function RootLayout() {
 					options={{ headerShown: false }}
 				/>
 			</Stack>
-			<Toast config={toastConfig} />
+			<Toaster />
 		</AppProviders>
 	)
 })
