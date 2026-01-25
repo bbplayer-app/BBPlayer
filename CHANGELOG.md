@@ -5,7 +5,24 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.2.2] - 2026-01-25
+
+### Changed
+
+- 升级到 expo55-beta
+- 优化 version code 逻辑，使用 commit 数量作为 version code
+- 增加 nightly 构建
+- 切换到 sonner-native
+- 升级 expo-image-theme-colors 依赖到 0.2.0，支持传入图片 url 提取封面色
+- 升级 expo-orpheus 到 0.9.4，支持断开蓝牙时暂停播放
+
+### Added
+
+- prevent progress bar regression & add debounce to PlayButton (Thanks to @longlin10086 #153)
+- fix: update PlaySlide info after song's change (Thanks to @longlin10086 #159)
+- feat: add PlayControls overlay to LyricPage (Thanks to @longlin10086 #164)
+
+## [2.2.0] - 2026-01-23
 
 ### Changed
 
@@ -224,7 +241,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.9...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.2...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -238,3 +255,5 @@
 [2.1.6]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.5...v2.1.6
 [2.1.8]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.6...v2.1.8
 [2.1.9]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.8...v2.1.9
+[2.2.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.9...v2.2.0
+[2.2.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.0...v2.2.2

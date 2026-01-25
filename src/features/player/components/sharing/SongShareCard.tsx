@@ -10,12 +10,14 @@ interface SongShareCardProps {
 	track: Track
 	viewShotRef: React.RefObject<ViewShot | null>
 	backgroundColor: string
+	onImageLoad?: () => void
 }
 
 export const SongShareCard = ({
 	track,
 	viewShotRef,
 	backgroundColor,
+	onImageLoad,
 }: SongShareCardProps) => {
 	const shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(track.uniqueKey)}&title=${encodeURIComponent(track.title)}&cover=${encodeURIComponent(track.coverUrl ?? '')}`
 
@@ -39,6 +41,8 @@ export const SongShareCard = ({
 						source={{ uri: track.coverUrl ?? undefined }}
 						style={styles.cover}
 						contentFit='cover'
+						onLoad={onImageLoad}
+						onError={onImageLoad}
 					/>
 				</View>
 

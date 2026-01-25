@@ -1,3 +1,4 @@
+import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
 import useLyricSync from '@/features/player/hooks/useLyricSync'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
@@ -257,6 +258,8 @@ const renderItem = ({
 	)
 }
 
+const SCROLL_DIRECTION_THRESHOLD = 8
+
 const Lyrics = memo(function Lyrics({
 	currentIndex,
 }: {
@@ -275,6 +278,8 @@ const Lyrics = memo(function Lyrics({
 	const scrollY = useSharedValue(0)
 	const contentHeight = useSharedValue(0)
 	const viewportHeight = useSharedValue(0)
+	const scrollDirection = useSharedValue<'up' | 'down' | 'idle'>('idle')
+	const lastScrollY = useSharedValue(0)
 	const track = useCurrentTrack()
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
@@ -308,9 +313,21 @@ const Lyrics = memo(function Lyrics({
 
 	const scrollHandler = useAnimatedScrollHandler({
 		onScroll: (e) => {
-			scrollY.value = e.contentOffset.y
+			const currentY = e.contentOffset.y
+			const deltaY = currentY - lastScrollY.value
+
+			// 检测滚动方向
+			if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
+				scrollDirection.value = deltaY > 0 ? 'up' : 'down'
+			}
+
+			lastScrollY.value = currentY
+			scrollY.value = currentY
 			contentHeight.value = e.contentSize.height
 			viewportHeight.value = e.layoutMeasurement.height
+		},
+		onEndDrag: () => {
+			scrollDirection.value = 'idle'
 		},
 	})
 
@@ -345,6 +362,17 @@ const Lyrics = memo(function Lyrics({
 		}
 		console.log('保存歌词偏移量成功:', lyrics.offset)
 	}
+
+	const handleEditLyrics = useCallback(() => {
+		if (!track || !lyrics) return
+		useModalStore
+			.getState()
+			.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+	}, [track, lyrics])
+
+	const handleOpenOffsetMenu = useCallback(() => {
+		setOffsetMenuVisible(true)
+	}, [])
 
 	const keyExtractor = useCallback(
 		(item: LyricLine, index: number) => `${index}_${item.timestamp * 1000}`,
@@ -425,7 +453,7 @@ const Lyrics = memo(function Lyrics({
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
-					paddingTop: windowHeight / 2,
+					paddingTop: windowHeight * 0.02,
 				}}
 				showsVerticalScrollIndicator={false}
 				onScrollEndDrag={onUserScrollEnd}
@@ -477,43 +505,14 @@ const Lyrics = memo(function Lyrics({
 				</MaskedView>
 			</View>
 
-			{/* 歌词偏移量调整显示按钮 */}
-			<View style={styles.controlsContainer}>
-				<View style={styles.controlsButtonContainer}>
-					<RectButton
-						style={styles.controlButton}
-						enabled={!offsetMenuVisible}
-						onPress={() =>
-							useModalStore
-								.getState()
-								.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
-						}
-					>
-						<Icon
-							source='pencil'
-							size={20}
-							color={
-								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-							}
-						/>
-					</RectButton>
-					<RectButton
-						style={styles.controlButton}
-						// @ts-expect-error -- 不想管
-						ref={offsetMenuAnchorRef}
-						enabled={!offsetMenuVisible}
-						onPress={() => setOffsetMenuVisible(true)}
-					>
-						<Icon
-							source='swap-vertical-circle-outline'
-							size={20}
-							color={
-								offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-							}
-						/>
-					</RectButton>
-				</View>
-			</View>
+			{/* 播放器控件覆盖层 */}
+			<LyricsControlOverlay
+				scrollDirection={scrollDirection}
+				offsetMenuVisible={offsetMenuVisible}
+				onEditLyrics={handleEditLyrics}
+				onOpenOffsetMenu={handleOpenOffsetMenu}
+				offsetMenuAnchorRef={offsetMenuAnchorRef}
+			/>
 
 			{/* 歌词偏移量调整面板 */}
 			<LyricsOffsetControl
@@ -608,24 +607,10 @@ const styles = StyleSheet.create({
 	},
 	lyricsContainer: {
 		flex: 1,
-		paddingBottom: 10,
 	},
 	lyricsContent: {
 		flex: 1,
 		flexDirection: 'column',
-	},
-	controlsContainer: {
-		paddingHorizontal: 16,
-		position: 'absolute',
-		bottom: 20,
-		right: 0,
-	},
-	controlsButtonContainer: {
-		flexDirection: 'column',
-	},
-	controlButton: {
-		borderRadius: 99999,
-		padding: 10,
 	},
 	gradient: {
 		height: 60,

@@ -59,7 +59,7 @@ export default function useLyricSync(
 			void flashListRef.current?.scrollToIndex({
 				animated: true,
 				index: currentLyricIndex,
-				viewPosition: 0.4,
+				viewPosition: 0.15,
 			})
 		}, 2000)
 	}
@@ -124,7 +124,7 @@ export default function useLyricSync(
 		void flashListRef.current?.scrollToIndex({
 			animated: true,
 			index: currentLyricIndex,
-			viewPosition: 0.4,
+			viewPosition: 0.15,
 		})
 	}, [currentLyricIndex, flashListRef, lyrics.length])
 

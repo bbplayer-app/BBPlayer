@@ -1,0 +1,271 @@
+name: Nightly Build
+
+on:
+  # 支持 Actions 页面手动触发
+  workflow_dispatch:
+
+  # 支持 PR 评论触发
+  issue_comment:
+    types: [created]
+
+# 并发控制：同一时间只允许一个 nightly 构建
+# 新的构建会取消正在进行的构建
+concurrency:
+  group: nightly-build
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22.x
+  PNPM_VERSION: 10
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  NIGHTLY_TAG: nightly
+  ALLOWED_USER: roitium
+
+jobs:
+  check-trigger:
+    permissions:
+      issues: write
+      contents: read
+      pull-requests: write
+    # 手动触发时直接通过，PR 评论触发时需要检查条件
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       github.event.comment.body == '/build-nightly')
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      pr_number: ${{ steps.context.outputs.pr_number }}
+      head_sha: ${{ steps.context.outputs.head_sha }}
+      trigger_type: ${{ steps.context.outputs.trigger_type }}
+    steps:
+      - name: 🔐 Check user permission
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # 手动触发，直接允许
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual trigger by ${{ github.actor }}"
+          elif [[ "${{ github.event.comment.user.login }}" == "${{ env.ALLOWED_USER }}" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "✅ User ${{ github.event.comment.user.login }} is allowed to trigger nightly build"
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "❌ User ${{ github.event.comment.user.login }} is not allowed to trigger nightly build"
+          fi
+
+      - name: 📝 React to comment
+        if: github.event_name == 'issue_comment' && steps.check.outputs.should_build == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: 🔍 Determine build context
+        if: steps.check.outputs.should_build == 'true'
+        id: context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 获取默认分支的最新 commit
+            const repo = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const defaultBranch = repo.data.default_branch;
+
+            const ref = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `heads/${defaultBranch}`
+            });
+
+            core.setOutput('head_sha', ref.data.object.sha);
+
+            if (context.eventName === 'workflow_dispatch') {
+              core.setOutput('pr_number', '');
+              core.setOutput('trigger_type', 'manual');
+            } else {
+              core.setOutput('pr_number', context.issue.number);
+              core.setOutput('trigger_type', 'pr_comment');
+            }
+
+  build:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_build == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    env:
+      ABI_FILTERS: arm64-v8a
+
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check-trigger.outputs.head_sha }}
+          fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
+
+      - name: 🤖 Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ env.EXPO_TOKEN }}
+          packager: pnpm
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: ⚙️ Prepare Variables
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          COMMIT_SHA="${{ needs.check-trigger.outputs.head_sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          VERSION_CODE=$(git rev-list --count HEAD)
+
+          APK_NAME="bbplayer-nightly-${SHORT_SHA}"
+
+          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
+          echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
+          echo "APK_PATH=${{ runner.temp }}/${APK_NAME}.apk" >> $GITHUB_ENV
+          echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+
+          echo "📊 Calculated VERSION_CODE: ${VERSION_CODE}"
+
+      - name: 🚀 Build APK
+        run: eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
+        env:
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+
+      - name: 📦 Upload Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK_PATH }}
+          if-no-files-found: error
+
+      - name: 🏷️ Update Nightly Release
+        run: |
+          RELEASE_NOTES="## 🌙 Nightly Build
+
+          **⚠️ 警告：这是自动构建的开发版本，可能不稳定**
+
+          ---
+
+          | 信息 | 值 |
+          |------|-----|
+          | 📝 Commit | [\`${{ env.SHORT_SHA }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_SHA }}) |
+          | 🕐 构建时间 | ${{ env.TIMESTAMP }} UTC |
+          | 📦 架构 | arm64-v8a |"
+
+          # 检查 nightly release 是否存在
+          if gh release view ${{ env.NIGHTLY_TAG }} > /dev/null 2>&1; then
+            echo "Nightly release exists, updating..."
+            
+            # 删除所有旧的 APK 附件
+            gh release view ${{ env.NIGHTLY_TAG }} --json assets -q '.assets[].name' | while read asset; do
+              if [[ "$asset" == *.apk ]]; then
+                echo "Deleting old asset: $asset"
+                gh release delete-asset ${{ env.NIGHTLY_TAG }} "$asset" --yes || true
+              fi
+            done
+            
+            # 上传新的 APK
+            gh release upload ${{ env.NIGHTLY_TAG }} "${{ env.APK_PATH }}" --clobber
+            
+            # 更新 release notes
+            gh release edit ${{ env.NIGHTLY_TAG }} \
+              --title "Nightly Build" \
+              --notes "$RELEASE_NOTES"
+          else
+            echo "Creating new nightly release..."
+            gh release create ${{ env.NIGHTLY_TAG }} \
+              "${{ env.APK_PATH }}" \
+              --title "Nightly Build" \
+              --prerelease \
+              --notes "$RELEASE_NOTES"
+          fi
+
+      - name: 🔄 Update Nightly Tag
+        run: |
+          # 强制更新 nightly tag 指向当前构建的 commit
+          git tag -f ${{ env.NIGHTLY_TAG }} ${{ env.COMMIT_SHA }}
+          git push -f origin ${{ env.NIGHTLY_TAG }}
+
+  notify:
+    needs: [check-trigger, build]
+    # 只在 PR 评论触发时发送通知
+    if: always() && needs.check-trigger.outputs.should_build == 'true' && needs.check-trigger.outputs.trigger_type == 'pr_comment'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: 💬 Send build notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const buildResult = "${{ needs.build.result }}";
+            const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
+            const headSha = "${{ needs.check-trigger.outputs.head_sha }}";
+            const shortSha = headSha.substring(0, 7);
+            const runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";
+            const releaseUrl = "${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NIGHTLY_TAG }}";
+
+            let body;
+            if (buildResult === 'success') {
+              body = `## ✅ Nightly 构建成功
+
+            | 信息 | 值 |
+            |------|-----|
+            | 📝 Commit | \`${shortSha}\` |
+            | 📦 下载 | [Nightly Release](${releaseUrl}) |
+            | 🔗 详情 | [Workflow](${runUrl}) |
+
+            APK 已上传到 [Nightly Release](${releaseUrl}) 🚀`;
+            } else if (buildResult === 'cancelled') {
+              body = `## ⏹️ Nightly 构建已取消
+
+            构建被新的 \`/build-nightly\` 请求取消。
+
+            - **Commit:** \`${shortSha}\`
+            - **详情:** [Workflow](${runUrl})`;
+            } else {
+              body = `## ❌ Nightly 构建失败
+
+            - **Commit:** \`${shortSha}\`
+            - **详情:** [Workflow](${runUrl})
+
+            请查看 workflow 日志了解详情。`;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });

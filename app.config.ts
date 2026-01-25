@@ -1,9 +1,45 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+import { execSync } from 'child_process'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
-import { version, versionCode } from './package.json'
+import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+
+// 使用 git commit 数量作为 versionCode
+const getVersionCode = (): number => {
+	const isCI = process.env.CI === 'true' || process.env.CI === '1'
+
+	// 优先使用环境变量（CI 环境）
+	if (process.env.VERSION_CODE) {
+		const versionCode = parseInt(process.env.VERSION_CODE, 10)
+		if (!isNaN(versionCode) && versionCode > 0) {
+			return versionCode
+		}
+	}
+
+	// CI 环境中必须提供 VERSION_CODE
+	if (isCI) {
+		throw new Error(
+			'VERSION_CODE environment variable is required in CI environment. ' +
+				'EAS build does not include .git directory, so git commands will fail.',
+		)
+	}
+
+	// 本地开发时使用 git commit count
+	try {
+		const commitCount = execSync('git rev-list --count HEAD', {
+			encoding: 'utf-8',
+		}).trim()
+		return parseInt(commitCount, 10)
+	} catch (error) {
+		throw new Error(
+			`Failed to get git commit count for versionCode: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+}
+
+const versionCode = getVersionCode()
 
 const getUniqueIdentifier = () => {
 	if (IS_DEV) {
@@ -38,7 +74,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 	icon: './assets/images/icon.png',
 	scheme: 'bbplayer',
 	userInterfaceStyle: 'automatic',
-	newArchEnabled: true,
 	platforms: ['android'],
 	android: {
 		adaptiveIcon: {

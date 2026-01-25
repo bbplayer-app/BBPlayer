@@ -87,12 +87,14 @@ export default function FavoritePage() {
 			toast.info('收藏夹为空，无需同步')
 			return
 		}
-		toast.show('同步中...')
+		const toastId = 'sync-playlist'
+		toast.show('同步中...', { id: toastId, duration: Infinity })
 		setRefreshing(true)
 		syncFavorite(
 			{
 				remoteSyncId: Number(id),
 				type: 'favorite',
+				toastId,
 			},
 			{
 				onSuccess: (id) => {

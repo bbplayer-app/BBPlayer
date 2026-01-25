@@ -76,12 +76,14 @@ export default function CollectionPage() {
 	const { mutate: syncCollection } = usePlaylistSync()
 
 	const handleSync = useCallback(() => {
-		toast.show('同步中...')
+		const toastId = 'sync-playlist'
+		toast.show('同步中...', { id: toastId, duration: Infinity })
 		setRefreshing(true)
 		syncCollection(
 			{
 				remoteSyncId: Number(id),
 				type: 'collection',
+				toastId,
 			},
 			{
 				onSuccess: (id) => {

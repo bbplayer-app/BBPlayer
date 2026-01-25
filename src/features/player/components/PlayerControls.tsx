@@ -10,14 +10,133 @@ import {
 } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 
-export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
-	const { colors } = useTheme()
+interface MainPlaybackControlsProps {
+	size?: 'normal' | 'compact'
+	onInteraction?: () => void
+}
+
+/**
+ * 主播放控制按钮组件（上一曲/播放暂停/下一曲）
+ * 可在主播放器和歌词页面复用
+ */
+export function MainPlaybackControls({
+	size = 'normal',
+	onInteraction,
+}: MainPlaybackControlsProps) {
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
+
+	// 对 BUFFERING 状态和 isPlaying 状态添加防抖，避免 seek 时短暂闪烁图标
+	const [debouncedBuffering, setDebouncedBuffering] = useState(false)
+	const [debouncedIsPlaying, setDebouncedIsPlaying] = useState(isPlaying)
+	const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const playingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		if (state === PlaybackState.BUFFERING) {
+			bufferingTimeoutRef.current = setTimeout(() => {
+				setDebouncedBuffering(true)
+			}, 200)
+		} else {
+			if (bufferingTimeoutRef.current) {
+				clearTimeout(bufferingTimeoutRef.current)
+				bufferingTimeoutRef.current = null
+			}
+			setDebouncedBuffering(false)
+		}
+		return () => {
+			if (bufferingTimeoutRef.current) {
+				clearTimeout(bufferingTimeoutRef.current)
+			}
+		}
+	}, [state])
+
+	useEffect(() => {
+		if (playingTimeoutRef.current) {
+			clearTimeout(playingTimeoutRef.current)
+			playingTimeoutRef.current = null
+		}
+		if (isPlaying) {
+			// 播放状态立即更新
+			setDebouncedIsPlaying(true)
+		} else {
+			// 暂停状态延迟更新，避免 seek 时短暂闪烁
+			playingTimeoutRef.current = setTimeout(() => {
+				setDebouncedIsPlaying(false)
+			}, 200)
+		}
+		return () => {
+			if (playingTimeoutRef.current) {
+				clearTimeout(playingTimeoutRef.current)
+			}
+		}
+	}, [isPlaying])
+
+	const finalPlayingIndicator = debouncedBuffering
+		? 'loading'
+		: debouncedIsPlaying
+			? 'pause'
+			: 'play'
+
+	const skipButtonSize = size === 'compact' ? 28 : 32
+	const playButtonSize = size === 'compact' ? 40 : 48
+	const gap = size === 'compact' ? 24 : 40
+
+	return (
+		<View style={[styles.mainControlsContainer, { gap }]}>
+			<IconButton
+				icon='skip-previous'
+				size={skipButtonSize}
+				onPress={() => {
+					onInteraction?.()
+					void Haptics.performAndroidHapticsAsync(
+						Haptics.AndroidHaptics.Context_Click,
+					)
+					void Orpheus.skipToPrevious()
+				}}
+			/>
+			<IconButton
+				icon={finalPlayingIndicator}
+				size={playButtonSize}
+				onPress={async () => {
+					onInteraction?.()
+					void Haptics.performAndroidHapticsAsync(
+						Haptics.AndroidHaptics.Context_Click,
+					)
+					const isPlaying = await Orpheus.getIsPlaying()
+					logInstance.debug('isPlaying', isPlaying)
+					if (isPlaying) {
+						await Orpheus.pause()
+					} else {
+						// 或许可以解决 play 无响应的问题？
+						// 好吧并不能，我是小丑
+						await Orpheus.pause()
+						await Orpheus.play()
+					}
+				}}
+				mode='contained'
+			/>
+			<IconButton
+				icon='skip-next'
+				size={skipButtonSize}
+				onPress={() => {
+					onInteraction?.()
+					void Haptics.performAndroidHapticsAsync(
+						Haptics.AndroidHaptics.Context_Click,
+					)
+					void Orpheus.skipToNext()
+				}}
+			/>
+		</View>
+	)
+}
+
+export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
+	const { colors } = useTheme()
 	const { data: shuffleMode, refetch: refetchShuffleMode } = useQuery({
 		queryKey: ['shuffleMode'],
 		queryFn: () => Orpheus.getShuffleMode(),
@@ -27,9 +146,6 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
-
-	const finalPlayingIndicator =
-		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
 
 	useEffect(() => {
 		void Orpheus.getRepeatMode().then(setRepeatMode)
@@ -45,47 +161,8 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 
 	return (
 		<View>
-			<View style={styles.mainControlsContainer}>
-				<IconButton
-					icon='skip-previous'
-					size={32}
-					onPress={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Context_Click,
-						)
-						void Orpheus.skipToPrevious()
-					}}
-				/>
-				<IconButton
-					icon={finalPlayingIndicator}
-					size={48}
-					onPress={async () => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Context_Click,
-						)
-						const isPlaying = await Orpheus.getIsPlaying()
-						logInstance.debug('isPlaying', isPlaying)
-						if (isPlaying) {
-							await Orpheus.pause()
-						} else {
-							// 或许可以解决 play 无响应的问题？
-							// 好吧并不能，我是小丑
-							await Orpheus.pause()
-							await Orpheus.play()
-						}
-					}}
-					mode='contained'
-				/>
-				<IconButton
-					icon='skip-next'
-					size={32}
-					onPress={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Context_Click,
-						)
-						void Orpheus.skipToNext()
-					}}
-				/>
+			<View style={styles.mainControlsWrapper}>
+				<MainPlaybackControls />
 			</View>
 			<View style={styles.secondaryControlsContainer}>
 				<Tooltip title='切换随机播放模式'>
@@ -168,12 +245,13 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 }
 
 const styles = StyleSheet.create({
-	mainControlsContainer: {
+	mainControlsWrapper: {
 		marginTop: 24,
+	},
+	mainControlsContainer: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
-		gap: 40,
 	},
 	secondaryControlsContainer: {
 		marginTop: 12,

@@ -90,6 +90,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ needs.setup.outputs.commitSha }}
+          fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4

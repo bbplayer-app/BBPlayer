@@ -79,7 +79,11 @@ function TextWithAnimation({
 	)
 }
 
-export function PlayerSlider() {
+interface PlayerSliderProps {
+	onInteraction?: () => void
+}
+
+export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
 	const { position, duration } = useAnimatedTrackProgress()
 
@@ -104,11 +108,15 @@ export function PlayerSlider() {
 			void Orpheus.seekTo(time)
 
 			seekTimeoutRef.current = setTimeout(() => {
-				isSeeking.set(false)
-				seekTimeoutRef.current = null
+				// 获取实际播放位置并同步，避免暂停状态下 position 未更新导致进度条回退
+				void Orpheus.getPosition().then((actualPosition) => {
+					position.set(actualPosition)
+					isSeeking.set(false)
+					seekTimeoutRef.current = null
+				})
 			}, 5000)
 		},
-		[isSeeking],
+		[isSeeking, position],
 	)
 
 	useAnimatedReaction(
@@ -160,11 +168,17 @@ export function PlayerSlider() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Drag_Start,
 			)
+			if (onInteraction) {
+				scheduleOnRN(onInteraction)
+			}
 		})
 		.onUpdate((e) => {
 			if (containerWidth.value === 0) return
 			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
 			scrubPosition.set(newProgress * (duration.value || 1))
+			if (onInteraction) {
+				scheduleOnRN(onInteraction)
+			}
 		})
 		.onFinalize(() => {
 			if (containerWidth.value === 0) return
@@ -178,6 +192,9 @@ export function PlayerSlider() {
 				Haptics.performAndroidHapticsAsync,
 				Haptics.AndroidHaptics.Gesture_End,
 			)
+			if (onInteraction) {
+				scheduleOnRN(onInteraction)
+			}
 
 			isScrubbing.set(false)
 		})

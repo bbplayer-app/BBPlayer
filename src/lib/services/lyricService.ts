@@ -96,7 +96,24 @@ class LyricService {
 			(e) => {
 				// All failed
 				// e will be an AggregateError if using Promise.any
-				return new FileSystemError('All lyric providers failed', { cause: e })
+				const aggregateError = e as AggregateError
+				const errors = Array.from(aggregateError.errors || [])
+				const errorMessages = errors
+					.map((err, index) => {
+						const providerName =
+							index === 0
+								? 'Netease'
+								: index === 1
+									? 'QQMusic'
+									: `Provider ${index}`
+						return `${providerName}: ${err instanceof Error ? err.message : String(err)}`
+					})
+					.join('; ')
+
+				return new FileSystemError(
+					`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
+					{ cause: e },
+				)
 			},
 		)
 	}

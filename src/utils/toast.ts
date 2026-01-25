@@ -1,64 +1,59 @@
-import type { ToastShowParams } from 'react-native-toast-message'
-import Toast from 'react-native-toast-message'
+import { toast as sonner } from 'sonner-native'
 import * as Haptics from './haptics'
 
-type Options = Omit<ToastShowParams, 'text1' | 'type'> & {
+interface Options {
 	description?: string
-	id?: string
+	id?: string | number
 	duration?: number
+	action?: {
+		label: string
+		onClick: () => void
+	}
 }
 
 const show = (message: string, options?: Options) => {
-	Toast.show({
-		type: 'info',
-		...options,
-		text1: message,
-		text2: options?.description,
-		visibilityTime: options?.duration ?? 3000,
-		autoHide: options?.duration === Number.POSITIVE_INFINITY ? false : true,
+	return sonner(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
 	})
 }
 
 const success = (message: string, options?: Options) => {
 	void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm)
-	Toast.show({
-		type: 'success',
-		...options,
-		text1: message,
-		text2: options?.description,
-		visibilityTime: options?.duration ?? 3000,
-		autoHide: options?.duration === Number.POSITIVE_INFINITY ? false : true,
+	return sonner.success(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
 	})
 }
 
 const error = (message: string, options?: Options) => {
 	void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject)
-	Toast.show({
-		type: 'error',
-		...options,
-		text1: message,
-		text2: options?.description,
-		visibilityTime: options?.duration ?? 3000,
-		autoHide: options?.duration === Number.POSITIVE_INFINITY ? false : true,
+	return sonner.error(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
 	})
 }
 
 const info = (message: string, options?: Options) => {
-	Toast.show({
-		type: 'info',
-		...options,
-		text1: message,
-		text2: options?.description,
-		visibilityTime: options?.duration ?? 3000,
-		autoHide: options?.duration === Number.POSITIVE_INFINITY ? false : true,
+	return sonner.info(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
 	})
 }
 
-const dismiss = (id?: string) => {
-	if (id) {
-		Toast.hide()
+const dismiss = (id?: string | number) => {
+	if (id !== undefined && id !== null) {
+		sonner.dismiss(id)
 	} else {
-		Toast.hide()
+		sonner.dismiss()
 	}
 }
 
