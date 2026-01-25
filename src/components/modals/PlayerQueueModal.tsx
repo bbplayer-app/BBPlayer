@@ -1,4 +1,4 @@
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import {
 	TrueSheet,
@@ -115,7 +115,7 @@ function PlayerQueueModal({
 	isVisible,
 	...props
 }: PlayerQueueModalProps) {
-	const currentTrack = useCurrentTrack()
+	const currentTrackId = useCurrentTrackId()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
@@ -132,9 +132,9 @@ function PlayerQueueModal({
 	})
 
 	const currentIndex = useMemo(() => {
-		if (!currentTrack || !queue) return -1
-		return queue.findIndex((t) => t.id === currentTrack.uniqueKey)
-	}, [currentTrack, queue])
+		if (!currentTrackId || !queue) return -1
+		return queue.findIndex((t) => t.id === currentTrackId)
+	}, [currentTrackId, queue])
 
 	const insets = useSafeAreaInsets()
 
@@ -142,10 +142,11 @@ function PlayerQueueModal({
 		async (index: number) => {
 			if (!queue) return
 			if (index === -1) return
+			if (queue[index].id === currentTrackId) return
 			await Orpheus.skipTo(index)
 			void refetch()
 		},
-		[queue, refetch],
+		[queue, refetch, currentTrackId],
 	)
 
 	const removeTrackHandler = useCallback(
@@ -164,11 +165,11 @@ function PlayerQueueModal({
 				track={item}
 				onSwitchTrack={switchTrackHandler}
 				onRemoveTrack={removeTrackHandler}
-				isCurrentTrack={item.id === currentTrack?.uniqueKey}
+				isCurrentTrack={item.id === currentTrackId}
 				index={index}
 			/>
 		),
-		[switchTrackHandler, removeTrackHandler, currentTrack?.uniqueKey],
+		[switchTrackHandler, removeTrackHandler, currentTrackId],
 	)
 
 	// eslint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
