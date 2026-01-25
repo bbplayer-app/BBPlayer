@@ -143,6 +143,7 @@ jobs:
           COMMIT_SHA="${{ needs.check-trigger.outputs.head_sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          VERSION_CODE=$(git rev-list --count HEAD)
 
           APK_NAME="bbplayer-nightly-${SHORT_SHA}"
 
@@ -152,9 +153,14 @@ jobs:
           echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
           echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+
+          echo "📊 Calculated VERSION_CODE: ${VERSION_CODE}"
 
       - name: 🚀 Build APK
         run: eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
+        env:
+          VERSION_CODE: ${{ env.VERSION_CODE }}
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v5

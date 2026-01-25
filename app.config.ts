@@ -8,6 +8,25 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
+	const isCI = process.env.CI === 'true' || process.env.CI === '1'
+
+	// 优先使用环境变量（CI 环境）
+	if (process.env.VERSION_CODE) {
+		const versionCode = parseInt(process.env.VERSION_CODE, 10)
+		if (!isNaN(versionCode) && versionCode > 0) {
+			return versionCode
+		}
+	}
+
+	// CI 环境中必须提供 VERSION_CODE
+	if (isCI) {
+		throw new Error(
+			'VERSION_CODE environment variable is required in CI environment. ' +
+				'EAS build does not include .git directory, so git commands will fail.',
+		)
+	}
+
+	// 本地开发时使用 git commit count
 	try {
 		const commitCount = execSync('git rev-list --count HEAD', {
 			encoding: 'utf-8',
