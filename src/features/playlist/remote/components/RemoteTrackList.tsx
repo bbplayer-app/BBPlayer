@@ -1,11 +1,12 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import type { FlashListRef, ListRenderItem } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useMemo, useState } from 'react'
+import type { RefObject } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -52,6 +53,7 @@ export interface ExtraData {
 	selectMode: boolean
 	enterSelectMode: (id: number) => void
 	showItemCover?: boolean
+	currentTrackIdRef: RefObject<string | undefined>
 }
 
 const renderItemDefault = ({
@@ -68,11 +70,15 @@ const renderItemDefault = ({
 		selectMode,
 		enterSelectMode,
 		showItemCover,
+		currentTrackIdRef,
 	} = extraData
 	return (
 		<TrackListItem
 			index={index}
-			onTrackPress={() => playTrack(item)}
+			onTrackPress={() => {
+				if (item.uniqueKey === currentTrackIdRef.current) return
+				playTrack(item)
+			}}
 			onMenuPress={(anchor) => handleMenuPress(item, anchor)}
 			showCoverImage={showItemCover ?? true}
 			data={{
@@ -122,7 +128,9 @@ export function TrackList({
 	listRef,
 }: TrackListProps) {
 	const { colors } = useTheme()
-	const haveTrack = useCurrentTrack()
+	const currentTrackId = useCurrentTrackId()
+	const currentTrackIdRef = useRef(currentTrackId)
+	currentTrackIdRef.current = currentTrackId
 	const insets = useSafeAreaInsets()
 
 	const [menuState, setMenuState] = useState<{
@@ -134,13 +142,6 @@ export function TrackList({
 		anchor: { x: 0, y: 0 },
 		track: null,
 	})
-
-	const handleMenuPress = useCallback(
-		(track: BilibiliTrack, anchor: { x: number; y: number }) => {
-			setMenuState({ visible: true, anchor, track })
-		},
-		[],
-	)
 
 	const handleDismissMenu = useCallback(() => {
 		setMenuState((prev) => ({ ...prev, visible: false }))
@@ -156,19 +157,11 @@ export function TrackList({
 			selected,
 			toggle,
 			playTrack,
-			handleMenuPress,
 			enterSelectMode,
 			showItemCover,
+			currentTrackIdRef,
 		}),
-		[
-			selectMode,
-			selected,
-			toggle,
-			playTrack,
-			handleMenuPress,
-			enterSelectMode,
-			showItemCover,
-		],
+		[selectMode, selected, toggle, playTrack, enterSelectMode, showItemCover],
 	)
 
 	const renderItem = renderCustomItem ?? renderItemDefault
@@ -188,7 +181,7 @@ export function TrackList({
 				contentContainerStyle={{
 					// 实现一个在 menu 弹出时，列表不可触摸的效果
 					pointerEvents: menuState.visible ? 'none' : 'auto',
-					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
+					paddingBottom: currentTrackId ? 70 + insets.bottom : insets.bottom,
 				}}
 				onEndReached={onEndReached}
 				ListFooterComponent={

@@ -1,4 +1,5 @@
 import { alert } from '@/components/modals/AlertModal'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -11,6 +12,7 @@ import { useMMKVBoolean } from 'react-native-mmkv'
 const SCOPE = 'UI.Playlist.Local.Player'
 
 export function useLocalPlaylistPlayer(playlistId: number) {
+	const currentTrackId = useCurrentTrackId()
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
 
@@ -45,6 +47,7 @@ export function useLocalPlaylistPlayer(playlistId: number) {
 
 	const handleTrackPress = useCallback(
 		(track: Track) => {
+			if (track.uniqueKey === currentTrackId) return
 			if (!ignoreAlertReplacePlaylist) {
 				alert(
 					'替换播放列表',
@@ -65,7 +68,12 @@ export function useLocalPlaylistPlayer(playlistId: number) {
 			}
 			void playAll(track.uniqueKey)
 		},
-		[ignoreAlertReplacePlaylist, playAll, setIgnoreAlertReplacePlaylist],
+		[
+			currentTrackId,
+			ignoreAlertReplacePlaylist,
+			playAll,
+			setIgnoreAlertReplacePlaylist,
+		],
 	)
 
 	return { playAll, handleTrackPress }
