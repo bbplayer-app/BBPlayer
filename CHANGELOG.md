@@ -18,6 +18,7 @@
 
 - prevent progress bar regression & add debounce to PlayButton (Thanks to @longlin10086 #153)
 - fix: update PlaySlide info after song's change (Thanks to @longlin10086 #159)
+- feat: add PlayControls overlay to LyricPage (Thanks to @longlin10086 #164)
 
 ## [2.2.0] - 2026-01-23
 

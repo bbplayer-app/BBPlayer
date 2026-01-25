@@ -153,7 +153,7 @@ jobs:
           echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
 
       - name: 🚀 Build APK
-        run: eas build --platform android --profile dev --local --no-wait --output=${{ env.APK_PATH }}
+        run: eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
 
       - name: 📦 Upload Artifact
         uses: actions/upload-artifact@v5
