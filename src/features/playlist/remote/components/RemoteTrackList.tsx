@@ -151,6 +151,13 @@ export function TrackList({
 		return String(item.id)
 	}, [])
 
+	const handleMenuPress = useCallback(
+		(track: BilibiliTrack, anchor: { x: number; y: number }) => {
+			setMenuState({ visible: true, anchor, track })
+		},
+		[],
+	)
+
 	const extraData = useMemo(
 		() => ({
 			selectMode,
@@ -160,8 +167,17 @@ export function TrackList({
 			enterSelectMode,
 			showItemCover,
 			currentTrackIdRef,
+			handleMenuPress,
 		}),
-		[selectMode, selected, toggle, playTrack, enterSelectMode, showItemCover],
+		[
+			selectMode,
+			selected,
+			toggle,
+			playTrack,
+			enterSelectMode,
+			showItemCover,
+			handleMenuPress,
+		],
 	)
 
 	const renderItem = renderCustomItem ?? renderItemDefault
