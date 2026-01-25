@@ -12,7 +12,7 @@ interface Options {
 }
 
 const show = (message: string, options?: Options) => {
-	sonner(message, {
+	return sonner(message, {
 		description: options?.description,
 		duration: options?.duration,
 		id: options?.id,
@@ -22,7 +22,7 @@ const show = (message: string, options?: Options) => {
 
 const success = (message: string, options?: Options) => {
 	void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm)
-	sonner.success(message, {
+	return sonner.success(message, {
 		description: options?.description,
 		duration: options?.duration,
 		id: options?.id,
@@ -32,7 +32,7 @@ const success = (message: string, options?: Options) => {
 
 const error = (message: string, options?: Options) => {
 	void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject)
-	sonner.error(message, {
+	return sonner.error(message, {
 		description: options?.description,
 		duration: options?.duration,
 		id: options?.id,
@@ -41,7 +41,7 @@ const error = (message: string, options?: Options) => {
 }
 
 const info = (message: string, options?: Options) => {
-	sonner.info(message, {
+	return sonner.info(message, {
 		description: options?.description,
 		duration: options?.duration,
 		id: options?.id,

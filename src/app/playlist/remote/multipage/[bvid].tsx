@@ -99,12 +99,14 @@ export default function MultipagePage() {
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
 	const handleSync = useCallback(() => {
-		toast.show('同步中...')
+		const toastId = 'sync-playlist'
+		toast.show('同步中...', { id: toastId, duration: Infinity })
 		setRefreshing(true)
 		syncMultipage(
 			{
 				remoteSyncId: bv2av(bvid),
 				type: 'multi_page',
+				toastId,
 			},
 			{
 				onSuccess: (id) => {

@@ -28,6 +28,7 @@ export const usePlaylistSync = () => {
 		}: {
 			remoteSyncId: number
 			type: Playlist['type']
+			toastId?: string
 		}) => {
 			const result = await syncFacade.sync(remoteSyncId, type)
 			if (result.isErr()) {
@@ -35,8 +36,8 @@ export const usePlaylistSync = () => {
 			}
 			return result.value
 		},
-		onSuccess: async (id) => {
-			toast.success('同步成功')
+		onSuccess: async (id, { toastId }) => {
+			toast.success('同步成功', { id: toastId })
 			if (!id) return
 			await Promise.all([
 				queryClient.invalidateQueries({
@@ -50,12 +51,16 @@ export const usePlaylistSync = () => {
 				}),
 			])
 		},
-		onError: (error, { remoteSyncId, type }) =>
+		onError: (error, { remoteSyncId, type, toastId }) => {
+			if (toastId) {
+				toast.dismiss(toastId)
+			}
 			toastAndLogError(
 				`同步播放列表失败: remoteSyncId=${remoteSyncId}, type=${type}`,
 				error,
 				SCOPE,
-			),
+			)
+		},
 	})
 }
 
