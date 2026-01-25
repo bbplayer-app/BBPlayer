@@ -54,8 +54,8 @@ importers:
         specifier: 0.1.0-beta.0
         version: 0.1.0-beta.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@roitium/expo-image-theme-colors':
-        specifier: ^0.1.1
-        version: 0.1.1(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        specifier: ^0.2.0
+        version: 0.2.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@roitium/expo-orpheus':
         specifier: ^0.9.3
         version: 0.9.3(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -2376,8 +2376,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  '@roitium/expo-image-theme-colors@0.1.1':
-    resolution: {integrity: sha512-OP0/tzLooBxRyXyrLJ5q2uGy+bEOv8GZvLtOvuGYKo0NexUBaxGxKhsb67nh7Pw0lxVQfig33CtjLNFzWwM8uA==}
+  '@roitium/expo-image-theme-colors@0.2.0':
+    resolution: {integrity: sha512-BCsQ1eebXksMEe1kdyM3xmoNPbRyKz0dBoJvZ0Udk02Ts0V8G6q2hlUG+jQbPIEJ9BZsPMBT2i8M1HWgLspBEA==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -9925,7 +9925,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@roitium/expo-image-theme-colors@0.1.1(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
+  '@roitium/expo-image-theme-colors@0.2.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
     dependencies:
       expo: 55.0.0-preview.5(@babel/core@7.28.4)(@expo/dom-webview@0.2.8)(@expo/metro-runtime@55.0.1)(expo-router@55.0.0-beta.2)(react-dom@19.1.0(react@19.2.0))(react-native-web@0.21.1(react-dom@19.1.0(react@19.2.0))(react@19.2.0))(react-native-webview@13.15.0(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react: 19.2.0

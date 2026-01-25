@@ -13,6 +13,7 @@
 - 优化 version code 逻辑，使用 commit 数量作为 version code
 - 增加 nightly 构建
 - 切换到 sonner-native
+- 升级 expo-image-theme-colors 依赖到 0.2.0，支持传入图片 url 提取封面色
 
 ### Added
 

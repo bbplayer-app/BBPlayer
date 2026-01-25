@@ -1,7 +1,7 @@
 {
 	"name": "bbplayer",
 	"main": "index.js",
-	"version": "2.2.1",
+	"version": "2.2.2",
 	"scripts": {
 		"start": "APP_VARIANT=development expo start",
 		"android": "expo run:android",
@@ -32,7 +32,7 @@
 		"@react-navigation/elements": "^2.9.5",
 		"@react-navigation/native": "^7.1.8",
 		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
-		"@roitium/expo-image-theme-colors": "^0.1.1",
+		"@roitium/expo-image-theme-colors": "^0.2.0",
 		"@roitium/expo-orpheus": "^0.9.3",
 		"@sentry/cli": "^2.58.4",
 		"@sentry/react-native": "~7.10.0",
