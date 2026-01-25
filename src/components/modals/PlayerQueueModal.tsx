@@ -142,7 +142,9 @@ function PlayerQueueModal({
 		async (index: number) => {
 			if (!queue) return
 			if (index === -1) return
-			if (queue[index].id === currentTrackId) return
+			const target = queue[index]
+			if (!target) return
+			if (target.id === currentTrackId) return
 			await Orpheus.skipTo(index)
 			void refetch()
 		},

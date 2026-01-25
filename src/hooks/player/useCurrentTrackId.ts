@@ -18,7 +18,7 @@ export function useCurrentTrackId() {
 			} catch (e) {
 				if (isMounted && currentRequestId === lastRequestIdRef.current) {
 					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useCurrentTrackId')
-					setTrackId(undefined)
+					// Keep the last known trackId to prevent playback issues
 				}
 				return
 			}
@@ -34,10 +34,14 @@ export function useCurrentTrackId() {
 		const sub = Orpheus.addListener('onTrackStarted', () => {
 			void fetchAndUpdate()
 		})
+		const sub2 = Orpheus.addListener('onTrackFinished', () => {
+			void fetchAndUpdate()
+		})
 
 		return () => {
 			isMounted = false
 			sub.remove()
+			sub2.remove()
 		}
 	}, [])
 
