@@ -211,6 +211,12 @@ jobs:
               --notes "$RELEASE_NOTES"
           fi
 
+      - name: 🔄 Update Nightly Tag
+        run: |
+          # 强制更新 nightly tag 指向当前构建的 commit
+          git tag -f ${{ env.NIGHTLY_TAG }} ${{ env.COMMIT_SHA }}
+          git push -f origin ${{ env.NIGHTLY_TAG }}
+
   notify:
     needs: [check-trigger, build]
     # 只在 PR 评论触发时发送通知
