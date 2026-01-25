@@ -25,6 +25,9 @@ env:
 
 jobs:
   check-trigger:
+    permissions:
+      issues: write
+      contents: read
     # 手动触发时直接通过，PR 评论触发时需要检查条件
     if: |
       github.event_name == 'workflow_dispatch' ||
