@@ -116,10 +116,12 @@ export default function LocalPlaylistPage() {
 			)
 			return
 		}
-		toast.show('同步中...')
+		const toastId = 'sync-playlist'
+		toast.show('同步中...', { id: toastId, duration: Infinity })
 		syncPlaylist({
 			remoteSyncId: playlistMetadata.remoteSyncId,
 			type: playlistMetadata.type,
+			toastId,
 		})
 	}, [playlistMetadata, syncPlaylist])
 
