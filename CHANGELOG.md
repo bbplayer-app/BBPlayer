@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [Unreleased]
+
+### Added
+
+- 集成 commitlint 和 lefthook 以规范 commit 信息
+
 ## [2.2.2] - 2026-01-25
 
 ### Changed
