@@ -2,7 +2,7 @@ import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { Track } from '@/types/core/media'
 import log from '@/utils/log'
 import { diffSets } from '@/utils/set'
-import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
+import { err, ok, type Result, type ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Services.SyncLocalToBilibili')
 
@@ -46,7 +46,7 @@ class SyncLocalToBilibiliService {
 		localTracks: Track[],
 		remotePlaylistId: number,
 	): Promise<
-		ResultAsync<
+		Result<
 			{
 				toAdd: string[]
 				toRemove: string[]
@@ -59,7 +59,7 @@ class SyncLocalToBilibiliService {
 			await bilibiliApi.getFavoriteListAllContents(remotePlaylistId)
 
 		if (remoteContentsResult.isErr()) {
-			return errAsync(remoteContentsResult.error)
+			return err(remoteContentsResult.error)
 		}
 
 		const remoteBvids = new Set(remoteContentsResult.value.map((i) => i.bvid))
@@ -80,7 +80,7 @@ class SyncLocalToBilibiliService {
 			localBvids, // target
 		)
 
-		return okAsync({
+		return ok({
 			toAdd: Array.from(addedBvids),
 			toRemove: Array.from(removedBvids),
 		})
@@ -93,7 +93,7 @@ class SyncLocalToBilibiliService {
 		folderId: number,
 		bvidsToAdd: string[],
 		onProgress?: (curr: number) => void,
-	): Promise<ResultAsync<number, Error>> {
+	): Promise<Result<number, Error>> {
 		let successCount = 0
 		let failCount = 0
 
@@ -142,7 +142,7 @@ class SyncLocalToBilibiliService {
 				`Batch add completed with ${failCount} failures out of ${bvidsToAdd.length}`,
 			)
 		}
-		return okAsync(failCount)
+		return ok(failCount)
 	}
 
 	/**
@@ -151,8 +151,8 @@ class SyncLocalToBilibiliService {
 	async executeBatchRemove(
 		folderId: number,
 		tokensToRemove: string[],
-	): Promise<ResultAsync<void, Error>> {
-		if (tokensToRemove.length === 0) return okAsync(void 0)
+	): Promise<Result<void, Error>> {
+		if (tokensToRemove.length === 0) return ok(void 0)
 
 		// API 限制分块
 		const CHUNK_SIZE = 20
@@ -163,10 +163,10 @@ class SyncLocalToBilibiliService {
 				chunk,
 			)
 			if (res.isErr()) {
-				return errAsync(res.error)
+				return err(res.error)
 			}
 		}
-		return okAsync(void 0)
+		return ok(void 0)
 	}
 }
 
