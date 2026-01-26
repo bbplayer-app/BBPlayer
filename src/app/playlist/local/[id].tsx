@@ -348,7 +348,11 @@ export default function LocalPlaylistPage() {
 							<Menu.Item
 								onPress={() => {
 									setFunctionalMenuVisible(false)
-									openModal('SyncLocalToBilibili', { playlistId: Number(id) })
+									openModal(
+										'SyncLocalToBilibili',
+										{ playlistId: Number(id) },
+										{ dismissible: false },
+									)
 								}}
 								title='同步到 B 站'
 								leadingIcon='sync'

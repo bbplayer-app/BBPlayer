@@ -44,6 +44,7 @@ interface State {
 	diffResult: DiffResult | null
 	progress: number
 	totalOps: number
+	failCount: number
 	errorMsg: string
 }
 
@@ -53,6 +54,7 @@ type Action =
 	| { type: 'SET_DIFF_RESULT'; payload: DiffResult }
 	| { type: 'SET_PROGRESS'; payload: number }
 	| { type: 'SET_TOTAL_OPS'; payload: number }
+	| { type: 'SET_FAIL_COUNT'; payload: number }
 	| { type: 'SET_ERROR'; payload: string }
 	| { type: 'RESET' }
 
@@ -62,6 +64,7 @@ const initialState: State = {
 	diffResult: null,
 	progress: 0,
 	totalOps: 0,
+	failCount: 0,
 	errorMsg: '',
 }
 
@@ -77,6 +80,8 @@ function reducer(state: State, action: Action): State {
 			return { ...state, progress: action.payload }
 		case 'SET_TOTAL_OPS':
 			return { ...state, totalOps: action.payload }
+		case 'SET_FAIL_COUNT':
+			return { ...state, failCount: action.payload }
 		case 'SET_ERROR':
 			return { ...state, errorMsg: action.payload, step: 'error' }
 		case 'RESET':
@@ -91,7 +96,15 @@ export default function SyncLocalToBilibiliModal({
 }: SyncLocalToBilibiliModalProps) {
 	const close = useModalStore((state) => state.close)
 	const [state, dispatch] = useReducer(reducer, initialState)
-	const { step, remoteFolder, diffResult, progress, totalOps, errorMsg } = state
+	const {
+		step,
+		remoteFolder,
+		diffResult,
+		progress,
+		totalOps,
+		failCount,
+		errorMsg,
+	} = state
 
 	const { data: playlist } = usePlaylistMetadata(playlistId)
 	const { data: userInfo } = usePersonalInformation()
@@ -185,6 +198,7 @@ export default function SyncLocalToBilibiliModal({
 		}
 
 		// 添加
+		let addsFailed = 0
 		if (diffResult.toAdd.length > 0) {
 			const res = await syncLocalToBilibiliService.executeBatchAdd(
 				remoteFolder.id,
@@ -193,6 +207,8 @@ export default function SyncLocalToBilibiliModal({
 			)
 			if (res.isErr()) {
 				toast.error('部分歌曲添加失败，请查看日志')
+			} else {
+				addsFailed = res.value
 			}
 		}
 
@@ -207,6 +223,7 @@ export default function SyncLocalToBilibiliModal({
 			}
 		}
 
+		dispatch({ type: 'SET_FAIL_COUNT', payload: addsFailed })
 		dispatch({ type: 'SET_STEP', payload: 'success' })
 	}
 
@@ -352,10 +369,19 @@ export default function SyncLocalToBilibiliModal({
 							<View style={styles.center}>
 								<Text
 									variant='titleLarge'
-									style={{ color: 'green', marginBottom: 10 }}
+									style={{
+										color: failCount > 0 ? 'orange' : 'green',
+										marginBottom: 10,
+									}}
 								>
-									同步成功
+									{failCount > 0 ? '同步部分成功' : '同步成功'}
 								</Text>
+								{failCount > 0 && (
+									<Text style={{ color: 'gray' }}>
+										有 {failCount} 首歌曲未能同步成功，请稍后重试。（可能是你的
+										IP 被风控了，R.I.P.）
+									</Text>
+								)}
 							</View>
 						</Dialog.Content>
 						<Dialog.Actions>

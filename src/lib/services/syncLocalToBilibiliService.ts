@@ -93,12 +93,15 @@ class SyncLocalToBilibiliService {
 		folderId: number,
 		bvidsToAdd: string[],
 		onProgress?: (curr: number) => void,
-	): Promise<ResultAsync<void, Error>> {
+	): Promise<ResultAsync<number, Error>> {
 		let successCount = 0
 		let failCount = 0
 
 		const CONCURRENCY = 1
 		const queue = [...bvidsToAdd]
+
+		const sleep = (ms: number) =>
+			new Promise((resolve) => setTimeout(resolve, ms))
 
 		const worker = async () => {
 			while (queue.length > 0) {
@@ -122,6 +125,9 @@ class SyncLocalToBilibiliService {
 					failCount++
 				}
 				onProgress?.(successCount + failCount)
+
+				// 添加延时防止风控
+				await sleep(300)
 			}
 		}
 
@@ -136,7 +142,7 @@ class SyncLocalToBilibiliService {
 				`Batch add completed with ${failCount} failures out of ${bvidsToAdd.length}`,
 			)
 		}
-		return okAsync(void 0)
+		return okAsync(failCount)
 	}
 
 	/**

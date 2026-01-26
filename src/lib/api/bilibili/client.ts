@@ -31,6 +31,8 @@ class ApiClient {
 			Cookie: cookie,
 			'User-Agent':
 				'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
+			Referer: 'https://www.bilibili.com/',
+			Origin: 'https://www.bilibili.com',
 			...options.headers,
 		}
 
