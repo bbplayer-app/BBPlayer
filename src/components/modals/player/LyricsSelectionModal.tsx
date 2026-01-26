@@ -107,7 +107,8 @@ const LyricsSelectionModal = () => {
 	const bvid = isBilibili ? currentTrack.bilibiliMetadata.bvid : undefined
 	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
 
-	const { data: pageList } = useGetMultiPageList(bvid)
+	const { data: pageList, isPending: isPageListPending } =
+		useGetMultiPageList(bvid)
 
 	// 计算 shareUrl
 	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack?.uniqueKey ?? '')}&title=${encodeURIComponent(currentTrack?.title ?? '')}&cover=${encodeURIComponent(currentTrack?.coverUrl ?? '')}`
@@ -182,6 +183,11 @@ const LyricsSelectionModal = () => {
 			// If not present, maybe we should toast 'waiting for image'?
 			// Or just proceed?
 			// SongShareModal waits. Here we are in a different flow (user clicks preview).
+		}
+
+		if (isPageListPending) {
+			toast.info('正在获取分享链接，请稍候')
+			return
 		}
 
 		setIsGenerating(true)

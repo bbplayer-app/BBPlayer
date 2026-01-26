@@ -259,12 +259,14 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					>
 						<Animated.View
 							style={[
+								styles.trackItem,
 								{ backgroundColor: colors.inverseSurface, opacity: 0.3 },
 								bufferedTrackInnerStyle,
 							]}
 						/>
 						<Animated.View
 							style={[
+								styles.trackItem,
 								{ backgroundColor: colors.primary },
 								activeTrackInnerStyle,
 							]}
@@ -320,5 +322,10 @@ const styles = StyleSheet.create({
 		height: THUMB_SIZE,
 		borderRadius: THUMB_SIZE / 2,
 		left: 0,
+	},
+	trackItem: {
+		position: 'absolute',
+		left: 0,
+		top: 0,
 	},
 })

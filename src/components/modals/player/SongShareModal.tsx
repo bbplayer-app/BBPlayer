@@ -35,7 +35,9 @@ const SongShareModal = () => {
 	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
 
 	// 只有在有 cid 的情况下才请求分 P 列表，否则没意义
-	const { data: pageList } = useGetMultiPageList(cid ? bvid : undefined)
+	const { data: pageList, isPending: isPageListPending } = useGetMultiPageList(
+		cid ? bvid : undefined,
+	)
 
 	const imageRef = useImage(
 		{ uri: currentTrack?.coverUrl ?? undefined },
@@ -77,6 +79,10 @@ const SongShareModal = () => {
 				// 如果图片还没好，就继续等待，不设置 false
 				return
 			}
+			// 等待分 P 列表加载完成
+			if (isPageListPending) {
+				return
+			}
 
 			setIsGenerating(true)
 			try {
@@ -95,7 +101,7 @@ const SongShareModal = () => {
 				setIsGenerating(false)
 			}
 		},
-		[imageRef],
+		[imageRef, isPageListPending],
 	)
 
 	// 当 imageRef 准备好时，尝试生成预览
@@ -110,7 +116,13 @@ const SongShareModal = () => {
 			// 没有封面，直接生成
 			void generatePreview()
 		}
-	}, [imageRef, generatePreview, currentTrack?.coverUrl])
+	}, [
+		imageRef,
+		generatePreview,
+		currentTrack?.coverUrl,
+		isPageListPending,
+		pageList,
+	])
 
 	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
