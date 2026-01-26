@@ -27,6 +27,7 @@ export interface ModalPropsMap {
 	PlaybackSpeed: undefined
 	LyricsSelection: undefined
 	SongShare: undefined
+	SyncLocalToBilibili: { playlistId: number }
 }
 
 export type ModalKey = keyof ModalPropsMap

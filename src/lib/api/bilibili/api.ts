@@ -78,6 +78,31 @@ export const createBilibiliApi = () => ({
 	},
 
 	/**
+	 * 创建收藏夹
+	 */
+	createFavoriteFolder(
+		title: string,
+		intro?: string,
+		cover?: string,
+		privacy: 0 | 1 = 0, // 0: public, 1: private
+	): ResultAsync<
+		{ id: number; title: string; mid: number; fid: number },
+		BilibiliApiError
+	> {
+		return bilibiliApiClient.postWithCsrf<{
+			id: number
+			fid: number
+			mid: number
+			title: string
+		}>('/x/v3/fav/folder/add', {
+			title,
+			intro: intro ?? '',
+			privacy: String(privacy),
+			cover: cover ?? '',
+		})
+	},
+
+	/**
 	 * 搜索视频
 	 */
 	searchVideos(

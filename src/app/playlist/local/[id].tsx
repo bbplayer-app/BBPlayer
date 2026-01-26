@@ -342,6 +342,18 @@ export default function LocalPlaylistPage() {
 						title='编辑播放列表信息'
 						leadingIcon='pencil'
 					/>
+					{/* 只允许同步纯粹本地创建的播放列表 */}
+					{playlistMetadata.type === 'local' &&
+						playlistMetadata.remoteSyncId === null && (
+							<Menu.Item
+								onPress={() => {
+									setFunctionalMenuVisible(false)
+									openModal('SyncLocalToBilibili', { playlistId: Number(id) })
+								}}
+								title='同步到 B 站'
+								leadingIcon='sync'
+							/>
+						)}
 					<Menu.Item
 						onPress={() => {
 							setFunctionalMenuVisible(false)
