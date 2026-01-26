@@ -10,6 +10,12 @@
 ### Added
 
 - 集成 commitlint 和 lefthook 以规范 commit 信息
+- 创建/修改歌曲或播放列表时，禁止使用重复的名称
+- 同步本地歌单到 b 站收藏夹（不稳定，容易被风控）
+
+### Changed
+
+- 重构 `src/lib/api/bilibili/api.ts` 为 Class
 
 ## [2.2.2] - 2026-01-25
 
