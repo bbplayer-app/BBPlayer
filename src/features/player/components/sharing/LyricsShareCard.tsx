@@ -1,6 +1,5 @@
-import type { Track } from '@/types/core/media'
 import type { LyricLine } from '@/types/player/lyrics'
-import { Image } from 'expo-image'
+import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
 import { Icon, Text } from 'react-native-paper'
@@ -8,20 +7,24 @@ import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
 
 interface LyricsShareCardProps {
-	track: Track
+	title: string
+	artistName: string
+	imageRef?: ImageRef | null
+	shareUrl: string
 	selectedLyrics: LyricLine[]
 	viewShotRef: React.RefObject<ViewShot | null>
 	backgroundColor: string
 }
 
 export const LyricsShareCard = ({
-	track,
+	title,
+	artistName,
+	imageRef,
+	shareUrl,
 	selectedLyrics,
 	viewShotRef,
 	backgroundColor,
 }: LyricsShareCardProps) => {
-	const shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(track.uniqueKey)}&title=${encodeURIComponent(track.title)}&cover=${encodeURIComponent(track.coverUrl ?? '')}`
-
 	return (
 		<ViewShot
 			ref={viewShotRef}
@@ -39,7 +42,7 @@ export const LyricsShareCard = ({
 			<View style={styles.content}>
 				<View style={styles.header}>
 					<Image
-						source={{ uri: track.coverUrl ?? undefined }}
+						source={imageRef}
 						style={styles.cover}
 						contentFit='cover'
 					/>
@@ -48,14 +51,14 @@ export const LyricsShareCard = ({
 							variant='titleLarge'
 							style={[styles.title, { color: '#fff' }]}
 						>
-							{track.title}
+							{title}
 						</Text>
 						<Text
 							variant='bodyMedium'
 							style={{ color: 'rgba(255,255,255,0.8)' }}
 							numberOfLines={1}
 						>
-							{track.artist?.name ?? 'Unknown Artist'}
+							{artistName}
 						</Text>
 					</View>
 				</View>

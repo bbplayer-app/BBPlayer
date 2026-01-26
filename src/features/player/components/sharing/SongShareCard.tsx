@@ -1,5 +1,4 @@
-import type { Track } from '@/types/core/media'
-import { Image } from 'expo-image'
+import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
@@ -7,20 +6,22 @@ import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
 
 interface SongShareCardProps {
-	track: Track
+	title: string
+	artistName: string
+	imageRef?: ImageRef | null
+	shareUrl: string
 	viewShotRef: React.RefObject<ViewShot | null>
 	backgroundColor: string
-	onImageLoad?: () => void
 }
 
 export const SongShareCard = ({
-	track,
+	title,
+	artistName,
+	imageRef,
+	shareUrl,
 	viewShotRef,
 	backgroundColor,
-	onImageLoad,
 }: SongShareCardProps) => {
-	const shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(track.uniqueKey)}&title=${encodeURIComponent(track.title)}&cover=${encodeURIComponent(track.coverUrl ?? '')}`
-
 	return (
 		<ViewShot
 			ref={viewShotRef}
@@ -38,11 +39,9 @@ export const SongShareCard = ({
 			<View style={styles.cardContent}>
 				<View style={styles.coverContainer}>
 					<Image
-						source={{ uri: track.coverUrl ?? undefined }}
+						source={imageRef}
 						style={styles.cover}
 						contentFit='cover'
-						onLoad={onImageLoad}
-						onError={onImageLoad}
 					/>
 				</View>
 
@@ -51,14 +50,14 @@ export const SongShareCard = ({
 						variant='headlineMedium'
 						style={[styles.title, { color: '#fff' }]}
 					>
-						{track.title}
+						{title}
 					</Text>
 					<Text
 						variant='titleMedium'
 						style={[styles.artist, { color: 'rgba(255,255,255,0.8)' }]}
 						numberOfLines={1}
 					>
-						{track.artist?.name ?? 'Unknown Artist'}
+						{artistName}
 					</Text>
 				</View>
 
