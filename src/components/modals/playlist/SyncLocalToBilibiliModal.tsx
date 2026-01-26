@@ -1,5 +1,5 @@
+import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'
-import { useAppStore } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { playlistService } from '@/lib/services/playlistService'
 import { syncLocalToBilibiliService } from '@/lib/services/syncLocalToBilibiliService'
@@ -94,15 +94,21 @@ export default function SyncLocalToBilibiliModal({
 	const { step, remoteFolder, diffResult, progress, totalOps, errorMsg } = state
 
 	const { data: playlist } = usePlaylistMetadata(playlistId)
-	const bilibiliMid = useAppStore((s) => s.bilibiliCookie?.mid)
+	const { data: userInfo } = usePersonalInformation()
 
 	// 检查远程收藏夹
 	useEffect(() => {
-		if (step !== 'checking' || !playlist || !bilibiliMid) return
+		if (step !== 'checking') return
+
+		if (!userInfo?.mid) {
+			dispatch({ type: 'SET_ERROR', payload: '未登录 B 站，请先登录' })
+			return
+		}
+		if (!playlist) return // 等待加载
 
 		const check = async () => {
 			const res = await syncLocalToBilibiliService.findRemotePlaylistByName(
-				Number(bilibiliMid),
+				Number(userInfo.mid),
 				playlist.title,
 			)
 			if (res.isErr()) {
@@ -118,7 +124,7 @@ export default function SyncLocalToBilibiliModal({
 			}
 		}
 		void check()
-	}, [step, playlist, bilibiliMid])
+	}, [step, playlist, userInfo?.mid])
 
 	// 创建远程收藏夹
 	const handleCreate = async () => {
@@ -208,24 +214,32 @@ export default function SyncLocalToBilibiliModal({
 		switch (step) {
 			case 'checking':
 				return (
-					<View style={styles.center}>
-						<ActivityIndicator size='large' />
-						<Text style={{ marginTop: 20 }}>正在查找远程收藏夹...</Text>
-					</View>
+					<>
+						<Dialog.Title>同步到 B 站</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.center}>
+								<ActivityIndicator size='large' />
+								<Text style={{ marginTop: 20 }}>正在查找远程收藏夹...</Text>
+							</View>
+						</Dialog.Content>
+					</>
 				)
 			case 'confirm_create':
 				return (
-					<View>
-						<Text variant='bodyLarge'>
-							未找到名为 &quot;{playlist?.title}&quot; 的 B 站收藏夹。
-						</Text>
-						<Text
-							variant='bodyMedium'
-							style={{ marginTop: 8, color: 'gray' }}
-						>
-							是否创建一个新的公开收藏夹？
-						</Text>
-						<View style={styles.actions}>
+					<>
+						<Dialog.Title>同步到 B 站</Dialog.Title>
+						<Dialog.Content>
+							<Text variant='bodyLarge'>
+								未找到名为 &quot;{playlist?.title}&quot; 的 B 站收藏夹。
+							</Text>
+							<Text
+								variant='bodyMedium'
+								style={{ marginTop: 8, color: 'gray' }}
+							>
+								是否创建一个新的公开收藏夹？
+							</Text>
+						</Dialog.Content>
+						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
 								mode='contained'
@@ -233,46 +247,71 @@ export default function SyncLocalToBilibiliModal({
 							>
 								创建并继续
 							</Button>
-						</View>
-					</View>
+						</Dialog.Actions>
+					</>
 				)
 			case 'diffing':
 				return (
-					<View style={styles.center}>
-						<ActivityIndicator size='large' />
-						<Text style={{ marginTop: 20 }}>正在对比列表差异...</Text>
-					</View>
+					<>
+						<Dialog.Title>同步到 B 站</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.center}>
+								<ActivityIndicator size='large' />
+								<Text style={{ marginTop: 20 }}>正在对比列表差异...</Text>
+							</View>
+						</Dialog.Content>
+					</>
 				)
-			case 'confirm_sync':
-				return (
-					<View>
-						<Text
-							variant='titleMedium'
-							style={{ marginBottom: 10 }}
-						>
-							同步确认
-						</Text>
-						<View style={styles.statRow}>
-							<Text>新增歌曲</Text>
-							<Text style={{ color: 'green', fontWeight: 'bold' }}>
-								+{diffResult?.toAdd.length}
-							</Text>
-						</View>
-						<Divider style={{ marginVertical: 4 }} />
-						<View style={styles.statRow}>
-							<Text>移除歌曲 (远端多余)</Text>
-							<Text style={{ color: 'red', fontWeight: 'bold' }}>
-								-{diffResult?.toRemove.length}
-							</Text>
-						</View>
-						<Text
-							variant='bodySmall'
-							style={{ marginTop: 10, color: 'gray' }}
-						>
-							注意：这是一个镜像同步操作。本地没有的歌曲将会从远端删除。
-						</Text>
+			case 'confirm_sync': {
+				const nothingToSync =
+					diffResult?.toAdd.length === 0 && diffResult.toRemove.length === 0
 
-						<View style={styles.actions}>
+				if (nothingToSync) {
+					return (
+						<>
+							<Dialog.Title>同步确认</Dialog.Title>
+							<Dialog.Content>
+								<Text variant='bodyLarge'>无需同步</Text>
+								<Text
+									variant='bodyMedium'
+									style={{ marginTop: 8, color: 'gray' }}
+								>
+									当前本地列表与远程收藏夹已完全一致。
+								</Text>
+							</Dialog.Content>
+							<Dialog.Actions>
+								<Button onPress={() => close('SyncLocalToBilibili')}>
+									关闭
+								</Button>
+							</Dialog.Actions>
+						</>
+					)
+				}
+				return (
+					<>
+						<Dialog.Title>同步确认</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.statRow}>
+								<Text>新增歌曲</Text>
+								<Text style={{ color: 'green', fontWeight: 'bold' }}>
+									+{diffResult?.toAdd.length}
+								</Text>
+							</View>
+							<Divider style={{ marginVertical: 4 }} />
+							<View style={styles.statRow}>
+								<Text>移除歌曲 (远端多余)</Text>
+								<Text style={{ color: 'red', fontWeight: 'bold' }}>
+									-{diffResult?.toRemove.length}
+								</Text>
+							</View>
+							<Text
+								variant='bodySmall'
+								style={{ marginTop: 10, color: 'gray', fontWeight: 'bold' }}
+							>
+								注意：这是一个镜像同步操作。本地没有的歌曲将会从远端删除。
+							</Text>
+						</Dialog.Content>
+						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
 								mode='contained'
@@ -280,89 +319,82 @@ export default function SyncLocalToBilibiliModal({
 							>
 								开始同步
 							</Button>
-						</View>
-					</View>
+						</Dialog.Actions>
+					</>
 				)
+			}
 			case 'syncing':
 				return (
-					<View style={styles.center}>
-						<ActivityIndicator size='large' />
-						<Text style={{ marginTop: 20, marginBottom: 10 }}>同步中...</Text>
-						<ProgressBar
-							progress={totalOps > 0 ? progress / totalOps : 0}
-							style={{ width: '100%' }}
-						/>
-						<Text style={{ marginTop: 5 }}>
-							{progress} / {totalOps}
-						</Text>
-					</View>
+					<>
+						<Dialog.Title>同步到 B 站</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.center}>
+								<ActivityIndicator size='large' />
+								<Text style={{ marginTop: 20, marginBottom: 10 }}>
+									同步中...
+								</Text>
+								<ProgressBar
+									progress={totalOps > 0 ? progress / totalOps : 0}
+									style={{ width: '100%' }}
+								/>
+								<Text style={{ marginTop: 5 }}>
+									{progress} / {totalOps}
+								</Text>
+							</View>
+						</Dialog.Content>
+					</>
 				)
 			case 'success':
 				return (
-					<View style={styles.center}>
-						<Text
-							variant='titleLarge'
-							style={{ color: 'green', marginBottom: 10 }}
-						>
-							同步完成
-						</Text>
-						<Button
-							mode='contained'
-							onPress={() => close('SyncLocalToBilibili')}
-						>
-							我知道了
-						</Button>
-					</View>
+					<>
+						<Dialog.Title>同步完成</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.center}>
+								<Text
+									variant='titleLarge'
+									style={{ color: 'green', marginBottom: 10 }}
+								>
+									同步成功
+								</Text>
+							</View>
+						</Dialog.Content>
+						<Dialog.Actions>
+							<Button
+								mode='contained'
+								onPress={() => close('SyncLocalToBilibili')}
+							>
+								我知道了
+							</Button>
+						</Dialog.Actions>
+					</>
 				)
 			case 'error':
 				return (
-					<View style={styles.center}>
-						<Text
-							variant='titleLarge'
-							style={{ color: 'red', marginBottom: 10 }}
-						>
-							出错了
-						</Text>
-						<Text>{errorMsg}</Text>
-						<Button
-							style={{ marginTop: 20 }}
-							onPress={() => close('SyncLocalToBilibili')}
-						>
-							关闭
-						</Button>
-					</View>
+					<>
+						<Dialog.Title>出错了</Dialog.Title>
+						<Dialog.Content>
+							<View style={styles.center}>
+								<Text style={{ color: 'red', marginBottom: 10 }}>
+									{errorMsg}
+								</Text>
+							</View>
+						</Dialog.Content>
+						<Dialog.Actions>
+							<Button onPress={() => close('SyncLocalToBilibili')}>关闭</Button>
+						</Dialog.Actions>
+					</>
 				)
 		}
 	}
 
-	return (
-		<Dialog
-			visible={true}
-			onDismiss={() => step !== 'syncing' && close('SyncLocalToBilibili')}
-		>
-			<Dialog.Title>同步到 B 站</Dialog.Title>
-			<Dialog.Content>
-				<View style={styles.container}>{renderContent()}</View>
-			</Dialog.Content>
-		</Dialog>
-	)
+	return renderContent()
 }
 
 const styles = StyleSheet.create({
-	container: {
-		minHeight: 120,
-		justifyContent: 'center',
-	},
 	center: {
 		alignItems: 'center',
 		justifyContent: 'center',
 		width: '100%',
-	},
-	actions: {
-		flexDirection: 'row',
-		justifyContent: 'flex-end',
-		marginTop: 20,
-		gap: 10,
 	},
 	statRow: {
 		flexDirection: 'row',

@@ -52,7 +52,7 @@ export function initializeSentry() {
 		enabled: !development && useAppStore.getState().settings.enableSentryReport,
 		enableLogs: false,
 		environment: getEnv(),
-		ignoreErrors: ['ExpoHaptics'],
+		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],
 	})
 
 	const scope = Sentry.getGlobalScope()

@@ -97,7 +97,7 @@ class SyncLocalToBilibiliService {
 		let successCount = 0
 		let failCount = 0
 
-		const CONCURRENCY = 3
+		const CONCURRENCY = 1
 		const queue = [...bvidsToAdd]
 
 		const worker = async () => {
