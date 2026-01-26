@@ -78,4 +78,22 @@ export function createNotImplementedError(message = '未实现', cause?: unknown
 	return createServiceError('NotImplemented', message, { cause })
 }
 
+export function createPlaylistAlreadyExists(title: string, cause?: unknown) {
+	return createServiceError(
+		'PlaylistAlreadyExists',
+		`播放列表 "${title}" 已存在`,
+		{
+			data: { title },
+			cause,
+		},
+	)
+}
+
+export function createTrackAlreadyExists(title: string, cause?: unknown) {
+	return createServiceError('TrackAlreadyExists', `歌曲 "${title}" 已存在`, {
+		data: { title },
+		cause,
+	})
+}
+
 export { DatabaseError } from './index'

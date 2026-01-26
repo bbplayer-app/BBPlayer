@@ -9,6 +9,7 @@ import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
 	DatabaseError,
+	createPlaylistAlreadyExists,
 	createPlaylistNotFound,
 	createTrackNotInPlaylist,
 	createValidationError,
@@ -50,24 +51,48 @@ export class PlaylistService {
 	 */
 	public createPlaylist(
 		payload: CreatePlaylistPayload,
-	): ResultAsync<typeof schema.playlists.$inferSelect, DatabaseError> {
+	): ResultAsync<
+		typeof schema.playlists.$inferSelect,
+		DatabaseError | ServiceError
+	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:insert:playlist', op: 'db' }, () =>
-				this.db
-					.insert(schema.playlists)
-					.values({
-						title: payload.title,
-						authorId: payload.authorId,
-						description: payload.description,
-						coverUrl: payload.coverUrl,
-						type: payload.type,
-						remoteSyncId: payload.remoteSyncId,
-					} satisfies CreatePlaylistPayload)
-					.returning(),
-			),
-			(e) => new DatabaseError('创建播放列表失败', { cause: e }),
+			(async () => {
+				// Check for duplicate title
+				const existing = await Sentry.startSpan(
+					{ name: 'db:query:playlist:duplicate', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: eq(schema.playlists.title, payload.title),
+							columns: { id: true },
+						}),
+				)
+				if (existing) {
+					throw createPlaylistAlreadyExists(payload.title)
+				}
+
+				const [result] = await Sentry.startSpan(
+					{ name: 'db:insert:playlist', op: 'db' },
+					() =>
+						this.db
+							.insert(schema.playlists)
+							.values({
+								title: payload.title,
+								authorId: payload.authorId,
+								description: payload.description,
+								coverUrl: payload.coverUrl,
+								type: payload.type,
+								remoteSyncId: payload.remoteSyncId,
+							} satisfies CreatePlaylistPayload)
+							.returning(),
+				)
+				return result
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('创建播放列表失败', { cause: e }),
 		).andThen((result) => {
-			return okAsync(result[0])
+			return okAsync(result)
 		})
 	}
 
@@ -99,6 +124,24 @@ export class PlaylistService {
 				)
 				if (!existing) {
 					throw createPlaylistNotFound(playlistId)
+				}
+
+				if (payload.title) {
+					const duplicate = await Sentry.startSpan(
+						{ name: 'db:query:playlist:duplicate', op: 'db' },
+						() =>
+							this.db.query.playlists.findFirst({
+								where: and(
+									eq(schema.playlists.title, payload.title!),
+									// 排除自己
+									sql`${schema.playlists.id} != ${playlistId}`,
+								),
+								columns: { id: true },
+							}),
+					)
+					if (duplicate) {
+						throw createPlaylistAlreadyExists(payload.title)
+					}
 				}
 
 				const [updated] = await Sentry.startSpan(
