@@ -64,45 +64,45 @@ const SongShareModal = () => {
 		}
 	}, [imageRef, theme.dark])
 
-	const generatePreview = useCallback(
-		async (retryCount = 0) => {
-			if (!viewShotRef.current) {
-				if (retryCount < 5) {
-					setTimeout(() => generatePreview(retryCount + 1), 200)
-					return
-				}
-				setIsGenerating(false)
-				return
-			}
-			// 等待图片加载完成
-			if (!imageRef) {
-				// 如果图片还没好，就继续等待，不设置 false
-				return
-			}
-			// 等待分 P 列表加载完成
-			if (isPageListPending) {
-				return
-			}
+	const generatePreview = useCallback(async () => {
+		let retryCount = 0
+		while (!viewShotRef.current && retryCount < 5) {
+			await new Promise((resolve) => setTimeout(resolve, 200))
+			retryCount++
+		}
 
-			setIsGenerating(true)
-			try {
-				const fileName = `bbplayer-share-song-${Date.now()}`
-				const uri = await captureRef(viewShotRef, {
-					format: 'png',
-					quality: 1,
-					result: 'tmpfile',
-					fileName,
-				})
-				setPreviewUri(uri)
-				setIsGenerating(false)
-			} catch (e) {
-				console.error(e)
-				toast.error('生成预览失败')
-				setIsGenerating(false)
-			}
-		},
-		[imageRef, isPageListPending],
-	)
+		if (!viewShotRef.current) {
+			setIsGenerating(false)
+			return
+		}
+
+		// 等待图片加载完成
+		if (!imageRef && currentTrack?.coverUrl) {
+			// 如果图片还没好，就继续等待，不设置 false
+			return
+		}
+		// 等待分 P 列表加载完成
+		if (isPageListPending) {
+			return
+		}
+
+		setIsGenerating(true)
+		try {
+			const fileName = `bbplayer-share-song-${Date.now()}`
+			const uri = await captureRef(viewShotRef, {
+				format: 'png',
+				quality: 1,
+				result: 'tmpfile',
+				fileName,
+			})
+			setPreviewUri(uri)
+			setIsGenerating(false)
+		} catch (e) {
+			console.error(e)
+			toast.error('生成预览失败')
+			setIsGenerating(false)
+		}
+	}, [imageRef, currentTrack?.coverUrl, isPageListPending])
 
 	// 当 imageRef 准备好时，尝试生成预览
 	useEffect(() => {
