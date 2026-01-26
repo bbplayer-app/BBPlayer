@@ -85,7 +85,7 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
-	const { position, duration } = useAnimatedTrackProgress()
+	const { position, duration, buffered } = useAnimatedTrackProgress()
 
 	const containerWidth = useSharedValue(0)
 	const isScrubbing = useSharedValue(false)
@@ -217,6 +217,21 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}
 	})
 
+	const bufferedProgress = useDerivedValue(() => {
+		const dur = duration.value || 1
+		const buf = buffered.value
+		return Math.min(Math.max(buf / dur, 0), 1)
+	})
+
+	const bufferedTrackInnerStyle = useAnimatedStyle(() => {
+		const translateX = (bufferedProgress.value - 1) * containerWidth.value
+		return {
+			transform: [{ translateX }],
+			width: containerWidth.value,
+			height: '100%',
+		}
+	})
+
 	const thumbAnimatedStyle = useAnimatedStyle(() => {
 		const translateX = progress.value * containerWidth.value - THUMB_SIZE / 2
 		return {
@@ -242,6 +257,12 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 							trackAnimatedStyle,
 						]}
 					>
+						<Animated.View
+							style={[
+								{ backgroundColor: colors.inverseSurface, opacity: 0.3 },
+								bufferedTrackInnerStyle,
+							]}
+						/>
 						<Animated.View
 							style={[
 								{ backgroundColor: colors.primary },
