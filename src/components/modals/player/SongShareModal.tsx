@@ -35,9 +35,10 @@ const SongShareModal = () => {
 	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
 
 	// 只有在有 cid 的情况下才请求分 P 列表，否则没意义
-	const { data: pageList, isPending: isPageListPending } = useGetMultiPageList(
-		cid ? bvid : undefined,
-	)
+	const { data: pageList, isPending: isPageListQueryPending } =
+		useGetMultiPageList(cid ? bvid : undefined)
+
+	const isPageListPending = !!cid && isPageListQueryPending
 
 	const imageRef = useImage(
 		{ uri: currentTrack?.coverUrl ?? undefined },

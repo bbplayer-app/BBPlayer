@@ -107,8 +107,9 @@ const LyricsSelectionModal = () => {
 	const bvid = isBilibili ? currentTrack.bilibiliMetadata.bvid : undefined
 	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
 
-	const { data: pageList, isPending: isPageListPending } =
+	const { data: pageList, isPending: isPageListQueryPending } =
 		useGetMultiPageList(bvid)
+	const isPageListPending = !!cid && isPageListQueryPending
 
 	// 计算 shareUrl
 	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack?.uniqueKey ?? '')}&title=${encodeURIComponent(currentTrack?.title ?? '')}&cover=${encodeURIComponent(currentTrack?.coverUrl ?? '')}`
