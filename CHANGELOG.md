@@ -9,11 +9,13 @@
 
 ### Changed
 
+- 重构分享卡片组件，优化预览生成逻辑，并支持带有分 P 参数的分享链接
+- 支持播放器页面显示缓冲进度
 - 升级到 expo55-beta
 - 优化 version code 逻辑，使用 commit 数量作为 version code
 - 增加 nightly 构建
 - 切换到 sonner-native
-- 升级 expo-image-theme-colors 依赖到 0.2.0，支持传入图片 url 提取封面色
+- 升级 expo-image-theme-colors 依赖到 0.2.1，支持传入图片 url 提取封面色
 - 升级 expo-orpheus 到 0.9.4，支持断开蓝牙时暂停播放
 
 ### Added

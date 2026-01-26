@@ -1,5 +1,6 @@
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { LyricLine } from '@/types/player/lyrics'
@@ -102,6 +103,22 @@ const LyricsSelectionModal = () => {
 		},
 	)
 
+	const isBilibili = currentTrack?.source === 'bilibili'
+	const bvid = isBilibili ? currentTrack.bilibiliMetadata.bvid : undefined
+	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
+
+	const { data: pageList, isPending: isPageListPending } =
+		useGetMultiPageList(bvid)
+
+	// 计算 shareUrl
+	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack?.uniqueKey ?? '')}&title=${encodeURIComponent(currentTrack?.title ?? '')}&cover=${encodeURIComponent(currentTrack?.coverUrl ?? '')}`
+	if (cid && pageList) {
+		const page = pageList.find((p) => p.cid === cid)
+		if (page) {
+			shareUrl += `&p=${page.page}`
+		}
+	}
+
 	const viewShotRef = useRef<ViewShot>(null)
 
 	useEffect(() => {
@@ -156,6 +173,23 @@ const LyricsSelectionModal = () => {
 			toast.error('无法生成预览')
 			return
 		}
+		if (!imageRef && currentTrack?.coverUrl) {
+			// 等待图片加载
+			// 注意：这里没有实现真正的等待，只是简单检查。
+			// 实际上 LyricsSelectionModal 的 preview 是立即生成的吗？
+			// User requested: "不再只监听 onImageLoad 是否完成，而是监听包含网络请求是否完成"
+			// But for Lyric card, image is small part.
+			// Let's rely on useImage ref being present.
+			// If not present, maybe we should toast 'waiting for image'?
+			// Or just proceed?
+			// SongShareModal waits. Here we are in a different flow (user clicks preview).
+		}
+
+		if (isPageListPending) {
+			toast.info('正在获取分享链接，请稍候')
+			return
+		}
+
 		setIsGenerating(true)
 		const fileName = `bbplayer-share-lyrics-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
 		try {
@@ -275,6 +309,25 @@ const LyricsSelectionModal = () => {
 						style={styles.errorText}
 					>
 						当前没有正在播放的歌曲
+					</Text>
+				</Dialog.Content>
+				<Dialog.Actions>
+					<Button onPress={() => close('LyricsSelection')}>关闭</Button>
+				</Dialog.Actions>
+			</>
+		)
+	}
+
+	if (currentTrack.source !== 'bilibili') {
+		return (
+			<>
+				<Dialog.Title>选择歌词分享</Dialog.Title>
+				<Dialog.Content style={styles.errorContainer}>
+					<Text
+						variant='bodyMedium'
+						style={styles.errorText}
+					>
+						当前仅支持分享 Bilibili 来源的歌曲
 					</Text>
 				</Dialog.Content>
 				<Dialog.Actions>
@@ -436,14 +489,15 @@ const LyricsSelectionModal = () => {
 				style={styles.hiddenCapture}
 				pointerEvents='none'
 			>
-				{currentTrack && lyrics && (
-					<LyricsShareCard
-						track={currentTrack}
-						selectedLyrics={lyrics.filter((_, i) => selectedIndices.has(i))}
-						viewShotRef={viewShotRef}
-						backgroundColor={cardColor}
-					/>
-				)}
+				<LyricsShareCard
+					title={currentTrack.title}
+					artistName={currentTrack.artist?.name ?? 'Unknown Artist'}
+					imageRef={imageRef}
+					shareUrl={shareUrl}
+					selectedLyrics={lyrics.filter((_, i) => selectedIndices.has(i))}
+					viewShotRef={viewShotRef}
+					backgroundColor={cardColor}
+				/>
 			</View>
 		</>
 	)

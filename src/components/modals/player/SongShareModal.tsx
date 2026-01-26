@@ -1,5 +1,6 @@
 import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
@@ -28,6 +29,16 @@ const SongShareModal = () => {
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(true)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+
+	const isBilibili = currentTrack?.source === 'bilibili'
+	const bvid = isBilibili ? currentTrack.bilibiliMetadata.bvid : undefined
+	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
+
+	// 只有在有 cid 的情况下才请求分 P 列表，否则没意义
+	const { data: pageList, isPending: isPageListPending } = useGetMultiPageList(
+		cid ? bvid : undefined,
+	)
+
 	const imageRef = useImage(
 		{ uri: currentTrack?.coverUrl ?? undefined },
 		{
@@ -54,10 +65,27 @@ const SongShareModal = () => {
 	}, [imageRef, theme.dark])
 
 	const generatePreview = useCallback(async () => {
+		let retryCount = 0
+		while (!viewShotRef.current && retryCount < 5) {
+			await new Promise((resolve) => setTimeout(resolve, 200))
+			retryCount++
+		}
+
 		if (!viewShotRef.current) {
 			setIsGenerating(false)
 			return
 		}
+
+		// 等待图片加载完成
+		if (!imageRef && currentTrack?.coverUrl) {
+			// 如果图片还没好，就继续等待，不设置 false
+			return
+		}
+		// 等待分 P 列表加载完成
+		if (isPageListPending) {
+			return
+		}
+
 		setIsGenerating(true)
 		try {
 			const fileName = `bbplayer-share-song-${Date.now()}`
@@ -74,22 +102,27 @@ const SongShareModal = () => {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
-	}, [])
+	}, [imageRef, currentTrack?.coverUrl, isPageListPending])
 
-	// 当卡片内的图片加载完成时触发预览生成
-	const onCardImageLoad = useCallback(() => {
-		void generatePreview()
-	}, [generatePreview])
-
-	// 如果没有封面图片，Image 不会触发 onLoad/onError，需要 fallback
+	// 当 imageRef 准备好时，尝试生成预览
 	useEffect(() => {
-		if (!currentTrack?.coverUrl) {
-			const immediate = setImmediate(() => {
+		if (imageRef) {
+			// 给一点时间让组件渲染
+			const timer = setTimeout(() => {
 				void generatePreview()
-			})
-			return () => clearImmediate(immediate)
+			}, 100)
+			return () => clearTimeout(timer)
+		} else if (!currentTrack?.coverUrl) {
+			// 没有封面，直接生成
+			void generatePreview()
 		}
-	}, [currentTrack?.coverUrl, generatePreview])
+	}, [
+		imageRef,
+		generatePreview,
+		currentTrack?.coverUrl,
+		isPageListPending,
+		pageList,
+	])
 
 	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
@@ -176,6 +209,34 @@ const SongShareModal = () => {
 		)
 	}
 
+	if (currentTrack.source !== 'bilibili') {
+		return (
+			<>
+				<Dialog.Title>分享歌曲</Dialog.Title>
+				<Dialog.Content style={styles.errorContainer}>
+					<Text
+						variant='bodyMedium'
+						style={styles.errorText}
+					>
+						当前仅支持分享 Bilibili 来源的歌曲
+					</Text>
+				</Dialog.Content>
+				<Dialog.Actions>
+					<Button onPress={() => close('SongShare')}>关闭</Button>
+				</Dialog.Actions>
+			</>
+		)
+	}
+
+	// 计算 shareUrl
+	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack.uniqueKey)}&title=${encodeURIComponent(currentTrack.title)}&cover=${encodeURIComponent(currentTrack.coverUrl ?? '')}`
+	if (cid && pageList) {
+		const page = pageList.find((p) => p.cid === cid)
+		if (page) {
+			shareUrl += `&p=${page.page}`
+		}
+	}
+
 	return (
 		<>
 			<Dialog.Title>分享歌曲</Dialog.Title>
@@ -241,14 +302,14 @@ const SongShareModal = () => {
 				style={styles.hiddenCapture}
 				pointerEvents='none'
 			>
-				{currentTrack && (
-					<SongShareCard
-						track={currentTrack}
-						viewShotRef={viewShotRef}
-						backgroundColor={cardColor}
-						onImageLoad={onCardImageLoad}
-					/>
-				)}
+				<SongShareCard
+					title={currentTrack.title}
+					artistName={currentTrack.artist?.name ?? 'Unknown Artist'}
+					imageRef={imageRef}
+					shareUrl={shareUrl}
+					viewShotRef={viewShotRef}
+					backgroundColor={cardColor}
+				/>
 			</View>
 		</>
 	)

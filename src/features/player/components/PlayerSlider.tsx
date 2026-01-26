@@ -2,7 +2,7 @@ import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
@@ -85,7 +85,7 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
-	const { position, duration } = useAnimatedTrackProgress()
+	const { position, duration, buffered } = useAnimatedTrackProgress()
 
 	const containerWidth = useSharedValue(0)
 	const isScrubbing = useSharedValue(false)
@@ -158,47 +158,66 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}
 	}, [containerWidth])
 
-	const pan = Gesture.Pan()
-		.onBegin((e) => {
-			if (containerWidth.value === 0) return
-			isScrubbing.set(true)
-			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.set(newProgress * (duration.value || 1))
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Drag_Start,
-			)
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
-		})
-		.onUpdate((e) => {
-			if (containerWidth.value === 0) return
-			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.set(newProgress * (duration.value || 1))
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
-		})
-		.onFinalize(() => {
-			if (containerWidth.value === 0) return
-			const targetTime = scrubPosition.value
+	const pan = useMemo(
+		() =>
+			Gesture.Pan()
+				.onBegin((e) => {
+					if (containerWidth.value === 0) return
+					isScrubbing.set(true)
+					const newProgress = Math.min(
+						Math.max(e.x / containerWidth.value, 0),
+						1,
+					)
+					scrubPosition.set(newProgress * (duration.value || 1))
+					scheduleOnRN(
+						Haptics.performAndroidHapticsAsync,
+						Haptics.AndroidHaptics.Drag_Start,
+					)
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
+				})
+				.onUpdate((e) => {
+					if (containerWidth.value === 0) return
+					const newProgress = Math.min(
+						Math.max(e.x / containerWidth.value, 0),
+						1,
+					)
+					scrubPosition.set(newProgress * (duration.value || 1))
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
+				})
+				.onFinalize(() => {
+					if (containerWidth.value === 0) return
+					const targetTime = scrubPosition.value
 
-			seekPosition.set(targetTime)
-			isSeeking.set(true)
+					seekPosition.set(targetTime)
+					isSeeking.set(true)
 
-			void scheduleOnRN(handleSeek, targetTime)
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Gesture_End,
-			)
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
+					void scheduleOnRN(handleSeek, targetTime)
+					scheduleOnRN(
+						Haptics.performAndroidHapticsAsync,
+						Haptics.AndroidHaptics.Gesture_End,
+					)
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
 
-			isScrubbing.set(false)
-		})
-		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
+					isScrubbing.set(false)
+				})
+				.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 }),
+		[
+			containerWidth,
+			isScrubbing,
+			scrubPosition,
+			duration,
+			onInteraction,
+			seekPosition,
+			isSeeking,
+			handleSeek,
+		],
+	)
 
 	const trackAnimatedStyle = useAnimatedStyle(() => {
 		return {
@@ -210,6 +229,21 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 
 	const activeTrackInnerStyle = useAnimatedStyle(() => {
 		const translateX = (progress.value - 1) * containerWidth.value
+		return {
+			transform: [{ translateX }],
+			width: containerWidth.value,
+			height: '100%',
+		}
+	})
+
+	const bufferedProgress = useDerivedValue(() => {
+		const dur = duration.value || 1
+		const buf = buffered.value
+		return Math.min(Math.max(buf / dur, 0), 1)
+	})
+
+	const bufferedTrackInnerStyle = useAnimatedStyle(() => {
+		const translateX = (bufferedProgress.value - 1) * containerWidth.value
 		return {
 			transform: [{ translateX }],
 			width: containerWidth.value,
@@ -244,6 +278,14 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					>
 						<Animated.View
 							style={[
+								styles.trackItem,
+								{ backgroundColor: colors.inverseSurface, opacity: 0.3 },
+								bufferedTrackInnerStyle,
+							]}
+						/>
+						<Animated.View
+							style={[
+								styles.trackItem,
 								{ backgroundColor: colors.primary },
 								activeTrackInnerStyle,
 							]}
@@ -299,5 +341,10 @@ const styles = StyleSheet.create({
 		height: THUMB_SIZE,
 		borderRadius: THUMB_SIZE / 2,
 		left: 0,
+	},
+	trackItem: {
+		position: 'absolute',
+		left: 0,
+		top: 0,
 	},
 })
