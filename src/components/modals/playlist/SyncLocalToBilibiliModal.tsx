@@ -237,6 +237,10 @@ export default function SyncLocalToBilibiliModal({
 							<View style={styles.center}>
 								<ActivityIndicator size='large' />
 								<Text style={{ marginTop: 20 }}>正在查找远程收藏夹...</Text>
+								<Text style={{ marginTop: 10, color: 'red', fontSize: 12 }}>
+									警告：此功能由于 B 站 API 限制，极易触发风控导致 IP{' '}
+									被暂时封禁，谨慎使用。
+								</Text>
 							</View>
 						</Dialog.Content>
 					</>
