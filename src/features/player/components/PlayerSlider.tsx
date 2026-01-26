@@ -2,7 +2,7 @@ import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
@@ -158,47 +158,66 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}
 	}, [containerWidth])
 
-	const pan = Gesture.Pan()
-		.onBegin((e) => {
-			if (containerWidth.value === 0) return
-			isScrubbing.set(true)
-			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.set(newProgress * (duration.value || 1))
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Drag_Start,
-			)
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
-		})
-		.onUpdate((e) => {
-			if (containerWidth.value === 0) return
-			const newProgress = Math.min(Math.max(e.x / containerWidth.value, 0), 1)
-			scrubPosition.set(newProgress * (duration.value || 1))
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
-		})
-		.onFinalize(() => {
-			if (containerWidth.value === 0) return
-			const targetTime = scrubPosition.value
+	const pan = useMemo(
+		() =>
+			Gesture.Pan()
+				.onBegin((e) => {
+					if (containerWidth.value === 0) return
+					isScrubbing.set(true)
+					const newProgress = Math.min(
+						Math.max(e.x / containerWidth.value, 0),
+						1,
+					)
+					scrubPosition.set(newProgress * (duration.value || 1))
+					scheduleOnRN(
+						Haptics.performAndroidHapticsAsync,
+						Haptics.AndroidHaptics.Drag_Start,
+					)
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
+				})
+				.onUpdate((e) => {
+					if (containerWidth.value === 0) return
+					const newProgress = Math.min(
+						Math.max(e.x / containerWidth.value, 0),
+						1,
+					)
+					scrubPosition.set(newProgress * (duration.value || 1))
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
+				})
+				.onFinalize(() => {
+					if (containerWidth.value === 0) return
+					const targetTime = scrubPosition.value
 
-			seekPosition.set(targetTime)
-			isSeeking.set(true)
+					seekPosition.set(targetTime)
+					isSeeking.set(true)
 
-			void scheduleOnRN(handleSeek, targetTime)
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Gesture_End,
-			)
-			if (onInteraction) {
-				scheduleOnRN(onInteraction)
-			}
+					void scheduleOnRN(handleSeek, targetTime)
+					scheduleOnRN(
+						Haptics.performAndroidHapticsAsync,
+						Haptics.AndroidHaptics.Gesture_End,
+					)
+					if (onInteraction) {
+						scheduleOnRN(onInteraction)
+					}
 
-			isScrubbing.set(false)
-		})
-		.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 })
+					isScrubbing.set(false)
+				})
+				.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 }),
+		[
+			containerWidth,
+			isScrubbing,
+			scrubPosition,
+			duration,
+			onInteraction,
+			seekPosition,
+			isSeeking,
+			handleSeek,
+		],
+	)
 
 	const trackAnimatedStyle = useAnimatedStyle(() => {
 		return {

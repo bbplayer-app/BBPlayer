@@ -6,7 +6,7 @@ import * as Haptics from '@/utils/haptics'
 import type { FlashListRef, ListRenderItem } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -130,7 +130,10 @@ export function TrackList({
 	const { colors } = useTheme()
 	const currentTrackId = useCurrentTrackId()
 	const currentTrackIdRef = useRef(currentTrackId)
-	currentTrackIdRef.current = currentTrackId
+
+	useEffect(() => {
+		currentTrackIdRef.current = currentTrackId
+	}, [currentTrackId])
 	const insets = useSafeAreaInsets()
 
 	const [menuState, setMenuState] = useState<{
