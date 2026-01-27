@@ -1,72 +1,47 @@
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
-import { Orpheus } from '@roitium/expo-orpheus'
-import { useEffect, useRef, useState } from 'react'
+import { useCurrentTrack as useOrpheusTrack } from '@roitium/expo-orpheus'
+import { useEffect, useState } from 'react'
 
 export function useCurrentTrack() {
-	const [track, setTrack] = useState<Track | null>(null)
-	const lastRequestIdRef = useRef(0)
+	const { track: orpheusTrack } = useOrpheusTrack()
+
+	const [internalTrack, setInternalTrack] = useState<Track | null>(null)
 
 	useEffect(() => {
 		let isMounted = true
 
-		const fetchAndUpdate = async () => {
-			const currentRequestId = ++lastRequestIdRef.current
-
-			const handleFetchError = (e: unknown) => {
-				if (isMounted && currentRequestId === lastRequestIdRef.current) {
-					toastAndLogError('读取当前曲目信息失败', e, 'Hooks.useCurrentTrack')
-					setTrack(null)
-				}
-			}
-
-			let currentTrack
-			try {
-				currentTrack = await Orpheus.getCurrentTrack()
-			} catch (e) {
-				return handleFetchError(e)
-			}
-
-			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
+		const fetchInternalTrack = async () => {
+			if (!orpheusTrack) {
+				setInternalTrack(null)
 				return
 			}
-			if (!currentTrack) {
-				setTrack(null)
-				return
-			}
+			const result = await trackService.getTrackByUniqueKey(orpheusTrack.id)
 
-			const internalTrack = await trackService.getTrackByUniqueKey(
-				currentTrack.id,
-			)
-			if (!isMounted || currentRequestId !== lastRequestIdRef.current) {
-				return
-			}
-			if (internalTrack.isErr()) {
-				setTrack(null)
+			if (!isMounted) return
+
+			if (result.isErr()) {
+				setInternalTrack(null)
 				toastAndLogError(
 					'读取当前曲目信息失败',
-					internalTrack.error,
+					result.error,
 					'Hooks.useCurrentTrack',
 				)
 				return
 			}
-			setTrack(internalTrack.value)
+
+			setInternalTrack(result.value)
 		}
 
-		void fetchAndUpdate()
-
-		const sub = Orpheus.addListener('onTrackStarted', () => {
-			void fetchAndUpdate()
-		})
+		void fetchInternalTrack()
 
 		return () => {
 			isMounted = false
-			sub.remove()
 		}
-	}, [])
+	}, [orpheusTrack, orpheusTrack?.id])
 
-	return track
+	return internalTrack
 }
 
 export default useCurrentTrack
