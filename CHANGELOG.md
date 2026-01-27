@@ -11,6 +11,7 @@
 
 - 集成 commitlint 和 lefthook 以规范 commit 信息
 - 同步本地歌单到 b 站收藏夹（不稳定，容易被风控）
+- 收藏夹同步现在会显示详细的进度模态框
 
 ### Changed
 

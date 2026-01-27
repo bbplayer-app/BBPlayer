@@ -27,6 +27,20 @@ import toast from '@/utils/toast'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
 
+export interface SyncProgress {
+	message: string
+	current?: number
+	total?: number
+	stage:
+		| 'initializing'
+		| 'fetching_metadata'
+		| 'calculating_diff'
+		| 'fetching_details'
+		| 'saving'
+		| 'completed'
+		| 'error'
+}
+
 let logger = log.extend('Facade')
 
 export class SyncFacade {
@@ -353,6 +367,7 @@ export class SyncFacade {
 	 */
 	public async syncFavorite(
 		favoriteId: number,
+		onProgress?: (progress: SyncProgress) => void,
 	): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
 		// getFavoriteListAllContents 获取到的 bvid 中会包含被 up 隐藏的视频，但这部分视频在 getFavoriteListContents 中是找不到的，也就无法添加到本地数据库。这导致对于包含这种视频的收藏夹，每次同步都会重新「同步」这些视频，但咱们没办法......
 		if (this.syncingIds.has(`favorite::${favoriteId}`)) {
@@ -360,11 +375,19 @@ export class SyncFacade {
 		}
 		try {
 			this.syncingIds.add(`favorite::${favoriteId}`)
+			onProgress?.({
+				message: '初始化同步任务...',
+				stage: 'initializing',
+			})
 			logger = log.extend('[Facade/SyncFavorite: ' + favoriteId + ']')
 			logger.info('开始同步收藏夹', { favoriteId })
 			logger.debug('syncFavorite', { favoriteId })
 
 			// 从 bilibili 获取基本元数据和收藏夹所有 bvid
+			onProgress?.({
+				message: '正在获取收藏夹元数据...',
+				stage: 'fetching_metadata',
+			})
 			const bilibiliResult = await ResultAsync.combine([
 				this.bilibiliApi.getFavoriteListAllContents(favoriteId),
 				this.bilibiliApi.getFavoriteListContents(favoriteId, 1),
@@ -402,6 +425,10 @@ export class SyncFacade {
 			})
 
 			// 开始计算 diff
+			onProgress?.({
+				message: '正在比对本地数据...',
+				stage: 'calculating_diff',
+			})
 			let bvidsToAddSet: Set<string>
 			let bvidsToRemoveSet: Set<string>
 			const afterRemovedHiddenBvidsAllBvids = new Set<string>(
@@ -453,15 +480,30 @@ export class SyncFacade {
 
 			// 开始获取收藏夹新增部分 bvid 的详细元数据
 			// 从第一页（最新）开始获取，直到所有新增的 bvid 都获取完成
+			onProgress?.({
+				message: `准备同步 ${bvidsToAddSet.size} 个新视频...`,
+				current: 0,
+				total: bvidsToAddSet.size,
+				stage: 'fetching_details',
+			})
+
 			const addedTracksMetadata = new Set<BilibiliFavoriteListContent>()
 			let nowPageNumber = 0
 			let hasMore = true
+			const totalToAdd = bvidsToAddSet.size
+			let fetchedCount = 0
 
 			while (hasMore) {
 				if (bvidsToAddSet.size === 0) {
 					break
 				}
 				nowPageNumber += 1
+				onProgress?.({
+					message: `正在获取第 ${nowPageNumber} 页详情...`,
+					current: fetchedCount,
+					total: totalToAdd,
+					stage: 'fetching_details',
+				})
 				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
 				const pageResult = await this.bilibiliApi.getFavoriteListContents(
 					favoriteId,
@@ -485,8 +527,15 @@ export class SyncFacade {
 					if (bvidsToAddSet.has(item.bvid)) {
 						addedTracksMetadata.add(item)
 						bvidsToAddSet.delete(item.bvid)
+						fetchedCount++
 					}
 				}
+				onProgress?.({
+					message: `已获取 ${fetchedCount}/${totalToAdd} 个视频详情...`,
+					current: fetchedCount,
+					total: totalToAdd,
+					stage: 'fetching_details',
+				})
 			}
 			if (bvidsToAddSet.size > 0) {
 				const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${[...bvidsToAddSet].join(',')}`
@@ -502,6 +551,10 @@ export class SyncFacade {
 				requestApiTimes: nowPageNumber,
 			})
 
+			onProgress?.({
+				message: '正在保存数据到数据库...',
+				stage: 'saving',
+			})
 			const txResult = await ResultAsync.fromPromise(
 				this.db.transaction(async (tx) => {
 					const playlistSvc = this.playlistService.withDB(tx)
@@ -690,10 +743,14 @@ export class SyncFacade {
 	 * @param type 播放列表类型
 	 * @returns
 	 */
-	public sync(remoteSyncId: number, type: Playlist['type']) {
+	public sync(
+		remoteSyncId: number,
+		type: Playlist['type'],
+		onProgress?: (progress: SyncProgress) => void,
+	) {
 		switch (type) {
 			case 'favorite': {
-				return this.syncFavorite(remoteSyncId)
+				return this.syncFavorite(remoteSyncId, onProgress)
 			}
 			case 'collection': {
 				return this.syncCollection(remoteSyncId)
