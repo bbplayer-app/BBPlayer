@@ -1,7 +1,7 @@
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { FavoriteSyncProgress } from '@/lib/facades/sync'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, ProgressBar, Text } from 'react-native-paper'
 
@@ -15,9 +15,13 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 
 	const [progress, setProgress] = useState<FavoriteSyncProgress | null>(null)
 	const { mutate: syncFavorite, isPending } = usePlaylistSync()
+	const hasSyncStarted = useRef(false)
 
 	// Auto-start sync on mount
 	useEffect(() => {
+		if (hasSyncStarted.current) return
+		hasSyncStarted.current = true
+
 		syncFavorite(
 			{
 				remoteSyncId: favoriteId,
@@ -64,7 +68,11 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	return (
 		<>
 			<Dialog.Title>
-				{progress?.stage === 'completed' ? '同步完成' : '正在同步收藏夹'}
+				{progress?.stage === 'completed'
+					? '同步完成'
+					: progress?.stage === 'error'
+						? '同步失败'
+						: '正在同步收藏夹'}
 			</Dialog.Title>
 			<Dialog.Content>
 				<View style={styles.content}>

@@ -85,7 +85,11 @@ export default function FavoritePage() {
 			return
 		}
 
-		openModal('FavoriteSyncProgress', { favoriteId: Number(id) })
+		openModal(
+			'FavoriteSyncProgress',
+			{ favoriteId: Number(id) },
+			{ dismissible: false },
+		)
 	}, [favoriteData?.pages, id, openModal])
 
 	useEffect(() => {
