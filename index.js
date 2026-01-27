@@ -1,5 +1,5 @@
 import { Orpheus, registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
-import log from './src/utils/log'
+import log, { reportErrorToSentry } from './src/utils/log'
 import {
 	finalizeAndRecordCurrentTrack,
 	setDesktopLyrics,
@@ -14,6 +14,8 @@ Orpheus.addListener('onPlayerError', (error) => {
 	toast.error(`播放器发生错误: ${error.message || '未知错误'}`, {
 		description: error.code,
 	})
+	log.error('播放器错误事件：', { error })
+	reportErrorToSentry(error, '播放器错误事件', 'Native.Player')
 })
 
 Orpheus.addListener('onTrackFinished', (event) => {

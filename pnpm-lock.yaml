@@ -57,8 +57,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@roitium/expo-orpheus':
-        specifier: ^0.10.1
-        version: 0.10.1(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        specifier: ^0.11.0
+        version: 0.11.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@sentry/cli':
         specifier: ^2.58.4
         version: 2.58.4
@@ -2458,8 +2458,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  '@roitium/expo-orpheus@0.10.1':
-    resolution: {integrity: sha512-1La/L2eJF13SCIxUN+7iGAmbczM1K/Uzatwn4T0tJA1Ocw/qZ3ER0YEh8e4pLjFgjWDjBD+h/qqn25x+2eh7bw==}
+  '@roitium/expo-orpheus@0.11.0':
+    resolution: {integrity: sha512-BKJdqhfzUaazWD/wVhi6GBkOnsTAss0K2tRUwyMZ9gFi4WfDRwcs4MDTjDzvq04kWwvrH2BGo77GVOcxgLOSHA==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -10242,7 +10242,7 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
 
-  '@roitium/expo-orpheus@0.10.1(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
+  '@roitium/expo-orpheus@0.11.0(expo@55.0.0-preview.5)(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
     dependencies:
       expo: 55.0.0-preview.5(@babel/core@7.28.4)(@expo/dom-webview@0.2.8)(@expo/metro-runtime@55.0.1)(expo-router@55.0.0-beta.2)(react-dom@19.1.0(react@19.2.0))(react-native-web@0.21.1(react-dom@19.1.0(react@19.2.0))(react@19.2.0))(react-native-webview@13.15.0(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react: 19.2.0
