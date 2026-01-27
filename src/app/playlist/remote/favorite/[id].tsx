@@ -7,7 +7,6 @@ import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMen
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
-import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
@@ -76,8 +75,6 @@ export default function FavoritePage() {
 		)
 	}, [favoriteData])
 
-	const { mutate: syncFavorite } = usePlaylistSync()
-
 	const { playTrack } = useRemotePlaylist()
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
@@ -87,27 +84,13 @@ export default function FavoritePage() {
 			toast.info('收藏夹为空，无需同步')
 			return
 		}
-		const toastId = 'sync-playlist'
-		toast.show('同步中...', { id: toastId, duration: Infinity })
-		setRefreshing(true)
-		syncFavorite(
-			{
-				remoteSyncId: Number(id),
-				type: 'favorite',
-				toastId,
-			},
-			{
-				onSuccess: (id) => {
-					if (!id) return
-					router.replace({
-						pathname: '/playlist/local/[id]',
-						params: { id: String(id) },
-					})
-				},
-			},
+
+		openModal(
+			'FavoriteSyncProgress',
+			{ favoriteId: Number(id), shouldRedirectToLocalPlaylist: true },
+			{ dismissible: false },
 		)
-		setRefreshing(false)
-	}, [favoriteData?.pages, id, router, syncFavorite])
+	}, [favoriteData?.pages, id, openModal])
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
