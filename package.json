@@ -7,7 +7,8 @@
 		"android": "expo run:android",
 		"test": "jest --watchAll",
 		"lint": "eslint .",
-		"format": "eslint . --fix && prettier --write ."
+		"format": "eslint . --fix && prettier --write .",
+		"postinstall": "patch-package"
 	},
 	"jest": {
 		"preset": "jest-expo",
@@ -83,6 +84,7 @@
 		"mitt": "^3.0.1",
 		"neverthrow": "^8.2.0",
 		"node-forge": "1.3.2",
+		"patch-package": "^8.0.1",
 		"prettier-plugin-organize-imports": "^4.3.0",
 		"promise": "^8.3.0",
 		"react": "19.2.0",

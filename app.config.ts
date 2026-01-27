@@ -74,7 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 	icon: './assets/images/icon.png',
 	scheme: 'bbplayer',
 	userInterfaceStyle: 'automatic',
-	platforms: ['android'],
+	platforms: ['android', 'ios'],
 	android: {
 		adaptiveIcon: {
 			foregroundImage: './assets/images/adaptive-icon.png',
@@ -174,7 +174,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			'expo-share-intent',
 			{
 				androidIntentFilters: ['text/*'],
-				disableIOS: true,
+				iosActivationRules: {
+					NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+					NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+					NSExtensionActivationSupportsImageWithMaxCount: 0,
+					NSExtensionActivationSupportsMovieWithMaxCount: 0,
+				},
 			},
 		],
 		'expo-router',
