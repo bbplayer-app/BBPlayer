@@ -1,7 +1,7 @@
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
-import type { SyncProgress } from '@/lib/facades/sync'
+import type { FavoriteSyncProgress } from '@/lib/facades/sync'
 import { syncFacade } from '@/lib/facades/sync'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -31,7 +31,7 @@ export const usePlaylistSync = () => {
 			remoteSyncId: number
 			type: Playlist['type']
 			toastId?: string
-			onProgress?: (progress: SyncProgress) => void
+			onProgress?: (progress: FavoriteSyncProgress) => void
 		}) => {
 			const result = await syncFacade.sync(remoteSyncId, type, onProgress)
 			if (result.isErr()) {

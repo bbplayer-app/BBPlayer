@@ -47,6 +47,9 @@ const SongShareModal = lazy(() => import('./modals/player/SongShareModal'))
 const SyncLocalToBilibiliModal = lazy(
 	() => import('./modals/playlist/SyncLocalToBilibiliModal'),
 )
+const FavoriteSyncProgressModal = lazy(
+	() => import('./modals/playlist/FavoriteSyncProgressModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -72,4 +75,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	LyricsSelection: LyricsSelectionModal,
 	SongShare: SongShareModal,
 	SyncLocalToBilibili: SyncLocalToBilibiliModal,
+	FavoriteSyncProgress: FavoriteSyncProgressModal,
 }
