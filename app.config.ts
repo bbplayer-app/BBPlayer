@@ -95,6 +95,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 						host: 'bbplayer.roitium.com',
 						pathPrefix: '/app/link-to',
 					},
+					{
+						scheme: 'https',
+						host: 'app.bbplayer.roitium.com',
+					},
 				],
 				category: ['BROWSABLE', 'DEFAULT'],
 			},
