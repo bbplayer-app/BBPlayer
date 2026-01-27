@@ -1,17 +1,31 @@
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { FavoriteSyncProgress } from '@/lib/facades/sync'
+import { useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, ProgressBar, Text } from 'react-native-paper'
 
 const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	favoriteId,
+	shouldRedirectToLocalPlaylist,
 }: {
 	favoriteId: number
+	shouldRedirectToLocalPlaylist?: boolean
 }) {
 	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('FavoriteSyncProgress'), [_close])
+	const router = useRouter()
+	const syncedPlaylistId = useRef<number | undefined>(undefined)
+
+	const close = useCallback(() => {
+		_close('FavoriteSyncProgress')
+		if (shouldRedirectToLocalPlaylist && syncedPlaylistId.current) {
+			const targetId = syncedPlaylistId.current
+			useModalStore.getState().doAfterModalHostClosed(() => {
+				router.push(`/playlist/local/${targetId}`)
+			})
+		}
+	}, [_close, shouldRedirectToLocalPlaylist, router])
 
 	const [progress, setProgress] = useState<FavoriteSyncProgress | null>(null)
 	const { mutate: syncFavorite, isPending } = usePlaylistSync()
@@ -29,7 +43,8 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 				onProgress: setProgress,
 			},
 			{
-				onSuccess: () => {
+				onSuccess: (id) => {
+					syncedPlaylistId.current = id
 					setProgress((prev) =>
 						prev ? { ...prev, stage: 'completed', message: '同步完成' } : null,
 					)

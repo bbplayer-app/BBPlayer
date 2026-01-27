@@ -87,7 +87,7 @@ export default function FavoritePage() {
 
 		openModal(
 			'FavoriteSyncProgress',
-			{ favoriteId: Number(id) },
+			{ favoriteId: Number(id), shouldRedirectToLocalPlaylist: true },
 			{ dismissible: false },
 		)
 	}, [favoriteData?.pages, id, openModal])

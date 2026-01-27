@@ -28,7 +28,10 @@ export interface ModalPropsMap {
 	LyricsSelection: undefined
 	SongShare: undefined
 	SyncLocalToBilibili: { playlistId: number }
-	FavoriteSyncProgress: { favoriteId: number }
+	FavoriteSyncProgress: {
+		favoriteId: number
+		shouldRedirectToLocalPlaylist?: boolean
+	}
 }
 
 export type ModalKey = keyof ModalPropsMap
