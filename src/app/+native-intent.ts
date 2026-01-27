@@ -14,13 +14,17 @@ export function redirectSystemPath({
 			return '/(tabs)/index'
 		}
 
+		// 这里的 path 可能是一个完整的 URL，也可能是一个 path
 		let url: URL | null = null
 		try {
 			url = new URL(path)
 		} catch {
-			url = null
+			// ignore
 		}
 		if (url) {
+			if (url.protocol === 'bbplayer:') {
+				return `/${url.hostname}${url.pathname}${url.search}`
+			}
 			if (url.hostname === 'notification.click') {
 				return '/player'
 			}

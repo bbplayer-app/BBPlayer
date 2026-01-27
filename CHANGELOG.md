@@ -16,6 +16,7 @@
 ### Changed
 
 - 重构 `src/lib/api/bilibili/api.ts` 为 Class
+- 修复冷启动时 Deep Link 无法跳转的问题
 
 ## [2.2.2] - 2026-01-25
 
