@@ -91,17 +91,13 @@ const renderItemDefault = ({
 				titleHtml: item.titleHtml,
 			}}
 			toggleSelected={() => {
-				void Haptics.performAndroidHapticsAsync(
-					Haptics.AndroidHaptics.Clock_Tick,
-				)
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
 				toggle(item.id)
 			}}
 			isSelected={selected.has(item.id)}
 			selectMode={selectMode}
 			enterSelectMode={() => {
-				void Haptics.performAndroidHapticsAsync(
-					Haptics.AndroidHaptics.Long_Press,
-				)
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
 				enterSelectMode(item.id)
 			}}
 		/>

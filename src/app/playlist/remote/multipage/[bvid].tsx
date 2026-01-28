@@ -176,17 +176,13 @@ export default function MultipagePage() {
 						titleHtml: item.titleHtml,
 					}}
 					toggleSelected={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Clock_Tick,
-						)
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
 						toggle(item.id)
 					}}
 					isSelected={selectedSet.has(item.id)}
 					selectMode={isSelectMode}
 					enterSelectMode={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Long_Press,
-						)
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
 						enterMode(item.id)
 					}}
 				/>

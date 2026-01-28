@@ -6,7 +6,7 @@ import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { AppState, ScrollView, StyleSheet, View } from 'react-native'
+import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Checkbox,
@@ -144,40 +144,44 @@ export default function PlaybackSettingsPage() {
 						}}
 					/>
 				</View>
-				<View style={styles.settingRow}>
-					<Text>桌面歌词</Text>
-					<Switch
-						value={isDesktopLyricsShown}
-						onValueChange={async () => {
-							try {
-								if (isDesktopLyricsShown) {
-									await Orpheus.hideDesktopLyrics()
-									setIsDesktopLyricsShown(false)
-								} else {
-									await enableDesktopLyrics()
-								}
-							} catch (e) {
-								toastAndLogError('设置失败', e, 'Settings')
-								return
-							}
-						}}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>桌面歌词锁定</Text>
-					<Switch
-						value={isDesktopLyricsLocked}
-						onValueChange={() => {
-							try {
-								Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
-							} catch (e) {
-								toastAndLogError('设置失败', e, 'Settings')
-								return
-							}
-							setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
-						}}
-					/>
-				</View>
+				{Platform.OS === 'android' && (
+					<>
+						<View style={styles.settingRow}>
+							<Text>桌面歌词</Text>
+							<Switch
+								value={isDesktopLyricsShown}
+								onValueChange={async () => {
+									try {
+										if (isDesktopLyricsShown) {
+											await Orpheus.hideDesktopLyrics()
+											setIsDesktopLyricsShown(false)
+										} else {
+											await enableDesktopLyrics()
+										}
+									} catch (e) {
+										toastAndLogError('设置失败', e, 'Settings')
+										return
+									}
+								}}
+							/>
+						</View>
+						<View style={styles.settingRow}>
+							<Text>桌面歌词锁定</Text>
+							<Switch
+								value={isDesktopLyricsLocked}
+								onValueChange={() => {
+									try {
+										Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
+									} catch (e) {
+										toastAndLogError('设置失败', e, 'Settings')
+										return
+									}
+									setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
+								}}
+							/>
+						</View>
+					</>
+				)}
 				<View style={styles.settingRow}>
 					<Text>自动匹配的歌词源（不影响手动搜索）</Text>
 					<FunctionalMenu

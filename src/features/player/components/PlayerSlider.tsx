@@ -170,7 +170,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					)
 					scrubPosition.set(newProgress * (duration.value || 1))
 					scheduleOnRN(
-						Haptics.performAndroidHapticsAsync,
+						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Drag_Start,
 					)
 					if (onInteraction) {
@@ -197,7 +197,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 
 					void scheduleOnRN(handleSeek, targetTime)
 					scheduleOnRN(
-						Haptics.performAndroidHapticsAsync,
+						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Gesture_End,
 					)
 					if (onInteraction) {

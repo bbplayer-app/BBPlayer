@@ -40,9 +40,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 						: void 0
 				}
 				onPressCover={() => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Context_Click,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					jumpTo('lyrics')
 				}}
 				coverRef={imageRef}

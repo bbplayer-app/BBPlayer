@@ -93,9 +93,7 @@ export function MainPlaybackControls({
 				size={skipButtonSize}
 				onPress={() => {
 					onInteraction?.()
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Context_Click,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToPrevious()
 				}}
 			/>
@@ -104,9 +102,7 @@ export function MainPlaybackControls({
 				size={playButtonSize}
 				onPress={async () => {
 					onInteraction?.()
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Context_Click,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					const isPlaying = await Orpheus.getIsPlaying()
 					logInstance.debug('isPlaying', isPlaying)
 					if (isPlaying) {
@@ -125,9 +121,7 @@ export function MainPlaybackControls({
 				size={skipButtonSize}
 				onPress={() => {
 					onInteraction?.()
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Context_Click,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToNext()
 				}}
 			/>
@@ -171,9 +165,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						size={24}
 						iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
 						onPress={async () => {
-							void Haptics.performAndroidHapticsAsync(
-								Haptics.AndroidHaptics.Confirm,
-							)
+							void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
 							await (shuffleMode
 								? Orpheus.setShuffleMode(false)
 								: Orpheus.setShuffleMode(true))
@@ -197,9 +189,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								: colors.onSurfaceVariant
 						}
 						onPress={() => {
-							void Haptics.performAndroidHapticsAsync(
-								Haptics.AndroidHaptics.Confirm,
-							)
+							void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
 							const nextMode =
 								repeatMode === RepeatMode.OFF
 									? RepeatMode.TRACK
@@ -232,9 +222,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						size={24}
 						iconColor={colors.onSurfaceVariant}
 						onPress={() => {
-							void Haptics.performAndroidHapticsAsync(
-								Haptics.AndroidHaptics.Context_Click,
-							)
+							void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 							onOpenQueue()
 						}}
 					/>

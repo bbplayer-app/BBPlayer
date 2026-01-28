@@ -2,7 +2,7 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Checkbox,
@@ -66,33 +66,39 @@ export default function AppearanceSettingsPage() {
 						}
 					/>
 				</View>
-				<View style={styles.settingRow}>
-					<Text>选择底部播放条样式</Text>
-					<FunctionalMenu
-						visible={nowPlayerBarMenuVisible}
-						onDismiss={() => setNowPlayerBarMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='palette'
-								size={20}
-								onPress={() => setNowPlayerBarMenuVisible(true)}
+				{Platform.OS === 'android' && (
+					<View style={styles.settingRow}>
+						<Text>选择底部播放条样式</Text>
+						<FunctionalMenu
+							visible={nowPlayerBarMenuVisible}
+							onDismiss={() => setNowPlayerBarMenuVisible(false)}
+							anchor={
+								<IconButton
+									icon='palette'
+									size={20}
+									onPress={() => setNowPlayerBarMenuVisible(true)}
+								/>
+							}
+						>
+							<Checkbox.Item
+								mode='ios'
+								label='悬浮（默认）'
+								status={
+									nowPlayingBarStyle === 'float' ? 'checked' : 'unchecked'
+								}
+								onPress={() => setNowPlayingBarStyle('float')}
 							/>
-						}
-					>
-						<Checkbox.Item
-							mode='ios'
-							label='悬浮（默认）'
-							status={nowPlayingBarStyle === 'float' ? 'checked' : 'unchecked'}
-							onPress={() => setNowPlayingBarStyle('float')}
-						/>
-						<Checkbox.Item
-							mode='ios'
-							label='沉浸'
-							status={nowPlayingBarStyle === 'bottom' ? 'checked' : 'unchecked'}
-							onPress={() => setNowPlayingBarStyle('bottom')}
-						/>
-					</FunctionalMenu>
-				</View>
+							<Checkbox.Item
+								mode='ios'
+								label='沉浸'
+								status={
+									nowPlayingBarStyle === 'bottom' ? 'checked' : 'unchecked'
+								}
+								onPress={() => setNowPlayingBarStyle('bottom')}
+							/>
+						</FunctionalMenu>
+					</View>
+				)}
 				<View style={styles.settingRow}>
 					<Text>选择播放器背景样式</Text>
 					<FunctionalMenu

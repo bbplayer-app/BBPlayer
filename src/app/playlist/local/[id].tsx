@@ -295,15 +295,11 @@ export default function LocalPlaylistPage() {
 				selectMode={selectMode}
 				selected={selected}
 				toggle={(trackId) => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Clock_Tick,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
 					toggle(trackId)
 				}}
 				enterSelectMode={(trackId) => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Long_Press,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
 					enterSelectMode(trackId)
 				}}
 				onEndReached={

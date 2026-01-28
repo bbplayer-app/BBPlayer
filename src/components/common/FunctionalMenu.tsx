@@ -20,9 +20,7 @@ const FunctionalMenu = memo(function FunctionalMenu({
 
 	useEffect(() => {
 		if (visible) {
-			void Haptics.performAndroidHapticsAsync(
-				Haptics.AndroidHaptics.Context_Click,
-			)
+			void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 		}
 	}, [visible])
 
