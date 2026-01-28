@@ -16,6 +16,7 @@
 - 使用 useDeferredValue 优化本地播放列表、本地歌单详情页和首页搜索的输入响应速度
 - 使用 useTransition 优化音乐库 Tab 切换体验，减少卡顿感
 - 使用 Reanimated 重写歌词滚动逻辑，完全绕过 React 渲染流程，极大提升性能
+- 重构播放器 Hooks，使用全局 Zustand Store 管理播放状态，减少 JS 与 Native 之间的通信开销
 
 ### Changed
 

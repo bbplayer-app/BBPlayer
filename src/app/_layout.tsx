@@ -1,6 +1,7 @@
 import AppProviders from '@/components/providers'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
@@ -87,6 +88,9 @@ export default Sentry.wrap(function RootLayout() {
 						})
 
 					void lyricService.migrateFromOldFormat()
+
+					// 初始化播放器状态
+					usePlayerStore.getState().initialize()
 
 					const initializePlayer = () => {
 						if (!global.playerIsReady) {
