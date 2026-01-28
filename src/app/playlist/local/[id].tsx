@@ -1,11 +1,9 @@
-import type { FlashListRef } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
 	useDeferredValue,
 	useEffect,
 	useMemo,
-	useRef,
 	useState,
 } from 'react'
 import { StyleSheet, useWindowDimensions, View } from 'react-native'
@@ -39,7 +37,6 @@ import {
 } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -155,11 +152,8 @@ export default function LocalPlaylistPage() {
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
-	const trackListRef = useRef<FlashListRef<Track>>(null)
-
 	const deleteTrack = useCallback(
 		(trackId: number) => {
-			void trackListRef.current?.prepareForLayoutAnimationRender()
 			deleteTrackFromLocalPlaylist({
 				trackIds: [trackId],
 				playlistId: Number(id),
@@ -179,7 +173,6 @@ export default function LocalPlaylistPage() {
 
 	const deleteSelectedTracks = useCallback(() => {
 		if (selected.size === 0) return
-		trackListRef.current?.prepareForLayoutAnimationRender()
 		deleteTrackFromLocalPlaylist({
 			trackIds: Array.from(selected),
 			playlistId: Number(id),
@@ -316,7 +309,6 @@ export default function LocalPlaylistPage() {
 			>
 				<LocalTrackList
 					isStale={searchQuery !== deferredQuery}
-					listRef={trackListRef}
 					tracks={finalPlaylistData ?? []}
 					playlist={playlistMetadata}
 					handleTrackPress={handleTrackPress}

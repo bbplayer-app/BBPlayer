@@ -15,7 +15,6 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
-import Animated, { LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
@@ -104,10 +103,7 @@ const renderItem = ({
 		? downloadStatus[item.uniqueKey]
 		: undefined
 	return (
-		<Animated.View
-			layout={LinearTransition}
-			style={{ opacity: isStale ? 0.5 : 1 }}
-		>
+		<View style={{ opacity: isStale ? 0.5 : 1 }}>
 			<TrackListItem
 				index={index}
 				onTrackPress={() => handleTrackPress(item)}
@@ -131,7 +127,7 @@ const renderItem = ({
 				}}
 				downloadState={downloadState}
 			/>
-		</Animated.View>
+		</View>
 	)
 }
 
