@@ -51,6 +51,7 @@ interface LocalTrackListProps {
 	onEndReached?: () => void
 	hasNextPage?: boolean
 	isFetchingNextPage?: boolean
+	isStale?: boolean
 }
 
 const renderItem = ({
@@ -68,6 +69,7 @@ const renderItem = ({
 		selectMode: boolean
 		playlist: Playlist
 		downloadStatus: Record<string, DownloadState>
+		isStale?: boolean
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -80,12 +82,16 @@ const renderItem = ({
 		selectMode,
 		playlist,
 		downloadStatus,
+		isStale,
 	} = extraData
 	const downloadState = downloadStatus
 		? downloadStatus[item.uniqueKey]
 		: undefined
 	return (
-		<Animated.View layout={LinearTransition}>
+		<Animated.View
+			layout={LinearTransition}
+			style={{ opacity: isStale ? 0.5 : 1 }}
+		>
 			<TrackListItem
 				index={index}
 				onTrackPress={() => handleTrackPress(item)}
@@ -176,6 +182,7 @@ export const LocalTrackList = forwardRef<
 		onEndReached,
 		isFetchingNextPage,
 		hasNextPage,
+		isStale,
 	},
 	ref,
 ) {
@@ -240,6 +247,7 @@ export const LocalTrackList = forwardRef<
 			enterSelectMode,
 			playlist,
 			downloadStatus,
+			isStale,
 		}),
 		[
 			selectMode,
@@ -250,6 +258,7 @@ export const LocalTrackList = forwardRef<
 			enterSelectMode,
 			playlist,
 			downloadStatus,
+			isStale,
 		],
 	)
 

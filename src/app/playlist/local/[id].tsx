@@ -302,10 +302,10 @@ export default function LocalPlaylistPage() {
 			<View
 				style={{
 					flex: 1,
-					opacity: searchQuery !== deferredQuery ? 0.5 : 1,
 				}}
 			>
 				<LocalTrackList
+					isStale={searchQuery !== deferredQuery}
 					ref={trackListRef}
 					tracks={finalPlaylistData ?? []}
 					playlist={playlistMetadata}
