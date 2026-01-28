@@ -27,7 +27,7 @@ export default function AnimatedModalOverlay({
 	const [showContent, setShowContent] = useState(false)
 
 	const wrapperAvoiding = useAnimatedStyle(() => {
-		const k = Math.max(0, height.value - insets.bottom)
+		const k = Math.max(0, Math.abs(height.value) - insets.bottom)
 		return { paddingBottom: k }
 	})
 
