@@ -243,15 +243,7 @@ const renderToViewItem = ({
 	ExtraData
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const {
-		toggle,
-		playTrack,
-		handleMenuPress,
-		selected,
-		selectMode,
-		enterSelectMode,
-		showItemCover,
-	} = extraData
+	const { playTrack, handleMenuPress, selection, showItemCover } = extraData
 
 	return (
 		<ToViewTrackListItem
@@ -270,13 +262,13 @@ const renderToViewItem = ({
 			}}
 			toggleSelected={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-				toggle(item.id)
+				selection.toggle(item.id)
 			}}
-			isSelected={selected.has(item.id)}
-			selectMode={selectMode}
+			isSelected={selection.selected.has(item.id)}
+			selectMode={selection.active}
 			enterSelectMode={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-				enterSelectMode(item.id)
+				selection.enter(item.id)
 			}}
 		/>
 	)

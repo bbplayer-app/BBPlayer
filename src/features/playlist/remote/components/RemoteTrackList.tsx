@@ -1,9 +1,16 @@
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type {
+	ListRenderItemInfoWithExtraData,
+	SelectionState,
+} from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
-import type { FlashListRef, ListRenderItem } from '@shopify/flash-list'
+import type {
+	FlashListProps,
+	FlashListRef,
+	ListRenderItem,
+} from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -18,40 +25,60 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { TrackListItem } from './PlaylistItem'
 
-interface TrackListProps {
+interface TrackListProps
+	extends Omit<
+		FlashListProps<BilibiliTrack>,
+		'data' | 'renderItem' | 'extraData'
+	> {
+	/**
+	 * 要显示的曲目数据数组
+	 */
 	tracks: BilibiliTrack[]
+	/**
+	 * 点击曲目时的回调函数
+	 */
 	playTrack: (track: BilibiliTrack) => void
+	/**
+	 * 生成曲目菜单项的函数
+	 */
 	trackMenuItems: (
 		track: BilibiliTrack,
 	) => { title: string; leadingIcon: string; onPress: () => void }[]
-	selectMode: boolean
-	selected: Set<number>
-	toggle: (id: number) => void
-	enterSelectMode: (id: number) => void
-	ListHeaderComponent: Parameters<typeof FlashList>[0]['ListHeaderComponent']
-	ListFooterComponent?: Parameters<typeof FlashList>[0]['ListFooterComponent']
-	ListEmptyComponent?: Parameters<typeof FlashList>[0]['ListEmptyComponent']
-	refreshControl: Parameters<typeof FlashList>[0]['refreshControl']
-	onEndReached?: () => void
+	/**
+	 * 多选状态管理
+	 */
+	selection: SelectionState
+	/**
+	 * 是否显示封面图片，默认为 true
+	 */
 	showItemCover?: boolean
+	/**
+	 * 是否正在获取下一页数据
+	 */
 	isFetchingNextPage?: boolean
+	/**
+	 * 是否还有下一页数据
+	 */
 	hasNextPage?: boolean
+	/**
+	 * 自定义渲染列表项的函数（可选）
+	 */
 	renderCustomItem?: (
 		info: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>,
 	) => React.ReactElement | null
+	/**
+	 * 列表引用（可选）
+	 */
 	listRef?: React.Ref<FlashListRef<BilibiliTrack>>
 }
 
 export interface ExtraData {
-	toggle: (id: number) => void
 	playTrack: (track: BilibiliTrack) => void
 	handleMenuPress: (
 		track: BilibiliTrack,
 		anchor: { x: number; y: number },
 	) => void
-	selected: Set<number>
-	selectMode: boolean
-	enterSelectMode: (id: number) => void
+	selection: SelectionState
 	showItemCover?: boolean
 	currentTrackIdRef: RefObject<string | undefined>
 }
@@ -63,12 +90,9 @@ const renderItemDefault = ({
 }: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
-		toggle,
 		playTrack,
 		handleMenuPress,
-		selected,
-		selectMode,
-		enterSelectMode,
+		selection,
 		showItemCover,
 		currentTrackIdRef,
 	} = extraData
@@ -92,13 +116,13 @@ const renderItemDefault = ({
 			}}
 			toggleSelected={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-				toggle(item.id)
+				selection.toggle(item.id)
 			}}
-			isSelected={selected.has(item.id)}
-			selectMode={selectMode}
+			isSelected={selection.selected.has(item.id)}
+			selectMode={selection.active}
 			enterSelectMode={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-				enterSelectMode(item.id)
+				selection.enter(item.id)
 			}}
 		/>
 	)
@@ -108,20 +132,13 @@ export function TrackList({
 	tracks,
 	playTrack,
 	trackMenuItems,
-	selectMode,
-	selected,
-	toggle,
-	enterSelectMode,
-	ListHeaderComponent,
-	ListFooterComponent,
-	ListEmptyComponent,
-	refreshControl,
-	onEndReached,
+	selection,
 	showItemCover,
 	isFetchingNextPage,
 	hasNextPage,
 	renderCustomItem,
 	listRef,
+	...flashListProps
 }: TrackListProps) {
 	const { colors } = useTheme()
 	const currentTrackId = useCurrentTrackId()
@@ -159,24 +176,13 @@ export function TrackList({
 
 	const extraData = useMemo(
 		() => ({
-			selectMode,
-			selected,
-			toggle,
+			selection,
 			playTrack,
-			enterSelectMode,
 			showItemCover,
 			currentTrackIdRef,
 			handleMenuPress,
 		}),
-		[
-			selectMode,
-			selected,
-			toggle,
-			playTrack,
-			enterSelectMode,
-			showItemCover,
-			handleMenuPress,
-		],
+		[selection, playTrack, showItemCover, handleMenuPress],
 	)
 
 	const renderItem = renderCustomItem ?? renderItemDefault
@@ -189,8 +195,6 @@ export function TrackList({
 				extraData={extraData}
 				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
 				ItemSeparatorComponent={() => <Divider />}
-				ListHeaderComponent={ListHeaderComponent}
-				refreshControl={refreshControl}
 				keyExtractor={keyExtractor}
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{
@@ -198,7 +202,6 @@ export function TrackList({
 					pointerEvents: menuState.visible ? 'none' : 'auto',
 					paddingBottom: currentTrackId ? 70 + insets.bottom : insets.bottom,
 				}}
-				onEndReached={onEndReached}
 				ListFooterComponent={
 					(isFetchingNextPage ? (
 						<View style={styles.footerLoadingContainer}>
@@ -211,10 +214,10 @@ export function TrackList({
 						>
 							•
 						</Text>
-					) : null) ?? ListFooterComponent
+					) : null) ?? flashListProps.ListFooterComponent
 				}
 				ListEmptyComponent={
-					ListEmptyComponent ?? (
+					flashListProps.ListEmptyComponent ?? (
 						<Text
 							style={[styles.emptyList, { color: colors.onSurfaceVariant }]}
 						>
@@ -222,6 +225,7 @@ export function TrackList({
 						</Text>
 					)
 				}
+				{...flashListProps}
 			/>
 			{menuState.track && (
 				<FunctionalMenu

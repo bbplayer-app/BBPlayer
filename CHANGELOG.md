@@ -21,6 +21,7 @@
 
 ### Changed
 
+- 重构 `RemoteTrackList` 和 `LocalTrackList` 组件的 Props，将选择相关状态合并为 `selection` 对象，并直接继承 `FlashList` 的 Props以获得更好的灵活性
 - 使用 react-native-keyboard-controller 的 API 重构 AnimatedModalOverlay
 - 重构 `src/lib/api/bilibili/api.ts` 为 Class
 - 修复冷启动时 Deep Link 无法跳转的问题

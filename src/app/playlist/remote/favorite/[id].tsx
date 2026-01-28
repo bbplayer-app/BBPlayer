@@ -56,6 +56,15 @@ export default function FavoritePage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -163,10 +172,7 @@ export default function FavoritePage() {
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={favoriteData.pages[0].info.cover}

@@ -69,6 +69,15 @@ export default function MultipagePage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(bv2av(bvid), 'multi_page')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -148,12 +157,9 @@ export default function MultipagePage() {
 		}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 			if (!extraData) throw new Error('Extradata 不存在')
 			const {
-				toggle,
 				playTrack: play,
 				handleMenuPress,
-				selected: selectedSet,
-				selectMode: isSelectMode,
-				enterSelectMode: enterMode,
+				selection,
 				showItemCover,
 			} = extraData
 
@@ -177,13 +183,13 @@ export default function MultipagePage() {
 					}}
 					toggleSelected={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-						toggle(item.id)
+						selection.toggle(item.id)
 					}}
-					isSelected={selectedSet.has(item.id)}
-					selectMode={isSelectMode}
+					isSelected={selection.selected.has(item.id)}
+					selectMode={selection.active}
 					enterSelectMode={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-						enterMode(item.id)
+						selection.enter(item.id)
 					}}
 				/>
 			)
@@ -250,10 +256,7 @@ export default function MultipagePage() {
 					tracks={tracksData}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					showItemCover={false}
 					ListHeaderComponent={
 						<PlaylistHeader

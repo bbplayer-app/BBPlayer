@@ -69,6 +69,15 @@ export default function ToViewPage() {
 	const insets = useSafeAreaInsets()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -163,10 +172,7 @@ export default function ToViewPage() {
 					tracks={tracksData}
 					playTrack={handlePlay}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={undefined}

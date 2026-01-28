@@ -56,6 +56,15 @@ export default function CollectionPage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'collection')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 
 	const {
 		data: collectionData,
@@ -160,10 +169,7 @@ export default function CollectionPage() {
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={collectionData.info.cover}

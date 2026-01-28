@@ -2,10 +2,7 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
-import {
-	LocalTrackList,
-	type LocalTrackListRef,
-} from '@/features/playlist/local/components/LocalTrackList'
+import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
@@ -23,16 +20,18 @@ import {
 } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
-import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
+import type { FlashListRef } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
 	useDeferredValue,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from 'react'
@@ -60,6 +59,16 @@ export default function LocalPlaylistPage() {
 	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
 		useTrackSelection()
+
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const [batchAddTracksModalPayloads, setBatchAddTracksModalPayloads] =
 		useState<{ track: CreateTrackPayload; artist: CreateArtistPayload }[]>([])
 	const openModal = useModalStore((state) => state.open)
@@ -145,7 +154,7 @@ export default function LocalPlaylistPage() {
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
-	const trackListRef = useRef<LocalTrackListRef>(null)
+	const trackListRef = useRef<FlashListRef<Track>>(null)
 
 	const deleteTrack = useCallback(
 		(trackId: number) => {
@@ -306,21 +315,12 @@ export default function LocalPlaylistPage() {
 			>
 				<LocalTrackList
 					isStale={searchQuery !== deferredQuery}
-					ref={trackListRef}
+					listRef={trackListRef}
 					tracks={finalPlaylistData ?? []}
 					playlist={playlistMetadata}
 					handleTrackPress={handleTrackPress}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={(trackId) => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-						toggle(trackId)
-					}}
-					enterSelectMode={(trackId) => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-						enterSelectMode(trackId)
-					}}
+					selection={selection}
 					onEndReached={
 						hasNextPagePlaylistData &&
 						!startSearch &&

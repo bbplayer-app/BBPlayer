@@ -74,6 +74,16 @@ export default function UploaderPage() {
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
 		useTrackSelection()
 
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
+
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
@@ -224,10 +234,7 @@ export default function UploaderPage() {
 					tracks={tracks ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={uploaderUserInfo.face}

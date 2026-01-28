@@ -49,6 +49,15 @@ export default function SearchResultsPage() {
 	const router = useRouter()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
@@ -129,12 +138,9 @@ export default function SearchResultsPage() {
 					tracks={uniqueSearchData ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
+					selection={selection}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 					hasNextPage={hasNextPage}
-					enterSelectMode={enterSelectMode}
 					ListHeaderComponent={null}
 					refreshControl={
 						<RefreshControl
