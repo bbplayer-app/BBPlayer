@@ -117,30 +117,39 @@ const LocalPlaylistListComponent = memo(() => {
 				style={styles.searchbar}
 				inputStyle={styles.searchInput}
 			/>
-			<FlashList
-				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
-				showsVerticalScrollIndicator={false}
-				data={finalPlaylists ?? []}
-				renderItem={renderPlaylistItem}
-				refreshControl={
-					<RefreshControl
-						refreshing={refreshing || playlistsIsRefetching}
-						onRefresh={onRefresh}
-						colors={[colors.primary]}
-						progressViewOffset={50}
-					/>
-				}
-				keyExtractor={keyExtractor}
-				ListFooterComponent={
-					<Text
-						variant='titleMedium'
-						style={styles.listFooter}
-					>
-						•
-					</Text>
-				}
-				ListEmptyComponent={<Text style={styles.emptyList}>没有播放列表</Text>}
-			/>
+			<View
+				style={{
+					flex: 1,
+					opacity: searchQuery !== deferredSearchQuery ? 0.5 : 1,
+				}}
+			>
+				<FlashList
+					contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
+					showsVerticalScrollIndicator={false}
+					data={finalPlaylists ?? []}
+					renderItem={renderPlaylistItem}
+					refreshControl={
+						<RefreshControl
+							refreshing={refreshing || playlistsIsRefetching}
+							onRefresh={onRefresh}
+							colors={[colors.primary]}
+							progressViewOffset={50}
+						/>
+					}
+					keyExtractor={keyExtractor}
+					ListFooterComponent={
+						<Text
+							variant='titleMedium'
+							style={styles.listFooter}
+						>
+							•
+						</Text>
+					}
+					ListEmptyComponent={
+						<Text style={styles.emptyList}>没有播放列表</Text>
+					}
+				/>
+			</View>
 		</View>
 	)
 })

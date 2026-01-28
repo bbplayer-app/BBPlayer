@@ -156,5 +156,12 @@
 	"private": true,
 	"overrides": {
 		"react-native-worklets": "0.8.0-nightly-20260122-45349f895"
+	},
+	"reanimated": {
+		"staticFeatureFlags": {
+			"ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS": true,
+			"IOS_SYNCHRONOUSLY_UPDATE_UI_PROPS": true,
+			"USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS": true
+		}
 	}
 }

@@ -18,17 +18,15 @@ Orpheus.addListener('onPlayerError', (error) => {
 	reportErrorToSentry(error, '播放器错误事件', 'Native.Player')
 })
 
-Orpheus.addListener('onTrackFinished', (event) => {
-	void finalizeAndRecordCurrentTrack(
-		event.trackId,
-		event.duration,
-		event.finalPosition,
-	)
-})
-
 registerOrpheusHeadlessTask(async (event) => {
 	if (event.eventName === 'onTrackStarted') {
 		setDesktopLyrics(event.trackId, event.reason)
+	} else if (event.eventName === 'onTrackFinished') {
+		void finalizeAndRecordCurrentTrack(
+			event.trackId,
+			event.duration,
+			event.finalPosition,
+		)
 	}
 })
 

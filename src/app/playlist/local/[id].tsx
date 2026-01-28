@@ -286,49 +286,56 @@ export default function LocalPlaylistPage() {
 				/>
 			</Animated.View>
 
-			<LocalTrackList
-				tracks={finalPlaylistData ?? []}
-				playlist={playlistMetadata}
-				handleTrackPress={handleTrackPress}
-				trackMenuItems={trackMenuItems}
-				selectMode={selectMode}
-				selected={selected}
-				toggle={(trackId) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-					toggle(trackId)
+			<View
+				style={{
+					flex: 1,
+					opacity: searchQuery !== deferredQuery ? 0.5 : 1,
 				}}
-				enterSelectMode={(trackId) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-					enterSelectMode(trackId)
-				}}
-				onEndReached={
-					hasNextPagePlaylistData &&
-					!startSearch &&
-					!isFetchingNextPagePlaylistData
-						? () => fetchNextPagePlaylistData()
-						: undefined
-				}
-				ListHeaderComponent={
-					<PlaylistHeader
-						playlist={playlistMetadata}
-						onClickPlayAll={playAll}
-						onClickSync={handleSync}
-						onClickCopyToLocalPlaylist={() =>
-							openModal('DuplicateLocalPlaylist', {
-								sourcePlaylistId: Number(id),
-								rawName: playlistMetadata.title,
-							})
-						}
-						onPressAuthor={(author) =>
-							author.remoteId &&
-							router.push({
-								pathname: '/playlist/remote/uploader/[mid]',
-								params: { mid: author.remoteId },
-							})
-						}
-					/>
-				}
-			/>
+			>
+				<LocalTrackList
+					tracks={finalPlaylistData ?? []}
+					playlist={playlistMetadata}
+					handleTrackPress={handleTrackPress}
+					trackMenuItems={trackMenuItems}
+					selectMode={selectMode}
+					selected={selected}
+					toggle={(trackId) => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+						toggle(trackId)
+					}}
+					enterSelectMode={(trackId) => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+						enterSelectMode(trackId)
+					}}
+					onEndReached={
+						hasNextPagePlaylistData &&
+						!startSearch &&
+						!isFetchingNextPagePlaylistData
+							? () => fetchNextPagePlaylistData()
+							: undefined
+					}
+					ListHeaderComponent={
+						<PlaylistHeader
+							playlist={playlistMetadata}
+							onClickPlayAll={playAll}
+							onClickSync={handleSync}
+							onClickCopyToLocalPlaylist={() =>
+								openModal('DuplicateLocalPlaylist', {
+									sourcePlaylistId: Number(id),
+									rawName: playlistMetadata.title,
+								})
+							}
+							onPressAuthor={(author) =>
+								author.remoteId &&
+								router.push({
+									pathname: '/playlist/remote/uploader/[mid]',
+									params: { mid: author.remoteId },
+								})
+							}
+						/>
+					}
+				/>
+			</View>
 
 			<Portal>
 				<FunctionalMenu
