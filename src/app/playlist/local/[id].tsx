@@ -151,7 +151,7 @@ export default function LocalPlaylistPage() {
 			type: playlistMetadata.type,
 			toastId,
 		})
-	}, [playlistMetadata, syncPlaylist])
+	}, [playlistMetadata, syncPlaylist, openModal])
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
