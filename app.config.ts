@@ -105,7 +105,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		],
 	},
 	plugins: [
-		'./expo-plugins/withAndroidPlugin',
+		// './expo-plugins/withAndroidPlugin',
 		'./expo-plugins/withAndroidGradleProperties',
 		[
 			'./expo-plugins/withAbiFilters',

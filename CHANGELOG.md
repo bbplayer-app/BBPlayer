@@ -20,6 +20,7 @@
 
 ### Changed
 
+- 使用 react-native-keyboard-controller 的 API 重构 AnimatedModalOverlay
 - 重构 `src/lib/api/bilibili/api.ts` 为 Class
 - 修复冷启动时 Deep Link 无法跳转的问题
 - 创建/修改歌曲或播放列表时，禁止使用重复的名称
