@@ -227,12 +227,12 @@ Register for iOS auto-linking:
 
 ## Language Interop Costs
 
-| Interface           | Overhead | Notes              |
-| ------------------- | -------- | ------------------ |
+| Interface          | Overhead | Notes              |
+| ------------------ | -------- | ------------------ |
 | Obj-C ↔ C++        | ~0       | Compile-time       |
 | Swift ↔ C++        | ~0       | Swift 5.9+ interop |
 | Kotlin ↔ C++ (JNI) | Medium   | Per-call lookup    |
-| C++ Turbo Module    | Low      | JSI direct access  |
+| C++ Turbo Module   | Low      | JSI direct access  |
 
 **Tip**: C++ Turbo Modules skip JNI at runtime since JS holds direct C++ function references via JSI.
 

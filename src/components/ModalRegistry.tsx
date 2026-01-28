@@ -1,6 +1,7 @@
-import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 import type { ComponentType } from 'react'
 import { lazy } from 'react'
+
+import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 
 const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))

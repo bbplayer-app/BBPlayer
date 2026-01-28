@@ -1,8 +1,3 @@
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
-import useAppStore from '@/hooks/stores/useAppStore'
-import * as Haptics from '@/utils/haptics'
 import {
 	Orpheus,
 	PlaybackState,
@@ -27,6 +22,12 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
+
+import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
+import useAppStore from '@/hooks/stores/useAppStore'
+import * as Haptics from '@/utils/haptics'
 
 const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =

@@ -1,6 +1,7 @@
-import type { TypedMMKVInterface } from '@/types/storage'
 import { createMMKV } from 'react-native-mmkv'
 import type { StateStorage } from 'zustand/middleware/persist'
+
+import type { TypedMMKVInterface } from '@/types/storage'
 
 const mmkv = createMMKV()
 

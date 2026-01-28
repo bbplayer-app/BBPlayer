@@ -1,5 +1,3 @@
-import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
-import { PlayerSlider } from '@/features/player/components/PlayerSlider'
 import { LinearGradient } from 'expo-linear-gradient'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
@@ -17,6 +15,9 @@ import Animated, {
 	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+
+import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
+import { PlayerSlider } from '@/features/player/components/PlayerSlider'
 
 const { height: windowHeight } = Dimensions.get('window')
 const OVERLAY_HEIGHT = windowHeight * 0.4

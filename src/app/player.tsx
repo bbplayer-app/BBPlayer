@@ -1,13 +1,3 @@
-import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
-import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
-import { PlayerHeader } from '@/features/player/components/PlayerHeader'
-import Lyrics from '@/features/player/components/PlayerLyrics'
-import PlayerMainTab from '@/features/player/components/PlayerMainTab'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import usePreventRemove from '@/hooks/router/usePreventRemove'
-import useAppStore from '@/hooks/stores/useAppStore'
-import log, { reportErrorToSentry } from '@/utils/log'
-import toast from '@/utils/toast'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import {
@@ -35,6 +25,17 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { TabView } from 'react-native-tab-view'
+
+import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
+import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
+import { PlayerHeader } from '@/features/player/components/PlayerHeader'
+import Lyrics from '@/features/player/components/PlayerLyrics'
+import PlayerMainTab from '@/features/player/components/PlayerMainTab'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
+import useAppStore from '@/hooks/stores/useAppStore'
+import log, { reportErrorToSentry } from '@/utils/log'
+import toast from '@/utils/toast'
 
 const logger = log.extend('App.Player')
 

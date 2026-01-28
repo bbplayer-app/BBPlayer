@@ -1,8 +1,10 @@
+import md5 from 'md5'
+import { okAsync, type ResultAsync } from 'neverthrow'
+
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
-import md5 from 'md5'
-import { okAsync, type ResultAsync } from 'neverthrow'
+
 import { bilibiliApiClient } from './client'
 
 const logger = log.extend('3Party.Bilibili.Wbi')

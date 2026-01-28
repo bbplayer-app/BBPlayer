@@ -1,6 +1,3 @@
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import * as Haptics from '@/utils/haptics'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -16,6 +13,10 @@ import Animated, {
 	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+
+import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import * as Haptics from '@/utils/haptics'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 const THUMB_SIZE = 12
 

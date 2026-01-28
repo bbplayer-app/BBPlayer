@@ -1,9 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo, useState } from 'react'
+
 import { neteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi } from '@/lib/api/qqmusic/api'
 import lyricService from '@/lib/services/lyricService'
 import type { Track } from '@/types/core/media'
-import { useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
 
 export const lyricsQueryKeys = {
 	all: ['lyrics'] as const,

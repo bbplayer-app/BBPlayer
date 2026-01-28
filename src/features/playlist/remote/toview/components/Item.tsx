@@ -1,3 +1,8 @@
+import { memo, useRef } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
+import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
@@ -5,10 +10,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import { memo, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
-import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+
 import ProgressRing from './ProgressRing'
 
 export interface TrackMenuItem {

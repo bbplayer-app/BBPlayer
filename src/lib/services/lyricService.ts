@@ -1,3 +1,7 @@
+import * as Sentry from '@sentry/react-native'
+import * as FileSystem from 'expo-file-system'
+import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
+
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
@@ -8,9 +12,6 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
-import * as Sentry from '@sentry/react-native'
-import * as FileSystem from 'expo-file-system'
-import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Service.Lyric')
 type lyricFileType =

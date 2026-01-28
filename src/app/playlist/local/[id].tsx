@@ -1,3 +1,22 @@
+import type { FlashListRef } from '@shopify/flash-list'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
+import Animated, {
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -25,24 +44,6 @@ import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-import type { FlashListRef } from '@shopify/flash-list'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import {
-	useCallback,
-	useDeferredValue,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
-import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withTiming,
-} from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'

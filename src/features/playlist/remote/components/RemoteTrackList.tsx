@@ -1,11 +1,3 @@
-import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
-import type { BilibiliTrack } from '@/types/core/media'
-import type {
-	ListRenderItemInfoWithExtraData,
-	SelectionState,
-} from '@/types/flashlist'
-import * as Haptics from '@/utils/haptics'
 import type {
 	FlashListProps,
 	FlashListRef,
@@ -23,13 +15,22 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import type { BilibiliTrack } from '@/types/core/media'
+import type {
+	ListRenderItemInfoWithExtraData,
+	SelectionState,
+} from '@/types/flashlist'
+import * as Haptics from '@/utils/haptics'
+
 import { TrackListItem } from './PlaylistItem'
 
-interface TrackListProps
-	extends Omit<
-		FlashListProps<BilibiliTrack>,
-		'data' | 'renderItem' | 'extraData'
-	> {
+interface TrackListProps extends Omit<
+	FlashListProps<BilibiliTrack>,
+	'data' | 'renderItem' | 'extraData'
+> {
 	/**
 	 * 要显示的曲目数据数组
 	 */

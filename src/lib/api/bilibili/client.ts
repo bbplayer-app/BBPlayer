@@ -1,6 +1,8 @@
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { getCsrfToken } from './utils'
 
 export interface ReqResponse<T> {

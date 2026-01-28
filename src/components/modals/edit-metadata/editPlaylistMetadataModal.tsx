@@ -1,3 +1,9 @@
+import * as DocumentPicker from 'expo-document-picker'
+import * as FileSystem from 'expo-file-system'
+import { useCallback, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
+
 import { useEditPlaylistMetadata } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bilibiliFacade } from '@/lib/facades/bilibili'
@@ -5,11 +11,6 @@ import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
 import toast from '@/utils/toast'
-import * as DocumentPicker from 'expo-document-picker'
-import * as FileSystem from 'expo-file-system'
-import { useCallback, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
 
 const logger = log.extend('Components.EditPlaylistMetadataModal')
 

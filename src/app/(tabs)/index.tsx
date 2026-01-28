@@ -1,3 +1,14 @@
+import { Image } from 'expo-image'
+import { useRouter } from 'expo-router'
+import { useShareIntentContext } from 'expo-share-intent'
+import { useCallback, useDeferredValue, useEffect, useState } from 'react'
+import { Keyboard, StyleSheet, View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
+import { useMMKVObject } from 'react-native-mmkv'
+import { Chip, IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
+import { useAnimatedRef } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions from '@/features/home/SearchSuggestions'
@@ -10,16 +21,6 @@ import {
 	navigateWithSearchStrategy,
 } from '@/utils/search'
 import toast from '@/utils/toast'
-import { Image } from 'expo-image'
-import { useRouter } from 'expo-router'
-import { useShareIntentContext } from 'expo-share-intent'
-import { useCallback, useDeferredValue, useEffect, useState } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
-import { useMMKVObject } from 'react-native-mmkv'
-import { Chip, IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
-import { useAnimatedRef } from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10

@@ -1,8 +1,9 @@
+import { usePathname, useRouter } from 'expo-router'
+import { useCallback } from 'react'
+
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import toast from '@/utils/toast'
-import { usePathname, useRouter } from 'expo-router'
-import { useCallback } from 'react'
 
 export function usePlaylistMenu(
 	playTrack: (track: BilibiliTrack, playNext: boolean) => void,

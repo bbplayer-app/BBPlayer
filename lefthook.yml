@@ -2,11 +2,11 @@ pre-commit:
   parallel: true
   commands:
     lint-and-format-codes:
-      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx}'
+      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
       run: pnpm eslint "{staged_files}" && pnpm oxfmt --write "{staged_files}"
       stage_fixed: true
     format-plain-text:
-      glob: '*.{md,,json,jsonc}'
+      glob: '*.{md,mdx}'
       run: pnpm oxfmt --write "{staged_files}"
       stage_fixed: true
 

@@ -1,10 +1,3 @@
-import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
-import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
-import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
-import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { LyricLine } from '@/types/player/lyrics'
-import toast from '@/utils/toast'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { FlashList } from '@shopify/flash-list'
 import { Image, useImage } from 'expo-image'
@@ -23,6 +16,14 @@ import {
 } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
+
+import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
+import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
+import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { LyricLine } from '@/types/player/lyrics'
+import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({
 	item,

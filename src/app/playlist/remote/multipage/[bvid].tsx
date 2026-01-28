@@ -1,3 +1,9 @@
+import type { FlashListRef } from '@shopify/flash-list'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, useTheme } from 'react-native-paper'
+
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
@@ -24,11 +30,6 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
-import type { FlashListRef } from '@shopify/flash-list'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
 	mp: BilibiliMultipageVideo,

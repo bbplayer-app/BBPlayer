@@ -1,5 +1,6 @@
 import * as ExpoHaptics from 'expo-haptics'
 import { Platform } from 'react-native'
+
 import { reportErrorToSentry } from './log'
 
 let hapticsSupported = true

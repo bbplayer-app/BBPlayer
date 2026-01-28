@@ -1,3 +1,9 @@
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { decode } from 'he'
+import { useMemo, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, Text, useTheme } from 'react-native-paper'
+
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -9,11 +15,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { decode } from 'he'
-import { useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, Text, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 	return {

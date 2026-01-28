@@ -1,3 +1,13 @@
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useMemo, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
+import Animated, {
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from 'react-native-reanimated'
+
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -21,15 +31,6 @@ import type {
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withTiming,
-} from 'react-native-reanimated'
 
 const SEARCHBAR_HEIGHT = 72
 

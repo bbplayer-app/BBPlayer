@@ -1,3 +1,5 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
@@ -5,7 +7,6 @@ import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import toast from '@/utils/toast'
-import { useMutation } from '@tanstack/react-query'
 
 export const useThumbUpVideo = () => {
 	return useMutation({

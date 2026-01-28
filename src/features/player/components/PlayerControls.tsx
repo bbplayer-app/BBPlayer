@@ -1,6 +1,3 @@
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import * as Haptics from '@/utils/haptics'
-import logInstance from '@/utils/log'
 import {
 	Orpheus,
 	PlaybackState,
@@ -13,6 +10,10 @@ import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
+
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import * as Haptics from '@/utils/haptics'
+import logInstance from '@/utils/log'
 
 interface MainPlaybackControlsProps {
 	size?: 'normal' | 'compact'

@@ -1,8 +1,9 @@
-import * as Haptics from '@/utils/haptics'
 import type { PropsWithChildren } from 'react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
 import { Menu } from 'react-native-paper'
+
+import * as Haptics from '@/utils/haptics'
 
 type FunctionalMenuProps = PropsWithChildren<Parameters<typeof Menu>[0]>
 

@@ -1,3 +1,8 @@
+import { FlashList } from '@shopify/flash-list'
+import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
+
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -8,10 +13,7 @@ import {
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
-import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
+
 import LocalPlaylistItem from './LocalPlaylistItem'
 
 const renderPlaylistItem = ({

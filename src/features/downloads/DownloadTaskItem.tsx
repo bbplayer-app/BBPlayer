@@ -1,9 +1,4 @@
 import {
-	eventListner,
-	type ProgressEvent,
-} from '@/hooks/stores/useDownloadManagerStore'
-import { toastAndLogError } from '@/utils/error-handling'
-import {
 	DownloadState,
 	Orpheus,
 	type DownloadTask,
@@ -16,6 +11,12 @@ import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 } from 'react-native-reanimated'
+
+import {
+	eventListner,
+	type ProgressEvent,
+} from '@/hooks/stores/useDownloadManagerStore'
+import { toastAndLogError } from '@/utils/error-handling'
 
 const DownloadTaskItem = memo(function DownloadTaskItem({
 	initTask,

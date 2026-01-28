@@ -1,6 +1,7 @@
-import createStickyEmitter from '@/utils/sticky-mitt'
 import type { DownloadState } from '@roitium/expo-orpheus'
 import { Orpheus } from '@roitium/expo-orpheus'
+
+import createStickyEmitter from '@/utils/sticky-mitt'
 
 export type ProgressEvent = Record<
 	`progress:${string}`,

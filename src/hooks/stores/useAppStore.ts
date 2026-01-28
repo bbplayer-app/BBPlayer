@@ -1,9 +1,3 @@
-import { alert } from '@/components/modals/AlertModal'
-import { expoDb } from '@/lib/db/db'
-import type { AppState, Settings } from '@/types/core/appStore'
-import type { StorageKey } from '@/types/storage'
-import log from '@/utils/log'
-import { storage, zustandStorage } from '@/utils/mmkv'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
@@ -11,6 +5,13 @@ import { err, ok, type Result } from 'neverthrow'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
+
+import { alert } from '@/components/modals/AlertModal'
+import { expoDb } from '@/lib/db/db'
+import type { AppState, Settings } from '@/types/core/appStore'
+import type { StorageKey } from '@/types/storage'
+import log from '@/utils/log'
+import { storage, zustandStorage } from '@/utils/mmkv'
 
 const logger = log.extend('Store.App')
 

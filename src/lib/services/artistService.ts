@@ -16,6 +16,7 @@ import type {
 	CreateArtistPayload,
 	UpdateArtistPayload,
 } from '@/types/services/artist'
+
 import type { TrackService } from './trackService'
 import { trackService } from './trackService'
 

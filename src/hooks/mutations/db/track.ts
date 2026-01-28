@@ -1,8 +1,9 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
-import { useMutation } from '@tanstack/react-query'
 
 queryClient.setMutationDefaults(['db', 'track'], {
 	retry: false,

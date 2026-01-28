@@ -1,6 +1,7 @@
-import { flatErrorMessage } from '@/utils/log'
 import { StyleSheet, Text, View } from 'react-native'
 import { Button } from 'react-native-paper'
+
+import { flatErrorMessage } from '@/utils/log'
 
 export default function GlobalErrorFallback({
 	error,

@@ -1,10 +1,11 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import type { BilibiliCollection } from '@/types/apis/bilibili'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import type { BilibiliCollection } from '@/types/apis/bilibili'
 
 const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 	const router = useRouter()

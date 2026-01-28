@@ -1,12 +1,3 @@
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import usePreventRemove from '@/hooks/router/usePreventRemove'
-import type { Playlist, Track } from '@/types/core/media'
-import type {
-	ListRenderItemInfoWithExtraData,
-	SelectionState,
-} from '@/types/flashlist'
-import * as Haptics from '@/utils/haptics'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { DownloadState } from '@roitium/expo-orpheus'
 import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
@@ -26,11 +17,24 @@ import {
 } from 'react-native-paper'
 import Animated, { LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
+import type { Playlist, Track } from '@/types/core/media'
+import type {
+	ListRenderItemInfoWithExtraData,
+	SelectionState,
+} from '@/types/flashlist'
+import * as Haptics from '@/utils/haptics'
+
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
 
-interface LocalTrackListProps
-	extends Omit<FlashListProps<Track>, 'data' | 'renderItem' | 'extraData'> {
+interface LocalTrackListProps extends Omit<
+	FlashListProps<Track>,
+	'data' | 'renderItem' | 'extraData'
+> {
 	/**
 	 * 要显示的本地曲目数组
 	 */

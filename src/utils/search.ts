@@ -1,6 +1,8 @@
+import type { Router } from 'expo-router'
+
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
-import type { Router } from 'expo-router'
+
 import { toastAndLogError } from './error-handling'
 import log from './log'
 import toast from './toast'

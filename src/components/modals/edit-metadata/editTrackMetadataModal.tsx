@@ -1,10 +1,11 @@
+import { useCallback, useState } from 'react'
+import { StyleSheet } from 'react-native'
+import { Button, Dialog, TextInput } from 'react-native-paper'
+
 import { useRenameTrack } from '@/hooks/mutations/db/track'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Track } from '@/types/core/media'
 import toast from '@/utils/toast'
-import { useCallback, useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
 
 export default function EditTrackMetadataModal({ track }: { track: Track }) {
 	const [title, setTitle] = useState<string>(track.title)

@@ -1,5 +1,3 @@
-import GlobalErrorFallback from '@/components/ErrorBoundary'
-import { queryClient } from '@/lib/config/queryClient'
 import { useMaterial3Theme } from '@pchmn/expo-material3-theme'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -13,6 +11,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+
+import GlobalErrorFallback from '@/components/ErrorBoundary'
+import { queryClient } from '@/lib/config/queryClient'
 
 export default function AppProviders({
 	onLayoutRootView,

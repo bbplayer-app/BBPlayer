@@ -8,6 +8,7 @@ import Animated, {
 	withSequence,
 	withTiming,
 } from 'react-native-reanimated'
+
 import { TrackListItem } from './PlaylistItem'
 
 type TrackListItemProps = ComponentProps<typeof TrackListItem>

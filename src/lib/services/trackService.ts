@@ -1,3 +1,9 @@
+import * as Sentry from '@sentry/react-native'
+import type { SQL } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
+import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
+
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
@@ -23,11 +29,7 @@ import type {
 	UpdateTrackPayloadBase,
 } from '@/types/services/track'
 import log from '@/utils/log'
-import * as Sentry from '@sentry/react-native'
-import type { SQL } from 'drizzle-orm'
-import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
-import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
+
 import generateUniqueTrackKey from './genKey'
 
 const logger = log.extend('Service.Track')

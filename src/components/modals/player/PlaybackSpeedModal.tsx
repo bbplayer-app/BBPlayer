@@ -1,10 +1,11 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { toastAndLogError } from '@/utils/error-handling'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, TextInput } from 'react-native-paper'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { toastAndLogError } from '@/utils/error-handling'
+import toast from '@/utils/toast'
 
 const PRESET_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 

@@ -1,7 +1,3 @@
-import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
-import { getGradientColors } from '@/utils/color'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -14,6 +10,11 @@ import {
 	View,
 } from 'react-native'
 import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
+
+import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
+import { getGradientColors } from '@/utils/color'
 
 const { width: screenWidth } = Dimensions.get('window')
 const coverSize = screenWidth - 80

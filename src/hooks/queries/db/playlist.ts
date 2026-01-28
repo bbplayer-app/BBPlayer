@@ -1,12 +1,13 @@
-import { queryClient } from '@/lib/config/queryClient'
-import { playlistService } from '@/lib/services/playlistService'
-import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import {
 	keepPreviousData,
 	skipToken,
 	useInfiniteQuery,
 	useQuery,
 } from '@tanstack/react-query'
+
+import { queryClient } from '@/lib/config/queryClient'
+import { playlistService } from '@/lib/services/playlistService'
+import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 queryClient.setQueryDefaults(['db', 'playlists'], {
 	retry: false,

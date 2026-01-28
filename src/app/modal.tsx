@@ -1,10 +1,11 @@
+import { useRouter } from 'expo-router'
+import { Suspense, useEffect, useState } from 'react'
+import { Keyboard, StyleSheet, View } from 'react-native'
+
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { modalRegistry } from '@/components/ModalRegistry'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useRouter } from 'expo-router'
-import { Suspense, useEffect, useState } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
 
 export default function ModalHost() {
 	const modals = useModalStore((state) => state.modals)

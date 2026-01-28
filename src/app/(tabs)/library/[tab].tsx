@@ -1,8 +1,3 @@
-import NowPlayingBar from '@/components/NowPlayingBar'
-import CollectionListComponent from '@/features/library/collection/CollectionList'
-import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
-import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
-import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState, useTransition } from 'react'
@@ -10,6 +5,12 @@ import { Dimensions, StyleSheet, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
+
+import NowPlayingBar from '@/components/NowPlayingBar'
+import CollectionListComponent from '@/features/library/collection/CollectionList'
+import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
+import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
+import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
 
 const renderScene = SceneMap({
 	local: LocalPlaylistListComponent,

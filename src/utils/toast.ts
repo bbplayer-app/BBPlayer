@@ -1,4 +1,5 @@
 import { toast as sonner } from 'sonner-native'
+
 import * as Haptics from './haptics'
 
 interface Options {

@@ -1,3 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { memo, useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
+import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+
 import { useDealFavoriteForOneVideo } from '@/hooks/mutations/bilibili/favorite'
 import {
 	favoriteListQueryKeys,
@@ -7,10 +12,6 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
-import { useQueryClient } from '@tanstack/react-query'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
-import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
 const FavoriteListItem = memo(function FavoriteListItem({
 	name,

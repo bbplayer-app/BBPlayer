@@ -1,5 +1,6 @@
-import log from '@/utils/log'
 import { getShareExtensionKey } from 'expo-share-intent'
+
+import log from '@/utils/log'
 
 export function redirectSystemPath({
 	path,

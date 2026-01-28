@@ -1,6 +1,7 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { StyleSheet, View } from 'react-native'
 import { Button, Text, useTheme } from 'react-native-paper'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function TabDisable() {
 	const { colors } = useTheme()

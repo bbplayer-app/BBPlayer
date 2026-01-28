@@ -1,6 +1,3 @@
-import NowPlayingBar from '@/components/NowPlayingBar'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import toast from '@/utils/toast'
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
@@ -10,6 +7,10 @@ import { memo } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import toast from '@/utils/toast'
 
 const updateTime = Updates.createdAt
 	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`

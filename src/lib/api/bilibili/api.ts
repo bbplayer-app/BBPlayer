@@ -1,3 +1,5 @@
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
@@ -27,7 +29,7 @@ import {
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { bilibiliApiClient } from './client'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'

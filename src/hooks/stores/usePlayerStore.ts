@@ -1,9 +1,10 @@
+import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
+import { create } from 'zustand'
+
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
-import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import { create } from 'zustand'
 
 const logger = log.extend('Store.Player')
 
