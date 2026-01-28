@@ -2,7 +2,10 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
-import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
+import {
+	LocalTrackList,
+	type LocalTrackListRef,
+} from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
@@ -26,7 +29,13 @@ import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useDeferredValue, useEffect, useState } from 'react'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
 import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
@@ -136,8 +145,11 @@ export default function LocalPlaylistPage() {
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
+	const trackListRef = useRef<LocalTrackListRef>(null)
+
 	const deleteTrack = useCallback(
 		(trackId: number) => {
+			void trackListRef.current?.prepareForLayoutAnimationRender()
 			deleteTrackFromLocalPlaylist({
 				trackIds: [trackId],
 				playlistId: Number(id),
@@ -157,6 +169,7 @@ export default function LocalPlaylistPage() {
 
 	const deleteSelectedTracks = useCallback(() => {
 		if (selected.size === 0) return
+		trackListRef.current?.prepareForLayoutAnimationRender()
 		deleteTrackFromLocalPlaylist({
 			trackIds: Array.from(selected),
 			playlistId: Number(id),
@@ -293,6 +306,7 @@ export default function LocalPlaylistPage() {
 				}}
 			>
 				<LocalTrackList
+					ref={trackListRef}
 					tracks={finalPlaylistData ?? []}
 					playlist={playlistMetadata}
 					handleTrackPress={handleTrackPress}

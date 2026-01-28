@@ -5,8 +5,16 @@ import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { DownloadState } from '@roitium/expo-orpheus'
+import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import {
+	forwardRef,
+	useCallback,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -18,9 +26,14 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
+import Animated, { LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
+
+export interface LocalTrackListRef {
+	prepareForLayoutAnimationRender: () => void
+}
 
 interface LocalTrackListProps {
 	tracks: Track[]
@@ -72,23 +85,25 @@ const renderItem = ({
 		? downloadStatus[item.uniqueKey]
 		: undefined
 	return (
-		<TrackListItem
-			index={index}
-			onTrackPress={() => handleTrackPress(item)}
-			onMenuPress={() => {
-				handleMenuPress(item, downloadState)
-			}}
-			disabled={
-				item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
-			}
-			data={item}
-			playlist={playlist}
-			toggleSelected={toggle}
-			isSelected={selected.has(item.id)}
-			selectMode={selectMode}
-			enterSelectMode={enterSelectMode}
-			downloadState={downloadState}
-		/>
+		<Animated.View layout={LinearTransition}>
+			<TrackListItem
+				index={index}
+				onTrackPress={() => handleTrackPress(item)}
+				onMenuPress={() => {
+					handleMenuPress(item, downloadState)
+				}}
+				disabled={
+					item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
+				}
+				data={item}
+				playlist={playlist}
+				toggleSelected={toggle}
+				isSelected={selected.has(item.id)}
+				selectMode={selectMode}
+				enterSelectMode={enterSelectMode}
+				downloadState={downloadState}
+			/>
+		</Animated.View>
 	)
 }
 
@@ -144,26 +159,39 @@ const HighFreqButton = ({
 	)
 }
 
-export function LocalTrackList({
-	tracks,
-	playlist,
-	handleTrackPress,
-	trackMenuItems,
-	selectMode,
-	selected,
-	toggle,
-	enterSelectMode,
-	ListHeaderComponent,
-	onEndReached,
-	isFetchingNextPage,
-	hasNextPage,
-}: LocalTrackListProps) {
+export const LocalTrackList = forwardRef<
+	LocalTrackListRef,
+	LocalTrackListProps
+>(function LocalTrackList(
+	{
+		tracks,
+		playlist,
+		handleTrackPress,
+		trackMenuItems,
+		selectMode,
+		selected,
+		toggle,
+		enterSelectMode,
+		ListHeaderComponent,
+		onEndReached,
+		isFetchingNextPage,
+		hasNextPage,
+	},
+	ref,
+) {
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)
+	const listRef = useRef<FlashListRef<Track>>(null)
+
+	useImperativeHandle(ref, () => ({
+		prepareForLayoutAnimationRender: () => {
+			listRef.current?.prepareForLayoutAnimationRender()
+		},
+	}))
 
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
@@ -235,6 +263,7 @@ export function LocalTrackList({
 	return (
 		<>
 			<FlashList
+				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={extraData}
@@ -345,7 +374,7 @@ export function LocalTrackList({
 			</TrueSheet>
 		</>
 	)
-}
+})
 
 const styles = StyleSheet.create({
 	footerLoadingContainer: {
