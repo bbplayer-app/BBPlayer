@@ -144,6 +144,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					usesCleartextTraffic: true,
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
+					packagingOptions: {
+						pickFirst: ['lib/*/libNitroModules.so'],
+					},
 				},
 			},
 		],
