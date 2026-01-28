@@ -48,6 +48,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
 			if (newTrackId !== currentInternalTrackId) {
 				const result = await trackService.getTrackByUniqueKey(currentTrack.id)
+
+				if (get().orpheusTrack?.id !== newTrackId) return
+
 				if (result.isErr()) {
 					set({ internalTrack: null })
 					toastAndLogError('读取当前曲目信息失败', result.error, 'Store.Player')
