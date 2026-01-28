@@ -70,7 +70,7 @@ export interface TypedNativeMMKV<Schema> {
 	/**
 	 * Delete the given `key`.
 	 */
-	delete: (key: StorageKey) => void
+	remove: (key: StorageKey) => void
 	/**
 	 * Get all keys.
 	 *

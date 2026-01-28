@@ -174,12 +174,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			'expo-share-intent',
 			{
 				androidIntentFilters: ['text/*'],
-				iosActivationRules: {
-					NSExtensionActivationSupportsWebURLWithMaxCount: 1,
-					NSExtensionActivationSupportsWebPageWithMaxCount: 1,
-					NSExtensionActivationSupportsImageWithMaxCount: 0,
-					NSExtensionActivationSupportsMovieWithMaxCount: 0,
-				},
+				disableIOS: true,
 			},
 		],
 		'expo-router',

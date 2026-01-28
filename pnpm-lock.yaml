@@ -243,8 +243,11 @@ importers:
         specifier: git+https://github.com/bbplayer-app/react-native-logs.git#v5.6.2
         version: https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4
       react-native-mmkv:
-        specifier: ^3.3.3
-        version: 3.3.3(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        specifier: ^4.1.1
+        version: 4.1.1(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+      react-native-nitro-modules:
+        specifier: ^0.33.2
+        version: 0.33.2(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react-native-pager-view:
         specifier: 8.0.0
         version: 8.0.0(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -6411,8 +6414,15 @@ packages:
     resolution: {tarball: https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4}
     version: 5.5.0
 
-  react-native-mmkv@3.3.3:
-    resolution: {integrity: sha512-GMsfOmNzx0p5+CtrCFRVtpOOMYNJXuksBVARSQrCFaZwjUyHJdQzcN900GGaFFNTxw2fs8s5Xje//RDKj9+PZA==}
+  react-native-mmkv@4.1.1:
+    resolution: {integrity: sha512-nYFjM27l7zVhIiyAqWEFRagGASecb13JMIlzAuOeakRRz9GMJ49hCQntUBE2aeuZRE4u4ehSqTOomB0mTF56Ew==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-nitro-modules: '*'
+
+  react-native-nitro-modules@0.33.2:
+    resolution: {integrity: sha512-ZlfOe6abODeHv/eZf8PxeSkrxIUhEKha6jaAAA9oXy7I6VPr7Ff4dUsAq3cyF3kX0L6qt2Dh9nzD2NdSsDwGpA==}
     peerDependencies:
       react: '*'
       react-native: '*'
@@ -14841,7 +14851,13 @@ snapshots:
 
   react-native-logs@https://codeload.github.com/bbplayer-app/react-native-logs/tar.gz/b534efdc6022ba04d7b98e4dae0a1f8864cc1fb4: {}
 
-  react-native-mmkv@3.3.3(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+  react-native-mmkv@4.1.1(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-native: 0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+      react-native-nitro-modules: 0.33.2(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+
+  react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
     dependencies:
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.4)(@react-native-community/cli@20.1.0(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)

@@ -19,6 +19,7 @@
 - 修复冷启动时 Deep Link 无法跳转的问题
 - 创建/修改歌曲或播放列表时，禁止使用重复的名称
 - 将 `app.bbplayer.roitium.com` 作为 Deep Link 的 host
+- 修复 iOS 上缺少 MaterialDesignIcons 字体导致应用崩溃的问题
 
 ## [2.2.2] - 2026-01-25
 
