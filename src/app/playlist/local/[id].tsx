@@ -132,6 +132,18 @@ export default function LocalPlaylistPage() {
 			return
 		}
 
+		if (playlistMetadata.type === 'favorite') {
+			openModal(
+				'FavoriteSyncProgress',
+				{
+					favoriteId: Number(playlistMetadata.remoteSyncId),
+					shouldRedirectToLocalPlaylist: false,
+				},
+				{ dismissible: false },
+			)
+			return
+		}
+
 		const toastId = 'sync-playlist'
 		toast.show('同步中...', { id: toastId, duration: Infinity })
 		syncPlaylist({
@@ -139,7 +151,7 @@ export default function LocalPlaylistPage() {
 			type: playlistMetadata.type,
 			toastId,
 		})
-	}, [playlistMetadata, syncPlaylist])
+	}, [playlistMetadata, syncPlaylist, openModal, id])
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
