@@ -1,3 +1,4 @@
+import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
@@ -12,7 +13,6 @@ import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { Playlist, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import toast from '@/utils/toast'
-import { FlashList } from '@shopify/flash-list'
 
 const renderPlaylistItem = ({
 	item,

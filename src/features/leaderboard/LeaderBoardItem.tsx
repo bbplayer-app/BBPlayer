@@ -1,12 +1,13 @@
-import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
-import type { Track } from '@/types/core/media'
-import { addToQueue } from '@/utils/player'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { Image } from 'expo-image'
 import { memo } from 'react'
 import { View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
+
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import type { Track } from '@/types/core/media'
+import { addToQueue } from '@/utils/player'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 interface LeaderBoardItemProps {
 	item: {

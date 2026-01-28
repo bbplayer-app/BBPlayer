@@ -1,8 +1,3 @@
-import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { checkForAppUpdate } from '@/lib/services/updateService'
-import { toastAndLogError } from '@/utils/error-handling'
-import toast from '@/utils/toast'
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
@@ -10,6 +5,12 @@ import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, IconButton, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { checkForAppUpdate } from '@/lib/services/updateService'
+import { toastAndLogError } from '@/utils/error-handling'
+import toast from '@/utils/toast'
 
 export default function GeneralSettingsPage() {
 	const router = useRouter()

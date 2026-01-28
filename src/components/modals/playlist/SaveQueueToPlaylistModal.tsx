@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { StyleSheet } from 'react-native'
+import { Button, Dialog, TextInput } from 'react-native-paper'
+
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
@@ -6,9 +10,6 @@ import type { ModalPropsMap } from '@/types/navigation'
 import { toastAndLogError } from '@/utils/error-handling'
 import Log from '@/utils/log'
 import toast from '@/utils/toast'
-import { useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
 
 const logger = Log.extend('SaveQueueToPlaylistModal')
 

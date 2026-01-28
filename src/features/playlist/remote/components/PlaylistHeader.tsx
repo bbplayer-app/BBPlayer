@@ -1,5 +1,3 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
@@ -12,6 +10,9 @@ import {
 	TouchableRipple,
 } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
 	coverUri: string | undefined

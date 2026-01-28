@@ -1,3 +1,6 @@
+import { decode } from 'he'
+import { errAsync, ResultAsync } from 'neverthrow'
+
 import type {
 	QQMusicLyricResponse,
 	QQMusicSearchResponse,
@@ -5,8 +8,6 @@ import type {
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import log from '@/utils/log'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
-import { decode } from 'he'
-import { errAsync, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('API.QQMusic')
 

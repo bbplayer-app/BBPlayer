@@ -1,3 +1,9 @@
+import { FlashList } from '@shopify/flash-list'
+import { useRouter } from 'expo-router'
+import { memo, useCallback, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Searchbar, Text, useTheme } from 'react-native-paper'
+
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { FavoriteFolderListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -6,11 +12,7 @@ import { useGetFavoritePlaylists } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
-import { FlashList } from '@shopify/flash-list'
-import { useRouter } from 'expo-router'
-import { memo, useCallback, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Searchbar, Text, useTheme } from 'react-native-paper'
+
 import FavoriteFolderListItem from './FavoriteFolderListItem'
 
 const renderPlaylistItem = ({ item }: { item: BilibiliPlaylist }) => (

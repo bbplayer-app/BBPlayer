@@ -1,7 +1,3 @@
-import { useLikeComment } from '@/hooks/mutations/bilibili/comments'
-import type { BilibiliCommentItem } from '@/types/apis/bilibili'
-import { toastAndLogError } from '@/utils/error-handling'
-import { formatRelativeTime } from '@/utils/time'
 import { useRecyclingState } from '@shopify/flash-list'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
@@ -11,6 +7,11 @@ import type { RenderItemInfo } from 'react-native-awesome-gallery'
 import Gallery from 'react-native-awesome-gallery'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { useLikeComment } from '@/hooks/mutations/bilibili/comments'
+import type { BilibiliCommentItem } from '@/types/apis/bilibili'
+import { toastAndLogError } from '@/utils/error-handling'
+import { formatRelativeTime } from '@/utils/time'
 
 interface CommentItemProps {
 	item: BilibiliCommentItem

@@ -1,7 +1,8 @@
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 export const favoriteListQueryKeys = {
 	all: ['bilibili', 'favoriteList'] as const,

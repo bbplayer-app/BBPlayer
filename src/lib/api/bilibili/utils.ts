@@ -1,7 +1,8 @@
-import useAppStore from '@/hooks/stores/useAppStore'
-import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
+
+import useAppStore from '@/hooks/stores/useAppStore'
+import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 
 /**
  * 转换B站bvid为avid

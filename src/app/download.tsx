@@ -1,8 +1,3 @@
-import NowPlayingBar from '@/components/NowPlayingBar'
-import DownloadHeader from '@/features/downloads/DownloadHeader'
-import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { queryClient } from '@/lib/config/queryClient'
 import type { DownloadTask } from '@roitium/expo-orpheus'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { FlashList } from '@shopify/flash-list'
@@ -12,6 +7,12 @@ import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import NowPlayingBar from '@/components/NowPlayingBar'
+import DownloadHeader from '@/features/downloads/DownloadHeader'
+import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { queryClient } from '@/lib/config/queryClient'
 
 const renderItem = ({ item }: { item: DownloadTask }) => {
 	return <DownloadTaskItem initTask={item} />

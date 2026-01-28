@@ -1,3 +1,5 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
@@ -10,7 +12,6 @@ import type { UpdatePlaylistPayload } from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-import { useMutation } from '@tanstack/react-query'
 
 const SCOPE = 'Mutation.DB.Playlist'
 

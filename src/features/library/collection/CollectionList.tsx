@@ -1,3 +1,8 @@
+import { FlashList } from '@shopify/flash-list'
+import { memo, useCallback, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { CollectionListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -6,10 +11,7 @@ import { useInfiniteCollectionsList } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
-import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+
 import CollectionListItem from './CollectionListItem'
 
 const renderCollectionItem = ({ item }: { item: BilibiliCollection }) => (

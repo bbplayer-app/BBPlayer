@@ -1,6 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import { execSync } from 'child_process'
+
 import type { ConfigContext, ExpoConfig } from 'expo/config'
+
 import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
@@ -105,7 +106,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		],
 	},
 	plugins: [
-		'./expo-plugins/withAndroidPlugin',
+		// './expo-plugins/withAndroidPlugin',
 		'./expo-plugins/withAndroidGradleProperties',
 		[
 			'./expo-plugins/withAbiFilters',
@@ -144,6 +145,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 					usesCleartextTraffic: true,
 					enableMinifyInReleaseBuilds: false,
 					enableShrinkResourcesInReleaseBuilds: false,
+					packagingOptions: {
+						pickFirst: ['lib/*/libNitroModules.so'],
+					},
 				},
 			},
 		],

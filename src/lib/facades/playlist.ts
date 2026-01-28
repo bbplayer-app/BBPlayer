@@ -1,3 +1,6 @@
+import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { errAsync, ResultAsync } from 'neverthrow'
+
 import {
 	bilibiliApi,
 	type bilibiliApi as BilibiliApiService,
@@ -15,8 +18,6 @@ import { trackService, type TrackService } from '@/lib/services/trackService'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import log from '@/utils/log'
-import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { errAsync, ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Facade')
 

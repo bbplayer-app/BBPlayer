@@ -1,3 +1,5 @@
+import { err, ok } from 'neverthrow'
+
 import {
 	bilibiliApi,
 	type bilibiliApi as BilibiliApiService,
@@ -5,7 +7,6 @@ import {
 import { av2bv } from '@/lib/api/bilibili/utils'
 import { createFacadeError } from '@/lib/errors/facade'
 import type { Playlist } from '@/types/core/media'
-import { err, ok } from 'neverthrow'
 
 export class BilibiliFacade {
 	constructor(private readonly bilibiliApi: typeof BilibiliApiService) {}

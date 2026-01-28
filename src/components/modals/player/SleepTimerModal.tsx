@@ -1,12 +1,13 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { toastAndLogError } from '@/utils/error-handling'
-import { formatDurationToHHMMSS } from '@/utils/time'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, TextInput } from 'react-native-paper'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { toastAndLogError } from '@/utils/error-handling'
+import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
 
 const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 

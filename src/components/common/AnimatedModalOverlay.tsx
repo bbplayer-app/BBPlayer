@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ViewStyle } from 'react-native'
-import { Keyboard, Pressable, StyleSheet } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
 import { useTheme } from 'react-native-paper'
-import Animated, {
-	useAnimatedKeyboard,
-	useAnimatedStyle,
-	useSharedValue,
-} from 'react-native-reanimated'
+import Animated, { useAnimatedStyle } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface Props {
@@ -25,30 +22,12 @@ export default function AnimatedModalOverlay({
 	contentStyle,
 }: Props) {
 	const insets = useSafeAreaInsets()
-	const keyboard = useAnimatedKeyboard()
+	const { height } = useReanimatedKeyboardAnimation()
 	const theme = useTheme()
 	const [showContent, setShowContent] = useState(false)
-	const isKeyboardVisibleByRN = useSharedValue(false)
-
-	useEffect(() => {
-		const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-			isKeyboardVisibleByRN.value = true
-		})
-		const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-			isKeyboardVisibleByRN.value = false
-		})
-
-		return () => {
-			showSubscription.remove()
-			hideSubscription.remove()
-		}
-	}, [isKeyboardVisibleByRN])
 
 	const wrapperAvoiding = useAnimatedStyle(() => {
-		if (!isKeyboardVisibleByRN.value) {
-			return { paddingBottom: 0 }
-		}
-		const k = Math.max(0, keyboard.height.value - insets.bottom)
+		const k = Math.max(0, Math.abs(height.value) - insets.bottom)
 		return { paddingBottom: k }
 	})
 

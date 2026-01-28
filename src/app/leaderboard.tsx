@@ -1,11 +1,3 @@
-import NowPlayingBar from '@/components/NowPlayingBar'
-import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import {
-	usePlayCountLeaderBoardPaginated,
-	useTotalPlaybackDuration,
-} from '@/hooks/queries/db/track'
-import type { Track } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
@@ -18,6 +10,15 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import NowPlayingBar from '@/components/NowPlayingBar'
+import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import {
+	usePlayCountLeaderBoardPaginated,
+	useTotalPlaybackDuration,
+} from '@/hooks/queries/db/track'
+import type { Track } from '@/types/core/media'
 
 interface LeaderBoardItemData {
 	track: Track

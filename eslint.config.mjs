@@ -9,6 +9,7 @@ import reactHooksExtra from 'eslint-plugin-react-hooks-extra'
 import reactYouMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need-an-effect'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
+
 import modalPlugin from './eslint-plugins/eslint-plugin-modal/index.js'
 
 export default defineConfig([

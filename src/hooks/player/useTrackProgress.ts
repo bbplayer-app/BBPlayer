@@ -1,7 +1,8 @@
-import playerProgressEmitter from '@/lib/player/progressListener'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
+
+import playerProgressEmitter from '@/lib/player/progressListener'
 
 interface Progress {
 	position: number

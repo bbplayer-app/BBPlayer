@@ -1,6 +1,3 @@
-import usePreventRemove from '@/hooks/router/usePreventRemove'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { storage } from '@/utils/mmkv'
 import {
 	useCallback,
 	useEffect,
@@ -15,6 +12,10 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
+
+import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { storage } from '@/utils/mmkv'
 
 const titles = ['欢迎使用 BBPlayer', '登录？']
 

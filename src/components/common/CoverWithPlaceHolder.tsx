@@ -1,10 +1,10 @@
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import { memo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme, View } from 'react-native'
 
 import { getGradientColors } from '@/utils/color'
-import { memo } from 'react'
 
 /**
  * 组件 Props 定义

@@ -1,8 +1,3 @@
-import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { alert } from '@/components/modals/AlertModal'
-import { useAppStore } from '@/hooks/stores/useAppStore'
-import { toastAndLogError } from '@/utils/error-handling'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -16,6 +11,12 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { alert } from '@/components/modals/AlertModal'
+import { useAppStore } from '@/hooks/stores/useAppStore'
+import { toastAndLogError } from '@/utils/error-handling'
+import toast from '@/utils/toast'
 
 export default function PlaybackSettingsPage() {
 	const router = useRouter()

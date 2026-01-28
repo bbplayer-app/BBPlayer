@@ -1,9 +1,10 @@
+import { useCallback } from 'react'
+
 import { syncFacade } from '@/lib/facades/sync'
 import type { BilibiliTrack } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
-import { useCallback } from 'react'
 
 export function useRemotePlaylist() {
 	const playTrack = useCallback(

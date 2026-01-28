@@ -1,11 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import toast from '@/utils/toast'
 import { Asset } from 'expo-asset'
 import { Image } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text } from 'react-native-paper'
+
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import toast from '@/utils/toast'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const WECHAT_QR = require('../../../../assets/images/wechat.png')

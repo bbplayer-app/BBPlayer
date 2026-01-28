@@ -1,3 +1,8 @@
+import { memo, useRef } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { RectButton } from 'react-native-gesture-handler'
+import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
@@ -5,10 +10,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
-import { memo, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
-import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+
 import ProgressRing from './ProgressRing'
 
 export interface TrackMenuItem {
@@ -243,15 +245,7 @@ const renderToViewItem = ({
 	ExtraData
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const {
-		toggle,
-		playTrack,
-		handleMenuPress,
-		selected,
-		selectMode,
-		enterSelectMode,
-		showItemCover,
-	} = extraData
+	const { playTrack, handleMenuPress, selection, showItemCover } = extraData
 
 	return (
 		<ToViewTrackListItem
@@ -270,13 +264,13 @@ const renderToViewItem = ({
 			}}
 			toggleSelected={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-				toggle(item.id)
+				selection.toggle(item.id)
 			}}
-			isSelected={selected.has(item.id)}
-			selectMode={selectMode}
+			isSelected={selection.selected.has(item.id)}
+			selectMode={selection.active}
 			enterSelectMode={() => {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-				enterSelectMode(item.id)
+				selection.enter(item.id)
 			}}
 		/>
 	)

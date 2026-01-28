@@ -1,12 +1,3 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import { alert } from '@/components/modals/AlertModal'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { playlistService } from '@/lib/services/playlistService'
-import type { Playlist } from '@/types/core/media'
-import { toastAndLogError } from '@/utils/error-handling'
-import { getInternalPlayUri } from '@/utils/player'
-import { formatRelativeTime } from '@/utils/time'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
@@ -20,6 +11,16 @@ import {
 	Tooltip,
 	TouchableRipple,
 } from 'react-native-paper'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import { alert } from '@/components/modals/AlertModal'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { playlistService } from '@/lib/services/playlistService'
+import type { Playlist } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+import { getInternalPlayUri } from '@/utils/player'
+import { formatRelativeTime } from '@/utils/time'
+import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }

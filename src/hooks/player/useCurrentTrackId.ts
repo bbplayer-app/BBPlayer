@@ -1,8 +1,7 @@
-import { useCurrentTrack as useOrpheusTrack } from '@roitium/expo-orpheus'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 
 export function useCurrentTrackId() {
-	const { track } = useOrpheusTrack()
-	return track?.id
+	return usePlayerStore((state) => state.orpheusTrack?.id)
 }
 
 export default useCurrentTrackId

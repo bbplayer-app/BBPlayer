@@ -1,12 +1,3 @@
-import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
-import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { expoDb } from '@/lib/db/db'
-import lyricService from '@/lib/services/lyricService'
-import { toastAndLogError } from '@/utils/error-handling'
-import log from '@/utils/log'
-import toast from '@/utils/toast'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
@@ -20,6 +11,16 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
+import { alert } from '@/components/modals/AlertModal'
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { expoDb } from '@/lib/db/db'
+import lyricService from '@/lib/services/lyricService'
+import { toastAndLogError } from '@/utils/error-handling'
+import log from '@/utils/log'
+import toast from '@/utils/toast'
 
 const logger = log.extend('TestPage')
 

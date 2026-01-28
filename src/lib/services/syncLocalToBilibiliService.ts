@@ -1,8 +1,9 @@
+import { err, ok, type Result, type ResultAsync } from 'neverthrow'
+
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { Track } from '@/types/core/media'
 import log from '@/utils/log'
 import { diffSets } from '@/utils/set'
-import { err, ok, type Result, type ResultAsync } from 'neverthrow'
 
 const logger = log.extend('Services.SyncLocalToBilibili')
 

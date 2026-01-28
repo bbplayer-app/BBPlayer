@@ -1,9 +1,10 @@
-import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Button, Dialog, TextInput } from 'react-native-paper'
+
+import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function DuplicateLocalPlaylistModal({
 	sourcePlaylistId,

@@ -1,8 +1,9 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useRouter } from 'expo-router'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function DonateSettingsPage() {
 	const router = useRouter()

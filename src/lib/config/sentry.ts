@@ -1,9 +1,10 @@
-import useAppStore from '@/hooks/stores/useAppStore'
-import log from '@/utils/log'
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
 import * as Application from 'expo-application'
 import * as Updates from 'expo-updates'
+
+import useAppStore from '@/hooks/stores/useAppStore'
+import log from '@/utils/log'
 
 const logger = log.extend('Utils.Sentry')
 

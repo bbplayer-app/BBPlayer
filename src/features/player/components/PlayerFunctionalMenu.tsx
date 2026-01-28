@@ -1,9 +1,3 @@
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { toastAndLogError } from '@/utils/error-handling'
-import { getInternalPlayUri } from '@/utils/player'
-import toast from '@/utils/toast'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
@@ -19,6 +13,13 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { toastAndLogError } from '@/utils/error-handling'
+import { getInternalPlayUri } from '@/utils/player'
+import toast from '@/utils/toast'
 
 export function PlayerFunctionalMenu({
 	menuVisible,

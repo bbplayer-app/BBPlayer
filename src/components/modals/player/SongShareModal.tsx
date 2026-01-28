@@ -1,8 +1,3 @@
-import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
-import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
-import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import toast from '@/utils/toast'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
@@ -18,6 +13,12 @@ import {
 } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
+
+import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
+import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import toast from '@/utils/toast'
 
 const SongShareModal = () => {
 	const currentTrack = useCurrentTrack()

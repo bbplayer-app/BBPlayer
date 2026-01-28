@@ -1,3 +1,6 @@
+import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
+
 import type { bilibiliApi as BilibiliApiService } from '@/lib/api/bilibili/api'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv, bv2av } from '@/lib/api/bilibili/utils'
@@ -24,8 +27,6 @@ import type { CreateArtistPayload } from '@/types/services/artist'
 import log from '@/utils/log'
 import { diffSets } from '@/utils/set'
 import toast from '@/utils/toast'
-import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
 
 export interface FavoriteSyncProgress {
 	message: string

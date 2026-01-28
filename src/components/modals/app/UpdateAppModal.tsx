@@ -1,11 +1,12 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { storage } from '@/utils/mmkv'
-import toast from '@/utils/toast'
 import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, useTheme } from 'react-native-paper'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { storage } from '@/utils/mmkv'
+import toast from '@/utils/toast'
 
 export interface UpdateModalProps {
 	version: string

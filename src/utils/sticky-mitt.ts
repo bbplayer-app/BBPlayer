@@ -1,4 +1,5 @@
 import mitt, { type Emitter, type Handler } from 'mitt'
+
 import log from './log'
 
 const logger = log.extend('Utils.StickyMitt')

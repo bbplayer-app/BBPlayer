@@ -1,11 +1,12 @@
+import type { Result } from 'neverthrow'
+import { err, ok } from 'neverthrow'
+
 import type { ServiceError } from '@/lib/errors'
 import {
 	createNotImplementedError,
 	createValidationError,
 } from '@/lib/errors/service'
 import type { TrackSourceData } from '@/types/services/track'
-import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
 
 export default function generateUniqueTrackKey(
 	payload: TrackSourceData,

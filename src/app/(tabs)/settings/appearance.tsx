@@ -1,5 +1,3 @@
-import FunctionalMenu from '@/components/common/FunctionalMenu'
-import useAppStore from '@/hooks/stores/useAppStore'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
@@ -12,6 +10,9 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import useAppStore from '@/hooks/stores/useAppStore'
 
 export default function AppearanceSettingsPage() {
 	const router = useRouter()

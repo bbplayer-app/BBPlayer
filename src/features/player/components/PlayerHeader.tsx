@@ -1,9 +1,10 @@
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { DownloadState } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
+
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 
 export function PlayerHeader({
 	onMorePress,

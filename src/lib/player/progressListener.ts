@@ -1,5 +1,6 @@
-import createStickyEmitter from '@/utils/sticky-mitt'
 import { Orpheus } from '@roitium/expo-orpheus'
+
+import createStickyEmitter from '@/utils/sticky-mitt'
 
 interface Events {
 	progress: {

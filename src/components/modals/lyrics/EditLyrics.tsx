@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { StyleSheet } from 'react-native'
+import { Button, Dialog, TextInput } from 'react-native-paper'
+
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
@@ -6,9 +10,6 @@ import type { ParsedLrc } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
 import toast from '@/utils/toast'
-import { useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
 
 export default function EditLyricsModal({
 	uniqueKey,

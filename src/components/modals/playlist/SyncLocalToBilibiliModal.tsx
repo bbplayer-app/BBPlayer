@@ -1,9 +1,3 @@
-import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
-import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { playlistService } from '@/lib/services/playlistService'
-import { syncLocalToBilibiliService } from '@/lib/services/syncLocalToBilibiliService'
-import toast from '@/utils/toast'
 import { useEffect, useReducer } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
@@ -14,6 +8,13 @@ import {
 	ProgressBar,
 	Text,
 } from 'react-native-paper'
+
+import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { playlistService } from '@/lib/services/playlistService'
+import { syncLocalToBilibiliService } from '@/lib/services/syncLocalToBilibiliService'
+import toast from '@/utils/toast'
 
 interface SyncLocalToBilibiliModalProps {
 	playlistId: number

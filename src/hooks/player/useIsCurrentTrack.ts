@@ -1,9 +1,11 @@
-import { useCurrentTrack as useOrpheusTrack } from '@roitium/expo-orpheus'
+import { useShallow } from 'zustand/react/shallow'
+
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 
 export function useIsCurrentTrack(trackUniqueKey: string) {
-	const { track } = useOrpheusTrack()
-
-	return track?.id === trackUniqueKey
+	return usePlayerStore(
+		useShallow((state) => state.orpheusTrack?.id === trackUniqueKey),
+	)
 }
 
 export default useIsCurrentTrack

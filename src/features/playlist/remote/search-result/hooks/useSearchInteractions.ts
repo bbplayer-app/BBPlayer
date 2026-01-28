@@ -1,3 +1,6 @@
+import { useRouter } from 'expo-router'
+import { useCallback } from 'react'
+
 import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-result/constants'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { syncFacade } from '@/lib/facades/sync'
@@ -6,8 +9,6 @@ import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
 import toast from '@/utils/toast'
-import { useRouter } from 'expo-router'
-import { useCallback } from 'react'
 
 export function useSearchInteractions() {
 	const router = useRouter()

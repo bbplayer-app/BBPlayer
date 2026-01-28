@@ -1,10 +1,11 @@
-import type { LyricLine } from '@/types/player/lyrics'
 import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
 import { Icon, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
+
+import type { LyricLine } from '@/types/player/lyrics'
 
 interface LyricsShareCardProps {
 	title: string

@@ -1,10 +1,11 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { memo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 export interface TrackMenuItem {
 	title: string

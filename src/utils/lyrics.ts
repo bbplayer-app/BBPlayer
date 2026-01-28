@@ -1,5 +1,6 @@
 import type { ParsedLrc } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
+
 import log from './log'
 
 const logger = log.extend('Utils.Lyrics')

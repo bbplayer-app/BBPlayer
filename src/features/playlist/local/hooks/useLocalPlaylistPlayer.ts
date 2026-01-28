@@ -1,3 +1,7 @@
+import { useCallback } from 'react'
+import type { MMKV } from 'react-native-mmkv'
+import { useMMKVBoolean } from 'react-native-mmkv'
+
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { playlistService } from '@/lib/services/playlistService'
@@ -5,9 +9,6 @@ import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
 import { addToQueue } from '@/utils/player'
-import { useCallback } from 'react'
-import type { MMKV } from 'react-native-mmkv'
-import { useMMKVBoolean } from 'react-native-mmkv'
 
 const SCOPE = 'UI.Playlist.Local.Player'
 
