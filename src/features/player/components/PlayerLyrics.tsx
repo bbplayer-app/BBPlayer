@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import {
 	memo,
 	useCallback,
-	useEffect,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -31,6 +30,7 @@ import {
 	Text,
 	useTheme,
 } from 'react-native-paper'
+import type { SharedValue } from 'react-native-reanimated'
 import Animated, {
 	useAnimatedScrollHandler,
 	useAnimatedStyle,
@@ -117,24 +117,20 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 
 const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	item,
-	isHighlighted,
+	currentLyricIndex,
 	jumpToThisLyric,
 	index,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
-	isHighlighted: boolean
+	currentLyricIndex: SharedValue<number>
 	jumpToThisLyric: (index: number) => void
 	index: number
 }) {
 	const colors = useTheme().colors
-	const isHighlightedShared = useSharedValue(isHighlighted)
-
-	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
-	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
 
 	const animatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		const isHighlighted = currentLyricIndex.value === index
+		if (isHighlighted) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				color: withTiming(colors.primary, { duration: 300 }),
@@ -165,24 +161,20 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 
 const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	item,
-	isHighlighted,
+	currentLyricIndex,
 	jumpToThisLyric,
 	index,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
-	isHighlighted: boolean
+	currentLyricIndex: SharedValue<number>
 	jumpToThisLyric: (index: number) => void
 	index: number
 }) {
 	const theme = useTheme()
-	const isHighlightedShared = useSharedValue(isHighlighted)
-
-	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
-	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
 
 	const animatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		const isHighlighted = currentLyricIndex.value === index
+		if (isHighlighted) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				transform: [
@@ -227,7 +219,7 @@ const renderItem = ({
 }: ListRenderItemInfoWithExtraData<
 	LyricLine & { isPaddingItem?: boolean },
 	{
-		currentLyricIndex: number
+		currentLyricIndex: SharedValue<number>
 		handleJumpToLyric: (index: number) => void
 		enableOldSchoolStyleLyric: boolean
 	}
@@ -242,7 +234,7 @@ const renderItem = ({
 		return (
 			<OldSchoolLyricLineItem
 				item={item}
-				isHighlighted={index === currentLyricIndex}
+				currentLyricIndex={currentLyricIndex}
 				index={index}
 				jumpToThisLyric={handleJumpToLyric}
 			/>
@@ -251,7 +243,7 @@ const renderItem = ({
 	return (
 		<ModernLyricLineItem
 			item={item}
-			isHighlighted={index === currentLyricIndex}
+			currentLyricIndex={currentLyricIndex}
 			index={index}
 			jumpToThisLyric={handleJumpToLyric}
 		/>
