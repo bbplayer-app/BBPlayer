@@ -1,7 +1,3 @@
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useAppStore from '@/hooks/stores/useAppStore'
-import * as Haptics from '@/utils/haptics'
 import {
 	Orpheus,
 	PlaybackState,
@@ -11,7 +7,7 @@ import {
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 import {
 	Directions,
 	Gesture,
@@ -26,6 +22,12 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
+
+import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
+import useAppStore from '@/hooks/stores/useAppStore'
+import * as Haptics from '@/utils/haptics'
 
 const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =
@@ -85,6 +87,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	const insets = useSafeAreaInsets()
 	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
+	const bottomBarHeight = useBottomTabBarHeight()
 
 	const nowPlayingBarStyle = useAppStore(
 		(state) => state.settings.nowPlayingBarStyle,
@@ -95,19 +98,13 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 
 	const prevTap = Gesture.Tap().onEnd((_e, success) => {
 		if (success) {
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Context_Click,
-			)
+			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
 			scheduleOnRN(() => Orpheus.skipToPrevious())
 		}
 	})
 	const playTap = Gesture.Tap().onEnd((_e, success) => {
 		if (success) {
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Context_Click,
-			)
+			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
 			scheduleOnRN(async (_isPlaying) => {
 				const isPlaying = await Orpheus.getIsPlaying()
 				if (isPlaying) {
@@ -122,10 +119,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 	})
 	const nextTap = Gesture.Tap().onEnd((_e, success) => {
 		if (success) {
-			scheduleOnRN(
-				Haptics.performAndroidHapticsAsync,
-				Haptics.AndroidHaptics.Context_Click,
-			)
+			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
 			scheduleOnRN(() => Orpheus.skipToNext())
 		}
 	})
@@ -186,6 +180,17 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 		}
 	})
 
+	let bottomMargin = 0
+	if (Platform.OS === 'ios') {
+		if (bottomBarHeight === 0) {
+			bottomMargin = insets.bottom + 10
+		} else {
+			bottomMargin = 10 + bottomBarHeight
+		}
+	} else {
+		bottomMargin = nowPlayingBarStyle === 'bottom' ? 0 : insets.bottom + 10
+	}
+
 	return (
 		<View
 			pointerEvents='box-none'
@@ -198,8 +203,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 							playerStyle,
 							{
 								backgroundColor: colors.elevation.level2,
-								marginBottom:
-									nowPlayingBarStyle === 'bottom' ? 0 : insets.bottom + 10,
+								marginBottom: bottomMargin,
 							},
 							animatedStyle,
 						]}

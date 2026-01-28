@@ -1,6 +1,7 @@
+import { useInfiniteQuery } from '@tanstack/react-query'
+
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-import { useInfiniteQuery } from '@tanstack/react-query'
 
 export const commentQueryKeys = {
 	all: ['bilibili', 'comments'] as const,

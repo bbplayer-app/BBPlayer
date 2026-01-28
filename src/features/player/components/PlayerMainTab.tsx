@@ -1,11 +1,13 @@
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import * as Haptics from '@/utils/haptics'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import * as Haptics from '@/utils/haptics'
+
 import { PlayerControls } from './PlayerControls'
 import { PlayerSlider } from './PlayerSlider'
 import { TrackInfo } from './PlayerTrackInfo'
@@ -40,9 +42,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 						: void 0
 				}
 				onPressCover={() => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Context_Click,
-					)
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					jumpTo('lyrics')
 				}}
 				coverRef={imageRef}

@@ -1,6 +1,9 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
+import type { FavoriteSyncProgress } from '@/lib/facades/sync'
 import { syncFacade } from '@/lib/facades/sync'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -9,7 +12,6 @@ import type { UpdatePlaylistPayload } from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-import { useMutation } from '@tanstack/react-query'
 
 const SCOPE = 'Mutation.DB.Playlist'
 
@@ -25,12 +27,14 @@ export const usePlaylistSync = () => {
 		mutationFn: async ({
 			remoteSyncId,
 			type,
+			onProgress,
 		}: {
 			remoteSyncId: number
 			type: Playlist['type']
 			toastId?: string
+			onProgress?: (progress: FavoriteSyncProgress) => void
 		}) => {
-			const result = await syncFacade.sync(remoteSyncId, type)
+			const result = await syncFacade.sync(remoteSyncId, type, onProgress)
 			if (result.isErr()) {
 				throw result.error
 			}

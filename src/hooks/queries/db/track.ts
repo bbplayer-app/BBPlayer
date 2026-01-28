@@ -1,7 +1,8 @@
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 queryClient.setQueryDefaults(['db', 'tracks'], {
 	retry: false,

@@ -1,5 +1,3 @@
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import {
 	TrueSheet,
 	type TrueSheetProps,
@@ -27,6 +25,9 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 
 const TrackItem = memo(
 	({

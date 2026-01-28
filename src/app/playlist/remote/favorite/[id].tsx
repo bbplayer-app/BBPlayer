@@ -1,3 +1,8 @@
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, useTheme } from 'react-native-paper'
+
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -7,17 +12,12 @@ import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMen
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
-import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import toast from '@/utils/toast'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
 	apiItem: BilibiliFavoriteListContent,
@@ -57,6 +57,15 @@ export default function FavoritePage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -76,8 +85,6 @@ export default function FavoritePage() {
 		)
 	}, [favoriteData])
 
-	const { mutate: syncFavorite } = usePlaylistSync()
-
 	const { playTrack } = useRemotePlaylist()
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
@@ -87,27 +94,13 @@ export default function FavoritePage() {
 			toast.info('收藏夹为空，无需同步')
 			return
 		}
-		const toastId = 'sync-playlist'
-		toast.show('同步中...', { id: toastId, duration: Infinity })
-		setRefreshing(true)
-		syncFavorite(
-			{
-				remoteSyncId: Number(id),
-				type: 'favorite',
-				toastId,
-			},
-			{
-				onSuccess: (id) => {
-					if (!id) return
-					router.replace({
-						pathname: '/playlist/local/[id]',
-						params: { id: String(id) },
-					})
-				},
-			},
+
+		openModal(
+			'FavoriteSyncProgress',
+			{ favoriteId: Number(id), shouldRedirectToLocalPlaylist: true },
+			{ dismissible: false },
 		)
-		setRefreshing(false)
-	}, [favoriteData?.pages, id, router, syncFavorite])
+	}, [favoriteData?.pages, id, openModal])
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
@@ -180,10 +173,7 @@ export default function FavoritePage() {
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={favoriteData.pages[0].info.cover}

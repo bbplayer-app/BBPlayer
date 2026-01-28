@@ -1,3 +1,8 @@
+import type { TransitionReason } from '@roitium/expo-orpheus'
+import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
+import type { Result } from 'neverthrow'
+import { err, ok } from 'neverthrow'
+
 import { trackKeys } from '@/hooks/queries/db/track'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
@@ -8,10 +13,7 @@ import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import lyricService from '@/lib/services/lyricService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
-import type { TransitionReason } from '@roitium/expo-orpheus'
-import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
+
 import { toastAndLogError } from './error-handling'
 import log, { flatErrorMessage } from './log'
 
@@ -186,8 +188,8 @@ async function addToQueue({
 function getInternalPlayUri(track: Track) {
 	if (track.source === 'bilibili') {
 		return track.bilibiliMetadata.isMultiPage
-			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=1&dolby=1`
-			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=1&dolby=1`
+			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=0&dolby=0`
+			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=0&dolby=0`
 	}
 	if (track.source === 'local' && track.localMetadata) {
 		return track.localMetadata.localPath

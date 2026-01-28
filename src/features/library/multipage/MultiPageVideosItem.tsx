@@ -1,11 +1,12 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 const MultiPageVideosItem = memo(
 	({ item }: { item: BilibiliFavoriteListContent }) => {

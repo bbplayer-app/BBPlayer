@@ -1,4 +1,3 @@
-import type { PlayRecord } from '@/types/core/media'
 import { relations, sql } from 'drizzle-orm'
 import {
 	check,
@@ -9,6 +8,8 @@ import {
 	text,
 	uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
+
+import type { PlayRecord } from '@/types/core/media'
 
 export const artists = sqliteTable(
 	'artists',

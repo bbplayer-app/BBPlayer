@@ -1,12 +1,13 @@
-import { useCreateNewLocalPlaylist } from '@/hooks/mutations/db/playlist'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import toast from '@/utils/toast'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, IconButton, TextInput } from 'react-native-paper'
+
+import { useCreateNewLocalPlaylist } from '@/hooks/mutations/db/playlist'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import toast from '@/utils/toast'
 
 export default function CreatePlaylistModal({
 	redirectToNewPlaylist,

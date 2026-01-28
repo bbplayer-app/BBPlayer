@@ -1,5 +1,6 @@
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { Button, Dialog, Text } from 'react-native-paper'
+
+import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export interface AlertButton {
 	text: string

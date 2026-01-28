@@ -1,9 +1,16 @@
+import * as Sentry from '@sentry/react-native'
+import type { SQL } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
+import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
+
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
 	DatabaseError,
 	createNotImplementedError,
+	createTrackAlreadyExists,
 	createTrackNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
@@ -22,11 +29,7 @@ import type {
 	UpdateTrackPayloadBase,
 } from '@/types/services/track'
 import log from '@/utils/log'
-import * as Sentry from '@sentry/react-native'
-import type { SQL } from 'drizzle-orm'
-import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
-import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
+
 import generateUniqueTrackKey from './genKey'
 
 const logger = log.extend('Service.Track')
@@ -134,6 +137,20 @@ export class TrackService {
 
 		const transactionResult = ResultAsync.fromPromise(
 			(async () => {
+				// Check for duplicate title
+				const existing = await Sentry.startSpan(
+					{ name: 'db:query:track:duplicate', op: 'db' },
+					() =>
+						this.db.query.tracks.findFirst({
+							where: eq(schema.tracks.title, payload.title),
+							columns: { id: true },
+						}),
+				)
+
+				if (existing) {
+					throw createTrackAlreadyExists(payload.title)
+				}
+
 				// 创建 track
 				const [newTrack] = await Sentry.startSpan(
 					{ name: 'db:insert:track', op: 'db' },
@@ -204,17 +221,39 @@ export class TrackService {
 		const { id, ...dataToUpdate } = payload
 
 		const updateResult = ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:update:track', op: 'db' }, () =>
-				this.db
-					.update(schema.tracks)
-					.set({
-						title: dataToUpdate.title ?? undefined,
-						artistId: dataToUpdate.artistId,
-						coverUrl: dataToUpdate.coverUrl,
-						duration: dataToUpdate.duration,
-					} satisfies Omit<UpdateTrackPayloadBase, 'id'>)
-					.where(eq(schema.tracks.id, id)),
-			),
+			(async () => {
+				if (dataToUpdate.title) {
+					const existing = await Sentry.startSpan(
+						{ name: 'db:query:track:duplicate', op: 'db' },
+						() =>
+							this.db.query.tracks.findFirst({
+								where: and(
+									eq(schema.tracks.title, dataToUpdate.title!),
+									sql`${schema.tracks.id} != ${id}`,
+								),
+								columns: { id: true },
+							}),
+					)
+
+					if (existing) {
+						throw createTrackAlreadyExists(dataToUpdate.title)
+					}
+				}
+
+				return await Sentry.startSpan(
+					{ name: 'db:update:track', op: 'db' },
+					() =>
+						this.db
+							.update(schema.tracks)
+							.set({
+								title: dataToUpdate.title ?? undefined,
+								artistId: dataToUpdate.artistId,
+								coverUrl: dataToUpdate.coverUrl,
+								duration: dataToUpdate.duration,
+							} satisfies Omit<UpdateTrackPayloadBase, 'id'>)
+							.where(eq(schema.tracks.id, id)),
+				)
+			})(),
 			(e) =>
 				e instanceof ServiceError
 					? e

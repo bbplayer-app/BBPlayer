@@ -1,10 +1,3 @@
-import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
-import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
-import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
-import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { LyricLine } from '@/types/player/lyrics'
-import toast from '@/utils/toast'
 import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { FlashList } from '@shopify/flash-list'
 import { Image, useImage } from 'expo-image'
@@ -23,6 +16,14 @@ import {
 } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
+
+import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
+import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
+import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { LyricLine } from '@/types/player/lyrics'
+import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({
 	item,
@@ -107,8 +108,9 @@ const LyricsSelectionModal = () => {
 	const bvid = isBilibili ? currentTrack.bilibiliMetadata.bvid : undefined
 	const cid = isBilibili ? currentTrack.bilibiliMetadata.cid : undefined
 
-	const { data: pageList, isPending: isPageListPending } =
+	const { data: pageList, isPending: isPageListQueryPending } =
 		useGetMultiPageList(bvid)
+	const isPageListPending = !!cid && isPageListQueryPending
 
 	// 计算 shareUrl
 	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack?.uniqueKey ?? '')}&title=${encodeURIComponent(currentTrack?.title ?? '')}&cover=${encodeURIComponent(currentTrack?.coverUrl ?? '')}`

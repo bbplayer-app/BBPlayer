@@ -1,8 +1,9 @@
-import type { TypedMMKVInterface } from '@/types/storage'
-import { MMKV } from 'react-native-mmkv'
+import { createMMKV } from 'react-native-mmkv'
 import type { StateStorage } from 'zustand/middleware/persist'
 
-const mmkv = new MMKV()
+import type { TypedMMKVInterface } from '@/types/storage'
+
+const mmkv = createMMKV()
 
 export const storage = mmkv as unknown as TypedMMKVInterface
 
@@ -18,6 +19,6 @@ export const zustandStorage: StateStorage = {
 	},
 	removeItem: (name) => {
 		// @ts-expect-error -- 管不了 zustand 的类型定义
-		return storage.delete(name)
+		return storage.remove(name)
 	},
 }

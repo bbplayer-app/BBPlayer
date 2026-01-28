@@ -1,6 +1,7 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-import { useMutation } from '@tanstack/react-query'
 
 export const useLikeComment = () => {
 	return useMutation({

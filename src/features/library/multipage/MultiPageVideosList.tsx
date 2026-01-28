@@ -1,3 +1,8 @@
+import { FlashList } from '@shopify/flash-list'
+import { memo, useCallback, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { LibraryTabSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -9,10 +14,7 @@ import {
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
-import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+
 import MultiPageVideosItem from './MultiPageVideosItem'
 
 const renderPlaylistItem = ({

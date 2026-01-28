@@ -5,6 +5,30 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.2.3] - 2026-01-28
+
+### Added
+
+- 本地播放列表移除歌曲时增加过渡动画
+- 集成 commitlint 和 lefthook 以规范 commit 信息
+- 同步本地歌单到 b 站收藏夹（不稳定，容易被风控）
+- 收藏夹同步现在会显示详细的进度模态框
+- 对 IOS 进行基础的适配
+- 使用 useDeferredValue 优化本地播放列表、本地歌单详情页和首页搜索的输入响应速度
+- 使用 useTransition 优化音乐库 Tab 切换体验，减少卡顿感
+- 使用 Reanimated 重写歌词滚动逻辑，完全绕过 React 渲染流程，极大提升性能
+- 重构播放器 Hooks，使用全局 Zustand Store 管理播放状态，减少 JS 与 Native 之间的通信开销
+
+### Changed
+
+- 重构 `RemoteTrackList` 和 `LocalTrackList` 组件的 Props，将选择相关状态合并为 `selection` 对象，并直接继承 `FlashList` 的 Props以获得更好的灵活性
+- 使用 react-native-keyboard-controller 的 API 重构 AnimatedModalOverlay
+- 重构 `src/lib/api/bilibili/api.ts` 为 Class
+- 修复冷启动时 Deep Link 无法跳转的问题
+- 创建/修改歌曲或播放列表时，禁止使用重复的名称
+- 将 `app.bbplayer.roitium.com` 作为 Deep Link 的 host
+- 关闭 dolby / hires 音源
+
 ## [2.2.2] - 2026-01-25
 
 ### Changed
@@ -243,7 +267,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.2...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.3...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -259,3 +283,4 @@
 [2.1.9]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.8...v2.1.9
 [2.2.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.1.9...v2.2.0
 [2.2.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.0...v2.2.2
+[2.2.3]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.2...v2.2.3

@@ -1,6 +1,3 @@
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
-import * as Haptics from '@/utils/haptics'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { Orpheus } from '@roitium/expo-orpheus'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -16,6 +13,10 @@ import Animated, {
 	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+
+import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import * as Haptics from '@/utils/haptics'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 const THUMB_SIZE = 12
 
@@ -170,7 +171,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					)
 					scrubPosition.set(newProgress * (duration.value || 1))
 					scheduleOnRN(
-						Haptics.performAndroidHapticsAsync,
+						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Drag_Start,
 					)
 					if (onInteraction) {
@@ -197,7 +198,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 
 					void scheduleOnRN(handleSeek, targetTime)
 					scheduleOnRN(
-						Haptics.performAndroidHapticsAsync,
+						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Gesture_End,
 					)
 					if (onInteraction) {

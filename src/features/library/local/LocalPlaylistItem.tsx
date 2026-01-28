@@ -1,10 +1,11 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import type { Playlist } from '@/types/core/media'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import type { Playlist } from '@/types/core/media'
 
 const LocalPlaylistItem = memo(
 	({ item }: { item: Playlist & { isToView?: boolean } }) => {

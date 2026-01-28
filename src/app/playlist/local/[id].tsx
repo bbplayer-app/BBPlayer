@@ -1,3 +1,22 @@
+import type { FlashListRef } from '@shopify/flash-list'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
+import Animated, {
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -20,22 +39,11 @@ import {
 } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
+import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
-import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
-import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withTiming,
-} from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'
@@ -49,9 +57,19 @@ export default function LocalPlaylistPage() {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
-	const debouncedQuery = useDebouncedValue(searchQuery, 200)
+	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
 		useTrackSelection()
+
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const [batchAddTracksModalPayloads, setBatchAddTracksModalPayloads] =
 		useState<{ track: CreateTrackPayload; artist: CreateArtistPayload }[]>([])
 	const openModal = useModalStore((state) => state.open)
@@ -72,10 +90,10 @@ export default function LocalPlaylistPage() {
 		data: searchData,
 		isError: isSearchError,
 		error: searchError,
-	} = useSearchTracksInPlaylist(Number(id), debouncedQuery, startSearch)
+	} = useSearchTracksInPlaylist(Number(id), deferredQuery, startSearch)
 
 	const finalPlaylistData = (() => {
-		if (!startSearch || !debouncedQuery.trim()) {
+		if (!startSearch || !deferredQuery.trim()) {
 			return allLoadedTracks
 		}
 
@@ -116,6 +134,16 @@ export default function LocalPlaylistPage() {
 			)
 			return
 		}
+
+		if (playlistMetadata.type === 'favorite') {
+			openModal(
+				'SyncLocalToBilibili',
+				{ playlistId: Number(id) },
+				{ dismissible: false },
+			)
+			return
+		}
+
 		const toastId = 'sync-playlist'
 		toast.show('同步中...', { id: toastId, duration: Infinity })
 		syncPlaylist({
@@ -123,12 +151,15 @@ export default function LocalPlaylistPage() {
 			type: playlistMetadata.type,
 			toastId,
 		})
-	}, [playlistMetadata, syncPlaylist])
+	}, [playlistMetadata, syncPlaylist, openModal, id])
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
 
+	const trackListRef = useRef<FlashListRef<Track>>(null)
+
 	const deleteTrack = useCallback(
 		(trackId: number) => {
+			void trackListRef.current?.prepareForLayoutAnimationRender()
 			deleteTrackFromLocalPlaylist({
 				trackIds: [trackId],
 				playlistId: Number(id),
@@ -148,6 +179,7 @@ export default function LocalPlaylistPage() {
 
 	const deleteSelectedTracks = useCallback(() => {
 		if (selected.size === 0) return
+		trackListRef.current?.prepareForLayoutAnimationRender()
 		deleteTrackFromLocalPlaylist({
 			trackIds: Array.from(selected),
 			playlistId: Number(id),
@@ -277,53 +309,48 @@ export default function LocalPlaylistPage() {
 				/>
 			</Animated.View>
 
-			<LocalTrackList
-				tracks={finalPlaylistData ?? []}
-				playlist={playlistMetadata}
-				handleTrackPress={handleTrackPress}
-				trackMenuItems={trackMenuItems}
-				selectMode={selectMode}
-				selected={selected}
-				toggle={(trackId) => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Clock_Tick,
-					)
-					toggle(trackId)
+			<View
+				style={{
+					flex: 1,
 				}}
-				enterSelectMode={(trackId) => {
-					void Haptics.performAndroidHapticsAsync(
-						Haptics.AndroidHaptics.Long_Press,
-					)
-					enterSelectMode(trackId)
-				}}
-				onEndReached={
-					hasNextPagePlaylistData &&
-					!startSearch &&
-					!isFetchingNextPagePlaylistData
-						? () => fetchNextPagePlaylistData()
-						: undefined
-				}
-				ListHeaderComponent={
-					<PlaylistHeader
-						playlist={playlistMetadata}
-						onClickPlayAll={playAll}
-						onClickSync={handleSync}
-						onClickCopyToLocalPlaylist={() =>
-							openModal('DuplicateLocalPlaylist', {
-								sourcePlaylistId: Number(id),
-								rawName: playlistMetadata.title,
-							})
-						}
-						onPressAuthor={(author) =>
-							author.remoteId &&
-							router.push({
-								pathname: '/playlist/remote/uploader/[mid]',
-								params: { mid: author.remoteId },
-							})
-						}
-					/>
-				}
-			/>
+			>
+				<LocalTrackList
+					isStale={searchQuery !== deferredQuery}
+					listRef={trackListRef}
+					tracks={finalPlaylistData ?? []}
+					playlist={playlistMetadata}
+					handleTrackPress={handleTrackPress}
+					trackMenuItems={trackMenuItems}
+					selection={selection}
+					onEndReached={
+						hasNextPagePlaylistData &&
+						!startSearch &&
+						!isFetchingNextPagePlaylistData
+							? () => fetchNextPagePlaylistData()
+							: undefined
+					}
+					ListHeaderComponent={
+						<PlaylistHeader
+							playlist={playlistMetadata}
+							onClickPlayAll={playAll}
+							onClickSync={handleSync}
+							onClickCopyToLocalPlaylist={() =>
+								openModal('DuplicateLocalPlaylist', {
+									sourcePlaylistId: Number(id),
+									rawName: playlistMetadata.title,
+								})
+							}
+							onPressAuthor={(author) =>
+								author.remoteId &&
+								router.push({
+									pathname: '/playlist/remote/uploader/[mid]',
+									params: { mid: author.remoteId },
+								})
+							}
+						/>
+					}
+				/>
+			</View>
 
 			<Portal>
 				<FunctionalMenu
@@ -342,6 +369,22 @@ export default function LocalPlaylistPage() {
 						title='编辑播放列表信息'
 						leadingIcon='pencil'
 					/>
+					{/* 只允许同步纯粹本地创建的播放列表 */}
+					{playlistMetadata.type === 'local' &&
+						playlistMetadata.remoteSyncId === null && (
+							<Menu.Item
+								onPress={() => {
+									setFunctionalMenuVisible(false)
+									openModal(
+										'SyncLocalToBilibili',
+										{ playlistId: Number(id) },
+										{ dismissible: false },
+									)
+								}}
+								title='同步到 B 站'
+								leadingIcon='sync'
+							/>
+						)}
 					<Menu.Item
 						onPress={() => {
 							setFunctionalMenuVisible(false)

@@ -1,9 +1,3 @@
-import { useFetchLyrics } from '@/hooks/mutations/lyrics'
-import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
-import type { LyricSearchResult } from '@/types/player/lyrics'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -15,6 +9,13 @@ import {
 	Text,
 	TouchableRipple,
 } from 'react-native-paper'
+
+import { useFetchLyrics } from '@/hooks/mutations/lyrics'
+import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LyricSearchResult } from '@/types/player/lyrics'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 const SOURCE_MAP = {
 	netease: '网易云',

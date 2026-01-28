@@ -1,3 +1,9 @@
+import type { FlashListRef } from '@shopify/flash-list'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, useTheme } from 'react-native-paper'
+
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
@@ -24,11 +30,6 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
-import type { FlashListRef } from '@shopify/flash-list'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
 
 const mapApiItemToTrack = (
 	mp: BilibiliMultipageVideo,
@@ -69,6 +70,15 @@ export default function MultipagePage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(bv2av(bvid), 'multi_page')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -148,12 +158,9 @@ export default function MultipagePage() {
 		}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 			if (!extraData) throw new Error('Extradata 不存在')
 			const {
-				toggle,
 				playTrack: play,
 				handleMenuPress,
-				selected: selectedSet,
-				selectMode: isSelectMode,
-				enterSelectMode: enterMode,
+				selection,
 				showItemCover,
 			} = extraData
 
@@ -176,18 +183,14 @@ export default function MultipagePage() {
 						titleHtml: item.titleHtml,
 					}}
 					toggleSelected={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Clock_Tick,
-						)
-						toggle(item.id)
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+						selection.toggle(item.id)
 					}}
-					isSelected={selectedSet.has(item.id)}
-					selectMode={isSelectMode}
+					isSelected={selection.selected.has(item.id)}
+					selectMode={selection.active}
 					enterSelectMode={() => {
-						void Haptics.performAndroidHapticsAsync(
-							Haptics.AndroidHaptics.Long_Press,
-						)
-						enterMode(item.id)
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+						selection.enter(item.id)
 					}}
 				/>
 			)
@@ -254,10 +257,7 @@ export default function MultipagePage() {
 					tracks={tracksData}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					showItemCover={false}
 					ListHeaderComponent={
 						<PlaylistHeader

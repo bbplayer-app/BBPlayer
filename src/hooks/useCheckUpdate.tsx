@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
+
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
-import { useEffect } from 'react'
+
 import { useModalStore } from './stores/useModalStore'
 
 export default function useCheckUpdate() {

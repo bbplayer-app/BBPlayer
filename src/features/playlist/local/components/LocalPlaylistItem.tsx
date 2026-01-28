@@ -1,13 +1,14 @@
-import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
-import type { Playlist, Track } from '@/types/core/media'
-import { formatDurationToHHMMSS } from '@/utils/time'
 import { DownloadState } from '@roitium/expo-orpheus'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
+
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import type { Playlist, Track } from '@/types/core/media'
+import { formatDurationToHHMMSS } from '@/utils/time'
 
 export interface TrackMenuItem {
 	title: string

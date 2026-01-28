@@ -1,6 +1,7 @@
-import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 import type { ComponentType } from 'react'
 import { lazy } from 'react'
+
+import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 
 const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
@@ -44,6 +45,12 @@ const LyricsSelectionModal = lazy(
 	() => import('./modals/player/LyricsSelectionModal'),
 )
 const SongShareModal = lazy(() => import('./modals/player/SongShareModal'))
+const SyncLocalToBilibiliModal = lazy(
+	() => import('./modals/playlist/SyncLocalToBilibiliModal'),
+)
+const FavoriteSyncProgressModal = lazy(
+	() => import('./modals/playlist/FavoriteSyncProgressModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -68,4 +75,6 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	SaveQueueToPlaylist: SaveQueueToPlaylistModal,
 	LyricsSelection: LyricsSelectionModal,
 	SongShare: SongShareModal,
+	SyncLocalToBilibili: SyncLocalToBilibiliModal,
+	FavoriteSyncProgress: FavoriteSyncProgressModal,
 }

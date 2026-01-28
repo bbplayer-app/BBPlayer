@@ -1,10 +1,11 @@
-import type { ModalInstance, ModalKey, ModalPropsMap } from '@/types/navigation'
-import toast from '@/utils/toast'
 import { router } from 'expo-router'
 import type { Emitter } from 'mitt'
 import mitt from 'mitt'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+
+import type { ModalInstance, ModalKey, ModalPropsMap } from '@/types/navigation'
+import toast from '@/utils/toast'
 
 interface ModalState {
 	modals: ModalInstance[]

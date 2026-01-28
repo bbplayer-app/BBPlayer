@@ -1,5 +1,3 @@
-import { useSearchSuggestions } from '@/hooks/queries/bilibili/search'
-import type { BilibiliSearchSuggestionItem } from '@/types/apis/bilibili'
 import { useCallback, useEffect, useMemo } from 'react'
 import { Dimensions, FlatList, Keyboard, StyleSheet, View } from 'react-native'
 import { useBottomTabBarHeight } from 'react-native-bottom-tabs'
@@ -18,6 +16,9 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnUI } from 'react-native-worklets'
+
+import { useSearchSuggestions } from '@/hooks/queries/bilibili/search'
+import type { BilibiliSearchSuggestionItem } from '@/types/apis/bilibili'
 
 export interface SearchSuggestionsProps {
 	query: string

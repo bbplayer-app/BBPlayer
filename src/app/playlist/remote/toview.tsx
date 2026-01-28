@@ -1,3 +1,9 @@
+import { useRouter } from 'expo-router'
+import { useCallback, useMemo, useState } from 'react'
+import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -22,11 +28,6 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
-import { useRouter } from 'expo-router'
-import { useCallback, useMemo, useState } from 'react'
-import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const mapApiItemToTrack = (
 	apiItem: BilibiliToViewVideoList['list'][0],
@@ -69,6 +70,15 @@ export default function ToViewPage() {
 	const insets = useSafeAreaInsets()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const selection = useMemo(
+		() => ({
+			active: selectMode,
+			selected,
+			toggle,
+			enter: enterSelectMode,
+		}),
+		[selectMode, selected, toggle, enterSelectMode],
+	)
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -163,10 +173,7 @@ export default function ToViewPage() {
 					tracks={tracksData}
 					playTrack={handlePlay}
 					trackMenuItems={trackMenuItems}
-					selectMode={selectMode}
-					selected={selected}
-					toggle={toggle}
-					enterSelectMode={enterSelectMode}
+					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverUri={undefined}

@@ -1,9 +1,10 @@
+import { useMutation } from '@tanstack/react-query'
+
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import type { LyricSearchResult } from '@/types/player/lyrics'
 import toast from '@/utils/toast'
-import { useMutation } from '@tanstack/react-query'
 
 export const useFetchLyrics = () => {
 	return useMutation({

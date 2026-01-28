@@ -1,10 +1,11 @@
-import playerProgressEmitter from '@/lib/player/progressListener'
-import type { LyricLine } from '@/types/player/lyrics'
 import { Orpheus } from '@roitium/expo-orpheus'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
+
+import playerProgressEmitter from '@/lib/player/progressListener'
+import type { LyricLine } from '@/types/player/lyrics'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],

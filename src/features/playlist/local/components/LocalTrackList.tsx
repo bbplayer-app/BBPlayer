@@ -1,11 +1,8 @@
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import usePreventRemove from '@/hooks/router/usePreventRemove'
-import type { Playlist, Track } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { DownloadState } from '@roitium/expo-orpheus'
+import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
+import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
@@ -18,26 +15,65 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
+import Animated, { LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
+import type { Playlist, Track } from '@/types/core/media'
+import type {
+	ListRenderItemInfoWithExtraData,
+	SelectionState,
+} from '@/types/flashlist'
+import * as Haptics from '@/utils/haptics'
+
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
 
-interface LocalTrackListProps {
+interface LocalTrackListProps extends Omit<
+	FlashListProps<Track>,
+	'data' | 'renderItem' | 'extraData'
+> {
+	/**
+	 * 要显示的本地曲目数组
+	 */
 	tracks: Track[]
+	/**
+	 * 所属的播放列表信息
+	 */
 	playlist: Playlist
+	/**
+	 * 点击曲目时的处理函数
+	 */
 	handleTrackPress: (track: Track) => void
+	/**
+	 * 生成曲目菜单项的函数
+	 */
 	trackMenuItems: (
 		track: Track,
 		downloadState?: DownloadState,
 	) => TrackMenuItem[]
-	selectMode: boolean
-	selected: Set<number>
-	toggle: (id: number) => void
-	enterSelectMode: (id: number) => void
-	ListHeaderComponent: Parameters<typeof FlashList>[0]['ListHeaderComponent']
-	onEndReached?: () => void
+	/**
+	 * 多选状态管理
+	 */
+	selection: SelectionState
+	/**
+	 * 列表引用
+	 */
+	listRef?: RefObject<FlashListRef<Track> | null>
+	/**
+	 * 是否还有下一页数据（可选）
+	 */
 	hasNextPage?: boolean
+	/**
+	 * 是否正在获取下一页数据（可选）
+	 */
 	isFetchingNextPage?: boolean
+	/**
+	 * 数据是否已过期，如果为 true，列表项会显示半透明（可选）
+	 */
+	isStale?: boolean
 }
 
 const renderItem = ({
@@ -49,46 +85,53 @@ const renderItem = ({
 	{
 		handleTrackPress: (track: Track) => void
 		handleMenuPress: (track: Track, downloadState?: DownloadState) => void
-		toggle: (id: number) => void
-		enterSelectMode: (id: number) => void
-		selected: Set<number>
-		selectMode: boolean
+		selection: SelectionState
 		playlist: Playlist
 		downloadStatus: Record<string, DownloadState>
+		isStale?: boolean
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		handleTrackPress,
 		handleMenuPress,
-		toggle,
-		enterSelectMode,
-		selected,
-		selectMode,
+		selection,
 		playlist,
 		downloadStatus,
+		isStale,
 	} = extraData
 	const downloadState = downloadStatus
 		? downloadStatus[item.uniqueKey]
 		: undefined
 	return (
-		<TrackListItem
-			index={index}
-			onTrackPress={() => handleTrackPress(item)}
-			onMenuPress={() => {
-				handleMenuPress(item, downloadState)
-			}}
-			disabled={
-				item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
-			}
-			data={item}
-			playlist={playlist}
-			toggleSelected={toggle}
-			isSelected={selected.has(item.id)}
-			selectMode={selectMode}
-			enterSelectMode={enterSelectMode}
-			downloadState={downloadState}
-		/>
+		<Animated.View
+			layout={LinearTransition}
+			style={{ opacity: isStale ? 0.5 : 1 }}
+		>
+			<TrackListItem
+				index={index}
+				onTrackPress={() => handleTrackPress(item)}
+				onMenuPress={() => {
+					handleMenuPress(item, downloadState)
+				}}
+				disabled={
+					item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
+				}
+				data={item}
+				playlist={playlist}
+				toggleSelected={(id: number) => {
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+					selection.toggle(id)
+				}}
+				isSelected={selection.selected.has(item.id)}
+				selectMode={selection.active}
+				enterSelectMode={(id: number) => {
+					void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+					selection.enter(id)
+				}}
+				downloadState={downloadState}
+			/>
+		</Animated.View>
 	)
 }
 
@@ -149,14 +192,14 @@ export function LocalTrackList({
 	playlist,
 	handleTrackPress,
 	trackMenuItems,
-	selectMode,
-	selected,
-	toggle,
-	enterSelectMode,
+	selection,
 	ListHeaderComponent,
 	onEndReached,
 	isFetchingNextPage,
 	hasNextPage,
+	isStale,
+	listRef,
+	...flashListProps
 }: LocalTrackListProps) {
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
@@ -204,24 +247,20 @@ export function LocalTrackList({
 
 	const extraData = useMemo(
 		() => ({
-			selectMode,
-			selected,
+			selection,
 			handleTrackPress,
 			handleMenuPress,
-			toggle,
-			enterSelectMode,
 			playlist,
 			downloadStatus,
+			isStale,
 		}),
 		[
-			selectMode,
-			selected,
+			selection,
 			handleTrackPress,
 			handleMenuPress,
-			toggle,
-			enterSelectMode,
 			playlist,
 			downloadStatus,
+			isStale,
 		],
 	)
 
@@ -235,6 +274,7 @@ export function LocalTrackList({
 	return (
 		<>
 			<FlashList
+				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={extraData}
@@ -247,7 +287,7 @@ export function LocalTrackList({
 				}}
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
-					isFetchingNextPage ? (
+					(isFetchingNextPage ? (
 						<View style={styles.footerLoadingContainer}>
 							<ActivityIndicator size='small' />
 						</View>
@@ -258,10 +298,11 @@ export function LocalTrackList({
 						>
 							•
 						</Text>
-					) : null
+					) : null) ?? flashListProps.ListFooterComponent
 				}
 				onEndReached={onEndReached}
 				onEndReachedThreshold={0.8}
+				{...flashListProps}
 			/>
 			<TrueSheet
 				ref={sheetRef}

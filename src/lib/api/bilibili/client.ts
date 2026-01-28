@@ -1,6 +1,8 @@
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { getCsrfToken } from './utils'
 
 export interface ReqResponse<T> {
@@ -31,6 +33,8 @@ class ApiClient {
 			Cookie: cookie,
 			'User-Agent':
 				'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
+			Referer: 'https://www.bilibili.com/',
+			Origin: 'https://www.bilibili.com',
 			...options.headers,
 		}
 

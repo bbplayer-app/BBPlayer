@@ -1,3 +1,5 @@
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
@@ -27,7 +29,7 @@ import {
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+
 import { bilibiliApiClient } from './client'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
@@ -35,9 +37,9 @@ import getWbiEncodedParams from './wbi'
 const logger = log.extend('3Party.Bilibili.Api')
 
 /**
- * 创建B站API客户端
+ * B站 API 客户端类
  */
-export const createBilibiliApi = () => ({
+export class BilibiliApi {
 	/**
 	 * 获取用户观看历史记录
 	 */
@@ -46,7 +48,7 @@ export const createBilibiliApi = () => ({
 			'/x/v2/history',
 			undefined,
 		)
-	},
+	}
 
 	/**
 	 * 获取分区热门视频
@@ -59,7 +61,7 @@ export const createBilibiliApi = () => ({
 				list: BilibiliVideoDetails[]
 			} | null>(`/x/web-interface/ranking/v2?rid=${partition}`, undefined)
 			.map((response) => response?.list ?? [])
-	},
+	}
 
 	/**
 	 * 获取用户收藏夹列表
@@ -75,7 +77,32 @@ export const createBilibiliApi = () => ({
 				undefined,
 			)
 			.map((response) => response?.list ?? [])
-	},
+	}
+
+	/**
+	 * 创建收藏夹
+	 */
+	createFavoriteFolder(
+		title: string,
+		intro?: string,
+		cover?: string,
+		privacy: 0 | 1 = 0, // 0: public, 1: private
+	): ResultAsync<
+		{ id: number; title: string; mid: number; fid: number },
+		BilibiliApiError
+	> {
+		return bilibiliApiClient.postWithCsrf<{
+			id: number
+			fid: number
+			mid: number
+			title: string
+		}>('/x/v3/fav/folder/add', {
+			title,
+			intro: intro ?? '',
+			privacy: String(privacy),
+			cover: cover ?? '',
+		})
+	}
 
 	/**
 	 * 搜索视频
@@ -106,7 +133,7 @@ export const createBilibiliApi = () => ({
 				}
 				return okAsync(res)
 			})
-	},
+	}
 
 	/**
 	 * 获取热门搜索关键词
@@ -119,7 +146,7 @@ export const createBilibiliApi = () => ({
 				limit: '10',
 			})
 			.map((response) => response?.trending.list ?? [])
-	},
+	}
 
 	/**
 	 * 获取搜索建议
@@ -189,7 +216,7 @@ export const createBilibiliApi = () => ({
 				}
 				return okAsync(data.result.tag)
 			})
-	},
+	}
 
 	/**
 	 * 获取视频音频流信息
@@ -322,7 +349,7 @@ export const createBilibiliApi = () => ({
 
 				return okAsync(stream)
 			})
-	},
+	}
 
 	/**
 	 * 获取视频分P列表
@@ -336,14 +363,14 @@ export const createBilibiliApi = () => ({
 				bvid,
 			},
 		)
-	},
+	}
 
 	/**
 	 * 获取登录本人信息
 	 */
 	getUserInfo(): ResultAsync<BilibiliUserInfo, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliUserInfo>('/x/space/myinfo', undefined)
-	},
+	}
 
 	/**
 	 * 获取别人用户信息
@@ -359,7 +386,7 @@ export const createBilibiliApi = () => ({
 				undefined,
 			)
 		})
-	},
+	}
 
 	/**
 	 * 获取收藏夹内容(分页)
@@ -376,7 +403,7 @@ export const createBilibiliApi = () => ({
 				ps: '40',
 			},
 		)
-	},
+	}
 
 	/**
 	 * 搜索收藏夹内容
@@ -400,7 +427,7 @@ export const createBilibiliApi = () => ({
 				res.medias ??= []
 				return okAsync(res)
 			})
-	},
+	}
 
 	/**
 	 * 获取收藏夹所有视频内容（仅bvid和类型）
@@ -414,7 +441,7 @@ export const createBilibiliApi = () => ({
 				media_id: favoriteId.toString(),
 			})
 			.map((response) => response.filter((item) => item.type === 2)) // 过滤非视频稿件 (type 2 is video)
-	},
+	}
 
 	/**
 	 * 获取视频详细信息
@@ -428,7 +455,7 @@ export const createBilibiliApi = () => ({
 				bvid,
 			},
 		)
-	},
+	}
 
 	/**
 	 * 批量删除收藏夹内容
@@ -443,7 +470,7 @@ export const createBilibiliApi = () => ({
 			media_id: String(favoriteId),
 			platform: 'web',
 		})
-	},
+	}
 
 	/**
 	 * 获取用户追更的视频合集/收藏夹（非用户自己创建的）列表
@@ -471,7 +498,7 @@ export const createBilibiliApi = () => ({
 				count: response.count,
 				hasMore: response.has_more,
 			}))
-	},
+	}
 
 	/**
 	 * 获取合集详细信息和完整内容
@@ -487,16 +514,16 @@ export const createBilibiliApi = () => ({
 				pn: '1', // Start from page 1
 			},
 		)
-	},
+	}
 
 	/**
 	 * 单个视频添加/删除到多个收藏夹
 	 */
-	dealFavoriteForOneVideo: (
+	dealFavoriteForOneVideo(
 		bvid: string,
 		addToFavoriteIds: string[],
 		delInFavoriteIds: string[],
-	): ResultAsync<BilibiliDealFavoriteForOneVideoResponse, BilibiliApiError> => {
+	): ResultAsync<BilibiliDealFavoriteForOneVideoResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
 		const addToFavoriteIdsCombined = addToFavoriteIds.join(',')
 		const delInFavoriteIdsCombined = delInFavoriteIds.join(',')
@@ -511,7 +538,7 @@ export const createBilibiliApi = () => ({
 			'/x/v3/fav/resource/deal',
 			data,
 		)
-	},
+	}
 
 	/**
 	 * 获取目标视频的收藏情况
@@ -536,16 +563,16 @@ export const createBilibiliApi = () => ({
 				}
 				return response.list
 			})
-	},
+	}
 
 	/**
 	 * 上报观看记录
 	 */
-	reportPlaybackHistory: (
+	reportPlaybackHistory(
 		bvid: string,
 		cid: number,
 		progress: number,
-	): ResultAsync<0, BilibiliApiError> => {
+	): ResultAsync<0, BilibiliApiError> {
 		const avid = bv2av(bvid)
 
 		const data = {
@@ -554,17 +581,17 @@ export const createBilibiliApi = () => ({
 			progress: Math.floor(progress).toString(),
 		}
 		return bilibiliApiClient.postWithCsrf<0>('/x/v2/history/report', data)
-	},
+	}
 
 	/**
 	 * 查询用户投稿视频明细
 	 * 可通过 keyword 搜索用户发布的视频
 	 */
-	getUserUploadedVideos: (
+	getUserUploadedVideos(
 		mid: number,
 		pn: number,
 		keyword?: string,
-	): ResultAsync<BilibiliUserUploadedVideosResponse, BilibiliApiError> => {
+	): ResultAsync<BilibiliUserUploadedVideosResponse, BilibiliApiError> {
 		const params = getWbiEncodedParams({
 			mid: mid.toString(),
 			pn: pn.toString(),
@@ -577,7 +604,7 @@ export const createBilibiliApi = () => ({
 				params,
 			)
 		})
-	},
+	}
 
 	/**
 	 * 获取评论区列表
@@ -598,7 +625,7 @@ export const createBilibiliApi = () => ({
 			next: String(next),
 			plat: '1',
 		})
-	},
+	}
 
 	/**
 	 * 获取楼中楼（子评论）列表
@@ -622,7 +649,7 @@ export const createBilibiliApi = () => ({
 				ps: '20',
 			},
 		)
-	},
+	}
 
 	/**
 	 * 点赞/取消点赞评论
@@ -642,31 +669,31 @@ export const createBilibiliApi = () => ({
 			rpid: String(rpid),
 			action: String(action),
 		})
-	},
+	}
 
 	/**
 	 * 申请登录二维码
 	 */
-	getLoginQrCode: (): ResultAsync<
+	getLoginQrCode(): ResultAsync<
 		{ url: string; qrcode_key: string },
 		BilibiliApiError
-	> => {
+	> {
 		return bilibiliApiClient.get<{ url: string; qrcode_key: string }>(
 			'',
 			undefined,
 			'https://passport.bilibili.com/x/passport-login/web/qrcode/generate',
 		)
-	},
+	}
 
 	/**
 	 * 轮询二维码登录状态接口
 	 */
-	pollQrCodeLoginStatus: (
+	pollQrCodeLoginStatus(
 		qrcode_key: string,
 	): ResultAsync<
 		{ status: BilibiliQrCodeLoginStatus; cookies: string },
 		BilibiliApiError
-	> => {
+	> {
 		const reqFunction = async () => {
 			const response = await fetch(
 				`https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${qrcode_key}`,
@@ -730,14 +757,12 @@ export const createBilibiliApi = () => ({
 				type: 'ResponseFailed',
 			})
 		})
-	},
+	}
 
 	/**
 	 * 获取 b23.tv 短链接的解析后结果
 	 */
-	getB23ResolvedUrl: (
-		b23Url: string,
-	): ResultAsync<string, BilibiliApiError> => {
+	getB23ResolvedUrl(b23Url: string): ResultAsync<string, BilibiliApiError> {
 		return ResultAsync.fromPromise(
 			fetch(b23Url, {
 				headers: {
@@ -773,17 +798,17 @@ export const createBilibiliApi = () => ({
 			}
 			return okAsync(redirectUrl)
 		})
-	},
+	}
 
 	/**
 	 * 检查视频是否已经点赞
 	 * （文档中说该接口实际查询的是 **近期** 是否被点赞）
 	 */
-	checkVideoIsThumbUp: (bvid: string) => {
+	checkVideoIsThumbUp(bvid: string) {
 		return bilibiliApiClient.get<0 | 1>('/x/web-interface/archive/has/like', {
 			bvid,
 		})
-	},
+	}
 
 	/**
 	 * 给视频点赞或取消点赞
@@ -791,10 +816,7 @@ export const createBilibiliApi = () => ({
 	 * @param like true 表示点赞，false 表示取消点赞
 	 * @returns 对于重复点赞的错误一律当作成功返回。
 	 */
-	thumbUpVideo: (
-		bvid: string,
-		like: boolean,
-	): ResultAsync<0, BilibiliApiError> => {
+	thumbUpVideo(bvid: string, like: boolean): ResultAsync<0, BilibiliApiError> {
 		const data = {
 			bvid,
 			like: like ? '1' : '2',
@@ -814,15 +836,15 @@ export const createBilibiliApi = () => ({
 						return errAsync(err)
 				}
 			})
-	},
+	}
 
 	/**
 	 * web 播放器信息
 	 */
-	getWebPlayerInfo: (
+	getWebPlayerInfo(
 		bvid: string,
 		cid: number,
-	): ResultAsync<BilibiliWebPlayerInfo, BilibiliApiError> => {
+	): ResultAsync<BilibiliWebPlayerInfo, BilibiliApiError> {
 		const params = getWbiEncodedParams({
 			bvid,
 			cid: String(cid),
@@ -833,20 +855,17 @@ export const createBilibiliApi = () => ({
 				params,
 			)
 		})
-	},
+	}
 
 	/**
 	 * 获取稍后再看视频列表
 	 */
-	getToViewVideoList: (): ResultAsync<
-		BilibiliToViewVideoList,
-		BilibiliApiError
-	> => {
+	getToViewVideoList(): ResultAsync<BilibiliToViewVideoList, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliToViewVideoList>(
 			'/x/v2/history/toview',
 			undefined,
 		)
-	},
+	}
 
 	/**
 	 * 删除稍后再看列表中的视频
@@ -854,10 +873,10 @@ export const createBilibiliApi = () => ({
 	 * @param avid 要删除的视频 avid
 	 * @returns 如果删除成功，返回 0，否则返回 1
 	 */
-	deleteToViewVideo: (
+	deleteToViewVideo(
 		deleteAllViewed?: boolean,
 		avid?: number,
-	): ResultAsync<undefined, BilibiliApiError> => {
+	): ResultAsync<undefined, BilibiliApiError> {
 		if (deleteAllViewed && avid) {
 			return errAsync(
 				new BilibiliApiError({
@@ -884,16 +903,16 @@ export const createBilibiliApi = () => ({
 			'/x/v2/history/toview/del',
 			data,
 		)
-	},
+	}
 
 	/**
 	 * 清除稍后再看列表中的所有视频
 	 */
-	clearToViewVideoList: (): ResultAsync<undefined, BilibiliApiError> => {
+	clearToViewVideoList(): ResultAsync<undefined, BilibiliApiError> {
 		return bilibiliApiClient.postWithCsrf<undefined>(
 			'/x/v2/history/toview/clear',
 		)
-	},
-})
+	}
+}
 
-export const bilibiliApi = createBilibiliApi()
+export const bilibiliApi = new BilibiliApi()

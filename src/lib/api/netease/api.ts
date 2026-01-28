@@ -1,3 +1,5 @@
+import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
+
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
 import type {
 	NeteaseLyricResponse,
@@ -6,7 +8,7 @@ import type {
 } from '@/types/apis/netease'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
-import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
+
 import type { RequestOptions } from './request'
 import { createRequest } from './request'
 import { createOption } from './utils'

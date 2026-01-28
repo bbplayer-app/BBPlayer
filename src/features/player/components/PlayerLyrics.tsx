@@ -1,14 +1,3 @@
-import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
-import useLyricSync from '@/features/player/hooks/useLyricSync'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
-import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import { queryClient } from '@/lib/config/queryClient'
-import lyricService from '@/lib/services/lyricService'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
-import type { LyricLine } from '@/types/player/lyrics'
-import { toastAndLogError } from '@/utils/error-handling'
 import MaskedView from '@react-native-masked-view/masked-view'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
@@ -37,6 +26,18 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
+
+import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
+import useLyricSync from '@/features/player/hooks/useLyricSync'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
+import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { queryClient } from '@/lib/config/queryClient'
+import lyricService from '@/lib/services/lyricService'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LyricLine } from '@/types/player/lyrics'
+import { toastAndLogError } from '@/utils/error-handling'
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,

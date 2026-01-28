@@ -1,8 +1,9 @@
+import type { SkRuntimeEffect } from '@shopify/react-native-skia'
+import { Skia } from '@shopify/react-native-skia'
+
 import useAppStore from '@/hooks/stores/useAppStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
-import type { SkRuntimeEffect } from '@shopify/react-native-skia'
-import { Skia } from '@shopify/react-native-skia'
 
 const GLSL_SHADER_SOURCE = `
   uniform float time;       // 时间
