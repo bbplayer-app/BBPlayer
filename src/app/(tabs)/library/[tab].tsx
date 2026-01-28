@@ -5,7 +5,7 @@ import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistLi
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -34,6 +34,7 @@ export enum Tabs {
 
 export default function Library() {
 	const [index, setIndex] = useState(Tabs.Local)
+	const [_, startTransition] = useTransition()
 	const insets = useSafeAreaInsets()
 	const colors = useTheme().colors
 	const router = useRouter()
@@ -43,7 +44,9 @@ export default function Library() {
 		if (tab === undefined) return
 		const numTab = Number(tab)
 		if (isNaN(numTab)) return
-		setIndex(numTab)
+		startTransition(() => {
+			setIndex(numTab)
+		})
 	})
 
 	return (
@@ -87,7 +90,11 @@ export default function Library() {
 							inactiveColor={colors.onSurface}
 						/>
 					)}
-					onIndexChange={setIndex}
+					onIndexChange={(i) => {
+						startTransition(() => {
+							setIndex(i)
+						})
+					}}
 					initialLayout={{ width: Dimensions.get('window').width, height: 0 }}
 					options={{
 						favorite: {

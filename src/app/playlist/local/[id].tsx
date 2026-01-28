@@ -20,14 +20,13 @@ import {
 } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useState } from 'react'
 import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
@@ -49,7 +48,7 @@ export default function LocalPlaylistPage() {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
-	const debouncedQuery = useDebouncedValue(searchQuery, 200)
+	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
 		useTrackSelection()
 	const [batchAddTracksModalPayloads, setBatchAddTracksModalPayloads] =
@@ -72,10 +71,10 @@ export default function LocalPlaylistPage() {
 		data: searchData,
 		isError: isSearchError,
 		error: searchError,
-	} = useSearchTracksInPlaylist(Number(id), debouncedQuery, startSearch)
+	} = useSearchTracksInPlaylist(Number(id), deferredQuery, startSearch)
 
 	const finalPlaylistData = (() => {
-		if (!startSearch || !debouncedQuery.trim()) {
+		if (!startSearch || !deferredQuery.trim()) {
 			return allLoadedTracks
 		}
 

@@ -9,7 +9,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
 import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
 import LocalPlaylistItem from './LocalPlaylistItem'
@@ -25,6 +25,7 @@ const LocalPlaylistListComponent = memo(() => {
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
+	const deferredSearchQuery = useDeferredValue(searchQuery)
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 
@@ -36,10 +37,10 @@ const LocalPlaylistListComponent = memo(() => {
 		isError: playlistsIsError,
 	} = usePlaylistLists()
 
-	const { data: searchResults } = useSearchPlaylists(searchQuery, true)
+	const { data: searchResults } = useSearchPlaylists(deferredSearchQuery, true)
 
 	const finalPlaylists = useMemo(() => {
-		if (searchQuery.trim()) {
+		if (deferredSearchQuery.trim()) {
 			return searchResults ?? []
 		}
 
@@ -63,7 +64,7 @@ const LocalPlaylistListComponent = memo(() => {
 			},
 			...playlists,
 		] as (Playlist & { isToView?: boolean })[]
-	}, [hasBilibiliCookie, playlists, searchQuery, searchResults])
+	}, [hasBilibiliCookie, playlists, deferredSearchQuery, searchResults])
 
 	const keyExtractor = useCallback((item: Playlist) => item.id.toString(), [])
 

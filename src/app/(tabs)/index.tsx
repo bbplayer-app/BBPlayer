@@ -13,7 +13,7 @@ import toast from '@/utils/toast'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useShareIntentContext } from 'expo-share-intent'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
@@ -35,6 +35,7 @@ function HomePage() {
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
 	const [searchQuery, setSearchQuery] = useState('')
+	const deferredSearchQuery = useDeferredValue(searchQuery)
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
@@ -236,7 +237,7 @@ function HomePage() {
 						/>
 					</View>
 					<SearchSuggestions
-						query={searchQuery}
+						query={deferredSearchQuery}
 						visible={searchQuery.length > 0}
 						onSuggestionPress={handleSuggestionPress}
 						searchBarRef={searchBarRef}
