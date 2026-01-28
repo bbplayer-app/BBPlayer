@@ -5,18 +5,13 @@ import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import {
-	runOnJS,
-	useAnimatedReaction,
-	useSharedValue,
-} from 'react-native-reanimated'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
 	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
 	offset: number, // 单位秒
 ) {
-	const currentLyricIndex = useSharedValue(0)
+	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
 	const manualScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
@@ -43,18 +38,16 @@ export default function useLyricSync(
 		[lyrics],
 	)
 
-	const onUserScrollStart = useCallback(() => {
-		'worklet'
+	const onUserScrollStart = () => {
 		if (!lyrics.length) return
 		if (manualScrollTimeoutRef.current) {
 			clearTimeout(manualScrollTimeoutRef.current)
 			manualScrollTimeoutRef.current = null
 		}
 		isManualScrollingRef.current = true
-	}, [lyrics.length])
+	}
 
-	const onUserScrollEnd = useCallback(() => {
-		'worklet'
+	const onUserScrollEnd = () => {
 		if (!lyrics.length) return
 		if (manualScrollTimeoutRef.current)
 			clearTimeout(manualScrollTimeoutRef.current)
@@ -65,11 +58,11 @@ export default function useLyricSync(
 
 			void flashListRef.current?.scrollToIndex({
 				animated: true,
-				index: currentLyricIndex.value,
+				index: currentLyricIndex,
 				viewPosition: 0.15,
 			})
 		}, 2000)
-	}, [currentLyricIndex, flashListRef, lyrics.length])
+	}
 
 	const handleJumpToLyric = useCallback(
 		async (index: number) => {
@@ -78,14 +71,14 @@ export default function useLyricSync(
 			const requestId = ++latestJumpRequestRef.current
 			await Orpheus.seekTo(lyrics[index].timestamp - offset)
 			if (latestJumpRequestRef.current !== requestId) return
-			currentLyricIndex.set(index)
+			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
 				manualScrollTimeoutRef.current = null
 			}
 			isManualScrollingRef.current = false
 		},
-		[currentLyricIndex, lyrics, offset],
+		[lyrics, offset],
 	)
 
 	useEffect(() => {
@@ -103,8 +96,8 @@ export default function useLyricSync(
 				return
 			}
 			const index = findIndexForTime(offsetedPosition)
-			if (index === currentLyricIndex.value) return
-			currentLyricIndex.value = index
+			if (index === currentLyricIndex) return
+			setCurrentLyricIndex(index)
 		})
 		return () => {
 			handler()
@@ -119,31 +112,21 @@ export default function useLyricSync(
 				return
 			}
 			const index = findIndexForTime(offsetedPosition)
-			if (index === currentLyricIndex.value) return
-			currentLyricIndex.set(index)
+			if (index === currentLyricIndex) return
+			setCurrentLyricIndex(index)
 		})
 	}, [currentLyricIndex, findIndexForTime, isActive, offset])
 
-	const performScroll = useCallback(
-		(index: number) => {
-			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
-			void flashListRef.current?.scrollToIndex({
-				animated: true,
-				index: index,
-				viewPosition: 0.15,
-			})
-		},
-		[flashListRef],
-	)
-
-	useAnimatedReaction(
-		() => currentLyricIndex.value,
-		(currentIndex, previousIndex) => {
-			if (currentIndex === previousIndex) return
-			void runOnJS(performScroll)(currentIndex)
-		},
-		[lyrics.length, performScroll],
-	)
+	// 当歌词发生变化且用户没自己滚时，滚动到当前歌词
+	useEffect(() => {
+		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
+		// eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
+		void flashListRef.current?.scrollToIndex({
+			animated: true,
+			index: currentLyricIndex,
+			viewPosition: 0.15,
+		})
+	}, [currentLyricIndex, flashListRef, lyrics.length])
 
 	useEffect(() => {
 		return () => {
