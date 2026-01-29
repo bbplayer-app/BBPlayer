@@ -6,6 +6,6 @@ module.exports = {
 			'always',
 			['app', 'docs', 'image-colors', 'orpheus', 'root'],
 		],
-		'scope-empty': [0, 'never'],
+		'scope-empty': [2, 'never'],
 	},
 }
