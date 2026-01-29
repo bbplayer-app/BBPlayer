@@ -1,0 +1,27 @@
+{
+	"name": "expo-orpheus-example",
+	"version": "1.0.0",
+	"private": true,
+	"main": "index.ts",
+	"scripts": {
+		"android": "expo run:android",
+		"ios": "expo run:ios",
+		"start": "expo start",
+		"web": "expo start --web"
+	},
+	"dependencies": {
+		"@roitium/expo-orpheus": "file:..",
+		"expo": "~54.0.25",
+		"react": "19.1.0",
+		"react-native": "0.81.5"
+	},
+	"devDependencies": {
+		"@types/react": "~19.1.0",
+		"typescript": "~5.9.2"
+	},
+	"expo": {
+		"autolinking": {
+			"nativeModulesDir": ".."
+		}
+	}
+}

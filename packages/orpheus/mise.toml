@@ -1,0 +1,2 @@
+[env]
+_.file = { path = ".env", redact = true }

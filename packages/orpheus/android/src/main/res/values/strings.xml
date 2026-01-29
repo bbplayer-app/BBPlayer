@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="desktop_lyrics">桌面歌词</string>
+    <string name="size">大小</string>
+    <string name="lock">锁定</string>
+    <string name="close">关闭</string>
+</resources>

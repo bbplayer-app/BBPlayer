@@ -1,18 +1,11 @@
 {
-	"extends": "expo/tsconfig.base",
-	"compilerOptions": {
-		"strict": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["*"],
-			"@/types/*": ["types/*"],
-			"@/lib/*": ["lib/*"],
-			"@/app/*": ["app/*"],
-			"@/components/*": ["components/*"],
-			"@/hooks/*": ["hooks/*"],
-			"@/utils/*": ["utils/*"],
-			"@/features/*": ["features/*"]
-		}
-	},
-	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+	"files": [],
+	"references": [
+		{ "path": "./apps/bbplayer/tsconfig.json" },
+		{ "path": "./packages/orpheus/tsconfig.json" },
+		{ "path": "./packages/orpheus/example/tsconfig.json" },
+		{ "path": "./packages/expo-image-theme-colors/tsconfig.json" },
+		{ "path": "./packages/expo-image-theme-colors/example/tsconfig.json" },
+		{ "path": "./apps/docs/tsconfig.json" }
+	]
 }

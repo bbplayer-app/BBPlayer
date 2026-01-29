@@ -1,0 +1,14 @@
+{
+	"name": "@bbplayer/docs",
+	"scripts": {
+		"docs:build": "vitepress build docs",
+		"docs:dev": "vitepress dev docs",
+		"docs:preview": "vitepress preview docs"
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.10",
+		"lucide-vue-next": "^0.562.0",
+		"vitepress": "2.0.0-alpha.12",
+		"vue": "^3.5.27"
+	}
+}

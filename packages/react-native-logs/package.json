@@ -1,0 +1,52 @@
+{
+	"name": "@roitium/react-native-logs",
+	"version": "5.6.2",
+	"description": "Performance-aware simple logger for React-Native with namespaces, custom levels and custom transports (colored console, file writing, etc.)",
+	"keywords": [
+		"colors",
+		"console",
+		"custom",
+		"debug",
+		"error",
+		"expo",
+		"file",
+		"levels",
+		"log",
+		"logger",
+		"logs",
+		"namespace",
+		"react-native"
+	],
+	"homepage": "https://github.com/bbplayer-app/bbplayer/tree/dev/packages/react-native-logs",
+	"bugs": {
+		"url": "https://github.com/bbplayer-app/bbplayer/issues"
+	},
+	"license": "MIT",
+	"author": "Alessandro Bottamedi - a.bottamedi@me.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bbplayer-app/bbplayer.git",
+		"directory": "packages/react-native-logs"
+	},
+	"files": [
+		"src"
+	],
+	"sideEffects": false,
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"build": "rm -rf dist && tsc",
+		"test": "jest",
+		"test:cov": "jest --coverage",
+		"test:verbose": "jest --verbose"
+	},
+	"devDependencies": {
+		"@types/react": "~19.2.9",
+		"jest": "^30.1.3",
+		"typescript": "~5.9.3"
+	},
+	"peerDependencies": {
+		"react": "*",
+		"react-native": "*"
+	}
+}

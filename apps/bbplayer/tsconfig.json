@@ -1,0 +1,22 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"baseUrl": "./src",
+		"paths": {
+			"@/*": ["*"],
+			"@/types/*": ["types/*"],
+			"@/lib/*": ["lib/*"],
+			"@/app/*": ["app/*"],
+			"@/components/*": ["components/*"],
+			"@/hooks/*": ["hooks/*"],
+			"@/utils/*": ["utils/*"],
+			"@/features/*": ["features/*"],
+			"@roitium/expo-orpheus": ["../../../packages/orpheus/src/index.ts"],
+			"@roitium/expo-image-theme-colors": [
+				"../../../packages/expo-image-theme-colors/src/index.ts"
+			]
+		}
+	},
+	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}
