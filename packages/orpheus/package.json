@@ -8,13 +8,17 @@
 		"expo-orpheus",
 		"react-native"
 	],
-	"homepage": "https://github.com/bbplayer-app/orpheus#readme",
+	"homepage": "https://github.com/bbplayer-app/bbplayer/tree/dev/packages/orpheus",
 	"bugs": {
-		"url": "https://github.com/bbplayer-app/orpheus/issues"
+		"url": "https://github.com/bbplayer-app/bbplayer/issues"
 	},
 	"license": "MIT",
 	"author": "Roitium <65794453+roitium@users.noreply.github.com> (https://github.com/roitium)",
-	"repository": "https://github.com/bbplayer-app/orpheus",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/bbplayer-app/bbplayer.git",
+		"directory": "packages/orpheus"
+	},
 	"files": [
 		"build",
 		"src",

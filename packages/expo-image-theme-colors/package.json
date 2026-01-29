@@ -10,15 +10,16 @@
 		"react-native",
 		"theme-extraction"
 	],
-	"homepage": "https://github.com/bbplayer-app/expo-image-theme-colors#readme",
+	"homepage": "https://github.com/bbplayer-app/bbplayer/tree/dev/packages/expo-image-theme-colors",
 	"bugs": {
-		"url": "https://github.com/bbplayer-app/expo-image-theme-colors/issues"
+		"url": "https://github.com/bbplayer-app/bbplayer/issues"
 	},
 	"license": "MIT",
 	"author": "Roitium <65794453+roitium@users.noreply.github.com> (https://github.com/roitium)",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/bbplayer-app/expo-image-theme-colors.git"
+		"url": "https://github.com/bbplayer-app/bbplayer.git",
+		"directory": "packages/expo-image-theme-colors"
 	},
 	"files": [
 		"build",
