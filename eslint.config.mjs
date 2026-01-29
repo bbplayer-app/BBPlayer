@@ -81,6 +81,7 @@ export default defineConfig([
 			'**/*.js',
 			'packages/react-native-logs/**',
 			'**/package-lock.json',
+			'**/pnpm-lock.yaml',
 		],
 	},
 	{
