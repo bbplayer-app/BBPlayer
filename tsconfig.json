@@ -1,4 +1,10 @@
 {
 	"files": [],
-	"references": [{ "path": "./apps/bbplayer/tsconfig.json" }]
+	"references": [
+		{ "path": "./apps/bbplayer/tsconfig.json" },
+		{ "path": "./packages/orpheus/tsconfig.json" },
+		{ "path": "./packages/orpheus/example/tsconfig.json" },
+		{ "path": "./packages/expo-image-theme-colors/tsconfig.json" },
+		{ "path": "./packages/expo-image-theme-colors/example/tsconfig.json" }
+	]
 }

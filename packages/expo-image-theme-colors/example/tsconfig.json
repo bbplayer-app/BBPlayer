@@ -3,8 +3,8 @@
 	"compilerOptions": {
 		"strict": true,
 		"paths": {
-			"expo-image-theme-colors": ["../src/index"],
-			"expo-image-theme-colors/*": ["../src/*"]
+			"@roitium/expo-image-theme-colors": ["../src/index"],
+			"@roitium/expo-image-theme-colors/*": ["../src/*"]
 		}
 	}
 }

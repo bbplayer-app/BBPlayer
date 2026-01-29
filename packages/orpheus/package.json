@@ -23,23 +23,15 @@
 		"expo-module": "expo-module",
 		"lint": "expo-module lint",
 		"open:android": "open -a \"Android Studio\" example/android",
-		"prepare": "lefthook install",
+		"prepare": "expo-module prepare",
 		"prepublishOnly": "expo-module prepublishOnly",
-		"release": "release-it",
 		"test": "expo-module test"
 	},
 	"devDependencies": {
-		"@commitlint/cli": "^20.3.1",
-		"@commitlint/config-conventional": "^20.3.1",
-		"@evilmartians/lefthook": "^2.0.15",
-		"@release-it/conventional-changelog": "^8.0.2",
 		"@types/react": "~19.1.0",
 		"expo": "^54.0.24",
 		"expo-module-scripts": "^5.0.7",
-		"lefthook": "^2.0.15",
-		"prettier": "^3.7.4",
-		"react-native": "0.81.5",
-		"release-it": "^19.2.4"
+		"react-native": "0.81.5"
 	},
 	"peerDependencies": {
 		"expo": "*",

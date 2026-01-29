@@ -3,8 +3,8 @@
 	"compilerOptions": {
 		"strict": true,
 		"paths": {
-			"expo-orpheus": ["../src/index"],
-			"expo-orpheus/*": ["../src/*"]
+			"@roitium/expo-orpheus": ["../src/index"],
+			"@roitium/expo-orpheus/*": ["../src/*"]
 		}
 	}
 }
