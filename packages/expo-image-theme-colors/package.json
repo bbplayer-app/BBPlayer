@@ -41,7 +41,6 @@
 		"lint": "expo-module lint",
 		"open:android": "open -a \"Android Studio\" example/android",
 		"open:ios": "xed example/ios",
-		"prepare": "expo-module prepare",
 		"prepublishOnly": "expo-module prepublishOnly",
 		"test": "expo-module test"
 	},

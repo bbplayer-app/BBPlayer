@@ -4,24 +4,14 @@ const { getSentryExpoConfig } = require('@sentry/react-native/metro')
 const {
 	wrapWithReanimatedMetroConfig,
 } = require('react-native-reanimated/metro-config')
-const path = require('path')
-
-const projectRoot = __dirname
-const workspaceRoot = path.resolve(projectRoot, '../..')
 
 module.exports = (async () => {
-	const { withMetroConfig } = await import('react-native-monorepo-config')
-
-	const config = getSentryExpoConfig(projectRoot, {
+	const config = getSentryExpoConfig(__dirname, {
 		annotateReactComponents: true,
 	})
 
-	const monorepoConfig = withMetroConfig(config, {
-		root: workspaceRoot,
-		dirname: projectRoot,
-	})
+	config.resolver.unstable_enablePackageExports = true
+	config.resolver.sourceExts.push('sql')
 
-	monorepoConfig.resolver.sourceExts.push('sql')
-
-	return wrapWithReanimatedMetroConfig(monorepoConfig)
+	return wrapWithReanimatedMetroConfig(config)
 })()
