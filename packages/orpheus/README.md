@@ -12,14 +12,6 @@
 - **桌面歌词**: 支持系统级桌面歌词悬浮窗。
 - **ExoPlayer 扩展**: 支持 `ffmpeg` 扩展（如需要）。
 
-## 注意事项
-
-> [!IMPORTANT]
-> **必须注册 Headless Task**
->
-> 你必须在应用的入口文件（如 `index.js`）中调用 `registerOrpheusHeadlessTask`。
-> 即使你不需要自定义后台逻辑，也必须注册它，因为内部的 Hooks（如 `useCurrentTrack`）依赖于此建立的事件桥接来接收原生事件。如果不注册，UI 将无法正确响应状态变化。
-
 ## 文档
 
 详细的 API 文档和使用说明请参阅 [Wiki](docs/Home.md) 或直接查看 `docs/` 目录。
