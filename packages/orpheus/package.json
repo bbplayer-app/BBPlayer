@@ -15,8 +15,19 @@
 	"license": "MIT",
 	"author": "Roitium <65794453+roitium@users.noreply.github.com> (https://github.com/roitium)",
 	"repository": "https://github.com/bbplayer-app/orpheus",
+	"files": [
+		"build",
+		"src",
+		"android",
+		"ios",
+		"expo-module.config.json"
+	],
 	"main": "build/index.js",
 	"types": "build/index.d.ts",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"scripts": {
 		"build": "expo-module build",
 		"clean": "expo-module clean",
