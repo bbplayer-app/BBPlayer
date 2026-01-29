@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Changed
+
+- 改为 monorepo
+
 ### Fixed
 
 - 修复搜索播放列表时，错误地过滤了远程播放列表的问题

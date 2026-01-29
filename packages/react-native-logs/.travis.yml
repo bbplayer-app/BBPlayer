@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - stable
+install:
+  - npm install
+  - npm run build
+script:
+  - npm run test
+after_success:
+  - npm run test:cov && bash <(curl -s https://codecov.io/bash) -e TRAVIS_NODE_VERSION

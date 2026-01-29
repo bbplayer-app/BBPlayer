@@ -79,6 +79,7 @@ export default defineConfig([
 			'**/node_modules/**',
 			'**/*.config.mjs',
 			'**/*.js',
+			'packages/react-native-logs/**',
 		],
 	},
 	{

@@ -1,6 +1,6 @@
 {
 	"name": "@bbplayer/app",
-	"version": "2.2.3",
+	"version": "2.2.4",
 	"private": true,
 	"main": "index.js",
 	"scripts": {
@@ -26,6 +26,7 @@
 		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
 		"@roitium/expo-image-theme-colors": "workspace:*",
 		"@roitium/expo-orpheus": "workspace:*",
+		"@roitium/react-native-logs": "workspace:*",
 		"@sentry/cli": "^2.58.4",
 		"@sentry/react-native": "~7.10.0",
 		"@shopify/flash-list": "^2.2.0",
@@ -80,7 +81,6 @@
 		"react-native-gesture-handler": "~2.30.0",
 		"react-native-gradle-plugin": "^0.71.19",
 		"react-native-keyboard-controller": "1.20.4",
-		"react-native-logs": "git+https://github.com/bbplayer-app/react-native-logs.git#v5.6.2",
 		"react-native-mmkv": "^4.1.1",
 		"react-native-nitro-modules": "^0.33.2",
 		"react-native-pager-view": "8.0.0",

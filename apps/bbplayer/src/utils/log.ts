@@ -1,12 +1,12 @@
-import * as Sentry from '@sentry/react-native'
-import * as EXPOFS from 'expo-file-system'
-import { err, ok, type Result } from 'neverthrow'
-import type { transportFunctionType } from 'react-native-logs'
+import type { transportFunctionType } from '@roitium/react-native-logs'
 import {
 	fileAsyncTransport,
 	logger,
 	mapConsoleTransport,
-} from 'react-native-logs'
+} from '@roitium/react-native-logs'
+import * as Sentry from '@sentry/react-native'
+import * as EXPOFS from 'expo-file-system'
+import { err, ok, type Result } from 'neverthrow'
 
 import { CustomError } from '@/lib/errors'
 import type { ProjectScope } from '@/types/core/scope'
