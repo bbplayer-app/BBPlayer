@@ -6,7 +6,9 @@
 		"packages/*"
 	],
 	"scripts": {
+		"check:deps": "syncpack list-mismatches",
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
+		"fix:deps": "syncpack fix-mismatches",
 		"format": "eslint . --fix && oxfmt --write .",
 		"lint": "eslint .",
 		"postinstall": "lefthook install"
@@ -27,6 +29,7 @@
 		"eslint-plugin-react-you-might-not-need-an-effect": "^0.5.6",
 		"lefthook": "^1.13.6",
 		"oxfmt": "^0.27.0",
+		"syncpack": "^13.0.4",
 		"typescript-eslint": "^8.53.1"
 	},
 	"packageManager": "pnpm@10.26.2"
