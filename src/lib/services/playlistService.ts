@@ -884,7 +884,7 @@ export class PlaylistService {
 	}
 
 	/**
-	 * 搜索本地播放列表
+	 * 搜索播放列表
 	 * @param query - 搜索关键词
 	 */
 	public searchPlaylists(query: string): ResultAsync<
@@ -900,10 +900,7 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:searchPlaylists', op: 'db' }, () =>
 				this.db.query.playlists.findMany({
-					where: and(
-						eq(schema.playlists.type, 'local'),
-						like(schema.playlists.title, `%${trimmed}%`),
-					),
+					where: like(schema.playlists.title, `%${trimmed}%`),
 					orderBy: desc(schema.playlists.updatedAt),
 					with: {
 						author: true,
