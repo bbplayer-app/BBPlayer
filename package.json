@@ -1,6 +1,10 @@
 {
 	"name": "bbplayer-root",
 	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
 		"format": "eslint . --fix && oxfmt --write .",
@@ -22,7 +26,6 @@
 		"eslint-plugin-react-hooks-extra": "^1.53.1",
 		"eslint-plugin-react-you-might-not-need-an-effect": "^0.5.6",
 		"oxfmt": "^0.27.0",
-		"turbo": "^2.0.0",
 		"typescript-eslint": "^8.53.1"
 	},
 	"packageManager": "pnpm@10.26.2"
