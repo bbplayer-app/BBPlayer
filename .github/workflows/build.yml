@@ -161,7 +161,7 @@ jobs:
 
       - name: ⚙️ Prepare Release Variables
         run: |
-          APP_VERSION=$(node -p "require('./package.json').version")
+          APP_VERSION=$(node -p "require('./apps/bbplayer/package.json').version")
           echo "RELEASE_TAG=v${APP_VERSION}" >> $GITHUB_ENV
           ls -R dist/
 
