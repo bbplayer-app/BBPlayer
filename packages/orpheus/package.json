@@ -1,0 +1,49 @@
+{
+	"name": "@roitium/expo-orpheus",
+	"version": "0.11.2",
+	"description": "A player for bbplayer",
+	"keywords": [
+		"ExpoOrpheus",
+		"expo",
+		"expo-orpheus",
+		"react-native"
+	],
+	"homepage": "https://github.com/bbplayer-app/orpheus#readme",
+	"bugs": {
+		"url": "https://github.com/bbplayer-app/orpheus/issues"
+	},
+	"license": "MIT",
+	"author": "Roitium <65794453+roitium@users.noreply.github.com> (https://github.com/roitium)",
+	"repository": "https://github.com/bbplayer-app/orpheus",
+	"main": "build/index.js",
+	"types": "build/index.d.ts",
+	"scripts": {
+		"build": "expo-module build",
+		"clean": "expo-module clean",
+		"expo-module": "expo-module",
+		"lint": "expo-module lint",
+		"open:android": "open -a \"Android Studio\" example/android",
+		"prepare": "lefthook install",
+		"prepublishOnly": "expo-module prepublishOnly",
+		"release": "release-it",
+		"test": "expo-module test"
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^20.3.1",
+		"@commitlint/config-conventional": "^20.3.1",
+		"@evilmartians/lefthook": "^2.0.15",
+		"@release-it/conventional-changelog": "^8.0.2",
+		"@types/react": "~19.1.0",
+		"expo": "^54.0.24",
+		"expo-module-scripts": "^5.0.7",
+		"lefthook": "^2.0.15",
+		"prettier": "^3.7.4",
+		"react-native": "0.81.5",
+		"release-it": "^19.2.4"
+	},
+	"peerDependencies": {
+		"expo": "*",
+		"react": "*",
+		"react-native": "*"
+	}
+}

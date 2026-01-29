@@ -1,0 +1,10 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"paths": {
+			"expo-orpheus": ["../src/index"],
+			"expo-orpheus/*": ["../src/*"]
+		}
+	}
+}

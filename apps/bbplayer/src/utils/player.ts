@@ -34,10 +34,6 @@ function convertToOrpheusTrack(
 	// })
 
 	const url = getInternalPlayUri(track)
-	const volume = {
-		measured_i: 0,
-		target_i: 0,
-	}
 
 	// 如果没有有效的 URL，返回错误
 	if (!url) {
@@ -55,7 +51,6 @@ function convertToOrpheusTrack(
 		artist: track.artist?.name,
 		artwork: track.coverUrl ?? undefined,
 		duration: track.duration,
-		loudness: volume,
 	}
 
 	// logger.debug('OrpheusTrack 转换完成', {

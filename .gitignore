@@ -52,3 +52,5 @@ temp-builds
 .gemini/
 gha-creds-*.json
 .env
+apps/**/android
+apps/**/ios

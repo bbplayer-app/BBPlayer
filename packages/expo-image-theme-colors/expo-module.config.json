@@ -1,0 +1,9 @@
+{
+	"platforms": ["android", "ios"],
+	"android": {
+		"modules": ["expo.modules.imagethemecolors.ExpoImageThemeColorsModule"]
+	},
+	"ios": {
+		"modules": ["ExpoImageThemeColorsModule"]
+	}
+}

@@ -10,7 +10,7 @@ import reactYouMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
-import modalPlugin from './eslint-plugins/eslint-plugin-modal/index.js'
+import modalPlugin from './apps/bbplayer/eslint-plugins/eslint-plugin-modal/index.js'
 
 export default defineConfig([
 	{
@@ -73,12 +73,12 @@ export default defineConfig([
 	},
 	{
 		ignores: [
-			'dist/**/*.ts',
-			'dist/**',
-			'**/*.mjs',
-			'eslint.config.mjs',
+			'**/dist/**',
+			'**/.expo/**',
+			'**/node_modules/**',
+			'**/*.config.mjs',
 			'**/*.js',
-			'.expo/**',
+			'packages/**',
 		],
 	},
 	{
@@ -109,7 +109,7 @@ export default defineConfig([
 				'error',
 				{
 					alias: {
-						'@': './src',
+						'@': './apps/bbplayer/src',
 					},
 					aliasForSubpaths: true,
 				},

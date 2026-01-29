@@ -1,0 +1,10 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"paths": {
+			"expo-image-theme-colors": ["../src/index"],
+			"expo-image-theme-colors/*": ["../src/*"]
+		}
+	}
+}

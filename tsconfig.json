@@ -1,18 +1,4 @@
 {
-	"extends": "expo/tsconfig.base",
-	"compilerOptions": {
-		"strict": true,
-		"baseUrl": "./src",
-		"paths": {
-			"@/*": ["*"],
-			"@/types/*": ["types/*"],
-			"@/lib/*": ["lib/*"],
-			"@/app/*": ["app/*"],
-			"@/components/*": ["components/*"],
-			"@/hooks/*": ["hooks/*"],
-			"@/utils/*": ["utils/*"],
-			"@/features/*": ["features/*"]
-		}
-	},
-	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+	"files": [],
+	"references": [{ "path": "./apps/bbplayer/tsconfig.json" }]
 }
