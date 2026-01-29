@@ -115,7 +115,7 @@ jobs:
 
       - name: ⚙️ Prepare Variables
         run: |
-          APP_VERSION=$(node -p "require('./package.json').version")
+          APP_VERSION=$(node -p "require('./apps/bbplayer/package.json').version")
           VERSION_CODE=$(git rev-list --count HEAD)
 
           # e.g. bbplayer-v1.0.0-prod-arm64-v8a
@@ -127,7 +127,7 @@ jobs:
 
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
-        run: eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
+        run: cd apps/bbplayer && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
 
       - name: 🧪 Create Dummy APK
         if: env.BUILD_TYPE == 'blank-test'
