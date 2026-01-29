@@ -31,10 +31,6 @@
 	"sideEffects": false,
 	"main": "build/index.js",
 	"types": "build/index.d.ts",
-	"publishConfig": {
-		"access": "public",
-		"registry": "https://registry.npmjs.org/"
-	},
 	"scripts": {
 		"build": "expo-module build",
 		"clean": "expo-module clean",

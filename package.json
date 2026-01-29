@@ -6,22 +6,14 @@
 		"packages/*"
 	],
 	"scripts": {
-		"changeset": "changeset",
-		"changeset:add": "changeset add",
-		"changeset:publish": "changeset publish",
-		"changeset:status": "changeset status",
-		"changeset:version": "changeset version",
 		"check:deps": "syncpack list-mismatches",
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
 		"fix:deps": "syncpack fix-mismatches",
 		"format": "eslint . --fix && oxfmt --write .",
 		"lint": "eslint .",
-		"postinstall": "lefthook install",
-		"release": "changeset publish",
-		"version-packages": "changeset version"
+		"postinstall": "lefthook install"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.29.8",
 		"@commitlint/cli": "^20.3.1",
 		"@commitlint/config-conventional": "^20.3.1",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
