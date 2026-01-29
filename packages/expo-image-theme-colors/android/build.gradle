@@ -1,7 +1,12 @@
 apply plugin: 'com.android.library'
 
+import groovy.json.JsonSlurper
+
+def packageJsonFile = new File(projectDir, '../package.json')
+def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
+
 group = 'expo.modules.imagethemecolors'
-version = '0.1.0'
+version = packageJson.version
 
 def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
 apply from: expoModulesCorePlugin
@@ -35,7 +40,7 @@ android {
   namespace "expo.modules.imagethemecolors"
   defaultConfig {
     versionCode 1
-    versionName "0.1.0"
+    versionName packageJson.version
   }
   lintOptions {
     abortOnError false
