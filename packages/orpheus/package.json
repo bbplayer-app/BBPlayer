@@ -23,7 +23,6 @@
 		"expo-module": "expo-module",
 		"lint": "expo-module lint",
 		"open:android": "open -a \"Android Studio\" example/android",
-		"prepare": "expo-module prepare",
 		"prepublishOnly": "expo-module prepublishOnly",
 		"test": "expo-module test"
 	},
