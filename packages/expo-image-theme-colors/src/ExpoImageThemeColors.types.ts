@@ -24,9 +24,7 @@ type SwatchName =
 	| 'lightMuted'
 	| 'darkMuted'
 
-type PaletteSwatches = {
-	[K in SwatchName]: ColorInfo | null
-}
+type PaletteSwatches = Record<SwatchName, ColorInfo | null>
 
 export type ExtractedPalette = {
 	/** 图片宽度 (px) */

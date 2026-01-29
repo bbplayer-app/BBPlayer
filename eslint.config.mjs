@@ -74,6 +74,7 @@ export default defineConfig([
 	{
 		ignores: [
 			'**/dist/**',
+			'**/build/**',
 			'**/.expo/**',
 			'**/node_modules/**',
 			'**/*.config.mjs',

@@ -1,10 +1,10 @@
 import {
 	Orpheus,
-	Track,
+	type Track,
 	PlaybackState,
 	RepeatMode,
 } from '@roitium/expo-orpheus'
-import React from 'react'
+import type { FC } from 'react'
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native'
 
 import { ControlButton, Button } from './Buttons'
@@ -24,7 +24,7 @@ interface PlayerControlsProps {
 	onToggleSpeed: () => void
 }
 
-export const PlayerControls: React.FC<PlayerControlsProps> = ({
+export const PlayerControls: FC<PlayerControlsProps> = ({
 	currentTrack,
 	playbackState,
 	isPlaying,
@@ -73,15 +73,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 					style={styles.title}
 					numberOfLines={1}
 				>
-					{currentTrack?.title || 'Not Playing'}
+					{currentTrack?.title ?? 'Not Playing'}
 				</Text>
 				<Text
 					style={styles.artist}
 					numberOfLines={1}
 				>
-					{currentTrack?.artist || 'Orpheus Player'}
+					{currentTrack?.artist ?? 'Orpheus Player'}
 				</Text>
-				<Text style={styles.trackId}>ID: {currentTrack?.id || '-'}</Text>
+				<Text style={styles.trackId}>ID: {currentTrack?.id ?? '-'}</Text>
 				<Text style={styles.debugText}>{lastEventLog}</Text>
 			</View>
 

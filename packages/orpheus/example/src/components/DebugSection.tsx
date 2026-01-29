@@ -1,5 +1,5 @@
-import { Orpheus, Track } from '@roitium/expo-orpheus'
-import React from 'react'
+import { Orpheus } from '@roitium/expo-orpheus'
+import type { FC } from 'react'
 import { View, Text, StyleSheet, Alert } from 'react-native'
 
 import { TEST_TRACKS } from '../constants'
@@ -24,7 +24,7 @@ interface DebugSectionProps {
 	onTestIndexTrack: () => void
 }
 
-export const DebugSection: React.FC<DebugSectionProps> = ({
+export const DebugSection: FC<DebugSectionProps> = ({
 	progress,
 	restorePlaybackPositionEnabled,
 	setRestorePlaybackPositionEnabled,
@@ -54,7 +54,9 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				/>
 				<Button
 					title='Clear Queue'
-					onPress={() => Orpheus.clear()}
+					onPress={() => {
+						void Orpheus.clear()
+					}}
 					danger
 				/>
 				<Button
@@ -82,13 +84,13 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Seek +15s'
 					onPress={() => {
-						Orpheus.seekTo(progress.position + 15)
+						void Orpheus.seekTo(progress.position + 15)
 					}}
 				/>
 				<Button
 					title='Seek to 0s'
 					onPress={() => {
-						Orpheus.seekTo(0)
+						void Orpheus.seekTo(0)
 					}}
 				/>
 
@@ -116,7 +118,7 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Set Sleep (10s)'
 					onPress={() => {
-						Orpheus.setSleepTimer(10000)
+						void Orpheus.setSleepTimer(10000)
 					}}
 				/>
 				<Button
@@ -129,8 +131,10 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 							} else {
 								Alert.alert('Sleep End', 'Not Set')
 							}
-						} catch (e: any) {
-							Alert.alert('Error', e.message)
+						} catch (e) {
+							if (e instanceof Error) {
+								Alert.alert('Error', e.message)
+							}
 							console.log(e)
 						}
 					}}
@@ -138,7 +142,7 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Cancel Sleep'
 					onPress={() => {
-						Orpheus.cancelSleepTimer()
+						void Orpheus.cancelSleepTimer()
 					}}
 				/>
 			</View>
@@ -148,13 +152,13 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Download [0]'
 					onPress={() => {
-						Orpheus.downloadTrack(TEST_TRACKS[0])
+						void Orpheus.downloadTrack(TEST_TRACKS[0])
 					}}
 				/>
 				<Button
 					title='Download Batch'
 					onPress={() => {
-						Orpheus.multiDownload(TEST_TRACKS.slice(1))
+						void Orpheus.multiDownload(TEST_TRACKS.slice(1))
 					}}
 				/>
 				<Button
@@ -173,8 +177,10 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 							const statusMap = await Orpheus.getDownloadStatusByIds(ids)
 							console.log('Status Map:', statusMap)
 							Alert.alert('Status Map', JSON.stringify(statusMap, null, 2))
-						} catch (e: any) {
-							Alert.alert('Error', e.message)
+						} catch (e) {
+							if (e instanceof Error) {
+								Alert.alert('Error', e.message)
+							}
 							console.log(e)
 							return
 						}
@@ -183,7 +189,7 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Del All DLs'
 					onPress={() => {
-						Orpheus.removeAllDownloads()
+						void Orpheus.removeAllDownloads()
 					}}
 					danger
 				/>
@@ -255,7 +261,7 @@ export const DebugSection: React.FC<DebugSectionProps> = ({
 				<Button
 					title='Trigger Error'
 					onPress={() => {
-						Orpheus.debugTriggerError()
+						void Orpheus.debugTriggerError()
 					}}
 					danger
 				/>

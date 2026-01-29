@@ -1,6 +1,6 @@
 import { AppRegistry, Platform } from 'react-native'
 
-import { Orpheus, OrpheusHeadlessEvent } from './ExpoOrpheusModule'
+import { Orpheus, type OrpheusHeadlessEvent } from './ExpoOrpheusModule'
 
 const ORPHEUS_HEADLESS_TASK = 'OrpheusHeadlessTask'
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { AppState, AppStateStatus } from 'react-native'
+import { AppState, type AppStateStatus } from 'react-native'
 
 import { Orpheus } from '../ExpoOrpheusModule'
 
@@ -40,7 +40,7 @@ export function useProgress() {
 			Orpheus.getBuffered(),
 		])
 			.then(([pos, dur, buf]) => {
-				setProgress((prev) => ({
+				setProgress(() => ({
 					position: pos,
 					duration: dur,
 					buffered: buf,

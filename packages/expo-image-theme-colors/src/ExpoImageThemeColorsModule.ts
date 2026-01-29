@@ -1,7 +1,7 @@
-import { NativeModule, requireNativeModule, SharedRef } from 'expo'
+import { NativeModule, requireNativeModule, type SharedRef } from 'expo'
 
-import { ExtractedPalette } from './ExpoImageThemeColors.types'
-import { ImageRef } from './ImageRef'
+import type { ExtractedPalette } from './ExpoImageThemeColors.types'
+import type { ImageRef } from './ImageRef'
 
 declare class ExpoImageThemeColorsModule extends NativeModule {
 	extractThemeColorAsync(

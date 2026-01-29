@@ -1,5 +1,5 @@
+import ExpoImageThemeColors from '@roitium/expo-image-theme-colors'
 import { useImage } from 'expo-image'
-import ExpoImageThemeColors from 'expo-image-theme-colors'
 import {
 	Button,
 	SafeAreaView,
@@ -29,9 +29,11 @@ export default function App() {
 			const result = await ExpoImageThemeColors.extractThemeColorAsync(imageRef)
 			console.log('Extraction Result:', JSON.stringify(result, null, 2))
 			Alert.alert('Result', JSON.stringify(result, null, 2))
-		} catch (e: any) {
+		} catch (e) {
 			console.error(e)
-			Alert.alert('Error', e.message ?? 'Unknown error')
+			if (e instanceof Error) {
+				Alert.alert('Error', e.message ?? 'Unknown error')
+			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-import React from 'react'
+import type { FC } from 'react'
 import { TouchableOpacity, Text, StyleSheet } from 'react-native'
 
 interface ControlButtonProps {
@@ -6,10 +6,7 @@ interface ControlButtonProps {
 	onPress: () => void
 }
 
-export const ControlButton: React.FC<ControlButtonProps> = ({
-	label,
-	onPress,
-}) => (
+export const ControlButton: FC<ControlButtonProps> = ({ label, onPress }) => (
 	<TouchableOpacity
 		style={styles.controlBtn}
 		onPress={onPress}
@@ -27,7 +24,7 @@ interface ButtonProps {
 	active?: boolean
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button: FC<ButtonProps> = ({
 	title,
 	onPress,
 	primary,
@@ -49,6 +46,7 @@ export const Button: React.FC<ButtonProps> = ({
 			style={[
 				styles.btnText,
 				small && { fontSize: 12 },
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 				(primary || danger || active) && { color: '#fff' },
 			]}
 		>

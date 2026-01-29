@@ -8,7 +8,7 @@ export function useIsPlaying() {
 	useEffect(() => {
 		let isMounted = true
 
-		Orpheus.getIsPlaying().then((val) => {
+		void Orpheus.getIsPlaying().then((val) => {
 			if (isMounted) setIsPlaying(val)
 		})
 

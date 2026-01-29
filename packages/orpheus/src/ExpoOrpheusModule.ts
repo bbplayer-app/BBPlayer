@@ -29,7 +29,7 @@ export interface Track {
 	duration?: number
 }
 
-export type AndroidPlaybackErrorEvent = {
+export interface AndroidPlaybackErrorEvent {
 	platform: 'android'
 	errorCode: number
 	errorCodeName: string | null
@@ -40,7 +40,7 @@ export type AndroidPlaybackErrorEvent = {
 	rootCauseMessage: string
 }
 
-export type IosPlaybackErrorEvent = {
+export interface IosPlaybackErrorEvent {
 	platform: 'ios'
 	error: string
 }
@@ -49,7 +49,7 @@ export type PlaybackErrorEvent =
 	| AndroidPlaybackErrorEvent
 	| IosPlaybackErrorEvent
 
-export type OrpheusEvents = {
+export interface OrpheusEvents {
 	onPlaybackStateChanged(event: { state: PlaybackState }): void
 	onTrackStarted(event: { trackId: string; reason: number }): void
 	onTrackFinished(event: {
@@ -67,15 +67,17 @@ export type OrpheusEvents = {
 	onIsPlayingChanged(event: { status: boolean }): void
 	onDownloadUpdated(event: DownloadTask): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	[key: string]: (...args: any[]) => void
 }
 
-export type OrpheusHeadlessTrackStartedEvent = {
+export interface OrpheusHeadlessTrackStartedEvent {
 	eventName: 'onTrackStarted'
 	trackId: string
 	reason: number
 }
 
-export type OrpheusHeadlessTrackFinishedEvent = {
+export interface OrpheusHeadlessTrackFinishedEvent {
 	eventName: 'onTrackFinished'
 	trackId: string
 	finalPosition: number

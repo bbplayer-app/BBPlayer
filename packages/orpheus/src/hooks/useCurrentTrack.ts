@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-import { Track, Orpheus } from '../ExpoOrpheusModule'
+import { type Track, Orpheus } from '../ExpoOrpheusModule'
 
 export function useCurrentTrack() {
 	const [track, setTrack] = useState<Track | null>(null)
@@ -23,14 +23,14 @@ export function useCurrentTrack() {
 	useEffect(() => {
 		let isMounted = true
 
-		fetchTrack().then(({ currentTrack, currentIndex }) => {
+		void fetchTrack().then(({ currentTrack, currentIndex }) => {
 			if (isMounted) {
 				setTrack(currentTrack)
 				setIndex(currentIndex)
 			}
 		})
 
-		const sub = Orpheus.addListener('onTrackStarted', async (event) => {
+		const sub = Orpheus.addListener('onTrackStarted', async () => {
 			console.log('Track Started')
 			const { currentTrack, currentIndex } = await fetchTrack()
 			if (isMounted) {

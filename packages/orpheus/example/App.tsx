@@ -2,10 +2,9 @@ import {
 	Orpheus,
 	PlaybackState,
 	RepeatMode,
-	TransitionReason,
 	useCurrentTrack,
 } from '@roitium/expo-orpheus'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { StyleSheet, SafeAreaView, ScrollView, Alert, View } from 'react-native'
 
 import { DebugSection } from './src/components/DebugSection'
@@ -37,14 +36,49 @@ export default function OrpheusTestScreen() {
 	// Debug Info
 	const [lastEventLog, setLastEventLog] = useState<string>('Ready')
 
+	// --- Initialization & Listeners ---
+	const syncDesktopLyricsStatus = useCallback(async () => {
+		try {
+			const shown = Orpheus.isDesktopLyricsShown
+			setDesktopLyricsShown(shown)
+			const locked = Orpheus.isDesktopLyricsLocked
+			setDesktopLyricsLocked(locked)
+			await Promise.resolve()
+		} catch (e) {
+			console.error('Sync Lyrics Error:', e)
+		}
+	}, [])
+
+	const syncFullState = useCallback(async () => {
+		try {
+			const playing = await Orpheus.getIsPlaying()
+			setIsPlaying(playing)
+
+			const shuffle = await Orpheus.getShuffleMode()
+			setShuffleMode(shuffle)
+
+			const speed = await Orpheus.getPlaybackSpeed()
+			setPlaybackSpeed(speed)
+
+			const repeat = await Orpheus.getRepeatMode()
+			setRepeatMode(repeat)
+
+			await syncDesktopLyricsStatus()
+		} catch (e) {
+			console.error('Sync Error:', e)
+			if (e instanceof Error) {
+				setLastEventLog(`Sync Error: ${e.message}`)
+			}
+		}
+	}, [syncDesktopLyricsStatus])
+
 	useEffect(() => {
 		setRestorePlaybackPositionEnabled(Orpheus.restorePlaybackPositionEnabled)
 		setAutoplay(Orpheus.autoplayOnStartEnabled)
 	}, [restorePlaybackPositionEnabled, autoplay])
 
-	// --- Initialization & Listeners ---
 	useEffect(() => {
-		syncFullState()
+		void syncFullState()
 
 		const subState = Orpheus.addListener('onPlaybackStateChanged', (event) => {
 			console.log('State Changed:', event.state)
@@ -70,11 +104,16 @@ export default function OrpheusTestScreen() {
 		})
 
 		const subError = Orpheus.addListener('onPlayerError', (event) => {
-			Alert.alert(
-				'Player Error',
-				`Code: ${event.errorCode}\nMessage: ${event.message}\nCause: ${event.rootCauseMessage}\nStack: ${event.stackTrace}`,
-			)
-			setLastEventLog(`Error: ${event.errorCode}`)
+			if (event.platform === 'android') {
+				Alert.alert(
+					'Player Error',
+					`Code: ${event.errorCode}\nMessage: ${event.message}\nCause: ${event.rootCauseMessage}\nStack: ${event.stackTrace}`,
+				)
+				setLastEventLog(`Error: ${event.errorCode}`)
+			} else {
+				Alert.alert('Player Error', `Error: ${event.error}`)
+				setLastEventLog(`Error: iOS Error`)
+			}
 		})
 
 		const subDownload = Orpheus.addListener('onDownloadUpdated', (task) => {
@@ -98,39 +137,7 @@ export default function OrpheusTestScreen() {
 			subDownload.remove()
 			subSpeed.remove()
 		}
-	}, [])
-
-	const syncFullState = async () => {
-		try {
-			const playing = await Orpheus.getIsPlaying()
-			setIsPlaying(playing)
-
-			const shuffle = await Orpheus.getShuffleMode()
-			setShuffleMode(shuffle)
-
-			const speed = await Orpheus.getPlaybackSpeed()
-			setPlaybackSpeed(speed)
-
-			const repeat = await Orpheus.getRepeatMode()
-			setRepeatMode(repeat)
-
-			await syncDesktopLyricsStatus()
-		} catch (e: any) {
-			console.error('Sync Error:', e)
-			setLastEventLog(`Sync Error: ${e.message}`)
-		}
-	}
-
-	const syncDesktopLyricsStatus = async () => {
-		try {
-			const shown = Orpheus.isDesktopLyricsShown
-			setDesktopLyricsShown(shown)
-			const locked = Orpheus.isDesktopLyricsLocked
-			setDesktopLyricsLocked(locked)
-		} catch (e: any) {
-			console.error('Sync Lyrics Error:', e)
-		}
-	}
+	}, [syncFullState])
 
 	// --- Handlers ---
 
@@ -141,8 +148,10 @@ export default function OrpheusTestScreen() {
 			} else {
 				await Orpheus.play()
 			}
-		} catch (e: any) {
-			Alert.alert('Action Failed', e.message)
+		} catch (e) {
+			if (e instanceof Error) {
+				Alert.alert('Action Failed', e.message)
+			}
 		}
 	}
 
@@ -151,8 +160,10 @@ export default function OrpheusTestScreen() {
 			await Orpheus.addToEnd(TEST_TRACKS, undefined, false)
 			setLastEventLog('Tracks added to queue end')
 			Alert.alert('Success', 'Tracks added to queue')
-		} catch (e: any) {
-			Alert.alert('Add Failed', e.message)
+		} catch (e) {
+			if (e instanceof Error) {
+				Alert.alert('Add Failed', e.message)
+			}
 		}
 	}
 
@@ -160,8 +171,10 @@ export default function OrpheusTestScreen() {
 		try {
 			await Orpheus.addToEnd(TEST_TRACKS, TEST_TRACKS[0].id, true)
 			setLastEventLog('Queue cleared and playing new tracks')
-		} catch (e: any) {
-			Alert.alert('Action Failed', e.message)
+		} catch (e) {
+			if (e instanceof Error) {
+				Alert.alert('Action Failed', e.message)
+			}
 		}
 	}
 
@@ -176,8 +189,10 @@ export default function OrpheusTestScreen() {
 			} else {
 				Alert.alert('Get Index 0', 'Empty (Queue might be empty)')
 			}
-		} catch (e: any) {
-			Alert.alert('Error', e.message)
+		} catch (e) {
+			if (e instanceof Error) {
+				Alert.alert('Error', e.message)
+			}
 		}
 	}
 
@@ -197,9 +212,9 @@ export default function OrpheusTestScreen() {
 		const speeds = [0.5, 1.0, 1.25, 1.5, 2.0]
 		let nextSpeed = 1.0
 
-		for (let i = 0; i < speeds.length; i++) {
-			if (playbackSpeed < speeds[i] - 0.01) {
-				nextSpeed = speeds[i]
+		for (const s of speeds) {
+			if (playbackSpeed < s - 0.01) {
+				nextSpeed = s
 				break
 			}
 		}
@@ -220,8 +235,10 @@ export default function OrpheusTestScreen() {
 			} else {
 				Alert.alert('Cannot Remove', 'No current index playing')
 			}
-		} catch (e: any) {
-			Alert.alert('Error', e.message)
+		} catch (e) {
+			if (e instanceof Error) {
+				Alert.alert('Error', e.message)
+			}
 		}
 	}
 
