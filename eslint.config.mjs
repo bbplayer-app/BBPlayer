@@ -80,6 +80,7 @@ export default defineConfig([
 			'**/*.config.mjs',
 			'**/*.js',
 			'packages/react-native-logs/**',
+			'**/package-lock.json',
 		],
 	},
 	{
