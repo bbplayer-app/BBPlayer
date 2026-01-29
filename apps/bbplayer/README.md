@@ -1,5 +1,9 @@
 # BBPlayer App
 
+<div align="center">
+<img src="./assets/images/icon_large.png" alt="logo" width="50" />
+</div>
+
 此目录包含 BBPlayer 移动端应用的主程序源代码。
 
 ## 📚 文档

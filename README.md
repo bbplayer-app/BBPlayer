@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/images/icon_large.png" alt="logo" width="50" />
+<img src="./apps/bbplayer/assets/images/icon_large.png" alt="logo" width="50" />
 <h1>BBPlayer</h1>
 
 ![GitHub Release](https://img.shields.io/github/v/release/yanyao2333/bbplayer)
@@ -71,7 +71,7 @@
 <details>
 <summary>点击展开查看微信收款码</summary>
 <br />
-<img src="./assets/images/wechat.png" alt="WeChat Donation" width="200" />
+<img src="./apps/bbplayer/assets/images/wechat.png" alt="WeChat Donation" width="200" />
 </details>
 
 ## 感谢
