@@ -55,7 +55,6 @@ temp-builds
 .zed
 .idea
 
-.gemini/
 gha-creds-*.json
 .env
 apps/**/android
