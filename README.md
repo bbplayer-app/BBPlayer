@@ -36,6 +36,14 @@
 - **播放库**: [Orpheus](https://github.com/bbplayer-app/orpheus)
 - **ORM**: Drizzle ORM
 
+## 项目结构
+
+这是一个 Monorepo 仓库，包含 BBPlayer 及其相关工具和文档。
+
+- **[apps/bbplayer](./apps/bbplayer)**: BBPlayer 移动端应用核心代码。
+- **[apps/docs](./apps/docs)**: 项目文档站点。
+- **[packages/](./packages)**: 共享库与工具包。
+
 ## 开源许可
 
 本项目采用 MIT 许可。

@@ -14,7 +14,7 @@
 
 ### 安装依赖
 
-在项目根目录下运行：
+在项目根目录下运行，这将安装所有 apps 和 packages 的依赖：
 
 ```bash
 pnpm install
@@ -22,11 +22,15 @@ pnpm install
 
 ### 启动项目
 
+请确保你位于 `apps/bbplayer` 目录下，或者使用过滤器运行命令：
+
 ```bash
-# 启动开发服务器
+# 进入 app 目录启动
+cd apps/bbplayer
 pnpm start
 
 # 运行 Android 模拟器
+cd apps/bbplayer
 pnpm android
 ```
 
