@@ -1,6 +1,6 @@
 import { Orpheus, SPECTRUM_SIZE } from '@roitium/expo-orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AppState, PermissionsAndroid, Platform, View } from 'react-native'
 import { useDerivedValue, useSharedValue } from 'react-native-reanimated'
 
@@ -92,102 +92,117 @@ export const SpectrumVisualizer = ({
 		}
 	}, [])
 
-	const points = useMemo(() => {
+	const geometry = useDerivedValue(() => {
 		const center = size / 2 + MAX_BAR_HEIGHT
 		const radius = size / 2 + GAP
+		const result = new Float32Array(BAR_COUNT * 4)
 
-		return Array.from({ length: BAR_COUNT }, (_, i) => {
+		for (let i = 0; i < BAR_COUNT; i++) {
 			const angle = (i / BAR_COUNT) * 2 * Math.PI - Math.PI / 2
-			return {
-				px: center + radius * Math.cos(angle),
-				py: center + radius * Math.sin(angle),
-				nx: Math.cos(angle),
-				ny: Math.sin(angle),
-			}
-		})
+			result[i * 4] = center + radius * Math.cos(angle)
+			result[i * 4 + 1] = center + radius * Math.sin(angle)
+			result[i * 4 + 2] = Math.cos(angle)
+			result[i * 4 + 3] = Math.sin(angle)
+		}
+		return result
 	}, [size])
 
 	const path = useDerivedValue(() => {
 		const skPath = Skia.Path.Make()
+		const geo = geometry.value
+		const freq = frequencyData.value
 
 		for (let i = 0; i < BAR_COUNT; i++) {
-			const val = frequencyData.value[i] || 0
+			const val = freq[i] || 0
 			const barHeight = Math.min(
 				Math.max(val * MAX_BAR_HEIGHT, 4),
 				MAX_BAR_HEIGHT,
 			)
 
-			const { px, py, nx, ny } = points[i]
+			const px = geo[i * 4]
+			const py = geo[i * 4 + 1]
+			const nx = geo[i * 4 + 2]
+			const ny = geo[i * 4 + 3]
+
 			skPath.moveTo(px, py)
 			skPath.lineTo(px + nx * barHeight, py + ny * barHeight)
 		}
 
 		return skPath
-	}, [points])
+	}, [geometry])
 
 	useEffect(() => {
 		if (!hasPermission) return
 
 		let animationFrameId: number
+		let lastFrameTime = 0
+		const TARGET_FPS = 30
+		const FRAME_INTERVAL = 1000 / TARGET_FPS
 
-		const animate = () => {
+		const animate = (timestamp: number) => {
 			if (!isPlaying || !isAppActive) return
 
-			Orpheus.updateSpectrumData(bufferRef.current)
-			const rawData = bufferRef.current
-			const newData = new Float32Array(BAR_COUNT)
-			const halfCount = BAR_COUNT / 2
+			const elapsed = timestamp - lastFrameTime
 
-			for (let i = 0; i < halfCount; i++) {
-				const t = i / (halfCount - 1)
+			if (elapsed >= FRAME_INTERVAL) {
+				lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL)
 
-				const startBin = Math.floor(t * t * (SPECTRUM_SIZE - 1))
-				const tNext = (i + 1) / (halfCount - 1)
-				const endBin = Math.floor(tNext * tNext * (SPECTRUM_SIZE - 1))
-				const actualEndBin = Math.max(endBin, startBin + 1)
+				Orpheus.updateSpectrumData(bufferRef.current)
+				const rawData = bufferRef.current
+				const newData = new Float32Array(BAR_COUNT)
+				const halfCount = BAR_COUNT / 2
 
-				let sum = 0
-				let count = 0
-				for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
-					sum += rawData[j]
-					count++
+				for (let i = 0; i < halfCount; i++) {
+					const t = i / (halfCount - 1)
+
+					const startBin = Math.floor(t * t * (SPECTRUM_SIZE - 1))
+					const tNext = (i + 1) / (halfCount - 1)
+					const endBin = Math.floor(tNext * tNext * (SPECTRUM_SIZE - 1))
+					const actualEndBin = Math.max(endBin, startBin + 1)
+
+					let sum = 0
+					let count = 0
+					for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
+						sum += rawData[j]
+						count++
+					}
+
+					let val = 0
+					if (count > 0) {
+						const magnitude = sum / count
+						const db = 20 * Math.log10(magnitude + 0.0001)
+
+						const minDb = -60
+						const maxDb = 0
+						val = (db - minDb) / (maxDb - minDb)
+					}
+
+					if (val < 0) val = 0
+					if (val > 1.0) val = 1.0
+
+					const mirrorIdx = BAR_COUNT - 1 - i
+
+					const smoothL =
+						prevDataRef.current[i] * SMOOTHING_FACTOR +
+						val * (1 - SMOOTHING_FACTOR)
+					prevDataRef.current[i] = smoothL
+					newData[i] = smoothL
+
+					const smoothR =
+						prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
+						val * (1 - SMOOTHING_FACTOR)
+					prevDataRef.current[mirrorIdx] = smoothR
+					newData[mirrorIdx] = smoothR
 				}
 
-				let val = 0
-				if (count > 0) {
-					const magnitude = sum / count
-					const db = 20 * Math.log10(magnitude + 0.0001)
-
-					const minDb = -60
-					const maxDb = 0
-					val = (db - minDb) / (maxDb - minDb)
-				}
-
-				if (val < 0) val = 0
-				if (val > 1.0) val = 1.0
-
-				const mirrorIdx = BAR_COUNT - 1 - i
-
-				const smoothL =
-					prevDataRef.current[i] * SMOOTHING_FACTOR +
-					val * (1 - SMOOTHING_FACTOR)
-				prevDataRef.current[i] = smoothL
-				newData[i] = smoothL
-
-				const smoothR =
-					prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
-					val * (1 - SMOOTHING_FACTOR)
-				prevDataRef.current[mirrorIdx] = smoothR
-				newData[mirrorIdx] = smoothR
+				frequencyData.set(newData)
 			}
-
-			frequencyData.set(newData)
 
 			animationFrameId = requestAnimationFrame(animate)
 		}
 
 		if (isPlaying && isAppActive) {
-			animate()
+			animationFrameId = requestAnimationFrame(animate) // Start loop
 		} else {
 			frequencyData.set(new Float32Array(BAR_COUNT).fill(0))
 		}
