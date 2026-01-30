@@ -2,6 +2,7 @@
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，但做了进一步封装和解耦，凑合着用 */
 import type { Result } from 'neverthrow'
 import { ResultAsync, err, ok } from 'neverthrow'
+import { fetch } from 'react-native-nitro-fetch'
 import * as setCookie from 'set-cookie-parser'
 
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'

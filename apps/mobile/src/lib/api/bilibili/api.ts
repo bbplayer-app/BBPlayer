@@ -165,7 +165,7 @@ export class BilibiliApi {
 		const url = `https://s.search.bilibili.com/main/suggest?${params.toString()}`
 
 		return ResultAsync.fromPromise(
-			fetch(url, {
+			globalThis.fetch(url, {
 				method: 'GET',
 				signal,
 			}),
@@ -695,7 +695,7 @@ export class BilibiliApi {
 		BilibiliApiError
 	> {
 		const reqFunction = async () => {
-			const response = await fetch(
+			const response = await globalThis.fetch(
 				`https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=${qrcode_key}`,
 				{
 					method: 'GET',
@@ -764,7 +764,7 @@ export class BilibiliApi {
 	 */
 	getB23ResolvedUrl(b23Url: string): ResultAsync<string, BilibiliApiError> {
 		return ResultAsync.fromPromise(
-			fetch(b23Url, {
+			globalThis.fetch(b23Url, {
 				headers: {
 					'User-Agent':
 						'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',

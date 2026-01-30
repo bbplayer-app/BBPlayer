@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react-native'
 import * as Application from 'expo-application'
 import Constants from 'expo-constants'
 import { err, ok, type Result } from 'neverthrow'
+import { fetch } from 'react-native-nitro-fetch'
 
 export interface ReleaseInfo {
 	version: string
