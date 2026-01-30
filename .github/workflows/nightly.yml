@@ -8,12 +8,6 @@ on:
   issue_comment:
     types: [created]
 
-# 并发控制：同一时间只允许一个 nightly 构建
-# 新的构建会取消正在进行的构建
-concurrency:
-  group: nightly-build
-  cancel-in-progress: true
-
 env:
   NODE_VERSION: 22.x
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -99,6 +93,9 @@ jobs:
 
   build:
     needs: check-trigger
+    concurrency:
+      group: nightly-build
+      cancel-in-progress: true
     if: needs.check-trigger.outputs.should_build == 'true'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
