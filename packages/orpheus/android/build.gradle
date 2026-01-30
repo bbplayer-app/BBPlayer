@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-kapt'
 
 import groovy.json.JsonSlurper
 
@@ -55,6 +56,8 @@ dependencies {
     implementation "com.google.code.gson:gson:2.13.2"
     implementation "com.squareup.retrofit2:converter-gson:2.9.0"
     implementation "io.github.zhongwuzw:mmkv:2.2.4"
-    implementation "com.github.bumptech.glide:glide:5.0.5"
+    implementation "com.github.bumptech.glide:glide:4.16.0"
+    implementation "org.chromium.net:cronet-embedded:141.7340.3"
+    implementation "androidx.media3:media3-datasource-cronet:1.9.1"
     compileOnly "com.facebook.react:react-android"
 }

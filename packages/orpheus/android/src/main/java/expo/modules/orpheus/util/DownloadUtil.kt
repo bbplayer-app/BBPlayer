@@ -88,9 +88,15 @@ object DownloadUtil {
     }
 
     private fun getUpstreamFactory(): DataSource.Factory {
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
-            .setAllowCrossProtocolRedirects(true)
+        val engine = expo.modules.orpheus.network.CronetManager.cronetEngine
+        val httpDataSourceFactory = if (engine != null) {
+            androidx.media3.datasource.cronet.CronetDataSource.Factory(engine, Executors.newFixedThreadPool(4))
+                .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+        } else {
+            DefaultHttpDataSource.Factory()
+                .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+                .setAllowCrossProtocolRedirects(true)
+        }
 
         return ResolvingDataSource.Factory(
             httpDataSourceFactory,
