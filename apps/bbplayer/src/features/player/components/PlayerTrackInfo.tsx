@@ -10,6 +10,7 @@ import {
 	useColorScheme,
 	View,
 } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
 
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
@@ -68,7 +69,9 @@ export function TrackInfo({
 	const coverSize = enableSpectrumVisualizer
 		? COVER_SIZE_CIRCLE
 		: COVER_SIZE_RECT
-	const coverBorderRadius = enableSpectrumVisualizer ? coverSize / 2 : 16
+	const coverBorderRadius = enableSpectrumVisualizer
+		? coverSize / 2
+		: COVER_SIZE_RECT * 0.22
 
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
@@ -103,25 +106,50 @@ export function TrackInfo({
 					style={{ width: coverSize, height: coverSize }}
 				>
 					{!coverRef ? (
-						<LinearGradient
-							colors={[color1, color2]}
-							style={[
-								styles.coverGradient,
-								{ borderRadius: coverBorderRadius },
-							]}
-							start={{ x: 0, y: 0 }}
-							end={{ x: 1, y: 1 }}
-						>
-							<Text
+						enableSpectrumVisualizer ? (
+							<LinearGradient
+								colors={[color1, color2]}
 								style={[
-									styles.coverPlaceholderText,
-									{ fontSize: coverSize * 0.45 },
+									styles.coverGradient,
+									{ borderRadius: coverBorderRadius },
 								]}
+								start={{ x: 0, y: 0 }}
+								end={{ x: 1, y: 1 }}
 							>
-								{firstChar}
-							</Text>
-						</LinearGradient>
-					) : (
+								<Text
+									style={[
+										styles.coverPlaceholderText,
+										{ fontSize: coverSize * 0.45 },
+									]}
+								>
+									{firstChar}
+								</Text>
+							</LinearGradient>
+						) : (
+							<SquircleView
+								style={[
+									styles.coverGradient,
+									{ borderRadius: coverBorderRadius, overflow: 'hidden' },
+								]}
+								cornerSmoothing={0.6}
+							>
+								<LinearGradient
+									colors={[color1, color2]}
+									style={StyleSheet.absoluteFill}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 1, y: 1 }}
+								/>
+								<Text
+									style={[
+										styles.coverPlaceholderText,
+										{ fontSize: coverSize * 0.45 },
+									]}
+								>
+									{firstChar}
+								</Text>
+							</SquircleView>
+						)
+					) : enableSpectrumVisualizer ? (
 						<Image
 							source={coverRef}
 							style={{
@@ -133,6 +161,27 @@ export function TrackInfo({
 							cachePolicy={'none'}
 							transition={300}
 						/>
+					) : (
+						<SquircleView
+							style={{
+								width: coverSize,
+								height: coverSize,
+								borderRadius: coverBorderRadius,
+								overflow: 'hidden',
+							}}
+							cornerSmoothing={0.6}
+						>
+							<Image
+								source={coverRef}
+								style={{
+									width: coverSize,
+									height: coverSize,
+								}}
+								recyclingKey={currentTrack.uniqueKey}
+								cachePolicy={'none'}
+								transition={300}
+							/>
+						</SquircleView>
 					)}
 				</TouchableOpacity>
 			</View>

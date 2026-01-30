@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native'
 import type { RenderItemInfo } from 'react-native-awesome-gallery'
 import Gallery from 'react-native-awesome-gallery'
+import SquircleView from 'react-native-fast-squircle'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -118,12 +119,17 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 									key={index}
 									onPress={() => openGallery(index)}
 								>
-									<Image
-										key={index}
-										source={{ uri: pic.img_src }}
+									<SquircleView
 										style={styles.commentImage}
-										contentFit='contain'
-									/>
+										cornerSmoothing={0.6}
+									>
+										<Image
+											key={index}
+											source={{ uri: pic.img_src }}
+											style={styles.commentImageInner}
+											contentFit='contain'
+										/>
+									</SquircleView>
 								</TouchableOpacity>
 							))}
 						</View>
@@ -164,35 +170,40 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 					</View>
 
 					{item.replies && item.replies.length > 0 && (
-						<TouchableOpacity
-							onPress={() => onReplyPress?.(item)}
-							style={[
-								styles.repliesPreview,
-								{ backgroundColor: theme.colors.surfaceVariant },
-							]}
-						>
-							{item.replies.slice(0, 3).map((reply) => (
-								<Text
-									key={reply.rpid}
-									numberOfLines={1}
-									style={[
-										styles.replyPreviewText,
-										{ color: theme.colors.onSurfaceVariant },
-									]}
-								>
-									<Text style={{ fontWeight: 'bold' }}>
-										{reply.member.uname}:{' '}
+						<TouchableOpacity onPress={() => onReplyPress?.(item)}>
+							<SquircleView
+								style={[
+									styles.repliesPreview,
+									{ backgroundColor: theme.colors.surfaceVariant },
+								]}
+								cornerSmoothing={0.6}
+							>
+								{item.replies.slice(0, 3).map((reply) => (
+									<Text
+										key={reply.rpid}
+										numberOfLines={1}
+										style={[
+											styles.replyPreviewText,
+											{ color: theme.colors.onSurfaceVariant },
+										]}
+									>
+										<Text style={{ fontWeight: 'bold' }}>
+											{reply.member.uname}:{' '}
+										</Text>
+										{reply.content.message}
 									</Text>
-									{reply.content.message}
-								</Text>
-							))}
-							{item.rcount > 3 && (
-								<Text
-									style={[styles.viewMoreText, { color: theme.colors.primary }]}
-								>
-									查看全部 {item.rcount} 条回复
-								</Text>
-							)}
+								))}
+								{item.rcount > 3 && (
+									<Text
+										style={[
+											styles.viewMoreText,
+											{ color: theme.colors.primary },
+										]}
+									>
+										查看全部 {item.rcount} 条回复
+									</Text>
+								)}
+							</SquircleView>
 						</TouchableOpacity>
 					)}
 				</View>
@@ -277,8 +288,13 @@ const styles = StyleSheet.create({
 	commentImage: {
 		width: 100,
 		height: 100,
-		borderRadius: 8,
+		borderRadius: 22,
 		backgroundColor: '#f0f0f0',
+		overflow: 'hidden',
+	},
+	commentImageInner: {
+		width: 100,
+		height: 100,
 	},
 	actions: {
 		flexDirection: 'row',
@@ -296,7 +312,8 @@ const styles = StyleSheet.create({
 	repliesPreview: {
 		marginTop: 8,
 		padding: 8,
-		borderRadius: 8,
+		borderRadius: 12,
+		overflow: 'hidden',
 	},
 	replyPreviewText: {
 		fontSize: 13,

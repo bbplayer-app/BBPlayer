@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ViewStyle } from 'react-native'
 import { Pressable, StyleSheet } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
 import { useTheme } from 'react-native-paper'
 import Animated, { useAnimatedStyle } from 'react-native-reanimated'
@@ -42,11 +43,9 @@ export default function AnimatedModalOverlay({
 				style={[
 					styles.content,
 					{
-						backgroundColor: theme.colors.surface,
 						marginHorizontal: Math.max(insets.left, insets.right, 26),
 						opacity: showContent ? 1 : 0,
 					},
-					contentStyle,
 				]}
 				onLayout={(e) => {
 					setShowContent(
@@ -55,7 +54,16 @@ export default function AnimatedModalOverlay({
 				}}
 				onPress={(e) => e.stopPropagation()}
 			>
-				{children}
+				<SquircleView
+					style={[
+						styles.contentInner,
+						{ backgroundColor: theme.colors.surface },
+						contentStyle,
+					]}
+					cornerSmoothing={0.6}
+				>
+					{children}
+				</SquircleView>
 			</Pressable>
 		</AnimatedPressable>
 	)
@@ -63,15 +71,18 @@ export default function AnimatedModalOverlay({
 
 const styles = StyleSheet.create({
 	wrapper: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		justifyContent: 'center',
 		backgroundColor: 'rgba(0,0,0,0.5)',
 		zIndex: 1000,
 	},
 	content: {
+		maxHeight: '85%',
+	},
+	contentInner: {
 		paddingTop: 10,
 		elevation: 24,
-		borderRadius: 24,
-		maxHeight: '85%',
+		borderRadius: 32,
+		overflow: 'hidden',
 	},
 })

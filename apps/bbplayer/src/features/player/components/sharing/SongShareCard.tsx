@@ -1,6 +1,7 @@
 import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
@@ -38,11 +39,16 @@ export const SongShareCard = ({
 
 			<View style={styles.cardContent}>
 				<View style={styles.coverContainer}>
-					<Image
-						source={imageRef}
-						style={styles.cover}
-						contentFit='cover'
-					/>
+					<SquircleView
+						style={styles.coverSquircle}
+						cornerSmoothing={0.6}
+					>
+						<Image
+							source={imageRef}
+							style={styles.cover}
+							contentFit='cover'
+						/>
+					</SquircleView>
 				</View>
 
 				<View style={styles.infoContainer}>
@@ -123,8 +129,13 @@ const styles = StyleSheet.create({
 	cover: {
 		width: '100%',
 		aspectRatio: 1,
-		borderRadius: 16,
 		backgroundColor: 'rgba(255,255,255,0.1)',
+	},
+	coverSquircle: {
+		width: '100%',
+		aspectRatio: 1,
+		borderRadius: 68,
+		overflow: 'hidden',
 	},
 	infoContainer: {
 		gap: 8,

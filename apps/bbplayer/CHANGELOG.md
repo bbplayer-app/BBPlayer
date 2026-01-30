@@ -14,6 +14,7 @@
 ### Changed
 
 - 改为 monorepo
+- 使用 `react-native-fast-squircle` 替换主要 UI 元素的圆角矩形为 squircle
 
 ### Fixed
 

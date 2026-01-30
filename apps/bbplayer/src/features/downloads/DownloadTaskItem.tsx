@@ -6,7 +6,8 @@ import {
 import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Icon, IconButton, Surface, Text, useTheme } from 'react-native-paper'
+import SquircleView from 'react-native-fast-squircle'
+import { Icon, IconButton, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -170,33 +171,31 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	}, [colors.error, task.id, task.state, task.track])
 
 	return (
-		<>
-			<Surface
-				ref={containerRef}
-				style={styles.surface}
-				elevation={0}
-			>
-				<View style={styles.itemContainer}>
-					<View style={styles.textContainer}>
+		<SquircleView
+			ref={containerRef}
+			style={styles.container}
+			cornerSmoothing={0.6}
+		>
+			<View style={styles.itemContainer}>
+				<View style={styles.textContainer}>
+					<Text
+						variant='bodyMedium'
+						numberOfLines={1}
+					>
+						{task.track?.title ?? '未知任务'}
+					</Text>
+					<View style={styles.statusContainer}>
 						<Text
-							variant='bodyMedium'
-							numberOfLines={1}
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
 						>
-							{task.track?.title ?? '未知任务'}
+							{getStatusText()}
 						</Text>
-						<View style={styles.statusContainer}>
-							<Text
-								variant='bodySmall'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								{getStatusText()}
-							</Text>
-						</View>
 					</View>
-
-					<View style={styles.iconsOuterContainer}>{icons}</View>
 				</View>
-			</Surface>
+
+				<View style={styles.iconsOuterContainer}>{icons}</View>
+			</View>
 			<Animated.View
 				style={[
 					progressBackgroundAnimatedStyle,
@@ -204,18 +203,18 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					{ backgroundColor: colors.surfaceVariant },
 				]}
 			></Animated.View>
-		</>
+		</SquircleView>
 	)
 })
 
 const styles = StyleSheet.create({
-	surface: {
-		borderRadius: 8,
+	container: {
+		borderRadius: 12,
 		backgroundColor: 'transparent',
 		marginVertical: 4,
 		marginHorizontal: 8,
 		position: 'relative',
-		width: '100%',
+		overflow: 'hidden',
 	},
 	itemContainer: {
 		flexDirection: 'row',

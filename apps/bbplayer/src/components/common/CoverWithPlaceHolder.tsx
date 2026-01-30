@@ -2,7 +2,8 @@ import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { memo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
-import { StyleSheet, Text, useColorScheme, View } from 'react-native'
+import { StyleSheet, Text, useColorScheme } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 
 import { getGradientColors } from '@/utils/color'
 
@@ -50,12 +51,14 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	title,
 	coverUrl,
 	size,
-	borderRadius = 4,
+	borderRadius,
 	cachePolicy = 'none',
 	style,
 }: CoverWithPlaceHolderProps) {
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
+
+	const computedBorderRadius = borderRadius ?? size * 0.22
 
 	const validTitle = title.trim()
 	const { color1, color2 } = getGradientColors(
@@ -67,12 +70,13 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
 
 	return (
-		<View
+		<SquircleView
 			style={[
 				styles.container,
-				{ width: size, height: size, borderRadius },
+				{ width: size, height: size, borderRadius: computedBorderRadius },
 				style,
 			]}
+			cornerSmoothing={0.6}
 		>
 			<LinearGradient
 				colors={[color1, color2]}
@@ -88,11 +92,11 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 			<Image
 				source={{ uri: coverUrl ?? undefined }}
 				recyclingKey={String(id)}
-				style={[styles.image, { width: size, height: size, borderRadius }]}
+				style={[styles.image, { width: size, height: size }]}
 				transition={300}
 				cachePolicy={cachePolicy}
 			/>
-		</View>
+		</SquircleView>
 	)
 })
 

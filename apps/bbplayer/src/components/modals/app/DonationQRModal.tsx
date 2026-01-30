@@ -1,7 +1,8 @@
 import { Asset } from 'expo-asset'
 import { Image } from 'expo-image'
-import * as MediaLibrary from 'expo-media-library'
+import MediaLibrary from 'expo-media-library'
 import { Pressable, StyleSheet, View } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { Button, Dialog, Text } from 'react-native-paper'
 
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
@@ -57,12 +58,17 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 						onLongPress={handleLongPress}
 						delayLongPress={500}
 					>
-						<Image
-							// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-							source={WECHAT_QR}
+						<SquircleView
 							style={styles.image}
-							contentFit='contain'
-						/>
+							cornerSmoothing={0.6}
+						>
+							<Image
+								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+								source={WECHAT_QR}
+								style={styles.imageInner}
+								contentFit='contain'
+							/>
+						</SquircleView>
 					</Pressable>
 					<Text
 						variant='bodySmall'
@@ -89,7 +95,12 @@ const styles = StyleSheet.create({
 		height: 200,
 		backgroundColor: '#f0f0f0',
 		marginBottom: 10,
-		borderRadius: 8,
+		borderRadius: 44,
+		overflow: 'hidden',
+	},
+	imageInner: {
+		width: 200,
+		height: 200,
 	},
 	hint: {
 		textAlign: 'center',

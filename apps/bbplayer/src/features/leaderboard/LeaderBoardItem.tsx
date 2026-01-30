@@ -1,6 +1,7 @@
 import { Image } from 'expo-image'
 import { memo } from 'react'
 import { View } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { RectButton } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
@@ -68,14 +69,24 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 					</Text>
 				</View>
 
-				<Image
-					source={{
-						uri: item.track.coverUrl ?? undefined,
+				<SquircleView
+					style={{
+						width: 45,
+						height: 45,
+						borderRadius: 10,
+						overflow: 'hidden',
 					}}
-					style={{ width: 45, height: 45, borderRadius: 4 }}
-					cachePolicy={'none'}
-					recyclingKey={item.track.uniqueKey}
-				/>
+					cornerSmoothing={0.6}
+				>
+					<Image
+						source={{
+							uri: item.track.coverUrl ?? undefined,
+						}}
+						style={{ width: 45, height: 45 }}
+						cachePolicy={'none'}
+						recyclingKey={item.track.uniqueKey}
+					/>
+				</SquircleView>
 
 				<View style={{ marginLeft: 12, flex: 1, marginRight: 4 }}>
 					<Text variant='bodySmall'>{item.track.title}</Text>

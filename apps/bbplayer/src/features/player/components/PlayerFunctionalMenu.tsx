@@ -3,11 +3,11 @@ import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
 import { ScrollView, View } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import {
 	Divider,
 	Icon,
 	List,
-	Surface,
 	Text,
 	TouchableRipple,
 	useTheme,
@@ -87,15 +87,15 @@ export function PlayerFunctionalMenu({
 		label: string
 		onPress: () => void
 	}) => (
-		<Surface
+		<SquircleView
 			style={{
-				borderRadius: 16,
+				borderRadius: 20,
 				overflow: 'hidden',
 				backgroundColor: colors.elevation.level2,
 				flex: 1,
 				marginHorizontal: 4,
 			}}
-			elevation={0}
+			cornerSmoothing={0.6}
 		>
 			<TouchableRipple
 				onPress={() => handleAction(onPress)}
@@ -121,7 +121,7 @@ export function PlayerFunctionalMenu({
 					</Text>
 				</View>
 			</TouchableRipple>
-		</Surface>
+		</SquircleView>
 	)
 
 	const downloadHandler = async () => {

@@ -133,7 +133,6 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					coverUrl={playlist.coverUrl}
 					title={playlist.title}
 					size={120}
-					borderRadius={8}
 				/>
 
 				<View style={styles.headerTextContainer}>
