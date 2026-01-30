@@ -1,3 +1,5 @@
+import { execSync } from 'child_process'
+
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 
 import { version } from './package.json'
@@ -8,14 +10,25 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
 	const versionCodeEnv = process.env.VERSION_CODE ?? undefined
+	const pwd = process.cwd()
+	// EAS 环境的行为很奇怪，似乎不会复制 .git 目录，所以需要特殊强制外部提供 versionCode
+	const isInEAS = pwd.includes('eas-build-local-nodejs')
 	if (versionCodeEnv !== undefined) {
 		const versionCode = parseInt(versionCodeEnv, 10)
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
 		}
+	} else if (!isInEAS) {
+		const versionCodeString = execSync('git rev-list --count HEAD')
+			.toString()
+			.trim()
+		const versionCode = parseInt(versionCodeString, 10)
+		if (!isNaN(versionCode) && versionCode > 0) {
+			return versionCode
+		}
 	}
 
-	throw new Error('VERSION_CODE environment variable is required. ')
+	throw new Error('VERSION_CODE environment variable is required or not in EAS')
 }
 
 const versionCode = getVersionCode()
