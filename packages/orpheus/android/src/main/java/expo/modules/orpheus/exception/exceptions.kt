@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.exception
 
 import expo.modules.kotlin.exception.CodedException
 

@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.service
 
 import android.Manifest
 import android.app.Notification
@@ -12,7 +12,8 @@ import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
-import expo.modules.orpheus.utils.DownloadUtil
+import expo.modules.orpheus.R
+import expo.modules.orpheus.util.DownloadUtil
 
 @UnstableApi
 class OrpheusDownloadService : DownloadService(

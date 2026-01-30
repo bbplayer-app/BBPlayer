@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.graphics.Color
@@ -22,8 +22,9 @@ import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import expo.modules.orpheus.models.LyricsLine
-import expo.modules.orpheus.utils.GeneralStorage
+import expo.modules.orpheus.R
+import expo.modules.orpheus.model.LyricsLine
+import expo.modules.orpheus.util.GeneralStorage
 import kotlin.math.abs
 
 class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {

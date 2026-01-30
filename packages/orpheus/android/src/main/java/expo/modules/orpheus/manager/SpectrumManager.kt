@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.manager
 
 import android.media.audiofx.Visualizer
 import android.util.Log

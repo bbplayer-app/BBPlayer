@@ -1,4 +1,4 @@
-package expo.modules.orpheus.utils
+package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log

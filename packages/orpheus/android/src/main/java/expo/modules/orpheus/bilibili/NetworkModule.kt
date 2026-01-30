@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.bilibili
 
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient

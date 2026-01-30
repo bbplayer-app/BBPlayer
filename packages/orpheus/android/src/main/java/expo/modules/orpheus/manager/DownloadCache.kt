@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.manager
 
 import android.content.Context
 import androidx.media3.common.util.UnstableApi

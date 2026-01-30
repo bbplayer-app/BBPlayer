@@ -1,4 +1,4 @@
-package expo.modules.orpheus.utils
+package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log
@@ -13,9 +13,9 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
-import expo.modules.orpheus.DownloadCache
+import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.OrpheusConfig
-import expo.modules.orpheus.OrpheusDownloadService
+import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.bilibili.BilibiliRepository
 import expo.modules.orpheus.bilibili.VolumeData
 import kotlinx.coroutines.CoroutineScope

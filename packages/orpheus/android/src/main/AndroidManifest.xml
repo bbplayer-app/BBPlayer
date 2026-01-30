@@ -13,7 +13,7 @@
 
     <application>
         <service
-            android:name=".OrpheusMusicService"
+            android:name=".service.OrpheusMusicService"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
@@ -24,7 +24,7 @@
             </intent-filter>
         </service>
         <service
-            android:name=".OrpheusDownloadService"
+            android:name=".service.OrpheusDownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync">
             <intent-filter>
@@ -32,6 +32,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
-        <service android:name=".OrpheusHeadlessTaskService" />
+        <service android:name=".service.OrpheusHeadlessTaskService" />
     </application>
 </manifest>

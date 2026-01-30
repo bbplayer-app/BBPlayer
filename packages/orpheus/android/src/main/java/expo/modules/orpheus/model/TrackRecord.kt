@@ -1,4 +1,4 @@
-package expo.modules.orpheus.models
+package expo.modules.orpheus.model
 
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record

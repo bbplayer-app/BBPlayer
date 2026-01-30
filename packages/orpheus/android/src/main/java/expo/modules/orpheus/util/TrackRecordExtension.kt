@@ -1,11 +1,11 @@
-package expo.modules.orpheus.utils
+package expo.modules.orpheus.util
 
 import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.google.gson.Gson
-import expo.modules.orpheus.models.TrackRecord
+import expo.modules.orpheus.model.TrackRecord
 
 fun TrackRecord.toMediaItem(gson: Gson): MediaItem {
     val trackJson = gson.toJson(this)

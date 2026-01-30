@@ -1,4 +1,4 @@
-package expo.modules.orpheus.utils
+package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log
@@ -7,7 +7,7 @@ import androidx.media3.common.MediaItem
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.tencent.mmkv.MMKV
-import expo.modules.orpheus.models.TrackRecord
+import expo.modules.orpheus.model.TrackRecord
 
 object GeneralStorage {
     private var kv: MMKV? = null

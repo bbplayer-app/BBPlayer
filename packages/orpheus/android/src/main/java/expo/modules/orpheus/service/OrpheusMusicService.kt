@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.service
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -25,13 +25,15 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import expo.modules.orpheus.R
-import expo.modules.orpheus.utils.DownloadUtil
-import expo.modules.orpheus.utils.SleepTimeController
-import expo.modules.orpheus.utils.GeneralStorage
-import expo.modules.orpheus.utils.GlideBitmapLoader
-import expo.modules.orpheus.utils.LoudnessStorage
-import expo.modules.orpheus.utils.calculateLoudnessGain
-import expo.modules.orpheus.utils.fadeInTo
+import expo.modules.orpheus.util.DownloadUtil
+import expo.modules.orpheus.util.SleepTimeController
+import expo.modules.orpheus.util.GeneralStorage
+import expo.modules.orpheus.util.GlideBitmapLoader
+import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.calculateLoudnessGain
+import expo.modules.orpheus.util.fadeInTo
+import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.util.CustomCommands
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel

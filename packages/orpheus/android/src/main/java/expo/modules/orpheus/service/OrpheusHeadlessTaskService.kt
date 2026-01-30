@@ -1,4 +1,4 @@
-package expo.modules.orpheus
+package expo.modules.orpheus.service
 
 import android.content.Intent
 import com.facebook.react.HeadlessJsTaskService

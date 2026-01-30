@@ -1,4 +1,4 @@
-package expo.modules.orpheus.models
+package expo.modules.orpheus.model
 
 data class LyricsLine(
     val timestamp: Double,

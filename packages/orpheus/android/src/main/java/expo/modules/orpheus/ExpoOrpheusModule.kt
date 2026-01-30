@@ -23,13 +23,17 @@ import com.google.gson.Gson
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import expo.modules.orpheus.models.TrackRecord
-import expo.modules.orpheus.utils.DownloadUtil
-import expo.modules.orpheus.utils.GeneralStorage
-import expo.modules.orpheus.utils.LoudnessStorage
-import expo.modules.orpheus.utils.toJsMap
-import expo.modules.orpheus.utils.toMediaItem
+import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.util.DownloadUtil
+import expo.modules.orpheus.util.GeneralStorage
+import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.toJsMap
+import expo.modules.orpheus.util.toMediaItem
 import expo.modules.kotlin.typedarray.Float32Array
+import expo.modules.orpheus.service.OrpheusMusicService
+import expo.modules.orpheus.service.OrpheusDownloadService
+import expo.modules.orpheus.manager.SpectrumManager
+import expo.modules.orpheus.exception.ControllerNotInitializedException
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -614,7 +618,7 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
             try {
-                val data = gson.fromJson(lyricsJson, expo.modules.orpheus.models.LyricsData::class.java)
+                val data = gson.fromJson(lyricsJson, expo.modules.orpheus.model.LyricsData::class.java)
                 OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(data.lyrics, data.offset)
             } catch (e: Exception) {
                 e.printStackTrace()
