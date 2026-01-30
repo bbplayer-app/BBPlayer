@@ -12,8 +12,8 @@ const getVersionCode = (): number => {
 	const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
 	// 优先使用环境变量（CI 环境）
-	const versionCodeEnv: string | undefined = process.env.VERSION_CODE
-	if (versionCodeEnv) {
+	const versionCodeEnv = process.env.VERSION_CODE ?? undefined
+	if (versionCodeEnv !== undefined) {
 		const versionCode = parseInt(versionCodeEnv, 10)
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
