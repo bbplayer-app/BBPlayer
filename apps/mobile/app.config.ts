@@ -145,15 +145,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: true,
-					enableShrinkResourcesInReleaseBuilds: true,
+					enableMinifyInReleaseBuilds: false,
+					enableShrinkResourcesInReleaseBuilds: false,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
 					},
-					extraProguardRules: `
--dontwarn expo.modules.kotlin.**
--dontwarn expo.modules.webview.**
-					`,
 				},
 			},
 		],
