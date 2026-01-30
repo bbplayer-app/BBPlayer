@@ -14,6 +14,7 @@
 ### Changed
 
 - 改为 monorepo
+- 将 TypeScript 及相关依赖统一管理到 root package.json
 - 使用 `@nandorojo/galeria` 替代 `react-native-awesome-gallery`
 - 使用 `react-native-fast-squircle` 替换主要 UI 元素的圆角矩形为 squircle
 - 统一列表项的设计风格（尺寸、圆角）

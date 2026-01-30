@@ -38,14 +38,13 @@
 		"test": "expo-module test"
 	},
 	"devDependencies": {
-		"@types/react": "~19.2.9",
 		"expo": "55.0.0-preview.7",
 		"expo-module-scripts": "^5.0.7",
-		"react-native": "*"
+		"react-native": "0.83.1"
 	},
 	"peerDependencies": {
 		"expo": "55.0.0-preview.7",
-		"react": "*",
-		"react-native": "*"
+		"react": "19.2.0",
+		"react-native": "0.83.1"
 	}
 }
