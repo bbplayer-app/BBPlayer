@@ -1,0 +1,15 @@
+{
+	"dependencyTypes": ["dev", "prod", "peer", "overrides"],
+	"filter": ".",
+	"indent": "\t",
+	"semverRange": "",
+	"source": ["package.json", "apps/*/package.json", "packages/*/package.json"],
+	"versionGroups": [
+		{
+			"label": "Use apps/bbplayer versions for core dependencies",
+			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router"],
+			"packages": ["**"],
+			"snapTo": ["@bbplayer/app"]
+		}
+	]
+}

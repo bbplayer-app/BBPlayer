@@ -8,15 +8,8 @@ on:
   issue_comment:
     types: [created]
 
-# 并发控制：同一时间只允许一个 nightly 构建
-# 新的构建会取消正在进行的构建
-concurrency:
-  group: nightly-build
-  cancel-in-progress: true
-
 env:
   NODE_VERSION: 22.x
-  PNPM_VERSION: 10
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -100,6 +93,9 @@ jobs:
 
   build:
     needs: check-trigger
+    concurrency:
+      group: nightly-build
+      cancel-in-progress: true
     if: needs.check-trigger.outputs.should_build == 'true'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
@@ -118,8 +114,6 @@ jobs:
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: 🏗 Setup Node
         uses: actions/setup-node@v6
@@ -139,7 +133,7 @@ jobs:
 
       - name: ⚙️ Prepare Variables
         run: |
-          APP_VERSION=$(node -p "require('./package.json').version")
+          APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
           COMMIT_SHA="${{ needs.check-trigger.outputs.head_sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
@@ -158,7 +152,7 @@ jobs:
           echo "📊 Calculated VERSION_CODE: ${VERSION_CODE}"
 
       - name: 🚀 Build APK
-        run: eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
+        run: cd apps/mobile && eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
         env:
           VERSION_CODE: ${{ env.VERSION_CODE }}
 

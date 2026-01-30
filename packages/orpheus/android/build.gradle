@@ -1,0 +1,60 @@
+apply plugin: 'com.android.library'
+
+import groovy.json.JsonSlurper
+
+def packageJsonFile = new File(projectDir, '../package.json')
+def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
+
+group = 'expo.modules.orpheus'
+version = packageJson.version
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+// If you want to use the managed Android SDK versions from expo-modules-core, set this to true.
+// The Android SDK versions will be bumped from time to time in SDK releases and may introduce breaking changes in your module code.
+// Most of the time, you may like to manage the Android SDK versions yourself.
+def useManagedAndroidSdkVersions = false
+if (useManagedAndroidSdkVersions) {
+    useDefaultAndroidSdkVersions()
+} else {
+    buildscript {
+        // Simple helper that allows the root project to override versions declared by this library.
+        ext.safeExtGet = { prop, fallback ->
+            rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+        }
+    }
+    project.android {
+        compileSdkVersion safeExtGet("compileSdkVersion", 36)
+        defaultConfig {
+            minSdkVersion safeExtGet("minSdkVersion", 24)
+            targetSdkVersion safeExtGet("targetSdkVersion", 36)
+        }
+    }
+}
+
+android {
+    namespace "expo.modules.orpheus"
+    defaultConfig {
+        versionCode 1
+        versionName packageJson.version
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation "androidx.media3:media3-exoplayer:1.9.0"
+    implementation "androidx.media3:media3-session:1.9.0"
+    implementation("androidx.media3:media3-exoplayer-dash:1.9.0")
+    implementation "com.squareup.retrofit2:retrofit:2.9.0"
+    implementation "com.google.code.gson:gson:2.13.2"
+    implementation "com.squareup.retrofit2:converter-gson:2.9.0"
+    implementation "io.github.zhongwuzw:mmkv:2.2.4"
+    implementation "com.github.bumptech.glide:glide:5.0.5"
+    compileOnly "com.facebook.react:react-android"
+}

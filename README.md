@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./assets/images/icon_large.png" alt="logo" width="50" />
+<img src="./apps/mobile/assets/images/icon_large.png" alt="logo" width="50" />
 <h1>BBPlayer</h1>
 
 ![GitHub Release](https://img.shields.io/github/v/release/yanyao2333/bbplayer)
@@ -23,9 +23,11 @@
 - **播放源**: 自由添加本地播放列表，登录账号后也可直接访问账号内收藏夹、订阅合集等，兼顾快速与方便。
 - **全功能播放器**: 提供播放/暂停、循环、随机、播放队列等功能。
 - **搜索**: 智能搜索，随意一条链接或 b23.tv 短链，即可解析实际内容并展示。同时也有收藏夹和本地播放列表内搜索。
-- **歌词**：支持自动匹配歌词（目前支持「网易云音乐」、「QQ 音乐」来源）和手动搜索，以及手动编辑功能，并提供歌词偏移量调整。
+- **歌词**：支持自动匹配歌词（网易云/QQ 音乐）、双语歌词、桌面歌词（悬浮窗）、歌词分享卡片。
 - **下载**：支持缓存歌曲并离线播放。
-- **桌面歌词**：支持启用桌面歌词功能。
+- **个性化**：支持浅色/深色模式。
+- **实用工具**：定时关闭、播放队列管理、播放历史统计（排行榜）。
+- **完善的播放体验**：响度均衡、断点续播、启动自动播放等。
 
 ## 技术栈
 
@@ -35,6 +37,14 @@
 - **UI**: Material Design 3 (React Native Paper)
 - **播放库**: [Orpheus](https://github.com/bbplayer-app/orpheus)
 - **ORM**: Drizzle ORM
+
+## 项目结构
+
+这是一个 Monorepo 仓库，包含 BBPlayer 及其相关工具和文档。
+
+- **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
+- **[apps/docs](./apps/docs)**: 项目文档站点。
+- **[packages/](./packages)**: 共享库与工具包。
 
 ## 开源许可
 
@@ -63,7 +73,7 @@
 <details>
 <summary>点击展开查看微信收款码</summary>
 <br />
-<img src="./assets/images/wechat.png" alt="WeChat Donation" width="200" />
+<img src="./apps/mobile/assets/images/wechat.png" alt="WeChat Donation" width="200" />
 </details>
 
 ## 感谢

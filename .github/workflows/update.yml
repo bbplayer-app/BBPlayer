@@ -11,8 +11,6 @@ jobs:
 
       - name: 🤖 Setup PNPM
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: 🏗 Setup Node
         uses: actions/setup-node@v6
@@ -31,7 +29,7 @@ jobs:
         run: pnpm install
 
       - name: 🚀 Create update
-        run: eas update --auto --platform=android
+        run: cd apps/mobile && eas update --auto --platform=android
 
       - name: 🚀 Submit source map
-        run: SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} npx sentry-expo-upload-sourcemaps dist
+        run: cd apps/mobile && SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} npx sentry-expo-upload-sourcemaps dist

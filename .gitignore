@@ -45,10 +45,17 @@ app-example
 app-example
 temp-builds
 .yarn/install-state.gz
-.vscode
+**/.vscode/
+!/.vscode/
+!/.vscode/settings.json
+!/.vscode/extensions.json
+!/.vscode/tasks.json
+!/.vscode/launch.json
+
 .zed
 .idea
 
-.gemini/
 gha-creds-*.json
 .env
+apps/**/android
+apps/**/ios
