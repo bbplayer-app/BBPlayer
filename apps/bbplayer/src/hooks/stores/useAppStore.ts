@@ -66,6 +66,7 @@ export const useAppStore = create<AppState>()(
 					enableSentryReport: true,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
+					enableSpectrumVisualizer: false,
 					playerBackgroundStyle: 'gradient',
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',

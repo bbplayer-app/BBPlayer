@@ -1,3 +1,4 @@
+import { useIsPlaying } from '@roitium/expo-orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -14,10 +15,15 @@ import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { getGradientColors } from '@/utils/color'
 
+import { SpectrumVisualizer } from './SpectrumVisualizer'
+
 const { width: screenWidth } = Dimensions.get('window')
-const coverSize = screenWidth - 80
+
+const COVER_SIZE_RECT = screenWidth - 80
+const COVER_SIZE_CIRCLE = screenWidth - 120
 
 export function TrackInfo({
 	onArtistPress,
@@ -29,10 +35,24 @@ export function TrackInfo({
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
-	const currentTrack = useCurrentTrack()
-	const isBilibiliVideo = currentTrack?.source === 'bilibili'
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
+
+	const currentTrack = useCurrentTrack()
+	const isPlaying = useIsPlaying()
+
+	const enableSpectrumVisualizer = useAppStore(
+		(state) => state.settings.enableSpectrumVisualizer,
+	)
+
+	const { data: isThumbUp, isPending: isThumbUpPending } = useGetVideoIsThumbUp(
+		currentTrack?.source === 'bilibili'
+			? currentTrack?.bilibiliMetadata.bvid
+			: undefined,
+	)
+	const { mutate: doThumbUpAction } = useThumbUpVideo()
+
+	const isBilibiliVideo = currentTrack?.source === 'bilibili'
 
 	const { color1, color2 } = getGradientColors(
 		currentTrack?.title ?? '',
@@ -45,13 +65,13 @@ export function TrackInfo({
 			? currentTrack?.title.charAt(0).toUpperCase()
 			: undefined)
 
-	const { data: isThumbUp, isPending: isThumbUpPending } = useGetVideoIsThumbUp(
-		isBilibiliVideo ? currentTrack?.bilibiliMetadata.bvid : undefined,
-	)
-	const { mutate: doThumbUpAction } = useThumbUpVideo()
+	const coverSize = enableSpectrumVisualizer
+		? COVER_SIZE_CIRCLE
+		: COVER_SIZE_RECT
+	const coverBorderRadius = enableSpectrumVisualizer ? coverSize / 2 : 16
 
 	const onThumbUpPress = () => {
-		if (isThumbUpPending || !isBilibiliVideo) return
+		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
 		doThumbUpAction({
 			bvid: currentTrack.bilibiliMetadata.bvid,
 			like: !isThumbUp,
@@ -63,24 +83,52 @@ export function TrackInfo({
 	return (
 		<View>
 			<View style={styles.coverContainer}>
+				{enableSpectrumVisualizer && (
+					<View
+						style={[
+							StyleSheet.absoluteFill,
+							{ alignItems: 'center', justifyContent: 'center' },
+						]}
+					>
+						<SpectrumVisualizer
+							isPlaying={isPlaying}
+							size={coverSize}
+							color={colors.primary}
+						/>
+					</View>
+				)}
 				<TouchableOpacity
 					activeOpacity={0.8}
 					onPress={onPressCover}
-					style={styles.coverTouchable}
+					style={{ width: coverSize, height: coverSize }}
 				>
 					{!coverRef ? (
 						<LinearGradient
 							colors={[color1, color2]}
-							style={styles.coverGradient}
+							style={[
+								styles.coverGradient,
+								{ borderRadius: coverBorderRadius },
+							]}
 							start={{ x: 0, y: 0 }}
 							end={{ x: 1, y: 1 }}
 						>
-							<Text style={styles.coverPlaceholderText}>{firstChar}</Text>
+							<Text
+								style={[
+									styles.coverPlaceholderText,
+									{ fontSize: coverSize * 0.45 },
+								]}
+							>
+								{firstChar}
+							</Text>
 						</LinearGradient>
 					) : (
 						<Image
 							source={coverRef}
-							style={styles.coverImage}
+							style={{
+								width: coverSize,
+								height: coverSize,
+								borderRadius: coverBorderRadius,
+							}}
 							recyclingKey={currentTrack.uniqueKey}
 							cachePolicy={'none'}
 							transition={300}
@@ -128,28 +176,18 @@ export function TrackInfo({
 const styles = StyleSheet.create({
 	coverContainer: {
 		alignItems: 'center',
+		justifyContent: 'center',
+		height: COVER_SIZE_RECT + 48,
 		paddingHorizontal: 32,
-		paddingVertical: 24,
-	},
-	coverTouchable: {
-		width: coverSize,
-		height: coverSize,
 	},
 	coverGradient: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
-		borderRadius: 16,
 	},
 	coverPlaceholderText: {
-		fontSize: coverSize * 0.45,
 		fontWeight: 'bold',
 		color: 'rgba(255, 255, 255, 0.7)',
-	},
-	coverImage: {
-		width: coverSize,
-		height: coverSize,
-		borderRadius: 16,
 	},
 	trackInfoContainer: {
 		paddingHorizontal: 24,

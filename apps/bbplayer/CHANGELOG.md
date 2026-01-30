@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Added
+
+- 显示频谱功能
+
 ### Changed
 
 - 改为 monorepo
@@ -62,9 +66,7 @@
 - 创建/修改歌曲或播放列表时，禁止使用重复的名称
 - 将 `app.bbplayer.roitium.com` 作为 Deep Link 的 host
 - 关闭 dolby / hires 音源
-  <<<<<<< HEAD
-- # 启用 reanimated 的 Static Flags：`ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`IOS_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
-  > > > > > > > master
+- 启用 reanimated 的 Static Flags：`ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`IOS_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
 
 ## [2.2.2] - 2026-01-25
 

@@ -246,7 +246,23 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
 	debugTriggerError(): Promise<void>
+
+	/**
+	 * 同步更新提供的 Float32Array 为最新的频谱频率数据。
+	 * 该数组应该在 JS 端创建一次并在动画循环中重复使用，以避免内存分配开销。
+	 *
+	 * 初始化长度建议为 SPECTRUM_SIZE
+	 *
+	 * @param destination 用于接收数据的 Float32Array
+	 */
+	updateSpectrumData(destination: Float32Array): void
 }
+
+/**
+ * 频谱数据的有效长度。
+ * 建议使用此常量来初始化 Float32Array。
+ */
+export const SPECTRUM_SIZE = 512
 
 export enum DownloadState {
 	QUEUED = 0,

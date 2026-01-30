@@ -5,6 +5,7 @@ interface Settings {
 	enableSentryReport: boolean
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
+	enableSpectrumVisualizer: boolean
 	playerBackgroundStyle: 'gradient' | 'md3'
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic'
