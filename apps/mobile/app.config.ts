@@ -12,8 +12,9 @@ const getVersionCode = (): number => {
 	const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
 	// 优先使用环境变量（CI 环境）
-	if (process.env.VERSION_CODE) {
-		const versionCode = parseInt(process.env.VERSION_CODE, 10)
+	const versionCodeEnv = process.env.VERSION_CODE
+	if (versionCodeEnv) {
+		const versionCode = parseInt(versionCodeEnv, 10)
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
 		}
@@ -111,9 +112,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		[
 			'./expo-plugins/withAbiFilters',
 			{
-				abiFilters: process.env.ABI_FILTERS
-					? process.env.ABI_FILTERS.split(',')
-					: ['arm64-v8a'],
+				abiFilters:
+					typeof process.env.ABI_FILTERS === 'string'
+						? process.env.ABI_FILTERS.split(',')
+						: ['arm64-v8a'],
 			},
 		],
 		[
