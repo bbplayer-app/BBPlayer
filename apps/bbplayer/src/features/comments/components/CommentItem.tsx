@@ -1,13 +1,10 @@
-import { useRecyclingState } from '@shopify/flash-list'
+import { Galeria } from '@nandorojo/galeria'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
-import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native'
-import type { RenderItemInfo } from 'react-native-awesome-gallery'
-import Gallery from 'react-native-awesome-gallery'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { IconButton, Text, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useLikeComment } from '@/hooks/mutations/bilibili/comments'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'
@@ -20,42 +17,11 @@ interface CommentItemProps {
 	bvid: string
 }
 
-const renderImageItem = ({
-	item,
-	setImageDimensions,
-}: RenderItemInfo<{ uri: string }>) => {
-	return (
-		<Image
-			source={item.uri}
-			style={StyleSheet.absoluteFillObject}
-			contentFit='contain'
-			onLoad={(e) => {
-				const { width, height } = e.source
-				setImageDimensions({ width, height })
-			}}
-		/>
-	)
-}
-
 export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	const theme = useTheme()
 	const [liked, setLiked] = useState(item.action === 1)
 	const [likeCount, setLikeCount] = useState(item.like || 0)
 	const router = useRouter()
-	const [galleryVisible, setGalleryVisible] = useRecyclingState(false, [
-		item.rpid,
-	])
-	const [selectedIndex, setSelectedIndex] = useRecyclingState(0, [item.rpid])
-	const insets = useSafeAreaInsets()
-
-	const openGallery = (index: number) => {
-		setSelectedIndex(index)
-		setGalleryVisible(true)
-	}
-
-	const closeGallery = () => {
-		setGalleryVisible(false)
-	}
 
 	const { mutateAsync: likeComment } = useLikeComment()
 
@@ -114,24 +80,24 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 
 					{item.content.pictures && item.content.pictures.length > 0 && (
 						<View style={styles.imagesContainer}>
-							{item.content.pictures.map((pic, index) => (
-								<TouchableOpacity
-									key={index}
-									onPress={() => openGallery(index)}
-								>
-									<SquircleView
-										style={styles.commentImage}
-										cornerSmoothing={0.6}
+							<Galeria
+								urls={item.content.pictures.map((pic) => pic.img_src ?? '')}
+							>
+								{item.content.pictures.map((pic, index) => (
+									<Galeria.Image
+										index={index}
+										key={index}
 									>
-										<Image
-											key={index}
-											source={{ uri: pic.img_src }}
-											style={styles.commentImageInner}
-											contentFit='contain'
-										/>
-									</SquircleView>
-								</TouchableOpacity>
-							))}
+										<View style={styles.commentImage}>
+											<Image
+												source={{ uri: pic.img_src }}
+												style={styles.commentImageInner}
+												contentFit='contain'
+											/>
+										</View>
+									</Galeria.Image>
+								))}
+							</Galeria>
 						</View>
 					)}
 
@@ -208,38 +174,6 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 					)}
 				</View>
 			</View>
-			<Modal
-				visible={galleryVisible}
-				transparent={true}
-				animationType='none'
-				onRequestClose={closeGallery}
-				statusBarTranslucent
-				navigationBarTranslucent
-			>
-				<View
-					style={[
-						styles.galleryContainer,
-						{
-							paddingTop: insets.top,
-							paddingBottom: insets.bottom,
-							paddingLeft: insets.left,
-							paddingRight: insets.right,
-						},
-					]}
-				>
-					<Gallery
-						data={
-							item.content.pictures?.map((pic) => ({ uri: pic.img_src })) ?? []
-						}
-						keyExtractor={(item) => item.uri}
-						renderItem={renderImageItem}
-						initialIndex={selectedIndex}
-						numToRender={5}
-						doubleTapInterval={150}
-						onSwipeToClose={closeGallery}
-					/>
-				</View>
-			</Modal>
 		</>
 	)
 }
@@ -288,7 +222,7 @@ const styles = StyleSheet.create({
 	commentImage: {
 		width: 100,
 		height: 100,
-		borderRadius: 22,
+		borderRadius: 0,
 		backgroundColor: '#f0f0f0',
 		overflow: 'hidden',
 	},
@@ -323,9 +257,5 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		marginTop: 4,
 		fontWeight: 'bold',
-	},
-	galleryContainer: {
-		flex: 1,
-		backgroundColor: 'black',
 	},
 })
