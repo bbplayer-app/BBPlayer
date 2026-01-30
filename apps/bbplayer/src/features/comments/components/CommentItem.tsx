@@ -1,8 +1,8 @@
 import { Galeria } from '@nandorojo/galeria'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
-import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Appearance, StyleSheet, TouchableOpacity, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { IconButton, Text, useTheme } from 'react-native-paper'
 
@@ -22,6 +22,16 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	const [liked, setLiked] = useState(item.action === 1)
 	const [likeCount, setLikeCount] = useState(item.like || 0)
 	const router = useRouter()
+	const [darkMode, setDarkMode] = useState(
+		Appearance.getColorScheme() === 'dark',
+	)
+
+	useEffect(() => {
+		const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+			setDarkMode(colorScheme === 'dark')
+		})
+		return () => subscription.remove()
+	}, [])
 
 	const { mutateAsync: likeComment } = useLikeComment()
 
@@ -82,6 +92,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 						<View style={styles.imagesContainer}>
 							<Galeria
 								urls={item.content.pictures.map((pic) => pic.img_src ?? '')}
+								theme={darkMode ? 'dark' : 'light'}
 							>
 								{item.content.pictures.map((pic, index) => (
 									<Galeria.Image
