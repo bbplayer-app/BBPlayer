@@ -1,12 +1,12 @@
 {
-	"version": "2.2.3",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.2.3",
+	"version": "2.2.4",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.2.4",
 	"notes": "你版本太低了，赶紧更新！",
 	"listed_notes": [
-		"新增：本地歌单同步至 B 站收藏夹",
-		"新增：本地播放列表支持搜索",
-		"新增：歌曲与歌词分享卡片",
-		"优化：蓝牙断开时自动暂停播放，进度条新增缓冲显示"
+		"❗❗修复了自 v2 版本以来的播放器页面无响应问题，建议所有人更新❗❗",
+		"新增：播放页面支持音频频谱显示",
+		"优化：UI 升级为超圆角风格",
+		"修复：搜索播放列表时的错误过滤问题"
 	],
 	"forced": false
 }
