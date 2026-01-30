@@ -33,9 +33,7 @@ class SpectrumManager {
                         fft: ByteArray?,
                         samplingRate: Int
                     ) {
-                        // We are pulling data manually in updateSpectrumData, so we might not need this listener active
-                        // But enabling it is required to start capturing? Actually, getFft() works if enabled.
-                        // We do nothing here to save CPU.
+                        // 我们采用手动轮询获取数据，但这个是必须的
                     }
                 }, Visualizer.getMaxCaptureRate() / 2, false, true)
                 enabled = true
@@ -72,40 +70,25 @@ class SpectrumManager {
         try {
             visualizer?.getFft(fftBytes)
             
-            // FFT format:
-            // byte[0] is DC component (real part)
-            // byte[1] is DC component (imaginary part) - usually 0
-            // byte[2] is real part of 1st frequency bin
-            // byte[3] is imaginary part of 1st frequency bin
-            // ...
-            // magnitude = sqrt(real^2 + imag^2)
-            
             val n = fftBytes.size
-            // We only care about magnitude, so output size is n / 2
             val outputSize = minOf(destination.size, n / 2)
 
             for (i in 0 until outputSize) {
-                // The first bin (DC)
                 if (i == 0) {
                      val real = fftBytes[0].toFloat()
                      val imag = fftBytes[1].toFloat()
-                     destination[0] = hypot(real, imag) / 128.0f // Normalize?
+                     destination[0] = hypot(real, imag) / 128.0f
                 } else {
                     val k = i * 2
                     if (k + 1 < n) {
                         val real = fftBytes[k].toFloat()
                         val imag = fftBytes[k + 1].toFloat()
                         val magnitude = hypot(real, imag)
-                        // Logarithmic scaling or linear? Linear is raw.
-                        // Visualizer returns 0-128 range roughly (byte is signed -128..127)
-                        // But magnitude can be higher. 
-                        // Let's normalize roughly to 0..1.
                         destination[i] = magnitude / 128.0f 
                     }
                 }
             }
         } catch (e: Exception) {
-             // Visualizer might fail if player stopped
              destination.fill(0f)
         }
     }

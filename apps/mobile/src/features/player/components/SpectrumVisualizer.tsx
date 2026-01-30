@@ -155,12 +155,15 @@ export const SpectrumVisualizer = ({
 
 				let val = 0
 				if (count > 0) {
-					val = sum / count
-					val = Math.pow(val, 0.6)
-					val *= 2.5 * (1 + t * 2.0)
+					const magnitude = sum / count
+					const db = 20 * Math.log10(magnitude + 0.0001)
+
+					const minDb = -60
+					const maxDb = 0
+					val = (db - minDb) / (maxDb - minDb)
 				}
 
-				if (val < 0.05) val = 0
+				if (val < 0) val = 0
 				if (val > 1.0) val = 1.0
 
 				const mirrorIdx = BAR_COUNT - 1 - i
