@@ -22,15 +22,15 @@ pnpm install
 
 ### 启动项目
 
-请确保你位于 `apps/bbplayer` 目录下，或者使用过滤器运行命令：
+请确保你位于 `apps/mobile` 目录下，或者使用过滤器运行命令：
 
 ```bash
 # 进入 app 目录启动
-cd apps/bbplayer
+cd apps/mobile
 pnpm start
 
 # 运行 Android 模拟器
-cd apps/bbplayer
+cd apps/mobile
 pnpm android
 ```
 

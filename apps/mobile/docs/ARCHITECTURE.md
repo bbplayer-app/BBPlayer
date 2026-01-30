@@ -33,7 +33,7 @@ src/
 ├── types/               # TypeScript 类型定义
 └── utils/               # 工具函数
 
-注：以上是 `apps/bbplayer` 内的源码结构。在 Monorepo 根目录下，我们还有 `packages/` 目录用于存放共享包，例如：
+注：以上是 `apps/mobile` 内的源码结构。在 Monorepo 根目录下，我们还有 `packages/` 目录用于存放共享包，例如：
 - `@roitium/expo-orpheus`: 播放器核心逻辑
 - `@roitium/expo-image-theme-colors`: 图片主题色提取
 - `@roitium/react-native-logs`: 日志工具库

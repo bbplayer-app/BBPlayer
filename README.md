@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./apps/bbplayer/assets/images/icon_large.png" alt="logo" width="50" />
+<img src="./apps/mobile/assets/images/icon_large.png" alt="logo" width="50" />
 <h1>BBPlayer</h1>
 
 ![GitHub Release](https://img.shields.io/github/v/release/yanyao2333/bbplayer)
@@ -42,7 +42,7 @@
 
 这是一个 Monorepo 仓库，包含 BBPlayer 及其相关工具和文档。
 
-- **[apps/bbplayer](./apps/bbplayer)**: BBPlayer 移动端应用核心代码。
+- **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
 - **[apps/docs](./apps/docs)**: 项目文档站点。
 - **[packages/](./packages)**: 共享库与工具包。
 
@@ -73,7 +73,7 @@
 <details>
 <summary>点击展开查看微信收款码</summary>
 <br />
-<img src="./apps/bbplayer/assets/images/wechat.png" alt="WeChat Donation" width="200" />
+<img src="./apps/mobile/assets/images/wechat.png" alt="WeChat Donation" width="200" />
 </details>
 
 ## 感谢

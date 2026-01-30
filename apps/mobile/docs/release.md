@@ -5,7 +5,7 @@
 ## 1. 准备版本
 
 - **更新 `package.json`**：同步修改 `version` 字段与 `android.versionCode`。
-- **编写变更说明**：整理本次发布的要点，更新 `apps/bbplayer/CHANGELOG.md` 文件。
+- **编写变更说明**：整理本次发布的要点，更新 `apps/mobile/CHANGELOG.md` 文件。
 
 ## 2. 发起更新
 
