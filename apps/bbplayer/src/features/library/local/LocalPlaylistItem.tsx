@@ -5,6 +5,7 @@ import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Playlist } from '@/types/core/media'
 
 const LocalPlaylistItem = memo(
@@ -30,7 +31,7 @@ const LocalPlaylistItem = memo(
 								id={item.id}
 								coverUrl={item.coverUrl}
 								title={item.title}
-								size={48}
+								size={LIST_ITEM_COVER_SIZE}
 							/>
 							<View style={styles.textContainer}>
 								<Text variant='titleMedium'>{item.title}</Text>

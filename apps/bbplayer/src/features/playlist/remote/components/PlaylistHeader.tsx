@@ -53,7 +53,6 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					coverUrl={coverUri}
 					title={title}
 					size={120}
-					borderRadius={8}
 				/>
 				<View style={styles.headerTextContainer}>
 					<TouchableRipple

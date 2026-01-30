@@ -6,6 +6,10 @@ import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import {
+	LIST_ITEM_BORDER_RADIUS,
+	LIST_ITEM_COVER_SIZE,
+} from '@/theme/dimensions'
 import type { BilibiliTrack } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
@@ -128,7 +132,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 							id={data.id}
 							coverUrl={data.cover}
 							title={data.title}
-							size={48}
+							size={LIST_ITEM_COVER_SIZE}
 						/>
 					) : null}
 
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
 	},
 	surface: {
 		overflow: 'hidden',
-		borderRadius: 8,
+		borderRadius: LIST_ITEM_BORDER_RADIUS,
 		backgroundColor: 'transparent',
 	},
 	itemContainer: {

@@ -1,11 +1,11 @@
-import { Image } from 'expo-image'
 import { memo } from 'react'
 import { View } from 'react-native'
-import SquircleView from 'react-native-fast-squircle'
 import { RectButton } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Track } from '@/types/core/media'
 import { addToQueue } from '@/utils/player'
 import { formatDurationToHHMMSS } from '@/utils/time'
@@ -69,24 +69,12 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 					</Text>
 				</View>
 
-				<SquircleView
-					style={{
-						width: 45,
-						height: 45,
-						borderRadius: 10,
-						overflow: 'hidden',
-					}}
-					cornerSmoothing={0.6}
-				>
-					<Image
-						source={{
-							uri: item.track.coverUrl ?? undefined,
-						}}
-						style={{ width: 45, height: 45 }}
-						cachePolicy={'none'}
-						recyclingKey={item.track.uniqueKey}
-					/>
-				</SquircleView>
+				<CoverWithPlaceHolder
+					id={item.track.uniqueKey}
+					title={item.track.title}
+					coverUrl={item.track.coverUrl}
+					size={LIST_ITEM_COVER_SIZE}
+				/>
 
 				<View style={{ marginLeft: 12, flex: 1, marginRight: 4 }}>
 					<Text variant='bodySmall'>{item.track.title}</Text>

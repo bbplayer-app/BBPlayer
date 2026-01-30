@@ -5,6 +5,7 @@ import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 
 const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
@@ -35,7 +36,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 							id={item.id}
 							coverUrl={item.cover}
 							title={item.title}
-							size={48}
+							size={LIST_ITEM_COVER_SIZE}
 						/>
 						<View style={styles.textContainer}>
 							<Text

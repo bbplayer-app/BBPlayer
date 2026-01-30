@@ -3,6 +3,8 @@ import { Shimmer } from 'react-native-fast-shimmer'
 import { useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { LIST_ITEM_COVER_SIZE, SQUIRCLE_RADIUS_RATIO } from '@/theme/dimensions'
+
 export function PlaylistPageSkeleton() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
 	coverSkeleton: {
 		width: 120,
 		height: 120,
-		borderRadius: 8,
+		borderRadius: 120 * SQUIRCLE_RADIUS_RATIO,
 		overflow: 'hidden',
 	},
 	headerTextSection: {
@@ -288,9 +290,9 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 	},
 	trackCoverSkeleton: {
-		width: 48,
-		height: 48,
-		borderRadius: 4,
+		width: LIST_ITEM_COVER_SIZE,
+		height: LIST_ITEM_COVER_SIZE,
+		borderRadius: LIST_ITEM_COVER_SIZE * SQUIRCLE_RADIUS_RATIO,
 		overflow: 'hidden',
 	},
 	trackInfoContainer: {

@@ -5,6 +5,10 @@ import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import {
+	LIST_ITEM_BORDER_RADIUS,
+	LIST_ITEM_COVER_SIZE,
+} from '@/theme/dimensions'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
 export interface TrackMenuItem {
@@ -150,7 +154,7 @@ export const TrackListItem = memo(function TrackListItem({
 							id={data.id}
 							coverUrl={data.cover}
 							title={data.title}
-							size={48}
+							size={LIST_ITEM_COVER_SIZE}
 						/>
 					) : null}
 
@@ -223,7 +227,7 @@ const styles = StyleSheet.create({
 	},
 	surface: {
 		overflow: 'hidden',
-		borderRadius: 8,
+		borderRadius: LIST_ITEM_BORDER_RADIUS,
 		backgroundColor: 'transparent',
 	},
 	itemContainer: {

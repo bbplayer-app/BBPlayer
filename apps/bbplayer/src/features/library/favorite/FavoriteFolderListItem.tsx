@@ -5,6 +5,7 @@ import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { BilibiliPlaylist } from '@/types/apis/bilibili'
 
 const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
@@ -27,7 +28,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 							id={item.id}
 							coverUrl={undefined}
 							title={item.title}
-							size={48}
+							size={LIST_ITEM_COVER_SIZE}
 						/>
 						<View style={styles.textContainer}>
 							<Text

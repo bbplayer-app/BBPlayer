@@ -7,6 +7,10 @@ import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import {
+	LIST_ITEM_COVER_SIZE,
+	LIST_ITEM_BORDER_RADIUS,
+} from '@/theme/dimensions'
 import type { Playlist, Track } from '@/types/core/media'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -153,7 +157,7 @@ export const TrackListItem = memo(function TrackListItem({
 							id={data.id}
 							coverUrl={data.coverUrl ?? data.artist?.avatarUrl}
 							title={data.title}
-							size={48}
+							size={LIST_ITEM_COVER_SIZE}
 						/>
 					) : null}
 
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
 	},
 	surface: {
 		overflow: 'hidden',
-		borderRadius: 8,
+		borderRadius: LIST_ITEM_BORDER_RADIUS,
 		backgroundColor: 'transparent',
 	},
 	itemContainer: {

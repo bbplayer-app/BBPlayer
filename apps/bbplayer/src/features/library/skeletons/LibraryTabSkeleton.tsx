@@ -2,6 +2,8 @@ import { StyleSheet, View } from 'react-native'
 import { Shimmer } from 'react-native-fast-shimmer'
 import { useTheme } from 'react-native-paper'
 
+import { LIST_ITEM_COVER_SIZE, SQUIRCLE_RADIUS_RATIO } from '@/theme/dimensions'
+
 /**
  * Generic item skeleton for all library lists
  */
@@ -227,9 +229,9 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 8,
 	},
 	coverSkeleton: {
-		width: 48,
-		height: 48,
-		borderRadius: 8,
+		width: LIST_ITEM_COVER_SIZE,
+		height: LIST_ITEM_COVER_SIZE,
+		borderRadius: LIST_ITEM_COVER_SIZE * SQUIRCLE_RADIUS_RATIO,
 		overflow: 'hidden',
 	},
 	itemTextContainer: {
