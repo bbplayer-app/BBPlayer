@@ -136,7 +136,7 @@ jobs:
 
       - name: ⚙️ Prepare Variables
         run: |
-          APP_VERSION=$(node -p "require('./apps/bbplayer/package.json').version")
+          APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
           COMMIT_SHA="${{ needs.check-trigger.outputs.head_sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
@@ -155,7 +155,7 @@ jobs:
           echo "📊 Calculated VERSION_CODE: ${VERSION_CODE}"
 
       - name: 🚀 Build APK
-        run: cd apps/bbplayer && eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
+        run: cd apps/mobile && eas build --platform android --profile prod-v8a --local --no-wait --output=${{ env.APK_PATH }}
         env:
           VERSION_CODE: ${{ env.VERSION_CODE }}
 

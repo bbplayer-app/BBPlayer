@@ -377,6 +377,19 @@ class OrpheusPlayerManager: NSObject {
         
         let item = AVPlayerItem(asset: asset)
         
+        // Attach Spectrum Tap
+        if let tap = AudioSpectrumAnalyzer.shared.createTap() {
+            let audioMix = AVMutableAudioMix()
+            // Try to find audio track. Note: This assumes tracks are available synchronously or shortly. 
+            // For robust implementation with remote assets, we might need to wait for "tracks" key.
+            // But doing it synchronously here is the "simple" approach.
+            if let track = asset.tracks(withMediaType: .audio).first {
+                let inputParams = AVMutableAudioMixInputParameters(track: track)
+                inputParams.audioTapProcessor = tap
+                audioMix.inputParameters = [inputParams]
+                item.audioMix = audioMix
+            }
+        }
 
         player.replaceCurrentItem(with: item)
         if let startPos = startPosition, startPos > 0 {

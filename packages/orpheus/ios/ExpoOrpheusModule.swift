@@ -261,5 +261,15 @@ public class ExpoOrpheusModule: Module {
     AsyncFunction("debugTriggerError") {
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
+    
+    Function("updateSpectrumData") { (destination: TypedArray) in
+        let count = destination.length
+        // Get the unsafe pointer to valid memory
+        let pointer = destination.getUnsafeMutablePointer(Float32.self)
+        
+        if let ptr = pointer {
+            AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: ptr, count: count)
+        }
+    }
   }
 }

@@ -9,6 +9,7 @@ import { StyleSheet, SafeAreaView, ScrollView, Alert, View } from 'react-native'
 
 import { DebugSection } from './src/components/DebugSection'
 import { PlayerControls } from './src/components/PlayerControls'
+import { SpectrumVisualizer } from './src/components/SpectrumVisualizer'
 import { TEST_TRACKS } from './src/constants'
 
 export default function OrpheusTestScreen() {
@@ -259,6 +260,8 @@ export default function OrpheusTestScreen() {
 					onToggleShuffle={toggleShuffle}
 					onToggleSpeed={toggleSpeed}
 				/>
+
+				<SpectrumVisualizer isPlaying={isPlaying} />
 
 				<View style={{ marginTop: 20 }}>
 					<DebugSection

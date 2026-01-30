@@ -29,6 +29,7 @@ import expo.modules.orpheus.utils.GeneralStorage
 import expo.modules.orpheus.utils.LoudnessStorage
 import expo.modules.orpheus.utils.toJsMap
 import expo.modules.orpheus.utils.toMediaItem
+import expo.modules.kotlin.typedarray.Float32Array
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -40,6 +41,9 @@ class ExpoOrpheusModule : Module() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var downloadManager: DownloadManager? = null
+
+    private val spectrumManager = SpectrumManager()
+    private var tempBuffer: FloatArray? = null
 
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
@@ -97,6 +101,17 @@ class ExpoOrpheusModule : Module() {
                     "status" to isPlaying
                 )
             )
+             
+            if (isPlaying) {
+                 player?.audioSessionId?.let { sessionId ->
+                     if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                         spectrumManager.start(sessionId)
+                     }
+                 }
+            } else {
+                 spectrumManager.stop()
+            }
+
             updateProgressRunnerState()
         }
 
@@ -195,6 +210,7 @@ class ExpoOrpheusModule : Module() {
             player?.removeListener(playerListener)
             OrpheusMusicService.removeOnServiceReadyListener { }
             player = null
+            spectrumManager.stop()
             Log.d("Orpheus", "Destroy media controller")
         }
 
@@ -623,7 +639,21 @@ class ExpoOrpheusModule : Module() {
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
             )
             playerListener.onPlayerError(exception)
+            playerListener.onPlayerError(exception)
         }.runOnQueue(Queues.MAIN)
+
+        Function("updateSpectrumData") { destination: Float32Array ->
+             val size = destination.length
+             if (tempBuffer == null || tempBuffer!!.size != size) {
+                 tempBuffer = FloatArray(size)
+             }
+             val buffer = tempBuffer!!
+             spectrumManager.getSpectrumData(buffer)
+             
+             val byteBuffer = destination.toDirectBuffer()
+             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
+             byteBuffer.asFloatBuffer().put(buffer)
+        }
     }
 
     private fun getDownloadMap(download: Download): Map<String, Any> {
