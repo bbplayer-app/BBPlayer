@@ -88,6 +88,8 @@ export default function useLyricSync(
 			(nextAppState) => {
 				if (nextAppState === 'active') {
 					setIsActive(true)
+				} else {
+					setIsActive(false)
 				}
 			},
 		)

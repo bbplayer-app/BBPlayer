@@ -21,6 +21,8 @@ export default function useAnimatedTrackProgress(background = false) {
 			(nextAppState) => {
 				if (nextAppState === 'active') {
 					isActive.value = true
+				} else {
+					isActive.value = false
 				}
 			},
 		)
