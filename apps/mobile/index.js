@@ -1,7 +1,3 @@
-import { Platform } from 'react-native'
-
-console.log(Platform.OS)
-
 import { Orpheus, registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
 
 import log, { reportErrorToSentry } from './src/utils/log'
