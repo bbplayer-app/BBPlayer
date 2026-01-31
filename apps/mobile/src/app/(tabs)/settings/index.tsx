@@ -96,6 +96,7 @@ export default function SettingsPage() {
 							/>
 						)}
 						onPress={() => router.push('/settings/general')}
+						testID='setting-general'
 					/>
 					<Divider style={styles.divider} />
 					<List.Item

@@ -114,6 +114,7 @@ export default function GeneralSettingsPage() {
 						icon='open-in-new'
 						size={20}
 						onPress={() => openModal('CookieLogin', undefined)}
+						testID='cookie-login-button'
 					/>
 				</View>
 				<View style={styles.settingRow}>

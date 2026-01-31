@@ -119,6 +119,7 @@ export const TrackListItem = memo(function TrackListItem({
 				if (selectMode) return
 				enterSelectMode(data.id)
 			}}
+			testID={`track-item-${data.id}`}
 		>
 			<Surface
 				style={styles.surface}

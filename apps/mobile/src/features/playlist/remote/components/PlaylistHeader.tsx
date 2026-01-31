@@ -90,6 +90,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon={mainButtonIcon}
 						onPress={() => onClickMainButton()}
+						testID='playlist-header-main-button'
 					>
 						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
 					</Button>

@@ -14,6 +14,10 @@
 - 启用 R8 混淆
 - 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
 
+### Added
+
+- 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
+
 ### Fixed
 
 - 修复 `reportErrorToSentry` 上报非 Error 类型错误时显示为 `[object Object]` 的问题

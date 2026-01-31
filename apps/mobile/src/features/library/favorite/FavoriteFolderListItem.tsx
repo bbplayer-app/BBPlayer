@@ -21,6 +21,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 					})
 				}}
 				style={styles.rectButton}
+				testID={`favorite-folder-${item.id}`}
 			>
 				<View>
 					<View style={styles.itemContainer}>
