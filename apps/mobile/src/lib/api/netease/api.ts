@@ -3,8 +3,8 @@ import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
 import type {
 	NeteaseLyricResponse,
+	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
-	NeteaseSong,
 } from '@/types/apis/netease'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
@@ -69,57 +69,6 @@ export class NeteaseApi {
 		})
 	}
 
-	/**
-	 * 从多个角度计算出最可能匹配的歌曲（屎）
-	 * @param songs
-	 * @param keyword 一般来说，就是 track.title
-	 * @param targetDurationMs
-	 * @returns
-	 */
-	private findBestMatch(
-		songs: NeteaseSong[],
-		keyword: string,
-		targetDurationMs: number,
-	): NeteaseSong {
-		const DURATION_WEIGHT = 10
-		const SIGMA_MS = 1500
-
-		const scoredSongs = songs.map((song) => {
-			let score = 0
-			if (song.name === keyword) {
-				score += 10
-			}
-			if (keyword.includes(song.name)) {
-				score += 5
-			}
-			song.alia.forEach((alias) => {
-				if (keyword.includes(alias)) {
-					score += 2
-				}
-			})
-			song.ar.forEach((artist) => {
-				if (keyword.includes(artist.name)) {
-					score += 1
-				}
-			})
-
-			const durationDiff = song.dt - targetDurationMs
-			const durationScore =
-				DURATION_WEIGHT *
-				Math.exp(-(durationDiff * durationDiff) / (2 * SIGMA_MS * SIGMA_MS))
-
-			score += durationScore
-
-			return { song, score }
-		})
-
-		const bestMatch = scoredSongs.reduce((best, current) => {
-			return current.score > best.score ? current : best
-		})
-
-		return bestMatch.score > 0 ? bestMatch.song : songs[0]
-	}
-
 	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
 		const parsedRawLyrics = parseLrc(lyricsResponse.lrc.lyric)
 		if (
@@ -163,6 +112,23 @@ export class NeteaseApi {
 				)
 			},
 		)
+	}
+
+	getPlaylist(
+		id: string,
+	): ResultAsync<NeteasePlaylistResponse, NeteaseApiError> {
+		const data = {
+			s: '0',
+			id: id,
+			n: '1000',
+			t: '0',
+		}
+		const requestOptions: RequestOptions = createOption({}, 'eapi')
+		return createRequest<object, NeteasePlaylistResponse>(
+			'/api/v6/playlist/detail',
+			data,
+			requestOptions,
+		).map((res) => res.body)
 	}
 }
 

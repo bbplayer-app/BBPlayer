@@ -1,0 +1,67 @@
+{
+	"name": "@roitium/meting",
+	"version": "1.6.0",
+	"description": "A powerful music API framework to accelerate development - Node.js port. Support Netease, Tencent, Kugou, Baidu, Kuwo music platforms.",
+	"keywords": [
+		"api",
+		"baidu",
+		"kugou",
+		"kuwo",
+		"lightweight",
+		"lyrics",
+		"music",
+		"music-api",
+		"netease",
+		"no-dependencies",
+		"nodejs",
+		"search",
+		"streaming",
+		"tencent"
+	],
+	"homepage": "https://github.com/metowolf/Meting",
+	"bugs": {
+		"url": "https://github.com/metowolf/Meting/issues"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "metowolf",
+		"email": "i@i-meto.com",
+		"url": "https://i-meto.com"
+	},
+	"contributors": [
+		{
+			"name": "Claude Code",
+			"email": "noreply@anthropic.com",
+			"url": "https://claude.ai/code"
+		}
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/metowolf/Meting.git"
+	},
+	"files": [
+		"lib/",
+		"LICENSE"
+	],
+	"type": "module",
+	"main": "./lib/meting.js",
+	"module": "./lib/meting.esm.js",
+	"exports": {
+		"import": "./lib/meting.esm.js",
+		"require": "./lib/meting.js"
+	},
+	"scripts": {
+		"build": "rollup -c",
+		"dev": "rollup -c --watch",
+		"example": "npm run build && node test/example.js",
+		"prepublishOnly": "npm run build",
+		"start": "npm run build && node test/example.js",
+		"test": "npm run build && node test/test.js"
+	},
+	"devDependencies": {
+		"@rollup/plugin-babel": "^6.0.4",
+		"@rollup/plugin-node-resolve": "^16.0.1",
+		"@rollup/plugin-terser": "^0.4.4",
+		"rollup": "^4.49.0"
+	}
+}

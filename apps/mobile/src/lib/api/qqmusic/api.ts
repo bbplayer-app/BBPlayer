@@ -3,6 +3,7 @@ import { errAsync, ResultAsync } from 'neverthrow'
 
 import type {
 	QQMusicLyricResponse,
+	QQMusicPlaylistResponse,
 	QQMusicSearchResponse,
 } from '@/types/apis/qqmusic'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
@@ -160,6 +161,38 @@ export class QQMusicApi {
 				this.parseLyrics(response),
 			)
 		})
+	}
+
+	/**
+	 * Get playlist by id
+	 * @param id
+	 * @returns
+	 */
+	public getPlaylist(id: string): ResultAsync<QQMusicPlaylistResponse, Error> {
+		const params = new URLSearchParams({
+			id,
+			format: 'json',
+			newsong: '1',
+			platform: 'jqspaframe.json',
+		})
+
+		const url = `https://c.y.qq.com/v8/fcg-bin/fcg_v8_playlist_cp.fcg?${params.toString()}`
+
+		return ResultAsync.fromPromise(
+			fetch(url, {
+				headers: {
+					Referer: 'http://y.qq.com',
+					'User-Agent':
+						'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+				},
+			}).then((res) => {
+				if (!res.ok) {
+					throw new Error(`QQ Music API error: ${res.statusText}`)
+				}
+				return res.json() as Promise<QQMusicPlaylistResponse>
+			}),
+			(e) => new Error('Failed to fetch playlist from QQ Music', { cause: e }),
+		)
 	}
 }
 

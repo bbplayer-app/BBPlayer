@@ -3,7 +3,10 @@ import * as FileSystem from 'expo-file-system'
 import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
+import { baiduApi, type BaiduApi } from '@/lib/api/baidu/api'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import { kugouApi, type KugouApi } from '@/lib/api/kugou/api'
+import { kuwoApi, type KuwoApi } from '@/lib/api/kuwo/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
@@ -28,6 +31,9 @@ class LyricService {
 	constructor(
 		readonly neteaseApi: NeteaseApi,
 		readonly qqMusicApi: QQMusicApi,
+		readonly kuwoApi: KuwoApi,
+		readonly kugouApi: KugouApi,
+		readonly baiduApi: BaiduApi,
 	) {}
 
 	private cleanKeyword(keyword: string): string {
@@ -59,7 +65,7 @@ class LyricService {
 	public getBestMatchedLyrics(
 		track: Track,
 		preciseKeyword?: string,
-		source?: 'auto' | 'netease' | 'qqmusic',
+		source?: 'auto' | 'netease' | 'qqmusic' | 'kuwo' | 'kugou' | 'baidu',
 	) {
 		const keyword = preciseKeyword ?? this.cleanKeyword(track.title)
 		const durationMs = track.duration * 1000
@@ -88,6 +94,37 @@ class LyricService {
 			)
 		}
 
+		if (source === 'kuwo' || source === undefined || source === 'auto') {
+			providers.push(
+				this.kuwoApi.searchBestMatchedLyrics(keyword, durationMs).map((res) => {
+					logger.debug('Kuwo returned lyrics')
+					return res
+				}),
+			)
+		}
+
+		if (source === 'kugou' || source === undefined || source === 'auto') {
+			providers.push(
+				this.kugouApi
+					.searchBestMatchedLyrics(keyword, durationMs)
+					.map((res) => {
+						logger.debug('Kugou returned lyrics')
+						return res
+					}),
+			)
+		}
+
+		if (source === 'baidu' || source === undefined || source === 'auto') {
+			providers.push(
+				this.baiduApi
+					.searchBestMatchedLyrics(keyword, durationMs)
+					.map((res) => {
+						logger.debug('Baidu returned lyrics')
+						return res
+					}),
+			)
+		}
+
 		return ResultAsync.fromPromise(
 			Promise.any(
 				providers.map((p) =>
@@ -104,14 +141,10 @@ class LyricService {
 				const aggregateError = e as AggregateError
 				const errors = Array.from(aggregateError.errors || [])
 				const errorMessages = errors
-					.map((err, index) => {
-						const providerName =
-							index === 0
-								? 'Netease'
-								: index === 1
-									? 'QQMusic'
-									: `Provider ${index}`
-						return `${providerName}: ${err instanceof Error ? err.message : String(err)}`
+					.map((err, _index) => {
+						// This mapping index is tricky because providers array dynamic.
+						// Simplified error logging:
+						return `${err instanceof Error ? err.message : String(err)}`
 					})
 					.join('; ')
 
@@ -246,6 +279,27 @@ class LyricService {
 					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
+			case 'kuwo':
+				return this.kuwoApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.kuwoApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
+			case 'kugou':
+				return this.kugouApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.kugouApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
+			case 'baidu':
+				return this.baiduApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.baiduApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
 			default:
 				return errAsync(new Error('未知歌曲源'))
 		}
@@ -349,5 +403,11 @@ class LyricService {
 	}
 }
 
-const lyricService = new LyricService(neteaseApi, qqMusicApi)
+const lyricService = new LyricService(
+	neteaseApi,
+	qqMusicApi,
+	kuwoApi,
+	kugouApi,
+	baiduApi,
+)
 export default lyricService

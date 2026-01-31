@@ -7,12 +7,17 @@
 
 ## [UNRELEASED]
 
+### Added
+
+- 支持 Kuwo、Kugou、Baidu 音乐的歌词搜索
+
 ### Changed
 
 - 移除 trackService 中的标题重复检查
 - orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
 - 启用 R8 混淆
 - 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
+- 将 `external-playlist-sync` 包中的歌单匹配逻辑迁移至 `apps/mobile`，并支持进度回调
 
 ### Fixed
 

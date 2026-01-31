@@ -50,22 +50,3 @@ export interface NeteaseAlbum {
 	picUrl: string
 	tns: string[]
 }
-
-export interface NeteaseLyricResponse {
-	lrc: {
-		version: number
-		lyric: string
-	}
-	tlyric: {
-		version: number
-		lyric: string
-	}
-	code: number
-}
-
-export interface NeteaseSearchResponse {
-	result: {
-		songs: NeteaseSong[]
-	}
-	code: number
-}
