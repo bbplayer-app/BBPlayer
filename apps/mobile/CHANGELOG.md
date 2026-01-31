@@ -5,6 +5,18 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- 移除 trackService 中的标题重复检查
+- orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
+- 启用 R8 混淆
+
+### Fixed
+
+- 修复 `reportErrorToSentry` 上报非 Error 类型错误时显示为 `[object Object]` 的问题
+
 ## [2.2.4] - 2026-01-30
 
 ### Added

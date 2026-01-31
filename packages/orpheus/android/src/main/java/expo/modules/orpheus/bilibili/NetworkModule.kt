@@ -1,5 +1,7 @@
 package expo.modules.orpheus.bilibili
 
+import android.content.Context
+import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -10,14 +12,15 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
     private const val BASE_URL = "https://api.bilibili.com"
 
+
     private val client: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)
-
             .addInterceptor(BilibiliHeaderInterceptor())
-            .build()
+
+        builder.build()
     }
 
     val retrofit: Retrofit by lazy {
