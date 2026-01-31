@@ -141,10 +141,24 @@ export function reportErrorToSentry(
 	message?: string,
 	scope?: ProjectScope | string,
 ) {
+	const stringifyError = (e: unknown): string => {
+		if (e === null) return 'null'
+		// eslint-disable-next-line @typescript-eslint/no-base-to-string
+		if (typeof e !== 'object') return String(e)
+		try {
+			return JSON.stringify(e)
+		} catch {
+			// Circular reference or other stringify error
+			return Object.prototype.toString.call(e)
+		}
+	}
+
 	const _error =
 		error instanceof Error
 			? error
-			: new Error(`非 Error 类型错误：${String(error)}`, { cause: error })
+			: new Error(`非 Error 类型错误：${stringifyError(error)}`, {
+					cause: error,
+				})
 
 	const isCustom = _error instanceof CustomError
 
