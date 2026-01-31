@@ -41,3 +41,9 @@ export class LrcParseError extends CustomError {
 		super(message, { type: 'LrcParseError' })
 	}
 }
+
+export class LyricNotFoundError extends CustomError {
+	constructor(message: string, opts?: { cause?: unknown }) {
+		super(message, { type: 'LyricNotFound', cause: opts?.cause })
+	}
+}

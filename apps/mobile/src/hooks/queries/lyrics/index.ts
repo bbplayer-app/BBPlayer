@@ -22,7 +22,7 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
 			if (result.isErr()) {
-				if (result.error.type === 'SearchResultNoMatch') {
+				if (result.error.type === 'LyricNotFound') {
 					return {
 						lyrics: null,
 						rawOriginalLyrics: result.error.message, // 就这样 hack 一下

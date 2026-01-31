@@ -7,7 +7,11 @@ import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
-import { DataParsingError, FileSystemError } from '@/lib/errors'
+import {
+	DataParsingError,
+	FileSystemError,
+	LyricNotFoundError,
+} from '@/lib/errors'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -111,7 +115,7 @@ class LyricService {
 					})
 					.join('; ')
 
-				return new FileSystemError(
+				return new LyricNotFoundError(
 					`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
 					{ cause: e },
 				)

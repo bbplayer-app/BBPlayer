@@ -135,8 +135,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: false,
-					enableMinifyInReleaseBuilds: true,
-					enableShrinkResourcesInReleaseBuilds: true,
+					enableMinifyInReleaseBuilds: false,
+					enableShrinkResourcesInReleaseBuilds: false,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
 					},
