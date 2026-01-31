@@ -11,8 +11,8 @@ import {
 } from 'react-native-paper'
 
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
-import { useExternalPlaylistSyncStore } from '@/hooks/stores/useExternalPlaylistSyncStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { GenericTrack } from '@/types/external_playlist'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
@@ -77,16 +77,15 @@ const SearchItem = memo(function SearchItem({
 export default function ManualMatchExternalSync({
 	track,
 	initialQuery,
-	index,
+	onMatch,
 }: {
 	track: GenericTrack
 	initialQuery: string
-	index: number
+	onMatch: (result: MatchResult) => void
 }) {
 	const [query, setQuery] = useState(initialQuery)
 	const [finalQuery, setFinalQuery] = useState(initialQuery)
 	const close = useModalStore((state) => state.close)
-	const setResult = useExternalPlaylistSyncStore((state) => state.setResult)
 
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
 		useSearchResults(finalQuery)
@@ -98,13 +97,13 @@ export default function ManualMatchExternalSync({
 
 	const handlePressItem = useCallback(
 		(video: BilibiliSearchVideo) => {
-			setResult(index, {
+			onMatch({
 				track,
 				matchedVideo: video,
 			})
 			close('ManualMatchExternalSync')
 		},
-		[close, index, setResult, track],
+		[close, onMatch, track],
 	)
 
 	const extraData = useMemo(() => ({ handlePressItem }), [handlePressItem])

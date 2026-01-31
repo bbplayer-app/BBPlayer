@@ -3,6 +3,7 @@ export interface GenericTrack {
 	artists: string[]
 	album: string
 	duration: number // milliseconds
+	coverUrl?: string
 }
 
 export interface GenericPlaylist {

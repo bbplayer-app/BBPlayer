@@ -40,6 +40,7 @@ export class ExternalPlaylistService {
 					artists: track.ar.map((a) => a.name),
 					album: track.al.name,
 					duration: track.dt,
+					coverUrl: track.al.picUrl,
 				}))
 
 				return {
@@ -78,6 +79,7 @@ export class ExternalPlaylistService {
 					artists: track.singer.map((s) => s.name),
 					album: track.album.name,
 					duration: track.interval * 1000,
+					coverUrl: `https://y.gtimg.cn/music/photo_new/T002R300x300M000${track.album.mid}.jpg`,
 				}))
 
 				return {

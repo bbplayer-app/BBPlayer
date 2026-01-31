@@ -1,17 +1,35 @@
 import { FlashList } from '@shopify/flash-list'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { memo, useCallback, useEffect } from 'react'
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Appbar, Text, TouchableRipple, useTheme } from 'react-native-paper'
+import {
+	Appbar,
+	Banner,
+	IconButton,
+	Text,
+	TouchableRipple,
+	useTheme,
+} from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
-import { useExternalPlaylistSyncStore } from '@/hooks/stores/useExternalPlaylistSyncStore'
+import usePreventRemove from '@/hooks/router/usePreventRemove'
+import {
+	ExternalPlaylistSyncStoreProvider,
+	useExternalPlaylistSyncStore,
+} from '@/hooks/stores/useExternalPlaylistSyncStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useExternalPlaylist } from '@/hooks/useExternalPlaylist'
+import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
 import { externalPlaylistService } from '@/lib/services/externalPlaylistService'
+import {
+	LIST_ITEM_BORDER_RADIUS,
+	LIST_ITEM_COVER_SIZE,
+} from '@/theme/dimensions'
 import type { GenericTrack } from '@/types/external_playlist'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import toast from '@/utils/toast'
 
 const SyncTrackItem = memo(
 	({
@@ -26,44 +44,109 @@ const SyncTrackItem = memo(
 		const theme = useTheme()
 		const result = useExternalPlaylistSyncStore((state) => state.results[index])
 
-		const statusColor = result
-			? result.matchedVideo
-				? theme.colors.primary
-				: theme.colors.error
-			: theme.colors.onSurfaceVariant
-
 		return (
-			<View style={styles.itemContainer}>
-				<TouchableRipple
-					onPress={onPress}
-					style={{ flex: 1 }}
-				>
-					<View style={styles.itemInner}>
-						<View style={styles.itemContent}>
-							<Text
-								variant='titleMedium'
-								numberOfLines={1}
+			<View
+				style={[
+					styles.itemContainer,
+					{
+						backgroundColor: theme.colors.elevation.level1,
+						marginBottom: 12,
+						borderRadius: 12,
+					},
+				]}
+			>
+				<View style={styles.itemInner}>
+					<CoverWithPlaceHolder
+						id={`${index}`}
+						title={track.title}
+						coverUrl={result?.matchedVideo?.pic}
+						size={LIST_ITEM_COVER_SIZE}
+						borderRadius={LIST_ITEM_BORDER_RADIUS}
+					/>
+					<View style={styles.itemContent}>
+						<Text
+							variant='titleMedium'
+							numberOfLines={2}
+							style={{ fontWeight: '600', marginBottom: 2 }}
+						>
+							{track.title}
+						</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: theme.colors.onSurfaceVariant }}
+							numberOfLines={1}
+						>
+							{track.artists.join(', ')} - {track.album}
+						</Text>
+						{result?.matchedVideo && (
+							<View
+								style={{
+									marginTop: 8,
+									backgroundColor: theme.colors.surfaceVariant,
+									padding: 8,
+									borderRadius: 8,
+								}}
 							>
-								{track.title}
-							</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: theme.colors.outline }}
-							>
-								{track.artists.join(', ')} - {track.album}
-							</Text>
-						</View>
-						<View style={styles.statusContainer}>
-							{result ? (
-								<Text style={{ color: statusColor, fontWeight: 'bold' }}>
-									{result.matchedVideo ? '已匹配' : '未找到'}
+								<Text
+									variant='bodySmall'
+									style={{
+										color: theme.colors.primary,
+										fontWeight: 'bold',
+										marginBottom: 2,
+									}}
+								>
+									已匹配:{' '}
+									{result.matchedVideo.title
+										.replace(/<em class="keyword">/g, '')
+										.replace(/<\/em>/g, '')}
 								</Text>
-							) : (
-								<Text style={{ color: statusColor }}>等待中</Text>
-							)}
-						</View>
+								<Text
+									variant='bodySmall'
+									style={{ color: theme.colors.onSurfaceVariant }}
+								>
+									UP主: {result.matchedVideo.author}
+								</Text>
+							</View>
+						)}
 					</View>
-				</TouchableRipple>
+					<View style={styles.statusContainer}>
+						{!result ? (
+							<IconButton
+								icon='clock-outline'
+								size={20}
+								iconColor={theme.colors.onSurfaceVariant}
+							/>
+						) : !result.matchedVideo ? (
+							<View style={{ alignItems: 'flex-end' }}>
+								<IconButton
+									icon='alert-circle-outline'
+									size={20}
+									iconColor={theme.colors.error}
+								/>
+								<IconButton
+									icon='pencil'
+									size={20}
+									onPress={onPress}
+									mode='contained-tonal'
+								/>
+							</View>
+						) : (
+							<View style={{ alignItems: 'flex-end' }}>
+								<IconButton
+									icon='check-circle-outline'
+									size={20}
+									iconColor={theme.colors.primary}
+								/>
+								<IconButton
+									icon='pencil'
+									size={20}
+									onPress={onPress}
+									mode='contained-tonal'
+								/>
+							</View>
+						)}
+					</View>
+				</View>
 			</View>
 		)
 	},
@@ -78,6 +161,7 @@ const renderItem = ({
 	GenericTrack,
 	{
 		openManualMatch: (track: GenericTrack, index: number) => void
+		syncing: boolean
 	}
 >) => {
 	if (!extraData) return null
@@ -90,7 +174,7 @@ const renderItem = ({
 	)
 }
 
-export default function ExternalPlaylistSyncPage() {
+const ExternalPlaylistSyncPageInner = () => {
 	const { id, source } = useLocalSearchParams<{
 		id: string
 		source: 'netease' | 'qq'
@@ -98,6 +182,7 @@ export default function ExternalPlaylistSyncPage() {
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
+	const navigation = useNavigation()
 	const openModal = useModalStore((state) => state.open)
 
 	const { data, isLoading, error } = useExternalPlaylist(
@@ -105,14 +190,104 @@ export default function ExternalPlaylistSyncPage() {
 		source ?? 'netease',
 	)
 
-	const { setSyncing, setProgress, setResult, reset, syncing, progress } =
-		useExternalPlaylistSyncStore()
+	const {
+		setSyncing,
+		setProgress,
+		setResult,
+		reset,
+		syncing,
+		progress,
+		results,
+	} = useExternalPlaylistSyncStore((state) => state)
 
 	// Reset store on mount
 	useEffect(() => {
 		reset()
 		return () => reset()
 	}, [reset])
+
+	const [isExiting, setIsExiting] = useState(false)
+
+	const hasResults = Object.keys(results).length > 0 && !isExiting
+	usePreventRemove(hasResults, (e) => {
+		const action = e.data.action
+		openModal('Alert', {
+			title: '确定要退出吗？',
+			message:
+				'退出后，当前的匹配结果将会丢失，未保存的进度将无法恢复。（注意，匹配完毕必须手动保存！）',
+			buttons: [
+				{
+					text: '取消',
+				},
+				{
+					text: '退出',
+					onPress: () => {
+						setIsExiting(true)
+						setTimeout(() => navigation.dispatch(action), 0)
+					},
+				},
+			],
+		})
+	})
+
+	const handleSave = useCallback(async () => {
+		if (!data?.playlist || !results) return
+		const matchResults = Object.values(results)
+		if (matchResults.length === 0) {
+			toast.error('没有可保存的内容')
+			return
+		}
+
+		const unmatchedCount = matchResults.filter(
+			(r) => r.matchedVideo === null,
+		).length
+
+		const proceedSave = async () => {
+			const loadingToast = toast.loading('正在保存到本地...')
+			try {
+				const saveResult = await syncExternalPlaylistFacade.saveMatchedPlaylist(
+					{
+						title: data.playlist.title,
+						coverUrl: data.playlist.coverUrl ?? '',
+						description: data.playlist.description ?? '',
+					},
+					matchResults,
+				)
+
+				if (saveResult.isErr()) {
+					toast.error(`保存失败: ${saveResult.error.message}`)
+					console.error(saveResult.error)
+				} else {
+					toast.success('歌单已保存到本地')
+					reset()
+					setTimeout(() => router.back(), 0)
+				}
+			} catch (e) {
+				toast.error('保存失败')
+				console.error(e)
+			} finally {
+				toast.dismiss(loadingToast)
+			}
+		}
+
+		if (unmatchedCount > 0) {
+			openModal('Alert', {
+				title: '存在未匹配的歌曲',
+				message: `还有 ${unmatchedCount} 首歌曲未匹配到视频。如果继续，这些歌曲将不会被保存。建议您手动匹配它们。`,
+				buttons: [
+					{
+						text: '去手动匹配',
+					},
+					{
+						text: '仍要保存',
+						onPress: proceedSave,
+					},
+				],
+			})
+		} else {
+			await proceedSave()
+		}
+	}, [data?.playlist, results, router, openModal, reset])
 
 	const handleSync = useCallback(async () => {
 		if (!data?.tracks) return
@@ -138,11 +313,11 @@ export default function ExternalPlaylistSyncPage() {
 		(track: GenericTrack, index: number) => {
 			openModal('ManualMatchExternalSync', {
 				track,
-				index,
 				initialQuery: `${track.title} - ${track.artists.join(' ')}`,
+				onMatch: (result) => setResult(index, result),
 			})
 		},
-		[openModal],
+		[openModal, setResult],
 	)
 
 	if (isLoading) {
@@ -166,46 +341,142 @@ export default function ExternalPlaylistSyncPage() {
 		)
 	}
 
-	const { playlist, tracks } = data
+	const { tracks } = data
 
 	return (
-		<View
-			style={[styles.container, { backgroundColor: theme.colors.background }]}
-		>
-			<Appbar.Header elevated>
-				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content
-					title={
-						syncing ? `同步中 ${(progress * 100).toFixed(0)}%` : '歌单同步'
-					}
+		<View style={{ flex: 1 }}>
+			<Appbar.Header>
+				<Appbar.BackAction onPress={router.back} />
+				<Appbar.Content title='外部歌单匹配' />
+				<Appbar.Action
+					icon='check'
+					onPress={handleSave}
+					disabled={!hasResults}
 				/>
 			</Appbar.Header>
-
+			<Banner
+				visible={hasResults}
+				actions={[
+					{
+						label: '立即保存',
+						onPress: handleSave,
+					},
+				]}
+				icon='information'
+			>
+				匹配完成后，请务必点击右上角或下方的保存按钮，否则进度将丢失。
+			</Banner>
 			<FlashList
 				data={tracks}
 				renderItem={renderItem}
-				extraData={{ openManualMatch: handleOpenManualMatch }}
+				extraData={{
+					openManualMatch: handleOpenManualMatch,
+					syncing,
+				}}
 				keyExtractor={(item, index) => `${index}-${item.title}`}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,
 				}}
 				ListHeaderComponent={
 					<PlaylistHeader
-						id={playlist.id}
-						coverUri={playlist.coverUrl}
-						title={playlist.title}
-						description={playlist.description}
+						id={data.playlist.id}
+						title={data.playlist.title}
+						description={data.playlist.description ?? ''}
+						coverUri={data.playlist.coverUrl ?? ''}
 						subtitles={[
-							`${playlist.author.name}`,
-							`${playlist.trackCount} 首歌曲`,
+							data.playlist.author.name,
+							`${data.playlist.trackCount} 首歌曲`,
 						]}
-						mainButtonIcon='sync'
-						mainButtonText={syncing ? '同步中...' : '开始同步'}
-						onClickMainButton={handleSync}
+						mainButtonIcon='check'
+						mainButtonText='保存'
 					/>
 				}
+				role='list'
+			/>
+
+			<ExternalPlaylistSyncFooter
+				onSync={handleSync}
+				syncing={syncing}
+				progress={progress}
+				total={tracks.length}
 			/>
 		</View>
+	)
+}
+
+const ExternalPlaylistSyncFooter = ({
+	onSync,
+	syncing,
+	progress,
+	total,
+}: {
+	onSync: () => void
+	syncing: boolean
+	progress: number
+	total: number
+}) => {
+	const theme = useTheme()
+	const insets = useSafeAreaInsets()
+
+	const remaining = total - Math.floor(progress * total)
+	const etaSeconds = (remaining * 1200) / 1000 // 1200ms per request
+	const etaText =
+		etaSeconds > 60
+			? `${(etaSeconds / 60).toFixed(1)} 分 (ETA)`
+			: `${etaSeconds.toFixed(0)} 秒 (ETA)`
+
+	return (
+		<View
+			style={[
+				styles.footer,
+				{
+					backgroundColor: theme.colors.elevation.level2,
+					paddingBottom: insets.bottom + 16,
+				},
+			]}
+		>
+			<View style={styles.progressContainer}>
+				{syncing ? (
+					<View style={styles.syncingContainer}>
+						<ActivityIndicator
+							animating={true}
+							color={theme.colors.primary}
+						/>
+						<View style={{ marginLeft: 12 }}>
+							<Text variant='bodyMedium'>
+								正在匹配... {(progress * 100).toFixed(0)}%
+							</Text>
+							<Text
+								variant='bodySmall'
+								style={{ color: theme.colors.outline }}
+							>
+								剩余 {etaText}
+							</Text>
+						</View>
+					</View>
+				) : (
+					<TouchableRipple
+						onPress={onSync}
+						style={[
+							styles.button,
+							{ backgroundColor: theme.colors.primaryContainer },
+						]}
+					>
+						<Text style={{ color: theme.colors.onPrimaryContainer }}>
+							开始匹配
+						</Text>
+					</TouchableRipple>
+				)}
+			</View>
+		</View>
+	)
+}
+
+export default function ExternalPlaylistSyncPage() {
+	return (
+		<ExternalPlaylistSyncStoreProvider>
+			<ExternalPlaylistSyncPageInner />
+		</ExternalPlaylistSyncStoreProvider>
 	)
 }
 
@@ -219,19 +490,46 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	itemContainer: {
-		flexDirection: 'column',
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: '#ccc',
+		paddingHorizontal: 16,
+		paddingVertical: 12,
 	},
 	itemInner: {
 		flexDirection: 'row',
-		padding: 16,
-		alignItems: 'center',
+		alignItems: 'flex-start',
 	},
 	itemContent: {
 		flex: 1,
+		justifyContent: 'center',
+		marginLeft: 12,
 	},
 	statusContainer: {
-		marginLeft: 16,
+		marginLeft: 8,
+		minWidth: 60,
+		alignItems: 'flex-end',
+	},
+	footer: {
+		padding: 16,
+		borderTopLeftRadius: 16,
+		borderTopRightRadius: 16,
+		elevation: 4,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: -2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+	},
+	progressContainer: {
+		alignItems: 'center',
+	},
+	syncingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		height: 48,
+	},
+	button: {
+		height: 48,
+		paddingHorizontal: 32,
+		borderRadius: 24,
+		justifyContent: 'center',
+		alignItems: 'center',
 	},
 })

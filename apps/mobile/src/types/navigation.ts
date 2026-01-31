@@ -1,4 +1,5 @@
 import type { AlertModalProps } from '@/components/modals/AlertModal'
+import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { Playlist, Track } from '@/types/core/media'
 import type { GenericTrack } from '@/types/external_playlist'
 import type { ParsedLrc } from '@/types/player/lyrics'
@@ -9,7 +10,7 @@ export interface ModalPropsMap {
 	ManualMatchExternalSync: {
 		track: GenericTrack
 		initialQuery: string
-		index: number
+		onMatch: (result: MatchResult) => void
 	}
 	AddVideoToBilibiliFavorite: { bvid: string }
 	EditPlaylistMetadata: { playlist: Playlist }

@@ -44,7 +44,7 @@ export interface FavoriteSyncProgress {
 
 let logger = log.extend('Facade')
 
-export class SyncFacade {
+export class SyncBilibiliPlaylistFacade {
 	private syncingIds = new Set<string>()
 	constructor(
 		private readonly trackService: TrackService,
@@ -764,9 +764,13 @@ export class SyncFacade {
 			}
 		}
 	}
+
+	public get dbInstance() {
+		return this.db
+	}
 }
 
-export const syncFacade = new SyncFacade(
+export const syncFacade = new SyncBilibiliPlaylistFacade(
 	trackService,
 	bilibiliApi,
 	playlistService,

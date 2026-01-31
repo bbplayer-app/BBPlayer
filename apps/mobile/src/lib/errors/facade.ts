@@ -10,6 +10,7 @@ export type FacadeErrorType =
 	| 'UpdateTrackLocalPlaylistsFailed'
 	| 'BatchAddTracksToLocalPlaylistFailed'
 	| 'PlaylistCreateFailed'
+	| 'SavePlaylistFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer'
+
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，但做了进一步封装和解耦，凑合着用 */
 import type { Result } from 'neverthrow'

@@ -24,6 +24,11 @@ interface PlaylistHeaderProps {
 	linkedPlaylistId?: number
 	id: string | number
 	mainButtonText?: string
+	disableMainButton?: boolean
+	secondaryButtonText?: string
+	secondaryButtonIcon?: string
+	onClickSecondaryButton?: () => void
+	disableSecondaryButton?: boolean
 }
 
 /**
@@ -39,6 +44,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	mainButtonText,
 	linkedPlaylistId,
 	id,
+	...props
 }: PlaylistHeaderProps) {
 	const router = useRouter()
 	const [showFullTitle, setShowFullTitle] = useState(false)
@@ -90,8 +96,20 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon={mainButtonIcon}
 						onPress={() => onClickMainButton()}
+						disabled={props.disableMainButton}
 					>
 						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
+					</Button>
+				)}
+				{props.secondaryButtonText && props.onClickSecondaryButton && (
+					<Button
+						mode='outlined'
+						icon={props.secondaryButtonIcon}
+						onPress={props.onClickSecondaryButton}
+						style={{ marginLeft: 8 }}
+						disabled={props.disableSecondaryButton}
+					>
+						{props.secondaryButtonText}
 					</Button>
 				)}
 				{linkedPlaylistId && (

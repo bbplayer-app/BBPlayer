@@ -22,7 +22,7 @@ import {
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bv2av } from '@/lib/api/bilibili/utils'
-import { syncFacade } from '@/lib/facades/sync'
+import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
