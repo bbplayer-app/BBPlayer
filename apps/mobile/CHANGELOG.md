@@ -11,6 +11,7 @@
 
 - 移除 trackService 中的标题重复检查
 - orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
+- 启用 R8 混淆
 
 ### Fixed
 

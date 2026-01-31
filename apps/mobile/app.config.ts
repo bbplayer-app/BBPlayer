@@ -135,11 +135,36 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: false,
-					enableShrinkResourcesInReleaseBuilds: false,
+					enableMinifyInReleaseBuilds: true,
+					enableShrinkResourcesInReleaseBuilds: true,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
 					},
+					extraProguardRules: `
+-dontwarn expo.modules.kotlin.**
+-dontwarn expo.modules.webview.**
+# --- 来自 retrofit2.pro ---
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
+-dontwarn javax.annotation.**
+-dontwarn kotlin.Unit
+-dontwarn retrofit2.KotlinExtensions
+-dontwarn retrofit2.KotlinExtensions$*
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface <1>
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface * extends <1>
+-keep,allowoptimization,allowshrinking,allowobfuscation class kotlin.coroutines.Continuation
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowoptimization,allowshrinking,allowobfuscation class <3>
+-keep,allowoptimization,allowshrinking,allowobfuscation class retrofit2.Response
+# --- 来自 retrofit2.pro ---
+					`,
 				},
 			},
 		],
