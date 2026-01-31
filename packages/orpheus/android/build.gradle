@@ -57,7 +57,7 @@ dependencies {
     implementation "com.squareup.retrofit2:converter-gson:2.9.0"
     implementation "io.github.zhongwuzw:mmkv:2.2.4"
     implementation "com.github.bumptech.glide:glide:4.16.0"
-    implementation "org.chromium.net:cronet-embedded:141.7340.3"
-    implementation "androidx.media3:media3-datasource-cronet:1.9.1"
+    implementation "androidx.media3:media3-datasource-okhttp:1.9.0"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
     compileOnly "com.facebook.react:react-android"
 }

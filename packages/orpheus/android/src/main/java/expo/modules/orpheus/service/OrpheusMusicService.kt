@@ -93,7 +93,6 @@ class OrpheusMusicService : MediaLibraryService() {
 
         GeneralStorage.initialize(this)
         LoudnessStorage.initialize(this)
-        expo.modules.orpheus.network.CronetManager.init(this)
 
         setMediaNotificationProvider(object : DefaultMediaNotificationProvider(this) {
             override fun getMediaButtons(

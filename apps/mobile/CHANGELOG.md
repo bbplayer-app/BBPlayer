@@ -10,6 +10,7 @@
 ### Changed
 
 - 移除 trackService 中的标题重复检查
+- orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
 
 ## [2.2.4] - 2026-01-30
 

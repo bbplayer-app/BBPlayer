@@ -7,7 +7,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.offline.DownloadManager
@@ -17,13 +16,6 @@ import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.OrpheusConfig
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.bilibili.BilibiliRepository
-import expo.modules.orpheus.bilibili.VolumeData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -88,15 +80,9 @@ object DownloadUtil {
     }
 
     private fun getUpstreamFactory(): DataSource.Factory {
-        val engine = expo.modules.orpheus.network.CronetManager.cronetEngine
-        val httpDataSourceFactory = if (engine != null) {
-            androidx.media3.datasource.cronet.CronetDataSource.Factory(engine, Executors.newFixedThreadPool(4))
-                .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
-        } else {
-            DefaultHttpDataSource.Factory()
-                .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
-                .setAllowCrossProtocolRedirects(true)
-        }
+        val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
+            expo.modules.orpheus.network.OkHttpClientManager.okHttpClient
+        ).setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
 
         return ResolvingDataSource.Factory(
             httpDataSourceFactory,
