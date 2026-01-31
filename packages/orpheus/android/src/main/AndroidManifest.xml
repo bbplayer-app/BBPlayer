@@ -11,7 +11,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application>
+    <application
+        android:networkSecurityConfig="@xml/network_security_config">
         <service
             android:name=".service.OrpheusMusicService"
             android:enabled="true"

@@ -12,6 +12,7 @@
 - 移除 trackService 中的标题重复检查
 - orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
 - 启用 R8 混淆
+- 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
 
 ### Fixed
 
