@@ -1,6 +1,6 @@
 import { Asset } from 'expo-asset'
 import { Image } from 'expo-image'
-import MediaLibrary from 'expo-media-library'
+import * as MediaLibrary from 'expo-media-library'
 import { Pressable, StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Button, Dialog, Text } from 'react-native-paper'

@@ -135,14 +135,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			{
 				android: {
 					usesCleartextTraffic: false,
-					enableMinifyInReleaseBuilds: false,
-					enableShrinkResourcesInReleaseBuilds: false,
+					enableMinifyInReleaseBuilds: true,
+					enableShrinkResourcesInReleaseBuilds: true,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
 					},
 					extraProguardRules: `
 -dontwarn expo.modules.kotlin.**
 -dontwarn expo.modules.webview.**
+# --- 修复模态框打不开的问题 ---
+-keepclassmembers class * {
+    void updatePath();
+}
+# --- 修复模态框打不开的问题 ---
 # --- 来自 retrofit2.pro ---
 -keepattributes Signature, InnerClasses, EnclosingMethod
 -keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations

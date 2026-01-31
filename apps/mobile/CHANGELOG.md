@@ -17,6 +17,7 @@
 ### Fixed
 
 - 修复 `reportErrorToSentry` 上报非 Error 类型错误时显示为 `[object Object]` 的问题
+- 修复 `DonationQRModal` 在部分 Android 设备上因 `expo-media-library` 导入方式错误导致崩溃的问题
 
 ## [2.2.4] - 2026-01-30
 
