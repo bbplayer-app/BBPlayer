@@ -10,3 +10,6 @@ onlyBuiltDependencies:
   - lefthook
   - react-native-logs
   - unrs-resolver
+
+patchedDependencies:
+  '@nandorojo/galeria': patches/@nandorojo__galeria.patch

@@ -1,0 +1,20 @@
+diff --git a/android/src/main/java/nandorojo/modules/galeria/GaleriaView.kt b/android/src/main/java/nandorojo/modules/galeria/GaleriaView.kt
+index af57d22ef00bd42742bdce8b008d4bec2459db14..b8374922a230140a1f665dfb22dce9ad448bc8dc 100644
+--- a/android/src/main/java/nandorojo/modules/galeria/GaleriaView.kt
++++ b/android/src/main/java/nandorojo/modules/galeria/GaleriaView.kt
+@@ -14,6 +14,7 @@ import android.widget.ImageView
+ import androidx.lifecycle.ViewModelProvider
+ import androidx.lifecycle.ViewModelStoreOwner
+ import androidx.recyclerview.widget.RecyclerView
++import androidx.annotation.Keep
+ import com.bumptech.glide.Glide
+ import com.facebook.react.views.image.ReactImageView
+ import com.github.iielse.imageviewer.ImageViewerActionViewModel
+@@ -44,6 +45,7 @@ fun convertToPhotos(ids: Array<String>): List<Photo> {
+ }
+ 
+ 
++@Keep
+ class GaleriaView(context: Context) : ViewGroup(context) {
+     private lateinit var viewer: ImageViewerBuilder
+     lateinit var urls: Array<String>
