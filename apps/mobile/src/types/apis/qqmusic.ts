@@ -80,6 +80,8 @@ export interface QQMusicPlaylistResponse {
 export interface QQMusicPlaylist {
 	disstid: string
 	dissname: string
+	desc: string
+	songnum: number
 	logo: string
 	nickname: string
 	songlist: QQMusicSong[]

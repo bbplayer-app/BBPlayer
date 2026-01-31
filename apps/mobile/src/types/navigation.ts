@@ -1,10 +1,16 @@
 import type { AlertModalProps } from '@/components/modals/AlertModal'
 import type { Playlist, Track } from '@/types/core/media'
+import type { GenericTrack } from '@/types/external_playlist'
 import type { ParsedLrc } from '@/types/player/lyrics'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 
 export interface ModalPropsMap {
+	ManualMatchExternalSync: {
+		track: GenericTrack
+		initialQuery: string
+		index: number
+	}
 	AddVideoToBilibiliFavorite: { bvid: string }
 	EditPlaylistMetadata: { playlist: Playlist }
 	EditTrackMetadata: { track: Track }
@@ -19,6 +25,7 @@ export interface ModalPropsMap {
 	}
 	DuplicateLocalPlaylist: { sourcePlaylistId: number; rawName: string }
 	ManualSearchLyrics: { uniqueKey: string; initialQuery: string }
+	InputExternalPlaylistInfo: undefined
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
 	SleepTimer: undefined

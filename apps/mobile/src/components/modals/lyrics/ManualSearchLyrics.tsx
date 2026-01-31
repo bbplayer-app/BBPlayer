@@ -20,6 +20,9 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 const SOURCE_MAP = {
 	netease: '网易云',
 	qqmusic: 'QQ 音乐',
+	kuwo: '酷我',
+	kugou: '酷狗',
+	baidu: '百度',
 }
 
 const renderItem = ({

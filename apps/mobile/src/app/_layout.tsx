@@ -256,6 +256,10 @@ export default Sentry.wrap(function RootLayout() {
 					name='comments/reply'
 					options={{ headerShown: false }}
 				/>
+				<Stack.Screen
+					name='playlist/external-sync'
+					options={{ headerShown: false }}
+				/>
 			</Stack>
 			<Toaster />
 		</AppProviders>

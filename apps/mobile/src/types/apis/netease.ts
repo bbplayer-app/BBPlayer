@@ -14,6 +14,9 @@ export interface NeteasePlaylist {
 	tags: string[]
 	backgroundCoverId: number
 	backgroundCoverUrl: string | null
+	subscribedCount: number
+	cloudTrackCount: number
+	trackCount: number
 	creator: NeteaseCreator
 	tracks: NeteaseSong[]
 }
