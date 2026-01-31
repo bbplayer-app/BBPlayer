@@ -1,5 +1,4 @@
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
-import { fetch } from 'react-native-nitro-fetch'
 
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'

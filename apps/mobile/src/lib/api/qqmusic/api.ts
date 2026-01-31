@@ -1,6 +1,5 @@
 import { decode } from 'he'
 import { errAsync, ResultAsync } from 'neverthrow'
-import { fetch } from 'react-native-nitro-fetch'
 
 import type {
 	QQMusicLyricResponse,
