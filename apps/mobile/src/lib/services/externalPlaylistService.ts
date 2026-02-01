@@ -1,4 +1,5 @@
-import { ResultAsync, okAsync } from 'neverthrow'
+import { decode } from 'he'
+import { ResultAsync, errAsync } from 'neverthrow'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi } from '@/lib/api/netease/api'
@@ -99,17 +100,7 @@ export class ExternalPlaylistService {
 				}
 			})
 		}
-		return okAsync({
-			playlist: {
-				id: '0',
-				title: 'Unknown',
-				coverUrl: '',
-				description: '',
-				trackCount: 0,
-				author: { name: 'Unknown' },
-			},
-			tracks: [],
-		})
+		return errAsync(new Error('Unsupported source: ' + String(source)))
 	}
 
 	public matchExternalPlaylist(
@@ -142,10 +133,21 @@ export class ExternalPlaylistService {
 					let matchedVideo: BilibiliSearchVideo | null = null
 
 					try {
-						const searchResult = await bilibiliApi.searchVideos(searchQuery, 1)
+						const searchResult = await bilibiliApi.searchVideos(
+							searchQuery,
+							1,
+							{
+								// 一点小巧思：带 cookie 调用搜索是会有个性化内容的，但在匹配时我认为个性化内容反而会干扰准确度
+								skipCookie: true,
+							},
+						)
 
 						if (searchResult.isOk()) {
-							matchedVideo = this.findBestMatch(searchResult.value.result, song)
+							const decodedResults = searchResult.value.result.map((video) => ({
+								...video,
+								title: decode(video.title),
+							}))
+							matchedVideo = this.findBestMatchSimple(decodedResults, song)
 						} else {
 							logger.error(
 								`Search failed for ${song.title}:`,
@@ -166,8 +168,36 @@ export class ExternalPlaylistService {
 
 				return results
 			})(),
-			(e) => new Error(String(e)),
+			(e) => (e instanceof Error ? e : new Error(String(e))),
 		)
+	}
+
+	// 经过测试，反而这种简单的方式准确率更高。。。相信大数据.jpg
+	private findBestMatchSimple(
+		results: BilibiliSearchVideo[],
+		targetSong: GenericTrack,
+	): BilibiliSearchVideo | null {
+		const targetDurationSec = targetSong.duration / 1000
+
+		for (const video of results) {
+			// 1. 黑名单过滤
+			if (BLACKLIST_ZONES.includes(video.typeid)) {
+				continue
+			}
+
+			// 2. 时长过滤 (差异 > 20s 排除)
+			const videoDurationSec = parseDurationString(video.duration)
+			const durationDiff = Math.abs(videoDurationSec - targetDurationSec)
+
+			if (durationDiff > 20) {
+				continue
+			}
+
+			// 3. 直接返回第一个满足条件的
+			return video
+		}
+
+		return null
 	}
 
 	private findBestMatch(

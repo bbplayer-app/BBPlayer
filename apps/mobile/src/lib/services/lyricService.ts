@@ -203,7 +203,6 @@ class LyricService {
 					.andThen((musicName) => {
 						const lyricSource =
 							useAppStore.getState().settings.lyricSource ?? 'auto'
-						// @ts-expect-error Safe to cast
 						return this.getBestMatchedLyrics(track, musicName, lyricSource)
 					})
 					.andThen((lyrics) => {
@@ -217,7 +216,6 @@ class LyricService {
 
 			const lyricSource = useAppStore.getState().settings.lyricSource ?? 'auto'
 
-			// @ts-expect-error Safe to cast
 			return this.getBestMatchedLyrics(track, undefined, lyricSource).andThen(
 				(lyrics) => {
 					logger.info('自动搜索最佳匹配的歌词完成')

@@ -216,28 +216,10 @@ export default function PlaybackSettingsPage() {
 						/>
 						<Checkbox.Item
 							mode='ios'
-							label='酷我音乐'
-							status={lyricSource === 'kuwo' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'kuwo' })
-								setLyricSourceMenuVisible(false)
-							}}
-						/>
-						<Checkbox.Item
-							mode='ios'
 							label='酷狗音乐'
 							status={lyricSource === 'kugou' ? 'checked' : 'unchecked'}
 							onPress={() => {
 								setSettings({ lyricSource: 'kugou' })
-								setLyricSourceMenuVisible(false)
-							}}
-						/>
-						<Checkbox.Item
-							mode='ios'
-							label='百度音乐'
-							status={lyricSource === 'baidu' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'baidu' })
 								setLyricSourceMenuVisible(false)
 							}}
 						/>

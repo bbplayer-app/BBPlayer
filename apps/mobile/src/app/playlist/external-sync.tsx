@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
+import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import {
@@ -49,16 +50,7 @@ const SyncTrackItem = memo(
 		const result = useExternalPlaylistSyncStore((state) => state.results[index])
 
 		return (
-			<View
-				style={[
-					styles.itemContainer,
-					{
-						// backgroundColor: theme.colors.elevation.level1, // Removed card style
-						// marginBottom: 12, // Removed spacing
-						// borderRadius: 12, // Removed border radius
-					},
-				]}
-			>
+			<View style={styles.itemContainer}>
 				<View style={styles.itemInner}>
 					<CoverWithPlaceHolder
 						id={`${index}`}
@@ -70,15 +62,14 @@ const SyncTrackItem = memo(
 					<View style={styles.itemContent}>
 						<Text
 							variant='titleMedium'
-							numberOfLines={2}
 							style={{ fontWeight: '600', marginBottom: 2 }}
 						>
 							{track.title}
+							{track.translatedTitle && ` (${track.translatedTitle})`}
 						</Text>
 						<Text
 							variant='bodySmall'
 							style={{ color: theme.colors.onSurfaceVariant }}
-							numberOfLines={1}
 						>
 							{track.artists.join(', ')} - {track.album}
 						</Text>
@@ -204,7 +195,6 @@ const ExternalPlaylistSyncPageInner = () => {
 		results,
 	} = useExternalPlaylistSyncStore((state) => state)
 
-	// Reset store on mount
 	useEffect(() => {
 		reset()
 		return () => reset()
@@ -231,7 +221,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					text: '退出',
 					onPress: () => {
 						setIsExiting(true)
-						router.back()
+						useModalStore.getState().doAfterModalHostClosed(() => router.back())
 					},
 				},
 			],
@@ -249,6 +239,8 @@ const ExternalPlaylistSyncPageInner = () => {
 		const unmatchedCount = matchResults.filter(
 			(r) => r.matchedVideo === null,
 		).length
+
+		const unprocessedCount = data.tracks.length - matchResults.length
 
 		const proceedSave = async () => {
 			const loadingToast = toast.loading('正在保存到本地...')
@@ -271,7 +263,12 @@ const ExternalPlaylistSyncPageInner = () => {
 						queryKey: playlistKeys.playlistLists(),
 					})
 					reset()
-					setTimeout(() => router.back(), 0)
+					const playlistId = saveResult.value
+					useModalStore
+						.getState()
+						.doAfterModalHostClosed(() =>
+							router.replace(`/playlist/local/${playlistId}`),
+						)
 				}
 			} catch (e) {
 				toast.error('保存失败')
@@ -281,10 +278,18 @@ const ExternalPlaylistSyncPageInner = () => {
 			}
 		}
 
-		if (unmatchedCount > 0) {
+		if (unmatchedCount > 0 || unprocessedCount > 0) {
+			const messages = []
+			if (unprocessedCount > 0) {
+				messages.push(`还有 ${unprocessedCount} 首歌曲未进行匹配`)
+			}
+			if (unmatchedCount > 0) {
+				messages.push(`还有 ${unmatchedCount} 首歌曲未匹配到视频`)
+			}
+
 			openModal('Alert', {
-				title: '存在未匹配的歌曲',
-				message: `还有 ${unmatchedCount} 首歌曲未匹配到视频。如果继续，这些歌曲将不会被保存。建议您手动匹配它们。`,
+				title: '存在未完成的项目',
+				message: `${messages.join('，')}。如果继续，这些已匹配的歌曲将被保存，未匹配的将被忽略。建议您完成匹配或手动匹配剩余歌曲。`,
 				buttons: [
 					{
 						text: '去手动匹配',
@@ -298,7 +303,15 @@ const ExternalPlaylistSyncPageInner = () => {
 		} else {
 			await proceedSave()
 		}
-	}, [data?.playlist, results, router, openModal, reset, queryClient])
+	}, [
+		data?.playlist,
+		results,
+		router,
+		openModal,
+		reset,
+		queryClient,
+		data?.tracks,
+	])
 
 	const handleSync = useCallback(async () => {
 		if (!data?.tracks) return
@@ -311,10 +324,9 @@ const ExternalPlaylistSyncPageInner = () => {
 		}
 
 		const startIndex = Object.keys(results).length
+		// 如果已经匹配完了，就默认用户的意思是重新匹配
 		if (startIndex >= data.tracks.length) {
-			if (startIndex === data.tracks.length) {
-				reset()
-			}
+			reset()
 		}
 
 		const effectiveStartIndex =
@@ -389,15 +401,13 @@ const ExternalPlaylistSyncPageInner = () => {
 		[openModal, setResult],
 	)
 
+	const keyExtractor = useCallback(
+		(item: GenericTrack, index: number) => `${index}-${item.title}`,
+		[],
+	)
+
 	if (isLoading) {
-		return (
-			<View style={styles.center}>
-				<ActivityIndicator
-					size='large'
-					color={theme.colors.primary}
-				/>
-			</View>
-		)
+		return <PlaylistPageSkeleton />
 	}
 
 	if (error || !data) {
@@ -413,7 +423,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	const { tracks } = data
 
 	return (
-		<View style={{ flex: 1 }}>
+		<View style={{ flex: 1, backgroundColor: theme.colors.background }}>
 			<Appbar.Header>
 				<Appbar.BackAction onPress={router.back} />
 				<Appbar.Content title='外部歌单匹配' />
@@ -442,7 +452,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					openManualMatch: handleOpenManualMatch,
 					syncing,
 				}}
-				keyExtractor={(item, index) => `${index}-${item.title}`}
+				keyExtractor={keyExtractor}
 				ItemSeparatorComponent={() => <Divider />}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,

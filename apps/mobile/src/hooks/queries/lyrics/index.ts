@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { kugouApi } from '@/lib/api/kugou/api'
 import { neteaseApi } from '@/lib/api/netease/api'
@@ -44,14 +44,12 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 	const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
 	const [results, setResults] = useState<LyricSearchResult>([])
-	const [processedProviders, setProcessedProviders] = useState<Set<string>>(
-		() => new Set(),
-	)
+	const processedProvidersRef = useRef<Set<string>>(new Set())
 
 	// Effect to reset results when query changes
 	useEffect(() => {
 		setResults([])
-		setProcessedProviders(new Set())
+		processedProvidersRef.current = new Set()
 	}, [searchQuery])
 
 	const queries = useQueries({
@@ -63,7 +61,6 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
-					console.log('Searching Netease:', searchQuery)
 					const res = await neteaseApi.search(
 						{
 							keywords: searchQuery,
@@ -83,7 +80,6 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				queryKey: lyricsQueryKeys.manualSearch(uniqueKey, `qq-${searchQuery}`),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
-					console.log('Searching QQ:', searchQuery)
 					const res = await qqMusicApi.search(searchQuery, 20, signal)
 					if (res.isOk()) {
 						return res.value
@@ -100,7 +96,6 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
-					console.log('Searching Kugou:', searchQuery)
 					const res = await kugouApi.search(searchQuery, 20, signal)
 					if (res.isOk()) {
 						return res.value
@@ -127,20 +122,16 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 			providerName: string,
 			data: LyricSearchResult | undefined,
 		) => {
-			if (data && !processedProviders.has(providerName)) {
+			if (data && !processedProvidersRef.current.has(providerName)) {
 				setResults((prev) => [...prev, ...data])
-				setProcessedProviders((prev) => {
-					const newSet = new Set(prev)
-					newSet.add(providerName)
-					return newSet
-				})
+				processedProvidersRef.current.add(providerName)
 			}
 		}
 
 		if (neteaseData) processResult('netease', neteaseData)
 		if (qqData) processResult('qq', qqData)
 		if (kugouData) processResult('kugou', kugouData)
-	}, [neteaseData, qqData, kugouData, processedProviders])
+	}, [neteaseData, qqData, kugouData])
 
 	const triggerSearch = useCallback((query: string) => {
 		setSearchQuery(query)

@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list'
+import { decode } from 'he'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
@@ -10,6 +11,7 @@ import {
 	TouchableRipple,
 } from 'react-native-paper'
 
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
@@ -43,32 +45,41 @@ const SearchItem = memo(function SearchItem({
 	item: BilibiliSearchVideo
 	onPress: (item: BilibiliSearchVideo) => void
 }) {
+	const coverUrl = item.pic.startsWith('//') ? `https:${item.pic}` : item.pic
 	return (
 		<TouchableRipple
 			style={styles.searchItem}
 			onPress={() => onPress(item)}
 		>
-			<View style={styles.searchItemContent}>
-				<Text
-					variant='bodyMedium'
-					numberOfLines={1}
-				>
-					{item.title
-						.replace(/<em class="keyword">/g, '')
-						.replace(/<\/em>/g, '')}
-				</Text>
-				<Text
-					variant='bodySmall'
-					numberOfLines={1}
-				>
-					{item.author} -{' '}
-					{formatDurationToHHMMSS(
-						Math.round(
-							parseInt(item.duration.split(':')[0]) * 60 +
-								parseInt(item.duration.split(':')[1]),
-						),
-					)}
-				</Text>
+			<View style={styles.itemContainer}>
+				<CoverWithPlaceHolder
+					id={item.bvid}
+					coverUrl={coverUrl}
+					size={40}
+					title={item.title}
+				/>
+				<View style={styles.searchItemContent}>
+					<Text
+						variant='bodyMedium'
+						numberOfLines={1}
+					>
+						{item.title
+							.replace(/<em class="keyword">/g, '')
+							.replace(/<\/em>/g, '')}
+					</Text>
+					<Text
+						variant='bodySmall'
+						numberOfLines={1}
+					>
+						{item.author} -{' '}
+						{formatDurationToHHMMSS(
+							Math.round(
+								parseInt(item.duration.split(':')[0]) * 60 +
+									parseInt(item.duration.split(':')[1]),
+							),
+						)}
+					</Text>
+				</View>
 			</View>
 		</TouchableRipple>
 	)
@@ -90,10 +101,23 @@ export default function ManualMatchExternalSync({
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
 		useSearchResults(finalQuery)
 
-	const allVideos = useMemo(
-		() => data?.pages.flatMap((page) => page.result) ?? [],
-		[data],
-	)
+	const allVideos = useMemo(() => {
+		if (!data?.pages) {
+			return []
+		}
+
+		const allTracks = data.pages.flatMap((page) => page.result)
+		const uniqueMap = new Map(
+			allTracks.map((track) => [
+				track.bvid,
+				{
+					...track,
+					title: decode(track.title),
+				},
+			]),
+		)
+		return [...uniqueMap.values()]
+	}, [data])
 
 	const handlePressItem = useCallback(
 		(video: BilibiliSearchVideo) => {
@@ -108,6 +132,8 @@ export default function ManualMatchExternalSync({
 
 	const extraData = useMemo(() => ({ handlePressItem }), [handlePressItem])
 
+	const keyExtractor = useCallback((item: BilibiliSearchVideo) => item.bvid, [])
+
 	const renderContent = () => {
 		if (isLoading) {
 			return (
@@ -121,7 +147,7 @@ export default function ManualMatchExternalSync({
 				<FlashList
 					data={allVideos}
 					renderItem={renderItem}
-					keyExtractor={(item) => item.bvid}
+					keyExtractor={keyExtractor}
 					extraData={extraData}
 					onEndReached={() => {
 						if (hasNextPage && !isFetchingNextPage) {
@@ -129,6 +155,13 @@ export default function ManualMatchExternalSync({
 						}
 					}}
 					onEndReachedThreshold={0.5}
+					ListFooterComponent={
+						isFetchingNextPage ? (
+							<View style={{ padding: 16 }}>
+								<ActivityIndicator />
+							</View>
+						) : null
+					}
 				/>
 			)
 		}
@@ -162,12 +195,17 @@ export default function ManualMatchExternalSync({
 
 const styles = StyleSheet.create({
 	searchItem: {
-		flexDirection: 'column',
 		paddingVertical: 8,
 		paddingHorizontal: 16,
 	},
+	itemContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
 	searchItemContent: {
 		flexDirection: 'column',
+		marginLeft: 12,
+		flex: 1,
 	},
 	centerContainer: {
 		flex: 1,
