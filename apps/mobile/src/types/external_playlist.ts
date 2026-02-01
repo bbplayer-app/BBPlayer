@@ -4,6 +4,7 @@ export interface GenericTrack {
 	album: string
 	duration: number // milliseconds
 	coverUrl?: string
+	translatedTitle?: string
 }
 
 export interface GenericPlaylist {

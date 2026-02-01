@@ -128,19 +128,12 @@ const ManualSearchLyricsModal = ({
 
 		if (searchResult.length > 0) {
 			return (
-				<>
-					{isSearching && (
-						<View style={styles.loadingOverlay}>
-							<ActivityIndicator size='small' />
-						</View>
-					)}
-					<FlashList
-						data={searchResult}
-						renderItem={renderItem}
-						keyExtractor={keyExtractor}
-						extraData={extraData}
-					/>
-				</>
+				<FlashList
+					data={searchResult}
+					renderItem={renderItem}
+					keyExtractor={keyExtractor}
+					extraData={extraData}
+				/>
 			)
 		}
 
@@ -159,7 +152,17 @@ const ManualSearchLyricsModal = ({
 
 	return (
 		<>
-			<Dialog.Title>手动搜索歌词</Dialog.Title>
+			<Dialog.Title style={styles.dialogTitle}>
+				<View style={styles.titleContainer}>
+					<Text variant='headlineSmall'>手动搜索歌词</Text>
+					{isSearching && (
+						<ActivityIndicator
+							size='small'
+							style={styles.loadingIndicator}
+						/>
+					)}
+				</View>
+			</Dialog.Title>
 			<Dialog.Content>
 				<Searchbar
 					value={query}
@@ -205,6 +208,17 @@ const styles = StyleSheet.create({
 	loadingOverlay: {
 		paddingVertical: 10,
 		alignItems: 'center',
+	},
+	dialogTitle: {
+		alignItems: 'center',
+	},
+	titleContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	loadingIndicator: {
+		marginLeft: 8,
 	},
 })
 

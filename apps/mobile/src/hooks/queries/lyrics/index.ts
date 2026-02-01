@@ -1,11 +1,12 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { kugouApi } from '@/lib/api/kugou/api'
 import { neteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi } from '@/lib/api/qqmusic/api'
 import lyricService from '@/lib/services/lyricService'
 import type { Track } from '@/types/core/media'
+import type { LyricSearchResult } from '@/types/player/lyrics'
 
 export const lyricsQueryKeys = {
 	all: ['lyrics'] as const,
@@ -42,6 +43,17 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 export const useManualSearchLyrics = (uniqueKey?: string) => {
 	const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
+	const [results, setResults] = useState<LyricSearchResult>([])
+	const [processedProviders, setProcessedProviders] = useState<Set<string>>(
+		() => new Set(),
+	)
+
+	// Effect to reset results when query changes
+	useEffect(() => {
+		setResults([])
+		setProcessedProviders(new Set())
+	}, [searchQuery])
+
 	const queries = useQueries({
 		queries: [
 			{
@@ -49,13 +61,16 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 					uniqueKey,
 					`netease-${searchQuery}`,
 				),
-				queryFn: async () => {
+				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					console.log('Searching Netease:', searchQuery)
-					const res = await neteaseApi.search({
-						keywords: searchQuery,
-						limit: 20,
-					})
+					const res = await neteaseApi.search(
+						{
+							keywords: searchQuery,
+							limit: 20,
+						},
+						signal,
+					)
 					if (res.isOk()) {
 						return res.value
 					}
@@ -66,10 +81,10 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 			},
 			{
 				queryKey: lyricsQueryKeys.manualSearch(uniqueKey, `qq-${searchQuery}`),
-				queryFn: async () => {
+				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					console.log('Searching QQ:', searchQuery)
-					const res = await qqMusicApi.search(searchQuery, 20)
+					const res = await qqMusicApi.search(searchQuery, 20, signal)
 					if (res.isOk()) {
 						return res.value
 					}
@@ -83,10 +98,10 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 					uniqueKey,
 					`kugou-${searchQuery}`,
 				),
-				queryFn: async () => {
+				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					console.log('Searching Kugou:', searchQuery)
-					const res = await kugouApi.search(searchQuery, 20)
+					const res = await kugouApi.search(searchQuery, 20, signal)
 					if (res.isOk()) {
 						return res.value
 					}
@@ -102,12 +117,30 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 	const qqQuery = queries[1]
 	const kugouQuery = queries[2]
 
-	const combinedResults = useMemo(() => {
-		const neteaseList = neteaseQuery.data ?? []
-		const qqList = qqQuery.data ?? []
-		const kugouList = kugouQuery.data ?? []
-		return [...neteaseList, ...qqList, ...kugouList]
-	}, [kugouQuery.data, neteaseQuery.data, qqQuery.data])
+	const neteaseData = neteaseQuery.data
+	const qqData = qqQuery.data
+	const kugouData = kugouQuery.data
+
+	// Effect to append results as they arrive
+	useEffect(() => {
+		const processResult = (
+			providerName: string,
+			data: LyricSearchResult | undefined,
+		) => {
+			if (data && !processedProviders.has(providerName)) {
+				setResults((prev) => [...prev, ...data])
+				setProcessedProviders((prev) => {
+					const newSet = new Set(prev)
+					newSet.add(providerName)
+					return newSet
+				})
+			}
+		}
+
+		if (neteaseData) processResult('netease', neteaseData)
+		if (qqData) processResult('qq', qqData)
+		if (kugouData) processResult('kugou', kugouData)
+	}, [neteaseData, qqData, kugouData, processedProviders])
 
 	const triggerSearch = useCallback((query: string) => {
 		setSearchQuery(query)
@@ -117,7 +150,7 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 
 	return {
 		search: triggerSearch,
-		results: combinedResults,
+		results,
 		isLoading,
 		errors: {
 			netease: neteaseQuery.error,

@@ -21,7 +21,10 @@ interface SearchParams {
 }
 
 export class NeteaseApi {
-	getLyrics(id: number): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
+	getLyrics(
+		id: number,
+		signal?: AbortSignal,
+	): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
 		const data = {
 			id: id,
 			lv: -1,
@@ -29,6 +32,9 @@ export class NeteaseApi {
 			os: 'pc',
 		}
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseLyricResponse>(
 			'/api/song/lyric',
 			data,
@@ -38,6 +44,7 @@ export class NeteaseApi {
 
 	search(
 		params: SearchParams,
+		signal?: AbortSignal,
 	): ResultAsync<LyricSearchResult, NeteaseApiError> {
 		const type = params.type ?? 1
 		const endpoint =
@@ -53,6 +60,9 @@ export class NeteaseApi {
 		}
 
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseSearchResponse>(
 			endpoint,
 			data,
@@ -88,8 +98,9 @@ export class NeteaseApi {
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
+		signal?: AbortSignal,
 	): ResultAsync<ParsedLrc, NeteaseApiError> {
-		return this.search({ keywords: keyword, limit: 10 }).andThen(
+		return this.search({ keywords: keyword, limit: 10 }, signal).andThen(
 			(searchResult) => {
 				if (searchResult.length === 0) {
 					return errAsync(
@@ -104,7 +115,7 @@ export class NeteaseApi {
 				// 相信网易云... 哥们儿写的规则太屎了
 				const bestMatch = searchResult[0]
 
-				return this.getLyrics(bestMatch.remoteId as number).andThen(
+				return this.getLyrics(bestMatch.remoteId as number, signal).andThen(
 					(lyricsResponse) => {
 						const lyricData = this.parseLyrics(lyricsResponse)
 						return okAsync(lyricData)

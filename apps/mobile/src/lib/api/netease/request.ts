@@ -39,6 +39,7 @@ export interface RequestOptions {
 	crypto?: 'weapi' | 'linuxapi' | 'eapi'
 	headers?: Record<string, string>
 	e_r?: boolean
+	signal?: AbortSignal
 }
 
 interface RequestPayload {
@@ -46,6 +47,7 @@ interface RequestPayload {
 	headers: Record<string, string>
 	body: object
 	e_r: boolean
+	signal?: AbortSignal
 }
 
 const buildRequestPayload = <T extends object>(
@@ -53,7 +55,7 @@ const buildRequestPayload = <T extends object>(
 	data: T,
 	options: RequestOptions,
 ): RequestPayload => {
-	const { ua, crypto = 'weapi' } = options
+	const { ua, crypto = 'weapi', signal } = options
 	const cookie =
 		typeof options.cookie === 'string'
 			? cookieToJson(options.cookie)
@@ -110,7 +112,7 @@ const buildRequestPayload = <T extends object>(
 		// pass
 	}
 
-	return { url, headers, body, e_r }
+	return { url, headers, body, e_r, signal }
 }
 
 interface FetchResult<TReturnBody> {
@@ -121,11 +123,12 @@ interface FetchResult<TReturnBody> {
 const executeFetch = <TReturnBody>(
 	payload: RequestPayload,
 ): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
-	const { url, headers, body, e_r } = payload
-	const settings = {
+	const { url, headers, body, e_r, signal } = payload
+	const settings: RequestInit = {
 		method: 'POST',
 		headers,
 		body: new URLSearchParams(body as Record<string, string>).toString(),
+		signal: signal,
 	}
 
 	return ResultAsync.fromPromise(

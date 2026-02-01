@@ -66,70 +66,93 @@ class LyricService {
 		const keyword = preciseKeyword ?? this.cleanKeyword(track.title)
 		const durationMs = track.duration * 1000
 
-		const providers = []
+		// Keep track of abort controllers for cancellation
+		const controllers: AbortController[] = []
+
+		const createProviderPromise = (
+			apiCall: (
+				signal: AbortSignal,
+			) => ResultAsync<ParsedLrc, Error | CustomError>,
+			providerName: string,
+		) => {
+			const controller = new AbortController()
+			controllers.push(controller)
+
+			return apiCall(controller.signal)
+				.map((res) => {
+					logger.debug(`${providerName} returned lyrics`)
+					// If one succeeds, abort others
+					controllers.forEach((c) => {
+						if (c !== controller) {
+							c.abort()
+						}
+					})
+					return res
+				})
+				.match(
+					(v) => v,
+					(e) => {
+						throw e
+					},
+				)
+		}
+
+		const providers: Promise<ParsedLrc>[] = []
 
 		if (source === 'netease' || source === undefined || source === 'auto') {
 			providers.push(
-				this.neteaseApi
-					.searchBestMatchedLyrics(keyword, durationMs)
-					.map((res) => {
-						logger.debug('Netease returned lyrics')
-						return res
-					}),
+				createProviderPromise(
+					(signal) =>
+						this.neteaseApi.searchBestMatchedLyrics(
+							keyword,
+							durationMs,
+							signal,
+						),
+					'Netease',
+				),
 			)
 		}
 
 		if (source === 'qqmusic' || source === undefined || source === 'auto') {
 			providers.push(
-				this.qqMusicApi
-					.searchBestMatchedLyrics(keyword, durationMs)
-					.map((res) => {
-						logger.debug('QQMusic returned lyrics')
-						return res
-					}),
+				createProviderPromise(
+					(signal) =>
+						this.qqMusicApi.searchBestMatchedLyrics(
+							keyword,
+							durationMs,
+							signal,
+						),
+					'QQMusic',
+				),
 			)
 		}
 
 		if (source === 'kugou' || source === undefined || source === 'auto') {
 			providers.push(
-				this.kugouApi
-					.searchBestMatchedLyrics(keyword, durationMs)
-					.map((res) => {
-						logger.debug('Kugou returned lyrics')
-						return res
-					}),
+				createProviderPromise(
+					(signal) =>
+						this.kugouApi.searchBestMatchedLyrics(keyword, durationMs, signal),
+					'Kugou',
+				),
 			)
 		}
 
-		return ResultAsync.fromPromise(
-			Promise.any(
-				providers.map((p) =>
-					// Convert ResultAsync to Promise that resolves on Ok and rejects on Err
-					p.match(
-						(v) => Promise.resolve(v),
-						(e) => Promise.reject(e),
-					),
-				),
-			),
-			(e) => {
-				// All failed
-				// e will be an AggregateError if using Promise.any
-				const aggregateError = e as AggregateError
-				const errors = Array.from(aggregateError.errors || [])
-				const errorMessages = errors
-					.map((err, _index) => {
-						// This mapping index is tricky because providers array dynamic.
-						// Simplified error logging:
-						return `${err instanceof Error ? err.message : String(err)}`
-					})
-					.join('; ')
+		return ResultAsync.fromPromise(Promise.any(providers), (e) => {
+			// All failed
+			// e will be an AggregateError if using Promise.any
+			const aggregateError = e as AggregateError
+			const errors = Array.from(aggregateError.errors || [])
+			const errorMessages = errors
+				.map((err) => {
+					return `${err instanceof Error ? err.message : String(err)}`
+				})
+				.join('; ')
 
-				return new LyricNotFoundError(
-					`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
-					{ cause: e },
-				)
-			},
-		)
+			return new LyricNotFoundError(
+				`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
+				{ cause: e },
+			)
+		})
 	}
 
 	/**

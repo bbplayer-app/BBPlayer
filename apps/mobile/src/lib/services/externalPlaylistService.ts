@@ -41,6 +41,7 @@ export class ExternalPlaylistService {
 					album: track.al.name,
 					duration: track.dt,
 					coverUrl: track.al.picUrl.replace('http://', 'https://'),
+					translatedTitle: track.tns?.[0],
 				}))
 
 				return {
@@ -80,6 +81,7 @@ export class ExternalPlaylistService {
 					album: track.album.name,
 					duration: track.interval * 1000,
 					coverUrl: `https://y.gtimg.cn/music/photo_new/T002R300x300M000${track.album.mid}.jpg`,
+					translatedTitle: track.subtitle,
 				}))
 
 				return {
@@ -135,7 +137,7 @@ export class ExternalPlaylistService {
 					}
 
 					const artistNames = song.artists.join(' ')
-					const searchQuery = `${song.title} - ${artistNames}`
+					const searchQuery = `${song.title} ${song.translatedTitle ?? ''} - ${artistNames}`
 
 					let matchedVideo: BilibiliSearchVideo | null = null
 

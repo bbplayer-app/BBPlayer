@@ -20,7 +20,11 @@ export class KugouApi {
 		}
 	}
 
-	search(keyword: string, limit = 10): ResultAsync<LyricSearchResult, Error> {
+	search(
+		keyword: string,
+		limit = 10,
+		signal?: AbortSignal,
+	): ResultAsync<LyricSearchResult, Error> {
 		const params = new URLSearchParams({
 			api_ver: '1',
 			area_code: '1',
@@ -38,7 +42,7 @@ export class KugouApi {
 		const url = `http://mobilecdn.kugou.com/api/v3/search/song?${params.toString()}`
 
 		return ResultAsync.fromPromise(
-			fetch(url, { headers: this.getHeaders() }).then((res) => {
+			fetch(url, { headers: this.getHeaders(), signal }).then((res) => {
 				if (!res.ok) {
 					throw new Error(`Kugou API error: ${res.statusText}`)
 				}
@@ -59,7 +63,7 @@ export class KugouApi {
 		})
 	}
 
-	getLyrics(id: string): ResultAsync<string, Error> {
+	getLyrics(id: string, signal?: AbortSignal): ResultAsync<string, Error> {
 		// Step 1: Search for lyric candidate
 		const searchParams = new URLSearchParams({
 			keyword: '%20-%20',
@@ -71,7 +75,7 @@ export class KugouApi {
 		const searchUrl = `http://krcs.kugou.com/search?${searchParams.toString()}`
 
 		return ResultAsync.fromPromise(
-			fetch(searchUrl).then(
+			fetch(searchUrl, { signal }).then(
 				(res) => res.json() as Promise<KugouLyricSearchResponse>,
 			),
 			(e) =>
@@ -95,7 +99,7 @@ export class KugouApi {
 			const downloadUrl = `http://lyrics.kugou.com/download?${downloadParams.toString()}`
 
 			return ResultAsync.fromPromise(
-				fetch(downloadUrl).then(
+				fetch(downloadUrl, { signal }).then(
 					(res) => res.json() as Promise<KugouLyricDownloadResponse>,
 				),
 				(e) => new Error('Failed to download lyric from Kugou', { cause: e }),
@@ -115,8 +119,9 @@ export class KugouApi {
 	searchBestMatchedLyrics(
 		keyword: string,
 		durationMs: number,
+		signal?: AbortSignal,
 	): ResultAsync<ParsedLrc, Error> {
-		return this.search(keyword).andThen((songs) => {
+		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
 				return errAsync(new Error('No songs found on Kugou'))
 			}
@@ -139,8 +144,8 @@ export class KugouApi {
 				)
 			}
 
-			return this.getLyrics(bestMatch.remoteId as string).map((content) =>
-				this.parseLyrics(content),
+			return this.getLyrics(bestMatch.remoteId as string, signal).map(
+				(content) => this.parseLyrics(content),
 			)
 		})
 	}
