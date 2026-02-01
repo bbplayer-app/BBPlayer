@@ -1,10 +1,13 @@
 import { FlashList } from '@shopify/flash-list'
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Banner,
+	Button,
+	Divider,
 	IconButton,
 	Text,
 	TouchableRipple,
@@ -14,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
+import { playlistKeys } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import {
 	ExternalPlaylistSyncStoreProvider,
@@ -49,9 +53,9 @@ const SyncTrackItem = memo(
 				style={[
 					styles.itemContainer,
 					{
-						backgroundColor: theme.colors.elevation.level1,
-						marginBottom: 12,
-						borderRadius: 12,
+						// backgroundColor: theme.colors.elevation.level1, // Removed card style
+						// marginBottom: 12, // Removed spacing
+						// borderRadius: 12, // Removed border radius
 					},
 				]}
 			>
@@ -59,7 +63,7 @@ const SyncTrackItem = memo(
 					<CoverWithPlaceHolder
 						id={`${index}`}
 						title={track.title}
-						coverUrl={result?.matchedVideo?.pic}
+						coverUrl={track.coverUrl}
 						size={LIST_ITEM_COVER_SIZE}
 						borderRadius={LIST_ITEM_BORDER_RADIUS}
 					/>
@@ -182,8 +186,8 @@ const ExternalPlaylistSyncPageInner = () => {
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
-	const navigation = useNavigation()
 	const openModal = useModalStore((state) => state.open)
+	const queryClient = useQueryClient()
 
 	const { data, isLoading, error } = useExternalPlaylist(
 		id ?? '',
@@ -206,11 +210,15 @@ const ExternalPlaylistSyncPageInner = () => {
 		return () => reset()
 	}, [reset])
 
+	const abortControllerRef = useRef<AbortController | null>(null)
+	const sessionStartTimeRef = useRef<number>(0)
+	const sessionStartCountRef = useRef<number>(0)
+	const [etaSeconds, setEtaSeconds] = useState<number | null>(null)
+
 	const [isExiting, setIsExiting] = useState(false)
 
 	const hasResults = Object.keys(results).length > 0 && !isExiting
-	usePreventRemove(hasResults, (e) => {
-		const action = e.data.action
+	usePreventRemove(hasResults, () => {
 		openModal('Alert', {
 			title: '确定要退出吗？',
 			message:
@@ -223,7 +231,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					text: '退出',
 					onPress: () => {
 						setIsExiting(true)
-						setTimeout(() => navigation.dispatch(action), 0)
+						router.back()
 					},
 				},
 			],
@@ -259,6 +267,9 @@ const ExternalPlaylistSyncPageInner = () => {
 					console.error(saveResult.error)
 				} else {
 					toast.success('歌单已保存到本地')
+					await queryClient.invalidateQueries({
+						queryKey: playlistKeys.playlistLists(),
+					})
 					reset()
 					setTimeout(() => router.back(), 0)
 				}
@@ -287,12 +298,41 @@ const ExternalPlaylistSyncPageInner = () => {
 		} else {
 			await proceedSave()
 		}
-	}, [data?.playlist, results, router, openModal, reset])
+	}, [data?.playlist, results, router, openModal, reset, queryClient])
 
 	const handleSync = useCallback(async () => {
 		if (!data?.tracks) return
+
+		if (syncing) {
+			abortControllerRef.current?.abort()
+			setSyncing(false)
+			toast.info('已暂停匹配')
+			return
+		}
+
+		const startIndex = Object.keys(results).length
+		if (startIndex >= data.tracks.length) {
+			if (startIndex === data.tracks.length) {
+				reset()
+			}
+		}
+
+		const effectiveStartIndex =
+			Object.keys(results).length === data.tracks.length
+				? 0
+				: Object.keys(results).length
+
 		setSyncing(true)
-		setProgress(0, 1)
+		if (effectiveStartIndex === 0) {
+			setProgress(0, data.tracks.length)
+		}
+
+		abortControllerRef.current = new AbortController()
+		sessionStartTimeRef.current = Date.now()
+		sessionStartCountRef.current = effectiveStartIndex
+
+		// Initial rough estimate
+		setEtaSeconds((data.tracks.length - effectiveStartIndex) * 1.2)
 
 		const result = await externalPlaylistService.matchExternalPlaylist(
 			data.tracks,
@@ -300,14 +340,43 @@ const ExternalPlaylistSyncPageInner = () => {
 				// Index is current - 1 because current starts at 1
 				setResult(current - 1, matchResult)
 				setProgress(current, total)
+
+				// ETA Calculation
+				const now = Date.now()
+				const elapsed = now - sessionStartTimeRef.current
+				const processedInSession = current - sessionStartCountRef.current
+
+				if (processedInSession > 0) {
+					const avgTimePerItem = elapsed / processedInSession
+					const remainingItems = total - current
+					const eta = (avgTimePerItem * remainingItems) / 1000
+					setEtaSeconds(eta)
+				}
+			},
+			{
+				startIndex: effectiveStartIndex,
+				signal: abortControllerRef.current.signal,
 			},
 		)
 
 		setSyncing(false)
 		if (result.isErr()) {
-			console.error(result.error)
+			if (result.error.message !== 'Aborted') {
+				console.error(result.error)
+				toast.error(`匹配出错: ${result.error.message}`)
+			}
+		} else {
+			toast.success('匹配完成')
 		}
-	}, [data?.tracks, setProgress, setResult, setSyncing])
+	}, [
+		data?.tracks,
+		setProgress,
+		setResult,
+		setSyncing,
+		syncing,
+		results,
+		reset,
+	])
 
 	const handleOpenManualMatch = useCallback(
 		(track: GenericTrack, index: number) => {
@@ -374,6 +443,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					syncing,
 				}}
 				keyExtractor={(item, index) => `${index}-${item.title}`}
+				ItemSeparatorComponent={() => <Divider />}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,
 				}}
@@ -398,7 +468,7 @@ const ExternalPlaylistSyncPageInner = () => {
 				onSync={handleSync}
 				syncing={syncing}
 				progress={progress}
-				total={tracks.length}
+				etaSeconds={etaSeconds}
 			/>
 		</View>
 	)
@@ -408,22 +478,22 @@ const ExternalPlaylistSyncFooter = ({
 	onSync,
 	syncing,
 	progress,
-	total,
+	etaSeconds,
 }: {
 	onSync: () => void
 	syncing: boolean
 	progress: number
-	total: number
+	etaSeconds: number | null
 }) => {
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
 
-	const remaining = total - Math.floor(progress * total)
-	const etaSeconds = (remaining * 1200) / 1000 // 1200ms per request
 	const etaText =
-		etaSeconds > 60
-			? `${(etaSeconds / 60).toFixed(1)} 分 (ETA)`
-			: `${etaSeconds.toFixed(0)} 秒 (ETA)`
+		etaSeconds !== null
+			? etaSeconds > 60
+				? `${(etaSeconds / 60).toFixed(1)} 分 (ETA)`
+				: `${etaSeconds.toFixed(0)} 秒 (ETA)`
+			: '计算中...'
 
 	return (
 		<View
@@ -437,22 +507,36 @@ const ExternalPlaylistSyncFooter = ({
 		>
 			<View style={styles.progressContainer}>
 				{syncing ? (
-					<View style={styles.syncingContainer}>
-						<ActivityIndicator
-							animating={true}
-							color={theme.colors.primary}
-						/>
-						<View style={{ marginLeft: 12 }}>
-							<Text variant='bodyMedium'>
-								正在匹配... {(progress * 100).toFixed(0)}%
-							</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: theme.colors.outline }}
-							>
-								剩余 {etaText}
-							</Text>
+					<View
+						style={[
+							styles.syncingContainer,
+							{ justifyContent: 'space-between', width: '100%' },
+						]}
+					>
+						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+							<ActivityIndicator
+								animating={true}
+								color={theme.colors.primary}
+							/>
+							<View style={{ marginLeft: 12 }}>
+								<Text variant='bodyMedium'>
+									正在匹配... {(progress * 100).toFixed(0)}%
+								</Text>
+								<Text
+									variant='bodySmall'
+									style={{ color: theme.colors.outline }}
+								>
+									剩余 {etaText}
+								</Text>
+							</View>
 						</View>
+						<Button
+							icon='pause'
+							mode='contained-tonal'
+							onPress={onSync}
+						>
+							暂停
+						</Button>
 					</View>
 				) : (
 					<TouchableRipple
@@ -463,7 +547,7 @@ const ExternalPlaylistSyncFooter = ({
 						]}
 					>
 						<Text style={{ color: theme.colors.onPrimaryContainer }}>
-							开始匹配
+							{progress > 0 && progress < 1 ? '继续匹配' : '开始匹配'}
 						</Text>
 					</TouchableRipple>
 				)}

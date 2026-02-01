@@ -10,20 +10,25 @@ import {
 } from 'react-native-paper'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { parseExternalPlaylistInfo } from '@/lib/utils/playlistUrlParser'
 
 const InputExternalPlaylistInfoModal = () => {
-	const [playlistId, setPlaylistId] = useState('')
+	const [input, setInput] = useState('')
 	const [source, setSource] = useState<'netease' | 'qq'>('netease')
 	const router = useRouter()
 	const close = useModalStore((state) => state.close)
 
 	const handleConfirm = () => {
-		if (!playlistId.trim()) return
+		if (!input.trim()) return
+		const parsed = parseExternalPlaylistInfo(input)
+		const finalId = parsed?.id ?? input.trim()
+		const finalSource = parsed?.source ?? source
+
 		close('InputExternalPlaylistInfo')
 		useModalStore.getState().doAfterModalHostClosed(() => {
 			router.push({
 				pathname: '/playlist/external-sync',
-				params: { id: playlistId, source },
+				params: { id: finalId, source: finalSource },
 			})
 		})
 	}
@@ -33,10 +38,15 @@ const InputExternalPlaylistInfoModal = () => {
 			<Dialog.Title>输入外部歌单信息</Dialog.Title>
 			<Dialog.Content>
 				<TextInput
-					label='歌单 ID'
-					value={playlistId}
-					onChangeText={setPlaylistId}
-					keyboardType='numeric'
+					label='歌单 ID / 链接'
+					value={input}
+					onChangeText={(text) => {
+						setInput(text)
+						const result = parseExternalPlaylistInfo(text)
+						if (result) {
+							setSource(result.source)
+						}
+					}}
 					mode='outlined'
 					style={styles.input}
 				/>
@@ -63,7 +73,7 @@ const InputExternalPlaylistInfoModal = () => {
 				<Button onPress={() => close('InputExternalPlaylistInfo')}>取消</Button>
 				<Button
 					onPress={handleConfirm}
-					disabled={!playlistId.trim()}
+					disabled={!input.trim()}
 				>
 					确定
 				</Button>

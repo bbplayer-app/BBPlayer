@@ -40,7 +40,7 @@ export class ExternalPlaylistService {
 					artists: track.ar.map((a) => a.name),
 					album: track.al.name,
 					duration: track.dt,
-					coverUrl: track.al.picUrl,
+					coverUrl: track.al.picUrl.replace('http://', 'https://'),
 				}))
 
 				return {
@@ -113,15 +113,26 @@ export class ExternalPlaylistService {
 	public matchExternalPlaylist(
 		tracks: GenericTrack[],
 		onProgress: (current: number, total: number, result: MatchResult) => void,
+		options?: { signal?: AbortSignal; startIndex?: number },
 	): ResultAsync<MatchResult[], Error> {
 		return ResultAsync.fromPromise(
 			(async () => {
 				const results: MatchResult[] = []
 				const total = tracks.length
+				const startIndex = options?.startIndex ?? 0
 
-				for (let i = 0; i < total; i++) {
+				for (let i = startIndex; i < total; i++) {
+					if (options?.signal?.aborted) {
+						throw new Error('Aborted')
+					}
+
 					const song = tracks[i]
 					await wait(MIN_DELAY)
+
+					// Double check after wait
+					if (options?.signal?.aborted) {
+						throw new Error('Aborted')
+					}
 
 					const artistNames = song.artists.join(' ')
 					const searchQuery = `${song.title} - ${artistNames}`
