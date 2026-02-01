@@ -77,6 +77,7 @@ export default Sentry.wrap(function RootLayout() {
 				reportErrorToSentry(error, '初始化 Zustand store 失败', ProjectScope.UI)
 			} finally {
 				setAppIsReady(true)
+				global.isUIReady = true
 
 				setImmediate(() => {
 					void cleanOldLogFiles(7)
