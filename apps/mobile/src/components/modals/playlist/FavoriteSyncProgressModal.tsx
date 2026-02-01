@@ -5,7 +5,7 @@ import { Button, Dialog, ProgressBar, Text } from 'react-native-paper'
 
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { FavoriteSyncProgress } from '@/lib/facades/sync'
+import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 
 const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	favoriteId,

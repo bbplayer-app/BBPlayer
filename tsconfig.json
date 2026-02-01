@@ -6,6 +6,7 @@
 		{ "path": "./packages/orpheus/example/tsconfig.json" },
 		{ "path": "./packages/expo-image-theme-colors/tsconfig.json" },
 		{ "path": "./packages/expo-image-theme-colors/example/tsconfig.json" },
-		{ "path": "./apps/docs/tsconfig.json" }
+		{ "path": "./apps/docs/tsconfig.json" },
+		{ "path": "./packages/external-playlist-sync/tsconfig.json" }
 	]
 }

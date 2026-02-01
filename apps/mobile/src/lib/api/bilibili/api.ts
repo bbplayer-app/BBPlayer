@@ -110,6 +110,7 @@ export class BilibiliApi {
 	searchVideos(
 		keyword: string,
 		page: number,
+		options?: { skipCookie?: boolean },
 	): ResultAsync<
 		{ result: BilibiliSearchVideo[]; numPages: number },
 		BilibiliApiError
@@ -125,7 +126,12 @@ export class BilibiliApi {
 				return bilibiliApiClient.get<{
 					result: BilibiliSearchVideo[]
 					numPages: number
-				}>('/x/web-interface/wbi/search/type', params)
+				}>(
+					'/x/web-interface/wbi/search/type',
+					params,
+					undefined,
+					options?.skipCookie,
+				)
 			})
 			.andThen((res) => {
 				if (!res.result) {

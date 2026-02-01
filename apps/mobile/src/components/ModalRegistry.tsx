@@ -51,6 +51,13 @@ const SyncLocalToBilibiliModal = lazy(
 const FavoriteSyncProgressModal = lazy(
 	() => import('./modals/playlist/FavoriteSyncProgressModal'),
 )
+const ManualMatchExternalSyncModal = lazy(
+	() => import('./modals/playlist/ManualMatchExternalSync'),
+)
+
+const InputExternalPlaylistInfoModal = lazy(
+	() => import('./modals/playlist/InputExternalPlaylistInfo'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -68,6 +75,7 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	UpdateTrackLocalPlaylists: UpdateTrackLocalPlaylistsModal,
 	DuplicateLocalPlaylist: DuplicateLocalPlaylistModal,
 	ManualSearchLyrics: ManualSearchLyricsModal,
+	InputExternalPlaylistInfo: InputExternalPlaylistInfoModal,
 	Alert: AlertModal,
 	EditLyrics: EditLyricsModal,
 	SleepTimer: SleepTimerModal,
@@ -77,4 +85,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	SongShare: SongShareModal,
 	SyncLocalToBilibili: SyncLocalToBilibiliModal,
 	FavoriteSyncProgress: FavoriteSyncProgressModal,
+	ManualMatchExternalSync: ManualMatchExternalSyncModal,
 }

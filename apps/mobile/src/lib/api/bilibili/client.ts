@@ -24,10 +24,12 @@ class ApiClient {
 		endpoint: string,
 		options: RequestInit = {},
 		fullUrl?: string,
+		skipCookie?: boolean,
 	): ResultAsync<T, BilibiliApiError> => {
 		const url = fullUrl ?? `${this.baseUrl}${endpoint}`
 		const cookieList = useAppStore.getState().bilibiliCookie
-		const cookie = cookieList ? serializeCookieObject(cookieList) : ''
+		const cookie =
+			cookieList && !skipCookie ? serializeCookieObject(cookieList) : ''
 
 		const headers = {
 			Cookie: cookie,
@@ -96,12 +98,14 @@ class ApiClient {
 	 * @param endpoint API 端点
 	 * @param params URL 查询参数
 	 * @param fullUrl 完整的 URL，如果提供则忽略 baseUrl
+	 * @param skipCookie 是否跳过 cookie 注入
 	 * @returns ResultAsync 包含成功数据或错误
 	 */
 	get<T>(
 		endpoint: string,
 		params?: Record<string, string | undefined> | string,
 		fullUrl?: string,
+		skipCookie?: boolean,
 	): ResultAsync<T, BilibiliApiError> {
 		let url = endpoint
 		if (typeof params === 'string') {
@@ -115,7 +119,7 @@ class ApiClient {
 			}
 			url = `${endpoint}?${searchParams.toString()}`
 		}
-		return this.request<T>(url, { method: 'GET' }, fullUrl)
+		return this.request<T>(url, { method: 'GET' }, fullUrl, skipCookie)
 	}
 
 	/**
@@ -131,6 +135,7 @@ class ApiClient {
 		data?: BodyInit,
 		headers?: Record<string, string>,
 		fullUrl?: string,
+		skipCookie?: boolean,
 	): ResultAsync<T, BilibiliApiError> {
 		return this.request<T>(
 			endpoint,
@@ -143,6 +148,7 @@ class ApiClient {
 				body: data,
 			},
 			fullUrl,
+			skipCookie,
 		)
 	}
 

@@ -496,7 +496,17 @@ export class TrackService {
 			return errAsync(processedPayloadsResult.error)
 		}
 
-		const processedPayloads = processedPayloadsResult.value
+		// Deduplicate payloads based on uniqueKey
+		const uniquePayloadsMap = new Map<
+			string,
+			{ uniqueKey: string; payload: CreateTrackPayload }
+		>()
+		for (const p of processedPayloadsResult.value) {
+			if (!uniquePayloadsMap.has(p.uniqueKey)) {
+				uniquePayloadsMap.set(p.uniqueKey, p)
+			}
+		}
+		const processedPayloads = Array.from(uniquePayloadsMap.values())
 		const uniqueKeys = processedPayloads.map((p) => p.uniqueKey)
 
 		return ResultAsync.fromPromise(

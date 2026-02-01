@@ -38,4 +38,25 @@ export type LyricSearchResult = (
 			artist: string
 			remoteId: string
 	  }
+	| {
+			source: 'kuwo'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: number
+	  }
+	| {
+			source: 'kugou'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: string
+	  }
+	| {
+			source: 'baidu'
+			duration: number // 秒
+			title: string
+			artist: string
+			remoteId: string
+	  }
 )[]

@@ -20,6 +20,9 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 const SOURCE_MAP = {
 	netease: '网易云',
 	qqmusic: 'QQ 音乐',
+	kuwo: '酷我',
+	kugou: '酷狗',
+	baidu: '百度',
 }
 
 const renderItem = ({
@@ -106,13 +109,6 @@ const ManualSearchLyricsModal = ({
 	)
 
 	const renderContent = () => {
-		if (isSearching) {
-			return (
-				<View style={styles.centerContainer}>
-					<ActivityIndicator size={'large'} />
-				</View>
-			)
-		}
 		if (!searchResult) {
 			return (
 				<View style={styles.centerContainer}>
@@ -120,6 +116,16 @@ const ManualSearchLyricsModal = ({
 				</View>
 			)
 		}
+
+		// When loading initially (no results yet)
+		if (isSearching && searchResult.length === 0) {
+			return (
+				<View style={styles.centerContainer}>
+					<ActivityIndicator size={'large'} />
+				</View>
+			)
+		}
+
 		if (searchResult.length > 0) {
 			return (
 				<FlashList
@@ -130,16 +136,33 @@ const ManualSearchLyricsModal = ({
 				/>
 			)
 		}
-		return (
-			<View style={styles.centerContainer}>
-				<Text style={styles.centerText}>没有找到匹配的歌词</Text>
-			</View>
-		)
+
+		// Search finished but nothing found
+		if (!isSearching && searchResult.length === 0) {
+			return (
+				<View style={styles.centerContainer}>
+					<Text style={styles.centerText}>没有找到匹配的歌词</Text>
+				</View>
+			)
+		}
+
+		// Fallback for edge cases
+		return null
 	}
 
 	return (
 		<>
-			<Dialog.Title>手动搜索歌词</Dialog.Title>
+			<Dialog.Title style={styles.dialogTitle}>
+				<View style={styles.titleContainer}>
+					<Text variant='headlineSmall'>手动搜索歌词</Text>
+					{isSearching && (
+						<ActivityIndicator
+							size='small'
+							style={styles.loadingIndicator}
+						/>
+					)}
+				</View>
+			</Dialog.Title>
 			<Dialog.Content>
 				<Searchbar
 					value={query}
@@ -181,6 +204,21 @@ const styles = StyleSheet.create({
 	},
 	scrollArea: {
 		height: 300,
+	},
+	loadingOverlay: {
+		paddingVertical: 10,
+		alignItems: 'center',
+	},
+	dialogTitle: {
+		alignItems: 'center',
+	},
+	titleContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	loadingIndicator: {
+		marginLeft: 8,
 	},
 })
 
