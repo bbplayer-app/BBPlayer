@@ -15,6 +15,8 @@ import { storage, zustandStorage } from '@/utils/mmkv'
 
 const logger = log.extend('Store.App')
 
+import toast from '@/utils/toast'
+
 export const parseCookieToObject = (
 	cookie?: string,
 ): Result<Record<string, string>, Error> => {
@@ -23,12 +25,32 @@ export const parseCookieToObject = (
 	}
 	try {
 		const cookieObj = parseCookie.parse(cookie)
-		for (const value of Object.values(cookieObj)) {
+		const sanitizedObj: Record<string, string> = {}
+		let hasInvalidKeys = false
+
+		for (const [key, value] of Object.entries(cookieObj)) {
 			if (value === undefined) {
 				return err(new Error(`无效的 cookie 字符串：值为 undefined：${value}`))
 			}
+			const trimmedKey = key.trim()
+			const trimmedValue = value.trim()
+
+			if (!trimmedKey) {
+				continue
+			}
+
+			if (trimmedKey !== key || trimmedValue !== value) {
+				hasInvalidKeys = true
+			}
+
+			sanitizedObj[trimmedKey] = trimmedValue
 		}
-		return ok(cookieObj as Record<string, string>)
+
+		if (hasInvalidKeys) {
+			toast.error('检测到 Cookie 包含无效字符（如换行符），已自动修复')
+		}
+
+		return ok(sanitizedObj)
 	} catch (error) {
 		return err(
 			new Error(
@@ -42,7 +64,18 @@ export const serializeCookieObject = (
 	cookieObj: Record<string, string>,
 ): string => {
 	return Object.entries(cookieObj)
-		.map(([key, value]) => parseCookie.serialize(key, value))
+		.map(([key, value]) => {
+			try {
+				return parseCookie.serialize(key, value)
+			} catch {
+				try {
+					return parseCookie.serialize(key.trim(), value.trim())
+				} catch {
+					return null
+				}
+			}
+		})
+		.filter((item) => item !== null)
 		.join('; ')
 }
 

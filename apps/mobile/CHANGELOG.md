@@ -25,6 +25,7 @@
 - 修复 `DonationQRModal` 在部分 Android 设备上因 `expo-media-library` 导入方式错误导致崩溃的问题
 - 修复歌词搜索失败时错误地使用 `FileSystemError` 类型导致被上报到 Sentry 的问题
 - 修复 `ToastContext` 未初始化导致应用崩溃的问题
+- 修复因 cookie 键名包含无效字符（如换行符）导致的应用崩溃，并增加自动修复提示
 
 ## [2.2.4] - 2026-01-30
 
