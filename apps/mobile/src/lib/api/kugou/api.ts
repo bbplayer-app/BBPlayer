@@ -35,7 +35,7 @@ export class KugouApi {
 			version: '8990',
 		})
 
-		const url = `https://mobilecdn.kugou.com/api/v3/search/song?${params.toString()}`
+		const url = `http://mobilecdn.kugou.com/api/v3/search/song?${params.toString()}`
 
 		return ResultAsync.fromPromise(
 			fetch(url, { headers: this.getHeaders() }).then((res) => {
@@ -68,7 +68,7 @@ export class KugouApi {
 			client: 'mobi',
 			man: 'yes',
 		})
-		const searchUrl = `https://krcs.kugou.com/search?${searchParams.toString()}`
+		const searchUrl = `http://krcs.kugou.com/search?${searchParams.toString()}`
 
 		return ResultAsync.fromPromise(
 			fetch(searchUrl).then(
@@ -92,7 +92,7 @@ export class KugouApi {
 				fmt: 'lrc',
 				ver: '1',
 			})
-			const downloadUrl = `https://lyrics.kugou.com/download?${downloadParams.toString()}`
+			const downloadUrl = `http://lyrics.kugou.com/download?${downloadParams.toString()}`
 
 			return ResultAsync.fromPromise(
 				fetch(downloadUrl).then(

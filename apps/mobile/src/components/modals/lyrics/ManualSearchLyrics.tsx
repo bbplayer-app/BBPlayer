@@ -109,13 +109,6 @@ const ManualSearchLyricsModal = ({
 	)
 
 	const renderContent = () => {
-		if (isSearching) {
-			return (
-				<View style={styles.centerContainer}>
-					<ActivityIndicator size={'large'} />
-				</View>
-			)
-		}
 		if (!searchResult) {
 			return (
 				<View style={styles.centerContainer}>
@@ -123,21 +116,45 @@ const ManualSearchLyricsModal = ({
 				</View>
 			)
 		}
-		if (searchResult.length > 0) {
+
+		// When loading initially (no results yet)
+		if (isSearching && searchResult.length === 0) {
 			return (
-				<FlashList
-					data={searchResult}
-					renderItem={renderItem}
-					keyExtractor={keyExtractor}
-					extraData={extraData}
-				/>
+				<View style={styles.centerContainer}>
+					<ActivityIndicator size={'large'} />
+				</View>
 			)
 		}
-		return (
-			<View style={styles.centerContainer}>
-				<Text style={styles.centerText}>没有找到匹配的歌词</Text>
-			</View>
-		)
+
+		if (searchResult.length > 0) {
+			return (
+				<>
+					{isSearching && (
+						<View style={styles.loadingOverlay}>
+							<ActivityIndicator size='small' />
+						</View>
+					)}
+					<FlashList
+						data={searchResult}
+						renderItem={renderItem}
+						keyExtractor={keyExtractor}
+						extraData={extraData}
+					/>
+				</>
+			)
+		}
+
+		// Search finished but nothing found
+		if (!isSearching && searchResult.length === 0) {
+			return (
+				<View style={styles.centerContainer}>
+					<Text style={styles.centerText}>没有找到匹配的歌词</Text>
+				</View>
+			)
+		}
+
+		// Fallback for edge cases
+		return null
 	}
 
 	return (
@@ -184,6 +201,10 @@ const styles = StyleSheet.create({
 	},
 	scrollArea: {
 		height: 300,
+	},
+	loadingOverlay: {
+		paddingVertical: 10,
+		alignItems: 'center',
 	},
 })
 
