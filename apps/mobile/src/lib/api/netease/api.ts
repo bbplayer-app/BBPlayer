@@ -3,8 +3,8 @@ import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
 import type {
 	NeteaseLyricResponse,
+	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
-	NeteaseSong,
 } from '@/types/apis/netease'
 import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
 import { mergeLrc, parseLrc } from '@/utils/lyrics'
@@ -21,7 +21,10 @@ interface SearchParams {
 }
 
 export class NeteaseApi {
-	getLyrics(id: number): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
+	getLyrics(
+		id: number,
+		signal?: AbortSignal,
+	): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
 		const data = {
 			id: id,
 			lv: -1,
@@ -29,6 +32,9 @@ export class NeteaseApi {
 			os: 'pc',
 		}
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseLyricResponse>(
 			'/api/song/lyric',
 			data,
@@ -38,6 +44,7 @@ export class NeteaseApi {
 
 	search(
 		params: SearchParams,
+		signal?: AbortSignal,
 	): ResultAsync<LyricSearchResult, NeteaseApiError> {
 		const type = params.type ?? 1
 		const endpoint =
@@ -53,6 +60,9 @@ export class NeteaseApi {
 		}
 
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseSearchResponse>(
 			endpoint,
 			data,
@@ -67,57 +77,6 @@ export class NeteaseApi {
 				remoteId: song.id,
 			}))
 		})
-	}
-
-	/**
-	 * 从多个角度计算出最可能匹配的歌曲（屎）
-	 * @param songs
-	 * @param keyword 一般来说，就是 track.title
-	 * @param targetDurationMs
-	 * @returns
-	 */
-	private findBestMatch(
-		songs: NeteaseSong[],
-		keyword: string,
-		targetDurationMs: number,
-	): NeteaseSong {
-		const DURATION_WEIGHT = 10
-		const SIGMA_MS = 1500
-
-		const scoredSongs = songs.map((song) => {
-			let score = 0
-			if (song.name === keyword) {
-				score += 10
-			}
-			if (keyword.includes(song.name)) {
-				score += 5
-			}
-			song.alia.forEach((alias) => {
-				if (keyword.includes(alias)) {
-					score += 2
-				}
-			})
-			song.ar.forEach((artist) => {
-				if (keyword.includes(artist.name)) {
-					score += 1
-				}
-			})
-
-			const durationDiff = song.dt - targetDurationMs
-			const durationScore =
-				DURATION_WEIGHT *
-				Math.exp(-(durationDiff * durationDiff) / (2 * SIGMA_MS * SIGMA_MS))
-
-			score += durationScore
-
-			return { song, score }
-		})
-
-		const bestMatch = scoredSongs.reduce((best, current) => {
-			return current.score > best.score ? current : best
-		})
-
-		return bestMatch.score > 0 ? bestMatch.song : songs[0]
 	}
 
 	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
@@ -139,8 +98,9 @@ export class NeteaseApi {
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
+		signal?: AbortSignal,
 	): ResultAsync<ParsedLrc, NeteaseApiError> {
-		return this.search({ keywords: keyword, limit: 10 }).andThen(
+		return this.search({ keywords: keyword, limit: 10 }, signal).andThen(
 			(searchResult) => {
 				if (searchResult.length === 0) {
 					return errAsync(
@@ -155,7 +115,7 @@ export class NeteaseApi {
 				// 相信网易云... 哥们儿写的规则太屎了
 				const bestMatch = searchResult[0]
 
-				return this.getLyrics(bestMatch.remoteId as number).andThen(
+				return this.getLyrics(bestMatch.remoteId as number, signal).andThen(
 					(lyricsResponse) => {
 						const lyricData = this.parseLyrics(lyricsResponse)
 						return okAsync(lyricData)
@@ -163,6 +123,23 @@ export class NeteaseApi {
 				)
 			},
 		)
+	}
+
+	getPlaylist(
+		id: string,
+	): ResultAsync<NeteasePlaylistResponse, NeteaseApiError> {
+		const data = {
+			s: '0',
+			id: id,
+			n: '1000',
+			t: '0',
+		}
+		const requestOptions: RequestOptions = createOption({}, 'eapi')
+		return createRequest<object, NeteasePlaylistResponse>(
+			'/api/v6/playlist/detail',
+			data,
+			requestOptions,
+		).map((res) => res.body)
 	}
 }
 

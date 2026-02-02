@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
+import { IconButton, Menu, Searchbar, Text, useTheme } from 'react-native-paper'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -27,6 +28,7 @@ const LocalPlaylistListComponent = memo(() => {
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
+	const [menuVisible, setMenuVisible] = useState(false)
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
@@ -102,14 +104,34 @@ const LocalPlaylistListComponent = memo(() => {
 					<Text variant='bodyMedium'>
 						{playlists.length ?? 0}&thinsp;个播放列表
 					</Text>
-					<IconButton
-						icon='plus'
-						size={20}
-						onPress={() => {
-							openModal('CreatePlaylist', { redirectToNewPlaylist: true })
-						}}
-						testID='create-playlist-button'
-					/>
+					<FunctionalMenu
+						visible={menuVisible}
+						onDismiss={() => setMenuVisible(false)}
+						anchor={
+							<IconButton
+								icon='plus'
+								size={20}
+								onPress={() => setMenuVisible(true)}
+							/>
+						}
+					>
+						<Menu.Item
+							leadingIcon='playlist-plus'
+							onPress={() => {
+								setMenuVisible(false)
+								openModal('CreatePlaylist', { redirectToNewPlaylist: true })
+							}}
+							title='新建播放列表'
+						/>
+						<Menu.Item
+							leadingIcon='link-plus'
+							onPress={() => {
+								setMenuVisible(false)
+								openModal('InputExternalPlaylistInfo', undefined)
+							}}
+							title='导入外部歌单'
+						/>
+					</FunctionalMenu>
 				</View>
 			</View>
 			<Searchbar

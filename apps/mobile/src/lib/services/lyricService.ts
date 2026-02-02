@@ -4,6 +4,7 @@ import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import { kugouApi, type KugouApi } from '@/lib/api/kugou/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
@@ -28,6 +29,7 @@ class LyricService {
 	constructor(
 		readonly neteaseApi: NeteaseApi,
 		readonly qqMusicApi: QQMusicApi,
+		readonly kugouApi: KugouApi,
 	) {}
 
 	private cleanKeyword(keyword: string): string {
@@ -59,68 +61,98 @@ class LyricService {
 	public getBestMatchedLyrics(
 		track: Track,
 		preciseKeyword?: string,
-		source?: 'auto' | 'netease' | 'qqmusic',
+		source?: 'auto' | 'netease' | 'qqmusic' | 'kugou',
 	) {
 		const keyword = preciseKeyword ?? this.cleanKeyword(track.title)
 		const durationMs = track.duration * 1000
 
-		const providers = []
+		// Keep track of abort controllers for cancellation
+		const controllers: AbortController[] = []
+
+		const createProviderPromise = (
+			apiCall: (
+				signal: AbortSignal,
+			) => ResultAsync<ParsedLrc, Error | CustomError>,
+			providerName: string,
+		) => {
+			const controller = new AbortController()
+			controllers.push(controller)
+
+			return apiCall(controller.signal)
+				.map((res) => {
+					logger.debug(`${providerName} returned lyrics`)
+					// If one succeeds, abort others
+					controllers.forEach((c) => {
+						if (c !== controller) {
+							c.abort()
+						}
+					})
+					return res
+				})
+				.match(
+					(v) => v,
+					(e) => {
+						throw e
+					},
+				)
+		}
+
+		const providers: Promise<ParsedLrc>[] = []
 
 		if (source === 'netease' || source === undefined || source === 'auto') {
 			providers.push(
-				this.neteaseApi
-					.searchBestMatchedLyrics(keyword, durationMs)
-					.map((res) => {
-						logger.debug('Netease returned lyrics')
-						return res
-					}),
+				createProviderPromise(
+					(signal) =>
+						this.neteaseApi.searchBestMatchedLyrics(
+							keyword,
+							durationMs,
+							signal,
+						),
+					'Netease',
+				),
 			)
 		}
 
 		if (source === 'qqmusic' || source === undefined || source === 'auto') {
 			providers.push(
-				this.qqMusicApi
-					.searchBestMatchedLyrics(keyword, durationMs)
-					.map((res) => {
-						logger.debug('QQMusic returned lyrics')
-						return res
-					}),
+				createProviderPromise(
+					(signal) =>
+						this.qqMusicApi.searchBestMatchedLyrics(
+							keyword,
+							durationMs,
+							signal,
+						),
+					'QQMusic',
+				),
 			)
 		}
 
-		return ResultAsync.fromPromise(
-			Promise.any(
-				providers.map((p) =>
-					// Convert ResultAsync to Promise that resolves on Ok and rejects on Err
-					p.match(
-						(v) => Promise.resolve(v),
-						(e) => Promise.reject(e),
-					),
+		if (source === 'kugou' || source === undefined || source === 'auto') {
+			providers.push(
+				createProviderPromise(
+					(signal) =>
+						this.kugouApi.searchBestMatchedLyrics(keyword, durationMs, signal),
+					'Kugou',
 				),
-			),
-			(e) => {
-				// All failed
-				// e will be an AggregateError if using Promise.any
-				const aggregateError = e as AggregateError
-				const errors = Array.from(aggregateError.errors || [])
-				const errorMessages = errors
-					.map((err, index) => {
-						const providerName =
-							index === 0
-								? 'Netease'
-								: index === 1
-									? 'QQMusic'
-									: `Provider ${index}`
-						return `${providerName}: ${err instanceof Error ? err.message : String(err)}`
-					})
-					.join('; ')
+			)
+		}
 
-				return new LyricNotFoundError(
-					`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
-					{ cause: e },
-				)
-			},
-		)
+		return ResultAsync.fromPromise(Promise.any(providers), (e) => {
+			// All failed
+			// e will be an AggregateError if using Promise.any
+			const aggregateError = e as AggregateError
+			const errors = Array.from(aggregateError.errors || [])
+			const errorMessages = errors
+				.map((err) => {
+					return `${err instanceof Error ? err.message : String(err)}`
+				})
+				.join('; ')
+
+			return new LyricNotFoundError(
+				`All lyric providers failed (${errors.length} providers). ${errorMessages}`,
+				{ cause: e },
+			)
+		})
 	}
 
 	/**
@@ -246,6 +278,13 @@ class LyricService {
 					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
+			case 'kugou':
+				return this.kugouApi
+					.getLyrics(item.remoteId)
+					.andThen((lyrics) => okAsync(this.kugouApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return this.saveLyricsToFile(lyrics, uniqueKey)
+					})
 			default:
 				return errAsync(new Error('未知歌曲源'))
 		}
@@ -349,5 +388,5 @@ class LyricService {
 	}
 }
 
-const lyricService = new LyricService(neteaseApi, qqMusicApi)
+const lyricService = new LyricService(neteaseApi, qqMusicApi, kugouApi)
 export default lyricService

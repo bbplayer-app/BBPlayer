@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 
 import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-result/constants'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { syncFacade } from '@/lib/facades/sync'
+import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliTrack } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'

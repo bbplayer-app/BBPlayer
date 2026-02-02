@@ -58,11 +58,21 @@ const dismiss = (id?: string | number) => {
 	}
 }
 
+const loading = (message: string, options?: Options) => {
+	return sonner.loading(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
+}
+
 const toast = {
 	show,
 	success,
 	error,
 	info,
+	loading,
 	dismiss,
 }
 

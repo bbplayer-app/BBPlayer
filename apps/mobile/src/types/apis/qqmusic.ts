@@ -69,3 +69,20 @@ export interface QQMusicLyricResponse {
 	lyric: string
 	trans: string
 }
+
+export interface QQMusicPlaylistResponse {
+	code: number
+	data: {
+		cdlist: QQMusicPlaylist[]
+	}
+}
+
+export interface QQMusicPlaylist {
+	disstid: string
+	dissname: string
+	desc: string
+	songnum: number
+	logo: string
+	nickname: string
+	songlist: QQMusicSong[]
+}

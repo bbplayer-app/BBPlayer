@@ -216,6 +216,15 @@ export default function PlaybackSettingsPage() {
 						/>
 						<Checkbox.Item
 							mode='ios'
+							label='酷狗音乐'
+							status={lyricSource === 'kugou' ? 'checked' : 'unchecked'}
+							onPress={() => {
+								setSettings({ lyricSource: 'kugou' })
+								setLyricSourceMenuVisible(false)
+							}}
+						/>
+						<Checkbox.Item
+							mode='ios'
 							label='自动 (选择最先返回的数据源)'
 							status={lyricSource === 'auto' ? 'checked' : 'unchecked'}
 							onPress={() => {

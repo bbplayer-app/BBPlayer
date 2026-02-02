@@ -123,9 +123,10 @@ interface BilibiliSearchVideo {
 	title: string
 	pic: string
 	author: string
-	duration: string
+	duration: string // MM:SS（MM 可以超过 60min）
 	senddate: number
 	mid: number
+	typeid: number
 }
 
 /**

@@ -31,11 +31,24 @@ export const formatDurationToHHMMSS = (seconds: number): string => {
 }
 
 /**
+ * Parse duration string (e.g., "03:45", "1:30:00") to seconds
+ * @param durationStr
+ * @returns seconds
+ */
+export function parseDurationString(durationStr: string): number {
+	const parts = durationStr.split(':').map(Number)
+	if (parts.length === 3) {
+		return parts[0] * 3600 + parts[1] * 60 + parts[2]
+	} else if (parts.length === 2) {
+		return parts[0] * 60 + parts[1]
+	}
+	return 0
+}
+
+/**
  * MM:SS 格式转换为秒数
  * @param duration
  * @returns
+ * @deprecated Use parseDurationString instead
  */
-export const formatMMSSToSeconds = (duration: string): number => {
-	const [minutes, seconds] = duration.split(':').map(Number)
-	return minutes * 60 + seconds
-}
+export const formatMMSSToSeconds = parseDurationString
