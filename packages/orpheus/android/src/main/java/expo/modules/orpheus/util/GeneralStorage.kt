@@ -4,14 +4,15 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 object GeneralStorage {
     private var kv: MMKV? = null
-    private val gson = Gson()
+    private val json = Json { ignoreUnknownKeys = true }
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
@@ -78,7 +79,7 @@ object GeneralStorage {
                 item.mediaMetadata.extras?.getString("track_json")
             }
 
-            val jsonListString = gson.toJson(jsonList)
+            val jsonListString = json.encodeToString(jsonList)
             safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
 
         } catch (e: Exception) {
@@ -92,14 +93,13 @@ object GeneralStorage {
 
             if (jsonListString.isNullOrEmpty()) return emptyList()
 
-            val listType = object : TypeToken<List<String>>() {}.type
-            val trackJsonList: List<String> = gson.fromJson(jsonListString, listType)
+            val trackJsonList: List<String> = json.decodeFromString(jsonListString)
 
             trackJsonList.mapNotNull { trackJson ->
                 try {
-                    val track = gson.fromJson(trackJson, TrackRecord::class.java)
+                    val track = json.decodeFromString<TrackRecord>(trackJson)
 
-                    track.toMediaItem(gson)
+                    track.toMediaItem()
 
                 } catch (e: Exception) {
                     Log.e("MediaItemStorer", "Failed to parse track json: $trackJson", e)

@@ -1,3 +1,9 @@
+## [0.11.3](https://github.com/bbplayer-app/orpheus/compare/v0.11.2...v0.11.3) (2026-02-02)
+
+### Changed
+
+- use kotlinx.serialization instead of gson
+
 ## [0.11.2](https://github.com/bbplayer-app/orpheus/compare/v0.11.1...v0.11.2) (2026-01-28)
 
 ### Bug Fixes
