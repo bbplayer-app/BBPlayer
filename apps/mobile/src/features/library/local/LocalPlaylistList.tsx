@@ -108,6 +108,7 @@ const LocalPlaylistListComponent = memo(() => {
 						onPress={() => {
 							openModal('CreatePlaylist', { redirectToNewPlaylist: true })
 						}}
+						testID='create-playlist-button'
 					/>
 				</View>
 			</View>

@@ -202,6 +202,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon='play'
 						onPress={() => onClickPlayAll()}
+						testID='playlist-play-all'
 					>
 						播放全部
 					</Button>
@@ -212,6 +213,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							icon='sync'
 							size={20}
 							onPress={onClickSync}
+							testID='playlist-sync'
 						/>
 					)}
 
@@ -221,6 +223,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							icon='content-copy'
 							size={20}
 							onPress={onClickCopyToLocalPlaylist}
+							testID='playlist-copy'
 						/>
 					</Tooltip>
 					<Tooltip title='下载全部'>
@@ -244,6 +247,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 									{ cancelable: true },
 								)
 							}
+							testID='playlist-download'
 						/>
 					</Tooltip>
 				</View>

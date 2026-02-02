@@ -24,6 +24,7 @@ const LocalPlaylistItem = memo(
 							params: { id: String(item.id) },
 						})
 					}}
+					testID={`local-playlist-${item.id}`}
 				>
 					<View>
 						<View style={styles.itemContainer}>

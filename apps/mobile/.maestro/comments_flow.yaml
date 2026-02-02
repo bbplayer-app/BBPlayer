@@ -1,0 +1,52 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+- runFlow: common/setup.yaml
+
+# 7. Comments & Image Viewer
+- tapOn:
+    id: 'search-bar'
+- inputText: 'BV17B6iBeEya'
+- pressKey: Enter
+
+# Wait for search results
+- extendedWaitUntil:
+    visible:
+      id: 'track-item-.*'
+    timeout: 10000
+
+# Tap the first item (should be the video)
+- tapOn:
+    id: 'track-item-.*'
+    index: 0
+
+- runFlow:
+    when:
+      visible: '替换播放列表'
+    commands:
+      - tapOn: '确定'
+
+# Open Player
+- runFlow: common/open_player.yaml
+
+# Open Comments
+- tapOn:
+    id: 'player-open-comments'
+
+# Wait for comments to load
+- extendedWaitUntil:
+    visible: '评论区'
+    timeout: 10000
+
+# Find an image to click
+# We scroll down a bit if needed, but usually we just look for the testID
+- scrollUntilVisible:
+    element:
+      id: 'comment-image'
+    direction: DOWN
+    timeout: 10000
+
+- tapOn:
+    id: 'comment-image'
+    index: 0

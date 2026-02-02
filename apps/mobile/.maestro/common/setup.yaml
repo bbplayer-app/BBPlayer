@@ -1,0 +1,56 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# 1. Onboarding
+- runFlow:
+    when:
+      visible: '下一步'
+    commands:
+      - tapOn: '下一步'
+      - tapOn: '游客模式'
+
+# 2. Login via Cookie
+# Navigate to Settings -> General
+- tapOn: '设置'
+- tapOn: '通用'
+- assertVisible:
+    id: 'cookie-login-button'
+
+- runFlow:
+    when:
+      visible:
+        id: 'cookie-login-button'
+    commands:
+      - tapOn:
+          id: 'cookie-login-button'
+      - tapOn:
+          id: 'cookie-input'
+      - copyTextFrom:
+          id: 'cookie-input'
+      - runFlow:
+          when:
+            true: ${maestro.copiedText == ''}
+          commands:
+            - tapOn:
+                id: 'cookie-input'
+            - inputText: ${COOKIE}
+            - tapOn:
+                id: 'cookie-login-confirm'
+            # Wait for login processing and toast
+            - waitForAnimationToEnd
+            - assertVisible: 'Cookie 已更新'
+      - runFlow:
+          when:
+            true: ${maestro.copiedText != ''}
+          commands:
+            - tapOn:
+                id: 'cookie-login-confirm'
+
+# Return to Home (optional, but good for consistent state)
+- tapOn: '主页'

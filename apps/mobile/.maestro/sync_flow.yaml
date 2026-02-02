@@ -1,0 +1,54 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+- runFlow: common/setup.yaml
+
+# 3. Library & Favorites Sync
+- tapOn: '音乐库'
+- swipe:
+    direction: LEFT
+# Wait for list to render
+- extendedWaitUntil:
+    visible:
+      id: 'favorite-folder-.*'
+    timeout: 10000
+
+# Enter first favorite folder
+- tapOn:
+    id: 'favorite-folder-.*'
+    index: 0
+
+# Confirm render
+- assertVisible:
+    id: 'playlist-header-main-button'
+
+# Click Sync
+- tapOn:
+    id: 'playlist-header-main-button'
+
+# Wait for "同步完成"
+- extendedWaitUntil:
+    visible: '同步完成'
+    timeout: 60000
+- tapOn: '关闭'
+
+# Now we should see tracks in the list
+- tapOn:
+    id: 'track-item-.*'
+    index: 0
+
+- runFlow:
+    when:
+      visible: '替换播放列表'
+    commands:
+      - tapOn: '确定'
+
+# Player should open
+- runFlow: common/open_player.yaml
+
+# Open Lyrics
+- tapOn:
+    id: 'player-cover'
+- assertVisible:
+    id: 'player-lyrics-view'

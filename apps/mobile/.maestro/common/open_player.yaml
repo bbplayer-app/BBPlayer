@@ -1,0 +1,11 @@
+appId: com.roitium.bbplayer
+---
+- runFlow:
+    when:
+      notVisible:
+        id: 'player-cover'
+    commands:
+      - tapOn:
+          id: 'now-playing-bar'
+      - assertVisible:
+          id: 'player-cover'

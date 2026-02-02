@@ -1,0 +1,34 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+# Pre-requisite: Play something. We reuse search_flow for this.
+- runFlow: search_flow.yaml
+
+# 5. Playback Controls
+- runFlow: common/open_player.yaml
+
+# Pause
+- tapOn:
+    id: 'player-play-pause'
+# Verify paused state (optional, might be hard to verify icon change without ID, but we can verify UI didn't crash)
+
+# Play
+- tapOn:
+    id: 'player-play-pause'
+
+# Next
+- tapOn:
+    id: 'player-next'
+
+# Prev
+- tapOn:
+    id: 'player-prev'
+
+# Shuffle
+- tapOn:
+    id: 'player-mode-shuffle'
+
+# Repeat
+- tapOn:
+    id: 'player-mode-repeat'

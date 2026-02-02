@@ -207,6 +207,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 							},
 							animatedStyle,
 						]}
+						testID='now-playing-bar'
 					>
 						<View style={styles.nowPlayingBarContent}>
 							<Image
