@@ -27,7 +27,10 @@ export default function useAnimatedTrackProgress(background = false) {
 			},
 		)
 		const handler = playerProgressEmitter.subscribe('progress', (data) => {
-			if (isActive.value || background) {
+			if (
+				(isActive.value && AppState.currentState === 'active') ||
+				background
+			) {
 				position.value = data.position
 				duration.value = data.duration
 				buffered.value = data.buffered
