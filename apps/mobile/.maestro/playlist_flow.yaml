@@ -1,0 +1,34 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+- runFlow: common/setup.yaml
+
+# 6. Local Playlist Management
+- tapOn: '音乐库'
+# Ensure we are on Local tab (swipe right to be safe? Default is Local)
+- swipe:
+    direction: RIGHT
+
+# Create Playlist
+- tapOn:
+    id: 'create-playlist-button'
+
+- tapOn:
+    id: 'create-playlist-title-input'
+- inputText: 'Test Playlist'
+
+- tapOn: '确定'
+
+# Verify Created
+- extendedWaitUntil:
+    visible: 'Test Playlist'
+    timeout: 5000
+
+# Enter Playlist
+- tapOn: 'Test Playlist'
+
+# Verify Header
+- assertVisible: 'Test Playlist'
+
+- tapOn: '播放全部'

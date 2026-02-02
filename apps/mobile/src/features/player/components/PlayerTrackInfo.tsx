@@ -104,6 +104,7 @@ export function TrackInfo({
 					activeOpacity={0.8}
 					onPress={onPressCover}
 					style={{ width: coverSize, height: coverSize }}
+					testID='player-cover'
 				>
 					{!coverRef ? (
 						enableSpectrumVisualizer ? (

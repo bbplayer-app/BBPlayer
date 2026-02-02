@@ -99,7 +99,10 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 										index={index}
 										key={index}
 									>
-										<View style={styles.commentImage}>
+										<View
+											style={styles.commentImage}
+											testID='comment-image'
+										>
 											<Image
 												source={{ uri: pic.img_src }}
 												style={styles.commentImageInner}

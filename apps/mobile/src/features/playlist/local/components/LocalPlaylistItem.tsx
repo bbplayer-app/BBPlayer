@@ -110,6 +110,7 @@ export const TrackListItem = memo(function TrackListItem({
 			]}
 			delayLongPress={500}
 			enabled={!disabled}
+			testID={`track-item-${index}`}
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(data.id)

@@ -84,6 +84,7 @@ export default function CookieLoginModal() {
 					multiline
 					style={styles.cookieInput}
 					textAlignVertical='top'
+					testID='cookie-input'
 				/>
 				<Text
 					variant='bodySmall'
@@ -96,7 +97,12 @@ export default function CookieLoginModal() {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					onPress={handleConfirm}
+					testID='cookie-login-confirm'
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

@@ -97,6 +97,7 @@ export function MainPlaybackControls({
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToPrevious()
 				}}
+				testID='player-prev'
 			/>
 			<IconButton
 				icon={finalPlayingIndicator}
@@ -116,6 +117,7 @@ export function MainPlaybackControls({
 					}
 				}}
 				mode='contained'
+				testID='player-play-pause'
 			/>
 			<IconButton
 				icon='skip-next'
@@ -125,6 +127,7 @@ export function MainPlaybackControls({
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToNext()
 				}}
+				testID='player-next'
 			/>
 		</View>
 	)
@@ -172,6 +175,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								: Orpheus.setShuffleMode(true))
 							await refetchShuffleMode()
 						}}
+						testID='player-mode-shuffle'
 					/>
 				</Tooltip>
 				<Tooltip title='切换循环播放模式'>
@@ -200,6 +204,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 							void Orpheus.setRepeatMode(nextMode)
 							setRepeatMode(nextMode)
 						}}
+						testID='player-mode-repeat'
 					/>
 				</Tooltip>
 				<Tooltip title='查看评论'>
@@ -215,6 +220,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								})
 							}
 						}}
+						testID='player-open-comments'
 					/>
 				</Tooltip>
 				<Tooltip title='打开播放列表'>
@@ -226,6 +232,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 							void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 							onOpenQueue()
 						}}
+						testID='player-open-queue'
 					/>
 				</Tooltip>
 			</View>

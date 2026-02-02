@@ -148,10 +148,12 @@ export default function SearchSuggestions({
 	const renderItem = useCallback(
 		({
 			item,
+			index,
 		}: {
 			item: BilibiliSearchSuggestionItem & {
 				_segments?: { text: string; emphasized: boolean }[]
 			}
+			index: number
 		}) => {
 			return (
 				<RectButton
@@ -160,6 +162,7 @@ export default function SearchSuggestions({
 						onSuggestionPress(item.value)
 					}}
 					style={[styles.itemButton, { backgroundColor: colors.surface }]}
+					testID={`search-suggestion-${index}`}
 				>
 					<Text
 						numberOfLines={1}

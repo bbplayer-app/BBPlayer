@@ -467,7 +467,10 @@ const Lyrics = memo(function Lyrics({
 	}
 
 	return (
-		<View style={styles.lyricsContainer}>
+		<View
+			style={styles.lyricsContainer}
+			testID='player-lyrics-view'
+		>
 			<View style={styles.lyricsContent}>
 				<MaskedView
 					style={{ flex: 1 }}

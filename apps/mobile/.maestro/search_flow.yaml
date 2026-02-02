@@ -1,0 +1,38 @@
+appId: com.roitium.bbplayer
+env:
+  COOKIE: ${COOKIE}
+---
+- runFlow: common/setup.yaml
+
+# 4. Search & Play
+- tapOn:
+    id: 'search-bar'
+- inputText: 'Bilibili'
+# Wait for suggestions
+- extendedWaitUntil:
+    visible:
+      id: 'search-suggestion-0'
+    timeout: 5000
+- tapOn:
+    id: 'search-suggestion-0'
+
+# Wait for search results (External Playlist or Tracks)
+# The search result page usually lists tracks.
+- extendedWaitUntil:
+    visible:
+      id: 'track-item-.*'
+    timeout: 10000
+
+# Play the first track
+- tapOn:
+    id: 'track-item-.*'
+    index: 0
+
+- runFlow:
+    when:
+      visible: '替换播放列表'
+    commands:
+      - tapOn: '确定'
+
+# Player should open
+- runFlow: common/open_player.yaml
