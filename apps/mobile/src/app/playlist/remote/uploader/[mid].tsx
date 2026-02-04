@@ -23,6 +23,7 @@ import {
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
@@ -90,6 +91,8 @@ export default function UploaderPage() {
 	const searchbarHeight = useSharedValue(0)
 	const debouncedQuery = useDebouncedValue(searchQuery, 200)
 	const openModal = useModalStore((state) => state.open)
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
@@ -189,6 +192,7 @@ export default function UploaderPage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: uploaderUserInfo.name
 					}
+					onPress={handleDoubleTap}
 				/>
 				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
@@ -232,6 +236,7 @@ export default function UploaderPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracks ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}

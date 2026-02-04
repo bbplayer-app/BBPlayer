@@ -7,8 +7,6 @@ import {
 } from './src/utils/player'
 import toast from './src/utils/toast'
 
-// 定义一个全局变量，避免二次初始化 player
-global.playerIsReady = false
 global.isUIReady = false
 
 Orpheus.addListener('onPlayerError', (error) => {

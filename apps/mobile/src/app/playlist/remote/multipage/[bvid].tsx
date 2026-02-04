@@ -21,6 +21,7 @@ import {
 	useGetVideoDetails,
 } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
 	BilibiliMultipageVideo,
@@ -105,6 +106,7 @@ export default function MultipagePage() {
 
 	const { playTrack } = useRemotePlaylist()
 	const listRef = useRef<FlashListRef<BilibiliTrack>>(null)
+	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
@@ -225,6 +227,7 @@ export default function MultipagePage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: videoData.title
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action

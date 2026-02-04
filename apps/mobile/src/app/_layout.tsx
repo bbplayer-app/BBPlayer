@@ -3,20 +3,20 @@ import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Network from 'expo-network'
-import { SplashScreen, Stack, useNavigationContainerRef } from 'expo-router'
+import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
 import AppProviders from '@/components/providers'
+import useCheckUpdate from '@/hooks/app/useCheckUpdate'
+import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
-import useCheckUpdate from '@/hooks/useCheckUpdate'
-import { useFastMigrations } from '@/hooks/useFastMigrations'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import lyricService from '@/lib/services/lyricService'
@@ -45,7 +45,7 @@ function onAppStateChange(status: AppStateStatus) {
 }
 
 export default Sentry.wrap(function RootLayout() {
-	const [appIsReady, setAppIsReady] = useState(false)
+	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
 	const open = useModalStore((state) => state.open)
@@ -67,61 +67,66 @@ export default Sentry.wrap(function RootLayout() {
 	}, [])
 
 	useEffect(() => {
-		const initializeApp = () => {
-			try {
-				useAppStore.getState()
-			} catch (error) {
-				logger.error('初始化 Zustand store 失败:', error)
-				reportErrorToSentry(error, '初始化 Zustand store 失败', ProjectScope.UI)
-			} finally {
-				setAppIsReady(true)
-				global.isUIReady = true
+		try {
+			useAppStore.getState()
+			global.isUIReady = true
 
-				setImmediate(() => {
-					void cleanOldLogFiles(7)
-						.andTee((deleted) => {
-							if (deleted > 0) {
-								logger.info(`已清理 ${deleted} 个旧日志文件`)
-							}
-						})
-						.orTee((e) => {
-							logger.warning('清理旧日志失败', { error: e.message })
-						})
-
-					void lyricService.migrateFromOldFormat()
-
-					// 初始化播放器状态
-					usePlayerStore.getState().initialize()
-
-					const initializePlayer = () => {
-						if (!global.playerIsReady) {
-							try {
-								const cookie = useAppStore.getState().bilibiliCookie
-								if (!cookie) {
-									logger.info('没有 bilibili cookie，跳过播放器初始化')
-									return
-								}
-								logger.debug('初始化 orpheus bilibili cookie')
-								Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
-							} catch (error) {
-								logger.error('播放器初始化失败: ', error)
-								reportErrorToSentry(
-									error,
-									'播放器初始化失败',
-									ProjectScope.Player,
-								)
-								global.playerIsReady = false
-							}
-						}
+			// 清理旧日志
+			cleanOldLogFiles(7)
+				.andTee((deleted) => {
+					if (deleted > 0) {
+						logger.info(`已清理 ${deleted} 个旧日志文件`)
 					}
-
-					void initializePlayer()
 				})
+				.orTee((e) => {
+					logger.warning('清理旧日志失败', { error: e.message })
+				})
+
+			// 迁移旧格式歌词
+			void lyricService.migrateFromOldFormat()
+
+			// 初始化播放器状态
+			usePlayerStore.getState().initialize()
+
+			// 初始化播放器 Cookie
+			try {
+				const cookie = useAppStore.getState().bilibiliCookie
+				if (cookie) {
+					logger.debug('初始化 orpheus bilibili cookie')
+					Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
+				} else {
+					logger.info('没有 bilibili cookie，跳过播放器初始化')
+				}
+			} catch (error) {
+				logger.error('播放器初始化失败: ', error)
+				reportErrorToSentry(error, '播放器初始化失败', ProjectScope.Player)
+			}
+		} catch (error) {
+			logger.error('初始化失败:', error)
+			reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
+		} finally {
+			// eslint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
+			setIsReady(true)
+		}
+	}, [])
+
+	useEffect(() => {
+		if (isReady && migrationsSuccess) {
+			SplashScreen.hide()
+
+			const firstOpen = storage.getBoolean('first_open') ?? true
+			if (firstOpen) {
+				open('Welcome', undefined, { dismissible: false })
 			}
 		}
+	}, [isReady, migrationsSuccess, open])
 
-		void initializeApp()
-	}, [])
+	useEffect(() => {
+		if (migrationsError) {
+			SplashScreen.hide()
+			logger.error('数据库迁移失败：', migrationsError)
+		}
+	}, [migrationsError])
 
 	useEffect(() => {
 		if (developement) {
@@ -140,26 +145,7 @@ export default Sentry.wrap(function RootLayout() {
 			})
 	}, [])
 
-	const onLayoutRootView = useCallback(() => {
-		if (appIsReady) {
-			if (migrationsError) {
-				// 当有错误时，表明迁移已经结束，需要隐藏 SplashScreen 展示错误信息
-				SplashScreen.hide()
-				logger.error('数据库迁移失败：', migrationsError)
-			}
-			if (migrationsSuccess) {
-				SplashScreen.hide()
-				logger.info('数据库迁移完成')
-			}
-			const firstOpen = storage.getBoolean('first_open') ?? true
-			if (firstOpen) {
-				open('Welcome', undefined, { dismissible: false })
-			}
-		}
-	}, [appIsReady, migrationsError, migrationsSuccess, open])
-
 	if (migrationsError) {
-		logger.error('数据库迁移失败:', migrationsError)
 		return (
 			<View style={styles.errorContainer}>
 				<Text>数据库迁移失败: {migrationsError?.message}</Text>
@@ -168,12 +154,12 @@ export default Sentry.wrap(function RootLayout() {
 		)
 	}
 
-	if (!migrationsSuccess || !appIsReady) {
+	if (!migrationsSuccess || !isReady) {
 		return null
 	}
 
 	return (
-		<AppProviders onLayoutRootView={onLayoutRootView}>
+		<AppProviders>
 			<Stack screenOptions={{ headerShown: false }}>
 				<Stack.Screen
 					name='(tabs)'

@@ -21,6 +21,7 @@ import {
 } from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
@@ -81,6 +82,8 @@ export default function ToViewPage() {
 	)
 	const openModal = useModalStore((state) => state.open)
 
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+
 	const {
 		data: rawToViewData,
 		isPending: isToViewDataPending,
@@ -139,6 +142,7 @@ export default function ToViewPage() {
 					title={
 						selectMode ? `已选择\u2009${selected.size}\u2009首` : '稍后再看'
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -170,6 +174,7 @@ export default function ToViewPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracksData}
 					playTrack={handlePlay}
 					trackMenuItems={trackMenuItems}

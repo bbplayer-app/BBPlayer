@@ -19,13 +19,14 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
+import { useExternalPlaylist } from '@/hooks/queries/external-playlist/useExternalPlaylist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import {
 	ExternalPlaylistSyncStoreProvider,
 	useExternalPlaylistSyncStore,
 } from '@/hooks/stores/useExternalPlaylistSyncStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { useExternalPlaylist } from '@/hooks/useExternalPlaylist'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
 import { externalPlaylistService } from '@/lib/services/externalPlaylistService'
 import {
@@ -179,6 +180,8 @@ const ExternalPlaylistSyncPageInner = () => {
 	const router = useRouter()
 	const openModal = useModalStore((state) => state.open)
 	const queryClient = useQueryClient()
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<GenericTrack>()
 
 	const { data, isLoading, error } = useExternalPlaylist(
 		id ?? '',
@@ -426,7 +429,10 @@ const ExternalPlaylistSyncPageInner = () => {
 		<View style={{ flex: 1, backgroundColor: theme.colors.background }}>
 			<Appbar.Header>
 				<Appbar.BackAction onPress={router.back} />
-				<Appbar.Content title='外部歌单匹配' />
+				<Appbar.Content
+					title='外部歌单匹配'
+					onPress={handleDoubleTap}
+				/>
 				<Appbar.Action
 					icon='check'
 					onPress={handleSave}
@@ -446,6 +452,7 @@ const ExternalPlaylistSyncPageInner = () => {
 				匹配完成后，请务必点击右上角或下方的保存按钮，否则进度将丢失。
 			</Banner>
 			<FlashList
+				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={{

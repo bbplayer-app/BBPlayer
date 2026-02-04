@@ -14,6 +14,7 @@ import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSele
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -67,6 +68,8 @@ export default function FavoritePage() {
 		[selectMode, selected, toggle, enterSelectMode],
 	)
 	const openModal = useModalStore((state) => state.open)
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
 	const {
 		data: favoriteData,
@@ -143,6 +146,7 @@ export default function FavoritePage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: favoriteData.pages[0].info.title
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -170,6 +174,7 @@ export default function FavoritePage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}

@@ -14,6 +14,7 @@
 - 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
 - 懒加载的模态框在加载时显示 `ActivityIndicator`
 - 优化数据库迁移检查，通过缓存 schema 版本跳过无新迁移时的 SQL 查询
+- 支持双击播放列表顶部回到顶端
 
 ### Changed
 
@@ -22,6 +23,7 @@
 - 启用 R8 混淆
 - 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
 - 移除 reanimated 的 Static Flags
+- 重构 RootLayout 的 SplashScreen 显示逻辑
 
 ### Fixed
 

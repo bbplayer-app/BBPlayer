@@ -37,6 +37,8 @@ import {
 } from '@/hooks/queries/db/playlist'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -57,6 +59,8 @@ export default function LocalPlaylistPage() {
 	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
 		useTrackSelection()
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
 
 	const selection = useMemo(
 		() => ({
@@ -251,6 +255,7 @@ export default function LocalPlaylistPage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: playlistMetadata.title
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<>
@@ -311,6 +316,7 @@ export default function LocalPlaylistPage() {
 				}}
 			>
 				<LocalTrackList
+					listRef={listRef}
 					isStale={searchQuery !== deferredQuery}
 					tracks={finalPlaylistData ?? []}
 					playlist={playlistMetadata}
