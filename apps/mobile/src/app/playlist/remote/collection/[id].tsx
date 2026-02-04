@@ -15,6 +15,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useCollectionAllContents } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliMediaItemInCollection } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -66,6 +67,8 @@ export default function CollectionPage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
 	const {
 		data: collectionData,
@@ -140,6 +143,7 @@ export default function CollectionPage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: collectionData.info.title
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -167,6 +171,7 @@ export default function CollectionPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}

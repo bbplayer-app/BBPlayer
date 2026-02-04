@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router'
 import { Suspense, useEffect, useState } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native'
 
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { modalRegistry } from '@/components/ModalRegistry'
@@ -68,7 +68,13 @@ export default function ModalHost() {
 						}}
 						contentStyle={{ zIndex }}
 					>
-						<Suspense fallback={<View />}>
+						<Suspense
+							fallback={
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size='large' />
+								</View>
+							}
+						>
 							{/*
             // @ts-expect-error -- 懒得管了*/}
 							<Component {...m.props} />
@@ -79,3 +85,13 @@ export default function ModalHost() {
 		</View>
 	)
 }
+
+const styles = StyleSheet.create({
+	loadingContainer: {
+		width: 200,
+		height: 150,
+		alignSelf: 'center',
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+})

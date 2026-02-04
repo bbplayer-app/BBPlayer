@@ -1,9 +1,8 @@
 import { useEffect } from 'react'
 
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
-
-import { useModalStore } from './stores/useModalStore'
 
 export default function useCheckUpdate() {
 	const open = useModalStore((state) => state.open)

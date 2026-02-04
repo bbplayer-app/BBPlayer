@@ -12,6 +12,7 @@ import { useSearchInteractions } from '@/features/playlist/remote/search-result/
 import { PlaylistTrackListSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { formatMMSSToSeconds } from '@/utils/time'
@@ -62,6 +63,8 @@ export default function SearchResultsPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+
 	const {
 		data: searchData,
 		isPending: isPendingSearchData,
@@ -109,6 +112,7 @@ export default function SearchResultsPage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: `搜索结果\u2009-\u2009${query}`
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -136,6 +140,7 @@ export default function SearchResultsPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={uniqueSearchData ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
