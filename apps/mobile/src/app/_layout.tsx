@@ -2,7 +2,6 @@ import { useLogger } from '@react-navigation/devtools'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
-import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator'
 import * as Network from 'expo-network'
 import { SplashScreen, Stack, useNavigationContainerRef } from 'expo-router'
 import * as Updates from 'expo-updates'
@@ -17,6 +16,7 @@ import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import useCheckUpdate from '@/hooks/useCheckUpdate'
+import { useFastMigrations } from '@/hooks/useFastMigrations'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import lyricService from '@/lib/services/lyricService'
@@ -46,10 +46,8 @@ function onAppStateChange(status: AppStateStatus) {
 
 export default Sentry.wrap(function RootLayout() {
 	const [appIsReady, setAppIsReady] = useState(false)
-	const { success: migrationsSuccess, error: migrationsError } = useMigrations(
-		drizzleDb,
-		migrations,
-	)
+	const { success: migrationsSuccess, error: migrationsError } =
+		useFastMigrations(drizzleDb, migrations)
 	const open = useModalStore((state) => state.open)
 	const ref = useNavigationContainerRef()
 	useCheckUpdate()

@@ -46,9 +46,7 @@ export default function TabLayout() {
 					title: '主页',
 					tabBarIcon: () => homeIcon,
 					tabBarLabel: '主页',
-					lazy: false,
-					// @ts-expect-error type definition missing
-					tabBarTestID: 'tab-home',
+					lazy: true,
 				}}
 			/>
 			<Tabs.Screen
@@ -57,9 +55,7 @@ export default function TabLayout() {
 					title: '音乐库',
 					tabBarIcon: () => libraryIcon,
 					tabBarLabel: '音乐库',
-					lazy: false,
-					// @ts-expect-error type definition missing
-					tabBarTestID: 'tab-library',
+					lazy: true,
 				}}
 			/>
 			<Tabs.Screen
@@ -68,9 +64,7 @@ export default function TabLayout() {
 					title: '设置',
 					tabBarIcon: () => settingsIcon,
 					tabBarLabel: '设置',
-					lazy: false,
-					// @ts-expect-error type definition missing
-					tabBarTestID: 'tab-settings',
+					lazy: true,
 				}}
 			/>
 		</Tabs>

@@ -16,6 +16,7 @@ export interface AppStorageSchema {
 	'app-storage': string
 	current_position: number
 	enable_loudness_normalization: boolean
+	db_schema_version: number
 }
 
 export type StorageKey = keyof AppStorageSchema
