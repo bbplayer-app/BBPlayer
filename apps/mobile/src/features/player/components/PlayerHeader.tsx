@@ -2,6 +2,12 @@ import { DownloadState } from '@roitium/expo-orpheus'
 import { useRouter } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
+import Animated, {
+	Extrapolation,
+	interpolate,
+	useAnimatedStyle,
+} from 'react-native-reanimated'
+import type { SharedValue } from 'react-native-reanimated'
 
 import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -9,15 +15,47 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 export function PlayerHeader({
 	onMorePress,
 	index,
+	scrollX,
 }: {
 	onMorePress: () => void
 	index: number
+	scrollX?: SharedValue<number>
 }) {
 	const router = useRouter()
 	const currentTrack = useCurrentTrack()
 	const { data: downloadStatus } = useBatchDownloadStatus(
 		currentTrack?.uniqueKey ? [currentTrack.uniqueKey] : [],
 	)
+
+	const title = currentTrack?.title ?? '正在播放'
+	const statusText =
+		downloadStatus?.[currentTrack?.uniqueKey ?? ''] === DownloadState.COMPLETED
+			? '正在播放 (已缓存)'
+			: '正在播放'
+
+	const titleStyle = useAnimatedStyle(() => {
+		if (!scrollX) return { opacity: index === 1 ? 1 : 0 }
+		return {
+			opacity: interpolate(
+				scrollX.value,
+				[0.4, 1],
+				[0, 1],
+				Extrapolation.CLAMP,
+			),
+		}
+	})
+
+	const statusStyle = useAnimatedStyle(() => {
+		if (!scrollX) return { opacity: index === 0 ? 1 : 0 }
+		return {
+			opacity: interpolate(
+				scrollX.value,
+				[0, 0.4],
+				[1, 0],
+				Extrapolation.CLAMP,
+			),
+		}
+	})
 
 	return (
 		<View style={styles.container}>
@@ -28,18 +66,32 @@ export function PlayerHeader({
 					onPress={() => router.back()}
 				/>
 			}
-			<Text
-				variant='titleMedium'
-				style={styles.title}
-				numberOfLines={1}
-			>
-				{index === 1
-					? (currentTrack?.title ?? '正在播放')
-					: downloadStatus?.[currentTrack?.uniqueKey ?? ''] ===
-						  DownloadState.COMPLETED
-						? '正在播放 (已缓存)'
-						: '正在播放'}
-			</Text>
+			<View style={styles.titleContainer}>
+				<Animated.View
+					style={[styles.headerTextContainer, statusStyle]}
+					pointerEvents='none'
+				>
+					<Text
+						variant='titleMedium'
+						numberOfLines={1}
+						style={styles.text}
+					>
+						{statusText}
+					</Text>
+				</Animated.View>
+				<Animated.View
+					style={[styles.headerTextContainer, titleStyle]}
+					pointerEvents='none'
+				>
+					<Text
+						variant='titleMedium'
+						numberOfLines={1}
+						style={styles.text}
+					>
+						{title}
+					</Text>
+				</Animated.View>
+			</View>
 			<IconButton
 				icon='dots-vertical'
 				size={24}
@@ -57,8 +109,18 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		paddingVertical: 8,
 	},
-	title: {
+	titleContainer: {
 		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		height: 40,
+	},
+	headerTextContainer: {
+		...StyleSheet.absoluteFillObject,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+	text: {
 		textAlign: 'center',
 	},
 })

@@ -16,15 +16,19 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
+import PagerView, {
+	type PagerViewOnPageScrollEvent,
+} from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
-import {
+import Animated, {
 	Easing,
 	useDerivedValue,
+	useEvent,
+	useHandler,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { TabView } from 'react-native-tab-view'
 
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
@@ -39,10 +43,35 @@ import toast from '@/utils/toast'
 
 const logger = log.extend('App.Player')
 
-const routes = [
-	{ key: 'main', title: 'Main' },
-	{ key: 'lyrics', title: 'Lyrics' },
-]
+const AnimatedPagerView = Animated.createAnimatedComponent(PagerView)
+
+function usePageScrollHandler(
+	handlers: {
+		onPageScroll: (
+			event: PagerViewOnPageScrollEvent['nativeEvent'],
+			context: Record<string, unknown>,
+		) => void
+	},
+	dependencies?: unknown[],
+) {
+	const { context, doDependenciesDiffer } = useHandler(handlers, dependencies)
+	const subscribeForEvents = ['onPageScroll']
+
+	return useEvent(
+		(event) => {
+			'worklet'
+			const { onPageScroll } = handlers
+			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
+				onPageScroll(
+					event as unknown as PagerViewOnPageScrollEvent['nativeEvent'],
+					context,
+				)
+			}
+		},
+		subscribeForEvents,
+		doDependenciesDiffer,
+	)
+}
 
 export default function PlayerPage() {
 	const theme = useTheme()
@@ -77,10 +106,24 @@ export default function PlayerPage() {
 		return height + insets.top + insets.bottom
 	}, [height, insets.bottom, insets.top])
 
+	const pagerRef = useRef<PagerView>(null)
 	const gradientMainColor = useSharedValue(colors.background)
+	const scrollX = useSharedValue(0)
 
 	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
+
+	const pageScrollHandler = usePageScrollHandler({
+		onPageScroll: (e) => {
+			'worklet'
+			scrollX.value = e.position + e.offset
+		},
+	})
+
+	const jumpTo = (key: string) => {
+		const pageIndex = key === 'lyrics' ? 1 : 0
+		pagerRef.current?.setPage(pageIndex)
+	}
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -129,27 +172,7 @@ export default function PlayerPage() {
 		playerBackgroundStyle,
 	])
 
-	const renderScene = ({
-		route,
-		jumpTo,
-	}: {
-		route: { key: string; title: string }
-		jumpTo: (key: string) => void
-	}) => {
-		switch (route.key) {
-			case 'main':
-				return (
-					<PlayerMainTab
-						sheetRef={sheetRef}
-						jumpTo={jumpTo}
-						imageRef={coverRef}
-						onPresent={() => setQueueVisible(true)}
-					/>
-				)
-			case 'lyrics':
-				return <Lyrics currentIndex={index} />
-		}
-	}
+	// Removed renderScene as we are using PagerView children directly
 
 	const scrimColors = useMemo(() => {
 		if (playerBackgroundStyle !== 'gradient')
@@ -275,16 +298,27 @@ export default function PlayerPage() {
 					<PlayerHeader
 						onMorePress={() => setMenuVisible(true)}
 						index={index}
+						scrollX={scrollX}
 					/>
-					<TabView
+					<AnimatedPagerView
+						ref={pagerRef}
 						style={styles.tabView}
-						navigationState={{ index, routes }}
-						renderScene={renderScene}
-						onIndexChange={setIndex}
-						initialLayout={{ width: width }}
-						lazy={({ route }) => route.key === 'lyrics'}
-						renderTabBar={() => null}
-					/>
+						initialPage={0}
+						onPageScroll={pageScrollHandler}
+						onPageSelected={(e) => setIndex(e.nativeEvent.position)}
+					>
+						<View key='main'>
+							<PlayerMainTab
+								sheetRef={sheetRef}
+								jumpTo={jumpTo}
+								imageRef={coverRef}
+								onPresent={() => setQueueVisible(true)}
+							/>
+						</View>
+						<View key='lyrics'>
+							<Lyrics currentIndex={index} />
+						</View>
+					</AnimatedPagerView>
 				</View>
 
 				<PlayerFunctionalMenu
