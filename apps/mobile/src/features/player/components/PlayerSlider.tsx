@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -86,7 +86,7 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
-	const { position, duration, buffered } = useAnimatedTrackProgress()
+	const { position, duration, buffered } = useSmoothProgress()
 
 	const containerWidth = useSharedValue(0)
 	const isScrubbing = useSharedValue(false)

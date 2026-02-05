@@ -100,13 +100,17 @@ export class NeteaseApi {
 	public parseLyrics(
 		lyricsResponse: NeteaseLyricResponse,
 	): LyricProviderResponseData {
-		const mainLrc = lyricsResponse.yrc?.lyric
-			? parseYrc(lyricsResponse.yrc.lyric)
-			: lyricsResponse.lrc?.lyric
+		const haveYrc = !!lyricsResponse.yrc?.lyric
 		const lyricData: LyricProviderResponseData = {
-			lrc: mainLrc,
-			tlyric: lyricsResponse.tlyric?.lyric,
-			romalrc: lyricsResponse.romalrc?.lyric,
+			lrc: haveYrc
+				? parseYrc(lyricsResponse.yrc!.lyric)
+				: lyricsResponse.lrc.lyric,
+			tlyric: haveYrc
+				? lyricsResponse.ytlrc?.lyric
+				: lyricsResponse.tlyric?.lyric,
+			romalrc: haveYrc
+				? lyricsResponse.yromalrc?.lyric
+				: lyricsResponse.romalrc?.lyric,
 		}
 
 		return lyricData

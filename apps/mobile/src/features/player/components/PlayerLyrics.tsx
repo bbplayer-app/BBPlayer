@@ -28,6 +28,7 @@ import {
 	useTheme,
 } from 'react-native-paper'
 import Animated, {
+	type SharedValue,
 	useAnimatedScrollHandler,
 	useAnimatedStyle,
 	useSharedValue,
@@ -37,6 +38,7 @@ import Animated, {
 import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
 import useLyricSync from '@/features/player/hooks/useLyricSync'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { lyricsQueryKeys, useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -44,6 +46,8 @@ import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { toastAndLogError } from '@/utils/error-handling'
+
+import { KaraokeWord } from './lyrics/KaraokeWord'
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,
@@ -188,12 +192,14 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	jumpToThisLyric,
 	index,
 	onPressBackground,
+	currentTime,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
 	onPressBackground?: () => void
+	currentTime: SharedValue<number>
 }) {
 	const theme = useTheme()
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -233,6 +239,32 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		}
 	})
 
+	const renderContent = () => {
+		if (item.isDynamic && item.spans && item.spans.length > 0) {
+			return (
+				<View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+					{item.spans.map((span, idx) => (
+						<KaraokeWord
+							key={`${index}_${idx}`}
+							span={span}
+							currentTime={currentTime}
+							baseStyle={styles.modernItemText}
+							activeColor={theme.colors.primary}
+							inactiveColor={theme.colors.onSurfaceDisabled}
+							isHighlighted={isHighlighted}
+						/>
+					))}
+				</View>
+			)
+		}
+
+		return (
+			<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
+				{item.content}
+			</Animated.Text>
+		)
+	}
+
 	return (
 		<View style={styles.modernItemWrapper}>
 			<Pressable
@@ -243,11 +275,11 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				style={[styles.modernItemButton, containerAnimatedStyle]}
 				onPress={() => jumpToThisLyric(index)}
 			>
-				<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
-					{item.content}
-				</Animated.Text>
+				{renderContent()}
 				{item.translations?.[0] && (
-					<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
+					<Animated.Text
+						style={[styles.modernItemTranslation, textAnimatedStyle]}
+					>
 						{item.translations[0]}
 					</Animated.Text>
 				)}
@@ -267,14 +299,23 @@ const renderItem = ({
 		handleJumpToLyric: (index: number) => void
 		enableOldSchoolStyleLyric: boolean
 		onPressBackground?: () => void
+		currentTime: SharedValue<number>
 	}
 >) => {
+	const resolvedExtraData = extraData as {
+		currentLyricIndex: number
+		handleJumpToLyric: (index: number) => void
+		enableOldSchoolStyleLyric: boolean
+		onPressBackground?: () => void
+		currentTime: SharedValue<number>
+	}
 	const {
 		currentLyricIndex,
 		handleJumpToLyric,
 		enableOldSchoolStyleLyric,
 		onPressBackground,
-	} = extraData ?? {}
+		currentTime,
+	} = resolvedExtraData ?? {}
 
 	if (item.isPaddingItem) {
 		return (
@@ -292,7 +333,7 @@ const renderItem = ({
 				item={item}
 				isHighlighted={index === currentLyricIndex}
 				index={index}
-				jumpToThisLyric={handleJumpToLyric!}
+				jumpToThisLyric={handleJumpToLyric}
 				onPressBackground={onPressBackground}
 			/>
 		)
@@ -302,8 +343,9 @@ const renderItem = ({
 			item={item}
 			isHighlighted={index === currentLyricIndex}
 			index={index}
-			jumpToThisLyric={handleJumpToLyric!}
+			jumpToThisLyric={handleJumpToLyric}
 			onPressBackground={onPressBackground}
+			currentTime={currentTime}
 		/>
 	)
 }
@@ -337,6 +379,8 @@ const Lyrics = memo(function Lyrics({
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
 
+	const { position: currentTime } = useSmoothProgress()
+
 	const {
 		data: lyrics,
 		isPending,
@@ -348,29 +392,9 @@ const Lyrics = memo(function Lyrics({
 
 		const currentLyrics = lyrics
 		try {
-			const { lines: parsedLines } = parseSpl(currentLyrics.lrc!)
-			const translationMap = new Map<number, string>()
-
-			if (currentLyrics.tlyric) {
-				try {
-					const { lines: transLines } = parseSpl(currentLyrics.tlyric)
-					transLines.forEach((l) => {
-						translationMap.set(l.startTime, l.content)
-					})
-				} catch {
-					// ignore translation parse error
-				}
-			}
-
-			if (translationMap.size > 0) {
-				parsedLines.forEach((l) => {
-					const trans = translationMap.get(l.startTime)
-					if (trans) {
-						if (!l.translations) l.translations = []
-						l.translations.push(trans)
-					}
-				})
-			}
+			// 主播亲测这样 hack 没问题！
+			const mergedSpl = currentLyrics.lrc + '\n' + (currentLyrics.tlyric ?? '')
+			const { lines: parsedLines } = parseSpl(mergedSpl)
 
 			const paddingTimestamp =
 				(parsedLines.at(-1)?.startTime ?? 0) + Number.EPSILON
@@ -386,7 +410,8 @@ const Lyrics = memo(function Lyrics({
 					isPaddingItem: true,
 				} as LyricLine & { isPaddingItem?: boolean },
 			]
-		} catch {
+		} catch (e) {
+			toastAndLogError('解析歌词失败', e, 'Player.PlayerLyrics')
 			return []
 		}
 	}, [lyrics])
@@ -486,12 +511,14 @@ const Lyrics = memo(function Lyrics({
 			handleJumpToLyric,
 			enableOldSchoolStyleLyric,
 			onPressBackground,
+			currentTime,
 		}),
 		[
 			currentLyricIndex,
 			handleJumpToLyric,
 			enableOldSchoolStyleLyric,
 			onPressBackground,
+			currentTime,
 		],
 	)
 
@@ -699,9 +726,18 @@ const styles = StyleSheet.create({
 	},
 	modernItemText: {
 		textAlign: 'left',
-		fontSize: 20,
+		fontSize: 24,
+		fontWeight: '700',
 		letterSpacing: 0,
-		lineHeight: 28,
+		lineHeight: 32,
+	},
+	modernItemTranslation: {
+		textAlign: 'left',
+		fontSize: 18,
+		fontWeight: '400',
+		letterSpacing: 0,
+		lineHeight: 26,
+		marginTop: 2,
 	},
 	pendingContainer: {
 		flex: 1,

@@ -74,6 +74,16 @@ export interface NeteaseLyricResponse {
 		version: number
 		lyric: string
 	}
+	/** 与 yrc 相对应的翻译歌词，如果使用 yrc 就必须用这个，否则时间戳对应不上 */
+	ytlrc?: {
+		version: number
+		lyric: string
+	}
+	/** 与 yrc 相对应的罗马音歌词，如果使用 yrc 就必须用这个，否则时间戳对应不上 */
+	yromalrc?: {
+		version: number
+		lyric: string
+	}
 	code: number
 }
 
