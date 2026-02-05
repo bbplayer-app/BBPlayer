@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import type { ColorSchemeName } from 'react-native'
 import {
 	Dimensions,
+	Pressable,
 	StyleSheet,
 	TouchableOpacity,
 	useColorScheme,
@@ -85,7 +86,10 @@ export function TrackInfo({
 
 	return (
 		<View>
-			<View style={styles.coverContainer}>
+			<Pressable
+				style={styles.coverContainer}
+				onPress={onPressCover}
+			>
 				{enableSpectrumVisualizer && (
 					<View
 						style={[
@@ -185,7 +189,7 @@ export function TrackInfo({
 						</SquircleView>
 					)}
 				</TouchableOpacity>
-			</View>
+			</Pressable>
 
 			<View style={styles.trackInfoContainer}>
 				<View style={styles.trackTitleContainer}>

@@ -9,7 +9,7 @@ import {
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
 import { router } from 'expo-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Activity, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
 	StyleSheet,
@@ -18,17 +18,12 @@ import {
 	View,
 } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
-import PagerView, {
-	type PagerViewOnPageScrollEvent,
-} from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	Easing,
 	interpolate,
 	useAnimatedStyle,
 	useDerivedValue,
-	useEvent,
-	useHandler,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
@@ -48,39 +43,9 @@ import toast from '@/utils/toast'
 
 const logger = log.extend('App.Player')
 
-const AnimatedPagerView = Animated.createAnimatedComponent(PagerView)
-
 const OVERLAY_OPACITY = 0.5
 const DISMISS_THRESHOLD = 150
 const ANIMATION_DURATION = 300
-
-function usePageScrollHandler(
-	handlers: {
-		onPageScroll: (
-			event: PagerViewOnPageScrollEvent['nativeEvent'],
-			context: Record<string, unknown>,
-		) => void
-	},
-	dependencies?: unknown[],
-) {
-	const { context, doDependenciesDiffer } = useHandler(handlers, dependencies)
-	const subscribeForEvents = ['onPageScroll']
-
-	return useEvent(
-		(event) => {
-			'worklet'
-			const { onPageScroll } = handlers
-			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
-				onPageScroll(
-					event as unknown as PagerViewOnPageScrollEvent['nativeEvent'],
-					context,
-				)
-			}
-		},
-		subscribeForEvents,
-		doDependenciesDiffer,
-	)
-}
 
 export default function PlayerPage() {
 	const theme = useTheme()
@@ -102,6 +67,9 @@ export default function PlayerPage() {
 	)
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
+	const [activeTab, setActiveTab] = useState<'main' | 'lyrics'>('main')
+	const index = activeTab === 'lyrics' ? 1 : 0
+
 	const translateY = useSharedValue(height)
 	const isClosing = useSharedValue(false)
 
@@ -121,8 +89,8 @@ export default function PlayerPage() {
 	}
 
 	const handleDismiss = () => {
-		if (index === 1) {
-			pagerRef.current?.setPage(0)
+		if (activeTab === 'lyrics') {
+			setActiveTab('main')
 			return
 		}
 		if (isClosing.value) return
@@ -134,10 +102,10 @@ export default function PlayerPage() {
 		)
 	}
 
-	const pagerGesture = Gesture.Native()
 	const panGesture = useMemo(
 		() =>
 			Gesture.Pan()
+				.enabled(activeTab === 'main')
 				.activeOffsetY([10, 1000])
 				.failOffsetX([-20, 20])
 				.onUpdate((event) => {
@@ -147,7 +115,6 @@ export default function PlayerPage() {
 						translateY.set(event.translationY)
 					}
 				})
-				.simultaneousWithExternalGesture(pagerGesture)
 				.onEnd((event) => {
 					'worklet'
 					if (isClosing.value) return
@@ -163,7 +130,7 @@ export default function PlayerPage() {
 						translateY.set(withTiming(0, { duration: 200 }))
 					}
 				}),
-		[height, isClosing, pagerGesture, translateY],
+		[height, isClosing, translateY, activeTab],
 	)
 
 	const overlayAnimatedStyle = useAnimatedStyle(() => {
@@ -197,23 +164,19 @@ export default function PlayerPage() {
 		return height + insets.top + insets.bottom
 	}, [height, insets.bottom, insets.top])
 
-	const pagerRef = useRef<PagerView>(null)
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
 
-	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
 
-	const pageScrollHandler = usePageScrollHandler({
-		onPageScroll: (e) => {
-			'worklet'
-			scrollX.value = e.position + e.offset
-		},
-	})
+	useEffect(() => {
+		scrollX.value = withTiming(activeTab === 'lyrics' ? 1 : 0, {
+			duration: 300,
+		})
+	}, [activeTab, scrollX])
 
 	const jumpTo = (key: string) => {
-		const pageIndex = key === 'lyrics' ? 1 : 0
-		pagerRef.current?.setPage(pageIndex)
+		setActiveTab(key === 'lyrics' ? 'lyrics' : 'main')
 	}
 
 	const gradientColors = useDerivedValue(() => {
@@ -296,8 +259,8 @@ export default function PlayerPage() {
 				})
 			return
 		}
-		if (index === 1) {
-			pagerRef.current?.setPage(0)
+		if (activeTab === 'lyrics') {
+			setActiveTab('main')
 			return
 		}
 		handleDismiss()
@@ -401,15 +364,9 @@ export default function PlayerPage() {
 								index={index}
 								scrollX={scrollX}
 							/>
-							<GestureDetector gesture={pagerGesture}>
-								<AnimatedPagerView
-									ref={pagerRef}
-									style={styles.tabView}
-									initialPage={0}
-									onPageScroll={pageScrollHandler}
-									onPageSelected={(e) => setIndex(e.nativeEvent.position)}
-								>
-									<View key='main'>
+							<View style={styles.tabView}>
+								<Activity mode={activeTab === 'main' ? 'visible' : 'hidden'}>
+									<View style={StyleSheet.absoluteFill}>
 										<PlayerMainTab
 											sheetRef={sheetRef}
 											jumpTo={jumpTo}
@@ -417,11 +374,16 @@ export default function PlayerPage() {
 											onPresent={() => setQueueVisible(true)}
 										/>
 									</View>
-									<View key='lyrics'>
-										<Lyrics currentIndex={index} />
+								</Activity>
+								<Activity mode={activeTab === 'lyrics' ? 'visible' : 'hidden'}>
+									<View style={StyleSheet.absoluteFill}>
+										<Lyrics
+											currentIndex={index}
+											onPressBackground={() => jumpTo('main')}
+										/>
 									</View>
-								</AnimatedPagerView>
-							</GestureDetector>
+								</Activity>
+							</View>
 						</View>
 
 						<PlayerFunctionalMenu
