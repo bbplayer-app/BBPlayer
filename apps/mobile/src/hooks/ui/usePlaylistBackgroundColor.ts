@@ -35,6 +35,9 @@ export interface PlaylistBackgroundColorResult {
 	nowPlayingBarColor: string | undefined
 }
 
+/**
+ * 供播放列表使用，根据封面提取主题色和对应的 NowPlayingBar 颜色
+ */
 export function usePlaylistBackgroundColor(
 	imageRef: ImageRef | null | undefined,
 	isDarkMode: boolean,
