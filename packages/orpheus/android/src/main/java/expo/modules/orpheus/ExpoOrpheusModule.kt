@@ -323,6 +323,17 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipToNext") {
             checkPlayer()
+
+            // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
+            val mediaItemCount = player?.mediaItemCount ?: 0
+            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+                && mediaItemCount > 0
+                && !(player?.hasNextMediaItem() ?: false)
+            ) {
+                player?.seekTo(0, C.TIME_UNSET)
+                return@AsyncFunction Unit
+            }
+
             if (player?.hasNextMediaItem() == true) {
                 player?.seekToNextMediaItem()
             }
@@ -330,6 +341,16 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipToPrevious") {
             checkPlayer()
+
+            // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
+            val mediaItemCount = player?.mediaItemCount ?: 0
+            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+                && mediaItemCount > 0
+                && !(player?.hasPreviousMediaItem() ?: false)
+            ) {
+                player?.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                return@AsyncFunction Unit
+            }
             if (player?.hasPreviousMediaItem() == true) {
                 player?.seekToPreviousMediaItem()
             }
