@@ -25,6 +25,7 @@
 - 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
 - 移除 reanimated 的 Static Flags
 - 重构 RootLayout 的 SplashScreen 显示逻辑
+- 试图增强播放器的后台留存能力
 
 ### Fixed
 
