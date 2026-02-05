@@ -1,3 +1,4 @@
+import { parseYrc } from '@bbplayer/splash/src/converter/netease'
 import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
@@ -6,8 +7,10 @@ import type {
 	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
 } from '@/types/apis/netease'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 
 import type { RequestOptions } from './request'
 import { createRequest } from './request'
@@ -94,27 +97,32 @@ export class NeteaseApi {
 		})
 	}
 
-	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
-		const parsedRawLyrics = parseLrc(lyricsResponse.lrc.lyric)
-		if (
-			!lyricsResponse.tlyric ||
-			lyricsResponse.tlyric.lyric.trim().length === 0
-		) {
-			return parsedRawLyrics
+	public parseLyrics(
+		lyricsResponse: NeteaseLyricResponse,
+	): LyricProviderResponseData {
+		const haveYrc = !!lyricsResponse.yrc?.lyric
+		const lrc = haveYrc ? lyricsResponse.yrc!.lyric : lyricsResponse.lrc.lyric
+		const tlrc = haveYrc
+			? lyricsResponse.ytlrc?.lyric
+			: lyricsResponse.tlyric?.lyric
+		const romalrc = haveYrc
+			? lyricsResponse.yromalrc?.lyric
+			: lyricsResponse.romalrc?.lyric
+		const lyricData: LyricProviderResponseData = {
+			// 一手防御性编程，我们不确定 tlyric 和 romalrc 会不会返回 yrc 格式，但是 parse 一下准没错
+			lrc: parseYrc(lrc),
+			tlyric: tlrc ? parseYrc(tlrc) : undefined,
+			romalrc: romalrc ? parseYrc(romalrc) : undefined,
 		}
-		const parsedTranslatedLyrics = parseLrc(lyricsResponse.tlyric.lyric)
-		if (parsedTranslatedLyrics === null) {
-			return parsedRawLyrics
-		}
-		const mergedLyrics = mergeLrc(parsedRawLyrics, parsedTranslatedLyrics)
-		return mergedLyrics
+
+		return lyricData
 	}
 
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<ParsedLrc, NeteaseApiError> {
+	): ResultAsync<LyricProviderResponseData, NeteaseApiError> {
 		return this.search({ keywords: keyword, limit: 10 }, signal).andThen(
 			(searchResult) => {
 				if (searchResult.length === 0) {

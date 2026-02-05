@@ -2,7 +2,7 @@ import type { AlertModalProps } from '@/components/modals/AlertModal'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { Playlist, Track } from '@/types/core/media'
 import type { GenericTrack } from '@/types/external_playlist'
-import type { ParsedLrc } from '@/types/player/lyrics'
+import type { LyricFileData } from '@/types/player/lyrics'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 
@@ -28,7 +28,7 @@ export interface ModalPropsMap {
 	ManualSearchLyrics: { uniqueKey: string; initialQuery: string }
 	InputExternalPlaylistInfo: undefined
 	Alert: AlertModalProps
-	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
+	EditLyrics: { uniqueKey: string; lyrics: LyricFileData }
 	SleepTimer: undefined
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' }

@@ -302,7 +302,11 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("play") {
             checkPlayer()
-            player?.play()
+            val p = player ?: return@AsyncFunction null
+            if (p.playbackState == Player.STATE_ENDED) {
+                p.seekTo(0)
+            }
+            p.play()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("pause") {

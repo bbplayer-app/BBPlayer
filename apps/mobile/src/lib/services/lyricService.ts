@@ -8,18 +8,19 @@ import { kugouApi, type KugouApi } from '@/lib/api/kugou/api'
 import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
-import {
-	DataParsingError,
-	FileSystemError,
-	LyricNotFoundError,
-} from '@/lib/errors'
+import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
+import type {
+	LyricFileData,
+	LyricProviderResponseData,
+	LyricSearchResult,
+	ParsedLrc,
+} from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
 
 const logger = log.extend('Service.Lyric')
-type lyricFileType =
+type oldLyricFileType =
 	| ParsedLrc
 	| (Omit<ParsedLrc, 'rawOriginalLyrics' | 'rawTranslatedLyrics'> & {
 			raw: string
@@ -72,7 +73,7 @@ class LyricService {
 		const createProviderPromise = (
 			apiCall: (
 				signal: AbortSignal,
-			) => ResultAsync<ParsedLrc, Error | CustomError>,
+			) => ResultAsync<LyricProviderResponseData, Error | CustomError>,
 			providerName: string,
 		) => {
 			const controller = new AbortController()
@@ -97,7 +98,7 @@ class LyricService {
 				)
 		}
 
-		const providers: Promise<ParsedLrc>[] = []
+		const providers: Promise<LyricProviderResponseData>[] = []
 
 		if (source === 'netease' || source === undefined || source === 'auto') {
 			providers.push(
@@ -160,38 +161,17 @@ class LyricService {
 	 * @param track
 	 * @returns
 	 */
-	public smartFetchLyrics(track: Track): ResultAsync<ParsedLrc, CustomError> {
-		try {
-			const lyricFile = new FileSystem.File(
-				FileSystem.Paths.document,
-				'lyrics',
-				`${track.uniqueKey.replaceAll('::', '--')}.json`,
-			)
-			lyricFile.parentDirectory.create({
-				intermediates: true,
-				idempotent: true,
-			})
-			if (lyricFile.exists) {
-				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'io:file:read', op: 'io' }, () =>
-						lyricFile.text(),
-					),
-					(e) =>
-						new FileSystemError(`读取歌词缓存失败`, {
-							cause: e,
-							data: { filePath: lyricFile.uri },
-						}),
-				).andThen((content) => {
-					try {
-						return okAsync(JSON.parse(content) as ParsedLrc)
-					} catch (e) {
-						return errAsync(
-							new DataParsingError('解析歌词缓存失败', { cause: e }),
-						)
-					}
-				})
-			}
+	public smartFetchLyrics(
+		track: Track,
+	): ResultAsync<LyricFileData, CustomError> {
+		const lyricFile = new FileSystem.File(
+			FileSystem.Paths.document,
+			'lyrics',
+			`${track.uniqueKey.replaceAll('::', '--')}.json`,
+		)
 
+		const fetchFromNetwork = (): ResultAsync<LyricFileData, CustomError> => {
+			// Bilibili 特殊处理
 			if (
 				track.source === 'bilibili' &&
 				track.bilibiliMetadata.bvid &&
@@ -205,36 +185,63 @@ class LyricService {
 							useAppStore.getState().settings.lyricSource ?? 'auto'
 						return this.getBestMatchedLyrics(track, musicName, lyricSource)
 					})
-					.andThen((lyrics) => {
-						logger.info('自动搜索最佳匹配的歌词完成')
-						Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-							lyricFile.write(JSON.stringify(lyrics)),
-						)
-						return okAsync(lyrics)
-					})
+					.andThen((lyrics) => this.processAndSaveLyrics(lyrics, track))
 			}
 
+			// 标准源处理
 			const lyricSource = useAppStore.getState().settings.lyricSource ?? 'auto'
-
 			return this.getBestMatchedLyrics(track, undefined, lyricSource).andThen(
-				(lyrics) => {
-					logger.info('自动搜索最佳匹配的歌词完成')
-					Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-						lyricFile.write(JSON.stringify(lyrics)),
-					)
-					return okAsync(lyrics)
-				},
+				(lyrics) => this.processAndSaveLyrics(lyrics, track),
 			)
-		} catch (e) {
-			return errAsync(new FileSystemError('处理歌词文件失败', { cause: e }))
 		}
+
+		// 先尝试本地获取
+		return ResultAsync.fromPromise(
+			(async () => {
+				if (!lyricFile.exists) {
+					throw new Error('Cache miss')
+				}
+
+				const content = await Sentry.startSpan(
+					{ name: 'io:file:read', op: 'io' },
+					() => lyricFile.text(),
+				)
+
+				const parsed = JSON.parse(content) as LyricFileData
+
+				if (!parsed || typeof parsed.lrc !== 'string') {
+					throw new Error('Invalid lyric format')
+				}
+
+				return parsed
+			})(),
+			(e) => {
+				// 抛出什么错误都无所谓的，因为我们下面会用 orElse 处理它
+				return e
+			},
+		).orElse(() => {
+			return fetchFromNetwork()
+		})
+	}
+
+	// 统一处理网络返回的歌词并保存
+	private processAndSaveLyrics(
+		lyrics: LyricProviderResponseData,
+		track: Track,
+	): ResultAsync<LyricFileData, CustomError> {
+		const lyricFileData: LyricFileData = {
+			...lyrics,
+			id: track.uniqueKey,
+			updateTime: Date.now(),
+		}
+		logger.info('网络搜索歌词完成，正在写入缓存')
+		return this.saveLyricsToFile(lyricFileData, track.uniqueKey)
 	}
 
 	public saveLyricsToFile(
-		lyrics: ParsedLrc,
-
+		lyrics: LyricFileData,
 		uniqueKey: string,
-	): ResultAsync<ParsedLrc, FileSystemError> {
+	): ResultAsync<LyricFileData, FileSystemError> {
 		try {
 			const lyricFile = new FileSystem.File(
 				FileSystem.Paths.document,
@@ -262,12 +269,19 @@ class LyricService {
 	public fetchLyrics(
 		item: LyricSearchResult[0],
 		uniqueKey: string,
-	): ResultAsync<ParsedLrc | string, Error> {
+	): ResultAsync<LyricFileData, Error> {
 		switch (item.source) {
 			case 'netease':
 				return this.neteaseApi
 					.getLyrics(item.remoteId)
 					.andThen((lyrics) => okAsync(this.neteaseApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return okAsync({
+							...lyrics,
+							id: uniqueKey,
+							updateTime: Date.now(),
+						} as LyricFileData)
+					})
 					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
@@ -276,12 +290,26 @@ class LyricService {
 					.getLyrics(item.remoteId)
 					.andThen((lyrics) => okAsync(this.qqMusicApi.parseLyrics(lyrics)))
 					.andThen((lyrics) => {
+						return okAsync({
+							...lyrics,
+							id: uniqueKey,
+							updateTime: Date.now(),
+						} as LyricFileData)
+					})
+					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
 			case 'kugou':
 				return this.kugouApi
 					.getLyrics(item.remoteId)
 					.andThen((lyrics) => okAsync(this.kugouApi.parseLyrics(lyrics)))
+					.andThen((lyrics) => {
+						return okAsync({
+							...lyrics,
+							id: uniqueKey,
+							updateTime: Date.now(),
+						} as LyricFileData)
+					})
 					.andThen((lyrics) => {
 						return this.saveLyricsToFile(lyrics, uniqueKey)
 					})
@@ -292,45 +320,89 @@ class LyricService {
 
 	/**
 	 * 迁移旧版歌词格式
+	 * 优化：增加标记文件检测，避免每次重启都遍历目录
 	 */
 	public async migrateFromOldFormat() {
 		const lyricsDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'lyrics',
 		)
+		const migrationMarker = new FileSystem.File(lyricsDir, '.migration_v2_done')
+
 		try {
-			if (!lyricsDir.exists) {
-				logger.debug('歌词缓存目录不存在，无需迁移')
+			if (!lyricsDir.exists) return
+
+			// 1. 检查标记文件，如果存在说明已经迁移过了，直接跳过
+			if (migrationMarker.exists) {
 				return
 			}
 
+			logger.info('检测到未迁移的歌词缓存，开始执行迁移...')
 			const lyricFiles = lyricsDir.list()
 
 			for (const file of lyricFiles) {
 				if (file instanceof FileSystem.Directory) continue
-				const content = await file.text()
-				const parsed = JSON.parse(content) as lyricFileType
-				const finalLyric: ParsedLrc = {
-					tags: parsed.tags,
-					offset: parsed.offset,
-					lyrics: parsed.lyrics,
-					rawOriginalLyrics: '',
-				}
-				if ('raw' in parsed) {
-					const trySplitIt = parsed.raw.split('\n\n')
-					if (trySplitIt.length === 2) {
-						finalLyric.rawOriginalLyrics = trySplitIt[0]
-						finalLyric.rawTranslatedLyrics = trySplitIt[1]
-					} else {
-						finalLyric.rawOriginalLyrics = parsed.raw
-					}
-				} else {
-					finalLyric.rawOriginalLyrics = parsed.rawOriginalLyrics
-					finalLyric.rawTranslatedLyrics = parsed.rawTranslatedLyrics
-				}
+				// 跳过标记文件本身
+				if (file.name.startsWith('.')) continue
+				if (!file.name.endsWith('.json')) continue
 
-				await this.saveLyricsToFile(finalLyric, file.name.replace('.json', ''))
+				try {
+					const content = await file.text()
+					let parsed: oldLyricFileType | LyricFileData | ParsedLrc
+					try {
+						parsed = JSON.parse(content) as
+							| oldLyricFileType
+							| LyricFileData
+							| ParsedLrc
+					} catch {
+						continue
+					}
+
+					// 检查是否已经是新格式 (包含 lrc 字段)
+					if ('lrc' in parsed) continue
+
+					// 还原 ID
+					const uniqueKey = file.name
+						.replace('.json', '')
+						.replaceAll('--', '::')
+
+					// 提取数据
+					let newLrc = ''
+					let newTlyric: string | undefined
+					let oldOffset: number | undefined
+
+					if ('raw' in parsed && typeof parsed.raw === 'string') {
+						const parts = parsed.raw.split('\n\n')
+						newLrc = parts[0]
+						newTlyric = parts.length > 1 ? parts[1] : undefined
+						// 旧的 raw 格式通常没有外层的 offset 字段，或者在 parsed 对象上
+						oldOffset = parsed.offset
+					} else if ('rawOriginalLyrics' in parsed) {
+						newLrc = parsed.rawOriginalLyrics || ''
+						newTlyric = parsed.rawTranslatedLyrics
+						oldOffset = parsed.offset
+					}
+
+					if (!newLrc) continue
+
+					const newLyricData: LyricFileData = {
+						id: uniqueKey,
+						updateTime: Date.now(),
+						lrc: newLrc,
+						tlyric: newTlyric,
+						misc: {
+							// 迁移用户手动设置的 offset
+							userOffset: oldOffset,
+						},
+					}
+
+					await this.saveLyricsToFile(newLyricData, uniqueKey)
+				} catch (e) {
+					logger.warning(`文件 ${file.name} 迁移失败`, e)
+				}
 			}
+
+			migrationMarker.create()
 			logger.info('歌词格式迁移完成')
 		} catch (e) {
 			toastAndLogError('迁移歌词格式失败', e, 'Service.Lyric')

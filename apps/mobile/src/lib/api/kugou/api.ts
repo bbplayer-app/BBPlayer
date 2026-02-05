@@ -6,9 +6,11 @@ import type {
 	KugouLyricSearchResponse,
 	KugouSearchResponse,
 } from '@/types/apis/kugou'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 import log from '@/utils/log'
-import { parseLrc } from '@/utils/lyrics'
 
 const logger = log.extend('API.Kugou')
 
@@ -112,15 +114,19 @@ export class KugouApi {
 		})
 	}
 
-	parseLyrics(content: string): ParsedLrc {
-		return parseLrc(content)
+	parseLyrics(content: string): LyricProviderResponseData {
+		return {
+			lrc: content,
+			tlyric: undefined,
+			romalrc: undefined,
+		}
 	}
 
 	searchBestMatchedLyrics(
 		keyword: string,
 		durationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<ParsedLrc, Error> {
+	): ResultAsync<LyricProviderResponseData, Error> {
 		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
 				return errAsync(new Error('No songs found on Kugou'))

@@ -60,32 +60,27 @@ export interface NeteaseLyricResponse {
 		lyric: string
 	}
 	/** 翻译歌词 */
-	tlyric: {
+	tlyric?: {
 		version: number
 		lyric: string
 	}
 	/** 罗马音歌词 */
-	romalrc: {
+	romalrc?: {
 		version: number
 		lyric: string
 	}
 	/** 逐字歌词 (Verbatim) */
-	yrc: {
+	yrc?: {
 		version: number
 		lyric: string
 	}
-	/** 逐字翻译歌词 */
-	ytlrc: {
+	/** 与 yrc 相对应的翻译歌词，如果使用 yrc 就必须用这个，否则时间戳对应不上 */
+	ytlrc?: {
 		version: number
 		lyric: string
 	}
-	/** 逐字罗马音歌词 */
-	yromalrc: {
-		version: number
-		lyric: string
-	}
-	/** 卡拉OK歌词 */
-	klyric: {
+	/** 与 yrc 相对应的罗马音歌词，如果使用 yrc 就必须用这个，否则时间戳对应不上 */
+	yromalrc?: {
 		version: number
 		lyric: string
 	}

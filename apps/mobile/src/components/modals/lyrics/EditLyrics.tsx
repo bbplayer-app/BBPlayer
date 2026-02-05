@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import { Button, Dialog, List, TextInput } from 'react-native-paper'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
-import type { ParsedLrc } from '@/types/player/lyrics'
+import type { LyricFileData } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
 import toast from '@/utils/toast'
 
 export default function EditLyricsModal({
@@ -16,38 +15,27 @@ export default function EditLyricsModal({
 	lyrics,
 }: {
 	uniqueKey: string
-	lyrics: ParsedLrc
+	lyrics: LyricFileData
 }) {
 	const close = useModalStore((state) => state.close)
-	const [original, setOriginal] = useState(lyrics.rawOriginalLyrics)
-	const [translated, setTranslated] = useState(lyrics.rawTranslatedLyrics)
+
+	const [lrc, setLrc] = useState(lyrics.lrc ?? '')
+	const [tlyric, setTlyric] = useState(lyrics.tlyric ?? '')
+	const [romalrc, setRomalrc] = useState(lyrics.romalrc ?? '')
 
 	const handleConfirm = async () => {
-		const parsedOriginal = parseLrc(original)
-		if (!translated) {
-			const result = await lyricService.saveLyricsToFile(
-				parsedOriginal,
-				uniqueKey,
-			)
-			if (result.isErr()) {
-				toastAndLogError(
-					'保存歌词失败',
-					result.error,
-					'Components.EditLyricsModal',
-				)
-				return
-			}
-			queryClient.setQueryData(
-				lyricsQueryKeys.smartFetchLyrics(uniqueKey),
-				result.value,
-			)
-			toast.success('歌词保存成功')
-			close('EditLyrics')
-			return
+		const newLyricData: LyricFileData = {
+			...lyrics,
+			lrc,
+			tlyric: tlyric || undefined,
+			romalrc: romalrc || undefined,
+			updateTime: Date.now(),
 		}
-		const parsedTranslated = parseLrc(translated)
-		const merged = mergeLrc(parsedOriginal, parsedTranslated)
-		const result = await lyricService.saveLyricsToFile(merged, uniqueKey)
+
+		console.warn('saving', newLyricData)
+
+		const result = await lyricService.saveLyricsToFile(newLyricData, uniqueKey)
+
 		if (result.isErr()) {
 			toastAndLogError(
 				'保存歌词失败',
@@ -56,6 +44,7 @@ export default function EditLyricsModal({
 			)
 			return
 		}
+
 		queryClient.setQueryData(
 			lyricsQueryKeys.smartFetchLyrics(uniqueKey),
 			result.value,
@@ -68,29 +57,78 @@ export default function EditLyricsModal({
 		<>
 			<Dialog.Title>编辑歌词</Dialog.Title>
 			<Dialog.Content style={styles.content}>
-				<TextInput
-					label='原始歌词'
-					value={original}
-					onChangeText={setOriginal}
-					mode='outlined'
-					numberOfLines={5}
-					multiline
-					style={styles.textInput}
-					textAlignVertical='top'
-				/>
-				{lyrics.rawTranslatedLyrics && (
-					<TextInput
-						label='翻译歌词'
-						value={translated}
-						onChangeText={setTranslated}
-						mode='outlined'
-						numberOfLines={5}
-						multiline
-						style={styles.textInput}
-						textAlignVertical='top'
-						disabled={!original}
-					/>
-				)}
+				<ScrollView style={styles.scrollView}>
+					<List.AccordionGroup>
+						<List.Accordion
+							title='主歌词'
+							id='lrc'
+							left={(props) => (
+								<List.Icon
+									{...props}
+									icon='music-note'
+								/>
+							)}
+						>
+							<View style={styles.inputContainer}>
+								<TextInput
+									value={lrc}
+									onChangeText={setLrc}
+									mode='outlined'
+									multiline
+									style={styles.textInput}
+									textAlignVertical='top'
+									placeholder='在此输入LRC格式歌词'
+								/>
+							</View>
+						</List.Accordion>
+
+						<List.Accordion
+							title='翻译歌词'
+							id='tlyric'
+							left={(props) => (
+								<List.Icon
+									{...props}
+									icon='translate'
+								/>
+							)}
+						>
+							<View style={styles.inputContainer}>
+								<TextInput
+									value={tlyric}
+									onChangeText={setTlyric}
+									mode='outlined'
+									multiline
+									style={styles.textInput}
+									textAlignVertical='top'
+									placeholder='在此输入翻译歌词'
+								/>
+							</View>
+						</List.Accordion>
+
+						<List.Accordion
+							title='罗马音歌词'
+							id='romalrc'
+							left={(props) => (
+								<List.Icon
+									{...props}
+									icon='alphabetical'
+								/>
+							)}
+						>
+							<View style={styles.inputContainer}>
+								<TextInput
+									value={romalrc}
+									onChangeText={setRomalrc}
+									mode='outlined'
+									multiline
+									style={styles.textInput}
+									textAlignVertical='top'
+									placeholder='在此输入罗马音歌词'
+								/>
+							</View>
+						</List.Accordion>
+					</List.AccordionGroup>
+				</ScrollView>
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => close('EditLyrics')}>取消</Button>
@@ -102,9 +140,19 @@ export default function EditLyricsModal({
 
 const styles = StyleSheet.create({
 	content: {
-		gap: 8,
+		paddingHorizontal: 0,
+		paddingBottom: 0,
+		maxHeight: 500,
+	},
+	scrollView: {
+		paddingHorizontal: 24,
+	},
+	inputContainer: {
+		paddingVertical: 8,
 	},
 	textInput: {
-		maxHeight: 200,
+		minHeight: 200,
+		maxHeight: 400,
+		fontSize: 14,
 	},
 })

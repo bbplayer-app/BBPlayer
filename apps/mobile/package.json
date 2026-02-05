@@ -12,6 +12,7 @@
 		"test": "jest --watchAll"
 	},
 	"dependencies": {
+		"@bbplayer/splash": "workspace:*",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@expo/metro-runtime": "~55.0.3",
 		"@gorhom/bottom-sheet": "^5.2.8",
@@ -133,7 +134,7 @@
 		"oxfmt": "^0.27.0",
 		"prettier": "3.6.2",
 		"prettier-plugin-organize-imports": "^4.3.0",
-		"ts-jest": "^29.3.2",
+		"ts-jest": "^29.4.1",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"tsx": "^4.21.0"
