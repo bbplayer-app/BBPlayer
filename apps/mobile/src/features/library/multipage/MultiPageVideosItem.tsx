@@ -28,7 +28,7 @@ const MultiPageVideosItem = memo(
 						<View style={styles.itemContainer}>
 							<CoverWithPlaceHolder
 								id={item.bvid}
-								coverUrl={item.cover}
+								cover={item.cover}
 								title={item.title}
 								size={LIST_ITEM_COVER_SIZE}
 							/>

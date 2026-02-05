@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
@@ -22,6 +23,7 @@ import {
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { useImageColor } from '@/hooks/ui/useImageColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
@@ -66,9 +68,23 @@ const dimensions = Dimensions.get('window')
 export default function ToViewPage() {
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const [menuVisiable, setMenuVisiable] = useState(false)
 	const insets = useSafeAreaInsets()
+
+	const coverRef = useImage('', {
+		onError: () => void 0,
+	})
+	const palette = useImageColor(coverRef)
+	const dominantColor = useMemo(() => {
+		if (!palette) return undefined
+		if (theme.dark) {
+			return palette.darkMuted?.hex ?? palette.muted?.hex
+		} else {
+			return palette.lightMuted?.hex ?? palette.muted?.hex
+		}
+	}, [palette, theme.dark])
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
@@ -136,8 +152,16 @@ export default function ToViewPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View
+			style={[
+				styles.container,
+				{ backgroundColor: dominantColor ?? colors.background },
+			]}
+		>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode ? `已选择\u2009${selected.size}\u2009首` : '稍后再看'
@@ -181,7 +205,7 @@ export default function ToViewPage() {
 					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={undefined}
+							cover={coverRef ?? undefined}
 							title={'稍后再看'}
 							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}

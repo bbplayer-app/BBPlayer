@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -24,6 +25,7 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { useImageColor } from '@/hooks/ui/useImageColor'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
@@ -68,7 +70,8 @@ const mapApiItemToTrack = (
 
 export default function UploaderPage() {
 	const { mid } = useLocalSearchParams<{ mid: string }>()
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
@@ -125,6 +128,19 @@ export default function UploaderPage() {
 			.flatMap((page) => page.list.vlist)
 			.map((item) => mapApiItemToTrack(item, uploaderUserInfo))
 	}, [uploadedVideos, uploaderUserInfo])
+
+	const coverRef = useImage(uploaderUserInfo?.face ?? '', {
+		onError: () => void 0,
+	})
+	const palette = useImageColor(coverRef)
+	const dominantColor = useMemo(() => {
+		if (!palette) return undefined
+		if (theme.dark) {
+			return palette.darkMuted?.hex ?? palette.muted?.hex
+		} else {
+			return palette.lightMuted?.hex ?? palette.muted?.hex
+		}
+	}, [palette, theme.dark])
 
 	const { playTrack } = useRemotePlaylist()
 
@@ -184,8 +200,16 @@ export default function UploaderPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View
+			style={[
+				styles.container,
+				{ backgroundColor: dominantColor ?? colors.background },
+			]}
+		>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode
@@ -243,7 +267,7 @@ export default function UploaderPage() {
 					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={uploaderUserInfo.face}
+							cover={coverRef ?? undefined}
 							title={uploaderUserInfo.name}
 							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
 							description={uploaderUserInfo.sign}

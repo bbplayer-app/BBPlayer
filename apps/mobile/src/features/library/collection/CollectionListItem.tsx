@@ -34,7 +34,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 					<View style={styles.itemContainer}>
 						<CoverWithPlaceHolder
 							id={item.id}
-							coverUrl={item.cover}
+							cover={item.cover}
 							title={item.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>

@@ -153,7 +153,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							coverUrl={data.cover}
+							cover={data.cover}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>

@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
@@ -38,6 +39,7 @@ import {
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { useImageColor } from '@/hooks/ui/useImageColor'
 import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
@@ -49,7 +51,8 @@ const SCOPE = 'UI.Playlist.Local'
 
 export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const dimensions = useWindowDimensions()
@@ -111,6 +114,19 @@ export default function LocalPlaylistPage() {
 		isPending: isPlaylistMetadataPending,
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
+
+	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
+		onError: () => void 0,
+	})
+	const palette = useImageColor(coverRef)
+	const dominantColor = useMemo(() => {
+		if (!palette) return undefined
+		if (theme.dark) {
+			return palette.darkMuted?.hex ?? palette.muted?.hex
+		} else {
+			return palette.lightMuted?.hex ?? palette.muted?.hex
+		}
+	}, [palette, theme.dark])
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
@@ -246,8 +262,16 @@ export default function LocalPlaylistPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View
+			style={[
+				styles.container,
+				{ backgroundColor: dominantColor ?? colors.background },
+			]}
+		>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content
 					title={
@@ -332,6 +356,7 @@ export default function LocalPlaylistPage() {
 					}
 					ListHeaderComponent={
 						<PlaylistHeader
+							coverRef={coverRef}
 							playlist={playlistMetadata}
 							onClickPlayAll={playAll}
 							onClickSync={handleSync}

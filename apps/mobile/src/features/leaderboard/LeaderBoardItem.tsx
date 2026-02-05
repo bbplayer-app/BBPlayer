@@ -72,7 +72,7 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 				<CoverWithPlaceHolder
 					id={item.track.uniqueKey}
 					title={item.track.title}
-					coverUrl={item.track.coverUrl}
+					cover={item.track.coverUrl}
 					size={LIST_ITEM_COVER_SIZE}
 				/>
 
