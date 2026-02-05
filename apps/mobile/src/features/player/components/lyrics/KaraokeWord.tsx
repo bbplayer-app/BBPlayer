@@ -1,7 +1,7 @@
 import type { LyricSpan } from '@bbplayer/splash'
+import { memo } from 'react'
 import type { StyleProp, TextStyle } from 'react-native'
-import { StyleSheet, View } from 'react-native'
-import { Text } from 'react-native-paper'
+import { StyleSheet, Text, View } from 'react-native'
 import Animated, {
 	Extrapolation,
 	interpolate,
@@ -20,17 +20,25 @@ interface KaraokeWordProps {
 	isHighlighted: boolean
 }
 
-export const KaraokeWord = ({
+export const KaraokeWord = memo(function KaraokeWord({
 	span,
 	currentTime,
 	baseStyle,
 	activeColor,
 	inactiveColor,
 	isHighlighted,
-}: KaraokeWordProps) => {
+}: KaraokeWordProps) {
 	const width = useSharedValue(0)
 
 	const maskStyle = useAnimatedStyle(() => {
+		// 如果不处于高亮行，直接不计算动画
+		if (!isHighlighted) {
+			return {
+				width: 0,
+				opacity: withTiming(0, { duration: 300 }),
+			}
+		}
+
 		const progress = interpolate(
 			currentTime.value * 1000, // Convert to ms
 			[span.startTime, span.endTime],
@@ -40,11 +48,12 @@ export const KaraokeWord = ({
 
 		return {
 			width: `${progress}%`,
-			opacity: withTiming(isHighlighted ? 1 : 0, { duration: 300 }),
+			opacity: withTiming(1, { duration: 300 }),
 		}
 	})
 
 	const activeTextStyle = useAnimatedStyle(() => {
+		if (!isHighlighted) return { width: width.value, color: activeColor }
 		return {
 			width: width.value,
 			color: activeColor,
@@ -77,7 +86,7 @@ export const KaraokeWord = ({
 			</Animated.View>
 		</View>
 	)
-}
+})
 
 const AnimatedText = Animated.createAnimatedComponent(Text)
 
