@@ -440,11 +440,24 @@ const Lyrics = memo(function Lyrics({
 			// 主播亲测这样 hack 没问题！
 			const mergedSpl = currentLyrics.lrc + '\n' + (secondaryLyrics ?? '')
 			const { lines: parsedLines } = parseSpl(mergedSpl)
+			const userOffset = lyrics.misc?.userOffset ?? 0
+			const offsetMs = userOffset * 1000
+
+			const linesWithOffset = parsedLines.map((line) => ({
+				...line,
+				startTime: line.startTime + offsetMs,
+				endTime: line.endTime + offsetMs,
+				spans: line.spans?.map((span) => ({
+					...span,
+					startTime: span.startTime + offsetMs,
+					endTime: span.endTime + offsetMs,
+				})),
+			}))
 
 			const paddingTimestamp =
-				(parsedLines.at(-1)?.startTime ?? 0) + Number.EPSILON
+				(linesWithOffset.at(-1)?.startTime ?? 0) + Number.EPSILON
 			return [
-				...parsedLines,
+				...linesWithOffset,
 				{
 					startTime: paddingTimestamp,
 					endTime: paddingTimestamp,
@@ -470,7 +483,7 @@ const Lyrics = memo(function Lyrics({
 			(l) => !l.isPaddingItem,
 		),
 		flashListRef,
-		lyrics?.misc?.userOffset ?? 0,
+		0,
 	)
 
 	const scrollHandler = useAnimatedScrollHandler({
