@@ -101,16 +101,18 @@ export class NeteaseApi {
 		lyricsResponse: NeteaseLyricResponse,
 	): LyricProviderResponseData {
 		const haveYrc = !!lyricsResponse.yrc?.lyric
+		const lrc = haveYrc ? lyricsResponse.yrc!.lyric : lyricsResponse.lrc.lyric
+		const tlrc = haveYrc
+			? lyricsResponse.ytlrc?.lyric
+			: lyricsResponse.tlyric?.lyric
+		const romalrc = haveYrc
+			? lyricsResponse.yromalrc?.lyric
+			: lyricsResponse.romalrc?.lyric
 		const lyricData: LyricProviderResponseData = {
-			lrc: haveYrc
-				? parseYrc(lyricsResponse.yrc!.lyric)
-				: lyricsResponse.lrc.lyric,
-			tlyric: haveYrc
-				? lyricsResponse.ytlrc?.lyric
-				: lyricsResponse.tlyric?.lyric,
-			romalrc: haveYrc
-				? lyricsResponse.yromalrc?.lyric
-				: lyricsResponse.romalrc?.lyric,
+			// 一手防御性编程，我们不确定 tlyric 和 romalrc 会不会返回 yrc 格式，但是 parse 一下准没错
+			lrc: parseYrc(lrc),
+			tlyric: tlrc ? parseYrc(tlrc) : undefined,
+			romalrc: romalrc ? parseYrc(romalrc) : undefined,
 		}
 
 		return lyricData

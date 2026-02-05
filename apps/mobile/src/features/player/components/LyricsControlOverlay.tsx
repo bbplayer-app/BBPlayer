@@ -12,6 +12,7 @@ import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
+	interpolate,
 	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -29,6 +30,9 @@ interface LyricsControlOverlayProps {
 	onEditLyrics: () => void
 	onOpenOffsetMenu: () => void
 	offsetMenuAnchorRef: React.RefObject<View | null>
+	showTranslationToggle: boolean
+	translationType: 'translation' | 'romaji'
+	onToggleTranslation: () => void
 }
 
 export const LyricsControlOverlay = memo(function LyricsControlOverlay({
@@ -37,6 +41,9 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	onEditLyrics,
 	onOpenOffsetMenu,
 	offsetMenuAnchorRef,
+	showTranslationToggle,
+	translationType,
+	onToggleTranslation,
 }: LyricsControlOverlayProps) {
 	const { colors, dark } = useTheme()
 	const controlsOpacity = useSharedValue(0)
@@ -107,6 +114,21 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 		resetHideTimer()
 	}, [resetHideTimer])
 
+	// 按钮动画样式
+	const utilityButtonsAnimatedStyle = useAnimatedStyle(() => {
+		return {
+			transform: [
+				{
+					translateY: interpolate(
+						controlsOpacity.value,
+						[0, 1],
+						[0, -150], // 当控件显示时，向上移动按钮以避免重叠
+					),
+				},
+			],
+		}
+	})
+
 	const controlsAnimatedStyle = useAnimatedStyle(() => ({
 		opacity: controlsOpacity.value,
 		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'none',
@@ -138,7 +160,25 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 			</GestureDetector>
 
 			{/* 功能按钮 - 始终可见，右下角 */}
-			<View style={styles.utilityButtons}>
+			<Animated.View
+				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
+			>
+				{showTranslationToggle && (
+					<RectButton
+						style={styles.utilityButton}
+						onPress={onToggleTranslation}
+					>
+						<Icon
+							source={
+								translationType === 'translation'
+									? 'translate'
+									: 'alphabetical-variant'
+							}
+							size={20}
+							color={colors.primary}
+						/>
+					</RectButton>
+				)}
 				<RectButton
 					style={styles.utilityButton}
 					enabled={!offsetMenuVisible}
@@ -167,7 +207,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 						}
 					/>
 				</RectButton>
-			</View>
+			</Animated.View>
 
 			{/* 播放器控件 - 条件显示 */}
 			<Animated.View style={[styles.playerControls, controlsAnimatedStyle]}>

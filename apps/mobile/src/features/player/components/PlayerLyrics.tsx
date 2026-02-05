@@ -132,12 +132,14 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	jumpToThisLyric,
 	index,
 	onPressBackground,
+	currentTime,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
 	onPressBackground?: () => void
+	currentTime: SharedValue<number>
 }) {
 	const colors = useTheme().colors
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -169,9 +171,31 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
 			>
-				<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
-					{item.content}
-				</Animated.Text>
+				{item.isDynamic && item.spans && item.spans.length > 0 ? (
+					<View
+						style={{
+							flexDirection: 'row',
+							flexWrap: 'wrap',
+							justifyContent: 'center',
+						}}
+					>
+						{item.spans.map((span, idx) => (
+							<KaraokeWord
+								key={`${index}_${idx}`}
+								span={span}
+								currentTime={currentTime}
+								baseStyle={styles.oldSchoolItemText}
+								activeColor={colors.primary}
+								inactiveColor={colors.onSurfaceDisabled}
+								isHighlighted={isHighlighted}
+							/>
+						))}
+					</View>
+				) : (
+					<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
+						{item.content}
+					</Animated.Text>
+				)}
 				{item.translations?.[0] && (
 					<Animated.Text
 						style={[styles.oldSchoolItemTranslation, animatedStyle]}
@@ -335,6 +359,7 @@ const renderItem = ({
 				index={index}
 				jumpToThisLyric={handleJumpToLyric}
 				onPressBackground={onPressBackground}
+				currentTime={currentTime}
 			/>
 		)
 	}
@@ -387,13 +412,33 @@ const Lyrics = memo(function Lyrics({
 		isError,
 		error,
 	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
+	const [preferredLyricType, setPreferredLyricType] = useState<
+		'translation' | 'romaji'
+	>('translation')
+
 	const finalLyrics = useMemo(() => {
 		if (!lyrics?.lrc) return []
 
 		const currentLyrics = lyrics
 		try {
+			// 判断可用性
+			const hasTranslation = !!currentLyrics.tlyric
+			const hasRomaji = !!currentLyrics.romalrc
+
+			// 确定当前应该显示什么
+			// 如果没有翻译，但有罗马音，强制显示罗马音
+			// 如果没有罗马音，但有翻译，强制显示翻译
+			// 如果都有，则根据用户偏好显示
+			let activeType = preferredLyricType
+			if (hasTranslation && !hasRomaji) activeType = 'translation'
+			else if (!hasTranslation && hasRomaji) activeType = 'romaji'
+			else if (!hasTranslation && !hasRomaji) activeType = 'translation' // fallback
+
+			const secondaryLyrics =
+				activeType === 'romaji' ? currentLyrics.romalrc : currentLyrics.tlyric
+
 			// 主播亲测这样 hack 没问题！
-			const mergedSpl = currentLyrics.lrc + '\n' + (currentLyrics.tlyric ?? '')
+			const mergedSpl = currentLyrics.lrc + '\n' + (secondaryLyrics ?? '')
 			const { lines: parsedLines } = parseSpl(mergedSpl)
 
 			const paddingTimestamp =
@@ -414,7 +459,7 @@ const Lyrics = memo(function Lyrics({
 			toastAndLogError('解析歌词失败', e, 'Player.PlayerLyrics')
 			return []
 		}
-	}, [lyrics])
+	}, [lyrics, preferredLyricType])
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
@@ -648,6 +693,17 @@ const Lyrics = memo(function Lyrics({
 				onEditLyrics={handleEditLyrics}
 				onOpenOffsetMenu={handleOpenOffsetMenu}
 				offsetMenuAnchorRef={offsetMenuAnchorRef}
+				showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
+				translationType={
+					// 这里的逻辑要和上面 finalLyrics 里的一致，或者更简单一点，因为只有当两者都有的时候才会显示 toggle
+					// 而当两者都有的时候，activeType 就是 preferredLyricType
+					preferredLyricType
+				}
+				onToggleTranslation={() =>
+					setPreferredLyricType((prev) =>
+						prev === 'translation' ? 'romaji' : 'translation',
+					)
+				}
 			/>
 
 			{/* 歌词偏移量调整面板 */}

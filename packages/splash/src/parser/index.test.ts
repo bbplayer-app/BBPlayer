@@ -110,4 +110,16 @@ Trans
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(1)
 	})
+	test('should handle metadata in the middle of file', () => {
+		const lrc = `
+[00:01.00]Line 1
+[by:Artist]
+[00:02.00]Line 2
+`
+		const result = parseSpl(lrc)
+		expect(result.meta.by).toBe('Artist')
+		expect(result.lines).toHaveLength(2)
+		expect(result.lines[0].content).toBe('Line 1')
+		expect(result.lines[1].content).toBe('Line 2')
+	})
 })

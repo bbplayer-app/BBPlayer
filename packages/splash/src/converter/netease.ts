@@ -38,6 +38,13 @@ export function parseYrc(yrcContent: string): string {
 			// Not JSON, continue to regex parsing
 		}
 
+		// Standard LRC line: [mm:ss.xx] or [mm:ss.xxx]
+		// Simply pass through as it is compatible with SPL
+		if (/^\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/.test(trimmed)) {
+			splLines.push(trimmed)
+			continue
+		}
+
 		const lineMatch = /^\[(\d+),(\d+)\](.*)/.exec(trimmed)
 		if (lineMatch) {
 			const lineStartTime = parseInt(lineMatch[1], 10)

@@ -54,4 +54,18 @@ describe('Netease YRC Converter', () => {
 			console.warn('Test data file not found, skipping real file test')
 		}
 	})
+	it('should parse mixed JSON and standard LRC lines', () => {
+		const input = `{"t":0,"c":[{"tx":"作词: "},{"tx":"DECO*27"}]}
+{"t":1000,"c":[{"tx":"作曲: "},{"tx":"DECO*27"}]}
+[00:20.848]特別な君と 特別な日を
+[00:25.915]笑い合って バカもしたいな`
+
+		const output = parseYrc(input)
+		const lines = output.split('\n')
+
+		expect(lines).toContain('[00:00.000]作词: DECO*27')
+		expect(lines).toContain('[00:01.000]作曲: DECO*27')
+		expect(lines).toContain('[00:20.848]特別な君と 特別な日を')
+		expect(lines).toContain('[00:25.915]笑い合って バカもしたいな')
+	})
 })
