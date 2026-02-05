@@ -29,14 +29,29 @@ export class NeteaseApi {
 			id: id,
 			lv: -1,
 			tv: -1,
-			os: 'pc',
+			rv: -1,
+			kv: -1,
+			yv: -1,
+			os: 'ios',
+			ver: 1,
 		}
-		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		const requestOptions: RequestOptions = createOption(
+			{
+				crypto: 'eapi',
+				cookie: {
+					os: 'ios',
+					appver: '8.7.01',
+					osver: '16.3',
+					deviceId: '265B59C3-C5DE-4876-8A33-FD52CD5C2960',
+				},
+			},
+			'eapi',
+		)
 		if (signal) {
 			requestOptions.signal = signal
 		}
 		return createRequest<object, NeteaseLyricResponse>(
-			'/api/song/lyric',
+			'/api/song/lyric/v1',
 			data,
 			requestOptions,
 		).map((res) => res.body)

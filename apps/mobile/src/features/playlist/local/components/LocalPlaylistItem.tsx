@@ -1,6 +1,6 @@
 import { DownloadState } from '@roitium/expo-orpheus'
 import { memo, useCallback } from 'react'
-import { Easing, StyleSheet, View } from 'react-native'
+import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
@@ -55,6 +55,7 @@ export const TrackListItem = memo(function TrackListItem({
 	downloadState,
 }: TrackListItemProps) {
 	const theme = useTheme()
+	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
@@ -104,7 +105,9 @@ export const TrackListItem = memo(function TrackListItem({
 				styles.rectButton,
 				{
 					backgroundColor: highlighted
-						? theme.colors.elevation.level5
+						? dark
+							? 'rgba(255, 255, 255, 0.12)'
+							: 'rgba(0, 0, 0, 0.12)'
 						: 'transparent',
 				},
 			]}
@@ -156,7 +159,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							coverUrl={data.coverUrl ?? data.artist?.avatarUrl}
+							cover={data.coverUrl ?? data.artist?.avatarUrl}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>

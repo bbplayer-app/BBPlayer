@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
@@ -38,6 +39,7 @@ import {
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
@@ -49,7 +51,8 @@ const SCOPE = 'UI.Playlist.Local'
 
 export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const dimensions = useWindowDimensions()
@@ -111,6 +114,15 @@ export default function LocalPlaylistPage() {
 		isPending: isPlaylistMetadataPending,
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
+
+	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
+		onError: () => void 0,
+	})
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
@@ -246,8 +258,11 @@ export default function LocalPlaylistPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View style={[styles.container, { backgroundColor }]}>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content
 					title={
@@ -332,6 +347,7 @@ export default function LocalPlaylistPage() {
 					}
 					ListHeaderComponent={
 						<PlaylistHeader
+							coverRef={coverRef}
 							playlist={playlistMetadata}
 							onClickPlayAll={playAll}
 							onClickSync={handleSync}
@@ -413,7 +429,7 @@ export default function LocalPlaylistPage() {
 				</FunctionalMenu>
 			</Portal>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

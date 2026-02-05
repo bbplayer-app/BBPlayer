@@ -54,7 +54,7 @@ const SearchItem = memo(function SearchItem({
 			<View style={styles.itemContainer}>
 				<CoverWithPlaceHolder
 					id={item.bvid}
-					coverUrl={coverUrl}
+					cover={coverUrl}
 					size={40}
 					title={item.title}
 				/>

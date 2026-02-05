@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { View } from 'react-native'
+import { useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
@@ -23,13 +23,16 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 	index,
 }: LeaderBoardItemProps) {
 	const { colors } = useTheme()
+	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(item.track.uniqueKey)
 
 	return (
 		<RectButton
 			style={{
 				backgroundColor: isCurrentTrack
-					? colors.elevation.level5
+					? dark
+						? 'rgba(255, 255, 255, 0.12)'
+						: 'rgba(0, 0, 0, 0.12)'
 					: 'transparent',
 				paddingVertical: 4,
 				paddingHorizontal: 8,
@@ -72,7 +75,7 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 				<CoverWithPlaceHolder
 					id={item.track.uniqueKey}
 					title={item.track.title}
-					coverUrl={item.track.coverUrl}
+					cover={item.track.coverUrl}
 					size={LIST_ITEM_COVER_SIZE}
 				/>
 

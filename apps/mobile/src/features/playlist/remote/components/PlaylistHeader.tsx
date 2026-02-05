@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard'
+import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -15,7 +16,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
-	coverUri: string | undefined
+	cover?: string | undefined | ImageRef
 	title: string | undefined
 	subtitles: string | string[] | undefined // 通常格式： "Author • n Tracks"
 	description: string | undefined
@@ -35,7 +36,7 @@ interface PlaylistHeaderProps {
  * 可复用的播放列表头部组件。
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
-	coverUri,
+	cover,
 	title,
 	subtitles,
 	description,
@@ -56,7 +57,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<View style={styles.headerContainer}>
 				<CoverWithPlaceHolder
 					id={id}
-					coverUrl={coverUri}
+					cover={cover}
 					title={title}
 					size={120}
 				/>

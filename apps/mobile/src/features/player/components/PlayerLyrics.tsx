@@ -11,7 +11,13 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { Dimensions, ScrollView, StyleSheet, View } from 'react-native'
+import {
+	Dimensions,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	View,
+} from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
@@ -121,11 +127,13 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	isHighlighted,
 	jumpToThisLyric,
 	index,
+	onPressBackground,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
+	onPressBackground?: () => void
 }) {
 	const colors = useTheme().colors
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -148,32 +156,44 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 		}
 	})
 	return (
-		<RectButton
-			style={styles.oldSchoolItemButton}
-			onPress={() => jumpToThisLyric(index)}
-		>
-			<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
-				{item.text}
-			</Animated.Text>
-			{item.translation && (
-				<Animated.Text style={[styles.oldSchoolItemTranslation, animatedStyle]}>
-					{item.translation}
+		<View style={styles.oldSchoolItemWrapper}>
+			<Pressable
+				style={StyleSheet.absoluteFill}
+				onPress={onPressBackground}
+			/>
+			<RectButton
+				style={styles.oldSchoolItemButton}
+				onPress={() => jumpToThisLyric(index)}
+			>
+				<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
+					{item.text}
 				</Animated.Text>
-			)}
-		</RectButton>
+				{item.translation && (
+					<Animated.Text
+						style={[styles.oldSchoolItemTranslation, animatedStyle]}
+					>
+						{item.translation}
+					</Animated.Text>
+				)}
+			</RectButton>
+		</View>
 	)
 })
+
+const AnimatedRectButton = Animated.createAnimatedComponent(RectButton)
 
 const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	item,
 	isHighlighted,
 	jumpToThisLyric,
 	index,
+	onPressBackground,
 }: {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
+	onPressBackground?: () => void
 }) {
 	const theme = useTheme()
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -182,7 +202,7 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		isHighlightedShared.value = isHighlighted
 	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
 
-	const animatedStyle = useAnimatedStyle(() => {
+	const containerAnimatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
@@ -190,7 +210,6 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 					{ scale: withTiming(1.05, { duration: 300 }) },
 					{ translateX: withTiming(12, { duration: 300 }) },
 				],
-				color: withTiming(theme.colors.primary, { duration: 300 }),
 			}
 		}
 
@@ -200,24 +219,40 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				{ scale: withTiming(1, { duration: 300 }) },
 				{ translateX: withTiming(0, { duration: 300 }) },
 			],
+		}
+	})
+
+	const textAnimatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				color: withTiming(theme.colors.primary, { duration: 300 }),
+			}
+		}
+		return {
 			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
 		}
 	})
 
 	return (
-		<RectButton
-			style={styles.modernItemButton}
-			onPress={() => jumpToThisLyric(index)}
-		>
-			<Animated.Text style={[styles.modernItemText, animatedStyle]}>
-				{item.text}
-			</Animated.Text>
-			{item.translation && (
-				<Animated.Text style={[styles.modernItemText, animatedStyle]}>
-					{item.translation}
+		<View style={styles.modernItemWrapper}>
+			<Pressable
+				style={StyleSheet.absoluteFill}
+				onPress={onPressBackground}
+			/>
+			<AnimatedRectButton
+				style={[styles.modernItemButton, containerAnimatedStyle]}
+				onPress={() => jumpToThisLyric(index)}
+			>
+				<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
+					{item.text}
 				</Animated.Text>
-			)}
-		</RectButton>
+				{item.translation && (
+					<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
+						{item.translation}
+					</Animated.Text>
+				)}
+			</AnimatedRectButton>
+		</View>
 	)
 })
 
@@ -231,21 +266,34 @@ const renderItem = ({
 		currentLyricIndex: number
 		handleJumpToLyric: (index: number) => void
 		enableOldSchoolStyleLyric: boolean
+		onPressBackground?: () => void
 	}
 >) => {
+	const {
+		currentLyricIndex,
+		handleJumpToLyric,
+		enableOldSchoolStyleLyric,
+		onPressBackground,
+	} = extraData ?? {}
+
 	if (item.isPaddingItem) {
-		return <View style={{ height: windowHeight / 2 }} />
+		return (
+			<Pressable
+				style={{ height: windowHeight / 2 }}
+				onPress={onPressBackground}
+			/>
+		)
 	}
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric } =
-		extraData
+
 	if (enableOldSchoolStyleLyric) {
 		return (
 			<OldSchoolLyricLineItem
 				item={item}
 				isHighlighted={index === currentLyricIndex}
 				index={index}
-				jumpToThisLyric={handleJumpToLyric}
+				jumpToThisLyric={handleJumpToLyric!}
+				onPressBackground={onPressBackground}
 			/>
 		)
 	}
@@ -254,7 +302,8 @@ const renderItem = ({
 			item={item}
 			isHighlighted={index === currentLyricIndex}
 			index={index}
-			jumpToThisLyric={handleJumpToLyric}
+			jumpToThisLyric={handleJumpToLyric!}
+			onPressBackground={onPressBackground}
 		/>
 	)
 }
@@ -263,8 +312,10 @@ const SCROLL_DIRECTION_THRESHOLD = 8
 
 const Lyrics = memo(function Lyrics({
 	currentIndex,
+	onPressBackground,
 }: {
 	currentIndex: number
+	onPressBackground?: () => void
 }) {
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
@@ -385,8 +436,14 @@ const Lyrics = memo(function Lyrics({
 			currentLyricIndex,
 			handleJumpToLyric,
 			enableOldSchoolStyleLyric,
+			onPressBackground,
 		}),
-		[currentLyricIndex, handleJumpToLyric, enableOldSchoolStyleLyric],
+		[
+			currentLyricIndex,
+			handleJumpToLyric,
+			enableOldSchoolStyleLyric,
+			onPressBackground,
+		],
 	)
 
 	useLayoutEffect(() => {
@@ -446,6 +503,7 @@ const Lyrics = memo(function Lyrics({
 		}
 		return (
 			<AnimatedFlashList
+				nestedScrollEnabled
 				ref={flashListRef}
 				data={finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]}
 				renderItem={renderItem}
@@ -547,13 +605,19 @@ const styles = StyleSheet.create({
 	offsetControlText: {
 		textAlign: 'center',
 	},
+	oldSchoolItemWrapper: {
+		alignItems: 'center',
+		paddingVertical: 4,
+	},
 	oldSchoolItemButton: {
 		flexDirection: 'column',
 		alignItems: 'center',
 		gap: 4,
 		borderRadius: 16,
 		paddingVertical: 8,
+		paddingHorizontal: 16,
 		marginHorizontal: 30,
+		alignSelf: 'center',
 	},
 	oldSchoolItemText: {
 		textAlign: 'center',
@@ -569,16 +633,22 @@ const styles = StyleSheet.create({
 		letterSpacing: 0.4,
 		lineHeight: 16,
 	},
+	modernItemWrapper: {
+		flexDirection: 'column',
+		alignItems: 'stretch',
+		marginVertical: 4,
+		paddingVertical: 2,
+	},
 	modernItemButton: {
 		flexDirection: 'column',
 		alignItems: 'flex-start',
 		gap: 4,
 		borderRadius: 8,
-		marginVertical: 4,
-		paddingVertical: 6,
+		paddingVertical: 4,
 		marginHorizontal: 30,
 		paddingLeft: 8,
 		paddingRight: 8,
+		alignSelf: 'flex-start',
 	},
 	modernItemText: {
 		textAlign: 'left',

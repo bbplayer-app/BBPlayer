@@ -56,7 +56,7 @@ const SyncTrackItem = memo(
 					<CoverWithPlaceHolder
 						id={`${index}`}
 						title={track.title}
-						coverUrl={track.coverUrl}
+						cover={track.coverUrl}
 						size={LIST_ITEM_COVER_SIZE}
 						borderRadius={LIST_ITEM_BORDER_RADIUS}
 					/>
@@ -469,7 +469,7 @@ const ExternalPlaylistSyncPageInner = () => {
 						id={data.playlist.id}
 						title={data.playlist.title}
 						description={data.playlist.description ?? ''}
-						coverUri={data.playlist.coverUrl ?? ''}
+						cover={data.playlist.coverUrl ?? ''}
 						subtitles={[
 							data.playlist.author.name,
 							`${data.playlist.trackCount} 首歌曲`,

@@ -63,7 +63,7 @@ const ProgressBar = memo(function ProgressBar() {
 				ref={trackViewRef}
 				style={[
 					styles.progressBarTrack,
-					{ backgroundColor: colors.outlineVariant },
+					// { backgroundColor: colors.outlineVariant },
 				]}
 			>
 				<Animated.View
@@ -78,7 +78,11 @@ const ProgressBar = memo(function ProgressBar() {
 	)
 })
 
-const NowPlayingBar = memo(function NowPlayingBar() {
+const NowPlayingBar = memo(function NowPlayingBar({
+	backgroundColor,
+}: {
+	backgroundColor?: string
+}) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -202,7 +206,7 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 						style={[
 							playerStyle,
 							{
-								backgroundColor: colors.elevation.level2,
+								backgroundColor: backgroundColor ?? colors.elevation.level2,
 								marginBottom: bottomMargin,
 							},
 							animatedStyle,
@@ -299,7 +303,7 @@ const styles = StyleSheet.create({
 		position: 'relative',
 	},
 	progressBarIndicator: {
-		height: 1,
+		height: 2,
 		position: 'absolute',
 		left: 0,
 		top: 0,

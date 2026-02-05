@@ -1,4 +1,5 @@
 import type { FlashListRef } from '@shopify/flash-list'
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -22,6 +23,7 @@ import {
 } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
 	BilibiliMultipageVideo,
@@ -67,7 +69,8 @@ export default function MultipagePage() {
 	const router = useRouter()
 	const { bvid, cid } = useLocalSearchParams<{ bvid: string; cid?: string }>()
 	const [refreshing, setRefreshing] = useState(false)
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const linkedPlaylistId = useCheckLinkedToPlaylist(bv2av(bvid), 'multi_page')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
@@ -101,6 +104,15 @@ export default function MultipagePage() {
 		}
 		return rawMultipageData.map((item) => mapApiItemToTrack(item, videoData))
 	}, [rawMultipageData, videoData])
+
+	const coverRef = useImage(videoData?.pic ?? '', {
+		onError: () => void 0,
+	})
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { mutate: syncMultipage } = usePlaylistSync()
 
@@ -219,8 +231,11 @@ export default function MultipagePage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View style={[styles.container, { backgroundColor }]}>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode
@@ -264,7 +279,7 @@ export default function MultipagePage() {
 					showItemCover={false}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={videoData.pic}
+							cover={coverRef ?? undefined}
 							title={videoData.title}
 							subtitles={`${videoData.owner.name}\u2009•\u2009${tracksData.length}\u2009首歌曲`}
 							description={videoData.desc}
@@ -289,7 +304,7 @@ export default function MultipagePage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

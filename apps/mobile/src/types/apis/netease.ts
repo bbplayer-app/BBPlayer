@@ -59,7 +59,33 @@ export interface NeteaseLyricResponse {
 		version: number
 		lyric: string
 	}
+	/** 翻译歌词 */
 	tlyric: {
+		version: number
+		lyric: string
+	}
+	/** 罗马音歌词 */
+	romalrc: {
+		version: number
+		lyric: string
+	}
+	/** 逐字歌词 (Verbatim) */
+	yrc: {
+		version: number
+		lyric: string
+	}
+	/** 逐字翻译歌词 */
+	ytlrc: {
+		version: number
+		lyric: string
+	}
+	/** 逐字罗马音歌词 */
+	yromalrc: {
+		version: number
+		lyric: string
+	}
+	/** 卡拉OK歌词 */
+	klyric: {
 		version: number
 		lyric: string
 	}

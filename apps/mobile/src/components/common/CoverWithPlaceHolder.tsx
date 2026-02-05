@@ -1,6 +1,7 @@
+import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
@@ -20,9 +21,9 @@ interface CoverWithPlaceHolderProps {
 	 */
 	title: string
 	/**
-	 * 封面图片 URL (来自 item.coverUrl)，可以为空
+	 * 封面图片源 (URL string or ImageRef)
 	 */
-	coverUrl?: string | null
+	cover?: string | null | undefined | ImageRef
 	/**
 	 * 封面/占位符的尺寸（宽高相同）
 	 */
@@ -43,13 +44,13 @@ interface CoverWithPlaceHolderProps {
 
 /**
  * 一个带渐变占位符的封面组件
- * 它会始终显示渐变占位符，如果 coverUrl 存在，
+ * 它会始终显示渐变占位符，如果 cover 存在，
  * 则会将图片淡入显示在占位符之上。
  */
 const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	id,
 	title,
-	coverUrl,
+	cover,
 	size,
 	borderRadius,
 	cachePolicy = 'none',
@@ -68,6 +69,13 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 
 	const firstChar =
 		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
+
+	const coverSource = useMemo(() => {
+		if (typeof cover === 'string') {
+			return { uri: cover }
+		}
+		return cover
+	}, [cover])
 
 	return (
 		<SquircleView
@@ -90,10 +98,10 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 			</LinearGradient>
 
 			<Image
-				source={{ uri: coverUrl ?? undefined }}
+				source={coverSource}
 				recyclingKey={String(id)}
 				style={[styles.image, { width: size, height: size }]}
-				transition={300}
+				transition={0}
 				cachePolicy={cachePolicy}
 			/>
 		</SquircleView>

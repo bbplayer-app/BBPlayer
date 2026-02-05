@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -16,6 +17,7 @@ import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useCollectionAllContents } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliMediaItemInCollection } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -53,7 +55,8 @@ const mapApiItemToTrack = (
 export default function CollectionPage() {
 	const router = useRouter()
 	const { id } = useLocalSearchParams<{ id: string }>()
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const [refreshing, setRefreshing] = useState(false)
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'collection')
 
@@ -79,6 +82,15 @@ export default function CollectionPage() {
 	const tracks = useMemo(
 		() => collectionData?.medias?.map(mapApiItemToTrack) ?? [],
 		[collectionData],
+	)
+
+	const coverRef = useImage(collectionData?.info?.cover ?? '', {
+		onError: () => void 0,
+	})
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
 	)
 
 	const { playTrack } = useRemotePlaylist()
@@ -135,8 +147,11 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View style={[styles.container, { backgroundColor }]}>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode
@@ -178,7 +193,7 @@ export default function CollectionPage() {
 					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={collectionData.info.cover}
+							cover={coverRef ?? undefined}
 							title={collectionData.info.title}
 							subtitles={`${collectionData.info.upper.name}\u2009•\u2009${collectionData.info.media_count}\u2009首歌曲`}
 							description={collectionData.info.intro}
@@ -202,7 +217,7 @@ export default function CollectionPage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

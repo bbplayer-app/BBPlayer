@@ -1,5 +1,4 @@
 import { DownloadState } from '@roitium/expo-orpheus'
-import { useRouter } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
 import Animated, {
@@ -14,14 +13,15 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 
 export function PlayerHeader({
 	onMorePress,
+	onBack,
 	index,
 	scrollX,
 }: {
 	onMorePress: () => void
+	onBack: () => void
 	index: number
 	scrollX?: SharedValue<number>
 }) {
-	const router = useRouter()
 	const currentTrack = useCurrentTrack()
 	const { data: downloadStatus } = useBatchDownloadStatus(
 		currentTrack?.uniqueKey ? [currentTrack.uniqueKey] : [],
@@ -63,7 +63,7 @@ export function PlayerHeader({
 				<IconButton
 					icon={index === 0 ? 'chevron-down' : 'chevron-left'}
 					size={24}
-					onPress={() => router.back()}
+					onPress={onBack}
 				/>
 			}
 			<View style={styles.titleContainer}>
