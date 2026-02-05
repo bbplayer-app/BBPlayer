@@ -23,7 +23,7 @@ import {
 } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
-import { useImageColor } from '@/hooks/ui/useImageColor'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
 	BilibiliMultipageVideo,
@@ -108,15 +108,11 @@ export default function MultipagePage() {
 	const coverRef = useImage(videoData?.pic ?? '', {
 		onError: () => void 0,
 	})
-	const palette = useImageColor(coverRef)
-	const dominantColor = useMemo(() => {
-		if (!palette) return undefined
-		if (theme.dark) {
-			return palette.darkMuted?.hex ?? palette.muted?.hex
-		} else {
-			return palette.lightMuted?.hex ?? palette.muted?.hex
-		}
-	}, [palette, theme.dark])
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { mutate: syncMultipage } = usePlaylistSync()
 
@@ -235,12 +231,7 @@ export default function MultipagePage() {
 	}
 
 	return (
-		<View
-			style={[
-				styles.container,
-				{ backgroundColor: dominantColor ?? colors.background },
-			]}
-		>
+		<View style={[styles.container, { backgroundColor }]}>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}
@@ -313,7 +304,7 @@ export default function MultipagePage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

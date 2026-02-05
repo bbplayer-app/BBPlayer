@@ -16,7 +16,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
-import { useImageColor } from '@/hooks/ui/useImageColor'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -94,15 +94,11 @@ export default function FavoritePage() {
 	const coverRef = useImage(favoriteData?.pages[0]?.info?.cover ?? '', {
 		onError: () => void 0,
 	})
-	const palette = useImageColor(coverRef)
-	const dominantColor = useMemo(() => {
-		if (!palette) return undefined
-		if (theme.dark) {
-			return palette.darkMuted?.hex ?? palette.muted?.hex
-		} else {
-			return palette.lightMuted?.hex ?? palette.muted?.hex
-		}
-	}, [palette, theme.dark])
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 
@@ -154,12 +150,7 @@ export default function FavoritePage() {
 	}
 
 	return (
-		<View
-			style={[
-				styles.container,
-				{ backgroundColor: dominantColor ?? colors.background },
-			]}
-		>
+		<View style={[styles.container, { backgroundColor }]}>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}
@@ -232,7 +223,7 @@ export default function FavoritePage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

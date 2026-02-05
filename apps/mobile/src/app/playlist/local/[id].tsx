@@ -39,7 +39,7 @@ import {
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
-import { useImageColor } from '@/hooks/ui/useImageColor'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { Track } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
@@ -118,15 +118,11 @@ export default function LocalPlaylistPage() {
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
 		onError: () => void 0,
 	})
-	const palette = useImageColor(coverRef)
-	const dominantColor = useMemo(() => {
-		if (!palette) return undefined
-		if (theme.dark) {
-			return palette.darkMuted?.hex ?? palette.muted?.hex
-		} else {
-			return palette.lightMuted?.hex ?? palette.muted?.hex
-		}
-	}, [palette, theme.dark])
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
@@ -262,12 +258,7 @@ export default function LocalPlaylistPage() {
 	}
 
 	return (
-		<View
-			style={[
-				styles.container,
-				{ backgroundColor: dominantColor ?? colors.background },
-			]}
-		>
+		<View style={[styles.container, { backgroundColor }]}>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}
@@ -438,7 +429,7 @@ export default function LocalPlaylistPage() {
 				</FunctionalMenu>
 			</Portal>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)
