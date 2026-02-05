@@ -208,7 +208,7 @@ export default function PlayerPage() {
 			return
 		}
 		if (index === 1) {
-			setIndex(0)
+			pagerRef.current?.setPage(0)
 		}
 	})
 
