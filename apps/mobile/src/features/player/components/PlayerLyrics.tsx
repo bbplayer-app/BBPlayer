@@ -156,10 +156,11 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 		}
 	})
 	return (
-		<Pressable
-			style={styles.oldSchoolItemWrapper}
-			onPress={onPressBackground}
-		>
+		<View style={styles.oldSchoolItemWrapper}>
+			<Pressable
+				style={StyleSheet.absoluteFill}
+				onPress={onPressBackground}
+			/>
 			<RectButton
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
@@ -175,9 +176,11 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 					</Animated.Text>
 				)}
 			</RectButton>
-		</Pressable>
+		</View>
 	)
 })
+
+const AnimatedRectButton = Animated.createAnimatedComponent(RectButton)
 
 const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	item,
@@ -199,7 +202,7 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		isHighlightedShared.value = isHighlighted
 	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
 
-	const animatedStyle = useAnimatedStyle(() => {
+	const containerAnimatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
@@ -207,7 +210,6 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 					{ scale: withTiming(1.05, { duration: 300 }) },
 					{ translateX: withTiming(12, { duration: 300 }) },
 				],
-				color: withTiming(theme.colors.primary, { duration: 300 }),
 			}
 		}
 
@@ -217,29 +219,40 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				{ scale: withTiming(1, { duration: 300 }) },
 				{ translateX: withTiming(0, { duration: 300 }) },
 			],
+		}
+	})
+
+	const textAnimatedStyle = useAnimatedStyle(() => {
+		if (isHighlightedShared.value === true) {
+			return {
+				color: withTiming(theme.colors.primary, { duration: 300 }),
+			}
+		}
+		return {
 			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
 		}
 	})
 
 	return (
-		<Pressable
-			style={styles.modernItemWrapper}
-			onPress={onPressBackground}
-		>
-			<RectButton
-				style={styles.modernItemButton}
+		<View style={styles.modernItemWrapper}>
+			<Pressable
+				style={StyleSheet.absoluteFill}
+				onPress={onPressBackground}
+			/>
+			<AnimatedRectButton
+				style={[styles.modernItemButton, containerAnimatedStyle]}
 				onPress={() => jumpToThisLyric(index)}
 			>
-				<Animated.Text style={[styles.modernItemText, animatedStyle]}>
+				<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
 					{item.text}
 				</Animated.Text>
 				{item.translation && (
-					<Animated.Text style={[styles.modernItemText, animatedStyle]}>
+					<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
 						{item.translation}
 					</Animated.Text>
 				)}
-			</RectButton>
-		</Pressable>
+			</AnimatedRectButton>
+		</View>
 	)
 })
 
