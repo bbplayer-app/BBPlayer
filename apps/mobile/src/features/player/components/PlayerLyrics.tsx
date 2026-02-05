@@ -1,3 +1,4 @@
+import { parseSpl, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
@@ -42,7 +43,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
-import type { LyricLine } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
@@ -140,7 +140,7 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 
 	useEffect(() => {
 		isHighlightedShared.value = isHighlighted
-	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const animatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
@@ -166,13 +166,13 @@ const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				onPress={() => jumpToThisLyric(index)}
 			>
 				<Animated.Text style={[styles.oldSchoolItemText, animatedStyle]}>
-					{item.text}
+					{item.content}
 				</Animated.Text>
-				{item.translation && (
+				{item.translations?.[0] && (
 					<Animated.Text
 						style={[styles.oldSchoolItemTranslation, animatedStyle]}
 					>
-						{item.translation}
+						{item.translations[0]}
 					</Animated.Text>
 				)}
 			</RectButton>
@@ -200,7 +200,7 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 
 	useEffect(() => {
 		isHighlightedShared.value = isHighlighted
-	}, [isHighlighted, item.timestamp, index, isHighlightedShared])
+	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
@@ -244,11 +244,11 @@ const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				onPress={() => jumpToThisLyric(index)}
 			>
 				<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
-					{item.text}
+					{item.content}
 				</Animated.Text>
-				{item.translation && (
+				{item.translations?.[0] && (
 					<Animated.Text style={[styles.modernItemText, textAnimatedStyle]}>
-						{item.translation}
+						{item.translations[0]}
 					</Animated.Text>
 				)}
 			</AnimatedRectButton>
@@ -344,24 +344,64 @@ const Lyrics = memo(function Lyrics({
 		error,
 	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
 	const finalLyrics = useMemo(() => {
-		if (!lyrics?.lyrics) return []
-		const paddingTimestamp =
-			(lyrics.lyrics.at(-1)?.timestamp ?? 0) + Number.EPSILON
-		return [
-			...lyrics.lyrics,
-			{
-				timestamp: paddingTimestamp,
-				text: '',
-				isPaddingItem: true,
-			},
-		]
+		if (!lyrics?.lrc) return []
+
+		const currentLyrics = lyrics
+		try {
+			const { lines: parsedLines } = parseSpl(currentLyrics.lrc!)
+			const translationMap = new Map<number, string>()
+
+			if (currentLyrics.tlyric) {
+				try {
+					const { lines: transLines } = parseSpl(currentLyrics.tlyric)
+					transLines.forEach((l) => {
+						translationMap.set(l.startTime, l.content)
+					})
+				} catch {
+					// ignore translation parse error
+				}
+			}
+
+			if (translationMap.size > 0) {
+				parsedLines.forEach((l) => {
+					const trans = translationMap.get(l.startTime)
+					if (trans) {
+						if (!l.translations) l.translations = []
+						l.translations.push(trans)
+					}
+				})
+			}
+
+			const paddingTimestamp =
+				(parsedLines.at(-1)?.startTime ?? 0) + Number.EPSILON
+			return [
+				...parsedLines,
+				{
+					startTime: paddingTimestamp,
+					endTime: paddingTimestamp,
+					content: '',
+					translations: [],
+					isDynamic: false,
+					spans: [],
+					isPaddingItem: true,
+				} as LyricLine & { isPaddingItem?: boolean },
+			]
+		} catch {
+			return []
+		}
 	}, [lyrics])
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
 		onUserScrollStart,
 		handleJumpToLyric,
-	} = useLyricSync(lyrics?.lyrics ?? [], flashListRef, lyrics?.offset ?? 0)
+	} = useLyricSync(
+		(finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]).filter(
+			(l) => !l.isPaddingItem,
+		),
+		flashListRef,
+		lyrics?.misc?.userOffset ?? 0,
+	)
 
 	const scrollHandler = useAnimatedScrollHandler({
 		onScroll: (e) => {
@@ -386,13 +426,17 @@ const Lyrics = memo(function Lyrics({
 	// 我们不在本地创建 offset state，而是直接调用 queryClient 来更新 smartFetchLyrics 的缓存。当用户点击确认时，再保存到本地
 	const handleChangeOffset = (delta: number) => {
 		if (!lyrics || !track) return
-		const newOffset = (lyrics.offset ?? 0) + delta
+		const currentLyrics = lyrics
+		const newOffset = (currentLyrics.misc?.userOffset ?? 0) + delta
 		queryClient.setQueryData(
 			lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
 			() => {
 				return {
-					...lyrics,
-					offset: newOffset,
+					...currentLyrics,
+					misc: {
+						...currentLyrics.misc,
+						userOffset: newOffset,
+					},
 				}
 			},
 		)
@@ -401,10 +445,14 @@ const Lyrics = memo(function Lyrics({
 	const handleCloseOffsetMenu = async () => {
 		setOffsetMenuVisible(false)
 		if (!lyrics || !track) return
+		const currentLyrics = lyrics
 		const saveResult = await lyricService.saveLyricsToFile(
 			{
-				...lyrics,
-				offset: lyrics.offset,
+				...currentLyrics,
+				misc: {
+					...currentLyrics.misc,
+					userOffset: currentLyrics.misc?.userOffset,
+				},
 			},
 			track.uniqueKey,
 		)
@@ -412,14 +460,15 @@ const Lyrics = memo(function Lyrics({
 			toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
 			return
 		}
-		console.log('保存歌词偏移量成功:', lyrics.offset)
+		console.log('保存歌词偏移量成功:', currentLyrics.misc?.userOffset)
 	}
 
 	const handleEditLyrics = useCallback(() => {
 		if (!track || !lyrics) return
-		useModalStore
-			.getState()
-			.open('EditLyrics', { uniqueKey: track.uniqueKey, lyrics })
+		useModalStore.getState().open('EditLyrics', {
+			uniqueKey: track.uniqueKey,
+			lyrics: lyrics,
+		})
 	}, [track, lyrics])
 
 	const handleOpenOffsetMenu = useCallback(() => {
@@ -427,7 +476,7 @@ const Lyrics = memo(function Lyrics({
 	}, [])
 
 	const keyExtractor = useCallback(
-		(item: LyricLine, index: number) => `${index}_${item.timestamp * 1000}`,
+		(item: LyricLine, index: number) => `${index}_${item.startTime}`,
 		[],
 	)
 
@@ -481,7 +530,7 @@ const Lyrics = memo(function Lyrics({
 	}
 
 	const renderLyrics = () => {
-		if (!lyrics.lyrics) {
+		if (!lyrics.lrc) {
 			return (
 				<Animated.ScrollView
 					contentContainerStyle={styles.rawLyricsScrollViewContainer}
@@ -492,11 +541,9 @@ const Lyrics = memo(function Lyrics({
 						variant='bodyMedium'
 						style={styles.rawLyricsText}
 					>
-						{lyrics.rawTranslatedLyrics ? '原始歌词：' : ''}
-						{lyrics.rawOriginalLyrics}
-						{lyrics.rawTranslatedLyrics
-							? `\n\n翻译歌词：${lyrics.rawTranslatedLyrics}`
-							: ''}
+						{lyrics ? '原始歌词：' : ''}
+						{lyrics.lrc}
+						{lyrics.tlyric ? `\n\n翻译歌词：${lyrics.tlyric}` : ''}
 					</Text>
 				</Animated.ScrollView>
 			)
@@ -580,7 +627,7 @@ const Lyrics = memo(function Lyrics({
 			<LyricsOffsetControl
 				visible={offsetMenuVisible}
 				anchor={offsetMenuAnchor}
-				offset={lyrics.offset ?? 0}
+				offset={lyrics?.misc?.userOffset ?? 0}
 				onChangeOffset={handleChangeOffset}
 				onClose={handleCloseOffsetMenu}
 			/>

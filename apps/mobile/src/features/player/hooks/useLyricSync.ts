@@ -1,3 +1,4 @@
+import type { LyricLine } from '@bbplayer/splash'
 import { Orpheus } from '@roitium/expo-orpheus'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
@@ -5,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
 import playerProgressEmitter from '@/lib/player/progressListener'
-import type { LyricLine } from '@/types/player/lyrics'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
@@ -27,7 +27,7 @@ export default function useLyricSync(
 				ans = 0
 			while (lo <= hi) {
 				const mid = Math.floor((lo + hi) / 2)
-				if (lyrics[mid].timestamp <= timestamp) {
+				if (lyrics[mid].startTime / 1000 <= timestamp) {
 					ans = mid
 					lo = mid + 1
 				} else {
@@ -70,7 +70,7 @@ export default function useLyricSync(
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
-			await Orpheus.seekTo(lyrics[index].timestamp - offset)
+			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
 			if (latestJumpRequestRef.current !== requestId) return
 			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {

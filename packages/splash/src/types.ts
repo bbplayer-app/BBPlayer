@@ -1,26 +1,26 @@
 /**
- * 最小的“逐字”单元 (对应 UI 里的一个 <span>)
+ * 最小的“逐字”单元
  */
 export interface LyricSpan {
-	/** 这一小段的文字，例如 "椒盐" */
+	/** 这一小段的文字 */
 	text: string
-	/** 绝对开始时间 (毫秒 ms) -> 用来判断是否开始高亮 */
+	/** 绝对开始时间 (毫秒 ms) */
 	startTime: number
-	/** 绝对结束时间 (毫秒 ms) -> 用来计算 width: x% */
+	/** 绝对结束时间 (毫秒 ms) */
 	endTime: number
-	/** 预计算持续时间 (毫秒 ms): endTime - startTime (避免 UI 每一帧都算) */
+	/** 预计算持续时间 (毫秒 ms) */
 	duration: number
 }
 
 /**
- * 每一行歌词 (对应 UI 里的一个 List Item)
+ * 每一行歌词
  */
 export interface LyricLine {
 	/** 该行歌词的开始时间 (毫秒 ms) */
 	startTime: number
 	/** 该行歌词的结束时间 (毫秒 ms) */
 	endTime: number
-	/** 主歌词内容（第一次出现的那个） */
+	/** 主歌词内容（第一次出现的） */
 	content: string
 	/** 翻译歌词列表，支持多行翻译 */
 	translations: string[]

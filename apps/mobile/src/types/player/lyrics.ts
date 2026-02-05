@@ -1,6 +1,6 @@
 export type Tags = Record<string, string>
 
-export interface LyricLine {
+export interface OldLyricLine {
 	/**
 	 * 歌词的起始时间，单位：秒
 	 */
@@ -17,7 +17,7 @@ export interface LyricLine {
 
 export interface ParsedLrc {
 	tags: Tags
-	lyrics: LyricLine[] | null
+	lyrics: OldLyricLine[] | null
 	rawOriginalLyrics: string // 原始歌词
 	rawTranslatedLyrics?: string // 原始翻译歌词
 	offset?: number // 单位秒
