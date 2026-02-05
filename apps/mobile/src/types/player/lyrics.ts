@@ -39,24 +39,30 @@ export type LyricSearchResult = (
 			remoteId: string
 	  }
 	| {
-			source: 'kuwo'
-			duration: number // 秒
-			title: string
-			artist: string
-			remoteId: number
-	  }
-	| {
 			source: 'kugou'
 			duration: number // 秒
 			title: string
 			artist: string
 			remoteId: string
 	  }
-	| {
-			source: 'baidu'
-			duration: number // 秒
-			title: string
-			artist: string
-			remoteId: string
-	  }
 )[]
+
+export interface LyricFileData {
+	id: string // 歌曲唯一ID
+	updateTime: number // 缓存时间
+
+	// 所有歌词都是 SPL 格式
+	lrc?: string // 主歌词
+	tlyric?: string // 翻译歌词
+	romalrc?: string // 罗马音歌词
+
+	misc?: {
+		userOffset?: number // 用户设置的歌词偏移量
+	}
+}
+
+// 歌词提供者最终应该返回的数据结构
+export type LyricProviderResponseData = Omit<
+	LyricFileData,
+	'id' | 'updateTime' | 'misc'
+>

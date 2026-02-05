@@ -12,6 +12,7 @@
 		"test": "jest --watchAll"
 	},
 	"dependencies": {
+		"@bbplayer/splash": "workspace:*",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@expo/metro-runtime": "~55.0.3",
 		"@gorhom/bottom-sheet": "^5.2.8",

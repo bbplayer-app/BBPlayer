@@ -6,9 +6,11 @@ import type {
 	QQMusicPlaylistResponse,
 	QQMusicSearchResponse,
 } from '@/types/apis/qqmusic'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 import log from '@/utils/log'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
 
 const logger = log.extend('API.QQMusic')
 
@@ -109,21 +111,17 @@ export class QQMusicApi {
 	 * @param response
 	 * @returns
 	 */
-	public parseLyrics(response: QQMusicLyricResponse): ParsedLrc {
-		const rawLyrics = response.lyric ? decode(response.lyric) : ''
-		const transLyrics = response.trans ? decode(response.trans) : ''
+	public parseLyrics(
+		response: QQMusicLyricResponse,
+	): LyricProviderResponseData {
+		const rawLyrics = response.lyric ? decode(response.lyric) : undefined
+		const transLyrics = response.trans ? decode(response.trans) : undefined
 
-		const parsedRaw = parseLrc(rawLyrics)
-		if (!transLyrics.trim()) {
-			return parsedRaw
+		return {
+			lrc: rawLyrics,
+			tlyric: transLyrics,
+			romalrc: undefined,
 		}
-
-		const parsedTrans = parseLrc(transLyrics)
-		if (!parsedTrans) {
-			return parsedRaw
-		}
-
-		return mergeLrc(parsedRaw, parsedTrans)
 	}
 
 	/**
@@ -135,7 +133,7 @@ export class QQMusicApi {
 		keyword: string,
 		durationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<ParsedLrc, Error> {
+	): ResultAsync<LyricProviderResponseData, Error> {
 		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
 				return errAsync(new Error('No songs found on QQ Music'))

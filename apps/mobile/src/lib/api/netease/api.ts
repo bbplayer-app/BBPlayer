@@ -1,3 +1,4 @@
+import { parseYrc } from '@bbplayer/splash/src/converter/netease'
 import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
@@ -6,8 +7,10 @@ import type {
 	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
 } from '@/types/apis/netease'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 
 import type { RequestOptions } from './request'
 import { createRequest } from './request'
@@ -94,27 +97,26 @@ export class NeteaseApi {
 		})
 	}
 
-	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
-		const parsedRawLyrics = parseLrc(lyricsResponse.lrc.lyric)
-		if (
-			!lyricsResponse.tlyric ||
-			lyricsResponse.tlyric.lyric.trim().length === 0
-		) {
-			return parsedRawLyrics
+	public parseLyrics(
+		lyricsResponse: NeteaseLyricResponse,
+	): LyricProviderResponseData {
+		const mainLrc = lyricsResponse.yrc?.lyric
+			? parseYrc(lyricsResponse.yrc.lyric)
+			: lyricsResponse.lrc?.lyric
+		const lyricData: LyricProviderResponseData = {
+			lrc: mainLrc,
+			tlyric: lyricsResponse.tlyric?.lyric,
+			romalrc: lyricsResponse.romalrc?.lyric,
 		}
-		const parsedTranslatedLyrics = parseLrc(lyricsResponse.tlyric.lyric)
-		if (parsedTranslatedLyrics === null) {
-			return parsedRawLyrics
-		}
-		const mergedLyrics = mergeLrc(parsedRawLyrics, parsedTranslatedLyrics)
-		return mergedLyrics
+
+		return lyricData
 	}
 
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<ParsedLrc, NeteaseApiError> {
+	): ResultAsync<LyricProviderResponseData, NeteaseApiError> {
 		return this.search({ keywords: keyword, limit: 10 }, signal).andThen(
 			(searchResult) => {
 				if (searchResult.length === 0) {
