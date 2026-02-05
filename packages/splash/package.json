@@ -1,0 +1,19 @@
+{
+	"name": "@bbplayer/splash",
+	"version": "1.0.0",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"test": "jest"
+	},
+	"devDependencies": {
+		"@types/crypto-js": "^4.2.2",
+		"@types/jest": "^29.5.14",
+		"@types/node-forge": "^1.3.14",
+		"crypto-js": "^4.2.0",
+		"jest": "^30.2.0",
+		"neverthrow": "^8.2.0",
+		"node-forge": "1.3.2",
+		"ts-jest": "^29.4.1"
+	}
+}
