@@ -25,7 +25,10 @@ import Animated, {
 	useAnimatedScrollHandler,
 	useSharedValue,
 	useDerivedValue,
+	configureReanimatedLogger,
+	ReanimatedLogLevel,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
 import useLyricSync from '@/features/player/hooks/useLyricSync'
@@ -46,6 +49,10 @@ import {
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
 const { height: windowHeight } = Dimensions.get('window')
+
+configureReanimatedLogger({
+	level: ReanimatedLogLevel.error,
+})
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,
@@ -203,28 +210,33 @@ const Lyrics = memo(function Lyrics({
 				return { secondaryLyrics: undefined, isMismatch: false }
 			}
 
+			let mainParsed, secondaryParsed
 			try {
-				const mainParsed = parseSpl(currentLyrics.lrc!)
-				const secondaryParsed = parseSpl(candidateSecondaryLyrics)
+				mainParsed = parseSpl(currentLyrics.lrc!)
+				secondaryParsed = parseSpl(candidateSecondaryLyrics)
+			} catch {
+				// 解析失败，返回原始歌词
+				return {
+					secondaryLyrics: candidateSecondaryLyrics,
+					isMismatch: false,
+				}
+			}
 
-				const mainTimestamps = new Set(mainParsed.lines.map((l) => l.startTime))
-				let matchCount = 0
-				if (secondaryParsed.lines.length > 0) {
-					for (const line of secondaryParsed.lines) {
-						if (mainTimestamps.has(line.startTime)) {
-							matchCount++
-						}
-					}
-
-					const matchRatio = matchCount / secondaryParsed.lines.length
-
-					// 如果匹配度低于 20%，则视为不匹配
-					if (matchRatio < 0.2) {
-						return { secondaryLyrics: undefined, isMismatch: true }
+			const mainTimestamps = new Set(mainParsed.lines.map((l) => l.startTime))
+			let matchCount = 0
+			if (secondaryParsed.lines.length > 0) {
+				for (const line of secondaryParsed.lines) {
+					if (mainTimestamps.has(line.startTime)) {
+						matchCount++
 					}
 				}
-			} catch {
-				// do nothing
+
+				const matchRatio = matchCount / secondaryParsed.lines.length
+
+				// 如果匹配度低于 20%，则视为不匹配
+				if (matchRatio < 0.2) {
+					return { secondaryLyrics: undefined, isMismatch: true }
+				}
 			}
 
 			return {
@@ -241,35 +253,41 @@ const Lyrics = memo(function Lyrics({
 		}
 	}, [isMismatch, track?.uniqueKey])
 
-	const finalLyrics = useMemo(() => {
+	// so bro I trust react compiler
+	const finalLyrics = (() => {
 		const lrc = lyrics?.lrc
 		if (!lrc) return []
 
-		try {
-			// 主播亲测这样 hack 没问题！
-			const mergedSpl = lrc + '\n' + (effectiveSecondaryLyrics ?? '')
-			const { lines: parsedLines } = parseSpl(mergedSpl)
-			if (parsedLines.length === 0) return null
+		// 主播亲测这样 hack 没问题！
+		const mergedSpl = lrc + '\n' + (effectiveSecondaryLyrics ?? '')
 
-			const paddingTimestamp =
-				(parsedLines.at(-1)?.startTime ?? 0) + Number.EPSILON
-			return [
-				...parsedLines,
-				{
-					startTime: paddingTimestamp,
-					endTime: paddingTimestamp,
-					content: '',
-					translations: [],
-					isDynamic: false,
-					spans: [],
-					isPaddingItem: true,
-				} as LyricLine & { isPaddingItem?: boolean },
-			]
+		let parsedLines
+		try {
+			const result = parseSpl(mergedSpl)
+			parsedLines = result.lines
 		} catch (e) {
 			toastAndLogError('解析歌词失败', e, 'Player.PlayerLyrics')
 			return null
 		}
-	}, [lyrics?.lrc, effectiveSecondaryLyrics])
+
+		if (parsedLines.length === 0) return null
+
+		const lastLine = parsedLines.at(-1)
+		const paddingTimestamp =
+			(lastLine ? lastLine.startTime : 0) + Number.EPSILON
+		return [
+			...parsedLines,
+			{
+				startTime: paddingTimestamp,
+				endTime: paddingTimestamp,
+				content: '',
+				translations: [],
+				isDynamic: false,
+				spans: [],
+				isPaddingItem: true,
+			} as LyricLine & { isPaddingItem?: boolean },
+		]
+	})()
 
 	const {
 		currentLyricIndex,
@@ -300,8 +318,12 @@ const Lyrics = memo(function Lyrics({
 			contentHeight.value = e.contentSize.height
 			viewportHeight.value = e.layoutMeasurement.height
 		},
+		onBeginDrag: () => {
+			scheduleOnRN(onUserScrollStart)
+		},
 		onEndDrag: () => {
 			scrollDirection.value = 'idle'
+			scheduleOnRN(onUserScrollEnd)
 		},
 	})
 
@@ -448,8 +470,6 @@ const Lyrics = memo(function Lyrics({
 					paddingTop: windowHeight * 0.02,
 				}}
 				showsVerticalScrollIndicator={false}
-				onScrollEndDrag={onUserScrollEnd}
-				onScrollBeginDrag={onUserScrollStart}
 				scrollEventThrottle={30}
 				onScroll={scrollHandler}
 				getItemType={(item) => (item.isPaddingItem ? 'padding' : 'lyric')}
