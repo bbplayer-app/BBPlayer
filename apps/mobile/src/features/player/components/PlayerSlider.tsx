@@ -60,18 +60,24 @@ function TextWithAnimation({
 		<>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(position)}
 			</Text>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(duration)}

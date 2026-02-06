@@ -102,36 +102,32 @@ export default function PlayerPage() {
 		)
 	}
 
-	const panGesture = useMemo(
-		() =>
-			Gesture.Pan()
-				.enabled(activeTab === 'main')
-				.activeOffsetY([10, 1000])
-				.failOffsetX([-10, 10])
-				.onUpdate((event) => {
-					'worklet'
-					if (isClosing.value) return
-					if (event.translationY > 0) {
-						translateY.set(event.translationY)
-					}
-				})
-				.onEnd((event) => {
-					'worklet'
-					if (isClosing.value) return
+	const panGesture = Gesture.Pan()
+		.enabled(activeTab === 'main')
+		.activeOffsetY([10, 1000])
+		.failOffsetX([-10, 10])
+		.onUpdate((event) => {
+			'worklet'
+			if (isClosing.value) return
+			if (event.translationY > 0) {
+				translateY.set(event.translationY)
+			}
+		})
+		.onEnd((event) => {
+			'worklet'
+			if (isClosing.value) return
 
-					if (event.translationY > DISMISS_THRESHOLD || event.velocityY > 500) {
-						isClosing.value = true
-						translateY.set(
-							withTiming(height, { duration: ANIMATION_DURATION }, () => {
-								scheduleOnRN(dismissPlayer)
-							}),
-						)
-					} else {
-						translateY.set(withTiming(0, { duration: 200 }))
-					}
-				}),
-		[height, isClosing, translateY, activeTab],
-	)
+			if (event.translationY > DISMISS_THRESHOLD || event.velocityY > 500) {
+				isClosing.value = true
+				translateY.set(
+					withTiming(height, { duration: ANIMATION_DURATION }, () => {
+						scheduleOnRN(dismissPlayer)
+					}),
+				)
+			} else {
+				translateY.set(withTiming(0, { duration: 200 }))
+			}
+		})
 
 	const overlayAnimatedStyle = useAnimatedStyle(() => {
 		const opacity = interpolate(
