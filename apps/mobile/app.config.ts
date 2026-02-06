@@ -73,6 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 			monochromeImage: './assets/images/adaptive-icon.png',
 			backgroundColor: '#ffffff',
 		},
+		googleServicesFile: './assets/config/google-services/google-services.json',
 		package: getUniqueIdentifier(),
 		versionCode: versionCode,
 		edgeToEdgeEnabled: true,
@@ -172,6 +173,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 # --- 来自 retrofit2.pro ---
 					`,
 				},
+				ios: {
+					useFrameworks: 'static',
+				},
 			},
 		],
 		[
@@ -214,6 +218,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 				isAccessMediaLocationEnabled: true,
 			},
 		],
+		'@react-native-firebase/app',
 	],
 	experiments: {
 		reactCompiler: true,
@@ -235,5 +240,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 		runtimeVersion: {
 			policy: 'appVersion',
 		},
+		googleServicesFile:
+			'./assets/config/google-services/GoogleService-Info.plist',
 	},
 })

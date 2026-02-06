@@ -1,9 +1,15 @@
+import analytics from '@react-native-firebase/analytics'
 import { useLogger } from '@react-navigation/devtools'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Network from 'expo-network'
-import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
+import {
+	Stack,
+	useNavigationContainerRef,
+	SplashScreen,
+	usePathname,
+} from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -45,6 +51,7 @@ function onAppStateChange(status: AppStateStatus) {
 }
 
 export default Sentry.wrap(function RootLayout() {
+	const pathname = usePathname()
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
@@ -60,6 +67,23 @@ export default Sentry.wrap(function RootLayout() {
 		})
 		return eventSubscription.remove.bind(eventSubscription)
 	})
+
+	useEffect(() => {
+		const logScreenView = async () => {
+			try {
+				await analytics().logScreenView({
+					screen_name: pathname,
+					screen_class: pathname,
+				})
+			} catch (error) {
+				console.error('[Analytics] Failed to log screen view:', error)
+			}
+		}
+
+		if (pathname) {
+			void logScreenView()
+		}
+	}, [pathname])
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', onAppStateChange)

@@ -22,6 +22,9 @@ pnpm install
 
 ### 启动项目
 
+> [!IMPORTANT]
+> 你需要准备好 firebase 的 google-services.json 和 GoogleService-Info.plist 文件，并将它们放在 `apps/mobile/assets/config/google-services/` 目录下。
+
 请确保你位于 `apps/mobile` 目录下，或者使用过滤器运行命令：
 
 ```bash
