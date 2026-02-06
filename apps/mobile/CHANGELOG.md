@@ -9,42 +9,38 @@
 
 ### Added
 
-- 支持酷狗音乐的歌词搜索
-- 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 b 站视频
+- 支持酷狗音乐歌词搜索
+- 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
 - 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
-- 懒加载的模态框在加载时显示 `ActivityIndicator`
-- 优化数据库迁移检查，通过缓存 schema 版本跳过无新迁移时的 SQL 查询
+- 懒加载模态框加载时显示 `ActivityIndicator`
 - 支持双击播放列表顶部回到顶端
-- 实现播放器页面滑动时标题的平滑渐变效果
-- 播放列表页面背景使用封面主题色
-- 支持下滑手势关闭播放器页面
-- 修复单曲循环模式下，播放完最后一首后不循环播放的问题 (Thanks to @k88936 #199)
-- 支持在翻译歌词和罗马音歌词之间切换
-- 支持网易云歌词获取罗马音歌词
-- 支持逐字歌词（目前仅支持网易云来源）
-- 增加歌词编辑时的格式校验功能，错误时会提示具体行号
+- 实现播放器页面标题平滑渐变效果
+- 播放列表页面背景支持封面主题色
+- 支持下滑关闭播放器页面
+- 支持网易云罗马音及逐字歌词，并支持在翻译与罗马音间切换
+- 增加歌词编辑格式校验及行号错误提示
 
 ### Changed
 
+- 优化数据库迁移检查，通过缓存 Schema 版本跳过冗余 SQL 查询
 - 移除 trackService 中的标题重复检查
-- orpheus 库从 Cronet 切换到 OkHttp 作为 Media3 的网络库
-- 启用 R8 混淆
-- 关闭全局 `cleartextTrafficPermitted`，只允许 `hdslb.com` 使用 http
-- 移除 reanimated 的 Static Flags
+- 播放器网络库（orpheus）从 Cronet 切换至 OkHttp
+- 启用 R8 混淆并移除 reanimated 的 Static Flags
 - 重构 RootLayout 的 SplashScreen 显示逻辑
-- 试图增强播放器的后台留存能力
-- 重构 `PlayerLyrics.tsx`，将歌词偏移量调整面板和歌词 item 解析解耦
+- 增强播放器后台留存能力
+- 重构 `PlayerLyrics.tsx`，实现歌词偏移面板与解析逻辑解耦
+- 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间以减少冗余渲染
 - 优化频谱在暂停时的回落动画
 
 ### Fixed
 
+- 修复单曲循环模式下播放完最后一首不循环的问题 (Thanks to @k88936 #199)
 - 修复 `reportErrorToSentry` 上报非 Error 类型错误时显示为 `[object Object]` 的问题
-- 修复 `DonationQRModal` 在部分 Android 设备上因 `expo-media-library` 导入方式错误导致崩溃的问题
-- 修复歌词搜索失败时错误地使用 `FileSystemError` 类型导致被上报到 Sentry 的问题
-- 修复 `ToastContext` 未初始化导致应用崩溃的问题
-- 修复因 cookie 键名包含无效字符（如换行符）导致的应用崩溃，并增加自动修复提示
-- 修复播放列表结束后点击播放按钮无效的问题，现在会从头开始播放
-- 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间更新，减少非必要渲染
+- 修复 `DonationQRModal` 在部分 Android 设备上因导入方式错误导致的崩溃
+- 修复歌词搜索失败时错误上报 `FileSystemError` 到 Sentry 的问题
+- 修复 `ToastContext` 未初始化导致的应用崩溃
+- 修复因 Cookie 键名包含无效字符（如换行符）导致的崩溃，并增加自动修复提示
+- 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
 
 ## [2.2.4] - 2026-01-30
 
