@@ -107,7 +107,7 @@ export default function PlayerPage() {
 			Gesture.Pan()
 				.enabled(activeTab === 'main')
 				.activeOffsetY([10, 1000])
-				.failOffsetX([-20, 20])
+				.failOffsetX([-10, 10])
 				.onUpdate((event) => {
 					'worklet'
 					if (isClosing.value) return

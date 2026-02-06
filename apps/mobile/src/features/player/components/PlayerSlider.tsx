@@ -162,6 +162,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const pan = useMemo(
 		() =>
 			Gesture.Pan()
+				.minDistance(1)
 				.onBegin((e) => {
 					if (containerWidth.value === 0) return
 					isScrubbing.set(true)
