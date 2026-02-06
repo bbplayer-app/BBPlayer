@@ -6,6 +6,7 @@ import { useTheme } from 'react-native-paper'
 import Animated, {
 	type SharedValue,
 	useAnimatedStyle,
+	useDerivedValue,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
@@ -39,6 +40,10 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	useEffect(() => {
 		isHighlightedShared.value = isHighlighted
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
+
+	const gatedCurrentTime = useDerivedValue(() => {
+		return isHighlightedShared.value ? currentTime.value : -1
+	})
 
 	const animatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
@@ -78,7 +83,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 							<KaraokeWord
 								key={`${index}_${idx}`}
 								span={span}
-								currentTime={currentTime}
+								currentTime={gatedCurrentTime}
 								baseStyle={styles.oldSchoolItemText}
 								activeColor={colors.primary}
 								inactiveColor={colors.onSurfaceDisabled}
@@ -118,6 +123,10 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	useEffect(() => {
 		isHighlightedShared.value = isHighlighted
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
+
+	const gatedCurrentTime = useDerivedValue(() => {
+		return isHighlightedShared.value ? currentTime.value : -1
+	})
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
 		if (isHighlightedShared.value === true) {
@@ -163,7 +172,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 						<KaraokeWord
 							key={`${index}_${idx}`}
 							span={span}
-							currentTime={currentTime}
+							currentTime={gatedCurrentTime}
 							baseStyle={styles.modernItemText}
 							activeColor={theme.colors.primary}
 							inactiveColor={theme.colors.onSurfaceDisabled}

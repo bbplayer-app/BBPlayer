@@ -89,12 +89,14 @@ export const KaraokeWord = memo(function KaraokeWord({
 			</Text>
 
 			<Animated.View style={[styles.mask, maskStyle]}>
-				<AnimatedText
-					style={[baseStyle, activeTextStyle]}
-					numberOfLines={1}
-				>
-					{span.text}
-				</AnimatedText>
+				{isHighlighted && (
+					<AnimatedText
+						style={[baseStyle, activeTextStyle]}
+						numberOfLines={1}
+					>
+						{span.text}
+					</AnimatedText>
+				)}
 			</Animated.View>
 		</View>
 	)
