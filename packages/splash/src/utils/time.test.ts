@@ -1,17 +1,17 @@
 import { parseTimeTag } from './time'
 
 describe('Time Utils (时间工具)', () => {
-	test('should parse standard format [mm:ss.SS] (标准格式)', () => {
+	test('应该解析标准格式 [mm:ss.SS]', () => {
 		// 05:20.22 -> 5*60*1000 + 20.22*1000 = 300000 + 20220 = 320220
 		expect(parseTimeTag('[05:20.22]')).toBe(320220)
 	})
 
-	test('should parse format with brackets angle brackets (括号处理)', () => {
+	test('应该能解析尖括号或无括号的格式', () => {
 		expect(parseTimeTag('<05:20.22>')).toBe(320220)
 		expect(parseTimeTag('05:20.22')).toBe(320220)
 	})
 
-	test('should parse short digits (短位数字)', () => {
+	test('应该解析短位数字', () => {
 		// [1:02.1] -> 1m 2s 100ms
 		// 60000 + 2000 + 100 = 62100
 		// "1" digit in ms -> 100ms per spec logic (padEnd 3)
@@ -22,23 +22,23 @@ describe('Time Utils (时间工具)', () => {
 		expect(parseTimeTag('[1:02.02]')).toBe(62020)
 	})
 
-	test('should parse long digits (长位数字/微秒)', () => {
+	test('应该解析长位数字/微秒', () => {
 		// [00:00.123456] -> 0m 0s 123ms (round)
 		expect(parseTimeTag('[00:00.123456]')).toBe(123)
 	})
 
-	test('should parse >2 digit minutes (长分钟)', () => {
+	test('应该解析超过两位数的分钟', () => {
 		// [100:00.00] -> 100m = 6000000ms
 		expect(parseTimeTag('[100:00.00]')).toBe(6000000)
 	})
 
-	test('should handle missing ms part strictly? (无毫秒部分)', () => {
+	test('应当能解析不带毫秒的时间', () => {
 		// Usually standardized as mm:ss.SS, but basic parseFloat handles "ss"
 		// "05:20" -> 5m 20s
 		expect(parseTimeTag('[05:20]')).toBe(320000)
 	})
 
-	test('should handle padding examples from spec (规范填充示例)', () => {
+	test('应该按照规范示例处理填充补全', () => {
 		// "130" -> 130ms (already 3 digits)
 		expect(parseTimeTag('[00:00.130]')).toBe(130)
 		// "1" -> 100ms

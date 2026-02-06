@@ -39,6 +39,9 @@ export default function AppearanceSettingsPage() {
 		(state) => state.settings.enableSpectrumVisualizer,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
+	const enableVerbatimLyrics = useAppStore(
+		(state) => state.settings.enableVerbatimLyrics,
+	)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
@@ -119,6 +122,15 @@ export default function AppearanceSettingsPage() {
 					<Switch
 						value={enableSpectrumVisualizer}
 						onValueChange={handleSpectrumToggle}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>显示逐字歌词</Text>
+					<Switch
+						value={enableVerbatimLyrics}
+						onValueChange={() =>
+							setSettings({ enableVerbatimLyrics: !enableVerbatimLyrics })
+						}
 					/>
 				</View>
 				<View style={styles.settingRow}>

@@ -6,10 +6,12 @@ import Animated, {
 	Extrapolation,
 	interpolate,
 	type SharedValue,
+	useAnimatedReaction,
 	useAnimatedStyle,
 	useSharedValue,
-	withTiming,
 } from 'react-native-reanimated'
+
+const AnimatedText = Animated.createAnimatedComponent(Text)
 
 interface KaraokeWordProps {
 	span: LyricSpan
@@ -28,34 +30,46 @@ export const KaraokeWord = memo(function KaraokeWord({
 	inactiveColor,
 	isHighlighted,
 }: KaraokeWordProps) {
-	const width = useSharedValue(0)
+	const localProgress = useSharedValue(0)
+	const layoutWidth = useSharedValue(0)
+
+	useAnimatedReaction(
+		() => currentTime.value,
+		(currentVal: number) => {
+			if (!isHighlighted) {
+				if (localProgress.value !== 0) {
+					localProgress.value = 0
+				}
+				return
+			}
+
+			const timeMs = currentVal * 1000
+			if (timeMs < span.startTime) {
+				localProgress.value = 0
+			} else if (timeMs > span.endTime) {
+				localProgress.value = 1
+			} else {
+				localProgress.value = interpolate(
+					timeMs,
+					[span.startTime, span.endTime],
+					[0, 1],
+					Extrapolation.CLAMP,
+				)
+			}
+		},
+		[isHighlighted, span],
+	)
 
 	const maskStyle = useAnimatedStyle(() => {
-		// 如果不处于高亮行，直接不计算动画
-		if (!isHighlighted) {
-			return {
-				width: 0,
-				opacity: withTiming(0, { duration: 300 }),
-			}
-		}
-
-		const progress = interpolate(
-			currentTime.value * 1000, // Convert to ms
-			[span.startTime, span.endTime],
-			[0, 100],
-			Extrapolation.CLAMP,
-		)
-
 		return {
-			width: `${progress}%`,
-			opacity: withTiming(1, { duration: 300 }),
+			width: layoutWidth.value * localProgress.value,
+			opacity: isHighlighted ? 1 : 0,
 		}
 	})
 
 	const activeTextStyle = useAnimatedStyle(() => {
-		if (!isHighlighted) return { width: width.value, color: activeColor }
 		return {
-			width: width.value,
+			width: layoutWidth.value,
 			color: activeColor,
 		}
 	})
@@ -64,7 +78,7 @@ export const KaraokeWord = memo(function KaraokeWord({
 		<View
 			style={styles.container}
 			onLayout={(e) => {
-				width.set(e.nativeEvent.layout.width)
+				layoutWidth.set(e.nativeEvent.layout.width)
 			}}
 		>
 			<Text
@@ -74,9 +88,7 @@ export const KaraokeWord = memo(function KaraokeWord({
 				{span.text}
 			</Text>
 
-			<Animated.View
-				style={[StyleSheet.absoluteFill, { overflow: 'hidden' }, maskStyle]}
-			>
+			<Animated.View style={[styles.mask, maskStyle]}>
 				<AnimatedText
 					style={[baseStyle, activeTextStyle]}
 					numberOfLines={1}
@@ -88,12 +100,14 @@ export const KaraokeWord = memo(function KaraokeWord({
 	)
 })
 
-const AnimatedText = Animated.createAnimatedComponent(Text)
-
 const styles = StyleSheet.create({
 	container: {
 		position: 'relative',
 		justifyContent: 'center',
 		alignItems: 'center',
+	},
+	mask: {
+		...StyleSheet.absoluteFill,
+		overflow: 'hidden',
 	},
 })

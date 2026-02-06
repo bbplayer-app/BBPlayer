@@ -17,5 +17,7 @@ export function parseTimeTag(timeStr: string): number {
 
 	const min = parseInt(minStr, 10)
 	const seconds = parseFloat(secStr + '.' + (msStr || '0'))
-	return min * 60 * 1000 + Math.round(seconds * 1000)
+	const result = min * 60 * 1000 + Math.round(seconds * 1000)
+
+	return result < 0 ? 0 : result
 }

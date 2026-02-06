@@ -103,6 +103,7 @@ export const useAppStore = create<AppState>()(
 					playerBackgroundStyle: 'gradient',
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
+					enableVerbatimLyrics: true,
 				},
 
 				hasBilibiliCookie: () => {
@@ -254,6 +255,7 @@ export const useAppStore = create<AppState>()(
 						'boolean',
 					)
 					checkAndSet(OLD_KEYS.BG_STYLE, 'playerBackgroundStyle', 'string')
+					migratedSettings.enableVerbatimLyrics ??= true
 				} catch (e) {
 					logger.error('迁移设置项失败', e)
 				}

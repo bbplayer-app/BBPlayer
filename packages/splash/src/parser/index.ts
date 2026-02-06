@@ -28,7 +28,8 @@ export function parseSpl(lrcContent: string): SplLyricData {
 			continue
 		}
 
-		const leadingTimeRegex = /^(\[(\d{1,3}):(\d{1,2})\.(\d{1,6})\])+/
+		// 支持可选的负号时间戳解析
+		const leadingTimeRegex = /^(\[(-?\d{1,3}):(-?\d{1,2})\.(\d{1,6})\])+/
 		const match = leadingTimeRegex.exec(originalLine)
 
 		if (!match) {
@@ -42,6 +43,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 				})
 				continue
 			} else {
+				// 若既无当前时间戳也关联不到上一行，则视作非法数据
 				throw new SplParseError(
 					i + 1,
 					`未找到时间戳，且无法关联到上一行: "${originalLine}"`,
@@ -52,7 +54,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		const fullTimePart = match[0]
 		const content = originalLine.substring(fullTimePart.length)
 
-		const singleTimeRegex = /\[(\d{1,3}):(\d{1,2})\.(\d{1,6})\]/g
+		const singleTimeRegex = /\[(-?\d{1,3}):(-?\d{1,2})\.(\d{1,6})\]/g
 		let tMatch
 
 		const extractedTimes: number[] = []
@@ -97,6 +99,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 
 		let endTime = explicitEnd
 		if (endTime === undefined) {
+			// 若没显式结束标签，则取下一行起始时间或默认为 10s
 			if (i < sortedTimes.length - 1) {
 				endTime = sortedTimes[i + 1]
 			} else {
@@ -129,5 +132,25 @@ export function parseSpl(lrcContent: string): SplLyricData {
 	return {
 		meta,
 		lines: finalLines,
+	}
+}
+
+/**
+ * 验证 SPL/LRC 歌词格式是否正确
+ *
+ * @param lrcContent 待验证的歌词内容
+ * @returns 验证结果对象
+ */
+export function verify(
+	lrcContent: string,
+): { isValid: true } | { isValid: false; error: SplParseError } {
+	try {
+		parseSpl(lrcContent)
+		return { isValid: true }
+	} catch (e) {
+		if (e instanceof SplParseError) {
+			return { isValid: false, error: e }
+		}
+		throw e
 	}
 }

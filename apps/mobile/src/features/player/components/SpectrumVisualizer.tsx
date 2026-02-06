@@ -138,73 +138,96 @@ export const SpectrumVisualizer = ({
 		let lastFrameTime = 0
 		const TARGET_FPS = 30
 		const FRAME_INTERVAL = 1000 / TARGET_FPS
+		const DECAY_FACTOR = 0.9
 
 		const animate = (timestamp: number) => {
-			if (!isPlaying || !isAppActive) return
+			if (!isAppActive) return
 
 			const elapsed = timestamp - lastFrameTime
 
 			if (elapsed >= FRAME_INTERVAL) {
 				lastFrameTime = timestamp - (elapsed % FRAME_INTERVAL)
 
-				Orpheus.updateSpectrumData(bufferRef.current)
-				const rawData = bufferRef.current
 				const newData = new Float32Array(BAR_COUNT)
-				const halfCount = BAR_COUNT / 2
+				const rawData = bufferRef.current
+				let hasSignal = false
 
-				for (let i = 0; i < halfCount; i++) {
-					const t = i / (halfCount - 1)
+				if (isPlaying) {
+					Orpheus.updateSpectrumData(rawData)
+					const halfCount = BAR_COUNT / 2
 
-					const startBin = Math.floor(t * t * (SPECTRUM_SIZE - 1))
-					const tNext = (i + 1) / (halfCount - 1)
-					const endBin = Math.floor(tNext * tNext * (SPECTRUM_SIZE - 1))
-					const actualEndBin = Math.max(endBin, startBin + 1)
+					for (let i = 0; i < halfCount; i++) {
+						const t = i / (halfCount - 1)
+						const startBin = Math.floor(t * t * (SPECTRUM_SIZE - 1))
+						const tNext = (i + 1) / (halfCount - 1)
+						const endBin = Math.floor(tNext * tNext * (SPECTRUM_SIZE - 1))
+						const actualEndBin = Math.max(endBin, startBin + 1)
 
-					let sum = 0
-					let count = 0
-					for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
-						sum += rawData[j]
-						count++
+						let sum = 0
+						let count = 0
+						for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
+							sum += rawData[j]
+							count++
+						}
+
+						let val = 0
+						if (count > 0) {
+							const magnitude = sum / count
+							const db = 20 * Math.log10(magnitude + 0.0001)
+							const minDb = -60
+							const maxDb = 0
+							val = (db - minDb) / (maxDb - minDb)
+						}
+
+						if (val < 0) val = 0
+						if (val > 1.0) val = 1.0
+
+						const mirrorIdx = BAR_COUNT - 1 - i
+
+						const smoothL =
+							prevDataRef.current[i] * SMOOTHING_FACTOR +
+							val * (1 - SMOOTHING_FACTOR)
+						prevDataRef.current[i] = smoothL
+						newData[i] = smoothL
+
+						const smoothR =
+							prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
+							val * (1 - SMOOTHING_FACTOR)
+						prevDataRef.current[mirrorIdx] = smoothR
+						newData[mirrorIdx] = smoothR
+
+						if (smoothL > 0.001 || smoothR > 0.001) {
+							hasSignal = true
+						}
 					}
-
-					let val = 0
-					if (count > 0) {
-						const magnitude = sum / count
-						const db = 20 * Math.log10(magnitude + 0.0001)
-
-						const minDb = -60
-						const maxDb = 0
-						val = (db - minDb) / (maxDb - minDb)
+				} else {
+					// Decay logic when paused
+					for (let i = 0; i < BAR_COUNT; i++) {
+						const decayed = prevDataRef.current[i] * DECAY_FACTOR
+						if (decayed > 0.001) {
+							prevDataRef.current[i] = decayed
+							newData[i] = decayed
+							hasSignal = true
+						} else {
+							prevDataRef.current[i] = 0
+							newData[i] = 0
+						}
 					}
-
-					if (val < 0) val = 0
-					if (val > 1.0) val = 1.0
-
-					const mirrorIdx = BAR_COUNT - 1 - i
-
-					const smoothL =
-						prevDataRef.current[i] * SMOOTHING_FACTOR +
-						val * (1 - SMOOTHING_FACTOR)
-					prevDataRef.current[i] = smoothL
-					newData[i] = smoothL
-
-					const smoothR =
-						prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
-						val * (1 - SMOOTHING_FACTOR)
-					prevDataRef.current[mirrorIdx] = smoothR
-					newData[mirrorIdx] = smoothR
 				}
 
 				frequencyData.set(newData)
+
+				// If no signal and not playing, stop the loop to save resources
+				if (!isPlaying && !hasSignal) {
+					return
+				}
 			}
 
 			animationFrameId = requestAnimationFrame(animate)
 		}
 
-		if (isPlaying && isAppActive) {
-			animationFrameId = requestAnimationFrame(animate) // Start loop
-		} else {
-			frequencyData.set(new Float32Array(BAR_COUNT).fill(0))
+		if (isAppActive) {
+			animationFrameId = requestAnimationFrame(animate)
 		}
 
 		return () => {

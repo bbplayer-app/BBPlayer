@@ -3,7 +3,7 @@ import { parseSpans } from './spans'
 describe('Span Parser (逐字解析)', () => {
 	const LINE_START = 1000
 
-	test('should parse plain text (纯文本)', () => {
+	test('应该解析纯文本', () => {
 		const result = parseSpans('Hello World', LINE_START, 1)
 		expect(result.content).toBe('Hello World')
 		expect(result.isDynamic).toBe(false)
@@ -13,7 +13,7 @@ describe('Span Parser (逐字解析)', () => {
 		expect(result.spans[0].endTime).toBe(0) // Placeholder
 	})
 
-	test('should parse verbatim with brackets (中括号逐字)', () => {
+	test('应该解析中括号形式的逐字歌词', () => {
 		// [1s]Hello[2s]World[3s]
 		const input = 'Hello[00:02.00]World[00:03.00]'
 		// Start at 1s (1000ms)
@@ -37,7 +37,7 @@ describe('Span Parser (逐字解析)', () => {
 		expect(result.explicitEnd).toBe(3000)
 	})
 
-	test('should parse verbatim with angle brackets (尖括号/兼容模式)', () => {
+	test('应该解析尖括号形式的逐字歌词（兼容模式）', () => {
 		// [1s]Hello<00:02.00>World[00:03.00]
 		const input = 'Hello<00:02.00>World[00:03.00]'
 		const result = parseSpans(input, 1000, 1)
@@ -48,7 +48,7 @@ describe('Span Parser (逐字解析)', () => {
 		expect(result.spans[1].endTime).toBe(3000)
 	})
 
-	test('should handle delayed start (延迟开始)', () => {
+	test('应该处理延迟开始的情况', () => {
 		// [1s]<1.5s>Text
 		const input = '<00:01.50>Text'
 		// Line start 1000
@@ -66,7 +66,7 @@ describe('Span Parser (逐字解析)', () => {
 		expect(result.spans[0].startTime).toBe(1500)
 	})
 
-	test('should warn and ignore regression timestamps (时间倒流)', () => {
+	test('应该警告并忽略时间倒流的戳', () => {
 		const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
 		// Start 5s. Tag 4s.
 		const input = 'Hello[00:04.00]World'
@@ -85,7 +85,7 @@ describe('Span Parser (逐字解析)', () => {
 		consoleSpy.mockRestore()
 	})
 
-	test('should handle redundant timestamps (处理冗余时间戳)', () => {
+	test('应该处理冗余的时间戳', () => {
 		// Text[1s][2s]Suffix
 		// Text ends at 1s. [2s] updates CurrentTime but doesn't extend Text (since it's already closed).
 		const input = 'Text[00:01.00][00:02.00]Suffix'

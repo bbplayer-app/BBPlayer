@@ -23,7 +23,7 @@ export function parseSpans(
 	/** 如果行末有显式时间标签，则返回该时间 (ms) */
 	explicitEnd?: number
 } {
-	// Regex splitting by tags: <mm:ss.SS> or [mm:ss.SS]
+	// 按标签切割，如 <mm:ss.SS> 或 [mm:ss.SS]
 	const parts = rawContent.split(/([<[]\d{1,3}:\d{1,2}\.\d{1,6}[>\]])/)
 
 	const spans: LyricSpan[] = []
@@ -38,7 +38,7 @@ export function parseSpans(
 			spans.push({
 				text: part,
 				startTime: currentTime,
-				endTime: 0,
+				endTime: 0, // 占位，待由下一个标签修正
 				duration: 0,
 			})
 			fullText += part

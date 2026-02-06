@@ -4,6 +4,9 @@ export interface YrcLine {
 }
 
 export function formatSplTime(ms: number): string {
+	// 将负时间戳统一处理为 0
+	if (ms < 0) ms = 0
+
 	const totalSeconds = Math.floor(ms / 1000)
 	const minutes = Math.floor(totalSeconds / 60)
 	const seconds = totalSeconds % 60
@@ -35,46 +38,61 @@ export function parseYrc(yrcContent: string): string {
 				continue
 			}
 		} catch {
-			// Not JSON, continue to regex parsing
+			// 若非 JSON，则继续正则解析
 		}
 
-		// Standard LRC line: [mm:ss.xx] or [mm:ss.xxx]
-		// Simply pass through as it is compatible with SPL
-		if (/^\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/.test(trimmed)) {
+		// 标准 LRC 行: [mm:ss.xx] 或 [mm:ss.xxx]
+		// SPL 兼容此类格式，透传即可
+		// 同时需支持元数据标签，如 [ar:Author]
+		if (
+			/^\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/.test(trimmed) ||
+			/^\[[a-zA-Z]+:/.test(trimmed)
+		) {
 			splLines.push(trimmed)
 			continue
 		}
 
 		const lineMatch = /^\[(\d+),(\d+)\](.*)/.exec(trimmed)
 		if (lineMatch) {
+			// 匹配 YRC 行格式: [开始时间,持续时间]内容
 			const lineStartTime = parseInt(lineMatch[1], 10)
-			const lineDuration = parseInt(lineMatch[2], 10)
-			const lineEndTime = lineStartTime + lineDuration
 			const content = lineMatch[3]
 
-			let splLine = `[${formatSplTime(lineStartTime)}]`
+			const splLineWords: string[] = []
 
 			const wordRegex = /\((\d+),(\d+),(\d+)\)([^(]*)/g
 			let match
-			let firstWord = true
+			let lastWordEndTime = lineStartTime
 
 			while ((match = wordRegex.exec(content)) !== null) {
 				const wordStartTime = parseInt(match[1], 10)
+				const wordDuration = parseInt(match[2], 10)
+				const wordEndTime = wordStartTime + wordDuration
 				const wordText = match[4]
 
-				if (firstWord) {
-					if (wordStartTime > lineStartTime) {
-						splLine += `<${formatSplTime(wordStartTime)}>${wordText}`
-					} else {
-						splLine += wordText
-					}
-					firstWord = false
+				if (wordStartTime > lastWordEndTime) {
+					// 检测到间隔，为当前词插入时间戳
+					// 必须先显式结束上一个词，否则上一个词会被拉长填满间隔
+					splLineWords.push(`<${formatSplTime(lastWordEndTime)}>`)
+					splLineWords.push(`<${formatSplTime(wordStartTime)}>${wordText}`)
+				} else if (splLineWords.length === 0) {
+					// 首个词，仅添加文本（起始点即为行起始点）
+					splLineWords.push(wordText)
 				} else {
-					splLine += `[${formatSplTime(wordStartTime)}]${wordText}`
+					// 连续词
+					splLineWords.push(`<${formatSplTime(wordStartTime)}>${wordText}`)
 				}
+
+				// 记录当前词的末尾作为上一个词的末尾，供后续间隔判断或行尾使用
+				lastWordEndTime = wordEndTime
 			}
 
-			splLine += `[${formatSplTime(lineEndTime)}]`
+			// 构造最终行数据
+			let splLine = `[${formatSplTime(lineStartTime)}]` + splLineWords.join('')
+
+			// 附加最后一个词的结束时间偏移量
+			splLine += `<${formatSplTime(lastWordEndTime)}>`
+
 			splLines.push(splLine)
 		}
 	}

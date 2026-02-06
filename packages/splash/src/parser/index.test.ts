@@ -1,7 +1,7 @@
-import { parseSpl } from './index'
+import { parseSpl, verify } from './index'
 
 describe('SPL Parser Integration (整体集成测试)', () => {
-	test('should parse basic LRC (基础 LRC)', () => {
+	test('应该解析基础 LRC', () => {
 		const lrc = `
 [ti:Title]
 [00:01.00]Line 1
@@ -16,7 +16,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 		expect(result.lines[1].endTime).toBe(12000) // 2000 + 10s default
 	})
 
-	test('should handle repeated lines (重复行)', () => {
+	test('应该处理重复行', () => {
 		const lrc = `[00:01.00][00:03.00]Repeated`
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(2)
@@ -26,7 +26,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 		expect(result.lines[1].content).toBe('Repeated')
 	})
 
-	test('should handle explicit translations (显式翻译)', () => {
+	test('应该处理显式翻译', () => {
 		const lrc = `
 [00:01.00]Main
 [00:01.00]Trans 1
@@ -38,7 +38,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 		expect(result.lines[0].translations).toEqual(['Trans 1', 'Trans 2'])
 	})
 
-	test('should handle implicit translations (隐式翻译)', () => {
+	test('应该处理隐式翻译', () => {
 		// "只要都有时间戳，翻译和主歌词可以不挨着" - Test explicit timestamps not adjacent
 		const lrc = `
 [00:01.00]Main 1
@@ -55,7 +55,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 		expect(result.lines[1].content).toBe('Main 2')
 	})
 
-	test('should handle pure implicit translation (纯隐式/无时间戳翻译)', () => {
+	test('应该处理纯隐式/无时间戳翻译', () => {
 		// Translation follows main lines without timestamp
 		const lrc = `
 [00:01.00]Main
@@ -66,7 +66,7 @@ Implicit Trans
 		expect(result.lines[0].translations).toContain('Implicit Trans')
 	})
 
-	test('should handle repeated lines with implicit translation (重复行+隐式翻译)', () => {
+	test('应该处理带有隐式翻译的重复行', () => {
 		// Complex case:
 		// [1s][3s]Main
 		// Trans
@@ -83,25 +83,25 @@ Trans
 		expect(result.lines[1].translations).toContain('Trans')
 	})
 
-	test('should throw on orphaned text (被遗弃的文本)', () => {
+	test('对于未匹配到时间戳的文本应报错', () => {
 		const lrc = `Orphaned Text`
 		expect(() => parseSpl(lrc)).toThrow(/未找到时间戳/)
 	})
 
-	test('should correct invalid end times with spans (使用 spans 修正结束时间)', () => {
+	test('应该使用 spans 修正结束时间', () => {
 		// Line with explicit end tag in spans
 		const lrc = `[00:01.00]Text[00:02.00]`
 		const result = parseSpl(lrc)
 		expect(result.lines[0].endTime).toBe(2000)
 	})
 
-	test('should fallback to 10s if last line has no end (最后一行默认时长)', () => {
+	test('如果最后一行没有结束标识，则默认为 10 秒', () => {
 		const lrc = `[00:01.00]Text`
 		const result = parseSpl(lrc)
 		expect(result.lines[0].endTime).toBe(11000)
 	})
 
-	test('should ignore empty lines and whitespace (忽略空行)', () => {
+	test('应该忽略空行和空白字符', () => {
 		const lrc = `
       
       [00:01.00]Text
@@ -110,7 +110,7 @@ Trans
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(1)
 	})
-	test('should handle metadata in the middle of file', () => {
+	test('应该处理文件中间的元数据', () => {
 		const lrc = `
 [00:01.00]Line 1
 [by:Artist]
@@ -121,5 +121,34 @@ Trans
 		expect(result.lines).toHaveLength(2)
 		expect(result.lines[0].content).toBe('Line 1')
 		expect(result.lines[1].content).toBe('Line 2')
+	})
+
+	test('应该优雅地处理负数时间戳', () => {
+		const lrc = `[-1:-1.000]Negative Time`
+		// Should clamp to 0 or at least parse without throwing "orphaned text" (if logic allows)
+		// Since regex doesn't match "-", it will likely be treated as text "[-1:-1.000]Negative Time"
+		// And if no prior timestamp, it throws "orphaned text"
+		expect(() => parseSpl(lrc)).not.toThrow()
+		const result = parseSpl(lrc)
+		expect(result.lines[0].startTime).toBe(0)
+	})
+})
+
+describe('verify', () => {
+	test('应该返回 isValid: true 对于有效的歌词', () => {
+		const lrc = `[00:01.00]Valid`
+		const result = verify(lrc)
+		expect(result.isValid).toBe(true)
+	})
+
+	test('应该返回 isValid: false 和 error 对于无效的歌词', () => {
+		const lrc = `Invalid Without Timestamp`
+		const result = verify(lrc)
+		if (result.isValid) {
+			throw new Error('Should be invalid')
+		}
+		expect(result.isValid).toBe(false)
+		expect(result.error.line).toBe(1)
+		expect(result.error.message).toContain('未找到时间戳')
 	})
 })

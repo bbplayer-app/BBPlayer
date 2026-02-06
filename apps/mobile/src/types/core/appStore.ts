@@ -9,6 +9,7 @@ interface Settings {
 	playerBackgroundStyle: 'gradient' | 'md3'
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
+	enableVerbatimLyrics: boolean
 }
 
 interface AppState {
