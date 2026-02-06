@@ -36,7 +36,10 @@ export const ExternalPlaylistSyncStoreProvider = ({
 	children: React.ReactNode
 }) => {
 	const storeRef = useRef<SyncStore | null>(null)
-	storeRef.current ??= createExternalPlaylistSyncStore()
+	// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+	if (!storeRef.current) {
+		storeRef.current = createExternalPlaylistSyncStore()
+	}
 	return (
 		<ExternalPlaylistSyncStoreContext.Provider value={storeRef.current}>
 			{children}

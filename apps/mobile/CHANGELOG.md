@@ -31,6 +31,7 @@
 - 重构 `PlayerLyrics.tsx`，实现歌词偏移面板与解析逻辑解耦
 - 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间以减少冗余渲染
 - 优化频谱在暂停时的回落动画
+- 迁移到 React Native Gesture Handler 3
 
 ### Fixed
 
@@ -41,6 +42,10 @@
 - 修复 `ToastContext` 未初始化导致的应用崩溃
 - 修复因 Cookie 键名包含无效字符（如换行符）导致的崩溃，并增加自动修复提示
 - 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
+- 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
+- 优化播放列表在屏幕较窄时的布局显示
+- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
 
 ## [2.2.4] - 2026-01-30
 
