@@ -25,8 +25,6 @@ import Animated, {
 	useAnimatedScrollHandler,
 	useSharedValue,
 	useDerivedValue,
-	configureReanimatedLogger,
-	ReanimatedLogLevel,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
@@ -48,11 +46,8 @@ import {
 	OldSchoolLyricLineItem,
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
-const { height: windowHeight } = Dimensions.get('window')
 
-configureReanimatedLogger({
-	level: ReanimatedLogLevel.error,
-})
+const { height: windowHeight } = Dimensions.get('window')
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,
