@@ -31,6 +31,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
 
 import { bilibiliApiClient } from './client'
+import { bilibili } from './proto/dm'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
@@ -105,7 +106,54 @@ export class BilibiliApi {
 	}
 
 	/**
+	 * 获取分段弹幕
+	 * @param bvid 视频 BV 号
+	 * @param cid 视频 CID
+	 * @param segment_index 分段索引（6min 一段，从 1 开始）
+	 */
+	getSegDanmaku(
+		bvid: string,
+		cid: number,
+		segment_index: number,
+	): ResultAsync<
+		bilibili.community.service.dm.v1.DmSegMobileReply,
+		BilibiliApiError
+	> {
+		const params = getWbiEncodedParams({
+			type: '1', // 1: video
+			oid: cid.toString(),
+			segment_index: segment_index.toString(),
+			bvid,
+		})
+
+		return params
+			.andThen((params) => {
+				return bilibiliApiClient.getBuffer('/x/v2/dm/wbi/web/seg.so', params)
+			})
+			.andThen((buffer) => {
+				try {
+					const decoded =
+						bilibili.community.service.dm.v1.DmSegMobileReply.decode(
+							new Uint8Array(buffer),
+						)
+					return okAsync(decoded)
+				} catch (error) {
+					return errAsync(
+						new BilibiliApiError({
+							message: `弹幕解包失败: ${error instanceof Error ? error.message : String(error)}`,
+							type: 'ResponseFailed',
+							cause: error,
+						}),
+					)
+				}
+			})
+	}
+
+	/**
 	 * 搜索视频
+	 * bvid: string,
+	 * page: number,
+	 * options?: { skipCookie?: boolean },
 	 */
 	searchVideos(
 		keyword: string,
