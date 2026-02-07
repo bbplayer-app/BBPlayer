@@ -29,6 +29,10 @@ export function useFeatureTracking() {
 			'setting_now_playing_bar_style',
 			settings.nowPlayingBarStyle,
 		)
+		void analyticsService.setUserProperty(
+			'setting_danmaku_enable',
+			String(settings.enableDanmaku),
+		)
 
 		void analyticsService.setUserProperty(
 			'setting_desktop_lyric',

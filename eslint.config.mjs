@@ -13,7 +13,7 @@ import tseslint from 'typescript-eslint'
 
 export default defineConfig([
 	{
-		ignores: ['dist/*'],
+		ignores: ['dist/*', '**/dm.d.ts', '**/dm.js'],
 	},
 	{
 		files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],

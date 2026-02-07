@@ -467,6 +467,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
             }
 
+            @OptIn(UnstableApi::class)
             override fun onPositionDiscontinuity(
                 oldPosition: Player.PositionInfo,
                 newPosition: Player.PositionInfo,

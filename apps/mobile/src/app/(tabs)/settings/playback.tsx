@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import { useAppStore } from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -236,6 +237,15 @@ export default function PlaybackSettingsPage() {
 							}}
 						/>
 					</FunctionalMenu>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>启用弹幕(听歌看弹幕到底有神魔用～)</Text>
+					<IconButton
+						icon='format-list-checks'
+						onPress={() =>
+							useModalStore.getState().open('DanmakuSettings', undefined)
+						}
+					/>
 				</View>
 			</ScrollView>
 		</View>

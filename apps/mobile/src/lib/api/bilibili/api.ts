@@ -4,6 +4,7 @@ import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
 	BilibiliCommentsResponse,
+	BilibiliDanmakuItem,
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliToViewVideoList,
@@ -115,15 +116,12 @@ export class BilibiliApi {
 		bvid: string,
 		cid: number,
 		segment_index: number,
-	): ResultAsync<
-		bilibili.community.service.dm.v1.DmSegMobileReply,
-		BilibiliApiError
-	> {
+	): ResultAsync<BilibiliDanmakuItem[], BilibiliApiError> {
 		const params = getWbiEncodedParams({
-			type: '1', // 1: video
-			oid: cid.toString(),
-			segment_index: segment_index.toString(),
-			bvid,
+			type: 1,
+			oid: cid,
+			segment_index: segment_index,
+			pid: bv2av(bvid),
 		})
 
 		return params
@@ -132,12 +130,33 @@ export class BilibiliApi {
 			})
 			.andThen((buffer) => {
 				try {
+					const data = new Uint8Array(buffer)
 					const decoded =
-						bilibili.community.service.dm.v1.DmSegMobileReply.decode(
-							new Uint8Array(buffer),
+						bilibili.community.service.dm.v1.DmSegMobileReply.decode(data)
+					const filtered = decoded.elems.filter((elem) => {
+						return (
+							elem.progress !== undefined &&
+							elem.progress !== null &&
+							elem.id !== undefined &&
+							elem.id !== null &&
+							elem.content !== undefined &&
+							elem.content !== null &&
+							elem.mode !== undefined &&
+							elem.mode !== null
 						)
-					return okAsync(decoded)
+					}) as (Omit<BilibiliDanmakuItem, 'progress'> & {
+						progress: number | Long
+					})[]
+					const mapped = filtered.map((elem) => ({
+						...elem,
+						progress:
+							typeof elem.progress === 'number'
+								? elem.progress
+								: elem.progress.toNumber(),
+					}))
+					return okAsync(mapped)
 				} catch (error) {
+					// TODO: 有可能返回的是 json，需要解析并且给出详细的错误信息
 					return errAsync(
 						new BilibiliApiError({
 							message: `弹幕解包失败: ${error instanceof Error ? error.message : String(error)}`,
