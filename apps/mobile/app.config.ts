@@ -11,11 +11,13 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
-	const versionCodeEnv = process.env.VERSION_CODE ?? undefined
+	const versionCodeEnv =
+		// env 获取到的不可能是 string，我们这么做只是为了让 eslint 开心
+		(process.env.VERSION_CODE as string | undefined | number) ?? undefined
 	const pwd = process.cwd()
 	// EAS 环境的行为很奇怪，似乎不会复制 .git 目录，所以需要特殊强制外部提供 versionCode
 	const isInEAS = pwd.includes('eas-build-local-nodejs')
-	if (versionCodeEnv !== undefined) {
+	if (typeof versionCodeEnv === 'string') {
 		const versionCode = parseInt(versionCodeEnv, 10)
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
