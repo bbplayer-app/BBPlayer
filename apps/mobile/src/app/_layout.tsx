@@ -3,12 +3,7 @@ import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Network from 'expo-network'
-import {
-	Stack,
-	useNavigationContainerRef,
-	SplashScreen,
-	usePathname,
-} from 'expo-router'
+import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -25,7 +20,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
-import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -52,7 +46,6 @@ function onAppStateChange(status: AppStateStatus) {
 }
 
 export default Sentry.wrap(function RootLayout() {
-	const pathname = usePathname()
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
@@ -69,16 +62,6 @@ export default Sentry.wrap(function RootLayout() {
 		})
 		return eventSubscription.remove.bind(eventSubscription)
 	})
-
-	useEffect(() => {
-		const logScreenView = async () => {
-			await analyticsService.logScreenView(pathname)
-		}
-
-		if (pathname) {
-			void logScreenView()
-		}
-	}, [pathname])
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', onAppStateChange)
