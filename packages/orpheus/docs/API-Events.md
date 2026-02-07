@@ -10,9 +10,11 @@
 | `onIsPlayingChanged`     | `{ status: boolean }`                  | 播放/暂停状态改变                            |
 | `onTrackFinished`        | `{ trackId, finalPosition, duration }` | 歌曲播放完成                                 |
 | `onPositionUpdate`       | `{ position, duration, buffered }`     | 进度更新 (约 500ms 一次)                     |
-| `onPlayerError`          | `{ code, message }`                    | 播放器报错                                   |
+| `onPlayerError`          | `PlaybackErrorEvent`                   | 播放器报错 (包含堆栈和平台相关信息)          |
+| `onHeadlessEvent`        | `OrpheusHeadlessEvent`                 | 后台任务事件                                 |
 | `onDownloadUpdated`      | `DownloadTask`                         | 下载进度更新                                 |
 | `onPlaybackSpeedChanged` | `{ speed: number }`                    | 倍速改变                                     |
+| `onPositionUpdate`       | `{ position, duration, buffered }`     | 进度更新 (约 500ms 一次)                     |
 
 **注意**: `onTrackStarted` 事件在 v0.9.0+ 已移除，请使用 Headless Task。
 

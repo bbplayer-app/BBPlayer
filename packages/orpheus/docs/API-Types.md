@@ -26,15 +26,19 @@ export interface Track {
 
 	/** 时长 (秒) */
 	duration?: number
+}
+```
 
-	/**
-	 * 响度标准化参数
-	 * 用于 ReplayGain 或类似处理
-	 */
-	loudness?: {
-		measured_i: number // 测量的各向同性响度 (LUFS)
-		target_i: number // 目标响度
-	}
+## TransitionReason
+
+触发切歌的原因。
+
+```typescript
+export enum TransitionReason {
+	REPEAT = 0, // 重复播放
+	AUTO = 1, // 自动切下一首
+	SEEK = 2, // 跳转
+	PLAYLIST_CHANGED = 3, // 播放列表改变
 }
 ```
 
@@ -86,4 +90,63 @@ export interface DownloadTask {
 	contentLength: number
 	track?: Track // 关联的 Track 对象信息
 }
+```
+
+## PlaybackErrorEvent
+
+播放错误详情。
+
+```typescript
+export interface AndroidPlaybackErrorEvent {
+	platform: 'android'
+	errorCode: number
+	errorCodeName: string | null
+	timestamp: string
+	message: string | null
+	stackTrace: string
+	rootCauseClass: string
+	rootCauseMessage: string
+}
+
+export interface IosPlaybackErrorEvent {
+	platform: 'ios'
+	error: string
+}
+
+export type PlaybackErrorEvent =
+	| AndroidPlaybackErrorEvent
+	| IosPlaybackErrorEvent
+```
+
+## OrpheusHeadlessEvent
+
+后台任务接收的事件类型。
+
+```typescript
+export interface OrpheusHeadlessTrackStartedEvent {
+	eventName: 'onTrackStarted'
+	trackId: string
+	reason: TransitionReason
+}
+
+export interface OrpheusHeadlessTrackFinishedEvent {
+	eventName: 'onTrackFinished'
+	trackId: string
+	finalPosition: number
+	duration: number
+}
+
+export interface OrpheusHeadlessTrackPausedEvent {
+	eventName: 'onTrackPaused'
+}
+
+export interface OrpheusHeadlessTrackResumedEvent {
+	eventName: 'onTrackResumed'
+}
+
+export type OrpheusHeadlessEvent =
+	| OrpheusHeadlessTrackStartedEvent
+	| OrpheusHeadlessTrackFinishedEvent
+	| OrpheusHeadlessTrackPausedEvent
+	| OrpheusHeadlessTrackResumedEvent
 ```

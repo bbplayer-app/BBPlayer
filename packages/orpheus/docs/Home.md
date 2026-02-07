@@ -2,14 +2,13 @@
 
 **BBPlayer 内部音频模块**
 
-Orpheus 是一个为 BBPlayer 构建的高性能音频播放库，基于 Android Media3 (ExoPlayer)。
+Orpheus 是一个为 BBPlayer 构建的高性能音频播放库，基于 Android Media3 (ExoPlayer) 和 AVFoundation。
 
 ## 目录
 
 - [API 方法 (Methods)](orpheus-API-Methods)
 - [数据类型 (Types)](orpheus-API-Types)
 - [事件与后台任务 (Events)](orpheus-API-Events)
-- [发版指南 (Releasing)](orpheus-RELEASING)
 
 ## 快速开始
 
