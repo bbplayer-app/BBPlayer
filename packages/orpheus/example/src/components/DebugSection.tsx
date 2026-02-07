@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import type { FC } from 'react'
 import { View, Text, StyleSheet, Alert } from 'react-native'
 

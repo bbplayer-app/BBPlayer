@@ -1,4 +1,4 @@
-import { DownloadState } from '@roitium/expo-orpheus'
+import { DownloadState } from '@bbplayer/orpheus'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginTop: 2,
+		flexWrap: 'wrap',
 	},
 	dotSeparator: {
 		marginHorizontal: 4,

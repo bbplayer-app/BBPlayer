@@ -22,6 +22,12 @@ export function registerOrpheusHeadlessTask(
 				...event,
 			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
 		})
+
+		Orpheus.addListener('onIsPlayingChanged', (event: { status: boolean }) => {
+			task({
+				eventName: event.status ? 'onTrackResumed' : 'onTrackPaused',
+			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
+		})
 	}
 
 	// On Android, the Headless Task Service handles this natively.

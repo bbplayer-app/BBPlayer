@@ -1,5 +1,5 @@
-import { Orpheus } from '@roitium/expo-orpheus'
-import { useEffect } from 'react'
+import { Orpheus } from '@bbplayer/orpheus'
+import { useCallback, useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated'
 
@@ -17,16 +17,22 @@ export default function useSmoothProgress(background = false) {
 	const isPlaying = useSharedValue(false)
 	const isAppActive = useSharedValue(true)
 
-	useFrameCallback((frameInfo) => {
-		if (
-			!isAppActive.value ||
-			!isPlaying.value ||
-			!frameInfo.timeSincePreviousFrame
-		) {
-			return
-		}
-		position.value = position.value + frameInfo.timeSincePreviousFrame / 1000
-	})
+	useFrameCallback(
+		useCallback(
+			(frameInfo) => {
+				if (
+					!isAppActive.value ||
+					!isPlaying.value ||
+					!frameInfo.timeSincePreviousFrame
+				) {
+					return
+				}
+				position.value =
+					position.value + frameInfo.timeSincePreviousFrame / 1000
+			},
+			[isAppActive, isPlaying, position],
+		),
+	)
 
 	useEffect(() => {
 		const syncState = () => {

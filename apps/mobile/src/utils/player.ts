@@ -1,6 +1,6 @@
+import type { TransitionReason } from '@bbplayer/orpheus'
+import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { parseSpl } from '@bbplayer/splash'
-import type { TransitionReason } from '@roitium/expo-orpheus'
-import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 

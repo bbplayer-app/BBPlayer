@@ -1,5 +1,5 @@
-import type { DownloadState } from '@roitium/expo-orpheus'
-import { Orpheus } from '@roitium/expo-orpheus'
+import type { DownloadState } from '@bbplayer/orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 
 import createStickyEmitter from '@/utils/sticky-mitt'
 

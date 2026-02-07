@@ -10,6 +10,7 @@
 ### Added
 
 - 支持酷狗音乐歌词搜索
+- 集成 Firebase Analytics
 - 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
 - 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
 - 懒加载模态框加载时显示 `ActivityIndicator`
@@ -31,6 +32,9 @@
 - 重构 `PlayerLyrics.tsx`，实现歌词偏移面板与解析逻辑解耦
 - 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间以减少冗余渲染
 - 优化频谱在暂停时的回落动画
+- 将 `eslint-plugin-modal` 移出 `apps/mobile` 并作为一个单独的包 `@bbplayer/eslint-plugin` 放在 `packages` 目录下
+- 将所有 `@roitium` 作用域的包迁移至 `@bbplayer` 作用域
+- 更新文档和 README，补充逐字歌词和歌词罗马音的功能说明
 
 ### Fixed
 
@@ -41,6 +45,10 @@
 - 修复 `ToastContext` 未初始化导致的应用崩溃
 - 修复因 Cookie 键名包含无效字符（如换行符）导致的崩溃，并增加自动修复提示
 - 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
+- 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
+- 优化播放列表在屏幕较窄时的布局显示
+- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
 
 ## [2.2.4] - 2026-01-30
 

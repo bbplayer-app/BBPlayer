@@ -1,5 +1,5 @@
-import type { DownloadTask } from '@roitium/expo-orpheus'
-import { Orpheus } from '@roitium/expo-orpheus'
+import type { DownloadTask } from '@bbplayer/orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { FlashList } from '@shopify/flash-list'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'

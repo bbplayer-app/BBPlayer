@@ -21,7 +21,7 @@
 为了在 App 后台或被杀掉进程时仍能处理切歌等逻辑（如更新通知栏或以前的 `onTrackStarted` 逻辑），你需要注册 Headless Task。
 
 ```typescript
-import { registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
+import { registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
 
 registerOrpheusHeadlessTask(async (event) => {
 	// 目前主要处理 TrackStarted 事件

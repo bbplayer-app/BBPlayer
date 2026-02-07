@@ -1,4 +1,4 @@
-import type { Track } from '@roitium/expo-orpheus'
+import type { Track } from '@bbplayer/orpheus'
 
 export const TEST_TRACKS: Track[] = [
 	{

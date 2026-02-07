@@ -1,5 +1,10 @@
 # BBPlayer 开发文档
 
+> [!NOTE]
+> 如果您是最终用户，请访问 [BBPlayer 官网](https://bbplayer.roitium.com) 获取使用说明。
+
+---
+
 欢迎查阅 BBPlayer 开发文档。这里包含了项目的架构设计、开发规范以及贡献指南。
 
 （以下内容大部分为 AI 编写，我进行了校对和审核）
@@ -20,7 +25,3 @@
 
 - **[技术债与路线图 (TECHNICAL_DEBT.md)](./TECHNICAL_DEBT.md)**
   - 当前已知的问题、待办事项及长期规划。
-
----
-
-> **Note**: 如果您是最终用户，请访问 [BBPlayer 官网](https://bbplayer.roitium.com) 获取使用说明。

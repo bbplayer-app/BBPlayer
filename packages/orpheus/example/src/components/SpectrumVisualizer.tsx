@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useEffect, useRef } from 'react'
 import { View, StyleSheet, Dimensions } from 'react-native'
 
@@ -77,7 +77,6 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 			{Array.from({ length: BAR_COUNT }).map((_, i) => (
 				<View
 					key={i}
-					// eslint-disable-next-line
 					ref={(ref) => {
 						barsRef.current[i] = ref
 					}}

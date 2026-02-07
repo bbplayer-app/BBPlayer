@@ -122,6 +122,14 @@ jobs:
           echo "APK_TEMP_PATH=${{runner.temp}}/${APK_NAME}.apk" >> $GITHUB_ENV
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
 
+      - name: ⚙️ Prepare Firebase Config
+        env:
+          FIREBASE_ANDROID_JSON: ${{ secrets.FIREBASE_ANDROID_JSON }}
+        if: ${{ env.FIREBASE_ANDROID_JSON != '' }}
+        run: |
+          mkdir -p apps/mobile/assets/config/google-services
+          echo "$FIREBASE_ANDROID_JSON" | base64 -d > apps/mobile/assets/config/google-services/google-services.real.json
+
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
         run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}

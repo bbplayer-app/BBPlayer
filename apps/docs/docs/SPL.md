@@ -1,13 +1,10 @@
 ---
-title: 'SPL 格式（Salt Player Lyrics）语法标准 | 不要糖醋放椒盐（椒盐音乐官网）'
-source: 'https://moriafly.com/standards/spl.html'
-author:
-published:
-created: 2026-02-05
-description: 'Moriafly Official | 不要糖醋放椒盐 | 椒盐音乐 | Salt Player'
-tags:
-  - 'clippings'
+title: SPL 歌词规范
+editLink: true
 ---
+
+> [!NOTE]
+> 本文档转载自 [Moriafly Official | SPL 格式语法标准](https://moriafly.com/standards/spl.html)。BBPlayer 完美支持该规范，并建议所有歌词文件遵循此标准。
 
 ## SPL 格式（Salt Player Lyrics）语法标准
 
@@ -189,9 +186,3 @@ SPL 标准支持多行翻译，
 ```
 [05:20.22]<05:21.22>你好<05:23.22>椒盐音乐[05:24.22]
 ```
-
-信息
-
-歌词行到达而首字未开始特性将在 SPW 1.8 和 Salt Player 11.0.0 中得到支持
-
-表示这句歌词从 5 分 20 秒 220 毫秒开始，但是到 5 分 21 秒 220 毫秒才到 `你好` 这部分，可以在 Salt Player 中实现歌词跳转到当前行但未真正开始播放的特性。

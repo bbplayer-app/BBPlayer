@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'
@@ -8,6 +8,7 @@ import { immer } from 'zustand/middleware/immer'
 
 import { alert } from '@/components/modals/AlertModal'
 import { expoDb } from '@/lib/db/db'
+import { analyticsService } from '@/lib/services/analyticsService'
 import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
@@ -96,7 +97,6 @@ export const useAppStore = create<AppState>()(
 				bilibiliCookie: null,
 				settings: {
 					sendPlayHistory: false,
-					enableSentryReport: true,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
 					enableSpectrumVisualizer: false,
@@ -104,6 +104,7 @@ export const useAppStore = create<AppState>()(
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
 					enableVerbatimLyrics: true,
+					enableDataCollection: true,
 				},
 
 				hasBilibiliCookie: () => {
@@ -150,14 +151,15 @@ export const useAppStore = create<AppState>()(
 					})
 				},
 
-				setEnableSentryReport: (value) => {
+				setEnableDataCollection: (value: boolean) => {
 					set((state) => {
-						state.settings.enableSentryReport = value
+						state.settings.enableDataCollection = value
 					})
+					void analyticsService.setAnalyticsCollectionEnabled(value)
 
 					alert(
 						'重启？',
-						'切换 Sentry 上报后，需要重启应用才能生效。',
+						'切换隐私设置后，需要重启应用才能完全生效。',
 						[
 							{ text: '取消' },
 							{
@@ -193,7 +195,33 @@ export const useAppStore = create<AppState>()(
 
 			merge: (persistedState, currentState) => {
 				if (persistedState) {
-					return { ...currentState, ...(persistedState as Partial<AppState>) }
+					const typedPersistedState = persistedState as AppState
+
+					// @ts-expect-error -- handling migration of old keys
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					const oldSentry = typedPersistedState.settings.enableSentryReport
+					// @ts-expect-error -- handling migration of old keys
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					const oldAnalytics = typedPersistedState.settings.enableAnalytics
+
+					const mergedState = {
+						...currentState,
+						...typedPersistedState,
+						settings: {
+							...currentState.settings,
+							...typedPersistedState.settings,
+						},
+					}
+
+					if (oldSentry === false || oldAnalytics === false) {
+						mergedState.settings.enableDataCollection = false
+					}
+					// @ts-expect-error -- cleanup
+					delete mergedState.settings.enableSentryReport
+					// @ts-expect-error -- cleanup
+					delete mergedState.settings.enableAnalytics
+
+					return mergedState
 				}
 
 				logger.info('没找到 "app-storage" 存储项. 检查旧的 MMKV 键并尝试迁移')
@@ -247,7 +275,6 @@ export const useAppStore = create<AppState>()(
 					}
 
 					checkAndSet(OLD_KEYS.SEND_HISTORY, 'sendPlayHistory', 'boolean')
-					checkAndSet(OLD_KEYS.SENTRY, 'enableSentryReport', 'boolean')
 					checkAndSet(OLD_KEYS.DEBUG_LOG, 'enableDebugLog', 'boolean')
 					checkAndSet(
 						OLD_KEYS.OLD_LYRIC,

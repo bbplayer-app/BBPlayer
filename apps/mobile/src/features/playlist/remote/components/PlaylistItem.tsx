@@ -5,6 +5,7 @@ import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { analyticsService } from '@/lib/services/analyticsService'
 import {
 	LIST_ITEM_BORDER_RADIUS,
 	LIST_ITEM_COVER_SIZE,
@@ -116,6 +117,7 @@ export const TrackListItem = memo(function TrackListItem({
 					return
 				}
 				if (isCurrentTrack) return
+				void analyticsService.logPlayerQueueAction('play_item')
 				onTrackPress()
 			}}
 			onLongPress={() => {
@@ -258,6 +260,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginTop: 2,
+		flexWrap: 'wrap',
 	},
 	dotSeparator: {
 		marginHorizontal: 4,

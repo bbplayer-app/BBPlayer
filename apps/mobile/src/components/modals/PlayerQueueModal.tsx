@@ -1,9 +1,9 @@
+import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import {
 	TrueSheet,
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
-import type { Track as OrpheusTrack } from '@roitium/expo-orpheus'
-import { Orpheus } from '@roitium/expo-orpheus'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import { useQuery } from '@tanstack/react-query'

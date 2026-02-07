@@ -276,9 +276,8 @@ const ExternalPlaylistSyncPageInner = () => {
 			} catch (e) {
 				toast.error('保存失败')
 				console.error(e)
-			} finally {
-				toast.dismiss(loadingToast)
 			}
+			toast.dismiss(loadingToast)
 		}
 
 		if (unmatchedCount > 0 || unprocessedCount > 0) {

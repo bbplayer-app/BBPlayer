@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'

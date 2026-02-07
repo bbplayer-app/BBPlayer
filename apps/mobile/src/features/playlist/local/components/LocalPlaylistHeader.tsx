@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as Clipboard from 'expo-clipboard'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'

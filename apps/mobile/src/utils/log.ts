@@ -1,9 +1,5 @@
-import type { transportFunctionType } from '@roitium/react-native-logs'
-import {
-	fileAsyncTransport,
-	logger,
-	mapConsoleTransport,
-} from '@roitium/react-native-logs'
+import type { transportFunctionType } from '@bbplayer/logs'
+import { fileAsyncTransport, logger, mapConsoleTransport } from '@bbplayer/logs'
 import * as Sentry from '@sentry/react-native'
 import * as EXPOFS from 'expo-file-system'
 import { err, ok, type Result } from 'neverthrow'

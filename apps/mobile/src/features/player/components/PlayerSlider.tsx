@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -60,18 +60,24 @@ function TextWithAnimation({
 		<>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(position)}
 			</Text>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(duration)}

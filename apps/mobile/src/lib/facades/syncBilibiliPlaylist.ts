@@ -14,6 +14,7 @@ import {
 } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import { artistService } from '@/lib/services/artistService'
 import generateUniqueTrackKey from '@/lib/services/genKey'
@@ -243,6 +244,11 @@ export class SyncBilibiliPlaylistFacade {
 								remoteId: contents.info.id,
 								playlistId: playlistRes.value.id,
 							})
+							void analyticsService.logPlaylistSync(
+								'sync_bilibili',
+								'collection',
+								trackIds.length,
+							)
 							return playlistRes.value.id
 						}),
 						(e) =>
@@ -347,6 +353,12 @@ export class SyncBilibiliPlaylistFacade {
 								remoteId: bv2av(bvid),
 								playlistId: playlistRes.value.id,
 							})
+
+							void analyticsService.logPlaylistSync(
+								'sync_bilibili',
+								'multi_page',
+								trackIds.length,
+							)
 
 							return playlistRes.value.id
 						}),
@@ -721,6 +733,12 @@ export class SyncBilibiliPlaylistFacade {
 						remoteId: favoriteId,
 						playlistId: localPlaylist.value.id,
 					})
+
+					void analyticsService.logPlaylistSync(
+						'sync_bilibili',
+						'favorite',
+						finalOrderedTrackIds.length,
+					)
 
 					return localPlaylist.value.id
 				}),

@@ -1,4 +1,4 @@
-import ExpoImageThemeColors from '@roitium/expo-image-theme-colors'
+import ExpoImageThemeColors from '@bbplayer/image-theme-colors'
 import { useImage } from 'expo-image'
 import {
 	Button,
