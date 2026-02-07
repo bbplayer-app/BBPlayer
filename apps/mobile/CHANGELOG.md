@@ -33,6 +33,8 @@
 - 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间以减少冗余渲染
 - 优化频谱在暂停时的回落动画
 - 迁移到 React Native Gesture Handler 3
+- 将 `eslint-plugin-modal` 移出 `apps/mobile` 并作为一个单独的包 `@bbplayer/eslint-plugin` 放在 `packages` 目录下
+- 将所有 `@roitium` 作用域的包迁移至 `@bbplayer` 作用域
 
 ### Fixed
 

@@ -3,8 +3,8 @@
 	"compilerOptions": {
 		"strict": true,
 		"paths": {
-			"@roitium/expo-orpheus": ["../src/index"],
-			"@roitium/expo-orpheus/*": ["../src/*"]
+			"@bbplayer/orpheus": ["../src/index"],
+			"@bbplayer/orpheus/*": ["../src/*"]
 		}
 	}
 }

@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useEffect } from 'react'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
@@ -17,31 +17,43 @@ export function useFeatureTracking() {
 
 		if (!enableDataCollection) return
 
-		if (Object.keys(settings).length > 0) {
-			Object.entries(settings).forEach(([key, value]) => {
-				void analyticsService.setUserProperty(`setting_${key}`, String(value))
-			})
-		}
+		void analyticsService.setUserProperty(
+			'setting_lyric_source',
+			settings.lyricSource,
+		)
+		void analyticsService.setUserProperty(
+			'setting_player_bg_style',
+			settings.playerBackgroundStyle,
+		)
+		void analyticsService.setUserProperty(
+			'setting_now_playing_bar_style',
+			settings.nowPlayingBarStyle,
+		)
 
-		const trackNativeSettings = () => {
-			void analyticsService.setUserProperty(
-				'setting_persist_pos',
-				String(Orpheus.restorePlaybackPositionEnabled),
-			)
-			void analyticsService.setUserProperty(
-				'setting_loudness_norm',
-				String(Orpheus.loudnessNormalizationEnabled),
-			)
-			void analyticsService.setUserProperty(
-				'setting_autoplay',
-				String(Orpheus.autoplayOnStartEnabled),
-			)
-			void analyticsService.setUserProperty(
-				'setting_desktop_lyric',
-				String(Orpheus.isDesktopLyricsShown),
-			)
-		}
+		void analyticsService.setUserProperty(
+			'setting_desktop_lyric',
+			String(Orpheus.isDesktopLyricsShown),
+		)
+		void analyticsService.setUserProperty(
+			'setting_loudness_norm',
+			String(Orpheus.loudnessNormalizationEnabled),
+		)
+		void analyticsService.setUserProperty(
+			'setting_autoplay',
+			String(Orpheus.autoplayOnStartEnabled),
+		)
+		void analyticsService.setUserProperty(
+			'setting_send_history',
+			String(settings.sendPlayHistory),
+		)
 
-		trackNativeSettings()
+		void analyticsService.setUserProperty(
+			'setting_visualizer',
+			String(settings.enableSpectrumVisualizer),
+		)
+		void analyticsService.setUserProperty(
+			'setting_persist_pos',
+			String(Orpheus.restorePlaybackPositionEnabled),
+		)
 	}, [settings, enableDataCollection])
 }

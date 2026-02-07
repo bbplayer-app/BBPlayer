@@ -1,5 +1,5 @@
+import type { DownloadState } from '@bbplayer/orpheus'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
-import type { DownloadState } from '@roitium/expo-orpheus'
 import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'

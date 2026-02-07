@@ -1,7 +1,8 @@
+import { Orpheus } from '@bbplayer/orpheus'
 import { useLogger } from '@react-navigation/devtools'
-import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
+import * as Application from 'expo-application'
 import * as Network from 'expo-network'
 import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
@@ -20,6 +21,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -64,6 +66,19 @@ export default Sentry.wrap(function RootLayout() {
 	})
 
 	useEffect(() => {
+		const logAppInfo = async () => {
+			if (
+				Application.nativeApplicationVersion &&
+				Application.nativeBuildVersion
+			) {
+				await analyticsService.logAppInfo(
+					Application.nativeApplicationVersion,
+					Application.nativeBuildVersion,
+				)
+			}
+		}
+		void logAppInfo()
+
 		const subscription = AppState.addEventListener('change', onAppStateChange)
 		return () => subscription.remove()
 	}, [])

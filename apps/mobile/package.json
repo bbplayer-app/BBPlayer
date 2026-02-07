@@ -12,6 +12,9 @@
 		"test": "jest --watchAll"
 	},
 	"dependencies": {
+		"@bbplayer/image-theme-colors": "workspace:*",
+		"@bbplayer/logs": "workspace:*",
+		"@bbplayer/orpheus": "workspace:*",
 		"@bbplayer/splash": "workspace:*",
 		"@bottom-tabs/react-navigation": "^0.10.2",
 		"@expo/metro-runtime": "~55.0.3",
@@ -28,9 +31,6 @@
 		"@react-navigation/elements": "^2.9.5",
 		"@react-navigation/native": "^7.1.8",
 		"@rnrepo/expo-config-plugin": "0.1.0-beta.0",
-		"@roitium/expo-image-theme-colors": "workspace:*",
-		"@roitium/expo-orpheus": "workspace:*",
-		"@roitium/react-native-logs": "workspace:*",
 		"@sentry/cli": "^2.58.4",
 		"@sentry/react-native": "~7.10.0",
 		"@shopify/flash-list": "^2.2.0",
@@ -103,6 +103,7 @@
 	},
 	"devDependencies": {
 		"@babel/core": "^7.27.1",
+		"@bbplayer/eslint-plugin": "workspace:*",
 		"@eslint/js": "^9.39.2",
 		"@faker-js/faker": "^9.9.0",
 		"@jest/globals": "^29.7.0",

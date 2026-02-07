@@ -348,8 +348,11 @@ log.err('Print this with console.error')
 
 ### **fileAsyncTransport**
 
-This transport requires the installation of `react-native-fs`([install tutorial here](https://github.com/itinance/react-native-fs)) or `expo-file-system`(Supports both `legacy` and `next` api), and allows you to save the
+This transport requires the installation of `react-native-fs`([install tutorial here](https://github.com/itinance/react-native-fs)) or `expo-file-system`, and allows you to save the
 logs on the `<filePath>/<fileName>.txt` file.
+
+> [!NOTE]
+> This version of `react-native-logs` mainly adds support for the `expo-file-system` **next** API. It supports both `legacy` and `next` APIs.
 
 If you want a new file to be created every day you can use `{date-today}` in the fileName: `app_logs_{date-today}.log` -> `app_logs_D-M-YYYY.log`.
 

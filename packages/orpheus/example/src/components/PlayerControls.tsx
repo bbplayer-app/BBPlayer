@@ -3,7 +3,7 @@ import {
 	type Track,
 	PlaybackState,
 	RepeatMode,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import type { FC } from 'react'
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native'
 

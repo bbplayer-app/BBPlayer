@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@bbplayer/eslint-plugin':
+        specifier: workspace:*
+        version: link:packages/eslint-plugin
       '@commitlint/cli':
         specifier: ^20.3.1
         version: 20.3.1(@types/node@25.1.0)(typescript@5.9.3)
@@ -56,6 +59,9 @@ importers:
       eslint-plugin-react-you-might-not-need-an-effect:
         specifier: ^0.5.6
         version: 0.5.6(eslint@9.39.2(jiti@2.6.1))
+      globals:
+        specifier: ^16.5.0
+        version: 16.5.0
       lefthook:
         specifier: ^1.13.6
         version: 1.13.6
@@ -86,6 +92,15 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@bbplayer/image-theme-colors':
+        specifier: workspace:*
+        version: link:../../packages/image-theme-colors
+      '@bbplayer/logs':
+        specifier: workspace:*
+        version: link:../../packages/logs
+      '@bbplayer/orpheus':
+        specifier: workspace:*
+        version: link:../../packages/orpheus
       '@bbplayer/splash':
         specifier: workspace:*
         version: link:../../packages/splash
@@ -134,15 +149,6 @@ importers:
       '@rnrepo/expo-config-plugin':
         specifier: 0.1.0-beta.0
         version: 0.1.0-beta.0(expo@55.0.0-preview.7)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
-      '@roitium/expo-image-theme-colors':
-        specifier: workspace:*
-        version: link:../../packages/expo-image-theme-colors
-      '@roitium/expo-orpheus':
-        specifier: workspace:*
-        version: link:../../packages/orpheus
-      '@roitium/react-native-logs':
-        specifier: workspace:*
-        version: link:../../packages/react-native-logs
       '@sentry/cli':
         specifier: ^2.58.4
         version: 2.58.4
@@ -354,6 +360,9 @@ importers:
       '@babel/core':
         specifier: ^7.27.1
         version: 7.28.6
+      '@bbplayer/eslint-plugin':
+        specifier: workspace:*
+        version: link:../../packages/eslint-plugin
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.2
@@ -466,7 +475,9 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
 
-  packages/expo-image-theme-colors:
+  packages/eslint-plugin: {}
+
+  packages/image-theme-colors:
     dependencies:
       react:
         specifier: 19.2.0
@@ -481,6 +492,22 @@ importers:
       react-native:
         specifier: 0.83.1
         version: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+
+  packages/logs:
+    dependencies:
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
+      react-native:
+        specifier: 0.83.1
+        version: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+    devDependencies:
+      '@types/react':
+        specifier: ~19.2.9
+        version: 19.2.9
+      jest:
+        specifier: ^30.2.0
+        version: 30.2.0(@types/node@25.1.0)(esbuild-register@3.6.0(esbuild@0.27.2))(ts-node@10.9.2(@types/node@25.1.0)(typescript@5.9.3))
 
   packages/orpheus:
     dependencies:
@@ -497,22 +524,6 @@ importers:
       react-native:
         specifier: 0.83.1
         version: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
-
-  packages/react-native-logs:
-    dependencies:
-      react:
-        specifier: 19.2.0
-        version: 19.2.0
-      react-native:
-        specifier: 0.83.1
-        version: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
-    devDependencies:
-      '@types/react':
-        specifier: ~19.2.9
-        version: 19.2.9
-      jest:
-        specifier: ^30.2.0
-        version: 30.2.0(@types/node@25.1.0)(esbuild-register@3.6.0(esbuild@0.27.2))(ts-node@10.9.2(@types/node@25.1.0)(typescript@5.9.3))
 
   packages/splash:
     devDependencies:
@@ -14536,7 +14547,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 8.53.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       '@typescript-eslint/parser': 8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       eslint: 9.39.2(jiti@2.6.1)
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.2(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1))
       eslint-plugin-expo: 1.0.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.39.2(jiti@2.6.1))
@@ -14586,7 +14597,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.2(jiti@2.6.1)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -14601,14 +14612,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.6.1)):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       eslint: 9.39.2(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.2(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -14649,7 +14660,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.2(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.2(jiti@2.6.1))
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1)))(eslint@9.39.2(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3

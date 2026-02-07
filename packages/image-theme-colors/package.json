@@ -1,5 +1,5 @@
 {
-	"name": "@roitium/expo-image-theme-colors",
+	"name": "@bbplayer/image-theme-colors",
 	"version": "0.3.0",
 	"description": "A module to extract theme colors using expo ImageRef",
 	"keywords": [

@@ -1,4 +1,4 @@
-import { Orpheus, registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
+import { Orpheus, registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
 
 import useAppStore from './src/hooks/stores/useAppStore'
 import { analyticsService } from './src/lib/services/analyticsService'

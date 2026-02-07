@@ -1,4 +1,4 @@
-import { DownloadState, Orpheus } from '@roitium/expo-orpheus'
+import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'

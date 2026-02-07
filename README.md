@@ -46,6 +46,11 @@
 - **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
 - **[apps/docs](./apps/docs)**: 项目文档站点。
 - **[packages/](./packages)**: 共享库与工具包。
+  - **[@bbplayer/splash](./packages/splash)**: 歌词解析与转换核心库。
+  - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 ESLint 规则。
+  - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Orpheus 的 Expo 音频播放模块。
+  - **[@bbplayer/logs](./packages/logs)**: 日志库，支持 `expo-file-system` **next** API。
+  - **[@bbplayer/image-theme-colors](./packages/image-theme-colors)**: 封面颜色提取工具。
 
 ## 开源许可
 

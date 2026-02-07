@@ -1,5 +1,5 @@
 {
-	"name": "@roitium/react-native-logs",
+	"name": "@bbplayer/logs",
 	"version": "5.6.2",
 	"description": "Performance-aware simple logger for React-Native with namespaces, custom levels and custom transports (colored console, file writing, etc.)",
 	"keywords": [

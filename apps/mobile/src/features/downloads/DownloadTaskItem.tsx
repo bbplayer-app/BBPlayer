@@ -1,8 +1,4 @@
-import {
-	DownloadState,
-	Orpheus,
-	type DownloadTask,
-} from '@roitium/expo-orpheus'
+import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'

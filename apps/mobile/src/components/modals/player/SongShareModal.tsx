@@ -1,4 +1,4 @@
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'

@@ -1,4 +1,4 @@
-import { Orpheus, SPECTRUM_SIZE } from '@roitium/expo-orpheus'
+import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, PermissionsAndroid, Platform, View } from 'react-native'

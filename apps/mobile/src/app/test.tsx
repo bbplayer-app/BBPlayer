@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'

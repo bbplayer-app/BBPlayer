@@ -4,7 +4,7 @@ import {
 	RepeatMode,
 	useIsPlaying,
 	usePlaybackState,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'

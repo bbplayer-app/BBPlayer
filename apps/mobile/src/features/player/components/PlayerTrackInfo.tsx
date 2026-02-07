@@ -1,4 +1,4 @@
-import { useIsPlaying } from '@roitium/expo-orpheus'
+import { useIsPlaying } from '@bbplayer/orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'

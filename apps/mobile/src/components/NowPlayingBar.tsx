@@ -3,7 +3,7 @@ import {
 	PlaybackState,
 	useIsPlaying,
 	usePlaybackState,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'

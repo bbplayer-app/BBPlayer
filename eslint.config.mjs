@@ -1,3 +1,4 @@
+import bbplayerPlugin from '@bbplayer/eslint-plugin'
 import importAlias from '@dword-design/eslint-plugin-import-alias'
 import js from '@eslint/js'
 import pluginQuery from '@tanstack/eslint-plugin-query'
@@ -9,8 +10,6 @@ import reactHooksExtra from 'eslint-plugin-react-hooks-extra'
 import reactYouMightNotNeedAnEffect from 'eslint-plugin-react-you-might-not-need-an-effect'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
-
-import modalPlugin from './apps/mobile/eslint-plugins/eslint-plugin-modal/index.js'
 
 export default defineConfig([
 	{
@@ -79,7 +78,7 @@ export default defineConfig([
 			'**/node_modules/**',
 			'**/*.config.mjs',
 			'**/*.js',
-			'packages/react-native-logs/**',
+			'packages/logs/**',
 			'**/package-lock.json',
 			'**/pnpm-lock.yaml',
 		],
@@ -98,15 +97,16 @@ export default defineConfig([
 	},
 	{
 		plugins: {
-			modal: modalPlugin,
+			bbplayer: bbplayerPlugin,
 		},
 		rules: {
-			'modal/no-navigate-after-modal-close': 'error',
+			'bbplayer/no-navigate-after-modal-close': 'error',
 		},
 	},
 	reactYouMightNotNeedAnEffect.configs.recommended,
-	importAlias.configs.recommended,
 	{
+		...importAlias.configs.recommended,
+		files: ['apps/mobile/src/**/*.{js,mjs,cjs,ts,jsx,tsx}'],
 		rules: {
 			'@dword-design/import-alias/prefer-alias': [
 				'error',

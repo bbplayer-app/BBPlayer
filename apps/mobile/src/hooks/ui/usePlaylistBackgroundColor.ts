@@ -1,5 +1,5 @@
-import type { ExtractedPalette } from '@roitium/expo-image-theme-colors'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import type { ExtractedPalette } from '@bbplayer/image-theme-colors'
+import ImageThemeColors from '@bbplayer/image-theme-colors'
 import type { ImageRef } from 'expo-image'
 import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'

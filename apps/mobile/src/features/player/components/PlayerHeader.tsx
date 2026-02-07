@@ -1,4 +1,4 @@
-import { DownloadState } from '@roitium/expo-orpheus'
+import { DownloadState } from '@bbplayer/orpheus'
 import { StyleSheet, View } from 'react-native'
 import { IconButton, Text } from 'react-native-paper'
 import Animated, {

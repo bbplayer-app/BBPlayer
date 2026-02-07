@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useCallback, useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated'

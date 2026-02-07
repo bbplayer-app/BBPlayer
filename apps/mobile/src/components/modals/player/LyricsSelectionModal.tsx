@@ -1,5 +1,5 @@
+import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { parseSpl, type LyricLine } from '@bbplayer/splash'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import { FlashList } from '@shopify/flash-list'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'

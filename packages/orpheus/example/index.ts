@@ -1,4 +1,4 @@
-import { Orpheus, registerOrpheusHeadlessTask } from '@roitium/expo-orpheus'
+import { Orpheus, registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
 import { registerRootComponent } from 'expo'
 
 import LYRICS_DATA from '../bilibili--BV1DL4y1V7xH--584235509.json'

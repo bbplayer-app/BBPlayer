@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'

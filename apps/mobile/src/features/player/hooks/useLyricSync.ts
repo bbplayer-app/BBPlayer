@@ -1,5 +1,5 @@
+import { Orpheus } from '@bbplayer/orpheus'
 import type { LyricLine } from '@bbplayer/splash'
-import { Orpheus } from '@roitium/expo-orpheus'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'

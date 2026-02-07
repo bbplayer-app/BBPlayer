@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'

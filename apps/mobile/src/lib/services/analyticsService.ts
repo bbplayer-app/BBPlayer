@@ -105,6 +105,11 @@ class AnalyticsService {
 		await setAnalyticsCollectionEnabled(getAnalytics(), enabled)
 		logger.debug(`[Analytics] Collection enabled: ${enabled}`)
 	}
+
+	public async logAppInfo(version: string, buildVersion: string) {
+		await this.setUserProperty('app_version', version)
+		await this.setUserProperty('build_version', buildVersion)
+	}
 }
 
 export const analyticsService = new AnalyticsService()
