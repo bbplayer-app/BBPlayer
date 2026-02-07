@@ -1,0 +1,57 @@
+# .easignore - Overrides .gitignore for EAS builds
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native - DO NOT IGNORE android/ or ios/ folders in packages/apps
+# We intentionally omit 'android/' and 'ios/' and 'apps/**/android' etc so they are INCLUDED.
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders - we want to KEEP these for local builds if they exist
+# /ios
+# /android
+# apps/**/android
+# apps/**/ios
+
+temp-builds
+.yarn/install-state.gz
+**/.vscode/
+!/.vscode/
+!/.vscode/settings.json
+!/.vscode/extensions.json
+!/.vscode/tasks.json
+!/.vscode/launch.json
+
+.zed
+.idea
+
+# Secrets - Explicitly include the real ones
+!google-services.real.json
+!GoogleService-Info.real.plist
+!**/google-services.real.json
+!**/GoogleService-Info.real.plist
+
+# Ignore the templates/dummies if necessary, but usually safe to keep
