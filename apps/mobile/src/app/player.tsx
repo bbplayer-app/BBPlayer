@@ -352,6 +352,7 @@ export default function PlayerPage() {
 											jumpTo={jumpTo}
 											imageRef={coverRef}
 											onPresent={() => setQueueVisible(true)}
+											danmakuEnabled={activeTab === 'main'}
 										/>
 									</View>
 								</Activity>

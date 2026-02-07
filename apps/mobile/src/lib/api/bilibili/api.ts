@@ -4,6 +4,7 @@ import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
 	BilibiliCommentsResponse,
+	BilibiliDanmakuItem,
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliToViewVideoList,
@@ -31,6 +32,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
 
 import { bilibiliApiClient } from './client'
+import { bilibili } from './proto/dm'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
@@ -105,7 +107,72 @@ export class BilibiliApi {
 	}
 
 	/**
+	 * 获取分段弹幕
+	 * @param bvid 视频 BV 号
+	 * @param cid 视频 CID
+	 * @param segment_index 分段索引（6min 一段，从 1 开始）
+	 */
+	getSegDanmaku(
+		bvid: string,
+		cid: number,
+		segment_index: number,
+	): ResultAsync<BilibiliDanmakuItem[], BilibiliApiError> {
+		const params = getWbiEncodedParams({
+			type: 1,
+			oid: cid,
+			segment_index: segment_index,
+			pid: bv2av(bvid),
+		})
+
+		return params
+			.andThen((params) => {
+				return bilibiliApiClient.getBuffer('/x/v2/dm/wbi/web/seg.so', params)
+			})
+			.andThen((buffer) => {
+				try {
+					const data = new Uint8Array(buffer)
+					const decoded =
+						bilibili.community.service.dm.v1.DmSegMobileReply.decode(data)
+					const filtered = decoded.elems.filter((elem) => {
+						return (
+							elem.progress !== undefined &&
+							elem.progress !== null &&
+							elem.id !== undefined &&
+							elem.id !== null &&
+							elem.content !== undefined &&
+							elem.content !== null &&
+							elem.mode !== undefined &&
+							elem.mode !== null
+						)
+					}) as (Omit<BilibiliDanmakuItem, 'progress'> & {
+						progress: number | Long
+					})[]
+					const mapped = filtered.map((elem) => ({
+						...elem,
+						progress:
+							typeof elem.progress === 'number'
+								? elem.progress
+								: elem.progress.toNumber(),
+					}))
+					return okAsync(mapped)
+				} catch (error) {
+					// TODO: 有可能返回的是 json，需要解析并且给出详细的错误信息
+					return errAsync(
+						new BilibiliApiError({
+							message: `弹幕解包失败: ${error instanceof Error ? error.message : String(error)}`,
+							type: 'ResponseFailed',
+							cause: error,
+						}),
+					)
+				}
+			})
+	}
+
+	/**
 	 * 搜索视频
+	 * keyword: string,
+	 * page: number,
+	 * options?: { skipCookie?: boolean },
 	 */
 	searchVideos(
 		keyword: string,

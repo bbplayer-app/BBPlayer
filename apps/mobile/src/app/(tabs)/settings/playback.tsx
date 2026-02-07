@@ -1,22 +1,12 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
-import {
-	Appbar,
-	Checkbox,
-	IconButton,
-	Switch,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { useRouter } from 'expo-router'
+import { useState } from 'react'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import { Appbar, IconButton, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { alert } from '@/components/modals/AlertModal'
-import { useAppStore } from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
-import toast from '@/utils/toast'
 
 export default function PlaybackSettingsPage() {
 	const router = useRouter()
@@ -30,60 +20,6 @@ export default function PlaybackSettingsPage() {
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
-	const [isDesktopLyricsShown, setIsDesktopLyricsShown] = useState(
-		Orpheus.isDesktopLyricsShown,
-	)
-	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
-		Orpheus.isDesktopLyricsLocked,
-	)
-
-	const lyricSource = useAppStore((state) => state.settings.lyricSource)
-	const setSettings = useAppStore((state) => state.setSettings)
-	const [lyricSourceMenuVisible, setLyricSourceMenuVisible] = useState(false)
-
-	const enableDesktopLyrics = async () => {
-		try {
-			const hadPermission = await Orpheus.checkOverlayPermission()
-			if (hadPermission) {
-				await Orpheus.showDesktopLyrics()
-				setIsDesktopLyricsShown(true)
-				toast.success('启用成功。从下一首歌开始生效')
-				return
-			}
-			alert(
-				'桌面歌词',
-				'启用桌面歌词需要启用悬浮窗权限。跳转到设置后，请找到 BBPlayer，并允许显示悬浮窗',
-				[
-					{
-						text: '去设置',
-						onPress: async () => {
-							await Orpheus.requestOverlayPermission()
-						},
-					},
-					{ text: '取消' },
-				],
-				{ cancelable: true },
-			)
-		} catch (e) {
-			toastAndLogError('设置桌面歌词失败', e, 'Settings')
-			return
-		}
-	}
-
-	useEffect(() => {
-		const listener = AppState.addEventListener('change', () => {
-			setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
-			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
-		})
-		return () => {
-			listener.remove()
-		}
-	}, [])
-
-	useFocusEffect(() => {
-		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
-		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
-	})
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -145,97 +81,15 @@ export default function PlaybackSettingsPage() {
 						}}
 					/>
 				</View>
-				{Platform.OS === 'android' && (
-					<>
-						<View style={styles.settingRow}>
-							<Text>桌面歌词</Text>
-							<Switch
-								value={isDesktopLyricsShown}
-								onValueChange={async () => {
-									try {
-										if (isDesktopLyricsShown) {
-											await Orpheus.hideDesktopLyrics()
-											setIsDesktopLyricsShown(false)
-										} else {
-											await enableDesktopLyrics()
-										}
-									} catch (e) {
-										toastAndLogError('设置失败', e, 'Settings')
-										return
-									}
-								}}
-							/>
-						</View>
-						<View style={styles.settingRow}>
-							<Text>桌面歌词锁定</Text>
-							<Switch
-								value={isDesktopLyricsLocked}
-								onValueChange={() => {
-									try {
-										Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
-									} catch (e) {
-										toastAndLogError('设置失败', e, 'Settings')
-										return
-									}
-									setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
-								}}
-							/>
-						</View>
-					</>
-				)}
+
 				<View style={styles.settingRow}>
-					<Text>自动匹配的歌词源（不影响手动搜索）</Text>
-					<FunctionalMenu
-						visible={lyricSourceMenuVisible}
-						onDismiss={() => setLyricSourceMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='playlist-music'
-								size={20}
-								onPress={() => setLyricSourceMenuVisible(true)}
-							/>
+					<Text>启用弹幕（听歌看弹幕到底有神魔用～）</Text>
+					<IconButton
+						icon='format-list-checks'
+						onPress={() =>
+							useModalStore.getState().open('DanmakuSettings', undefined)
 						}
-					>
-						<Checkbox.Item
-							mode='ios'
-							label='网易云音乐'
-							status={lyricSource === 'netease' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'netease' })
-								setLyricSourceMenuVisible(false)
-							}}
-						/>
-						<Checkbox.Item
-							mode='ios'
-							label='QQ 音乐'
-							status={lyricSource === 'qqmusic' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'qqmusic' })
-								setLyricSourceMenuVisible(false)
-							}}
-						/>
-						<Checkbox.Item
-							mode='ios'
-							label='酷狗音乐'
-							status={lyricSource === 'kugou' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'kugou' })
-								setLyricSourceMenuVisible(false)
-							}}
-						/>
-						<Checkbox.Item
-							mode='ios'
-							label='自动 (选择最先返回的数据源)'
-							status={lyricSource === 'auto' ? 'checked' : 'unchecked'}
-							onPress={() => {
-								setSettings({ lyricSource: 'auto' })
-								setLyricSourceMenuVisible(false)
-								toast.info(
-									'「自动」的意思是：选择最先返回的数据源，但不会考虑匹配度，所以不保证结果一定是最好的',
-								)
-							}}
-						/>
-					</FunctionalMenu>
+					/>
 				</View>
 			</ScrollView>
 		</View>

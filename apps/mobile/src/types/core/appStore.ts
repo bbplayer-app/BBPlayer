@@ -10,6 +10,8 @@ interface Settings {
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean
 	enableDataCollection: boolean
+	enableDanmaku: boolean
+	danmakuFilterLevel: number
 }
 
 interface AppState {

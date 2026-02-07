@@ -40,6 +40,7 @@ export interface ModalPropsMap {
 		favoriteId: number
 		shouldRedirectToLocalPlaylist?: boolean
 	}
+	DanmakuSettings: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

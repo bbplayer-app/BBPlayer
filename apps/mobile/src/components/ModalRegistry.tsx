@@ -58,6 +58,9 @@ const ManualMatchExternalSyncModal = lazy(
 const InputExternalPlaylistInfoModal = lazy(
 	() => import('./modals/playlist/InputExternalPlaylistInfo'),
 )
+const DanmakuSettingsModal = lazy(
+	() => import('./modals/player/DanmakuSettingsModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -86,4 +89,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	SyncLocalToBilibili: SyncLocalToBilibiliModal,
 	FavoriteSyncProgress: FavoriteSyncProgressModal,
 	ManualMatchExternalSync: ManualMatchExternalSyncModal,
+	DanmakuSettings: DanmakuSettingsModal,
 }

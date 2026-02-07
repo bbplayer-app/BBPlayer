@@ -1,9 +1,7 @@
 import { memo } from 'react'
-import { Dimensions, StyleSheet, View } from 'react-native'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Icon, Text, useTheme } from 'react-native-paper'
-
-const { height: windowHeight, width: windowWidth } = Dimensions.get('window')
 
 export interface LyricsOffsetControlProps {
 	visible: boolean
@@ -20,6 +18,9 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	onChangeOffset,
 	onClose,
 }: LyricsOffsetControlProps) {
+	const dimensions = useWindowDimensions()
+	const windowHeight = dimensions.height
+	const windowWidth = dimensions.width
 	const colors = useTheme().colors
 
 	return (

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { Dimensions, FlatList, Keyboard, StyleSheet, View } from 'react-native'
+import {
+	FlatList,
+	Keyboard,
+	StyleSheet,
+	useWindowDimensions,
+	View,
+} from 'react-native'
 import { useBottomTabBarHeight } from 'react-native-bottom-tabs'
 import { RectButton } from 'react-native-gesture-handler'
 import { Divider, Text, useTheme } from 'react-native-paper'
@@ -67,8 +73,9 @@ export default function SearchSuggestions({
 	onSuggestionPress,
 }: SearchSuggestionsProps) {
 	const { colors } = useTheme()
-	const windowHeight = Dimensions.get('window').height
-	const windowWidth = Dimensions.get('window').width
+	const dimensions = useWindowDimensions()
+	const windowHeight = dimensions.height
+	const windowWidth = dimensions.width
 	const insets = useSafeAreaInsets()
 	const { data: items } = useSearchSuggestions(query)
 	const parsedItems = useMemo(() => {
