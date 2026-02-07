@@ -9,7 +9,7 @@ import {
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
 import { router } from 'expo-router'
-import { Activity, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
 	StyleSheet,
@@ -274,6 +274,22 @@ export default function PlayerPage() {
 		}
 	}, [playerBackgroundStyle, setSettings])
 
+	const mainTabStyle = useAnimatedStyle(() => {
+		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [1, 0, 0])
+		return {
+			opacity,
+			pointerEvents: scrollX.value > 0.5 ? 'none' : 'auto',
+		}
+	})
+
+	const lyricsTabStyle = useAnimatedStyle(() => {
+		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [0, 0, 1])
+		return {
+			opacity,
+			pointerEvents: scrollX.value < 0.5 ? 'none' : 'auto',
+		}
+	})
+
 	return (
 		<View style={styles.fullScreen}>
 			{/* Black overlay */}
@@ -345,25 +361,23 @@ export default function PlayerPage() {
 								scrollX={scrollX}
 							/>
 							<View style={styles.tabView}>
-								<Activity mode={activeTab === 'main' ? 'visible' : 'hidden'}>
-									<View style={StyleSheet.absoluteFill}>
-										<PlayerMainTab
-											sheetRef={sheetRef}
-											jumpTo={jumpTo}
-											imageRef={coverRef}
-											onPresent={() => setQueueVisible(true)}
-											danmakuEnabled={activeTab === 'main'}
-										/>
-									</View>
-								</Activity>
-								<Activity mode={activeTab === 'lyrics' ? 'visible' : 'hidden'}>
-									<View style={StyleSheet.absoluteFill}>
-										<Lyrics
-											currentIndex={index}
-											onPressBackground={() => jumpTo('main')}
-										/>
-									</View>
-								</Activity>
+								<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
+									<PlayerMainTab
+										sheetRef={sheetRef}
+										jumpTo={jumpTo}
+										imageRef={coverRef}
+										onPresent={() => setQueueVisible(true)}
+										danmakuEnabled={activeTab === 'main'}
+									/>
+								</Animated.View>
+								<Animated.View
+									style={[StyleSheet.absoluteFill, lyricsTabStyle]}
+								>
+									<Lyrics
+										currentIndex={index}
+										onPressBackground={() => jumpTo('main')}
+									/>
+								</Animated.View>
 							</View>
 						</View>
 

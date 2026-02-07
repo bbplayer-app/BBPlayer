@@ -1,0 +1,20 @@
+# Replicate essential ignores from root and local .gitignore
+node_modules/
+.expo/
+dist/
+web-build/
+android/
+ios/
+
+# Include real google services files
+!google-services.real.json
+!GoogleService-Info.real.plist
+
+# Keep other variants ignored
+google-services-*.json
+GoogleService-Info-*.plist
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
