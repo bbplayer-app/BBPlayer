@@ -6,10 +6,10 @@ Orpheus 是一个为 BBPlayer 构建的高性能音频播放库，基于 Android
 
 ## 目录
 
-- [API 方法 (Methods)](API-Methods.md)
-- [数据类型 (Types)](API-Types.md)
-- [事件与后台任务 (Events)](API-Events.md)
-- [发版指南 (Releasing)](RELEASING.md)
+- [API 方法 (Methods)](orpheus/API-Methods)
+- [数据类型 (Types)](orpheus/API-Types)
+- [事件与后台任务 (Events)](orpheus/API-Events)
+- [发版指南 (Releasing)](orpheus/RELEASING)
 
 ## 快速开始
 
