@@ -4,38 +4,82 @@
 
 ## 🚀 快速开始 (Getting Started)
 
-### 环境准备
+## 🚀 快速开始 (Getting Started)
 
-本项目的开发环境基于 Node.js 和 React Native (Expo)。
+### 1. 环境准备
 
-1.  **包管理器**: 必须使用 **pnpm**。
-2.  **移动开发环境**:
-    - **Android**: 安装 Android Studio 并配置 Android SDK。
+- **包管理器**: 必须使用 **pnpm**。
+- **Android 环境**: 配置好 Android Studio 和 SDK。
+- **mise (可选)**: 我们推荐使用 [mise](https://mise.jdx.dev/) 来管理环境变量和任务脚本。
 
-### 安装依赖
+### 2. 安装依赖
 
-在项目根目录下运行，这将安装所有 apps 和 packages 的依赖：
+在项目根目录下运行：
 
 ```bash
 pnpm install
 ```
 
-### 启动项目
+### 3. 配置环境变量
 
-> [!IMPORTANT]
-> 你需要准备好 firebase 的 google-services.json 和 GoogleService-Info.plist 文件，并将它们放在 `apps/mobile/assets/config/google-services/` 目录下。
+你可以通过 `.env.local` 文件或 export 命令配置以下环境变量：
 
-请确保你位于 `apps/mobile` 目录下，或者使用过滤器运行命令：
+- **VERSION_CODE**: (必须) 用于标记构建版本。
+  - 推荐命令: `git rev-list --count HEAD`
+- **SENTRY_AUTH_TOKEN**: (可选) Sentry 错误追踪。
+  - **dev 构建**: 不需要此 Token
+  - **production / preview 构建**: 需要真实 Token 以上传符号表。
+
+### 4. 构建基座 (Development Build)
+
+本项目包含原生代码，**不能**直接使用 Expo Go 运行。你需要先构建自定义基座。
+
+**方式 A: 使用 EAS (推荐)**
+
+参考 `apps/mobile/mise.toml`，运行构建命令：
 
 ```bash
-# 进入 app 目录启动
-cd apps/mobile
-pnpm start
+# 如果安装了 mise (需要传入 version 参数)
+mise run builddev --version 1.0.0
 
-# 运行 Android 模拟器
+# 或者直接运行 eas 命令
 cd apps/mobile
-pnpm android
+VERSION_CODE=$(git rev-list --count HEAD) eas build --profile dev --platform android --local --output=./temp-builds/bbplayer-1.0.0-dev.apk
 ```
+
+**方式 B: 传统 Prebuild**
+
+如果你更习惯使用原生工具链：
+
+```bash
+cd apps/mobile
+# 生成原生目录 (android/ios). 推荐加上 --clean 以确保配置生效
+npx expo prebuild --clean
+
+# 编译并安装到设备
+npx expo run:android
+```
+
+### 5. 启动开发
+
+构建并安装应用后，启动 Metro 服务器进行开发：
+
+```bash
+cd apps/mobile
+pnpm expo start
+```
+
+> [!IMPORTANT]
+> **Firebase 配置 (Firebase Configuration)**
+>
+> 项目包含模拟的 Firebase 配置文件 (`google-services.json` 和 `GoogleService-Info.plist`)，你可以直接运行项目。
+>
+> 如果你需要使用真实的 Firebase 功能（如 Analytics），请将你的真实配置文件重命名为：
+>
+> - `google-services.real.json`
+> - `GoogleService-Info.real.plist`
+>
+> 并放在 `apps/mobile/assets/config/google-services/` 目录下。使用 eas 构建时会自动优先使用真实文件。（如果不使用 eas 构建，则需要在放置真实文件后，运行 `npx expo prebuild --clean`）
 
 ## 📂 文档导航
 

@@ -1,0 +1,67 @@
+{
+	"project_info": {
+		"project_number": "123456789012",
+		"project_id": "bbplayer-mock",
+		"storage_bucket": "bbplayer-mock.firebasestorage.app"
+	},
+	"client": [
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:123456789012:android:mockandroidappid01",
+				"android_client_info": {
+					"package_name": "com.roitium.bbplayer"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyMockKeyForAndroidBBPlayer123456"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		},
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:123456789012:android:mockandroidappid02",
+				"android_client_info": {
+					"package_name": "com.roitium.bbplayer.dev"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyMockKeyForAndroidBBPlayerDev123456"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		},
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:123456789012:android:mockandroidappid03",
+				"android_client_info": {
+					"package_name": "com.roitium.bbplayer.preview"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyMockKeyForAndroidBBPlayerPreview123456"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		}
+	],
+	"configuration_version": "1"
+}

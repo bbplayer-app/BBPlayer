@@ -123,9 +123,12 @@ jobs:
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
 
       - name: ⚙️ Prepare Firebase Config
+        env:
+          FIREBASE_ANDROID_JSON: ${{ secrets.FIREBASE_ANDROID_JSON }}
+        if: ${{ env.FIREBASE_ANDROID_JSON != '' }}
         run: |
           mkdir -p apps/mobile/assets/config/google-services
-          echo "${{ secrets.FIREBASE_ANDROID_JSON }}" | base64 -d > apps/mobile/assets/config/google-services/google-services.json
+          echo "$FIREBASE_ANDROID_JSON" | base64 -d > apps/mobile/assets/config/google-services/google-services.real.json
 
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
