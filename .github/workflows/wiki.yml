@@ -3,18 +3,28 @@ on:
   push:
     branches: [dev]
     paths:
-      - apps/docs/docs/**
+      - apps/mobile/docs/**
+      - packages/orpheus/docs/**
       - .github/workflows/wiki.yml
+
 concurrency:
   group: publish-wiki
   cancel-in-progress: true
+
 permissions:
   contents: write
+
 jobs:
   publish-wiki:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Wiki Content
+        run: |
+          mkdir temp_wiki
+          cp -r apps/mobile/docs/* temp_wiki/
+          mkdir -p temp_wiki/orpheus
+          cp -r packages/orpheus/docs/* temp_wiki/orpheus/
       - uses: Andrew-Chen-Wang/github-wiki-action@v5
         with:
-          path: apps/mobile/docs
+          path: temp_wiki
