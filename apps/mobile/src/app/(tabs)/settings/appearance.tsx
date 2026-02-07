@@ -26,9 +26,6 @@ export default function AppearanceSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 
-	const enableOldSchoolStyleLyric = useAppStore(
-		(state) => state.settings.enableOldSchoolStyleLyric,
-	)
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
@@ -39,9 +36,6 @@ export default function AppearanceSettingsPage() {
 		(state) => state.settings.enableSpectrumVisualizer,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
-	const enableVerbatimLyrics = useAppStore(
-		(state) => state.settings.enableVerbatimLyrics,
-	)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
@@ -124,26 +118,7 @@ export default function AppearanceSettingsPage() {
 						onValueChange={handleSpectrumToggle}
 					/>
 				</View>
-				<View style={styles.settingRow}>
-					<Text>显示逐字歌词</Text>
-					<Switch
-						value={enableVerbatimLyrics}
-						onValueChange={() =>
-							setSettings({ enableVerbatimLyrics: !enableVerbatimLyrics })
-						}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>恢复旧版歌词样式</Text>
-					<Switch
-						value={enableOldSchoolStyleLyric}
-						onValueChange={() =>
-							setSettings({
-								enableOldSchoolStyleLyric: !enableOldSchoolStyleLyric,
-							})
-						}
-					/>
-				</View>
+
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>
 						<Text>选择底部播放条样式</Text>

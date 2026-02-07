@@ -11,6 +11,7 @@ export default function SettingsLayout() {
 			<Stack.Screen name='appearance' />
 			<Stack.Screen name='playback' />
 			<Stack.Screen name='general' />
+			<Stack.Screen name='lyrics' />
 			<Stack.Screen name='donate' />
 		</Stack>
 	)

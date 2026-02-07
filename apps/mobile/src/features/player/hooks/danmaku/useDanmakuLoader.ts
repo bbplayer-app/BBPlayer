@@ -38,11 +38,13 @@ export default function useDanmakuLoader(
 				const cidResult = await bilibiliApi.getPageList(bvid)
 				if (cidResult.isErr()) {
 					logger.error('获取 cid 失败', cidResult.error)
+					isLoadingRef.current = false
 					return
 				}
 				cidToUse = cidResult.value[0].cid
 				if (!cidToUse) {
 					logger.error('获取 cid 失败')
+					isLoadingRef.current = false
 					return
 				}
 			}

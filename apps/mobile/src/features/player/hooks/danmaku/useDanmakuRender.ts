@@ -13,6 +13,7 @@ import {
 	useSharedValue,
 } from 'react-native-reanimated'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliDanmakuItem } from '@/types/apis/bilibili'
 
 import { CONFIG } from './constants'
@@ -111,6 +112,7 @@ export const useDanmakuRender = ({
 		new Array<number>(1).fill(0),
 	)
 	const heightSV = useSharedValue(height)
+	const enableDanmaku = useAppStore((state) => state.settings.enableDanmaku)
 
 	useEffect(() => {
 		heightSV.value = height
@@ -143,6 +145,7 @@ export const useDanmakuRender = ({
 			tracks.set(new Array<number>(newTrackCount).fill(0))
 			staticTopTracks.set(new Array<number>(newTrackCount).fill(0))
 			staticBottomTracks.set(new Array<number>(newTrackCount).fill(0))
+			activeBullets.set([])
 		},
 	)
 
@@ -181,17 +184,15 @@ export const useDanmakuRender = ({
 
 			spawnedCount++
 
-			const strColor = item.color?.toString(16)
-			const color = item.color
-				? Skia.Color(`#${strColor}`)
-				: Skia.Color(defaultColor)
+			const hexColor = '#' + item.color?.toString(16).padStart(6, '0')
+			const color = item.color ? Skia.Color(hexColor) : Skia.Color(defaultColor)
 
 			let fontSize = CONFIG.FONT_SIZE
 			if (item.fontsize === 18) fontSize = 12
 			else if (item.fontsize === 25) fontSize = 16
 			else if (item.fontsize === 36) fontSize = 22
 
-			const isBlack = item.color === 0
+			const isBlack = hexColor === '#000000'
 
 			const shadows = isBlack
 				? undefined
@@ -257,53 +258,63 @@ export const useDanmakuRender = ({
 			const mode = item.mode || 1
 
 			if (mode === 5) {
+				let targetIndex = -1
 				staticTopTracks.modify((t) => {
 					'worklet'
 					for (let i = 0; i < t.length; i++) {
-						const index = i
 						if (t[i] <= now) {
 							t[i] = now + 4000
-							activeBullets.modify((bullets) => {
-								bullets.push({
-									paragraph,
-									x: (width - textWidth) / 2,
-									y: index * CONFIG.LINE_HEIGHT + 10,
-									width: textWidth,
-									opacity: CONFIG.OPACITY,
-									vx: 0,
-									birthTime: now,
-								})
-								return bullets
-							})
+							targetIndex = i
 							break
 						}
 					}
 					return t
 				})
+
+				if (targetIndex !== -1) {
+					activeBullets.modify((bullets) => {
+						'worklet'
+						bullets.push({
+							paragraph,
+							x: (width - textWidth) / 2,
+							y: targetIndex * CONFIG.LINE_HEIGHT + 10,
+							width: textWidth,
+							opacity: CONFIG.OPACITY,
+							vx: 0,
+							birthTime: now,
+						})
+						return bullets
+					})
+				}
 			} else if (mode === 4) {
+				let targetIndex = -1
 				staticBottomTracks.modify((t) => {
 					'worklet'
 					for (let i = 0; i < t.length; i++) {
-						const index = i
 						if (t[i] <= now) {
 							t[i] = now + 4000
-							activeBullets.modify((bullets) => {
-								bullets.push({
-									paragraph,
-									x: (width - textWidth) / 2,
-									y: heightSV.value - (index + 1) * CONFIG.LINE_HEIGHT - 10,
-									width: textWidth,
-									opacity: CONFIG.OPACITY,
-									vx: 0,
-									birthTime: now,
-								})
-								return bullets
-							})
+							targetIndex = i
 							break
 						}
 					}
 					return t
 				})
+
+				if (targetIndex !== -1) {
+					activeBullets.modify((bullets) => {
+						'worklet'
+						bullets.push({
+							paragraph,
+							x: (width - textWidth) / 2,
+							y: heightSV.value - (targetIndex + 1) * CONFIG.LINE_HEIGHT - 10,
+							width: textWidth,
+							opacity: CONFIG.OPACITY,
+							vx: 0,
+							birthTime: now,
+						})
+						return bullets
+					})
+				}
 			} else {
 				const bestTrack = findBestScrollTrack(tracks.value, width)
 				if (bestTrack !== -1) {
@@ -346,7 +357,7 @@ export const useDanmakuRender = ({
 			}
 			return bullets
 		})
-	})
+	}, enableDanmaku)
 
 	useFrameCallback(() => {
 		const recorder = Skia.PictureRecorder()
@@ -367,7 +378,7 @@ export const useDanmakuRender = ({
 		}
 
 		picture.value = recorder.finishRecordingAsPicture()
-	})
+	}, enableDanmaku)
 
 	return { picture, resetEngine }
 }

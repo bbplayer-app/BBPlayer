@@ -36,6 +36,7 @@
 - 将 `eslint-plugin-modal` 移出 `apps/mobile` 并作为一个单独的包 `@bbplayer/eslint-plugin` 放在 `packages` 目录下
 - 将所有 `@roitium` 作用域的包迁移至 `@bbplayer` 作用域
 - 更新文档和 README，补充逐字歌词和歌词罗马音的功能说明
+- 重构设置页面，将歌词相关设置移动到独立的「歌词」分类中
 
 ### Fixed
 

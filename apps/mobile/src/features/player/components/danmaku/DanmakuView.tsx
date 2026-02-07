@@ -80,8 +80,6 @@ export const DanmakuView = ({
 		[position],
 	)
 
-	if (!picture) return null
-
 	return (
 		<View
 			style={StyleSheet.absoluteFill}

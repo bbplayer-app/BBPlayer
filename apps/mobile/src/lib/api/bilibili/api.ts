@@ -170,7 +170,7 @@ export class BilibiliApi {
 
 	/**
 	 * 搜索视频
-	 * bvid: string,
+	 * keyword: string,
 	 * page: number,
 	 * options?: { skipCookie?: boolean },
 	 */

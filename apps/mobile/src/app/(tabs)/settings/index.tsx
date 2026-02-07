@@ -64,7 +64,7 @@ export default function SettingsPage() {
 					<Divider style={styles.divider} />
 					<List.Item
 						title='播放'
-						description='播放行为、音效设置、歌词'
+						description='播放行为、音效设置、弹幕'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -78,6 +78,24 @@ export default function SettingsPage() {
 							/>
 						)}
 						onPress={() => router.push('/settings/playback')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
+						title='歌词'
+						description='歌词源、桌面歌词、样式'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='text-box-outline'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/lyrics')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
