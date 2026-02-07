@@ -13,6 +13,6 @@
 
 包含项目架构、贡献指南、发版流程以及开发规范。
 
-### 🎸 [Orpheus 音频模块 (Orpheus Home)](orpheus/Home)
+### 🎸 [Orpheus 音频模块 (Orpheus Home)](orpheus-Home)
 
 包含核心音频播放器的 API 方法、事件说明及技术方案。

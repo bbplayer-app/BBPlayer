@@ -29,9 +29,11 @@ jobs:
           cp apps/mobile/docs/Home.md temp_wiki/App-Home.md
           # 3. Copy remaining mobile docs (excluding Home.md)
           find apps/mobile/docs -maxdepth 1 -type f ! -name 'Home.md' -exec cp {} temp_wiki/ \;
-          # 4. Copy orpheus docs to orpheus/ subdirectory
-          mkdir -p temp_wiki/orpheus
-          cp -r packages/orpheus/docs/* temp_wiki/orpheus/
+          # 4. Copy orpheus docs with orpheus- prefix (flat structure for GitHub Wiki)
+          for file in packages/orpheus/docs/*.md; do
+            filename=$(basename "$file")
+            cp "$file" "temp_wiki/orpheus-$filename"
+          done
       - uses: Andrew-Chen-Wang/github-wiki-action@v5
         with:
           path: temp_wiki

@@ -9,11 +9,11 @@
 - [开发规范](BEST_PRACTICES)
 - [发版流程](RELEASE)
 
-#### [Orpheus 音频库](orpheus/Home)
+#### [Orpheus 音频库](orpheus-Home)
 
-- [API 方法](orpheus/API-Methods)
-- [数据类型](orpheus/API-Types)
-- [事件说明](orpheus/API-Events)
+- [API 方法](orpheus-API-Methods)
+- [数据类型](orpheus-API-Types)
+- [事件说明](orpheus-API-Events)
 
 ---
 
