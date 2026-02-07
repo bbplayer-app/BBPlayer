@@ -1,7 +1,12 @@
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
+import {
+	RefreshControl,
+	StyleSheet,
+	useWindowDimensions,
+	View,
+} from 'react-native'
 import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -63,8 +68,6 @@ const mapApiItemToTrack = (
 	}
 }
 
-const dimensions = Dimensions.get('window')
-
 export default function ToViewPage() {
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
@@ -72,6 +75,7 @@ export default function ToViewPage() {
 	const { colors } = theme
 	const [menuVisiable, setMenuVisiable] = useState(false)
 	const insets = useSafeAreaInsets()
+	const dimensions = useWindowDimensions()
 
 	const coverRef = useImage('', {
 		onError: () => void 0,

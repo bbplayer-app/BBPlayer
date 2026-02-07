@@ -13,10 +13,10 @@ import {
 	useState,
 } from 'react'
 import {
-	Dimensions,
 	Pressable,
 	ScrollView,
 	StyleSheet,
+	useWindowDimensions,
 	View,
 } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
@@ -47,8 +47,6 @@ import {
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
 
-const { height: windowHeight } = Dimensions.get('window')
-
 const AnimatedFlashList = Animated.createAnimatedComponent(
 	FlashList,
 ) as typeof FlashList<LyricLine & { isPaddingItem?: boolean }>
@@ -66,16 +64,10 @@ const renderItem = ({
 		enableVerbatimLyrics: boolean
 		onPressBackground?: () => void
 		currentTime: SharedValue<number>
+		windowHeight: number
 	}
 >) => {
-	const resolvedExtraData = extraData as {
-		currentLyricIndex: number
-		handleJumpToLyric: (index: number) => void
-		enableOldSchoolStyleLyric: boolean
-		enableVerbatimLyrics: boolean
-		onPressBackground?: () => void
-		currentTime: SharedValue<number>
-	}
+	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		currentLyricIndex,
 		handleJumpToLyric,
@@ -83,7 +75,8 @@ const renderItem = ({
 		enableVerbatimLyrics,
 		onPressBackground,
 		currentTime,
-	} = resolvedExtraData ?? {}
+		windowHeight,
+	} = extraData
 
 	if (item.isPaddingItem) {
 		return (
@@ -130,6 +123,8 @@ const Lyrics = memo(function Lyrics({
 	currentIndex: number
 	onPressBackground?: () => void
 }) {
+	const dimensions = useWindowDimensions()
+	const windowHeight = dimensions.height
 	const colors = useTheme().colors
 	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
 	const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
@@ -387,6 +382,7 @@ const Lyrics = memo(function Lyrics({
 			enableVerbatimLyrics,
 			onPressBackground,
 			currentTime: adjustedCurrentTime,
+			windowHeight,
 		}),
 		[
 			currentLyricIndex,
@@ -395,6 +391,7 @@ const Lyrics = memo(function Lyrics({
 			enableVerbatimLyrics,
 			onPressBackground,
 			adjustedCurrentTime,
+			windowHeight,
 		],
 	)
 
@@ -436,7 +433,13 @@ const Lyrics = memo(function Lyrics({
 		if (!lyrics.lrc || !finalLyrics) {
 			return (
 				<Animated.ScrollView
-					contentContainerStyle={styles.rawLyricsScrollViewContainer}
+					contentContainerStyle={[
+						styles.rawLyricsScrollViewContainer,
+						{
+							paddingTop: windowHeight * 0.05,
+							paddingBottom: windowHeight * 0.5,
+						},
+					]}
 					scrollEventThrottle={16}
 					onScroll={scrollHandler}
 				>
@@ -562,8 +565,6 @@ const styles = StyleSheet.create({
 	rawLyricsScrollViewContainer: {
 		justifyContent: 'center',
 		alignItems: 'center',
-		paddingTop: windowHeight * 0.05,
-		paddingBottom: windowHeight * 0.5,
 	},
 	rawLyricsText: {
 		textAlign: 'center',
