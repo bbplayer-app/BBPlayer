@@ -6,6 +6,7 @@ import type * as schema from '@/lib/db/schema'
 import type { DatabaseError, ServiceError } from '@/lib/errors'
 import type { FacadeError } from '@/lib/errors/facade'
 import { createFacadeError } from '@/lib/errors/facade'
+import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import { artistService } from '@/lib/services/artistService'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
@@ -145,6 +146,11 @@ export class SyncExternalPlaylistFacade {
 				if (addTracksResult.isErr()) throw addTracksResult.error
 
 				logger.info('Save matched playlist success', { playlistId })
+				void analyticsService.logPlaylistSync(
+					'sync_external',
+					'external',
+					orderedTrackIds.length,
+				)
 				return playlistId
 			}),
 			(e) =>

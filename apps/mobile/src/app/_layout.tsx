@@ -1,4 +1,3 @@
-import analytics from '@react-native-firebase/analytics'
 import { useLogger } from '@react-navigation/devtools'
 import { Orpheus } from '@roitium/expo-orpheus'
 import * as Sentry from '@sentry/react-native'
@@ -18,6 +17,7 @@ import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
 import AppProviders from '@/components/providers'
+import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
@@ -25,6 +25,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -58,6 +59,7 @@ export default Sentry.wrap(function RootLayout() {
 	const open = useModalStore((state) => state.open)
 	const ref = useNavigationContainerRef()
 	useCheckUpdate()
+	useFeatureTracking()
 
 	useLogger(ref)
 
@@ -70,14 +72,7 @@ export default Sentry.wrap(function RootLayout() {
 
 	useEffect(() => {
 		const logScreenView = async () => {
-			try {
-				await analytics().logScreenView({
-					screen_name: pathname,
-					screen_class: pathname,
-				})
-			} catch (error) {
-				console.error('[Analytics] Failed to log screen view:', error)
-			}
+			await analyticsService.logScreenView(pathname)
 		}
 
 		if (pathname) {

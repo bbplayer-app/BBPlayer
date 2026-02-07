@@ -20,12 +20,14 @@ export default function GeneralSettingsPage() {
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const sendPlayHistory = useAppStore((state) => state.settings.sendPlayHistory)
-	const setEnableSentryReport = useAppStore(
-		(state) => state.setEnableSentryReport,
+
+	const setEnableDataCollection = useAppStore(
+		(state) => state.setEnableDataCollection,
 	)
-	const enableSentryReport = useAppStore(
-		(state) => state.settings.enableSentryReport,
+	const enableDataCollection = useAppStore(
+		(state) => state.settings.enableDataCollection,
 	)
+
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 
@@ -95,10 +97,10 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
-					<Text>向{'\u2009Sentry\u2009'}上报错误</Text>
+					<Text>分享数据（崩溃报告 & 匿名统计）</Text>
 					<Switch
-						value={enableSentryReport}
-						onValueChange={setEnableSentryReport}
+						value={enableDataCollection}
+						onValueChange={setEnableDataCollection}
 					/>
 				</View>
 				<View style={styles.settingRow}>

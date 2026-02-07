@@ -10,6 +10,7 @@
 ### Added
 
 - 支持酷狗音乐歌词搜索
+- 集成 Firebase Analytics
 - 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
 - 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
 - 懒加载模态框加载时显示 `ActivityIndicator`

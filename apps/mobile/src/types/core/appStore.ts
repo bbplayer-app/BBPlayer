@@ -2,7 +2,6 @@ import type { Result } from 'neverthrow'
 
 interface Settings {
 	sendPlayHistory: boolean
-	enableSentryReport: boolean
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
 	enableSpectrumVisualizer: boolean
@@ -10,6 +9,7 @@ interface Settings {
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean
+	enableDataCollection: boolean
 }
 
 interface AppState {
@@ -25,8 +25,8 @@ interface AppState {
 	// Settings
 	setSettings: (updates: Partial<Settings>) => void
 
-	setEnableSentryReport: (value: boolean) => void
 	setEnableDebugLog: (value: boolean) => void
+	setEnableDataCollection: (value: boolean) => void
 }
 
 export type { AppState, Settings }

@@ -409,14 +409,36 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
+    private fun sendTrackPausedEvent() {
+        try {
+            val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
+            intent.putExtra("eventName", "onTrackPaused")
+            startService(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun sendTrackResumedEvent() {
+        try {
+            val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
+            intent.putExtra("eventName", "onTrackResumed")
+            startService(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
+                    sendTrackResumedEvent()
                 } else {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
+                    sendTrackPausedEvent()
                 }
             }
 

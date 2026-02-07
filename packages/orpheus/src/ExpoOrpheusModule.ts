@@ -84,9 +84,19 @@ export interface OrpheusHeadlessTrackFinishedEvent {
 	duration: number
 }
 
+export interface OrpheusHeadlessTrackPausedEvent {
+	eventName: 'onTrackPaused'
+}
+
+export interface OrpheusHeadlessTrackResumedEvent {
+	eventName: 'onTrackResumed'
+}
+
 export type OrpheusHeadlessEvent =
 	| OrpheusHeadlessTrackStartedEvent
 	| OrpheusHeadlessTrackFinishedEvent
+	| OrpheusHeadlessTrackPausedEvent
+	| OrpheusHeadlessTrackResumedEvent
 
 declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	restorePlaybackPositionEnabled: boolean
