@@ -1,5 +1,6 @@
-import type { TransitionReason } from '@roitium/expo-orpheus'
-import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
+import type { TransitionReason } from '@bbplayer/orpheus'
+import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
+import { parseSpl } from '@bbplayer/splash'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 
@@ -272,8 +273,30 @@ function setDesktopLyrics(
 				toastAndLogError('获取歌词失败：', lyricsResult.error, 'Utils.Player')
 				return
 			}
-			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
-			await Orpheus.setDesktopLyrics(JSON.stringify(lyricsResult.value))
+			const mergedLyrics =
+				(lyricsResult.value.lrc ?? '') +
+				'\n' +
+				(lyricsResult.value.tlyric ?? '')
+			try {
+				const parsedLyrics = parseSpl(mergedLyrics)
+				const orpheusLyrics = parsedLyrics.lines.map((line) => {
+					return {
+						timestamp: line.startTime / 1000,
+						text: line.content,
+						translation: line.translations[0],
+					}
+				})
+				if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+				await Orpheus.setDesktopLyrics(
+					JSON.stringify({
+						lyrics: orpheusLyrics,
+						offset: lyricsResult.value.misc?.userOffset ?? 0,
+					}),
+				)
+			} catch (e) {
+				toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
+				return
+			}
 		} catch (e) {
 			toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
 			return

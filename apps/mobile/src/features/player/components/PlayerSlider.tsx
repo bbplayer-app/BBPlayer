@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
+import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -60,18 +60,24 @@ function TextWithAnimation({
 		<>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(position)}
 			</Text>
 			<Text
 				variant='bodySmall'
+				numberOfLines={1}
+				adjustsFontSizeToFit
 				style={{
 					color: colors.onSurfaceVariant,
 					fontVariant: ['tabular-nums'],
+					includeFontPadding: false,
 				}}
 			>
 				{formatDurationToHHMMSS(duration)}
@@ -86,7 +92,7 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
-	const { position, duration, buffered } = useAnimatedTrackProgress()
+	const { position, duration, buffered } = useSmoothProgress()
 
 	const containerWidth = useSharedValue(0)
 	const isScrubbing = useSharedValue(false)
@@ -162,6 +168,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const pan = useMemo(
 		() =>
 			Gesture.Pan()
+				.minDistance(1)
 				.onBegin((e) => {
 					if (containerWidth.value === 0) return
 					isScrubbing.set(true)

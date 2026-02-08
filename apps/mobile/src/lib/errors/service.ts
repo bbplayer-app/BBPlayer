@@ -4,7 +4,6 @@ export type ServiceErrorType =
 	| 'ArtistNotFound'
 	| 'PlaylistNotFound'
 	| 'PlaylistAlreadyExists'
-	| 'TrackAlreadyExists'
 	| 'TrackNotInPlaylist'
 	| 'ArtistAlreadyExists'
 	| 'Validation'
@@ -87,13 +86,6 @@ export function createPlaylistAlreadyExists(title: string, cause?: unknown) {
 			cause,
 		},
 	)
-}
-
-export function createTrackAlreadyExists(title: string, cause?: unknown) {
-	return createServiceError('TrackAlreadyExists', `歌曲 "${title}" 已存在`, {
-		data: { title },
-		cause,
-	})
 }
 
 export { DatabaseError } from './index'

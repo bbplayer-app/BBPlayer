@@ -1,3 +1,4 @@
+import { type LyricLine } from '@bbplayer/splash'
 import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, View } from 'react-native'
@@ -5,8 +6,6 @@ import SquircleView from 'react-native-fast-squircle'
 import { Icon, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import ViewShot from 'react-native-view-shot'
-
-import type { LyricLine } from '@/types/player/lyrics'
 
 interface LyricsShareCardProps {
 	title: string
@@ -89,16 +88,16 @@ export const LyricsShareCard = ({
 					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
-							key={`${lyric.timestamp}-${index}`}
+							key={`${lyric.startTime}-${index}`}
 							style={styles.lyricLine}
 						>
 							<Text
 								variant='headlineSmall'
 								style={[styles.lyricText, { color: '#fff' }]}
 							>
-								{lyric.text}
+								{lyric.content}
 							</Text>
-							{lyric.translation && (
+							{lyric.translations?.[0] && (
 								<Text
 									variant='bodyMedium'
 									style={[
@@ -106,7 +105,7 @@ export const LyricsShareCard = ({
 										{ color: 'rgba(255,255,255,0.7)' },
 									]}
 								>
-									{lyric.translation}
+									{lyric.translations[0]}
 								</Text>
 							)}
 						</View>

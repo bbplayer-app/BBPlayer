@@ -1,3 +1,7 @@
+import { execSync } from 'child_process'
+import fs from 'fs'
+import path from 'path'
+
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 
 import { version } from './package.json'
@@ -7,15 +11,28 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
-	const versionCodeEnv = process.env.VERSION_CODE ?? undefined
-	if (versionCodeEnv !== undefined) {
+	const versionCodeEnv =
+		// env 获取到的不可能是 string，我们这么做只是为了让 eslint 开心
+		(process.env.VERSION_CODE as string | undefined | number) ?? undefined
+	const pwd = process.cwd()
+	// EAS 环境的行为很奇怪，似乎不会复制 .git 目录，所以需要特殊强制外部提供 versionCode
+	const isInEAS = pwd.includes('eas-build-local-nodejs')
+	if (typeof versionCodeEnv === 'string') {
 		const versionCode = parseInt(versionCodeEnv, 10)
+		if (!isNaN(versionCode) && versionCode > 0) {
+			return versionCode
+		}
+	} else if (!isInEAS) {
+		const versionCodeString = execSync('git rev-list --count HEAD')
+			.toString()
+			.trim()
+		const versionCode = parseInt(versionCodeString, 10)
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
 		}
 	}
 
-	throw new Error('VERSION_CODE environment variable is required. ')
+	throw new Error('VERSION_CODE environment variable is required or not in EAS')
 }
 
 const versionCode = getVersionCode()
@@ -45,151 +62,212 @@ const getAppName = () => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default ({ config }: ConfigContext): ExpoConfig => ({
-	name: getAppName(),
-	slug: 'bbplayer',
-	version: version,
-	orientation: 'portrait',
-	icon: './assets/images/icon.png',
-	scheme: 'bbplayer',
-	userInterfaceStyle: 'automatic',
-	platforms: ['android', 'ios'],
-	android: {
-		adaptiveIcon: {
-			foregroundImage: './assets/images/adaptive-icon.png',
-			monochromeImage: './assets/images/adaptive-icon.png',
-			backgroundColor: '#ffffff',
+export default ({ config }: ConfigContext): ExpoConfig => {
+	const googleServicesJsonPath =
+		'./assets/config/google-services/google-services.json'
+	const googleServicesJsonRealPath =
+		'./assets/config/google-services/google-services.real.json'
+	const googleServicesPlistPath =
+		'./assets/config/google-services/GoogleService-Info.plist'
+	const googleServicesPlistRealPath =
+		'./assets/config/google-services/GoogleService-Info.real.plist'
+
+	const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
+		if (fs.existsSync(path.resolve(process.cwd(), realPath))) {
+			return realPath
+		}
+		return defaultPath
+	}
+
+	return {
+		name: getAppName(),
+		slug: 'bbplayer',
+		version: version,
+		orientation: 'portrait',
+		icon: './assets/images/icon.png',
+		scheme: 'bbplayer',
+		userInterfaceStyle: 'automatic',
+		platforms: ['android', 'ios'],
+		android: {
+			adaptiveIcon: {
+				foregroundImage: './assets/images/adaptive-icon.png',
+				monochromeImage: './assets/images/adaptive-icon.png',
+				backgroundColor: '#ffffff',
+			},
+			googleServicesFile: getGoogleServicesFile(
+				googleServicesJsonPath,
+				googleServicesJsonRealPath,
+			),
+			package: getUniqueIdentifier(),
+			versionCode: versionCode,
+			edgeToEdgeEnabled: true,
+			runtimeVersion: version,
+			intentFilters: [
+				{
+					action: 'VIEW',
+					autoVerify: true,
+					data: [
+						{
+							scheme: 'https',
+							host: 'bbplayer.roitium.com',
+							pathPrefix: '/app/link-to',
+						},
+						{
+							scheme: 'https',
+							host: 'app.bbplayer.roitium.com',
+						},
+					],
+					category: ['BROWSABLE', 'DEFAULT'],
+				},
+			],
 		},
-		package: getUniqueIdentifier(),
-		versionCode: versionCode,
-		edgeToEdgeEnabled: true,
-		runtimeVersion: version,
-		intentFilters: [
-			{
-				action: 'VIEW',
-				autoVerify: true,
-				data: [
-					{
-						scheme: 'https',
-						host: 'bbplayer.roitium.com',
-						pathPrefix: '/app/link-to',
+		plugins: [
+			'./expo-plugins/withKotlinSerialization',
+			// './expo-plugins/withAndroidPlugin',
+			'./expo-plugins/withAndroidGradleProperties',
+			[
+				'./expo-plugins/withAbiFilters',
+				{
+					abiFilters:
+						typeof process.env.ABI_FILTERS === 'string'
+							? process.env.ABI_FILTERS.split(',')
+							: ['arm64-v8a'],
+				},
+			],
+			[
+				'expo-dev-client',
+				{
+					launchMode: 'most-recent',
+				},
+			],
+			[
+				'expo-splash-screen',
+				{
+					image: './assets/images/splash-icon.png',
+					imageWidth: 200,
+					resizeMode: 'contain',
+				},
+			],
+			[
+				'@sentry/react-native/expo',
+				{
+					url: 'https://sentry.io/',
+					project: 'bbplayer',
+					organization: 'roitium',
+				},
+			],
+			[
+				'expo-build-properties',
+				{
+					android: {
+						usesCleartextTraffic: true,
+						enableMinifyInReleaseBuilds: true,
+						enableShrinkResourcesInReleaseBuilds: true,
+						packagingOptions: {
+							pickFirst: ['lib/*/libNitroModules.so'],
+						},
+						extraProguardRules: `
+-dontwarn expo.modules.kotlin.**
+-dontwarn expo.modules.webview.**
+# --- 修复模态框打不开的问题 ---
+-keepclassmembers class * {
+    void updatePath();
+}
+# --- 修复模态框打不开的问题 ---
+# --- 来自 retrofit2.pro ---
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
+-dontwarn javax.annotation.**
+-dontwarn kotlin.Unit
+-dontwarn retrofit2.KotlinExtensions
+-dontwarn retrofit2.KotlinExtensions$*
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface <1>
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface * extends <1>
+-keep,allowoptimization,allowshrinking,allowobfuscation class kotlin.coroutines.Continuation
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowoptimization,allowshrinking,allowobfuscation class <3>
+-keep,allowoptimization,allowshrinking,allowobfuscation class retrofit2.Response
+# --- 来自 retrofit2.pro ---
+					`,
 					},
-					{
-						scheme: 'https',
-						host: 'app.bbplayer.roitium.com',
-					},
-				],
-				category: ['BROWSABLE', 'DEFAULT'],
-			},
-		],
-	},
-	plugins: [
-		// './expo-plugins/withAndroidPlugin',
-		'./expo-plugins/withAndroidGradleProperties',
-		[
-			'./expo-plugins/withAbiFilters',
-			{
-				abiFilters:
-					typeof process.env.ABI_FILTERS === 'string'
-						? process.env.ABI_FILTERS.split(',')
-						: ['arm64-v8a'],
-			},
-		],
-		[
-			'expo-dev-client',
-			{
-				launchMode: 'most-recent',
-			},
-		],
-		[
-			'expo-splash-screen',
-			{
-				image: './assets/images/splash-icon.png',
-				imageWidth: 200,
-				resizeMode: 'contain',
-			},
-		],
-		[
-			'@sentry/react-native/expo',
-			{
-				url: 'https://sentry.io/',
-				project: 'bbplayer',
-				organization: 'roitium',
-			},
-		],
-		[
-			'expo-build-properties',
-			{
-				android: {
-					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: false,
-					enableShrinkResourcesInReleaseBuilds: false,
-					packagingOptions: {
-						pickFirst: ['lib/*/libNitroModules.so'],
+					ios: {
+						useFrameworks: 'static',
 					},
 				},
-			},
-		],
-		[
-			'expo-asset',
-			{
-				assets: ['./assets/images/media3_notification_small_icon.png'],
-			},
-		],
-		'expo-font',
-		[
-			'react-native-bottom-tabs',
-			{
-				theme: 'material3-dynamic',
-			},
-		],
-		[
-			'react-native-edge-to-edge',
-			{
-				android: {
-					parentTheme: 'Material3',
+			],
+			[
+				'expo-asset',
+				{
+					assets: ['./assets/images/media3_notification_small_icon.png'],
 				},
-			},
+			],
+			'expo-font',
+			[
+				'react-native-bottom-tabs',
+				{
+					theme: 'material3-dynamic',
+				},
+			],
+			[
+				'react-native-edge-to-edge',
+				{
+					android: {
+						parentTheme: 'Material3',
+					},
+				},
+			],
+			'expo-web-browser',
+			'expo-sqlite',
+			[
+				'expo-share-intent',
+				{
+					androidIntentFilters: ['text/*'],
+					disableIOS: true,
+				},
+			],
+			'expo-router',
+			'@rnrepo/expo-config-plugin',
+			[
+				'expo-media-library',
+				{
+					photosPermission: '允许 $(PRODUCT_NAME) 访问您的相册',
+					savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
+					isAccessMediaLocationEnabled: true,
+				},
+			],
+			'@react-native-firebase/app',
 		],
-		'expo-web-browser',
-		'expo-sqlite',
-		[
-			'expo-share-intent',
-			{
-				androidIntentFilters: ['text/*'],
-				disableIOS: true,
-			},
-		],
-		'expo-router',
-		'@rnrepo/expo-config-plugin',
-		[
-			'expo-media-library',
-			{
-				photosPermission: '允许 $(PRODUCT_NAME) 访问您的相册',
-				savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
-				isAccessMediaLocationEnabled: true,
-			},
-		],
-	],
-	experiments: {
-		reactCompiler: true,
-		typedRoutes: true,
-	},
-	extra: {
-		eas: {
-			projectId: '1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
+		experiments: {
+			reactCompiler: true,
+			typedRoutes: true,
 		},
-		updateManifestUrl:
-			'https://cdn.jsdelivr.net/gh/bbplayer-app/bbplayer@master/update.json',
-	},
-	owner: 'roitium',
-	updates: {
-		url: 'https://u.expo.dev/1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
-	},
-	ios: {
-		bundleIdentifier: 'com.roitium.bbplayer',
-		runtimeVersion: {
-			policy: 'appVersion',
+		extra: {
+			eas: {
+				projectId: '1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
+			},
+			updateManifestUrl:
+				'https://cdn.jsdelivr.net/gh/bbplayer-app/bbplayer@master/update.json',
 		},
-	},
-})
+		owner: 'roitium',
+		updates: {
+			url: 'https://u.expo.dev/1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
+		},
+		ios: {
+			bundleIdentifier: 'com.roitium.bbplayer',
+			runtimeVersion: {
+				policy: 'appVersion',
+			},
+			googleServicesFile: getGoogleServicesFile(
+				googleServicesPlistPath,
+				googleServicesPlistRealPath,
+			),
+		},
+	}
+}

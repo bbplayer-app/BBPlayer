@@ -3,7 +3,7 @@ import {
 	PlaybackState,
 	RepeatMode,
 	useCurrentTrack,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import { useEffect, useState, useCallback } from 'react'
 import { StyleSheet, SafeAreaView, ScrollView, Alert, View } from 'react-native'
 

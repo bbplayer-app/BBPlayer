@@ -1,5 +1,5 @@
 import { memo, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 
@@ -69,6 +69,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 }: TrackListItemProps) {
 	const { colors } = useTheme()
 	const menuRef = useRef<View>(null)
+	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
@@ -79,7 +80,9 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 				styles.rectButton,
 				{
 					backgroundColor: highlighted
-						? colors.elevation.level5
+						? dark
+							? 'rgba(255, 255, 255, 0.12)'
+							: 'rgba(0, 0, 0, 0.12)'
 						: 'transparent',
 				},
 			]}
@@ -130,7 +133,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							coverUrl={data.cover}
+							cover={data.cover}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>
@@ -230,6 +233,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginTop: 2,
+		flexWrap: 'wrap',
 	},
 	dotSeparator: {
 		marginHorizontal: 4,

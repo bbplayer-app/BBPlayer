@@ -13,7 +13,7 @@
 	"arrowParens": "always",
 	"endOfLine": "lf",
 	"singleAttributePerLine": true,
-	"ignorePatterns": [],
+	"ignorePatterns": ["**/dm.d.ts", "**/dm.js"],
 	"experimentalSortImports": {
 		"groups": [
 			["side-effect"],

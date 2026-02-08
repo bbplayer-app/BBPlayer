@@ -39,7 +39,7 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 
 logger.info(
 	'Sentry 启用状态为：',
-	!development && useAppStore.getState().settings.enableSentryReport,
+	!development && useAppStore.getState().settings.enableDataCollection,
 )
 
 export function initializeSentry() {
@@ -50,7 +50,8 @@ export function initializeSentry() {
 		sendDefaultPii: false,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
-		enabled: !development && useAppStore.getState().settings.enableSentryReport,
+		enabled:
+			!development && useAppStore.getState().settings.enableDataCollection,
 		enableLogs: false,
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],

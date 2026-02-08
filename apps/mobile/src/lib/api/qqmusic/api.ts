@@ -3,11 +3,14 @@ import { errAsync, ResultAsync } from 'neverthrow'
 
 import type {
 	QQMusicLyricResponse,
+	QQMusicPlaylistResponse,
 	QQMusicSearchResponse,
 } from '@/types/apis/qqmusic'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 import log from '@/utils/log'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
 
 const logger = log.extend('API.QQMusic')
 
@@ -21,6 +24,7 @@ export class QQMusicApi {
 	public search(
 		keyword: string,
 		limit = 10,
+		signal?: AbortSignal,
 	): ResultAsync<LyricSearchResult, Error> {
 		const searchType = 0 // 0 for song
 		const pageNum = 1
@@ -55,6 +59,7 @@ export class QQMusicApi {
 					'Content-Type': 'application/json;charset=utf-8',
 					Referer: 'https://y.qq.com/',
 				},
+				signal,
 			}).then((res) => {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
@@ -79,7 +84,10 @@ export class QQMusicApi {
 	 * @param songmid
 	 * @returns
 	 */
-	public getLyrics(songmid: string): ResultAsync<QQMusicLyricResponse, Error> {
+	public getLyrics(
+		songmid: string,
+		signal?: AbortSignal,
+	): ResultAsync<QQMusicLyricResponse, Error> {
 		const url = `https://i.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=${songmid}&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&nobase64=1`
 
 		return ResultAsync.fromPromise(
@@ -87,6 +95,7 @@ export class QQMusicApi {
 				headers: {
 					Referer: 'https://y.qq.com/',
 				},
+				signal,
 			}).then((res) => {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
@@ -102,21 +111,17 @@ export class QQMusicApi {
 	 * @param response
 	 * @returns
 	 */
-	public parseLyrics(response: QQMusicLyricResponse): ParsedLrc {
-		const rawLyrics = response.lyric ? decode(response.lyric) : ''
-		const transLyrics = response.trans ? decode(response.trans) : ''
+	public parseLyrics(
+		response: QQMusicLyricResponse,
+	): LyricProviderResponseData {
+		const rawLyrics = response.lyric ? decode(response.lyric) : undefined
+		const transLyrics = response.trans ? decode(response.trans) : undefined
 
-		const parsedRaw = parseLrc(rawLyrics)
-		if (!transLyrics.trim()) {
-			return parsedRaw
+		return {
+			lrc: rawLyrics,
+			tlyric: transLyrics,
+			romalrc: undefined,
 		}
-
-		const parsedTrans = parseLrc(transLyrics)
-		if (!parsedTrans) {
-			return parsedRaw
-		}
-
-		return mergeLrc(parsedRaw, parsedTrans)
 	}
 
 	/**
@@ -127,8 +132,9 @@ export class QQMusicApi {
 	public searchBestMatchedLyrics(
 		keyword: string,
 		durationMs: number,
-	): ResultAsync<ParsedLrc, Error> {
-		return this.search(keyword).andThen((songs) => {
+		signal?: AbortSignal,
+	): ResultAsync<LyricProviderResponseData, Error> {
+		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
 				return errAsync(new Error('No songs found on QQ Music'))
 			}
@@ -156,10 +162,42 @@ export class QQMusicApi {
 				)
 			}
 
-			return this.getLyrics(bestMatch.remoteId as string).map((response) =>
-				this.parseLyrics(response),
+			return this.getLyrics(bestMatch.remoteId as string, signal).map(
+				(response) => this.parseLyrics(response),
 			)
 		})
+	}
+
+	/**
+	 * Get playlist by id
+	 * @param id
+	 * @returns
+	 */
+	public getPlaylist(id: string): ResultAsync<QQMusicPlaylistResponse, Error> {
+		const params = new URLSearchParams({
+			id,
+			format: 'json',
+			newsong: '1',
+			platform: 'jqspaframe.json',
+		})
+
+		const url = `https://c.y.qq.com/v8/fcg-bin/fcg_v8_playlist_cp.fcg?${params.toString()}`
+
+		return ResultAsync.fromPromise(
+			fetch(url, {
+				headers: {
+					Referer: 'http://y.qq.com',
+					'User-Agent':
+						'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+				},
+			}).then((res) => {
+				if (!res.ok) {
+					throw new Error(`QQ Music API error: ${res.statusText}`)
+				}
+				return res.json() as Promise<QQMusicPlaylistResponse>
+			}),
+			(e) => new Error('Failed to fetch playlist from QQ Music', { cause: e }),
+		)
 	}
 }
 

@@ -24,12 +24,13 @@ const LocalPlaylistItem = memo(
 							params: { id: String(item.id) },
 						})
 					}}
+					testID={`local-playlist-${item.id}`}
 				>
 					<View>
 						<View style={styles.itemContainer}>
 							<CoverWithPlaceHolder
 								id={item.id}
-								coverUrl={item.coverUrl}
+								cover={item.coverUrl}
 								title={item.title}
 								size={LIST_ITEM_COVER_SIZE}
 							/>

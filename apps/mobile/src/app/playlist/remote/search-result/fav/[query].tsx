@@ -15,6 +15,7 @@ import {
 } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -67,6 +68,8 @@ export default function SearchResultsPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+
 	const { data: userData } = usePersonalInformation()
 	const { data: favoriteFolderList } = useGetFavoritePlaylists(userData?.mid)
 	const {
@@ -108,6 +111,7 @@ export default function SearchResultsPage() {
 							? `已选择\u2009${selected.size}\u2009首`
 							: `搜索结果\u2009-\u2009${query}`
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -135,6 +139,7 @@ export default function SearchResultsPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracks}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}

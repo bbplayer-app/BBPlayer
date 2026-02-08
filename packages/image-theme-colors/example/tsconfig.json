@@ -1,0 +1,10 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"paths": {
+			"@bbplayer/image-theme-colors": ["../src/index"],
+			"@bbplayer/image-theme-colors/*": ["../src/*"]
+		}
+	}
+}

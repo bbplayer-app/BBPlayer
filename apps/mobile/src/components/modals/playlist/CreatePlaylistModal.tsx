@@ -101,6 +101,7 @@ export default function CreatePlaylistModal({
 					mode='outlined'
 					numberOfLines={1}
 					textAlignVertical='top'
+					testID='create-playlist-title-input'
 				/>
 				<TextInput
 					label='描述'
@@ -131,7 +132,12 @@ export default function CreatePlaylistModal({
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					onPress={handleConfirm}
+					testID='create-playlist-confirm-button'
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

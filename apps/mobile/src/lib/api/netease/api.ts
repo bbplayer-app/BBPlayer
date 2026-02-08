@@ -1,13 +1,16 @@
+import { parseYrc } from '@bbplayer/splash/src/converter/netease'
 import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
 import type {
 	NeteaseLyricResponse,
+	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
-	NeteaseSong,
 } from '@/types/apis/netease'
-import type { LyricSearchResult, ParsedLrc } from '@/types/player/lyrics'
-import { mergeLrc, parseLrc } from '@/utils/lyrics'
+import type {
+	LyricProviderResponseData,
+	LyricSearchResult,
+} from '@/types/player/lyrics'
 
 import type { RequestOptions } from './request'
 import { createRequest } from './request'
@@ -21,16 +24,37 @@ interface SearchParams {
 }
 
 export class NeteaseApi {
-	getLyrics(id: number): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
+	getLyrics(
+		id: number,
+		signal?: AbortSignal,
+	): ResultAsync<NeteaseLyricResponse, NeteaseApiError> {
 		const data = {
 			id: id,
 			lv: -1,
 			tv: -1,
-			os: 'pc',
+			rv: -1,
+			kv: -1,
+			yv: -1,
+			os: 'ios',
+			ver: 1,
 		}
-		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		const requestOptions: RequestOptions = createOption(
+			{
+				crypto: 'eapi',
+				cookie: {
+					os: 'ios',
+					appver: '8.7.01',
+					osver: '16.3',
+					deviceId: '265B59C3-C5DE-4876-8A33-FD52CD5C2960',
+				},
+			},
+			'eapi',
+		)
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseLyricResponse>(
-			'/api/song/lyric',
+			'/api/song/lyric/v1',
 			data,
 			requestOptions,
 		).map((res) => res.body)
@@ -38,6 +62,7 @@ export class NeteaseApi {
 
 	search(
 		params: SearchParams,
+		signal?: AbortSignal,
 	): ResultAsync<LyricSearchResult, NeteaseApiError> {
 		const type = params.type ?? 1
 		const endpoint =
@@ -53,6 +78,9 @@ export class NeteaseApi {
 		}
 
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+		if (signal) {
+			requestOptions.signal = signal
+		}
 		return createRequest<object, NeteaseSearchResponse>(
 			endpoint,
 			data,
@@ -69,78 +97,33 @@ export class NeteaseApi {
 		})
 	}
 
-	/**
-	 * 从多个角度计算出最可能匹配的歌曲（屎）
-	 * @param songs
-	 * @param keyword 一般来说，就是 track.title
-	 * @param targetDurationMs
-	 * @returns
-	 */
-	private findBestMatch(
-		songs: NeteaseSong[],
-		keyword: string,
-		targetDurationMs: number,
-	): NeteaseSong {
-		const DURATION_WEIGHT = 10
-		const SIGMA_MS = 1500
-
-		const scoredSongs = songs.map((song) => {
-			let score = 0
-			if (song.name === keyword) {
-				score += 10
-			}
-			if (keyword.includes(song.name)) {
-				score += 5
-			}
-			song.alia.forEach((alias) => {
-				if (keyword.includes(alias)) {
-					score += 2
-				}
-			})
-			song.ar.forEach((artist) => {
-				if (keyword.includes(artist.name)) {
-					score += 1
-				}
-			})
-
-			const durationDiff = song.dt - targetDurationMs
-			const durationScore =
-				DURATION_WEIGHT *
-				Math.exp(-(durationDiff * durationDiff) / (2 * SIGMA_MS * SIGMA_MS))
-
-			score += durationScore
-
-			return { song, score }
-		})
-
-		const bestMatch = scoredSongs.reduce((best, current) => {
-			return current.score > best.score ? current : best
-		})
-
-		return bestMatch.score > 0 ? bestMatch.song : songs[0]
-	}
-
-	public parseLyrics(lyricsResponse: NeteaseLyricResponse): ParsedLrc {
-		const parsedRawLyrics = parseLrc(lyricsResponse.lrc.lyric)
-		if (
-			!lyricsResponse.tlyric ||
-			lyricsResponse.tlyric.lyric.trim().length === 0
-		) {
-			return parsedRawLyrics
+	public parseLyrics(
+		lyricsResponse: NeteaseLyricResponse,
+	): LyricProviderResponseData {
+		const haveYrc = !!lyricsResponse.yrc?.lyric
+		const lrc = haveYrc ? lyricsResponse.yrc!.lyric : lyricsResponse.lrc.lyric
+		const tlrc = haveYrc
+			? lyricsResponse.ytlrc?.lyric
+			: lyricsResponse.tlyric?.lyric
+		const romalrc = haveYrc
+			? lyricsResponse.yromalrc?.lyric
+			: lyricsResponse.romalrc?.lyric
+		const lyricData: LyricProviderResponseData = {
+			// 一手防御性编程，我们不确定 tlyric 和 romalrc 会不会返回 yrc 格式，但是 parse 一下准没错
+			lrc: parseYrc(lrc),
+			tlyric: tlrc ? parseYrc(tlrc) : undefined,
+			romalrc: romalrc ? parseYrc(romalrc) : undefined,
 		}
-		const parsedTranslatedLyrics = parseLrc(lyricsResponse.tlyric.lyric)
-		if (parsedTranslatedLyrics === null) {
-			return parsedRawLyrics
-		}
-		const mergedLyrics = mergeLrc(parsedRawLyrics, parsedTranslatedLyrics)
-		return mergedLyrics
+
+		return lyricData
 	}
 
 	public searchBestMatchedLyrics(
 		keyword: string,
 		_targetDurationMs: number,
-	): ResultAsync<ParsedLrc, NeteaseApiError> {
-		return this.search({ keywords: keyword, limit: 10 }).andThen(
+		signal?: AbortSignal,
+	): ResultAsync<LyricProviderResponseData, NeteaseApiError> {
+		return this.search({ keywords: keyword, limit: 10 }, signal).andThen(
 			(searchResult) => {
 				if (searchResult.length === 0) {
 					return errAsync(
@@ -155,7 +138,7 @@ export class NeteaseApi {
 				// 相信网易云... 哥们儿写的规则太屎了
 				const bestMatch = searchResult[0]
 
-				return this.getLyrics(bestMatch.remoteId as number).andThen(
+				return this.getLyrics(bestMatch.remoteId as number, signal).andThen(
 					(lyricsResponse) => {
 						const lyricData = this.parseLyrics(lyricsResponse)
 						return okAsync(lyricData)
@@ -163,6 +146,23 @@ export class NeteaseApi {
 				)
 			},
 		)
+	}
+
+	getPlaylist(
+		id: string,
+	): ResultAsync<NeteasePlaylistResponse, NeteaseApiError> {
+		const data = {
+			s: '0',
+			id: id,
+			n: '1000',
+			t: '0',
+		}
+		const requestOptions: RequestOptions = createOption({}, 'eapi')
+		return createRequest<object, NeteasePlaylistResponse>(
+			'/api/v6/playlist/detail',
+			data,
+			requestOptions,
+		).map((res) => res.body)
 	}
 }
 

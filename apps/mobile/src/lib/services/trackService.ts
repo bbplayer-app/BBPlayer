@@ -10,7 +10,6 @@ import { ServiceError } from '@/lib/errors'
 import {
 	DatabaseError,
 	createNotImplementedError,
-	createTrackAlreadyExists,
 	createTrackNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
@@ -137,20 +136,6 @@ export class TrackService {
 
 		const transactionResult = ResultAsync.fromPromise(
 			(async () => {
-				// Check for duplicate title
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:track:duplicate', op: 'db' },
-					() =>
-						this.db.query.tracks.findFirst({
-							where: eq(schema.tracks.title, payload.title),
-							columns: { id: true },
-						}),
-				)
-
-				if (existing) {
-					throw createTrackAlreadyExists(payload.title)
-				}
-
 				// 创建 track
 				const [newTrack] = await Sentry.startSpan(
 					{ name: 'db:insert:track', op: 'db' },
@@ -222,24 +207,6 @@ export class TrackService {
 
 		const updateResult = ResultAsync.fromPromise(
 			(async () => {
-				if (dataToUpdate.title) {
-					const existing = await Sentry.startSpan(
-						{ name: 'db:query:track:duplicate', op: 'db' },
-						() =>
-							this.db.query.tracks.findFirst({
-								where: and(
-									eq(schema.tracks.title, dataToUpdate.title!),
-									sql`${schema.tracks.id} != ${id}`,
-								),
-								columns: { id: true },
-							}),
-					)
-
-					if (existing) {
-						throw createTrackAlreadyExists(dataToUpdate.title)
-					}
-				}
-
 				return await Sentry.startSpan(
 					{ name: 'db:update:track', op: 'db' },
 					() =>
@@ -529,7 +496,17 @@ export class TrackService {
 			return errAsync(processedPayloadsResult.error)
 		}
 
-		const processedPayloads = processedPayloadsResult.value
+		// Deduplicate payloads based on uniqueKey
+		const uniquePayloadsMap = new Map<
+			string,
+			{ uniqueKey: string; payload: CreateTrackPayload }
+		>()
+		for (const p of processedPayloadsResult.value) {
+			if (!uniquePayloadsMap.has(p.uniqueKey)) {
+				uniquePayloadsMap.set(p.uniqueKey, p)
+			}
+		}
+		const processedPayloads = Array.from(uniquePayloadsMap.values())
 		const uniqueKeys = processedPayloads.map((p) => p.uniqueKey)
 
 		return ResultAsync.fromPromise(

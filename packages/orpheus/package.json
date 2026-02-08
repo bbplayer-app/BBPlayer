@@ -1,6 +1,6 @@
 {
-	"name": "@roitium/expo-orpheus",
-	"version": "0.11.2",
+	"name": "@bbplayer/orpheus",
+	"version": "0.11.3",
 	"description": "A player for bbplayer",
 	"keywords": [
 		"ExpoOrpheus",

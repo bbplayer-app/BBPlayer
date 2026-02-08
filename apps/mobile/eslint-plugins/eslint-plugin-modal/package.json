@@ -1,6 +1,0 @@
-{
-	"name": "eslint-plugin-modal",
-	"version": "0.0.0",
-	"type": "module",
-	"main": "index.js"
-}

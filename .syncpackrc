@@ -6,10 +6,16 @@
 	"source": ["package.json", "apps/*/package.json", "packages/*/package.json"],
 	"versionGroups": [
 		{
-			"label": "Use apps/bbplayer versions for core dependencies",
+			"label": "Use apps/mobile versions for core dependencies",
 			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router"],
 			"packages": ["**"],
-			"snapTo": ["@bbplayer/app"]
+			"snapTo": ["@bbplayer/mobile"]
+		},
+		{
+			"label": "Use apps/mobile versions for dev tools",
+			"dependencies": ["eslint", "typescript", "@types/node", "eslint-plugin-*", "@typescript-eslint/*"],
+			"packages": ["**"],
+			"snapTo": ["@bbplayer/mobile"]
 		}
 	]
 }

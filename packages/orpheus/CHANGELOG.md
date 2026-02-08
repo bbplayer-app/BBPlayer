@@ -1,3 +1,16 @@
+## [0.11.4] (2026-02-07)
+
+### Changed
+
+- 同步 `packages/orpheus/docs` 文档，补全缺失的 API 方法、事件和类型定义。
+- 删除 `RELEASING.md` 发版指南及相关 npm 配置文件，本项目不再发布到 npm。
+
+## [0.11.3](https://github.com/bbplayer-app/orpheus/compare/v0.11.2...v0.11.3) (2026-02-02)
+
+### Changed
+
+- use kotlinx.serialization instead of gson
+
 ## [0.11.2](https://github.com/bbplayer-app/orpheus/compare/v0.11.1...v0.11.2) (2026-01-28)
 
 ### Bug Fixes

@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -16,6 +16,7 @@ import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import { expoDb } from '@/lib/db/db'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -139,6 +140,8 @@ export default function TestPage() {
 		)
 	}
 
+	const openModal = useModalStore((state) => state.open)
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<ScrollView
@@ -147,6 +150,14 @@ export default function TestPage() {
 				contentInsetAdjustmentBehavior='automatic'
 			>
 				<View style={styles.buttonContainer}>
+					<Button
+						mode='contained'
+						onPress={() => openModal('InputExternalPlaylistInfo', undefined)}
+						loading={loading}
+						style={styles.button}
+					>
+						同步外部歌单
+					</Button>
 					<Button
 						mode='outlined'
 						onPress={() => setUpdateChannelModalVisible(true)}

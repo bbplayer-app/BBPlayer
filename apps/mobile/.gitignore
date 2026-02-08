@@ -4,3 +4,10 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# google-services.json
+# GoogleService-Info.plist
+google-services.real.json
+GoogleService-Info.real.plist
+google-services-*.json
+GoogleService-Info-*.plist

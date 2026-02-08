@@ -12,9 +12,9 @@
 			"@/hooks/*": ["hooks/*"],
 			"@/utils/*": ["utils/*"],
 			"@/features/*": ["features/*"],
-			"@roitium/expo-orpheus": ["../../../packages/orpheus/src/index.ts"],
-			"@roitium/expo-image-theme-colors": [
-				"../../../packages/expo-image-theme-colors/src/index.ts"
+			"@bbplayer/orpheus": ["../../../packages/orpheus/src/index.ts"],
+			"@bbplayer/image-theme-colors": [
+				"../../../packages/image-theme-colors/src/index.ts"
 			]
 		}
 	},

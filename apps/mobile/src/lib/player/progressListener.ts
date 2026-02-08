@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 
 import createStickyEmitter from '@/utils/sticky-mitt'
 

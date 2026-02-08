@@ -235,6 +235,7 @@ function HomePage() {
 								styles.searchbar,
 								{ backgroundColor: colors.surfaceVariant },
 							]}
+							testID='search-bar'
 						/>
 					</View>
 					<SearchSuggestions

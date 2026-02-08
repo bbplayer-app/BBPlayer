@@ -1,6 +1,12 @@
+import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import { Dimensions, RefreshControl, StyleSheet, View } from 'react-native'
+import {
+	RefreshControl,
+	StyleSheet,
+	useWindowDimensions,
+	View,
+} from 'react-native'
 import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -21,8 +27,10 @@ import {
 } from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
-import { syncFacade } from '@/lib/facades/sync'
+import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -60,14 +68,23 @@ const mapApiItemToTrack = (
 	}
 }
 
-const dimensions = Dimensions.get('window')
-
 export default function ToViewPage() {
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const [menuVisiable, setMenuVisiable] = useState(false)
 	const insets = useSafeAreaInsets()
+	const dimensions = useWindowDimensions()
+
+	const coverRef = useImage('', {
+		onError: () => void 0,
+	})
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
@@ -80,6 +97,8 @@ export default function ToViewPage() {
 		[selectMode, selected, toggle, enterSelectMode],
 	)
 	const openModal = useModalStore((state) => state.open)
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
 	const {
 		data: rawToViewData,
@@ -133,12 +152,16 @@ export default function ToViewPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View style={[styles.container, { backgroundColor }]}>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode ? `已选择\u2009${selected.size}\u2009首` : '稍后再看'
 					}
+					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<Appbar.Action
@@ -170,13 +193,14 @@ export default function ToViewPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracksData}
 					playTrack={handlePlay}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={undefined}
+							cover={coverRef ?? undefined}
 							title={'稍后再看'}
 							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}
@@ -204,7 +228,7 @@ export default function ToViewPage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 
 			<Portal>

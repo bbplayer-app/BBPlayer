@@ -1,17 +1,11 @@
-# BBPlayer App
+# @bbplayer/mobile
 
-<div align="center">
-<img src="./assets/images/icon_large.png" alt="logo" width="50" />
-</div>
+BBPlayer 移动端应用的主程序。
 
-此目录包含 BBPlayer 移动端应用的主程序源代码。
+## 简介
 
-## 📚 文档
+此目录包含 BBPlayer 移动端应用的核心源代码。基于 React Native 和 Expo 构建，旨在提供从 Bilibili 同步音频并在本地流畅播放的体验。
 
-所有的开发指南、架构文档以及贡献指南都位于 **[apps/docs](../docs)** 目录中（我们的文档站点）。
+## 文档
 
-你可以在那里找到：
-
-- **[架构指南 (Architecture)](./docs/ARCHITECTURE.md)**
-- **[贡献指南 (Contributing)](./docs/CONTRIBUTING.md)**
-- **[开发规范 (Best Practices)](./docs/BEST_PRACTICES.md)**
+所有的开发指南、架构说明以及最佳实践都位于仓库 GitHub Wiki 中： https://github.com/bbplayer-app/BBPlayer/wiki

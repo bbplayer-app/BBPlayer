@@ -1,12 +1,13 @@
 {
-	"version": "2.2.4",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.2.4",
+	"version": "2.3.0",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.3.0",
 	"notes": "你版本太低了，赶紧更新！",
 	"listed_notes": [
-		"❗❗修复了自 v2 版本以来的播放器页面无响应问题，建议所有人更新❗❗",
-		"新增：播放页面支持音频频谱显示",
-		"优化：UI 升级为超圆角风格",
-		"修复：搜索播放列表时的错误过滤问题"
+		"新增：从网易云/qq 音乐导入歌单并自动匹配 b 站视频源",
+		"新增：网易云歌词支持罗马音和逐字歌词",
+		"新增：支持在播放器页面显示弹幕",
+		"优化：优化了多处设计细节和用户体验",
+		"修复：修复了多个问题"
 	],
 	"forced": false
 }

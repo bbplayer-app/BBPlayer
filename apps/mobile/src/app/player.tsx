@@ -1,5 +1,5 @@
+import ImageThemeColors from '@bbplayer/image-theme-colors'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
 import {
 	Canvas,
 	Group,
@@ -8,6 +8,7 @@ import {
 	vec,
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
+import { router } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
@@ -16,15 +17,18 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
-import {
+import Animated, {
 	Easing,
+	interpolate,
+	useAnimatedStyle,
 	useDerivedValue,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { TabView } from 'react-native-tab-view'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
@@ -39,10 +43,9 @@ import toast from '@/utils/toast'
 
 const logger = log.extend('App.Player')
 
-const routes = [
-	{ key: 'main', title: 'Main' },
-	{ key: 'lyrics', title: 'Lyrics' },
-]
+const OVERLAY_OPACITY = 0.5
+const DISMISS_THRESHOLD = 150
+const ANIMATION_DURATION = 300
 
 export default function PlayerPage() {
 	const theme = useTheme()
@@ -62,6 +65,86 @@ export default function PlayerPage() {
 	const [isForeground, setIsForeground] = useState(
 		AppState.currentState === 'active',
 	)
+	const [isPreventingBack, setIsPreventingBack] = useState(true)
+
+	const [activeTab, setActiveTab] = useState<'main' | 'lyrics'>('main')
+	const index = activeTab === 'lyrics' ? 1 : 0
+
+	const translateY = useSharedValue(height)
+	const isClosing = useSharedValue(false)
+
+	// 进场动画
+	useEffect(() => {
+		translateY.value = withTiming(0, { duration: ANIMATION_DURATION })
+	}, [translateY])
+
+	const dismissPlayer = () => {
+		setIsPreventingBack(false)
+
+		setImmediate(() => {
+			if (router.canGoBack()) {
+				router.back()
+			}
+		})
+	}
+
+	const handleDismiss = () => {
+		if (activeTab === 'lyrics') {
+			setActiveTab('main')
+			return
+		}
+		if (isClosing.value) return
+		isClosing.set(true)
+		translateY.set(
+			withTiming(height, { duration: ANIMATION_DURATION }, () => {
+				scheduleOnRN(dismissPlayer)
+			}),
+		)
+	}
+
+	const panGesture = Gesture.Pan()
+		.enabled(activeTab === 'main')
+		.activeOffsetY([10, 1000])
+		.failOffsetX([-10, 10])
+		.onUpdate((event) => {
+			'worklet'
+			if (isClosing.value) return
+			if (event.translationY > 0) {
+				translateY.set(event.translationY)
+			}
+		})
+		.onEnd((event) => {
+			'worklet'
+			if (isClosing.value) return
+
+			if (event.translationY > DISMISS_THRESHOLD || event.velocityY > 500) {
+				isClosing.value = true
+				translateY.set(
+					withTiming(height, { duration: ANIMATION_DURATION }, () => {
+						scheduleOnRN(dismissPlayer)
+					}),
+				)
+			} else {
+				translateY.set(withTiming(0, { duration: 200 }))
+			}
+		})
+
+	const overlayAnimatedStyle = useAnimatedStyle(() => {
+		const opacity = interpolate(
+			translateY.value,
+			[0, height],
+			[OVERLAY_OPACITY, 0],
+		)
+		return {
+			opacity,
+		}
+	})
+
+	const contentAnimatedStyle = useAnimatedStyle(() => {
+		return {
+			transform: [{ translateY: translateY.value }],
+		}
+	})
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -78,9 +161,19 @@ export default function PlayerPage() {
 	}, [height, insets.bottom, insets.top])
 
 	const gradientMainColor = useSharedValue(colors.background)
+	const scrollX = useSharedValue(0)
 
-	const [index, setIndex] = useState(0)
 	const [menuVisible, setMenuVisible] = useState(false)
+
+	useEffect(() => {
+		scrollX.value = withTiming(activeTab === 'lyrics' ? 1 : 0, {
+			duration: 300,
+		})
+	}, [activeTab, scrollX])
+
+	const jumpTo = (key: string) => {
+		setActiveTab(key === 'lyrics' ? 'lyrics' : 'main')
+	}
 
 	const gradientColors = useDerivedValue(() => {
 		if (playerBackgroundStyle !== 'gradient') {
@@ -129,28 +222,6 @@ export default function PlayerPage() {
 		playerBackgroundStyle,
 	])
 
-	const renderScene = ({
-		route,
-		jumpTo,
-	}: {
-		route: { key: string; title: string }
-		jumpTo: (key: string) => void
-	}) => {
-		switch (route.key) {
-			case 'main':
-				return (
-					<PlayerMainTab
-						sheetRef={sheetRef}
-						jumpTo={jumpTo}
-						imageRef={coverRef}
-						onPresent={() => setQueueVisible(true)}
-					/>
-				)
-			case 'lyrics':
-				return <Lyrics currentIndex={index} />
-		}
-	}
-
 	const scrimColors = useMemo(() => {
 		if (playerBackgroundStyle !== 'gradient')
 			return ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']
@@ -163,7 +234,7 @@ export default function PlayerPage() {
 
 	const [queueVisible, setQueueVisible] = useState(false)
 
-	usePreventRemove(index === 1 || menuVisible || queueVisible, () => {
+	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
 			setMenuVisible(false)
 			return
@@ -184,9 +255,11 @@ export default function PlayerPage() {
 				})
 			return
 		}
-		if (index === 1) {
-			setIndex(0)
+		if (activeTab === 'lyrics') {
+			setActiveTab('main')
+			return
 		}
+		handleDismiss()
 	})
 
 	const scrimEndVec = vec(0, realHeight * 0.5)
@@ -201,109 +274,139 @@ export default function PlayerPage() {
 		}
 	}, [playerBackgroundStyle, setSettings])
 
-	const FallbackBackground = useMemo(
-		() => (
-			<View
-				style={[
-					StyleSheet.absoluteFill,
-					{ backgroundColor: colors.background },
-				]}
-			/>
-		),
-		[colors.background],
-	)
+	const mainTabStyle = useAnimatedStyle(() => {
+		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [1, 0, 0])
+		return {
+			opacity,
+			pointerEvents: scrollX.value > 0.5 ? 'none' : 'auto',
+		}
+	})
+
+	const lyricsTabStyle = useAnimatedStyle(() => {
+		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [0, 0, 1])
+		return {
+			opacity,
+			pointerEvents: scrollX.value < 0.5 ? 'none' : 'auto',
+		}
+	})
 
 	return (
-		<>
-			{isForeground ? (
-				<Canvas style={StyleSheet.absoluteFill}>
-					<Rect
-						x={0}
-						y={0}
-						width={width}
-						height={realHeight}
-						color={colors.background}
-					/>
-					{playerBackgroundStyle === 'gradient' && (
-						<Group>
-							<Rect
-								x={0}
-								y={0}
-								width={width}
-								height={realHeight}
-							>
-								<LinearGradient
-									start={vec(0, 0)}
-									end={vec(0, realHeight)}
-									colors={gradientColors}
-									positions={[0, 1]}
-								/>
-							</Rect>
-							<Rect
-								x={0}
-								y={0}
-								width={width}
-								height={realHeight}
-							>
-								<LinearGradient
-									start={vec(0, 0)}
-									end={scrimEndVec}
-									colors={scrimColors}
-								/>
-							</Rect>
-						</Group>
-					)}
-				</Canvas>
-			) : (
-				FallbackBackground
-			)}
+		<View style={styles.fullScreen}>
+			{/* Black overlay */}
+			<Animated.View
+				style={[styles.overlay, overlayAnimatedStyle]}
+				pointerEvents='none'
+			/>
 
-			<View
-				style={[
-					styles.container,
-					{
-						paddingTop: insets.top,
-					},
-				]}
-			>
-				<View
-					style={[
-						styles.innerContainer,
-						{ pointerEvents: menuVisible ? 'none' : 'auto' },
-					]}
-				>
-					<PlayerHeader
-						onMorePress={() => setMenuVisible(true)}
-						index={index}
-					/>
-					<TabView
-						style={styles.tabView}
-						navigationState={{ index, routes }}
-						renderScene={renderScene}
-						onIndexChange={setIndex}
-						initialLayout={{ width: width }}
-						lazy={({ route }) => route.key === 'lyrics'}
-						renderTabBar={() => null}
-					/>
-				</View>
+			{/* Player content */}
+			<GestureDetector gesture={panGesture}>
+				<Animated.View style={[styles.fullScreen, contentAnimatedStyle]}>
+					<Canvas style={StyleSheet.absoluteFill}>
+						<Rect
+							x={0}
+							y={0}
+							width={width}
+							height={realHeight}
+							color={colors.background}
+						/>
+						{playerBackgroundStyle === 'gradient' && (
+							<Group>
+								<Rect
+									x={0}
+									y={0}
+									width={width}
+									height={realHeight}
+								>
+									<LinearGradient
+										start={vec(0, 0)}
+										end={vec(0, realHeight)}
+										colors={gradientColors}
+										positions={[0, 1]}
+									/>
+								</Rect>
+								<Rect
+									x={0}
+									y={0}
+									width={width}
+									height={realHeight}
+								>
+									<LinearGradient
+										start={vec(0, 0)}
+										end={scrimEndVec}
+										colors={scrimColors}
+									/>
+								</Rect>
+							</Group>
+						)}
+					</Canvas>
 
-				<PlayerFunctionalMenu
-					menuVisible={menuVisible}
-					setMenuVisible={setMenuVisible}
-				/>
+					<View
+						style={[
+							styles.container,
+							{
+								paddingTop: insets.top,
+							},
+						]}
+					>
+						<View
+							style={[
+								styles.innerContainer,
+								{ pointerEvents: menuVisible ? 'none' : 'auto' },
+							]}
+						>
+							<PlayerHeader
+								onMorePress={() => setMenuVisible(true)}
+								onBack={handleDismiss}
+								index={index}
+								scrollX={scrollX}
+							/>
+							<View style={styles.tabView}>
+								<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
+									<PlayerMainTab
+										sheetRef={sheetRef}
+										jumpTo={jumpTo}
+										imageRef={coverRef}
+										onPresent={() => setQueueVisible(true)}
+										danmakuEnabled={activeTab === 'main'}
+									/>
+								</Animated.View>
+								<Animated.View
+									style={[StyleSheet.absoluteFill, lyricsTabStyle]}
+								>
+									<Lyrics
+										currentIndex={index}
+										onPressBackground={() => jumpTo('main')}
+									/>
+								</Animated.View>
+							</View>
+						</View>
 
-				<PlayerQueueModal
-					sheetRef={sheetRef}
-					isVisible={queueVisible}
-					onDidDismiss={() => setQueueVisible(false)}
-					onDidPresent={() => setQueueVisible(true)}
-				/>
-			</View>
-		</>
+						<PlayerFunctionalMenu
+							menuVisible={menuVisible}
+							setMenuVisible={setMenuVisible}
+						/>
+
+						<PlayerQueueModal
+							sheetRef={sheetRef}
+							isVisible={queueVisible}
+							onDidDismiss={() => setQueueVisible(false)}
+							onDidPresent={() => setQueueVisible(true)}
+						/>
+					</View>
+				</Animated.View>
+			</GestureDetector>
+		</View>
 	)
 }
 
 const styles = StyleSheet.create({
+	fullScreen: {
+		flex: 1,
+	},
+	overlay: {
+		...StyleSheet.absoluteFill,
+		backgroundColor: 'black',
+	},
 	container: {
 		flex: 1,
 	},

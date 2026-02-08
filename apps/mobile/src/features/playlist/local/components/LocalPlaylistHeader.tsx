@@ -1,5 +1,6 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as Clipboard from 'expo-clipboard'
+import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -29,6 +30,7 @@ interface PlaylistHeaderProps {
 	onClickCopyToLocalPlaylist: () => void
 	/** 当作者为 bilibili 时触发。可选，未提供时仅视觉提示不响应 */
 	onPressAuthor?: (author: NonNullable<Playlist['author']>) => void
+	coverRef?: ImageRef | null
 }
 
 interface SubtitlePieces {
@@ -78,6 +80,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	onClickSync,
 	onClickCopyToLocalPlaylist,
 	onPressAuthor,
+	coverRef,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
@@ -130,7 +133,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<View style={styles.headerContainer}>
 				<CoverWithPlaceHolder
 					id={playlist.id}
-					coverUrl={playlist.coverUrl}
+					cover={coverRef ?? playlist.coverUrl}
 					title={playlist.title}
 					size={120}
 				/>
@@ -202,6 +205,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon='play'
 						onPress={() => onClickPlayAll()}
+						testID='playlist-play-all'
 					>
 						播放全部
 					</Button>
@@ -212,6 +216,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							icon='sync'
 							size={20}
 							onPress={onClickSync}
+							testID='playlist-sync'
 						/>
 					)}
 
@@ -221,6 +226,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							icon='content-copy'
 							size={20}
 							onPress={onClickCopyToLocalPlaylist}
+							testID='playlist-copy'
 						/>
 					</Tooltip>
 					<Tooltip title='下载全部'>
@@ -244,6 +250,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 									{ cancelable: true },
 								)
 							}
+							testID='playlist-download'
 						/>
 					</Tooltip>
 				</View>

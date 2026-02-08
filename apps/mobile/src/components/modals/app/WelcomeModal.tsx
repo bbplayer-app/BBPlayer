@@ -97,7 +97,12 @@ export default function WelcomeModal() {
 				>
 					登录
 				</Button>
-				<Button onPress={confirmGuestMode}>游客模式</Button>
+				<Button
+					onPress={confirmGuestMode}
+					testID='welcome-guest-mode'
+				>
+					游客模式
+				</Button>
 			</View>
 		</View>
 	)
@@ -163,7 +168,14 @@ export default function WelcomeModal() {
 			<Dialog.Actions>
 				{step > 0 && <Button onPress={() => goToStep(step - 1)}>上一步</Button>}
 
-				{step < 1 && <Button onPress={() => goToStep(step + 1)}>下一步</Button>}
+				{step < 1 && (
+					<Button
+						onPress={() => goToStep(step + 1)}
+						testID='welcome-next-step'
+					>
+						下一步
+					</Button>
+				)}
 			</Dialog.Actions>
 		</>
 	)

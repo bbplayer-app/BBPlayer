@@ -1,6 +1,6 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useEffect, useRef } from 'react'
-import { View, StyleSheet, Dimensions } from 'react-native'
+import { View, StyleSheet, useWindowDimensions } from 'react-native'
 
 const BAR_COUNT = 32
 const FFT_SIZE = 1024 // Buffer size we might pull, but we only show 32 bars
@@ -10,6 +10,7 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 	const barsRef = useRef<(View | null)[]>([])
 	const rafRef = useRef<number | null>(null)
 	const bufferRef = useRef(new Float32Array(FFT_SIZE / 2))
+	const dimensions = useWindowDimensions()
 
 	useEffect(() => {
 		const animate = () => {
@@ -77,7 +78,6 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 			{Array.from({ length: BAR_COUNT }).map((_, i) => (
 				<View
 					key={i}
-					// eslint-disable-next-line
 					ref={(ref) => {
 						barsRef.current[i] = ref
 					}}
@@ -85,6 +85,7 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 						styles.bar,
 						{
 							backgroundColor: `hsl(${i * 10}, 80%, 50%)`,
+							width: (dimensions.width - 80) / BAR_COUNT,
 						},
 					]}
 				/>
@@ -105,7 +106,6 @@ const styles = StyleSheet.create({
 		marginVertical: 10,
 	},
 	bar: {
-		width: (Dimensions.get('window').width - 80) / BAR_COUNT,
 		height: 2,
 		borderRadius: 2,
 	},

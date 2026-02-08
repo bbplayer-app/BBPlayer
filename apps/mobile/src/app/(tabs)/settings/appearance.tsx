@@ -26,9 +26,6 @@ export default function AppearanceSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 
-	const enableOldSchoolStyleLyric = useAppStore(
-		(state) => state.settings.enableOldSchoolStyleLyric,
-	)
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
 	)
@@ -121,17 +118,7 @@ export default function AppearanceSettingsPage() {
 						onValueChange={handleSpectrumToggle}
 					/>
 				</View>
-				<View style={styles.settingRow}>
-					<Text>恢复旧版歌词样式</Text>
-					<Switch
-						value={enableOldSchoolStyleLyric}
-						onValueChange={() =>
-							setSettings({
-								enableOldSchoolStyleLyric: !enableOldSchoolStyleLyric,
-							})
-						}
-					/>
-				</View>
+
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>
 						<Text>选择底部播放条样式</Text>

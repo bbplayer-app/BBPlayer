@@ -3,6 +3,7 @@ import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, type RefObject } from 'react'
 import { StyleSheet, View } from 'react-native'
+import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -17,6 +18,7 @@ interface PlayerMainTabProps {
 	jumpTo: (key: string) => void
 	imageRef: ImageRef | null
 	onPresent: () => void
+	danmakuEnabled: boolean
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
@@ -24,6 +26,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	jumpTo,
 	imageRef,
 	onPresent,
+	danmakuEnabled,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
@@ -31,7 +34,10 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 	if (!currentTrack) return null
 	return (
-		<View style={styles.container}>
+		<ScrollView
+			contentContainerStyle={styles.container}
+			showsVerticalScrollIndicator={false}
+		>
 			<TrackInfo
 				onArtistPress={() =>
 					currentTrack.artist?.remoteId
@@ -46,6 +52,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					jumpTo('lyrics')
 				}}
 				coverRef={imageRef}
+				danmakuEnabled={danmakuEnabled}
 			/>
 
 			<View
@@ -64,13 +71,13 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					}}
 				/>
 			</View>
-		</View>
+		</ScrollView>
 	)
 })
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
+		flexGrow: 1,
 		justifyContent: 'space-between',
 	},
 	controlsContainer: {

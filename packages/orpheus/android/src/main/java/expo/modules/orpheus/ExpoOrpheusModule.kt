@@ -19,7 +19,6 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.gson.Gson
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -34,6 +33,9 @@ import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.exception.ControllerNotInitializedException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -52,7 +54,7 @@ class ExpoOrpheusModule : Module() {
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
     
-    val gson = Gson()
+    val json = Json { ignoreUnknownKeys = true }
 
     private val playerListener = object : Player.Listener {
 
@@ -300,7 +302,11 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("play") {
             checkPlayer()
-            player?.play()
+            val p = player ?: return@AsyncFunction null
+            if (p.playbackState == Player.STATE_ENDED) {
+                p.seekTo(0)
+            }
+            p.play()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("pause") {
@@ -321,6 +327,17 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipToNext") {
             checkPlayer()
+
+            // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
+            val mediaItemCount = player?.mediaItemCount ?: 0
+            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+                && mediaItemCount > 0
+                && !(player?.hasNextMediaItem() ?: false)
+            ) {
+                player?.seekTo(0, C.TIME_UNSET)
+                return@AsyncFunction Unit
+            }
+
             if (player?.hasNextMediaItem() == true) {
                 player?.seekToNextMediaItem()
             }
@@ -328,6 +345,16 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipToPrevious") {
             checkPlayer()
+
+            // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
+            val mediaItemCount = player?.mediaItemCount ?: 0
+            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+                && mediaItemCount > 0
+                && !(player?.hasPreviousMediaItem() ?: false)
+            ) {
+                player?.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                return@AsyncFunction Unit
+            }
             if (player?.hasPreviousMediaItem() == true) {
                 player?.seekToPreviousMediaItem()
             }
@@ -398,7 +425,7 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
             checkPlayer()
             val mediaItems = tracks.map { track ->
-                track.toMediaItem(gson)
+                track.toMediaItem()
             }
             val p = player ?: return@AsyncFunction
             if (clearQueue == true) {
@@ -430,7 +457,7 @@ class ExpoOrpheusModule : Module() {
             checkPlayer()
             val p = player ?: return@AsyncFunction
 
-            val mediaItem = track.toMediaItem(gson)
+            val mediaItem = track.toMediaItem()
             val targetIndex = p.currentMediaItemIndex + 1
 
             var existingIndex = -1
@@ -463,7 +490,7 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("downloadTrack") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
             val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
-                .setData(gson.toJson(track).toByteArray())
+                .setData(json.encodeToString(track).toByteArray())
                 .build()
 
             DownloadService.sendAddDownload(
@@ -478,7 +505,7 @@ class ExpoOrpheusModule : Module() {
             val context = appContext.reactContext ?: return@AsyncFunction
             tracks.forEach { track ->
                 val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
-                    .setData(gson.toJson(track).toByteArray())
+                    .setData(json.encodeToString(track).toByteArray())
                     .build()
                 DownloadService.sendAddDownload(
                     context,
@@ -618,7 +645,7 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
             try {
-                val data = gson.fromJson(lyricsJson, expo.modules.orpheus.model.LyricsData::class.java)
+                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(data.lyrics, data.offset)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -675,7 +702,7 @@ class ExpoOrpheusModule : Module() {
 
         if (trackJson != null) {
             try {
-                val track = gson.fromJson(trackJson, TrackRecord::class.java)
+                val track = json.decodeFromString<TrackRecord>(trackJson)
                 map["track"] = track
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -769,7 +796,7 @@ class ExpoOrpheusModule : Module() {
 
         if (trackJson != null) {
             try {
-                return gson.fromJson(trackJson, TrackRecord::class.java)
+                return json.decodeFromString(trackJson)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

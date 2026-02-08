@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { syncFacade } from '@/lib/facades/sync'
+import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import type { BilibiliTrack } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'

@@ -1,4 +1,4 @@
-import { Orpheus, type Track as OrpheusTrack } from '@roitium/expo-orpheus'
+import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { create } from 'zustand'
 
 import { trackService } from '@/lib/services/trackService'

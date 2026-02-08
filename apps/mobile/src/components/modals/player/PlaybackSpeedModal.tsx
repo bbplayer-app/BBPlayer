@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Button, Dialog, Text, TextInput } from 'react-native-paper'

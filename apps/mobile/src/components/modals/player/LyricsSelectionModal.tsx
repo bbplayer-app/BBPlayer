@@ -1,9 +1,10 @@
-import ImageThemeColors from '@roitium/expo-image-theme-colors'
+import ImageThemeColors from '@bbplayer/image-theme-colors'
+import { parseSpl, type LyricLine } from '@bbplayer/splash'
 import { FlashList } from '@shopify/flash-list'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -22,7 +23,6 @@ import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { LyricLine } from '@/types/player/lyrics'
 import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({
@@ -53,16 +53,16 @@ const LyricItem = memo(function LyricItem({
 							color: isSelected ? primaryColor : onSurfaceColor,
 						}}
 					>
-						{item.text}
+						{item.content}
 					</Text>
-					{item.translation && (
+					{item.translations?.[0] && (
 						<Text
 							variant='bodySmall'
 							style={{
 								color: isSelected ? primaryColor : onSurfaceVariantColor,
 							}}
 						>
-							{item.translation}
+							{item.translations[0]}
 						</Text>
 					)}
 				</View>
@@ -86,7 +86,37 @@ const LyricsSelectionModal = () => {
 		isError,
 		error,
 	} = useSmartFetchLyrics(true, currentTrack ?? undefined)
-	const lyrics = lyricsData?.lyrics
+
+	const lyrics = useMemo(() => {
+		if (!lyricsData?.lrc) return []
+		try {
+			const { lines: parsedLines } = parseSpl(lyricsData.lrc)
+			const translationMap = new Map<number, string>()
+			if (lyricsData.tlyric) {
+				try {
+					const { lines: transLines } = parseSpl(lyricsData.tlyric)
+					transLines.forEach((l) => {
+						translationMap.set(l.startTime, l.content)
+					})
+				} catch {
+					// ignore
+				}
+			}
+
+			if (translationMap.size > 0) {
+				parsedLines.forEach((l) => {
+					const trans = translationMap.get(l.startTime)
+					if (trans) {
+						if (!l.translations) l.translations = []
+						l.translations.push(trans)
+					}
+				})
+			}
+			return parsedLines
+		} catch {
+			return []
+		}
+	}, [lyricsData])
 
 	const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
 		() => new Set(),
@@ -164,7 +194,7 @@ const LyricsSelectionModal = () => {
 	}, [])
 
 	const keyExtractor = useCallback(
-		(item: LyricLine, index: number) => `${index}-${item.timestamp}`,
+		(item: LyricLine, index: number) => `${index}-${item.startTime}`,
 		[],
 	)
 
@@ -174,17 +204,6 @@ const LyricsSelectionModal = () => {
 		if (!viewShotRef.current) {
 			toast.error('无法生成预览')
 			return
-		}
-		if (!imageRef && currentTrack?.coverUrl) {
-			// 等待图片加载
-			// 注意：这里没有实现真正的等待，只是简单检查。
-			// 实际上 LyricsSelectionModal 的 preview 是立即生成的吗？
-			// User requested: "不再只监听 onImageLoad 是否完成，而是监听包含网络请求是否完成"
-			// But for Lyric card, image is small part.
-			// Let's rely on useImage ref being present.
-			// If not present, maybe we should toast 'waiting for image'?
-			// Or just proceed?
-			// SongShareModal waits. Here we are in a different flow (user clicks preview).
 		}
 
 		if (isPageListPending) {

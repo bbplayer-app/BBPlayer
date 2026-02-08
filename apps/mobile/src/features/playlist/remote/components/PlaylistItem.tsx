@@ -1,10 +1,11 @@
 import { memo, useRef } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { analyticsService } from '@/lib/services/analyticsService'
 import {
 	LIST_ITEM_BORDER_RADIUS,
 	LIST_ITEM_COVER_SIZE,
@@ -89,6 +90,7 @@ export const TrackListItem = memo(function TrackListItem({
 	enterSelectMode,
 }: TrackListItemProps) {
 	const { colors } = useTheme()
+	const dark = useColorScheme() === 'dark'
 	const menuRef = useRef<View>(null)
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
@@ -101,7 +103,9 @@ export const TrackListItem = memo(function TrackListItem({
 				styles.rectButton,
 				{
 					backgroundColor: highlighted
-						? colors.elevation.level5
+						? dark
+							? 'rgba(255, 255, 255, 0.12)'
+							: 'rgba(0, 0, 0, 0.12)'
 						: 'transparent',
 				},
 			]}
@@ -113,12 +117,14 @@ export const TrackListItem = memo(function TrackListItem({
 					return
 				}
 				if (isCurrentTrack) return
+				void analyticsService.logPlayerQueueAction('play_item')
 				onTrackPress()
 			}}
 			onLongPress={() => {
 				if (selectMode) return
 				enterSelectMode(data.id)
 			}}
+			testID={`track-item-${data.id}`}
 		>
 			<Surface
 				style={styles.surface}
@@ -152,7 +158,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							coverUrl={data.cover}
+							cover={data.cover}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>
@@ -254,6 +260,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginTop: 2,
+		flexWrap: 'wrap',
 	},
 	dotSeparator: {
 		marginHorizontal: 4,

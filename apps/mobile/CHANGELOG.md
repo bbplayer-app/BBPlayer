@@ -5,6 +5,53 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.3.0] - 2026-02-07
+
+### Added
+
+- 支持酷狗音乐歌词搜索
+- 集成 Firebase Analytics
+- 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
+- 为关键 UI 组件添加 `testID` 以支持 Maestro E2E 测试
+- 懒加载模态框加载时显示 `ActivityIndicator`
+- 支持双击播放列表顶部回到顶端
+- 实现播放器页面标题平滑渐变效果
+- 播放列表页面背景支持封面主题色
+- 支持下滑关闭播放器页面
+- 支持网易云罗马音及逐字歌词，并支持在翻译与罗马音间切换
+- 增加歌词编辑格式校验及行号错误提示
+- 支持在播放器页面显示弹幕
+
+### Changed
+
+- 优化数据库迁移检查，通过缓存 Schema 版本跳过冗余 SQL 查询
+- 移除 trackService 中的标题重复检查
+- 播放器网络库（orpheus）从 Cronet 切换至 OkHttp
+- 启用 R8 混淆并移除 reanimated 的 Static Flags
+- 重构 RootLayout 的 SplashScreen 显示逻辑
+- 增强播放器后台留存能力
+- 重构 `PlayerLyrics.tsx`，实现歌词偏移面板与解析逻辑解耦
+- 优化 `KaraokeWord` 组件性能，仅在当前行监听播放时间以减少冗余渲染
+- 优化频谱在暂停时的回落动画
+- 将 `eslint-plugin-modal` 移出 `apps/mobile` 并作为一个单独的包 `@bbplayer/eslint-plugin` 放在 `packages` 目录下
+- 将所有 `@roitium` 作用域的包迁移至 `@bbplayer` 作用域
+- 更新文档和 README，补充逐字歌词和歌词罗马音的功能说明
+- 重构设置页面，将歌词相关设置移动到独立的「歌词」分类中
+
+### Fixed
+
+- 修复单曲循环模式下播放完最后一首不循环的问题 (Thanks to @k88936 #199)
+- 修复 `reportErrorToSentry` 上报非 Error 类型错误时显示为 `[object Object]` 的问题
+- 修复 `DonationQRModal` 在部分 Android 设备上因导入方式错误导致的崩溃
+- 修复歌词搜索失败时错误上报 `FileSystemError` 到 Sentry 的问题
+- 修复 `ToastContext` 未初始化导致的应用崩溃
+- 修复因 Cookie 键名包含无效字符（如换行符）导致的崩溃，并增加自动修复提示
+- 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
+- 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
+- 优化播放列表在屏幕较窄时的布局显示
+- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
+
 ## [2.2.4] - 2026-01-30
 
 ### Added
@@ -35,31 +82,6 @@
 - 对 IOS 进行基础的适配
 - 使用 useDeferredValue 优化本地播放列表、本地歌单详情页和首页搜索的输入响应速度
 - 使用 useTransition 优化音乐库 Tab 切换体验，减少卡顿感
-- 重构播放器 Hooks，使用全局 Zustand Store 管理播放状态，减少 JS 与 Native 之间的通信开销
-
-### Changed
-
-- 重构 `RemoteTrackList` 和 `LocalTrackList` 组件的 Props，将选择相关状态合并为 `selection` 对象，并直接继承 `FlashList` 的 Props以获得更好的灵活性
-- 使用 react-native-keyboard-controller 的 API 重构 AnimatedModalOverlay
-- 重构 `src/lib/api/bilibili/api.ts` 为 Class
-- 修复冷启动时 Deep Link 无法跳转的问题
-- 创建/修改歌曲或播放列表时，禁止使用重复的名称
-- 将 `app.bbplayer.roitium.com` 作为 Deep Link 的 host
-- 关闭 dolby / hires 音源
-- 启用 reanimated 的 Static Flags：`ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`IOS_SYNCHRONOUSLY_UPDATE_UI_PROPS`、`USE_COMMIT_HOOK_ONLY_FOR_REACT_COMMITS`
-
-## [2.2.3] - 2026-01-28
-
-### Added
-
-- 本地播放列表移除歌曲时增加过渡动画
-- 集成 commitlint 和 lefthook 以规范 commit 信息
-- 同步本地歌单到 b 站收藏夹（不稳定，容易被风控）
-- 收藏夹同步现在会显示详细的进度模态框
-- 对 IOS 进行基础的适配
-- 使用 useDeferredValue 优化本地播放列表、本地歌单详情页和首页搜索的输入响应速度
-- 使用 useTransition 优化音乐库 Tab 切换体验，减少卡顿感
-- 使用 Reanimated 重写歌词滚动逻辑，完全绕过 React 渲染流程，极大提升性能
 - 重构播放器 Hooks，使用全局 Zustand Store 管理播放状态，减少 JS 与 Native 之间的通信开销
 
 ### Changed
@@ -311,7 +333,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.4...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.0...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -329,3 +351,4 @@
 [2.2.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.0...v2.2.2
 [2.2.3]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.2...v2.2.3
 [2.2.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.3...v2.2.4
+[2.3.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.4...v2.3.0

@@ -1,16 +1,17 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
+import type { LyricLine } from '@bbplayer/splash'
 import type { FlashListRef } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
 import playerProgressEmitter from '@/lib/player/progressListener'
-import type { LyricLine } from '@/types/player/lyrics'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
 	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
 	offset: number, // 单位秒
+	enabled: boolean,
 ) {
 	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
 	const isManualScrollingRef = useRef(false)
@@ -27,7 +28,7 @@ export default function useLyricSync(
 				ans = 0
 			while (lo <= hi) {
 				const mid = Math.floor((lo + hi) / 2)
-				if (lyrics[mid].timestamp <= timestamp) {
+				if (lyrics[mid].startTime / 1000 <= timestamp) {
 					ans = mid
 					lo = mid + 1
 				} else {
@@ -70,7 +71,7 @@ export default function useLyricSync(
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
-			await Orpheus.seekTo(lyrics[index].timestamp - offset)
+			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
 			if (latestJumpRequestRef.current !== requestId) return
 			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
@@ -94,6 +95,8 @@ export default function useLyricSync(
 			},
 		)
 		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			if (!enabled) return
+
 			const offsetedPosition = data.position + offset
 			if (!isActive || offsetedPosition <= 0) {
 				return
@@ -106,9 +109,10 @@ export default function useLyricSync(
 			handler()
 			appStateSubscription.remove()
 		}
-	}, [currentLyricIndex, findIndexForTime, isActive, offset])
+	}, [currentLyricIndex, enabled, findIndexForTime, isActive, offset])
 
 	useEffect(() => {
+		if (!enabled) return
 		void Orpheus.getPosition().then((data) => {
 			const offsetedPosition = data + offset
 			if (!isActive || offsetedPosition <= 0) {
@@ -118,10 +122,11 @@ export default function useLyricSync(
 			if (index === currentLyricIndex) return
 			setCurrentLyricIndex(index)
 		})
-	}, [currentLyricIndex, findIndexForTime, isActive, offset])
+	}, [currentLyricIndex, enabled, findIndexForTime, isActive, offset])
 
 	// 当歌词发生变化且用户没自己滚时，滚动到当前歌词
 	useEffect(() => {
+		if (!enabled) return
 		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
 		// eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
 		void flashListRef.current?.scrollToIndex({
@@ -129,7 +134,7 @@ export default function useLyricSync(
 			index: currentLyricIndex,
 			viewPosition: 0.15,
 		})
-	}, [currentLyricIndex, flashListRef, lyrics.length])
+	}, [currentLyricIndex, enabled, flashListRef, lyrics.length])
 
 	useEffect(() => {
 		return () => {

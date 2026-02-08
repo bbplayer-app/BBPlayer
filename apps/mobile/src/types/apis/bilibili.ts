@@ -123,9 +123,10 @@ interface BilibiliSearchVideo {
 	title: string
 	pic: string
 	author: string
-	duration: string
+	duration: string // MM:SS（MM 可以超过 60min）
 	senddate: number
 	mid: number
+	typeid: number
 }
 
 /**
@@ -489,6 +490,19 @@ interface BilibiliReplyCommentsResponse {
 	root: BilibiliCommentItem
 }
 
+/**
+ * 单条弹幕数据（项目内使用）
+ */
+interface BilibiliDanmakuItem {
+	id: number | Long
+	progress: number // 弹幕出现时间（ms）
+	mode: number // 弹幕模式：1/2/3：滚动；4：底部；5：顶部
+	fontsize?: 18 | 25 | 36 | null // 我们可能不会使用这个值，统一归一化
+	color?: number | null // 十进制 RGB888
+	content: string // 弹幕内容
+	weight?: number | null // 弹幕权重 [0-10]，我们在过滤弹幕时有用，值越大权重越高
+}
+
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
@@ -517,6 +531,7 @@ export type {
 	BilibiliUserUploadedVideosResponse,
 	BilibiliVideoDetails,
 	BilibiliWebPlayerInfo,
+	BilibiliDanmakuItem,
 }
 
 export { BilibiliQrCodeLoginStatus }

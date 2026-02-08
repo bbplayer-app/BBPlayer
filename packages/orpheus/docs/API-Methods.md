@@ -1,5 +1,20 @@
 # API 方法
 
+获得 `Orpheus` 模块实例后可调用的方法。
+
+## 模块属性 (Module Properties)
+
+- **`restorePlaybackPositionEnabled: boolean`**
+  是否开启恢复播放进度。
+- **`loudnessNormalizationEnabled: boolean`**
+  是否开启响度标准化。
+- **`autoplayOnStartEnabled: boolean`**
+  是否开启启动时自动播放。
+- **`isDesktopLyricsShown: boolean`**
+  桌面歌词是否显示中。
+- **`isDesktopLyricsLocked: boolean`**
+  桌面歌词是否锁定（不可拖动）。
+
 ## 播放控制 (Playback Control)
 
 - **`play(): Promise<void>`**
@@ -25,6 +40,30 @@
 
 - **`getPlaybackSpeed(): Promise<number>`**
   获取当前倍速。
+
+- **`getPosition(): Promise<number>`**
+  获取当前播放进度（秒）。
+
+- **`getDuration(): Promise<number>`**
+  获取当前曲目总时长（秒）。
+
+- **`getBuffered(): Promise<number>`**
+  获取当前缓冲进度（秒）。
+
+- **`getIsPlaying(): Promise<boolean>`**
+  获取当前是否正在播放。
+
+- **`getShuffleMode(): Promise<boolean>`**
+  获取随机模式状态。
+
+- **`getRepeatMode(): Promise<RepeatMode>`**
+  获取当前重复模式。
+
+- **`setRepeatMode(mode: RepeatMode): Promise<void>`**
+  设置重复模式。
+
+- **`setShuffleMode(enabled: boolean): Promise<void>`**
+  设置随机模式。
 
 ## 队列管理 (Queue Management)
 
@@ -105,3 +144,8 @@ Orpheus 使用 Media3 DownloadManager。
 
 - **`setDesktopLyrics(json: string)`**
   更新歌词内容。
+
+## 频谱数据 (Spectrum)
+
+- **`updateSpectrumData(destination: Float32Array): void`**
+  同步更新提供的 `Float32Array` 为最新的频谱频率数据。建议在 JS 端创建一次并在动画循环中重复使用。

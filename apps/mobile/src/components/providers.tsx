@@ -15,13 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import GlobalErrorFallback from '@/components/ErrorBoundary'
 import { queryClient } from '@/lib/config/queryClient'
 
-export default function AppProviders({
-	onLayoutRootView,
-	children,
-}: {
-	onLayoutRootView: () => void
-	children: ReactNode
-}) {
+export default function AppProviders({ children }: { children: ReactNode }) {
 	const colorScheme = useColorScheme()
 	const { theme } = useMaterial3Theme()
 	const paperTheme = useMemo(
@@ -36,10 +30,7 @@ export default function AppProviders({
 		<ShareIntentProvider>
 			<SafeAreaProvider>
 				<KeyboardProvider>
-					<View
-						onLayout={onLayoutRootView}
-						style={styles.container}
-					>
+					<View style={styles.container}>
 						<Sentry.ErrorBoundary
 							// eslint-disable-next-line @typescript-eslint/unbound-method
 							fallback={({ error, resetError }) => (

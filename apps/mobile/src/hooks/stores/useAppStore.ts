@@ -1,4 +1,4 @@
-import { Orpheus } from '@roitium/expo-orpheus'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as parseCookie from 'cookie'
 import * as Expo from 'expo'
 import { err, ok, type Result } from 'neverthrow'
@@ -8,12 +8,15 @@ import { immer } from 'zustand/middleware/immer'
 
 import { alert } from '@/components/modals/AlertModal'
 import { expoDb } from '@/lib/db/db'
+import { analyticsService } from '@/lib/services/analyticsService'
 import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
 import { storage, zustandStorage } from '@/utils/mmkv'
 
 const logger = log.extend('Store.App')
+
+import toast from '@/utils/toast'
 
 export const parseCookieToObject = (
 	cookie?: string,
@@ -23,12 +26,32 @@ export const parseCookieToObject = (
 	}
 	try {
 		const cookieObj = parseCookie.parse(cookie)
-		for (const value of Object.values(cookieObj)) {
+		const sanitizedObj: Record<string, string> = {}
+		let hasInvalidKeys = false
+
+		for (const [key, value] of Object.entries(cookieObj)) {
 			if (value === undefined) {
 				return err(new Error(`无效的 cookie 字符串：值为 undefined：${value}`))
 			}
+			const trimmedKey = key.trim()
+			const trimmedValue = value.trim()
+
+			if (!trimmedKey) {
+				continue
+			}
+
+			if (trimmedKey !== key || trimmedValue !== value) {
+				hasInvalidKeys = true
+			}
+
+			sanitizedObj[trimmedKey] = trimmedValue
 		}
-		return ok(cookieObj as Record<string, string>)
+
+		if (hasInvalidKeys) {
+			toast.error('检测到 Cookie 包含无效字符（如换行符），已自动修复')
+		}
+
+		return ok(sanitizedObj)
 	} catch (error) {
 		return err(
 			new Error(
@@ -42,7 +65,18 @@ export const serializeCookieObject = (
 	cookieObj: Record<string, string>,
 ): string => {
 	return Object.entries(cookieObj)
-		.map(([key, value]) => parseCookie.serialize(key, value))
+		.map(([key, value]) => {
+			try {
+				return parseCookie.serialize(key, value)
+			} catch {
+				try {
+					return parseCookie.serialize(key.trim(), value.trim())
+				} catch {
+					return null
+				}
+			}
+		})
+		.filter((item) => item !== null)
 		.join('; ')
 }
 
@@ -63,13 +97,16 @@ export const useAppStore = create<AppState>()(
 				bilibiliCookie: null,
 				settings: {
 					sendPlayHistory: false,
-					enableSentryReport: true,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
 					enableSpectrumVisualizer: false,
 					playerBackgroundStyle: 'gradient',
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
+					enableVerbatimLyrics: true,
+					enableDataCollection: true,
+					enableDanmaku: false,
+					danmakuFilterLevel: 0,
 				},
 
 				hasBilibiliCookie: () => {
@@ -116,14 +153,15 @@ export const useAppStore = create<AppState>()(
 					})
 				},
 
-				setEnableSentryReport: (value) => {
+				setEnableDataCollection: (value: boolean) => {
 					set((state) => {
-						state.settings.enableSentryReport = value
+						state.settings.enableDataCollection = value
 					})
+					void analyticsService.setAnalyticsCollectionEnabled(value)
 
 					alert(
 						'重启？',
-						'切换 Sentry 上报后，需要重启应用才能生效。',
+						'切换隐私设置后，需要重启应用才能完全生效。',
 						[
 							{ text: '取消' },
 							{
@@ -159,7 +197,33 @@ export const useAppStore = create<AppState>()(
 
 			merge: (persistedState, currentState) => {
 				if (persistedState) {
-					return { ...currentState, ...(persistedState as Partial<AppState>) }
+					const typedPersistedState = persistedState as AppState
+
+					// @ts-expect-error -- handling migration of old keys
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					const oldSentry = typedPersistedState.settings.enableSentryReport
+					// @ts-expect-error -- handling migration of old keys
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					const oldAnalytics = typedPersistedState.settings.enableAnalytics
+
+					const mergedState = {
+						...currentState,
+						...typedPersistedState,
+						settings: {
+							...currentState.settings,
+							...typedPersistedState.settings,
+						},
+					}
+
+					if (oldSentry === false || oldAnalytics === false) {
+						mergedState.settings.enableDataCollection = false
+					}
+					// @ts-expect-error -- cleanup
+					delete mergedState.settings.enableSentryReport
+					// @ts-expect-error -- cleanup
+					delete mergedState.settings.enableAnalytics
+
+					return mergedState
 				}
 
 				logger.info('没找到 "app-storage" 存储项. 检查旧的 MMKV 键并尝试迁移')
@@ -213,7 +277,6 @@ export const useAppStore = create<AppState>()(
 					}
 
 					checkAndSet(OLD_KEYS.SEND_HISTORY, 'sendPlayHistory', 'boolean')
-					checkAndSet(OLD_KEYS.SENTRY, 'enableSentryReport', 'boolean')
 					checkAndSet(OLD_KEYS.DEBUG_LOG, 'enableDebugLog', 'boolean')
 					checkAndSet(
 						OLD_KEYS.OLD_LYRIC,

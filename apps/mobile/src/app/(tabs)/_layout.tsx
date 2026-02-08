@@ -46,7 +46,7 @@ export default function TabLayout() {
 					title: '主页',
 					tabBarIcon: () => homeIcon,
 					tabBarLabel: '主页',
-					lazy: false,
+					lazy: true,
 				}}
 			/>
 			<Tabs.Screen
@@ -55,7 +55,7 @@ export default function TabLayout() {
 					title: '音乐库',
 					tabBarIcon: () => libraryIcon,
 					tabBarLabel: '音乐库',
-					lazy: false,
+					lazy: true,
 				}}
 			/>
 			<Tabs.Screen
@@ -64,7 +64,7 @@ export default function TabLayout() {
 					title: '设置',
 					tabBarIcon: () => settingsIcon,
 					tabBarLabel: '设置',
-					lazy: false,
+					lazy: true,
 				}}
 			/>
 		</Tabs>

@@ -86,6 +86,23 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val player = mediaSession?.player
+        if (player == null || !player.playWhenReady || player.mediaItemCount == 0){
+            stopSelf()
+        }
+        super.onTaskRemoved(rootIntent)
+    }
+
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        super.onUpdateNotification(session, true)
+    }
+
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
@@ -392,14 +409,36 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
+    private fun sendTrackPausedEvent() {
+        try {
+            val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
+            intent.putExtra("eventName", "onTrackPaused")
+            startService(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun sendTrackResumedEvent() {
+        try {
+            val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
+            intent.putExtra("eventName", "onTrackResumed")
+            startService(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
+                    sendTrackResumedEvent()
                 } else {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
+                    sendTrackPausedEvent()
                 }
             }
 
@@ -428,6 +467,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
             }
 
+            @OptIn(UnstableApi::class)
             override fun onPositionDiscontinuity(
                 oldPosition: Player.PositionInfo,
                 newPosition: Player.PositionInfo,

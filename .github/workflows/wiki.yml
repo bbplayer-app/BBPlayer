@@ -3,18 +3,37 @@ on:
   push:
     branches: [dev]
     paths:
-      - apps/docs/docs/**
+      - apps/mobile/docs/**
+      - packages/orpheus/docs/**
+      - .github/wiki/**
       - .github/workflows/wiki.yml
+
 concurrency:
   group: publish-wiki
   cancel-in-progress: true
+
 permissions:
   contents: write
+
 jobs:
   publish-wiki:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Wiki Content
+        run: |
+          mkdir temp_wiki
+          # 1. Copy main entry files from .github/wiki (Home.md, _Sidebar.md)
+          cp -r .github/wiki/* temp_wiki/
+          # 2. Move apps/mobile/docs/Home.md -> App-Home.md
+          cp apps/mobile/docs/Home.md temp_wiki/App-Home.md
+          # 3. Copy remaining mobile docs (excluding Home.md)
+          find apps/mobile/docs -maxdepth 1 -type f ! -name 'Home.md' -exec cp {} temp_wiki/ \;
+          # 4. Copy orpheus docs with orpheus- prefix (flat structure for GitHub Wiki)
+          for file in packages/orpheus/docs/*.md; do
+            filename=$(basename "$file")
+            cp "$file" "temp_wiki/orpheus-$filename"
+          done
       - uses: Andrew-Chen-Wang/github-wiki-action@v5
         with:
-          path: apps/mobile/docs
+          path: temp_wiki

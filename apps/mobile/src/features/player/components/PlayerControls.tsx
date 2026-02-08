@@ -4,7 +4,7 @@ import {
 	RepeatMode,
 	useIsPlaying,
 	usePlaybackState,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
@@ -12,6 +12,7 @@ import { AppState, StyleSheet, View } from 'react-native'
 import { IconButton, Tooltip, useTheme } from 'react-native-paper'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { analyticsService } from '@/lib/services/analyticsService'
 import * as Haptics from '@/utils/haptics'
 import logInstance from '@/utils/log'
 
@@ -96,7 +97,9 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToPrevious()
+					void analyticsService.logPlayerAction('skip_prev')
 				}}
+				testID='player-prev'
 			/>
 			<IconButton
 				icon={finalPlayingIndicator}
@@ -108,14 +111,14 @@ export function MainPlaybackControls({
 					logInstance.debug('isPlaying', isPlaying)
 					if (isPlaying) {
 						await Orpheus.pause()
+						void analyticsService.logPlayerAction('pause')
 					} else {
-						// 或许可以解决 play 无响应的问题？
-						// 好吧并不能，我是小丑
-						await Orpheus.pause()
 						await Orpheus.play()
+						void analyticsService.logPlayerAction('play')
 					}
 				}}
 				mode='contained'
+				testID='player-play-pause'
 			/>
 			<IconButton
 				icon='skip-next'
@@ -124,7 +127,9 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					void Orpheus.skipToNext()
+					void analyticsService.logPlayerAction('skip_next')
 				}}
+				testID='player-next'
 			/>
 		</View>
 	)
@@ -171,7 +176,11 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								? Orpheus.setShuffleMode(false)
 								: Orpheus.setShuffleMode(true))
 							await refetchShuffleMode()
+							void analyticsService.logPlayerAction('shuffle', {
+								mode: !shuffleMode,
+							})
 						}}
+						testID='player-mode-shuffle'
 					/>
 				</Tooltip>
 				<Tooltip title='切换循环播放模式'>
@@ -199,7 +208,11 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 										: RepeatMode.OFF
 							void Orpheus.setRepeatMode(nextMode)
 							setRepeatMode(nextMode)
+							void analyticsService.logPlayerAction('repeat', {
+								mode: nextMode,
+							})
 						}}
+						testID='player-mode-repeat'
 					/>
 				</Tooltip>
 				<Tooltip title='查看评论'>
@@ -215,6 +228,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								})
 							}
 						}}
+						testID='player-open-comments'
 					/>
 				</Tooltip>
 				<Tooltip title='打开播放列表'>
@@ -225,7 +239,9 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 						onPress={() => {
 							void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 							onOpenQueue()
+							void analyticsService.logPlayerQueueAction('open_queue')
 						}}
+						testID='player-open-queue'
 					/>
 				</Tooltip>
 			</View>

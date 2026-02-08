@@ -1,3 +1,4 @@
+import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -23,6 +24,8 @@ import {
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type {
@@ -67,7 +70,8 @@ const mapApiItemToTrack = (
 
 export default function UploaderPage() {
 	const { mid } = useLocalSearchParams<{ mid: string }>()
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
@@ -90,6 +94,8 @@ export default function UploaderPage() {
 	const searchbarHeight = useSharedValue(0)
 	const debouncedQuery = useDebouncedValue(searchQuery, 200)
 	const openModal = useModalStore((state) => state.open)
+
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
@@ -122,6 +128,15 @@ export default function UploaderPage() {
 			.flatMap((page) => page.list.vlist)
 			.map((item) => mapApiItemToTrack(item, uploaderUserInfo))
 	}, [uploadedVideos, uploaderUserInfo])
+
+	const coverRef = useImage(uploaderUserInfo?.face ?? '', {
+		onError: () => void 0,
+	})
+	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 
@@ -181,14 +196,18 @@ export default function UploaderPage() {
 	}
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header elevated>
+		<View style={[styles.container, { backgroundColor }]}>
+			<Appbar.Header
+				elevated
+				style={{ backgroundColor: 'transparent' }}
+			>
 				<Appbar.Content
 					title={
 						selectMode
 							? `已选择\u2009${selected.size}\u2009首`
 							: uploaderUserInfo.name
 					}
+					onPress={handleDoubleTap}
 				/>
 				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
@@ -232,13 +251,14 @@ export default function UploaderPage() {
 
 			<View style={styles.listContainer}>
 				<TrackList
+					listRef={listRef}
 					tracks={tracks ?? []}
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					ListHeaderComponent={
 						<PlaylistHeader
-							coverUri={uploaderUserInfo.face}
+							cover={coverRef ?? undefined}
 							title={uploaderUserInfo.name}
 							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
 							description={uploaderUserInfo.sign}
@@ -264,7 +284,7 @@ export default function UploaderPage() {
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

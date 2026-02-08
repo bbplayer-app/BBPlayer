@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard'
+import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -15,7 +16,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
-	coverUri: string | undefined
+	cover?: string | undefined | ImageRef
 	title: string | undefined
 	subtitles: string | string[] | undefined // 通常格式： "Author • n Tracks"
 	description: string | undefined
@@ -24,13 +25,18 @@ interface PlaylistHeaderProps {
 	linkedPlaylistId?: number
 	id: string | number
 	mainButtonText?: string
+	disableMainButton?: boolean
+	secondaryButtonText?: string
+	secondaryButtonIcon?: string
+	onClickSecondaryButton?: () => void
+	disableSecondaryButton?: boolean
 }
 
 /**
  * 可复用的播放列表头部组件。
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
-	coverUri,
+	cover,
 	title,
 	subtitles,
 	description,
@@ -39,6 +45,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	mainButtonText,
 	linkedPlaylistId,
 	id,
+	...props
 }: PlaylistHeaderProps) {
 	const router = useRouter()
 	const [showFullTitle, setShowFullTitle] = useState(false)
@@ -50,7 +57,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<View style={styles.headerContainer}>
 				<CoverWithPlaceHolder
 					id={id}
-					coverUrl={coverUri}
+					cover={cover}
 					title={title}
 					size={120}
 				/>
@@ -90,8 +97,21 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon={mainButtonIcon}
 						onPress={() => onClickMainButton()}
+						disabled={props.disableMainButton}
+						testID='playlist-header-main-button'
 					>
 						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
+					</Button>
+				)}
+				{props.secondaryButtonText && props.onClickSecondaryButton && (
+					<Button
+						mode='outlined'
+						icon={props.secondaryButtonIcon}
+						onPress={props.onClickSecondaryButton}
+						style={{ marginLeft: 8 }}
+						disabled={props.disableSecondaryButton}
+					>
+						{props.secondaryButtonText}
 					</Button>
 				)}
 				{linkedPlaylistId && (

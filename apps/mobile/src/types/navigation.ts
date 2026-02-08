@@ -1,10 +1,17 @@
 import type { AlertModalProps } from '@/components/modals/AlertModal'
+import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { Playlist, Track } from '@/types/core/media'
-import type { ParsedLrc } from '@/types/player/lyrics'
+import type { GenericTrack } from '@/types/external_playlist'
+import type { LyricFileData } from '@/types/player/lyrics'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 
 export interface ModalPropsMap {
+	ManualMatchExternalSync: {
+		track: GenericTrack
+		initialQuery: string
+		onMatch: (result: MatchResult) => void
+	}
 	AddVideoToBilibiliFavorite: { bvid: string }
 	EditPlaylistMetadata: { playlist: Playlist }
 	EditTrackMetadata: { track: Track }
@@ -19,8 +26,9 @@ export interface ModalPropsMap {
 	}
 	DuplicateLocalPlaylist: { sourcePlaylistId: number; rawName: string }
 	ManualSearchLyrics: { uniqueKey: string; initialQuery: string }
+	InputExternalPlaylistInfo: undefined
 	Alert: AlertModalProps
-	EditLyrics: { uniqueKey: string; lyrics: ParsedLrc }
+	EditLyrics: { uniqueKey: string; lyrics: LyricFileData }
 	SleepTimer: undefined
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' }
@@ -32,6 +40,7 @@ export interface ModalPropsMap {
 		favoriteId: number
 		shouldRedirectToLocalPlaylist?: boolean
 	}
+	DanmakuSettings: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

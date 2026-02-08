@@ -3,7 +3,7 @@ import {
 	PlaybackState,
 	useIsPlaying,
 	usePlaybackState,
-} from '@roitium/expo-orpheus'
+} from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
@@ -23,15 +23,15 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import useAnimatedTrackProgress from '@/hooks/player/useAnimatedTrackProgress'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
 
 const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =
-		useAnimatedTrackProgress(false)
+		useSmoothProgress(false)
 	const sharedTrackViewWidth = useSharedValue(0)
 	const trackViewRef = useRef<View>(null)
 	const { colors } = useTheme()
@@ -63,7 +63,7 @@ const ProgressBar = memo(function ProgressBar() {
 				ref={trackViewRef}
 				style={[
 					styles.progressBarTrack,
-					{ backgroundColor: colors.outlineVariant },
+					// { backgroundColor: colors.outlineVariant },
 				]}
 			>
 				<Animated.View
@@ -78,7 +78,11 @@ const ProgressBar = memo(function ProgressBar() {
 	)
 })
 
-const NowPlayingBar = memo(function NowPlayingBar() {
+const NowPlayingBar = memo(function NowPlayingBar({
+	backgroundColor,
+}: {
+	backgroundColor?: string
+}) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -202,11 +206,12 @@ const NowPlayingBar = memo(function NowPlayingBar() {
 						style={[
 							playerStyle,
 							{
-								backgroundColor: colors.elevation.level2,
+								backgroundColor: backgroundColor ?? colors.elevation.level2,
 								marginBottom: bottomMargin,
 							},
 							animatedStyle,
 						]}
+						testID='now-playing-bar'
 					>
 						<View style={styles.nowPlayingBarContent}>
 							<Image
@@ -298,7 +303,7 @@ const styles = StyleSheet.create({
 		position: 'relative',
 	},
 	progressBarIndicator: {
-		height: 1,
+		height: 2,
 		position: 'absolute',
 		left: 0,
 		top: 0,

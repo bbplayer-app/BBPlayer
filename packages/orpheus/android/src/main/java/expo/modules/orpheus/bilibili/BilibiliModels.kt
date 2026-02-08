@@ -1,68 +1,81 @@
 package expo.modules.orpheus.bilibili
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class BilibiliApiResponse<TData>(
-    val code: Int,
-    val message: String,
-    val data: TData?
+    @SerialName("code") val code: Int,
+    @SerialName("message") val message: String,
+    @SerialName("data") val data: TData?
 )
 
+@Serializable
 data class BilibiliAudioStreamResponse(
-    val durl: List<DurlItem>?,
+    @SerialName("durl") val durl: List<DurlItem>? = null,
 
-    val dash: DashData?,
+    @SerialName("dash") val dash: DashData? = null,
 
-    val volume: VolumeData?
+    @SerialName("volume") val volume: VolumeData? = null
 )
 
+@Serializable
 data class DurlItem(
-    val order: Int,
-    val url: String,
-    @SerializedName("backup_url") val backupUrl: List<String>?
+    @SerialName("order") val order: Int,
+    @SerialName("url") val url: String,
+    @SerialName("backup_url") val backupUrl: List<String>?
 )
 
+@Serializable
 data class DashData(
-    val audio: List<DashAudioItem>?,
-    val dolby: DolbyData?,
-    val flac: FlacData?
+    @SerialName("audio") val audio: List<DashAudioItem>?,
+    @SerialName("dolby") val dolby: DolbyData?,
+    @SerialName("flac") val flac: FlacData?
 )
 
+@Serializable
 data class DashAudioItem(
-    val id: Int,
-    @SerializedName("base_url") val baseUrl: String,
-    @SerializedName("backup_url") val backupUrl: List<String>?
+    @SerialName("id") val id: Int,
+    @SerialName("base_url") val baseUrl: String,
+    @SerialName("backup_url") val backupUrl: List<String>?
 )
 
+@Serializable
 data class DolbyData(
-    val type: Int,
-    val audio: List<DashAudioItem>?
+    @SerialName("type") val type: Int,
+    @SerialName("audio") val audio: List<DashAudioItem>?
 )
 
+@Serializable
 data class FlacData(
-    val display: Boolean,
-    val audio: DashAudioItem?
+    @SerialName("display") val display: Boolean,
+    @SerialName("audio") val audio: DashAudioItem?
 )
 
+@Serializable
 data class VolumeData(
-    @SerializedName("measured_i") val measuredI: Double,
-    @SerializedName("target_i") val targetI: Double
+    @SerialName("measured_i") val measuredI: Double,
+    @SerialName("target_i") val targetI: Double
 )
 
+@Serializable
 data class BilibiliNavResponse(
-    val code: Int,
-    val data: NavData?
+    @SerialName("code") val code: Int,
+    @SerialName("data") val data: NavData?
 )
 
+@Serializable
 data class NavData(
-    @SerializedName("wbi_img") val wbiImg: WbiImgData?
+    @SerialName("wbi_img") val wbiImg: WbiImgData?
 )
 
+@Serializable
 data class WbiImgData(
-    @SerializedName("img_url") val imgUrl: String,
-    @SerializedName("sub_url") val subUrl: String
+    @SerialName("img_url") val imgUrl: String,
+    @SerialName("sub_url") val subUrl: String
 )
 
+@Serializable
 data class BilibiliPageListResponse(
-    val cid: Long
+    @SerialName("cid") val cid: Long
 )
