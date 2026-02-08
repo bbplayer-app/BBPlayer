@@ -106,6 +106,7 @@ export default function PlayerPage() {
 		.enabled(activeTab === 'main')
 		.activeOffsetY([10, 1000])
 		.failOffsetX([-10, 10])
+		.minDist(5)
 		.onUpdate((event) => {
 			'worklet'
 			if (isClosing.value) return
@@ -278,7 +279,7 @@ export default function PlayerPage() {
 		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [1, 0, 0])
 		return {
 			opacity,
-			pointerEvents: scrollX.value > 0.5 ? 'none' : 'auto',
+			pointerEvents: scrollX.value >= 0.5 ? 'none' : 'auto',
 		}
 	})
 
@@ -286,7 +287,7 @@ export default function PlayerPage() {
 		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [0, 0, 1])
 		return {
 			opacity,
-			pointerEvents: scrollX.value < 0.5 ? 'none' : 'auto',
+			pointerEvents: scrollX.value <= 0.5 ? 'none' : 'auto',
 		}
 	})
 

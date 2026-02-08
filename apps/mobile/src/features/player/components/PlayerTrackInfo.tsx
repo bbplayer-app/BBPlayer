@@ -229,7 +229,7 @@ export function TrackInfo({
 							{currentTrack.title}
 						</Text>
 						{currentTrack.artist?.name && (
-							<TouchableRipple onPress={onArtistPress}>
+							<TouchableRipple onPress={onArtistPress} delayPressIn={0}>
 								<Text
 									variant='bodyMedium'
 									style={{ color: colors.onSurfaceVariant }}

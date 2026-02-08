@@ -89,7 +89,7 @@ export function MainPlaybackControls({
 	const gap = size === 'compact' ? 24 : 40
 
 	return (
-		<View style={[styles.mainControlsContainer, { gap }]}>
+		<View style={[styles.mainControlsContainer, { gap }]} collapsable={false}>
 			<IconButton
 				icon='skip-previous'
 				size={skipButtonSize}
@@ -159,7 +159,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	}, [])
 
 	return (
-		<View>
+		<View collapsable={false}>
 			<View style={styles.mainControlsWrapper}>
 				<MainPlaybackControls />
 			</View>

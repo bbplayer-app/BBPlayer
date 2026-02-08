@@ -34,10 +34,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 	if (!currentTrack) return null
 	return (
-		<ScrollView
-			contentContainerStyle={styles.container}
-			showsVerticalScrollIndicator={false}
-		>
+		<View style={styles.container}>
 			<TrackInfo
 				onArtistPress={() =>
 					currentTrack.artist?.remoteId
@@ -57,7 +54,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 			<View
 				style={[
-					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 20, flex: 1 },
 					styles.controlsContainer,
 				]}
 			>
@@ -71,13 +68,13 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					}}
 				/>
 			</View>
-		</ScrollView>
+		</View>
 	)
 })
 
 const styles = StyleSheet.create({
 	container: {
-		flexGrow: 1,
+		flex: 1,
 		justifyContent: 'space-between',
 	},
 	controlsContainer: {
