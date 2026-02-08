@@ -11,6 +11,7 @@
 
 - 修复 `image-theme-colors` 在 Android 上因类型转换错误导致的崩溃
 - 修复获取网易云歌单时因某些字段缺失（如 `playlist` 或 `creator`）导致的崩溃
+- 修复因重复点击导致的分享失败问题，并优化按钮加载状态
 
 ### Changed
 

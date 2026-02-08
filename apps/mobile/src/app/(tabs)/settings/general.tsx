@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -60,18 +60,36 @@ export default function GeneralSettingsPage() {
 		setIsCheckingForUpdate(false)
 	}
 
+	const [isSharing, setIsSharing] = useState(false)
+	const isSharingRef = useRef(false)
+
 	const shareLogFile = async () => {
-		const d = new Date()
-		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-		const file = new FileSystem.File(
-			FileSystem.Paths.document,
-			'logs',
-			`${dateString}.log`,
-		)
-		if (file.exists) {
-			await Sharing.shareAsync(file.uri)
-		} else {
-			toastAndLogError('', new Error('无法分享日志：未找到日志文件'), 'UI.Test')
+		if (isSharingRef.current) return
+		isSharingRef.current = true
+		setIsSharing(true)
+
+		try {
+			const d = new Date()
+			const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+			const file = new FileSystem.File(
+				FileSystem.Paths.document,
+				'logs',
+				`${dateString}.log`,
+			)
+			if (file.exists) {
+				await Sharing.shareAsync(file.uri)
+			} else {
+				toastAndLogError(
+					'',
+					new Error('无法分享日志：未找到日志文件'),
+					'UI.Test',
+				)
+			}
+		} catch (e) {
+			toastAndLogError('', e, 'UI.Settings')
+		} finally {
+			setIsSharing(false)
+			isSharingRef.current = false
 		}
 	}
 
@@ -134,6 +152,8 @@ export default function GeneralSettingsPage() {
 						icon='share-variant'
 						size={20}
 						onPress={shareLogFile}
+						loading={isSharing}
+						disabled={isSharing}
 					/>
 				</View>
 				<View style={styles.settingRow}>

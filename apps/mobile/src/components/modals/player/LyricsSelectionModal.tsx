@@ -230,53 +230,54 @@ const LyricsSelectionModal = () => {
 		}
 	}
 
+	const isSharingRef = useRef(false)
+
 	const handleShare = async (action: 'save' | 'share') => {
 		if (selectedIndices.size === 0) {
 			toast.error('请先选择歌词')
 			return
 		}
 
+		if (isSharingRef.current) return
+		isSharingRef.current = true
 		setIsSharing(true)
 
-		let uri = previewUri
-		const needsCapture = !uri && viewShotRef.current !== null
-		if (needsCapture) {
-			try {
-				const fileName = `bbplayer-share-lyrics-${Date.now()}`
-				uri = await captureRef(viewShotRef, {
-					format: 'png',
-					quality: 1,
-					result: 'tmpfile',
-					fileName,
-				})
-			} catch (e) {
-				console.error(e)
-				toast.error('生成图片失败')
-				setIsSharing(false)
-				return
-			}
-		}
-
-		if (!uri) {
-			toast.error('生成图片失败')
-			setIsSharing(false)
-			return
-		}
-
-		const permissionStatus = permissionResponse?.status
-		if (
-			action === 'save' &&
-			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
-		) {
-			const { status } = await requestPermission()
-			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
-				toast.error('无法保存图片', { description: '请允许访问相册' })
-				setIsSharing(false)
-				return
-			}
-		}
-
 		try {
+			let uri = previewUri
+			const needsCapture = !uri && viewShotRef.current !== null
+			if (needsCapture) {
+				try {
+					const fileName = `bbplayer-share-lyrics-${Date.now()}`
+					uri = await captureRef(viewShotRef, {
+						format: 'png',
+						quality: 1,
+						result: 'tmpfile',
+						fileName,
+					})
+				} catch (e) {
+					console.error(e)
+					toast.error('生成图片失败')
+					return
+				}
+			}
+
+			if (!uri) {
+				toast.error('生成图片失败')
+				return
+			}
+
+			const permissionStatus = permissionResponse?.status
+			if (
+				action === 'save' &&
+				permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
+			) {
+				const { status } = await requestPermission()
+				if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+					toast.error('无法保存图片', { description: '请允许访问相册' })
+					return
+				}
+			}
+
 			if (action === 'save') {
 				await MediaLibrary.saveToLibraryAsync(uri)
 				toast.success('已保存到相册')
@@ -286,16 +287,16 @@ const LyricsSelectionModal = () => {
 					await Sharing.shareAsync(uri)
 				} else {
 					toast.error('分享不可用')
-					setIsSharing(false)
 					return
 				}
 			}
-			setIsSharing(false)
 			close('LyricsSelection')
 		} catch (e) {
 			console.error(e)
 			toast.error('操作失败')
+		} finally {
 			setIsSharing(false)
+			isSharingRef.current = false
 		}
 	}
 
