@@ -1,6 +1,6 @@
 export interface NeteasePlaylistResponse {
 	code: number
-	playlist: NeteasePlaylist
+	playlist?: NeteasePlaylist
 }
 
 export interface NeteasePlaylist {
@@ -17,8 +17,8 @@ export interface NeteasePlaylist {
 	subscribedCount: number
 	cloudTrackCount: number
 	trackCount: number
-	creator: NeteaseCreator
-	tracks: NeteaseSong[]
+	creator?: NeteaseCreator | null
+	tracks?: NeteaseSong[] | null
 }
 
 export interface NeteaseCreator {

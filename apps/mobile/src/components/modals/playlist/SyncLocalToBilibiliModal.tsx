@@ -2,13 +2,13 @@ import { useEffect, useReducer } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Button,
 	Dialog,
 	Divider,
 	ProgressBar,
 	Text,
 } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'

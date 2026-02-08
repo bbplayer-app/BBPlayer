@@ -7,13 +7,21 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 修复 `image-theme-colors` 在 Android 上因类型转换错误导致的崩溃
+- 修复获取网易云歌单时因某些字段缺失（如 `playlist` 或 `creator`）导致的崩溃
+
 ### Changed
 
+- 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 
 ## [2.3.0] - 2026-02-07
 
 ### Added
+
+- 基于 `react-native-gesture-handler` 封装了 `Button` 组件，样式与 `react-native-paper` 保持一致
 
 - 支持酷狗音乐歌词搜索
 - 集成 Firebase Analytics
@@ -55,7 +63,8 @@
 - 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
 - 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
 - 优化播放列表在屏幕较窄时的布局显示
-- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 修复播放队列模态框中使用 `RectButton` 无法点击的问题，并移除删除按钮的涟漪效果
+- 修复播放器页面在部分小屏设备上无法滚动的问题
 - 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
 
 ## [2.2.4] - 2026-01-30

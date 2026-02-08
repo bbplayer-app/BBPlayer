@@ -6,16 +6,16 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Banner,
-	Button,
 	Divider,
-	IconButton,
 	Text,
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import IconButton from '@/components/common/IconButton'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'

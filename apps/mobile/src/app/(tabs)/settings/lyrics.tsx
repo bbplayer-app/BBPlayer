@@ -2,17 +2,11 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
-import {
-	Appbar,
-	Checkbox,
-	IconButton,
-	Switch,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Checkbox, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { toastAndLogError } from '@/utils/error-handling'

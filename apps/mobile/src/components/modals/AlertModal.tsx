@@ -1,5 +1,6 @@
-import { Button, Dialog, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export interface AlertButton {
@@ -33,7 +34,6 @@ export default function AlertModal({
 					<Button
 						key={index}
 						onPress={button.onPress ?? (() => close('Alert'))}
-						uppercase={false}
 						mode='text'
 					>
 						{button.text}
@@ -49,7 +49,6 @@ export default function AlertModal({
 					<Button
 						key={index}
 						onPress={handlePress}
-						uppercase={false}
 						mode='text'
 					>
 						{button.text}

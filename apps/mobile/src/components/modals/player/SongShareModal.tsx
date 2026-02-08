@@ -4,16 +4,11 @@ import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Button,
-	Dialog,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { ActivityIndicator, Dialog, Text, useTheme } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
+import Button from '@/components/common/Button'
 import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'

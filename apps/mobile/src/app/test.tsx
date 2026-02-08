@@ -2,17 +2,11 @@ import { Orpheus } from '@bbplayer/orpheus'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import {
-	Button,
-	Dialog,
-	Portal,
-	Text,
-	TextInput,
-	useTheme,
-} from 'react-native-paper'
+import { Dialog, Portal, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
+import Button from '@/components/common/Button'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'

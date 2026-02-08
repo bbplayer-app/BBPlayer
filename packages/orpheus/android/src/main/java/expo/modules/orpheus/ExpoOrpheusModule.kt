@@ -339,24 +339,30 @@ class ExpoOrpheusModule : Module() {
             }
 
             if (player?.hasNextMediaItem() == true) {
-                player?.seekToNextMediaItem()
+                player?.seekToNext()
             }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToPrevious") {
             checkPlayer()
+            val player = player ?: return@AsyncFunction Unit
 
-            // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
-            val mediaItemCount = player?.mediaItemCount ?: 0
-            if (player?.repeatMode == Player.REPEAT_MODE_ONE
-                && mediaItemCount > 0
-                && !(player?.hasPreviousMediaItem() ?: false)
-            ) {
-                player?.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+            if (player.currentPosition > C.DEFAULT_MAX_SEEK_TO_PREVIOUS_POSITION_MS) {
+                player.seekTo(0)
                 return@AsyncFunction Unit
             }
-            if (player?.hasPreviousMediaItem() == true) {
-                player?.seekToPreviousMediaItem()
+
+            val mediaItemCount = player.mediaItemCount
+            if (player.repeatMode == Player.REPEAT_MODE_ONE
+                && mediaItemCount > 0
+                && !player.hasPreviousMediaItem()
+            ) {
+                player.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                return@AsyncFunction Unit
+            }
+
+            if (player.hasPreviousMediaItem()) {
+                player.seekToPreviousMediaItem()
             }
         }.runOnQueue(Queues.MAIN)
 

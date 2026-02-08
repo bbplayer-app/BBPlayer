@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native'
-import { Button, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function TabDisable() {

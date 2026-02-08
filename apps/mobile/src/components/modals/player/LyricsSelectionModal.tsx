@@ -8,7 +8,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Button,
 	Checkbox,
 	Dialog,
 	Text,
@@ -18,6 +17,7 @@ import {
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
+import Button from '@/components/common/Button'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'

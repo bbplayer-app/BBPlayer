@@ -113,6 +113,7 @@
 		"@react-native-community/cli": "latest",
 		"@tanstack/eslint-plugin-query": "^5.91.3",
 		"@testing-library/react-native": "^13.3.3",
+		"@types/color": "^4.2.0",
 		"@types/crypto-js": "^4.2.2",
 		"@types/he": "^1.2.3",
 		"@types/jest": "^29.5.14",
