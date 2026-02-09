@@ -10,6 +10,7 @@
 ### Changed
 
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
+- 播放器页面换回滑动样式
 
 ### Fixed
 
