@@ -11,6 +11,10 @@
 
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 
+### Fixed
+
+- 修复播放器页面底部出现的白块问题
+
 ## [2.3.0] - 2026-02-07
 
 ### Added

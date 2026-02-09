@@ -12,12 +12,12 @@ import { router } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
+	Dimensions,
 	StyleSheet,
 	useColorScheme,
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	Easing,
@@ -51,7 +51,7 @@ export default function PlayerPage() {
 	const coverRef = useImage(currentTrack?.coverUrl ?? '', {
 		onError: () => void 0,
 	})
-	const { width, height } = useWindowDimensions()
+	const { width } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -90,9 +90,7 @@ export default function PlayerPage() {
 		}
 	}, [])
 
-	const realHeight = useMemo(() => {
-		return height
-	}, [height])
+	const realHeight = Dimensions.get('screen').height
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
