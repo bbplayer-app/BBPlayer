@@ -17,7 +17,6 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	Easing,
@@ -28,7 +27,6 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { scheduleOnRN } from 'react-native-worklets'
 
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
@@ -42,10 +40,6 @@ import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 
 const logger = log.extend('App.Player')
-
-const OVERLAY_OPACITY = 0.5
-const DISMISS_THRESHOLD = 150
-const ANIMATION_DURATION = 300
 
 export default function PlayerPage() {
 	const theme = useTheme()
@@ -70,22 +64,11 @@ export default function PlayerPage() {
 	const [activeTab, setActiveTab] = useState<'main' | 'lyrics'>('main')
 	const index = activeTab === 'lyrics' ? 1 : 0
 
-	const translateY = useSharedValue(height)
-	const isClosing = useSharedValue(false)
-
-	// 进场动画
-	useEffect(() => {
-		translateY.value = withTiming(0, { duration: ANIMATION_DURATION })
-	}, [translateY])
-
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)
-
-		setImmediate(() => {
-			if (router.canGoBack()) {
-				router.back()
-			}
-		})
+		if (router.canGoBack()) {
+			router.back()
+		}
 	}
 
 	const handleDismiss = () => {
@@ -93,58 +76,8 @@ export default function PlayerPage() {
 			setActiveTab('main')
 			return
 		}
-		if (isClosing.value) return
-		isClosing.set(true)
-		translateY.set(
-			withTiming(height, { duration: ANIMATION_DURATION }, () => {
-				scheduleOnRN(dismissPlayer)
-			}),
-		)
+		dismissPlayer()
 	}
-
-	const panGesture = Gesture.Pan()
-		.enabled(activeTab === 'main')
-		.activeOffsetY([10, 1000])
-		.failOffsetX([-10, 10])
-		.onUpdate((event) => {
-			'worklet'
-			if (isClosing.value) return
-			if (event.translationY > 0) {
-				translateY.set(event.translationY)
-			}
-		})
-		.onEnd((event) => {
-			'worklet'
-			if (isClosing.value) return
-
-			if (event.translationY > DISMISS_THRESHOLD || event.velocityY > 500) {
-				isClosing.value = true
-				translateY.set(
-					withTiming(height, { duration: ANIMATION_DURATION }, () => {
-						scheduleOnRN(dismissPlayer)
-					}),
-				)
-			} else {
-				translateY.set(withTiming(0, { duration: 200 }))
-			}
-		})
-
-	const overlayAnimatedStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(
-			translateY.value,
-			[0, height],
-			[OVERLAY_OPACITY, 0],
-		)
-		return {
-			opacity,
-		}
-	})
-
-	const contentAnimatedStyle = useAnimatedStyle(() => {
-		return {
-			transform: [{ translateY: translateY.value }],
-		}
-	})
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -157,8 +90,8 @@ export default function PlayerPage() {
 	}, [])
 
 	const realHeight = useMemo(() => {
-		return height + insets.top + insets.bottom
-	}, [height, insets.bottom, insets.top])
+		return height
+	}, [height])
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
@@ -292,109 +225,98 @@ export default function PlayerPage() {
 
 	return (
 		<View style={styles.fullScreen}>
-			{/* Black overlay */}
-			<Animated.View
-				style={[styles.overlay, overlayAnimatedStyle]}
-				pointerEvents='none'
-			/>
+			<View style={styles.fullScreen}>
+				<Canvas style={StyleSheet.absoluteFill}>
+					<Rect
+						x={0}
+						y={0}
+						width={width}
+						height={realHeight}
+						color={colors.background}
+					/>
+					{playerBackgroundStyle === 'gradient' && (
+						<Group>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={vec(0, realHeight)}
+									colors={gradientColors}
+									positions={[0, 1]}
+								/>
+							</Rect>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={scrimEndVec}
+									colors={scrimColors}
+								/>
+							</Rect>
+						</Group>
+					)}
+				</Canvas>
 
-			{/* Player content */}
-			<GestureDetector gesture={panGesture}>
-				<Animated.View style={[styles.fullScreen, contentAnimatedStyle]}>
-					<Canvas style={StyleSheet.absoluteFill}>
-						<Rect
-							x={0}
-							y={0}
-							width={width}
-							height={realHeight}
-							color={colors.background}
-						/>
-						{playerBackgroundStyle === 'gradient' && (
-							<Group>
-								<Rect
-									x={0}
-									y={0}
-									width={width}
-									height={realHeight}
-								>
-									<LinearGradient
-										start={vec(0, 0)}
-										end={vec(0, realHeight)}
-										colors={gradientColors}
-										positions={[0, 1]}
-									/>
-								</Rect>
-								<Rect
-									x={0}
-									y={0}
-									width={width}
-									height={realHeight}
-								>
-									<LinearGradient
-										start={vec(0, 0)}
-										end={scrimEndVec}
-										colors={scrimColors}
-									/>
-								</Rect>
-							</Group>
-						)}
-					</Canvas>
-
+				<View
+					style={[
+						styles.container,
+						{
+							paddingTop: insets.top,
+						},
+					]}
+				>
 					<View
 						style={[
-							styles.container,
-							{
-								paddingTop: insets.top,
-							},
+							styles.innerContainer,
+							{ pointerEvents: menuVisible ? 'none' : 'auto' },
 						]}
 					>
-						<View
-							style={[
-								styles.innerContainer,
-								{ pointerEvents: menuVisible ? 'none' : 'auto' },
-							]}
-						>
-							<PlayerHeader
-								onMorePress={() => setMenuVisible(true)}
-								onBack={handleDismiss}
-								index={index}
-								scrollX={scrollX}
-							/>
-							<View style={styles.tabView}>
-								<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
-									<PlayerMainTab
-										sheetRef={sheetRef}
-										jumpTo={jumpTo}
-										imageRef={coverRef}
-										onPresent={() => setQueueVisible(true)}
-										danmakuEnabled={activeTab === 'main'}
-									/>
-								</Animated.View>
-								<Animated.View
-									style={[StyleSheet.absoluteFill, lyricsTabStyle]}
-								>
-									<Lyrics
-										currentIndex={index}
-										onPressBackground={() => jumpTo('main')}
-									/>
-								</Animated.View>
-							</View>
+						<PlayerHeader
+							onMorePress={() => setMenuVisible(true)}
+							onBack={handleDismiss}
+							index={index}
+							scrollX={scrollX}
+						/>
+						<View style={styles.tabView}>
+							<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
+								<PlayerMainTab
+									sheetRef={sheetRef}
+									jumpTo={jumpTo}
+									imageRef={coverRef}
+									onPresent={() => setQueueVisible(true)}
+									danmakuEnabled={activeTab === 'main'}
+								/>
+							</Animated.View>
+							<Animated.View style={[StyleSheet.absoluteFill, lyricsTabStyle]}>
+								<Lyrics
+									currentIndex={index}
+									onPressBackground={() => jumpTo('main')}
+								/>
+							</Animated.View>
 						</View>
-
-						<PlayerFunctionalMenu
-							menuVisible={menuVisible}
-							setMenuVisible={setMenuVisible}
-						/>
-
-						<PlayerQueueModal
-							sheetRef={sheetRef}
-							isVisible={queueVisible}
-							onDidDismiss={() => setQueueVisible(false)}
-							onDidPresent={() => setQueueVisible(true)}
-						/>
 					</View>
-				</Animated.View>
-			</GestureDetector>
+
+					<PlayerFunctionalMenu
+						menuVisible={menuVisible}
+						setMenuVisible={setMenuVisible}
+					/>
+
+					<PlayerQueueModal
+						sheetRef={sheetRef}
+						isVisible={queueVisible}
+						onDidDismiss={() => setQueueVisible(false)}
+						onDidPresent={() => setQueueVisible(true)}
+					/>
+				</View>
+			</View>
 		</View>
 	)
 }
@@ -402,10 +324,6 @@ export default function PlayerPage() {
 const styles = StyleSheet.create({
 	fullScreen: {
 		flex: 1,
-	},
-	overlay: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: 'black',
 	},
 	container: {
 		flex: 1,

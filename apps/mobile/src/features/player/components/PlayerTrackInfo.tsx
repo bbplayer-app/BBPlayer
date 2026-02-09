@@ -175,7 +175,6 @@ export function TrackInfo({
 								width: coverSize,
 								height: coverSize,
 								borderRadius: coverBorderRadius,
-								zIndex: -1,
 							}}
 							recyclingKey={currentTrack.uniqueKey}
 							cachePolicy={'none'}
