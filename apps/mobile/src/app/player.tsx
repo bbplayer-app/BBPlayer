@@ -17,6 +17,7 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	Easing,
