@@ -90,8 +90,8 @@ export default function PlayerPage() {
 	}, [])
 
 	const realHeight = useMemo(() => {
-		return height + insets.top + insets.bottom
-	}, [height, insets.bottom, insets.top])
+		return height
+	}, [height])
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
