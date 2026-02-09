@@ -1,6 +1,6 @@
 {
 	"name": "@bbplayer/mobile",
-	"version": "2.3.0",
+	"version": "2.3.1",
 	"private": true,
 	"main": "index.js",
 	"scripts": {
@@ -8,6 +8,7 @@
 		"format": "eslint . --fix && oxfmt --write .",
 		"lint": "eslint .",
 		"postinstall": "patch-package",
+		"prepare": "pbjs -t static-module -w commonjs -o src/lib/api/bilibili/proto/dm.js src/lib/api/bilibili/proto/dm.proto && pbts -o src/lib/api/bilibili/proto/dm.d.ts src/lib/api/bilibili/proto/dm.js",
 		"start": "APP_VARIANT=development expo start",
 		"test": "jest --watchAll"
 	},

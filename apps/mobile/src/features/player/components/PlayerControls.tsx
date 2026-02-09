@@ -9,12 +9,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
-import { IconButton, Tooltip, useTheme } from 'react-native-paper'
+import { useTheme } from 'react-native-paper'
 
+import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { analyticsService } from '@/lib/services/analyticsService'
 import * as Haptics from '@/utils/haptics'
-import logInstance from '@/utils/log'
 
 interface MainPlaybackControlsProps {
 	size?: 'normal' | 'compact'
@@ -108,7 +108,6 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					const isPlaying = await Orpheus.getIsPlaying()
-					logInstance.debug('isPlaying', isPlaying)
 					if (isPlaying) {
 						await Orpheus.pause()
 						void analyticsService.logPlayerAction('pause')
@@ -165,85 +164,77 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 				<MainPlaybackControls />
 			</View>
 			<View style={styles.secondaryControlsContainer}>
-				<Tooltip title='切换随机播放模式'>
-					<IconButton
-						icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
-						size={24}
-						iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
-						onPress={async () => {
-							void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-							await (shuffleMode
-								? Orpheus.setShuffleMode(false)
-								: Orpheus.setShuffleMode(true))
-							await refetchShuffleMode()
-							void analyticsService.logPlayerAction('shuffle', {
-								mode: !shuffleMode,
-							})
-						}}
-						testID='player-mode-shuffle'
-					/>
-				</Tooltip>
-				<Tooltip title='切换循环播放模式'>
-					<IconButton
-						icon={
+				<IconButton
+					icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
+					size={24}
+					iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
+					onPress={async () => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+						await (shuffleMode
+							? Orpheus.setShuffleMode(false)
+							: Orpheus.setShuffleMode(true))
+						await refetchShuffleMode()
+						void analyticsService.logPlayerAction('shuffle', {
+							mode: !shuffleMode,
+						})
+					}}
+					testID='player-mode-shuffle'
+				/>
+				<IconButton
+					icon={
+						repeatMode === RepeatMode.OFF
+							? 'repeat-off'
+							: repeatMode === RepeatMode.TRACK
+								? 'repeat-once'
+								: 'repeat'
+					}
+					size={24}
+					iconColor={
+						repeatMode !== RepeatMode.OFF
+							? colors.primary
+							: colors.onSurfaceVariant
+					}
+					onPress={() => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+						const nextMode =
 							repeatMode === RepeatMode.OFF
-								? 'repeat-off'
+								? RepeatMode.TRACK
 								: repeatMode === RepeatMode.TRACK
-									? 'repeat-once'
-									: 'repeat'
-						}
-						size={24}
-						iconColor={
-							repeatMode !== RepeatMode.OFF
-								? colors.primary
-								: colors.onSurfaceVariant
-						}
-						onPress={() => {
-							void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-							const nextMode =
-								repeatMode === RepeatMode.OFF
-									? RepeatMode.TRACK
-									: repeatMode === RepeatMode.TRACK
-										? RepeatMode.QUEUE
-										: RepeatMode.OFF
-							void Orpheus.setRepeatMode(nextMode)
-							setRepeatMode(nextMode)
-							void analyticsService.logPlayerAction('repeat', {
-								mode: nextMode,
+									? RepeatMode.QUEUE
+									: RepeatMode.OFF
+						void Orpheus.setRepeatMode(nextMode)
+						setRepeatMode(nextMode)
+						void analyticsService.logPlayerAction('repeat', {
+							mode: nextMode,
+						})
+					}}
+					testID='player-mode-repeat'
+				/>
+				<IconButton
+					icon='comment-text-outline'
+					size={24}
+					disabled={currentTrack?.source !== 'bilibili'}
+					onPress={() => {
+						if (currentTrack?.source === 'bilibili') {
+							router.push({
+								pathname: '/comments/[bvid]',
+								params: { bvid: currentTrack.bilibiliMetadata.bvid },
 							})
-						}}
-						testID='player-mode-repeat'
-					/>
-				</Tooltip>
-				<Tooltip title='查看评论'>
-					<IconButton
-						icon='comment-text-outline'
-						size={24}
-						disabled={currentTrack?.source !== 'bilibili'}
-						onPress={() => {
-							if (currentTrack?.source === 'bilibili') {
-								router.push({
-									pathname: '/comments/[bvid]',
-									params: { bvid: currentTrack.bilibiliMetadata.bvid },
-								})
-							}
-						}}
-						testID='player-open-comments'
-					/>
-				</Tooltip>
-				<Tooltip title='打开播放列表'>
-					<IconButton
-						icon='format-list-bulleted'
-						size={24}
-						iconColor={colors.onSurfaceVariant}
-						onPress={() => {
-							void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-							onOpenQueue()
-							void analyticsService.logPlayerQueueAction('open_queue')
-						}}
-						testID='player-open-queue'
-					/>
-				</Tooltip>
+						}
+					}}
+					testID='player-open-comments'
+				/>
+				<IconButton
+					icon='format-list-bulleted'
+					size={24}
+					iconColor={colors.onSurfaceVariant}
+					onPress={() => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+						onOpenQueue()
+						void analyticsService.logPlayerQueueAction('open_queue')
+					}}
+					testID='player-open-queue'
+				/>
 			</View>
 		</View>
 	)

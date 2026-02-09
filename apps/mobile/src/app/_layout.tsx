@@ -186,9 +186,7 @@ export default Sentry.wrap(function RootLayout() {
 				<Stack.Screen
 					name='player'
 					options={{
-						presentation: 'transparentModal',
-						gestureEnabled: false,
-						animation: 'none',
+						animation: 'slide_from_bottom',
 						headerShown: false,
 					}}
 				/>
