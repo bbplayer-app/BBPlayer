@@ -12,6 +12,11 @@
 - 修复 `image-theme-colors` 在 Android 上因类型转换错误导致的崩溃
 - 修复获取网易云歌单时因某些字段缺失（如 `playlist` 或 `creator`）导致的崩溃
 - 修复因重复点击导致的分享失败问题，并优化按钮加载状态
+- 修复播放器因 data 可能为 null 导致的解析错误问题
+
+### Changed
+
+- 过滤掉播放器非关键错误（如 Bilibili API 错误、网络错误）的 Sentry 上报
 
 ### Changed
 

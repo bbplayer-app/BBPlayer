@@ -11,15 +11,81 @@ import toast from './src/utils/toast'
 
 global.isUIReady = false
 
+const parsePlayerError = (error) => {
+	const rawMessage = error.rootCauseMessage || error.message || ''
+
+	if (rawMessage.includes('Bilibili API Error')) {
+		const codeMatch = rawMessage.match(/code=(-?\d+)/)
+		const msgMatch = rawMessage.match(/msg=(.+)/)
+		const code = codeMatch ? codeMatch[1] : 'Unknown'
+		const msg = msgMatch ? msgMatch[1] : 'Unknown Error'
+
+		if (code === '-412') {
+			return {
+				message: 'Bilibili 触发验证码，请尝试重新登录或稍后再试',
+				shouldReport: false,
+			}
+		}
+		if (code === '-101') {
+			return { message: 'Bilibili 账号未登录', shouldReport: false }
+		}
+
+		return {
+			message: `Bilibili API 错误: ${msg} (${code})`,
+			shouldReport: false,
+		}
+	}
+
+	if (rawMessage.includes('Bilibili API Logic Error')) {
+		return {
+			message: 'Bilibili 数据解析失败，请检查网络或稍后再试',
+			shouldReport: false,
+		}
+	}
+
+	if (rawMessage.includes('AudioStreamError')) {
+		return {
+			message: '无法获取音频流，可能需要大会员或该歌曲已下架',
+			shouldReport: false,
+		}
+	}
+
+	if (rawMessage.includes('Bilibili API Http Error')) {
+		const codeMatch = rawMessage.match(/Http Error: (\d+)/)
+		return {
+			message: `Bilibili 网络请求失败: ${codeMatch ? codeMatch[1] : 'Unknown'}`,
+			shouldReport: false,
+		}
+	}
+
+	if (
+		rawMessage.includes('Unable to connect') ||
+		rawMessage.includes('UnknownHostException') ||
+		rawMessage.includes('ConnectException') ||
+		rawMessage.includes('SocketTimeoutException')
+	) {
+		return { message: '网络连接失败，请检查网络设置', shouldReport: false }
+	}
+
+	return {
+		message: error.message || '播放器发生未知错误',
+		shouldReport: true,
+	}
+}
+
 Orpheus.addListener('onPlayerError', (error) => {
 	log.error('播放器错误事件：', { error })
+	const { message, shouldReport } = parsePlayerError(error)
+
 	if (global.isUIReady) {
-		toast.error(`播放器发生错误: ${error.message || '未知错误'}`, {
+		toast.error(message, {
 			description: error.code,
 		})
 	}
-	log.error('播放器错误事件：', { error })
-	reportErrorToSentry(error, '播放器错误事件', 'Native.Player')
+
+	if (shouldReport) {
+		reportErrorToSentry(error, '播放器错误事件', 'Native.Player')
+	}
 })
 
 let lastResumedTime = 0
