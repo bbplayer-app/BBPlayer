@@ -182,12 +182,19 @@ class OrpheusMusicService : MediaLibraryService() {
             }
         })
 
+        initializePlayer()
+    }
 
+    /**
+     * 创建/重建 ExoPlayer、MediaSession 及相关组件。
+     * 可多次调用，每次调用前应确保旧 player 已释放或为 null。
+     */
+    @OptIn(UnstableApi::class)
+    private fun initializePlayer() {
         val dataSourceFactory = DownloadUtil.getPlayerDataSourceFactory(this)
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
-
 
         val renderersFactory = DefaultRenderersFactory(this)
             .experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
@@ -244,6 +251,19 @@ class OrpheusMusicService : MediaLibraryService() {
         sleepTimerManager = SleepTimeController(player!!)
     }
 
+    /**
+     * 检查 player 是否存在，不存在则重建。
+     * 供外部（如 ExpoOrpheusModule）调用。
+     */
+    @OptIn(UnstableApi::class)
+    fun ensurePlayer(): ExoPlayer {
+        if (player == null) {
+            Log.w("OrpheusMusicService", "Player was null, reinitializing...")
+            initializePlayer()
+        }
+        return player!!
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
@@ -259,6 +279,7 @@ class OrpheusMusicService : MediaLibraryService() {
             release()
             mediaSession = null
         }
+        this.player = null
         super.onDestroy()
     }
 

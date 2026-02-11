@@ -249,33 +249,33 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("getPosition") {
-            checkPlayer()
+            ensurePlayer()
             player?.currentPosition?.toDouble()?.div(1000.0) ?: 0.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getDuration") {
-            checkPlayer()
+            ensurePlayer()
             val d = player?.duration ?: C.TIME_UNSET
             if (d == C.TIME_UNSET) 0.0 else d.toDouble() / 1000.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getBuffered") {
-            checkPlayer()
+            ensurePlayer()
             player?.bufferedPosition?.toDouble()?.div(1000.0) ?: 0.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIsPlaying") {
-            checkPlayer()
+            ensurePlayer()
             player?.isPlaying ?: false
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getCurrentIndex") {
-            checkPlayer()
+            ensurePlayer()
             player?.currentMediaItemIndex ?: -1
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getCurrentTrack") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
             val currentItem = p.currentMediaItem ?: return@AsyncFunction null
 
@@ -283,12 +283,12 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getShuffleMode") {
-            checkPlayer()
+            ensurePlayer()
             player?.shuffleModeEnabled
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIndexTrack") { index: Int ->
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
 
             if (index < 0 || index >= p.mediaItemCount) {
@@ -301,7 +301,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("play") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
             if (p.playbackState == Player.STATE_ENDED) {
                 p.seekTo(0)
@@ -310,23 +310,23 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("pause") {
-            checkPlayer()
+            ensurePlayer()
             player?.pause()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("clear") {
-            checkPlayer()
+            ensurePlayer()
             player?.clearMediaItems()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipTo") { index: Int ->
             // 跳转到指定索引的开头
-            checkPlayer()
+            ensurePlayer()
             player?.seekTo(index, C.TIME_UNSET)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToNext") {
-            checkPlayer()
+            ensurePlayer()
 
             // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
             val mediaItemCount = player?.mediaItemCount ?: 0
@@ -344,7 +344,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToPrevious") {
-            checkPlayer()
+            ensurePlayer()
 
             // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
             val mediaItemCount = player?.mediaItemCount ?: 0
@@ -361,13 +361,13 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("seekTo") { seconds: Double ->
-            checkPlayer()
+            ensurePlayer()
             val ms = (seconds * 1000).toLong()
             player?.seekTo(ms)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setRepeatMode") { mode: Int ->
-            checkPlayer()
+            ensurePlayer()
             // mode: 0=OFF, 1=TRACK, 2=QUEUE
             val repeatMode = when (mode) {
                 1 -> Player.REPEAT_MODE_ONE
@@ -378,24 +378,24 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
-            checkPlayer()
+            ensurePlayer()
             player?.shuffleModeEnabled = enabled
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getRepeatMode") {
-            checkPlayer()
+            ensurePlayer()
             player?.repeatMode
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("removeTrack") { index: Int ->
-            checkPlayer()
+            ensurePlayer()
             if (index >= 0 && index < (player?.mediaItemCount ?: 0)) {
                 player?.removeMediaItem(index)
             }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getQueue") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction emptyList<TrackRecord>()
             val count = p.mediaItemCount
             val queue = ArrayList<TrackRecord>(count)
@@ -423,7 +423,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
-            checkPlayer()
+            ensurePlayer()
             val mediaItems = tracks.map { track ->
                 track.toMediaItem()
             }
@@ -454,7 +454,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("playNext") { track: TrackRecord ->
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction
 
             val mediaItem = track.toMediaItem()
@@ -653,12 +653,12 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setPlaybackSpeed") { speed: Float ->
-            checkPlayer()
+            ensurePlayer()
             player?.setPlaybackSpeed(speed)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getPlaybackSpeed") {
-            checkPlayer()
+            ensurePlayer()
             player?.playbackParameters?.speed ?: 1.0f
         }.runOnQueue(Queues.MAIN)
 
@@ -822,9 +822,14 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun checkPlayer() {
-        if (player == null) {
-            throw ControllerNotInitializedException()
+    private fun ensurePlayer() {
+        val service = OrpheusMusicService.instance
+            ?: throw ControllerNotInitializedException()
+        val servicePlayer = service.ensurePlayer()
+        if (this.player !== servicePlayer) {
+            this.player?.removeListener(playerListener)
+            this.player = servicePlayer
+            servicePlayer.addListener(playerListener)
         }
     }
 }
