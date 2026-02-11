@@ -345,19 +345,20 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipToPrevious") {
             ensurePlayer()
+            val p = player ?: return@AsyncFunction null
 
             // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
             val mediaItemCount = player?.mediaItemCount ?: 0
             if (player?.repeatMode == Player.REPEAT_MODE_ONE
                 && mediaItemCount > 0
-                && !player.hasPreviousMediaItem()
+                && !p.hasPreviousMediaItem()
             ) {
-                player.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                p.seekTo(mediaItemCount - 1, C.TIME_UNSET)
                 return@AsyncFunction Unit
             }
 
-            if (player.hasPreviousMediaItem()) {
-                player.seekToPreviousMediaItem()
+            if (p.hasPreviousMediaItem()) {
+                p.seekToPreviousMediaItem()
             }
         }.runOnQueue(Queues.MAIN)
 
