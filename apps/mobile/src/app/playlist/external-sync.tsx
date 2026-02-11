@@ -37,6 +37,8 @@ import type { GenericTrack } from '@/types/external_playlist'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import toast from '@/utils/toast'
 
+const ItemSeparator = () => <Divider />
+
 const SyncTrackItem = memo(
 	({
 		index,
@@ -232,7 +234,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	})
 
 	const handleSave = useCallback(async () => {
-		if (!data?.playlist || !results) return
+		if (!data?.playlist || !data?.tracks || !results) return
 		const matchResults = Object.values(results)
 		if (matchResults.length === 0) {
 			toast.error('没有可保存的内容')
@@ -459,7 +461,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					syncing,
 				}}
 				keyExtractor={keyExtractor}
-				ItemSeparatorComponent={() => <Divider />}
+				ItemSeparatorComponent={ItemSeparator}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,
 				}}

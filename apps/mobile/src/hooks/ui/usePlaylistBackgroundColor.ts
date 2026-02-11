@@ -73,7 +73,7 @@ export function usePlaylistBackgroundColor(
 			try {
 				const result = await ImageThemeColors.extractThemeColorAsync(imageRef)
 				if (!isCancelled) {
-					setPalette(result)
+					setPalette(result ?? undefined)
 				}
 			} catch (e) {
 				if (!isCancelled) {

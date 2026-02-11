@@ -157,6 +157,11 @@ const LyricsSelectionModal = () => {
 		if (imageRef) {
 			ImageThemeColors.extractThemeColorAsync(imageRef)
 				.then((palette) => {
+					if (!palette) {
+						setCardColor(theme.colors.elevation.level3)
+						return
+					}
+
 					const bgColor = theme.dark
 						? (palette.darkMuted?.hex ?? palette.muted?.hex)
 						: (palette.lightMuted?.hex ?? palette.muted?.hex)

@@ -94,7 +94,7 @@ object BilibiliRepository {
         }
 
         if (apiResponse.data == null) {
-            throw IOException("Bilibili API Logic Error: code=0 msg=ok but data is missing")
+            throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
         }
 
         val data = apiResponse.data
@@ -148,7 +148,7 @@ object BilibiliRepository {
         }
 
         if (apiResponse.data == null) {
-             throw IOException("Bilibili API Logic Error: code=0 msg=ok but data is missing")
+            throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
         }
 
         return apiResponse.data[0].cid

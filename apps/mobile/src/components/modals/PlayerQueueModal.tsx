@@ -212,7 +212,6 @@ function PlayerQueueModal({
 				<View
 					style={{
 						height: '100%',
-						paddingBottom: insets.bottom,
 					}}
 				>
 					<View

@@ -12,6 +12,9 @@ import toast from './src/utils/toast'
 global.isUIReady = false
 
 const parsePlayerError = (error) => {
+	if (!error) {
+		return { message: '播放器发生未知错误', shouldReport: true }
+	}
 	const rawMessage = error.rootCauseMessage || error.message || ''
 
 	if (rawMessage.includes('Bilibili API Error')) {

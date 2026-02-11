@@ -170,6 +170,9 @@ importers:
       babel-preset-expo:
         specifier: ~55.0.1
         version: 55.0.2(@babel/core@7.28.6)(@babel/runtime@7.28.6)(expo@55.0.0-preview.7)(react-refresh@0.14.2)
+      color:
+        specifier: ^4.2.3
+        version: 4.2.3
       cookie:
         specifier: ^1.0.2
         version: 1.0.2

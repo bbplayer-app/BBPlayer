@@ -17,9 +17,6 @@
 ### Changed
 
 - 过滤掉播放器非关键错误（如 Bilibili API 错误、网络错误）的 Sentry 上报
-
-### Changed
-
 - 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 
@@ -28,7 +25,6 @@
 ### Added
 
 - 基于 `react-native-gesture-handler` 封装了 `Button` 组件，样式与 `react-native-paper` 保持一致
-
 - 支持酷狗音乐歌词搜索
 - 集成 Firebase Analytics
 - 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
