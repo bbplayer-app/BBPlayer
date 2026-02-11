@@ -1,4 +1,3 @@
-import { useMaterial3Theme } from '@pchmn/expo-material3-theme'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ShareIntentProvider } from 'expo-share-intent'
@@ -14,16 +13,22 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 import GlobalErrorFallback from '@/components/ErrorBoundary'
 import { queryClient } from '@/lib/config/queryClient'
+import { buildMaterial3PaperColors } from '@/lib/theme/material3Colors'
 
 export default function AppProviders({ children }: { children: ReactNode }) {
 	const colorScheme = useColorScheme()
-	const { theme } = useMaterial3Theme()
 	const paperTheme = useMemo(
 		() =>
 			colorScheme === 'dark'
-				? { ...MD3DarkTheme, colors: theme.dark }
-				: { ...MD3LightTheme, colors: theme.light },
-		[colorScheme, theme],
+				? {
+						...MD3DarkTheme,
+						colors: buildMaterial3PaperColors(colorScheme),
+					}
+				: {
+						...MD3LightTheme,
+						colors: buildMaterial3PaperColors(colorScheme),
+					},
+		[colorScheme],
 	)
 
 	return (
