@@ -17,18 +17,17 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import PagerView from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	Easing,
-	interpolate,
-	useAnimatedStyle,
 	useDerivedValue,
+	useEvent,
+	useHandler,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { scheduleOnRN } from 'react-native-worklets'
 
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
@@ -38,25 +37,52 @@ import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useScreenDimensions } from '@/hooks/ui/useScreenDimensions'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 
-const logger = log.extend('App.Player')
+const AnimatedPagerView = Animated.createAnimatedComponent(PagerView)
 
-const OVERLAY_OPACITY = 0.5
-const DISMISS_THRESHOLD = 150
-const ANIMATION_DURATION = 300
+interface PageScrollEvent {
+	offset: number
+	position: number
+}
+
+function usePageScrollHandler(
+	handlers: {
+		onPageScroll: (e: PageScrollEvent, context: Record<string, unknown>) => void
+	},
+	dependencies?: unknown[],
+) {
+	const { context, doDependenciesDiffer } = useHandler(handlers, dependencies)
+	const subscribeForEvents = ['onPageScroll']
+
+	return useEvent(
+		(event) => {
+			'worklet'
+			const { onPageScroll } = handlers
+			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
+				onPageScroll(event as unknown as PageScrollEvent, context)
+			}
+		},
+		subscribeForEvents,
+		doDependenciesDiffer,
+	)
+}
+
+const logger = log.extend('App.Player')
 
 export default function PlayerPage() {
 	const theme = useTheme()
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
 	const sheetRef = useRef<TrueSheet>(null)
+	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
 	const coverRef = useImage(currentTrack?.coverUrl ?? '', {
 		onError: () => void 0,
 	})
-	const { width, height } = useWindowDimensions()
+	const { width } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -67,84 +93,22 @@ export default function PlayerPage() {
 	)
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
-	const [activeTab, setActiveTab] = useState<'main' | 'lyrics'>('main')
-	const index = activeTab === 'lyrics' ? 1 : 0
-
-	const translateY = useSharedValue(height)
-	const isClosing = useSharedValue(false)
-
-	// 进场动画
-	useEffect(() => {
-		translateY.value = withTiming(0, { duration: ANIMATION_DURATION })
-	}, [translateY])
+	const [index, setIndex] = useState(0)
 
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)
-
-		setImmediate(() => {
-			if (router.canGoBack()) {
-				router.back()
-			}
-		})
+		if (router.canGoBack()) {
+			router.back()
+		}
 	}
 
 	const handleDismiss = () => {
-		if (activeTab === 'lyrics') {
-			setActiveTab('main')
+		if (index === 1) {
+			pagerRef.current?.setPage(0)
 			return
 		}
-		if (isClosing.value) return
-		isClosing.set(true)
-		translateY.set(
-			withTiming(height, { duration: ANIMATION_DURATION }, () => {
-				scheduleOnRN(dismissPlayer)
-			}),
-		)
+		dismissPlayer()
 	}
-
-	const panGesture = Gesture.Pan()
-		.enabled(activeTab === 'main')
-		.activeOffsetY([-1000, 10])
-		.failOffsetX([-10, 10])
-		.onUpdate((event) => {
-			'worklet'
-			if (isClosing.value) return
-			if (event.translationY > 0) {
-				translateY.set(event.translationY)
-			}
-		})
-		.onEnd((event) => {
-			'worklet'
-			if (isClosing.value) return
-
-			if (event.translationY > DISMISS_THRESHOLD || event.velocityY > 500) {
-				isClosing.value = true
-				translateY.set(
-					withTiming(height, { duration: ANIMATION_DURATION }, () => {
-						scheduleOnRN(dismissPlayer)
-					}),
-				)
-			} else {
-				translateY.set(withTiming(0, { duration: 200 }))
-			}
-		})
-
-	const overlayAnimatedStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(
-			translateY.value,
-			[0, height],
-			[OVERLAY_OPACITY, 0],
-		)
-		return {
-			opacity,
-		}
-	})
-
-	const contentAnimatedStyle = useAnimatedStyle(() => {
-		return {
-			transform: [{ translateY: translateY.value }],
-		}
-	})
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -156,23 +120,16 @@ export default function PlayerPage() {
 		}
 	}, [])
 
-	const realHeight = useMemo(() => {
-		return height + insets.top + insets.bottom
-	}, [height, insets.bottom, insets.top])
+	const { height: realHeight } = useScreenDimensions()
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
 
 	const [menuVisible, setMenuVisible] = useState(false)
 
-	useEffect(() => {
-		scrollX.value = withTiming(activeTab === 'lyrics' ? 1 : 0, {
-			duration: 300,
-		})
-	}, [activeTab, scrollX])
-
 	const jumpTo = (key: string) => {
-		setActiveTab(key === 'lyrics' ? 'lyrics' : 'main')
+		const targetIndex = key === 'lyrics' ? 1 : 0
+		pagerRef.current?.setPage(targetIndex)
 	}
 
 	const gradientColors = useDerivedValue(() => {
@@ -257,8 +214,8 @@ export default function PlayerPage() {
 				})
 			return
 		}
-		if (activeTab === 'lyrics') {
-			setActiveTab('main')
+		if (index === 1) {
+			pagerRef.current?.setPage(0)
 			return
 		}
 		handleDismiss()
@@ -276,127 +233,119 @@ export default function PlayerPage() {
 		}
 	}, [playerBackgroundStyle, setSettings])
 
-	const mainTabStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [1, 0, 0])
-		return {
-			opacity,
-			pointerEvents: scrollX.value > 0.5 ? 'none' : 'auto',
-		}
-	})
-
-	const lyricsTabStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [0, 0, 1])
-		return {
-			opacity,
-			pointerEvents: scrollX.value < 0.5 ? 'none' : 'auto',
-		}
+	const pageScrollHandler = usePageScrollHandler({
+		onPageScroll: (e) => {
+			'worklet'
+			scrollX.value = e.offset + e.position
+		},
 	})
 
 	return (
 		<View style={styles.fullScreen}>
-			{/* Black overlay */}
-			<Animated.View
-				style={[styles.overlay, overlayAnimatedStyle]}
-				pointerEvents='none'
-			/>
+			<View style={styles.fullScreen}>
+				<Canvas style={StyleSheet.absoluteFill}>
+					<Rect
+						x={0}
+						y={0}
+						width={width}
+						height={realHeight}
+						color={colors.background}
+					/>
+					{playerBackgroundStyle === 'gradient' && (
+						<Group>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={vec(0, realHeight)}
+									colors={gradientColors}
+									positions={[0, 1]}
+								/>
+							</Rect>
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={realHeight}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={scrimEndVec}
+									colors={scrimColors}
+								/>
+							</Rect>
+						</Group>
+					)}
+				</Canvas>
 
-			{/* Player content */}
-			<GestureDetector gesture={panGesture}>
-				<Animated.View style={[styles.fullScreen, contentAnimatedStyle]}>
-					<Canvas style={StyleSheet.absoluteFill}>
-						<Rect
-							x={0}
-							y={0}
-							width={width}
-							height={realHeight}
-							color={colors.background}
-						/>
-						{playerBackgroundStyle === 'gradient' && (
-							<Group>
-								<Rect
-									x={0}
-									y={0}
-									width={width}
-									height={realHeight}
-								>
-									<LinearGradient
-										start={vec(0, 0)}
-										end={vec(0, realHeight)}
-										colors={gradientColors}
-										positions={[0, 1]}
-									/>
-								</Rect>
-								<Rect
-									x={0}
-									y={0}
-									width={width}
-									height={realHeight}
-								>
-									<LinearGradient
-										start={vec(0, 0)}
-										end={scrimEndVec}
-										colors={scrimColors}
-									/>
-								</Rect>
-							</Group>
-						)}
-					</Canvas>
-
+				<View
+					style={[
+						styles.container,
+						{
+							paddingTop: insets.top,
+						},
+					]}
+				>
 					<View
 						style={[
-							styles.container,
-							{
-								paddingTop: insets.top,
-							},
+							styles.innerContainer,
+							{ pointerEvents: menuVisible ? 'none' : 'auto' },
 						]}
 					>
-						<View
-							style={[
-								styles.innerContainer,
-								{ pointerEvents: menuVisible ? 'none' : 'auto' },
-							]}
+						<PlayerHeader
+							onMorePress={() => setMenuVisible(true)}
+							onBack={handleDismiss}
+							index={index}
+							scrollX={scrollX}
+						/>
+						<AnimatedPagerView
+							ref={pagerRef}
+							style={styles.tabView}
+							initialPage={0}
+							onPageScroll={pageScrollHandler}
+							onPageSelected={(e) => setIndex(e.nativeEvent.position)}
 						>
-							<PlayerHeader
-								onMorePress={() => setMenuVisible(true)}
-								onBack={handleDismiss}
-								index={index}
-								scrollX={scrollX}
-							/>
-							<View style={styles.tabView}>
-								<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
-									<PlayerMainTab
-										sheetRef={sheetRef}
-										jumpTo={jumpTo}
-										imageRef={coverRef}
-										onPresent={() => setQueueVisible(true)}
-										danmakuEnabled={activeTab === 'main'}
-									/>
-								</Animated.View>
-								<Animated.View
-									style={[StyleSheet.absoluteFill, lyricsTabStyle]}
-								>
-									<Lyrics
-										currentIndex={index}
-										onPressBackground={() => jumpTo('main')}
-									/>
-								</Animated.View>
+							<View
+								key='main'
+								style={styles.tabView}
+							>
+								<PlayerMainTab
+									sheetRef={sheetRef}
+									jumpTo={jumpTo}
+									imageRef={coverRef}
+									onPresent={() => setQueueVisible(true)}
+									danmakuEnabled={index === 0}
+								/>
 							</View>
-						</View>
-
-						<PlayerFunctionalMenu
-							menuVisible={menuVisible}
-							setMenuVisible={setMenuVisible}
-						/>
-
-						<PlayerQueueModal
-							sheetRef={sheetRef}
-							isVisible={queueVisible}
-							onDidDismiss={() => setQueueVisible(false)}
-							onDidPresent={() => setQueueVisible(true)}
-						/>
+							<View
+								key='lyrics'
+								style={styles.tabView}
+							>
+								<Lyrics
+									currentIndex={index}
+									onPressBackground={() => jumpTo('main')}
+								/>
+							</View>
+						</AnimatedPagerView>
 					</View>
-				</Animated.View>
-			</GestureDetector>
+
+					<PlayerFunctionalMenu
+						menuVisible={menuVisible}
+						setMenuVisible={setMenuVisible}
+					/>
+
+					<PlayerQueueModal
+						sheetRef={sheetRef}
+						isVisible={queueVisible}
+						onDidDismiss={() => setQueueVisible(false)}
+						onDidPresent={() => setQueueVisible(true)}
+					/>
+				</View>
+			</View>
 		</View>
 	)
 }
@@ -404,10 +353,6 @@ export default function PlayerPage() {
 const styles = StyleSheet.create({
 	fullScreen: {
 		flex: 1,
-	},
-	overlay: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: 'black',
 	},
 	container: {
 		flex: 1,

@@ -1,3 +1,9 @@
+## [0.11.5] (2026-02-10)
+
+### Changed
+
+- 重构 Android 端 player 初始化逻辑，支持 player 被释放后自动重建（`ensurePlayer`）。
+
 ## [0.11.4] (2026-02-07)
 
 ### Changed

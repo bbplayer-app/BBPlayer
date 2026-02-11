@@ -19,6 +19,12 @@
 - 过滤掉播放器非关键错误（如 Bilibili API 错误、网络错误）的 Sentry 上报
 - 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
+- 播放器页面换回滑动样式
+- orpheus: 在 player 被销毁后点击播放时重新创建
+
+### Fixed
+
+- 修复播放器页面底部出现的白块问题
 
 ## [2.3.0] - 2026-02-07
 
