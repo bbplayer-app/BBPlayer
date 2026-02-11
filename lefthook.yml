@@ -1,6 +1,11 @@
 pre-commit:
   parallel: true
   commands:
+    gitleaks:
+      run: >-
+        command -v gitleaks > /dev/null 2>&1
+        && gitleaks protect --staged --verbose --baseline-path .gitleaks-baseline.json
+        || echo "⚠️ gitleaks is not installed, skipping secret scan. Install with: brew install gitleaks"
     lint-and-format-codes:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
       run: pnpm eslint "{staged_files}" && pnpm oxfmt --write "{staged_files}"
