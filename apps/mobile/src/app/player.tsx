@@ -148,6 +148,8 @@ export default function PlayerPage() {
 		}
 		ImageThemeColors.extractThemeColorAsync(coverRef)
 			.then((palette) => {
+				if (!palette) return
+
 				const animationConfig = {
 					duration: 400,
 					easing: Easing.out(Easing.quad),

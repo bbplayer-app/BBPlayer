@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, ProgressBar, Text } from 'react-native-paper'
+import { Dialog, ProgressBar, Text } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'

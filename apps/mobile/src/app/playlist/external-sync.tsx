@@ -6,16 +6,16 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Banner,
-	Button,
 	Divider,
-	IconButton,
 	Text,
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import IconButton from '@/components/common/IconButton'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
@@ -36,6 +36,8 @@ import {
 import type { GenericTrack } from '@/types/external_playlist'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import toast from '@/utils/toast'
+
+const ItemSeparator = () => <Divider />
 
 const SyncTrackItem = memo(
 	({
@@ -232,7 +234,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	})
 
 	const handleSave = useCallback(async () => {
-		if (!data?.playlist || !results) return
+		if (!data?.playlist || !data?.tracks || !results) return
 		const matchResults = Object.values(results)
 		if (matchResults.length === 0) {
 			toast.error('没有可保存的内容')
@@ -459,7 +461,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					syncing,
 				}}
 				keyExtractor={keyExtractor}
-				ItemSeparatorComponent={() => <Divider />}
+				ItemSeparatorComponent={ItemSeparator}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,
 				}}

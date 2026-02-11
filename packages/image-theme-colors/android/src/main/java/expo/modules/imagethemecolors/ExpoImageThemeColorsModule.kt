@@ -15,6 +15,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.sharedobjects.SharedRef
 import expo.modules.kotlin.types.Either
+import expo.modules.kotlin.types.EitherOfFour
 import expo.modules.kotlin.types.EitherOfThree
 import expo.modules.kotlin.types.toKClass
 
@@ -29,9 +30,13 @@ class ExpoImageThemeColorsModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("ExpoImageThemeColors")
 
-        AsyncFunction("extractThemeColorAsync") Coroutine { imageSource: EitherOfThree<String, SharedRef<Bitmap>, SharedRef<Drawable>>
+        AsyncFunction("extractThemeColorAsync") Coroutine { imageSource: EitherOfFour<String, SharedRef<Bitmap>, SharedRef<Drawable>, Int>
             ->
             val bitmap = when {
+                imageSource.`is`(Int::class) -> {
+                    android.util.Log.w(TAG, "Received Integer input for image source. This usually indicates a race condition where the image was released. Returning null.")
+                    return@Coroutine null
+                }
                 imageSource.`is`(String::class) -> getBitmapFromUrl(imageSource.get(String::class))
                 imageSource.`is`(toKClass<SharedRef<Bitmap>>()) -> imageSource.get(toKClass<SharedRef<Bitmap>>()).ref
                 else -> (imageSource.get(toKClass<SharedRef<Drawable>>()).ref as? BitmapDrawable)?.bitmap

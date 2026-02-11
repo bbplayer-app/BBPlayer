@@ -3,13 +3,13 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Button,
 	Dialog,
 	Searchbar,
 	Text,
 	TouchableRipple,
 } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useFetchLyrics } from '@/hooks/mutations/lyrics'
 import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'

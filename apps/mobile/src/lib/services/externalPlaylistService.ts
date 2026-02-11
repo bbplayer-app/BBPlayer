@@ -36,7 +36,24 @@ export class ExternalPlaylistService {
 	): ResultAsync<{ playlist: GenericPlaylist; tracks: GenericTrack[] }, Error> {
 		if (source === 'netease') {
 			return neteaseApi.getPlaylist(playlistId).map((response) => {
-				const tracks = response.playlist.tracks.map((track) => ({
+				if (!response.playlist) {
+					return {
+						playlist: {
+							id: playlistId,
+							title: 'Unknown Playlist',
+							coverUrl: '',
+							description: '',
+							trackCount: 0,
+							author: {
+								name: 'Unknown',
+								id: 0,
+							},
+						},
+						tracks: [],
+					}
+				}
+
+				const tracks = (response.playlist.tracks ?? []).map((track) => ({
 					title: track.name,
 					artists: track.ar.map((a) => a.name),
 					album: track.al.name,
@@ -53,8 +70,8 @@ export class ExternalPlaylistService {
 						description: response.playlist.description ?? '',
 						trackCount: response.playlist.trackCount,
 						author: {
-							name: response.playlist.creator.nickname,
-							id: response.playlist.creator.userId,
+							name: response.playlist.creator?.nickname ?? 'Unknown',
+							id: response.playlist.creator?.userId ?? 0,
 						},
 					},
 					tracks,

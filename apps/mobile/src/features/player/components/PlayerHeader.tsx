@@ -1,6 +1,6 @@
 import { DownloadState } from '@bbplayer/orpheus'
 import { StyleSheet, View } from 'react-native'
-import { IconButton, Text } from 'react-native-paper'
+import { Text } from 'react-native-paper'
 import Animated, {
 	Extrapolation,
 	interpolate,
@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import type { SharedValue } from 'react-native-reanimated'
 
+import IconButton from '@/components/common/IconButton'
 import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 

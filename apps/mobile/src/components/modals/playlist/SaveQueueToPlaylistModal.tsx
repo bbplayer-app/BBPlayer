@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
+import { Dialog, TextInput } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'

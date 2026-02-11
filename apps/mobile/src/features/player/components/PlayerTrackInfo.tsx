@@ -13,8 +13,9 @@ import {
 	View,
 } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
-import { IconButton, Text, TouchableRipple, useTheme } from 'react-native-paper'
+import { Text, TouchableRipple, useTheme } from 'react-native-paper'
 
+import IconButton from '@/components/common/IconButton'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'

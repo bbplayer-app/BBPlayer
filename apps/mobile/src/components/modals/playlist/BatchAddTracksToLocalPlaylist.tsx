@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Button, Dialog, RadioButton, Text, useTheme } from 'react-native-paper'
+import { Dialog, RadioButton, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useBatchAddTracksToLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'

@@ -1,8 +1,9 @@
 import Slider from '@react-native-community/slider'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, Switch, Text } from 'react-native-paper'
+import { Dialog, Switch, Text } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 

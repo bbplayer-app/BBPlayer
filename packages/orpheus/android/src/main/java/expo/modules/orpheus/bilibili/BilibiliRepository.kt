@@ -35,7 +35,8 @@ object BilibiliRepository {
         val wbiData = response.body()?.data?.wbiImg
 
         if (!response.isSuccessful || wbiData == null) {
-            throw IOException("Failed to fetch Wbi Keys: ${response.code()}")
+            val msg = response.body()?.message ?: "Unknown Error"
+            throw IOException("Bilibili API Error: code=${response.code()} msg=$msg")
         }
 
         val imgKey = WbiUtil.extractKey(wbiData.imgUrl)
@@ -87,8 +88,13 @@ object BilibiliRepository {
         }
 
         val apiResponse = response.body()
-        if (apiResponse?.code != 0 || apiResponse.data == null) {
-            throw IOException("Bilibili API Logic Error: code=${apiResponse?.code} msg=${apiResponse?.message}")
+        if (apiResponse?.code != 0) {
+            val msg = apiResponse?.message ?: "Unknown Error"
+            throw IOException("Bilibili API Error: code=${apiResponse?.code} msg=$msg")
+        }
+
+        if (apiResponse.data == null) {
+            throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
         }
 
         val data = apiResponse.data
@@ -136,8 +142,13 @@ object BilibiliRepository {
         }
 
         val apiResponse = response.body()
-        if (apiResponse?.code != 0 || apiResponse.data == null) {
-            throw IOException("Bilibili API Logic Error: code=${apiResponse?.code} msg=${apiResponse?.message}")
+        if (apiResponse?.code != 0) {
+            val msg = apiResponse?.message ?: "Unknown Error"
+            throw IOException("Bilibili API Error: code=${apiResponse?.code} msg=$msg")
+        }
+
+        if (apiResponse.data == null) {
+            throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
         }
 
         return apiResponse.data[0].cid

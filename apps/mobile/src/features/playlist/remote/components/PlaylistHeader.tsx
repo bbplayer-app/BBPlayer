@@ -3,16 +3,12 @@ import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	Button,
-	Divider,
-	IconButton,
-	Text,
-	TouchableRipple,
-} from 'react-native-paper'
+import { Divider, Text, TouchableRipple } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import IconButton from '@/components/common/IconButton'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {

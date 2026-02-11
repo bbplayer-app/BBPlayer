@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useUpdateTrackLocalPlaylists } from '@/hooks/mutations/db/playlist'
 import {
 	usePlaylistLists,

@@ -4,16 +4,11 @@ import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	Button,
-	Divider,
-	IconButton,
-	Text,
-	Tooltip,
-	TouchableRipple,
-} from 'react-native-paper'
+import { Divider, Text, TouchableRipple } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { playlistService } from '@/lib/services/playlistService'
@@ -220,39 +215,35 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						/>
 					)}
 
-					<Tooltip title='复制到本地歌单'>
-						<IconButton
-							mode='contained'
-							icon='content-copy'
-							size={20}
-							onPress={onClickCopyToLocalPlaylist}
-							testID='playlist-copy'
-						/>
-					</Tooltip>
-					<Tooltip title='下载全部'>
-						<IconButton
-							mode='contained'
-							icon='download'
-							size={20}
-							onPress={() =>
-								alert(
-									'下载全部？',
-									'是否要下载该播放列表内的全部歌曲？（已下载过的不会重新下载）',
-									[
-										{
-											text: '取消',
-										},
-										{
-											text: '确定',
-											onPress: onClickDownloadAll,
-										},
-									],
-									{ cancelable: true },
-								)
-							}
-							testID='playlist-download'
-						/>
-					</Tooltip>
+					<IconButton
+						mode='contained'
+						icon='content-copy'
+						size={20}
+						onPress={onClickCopyToLocalPlaylist}
+						testID='playlist-copy'
+					/>
+					<IconButton
+						mode='contained'
+						icon='download'
+						size={20}
+						onPress={() =>
+							alert(
+								'下载全部？',
+								'是否要下载该播放列表内的全部歌曲？（已下载过的不会重新下载）',
+								[
+									{
+										text: '取消',
+									},
+									{
+										text: '确定',
+										onPress: onClickDownloadAll,
+									},
+								],
+								{ cancelable: true },
+							)
+						}
+						testID='playlist-download'
+					/>
 				</View>
 			</View>
 

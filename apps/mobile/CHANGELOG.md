@@ -7,8 +7,17 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 修复 `image-theme-colors` 在 Android 上因类型转换错误导致的崩溃
+- 修复获取网易云歌单时因某些字段缺失（如 `playlist` 或 `creator`）导致的崩溃
+- 修复因重复点击导致的分享失败问题，并优化按钮加载状态
+- 修复播放器因 data 可能为 null 导致的解析错误问题
+
 ### Changed
 
+- 过滤掉播放器非关键错误（如 Bilibili API 错误、网络错误）的 Sentry 上报
+- 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 - 播放器页面换回滑动样式
 - orpheus: 在 player 被销毁后点击播放时重新创建
@@ -21,6 +30,7 @@
 
 ### Added
 
+- 基于 `react-native-gesture-handler` 封装了 `Button` 组件，样式与 `react-native-paper` 保持一致
 - 支持酷狗音乐歌词搜索
 - 集成 Firebase Analytics
 - 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
@@ -61,7 +71,8 @@
 - 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
 - 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
 - 优化播放列表在屏幕较窄时的布局显示
-- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 修复播放队列模态框中使用 `RectButton` 无法点击的问题，并移除删除按钮的涟漪效果
+- 修复播放器页面在部分小屏设备上无法滚动的问题
 - 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
 
 ## [2.2.4] - 2026-01-30

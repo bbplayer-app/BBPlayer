@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
-import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useDealFavoriteForOneVideo } from '@/hooks/mutations/bilibili/favorite'
 import {
 	favoriteListQueryKeys,
