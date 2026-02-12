@@ -14,6 +14,7 @@
 - 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 - 配置 gitleaks 用于检测代码中的敏感信息泄漏（pre-commit 钩子 + CI）
+- 集成 oxlint 作为高性能 linter（含 tsgolint type-aware 规则），与 ESLint 并行运行
 - 播放器页面换回滑动样式
 - orpheus: 在 player 被销毁后点击播放时重新创建
 

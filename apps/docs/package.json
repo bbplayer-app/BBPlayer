@@ -3,10 +3,12 @@
 	"scripts": {
 		"docs:build": "vitepress build docs",
 		"docs:dev": "vitepress dev docs",
-		"docs:preview": "vitepress preview docs"
+		"docs:preview": "vitepress preview docs",
+		"oxlint": "oxlint -c ../../.oxlintrc.json"
 	},
 	"devDependencies": {
 		"lucide-vue-next": "^0.562.0",
+		"oxlint": "^1.46.0",
 		"vitepress": "2.0.0-alpha.12",
 		"vue": "^3.5.27"
 	}

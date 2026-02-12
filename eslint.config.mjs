@@ -3,6 +3,7 @@ import importAlias from '@dword-design/eslint-plugin-import-alias'
 import js from '@eslint/js'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import eslintConfigPrettier from 'eslint-config-prettier/flat'
+import oxlint from 'eslint-plugin-oxlint'
 import pluginReact from 'eslint-plugin-react'
 import reactCompiler from 'eslint-plugin-react-compiler'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -120,4 +121,5 @@ export default defineConfig([
 		},
 	},
 	eslintConfigPrettier,
+	...oxlint.configs['flat/recommended'],
 ])
