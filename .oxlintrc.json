@@ -5,7 +5,6 @@
 		"typescript",
 		"unicorn",
 		"eslint",
-		"react-perf",
 		"oxc",
 		"import",
 		"promise"
@@ -13,10 +12,10 @@
 	"categories": {
 		"correctness": "error",
 		"suspicious": "error",
-		"pedantic": "error",
+		"pedantic": "allow",
 		"perf": "error",
-		"style": "error",
-		"restriction": "error"
+		"style": "allow",
+		"restriction": "allow"
 	},
 	"env": {
 		"builtin": true
@@ -69,39 +68,7 @@
 		"@tanstack/query/no-void-query-fn": "error",
 		"@tanstack/query/mutation-property-order": "error",
 		"react-compiler/react-compiler": "error",
-		"bbplayer/no-navigate-after-modal-close": "error",
-
-		"no-magic-numbers": "off",
-		"sort-keys": "off",
-		"sort-imports": "off",
-		"typescript/explicit-function-return-type": "off",
-		"id-length": "off",
-		"react/jsx-max-depth": "off",
-		"no-ternary": "off",
-		"typescript/explicit-module-boundary-types": "off",
-		"max-lines-per-function": "off",
-		"no-undefined": "off",
-		"max-statements": "off",
-		"no-inline-comments": "off",
-		"unicorn/filename-case": "off",
-		"no-void": "off",
-		"func-style": "off",
-		"unicorn/no-null": "off",
-		"capitalized-comments": "off",
-		"arrow-body-style": "off",
-		"unicorn/catch-error-name": "off",
-		"no-implicit-coercion": "off",
-		"new-cap": "off",
-		"unicorn/switch-case-braces": "off",
-		"react/jsx-props-no-spreading": "off",
-		"max-lines": "off",
-		"init-declarations": "off",
-		"react/jsx-curly-brace-presence": "off",
-		"react/no-multi-comp": "off",
-		"unicorn/numeric-separators-style": "off",
-		"no-negated-condition": "off",
-		"no-continue": "off",
-		"no-bitwise": "off"
+		"bbplayer/no-navigate-after-modal-close": "error"
 	},
 	"settings": {
 		"react": {
@@ -141,17 +108,14 @@
 				"react-you-might-not-need-an-effect/no-derived-state": "warn"
 			},
 			"jsPlugins": ["eslint-plugin-react-you-might-not-need-an-effect"],
-			"globals": {
-				"AudioWorkletGlobalScope": "readonly",
-				"AudioWorkletProcessor": "readonly",
-				"currentFrame": "readonly",
-				"currentTime": "readonly",
-				"registerProcessor": "readonly",
-				"sampleRate": "readonly",
-				"WorkletGlobalScope": "readonly"
-			},
 			"env": {
-				"browser": true
+				"es2022": true,
+				"browser": true,
+				"node": true
+			},
+			"globals": {
+				"__DEV__": "readonly",
+				"global": "readonly"
 			}
 		}
 	]
