@@ -8,6 +8,17 @@ import SquircleView from 'react-native-fast-squircle'
 
 import { getGradientColors } from '@/utils/color'
 
+const getFirstChar = (validTitle: string) => {
+	if (!validTitle) return undefined
+
+	const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+
+	const segments = segmenter.segment(validTitle)
+	const firstSegment = [...segments][0]
+
+	return firstSegment ? firstSegment.segment.toUpperCase() : undefined
+}
+
 /**
  * 组件 Props 定义
  */
@@ -67,8 +78,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		isDark,
 	)
 
-	const firstChar =
-		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
+	const firstChar = getFirstChar(validTitle)
 
 	const coverSource = useMemo(() => {
 		if (typeof cover === 'string') {

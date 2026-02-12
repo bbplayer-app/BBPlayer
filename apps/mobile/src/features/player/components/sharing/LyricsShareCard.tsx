@@ -88,6 +88,7 @@ export const LyricsShareCard = ({
 					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
+							// oxlint-disable-next-line react/no-array-index-key -- lyrics 是外部传入的，所以 index 是静态的
 							key={`${lyric.startTime}-${index}`}
 							style={styles.lyricLine}
 						>

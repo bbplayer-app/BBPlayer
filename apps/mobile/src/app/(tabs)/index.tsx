@@ -32,6 +32,15 @@ interface SearchHistoryItem {
 	timestamp: number
 }
 
+const getGreetingMsg = () => {
+	const hour = new Date().getHours()
+	if (hour >= 0 && hour < 6) return '凌晨好'
+	if (hour >= 6 && hour < 12) return '早上好'
+	if (hour >= 12 && hour < 18) return '下午好'
+	if (hour >= 18 && hour < 24) return '晚上好'
+	return '你好'
+}
+
 function HomePage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
@@ -52,15 +61,6 @@ function HomePage() {
 		isPending: personalInfoPending,
 		isError: personalInfoError,
 	} = usePersonalInformation()
-
-	const getGreetingMsg = () => {
-		const hour = new Date().getHours()
-		if (hour >= 0 && hour < 6) return '凌晨好'
-		if (hour >= 6 && hour < 12) return '早上好'
-		if (hour >= 12 && hour < 18) return '下午好'
-		if (hour >= 18 && hour < 24) return '晚上好'
-		return '你好'
-	}
 
 	const greeting = getGreetingMsg()
 

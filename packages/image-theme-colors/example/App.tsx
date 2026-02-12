@@ -25,12 +25,10 @@ export default function App() {
 		}
 
 		try {
-			console.log('Extracting colors...')
 			const result = await ExpoImageThemeColors.extractThemeColorAsync(imageRef)
-			console.log('Extraction Result:', JSON.stringify(result, null, 2))
+
 			Alert.alert('Result', JSON.stringify(result, null, 2))
 		} catch (e) {
-			console.error(e)
 			if (e instanceof Error) {
 				Alert.alert('Error', e.message ?? 'Unknown error')
 			}

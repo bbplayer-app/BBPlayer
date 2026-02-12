@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
+	createAnimatedComponent,
 	type SharedValue,
 	useAnimatedStyle,
 	useDerivedValue,
@@ -13,7 +14,7 @@ import Animated, {
 
 import { KaraokeWord } from './KaraokeWord'
 
-const AnimatedRectButton = Animated.createAnimatedComponent(RectButton)
+const AnimatedRectButton = createAnimatedComponent(RectButton)
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
@@ -46,7 +47,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	})
 
 	const animatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				color: withTiming(colors.primary, { duration: 300 }),
@@ -79,9 +80,9 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 							justifyContent: 'center',
 						}}
 					>
-						{item.spans.map((span, idx) => (
+						{item.spans.map((span) => (
 							<KaraokeWord
-								key={`${index}_${idx}`}
+								key={`span_${item.startTime}_${span.startTime}_${span.text}`}
 								span={span}
 								currentTime={gatedCurrentTime}
 								baseStyle={styles.oldSchoolItemText}
@@ -129,7 +130,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				transform: [
@@ -149,7 +150,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const textAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				color: withTiming(theme.colors.primary, { duration: 300 }),
 			}
@@ -168,9 +169,9 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		) {
 			return (
 				<View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-					{item.spans.map((span, idx) => (
+					{item.spans.map((span) => (
 						<KaraokeWord
-							key={`${index}_${idx}`}
+							key={`span_${item.startTime}_${span.startTime}_${span.text}`}
 							span={span}
 							currentTime={gatedCurrentTime}
 							baseStyle={styles.modernItemText}

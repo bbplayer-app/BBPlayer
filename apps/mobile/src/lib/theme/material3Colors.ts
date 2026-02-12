@@ -14,43 +14,85 @@ export function buildMaterial3PaperColors(
 		colorScheme === 'dark' ? MD3DarkTheme.colors : MD3LightTheme.colors
 
 	return {
-		primary: (d.primary as string) ?? fallback.primary,
+		primary: typeof d.primary === 'string' ? d.primary : fallback.primary,
 		primaryContainer:
-			(d.primaryContainer as string) ?? fallback.primaryContainer,
-		secondary: (d.secondary as string) ?? fallback.secondary,
+			typeof d.primaryContainer === 'string'
+				? d.primaryContainer
+				: fallback.primaryContainer,
+		secondary:
+			typeof d.secondary === 'string' ? d.secondary : fallback.secondary,
 		secondaryContainer:
-			(d.secondaryContainer as string) ?? fallback.secondaryContainer,
-		tertiary: (d.tertiary as string) ?? fallback.tertiary,
+			typeof d.secondaryContainer === 'string'
+				? d.secondaryContainer
+				: fallback.secondaryContainer,
+		tertiary: typeof d.tertiary === 'string' ? d.tertiary : fallback.tertiary,
 		tertiaryContainer:
-			(d.tertiaryContainer as string) ?? fallback.tertiaryContainer,
-		surface: (d.surface as string) ?? fallback.surface,
-		surfaceVariant: (d.surfaceVariant as string) ?? fallback.surfaceVariant,
-		background: (d.background as string) ?? fallback.background,
-		error: (d.error as string) ?? fallback.error,
-		errorContainer: (d.errorContainer as string) ?? fallback.errorContainer,
-		onPrimary: (d.onPrimary as string) ?? fallback.onPrimary,
+			typeof d.tertiaryContainer === 'string'
+				? d.tertiaryContainer
+				: fallback.tertiaryContainer,
+		surface: typeof d.surface === 'string' ? d.surface : fallback.surface,
+		surfaceVariant:
+			typeof d.surfaceVariant === 'string'
+				? d.surfaceVariant
+				: fallback.surfaceVariant,
+		background:
+			typeof d.background === 'string' ? d.background : fallback.background,
+		error: typeof d.error === 'string' ? d.error : fallback.error,
+		errorContainer:
+			typeof d.errorContainer === 'string'
+				? d.errorContainer
+				: fallback.errorContainer,
+		onPrimary:
+			typeof d.onPrimary === 'string' ? d.onPrimary : fallback.onPrimary,
 		onPrimaryContainer:
-			(d.onPrimaryContainer as string) ?? fallback.onPrimaryContainer,
-		onSecondary: (d.onSecondary as string) ?? fallback.onSecondary,
+			typeof d.onPrimaryContainer === 'string'
+				? d.onPrimaryContainer
+				: fallback.onPrimaryContainer,
+		onSecondary:
+			typeof d.onSecondary === 'string' ? d.onSecondary : fallback.onSecondary,
 		onSecondaryContainer:
-			(d.onSecondaryContainer as string) ?? fallback.onSecondaryContainer,
-		onTertiary: (d.onTertiary as string) ?? fallback.onTertiary,
+			typeof d.onSecondaryContainer === 'string'
+				? d.onSecondaryContainer
+				: fallback.onSecondaryContainer,
+		onTertiary:
+			typeof d.onTertiary === 'string' ? d.onTertiary : fallback.onTertiary,
 		onTertiaryContainer:
-			(d.onTertiaryContainer as string) ?? fallback.onTertiaryContainer,
-		onSurface: (d.onSurface as string) ?? fallback.onSurface,
+			typeof d.onTertiaryContainer === 'string'
+				? d.onTertiaryContainer
+				: fallback.onTertiaryContainer,
+		onSurface:
+			typeof d.onSurface === 'string' ? d.onSurface : fallback.onSurface,
 		onSurfaceVariant:
-			(d.onSurfaceVariant as string) ?? fallback.onSurfaceVariant,
-		onError: (d.onError as string) ?? fallback.onError,
+			typeof d.onSurfaceVariant === 'string'
+				? d.onSurfaceVariant
+				: fallback.onSurfaceVariant,
+		onError: typeof d.onError === 'string' ? d.onError : fallback.onError,
 		onErrorContainer:
-			(d.onErrorContainer as string) ?? fallback.onErrorContainer,
-		onBackground: (d.onBackground as string) ?? fallback.onBackground,
-		outline: (d.outline as string) ?? fallback.outline,
-		outlineVariant: (d.outlineVariant as string) ?? fallback.outlineVariant,
+			typeof d.onErrorContainer === 'string'
+				? d.onErrorContainer
+				: fallback.onErrorContainer,
+		onBackground:
+			typeof d.onBackground === 'string'
+				? d.onBackground
+				: fallback.onBackground,
+		outline: typeof d.outline === 'string' ? d.outline : fallback.outline,
+		outlineVariant:
+			typeof d.outlineVariant === 'string'
+				? d.outlineVariant
+				: fallback.outlineVariant,
 		// Renamed in Expo Router: surfaceInverse → inverseSurface
-		inverseSurface: (d.surfaceInverse as string) ?? fallback.inverseSurface,
+		inverseSurface:
+			typeof d.surfaceInverse === 'string'
+				? d.surfaceInverse
+				: fallback.inverseSurface,
 		inverseOnSurface:
-			(d.onSurfaceInverse as string) ?? fallback.inverseOnSurface,
-		inversePrimary: (d.primaryInverse as string) ?? fallback.inversePrimary,
+			typeof d.onSurfaceInverse === 'string'
+				? d.onSurfaceInverse
+				: fallback.inverseOnSurface,
+		inversePrimary:
+			typeof d.primaryInverse === 'string'
+				? d.primaryInverse
+				: fallback.inversePrimary,
 		shadow: fallback.shadow,
 		scrim: fallback.scrim,
 		// Not available from Expo Router dynamic colors — use Paper defaults

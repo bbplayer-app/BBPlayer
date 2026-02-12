@@ -1,4 +1,4 @@
-import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
+import { SPECTRUM_SIZE, Orpheus } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, PermissionsAndroid, Platform, View } from 'react-native'
@@ -255,6 +255,7 @@ export const SpectrumVisualizer = ({
 				<Path
 					path={path}
 					color={color}
+					// oxlint-disable-next-line react/style-prop-object
 					style='stroke'
 					strokeWidth={4}
 					strokeCap='round'

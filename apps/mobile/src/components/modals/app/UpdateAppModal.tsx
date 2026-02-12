@@ -59,10 +59,10 @@ export default function UpdateAppModal({
 					</Text>
 				) : null}
 				{listed_notes && listed_notes.length > 0 ? (
-					listed_notes.map((note, index) => (
+					listed_notes.map((note) => (
 						<Text
 							selectable
-							key={index}
+							key={note}
 							style={styles.noteText}
 						>
 							{`• ${note}`}

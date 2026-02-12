@@ -2,6 +2,10 @@
 	"files.autoSave": "onFocusChange",
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "oxc.oxc-vscode",
+	"oxc.typeAware": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.oxc": "always"
+	},
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "oxc.oxc-vscode"
 	},

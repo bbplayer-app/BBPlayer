@@ -7,6 +7,8 @@ import { diffSets } from '@/utils/set'
 
 const logger = log.extend('Services.SyncLocalToBilibili')
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 class SyncLocalToBilibiliService {
 	/**
 	 * 通过名称查找远程收藏夹
@@ -100,9 +102,6 @@ class SyncLocalToBilibiliService {
 
 		const CONCURRENCY = 1
 		const queue = [...bvidsToAdd]
-
-		const sleep = (ms: number) =>
-			new Promise((resolve) => setTimeout(resolve, ms))
 
 		const worker = async () => {
 			while (queue.length > 0) {

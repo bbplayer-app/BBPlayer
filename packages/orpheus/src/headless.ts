@@ -13,20 +13,26 @@ export function registerOrpheusHeadlessTask(
 			task({
 				eventName: 'onTrackStarted',
 				...event,
-			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
+			}).catch(() => {
+				// ignore headless task errors
+			})
 		})
 
 		Orpheus.addListener('onTrackFinished', (event) => {
 			task({
 				eventName: 'onTrackFinished',
 				...event,
-			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
+			}).catch(() => {
+				// ignore headless task errors
+			})
 		})
 
 		Orpheus.addListener('onIsPlayingChanged', (event: { status: boolean }) => {
 			task({
 				eventName: event.status ? 'onTrackResumed' : 'onTrackPaused',
-			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
+			}).catch(() => {
+				// ignore headless task errors
+			})
 		})
 	}
 

@@ -75,21 +75,23 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 
 	return (
 		<View style={styles.container}>
-			{Array.from({ length: BAR_COUNT }).map((_, i) => (
-				<View
-					key={i}
-					ref={(ref) => {
-						barsRef.current[i] = ref
-					}}
-					style={[
-						styles.bar,
-						{
-							backgroundColor: `hsl(${i * 10}, 80%, 50%)`,
-							width: (dimensions.width - 80) / BAR_COUNT,
-						},
-					]}
-				/>
-			))}
+			{Array.from({ length: BAR_COUNT })
+				.map((_, i) => ({ id: `bar-${i}` }))
+				.map((item, i) => (
+					<View
+						key={item.id}
+						ref={(ref) => {
+							barsRef.current[i] = ref
+						}}
+						style={[
+							styles.bar,
+							{
+								backgroundColor: `hsl(${i * 10}, 80%, 50%)`,
+								width: (dimensions.width - 80) / BAR_COUNT,
+							},
+						]}
+					/>
+				))}
 		</View>
 	)
 }

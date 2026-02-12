@@ -176,9 +176,9 @@ export default function SearchSuggestions({
 						style={{ color: colors.onSurface }}
 					>
 						{(item._segments ?? [{ text: item.value, emphasized: false }]).map(
-							(seg, i) => (
+							(seg) => (
 								<Text
-									key={i}
+									key={`${item.value}-${seg.text}`}
 									style={[
 										styles.itemText,
 										seg.emphasized && { color: colors.primary },

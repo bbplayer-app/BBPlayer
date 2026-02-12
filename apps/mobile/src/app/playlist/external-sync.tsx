@@ -261,7 +261,6 @@ const ExternalPlaylistSyncPageInner = () => {
 
 				if (saveResult.isErr()) {
 					toast.error(`保存失败: ${saveResult.error.message}`)
-					console.error(saveResult.error)
 				} else {
 					toast.success('歌单已保存到本地')
 					await queryClient.invalidateQueries({
@@ -275,9 +274,8 @@ const ExternalPlaylistSyncPageInner = () => {
 							router.replace(`/playlist/local/${playlistId}`),
 						)
 				}
-			} catch (e) {
+			} catch {
 				toast.error('保存失败')
-				console.error(e)
 			}
 			toast.dismiss(loadingToast)
 		}
@@ -378,7 +376,6 @@ const ExternalPlaylistSyncPageInner = () => {
 		setSyncing(false)
 		if (result.isErr()) {
 			if (result.error.message !== 'Aborted') {
-				console.error(result.error)
 				toast.error(`匹配出错: ${result.error.message}`)
 			}
 		} else {

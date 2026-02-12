@@ -46,7 +46,9 @@ export function useProgress() {
 					buffered: buf,
 				}))
 			})
-			.catch((e) => console.warn('同步最新进度失败', e))
+			.catch(() => {
+				/* empty */
+			})
 	}
 
 	useEffect(() => {

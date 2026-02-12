@@ -55,10 +55,8 @@ describe('网易云 YRC 转换器', () => {
 				const result = parseYrc(data.yrc.lyric)
 				// 期望包含间奏的时间戳 <00:58.020>
 				expect(result).toContain('[00:57.500]流<00:58.020>れ')
-				console.log('Converted sample:\n', result.substring(0, 200))
 			}
 		} else {
-			console.warn('Test data file not found, skipping real file test')
 		}
 	})
 	it('应该解析混合了 JSON 和标准 LRC 的行', () => {

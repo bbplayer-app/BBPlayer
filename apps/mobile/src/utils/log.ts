@@ -10,9 +10,10 @@ import type { ProjectScope } from '@/types/core/scope'
 const isDev = __DEV__
 
 const sentryBreadcrumbTransport: transportFunctionType<object> = (props) => {
+	const level = props.level.text as unknown as Sentry.SeverityLevel
 	Sentry.addBreadcrumb({
 		category: 'log',
-		level: props.level.text as Sentry.SeverityLevel,
+		level,
 		message: props.msg,
 	})
 }
@@ -105,6 +106,18 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
  * @returns 一个用 separator 拼接的字符串
  */
 
+const stringifyError = (e: unknown): string => {
+	if (e === null) return 'null'
+	// eslint-disable-next-line @typescript-eslint/no-base-to-string
+	if (typeof e !== 'object') return String(e)
+	try {
+		return JSON.stringify(e)
+	} catch {
+		// Circular reference or other stringify error
+		return Object.prototype.toString.call(e)
+	}
+}
+
 export function flatErrorMessage(
 	error: Error,
 	separator = ':: ',
@@ -137,18 +150,6 @@ export function reportErrorToSentry(
 	message?: string,
 	scope?: ProjectScope | string,
 ) {
-	const stringifyError = (e: unknown): string => {
-		if (e === null) return 'null'
-		// eslint-disable-next-line @typescript-eslint/no-base-to-string
-		if (typeof e !== 'object') return String(e)
-		try {
-			return JSON.stringify(e)
-		} catch {
-			// Circular reference or other stringify error
-			return Object.prototype.toString.call(e)
-		}
-	}
-
 	const _error =
 		error instanceof Error
 			? error
@@ -179,9 +180,8 @@ try {
 		intermediates: true,
 		idempotent: true,
 	})
-	console.log('成功创建日志目录')
-} catch (e) {
-	console.log('创建日志目录失败', e)
+} catch (_e) {
+	// ignore directory creation error
 }
 const log = logger.createLogger(config)
 

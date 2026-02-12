@@ -12,10 +12,9 @@ export function useCurrentTrack() {
 				Orpheus.getCurrentTrack(),
 				Orpheus.getCurrentIndex(),
 			])
-			console.log(currentTrack)
+
 			return { currentTrack, currentIndex }
-		} catch (e) {
-			console.warn('Failed to fetch current track', e)
+		} catch {
 			return { currentTrack: null, currentIndex: -1 }
 		}
 	}
@@ -31,7 +30,6 @@ export function useCurrentTrack() {
 		})
 
 		const sub = Orpheus.addListener('onTrackStarted', async () => {
-			console.log('Track Started')
 			const { currentTrack, currentIndex } = await fetchTrack()
 			if (isMounted) {
 				setTrack(currentTrack)

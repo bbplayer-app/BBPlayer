@@ -25,9 +25,18 @@ interface nonNullableIcon {
 	scale: number
 }
 
-const homeIcon = Icon.getImageSourceSync('home', 24) as nonNullableIcon
-const libraryIcon = Icon.getImageSourceSync('bookshelf', 24) as nonNullableIcon
-const settingsIcon = Icon.getImageSourceSync('cog', 24) as nonNullableIcon
+const homeIcon = Icon.getImageSourceSync(
+	'home',
+	24,
+) as unknown as nonNullableIcon
+const libraryIcon = Icon.getImageSourceSync(
+	'bookshelf',
+	24,
+) as unknown as nonNullableIcon
+const settingsIcon = Icon.getImageSourceSync(
+	'cog',
+	24,
+) as unknown as nonNullableIcon
 
 export default function TabLayout() {
 	const themes = useTheme().colors

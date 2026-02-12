@@ -45,8 +45,8 @@ export default function OrpheusTestScreen() {
 			const locked = Orpheus.isDesktopLyricsLocked
 			setDesktopLyricsLocked(locked)
 			await Promise.resolve()
-		} catch (e) {
-			console.error('Sync Lyrics Error:', e)
+		} catch {
+			// ignore lyrics status sync error
 		}
 	}, [])
 
@@ -66,7 +66,7 @@ export default function OrpheusTestScreen() {
 
 			await syncDesktopLyricsStatus()
 		} catch (e) {
-			console.error('Sync Error:', e)
+			// ignore sync error
 			if (e instanceof Error) {
 				setLastEventLog(`Sync Error: ${e.message}`)
 			}
@@ -82,18 +82,15 @@ export default function OrpheusTestScreen() {
 		void syncFullState()
 
 		const subState = Orpheus.addListener('onPlaybackStateChanged', (event) => {
-			console.log('State Changed:', event.state)
 			setPlaybackState(event.state)
 		})
 
 		const subTrackFinish = Orpheus.addListener('onTrackFinished', (event) => {
-			console.log('Track Finished:', event)
 			setLastEventLog(`Track Finished: ${event.trackId}`)
 		})
 
 		const subPlaying = Orpheus.addListener('onIsPlayingChanged', (event) => {
 			setIsPlaying(event.status)
-			console.log('IsPlaying Changed:', event.status)
 		})
 
 		const subProgress = Orpheus.addListener('onPositionUpdate', (event) => {
@@ -117,14 +114,11 @@ export default function OrpheusTestScreen() {
 			}
 		})
 
-		const subDownload = Orpheus.addListener('onDownloadUpdated', (task) => {
-			console.log(
-				`Download [${task.id}]: ${task.percentDownloaded.toFixed(1)}% (State: ${task.state})`,
-			)
+		const subDownload = Orpheus.addListener('onDownloadUpdated', (_task) => {
+			// download progress updates ignored in this screen
 		})
 
 		const subSpeed = Orpheus.addListener('onPlaybackSpeedChanged', (event) => {
-			console.log('Speed Changed:', event.speed)
 			setPlaybackSpeed(event.speed)
 		})
 

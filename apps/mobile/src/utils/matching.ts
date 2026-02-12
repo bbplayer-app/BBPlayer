@@ -18,7 +18,7 @@ export function lcs(s1: string, s2: string): number {
 	const m = s1.length
 	const n = s2.length
 	const dp: number[][] = Array.from({ length: m + 1 }, (): number[] =>
-		new Array<number>(n + 1).fill(0),
+		Array.from({ length: n + 1 }, () => 0),
 	)
 
 	for (let i = 1; i <= m; i++) {

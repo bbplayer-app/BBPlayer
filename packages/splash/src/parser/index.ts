@@ -77,7 +77,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		})
 	}
 
-	const sortedTimes = Array.from(rawLinesMap.keys()).sort((a, b) => a - b)
+	const sortedTimes = Array.from(rawLinesMap.keys()).toSorted((a, b) => a - b)
 
 	const finalLines: LyricLine[] = []
 
@@ -110,11 +110,10 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		const fixedSpans = spans.map((s) => {
 			if (s.endTime === 0 || isNaN(s.endTime)) {
 				const validEndTime = endTime
-				return {
-					...s,
+				return Object.assign(s, {
 					endTime: validEndTime,
 					duration: validEndTime - s.startTime,
-				}
+				})
 			}
 			return s
 		})

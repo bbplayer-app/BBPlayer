@@ -55,7 +55,7 @@ export const weapi = (
 			secretKey,
 			iv,
 		),
-		encSecKey: rsaEncrypt(secretKey.split('').reverse().join(''), publicKey),
+		encSecKey: rsaEncrypt(secretKey.split('').toReversed().join(''), publicKey),
 	}
 }
 

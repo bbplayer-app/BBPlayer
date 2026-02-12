@@ -72,7 +72,7 @@ export const DebugSection: FC<DebugSectionProps> = ({
 					title='Log Queue'
 					onPress={async () => {
 						const q = await Orpheus.getQueue()
-						console.log('Current Queue:', q)
+
 						setLastEventLog(`Queue Length: ${q.length}`)
 					}}
 				/>
@@ -135,7 +135,6 @@ export const DebugSection: FC<DebugSectionProps> = ({
 							if (e instanceof Error) {
 								Alert.alert('Error', e.message)
 							}
-							console.log(e)
 						}
 					}}
 				/>
@@ -165,7 +164,7 @@ export const DebugSection: FC<DebugSectionProps> = ({
 					title='Get Downloads'
 					onPress={async () => {
 						const downloads = await Orpheus.getDownloads()
-						console.log('All Downloads:', downloads)
+
 						setLastEventLog(`Downloads: ${downloads.length}`)
 					}}
 				/>
@@ -175,13 +174,13 @@ export const DebugSection: FC<DebugSectionProps> = ({
 						const ids = TEST_TRACKS.map((t) => t.id)
 						try {
 							const statusMap = await Orpheus.getDownloadStatusByIds(ids)
-							console.log('Status Map:', statusMap)
+
 							Alert.alert('Status Map', JSON.stringify(statusMap, null, 2))
 						} catch (e) {
 							if (e instanceof Error) {
 								Alert.alert('Error', e.message)
 							}
-							console.log(e)
+
 							return
 						}
 					}}

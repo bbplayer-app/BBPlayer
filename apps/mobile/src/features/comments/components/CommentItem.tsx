@@ -96,9 +96,10 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 								theme={darkMode ? 'dark' : 'light'}
 							>
 								{item.content.pictures.map((pic, index) => (
+									// oxlint-disable-next-line typescript/unbound-method
 									<Galeria.Image
 										index={index}
-										key={index}
+										key={pic.img_src}
 									>
 										<View
 											style={styles.commentImage}
@@ -110,6 +111,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 												contentFit='contain'
 											/>
 										</View>
+										{/* oxlint-disable-next-line typescript/unbound-method */}
 									</Galeria.Image>
 								))}
 							</Galeria>

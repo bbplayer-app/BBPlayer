@@ -339,9 +339,9 @@ export function LocalTrackList({
 											width: '100%',
 										}}
 									>
-										{highFreqItems.map((item, index) => (
+										{highFreqItems.map((item) => (
 											<HighFreqButton
-												key={index}
+												key={item.title}
 												item={item}
 												onDismiss={dismissMenu}
 											/>
@@ -350,9 +350,9 @@ export function LocalTrackList({
 								)}
 							</View>
 
-							{normalItems.map((menuItem, index) => (
+							{normalItems.map((menuItem) => (
 								<List.Item
-									key={index}
+									key={menuItem.title}
 									title={menuItem.title}
 									titleStyle={
 										menuItem.danger ? { color: theme.colors.error } : {}

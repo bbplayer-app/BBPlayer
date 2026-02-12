@@ -1,6 +1,5 @@
-import 'dayjs/locale/zh-cn'
-
 import dayjs from 'dayjs'
+import _zhCn from 'dayjs/locale/zh-cn'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)

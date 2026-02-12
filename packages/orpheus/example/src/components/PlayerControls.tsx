@@ -7,6 +7,13 @@ import {
 import type { FC } from 'react'
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native'
 
+const formatTime = (seconds: number) => {
+	if (!seconds || isNaN(seconds) || seconds < 0) return '0:00'
+	const mins = Math.floor(seconds / 60)
+	const secs = Math.floor(seconds % 60)
+	return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+}
+
 import { ControlButton, Button } from './Buttons'
 
 interface PlayerControlsProps {
@@ -38,13 +45,6 @@ export const PlayerControls: FC<PlayerControlsProps> = ({
 	onToggleShuffle,
 	onToggleSpeed,
 }) => {
-	const formatTime = (seconds: number) => {
-		if (!seconds || isNaN(seconds) || seconds < 0) return '0:00'
-		const mins = Math.floor(seconds / 60)
-		const secs = Math.floor(seconds % 60)
-		return `${mins}:${secs < 10 ? '0' : ''}${secs}`
-	}
-
 	const progressPercent =
 		progress.duration > 0 ? (progress.position / progress.duration) * 100 : 0
 

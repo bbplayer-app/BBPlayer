@@ -61,6 +61,7 @@ const HighlightedText = ({
 				if (match) {
 					return (
 						<Text
+							// oxlint-disable-next-line react/no-array-index-key
 							key={index}
 							style={{ fontWeight: 'bold', color: colors.primary }}
 						>
@@ -68,7 +69,7 @@ const HighlightedText = ({
 						</Text>
 					)
 				}
-				return <Text key={index}>{part}</Text>
+				return <Text key={part}>{part}</Text>
 			})}
 		</Text>
 	)

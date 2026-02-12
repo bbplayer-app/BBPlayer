@@ -55,6 +55,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 								</QueryClientProvider>
 							</GestureHandlerRootView>
 						</Sentry.ErrorBoundary>
+						{/* oxlint-disable-next-line react/style-prop-object */}
 						<SystemBars style='auto' />
 					</View>
 				</KeyboardProvider>

@@ -52,7 +52,7 @@ export default function useDanmakuLoader(
 			result.match(
 				(danmakus) => {
 					const cleaned = cleanDanmaku(danmakus, danmakuFilterLevel)
-					const nextData = [...rawDataSV.value, ...cleaned].sort(
+					const nextData = [...rawDataSV.value, ...cleaned].toSorted(
 						(a, b) => a.progress - b.progress,
 					)
 					rawDataSV.value = nextData

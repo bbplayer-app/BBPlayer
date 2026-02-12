@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react-native'
-import type { SQL } from 'drizzle-orm'
+import { type SQL } from 'drizzle-orm'
 import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
@@ -21,7 +21,6 @@ import type {
 } from '@/types/core/media'
 import type {
 	BilibiliMetadataPayload,
-	CreateBilibiliTrackPayload,
 	CreateTrackPayload,
 	CreateTrackPayloadBase,
 	UpdateTrackPayload,
@@ -569,10 +568,12 @@ export class TrackService {
 										`该错误不应该出现，无法为 ${uniqueKey} 找到 trackId`,
 									)
 								}
-								return {
-									trackId,
-									...(payload as CreateBilibiliTrackPayload).bilibiliMetadata,
+								if (payload.source === 'bilibili') {
+									return Object.assign({ trackId }, payload.bilibiliMetadata)
 								}
+								throw new ServiceError(
+									`该错误不应该出现，track ${uniqueKey} 的 source 为 ${payload.source}`,
+								)
 							},
 						)
 

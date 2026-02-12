@@ -106,10 +106,12 @@ export const useDanmakuRender = ({
 }) => {
 	const defaultColor = useTheme().colors.primary
 	const activeBullets = useSharedValue<ActiveBullet[]>([])
-	const tracks = useSharedValue<number[]>(new Array<number>(1).fill(0))
-	const staticTopTracks = useSharedValue<number[]>(new Array<number>(1).fill(0))
+	const tracks = useSharedValue<number[]>(Array.from({ length: 1 }, () => 0))
+	const staticTopTracks = useSharedValue<number[]>(
+		Array.from({ length: 1 }, () => 0),
+	)
 	const staticBottomTracks = useSharedValue<number[]>(
-		new Array<number>(1).fill(0),
+		Array.from({ length: 1 }, () => 0),
 	)
 	const heightSV = useSharedValue(height)
 	const enableDanmaku = useAppStore((state) => state.settings.enableDanmaku)
@@ -127,9 +129,9 @@ export const useDanmakuRender = ({
 			Math.floor(heightSV.value / CONFIG.LINE_HEIGHT),
 			1,
 		)
-		tracks.set(new Array<number>(newTracksCount).fill(0))
-		staticTopTracks.set(new Array<number>(newTracksCount).fill(0))
-		staticBottomTracks.set(new Array<number>(newTracksCount).fill(0))
+		tracks.set(Array.from({ length: newTracksCount }, () => 0))
+		staticTopTracks.set(Array.from({ length: newTracksCount }, () => 0))
+		staticBottomTracks.set(Array.from({ length: newTracksCount }, () => 0))
 		cursor.set(binarySearch(rawDataSV.value, targetTime))
 	}
 
@@ -142,9 +144,9 @@ export const useDanmakuRender = ({
 				1,
 			)
 
-			tracks.set(new Array<number>(newTrackCount).fill(0))
-			staticTopTracks.set(new Array<number>(newTrackCount).fill(0))
-			staticBottomTracks.set(new Array<number>(newTrackCount).fill(0))
+			tracks.set(Array.from({ length: newTrackCount }, () => 0))
+			staticTopTracks.set(Array.from({ length: newTrackCount }, () => 0))
+			staticBottomTracks.set(Array.from({ length: newTrackCount }, () => 0))
 			activeBullets.set([])
 		},
 	)

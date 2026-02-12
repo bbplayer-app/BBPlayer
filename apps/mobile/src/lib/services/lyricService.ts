@@ -144,9 +144,7 @@ class LyricService {
 			const aggregateError = e as AggregateError
 			const errors = Array.from(aggregateError.errors || [])
 			const errorMessages = errors
-				.map((err) => {
-					return `${err instanceof Error ? err.message : String(err)}`
-				})
+				.map((err) => (err instanceof Error ? err.message : String(err)))
 				.join('; ')
 
 			return new LyricNotFoundError(

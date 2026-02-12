@@ -12,7 +12,7 @@ import { parseTimeTag } from '../utils/time'
 export function parseSpans(
 	rawContent: string,
 	lineStartTime: number,
-	lineNumber: number,
+	_lineNumber: number,
 ): {
 	/** 纯文本内容 (移除标签后) */
 	content: string
@@ -46,9 +46,6 @@ export function parseSpans(
 			const time = parseTimeTag(part)
 
 			if (time < currentTime) {
-				console.warn(
-					`第 ${lineNumber} 行警告: 时间戳 ${part} (${time}) 小于当前时间 ${currentTime}，已忽略。`,
-				)
 				continue
 			}
 

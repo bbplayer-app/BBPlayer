@@ -29,8 +29,8 @@
 		"expo-module.config.json"
 	],
 	"sideEffects": false,
-	"main": "build/index.js",
-	"types": "build/index.d.ts",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
 	"scripts": {
 		"build": "expo-module build",
 		"clean": "expo-module clean",
