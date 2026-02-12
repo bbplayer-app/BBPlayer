@@ -338,67 +338,69 @@ class LyricService {
 			logger.info('检测到未迁移的歌词缓存，开始执行迁移...')
 			const lyricFiles = lyricsDir.list()
 
-			for (const file of lyricFiles) {
-				if (file instanceof FileSystem.Directory) continue
-				// 跳过标记文件本身
-				if (file.name.startsWith('.')) continue
-				if (!file.name.endsWith('.json')) continue
+			await Promise.all(
+				lyricFiles.map(async (file) => {
+					if (file instanceof FileSystem.Directory) return
+					// 跳过标记文件本身
+					if (file.name.startsWith('.')) return
+					if (!file.name.endsWith('.json')) return
 
-				try {
-					const content = await file.text()
-					let parsed: oldLyricFileType | LyricFileData | ParsedLrc
 					try {
-						parsed = JSON.parse(content) as
-							| oldLyricFileType
-							| LyricFileData
-							| ParsedLrc
-					} catch {
-						continue
+						const content = await file.text()
+						let parsed: oldLyricFileType | LyricFileData | ParsedLrc
+						try {
+							parsed = JSON.parse(content) as
+								| oldLyricFileType
+								| LyricFileData
+								| ParsedLrc
+						} catch {
+							return
+						}
+
+						// 检查是否已经是新格式 (包含 lrc 字段)
+						if ('lrc' in parsed) return
+
+						// 还原 ID
+						const uniqueKey = file.name
+							.replace('.json', '')
+							.replaceAll('--', '::')
+
+						// 提取数据
+						let newLrc = ''
+						let newTlyric: string | undefined
+						let oldOffset: number | undefined
+
+						if ('raw' in parsed && typeof parsed.raw === 'string') {
+							const parts = parsed.raw.split('\n\n')
+							newLrc = parts[0]
+							newTlyric = parts.length > 1 ? parts[1] : undefined
+							// 旧的 raw 格式通常没有外层的 offset 字段，或者在 parsed 对象上
+							oldOffset = parsed.offset
+						} else if ('rawOriginalLyrics' in parsed) {
+							newLrc = parsed.rawOriginalLyrics || ''
+							newTlyric = parsed.rawTranslatedLyrics
+							oldOffset = parsed.offset
+						}
+
+						if (!newLrc) return
+
+						const newLyricData: LyricFileData = {
+							id: uniqueKey,
+							updateTime: Date.now(),
+							lrc: newLrc,
+							tlyric: newTlyric,
+							misc: {
+								// 迁移用户手动设置的 offset
+								userOffset: oldOffset,
+							},
+						}
+
+						await this.saveLyricsToFile(newLyricData, uniqueKey)
+					} catch (e) {
+						logger.warning(`文件 ${file.name} 迁移失败`, e)
 					}
-
-					// 检查是否已经是新格式 (包含 lrc 字段)
-					if ('lrc' in parsed) continue
-
-					// 还原 ID
-					const uniqueKey = file.name
-						.replace('.json', '')
-						.replaceAll('--', '::')
-
-					// 提取数据
-					let newLrc = ''
-					let newTlyric: string | undefined
-					let oldOffset: number | undefined
-
-					if ('raw' in parsed && typeof parsed.raw === 'string') {
-						const parts = parsed.raw.split('\n\n')
-						newLrc = parts[0]
-						newTlyric = parts.length > 1 ? parts[1] : undefined
-						// 旧的 raw 格式通常没有外层的 offset 字段，或者在 parsed 对象上
-						oldOffset = parsed.offset
-					} else if ('rawOriginalLyrics' in parsed) {
-						newLrc = parsed.rawOriginalLyrics || ''
-						newTlyric = parsed.rawTranslatedLyrics
-						oldOffset = parsed.offset
-					}
-
-					if (!newLrc) continue
-
-					const newLyricData: LyricFileData = {
-						id: uniqueKey,
-						updateTime: Date.now(),
-						lrc: newLrc,
-						tlyric: newTlyric,
-						misc: {
-							// 迁移用户手动设置的 offset
-							userOffset: oldOffset,
-						},
-					}
-
-					await this.saveLyricsToFile(newLyricData, uniqueKey)
-				} catch (e) {
-					logger.warning(`文件 ${file.name} 迁移失败`, e)
-				}
-			}
+				}),
+			)
 
 			migrationMarker.create()
 			logger.info('歌词格式迁移完成')

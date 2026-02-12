@@ -518,6 +518,7 @@ export class SyncBilibiliPlaylistFacade {
 					stage: 'fetching_details',
 				})
 				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+				// oxlint-disable-next-line no-await-in-loop
 				const pageResult = await this.bilibiliApi.getFavoriteListContents(
 					favoriteId,
 					nowPageNumber,

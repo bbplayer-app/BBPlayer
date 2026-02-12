@@ -109,6 +109,7 @@ class SyncLocalToBilibiliService {
 				if (!bvid) break
 
 				// 添加到 folderId，不从任何文件夹移除
+				// oxlint-disable-next-line no-await-in-loop
 				const res = await bilibiliApi.dealFavoriteForOneVideo(
 					bvid,
 					[String(folderId)],
@@ -127,6 +128,7 @@ class SyncLocalToBilibiliService {
 				onProgress?.(successCount + failCount)
 
 				// 添加延时防止风控
+				// oxlint-disable-next-line no-await-in-loop
 				await sleep(300)
 			}
 		}
@@ -158,6 +160,7 @@ class SyncLocalToBilibiliService {
 		const CHUNK_SIZE = 20
 		for (let i = 0; i < tokensToRemove.length; i += CHUNK_SIZE) {
 			const chunk = tokensToRemove.slice(i, i + CHUNK_SIZE)
+			// oxlint-disable-next-line no-await-in-loop
 			const res = await bilibiliApi.batchDeleteFavoriteListContents(
 				folderId,
 				chunk,

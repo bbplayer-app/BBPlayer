@@ -89,7 +89,7 @@
 		"react-you-might-not-need-an-effect/no-chain-state-updates": "warn",
 		"react-you-might-not-need-an-effect/no-derived-state": "warn",
 
-		"eslint/no-await-in-loop": "allow",
+		"eslint/no-await-in-loop": "error",
 		"always-return": "allow"
 	},
 	"settings": {

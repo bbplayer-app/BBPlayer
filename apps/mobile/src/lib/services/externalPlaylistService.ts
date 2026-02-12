@@ -137,6 +137,7 @@ export class ExternalPlaylistService {
 					}
 
 					const song = tracks[i]
+					// oxlint-disable-next-line no-await-in-loop
 					await wait(MIN_DELAY)
 
 					// Double check after wait
@@ -150,6 +151,7 @@ export class ExternalPlaylistService {
 					let matchedVideo: BilibiliSearchVideo | null = null
 
 					try {
+						// eslint-disable-next-line no-await-in-loop
 						const searchResult = await bilibiliApi.searchVideos(
 							searchQuery,
 							1,

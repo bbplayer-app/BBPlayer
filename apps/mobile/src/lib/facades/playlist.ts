@@ -159,18 +159,19 @@ export class PlaylistFacade {
 				logger.debug('step2: 解析/创建 Track 完成', trackId)
 
 				// step3: 执行增删
-				for (const pid of toAddPlaylistIds) {
-					const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
-						trackId,
-					])
-					if (r.isErr()) throw r.error
-				}
-				for (const pid of toRemovePlaylistIds) {
-					const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [
-						trackId,
-					])
-					if (r.isErr()) throw r.error
-				}
+				const addResult = await ResultAsync.combine(
+					toAddPlaylistIds.map((pid) =>
+						playlistSvc.addManyTracksToLocalPlaylist(pid, [trackId]),
+					),
+				)
+				if (addResult.isErr()) throw addResult.error
+
+				const removeResult = await ResultAsync.combine(
+					toRemovePlaylistIds.map((pid) =>
+						playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [trackId]),
+					),
+				)
+				if (removeResult.isErr()) throw removeResult.error
 				logger.debug('step3: 更新本地播放列表完成', {
 					added: toAddPlaylistIds,
 					removed: toRemovePlaylistIds,
