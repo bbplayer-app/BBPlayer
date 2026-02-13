@@ -122,7 +122,7 @@ export default Sentry.wrap(function RootLayout() {
 			logger.error('初始化失败:', error)
 			reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
 		} finally {
-			// eslint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
+			// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
 			setIsReady(true)
 		}
 	}, [])

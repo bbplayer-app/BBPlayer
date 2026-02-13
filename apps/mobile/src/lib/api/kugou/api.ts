@@ -44,12 +44,14 @@ export class KugouApi {
 		const url = `http://mobilecdn.kugou.com/api/v3/search/song?${params.toString()}`
 
 		return ResultAsync.fromPromise(
-			fetch(url, { headers: this.getHeaders(), signal }).then((res) => {
-				if (!res.ok) {
-					throw new Error(`Kugou API error: ${res.statusText}`)
-				}
-				return res.json() as Promise<KugouSearchResponse>
-			}),
+			fetch(url, { headers: this.getHeaders(), signal: signal ?? null }).then(
+				(res) => {
+					if (!res.ok) {
+						throw new Error(`Kugou API error: ${res.statusText}`)
+					}
+					return res.json() as Promise<KugouSearchResponse>
+				},
+			),
 			(e) => new Error('Failed to search Kugou', { cause: e }),
 		).map((res) => {
 			if (res.status !== 1 || !res.data?.info) {
@@ -77,7 +79,7 @@ export class KugouApi {
 		const searchUrl = `http://krcs.kugou.com/search?${searchParams.toString()}`
 
 		return ResultAsync.fromPromise(
-			fetch(searchUrl, { signal }).then(
+			fetch(searchUrl, { signal: signal ?? null }).then(
 				(res) => res.json() as Promise<KugouLyricSearchResponse>,
 			),
 			(e) =>
@@ -101,7 +103,7 @@ export class KugouApi {
 			const downloadUrl = `http://lyrics.kugou.com/download?${downloadParams.toString()}`
 
 			return ResultAsync.fromPromise(
-				fetch(downloadUrl, { signal }).then(
+				fetch(downloadUrl, { signal: signal ?? null }).then(
 					(res) => res.json() as Promise<KugouLyricDownloadResponse>,
 				),
 				(e) => new Error('Failed to download lyric from Kugou', { cause: e }),

@@ -9,7 +9,7 @@ const logger = log.extend('Utils.StickyMitt')
  *
  * @returns 一个支持粘性事件的 Emitter 实例。
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 function createStickyEmitter<Events extends Record<string, any>>() {
 	const emitter: Emitter<Events> = mitt<Events>()
 

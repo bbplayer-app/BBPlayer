@@ -46,7 +46,7 @@ export const Button: FC<ButtonProps> = ({
 			style={[
 				styles.btnText,
 				small && { fontSize: 12 },
-				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				// oxlint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 				(primary || danger || active) && { color: '#fff' },
 			]}
 		>

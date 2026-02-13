@@ -47,7 +47,7 @@ export const LyricsShareCard = ({
 						cornerSmoothing={0.6}
 					>
 						<Image
-							source={imageRef}
+							source={imageRef ?? null}
 							style={styles.cover}
 							contentFit='cover'
 						/>
@@ -88,6 +88,7 @@ export const LyricsShareCard = ({
 					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
+							// oxlint-disable-next-line react/no-array-index-key
 							key={`${lyric.startTime}-${index}`}
 							style={styles.lyricLine}
 						>

@@ -44,7 +44,7 @@ export default function WelcomeModal() {
 	}))
 
 	useEffect(() => {
-		// eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
 		if (measuredWidth <= 0) return
 		translateX.set(withTiming(-step * measuredWidth, { duration: 300 }))
 		containerHeight.set(withTiming(stepHeights[step], { duration: 300 }))

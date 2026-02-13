@@ -1,0 +1,9 @@
+# https://github.com/gitleaks/gitleaks
+
+title = "BBPlayer Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = ['''pnpm-lock\.yaml''', '''\.expo/''', '''node_modules/''']

@@ -47,15 +47,17 @@ interface BilibiliAudioStreamResponse {
 			} | null
 		} | null
 	}
-	volume?: {
-		measured_i: number
-		target_i: number
-		multi_scene_args: {
-			high_dynamic_target_i: '-24'
-			normal_target_i: '-14'
-			undersized_target_i: '-28'
-		}
-	}
+	volume?:
+		| {
+				measured_i: number
+				target_i: number
+				multi_scene_args: {
+					high_dynamic_target_i: '-24'
+					normal_target_i: '-14'
+					undersized_target_i: '-28'
+				}
+		  }
+		| undefined
 }
 
 /**

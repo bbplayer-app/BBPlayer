@@ -98,8 +98,6 @@ export default function EditLyricsModal({
 			updateTime: Date.now(),
 		}
 
-		console.warn('saving', newLyricData)
-
 		const result = await lyricService.saveLyricsToFile(newLyricData, uniqueKey)
 
 		if (result.isErr()) {
@@ -143,7 +141,7 @@ export default function EditLyricsModal({
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	const renderTabBar = (props: any) => (
 		<TabBar
 			{...props}

@@ -178,6 +178,7 @@ export default function SearchSuggestions({
 						{(item._segments ?? [{ text: item.value, emphasized: false }]).map(
 							(seg, i) => (
 								<Text
+									// oxlint-disable-next-line react/no-array-index-key
 									key={i}
 									style={[
 										styles.itemText,

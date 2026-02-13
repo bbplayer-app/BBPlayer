@@ -110,11 +110,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		const fixedSpans = spans.map((s) => {
 			if (s.endTime === 0 || isNaN(s.endTime)) {
 				const validEndTime = endTime
-				return {
-					...s,
-					endTime: validEndTime,
-					duration: validEndTime - s.startTime,
-				}
+				return Object.assign(s, {endTime:validEndTime,duration:validEndTime-s.startTime})
 			}
 			return s
 		})

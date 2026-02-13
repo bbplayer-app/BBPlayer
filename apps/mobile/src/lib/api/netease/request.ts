@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer'
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* oxlint-disable @typescript-eslint/no-unsafe-assignment */
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，但做了进一步封装和解耦，凑合着用 */
 import type { Result } from 'neverthrow'
 import { ResultAsync, err, ok } from 'neverthrow'
@@ -47,7 +47,7 @@ interface RequestPayload {
 	headers: Record<string, string>
 	body: object
 	e_r: boolean
-	signal?: AbortSignal
+	signal?: AbortSignal | undefined
 }
 
 const buildRequestPayload = <T extends object>(
@@ -128,7 +128,7 @@ const executeFetch = <TReturnBody>(
 		method: 'POST',
 		headers,
 		body: new URLSearchParams(body as Record<string, string>).toString(),
-		signal: signal,
+		signal: signal ?? null,
 	}
 
 	return ResultAsync.fromPromise(

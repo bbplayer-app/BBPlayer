@@ -34,7 +34,6 @@ export const useRenameTrack = () => {
 				queryKey: [...playlistKeys.all, 'playlistContents'],
 			})
 		},
-		onError: (error, { trackId }) =>
-			console.error('重命名歌曲失败', trackId, error),
+		onError: () => {},
 	})
 }

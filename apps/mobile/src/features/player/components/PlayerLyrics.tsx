@@ -21,6 +21,7 @@ import {
 } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import Animated, {
+	createAnimatedComponent,
 	type SharedValue,
 	useAnimatedScrollHandler,
 	useSharedValue,
@@ -47,7 +48,7 @@ import {
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
 
-const AnimatedFlashList = Animated.createAnimatedComponent(
+const AnimatedFlashList = createAnimatedComponent(
 	FlashList,
 ) as typeof FlashList<LyricLine & { isPaddingItem?: boolean }>
 

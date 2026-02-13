@@ -23,10 +23,10 @@ export enum TransitionReason {
 export interface Track {
 	id: string
 	url: string
-	title?: string
-	artist?: string
-	artwork?: string
-	duration?: number
+	title?: string | undefined
+	artist?: string | undefined
+	artwork?: string | undefined
+	duration?: number | undefined
 }
 
 export interface AndroidPlaybackErrorEvent {
@@ -67,7 +67,7 @@ export interface OrpheusEvents {
 	onIsPlayingChanged(event: { status: boolean }): void
 	onDownloadUpdated(event: DownloadTask): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: (...args: any[]) => void
 }
 

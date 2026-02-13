@@ -34,7 +34,7 @@ interface TrackListItemProps {
 	isSelected: boolean
 	selectMode: boolean
 	enterSelectMode: (id: number) => void
-	downloadState?: DownloadState
+	downloadState?: DownloadState | undefined
 }
 
 /**

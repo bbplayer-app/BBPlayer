@@ -38,7 +38,7 @@ export default function TestPage() {
 				duration: Number.POSITIVE_INFINITY,
 			})
 		} catch (error) {
-			console.error('检查更新失败:', error)
+			
 			toast.error('检查更新失败', { description: String(error) })
 		}
 		setLoading(false)
@@ -61,7 +61,7 @@ export default function TestPage() {
 				return
 			}
 			const updateResult = await Updates.fetchUpdateAsync()
-			if (updateResult.isNew === true) {
+			if (updateResult.isNew) {
 				toast.success('有新版本可用', {
 					description: '现在更新',
 				})
@@ -72,7 +72,7 @@ export default function TestPage() {
 				}, 1000)
 			}
 		} catch (error) {
-			console.error('更新失败:', error)
+			
 			toast.error('更新失败', { description: String(error) })
 		}
 		setLoading(false)

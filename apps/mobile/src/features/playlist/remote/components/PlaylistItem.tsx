@@ -25,14 +25,14 @@ export const TrackMenuItemDividerToken: TrackMenuItem = {
 }
 
 export interface TrackNecessaryData {
-	cover?: string
-	artistCover?: string
+	cover?: string | undefined
+	artistCover?: string | undefined
 	title: string
 	duration: number
 	id: number
-	artistName?: string
+	artistName?: string | undefined
 	uniqueKey: string
-	titleHtml?: string
+	titleHtml?: string | undefined
 }
 
 interface TrackListItemProps {
@@ -61,6 +61,7 @@ const HighlightedText = ({
 				if (match) {
 					return (
 						<Text
+							// oxlint-disable-next-line react/no-array-index-key
 							key={index}
 							style={{ fontWeight: 'bold', color: colors.primary }}
 						>
@@ -68,6 +69,7 @@ const HighlightedText = ({
 						</Text>
 					)
 				}
+				// oxlint-disable-next-line react/no-array-index-key
 				return <Text key={index}>{part}</Text>
 			})}
 		</Text>

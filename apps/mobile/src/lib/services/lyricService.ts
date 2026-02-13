@@ -145,7 +145,7 @@ class LyricService {
 			const errors = Array.from(aggregateError.errors || [])
 			const errorMessages = errors
 				.map((err) => {
-					return `${err instanceof Error ? err.message : String(err)}`
+					return err instanceof Error ? err.message : String(err)
 				})
 				.join('; ')
 
@@ -347,6 +347,7 @@ class LyricService {
 				if (!file.name.endsWith('.json')) continue
 
 				try {
+					// oxlint-disable-next-line no-await-in-loop
 					const content = await file.text()
 					let parsed: oldLyricFileType | LyricFileData | ParsedLrc
 					try {
@@ -396,6 +397,7 @@ class LyricService {
 						},
 					}
 
+					// oxlint-disable-next-line no-await-in-loop
 					await this.saveLyricsToFile(newLyricData, uniqueKey)
 				} catch (e) {
 					logger.warning(`文件 ${file.name} 迁移失败`, e)

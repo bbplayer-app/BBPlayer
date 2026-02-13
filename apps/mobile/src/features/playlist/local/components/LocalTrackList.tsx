@@ -207,7 +207,7 @@ export function LocalTrackList({
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
 		track: Track | null
-		downloadState?: DownloadState
+		downloadState: DownloadState | undefined
 	}>({
 		visible: false,
 		track: null,
@@ -270,7 +270,7 @@ export function LocalTrackList({
 	return (
 		<>
 			<FlashList
-				ref={listRef}
+				ref={listRef ?? null}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={extraData}
@@ -341,6 +341,7 @@ export function LocalTrackList({
 									>
 										{highFreqItems.map((item, index) => (
 											<HighFreqButton
+												// oxlint-disable-next-line react/no-array-index-key
 												key={index}
 												item={item}
 												onDismiss={dismissMenu}
@@ -352,6 +353,7 @@ export function LocalTrackList({
 
 							{normalItems.map((menuItem, index) => (
 								<List.Item
+									// oxlint-disable-next-line react/no-array-index-key
 									key={index}
 									title={menuItem.title}
 									titleStyle={

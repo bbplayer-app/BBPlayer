@@ -14,5 +14,9 @@
 	"[javascript]": {
 		"editor.defaultFormatter": "oxc.oxc-vscode"
 	},
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"oxc.typeAware": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.oxc": "always"
+	}
 }

@@ -33,8 +33,8 @@ export const useDeleteToViewVideo = () => {
 			deleteAllViewed,
 			avid,
 		}: {
-			deleteAllViewed?: boolean
-			avid?: number
+			deleteAllViewed?: boolean | undefined
+			avid?: number | undefined
 		}) =>
 			returnOrThrowAsync(
 				bilibiliApi.deleteToViewVideo(deleteAllViewed, avid).map(() => true),

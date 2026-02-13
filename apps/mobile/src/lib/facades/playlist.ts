@@ -55,8 +55,8 @@ export class PlaylistFacade {
 
 				const localPlaylistResult = await playlistSvc.createPlaylist({
 					title: name,
-					description: playlistMetadata.description ?? undefined,
-					coverUrl: playlistMetadata.coverUrl ?? undefined,
+					description: playlistMetadata.description ?? null,
+					coverUrl: playlistMetadata.coverUrl ?? null,
 					authorId: null,
 					type: 'local',
 					remoteSyncId: null,
@@ -152,7 +152,7 @@ export class PlaylistFacade {
 				// step2: 解析/创建 Track
 				const trackRes = await trackSvc.findOrCreateTrack({
 					...trackPayload,
-					artistId: finalArtistId ?? undefined,
+					artistId: finalArtistId ?? null,
 				})
 				if (trackRes.isErr()) throw trackRes.error
 				const trackId = trackRes.value.id
@@ -160,12 +160,14 @@ export class PlaylistFacade {
 
 				// step3: 执行增删
 				for (const pid of toAddPlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
 						trackId,
 					])
 					if (r.isErr()) throw r.error
 				}
 				for (const pid of toRemovePlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [
 						trackId,
 					])
@@ -234,7 +236,7 @@ export class PlaylistFacade {
 				const trackResult = await trackSvc.findOrCreateManyTracks(
 					payloads.map((p) => ({
 						...p.track,
-						artistId: artistMap.get(p.artist.remoteId!)?.id,
+						artistId: artistMap.get(p.artist.remoteId!)?.id ?? null,
 					})),
 					'bilibili',
 				)

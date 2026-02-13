@@ -3,6 +3,7 @@ import { memo } from 'react'
 import type { StyleProp, TextStyle } from 'react-native'
 import { StyleSheet, Text, View } from 'react-native'
 import Animated, {
+	createAnimatedComponent,
 	Extrapolation,
 	interpolate,
 	type SharedValue,
@@ -11,7 +12,7 @@ import Animated, {
 	useSharedValue,
 } from 'react-native-reanimated'
 
-const AnimatedText = Animated.createAnimatedComponent(Text)
+const AnimatedText = createAnimatedComponent(Text)
 
 interface KaraokeWordProps {
 	span: LyricSpan

@@ -31,16 +31,18 @@ export interface Query {
 	e_r?: boolean
 }
 
+import { compact } from '@/utils/obj'
+
 export function createOption(
 	query: Query,
 	crypto: 'weapi' | 'linuxapi' | 'eapi' | '' = '',
 ) {
-	return {
+	return compact({
 		crypto: (query.crypto ?? crypto) || 'weapi',
 		cookie: query.cookie,
 		ua: query.ua,
 		proxy: query.proxy,
 		realIP: query.realIP,
 		e_r: query.e_r,
-	}
+	})
 }

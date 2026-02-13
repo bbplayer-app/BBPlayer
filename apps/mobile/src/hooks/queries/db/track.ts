@@ -49,8 +49,8 @@ export function usePlayCountLeaderBoardPaginated(
 				trackService.getPlayCountLeaderBoardPaginated({
 					limit,
 					onlyCompleted,
-					initialLimit,
-					cursor: pageParam,
+					...(initialLimit !== undefined && { initialLimit }),
+					...(pageParam && { cursor: pageParam }),
 				}),
 			),
 		initialPageParam: undefined as

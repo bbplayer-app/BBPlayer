@@ -223,7 +223,7 @@ export default function ToViewPage() {
 							progressViewOffset={50}
 						/>
 					}
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- renderToViewItem 需要一个特化属性 progress，就用 any hack 一下
+					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- renderToViewItem 需要一个特化属性 progress，就用 any hack 一下
 					renderCustomItem={renderToViewItem as any}
 				/>
 			</View>

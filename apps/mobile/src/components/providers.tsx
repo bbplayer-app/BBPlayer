@@ -37,7 +37,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 				<KeyboardProvider>
 					<View style={styles.container}>
 						<Sentry.ErrorBoundary
-							// eslint-disable-next-line @typescript-eslint/unbound-method
+							// oxlint-disable-next-line @typescript-eslint/unbound-method
 							fallback={({ error, resetError }) => (
 								<GlobalErrorFallback
 									error={error}

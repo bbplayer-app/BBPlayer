@@ -203,7 +203,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					seekPosition.set(targetTime)
 					isSeeking.set(true)
 
-					void scheduleOnRN(handleSeek, targetTime)
+					 scheduleOnRN(handleSeek, targetTime)
 					scheduleOnRN(
 						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Gesture_End,

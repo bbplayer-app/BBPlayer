@@ -6,11 +6,11 @@ import SquircleView from 'react-native-fast-squircle'
 import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* oxlint-disable @typescript-eslint/no-unsafe-argument */
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+// oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const WECHAT_QR = require('../../../../assets/images/wechat.png')
 
 export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
@@ -64,7 +64,7 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 							cornerSmoothing={0.6}
 						>
 							<Image
-								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+								// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 								source={WECHAT_QR}
 								style={styles.imageInner}
 								contentFit='contain'

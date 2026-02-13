@@ -10,7 +10,11 @@ export type PlayerErrorType = 'UnknownSource' | 'AudioUrlNotFound'
 export class PlayerError extends UIError {
 	constructor(
 		message: string,
-		opts?: { type?: PlayerErrorType; data?: unknown; cause?: unknown },
+		opts?: {
+			type?: PlayerErrorType | undefined
+			data?: unknown
+			cause?: unknown
+		},
 	) {
 		super(message, { type: opts?.type, data: opts?.data, cause: opts?.cause })
 	}

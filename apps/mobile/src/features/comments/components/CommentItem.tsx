@@ -95,23 +95,28 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 								urls={item.content.pictures.map((pic) => pic.img_src ?? '')}
 								theme={darkMode ? 'dark' : 'light'}
 							>
-								{item.content.pictures.map((pic, index) => (
-									<Galeria.Image
-										index={index}
-										key={index}
-									>
-										<View
-											style={styles.commentImage}
-											testID='comment-image'
+								{item.content.pictures.map((pic, index) => {
+									return (
+										/* oxlint-disable-next-line @typescript-eslint/unbound-method */
+										<Galeria.Image
+											index={index}
+											// oxlint-disable-next-line react/no-array-index-key
+											key={index}
 										>
-											<Image
-												source={{ uri: pic.img_src }}
-												style={styles.commentImageInner}
-												contentFit='contain'
-											/>
-										</View>
-									</Galeria.Image>
-								))}
+											<View
+												style={styles.commentImage}
+												testID='comment-image'
+											>
+												<Image
+													source={{ uri: pic.img_src }}
+													style={styles.commentImageInner}
+													contentFit='contain'
+												/>
+											</View>
+											{/* oxlint-disable-next-line @typescript-eslint/unbound-method */}
+										</Galeria.Image>
+									)
+								})}
 							</Galeria>
 						</View>
 					)}
