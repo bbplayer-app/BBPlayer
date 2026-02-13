@@ -1,6 +1,7 @@
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import GraphemeSplitter from 'grapheme-splitter'
 import { memo, useMemo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme } from 'react-native'
@@ -8,15 +9,15 @@ import SquircleView from 'react-native-fast-squircle'
 
 import { getGradientColors } from '@/utils/color'
 
+const splitter = new GraphemeSplitter()
+
 const getFirstChar = (validTitle: string) => {
 	if (!validTitle) return undefined
 
-	const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+	const segments = splitter.splitGraphemes(validTitle)
+	const firstSegment = segments[0]
 
-	const segments = segmenter.segment(validTitle)
-	const firstSegment = [...segments][0]
-
-	return firstSegment ? firstSegment.segment.toUpperCase() : undefined
+	return firstSegment ? firstSegment.toUpperCase() : undefined
 }
 
 /**

@@ -100,7 +100,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 			package: getUniqueIdentifier(),
 			versionCode: versionCode,
-			edgeToEdgeEnabled: true,
+			predictiveBackGestureEnabled: true,
 			runtimeVersion: version,
 			intentFilters: [
 				{
@@ -243,6 +243,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 			],
 			'@react-native-firebase/app',
+			'expo-sharing',
+			'@sentry/react-native',
 		],
 		experiments: {
 			reactCompiler: true,

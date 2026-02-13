@@ -15,12 +15,12 @@
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",
-		"@commitlint/cli": "^20.3.1",
-		"@commitlint/config-conventional": "^20.3.1",
+		"@commitlint/cli": "^20.4.1",
+		"@commitlint/config-conventional": "^20.4.1",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@eslint/js": "^9.39.2",
-		"@tanstack/eslint-plugin-query": "^5.91.3",
-		"@types/node": "^25.0.10",
+		"@tanstack/eslint-plugin-query": "^5.91.4",
+		"@types/node": "^25.2.3",
 		"@typescript/native-preview": "7.0.0-dev.20260211.1",
 		"eslint": "^9.39.2",
 		"eslint-plugin-oxlint": "^1.46.0",
@@ -29,11 +29,11 @@
 		"eslint-plugin-react-you-might-not-need-an-effect": "^0.5.6",
 		"lefthook": "^1.13.6",
 		"oxfmt": "^0.27.0",
-		"oxlint": "^1.46.0",
-		"oxlint-tsgolint": "^0.12.0",
+		"oxlint": "^1.47.0",
+		"oxlint-tsgolint": "^0.12.1",
 		"syncpack": "^13.0.4",
 		"typescript": "~5.9.3",
-		"typescript-eslint": "^8.53.1"
+		"typescript-eslint": "^8.55.0"
 	},
 	"packageManager": "pnpm@10.26.2"
 }
