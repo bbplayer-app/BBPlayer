@@ -152,7 +152,7 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 			disabled,
 			onPress,
 			selected = false,
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			// oxlint-disable-next-line @typescript-eslint/no-unused-vars
 			animated = false,
 			mode,
 			style,

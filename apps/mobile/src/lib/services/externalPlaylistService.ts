@@ -151,7 +151,7 @@ export class ExternalPlaylistService {
 					let matchedVideo: BilibiliSearchVideo | null = null
 
 					try {
-						// eslint-disable-next-line no-await-in-loop
+						// oxlint-disable-next-line no-await-in-loop
 						const searchResult = await bilibiliApi.searchVideos(
 							searchQuery,
 							1,

@@ -200,10 +200,10 @@ export const useAppStore = create<AppState>()(
 					const typedPersistedState = persistedState as AppState
 
 					// @ts-expect-error -- handling migration of old keys
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					const oldSentry = typedPersistedState.settings.enableSentryReport
 					// @ts-expect-error -- handling migration of old keys
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					const oldAnalytics = typedPersistedState.settings.enableAnalytics
 
 					const mergedState = {

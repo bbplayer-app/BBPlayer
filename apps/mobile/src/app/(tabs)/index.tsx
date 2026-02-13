@@ -205,10 +205,10 @@ function HomePage() {
 						<Image
 							style={styles.avatarImage}
 							source={
-								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+								// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 								!personalInfoPending && !personalInfoError && personalInfo?.face
 									? { uri: personalInfo.face }
-									: // eslint-disable-next-line @typescript-eslint/no-require-imports
+									: // oxlint-disable-next-line @typescript-eslint/no-require-imports
 										require('../../../assets/images/bilibili-default-avatar.jpg')
 							}
 							cachePolicy={'disk'}

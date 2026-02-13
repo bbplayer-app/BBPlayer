@@ -7,16 +7,11 @@
 	],
 	"scripts": {
 		"check:deps": "syncpack list-mismatches",
-		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
 		"fix:deps": "syncpack fix-mismatches",
-		"format": "eslint . --fix && oxfmt --write .",
+		"format": "oxfmt --write .",
 		"lint": "oxlint --type-aware && eslint .",
 		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
-		"lint:oxlint": "oxlint --type-aware",
 		"postinstall": "lefthook install"
-	},
-	"dependencies": {
-		"@typescript/native-preview": "7.0.0-dev.20260211.1"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",
@@ -29,6 +24,7 @@
 		"@typescript-eslint/eslint-plugin": "^8.53.1",
 		"@typescript-eslint/parser": "^8.53.1",
 		"@typescript-eslint/utils": "^8.53.1",
+		"@typescript/native-preview": "7.0.0-dev.20260211.1",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-oxlint": "^1.46.0",

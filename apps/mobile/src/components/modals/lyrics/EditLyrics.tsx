@@ -141,7 +141,7 @@ export default function EditLyricsModal({
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	const renderTabBar = (props: any) => (
 		<TabBar
 			{...props}

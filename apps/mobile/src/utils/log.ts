@@ -108,7 +108,7 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 
 const stringifyError = (e: unknown): string => {
 	if (e === null) return 'null'
-	// eslint-disable-next-line @typescript-eslint/no-base-to-string
+	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
 	if (typeof e !== 'object') return String(e)
 	try {
 		return JSON.stringify(e)

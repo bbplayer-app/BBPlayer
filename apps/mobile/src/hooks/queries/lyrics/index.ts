@@ -19,7 +19,7 @@ export const lyricsQueryKeys = {
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
 	return useQuery({
-		// eslint-disable-next-line @tanstack/query/exhaustive-deps
+		// oxlint-disable-next-line @tanstack/query/exhaustive-deps
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
@@ -51,7 +51,7 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 
 	// Effect to reset results when query changes
 	useEffect(() => {
-		// eslint-disable-next-line react-you-might-not-need-an-effect/no-chain-state-updates
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-chain-state-updates
 		setResults([])
 		processedProvidersRef.current = new Set()
 	}, [searchQuery])
