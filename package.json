@@ -23,6 +23,7 @@
 		"@types/node": "^25.2.3",
 		"@typescript/native-preview": "7.0.0-dev.20260211.1",
 		"eslint": "^9.39.2",
+		"eslint-plugin-drizzle": "^0.2.3",
 		"eslint-plugin-oxlint": "^1.46.0",
 		"eslint-plugin-react-compiler": "19.1.0-rc.1",
 		"eslint-plugin-react-hooks-extra": "^1.53.1",

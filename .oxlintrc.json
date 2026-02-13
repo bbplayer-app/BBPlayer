@@ -105,7 +105,8 @@
 			"specifier": "./packages/eslint-plugin/index.js"
 		},
 		"eslint-plugin-react-hooks-extra",
-		"eslint-plugin-react-you-might-not-need-an-effect"
+		"eslint-plugin-react-you-might-not-need-an-effect",
+		"eslint-plugin-drizzle"
 	],
 	"overrides": [
 		{

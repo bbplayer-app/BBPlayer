@@ -38,12 +38,12 @@
 		"test": "expo-module test"
 	},
 	"devDependencies": {
-		"expo": "55.0.0-preview.7",
+		"expo": "55.0.0-preview.10",
 		"expo-module-scripts": "^5.0.7",
 		"react-native": "0.83.1"
 	},
 	"peerDependencies": {
-		"expo": "55.0.0-preview.7",
+		"expo": "55.0.0-preview.10",
 		"react": "19.2.0",
 		"react-native": "0.83.1"
 	}
