@@ -17,14 +17,14 @@ export function cleanDanmaku(
 		return w >= filterWeight && d.progress !== undefined && d.progress !== null
 	})
 
-	const sortedByWeight = [...filteredDanmakus].toSorted((a, b) => {
+	const sortedByWeight = [...filteredDanmakus].sort((a, b) => {
 		const wa = a.weight ?? 10
 		const wb = b.weight ?? 10
 		return wb - wa
 	})
 
 	if (maxNumPerSecond === undefined) {
-		return sortedByWeight.toSorted((a, b) => {
+		return sortedByWeight.sort((a, b) => {
 			return a.progress - b.progress
 		})
 	}
@@ -42,7 +42,7 @@ export function cleanDanmaku(
 		}
 	}
 
-	return result.toSorted((a, b) => {
+	return result.sort((a, b) => {
 		return a.progress - b.progress
 	})
 }

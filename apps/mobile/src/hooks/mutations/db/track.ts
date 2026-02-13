@@ -4,6 +4,9 @@ import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
+import { toastAndLogError } from '@/utils/error-handling'
+
+const SCOPE = 'Mutation.DB.Track'
 
 queryClient.setMutationDefaults(['db', 'track'], {
 	retry: false,
@@ -34,8 +37,8 @@ export const useRenameTrack = () => {
 				queryKey: [...playlistKeys.all, 'playlistContents'],
 			})
 		},
-		onError: () => {
-			// error is handled by mutation defaults or caller
+		onError: (error, { newTitle }) => {
+			toastAndLogError(`修改歌曲名称失败: ${newTitle}`, error, SCOPE)
 		},
 	})
 }

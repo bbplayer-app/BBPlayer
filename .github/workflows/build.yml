@@ -86,7 +86,7 @@ jobs:
 
     steps:
       - name: 🏗 Setup repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.setup.outputs.commitSha }}
           fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
@@ -154,7 +154,7 @@ jobs:
       contents: write
     steps:
       - name: 🏗 Setup repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.setup.outputs.commitSha }}
 

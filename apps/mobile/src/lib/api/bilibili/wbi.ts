@@ -36,7 +36,7 @@ function encWbi(
 	Object.assign(params, { wts: curr_time }) // 添加 wts 字段
 	// 按照 key 重排参数
 	const query = Object.keys(params)
-		.toSorted()
+		.sort()
 		.map((key) => {
 			// 过滤 value 中的 "!'()*" 字符
 			// oxlint-disable-next-line @typescript-eslint/no-base-to-string

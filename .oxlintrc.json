@@ -90,7 +90,8 @@
 		"react-you-might-not-need-an-effect/no-derived-state": "warn",
 
 		"eslint/no-await-in-loop": "error",
-		"always-return": "allow"
+		"always-return": "allow",
+		"no-array-sort": "allow"
 	},
 	"settings": {
 		"react": {

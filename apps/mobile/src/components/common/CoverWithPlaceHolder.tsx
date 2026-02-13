@@ -109,7 +109,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 			</LinearGradient>
 
 			<Image
-				source={coverSource}
+				{...(coverSource ? { source: coverSource } : {})}
 				recyclingKey={String(id)}
 				style={[styles.image, { width: size, height: size }]}
 				transition={0}

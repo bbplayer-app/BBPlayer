@@ -77,7 +77,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		})
 	}
 
-	const sortedTimes = Array.from(rawLinesMap.keys()).toSorted((a, b) => a - b)
+	const sortedTimes = Array.from(rawLinesMap.keys()).sort((a, b) => a - b)
 
 	const finalLines: LyricLine[] = []
 

@@ -69,7 +69,14 @@ const HighlightedText = ({
 						</Text>
 					)
 				}
-				return <Text key={part}>{part}</Text>
+				return (
+					<Text
+						// oxlint-disable-next-line react/no-array-index-key
+						key={index}
+					>
+						{part}
+					</Text>
+				)
 			})}
 		</Text>
 	)
