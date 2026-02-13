@@ -51,6 +51,7 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 
 	// Effect to reset results when query changes
 	useEffect(() => {
+		// eslint-disable-next-line react-you-might-not-need-an-effect/no-chain-state-updates
 		setResults([])
 		processedProvidersRef.current = new Set()
 	}, [searchQuery])
