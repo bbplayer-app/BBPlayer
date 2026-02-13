@@ -13,9 +13,9 @@
 		},
 		{
 			"label": "Use apps/mobile versions for dev tools",
-			"dependencies": ["eslint", "typescript", "@types/node", "eslint-plugin-*", "@typescript-eslint/*"],
+			"dependencies": ["eslint", "typescript", "@types/node", "eslint-plugin-*", "@typescript-eslint/*", "oxlint", "oxfmt"],
 			"packages": ["**"],
-			"snapTo": ["@bbplayer/mobile"]
+			"snapTo": ["bbplayer-root"]
 		}
 	]
 }
