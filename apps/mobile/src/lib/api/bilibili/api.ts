@@ -147,14 +147,14 @@ export class BilibiliApi {
 					}) as (Omit<BilibiliDanmakuItem, 'progress'> & {
 						progress: number | Long
 					})[]
-					const mapped = filtered.map((elem) =>
-						Object.assign(elem, {
-							progress:
-								typeof elem.progress === `number`
-									? elem.progress
-									: elem.progress.toNumber(),
-						}),
-					)
+					// oxlint-disable-next-line oxc/no-map-spread -- 如果修改为 Object.assign 会导致 worklets 报错？
+					const mapped = filtered.map((elem) => ({
+						...elem,
+						progress:
+							typeof elem.progress === 'number'
+								? elem.progress
+								: elem.progress.toNumber(),
+					}))
 					return okAsync(mapped)
 				} catch (error) {
 					// TODO: 有可能返回的是 json，需要解析并且给出详细的错误信息
