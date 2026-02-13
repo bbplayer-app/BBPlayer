@@ -13,6 +13,8 @@ import {
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
+import { compact as compactObj } from '@/utils/obj'
+
 export type ButtonMode =
 	| 'text'
 	| 'outlined'
@@ -91,9 +93,9 @@ const getButtonColors = ({
 }: {
 	theme: MD3Theme
 	mode: ButtonMode
-	customButtonColor?: string
-	customTextColor?: string
-	disabled?: boolean
+	customButtonColor?: string | undefined
+	customTextColor?: string | undefined
+	disabled?: boolean | undefined
 }) => {
 	const isMode = (m: ButtonMode) => mode === m
 
@@ -231,7 +233,7 @@ const Button = forwardRef<ComponentRef<typeof BaseButton>, ButtonProps>(
 			>
 				<BaseButton
 					ref={ref}
-					onPress={onPress}
+					{...compactObj({ onPress: onPress ? () => onPress?.() : undefined })}
 					enabled={!disabled}
 					rippleColor={rippleColor}
 					style={[
@@ -247,15 +249,15 @@ const Button = forwardRef<ComponentRef<typeof BaseButton>, ButtonProps>(
 						{loading ? (
 							<ActivityIndicator
 								size={18}
-								color={textColor}
-								style={iconStyle}
+								{...compactObj({ color: textColor })}
+								style={icon ? { marginRight: 8 } : {}}
 							/>
 						) : icon ? (
 							<View style={iconStyle}>
 								<Icon
 									source={icon}
 									size={18}
-									color={textColor}
+									{...compactObj({ color: textColor })}
 								/>
 							</View>
 						) : null}

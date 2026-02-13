@@ -321,7 +321,7 @@ export class BilibiliApi {
 				)
 			})
 			.andThen((response) => {
-				const { dash, durl, volume } = response
+				const { dash, durl } = response
 
 				if (!dash) {
 					if (!durl?.[0]) {
@@ -338,7 +338,6 @@ export class BilibiliApi {
 						quality: 114514,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'mp4' as const,
-						volume,
 					})
 				}
 
@@ -349,7 +348,6 @@ export class BilibiliApi {
 						quality: dash.dolby.audio[0].id,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'dash' as const,
-						volume,
 					})
 				}
 
@@ -360,7 +358,6 @@ export class BilibiliApi {
 						quality: dash.flac.audio.id,
 						getTime: Date.now() + 60 * 1000, // Add 60s buffer
 						type: 'dash' as const,
-						volume,
 					})
 				}
 
@@ -390,7 +387,6 @@ export class BilibiliApi {
 						quality: targetAudio.id,
 						getTime,
 						type: 'dash',
-						volume,
 					}
 					logger.debug('找到指定质量音频流', { quality: audioQuality })
 				} else {
@@ -406,7 +402,6 @@ export class BilibiliApi {
 							quality: highestQualityAudio.id,
 							getTime,
 							type: 'dash',
-							volume,
 						}
 					}
 				}

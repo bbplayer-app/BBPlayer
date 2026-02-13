@@ -75,7 +75,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		if (typeof cover === 'string') {
 			return { uri: cover }
 		}
-		return cover
+		return cover ?? null
 	}, [cover])
 
 	return (

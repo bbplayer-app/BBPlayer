@@ -127,6 +127,7 @@
 		"babel-plugin-inline-import": "^3.0.0",
 		"babel-plugin-react-compiler": "19.1.0-rc.1",
 		"babel-plugin-transform-remove-console": "^6.9.4",
+		"drizzle-kit": "^0.31.9",
 		"eslint": "^9.39.2",
 		"eslint-config-expo": "~55.0.0",
 		"eslint-config-prettier": "^10.1.8",

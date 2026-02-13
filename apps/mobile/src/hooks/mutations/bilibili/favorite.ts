@@ -31,10 +31,7 @@ export const useDealFavoriteForOneVideo = () => {
 			),
 		onSuccess: async (_data, _value) => {
 			toast.success('操作成功', {
-				description:
-					_data.toast_msg.length > 0
-						? `api 返回消息：${_data.toast_msg}`
-						: undefined,
+				description: _data.toast_msg,
 			})
 			// 只刷新当前显示的收藏夹
 			await queryClient.refetchQueries({

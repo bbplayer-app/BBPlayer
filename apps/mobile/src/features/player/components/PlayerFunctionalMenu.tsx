@@ -134,15 +134,13 @@ export function PlayerFunctionalMenu({
 			toast.error('获取内部播放地址失败')
 			return
 		}
-		const artistName = currentTrack.artist?.name
-		const artworkUrl = currentTrack.coverUrl ?? undefined
 		try {
 			await Orpheus.downloadTrack({
 				id: currentTrack.uniqueKey,
 				url: url,
 				title: currentTrack.title,
-				artist: artistName,
-				artwork: artworkUrl,
+				artist: currentTrack.artist?.name ?? 'Unknown',
+				artwork: currentTrack.coverUrl ?? '',
 				duration: currentTrack.duration,
 			})
 			toast.success('已添加到下载队列')

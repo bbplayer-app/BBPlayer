@@ -23,10 +23,10 @@ export enum TransitionReason {
 export interface Track {
 	id: string
 	url: string
-	title?: string
-	artist?: string
-	artwork?: string
-	duration?: number
+	title?: string | undefined
+	artist?: string | undefined
+	artwork?: string | undefined
+	duration?: number | undefined
 }
 
 export interface AndroidPlaybackErrorEvent {

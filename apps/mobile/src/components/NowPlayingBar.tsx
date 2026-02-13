@@ -81,7 +81,7 @@ const ProgressBar = memo(function ProgressBar() {
 const NowPlayingBar = memo(function NowPlayingBar({
 	backgroundColor,
 }: {
-	backgroundColor?: string
+	backgroundColor?: string | undefined
 }) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
@@ -215,7 +215,9 @@ const NowPlayingBar = memo(function NowPlayingBar({
 					>
 						<View style={styles.nowPlayingBarContent}>
 							<Image
-								source={{ uri: currentTrack.coverUrl ?? undefined }}
+								source={
+									currentTrack.coverUrl ? { uri: currentTrack.coverUrl } : null
+								}
 								style={[
 									styles.nowPlayingBarImage,
 									{

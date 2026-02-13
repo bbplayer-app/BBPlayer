@@ -44,7 +44,7 @@ export const SongShareCard = ({
 						cornerSmoothing={0.6}
 					>
 						<Image
-							source={imageRef}
+							source={imageRef ?? null}
 							style={styles.cover}
 							contentFit='cover'
 						/>

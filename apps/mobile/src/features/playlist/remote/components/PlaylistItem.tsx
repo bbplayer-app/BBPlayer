@@ -25,14 +25,14 @@ export const TrackMenuItemDividerToken: TrackMenuItem = {
 }
 
 export interface TrackNecessaryData {
-	cover?: string
-	artistCover?: string
+	cover?: string | undefined
+	artistCover?: string | undefined
 	title: string
 	duration: number
 	id: number
-	artistName?: string
+	artistName?: string | undefined
 	uniqueKey: string
-	titleHtml?: string
+	titleHtml?: string | undefined
 }
 
 interface TrackListItemProps {

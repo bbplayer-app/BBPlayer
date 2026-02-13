@@ -242,12 +242,18 @@ export const useDanmakuRender = ({
 			const builder = Skia.ParagraphBuilder.Make(
 				{
 					maxLines: 1,
-					textStyle: {
-						fontSize,
-						color,
-						fontFamilies: [fontFamilyName],
-						shadows,
-					},
+					textStyle: shadows
+						? {
+								fontSize,
+								color,
+								fontFamilies: [fontFamilyName],
+								shadows,
+							}
+						: {
+								fontSize,
+								color,
+								fontFamilies: [fontFamilyName],
+							},
 				},
 				fontMgr,
 			)

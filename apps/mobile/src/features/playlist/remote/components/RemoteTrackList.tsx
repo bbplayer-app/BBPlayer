@@ -191,7 +191,7 @@ export function TrackList({
 	return (
 		<>
 			<FlashList
-				ref={listRef}
+				ref={listRef ?? null}
 				data={tracks}
 				extraData={extraData}
 				renderItem={renderItem as ListRenderItem<BilibiliTrack>}

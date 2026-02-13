@@ -226,7 +226,7 @@ class ApiClient {
 					'Content-Type': 'application/x-www-form-urlencoded',
 					...headers,
 				},
-				body: data,
+				body: data ?? null,
 			},
 			fullUrl,
 			skipCookie,

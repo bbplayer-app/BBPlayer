@@ -53,9 +53,9 @@ export class ArtistService {
 					.values({
 						name: payload.name,
 						source: payload.source,
-						remoteId: payload.remoteId,
-						avatarUrl: payload.avatarUrl,
-						signature: payload.signature,
+						remoteId: payload.remoteId ?? null,
+						avatarUrl: payload.avatarUrl ?? null,
+						signature: payload.signature ?? null,
 					} satisfies CreateArtistPayload)
 					.returning(),
 			),
@@ -111,9 +111,9 @@ export class ArtistService {
 							.values({
 								name: payload.name,
 								source: payload.source,
-								remoteId: payload.remoteId,
-								avatarUrl: payload.avatarUrl,
-								signature: payload.signature,
+								remoteId: payload.remoteId ?? null,
+								avatarUrl: payload.avatarUrl ?? null,
+								signature: payload.signature ?? null,
 							} satisfies CreateArtistPayload)
 							.returning(),
 				)
@@ -155,16 +155,17 @@ export class ArtistService {
 					throw createArtistNotFound(artistId)
 				}
 
+				const updates: Partial<typeof schema.artists.$inferInsert> = {}
+				if (payload.name != null) updates.name = payload.name
+				if (payload.avatarUrl != null) updates.avatarUrl = payload.avatarUrl
+				if (payload.signature != null) updates.signature = payload.signature
+
 				const [updated] = await Sentry.startSpan(
 					{ name: 'db:update:artist', op: 'db' },
 					() =>
 						this.db
 							.update(schema.artists)
-							.set({
-								name: payload.name ?? undefined,
-								avatarUrl: payload.avatarUrl,
-								signature: payload.signature,
-							} satisfies UpdateArtistPayload)
+							.set(updates)
 							.where(eq(schema.artists.id, artistId))
 							.returning(),
 				)
@@ -343,9 +344,9 @@ export class ArtistService {
 											({
 												name: p.name,
 												source: p.source,
-												remoteId: p.remoteId,
-												avatarUrl: p.avatarUrl,
-												signature: p.signature,
+												remoteId: p.remoteId ?? null,
+												avatarUrl: p.avatarUrl ?? null,
+												signature: p.signature ?? null,
 											}) satisfies CreateArtistPayload,
 									),
 								)

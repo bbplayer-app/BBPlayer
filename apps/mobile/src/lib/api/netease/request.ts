@@ -47,7 +47,7 @@ interface RequestPayload {
 	headers: Record<string, string>
 	body: object
 	e_r: boolean
-	signal?: AbortSignal
+	signal?: AbortSignal | undefined
 }
 
 const buildRequestPayload = <T extends object>(
@@ -128,7 +128,7 @@ const executeFetch = <TReturnBody>(
 		method: 'POST',
 		headers,
 		body: new URLSearchParams(body as Record<string, string>).toString(),
-		signal: signal,
+		signal: signal ?? null,
 	}
 
 	return ResultAsync.fromPromise(
