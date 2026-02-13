@@ -228,8 +228,8 @@ const LyricsSelectionModal = () => {
 			setPreviewUri(uri)
 			setShowPreview(true)
 			setIsGenerating(false)
-		} catch (e) {
-			console.error(e)
+		} catch  {
+			
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
@@ -259,8 +259,8 @@ const LyricsSelectionModal = () => {
 						result: 'tmpfile',
 						fileName,
 					})
-				} catch (e) {
-					console.error(e)
+				} catch  {
+					
 					toast.error('生成图片失败')
 					return
 				}
@@ -296,8 +296,8 @@ const LyricsSelectionModal = () => {
 				}
 			}
 			close('LyricsSelection')
-		} catch (e) {
-			console.error(e)
+		} catch  {
+			
 			toast.error('操作失败')
 		} finally {
 			setIsSharing(false)

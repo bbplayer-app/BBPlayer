@@ -569,10 +569,7 @@ export class TrackService {
 										`该错误不应该出现，无法为 ${uniqueKey} 找到 trackId`,
 									)
 								}
-								return {
-									trackId,
-									...(payload as CreateBilibiliTrackPayload).bilibiliMetadata,
-								}
+								return Object.assign({trackId}, (payload as CreateBilibiliTrackPayload).bilibiliMetadata)
 							},
 						)
 

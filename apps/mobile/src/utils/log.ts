@@ -179,9 +179,9 @@ try {
 		intermediates: true,
 		idempotent: true,
 	})
-	console.log('成功创建日志目录')
-} catch (e) {
-	console.log('创建日志目录失败', e)
+	
+} catch  {
+	
 }
 const log = logger.createLogger(config)
 

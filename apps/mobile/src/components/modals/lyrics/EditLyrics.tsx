@@ -98,7 +98,7 @@ export default function EditLyricsModal({
 			updateTime: Date.now(),
 		}
 
-		console.warn('saving', newLyricData)
+		
 
 		const result = await lyricService.saveLyricsToFile(newLyricData, uniqueKey)
 

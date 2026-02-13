@@ -96,8 +96,8 @@ const SongShareModal = () => {
 			})
 			setPreviewUri(uri)
 			setIsGenerating(false)
-		} catch (e) {
-			console.error(e)
+		} catch  {
+			
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
@@ -144,8 +144,8 @@ const SongShareModal = () => {
 						result: 'tmpfile',
 						fileName,
 					})
-				} catch (e) {
-					console.error(e)
+				} catch  {
+					
 					toast.error('生成图片失败')
 					return
 				}
@@ -181,8 +181,8 @@ const SongShareModal = () => {
 				}
 			}
 			close('SongShare')
-		} catch (e) {
-			console.error(e)
+		} catch  {
+			
 			toast.error('操作失败')
 		} finally {
 			setIsSharing(false)

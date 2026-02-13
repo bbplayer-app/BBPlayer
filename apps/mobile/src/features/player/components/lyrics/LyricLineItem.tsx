@@ -46,7 +46,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	})
 
 	const animatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				color: withTiming(colors.primary, { duration: 300 }),
@@ -129,7 +129,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				transform: [
@@ -149,7 +149,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const textAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				color: withTiming(theme.colors.primary, { duration: 300 }),
 			}
