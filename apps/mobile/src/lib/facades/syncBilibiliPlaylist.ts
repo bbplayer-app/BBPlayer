@@ -73,7 +73,7 @@ export class SyncBilibiliPlaylistFacade {
 				source: 'bilibili' as const,
 				bilibiliMetadata: {
 					bvid,
-					cid,
+					cid: cid ?? null,
 					isMultiPage: cid !== undefined,
 					videoIsValid: true,
 				},
@@ -107,9 +107,9 @@ export class SyncBilibiliPlaylistFacade {
 			.findOrCreateArtist({
 				name: track.artist.name,
 				source: track.artist.source,
-				remoteId: track.artist.remoteId,
-				avatarUrl: track.artist.avatarUrl,
-				signature: track.artist.signature,
+				remoteId: track.artist.remoteId ?? null,
+				avatarUrl: track.artist.avatarUrl ?? null,
+				signature: track.artist.signature ?? null,
 			})
 			.andThen((artist) => {
 				return this.trackService.findOrCreateTrack({
@@ -200,7 +200,7 @@ export class SyncBilibiliPlaylistFacade {
 									name: artistInfo.name,
 									source: 'bilibili',
 									remoteId: String(remoteId),
-									avatarUrl: undefined,
+									avatarUrl: null,
 								})),
 							)
 							if (artistRes.isErr()) throw artistRes.error
@@ -216,12 +216,13 @@ export class SyncBilibiliPlaylistFacade {
 									bilibiliMetadata: {
 										bvid: v.bvid,
 										isMultiPage: false,
-										cid: undefined,
+										cid: null,
 										videoIsValid: true,
 									},
 									coverUrl: v.cover,
 									duration: v.duration,
-									artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
+									artistId:
+										localArtistIdMap.get(String(v.upper.mid))?.id ?? null,
 								})),
 								'bilibili',
 							)
@@ -518,6 +519,7 @@ export class SyncBilibiliPlaylistFacade {
 					stage: 'fetching_details',
 				})
 				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+				// oxlint-disable-next-line no-await-in-loop
 				const pageResult = await this.bilibiliApi.getFavoriteListContents(
 					favoriteId,
 					nowPageNumber,
@@ -632,12 +634,12 @@ export class SyncBilibiliPlaylistFacade {
 							bilibiliMetadata: {
 								bvid: v.bvid,
 								isMultiPage: false,
-								cid: undefined,
+								cid: null,
 								videoIsValid: v.attr === 0,
 							},
 							coverUrl: v.cover,
 							duration: v.duration,
-							artistId: artistsMap.value.get(String(v.upper.mid))?.id,
+							artistId: artistsMap.value.get(String(v.upper.mid))?.id ?? null,
 						}),
 					)
 

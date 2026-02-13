@@ -77,6 +77,7 @@ export const SpectrumVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 		<View style={styles.container}>
 			{Array.from({ length: BAR_COUNT }).map((_, i) => (
 				<View
+					// oxlint-disable-next-line react/no-array-index-key
 					key={i}
 					ref={(ref) => {
 						barsRef.current[i] = ref

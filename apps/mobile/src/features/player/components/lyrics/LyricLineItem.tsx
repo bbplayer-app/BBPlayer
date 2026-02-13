@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
+	createAnimatedComponent,
 	type SharedValue,
 	useAnimatedStyle,
 	useDerivedValue,
@@ -13,14 +14,14 @@ import Animated, {
 
 import { KaraokeWord } from './KaraokeWord'
 
-const AnimatedRectButton = Animated.createAnimatedComponent(RectButton)
+const AnimatedRectButton = createAnimatedComponent(RectButton)
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
-	onPressBackground?: () => void
+	onPressBackground?: (() => void) | undefined
 	currentTime: SharedValue<number>
 	enableVerbatimLyrics: boolean
 }
@@ -81,6 +82,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 					>
 						{item.spans.map((span, idx) => (
 							<KaraokeWord
+								// oxlint-disable-next-line react/no-array-index-key
 								key={`${index}_${idx}`}
 								span={span}
 								currentTime={gatedCurrentTime}
@@ -170,6 +172,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				<View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
 					{item.spans.map((span, idx) => (
 						<KaraokeWord
+							// oxlint-disable-next-line react/no-array-index-key
 							key={`${index}_${idx}`}
 							span={span}
 							currentTime={gatedCurrentTime}

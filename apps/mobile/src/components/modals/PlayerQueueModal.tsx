@@ -171,7 +171,7 @@ function PlayerQueueModal({
 		[switchTrackHandler, removeTrackHandler, currentTrackId],
 	)
 
-	// eslint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
+	// oxlint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
 	useEffect(() => {
 		if (isVisible) {
 			void refetch()

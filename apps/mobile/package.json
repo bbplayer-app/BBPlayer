@@ -99,6 +99,7 @@
 		"react-native-text-ticker": "^1.15.0",
 		"react-native-view-shot": "^4.0.3",
 		"react-native-worklets": "0.8.0-nightly-20260122-45349f895",
+		"runes2": "^1.1.4",
 		"set-cookie-parser": "^2.7.2",
 		"shaka-player": "^4.14.10",
 		"sonner-native": "^0.23.0",

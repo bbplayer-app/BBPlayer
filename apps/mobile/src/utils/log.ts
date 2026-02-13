@@ -132,23 +132,23 @@ export function flatErrorMessage(
  * @param message 附加信息
  */
 
+const stringifyError = (e: unknown): string => {
+	if (e === null) return 'null'
+	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
+	if (typeof e !== 'object') return String(e)
+	try {
+		return JSON.stringify(e)
+	} catch {
+		// Circular reference or other stringify error
+		return Object.prototype.toString.call(e)
+	}
+}
+
 export function reportErrorToSentry(
 	error: unknown,
 	message?: string,
 	scope?: ProjectScope | string,
 ) {
-	const stringifyError = (e: unknown): string => {
-		if (e === null) return 'null'
-		// eslint-disable-next-line @typescript-eslint/no-base-to-string
-		if (typeof e !== 'object') return String(e)
-		try {
-			return JSON.stringify(e)
-		} catch {
-			// Circular reference or other stringify error
-			return Object.prototype.toString.call(e)
-		}
-	}
-
 	const _error =
 		error instanceof Error
 			? error
@@ -179,10 +179,7 @@ try {
 		intermediates: true,
 		idempotent: true,
 	})
-	
-} catch  {
-	
-}
+} catch {}
 const log = logger.createLogger(config)
 
 export default log

@@ -39,7 +39,7 @@ function convertToOrpheusTrack(
 	// 如果没有有效的 URL，返回错误
 	if (!url) {
 		const errorMsg = '没有找到有效的音频流 URL'
-		logger.warning(`${errorMsg}`, track)
+		logger.warning(errorMsg, track)
 		return err(
 			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
 		)

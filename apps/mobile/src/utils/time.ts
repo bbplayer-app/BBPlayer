@@ -1,3 +1,4 @@
+// oxlint-disable-next-line import/no-unassigned-import
 import 'dayjs/locale/zh-cn'
 
 import dayjs from 'dayjs'

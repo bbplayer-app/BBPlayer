@@ -147,7 +147,14 @@ export class BilibiliApi {
 					}) as (Omit<BilibiliDanmakuItem, 'progress'> & {
 						progress: number | Long
 					})[]
-					const mapped = filtered.map((elem) => (Object.assign(elem, {progress:typeof elem.progress===`number`?elem.progress:elem.progress.toNumber()})))
+					const mapped = filtered.map((elem) =>
+						Object.assign(elem, {
+							progress:
+								typeof elem.progress === `number`
+									? elem.progress
+									: elem.progress.toNumber(),
+						}),
+					)
 					return okAsync(mapped)
 				} catch (error) {
 					// TODO: 有可能返回的是 json，需要解析并且给出详细的错误信息
@@ -234,7 +241,7 @@ export class BilibiliApi {
 		return ResultAsync.fromPromise(
 			fetch(url, {
 				method: 'GET',
-				signal,
+				signal: signal ?? null,
 			}),
 			(e) => {
 				if (e instanceof Error && e.name === 'AbortError') {

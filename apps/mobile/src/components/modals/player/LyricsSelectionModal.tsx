@@ -75,6 +75,8 @@ const LyricItem = memo(function LyricItem({
 	)
 })
 
+const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
+
 const LyricsSelectionModal = () => {
 	const theme = useTheme()
 	const currentTrack = useCurrentTrack()
@@ -128,7 +130,7 @@ const LyricsSelectionModal = () => {
 	const [isGenerating, setIsGenerating] = useState(false)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
 	const imageRef = useImage(
-		{ uri: currentTrack?.coverUrl ?? undefined },
+		{ uri: currentTrack?.coverUrl ?? '' },
 		{
 			onError: () => void 0,
 		},
@@ -203,8 +205,6 @@ const LyricsSelectionModal = () => {
 		[],
 	)
 
-	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
-
 	const generatePreview = async () => {
 		if (!viewShotRef.current) {
 			toast.error('无法生成预览')
@@ -228,8 +228,7 @@ const LyricsSelectionModal = () => {
 			setPreviewUri(uri)
 			setShowPreview(true)
 			setIsGenerating(false)
-		} catch  {
-			
+		} catch {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
@@ -259,8 +258,7 @@ const LyricsSelectionModal = () => {
 						result: 'tmpfile',
 						fileName,
 					})
-				} catch  {
-					
+				} catch {
 					toast.error('生成图片失败')
 					return
 				}
@@ -296,8 +294,7 @@ const LyricsSelectionModal = () => {
 				}
 			}
 			close('LyricsSelection')
-		} catch  {
-			
+		} catch {
 			toast.error('操作失败')
 		} finally {
 			setIsSharing(false)

@@ -91,7 +91,9 @@
 
 		"eslint/no-await-in-loop": "error",
 		"always-return": "allow",
-		"no-array-sort": "allow"
+		"no-array-sort": "allow",
+		"no-new-array": "allow",
+		"style-prop-object": "allow"
 	},
 	"settings": {
 		"react": {
