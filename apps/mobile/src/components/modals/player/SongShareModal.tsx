@@ -15,6 +15,8 @@ import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 
+const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
+
 const SongShareModal = () => {
 	const currentTrack = useCurrentTrack()
 	const close = useModalStore((state) => state.close)
@@ -37,7 +39,7 @@ const SongShareModal = () => {
 	const isPageListPending = !!cid && isPageListQueryPending
 
 	const imageRef = useImage(
-		{ uri: currentTrack?.coverUrl ?? undefined },
+		{ uri: currentTrack?.coverUrl ?? '' },
 		{
 			onError: () => void 0,
 		},
@@ -66,6 +68,7 @@ const SongShareModal = () => {
 	const generatePreview = useCallback(async () => {
 		let retryCount = 0
 		while (!viewShotRef.current && retryCount < 5) {
+			// oxlint-disable-next-line no-await-in-loop
 			await new Promise((resolve) => setTimeout(resolve, 200))
 			retryCount++
 		}
@@ -96,8 +99,7 @@ const SongShareModal = () => {
 			})
 			setPreviewUri(uri)
 			setIsGenerating(false)
-		} catch (e) {
-			console.error(e)
+		} catch {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
@@ -123,8 +125,6 @@ const SongShareModal = () => {
 		pageList,
 	])
 
-	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
-
 	const isSharingRef = useRef(false)
 
 	const handleShare = async (action: 'save' | 'share') => {
@@ -144,8 +144,7 @@ const SongShareModal = () => {
 						result: 'tmpfile',
 						fileName,
 					})
-				} catch (e) {
-					console.error(e)
+				} catch {
 					toast.error('生成图片失败')
 					return
 				}
@@ -181,8 +180,7 @@ const SongShareModal = () => {
 				}
 			}
 			close('SongShare')
-		} catch (e) {
-			console.error(e)
+		} catch {
 			toast.error('操作失败')
 		} finally {
 			setIsSharing(false)

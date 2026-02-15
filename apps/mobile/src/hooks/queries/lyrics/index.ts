@@ -19,7 +19,7 @@ export const lyricsQueryKeys = {
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
 	return useQuery({
-		// eslint-disable-next-line @tanstack/query/exhaustive-deps
+		// oxlint-disable-next-line @tanstack/query/exhaustive-deps
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
@@ -49,11 +49,8 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 	const [results, setResults] = useState<LyricSearchResult>([])
 	const processedProvidersRef = useRef<Set<string>>(new Set())
 
-	// Effect to reset results when query changes
-	useEffect(() => {
-		setResults([])
-		processedProvidersRef.current = new Set()
-	}, [searchQuery])
+	// Effect to reset results when query changes - REMOVED
+	// Moved to triggerSearch
 
 	const queries = useQueries({
 		queries: [
@@ -137,6 +134,8 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 	}, [neteaseData, qqData, kugouData])
 
 	const triggerSearch = useCallback((query: string) => {
+		setResults([])
+		processedProvidersRef.current = new Set()
 		setSearchQuery(query)
 	}, [])
 

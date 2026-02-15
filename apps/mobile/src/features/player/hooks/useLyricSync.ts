@@ -128,7 +128,7 @@ export default function useLyricSync(
 	useEffect(() => {
 		if (!enabled) return
 		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
-		// eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
 		void flashListRef.current?.scrollToIndex({
 			animated: true,
 			index: currentLyricIndex,

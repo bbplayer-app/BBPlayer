@@ -147,6 +147,7 @@ export class BilibiliApi {
 					}) as (Omit<BilibiliDanmakuItem, 'progress'> & {
 						progress: number | Long
 					})[]
+					// oxlint-disable-next-line oxc/no-map-spread -- 如果修改为 Object.assign 会导致 worklets 报错？
 					const mapped = filtered.map((elem) => ({
 						...elem,
 						progress:
@@ -240,7 +241,7 @@ export class BilibiliApi {
 		return ResultAsync.fromPromise(
 			fetch(url, {
 				method: 'GET',
-				signal,
+				signal: signal,
 			}),
 			(e) => {
 				if (e instanceof Error && e.name === 'AbortError') {

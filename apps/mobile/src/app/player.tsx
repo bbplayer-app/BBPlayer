@@ -19,7 +19,8 @@ import {
 } from 'react-native'
 import PagerView from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
-import Animated, {
+import {
+	createAnimatedComponent,
 	Easing,
 	useDerivedValue,
 	useEvent,
@@ -41,7 +42,7 @@ import { useScreenDimensions } from '@/hooks/ui/useScreenDimensions'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 
-const AnimatedPagerView = Animated.createAnimatedComponent(PagerView)
+const AnimatedPagerView = createAnimatedComponent(PagerView)
 
 interface PageScrollEvent {
 	offset: number

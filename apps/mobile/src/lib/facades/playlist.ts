@@ -55,8 +55,8 @@ export class PlaylistFacade {
 
 				const localPlaylistResult = await playlistSvc.createPlaylist({
 					title: name,
-					description: playlistMetadata.description ?? undefined,
-					coverUrl: playlistMetadata.coverUrl ?? undefined,
+					description: playlistMetadata.description,
+					coverUrl: playlistMetadata.coverUrl,
 					authorId: null,
 					type: 'local',
 					remoteSyncId: null,
@@ -160,12 +160,14 @@ export class PlaylistFacade {
 
 				// step3: 执行增删
 				for (const pid of toAddPlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
 						trackId,
 					])
 					if (r.isErr()) throw r.error
 				}
 				for (const pid of toRemovePlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [
 						trackId,
 					])

@@ -67,7 +67,7 @@ export interface OrpheusEvents {
 	onIsPlayingChanged(event: { status: boolean }): void
 	onDownloadUpdated(event: DownloadTask): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: (...args: any[]) => void
 }
 

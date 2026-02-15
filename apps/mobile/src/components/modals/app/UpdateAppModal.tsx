@@ -62,6 +62,7 @@ export default function UpdateAppModal({
 					listed_notes.map((note, index) => (
 						<Text
 							selectable
+							// oxlint-disable-next-line react/no-array-index-key
 							key={index}
 							style={styles.noteText}
 						>

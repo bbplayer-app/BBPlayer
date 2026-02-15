@@ -88,6 +88,7 @@ export const LyricsShareCard = ({
 					</View>
 					{selectedLyrics.map((lyric, index) => (
 						<View
+							// oxlint-disable-next-line react/no-array-index-key
 							key={`${lyric.startTime}-${index}`}
 							style={styles.lyricLine}
 						>

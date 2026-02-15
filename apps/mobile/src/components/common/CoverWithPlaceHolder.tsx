@@ -5,6 +5,7 @@ import { memo, useMemo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
+import { runes } from 'runes2'
 
 import { getGradientColors } from '@/utils/color'
 
@@ -68,7 +69,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	)
 
 	const firstChar =
-		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
+		validTitle.length > 0 ? runes(validTitle)[0].toUpperCase() : undefined
 
 	const coverSource = useMemo(() => {
 		if (typeof cover === 'string') {

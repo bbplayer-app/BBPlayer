@@ -8,5 +8,9 @@
 		{ "path": "./packages/image-theme-colors/example/tsconfig.json" },
 		{ "path": "./apps/docs/tsconfig.json" },
 		{ "path": "./packages/splash/tsconfig.json" }
-	]
+	],
+	"compilerOptions": {
+		"skipLibCheck": true,
+		"exactOptionalPropertyTypes": false
+	}
 }

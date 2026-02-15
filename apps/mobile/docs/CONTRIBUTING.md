@@ -110,7 +110,7 @@ pnpm expo start
 
 ### 代码质量
 
-我们使用 lefthook 来自动执行代码检查和格式化，请确保你配置好了 lefthook。
+我们使用 lefthook 来自动执行代码检查和格式化（oxlint, oxfmt, eslint），请确保你配置好了 lefthook。
 
 ## 🤝 贡献代码
 

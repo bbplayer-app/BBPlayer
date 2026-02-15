@@ -37,6 +37,6 @@ export function toastAndLogError(
 			description: String(error as unknown),
 			duration: Number.POSITIVE_INFINITY,
 		})
-		log.extend(scope).error(`${message}`, error)
+		log.extend(scope).error(message, error)
 	}
 }
