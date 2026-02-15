@@ -220,15 +220,10 @@ export default function FavoritePage() {
 					}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 					isFetchingNextPage={isFetchingNextPage}
-					hasNextPage={hasNextPage}
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar
-					{...(nowPlayingBarColor
-						? { backgroundColor: nowPlayingBarColor }
-						: {})}
-				/>
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

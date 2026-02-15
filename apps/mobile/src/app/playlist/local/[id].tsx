@@ -226,26 +226,12 @@ export default function LocalPlaylistPage() {
 				toast.error(`批量添加歌曲失败：未找到\u2009track: ${trackId}`)
 				return
 			}
-			const { artist, source } = track
-
-			const processedBilibiliData =
-				source === 'bilibili'
-					? {
-							bilibiliMetadata: {
-								...track.bilibiliMetadata,
-								cid: track.bilibiliMetadata.cid ?? null,
-								mainTrackTitle: track.bilibiliMetadata.mainTrackTitle ?? null,
-							},
-						}
-					: {}
-
 			payloads.push({
 				track: {
 					...track,
-					artistId: artist?.id ?? null,
-					...processedBilibiliData,
+					artistId: track.artist?.id,
 				},
-				artist: artist!,
+				artist: track.artist!,
 			})
 		}
 		setBatchAddTracksModalPayloads(payloads)
@@ -443,11 +429,7 @@ export default function LocalPlaylistPage() {
 				</FunctionalMenu>
 			</Portal>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar
-					{...(nowPlayingBarColor
-						? { backgroundColor: nowPlayingBarColor }
-						: {})}
-				/>
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

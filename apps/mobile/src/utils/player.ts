@@ -123,7 +123,7 @@ async function addToQueue({
 	tracks: Track[]
 	playNow: boolean
 	clearQueue: boolean
-	startFromKey?: string | undefined
+	startFromKey?: string
 	playNext: boolean
 }) {
 	if (!tracks || tracks.length === 0) {

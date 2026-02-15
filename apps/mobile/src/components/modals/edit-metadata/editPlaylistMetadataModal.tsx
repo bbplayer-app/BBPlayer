@@ -62,8 +62,8 @@ export default function EditPlaylistMetadataModal({
 			playlistId: playlist.id,
 			payload: {
 				title,
-				description: description ?? null,
-				coverUrl: coverUrl ?? null,
+				description: description ?? undefined,
+				coverUrl: coverUrl ?? undefined,
 			},
 		})
 		close()
@@ -94,10 +94,10 @@ export default function EditPlaylistMetadataModal({
 
 	const handleDismiss = useCallback(() => {
 		close()
-		setTitle(playlist.title)
-		setDescription(playlist.description ?? '')
-		setCoverUrl(playlist.coverUrl ?? '')
-	}, [close, playlist.title, playlist.description, playlist.coverUrl])
+		setTitle('')
+		setDescription('')
+		setCoverUrl('')
+	}, [close])
 
 	return (
 		<>
@@ -105,7 +105,7 @@ export default function EditPlaylistMetadataModal({
 			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='标题'
-					value={title ?? ''}
+					value={title}
 					onChangeText={setTitle}
 					mode='outlined'
 					numberOfLines={1}
@@ -114,7 +114,7 @@ export default function EditPlaylistMetadataModal({
 				<TextInput
 					label='描述'
 					onChangeText={setDescription}
-					value={description ?? ''}
+					value={description ?? undefined}
 					mode='outlined'
 					multiline
 					style={styles.descriptionInput}
@@ -124,7 +124,7 @@ export default function EditPlaylistMetadataModal({
 					<TextInput
 						label='封面'
 						onChangeText={setCoverUrl}
-						value={coverUrl ?? ''}
+						value={coverUrl ?? undefined}
 						mode='outlined'
 						numberOfLines={1}
 						textAlignVertical='top'

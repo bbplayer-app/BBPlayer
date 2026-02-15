@@ -90,7 +90,6 @@ export default function Library() {
 							indicatorStyle={{ backgroundColor: colors.onSecondaryContainer }}
 							activeColor={colors.onSecondaryContainer}
 							inactiveColor={colors.onSurface}
-							options={props.options ?? {}}
 						/>
 					)}
 					onIndexChange={(i) => {

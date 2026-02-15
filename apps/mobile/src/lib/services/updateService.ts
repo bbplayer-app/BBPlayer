@@ -6,7 +6,7 @@ import { err, ok, type Result } from 'neverthrow'
 export interface ReleaseInfo {
 	version: string
 	notes: string
-	listed_notes?: string[] | undefined
+	listed_notes?: string[]
 	url: string
 	forced: boolean
 }

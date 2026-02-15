@@ -24,7 +24,7 @@ interface BilibiliErrorData {
 
 export class BilibiliApiError extends ThirdPartyError {
 	readonly data: BilibiliErrorData
-	declare readonly type?: BilibiliApiErrorType
+	readonly type?: BilibiliApiErrorType
 	constructor({
 		message,
 		msgCode,
@@ -34,17 +34,17 @@ export class BilibiliApiError extends ThirdPartyError {
 	}: BilibiliApiErrorDetails) {
 		super(message, {
 			vendor: 'Bilibili',
+			type,
 			data: {
 				rawData,
 				msgCode,
 			},
-			type,
 			cause,
 		})
 		this.data = {
 			rawData,
 			msgCode: msgCode ?? 0,
 		}
-		if (type) this.type = type
+		this.type = type
 	}
 }

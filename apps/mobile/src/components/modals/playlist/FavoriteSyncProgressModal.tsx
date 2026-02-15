@@ -100,7 +100,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 						{progress?.message ?? '准备中...'}
 					</Text>
 					<ProgressBar
-						progress={localProgress ?? 0}
+						progress={localProgress}
 						indeterminate={localProgress === undefined}
 						style={styles.progressBar}
 					/>

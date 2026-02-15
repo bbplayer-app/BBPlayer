@@ -207,7 +207,7 @@ export function LocalTrackList({
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
 		track: Track | null
-		downloadState: DownloadState | undefined
+		downloadState?: DownloadState
 	}>({
 		visible: false,
 		track: null,
@@ -270,7 +270,7 @@ export function LocalTrackList({
 	return (
 		<>
 			<FlashList
-				ref={listRef ?? null}
+				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={extraData}

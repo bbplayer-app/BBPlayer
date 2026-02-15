@@ -59,7 +59,7 @@ export class QQMusicApi {
 					'Content-Type': 'application/json;charset=utf-8',
 					Referer: 'https://y.qq.com/',
 				},
-				signal: signal ?? null,
+				signal,
 			}).then((res) => {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
@@ -95,7 +95,7 @@ export class QQMusicApi {
 				headers: {
 					Referer: 'https://y.qq.com/',
 				},
-				signal: signal ?? null,
+				signal,
 			}).then((res) => {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)

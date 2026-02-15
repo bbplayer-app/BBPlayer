@@ -30,10 +30,10 @@ interface PlaylistHeaderProps {
 
 interface SubtitlePieces {
 	isLocal: boolean
-	authorName?: string | undefined
+	authorName?: string
 	authorClickable: boolean
 	countText: string
-	syncLine?: string | undefined // 带“最后同步：xxx”的整行
+	syncLine?: string // 带“最后同步：xxx”的整行
 }
 
 // 三元运算符过于难懂，还是用函数好一些
@@ -63,13 +63,7 @@ function buildSubtitlePieces(
 			}`
 		: undefined
 
-	return {
-		isLocal,
-		authorName,
-		authorClickable,
-		countText,
-		syncLine,
-	}
+	return { isLocal, authorName, authorClickable, countText, syncLine }
 }
 
 /**
@@ -114,8 +108,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						id: t.uniqueKey,
 						title: t.title,
 						url: url,
-						artist: t.artist?.name ?? 'Unknown',
-						artwork: t.coverUrl ?? '',
+						artist: t.artist?.name,
+						artwork: t.coverUrl ?? undefined,
 						duration: t.duration,
 					}
 				})

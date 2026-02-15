@@ -1,9 +1,9 @@
 export class CustomError extends Error {
-	readonly type?: string | undefined
+	readonly type?: string
 	readonly data?: unknown
 	constructor(
 		message: string,
-		opts?: { type?: string | undefined; data?: unknown; cause?: unknown },
+		opts?: { type?: string; data?: unknown; cause?: unknown },
 	) {
 		super(message, { cause: opts?.cause })
 		this.name = this.constructor.name
@@ -19,17 +19,12 @@ export class FacadeError extends CustomError {}
 export class UIError extends CustomError {}
 
 export class ThirdPartyError extends CustomError {
-	readonly vendor?: string | undefined
-	readonly type?: string | undefined
+	readonly vendor?: string
+	readonly type?: string
 	readonly data?: unknown
 	constructor(
 		message: string,
-		opts?: {
-			vendor?: string | undefined
-			type?: string | undefined
-			data?: unknown
-			cause?: unknown
-		},
+		opts?: { vendor?: string; type?: string; data?: unknown; cause?: unknown },
 	) {
 		super(message, { type: opts?.type, data: opts?.data, cause: opts?.cause })
 		this.vendor = opts?.vendor

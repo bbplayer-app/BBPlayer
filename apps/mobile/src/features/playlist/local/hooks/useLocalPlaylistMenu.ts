@@ -114,8 +114,8 @@ export function useLocalPlaylistMenu({
 							id: item.uniqueKey,
 							url: url,
 							title: item.title,
-							artist: item.artist?.name ?? 'Unknown',
-							artwork: item.coverUrl ?? '',
+							artist: item.artist?.name,
+							artwork: item.coverUrl ?? undefined,
 							duration: item.duration,
 						})
 

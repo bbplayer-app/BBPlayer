@@ -36,6 +36,7 @@ export const useFastMigrations = (
 ): State => {
 	const initialState: State = {
 		success: false,
+		error: undefined,
 	}
 
 	const fetchReducer = (state: State, action: Action): State => {

@@ -21,7 +21,7 @@ export function parseSpans(
 	/** 是否包含逐字标签 */
 	isDynamic: boolean
 	/** 如果行末有显式时间标签，则返回该时间 (ms) */
-	explicitEnd?: number | undefined
+	explicitEnd?: number
 } {
 	// 按标签切割，如 <mm:ss.SS> 或 [mm:ss.SS]
 	const parts = rawContent.split(/([<[]\d{1,3}:\d{1,2}\.\d{1,6}[>\]])/)

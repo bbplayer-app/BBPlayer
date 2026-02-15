@@ -41,7 +41,7 @@ export const usePlaylistSync = () => {
 			return result.value
 		},
 		onSuccess: async (id, { toastId }) => {
-			toast.success('同步成功', toastId ? { id: toastId } : {})
+			toast.success('同步成功', { id: toastId })
 			if (!id) return
 			await Promise.all([
 				queryClient.invalidateQueries({

@@ -212,17 +212,12 @@ export default function CollectionPage() {
 								setRefreshing(false)
 							}}
 							colors={[colors.primary]}
-							progressViewOffset={50}
 						/>
 					}
 				/>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar
-					{...(nowPlayingBarColor
-						? { backgroundColor: nowPlayingBarColor }
-						: {})}
-				/>
+				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
 		</View>
 	)

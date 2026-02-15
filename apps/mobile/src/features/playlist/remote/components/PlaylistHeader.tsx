@@ -16,16 +16,16 @@ interface PlaylistHeaderProps {
 	title: string | undefined
 	subtitles: string | string[] | undefined // 通常格式： "Author • n Tracks"
 	description: string | undefined
-	onClickMainButton?: (() => void) | undefined
+	onClickMainButton?: () => void
 	mainButtonIcon: IconSource
-	linkedPlaylistId?: number | undefined
+	linkedPlaylistId?: number
 	id: string | number
-	mainButtonText?: string | undefined
-	disableMainButton?: boolean | undefined
-	secondaryButtonText?: string | undefined
-	secondaryButtonIcon?: string | undefined
-	onClickSecondaryButton?: (() => void) | undefined
-	disableSecondaryButton?: boolean | undefined
+	mainButtonText?: string
+	disableMainButton?: boolean
+	secondaryButtonText?: string
+	secondaryButtonIcon?: string
+	onClickSecondaryButton?: () => void
+	disableSecondaryButton?: boolean
 }
 
 /**
@@ -93,7 +93,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						mode='contained'
 						icon={mainButtonIcon}
 						onPress={() => onClickMainButton()}
-						disabled={!!props.disableMainButton}
+						disabled={props.disableMainButton}
 						testID='playlist-header-main-button'
 					>
 						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
@@ -102,12 +102,10 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				{props.secondaryButtonText && props.onClickSecondaryButton && (
 					<Button
 						mode='outlined'
-						{...(props.secondaryButtonIcon
-							? { icon: props.secondaryButtonIcon }
-							: {})}
+						icon={props.secondaryButtonIcon}
 						onPress={props.onClickSecondaryButton}
 						style={{ marginLeft: 8 }}
-						disabled={!!props.disableSecondaryButton}
+						disabled={props.disableSecondaryButton}
 					>
 						{props.secondaryButtonText}
 					</Button>

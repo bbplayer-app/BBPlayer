@@ -25,6 +25,7 @@ import type {
 	CreateTrackPayload,
 	CreateTrackPayloadBase,
 	UpdateTrackPayload,
+	UpdateTrackPayloadBase,
 } from '@/types/services/track'
 import log from '@/utils/log'
 
@@ -162,9 +163,9 @@ export class TrackService {
 							this.db.insert(schema.bilibiliMetadata).values({
 								trackId,
 								bvid: payload.bilibiliMetadata.bvid,
-								cid: payload.bilibiliMetadata.cid ?? null,
+								cid: payload.bilibiliMetadata.cid,
 								isMultiPage: payload.bilibiliMetadata.isMultiPage,
-								mainTrackTitle: payload.bilibiliMetadata.mainTrackTitle ?? null,
+								mainTrackTitle: payload.bilibiliMetadata.mainTrackTitle,
 								videoIsValid: payload.bilibiliMetadata.videoIsValid,
 							} satisfies BilibiliMetadataPayload & {
 								trackId: number
@@ -206,21 +207,17 @@ export class TrackService {
 
 		const updateResult = ResultAsync.fromPromise(
 			(async () => {
-				const updates: Partial<typeof schema.tracks.$inferInsert> = {}
-				if (dataToUpdate.title != null) updates.title = dataToUpdate.title
-				if (dataToUpdate.artistId !== undefined)
-					updates.artistId = dataToUpdate.artistId
-				if (dataToUpdate.coverUrl !== undefined)
-					updates.coverUrl = dataToUpdate.coverUrl
-				if (dataToUpdate.duration !== undefined)
-					updates.duration = dataToUpdate.duration
-
 				return await Sentry.startSpan(
 					{ name: 'db:update:track', op: 'db' },
 					() =>
 						this.db
 							.update(schema.tracks)
-							.set(updates)
+							.set({
+								title: dataToUpdate.title ?? undefined,
+								artistId: dataToUpdate.artistId,
+								coverUrl: dataToUpdate.coverUrl,
+								duration: dataToUpdate.duration,
+							} satisfies Omit<UpdateTrackPayloadBase, 'id'>)
 							.where(eq(schema.tracks.id, id)),
 				)
 			})(),
@@ -518,8 +515,8 @@ export class TrackService {
 					({ uniqueKey, payload }) =>
 						({
 							title: payload.title,
-							artistId: payload.artistId ?? null,
-							coverUrl: payload.coverUrl ?? null,
+							artistId: payload.artistId,
+							coverUrl: payload.coverUrl,
 							duration: payload.duration,
 							uniqueKey: uniqueKey,
 							source: payload.source,
@@ -672,13 +669,11 @@ export class TrackService {
 	}): ResultAsync<
 		{
 			items: { track: Track; playCount: number }[]
-			nextCursor?:
-				| {
-						lastPlayCount: number
-						lastUpdatedAt: number
-						lastId: number
-				  }
-				| undefined
+			nextCursor?: {
+				lastPlayCount: number
+				lastUpdatedAt: number
+				lastId: number
+			}
 		},
 		DatabaseError | ServiceError
 	> {

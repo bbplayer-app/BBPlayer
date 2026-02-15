@@ -6,8 +6,6 @@ import { ActivityIndicator, Icon, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
-import { compact as compactObj } from '@/utils/obj'
-
 type IconButtonMode = 'outlined' | 'contained' | 'contained-tonal'
 
 export interface IconButtonProps {
@@ -77,11 +75,11 @@ const getIconButtonColor = ({
 	customContainerColor,
 }: {
 	theme: MD3Theme
-	disabled?: boolean | undefined
-	selected?: boolean | undefined
-	mode?: IconButtonMode | undefined
-	customIconColor?: string | undefined
-	customContainerColor?: string | undefined
+	disabled?: boolean
+	selected?: boolean
+	mode?: IconButtonMode
+	customIconColor?: string
+	customContainerColor?: string
 }) => {
 	if (disabled) {
 		return {
@@ -197,7 +195,7 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 				ref={ref}
 				onPress={handlePress}
 				enabled={!disabled}
-				{...compactObj({ rippleColor: rippleColorFinal })}
+				rippleColor={rippleColorFinal}
 				style={[
 					{
 						width: buttonSize,

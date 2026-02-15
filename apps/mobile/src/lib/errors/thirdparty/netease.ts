@@ -7,9 +7,9 @@ export type NeteaseApiErrorType =
 
 interface NeteaseApiErrorDetails {
 	message: string
-	msgCode?: number | undefined
+	msgCode?: number
 	rawData?: unknown
-	type?: NeteaseApiErrorType | undefined
+	type?: NeteaseApiErrorType
 	cause?: unknown
 }
 
@@ -20,7 +20,7 @@ interface NeteaseErrorData {
 
 export class NeteaseApiError extends ThirdPartyError {
 	readonly data: NeteaseErrorData
-	declare readonly type?: NeteaseApiErrorType | undefined
+	readonly type?: NeteaseApiErrorType
 	constructor({
 		message,
 		msgCode,

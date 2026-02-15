@@ -14,12 +14,9 @@ export interface AlertOptions {
 
 export interface AlertModalProps {
 	title: string
-	message?: string | undefined
-	/**
-	 * [negative, positive]
-	 */
-	buttons: readonly [AlertButton, AlertButton?]
-	options?: AlertOptions | undefined
+	message?: string
+	buttons: readonly [AlertButton, AlertButton?] // [negative, positive]
+	options?: AlertOptions
 }
 
 export default function AlertModal({

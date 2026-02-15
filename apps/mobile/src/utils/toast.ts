@@ -3,39 +3,51 @@ import { toast as sonner } from 'sonner-native'
 import * as Haptics from './haptics'
 
 interface Options {
-	description?: string | undefined
-	id?: string | number | undefined
-	duration?: number | undefined
-	action?:
-		| {
-				label: string
-				onClick: () => void
-		  }
-		| undefined
-}
-
-const omitUndefined = <T extends object>(obj: T) => {
-	return Object.fromEntries(
-		Object.entries(obj).filter(([_, value]) => value !== undefined),
-	)
+	description?: string
+	id?: string | number
+	duration?: number
+	action?: {
+		label: string
+		onClick: () => void
+	}
 }
 
 const show = (message: string, options?: Options) => {
-	return sonner(message, omitUndefined(options ?? {}))
+	return sonner(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
 }
 
 const success = (message: string, options?: Options) => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-	return sonner.success(message, omitUndefined(options ?? {}))
+	return sonner.success(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
 }
 
 const error = (message: string, options?: Options) => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Reject)
-	return sonner.error(message, omitUndefined(options ?? {}))
+	return sonner.error(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
 }
 
 const info = (message: string, options?: Options) => {
-	return sonner.info(message, omitUndefined(options ?? {}))
+	return sonner.info(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
 }
 
 const dismiss = (id?: string | number) => {
@@ -47,7 +59,12 @@ const dismiss = (id?: string | number) => {
 }
 
 const loading = (message: string, options?: Options) => {
-	return sonner.loading(message, omitUndefined(options ?? {}))
+	return sonner.loading(message, {
+		description: options?.description,
+		duration: options?.duration,
+		id: options?.id,
+		action: options?.action,
+	})
 }
 
 const toast = {

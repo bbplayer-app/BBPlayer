@@ -20,7 +20,6 @@ import type {
 	ReorderSingleTrackPayload,
 	UpdatePlaylistPayload,
 } from '@/types/services/playlist'
-import { compact } from '@/utils/obj'
 
 import type { TrackService } from './trackService'
 import { trackService } from './trackService'
@@ -79,11 +78,11 @@ export class PlaylistService {
 							.insert(schema.playlists)
 							.values({
 								title: payload.title,
-								authorId: payload.authorId ?? null,
-								description: payload.description ?? null,
-								coverUrl: payload.coverUrl ?? null,
+								authorId: payload.authorId,
+								description: payload.description,
+								coverUrl: payload.coverUrl,
 								type: payload.type,
-								remoteSyncId: payload.remoteSyncId ?? null,
+								remoteSyncId: payload.remoteSyncId,
 							} satisfies CreatePlaylistPayload)
 							.returning(),
 				)
@@ -146,18 +145,16 @@ export class PlaylistService {
 					}
 				}
 
-				const updates: Partial<typeof schema.playlists.$inferInsert> = {}
-				if (payload.title != null) updates.title = payload.title
-				if (payload.description !== undefined)
-					updates.description = payload.description
-				if (payload.coverUrl !== undefined) updates.coverUrl = payload.coverUrl
-
 				const [updated] = await Sentry.startSpan(
 					{ name: 'db:update:playlist', op: 'db' },
 					() =>
 						this.db
 							.update(schema.playlists)
-							.set(updates)
+							.set({
+								title: payload.title ?? undefined,
+								description: payload.description,
+								coverUrl: payload.coverUrl,
+							} satisfies UpdatePlaylistPayload)
 							.where(eq(schema.playlists.id, playlistId))
 							.returning(),
 				)
@@ -688,11 +685,11 @@ export class PlaylistService {
 							.insert(schema.playlists)
 							.values({
 								title: payload.title,
-								authorId: payload.authorId ?? null,
-								description: payload.description ?? null,
-								coverUrl: payload.coverUrl ?? null,
+								authorId: payload.authorId,
+								description: payload.description,
+								coverUrl: payload.coverUrl,
 								type: payload.type,
-								remoteSyncId: payload.remoteSyncId ?? null,
+								remoteSyncId: payload.remoteSyncId,
 							} satisfies CreatePlaylistPayload)
 							.returning(),
 				)
@@ -991,7 +988,7 @@ export class PlaylistService {
 	 */
 	public getPlaylistTracksPaginated(options: {
 		playlistId: number
-		initialLimit?: number | undefined
+		initialLimit?: number
 		limit: number
 		cursor:
 			| {
@@ -1117,12 +1114,10 @@ export class PlaylistService {
 				}
 			}
 
-			return okAsync(
-				compact({
-					tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
-					nextCursor,
-				}),
-			)
+			return okAsync({
+				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				nextCursor,
+			})
 		})
 	}
 }

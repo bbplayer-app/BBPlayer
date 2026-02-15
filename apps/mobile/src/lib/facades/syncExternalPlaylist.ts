@@ -50,7 +50,7 @@ export class SyncExternalPlaylistFacade {
 				// 1. 提取所有需要创建/查找的 Artist
 				const uniqueArtistsMap = new Map<
 					string,
-					{ name: string; remoteId: string }
+					{ name: string; remoteId: string; face?: string }
 				>()
 
 				const validMatches = matchResults.filter((r) => r.matchedVideo !== null)
@@ -77,7 +77,7 @@ export class SyncExternalPlaylistFacade {
 						name: artist.name,
 						source: 'bilibili' as const,
 						remoteId: artist.remoteId,
-						avatarUrl: null,
+						avatarUrl: undefined,
 					}),
 				)
 
@@ -97,14 +97,14 @@ export class SyncExternalPlaylistFacade {
 						bilibiliMetadata: {
 							bvid: video.bvid,
 							isMultiPage: false,
-							cid: null,
+							cid: undefined,
 							videoIsValid: true,
 						},
 						coverUrl: video.pic.startsWith('//')
 							? `https:${video.pic}`
 							: video.pic,
 						duration: parseDurationString(video.duration),
-						artistId: artistId ?? null,
+						artistId: artistId,
 					}
 				})
 
@@ -133,7 +133,7 @@ export class SyncExternalPlaylistFacade {
 					description: playlistInfo.description,
 					coverUrl: playlistInfo.coverUrl,
 					type: 'local', // 另存为本地歌单
-					authorId: null, // 本地歌单没有 strict author
+					authorId: undefined, // 本地歌单没有 strict author
 				})
 				if (playlistResult.isErr()) throw playlistResult.error
 				const playlistId = playlistResult.value.id
