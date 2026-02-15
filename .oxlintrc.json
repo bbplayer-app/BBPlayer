@@ -93,7 +93,8 @@
 		"always-return": "allow",
 		"no-array-sort": "allow",
 		"no-new-array": "allow",
-		"style-prop-object": "allow"
+		"style-prop-object": "allow",
+		"no-map-spread": "allow"
 	},
 	"settings": {
 		"react": {

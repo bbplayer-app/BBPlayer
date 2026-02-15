@@ -43,7 +43,7 @@ class ApiClient {
 
 		if (options.headers) {
 			new Headers(options.headers).forEach((value, key) => {
-				headers.append(key, value)
+				headers.set(key, value)
 			})
 		}
 
