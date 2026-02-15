@@ -73,7 +73,7 @@ export class SyncBilibiliPlaylistFacade {
 				source: 'bilibili' as const,
 				bilibiliMetadata: {
 					bvid,
-					cid: cid ?? null,
+					cid: cid,
 					isMultiPage: cid !== undefined,
 					videoIsValid: true,
 				},
@@ -107,9 +107,9 @@ export class SyncBilibiliPlaylistFacade {
 			.findOrCreateArtist({
 				name: track.artist.name,
 				source: track.artist.source,
-				remoteId: track.artist.remoteId ?? null,
-				avatarUrl: track.artist.avatarUrl ?? null,
-				signature: track.artist.signature ?? null,
+				remoteId: track.artist.remoteId,
+				avatarUrl: track.artist.avatarUrl,
+				signature: track.artist.signature,
 			})
 			.andThen((artist) => {
 				return this.trackService.findOrCreateTrack({
@@ -200,7 +200,7 @@ export class SyncBilibiliPlaylistFacade {
 									name: artistInfo.name,
 									source: 'bilibili',
 									remoteId: String(remoteId),
-									avatarUrl: null,
+									avatarUrl: undefined,
 								})),
 							)
 							if (artistRes.isErr()) throw artistRes.error
@@ -216,13 +216,12 @@ export class SyncBilibiliPlaylistFacade {
 									bilibiliMetadata: {
 										bvid: v.bvid,
 										isMultiPage: false,
-										cid: null,
+										cid: undefined,
 										videoIsValid: true,
 									},
 									coverUrl: v.cover,
 									duration: v.duration,
-									artistId:
-										localArtistIdMap.get(String(v.upper.mid))?.id ?? null,
+									artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
 								})),
 								'bilibili',
 							)
@@ -639,7 +638,7 @@ export class SyncBilibiliPlaylistFacade {
 							},
 							coverUrl: v.cover,
 							duration: v.duration,
-							artistId: artistsMap.value.get(String(v.upper.mid))?.id ?? null,
+							artistId: artistsMap.value.get(String(v.upper.mid))?.id,
 						}),
 					)
 

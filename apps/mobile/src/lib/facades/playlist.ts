@@ -55,8 +55,8 @@ export class PlaylistFacade {
 
 				const localPlaylistResult = await playlistSvc.createPlaylist({
 					title: name,
-					description: playlistMetadata.description ?? null,
-					coverUrl: playlistMetadata.coverUrl ?? null,
+					description: playlistMetadata.description,
+					coverUrl: playlistMetadata.coverUrl,
 					authorId: null,
 					type: 'local',
 					remoteSyncId: null,
@@ -152,7 +152,7 @@ export class PlaylistFacade {
 				// step2: 解析/创建 Track
 				const trackRes = await trackSvc.findOrCreateTrack({
 					...trackPayload,
-					artistId: finalArtistId ?? null,
+					artistId: finalArtistId ?? undefined,
 				})
 				if (trackRes.isErr()) throw trackRes.error
 				const trackId = trackRes.value.id
@@ -236,7 +236,7 @@ export class PlaylistFacade {
 				const trackResult = await trackSvc.findOrCreateManyTracks(
 					payloads.map((p) => ({
 						...p.track,
-						artistId: artistMap.get(p.artist.remoteId!)?.id ?? null,
+						artistId: artistMap.get(p.artist.remoteId!)?.id,
 					})),
 					'bilibili',
 				)

@@ -241,7 +241,7 @@ export class BilibiliApi {
 		return ResultAsync.fromPromise(
 			fetch(url, {
 				method: 'GET',
-				signal: signal ?? null,
+				signal: signal,
 			}),
 			(e) => {
 				if (e instanceof Error && e.name === 'AbortError') {
