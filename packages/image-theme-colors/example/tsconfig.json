@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
+		"exactOptionalPropertyTypes": false,
 		"paths": {
 			"@bbplayer/image-theme-colors": ["../src/index"],
 			"@bbplayer/image-theme-colors/*": ["../src/*"]

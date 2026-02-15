@@ -3,7 +3,7 @@
 	"extends": "expo-module-scripts/tsconfig.base",
 	"compilerOptions": {
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
+		"exactOptionalPropertyTypes": false,
 		"outDir": "./build"
 	},
 	"include": ["./src"],

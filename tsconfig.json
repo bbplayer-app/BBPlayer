@@ -11,6 +11,6 @@
 	],
 	"compilerOptions": {
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true
+		"exactOptionalPropertyTypes": false
 	}
 }

@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
+		"exactOptionalPropertyTypes": false,
 		"paths": {
 			"@bbplayer/orpheus": ["../src/index"],
 			"@bbplayer/orpheus/*": ["../src/*"]

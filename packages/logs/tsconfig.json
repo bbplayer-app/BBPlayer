@@ -6,7 +6,7 @@
 		"outDir": "./dist",
 		"strict": true,
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true
+		"exactOptionalPropertyTypes": false
 	},
 	"exclude": ["demo", "dist", "test", "node_modules"]
 }

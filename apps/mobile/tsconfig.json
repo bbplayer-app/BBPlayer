@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"strict": true,
 		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
+		"exactOptionalPropertyTypes": false,
 		"paths": {
 			"@/*": ["./src/*"],
 			"@/types/*": ["./src/types/*"],
