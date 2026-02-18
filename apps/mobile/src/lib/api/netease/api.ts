@@ -2,7 +2,7 @@ import { parseYrc } from '@bbplayer/splash/src/converter/netease'
 import { errAsync, okAsync, type ResultAsync } from 'neverthrow'
 
 import { NeteaseApiError } from '@/lib/errors/thirdparty/netease'
-import type {
+import {
 	NeteaseLyricResponse,
 	NeteasePlaylistResponse,
 	NeteaseSearchResponse,
@@ -53,10 +53,11 @@ export class NeteaseApi {
 		if (signal) {
 			requestOptions.signal = signal
 		}
-		return createRequest<object, NeteaseLyricResponse>(
+		return createRequest(
 			'/api/song/lyric/v1',
 			data,
 			requestOptions,
+			NeteaseLyricResponse,
 		).map((res) => res.body)
 	}
 
@@ -81,10 +82,11 @@ export class NeteaseApi {
 		if (signal) {
 			requestOptions.signal = signal
 		}
-		return createRequest<object, NeteaseSearchResponse>(
+		return createRequest(
 			endpoint,
 			data,
 			requestOptions,
+			NeteaseSearchResponse,
 		).map((res) => {
 			if (!res.body.result?.songs) return []
 			return res.body.result.songs.map((song) => ({
@@ -158,10 +160,11 @@ export class NeteaseApi {
 			t: '0',
 		}
 		const requestOptions: RequestOptions = createOption({}, 'eapi')
-		return createRequest<object, NeteasePlaylistResponse>(
+		return createRequest(
 			'/api/v6/playlist/detail',
 			data,
 			requestOptions,
+			NeteasePlaylistResponse,
 		).map((res) => res.body)
 	}
 }

@@ -1,40 +1,35 @@
 import { ThirdPartyError } from '@/lib/errors'
 
-export type BilibiliApiErrorType =
+export type KugouApiErrorType =
 	| 'RequestFailed'
 	| 'ResponseFailed'
 	| 'ValidationFailed'
-	| 'NoCookie'
-	| 'CsrfError'
-	| 'AudioStreamError'
-	| 'RequestAborted'
-	| 'InvalidArgument'
 
-interface BilibiliApiErrorDetails {
+interface KugouApiErrorDetails {
 	message: string
 	msgCode?: number
 	rawData?: unknown
-	type?: BilibiliApiErrorType
+	type?: KugouApiErrorType
 	cause?: unknown
 }
 
-interface BilibiliErrorData {
+interface KugouErrorData {
 	msgCode: number
 	rawData: unknown
 }
 
-export class BilibiliApiError extends ThirdPartyError {
-	readonly data: BilibiliErrorData
-	readonly type?: BilibiliApiErrorType
+export class KugouApiError extends ThirdPartyError {
+	readonly data: KugouErrorData
+	readonly type?: KugouApiErrorType
 	constructor({
 		message,
 		msgCode,
 		rawData,
 		type,
 		cause,
-	}: BilibiliApiErrorDetails) {
+	}: KugouApiErrorDetails) {
 		super(message, {
-			vendor: 'Bilibili',
+			vendor: 'Kugou',
 			type,
 			data: {
 				rawData,

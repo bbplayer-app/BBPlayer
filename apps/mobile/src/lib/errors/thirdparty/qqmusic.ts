@@ -1,40 +1,35 @@
 import { ThirdPartyError } from '@/lib/errors'
 
-export type BilibiliApiErrorType =
+export type QQMusicApiErrorType =
 	| 'RequestFailed'
 	| 'ResponseFailed'
 	| 'ValidationFailed'
-	| 'NoCookie'
-	| 'CsrfError'
-	| 'AudioStreamError'
-	| 'RequestAborted'
-	| 'InvalidArgument'
 
-interface BilibiliApiErrorDetails {
+interface QQMusicApiErrorDetails {
 	message: string
 	msgCode?: number
 	rawData?: unknown
-	type?: BilibiliApiErrorType
+	type?: QQMusicApiErrorType
 	cause?: unknown
 }
 
-interface BilibiliErrorData {
+interface QQMusicErrorData {
 	msgCode: number
 	rawData: unknown
 }
 
-export class BilibiliApiError extends ThirdPartyError {
-	readonly data: BilibiliErrorData
-	readonly type?: BilibiliApiErrorType
+export class QQMusicApiError extends ThirdPartyError {
+	readonly data: QQMusicErrorData
+	readonly type?: QQMusicApiErrorType
 	constructor({
 		message,
 		msgCode,
 		rawData,
 		type,
 		cause,
-	}: BilibiliApiErrorDetails) {
+	}: QQMusicApiErrorDetails) {
 		super(message, {
-			vendor: 'Bilibili',
+			vendor: 'QQMusic',
 			type,
 			data: {
 				rawData,

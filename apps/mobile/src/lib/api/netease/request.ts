@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer'
 
+import { type Type, type } from 'arktype'
 /* oxlint-disable @typescript-eslint/no-unsafe-assignment */
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，但做了进一步封装和解耦，凑合着用 */
 import type { Result } from 'neverthrow'
@@ -122,6 +123,7 @@ interface FetchResult<TReturnBody> {
 
 const executeFetch = <TReturnBody>(
 	payload: RequestPayload,
+	validator?: Type<TReturnBody>,
 ): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
 	const { url, headers, body, e_r, signal } = payload
 	const settings: RequestInit = {
@@ -157,6 +159,23 @@ const executeFetch = <TReturnBody>(
 				(cookie) => `${cookie.name}=${cookie.value}`,
 			)
 
+			if (validator) {
+				const validated = validator(responseBody)
+				if (validated instanceof type.errors) {
+					return err(
+						new NeteaseApiError({
+							message: `数据校验失败: ${validated.summary}`,
+							type: 'ValidationFailed',
+							rawData: responseBody,
+						}),
+					)
+				}
+				return ok({
+					body: validated as TReturnBody,
+					cookie: cookies,
+				})
+			}
+
 			return ok({
 				body: responseBody,
 				cookie: cookies,
@@ -177,8 +196,9 @@ export const createRequest = <TData extends object, TReturnBody>(
 	uri: string,
 	data: TData,
 	options: RequestOptions,
+	validator?: Type<TReturnBody>,
 ): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
 	const payloadResult = buildRequestPayload(uri, data, options)
 
-	return executeFetch(payloadResult)
+	return executeFetch(payloadResult, validator)
 }

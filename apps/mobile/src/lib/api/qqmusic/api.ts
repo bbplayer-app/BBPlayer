@@ -1,7 +1,9 @@
+import { type } from 'arktype'
 import { decode } from 'he'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
-import type {
+import { QQMusicApiError } from '@/lib/errors/thirdparty/qqmusic'
+import {
 	QQMusicLyricResponse,
 	QQMusicPlaylistResponse,
 	QQMusicSearchResponse,
@@ -17,15 +19,12 @@ const logger = log.extend('API.QQMusic')
 export class QQMusicApi {
 	/**
 	 * Search for songs on QQ Music
-	 * @param keyword
-	 * @param limit
-	 * @returns
 	 */
 	public search(
 		keyword: string,
 		limit = 10,
 		signal?: AbortSignal,
-	): ResultAsync<LyricSearchResult, Error> {
+	): ResultAsync<LyricSearchResult, QQMusicApiError> {
 		const searchType = 0 // 0 for song
 		const pageNum = 1
 
@@ -64,30 +63,46 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
-				return res.json() as Promise<QQMusicSearchResponse>
+				return res.json() as Promise<unknown>
 			}),
-			(e) => new Error('Failed to search QQ Music', { cause: e }),
-		).map((res) => {
-			const list = res.req.data.body.song.list
-			return list.map((song) => ({
-				source: 'qqmusic' as const,
-				duration: song.interval,
-				title: song.name,
-				artist: song.singer[0]?.name ?? 'Unknown',
-				remoteId: song.mid,
-			}))
+			(e) =>
+				new QQMusicApiError({
+					message: 'Failed to search QQ Music',
+					type: 'RequestFailed',
+					cause: e,
+				}),
+		).andThen((raw) => {
+			const validated = QQMusicSearchResponse(raw)
+			if (validated instanceof type.errors) {
+				return errAsync(
+					new QQMusicApiError({
+						message: `QQ Music search response validation failed: ${validated.summary}`,
+						type: 'ValidationFailed',
+						rawData: raw,
+						cause: validated,
+					}),
+				)
+			}
+			const list = validated.req.data.body.song.list
+			return okAsync(
+				list.map((song) => ({
+					source: 'qqmusic' as const,
+					duration: song.interval,
+					title: song.name,
+					artist: song.singer[0]?.name ?? 'Unknown',
+					remoteId: song.mid,
+				})),
+			)
 		})
 	}
 
 	/**
 	 * Get lyrics by songmid
-	 * @param songmid
-	 * @returns
 	 */
 	public getLyrics(
 		songmid: string,
 		signal?: AbortSignal,
-	): ResultAsync<QQMusicLyricResponse, Error> {
+	): ResultAsync<QQMusicLyricResponse, QQMusicApiError> {
 		const url = `https://i.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=${songmid}&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&nobase64=1`
 
 		return ResultAsync.fromPromise(
@@ -100,16 +115,32 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
-				return res.json() as Promise<QQMusicLyricResponse>
+				return res.json() as Promise<unknown>
 			}),
-			(e) => new Error('Failed to fetch lyrics from QQ Music', { cause: e }),
-		)
+			(e) =>
+				new QQMusicApiError({
+					message: 'Failed to fetch lyrics from QQ Music',
+					type: 'RequestFailed',
+					cause: e,
+				}),
+		).andThen((raw) => {
+			const validated = QQMusicLyricResponse(raw)
+			if (validated instanceof type.errors) {
+				return errAsync(
+					new QQMusicApiError({
+						message: `QQ Music lyric response validation failed: ${validated.summary}`,
+						type: 'ValidationFailed',
+						rawData: raw,
+						cause: validated,
+					}),
+				)
+			}
+			return okAsync(validated)
+		})
 	}
 
 	/**
 	 * Parse QQ Music lyrics response
-	 * @param response
-	 * @returns
 	 */
 	public parseLyrics(
 		response: QQMusicLyricResponse,
@@ -126,17 +157,20 @@ export class QQMusicApi {
 
 	/**
 	 * Search and find the best matched lyrics
-	 * @param keyword
-	 * @param durationMs
 	 */
 	public searchBestMatchedLyrics(
 		keyword: string,
 		durationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<LyricProviderResponseData, Error> {
+	): ResultAsync<LyricProviderResponseData, QQMusicApiError> {
 		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
-				return errAsync(new Error('No songs found on QQ Music'))
+				return errAsync(
+					new QQMusicApiError({
+						message: 'No songs found on QQ Music',
+						type: 'ResponseFailed',
+					}),
+				)
 			}
 
 			// Simple matching strategy: prefer exact name match, then duration match
@@ -170,10 +204,10 @@ export class QQMusicApi {
 
 	/**
 	 * Get playlist by id
-	 * @param id
-	 * @returns
 	 */
-	public getPlaylist(id: string): ResultAsync<QQMusicPlaylistResponse, Error> {
+	public getPlaylist(
+		id: string,
+	): ResultAsync<QQMusicPlaylistResponse, QQMusicApiError> {
 		const params = new URLSearchParams({
 			id,
 			format: 'json',
@@ -194,10 +228,28 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
-				return res.json() as Promise<QQMusicPlaylistResponse>
+				return res.json() as Promise<unknown>
 			}),
-			(e) => new Error('Failed to fetch playlist from QQ Music', { cause: e }),
-		)
+			(e) =>
+				new QQMusicApiError({
+					message: 'Failed to fetch playlist from QQ Music',
+					type: 'RequestFailed',
+					cause: e,
+				}),
+		).andThen((raw) => {
+			const validated = QQMusicPlaylistResponse(raw)
+			if (validated instanceof type.errors) {
+				return errAsync(
+					new QQMusicApiError({
+						message: `QQ Music playlist response validation failed: ${validated.summary}`,
+						type: 'ValidationFailed',
+						rawData: raw,
+						cause: validated,
+					}),
+				)
+			}
+			return okAsync(validated)
+		})
 	}
 }
 

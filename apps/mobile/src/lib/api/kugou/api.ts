@@ -1,7 +1,9 @@
+import { type } from 'arktype'
 import CryptoJS from 'crypto-js'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
-import type {
+import { KugouApiError } from '@/lib/errors/thirdparty/kugou'
+import {
 	KugouLyricDownloadResponse,
 	KugouLyricSearchResponse,
 	KugouSearchResponse,
@@ -26,7 +28,7 @@ export class KugouApi {
 		keyword: string,
 		limit = 10,
 		signal?: AbortSignal,
-	): ResultAsync<LyricSearchResult, Error> {
+	): ResultAsync<LyricSearchResult, KugouApiError> {
 		const params = new URLSearchParams({
 			api_ver: '1',
 			area_code: '1',
@@ -48,24 +50,46 @@ export class KugouApi {
 				if (!res.ok) {
 					throw new Error(`Kugou API error: ${res.statusText}`)
 				}
-				return res.json() as Promise<KugouSearchResponse>
+				return res.json() as Promise<unknown>
 			}),
-			(e) => new Error('Failed to search Kugou', { cause: e }),
-		).map((res) => {
-			if (res.status !== 1 || !res.data?.info) {
-				return []
+			(e) =>
+				new KugouApiError({
+					message: 'Failed to search Kugou',
+					type: 'RequestFailed',
+					cause: e,
+				}),
+		).andThen((raw) => {
+			const validated = KugouSearchResponse(raw)
+			if (validated instanceof type.errors) {
+				return errAsync(
+					new KugouApiError({
+						message: `Kugou search response validation failed: ${validated.summary}`,
+						type: 'ValidationFailed',
+						rawData: raw,
+						cause: validated,
+					}),
+				)
 			}
-			return res.data.info.map((song) => ({
-				source: 'kugou' as const,
-				duration: song.duration,
-				title: song.songname || song.filename,
-				artist: song.singername,
-				remoteId: song.hash,
-			}))
+			const res = validated
+			if (res.status !== 1 || !res.data?.info) {
+				return okAsync<LyricSearchResult, KugouApiError>([])
+			}
+			return okAsync(
+				res.data.info.map((song) => ({
+					source: 'kugou' as const,
+					duration: song.duration,
+					title: song.songname || song.filename,
+					artist: song.singername,
+					remoteId: song.hash,
+				})),
+			)
 		})
 	}
 
-	getLyrics(id: string, signal?: AbortSignal): ResultAsync<string, Error> {
+	getLyrics(
+		id: string,
+		signal?: AbortSignal,
+	): ResultAsync<string, KugouApiError> {
 		// Step 1: Search for lyric candidate
 		const searchParams = new URLSearchParams({
 			keyword: '%20-%20',
@@ -78,13 +102,34 @@ export class KugouApi {
 
 		return ResultAsync.fromPromise(
 			fetch(searchUrl, { signal }).then(
-				(res) => res.json() as Promise<KugouLyricSearchResponse>,
+				(res) => res.json() as Promise<unknown>,
 			),
 			(e) =>
-				new Error('Failed to search lyric candidate on Kugou', { cause: e }),
-		).andThen((searchRes) => {
+				new KugouApiError({
+					message: 'Failed to search lyric candidate on Kugou',
+					type: 'RequestFailed',
+					cause: e,
+				}),
+		).andThen((raw) => {
+			const searchRes = KugouLyricSearchResponse(raw)
+			if (searchRes instanceof type.errors) {
+				return errAsync(
+					new KugouApiError({
+						message: `Kugou lyric search validation failed: ${searchRes.summary}`,
+						type: 'ValidationFailed',
+						rawData: raw,
+						cause: searchRes,
+					}),
+				)
+			}
+
 			if (!searchRes.candidates || searchRes.candidates.length === 0) {
-				return errAsync(new Error('No lyric candidates found on Kugou'))
+				return errAsync(
+					new KugouApiError({
+						message: 'No lyric candidates found on Kugou',
+						type: 'ResponseFailed',
+					}),
+				)
 			}
 
 			const candidate = searchRes.candidates[0]
@@ -102,14 +147,30 @@ export class KugouApi {
 
 			return ResultAsync.fromPromise(
 				fetch(downloadUrl, { signal }).then(
-					(res) => res.json() as Promise<KugouLyricDownloadResponse>,
+					(res) => res.json() as Promise<unknown>,
 				),
-				(e) => new Error('Failed to download lyric from Kugou', { cause: e }),
-			).map((downloadRes) => {
+				(e) =>
+					new KugouApiError({
+						message: 'Failed to download lyric from Kugou',
+						type: 'RequestFailed',
+						cause: e,
+					}),
+			).andThen((downloadRaw) => {
+				const downloadRes = KugouLyricDownloadResponse(downloadRaw)
+				if (downloadRes instanceof type.errors) {
+					return errAsync(
+						new KugouApiError({
+							message: `Kugou lyric download validation failed: ${downloadRes.summary}`,
+							type: 'ValidationFailed',
+							rawData: downloadRaw,
+							cause: downloadRes,
+						}),
+					)
+				}
 				// Decode Base64 content
 				const raw = downloadRes.content
 				const word = CryptoJS.enc.Base64.parse(raw)
-				return CryptoJS.enc.Utf8.stringify(word)
+				return okAsync(CryptoJS.enc.Utf8.stringify(word))
 			})
 		})
 	}
@@ -126,10 +187,15 @@ export class KugouApi {
 		keyword: string,
 		durationMs: number,
 		signal?: AbortSignal,
-	): ResultAsync<LyricProviderResponseData, Error> {
+	): ResultAsync<LyricProviderResponseData, KugouApiError> {
 		return this.search(keyword, 10, signal).andThen((songs) => {
 			if (!songs || songs.length === 0) {
-				return errAsync(new Error('No songs found on Kugou'))
+				return errAsync(
+					new KugouApiError({
+						message: 'No songs found on Kugou',
+						type: 'ResponseFailed',
+					}),
+				)
 			}
 
 			const targetDurationSeconds = Math.round(durationMs / 1000)

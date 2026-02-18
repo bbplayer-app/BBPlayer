@@ -3,6 +3,7 @@ import { ThirdPartyError } from '@/lib/errors'
 export type NeteaseApiErrorType =
 	| 'RequestFailed'
 	| 'ResponseFailed'
+	| 'ValidationFailed'
 	| 'SearchResultNoMatch'
 
 interface NeteaseApiErrorDetails {
@@ -29,7 +30,7 @@ export class NeteaseApiError extends ThirdPartyError {
 		cause,
 	}: NeteaseApiErrorDetails) {
 		super(message, {
-			vendor: 'Bilibili',
+			vendor: 'Netease',
 			type,
 			data: {
 				rawData,

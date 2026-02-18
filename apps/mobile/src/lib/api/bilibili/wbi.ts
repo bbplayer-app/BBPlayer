@@ -103,7 +103,10 @@ function getWbiKeys(): ResultAsync<
 	}
 	const result = bilibiliApiClient.get<{
 		wbi_img: { img_url: string; sub_url: string }
-	}>('/x/web-interface/nav', undefined)
+	}>({
+		target: '/x/web-interface/nav',
+		skipCodeCheck: true,
+	})
 	return result.map(({ wbi_img: { img_url, sub_url } }) => {
 		const img_key = img_url.slice(
 			img_url.lastIndexOf('/') + 1,

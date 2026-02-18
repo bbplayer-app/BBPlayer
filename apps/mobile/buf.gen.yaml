@@ -1,0 +1,7 @@
+version: v2
+plugins:
+  - local: protoc-gen-ts_proto
+    out: src/lib/api/bilibili/proto
+    opt:
+      - forceLong=string
+      - esModuleInterop=true

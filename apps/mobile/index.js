@@ -1,3 +1,6 @@
+import { configure } from 'arktype/config'
+configure({ exactOptionalPropertyTypes: false })
+
 import { Orpheus, registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
 
 import useAppStore from './src/hooks/stores/useAppStore'
