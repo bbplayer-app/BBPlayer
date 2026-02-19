@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
@@ -112,12 +112,18 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			if (!playlistsContainingTrack) return new Set<number>()
 			return new Set(playlistsContainingTrack.map((p) => p.id))
 		}, [playlistsContainingTrack])
-		const initialCheckedPlaylistIdList = Array.from(initialCheckedPlaylistIdSet)
+		const initialCheckedPlaylistIdList = useMemo(
+			() => Array.from(initialCheckedPlaylistIdSet),
+			[initialCheckedPlaylistIdSet],
+		)
 
-		useEffect(() => {
-			// 初始化组件的勾选状态
+		const [prevInitialIds, setPrevInitialIds] = useState(
+			initialCheckedPlaylistIdList,
+		)
+		if (prevInitialIds !== initialCheckedPlaylistIdList) {
+			setPrevInitialIds(initialCheckedPlaylistIdList)
 			setCheckedPlaylistIds(initialCheckedPlaylistIdList)
-		}, [initialCheckedPlaylistIdList])
+		}
 
 		const handleCheckboxPress = useCallback((playlistId: number) => {
 			setCheckedPlaylistIds((currentIds) => {

@@ -1,4 +1,4 @@
-import { createContext, use, useRef } from 'react'
+import { createContext, use, useMemo } from 'react'
 import { createStore, useStore } from 'zustand'
 
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
@@ -35,13 +35,9 @@ export const ExternalPlaylistSyncStoreProvider = ({
 }: {
 	children: React.ReactNode
 }) => {
-	const storeRef = useRef<SyncStore | null>(null)
-	// oxlint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-	if (!storeRef.current) {
-		storeRef.current = createExternalPlaylistSyncStore()
-	}
+	const store = useMemo(() => createExternalPlaylistSyncStore(), [])
 	return (
-		<ExternalPlaylistSyncStoreContext.Provider value={storeRef.current}>
+		<ExternalPlaylistSyncStoreContext.Provider value={store}>
 			{children}
 		</ExternalPlaylistSyncStoreContext.Provider>
 	)

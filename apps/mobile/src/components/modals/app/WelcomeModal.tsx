@@ -20,6 +20,53 @@ import { storage } from '@/utils/mmkv'
 
 const titles = ['欢迎使用 BBPlayer', '登录？']
 
+function Step0() {
+	return (
+		<View>
+			<Text>
+				看起来你是第一次打开 BBPlayer，容我介绍一下：BBPlayer
+				是一款开源、简洁的音乐播放器，你可以使用他播放来自
+				{' BiliBili '}的歌曲。
+				{'\n\n'}
+				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
+				<Text style={styles.boldText}>仍不保证</Text>
+				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
+				{'\n\n'}
+				如果您选择「游客模式」，本地播放列表、搜索、查看合集等大部分功能仍可使用，但无法访问并即时查看您自己收藏夹中的更新。
+			</Text>
+		</View>
+	)
+}
+
+function Step1({
+	onLogin,
+	onGuestMode,
+}: {
+	onLogin: () => void
+	onGuestMode: () => void
+}) {
+	return (
+		<View>
+			<Text>最后一步！选择登录还是游客模式？</Text>
+
+			<View style={styles.stepButtonContainer}>
+				<Button
+					mode='contained'
+					onPress={onLogin}
+				>
+					登录
+				</Button>
+				<Button
+					onPress={onGuestMode}
+					testID='welcome-guest-mode'
+				>
+					游客模式
+				</Button>
+			</View>
+		</View>
+	)
+}
+
 export default function WelcomeModal() {
 	const _close = useModalStore((s) => s.close)
 	const close = useCallback(() => _close('Welcome'), [_close])
@@ -71,43 +118,6 @@ export default function WelcomeModal() {
 		close()
 	}
 
-	const Step0 = () => (
-		<View>
-			<Text>
-				看起来你是第一次打开{' '}BBPlayer，容我介绍一下：BBPlayer
-				是一款开源、简洁的音乐播放器，你可以使用他播放来自
-				{' BiliBili '}的歌曲。
-				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
-				<Text style={styles.boldText}>仍不保证</Text>
-				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
-				{'\n\n'}
-				如果您选择「游客模式」，本地播放列表、搜索、查看合集等大部分功能仍可使用，但无法访问并即时查看您自己收藏夹中的更新。
-			</Text>
-		</View>
-	)
-
-	const Step1 = () => (
-		<View>
-			<Text>最后一步！选择登录还是游客模式？</Text>
-
-			<View style={styles.stepButtonContainer}>
-				<Button
-					mode='contained'
-					onPress={confirmLogin}
-				>
-					登录
-				</Button>
-				<Button
-					onPress={confirmGuestMode}
-					testID='welcome-guest-mode'
-				>
-					游客模式
-				</Button>
-			</View>
-		</View>
-	)
-
 	usePreventRemove(true, () => goToStep(step - 1))
 
 	return (
@@ -140,7 +150,10 @@ export default function WelcomeModal() {
 						setStepHeights((s) => [s[0], height])
 					}}
 				>
-					<Step1 />
+					<Step1
+						onLogin={confirmLogin}
+						onGuestMode={confirmGuestMode}
+					/>
 				</View>
 			</View>
 			<Dialog.Title>{titles[step]}</Dialog.Title>
@@ -160,7 +173,10 @@ export default function WelcomeModal() {
 							<Step0 />
 						</View>
 						<View style={{ width: measuredWidth }}>
-							<Step1 />
+							<Step1
+								onLogin={confirmLogin}
+								onGuestMode={confirmGuestMode}
+							/>
 						</View>
 					</Animated.View>
 				</Animated.View>

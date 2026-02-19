@@ -39,7 +39,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	const isHighlightedShared = useSharedValue(isHighlighted)
 
 	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
+		isHighlightedShared.set(isHighlighted)
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const gatedCurrentTime = useDerivedValue(() => {
@@ -123,7 +123,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	const isHighlightedShared = useSharedValue(isHighlighted)
 
 	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
+		isHighlightedShared.set(isHighlighted)
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const gatedCurrentTime = useDerivedValue(() => {

@@ -233,7 +233,7 @@ const ExternalPlaylistSyncPageInner = () => {
 		})
 	})
 
-	const handleSave = useCallback(async () => {
+	const handleSave = async () => {
 		if (!data?.playlist || !data?.tracks || !results) return
 		const matchResults = Object.values(results)
 		if (matchResults.length === 0) {
@@ -249,19 +249,20 @@ const ExternalPlaylistSyncPageInner = () => {
 
 		const proceedSave = async () => {
 			const loadingToast = toast.loading('正在保存到本地...')
+			const coverUrl = data.playlist.coverUrl ?? ''
+			const description = data.playlist.description ?? ''
 			try {
 				const saveResult = await syncExternalPlaylistFacade.saveMatchedPlaylist(
 					{
 						title: data.playlist.title,
-						coverUrl: data.playlist.coverUrl ?? '',
-						description: data.playlist.description ?? '',
+						coverUrl,
+						description,
 					},
 					matchResults,
 				)
 
 				if (saveResult.isErr()) {
 					toast.error(`保存失败: ${saveResult.error.message}`)
-					
 				} else {
 					toast.success('歌单已保存到本地')
 					await queryClient.invalidateQueries({
@@ -275,9 +276,8 @@ const ExternalPlaylistSyncPageInner = () => {
 							router.replace(`/playlist/local/${playlistId}`),
 						)
 				}
-			} catch  {
+			} catch {
 				toast.error('保存失败')
-				
 			}
 			toast.dismiss(loadingToast)
 		}
@@ -307,17 +307,9 @@ const ExternalPlaylistSyncPageInner = () => {
 		} else {
 			await proceedSave()
 		}
-	}, [
-		data?.playlist,
-		results,
-		router,
-		openModal,
-		reset,
-		queryClient,
-		data?.tracks,
-	])
+	}
 
-	const handleSync = useCallback(async () => {
+	const handleSync = async () => {
 		if (!data?.tracks) return
 
 		if (syncing) {
@@ -378,21 +370,12 @@ const ExternalPlaylistSyncPageInner = () => {
 		setSyncing(false)
 		if (result.isErr()) {
 			if (result.error.message !== 'Aborted') {
-				
 				toast.error(`匹配出错: ${result.error.message}`)
 			}
 		} else {
 			toast.success('匹配完成')
 		}
-	}, [
-		data?.tracks,
-		setProgress,
-		setResult,
-		setSyncing,
-		syncing,
-		results,
-		reset,
-	])
+	}
 
 	const handleOpenManualMatch = useCallback(
 		(track: GenericTrack, index: number) => {

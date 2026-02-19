@@ -22,24 +22,17 @@ export default function ModalHost() {
 	})
 
 	useEffect(() => {
-		if (modals.length === 0) return
-		setCanUnmountHost(false)
-	}, [modals])
-
-	useEffect(() => {
-		const closeAction = () => {
-			if (router.canGoBack()) {
-				setCanUnmountHost(true)
-				router.back()
-				// 确保在 ModalHost 关闭后再执行回调，避免其他导航操作与 ModalHost 关闭发生竞态
-				setImmediate(() => {
-					eventEmitter.emit('modalHostDidClose')
-				})
-			}
+		if (modals.length > 0) {
+			setCanUnmountHost(false)
+			return
 		}
-		if (modals.length === 0) {
-			Keyboard.dismiss()
-			closeAction()
+		Keyboard.dismiss()
+		if (router.canGoBack()) {
+			setCanUnmountHost(true)
+			router.back()
+			setImmediate(() => {
+				eventEmitter.emit('modalHostDidClose')
+			})
 		}
 	}, [eventEmitter, modals, router])
 
