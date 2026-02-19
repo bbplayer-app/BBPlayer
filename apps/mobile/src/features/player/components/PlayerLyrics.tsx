@@ -173,7 +173,7 @@ const Lyrics = memo(function Lyrics({
 
 	const offsetSharedValue = useSharedValue(0)
 	useEffect(() => {
-		offsetSharedValue.value = tempOffset
+		offsetSharedValue.set(tempOffset)
 	}, [tempOffset, offsetSharedValue])
 
 	const adjustedCurrentTime = useDerivedValue(() => {
@@ -301,19 +301,19 @@ const Lyrics = memo(function Lyrics({
 
 			// 检测滚动方向
 			if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
-				scrollDirection.value = deltaY > 0 ? 'up' : 'down'
+				scrollDirection.set(deltaY > 0 ? 'up' : 'down')
 			}
 
-			lastScrollY.value = currentY
-			scrollY.value = currentY
-			contentHeight.value = e.contentSize.height
-			viewportHeight.value = e.layoutMeasurement.height
+			lastScrollY.set(currentY)
+			scrollY.set(currentY)
+			contentHeight.set(e.contentSize.height)
+			viewportHeight.set(e.layoutMeasurement.height)
 		},
 		onBeginDrag: () => {
 			scheduleOnRN(onUserScrollStart)
 		},
 		onEndDrag: () => {
-			scrollDirection.value = 'idle'
+			scrollDirection.set('idle')
 			scheduleOnRN(onUserScrollEnd)
 		},
 	})

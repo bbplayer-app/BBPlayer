@@ -63,34 +63,11 @@ export default function GeneralSettingsPage() {
 	const [isSharing, setIsSharing] = useState(false)
 	const isSharingRef = useRef(false)
 
-	const shareLogFile = async () => {
+	const shareLogFile = () => {
 		if (isSharingRef.current) return
 		isSharingRef.current = true
 		setIsSharing(true)
-
-		try {
-			const d = new Date()
-			const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-			const file = new FileSystem.File(
-				FileSystem.Paths.document,
-				'logs',
-				`${dateString}.log`,
-			)
-			if (file.exists) {
-				await Sharing.shareAsync(file.uri)
-			} else {
-				toastAndLogError(
-					'',
-					new Error('无法分享日志：未找到日志文件'),
-					'UI.Test',
-				)
-			}
-		} catch (e) {
-			toastAndLogError('', e, 'UI.Settings')
-		} finally {
-			setIsSharing(false)
-			isSharingRef.current = false
-		}
+		void performShareLog(setIsSharing, isSharingRef)
 	}
 
 	return (
@@ -176,6 +153,31 @@ export default function GeneralSettingsPage() {
 			</ScrollView>
 		</View>
 	)
+}
+
+async function performShareLog(
+	setIsSharing: (v: boolean) => void,
+	isSharingRef: { current: boolean },
+) {
+	try {
+		const d = new Date()
+		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+		const file = new FileSystem.File(
+			FileSystem.Paths.document,
+			'logs',
+			`${dateString}.log`,
+		)
+		if (file.exists) {
+			await Sharing.shareAsync(file.uri)
+		} else {
+			toastAndLogError('', new Error('无法分享日志：未找到日志文件'), 'UI.Test')
+		}
+	} catch (e) {
+		toastAndLogError('', e, 'UI.Settings')
+	} finally {
+		setIsSharing(false)
+		isSharingRef.current = false
+	}
 }
 
 const styles = StyleSheet.create({

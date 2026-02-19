@@ -41,8 +41,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { Track } from '@/types/core/media'
-import type { CreateArtistPayload } from '@/types/services/artist'
-import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -74,8 +72,6 @@ export default function LocalPlaylistPage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
-	const [batchAddTracksModalPayloads, setBatchAddTracksModalPayloads] =
-		useState<{ track: CreateTrackPayload; artist: CreateArtistPayload }[]>([])
 	const openModal = useModalStore((state) => state.open)
 	const [functionalMenuVisible, setFunctionalMenuVisible] = useState(false)
 
@@ -89,6 +85,24 @@ export default function LocalPlaylistPage() {
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks =
 		playlistData?.pages.flatMap((page) => page.tracks) ?? []
+
+	const batchAddTracksModalPayloads = (() => {
+		const payloads = []
+		for (const trackId of selected) {
+			const track = playlistData?.pages
+				.flatMap((page) => page.tracks)
+				.find((t) => t.id === trackId)
+			if (!track) return []
+			payloads.push({
+				track: {
+					...track,
+					artistId: track.artist?.id,
+				},
+				artist: track.artist!,
+			})
+		}
+		return payloads
+	})()
 
 	const {
 		data: searchData,
@@ -215,27 +229,6 @@ export default function LocalPlaylistPage() {
 			withTiming(startSearch ? SEARCHBAR_HEIGHT : 0, { duration: 180 }),
 		)
 	}, [searchbarHeight, startSearch])
-
-	useEffect(() => {
-		const payloads = []
-		for (const trackId of selected) {
-			const track = playlistData?.pages
-				.flatMap((page) => page.tracks)
-				.find((t) => t.id === trackId)
-			if (!track) {
-				toast.error(`批量添加歌曲失败：未找到\u2009track: ${trackId}`)
-				return
-			}
-			payloads.push({
-				track: {
-					...track,
-					artistId: track.artist?.id,
-				},
-				artist: track.artist!,
-			})
-		}
-		setBatchAddTracksModalPayloads(payloads)
-	}, [playlistData, selected])
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
