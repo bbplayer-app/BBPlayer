@@ -5,8 +5,8 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import expo.modules.orpheus.model.TrackRecord
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 fun TrackRecord.toMediaItem(): MediaItem {
     val trackJson = Json.encodeToString(this)

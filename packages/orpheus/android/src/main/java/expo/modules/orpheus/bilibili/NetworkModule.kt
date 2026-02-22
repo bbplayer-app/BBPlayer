@@ -1,7 +1,5 @@
 package expo.modules.orpheus.bilibili
 
-import android.content.Context
-import android.util.Log
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
@@ -13,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 object NetworkModule {
     private const val BASE_URL = "https://api.bilibili.com"
-    
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val client: OkHttpClient by lazy {

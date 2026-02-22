@@ -14,7 +14,6 @@ import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.sharedobjects.SharedRef
-import expo.modules.kotlin.types.Either
 import expo.modules.kotlin.types.EitherOfThree
 import expo.modules.kotlin.types.toKClass
 
@@ -63,7 +62,6 @@ class ExpoImageThemeColorsModule : Module() {
             throw ImageLoadingFailedException(e.toCodedException())
         }
     }
-
 
 
     private fun Int.toHexColor(): String {

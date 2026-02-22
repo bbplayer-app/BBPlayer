@@ -3,11 +3,14 @@ package expo.modules.orpheus.manager
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
 object CoverDownloadManager {
     private const val TAG = "CoverDownloadManager"
@@ -15,8 +18,28 @@ object CoverDownloadManager {
 
     private val okHttpClient = OkHttpClient()
 
+    @Volatile
+    private var coverCache: ConcurrentHashMap<String, File>? = null
+    private val downloadLocks = ConcurrentHashMap<String, Mutex>()
+
     fun getCoversDir(context: Context): File {
         return File(context.filesDir, COVERS_DIR)
+    }
+
+    private fun initCacheIfNeeded(context: Context) {
+        if (coverCache != null) return
+
+        synchronized(this) {
+            if (coverCache != null) return
+            val newCache = ConcurrentHashMap<String, File>()
+            val dir = getCoversDir(context)
+            if (dir.exists()) {
+                dir.listFiles()?.forEach { file ->
+                    newCache[file.nameWithoutExtension] = file
+                }
+            }
+            coverCache = newCache
+        }
     }
 
     /**
@@ -24,10 +47,9 @@ object CoverDownloadManager {
      * 支持任意扩展名的模糊匹配。
      */
     fun getCoverFile(context: Context, trackId: String): File? {
-        val dir = getCoversDir(context)
-        if (!dir.exists()) return null
+        initCacheIfNeeded(context)
         val safeId = sanitizeTrackId(trackId)
-        return dir.listFiles()?.firstOrNull { it.nameWithoutExtension == safeId }
+        return coverCache?.get(safeId)
     }
 
     /**
@@ -61,43 +83,64 @@ object CoverDownloadManager {
      * 使用 Glide 下载，禁用 Glide 磁盘缓存以避免双重缓存。
      */
     suspend fun downloadCover(context: Context, trackId: String, artworkUrl: String) {
-        withContext(Dispatchers.IO) {
-            // 如果已存在，跳过
-            if (getCoverFile(context, trackId) != null) {
-                Log.d(TAG, "Cover already exists for $trackId, skipping")
-                return@withContext
-            }
+        val safeId = sanitizeTrackId(trackId)
+        val mutex = downloadLocks.getOrPut(safeId) { Mutex() }
 
-            val ext = extractExtension(artworkUrl)
-            val dir = getCoversDir(context)
-            if (!dir.exists()) dir.mkdirs()
-            val safeId = sanitizeTrackId(trackId)
-            val targetFile = File(dir, "$safeId.$ext")
-
-            try {
-                val safeUrl = artworkUrl.replace("http://", "https://")
-
-                val request = Request.Builder()
-                    .url(safeUrl)
-                    .header("User-Agent", "Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/109.0 Firefox/112.0")
-                    .build()
-
-                val response = okHttpClient.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    throw Exception("HTTP error code: ${response.code}")
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                // 如果已存在，跳过
+                if (getCoverFile(context, trackId) != null) {
+                    Log.d(TAG, "Cover already exists for $trackId, skipping")
+                    return@withContext
                 }
 
-                response.body?.byteStream()?.use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output)
-                    }
-                } ?: throw Exception("Empty response body")
+                val ext = extractExtension(artworkUrl)
+                val dir = getCoversDir(context)
+                if (!dir.exists()) dir.mkdirs()
+                val targetFile = File(dir, "$safeId.$ext")
+                val tempFile = File(dir, "$safeId.tmp")
 
-                Log.d(TAG, "Downloaded cover for $trackId ($artworkUrl) -> ${targetFile.absolutePath}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to download cover for $trackId, url=$artworkUrl: ${e.message}")
-                // 清理可能的部分文件
-                targetFile.delete()
+                try {
+                    val safeUrl = artworkUrl.replace("http://", "https://")
+
+                    val request = Request.Builder()
+                        .url(safeUrl)
+                        .header(
+                            "User-Agent",
+                            "Mozilla/5.0 (Android 14; Mobile; rv:109.0) Gecko/109.0 Firefox/112.0"
+                        )
+                        .build()
+
+                    okHttpClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            throw Exception("HTTP error code: ${response.code}")
+                        }
+                        response.body?.byteStream()?.use { input ->
+                            FileOutputStream(tempFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        } ?: throw Exception("Empty response body")
+                    }
+
+                    if (tempFile.renameTo(targetFile)) {
+                        Log.d(
+                            TAG,
+                            "Downloaded cover for $trackId ($artworkUrl) -> ${targetFile.absolutePath}"
+                        )
+                        initCacheIfNeeded(context)
+                        coverCache?.put(safeId, targetFile)
+                    } else {
+                        throw Exception("Failed to rename temp file to target file")
+                    }
+                } catch (e: Exception) {
+                    Log.e(
+                        TAG,
+                        "Failed to download cover for $trackId, url=$artworkUrl: ${e.message}"
+                    )
+                    // 清理可能的部分文件
+                    tempFile.delete()
+                    targetFile.delete() // Also try to delete target file just in case
+                }
             }
         }
     }
@@ -108,6 +151,8 @@ object CoverDownloadManager {
     fun deleteCover(context: Context, trackId: String) {
         val file = getCoverFile(context, trackId)
         if (file != null && file.delete()) {
+            val safeId = sanitizeTrackId(trackId)
+            coverCache?.remove(safeId)
             Log.d(TAG, "Deleted cover for $trackId")
         }
     }
@@ -119,6 +164,7 @@ object CoverDownloadManager {
         val dir = getCoversDir(context)
         if (dir.exists()) {
             dir.deleteRecursively()
+            coverCache?.clear()
             Log.d(TAG, "Deleted all covers")
         }
     }

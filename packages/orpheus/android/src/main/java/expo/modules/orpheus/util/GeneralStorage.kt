@@ -2,13 +2,11 @@ package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 object GeneralStorage {
     private var kv: MMKV? = null

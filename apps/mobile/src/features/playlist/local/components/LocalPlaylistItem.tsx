@@ -160,10 +160,11 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							cover={resolveTrackCover(
-								data.uniqueKey,
-								data.coverUrl ?? data.artist?.avatarUrl,
-							)}
+							cover={
+								downloadState === DownloadState.COMPLETED
+									? resolveTrackCover(data.uniqueKey, data.coverUrl)
+									: data.coverUrl
+							}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>

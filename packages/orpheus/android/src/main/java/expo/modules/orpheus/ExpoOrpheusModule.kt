@@ -22,26 +22,25 @@ import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.typedarray.Float32Array
+import expo.modules.orpheus.exception.ControllerNotInitializedException
+import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.service.OrpheusDownloadService
+import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
-import expo.modules.kotlin.typedarray.Float32Array
-import expo.modules.orpheus.service.OrpheusMusicService
-import expo.modules.orpheus.service.OrpheusDownloadService
-import expo.modules.orpheus.manager.SpectrumManager
-import expo.modules.orpheus.exception.ControllerNotInitializedException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
-import expo.modules.orpheus.manager.CoverDownloadManager
+import kotlinx.serialization.json.Json
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -61,7 +60,7 @@ class ExpoOrpheusModule : Module() {
 
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
-    
+
     val json = Json { ignoreUnknownKeys = true }
 
     private val playerListener = object : Player.Listener {
@@ -91,7 +90,6 @@ class ExpoOrpheusModule : Module() {
         }
 
 
-
         /**
          * 处理播放状态改变
          */
@@ -115,15 +113,15 @@ class ExpoOrpheusModule : Module() {
                     "status" to isPlaying
                 )
             )
-             
+
             if (isPlaying) {
-                 player?.audioSessionId?.let { sessionId ->
-                     if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                         spectrumManager.start(sessionId)
-                     }
-                 }
+                player?.audioSessionId?.let { sessionId ->
+                    if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        spectrumManager.start(sessionId)
+                    }
+                }
             } else {
-                 spectrumManager.stop()
+                spectrumManager.stop()
             }
 
             updateProgressRunnerState()
@@ -192,21 +190,29 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
-                    
+
                     service.addTrackEventListener(object : OrpheusMusicService.TrackEventListener {
                         override fun onTrackStarted(trackId: String, reason: Int) {
-                            sendEvent("onTrackStarted", mapOf(
-                                "trackId" to trackId,
-                                "reason" to reason
-                            ))
+                            sendEvent(
+                                "onTrackStarted", mapOf(
+                                    "trackId" to trackId,
+                                    "reason" to reason
+                                )
+                            )
                         }
 
-                        override fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double) {
-                            sendEvent("onTrackFinished", mapOf(
-                                "trackId" to trackId,
-                                "finalPosition" to finalPosition,
-                                "duration" to duration
-                            ))
+                        override fun onTrackFinished(
+                            trackId: String,
+                            finalPosition: Double,
+                            duration: Double
+                        ) {
+                            sendEvent(
+                                "onTrackFinished", mapOf(
+                                    "trackId" to trackId,
+                                    "finalPosition" to finalPosition,
+                                    "duration" to duration
+                                )
+                            )
                         }
                     })
                 }
@@ -621,6 +627,7 @@ class ExpoOrpheusModule : Module() {
 
             // 先收集所有待下载项
             data class PendingCover(val trackId: String, val artworkUrl: String)
+
             val pendingList = mutableListOf<PendingCover>()
 
             try {
@@ -661,12 +668,14 @@ class ExpoOrpheusModule : Module() {
                         Log.e("Orpheus", "Cover download failed for ${item.trackId}: ${e.message}")
                         "failed"
                     }
-                    sendEvent("onCoverDownloadProgress", mapOf(
-                        "current" to (index + 1),
-                        "total" to total,
-                        "trackId" to item.trackId,
-                        "status" to status
-                    ))
+                    sendEvent(
+                        "onCoverDownloadProgress", mapOf(
+                            "current" to (index + 1),
+                            "total" to total,
+                            "trackId" to item.trackId,
+                            "status" to status
+                        )
+                    )
                 }
             }
 
@@ -729,7 +738,10 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(data.lyrics, data.offset)
+                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
+                    data.lyrics,
+                    data.offset
+                )
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -757,16 +769,16 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         Function("updateSpectrumData") { destination: Float32Array ->
-             val size = destination.length
-             if (tempBuffer == null || tempBuffer!!.size != size) {
-                 tempBuffer = FloatArray(size)
-             }
-             val buffer = tempBuffer!!
-             spectrumManager.getSpectrumData(buffer)
-             
-             val byteBuffer = destination.toDirectBuffer()
-             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
-             byteBuffer.asFloatBuffer().put(buffer)
+            val size = destination.length
+            if (tempBuffer == null || tempBuffer!!.size != size) {
+                tempBuffer = FloatArray(size)
+            }
+            val buffer = tempBuffer!!
+            spectrumManager.getSpectrumData(buffer)
+
+            val byteBuffer = destination.toDirectBuffer()
+            byteBuffer.order(java.nio.ByteOrder.nativeOrder())
+            byteBuffer.asFloatBuffer().put(buffer)
         }
     }
 

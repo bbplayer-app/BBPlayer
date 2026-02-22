@@ -3,7 +3,6 @@ package expo.modules.orpheus.manager
 import android.media.audiofx.Visualizer
 import android.util.Log
 import kotlin.math.hypot
-import kotlin.math.log10
 
 class SpectrumManager {
     private var visualizer: Visualizer? = null
@@ -69,27 +68,27 @@ class SpectrumManager {
 
         try {
             visualizer?.getFft(fftBytes)
-            
+
             val n = fftBytes.size
             val outputSize = minOf(destination.size, n / 2)
 
             for (i in 0 until outputSize) {
                 if (i == 0) {
-                     val real = fftBytes[0].toFloat()
-                     val imag = fftBytes[1].toFloat()
-                     destination[0] = hypot(real, imag) / 128.0f
+                    val real = fftBytes[0].toFloat()
+                    val imag = fftBytes[1].toFloat()
+                    destination[0] = hypot(real, imag) / 128.0f
                 } else {
                     val k = i * 2
                     if (k + 1 < n) {
                         val real = fftBytes[k].toFloat()
                         val imag = fftBytes[k + 1].toFloat()
                         val magnitude = hypot(real, imag)
-                        destination[i] = magnitude / 128.0f 
+                        destination[i] = magnitude / 128.0f
                     }
                 }
             }
         } catch (e: Exception) {
-             destination.fill(0f)
+            destination.fill(0f)
         }
     }
 }
