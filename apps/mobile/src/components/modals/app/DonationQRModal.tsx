@@ -18,11 +18,19 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 
 	const handleLongPress = async () => {
+		const permissionStatus = permissionResponse
+			? permissionResponse.status
+			: undefined
+		const accessPrivileges = permissionResponse
+			? permissionResponse.accessPrivileges
+			: undefined
+
+		const needsPermission =
+			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED &&
+			accessPrivileges !== 'all'
+
 		try {
-			if (
-				permissionResponse?.status !== MediaLibrary.PermissionStatus.GRANTED &&
-				permissionResponse?.accessPrivileges !== 'all'
-			) {
+			if (needsPermission) {
 				const { status } = await requestPermission()
 				if (status !== MediaLibrary.PermissionStatus.GRANTED) {
 					toast.error('无法保存图片', {
@@ -37,14 +45,18 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 				await asset.downloadAsync()
 			}
 
-			const uri = asset.localUri ?? asset.uri
-
-			if (uri) {
-				await MediaLibrary.saveToLibraryAsync(uri)
-				toast.success('已保存到相册')
-			} else {
-				throw new Error('无法获取图片路径')
+			let uri = asset.localUri
+			if (!uri) {
+				uri = asset.uri
 			}
+
+			if (!uri) {
+				toast.error('保存失败', { description: '无法获取图片路径' })
+				return
+			}
+
+			await MediaLibrary.saveToLibraryAsync(uri)
+			toast.success('已保存到相册')
 		} catch (e) {
 			toast.error('保存失败', { description: String(e) })
 		}

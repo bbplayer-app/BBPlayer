@@ -237,7 +237,7 @@ export default function PlayerPage() {
 	const pageScrollHandler = usePageScrollHandler({
 		onPageScroll: (e) => {
 			'worklet'
-			scrollX.value = e.offset + e.position
+			scrollX.set(e.offset + e.position)
 		},
 	})
 

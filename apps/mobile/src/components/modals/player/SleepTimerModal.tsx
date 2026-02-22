@@ -14,7 +14,6 @@ const PRESET_DURATIONS = [15, 30, 45, 60] // in minutes
 
 const SleepTimerModal = () => {
 	const close = useModalStore((state) => state.close)
-	const [remainingTime, setRemainingTime] = useState<number | null>(null)
 	const { data: sleepTimerEndAt } = useQuery({
 		queryFn: async () => {
 			return await Orpheus.getSleepTimerEndTime()
@@ -23,6 +22,7 @@ const SleepTimerModal = () => {
 		gcTime: 0,
 		staleTime: 0,
 	})
+	const [remainingTime, setRemainingTime] = useState<number | null>(null)
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customMinutes, setCustomMinutes] = useState('')
 
@@ -57,9 +57,13 @@ const SleepTimerModal = () => {
 	}
 
 	const handleCancelTimer = async () => {
-		await Orpheus.cancelSleepTimer()
-		toast.success('取消定时器成功')
-		close('SleepTimer')
+		try {
+			await Orpheus.cancelSleepTimer()
+			toast.success('取消定时器成功')
+			close('SleepTimer')
+		} catch (e) {
+			toastAndLogError('取消定时器失败', e, 'Modal.SleepTimer')
+		}
 	}
 
 	return (

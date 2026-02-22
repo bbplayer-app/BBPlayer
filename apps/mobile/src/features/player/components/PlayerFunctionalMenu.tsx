@@ -8,6 +8,7 @@ import {
 	Divider,
 	Icon,
 	List,
+	MD3Theme,
 	Text,
 	TouchableRipple,
 	useTheme,
@@ -20,6 +21,56 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+
+function HighFreqButton({
+	icon,
+	label,
+	onPress,
+	colors,
+}: {
+	icon: string
+	label: string
+	onPress: () => void
+	colors: MD3Theme['colors']
+}) {
+	return (
+		<SquircleView
+			style={{
+				borderRadius: 20,
+				overflow: 'hidden',
+				backgroundColor: colors.elevation.level2,
+				flex: 1,
+				marginHorizontal: 4,
+			}}
+			cornerSmoothing={0.6}
+		>
+			<TouchableRipple
+				onPress={onPress}
+				style={{ flex: 1 }}
+			>
+				<View
+					style={{
+						alignItems: 'center',
+						justifyContent: 'center',
+						paddingVertical: 16,
+						height: 80,
+					}}
+				>
+					<Icon
+						source={icon}
+						size={28}
+					/>
+					<Text
+						variant='labelMedium'
+						style={{ marginTop: 8 }}
+					>
+						{label}
+					</Text>
+				</View>
+			</TouchableRipple>
+		</SquircleView>
+	)
+}
 
 export function PlayerFunctionalMenu({
 	menuVisible,
@@ -78,53 +129,7 @@ export function PlayerFunctionalMenu({
 		[setMenuVisible],
 	)
 
-	const HighFreqButton = ({
-		icon,
-		label,
-		onPress,
-	}: {
-		icon: string
-		label: string
-		onPress: () => void
-	}) => (
-		<SquircleView
-			style={{
-				borderRadius: 20,
-				overflow: 'hidden',
-				backgroundColor: colors.elevation.level2,
-				flex: 1,
-				marginHorizontal: 4,
-			}}
-			cornerSmoothing={0.6}
-		>
-			<TouchableRipple
-				onPress={() => handleAction(onPress)}
-				style={{ flex: 1 }}
-			>
-				<View
-					style={{
-						alignItems: 'center',
-						justifyContent: 'center',
-						paddingVertical: 16,
-						height: 80,
-					}}
-				>
-					<Icon
-						source={icon}
-						size={28}
-					/>
-					<Text
-						variant='labelMedium'
-						style={{ marginTop: 8 }}
-					>
-						{label}
-					</Text>
-				</View>
-			</TouchableRipple>
-		</SquircleView>
-	)
-
-	const downloadHandler = async () => {
+	const downloadHandler = useCallback(async () => {
 		if (!currentTrack) {
 			toast.error('为什么 currentTrack 不存在？')
 			return
@@ -153,7 +158,7 @@ export function PlayerFunctionalMenu({
 				'Features.Player.PlayerFunctionalMenu',
 			)
 		}
-	}
+	}, [currentTrack])
 
 	return (
 		<TrueSheet
@@ -180,12 +185,18 @@ export function PlayerFunctionalMenu({
 					<HighFreqButton
 						icon='speedometer'
 						label='倍速'
-						onPress={() => openModal('PlaybackSpeed', undefined)}
+						onPress={() =>
+							handleAction(() => openModal('PlaybackSpeed', undefined))
+						}
+						colors={colors}
 					/>
 					<HighFreqButton
 						icon='timer-outline'
 						label='定时关闭'
-						onPress={() => openModal('SleepTimer', undefined)}
+						onPress={() =>
+							handleAction(() => openModal('SleepTimer', undefined))
+						}
+						colors={colors}
 					/>
 					<HighFreqButton
 						icon='download'
@@ -195,7 +206,8 @@ export function PlayerFunctionalMenu({
 								? '重新下载'
 								: '下载'
 						}
-						onPress={downloadHandler}
+						onPress={() => handleAction(downloadHandler)}
+						colors={colors}
 					/>
 				</View>
 

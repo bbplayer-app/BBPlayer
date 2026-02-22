@@ -17,6 +17,76 @@ import toast from '@/utils/toast'
 
 const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
+async function performShare(
+	action: 'save' | 'share',
+	previewUri: string | null,
+	viewShotRef: { current: ViewShot | null },
+	uniqueKey: string,
+	permissionResponse: MediaLibrary.PermissionResponse | null,
+	requestPermission: () => Promise<MediaLibrary.PermissionResponse>,
+	closeModal: () => void,
+	setIsSharing: (v: boolean) => void,
+	isSharingRef: { current: boolean },
+) {
+	isSharingRef.current = true
+	setIsSharing(true)
+
+	try {
+		let uri = previewUri
+		const needsCapture = !uri && viewShotRef.current !== null
+		if (needsCapture) {
+			const fileName = `bbplayer-share-song-${sanitizeFileName(uniqueKey)}-${Date.now()}`
+			try {
+				uri = await captureRef(viewShotRef, {
+					format: 'png',
+					quality: 1,
+					result: 'tmpfile',
+					fileName,
+				})
+			} catch {
+				toast.error('生成图片失败')
+				return
+			}
+		}
+
+		if (!uri) {
+			toast.error('生成图片失败')
+			return
+		}
+
+		const permissionStatus = permissionResponse?.status
+		if (
+			action === 'save' &&
+			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
+		) {
+			const { status } = await requestPermission()
+			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+				toast.error('无法保存图片', { description: '请允许访问相册' })
+				return
+			}
+		}
+
+		if (action === 'save') {
+			await MediaLibrary.saveToLibraryAsync(uri)
+			toast.success('已保存到相册')
+		} else {
+			const sharingAvailable = await Sharing.isAvailableAsync()
+			if (sharingAvailable) {
+				await Sharing.shareAsync(uri)
+			} else {
+				toast.error('分享不可用')
+				return
+			}
+		}
+		closeModal()
+	} catch {
+		toast.error('操作失败')
+	} finally {
+		setIsSharing(false)
+		isSharingRef.current = false
+	}
+}
+
 const SongShareModal = () => {
 	const currentTrack = useCurrentTrack()
 	const close = useModalStore((state) => state.close)
@@ -127,65 +197,19 @@ const SongShareModal = () => {
 
 	const isSharingRef = useRef(false)
 
-	const handleShare = async (action: 'save' | 'share') => {
+	const handleShare = (action: 'save' | 'share') => {
 		if (isSharingRef.current) return
-		isSharingRef.current = true
-		setIsSharing(true)
-
-		try {
-			let uri = previewUri
-			const needsCapture = !uri && viewShotRef.current !== null
-			if (needsCapture) {
-				const fileName = `bbplayer-share-song-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
-				try {
-					uri = await captureRef(viewShotRef, {
-						format: 'png',
-						quality: 1,
-						result: 'tmpfile',
-						fileName,
-					})
-				} catch {
-					toast.error('生成图片失败')
-					return
-				}
-			}
-
-			if (!uri) {
-				toast.error('生成图片失败')
-				return
-			}
-
-			const permissionStatus = permissionResponse?.status
-			if (
-				action === 'save' &&
-				permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
-			) {
-				const { status } = await requestPermission()
-				if (status !== MediaLibrary.PermissionStatus.GRANTED) {
-					toast.error('无法保存图片', { description: '请允许访问相册' })
-					return
-				}
-			}
-
-			if (action === 'save') {
-				await MediaLibrary.saveToLibraryAsync(uri)
-				toast.success('已保存到相册')
-			} else {
-				const sharingAvailable = await Sharing.isAvailableAsync()
-				if (sharingAvailable) {
-					await Sharing.shareAsync(uri)
-				} else {
-					toast.error('分享不可用')
-					return
-				}
-			}
-			close('SongShare')
-		} catch {
-			toast.error('操作失败')
-		} finally {
-			setIsSharing(false)
-			isSharingRef.current = false
-		}
+		void performShare(
+			action,
+			previewUri,
+			viewShotRef,
+			currentTrack?.uniqueKey ?? '',
+			permissionResponse,
+			requestPermission,
+			() => close('SongShare'),
+			setIsSharing,
+			isSharingRef,
+		)
 	}
 
 	if (!currentTrack) {
