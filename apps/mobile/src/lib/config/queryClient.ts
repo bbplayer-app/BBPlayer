@@ -35,7 +35,7 @@ export const queryClient = new QueryClient({
 			const handleOfflineError = async () => {
 				try {
 					const state = await Network.getNetworkStateAsync()
-					if (!state.isConnected) {
+					if (state.isConnected === false) {
 						if (isNetworkError(error)) {
 							return
 						}
