@@ -10,12 +10,11 @@ import toast from '@/utils/toast'
 
 function isNetworkError(error: unknown) {
 	if (error instanceof Error) {
+		const msg = error.message.toLowerCase()
 		return (
-			error.name === 'NetworkError' ||
-			error.name === 'TypeError' ||
-			error.name === 'AbortError' ||
-			error.message.includes('Network') ||
-			error.message.includes('fetch')
+			error.name === 'RequestFailed' ||
+			msg.includes('request failed') ||
+			msg.includes('network')
 		)
 	}
 	return false
