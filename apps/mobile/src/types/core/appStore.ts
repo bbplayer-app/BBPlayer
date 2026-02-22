@@ -14,8 +14,14 @@ interface Settings {
 	danmakuFilterLevel: number
 }
 
+interface BilibiliUserInfo {
+	name?: string
+	face?: string
+}
+
 interface AppState {
 	bilibiliCookie: Record<string, string> | null
+	bilibiliUserInfo: BilibiliUserInfo | null
 	settings: Settings
 
 	// Cookies
@@ -23,6 +29,7 @@ interface AppState {
 	setBilibiliCookie: (cookieString: string) => Result<void, Error>
 	updateBilibiliCookie: (updates: Record<string, string>) => Result<void, Error>
 	clearBilibiliCookie: () => void
+	setBilibiliUserInfo: (info: BilibiliUserInfo | null) => void
 
 	// Settings
 	setSettings: (updates: Partial<Settings>) => void

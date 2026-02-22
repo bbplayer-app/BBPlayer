@@ -56,11 +56,7 @@ function HomePage() {
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const searchBarRef = useAnimatedRef<View>()
 
-	const {
-		data: personalInfo,
-		isPending: personalInfoPending,
-		isError: personalInfoError,
-	} = usePersonalInformation()
+	const { data: personalInfo } = usePersonalInformation()
 
 	const greeting = getGreetingMsg()
 
@@ -173,10 +169,7 @@ function HomePage() {
 							variant='bodyMedium'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							{greeting}，
-							{personalInfoPending || personalInfoError || !personalInfo
-								? '陌生人'
-								: personalInfo.name}
+							{greeting}，{personalInfo?.name || '陌生人'}
 						</Text>
 					</View>
 					<RectButton
@@ -205,8 +198,7 @@ function HomePage() {
 						<Image
 							style={styles.avatarImage}
 							source={
-								// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
-								!personalInfoPending && !personalInfoError && personalInfo?.face
+								personalInfo?.face
 									? { uri: personalInfo.face }
 									: // oxlint-disable-next-line @typescript-eslint/no-require-imports
 										require('../../../assets/images/bilibili-default-avatar.jpg')

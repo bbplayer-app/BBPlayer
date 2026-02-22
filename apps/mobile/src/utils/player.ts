@@ -1,6 +1,7 @@
 import type { TransitionReason } from '@bbplayer/orpheus'
 import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { parseSpl } from '@bbplayer/splash'
+import { Image } from 'expo-image'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 
@@ -306,6 +307,30 @@ function setDesktopLyrics(
 		void setIt()
 		debouncedSetDesktopLyrics = null
 	}, 1000)
+}
+
+export async function downloadAndCacheTrack(track: Track) {
+	const url = getInternalPlayUri(track)
+	if (!url) {
+		throw new Error('获取内部播放地址失败')
+	}
+	const artistName = track.artist?.name
+	const artworkUrl = track.coverUrl ?? undefined
+
+	await Orpheus.downloadTrack({
+		id: track.uniqueKey,
+		url: url,
+		title: track.title,
+		artist: artistName,
+		artwork: artworkUrl,
+		duration: track.duration,
+	})
+
+	if (artworkUrl) {
+		Image.prefetch(artworkUrl, 'disk').catch(() => {
+			// Ignore error
+		})
+	}
 }
 
 export {

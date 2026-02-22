@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/react-native'
 import { QueryCache, QueryClient } from '@tanstack/react-query'
+import * as Network from 'expo-network'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { ThirdPartyError } from '@/lib/errors'
@@ -19,12 +20,43 @@ export const queryClient = new QueryClient({
 	},
 	queryCache: new QueryCache({
 		onError: (error, query) => {
-			toastAndLogError('查询失败: ' + query.queryKey.toString(), error, 'Query')
+			const handleOfflineError = async () => {
+				try {
+					const state = await Network.getNetworkStateAsync()
+					if (!state.isConnected) {
+						if (
+							error instanceof Error &&
+							(error.message.includes('Network') ||
+								error.message.includes('fetch'))
+						) {
+							return
+						}
+					}
 
-			if (error instanceof BilibiliApiError && error.data.msgCode === -101) {
-				toast.error('登录状态失效，请重新登录')
-				useModalStore.getState().open('QRCodeLogin', undefined)
+					toastAndLogError(
+						'查询失败: ' + query.queryKey.toString(),
+						error,
+						'Query',
+					)
+
+					if (
+						error instanceof BilibiliApiError &&
+						error.data.msgCode === -101
+					) {
+						toast.error('登录状态失效，请重新登录')
+						useModalStore.getState().open('QRCodeLogin', undefined)
+					}
+				} catch {
+					// Fallback in case Network check throws
+					toastAndLogError(
+						'查询失败: ' + query.queryKey.toString(),
+						error,
+						'Query',
+					)
+				}
 			}
+
+			void handleOfflineError()
 
 			// 这个错误属于三方依赖的错误，不应该报告到 Sentry
 			if (error instanceof ThirdPartyError) {

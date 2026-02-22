@@ -1,4 +1,4 @@
-import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import { DownloadState, type DownloadTask } from '@bbplayer/orpheus'
 import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -14,6 +14,7 @@ import {
 	type ProgressEvent,
 } from '@/hooks/stores/useDownloadManagerStore'
 import { toastAndLogError } from '@/utils/error-handling'
+import { downloadAndCacheTrack } from '@/utils/player'
 
 const DownloadTaskItem = memo(function DownloadTaskItem({
 	initTask,
@@ -135,7 +136,11 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							onPress={async () => {
 								if (!task.track) return
 								try {
-									await Orpheus.downloadTrack(task.track)
+									// 强制转换为内部 Track 类型以兼容 downloadAndCacheTrack 签名
+									// task.track 本质上包含我们需要下载的所有属性
+									const trackToDownload =
+										task.track as unknown as import('@/types/core/media').Track
+									await downloadAndCacheTrack(trackToDownload)
 								} catch (e) {
 									toastAndLogError(
 										'重新下载失败',
@@ -151,6 +156,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 						icon='close'
 						onPress={async () => {
 							try {
+								const { Orpheus } = await import('@bbplayer/orpheus')
 								await Orpheus.removeDownload(task.id)
 							} catch (e) {
 								toastAndLogError(

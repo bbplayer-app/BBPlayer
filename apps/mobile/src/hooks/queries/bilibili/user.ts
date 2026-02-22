@@ -18,10 +18,42 @@ export const userQueryKeys = {
 export const usePersonalInformation = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
+
 	return useQuery({
 		queryKey: userQueryKeys.personalInformation(),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getUserInfo()),
+		queryFn: async () => {
+			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo())
+			// 缓存用户信息和头像供离线时显示
+			if (res.name) {
+				useAppStore.getState().setBilibiliUserInfo({
+					name: res.name,
+					face: res.face,
+				})
+				if (res.face) {
+					import('expo-image')
+						.then(({ Image }) => {
+							Image.prefetch(res.face, 'disk').catch(() => {
+								// Ignore error
+							})
+						})
+						.catch(() => {
+							// Ignore if expo-image cannot be loaded dynamically
+						})
+				}
+			}
+			return res
+		},
 		enabled,
+		initialData: () => {
+			const storeData = useAppStore.getState().bilibiliUserInfo
+			if (storeData && storeData.name) {
+				return {
+					name: storeData.name,
+					face: storeData.face,
+				}
+			}
+			return undefined
+		},
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})
 }

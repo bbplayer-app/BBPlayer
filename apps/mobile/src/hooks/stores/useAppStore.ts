@@ -108,6 +108,7 @@ export const useAppStore = create<AppState>()(
 					enableDanmaku: false,
 					danmakuFilterLevel: 0,
 				},
+				bilibiliUserInfo: null,
 
 				hasBilibiliCookie: () => {
 					const { bilibiliCookie } = get()
@@ -144,6 +145,13 @@ export const useAppStore = create<AppState>()(
 				clearBilibiliCookie: () => {
 					set((state) => {
 						state.bilibiliCookie = null
+						state.bilibiliUserInfo = null
+					})
+				},
+
+				setBilibiliUserInfo: (info) => {
+					set((state) => {
+						state.bilibiliUserInfo = info
 					})
 				},
 
@@ -192,6 +200,7 @@ export const useAppStore = create<AppState>()(
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
+				bilibiliUserInfo: state.bilibiliUserInfo,
 				settings: state.settings,
 			}),
 

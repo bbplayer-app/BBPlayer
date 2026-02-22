@@ -85,6 +85,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
         params?.y = 200
 
         createView()
+        updateTouchableFlags()
 
         try {
             windowManager.addView(floatingView, params)
@@ -249,7 +250,9 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     val dy = (event.rawY - initialTouchY).toInt()
                     if (abs(dy) > touchSlop) {
                         isClick = false
-                        params?.y = initialY + dy
+                        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+                        val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+                        params?.y = maxOf(statusBarHeight, initialY + dy)
                         try {
                             windowManager.updateViewLayout(floatingView, params)
                         } catch (e: Exception) {
