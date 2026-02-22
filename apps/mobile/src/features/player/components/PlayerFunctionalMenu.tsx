@@ -1,4 +1,4 @@
-import { DownloadState } from '@bbplayer/orpheus'
+import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
@@ -19,7 +19,7 @@ import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
-import { downloadAndCacheTrack } from '@/utils/player'
+import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 function HighFreqButton({
@@ -134,8 +134,22 @@ export function PlayerFunctionalMenu({
 			toast.error('为什么 currentTrack 不存在？')
 			return
 		}
+		const url = getInternalPlayUri(currentTrack)
+		if (!url) {
+			toast.error('获取内部播放地址失败')
+			return
+		}
+		const artistName = currentTrack.artist?.name
+		const artworkUrl = currentTrack.coverUrl ?? undefined
 		try {
-			await downloadAndCacheTrack(currentTrack)
+			await Orpheus.downloadTrack({
+				id: currentTrack.uniqueKey,
+				url: url,
+				title: currentTrack.title,
+				artist: artistName,
+				artwork: artworkUrl,
+				duration: currentTrack.duration,
+			})
 			toast.success('已添加到下载队列')
 		} catch (e) {
 			toastAndLogError(

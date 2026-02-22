@@ -1,4 +1,4 @@
-import { DownloadState, type DownloadTask } from '@bbplayer/orpheus'
+import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -13,9 +13,7 @@ import {
 	eventListner,
 	type ProgressEvent,
 } from '@/hooks/stores/useDownloadManagerStore'
-import { Artist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
-import { downloadAndCacheTrack } from '@/utils/player'
 
 const DownloadTaskItem = memo(function DownloadTaskItem({
 	initTask,
@@ -137,22 +135,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							onPress={async () => {
 								if (!task.track) return
 								try {
-									const trackToDownload: Partial<Track> = {
-										uniqueKey: task.track.id,
-										title: task.track.title,
-										artist: task.track.artist
-											? ({
-													name: task.track.artist,
-												} as Artist)
-											: undefined,
-										coverUrl: task.track.artwork,
-										duration: task.track.duration,
-										source: 'local',
-										localMetadata: {
-											localPath: task.track.url,
-										},
-									}
-									await downloadAndCacheTrack(trackToDownload as Track)
+									await Orpheus.downloadTrack(task.track)
 								} catch (e) {
 									toastAndLogError(
 										'重新下载失败',
@@ -168,7 +151,6 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 						icon='close'
 						onPress={async () => {
 							try {
-								const { Orpheus } = await import('@bbplayer/orpheus')
 								await Orpheus.removeDownload(task.id)
 							} catch (e) {
 								toastAndLogError(

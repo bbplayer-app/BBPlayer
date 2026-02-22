@@ -8,7 +8,7 @@ import type { TrackMenuItem } from '@/features/playlist/local/components/LocalPl
 import { queryClient } from '@/lib/config/queryClient'
 import type { Playlist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
-import { convertToOrpheusTrack, downloadAndCacheTrack } from '@/utils/player'
+import { convertToOrpheusTrack, getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 const SCOPE = 'UI.Playlist.Local.Menu'
@@ -102,7 +102,21 @@ export function useLocalPlaylistMenu({
 						}
 
 						try {
-							await downloadAndCacheTrack(item)
+							const url = getInternalPlayUri(item)
+							if (!url) {
+								toastAndLogError('获取内部播放地址失败', '失败了！', SCOPE)
+								return
+							}
+
+							await Orpheus.downloadTrack({
+								id: item.uniqueKey,
+								url: url,
+								title: item.title,
+								artist: item.artist?.name,
+								artwork: item.coverUrl ?? undefined,
+								duration: item.duration,
+							})
+
 							toast.success('已开始下载')
 						} catch (error) {
 							toastAndLogError('缓存音频失败', error, SCOPE)
