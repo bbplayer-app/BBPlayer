@@ -136,9 +136,6 @@ const Lyrics = memo(function Lyrics({
 		height: number
 	} | null>(null)
 	const offsetMenuAnchorRef = useRef<View>(null)
-	const scrollY = useSharedValue(0)
-	const contentHeight = useSharedValue(0)
-	const viewportHeight = useSharedValue(0)
 	const scrollDirection = useSharedValue<'up' | 'down' | 'idle'>('idle')
 	const lastScrollY = useSharedValue(0)
 	const track = useCurrentTrack()
@@ -297,7 +294,7 @@ const Lyrics = memo(function Lyrics({
 	const scrollHandler = useAnimatedScrollHandler({
 		onScroll: (e) => {
 			const currentY = e.contentOffset.y
-			const deltaY = currentY - lastScrollY.value
+			const deltaY = currentY - lastScrollY.get()
 
 			// 检测滚动方向
 			if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
@@ -305,9 +302,6 @@ const Lyrics = memo(function Lyrics({
 			}
 
 			lastScrollY.set(currentY)
-			scrollY.set(currentY)
-			contentHeight.set(e.contentSize.height)
-			viewportHeight.set(e.layoutMeasurement.height)
 		},
 		onBeginDrag: () => {
 			scheduleOnRN(onUserScrollStart)

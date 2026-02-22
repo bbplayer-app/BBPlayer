@@ -31,7 +31,7 @@ function HighFreqButton({
 	icon: string
 	label: string
 	onPress: () => void
-	colors: ReturnType<typeof useTheme<MD3Theme>>['colors']
+	colors: MD3Theme['colors']
 }) {
 	return (
 		<SquircleView
@@ -129,7 +129,7 @@ export function PlayerFunctionalMenu({
 		[setMenuVisible],
 	)
 
-	const downloadHandler = async () => {
+	const downloadHandler = useCallback(async () => {
 		if (!currentTrack) {
 			toast.error('为什么 currentTrack 不存在？')
 			return
@@ -158,7 +158,7 @@ export function PlayerFunctionalMenu({
 				'Features.Player.PlayerFunctionalMenu',
 			)
 		}
-	}
+	}, [currentTrack])
 
 	return (
 		<TrueSheet

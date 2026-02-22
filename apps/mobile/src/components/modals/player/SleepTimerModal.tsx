@@ -57,9 +57,13 @@ const SleepTimerModal = () => {
 	}
 
 	const handleCancelTimer = async () => {
-		await Orpheus.cancelSleepTimer()
-		toast.success('取消定时器成功')
-		close('SleepTimer')
+		try {
+			await Orpheus.cancelSleepTimer()
+			toast.success('取消定时器成功')
+			close('SleepTimer')
+		} catch (e) {
+			toastAndLogError('取消定时器失败', e, 'Modal.SleepTimer')
+		}
 	}
 
 	return (

@@ -197,9 +197,9 @@ const SongShareModal = () => {
 
 	const isSharingRef = useRef(false)
 
-	const handleShare = async (action: 'save' | 'share') => {
+	const handleShare = (action: 'save' | 'share') => {
 		if (isSharingRef.current) return
-		await performShare(
+		void performShare(
 			action,
 			previewUri,
 			viewShotRef,

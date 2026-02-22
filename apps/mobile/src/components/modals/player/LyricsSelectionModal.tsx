@@ -23,7 +23,7 @@ import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { ModalPropsMap } from '@/types/navigation'
+import type { ModalPropsMap } from '@/types/navigation'
 import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({

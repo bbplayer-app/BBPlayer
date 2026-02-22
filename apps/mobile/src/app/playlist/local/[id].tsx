@@ -83,8 +83,10 @@ export default function LocalPlaylistPage() {
 		hasNextPage: hasNextPagePlaylistData,
 		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
-	const allLoadedTracks =
-		playlistData?.pages.flatMap((page) => page.tracks) ?? []
+	const allLoadedTracks = useMemo(
+		() => playlistData?.pages.flatMap((page) => page.tracks) ?? [],
+		[playlistData],
+	)
 
 	const batchAddTracksModalPayloads = (() => {
 		const payloads = []

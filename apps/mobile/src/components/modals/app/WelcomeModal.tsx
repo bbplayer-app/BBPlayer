@@ -104,19 +104,20 @@ export default function WelcomeModal() {
 	}, [containerRef])
 
 	const goToStep = (index: number) => {
-		const idx = Math.max(0, Math.min(2 - 1, index))
+		const maxIndex = Math.max(0, (titles.length || stepHeights.length) - 1)
+		const idx = Math.max(0, Math.min(maxIndex, index))
 		setStep(idx)
 	}
 
-	const confirmGuestMode = () => {
+	const confirmGuestMode = useCallback(() => {
 		storage.set('first_open', false)
 		close()
-	}
-	const confirmLogin = () => {
+	}, [close])
+	const confirmLogin = useCallback(() => {
 		storage.set('first_open', false)
 		open('QRCodeLogin', undefined)
 		close()
-	}
+	}, [close, open])
 
 	usePreventRemove(true, () => goToStep(step - 1))
 
