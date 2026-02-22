@@ -45,6 +45,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
     private var textSize = 18f
     private var textColor = "#FFFFFF".toColorInt()
     private var isLocked = false
+    private var cachedStatusBarHeight = -1
 
     private val colors = listOf(
         "#FFFFFF", "#CCCCCC",
@@ -250,9 +251,11 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     val dy = (event.rawY - initialTouchY).toInt()
                     if (abs(dy) > touchSlop) {
                         isClick = false
-                        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
-                        val statusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
-                        params?.y = maxOf(statusBarHeight, initialY + dy)
+                        if (cachedStatusBarHeight < 0) {
+                            val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+                            cachedStatusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+                        }
+                        params?.y = maxOf(cachedStatusBarHeight, initialY + dy)
                         try {
                             windowManager.updateViewLayout(floatingView, params)
                         } catch (e: Exception) {

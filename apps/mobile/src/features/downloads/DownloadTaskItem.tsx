@@ -13,6 +13,7 @@ import {
 	eventListner,
 	type ProgressEvent,
 } from '@/hooks/stores/useDownloadManagerStore'
+import { Artist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { downloadAndCacheTrack } from '@/utils/player'
 
@@ -136,11 +137,22 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							onPress={async () => {
 								if (!task.track) return
 								try {
-									// 强制转换为内部 Track 类型以兼容 downloadAndCacheTrack 签名
-									// task.track 本质上包含我们需要下载的所有属性
-									const trackToDownload =
-										task.track as unknown as import('@/types/core/media').Track
-									await downloadAndCacheTrack(trackToDownload)
+									const trackToDownload: Partial<Track> = {
+										uniqueKey: task.track.id,
+										title: task.track.title,
+										artist: task.track.artist
+											? ({
+													name: task.track.artist,
+												} as Artist)
+											: undefined,
+										coverUrl: task.track.artwork,
+										duration: task.track.duration,
+										source: 'local',
+										localMetadata: {
+											localPath: task.track.url,
+										},
+									}
+									await downloadAndCacheTrack(trackToDownload as Track)
 								} catch (e) {
 									toastAndLogError(
 										'重新下载失败',

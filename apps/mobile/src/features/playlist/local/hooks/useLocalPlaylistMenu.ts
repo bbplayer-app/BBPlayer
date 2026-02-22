@@ -101,9 +101,12 @@ export function useLocalPlaylistMenu({
 							return
 						}
 
-						await downloadAndCacheTrack(item)
-
-						toast.success('已开始下载')
+						try {
+							await downloadAndCacheTrack(item)
+							toast.success('已开始下载')
+						} catch (error) {
+							toastAndLogError('缓存音频失败', error, SCOPE)
+						}
 					},
 					isHighFreq: true,
 				},

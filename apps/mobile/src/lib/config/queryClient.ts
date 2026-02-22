@@ -8,6 +8,19 @@ import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
+function isNetworkError(error: unknown) {
+	if (error instanceof Error) {
+		return (
+			error.name === 'NetworkError' ||
+			error.name === 'TypeError' ||
+			error.name === 'AbortError' ||
+			error.message.includes('Network') ||
+			error.message.includes('fetch')
+		)
+	}
+	return false
+}
+
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -24,20 +37,10 @@ export const queryClient = new QueryClient({
 				try {
 					const state = await Network.getNetworkStateAsync()
 					if (!state.isConnected) {
-						if (
-							error instanceof Error &&
-							(error.message.includes('Network') ||
-								error.message.includes('fetch'))
-						) {
+						if (isNetworkError(error)) {
 							return
 						}
 					}
-
-					toastAndLogError(
-						'查询失败: ' + query.queryKey.toString(),
-						error,
-						'Query',
-					)
 
 					if (
 						error instanceof BilibiliApiError &&
@@ -45,7 +48,14 @@ export const queryClient = new QueryClient({
 					) {
 						toast.error('登录状态失效，请重新登录')
 						useModalStore.getState().open('QRCodeLogin', undefined)
+						return
 					}
+
+					toastAndLogError(
+						'查询失败: ' + query.queryKey.toString(),
+						error,
+						'Query',
+					)
 				} catch {
 					// Fallback in case Network check throws
 					toastAndLogError(

@@ -26,8 +26,10 @@ export const usePersonalInformation = () => {
 			// 缓存用户信息和头像供离线时显示
 			if (res.name) {
 				useAppStore.getState().setBilibiliUserInfo({
+					mid: res.mid,
 					name: res.name,
 					face: res.face,
+					cachedAt: Date.now(),
 				})
 				if (res.face) {
 					import('expo-image')
@@ -48,11 +50,15 @@ export const usePersonalInformation = () => {
 			const storeData = useAppStore.getState().bilibiliUserInfo
 			if (storeData && storeData.name) {
 				return {
+					mid: storeData.mid ?? 0,
 					name: storeData.name,
 					face: storeData.face,
-				}
+				} as import('@/types/apis/bilibili').BilibiliUserInfo
 			}
 			return undefined
+		},
+		initialDataUpdatedAt: () => {
+			return useAppStore.getState().bilibiliUserInfo?.cachedAt ?? 0
 		},
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})

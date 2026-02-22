@@ -14,14 +14,16 @@ interface Settings {
 	danmakuFilterLevel: number
 }
 
-interface BilibiliUserInfo {
+interface BilibiliUserSummary {
+	mid?: number
 	name?: string
 	face?: string
+	cachedAt?: number
 }
 
 interface AppState {
 	bilibiliCookie: Record<string, string> | null
-	bilibiliUserInfo: BilibiliUserInfo | null
+	bilibiliUserInfo: BilibiliUserSummary | null
 	settings: Settings
 
 	// Cookies
@@ -29,7 +31,7 @@ interface AppState {
 	setBilibiliCookie: (cookieString: string) => Result<void, Error>
 	updateBilibiliCookie: (updates: Record<string, string>) => Result<void, Error>
 	clearBilibiliCookie: () => void
-	setBilibiliUserInfo: (info: BilibiliUserInfo | null) => void
+	setBilibiliUserInfo: (info: BilibiliUserSummary | null) => void
 
 	// Settings
 	setSettings: (updates: Partial<Settings>) => void
@@ -38,4 +40,4 @@ interface AppState {
 	setEnableDataCollection: (value: boolean) => void
 }
 
-export type { AppState, Settings }
+export type { AppState, BilibiliUserSummary, Settings }
