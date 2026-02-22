@@ -859,18 +859,38 @@ export class BilibiliApi {
 					}),
 				)
 			}
-			const redirectUrl = response.url // react native 不支持 redirect: 'manual'，所以在这里直接获取最终跳转到的 URL
-			if (!redirectUrl) {
-				return errAsync(
+			const responseUrl = response.url // react native 不支持 redirect: 'manual'，所以在这里直接获取最终跳转到的 URL
+
+			return ResultAsync.fromPromise(
+				response.text(),
+				() =>
 					new BilibiliApiError({
-						message: '未获取到 b23.tv 短链接的解析结果',
-						msgCode: 0,
-						rawData: null,
+						message: '解析响应体失败',
 						type: 'ResponseFailed',
 					}),
+			).andThen((html) => {
+				// 提取 canonical URL，目前的 b23.tv 可能不重定向直接返回 HTML
+				const match = html.match(
+					/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i,
 				)
-			}
-			return okAsync(redirectUrl)
+				if (match && match[1]) {
+					return okAsync(match[1])
+				}
+
+				// 兜底：如果 HTML 里面没找到 canonical link，可以 fallback 到 response.url
+				// response.url 在以前的行为（302 重定向）中会变成最终 URL
+				if (!responseUrl || responseUrl.includes('b23.tv')) {
+					return errAsync(
+						new BilibiliApiError({
+							message: '未获取到 b23.tv 短链接的解析结果',
+							msgCode: 0,
+							rawData: null,
+							type: 'ResponseFailed',
+						}),
+					)
+				}
+				return okAsync(responseUrl)
+			})
 		})
 	}
 
