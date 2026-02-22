@@ -252,8 +252,8 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     if (abs(dy) > touchSlop) {
                         isClick = false
                         if (cachedStatusBarHeight < 0) {
-                            val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
-                            cachedStatusBarHeight = if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId) else 0
+                            val insets = androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(v.rootWindowInsets)
+                            cachedStatusBarHeight = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
                         }
                         params?.y = maxOf(cachedStatusBarHeight, initialY + dy)
                         try {

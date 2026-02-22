@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { Image } from 'expo-image'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
@@ -32,15 +33,9 @@ export const usePersonalInformation = () => {
 					cachedAt: Date.now(),
 				})
 				if (res.face) {
-					import('expo-image')
-						.then(({ Image }) => {
-							Image.prefetch(res.face, 'disk').catch(() => {
-								// Ignore error
-							})
-						})
-						.catch(() => {
-							// Ignore if expo-image cannot be loaded dynamically
-						})
+					Image.prefetch(res.face, 'disk').catch(() => {
+						// Ignore error
+					})
 				}
 			}
 			return res

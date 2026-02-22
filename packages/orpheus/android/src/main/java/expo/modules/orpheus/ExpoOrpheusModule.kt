@@ -208,16 +208,18 @@ class ExpoOrpheusModule : Module() {
         }
 
         OnDestroy {
-            mainHandler.removeCallbacks(progressSendEventRunnable)
-            mainHandler.removeCallbacks(progressSaveRunnable)
-            mainHandler.removeCallbacks(downloadProgressRunnable)
-            controllerFuture?.let { MediaController.releaseFuture(it) }
-            downloadManager?.removeListener(downloadListener)
-            player?.removeListener(playerListener)
-            OrpheusMusicService.removeOnServiceReadyListener { }
-            player = null
-            spectrumManager.stop()
-            Log.d("Orpheus", "Destroy media controller")
+            mainHandler.post {
+                mainHandler.removeCallbacks(progressSendEventRunnable)
+                mainHandler.removeCallbacks(progressSaveRunnable)
+                mainHandler.removeCallbacks(downloadProgressRunnable)
+                controllerFuture?.let { MediaController.releaseFuture(it) }
+                downloadManager?.removeListener(downloadListener)
+                player?.removeListener(playerListener)
+                OrpheusMusicService.removeOnServiceReadyListener { }
+                player = null
+                spectrumManager.stop()
+                Log.d("Orpheus", "Destroy media controller")
+            }
         }
 
         Property("restorePlaybackPositionEnabled")
