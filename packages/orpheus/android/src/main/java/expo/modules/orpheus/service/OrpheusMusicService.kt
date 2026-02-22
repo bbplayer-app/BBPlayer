@@ -11,8 +11,8 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -23,21 +23,20 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.CopyOnWriteArrayList
 import expo.modules.orpheus.R
+import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
-import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.GlideBitmapLoader
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.calculateLoudnessGain
 import expo.modules.orpheus.util.fadeInTo
-import expo.modules.orpheus.manager.FloatingLyricsManager
-import expo.modules.orpheus.util.CustomCommands
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
 class OrpheusMusicService : MediaLibraryService() {
@@ -50,7 +49,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     lateinit var floatingLyricsManager: FloatingLyricsManager
     private val serviceHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    
+
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
 
@@ -93,7 +92,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0){
+        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
             stopSelf()
         }
         super.onTaskRemoved(rootIntent)
@@ -171,7 +170,12 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 builder.add(
                     CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-                        .setSessionCommand(SessionCommand(CustomCommands.CMD_TOGGLE_REPEAT_MODE, Bundle.EMPTY))
+                        .setSessionCommand(
+                            SessionCommand(
+                                CustomCommands.CMD_TOGGLE_REPEAT_MODE,
+                                Bundle.EMPTY
+                            )
+                        )
                         .setCustomIconResId(repeatIcon)
                         .setDisplayName("Repeat Mode")
                         .setEnabled(true)
@@ -376,7 +380,10 @@ class OrpheusMusicService : MediaLibraryService() {
 
             // 软件冷启动时，恢复的歌曲并不会触发 onMediaTransition 事件，我们需要手动补发一个
             if (player.currentMediaItem != null) {
-                sendTrackStartEvent(player.currentMediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
+                sendTrackStartEvent(
+                    player.currentMediaItem,
+                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED
+                )
             }
         }
     }
@@ -399,7 +406,7 @@ class OrpheusMusicService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private fun sendTrackStartEvent(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
         if (mediaItem == null) return
-        
+
         // Notify local listeners
         trackEventListeners.forEach { it.onTrackStarted(mediaItem.mediaId, reason) }
 
@@ -484,7 +491,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 val currentItem = player.currentMediaItem ?: return
                 val duration = player.duration
                 if (duration != C.TIME_UNSET && duration > 0) {
-                     durationCache[currentItem.mediaId] = duration
+                    durationCache[currentItem.mediaId] = duration
                 }
             }
 
@@ -498,7 +505,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 val isIndexChanged = oldPosition.mediaItemIndex != newPosition.mediaItemIndex
                 val lastMediaItem = oldPosition.mediaItem ?: return
                 val currentTime = System.currentTimeMillis()
-                
+
                 // Debounce
                 if ((currentTime - lastTrackFinishedAt) < 200) {
                     return
@@ -507,7 +514,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 if (isAutoTransition || isIndexChanged) {
                     val duration = durationCache[lastMediaItem.mediaId] ?: return
                     lastTrackFinishedAt = currentTime
-                    
+
                     sendTrackFinishedEvent(
                         lastMediaItem.mediaId,
                         oldPosition.positionMs / 1000.0,

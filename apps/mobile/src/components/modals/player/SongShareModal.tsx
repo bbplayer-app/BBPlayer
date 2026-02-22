@@ -11,6 +11,7 @@ import { captureRef } from 'react-native-view-shot'
 import Button from '@/components/common/Button'
 import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
@@ -108,8 +109,13 @@ const SongShareModal = () => {
 
 	const isPageListPending = !!cid && isPageListQueryPending
 
+	const resolvedCoverUrl = resolveTrackCover(
+		currentTrack?.uniqueKey,
+		currentTrack?.coverUrl,
+	)
+
 	const imageRef = useImage(
-		{ uri: currentTrack?.coverUrl ?? '' },
+		{ uri: resolvedCoverUrl ?? '' },
 		{
 			onError: () => void 0,
 		},
@@ -149,7 +155,7 @@ const SongShareModal = () => {
 		}
 
 		// 等待图片加载完成
-		if (!imageRef && currentTrack?.coverUrl) {
+		if (!imageRef && resolvedCoverUrl) {
 			// 如果图片还没好，就继续等待，不设置 false
 			return
 		}
@@ -173,7 +179,7 @@ const SongShareModal = () => {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
-	}, [imageRef, currentTrack?.coverUrl, isPageListPending])
+	}, [imageRef, resolvedCoverUrl, isPageListPending])
 
 	// 当 imageRef 准备好时，尝试生成预览
 	useEffect(() => {
@@ -183,17 +189,11 @@ const SongShareModal = () => {
 				void generatePreview()
 			}, 100)
 			return () => clearTimeout(timer)
-		} else if (!currentTrack?.coverUrl) {
+		} else if (!resolvedCoverUrl) {
 			// 没有封面，直接生成
 			void generatePreview()
 		}
-	}, [
-		imageRef,
-		generatePreview,
-		currentTrack?.coverUrl,
-		isPageListPending,
-		pageList,
-	])
+	}, [imageRef, generatePreview, resolvedCoverUrl, isPageListPending, pageList])
 
 	const isSharingRef = useRef(false)
 

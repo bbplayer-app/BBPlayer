@@ -41,6 +41,7 @@ export interface ModalPropsMap {
 		shouldRedirectToLocalPlaylist?: boolean
 	}
 	DanmakuSettings: undefined
+	CoverDownloadProgress: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

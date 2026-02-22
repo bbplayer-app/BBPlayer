@@ -25,7 +25,7 @@ object DownloadCache {
     }
 
     @Synchronized
-    fun  getLruCache(context: Context): SimpleCache {
+    fun getLruCache(context: Context): SimpleCache {
         if (lruCache == null) {
             val cacheDir = File(context.cacheDir, "media_cache_lru")
             val evictor = LeastRecentlyUsedCacheEvictor(256 * 1024 * 1024)

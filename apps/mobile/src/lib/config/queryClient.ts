@@ -1,11 +1,24 @@
 import * as Sentry from '@sentry/react-native'
 import { QueryCache, QueryClient } from '@tanstack/react-query'
+import * as Network from 'expo-network'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { ThirdPartyError } from '@/lib/errors'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
+
+function isNetworkError(error: unknown) {
+	if (error instanceof Error) {
+		const msg = error.message.toLowerCase()
+		return (
+			error.name === 'RequestFailed' ||
+			msg.includes('request failed') ||
+			msg.includes('network')
+		)
+	}
+	return false
+}
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
@@ -19,12 +32,40 @@ export const queryClient = new QueryClient({
 	},
 	queryCache: new QueryCache({
 		onError: (error, query) => {
-			toastAndLogError('查询失败: ' + query.queryKey.toString(), error, 'Query')
+			const handleOfflineError = async () => {
+				try {
+					const state = await Network.getNetworkStateAsync()
+					if (state.isConnected === false) {
+						if (isNetworkError(error)) {
+							return
+						}
+					}
 
-			if (error instanceof BilibiliApiError && error.data.msgCode === -101) {
-				toast.error('登录状态失效，请重新登录')
-				useModalStore.getState().open('QRCodeLogin', undefined)
+					if (
+						error instanceof BilibiliApiError &&
+						error.data.msgCode === -101
+					) {
+						toast.error('登录状态失效，请重新登录')
+						useModalStore.getState().open('QRCodeLogin', undefined)
+						return
+					}
+
+					toastAndLogError(
+						'查询失败: ' + query.queryKey.toString(),
+						error,
+						'Query',
+					)
+				} catch {
+					// Fallback in case Network check throws
+					toastAndLogError(
+						'查询失败: ' + query.queryKey.toString(),
+						error,
+						'Query',
+					)
+				}
 			}
+
+			void handleOfflineError()
 
 			// 这个错误属于三方依赖的错误，不应该报告到 Sentry
 			if (error instanceof ThirdPartyError) {

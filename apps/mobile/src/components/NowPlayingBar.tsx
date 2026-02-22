@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -215,7 +216,13 @@ const NowPlayingBar = memo(function NowPlayingBar({
 					>
 						<View style={styles.nowPlayingBarContent}>
 							<Image
-								source={{ uri: currentTrack.coverUrl ?? undefined }}
+								source={{
+									uri:
+										resolveTrackCover(
+											currentTrack.uniqueKey,
+											currentTrack.coverUrl,
+										) ?? undefined,
+								}}
 								style={[
 									styles.nowPlayingBarImage,
 									{
@@ -224,7 +231,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 									},
 								]}
 								recyclingKey={currentTrack.uniqueKey}
-								cachePolicy={'none'}
+								cachePolicy={'disk'}
 							/>
 
 							<View style={styles.nowPlayingBarTextContainer}>

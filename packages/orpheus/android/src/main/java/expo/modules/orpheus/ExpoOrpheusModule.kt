@@ -22,20 +22,25 @@ import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.typedarray.Float32Array
+import expo.modules.orpheus.exception.ControllerNotInitializedException
+import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.service.OrpheusDownloadService
+import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
-import expo.modules.kotlin.typedarray.Float32Array
-import expo.modules.orpheus.service.OrpheusMusicService
-import expo.modules.orpheus.service.OrpheusDownloadService
-import expo.modules.orpheus.manager.SpectrumManager
-import expo.modules.orpheus.exception.ControllerNotInitializedException
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -51,9 +56,11 @@ class ExpoOrpheusModule : Module() {
     private val spectrumManager = SpectrumManager()
     private var tempBuffer: FloatArray? = null
 
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
-    
+
     val json = Json { ignoreUnknownKeys = true }
 
     private val playerListener = object : Player.Listener {
@@ -83,7 +90,6 @@ class ExpoOrpheusModule : Module() {
         }
 
 
-
         /**
          * 处理播放状态改变
          */
@@ -107,15 +113,15 @@ class ExpoOrpheusModule : Module() {
                     "status" to isPlaying
                 )
             )
-             
+
             if (isPlaying) {
-                 player?.audioSessionId?.let { sessionId ->
-                     if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                         spectrumManager.start(sessionId)
-                     }
-                 }
+                player?.audioSessionId?.let { sessionId ->
+                    if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        spectrumManager.start(sessionId)
+                    }
+                }
             } else {
-                 spectrumManager.stop()
+                spectrumManager.stop()
             }
 
             updateProgressRunnerState()
@@ -161,7 +167,8 @@ class ExpoOrpheusModule : Module() {
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
             "onTrackStarted",
-            "onTrackFinished"
+            "onTrackFinished",
+            "onCoverDownloadProgress"
         )
 
         OnCreate {
@@ -183,21 +190,29 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
-                    
+
                     service.addTrackEventListener(object : OrpheusMusicService.TrackEventListener {
                         override fun onTrackStarted(trackId: String, reason: Int) {
-                            sendEvent("onTrackStarted", mapOf(
-                                "trackId" to trackId,
-                                "reason" to reason
-                            ))
+                            sendEvent(
+                                "onTrackStarted", mapOf(
+                                    "trackId" to trackId,
+                                    "reason" to reason
+                                )
+                            )
                         }
 
-                        override fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double) {
-                            sendEvent("onTrackFinished", mapOf(
-                                "trackId" to trackId,
-                                "finalPosition" to finalPosition,
-                                "duration" to duration
-                            ))
+                        override fun onTrackFinished(
+                            trackId: String,
+                            finalPosition: Double,
+                            duration: Double
+                        ) {
+                            sendEvent(
+                                "onTrackFinished", mapOf(
+                                    "trackId" to trackId,
+                                    "finalPosition" to finalPosition,
+                                    "duration" to duration
+                                )
+                            )
                         }
                     })
                 }
@@ -208,16 +223,19 @@ class ExpoOrpheusModule : Module() {
         }
 
         OnDestroy {
-            mainHandler.removeCallbacks(progressSendEventRunnable)
-            mainHandler.removeCallbacks(progressSaveRunnable)
-            mainHandler.removeCallbacks(downloadProgressRunnable)
-            controllerFuture?.let { MediaController.releaseFuture(it) }
-            downloadManager?.removeListener(downloadListener)
-            player?.removeListener(playerListener)
-            OrpheusMusicService.removeOnServiceReadyListener { }
-            player = null
-            spectrumManager.stop()
-            Log.d("Orpheus", "Destroy media controller")
+            mainHandler.post {
+                mainHandler.removeCallbacks(progressSendEventRunnable)
+                mainHandler.removeCallbacks(progressSaveRunnable)
+                mainHandler.removeCallbacks(downloadProgressRunnable)
+                controllerFuture?.let { MediaController.releaseFuture(it) }
+                downloadManager?.removeListener(downloadListener)
+                player?.removeListener(playerListener)
+                OrpheusMusicService.removeOnServiceReadyListener { }
+                player = null
+                spectrumManager.stop()
+                ioScope.cancel()
+                Log.d("Orpheus", "Destroy media controller")
+            }
         }
 
         Property("restorePlaybackPositionEnabled")
@@ -527,6 +545,7 @@ class ExpoOrpheusModule : Module() {
                 id,
                 false
             )
+            CoverDownloadManager.deleteCover(context, id)
         }
 
         AsyncFunction("removeAllDownloads") {
@@ -536,6 +555,7 @@ class ExpoOrpheusModule : Module() {
                 OrpheusDownloadService::class.java,
                 false
             )
+            CoverDownloadManager.deleteAllCovers(context)
         }
 
         AsyncFunction("getDownloads") {
@@ -598,6 +618,76 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        AsyncFunction("downloadMissingCovers") {
+            val context =
+                appContext.reactContext ?: return@AsyncFunction 0
+            val downloadManager = DownloadUtil.getDownloadManager(context)
+            val downloadIndex = downloadManager.downloadIndex
+            val cursor = downloadIndex.getDownloads()
+
+            // 先收集所有待下载项
+            data class PendingCover(val trackId: String, val artworkUrl: String)
+
+            val pendingList = mutableListOf<PendingCover>()
+
+            try {
+                while (cursor.moveToNext()) {
+                    val download = cursor.download
+                    if (download.state != Download.STATE_COMPLETED) continue
+                    if (download.request.data.isEmpty()) continue
+
+                    val trackId = download.request.id
+                    if (CoverDownloadManager.getCoverFile(context, trackId) != null) continue
+
+                    try {
+                        val track = json.decodeFromString<TrackRecord>(
+                            String(download.request.data)
+                        )
+                        val artwork = track.artwork
+                        if (!artwork.isNullOrEmpty()) {
+                            pendingList.add(PendingCover(trackId, artwork))
+                        }
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Failed to parse track for cover: ${e.message}")
+                    }
+                }
+            } finally {
+                cursor.close()
+            }
+
+            val total = pendingList.size
+            if (total == 0) return@AsyncFunction 0
+
+            // 在 IO 线程顺序下载，逐个发送进度事件
+            ioScope.launch {
+                pendingList.forEachIndexed { index, item ->
+                    val status = try {
+                        CoverDownloadManager.downloadCover(context, item.trackId, item.artworkUrl)
+                        "success"
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Cover download failed for ${item.trackId}: ${e.message}")
+                        "failed"
+                    }
+                    sendEvent(
+                        "onCoverDownloadProgress", mapOf(
+                            "current" to (index + 1),
+                            "total" to total,
+                            "trackId" to item.trackId,
+                            "status" to status
+                        )
+                    )
+                }
+            }
+
+            return@AsyncFunction total
+        }
+
+        Function("getDownloadedCoverUri") { trackId: String ->
+            val context = appContext.reactContext ?: return@Function null
+            val file = CoverDownloadManager.getCoverFile(context, trackId)
+            file?.let { "file://${it.absolutePath}" }
+        }
+
         AsyncFunction("getUncompletedDownloadTasks") {
             val context =
                 appContext.reactContext ?: return@AsyncFunction emptyList<Map<String, Any>>()
@@ -648,7 +738,10 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(data.lyrics, data.offset)
+                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
+                    data.lyrics,
+                    data.offset
+                )
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -676,16 +769,16 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         Function("updateSpectrumData") { destination: Float32Array ->
-             val size = destination.length
-             if (tempBuffer == null || tempBuffer!!.size != size) {
-                 tempBuffer = FloatArray(size)
-             }
-             val buffer = tempBuffer!!
-             spectrumManager.getSpectrumData(buffer)
-             
-             val byteBuffer = destination.toDirectBuffer()
-             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
-             byteBuffer.asFloatBuffer().put(buffer)
+            val size = destination.length
+            if (tempBuffer == null || tempBuffer!!.size != size) {
+                tempBuffer = FloatArray(size)
+            }
+            val buffer = tempBuffer!!
+            spectrumManager.getSpectrumData(buffer)
+
+            val byteBuffer = destination.toDirectBuffer()
+            byteBuffer.order(java.nio.ByteOrder.nativeOrder())
+            byteBuffer.asFloatBuffer().put(buffer)
         }
     }
 
@@ -721,6 +814,24 @@ class ExpoOrpheusModule : Module() {
         ) {
             sendEvent("onDownloadUpdated", getDownloadMap(download))
             updateDownloadProgressRunnerState()
+
+            // 歌曲下载完成后，异步下载封面
+            if (download.state == Download.STATE_COMPLETED && download.request.data.isNotEmpty()) {
+                val context = appContext.reactContext ?: return
+                try {
+                    val track = json.decodeFromString<TrackRecord>(
+                        String(download.request.data)
+                    )
+                    val artwork = track.artwork
+                    if (!artwork.isNullOrEmpty()) {
+                        ioScope.launch {
+                            CoverDownloadManager.downloadCover(context, track.id, artwork)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to trigger cover download: ${e.message}")
+                }
+            }
         }
     }
 

@@ -12,10 +12,10 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
-import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.OrpheusConfig
-import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.bilibili.BilibiliRepository
+import expo.modules.orpheus.manager.DownloadCache
+import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -82,7 +82,8 @@ object DownloadUtil {
     private fun getUpstreamFactory(): DataSource.Factory {
         val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             expo.modules.orpheus.network.OkHttpClientManager.okHttpClient
-        ).setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+        )
+            .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
 
         return ResolvingDataSource.Factory(
             httpDataSourceFactory,
@@ -118,7 +119,10 @@ object DownloadUtil {
                     )
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     if (volume !== null) {
-                        Log.d("LoudnessNormalization", "uri: ${dataSpec.uri}, measuredI: ${volume.measuredI}")
+                        Log.d(
+                            "LoudnessNormalization",
+                            "uri: ${dataSpec.uri}, measuredI: ${volume.measuredI}"
+                        )
                         LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
                     }
 

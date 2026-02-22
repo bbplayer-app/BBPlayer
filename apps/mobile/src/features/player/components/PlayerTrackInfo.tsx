@@ -179,7 +179,7 @@ export function TrackInfo({
 								zIndex: -1,
 							}}
 							recyclingKey={currentTrack.uniqueKey}
-							cachePolicy={'none'}
+							cachePolicy={'disk'}
 							transition={300}
 						/>
 					) : (
@@ -199,7 +199,7 @@ export function TrackInfo({
 									height: coverSize,
 								}}
 								recyclingKey={currentTrack.uniqueKey}
-								cachePolicy={'none'}
+								cachePolicy={'disk'}
 								transition={300}
 							/>
 						</SquircleView>
