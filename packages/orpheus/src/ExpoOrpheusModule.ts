@@ -66,6 +66,12 @@ export interface OrpheusEvents {
 	}): void
 	onIsPlayingChanged(event: { status: boolean }): void
 	onDownloadUpdated(event: DownloadTask): void
+	onCoverDownloadProgress(event: {
+		current: number
+		total: number
+		trackId: string
+		status: 'success' | 'failed'
+	}): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
 	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: (...args: any[]) => void
@@ -246,6 +252,18 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 获取所有未完成的下载任务
 	 */
 	getUncompletedDownloadTasks(): Promise<DownloadTask[]>
+
+	/**
+	 * 下载缺失的封面图片（本地有歌曲但没有封面的）
+	 * @returns 启动下载的封面数量
+	 */
+	downloadMissingCovers(): Promise<number>
+
+	/**
+	 * 获取已下载的封面 URI
+	 * @returns file:// URI，如果不存在返回 null
+	 */
+	getDownloadedCoverUri(trackId: string): string | null
 
 	checkOverlayPermission(): Promise<boolean>
 	requestOverlayPermission(): Promise<void>

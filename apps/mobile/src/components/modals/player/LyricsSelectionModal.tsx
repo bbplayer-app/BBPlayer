@@ -20,6 +20,7 @@ import { captureRef } from 'react-native-view-shot'
 import Button from '@/components/common/Button'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -199,7 +200,11 @@ const LyricsSelectionModal = () => {
 	const [isGenerating, setIsGenerating] = useState(false)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
 	const imageRef = useImage(
-		{ uri: currentTrack?.coverUrl ?? '' },
+		{
+			uri:
+				resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ??
+				'',
+		},
 		{
 			onError: () => void 0,
 		},

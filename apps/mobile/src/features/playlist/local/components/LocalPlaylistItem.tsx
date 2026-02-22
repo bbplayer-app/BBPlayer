@@ -7,6 +7,7 @@ import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import {
 	LIST_ITEM_COVER_SIZE,
 	LIST_ITEM_BORDER_RADIUS,
@@ -159,7 +160,10 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							cover={data.coverUrl ?? data.artist?.avatarUrl}
+							cover={resolveTrackCover(
+								data.uniqueKey,
+								data.coverUrl ?? data.artist?.avatarUrl,
+							)}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>

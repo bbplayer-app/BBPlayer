@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system'
+import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
 import { useRef, useState } from 'react'
@@ -140,6 +141,30 @@ export default function GeneralSettingsPage() {
 						size={20}
 						loading={isCheckingForUpdate}
 						onPress={handleCheckForUpdate}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>下载缺失封面</Text>
+					<IconButton
+						icon='image-sync'
+						size={20}
+						onPress={() => openModal('CoverDownloadProgress', undefined)}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>清空图片缓存</Text>
+					<IconButton
+						icon='image-remove'
+						size={20}
+						onPress={async () => {
+							try {
+								await Image.clearDiskCache()
+								await Image.clearMemoryCache()
+								toast.success('已清空图片缓存')
+							} catch (e) {
+								toastAndLogError('清空图片缓存失败', e, 'UI.Settings.General')
+							}
+						}}
 					/>
 				</View>
 				<View style={styles.settingRow}>

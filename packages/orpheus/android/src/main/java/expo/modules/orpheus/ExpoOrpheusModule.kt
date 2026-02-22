@@ -33,9 +33,15 @@ import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.exception.ControllerNotInitializedException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import expo.modules.orpheus.manager.CoverDownloadManager
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -50,6 +56,8 @@ class ExpoOrpheusModule : Module() {
 
     private val spectrumManager = SpectrumManager()
     private var tempBuffer: FloatArray? = null
+
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
@@ -161,7 +169,8 @@ class ExpoOrpheusModule : Module() {
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
             "onTrackStarted",
-            "onTrackFinished"
+            "onTrackFinished",
+            "onCoverDownloadProgress"
         )
 
         OnCreate {
@@ -218,6 +227,7 @@ class ExpoOrpheusModule : Module() {
                 OrpheusMusicService.removeOnServiceReadyListener { }
                 player = null
                 spectrumManager.stop()
+                ioScope.cancel()
                 Log.d("Orpheus", "Destroy media controller")
             }
         }
@@ -529,6 +539,7 @@ class ExpoOrpheusModule : Module() {
                 id,
                 false
             )
+            CoverDownloadManager.deleteCover(context, id)
         }
 
         AsyncFunction("removeAllDownloads") {
@@ -538,6 +549,7 @@ class ExpoOrpheusModule : Module() {
                 OrpheusDownloadService::class.java,
                 false
             )
+            CoverDownloadManager.deleteAllCovers(context)
         }
 
         AsyncFunction("getDownloads") {
@@ -598,6 +610,73 @@ class ExpoOrpheusModule : Module() {
             } finally {
                 cursor.close()
             }
+        }
+
+        AsyncFunction("downloadMissingCovers") {
+            val context =
+                appContext.reactContext ?: return@AsyncFunction 0
+            val downloadManager = DownloadUtil.getDownloadManager(context)
+            val downloadIndex = downloadManager.downloadIndex
+            val cursor = downloadIndex.getDownloads()
+
+            // 先收集所有待下载项
+            data class PendingCover(val trackId: String, val artworkUrl: String)
+            val pendingList = mutableListOf<PendingCover>()
+
+            try {
+                while (cursor.moveToNext()) {
+                    val download = cursor.download
+                    if (download.state != Download.STATE_COMPLETED) continue
+                    if (download.request.data.isEmpty()) continue
+
+                    val trackId = download.request.id
+                    if (CoverDownloadManager.getCoverFile(context, trackId) != null) continue
+
+                    try {
+                        val track = json.decodeFromString<TrackRecord>(
+                            String(download.request.data)
+                        )
+                        val artwork = track.artwork
+                        if (!artwork.isNullOrEmpty()) {
+                            pendingList.add(PendingCover(trackId, artwork))
+                        }
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Failed to parse track for cover: ${e.message}")
+                    }
+                }
+            } finally {
+                cursor.close()
+            }
+
+            val total = pendingList.size
+            if (total == 0) return@AsyncFunction 0
+
+            // 在 IO 线程顺序下载，逐个发送进度事件
+            ioScope.launch {
+                pendingList.forEachIndexed { index, item ->
+                    val status = try {
+                        CoverDownloadManager.downloadCover(context, item.trackId, item.artworkUrl)
+                        "success"
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Cover download failed for ${item.trackId}: ${e.message}")
+                        "failed"
+                    }
+                    sendEvent("onCoverDownloadProgress", mapOf(
+                        "current" to (index + 1),
+                        "total" to total,
+                        "trackId" to item.trackId,
+                        "status" to status
+                    ))
+                }
+            }
+
+            return@AsyncFunction total
+        }
+
+        Function("getDownloadedCoverUri") { trackId: String ->
+            val context = appContext.reactContext ?: return@Function null
+            val file = CoverDownloadManager.getCoverFile(context, trackId)
+            file?.let { "file://${it.absolutePath}" }
         }
 
         AsyncFunction("getUncompletedDownloadTasks") {
@@ -723,6 +802,24 @@ class ExpoOrpheusModule : Module() {
         ) {
             sendEvent("onDownloadUpdated", getDownloadMap(download))
             updateDownloadProgressRunnerState()
+
+            // 歌曲下载完成后，异步下载封面
+            if (download.state == Download.STATE_COMPLETED && download.request.data.isNotEmpty()) {
+                val context = appContext.reactContext ?: return
+                try {
+                    val track = json.decodeFromString<TrackRecord>(
+                        String(download.request.data)
+                    )
+                    val artwork = track.artwork
+                    if (!artwork.isNullOrEmpty()) {
+                        ioScope.launch {
+                            CoverDownloadManager.downloadCover(context, track.id, artwork)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to trigger cover download: ${e.message}")
+                }
+            }
         }
     }
 

@@ -36,6 +36,7 @@ import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useScreenDimensions } from '@/hooks/ui/useScreenDimensions'
@@ -80,9 +81,12 @@ export default function PlayerPage() {
 	const sheetRef = useRef<TrueSheet>(null)
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 	const { width } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(

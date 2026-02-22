@@ -38,7 +38,6 @@ export default function TestPage() {
 				duration: Number.POSITIVE_INFINITY,
 			})
 		} catch (error) {
-			
 			toast.error('检查更新失败', { description: String(error) })
 		}
 		setLoading(false)
@@ -72,7 +71,6 @@ export default function TestPage() {
 				}, 1000)
 			}
 		} catch (error) {
-			
 			toast.error('更新失败', { description: String(error) })
 		}
 		setLoading(false)

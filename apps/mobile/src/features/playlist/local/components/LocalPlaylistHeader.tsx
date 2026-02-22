@@ -10,6 +10,7 @@ import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -109,7 +110,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						title: t.title,
 						url: url,
 						artist: t.artist?.name,
-						artwork: t.coverUrl ?? undefined,
+						artwork: resolveTrackCover(t.uniqueKey, t.coverUrl) ?? undefined,
 						duration: t.duration,
 					}
 				})

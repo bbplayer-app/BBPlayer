@@ -54,7 +54,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	cover,
 	size,
 	borderRadius,
-	cachePolicy = 'none',
+	cachePolicy = 'disk',
 	style,
 }: CoverWithPlaceHolderProps) {
 	const colorScheme: ColorSchemeName = useColorScheme()
@@ -77,6 +77,10 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		}
 		return cover
 	}, [cover])
+	const policy =
+		typeof cover === 'string' && cover.startsWith('file://')
+			? 'none'
+			: cachePolicy
 
 	return (
 		<SquircleView
@@ -103,7 +107,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 				recyclingKey={String(id)}
 				style={[styles.image, { width: size, height: size }]}
 				transition={0}
-				cachePolicy={cachePolicy}
+				cachePolicy={policy}
 			/>
 		</SquircleView>
 	)
