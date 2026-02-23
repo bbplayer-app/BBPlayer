@@ -620,7 +620,7 @@ export class PlaylistService {
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
               ON pt.track_id = bm.track_id
-            WHERE pt.playlist_id = ${schema.playlists.id}
+            WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
 						totalDuration: sql<number>`(
@@ -630,7 +630,7 @@ export class PlaylistService {
               ON pt.track_id = t.id
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
               ON pt.track_id = bm.track_id
-            WHERE pt.playlist_id = ${schema.playlists.id}
+            WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('total_duration'),
 					},

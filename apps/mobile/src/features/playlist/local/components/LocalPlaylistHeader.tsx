@@ -50,7 +50,7 @@ function buildSubtitlePieces(
 			? `${playlist.itemCount}\u2009首\u2009(\u2009${playlist.itemCount - playlist.validTrackCount}\u2009首失效) `
 			: `${playlist.itemCount}\u2009首`
 
-	let countText = `${countRaw}\u2009歌曲`
+	let countText = `${countRaw}歌曲`
 	if (totalDuration !== undefined) {
 		countText += `\u2009•\u2009共\u2009${formatDurationToText(totalDuration)}`
 	}
