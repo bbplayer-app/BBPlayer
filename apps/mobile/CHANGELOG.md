@@ -20,6 +20,7 @@
 - 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
 - 播放器页面换回滑动样式
 - orpheus: 在 player 被销毁后点击播放时重新创建
+- 重构歌词页面，使用 ScrollView
 
 ### Fixed
 
