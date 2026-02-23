@@ -27,9 +27,7 @@ export default function useDanmakuLoader(
 	currentTime: SharedValue<number>,
 ) {
 	const networkState = useNetworkState()
-	const isOffline =
-		networkState.isConnected === false &&
-		networkState.isInternetReachable !== true
+	const isOffline = networkState.isConnected === false
 	const rawDataSV = useSharedValue<BilibiliDanmakuItem[]>([])
 	const loadedSegmentsRef = useRef<Set<number>>(new Set())
 	const isLoadingRef = useRef(false)

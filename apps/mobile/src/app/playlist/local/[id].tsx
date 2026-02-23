@@ -93,9 +93,7 @@ export default function LocalPlaylistPage() {
 	)
 
 	const networkState = useNetworkState()
-	const isOffline =
-		networkState.isConnected === false &&
-		networkState.isInternetReachable !== true
+	const isOffline = networkState.isConnected === false
 
 	const loadedTrackKeys = useMemo(
 		() => allLoadedTracks.map((t) => t.uniqueKey),
