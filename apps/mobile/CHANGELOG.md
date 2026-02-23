@@ -14,6 +14,7 @@
 
 ### Changed
 
+- orpheus: 构建媒体通知时优先使用本地已下载的封面图片
 - 使用 Expo Router 内置 `Color` API 替代 `@pchmn/expo-material3-theme` 获取 Material 3 动态颜色
 - 过滤掉播放器非关键错误（如 Bilibili API 错误、网络错误）的 Sentry 上报
 - 将 `react-native-paper` 的按钮组件底层全部换为 RNGH 组件

@@ -444,8 +444,9 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
             ensurePlayer()
+            val context = appContext.reactContext
             val mediaItems = tracks.map { track ->
-                track.toMediaItem()
+                track.toMediaItem(context)
             }
             val p = player ?: return@AsyncFunction
             if (clearQueue == true) {
@@ -477,7 +478,8 @@ class ExpoOrpheusModule : Module() {
             ensurePlayer()
             val p = player ?: return@AsyncFunction
 
-            val mediaItem = track.toMediaItem()
+            val context = appContext.reactContext
+            val mediaItem = track.toMediaItem(context)
             val targetIndex = p.currentMediaItemIndex + 1
 
             var existingIndex = -1
