@@ -1,7 +1,5 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import type { LyricLine } from '@bbplayer/splash'
-import type { FlashListRef } from '@shopify/flash-list'
-import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
 
@@ -9,7 +7,7 @@ import playerProgressEmitter from '@/lib/player/progressListener'
 
 export default function useLyricSync(
 	lyrics: LyricLine[],
-	flashListRef: RefObject<FlashListRef<LyricLine> | null>,
+	scrollToIndex: (index: number, animated?: boolean) => void,
 	offset: number, // 单位秒
 	enabled: boolean,
 ) {
@@ -58,11 +56,7 @@ export default function useLyricSync(
 			manualScrollTimeoutRef.current = null
 			isManualScrollingRef.current = false
 
-			void flashListRef.current?.scrollToIndex({
-				animated: true,
-				index: currentLyricIndex,
-				viewPosition: 0.15,
-			})
+			scrollToIndex(currentLyricIndex, true)
 		}, 2000)
 	}
 
@@ -128,13 +122,8 @@ export default function useLyricSync(
 	useEffect(() => {
 		if (!enabled) return
 		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
-		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- 我们使用命令式的方法来同步 flashlist 组件的滚动位置，这里没有更好的办法
-		void flashListRef.current?.scrollToIndex({
-			animated: true,
-			index: currentLyricIndex,
-			viewPosition: 0.15,
-		})
-	}, [currentLyricIndex, enabled, flashListRef, lyrics.length])
+		scrollToIndex(currentLyricIndex, true)
+	}, [currentLyricIndex, enabled, lyrics.length, scrollToIndex])
 
 	useEffect(() => {
 		return () => {
