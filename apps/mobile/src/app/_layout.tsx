@@ -59,6 +59,10 @@ export default Sentry.wrap(function RootLayout() {
 	useLogger(ref)
 
 	onlineManager.setEventListener((setOnline) => {
+		void Network.getNetworkStateAsync().then((state) => {
+			setOnline(!!state.isConnected)
+		})
+
 		const eventSubscription = Network.addNetworkStateListener((state) => {
 			setOnline(!!state.isConnected)
 		})

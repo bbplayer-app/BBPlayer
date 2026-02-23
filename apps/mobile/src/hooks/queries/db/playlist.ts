@@ -12,6 +12,7 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 queryClient.setQueryDefaults(['db', 'playlists'], {
 	retry: false,
 	staleTime: 0,
+	networkMode: 'always',
 })
 
 export const playlistKeys = {

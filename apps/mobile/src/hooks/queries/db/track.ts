@@ -7,6 +7,7 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 queryClient.setQueryDefaults(['db', 'tracks'], {
 	retry: false,
 	staleTime: 0,
+	networkMode: 'always',
 })
 
 export const trackKeys = {

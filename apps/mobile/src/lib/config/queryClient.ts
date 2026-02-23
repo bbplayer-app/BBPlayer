@@ -1,24 +1,11 @@
 import * as Sentry from '@sentry/react-native'
 import { QueryCache, QueryClient } from '@tanstack/react-query'
-import * as Network from 'expo-network'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { ThirdPartyError } from '@/lib/errors'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-
-function isNetworkError(error: unknown) {
-	if (error instanceof Error) {
-		const msg = error.message.toLowerCase()
-		return (
-			error.name === 'RequestFailed' ||
-			msg.includes('request failed') ||
-			msg.includes('network')
-		)
-	}
-	return false
-}
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
@@ -34,13 +21,6 @@ export const queryClient = new QueryClient({
 		onError: (error, query) => {
 			const handleOfflineError = async () => {
 				try {
-					const state = await Network.getNetworkStateAsync()
-					if (state.isConnected === false) {
-						if (isNetworkError(error)) {
-							return
-						}
-					}
-
 					if (
 						error instanceof BilibiliApiError &&
 						error.data.msgCode === -101

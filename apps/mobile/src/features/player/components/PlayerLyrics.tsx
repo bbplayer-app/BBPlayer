@@ -1,7 +1,5 @@
 import { parseSpl, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
-import type { FlashListRef } from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
 import { LinearGradient } from 'expo-linear-gradient'
 import {
 	memo,
@@ -21,8 +19,6 @@ import {
 } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
 import Animated, {
-	createAnimatedComponent,
-	type SharedValue,
 	useAnimatedScrollHandler,
 	useSharedValue,
 	useDerivedValue,
@@ -38,7 +34,6 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -47,73 +42,6 @@ import {
 	OldSchoolLyricLineItem,
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
-
-const AnimatedFlashList = createAnimatedComponent(
-	FlashList,
-) as typeof FlashList<LyricLine & { isPaddingItem?: boolean }>
-
-const renderItem = ({
-	item,
-	index,
-	extraData,
-}: ListRenderItemInfoWithExtraData<
-	LyricLine & { isPaddingItem?: boolean },
-	{
-		currentLyricIndex: number
-		handleJumpToLyric: (index: number) => void
-		enableOldSchoolStyleLyric: boolean
-		enableVerbatimLyrics: boolean
-		onPressBackground?: () => void
-		currentTime: SharedValue<number>
-		windowHeight: number
-	}
->) => {
-	if (!extraData) throw new Error('Extradata 不存在')
-	const {
-		currentLyricIndex,
-		handleJumpToLyric,
-		enableOldSchoolStyleLyric,
-		enableVerbatimLyrics,
-		onPressBackground,
-		currentTime,
-		windowHeight,
-	} = extraData
-
-	if (item.isPaddingItem) {
-		return (
-			<Pressable
-				style={{ height: windowHeight / 2 }}
-				onPress={onPressBackground}
-			/>
-		)
-	}
-	if (!extraData) throw new Error('Extradata 不存在')
-
-	if (enableOldSchoolStyleLyric) {
-		return (
-			<OldSchoolLyricLineItem
-				item={item}
-				isHighlighted={index === currentLyricIndex}
-				index={index}
-				jumpToThisLyric={handleJumpToLyric}
-				onPressBackground={onPressBackground}
-				currentTime={currentTime}
-				enableVerbatimLyrics={enableVerbatimLyrics}
-			/>
-		)
-	}
-	return (
-		<ModernLyricLineItem
-			item={item}
-			isHighlighted={index === currentLyricIndex}
-			index={index}
-			jumpToThisLyric={handleJumpToLyric}
-			onPressBackground={onPressBackground}
-			currentTime={currentTime}
-			enableVerbatimLyrics={enableVerbatimLyrics}
-		/>
-	)
-}
 
 const SCROLL_DIRECTION_THRESHOLD = 8
 
@@ -127,7 +55,22 @@ const Lyrics = memo(function Lyrics({
 	const dimensions = useWindowDimensions()
 	const windowHeight = dimensions.height
 	const colors = useTheme().colors
-	const flashListRef = useRef<FlashListRef<LyricLine>>(null)
+	const scrollViewRef = useRef<Animated.ScrollView>(null)
+	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
+
+	const scrollToIndex = useCallback(
+		(index: number, animated = true) => {
+			const y = itemLayoutsRef.current[index]
+			if (y !== undefined && scrollViewRef.current) {
+				scrollViewRef.current.scrollTo({
+					y: Math.max(0, y - windowHeight * 0.15),
+					animated,
+				})
+			}
+		},
+		[windowHeight],
+	)
+
 	const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
 	const [offsetMenuAnchor, setOffsetMenuAnchor] = useState<{
 		x: number
@@ -147,6 +90,10 @@ const Lyrics = memo(function Lyrics({
 	)
 
 	const { position: currentTime } = useSmoothProgress()
+
+	useEffect(() => {
+		itemLayoutsRef.current = {}
+	}, [track?.uniqueKey])
 
 	const {
 		data: lyrics,
@@ -286,7 +233,7 @@ const Lyrics = memo(function Lyrics({
 		((finalLyrics ?? []) as (LyricLine & { isPaddingItem?: boolean })[]).filter(
 			(l) => !l.isPaddingItem,
 		),
-		flashListRef,
+		scrollToIndex,
 		-tempOffset,
 		currentIndex === 1,
 	)
@@ -364,32 +311,6 @@ const Lyrics = memo(function Lyrics({
 		setOffsetMenuVisible(true)
 	}, [])
 
-	const keyExtractor = useCallback(
-		(item: LyricLine, index: number) => `${index}_${item.startTime}`,
-		[],
-	)
-
-	const extraData = useMemo(
-		() => ({
-			currentLyricIndex,
-			handleJumpToLyric,
-			enableOldSchoolStyleLyric,
-			enableVerbatimLyrics,
-			onPressBackground,
-			currentTime: adjustedCurrentTime,
-			windowHeight,
-		}),
-		[
-			currentLyricIndex,
-			handleJumpToLyric,
-			enableOldSchoolStyleLyric,
-			enableVerbatimLyrics,
-			onPressBackground,
-			adjustedCurrentTime,
-			windowHeight,
-		],
-	)
-
 	useLayoutEffect(() => {
 		if (offsetMenuAnchorRef.current) {
 			offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
@@ -450,13 +371,9 @@ const Lyrics = memo(function Lyrics({
 			)
 		}
 		return (
-			<AnimatedFlashList
+			<Animated.ScrollView
 				nestedScrollEnabled
-				ref={flashListRef}
-				data={finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]}
-				renderItem={renderItem}
-				extraData={extraData}
-				keyExtractor={keyExtractor}
+				ref={scrollViewRef}
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
@@ -465,8 +382,53 @@ const Lyrics = memo(function Lyrics({
 				showsVerticalScrollIndicator={false}
 				scrollEventThrottle={30}
 				onScroll={scrollHandler}
-				getItemType={(item) => (item.isPaddingItem ? 'padding' : 'lyric')}
-			/>
+			>
+				{(finalLyrics as (LyricLine & { isPaddingItem?: boolean })[]).map(
+					(item, index) => {
+						if (item.isPaddingItem) {
+							return (
+								<Pressable
+									key='padding_item'
+									style={{ height: windowHeight / 2 }}
+									onPress={onPressBackground}
+								/>
+							)
+						}
+
+						return (
+							<View
+								// oxlint-disable-next-line eslint/react/no-array-index-key -- lyrics might have duplicate start times, index is needed for uniqueness
+								key={`${index}_${item.startTime}`}
+								onLayout={(e) => {
+									itemLayoutsRef.current[index] = e.nativeEvent.layout.y
+								}}
+							>
+								{enableOldSchoolStyleLyric ? (
+									<OldSchoolLyricLineItem
+										item={item}
+										isHighlighted={index === currentLyricIndex}
+										index={index}
+										jumpToThisLyric={handleJumpToLyric}
+										onPressBackground={onPressBackground}
+										currentTime={adjustedCurrentTime}
+										enableVerbatimLyrics={enableVerbatimLyrics}
+									/>
+								) : (
+									<ModernLyricLineItem
+										item={item}
+										isHighlighted={index === currentLyricIndex}
+										index={index}
+										jumpToThisLyric={handleJumpToLyric}
+										onPressBackground={onPressBackground}
+										currentTime={adjustedCurrentTime}
+										enableVerbatimLyrics={enableVerbatimLyrics}
+									/>
+								)}
+							</View>
+						)
+					},
+				)}
+			</Animated.ScrollView>
 		)
 	}
 

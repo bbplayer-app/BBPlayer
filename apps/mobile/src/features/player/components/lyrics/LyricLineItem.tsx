@@ -46,17 +46,25 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 		return isHighlightedShared.value ? currentTime.value : -1
 	})
 
+	const isVerbatim = !!(
+		enableVerbatimLyrics &&
+		item.isDynamic &&
+		item.spans &&
+		item.spans.length > 0
+	)
+
 	const animatedStyle = useAnimatedStyle(() => {
+		const duration = isVerbatim ? 0 : 300
 		if (isHighlightedShared.value) {
 			return {
-				opacity: withTiming(1, { duration: 300 }),
-				color: withTiming(colors.primary, { duration: 300 }),
+				opacity: withTiming(1, { duration }),
+				color: withTiming(colors.primary, { duration }),
 			}
 		}
 
 		return {
-			opacity: withTiming(0.7, { duration: 300 }),
-			color: withTiming(colors.onSurfaceDisabled, { duration: 300 }),
+			opacity: withTiming(0.7, { duration }),
+			color: withTiming(colors.onSurfaceDisabled, { duration }),
 		}
 	})
 	return (
@@ -69,10 +77,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
 			>
-				{enableVerbatimLyrics &&
-				item.isDynamic &&
-				item.spans &&
-				item.spans.length > 0 ? (
+				{isVerbatim ? (
 					<View
 						style={{
 							flexDirection: 'row',
@@ -150,24 +155,27 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		}
 	})
 
+	const isVerbatim = !!(
+		enableVerbatimLyrics &&
+		item.isDynamic &&
+		item.spans &&
+		item.spans.length > 0
+	)
+
 	const textAnimatedStyle = useAnimatedStyle(() => {
+		const duration = isVerbatim ? 0 : 300
 		if (isHighlightedShared.value) {
 			return {
-				color: withTiming(theme.colors.primary, { duration: 300 }),
+				color: withTiming(theme.colors.primary, { duration }),
 			}
 		}
 		return {
-			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
+			color: withTiming(theme.colors.onSurfaceDisabled, { duration }),
 		}
 	})
 
 	const renderContent = () => {
-		if (
-			enableVerbatimLyrics &&
-			item.isDynamic &&
-			item.spans &&
-			item.spans.length > 0
-		) {
+		if (isVerbatim) {
 			return (
 				<View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
 					{item.spans.map((span, idx) => (
