@@ -45,7 +45,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
     private var textSize = 18f
     private var textColor = "#FFFFFF".toColorInt()
     private var isLocked = false
-    private var cachedStatusBarHeight = -1
+    private var cachedStatusBarHeight = 0
 
     private val colors = listOf(
         "#FFFFFF", "#CCCCCC",
@@ -62,6 +62,10 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
 
     init {
         isLocked = GeneralStorage.isDesktopLyricsLocked()
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        if (resourceId > 0) {
+            cachedStatusBarHeight = context.resources.getDimensionPixelSize(resourceId)
+        }
     }
 
     fun show() {
@@ -256,12 +260,6 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     val dy = (event.rawY - initialTouchY).toInt()
                     if (abs(dy) > touchSlop) {
                         isClick = false
-                        if (cachedStatusBarHeight < 0) {
-                            val insets =
-                                androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(v.rootWindowInsets)
-                            cachedStatusBarHeight =
-                                insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-                        }
                         params?.y = maxOf(cachedStatusBarHeight, initialY + dy)
                         try {
                             windowManager.updateViewLayout(floatingView, params)
