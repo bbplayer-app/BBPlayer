@@ -71,6 +71,7 @@
 		"expo-web-browser": "~55.0.3",
 		"he": "^1.2.0",
 		"immer": "^10.2.0",
+		"lottie-react-native": "~7.3.6",
 		"md5": "^2.3.0",
 		"mitt": "^3.0.1",
 		"neverthrow": "^8.2.0",
