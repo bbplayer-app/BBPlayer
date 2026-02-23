@@ -91,6 +91,10 @@ const Lyrics = memo(function Lyrics({
 
 	const { position: currentTime } = useSmoothProgress()
 
+	useEffect(() => {
+		itemLayoutsRef.current = {}
+	}, [track?.uniqueKey])
+
 	const {
 		data: lyrics,
 		isPending,
