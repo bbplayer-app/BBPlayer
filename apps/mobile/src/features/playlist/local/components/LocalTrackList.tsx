@@ -17,8 +17,8 @@ import {
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -73,6 +73,14 @@ interface LocalTrackListProps extends Omit<
 	 * 数据是否已过期，如果为 true，列表项会显示半透明（可选）
 	 */
 	isStale?: boolean
+	/**
+	 * 当前设备是否处于无网络离线状态
+	 */
+	isOffline?: boolean
+	/**
+	 * 在离线状态下，哪些歌曲的 uniqueKey 是被完整缓存可以播放的
+	 */
+	playableOfflineKeys?: Set<string>
 }
 
 const renderItem = ({
@@ -88,6 +96,8 @@ const renderItem = ({
 		playlist: Playlist
 		downloadStatus: Record<string, DownloadState>
 		isStale?: boolean
+		isOffline?: boolean
+		playableOfflineKeys?: Set<string>
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -98,12 +108,18 @@ const renderItem = ({
 		playlist,
 		downloadStatus,
 		isStale,
+		isOffline,
+		playableOfflineKeys,
 	} = extraData
 	const downloadState = downloadStatus
 		? downloadStatus[item.uniqueKey]
 		: undefined
+
+	const isUnplayableOffline =
+		isOffline && playableOfflineKeys && !playableOfflineKeys.has(item.uniqueKey)
+
 	return (
-		<View style={{ opacity: isStale ? 0.5 : 1 }}>
+		<View style={{ opacity: isStale || isUnplayableOffline ? 0.4 : 1 }}>
 			<TrackListItem
 				index={index}
 				onTrackPress={() => handleTrackPress(item)}
@@ -194,6 +210,8 @@ export function LocalTrackList({
 	isFetchingNextPage,
 	hasNextPage,
 	isStale,
+	isOffline,
+	playableOfflineKeys,
 	listRef,
 	...flashListProps
 }: LocalTrackListProps) {
@@ -249,6 +267,8 @@ export function LocalTrackList({
 			playlist,
 			downloadStatus,
 			isStale,
+			isOffline,
+			playableOfflineKeys,
 		}),
 		[
 			selection,
@@ -257,6 +277,8 @@ export function LocalTrackList({
 			playlist,
 			downloadStatus,
 			isStale,
+			isOffline,
+			playableOfflineKeys,
 		],
 	)
 

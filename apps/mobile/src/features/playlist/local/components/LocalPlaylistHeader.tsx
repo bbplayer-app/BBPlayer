@@ -16,11 +16,12 @@ import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
-import { formatRelativeTime } from '@/utils/time'
+import { formatDurationToText, formatRelativeTime } from '@/utils/time'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }
+	totalDuration?: number
 	onClickPlayAll: () => void
 	onClickSync: () => void
 	onClickCopyToLocalPlaylist: () => void
@@ -40,6 +41,7 @@ interface SubtitlePieces {
 // 三元运算符过于难懂，还是用函数好一些
 function buildSubtitlePieces(
 	playlist: Playlist & { validTrackCount: number },
+	totalDuration: number | undefined,
 ): SubtitlePieces {
 	const isLocal = playlist.type === 'local'
 
@@ -48,7 +50,10 @@ function buildSubtitlePieces(
 			? `${playlist.itemCount}\u2009首\u2009(\u2009${playlist.itemCount - playlist.validTrackCount}\u2009首失效) `
 			: `${playlist.itemCount}\u2009首`
 
-	const countText = `${countRaw}\u2009歌曲`
+	let countText = `${countRaw}\u2009歌曲`
+	if (totalDuration !== undefined) {
+		countText += `\u2009•\u2009共\u2009${formatDurationToText(totalDuration)}`
+	}
 
 	const authorName = !isLocal
 		? (playlist.author?.name ?? '未知作者')
@@ -72,6 +77,7 @@ function buildSubtitlePieces(
  */
 export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
+	totalDuration,
 	onClickPlayAll,
 	onClickSync,
 	onClickCopyToLocalPlaylist,
@@ -82,8 +88,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const router = useRouter()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
-		() => buildSubtitlePieces(playlist),
-		[playlist],
+		() => buildSubtitlePieces(playlist, totalDuration),
+		[playlist, totalDuration],
 	)
 	const onClickDownloadAll = useCallback(async () => {
 		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)

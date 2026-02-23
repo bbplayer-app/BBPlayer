@@ -40,6 +40,7 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 		},
 		enabled,
 		staleTime: 0,
+		networkMode: 'always',
 	})
 }
 

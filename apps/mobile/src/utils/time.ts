@@ -32,6 +32,18 @@ export const formatDurationToHHMMSS = (seconds: number): string => {
 }
 
 /**
+ * 格式化秒数为 XX小时XX分钟 文本
+ */
+export const formatDurationToText = (seconds: number): string => {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	let text = ''
+	if (hours > 0) text += `${hours} 小时 `
+	text += `${minutes} 分钟`
+	return text.trim()
+}
+
+/**
  * Parse duration string (e.g., "03:45", "1:30:00") to seconds
  * @param durationStr
  * @returns seconds

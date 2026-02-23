@@ -9,8 +9,8 @@ import Animated, {
 import type { SharedValue } from 'react-native-reanimated'
 
 import IconButton from '@/components/common/IconButton'
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 
 export function PlayerHeader({
 	onMorePress,

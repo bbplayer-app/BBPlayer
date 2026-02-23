@@ -602,6 +602,7 @@ export class PlaylistService {
 				author: typeof schema.artists.$inferSelect | null
 		  } & {
 				validTrackCount: number
+				totalDuration: number
 		  })
 		| undefined,
 		DatabaseError
@@ -622,6 +623,16 @@ export class PlaylistService {
             WHERE pt.playlist_id = ${schema.playlists.id}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
+						totalDuration: sql<number>`(
+            SELECT COALESCE(SUM(t.duration), 0)
+            FROM ${schema.playlistTracks} AS pt
+            JOIN ${schema.tracks} AS t
+              ON pt.track_id = t.id
+            LEFT JOIN ${schema.bilibiliMetadata} AS bm
+              ON pt.track_id = bm.track_id
+            WHERE pt.playlist_id = ${schema.playlists.id}
+              AND (bm.video_is_valid IS NOT false)
+          )`.as('total_duration'),
 					},
 				}),
 			),

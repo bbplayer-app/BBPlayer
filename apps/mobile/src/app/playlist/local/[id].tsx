@@ -1,4 +1,6 @@
+import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { useImage } from 'expo-image'
+import { useNetworkState } from 'expo-network'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
@@ -36,12 +38,14 @@ import {
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
+import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
+import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 const SEARCHBAR_HEIGHT = 72
@@ -87,6 +91,48 @@ export default function LocalPlaylistPage() {
 		() => playlistData?.pages.flatMap((page) => page.tracks) ?? [],
 		[playlistData],
 	)
+
+	const networkState = useNetworkState()
+	const isOffline =
+		networkState.isConnected === false &&
+		networkState.isInternetReachable !== true
+
+	const loadedTrackKeys = useMemo(
+		() => allLoadedTracks.map((t) => t.uniqueKey),
+		[allLoadedTracks],
+	)
+	const { data: downloadStatus } = useBatchDownloadStatus(loadedTrackKeys)
+
+	const playableOfflineKeys = useMemo(() => {
+		if (!allLoadedTracks.length) return new Set<string>()
+
+		const keys = new Set<string>()
+		const urisToCheck: { uniqueKey: string; uri: string }[] = []
+
+		for (const track of allLoadedTracks) {
+			if (track.source === 'local') {
+				keys.add(track.uniqueKey)
+				continue
+			}
+			const uri = getInternalPlayUri(track)
+			if (uri) {
+				urisToCheck.push({ uniqueKey: track.uniqueKey, uri })
+			}
+		}
+
+		const validUris = new Set(
+			Orpheus.getLruCachedUris(urisToCheck.map((u) => u.uri)),
+		)
+		for (const item of urisToCheck) {
+			if (
+				validUris.has(item.uri) ||
+				downloadStatus?.[item.uniqueKey] === DownloadState.COMPLETED
+			) {
+				keys.add(item.uniqueKey)
+			}
+		}
+		return keys
+	}, [allLoadedTracks, downloadStatus])
 
 	const batchAddTracksModalPayloads = (() => {
 		const payloads = []
@@ -185,7 +231,11 @@ export default function LocalPlaylistPage() {
 		})
 	}, [playlistMetadata, syncPlaylist, openModal])
 
-	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(Number(id))
+	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(
+		Number(id),
+		isOffline,
+		playableOfflineKeys,
+	)
 
 	const deleteTrack = useCallback(
 		(trackId: number) => {
@@ -333,6 +383,8 @@ export default function LocalPlaylistPage() {
 					handleTrackPress={handleTrackPress}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
+					isOffline={isOffline}
+					playableOfflineKeys={playableOfflineKeys}
 					onEndReached={
 						hasNextPagePlaylistData &&
 						!startSearch &&
@@ -344,6 +396,7 @@ export default function LocalPlaylistPage() {
 						<PlaylistHeader
 							coverRef={coverRef}
 							playlist={playlistMetadata}
+							totalDuration={playlistMetadata.totalDuration}
 							onClickPlayAll={playAll}
 							onClickSync={handleSync}
 							onClickCopyToLocalPlaylist={() =>

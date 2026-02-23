@@ -5,7 +5,6 @@ import {
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
-import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
@@ -13,6 +12,7 @@ import { useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { analyticsService } from '@/lib/services/analyticsService'
 import * as Haptics from '@/utils/haptics'
 
@@ -136,12 +136,7 @@ export function MainPlaybackControls({
 
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
-	const { data: shuffleMode, refetch: refetchShuffleMode } = useQuery({
-		queryKey: ['shuffleMode'],
-		queryFn: () => Orpheus.getShuffleMode(),
-		gcTime: 0,
-		staleTime: 0,
-	})
+	const { data: shuffleMode, refetch: refetchShuffleMode } = useShuffleMode()
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
