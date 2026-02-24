@@ -629,6 +629,16 @@ export default function LocalPlaylistPage() {
 						y: 60 + insets.top,
 					}}
 				>
+					{playlistMetadata.type === 'local' && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								enterSelectMode()
+							}}
+							title='排序'
+							leadingIcon='sort'
+						/>
+					)}
 					<Menu.Item
 						onPress={() => {
 							setFunctionalMenuVisible(false)

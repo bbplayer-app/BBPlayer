@@ -18,9 +18,11 @@ export function useTrackSelection() {
 		})
 	}, [])
 
-	const enterSelectMode = useCallback((id: number) => {
+	const enterSelectMode = useCallback((id?: number) => {
 		setSelectMode(true)
-		setSelected(new Set([id]))
+		if (id !== undefined) {
+			setSelected(new Set([id]))
+		}
 	}, [])
 
 	const exitSelectMode = useCallback(() => {
