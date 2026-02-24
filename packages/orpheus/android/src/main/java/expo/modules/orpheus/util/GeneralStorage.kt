@@ -85,7 +85,7 @@ object GeneralStorage {
         }
     }
 
-    fun restoreQueue(): List<MediaItem> {
+    fun restoreQueue(context: Context): List<MediaItem> {
         return try {
             val jsonListString = kv?.decodeString(KEY_SAVED_QUEUE)
 
@@ -97,7 +97,7 @@ object GeneralStorage {
                 try {
                     val track = json.decodeFromString<TrackRecord>(trackJson)
 
-                    track.toMediaItem()
+                    track.toMediaItem(context)
 
                 } catch (e: Exception) {
                     Log.e("MediaItemStorer", "Failed to parse track json: $trackJson", e)

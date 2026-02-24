@@ -23,6 +23,7 @@ import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.typedarray.Float32Array
+import expo.modules.kotlin.Promise
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.manager.SpectrumManager
@@ -175,6 +176,7 @@ class ExpoOrpheusModule : Module() {
             val context = appContext.reactContext ?: return@OnCreate
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
+            expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(
                 context,
                 ComponentName(context, OrpheusMusicService::class.java)
@@ -444,8 +446,9 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
             ensurePlayer()
+            val context = appContext.reactContext
             val mediaItems = tracks.map { track ->
-                track.toMediaItem()
+                track.toMediaItem(context)
             }
             val p = player ?: return@AsyncFunction
             if (clearQueue == true) {
@@ -477,7 +480,8 @@ class ExpoOrpheusModule : Module() {
             ensurePlayer()
             val p = player ?: return@AsyncFunction
 
-            val mediaItem = track.toMediaItem()
+            val context = appContext.reactContext
+            val mediaItem = track.toMediaItem(context)
             val targetIndex = p.currentMediaItemIndex + 1
 
             var existingIndex = -1
@@ -757,16 +761,15 @@ class ExpoOrpheusModule : Module() {
             player?.playbackParameters?.speed ?: 1.0f
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("debugTriggerError") {
-            val rootCause = RuntimeException("This is a simulated root cause exception")
-            val exception = PlaybackException(
-                "Simulated PlaybackException for debugging",
-                rootCause,
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
-            )
-            playerListener.onPlayerError(exception)
-            playerListener.onPlayerError(exception)
-        }.runOnQueue(Queues.MAIN)
+        Function("getLruCachedUris") { uris: List<String> ->
+            try {
+                uris.filter { uri -> 
+                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri) 
+                }
+            } catch (e: Exception) {
+                emptyList<String>()
+            }
+        }
 
         Function("updateSpectrumData") { destination: Float32Array ->
             val size = destination.length

@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
 import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
 import db from '@/lib/db/db'
@@ -17,7 +18,7 @@ import {
 import type { Playlist, Track } from '@/types/core/media'
 import type {
 	CreatePlaylistPayload,
-	ReorderSingleTrackPayload,
+	ReorderLocalPlaylistTrackPayload,
 	UpdatePlaylistPayload,
 } from '@/types/services/playlist'
 
@@ -215,6 +216,7 @@ export class PlaylistService {
 
 	/**
 	 * 批量添加 tracks 到本地播放列表。
+	 * 新 track 总是追加到末尾（sort_key 最大值）。
 	 */
 	public addManyTracksToLocalPlaylist(
 		playlistId: number,
@@ -245,27 +247,31 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				// 获取当前最大 order
-				const maxOrderResult = await Sentry.startSpan(
-					{ name: 'db:query:max_order', op: 'db' },
+				// 获取当前最大 sort_key（DESC 排序下，最大值对应最新加入的歌曲）
+				const maxKeyResult = await Sentry.startSpan(
+					{ name: 'db:query:max_sort_key', op: 'db' },
 					() =>
 						this.db
 							.select({
-								maxOrder: sql<
-									number | null
-								>`MAX(${schema.playlistTracks.order})`,
+								maxKey: sql<
+									string | null
+								>`MAX(${schema.playlistTracks.sortKey})`,
 							})
 							.from(schema.playlistTracks)
 							.where(eq(schema.playlistTracks.playlistId, playlistId)),
 				)
-				let nextOrder = (maxOrderResult[0].maxOrder ?? -1) + 1
+				let prevKey: string | null = maxKeyResult[0].maxKey ?? null
 
-				// 构造批量插入的行
-				const values = trackIds.map((tid) => ({
-					playlistId,
-					trackId: tid,
-					order: nextOrder++,
-				}))
+				// 构造批量插入的行，每条用 generateKeyBetween(prevKey, null) 追加到末端
+				const values = trackIds.map((tid) => {
+					const sortKey = generateKeyBetween(prevKey, null)
+					prevKey = sortKey
+					return {
+						playlistId,
+						trackId: tid,
+						sortKey,
+					}
+				})
 
 				// 批量插入（忽略已存在的）
 				const inserted = await Sentry.startSpan(
@@ -388,20 +394,18 @@ export class PlaylistService {
 	}
 
 	/**
-	 * 在本地播放列表中移动单个歌曲的位置。
+	 * 在本地播放列表中移动单个歌曲的位置（fractional indexing）。
+	 * 只需知道目标槽位两侧的 sort_key 即可，单行写入，无需移动其他行。
+	 *
 	 * @param playlistId - 目标播放列表的 ID。
-	 * @param payload - 包含歌曲ID、原始位置和目标位置的对象。
+	 * @param payload - 包含 trackId 和目标位置前后两项的 sortKey。
 	 * @returns ResultAsync
 	 */
 	public reorderSingleLocalPlaylistTrack(
 		playlistId: number,
-		payload: ReorderSingleTrackPayload,
+		payload: ReorderLocalPlaylistTrackPayload,
 	): ResultAsync<true, DatabaseError | ServiceError> {
-		const { trackId, fromOrder, toOrder } = payload
-
-		if (fromOrder === toOrder) {
-			return okAsync(true)
-		}
+		const { trackId, prevSortKey, nextSortKey } = payload
 
 		return ResultAsync.fromPromise(
 			(async () => {
@@ -420,72 +424,26 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				// 验证要移动的歌曲确实在 fromOrder 位置
-				const trackToMove = await Sentry.startSpan(
-					{ name: 'db:query:playlistTrack', op: 'db' },
-					() =>
-						this.db.query.playlistTracks.findFirst({
-							where: and(
-								eq(schema.playlistTracks.playlistId, playlistId),
-								eq(schema.playlistTracks.trackId, trackId),
-								eq(schema.playlistTracks.order, fromOrder),
-							),
-						}),
-				)
-				if (!trackToMove) {
-					// 这也太操蛋了，我觉得我不可能写出这种前后端不一致的代码
+				// 前置校验：prevSortKey 必须小于 nextSortKey
+				if (
+					prevSortKey !== null &&
+					nextSortKey !== null &&
+					prevSortKey >= nextSortKey
+				) {
 					throw new ServiceError(
-						`数据不一致：歌曲 ${trackId} 不在播放列表 ${playlistId} 的 ${fromOrder} 位置。`,
+						`Invalid sort keys: prevSortKey must be less than nextSortKey (got "${prevSortKey}" >= "${nextSortKey}")`,
 					)
 				}
 
-				if (toOrder > fromOrder) {
-					// 往列表尾部移动
-					// 把从 fromOrder+1 到 toOrder 的所有歌曲的 order 都减 1 (向上挪一位)
-					await Sentry.startSpan(
-						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
-						() =>
-							this.db
-								.update(schema.playlistTracks)
-								.set({
-									order: sql`${schema.playlistTracks.order} - 1`,
-								})
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										sql`${schema.playlistTracks.order} > ${fromOrder}`,
-										sql`${schema.playlistTracks.order} <= ${toOrder}`,
-									),
-								),
-					)
-				} else {
-					// 往列表头部移动
-					// 把从 toOrder 到 fromOrder-1 的所有歌曲的 order 都加 1 (向下挪一位)
-					await Sentry.startSpan(
-						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
-						() =>
-							this.db
-								.update(schema.playlistTracks)
-								.set({
-									order: sql`${schema.playlistTracks.order} + 1`,
-								})
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										sql`${schema.playlistTracks.order} >= ${toOrder}`,
-										sql`${schema.playlistTracks.order} < ${fromOrder}`,
-									),
-								),
-					)
-				}
+				// 生成新的 sort_key（在 prevSortKey 和 nextSortKey 之间）
+				const newSortKey = generateKeyBetween(prevSortKey, nextSortKey)
 
-				// 把被移动的歌曲放到目标位置
 				await Sentry.startSpan(
-					{ name: 'db:update:playlistTrack:order', op: 'db' },
+					{ name: 'db:update:playlistTrack:sortKey', op: 'db' },
 					() =>
 						this.db
 							.update(schema.playlistTracks)
-							.set({ order: toOrder })
+							.set({ sortKey: newSortKey })
 							.where(
 								and(
 									eq(schema.playlistTracks.playlistId, playlistId),
@@ -499,7 +457,7 @@ export class PlaylistService {
 			(e) =>
 				e instanceof ServiceError
 					? e
-					: new DatabaseError('重排序播放列表歌曲的事务失败', {
+					: new DatabaseError('重排序播放列表歌曲失败', {
 							cause: e,
 						}),
 		)
@@ -526,8 +484,8 @@ export class PlaylistService {
 				if (!type) throw createPlaylistNotFound(playlistId)
 				const orderBy =
 					type.type === 'local'
-						? desc(schema.playlistTracks.order)
-						: asc(schema.playlistTracks.order)
+						? desc(schema.playlistTracks.sortKey)
+						: asc(schema.playlistTracks.sortKey)
 
 				return Sentry.startSpan(
 					{ name: 'db:query:playlistTracks', op: 'db' },
@@ -602,6 +560,7 @@ export class PlaylistService {
 				author: typeof schema.artists.$inferSelect | null
 		  } & {
 				validTrackCount: number
+				totalDuration: number
 		  })
 		| undefined,
 		DatabaseError
@@ -619,9 +578,19 @@ export class PlaylistService {
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
               ON pt.track_id = bm.track_id
-            WHERE pt.playlist_id = ${schema.playlists.id}
+            WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
+						totalDuration: sql<number>`(
+            SELECT COALESCE(SUM(t.duration), 0)
+            FROM ${schema.playlistTracks} AS pt
+            JOIN ${schema.tracks} AS t
+              ON pt.track_id = t.id
+            LEFT JOIN ${schema.bilibiliMetadata} AS bm
+              ON pt.track_id = bm.track_id
+            WHERE pt.playlist_id = ${playlistId}
+              AND (bm.video_is_valid IS NOT false)
+          )`.as('total_duration'),
 					},
 				}),
 			),
@@ -726,11 +695,17 @@ export class PlaylistService {
 				)
 
 				if (trackIds.length > 0) {
-					const newPlaylistTracks = trackIds.map((id, index) => ({
-						playlistId: playlistId,
-						trackId: id,
-						order: index,
-					}))
+					// 为每个 trackId 生成升序 sort_key
+					let prevKey: string | null = null
+					const newPlaylistTracks = trackIds.map((id) => {
+						const sortKey = generateKeyBetween(prevKey, null)
+						prevKey = sortKey
+						return {
+							playlistId: playlistId,
+							trackId: id,
+							sortKey,
+						}
+					})
 					await Sentry.startSpan(
 						{ name: 'db:insert:playlistTracks', op: 'db' },
 						() =>
@@ -953,7 +928,7 @@ export class PlaylistService {
 									},
 								},
 							},
-							orderBy: asc(schema.playlistTracks.order),
+							orderBy: asc(schema.playlistTracks.sortKey),
 						}),
 				)
 
@@ -992,7 +967,7 @@ export class PlaylistService {
 		limit: number
 		cursor:
 			| {
-					lastOrder: number
+					lastSortKey: string
 					createdAt: number
 					lastId: number
 			  }
@@ -1000,11 +975,13 @@ export class PlaylistService {
 	}): ResultAsync<
 		{
 			tracks: Track[]
+			sortKeys: string[]
 			nextCursor?: {
-				lastOrder: number
+				lastSortKey: string
 				createdAt: number
 				lastId: number
 			}
+			nextPageFirstSortKey?: string
 		},
 		DatabaseError | ServiceError
 	> {
@@ -1029,7 +1006,7 @@ export class PlaylistService {
 				const operator = isDesc ? lt : gt
 
 				const orderBy = [
-					sortDirection(schema.playlistTracks.order),
+					sortDirection(schema.playlistTracks.sortKey),
 					sortDirection(schema.playlistTracks.createdAt),
 					sortDirection(schema.playlistTracks.trackId),
 				]
@@ -1039,18 +1016,18 @@ export class PlaylistService {
 				]
 
 				if (cursor) {
-					const { lastOrder, createdAt, lastId } = cursor
+					const { lastSortKey, createdAt, lastId } = cursor
 					const dateObj = new Date(createdAt)
 
 					whereClauses.push(
 						or(
-							operator(schema.playlistTracks.order, lastOrder),
+							operator(schema.playlistTracks.sortKey, lastSortKey),
 							and(
-								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.sortKey, lastSortKey),
 								operator(schema.playlistTracks.createdAt, dateObj),
 							),
 							and(
-								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.sortKey, lastSortKey),
 								eq(schema.playlistTracks.createdAt, dateObj),
 								operator(schema.playlistTracks.trackId, lastId),
 							),
@@ -1090,6 +1067,7 @@ export class PlaylistService {
 						}),
 		).andThen((data) => {
 			const newTracks: Track[] = []
+			const sortKeys: string[] = []
 			for (const pt of data) {
 				const t = this.trackService.formatTrack(pt.track)
 				if (!t) {
@@ -1100,23 +1078,28 @@ export class PlaylistService {
 					)
 				}
 				newTracks.push(t)
+				sortKeys.push(pt.sortKey)
 			}
 
 			let nextCursor
+			let nextPageFirstSortKey
 			const hasMore = data.length === effectiveLimit + 1
 
 			if (hasMore) {
 				const lastItem = data[effectiveLimit - 1]
 				nextCursor = {
-					lastOrder: lastItem.order,
+					lastSortKey: lastItem.sortKey,
 					createdAt: lastItem.createdAt.getTime(),
 					lastId: lastItem.trackId,
 				}
+				nextPageFirstSortKey = data[effectiveLimit].sortKey
 			}
 
 			return okAsync({
 				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				sortKeys: hasMore ? sortKeys.slice(0, effectiveLimit) : sortKeys,
 				nextCursor,
+				nextPageFirstSortKey,
 			})
 		})
 	}

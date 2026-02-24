@@ -284,6 +284,13 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	 * @param destination 用于接收数据的 Float32Array
 	 */
 	updateSpectrumData(destination: Float32Array): void
+
+	/**
+	 * 检查传入的 URI 列表中，哪些已经被完整缓存在本地 LRU Cache 中。
+	 * @param uris 包含完整播放参数的 URI 列表 (例如 `orpheus://bilibili?...`)
+	 * @returns 返回已完整缓存的 URI 列表
+	 */
+	getLruCachedUris(uris: string[]): string[]
 }
 
 /**

@@ -356,7 +356,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun restorePlayerState(restorePosition: Boolean) {
         val player = player ?: return
 
-        val restoredItems = GeneralStorage.restoreQueue()
+        val restoredItems = GeneralStorage.restoreQueue(this)
 
         if (restoredItems.isNotEmpty()) {
             player.setMediaItems(restoredItems)

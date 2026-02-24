@@ -1,7 +1,11 @@
 import { DownloadState } from '@bbplayer/orpheus'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import {
+	Gesture,
+	GestureDetector,
+	RectButton,
+} from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
 
@@ -27,6 +31,16 @@ interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
 	onMenuPress: () => void
+	/**
+	 * 拖拽把手上的 RNGH 合成手势回调。
+	 *
+	 * `onDragStart(absoluteY)` — 长按阈値到达时触发
+	 * `onDragUpdate(absoluteY)` — 手指移动时持续触发
+	 * `onDragEnd()` — 手指抬起或手势取消时触发
+	 */
+	onDragStart?: (absoluteY: number) => void
+	onDragUpdate?: (absoluteY: number) => void
+	onDragEnd?: () => void
 	showCoverImage?: boolean
 	data: Track
 	disabled?: boolean
@@ -45,6 +59,9 @@ export const TrackListItem = memo(function TrackListItem({
 	index,
 	onTrackPress,
 	onMenuPress,
+	onDragStart,
+	onDragUpdate,
+	onDragEnd,
 	showCoverImage = true,
 	data,
 	disabled = false,
@@ -172,7 +189,12 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
-						<Text variant='bodySmall'>{data.title}</Text>
+						<Text
+							variant='bodySmall'
+							numberOfLines={selectMode ? 1 : 0}
+						>
+							{data.title}
+						</Text>
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artist && (
@@ -198,8 +220,9 @@ export const TrackListItem = memo(function TrackListItem({
 							{/* 显示下载状态 */}
 							{renderDownloadStatus()}
 						</View>
-						{/* 显示主视频标题（如果是分 p） */}
-						{data.source === 'bilibili' &&
+						{/* 显示主视频标题（如果是分 p） — selectMode 下隐藏以固定高度 */}
+						{!selectMode &&
+							data.source === 'bilibili' &&
 							data.bilibiliMetadata.mainTrackTitle &&
 							data.bilibiliMetadata.mainTrackTitle !== data.title &&
 							playlist.type !== 'multi_page' && (
@@ -215,24 +238,38 @@ export const TrackListItem = memo(function TrackListItem({
 							)}
 					</View>
 
-					{/* Context Menu */}
+					{/* Context Menu / Drag Handle */}
 					{!disabled && (
 						<View>
-							<RectButton
-								style={styles.menuButton}
-								onPress={() => onMenuPress()}
-								enabled={!selectMode}
-							>
-								<Icon
-									source='dots-vertical'
-									size={20}
-									color={
-										selectMode
-											? theme.colors.onSurfaceDisabled
-											: theme.colors.primary
-									}
-								/>
-							</RectButton>
+							{selectMode ? (
+								<GestureDetector
+									gesture={Gesture.Pan()
+										.activateAfterLongPress(200)
+										.runOnJS(true)
+										.onStart((e) => onDragStart?.(e.absoluteY))
+										.onUpdate((e) => onDragUpdate?.(e.absoluteY))
+										.onFinalize(() => onDragEnd?.())}
+								>
+									<View style={styles.menuButton}>
+										<Icon
+											source='drag-vertical'
+											size={20}
+											color={theme.colors.onSurfaceVariant}
+										/>
+									</View>
+								</GestureDetector>
+							) : (
+								<RectButton
+									style={styles.menuButton}
+									onPress={() => onMenuPress()}
+								>
+									<Icon
+										source='dots-vertical'
+										size={20}
+										color={theme.colors.primary}
+									/>
+								</RectButton>
+							)}
 						</View>
 					)}
 				</View>

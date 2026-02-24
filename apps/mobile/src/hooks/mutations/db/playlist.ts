@@ -303,6 +303,36 @@ export const useCreateNewLocalPlaylist = () => {
 	})
 }
 
+export const useReorderLocalPlaylistTrack = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'reorderLocalPlaylistTrack'],
+		mutationFn: async ({
+			playlistId,
+			trackId,
+			prevSortKey,
+			nextSortKey,
+		}: {
+			playlistId: number
+			trackId: number
+			prevSortKey: string | null
+			nextSortKey: string | null
+		}) => {
+			const result = await playlistService.reorderSingleLocalPlaylistTrack(
+				playlistId,
+				{ trackId, prevSortKey, nextSortKey },
+			)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (_, { playlistId }) => {
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.playlistContents(playlistId),
+			})
+		},
+		onError: (error) => toastAndLogError('重排序歌曲位置失败', error, SCOPE),
+	})
+}
+
 /**
  * 批量添加 tracks 到本地播放列表
  * @param playlistId

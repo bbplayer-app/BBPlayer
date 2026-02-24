@@ -89,7 +89,7 @@ const CollectionListComponent = memo(() => {
 					/>
 				}
 				keyExtractor={keyExtractor}
-				contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
+				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 				ListFooterComponent={

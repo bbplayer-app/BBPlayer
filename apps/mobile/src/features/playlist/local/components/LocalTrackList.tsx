@@ -15,10 +15,11 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
+import type { MD3Theme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { useBatchDownloadStatus } from '@/hooks/player/useBatchDownloadStatus'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -73,6 +74,30 @@ interface LocalTrackListProps extends Omit<
 	 * 数据是否已过期，如果为 true，列表项会显示半透明（可选）
 	 */
 	isStale?: boolean
+	/**
+	 * 当前设备是否处于无网络离线状态
+	 */
+	isOffline?: boolean
+	/**
+	 * 在离线状态下，哪些歌曲的 uniqueKey 是被完整缓存可以播放的
+	 */
+	playableOfflineKeys?: Set<string>
+	/**
+	 * 在 selectMode 下长按拖拽把手时触发
+	 */
+	onDragStart?: (trackIndex: number, trackId: number, absoluteY: number) => void
+	/**
+	 * 手指在拖拽过程中持续移动时触发
+	 */
+	onDragUpdate?: (absoluteY: number) => void
+	/**
+	 * 手指抬起或手势取消时触发
+	 */
+	onDragEnd?: () => void
+	/**
+	 * 拖拽时当前插入位置（在哪个索引的项目之后显示插入线）
+	 */
+	insertAfterIndex?: number | null
 }
 
 const renderItem = ({
@@ -88,6 +113,17 @@ const renderItem = ({
 		playlist: Playlist
 		downloadStatus: Record<string, DownloadState>
 		isStale?: boolean
+		isOffline?: boolean
+		playableOfflineKeys?: Set<string>
+		onDragStart?: (
+			trackIndex: number,
+			trackId: number,
+			absoluteY: number,
+		) => void
+		onDragUpdate?: (absoluteY: number) => void
+		onDragEnd?: () => void
+		insertAfterIndex: number | null
+		colors: MD3Theme['colors']
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -98,36 +134,62 @@ const renderItem = ({
 		playlist,
 		downloadStatus,
 		isStale,
+		isOffline,
+		playableOfflineKeys,
+		onDragStart,
+		onDragUpdate,
+		onDragEnd,
+		insertAfterIndex,
+		colors,
 	} = extraData
 	const downloadState = downloadStatus
 		? downloadStatus[item.uniqueKey]
 		: undefined
+
+	const isUnplayableOffline =
+		isOffline && playableOfflineKeys && !playableOfflineKeys.has(item.uniqueKey)
+
 	return (
-		<View style={{ opacity: isStale ? 0.5 : 1 }}>
-			<TrackListItem
-				index={index}
-				onTrackPress={() => handleTrackPress(item)}
-				onMenuPress={() => {
-					handleMenuPress(item, downloadState)
-				}}
-				disabled={
-					item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
-				}
-				data={item}
-				playlist={playlist}
-				toggleSelected={(id: number) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-					selection.toggle(id)
-				}}
-				isSelected={selection.selected.has(item.id)}
-				selectMode={selection.active}
-				enterSelectMode={(id: number) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-					selection.enter(id)
-				}}
-				downloadState={downloadState}
-			/>
-		</View>
+		<>
+			<View style={{ opacity: isStale || isUnplayableOffline ? 0.4 : 1 }}>
+				<TrackListItem
+					index={index}
+					onTrackPress={() => handleTrackPress(item)}
+					onMenuPress={() => {
+						handleMenuPress(item, downloadState)
+					}}
+					onDragStart={(absoluteY) => onDragStart?.(index, item.id, absoluteY)}
+					onDragUpdate={onDragUpdate}
+					onDragEnd={onDragEnd}
+					disabled={
+						item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
+					}
+					data={item}
+					playlist={playlist}
+					toggleSelected={(id: number) => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+						selection.toggle(id)
+					}}
+					isSelected={selection.selected.has(item.id)}
+					selectMode={selection.active}
+					enterSelectMode={(id: number) => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+						selection.enter(id)
+					}}
+					downloadState={downloadState}
+				/>
+			</View>
+			{insertAfterIndex === index && (
+				<View
+					pointerEvents='none'
+					style={{
+						height: 2,
+						backgroundColor: colors.primary,
+						marginHorizontal: 8,
+					}}
+				/>
+			)}
+		</>
 	)
 }
 
@@ -194,7 +256,13 @@ export function LocalTrackList({
 	isFetchingNextPage,
 	hasNextPage,
 	isStale,
+	isOffline,
+	playableOfflineKeys,
 	listRef,
+	onDragStart,
+	onDragUpdate,
+	onDragEnd,
+	insertAfterIndex,
 	...flashListProps
 }: LocalTrackListProps) {
 	const haveTrack = useCurrentTrack()
@@ -249,6 +317,13 @@ export function LocalTrackList({
 			playlist,
 			downloadStatus,
 			isStale,
+			isOffline,
+			playableOfflineKeys,
+			onDragStart,
+			onDragUpdate,
+			onDragEnd,
+			insertAfterIndex: insertAfterIndex ?? null,
+			colors: theme.colors,
 		}),
 		[
 			selection,
@@ -257,6 +332,13 @@ export function LocalTrackList({
 			playlist,
 			downloadStatus,
 			isStale,
+			isOffline,
+			playableOfflineKeys,
+			onDragStart,
+			onDragUpdate,
+			onDragEnd,
+			insertAfterIndex,
+			theme.colors,
 		],
 	)
 

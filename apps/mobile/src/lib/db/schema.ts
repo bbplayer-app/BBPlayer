@@ -124,15 +124,15 @@ export const playlistTracks = sqliteTable(
 		trackId: integer('track_id')
 			.notNull()
 			.references(() => tracks.id, { onDelete: 'cascade' }),
-		order: integer('order').notNull(), // 歌曲在列表中的顺序，从 0 开始
+		sortKey: text('sort_key').notNull(), // 歌曲在列表中的顺序，fractional indexing 字符串键
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(unixepoch() * 1000)`),
 	},
 	(table) => [
 		primaryKey({ columns: [table.playlistId, table.trackId] }),
-		index('playlist_tracks_playlist_idx').on(table.playlistId),
 		index('playlist_tracks_track_idx').on(table.trackId),
+		index('playlist_tracks_sort_key_idx').on(table.playlistId, table.sortKey),
 	],
 )
 

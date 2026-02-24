@@ -254,12 +254,18 @@ importers:
       expo-web-browser:
         specifier: ~55.0.3
         version: 55.0.3(expo@55.0.0-preview.7)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))
+      fractional-indexing:
+        specifier: ^3.2.0
+        version: 3.2.0
       he:
         specifier: ^1.2.0
         version: 1.2.0
       immer:
         specifier: ^10.2.0
         version: 10.2.0
+      lottie-react-native:
+        specifier: ~7.3.6
+        version: 7.3.6(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       md5:
         specifier: ^2.3.0
         version: 2.3.0
@@ -6041,6 +6047,10 @@ packages:
     resolution: {integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==}
     engines: {node: '>= 6'}
 
+  fractional-indexing@3.2.0:
+    resolution: {integrity: sha512-PcOxmqwYCW7O2ovKRU8OoQQj2yqTfEB/yeTYk4gPid6dN5ODRfU1hXd9tTVZzax/0NkO7AxpHykvZnT1aYp/BQ==}
+    engines: {node: ^14.13.1 || >=16.0.0}
+
   framer-motion@10.18.0:
     resolution: {integrity: sha512-oGlDh1Q1XqYPksuTD/usb0I70hq95OUzmL9+6Zd+Hs4XV0oaISBa/UUMSjYiq6m8EUF32132mOJ8xVZS+I0S6w==}
     peerDependencies:
@@ -7176,6 +7186,19 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  lottie-react-native@7.3.6:
+    resolution: {integrity: sha512-TevFHRvFURh6GlaqLKrSNXuKAxvBvFCiXfS7FXQI1K/ikOStgAwWLFPGjW0i1qB2/VzPACKmRs+535VjHUZZZQ==}
+    peerDependencies:
+      '@lottiefiles/dotlottie-react': ^0.13.5
+      react: '*'
+      react-native: '>=0.46'
+      react-native-windows: '>=0.63.x'
+    peerDependenciesMeta:
+      '@lottiefiles/dotlottie-react':
+        optional: true
+      react-native-windows:
+        optional: true
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -16268,6 +16291,8 @@ snapshots:
       hasown: 2.0.2
       mime-types: 2.1.35
 
+  fractional-indexing@3.2.0: {}
+
   framer-motion@10.18.0(react-dom@19.1.0(react@19.2.0))(react@19.2.0):
     dependencies:
       tslib: 2.8.1
@@ -17803,6 +17828,11 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  lottie-react-native@7.3.6(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-native: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
 
   lru-cache@10.4.3: {}
 

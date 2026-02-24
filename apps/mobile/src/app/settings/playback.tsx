@@ -6,6 +6,8 @@ import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
@@ -13,6 +15,7 @@ export default function PlaybackSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
+	const haveTrack = useCurrentTrack()
 
 	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
 		useState(Orpheus.restorePlaybackPositionEnabled)
@@ -32,7 +35,7 @@ export default function PlaybackSettingsPage() {
 				style={styles.scrollView}
 				contentContainerStyle={[
 					styles.scrollContent,
-					{ paddingBottom: insets.bottom + 20 },
+					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
 				<View style={styles.settingRow}>
@@ -93,6 +96,9 @@ export default function PlaybackSettingsPage() {
 					/>
 				</View>
 			</ScrollView>
+			<View style={styles.nowPlayingBarContainer}>
+				<NowPlayingBar />
+			</View>
 		</View>
 	)
 }
@@ -112,5 +118,11 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
 	},
 })

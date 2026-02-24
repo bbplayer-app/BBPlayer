@@ -1,7 +1,6 @@
 import type { DownloadTask } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
 import { FlashList } from '@shopify/flash-list'
-import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -12,6 +11,7 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { orpheusQueryKeys, useDownloadTasks } from '@/hooks/queries/orpheus'
 import { queryClient } from '@/lib/config/queryClient'
 
 const renderItem = ({ item }: { item: DownloadTask }) => {
@@ -23,18 +23,7 @@ export default function DownloadPage() {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 
-	const {
-		data: tasks,
-		isPending,
-		isError,
-		error,
-	} = useQuery({
-		queryKey: ['downloadTasks'],
-		queryFn: async () => {
-			return await Orpheus.getUncompletedDownloadTasks()
-		},
-		staleTime: 0,
-	})
+	const { data: tasks, isPending, isError, error } = useDownloadTasks()
 
 	const haveTrack = useCurrentTrack()
 
@@ -82,7 +71,9 @@ export default function DownloadPage() {
 				taskCount={tasks.length}
 				onClearAll={async () => {
 					await Orpheus.clearUncompletedDownloadTasks()
-					await queryClient.invalidateQueries({ queryKey: ['downloadTasks'] })
+					await queryClient.invalidateQueries({
+						queryKey: orpheusQueryKeys.downloadTasks(),
+					})
 				}}
 			/>
 

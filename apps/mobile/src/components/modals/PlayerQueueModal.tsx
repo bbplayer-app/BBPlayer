@@ -6,7 +6,6 @@ import {
 } from '@lodev09/react-native-true-sheet'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
-import { useQuery } from '@tanstack/react-query'
 import {
 	memo,
 	useCallback,
@@ -26,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 const TrackItem = memo(
@@ -117,16 +117,7 @@ function PlayerQueueModal({
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
 
-	const { data: queue, refetch } = useQuery<OrpheusTrack[]>({
-		queryKey: ['player', 'queue'],
-		queryFn: async () => {
-			const q = await Orpheus.getQueue()
-			return q
-		},
-		staleTime: 0,
-		enabled: isVisible,
-		gcTime: 0,
-	})
+	const { data: queue, refetch } = usePlayerQueue(isVisible)
 
 	const currentIndex = useMemo(() => {
 		if (!currentTrackId || !queue) return -1

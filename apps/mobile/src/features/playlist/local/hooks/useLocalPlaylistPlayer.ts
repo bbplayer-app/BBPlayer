@@ -1,3 +1,4 @@
+import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { useCallback } from 'react'
 import type { MMKV } from 'react-native-mmkv'
 import { useMMKVBoolean } from 'react-native-mmkv'
@@ -9,10 +10,16 @@ import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { storage } from '@/utils/mmkv'
 import { addToQueue } from '@/utils/player'
+import { getInternalPlayUri } from '@/utils/player'
+import toast from '@/utils/toast'
 
 const SCOPE = 'UI.Playlist.Local.Player'
 
-export function useLocalPlaylistPlayer(playlistId: number) {
+export function useLocalPlaylistPlayer(
+	playlistId: number,
+	isOffline?: boolean,
+	playableOfflineKeys?: Set<string>,
+) {
 	const currentTrackId = useCurrentTrackId()
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
@@ -24,9 +31,53 @@ export function useLocalPlaylistPlayer(playlistId: number) {
 				toastAndLogError('获取播放列表内容失败', tracksResult.error, SCOPE)
 				return
 			}
-			const tracks = tracksResult.value.filter((item) =>
+			let tracks = tracksResult.value.filter((item) =>
 				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
 			)
+
+			if (isOffline) {
+				const originalLength = tracks.length
+				const urisToCheck: { uniqueKey: string; uri: string }[] = []
+				const keys = new Set<string>()
+
+				for (const track of tracks) {
+					if (track.source === 'local') {
+						keys.add(track.uniqueKey)
+						continue
+					}
+					const uri = getInternalPlayUri(track)
+					if (uri) {
+						urisToCheck.push({ uniqueKey: track.uniqueKey, uri })
+					}
+				}
+
+				const validUris = new Set(
+					Orpheus.getLruCachedUris(urisToCheck.map((u) => u.uri)),
+				)
+				const downloadStatus = await Orpheus.getDownloadStatusByIds(
+					urisToCheck.map((u) => u.uniqueKey),
+				)
+
+				for (const item of urisToCheck) {
+					if (
+						validUris.has(item.uri) ||
+						downloadStatus?.[item.uniqueKey] === DownloadState.COMPLETED
+					) {
+						keys.add(item.uniqueKey)
+					}
+				}
+
+				tracks = tracks.filter((t) => keys.has(t.uniqueKey))
+
+				if (tracks.length === 0) {
+					toast.show('当前离线，没有可播放的已缓存歌曲')
+					return
+				}
+				if (tracks.length < originalLength) {
+					toast.show('当前离线，仅添加可播放的已缓存歌曲到播放队列')
+				}
+			}
+
 			if (!tracks || tracks.length === 0) {
 				return
 			}
@@ -43,11 +94,19 @@ export function useLocalPlaylistPlayer(playlistId: number) {
 				toastAndLogError('播放全部失败', error, SCOPE)
 			}
 		},
-		[playlistId],
+		[playlistId, isOffline],
 	)
 
 	const handleTrackPress = useCallback(
 		(track: Track) => {
+			if (
+				isOffline &&
+				playableOfflineKeys &&
+				!playableOfflineKeys.has(track.uniqueKey)
+			) {
+				toast.show('当前无网络，无法播放，请检查网络设置')
+				return
+			}
 			if (track.uniqueKey === currentTrackId) return
 			if (!ignoreAlertReplacePlaylist) {
 				alert(
@@ -74,6 +133,8 @@ export function useLocalPlaylistPlayer(playlistId: number) {
 			ignoreAlertReplacePlaylist,
 			playAll,
 			setIgnoreAlertReplacePlaylist,
+			isOffline,
+			playableOfflineKeys,
 		],
 	)
 
