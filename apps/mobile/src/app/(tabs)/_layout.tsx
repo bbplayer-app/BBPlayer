@@ -59,7 +59,7 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name='settings'
+				name='settings/index'
 				options={{
 					title: '设置',
 					tabBarIcon: () => settingsIcon,
