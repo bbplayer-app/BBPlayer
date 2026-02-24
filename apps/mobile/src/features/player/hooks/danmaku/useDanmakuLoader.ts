@@ -32,6 +32,9 @@ export default function useDanmakuLoader(
 	const loadedSegmentsRef = useRef<Set<number>>(new Set())
 	const isLoadingRef = useRef(false)
 	const retryCountRef = useRef<Record<number, number>>({})
+	const retryTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
+		{},
+	)
 	const danmakuFilterLevel = useAppStore(
 		(state) => state.settings.danmakuFilterLevel,
 	)
@@ -74,6 +77,10 @@ export default function useDanmakuLoader(
 				rawDataSV.value = nextData
 				loadedSegmentsRef.current.add(segIndex)
 				retryCountRef.current[segIndex] = 0
+				if (retryTimersRef.current[segIndex]) {
+					clearTimeout(retryTimersRef.current[segIndex])
+					delete retryTimersRef.current[segIndex]
+				}
 			} catch (e) {
 				logger.error(`获取弹幕失败 segIndex:${segIndex}`, e)
 				const retryCount = (retryCountRef.current[segIndex] || 0) + 1
@@ -84,8 +91,12 @@ export default function useDanmakuLoader(
 				)
 				logger.info(`弹幕分段 ${segIndex} 将在 ${delay}ms 后才允许重试`)
 				loadedSegmentsRef.current.add(segIndex)
-				setTimeout(() => {
+				if (retryTimersRef.current[segIndex]) {
+					clearTimeout(retryTimersRef.current[segIndex])
+				}
+				retryTimersRef.current[segIndex] = setTimeout(() => {
 					loadedSegmentsRef.current.delete(segIndex)
+					delete retryTimersRef.current[segIndex]
 				}, delay)
 			} finally {
 				isLoadingRef.current = false
@@ -140,6 +151,8 @@ export default function useDanmakuLoader(
 		loadedSegmentsRef.current.clear()
 		isLoadingRef.current = false
 		retryCountRef.current = {}
+		Object.values(retryTimersRef.current).forEach(clearTimeout)
+		retryTimersRef.current = {}
 	}, [bvid, cid, rawDataSV])
 
 	return {

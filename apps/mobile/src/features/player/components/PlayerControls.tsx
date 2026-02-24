@@ -16,6 +16,7 @@ import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { analyticsService } from '@/lib/services/analyticsService'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { tintLottieSource } from '@/utils/lottie'
 
@@ -114,7 +115,7 @@ export function MainPlaybackControls({
 		} else {
 			playPauseLottieRef.current?.play(0, 8)
 		}
-	}, [debouncedIsPlaying])
+	}, [debouncedIsPlaying, debouncedBuffering])
 
 	const skipButtonSize = size === 'compact' ? 40 : 46
 	const playButtonSize = size === 'compact' ? 80 : 96
@@ -177,12 +178,16 @@ export function MainPlaybackControls({
 					const nextIsPlaying = !debouncedIsPlaying
 					setDebouncedIsPlaying(nextIsPlaying)
 
-					if (debouncedIsPlaying) {
-						await Orpheus.pause()
-						void analyticsService.logPlayerAction('pause')
-					} else {
-						await Orpheus.play()
-						void analyticsService.logPlayerAction('play')
+					try {
+						if (debouncedIsPlaying) {
+							await Orpheus.pause()
+							void analyticsService.logPlayerAction('pause')
+						} else {
+							await Orpheus.play()
+							void analyticsService.logPlayerAction('play')
+						}
+					} catch (e) {
+						toastAndLogError('播放操作失败', e, 'UI.Player.Controls')
 					}
 				}}
 				testID='player-play-pause'
