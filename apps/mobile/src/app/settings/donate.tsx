@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function DonateSettingsPage() {
@@ -10,6 +12,7 @@ export default function DonateSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
+	const haveTrack = useCurrentTrack()
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -21,7 +24,7 @@ export default function DonateSettingsPage() {
 				style={styles.scrollView}
 				contentContainerStyle={[
 					styles.scrollContent,
-					{ paddingBottom: insets.bottom + 20 },
+					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
 				<View style={styles.introContainer}>
@@ -51,6 +54,9 @@ export default function DonateSettingsPage() {
 					onPress={() => openModal('DonationQR', { type: 'wechat' })}
 				/>
 			</ScrollView>
+			<View style={styles.nowPlayingBarContainer}>
+				<NowPlayingBar />
+			</View>
 		</View>
 	)
 }
@@ -74,5 +80,11 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		lineHeight: 24,
 		opacity: 0.8,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
 	},
 })
