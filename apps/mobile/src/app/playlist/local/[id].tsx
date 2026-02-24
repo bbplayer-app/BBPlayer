@@ -99,12 +99,18 @@ export default function LocalPlaylistPage() {
 		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks = useMemo(
-		() => playlistData?.pages.flatMap((page) => page.tracks) ?? [],
+		() =>
+			(
+				playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+			)?.flatMap((page) => page.tracks) ?? [],
 		[playlistData],
 	)
-	/** DB `order` values parallel to allLoadedTracks (needed for reorder mutation) */
-	const allLoadedOrderValues = useMemo(
-		() => playlistData?.pages.flatMap((page) => page.orderValues) ?? [],
+	/** DB `sort_key` values parallel to allLoadedTracks (needed for reorder mutation) */
+	const allLoadedSortKeys = useMemo(
+		() =>
+			(
+				playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+			)?.flatMap((page) => page.sortKeys) ?? [],
 		[playlistData],
 	)
 
@@ -151,8 +157,8 @@ export default function LocalPlaylistPage() {
 	const batchAddTracksModalPayloads = (() => {
 		const payloads = []
 		for (const trackId of selected) {
-			const track = playlistData?.pages
-				.flatMap((page) => page.tracks)
+			const track = (playlistData?.pages as Array<{ tracks: Track[] }>)
+				?.flatMap((page) => page.tracks)
 				.find((t) => t.id === trackId)
 			if (!track) return []
 			payloads.push({
@@ -430,10 +436,26 @@ export default function LocalPlaylistPage() {
 				0,
 				Math.min(targetVisualIndex, finalPlaylistData.length - 1),
 			)
-			const targetOrder = allLoadedOrderValues[clamped]
-			if (targetOrder !== undefined) {
-				reorderTrack({ playlistId: Number(id), trackId, toOrder: targetOrder })
+			// 显示为 DESC 排序：index 0 = 最高 sort_key，index N-1 = 最低 sort_key
+			// 向下拖（clamped > trackIndex）：新位置夹在 [clamped] 和 [clamped+1] 之间
+			// 向上拖（clamped < trackIndex）：新位置夹在 [clamped-1] 和 [clamped] 之间
+			let prevSortKey: string | null
+			let nextSortKey: string | null
+			if (targetVisualIndex > trackIndex) {
+				// 向列表底部方向移动（sort_key 降低）
+				prevSortKey = allLoadedSortKeys[clamped + 1] ?? null
+				nextSortKey = allLoadedSortKeys[clamped] ?? null
+			} else {
+				// 向列表顶部方向移动（sort_key 升高）
+				prevSortKey = allLoadedSortKeys[clamped] ?? null
+				nextSortKey = allLoadedSortKeys[clamped - 1] ?? null
 			}
+			reorderTrack({
+				playlistId: Number(id),
+				trackId,
+				prevSortKey,
+				nextSortKey,
+			})
 		}
 
 		setDragging(null)
@@ -441,7 +463,7 @@ export default function LocalPlaylistPage() {
 	}, [
 		stopAutoScroll,
 		finalPlaylistData.length,
-		allLoadedOrderValues,
+		allLoadedSortKeys,
 		reorderTrack,
 		id,
 	])

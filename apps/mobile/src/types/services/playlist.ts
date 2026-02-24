@@ -13,8 +13,8 @@ export interface UpdatePlaylistPayload {
 	coverUrl?: string | null
 }
 
-export interface ReorderSingleTrackPayload {
+export interface ReorderLocalPlaylistTrackPayload {
 	trackId: number
-	fromOrder: number // 从 0 开始
-	toOrder: number // 从 0 开始
+	prevSortKey: string | null // 目标位置前一项的 sortKey，null 代表列表最前
+	nextSortKey: string | null // 目标位置后一项的 sortKey，null 代表列表最后
 }

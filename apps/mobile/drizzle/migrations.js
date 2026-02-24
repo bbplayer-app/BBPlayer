@@ -13,6 +13,7 @@ import m0009 from './0009_lethal_marten_broadcloak.sql'
 import m0010 from './0010_brainy_anita_blake.sql'
 import m0011 from './0011_grey_echo.sql'
 import m0012 from './0012_blushing_human_fly.sql'
+import m0013 from './0013_jittery_randall.sql'
 import journal from './meta/_journal.json'
 
 export default {
@@ -31,5 +32,6 @@ export default {
 		m0010,
 		m0011,
 		m0012,
+		m0013,
 	},
 }

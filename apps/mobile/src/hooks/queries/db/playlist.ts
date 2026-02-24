@@ -129,7 +129,7 @@ export const usePlaylistContentsInfinite = (
 			),
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
 		initialPageParam: undefined as
-			| { lastOrder: number; createdAt: number; lastId: number }
+			| { lastSortKey: string; createdAt: number; lastId: number }
 			| undefined,
 		gcTime: 0,
 	})

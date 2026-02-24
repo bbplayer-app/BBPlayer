@@ -309,16 +309,17 @@ export const useReorderLocalPlaylistTrack = () => {
 		mutationFn: async ({
 			playlistId,
 			trackId,
-			toOrder,
+			prevSortKey,
+			nextSortKey,
 		}: {
 			playlistId: number
 			trackId: number
-			toOrder: number
+			prevSortKey: string | null
+			nextSortKey: string | null
 		}) => {
-			const result = await playlistService.moveLocalPlaylistTrackToOrder(
+			const result = await playlistService.reorderSingleLocalPlaylistTrack(
 				playlistId,
-				trackId,
-				toOrder,
+				{ trackId, prevSortKey, nextSortKey },
 			)
 			if (result.isErr()) throw result.error
 			return result.value
