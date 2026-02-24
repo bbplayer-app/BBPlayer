@@ -269,6 +269,26 @@ export default Sentry.wrap(function RootLayout() {
 					name='playlist/external-sync'
 					options={{ headerShown: false }}
 				/>
+				<Stack.Screen
+					name='settings/appearance'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/playback'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/lyrics'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/general'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/donate'
+					options={{ headerShown: false }}
+				/>
 			</Stack>
 			<Toaster />
 		</AppProviders>
