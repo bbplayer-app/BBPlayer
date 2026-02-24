@@ -506,6 +506,42 @@ export class PlaylistService {
 	}
 
 	/**
+	 * 通过 trackId 移动播放列表中的歌曲，无需提前知道 DB order 值。
+	 * 内部会先查询当前 order 再执行 reorderSingleLocalPlaylistTrack。
+	 * @param playlistId - 目标播放列表的 ID。
+	 * @param trackId - 要移动的歌曲 ID。
+	 * @param toOrder - 目标 DB order 值。
+	 * @returns ResultAsync
+	 */
+	public moveLocalPlaylistTrackToOrder(
+		playlistId: number,
+		trackId: number,
+		toOrder: number,
+	): ResultAsync<true, DatabaseError | ServiceError> {
+		return ResultAsync.fromPromise(
+			this.db.query.playlistTracks.findFirst({
+				where: and(
+					eq(schema.playlistTracks.playlistId, playlistId),
+					eq(schema.playlistTracks.trackId, trackId),
+				),
+				columns: { order: true },
+			}),
+			(e) => new DatabaseError('查询歌曲排序位置失败', { cause: e }),
+		).andThen((row) => {
+			if (!row) {
+				return errAsync(
+					new ServiceError(`歌曲 ${trackId} 不在播放列表 ${playlistId} 中`),
+				)
+			}
+			return this.reorderSingleLocalPlaylistTrack(playlistId, {
+				trackId,
+				fromOrder: row.order,
+				toOrder,
+			})
+		})
+	}
+
+	/**
 	 * 获取播放列表中的所有歌曲
 	 * @param playlistId - 目标播放列表的 ID。
 	 * @returns ResultAsync
@@ -1011,6 +1047,7 @@ export class PlaylistService {
 	}): ResultAsync<
 		{
 			tracks: Track[]
+			orderValues: number[]
 			nextCursor?: {
 				lastOrder: number
 				createdAt: number
@@ -1101,6 +1138,7 @@ export class PlaylistService {
 						}),
 		).andThen((data) => {
 			const newTracks: Track[] = []
+			const orderValues: number[] = []
 			for (const pt of data) {
 				const t = this.trackService.formatTrack(pt.track)
 				if (!t) {
@@ -1111,6 +1149,7 @@ export class PlaylistService {
 					)
 				}
 				newTracks.push(t)
+				orderValues.push(pt.order)
 			}
 
 			let nextCursor
@@ -1127,6 +1166,9 @@ export class PlaylistService {
 
 			return okAsync({
 				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				orderValues: hasMore
+					? orderValues.slice(0, effectiveLimit)
+					: orderValues,
 				nextCursor,
 			})
 		})

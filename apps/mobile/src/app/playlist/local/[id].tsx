@@ -7,9 +7,10 @@ import {
 	useDeferredValue,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -22,6 +23,7 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
+import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
@@ -32,6 +34,7 @@ import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
 	usePlaylistSync,
+	useReorderLocalPlaylistTrack,
 } from '@/hooks/mutations/db/playlist'
 import {
 	usePlaylistContentsInfinite,
@@ -45,11 +48,19 @@ import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
+import * as Haptics from '@/utils/haptics'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'
+
+const SELECT_MODE_ITEM_HEIGHT = 69
+
+/** px from top/bottom edge of list container that triggers auto-scroll */
+const EDGE_ZONE = 80
+/** px scrolled per auto-scroll tick (~16 ms) */
+const SCROLL_SPEED = 8
 
 export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
@@ -89,6 +100,11 @@ export default function LocalPlaylistPage() {
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks = useMemo(
 		() => playlistData?.pages.flatMap((page) => page.tracks) ?? [],
+		[playlistData],
+	)
+	/** DB `order` values parallel to allLoadedTracks (needed for reorder mutation) */
+	const allLoadedOrderValues = useMemo(
+		() => playlistData?.pages.flatMap((page) => page.orderValues) ?? [],
 		[playlistData],
 	)
 
@@ -188,15 +204,12 @@ export default function LocalPlaylistPage() {
 	const { mutate: deletePlaylist } = useDeletePlaylist()
 	const { mutate: deleteTrackFromLocalPlaylist } =
 		useBatchDeleteTracksFromLocalPlaylist()
+	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
 
 	const onClickDeletePlaylist = useCallback(() => {
 		deletePlaylist(
-			{
-				playlistId: Number(id),
-			},
-			{
-				onSuccess: () => router.back(),
-			},
+			{ playlistId: Number(id) },
+			{ onSuccess: () => router.back() },
 		)
 	}, [deletePlaylist, id, router])
 
@@ -248,9 +261,8 @@ export default function LocalPlaylistPage() {
 	const trackMenuItems = useLocalPlaylistMenu({
 		deleteTrack,
 		openAddToPlaylistModal: (track) =>
-			openModal('UpdateTrackLocalPlaylists', { track: track }),
-		openEditTrackModal: (track) =>
-			openModal('EditTrackMetadata', { track: track }),
+			openModal('UpdateTrackLocalPlaylists', { track }),
+		openEditTrackModal: (track) => openModal('EditTrackMetadata', { track }),
 		playlist: playlistMetadata!,
 	})
 
@@ -284,21 +296,169 @@ export default function LocalPlaylistPage() {
 		height: searchbarHeight.value,
 	}))
 
-	if (typeof id !== 'string') {
-		return null
-	}
+	const [dragging, setDragging] = useState<{
+		trackIndex: number
+		trackId: number
+	} | null>(null)
 
-	if (isPlaylistDataPending || isPlaylistMetadataPending) {
+	/** Index AFTER which to show the insertion line (-1 = before item 0) */
+	const [insertAfterIndex, setInsertAfterIndex] = useState<number | null>(null)
+
+	/** Ghost Y relative to the list container */
+	const ghostY = useSharedValue(0)
+
+	const dragOriginRef = useRef(0)
+
+	/** Absolute screen Y of the top of the list container (from measureInWindow) */
+	const containerTopRef = useRef(0)
+	const containerHeightRef = useRef(0)
+	const listContainerRef = useRef<View>(null)
+
+	/** Current FlashList scroll offset */
+	const scrollOffsetRef = useRef(0)
+
+	/** Auto-scroll interval handle */
+	const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+	const stopAutoScroll = useCallback(() => {
+		if (autoScrollRef.current !== null) {
+			clearInterval(autoScrollRef.current)
+			autoScrollRef.current = null
+		}
+	}, [])
+
+	const startAutoScroll = useCallback(
+		(direction: 'up' | 'down') => {
+			stopAutoScroll()
+			autoScrollRef.current = setInterval(() => {
+				const delta = direction === 'down' ? SCROLL_SPEED : -SCROLL_SPEED
+				const next = Math.max(0, scrollOffsetRef.current + delta)
+				listRef.current?.scrollToOffset({ offset: next, animated: false })
+				scrollOffsetRef.current = next
+			}, 16)
+		},
+		[stopAutoScroll, listRef],
+	)
+
+	const updateDragPosition = useCallback(
+		(absoluteY: number) => {
+			// Ghost: center it on the finger relative to the container
+			ghostY.set(
+				absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
+			)
+
+			// Insert index: use calibration so that item-0 touches the origin correctly
+			const hoverRel =
+				absoluteY + scrollOffsetRef.current - dragOriginRef.current
+			const k = Math.floor(hoverRel / SELECT_MODE_ITEM_HEIGHT)
+			// Upper/lower half of item k determines whether to insert before or after
+			const inItemFrac =
+				(hoverRel - k * SELECT_MODE_ITEM_HEIGHT) / SELECT_MODE_ITEM_HEIGHT
+			const insertIdx = inItemFrac >= 0.5 ? k : k - 1
+			setInsertAfterIndex(
+				Math.max(-1, Math.min(insertIdx, finalPlaylistData.length - 1)),
+			)
+
+			// Edge auto-scroll
+			const containerRelY = absoluteY - containerTopRef.current
+			if (containerRelY < EDGE_ZONE) {
+				startAutoScroll('up')
+			} else if (containerRelY > containerHeightRef.current - EDGE_ZONE) {
+				startAutoScroll('down')
+			} else {
+				stopAutoScroll()
+			}
+		},
+		[finalPlaylistData.length, ghostY, startAutoScroll, stopAutoScroll],
+	)
+
+	const draggingRef = useRef(dragging)
+	const insertAfterIndexRef = useRef(insertAfterIndex)
+	useEffect(() => {
+		draggingRef.current = dragging
+	}, [dragging])
+	useEffect(() => {
+		insertAfterIndexRef.current = insertAfterIndex
+	}, [insertAfterIndex])
+
+	const handleDragStart = useCallback(
+		(trackIndex: number, trackId: number, absoluteY: number) => {
+			void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+			// Calibrate: store the virtual Y-origin so item i is at origin + i * H
+			dragOriginRef.current =
+				absoluteY +
+				scrollOffsetRef.current -
+				trackIndex * SELECT_MODE_ITEM_HEIGHT
+			setDragging({ trackIndex, trackId })
+			// Ghost starts centered on the finger
+			ghostY.set(
+				absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
+			)
+			setInsertAfterIndex(trackIndex - 1)
+		},
+		[ghostY],
+	)
+
+	const handleDragUpdate = useCallback(
+		(absoluteY: number) => {
+			updateDragPosition(absoluteY)
+		},
+		[updateDragPosition],
+	)
+
+	const handleDragEnd = useCallback(() => {
+		stopAutoScroll()
+		const currentDragging = draggingRef.current
+		const currentInsertAfterIndex = insertAfterIndexRef.current
+
+		if (!currentDragging || currentInsertAfterIndex === null) {
+			setDragging(null)
+			setInsertAfterIndex(null)
+			return
+		}
+
+		const { trackIndex, trackId } = currentDragging
+
+		// Adjust target visual index based on drag direction
+		const targetVisualIndex =
+			currentInsertAfterIndex >= trackIndex
+				? currentInsertAfterIndex
+				: currentInsertAfterIndex + 1
+
+		if (targetVisualIndex !== trackIndex) {
+			const clamped = Math.max(
+				0,
+				Math.min(targetVisualIndex, finalPlaylistData.length - 1),
+			)
+			const targetOrder = allLoadedOrderValues[clamped]
+			if (targetOrder !== undefined) {
+				reorderTrack({ playlistId: Number(id), trackId, toOrder: targetOrder })
+			}
+		}
+
+		setDragging(null)
+		setInsertAfterIndex(null)
+	}, [
+		stopAutoScroll,
+		finalPlaylistData.length,
+		allLoadedOrderValues,
+		reorderTrack,
+		id,
+	])
+
+	const ghostAnimatedStyle = useAnimatedStyle(() => ({
+		transform: [{ translateY: ghostY.value }],
+	}))
+
+	const draggedTrack =
+		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
+
+	if (typeof id !== 'string') return null
+	if (isPlaylistDataPending || isPlaylistMetadataPending)
 		return <PlaylistPageSkeleton />
-	}
-
-	if (isPlaylistDataError || isPlaylistMetadataError) {
+	if (isPlaylistDataError || isPlaylistMetadataError)
 		return <PlaylistError text='加载播放列表内容失败' />
-	}
-
-	if (!playlistMetadata) {
-		return <PlaylistError text='未找到播放列表元数据' />
-	}
+	if (!playlistMetadata) return <PlaylistError text='未找到播放列表元数据' />
 
 	return (
 		<View style={[styles.container, { backgroundColor }]}>
@@ -369,8 +529,13 @@ export default function LocalPlaylistPage() {
 			</Animated.View>
 
 			<View
-				style={{
-					flex: 1,
+				ref={listContainerRef}
+				style={{ flex: 1 }}
+				onLayout={() => {
+					listContainerRef.current?.measureInWindow((_x, y, _w, h) => {
+						containerTopRef.current = y
+						containerHeightRef.current = h
+					})
 				}}
 			>
 				<LocalTrackList
@@ -390,6 +555,25 @@ export default function LocalPlaylistPage() {
 							? () => fetchNextPagePlaylistData()
 							: undefined
 					}
+					onDragStart={
+						selectMode && playlistMetadata.type === 'local'
+							? handleDragStart
+							: undefined
+					}
+					onDragUpdate={
+						selectMode && playlistMetadata.type === 'local'
+							? handleDragUpdate
+							: undefined
+					}
+					onDragEnd={
+						selectMode && playlistMetadata.type === 'local'
+							? handleDragEnd
+							: undefined
+					}
+					insertAfterIndex={dragging !== null ? insertAfterIndex : null}
+					onScroll={(e) => {
+						scrollOffsetRef.current = e.nativeEvent.contentOffset.y
+					}}
 					ListHeaderComponent={
 						<PlaylistHeader
 							coverRef={coverRef}
@@ -413,6 +597,27 @@ export default function LocalPlaylistPage() {
 						/>
 					}
 				/>
+
+				{dragging !== null && draggedTrack && (
+					<Animated.View
+						pointerEvents='none'
+						style={[styles.ghostContainer, ghostAnimatedStyle]}
+					>
+						<View style={styles.ghostInner}>
+							<TrackListItem
+								index={dragging.trackIndex}
+								data={draggedTrack}
+								playlist={playlistMetadata}
+								selectMode={true}
+								isSelected={false}
+								toggleSelected={() => void 0}
+								enterSelectMode={() => void 0}
+								onTrackPress={() => void 0}
+								onMenuPress={() => void 0}
+							/>
+						</View>
+					</Animated.View>
+				)}
 			</View>
 
 			<Portal>
@@ -432,7 +637,6 @@ export default function LocalPlaylistPage() {
 						title='编辑播放列表信息'
 						leadingIcon='pencil'
 					/>
-					{/* 只允许同步纯粹本地创建的播放列表 */}
 					{playlistMetadata.type === 'local' &&
 						playlistMetadata.remoteSyncId === null && (
 							<Menu.Item
@@ -455,15 +659,8 @@ export default function LocalPlaylistPage() {
 								'删除播放列表',
 								'确定要删除此播放列表吗？',
 								[
-									{
-										text: '取消',
-									},
-									{
-										text: '确定',
-										onPress: () => {
-											onClickDeletePlaylist()
-										},
-									},
+									{ text: '取消' },
+									{ text: '确定', onPress: onClickDeletePlaylist },
 								],
 								{ cancelable: true },
 							)
@@ -474,6 +671,7 @@ export default function LocalPlaylistPage() {
 					/>
 				</FunctionalMenu>
 			</Portal>
+
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
@@ -482,16 +680,25 @@ export default function LocalPlaylistPage() {
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	searchbarContainer: {
-		overflow: 'hidden',
-	},
+	container: { flex: 1 },
+	searchbarContainer: { overflow: 'hidden' },
 	nowPlayingBarContainer: {
 		position: 'absolute',
 		bottom: 0,
 		left: 0,
 		right: 0,
+	},
+	ghostContainer: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+	},
+	ghostInner: {
+		opacity: 0.85,
+		elevation: 8,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 6,
 	},
 })
