@@ -9,8 +9,8 @@ import { storage } from '@/utils/mmkv'
 
 const logger = log.extend('useFastMigrations')
 const SCHEMA_VERSION_KEY = 'db_schema_version'
-/** 标记 sort_key JS 迁移是否已完成，避免每次启动都扫描 */
-const SORT_KEY_MIGRATED_KEY = 'sort_key_migrated_v1' // gitleaks:allow
+
+const SORT_KEY_MIGRATED_V2_KEY = 'sort_key_migrated_v2' // gitleaks:allow
 
 interface MigrationConfig {
 	journal: {
@@ -29,63 +29,80 @@ type Action =
 	| { type: 'migrated'; payload: true }
 	| { type: 'error'; payload: Error }
 
-/**
- * 将 playlist_tracks 中 sort_key = '' 的行从旧 integer `order` 列迁移到
- * fractional indexing 字符串键。
- *
- * 每个 playlist 按旧的 `order` ASC 排序，依次用 generateKeyBetween 生成升序
- * sort_key。UI 端仍用 DESC 展示（最新的 sort_key 最大），与之前 desc(order) 一致。
- */
-function migrateSortKeys(): void {
-	if (storage.getBoolean(SORT_KEY_MIGRATED_KEY)) return
+function migrateSortKeysV2(): void {
+	if (storage.getBoolean(SORT_KEY_MIGRATED_V2_KEY)) return
 
-	// 读出所有 sort_key 为空的行，按 playlist / order 排序
-	// 此时 `order` 列仍存在（SQL migration 未删除），可以直接读取
-	type Row = { playlist_id: number; track_id: number }
-	const rows = expoDb.getAllSync<Row>(
-		`SELECT playlist_id, track_id
-     FROM playlist_tracks
-     WHERE sort_key = ''
-     ORDER BY playlist_id ASC, "order" ASC, rowid ASC`,
-	)
+	try {
+		const tableInfo = expoDb.getAllSync<{ name: string }>(
+			`PRAGMA table_info(playlist_tracks)`,
+		)
+		const hasOrderColumn = tableInfo.some((col) => col.name === 'order')
 
-	if (rows.length === 0) {
-		storage.set(SORT_KEY_MIGRATED_KEY, true)
-		return
-	}
-
-	// 按 playlist 分组
-	const grouped = new Map<number, number[]>()
-	for (const row of rows) {
-		const arr = grouped.get(row.playlist_id) ?? []
-		arr.push(row.track_id)
-		grouped.set(row.playlist_id, arr)
-	}
-
-	// 对每个 playlist 生成 sort_key 并逐行 UPDATE（同步，在主线程 SQLite 上跑）
-	expoDb.withTransactionSync(() => {
-		for (const [playlistId, trackIds] of grouped) {
-			let prevKey: string | null = null
-			for (const trackId of trackIds) {
-				const sortKey = generateKeyBetween(prevKey, null)
-				prevKey = sortKey
-				expoDb.runSync(
-					`UPDATE playlist_tracks SET sort_key = ? WHERE playlist_id = ? AND track_id = ?`,
-					[sortKey, playlistId, trackId],
-				)
-			}
+		if (!hasOrderColumn) {
+			logger.info('[v2] 物理表中已无 order 字段，无需执行数据迁移与删除操作')
+			storage.set(SORT_KEY_MIGRATED_V2_KEY, true)
+			return
 		}
-	})
 
-	logger.info(`sort_key 迁移完成，共处理 ${rows.length} 行`)
-	storage.set(SORT_KEY_MIGRATED_KEY, true)
+		expoDb.withTransactionSync(() => {
+			// 1. 读取需要迁移的数据
+			type Row = { playlist_id: number; track_id: number }
+			const rows = expoDb.getAllSync<Row>(
+				`SELECT playlist_id, track_id
+                 FROM playlist_tracks
+                 WHERE sort_key = '' OR sort_key IS NULL
+                 ORDER BY playlist_id ASC, "order" ASC, rowid ASC`,
+			)
+
+			if (rows.length > 0) {
+				// 2. 读取当前各个歌单的最大 sort_key 作为接力起点
+				type MaxKeyRow = { playlist_id: number; max_key: string }
+				const maxKeys = expoDb.getAllSync<MaxKeyRow>(
+					`SELECT playlist_id, MAX(sort_key) as max_key
+                     FROM playlist_tracks
+                     WHERE sort_key != '' AND sort_key IS NOT NULL
+                     GROUP BY playlist_id`,
+				)
+
+				const maxKeyMap = new Map<number, string>()
+				for (const row of maxKeys) {
+					maxKeyMap.set(row.playlist_id, row.max_key)
+				}
+
+				// 按 playlist 分组
+				const grouped = new Map<number, number[]>()
+				for (const row of rows) {
+					const arr = grouped.get(row.playlist_id) ?? []
+					arr.push(row.track_id)
+					grouped.set(row.playlist_id, arr)
+				}
+
+				// 3. 执行更新操作
+				for (const [playlistId, trackIds] of grouped) {
+					let prevKey: string | null = maxKeyMap.get(playlistId) || null
+
+					for (const trackId of trackIds) {
+						const sortKey = generateKeyBetween(prevKey, null)
+						prevKey = sortKey
+						expoDb.runSync(
+							`UPDATE playlist_tracks SET sort_key = ? WHERE playlist_id = ? AND track_id = ?`,
+							[sortKey, playlistId, trackId],
+						)
+					}
+				}
+				logger.info(`[v2] sort_key 数据迁移接力完成，共处理 ${rows.length} 行`)
+			}
+
+			expoDb.runSync(`ALTER TABLE playlist_tracks DROP COLUMN "order"`)
+			logger.info('[v2] 已成功从物理表中删除 order 字段')
+		})
+
+		storage.set(SORT_KEY_MIGRATED_V2_KEY, true)
+	} catch (error) {
+		logger.error('[v2] 迁移过程中发生错误，事务已回滚:', error)
+	}
 }
 
-/**
- * 通过在 MMKV 中缓存最新的迁移版本号，避免每次启动都执行 SQL 查询检查迁移状态。
- *
- * （我没想到性能差异会这么大，大约是 5000x 的提升...从 300ms 到 0.06ms...）
- */
 export const useFastMigrations = (
 	db: ExpoSQLiteDatabase<Record<string, unknown>>,
 	migrations: MigrationConfig,
@@ -120,8 +137,8 @@ export const useFastMigrations = (
 			const latestVersion = migrations.journal.entries.at(-1)?.when ?? 0
 
 			if (cachedVersion === latestVersion) {
-				// SQL 迁移已是最新，但仍需执行 JS 层数据迁移（有 MMKV flag 保护，冷路径极快）
-				migrateSortKeys()
+				// SQL 迁移已是最新，检查/执行 JS 层 v2 迁移
+				migrateSortKeysV2()
 				dispatch({ type: 'migrated', payload: true })
 				return
 			}
@@ -130,8 +147,8 @@ export const useFastMigrations = (
 
 			try {
 				await migrate(db, migrations)
-				// SQL 迁移完成后立刻执行 JS 层数据迁移
-				migrateSortKeys()
+				// SQL 迁移完成后立刻检查/执行 JS 层 v2 迁移
+				migrateSortKeysV2()
 
 				storage.set(SCHEMA_VERSION_KEY, latestVersion)
 				dispatch({ type: 'migrated', payload: true })

@@ -1,3 +1,6 @@
+import { useMMKVDevTools } from '@rozenite/mmkv-plugin'
+import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
+import { useTanStackQueryDevTools } from '@rozenite/tanstack-query-plugin'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ShareIntentProvider } from 'expo-share-intent'
@@ -14,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import GlobalErrorFallback from '@/components/ErrorBoundary'
 import { queryClient } from '@/lib/config/queryClient'
 import { buildMaterial3PaperColors } from '@/lib/theme/material3Colors'
+import { storage } from '@/utils/mmkv'
 
 export default function AppProviders({ children }: { children: ReactNode }) {
 	const colorScheme = useColorScheme()
@@ -30,6 +34,15 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 					},
 		[colorScheme],
 	)
+
+	useTanStackQueryDevTools(queryClient)
+	useMMKVDevTools({
+		storages: {
+			// @ts-expect-error
+			app: storage,
+		},
+	})
+	useRequireProfilerDevTools()
 
 	return (
 		<ShareIntentProvider>
