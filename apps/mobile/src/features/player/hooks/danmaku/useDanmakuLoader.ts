@@ -1,4 +1,4 @@
-import { useNetworkState } from 'expo-network'
+import { useNetInfo } from '@react-native-community/netinfo'
 import { useCallback, useEffect, useRef } from 'react'
 import {
 	useAnimatedReaction,
@@ -26,7 +26,7 @@ export default function useDanmakuLoader(
 	cid: number | undefined,
 	currentTime: SharedValue<number>,
 ) {
-	const networkState = useNetworkState()
+	const networkState = useNetInfo()
 	const isOffline = networkState.isConnected === false
 	const rawDataSV = useSharedValue<BilibiliDanmakuItem[]>([])
 	const loadedSegmentsRef = useRef<Set<number>>(new Set())

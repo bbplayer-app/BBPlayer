@@ -113,6 +113,9 @@ importers:
       '@nandorojo/galeria':
         specifier: ^2.0.2
         version: 2.0.2(expo@55.0.0-preview.7)(react-dom@19.1.0(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+      '@react-native-community/netinfo':
+        specifier: ^12.0.1
+        version: 12.0.1(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@react-native-community/slider':
         specifier: ^5.1.2
         version: 5.1.2
@@ -227,9 +230,6 @@ importers:
       expo-media-library:
         specifier: ~55.0.3
         version: 55.0.3(expo@55.0.0-preview.7)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))
-      expo-network:
-        specifier: ~55.0.3
-        version: 55.0.3(expo@55.0.0-preview.7)(react@19.2.0)
       expo-router:
         specifier: 55.0.0-canary-20260128-67ce8d5
         version: 55.0.0-canary-20260128-67ce8d5(14bd913a0d48c5e3820841e4afa62015)
@@ -3160,6 +3160,12 @@ packages:
     engines: {node: '>=20.19.4'}
     hasBin: true
 
+  '@react-native-community/netinfo@12.0.1':
+    resolution: {integrity: sha512-P/3caXIvfYSJG8AWJVefukg+ZGRPs+M4Lp3pNJtgcTYoJxCjWrKQGNnCkj/Cz//zWa/avGed0i/wzm0T8vV2IQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '>=0.59'
+
   '@react-native-community/slider@5.1.2':
     resolution: {integrity: sha512-UV/MjCyCtSjS5BQDrrGIMmCXm309xEG6XbR0Dj65kzTraJSVDxSjQS2uBUXgX+5SZUOCzCxzv3OufOZBdtQY4w==}
 
@@ -5950,12 +5956,6 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
-
-  expo-network@55.0.3:
-    resolution: {integrity: sha512-Nab4nv5NeXpt+0QRhy3oon2rGtatYByVbjNnhe5aSpLAcfg9ztdpM+jbmMzrjluZ9rm7N/oBGzCUP6D2aMPGwQ==}
-    peerDependencies:
-      expo: '*'
-      react: '*'
 
   expo-router@55.0.0-canary-20260128-67ce8d5:
     resolution: {integrity: sha512-N5UzgdG+yPRF5Lh9EYXXi3TcZ3PX+mPCIaGs9ekwY2s+Z62O76jEZIOZ1Z0X0x7srLI/R9P6wbQdqxpR2Wx93Q==}
@@ -13121,6 +13121,11 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@react-native-community/netinfo@12.0.1(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      react: 19.2.0
+      react-native: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+
   '@react-native-community/slider@5.1.2': {}
 
   '@react-native-firebase/analytics@23.8.6(@react-native-firebase/app@23.8.6(expo@55.0.0-preview.7)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))':
@@ -16440,11 +16445,6 @@ snapshots:
       invariant: 2.2.4
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
-
-  expo-network@55.0.3(expo@55.0.0-preview.7)(react@19.2.0):
-    dependencies:
-      expo: 55.0.0-preview.7(@babel/core@7.28.6)(@expo/dom-webview@0.2.8)(@expo/metro-runtime@55.0.3)(expo-router@55.0.0-canary-20260128-67ce8d5)(react-dom@19.1.0(react@19.2.0))(react-native-web@0.21.1(react-dom@19.1.0(react@19.2.0))(react@19.2.0))(react-native-webview@13.15.0(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
-      react: 19.2.0
 
   expo-router@55.0.0-canary-20260128-67ce8d5(14bd913a0d48c5e3820841e4afa62015):
     dependencies:

@@ -1,9 +1,12 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	fetch as fetchNetInfo,
+	addEventListener as addNetInfoEventListener,
+} from '@react-native-community/netinfo'
 import { useLogger } from '@react-navigation/devtools'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import * as Network from 'expo-network'
 import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
@@ -59,14 +62,14 @@ export default Sentry.wrap(function RootLayout() {
 	useLogger(ref)
 
 	onlineManager.setEventListener((setOnline) => {
-		void Network.getNetworkStateAsync().then((state) => {
+		void fetchNetInfo().then((state) => {
 			setOnline(!!state.isConnected)
 		})
 
-		const eventSubscription = Network.addNetworkStateListener((state) => {
+		const unsubscribe = addNetInfoEventListener((state) => {
 			setOnline(!!state.isConnected)
 		})
-		return eventSubscription.remove.bind(eventSubscription)
+		return unsubscribe
 	})
 
 	useEffect(() => {

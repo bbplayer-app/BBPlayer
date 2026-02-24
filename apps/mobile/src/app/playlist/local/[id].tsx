@@ -1,6 +1,6 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import { useNetInfo } from '@react-native-community/netinfo'
 import { useImage } from 'expo-image'
-import { useNetworkState } from 'expo-network'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
@@ -106,7 +106,7 @@ export default function LocalPlaylistPage() {
 			}>
 		)?.flatMap((page) => page.sortKeys) ?? []
 
-	const networkState = useNetworkState()
+	const networkState = useNetInfo()
 	const isOffline = networkState.isConnected === false
 
 	const loadedTrackKeys = allLoadedTracks.map((t) => t.uniqueKey)

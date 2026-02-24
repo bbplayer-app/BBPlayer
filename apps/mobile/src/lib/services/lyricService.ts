@@ -1,6 +1,6 @@
+import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import * as FileSystem from 'expo-file-system'
-import * as Network from 'expo-network'
 import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
@@ -221,16 +221,16 @@ class LyricService {
 				return e
 			},
 		).orElse(() => {
-			return ResultAsync.fromSafePromise(
-				Network.getNetworkStateAsync(),
-			).andThen((networkState) => {
-				if (networkState.isConnected === false) {
-					return errAsync(
-						new LyricNotFoundError('当前处于离线状态，无法获取网络歌词'),
-					)
-				}
-				return fetchFromNetwork()
-			})
+			return ResultAsync.fromSafePromise(fetchNetInfo()).andThen(
+				(networkState) => {
+					if (networkState.isConnected === false) {
+						return errAsync(
+							new LyricNotFoundError('当前处于离线状态，无法获取网络歌词'),
+						)
+					}
+					return fetchFromNetwork()
+				},
+			)
 		})
 	}
 
