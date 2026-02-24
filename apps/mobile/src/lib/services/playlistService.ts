@@ -981,6 +981,7 @@ export class PlaylistService {
 				createdAt: number
 				lastId: number
 			}
+			nextPageFirstSortKey?: string
 		},
 		DatabaseError | ServiceError
 	> {
@@ -1081,6 +1082,7 @@ export class PlaylistService {
 			}
 
 			let nextCursor
+			let nextPageFirstSortKey
 			const hasMore = data.length === effectiveLimit + 1
 
 			if (hasMore) {
@@ -1090,12 +1092,14 @@ export class PlaylistService {
 					createdAt: lastItem.createdAt.getTime(),
 					lastId: lastItem.trackId,
 				}
+				nextPageFirstSortKey = data[effectiveLimit].sortKey
 			}
 
 			return okAsync({
 				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
 				sortKeys: hasMore ? sortKeys.slice(0, effectiveLimit) : sortKeys,
 				nextCursor,
+				nextPageFirstSortKey,
 			})
 		})
 	}

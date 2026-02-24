@@ -90,12 +90,20 @@ export default function LocalPlaylistPage() {
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const allLoadedTracks =
 		(
-			playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+			playlistData?.pages as Array<{
+				tracks: Track[]
+				sortKeys: string[]
+				nextPageFirstSortKey?: string
+			}>
 		)?.flatMap((page) => page.tracks) ?? []
 	/** DB `sort_key` values parallel to allLoadedTracks (needed for reorder mutation) */
 	const allLoadedSortKeys =
 		(
-			playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+			playlistData?.pages as Array<{
+				tracks: Track[]
+				sortKeys: string[]
+				nextPageFirstSortKey?: string
+			}>
 		)?.flatMap((page) => page.sortKeys) ?? []
 
 	const networkState = useNetworkState()
@@ -414,7 +422,15 @@ export default function LocalPlaylistPage() {
 			let nextSortKey: string | null
 			if (targetVisualIndex > trackIndex) {
 				// 向列表底部方向移动（sort_key 降低）
-				prevSortKey = allLoadedSortKeys[clamped + 1] ?? null
+				// 如果已经到了加载的末尾，且还有下一页，那么 prevSortKey 应该是下一页的第一条的 key
+				const isAtEnd = clamped === allLoadedSortKeys.length - 1
+				const nextPageFirstSortKey =
+					playlistData?.pages[playlistData.pages.length - 1]
+						?.nextPageFirstSortKey
+				prevSortKey =
+					allLoadedSortKeys[clamped + 1] ??
+					(isAtEnd && hasNextPagePlaylistData ? nextPageFirstSortKey : null) ??
+					null
 				nextSortKey = allLoadedSortKeys[clamped] ?? null
 			} else {
 				// 向列表顶部方向移动（sort_key 升高）

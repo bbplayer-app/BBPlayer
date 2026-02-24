@@ -35,6 +35,8 @@
 
 ### Fixed
 
+- 修复本地播放列表在分页未加载完成时，将歌曲拖拽到当前列表底部会导致其被移动到全列表底部的问题
+
 - 修复播放器主控件 Lottie 图标 `colorFilters` 不生效（始终显示红色）的问题，根本原因是 JSON 文件中 Stroke 图层颜色硬编码为红色且 lottie-react-native 对 Stroke 图层的 colorFilters 支持有限，已将三个 Lottie JSON 的 Stroke 颜色改为白色以使主题色正确叠加
 - 修复应用启动后断网导致本地播放列表和数据触发无限加载的问题
 - orpheus：修复桌面歌词锁定后重启应用，导致歌词无法移动且阻挡底层点击操作的问题
