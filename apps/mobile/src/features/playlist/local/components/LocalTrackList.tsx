@@ -15,7 +15,7 @@ import {
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
-import { MD3Colors } from 'react-native-paper/src/types'
+import type { MD3Theme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -123,7 +123,7 @@ const renderItem = ({
 		onDragUpdate?: (absoluteY: number) => void
 		onDragEnd?: () => void
 		insertAfterIndex: number | null
-		colors: MD3Colors
+		colors: MD3Theme['colors']
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')

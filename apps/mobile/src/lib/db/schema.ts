@@ -131,7 +131,6 @@ export const playlistTracks = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.playlistId, table.trackId] }),
-		index('playlist_tracks_playlist_idx').on(table.playlistId),
 		index('playlist_tracks_track_idx').on(table.trackId),
 		index('playlist_tracks_sort_key_idx').on(table.playlistId, table.sortKey),
 	],

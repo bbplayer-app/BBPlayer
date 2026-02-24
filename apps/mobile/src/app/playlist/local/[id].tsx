@@ -2,14 +2,7 @@ import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { useImage } from 'expo-image'
 import { useNetworkState } from 'expo-network'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import {
-	useCallback,
-	useDeferredValue,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
 import Animated, {
@@ -78,15 +71,12 @@ export default function LocalPlaylistPage() {
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
 
-	const selection = useMemo(
-		() => ({
-			active: selectMode,
-			selected,
-			toggle,
-			enter: enterSelectMode,
-		}),
-		[selectMode, selected, toggle, enterSelectMode],
-	)
+	const selection = {
+		active: selectMode,
+		selected,
+		toggle,
+		enter: enterSelectMode,
+	}
 	const openModal = useModalStore((state) => state.open)
 	const [functionalMenuVisible, setFunctionalMenuVisible] = useState(false)
 
@@ -98,32 +88,23 @@ export default function LocalPlaylistPage() {
 		hasNextPage: hasNextPagePlaylistData,
 		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
-	const allLoadedTracks = useMemo(
-		() =>
-			(
-				playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
-			)?.flatMap((page) => page.tracks) ?? [],
-		[playlistData],
-	)
+	const allLoadedTracks =
+		(
+			playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+		)?.flatMap((page) => page.tracks) ?? []
 	/** DB `sort_key` values parallel to allLoadedTracks (needed for reorder mutation) */
-	const allLoadedSortKeys = useMemo(
-		() =>
-			(
-				playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
-			)?.flatMap((page) => page.sortKeys) ?? [],
-		[playlistData],
-	)
+	const allLoadedSortKeys =
+		(
+			playlistData?.pages as Array<{ tracks: Track[]; sortKeys: string[] }>
+		)?.flatMap((page) => page.sortKeys) ?? []
 
 	const networkState = useNetworkState()
 	const isOffline = networkState.isConnected === false
 
-	const loadedTrackKeys = useMemo(
-		() => allLoadedTracks.map((t) => t.uniqueKey),
-		[allLoadedTracks],
-	)
+	const loadedTrackKeys = allLoadedTracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(loadedTrackKeys)
 
-	const playableOfflineKeys = useMemo(() => {
+	const playableOfflineKeys = (() => {
 		if (!allLoadedTracks.length) return new Set<string>()
 
 		const keys = new Set<string>()
@@ -152,15 +133,16 @@ export default function LocalPlaylistPage() {
 			}
 		}
 		return keys
-	}, [allLoadedTracks, downloadStatus])
+	})()
 
 	const batchAddTracksModalPayloads = (() => {
+		const trackMap = new Map<number, Track>(
+			allLoadedTracks.map((t) => [t.id, t]),
+		)
 		const payloads = []
 		for (const trackId of selected) {
-			const track = (playlistData?.pages as Array<{ tracks: Track[] }>)
-				?.flatMap((page) => page.tracks)
-				.find((t) => t.id === trackId)
-			if (!track) return []
+			const track = trackMap.get(trackId)
+			if (!track) continue
 			payloads.push({
 				track: {
 					...track,
@@ -212,14 +194,14 @@ export default function LocalPlaylistPage() {
 		useBatchDeleteTracksFromLocalPlaylist()
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
 
-	const onClickDeletePlaylist = useCallback(() => {
+	const onClickDeletePlaylist = () => {
 		deletePlaylist(
 			{ playlistId: Number(id) },
 			{ onSuccess: () => router.back() },
 		)
-	}, [deletePlaylist, id, router])
+	}
 
-	const handleSync = useCallback(() => {
+	const handleSync = () => {
 		if (!playlistMetadata || !playlistMetadata.remoteSyncId) {
 			toast.error(
 				'无法同步，因为未找到播放列表元数据或\u2009remoteSyncId\u2009为空',
@@ -246,7 +228,7 @@ export default function LocalPlaylistPage() {
 			type: playlistMetadata.type,
 			toastId,
 		})
-	}, [playlistMetadata, syncPlaylist, openModal])
+	}
 
 	const { playAll, handleTrackPress } = useLocalPlaylistPlayer(
 		Number(id),
@@ -254,15 +236,12 @@ export default function LocalPlaylistPage() {
 		playableOfflineKeys,
 	)
 
-	const deleteTrack = useCallback(
-		(trackId: number) => {
-			deleteTrackFromLocalPlaylist({
-				trackIds: [trackId],
-				playlistId: Number(id),
-			})
-		},
-		[deleteTrackFromLocalPlaylist, id],
-	)
+	const deleteTrack = (trackId: number) => {
+		deleteTrackFromLocalPlaylist({
+			trackIds: [trackId],
+			playlistId: Number(id),
+		})
+	}
 
 	const trackMenuItems = useLocalPlaylistMenu({
 		deleteTrack,
@@ -272,14 +251,14 @@ export default function LocalPlaylistPage() {
 		playlist: playlistMetadata!,
 	})
 
-	const deleteSelectedTracks = useCallback(() => {
+	const deleteSelectedTracks = () => {
 		if (selected.size === 0) return
 		deleteTrackFromLocalPlaylist({
 			trackIds: Array.from(selected),
 			playlistId: Number(id),
 		})
 		exitSelectMode()
-	}, [selected, id, deleteTrackFromLocalPlaylist, exitSelectMode])
+	}
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
@@ -326,57 +305,55 @@ export default function LocalPlaylistPage() {
 	/** Auto-scroll interval handle */
 	const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-	const stopAutoScroll = useCallback(() => {
+	const stopAutoScroll = () => {
 		if (autoScrollRef.current !== null) {
 			clearInterval(autoScrollRef.current)
 			autoScrollRef.current = null
 		}
+	}
+
+	// 组件卸载时清理自动滚动定时器
+	useEffect(() => {
+		return () => stopAutoScroll()
 	}, [])
 
-	const startAutoScroll = useCallback(
-		(direction: 'up' | 'down') => {
+	const startAutoScroll = (direction: 'up' | 'down') => {
+		stopAutoScroll()
+		autoScrollRef.current = setInterval(() => {
+			const delta = direction === 'down' ? SCROLL_SPEED : -SCROLL_SPEED
+			const next = Math.max(0, scrollOffsetRef.current + delta)
+			listRef.current?.scrollToOffset({ offset: next, animated: false })
+			scrollOffsetRef.current = next
+		}, 16)
+	}
+
+	const updateDragPosition = (absoluteY: number) => {
+		// Ghost: center it on the finger relative to the container
+		ghostY.set(
+			absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
+		)
+
+		// Insert index: use calibration so that item-0 touches the origin correctly
+		const hoverRel = absoluteY + scrollOffsetRef.current - dragOriginRef.current
+		const k = Math.floor(hoverRel / SELECT_MODE_ITEM_HEIGHT)
+		// Upper/lower half of item k determines whether to insert before or after
+		const inItemFrac =
+			(hoverRel - k * SELECT_MODE_ITEM_HEIGHT) / SELECT_MODE_ITEM_HEIGHT
+		const insertIdx = inItemFrac >= 0.5 ? k : k - 1
+		setInsertAfterIndex(
+			Math.max(-1, Math.min(insertIdx, finalPlaylistData.length - 1)),
+		)
+
+		// Edge auto-scroll
+		const containerRelY = absoluteY - containerTopRef.current
+		if (containerRelY < EDGE_ZONE) {
+			startAutoScroll('up')
+		} else if (containerRelY > containerHeightRef.current - EDGE_ZONE) {
+			startAutoScroll('down')
+		} else {
 			stopAutoScroll()
-			autoScrollRef.current = setInterval(() => {
-				const delta = direction === 'down' ? SCROLL_SPEED : -SCROLL_SPEED
-				const next = Math.max(0, scrollOffsetRef.current + delta)
-				listRef.current?.scrollToOffset({ offset: next, animated: false })
-				scrollOffsetRef.current = next
-			}, 16)
-		},
-		[stopAutoScroll, listRef],
-	)
-
-	const updateDragPosition = useCallback(
-		(absoluteY: number) => {
-			// Ghost: center it on the finger relative to the container
-			ghostY.set(
-				absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
-			)
-
-			// Insert index: use calibration so that item-0 touches the origin correctly
-			const hoverRel =
-				absoluteY + scrollOffsetRef.current - dragOriginRef.current
-			const k = Math.floor(hoverRel / SELECT_MODE_ITEM_HEIGHT)
-			// Upper/lower half of item k determines whether to insert before or after
-			const inItemFrac =
-				(hoverRel - k * SELECT_MODE_ITEM_HEIGHT) / SELECT_MODE_ITEM_HEIGHT
-			const insertIdx = inItemFrac >= 0.5 ? k : k - 1
-			setInsertAfterIndex(
-				Math.max(-1, Math.min(insertIdx, finalPlaylistData.length - 1)),
-			)
-
-			// Edge auto-scroll
-			const containerRelY = absoluteY - containerTopRef.current
-			if (containerRelY < EDGE_ZONE) {
-				startAutoScroll('up')
-			} else if (containerRelY > containerHeightRef.current - EDGE_ZONE) {
-				startAutoScroll('down')
-			} else {
-				stopAutoScroll()
-			}
-		},
-		[finalPlaylistData.length, ghostY, startAutoScroll, stopAutoScroll],
-	)
+		}
+	}
 
 	const draggingRef = useRef(dragging)
 	const insertAfterIndexRef = useRef(insertAfterIndex)
@@ -387,32 +364,26 @@ export default function LocalPlaylistPage() {
 		insertAfterIndexRef.current = insertAfterIndex
 	}, [insertAfterIndex])
 
-	const handleDragStart = useCallback(
-		(trackIndex: number, trackId: number, absoluteY: number) => {
-			void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-			// Calibrate: store the virtual Y-origin so item i is at origin + i * H
-			dragOriginRef.current =
-				absoluteY +
-				scrollOffsetRef.current -
-				trackIndex * SELECT_MODE_ITEM_HEIGHT
-			setDragging({ trackIndex, trackId })
-			// Ghost starts centered on the finger
-			ghostY.set(
-				absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
-			)
-			setInsertAfterIndex(trackIndex - 1)
-		},
-		[ghostY],
-	)
+	const handleDragStart = (
+		trackIndex: number,
+		trackId: number,
+		absoluteY: number,
+	) => {
+		void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+		// Calibrate: store the virtual Y-origin so item i is at origin + i * H
+		dragOriginRef.current =
+			absoluteY + scrollOffsetRef.current - trackIndex * SELECT_MODE_ITEM_HEIGHT
+		setDragging({ trackIndex, trackId })
+		// Ghost starts centered on the finger
+		ghostY.set(
+			absoluteY - containerTopRef.current - SELECT_MODE_ITEM_HEIGHT / 2,
+		)
+		setInsertAfterIndex(trackIndex - 1)
+	}
 
-	const handleDragUpdate = useCallback(
-		(absoluteY: number) => {
-			updateDragPosition(absoluteY)
-		},
-		[updateDragPosition],
-	)
+	const handleDragUpdate = updateDragPosition
 
-	const handleDragEnd = useCallback(() => {
+	const handleDragEnd = () => {
 		stopAutoScroll()
 		const currentDragging = draggingRef.current
 		const currentInsertAfterIndex = insertAfterIndexRef.current
@@ -460,13 +431,7 @@ export default function LocalPlaylistPage() {
 
 		setDragging(null)
 		setInsertAfterIndex(null)
-	}, [
-		stopAutoScroll,
-		finalPlaylistData.length,
-		allLoadedSortKeys,
-		reorderTrack,
-		id,
-	])
+	}
 
 	const ghostAnimatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: ghostY.value }],
@@ -578,17 +543,17 @@ export default function LocalPlaylistPage() {
 							: undefined
 					}
 					onDragStart={
-						selectMode && playlistMetadata.type === 'local'
+						selectMode && playlistMetadata.type === 'local' && !startSearch
 							? handleDragStart
 							: undefined
 					}
 					onDragUpdate={
-						selectMode && playlistMetadata.type === 'local'
+						selectMode && playlistMetadata.type === 'local' && !startSearch
 							? handleDragUpdate
 							: undefined
 					}
 					onDragEnd={
-						selectMode && playlistMetadata.type === 'local'
+						selectMode && playlistMetadata.type === 'local' && !startSearch
 							? handleDragEnd
 							: undefined
 					}

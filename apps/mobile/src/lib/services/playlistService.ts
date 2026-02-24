@@ -424,6 +424,17 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
+				// 前置校验：prevSortKey 必须小于 nextSortKey
+				if (
+					prevSortKey !== null &&
+					nextSortKey !== null &&
+					prevSortKey >= nextSortKey
+				) {
+					throw new ServiceError(
+						`Invalid sort keys: prevSortKey must be less than nextSortKey (got "${prevSortKey}" >= "${nextSortKey}")`,
+					)
+				}
+
 				// 生成新的 sort_key（在 prevSortKey 和 nextSortKey 之间）
 				const newSortKey = generateKeyBetween(prevSortKey, nextSortKey)
 
