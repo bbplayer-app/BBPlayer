@@ -3,7 +3,9 @@ import { hc } from 'hono/client'
 
 import { getAuthToken } from './token'
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://be.bbplayer.app'
+// const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://be.bbplayer.app'
+
+const BASE_URL = '10.0.2.2:8787'
 
 export const api = hc<AppType>(BASE_URL, {
 	headers: () => {

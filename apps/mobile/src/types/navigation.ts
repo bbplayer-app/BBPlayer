@@ -42,6 +42,8 @@ export interface ModalPropsMap {
 	}
 	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined
+	EnableSharing: { playlistId: number }
+	SubscribeToSharedPlaylist: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

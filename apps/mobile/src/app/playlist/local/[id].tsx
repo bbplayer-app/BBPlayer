@@ -665,6 +665,30 @@ export default function LocalPlaylistPage() {
 								leadingIcon='sync'
 							/>
 						)}
+					{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								openModal('EnableSharing', { playlistId: Number(id) })
+							}}
+							title='设为共享歌单'
+							leadingIcon='share-variant'
+						/>
+					)}
+					{playlistMetadata.shareId && (
+						<Menu.Item
+							onPress={async () => {
+								setFunctionalMenuVisible(false)
+								const { default: Clipboard } = await import('expo-clipboard')
+								await Clipboard.setStringAsync(
+									`https://bbplayer.app/share/${playlistMetadata.shareId}`,
+								)
+								toast.success('已复制分享链接')
+							}}
+							title='复制分享链接'
+							leadingIcon='link-variant'
+						/>
+					)}
 					<Menu.Item
 						onPress={() => {
 							setFunctionalMenuVisible(false)

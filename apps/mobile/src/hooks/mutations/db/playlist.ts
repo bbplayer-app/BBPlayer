@@ -1,8 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
+import { useRouter } from 'expo-router'
 
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
+import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
@@ -353,7 +355,7 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 			playlistId: number
 			payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
 		}) => {
-			const result = await playlistFacade.batchAddTracksToLocalPlaylist(
+			const result = await playlistFacade.addTracksToSharedPlaylist(
 				playlistId,
 				payloads,
 			)
@@ -384,5 +386,57 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 		},
 		onError: (error) =>
 			toastAndLogError('批量添加歌曲到播放列表失败', error, SCOPE),
+	})
+}
+
+/**
+ * 将本地歌单升级为共享歌单（启用分享）
+ */
+export const useEnableSharing = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'enableSharing'],
+		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+			const result = await sharedPlaylistFacade.enableSharing(playlistId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (_, { playlistId }) => {
+			toast.success('已开启共享')
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistLists(),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistMetadata(playlistId),
+				}),
+			])
+		},
+		onError: (error) => toastAndLogError('启用共享歌单失败', error, SCOPE),
+	})
+}
+
+/**
+ * 通过 shareId 订阅一个共享歌单
+ */
+export const useSubscribeToSharedPlaylist = () => {
+	const router = useRouter()
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'subscribeToSharedPlaylist'],
+		mutationFn: async ({ shareId }: { shareId: string }) => {
+			const result = await sharedPlaylistFacade.subscribeToPlaylist(shareId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async ({ localPlaylistId }) => {
+			toast.success('订阅成功')
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.playlistLists(),
+			})
+			router.push({
+				pathname: '/playlist/local/[id]',
+				params: { id: String(localPlaylistId) },
+			})
+		},
+		onError: (error) => toastAndLogError('订阅共享歌单失败', error, SCOPE),
 	})
 }
