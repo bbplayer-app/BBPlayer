@@ -15,35 +15,33 @@ const meRoute = new Hono<{
 	Bindings: Env
 	Variables: { jwtPayload: JwtTokenPayload }
 }>()
+	.use('*', authMiddleware)
+	.get('/playlists', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const { db, client } = createDb(c.env.DATABASE_URL)
 
-meRoute.use('*', authMiddleware)
+		const rows = await db
+			.select({
+				id: sharedPlaylists.id,
+				title: sharedPlaylists.title,
+				description: sharedPlaylists.description,
+				coverUrl: sharedPlaylists.coverUrl,
+				updatedAt: sharedPlaylists.updatedAt,
+				role: playlistMembers.role,
+				joinedAt: playlistMembers.joinedAt,
+			})
+			.from(playlistMembers)
+			.innerJoin(
+				sharedPlaylists,
+				and(
+					eq(playlistMembers.playlistId, sharedPlaylists.id),
+					isNull(sharedPlaylists.deletedAt),
+				),
+			)
+			.where(eq(playlistMembers.mid, sub))
 
-meRoute.get('/playlists', async (c) => {
-	const { sub } = c.var.jwtPayload
-	const { db, client } = createDb(c.env.DATABASE_URL)
-
-	const rows = await db
-		.select({
-			id: sharedPlaylists.id,
-			title: sharedPlaylists.title,
-			description: sharedPlaylists.description,
-			coverUrl: sharedPlaylists.coverUrl,
-			updatedAt: sharedPlaylists.updatedAt,
-			role: playlistMembers.role,
-			joinedAt: playlistMembers.joinedAt,
-		})
-		.from(playlistMembers)
-		.innerJoin(
-			sharedPlaylists,
-			and(
-				eq(playlistMembers.playlistId, sharedPlaylists.id),
-				isNull(sharedPlaylists.deletedAt),
-			),
-		)
-		.where(eq(playlistMembers.mid, sub))
-
-	c.executionCtx.waitUntil(client.end())
-	return c.json({ playlists: rows })
-})
+		c.executionCtx.waitUntil(client.end())
+		return c.json({ playlists: rows })
+	})
 
 export default meRoute

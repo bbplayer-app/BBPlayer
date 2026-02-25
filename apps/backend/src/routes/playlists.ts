@@ -14,6 +14,7 @@ import { authMiddleware } from '../middleware/auth'
 import type { ChangeEvent, JwtTokenPayload, TrackInput } from '../types'
 import {
 	createPlaylistRequestSchema,
+	getPlaylistChangesRequestSchema,
 	playlistChangesRequestSchema,
 	updatePlaylistRequestSchema,
 } from '../validators/playlists'
@@ -33,328 +34,319 @@ type HonoEnv = {
 }
 
 const playlistsRoute = new Hono<HonoEnv>()
+	.use('*', authMiddleware)
+	.post(
+		'/',
+		arktypeValidator('json', createPlaylistRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const body = c.req.valid('json')
+			const { db, client } = createDb(c.env.DATABASE_URL)
 
-playlistsRoute.use('*', authMiddleware)
+			// 创建歌单
+			const [playlist] = await db
+				.insert(sharedPlaylists)
+				.values({
+					ownerMid: mid,
+					title: body.title,
+					description: body.description,
+					coverUrl: body.cover_url,
+				})
+				.returning()
 
-// ---------------------------------------------------------------------------
-// POST /api/playlists — 创建共享歌单
-// ---------------------------------------------------------------------------
-playlistsRoute.post(
-	'/',
-	arktypeValidator('json', createPlaylistRequestSchema, validationHook),
-	async (c) => {
-		const { sub } = c.var.jwtPayload
-		const mid = sub
-		const body = c.req.valid('json')
-		const { db, client } = createDb(c.env.DATABASE_URL)
-
-		// 创建歌单
-		const [playlist] = await db
-			.insert(sharedPlaylists)
-			.values({
-				ownerMid: mid,
-				title: body.title,
-				description: body.description,
-				coverUrl: body.cover_url,
+			// 将创建者写入 playlist_members（role=owner）
+			await db.insert(playlistMembers).values({
+				playlistId: playlist.id,
+				mid,
+				role: 'owner',
 			})
-			.returning()
 
-		// 将创建者写入 playlist_members（role=owner）
-		await db.insert(playlistMembers).values({
-			playlistId: playlist.id,
-			mid,
-			role: 'owner',
-		})
+			// 可选：携带初始曲目
+			if (body.tracks?.length) {
+				await upsertTracks(db, playlist.id, mid, body.tracks)
+			}
 
-		// 可选：携带初始曲目
-		if (body.tracks?.length) {
-			await upsertTracks(db, playlist.id, mid, body.tracks)
-		}
+			c.executionCtx.waitUntil(client.end())
+			return c.json({ playlist }, 201)
+		},
+	)
+	.patch(
+		'/:id',
+		arktypeValidator('json', updatePlaylistRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const playlistId = c.req.param('id')
+			const body = c.req.valid('json')
+			const { db, client } = createDb(c.env.DATABASE_URL)
 
-		c.executionCtx.waitUntil(client.end())
-		return c.json({ playlist }, 201)
-	},
-)
+			// 权限校验
+			const member = await getMember(db, playlistId, mid)
+			if (!member || member.role !== 'owner') {
+				return c.json({ error: 'Forbidden' }, 403)
+			}
 
-// ---------------------------------------------------------------------------
-// PATCH /api/playlists/:id — 修改元数据（仅 owner）
-// ---------------------------------------------------------------------------
-playlistsRoute.patch(
-	'/:id',
-	arktypeValidator('json', updatePlaylistRequestSchema, validationHook),
-	async (c) => {
-		const { sub } = c.var.jwtPayload
-		const mid = sub
-		const playlistId = c.req.param('id')
-		const body = c.req.valid('json')
-		const { db, client } = createDb(c.env.DATABASE_URL)
+			const [updated] = await db
+				.update(sharedPlaylists)
+				.set({
+					...(body.title !== undefined ? { title: body.title } : {}),
+					...(body.description !== undefined
+						? { description: body.description }
+						: {}),
+					...(body.cover_url !== undefined ? { coverUrl: body.cover_url } : {}),
+					updatedAt: new Date(),
+				})
+				.where(eq(sharedPlaylists.id, playlistId))
+				.returning()
 
-		// 权限校验
-		const member = await getMember(db, playlistId, mid)
-		if (!member || member.role !== 'owner') {
-			return c.json({ error: 'Forbidden' }, 403)
-		}
+			c.executionCtx.waitUntil(client.end())
+			return c.json({ playlist: updated })
+		},
+	)
+	.post(
+		'/:id/changes',
+		arktypeValidator('json', playlistChangesRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const playlistId = c.req.param('id')
+			const { changes } = c.req.valid('json')
+			const { db, client } = createDb(c.env.DATABASE_URL)
 
-		const [updated] = await db
-			.update(sharedPlaylists)
-			.set({
-				...(body.title !== undefined ? { title: body.title } : {}),
-				...(body.description !== undefined
-					? { description: body.description }
-					: {}),
-				...(body.cover_url !== undefined ? { coverUrl: body.cover_url } : {}),
-				updatedAt: new Date(),
-			})
-			.where(eq(sharedPlaylists.id, playlistId))
-			.returning()
+			const member = await getMember(db, playlistId, mid)
+			if (!member || member.role === 'subscriber') {
+				return c.json({ error: 'Forbidden' }, 403)
+			}
 
-		c.executionCtx.waitUntil(client.end())
-		return c.json({ playlist: updated })
-	},
-)
+			if (changes.length === 0) {
+				return c.json({ error: 'changes array is required' }, 400)
+			}
 
-// ---------------------------------------------------------------------------
-// POST /api/playlists/:id/changes — 增量上传变更（owner / editor）
-// ---------------------------------------------------------------------------
-playlistsRoute.post(
-	'/:id/changes',
-	arktypeValidator('json', playlistChangesRequestSchema, validationHook),
-	async (c) => {
-		const { sub } = c.var.jwtPayload
-		const mid = sub
-		const playlistId = c.req.param('id')
-		const { changes } = c.req.valid('json')
-		const { db, client } = createDb(c.env.DATABASE_URL)
+			// 按 operation_at 升序排列，确保 LWW 顺序正确
+			const sorted = [...changes].sort(
+				(a, b) => a.operation_at - b.operation_at,
+			)
 
-		const member = await getMember(db, playlistId, mid)
-		if (!member || member.role === 'subscriber') {
-			return c.json({ error: 'Forbidden' }, 403)
-		}
+			for (const change of sorted) {
+				const operationDate = new Date(change.operation_at)
 
-		if (changes.length === 0) {
-			return c.json({ error: 'changes array is required' }, 400)
-		}
-
-		// 按 operation_at 升序排列，确保 LWW 顺序正确
-		const sorted = [...changes].sort((a, b) => a.operation_at - b.operation_at)
-
-		for (const change of sorted) {
-			const operationDate = new Date(change.operation_at)
-
-			if (change.op === 'upsert') {
-				// 1. upsert shared_tracks（资源池）
-				await db
-					.insert(sharedTracks)
-					.values({
-						uniqueKey: change.track.unique_key,
-						title: change.track.title,
-						artistName: change.track.artist_name,
-						artistId: change.track.artist_id,
-						coverUrl: change.track.cover_url,
-						duration: change.track.duration,
-						bilibiliBvid: change.track.bilibili_bvid,
-						bilibiliCid: change.track.bilibili_cid,
-					})
-					.onConflictDoUpdate({
-						target: sharedTracks.uniqueKey,
-						set: {
+				if (change.op === 'upsert') {
+					// 1. upsert shared_tracks（资源池）
+					await db
+						.insert(sharedTracks)
+						.values({
+							uniqueKey: change.track.unique_key,
 							title: change.track.title,
 							artistName: change.track.artist_name,
+							artistId: change.track.artist_id,
 							coverUrl: change.track.cover_url,
-							updatedAt: operationDate,
-						},
-					})
+							duration: change.track.duration,
+							bilibiliBvid: change.track.bilibili_bvid,
+							bilibiliCid: change.track.bilibili_cid,
+						})
+						.onConflictDoUpdate({
+							target: sharedTracks.uniqueKey,
+							set: {
+								title: change.track.title,
+								artistName: change.track.artist_name,
+								coverUrl: change.track.cover_url,
+								updatedAt: operationDate,
+							},
+						})
 
-				// 2. upsert shared_playlist_tracks（LWW：只在 operation_at 更新时才写）
-				await db
-					.insert(sharedPlaylistTracks)
-					.values({
-						playlistId,
-						trackUniqueKey: change.track.unique_key,
-						sortKey: change.sort_key,
-						addedByMid: mid,
-						updatedAt: operationDate,
-						deletedAt: null,
-					})
-					.onConflictDoUpdate({
-						target: [
-							sharedPlaylistTracks.playlistId,
-							sharedPlaylistTracks.trackUniqueKey,
-						],
-						set: {
+					// 2. upsert shared_playlist_tracks（LWW：只在 operation_at 更新时才写）
+					await db
+						.insert(sharedPlaylistTracks)
+						.values({
+							playlistId,
+							trackUniqueKey: change.track.unique_key,
 							sortKey: change.sort_key,
+							addedByMid: mid,
 							updatedAt: operationDate,
 							deletedAt: null,
-						},
-						// LWW：只在 operation_at 更新时才写入
-						setWhere: lt(sharedPlaylistTracks.updatedAt, operationDate),
-					})
-			} else if (change.op === 'remove') {
-				// LWW 软删除
-				await db
-					.update(sharedPlaylistTracks)
-					.set({ deletedAt: operationDate })
-					.where(
-						and(
-							eq(sharedPlaylistTracks.playlistId, playlistId),
-							eq(sharedPlaylistTracks.trackUniqueKey, change.track_unique_key),
-							lt(sharedPlaylistTracks.updatedAt, operationDate),
-						),
-					)
-			} else if (change.op === 'reorder') {
-				// LWW reorder
-				await db
-					.update(sharedPlaylistTracks)
-					.set({ sortKey: change.sort_key, updatedAt: operationDate })
-					.where(
-						and(
-							eq(sharedPlaylistTracks.playlistId, playlistId),
-							eq(sharedPlaylistTracks.trackUniqueKey, change.track_unique_key),
-							lt(sharedPlaylistTracks.updatedAt, operationDate),
-						),
-					)
-			}
-		}
-
-		const appliedAt = Date.now()
-		c.executionCtx.waitUntil(client.end())
-		return c.json({ applied_at: appliedAt })
-	},
-)
-
-// ---------------------------------------------------------------------------
-// GET /api/playlists/:id/changes?since=<ms> — 增量拉取变更（所有 member）
-// ---------------------------------------------------------------------------
-playlistsRoute.get('/:id/changes', async (c) => {
-	const { sub } = c.var.jwtPayload
-	const mid = sub
-	const playlistId = c.req.param('id')
-	const sinceMs = Number(c.req.query('since') ?? '0')
-	const { db, client } = createDb(c.env.DATABASE_URL)
-
-	const member = await getMember(db, playlistId, mid)
-	if (!member) {
-		return c.json({ error: 'Forbidden' }, 403)
-	}
-
-	const sinceDate = new Date(sinceMs)
-	const serverTime = Date.now()
-
-	// 元数据变更
-	const [playlist] = await db
-		.select()
-		.from(sharedPlaylists)
-		.where(eq(sharedPlaylists.id, playlistId))
-	const metadata =
-		playlist.updatedAt > sinceDate
-			? {
-					title: playlist.title,
-					description: playlist.description,
-					cover_url: playlist.coverUrl,
-					updated_at: playlist.updatedAt.getTime(),
+						})
+						.onConflictDoUpdate({
+							target: [
+								sharedPlaylistTracks.playlistId,
+								sharedPlaylistTracks.trackUniqueKey,
+							],
+							set: {
+								sortKey: change.sort_key,
+								updatedAt: operationDate,
+								deletedAt: null,
+							},
+							// LWW：只在 operation_at 更新时才写入
+							setWhere: lt(sharedPlaylistTracks.updatedAt, operationDate),
+						})
+				} else if (change.op === 'remove') {
+					// LWW 软删除
+					await db
+						.update(sharedPlaylistTracks)
+						.set({ deletedAt: operationDate })
+						.where(
+							and(
+								eq(sharedPlaylistTracks.playlistId, playlistId),
+								eq(
+									sharedPlaylistTracks.trackUniqueKey,
+									change.track_unique_key,
+								),
+								lt(sharedPlaylistTracks.updatedAt, operationDate),
+							),
+						)
+				} else if (change.op === 'reorder') {
+					// LWW reorder
+					await db
+						.update(sharedPlaylistTracks)
+						.set({ sortKey: change.sort_key, updatedAt: operationDate })
+						.where(
+							and(
+								eq(sharedPlaylistTracks.playlistId, playlistId),
+								eq(
+									sharedPlaylistTracks.trackUniqueKey,
+									change.track_unique_key,
+								),
+								lt(sharedPlaylistTracks.updatedAt, operationDate),
+							),
+						)
 				}
-			: null
-
-	// 曲目变化（updatedAt 或 deletedAt > since）
-	const changedRows = await db
-		.select({
-			trackUniqueKey: sharedPlaylistTracks.trackUniqueKey,
-			sortKey: sharedPlaylistTracks.sortKey,
-			updatedAt: sharedPlaylistTracks.updatedAt,
-			deletedAt: sharedPlaylistTracks.deletedAt,
-			track: sharedTracks,
-		})
-		.from(sharedPlaylistTracks)
-		.leftJoin(
-			sharedTracks,
-			eq(sharedPlaylistTracks.trackUniqueKey, sharedTracks.uniqueKey),
-		)
-		.where(
-			and(
-				eq(sharedPlaylistTracks.playlistId, playlistId),
-				or(
-					gt(sharedPlaylistTracks.updatedAt, sinceDate),
-					and(
-						isNotNull(sharedPlaylistTracks.deletedAt),
-						gt(sharedPlaylistTracks.deletedAt, sinceDate),
-					),
-				),
-			),
-		)
-
-	const tracks: ChangeEvent[] = changedRows.map((row) => {
-		if (row.deletedAt && row.deletedAt > sinceDate) {
-			return {
-				op: 'delete',
-				track_unique_key: row.trackUniqueKey,
-				deleted_at: row.deletedAt.getTime(),
 			}
+
+			const appliedAt = Date.now()
+			c.executionCtx.waitUntil(client.end())
+			return c.json({ applied_at: appliedAt })
+		},
+	)
+	.get(
+		'/:id/changes',
+		arktypeValidator('query', getPlaylistChangesRequestSchema),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const playlistId = c.req.param('id')
+			const sinceMs = c.req.valid('query').since
+			const { db, client } = createDb(c.env.DATABASE_URL)
+
+			const member = await getMember(db, playlistId, mid)
+			if (!member) {
+				return c.json({ error: 'Forbidden' }, 403)
+			}
+
+			const sinceDate = new Date(sinceMs)
+			const serverTime = Date.now()
+
+			// 元数据变更
+			const [playlist] = await db
+				.select()
+				.from(sharedPlaylists)
+				.where(eq(sharedPlaylists.id, playlistId))
+			const metadata =
+				playlist.updatedAt > sinceDate
+					? {
+							title: playlist.title,
+							description: playlist.description,
+							cover_url: playlist.coverUrl,
+							updated_at: playlist.updatedAt.getTime(),
+						}
+					: null
+
+			// 曲目变化（updatedAt 或 deletedAt > since）
+			const changedRows = await db
+				.select({
+					trackUniqueKey: sharedPlaylistTracks.trackUniqueKey,
+					sortKey: sharedPlaylistTracks.sortKey,
+					updatedAt: sharedPlaylistTracks.updatedAt,
+					deletedAt: sharedPlaylistTracks.deletedAt,
+					track: sharedTracks,
+				})
+				.from(sharedPlaylistTracks)
+				.leftJoin(
+					sharedTracks,
+					eq(sharedPlaylistTracks.trackUniqueKey, sharedTracks.uniqueKey),
+				)
+				.where(
+					and(
+						eq(sharedPlaylistTracks.playlistId, playlistId),
+						or(
+							gt(sharedPlaylistTracks.updatedAt, sinceDate),
+							and(
+								isNotNull(sharedPlaylistTracks.deletedAt),
+								gt(sharedPlaylistTracks.deletedAt, sinceDate),
+							),
+						),
+					),
+				)
+
+			const tracks: ChangeEvent[] = changedRows.map((row) => {
+				if (row.deletedAt && row.deletedAt > sinceDate) {
+					return {
+						op: 'delete',
+						track_unique_key: row.trackUniqueKey,
+						deleted_at: row.deletedAt.getTime(),
+					}
+				}
+				const t = row.track!
+				return {
+					op: 'upsert',
+					track: {
+						unique_key: t.uniqueKey,
+						title: t.title,
+						artist_name: t.artistName ?? undefined,
+						artist_id: t.artistId ?? undefined,
+						cover_url: t.coverUrl ?? undefined,
+						duration: t.duration ?? undefined,
+						bilibili_bvid: t.bilibiliBvid,
+						bilibili_cid: t.bilibiliCid ?? undefined,
+					},
+					sort_key: row.sortKey,
+					updated_at: row.updatedAt.getTime(),
+				}
+			})
+
+			c.executionCtx.waitUntil(client.end())
+			return c.json({
+				metadata,
+				tracks,
+				has_more: false,
+				server_time: serverTime,
+			})
+		},
+	)
+	.post('/:id/subscribe', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const mid = sub
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		// 歌单必须存在且未删除
+		const [playlist] = await db
+			.select()
+			.from(sharedPlaylists)
+			.where(
+				and(
+					eq(sharedPlaylists.id, playlistId),
+					isNull(sharedPlaylists.deletedAt),
+				),
+			)
+		if (!playlist) {
+			return c.json({ error: 'Playlist not found' }, 404)
 		}
-		const t = row.track!
-		return {
-			op: 'upsert',
-			track: {
-				unique_key: t.uniqueKey,
-				title: t.title,
-				artist_name: t.artistName ?? undefined,
-				artist_id: t.artistId ?? undefined,
-				cover_url: t.coverUrl ?? undefined,
-				duration: t.duration ?? undefined,
-				bilibili_bvid: t.bilibiliBvid,
-				bilibili_cid: t.bilibiliCid ?? undefined,
-			},
-			sort_key: row.sortKey,
-			updated_at: row.updatedAt.getTime(),
+
+		// 如果已经是成员则直接返回现有角色
+		const existing = await getMember(db, playlistId, mid)
+		if (existing) {
+			return c.json({ role: existing.role, already_member: true })
 		}
+
+		await db.insert(playlistMembers).values({
+			playlistId,
+			mid,
+			role: 'subscriber',
+		})
+
+		c.executionCtx.waitUntil(client.end())
+		return c.json({ role: 'subscriber', already_member: false }, 201)
 	})
-
-	c.executionCtx.waitUntil(client.end())
-	return c.json({
-		metadata,
-		tracks,
-		has_more: false,
-		server_time: serverTime,
-	})
-})
-
-// ---------------------------------------------------------------------------
-// POST /api/playlists/:id/subscribe — 订阅歌单（通过分享链接）
-// ---------------------------------------------------------------------------
-playlistsRoute.post('/:id/subscribe', async (c) => {
-	const { sub } = c.var.jwtPayload
-	const mid = sub
-	const playlistId = c.req.param('id')
-	const { db, client } = createDb(c.env.DATABASE_URL)
-
-	// 歌单必须存在且未删除
-	const [playlist] = await db
-		.select()
-		.from(sharedPlaylists)
-		.where(
-			and(
-				eq(sharedPlaylists.id, playlistId),
-				isNull(sharedPlaylists.deletedAt),
-			),
-		)
-	if (!playlist) {
-		return c.json({ error: 'Playlist not found' }, 404)
-	}
-
-	// 如果已经是成员则直接返回现有角色
-	const existing = await getMember(db, playlistId, mid)
-	if (existing) {
-		return c.json({ role: existing.role, already_member: true })
-	}
-
-	await db.insert(playlistMembers).values({
-		playlistId,
-		mid,
-		role: 'subscriber',
-	})
-
-	c.executionCtx.waitUntil(client.end())
-	return c.json({ role: 'subscriber', already_member: false }, 201)
-})
 
 // ---------------------------------------------------------------------------
 // 工具函数

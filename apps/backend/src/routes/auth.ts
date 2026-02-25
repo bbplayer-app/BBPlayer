@@ -15,9 +15,7 @@ import { loginRequestSchema } from '../validators/auth'
  *  2. upsert users 表
  *  3. 签发 JWT（sub=mid, jwtVersion=当前值）
  */
-const authRoute = new Hono<{ Bindings: Env }>()
-
-authRoute.post(
+const authRoute = new Hono<{ Bindings: Env }>().post(
 	'/login',
 	arktypeValidator('json', loginRequestSchema, (result, c) => {
 		if (!result.success) {

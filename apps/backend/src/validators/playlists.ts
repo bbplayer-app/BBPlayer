@@ -56,3 +56,7 @@ export const updatePlaylistRequestSchema = arkType({
 export const playlistChangesRequestSchema = arkType({
 	changes: changeOperationSchema.array(),
 })
+
+export const getPlaylistChangesRequestSchema = arkType({
+	since: 'number',
+})

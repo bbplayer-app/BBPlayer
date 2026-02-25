@@ -155,7 +155,14 @@ export class PlaylistService {
 								title: payload.title ?? undefined,
 								description: payload.description,
 								coverUrl: payload.coverUrl,
-							} satisfies UpdatePlaylistPayload)
+								shareId: payload.shareId,
+								shareRole: payload.shareRole,
+								lastShareSyncAt: payload.lastShareSyncAt
+									? new Date(payload.lastShareSyncAt)
+									: payload.lastShareSyncAt === null
+										? null
+										: undefined,
+							})
 							.where(eq(schema.playlists.id, playlistId))
 							.returning(),
 				)
@@ -659,7 +666,7 @@ export class PlaylistService {
 								coverUrl: payload.coverUrl,
 								type: payload.type,
 								remoteSyncId: payload.remoteSyncId,
-							} satisfies CreatePlaylistPayload)
+							})
 							.returning(),
 				)
 
@@ -1102,6 +1109,42 @@ export class PlaylistService {
 				nextPageFirstSortKey,
 			})
 		})
+	}
+
+	/**
+	 * 根据 shareId（后端 UUID）查找本地歌单
+	 */
+	public findPlaylistByShareId(
+		shareId: string,
+	): ResultAsync<
+		typeof schema.playlists.$inferSelect | undefined,
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlist:byShareId', op: 'db' }, () =>
+				this.db.query.playlists.findFirst({
+					where: eq(schema.playlists.shareId, shareId),
+				}),
+			),
+			(e) => new DatabaseError('根据 shareId 查找歌单失败', { cause: e }),
+		)
+	}
+
+	/**
+	 * 获取所有已共享（shareId 不为 null）的本地歌单
+	 */
+	public getSharedPlaylists(): ResultAsync<
+		(typeof schema.playlists.$inferSelect)[],
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlists:shared', op: 'db' }, () =>
+				this.db.query.playlists.findMany({
+					where: (p, { isNotNull }) => isNotNull(p.shareId),
+				}),
+			),
+			(e) => new DatabaseError('获取共享歌单列表失败', { cause: e }),
+		)
 	}
 }
 

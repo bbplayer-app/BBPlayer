@@ -100,6 +100,12 @@ export const playlists = sqliteTable(
 		}).notNull(),
 		remoteSyncId: integer('remote_sync_id'), // 当存在这个值时，这个 playlist 只能从远程同步，而不能从本地直接修改（或许也可以？因为我们已经实现了大量本地有关收藏夹的操作逻辑，先不管了~）
 		lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
+		// 歌单分享功能字段
+		shareId: text('share_id'), // 对应后端 shared_playlists.id (UUID)，null 表示纯本地歌单
+		shareRole: text('share_role', {
+			enum: ['owner', 'editor', 'subscriber'],
+		}), // null 表示不参与任何共享歌单
+		lastShareSyncAt: integer('last_share_sync_at', { mode: 'timestamp_ms' }), // 增量同步游标，存服务端 server_time
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(unixepoch() * 1000)`),
@@ -160,6 +166,33 @@ export const localMetadata = sqliteTable('local_metadata', {
 		.primaryKey()
 		.references(() => tracks.id, { onDelete: 'cascade' }),
 	localPath: text('local_path').notNull(),
+})
+
+export const playlistSyncQueue = sqliteTable('playlist_sync_queue', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	playlistId: integer('playlist_id')
+		.notNull()
+		.references(() => playlists.id, { onDelete: 'cascade' }),
+	operation: text('operation', {
+		enum: ['add_tracks', 'remove_tracks', 'reorder_track', 'update_metadata'],
+	}).notNull(),
+	payload: text('payload', { mode: 'json' }).notNull(),
+	status: text('status', {
+		enum: ['pending', 'syncing', 'done', 'failed'],
+	})
+		.notNull()
+		.default('pending'),
+	attempts: integer('attempts').notNull().default(0),
+	lastAttemptAt: integer('last_attempt_at', { mode: 'timestamp_ms' }),
+	failureReason: text('failure_reason'),
+	// 用户真正执行操作的时间，入队时立刻记录，不是上传时的时间
+	// 这是 LWW 冲突解决的基准时间戳，防止网络延迟重试时覆盖掉更新的操作
+	operationAt: integer('operation_at', { mode: 'timestamp_ms' })
+		.notNull()
+		.default(sql`(unixepoch() * 1000)`),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' })
+		.notNull()
+		.default(sql`(unixepoch() * 1000)`),
 })
 
 // ##################################

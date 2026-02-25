@@ -165,7 +165,7 @@ export const useEditPlaylistMetadata = () => {
 			payload: UpdatePlaylistPayload
 		}) => {
 			if (playlistId === 0) return
-			const result = await playlistService.updatePlaylistMetadata(
+			const result = await playlistFacade.updateSharedPlaylistMetadata(
 				playlistId,
 				payload,
 			)
@@ -229,7 +229,7 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 			trackIds: number[]
 			playlistId: number
 		}) => {
-			const result = await playlistService.batchRemoveTracksFromLocalPlaylist(
+			const result = await playlistFacade.removeTracksFromSharedPlaylist(
 				playlistId,
 				trackIds,
 			)
@@ -317,9 +317,13 @@ export const useReorderLocalPlaylistTrack = () => {
 			prevSortKey: string | null
 			nextSortKey: string | null
 		}) => {
-			const result = await playlistService.reorderSingleLocalPlaylistTrack(
+			const result = await playlistFacade.reorderSharedPlaylistTrack(
 				playlistId,
-				{ trackId, prevSortKey, nextSortKey },
+				{
+					trackId,
+					prevSortKey,
+					nextSortKey,
+				},
 			)
 			if (result.isErr()) throw result.error
 			return result.value

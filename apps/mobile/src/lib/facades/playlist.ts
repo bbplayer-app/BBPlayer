@@ -1,12 +1,12 @@
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { ResultAsync, errAsync } from 'neverthrow'
 
 import {
 	bilibiliApi,
 	type bilibiliApi as BilibiliApiService,
 } from '@/lib/api/bilibili/api'
 import db from '@/lib/db/db'
-import type * as schema from '@/lib/db/schema'
+import * as schema from '@/lib/db/schema'
 import { createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
 import { artistService, type ArtistService } from '@/lib/services/artistService'
@@ -16,6 +16,10 @@ import {
 } from '@/lib/services/playlistService'
 import { trackService, type TrackService } from '@/lib/services/trackService'
 import type { CreateArtistPayload } from '@/types/services/artist'
+import type {
+	ReorderLocalPlaylistTrackPayload,
+	UpdatePlaylistPayload,
+} from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import log from '@/utils/log'
 
@@ -328,6 +332,139 @@ export class PlaylistFacade {
 					cause: e,
 				}),
 		)
+	}
+
+	// ---------------------------------------------------------------------------
+	// 共享歌单包装方法：本地写入完成后将操作入队，供 PlaylistSyncWorker 消费
+	// ---------------------------------------------------------------------------
+
+	/**
+	 * 向本地+共享歌单批量添加曲目。
+	 * 成功后若歌单参与共享（owner/editor），将操作写入 playlistSyncQueue。
+	 */
+	public async addTracksToSharedPlaylist(
+		playlistId: number,
+		payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[],
+	) {
+		const result = await this.batchAddTracksToLocalPlaylist(
+			playlistId,
+			payloads,
+		)
+		if (result.isErr()) return result
+
+		const playlist = await this.playlistService.getPlaylistById(playlistId)
+		if (playlist.isOk() && playlist.value) {
+			const { shareId, shareRole } = playlist.value
+			if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+				await this.enqueueSync(playlistId, 'add_tracks', {
+					trackIds: result.value,
+				})
+			}
+		}
+		return result
+	}
+
+	/**
+	 * 从本地+共享歌单批量移除曲目。
+	 * 成功后若歌单参与共享，将操作写入 playlistSyncQueue。
+	 */
+	public async removeTracksFromSharedPlaylist(
+		playlistId: number,
+		trackIds: number[],
+	) {
+		const result =
+			await this.playlistService.batchRemoveTracksFromLocalPlaylist(
+				playlistId,
+				trackIds,
+			)
+		if (result.isErr()) return result
+
+		const playlist = await this.playlistService.getPlaylistById(playlistId)
+		if (playlist.isOk() && playlist.value) {
+			const { shareId, shareRole } = playlist.value
+			if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+				// 只入队实际被移除的 track 的 uniqueKey：先通过 trackIds 查 uniqueKey
+				await this.enqueueSync(playlistId, 'remove_tracks', {
+					removedTrackIds: result.value.removedTrackIds,
+				})
+			}
+		}
+		return result
+	}
+
+	/**
+	 * 在本地+共享歌单中移动单曲位置。
+	 * 成功后若歌单参与共享，将操作写入 playlistSyncQueue。
+	 */
+	public async reorderSharedPlaylistTrack(
+		playlistId: number,
+		payload: ReorderLocalPlaylistTrackPayload,
+	) {
+		const result = await this.playlistService.reorderSingleLocalPlaylistTrack(
+			playlistId,
+			payload,
+		)
+		if (result.isErr()) return result
+
+		const playlist = await this.playlistService.getPlaylistById(playlistId)
+		if (playlist.isOk() && playlist.value) {
+			const { shareId, shareRole } = playlist.value
+			if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+				await this.enqueueSync(playlistId, 'reorder_track', {
+					trackId: payload.trackId,
+					prevSortKey: payload.prevSortKey,
+					nextSortKey: payload.nextSortKey,
+				})
+			}
+		}
+		return result
+	}
+
+	/**
+	 * 更新本地+共享歌单的元数据（标题/描述/封面）。
+	 * 成功后若歌单参与共享，将操作写入 playlistSyncQueue。
+	 */
+	public async updateSharedPlaylistMetadata(
+		playlistId: number,
+		payload: UpdatePlaylistPayload,
+	) {
+		const result = await this.playlistService.updatePlaylistMetadata(
+			playlistId,
+			payload,
+		)
+		if (result.isErr()) return result
+
+		const { shareId, shareRole } = result.value
+		if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+			await this.enqueueSync(playlistId, 'update_metadata', {
+				title: payload.title,
+				description: payload.description,
+				coverUrl: payload.coverUrl,
+			})
+		}
+		return result
+	}
+
+	/**
+	 * 向 playlist_sync_queue 写入一条待同步记录。
+	 * operationAt 记录用户真正执行操作的时间（LWW 基准）。
+	 */
+	private async enqueueSync(
+		playlistId: number,
+		operation: (typeof schema.playlistSyncQueue.$inferInsert)['operation'],
+		payload: Record<string, unknown>,
+	): Promise<void> {
+		try {
+			await this.db.insert(schema.playlistSyncQueue).values({
+				playlistId,
+				operation,
+				payload: JSON.stringify(payload),
+				operationAt: new Date(Date.now()),
+			})
+		} catch (e) {
+			// 入队失败不应打断主流程，仅记录日志
+			logger.error('写入 playlistSyncQueue 失败', { playlistId, operation, e })
+		}
 	}
 }
 
