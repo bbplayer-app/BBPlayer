@@ -1,4 +1,3 @@
-import { useNetInfo } from '@react-native-community/netinfo'
 import { useCallback, useEffect, useRef } from 'react'
 import {
 	useAnimatedReaction,
@@ -9,6 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import { fetchDanmakuSegmentQuery } from '@/hooks/queries/bilibili/danmaku'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { BilibiliDanmakuItem } from '@/types/apis/bilibili'
 import { cleanDanmaku } from '@/utils/danmaku'
@@ -26,8 +26,7 @@ export default function useDanmakuLoader(
 	cid: number | undefined,
 	currentTime: SharedValue<number>,
 ) {
-	const networkState = useNetInfo()
-	const isOffline = networkState.isConnected === false
+	const isOffline = useIsActuallyOffline()
 	const rawDataSV = useSharedValue<BilibiliDanmakuItem[]>([])
 	const loadedSegmentsRef = useRef<Set<number>>(new Set())
 	const isLoadingRef = useRef(false)

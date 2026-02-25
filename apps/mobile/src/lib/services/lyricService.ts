@@ -19,6 +19,7 @@ import type {
 } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
+import { isActuallyOffline } from '@/utils/network'
 
 const logger = log.extend('Service.Lyric')
 type oldLyricFileType =
@@ -223,7 +224,7 @@ class LyricService {
 		).orElse(() => {
 			return ResultAsync.fromSafePromise(fetchNetInfo()).andThen(
 				(networkState) => {
-					if (networkState.isConnected === false) {
+					if (isActuallyOffline(networkState)) {
 						return errAsync(
 							new LyricNotFoundError('当前处于离线状态，无法获取网络歌词'),
 						)

@@ -48,6 +48,7 @@ interface TrackListItemProps {
 	toggleSelected: (id: number) => void
 	isSelected: boolean
 	selectMode: boolean
+	isSearching?: boolean
 	enterSelectMode: (id: number) => void
 	downloadState?: DownloadState
 }
@@ -69,6 +70,7 @@ export const TrackListItem = memo(function TrackListItem({
 	toggleSelected,
 	isSelected,
 	selectMode,
+	isSearching = false,
 	enterSelectMode,
 	downloadState,
 }: TrackListItemProps) {
@@ -242,22 +244,24 @@ export const TrackListItem = memo(function TrackListItem({
 					{!disabled && (
 						<View>
 							{selectMode ? (
-								<GestureDetector
-									gesture={Gesture.Pan()
-										.activateAfterLongPress(200)
-										.runOnJS(true)
-										.onStart((e) => onDragStart?.(e.absoluteY))
-										.onUpdate((e) => onDragUpdate?.(e.absoluteY))
-										.onFinalize(() => onDragEnd?.())}
-								>
-									<View style={styles.menuButton}>
-										<Icon
-											source='drag-vertical'
-											size={20}
-											color={theme.colors.onSurfaceVariant}
-										/>
-									</View>
-								</GestureDetector>
+								playlist.type === 'local' && !isSearching ? (
+									<GestureDetector
+										gesture={Gesture.Pan()
+											.activateAfterLongPress(200)
+											.runOnJS(true)
+											.onStart((e) => onDragStart?.(e.absoluteY))
+											.onUpdate((e) => onDragUpdate?.(e.absoluteY))
+											.onFinalize(() => onDragEnd?.())}
+									>
+										<View style={styles.menuButton}>
+											<Icon
+												source='drag-vertical'
+												size={20}
+												color={theme.colors.onSurfaceVariant}
+											/>
+										</View>
+									</GestureDetector>
+								) : null
 							) : (
 								<RectButton
 									style={styles.menuButton}

@@ -1,5 +1,4 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
-import { useNetInfo } from '@react-native-community/netinfo'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useRef, useState } from 'react'
@@ -39,6 +38,7 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
+import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -106,8 +106,7 @@ export default function LocalPlaylistPage() {
 			}>
 		)?.flatMap((page) => page.sortKeys) ?? []
 
-	const networkState = useNetInfo()
-	const isOffline = networkState.isConnected === false
+	const isOffline = useIsActuallyOffline()
 
 	const loadedTrackKeys = allLoadedTracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(loadedTrackKeys)
@@ -550,6 +549,7 @@ export default function LocalPlaylistPage() {
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					isOffline={isOffline}
+					isSearching={startSearch}
 					playableOfflineKeys={playableOfflineKeys}
 					onEndReached={
 						hasNextPagePlaylistData &&

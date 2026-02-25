@@ -30,6 +30,7 @@ import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
+import { isActuallyOffline } from '@/utils/network'
 import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
@@ -63,11 +64,11 @@ export default Sentry.wrap(function RootLayout() {
 
 	onlineManager.setEventListener((setOnline) => {
 		void fetchNetInfo().then((state) => {
-			setOnline(!!state.isConnected)
+			setOnline(!isActuallyOffline(state))
 		})
 
 		const unsubscribe = addNetInfoEventListener((state) => {
-			setOnline(!!state.isConnected)
+			setOnline(!isActuallyOffline(state))
 		})
 		return unsubscribe
 	})

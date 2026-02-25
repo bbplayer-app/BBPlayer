@@ -83,6 +83,10 @@ interface LocalTrackListProps extends Omit<
 	 */
 	playableOfflineKeys?: Set<string>
 	/**
+	 * 是否处于搜索状态
+	 */
+	isSearching?: boolean
+	/**
 	 * 在 selectMode 下长按拖拽把手时触发
 	 */
 	onDragStart?: (trackIndex: number, trackId: number, absoluteY: number) => void
@@ -115,6 +119,7 @@ const renderItem = ({
 		isStale?: boolean
 		isOffline?: boolean
 		playableOfflineKeys?: Set<string>
+		isSearching?: boolean
 		onDragStart?: (
 			trackIndex: number,
 			trackId: number,
@@ -136,6 +141,7 @@ const renderItem = ({
 		isStale,
 		isOffline,
 		playableOfflineKeys,
+		isSearching,
 		onDragStart,
 		onDragUpdate,
 		onDragEnd,
@@ -172,6 +178,7 @@ const renderItem = ({
 					}}
 					isSelected={selection.selected.has(item.id)}
 					selectMode={selection.active}
+					isSearching={isSearching}
 					enterSelectMode={(id: number) => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
 						selection.enter(id)
@@ -258,6 +265,7 @@ export function LocalTrackList({
 	isStale,
 	isOffline,
 	playableOfflineKeys,
+	isSearching,
 	listRef,
 	onDragStart,
 	onDragUpdate,
@@ -319,6 +327,7 @@ export function LocalTrackList({
 			isStale,
 			isOffline,
 			playableOfflineKeys,
+			isSearching,
 			onDragStart,
 			onDragUpdate,
 			onDragEnd,
@@ -334,6 +343,7 @@ export function LocalTrackList({
 			isStale,
 			isOffline,
 			playableOfflineKeys,
+			isSearching,
 			onDragStart,
 			onDragUpdate,
 			onDragEnd,
