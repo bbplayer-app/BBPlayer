@@ -94,7 +94,8 @@
 		"no-array-sort": "allow",
 		"no-new-array": "allow",
 		"style-prop-object": "allow",
-		"no-map-spread": "allow"
+		"no-map-spread": "allow",
+		"no-await-in-loop": "allow"
 	},
 	"settings": {
 		"react": {

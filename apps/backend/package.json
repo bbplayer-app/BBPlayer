@@ -1,0 +1,27 @@
+{
+	"name": "@bbplayer/backend",
+	"version": "0.0.1",
+	"private": true,
+	"types": "src/index.ts",
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev"
+	},
+	"dependencies": {
+		"@hono/arktype-validator": "^2.0.1",
+		"arktype": "^2.1.29",
+		"drizzle-orm": "^0.44.1",
+		"hono": "^4.7.5",
+		"postgres": "^3.4.5"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.31.0",
+		"typescript": "~5.9.3",
+		"wrangler": "^4.4.0"
+	}
+}

@@ -11,4 +11,6 @@ onlyBuiltDependencies:
   - lefthook
   - protobufjs
   - react-native-logs
+  - sharp
   - unrs-resolver
+  - workerd

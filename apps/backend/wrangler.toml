@@ -1,0 +1,9 @@
+name = "bbplayer-backend"
+main = "src/index.ts"
+compatibility_date = "2025-02-01"
+compatibility_flags = ["nodejs_compat"]
+
+# JWT_SECRET 和 DATABASE_URL 通过 `wrangler secret put` 设置
+
+[dev]
+local_protocol = "http"

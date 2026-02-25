@@ -1,0 +1,2 @@
+[env]
+_.file = { path = ".dev.vars", redact = true }
