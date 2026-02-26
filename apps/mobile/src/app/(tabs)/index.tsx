@@ -347,9 +347,9 @@ function HomePage() {
 						)}
 					</View>
 				</View>
-				<View style={styles.nowPlayingBarContainer}>
-					<NowPlayingBar />
-				</View>
+			</View>
+			<View style={styles.nowPlayingBarContainer}>
+				<NowPlayingBar />
 			</View>
 		</View>
 	)

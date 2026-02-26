@@ -620,7 +620,7 @@ export class PlaylistFacade {
 					const resp = await this.bbplayerApi.playlists[':id'].$delete({
 						param: { id: shareId },
 					})
-					if (!resp.ok && resp.status !== 404) {
+					if (!resp.ok && resp.status !== 404 && resp.status !== 403) {
 						const body = await resp.json().catch(() => ({}))
 						throw createFacadeError(
 							'PlaylistDeleteFailed',
@@ -628,8 +628,8 @@ export class PlaylistFacade {
 							{ cause: body },
 						)
 					}
-					if (resp.status === 404) {
-						logger.warn('远端歌单已不存在，跳过云端删除', {
+					if (resp.status === 404 || resp.status === 403) {
+						logger.warning('远端歌单已不存在或权限丢失，跳过云端删除', {
 							playlistId,
 							shareId,
 						})
@@ -644,7 +644,7 @@ export class PlaylistFacade {
 					].members.me.$delete({
 						param: { id: shareId },
 					})
-					if (!resp.ok && resp.status !== 404) {
+					if (!resp.ok && resp.status !== 404 && resp.status !== 403) {
 						const body = await resp.json().catch(() => ({}))
 						throw createFacadeError(
 							'PlaylistDeleteFailed',
@@ -652,11 +652,14 @@ export class PlaylistFacade {
 							{ cause: body },
 						)
 					}
-					if (resp.status === 404) {
-						logger.warn('远端歌单已被删除，继续清理本地关联', {
-							playlistId,
-							shareId,
-						})
+					if (resp.status === 404 || resp.status === 403) {
+						logger.warning(
+							'远端歌单已被删除或已解除成员关系，继续清理本地关联',
+							{
+								playlistId,
+								shareId,
+							},
+						)
 					}
 
 					await this.db.transaction(async (tx) => {

@@ -78,6 +78,22 @@ const EDGE_ZONE = 80
 /** px scrolled per auto-scroll tick (~16 ms) */
 const SCROLL_SPEED = 8
 
+const deletePlaylistDialogPrompt = (
+	playlistMetadata: ReturnType<typeof usePlaylistMetadata>['data'],
+) => {
+	if (!playlistMetadata || playlistMetadata.shareId === null)
+		return '确定要删除此播放列表吗？'
+	switch (playlistMetadata?.shareRole) {
+		case 'owner':
+			return '确定要删除此播放列表吗？同时所有订阅过该播放列表的人也会失去访问权限。'
+		case 'editor':
+			return '确定要删除此播放列表吗？同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。'
+		case 'subscriber':
+			return '确定要删除此播放列表吗？同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。'
+	}
+	return '确定要删除此播放列表吗？'
+}
+
 export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
@@ -835,7 +851,7 @@ export default function LocalPlaylistPage() {
 							setFunctionalMenuVisible(false)
 							alert(
 								'删除播放列表',
-								'确定要删除此播放列表吗？',
+								deletePlaylistDialogPrompt(playlistMetadata),
 								[
 									{ text: '取消' },
 									{ text: '确定', onPress: onClickDeletePlaylist },

@@ -249,15 +249,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			const sinceMs = c.req.valid('query').since
 			const { db, client } = createDb(c.env.DATABASE_URL)
 
-			const member = await getMember(db, playlistId, mid)
-			if (!member) {
-				return c.json({ error: 'Forbidden' }, 403)
-			}
-
-			const sinceDate = new Date(sinceMs)
-			const serverTime = Date.now()
-
-			// 元数据变更
+			// 先判断歌单是否存在且未被删除
 			const [playlist] = await db
 				.select()
 				.from(sharedPlaylists)
@@ -270,6 +262,17 @@ const playlistsRoute = new Hono<HonoEnv>()
 			if (!playlist) {
 				return c.json({ error: 'Playlist not found' }, 404)
 			}
+
+			// 歌单存在时再校验成员关系
+			const member = await getMember(db, playlistId, mid)
+			if (!member) {
+				return c.json({ error: 'Forbidden' }, 403)
+			}
+
+			const sinceDate = new Date(sinceMs)
+			const serverTime = Date.now()
+
+			// 元数据变更
 			const metadata =
 				playlist.updatedAt > sinceDate
 					? {

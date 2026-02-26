@@ -19,7 +19,7 @@ import {
 import { api as bbplayerApiClient } from '@/lib/api/bbplayer/client'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import { createFacadeError } from '@/lib/errors/facade'
+import { FacadeError, createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
 import { artistService, type ArtistService } from '@/lib/services/artistService'
 import {
@@ -473,6 +473,9 @@ export class SharedPlaylistFacade {
 				return { applied }
 			})(),
 			(e) => {
+				if (e instanceof FacadeError && e.type === 'SharedPlaylistDeleted') {
+					throw e
+				}
 				return createFacadeError(
 					'SharedPlaylistPullFailed',
 					'增量拉取歌单变更失败',
