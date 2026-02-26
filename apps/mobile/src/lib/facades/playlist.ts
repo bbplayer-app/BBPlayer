@@ -1,10 +1,7 @@
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync, errAsync } from 'neverthrow'
 
-import {
-	bilibiliApi,
-	type bilibiliApi as BilibiliApiService,
-} from '@/lib/api/bilibili/api'
+import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { createFacadeError } from '@/lib/errors/facade'
@@ -23,15 +20,17 @@ import type {
 import type { CreateTrackPayload } from '@/types/services/track'
 import log from '@/utils/log'
 
+type BbplayerApiClient = typeof bbplayerApi
+
 const logger = log.extend('Facade')
 
 export class PlaylistFacade {
 	constructor(
 		private readonly trackService: TrackService,
-		private readonly bilibiliApi: typeof BilibiliApiService,
 		private readonly playlistService: PlaylistService,
 		private readonly artistService: ArtistService,
 		private readonly db: ExpoSQLiteDatabase<typeof schema>,
+		private readonly bbplayerApi: BbplayerApiClient,
 	) {}
 
 	/**
@@ -542,6 +541,105 @@ export class PlaylistFacade {
 	}
 
 	/**
+	 * 删除播放列表，按 shareRole 路由到不同的删除策略：
+	 * - local（无 shareId）：直接删除本地数据
+	 * - subscriber：服务端解除成员关系 + 删除本地副本
+	 * - editor：服务端解除成员关系 + 清空 shareId/shareRole（保留本地数据转为普通 local 歌单）
+	 * - owner：服务端软删除共享歌单 + 删除本地副本
+	 */
+	public async deletePlaylist(playlistId: number) {
+		const playlistRes = await this.playlistService.getPlaylistById(playlistId)
+		if (playlistRes.isErr()) {
+			return errAsync(
+				createFacadeError('PlaylistDeleteFailed', '读取播放列表失败', {
+					cause: playlistRes.error,
+				}),
+			)
+		}
+		const playlist = playlistRes.value
+		if (!playlist) {
+			return errAsync(
+				createFacadeError(
+					'PlaylistDeleteFailed',
+					`未找到播放列表：${playlistId}`,
+				),
+			)
+		}
+
+		const { shareId, shareRole } = playlist
+
+		// local 直接删除本地，无需鉴权或网络请求
+		if (!shareId) {
+			return this.playlistService
+				.deletePlaylist(playlistId)
+				.map(() => undefined)
+				.mapErr((e) =>
+					createFacadeError('PlaylistDeleteFailed', '删除播放列表失败', {
+						cause: e,
+					}),
+				)
+		}
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				if (shareRole === 'owner') {
+					// owner：服务端软删除，然后删除本地副本
+					const resp = await this.bbplayerApi.playlists[':id'].$delete({
+						param: { id: shareId },
+					})
+					if (!resp.ok) {
+						const body = await resp.json().catch(() => ({}))
+						throw createFacadeError(
+							'PlaylistDeleteFailed',
+							`删除共享歌单失败（${resp.status}）`,
+							{ cause: body },
+						)
+					}
+					const deleteRes =
+						await this.playlistService.deletePlaylist(playlistId)
+					if (deleteRes.isErr()) throw deleteRes.error
+				} else if (shareRole === 'subscriber' || shareRole === 'editor') {
+					// subscriber/editor：服务端解除成员关系
+					const resp = await this.bbplayerApi.playlists[
+						':id'
+					].members.me.$delete({
+						param: { id: shareId },
+					})
+					if (!resp.ok) {
+						const body = await resp.json().catch(() => ({}))
+						throw createFacadeError(
+							'PlaylistDeleteFailed',
+							`解除共享歌单关联失败（${resp.status}）`,
+							{ cause: body },
+						)
+					}
+
+					await this.db.transaction(async (tx) => {
+						const txPlaylist = this.playlistService.withDB(tx)
+						if (shareRole === 'subscriber') {
+							// subscriber：删除本地副本
+							const r = await txPlaylist.deletePlaylist(playlistId)
+							if (r.isErr()) throw r.error
+						} else {
+							// editor：保留本地数据，仅断开共享连接
+							const r = await txPlaylist.updatePlaylistMetadata(playlistId, {
+								shareId: null,
+								shareRole: null,
+								lastShareSyncAt: null,
+							})
+							if (r.isErr()) throw r.error
+						}
+					})
+				}
+			})(),
+			(e) =>
+				createFacadeError('PlaylistDeleteFailed', '删除播放列表失败', {
+					cause: e,
+				}),
+		)
+	}
+
+	/**
 	 * 向 playlist_sync_queue 写入一条待同步记录（在调用方的事务内执行）。
 	 * operationAt 记录用户真正执行操作的时间（LWW 基准）。
 	 */
@@ -562,8 +660,8 @@ export class PlaylistFacade {
 
 export const playlistFacade = new PlaylistFacade(
 	trackService,
-	bilibiliApi,
 	playlistService,
 	artistService,
 	db,
+	bbplayerApi,
 )

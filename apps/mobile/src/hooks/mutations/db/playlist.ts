@@ -226,7 +226,13 @@ export const useDeletePlaylist = () => {
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'deletePlaylist'],
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
-			const result = await playlistService.deletePlaylist(playlistId)
+			// 共享歌单需要有效 token；本地歌单无需，若获取失败静默忽略
+			try {
+				await ensureBBPlayerToken()
+			} catch {
+				// local 歌单不需要 token，继续执行
+			}
+			const result = await playlistFacade.deletePlaylist(playlistId)
 			if (result.isErr()) {
 				throw result.error
 			}

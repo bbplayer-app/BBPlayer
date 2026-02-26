@@ -20,6 +20,7 @@ export type FacadeErrorType =
 	| 'ReorderPlaylistTrackFailed'
 	| 'UpdatePlaylistMetadataFailed'
 	| 'PlaylistPermissionDenied'
+	| 'PlaylistDeleteFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

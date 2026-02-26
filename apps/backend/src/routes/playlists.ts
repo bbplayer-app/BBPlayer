@@ -368,6 +368,66 @@ const playlistsRoute = new Hono<HonoEnv>()
 		c.executionCtx.waitUntil(client.end())
 		return c.json({ role: 'subscriber', already_member: false }, 201)
 	})
+	/**
+	 * DELETE /playlists/:id
+	 * owner 专用：软删除共享歌单（设置 deletedAt）。
+	 * 其他成员若再拉取或订阅此歌单会收到 404。
+	 */
+	.delete('/:id', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const mid = sub
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		const member = await getMember(db, playlistId, mid)
+		if (!member || member.role !== 'owner') {
+			return c.json({ error: 'Forbidden' }, 403)
+		}
+
+		await db
+			.update(sharedPlaylists)
+			.set({ deletedAt: new Date() })
+			.where(eq(sharedPlaylists.id, playlistId))
+
+		c.executionCtx.waitUntil(client.end())
+		return c.json({ deleted: true })
+	})
+	/**
+	 * DELETE /playlists/:id/members/me
+	 * subscriber / editor 专用：从 playlist_members 中移除自己，解除与该歌单的关联。
+	 * 幂等：若已不是成员，直接返回成功。
+	 * owner 不能调用此接口（应使用 DELETE /playlists/:id）。
+	 */
+	.delete('/:id/members/me', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const mid = sub
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		const member = await getMember(db, playlistId, mid)
+		if (!member) {
+			// 已不是成员，幂等返回成功
+			return c.json({ removed: true })
+		}
+		if (member.role === 'owner') {
+			return c.json(
+				{ error: 'Owner cannot leave; use DELETE /:id to delete the playlist' },
+				400,
+			)
+		}
+
+		await db
+			.delete(playlistMembers)
+			.where(
+				and(
+					eq(playlistMembers.playlistId, playlistId),
+					eq(playlistMembers.mid, mid),
+				),
+			)
+
+		c.executionCtx.waitUntil(client.end())
+		return c.json({ removed: true })
+	})
 
 // ---------------------------------------------------------------------------
 // 工具函数
