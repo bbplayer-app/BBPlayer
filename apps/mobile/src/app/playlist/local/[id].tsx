@@ -61,6 +61,7 @@ import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColo
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
+import { CustomError } from '@/lib/errors'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -303,6 +304,13 @@ export default function LocalPlaylistPage() {
 		exitSelectMode()
 	}
 
+	/** 防止重复处理共享歌单被删除的场景 */
+	const handledRemoteDeletionRef = useRef(false)
+
+	useEffect(() => {
+		handledRemoteDeletionRef.current = false
+	}, [id])
+
 	useEffect(() => {
 		if (typeof id !== 'string') {
 			router.replace('/+not-found')
@@ -324,12 +332,34 @@ export default function LocalPlaylistPage() {
 		if (typeof id !== 'string') return
 		if (!playlistMetadata?.shareId || !playlistMetadata.shareRole) return
 		if (isOffline) return
-		pullSharedPlaylist({ playlistId: Number(id) })
+		pullSharedPlaylist(
+			{ playlistId: Number(id) },
+			{
+				onError: (error) => {
+					if (
+						handledRemoteDeletionRef.current ||
+						!(error instanceof CustomError) ||
+						error.type !== 'SharedPlaylistDeleted'
+					) {
+						return
+					}
+					handledRemoteDeletionRef.current = true
+					toast.error('共享者已删除该歌单，已为你移除本地副本')
+					deletePlaylist(
+						{ playlistId: Number(id) },
+						{ onSuccess: () => router.back() },
+					)
+				},
+			},
+		)
 	}, [
 		id,
 		isOffline,
 		playlistMetadata?.shareId,
 		playlistMetadata?.shareRole,
+		handledRemoteDeletionRef,
+		deletePlaylist,
+		router,
 		pullSharedPlaylist,
 	])
 

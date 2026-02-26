@@ -15,6 +15,7 @@ export type FacadeErrorType =
 	| 'SharedPlaylistSubscribeFailed'
 	| 'SharedPlaylistRestoreFailed'
 	| 'SharedPlaylistPullFailed'
+	| 'SharedPlaylistDeleted'
 	| 'SharedPlaylistUnsubscribeFailed'
 	| 'RemoveTracksFromPlaylistFailed'
 	| 'ReorderPlaylistTrackFailed'

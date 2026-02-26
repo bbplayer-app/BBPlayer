@@ -423,6 +423,11 @@ export class SharedPlaylistFacade {
 					param: { id: playlist.shareId },
 					query: { since: String(since) },
 				})
+				if (resp.status === 404) {
+					throw createFacadeError('SharedPlaylistDeleted', '共享歌单已被删除', {
+						data: { playlistId: localPlaylistId, shareId: playlist.shareId },
+					})
+				}
 				if (!resp.ok) {
 					throw createFacadeError(
 						'SharedPlaylistPullFailed',

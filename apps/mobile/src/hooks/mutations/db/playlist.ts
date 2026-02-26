@@ -5,6 +5,7 @@ import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
 import { queryClient } from '@/lib/config/queryClient'
+import { CustomError } from '@/lib/errors'
 import { playlistFacade } from '@/lib/facades/playlist'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
@@ -502,11 +503,19 @@ export const usePullSharedPlaylist = () => {
 				}),
 			])
 		},
-		onError: (error, { playlistId }) =>
+		onError: (error, { playlistId }) => {
+			if (
+				error instanceof CustomError &&
+				error.type === 'SharedPlaylistDeleted'
+			) {
+				// 交由调用方处理删除逻辑，这里静默
+				return
+			}
 			toastAndLogError(
 				`拉取共享歌单失败: playlistId=${playlistId}`,
 				error,
 				SCOPE,
-			),
+			)
+		},
 	})
 }

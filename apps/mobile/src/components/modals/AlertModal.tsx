@@ -42,8 +42,10 @@ export default function AlertModal({
 			}
 			case 1: {
 				const handlePress = () => {
-					button.onPress?.()
 					close('Alert')
+					useModalStore.getState().doAfterModalHostClosed(() => {
+						button.onPress?.()
+					})
 				}
 				return (
 					<Button

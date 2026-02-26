@@ -261,7 +261,15 @@ const playlistsRoute = new Hono<HonoEnv>()
 			const [playlist] = await db
 				.select()
 				.from(sharedPlaylists)
-				.where(eq(sharedPlaylists.id, playlistId))
+				.where(
+					and(
+						eq(sharedPlaylists.id, playlistId),
+						isNull(sharedPlaylists.deletedAt),
+					),
+				)
+			if (!playlist) {
+				return c.json({ error: 'Playlist not found' }, 404)
+			}
 			const metadata =
 				playlist.updatedAt > sinceDate
 					? {
@@ -413,6 +421,11 @@ const playlistsRoute = new Hono<HonoEnv>()
 			.update(sharedPlaylists)
 			.set({ deletedAt: new Date() })
 			.where(eq(sharedPlaylists.id, playlistId))
+
+		// 清理成员关系，确保后续请求无法再命中
+		await db
+			.delete(playlistMembers)
+			.where(eq(playlistMembers.playlistId, playlistId))
 
 		c.executionCtx.waitUntil(client.end())
 		return c.json({ deleted: true })
