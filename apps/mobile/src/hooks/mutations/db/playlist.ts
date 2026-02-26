@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
-import { getAuthToken, setAuthToken } from '@/lib/api/bbplayer/token'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
@@ -20,9 +19,10 @@ import toast from '@/utils/toast'
 
 /** 若当前无 BBPlayer JWT，尝试用 Bilibili Cookie 自动换取。无 cookie 时抛出异常。 */
 async function ensureBBPlayerToken(): Promise<void> {
-	if (getAuthToken()) return
+	const store = useAppStore.getState()
+	if (store.bbplayerToken) return
 
-	const cookie = useAppStore.getState().bilibiliCookie
+	const cookie = store.bilibiliCookie
 	if (!cookie || Object.keys(cookie).length === 0) {
 		throw new Error('请先登录 Bilibili，才能使用共享功能')
 	}
@@ -38,7 +38,7 @@ async function ensureBBPlayerToken(): Promise<void> {
 		)
 	}
 	const data = (await resp.json()) as { token: string }
-	setAuthToken(data.token)
+	store.setBbplayerToken(data.token)
 }
 
 const SCOPE = 'Mutation.DB.Playlist'

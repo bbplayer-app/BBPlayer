@@ -6,8 +6,8 @@ import { Dialog, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useEnableSharing } from '@/hooks/mutations/db/playlist'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { getAuthToken } from '@/lib/api/bbplayer/token'
 import toast from '@/utils/toast'
 
 const SHARE_BASE_URL = 'https://bbplayer.app/share'
@@ -20,8 +20,8 @@ export default function EnableSharingModal({
 	const close = useModalStore((state) => state.close)
 	const { mutate: enableSharing, isPending } = useEnableSharing()
 	const [shareId, setShareId] = useState<string | null>(null)
+	const hasToken = useAppStore((state) => !!state.bbplayerToken)
 
-	const hasToken = !!getAuthToken()
 	const shareUrl = shareId ? `${SHARE_BASE_URL}/${shareId}` : ''
 
 	const handleConfirm = () => {
