@@ -12,6 +12,10 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync } from 'neverthrow'
 
+import {
+	setSharedPlaylistMembers,
+	clearSharedPlaylistMembers,
+} from '@/hooks/stores/useSharedPlaylistMembersStore'
 import { api as bbplayerApiClient } from '@/lib/api/bbplayer/client'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
@@ -248,7 +252,7 @@ export class SharedPlaylistFacade {
 					if (createResult.isErr()) throw createResult.error
 					const id = createResult.value.id
 
-					await this._applyPullResponse(id, changesData, tx, {
+					await this._applyPullResponse(id, shareId, changesData, tx, {
 						playlistService: txPlaylist,
 						trackService: txTrack,
 						artistService: txArtist,
@@ -352,7 +356,8 @@ export class SharedPlaylistFacade {
 
 							await this._applyPullResponse(
 								localId,
-								changesData as Parameters<typeof this._applyPullResponse>[1],
+								remote.id,
+								changesData as Parameters<typeof this._applyPullResponse>[2],
 								tx,
 								{
 									playlistService: txPlaylist,
@@ -434,11 +439,17 @@ export class SharedPlaylistFacade {
 					const txTrack = this.trackService.withDB(tx)
 					const txArtist = this.artistService.withDB(tx)
 
-					const n = await this._applyPullResponse(localPlaylistId, data, tx, {
-						playlistService: txPlaylist,
-						trackService: txTrack,
-						artistService: txArtist,
-					})
+					const n = await this._applyPullResponse(
+						localPlaylistId,
+						playlist.shareId!,
+						data,
+						tx,
+						{
+							playlistService: txPlaylist,
+							trackService: txTrack,
+							artistService: txArtist,
+						},
+					)
 
 					const updateResult = await txPlaylist.updatePlaylistMetadata(
 						localPlaylistId,
@@ -526,6 +537,8 @@ export class SharedPlaylistFacade {
 						if (updateResult.isErr()) throw updateResult.error
 					}
 				})
+
+				clearSharedPlaylistMembers(playlist.shareId)
 			})(),
 			(e) =>
 				createFacadeError(
@@ -538,12 +551,19 @@ export class SharedPlaylistFacade {
 
 	private async _applyPullResponse(
 		localPlaylistId: number,
+		shareId: string,
 		data: {
 			metadata?: {
 				title?: string | null
 				description?: string | null
 				cover_url?: string | null
 			} | null
+			members?: Array<{
+				mid: number
+				name: string
+				avatar_url?: string | null
+				role: 'owner' | 'editor' | 'subscriber'
+			}>
 			tracks: Array<
 				| {
 						op: 'upsert'
@@ -594,6 +614,27 @@ export class SharedPlaylistFacade {
 					metaUpdate,
 				)
 				if (metaResult.isErr()) throw metaResult.error
+			}
+		}
+
+		if (Array.isArray(data.members)) {
+			type narrowedMember = Omit<(typeof data.members)[number], 'role'> & {
+				role: 'owner' | 'editor'
+			}
+			const members = data.members
+				.filter((m) => m.role === 'owner' || m.role === 'editor')
+				.map((m) => ({
+					mid: Number(m.mid),
+					name: m.name,
+					avatarUrl: m.avatar_url ?? null,
+					role: m.role,
+				}))
+				.filter((m) => Number.isFinite(m.mid) && !!m.name) as narrowedMember[]
+
+			if (members.length > 0) {
+				setSharedPlaylistMembers(shareId, members)
+			} else {
+				clearSharedPlaylistMembers(shareId)
 			}
 		}
 

@@ -50,6 +50,10 @@ import {
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
+import {
+	useSharedPlaylistMembers,
+	type SharedPlaylistMember,
+} from '@/hooks/queries/sharedPlaylistMembers'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -204,6 +208,8 @@ export default function LocalPlaylistPage() {
 		isPending: isPlaylistMetadataPending,
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
+
+	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
 
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
@@ -222,6 +228,13 @@ export default function LocalPlaylistPage() {
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
 	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
 		usePullSharedPlaylist()
+
+	const handlePressShareMember = (member: SharedPlaylistMember) => {
+		router.push({
+			pathname: '/playlist/remote/uploader/[mid]',
+			params: { mid: String(member.mid) },
+		})
+	}
 
 	const onClickDeletePlaylist = () => {
 		deletePlaylist(
@@ -689,6 +702,8 @@ export default function LocalPlaylistPage() {
 									params: { mid: author.remoteId },
 								})
 							}
+							shareMembers={shareMembers}
+							onPressShareMember={handlePressShareMember}
 						/>
 					}
 				/>

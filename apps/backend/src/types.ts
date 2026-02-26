@@ -50,3 +50,10 @@ export type ChangeEvent =
 			track_unique_key: string
 			deleted_at: number
 	  }
+
+export interface PlaylistMemberInfo {
+	mid: number
+	name: string
+	avatar_url?: string | null
+	role: 'owner' | 'editor'
+}

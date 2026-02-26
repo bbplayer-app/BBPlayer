@@ -9,6 +9,7 @@ import {
 	sharedPlaylists,
 	sharedPlaylistTracks,
 	sharedTracks,
+	users,
 } from '../db/schema'
 import { authMiddleware } from '../middleware/auth'
 import type { ChangeEvent, JwtTokenPayload, TrackInput } from '../types'
@@ -324,10 +325,34 @@ const playlistsRoute = new Hono<HonoEnv>()
 				}
 			})
 
+			// 成员列表（仅 owner + editor）
+			const members = await db
+				.select({
+					mid: playlistMembers.mid,
+					role: playlistMembers.role,
+					name: users.name,
+					avatar_url: users.face,
+				})
+				.from(playlistMembers)
+				.innerJoin(users, eq(users.mid, playlistMembers.mid))
+				.where(
+					and(
+						eq(playlistMembers.playlistId, playlistId),
+						or(
+							eq(playlistMembers.role, 'owner'),
+							eq(playlistMembers.role, 'editor'),
+						),
+					),
+				)
+
 			c.executionCtx.waitUntil(client.end())
 			return c.json({
 				metadata,
 				tracks,
+				members: members.map((m) => ({
+					...m,
+					mid: Number(m.mid),
+				})),
 				has_more: false,
 				server_time: serverTime,
 			})

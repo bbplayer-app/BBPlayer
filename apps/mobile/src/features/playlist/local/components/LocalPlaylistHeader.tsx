@@ -4,13 +4,14 @@ import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Divider, Text, TouchableRipple } from 'react-native-paper'
+import { Avatar, Divider, Text, TouchableRipple } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { resolveTrackCover } from '@/hooks/player/useLocalCover'
+import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -28,6 +29,8 @@ interface PlaylistHeaderProps {
 	/** 当作者为 bilibili 时触发。可选，未提供时仅视觉提示不响应 */
 	onPressAuthor?: (author: NonNullable<Playlist['author']>) => void
 	coverRef?: ImageRef | null
+	shareMembers?: SharedPlaylistMember[]
+	onPressShareMember?: (member: SharedPlaylistMember) => void
 }
 
 interface SubtitlePieces {
@@ -83,6 +86,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	onClickCopyToLocalPlaylist,
 	onPressAuthor,
 	coverRef,
+	shareMembers,
+	onPressShareMember,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
@@ -91,6 +96,13 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		() => buildSubtitlePieces(playlist, totalDuration),
 		[playlist, totalDuration],
 	)
+
+	const shareOwner = useMemo(() => {
+		if (!shareMembers?.length) return null
+		return (
+			shareMembers.find((m) => m.role === 'owner') ?? shareMembers[0] ?? null
+		)
+	}, [shareMembers])
 	const onClickDownloadAll = useCallback(async () => {
 		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
 		if (tracksResult.isErr()) {
@@ -192,6 +204,45 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							</>
 						)}
 					</Text>
+
+					{playlist.shareId && shareOwner && (
+						<TouchableRipple
+							onPress={
+								onPressShareMember
+									? () => onPressShareMember(shareOwner)
+									: undefined
+							}
+						>
+							<View style={styles.shareInfoRow}>
+								{shareOwner.avatarUrl ? (
+									<Avatar.Image
+										size={32}
+										source={{ uri: shareOwner.avatarUrl }}
+									/>
+								) : (
+									<Avatar.Text
+										size={32}
+										label={shareOwner.name.slice(0, 1)}
+									/>
+								)}
+								<View style={styles.shareInfoText}>
+									<Text
+										variant='bodyMedium'
+										numberOfLines={1}
+										style={styles.shareOwnerName}
+									>
+										{shareOwner.name}
+									</Text>
+									<Text
+										variant='bodySmall'
+										style={styles.shareOwnerRole}
+									>
+										{shareOwner.role === 'owner' ? '共享创建者' : '共享编辑者'}
+									</Text>
+								</View>
+							</View>
+						</TouchableRipple>
+					)}
 				</View>
 			</View>
 
@@ -292,6 +343,23 @@ const styles = StyleSheet.create({
 	subtitle: {
 		fontWeight: '100',
 		lineHeight: 18,
+	},
+	shareInfoRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		columnGap: 10,
+		marginTop: 10,
+	},
+	shareInfoText: {
+		flex: 1,
+		flexDirection: 'column',
+		rowGap: 2,
+	},
+	shareOwnerName: {
+		fontWeight: '600',
+	},
+	shareOwnerRole: {
+		opacity: 0.7,
 	},
 	actionsContainer: {
 		flexDirection: 'row',
