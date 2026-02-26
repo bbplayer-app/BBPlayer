@@ -17,6 +17,7 @@ import {
 	createPlaylistRequestSchema,
 	getPlaylistChangesRequestSchema,
 	playlistChangesRequestSchema,
+	subscribePlaylistRequestSchema,
 	updatePlaylistRequestSchema,
 } from '../validators/playlists'
 
@@ -369,15 +370,87 @@ const playlistsRoute = new Hono<HonoEnv>()
 			})
 		},
 	)
-	.post('/:id/subscribe', async (c) => {
+	.post(
+		'/:id/subscribe',
+		arktypeValidator('json', subscribePlaylistRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const playlistId = c.req.param('id')
+			const body = c.req.valid('json') ?? {}
+			const inviteCode =
+				typeof body?.invite_code === 'string'
+					? body.invite_code.trim()
+					: undefined
+			const { db, client } = createDb(c.env.DATABASE_URL)
+
+			// 歌单必须存在且未删除
+			const [playlist] = await db
+				.select()
+				.from(sharedPlaylists)
+				.where(
+					and(
+						eq(sharedPlaylists.id, playlistId),
+						isNull(sharedPlaylists.deletedAt),
+					),
+				)
+			if (!playlist) {
+				return c.json({ error: 'Playlist not found' }, 404)
+			}
+
+			// 已是成员：owner/editor 直接返回；subscriber 在邀请码匹配时升级
+			const existing = await getMember(db, playlistId, mid)
+			if (existing) {
+				if (existing.role === 'subscriber') {
+					const shouldUpgrade =
+						inviteCode && playlist.editorInviteCode === inviteCode
+					if (shouldUpgrade) {
+						await db
+							.update(playlistMembers)
+							.set({ role: 'editor' })
+							.where(
+								and(
+									eq(playlistMembers.playlistId, playlistId),
+									eq(playlistMembers.mid, mid),
+								),
+							)
+						c.executionCtx.waitUntil(client.end())
+						return c.json({
+							role: 'editor',
+							already_member: true,
+							upgraded: true,
+						})
+					}
+				}
+				c.executionCtx.waitUntil(client.end())
+				return c.json({ role: existing.role, already_member: true })
+			}
+
+			// 新成员：邀请码匹配则授予 editor，否则为 subscriber
+			const newRole =
+				inviteCode && playlist.editorInviteCode === inviteCode
+					? 'editor'
+					: 'subscriber'
+			await db.insert(playlistMembers).values({
+				playlistId,
+				mid,
+				role: newRole,
+			})
+
+			c.executionCtx.waitUntil(client.end())
+			return c.json({ role: newRole, already_member: false }, 201)
+		},
+	)
+	.get('/:id/invite', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const mid = sub
 		const playlistId = c.req.param('id')
 		const { db, client } = createDb(c.env.DATABASE_URL)
 
-		// 歌单必须存在且未删除
 		const [playlist] = await db
-			.select()
+			.select({
+				ownerMid: sharedPlaylists.ownerMid,
+				editorInviteCode: sharedPlaylists.editorInviteCode,
+			})
 			.from(sharedPlaylists)
 			.where(
 				and(
@@ -385,24 +458,47 @@ const playlistsRoute = new Hono<HonoEnv>()
 					isNull(sharedPlaylists.deletedAt),
 				),
 			)
+
 		if (!playlist) {
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
-
-		// 如果已经是成员则直接返回现有角色
-		const existing = await getMember(db, playlistId, mid)
-		if (existing) {
-			return c.json({ role: existing.role, already_member: true })
+		if (playlist.ownerMid !== sub) {
+			return c.json({ error: 'Forbidden' }, 403)
 		}
 
-		await db.insert(playlistMembers).values({
-			playlistId,
-			mid,
-			role: 'subscriber',
-		})
+		c.executionCtx.waitUntil(client.end())
+		return c.json({ editor_invite_code: playlist.editorInviteCode ?? null })
+	})
+	.post('/:id/invite/rotate', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		const [playlist] = await db
+			.select({ ownerMid: sharedPlaylists.ownerMid })
+			.from(sharedPlaylists)
+			.where(
+				and(
+					eq(sharedPlaylists.id, playlistId),
+					isNull(sharedPlaylists.deletedAt),
+				),
+			)
+
+		if (!playlist) {
+			return c.json({ error: 'Playlist not found' }, 404)
+		}
+		if (playlist.ownerMid !== sub) {
+			return c.json({ error: 'Forbidden' }, 403)
+		}
+
+		const newCode = generateInviteCode()
+		await db
+			.update(sharedPlaylists)
+			.set({ editorInviteCode: newCode })
+			.where(eq(sharedPlaylists.id, playlistId))
 
 		c.executionCtx.waitUntil(client.end())
-		return c.json({ role: 'subscriber', already_member: false }, 201)
+		return c.json({ editor_invite_code: newCode })
 	})
 	/**
 	 * DELETE /playlists/:id
@@ -521,6 +617,17 @@ async function upsertTracks(
 			)
 			.onConflictDoNothing()
 	})
+}
+
+function generateInviteCode(): string {
+	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+	let out = ''
+	for (let i = 0; i < 8; i++) {
+		const idx = Math.floor(Math.random() * chars.length)
+		out += chars[idx]
+	}
+
+	return 'BBP-' + out
 }
 
 export default playlistsRoute

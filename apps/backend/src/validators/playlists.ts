@@ -60,3 +60,7 @@ export const playlistChangesRequestSchema = arkType({
 export const getPlaylistChangesRequestSchema = arkType({
 	since: 'string.integer.parse',
 })
+
+export const subscribePlaylistRequestSchema = arkType({
+	'invite_code?': 'string',
+})

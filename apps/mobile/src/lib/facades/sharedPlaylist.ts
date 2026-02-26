@@ -172,14 +172,16 @@ export class SharedPlaylistFacade {
 	 * 步骤：POST subscribe → 创建本地歌单行 → 全量拉取（since=0）。
 	 * @param shareId 后端共享歌单 UUID
 	 */
-	public subscribeToPlaylist(
-		shareId: string,
-	): ResultAsync<
+	public subscribeToPlaylist(params: {
+		shareId: string
+		inviteCode?: string
+	}): ResultAsync<
 		{ localPlaylistId: number },
 		ReturnType<typeof createFacadeError>
 	> {
 		return ResultAsync.fromPromise(
 			(async () => {
+				const { shareId, inviteCode } = params
 				// 1. 检查是否已有本地副本
 				const existing =
 					await this.playlistService.findPlaylistByShareId(shareId)
@@ -194,6 +196,7 @@ export class SharedPlaylistFacade {
 				// 2. 通知后端订阅
 				const subResp = await this.api.playlists[':id'].subscribe.$post({
 					param: { id: shareId },
+					json: inviteCode ? { invite_code: inviteCode } : {},
 				})
 				if (!subResp.ok && subResp.status !== 201) {
 					const errBody = await subResp.json().catch(() => ({}))
@@ -554,6 +557,35 @@ export class SharedPlaylistFacade {
 					'解除共享歌单订阅失败',
 					{ cause: e },
 				),
+		)
+	}
+
+	public rotateEditorInviteCode(
+		shareId: string,
+	): ResultAsync<
+		{ editorInviteCode: string },
+		ReturnType<typeof createFacadeError>
+	> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const resp = await this.api.playlists[':id'].invite.rotate.$post({
+					param: { id: shareId },
+				})
+				if (!resp.ok) {
+					throw createFacadeError(
+						'InviteCodeRotateFailed',
+						`生成编辑者邀请码失败：${resp.status}`,
+					)
+				}
+				const data = (await resp.json()) as {
+					editor_invite_code: string
+				}
+				return { editorInviteCode: data.editor_invite_code }
+			})(),
+			(e) =>
+				createFacadeError('InviteCodeRotateFailed', '生成编辑者邀请码失败', {
+					cause: e,
+				}),
 		)
 	}
 

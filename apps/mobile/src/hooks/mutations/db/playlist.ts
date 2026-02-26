@@ -458,9 +458,18 @@ export const useSubscribeToSharedPlaylist = () => {
 	const router = useRouter()
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'subscribeToSharedPlaylist'],
-		mutationFn: async ({ shareId }: { shareId: string }) => {
+		mutationFn: async ({
+			shareId,
+			inviteCode,
+		}: {
+			shareId: string
+			inviteCode?: string
+		}) => {
 			await ensureBBPlayerToken()
-			const result = await sharedPlaylistFacade.subscribeToPlaylist(shareId)
+			const result = await sharedPlaylistFacade.subscribeToPlaylist({
+				shareId,
+				inviteCode,
+			})
 			if (result.isErr()) throw result.error
 			return result.value
 		},

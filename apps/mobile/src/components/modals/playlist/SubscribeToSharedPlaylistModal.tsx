@@ -18,6 +18,7 @@ function extractShareId(input: string): string {
 
 export default function SubscribeToSharedPlaylistModal() {
 	const [input, setInput] = useState('')
+	const [inviteCode, setInviteCode] = useState('')
 	const close = useModalStore((state) => state.close)
 	const { mutate: subscribe, isPending } = useSubscribeToSharedPlaylist()
 
@@ -30,7 +31,7 @@ export default function SubscribeToSharedPlaylistModal() {
 	const handleSubscribe = () => {
 		if (!isValidId) return
 		subscribe(
-			{ shareId },
+			{ shareId, inviteCode: inviteCode.trim() || undefined },
 			{
 				onSuccess: () => close('SubscribeToSharedPlaylist'),
 			},
@@ -57,6 +58,16 @@ export default function SubscribeToSharedPlaylistModal() {
 					style={styles.input}
 					editable={!isPending}
 					error={input.trim().length > 0 && !isValidId}
+				/>
+				<TextInput
+					label='编辑者邀请码（可选）'
+					value={inviteCode}
+					onChangeText={setInviteCode}
+					mode='outlined'
+					autoCapitalize='characters'
+					autoCorrect={false}
+					style={styles.input}
+					editable={!isPending}
 				/>
 				{input.trim().length > 0 && !isValidId && (
 					<Text

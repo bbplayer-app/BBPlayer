@@ -8,6 +8,7 @@ import Button from '@/components/common/Button'
 import { useEnableSharing } from '@/hooks/mutations/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import toast from '@/utils/toast'
 
 const SHARE_BASE_URL = 'https://bbplayer.roitium.com/share/playlist'
@@ -20,6 +21,8 @@ export default function EnableSharingModal({
 	const close = useModalStore((state) => state.close)
 	const { mutate: enableSharing, isPending } = useEnableSharing()
 	const [shareId, setShareId] = useState<string | null>(null)
+	const [inviteCode, setInviteCode] = useState<string | null>(null)
+	const [inviteLoading, setInviteLoading] = useState(false)
 	const hasToken = useAppStore((state) => !!state.bbplayerToken)
 
 	const shareUrl = shareId ? `${SHARE_BASE_URL}/${shareId}` : ''
@@ -34,6 +37,25 @@ export default function EnableSharingModal({
 	const handleCopy = async () => {
 		await Clipboard.setStringAsync(shareUrl)
 		toast.success('已复制分享链接')
+	}
+
+	const handleRotateInvite = async () => {
+		if (!shareId) return
+		setInviteLoading(true)
+		const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)
+		setInviteLoading(false)
+		if (result.isErr()) {
+			toast.error('生成邀请码失败')
+			return
+		}
+		setInviteCode(result.value.editorInviteCode)
+		toast.success('已生成新的编辑者邀请码')
+	}
+
+	const handleCopyInvite = async () => {
+		if (!inviteCode) return
+		await Clipboard.setStringAsync(inviteCode)
+		toast.success('已复制邀请码')
 	}
 
 	// ---- 成功状态：显示可复制的链接 ----
@@ -105,6 +127,30 @@ export default function EnableSharingModal({
 						</View>
 					)}
 					<Text variant='bodyMedium'>
+						<View style={styles.inviteRow}>
+							<Button
+								onPress={handleRotateInvite}
+								loading={inviteLoading}
+								mode='outlined'
+							>
+								生成 / 重置 编辑者邀请码
+							</Button>
+						</View>
+						{inviteCode && (
+							<TextInput
+								value={inviteCode}
+								editable={false}
+								mode='outlined'
+								dense
+								style={styles.linkInput}
+								right={
+									<TextInput.Icon
+										icon='content-copy'
+										onPress={handleCopyInvite}
+									/>
+								}
+							/>
+						)}
 						共享后，其他用户可通过链接订阅此歌单。
 					</Text>
 					<Text
@@ -145,6 +191,9 @@ const styles = StyleSheet.create({
 	},
 	linkInput: {
 		fontSize: 12,
+	},
+	inviteRow: {
+		marginTop: 8,
 	},
 	warningBox: {
 		flexDirection: 'row',

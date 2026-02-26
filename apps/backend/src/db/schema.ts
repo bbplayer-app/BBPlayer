@@ -29,6 +29,8 @@ export const sharedPlaylists = pgTable('shared_playlists', {
 	title: text('title').notNull(),
 	description: text('description'),
 	coverUrl: text('cover_url'),
+	/** 编辑者邀请码（明文存储，旋转后旧码失效） */
+	editorInviteCode: text('editor_invite_code'),
 	createdAt: timestamp('created_at', { withTimezone: true })
 		.notNull()
 		.default(sql`now()`),
