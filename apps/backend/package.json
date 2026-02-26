@@ -15,12 +15,12 @@
 	"dependencies": {
 		"@hono/arktype-validator": "^2.0.1",
 		"arktype": "^2.1.29",
-		"drizzle-orm": "^0.44.1",
-		"hono": "^4.7.5",
+		"drizzle-orm": "^0.44.7",
+		"hono": "^4.12.2",
 		"postgres": "^3.4.5"
 	},
 	"devDependencies": {
-		"drizzle-kit": "^0.31.0",
+		"drizzle-kit": "^0.31.9",
 		"typescript": "~5.9.3",
 		"wrangler": "^4.4.0"
 	}

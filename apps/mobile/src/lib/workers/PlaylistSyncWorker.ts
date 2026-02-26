@@ -34,6 +34,35 @@ class PlaylistSyncWorker {
 		void this.syncAllPlaylists()
 	}
 
+	/**
+	 * 应用启动时调用：将上次被意外中断（状态为 syncing 或 pending 但未被消费）的记录
+	 * 重置为 pending，然后触发同步。
+	 * - syncing：进程被杀死时正在上传，需要重置
+	 * - pending：进程被杀死时还没轮到，triggerSync 会正常消费，无需额外处理
+	 */
+	async recoverStuckRows(): Promise<void> {
+		try {
+			// 仅需处理 syncing，pending 本来就可以被 triggerSync 消费
+			const stuck = await db
+				.select({ id: schema.playlistSyncQueue.id })
+				.from(schema.playlistSyncQueue)
+				.where(eq(schema.playlistSyncQueue.status, 'syncing'))
+			if (stuck.length > 0) {
+				await db
+					.update(schema.playlistSyncQueue)
+					.set({ status: 'pending' })
+					.where(eq(schema.playlistSyncQueue.status, 'syncing'))
+				logger.info(
+					`恢复了 ${stuck.length} 条中断的同步记录（syncing → pending）`,
+				)
+			}
+		} catch (error) {
+			logger.error('recoverStuckRows 失败', { error })
+		}
+		// 无论是否有 syncing 记录，都触发一次以消费所有 pending 行
+		this.triggerSync()
+	}
+
 	private async syncAllPlaylists(): Promise<void> {
 		if (this.isRunning) {
 			this.runAgain = true

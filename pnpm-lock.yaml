@@ -81,17 +81,17 @@ importers:
         specifier: ^2.1.29
         version: 2.1.29
       drizzle-orm:
-        specifier: ^0.44.1
+        specifier: ^0.44.7
         version: 0.44.7(@cloudflare/workers-types@4.20260304.0)(@neondatabase/serverless@0.10.4)(@types/pg@8.11.6)(expo-sqlite@55.0.3(expo@55.0.0-preview.7)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(postgres@3.4.8)
       hono:
-        specifier: ^4.7.5
+        specifier: ^4.12.2
         version: 4.12.2
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
     devDependencies:
       drizzle-kit:
-        specifier: ^0.31.0
+        specifier: ^0.31.9
         version: 0.31.9
       typescript:
         specifier: ~5.9.3

@@ -26,6 +26,7 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
+import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -138,6 +139,9 @@ export default Sentry.wrap(function RootLayout() {
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
 			SplashScreen.hide()
+
+			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
+			void playlistSyncWorker.recoverStuckRows()
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
