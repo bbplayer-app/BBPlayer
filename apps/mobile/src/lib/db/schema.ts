@@ -182,9 +182,6 @@ export const playlistSyncQueue = sqliteTable('playlist_sync_queue', {
 	})
 		.notNull()
 		.default('pending'),
-	attempts: integer('attempts').notNull().default(0),
-	lastAttemptAt: integer('last_attempt_at', { mode: 'timestamp_ms' }),
-	failureReason: text('failure_reason'),
 	// 用户真正执行操作的时间，入队时立刻记录，不是上传时的时间
 	// 这是 LWW 冲突解决的基准时间戳，防止网络延迟重试时覆盖掉更新的操作
 	operationAt: integer('operation_at', { mode: 'timestamp_ms' })

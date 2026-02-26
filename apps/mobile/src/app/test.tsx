@@ -12,6 +12,7 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { expoDb } from '@/lib/db/db'
+import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
@@ -132,6 +133,21 @@ export default function TestPage() {
 		)
 	}
 
+	const testPullSharedPlaylist = async () => {
+		setLoading(true)
+		try {
+			const result = await sharedPlaylistFacade.pullChanges(44)
+			if (result.isErr()) throw result.error
+			toast.success('拉取共享歌单成功', {
+				description: `applied=${result.value.applied}`,
+			})
+		} catch (error) {
+			toastAndLogError('拉取共享歌单失败', error, 'TestPage')
+		} finally {
+			setLoading(false)
+		}
+	}
+
 	const openModal = useModalStore((state) => state.open)
 
 	return (
@@ -149,6 +165,14 @@ export default function TestPage() {
 						style={styles.button}
 					>
 						同步外部歌单
+					</Button>
+					<Button
+						mode='outlined'
+						onPress={testPullSharedPlaylist}
+						loading={loading}
+						style={styles.button}
+					>
+						测试共享歌单增量拉取
 					</Button>
 					<Button
 						mode='outlined'

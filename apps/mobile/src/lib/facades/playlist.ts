@@ -12,6 +12,7 @@ import {
 	type PlaylistService,
 } from '@/lib/services/playlistService'
 import { trackService, type TrackService } from '@/lib/services/trackService'
+import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type {
 	ReorderLocalPlaylistTrackPayload,
@@ -141,6 +142,10 @@ export class PlaylistFacade {
 				const playlistSvc = this.playlistService.withDB(tx)
 				const trackSvc = this.trackService.withDB(tx)
 				const artistSvc = this.artistService.withDB(tx)
+				const targetPlaylists = new Map<
+					number,
+					typeof schema.playlists.$inferSelect
+				>()
 
 				// step0: 权限校验（所有目标歌单中，共享歌单仅 owner/editor 可写）
 				const allTargetIds = [...toAddPlaylistIds, ...toRemovePlaylistIds]
@@ -164,6 +169,8 @@ export class PlaylistFacade {
 							'无权限修改此共享歌单',
 						)
 					}
+
+					targetPlaylists.set(pid, pl)
 				}
 
 				// step1: 解析/创建 Artist（如需要）
@@ -192,6 +199,16 @@ export class PlaylistFacade {
 						trackId,
 					])
 					if (r.isErr()) throw r.error
+
+					const target = targetPlaylists.get(pid)
+					if (
+						target?.shareId &&
+						(target.shareRole === 'owner' || target.shareRole === 'editor')
+					) {
+						await this.enqueueSync(tx, pid, 'add_tracks', {
+							trackIds: [trackId],
+						})
+					}
 				}
 				for (const pid of toRemovePlaylistIds) {
 					// oxlint-disable-next-line no-await-in-loop
@@ -199,6 +216,17 @@ export class PlaylistFacade {
 						trackId,
 					])
 					if (r.isErr()) throw r.error
+
+					const target = targetPlaylists.get(pid)
+					if (
+						target?.shareId &&
+						(target.shareRole === 'owner' || target.shareRole === 'editor') &&
+						r.value.removedTrackIds.length > 0
+					) {
+						await this.enqueueSync(tx, pid, 'remove_tracks', {
+							removedTrackIds: r.value.removedTrackIds,
+						})
+					}
 				}
 				logger.debug('step3: 更新本地播放列表完成', {
 					added: toAddPlaylistIds,
@@ -514,6 +542,11 @@ export class PlaylistFacade {
 					)
 				}
 
+				const nextTitle = payload.title ?? playlist.title
+				const nextDescription =
+					payload.description ?? playlist.description ?? null
+				const nextCoverUrl = payload.coverUrl ?? playlist.coverUrl ?? null
+
 				const result = await playlistSvc.updatePlaylistMetadata(
 					playlistId,
 					payload,
@@ -523,9 +556,9 @@ export class PlaylistFacade {
 				// 若为共享歌单（owner/editor），在同一事务内入队
 				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
 					await this.enqueueSync(tx, playlistId, 'update_metadata', {
-						title: payload.title,
-						description: payload.description,
-						coverUrl: payload.coverUrl,
+						title: nextTitle,
+						description: nextDescription,
+						coverUrl: nextCoverUrl,
 					})
 				}
 
@@ -655,6 +688,11 @@ export class PlaylistFacade {
 			payload: JSON.stringify(payload),
 			operationAt: new Date(Date.now()),
 		})
+
+		// 事务提交后触发同步（setTimeout 确保在当前事务结束之后执行）。
+		setTimeout(() => {
+			playlistSyncWorker.triggerSync()
+		}, 0)
 	}
 }
 

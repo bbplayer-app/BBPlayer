@@ -72,7 +72,8 @@ export class SharedPlaylistFacade {
 						title: schema.tracks.title,
 						coverUrl: schema.tracks.coverUrl,
 						duration: schema.tracks.duration,
-						artistId: schema.tracks.artistId,
+						artistName: schema.artists.name,
+						artistRemoteId: schema.artists.remoteId,
 						bvid: schema.bilibiliMetadata.bvid,
 						cid: schema.bilibiliMetadata.cid,
 					})
@@ -80,6 +81,10 @@ export class SharedPlaylistFacade {
 					.innerJoin(
 						schema.tracks,
 						eq(schema.playlistTracks.trackId, schema.tracks.id),
+					)
+					.leftJoin(
+						schema.artists,
+						eq(schema.tracks.artistId, schema.artists.id),
 					)
 					.leftJoin(
 						schema.bilibiliMetadata,
@@ -102,6 +107,8 @@ export class SharedPlaylistFacade {
 							title: t.title,
 							cover_url: t.coverUrl ?? undefined,
 							duration: t.duration ?? undefined,
+							artist_name: t.artistName ?? undefined,
+							artist_id: t.artistRemoteId ?? undefined,
 							bilibili_bvid: t.bvid!,
 							bilibili_cid: t.cid ? String(t.cid) : undefined,
 						},
@@ -449,10 +456,15 @@ export class SharedPlaylistFacade {
 				})
 				return { applied }
 			})(),
-			(e) =>
-				createFacadeError('SharedPlaylistPullFailed', '增量拉取歌单变更失败', {
-					cause: e,
-				}),
+			(e) => {
+				return createFacadeError(
+					'SharedPlaylistPullFailed',
+					'增量拉取歌单变更失败',
+					{
+						cause: e,
+					},
+				)
+			},
 		)
 	}
 
