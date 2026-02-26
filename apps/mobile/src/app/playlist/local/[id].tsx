@@ -681,7 +681,7 @@ export default function LocalPlaylistPage() {
 							onPress={async () => {
 								setFunctionalMenuVisible(false)
 								await Clipboard.setStringAsync(
-									`https://bbplayer.app/share/${playlistMetadata.shareId}`,
+									`https://bbplayer-backend.roitium.workers.dev/share/${playlistMetadata.shareId}`,
 								)
 								toast.success('已复制分享链接')
 							}}

@@ -5,7 +5,7 @@ import { getAuthToken } from './token'
 
 // const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://be.bbplayer.app'
 
-const BASE_URL = 'http://10.0.2.2:8787'
+const BASE_URL = 'https://bbplayer-backend.roitium.workers.dev'
 
 export const api = hc<AppType>(BASE_URL, {
 	headers: () => {

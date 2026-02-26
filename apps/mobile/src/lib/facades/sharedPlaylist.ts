@@ -8,7 +8,7 @@
  *   - pullChanges        增量拉取单个歌单的最新变更并应用到本地 DB
  *   - unsubscribeFromPlaylist 解除订阅/断开共享连接
  */
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync } from 'neverthrow'
 
@@ -24,6 +24,8 @@ import {
 } from '@/lib/services/playlistService'
 import { trackService, type TrackService } from '@/lib/services/trackService'
 import log from '@/utils/log'
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 const logger = log.extend('SharedPlaylistFacade')
 
@@ -127,16 +129,19 @@ export class SharedPlaylistFacade {
 				const shareId: string = remotePlaylist.id
 				const serverTime = Date.now()
 
-				// 5. 将 shareId/role/syncAt 写回本地
-				const updateResult = await this.playlistService.updatePlaylistMetadata(
-					localPlaylistId,
-					{
-						shareId,
-						shareRole: 'owner',
-						lastShareSyncAt: serverTime,
-					},
-				)
-				if (updateResult.isErr()) throw updateResult.error
+				// 5. 将 shareId/role/syncAt 写回本地（事务保证原子性）
+				await this.db.transaction(async (tx) => {
+					const txPlaylist = this.playlistService.withDB(tx)
+					const updateResult = await txPlaylist.updatePlaylistMetadata(
+						localPlaylistId,
+						{
+							shareId,
+							shareRole: 'owner',
+							lastShareSyncAt: serverTime,
+						},
+					)
+					if (updateResult.isErr()) throw updateResult.error
+				})
 
 				logger.info('enableSharing 完成', { localPlaylistId, shareId })
 				return { shareId }
@@ -196,12 +201,13 @@ export class SharedPlaylistFacade {
 				// 3. 从后端获取元数据（通过 since=0 拿到 metadata 字段）
 				const changesResp = await this.api.playlists[':id'].changes.$get({
 					param: { id: shareId },
-					query: { since: 0 },
+					query: { since: '0' },
 				})
 				if (!changesResp.ok) {
 					throw createFacadeError(
 						'SharedPlaylistSubscribeFailed',
-						`拉取歌单初始数据失败：${changesResp.status}`,
+						`拉取歌单初始数据失败`,
+						{ cause: await changesResp.json().catch(() => ({})) },
 					)
 				}
 				const changesData = await changesResp.json()
@@ -215,29 +221,38 @@ export class SharedPlaylistFacade {
 					}
 				).metadata
 
-				// 4. 创建本地歌单行
-				const createResult = await this.playlistService.createPlaylist({
-					title: meta?.title ?? '共享歌单',
-					description: meta?.description ?? null,
-					coverUrl: meta?.cover_url ?? null,
-					type: 'local',
-					shareId,
-					shareRole: role,
-					lastShareSyncAt: 0,
-				})
-				if (createResult.isErr()) throw createResult.error
-				const localPlaylistId = createResult.value.id
-
-				// 5. 应用初始曲目变更
-				await this._applyPullResponse(
-					localPlaylistId,
-					changesData as Parameters<typeof this._applyPullResponse>[1],
-				)
-
-				// 6. 更新 lastShareSyncAt
 				const serverTime = (changesData as { server_time: number }).server_time
-				await this.playlistService.updatePlaylistMetadata(localPlaylistId, {
-					lastShareSyncAt: serverTime,
+
+				// 4. 事务：创建本地歌单行 + 应用初始曲目 + 更新同步游标（原子）
+				const localPlaylistId = await this.db.transaction(async (tx) => {
+					const txPlaylist = this.playlistService.withDB(tx)
+					const txTrack = this.trackService.withDB(tx)
+					const txArtist = this.artistService.withDB(tx)
+
+					const createResult = await txPlaylist.createPlaylist({
+						title: meta?.title ?? '共享歌单',
+						description: meta?.description ?? null,
+						coverUrl: meta?.cover_url ?? null,
+						type: 'local',
+						shareId,
+						shareRole: role,
+						lastShareSyncAt: 0,
+					})
+					if (createResult.isErr()) throw createResult.error
+					const id = createResult.value.id
+
+					await this._applyPullResponse(id, changesData, tx, {
+						playlistService: txPlaylist,
+						trackService: txTrack,
+						artistService: txArtist,
+					})
+
+					const syncResult = await txPlaylist.updatePlaylistMetadata(id, {
+						lastShareSyncAt: serverTime,
+					})
+					if (syncResult.isErr()) throw syncResult.error
+
+					return id
 				})
 
 				logger.info('subscribeToPlaylist 完成', { shareId, localPlaylistId })
@@ -296,36 +311,61 @@ export class SharedPlaylistFacade {
 
 				let restored = 0
 				for (const remote of missing) {
-					// oxlint-disable-next-line no-await-in-loop
-					const createResult = await this.playlistService.createPlaylist({
-						title: remote.title,
-						description: remote.description,
-						coverUrl: remote.coverUrl,
-						type: 'local',
-						shareId: remote.id,
-						shareRole: remote.role,
-						lastShareSyncAt: 0,
+					// 全量拉取（since=0）— API 调用在事务外
+					const changesResp = await this.api.playlists[':id'].changes.$get({
+						param: { id: remote.id },
+						query: { since: '0' },
 					})
-					if (createResult.isErr()) {
-						logger.error('恢复歌单失败', {
-							shareId: remote.id,
-							error: createResult.error,
-						})
+					if (!changesResp.ok) {
+						logger.error('恢复歌单：拉取初始数据失败', { shareId: remote.id })
 						continue
 					}
-					const localId = createResult.value.id
+					const changesData = await changesResp.json()
+					const serverTime = (changesData as { server_time: number })
+						.server_time
 
-					// 全量拉取（since=0）
-					// oxlint-disable-next-line no-await-in-loop
-					const pullResult = await this.pullChanges(localId)
-					if (pullResult.isErr()) {
-						logger.error('恢复歌单全量拉取失败', {
-							shareId: remote.id,
-							error: pullResult.error,
+					// 事务：创建歌单行 + 应用曲目 + 更新同步游标（原子，单歌单独立回滚）
+					try {
+						await this.db.transaction(async (tx) => {
+							const txPlaylist = this.playlistService.withDB(tx)
+							const txTrack = this.trackService.withDB(tx)
+							const txArtist = this.artistService.withDB(tx)
+
+							const createResult = await txPlaylist.createPlaylist({
+								title: remote.title,
+								description: remote.description,
+								coverUrl: remote.coverUrl,
+								type: 'local',
+								shareId: remote.id,
+								shareRole: remote.role,
+								lastShareSyncAt: 0,
+							})
+							if (createResult.isErr()) throw createResult.error
+							const localId = createResult.value.id
+
+							await this._applyPullResponse(
+								localId,
+								changesData as Parameters<typeof this._applyPullResponse>[1],
+								tx,
+								{
+									playlistService: txPlaylist,
+									trackService: txTrack,
+									artistService: txArtist,
+								},
+							)
+
+							const syncResult = await txPlaylist.updatePlaylistMetadata(
+								localId,
+								{
+									lastShareSyncAt: serverTime,
+								},
+							)
+							if (syncResult.isErr()) throw syncResult.error
 						})
-						continue
+						restored++
+					} catch (e) {
+						logger.error('恢复歌单失败', { shareId: remote.id, error: e })
 					}
-					restored++
 				}
 
 				logger.info('restoreFromCloud 完成', { restored })
@@ -369,7 +409,7 @@ export class SharedPlaylistFacade {
 				// 2. GET /api/playlists/:id/changes?since=<ms>
 				const resp = await this.api.playlists[':id'].changes.$get({
 					param: { id: playlist.shareId },
-					query: { since },
+					query: { since: String(since) },
 				})
 				if (!resp.ok) {
 					throw createFacadeError(
@@ -379,16 +419,28 @@ export class SharedPlaylistFacade {
 				}
 				const data = await resp.json()
 
-				// 3. 应用变更
-				const applied = await this._applyPullResponse(localPlaylistId, data)
-
-				// 4. 更新 lastShareSyncAt = server_time
 				const serverTime = (data as { server_time: number }).server_time
-				const updateResult = await this.playlistService.updatePlaylistMetadata(
-					localPlaylistId,
-					{ lastShareSyncAt: serverTime },
-				)
-				if (updateResult.isErr()) throw updateResult.error
+
+				// 3. 事务：应用变更 + 更新同步游标（原子）
+				const applied = await this.db.transaction(async (tx) => {
+					const txPlaylist = this.playlistService.withDB(tx)
+					const txTrack = this.trackService.withDB(tx)
+					const txArtist = this.artistService.withDB(tx)
+
+					const n = await this._applyPullResponse(localPlaylistId, data, tx, {
+						playlistService: txPlaylist,
+						trackService: txTrack,
+						artistService: txArtist,
+					})
+
+					const updateResult = await txPlaylist.updatePlaylistMetadata(
+						localPlaylistId,
+						{ lastShareSyncAt: serverTime },
+					)
+					if (updateResult.isErr()) throw updateResult.error
+
+					return n
+				})
 
 				logger.info('pullChanges 完成', {
 					localPlaylistId,
@@ -430,28 +482,38 @@ export class SharedPlaylistFacade {
 					return
 				}
 
-				if (playlist.shareRole === 'subscriber') {
-					// 订阅者：直接删除本地副本
-					logger.info('unsubscribeFromPlaylist: 删除订阅副本', {
-						localPlaylistId,
-					})
-					const deleteResult =
-						await this.playlistService.deletePlaylist(localPlaylistId)
-					if (deleteResult.isErr()) throw deleteResult.error
-				} else {
-					// owner/editor：断开连接但保留本地数据
-					logger.info('unsubscribeFromPlaylist: 断开共享连接（保留本地数据）', {
-						localPlaylistId,
-						role: playlist.shareRole,
-					})
-					const updateResult =
-						await this.playlistService.updatePlaylistMetadata(localPlaylistId, {
-							shareId: null,
-							shareRole: null,
-							lastShareSyncAt: null,
+				// 事务：删除或断开连接（原子）
+				await this.db.transaction(async (tx) => {
+					const txPlaylist = this.playlistService.withDB(tx)
+
+					if (playlist.shareRole === 'subscriber') {
+						// 订阅者：直接删除本地副本
+						logger.info('unsubscribeFromPlaylist: 删除订阅副本', {
+							localPlaylistId,
 						})
-					if (updateResult.isErr()) throw updateResult.error
-				}
+						const deleteResult =
+							await txPlaylist.deletePlaylist(localPlaylistId)
+						if (deleteResult.isErr()) throw deleteResult.error
+					} else {
+						// owner/editor：断开连接但保留本地数据
+						logger.info(
+							'unsubscribeFromPlaylist: 断开共享连接（保留本地数据）',
+							{
+								localPlaylistId,
+								role: playlist.shareRole,
+							},
+						)
+						const updateResult = await txPlaylist.updatePlaylistMetadata(
+							localPlaylistId,
+							{
+								shareId: null,
+								shareRole: null,
+								lastShareSyncAt: null,
+							},
+						)
+						if (updateResult.isErr()) throw updateResult.error
+					}
+				})
 			})(),
 			(e) =>
 				createFacadeError(
@@ -462,9 +524,6 @@ export class SharedPlaylistFacade {
 		)
 	}
 
-	// ---------------------------------------------------------------------------
-	// 私有辅助：将后端 changes 响应应用到本地 playlistTracks
-	// ---------------------------------------------------------------------------
 	private async _applyPullResponse(
 		localPlaylistId: number,
 		data: {
@@ -497,13 +556,20 @@ export class SharedPlaylistFacade {
 			>
 			server_time?: number
 		},
+		conn: Tx,
+		services: {
+			playlistService: PlaylistService
+			trackService: TrackService
+			artistService: ArtistService
+		},
 	): Promise<number> {
+		const { playlistService, trackService, artistService } = services
 		let applied = 0
 
 		// ---- 应用元数据更新 ----
 		if (data.metadata) {
 			const metaUpdate: Parameters<
-				typeof this.playlistService.updatePlaylistMetadata
+				typeof playlistService.updatePlaylistMetadata
 			>[1] = {}
 			if (data.metadata.title != null) metaUpdate.title = data.metadata.title
 			if (data.metadata.description !== undefined)
@@ -511,10 +577,11 @@ export class SharedPlaylistFacade {
 			if (data.metadata.cover_url !== undefined)
 				metaUpdate.coverUrl = data.metadata.cover_url
 			if (Object.keys(metaUpdate).length > 0) {
-				await this.playlistService.updatePlaylistMetadata(
+				const metaResult = await playlistService.updatePlaylistMetadata(
 					localPlaylistId,
 					metaUpdate,
 				)
+				if (metaResult.isErr()) throw metaResult.error
 			}
 		}
 
@@ -542,9 +609,7 @@ export class SharedPlaylistFacade {
 				}))
 			if (artistsToCreate.length > 0) {
 				const artistResult =
-					await this.artistService.findOrCreateManyRemoteArtists(
-						artistsToCreate,
-					)
+					await artistService.findOrCreateManyRemoteArtists(artistsToCreate)
 				if (artistResult.isOk()) {
 					for (const [remoteId, artist] of artistResult.value.entries()) {
 						artistMap.set(remoteId, artist.id)
@@ -575,7 +640,7 @@ export class SharedPlaylistFacade {
 				}
 			})
 
-			const trackIdsResult = await this.trackService.findOrCreateManyTracks(
+			const trackIdsResult = await trackService.findOrCreateManyTracks(
 				trackPayloads,
 				'bilibili',
 			)
@@ -584,7 +649,7 @@ export class SharedPlaylistFacade {
 					error: trackIdsResult.error,
 				})
 			} else {
-				// 用服务端 sort_key 直接 upsert playlist_tracks
+				// 用服务端 sort_key 直接 upsert playlist_tracks（conn 已是 tx 作用域）
 				const trackIdMap = trackIdsResult.value
 				const rows = upsertChanges
 					.map((c) => {
@@ -599,7 +664,7 @@ export class SharedPlaylistFacade {
 					.filter((r): r is NonNullable<typeof r> => r !== null)
 
 				if (rows.length > 0) {
-					await this.db
+					await conn
 						.insert(schema.playlistTracks)
 						.values(rows)
 						.onConflictDoUpdate({
@@ -609,23 +674,6 @@ export class SharedPlaylistFacade {
 							],
 							set: { sortKey: schema.playlistTracks.sortKey },
 						})
-
-					// 更新 itemCount
-					const currentCount = await this.db
-						.select({ count: schema.playlists.itemCount })
-						.from(schema.playlists)
-						.where(eq(schema.playlists.id, localPlaylistId))
-					const realCount = await this.db
-						.select({ c: schema.playlistTracks.trackId })
-						.from(schema.playlistTracks)
-						.where(eq(schema.playlistTracks.playlistId, localPlaylistId))
-					if (currentCount[0]?.count !== realCount.length) {
-						await this.db
-							.update(schema.playlists)
-							.set({ itemCount: realCount.length })
-							.where(eq(schema.playlists.id, localPlaylistId))
-					}
-
 					applied += rows.length
 				}
 			}
@@ -635,11 +683,11 @@ export class SharedPlaylistFacade {
 		if (deleteChanges.length > 0) {
 			const uniqueKeys = deleteChanges.map((c) => c.track_unique_key)
 			const trackIdsResult =
-				await this.trackService.findTrackIdsByUniqueKeys(uniqueKeys)
+				await trackService.findTrackIdsByUniqueKeys(uniqueKeys)
 			if (trackIdsResult.isOk()) {
 				const trackIds = Array.from(trackIdsResult.value.values())
 				if (trackIds.length > 0) {
-					await this.db
+					await conn
 						.delete(schema.playlistTracks)
 						.where(
 							and(
@@ -650,6 +698,18 @@ export class SharedPlaylistFacade {
 					applied += trackIds.length
 				}
 			}
+		}
+
+		// ---- 重算并更新 itemCount ----
+		if (applied > 0) {
+			const [{ count }] = await conn
+				.select({ count: sql<number>`count(*)` })
+				.from(schema.playlistTracks)
+				.where(eq(schema.playlistTracks.playlistId, localPlaylistId))
+			await conn
+				.update(schema.playlists)
+				.set({ itemCount: count })
+				.where(eq(schema.playlists.id, localPlaylistId))
 		}
 
 		return applied

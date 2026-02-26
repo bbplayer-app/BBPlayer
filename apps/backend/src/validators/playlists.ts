@@ -58,5 +58,5 @@ export const playlistChangesRequestSchema = arkType({
 })
 
 export const getPlaylistChangesRequestSchema = arkType({
-	since: 'number',
+	since: 'string.integer.parse',
 })

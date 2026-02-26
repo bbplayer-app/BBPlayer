@@ -16,6 +16,10 @@ export type FacadeErrorType =
 	| 'SharedPlaylistRestoreFailed'
 	| 'SharedPlaylistPullFailed'
 	| 'SharedPlaylistUnsubscribeFailed'
+	| 'RemoveTracksFromPlaylistFailed'
+	| 'ReorderPlaylistTrackFailed'
+	| 'UpdatePlaylistMetadataFailed'
+	| 'PlaylistPermissionDenied'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

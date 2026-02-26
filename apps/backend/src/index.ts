@@ -15,7 +15,11 @@ const app = new Hono<{ Bindings: Env }>()
 	.use(
 		'*',
 		cors({
-			origin: ['https://bbplayer.app', 'http://localhost:3000'],
+			origin: [
+				'https://be.bbplayer.roitium.com',
+				'http://localhost:3000',
+				'https://bbplayer-backend.roitium.workers.dev',
+			],
 			allowHeaders: ['Authorization', 'Content-Type'],
 			allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 		}),
