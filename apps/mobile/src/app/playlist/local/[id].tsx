@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import * as Clipboard from 'expo-clipboard'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useRef, useState } from 'react'
@@ -679,7 +680,6 @@ export default function LocalPlaylistPage() {
 						<Menu.Item
 							onPress={async () => {
 								setFunctionalMenuVisible(false)
-								const { default: Clipboard } = await import('expo-clipboard')
 								await Clipboard.setStringAsync(
 									`https://bbplayer.app/share/${playlistMetadata.shareId}`,
 								)

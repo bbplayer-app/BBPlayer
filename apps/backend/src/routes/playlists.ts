@@ -1,5 +1,5 @@
 import { arktypeValidator } from '@hono/arktype-validator'
-import { and, eq, gt, isNotNull, isNull, lt, or } from 'drizzle-orm'
+import { and, eq, gt, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { createDb } from '../db'
@@ -128,77 +128,72 @@ const playlistsRoute = new Hono<HonoEnv>()
 				(a, b) => a.operation_at - b.operation_at,
 			)
 
-			for (const change of sorted) {
-				const operationDate = new Date(change.operation_at)
+			const upsertChanges = sorted.filter((c) => c.op === 'upsert')
+			const removeChanges = sorted.filter((c) => c.op === 'remove')
+			const reorderChanges = sorted.filter((c) => c.op === 'reorder')
 
-				if (change.op === 'upsert') {
-					// 1. upsert shared_tracks（资源池）
-					await db
+			await db.transaction(async (tx) => {
+				// 1. 批量 upsert shared_tracks（资源池）
+				if (upsertChanges.length > 0) {
+					await tx
 						.insert(sharedTracks)
-						.values({
-							uniqueKey: change.track.unique_key,
-							title: change.track.title,
-							artistName: change.track.artist_name,
-							artistId: change.track.artist_id,
-							coverUrl: change.track.cover_url,
-							duration: change.track.duration,
-							bilibiliBvid: change.track.bilibili_bvid,
-							bilibiliCid: change.track.bilibili_cid,
-						})
+						.values(
+							upsertChanges.map((c) => ({
+								uniqueKey: c.track.unique_key,
+								title: c.track.title,
+								artistName: c.track.artist_name,
+								artistId: c.track.artist_id,
+								coverUrl: c.track.cover_url,
+								duration: c.track.duration,
+								bilibiliBvid: c.track.bilibili_bvid,
+								bilibiliCid: c.track.bilibili_cid,
+							})),
+						)
 						.onConflictDoUpdate({
 							target: sharedTracks.uniqueKey,
 							set: {
-								title: change.track.title,
-								artistName: change.track.artist_name,
-								coverUrl: change.track.cover_url,
-								updatedAt: operationDate,
+								title: sql`excluded.title`,
+								artistName: sql`excluded.artist_name`,
+								coverUrl: sql`excluded.cover_url`,
+								updatedAt: sql`excluded.updated_at`,
 							},
 						})
 
-					// 2. upsert shared_playlist_tracks（LWW：只在 operation_at 更新时才写）
-					await db
+					// 2. 批量 upsert shared_playlist_tracks（LWW：用 excluded.updated_at 逐行比较）
+					await tx
 						.insert(sharedPlaylistTracks)
-						.values({
-							playlistId,
-							trackUniqueKey: change.track.unique_key,
-							sortKey: change.sort_key,
-							addedByMid: mid,
-							updatedAt: operationDate,
-							deletedAt: null,
-						})
+						.values(
+							upsertChanges.map((c) => ({
+								playlistId,
+								trackUniqueKey: c.track.unique_key,
+								sortKey: c.sort_key,
+								addedByMid: mid,
+								updatedAt: new Date(c.operation_at),
+								deletedAt: null,
+							})),
+						)
 						.onConflictDoUpdate({
 							target: [
 								sharedPlaylistTracks.playlistId,
 								sharedPlaylistTracks.trackUniqueKey,
 							],
 							set: {
-								sortKey: change.sort_key,
-								updatedAt: operationDate,
+								sortKey: sql`excluded.sort_key`,
+								updatedAt: sql`excluded.updated_at`,
 								deletedAt: null,
 							},
-							// LWW：只在 operation_at 更新时才写入
-							setWhere: lt(sharedPlaylistTracks.updatedAt, operationDate),
-						})
-				} else if (change.op === 'remove') {
-					// LWW 软删除
-					await db
-						.update(sharedPlaylistTracks)
-						.set({ deletedAt: operationDate })
-						.where(
-							and(
-								eq(sharedPlaylistTracks.playlistId, playlistId),
-								eq(
-									sharedPlaylistTracks.trackUniqueKey,
-									change.track_unique_key,
-								),
-								lt(sharedPlaylistTracks.updatedAt, operationDate),
+							setWhere: lt(
+								sharedPlaylistTracks.updatedAt,
+								sql`excluded.updated_at`,
 							),
-						)
-				} else if (change.op === 'reorder') {
-					// LWW reorder
-					await db
+						})
+				}
+
+				// 3. remove（LWW 软删除）
+				for (const change of removeChanges) {
+					await tx
 						.update(sharedPlaylistTracks)
-						.set({ sortKey: change.sort_key, updatedAt: operationDate })
+						.set({ deletedAt: new Date(change.operation_at) })
 						.where(
 							and(
 								eq(sharedPlaylistTracks.playlistId, playlistId),
@@ -206,11 +201,37 @@ const playlistsRoute = new Hono<HonoEnv>()
 									sharedPlaylistTracks.trackUniqueKey,
 									change.track_unique_key,
 								),
-								lt(sharedPlaylistTracks.updatedAt, operationDate),
+								lt(
+									sharedPlaylistTracks.updatedAt,
+									new Date(change.operation_at),
+								),
 							),
 						)
 				}
-			}
+
+				// 4. reorder（LWW）
+				for (const change of reorderChanges) {
+					await tx
+						.update(sharedPlaylistTracks)
+						.set({
+							sortKey: change.sort_key,
+							updatedAt: new Date(change.operation_at),
+						})
+						.where(
+							and(
+								eq(sharedPlaylistTracks.playlistId, playlistId),
+								eq(
+									sharedPlaylistTracks.trackUniqueKey,
+									change.track_unique_key,
+								),
+								lt(
+									sharedPlaylistTracks.updatedAt,
+									new Date(change.operation_at),
+								),
+							),
+						)
+				}
+			})
 
 			const appliedAt = Date.now()
 			c.executionCtx.waitUntil(client.end())
@@ -370,31 +391,35 @@ async function upsertTracks(
 	mid: string,
 	tracks: Array<{ track: TrackInput; sort_key: string }>,
 ) {
-	for (const { track, sort_key } of tracks) {
-		await db
+	await db.transaction(async (tx) => {
+		await tx
 			.insert(sharedTracks)
-			.values({
-				uniqueKey: track.unique_key,
-				title: track.title,
-				artistName: track.artist_name,
-				artistId: track.artist_id,
-				coverUrl: track.cover_url,
-				duration: track.duration,
-				bilibiliBvid: track.bilibili_bvid,
-				bilibiliCid: track.bilibili_cid,
-			})
+			.values(
+				tracks.map(({ track }) => ({
+					uniqueKey: track.unique_key,
+					title: track.title,
+					artistName: track.artist_name,
+					artistId: track.artist_id,
+					coverUrl: track.cover_url,
+					duration: track.duration,
+					bilibiliBvid: track.bilibili_bvid,
+					bilibiliCid: track.bilibili_cid,
+				})),
+			)
 			.onConflictDoNothing()
 
-		await db
+		await tx
 			.insert(sharedPlaylistTracks)
-			.values({
-				playlistId,
-				trackUniqueKey: track.unique_key,
-				sortKey: sort_key,
-				addedByMid: mid,
-			})
+			.values(
+				tracks.map(({ track, sort_key }) => ({
+					playlistId,
+					trackUniqueKey: track.unique_key,
+					sortKey: sort_key,
+					addedByMid: mid,
+				})),
+			)
 			.onConflictDoNothing()
-	}
+	})
 }
 
 export default playlistsRoute
