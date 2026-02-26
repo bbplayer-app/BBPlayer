@@ -8,3 +8,8 @@ routes = [{ pattern = "be.bbplayer.roitium.com", custom_domain = true }]
 
 [dev]
 local_protocol = "http"
+
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true

@@ -44,6 +44,7 @@ export interface ModalPropsMap {
 	CoverDownloadProgress: undefined
 	EnableSharing: { playlistId: number }
 	SubscribeToSharedPlaylist: undefined
+	SyncFailures: { playlistId?: number }
 }
 
 export type ModalKey = keyof ModalPropsMap

@@ -1,8 +1,15 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import { and, eq } from 'drizzle-orm'
 import * as Clipboard from 'expo-clipboard'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import {
 	ActivityIndicator,
@@ -48,6 +55,8 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
+import db from '@/lib/db/db'
+import * as schema from '@/lib/db/schema'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -73,6 +82,7 @@ export default function LocalPlaylistPage() {
 	const dimensions = useWindowDimensions()
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
+	const [hasSyncFailures, setHasSyncFailures] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
@@ -310,6 +320,32 @@ export default function LocalPlaylistPage() {
 		pullSharedPlaylist,
 	])
 
+	const refreshSyncFailureFlag = useCallback(async () => {
+		if (!playlistMetadata?.shareId) {
+			setHasSyncFailures(false)
+			return
+		}
+		try {
+			const rows = await db
+				.select({ id: schema.playlistSyncQueue.id })
+				.from(schema.playlistSyncQueue)
+				.where(
+					and(
+						eq(schema.playlistSyncQueue.playlistId, playlistMetadata.id),
+						eq(schema.playlistSyncQueue.status, 'failed'),
+					),
+				)
+				.limit(1)
+			setHasSyncFailures(rows.length > 0)
+		} catch (error) {
+			toastAndLogError('读取同步失败状态失败', error, SCOPE)
+		}
+	}, [playlistMetadata?.id, playlistMetadata?.shareId])
+
+	useEffect(() => {
+		void refreshSyncFailureFlag()
+	}, [refreshSyncFailureFlag])
+
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
 	}))
@@ -326,7 +362,6 @@ export default function LocalPlaylistPage() {
 	const ghostY = useSharedValue(0)
 
 	const dragOriginRef = useRef(0)
-
 	/** Absolute screen Y of the top of the list container (from measureInWindow) */
 	const containerTopRef = useRef(0)
 	const containerHeightRef = useRef(0)
@@ -532,6 +567,16 @@ export default function LocalPlaylistPage() {
 					</>
 				) : (
 					<>
+						{playlistMetadata.shareId && hasSyncFailures && (
+							<Appbar.Action
+								icon='alert-circle'
+								color={colors.error}
+								onPress={() => {
+									openModal('SyncFailures', { playlistId: playlistMetadata.id })
+								}}
+								accessibilityLabel='同步失败'
+							/>
+						)}
 						{isPullingShared && (
 							<Appbar.Action
 								icon={() => (

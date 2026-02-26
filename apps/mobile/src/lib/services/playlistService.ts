@@ -59,19 +59,6 @@ export class PlaylistService {
 	> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				// Check for duplicate title
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:playlist:duplicate', op: 'db' },
-					() =>
-						this.db.query.playlists.findFirst({
-							where: eq(schema.playlists.title, payload.title),
-							columns: { id: true },
-						}),
-				)
-				if (existing) {
-					throw createPlaylistAlreadyExists(payload.title)
-				}
-
 				const insertValues: typeof schema.playlists.$inferInsert = {
 					title: payload.title,
 					authorId: payload.authorId ?? null,
@@ -646,19 +633,6 @@ export class PlaylistService {
 
 				if (existingPlaylist) {
 					return existingPlaylist
-				}
-
-				// Check for duplicate title
-				const duplicate = await Sentry.startSpan(
-					{ name: 'db:query:playlist:duplicate', op: 'db' },
-					() =>
-						this.db.query.playlists.findFirst({
-							where: eq(schema.playlists.title, payload.title),
-							columns: { id: true },
-						}),
-				)
-				if (duplicate) {
-					throw createPlaylistAlreadyExists(payload.title)
 				}
 
 				const [newPlaylist] = await Sentry.startSpan(

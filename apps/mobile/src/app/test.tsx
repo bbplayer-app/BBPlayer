@@ -1,4 +1,5 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import { asc } from 'drizzle-orm'
 import * as Updates from 'expo-updates'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -11,7 +12,8 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { expoDb } from '@/lib/db/db'
+import db, { expoDb } from '@/lib/db/db'
+import * as schema from '@/lib/db/schema'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -148,6 +150,24 @@ export default function TestPage() {
 		}
 	}
 
+	const dumpSyncQueue = async () => {
+		setLoading(true)
+		try {
+			const rows = await db
+				.select()
+				.from(schema.playlistSyncQueue)
+				.orderBy(asc(schema.playlistSyncQueue.id))
+			logger.info('playlist_sync_queue', rows)
+			toast.success('队列表输出', {
+				description: `rows=${rows.length}（详见日志）`,
+			})
+		} catch (error) {
+			toastAndLogError('读取 playlist_sync_queue 失败', error, 'TestPage')
+		} finally {
+			setLoading(false)
+		}
+	}
+
 	const openModal = useModalStore((state) => state.open)
 
 	return (
@@ -221,6 +241,14 @@ export default function TestPage() {
 						style={styles.button}
 					>
 						清空播放器队列
+					</Button>
+					<Button
+						mode='outlined'
+						onPress={dumpSyncQueue}
+						loading={loading}
+						style={styles.button}
+					>
+						输出 playlist_sync_queue
 					</Button>
 				</View>
 			</ScrollView>
