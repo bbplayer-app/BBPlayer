@@ -476,3 +476,37 @@ export const useSubscribeToSharedPlaylist = () => {
 		onError: (error) => toastAndLogError('订阅共享歌单失败', error, SCOPE),
 	})
 }
+
+/**
+ * 拉取共享歌单的增量变更
+ */
+export const usePullSharedPlaylist = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'pullSharedPlaylist'],
+		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+			await ensureBBPlayerToken()
+			const result = await sharedPlaylistFacade.pullChanges(playlistId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (_, { playlistId }) => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistContents(playlistId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistMetadata(playlistId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistLists(),
+				}),
+			])
+		},
+		onError: (error, { playlistId }) =>
+			toastAndLogError(
+				`拉取共享歌单失败: playlistId=${playlistId}`,
+				error,
+				SCOPE,
+			),
+	})
+}

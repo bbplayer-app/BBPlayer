@@ -86,7 +86,10 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			refetch: refetchPlaylists,
 		} = usePlaylistLists()
 		const filteredPlaylists = useMemo(
-			() => allPlaylists?.filter((p) => p.type === 'local'),
+			() =>
+				allPlaylists?.filter(
+					(p) => p.type === 'local' && p.shareRole !== 'subscriber',
+				),
 			[allPlaylists],
 		)
 
@@ -232,7 +235,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 					</Dialog.ScrollArea>
 					<Dialog.Content>
 						<Text variant='bodySmall'>
-							*{'\u2009'}与远程同步的播放列表不会显示
+							*{'\u2009'}与远程同步或订阅的共享歌单不会显示
 						</Text>
 					</Dialog.Content>
 					<Dialog.Actions style={styles.actionsContainer}>

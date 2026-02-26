@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import { Divider, Icon, Text } from 'react-native-paper'
+import { Divider, Icon, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
@@ -11,6 +11,9 @@ import type { Playlist } from '@/types/core/media'
 const LocalPlaylistItem = memo(
 	({ item }: { item: Playlist & { isToView?: boolean } }) => {
 		const router = useRouter()
+		const { colors } = useTheme()
+		const isShared = !!item.shareId
+		const isRemote = item.type !== 'local'
 
 		return (
 			<View>
@@ -42,7 +45,14 @@ const LocalPlaylistItem = memo(
 											? '与\u2009B\u2009站「稍后再看」同步'
 											: `${item.itemCount}\u2009首歌曲`}
 									</Text>
-									{item.type === 'local' || (
+									{isShared && (
+										<Icon
+											source='account-group'
+											color={colors.primary}
+											size={13}
+										/>
+									)}
+									{!isShared && isRemote && (
 										<Icon
 											source={'cloud'}
 											color={'#87ceeb'}

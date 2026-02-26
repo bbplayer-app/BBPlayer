@@ -4,7 +4,14 @@ import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
-import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Appbar,
+	Menu,
+	Portal,
+	Searchbar,
+	useTheme,
+} from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -26,6 +33,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
+	usePullSharedPlaylist,
 	usePlaylistSync,
 	useReorderLocalPlaylistTrack,
 } from '@/hooks/mutations/db/playlist'
@@ -186,6 +194,7 @@ export default function LocalPlaylistPage() {
 		isPending: isPlaylistMetadataPending,
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
+	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
 
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
 		onError: () => void 0,
@@ -201,6 +210,8 @@ export default function LocalPlaylistPage() {
 	const { mutate: deleteTrackFromLocalPlaylist } =
 		useBatchDeleteTracksFromLocalPlaylist()
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
+	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
+		usePullSharedPlaylist()
 
 	const onClickDeletePlaylist = () => {
 		deletePlaylist(
@@ -257,6 +268,7 @@ export default function LocalPlaylistPage() {
 			openModal('UpdateTrackLocalPlaylists', { track }),
 		openEditTrackModal: (track) => openModal('EditTrackMetadata', { track }),
 		playlist: playlistMetadata!,
+		isReadOnly: isSharedSubscriber,
 	})
 
 	const deleteSelectedTracks = () => {
@@ -284,6 +296,19 @@ export default function LocalPlaylistPage() {
 			withTiming(startSearch ? SEARCHBAR_HEIGHT : 0, { duration: 180 }),
 		)
 	}, [searchbarHeight, startSearch])
+
+	useEffect(() => {
+		if (typeof id !== 'string') return
+		if (!playlistMetadata?.shareId || !playlistMetadata.shareRole) return
+		if (isOffline) return
+		pullSharedPlaylist({ playlistId: Number(id) })
+	}, [
+		id,
+		isOffline,
+		playlistMetadata?.shareId,
+		playlistMetadata?.shareRole,
+		pullSharedPlaylist,
+	])
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
@@ -507,6 +532,18 @@ export default function LocalPlaylistPage() {
 					</>
 				) : (
 					<>
+						{isPullingShared && (
+							<Appbar.Action
+								icon={() => (
+									<ActivityIndicator
+										size={18}
+										animating
+										color={colors.primary}
+									/>
+								)}
+								disabled
+							/>
+						)}
 						<Appbar.Action
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
@@ -560,17 +597,26 @@ export default function LocalPlaylistPage() {
 							: undefined
 					}
 					onDragStart={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragStart
 							: undefined
 					}
 					onDragUpdate={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragUpdate
 							: undefined
 					}
 					onDragEnd={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragEnd
 							: undefined
 					}
@@ -633,7 +679,7 @@ export default function LocalPlaylistPage() {
 						y: 60 + insets.top,
 					}}
 				>
-					{playlistMetadata.type === 'local' && (
+					{playlistMetadata.type === 'local' && !isSharedSubscriber && (
 						<Menu.Item
 							onPress={() => {
 								setFunctionalMenuVisible(false)
@@ -643,16 +689,21 @@ export default function LocalPlaylistPage() {
 							leadingIcon='sort'
 						/>
 					)}
-					<Menu.Item
-						onPress={() => {
-							setFunctionalMenuVisible(false)
-							openModal('EditPlaylistMetadata', { playlist: playlistMetadata })
-						}}
-						title='编辑播放列表信息'
-						leadingIcon='pencil'
-					/>
+					{!isSharedSubscriber && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								openModal('EditPlaylistMetadata', {
+									playlist: playlistMetadata,
+								})
+							}}
+							title='编辑播放列表信息'
+							leadingIcon='pencil'
+						/>
+					)}
 					{playlistMetadata.type === 'local' &&
-						playlistMetadata.remoteSyncId === null && (
+						playlistMetadata.remoteSyncId === null &&
+						!isSharedSubscriber && (
 							<Menu.Item
 								onPress={() => {
 									setFunctionalMenuVisible(false)

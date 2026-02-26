@@ -72,20 +72,27 @@ export class PlaylistService {
 					throw createPlaylistAlreadyExists(payload.title)
 				}
 
+				const insertValues: typeof schema.playlists.$inferInsert = {
+					title: payload.title,
+					authorId: payload.authorId ?? null,
+					description: payload.description ?? null,
+					coverUrl: payload.coverUrl ?? null,
+					type: payload.type,
+					remoteSyncId: payload.remoteSyncId ?? null,
+					shareId: payload.shareId ?? null,
+					shareRole: payload.shareRole ?? null,
+					lastShareSyncAt:
+						payload.lastShareSyncAt === undefined
+							? undefined
+							: payload.lastShareSyncAt === null
+								? null
+								: new Date(payload.lastShareSyncAt),
+				}
+
 				const [result] = await Sentry.startSpan(
 					{ name: 'db:insert:playlist', op: 'db' },
 					() =>
-						this.db
-							.insert(schema.playlists)
-							.values({
-								title: payload.title,
-								authorId: payload.authorId,
-								description: payload.description,
-								coverUrl: payload.coverUrl,
-								type: payload.type,
-								remoteSyncId: payload.remoteSyncId,
-							} satisfies CreatePlaylistPayload)
-							.returning(),
+						this.db.insert(schema.playlists).values(insertValues).returning(),
 				)
 				return result
 			})(),
