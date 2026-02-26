@@ -733,7 +733,8 @@ export class SharedPlaylistFacade {
 								schema.playlistTracks.playlistId,
 								schema.playlistTracks.trackId,
 							],
-							set: { sortKey: schema.playlistTracks.sortKey },
+							// 使用服务器下发的最新 sort_key 覆盖本地值，确保重排同步生效
+							set: { sortKey: sql`excluded.sort_key` },
 						})
 					applied += rows.length
 				}

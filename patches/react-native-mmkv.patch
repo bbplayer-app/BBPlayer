@@ -1,0 +1,20 @@
+diff --git a/src/hooks/createMMKVHook.ts b/src/hooks/createMMKVHook.ts
+index cc1b0de9e8cc2033b3c1d8094f8434f5a82a7cd5..a388019b0dd7d80ac2e93cbd06da882c93214bdf 100644
+--- a/src/hooks/createMMKVHook.ts
++++ b/src/hooks/createMMKVHook.ts
+@@ -58,7 +58,14 @@ export function createMMKVHook<
+          setBump((b) => b + 1)
+        }
+      })
+-      return () => listener.remove()
++      return () => {
++        if (typeof listener === 'function') {
++          // @ts-expect-error
++          listener()
++          return
++        }
++        listener?.remove?.()
++      }
+    }, [key, mmkv])
+
+    return [value, set]
