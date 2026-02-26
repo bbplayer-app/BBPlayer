@@ -485,20 +485,34 @@ const playlistsRoute = new Hono<HonoEnv>()
 			)
 
 		if (!playlist) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
 		if (playlist.ownerMid !== sub) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
-		const newCode = generateInviteCode()
-		await db
-			.update(sharedPlaylists)
-			.set({ editorInviteCode: newCode })
-			.where(eq(sharedPlaylists.id, playlistId))
+		for (let attempt = 0; attempt < MAX_INVITE_ROTATE_ATTEMPTS; attempt++) {
+			const newCode = generateInviteCode()
+			try {
+				await db
+					.update(sharedPlaylists)
+					.set({ editorInviteCode: newCode })
+					.where(eq(sharedPlaylists.id, playlistId))
+
+				c.executionCtx.waitUntil(client.end())
+				return c.json({ editor_invite_code: newCode })
+			} catch (err) {
+				if (isUniqueConstraintViolation(err)) {
+					continue
+				}
+				throw err
+			}
+		}
 
 		c.executionCtx.waitUntil(client.end())
-		return c.json({ editor_invite_code: newCode })
+		return c.json({ error: 'Invite code collision, please retry later' }, 503)
 	})
 	/**
 	 * DELETE /playlists/:id
@@ -622,12 +636,20 @@ async function upsertTracks(
 function generateInviteCode(): string {
 	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 	let out = ''
-	for (let i = 0; i < 8; i++) {
+	for (let i = 0; i < 12; i++) {
 		const idx = Math.floor(Math.random() * chars.length)
 		out += chars[idx]
 	}
 
 	return 'BBP-' + out
 }
+
+function isUniqueConstraintViolation(err: unknown): boolean {
+	if (!err || typeof err !== 'object') return false
+	const code = (err as { code?: unknown }).code
+	return code === '23505'
+}
+
+const MAX_INVITE_ROTATE_ATTEMPTS = 5
 
 export default playlistsRoute

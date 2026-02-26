@@ -1,12 +1,12 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { and, eq } from 'drizzle-orm'
-import * as Clipboard from 'expo-clipboard'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
 	useDeferredValue,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from 'react'
@@ -293,6 +293,16 @@ export default function LocalPlaylistPage() {
 		Number(id),
 		isOffline,
 		playableOfflineKeys,
+	)
+	const pullingIcon = useMemo(
+		() => () => (
+			<ActivityIndicator
+				size={18}
+				animating
+				color={colors.primary}
+			/>
+		),
+		[colors.primary],
 	)
 
 	const deleteTrack = (trackId: number) => {
@@ -638,13 +648,7 @@ export default function LocalPlaylistPage() {
 						)}
 						{isPullingShared && (
 							<Appbar.Action
-								icon={() => (
-									<ActivityIndicator
-										size={18}
-										animating
-										color={colors.primary}
-									/>
-								)}
+								icon={pullingIcon}
 								disabled
 							/>
 						)}
@@ -835,14 +839,14 @@ export default function LocalPlaylistPage() {
 					)}
 					{playlistMetadata.shareId && (
 						<Menu.Item
-							onPress={async () => {
+							onPress={() => {
 								setFunctionalMenuVisible(false)
-								await Clipboard.setStringAsync(
-									`https://bbplayer-backend.roitium.workers.dev/share/${playlistMetadata.shareId}`,
-								)
-								toast.success('已复制分享链接')
+								openModal('EnableSharing', {
+									playlistId: Number(id),
+									shareId: playlistMetadata.shareId,
+								})
 							}}
-							title='复制分享链接'
+							title='共享设置'
 							leadingIcon='link-variant'
 						/>
 					)}

@@ -42,7 +42,7 @@ export interface ModalPropsMap {
 	}
 	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined
-	EnableSharing: { playlistId: number }
+	EnableSharing: { playlistId: number; shareId?: string | null }
 	SubscribeToSharedPlaylist: undefined
 	SyncFailures: { playlistId?: number }
 }

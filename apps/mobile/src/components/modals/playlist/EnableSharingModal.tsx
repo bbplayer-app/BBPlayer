@@ -1,31 +1,49 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
 import * as Clipboard from 'expo-clipboard'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-import { useEnableSharing } from '@/hooks/mutations/db/playlist'
+import {
+	useEnableSharing,
+	useRotateEditorInviteCode,
+} from '@/hooks/mutations/db/playlist'
+import { useEditorInviteCode } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import toast from '@/utils/toast'
 
 const SHARE_BASE_URL = 'https://bbplayer.roitium.com/share/playlist'
 
 export default function EnableSharingModal({
 	playlistId,
+	shareId: initialShareId,
 }: {
 	playlistId: number
+	shareId?: string | null
 }) {
 	const close = useModalStore((state) => state.close)
 	const { mutate: enableSharing, isPending } = useEnableSharing()
-	const [shareId, setShareId] = useState<string | null>(null)
+	const { mutateAsync: rotateInvite, isPending: isRotating } =
+		useRotateEditorInviteCode()
+	const [shareId, setShareId] = useState<string | null>(initialShareId ?? null)
 	const [inviteCode, setInviteCode] = useState<string | null>(null)
-	const [inviteLoading, setInviteLoading] = useState(false)
 	const hasToken = useAppStore((state) => !!state.bbplayerToken)
 
-	const shareUrl = shareId ? `${SHARE_BASE_URL}/${shareId}` : ''
+	const { data: fetchedInviteCode, isFetching: inviteFetching } =
+		useEditorInviteCode(shareId)
+
+	const subscribeUrl = shareId
+		? `${SHARE_BASE_URL}?shareId=${encodeURIComponent(shareId)}`
+		: ''
+	const editorUrl = shareId
+		? `${subscribeUrl}${inviteCode ? `&inviteCode=${encodeURIComponent(inviteCode)}` : ''}`
+		: ''
+
+	useEffect(() => {
+		if (fetchedInviteCode) setInviteCode(fetchedInviteCode)
+	}, [fetchedInviteCode])
 
 	const handleConfirm = () => {
 		enableSharing(
@@ -34,21 +52,22 @@ export default function EnableSharingModal({
 		)
 	}
 
-	const handleCopy = async () => {
-		await Clipboard.setStringAsync(shareUrl)
-		toast.success('已复制分享链接')
+	const handleCopySubscribe = async () => {
+		if (!subscribeUrl) return
+		await Clipboard.setStringAsync(subscribeUrl)
+		toast.success('已复制订阅链接')
+	}
+
+	const handleCopyEditorLink = async () => {
+		if (!editorUrl || !inviteCode) return
+		await Clipboard.setStringAsync(editorUrl)
+		toast.success('已复制协作编辑链接')
 	}
 
 	const handleRotateInvite = async () => {
 		if (!shareId) return
-		setInviteLoading(true)
-		const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)
-		setInviteLoading(false)
-		if (result.isErr()) {
-			toast.error('生成邀请码失败')
-			return
-		}
-		setInviteCode(result.value.editorInviteCode)
+		const result = await rotateInvite({ shareId })
+		setInviteCode(result.editorInviteCode)
 		toast.success('已生成新的编辑者邀请码')
 	}
 
@@ -68,9 +87,10 @@ export default function EnableSharingModal({
 						<Text variant='bodyMedium'>
 							把下方链接发给朋友，对方即可订阅此歌单。
 						</Text>
-						<View style={styles.linkRow}>
+						<View style={styles.linkSection}>
+							<Text variant='bodySmall'>订阅链接（只读）</Text>
 							<TextInput
-								value={shareUrl}
+								value={subscribeUrl}
 								editable={false}
 								mode='outlined'
 								dense
@@ -78,19 +98,58 @@ export default function EnableSharingModal({
 								right={
 									<TextInput.Icon
 										icon='content-copy'
-										onPress={handleCopy}
+										onPress={handleCopySubscribe}
 									/>
 								}
 							/>
+						</View>
+						<View style={styles.inviteSection}>
+							<Text variant='bodyMedium'>
+								需要协作者编辑此歌单？使用下面的邀请链接。
+							</Text>
+							{inviteCode && (
+								<View style={styles.linkSection}>
+									<Text variant='bodySmall'>协作编辑邀请链接</Text>
+									<TextInput
+										value={editorUrl}
+										editable={false}
+										mode='outlined'
+										dense
+										style={styles.linkInput}
+										right={
+											<TextInput.Icon
+												icon='content-copy'
+												onPress={handleCopyEditorLink}
+											/>
+										}
+									/>
+								</View>
+							)}
+							{!inviteCode && inviteFetching && (
+								<Text
+									variant='bodySmall'
+									style={{ textAlign: 'center' }}
+								>
+									邀请码加载中...
+								</Text>
+							)}
+							<Button
+								onPress={handleRotateInvite}
+								loading={isRotating}
+								disabled={isRotating}
+								mode='outlined'
+							>
+								重置协作编辑邀请链接
+							</Button>
 						</View>
 					</View>
 				</Dialog.Content>
 				<Dialog.Actions>
 					<Button
-						onPress={handleCopy}
+						onPress={handleCopySubscribe}
 						mode='text'
 					>
-						复制链接
+						复制订阅链接
 					</Button>
 					<Button
 						onPress={() => close('EnableSharing')}
@@ -127,15 +186,6 @@ export default function EnableSharingModal({
 						</View>
 					)}
 					<Text variant='bodyMedium'>
-						<View style={styles.inviteRow}>
-							<Button
-								onPress={handleRotateInvite}
-								loading={inviteLoading}
-								mode='outlined'
-							>
-								生成 / 重置 编辑者邀请码
-							</Button>
-						</View>
 						{inviteCode && (
 							<TextInput
 								value={inviteCode}
@@ -189,11 +239,16 @@ const styles = StyleSheet.create({
 	linkRow: {
 		marginTop: 4,
 	},
+	linkSection: {
+		marginTop: 4,
+		gap: 4,
+	},
 	linkInput: {
 		fontSize: 12,
 	},
-	inviteRow: {
+	inviteSection: {
 		marginTop: 8,
+		gap: 8,
 	},
 	warningBox: {
 		flexDirection: 'row',

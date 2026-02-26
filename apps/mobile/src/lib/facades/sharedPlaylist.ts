@@ -426,10 +426,18 @@ export class SharedPlaylistFacade {
 					param: { id: playlist.shareId },
 					query: { since: String(since) },
 				})
-				if (resp.status === 404) {
-					throw createFacadeError('SharedPlaylistDeleted', '共享歌单已被删除', {
-						data: { playlistId: localPlaylistId, shareId: playlist.shareId },
-					})
+				if (resp.status === 404 || resp.status === 403) {
+					throw createFacadeError(
+						'SharedPlaylistDeleted',
+						'共享歌单已被删除或无权限访问',
+						{
+							data: {
+								playlistId: localPlaylistId,
+								shareId: playlist.shareId,
+								status: resp.status,
+							},
+						},
+					)
 				}
 				if (!resp.ok) {
 					throw createFacadeError(
@@ -584,6 +592,41 @@ export class SharedPlaylistFacade {
 			})(),
 			(e) =>
 				createFacadeError('InviteCodeRotateFailed', '生成编辑者邀请码失败', {
+					cause: e,
+				}),
+		)
+	}
+
+	public getEditorInviteCode(
+		shareId: string,
+	): ResultAsync<
+		{ editorInviteCode: string },
+		ReturnType<typeof createFacadeError>
+	> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const resp = await this.api.playlists[':id'].invite.$get({
+					param: { id: shareId },
+				})
+				if (!resp.ok) {
+					throw createFacadeError(
+						'InviteCodeFetchFailed',
+						`获取编辑者邀请码失败：${resp.status}`,
+					)
+				}
+				const data = (await resp.json()) as {
+					editor_invite_code?: string | null
+				}
+				if (!data.editor_invite_code) {
+					throw createFacadeError(
+						'InviteCodeFetchFailed',
+						'未从服务器获取到编辑者邀请码',
+					)
+				}
+				return { editorInviteCode: data.editor_invite_code }
+			})(),
+			(e) =>
+				createFacadeError('InviteCodeFetchFailed', '获取编辑者邀请码失败', {
 					cause: e,
 				}),
 		)

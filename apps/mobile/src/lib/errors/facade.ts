@@ -23,6 +23,7 @@ export type FacadeErrorType =
 	| 'PlaylistPermissionDenied'
 	| 'PlaylistDeleteFailed'
 	| 'InviteCodeRotateFailed'
+	| 'InviteCodeFetchFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

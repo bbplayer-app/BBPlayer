@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Dialog, Text, TextInput } from 'react-native-paper'
 
@@ -6,14 +6,30 @@ import Button from '@/components/common/Button'
 import { useSubscribeToSharedPlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
-/** 从分享链接或原始 UUID 中提取 UUID */
-function extractShareId(input: string): string {
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+/** 从任意输入中提取 shareId + inviteCode（优先 query params） */
+function parseShareLink(input: string): {
+	shareId?: string
+	inviteCode?: string
+} {
 	const trimmed = input.trim()
-	// 匹配 UUID 格式（8-4-4-4-12）
-	const uuidMatch = trimmed.match(
-		/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
-	)
-	return uuidMatch ? uuidMatch[0] : trimmed
+	if (!trimmed) return {}
+
+	try {
+		const url = new URL(trimmed)
+		const qpShareId = url.searchParams.get('shareId') ?? undefined
+		const qpInvite = url.searchParams.get('inviteCode') ?? undefined
+		const pathUuid = url.pathname.match(UUID_RE)?.[0]
+		return {
+			shareId: qpShareId ?? pathUuid ?? undefined,
+			inviteCode: qpInvite ?? undefined,
+		}
+	} catch (_e) {
+		// fallback to plain text / raw UUID
+		const uuid = trimmed.match(UUID_RE)?.[0]
+		return { shareId: uuid ?? undefined, inviteCode: undefined }
+	}
 }
 
 export default function SubscribeToSharedPlaylistModal() {
@@ -22,20 +38,29 @@ export default function SubscribeToSharedPlaylistModal() {
 	const close = useModalStore((state) => state.close)
 	const { mutate: subscribe, isPending } = useSubscribeToSharedPlaylist()
 
-	const shareId = extractShareId(input)
-	const isValidId =
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-			shareId,
-		)
+	const parsed = useMemo(() => parseShareLink(input), [input])
+	const shareId = parsed.shareId ?? ''
+	const isValidId = UUID_RE.test(shareId)
 
 	const handleSubscribe = () => {
 		if (!isValidId) return
 		subscribe(
-			{ shareId, inviteCode: inviteCode.trim() || undefined },
+			{
+				shareId,
+				inviteCode: (inviteCode || parsed.inviteCode || '').trim() || undefined,
+			},
 			{
 				onSuccess: () => close('SubscribeToSharedPlaylist'),
 			},
 		)
+	}
+
+	const handleChangeInput = (text: string) => {
+		setInput(text)
+		const next = parseShareLink(text)
+		if (next.inviteCode) {
+			setInviteCode(next.inviteCode)
+		}
 	}
 
 	return (
@@ -51,7 +76,7 @@ export default function SubscribeToSharedPlaylistModal() {
 				<TextInput
 					label='分享链接 / 歌单 ID'
 					value={input}
-					onChangeText={setInput}
+					onChangeText={handleChangeInput}
 					mode='outlined'
 					autoCapitalize='none'
 					autoCorrect={false}
@@ -68,6 +93,9 @@ export default function SubscribeToSharedPlaylistModal() {
 					autoCorrect={false}
 					style={styles.input}
 					editable={!isPending}
+					placeholder={
+						parsed.inviteCode ? `已从链接填充：${parsed.inviteCode}` : ''
+					}
 				/>
 				{input.trim().length > 0 && !isValidId && (
 					<Text

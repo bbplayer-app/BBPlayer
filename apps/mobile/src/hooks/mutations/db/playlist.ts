@@ -528,3 +528,21 @@ export const usePullSharedPlaylist = () => {
 		},
 	})
 }
+
+export const useRotateEditorInviteCode = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'editorInvite', 'rotate'],
+		mutationFn: async ({ shareId }: { shareId: string }) => {
+			const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (data, { shareId }) => {
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.editorInviteCode(shareId),
+			})
+			return data
+		},
+		onError: (error) => toastAndLogError('生成编辑者邀请码失败', error, SCOPE),
+	})
+}

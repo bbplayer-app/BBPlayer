@@ -6,6 +6,7 @@ import {
 	primaryKey,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -19,27 +20,35 @@ export const users = pgTable('users', {
 		.default(sql`now()`),
 })
 
-export const sharedPlaylists = pgTable('shared_playlists', {
-	id: uuid('id')
-		.primaryKey()
-		.default(sql`gen_random_uuid()`),
-	ownerMid: text('owner_mid')
-		.notNull()
-		.references(() => users.mid, { onDelete: 'cascade' }),
-	title: text('title').notNull(),
-	description: text('description'),
-	coverUrl: text('cover_url'),
-	/** 编辑者邀请码（明文存储，旋转后旧码失效） */
-	editorInviteCode: text('editor_invite_code'),
-	createdAt: timestamp('created_at', { withTimezone: true })
-		.notNull()
-		.default(sql`now()`),
-	updatedAt: timestamp('updated_at', { withTimezone: true })
-		.notNull()
-		.default(sql`now()`),
-	/** 软删除；非 null 表示已删除 */
-	deletedAt: timestamp('deleted_at', { withTimezone: true }),
-})
+export const sharedPlaylists = pgTable(
+	'shared_playlists',
+	{
+		id: uuid('id')
+			.primaryKey()
+			.default(sql`gen_random_uuid()`),
+		ownerMid: text('owner_mid')
+			.notNull()
+			.references(() => users.mid, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		description: text('description'),
+		coverUrl: text('cover_url'),
+		/** 编辑者邀请码（明文存储，旋转后旧码失效） */
+		editorInviteCode: text('editor_invite_code'),
+		createdAt: timestamp('created_at', { withTimezone: true })
+			.notNull()
+			.default(sql`now()`),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.notNull()
+			.default(sql`now()`),
+		/** 软删除；非 null 表示已删除 */
+		deletedAt: timestamp('deleted_at', { withTimezone: true }),
+	},
+	(t) => [
+		uniqueIndex('editor_invite_code_unq')
+			.on(t.editorInviteCode)
+			.where(sql`${t.editorInviteCode} IS NOT NULL`),
+	],
+)
 
 export const playlistMembers = pgTable(
 	'playlist_members',
