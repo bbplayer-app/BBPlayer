@@ -55,7 +55,7 @@ const LocalPlaylistItem = memo(
 									{!isShared && isRemote && (
 										<Icon
 											source={'cloud'}
-											color={'#87ceeb'}
+											color={colors.primary}
 											size={13}
 										/>
 									)}

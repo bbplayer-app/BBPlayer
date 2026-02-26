@@ -10,7 +10,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 
-const SHARE_BASE_URL = 'https://bbplayer.app/share'
+const SHARE_BASE_URL = 'https://bbplayer.roitium.com/share/playlist'
 
 export default function EnableSharingModal({
 	playlistId,
