@@ -59,7 +59,7 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 
 		const { mid, uname, face } = biliJson.data
 
-		const { db } = createDb(c.env.DATABASE_URL)
+		const { db } = await createDb(c.env.DATABASE_URL)
 		try {
 			const existing = await db
 				.select({ mid: users.mid })

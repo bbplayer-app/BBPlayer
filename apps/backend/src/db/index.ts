@@ -1,33 +1,25 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import type { Sql } from 'postgres'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { Client } from 'pg'
 
 import * as schema from './schema'
 
-let client: Sql | null = null
-let db: PostgresJsDatabase<typeof schema> | null = null
-let lastConnectionString: string | null = null
-
-export function createDb(connectionString: string) {
-	if (!client || connectionString !== lastConnectionString) {
-		if (client) {
-			void client.end()
-		}
-		client = postgres(connectionString, {
-			prepare: false,
-			max: 1,
-			idle_timeout: 20,
-			connect_timeout: 10,
-		})
-		db = drizzle(client, { schema })
-		lastConnectionString = connectionString
-	}
-	return { db: db!, client }
-}
-
 export type DbConnection = {
-	db: PostgresJsDatabase<typeof schema>
-	client: Sql
+	db: NodePgDatabase<typeof schema>
+	client: Client
 }
 export type DrizzleDb = DbConnection['db']
+
+export async function createDb(
+	connectionString: string,
+): Promise<DbConnection> {
+	const client = new Client({
+		connectionString,
+	})
+
+	await client.connect()
+
+	const db = drizzle(client, { schema })
+
+	return { db, client }
+}

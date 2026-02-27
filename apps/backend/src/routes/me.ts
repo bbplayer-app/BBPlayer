@@ -18,7 +18,7 @@ const meRoute = new Hono<{
 	.use('*', authMiddleware)
 	.get('/playlists', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const { db } = createDb(c.env.DATABASE_URL)
+		const { db } = await createDb(c.env.DATABASE_URL)
 
 		const rows = await db
 			.select({

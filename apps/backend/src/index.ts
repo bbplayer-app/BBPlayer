@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
 
 import authRoute from './routes/auth'
 import meRoute from './routes/me'
@@ -11,7 +10,7 @@ const healthRoute = new Hono<{ Bindings: Env }>().get('/', (c) =>
 )
 
 const app = new Hono<{ Bindings: Env }>()
-	.use('*', logger())
+	// .use('*', logger())
 	.use(
 		'*',
 		cors({
