@@ -167,7 +167,7 @@ export class SharedPlaylistFacade {
 				}
 				const { playlist: remotePlaylist } = await resp.json()
 				const shareId: string = remotePlaylist.id
-				const serverTime = remotePlaylist.updated_at ?? Date.now()
+				const serverTime = parseInt(remotePlaylist.updatedAt) ?? Date.now()
 				await this.db.transaction(async (tx) => {
 					const txPlaylist = this.playlistService.withDB(tx)
 					const updateResult = await txPlaylist.updatePlaylistMetadata(
