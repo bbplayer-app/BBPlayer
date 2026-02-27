@@ -1,9 +1,9 @@
+import { useRouter } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Dialog, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-import { useSubscribeToSharedPlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
@@ -36,7 +36,7 @@ export default function SubscribeToSharedPlaylistModal() {
 	const [input, setInput] = useState('')
 	const [inviteCode, setInviteCode] = useState('')
 	const close = useModalStore((state) => state.close)
-	const { mutate: subscribe, isPending } = useSubscribeToSharedPlaylist()
+	const router = useRouter()
 
 	const parsed = useMemo(() => parseShareLink(input), [input])
 	const shareId = parsed.shareId ?? ''
@@ -44,15 +44,17 @@ export default function SubscribeToSharedPlaylistModal() {
 
 	const handleSubscribe = () => {
 		if (!isValidId) return
-		subscribe(
-			{
-				shareId,
-				inviteCode: (inviteCode || parsed.inviteCode || '').trim() || undefined,
-			},
-			{
-				onSuccess: () => close('SubscribeToSharedPlaylist'),
-			},
-		)
+		close('SubscribeToSharedPlaylist')
+		useModalStore.getState().doAfterModalHostClosed(() => {
+			router.push({
+				pathname: '/share/playlist',
+				params: {
+					shareId: shareId,
+					inviteCode:
+						(inviteCode || parsed.inviteCode || '').trim() || undefined,
+				},
+			})
+		})
 	}
 
 	const handleChangeInput = (text: string) => {
@@ -81,7 +83,6 @@ export default function SubscribeToSharedPlaylistModal() {
 					autoCapitalize='none'
 					autoCorrect={false}
 					style={styles.input}
-					editable={!isPending}
 					error={input.trim().length > 0 && !isValidId}
 				/>
 				<TextInput
@@ -92,7 +93,6 @@ export default function SubscribeToSharedPlaylistModal() {
 					autoCapitalize='characters'
 					autoCorrect={false}
 					style={styles.input}
-					editable={!isPending}
 					placeholder={
 						parsed.inviteCode ? `已从链接填充：${parsed.inviteCode}` : ''
 					}
@@ -109,15 +109,13 @@ export default function SubscribeToSharedPlaylistModal() {
 			<Dialog.Actions>
 				<Button
 					onPress={() => close('SubscribeToSharedPlaylist')}
-					disabled={isPending}
 					mode='text'
 				>
 					取消
 				</Button>
 				<Button
 					onPress={handleSubscribe}
-					loading={isPending}
-					disabled={isPending || !isValidId}
+					disabled={!isValidId}
 					mode='text'
 				>
 					订阅

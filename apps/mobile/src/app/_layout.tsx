@@ -237,6 +237,10 @@ export default Sentry.wrap(function RootLayout() {
 					name='playlist/local/[id]'
 					options={{ headerShown: false }}
 				/>
+				<Stack.Screen
+					name='share/playlist'
+					options={{ headerShown: false }}
+				/>
 
 				<Stack.Screen
 					name='leaderboard'

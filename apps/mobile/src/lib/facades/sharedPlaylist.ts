@@ -33,6 +33,35 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 const logger = log.extend('SharedPlaylistFacade')
 
+export interface SharedPlaylistPreview {
+	playlist: {
+		id: string
+		title: string
+		description: string | null
+		coverUrl: string | null
+		createdAt: Date
+		updatedAt: Date
+		trackCount: number
+	}
+	owner: {
+		mid: number
+		name: string
+		avatarUrl?: string | null
+	} | null
+	tracks: Array<{
+		unique_key: string
+		title: string
+		artist_name?: string
+		artist_id?: string
+		cover_url?: string
+		duration?: number
+		bilibili_bvid: string
+		bilibili_cid?: string
+		sort_key: string
+	}>
+	previewLimit: number
+}
+
 export class SharedPlaylistFacade {
 	constructor(
 		private readonly db: ExpoSQLiteDatabase<typeof schema>,
@@ -276,6 +305,78 @@ export class SharedPlaylistFacade {
 				createFacadeError('SharedPlaylistSubscribeFailed', '订阅共享歌单失败', {
 					cause: e,
 				}),
+		)
+	}
+
+	public getPreview(
+		shareId: string,
+	): ResultAsync<SharedPlaylistPreview, ReturnType<typeof createFacadeError>> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const resp = await this.api.playlists[':id'].preview.$get({
+					param: { id: shareId },
+				})
+				if (resp.status === 404) {
+					throw createFacadeError(
+						'SharedPlaylistNotFound',
+						'共享歌单不存在或已删除',
+					)
+				}
+				if (!resp.ok) {
+					const errBody = await resp.json().catch(() => ({}))
+					throw createFacadeError(
+						'SharedPlaylistPreviewFailed',
+						`获取共享歌单预览失败：${resp.status}`,
+						{ cause: errBody },
+					)
+				}
+
+				const data = (await resp.json()) as {
+					playlist: {
+						id: string
+						title: string
+						description?: string | null
+						cover_url?: string | null
+						created_at: number
+						updated_at: number
+						track_count: number
+					}
+					owner: {
+						mid: number
+						name: string
+						avatar_url?: string | null
+					} | null
+					tracks: SharedPlaylistPreview['tracks']
+					preview_limit: number
+				}
+
+				return {
+					playlist: {
+						id: data.playlist.id,
+						title: data.playlist.title,
+						description: data.playlist.description ?? null,
+						coverUrl: data.playlist.cover_url ?? null,
+						createdAt: new Date(data.playlist.created_at),
+						updatedAt: new Date(data.playlist.updated_at),
+						trackCount: Number(data.playlist.track_count ?? 0),
+					},
+					owner: data.owner
+						? {
+								mid: data.owner.mid,
+								name: data.owner.name,
+								avatarUrl: data.owner.avatar_url ?? null,
+							}
+						: null,
+					tracks: data.tracks,
+					previewLimit: data.preview_limit,
+				}
+			})(),
+			(e) =>
+				createFacadeError(
+					'SharedPlaylistPreviewFailed',
+					'获取共享歌单预览失败',
+					{ cause: e },
+				),
 		)
 	}
 

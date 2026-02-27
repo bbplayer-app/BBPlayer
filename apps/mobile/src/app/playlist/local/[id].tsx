@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { and, eq } from 'drizzle-orm'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -33,6 +34,7 @@ import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlayli
 import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
+import { SharedPlaylistMembersSheet } from '@/features/playlist/local/components/SharedPlaylistMembersSheet'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
@@ -50,10 +52,7 @@ import {
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
-import {
-	useSharedPlaylistMembers,
-	type SharedPlaylistMember,
-} from '@/hooks/queries/sharedPlaylistMembers'
+import { useSharedPlaylistMembers } from '@/hooks/queries/sharedPlaylistMembers'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -110,6 +109,7 @@ export default function LocalPlaylistPage() {
 		useTrackSelection()
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
+	const membersSheetRef = useRef<TrueSheet>(null)
 
 	const selection = {
 		active: selectMode,
@@ -246,11 +246,10 @@ export default function LocalPlaylistPage() {
 	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
 		usePullSharedPlaylist()
 
-	const handlePressShareMember = (member: SharedPlaylistMember) => {
-		router.push({
-			pathname: '/playlist/remote/uploader/[mid]',
-			params: { mid: String(member.mid) },
-		})
+	const handlePressShareMember = () => {
+		if (playlistMetadata?.shareId) {
+			void membersSheetRef.current?.present()
+		}
 	}
 
 	const onClickDeletePlaylist = () => {
@@ -844,6 +843,7 @@ export default function LocalPlaylistPage() {
 								openModal('EnableSharing', {
 									playlistId: Number(id),
 									shareId: playlistMetadata.shareId,
+									shareRole: playlistMetadata.shareRole,
 								})
 							}}
 							title='共享设置'
@@ -873,6 +873,11 @@ export default function LocalPlaylistPage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
+
+			<SharedPlaylistMembersSheet
+				ref={membersSheetRef}
+				shareId={playlistMetadata?.shareId}
+			/>
 		</View>
 	)
 }

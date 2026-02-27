@@ -1,5 +1,16 @@
 import { arktypeValidator } from '@hono/arktype-validator'
-import { and, eq, gt, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	gt,
+	isNotNull,
+	isNull,
+	lt,
+	or,
+	sql,
+} from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { createDb } from '../db'
@@ -29,6 +40,8 @@ const validationHook: Parameters<typeof arktypeValidator>[2] = (result, c) => {
 		)
 	}
 }
+
+const PLAYLIST_PREVIEW_LIMIT = 30
 
 type HonoEnv = {
 	Bindings: Env
@@ -106,6 +119,110 @@ const playlistsRoute = new Hono<HonoEnv>()
 			return c.json({ playlist: updated })
 		},
 	)
+	.get('/:id/preview', async (c) => {
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		const [playlist] = await db
+			.select({
+				id: sharedPlaylists.id,
+				title: sharedPlaylists.title,
+				description: sharedPlaylists.description,
+				coverUrl: sharedPlaylists.coverUrl,
+				ownerMid: sharedPlaylists.ownerMid,
+				createdAt: sharedPlaylists.createdAt,
+				updatedAt: sharedPlaylists.updatedAt,
+			})
+			.from(sharedPlaylists)
+			.where(
+				and(
+					eq(sharedPlaylists.id, playlistId),
+					isNull(sharedPlaylists.deletedAt),
+				),
+			)
+
+		if (!playlist) {
+			return c.json({ error: 'Playlist not found' }, 404)
+		}
+
+		const [owner] = await db
+			.select({
+				mid: users.mid,
+				name: users.name,
+				avatarUrl: users.face,
+			})
+			.from(users)
+			.where(eq(users.mid, playlist.ownerMid))
+
+		const [{ count: trackCount }] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(sharedPlaylistTracks)
+			.where(
+				and(
+					eq(sharedPlaylistTracks.playlistId, playlistId),
+					isNull(sharedPlaylistTracks.deletedAt),
+				),
+			)
+
+		const rows = await db
+			.select({
+				trackUniqueKey: sharedPlaylistTracks.trackUniqueKey,
+				sortKey: sharedPlaylistTracks.sortKey,
+				track: sharedTracks,
+			})
+			.from(sharedPlaylistTracks)
+			.leftJoin(
+				sharedTracks,
+				eq(sharedPlaylistTracks.trackUniqueKey, sharedTracks.uniqueKey),
+			)
+			.where(
+				and(
+					eq(sharedPlaylistTracks.playlistId, playlistId),
+					isNull(sharedPlaylistTracks.deletedAt),
+				),
+			)
+			.orderBy(desc(sharedPlaylistTracks.sortKey))
+			.limit(PLAYLIST_PREVIEW_LIMIT)
+
+		const tracks = rows
+			.filter((row) => row.track)
+			.map((row) => {
+				const t = row.track!
+				return {
+					unique_key: t.uniqueKey,
+					title: t.title,
+					artist_name: t.artistName ?? undefined,
+					artist_id: t.artistId ?? undefined,
+					cover_url: t.coverUrl ?? undefined,
+					duration: t.duration ?? undefined,
+					bilibili_bvid: t.bilibiliBvid,
+					bilibili_cid: t.bilibiliCid ?? undefined,
+					sort_key: row.sortKey,
+				}
+			})
+
+		c.executionCtx.waitUntil(client.end())
+		return c.json({
+			playlist: {
+				id: playlist.id,
+				title: playlist.title,
+				description: playlist.description,
+				cover_url: playlist.coverUrl,
+				created_at: playlist.createdAt.getTime(),
+				updated_at: playlist.updatedAt.getTime(),
+				track_count: Number(trackCount ?? 0),
+			},
+			owner: owner
+				? {
+						mid: Number(owner.mid),
+						name: owner.name,
+						avatar_url: owner.avatarUrl,
+					}
+				: null,
+			tracks,
+			preview_limit: PLAYLIST_PREVIEW_LIMIT,
+		})
+	})
 	.post(
 		'/:id/changes',
 		arktypeValidator('json', playlistChangesRequestSchema, validationHook),
@@ -544,7 +661,47 @@ const playlistsRoute = new Hono<HonoEnv>()
 		return c.json({ deleted: true })
 	})
 	/**
+	 * GET /playlists/:id/members
+	 * 获取歌单的所有成员（owner, editor, subscriber）。
+	 * 仅 owner 和 editor 有权限调用。
+	 */
+	.get('/:id/members', async (c) => {
+		const { sub } = c.var.jwtPayload
+		const mid = sub
+		const playlistId = c.req.param('id')
+		const { db, client } = createDb(c.env.DATABASE_URL)
+
+		const member = await getMember(db, playlistId, mid)
+		if (!member || (member.role !== 'owner' && member.role !== 'editor')) {
+			return c.json({ error: 'Forbidden' }, 403)
+		}
+
+		const members = await db
+			.select({
+				mid: playlistMembers.mid,
+				role: playlistMembers.role,
+				name: users.name,
+				avatar_url: users.face,
+				joined_at: playlistMembers.joinedAt,
+			})
+			.from(playlistMembers)
+			.innerJoin(users, eq(users.mid, playlistMembers.mid))
+			.where(eq(playlistMembers.playlistId, playlistId))
+			.orderBy(asc(playlistMembers.joinedAt))
+
+		c.executionCtx.waitUntil(client.end())
+		return c.json({
+			members: members.map((m) => ({
+				...m,
+				mid: Number(m.mid),
+				joined_at: m.joined_at.getTime(),
+			})),
+		})
+	})
+
+	/**
 	 * DELETE /playlists/:id/members/me
+
 	 * subscriber / editor 专用：从 playlist_members 中移除自己，解除与该歌单的关联。
 	 * 幂等：若已不是成员，直接返回成功。
 	 * owner 不能调用此接口（应使用 DELETE /playlists/:id）。

@@ -19,9 +19,11 @@ const SHARE_BASE_URL = 'https://bbplayer.roitium.com/share/playlist'
 export default function EnableSharingModal({
 	playlistId,
 	shareId: initialShareId,
+	shareRole,
 }: {
 	playlistId: number
 	shareId?: string | null
+	shareRole?: 'owner' | 'editor' | 'subscriber' | null
 }) {
 	const close = useModalStore((state) => state.close)
 	const { mutate: enableSharing, isPending } = useEnableSharing()
@@ -103,54 +105,50 @@ export default function EnableSharingModal({
 								}
 							/>
 						</View>
-						<View style={styles.inviteSection}>
-							<Text variant='bodyMedium'>
-								需要协作者编辑此歌单？使用下面的邀请链接。
-							</Text>
-							{inviteCode && (
-								<View style={styles.linkSection}>
-									<Text variant='bodySmall'>协作编辑邀请链接</Text>
-									<TextInput
-										value={editorUrl}
-										editable={false}
-										mode='outlined'
-										dense
-										style={styles.linkInput}
-										right={
-											<TextInput.Icon
-												icon='content-copy'
-												onPress={handleCopyEditorLink}
-											/>
-										}
-									/>
-								</View>
-							)}
-							{!inviteCode && inviteFetching && (
-								<Text
-									variant='bodySmall'
-									style={{ textAlign: 'center' }}
-								>
-									邀请码加载中...
+						{(!shareRole || shareRole === 'owner') && (
+							<View style={styles.inviteSection}>
+								<Text variant='bodyMedium'>
+									需要协作者编辑此歌单？使用下面的邀请链接。
 								</Text>
-							)}
-							<Button
-								onPress={handleRotateInvite}
-								loading={isRotating}
-								disabled={isRotating}
-								mode='outlined'
-							>
-								重置协作编辑邀请链接
-							</Button>
-						</View>
+								{inviteCode && (
+									<View style={styles.linkSection}>
+										<Text variant='bodySmall'>协作编辑邀请链接</Text>
+										<TextInput
+											value={editorUrl}
+											editable={false}
+											mode='outlined'
+											dense
+											style={styles.linkInput}
+											right={
+												<TextInput.Icon
+													icon='content-copy'
+													onPress={handleCopyEditorLink}
+												/>
+											}
+										/>
+									</View>
+								)}
+								{!inviteCode && inviteFetching && (
+									<Text
+										variant='bodySmall'
+										style={{ textAlign: 'center' }}
+									>
+										邀请码加载中...
+									</Text>
+								)}
+								<Button
+									onPress={handleRotateInvite}
+									loading={isRotating}
+									disabled={isRotating}
+									mode='outlined'
+								>
+									重置协作编辑邀请链接
+								</Button>
+							</View>
+						)}
 					</View>
 				</Dialog.Content>
 				<Dialog.Actions>
-					<Button
-						onPress={handleCopySubscribe}
-						mode='text'
-					>
-						复制订阅链接
-					</Button>
 					<Button
 						onPress={() => close('EnableSharing')}
 						mode='text'

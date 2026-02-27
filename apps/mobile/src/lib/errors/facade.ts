@@ -24,6 +24,8 @@ export type FacadeErrorType =
 	| 'PlaylistDeleteFailed'
 	| 'InviteCodeRotateFailed'
 	| 'InviteCodeFetchFailed'
+	| 'SharedPlaylistNotFound'
+	| 'SharedPlaylistPreviewFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(
