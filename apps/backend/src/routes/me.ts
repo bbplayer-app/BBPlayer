@@ -18,7 +18,7 @@ const meRoute = new Hono<{
 	.use('*', authMiddleware)
 	.get('/playlists', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const { db, client } = createDb(c.env.DATABASE_URL)
+		const { db } = createDb(c.env.DATABASE_URL)
 
 		const rows = await db
 			.select({
@@ -41,7 +41,6 @@ const meRoute = new Hono<{
 			.where(eq(playlistMembers.mid, sub))
 			.orderBy(desc(playlistMembers.joinedAt))
 
-		c.executionCtx.waitUntil(client.end())
 		return c.json({ playlists: rows })
 	})
 

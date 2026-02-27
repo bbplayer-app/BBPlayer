@@ -1,7 +1,8 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { asc } from 'drizzle-orm'
 import * as Updates from 'expo-updates'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Dialog, Portal, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -10,6 +11,7 @@ import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import db, { expoDb } from '@/lib/db/db'
@@ -24,6 +26,7 @@ const logger = log.extend('TestPage')
 
 export default function TestPage() {
 	const [loading, setLoading] = useState(false)
+	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 	const { isUpdatePending } = Updates.useUpdates()
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
@@ -168,6 +171,12 @@ export default function TestPage() {
 		}
 	}
 
+	const openSyncFailuresSheet = () => {
+		if (syncFailuresSheetRef.current) {
+			void syncFailuresSheetRef.current.present()
+		}
+	}
+
 	const openModal = useModalStore((state) => state.open)
 
 	return (
@@ -250,6 +259,13 @@ export default function TestPage() {
 					>
 						输出 playlist_sync_queue
 					</Button>
+					<Button
+						mode='outlined'
+						onPress={openSyncFailuresSheet}
+						style={styles.button}
+					>
+						预览同步失败记录 Sheet
+					</Button>
 				</View>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>
@@ -309,6 +325,10 @@ export default function TestPage() {
 					</Dialog.Actions>
 				</AnimatedModalOverlay>
 			</Portal>
+			<SyncFailuresSheet
+				ref={syncFailuresSheetRef}
+				useMockData
+			/>
 		</View>
 	)
 }

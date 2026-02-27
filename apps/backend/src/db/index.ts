@@ -1,17 +1,33 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import type { Sql } from 'postgres'
 
 import * as schema from './schema'
 
-/**
- * 工厂函数：每次请求按需创建 Drizzle 实例和 Postgres 客户端。
- * 返回 { db, client }，以便路由在完成后调用 client.end() 关闭连接。
- */
+let client: Sql | null = null
+let db: PostgresJsDatabase<typeof schema> | null = null
+let lastConnectionString: string | null = null
+
 export function createDb(connectionString: string) {
-	const client = postgres(connectionString, { prepare: false, max: 1 })
-	const db = drizzle(client, { schema })
-	return { db, client }
+	if (!client || connectionString !== lastConnectionString) {
+		if (client) {
+			void client.end()
+		}
+		client = postgres(connectionString, {
+			prepare: false,
+			max: 1,
+			idle_timeout: 20,
+			connect_timeout: 10,
+		})
+		db = drizzle(client, { schema })
+		lastConnectionString = connectionString
+	}
+	return { db: db!, client }
 }
 
-export type DbConnection = ReturnType<typeof createDb>
+export type DbConnection = {
+	db: PostgresJsDatabase<typeof schema>
+	client: Sql
+}
 export type DrizzleDb = DbConnection['db']

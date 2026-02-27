@@ -59,7 +59,7 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 
 		const { mid, uname, face } = biliJson.data
 
-		const { db, client } = createDb(c.env.DATABASE_URL)
+		const { db } = createDb(c.env.DATABASE_URL)
 		try {
 			const existing = await db
 				.select({ mid: users.mid })
@@ -98,8 +98,6 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 			return c.json({ token, mid: String(mid), name: uname, face })
 		} catch {
 			return c.json({ error: 'Internal server error' }, 500)
-		} finally {
-			c.executionCtx.waitUntil(client.end())
 		}
 	},
 )

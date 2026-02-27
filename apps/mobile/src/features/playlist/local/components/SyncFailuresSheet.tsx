@@ -24,17 +24,52 @@ const OPERATION_INFO: Record<string, { label: string; icon: string }> = {
 	update_metadata: { label: '更新元数据', icon: 'pencil-outline' },
 }
 
+// DEV ONLY: 假数据，用于直接预览 Sheet 样式，不写数据库
+const DEV_MOCK_ROWS: (typeof schema.playlistSyncQueue.$inferSelect)[] = __DEV__
+	? [
+			{
+				id: 1,
+				playlistId: 1,
+				operation: 'add_tracks',
+				payload: { trackIds: [1, 2, 3] },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 3600000),
+				createdAt: new Date(Date.now() - 3600000),
+			},
+			{
+				id: 2,
+				playlistId: 1,
+				operation: 'remove_tracks',
+				payload: { removedTrackIds: [4, 5] },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 1800000),
+				createdAt: new Date(Date.now() - 1800000),
+			},
+			{
+				id: 3,
+				playlistId: 1,
+				operation: 'update_metadata',
+				payload: { title: '测试歌单' },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 300000),
+				createdAt: new Date(Date.now() - 300000),
+			},
+		]
+	: []
+
 interface Props {
 	playlistId?: number
+	/** DEV ONLY: 传入 true 直接展示 mock 数据，不读 DB */
+	useMockData?: boolean
 }
 
 export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
-	function SyncFailuresSheet({ playlistId }, ref) {
+	function SyncFailuresSheet({ playlistId, useMockData = false }, ref) {
 		const { colors } = useTheme()
 		const insets = useSafeAreaInsets()
 		const [loading, setLoading] = useState(false)
 
-		const { data: rows = [] } = useLiveQuery(
+		const { data: dbRows = [] } = useLiveQuery(
 			db
 				.select()
 				.from(schema.playlistSyncQueue)
@@ -47,6 +82,8 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 						: eq(schema.playlistSyncQueue.status, 'failed'),
 				),
 		)
+
+		const rows = __DEV__ && useMockData ? DEV_MOCK_ROWS : dbRows
 
 		const handleRetry = async () => {
 			if (!rows.length) {
@@ -178,6 +215,7 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		marginBottom: 16,
 		textAlign: 'center',
+		marginTop: 16,
 	},
 	center: {
 		paddingVertical: 40,
