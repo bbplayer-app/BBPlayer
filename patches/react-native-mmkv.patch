@@ -9,8 +9,7 @@ index cc1b0de9e8cc2033b3c1d8094f8434f5a82a7cd5..a388019b0dd7d80ac2e93cbd06da882c
 -      return () => listener.remove()
 +      return () => {
 +        if (typeof listener === 'function') {
-+          // @ts-expect-error - listener may be a cleanup function on some platforms/versions
-+          // instead of an object with remove() method
++          // @ts-expect-error
 +          listener()
 +          return
 +        }
