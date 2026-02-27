@@ -49,79 +49,7 @@ type HonoEnv = {
 }
 
 const playlistsRoute = new Hono<HonoEnv>()
-	.use('*', authMiddleware)
-	.post(
-		'/',
-		arktypeValidator('json', createPlaylistRequestSchema, validationHook),
-		async (c) => {
-			const { sub } = c.var.jwtPayload
-			const mid = sub
-			const body = c.req.valid('json')
-			const { db } = await createDb(c.env.DATABASE_URL)
-
-			// 三步操作（创建歌单 → 写入 owner 成员 → 可选初始曲目）作为原子事务
-			const playlist = await db.transaction(async (tx) => {
-				// 1. 创建歌单
-				const [newPlaylist] = await tx
-					.insert(sharedPlaylists)
-					.values({
-						ownerMid: mid,
-						title: body.title,
-						description: body.description,
-						coverUrl: body.cover_url,
-					})
-					.returning()
-
-				// 2. 将创建者写入 playlist_members（role=owner）
-				await tx.insert(playlistMembers).values({
-					playlistId: newPlaylist.id,
-					mid,
-					role: 'owner',
-				})
-
-				// 3. 可选：携带初始曲目
-				if (body.tracks?.length) {
-					await upsertTracks(tx, newPlaylist.id, mid, body.tracks)
-				}
-
-				return newPlaylist
-			})
-
-			return c.json({ playlist }, 201)
-		},
-	)
-	.patch(
-		'/:id',
-		arktypeValidator('json', updatePlaylistRequestSchema, validationHook),
-		async (c) => {
-			const { sub } = c.var.jwtPayload
-			const mid = sub
-			const playlistId = c.req.param('id')
-			const body = c.req.valid('json')
-			const { db } = await createDb(c.env.DATABASE_URL)
-
-			// 权限校验
-			const member = await getMember(db, playlistId, mid)
-			if (!member || member.role !== 'owner') {
-				return c.json({ error: 'Forbidden' }, 403)
-			}
-
-			const [updated] = await db
-				.update(sharedPlaylists)
-				.set({
-					...(body.title !== undefined ? { title: body.title } : {}),
-					...(body.description !== undefined
-						? { description: body.description }
-						: {}),
-					...(body.cover_url !== undefined ? { coverUrl: body.cover_url } : {}),
-					updatedAt: new Date(),
-				})
-				.where(eq(sharedPlaylists.id, playlistId))
-				.returning()
-
-			return c.json({ playlist: updated })
-		},
-	)
+	// 无需鉴权的公开接口
 	.get('/:id/preview', async (c) => {
 		const playlistId = c.req.param('id')
 		const { db } = await createDb(c.env.DATABASE_URL)
@@ -225,6 +153,80 @@ const playlistsRoute = new Hono<HonoEnv>()
 			preview_limit: PLAYLIST_PREVIEW_LIMIT,
 		})
 	})
+	// 以下需要鉴权
+	.use('*', authMiddleware)
+	.post(
+		'/',
+		arktypeValidator('json', createPlaylistRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const body = c.req.valid('json')
+			const { db } = await createDb(c.env.DATABASE_URL)
+
+			// 三步操作（创建歌单 → 写入 owner 成员 → 可选初始曲目）作为原子事务
+			const playlist = await db.transaction(async (tx) => {
+				// 1. 创建歌单
+				const [newPlaylist] = await tx
+					.insert(sharedPlaylists)
+					.values({
+						ownerMid: mid,
+						title: body.title,
+						description: body.description,
+						coverUrl: body.cover_url,
+					})
+					.returning()
+
+				// 2. 将创建者写入 playlist_members（role=owner）
+				await tx.insert(playlistMembers).values({
+					playlistId: newPlaylist.id,
+					mid,
+					role: 'owner',
+				})
+
+				// 3. 可选：携带初始曲目
+				if (body.tracks?.length) {
+					await upsertTracks(tx, newPlaylist.id, mid, body.tracks)
+				}
+
+				return newPlaylist
+			})
+
+			return c.json({ playlist }, 201)
+		},
+	)
+	.patch(
+		'/:id',
+		arktypeValidator('json', updatePlaylistRequestSchema, validationHook),
+		async (c) => {
+			const { sub } = c.var.jwtPayload
+			const mid = sub
+			const playlistId = c.req.param('id')
+			const body = c.req.valid('json')
+			const { db } = await createDb(c.env.DATABASE_URL)
+
+			// 权限校验
+			const member = await getMember(db, playlistId, mid)
+			if (!member || member.role !== 'owner') {
+				return c.json({ error: 'Forbidden' }, 403)
+			}
+
+			const [updated] = await db
+				.update(sharedPlaylists)
+				.set({
+					...(body.title !== undefined ? { title: body.title } : {}),
+					...(body.description !== undefined
+						? { description: body.description }
+						: {}),
+					...(body.cover_url !== undefined ? { coverUrl: body.cover_url } : {}),
+					updatedAt: new Date(),
+				})
+				.where(eq(sharedPlaylists.id, playlistId))
+				.returning()
+
+			return c.json({ playlist: updated })
+		},
+	)
 	.post(
 		'/:id/changes',
 		arktypeValidator('json', playlistChangesRequestSchema, validationHook),

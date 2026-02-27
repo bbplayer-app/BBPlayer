@@ -18,6 +18,7 @@ const app = new Hono<{ Bindings: Env }>()
 				'https://bbplayer.roitium.com',
 				'http://localhost:3000',
 				'https://bbplayer-backend.roitium.workers.dev',
+				'http://localhost:5173',
 			],
 			allowHeaders: ['Authorization', 'Content-Type'],
 			allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
