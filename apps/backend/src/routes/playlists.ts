@@ -59,28 +59,33 @@ const playlistsRoute = new Hono<HonoEnv>()
 			const body = c.req.valid('json')
 			const { db } = await createDb(c.env.DATABASE_URL)
 
-			// 创建歌单
-			const [playlist] = await db
-				.insert(sharedPlaylists)
-				.values({
-					ownerMid: mid,
-					title: body.title,
-					description: body.description,
-					coverUrl: body.cover_url,
+			// 三步操作（创建歌单 → 写入 owner 成员 → 可选初始曲目）作为原子事务
+			const playlist = await db.transaction(async (tx) => {
+				// 1. 创建歌单
+				const [newPlaylist] = await tx
+					.insert(sharedPlaylists)
+					.values({
+						ownerMid: mid,
+						title: body.title,
+						description: body.description,
+						coverUrl: body.cover_url,
+					})
+					.returning()
+
+				// 2. 将创建者写入 playlist_members（role=owner）
+				await tx.insert(playlistMembers).values({
+					playlistId: newPlaylist.id,
+					mid,
+					role: 'owner',
 				})
-				.returning()
 
-			// 将创建者写入 playlist_members（role=owner）
-			await db.insert(playlistMembers).values({
-				playlistId: playlist.id,
-				mid,
-				role: 'owner',
+				// 3. 可选：携带初始曲目
+				if (body.tracks?.length) {
+					await upsertTracks(tx, newPlaylist.id, mid, body.tracks)
+				}
+
+				return newPlaylist
 			})
-
-			// 可选：携带初始曲目
-			if (body.tracks?.length) {
-				await upsertTracks(db, playlist.id, mid, body.tracks)
-			}
 
 			return c.json({ playlist }, 201)
 		},
@@ -211,7 +216,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			},
 			owner: owner
 				? {
-						mid: Number(owner.mid),
+						mid: owner.mid,
 						name: owner.name,
 						avatar_url: owner.avatarUrl,
 					}
@@ -305,12 +310,15 @@ const playlistsRoute = new Hono<HonoEnv>()
 						})
 				}
 
-				// 3. remove（LWW 软删除）- 转换为批量 Upsert 不便（缺 sortKey），维持原样或后续优化
+				// 3. remove（LWW 软删除）- 同步更新 updatedAt，确保后续 LWW 冲突判断正确
 				await Promise.all(
 					removeChanges.map((change) =>
 						tx
 							.update(sharedPlaylistTracks)
-							.set({ deletedAt: new Date(change.operation_at) })
+							.set({
+								deletedAt: new Date(change.operation_at),
+								updatedAt: new Date(change.operation_at),
+							})
 							.where(
 								and(
 									eq(sharedPlaylistTracks.playlistId, playlistId),
@@ -487,7 +495,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				tracks,
 				members: members.map((m) => ({
 					...m,
-					mid: Number(m.mid),
+					mid: m.mid,
 				})),
 				has_more: false,
 				server_time: serverTime,
@@ -690,7 +698,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		return c.json({
 			members: members.map((m) => ({
 				...m,
-				mid: Number(m.mid),
+				mid: m.mid,
 				joined_at: m.joined_at.getTime(),
 			})),
 		})
@@ -755,35 +763,33 @@ async function upsertTracks(
 	mid: string,
 	tracks: Array<{ track: TrackInput; sort_key: string }>,
 ) {
-	await db.transaction(async (tx) => {
-		await tx
-			.insert(sharedTracks)
-			.values(
-				tracks.map(({ track }) => ({
-					uniqueKey: track.unique_key,
-					title: track.title,
-					artistName: track.artist_name,
-					artistId: track.artist_id,
-					coverUrl: track.cover_url,
-					duration: track.duration,
-					bilibiliBvid: track.bilibili_bvid,
-					bilibiliCid: track.bilibili_cid,
-				})),
-			)
-			.onConflictDoNothing()
+	await db
+		.insert(sharedTracks)
+		.values(
+			tracks.map(({ track }) => ({
+				uniqueKey: track.unique_key,
+				title: track.title,
+				artistName: track.artist_name,
+				artistId: track.artist_id,
+				coverUrl: track.cover_url,
+				duration: track.duration,
+				bilibiliBvid: track.bilibili_bvid,
+				bilibiliCid: track.bilibili_cid,
+			})),
+		)
+		.onConflictDoNothing()
 
-		await tx
-			.insert(sharedPlaylistTracks)
-			.values(
-				tracks.map(({ track, sort_key }) => ({
-					playlistId,
-					trackUniqueKey: track.unique_key,
-					sortKey: sort_key,
-					addedByMid: mid,
-				})),
-			)
-			.onConflictDoNothing()
-	})
+	await db
+		.insert(sharedPlaylistTracks)
+		.values(
+			tracks.map(({ track, sort_key }) => ({
+				playlistId,
+				trackUniqueKey: track.unique_key,
+				sortKey: sort_key,
+				addedByMid: mid,
+			})),
+		)
+		.onConflictDoNothing()
 }
 
 function generateInviteCode(): string {
