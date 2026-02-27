@@ -11,4 +11,9 @@ onlyBuiltDependencies:
   - lefthook
   - protobufjs
   - react-native-logs
+  - sharp
   - unrs-resolver
+  - workerd
+
+patchedDependencies:
+  react-native-mmkv: patches/react-native-mmkv.patch

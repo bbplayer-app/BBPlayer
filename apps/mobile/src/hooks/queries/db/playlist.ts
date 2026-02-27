@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 
 import { queryClient } from '@/lib/config/queryClient'
+import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -41,6 +42,8 @@ export const playlistKeys = {
 			limit,
 			initialLimit,
 		] as const,
+	editorInviteCode: (shareId: string) =>
+		[...playlistKeys.all, 'editorInviteCode', shareId] as const,
 }
 
 export const usePlaylistLists = () => {
@@ -68,7 +71,7 @@ export const usePlaylistMetadata = (playlistId: number) => {
 
 export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
 	return useQuery({
-		queryKey: ['playlistsContainingTrack', 'byUniqueKey', uniqueKey],
+		queryKey: playlistKeys.playlistsContainingTrack(uniqueKey),
 		queryFn:
 			uniqueKey !== undefined
 				? () =>
@@ -132,5 +135,18 @@ export const usePlaylistContentsInfinite = (
 			| { lastSortKey: string; createdAt: number; lastId: number }
 			| undefined,
 		gcTime: 0,
+	})
+}
+
+export const useEditorInviteCode = (shareId?: string | null) => {
+	const enabled = !!shareId
+	return useQuery({
+		queryKey: playlistKeys.editorInviteCode(shareId ?? ''),
+		queryFn: enabled
+			? () =>
+					returnOrThrowAsync(sharedPlaylistFacade.getEditorInviteCode(shareId))
+			: skipToken,
+		select: (result) => result.editorInviteCode,
+		enabled,
 	})
 }

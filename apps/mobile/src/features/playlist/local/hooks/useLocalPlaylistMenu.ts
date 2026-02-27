@@ -18,6 +18,7 @@ interface LocalPlaylistMenuProps {
 	openAddToPlaylistModal: (track: Track) => void
 	openEditTrackModal: (track: Track) => void
 	playlist: Playlist
+	isReadOnly: boolean
 }
 
 export function useLocalPlaylistMenu({
@@ -25,6 +26,7 @@ export function useLocalPlaylistMenu({
 	openAddToPlaylistModal,
 	openEditTrackModal,
 	playlist,
+	isReadOnly,
 }: LocalPlaylistMenuProps) {
 	const router = useRouter()
 
@@ -141,7 +143,7 @@ export function useLocalPlaylistMenu({
 				onPress: () => openEditTrackModal(item),
 			},
 		)
-		if (playlist?.type === 'local') {
+		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
 				leadingIcon: 'playlist-remove',

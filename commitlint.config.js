@@ -4,7 +4,16 @@ module.exports = {
 		'scope-enum': [
 			2,
 			'always',
-			['mobile', 'docs', 'image-colors', 'orpheus', 'logs', 'root', 'splash'],
+			[
+				'mobile',
+				'docs',
+				'image-colors',
+				'orpheus',
+				'logs',
+				'root',
+				'splash',
+				'backend',
+			],
 		],
 		'scope-empty': [2, 'never'],
 	},

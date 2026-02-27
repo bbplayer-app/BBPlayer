@@ -30,7 +30,7 @@ export interface TrackMenuItem {
 interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
-	onMenuPress: () => void
+	onMenuPress?: () => void
 	/**
 	 * 拖拽把手上的 RNGH 合成手势回调。
 	 *
@@ -50,6 +50,7 @@ interface TrackListItemProps {
 	selectMode: boolean
 	isSearching?: boolean
 	enterSelectMode: (id: number) => void
+	isReadOnly?: boolean
 	downloadState?: DownloadState
 }
 
@@ -72,6 +73,7 @@ export const TrackListItem = memo(function TrackListItem({
 	selectMode,
 	isSearching = false,
 	enterSelectMode,
+	isReadOnly,
 	downloadState,
 }: TrackListItemProps) {
 	const theme = useTheme()
@@ -136,14 +138,14 @@ export const TrackListItem = memo(function TrackListItem({
 			testID={`track-item-${index}`}
 			onPress={() => {
 				if (selectMode) {
-					toggleSelected(data.id)
+					if (!isReadOnly) toggleSelected(data.id)
 					return
 				}
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}
 			onLongPress={() => {
-				if (selectMode) return
+				if (selectMode || isReadOnly) return
 				enterSelectMode(data.id)
 			}}
 		>
@@ -265,7 +267,8 @@ export const TrackListItem = memo(function TrackListItem({
 							) : (
 								<RectButton
 									style={styles.menuButton}
-									onPress={() => onMenuPress()}
+									enabled={!!onMenuPress}
+									onPress={() => onMenuPress?.()}
 								>
 									<Icon
 										source='dots-vertical'

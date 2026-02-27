@@ -24,6 +24,7 @@ interface BilibiliUserSummary {
 interface AppState {
 	bilibiliCookie: Record<string, string> | null
 	bilibiliUserInfo: BilibiliUserSummary | null
+	bbplayerToken: string | null
 	settings: Settings
 
 	// Cookies
@@ -32,6 +33,10 @@ interface AppState {
 	updateBilibiliCookie: (updates: Record<string, string>) => Result<void, Error>
 	clearBilibiliCookie: () => void
 	setBilibiliUserInfo: (info: BilibiliUserSummary | null) => void
+
+	// Auth
+	setBbplayerToken: (token: string) => void
+	clearBbplayerToken: () => void
 
 	// Settings
 	setSettings: (updates: Partial<Settings>) => void

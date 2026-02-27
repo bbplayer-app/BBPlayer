@@ -1,0 +1,20 @@
+diff --git a/src/hooks/createMMKVHook.ts b/src/hooks/createMMKVHook.ts
+index cc1b0de9e8cc2033b3c1d8094f8434f5a82a7cd5..9058728d1cdb7e138f5a64a43f299b1fd0641ebe 100644
+--- a/src/hooks/createMMKVHook.ts
++++ b/src/hooks/createMMKVHook.ts
+@@ -58,7 +58,14 @@ export function createMMKVHook<
+           setBump((b) => b + 1)
+         }
+       })
+-      return () => listener.remove()
++      return () => {
++        if (typeof listener === 'function') {
++          // @ts-expect-error - the return type of addOnValueChangedListener can be either a function or an object with a remove method, depending on the MMKV implementation. We check for both cases here.
++          listener()
++          return
++        }
++        listener?.remove?.()
++      }
+     }, [key, mmkv])
+ 
+     return [value, set]

@@ -35,72 +35,40 @@ interface LocalTrackListProps extends Omit<
 	FlashListProps<Track>,
 	'data' | 'renderItem' | 'extraData'
 > {
-	/**
-	 * 要显示的本地曲目数组
-	 */
+	/** 要显示的本地曲目数组 */
 	tracks: Track[]
-	/**
-	 * 所属的播放列表信息
-	 */
+	/** 所属的播放列表信息 */
 	playlist: Playlist
-	/**
-	 * 点击曲目时的处理函数
-	 */
+	/** 点击曲目时的处理函数 */
 	handleTrackPress: (track: Track) => void
-	/**
-	 * 生成曲目菜单项的函数
-	 */
+	/** 生成曲目菜单项的函数 */
 	trackMenuItems: (
 		track: Track,
 		downloadState?: DownloadState,
 	) => TrackMenuItem[]
-	/**
-	 * 多选状态管理
-	 */
+	/** 多选状态管理 */
 	selection: SelectionState
-	/**
-	 * 列表引用
-	 */
+	/** 列表引用 */
 	listRef?: RefObject<FlashListRef<Track> | null>
-	/**
-	 * 是否还有下一页数据（可选）
-	 */
+	/** 是否还有下一页数据（可选） */
 	hasNextPage?: boolean
-	/**
-	 * 是否正在获取下一页数据（可选）
-	 */
+	/** 是否正在获取下一页数据（可选） */
 	isFetchingNextPage?: boolean
-	/**
-	 * 数据是否已过期，如果为 true，列表项会显示半透明（可选）
-	 */
+	/** 数据是否已过期，如果为 true，列表项会显示半透明（可选） */
 	isStale?: boolean
-	/**
-	 * 当前设备是否处于无网络离线状态
-	 */
+	/** 当前设备是否处于无网络离线状态 */
 	isOffline?: boolean
-	/**
-	 * 在离线状态下，哪些歌曲的 uniqueKey 是被完整缓存可以播放的
-	 */
+	/** 在离线状态下，哪些歌曲的 uniqueKey 是被完整缓存可以播放的 */
 	playableOfflineKeys?: Set<string>
-	/**
-	 * 是否处于搜索状态
-	 */
+	/** 是否处于搜索状态 */
 	isSearching?: boolean
-	/**
-	 * 在 selectMode 下长按拖拽把手时触发
-	 */
+	/** 在 selectMode 下长按拖拽把手时触发 */
 	onDragStart?: (trackIndex: number, trackId: number, absoluteY: number) => void
-	/**
-	 * 手指在拖拽过程中持续移动时触发
-	 */
+	/** 手指在拖拽过程中持续移动时触发 */
 	onDragUpdate?: (absoluteY: number) => void
-	/**
-	 * 手指抬起或手势取消时触发
-	 */
+	/** 手指抬起或手势取消时触发 */
 	onDragEnd?: () => void
-	/**
-	 * 拖拽时当前插入位置（在哪个索引的项目之后显示插入线）
-	 */
+	/** 高亮显示插入位置 */
 	insertAfterIndex?: number | null
 }
 
@@ -115,7 +83,7 @@ const renderItem = ({
 		handleMenuPress: (track: Track, downloadState?: DownloadState) => void
 		selection: SelectionState
 		playlist: Playlist
-		downloadStatus: Record<string, DownloadState>
+		downloadStatus?: Record<string, DownloadState>
 		isStale?: boolean
 		isOffline?: boolean
 		playableOfflineKeys?: Set<string>
@@ -129,6 +97,7 @@ const renderItem = ({
 		onDragEnd?: () => void
 		insertAfterIndex: number | null
 		colors: MD3Theme['colors']
+		isReadOnly?: boolean
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
@@ -154,6 +123,7 @@ const renderItem = ({
 
 	const isUnplayableOffline =
 		isOffline && playableOfflineKeys && !playableOfflineKeys.has(item.uniqueKey)
+	const isReadOnly = extraData.isReadOnly === true
 
 	return (
 		<>
@@ -164,9 +134,13 @@ const renderItem = ({
 					onMenuPress={() => {
 						handleMenuPress(item, downloadState)
 					}}
-					onDragStart={(absoluteY) => onDragStart?.(index, item.id, absoluteY)}
-					onDragUpdate={onDragUpdate}
-					onDragEnd={onDragEnd}
+					onDragStart={
+						isReadOnly
+							? undefined
+							: (absoluteY) => onDragStart?.(index, item.id, absoluteY)
+					}
+					onDragUpdate={isReadOnly ? undefined : onDragUpdate}
+					onDragEnd={isReadOnly ? undefined : onDragEnd}
 					disabled={
 						item.source === 'bilibili' && !item.bilibiliMetadata.videoIsValid
 					}
@@ -184,6 +158,7 @@ const renderItem = ({
 						selection.enter(id)
 					}}
 					downloadState={downloadState}
+					isReadOnly={isReadOnly}
 				/>
 			</View>
 			{insertAfterIndex === index && (
@@ -276,6 +251,7 @@ export function LocalTrackList({
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+	const isReadOnly = playlist.shareRole === 'subscriber'
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)
@@ -333,6 +309,7 @@ export function LocalTrackList({
 			onDragEnd,
 			insertAfterIndex: insertAfterIndex ?? null,
 			colors: theme.colors,
+			isReadOnly,
 		}),
 		[
 			selection,
@@ -349,6 +326,7 @@ export function LocalTrackList({
 			onDragEnd,
 			insertAfterIndex,
 			theme.colors,
+			isReadOnly,
 		],
 	)
 

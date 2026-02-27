@@ -132,6 +132,14 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='导入外部歌单'
 						/>
+						<Menu.Item
+							leadingIcon='account-group'
+							onPress={() => {
+								setMenuVisible(false)
+								openModal('SubscribeToSharedPlaylist', undefined)
+							}}
+							title='订阅共享歌单'
+						/>
 					</FunctionalMenu>
 				</View>
 			</View>

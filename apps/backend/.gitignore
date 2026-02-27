@@ -1,0 +1,5 @@
+.dev.vars
+.wrangler/
+node_modules/
+dist/
+drizzle/

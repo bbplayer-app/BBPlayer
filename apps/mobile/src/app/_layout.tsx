@@ -26,6 +26,7 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
+import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -139,6 +140,11 @@ export default Sentry.wrap(function RootLayout() {
 		if (isReady && migrationsSuccess) {
 			SplashScreen.hide()
 
+			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
+			playlistSyncWorker.recoverStuckRows().catch((error) => {
+				logger.error('恢复同步任务失败:', error)
+			})
+
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
 				open('Welcome', undefined, { dismissible: false })
@@ -231,6 +237,10 @@ export default Sentry.wrap(function RootLayout() {
 
 				<Stack.Screen
 					name='playlist/local/[id]'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='share/playlist'
 					options={{ headerShown: false }}
 				/>
 

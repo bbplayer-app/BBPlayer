@@ -1,8 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
+import { useRouter } from 'expo-router'
 
 import { playlistKeys } from '@/hooks/queries/db/playlist'
+import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
+import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
 import { queryClient } from '@/lib/config/queryClient'
+import { CustomError } from '@/lib/errors'
 import { playlistFacade } from '@/lib/facades/playlist'
+import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
@@ -13,10 +18,35 @@ import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
+/** 若当前无 BBPlayer JWT，尝试用 Bilibili Cookie 自动换取。无 cookie 时抛出异常。 */
+async function ensureBBPlayerToken(): Promise<void> {
+	const store = useAppStore.getState()
+	if (store.bbplayerToken) return
+
+	const cookie = store.bilibiliCookie
+	if (!cookie || Object.keys(cookie).length === 0) {
+		throw new Error('请先登录 Bilibili，才能使用共享功能')
+	}
+
+	const cookieStr = serializeCookieObject(cookie)
+	const resp = await bbplayerApi.auth.login.$post({
+		json: { cookie: cookieStr },
+	})
+	if (!resp.ok) {
+		const body = await resp.json().catch(() => ({}))
+		throw new Error(
+			`BBPlayer 身份验证失败（${resp.status}）：${JSON.stringify(body)}`,
+		)
+	}
+	const data = (await resp.json()) as { token: string }
+	store.setBbplayerToken(data.token)
+}
+
 const SCOPE = 'Mutation.DB.Playlist'
 
 queryClient.setMutationDefaults(['db', 'playlist'], {
 	retry: false,
+	networkMode: 'always',
 })
 
 // React Query 的 invalidateQueries 会直接在后台刷新当前页面活跃的查询，能满足咱们的需求。
@@ -165,7 +195,7 @@ export const useEditPlaylistMetadata = () => {
 			payload: UpdatePlaylistPayload
 		}) => {
 			if (playlistId === 0) return
-			const result = await playlistService.updatePlaylistMetadata(
+			const result = await playlistFacade.updatePlaylistMetadata(
 				playlistId,
 				payload,
 			)
@@ -198,7 +228,13 @@ export const useDeletePlaylist = () => {
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'deletePlaylist'],
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
-			const result = await playlistService.deletePlaylist(playlistId)
+			// 共享歌单需要有效 token；本地歌单无需，若获取失败静默忽略
+			try {
+				await ensureBBPlayerToken()
+			} catch {
+				// local 歌单不需要 token，继续执行
+			}
+			const result = await playlistFacade.deletePlaylist(playlistId)
 			if (result.isErr()) {
 				throw result.error
 			}
@@ -229,7 +265,7 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 			trackIds: number[]
 			playlistId: number
 		}) => {
-			const result = await playlistService.batchRemoveTracksFromLocalPlaylist(
+			const result = await playlistFacade.removeTracksFromPlaylist(
 				playlistId,
 				trackIds,
 			)
@@ -317,9 +353,13 @@ export const useReorderLocalPlaylistTrack = () => {
 			prevSortKey: string | null
 			nextSortKey: string | null
 		}) => {
-			const result = await playlistService.reorderSingleLocalPlaylistTrack(
+			const result = await playlistFacade.reorderLocalPlaylistTrack(
 				playlistId,
-				{ trackId, prevSortKey, nextSortKey },
+				{
+					trackId,
+					prevSortKey,
+					nextSortKey,
+				},
 			)
 			if (result.isErr()) throw result.error
 			return result.value
@@ -380,5 +420,130 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 		},
 		onError: (error) =>
 			toastAndLogError('批量添加歌曲到播放列表失败', error, SCOPE),
+	})
+}
+
+/**
+ * 将本地歌单升级为共享歌单（启用分享）
+ */
+export const useEnableSharing = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'enableSharing'],
+		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+			await ensureBBPlayerToken()
+			const result = await sharedPlaylistFacade.enableSharing(playlistId)
+			if (result.isErr()) {
+				throw result.error
+			}
+			return result.value
+		},
+		onSuccess: async (_, { playlistId }) => {
+			toast.success('已开启共享')
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistLists(),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistMetadata(playlistId),
+				}),
+			])
+		},
+		onError: (error) => toastAndLogError('启用共享歌单失败', error, SCOPE),
+	})
+}
+
+/**
+ * 通过 shareId 订阅一个共享歌单
+ */
+export const useSubscribeToSharedPlaylist = () => {
+	const router = useRouter()
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'subscribeToSharedPlaylist'],
+		mutationFn: async ({
+			shareId,
+			inviteCode,
+		}: {
+			shareId: string
+			inviteCode?: string
+		}) => {
+			await ensureBBPlayerToken()
+			const result = await sharedPlaylistFacade.subscribeToPlaylist({
+				shareId,
+				inviteCode,
+			})
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async ({ localPlaylistId }) => {
+			toast.success('订阅成功')
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.playlistLists(),
+			})
+			router.push({
+				pathname: '/playlist/local/[id]',
+				params: { id: String(localPlaylistId) },
+			})
+		},
+		onError: (error) => toastAndLogError('订阅共享歌单失败', error, SCOPE),
+	})
+}
+
+/**
+ * 拉取共享歌单的增量变更
+ */
+export const usePullSharedPlaylist = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'pullSharedPlaylist'],
+		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+			await ensureBBPlayerToken()
+			const result = await sharedPlaylistFacade.pullChanges(playlistId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (_, { playlistId }) => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistContents(playlistId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistMetadata(playlistId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistLists(),
+				}),
+			])
+		},
+		onError: (error, { playlistId }) => {
+			if (
+				error instanceof CustomError &&
+				error.type === 'SharedPlaylistDeleted'
+			) {
+				// 交由调用方处理删除逻辑，这里静默
+				return
+			}
+			toastAndLogError(
+				`拉取共享歌单失败: playlistId=${playlistId}`,
+				error,
+				SCOPE,
+			)
+		},
+	})
+}
+
+export const useRotateEditorInviteCode = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'editorInvite', 'rotate'],
+		mutationFn: async ({ shareId }: { shareId: string }) => {
+			const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (data, { shareId }) => {
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.editorInviteCode(shareId),
+			})
+			return data
+		},
+		onError: (error) => toastAndLogError('生成编辑者邀请码失败', error, SCOPE),
 	})
 }

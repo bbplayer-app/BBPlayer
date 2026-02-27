@@ -10,7 +10,13 @@ pre-commit:
         fi
     lint-and-format-codes:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
-      run: pnpm oxfmt --write "{staged_files}" && pnpm oxlint --type-aware "{staged_files}" && pnpm eslint "{staged_files}"
+      run: |
+        if [ -z "{staged_files}" ]; then
+          echo "No staged files to lint or format."
+          exit 0
+        fi
+
+        pnpm oxfmt --write "{staged_files}" && pnpm oxlint --type-aware "{staged_files}" && pnpm eslint "{staged_files}"
       stage_fixed: true
     format-plain-text:
       glob: '*.{md,mdx}'

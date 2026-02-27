@@ -75,6 +75,10 @@ export interface Playlist {
 	type: 'favorite' | 'collection' | 'multi_page' | 'local'
 	remoteSyncId: number | null
 	lastSyncedAt: Date | null
+	// 歌单分享功能字段
+	shareId: string | null
+	shareRole: 'owner' | 'editor' | 'subscriber' | null
+	lastShareSyncAt: Date | null
 	createdAt: Date
 	updatedAt: Date
 }

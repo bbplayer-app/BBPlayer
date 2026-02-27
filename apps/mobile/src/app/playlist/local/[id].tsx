@@ -1,9 +1,21 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { and, eq } from 'drizzle-orm'
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
-import { Appbar, Menu, Portal, Searchbar, useTheme } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Appbar,
+	MD3Theme,
+	Menu,
+	Portal,
+	Searchbar,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -18,6 +30,8 @@ import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlayli
 import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
+import { SharedPlaylistMembersSheet } from '@/features/playlist/local/components/SharedPlaylistMembersSheet'
+import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
@@ -25,6 +39,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
+	usePullSharedPlaylist,
 	usePlaylistSync,
 	useReorderLocalPlaylistTrack,
 } from '@/hooks/mutations/db/playlist'
@@ -34,11 +49,15 @@ import {
 	useSearchTracksInPlaylist,
 } from '@/hooks/queries/db/playlist'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
+import { useSharedPlaylistMembers } from '@/hooks/queries/sharedPlaylistMembers'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
+import db from '@/lib/db/db'
+import * as schema from '@/lib/db/schema'
+import { CustomError } from '@/lib/errors'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -55,6 +74,44 @@ const EDGE_ZONE = 80
 /** px scrolled per auto-scroll tick (~16 ms) */
 const SCROLL_SPEED = 8
 
+const deletePlaylistDialogPrompt = (
+	playlistMetadata: ReturnType<typeof usePlaylistMetadata>['data'],
+	colors: MD3Theme['colors'],
+) => {
+	if (!playlistMetadata || playlistMetadata.shareId === null)
+		return '确定要删除此播放列表吗？'
+	switch (playlistMetadata?.shareRole) {
+		case 'owner':
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时所有订阅过该播放列表的人也会失去访问权限。
+					</Text>
+				</>
+			)
+		case 'editor':
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。
+					</Text>
+				</>
+			)
+		case 'subscriber':
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。
+					</Text>
+				</>
+			)
+	}
+	return <Text>确定要删除此播放列表吗？</Text>
+}
+
 export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
@@ -70,6 +127,8 @@ export default function LocalPlaylistPage() {
 		useTrackSelection()
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
+	const membersSheetRef = useRef<TrueSheet>(null)
+	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
 	const selection = {
 		active: selectMode,
@@ -186,6 +245,9 @@ export default function LocalPlaylistPage() {
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
 
+	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
+	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
+
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
 		onError: () => void 0,
 	})
@@ -200,6 +262,14 @@ export default function LocalPlaylistPage() {
 	const { mutate: deleteTrackFromLocalPlaylist } =
 		useBatchDeleteTracksFromLocalPlaylist()
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
+	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
+		usePullSharedPlaylist()
+
+	const handlePressShareMember = () => {
+		if (playlistMetadata?.shareId) {
+			void membersSheetRef.current?.present()
+		}
+	}
 
 	const onClickDeletePlaylist = () => {
 		deletePlaylist(
@@ -242,6 +312,16 @@ export default function LocalPlaylistPage() {
 		isOffline,
 		playableOfflineKeys,
 	)
+	const pullingIcon = useMemo(
+		() => () => (
+			<ActivityIndicator
+				size={18}
+				animating
+				color={colors.primary}
+			/>
+		),
+		[colors.primary],
+	)
 
 	const deleteTrack = (trackId: number) => {
 		deleteTrackFromLocalPlaylist({
@@ -256,6 +336,7 @@ export default function LocalPlaylistPage() {
 			openModal('UpdateTrackLocalPlaylists', { track }),
 		openEditTrackModal: (track) => openModal('EditTrackMetadata', { track }),
 		playlist: playlistMetadata!,
+		isReadOnly: isSharedSubscriber,
 	})
 
 	const deleteSelectedTracks = () => {
@@ -266,6 +347,13 @@ export default function LocalPlaylistPage() {
 		})
 		exitSelectMode()
 	}
+
+	/** 防止重复处理共享歌单被删除的场景 */
+	const handledRemoteDeletionRef = useRef(false)
+
+	useEffect(() => {
+		handledRemoteDeletionRef.current = false
+	}, [id])
 
 	useEffect(() => {
 		if (typeof id !== 'string') {
@@ -284,6 +372,56 @@ export default function LocalPlaylistPage() {
 		)
 	}, [searchbarHeight, startSearch])
 
+	useEffect(() => {
+		if (typeof id !== 'string') return
+		if (!playlistMetadata?.shareId || !playlistMetadata.shareRole) return
+		if (isOffline) return
+		pullSharedPlaylist(
+			{ playlistId: Number(id) },
+			{
+				onError: (error) => {
+					if (
+						handledRemoteDeletionRef.current ||
+						!(error instanceof CustomError) ||
+						error.type !== 'SharedPlaylistDeleted'
+					) {
+						return
+					}
+					handledRemoteDeletionRef.current = true
+					toast.error('共享者已删除该歌单，已为你移除本地副本')
+					deletePlaylist(
+						{ playlistId: Number(id) },
+						{ onSuccess: () => router.back() },
+					)
+				},
+			},
+		)
+	}, [
+		id,
+		isOffline,
+		playlistMetadata?.shareId,
+		playlistMetadata?.shareRole,
+		handledRemoteDeletionRef,
+		deletePlaylist,
+		router,
+		pullSharedPlaylist,
+	])
+
+	const { data: syncFailures } = useLiveQuery(
+		db
+			.select({ id: schema.playlistSyncQueue.id })
+			.from(schema.playlistSyncQueue)
+			.where(
+				and(
+					eq(schema.playlistSyncQueue.playlistId, playlistMetadata?.id ?? -1),
+					eq(schema.playlistSyncQueue.status, 'failed'),
+				),
+			)
+			.limit(1),
+	)
+	const hasSyncFailures =
+		!!playlistMetadata?.shareId && (syncFailures?.length ?? 0) > 0
+
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
 	}))
@@ -300,7 +438,6 @@ export default function LocalPlaylistPage() {
 	const ghostY = useSharedValue(0)
 
 	const dragOriginRef = useRef(0)
-
 	/** Absolute screen Y of the top of the list container (from measureInWindow) */
 	const containerTopRef = useRef(0)
 	const containerHeightRef = useRef(0)
@@ -506,6 +643,22 @@ export default function LocalPlaylistPage() {
 					</>
 				) : (
 					<>
+						{playlistMetadata.shareId && hasSyncFailures && (
+							<Appbar.Action
+								icon='alert-circle'
+								color={colors.error}
+								onPress={() => {
+									void syncFailuresSheetRef.current?.present()
+								}}
+								accessibilityLabel='同步失败'
+							/>
+						)}
+						{isPullingShared && (
+							<Appbar.Action
+								icon={pullingIcon}
+								disabled
+							/>
+						)}
 						<Appbar.Action
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
@@ -559,17 +712,26 @@ export default function LocalPlaylistPage() {
 							: undefined
 					}
 					onDragStart={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragStart
 							: undefined
 					}
 					onDragUpdate={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragUpdate
 							: undefined
 					}
 					onDragEnd={
-						selectMode && playlistMetadata.type === 'local' && !startSearch
+						selectMode &&
+						playlistMetadata.type === 'local' &&
+						!startSearch &&
+						!isSharedSubscriber
 							? handleDragEnd
 							: undefined
 					}
@@ -597,6 +759,8 @@ export default function LocalPlaylistPage() {
 									params: { mid: author.remoteId },
 								})
 							}
+							shareMembers={shareMembers}
+							onPressShareMember={handlePressShareMember}
 						/>
 					}
 				/>
@@ -632,7 +796,7 @@ export default function LocalPlaylistPage() {
 						y: 60 + insets.top,
 					}}
 				>
-					{playlistMetadata.type === 'local' && (
+					{playlistMetadata.type === 'local' && !isSharedSubscriber && (
 						<Menu.Item
 							onPress={() => {
 								setFunctionalMenuVisible(false)
@@ -642,16 +806,21 @@ export default function LocalPlaylistPage() {
 							leadingIcon='sort'
 						/>
 					)}
-					<Menu.Item
-						onPress={() => {
-							setFunctionalMenuVisible(false)
-							openModal('EditPlaylistMetadata', { playlist: playlistMetadata })
-						}}
-						title='编辑播放列表信息'
-						leadingIcon='pencil'
-					/>
+					{!isSharedSubscriber && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								openModal('EditPlaylistMetadata', {
+									playlist: playlistMetadata,
+								})
+							}}
+							title='编辑播放列表信息'
+							leadingIcon='pencil'
+						/>
+					)}
 					{playlistMetadata.type === 'local' &&
-						playlistMetadata.remoteSyncId === null && (
+						playlistMetadata.remoteSyncId === null &&
+						!isSharedSubscriber && (
 							<Menu.Item
 								onPress={() => {
 									setFunctionalMenuVisible(false)
@@ -665,12 +834,36 @@ export default function LocalPlaylistPage() {
 								leadingIcon='sync'
 							/>
 						)}
+					{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								openModal('EnableSharing', { playlistId: Number(id) })
+							}}
+							title='设为共享歌单'
+							leadingIcon='share-variant'
+						/>
+					)}
+					{playlistMetadata.shareId && (
+						<Menu.Item
+							onPress={() => {
+								setFunctionalMenuVisible(false)
+								openModal('EnableSharing', {
+									playlistId: Number(id),
+									shareId: playlistMetadata.shareId,
+									shareRole: playlistMetadata.shareRole,
+								})
+							}}
+							title='共享设置'
+							leadingIcon='link-variant'
+						/>
+					)}
 					<Menu.Item
 						onPress={() => {
 							setFunctionalMenuVisible(false)
 							alert(
 								'删除播放列表',
-								'确定要删除此播放列表吗？',
+								deletePlaylistDialogPrompt(playlistMetadata, colors),
 								[
 									{ text: '取消' },
 									{ text: '确定', onPress: onClickDeletePlaylist },
@@ -688,6 +881,15 @@ export default function LocalPlaylistPage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
+
+			<SharedPlaylistMembersSheet
+				ref={membersSheetRef}
+				shareId={playlistMetadata?.shareId}
+			/>
+			<SyncFailuresSheet
+				ref={syncFailuresSheetRef}
+				playlistId={playlistMetadata?.id}
+			/>
 		</View>
 	)
 }

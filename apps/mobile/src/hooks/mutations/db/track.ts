@@ -7,6 +7,7 @@ import type { Track } from '@/types/core/media'
 
 queryClient.setMutationDefaults(['db', 'track'], {
 	retry: false,
+	networkMode: 'always',
 })
 
 export const useRenameTrack = () => {
