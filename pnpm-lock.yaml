@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   react-native-mmkv:
-    hash: 4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8
+    hash: 6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52
     path: patches/react-native-mmkv.patch
 
 importers:
@@ -349,7 +349,7 @@ importers:
         version: 1.20.4(react-native-reanimated@4.2.1(react-native-worklets@0.8.0-nightly-20260122-45349f895(@babel/core@7.28.6)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react-native-mmkv:
         specifier: ^4.1.1
-        version: 4.1.1(patch_hash=4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        version: 4.1.1(patch_hash=6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react-native-nitro-modules:
         specifier: ^0.33.2
         version: 0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -428,7 +428,7 @@ importers:
         version: 1.3.0
       '@rozenite/mmkv-plugin':
         specifier: ^1.3.0
-        version: 1.3.0(react-native-mmkv@4.1.1(patch_hash=4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+        version: 1.3.0(react-native-mmkv@4.1.1(patch_hash=6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       '@rozenite/require-profiler-plugin':
         specifier: ^1.3.0
         version: 1.3.0(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -14295,13 +14295,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@rozenite/mmkv-plugin@1.3.0(react-native-mmkv@4.1.1(patch_hash=4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
+  '@rozenite/mmkv-plugin@1.3.0(react-native-mmkv@4.1.1(patch_hash=6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)':
     dependencies:
       '@rozenite/plugin-bridge': 1.3.0(react@19.2.0)
       nanoevents: 9.1.0
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
-      react-native-mmkv: 4.1.1(patch_hash=4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+      react-native-mmkv: 4.1.1(patch_hash=6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
 
   '@rozenite/plugin-bridge@1.3.0(react@19.2.0)':
     dependencies:
@@ -20349,7 +20349,7 @@ snapshots:
       react-native-is-edge-to-edge: 1.2.1(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react-native-reanimated: 4.2.1(react-native-worklets@0.8.0-nightly-20260122-45349f895(@babel/core@7.28.6)(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
 
-  react-native-mmkv@4.1.1(patch_hash=4cef3e5c8294f69d85e15f390ef8928e0eb918a1de563d848091ff7077910dd8)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+  react-native-mmkv@4.1.1(patch_hash=6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52)(react-native-nitro-modules@0.33.2(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
     dependencies:
       react: 19.2.0
       react-native: 0.83.1(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
