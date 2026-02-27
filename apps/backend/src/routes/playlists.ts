@@ -143,6 +143,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			)
 
 		if (!playlist) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
 

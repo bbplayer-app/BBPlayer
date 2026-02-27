@@ -167,7 +167,8 @@ export class SharedPlaylistFacade {
 				}
 				const { playlist: remotePlaylist } = await resp.json()
 				const shareId: string = remotePlaylist.id
-				const serverTime = parseInt(remotePlaylist.updatedAt) ?? Date.now()
+				const parsed = new Date(remotePlaylist.updatedAt).getTime()
+				const serverTime = Number.isFinite(parsed) ? parsed : Date.now()
 				await this.db.transaction(async (tx) => {
 					const txPlaylist = this.playlistService.withDB(tx)
 					const updateResult = await txPlaylist.updatePlaylistMetadata(
@@ -212,6 +213,7 @@ export class SharedPlaylistFacade {
 				// 1. 检查是否已有本地副本
 				const existing =
 					await this.playlistService.findPlaylistByShareId(shareId)
+				if (existing.isErr()) throw existing.error
 				if (existing.isOk() && existing.value) {
 					logger.info('subscribeToPlaylist: 已存在本地副本', {
 						shareId,
@@ -859,10 +861,7 @@ export class SharedPlaylistFacade {
 						artistMap.set(remoteId, artist.id)
 					}
 				} else {
-					logger.error('_applyPullResponse: 批量创建 artist 失败', {
-						error: artistResult.error,
-						artistsToCreate,
-					})
+					throw artistResult.error
 				}
 			}
 
@@ -894,38 +893,35 @@ export class SharedPlaylistFacade {
 				'bilibili',
 			)
 			if (trackIdsResult.isErr()) {
-				logger.error('_applyPullResponse: 批量创建 track 失败', {
-					error: trackIdsResult.error,
+				throw trackIdsResult.error
+			}
+			// 用服务端 sort_key 直接 upsert playlist_tracks（conn 已是 tx 作用域）
+			const trackIdMap = trackIdsResult.value
+			const rows = upsertChanges
+				.map((c) => {
+					const trackId = trackIdMap.get(c.track.unique_key)
+					if (!trackId) return null
+					return {
+						playlistId: localPlaylistId,
+						trackId,
+						sortKey: c.sort_key,
+					}
 				})
-			} else {
-				// 用服务端 sort_key 直接 upsert playlist_tracks（conn 已是 tx 作用域）
-				const trackIdMap = trackIdsResult.value
-				const rows = upsertChanges
-					.map((c) => {
-						const trackId = trackIdMap.get(c.track.unique_key)
-						if (!trackId) return null
-						return {
-							playlistId: localPlaylistId,
-							trackId,
-							sortKey: c.sort_key,
-						}
-					})
-					.filter((r): r is NonNullable<typeof r> => r !== null)
+				.filter((r): r is NonNullable<typeof r> => r !== null)
 
-				if (rows.length > 0) {
-					await conn
-						.insert(schema.playlistTracks)
-						.values(rows)
-						.onConflictDoUpdate({
-							target: [
-								schema.playlistTracks.playlistId,
-								schema.playlistTracks.trackId,
-							],
-							// 使用服务器下发的最新 sort_key 覆盖本地值，确保重排同步生效
-							set: { sortKey: sql`excluded.sort_key` },
-						})
-					applied += rows.length
-				}
+			if (rows.length > 0) {
+				await conn
+					.insert(schema.playlistTracks)
+					.values(rows)
+					.onConflictDoUpdate({
+						target: [
+							schema.playlistTracks.playlistId,
+							schema.playlistTracks.trackId,
+						],
+						// 使用服务器下发的最新 sort_key 覆盖本地值，确保重排同步生效
+						set: { sortKey: sql`excluded.sort_key` },
+					})
+				applied += rows.length
 			}
 		}
 
@@ -934,19 +930,20 @@ export class SharedPlaylistFacade {
 			const uniqueKeys = deleteChanges.map((c) => c.track_unique_key)
 			const trackIdsResult =
 				await trackService.findTrackIdsByUniqueKeys(uniqueKeys)
-			if (trackIdsResult.isOk()) {
-				const trackIds = Array.from(trackIdsResult.value.values())
-				if (trackIds.length > 0) {
-					await conn
-						.delete(schema.playlistTracks)
-						.where(
-							and(
-								eq(schema.playlistTracks.playlistId, localPlaylistId),
-								inArray(schema.playlistTracks.trackId, trackIds),
-							),
-						)
-					applied += trackIds.length
-				}
+			if (trackIdsResult.isErr()) {
+				throw trackIdsResult.error
+			}
+			const trackIds = Array.from(trackIdsResult.value.values())
+			if (trackIds.length > 0) {
+				await conn
+					.delete(schema.playlistTracks)
+					.where(
+						and(
+							eq(schema.playlistTracks.playlistId, localPlaylistId),
+							inArray(schema.playlistTracks.trackId, trackIds),
+						),
+					)
+				applied += trackIds.length
 			}
 		}
 

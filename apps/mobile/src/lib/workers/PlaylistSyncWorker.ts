@@ -82,6 +82,11 @@ class PlaylistSyncWorker {
 				for (const row of playlistRows) {
 					await this.syncSinglePlaylist(row.playlistId)
 				}
+
+				// 每轮处理完后清理已完成的记录，避免表无限膨胀
+				await db
+					.delete(schema.playlistSyncQueue)
+					.where(eq(schema.playlistSyncQueue.status, 'done'))
 			} while (this.runAgain)
 		} finally {
 			this.isRunning = false
@@ -108,6 +113,7 @@ class PlaylistSyncWorker {
 
 		const playlistRes = await playlistService.getPlaylistById(playlistId)
 		if (playlistRes.isErr()) {
+			// 数据库查询异常（非歌单不存在），保留队列行等待下次重试
 			logger.error('syncSinglePlaylist: 读取歌单失败', {
 				playlistId,
 				error: playlistRes.error,
@@ -117,17 +123,13 @@ class PlaylistSyncWorker {
 
 		const playlist = playlistRes.value
 		if (!playlist?.shareId || !playlist.shareRole) {
-			await this.markRows(
-				queueRows.map((r) => r.id),
-				'failed',
-			)
+			// 歌单不存在或未开启分享，永久无效，直接清理
+			await this.deleteRows(queueRows.map((r) => r.id))
 			return
 		}
 		if (playlist.shareRole === 'subscriber') {
-			await this.markRows(
-				queueRows.map((r) => r.id),
-				'failed',
-			)
+			// 订阅者无写权限，永久无效，直接清理
+			await this.deleteRows(queueRows.map((r) => r.id))
 			return
 		}
 
@@ -142,10 +144,8 @@ class PlaylistSyncWorker {
 
 		if (metadataOps.length > 0) {
 			if (playlist.shareRole !== 'owner') {
-				await this.markRows(
-					metadataOps.map((r) => r.id),
-					'failed',
-				)
+				// 非 owner 无法修改元数据，永久无效，直接清理
+				await this.deleteRows(metadataOps.map((r) => r.id))
 			} else {
 				await this.pushMetadataChanges(playlist.shareId, metadataOps)
 			}
@@ -188,10 +188,8 @@ class PlaylistSyncWorker {
 		}
 
 		if (trackIds.size === 0) {
-			await this.markRows(
-				rows.map((r) => r.id),
-				'failed',
-			)
+			// payload 损坏，无法解析出任何 trackId，永久无效，直接清理
+			await this.deleteRows(rows.map((r) => r.id))
 			return
 		}
 
@@ -328,7 +326,8 @@ class PlaylistSyncWorker {
 		}
 
 		if (invalidRowIds.length > 0) {
-			await this.markRows(invalidRowIds, 'failed')
+			// payload 损坏或对应 track 已被删除，永久无效，直接清理
+			await this.deleteRows(invalidRowIds)
 		}
 
 		if (changes.length === 0) return
@@ -493,7 +492,10 @@ class PlaylistSyncWorker {
 	private toMillis(value: unknown): number {
 		if (value instanceof Date) return value.getTime()
 		if (typeof value === 'number') return value
-		if (typeof value === 'string') return Number(value)
+		if (typeof value === 'string') {
+			const num = Number(value)
+			return Number.isNaN(num) ? Date.now() : num
+		}
 		return Date.now()
 	}
 
@@ -505,6 +507,14 @@ class PlaylistSyncWorker {
 		await db
 			.update(schema.playlistSyncQueue)
 			.set({ status })
+			.where(inArray(schema.playlistSyncQueue.id, ids))
+	}
+
+	/** 永久性无效的记录（不可能成功），直接从队列中删除 */
+	private async deleteRows(ids: number[]): Promise<void> {
+		if (ids.length === 0) return
+		await db
+			.delete(schema.playlistSyncQueue)
 			.where(inArray(schema.playlistSyncQueue.id, ids))
 	}
 }
