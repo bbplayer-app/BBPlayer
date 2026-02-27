@@ -32,10 +32,16 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 		// -----------------------------------------------------------------------
 		// 1. 向 B 站验证 cookie
 		// -----------------------------------------------------------------------
+		const controller = new AbortController()
+		const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
 		const biliRes = await fetch(
 			'https://api.bilibili.com/x/web-interface/nav',
-			{ headers: { Cookie: cookie } },
-		)
+			{
+				headers: { Cookie: cookie },
+				signal: controller.signal,
+			},
+		).finally(() => clearTimeout(timeoutId))
 		const biliJson = (await biliRes.json()) as {
 			code: number
 			message?: string
@@ -53,9 +59,8 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 
 		const { mid, uname, face } = biliJson.data
 
+		const { db, client } = createDb(c.env.DATABASE_URL)
 		try {
-			const { db, client } = createDb(c.env.DATABASE_URL)
-
 			const existing = await db
 				.select({ mid: users.mid })
 				.from(users)
@@ -90,10 +95,11 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 				c.env.JWT_SECRET,
 			)
 
-			c.executionCtx.waitUntil(client.end())
 			return c.json({ token, mid: String(mid), name: uname, face })
 		} catch {
 			return c.json({ error: 'Internal server error' }, 500)
+		} finally {
+			c.executionCtx.waitUntil(client.end())
 		}
 	},
 )

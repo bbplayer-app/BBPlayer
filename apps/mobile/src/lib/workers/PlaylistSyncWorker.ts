@@ -170,13 +170,17 @@ class PlaylistSyncWorker {
 		const trackIds = new Set<number>()
 		for (const row of addOps) {
 			const payload = this.parsePayload(row.payload) as { trackIds?: number[] }
-			payload.trackIds?.forEach((id) => trackIds.add(id))
+			payload.trackIds?.forEach((id) => {
+				trackIds.add(id)
+			})
 		}
 		for (const row of removeOps) {
 			const payload = this.parsePayload(row.payload) as {
 				removedTrackIds?: number[]
 			}
-			payload.removedTrackIds?.forEach((id) => trackIds.add(id))
+			payload.removedTrackIds?.forEach((id) => {
+				trackIds.add(id)
+			})
 		}
 		for (const row of reorderOps) {
 			const payload = this.parsePayload(row.payload) as { trackId?: number }
@@ -332,6 +336,11 @@ class PlaylistSyncWorker {
 		// operation_at 升序，确保与服务器 LWW 对齐
 		changes.sort((a, b) => a.operation_at - b.operation_at)
 
+		// 发起请求前先标记为 syncing，避免重启后重复提交
+		if (validRowIds.size > 0) {
+			await this.markRows([...validRowIds], 'syncing')
+		}
+
 		try {
 			const resp = await bbplayerApi.playlists[':id'].changes.$post({
 				param: { id: shareId },
@@ -362,10 +371,7 @@ class PlaylistSyncWorker {
 				playlistId,
 				error,
 			})
-			await this.markRows(
-				rows.map((r) => r.id),
-				'failed',
-			)
+			await this.markRows([...validRowIds], 'failed')
 		}
 	}
 
@@ -380,6 +386,9 @@ class PlaylistSyncWorker {
 			description?: string | null
 			coverUrl?: string | null
 		}
+		const rowIds = rows.map((r) => r.id)
+		await this.markRows(rowIds, 'syncing')
+
 		try {
 			const resp = await bbplayerApi.playlists[':id'].$patch({
 				param: { id: shareId },
@@ -397,18 +406,10 @@ class PlaylistSyncWorker {
 			await db
 				.update(schema.playlistSyncQueue)
 				.set({ status: 'done' })
-				.where(
-					inArray(
-						schema.playlistSyncQueue.id,
-						rows.map((r) => r.id),
-					),
-				)
+				.where(inArray(schema.playlistSyncQueue.id, rowIds))
 		} catch (error) {
 			logger.error('pushMetadataChanges 失败', { error })
-			await this.markRows(
-				rows.map((r) => r.id),
-				'failed',
-			)
+			await this.markRows(rowIds, 'failed')
 		}
 	}
 
@@ -498,7 +499,7 @@ class PlaylistSyncWorker {
 
 	private async markRows(
 		ids: number[],
-		status: 'done' | 'failed',
+		status: 'pending' | 'syncing' | 'done' | 'failed',
 	): Promise<void> {
 		if (ids.length === 0) return
 		await db

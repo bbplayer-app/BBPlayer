@@ -99,6 +99,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			// 权限校验
 			const member = await getMember(db, playlistId, mid)
 			if (!member || member.role !== 'owner') {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'Forbidden' }, 403)
 			}
 
@@ -235,10 +236,12 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 			const member = await getMember(db, playlistId, mid)
 			if (!member || member.role === 'subscriber') {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'Forbidden' }, 403)
 			}
 
 			if (changes.length === 0) {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'changes array is required' }, 400)
 			}
 
@@ -390,12 +393,14 @@ const playlistsRoute = new Hono<HonoEnv>()
 					),
 				)
 			if (!playlist) {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'Playlist not found' }, 404)
 			}
 
 			// 歌单存在时再校验成员关系
 			const member = await getMember(db, playlistId, mid)
 			if (!member) {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'Forbidden' }, 403)
 			}
 
@@ -524,6 +529,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 					),
 				)
 			if (!playlist) {
+				c.executionCtx.waitUntil(client.end())
 				return c.json({ error: 'Playlist not found' }, 404)
 			}
 
@@ -589,9 +595,11 @@ const playlistsRoute = new Hono<HonoEnv>()
 			)
 
 		if (!playlist) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
 		if (playlist.ownerMid !== sub) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
@@ -656,6 +664,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 		const member = await getMember(db, playlistId, mid)
 		if (!member || member.role !== 'owner') {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
@@ -685,6 +694,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 		const member = await getMember(db, playlistId, mid)
 		if (!member || (member.role !== 'owner' && member.role !== 'editor')) {
+			c.executionCtx.waitUntil(client.end())
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 

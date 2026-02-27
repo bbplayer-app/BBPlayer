@@ -1,9 +1,10 @@
 /** JWT payload 结构 */
 export interface JwtTokenPayload {
 	sub: string // B 站 mid（text 存储，避免大数精度丢失）
-	jwtVersion: number
-	iat: number
-	exp: number
+	jwtVersion?: number
+	iat?: number
+	exp?: number
+	role?: string
 }
 
 /** POST /api/playlists/:id/changes — 请求体单条变更 */

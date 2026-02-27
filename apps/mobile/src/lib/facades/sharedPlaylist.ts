@@ -167,9 +167,7 @@ export class SharedPlaylistFacade {
 				}
 				const { playlist: remotePlaylist } = await resp.json()
 				const shareId: string = remotePlaylist.id
-				const serverTime = Date.now()
-
-				// 5. 将 shareId/role/syncAt 写回本地（事务保证原子性）
+				const serverTime = remotePlaylist.updated_at ?? Date.now()
 				await this.db.transaction(async (tx) => {
 					const txPlaylist = this.playlistService.withDB(tx)
 					const updateResult = await txPlaylist.updatePlaylistMetadata(
@@ -860,6 +858,11 @@ export class SharedPlaylistFacade {
 					for (const [remoteId, artist] of artistResult.value.entries()) {
 						artistMap.set(remoteId, artist.id)
 					}
+				} else {
+					logger.error('_applyPullResponse: 批量创建 artist 失败', {
+						error: artistResult.error,
+						artistsToCreate,
+					})
 				}
 			}
 
