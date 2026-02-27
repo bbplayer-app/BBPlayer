@@ -1,6 +1,8 @@
 package expo.modules.orpheus
 
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -19,11 +21,13 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.typedarray.Float32Array
-import expo.modules.kotlin.Promise
+import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.manager.SpectrumManager
@@ -31,8 +35,10 @@ import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
+import expo.modules.orpheus.util.ExportOptions
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +64,8 @@ class ExpoOrpheusModule : Module() {
     private var tempBuffer: FloatArray? = null
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private lateinit var directoryPickerLauncher: AppContextActivityResultLauncher<String, String?>
 
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
@@ -169,8 +177,13 @@ class ExpoOrpheusModule : Module() {
             "onPlaybackSpeedChanged",
             "onTrackStarted",
             "onTrackFinished",
-            "onCoverDownloadProgress"
+            "onCoverDownloadProgress",
+            "onExportProgress"
         )
+
+        RegisterActivityContracts {
+            directoryPickerLauncher = registerForActivityResult(DirectoryPickerContract())
+        }
 
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
@@ -686,6 +699,23 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction total
         }
 
+        AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            runExportDownloads(
+                ids = ids,
+                destinationUri = destinationUri,
+                context = context,
+                options = ExportOptions(
+                    filenamePattern = filenamePattern,
+                    embedLyrics = embedLyrics,
+                    convertToLrc = convertToLrc,
+                ),
+                json = json,
+                ioScope = ioScope,
+                sendEvent = ::sendEvent,
+            )
+        }
+
         Function("getDownloadedCoverUri") { trackId: String ->
             val context = appContext.reactContext ?: return@Function null
             val file = CoverDownloadManager.getCoverFile(context, trackId)
@@ -755,6 +785,23 @@ class ExpoOrpheusModule : Module() {
             ensurePlayer()
             player?.setPlaybackSpeed(speed)
         }.runOnQueue(Queues.MAIN)
+
+        AsyncFunction("selectDirectory") Coroutine { ->
+            val context = appContext.reactContext ?: return@Coroutine null
+            val uriString = directoryPickerLauncher.launch("")
+            if (uriString != null) {
+                try {
+                    val treeUri = uriString.toUri()
+                    context.contentResolver.takePersistableUriPermission(
+                        treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to take persistable URI permission: ${e.message}")
+                }
+            }
+            uriString
+        }
 
         AsyncFunction("getPlaybackSpeed") {
             ensurePlayer()

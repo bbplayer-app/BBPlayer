@@ -51,6 +51,16 @@ export function useDownloadTasks() {
 	})
 }
 
+export function useAllDownloads() {
+	return useQuery({
+		queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
+		queryFn: async () => {
+			return await Orpheus.getDownloads()
+		},
+		staleTime: 0,
+	})
+}
+
 export function usePlayerQueue(enabled: boolean = true) {
 	return useQuery<OrpheusTrack[]>({
 		queryKey: orpheusQueryKeys.playerQueue(),
