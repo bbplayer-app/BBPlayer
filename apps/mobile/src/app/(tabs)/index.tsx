@@ -175,11 +175,10 @@ function HomePage() {
 			{/*顶部欢迎区域*/}
 			<View
 				style={{
-					paddingHorizontal: 16,
 					paddingTop: insets.top + 8,
 				}}
 			>
-				<View style={styles.greetingContainer}>
+				<View style={[styles.greetingContainer, { paddingHorizontal: 16 }]}>
 					<View>
 						<Text
 							variant='headlineSmall'

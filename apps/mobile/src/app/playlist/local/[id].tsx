@@ -15,9 +15,11 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import {
 	ActivityIndicator,
 	Appbar,
+	MD3Theme,
 	Menu,
 	Portal,
 	Searchbar,
+	Text,
 	useTheme,
 } from 'react-native-paper'
 import Animated, {
@@ -79,18 +81,40 @@ const SCROLL_SPEED = 8
 
 const deletePlaylistDialogPrompt = (
 	playlistMetadata: ReturnType<typeof usePlaylistMetadata>['data'],
+	colors: MD3Theme['colors'],
 ) => {
 	if (!playlistMetadata || playlistMetadata.shareId === null)
 		return '确定要删除此播放列表吗？'
 	switch (playlistMetadata?.shareRole) {
 		case 'owner':
-			return '确定要删除此播放列表吗？同时所有订阅过该播放列表的人也会失去访问权限。'
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时所有订阅过该播放列表的人也会失去访问权限。
+					</Text>
+				</>
+			)
 		case 'editor':
-			return '确定要删除此播放列表吗？同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。'
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。
+					</Text>
+				</>
+			)
 		case 'subscriber':
-			return '确定要删除此播放列表吗？同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。'
+			return (
+				<>
+					<Text>确定要删除此播放列表吗？</Text>
+					<Text style={{ color: colors.error }}>
+						同时你也会失去访问权限，下次需要由共享歌单的人再次邀请。
+					</Text>
+				</>
+			)
 	}
-	return '确定要删除此播放列表吗？'
+	return <Text>确定要删除此播放列表吗？</Text>
 }
 
 export default function LocalPlaylistPage() {
@@ -855,7 +879,7 @@ export default function LocalPlaylistPage() {
 							setFunctionalMenuVisible(false)
 							alert(
 								'删除播放列表',
-								deletePlaylistDialogPrompt(playlistMetadata),
+								deletePlaylistDialogPrompt(playlistMetadata, colors),
 								[
 									{ text: '取消' },
 									{ text: '确定', onPress: onClickDeletePlaylist },
