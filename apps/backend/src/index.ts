@@ -21,7 +21,7 @@ const app = new Hono<{ Bindings: Env }>()
 				'https://bbplayer-backend.roitium.workers.dev',
 			],
 			allowHeaders: ['Authorization', 'Content-Type'],
-			allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+			allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		}),
 	)
 	.route('/auth', authRoute)

@@ -3,7 +3,8 @@ import { hc } from 'hono/client'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 
-const BASE_URL = 'https://be.bbplayer.roitium.com'
+const BASE_URL =
+	process.env.EXPO_PUBLIC_BBPLAYER_API_URL ?? 'https://be.bbplayer.roitium.com'
 
 export const api = hc<AppType>(BASE_URL, {
 	headers: () => {

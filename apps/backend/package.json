@@ -2,7 +2,13 @@
 	"name": "@bbplayer/backend",
 	"version": "0.0.1",
 	"private": true,
-	"types": "src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
 	"scripts": {
 		"cf-typegen": "wrangler types",
 		"db:generate": "drizzle-kit generate",

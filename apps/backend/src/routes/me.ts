@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { createDb } from '../db'
@@ -39,6 +39,7 @@ const meRoute = new Hono<{
 				),
 			)
 			.where(eq(playlistMembers.mid, sub))
+			.orderBy(desc(playlistMembers.joinedAt))
 
 		c.executionCtx.waitUntil(client.end())
 		return c.json({ playlists: rows })

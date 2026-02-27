@@ -247,7 +247,10 @@ export class PlaylistFacade {
 					'更新 Track 在本地播放列表失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -338,7 +341,10 @@ export class PlaylistFacade {
 					'批量添加 tracks 到本地播放列表失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -455,7 +461,10 @@ export class PlaylistFacade {
 					'从播放列表移除曲目失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -510,7 +519,10 @@ export class PlaylistFacade {
 					'调整播放列表曲目顺序失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -570,7 +582,10 @@ export class PlaylistFacade {
 					'更新播放列表元数据失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -703,11 +718,6 @@ export class PlaylistFacade {
 			payload: JSON.stringify(payload),
 			operationAt: new Date(Date.now()),
 		})
-
-		// 事务提交后触发同步（setTimeout 确保在当前事务结束之后执行）。
-		setTimeout(() => {
-			playlistSyncWorker.triggerSync()
-		}, 0)
 	}
 }
 

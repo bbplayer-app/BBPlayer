@@ -71,7 +71,7 @@ export const usePlaylistMetadata = (playlistId: number) => {
 
 export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
 	return useQuery({
-		queryKey: ['playlistsContainingTrack', 'byUniqueKey', uniqueKey],
+		queryKey: playlistKeys.playlistsContainingTrack(uniqueKey),
 		queryFn:
 			uniqueKey !== undefined
 				? () =>
@@ -139,11 +139,14 @@ export const usePlaylistContentsInfinite = (
 }
 
 export const useEditorInviteCode = (shareId?: string | null) => {
+	const enabled = !!shareId
 	return useQuery({
-		queryKey: [...playlistKeys.all, 'editorInviteCode', shareId] as const,
-		queryFn: () =>
-			returnOrThrowAsync(sharedPlaylistFacade.getEditorInviteCode(shareId!)),
+		queryKey: playlistKeys.editorInviteCode(shareId ?? ''),
+		queryFn: enabled
+			? () =>
+					returnOrThrowAsync(sharedPlaylistFacade.getEditorInviteCode(shareId))
+			: skipToken,
 		select: (result) => result.editorInviteCode,
-		enabled: !!shareId,
+		enabled,
 	})
 }

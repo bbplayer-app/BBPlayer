@@ -1,3 +1,5 @@
+export type SharedPlaylistRole = 'owner' | 'editor' | 'subscriber'
+
 export interface CreatePlaylistPayload {
 	title: string
 	description?: string | null
@@ -6,7 +8,7 @@ export interface CreatePlaylistPayload {
 	type: 'favorite' | 'collection' | 'multi_page' | 'local'
 	remoteSyncId?: number | null
 	shareId?: string | null
-	shareRole?: 'owner' | 'editor' | 'subscriber' | null
+	shareRole?: SharedPlaylistRole | null
 	lastShareSyncAt?: number | null
 }
 
@@ -16,7 +18,7 @@ export interface UpdatePlaylistPayload {
 	coverUrl?: string | null
 	// 共享歌单升级/降级字段：普通本地歌单 → 共享歌单时需要更新这三个字段
 	shareId?: string | null
-	shareRole?: 'owner' | 'editor' | 'subscriber' | null
+	shareRole?: SharedPlaylistRole | null
 	lastShareSyncAt?: number | null
 }
 

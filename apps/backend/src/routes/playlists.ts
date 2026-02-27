@@ -308,47 +308,59 @@ const playlistsRoute = new Hono<HonoEnv>()
 						})
 				}
 
-				// 3. remove（LWW 软删除）
-				for (const change of removeChanges) {
-					await tx
-						.update(sharedPlaylistTracks)
-						.set({ deletedAt: new Date(change.operation_at) })
-						.where(
-							and(
-								eq(sharedPlaylistTracks.playlistId, playlistId),
-								eq(
-									sharedPlaylistTracks.trackUniqueKey,
-									change.track_unique_key,
-								),
-								lt(
-									sharedPlaylistTracks.updatedAt,
-									new Date(change.operation_at),
+				// 3. remove（LWW 软删除）- 转换为批量 Upsert 不便（缺 sortKey），维持原样或后续优化
+				await Promise.all(
+					removeChanges.map((change) =>
+						tx
+							.update(sharedPlaylistTracks)
+							.set({ deletedAt: new Date(change.operation_at) })
+							.where(
+								and(
+									eq(sharedPlaylistTracks.playlistId, playlistId),
+									eq(
+										sharedPlaylistTracks.trackUniqueKey,
+										change.track_unique_key,
+									),
+									lt(
+										sharedPlaylistTracks.updatedAt,
+										new Date(change.operation_at),
+									),
 								),
 							),
-						)
-				}
+					),
+				)
 
-				// 4. reorder（LWW）
-				for (const change of reorderChanges) {
+				// 4. reorder（LWW）- 使用 Batch Upsert 优化 N+1
+				// 这里利用 INSERT ... ON CONFLICT DO UPDATE 实现批量更新
+				// 仅需确保 payload 中包含复合主键 (playlistId, trackUniqueKey) 和非空字段 (sortKey)
+				if (reorderChanges.length > 0) {
 					await tx
-						.update(sharedPlaylistTracks)
-						.set({
-							sortKey: change.sort_key,
-							updatedAt: new Date(change.operation_at),
-						})
-						.where(
-							and(
-								eq(sharedPlaylistTracks.playlistId, playlistId),
-								eq(
-									sharedPlaylistTracks.trackUniqueKey,
-									change.track_unique_key,
-								),
-								lt(
-									sharedPlaylistTracks.updatedAt,
-									new Date(change.operation_at),
-								),
-							),
+						.insert(sharedPlaylistTracks)
+						.values(
+							reorderChanges.map((change) => ({
+								playlistId,
+								trackUniqueKey: change.track_unique_key,
+								sortKey: change.sort_key,
+								updatedAt: new Date(change.operation_at),
+								// addedByMid 是 nullable，新建时若无信息可暂空，或填当前操作者
+								addedByMid: mid,
+							})),
 						)
+						.onConflictDoUpdate({
+							target: [
+								sharedPlaylistTracks.playlistId,
+								sharedPlaylistTracks.trackUniqueKey,
+							],
+							set: {
+								sortKey: sql`excluded.sort_key`,
+								updatedAt: sql`excluded.updated_at`,
+							},
+							// LWW 逻辑: 只有新操作时间更晚才执行更新
+							setWhere: lt(
+								sharedPlaylistTracks.updatedAt,
+								sql`excluded.updated_at`,
+							),
+						})
 				}
 			})
 

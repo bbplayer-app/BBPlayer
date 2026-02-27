@@ -435,9 +435,18 @@ export class SharedPlaylistFacade {
 						logger.error('恢复歌单：拉取初始数据失败', { shareId: remote.id })
 						continue
 					}
-					const changesData = await changesResp.json()
-					const serverTime = (changesData as { server_time: number })
-						.server_time
+					let changesData
+					try {
+						changesData = await changesResp.json()
+					} catch (e) {
+						logger.error('恢复歌单：解析初始数据失败', {
+							shareId: remote.id,
+							error: e,
+						})
+						continue
+					}
+					const serverTime =
+						(changesData as { server_time?: number }).server_time ?? Date.now()
 
 					// 事务：创建歌单行 + 应用曲目 + 更新同步游标（原子，单歌单独立回滚）
 					try {

@@ -118,6 +118,7 @@ export const playlists = sqliteTable(
 		index('playlists_title_idx').on(table.title),
 		index('playlists_type_idx').on(table.type),
 		index('playlists_author_idx').on(table.authorId),
+		index('playlists_share_id_idx').on(table.shareId),
 	],
 )
 
@@ -168,29 +169,36 @@ export const localMetadata = sqliteTable('local_metadata', {
 	localPath: text('local_path').notNull(),
 })
 
-export const playlistSyncQueue = sqliteTable('playlist_sync_queue', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
-	playlistId: integer('playlist_id')
-		.notNull()
-		.references(() => playlists.id, { onDelete: 'cascade' }),
-	operation: text('operation', {
-		enum: ['add_tracks', 'remove_tracks', 'reorder_track', 'update_metadata'],
-	}).notNull(),
-	payload: text('payload', { mode: 'json' }).notNull(),
-	status: text('status', {
-		enum: ['pending', 'syncing', 'done', 'failed'],
-	})
-		.notNull()
-		.default('pending'),
-	// 用户真正执行操作的时间，入队时立刻记录，不是上传时的时间
-	// 这是 LWW 冲突解决的基准时间戳，防止网络延迟重试时覆盖掉更新的操作
-	operationAt: integer('operation_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-	createdAt: integer('created_at', { mode: 'timestamp_ms' })
-		.notNull()
-		.default(sql`(unixepoch() * 1000)`),
-})
+export const playlistSyncQueue = sqliteTable(
+	'playlist_sync_queue',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		playlistId: integer('playlist_id')
+			.notNull()
+			.references(() => playlists.id, { onDelete: 'cascade' }),
+		operation: text('operation', {
+			enum: ['add_tracks', 'remove_tracks', 'reorder_track', 'update_metadata'],
+		}).notNull(),
+		payload: text('payload', { mode: 'json' }).notNull(),
+		status: text('status', {
+			enum: ['pending', 'syncing', 'done', 'failed'],
+		})
+			.notNull()
+			.default('pending'),
+		// 用户真正执行操作的时间，入队时立刻记录，不是上传时的时间
+		// 这是 LWW 冲突解决的基准时间戳，防止网络延迟重试时覆盖掉更新的操作
+		operationAt: integer('operation_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+	},
+	(table) => [
+		index('playlist_sync_queue_status_idx').on(table.status),
+		index('playlist_sync_queue_playlist_id_idx').on(table.playlistId),
+	],
+)
 
 // ##################################
 // RELATIONS

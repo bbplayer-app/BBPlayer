@@ -265,7 +265,7 @@ class PlaylistSyncWorker {
 				continue
 			}
 
-			rowChanges.forEach((c) => changes.push(c))
+			changes.push(...rowChanges)
 			validRowIds.add(row.id)
 		}
 
@@ -296,7 +296,7 @@ class PlaylistSyncWorker {
 				invalidRowIds.push(row.id)
 				continue
 			}
-			rowChanges.forEach((c) => changes.push(c))
+			changes.push(...rowChanges)
 			validRowIds.add(row.id)
 		}
 

@@ -141,7 +141,9 @@ export default Sentry.wrap(function RootLayout() {
 			SplashScreen.hide()
 
 			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
-			void playlistSyncWorker.recoverStuckRows()
+			playlistSyncWorker.recoverStuckRows().catch((error) => {
+				logger.error('恢复同步任务失败:', error)
+			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {

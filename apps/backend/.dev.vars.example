@@ -1,3 +1,4 @@
 DATABASE_URL=postgres://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 
+# You can generate a random secret using: openssl rand -base64 32
 JWT_SECRET=your-local-dev-secret-at-least-32-chars

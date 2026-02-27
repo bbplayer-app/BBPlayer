@@ -120,6 +120,13 @@
 			"when": 1772092756024,
 			"tag": "0016_cheerful_stark_industries",
 			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "6",
+			"when": 1772169556066,
+			"tag": "0017_rare_lifeguard",
+			"breakpoints": true
 		}
 	]
 }
