@@ -102,7 +102,7 @@ export default function SharedPlaylistPreviewPage() {
 
 	// 推导当前状态
 	const isAlreadyJoined = !!localPlaylist
-	const localRole = localPlaylist?.shareRole // 'owner' | 'editor' | 'subscriber' | null
+	const localRole = localPlaylist ? localPlaylist.shareRole : null
 	const canUpgradeToEditor = localRole === 'subscriber' && !!parsedInviteCode
 	const isFullMember = localRole === 'owner' || localRole === 'editor'
 

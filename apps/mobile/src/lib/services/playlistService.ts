@@ -1097,10 +1097,7 @@ export class PlaylistService {
 	 */
 	public findPlaylistByShareId(
 		shareId: string,
-	): ResultAsync<
-		typeof schema.playlists.$inferSelect | undefined,
-		DatabaseError
-	> {
+	): ResultAsync<typeof schema.playlists.$inferSelect | false, DatabaseError> {
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:playlist:byShareId', op: 'db' }, () =>
 				this.db.query.playlists.findFirst({
@@ -1108,7 +1105,10 @@ export class PlaylistService {
 				}),
 			),
 			(e) => new DatabaseError('根据 shareId 查找歌单失败', { cause: e }),
-		)
+		).andThen((playlist) => {
+			if (!playlist) return okAsync(false as const)
+			return okAsync(playlist)
+		})
 	}
 
 	/**

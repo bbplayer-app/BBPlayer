@@ -139,10 +139,10 @@ export default function EnableSharingModal({
 								<Button
 									onPress={handleRotateInvite}
 									loading={isRotating}
-									disabled={isRotating}
+									disabled={isRotating || inviteFetching}
 									mode='outlined'
 								>
-									重置协作编辑邀请链接
+									{inviteCode ? '重置协作编辑邀请链接' : '生成协作编辑邀请链接'}
 								</Button>
 							</View>
 						)}

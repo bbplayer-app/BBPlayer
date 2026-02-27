@@ -497,7 +497,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				tracks,
 				members: members.map((m) => ({
 					...m,
-					mid: m.mid,
+					mid: Number(m.mid),
 				})),
 				has_more: false,
 				server_time: serverTime,
@@ -700,7 +700,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		return c.json({
 			members: members.map((m) => ({
 				...m,
-				mid: m.mid,
+				mid: Number(m.mid),
 				joined_at: m.joined_at.getTime(),
 			})),
 		})

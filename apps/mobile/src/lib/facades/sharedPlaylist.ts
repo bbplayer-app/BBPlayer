@@ -586,7 +586,7 @@ export class SharedPlaylistFacade {
 					return n
 				})
 
-				logger.info('pullChanges 完成', {
+				logger.debug('pullChanges 完成', {
 					localPlaylistId,
 					applied,
 					serverTime,
@@ -710,7 +710,7 @@ export class SharedPlaylistFacade {
 	public getEditorInviteCode(
 		shareId: string,
 	): ResultAsync<
-		{ editorInviteCode: string },
+		{ editorInviteCode: string | null },
 		ReturnType<typeof createFacadeError>
 	> {
 		return ResultAsync.fromPromise(
@@ -727,13 +727,8 @@ export class SharedPlaylistFacade {
 				const data = (await resp.json()) as {
 					editor_invite_code?: string | null
 				}
-				if (!data.editor_invite_code) {
-					throw createFacadeError(
-						'InviteCodeFetchFailed',
-						'未从服务器获取到编辑者邀请码',
-					)
-				}
-				return { editorInviteCode: data.editor_invite_code }
+				// null 表示尚未生成邀请码，属于合法状态，不视为错误
+				return { editorInviteCode: data.editor_invite_code ?? null }
 			})(),
 			(e) =>
 				createFacadeError('InviteCodeFetchFailed', '获取编辑者邀请码失败', {

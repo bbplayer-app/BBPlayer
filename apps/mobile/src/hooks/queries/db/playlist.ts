@@ -158,7 +158,7 @@ export const useEditorInviteCode = (shareId?: string | null) => {
 			? () =>
 					returnOrThrowAsync(sharedPlaylistFacade.getEditorInviteCode(shareId))
 			: skipToken,
-		select: (result) => result.editorInviteCode,
+		select: (result) => result.editorInviteCode ?? null,
 		enabled,
 	})
 }
