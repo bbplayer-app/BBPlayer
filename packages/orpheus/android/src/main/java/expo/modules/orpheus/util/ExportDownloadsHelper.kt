@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadIndex
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.model.LyricFileCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -121,6 +122,7 @@ private suspend fun exportSingleItem(
             track = track,
             context = context,
             options = options,
+            json = json,
         )
 
         // 4. 拷贝到 SAF 目标路径
@@ -170,6 +172,7 @@ private fun writeMetadata(
     track: TrackRecord?,
     context: Context,
     options: ExportOptions,
+    json: Json,
 ) {
     if (track == null) return
 
@@ -189,7 +192,7 @@ private fun writeMetadata(
 
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）
         if (options.embedLyrics) {
-            writeLyrics(id, tempM4a, tag, options.convertToLrc, context)
+            writeLyrics(id, tempM4a, tag, options.convertToLrc, context, json)
         }
 
         audioFile.commit()
@@ -208,21 +211,23 @@ private fun writeLyrics(
     tag: org.jaudiotagger.tag.Tag,
     convertToLrc: Boolean,
     context: Context,
+    json: Json,
 ) {
     try {
         val lyricsDir = File(context.filesDir, "lyrics")
         val lyricFile = File(lyricsDir, "${id.replace("::", "--")}.json")
+        Log.d("OrpheusExport", "Checking lyrics file: $lyricFile")
         if (!lyricFile.exists()) return
 
         val lyricJson = lyricFile.readText()
-        val lrcMatch = Regex(
-            "\"lrc\"\\s*:\\s*\"(.*?)\"(?:,|})",
-            RegexOption.DOT_MATCHES_ALL,
-        ).find(lyricJson) ?: return
+        val lrcContent0 = json.decodeFromString<LyricFileCache>(lyricJson).lrc
+        if (lrcContent0 == null) {
+            Log.w("OrpheusExport", "No 'lrc' field found in lyrics JSON for $id")
+            return
+        }
+        Log.d("OrpheusExport", "Extracted lyrics: ${lrcContent0.take(100)}")
 
-        var lrcContent = lrcMatch.groupValues[1]
-            .replace("\\n", "\n")
-            .replace("\\\"", "\"")
+        var lrcContent = lrcContent0
 
         if (convertToLrc) {
             lrcContent = SplConverter.toStandardLrc(lrcContent)
