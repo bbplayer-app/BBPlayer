@@ -44,6 +44,8 @@ export const playlistKeys = {
 		] as const,
 	editorInviteCode: (shareId: string) =>
 		[...playlistKeys.all, 'editorInviteCode', shareId] as const,
+	playlistByShareId: (shareId: string) =>
+		[...playlistKeys.all, 'byShareId', shareId] as const,
 }
 
 export const usePlaylistLists = () => {
@@ -135,6 +137,16 @@ export const usePlaylistContentsInfinite = (
 			| { lastSortKey: string; createdAt: number; lastId: number }
 			| undefined,
 		gcTime: 0,
+	})
+}
+
+export const usePlaylistByShareId = (shareId?: string) => {
+	return useQuery({
+		queryKey: playlistKeys.playlistByShareId(shareId ?? ''),
+		queryFn: shareId
+			? () => returnOrThrowAsync(playlistService.findPlaylistByShareId(shareId))
+			: skipToken,
+		enabled: !!shareId,
 	})
 }
 

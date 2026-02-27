@@ -99,18 +99,11 @@ const bannerText = computed(() => {
 		: `${name} 分享了一个歌单给你`
 })
 
-const bbplayerDeepLink = computed(() => {
-	if (!shareId.value) return ''
-	const params = new URLSearchParams({ shareId: shareId.value })
-	if (inviteCode.value) params.set('inviteCode', inviteCode.value)
-	return `bbplayer://share/playlist?${params.toString()}`
-})
-
 const bbplayerAppLink = computed(() => {
 	if (!shareId.value) return ''
 	const params = new URLSearchParams({ shareId: shareId.value })
 	if (inviteCode.value) params.set('inviteCode', inviteCode.value)
-	return `https://app.bbplayer.roitium.com/share/playlist?${params.toString()}`
+	return `https://app.bbplayer.roitium.com/app/link-to/share/playlist?${params.toString()}`
 })
 </script>
 
@@ -274,7 +267,7 @@ const bbplayerAppLink = computed(() => {
 			<!-- Action buttons (pinned to bottom of card) -->
 			<div class="button-group">
 				<a
-					:href="bbplayerDeepLink"
+					:href="bbplayerAppLink"
 					class="btn btn-primary"
 				>
 					<Play
@@ -283,16 +276,6 @@ const bbplayerAppLink = computed(() => {
 						class="btn-icon"
 					/>
 					{{ isInvite ? '接受邀请，在 BBPlayer 中打开' : '在 BBPlayer 中订阅' }}
-				</a>
-				<a
-					:href="bbplayerAppLink"
-					class="btn btn-secondary"
-				>
-					<ExternalLink
-						:size="16"
-						class="btn-icon"
-					/>
-					通过 App Link 打开
 				</a>
 			</div>
 		</div>
@@ -304,7 +287,7 @@ const bbplayerAppLink = computed(() => {
 				target="_blank"
 				class="footer-link"
 			>
-				BBPlayer · bbplayer.roitium.com
+				来自 BBPlayer | 由 Roitium ❤️ 构建
 			</a>
 		</div>
 	</div>
@@ -803,23 +786,6 @@ const bbplayerAppLink = computed(() => {
 	.card {
 		border-radius: 16px;
 		max-height: calc(100dvh - 60px);
-	}
-}
-</style>
-
-<!-- 全局覆盖：让 html/body 背景跟随 .page，消除白边 -->
-<style>
-html,
-body {
-	margin: 0;
-	padding: 0;
-	background: #dde1e7;
-}
-
-@media (prefers-color-scheme: dark) {
-	html,
-	body {
-		background: #0a0a0f;
 	}
 }
 </style>

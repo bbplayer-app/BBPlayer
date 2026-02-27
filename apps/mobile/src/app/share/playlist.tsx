@@ -6,6 +6,7 @@ import { RefreshControl, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Avatar,
+	Banner,
 	Divider,
 	Text,
 	TouchableRipple,
@@ -20,6 +21,7 @@ import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSubscribeToSharedPlaylist } from '@/hooks/mutations/db/playlist'
+import { usePlaylistByShareId } from '@/hooks/queries/db/playlist'
 import { useSharedPlaylistPreview } from '@/hooks/queries/sharedPlaylistPreview'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
@@ -95,6 +97,25 @@ export default function SharedPlaylistPreviewPage() {
 	const { data, isPending, isError, refetch } =
 		useSharedPlaylistPreview(parsedShareId)
 
+	// 查本地 DB，判断该歌单是否已加入
+	const { data: localPlaylist } = usePlaylistByShareId(parsedShareId)
+
+	// 推导当前状态
+	const isAlreadyJoined = !!localPlaylist
+	const localRole = localPlaylist?.shareRole // 'owner' | 'editor' | 'subscriber' | null
+	const canUpgradeToEditor = localRole === 'subscriber' && !!parsedInviteCode
+	const isFullMember = localRole === 'owner' || localRole === 'editor'
+
+	// 引导提示：说明点击按钮后的权限
+	const getActionHint = () => {
+		if (isFullMember) return null // 已是成员，无需提示
+		if (canUpgradeToEditor) return '升级后你将可以添加、删除和排序曲目'
+		if (parsedInviteCode)
+			return '你将以协作编辑者身份加入，可以添加、删除和排序曲目'
+		return '订阅后你只能查看此歌单的最新内容，无法修改'
+	}
+	const actionHint = getActionHint()
+
 	const { mutate: subscribe, isPending: isSubscribing } =
 		useSubscribeToSharedPlaylist()
 
@@ -133,6 +154,11 @@ export default function SharedPlaylistPreviewPage() {
 	const handleSubscribe = () => {
 		if (!parsedShareId) return
 		subscribe({ shareId: parsedShareId, inviteCode: parsedInviteCode })
+	}
+
+	const handleGoToPlaylist = () => {
+		if (!localPlaylist) return
+		router.replace(`/playlist/local/${localPlaylist.id}`)
 	}
 
 	if (!parsedShareId) return null
@@ -227,19 +253,60 @@ export default function SharedPlaylistPreviewPage() {
 										)}
 									</View>
 								</View>
-								{/* 订阅按钮 */}
+								{/* 订阅/升级/进入 按钮 */}
 								<View style={styles.actionsContainer}>
-									<Button
-										mode='contained'
-										icon='account-plus'
-										onPress={handleSubscribe}
-										loading={isSubscribing}
-										disabled={isSubscribing}
-										testID='playlist-header-main-button'
-									>
-										订阅共享歌单
-									</Button>
+									{isFullMember ? (
+										<Button
+											mode='contained'
+											icon='playlist-music'
+											onPress={handleGoToPlaylist}
+											testID='playlist-header-main-button'
+										>
+											前往歌单
+										</Button>
+									) : canUpgradeToEditor ? (
+										<Button
+											mode='contained'
+											icon='account-arrow-up'
+											onPress={handleSubscribe}
+											loading={isSubscribing}
+											disabled={isSubscribing}
+											testID='playlist-header-main-button'
+										>
+											升级为协作编辑者
+										</Button>
+									) : isAlreadyJoined ? (
+										<Button
+											mode='outlined'
+											icon='playlist-music'
+											onPress={handleGoToPlaylist}
+											testID='playlist-header-main-button'
+										>
+											已订阅，前往查看
+										</Button>
+									) : (
+										<Button
+											mode='contained'
+											icon={parsedInviteCode ? 'account-plus' : 'rss'}
+											onPress={handleSubscribe}
+											loading={isSubscribing}
+											disabled={isSubscribing}
+											testID='playlist-header-main-button'
+										>
+											{parsedInviteCode ? '加入协作编辑' : '订阅共享歌单'}
+										</Button>
+									)}
 								</View>
+								{/* 权限说明提示 */}
+								{actionHint && (
+									<Banner
+										visible
+										icon='information-outline'
+										style={styles.hintBanner}
+									>
+										{actionHint}
+									</Banner>
+								)}
 								{/* 描述 */}
 								<Text
 									variant='bodyMedium'
@@ -322,6 +389,11 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		marginHorizontal: 16,
+	},
+	hintBanner: {
+		marginHorizontal: 16,
+		marginTop: 8,
+		borderRadius: 8,
 	},
 	description: {
 		margin: 0,

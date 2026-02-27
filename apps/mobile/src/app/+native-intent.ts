@@ -35,6 +35,12 @@ export function redirectSystemPath({
 					return result
 				}
 			}
+			if (url.hostname === 'app.bbplayer.roitium.com') {
+				const result = url.href.split('/link-to/')[1]
+				if (result) {
+					return result
+				}
+			}
 		}
 		return path
 	} catch {
