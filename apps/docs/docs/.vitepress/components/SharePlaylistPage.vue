@@ -7,6 +7,8 @@ import {
 	ExternalLink,
 	User,
 	Music2,
+	Users,
+	Share2,
 } from 'lucide-vue-next'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -51,7 +53,6 @@ const BACKEND_URL = 'https://be.bbplayer.roitium.com'
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 onMounted(async () => {
-	// Check for in-app browser
 	const ua = navigator.userAgent
 	isOnInAppBrowser.value =
 		/MicroMessenger|QQ\/|Weibo|AlipayClient|DingTalk|ZhihuHybrid|BaiduBoxApp/i.test(
@@ -79,7 +80,7 @@ onMounted(async () => {
 		} else {
 			data.value = await resp.json()
 		}
-	} catch (e) {
+	} catch {
 		error.value = '网络错误，请稍后重试'
 	} finally {
 		loading.value = false
@@ -87,7 +88,17 @@ onMounted(async () => {
 })
 
 // ── Computed ───────────────────────────────────────────────────────────────
-/** 跳转到 BBPlayer share/playlist 页的 deep link */
+const isInvite = computed(() => !!inviteCode.value)
+
+const bannerText = computed(() => {
+	if (!data.value?.owner)
+		return isInvite.value ? '邀请你共同编辑歌单' : '分享了一个歌单给你'
+	const name = data.value.owner.name
+	return isInvite.value
+		? `${name} 邀请你共同编辑歌单`
+		: `${name} 分享了一个歌单给你`
+})
+
 const bbplayerDeepLink = computed(() => {
 	if (!shareId.value) return ''
 	const params = new URLSearchParams({ shareId: shareId.value })
@@ -95,7 +106,6 @@ const bbplayerDeepLink = computed(() => {
 	return `bbplayer://share/playlist?${params.toString()}`
 })
 
-/** 通用 App Link（Android intent filter / iOS Universal Link 兜底） */
 const bbplayerAppLink = computed(() => {
 	if (!shareId.value) return ''
 	const params = new URLSearchParams({ shareId: shareId.value })
@@ -113,7 +123,7 @@ const bbplayerAppLink = computed(() => {
 		>
 			<div class="overlay-content">
 				<ExternalLink
-					:size="48"
+					:size="40"
 					class="overlay-icon"
 				/>
 				<h3 class="overlay-title">请在浏览器打开</h3>
@@ -124,7 +134,7 @@ const bbplayerAppLink = computed(() => {
 		<!-- Loading skeleton -->
 		<div
 			v-if="loading"
-			class="card skeleton-card"
+			class="card"
 		>
 			<div class="skeleton cover-skeleton" />
 			<div class="skeleton title-skeleton" />
@@ -135,10 +145,10 @@ const bbplayerAppLink = computed(() => {
 		<!-- Error state -->
 		<div
 			v-else-if="error"
-			class="card error-card"
+			class="card center-card"
 		>
 			<AlertCircle
-				:size="64"
+				:size="56"
 				class="error-icon"
 			/>
 			<h2 class="error-title">{{ error }}</h2>
@@ -150,124 +160,136 @@ const bbplayerAppLink = computed(() => {
 			v-else-if="data"
 			class="card preview-card"
 		>
-			<!-- Cover -->
-			<div class="cover-wrapper">
-				<img
-					v-if="data.playlist.cover_url"
-					:src="data.playlist.cover_url"
-					:alt="data.playlist.title"
-					class="cover-image"
-					referrerpolicy="no-referrer"
-				/>
-				<div
-					v-else
-					class="cover-placeholder"
-				>
-					<ListMusic
-						:size="64"
-						class="placeholder-icon"
-					/>
-				</div>
-			</div>
-
-			<!-- Title & meta -->
-			<h1 class="playlist-title">{{ data.playlist.title || '未命名歌单' }}</h1>
-
-			<p
-				v-if="data.playlist.description"
-				class="playlist-desc"
-			>
-				{{ data.playlist.description }}
-			</p>
-
-			<!-- Owner -->
+			<!-- Banner -->
 			<div
-				v-if="data.owner"
-				class="owner-row"
+				class="banner"
+				:class="isInvite ? 'banner-invite' : 'banner-share'"
 			>
-				<img
-					v-if="data.owner.avatar_url"
-					:src="data.owner.avatar_url"
-					class="owner-avatar"
-					referrerpolicy="no-referrer"
-					:alt="data.owner.name"
+				<component
+					:is="isInvite ? Users : Share2"
+					:size="14"
+					class="banner-icon"
 				/>
-				<div
-					v-else
-					class="owner-avatar-placeholder"
-				>
-					<User :size="16" />
-				</div>
-				<span class="owner-name">{{ data.owner.name }}</span>
-				<span class="track-count">· {{ data.playlist.track_count }} 首</span>
-			</div>
-			<div
-				v-else
-				class="track-count-standalone"
-			>
-				{{ data.playlist.track_count }} 首曲目
+				<span>{{ bannerText }}</span>
 			</div>
 
-			<!-- Track preview list -->
-			<ul
-				v-if="data.tracks.length"
-				class="track-list"
-			>
-				<li
-					v-for="(track, index) in data.tracks"
-					:key="track.unique_key"
-					class="track-item"
-				>
-					<span class="track-index">{{ index + 1 }}</span>
-					<img
-						v-if="track.cover_url"
-						:src="track.cover_url"
-						class="track-cover"
-						referrerpolicy="no-referrer"
-						:alt="track.title"
-					/>
-					<div
-						v-else
-						class="track-cover-placeholder"
-					>
-						<Music2 :size="14" />
+			<!-- Scrollable body -->
+			<div class="card-body">
+				<!-- Header: cover + meta side by side -->
+				<div class="header-row">
+					<div class="cover-wrapper">
+						<img
+							v-if="data.playlist.cover_url"
+							:src="data.playlist.cover_url"
+							:alt="data.playlist.title"
+							class="cover-image"
+							referrerpolicy="no-referrer"
+						/>
+						<div
+							v-else
+							class="cover-placeholder"
+						>
+							<ListMusic :size="40" />
+						</div>
 					</div>
-					<div class="track-info">
-						<span class="track-title">{{ track.title }}</span>
-						<span
-							v-if="track.artist_name"
-							class="track-artist"
-							>{{ track.artist_name }}</span
+
+					<div class="meta">
+						<h1 class="playlist-title">
+							{{ data.playlist.title || '未命名歌单' }}
+						</h1>
+						<p
+							v-if="data.playlist.description"
+							class="playlist-desc"
+						>
+							{{ data.playlist.description }}
+						</p>
+						<div
+							v-if="data.owner"
+							class="owner-row"
+						>
+							<img
+								v-if="data.owner.avatar_url"
+								:src="data.owner.avatar_url"
+								class="owner-avatar"
+								referrerpolicy="no-referrer"
+								:alt="data.owner.name"
+							/>
+							<div
+								v-else
+								class="owner-avatar-placeholder"
+							>
+								<User :size="12" />
+							</div>
+							<span class="owner-name">{{ data.owner.name }}</span>
+						</div>
+						<span class="track-count"
+							>{{ data.playlist.track_count }} 首曲目</span
 						>
 					</div>
-				</li>
-			</ul>
-			<p
-				v-if="data.tracks.length < data.playlist.track_count"
-				class="more-hint"
-			>
-				仅显示前 {{ data.preview_limit }} 首，在 BBPlayer 中查看全部
-			</p>
+				</div>
 
-			<!-- Action buttons -->
+				<!-- Track list -->
+				<ul
+					v-if="data.tracks.length"
+					class="track-list"
+				>
+					<li
+						v-for="(track, index) in data.tracks"
+						:key="track.unique_key"
+						class="track-item"
+					>
+						<span class="track-index">{{ index + 1 }}</span>
+						<img
+							v-if="track.cover_url"
+							:src="track.cover_url"
+							class="track-cover"
+							referrerpolicy="no-referrer"
+							:alt="track.title"
+						/>
+						<div
+							v-else
+							class="track-cover-placeholder"
+						>
+							<Music2 :size="13" />
+						</div>
+						<div class="track-info">
+							<span class="track-title">{{ track.title }}</span>
+							<span
+								v-if="track.artist_name"
+								class="track-artist"
+								>{{ track.artist_name }}</span
+							>
+						</div>
+					</li>
+				</ul>
+
+				<p
+					v-if="data.tracks.length < data.playlist.track_count"
+					class="more-hint"
+				>
+					仅预览前 {{ data.preview_limit }} 首 · 订阅后自动同步全部曲目
+				</p>
+			</div>
+
+			<!-- Action buttons (pinned to bottom of card) -->
 			<div class="button-group">
 				<a
 					:href="bbplayerDeepLink"
 					class="btn btn-primary"
 				>
 					<Play
-						:size="20"
+						:size="18"
 						fill="currentColor"
 						class="btn-icon"
 					/>
-					在 BBPlayer 中订阅
+					{{ isInvite ? '接受邀请，在 BBPlayer 中打开' : '在 BBPlayer 中订阅' }}
 				</a>
 				<a
 					:href="bbplayerAppLink"
 					class="btn btn-secondary"
 				>
 					<ExternalLink
-						:size="20"
+						:size="16"
 						class="btn-icon"
 					/>
 					通过 App Link 打开
@@ -277,88 +299,96 @@ const bbplayerAppLink = computed(() => {
 
 		<!-- Footer -->
 		<div class="footer">
-			<p class="hint">来自 BBPlayer | 由 Roitium ❤️ 构建</p>
 			<a
 				href="https://bbplayer.roitium.com"
 				target="_blank"
 				class="footer-link"
-				>bbplayer.roitium.com</a
 			>
+				BBPlayer · bbplayer.roitium.com
+			</a>
 		</div>
 	</div>
 </template>
 
 <style scoped>
 /* ── Design tokens ─────────────────────────────────────────────────────── */
-:root {
-	--bg: #f9fafb;
+.page {
+	--bg: #dde1e7;
 	--card-bg: #ffffff;
-	--text-1: #111827;
-	--text-2: #6b7280;
-	--text-3: #9ca3af;
-	--primary: #18181b;
+	--text-1: #0f172a;
+	--text-2: #64748b;
+	--text-3: #94a3b8;
+	--primary: #0f172a;
 	--primary-fg: #ffffff;
-	--secondary-bg: #f3f4f6;
-	--secondary-fg: #1f2937;
-	--border: #e5e7eb;
-	--radius: 24px;
+	--secondary-bg: #f1f5f9;
+	--secondary-fg: #334155;
+	--border: rgba(0, 0, 0, 0.08);
+	--track-hover: #f8fafc;
+	--card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
-	:root {
-		--bg: #09090b;
-		--card-bg: #18181b;
-		--text-1: #f9fafb;
-		--text-2: #a1a1aa;
-		--text-3: #71717a;
-		--primary: #fafafa;
-		--primary-fg: #18181b;
-		--secondary-bg: #27272a;
-		--secondary-fg: #e4e4e7;
-		--border: #27272a;
+	.page {
+		--bg: #0a0a0f;
+		--card-bg: #16161e;
+		--text-1: #f1f5f9;
+		--text-2: #94a3b8;
+		--text-3: #475569;
+		--primary: #f1f5f9;
+		--primary-fg: #0f172a;
+		--secondary-bg: #1e1e2a;
+		--secondary-fg: #cbd5e1;
+		--border: rgba(255, 255, 255, 0.08);
+		--track-hover: #1e1e2a;
+		--card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
 	}
 }
 
-/* ── Layout ────────────────────────────────────────────────────────────── */
+/* ── Layout: locked to viewport, no page scroll ────────────────────────── */
 .page {
-	min-height: 100dvh;
+	height: 100dvh;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 24px;
+	padding: 20px 16px 12px;
 	background-color: var(--bg);
 	font-family:
 		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
 		Arial, sans-serif;
 	color: var(--text-1);
-	transition: background-color 0.4s ease;
+	box-sizing: border-box;
 }
 
-/* ── Card base ─────────────────────────────────────────────────────────── */
+/* ── Card ──────────────────────────────────────────────────────────────── */
 .card {
 	background: var(--card-bg);
-	border-radius: var(--radius);
-	padding: 40px 48px;
-	max-width: 500px;
+	border-radius: 20px;
+	max-width: 480px;
 	width: 100%;
-	text-align: center;
 	border: 1px solid var(--border);
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-	animation: fadeUp 0.5s ease-out both;
-	margin: auto;
+	box-shadow: var(--card-shadow);
+	animation: fadeUp 0.45s ease-out both;
+	/* flex column so card-body can grow and buttons stay at bottom */
+	display: flex;
+	flex-direction: column;
+	/* card must not exceed viewport */
+	max-height: calc(100dvh - 80px);
+	overflow: hidden;
 }
 
-@media (prefers-color-scheme: dark) {
-	.card {
-		box-shadow: none;
-	}
+/* skeleton / error cards don't need inner flex scroll */
+.center-card {
+	padding: 48px 40px;
+	text-align: center;
+	align-items: center;
 }
 
 @keyframes fadeUp {
 	from {
 		opacity: 0;
-		transform: translateY(12px);
+		transform: translateY(10px);
 	}
 	to {
 		opacity: 1;
@@ -366,68 +396,75 @@ const bbplayerAppLink = computed(() => {
 	}
 }
 
-/* ── Skeleton ──────────────────────────────────────────────────────────── */
-.skeleton {
-	background: var(--secondary-bg);
-	border-radius: 12px;
-	animation: shimmer 1.4s infinite;
+/* ── Banner ────────────────────────────────────────────────────────────── */
+.banner {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 18px;
+	font-size: 0.8rem;
+	font-weight: 500;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
 }
 
-@keyframes shimmer {
-	0%,
-	100% {
-		opacity: 0.6;
+.banner-share {
+	background: color-mix(in srgb, #3b82f6 8%, transparent);
+	color: #3b82f6;
+}
+
+.banner-invite {
+	background: color-mix(in srgb, #8b5cf6 8%, transparent);
+	color: #8b5cf6;
+}
+
+@media (prefers-color-scheme: dark) {
+	.banner-share {
+		color: #93c5fd;
+		background: color-mix(in srgb, #3b82f6 12%, transparent);
 	}
-	50% {
-		opacity: 1;
+	.banner-invite {
+		color: #c4b5fd;
+		background: color-mix(in srgb, #8b5cf6 12%, transparent);
 	}
 }
 
-.cover-skeleton {
-	width: 200px;
-	height: 200px;
-	border-radius: 20px;
-	margin: 0 auto 28px;
+.banner-icon {
+	flex-shrink: 0;
 }
 
-.title-skeleton {
-	height: 28px;
-	width: 70%;
-	margin: 0 auto 12px;
+/* ── Scrollable body ───────────────────────────────────────────────────── */
+.card-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 20px 20px 0;
+	scrollbar-width: thin;
+	scrollbar-color: var(--border) transparent;
 }
 
-.subtitle-skeleton {
-	height: 16px;
-	width: 45%;
-	margin: 0 auto 28px;
+/* ── Header row: cover + meta ──────────────────────────────────────────── */
+.header-row {
+	display: flex;
+	gap: 16px;
+	align-items: flex-start;
+	margin-bottom: 16px;
 }
 
-.btn-skeleton {
-	height: 52px;
-	width: 100%;
-	border-radius: 9999px;
-}
-
-/* ── Cover ─────────────────────────────────────────────────────────────── */
 .cover-wrapper {
-	width: 200px;
-	height: 200px;
-	border-radius: 20px;
+	width: 88px;
+	height: 88px;
+	border-radius: 12px;
 	overflow: hidden;
-	margin: 0 auto 28px;
+	flex-shrink: 0;
 	background: var(--secondary-bg);
-	box-shadow: 0 16px 24px -8px rgba(0, 0, 0, 0.08);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .cover-image {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: transform 0.4s ease;
-}
-
-.cover-image:hover {
-	transform: scale(1.04);
 }
 
 .cover-placeholder {
@@ -439,44 +476,52 @@ const bbplayerAppLink = computed(() => {
 	color: var(--text-3);
 }
 
-/* ── Playlist info ─────────────────────────────────────────────────────── */
+.meta {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: 2px;
+}
+
 .playlist-title {
-	font-size: 1.5rem;
+	font-size: 1.05rem;
 	font-weight: 700;
 	color: var(--text-1);
-	margin-bottom: 10px;
-	line-height: 1.3;
+	line-height: 1.35;
 	word-break: break-word;
+	margin: 0 0 2px;
 }
 
 .playlist-desc {
-	font-size: 0.9rem;
+	font-size: 0.8rem;
 	color: var(--text-2);
-	margin-bottom: 14px;
 	line-height: 1.5;
-	text-align: center;
+	margin: 0;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
-/* ── Owner row ─────────────────────────────────────────────────────────── */
 .owner-row {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-bottom: 24px;
-	font-size: 0.875rem;
-	color: var(--text-2);
+	gap: 6px;
+	margin-top: 4px;
 }
 
 .owner-avatar {
-	width: 24px;
-	height: 24px;
+	width: 20px;
+	height: 20px;
 	border-radius: 50%;
 	object-fit: cover;
 }
 
 .owner-avatar-placeholder {
-	width: 24px;
-	height: 24px;
+	width: 20px;
+	height: 20px;
 	border-radius: 50%;
 	background: var(--secondary-bg);
 	display: flex;
@@ -486,41 +531,37 @@ const bbplayerAppLink = computed(() => {
 }
 
 .owner-name {
+	font-size: 0.8rem;
 	font-weight: 500;
-	color: var(--text-1);
+	color: var(--text-2);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .track-count {
-	color: var(--text-2);
-}
-
-.track-count-standalone {
-	margin-bottom: 24px;
-	font-size: 0.875rem;
-	color: var(--text-2);
+	font-size: 0.78rem;
+	color: var(--text-3);
+	margin-top: 2px;
 }
 
 /* ── Track list ────────────────────────────────────────────────────────── */
 .track-list {
 	list-style: none;
-	margin: 0 0 8px;
+	margin: 0;
 	padding: 0;
-	text-align: left;
-	max-height: 320px;
-	overflow-y: auto;
 	border: 1px solid var(--border);
-	border-radius: 16px;
-	scrollbar-width: thin;
-	scrollbar-color: var(--border) transparent;
+	border-radius: 12px;
+	overflow: hidden;
 }
 
 .track-item {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 10px 14px;
+	padding: 9px 12px;
 	border-bottom: 1px solid var(--border);
-	transition: background 0.15s ease;
+	transition: background 0.12s ease;
 }
 
 .track-item:last-child {
@@ -528,28 +569,28 @@ const bbplayerAppLink = computed(() => {
 }
 
 .track-item:hover {
-	background: var(--secondary-bg);
+	background: var(--track-hover);
 }
 
 .track-index {
-	font-size: 0.75rem;
+	font-size: 0.7rem;
 	color: var(--text-3);
-	width: 18px;
+	width: 16px;
 	text-align: right;
 	flex-shrink: 0;
 }
 
 .track-cover {
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 	border-radius: 6px;
 	object-fit: cover;
 	flex-shrink: 0;
 }
 
 .track-cover-placeholder {
-	width: 36px;
-	height: 36px;
+	width: 32px;
+	height: 32px;
 	border-radius: 6px;
 	background: var(--secondary-bg);
 	display: flex;
@@ -562,141 +603,169 @@ const bbplayerAppLink = computed(() => {
 .track-info {
 	flex: 1;
 	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
 }
 
 .track-title {
-	font-size: 0.875rem;
+	display: block;
+	font-size: 0.825rem;
 	font-weight: 500;
 	color: var(--text-1);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	line-height: 1.4;
 }
 
 .track-artist {
-	font-size: 0.75rem;
-	color: var(--text-2);
+	display: block;
+	font-size: 0.72rem;
+	color: var(--text-3);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
 .more-hint {
-	font-size: 0.78rem;
+	font-size: 0.75rem;
 	color: var(--text-3);
-	margin-bottom: 20px;
 	text-align: center;
+	padding: 10px 0 4px;
+}
+
+/* ── Skeleton ──────────────────────────────────────────────────────────── */
+.skeleton {
+	background: var(--secondary-bg);
+	border-radius: 10px;
+	animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+	0%,
+	100% {
+		opacity: 0.5;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+.cover-skeleton {
+	width: 88px;
+	height: 88px;
+	border-radius: 12px;
+	margin: 20px 20px 0;
+}
+.title-skeleton {
+	height: 20px;
+	width: 55%;
+	margin: 16px 20px 8px;
+}
+.subtitle-skeleton {
+	height: 14px;
+	width: 35%;
+	margin: 0 20px 20px;
+}
+.btn-skeleton {
+	height: 48px;
+	margin: 16px 20px 20px;
+	border-radius: 12px;
 }
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 .button-group {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	margin-top: 20px;
+	gap: 8px;
+	padding: 14px 16px 16px;
+	flex-shrink: 0;
+	border-top: 1px solid var(--border);
 }
 
 .btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 10px;
-	padding: 15px 28px;
-	border-radius: 9999px;
-	font-size: 1rem;
+	gap: 8px;
+	padding: 13px 20px;
+	border-radius: 12px;
+	font-size: 0.9rem;
 	font-weight: 600;
 	text-decoration: none;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 	cursor: pointer;
+	line-height: 1;
 }
 
 .btn-primary {
 	background-color: var(--primary);
 	color: var(--primary-fg);
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .btn-primary:hover {
-	opacity: 0.88;
+	opacity: 0.85;
 	transform: translateY(-1px);
 }
 
 .btn-secondary {
 	background-color: var(--secondary-bg);
 	color: var(--secondary-fg);
+	font-weight: 500;
 }
 
 .btn-secondary:hover {
-	opacity: 0.8;
-	transform: translateY(-1px);
+	opacity: 0.75;
 }
 
 .btn-icon {
-	opacity: 0.9;
+	flex-shrink: 0;
 }
 
 /* ── Error ─────────────────────────────────────────────────────────────── */
 .error-icon {
-	color: #ef4444;
-	margin: 0 auto 20px;
-	display: flex;
-	justify-content: center;
+	color: #f87171;
+	margin-bottom: 16px;
 }
 
 .error-title {
-	font-size: 1.2rem;
+	font-size: 1.1rem;
 	font-weight: 600;
-	margin-bottom: 8px;
+	margin: 0 0 8px;
 	color: var(--text-1);
 }
 
 .error-desc {
-	font-size: 0.9rem;
+	font-size: 0.875rem;
 	color: var(--text-2);
+	margin: 0;
 }
 
 /* ── Footer ────────────────────────────────────────────────────────────── */
 .footer {
-	margin-top: 24px;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
+	margin-top: 12px;
 	text-align: center;
-	opacity: 0.75;
-}
-
-.hint {
-	font-size: 0.85rem;
-	color: var(--text-2);
-	font-weight: 500;
 }
 
 .footer-link {
-	font-size: 0.85rem;
-	color: var(--text-2);
+	font-size: 0.78rem;
+	color: var(--text-3);
 	text-decoration: none;
 }
 
 .footer-link:hover {
-	text-decoration: underline;
-	opacity: 1;
+	color: var(--text-2);
 }
 
 /* ── In-app browser overlay ────────────────────────────────────────────── */
 .browser-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.85);
-	backdrop-filter: blur(8px);
+	background: rgba(0, 0, 0, 0.88);
+	backdrop-filter: blur(10px);
 	z-index: 9999;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 32px;
-	animation: fadeUp 0.3s ease-out;
 }
 
 .overlay-content {
@@ -705,50 +774,52 @@ const bbplayerAppLink = computed(() => {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 16px;
+	gap: 14px;
+	max-width: 280px;
 }
 
 .overlay-icon {
-	opacity: 0.9;
+	opacity: 0.85;
 }
 
 .overlay-title {
-	font-size: 1.5rem;
+	font-size: 1.4rem;
 	font-weight: 700;
-	color: white;
 	margin: 0;
 }
 
 .overlay-desc {
-	font-size: 1rem;
-	opacity: 0.8;
+	font-size: 0.95rem;
+	opacity: 0.75;
 	line-height: 1.6;
-	max-width: 280px;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
 	.page {
-		padding: 16px;
-		justify-content: flex-start;
-		padding-top: 32px;
+		padding: 12px 12px 10px;
 	}
 
 	.card {
-		padding: 28px 20px;
-		box-shadow: none;
-		background: transparent !important;
-		border: none !important;
+		border-radius: 16px;
+		max-height: calc(100dvh - 60px);
 	}
+}
+</style>
 
-	.cover-wrapper {
-		width: 160px;
-		height: 160px;
-		margin-bottom: 20px;
-	}
+<!-- 全局覆盖：让 html/body 背景跟随 .page，消除白边 -->
+<style>
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: #dde1e7;
+}
 
-	.playlist-title {
-		font-size: 1.25rem;
+@media (prefers-color-scheme: dark) {
+	html,
+	body {
+		background: #0a0a0f;
 	}
 }
 </style>
