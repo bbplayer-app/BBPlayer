@@ -46,6 +46,7 @@ const SCOPE = 'Mutation.DB.Playlist'
 
 queryClient.setMutationDefaults(['db', 'playlist'], {
 	retry: false,
+	networkMode: 'always',
 })
 
 // React Query 的 invalidateQueries 会直接在后台刷新当前页面活跃的查询，能满足咱们的需求。

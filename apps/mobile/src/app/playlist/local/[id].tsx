@@ -1,16 +1,10 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { and, eq } from 'drizzle-orm'
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import {
-	useCallback,
-	useDeferredValue,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import {
 	ActivityIndicator,
@@ -37,6 +31,7 @@ import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylis
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { SharedPlaylistMembersSheet } from '@/features/playlist/local/components/SharedPlaylistMembersSheet'
+import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
 import { useLocalPlaylistPlayer } from '@/features/playlist/local/hooks/useLocalPlaylistPlayer'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
@@ -126,7 +121,6 @@ export default function LocalPlaylistPage() {
 	const dimensions = useWindowDimensions()
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
-	const [hasSyncFailures, setHasSyncFailures] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const deferredQuery = useDeferredValue(searchQuery)
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
@@ -134,6 +128,7 @@ export default function LocalPlaylistPage() {
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
 	const membersSheetRef = useRef<TrueSheet>(null)
+	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
 	const selection = {
 		active: selectMode,
@@ -412,31 +407,20 @@ export default function LocalPlaylistPage() {
 		pullSharedPlaylist,
 	])
 
-	const refreshSyncFailureFlag = useCallback(async () => {
-		if (!playlistMetadata?.shareId) {
-			setHasSyncFailures(false)
-			return
-		}
-		try {
-			const rows = await db
-				.select({ id: schema.playlistSyncQueue.id })
-				.from(schema.playlistSyncQueue)
-				.where(
-					and(
-						eq(schema.playlistSyncQueue.playlistId, playlistMetadata.id),
-						eq(schema.playlistSyncQueue.status, 'failed'),
-					),
-				)
-				.limit(1)
-			setHasSyncFailures(rows.length > 0)
-		} catch (error) {
-			toastAndLogError('读取同步失败状态失败', error, SCOPE)
-		}
-	}, [playlistMetadata?.id, playlistMetadata?.shareId])
-
-	useEffect(() => {
-		void refreshSyncFailureFlag()
-	}, [refreshSyncFailureFlag])
+	const { data: syncFailures } = useLiveQuery(
+		db
+			.select({ id: schema.playlistSyncQueue.id })
+			.from(schema.playlistSyncQueue)
+			.where(
+				and(
+					eq(schema.playlistSyncQueue.playlistId, playlistMetadata?.id ?? -1),
+					eq(schema.playlistSyncQueue.status, 'failed'),
+				),
+			)
+			.limit(1),
+	)
+	const hasSyncFailures =
+		!!playlistMetadata?.shareId && (syncFailures?.length ?? 0) > 0
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
@@ -664,7 +648,7 @@ export default function LocalPlaylistPage() {
 								icon='alert-circle'
 								color={colors.error}
 								onPress={() => {
-									openModal('SyncFailures', { playlistId: playlistMetadata.id })
+									void syncFailuresSheetRef.current?.present()
 								}}
 								accessibilityLabel='同步失败'
 							/>
@@ -901,6 +885,10 @@ export default function LocalPlaylistPage() {
 			<SharedPlaylistMembersSheet
 				ref={membersSheetRef}
 				shareId={playlistMetadata?.shareId}
+			/>
+			<SyncFailuresSheet
+				ref={syncFailuresSheetRef}
+				playlistId={playlistMetadata?.id}
 			/>
 		</View>
 	)

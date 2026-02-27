@@ -48,7 +48,6 @@ export interface ModalPropsMap {
 		shareRole?: 'owner' | 'editor' | 'subscriber' | null
 	}
 	SubscribeToSharedPlaylist: undefined
-	SyncFailures: { playlistId?: number }
 }
 
 export type ModalKey = keyof ModalPropsMap

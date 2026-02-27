@@ -1,8 +1,16 @@
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { eq } from 'drizzle-orm'
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useShareIntentContext } from 'expo-share-intent'
-import { useCallback, useDeferredValue, useEffect, useState } from 'react'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
@@ -14,9 +22,9 @@ import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions from '@/features/home/SearchSuggestions'
+import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
@@ -59,26 +67,18 @@ function HomePage() {
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const searchBarRef = useAnimatedRef<View>()
+	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
 	const { data: personalInfo } = usePersonalInformation()
-	const openModal = useModalStore((state) => state.open)
-	const [hasSyncFailures, setHasSyncFailures] = useState(false)
 
-	useEffect(() => {
-		const check = async () => {
-			try {
-				const rows = await db
-					.select({ id: schema.playlistSyncQueue.id })
-					.from(schema.playlistSyncQueue)
-					.where(eq(schema.playlistSyncQueue.status, 'failed'))
-					.limit(1)
-				setHasSyncFailures(rows.length > 0)
-			} catch (error) {
-				toastAndLogError('检查同步失败状态失败', error, 'UI.Home')
-			}
-		}
-		void check()
-	}, [])
+	const { data: syncFailures } = useLiveQuery(
+		db
+			.select({ id: schema.playlistSyncQueue.id })
+			.from(schema.playlistSyncQueue)
+			.where(eq(schema.playlistSyncQueue.status, 'failed'))
+			.limit(1),
+	)
+	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
 
 	const greeting = getGreetingMsg()
 
@@ -199,7 +199,7 @@ function HomePage() {
 								icon='alert-circle'
 								size={22}
 								iconColor={colors.error}
-								onPress={() => openModal('SyncFailures', {})}
+								onPress={() => void syncFailuresSheetRef.current?.present()}
 							/>
 						)}
 						<RectButton
@@ -350,6 +350,7 @@ function HomePage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
+			<SyncFailuresSheet ref={syncFailuresSheetRef} />
 		</View>
 	)
 }
