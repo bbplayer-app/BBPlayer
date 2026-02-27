@@ -35,6 +35,7 @@ export default defineConfig({
 					{ text: '排行榜', link: '/guides/leaderboard' },
 					{ text: '评论区', link: '/guides/comments' },
 					{ text: '导入外部歌单', link: '/guides/external-playlist' },
+					{ text: '共享歌单与协同编辑', link: '/guides/shared-playlist' },
 				],
 			},
 		],
