@@ -69,8 +69,8 @@ export default function Library() {
 					</Text>
 					<View style={styles.headerIcons}>
 						<IconButton
-							icon='progress-download'
-							onPress={() => router.push('/download')}
+							icon='download-box'
+							onPress={() => router.push('/downloaded')}
 						/>
 						<IconButton
 							icon='trophy'

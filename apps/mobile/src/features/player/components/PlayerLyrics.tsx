@@ -346,6 +346,22 @@ const Lyrics = memo(function Lyrics({
 	}
 
 	const renderLyrics = () => {
+		if (lyrics.errorMessage) {
+			return (
+				<ScrollView
+					style={styles.errorScrollView}
+					contentContainerStyle={styles.errorContentContainer}
+				>
+					<Text
+						variant='bodyMedium'
+						style={styles.errorText}
+					>
+						{lyrics.errorMessage}
+					</Text>
+				</ScrollView>
+			)
+		}
+
 		if (!lyrics.lrc || !finalLyrics) {
 			return (
 				<Animated.ScrollView

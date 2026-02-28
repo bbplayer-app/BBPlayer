@@ -86,7 +86,8 @@ export default function ToViewPage() {
 		colors.background,
 	)
 
-	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
+		useTrackSelection()
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -164,24 +165,43 @@ export default function ToViewPage() {
 					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
-					<Appbar.Action
-						icon='playlist-plus'
-						onPress={() => {
-							const payloads = []
-							for (const id of selected) {
-								const track = tracksData.find((t) => t.id === id)
-								if (track) {
-									payloads.push({
-										track: track as Track,
-										artist: track.artist!,
-									})
-								}
+					<>
+						<Appbar.Action
+							icon='select-all'
+							onPress={() => setSelected(new Set(tracksData.map((t) => t.id)))}
+						/>
+						<Appbar.Action
+							icon='select-compare'
+							onPress={() =>
+								setSelected(
+									new Set(
+										tracksData
+											.filter((t) => !selected.has(t.id))
+											.map((t) => t.id),
+									),
+								)
 							}
-							openModal('BatchAddTracksToLocalPlaylist', {
-								payloads,
-							})
-						}}
-					/>
+						/>
+						<Appbar.Action
+							icon='playlist-plus'
+							onPress={() => {
+								const trackMap = new Map(tracksData.map((t) => [t.id, t]))
+								const payloads = []
+								for (const id of selected) {
+									const track = trackMap.get(id)
+									if (track) {
+										payloads.push({
+											track: track as Track,
+											artist: track.artist!,
+										})
+									}
+								}
+								openModal('BatchAddTracksToLocalPlaylist', {
+									payloads,
+								})
+							}}
+						/>
+					</>
 				) : (
 					<Appbar.BackAction onPress={() => router.back()} />
 				)}

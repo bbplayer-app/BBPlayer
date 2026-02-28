@@ -218,6 +218,12 @@ public class ExpoOrpheusModule: Module {
         OrpheusDownloadManager.shared.removeDownload(id: id)
     }
     
+    Function("removeDownloads") { (ids: [String]) in
+        for id in ids {
+            OrpheusDownloadManager.shared.removeDownload(id: id)
+        }
+    }
+    
     Function("removeAllDownloads") {
         OrpheusDownloadManager.shared.removeAllDownloads()
     }

@@ -123,8 +123,14 @@ export default function LocalPlaylistPage() {
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const deferredQuery = useDeferredValue(searchQuery)
-	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
-		useTrackSelection()
+	const {
+		selected,
+		selectMode,
+		toggle,
+		enterSelectMode,
+		exitSelectMode,
+		setSelected,
+	} = useTrackSelection()
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
 	const membersSheetRef = useRef<TrueSheet>(null)
@@ -616,6 +622,24 @@ export default function LocalPlaylistPage() {
 				/>
 				{selectMode ? (
 					<>
+						<Appbar.Action
+							icon='select-all'
+							onPress={() =>
+								setSelected(new Set(finalPlaylistData.map((t) => t.id)))
+							}
+						/>
+						<Appbar.Action
+							icon='select-compare'
+							onPress={() =>
+								setSelected(
+									new Set(
+										finalPlaylistData
+											.filter((t) => !selected.has(t.id))
+											.map((t) => t.id),
+									),
+								)
+							}
+						/>
 						{playlistMetadata.type === 'local' && (
 							<Appbar.Action
 								icon='trash-can'

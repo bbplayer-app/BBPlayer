@@ -1,6 +1,9 @@
 package expo.modules.orpheus
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -19,11 +22,13 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.typedarray.Float32Array
-import expo.modules.kotlin.Promise
+import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.manager.SpectrumManager
@@ -31,8 +36,10 @@ import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
+import expo.modules.orpheus.util.ExportOptions
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +65,12 @@ class ExpoOrpheusModule : Module() {
     private var tempBuffer: FloatArray? = null
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // applicationContext 在 OnCreate 时缓存，生命周期与 Application 一致，
+    // 不受 React Native 组件卸载导致 reactContext 变 null 的影响。
+    private var cachedAppContext: Context? = null
+
+    private lateinit var directoryPickerLauncher: AppContextActivityResultLauncher<String, String?>
 
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
@@ -169,11 +182,17 @@ class ExpoOrpheusModule : Module() {
             "onPlaybackSpeedChanged",
             "onTrackStarted",
             "onTrackFinished",
-            "onCoverDownloadProgress"
+            "onCoverDownloadProgress",
+            "onExportProgress"
         )
+
+        RegisterActivityContracts {
+            directoryPickerLauncher = registerForActivityResult(DirectoryPickerContract())
+        }
 
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
+            cachedAppContext = context.applicationContext
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
@@ -552,6 +571,19 @@ class ExpoOrpheusModule : Module() {
             CoverDownloadManager.deleteCover(context, id)
         }
 
+        AsyncFunction("removeDownloads") { ids: List<String> ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            for (id in ids) {
+                DownloadService.sendRemoveDownload(
+                    context,
+                    OrpheusDownloadService::class.java,
+                    id,
+                    false
+                )
+                CoverDownloadManager.deleteCover(context, id)
+            }
+        }
+
         AsyncFunction("removeAllDownloads") {
             val context = appContext.reactContext ?: return@AsyncFunction null
             DownloadService.sendRemoveAllDownloads(
@@ -686,6 +718,30 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction total
         }
 
+        AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean, cropCoverArt: Boolean ->
+            val context = appContext.reactContext ?: run {
+                sendEvent("onExportProgress", mapOf(
+                    "status" to "error",
+                    "message" to "React context is null"
+                ))
+                return@AsyncFunction
+            }
+            runExportDownloads(
+                ids = ids,
+                destinationUri = destinationUri,
+                context = context,
+                options = ExportOptions(
+                    filenamePattern = filenamePattern,
+                    embedLyrics = embedLyrics,
+                    convertToLrc = convertToLrc,
+                    cropCoverArt = cropCoverArt,
+                ),
+                json = json,
+                ioScope = ioScope,
+                sendEvent = ::sendEvent,
+            )
+        }
+
         Function("getDownloadedCoverUri") { trackId: String ->
             val context = appContext.reactContext ?: return@Function null
             val file = CoverDownloadManager.getCoverFile(context, trackId)
@@ -756,6 +812,23 @@ class ExpoOrpheusModule : Module() {
             player?.setPlaybackSpeed(speed)
         }.runOnQueue(Queues.MAIN)
 
+        AsyncFunction("selectDirectory") Coroutine { ->
+            val context = appContext.reactContext ?: return@Coroutine null
+            val uriString = directoryPickerLauncher.launch("")
+            if (uriString != null) {
+                try {
+                    val treeUri = uriString.toUri()
+                    context.contentResolver.takePersistableUriPermission(
+                        treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to take persistable URI permission: ${e.message}")
+                }
+            }
+            uriString
+        }
+
         AsyncFunction("getPlaybackSpeed") {
             ensurePlayer()
             player?.playbackParameters?.speed ?: 1.0f
@@ -820,7 +893,9 @@ class ExpoOrpheusModule : Module() {
 
             // 歌曲下载完成后，异步下载封面
             if (download.state == Download.STATE_COMPLETED && download.request.data.isNotEmpty()) {
-                val context = appContext.reactContext ?: return
+                // 封面下载只需能访问文件系统的 Context，使用 OnCreate 时缓存的
+                // applicationContext，避免 reactContext 为 null 时封面静默跳过。
+                val context = cachedAppContext ?: appContext.reactContext ?: return
                 try {
                     val track = json.decodeFromString<TrackRecord>(
                         String(download.request.data)
