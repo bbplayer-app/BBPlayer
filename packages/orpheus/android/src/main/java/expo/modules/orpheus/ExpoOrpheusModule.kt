@@ -282,6 +282,16 @@ class ExpoOrpheusModule : Module() {
                 }
             }
 
+        Property("isStatusBarLyricsEnabled")
+            .get { GeneralStorage.isStatusBarLyricsEnabled() }
+            .set { enabled: Boolean ->
+                GeneralStorage.setStatusBarLyricsEnabled(enabled)
+                OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+            }
+
+        Property("isSuperLyricApiEnabled")
+            .get { com.hchen.superlyricapi.SuperLyricTool.isEnabled }
+
 
         Function("setBilibiliCookie") { cookie: String ->
             OrpheusConfig.bilibiliCookie = cookie
@@ -803,6 +813,21 @@ class ExpoOrpheusModule : Module() {
                     data.offset
                 )
             } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.runOnQueue(Queues.MAIN)
+
+        AsyncFunction("setStatusBarLyrics") { lyricsJson: String ->
+            try {
+                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
+                val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
+                Log.d("StatusBarLyrics", "[Module] setStatusBarLyrics: ${data.lyrics.size} lines offset=${data.offset} ts=${System.currentTimeMillis()} first=\"$firstLine\" | serviceAlive=${OrpheusMusicService.instance != null}")
+                OrpheusMusicService.instance?.statusBarLyricsManager?.setLyrics(
+                    data.lyrics,
+                    data.offset
+                )
+            } catch (e: Exception) {
+                Log.e("StatusBarLyrics", "[Module] setStatusBarLyrics parse error: ${e.message}", e)
                 e.printStackTrace()
             }
         }.runOnQueue(Queues.MAIN)

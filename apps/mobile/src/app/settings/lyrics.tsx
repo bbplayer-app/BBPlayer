@@ -12,6 +12,7 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { toastAndLogError } from '@/utils/error-handling'
+import { setDesktopLyrics } from '@/utils/player'
 import toast from '@/utils/toast'
 
 export default function LyricsSettingsPage() {
@@ -25,6 +26,12 @@ export default function LyricsSettingsPage() {
 	)
 	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
 		Orpheus.isDesktopLyricsLocked,
+	)
+	const [isStatusBarLyricsEnabled, setIsStatusBarLyricsEnabled] = useState(
+		Orpheus.isStatusBarLyricsEnabled,
+	)
+	const [isSuperLyricApiEnabled, setIsSuperLyricApiEnabled] = useState(
+		Orpheus.isSuperLyricApiEnabled,
 	)
 
 	const lyricSource = useAppStore((state) => state.settings.lyricSource)
@@ -44,7 +51,11 @@ export default function LyricsSettingsPage() {
 			if (hadPermission) {
 				await Orpheus.showDesktopLyrics()
 				setIsDesktopLyricsShown(true)
-				toast.success('启用成功。从下一首歌开始生效')
+				// 立即推送当前正在播放的歌词，不等下一首
+				const currentTrack = await Orpheus.getCurrentTrack()
+				if (currentTrack) {
+					setDesktopLyrics(currentTrack.id, 0)
+				}
 				return
 			}
 			alert(
@@ -71,6 +82,8 @@ export default function LyricsSettingsPage() {
 		const listener = AppState.addEventListener('change', () => {
 			setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
 			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+			setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
+			setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 		})
 		return () => {
 			listener.remove()
@@ -80,6 +93,8 @@ export default function LyricsSettingsPage() {
 	useFocusEffect(() => {
 		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
 		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+		setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
+		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 	})
 
 	return (
@@ -148,6 +163,34 @@ export default function LyricsSettingsPage() {
 										return
 									}
 									setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
+								}}
+							/>
+						</View>
+						<View style={styles.settingRow}>
+							<Text
+								style={!isSuperLyricApiEnabled ? { opacity: 0.4 } : undefined}
+							>
+								状态栏歌词
+								{!isSuperLyricApiEnabled ? '（需安装 SuperLyric 模块）' : ''}
+							</Text>
+							<Switch
+								disabled={!isSuperLyricApiEnabled}
+								value={isStatusBarLyricsEnabled}
+								onValueChange={async () => {
+									try {
+										const next = !isStatusBarLyricsEnabled
+										Orpheus.isStatusBarLyricsEnabled = next
+										setIsStatusBarLyricsEnabled(next)
+										if (next) {
+											// 立即推送当前歌词
+											const currentTrack = await Orpheus.getCurrentTrack()
+											if (currentTrack) {
+												setDesktopLyrics(currentTrack.id, 0)
+											}
+										}
+									} catch (e) {
+										toastAndLogError('设置失败', e, 'Settings')
+									}
 								}}
 							/>
 						</View>

@@ -22,6 +22,7 @@ object GeneralStorage {
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
+    private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
 
 
     @Synchronized
@@ -128,4 +129,7 @@ object GeneralStorage {
 
     fun isDesktopLyricsLocked() = kv?.decodeBool(KEY_DESKTOP_LYRICS_LOCKED, false) ?: false
     fun setDesktopLyricsLocked(locked: Boolean) = safeKv.encode(KEY_DESKTOP_LYRICS_LOCKED, locked)
+
+    fun isStatusBarLyricsEnabled() = kv?.decodeBool(KEY_STATUS_BAR_LYRICS_ENABLED, false) ?: false
+    fun setStatusBarLyricsEnabled(enabled: Boolean) = safeKv.encode(KEY_STATUS_BAR_LYRICS_ENABLED, enabled)
 }

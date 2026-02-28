@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -48,6 +49,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private var scope = MainScope()
 
     lateinit var floatingLyricsManager: FloatingLyricsManager
+    lateinit var statusBarLyricsManager: StatusBarLyricsManager
     private val serviceHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     private var lastTrackFinishedAt: Long = 0
@@ -55,11 +57,15 @@ class OrpheusMusicService : MediaLibraryService() {
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
-            player?.let {
-                if (it.isPlaying) {
-                    floatingLyricsManager.updateTime(it.currentPosition / 1000.0)
+            player?.let { p ->
+                if (p.isPlaying) {
+                    val seconds = p.currentPosition / 1000.0
+                    floatingLyricsManager.updateTime(seconds)
+                    statusBarLyricsManager.updateTime(seconds)
+                } else {
+                    android.util.Log.v("StatusBarLyrics", "[Runnable] player not playing, state=${player?.playbackState}")
                 }
-            }
+            } ?: android.util.Log.w("StatusBarLyrics", "[Runnable] player is null")
             serviceHandler.postDelayed(this, 200)
         }
     }
@@ -220,6 +226,9 @@ class OrpheusMusicService : MediaLibraryService() {
             serviceHandler.post { floatingLyricsManager.show() }
         }
 
+        statusBarLyricsManager = StatusBarLyricsManager(this)
+        statusBarLyricsManager.enabled = GeneralStorage.isStatusBarLyricsEnabled()
+
         setupListeners()
 
         var launchIntent = packageManager.getLaunchIntentForPackage(packageName)
@@ -275,6 +284,7 @@ class OrpheusMusicService : MediaLibraryService() {
     override fun onDestroy() {
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         floatingLyricsManager.hide()
+        statusBarLyricsManager.onStop()
         scope.cancel()
         instance = null
 
@@ -460,6 +470,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
@@ -475,9 +486,19 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                val reasonStr = when (reason) {
+                    Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "PLAYLIST_CHANGED"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
+                    else -> "UNKNOWN($reason)"
+                }
+                android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=${mediaItem?.mediaId} reason=$reasonStr ts=${System.currentTimeMillis()}")
                 sendTrackStartEvent(mediaItem, reason)
 
                 floatingLyricsManager.setLyrics(emptyList())
+                statusBarLyricsManager.onStop()
+
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
 

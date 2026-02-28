@@ -118,6 +118,9 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	autoplayOnStartEnabled: boolean
 	isDesktopLyricsShown: boolean
 	isDesktopLyricsLocked: boolean
+	isStatusBarLyricsEnabled: boolean
+	/** SuperLyric Xposed 模块是否已激活（只读）*/
+	readonly isSuperLyricApiEnabled: boolean
 
 	/**
 	 * 获取当前进度（秒）
@@ -324,6 +327,13 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
 	setDesktopLyrics(lyricsJson: string): Promise<void>
+
+	/**
+	 * 推送歌词到状态栏歌词模块（Android 专属，依赖 SuperLyric Xposed 模块）。
+	 * 需配合 `isStatusBarLyricsEnabled = true` 使用。
+	 * @param lyricsJson 与 setDesktopLyrics 格式相同的 JSON 字符串
+	 */
+	setStatusBarLyrics(lyricsJson: string): Promise<void>
 
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
