@@ -28,9 +28,10 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 					return {
 						id: track!.uniqueKey,
 						updateTime: Date.now(),
-						lrc: result.error.message,
+						lrc: undefined,
 						tlyric: undefined,
 						romalrc: undefined,
+						errorMessage: result.error.message,
 						misc: undefined,
 					} satisfies LyricFileData
 				}

@@ -1,14 +1,22 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
-import { useCallback, useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import {
+	type ComponentRef,
+	useCallback,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
+import { StyleSheet, ToastAndroid, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
 	Appbar,
 	Checkbox,
 	Divider,
+	Menu,
 	Searchbar,
 	Surface,
 	Text,
@@ -17,16 +25,52 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
+import { alert } from '@/components/modals/AlertModal'
+import ExportDownloadsProgressModal from '@/components/modals/settings/ExportDownloadsProgressModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
-import { useAllDownloads } from '@/hooks/queries/orpheus'
-import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useRemoveDownloadsMutation } from '@/hooks/mutations/orpheus'
+import { useAllDownloads, orpheusQueryKeys } from '@/hooks/queries/orpheus'
+import { queryClient } from '@/lib/config/queryClient'
 import {
 	LIST_ITEM_COVER_SIZE,
 	LIST_ITEM_BORDER_RADIUS,
 } from '@/theme/dimensions'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
+
+interface DownloadedItemExtraData {
+	selectMode: boolean
+	selected: Set<string>
+	toggleSelected: (id: string) => void
+	enterSelectMode: (id: string) => void
+	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
+}
+
+function renderDownloadedItem({
+	item,
+	index,
+	extraData,
+}: {
+	item: DownloadTask
+	index: number
+	extraData?: DownloadedItemExtraData
+}) {
+	return (
+		<DownloadedItem
+			item={item}
+			index={index}
+			selectMode={extraData?.selectMode ?? false}
+			isSelected={extraData?.selected.has(item.id) ?? false}
+			toggleSelected={extraData?.toggleSelected ?? (() => {})}
+			enterSelectMode={extraData?.enterSelectMode ?? (() => {})}
+			onMenuPress={extraData?.onMenuPress ?? (() => {})}
+		/>
+	)
+}
 
 function DownloadedItem({
 	item,
@@ -35,6 +79,7 @@ function DownloadedItem({
 	isSelected,
 	toggleSelected,
 	enterSelectMode,
+	onMenuPress,
 }: {
 	item: DownloadTask
 	index: number
@@ -42,9 +87,11 @@ function DownloadedItem({
 	isSelected: boolean
 	toggleSelected: (id: string) => void
 	enterSelectMode: (id: string) => void
+	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
 }) {
 	const theme = useTheme()
 	const track = item.track
+	const menuButtonRef = useRef<ComponentRef<typeof IconButton>>(null)
 
 	return (
 		<RectButton
@@ -129,6 +176,29 @@ function DownloadedItem({
 							</Text>
 						</View>
 					</View>
+
+					{!selectMode && (
+						<IconButton
+							ref={menuButtonRef}
+							icon='dots-vertical'
+							size={20}
+							iconColor={theme.colors.onSurfaceVariant}
+							onPress={() => {
+								;(menuButtonRef.current as unknown as View)?.measure(
+									(
+										_x: number,
+										_y: number,
+										_w: number,
+										_h: number,
+										pageX: number,
+										pageY: number,
+									) => {
+										onMenuPress(item.id, { x: pageX, y: pageY })
+									},
+								)
+							}}
+						/>
+					)}
 				</View>
 			</Surface>
 		</RectButton>
@@ -139,18 +209,22 @@ export default function DownloadedPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
-	const openModal = useModalStore((state) => state.open)
+
+	const exportSheetRef = useRef<TrueSheetType>(null)
+	const [exportConfig, setExportConfig] = useState<{
+		ids: string[]
+		destinationUri: string
+	} | null>(null)
 
 	const { data: allTasks, isPending } = useAllDownloads()
-	const completedTasks = useMemo(
-		() => (allTasks ?? []).filter((t) => t.state === DownloadState.COMPLETED),
-		[allTasks],
+	const completedTasks = (allTasks ?? []).filter(
+		(t) => t.state === DownloadState.COMPLETED,
 	)
 
 	const [searchQuery, setSearchQuery] = useState('')
 	const [isSearching, setIsSearching] = useState(false)
 
-	const filteredTasks = useMemo(() => {
+	const filteredTasks = (() => {
 		if (!searchQuery.trim()) return completedTasks
 		const query = searchQuery.toLowerCase()
 		return completedTasks.filter((t) => {
@@ -160,7 +234,7 @@ export default function DownloadedPage() {
 				track?.artist?.toLowerCase().includes(query)
 			)
 		})
-	}, [completedTasks, searchQuery])
+	})()
 
 	const {
 		selected,
@@ -171,40 +245,140 @@ export default function DownloadedPage() {
 		setSelected,
 	} = useTrackSelection<string>()
 
-	const handleExport = async () => {
-		const idsToExport = selectMode
-			? Array.from(selected)
-			: completedTasks.map((t) => t.id)
-		if (idsToExport.length === 0) return
+	const removeDownloadsMutation = useRemoveDownloadsMutation()
 
+	// ── Item context menu ──────────────────────────────────────
+	const [menuState, setMenuState] = useState<{
+		visible: boolean
+		id: string | null
+		anchor: { x: number; y: number }
+	}>({ visible: false, id: null, anchor: { x: 0, y: 0 } })
+
+	const handleItemMenuPress = useCallback(
+		(id: string, anchor: { x: number; y: number }) => {
+			setMenuState({ visible: true, id, anchor })
+		},
+		[],
+	)
+
+	const dismissItemMenu = useCallback(() => {
+		setMenuState((prev) => ({ ...prev, visible: false }))
+	}, [])
+
+	const handleSingleExport = useCallback(async () => {
+		dismissItemMenu()
+		const id = menuState.id
+		if (!id) return
+		ToastAndroid.showWithGravity(
+			'请选择需要导出到的目录',
+			ToastAndroid.SHORT,
+			ToastAndroid.BOTTOM,
+		)
 		const directoryUri = await Orpheus.selectDirectory()
 		if (directoryUri) {
-			openModal('ExportDownloadsProgress', {
-				ids: idsToExport,
-				destinationUri: directoryUri,
-			})
+			setExportConfig({ ids: [id], destinationUri: directoryUri })
+			void exportSheetRef.current?.present()
+		}
+	}, [dismissItemMenu, menuState.id])
+
+	const handleDelete = useCallback(() => {
+		dismissItemMenu()
+		const id = menuState.id
+		if (!id) return
+		const task = completedTasks.find((t) => t.id === id)
+		const title = task?.track?.title ?? id
+		alert(
+			'删除下载',
+			`确定要删除「${title}」的下载记录及缓存文件吗？`,
+			[
+				{ text: '取消' },
+				{
+					text: '删除',
+					onPress: async () => {
+						try {
+							await Orpheus.removeDownload(id)
+							await queryClient.invalidateQueries({
+								queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
+							})
+						} catch (e) {
+							toastAndLogError('删除下载失败', e, 'Downloaded.Page')
+						}
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}, [dismissItemMenu, menuState.id, completedTasks])
+
+	const handleExport = async () => {
+		const idsToExport = Array.from(selected)
+		if (idsToExport.length === 0) {
+			ToastAndroid.showWithGravity(
+				'请先选择需要导出的歌曲',
+				ToastAndroid.SHORT,
+				ToastAndroid.BOTTOM,
+			)
+			return
+		}
+
+		ToastAndroid.showWithGravity(
+			'请选择需要导出到的目录',
+			ToastAndroid.SHORT,
+			ToastAndroid.BOTTOM,
+		)
+		const directoryUri = await Orpheus.selectDirectory()
+		if (directoryUri) {
+			setExportConfig({ ids: idsToExport, destinationUri: directoryUri })
+			void exportSheetRef.current?.present()
 			exitSelectMode()
 		}
 	}
 
-	const renderDownloadedItem = useCallback(
-		({ item, index }: { item: DownloadTask; index: number }) => (
-			<DownloadedItem
-				item={item}
-				index={index}
-				selectMode={selectMode}
-				isSelected={selected.has(item.id)}
-				toggleSelected={(id) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-					toggle(id)
-				}}
-				enterSelectMode={(id) => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-					enterSelectMode(id)
-				}}
-			/>
-		),
-		[selectMode, selected, toggle, enterSelectMode],
+	const handleBatchDelete = useCallback(() => {
+		const idsToDelete = Array.from(selected)
+		if (idsToDelete.length === 0) return
+		alert(
+			'批量删除',
+			`确定要删除选中的 ${idsToDelete.length} 首歌曲的下载记录及缓存文件吗？`,
+			[
+				{ text: '取消' },
+				{
+					text: '删除',
+					onPress: () => {
+						removeDownloadsMutation.mutate(idsToDelete, {
+							onSuccess: () => exitSelectMode(),
+							onError: (e) =>
+								toastAndLogError('批量删除失败', e, 'Downloaded.Page'),
+						})
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}, [selected, exitSelectMode, removeDownloadsMutation])
+
+	const invertSelection = useCallback(() => {
+		const allIds = filteredTasks.map((t) => t.id)
+		const inverted = new Set(allIds.filter((id) => !selected.has(id)))
+		setSelected(inverted)
+		void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+	}, [filteredTasks, selected, setSelected])
+
+	const extraData = useMemo<DownloadedItemExtraData>(
+		() => ({
+			selectMode,
+			selected,
+			toggleSelected: (id: string) => {
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+				toggle(id)
+			},
+			enterSelectMode: (id: string) => {
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+				enterSelectMode(id)
+			},
+			onMenuPress: handleItemMenuPress,
+		}),
+		[selectMode, selected, toggle, enterSelectMode, handleItemMenuPress],
 	)
 
 	if (isPending) {
@@ -226,7 +400,7 @@ export default function DownloadedPage() {
 					onPress={() => (selectMode ? exitSelectMode() : router.back())}
 				/>
 				<Appbar.Content
-					title={selectMode ? `已选择 ${selected.size} 项` : '下载历史'}
+					title={selectMode ? `已选择 ${selected.size} 项` : '下载管理'}
 				/>
 				{selectMode ? (
 					<>
@@ -235,6 +409,15 @@ export default function DownloadedPage() {
 							onPress={() =>
 								setSelected(new Set(filteredTasks.map((t) => t.id)))
 							}
+						/>
+						<Appbar.Action
+							icon='select-compare'
+							onPress={invertSelection}
+						/>
+						<Appbar.Action
+							icon='trash-can-outline'
+							onPress={handleBatchDelete}
+							disabled={selected.size === 0}
 						/>
 						<Appbar.Action
 							icon='export-variant'
@@ -275,6 +458,7 @@ export default function DownloadedPage() {
 				<FlashList
 					data={filteredTasks}
 					renderItem={renderDownloadedItem}
+					extraData={extraData}
 					keyExtractor={(item) => item.id}
 					ItemSeparatorComponent={() => <Divider />}
 					contentContainerStyle={{
@@ -291,6 +475,32 @@ export default function DownloadedPage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
+
+			<FunctionalMenu
+				visible={menuState.visible}
+				onDismiss={dismissItemMenu}
+				anchor={menuState.anchor}
+				anchorPosition='bottom'
+			>
+				<Menu.Item
+					leadingIcon='export-variant'
+					title='导出'
+					onPress={() => {
+						void handleSingleExport()
+					}}
+				/>
+				<Menu.Item
+					leadingIcon='trash-can-outline'
+					title='删除'
+					onPress={handleDelete}
+				/>
+			</FunctionalMenu>
+
+			<ExportDownloadsProgressModal
+				sheetRef={exportSheetRef}
+				ids={exportConfig?.ids ?? []}
+				destinationUri={exportConfig?.destinationUri ?? ''}
+			/>
 		</View>
 	)
 }

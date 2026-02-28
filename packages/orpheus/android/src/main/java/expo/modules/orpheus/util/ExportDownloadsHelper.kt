@@ -1,7 +1,11 @@
 package expo.modules.orpheus.util
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.request.RequestOptions
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import androidx.media3.common.util.UnstableApi
@@ -25,6 +29,7 @@ data class ExportOptions(
     val filenamePattern: String?,
     val embedLyrics: Boolean,
     val convertToLrc: Boolean,
+    val cropCoverArt: Boolean = false,
 )
 
 
@@ -187,7 +192,25 @@ private fun writeMetadata(
         // 封面
         val coverFile = CoverDownloadManager.getCoverFile(context, id)
         if (coverFile != null && coverFile.exists()) {
-            tag.setField(ArtworkFactory.createArtworkFromFile(coverFile))
+            val artwork = if (options.cropCoverArt) {
+                // 使用 Glide 加载并 centerCrop 裁剪为正方形，
+                // 能正确处理 WebP / HEIF 等各种格式及 EXIF 旋转。
+                val squareBitmap = Glide.with(context)
+                    .asBitmap()
+                    .load(coverFile)
+                    .apply(RequestOptions().transform(CenterCrop()))
+                    .submit(1200, 1200)
+                    .get()
+                val tmpFile = File(context.cacheDir, "${id}_cover_sq.jpg")
+                tmpFile.outputStream().use {
+                    squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                }
+                squareBitmap.recycle()
+                ArtworkFactory.createArtworkFromFile(tmpFile)
+            } else {
+                ArtworkFactory.createArtworkFromFile(coverFile)
+            }
+            tag.setField(artwork)
         }
 
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）

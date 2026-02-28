@@ -4,6 +4,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { forwardRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Icon, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -47,6 +48,33 @@ const DEV_MOCK_ROWS: (typeof schema.playlistSyncQueue.$inferSelect)[] = __DEV__
 			},
 			{
 				id: 3,
+				playlistId: 1,
+				operation: 'update_metadata',
+				payload: { title: '测试歌单' },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 300000),
+				createdAt: new Date(Date.now() - 300000),
+			},
+			{
+				id: 4,
+				playlistId: 1,
+				operation: 'update_metadata',
+				payload: { title: '测试歌单' },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 300000),
+				createdAt: new Date(Date.now() - 300000),
+			},
+			{
+				id: 5,
+				playlistId: 1,
+				operation: 'update_metadata',
+				payload: { title: '测试歌单' },
+				status: 'failed',
+				operationAt: new Date(Date.now() - 300000),
+				createdAt: new Date(Date.now() - 300000),
+			},
+			{
+				id: 6,
 				playlistId: 1,
 				operation: 'update_metadata',
 				payload: { title: '测试歌单' },
@@ -131,75 +159,79 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 				backgroundColor={colors.elevation.level1}
 				scrollable
 			>
-				<View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
-					<Text
-						variant='titleLarge'
-						style={styles.title}
+				<GestureHandlerRootView style={{ flexGrow: 1 }}>
+					<View
+						style={[styles.container, { paddingBottom: insets.bottom + 20 }]}
 					>
-						同步失败记录
-					</Text>
-
-					{loading ? (
-						<View style={styles.center}>
-							<ActivityIndicator size='large' />
-						</View>
-					) : rows.length === 0 ? (
-						<View style={styles.center}>
-							<Text style={{ color: colors.onSurfaceVariant }}>
-								暂无失败记录
-							</Text>
-						</View>
-					) : (
-						<ScrollView
-							style={styles.listContent}
-							nestedScrollEnabled
+						<Text
+							variant='titleLarge'
+							style={styles.title}
 						>
-							{rows.map((row) => {
-								const info = getOperationInfo(row.operation)
-								return (
-									<View
-										key={row.id}
-										style={styles.row}
-									>
+							同步失败记录
+						</Text>
+
+						{loading ? (
+							<View style={styles.center}>
+								<ActivityIndicator size='large' />
+							</View>
+						) : rows.length === 0 ? (
+							<View style={styles.center}>
+								<Text style={{ color: colors.onSurfaceVariant }}>
+									暂无失败记录
+								</Text>
+							</View>
+						) : (
+							<ScrollView
+								style={styles.listContent}
+								nestedScrollEnabled
+							>
+								{rows.map((row) => {
+									const info = getOperationInfo(row.operation)
+									return (
 										<View
-											style={[
-												styles.iconContainer,
-												{ backgroundColor: colors.elevation.level3 },
-											]}
+											key={row.id}
+											style={styles.row}
 										>
-											<Icon
-												source={info.icon}
-												size={24}
-												color={colors.onSurface}
-											/>
-										</View>
-										<View style={styles.rowInfo}>
-											<Text variant='bodyLarge'>{info.label}</Text>
-											<Text
-												variant='bodySmall'
-												style={{ color: colors.onSurfaceVariant }}
+											<View
+												style={[
+													styles.iconContainer,
+													{ backgroundColor: colors.elevation.level3 },
+												]}
 											>
-												{formatRelativeTime(row.operationAt)}
-											</Text>
+												<Icon
+													source={info.icon}
+													size={24}
+													color={colors.onSurface}
+												/>
+											</View>
+											<View style={styles.rowInfo}>
+												<Text variant='bodyLarge'>{info.label}</Text>
+												<Text
+													variant='bodySmall'
+													style={{ color: colors.onSurfaceVariant }}
+												>
+													{formatRelativeTime(row.operationAt)}
+												</Text>
+											</View>
 										</View>
-									</View>
-								)
-							})}
-						</ScrollView>
-					)}
+									)
+								})}
+							</ScrollView>
+						)}
 
-					<View style={styles.actions}>
-						<Button
-							mode='contained'
-							onPress={handleRetry}
-							loading={loading}
-							disabled={loading || rows.length === 0}
-							style={styles.retryButton}
-						>
-							全部重试
-						</Button>
+						<View style={styles.actions}>
+							<Button
+								mode='contained'
+								onPress={handleRetry}
+								loading={loading}
+								disabled={loading || rows.length === 0}
+								style={styles.retryButton}
+							>
+								全部重试
+							</Button>
+						</View>
 					</View>
-				</View>
+				</GestureHandlerRootView>
 			</TrueSheetComponent>
 		)
 	},

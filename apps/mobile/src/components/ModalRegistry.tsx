@@ -64,9 +64,6 @@ const DanmakuSettingsModal = lazy(
 const CoverDownloadProgressModal = lazy(
 	() => import('./modals/settings/CoverDownloadProgressModal'),
 )
-const ExportDownloadsProgressModal = lazy(
-	() => import('./modals/settings/ExportDownloadsProgressModal'),
-)
 const EnableSharingModal = lazy(
 	() => import('./modals/playlist/EnableSharingModal'),
 )
@@ -103,7 +100,6 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	ManualMatchExternalSync: ManualMatchExternalSyncModal,
 	DanmakuSettings: DanmakuSettingsModal,
 	CoverDownloadProgress: CoverDownloadProgressModal,
-	ExportDownloadsProgress: ExportDownloadsProgressModal,
 	EnableSharing: EnableSharingModal,
 	SubscribeToSharedPlaylist: SubscribeToSharedPlaylistModal,
 }

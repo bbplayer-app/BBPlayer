@@ -16,7 +16,6 @@ class DirectoryPickerContract : AppContextActivityResultContract<String, String?
     override fun createIntent(context: Context, input: String): Intent =
         Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
 
     override fun parseResult(input: String, resultCode: Int, intent: Intent?): String? {

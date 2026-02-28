@@ -565,6 +565,19 @@ class ExpoOrpheusModule : Module() {
             CoverDownloadManager.deleteCover(context, id)
         }
 
+        AsyncFunction("removeDownloads") { ids: List<String> ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            for (id in ids) {
+                DownloadService.sendRemoveDownload(
+                    context,
+                    OrpheusDownloadService::class.java,
+                    id,
+                    false
+                )
+                CoverDownloadManager.deleteCover(context, id)
+            }
+        }
+
         AsyncFunction("removeAllDownloads") {
             val context = appContext.reactContext ?: return@AsyncFunction null
             DownloadService.sendRemoveAllDownloads(
@@ -699,7 +712,7 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction total
         }
 
-        AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean ->
+        AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean, cropCoverArt: Boolean ->
             val context = appContext.reactContext ?: return@AsyncFunction
             runExportDownloads(
                 ids = ids,
@@ -709,6 +722,7 @@ class ExpoOrpheusModule : Module() {
                     filenamePattern = filenamePattern,
                     embedLyrics = embedLyrics,
                     convertToLrc = convertToLrc,
+                    cropCoverArt = cropCoverArt,
                 ),
                 json = json,
                 ioScope = ioScope,

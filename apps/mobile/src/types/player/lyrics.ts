@@ -56,6 +56,9 @@ export interface LyricFileData {
 	tlyric?: string | undefined // 翻译歌词
 	romalrc?: string | undefined // 罗马音歌词
 
+	/** 当歌词获取失败时（如离线状态），存储错误信息直接展示，不走解析流程 */
+	errorMessage?: string | undefined
+
 	misc?:
 		| {
 				userOffset?: number | undefined // 用户设置的歌词偏移量

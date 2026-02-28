@@ -12,12 +12,14 @@ export const orpheusQueryKeys = {
 	downloadTasks: () => [...orpheusQueryKeys.all, 'downloadTasks'] as const,
 	playerQueue: () => [...orpheusQueryKeys.all, 'playerQueue'] as const,
 	sleepTimer: () => [...orpheusQueryKeys.all, 'sleepTimerEndAt'] as const,
+	allDownloads: () => [...orpheusQueryKeys.all, 'allDownloads'] as const,
 }
 
 queryClient.setQueryDefaults(orpheusQueryKeys.all, {
 	networkMode: 'always',
 	gcTime: 0,
 	staleTime: 0,
+	retry: false,
 })
 
 export function useBatchDownloadStatus(ids: string[]) {
@@ -53,7 +55,7 @@ export function useDownloadTasks() {
 
 export function useAllDownloads() {
 	return useQuery({
-		queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
+		queryKey: orpheusQueryKeys.allDownloads(),
 		queryFn: async () => {
 			return await Orpheus.getDownloads()
 		},

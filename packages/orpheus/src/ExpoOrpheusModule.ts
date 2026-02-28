@@ -232,6 +232,11 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	removeDownload(id: string): Promise<void>
 
 	/**
+	 * 批量移除下载任务
+	 */
+	removeDownloads(ids: string[]): Promise<void>
+
+	/**
 	 * 批量下载歌曲
 	 */
 	multiDownload(tracks: Track[]): Promise<void>
@@ -291,6 +296,7 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	 *   SPL 是 LRC 的超集，支持逐字时间戳（`<mm:ss.ms>`），
 	 *   但仅椒盐音乐等少数播放器能识别；开启后将移除逐字时间戳，
 	 *   输出兼容所有播放器的标准 LRC。仅在 `embedLyrics=true` 时生效。
+	 * @param cropCoverArt 是否裁剪封面为正方形（以短边为基准）。默认 false 保持原始封面比例。
 	 *
 	 * @example
 	 * // 生成 "米津玄師 - Lemon.m4a"
@@ -304,6 +310,7 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 		filenamePattern: string,
 		embedLyrics: boolean,
 		convertToLrc: boolean,
+		cropCoverArt: boolean,
 	): Promise<void>
 
 	/**

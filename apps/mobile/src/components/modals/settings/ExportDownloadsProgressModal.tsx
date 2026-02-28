@@ -1,19 +1,22 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import type { RefObject } from 'react'
 import { memo, useEffect, useRef, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { ScrollView } from 'react-native-gesture-handler'
+import { ScrollView, StyleSheet, View } from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import {
-	Dialog,
 	Divider,
 	HelperText,
 	ProgressBar,
 	Switch,
 	Text,
 	TextInput,
+	useTheme,
 } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
 type Stage = 'config' | 'exporting' | 'completed' | 'error'
@@ -26,7 +29,8 @@ interface ProgressState {
 	message: string
 }
 
-interface ExportDownloadsProgressModalProps {
+export interface ExportDownloadsProgressModalProps {
+	sheetRef: RefObject<TrueSheetType | null>
 	ids: string[]
 	destinationUri: string
 }
@@ -39,6 +43,8 @@ const PREVIEW_VALUES: Record<string, string> = {
 	cid: '1919810',
 }
 
+const VARIABLE_KEYS = Object.keys(PREVIEW_VALUES)
+
 function buildPreviewFilename(pattern: string): string {
 	if (!pattern.trim()) return `${PREVIEW_VALUES.name}.m4a`
 	let result = pattern
@@ -49,16 +55,23 @@ function buildPreviewFilename(pattern: string): string {
 	return result ? `${result}.m4a` : `${PREVIEW_VALUES.name}.m4a`
 }
 
+function patternHasVariable(pattern: string): boolean {
+	return VARIABLE_KEYS.some((k) => pattern.includes(`{${k}}`))
+}
+
 const ExportDownloadsProgressModal = memo(
 	function ExportDownloadsProgressModal({
+		sheetRef,
 		ids,
 		destinationUri,
 	}: ExportDownloadsProgressModalProps) {
-		const close = useModalStore((state) => state.close)
+		const { colors } = useTheme()
+		const insets = useSafeAreaInsets()
 
 		const [filenamePattern, setFilenamePattern] = useState('{name}')
 		const [embedLyrics, setEmbedLyrics] = useState(false)
 		const [convertToLrc, setConvertToLrc] = useState(false)
+		const [cropCoverArt, setCropCoverArt] = useState(false)
 
 		const [progress, setProgress] = useState<ProgressState>({
 			current: 0,
@@ -70,6 +83,23 @@ const ExportDownloadsProgressModal = memo(
 		const hasStarted = useRef(false)
 
 		const stage = progress.stage
+
+		// Reset internal state whenever a new export session begins (ids / destination changed)
+		const idsKey = ids.join(',')
+		useEffect(() => {
+			setFilenamePattern('{name}')
+			setEmbedLyrics(false)
+			setConvertToLrc(false)
+			setCropCoverArt(false)
+			setProgress({
+				current: 0,
+				total: idsKey.split(',').filter(Boolean).length,
+				failed: 0,
+				stage: 'config',
+				message: '准备导出...',
+			})
+			hasStarted.current = false
+		}, [idsKey, destinationUri])
 
 		function startExport() {
 			if (hasStarted.current) return
@@ -110,6 +140,7 @@ const ExportDownloadsProgressModal = memo(
 				effectivePattern,
 				embedLyrics,
 				convertToLrc,
+				cropCoverArt,
 			).catch((e: unknown) => {
 				toastAndLogError('启动批量导出失败', e, 'Modal.ExportDownloadsProgress')
 				setProgress((prev) => ({
@@ -117,184 +148,237 @@ const ExportDownloadsProgressModal = memo(
 					stage: 'error',
 					message: '启动导出任务失败',
 				}))
-			})
-
-			return () => {
 				subscription.remove()
-			}
+			})
 		}
 
-		useEffect(() => {
-			// listener 已在 startExport 中注册并返回 cleanup
-			// 这里无需再做，但若组件意外卸载时也能收尾
-			// oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
-			if (stage !== 'exporting') return
-		}, [stage])
+		function dismiss() {
+			void sheetRef.current?.dismiss()
+		}
 
 		const isFinished = stage === 'completed' || stage === 'error'
 		const progressValue =
 			progress.total > 0 ? progress.current / progress.total : undefined
 
-		if (stage === 'config') {
-			const previewName = buildPreviewFilename(filenamePattern)
-			const isEmpty = !filenamePattern.trim()
-
-			return (
-				<>
-					<Dialog.Title>导出设置</Dialog.Title>
-					<Dialog.ScrollArea style={styles.scrollArea}>
-						<ScrollView
-							style={styles.scrollViewContent}
-							contentContainerStyle={styles.configContent}
-						>
-							{/* ── 文件名模板 ── */}
-							<Text
-								variant='labelLarge'
-								style={styles.sectionTitle}
-							>
-								文件名模板
-							</Text>
-							<TextInput
-								label='文件名模板'
-								value={filenamePattern}
-								onChangeText={setFilenamePattern}
-								mode='outlined'
-								placeholder='{name}'
-								autoCapitalize='none'
-								autoCorrect={false}
-								dense
-							/>
-							<HelperText
-								type='info'
-								visible
-								style={styles.helperText}
-							>
-								{isEmpty ? '为空时使用默认模板 {name}' : `预览：${previewName}`}
-							</HelperText>
-
-							{/* 可用变量说明 */}
-							<View style={styles.variableBox}>
-								<Text
-									variant='labelSmall'
-									style={styles.variableTitle}
-								>
-									可用变量
-								</Text>
-								{[
-									['id', '曲目唯一 ID'],
-									['name', '曲目标题'],
-									['artist', '艺术家'],
-									['bvid', 'B 站 BV 号'],
-									['cid', 'B 站 CID（如果不是分 P 视频则为空）'],
-								].map(([v, desc]) => (
-									<Text
-										key={v}
-										variant='bodySmall'
-										style={styles.variableRow}
-									>
-										<Text style={styles.variableTag}>{`{${v}}`}</Text>
-										{'  '}
-										{desc}
-									</Text>
-								))}
-							</View>
-
-							<Divider style={styles.divider} />
-
-							{/* ── 内嵌歌词开关 ── */}
-							<View style={styles.switchRow}>
-								<View style={styles.switchLabel}>
-									<Text variant='labelLarge'>内嵌歌词</Text>
-								</View>
-								<Switch
-									value={embedLyrics}
-									onValueChange={setEmbedLyrics}
-								/>
-							</View>
-							<HelperText
-								type='info'
-								visible
-								style={styles.helperText}
-							>
-								只有在播放器「歌词」页面加载过歌词的曲目才会包含内嵌歌词——歌词在播放时加载并缓存到本地，未打开过歌词页面的曲目将不含内嵌歌词。
-							</HelperText>
-
-							{/* ── SPL → LRC 开关（仅 embedLyrics 开启时显示）── */}
-							{embedLyrics && (
-								<>
-									<Divider style={styles.divider} />
-									<View style={styles.switchRow}>
-										<View style={styles.switchLabel}>
-											<Text variant='labelLarge'>转换为标准 LRC</Text>
-										</View>
-										<Switch
-											value={convertToLrc}
-											onValueChange={setConvertToLrc}
-										/>
-									</View>
-									<HelperText
-										type='info'
-										visible
-										style={styles.helperText}
-									>
-										BBPlayer 歌词遵循 SPL 规范（LRC
-										超集），支持逐字时间戳（卡拉OK高亮效果）。但大多数播放器（除椒盐音乐外，因为这个规范就来自椒盐音乐）无法识别
-										SPL 逐字语法，开启后将转换为所有播放器均可读取的标准
-										LRC（逐字信息将被移除）。
-									</HelperText>
-								</>
-							)}
-						</ScrollView>
-					</Dialog.ScrollArea>
-					<Dialog.Actions>
-						<Button onPress={() => close('ExportDownloadsProgress')}>
-							取消
-						</Button>
-						<Button
-							mode='contained'
-							onPress={startExport}
-						>
-							开始导出
-						</Button>
-					</Dialog.Actions>
-				</>
-			)
-		}
+		const stageTitle =
+			stage === 'config'
+				? '导出设置'
+				: stage === 'completed'
+					? '导出完成'
+					: stage === 'error'
+						? '导出失败'
+						: '正在批量导出歌曲'
 
 		return (
-			<>
-				<Dialog.Title>
-					{stage === 'completed'
-						? '导出完成'
-						: stage === 'error'
-							? '导出失败'
-							: '正在批量导出歌曲'}
-				</Dialog.Title>
-				<Dialog.Content>
-					<View style={styles.progressContent}>
+			<TrueSheet
+				ref={sheetRef}
+				detents={[0.75]}
+				cornerRadius={24}
+				backgroundColor={colors.elevation.level1}
+				scrollable
+				dismissible={stage === 'config' || isFinished}
+				onDidDismiss={() => {
+					setProgress({
+						current: 0,
+						total: ids.length,
+						failed: 0,
+						stage: 'config',
+						message: '准备导出...',
+					})
+					hasStarted.current = false
+					setFilenamePattern('{name}')
+					setEmbedLyrics(false)
+					setConvertToLrc(false)
+				}}
+			>
+				<GestureHandlerRootView style={{ flex: 1 }}>
+					<View style={styles.sheetHeader}>
 						<Text
-							variant='bodyMedium'
-							style={styles.message}
-							numberOfLines={2}
+							variant='titleLarge'
+							style={styles.sheetTitle}
 						>
-							{progress.message}
+							{stageTitle}
 						</Text>
-						<ProgressBar
-							progress={isFinished ? 1 : progressValue}
-							indeterminate={!isFinished && progressValue === undefined}
-							style={styles.progressBar}
-						/>
 					</View>
-				</Dialog.Content>
-				<Dialog.Actions>
-					<Button
-						onPress={() => close('ExportDownloadsProgress')}
-						disabled={!isFinished}
+					<ScrollView
+						style={{ flex: 1 }}
+						contentContainerStyle={[
+							styles.sheetContent,
+							{ paddingBottom: insets.bottom + 16 },
+						]}
+						nestedScrollEnabled
 					>
-						{isFinished ? '关闭' : '请稍候'}
-					</Button>
-				</Dialog.Actions>
-			</>
+						{stage === 'config' ? (
+							<>
+								{/* ── 文件名模板 ── */}
+								<Text
+									variant='labelLarge'
+									style={styles.sectionTitle}
+								>
+									文件名模板
+								</Text>
+								<TextInput
+									label='文件名模板'
+									value={filenamePattern}
+									onChangeText={setFilenamePattern}
+									mode='outlined'
+									placeholder='{name}'
+									autoCapitalize='none'
+									autoCorrect={false}
+									dense
+								/>
+								<HelperText
+									type={
+										!filenamePattern.trim() ||
+										patternHasVariable(filenamePattern)
+											? 'info'
+											: 'error'
+									}
+									visible
+									style={styles.helperText}
+								>
+									{!filenamePattern.trim()
+										? '为空时使用默认模板 {name}'
+										: patternHasVariable(filenamePattern)
+											? `预览：${buildPreviewFilename(filenamePattern)}`
+											: '模板中未包含任何变量，将自动替换为 {name}'}
+								</HelperText>
+								{/* 可用变量说明 */}
+								<View style={styles.variableBox}>
+									<Text
+										variant='labelSmall'
+										style={styles.variableTitle}
+									>
+										可用变量
+									</Text>
+									{[
+										['id', '曲目唯一 ID'],
+										['name', '曲目标题'],
+										['artist', '艺术家'],
+										['bvid', 'B 站 BV 号'],
+										['cid', 'B 站 CID（如果不是分 P 视频则为空）'],
+									].map(([v, desc]) => (
+										<Text
+											key={v}
+											variant='bodySmall'
+											style={styles.variableRow}
+										>
+											<Text style={styles.variableTag}>{`{${v}}`}</Text>
+											{'  '}
+											{desc}
+										</Text>
+									))}
+								</View>
+
+								<Divider style={styles.divider} />
+
+								{/* ── 内嵌歌词开关 ── */}
+								<View style={styles.switchRow}>
+									<View style={styles.switchLabel}>
+										<Text variant='labelLarge'>内嵌歌词</Text>
+									</View>
+									<Switch
+										value={embedLyrics}
+										onValueChange={setEmbedLyrics}
+									/>
+								</View>
+								<HelperText
+									type='info'
+									visible
+									style={styles.helperText}
+								>
+									只有在播放器「歌词」页面加载过歌词的曲目才会包含内嵌歌词——歌词在播放时加载并缓存到本地，未打开过歌词页面的曲目将不含内嵌歌词。
+								</HelperText>
+
+								{/* ── SPL → LRC 开关（仅 embedLyrics 开启时显示）── */}
+								{embedLyrics && (
+									<>
+										<Divider style={styles.divider} />
+										<View style={styles.switchRow}>
+											<View style={styles.switchLabel}>
+												<Text variant='labelLarge'>转换为标准 LRC</Text>
+											</View>
+											<Switch
+												value={convertToLrc}
+												onValueChange={setConvertToLrc}
+											/>
+										</View>
+										<HelperText
+											type='info'
+											visible
+											style={styles.helperText}
+										>
+											BBPlayer 歌词遵循 SPL 规范（LRC
+											超集），支持逐字时间戳（卡拉OK高亮效果）。但大多数播放器（除椒盐音乐外，因为这个规范就来自椒盐音乐）无法识别
+											SPL 逐字语法，开启后将转换为所有播放器均可读取的标准
+											LRC（逐字信息将被移除）。
+										</HelperText>
+									</>
+								)}
+
+								<Divider style={styles.divider} />
+
+								{/* ── 裁剪封面开关 ── */}
+								<View style={styles.switchRow}>
+									<View style={styles.switchLabel}>
+										<Text variant='labelLarge'>裁剪封面为正方形</Text>
+									</View>
+									<Switch
+										value={cropCoverArt}
+										onValueChange={setCropCoverArt}
+									/>
+								</View>
+								<HelperText
+									type='info'
+									visible
+									style={styles.helperText}
+								>
+									Bilibili 封面通常为 16:9，开启后将按中心裁剪为 1:1
+									方形，符合主流音乐播放器的封面规范。
+								</HelperText>
+
+								<Divider style={styles.divider} />
+
+								<View style={styles.actionRow}>
+									<Button onPress={dismiss}>取消</Button>
+									<Button
+										mode='contained'
+										onPress={startExport}
+									>
+										开始导出
+									</Button>
+								</View>
+							</>
+						) : (
+							<>
+								<View style={styles.progressContent}>
+									<Text
+										variant='bodyMedium'
+										style={styles.message}
+										numberOfLines={2}
+									>
+										{progress.message}
+									</Text>
+									<ProgressBar
+										progress={isFinished ? 1 : progressValue}
+										indeterminate={!isFinished && progressValue === undefined}
+										style={styles.progressBar}
+									/>
+								</View>
+
+								<View style={styles.actionRow}>
+									<Button
+										onPress={dismiss}
+										disabled={!isFinished}
+									>
+										{isFinished ? '关闭' : '请稍候'}
+									</Button>
+								</View>
+							</>
+						)}
+					</ScrollView>
+				</GestureHandlerRootView>
+			</TrueSheet>
 		)
 	},
 )
@@ -302,16 +386,18 @@ const ExportDownloadsProgressModal = memo(
 ExportDownloadsProgressModal.displayName = 'ExportDownloadsProgressModal'
 
 const styles = StyleSheet.create({
-	scrollArea: {
-		paddingHorizontal: 0,
-	},
-	scrollViewContent: {
-		maxHeight: 480,
-	},
-	configContent: {
+	sheetContent: {
 		paddingHorizontal: 24,
-		paddingVertical: 8,
+		paddingTop: 8,
 		gap: 2,
+	},
+	sheetHeader: {
+		paddingHorizontal: 24,
+		paddingTop: 26,
+		paddingBottom: 16,
+	},
+	sheetTitle: {
+		fontWeight: '700',
 	},
 	sectionTitle: {
 		marginBottom: 6,
@@ -352,6 +438,12 @@ const styles = StyleSheet.create({
 	switchLabel: {
 		flex: 1,
 		paddingRight: 8,
+	},
+	actionRow: {
+		flexDirection: 'row',
+		justifyContent: 'flex-end',
+		gap: 8,
+		marginTop: 8,
 	},
 	progressContent: {
 		gap: 15,
