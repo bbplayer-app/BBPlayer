@@ -171,6 +171,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 						usesCleartextTraffic: true,
 						enableMinifyInReleaseBuilds: true,
 						enableShrinkResourcesInReleaseBuilds: true,
+						minSdkVersion: 26,
 						packagingOptions: {
 							pickFirst: ['lib/*/libNitroModules.so'],
 						},
@@ -203,6 +204,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 -keep,allowoptimization,allowshrinking,allowobfuscation class <3>
 -keep,allowoptimization,allowshrinking,allowobfuscation class retrofit2.Response
 # --- 来自 retrofit2.pro ---
+# --- 来自 SuperLyricApi ---
+-keep class com.hchen.superlyricapi.* {*;}
+# --- 来自 SuperLyricApi ---
 					`,
 					},
 					ios: {

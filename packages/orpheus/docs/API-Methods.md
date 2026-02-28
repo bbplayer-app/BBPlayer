@@ -143,7 +143,10 @@ Orpheus 使用 Media3 DownloadManager。
   权限检查与请求。
 
 - **`setDesktopLyrics(json: string)`**
-  更新歌词内容。
+  更新桌面悬浮窗歌词内容。
+
+- **`setStatusBarLyrics(json: string)`**
+  更新状态栏歌词内容（需要系统支持及相关模块）。
 
 ## 频谱数据 (Spectrum)
 

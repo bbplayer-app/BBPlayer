@@ -5,7 +5,7 @@ import { analyticsService } from './src/lib/services/analyticsService'
 import log, { reportErrorToSentry } from './src/utils/log'
 import {
 	finalizeAndRecordCurrentTrack,
-	setDesktopLyrics,
+	pushLyricsToOverlays,
 } from './src/utils/player'
 import toast from './src/utils/toast'
 
@@ -98,7 +98,7 @@ registerOrpheusHeadlessTask(async (event) => {
 	if (event.eventName === 'onTrackStarted') {
 		lastResumedTime = Date.now()
 		totalPlayedTime = 0
-		setDesktopLyrics(event.trackId, event.reason)
+		pushLyricsToOverlays(event.trackId, event.reason)
 	} else if (event.eventName === 'onTrackResumed') {
 		lastResumedTime = Date.now()
 	} else if (event.eventName === 'onTrackPaused') {

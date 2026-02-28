@@ -50,10 +50,25 @@ BBPlayer 内部采用 **SPL (Salt Player Lyirc)** 格式作为歌词存储与交
 
 ## 桌面歌词 (Android) {#desktop-lyrics}
 
-在 **设置 -> 播放设置** 中开启。
+在 **设置 -> 歌词设置** 中开启。
 开启后，歌词会以悬浮窗的形式显示在屏幕最上层。你可以自由拖动位置，或者在设置中将其 **锁定** 以防止误触。
 
 你也可以点击歌词，在弹出面板中可以调整字体大小、颜色，以及控制歌曲播放及上一曲下一曲。
 
 > [!IMPORTANT]
 > 启用桌面歌词需要授予「悬浮窗」权限。首次开启时，应用会引导你前往系统设置页面进行授权。
+
+## 状态栏歌词 (Status Bar Lyric) {#status-bar-lyric}
+
+BBPlayer 支持通过 Xposed 插件在系统状态栏显示当前播放的歌词。
+
+### 安装与配置
+
+1. **环境准备**：确保你的设备已安装 **Xposed** 或 **LSPosed** 环境。
+2. **下载并安装 SuperLyric**：前往 [HChenX/SuperLyric](https://github.com/HChenX/SuperLyric) 下载并安装最新版插件。
+3. **配置作用域**：在 LSPosed/Xposed 模块的作用域设置中勾选 **BBPlayer**，然后重启设备以使插件生效。
+4. **下载并安装状态栏歌词容器**：前往 [Block-Network/StatusBarLyric](https://github.com/Block-Network/StatusBarLyric) 下载并安装最新版应用，并按照其说明完成相关配置。
+5. **开启功能**：打开 BBPlayer，进入 **设置 -> 歌词设置** 页面，找到并启动 **状态栏歌词** 即可。
+
+> [!IMPORTANT]
+> 该功能目前仍处于实验阶段，可能存在兼容性问题或 Bug。如果你在安装或使用过程中发现无法正常显示，欢迎在 GitHub 上提交 [Issue](https://github.com/Block-Network/BBPlayer/issues) 反馈给我们。
