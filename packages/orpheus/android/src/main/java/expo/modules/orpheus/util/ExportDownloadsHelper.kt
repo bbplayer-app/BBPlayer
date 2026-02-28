@@ -192,25 +192,31 @@ private fun writeMetadata(
         // 封面
         val coverFile = CoverDownloadManager.getCoverFile(context, id)
         if (coverFile != null && coverFile.exists()) {
-            val artwork = if (options.cropCoverArt) {
-                // 使用 Glide 加载并 centerCrop 裁剪为正方形，
-                // 能正确处理 WebP / HEIF 等各种格式及 EXIF 旋转。
-                val squareBitmap = Glide.with(context)
-                    .asBitmap()
-                    .load(coverFile)
-                    .apply(RequestOptions().transform(CenterCrop()))
-                    .submit(1200, 1200)
-                    .get()
-                val tmpFile = File(context.cacheDir, "${id}_cover_sq.jpg")
-                tmpFile.outputStream().use {
-                    squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+            try {
+                val artwork = if (options.cropCoverArt) {
+                    // 使用 Glide 加载并 centerCrop 裁剪为正方形，
+                    // 能正确处理 WebP / HEIF 等各种格式及 EXIF 旋转。
+                    val squareBitmap = Glide.with(context)
+                        .asBitmap()
+                        .load(coverFile)
+                        .apply(RequestOptions().transform(CenterCrop()))
+                        .submit(1200, 1200)
+                        .get()
+                    val tmpFile = File(context.cacheDir, "${id}_cover_sq.jpg")
+                    tmpFile.outputStream().use {
+                        squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                    }
+                    squareBitmap.recycle()
+                    ArtworkFactory.createArtworkFromFile(tmpFile)
+                } else {
+                    ArtworkFactory.createArtworkFromFile(coverFile)
                 }
-                squareBitmap.recycle()
-                ArtworkFactory.createArtworkFromFile(tmpFile)
-            } else {
-                ArtworkFactory.createArtworkFromFile(coverFile)
+                tag.setField(artwork)
+            } catch (e: Exception) {
+                Log.w("OrpheusExport", "Cover embed skipped for $id: ${e.message}")
             }
-            tag.setField(artwork)
+        } else {
+            Log.w("OrpheusExport", "Cover file not found for $id, skipping artwork embed")
         }
 
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）

@@ -1,6 +1,7 @@
 package expo.modules.orpheus
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Handler
@@ -64,6 +65,10 @@ class ExpoOrpheusModule : Module() {
     private var tempBuffer: FloatArray? = null
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // applicationContext 在 OnCreate 时缓存，生命周期与 Application 一致，
+    // 不受 React Native 组件卸载导致 reactContext 变 null 的影响。
+    private var cachedAppContext: Context? = null
 
     private lateinit var directoryPickerLauncher: AppContextActivityResultLauncher<String, String?>
 
@@ -187,6 +192,7 @@ class ExpoOrpheusModule : Module() {
 
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
+            cachedAppContext = context.applicationContext
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
@@ -881,7 +887,9 @@ class ExpoOrpheusModule : Module() {
 
             // 歌曲下载完成后，异步下载封面
             if (download.state == Download.STATE_COMPLETED && download.request.data.isNotEmpty()) {
-                val context = appContext.reactContext ?: return
+                // 封面下载只需能访问文件系统的 Context，使用 OnCreate 时缓存的
+                // applicationContext，避免 reactContext 为 null 时封面静默跳过。
+                val context = cachedAppContext ?: appContext.reactContext ?: return
                 try {
                     val track = json.decodeFromString<TrackRecord>(
                         String(download.request.data)
