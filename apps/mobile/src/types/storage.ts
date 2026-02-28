@@ -20,6 +20,7 @@ export interface AppStorageSchema {
 	sort_key_migrated_v1: boolean
 	sort_key_migrated_v2: boolean
 	bbplayer_jwt: string
+	sort_key_migrated_v3: boolean
 }
 
 export type StorageKey = keyof AppStorageSchema

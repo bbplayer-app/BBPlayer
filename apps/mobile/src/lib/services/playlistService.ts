@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
-import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
@@ -483,10 +483,8 @@ export class PlaylistService {
 						}),
 				)
 				if (!type) throw createPlaylistNotFound(playlistId)
-				const orderBy =
-					type.type === 'local'
-						? desc(schema.playlistTracks.sortKey)
-						: asc(schema.playlistTracks.sortKey)
+				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
+				const orderBy = desc(schema.playlistTracks.sortKey)
 
 				return Sentry.startSpan(
 					{ name: 'db:query:playlistTracks', op: 'db' },
@@ -683,17 +681,19 @@ export class PlaylistService {
 				)
 
 				if (trackIds.length > 0) {
-					// 为每个 trackId 生成升序 sort_key
+					// 倒序生成 sort_key：trackIds[0]（排列首位）获得最大的 sort_key
+					// 与 local playlist 约定一致：位置越靠前 sort_key 越大，查询时统一使用 DESC
 					let prevKey: string | null = null
-					const newPlaylistTracks = trackIds.map((id) => {
-						const sortKey = generateKeyBetween(prevKey, null)
-						prevKey = sortKey
-						return {
-							playlistId: playlistId,
-							trackId: id,
-							sortKey,
-						}
-					})
+					const sortKeys: string[] = new Array(trackIds.length)
+					for (let i = trackIds.length - 1; i >= 0; i--) {
+						sortKeys[i] = generateKeyBetween(prevKey, null)
+						prevKey = sortKeys[i]!
+					}
+					const newPlaylistTracks = trackIds.map((id, i) => ({
+						playlistId: playlistId,
+						trackId: id,
+						sortKey: sortKeys[i],
+					}))
 					await Sentry.startSpan(
 						{ name: 'db:insert:playlistTracks', op: 'db' },
 						() =>
@@ -916,7 +916,7 @@ export class PlaylistService {
 									},
 								},
 							},
-							orderBy: asc(schema.playlistTracks.sortKey),
+							orderBy: desc(schema.playlistTracks.sortKey),
 						}),
 				)
 
@@ -989,9 +989,9 @@ export class PlaylistService {
 				)
 				if (!playlist) throw createPlaylistNotFound(playlistId)
 
-				const isDesc = playlist.type === 'local'
-				const sortDirection = isDesc ? desc : asc
-				const operator = isDesc ? lt : gt
+				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
+				const sortDirection = desc
+				const operator = lt
 
 				const orderBy = [
 					sortDirection(schema.playlistTracks.sortKey),
