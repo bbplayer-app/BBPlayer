@@ -62,10 +62,8 @@ class OrpheusMusicService : MediaLibraryService() {
                     val seconds = p.currentPosition / 1000.0
                     floatingLyricsManager.updateTime(seconds)
                     statusBarLyricsManager.updateTime(seconds)
-                } else {
-                    android.util.Log.v("StatusBarLyrics", "[Runnable] player not playing, state=${player?.playbackState}")
                 }
-            } ?: android.util.Log.w("StatusBarLyrics", "[Runnable] player is null")
+            }
             serviceHandler.postDelayed(this, 200)
         }
     }
