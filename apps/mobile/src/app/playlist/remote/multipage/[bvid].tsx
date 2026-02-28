@@ -266,9 +266,10 @@ export default function MultipagePage() {
 						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {
+								const trackMap = new Map(tracksData.map((t) => [t.id, t]))
 								const payloads = []
 								for (const id of selected) {
-									const track = tracksData.find((t) => t.id === id)
+									const track = trackMap.get(id)
 									if (track) {
 										payloads.push({
 											track: track as Track,

@@ -105,15 +105,18 @@ private suspend fun exportSingleItem(
         tempM4a = File(context.cacheDir, "$id.m4a")
         if (tempM4a.exists()) tempM4a.delete()
         val dataSpec = DataSpec(download.request.uri)
-        dataSource.open(dataSpec)
-        tempM4a.outputStream().use { outputStream ->
-            val buffer = ByteArray(64 * 1024)
-            var bytesRead: Int
-            while (dataSource.read(buffer, 0, buffer.size).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
+        try {
+            dataSource.open(dataSpec)
+            tempM4a.outputStream().use { outputStream ->
+                val buffer = ByteArray(64 * 1024)
+                var bytesRead: Int
+                while (dataSource.read(buffer, 0, buffer.size).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                }
             }
+        } finally {
+            dataSource.close()
         }
-        dataSource.close()
 
         // 2. 提前解码 TrackRecord（用于文件名，不依赖元数据写入是否成功）
         val track: TrackRecord? = download.request.data
@@ -136,7 +139,9 @@ private suspend fun exportSingleItem(
         if (newFile != null) {
             context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
                 tempM4a.inputStream().use { it.copyTo(outputStream) }
-            }
+            } ?: throw Exception("Failed to open output stream for $fileName")
+        } else {
+            throw Exception("Failed to create file $fileName in destination")
         }
 
         sendEvent(
@@ -153,16 +158,14 @@ private suspend fun exportSingleItem(
         sendEvent(
             "onExportProgress", mapOf(
                 "currentId" to id,
+                "index" to index + 1,
+                "total" to totalFiles,
                 "status" to "error",
                 "message" to e.message,
             )
         )
     } finally {
         tempM4a?.delete()
-        try {
-            dataSource.close()
-        } catch (_: Exception) {
-        }
     }
 }
 
@@ -203,11 +206,15 @@ private fun writeMetadata(
                         .submit(1200, 1200)
                         .get()
                     val tmpFile = File(context.cacheDir, "${id}_cover_sq.jpg")
-                    tmpFile.outputStream().use {
-                        squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                    try {
+                        tmpFile.outputStream().use {
+                            squareBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                        }
+                        squareBitmap.recycle()
+                        ArtworkFactory.createArtworkFromFile(tmpFile)
+                    } finally {
+                        tmpFile.delete()
                     }
-                    squareBitmap.recycle()
-                    ArtworkFactory.createArtworkFromFile(tmpFile)
                 } else {
                     ArtworkFactory.createArtworkFromFile(coverFile)
                 }
@@ -221,7 +228,7 @@ private fun writeMetadata(
 
         // 歌词（仅在已缓存且 embedLyrics=true 时写入）
         if (options.embedLyrics) {
-            writeLyrics(id, tempM4a, tag, options.convertToLrc, context, json)
+            writeLyrics(id, tag, options.convertToLrc, context, json)
         }
 
         audioFile.commit()
@@ -236,7 +243,6 @@ private fun writeMetadata(
 
 private fun writeLyrics(
     id: String,
-    tempM4a: File,
     tag: org.jaudiotagger.tag.Tag,
     convertToLrc: Boolean,
     context: Context,

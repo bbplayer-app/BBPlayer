@@ -81,11 +81,11 @@ const ExportDownloadsProgressModal = memo(
 			message: '准备导出...',
 		})
 		const hasStarted = useRef(false)
+		const subscriptionRef = useRef<{ remove(): void } | null>(null)
 
 		const stage = progress.stage
 
 		// Reset internal state whenever a new export session begins (ids / destination changed)
-		const idsKey = ids.join(',')
 		useEffect(() => {
 			setFilenamePattern('{name}')
 			setEmbedLyrics(false)
@@ -93,13 +93,18 @@ const ExportDownloadsProgressModal = memo(
 			setCropCoverArt(false)
 			setProgress({
 				current: 0,
-				total: idsKey.split(',').filter(Boolean).length,
+				total: ids.length,
 				failed: 0,
 				stage: 'config',
 				message: '准备导出...',
 			})
 			hasStarted.current = false
-		}, [idsKey, destinationUri])
+
+			return () => {
+				subscriptionRef.current?.remove()
+				subscriptionRef.current = null
+			}
+		}, [ids, destinationUri])
 
 		function startExport() {
 			if (hasStarted.current) return
@@ -107,33 +112,45 @@ const ExportDownloadsProgressModal = memo(
 
 			setProgress((prev) => ({ ...prev, stage: 'exporting' }))
 
-			const subscription = Orpheus.addListener('onExportProgress', (event) => {
-				setProgress((prev) => {
-					const failed = prev.failed + (event.status === 'error' ? 1 : 0)
-					const current = event.index ?? prev.current
-					const total = event.total ?? prev.total
-					const isLast = current === total
+			subscriptionRef.current = Orpheus.addListener(
+				'onExportProgress',
+				(event) => {
+					setProgress((prev) => {
+						const failed = prev.failed + (event.status === 'error' ? 1 : 0)
+						const current = event.index ?? prev.current
+						const total = event.total ?? prev.total
+						const isLast = current === total
 
-					let message = `正在导出 ${current}/${total}...`
-					if (event.status === 'error') {
-						message = `导出 ${event.currentId} 失败: ${event.message ?? '未知错误'}`
-					}
+						let message = `正在导出 ${current}/${total}...`
+						if (event.status === 'error') {
+							message = `导出 ${event.currentId} 失败: ${event.message ?? '未知错误'}`
+						}
 
-					return {
-						current,
-						total,
-						failed,
-						stage: isLast ? 'completed' : 'exporting',
-						message: isLast
-							? failed > 0
-								? `导出完成，${total - failed} 个成功，${failed} 个失败`
-								: `全部 ${total} 个曲目已成功导出`
-							: message,
-					}
-				})
-			})
+						if (isLast) {
+							subscriptionRef.current?.remove()
+							subscriptionRef.current = null
+						}
 
-			const effectivePattern = filenamePattern.trim() || '{name}'
+						return {
+							current,
+							total,
+							failed,
+							stage: isLast ? 'completed' : 'exporting',
+							message: isLast
+								? failed > 0
+									? `导出完成，${total - failed} 个成功，${failed} 个失败`
+									: `全部 ${total} 个曲目已成功导出`
+								: message,
+						}
+					})
+				},
+			)
+
+			let effectivePattern = filenamePattern.trim() || '{name}'
+			if (!patternHasVariable(effectivePattern)) {
+				effectivePattern = '{name}'
+			}
+
 			Orpheus.exportDownloads(
 				ids,
 				destinationUri,
@@ -148,11 +165,14 @@ const ExportDownloadsProgressModal = memo(
 					stage: 'error',
 					message: '启动导出任务失败',
 				}))
-				subscription.remove()
+				subscriptionRef.current?.remove()
+				subscriptionRef.current = null
 			})
 		}
 
 		function dismiss() {
+			subscriptionRef.current?.remove()
+			subscriptionRef.current = null
 			void sheetRef.current?.dismiss()
 		}
 
@@ -189,6 +209,9 @@ const ExportDownloadsProgressModal = memo(
 					setFilenamePattern('{name}')
 					setEmbedLyrics(false)
 					setConvertToLrc(false)
+					setCropCoverArt(false)
+					subscriptionRef.current?.remove()
+					subscriptionRef.current = null
 				}}
 			>
 				<GestureHandlerRootView style={{ flex: 1 }}>

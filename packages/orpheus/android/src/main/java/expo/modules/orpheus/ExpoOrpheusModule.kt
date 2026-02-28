@@ -719,7 +719,13 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean, cropCoverArt: Boolean ->
-            val context = appContext.reactContext ?: return@AsyncFunction
+            val context = appContext.reactContext ?: run {
+                sendEvent("onExportProgress", mapOf(
+                    "status" to "error",
+                    "message" to "React context is null"
+                ))
+                return@AsyncFunction
+            }
             runExportDownloads(
                 ids = ids,
                 destinationUri = destinationUri,

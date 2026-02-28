@@ -307,7 +307,7 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	exportDownloads(
 		ids: string[],
 		destinationUri: string,
-		filenamePattern: string,
+		filenamePattern: string | null,
 		embedLyrics: boolean,
 		convertToLrc: boolean,
 		cropCoverArt: boolean,

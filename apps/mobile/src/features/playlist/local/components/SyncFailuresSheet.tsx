@@ -18,7 +18,7 @@ import toast from '@/utils/toast'
 
 const SCOPE = 'SyncFailuresSheet'
 
-const OPERATION_INFO: Record<string, { label: string; icon: string }> = {
+const OPERATION_INFO = {
 	add_tracks: { label: '添加曲目', icon: 'plus-circle-outline' },
 	remove_tracks: { label: '删除曲目', icon: 'minus-circle-outline' },
 	reorder_track: { label: '重新排序', icon: 'swap-vertical' },
@@ -26,62 +26,29 @@ const OPERATION_INFO: Record<string, { label: string; icon: string }> = {
 }
 
 // DEV ONLY: 假数据，用于直接预览 Sheet 样式，不写数据库
+const createMockRow = (
+	id: number,
+	operation: keyof typeof OPERATION_INFO,
+	payload: object,
+	timeOffset: number,
+): typeof schema.playlistSyncQueue.$inferSelect => ({
+	id,
+	playlistId: 1,
+	operation,
+	payload,
+	status: 'failed',
+	operationAt: new Date(Date.now() - timeOffset),
+	createdAt: new Date(Date.now() - timeOffset),
+})
+
 const DEV_MOCK_ROWS: (typeof schema.playlistSyncQueue.$inferSelect)[] = __DEV__
 	? [
-			{
-				id: 1,
-				playlistId: 1,
-				operation: 'add_tracks',
-				payload: { trackIds: [1, 2, 3] },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 3600000),
-				createdAt: new Date(Date.now() - 3600000),
-			},
-			{
-				id: 2,
-				playlistId: 1,
-				operation: 'remove_tracks',
-				payload: { removedTrackIds: [4, 5] },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 1800000),
-				createdAt: new Date(Date.now() - 1800000),
-			},
-			{
-				id: 3,
-				playlistId: 1,
-				operation: 'update_metadata',
-				payload: { title: '测试歌单' },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 300000),
-				createdAt: new Date(Date.now() - 300000),
-			},
-			{
-				id: 4,
-				playlistId: 1,
-				operation: 'update_metadata',
-				payload: { title: '测试歌单' },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 300000),
-				createdAt: new Date(Date.now() - 300000),
-			},
-			{
-				id: 5,
-				playlistId: 1,
-				operation: 'update_metadata',
-				payload: { title: '测试歌单' },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 300000),
-				createdAt: new Date(Date.now() - 300000),
-			},
-			{
-				id: 6,
-				playlistId: 1,
-				operation: 'update_metadata',
-				payload: { title: '测试歌单' },
-				status: 'failed',
-				operationAt: new Date(Date.now() - 300000),
-				createdAt: new Date(Date.now() - 300000),
-			},
+			createMockRow(1, 'add_tracks', { trackIds: [1, 2, 3] }, 3600000),
+			createMockRow(2, 'remove_tracks', { removedTrackIds: [4, 5] }, 1800000),
+			createMockRow(3, 'update_metadata', { title: '测试歌单' }, 300000),
+			createMockRow(4, 'update_metadata', { title: '测试歌单' }, 300000),
+			createMockRow(5, 'update_metadata', { title: '测试歌单' }, 300000),
+			createMockRow(6, 'update_metadata', { title: '测试歌单' }, 300000),
 		]
 	: []
 
@@ -148,7 +115,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 			}
 		}
 
-		const getOperationInfo = (op: string) =>
+		const getOperationInfo = (op: keyof typeof OPERATION_INFO) =>
 			OPERATION_INFO[op] ?? { label: op, icon: 'help-circle-outline' }
 
 		return (

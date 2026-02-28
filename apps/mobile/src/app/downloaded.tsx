@@ -9,7 +9,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { StyleSheet, ToastAndroid, View } from 'react-native'
+import { StyleSheet, ToastAndroid, View, Platform, Alert } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
@@ -247,7 +247,6 @@ export default function DownloadedPage() {
 
 	const removeDownloadsMutation = useRemoveDownloadsMutation()
 
-	// ── Item context menu ──────────────────────────────────────
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
 		id: string | null
@@ -269,6 +268,12 @@ export default function DownloadedPage() {
 		dismissItemMenu()
 		const id = menuState.id
 		if (!id) return
+
+		if (Platform.OS !== 'android') {
+			Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
+			return
+		}
+
 		ToastAndroid.showWithGravity(
 			'请选择需要导出到的目录',
 			ToastAndroid.SHORT,
@@ -311,13 +316,24 @@ export default function DownloadedPage() {
 	}, [dismissItemMenu, menuState.id, completedTasks])
 
 	const handleExport = async () => {
-		const idsToExport = Array.from(selected)
+		const idsToExport =
+			selected.size > 0 ? Array.from(selected) : completedTasks.map((t) => t.id)
+
 		if (idsToExport.length === 0) {
-			ToastAndroid.showWithGravity(
-				'请先选择需要导出的歌曲',
-				ToastAndroid.SHORT,
-				ToastAndroid.BOTTOM,
-			)
+			if (Platform.OS === 'android') {
+				ToastAndroid.showWithGravity(
+					'没有可导出的歌曲',
+					ToastAndroid.SHORT,
+					ToastAndroid.BOTTOM,
+				)
+			} else {
+				Alert.alert('提示', '没有可导出的歌曲')
+			}
+			return
+		}
+
+		if (Platform.OS !== 'android') {
+			Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
 			return
 		}
 
@@ -330,7 +346,9 @@ export default function DownloadedPage() {
 		if (directoryUri) {
 			setExportConfig({ ids: idsToExport, destinationUri: directoryUri })
 			void exportSheetRef.current?.present()
-			exitSelectMode()
+			if (selectMode) {
+				exitSelectMode()
+			}
 		}
 	}
 

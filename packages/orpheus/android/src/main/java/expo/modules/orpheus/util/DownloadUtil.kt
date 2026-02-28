@@ -106,7 +106,7 @@ object DownloadUtil {
             .setCache(cache)
             .setUpstreamDataSourceFactory(null) // No upstream, only cache
             .setCacheReadDataSourceFactory(androidx.media3.datasource.FileDataSource.Factory())
-            .setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            .setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE)
             .createDataSource()
     }
 

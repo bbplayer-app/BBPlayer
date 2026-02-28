@@ -25,7 +25,12 @@ object SplConverter {
      *   - `[mm:ss.ms]` —— 标准 SPL 逐字标记
      *   - `<mm:ss.ms>` —— SPL 兼容逐字标记
      */
-    private val INLINE_TIMESTAMP_REGEX = Regex("[<\\[]\\d{1,3}:\\d{1,2}\\.\\d{1,6}[>\\]]")
+    private val INLINE_TIMESTAMP_REGEX = Regex("(?:\\[\\d{1,3}:\\d{1,2}\\.\\d{1,6}\\])|(?:<\\d{1,3}:\\d{1,2}\\.\\d{1,6}>)")
+
+    /**
+     * 元数据行 / 空行中的逐字时间戳正则，避免分配。
+     */
+    private val METADATA_TIMESTAMP_REGEX = Regex("<\\d{1,3}:\\d{1,2}\\.\\d{1,6}>")
 
     /**
      * 将 SPL 内容转换为标准 LRC：
@@ -40,7 +45,7 @@ object SplConverter {
                 leadingMatch.value + INLINE_TIMESTAMP_REGEX.replace(body, "")
             } else {
                 // 元数据行 / 空行：仅剥除 <...> 形式（不会误伤 [ti:Title] 等元数据标签）
-                Regex("<\\d{1,3}:\\d{1,2}\\.\\d{1,6}>").replace(line, "")
+                METADATA_TIMESTAMP_REGEX.replace(line, "")
             }
         }
 }
