@@ -207,6 +207,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 # --- 来自 SuperLyricApi ---
 -keep class com.hchen.superlyricapi.* {*;}
 # --- 来自 SuperLyricApi ---
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn org.jaudiotagger.**
+-keep class org.jaudiotagger.** { *; }
 					`,
 					},
 					ios: {
