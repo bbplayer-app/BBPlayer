@@ -29,7 +29,7 @@ export default defineConfig({
 					{ text: '搜索', link: '/guides/search' },
 					{ text: '歌单', link: '/guides/playlist' },
 					{ text: '歌词', link: '/guides/lyrics' },
-					{ text: '下载', link: '/guides/download' },
+					{ text: '下载与导出', link: '/guides/download' },
 					{ text: '播放器功能', link: '/guides/player' },
 					{ text: '设置与个性化', link: '/guides/settings' },
 					{ text: '排行榜', link: '/guides/leaderboard' },

@@ -40,8 +40,8 @@ features:
     linkText: 深入了解
 
   - icon: ⬇️
-    title: 离线畅听
-    details: 支持缓存单曲或整个歌单，随时随地享受音频。
+    title: 下载与导出
+    details: 支持缓存单曲或整个歌单，并可导出为带封面与内嵌歌词的 m4a 文件，随时随地享受音频。
     link: /guides/download
     linkText: 深入了解
 
