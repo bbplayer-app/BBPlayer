@@ -1,5 +1,3 @@
-import { getShareExtensionKey } from 'expo-share-intent'
-
 import log from '@/utils/log'
 
 export function redirectSystemPath({
@@ -10,11 +8,6 @@ export function redirectSystemPath({
 	initial: boolean
 }) {
 	try {
-		const shareKey = getShareExtensionKey?.()
-		if (shareKey && path.includes(`dataUrl=${shareKey}`)) {
-			return '/(tabs)/index'
-		}
-
 		// 这里的 path 可能是一个完整的 URL，也可能是一个 path
 		let url: URL | null = null
 		try {
@@ -23,8 +16,8 @@ export function redirectSystemPath({
 			// ignore
 		}
 		if (url) {
-			if (url.protocol === 'bbplayer:') {
-				return `/${url.hostname}${url.pathname}${url.search}`
+			if (url.hostname === 'expo-sharing') {
+				return '/(tabs)'
 			}
 			if (url.hostname === 'notification.click') {
 				return '/player'
@@ -40,6 +33,9 @@ export function redirectSystemPath({
 				if (result) {
 					return result
 				}
+			}
+			if (url.protocol === 'bbplayer:') {
+				return `/${url.hostname}${url.pathname}${url.search}`
 			}
 		}
 		return path

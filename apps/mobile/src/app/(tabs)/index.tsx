@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useShareIntentContext } from 'expo-share-intent'
+import { useIncomingShare } from 'expo-sharing'
 import {
 	useCallback,
 	useDeferredValue,
@@ -11,10 +11,22 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
+import {
+	Keyboard,
+	Platform,
+	StyleSheet,
+	ToastAndroid,
+	View,
+} from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
-import { Chip, Searchbar, Text, useTheme } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Chip,
+	Searchbar,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -62,8 +74,8 @@ function HomePage() {
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
-	const { hasShareIntent, shareIntent, resetShareIntent } =
-		useShareIntentContext()
+	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
+		useIncomingShare()
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const searchBarRef = useAnimatedRef<View>()
@@ -159,16 +171,51 @@ function HomePage() {
 	}
 
 	useEffect(() => {
-		if (!hasShareIntent) return
-		const query = (shareIntent?.webUrl ?? shareIntent?.text ?? '').trim()
+		if (resolvedSharedPayloads.length === 0) return
+		if (resolvedSharedPayloads.length > 1) {
+			if (Platform.OS === 'android') {
+				ToastAndroid.show('收到多个共享内容，已忽略', ToastAndroid.SHORT)
+			} else {
+				alert(
+					'收到多个共享内容，已忽略',
+					'当前版本仅支持处理单个共享内容，已忽略其他内容',
+					[{ text: '确定' }],
+				)
+			}
+		}
+		const data = resolvedSharedPayloads[0]
+		let query: string | undefined
+		if (data.shareType === 'text') {
+			query = data.value
+		}
 		if (!query) {
-			resetShareIntent()
+			clearSharedPayloads()
 			return
 		}
 
-		resetShareIntent()
+		clearSharedPayloads()
 		void handleEnter(query)
-	}, [hasShareIntent, shareIntent, router, resetShareIntent, handleEnter])
+	}, [resolvedSharedPayloads, clearSharedPayloads, handleEnter])
+
+	if (isResolving) {
+		return (
+			<View
+				style={[
+					styles.container,
+					{
+						backgroundColor: colors.background,
+						justifyContent: 'center',
+						alignItems: 'center',
+					},
+				]}
+			>
+				<ActivityIndicator
+					size='large'
+					color={colors.primary}
+				/>
+			</View>
+		)
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>

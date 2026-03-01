@@ -3,7 +3,6 @@ import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
 import { useTanStackQueryDevTools } from '@rozenite/tanstack-query-plugin'
 import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ShareIntentProvider } from 'expo-share-intent'
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
@@ -45,34 +44,30 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 	useRequireProfilerDevTools()
 
 	return (
-		<ShareIntentProvider>
-			<SafeAreaProvider>
-				<KeyboardProvider>
-					<View style={styles.container}>
-						<Sentry.ErrorBoundary
-							// oxlint-disable-next-line @typescript-eslint/unbound-method
-							fallback={({ error, resetError }) => (
-								<GlobalErrorFallback
-									error={error}
-									resetError={resetError}
-								/>
-							)}
-						>
-							<GestureHandlerRootView style={styles.container}>
-								<QueryClientProvider client={queryClient}>
-									<PaperProvider theme={paperTheme}>
-										<ShimmerProvider duration={1500}>
-											{children}
-										</ShimmerProvider>
-									</PaperProvider>
-								</QueryClientProvider>
-							</GestureHandlerRootView>
-						</Sentry.ErrorBoundary>
-						<SystemBars style='auto' />
-					</View>
-				</KeyboardProvider>
-			</SafeAreaProvider>
-		</ShareIntentProvider>
+		<SafeAreaProvider>
+			<KeyboardProvider>
+				<View style={styles.container}>
+					<Sentry.ErrorBoundary
+						// oxlint-disable-next-line @typescript-eslint/unbound-method
+						fallback={({ error, resetError }) => (
+							<GlobalErrorFallback
+								error={error}
+								resetError={resetError}
+							/>
+						)}
+					>
+						<GestureHandlerRootView style={styles.container}>
+							<QueryClientProvider client={queryClient}>
+								<PaperProvider theme={paperTheme}>
+									<ShimmerProvider duration={1500}>{children}</ShimmerProvider>
+								</PaperProvider>
+							</QueryClientProvider>
+						</GestureHandlerRootView>
+					</Sentry.ErrorBoundary>
+					<SystemBars style='auto' />
+				</View>
+			</KeyboardProvider>
+		</SafeAreaProvider>
 	)
 }
 

@@ -211,6 +211,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 -dontwarn javax.imageio.**
 -dontwarn org.jaudiotagger.**
 -keep class org.jaudiotagger.** { *; }
+-keep class expo.modules.kotlin.services.FilePermissionService$** { *; }
+-keep class expo.modules.kotlin.services.FilePermissionService { *; }
 					`,
 					},
 					ios: {
@@ -241,13 +243,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			],
 			'expo-web-browser',
 			'expo-sqlite',
-			[
-				'expo-share-intent',
-				{
-					androidIntentFilters: ['text/*'],
-					disableIOS: true,
-				},
-			],
 			'expo-router',
 			'@rnrepo/expo-config-plugin',
 			[
@@ -259,6 +254,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 			],
 			'@react-native-firebase/app',
+			'expo-image',
+			[
+				'expo-sharing',
+				{
+					ios: {
+						enabled: false,
+					},
+					android: {
+						enabled: true,
+						singleShareMimeTypes: ['text/*'],
+						multipleShareMimeTypes: ['text/*'],
+					},
+				},
+			],
 		],
 		experiments: {
 			reactCompiler: true,
@@ -274,6 +283,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		owner: 'roitium',
 		updates: {
 			url: 'https://u.expo.dev/1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
+			enableBsdiffPatchSupport: true,
 		},
 		ios: {
 			bundleIdentifier: 'com.roitium.bbplayer',

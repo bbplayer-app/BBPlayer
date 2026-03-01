@@ -7,7 +7,7 @@
 	"versionGroups": [
 		{
 			"label": "Use apps/mobile versions for core dependencies",
-			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router"],
+			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router", "react-native-worklets"],
 			"packages": ["**"],
 			"snapTo": ["@bbplayer/mobile"]
 		},
