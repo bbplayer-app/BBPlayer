@@ -1,12 +1,9 @@
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { ResultAsync, errAsync } from 'neverthrow'
 
-import {
-	bilibiliApi,
-	type bilibiliApi as BilibiliApiService,
-} from '@/lib/api/bilibili/api'
+import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
 import db from '@/lib/db/db'
-import type * as schema from '@/lib/db/schema'
+import * as schema from '@/lib/db/schema'
 import { createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
 import { artistService, type ArtistService } from '@/lib/services/artistService'
@@ -15,19 +12,26 @@ import {
 	type PlaylistService,
 } from '@/lib/services/playlistService'
 import { trackService, type TrackService } from '@/lib/services/trackService'
+import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import type { CreateArtistPayload } from '@/types/services/artist'
+import type {
+	ReorderLocalPlaylistTrackPayload,
+	UpdatePlaylistPayload,
+} from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import log from '@/utils/log'
+
+type BbplayerApiClient = typeof bbplayerApi
 
 const logger = log.extend('Facade')
 
 export class PlaylistFacade {
 	constructor(
 		private readonly trackService: TrackService,
-		private readonly bilibiliApi: typeof BilibiliApiService,
 		private readonly playlistService: PlaylistService,
 		private readonly artistService: ArtistService,
 		private readonly db: ExpoSQLiteDatabase<typeof schema>,
+		private readonly bbplayerApi: BbplayerApiClient,
 	) {}
 
 	/**
@@ -55,8 +59,8 @@ export class PlaylistFacade {
 
 				const localPlaylistResult = await playlistSvc.createPlaylist({
 					title: name,
-					description: playlistMetadata.description ?? undefined,
-					coverUrl: playlistMetadata.coverUrl ?? undefined,
+					description: playlistMetadata.description,
+					coverUrl: playlistMetadata.coverUrl,
 					authorId: null,
 					type: 'local',
 					remoteSyncId: null,
@@ -138,6 +142,36 @@ export class PlaylistFacade {
 				const playlistSvc = this.playlistService.withDB(tx)
 				const trackSvc = this.trackService.withDB(tx)
 				const artistSvc = this.artistService.withDB(tx)
+				const targetPlaylists = new Map<
+					number,
+					typeof schema.playlists.$inferSelect
+				>()
+
+				// step0: 权限校验（所有目标歌单中，共享歌单仅 owner/editor 可写）
+				const allTargetIds = [...toAddPlaylistIds, ...toRemovePlaylistIds]
+				for (const pid of allTargetIds) {
+					// oxlint-disable-next-line no-await-in-loop
+					const res = await playlistSvc.getPlaylistById(pid)
+					if (res.isErr()) throw res.error
+					const pl = res.value
+					if (!pl)
+						throw createFacadeError(
+							'PlaylistPermissionDenied',
+							`未找到播放列表：${pid}`,
+						)
+					if (
+						pl.shareId &&
+						pl.shareRole !== 'owner' &&
+						pl.shareRole !== 'editor'
+					) {
+						throw createFacadeError(
+							'PlaylistPermissionDenied',
+							'无权限修改此共享歌单',
+						)
+					}
+
+					targetPlaylists.set(pid, pl)
+				}
 
 				// step1: 解析/创建 Artist（如需要）
 				let finalArtistId: number | undefined =
@@ -160,16 +194,39 @@ export class PlaylistFacade {
 
 				// step3: 执行增删
 				for (const pid of toAddPlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.addManyTracksToLocalPlaylist(pid, [
 						trackId,
 					])
 					if (r.isErr()) throw r.error
+
+					const target = targetPlaylists.get(pid)
+					if (
+						target?.shareId &&
+						(target.shareRole === 'owner' || target.shareRole === 'editor')
+					) {
+						await this.enqueueSync(tx, pid, 'add_tracks', {
+							trackIds: [trackId],
+						})
+					}
 				}
 				for (const pid of toRemovePlaylistIds) {
+					// oxlint-disable-next-line no-await-in-loop
 					const r = await playlistSvc.batchRemoveTracksFromLocalPlaylist(pid, [
 						trackId,
 					])
 					if (r.isErr()) throw r.error
+
+					const target = targetPlaylists.get(pid)
+					if (
+						target?.shareId &&
+						(target.shareRole === 'owner' || target.shareRole === 'editor') &&
+						r.value.removedTrackIds.length > 0
+					) {
+						await this.enqueueSync(tx, pid, 'remove_tracks', {
+							removedTrackIds: r.value.removedTrackIds,
+						})
+					}
 				}
 				logger.debug('step3: 更新本地播放列表完成', {
 					added: toAddPlaylistIds,
@@ -190,14 +247,17 @@ export class PlaylistFacade {
 					'更新 Track 在本地播放列表失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
-	 * 批量添加 tracks 到本地播放列表
+	 * 批量添加 tracks 到本地播放列表。
+	 * 若歌单参与共享（owner/editor），在同一事务内将操作写入 playlistSyncQueue。
 	 * @param playlistId
 	 * @param payloads 应包含 track 和 artist，**artist 只能为 remote 来源**
-	 * @returns
 	 */
 	public async batchAddTracksToLocalPlaylist(
 		playlistId: number,
@@ -217,17 +277,32 @@ export class PlaylistFacade {
 			}
 		}
 		return ResultAsync.fromPromise(
-			(async () => {
-				const playlistSvc = this.playlistService.withDB(this.db)
-				const trackSvc = this.trackService.withDB(this.db)
-				const artistSvc = this.artistService.withDB(this.db)
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+				const trackSvc = this.trackService.withDB(tx)
+				const artistSvc = this.artistService.withDB(tx)
+
+				// step0: 权限校验（共享歌单仅 owner/editor 可写）
+				const playlistRes = await playlistSvc.getPlaylistById(playlistId)
+				if (playlistRes.isErr()) throw playlistRes.error
+				const playlist = playlistRes.value
+				if (!playlist)
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						`未找到播放列表：${playlistId}`,
+					)
+				const { shareId, shareRole } = playlist
+				if (shareId && shareRole !== 'owner' && shareRole !== 'editor') {
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						'无权限修改此共享歌单',
+					)
+				}
 
 				const artistResult = await artistSvc.findOrCreateManyRemoteArtists(
 					payloads.map((p) => p.artist),
 				)
-				if (artistResult.isErr()) {
-					throw artistResult.error
-				}
+				if (artistResult.isErr()) throw artistResult.error
 				const artistMap = artistResult.value
 				logger.debug('step1: 批量创建 artist 完成')
 
@@ -248,20 +323,28 @@ export class PlaylistFacade {
 				)
 				if (addResult.isErr()) throw addResult.error
 				logger.debug('step3: 批量将 track 添加到本地播放列表完成')
+
+				// 若为共享歌单（owner/editor），在同一事务内入队
+				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+					await this.enqueueSync(tx, playlistId, 'add_tracks', { trackIds })
+				}
+
 				logger.info('批量添加 tracks 到本地播放列表成功', {
 					playlistId,
 					added: trackIds.length,
 				})
-
 				return trackIds
-			})(),
+			}),
 			(e) =>
 				createFacadeError(
 					'BatchAddTracksToLocalPlaylistFailed',
 					'批量添加 tracks 到本地播放列表失败',
 					{ cause: e },
 				),
-		)
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
 	}
 
 	/**
@@ -327,12 +410,321 @@ export class PlaylistFacade {
 				}),
 		)
 	}
+
+	/**
+	 * 从本地播放列表批量移除曲目。
+	 * 若歌单参与共享（owner/editor），在同一事务内将操作写入 playlistSyncQueue。
+	 */
+	public async removeTracksFromPlaylist(
+		playlistId: number,
+		trackIds: number[],
+	) {
+		return ResultAsync.fromPromise(
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+
+				// 权限校验（共享歌单仅 owner/editor 可写）
+				const playlistRes = await playlistSvc.getPlaylistById(playlistId)
+				if (playlistRes.isErr()) throw playlistRes.error
+				const playlist = playlistRes.value
+				if (!playlist)
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						`未找到播放列表：${playlistId}`,
+					)
+				const { shareId, shareRole } = playlist
+				if (shareId && shareRole !== 'owner' && shareRole !== 'editor') {
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						'无权限修改此共享歌单',
+					)
+				}
+
+				const result = await playlistSvc.batchRemoveTracksFromLocalPlaylist(
+					playlistId,
+					trackIds,
+				)
+				if (result.isErr()) throw result.error
+
+				// 若为共享歌单（owner/editor），在同一事务内入队
+				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+					await this.enqueueSync(tx, playlistId, 'remove_tracks', {
+						removedTrackIds: result.value.removedTrackIds,
+					})
+				}
+
+				return result.value
+			}),
+			(e) =>
+				createFacadeError(
+					'RemoveTracksFromPlaylistFailed',
+					'从播放列表移除曲目失败',
+					{ cause: e },
+				),
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
+	}
+
+	/**
+	 * 调整本地播放列表中单曲的位置。
+	 * 若歌单参与共享（owner/editor），在同一事务内将操作写入 playlistSyncQueue。
+	 */
+	public async reorderLocalPlaylistTrack(
+		playlistId: number,
+		payload: ReorderLocalPlaylistTrackPayload,
+	) {
+		return ResultAsync.fromPromise(
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+
+				// 权限校验（共享歌单仅 owner/editor 可写）
+				const playlistRes = await playlistSvc.getPlaylistById(playlistId)
+				if (playlistRes.isErr()) throw playlistRes.error
+				const playlist = playlistRes.value
+				if (!playlist)
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						`未找到播放列表：${playlistId}`,
+					)
+				const { shareId, shareRole } = playlist
+				if (shareId && shareRole !== 'owner' && shareRole !== 'editor') {
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						'无权限修改此共享歌单',
+					)
+				}
+
+				const result = await playlistSvc.reorderSingleLocalPlaylistTrack(
+					playlistId,
+					payload,
+				)
+				if (result.isErr()) throw result.error
+
+				// 若为共享歌单（owner/editor），在同一事务内入队
+				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+					await this.enqueueSync(tx, playlistId, 'reorder_track', {
+						trackId: payload.trackId,
+						prevSortKey: payload.prevSortKey,
+						nextSortKey: payload.nextSortKey,
+					})
+				}
+
+				return result.value
+			}),
+			(e) =>
+				createFacadeError(
+					'ReorderPlaylistTrackFailed',
+					'调整播放列表曲目顺序失败',
+					{ cause: e },
+				),
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
+	}
+
+	/**
+	 * 更新播放列表元数据（标题/描述/封面）。
+	 * 若歌单参与共享（owner/editor），在同一事务内将操作写入 playlistSyncQueue。
+	 */
+	public async updatePlaylistMetadata(
+		playlistId: number,
+		payload: UpdatePlaylistPayload,
+	) {
+		return ResultAsync.fromPromise(
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+
+				// 权限校验（共享歌单仅 owner/editor 可写）
+				const playlistRes = await playlistSvc.getPlaylistById(playlistId)
+				if (playlistRes.isErr()) throw playlistRes.error
+				const playlist = playlistRes.value
+				if (!playlist)
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						`未找到播放列表：${playlistId}`,
+					)
+				const { shareId, shareRole } = playlist
+				if (shareId && shareRole !== 'owner' && shareRole !== 'editor') {
+					throw createFacadeError(
+						'PlaylistPermissionDenied',
+						'无权限修改此共享歌单',
+					)
+				}
+
+				const nextTitle = payload.title ?? playlist.title
+				const nextDescription =
+					payload.description ?? playlist.description ?? null
+				const nextCoverUrl = payload.coverUrl ?? playlist.coverUrl ?? null
+
+				const result = await playlistSvc.updatePlaylistMetadata(
+					playlistId,
+					payload,
+				)
+				if (result.isErr()) throw result.error
+
+				// 若为共享歌单（owner/editor），在同一事务内入队
+				if (shareId && (shareRole === 'owner' || shareRole === 'editor')) {
+					await this.enqueueSync(tx, playlistId, 'update_metadata', {
+						title: nextTitle,
+						description: nextDescription,
+						coverUrl: nextCoverUrl,
+					})
+				}
+
+				return result.value
+			}),
+			(e) =>
+				createFacadeError(
+					'UpdatePlaylistMetadataFailed',
+					'更新播放列表元数据失败',
+					{ cause: e },
+				),
+		).map((res) => {
+			playlistSyncWorker.triggerSync()
+			return res
+		})
+	}
+
+	/**
+	 * 删除播放列表，按 shareRole 路由到不同的删除策略：
+	 * - local（无 shareId）：直接删除本地数据
+	 * - subscriber：服务端解除成员关系 + 删除本地副本
+	 * - editor：服务端解除成员关系 + 清空 shareId/shareRole（保留本地数据转为普通 local 歌单）
+	 * - owner：服务端软删除共享歌单 + 删除本地副本
+	 */
+	public async deletePlaylist(playlistId: number) {
+		const playlistRes = await this.playlistService.getPlaylistById(playlistId)
+		if (playlistRes.isErr()) {
+			return errAsync(
+				createFacadeError('PlaylistDeleteFailed', '读取播放列表失败', {
+					cause: playlistRes.error,
+				}),
+			)
+		}
+		const playlist = playlistRes.value
+		if (!playlist) {
+			return errAsync(
+				createFacadeError(
+					'PlaylistDeleteFailed',
+					`未找到播放列表：${playlistId}`,
+				),
+			)
+		}
+
+		const { shareId, shareRole } = playlist
+
+		// local 直接删除本地，无需鉴权或网络请求
+		if (!shareId) {
+			return this.playlistService
+				.deletePlaylist(playlistId)
+				.map(() => undefined)
+				.mapErr((e) =>
+					createFacadeError('PlaylistDeleteFailed', '删除播放列表失败', {
+						cause: e,
+					}),
+				)
+		}
+
+		return ResultAsync.fromPromise(
+			(async () => {
+				if (shareRole === 'owner') {
+					// owner：服务端软删除，然后删除本地副本
+					const resp = await this.bbplayerApi.playlists[':id'].$delete({
+						param: { id: shareId },
+					})
+					if (!resp.ok && resp.status !== 404 && resp.status !== 403) {
+						const body = await resp.json().catch(() => ({}))
+						throw createFacadeError(
+							'PlaylistDeleteFailed',
+							`删除共享歌单失败（${resp.status}）`,
+							{ cause: body },
+						)
+					}
+					if (resp.status === 404 || resp.status === 403) {
+						logger.warning('远端歌单已不存在或权限丢失，跳过云端删除', {
+							playlistId,
+							shareId,
+						})
+					}
+					const deleteRes =
+						await this.playlistService.deletePlaylist(playlistId)
+					if (deleteRes.isErr()) throw deleteRes.error
+				} else if (shareRole === 'subscriber' || shareRole === 'editor') {
+					// subscriber/editor：服务端解除成员关系
+					const resp = await this.bbplayerApi.playlists[
+						':id'
+					].members.me.$delete({
+						param: { id: shareId },
+					})
+					if (!resp.ok && resp.status !== 404 && resp.status !== 403) {
+						const body = await resp.json().catch(() => ({}))
+						throw createFacadeError(
+							'PlaylistDeleteFailed',
+							`解除共享歌单关联失败（${resp.status}）`,
+							{ cause: body },
+						)
+					}
+					if (resp.status === 404 || resp.status === 403) {
+						logger.warning(
+							'远端歌单已被删除或已解除成员关系，继续清理本地关联',
+							{
+								playlistId,
+								shareId,
+							},
+						)
+					}
+
+					await this.db.transaction(async (tx) => {
+						const txPlaylist = this.playlistService.withDB(tx)
+						if (shareRole === 'subscriber') {
+							// subscriber：删除本地副本
+							const r = await txPlaylist.deletePlaylist(playlistId)
+							if (r.isErr()) throw r.error
+						} else {
+							// editor：保留本地数据，仅断开共享连接
+							const r = await txPlaylist.updatePlaylistMetadata(playlistId, {
+								shareId: null,
+								shareRole: null,
+								lastShareSyncAt: null,
+							})
+							if (r.isErr()) throw r.error
+						}
+					})
+				}
+			})(),
+			(e) =>
+				createFacadeError('PlaylistDeleteFailed', '删除播放列表失败', {
+					cause: e,
+				}),
+		)
+	}
+
+	/**
+	 * 向 playlist_sync_queue 写入一条待同步记录（在调用方的事务内执行）。
+	 * operationAt 记录用户真正执行操作的时间（LWW 基准）。
+	 */
+	private async enqueueSync(
+		db: ExpoSQLiteDatabase<typeof schema>,
+		playlistId: number,
+		operation: (typeof schema.playlistSyncQueue.$inferInsert)['operation'],
+		payload: Record<string, unknown>,
+	): Promise<void> {
+		await db.insert(schema.playlistSyncQueue).values({
+			playlistId,
+			operation,
+			payload: JSON.stringify(payload),
+			operationAt: new Date(Date.now()),
+		})
+	}
 }
 
 export const playlistFacade = new PlaylistFacade(
 	trackService,
-	bilibiliApi,
 	playlistService,
 	artistService,
 	db,
+	bbplayerApi,
 )

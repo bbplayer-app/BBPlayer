@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Button, Dialog, TextInput } from 'react-native-paper'
+import { Dialog, TextInput } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 

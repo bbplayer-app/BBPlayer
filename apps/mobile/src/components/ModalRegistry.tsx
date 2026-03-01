@@ -61,6 +61,15 @@ const InputExternalPlaylistInfoModal = lazy(
 const DanmakuSettingsModal = lazy(
 	() => import('./modals/player/DanmakuSettingsModal'),
 )
+const CoverDownloadProgressModal = lazy(
+	() => import('./modals/settings/CoverDownloadProgressModal'),
+)
+const EnableSharingModal = lazy(
+	() => import('./modals/playlist/EnableSharingModal'),
+)
+const SubscribeToSharedPlaylistModal = lazy(
+	() => import('./modals/playlist/SubscribeToSharedPlaylistModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -90,4 +99,7 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	FavoriteSyncProgress: FavoriteSyncProgressModal,
 	ManualMatchExternalSync: ManualMatchExternalSyncModal,
 	DanmakuSettings: DanmakuSettingsModal,
+	CoverDownloadProgress: CoverDownloadProgressModal,
+	EnableSharing: EnableSharingModal,
+	SubscribeToSharedPlaylist: SubscribeToSharedPlaylistModal,
 }

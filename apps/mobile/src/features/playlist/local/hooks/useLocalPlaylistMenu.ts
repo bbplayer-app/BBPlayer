@@ -18,6 +18,7 @@ interface LocalPlaylistMenuProps {
 	openAddToPlaylistModal: (track: Track) => void
 	openEditTrackModal: (track: Track) => void
 	playlist: Playlist
+	isReadOnly: boolean
 }
 
 export function useLocalPlaylistMenu({
@@ -25,6 +26,7 @@ export function useLocalPlaylistMenu({
 	openAddToPlaylistModal,
 	openEditTrackModal,
 	playlist,
+	isReadOnly,
 }: LocalPlaylistMenuProps) {
 	const router = useRouter()
 
@@ -100,26 +102,27 @@ export function useLocalPlaylistMenu({
 							})
 							return
 						}
-						const url = getInternalPlayUri(item)
-						if (!url) {
-							toastAndLogError(
-								'获取内部播放地址失败',
-								'失败了！',
-								'UI.Playlist.Local.Menu',
-							)
-							return
+
+						try {
+							const url = getInternalPlayUri(item)
+							if (!url) {
+								toastAndLogError('获取内部播放地址失败', '失败了！', SCOPE)
+								return
+							}
+
+							await Orpheus.downloadTrack({
+								id: item.uniqueKey,
+								url: url,
+								title: item.title,
+								artist: item.artist?.name,
+								artwork: item.coverUrl ?? undefined,
+								duration: item.duration,
+							})
+
+							toast.success('已开始下载')
+						} catch (error) {
+							toastAndLogError('缓存音频失败', error, SCOPE)
 						}
-
-						await Orpheus.downloadTrack({
-							id: item.uniqueKey,
-							url: url,
-							title: item.title,
-							artist: item.artist?.name,
-							artwork: item.coverUrl ?? undefined,
-							duration: item.duration,
-						})
-
-						toast.success('已开始下载')
 					},
 					isHighFreq: true,
 				},
@@ -140,7 +143,7 @@ export function useLocalPlaylistMenu({
 				onPress: () => openEditTrackModal(item),
 			},
 		)
-		if (playlist?.type === 'local') {
+		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
 				leadingIcon: 'playlist-remove',

@@ -1,20 +1,45 @@
+import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { eq } from 'drizzle-orm'
+import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useShareIntentContext } from 'expo-share-intent'
-import { useCallback, useDeferredValue, useEffect, useState } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
+import { useIncomingShare } from 'expo-sharing'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
+import {
+	Keyboard,
+	Platform,
+	StyleSheet,
+	ToastAndroid,
+	View,
+} from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
-import { Chip, IconButton, Searchbar, Text, useTheme } from 'react-native-paper'
+import {
+	ActivityIndicator,
+	Chip,
+	Searchbar,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions from '@/features/home/SearchSuggestions'
+import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
+import db from '@/lib/db/db'
+import * as schema from '@/lib/db/schema'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
 	matchSearchStrategies,
@@ -31,6 +56,15 @@ interface SearchHistoryItem {
 	timestamp: number
 }
 
+const getGreetingMsg = () => {
+	const hour = new Date().getHours()
+	if (hour >= 0 && hour < 6) return '凌晨好'
+	if (hour >= 6 && hour < 12) return '早上好'
+	if (hour >= 12 && hour < 18) return '下午好'
+	if (hour >= 18 && hour < 24) return '晚上好'
+	return '你好'
+}
+
 function HomePage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
@@ -40,26 +74,23 @@ function HomePage() {
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
-	const { hasShareIntent, shareIntent, resetShareIntent } =
-		useShareIntentContext()
+	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
+		useIncomingShare()
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const searchBarRef = useAnimatedRef<View>()
+	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
-	const {
-		data: personalInfo,
-		isPending: personalInfoPending,
-		isError: personalInfoError,
-	} = usePersonalInformation()
+	const { data: personalInfo } = usePersonalInformation()
 
-	const getGreetingMsg = () => {
-		const hour = new Date().getHours()
-		if (hour >= 0 && hour < 6) return '凌晨好'
-		if (hour >= 6 && hour < 12) return '早上好'
-		if (hour >= 12 && hour < 18) return '下午好'
-		if (hour >= 18 && hour < 24) return '晚上好'
-		return '你好'
-	}
+	const { data: syncFailures } = useLiveQuery(
+		db
+			.select({ id: schema.playlistSyncQueue.id })
+			.from(schema.playlistSyncQueue)
+			.where(eq(schema.playlistSyncQueue.status, 'failed'))
+			.limit(1),
+	)
+	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
 
 	const greeting = getGreetingMsg()
 
@@ -140,27 +171,61 @@ function HomePage() {
 	}
 
 	useEffect(() => {
-		if (!hasShareIntent) return
-		const query = (shareIntent?.webUrl ?? shareIntent?.text ?? '').trim()
+		if (resolvedSharedPayloads.length === 0) return
+		if (resolvedSharedPayloads.length > 1) {
+			if (Platform.OS === 'android') {
+				ToastAndroid.show('收到多个共享内容，已忽略', ToastAndroid.SHORT)
+			} else {
+				alert(
+					'收到多个共享内容，已忽略',
+					'当前版本仅支持处理单个共享内容，已忽略其他内容',
+					[{ text: '确定' }],
+				)
+			}
+		}
+		const data = resolvedSharedPayloads[0]
+		let query: string | undefined
+		if (data.shareType === 'text') {
+			query = data.value
+		}
 		if (!query) {
-			resetShareIntent()
+			clearSharedPayloads()
 			return
 		}
 
-		resetShareIntent()
+		clearSharedPayloads()
 		void handleEnter(query)
-	}, [hasShareIntent, shareIntent, router, resetShareIntent, handleEnter])
+	}, [resolvedSharedPayloads, clearSharedPayloads, handleEnter])
+
+	if (isResolving) {
+		return (
+			<View
+				style={[
+					styles.container,
+					{
+						backgroundColor: colors.background,
+						justifyContent: 'center',
+						alignItems: 'center',
+					},
+				]}
+			>
+				<ActivityIndicator
+					size='large'
+					color={colors.primary}
+				/>
+			</View>
+		)
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			{/*顶部欢迎区域*/}
 			<View
 				style={{
-					paddingHorizontal: 16,
 					paddingTop: insets.top + 8,
 				}}
 			>
-				<View style={styles.greetingContainer}>
+				<View style={[styles.greetingContainer, { paddingHorizontal: 16 }]}>
 					<View>
 						<Text
 							variant='headlineSmall'
@@ -172,157 +237,167 @@ function HomePage() {
 							variant='bodyMedium'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							{greeting}，
-							{personalInfoPending || personalInfoError || !personalInfo
-								? '陌生人'
-								: personalInfo.name}
+							{greeting}，{personalInfo?.name || '陌生人'}
 						</Text>
 					</View>
-					<RectButton
-						enabled={hasBilibiliCookie()}
-						onPress={() =>
-							alert(
-								'退出登录？',
-								'是否退出登录？',
-								[
-									{ text: '取消' },
-									{
-										text: '确定',
-										onPress: async () => {
-											clearBilibiliCookie()
-											await queryClient.cancelQueries()
-											queryClient.clear()
-											toast.success('Cookie\u2009已清除')
-										},
-									},
-								],
-								{ cancelable: true },
-							)
-						}
-						style={styles.avatarButton}
-					>
-						<Image
-							style={styles.avatarImage}
-							source={
-								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-								!personalInfoPending && !personalInfoError && personalInfo?.face
-									? { uri: personalInfo.face }
-									: // eslint-disable-next-line @typescript-eslint/no-require-imports
-										require('../../../assets/images/bilibili-default-avatar.jpg')
-							}
-							cachePolicy={'disk'}
-						/>
-					</RectButton>
-				</View>
-			</View>
-
-			<View style={styles.searchSection}>
-				{/* 搜索栏 */}
-				<View style={styles.searchbarContainer}>
-					<View ref={searchBarRef}>
-						<Searchbar
-							placeholder={
-								'关键词\u2009/\u2009b23.tv\u2009/\u2009完整网址\u2009/\u2009av\u2009/\u2009bv'
-							}
-							onChangeText={setSearchQuery}
-							value={searchQuery}
-							icon={isLoading ? 'loading' : 'magnify'}
-							onClearIconPress={() => setSearchQuery('')}
-							onSubmitEditing={() => handleEnter(searchQuery)}
-							elevation={0}
-							mode='bar'
-							style={[
-								styles.searchbar,
-								{ backgroundColor: colors.surfaceVariant },
-							]}
-							testID='search-bar'
-						/>
-					</View>
-					<SearchSuggestions
-						query={deferredSearchQuery}
-						visible={searchQuery.length > 0}
-						onSuggestionPress={handleSuggestionPress}
-						searchBarRef={searchBarRef}
-					/>
-				</View>
-
-				{/* 搜索历史 */}
-				<View style={styles.historySection}>
-					<View style={styles.historyHeader}>
-						<Text
-							variant='titleMedium'
-							style={styles.historyTitle}
-						>
-							最近搜索
-						</Text>
-						{searchHistory && searchHistory.length > 0 && (
+					<View style={styles.headerRight}>
+						{hasSyncFailures && (
 							<IconButton
-								icon='trash-can-outline'
-								size={20}
-								onPress={() =>
-									alert(
-										'清空搜索历史？',
-										'确定要清空吗？',
-										[
-											{ text: '取消' },
-											{
-												text: '确定',
-												onPress: () => {
-													setSearchHistory([])
-												},
-											},
-										],
-										{ cancelable: true },
-									)
-								}
+								icon='alert-circle'
+								size={22}
+								iconColor={colors.error}
+								onPress={() => void syncFailuresSheetRef.current?.present()}
 							/>
 						)}
+						<RectButton
+							enabled={hasBilibiliCookie()}
+							onPress={() =>
+								alert(
+									'退出登录？',
+									'是否退出登录？',
+									[
+										{ text: '取消' },
+										{
+											text: '确定',
+											onPress: async () => {
+												clearBilibiliCookie()
+												await queryClient.cancelQueries()
+												queryClient.clear()
+												toast.success('Cookie\u2009已清除')
+											},
+										},
+									],
+									{ cancelable: true },
+								)
+							}
+							style={styles.avatarButton}
+						>
+							<Image
+								style={styles.avatarImage}
+								source={
+									personalInfo?.face
+										? { uri: personalInfo.face }
+										: // oxlint-disable-next-line @typescript-eslint/no-require-imports
+											require('../../../assets/images/bilibili-default-avatar.jpg')
+								}
+								cachePolicy={'disk'}
+							/>
+						</RectButton>
 					</View>
-					{searchHistory && searchHistory.length > 0 ? (
-						<View style={styles.historyChipsContainer}>
-							{searchHistory.map((item) => (
-								<Chip
-									key={item.id}
-									onPress={() => handleSearchItemClick(item.text)}
-									onLongPress={() =>
+				</View>
+
+				<View style={styles.searchSection}>
+					{/* 搜索栏 */}
+					<View style={styles.searchbarContainer}>
+						<View ref={searchBarRef}>
+							<Searchbar
+								placeholder={
+									'关键词\u2009/\u2009b23.tv\u2009/\u2009完整网址\u2009/\u2009av\u2009/\u2009bv'
+								}
+								onChangeText={setSearchQuery}
+								value={searchQuery}
+								icon={isLoading ? 'loading' : 'magnify'}
+								onClearIconPress={() => setSearchQuery('')}
+								onSubmitEditing={() => handleEnter(searchQuery)}
+								elevation={0}
+								mode='bar'
+								style={[
+									styles.searchbar,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								testID='search-bar'
+							/>
+						</View>
+						<SearchSuggestions
+							query={deferredSearchQuery}
+							visible={searchQuery.length > 0}
+							onSuggestionPress={handleSuggestionPress}
+							searchBarRef={searchBarRef}
+						/>
+					</View>
+
+					{/* 搜索历史 */}
+					<View style={styles.historySection}>
+						<View style={styles.historyHeader}>
+							<Text
+								variant='titleMedium'
+								style={styles.historyTitle}
+							>
+								最近搜索
+							</Text>
+							{searchHistory && searchHistory.length > 0 && (
+								<IconButton
+									icon='trash-can-outline'
+									size={20}
+									onPress={() =>
 										alert(
-											'删除搜索历史？',
-											`确定要删除「${item.text}」吗？`,
+											'清空搜索历史？',
+											'确定要清空吗？',
 											[
 												{ text: '取消' },
 												{
 													text: '确定',
 													onPress: () => {
-														// 优化：使用 filter 创建新数组，避免直接修改 state
-														const newHistory = searchHistory.filter(
-															(h) => h.id !== item.id,
-														)
-														setSearchHistory(newHistory)
+														setSearchHistory([])
 													},
 												},
 											],
 											{ cancelable: true },
 										)
 									}
-									style={styles.chip}
-									mode='outlined'
-								>
-									{item.text}
-								</Chip>
-							))}
+								/>
+							)}
 						</View>
-					) : (
-						<Text
-							style={[styles.noHistoryText, { color: colors.onSurfaceVariant }]}
-						>
-							暂无搜索历史
-						</Text>
-					)}
+						{searchHistory && searchHistory.length > 0 ? (
+							<View style={styles.historyChipsContainer}>
+								{searchHistory.map((item) => (
+									<Chip
+										key={item.id}
+										onPress={() => handleSearchItemClick(item.text)}
+										onLongPress={() =>
+											alert(
+												'删除搜索历史？',
+												`确定要删除「${item.text}」吗？`,
+												[
+													{ text: '取消' },
+													{
+														text: '确定',
+														onPress: () => {
+															// 优化：使用 filter 创建新数组，避免直接修改 state
+															const newHistory = searchHistory.filter(
+																(h) => h.id !== item.id,
+															)
+															setSearchHistory(newHistory)
+														},
+													},
+												],
+												{ cancelable: true },
+											)
+										}
+										style={styles.chip}
+										mode='outlined'
+									>
+										{item.text}
+									</Chip>
+								))}
+							</View>
+						) : (
+							<Text
+								style={[
+									styles.noHistoryText,
+									{ color: colors.onSurfaceVariant },
+								]}
+							>
+								暂无搜索历史
+							</Text>
+						)}
+					</View>
 				</View>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
+			<SyncFailuresSheet ref={syncFailuresSheetRef} />
 		</View>
 	)
 }
@@ -342,6 +417,10 @@ const styles = StyleSheet.create({
 	avatarButton: {
 		borderRadius: 20,
 		overflow: 'hidden',
+	},
+	headerRight: {
+		flexDirection: 'row',
+		alignItems: 'center',
 	},
 	avatarImage: {
 		width: 40,

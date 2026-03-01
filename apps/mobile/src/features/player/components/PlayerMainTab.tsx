@@ -57,7 +57,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 			<View
 				style={[
-					{ paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+					{ paddingBottom: Math.max(insets.bottom + 20, 20) },
 					styles.controlsContainer,
 				]}
 			>

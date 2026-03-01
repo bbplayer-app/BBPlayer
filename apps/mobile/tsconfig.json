@@ -2,16 +2,17 @@
 	"extends": "expo/tsconfig.base",
 	"compilerOptions": {
 		"strict": true,
-		"baseUrl": "./src",
+		"skipLibCheck": true,
+		"exactOptionalPropertyTypes": false,
 		"paths": {
-			"@/*": ["*"],
-			"@/types/*": ["types/*"],
-			"@/lib/*": ["lib/*"],
-			"@/app/*": ["app/*"],
-			"@/components/*": ["components/*"],
-			"@/hooks/*": ["hooks/*"],
-			"@/utils/*": ["utils/*"],
-			"@/features/*": ["features/*"],
+			"@/*": ["./src/*"],
+			"@/types/*": ["./src/types/*"],
+			"@/lib/*": ["./src/lib/*"],
+			"@/app/*": ["./src/app/*"],
+			"@/components/*": ["./src/components/*"],
+			"@/hooks/*": ["./src/hooks/*"],
+			"@/utils/*": ["./src/utils/*"],
+			"@/features/*": ["./src/features/*"],
 			"@bbplayer/orpheus": ["../../../packages/orpheus/src/index.ts"],
 			"@bbplayer/image-theme-colors": [
 				"../../../packages/image-theme-colors/src/index.ts"

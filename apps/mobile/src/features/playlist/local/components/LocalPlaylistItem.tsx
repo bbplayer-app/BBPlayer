@@ -1,12 +1,17 @@
 import { DownloadState } from '@bbplayer/orpheus'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import {
+	Gesture,
+	GestureDetector,
+	RectButton,
+} from 'react-native-gesture-handler'
 import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import {
 	LIST_ITEM_COVER_SIZE,
 	LIST_ITEM_BORDER_RADIUS,
@@ -25,7 +30,17 @@ export interface TrackMenuItem {
 interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
-	onMenuPress: () => void
+	onMenuPress?: () => void
+	/**
+	 * 拖拽把手上的 RNGH 合成手势回调。
+	 *
+	 * `onDragStart(absoluteY)` — 长按阈値到达时触发
+	 * `onDragUpdate(absoluteY)` — 手指移动时持续触发
+	 * `onDragEnd()` — 手指抬起或手势取消时触发
+	 */
+	onDragStart?: (absoluteY: number) => void
+	onDragUpdate?: (absoluteY: number) => void
+	onDragEnd?: () => void
 	showCoverImage?: boolean
 	data: Track
 	disabled?: boolean
@@ -33,7 +48,9 @@ interface TrackListItemProps {
 	toggleSelected: (id: number) => void
 	isSelected: boolean
 	selectMode: boolean
+	isSearching?: boolean
 	enterSelectMode: (id: number) => void
+	isReadOnly?: boolean
 	downloadState?: DownloadState
 }
 
@@ -44,6 +61,9 @@ export const TrackListItem = memo(function TrackListItem({
 	index,
 	onTrackPress,
 	onMenuPress,
+	onDragStart,
+	onDragUpdate,
+	onDragEnd,
 	showCoverImage = true,
 	data,
 	disabled = false,
@@ -51,7 +71,9 @@ export const TrackListItem = memo(function TrackListItem({
 	toggleSelected,
 	isSelected,
 	selectMode,
+	isSearching = false,
 	enterSelectMode,
+	isReadOnly,
 	downloadState,
 }: TrackListItemProps) {
 	const theme = useTheme()
@@ -116,14 +138,14 @@ export const TrackListItem = memo(function TrackListItem({
 			testID={`track-item-${index}`}
 			onPress={() => {
 				if (selectMode) {
-					toggleSelected(data.id)
+					if (!isReadOnly) toggleSelected(data.id)
 					return
 				}
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}
 			onLongPress={() => {
-				if (selectMode) return
+				if (selectMode || isReadOnly) return
 				enterSelectMode(data.id)
 			}}
 		>
@@ -159,7 +181,11 @@ export const TrackListItem = memo(function TrackListItem({
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
 							id={data.id}
-							cover={data.coverUrl ?? data.artist?.avatarUrl}
+							cover={
+								downloadState === DownloadState.COMPLETED
+									? resolveTrackCover(data.uniqueKey, data.coverUrl)
+									: data.coverUrl
+							}
 							title={data.title}
 							size={LIST_ITEM_COVER_SIZE}
 						/>
@@ -167,7 +193,12 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
-						<Text variant='bodySmall'>{data.title}</Text>
+						<Text
+							variant='bodySmall'
+							numberOfLines={selectMode ? 1 : 0}
+						>
+							{data.title}
+						</Text>
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artist && (
@@ -193,8 +224,9 @@ export const TrackListItem = memo(function TrackListItem({
 							{/* 显示下载状态 */}
 							{renderDownloadStatus()}
 						</View>
-						{/* 显示主视频标题（如果是分 p） */}
-						{data.source === 'bilibili' &&
+						{/* 显示主视频标题（如果是分 p） — selectMode 下隐藏以固定高度 */}
+						{!selectMode &&
+							data.source === 'bilibili' &&
 							data.bilibiliMetadata.mainTrackTitle &&
 							data.bilibiliMetadata.mainTrackTitle !== data.title &&
 							playlist.type !== 'multi_page' && (
@@ -210,24 +242,41 @@ export const TrackListItem = memo(function TrackListItem({
 							)}
 					</View>
 
-					{/* Context Menu */}
+					{/* Context Menu / Drag Handle */}
 					{!disabled && (
 						<View>
-							<RectButton
-								style={styles.menuButton}
-								onPress={() => onMenuPress()}
-								enabled={!selectMode}
-							>
-								<Icon
-									source='dots-vertical'
-									size={20}
-									color={
-										selectMode
-											? theme.colors.onSurfaceDisabled
-											: theme.colors.primary
-									}
-								/>
-							</RectButton>
+							{selectMode ? (
+								playlist.type === 'local' && !isSearching ? (
+									<GestureDetector
+										gesture={Gesture.Pan()
+											.activateAfterLongPress(200)
+											.runOnJS(true)
+											.onStart((e) => onDragStart?.(e.absoluteY))
+											.onUpdate((e) => onDragUpdate?.(e.absoluteY))
+											.onFinalize(() => onDragEnd?.())}
+									>
+										<View style={styles.menuButton}>
+											<Icon
+												source='drag-vertical'
+												size={20}
+												color={theme.colors.onSurfaceVariant}
+											/>
+										</View>
+									</GestureDetector>
+								) : null
+							) : (
+								<RectButton
+									style={styles.menuButton}
+									enabled={!!onMenuPress}
+									onPress={() => onMenuPress?.()}
+								>
+									<Icon
+										source='dots-vertical'
+										size={20}
+										color={theme.colors.primary}
+									/>
+								</RectButton>
+							)}
 						</View>
 					)}
 				</View>

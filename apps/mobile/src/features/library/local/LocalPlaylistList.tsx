@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { IconButton, Menu, Searchbar, Text, useTheme } from 'react-native-paper'
+import { Menu, Searchbar, Text, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -131,6 +132,14 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='导入外部歌单'
 						/>
+						<Menu.Item
+							leadingIcon='account-group'
+							onPress={() => {
+								setMenuVisible(false)
+								openModal('SubscribeToSharedPlaylist', undefined)
+							}}
+							title='订阅共享歌单'
+						/>
 					</FunctionalMenu>
 				</View>
 			</View>
@@ -149,7 +158,7 @@ const LocalPlaylistListComponent = memo(() => {
 				}}
 			>
 				<FlashList
-					contentContainerStyle={{ paddingBottom: haveTrack ? 70 : 10 }}
+					contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 					showsVerticalScrollIndicator={false}
 					data={finalPlaylists ?? []}
 					renderItem={renderPlaylistItem}

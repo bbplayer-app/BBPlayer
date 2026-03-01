@@ -8,7 +8,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Button,
 	Checkbox,
 	Dialog,
 	Text,
@@ -18,11 +17,14 @@ import {
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
+import Button from '@/components/common/Button'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { ModalPropsMap } from '@/types/navigation'
 import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({
@@ -74,6 +76,76 @@ const LyricItem = memo(function LyricItem({
 		</TouchableRipple>
 	)
 })
+
+const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
+
+async function performShare(
+	action: 'save' | 'share',
+	previewUri: string | null,
+	viewShotRef: { current: ViewShot | null },
+	permissionStatus: MediaLibrary.PermissionStatus | undefined,
+	requestPermission: () => Promise<{ status: MediaLibrary.PermissionStatus }>,
+	setIsSharing: (value: boolean) => void,
+	isSharingRef: { current: boolean },
+	close: (name: keyof ModalPropsMap) => void,
+) {
+	isSharingRef.current = true
+	setIsSharing(true)
+
+	try {
+		let uri = previewUri
+		const needsCapture = !uri && viewShotRef.current !== null
+		if (needsCapture) {
+			try {
+				const fileName = `bbplayer-share-lyrics-${Date.now()}`
+				uri = await captureRef(viewShotRef, {
+					format: 'png',
+					quality: 1,
+					result: 'tmpfile',
+					fileName,
+				})
+			} catch {
+				toast.error('生成图片失败')
+				return
+			}
+		}
+
+		if (!uri) {
+			toast.error('生成图片失败')
+			return
+		}
+
+		if (
+			action === 'save' &&
+			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
+		) {
+			const { status } = await requestPermission()
+			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+				toast.error('无法保存图片', { description: '请允许访问相册' })
+				return
+			}
+		}
+
+		if (action === 'save') {
+			await MediaLibrary.saveToLibraryAsync(uri)
+			toast.success('已保存到相册')
+		} else {
+			const sharingAvailable = await Sharing.isAvailableAsync()
+			if (sharingAvailable) {
+				await Sharing.shareAsync(uri)
+			} else {
+				toast.error('分享不可用')
+				return
+			}
+		}
+		close('LyricsSelection')
+	} catch {
+		toast.error('操作失败')
+	} finally {
+		setIsSharing(false)
+		isSharingRef.current = false
+	}
+}
 
 const LyricsSelectionModal = () => {
 	const theme = useTheme()
@@ -128,7 +200,11 @@ const LyricsSelectionModal = () => {
 	const [isGenerating, setIsGenerating] = useState(false)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
 	const imageRef = useImage(
-		{ uri: currentTrack?.coverUrl ?? undefined },
+		{
+			uri:
+				resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ??
+				'',
+		},
 		{
 			onError: () => void 0,
 		},
@@ -157,6 +233,11 @@ const LyricsSelectionModal = () => {
 		if (imageRef) {
 			ImageThemeColors.extractThemeColorAsync(imageRef)
 				.then((palette) => {
+					if (!palette) {
+						setCardColor(theme.colors.elevation.level3)
+						return
+					}
+
 					const bgColor = theme.dark
 						? (palette.darkMuted?.hex ?? palette.muted?.hex)
 						: (palette.lightMuted?.hex ?? palette.muted?.hex)
@@ -198,8 +279,6 @@ const LyricsSelectionModal = () => {
 		[],
 	)
 
-	const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
-
 	const generatePreview = async () => {
 		if (!viewShotRef.current) {
 			toast.error('无法生成预览')
@@ -223,80 +302,32 @@ const LyricsSelectionModal = () => {
 			setPreviewUri(uri)
 			setShowPreview(true)
 			setIsGenerating(false)
-		} catch (e) {
-			console.error(e)
+		} catch {
 			toast.error('生成预览失败')
 			setIsGenerating(false)
 		}
 	}
 
-	const handleShare = async (action: 'save' | 'share') => {
+	const isSharingRef = useRef(false)
+
+	const handleShare = (action: 'save' | 'share') => {
 		if (selectedIndices.size === 0) {
 			toast.error('请先选择歌词')
 			return
 		}
 
-		setIsSharing(true)
+		if (isSharingRef.current) return
 
-		let uri = previewUri
-		const needsCapture = !uri && viewShotRef.current !== null
-		if (needsCapture) {
-			try {
-				const fileName = `bbplayer-share-lyrics-${Date.now()}`
-				uri = await captureRef(viewShotRef, {
-					format: 'png',
-					quality: 1,
-					result: 'tmpfile',
-					fileName,
-				})
-			} catch (e) {
-				console.error(e)
-				toast.error('生成图片失败')
-				setIsSharing(false)
-				return
-			}
-		}
-
-		if (!uri) {
-			toast.error('生成图片失败')
-			setIsSharing(false)
-			return
-		}
-
-		const permissionStatus = permissionResponse?.status
-		if (
-			action === 'save' &&
-			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
-		) {
-			const { status } = await requestPermission()
-			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
-				toast.error('无法保存图片', { description: '请允许访问相册' })
-				setIsSharing(false)
-				return
-			}
-		}
-
-		try {
-			if (action === 'save') {
-				await MediaLibrary.saveToLibraryAsync(uri)
-				toast.success('已保存到相册')
-			} else {
-				const sharingAvailable = await Sharing.isAvailableAsync()
-				if (sharingAvailable) {
-					await Sharing.shareAsync(uri)
-				} else {
-					toast.error('分享不可用')
-					setIsSharing(false)
-					return
-				}
-			}
-			setIsSharing(false)
-			close('LyricsSelection')
-		} catch (e) {
-			console.error(e)
-			toast.error('操作失败')
-			setIsSharing(false)
-		}
+		void performShare(
+			action,
+			previewUri,
+			viewShotRef,
+			permissionResponse?.status,
+			requestPermission,
+			setIsSharing,
+			isSharingRef,
+			close,
+		)
 	}
 
 	const renderItem = useCallback(

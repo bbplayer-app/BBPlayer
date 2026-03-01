@@ -61,7 +61,7 @@ const getAppName = () => {
 	return 'BBPlayer'
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// oxlint-disable-next-line @typescript-eslint/no-unused-vars
 export default ({ config }: ConfigContext): ExpoConfig => {
 	const googleServicesJsonPath =
 		'./assets/config/google-services/google-services.json'
@@ -112,9 +112,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 							host: 'bbplayer.roitium.com',
 							pathPrefix: '/app/link-to',
 						},
+					],
+					category: ['BROWSABLE', 'DEFAULT'],
+				},
+				{
+					action: 'VIEW',
+					autoVerify: true,
+					data: [
 						{
 							scheme: 'https',
 							host: 'app.bbplayer.roitium.com',
+							pathPrefix: '/app/link-to',
 						},
 					],
 					category: ['BROWSABLE', 'DEFAULT'],
@@ -163,6 +171,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 						usesCleartextTraffic: true,
 						enableMinifyInReleaseBuilds: true,
 						enableShrinkResourcesInReleaseBuilds: true,
+						minSdkVersion: 26,
 						packagingOptions: {
 							pickFirst: ['lib/*/libNitroModules.so'],
 						},
@@ -195,6 +204,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 -keep,allowoptimization,allowshrinking,allowobfuscation class <3>
 -keep,allowoptimization,allowshrinking,allowobfuscation class retrofit2.Response
 # --- 来自 retrofit2.pro ---
+# --- 来自 SuperLyricApi ---
+-keep class com.hchen.superlyricapi.* {*;}
+# --- 来自 SuperLyricApi ---
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn org.jaudiotagger.**
+-keep class org.jaudiotagger.** { *; }
+-keep class expo.modules.kotlin.services.FilePermissionService$** { *; }
+-keep class expo.modules.kotlin.services.FilePermissionService { *; }
 					`,
 					},
 					ios: {
@@ -225,13 +243,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			],
 			'expo-web-browser',
 			'expo-sqlite',
-			[
-				'expo-share-intent',
-				{
-					androidIntentFilters: ['text/*'],
-					disableIOS: true,
-				},
-			],
 			'expo-router',
 			'@rnrepo/expo-config-plugin',
 			[
@@ -243,6 +254,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 			],
 			'@react-native-firebase/app',
+			'expo-image',
+			[
+				'expo-sharing',
+				{
+					ios: {
+						enabled: false,
+					},
+					android: {
+						enabled: true,
+						singleShareMimeTypes: ['text/*'],
+						multipleShareMimeTypes: ['text/*'],
+					},
+				},
+			],
 		],
 		experiments: {
 			reactCompiler: true,
@@ -258,6 +283,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		owner: 'roitium',
 		updates: {
 			url: 'https://u.expo.dev/1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
+			enableBsdiffPatchSupport: true,
 		},
 		ios: {
 			bundleIdentifier: 'com.roitium.bbplayer',

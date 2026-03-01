@@ -1,14 +1,9 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	Button,
-	Dialog,
-	SegmentedButtons,
-	Text,
-	TextInput,
-} from 'react-native-paper'
+import { Dialog, SegmentedButtons, Text, TextInput } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { parseExternalPlaylistInfo } from '@/lib/utils/playlistUrlParser'
 

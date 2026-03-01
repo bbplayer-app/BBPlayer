@@ -1,3 +1,4 @@
+// oxlint-disable-next-line import/no-unassigned-import
 import 'dayjs/locale/zh-cn'
 
 import dayjs from 'dayjs'
@@ -28,6 +29,18 @@ export const formatDurationToHHMMSS = (seconds: number): string => {
 		return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
 	}
 	return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
+}
+
+/**
+ * 格式化秒数为 XX小时XX分钟 文本
+ */
+export const formatDurationToText = (seconds: number): string => {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	let text = ''
+	if (hours > 0) text += `${hours} 小时 `
+	text += `${minutes} 分钟`
+	return text.trim()
 }
 
 /**

@@ -2,10 +2,11 @@ import Icon from '@react-native-vector-icons/material-design-icons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState, useTransition } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
-import { IconButton, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
 
+import IconButton from '@/components/common/IconButton'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import CollectionListComponent from '@/features/library/collection/CollectionList'
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
@@ -68,8 +69,8 @@ export default function Library() {
 					</Text>
 					<View style={styles.headerIcons}>
 						<IconButton
-							icon='progress-download'
-							onPress={() => router.push('/download')}
+							icon='download-box'
+							onPress={() => router.push('/downloaded')}
 						/>
 						<IconButton
 							icon='trophy'

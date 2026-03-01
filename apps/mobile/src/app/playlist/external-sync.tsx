@@ -6,16 +6,16 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Banner,
-	Button,
 	Divider,
-	IconButton,
 	Text,
 	TouchableRipple,
 	useTheme,
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import IconButton from '@/components/common/IconButton'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
@@ -36,6 +36,8 @@ import {
 import type { GenericTrack } from '@/types/external_playlist'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import toast from '@/utils/toast'
+
+const ItemSeparator = () => <Divider />
 
 const SyncTrackItem = memo(
 	({
@@ -231,8 +233,8 @@ const ExternalPlaylistSyncPageInner = () => {
 		})
 	})
 
-	const handleSave = useCallback(async () => {
-		if (!data?.playlist || !results) return
+	const handleSave = async () => {
+		if (!data?.playlist || !data?.tracks || !results) return
 		const matchResults = Object.values(results)
 		if (matchResults.length === 0) {
 			toast.error('没有可保存的内容')
@@ -247,19 +249,20 @@ const ExternalPlaylistSyncPageInner = () => {
 
 		const proceedSave = async () => {
 			const loadingToast = toast.loading('正在保存到本地...')
+			const coverUrl = data.playlist.coverUrl ?? ''
+			const description = data.playlist.description ?? ''
 			try {
 				const saveResult = await syncExternalPlaylistFacade.saveMatchedPlaylist(
 					{
 						title: data.playlist.title,
-						coverUrl: data.playlist.coverUrl ?? '',
-						description: data.playlist.description ?? '',
+						coverUrl,
+						description,
 					},
 					matchResults,
 				)
 
 				if (saveResult.isErr()) {
 					toast.error(`保存失败: ${saveResult.error.message}`)
-					console.error(saveResult.error)
 				} else {
 					toast.success('歌单已保存到本地')
 					await queryClient.invalidateQueries({
@@ -273,9 +276,8 @@ const ExternalPlaylistSyncPageInner = () => {
 							router.replace(`/playlist/local/${playlistId}`),
 						)
 				}
-			} catch (e) {
+			} catch {
 				toast.error('保存失败')
-				console.error(e)
 			}
 			toast.dismiss(loadingToast)
 		}
@@ -305,17 +307,9 @@ const ExternalPlaylistSyncPageInner = () => {
 		} else {
 			await proceedSave()
 		}
-	}, [
-		data?.playlist,
-		results,
-		router,
-		openModal,
-		reset,
-		queryClient,
-		data?.tracks,
-	])
+	}
 
-	const handleSync = useCallback(async () => {
+	const handleSync = async () => {
 		if (!data?.tracks) return
 
 		if (syncing) {
@@ -376,21 +370,12 @@ const ExternalPlaylistSyncPageInner = () => {
 		setSyncing(false)
 		if (result.isErr()) {
 			if (result.error.message !== 'Aborted') {
-				console.error(result.error)
 				toast.error(`匹配出错: ${result.error.message}`)
 			}
 		} else {
 			toast.success('匹配完成')
 		}
-	}, [
-		data?.tracks,
-		setProgress,
-		setResult,
-		setSyncing,
-		syncing,
-		results,
-		reset,
-	])
+	}
 
 	const handleOpenManualMatch = useCallback(
 		(track: GenericTrack, index: number) => {
@@ -459,7 +444,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					syncing,
 				}}
 				keyExtractor={keyExtractor}
-				ItemSeparatorComponent={() => <Divider />}
+				ItemSeparatorComponent={ItemSeparator}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,
 				}}

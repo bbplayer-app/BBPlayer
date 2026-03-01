@@ -2,12 +2,13 @@ import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { useRecyclingState } from '@shopify/flash-list'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Icon, IconButton, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 } from 'react-native-reanimated'
 
+import IconButton from '@/components/common/IconButton'
 import {
 	eventListner,
 	type ProgressEvent,

@@ -66,8 +66,22 @@ export interface OrpheusEvents {
 	}): void
 	onIsPlayingChanged(event: { status: boolean }): void
 	onDownloadUpdated(event: DownloadTask): void
+	onCoverDownloadProgress(event: {
+		current: number
+		total: number
+		trackId: string
+		status: 'success' | 'failed'
+	}): void
 	onPlaybackSpeedChanged(event: { speed: number }): void
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	onExportProgress(event: {
+		progress?: number
+		currentId: string
+		index?: number
+		total?: number
+		status: 'success' | 'error'
+		message?: string
+	}): void
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: (...args: any[]) => void
 }
 
@@ -104,6 +118,9 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	autoplayOnStartEnabled: boolean
 	isDesktopLyricsShown: boolean
 	isDesktopLyricsLocked: boolean
+	isStatusBarLyricsEnabled: boolean
+	/** SuperLyric Xposed 模块是否已激活（只读）*/
+	readonly isSuperLyricApiEnabled: boolean
 
 	/**
 	 * 获取当前进度（秒）
@@ -218,6 +235,11 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	removeDownload(id: string): Promise<void>
 
 	/**
+	 * 批量移除下载任务
+	 */
+	removeDownloads(ids: string[]): Promise<void>
+
+	/**
 	 * 批量下载歌曲
 	 */
 	multiDownload(tracks: Track[]): Promise<void>
@@ -247,11 +269,71 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	getUncompletedDownloadTasks(): Promise<DownloadTask[]>
 
+	/**
+	 * 下载缺失的封面图片（本地有歌曲但没有封面的）
+	 * @returns 启动下载的封面数量
+	 */
+	downloadMissingCovers(): Promise<number>
+
+	/**
+	 * 获取已下载的封面 URI
+	 * @returns file:// URI，如果不存在返回 null
+	 */
+	getDownloadedCoverUri(trackId: string): string | null
+
+	/**
+	 * 批量导出已下载的曲目到指定目录 (仅限 Android SAF URI)
+	 * @param ids 曲目 ID 列表
+	 * @param destinationUri 目标目录的 SAF URI (通过 selectDirectory 获取)
+	 * @param filenamePattern 文件名模板，支持以下变量：
+	 *   - `{id}`     — 曲目唯一 ID
+	 *   - `{name}`   — 曲目标题
+	 *   - `{artist}` — 艺术家名称
+	 *   - `{bvid}`   — B 站 BV 号（非 B 站曲目为空字符串）
+	 *   - `{cid}`    — B 站 CID（非 B 站曲目为空字符串，可选使用）
+	 *   不提供时默认使用 `{name}`
+	 * @param embedLyrics 是否将歌词嵌入到 m4a 文件。
+	 *   **注意**：仅对用户在播放器歌词页面加载过歌词的曲目有效。
+	 *   加载过的歌词会缓存到本地；未加载过的曲目将不含内嵌歌词。
+	 * @param convertToLrc 是否将 SPL 歌词转换为标准 LRC。
+	 *   SPL 是 LRC 的超集，支持逐字时间戳（`<mm:ss.ms>`），
+	 *   但仅椒盐音乐等少数播放器能识别；开启后将移除逐字时间戳，
+	 *   输出兼容所有播放器的标准 LRC。仅在 `embedLyrics=true` 时生效。
+	 * @param cropCoverArt 是否裁剪封面为正方形（以短边为基准）。默认 false 保持原始封面比例。
+	 *
+	 * @example
+	 * // 生成 "米津玄師 - Lemon.m4a"
+	 * exportDownloads(ids, uri, '{artist} - {name}', true, false)
+	 * // 生成 "BV1xx411c7mD_123456789.m4a"
+	 * exportDownloads(ids, uri, '{bvid}_{cid}', false, false)
+	 */
+	exportDownloads(
+		ids: string[],
+		destinationUri: string,
+		filenamePattern: string | null,
+		embedLyrics: boolean,
+		convertToLrc: boolean,
+		cropCoverArt: boolean,
+	): Promise<void>
+
+	/**
+	 * 调起系统目录选择器并返回目录的 URI (仅限 Android)
+	 * @returns 目录的 URI 字符串，如果取消则返回 null
+	 */
+	selectDirectory(): Promise<string | null>
+
 	checkOverlayPermission(): Promise<boolean>
 	requestOverlayPermission(): Promise<void>
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
 	setDesktopLyrics(lyricsJson: string): Promise<void>
+
+	/**
+	 * 推送歌词到状态栏歌词模块（Android 专属，依赖 SuperLyric Xposed 模块）。
+	 * 需配合 `isStatusBarLyricsEnabled = true` 使用。
+	 * @param lyricsJson 与 setDesktopLyrics 格式相同的 JSON 字符串
+	 */
+	setStatusBarLyrics(lyricsJson: string): Promise<void>
 
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
@@ -266,6 +348,13 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	 * @param destination 用于接收数据的 Float32Array
 	 */
 	updateSpectrumData(destination: Float32Array): void
+
+	/**
+	 * 检查传入的 URI 列表中，哪些已经被完整缓存在本地 LRU Cache 中。
+	 * @param uris 包含完整播放参数的 URI 列表 (例如 `orpheus://bilibili?...`)
+	 * @returns 返回已完整缓存的 URI 列表
+	 */
+	getLruCachedUris(uris: string[]): string[]
 }
 
 /**

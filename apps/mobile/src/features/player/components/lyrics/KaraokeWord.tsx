@@ -3,6 +3,7 @@ import { memo } from 'react'
 import type { StyleProp, TextStyle } from 'react-native'
 import { StyleSheet, Text, View } from 'react-native'
 import Animated, {
+	createAnimatedComponent,
 	Extrapolation,
 	interpolate,
 	type SharedValue,
@@ -11,7 +12,7 @@ import Animated, {
 	useSharedValue,
 } from 'react-native-reanimated'
 
-const AnimatedText = Animated.createAnimatedComponent(Text)
+const AnimatedText = createAnimatedComponent(Text)
 
 interface KaraokeWordProps {
 	span: LyricSpan
@@ -38,22 +39,24 @@ export const KaraokeWord = memo(function KaraokeWord({
 		(currentVal: number) => {
 			if (!isHighlighted) {
 				if (localProgress.value !== 0) {
-					localProgress.value = 0
+					localProgress.set(0)
 				}
 				return
 			}
 
 			const timeMs = currentVal * 1000
 			if (timeMs < span.startTime) {
-				localProgress.value = 0
+				localProgress.set(0)
 			} else if (timeMs > span.endTime) {
-				localProgress.value = 1
+				localProgress.set(1)
 			} else {
-				localProgress.value = interpolate(
-					timeMs,
-					[span.startTime, span.endTime],
-					[0, 1],
-					Extrapolation.CLAMP,
+				localProgress.set(
+					interpolate(
+						timeMs,
+						[span.startTime, span.endTime],
+						[0, 1],
+						Extrapolation.CLAMP,
+					),
 				)
 			}
 		},

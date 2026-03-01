@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useUpdateTrackLocalPlaylists } from '@/hooks/mutations/db/playlist'
 import {
 	usePlaylistLists,
@@ -85,7 +86,10 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			refetch: refetchPlaylists,
 		} = usePlaylistLists()
 		const filteredPlaylists = useMemo(
-			() => allPlaylists?.filter((p) => p.type === 'local'),
+			() =>
+				allPlaylists?.filter(
+					(p) => p.type === 'local' && p.shareRole !== 'subscriber',
+				),
 			[allPlaylists],
 		)
 
@@ -111,12 +115,18 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			if (!playlistsContainingTrack) return new Set<number>()
 			return new Set(playlistsContainingTrack.map((p) => p.id))
 		}, [playlistsContainingTrack])
-		const initialCheckedPlaylistIdList = Array.from(initialCheckedPlaylistIdSet)
+		const initialCheckedPlaylistIdList = useMemo(
+			() => Array.from(initialCheckedPlaylistIdSet),
+			[initialCheckedPlaylistIdSet],
+		)
 
-		useEffect(() => {
-			// 初始化组件的勾选状态
+		const [prevInitialIds, setPrevInitialIds] = useState(
+			initialCheckedPlaylistIdList,
+		)
+		if (prevInitialIds !== initialCheckedPlaylistIdList) {
+			setPrevInitialIds(initialCheckedPlaylistIdList)
 			setCheckedPlaylistIds(initialCheckedPlaylistIdList)
-		}, [initialCheckedPlaylistIdList])
+		}
 
 		const handleCheckboxPress = useCallback((playlistId: number) => {
 			setCheckedPlaylistIds((currentIds) => {
@@ -225,7 +235,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 					</Dialog.ScrollArea>
 					<Dialog.Content>
 						<Text variant='bodySmall'>
-							*{'\u2009'}与远程同步的播放列表不会显示
+							*{'\u2009'}与远程同步或订阅的共享歌单不会显示
 						</Text>
 					</Dialog.Content>
 					<Dialog.Actions style={styles.actionsContainer}>

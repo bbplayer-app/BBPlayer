@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* oxlint-disable @typescript-eslint/no-unsafe-return */
 /* 这些代码从 https://github.com/nooblong/NeteaseCloudMusicApiBackup/ 抄的，能别动就别动！！！！ */
 import CryptoJS from 'crypto-js'
 import forge from 'node-forge'
@@ -55,7 +55,7 @@ export const weapi = (
 			secretKey,
 			iv,
 		),
-		encSecKey: rsaEncrypt(secretKey.split('').reverse().join(''), publicKey),
+		encSecKey: rsaEncrypt(secretKey.split('').toReversed().join(''), publicKey),
 	}
 }
 

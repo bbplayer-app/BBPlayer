@@ -14,8 +14,8 @@ const logger = log.extend('Services.ExternalPlaylist')
 
 // 全局配置
 const MIN_DELAY = 1200 // 防封号延迟 (ms)
-const BLACKLIST_ZONES = [26, 29, 31, 201, 238] // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
-const PRIORITY_ZONES = [193, 130, 267] // 优先分区 (MV, 音乐综合, 电台)
+const BLACKLIST_ZONES = new Set([26, 29, 31, 201, 238]) // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
+const PRIORITY_ZONES = new Set([193, 130, 267]) // 优先分区 (MV, 音乐综合, 电台)
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -36,7 +36,24 @@ export class ExternalPlaylistService {
 	): ResultAsync<{ playlist: GenericPlaylist; tracks: GenericTrack[] }, Error> {
 		if (source === 'netease') {
 			return neteaseApi.getPlaylist(playlistId).map((response) => {
-				const tracks = response.playlist.tracks.map((track) => ({
+				if (!response.playlist) {
+					return {
+						playlist: {
+							id: playlistId,
+							title: 'Unknown Playlist',
+							coverUrl: '',
+							description: '',
+							trackCount: 0,
+							author: {
+								name: 'Unknown',
+								id: 0,
+							},
+						},
+						tracks: [],
+					}
+				}
+
+				const tracks = (response.playlist.tracks ?? []).map((track) => ({
 					title: track.name,
 					artists: track.ar.map((a) => a.name),
 					album: track.al.name,
@@ -53,8 +70,8 @@ export class ExternalPlaylistService {
 						description: response.playlist.description ?? '',
 						trackCount: response.playlist.trackCount,
 						author: {
-							name: response.playlist.creator.nickname,
-							id: response.playlist.creator.userId,
+							name: response.playlist.creator?.nickname ?? 'Unknown',
+							id: response.playlist.creator?.userId ?? 0,
 						},
 					},
 					tracks,
@@ -120,6 +137,7 @@ export class ExternalPlaylistService {
 					}
 
 					const song = tracks[i]
+					// oxlint-disable-next-line no-await-in-loop
 					await wait(MIN_DELAY)
 
 					// Double check after wait
@@ -133,6 +151,7 @@ export class ExternalPlaylistService {
 					let matchedVideo: BilibiliSearchVideo | null = null
 
 					try {
+						// oxlint-disable-next-line no-await-in-loop
 						const searchResult = await bilibiliApi.searchVideos(
 							searchQuery,
 							1,
@@ -181,7 +200,7 @@ export class ExternalPlaylistService {
 
 		for (const video of results) {
 			// 1. 黑名单过滤
-			if (BLACKLIST_ZONES.includes(video.typeid)) {
+			if (BLACKLIST_ZONES.has(video.typeid)) {
 				continue
 			}
 
@@ -224,7 +243,7 @@ export class ExternalPlaylistService {
 		targetSong: GenericTrack,
 	): number {
 		// 1. 黑名单过滤
-		if (BLACKLIST_ZONES.includes(video.typeid)) {
+		if (BLACKLIST_ZONES.has(video.typeid)) {
 			return -1
 		}
 
@@ -254,7 +273,7 @@ export class ExternalPlaylistService {
 
 		// 额外加分项
 		// 如果是优先分区 (官方/音乐区)，给予 10% 加成
-		if (PRIORITY_ZONES.includes(video.typeid)) {
+		if (PRIORITY_ZONES.has(video.typeid)) {
 			totalScore *= 1.1
 		}
 

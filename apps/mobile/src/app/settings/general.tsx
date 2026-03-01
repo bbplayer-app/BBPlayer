@@ -1,11 +1,15 @@
 import * as FileSystem from 'expo-file-system'
+import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, IconButton, Switch, Text, useTheme } from 'react-native-paper'
+import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import IconButton from '@/components/common/IconButton'
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
@@ -18,6 +22,7 @@ export default function GeneralSettingsPage() {
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
 	const setSettings = useAppStore((state) => state.setSettings)
+	const haveTrack = useCurrentTrack()
 
 	const sendPlayHistory = useAppStore((state) => state.settings.sendPlayHistory)
 
@@ -59,19 +64,14 @@ export default function GeneralSettingsPage() {
 		setIsCheckingForUpdate(false)
 	}
 
-	const shareLogFile = async () => {
-		const d = new Date()
-		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-		const file = new FileSystem.File(
-			FileSystem.Paths.document,
-			'logs',
-			`${dateString}.log`,
-		)
-		if (file.exists) {
-			await Sharing.shareAsync(file.uri)
-		} else {
-			toastAndLogError('', new Error('无法分享日志：未找到日志文件'), 'UI.Test')
-		}
+	const [isSharing, setIsSharing] = useState(false)
+	const isSharingRef = useRef(false)
+
+	const shareLogFile = () => {
+		if (isSharingRef.current) return
+		isSharingRef.current = true
+		setIsSharing(true)
+		void performShareLog(setIsSharing, isSharingRef)
 	}
 
 	return (
@@ -84,7 +84,7 @@ export default function GeneralSettingsPage() {
 				style={styles.scrollView}
 				contentContainerStyle={[
 					styles.scrollContent,
-					{ paddingBottom: insets.bottom + 20 },
+					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
 				<View style={styles.settingRow}>
@@ -133,6 +133,8 @@ export default function GeneralSettingsPage() {
 						icon='share-variant'
 						size={20}
 						onPress={shareLogFile}
+						loading={isSharing}
+						disabled={isSharing}
 					/>
 				</View>
 				<View style={styles.settingRow}>
@@ -145,6 +147,30 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
+					<Text>下载缺失封面</Text>
+					<IconButton
+						icon='image-sync'
+						size={20}
+						onPress={() => openModal('CoverDownloadProgress', undefined)}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>清空图片缓存</Text>
+					<IconButton
+						icon='image-remove'
+						size={20}
+						onPress={async () => {
+							try {
+								await Image.clearDiskCache()
+								await Image.clearMemoryCache()
+								toast.success('已清空图片缓存')
+							} catch (e) {
+								toastAndLogError('清空图片缓存失败', e, 'UI.Settings.General')
+							}
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
 					<Text>开发者页面</Text>
 					<IconButton
 						icon='open-in-new'
@@ -153,8 +179,36 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 			</ScrollView>
+			<View style={styles.nowPlayingBarContainer}>
+				<NowPlayingBar />
+			</View>
 		</View>
 	)
+}
+
+async function performShareLog(
+	setIsSharing: (v: boolean) => void,
+	isSharingRef: { current: boolean },
+) {
+	try {
+		const d = new Date()
+		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+		const file = new FileSystem.File(
+			FileSystem.Paths.document,
+			'logs',
+			`${dateString}.log`,
+		)
+		if (file.exists) {
+			await Sharing.shareAsync(file.uri)
+		} else {
+			toastAndLogError('', new Error('无法分享日志：未找到日志文件'), 'UI.Test')
+		}
+	} catch (e) {
+		toastAndLogError('', e, 'UI.Settings')
+	} finally {
+		setIsSharing(false)
+		isSharingRef.current = false
+	}
 }
 
 const styles = StyleSheet.create({
@@ -172,5 +226,11 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
 	},
 })

@@ -16,7 +16,7 @@ export async function returnOrThrowAsync<T, E>(
 		}
 		return value as Exclude<T, undefined | null>
 	}
-	// eslint-disable-next-line @typescript-eslint/only-throw-error
+	// oxlint-disable-next-line @typescript-eslint/only-throw-error
 	throw result.error
 }
 

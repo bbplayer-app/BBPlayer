@@ -5,16 +5,27 @@ import {
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
-import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import LottieView, { type AnimationObject } from 'lottie-react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
-import { useTheme } from 'react-native-paper'
+import { RectButton } from 'react-native-gesture-handler'
+import { ActivityIndicator, useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { analyticsService } from '@/lib/services/analyticsService'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
+import { tintLottieSource } from '@/utils/lottie'
+
+const skipPrevSource =
+	require('@/assets/lottie/skip-prev.json') as AnimationObject
+const skipNextSource =
+	require('@/assets/lottie/skip-next.json') as AnimationObject
+const playPauseSource =
+	require('@/assets/lottie/play-pause.json') as AnimationObject
 
 interface MainPlaybackControlsProps {
 	size?: 'normal' | 'compact'
@@ -29,20 +40,30 @@ export function MainPlaybackControls({
 	size = 'normal',
 	onInteraction,
 }: MainPlaybackControlsProps) {
+	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
 
-	// 对 BUFFERING 状态和 isPlaying 状态添加防抖，避免 seek 时短暂闪烁图标
-	const [debouncedBuffering, setDebouncedBuffering] = useState(false)
+	// 对 isPlaying 状态添加防抖，避免 seek 时短暂闪烁图标
 	const [debouncedIsPlaying, setDebouncedIsPlaying] = useState(isPlaying)
-	const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const [debouncedBuffering, setDebouncedBuffering] = useState(false)
 	const playingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const prevLottieRef = useRef<LottieView>(null)
+	const nextLottieRef = useRef<LottieView>(null)
+	const playPauseLottieRef = useRef<LottieView>(null)
+	const isFirstMount = useRef(true)
 
 	useEffect(() => {
 		if (state === PlaybackState.BUFFERING) {
+			if (bufferingTimeoutRef.current) {
+				clearTimeout(bufferingTimeoutRef.current)
+				bufferingTimeoutRef.current = null
+			}
 			bufferingTimeoutRef.current = setTimeout(() => {
 				setDebouncedBuffering(true)
-			}, 200)
+			}, 300)
 		} else {
 			if (bufferingTimeoutRef.current) {
 				clearTimeout(bufferingTimeoutRef.current)
@@ -78,70 +99,148 @@ export function MainPlaybackControls({
 		}
 	}, [isPlaying])
 
-	const finalPlayingIndicator = debouncedBuffering
-		? 'loading'
-		: debouncedIsPlaying
-			? 'pause'
-			: 'play'
+	useEffect(() => {
+		if (isFirstMount.current) {
+			isFirstMount.current = false
+			if (debouncedIsPlaying) {
+				playPauseLottieRef.current?.play(0, 0)
+			} else {
+				playPauseLottieRef.current?.play(8, 8)
+			}
+			return
+		}
 
-	const skipButtonSize = size === 'compact' ? 28 : 32
-	const playButtonSize = size === 'compact' ? 40 : 48
+		if (debouncedIsPlaying) {
+			playPauseLottieRef.current?.play(8, 0)
+		} else {
+			playPauseLottieRef.current?.play(0, 8)
+		}
+	}, [debouncedIsPlaying, debouncedBuffering])
+
+	const skipButtonSize = size === 'compact' ? 40 : 46
+	const playButtonSize = size === 'compact' ? 80 : 96
 	const gap = size === 'compact' ? 24 : 40
+
+	// 我知道这 tmd 是一种究极无敌肮脏的 hack，但没办法，colorFilters 不生效啊...
+	const tintedSkipPrev = useMemo(
+		() => tintLottieSource(skipPrevSource, colors.onSurfaceVariant),
+		[colors.onSurfaceVariant],
+	)
+	const tintedPlayPause = useMemo(
+		() => tintLottieSource(playPauseSource, colors.primary),
+		[colors.primary],
+	)
+	const tintedSkipNext = useMemo(
+		() => tintLottieSource(skipNextSource, colors.onSurfaceVariant),
+		[colors.onSurfaceVariant],
+	)
 
 	return (
 		<View style={[styles.mainControlsContainer, { gap }]}>
-			<IconButton
-				icon='skip-previous'
-				size={skipButtonSize}
+			<RectButton
+				style={{
+					width: skipButtonSize,
+					height: skipButtonSize,
+					justifyContent: 'center',
+					alignItems: 'center',
+					borderRadius: 99999,
+				}}
 				onPress={() => {
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+					prevLottieRef.current?.play(0, 60)
 					void Orpheus.skipToPrevious()
 					void analyticsService.logPlayerAction('skip_prev')
 				}}
 				testID='player-prev'
-			/>
-			<IconButton
-				icon={finalPlayingIndicator}
-				size={playButtonSize}
+			>
+				<LottieView
+					ref={prevLottieRef}
+					source={tintedSkipPrev}
+					style={{ width: '100%', height: '100%' }}
+					autoPlay={false}
+					speed={2}
+					loop={false}
+				/>
+			</RectButton>
+			<RectButton
+				style={{
+					width: playButtonSize,
+					height: playButtonSize,
+					justifyContent: 'center',
+					alignItems: 'center',
+					borderRadius: 99999,
+				}}
 				onPress={async () => {
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-					const isPlaying = await Orpheus.getIsPlaying()
-					if (isPlaying) {
-						await Orpheus.pause()
-						void analyticsService.logPlayerAction('pause')
-					} else {
-						await Orpheus.play()
-						void analyticsService.logPlayerAction('play')
+
+					const nextIsPlaying = !debouncedIsPlaying
+					setDebouncedIsPlaying(nextIsPlaying)
+
+					try {
+						if (debouncedIsPlaying) {
+							await Orpheus.pause()
+							void analyticsService.logPlayerAction('pause')
+						} else {
+							await Orpheus.play()
+							void analyticsService.logPlayerAction('play')
+						}
+					} catch (e) {
+						toastAndLogError('播放操作失败', e, 'UI.Player.Controls')
 					}
 				}}
-				mode='contained'
 				testID='player-play-pause'
-			/>
-			<IconButton
-				icon='skip-next'
-				size={skipButtonSize}
+			>
+				{debouncedBuffering ? (
+					<ActivityIndicator
+						size={playButtonSize * 0.4}
+						color={colors.primary}
+					/>
+				) : (
+					<LottieView
+						ref={playPauseLottieRef}
+						source={tintedPlayPause}
+						style={{ width: '100%', height: '100%' }}
+						autoPlay={false}
+						speed={2}
+						loop={false}
+					/>
+				)}
+			</RectButton>
+			<RectButton
+				style={{
+					width: skipButtonSize,
+					height: skipButtonSize,
+					justifyContent: 'center',
+					alignItems: 'center',
+					borderRadius: 99999,
+				}}
 				onPress={() => {
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+					nextLottieRef.current?.play(0, 60)
 					void Orpheus.skipToNext()
 					void analyticsService.logPlayerAction('skip_next')
 				}}
 				testID='player-next'
-			/>
+			>
+				<LottieView
+					ref={nextLottieRef}
+					source={tintedSkipNext}
+					style={{ width: '100%', height: '100%' }}
+					autoPlay={false}
+					speed={2}
+					loop={false}
+				/>
+			</RectButton>
 		</View>
 	)
 }
 
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
-	const { data: shuffleMode, refetch: refetchShuffleMode } = useQuery({
-		queryKey: ['shuffleMode'],
-		queryFn: () => Orpheus.getShuffleMode(),
-		gcTime: 0,
-		staleTime: 0,
-	})
+	const { data: shuffleMode, refetch: refetchShuffleMode } = useShuffleMode()
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()

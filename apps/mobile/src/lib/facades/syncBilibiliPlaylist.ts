@@ -73,7 +73,7 @@ export class SyncBilibiliPlaylistFacade {
 				source: 'bilibili' as const,
 				bilibiliMetadata: {
 					bvid,
-					cid,
+					cid: cid,
 					isMultiPage: cid !== undefined,
 					videoIsValid: true,
 				},
@@ -518,6 +518,7 @@ export class SyncBilibiliPlaylistFacade {
 					stage: 'fetching_details',
 				})
 				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+				// oxlint-disable-next-line no-await-in-loop
 				const pageResult = await this.bilibiliApi.getFavoriteListContents(
 					favoriteId,
 					nowPageNumber,
@@ -632,7 +633,7 @@ export class SyncBilibiliPlaylistFacade {
 							bilibiliMetadata: {
 								bvid: v.bvid,
 								isMultiPage: false,
-								cid: undefined,
+								cid: null,
 								videoIsValid: v.attr === 0,
 							},
 							coverUrl: v.cover,

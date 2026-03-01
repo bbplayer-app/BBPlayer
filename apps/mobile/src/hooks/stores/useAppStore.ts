@@ -95,6 +95,7 @@ export const useAppStore = create<AppState>()(
 		immer((set, get) => {
 			return {
 				bilibiliCookie: null,
+				bbplayerToken: null,
 				settings: {
 					sendPlayHistory: false,
 					enableDebugLog: false,
@@ -108,6 +109,7 @@ export const useAppStore = create<AppState>()(
 					enableDanmaku: false,
 					danmakuFilterLevel: 0,
 				},
+				bilibiliUserInfo: null,
 
 				hasBilibiliCookie: () => {
 					const { bilibiliCookie } = get()
@@ -123,9 +125,11 @@ export const useAppStore = create<AppState>()(
 					const cookieObj = result.value
 					set((state) => {
 						state.bilibiliCookie = cookieObj
+						state.bbplayerToken = null
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(cookieObj))
 					logger.info('设置 cookie 到 orpheus')
+
 					return ok(undefined)
 				},
 
@@ -135,6 +139,7 @@ export const useAppStore = create<AppState>()(
 
 					set((state) => {
 						state.bilibiliCookie = newCookie
+						state.bbplayerToken = null
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
 					logger.info('更新 cookie 到 orpheus')
@@ -144,6 +149,26 @@ export const useAppStore = create<AppState>()(
 				clearBilibiliCookie: () => {
 					set((state) => {
 						state.bilibiliCookie = null
+						state.bilibiliUserInfo = null
+						state.bbplayerToken = null
+					})
+				},
+
+				setBilibiliUserInfo: (info) => {
+					set((state) => {
+						state.bilibiliUserInfo = info
+					})
+				},
+
+				setBbplayerToken: (token) => {
+					set((state) => {
+						state.bbplayerToken = token
+					})
+				},
+
+				clearBbplayerToken: () => {
+					set((state) => {
+						state.bbplayerToken = null
 					})
 				},
 
@@ -192,6 +217,8 @@ export const useAppStore = create<AppState>()(
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
+				bilibiliUserInfo: state.bilibiliUserInfo,
+				bbplayerToken: state.bbplayerToken,
 				settings: state.settings,
 			}),
 
@@ -200,10 +227,10 @@ export const useAppStore = create<AppState>()(
 					const typedPersistedState = persistedState as AppState
 
 					// @ts-expect-error -- handling migration of old keys
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					const oldSentry = typedPersistedState.settings.enableSentryReport
 					// @ts-expect-error -- handling migration of old keys
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					const oldAnalytics = typedPersistedState.settings.enableAnalytics
 
 					const mergedState = {
@@ -239,8 +266,15 @@ export const useAppStore = create<AppState>()(
 							hasOldData = true
 						}
 					}
+
+					const oldToken = storage.getString('bbplayer_jwt')
+					if (oldToken) {
+						migratedState.bbplayerToken = oldToken
+						hasOldData = true
+						storage.remove('bbplayer_jwt')
+					}
 				} catch (e) {
-					logger.error('解析并迁移旧的 bilibili cookie 失败', e)
+					logger.error('解析并迁移旧的 bilibili 数据失败', e)
 				}
 
 				const migratedSettings = { ...currentState.settings }

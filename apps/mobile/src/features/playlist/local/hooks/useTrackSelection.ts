@@ -2,11 +2,11 @@ import { useCallback, useState } from 'react'
 
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 
-export function useTrackSelection() {
-	const [selected, setSelected] = useState<Set<number>>(() => new Set())
+export function useTrackSelection<T = number>() {
+	const [selected, setSelected] = useState<Set<T>>(() => new Set())
 	const [selectMode, setSelectMode] = useState<boolean>(false)
 
-	const toggle = useCallback((id: number) => {
+	const toggle = useCallback((id: T) => {
 		setSelected((prev) => {
 			const next = new Set(prev)
 			if (next.has(id)) {
@@ -18,9 +18,11 @@ export function useTrackSelection() {
 		})
 	}, [])
 
-	const enterSelectMode = useCallback((id: number) => {
+	const enterSelectMode = useCallback((id?: T) => {
 		setSelectMode(true)
-		setSelected(new Set([id]))
+		if (id !== undefined) {
+			setSelected(new Set([id]))
+		}
 	}, [])
 
 	const exitSelectMode = useCallback(() => {

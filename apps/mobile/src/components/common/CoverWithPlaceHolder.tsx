@@ -5,6 +5,7 @@ import { memo, useMemo } from 'react'
 import type { ColorSchemeName, StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, useColorScheme } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
+import { runes } from 'runes2'
 
 import { getGradientColors } from '@/utils/color'
 
@@ -53,7 +54,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	cover,
 	size,
 	borderRadius,
-	cachePolicy = 'none',
+	cachePolicy = 'disk',
 	style,
 }: CoverWithPlaceHolderProps) {
 	const colorScheme: ColorSchemeName = useColorScheme()
@@ -68,7 +69,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	)
 
 	const firstChar =
-		validTitle.length > 0 ? [...validTitle][0].toUpperCase() : undefined
+		validTitle.length > 0 ? runes(validTitle)[0].toUpperCase() : undefined
 
 	const coverSource = useMemo(() => {
 		if (typeof cover === 'string') {
@@ -76,6 +77,10 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 		}
 		return cover
 	}, [cover])
+	const policy =
+		typeof cover === 'string' && cover.startsWith('file://')
+			? 'none'
+			: cachePolicy
 
 	return (
 		<SquircleView
@@ -102,7 +107,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 				recyclingKey={String(id)}
 				style={[styles.image, { width: size, height: size }]}
 				transition={0}
-				cachePolicy={cachePolicy}
+				cachePolicy={policy}
 			/>
 		</SquircleView>
 	)

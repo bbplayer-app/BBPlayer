@@ -2,9 +2,10 @@ import { verify } from '@bbplayer/splash'
 import * as WebBrowser from 'expo-web-browser'
 import { useState } from 'react'
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native'
-import { Button, Dialog, TextInput, useTheme } from 'react-native-paper'
+import { Dialog, TextInput, useTheme } from 'react-native-paper'
 import { TabBar, TabView } from 'react-native-tab-view'
 
+import Button from '@/components/common/Button'
 import { alert } from '@/components/modals/AlertModal'
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -97,8 +98,6 @@ export default function EditLyricsModal({
 			updateTime: Date.now(),
 		}
 
-		console.warn('saving', newLyricData)
-
 		const result = await lyricService.saveLyricsToFile(newLyricData, uniqueKey)
 
 		if (result.isErr()) {
@@ -142,7 +141,7 @@ export default function EditLyricsModal({
 		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 	const renderTabBar = (props: any) => (
 		<TabBar
 			{...props}

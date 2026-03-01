@@ -3,13 +3,14 @@ import { Image } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import { Pressable, StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
-import { Button, Dialog, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import Button from '@/components/common/Button'
+/* oxlint-disable @typescript-eslint/no-unsafe-argument */
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+// oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const WECHAT_QR = require('../../../../assets/images/wechat.png')
 
 export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
@@ -17,11 +18,19 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 
 	const handleLongPress = async () => {
+		const permissionStatus = permissionResponse
+			? permissionResponse.status
+			: undefined
+		const accessPrivileges = permissionResponse
+			? permissionResponse.accessPrivileges
+			: undefined
+
+		const needsPermission =
+			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED &&
+			accessPrivileges !== 'all'
+
 		try {
-			if (
-				permissionResponse?.status !== MediaLibrary.PermissionStatus.GRANTED &&
-				permissionResponse?.accessPrivileges !== 'all'
-			) {
+			if (needsPermission) {
 				const { status } = await requestPermission()
 				if (status !== MediaLibrary.PermissionStatus.GRANTED) {
 					toast.error('无法保存图片', {
@@ -36,14 +45,18 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 				await asset.downloadAsync()
 			}
 
-			const uri = asset.localUri ?? asset.uri
-
-			if (uri) {
-				await MediaLibrary.saveToLibraryAsync(uri)
-				toast.success('已保存到相册')
-			} else {
-				throw new Error('无法获取图片路径')
+			let uri = asset.localUri
+			if (!uri) {
+				uri = asset.uri
 			}
+
+			if (!uri) {
+				toast.error('保存失败', { description: '无法获取图片路径' })
+				return
+			}
+
+			await MediaLibrary.saveToLibraryAsync(uri)
+			toast.success('已保存到相册')
 		} catch (e) {
 			toast.error('保存失败', { description: String(e) })
 		}
@@ -63,7 +76,7 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 							cornerSmoothing={0.6}
 						>
 							<Image
-								// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+								// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
 								source={WECHAT_QR}
 								style={styles.imageInner}
 								contentFit='contain'

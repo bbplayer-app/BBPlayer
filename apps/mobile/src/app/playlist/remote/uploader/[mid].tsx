@@ -2,13 +2,14 @@ import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, Button, Searchbar, Text, useTheme } from 'react-native-paper'
+import { Appbar, Searchbar, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 
+import Button from '@/components/common/Button'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -76,8 +77,14 @@ export default function UploaderPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
-	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
-		useTrackSelection()
+	const {
+		selected,
+		selectMode,
+		toggle,
+		enterSelectMode,
+		exitSelectMode,
+		setSelected,
+	} = useTrackSelection()
 
 	const selection = useMemo(
 		() => ({
@@ -211,24 +218,40 @@ export default function UploaderPage() {
 				/>
 				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
-					<Appbar.Action
-						icon='playlist-plus'
-						onPress={() => {
-							const payloads = []
-							for (const id of selected) {
-								const track = tracks.find((t) => t.id === id)
-								if (track) {
-									payloads.push({
-										track: track as Track,
-										artist: track.artist!,
-									})
-								}
+					<>
+						<Appbar.Action
+							icon='select-all'
+							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
+						/>
+						<Appbar.Action
+							icon='select-compare'
+							onPress={() =>
+								setSelected(
+									new Set(
+										tracks.filter((t) => !selected.has(t.id)).map((t) => t.id),
+									),
+								)
 							}
-							openModal('BatchAddTracksToLocalPlaylist', {
-								payloads,
-							})
-						}}
-					/>
+						/>
+						<Appbar.Action
+							icon='playlist-plus'
+							onPress={() => {
+								const payloads = []
+								for (const id of selected) {
+									const track = tracks.find((t) => t.id === id)
+									if (track) {
+										payloads.push({
+											track: track as Track,
+											artist: track.artist!,
+										})
+									}
+								}
+								openModal('BatchAddTracksToLocalPlaylist', {
+									payloads,
+								})
+							}}
+						/>
+					</>
 				) : (
 					<Appbar.Action
 						icon={startSearch ? 'close' : 'magnify'}

@@ -5,6 +5,7 @@ import { Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Track } from '@/types/core/media'
 import { addToQueue } from '@/utils/player'
@@ -75,7 +76,7 @@ export const LeaderBoardListItem = memo(function LeaderBoardListItem({
 				<CoverWithPlaceHolder
 					id={item.track.uniqueKey}
 					title={item.track.title}
-					cover={item.track.coverUrl}
+					cover={resolveTrackCover(item.track.uniqueKey, item.track.coverUrl)}
 					size={LIST_ITEM_COVER_SIZE}
 				/>
 

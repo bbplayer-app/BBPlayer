@@ -2,8 +2,9 @@ import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, Text, useTheme } from 'react-native-paper'
+import { Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
@@ -61,6 +62,7 @@ export default function UpdateAppModal({
 					listed_notes.map((note, index) => (
 						<Text
 							selectable
+							// oxlint-disable-next-line react/no-array-index-key
 							key={index}
 							style={styles.noteText}
 						>

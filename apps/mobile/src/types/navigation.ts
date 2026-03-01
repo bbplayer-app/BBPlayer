@@ -41,6 +41,13 @@ export interface ModalPropsMap {
 		shouldRedirectToLocalPlaylist?: boolean
 	}
 	DanmakuSettings: undefined
+	CoverDownloadProgress: undefined
+	EnableSharing: {
+		playlistId: number
+		shareId?: string | null
+		shareRole?: 'owner' | 'editor' | 'subscriber' | null
+	}
+	SubscribeToSharedPlaylist: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

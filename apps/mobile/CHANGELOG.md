@@ -5,16 +5,67 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [Unreleased]
+## [2.4.1] - 2026-03-01
 
 ### Changed
 
-- 将 protobuf 生成脚本移至 `prepare` script，安装依赖时自动生成 `dm.js` 和 `dm.d.ts`
+- 歌单支持同名，不再进行同名判断
+
+### Added
+
+- 歌单共享、协同编辑功能
+- 状态栏歌词
+- 导出歌曲
+
+## [2.3.2] - 2023-02-25
+
+### Added
+
+- 为设置页面的所有子页面增加 NowPlayingBar
+- 支持显示本地歌单播放完成所需的总时长
+- orpheus：支持歌曲封面与音频同步下载及清理，支持补齐缺失封面，提升无网播放体验
+- orpheus：引入全局图片本地缓存机制（基于 Glide 默认 LRU 策略，上限默认 250MB）
+- 优化无网状态下的本地播放列表显示逻辑，高亮已下载和自动缓存的歌曲
+- 本地播放列表支持拖拽排序：在多选模式下长按右侧拖拽手柄即可拖动曲目，自动滚动，松手后持久化新顺序
+
+### Changed
+
+- 播放器主页的主控制按钮替换为 Lottie 动画，并支持乐观更新状态
+- 本地播放列表排序从整数 `order` 迁移至 Fractional Indexing（字符串键），排序时只更新单行，无需全量位移；旧数据启动时自动迁移
+- orpheus：优化媒体通知的构建逻辑，优先加载本地已下载的封面图片
+- orpheus：优化播放器生命周期，在实例被销毁后重新点击播放时自动触发重建
+- 重构弹幕加载逻辑，避免无网或弱网状态下无限加载
+- 优化歌词加载策略：无网络且无本地缓存时直接返回未找到，不再发起无效网络请求
+- 替换 Material 3 动态颜色获取方案，由 `@pchmn/expo-material3-theme` 迁移至 Expo Router 内置的 `Color` API
+- 优化 Sentry 异常上报规则，屏蔽播放器非关键性错误（如 Bilibili API 异常或常规网络错误）
+- 替换 `react-native-paper` 按钮组件的底层实现为 RNGH 组件，提升交互性能
+- 调整 protobuf 编译流程，将生成脚本移至 `prepare` 阶段，实现依赖安装时自动生成 `dm.js` 与 `dm.d.ts`
+- 恢复播放器页面的滑动交互样式
+- 重构歌词页面，底层使用 ScrollView 以提升滚动表现
+- 重构首页用户信息的展示逻辑
+- 重构设置页面路由结构，将其作为独立 stack 页面
+
+### Fixed
+
+- 修复本地播放列表在分页未加载完成时，将歌曲拖拽到当前列表底部会导致其被移动到全列表底部的问题
+- 修复播放器主控件 Lottie 图标 `colorFilters` 不生效（始终显示红色）的问题，根本原因是 JSON 文件中 Stroke 图层颜色硬编码为红色且 lottie-react-native 对 Stroke 图层的 colorFilters 支持有限，已将三个 Lottie JSON 的 Stroke 颜色改为白色以使主题色正确叠加
+- 修复应用启动后断网导致本地播放列表和数据触发无限加载的问题
+- orpheus：修复桌面歌词锁定后重启应用，导致歌词无法移动且阻挡底层点击操作的问题
+- 修复 `b23.tv` 短链接解析失败的问题（调整为从 HTML 响应中提取目标链接）
+- 修复在开启系统三键导航的设备上，播放器底部控件可能与系统导航栏重叠的问题
+- 修复获取网易云音乐歌单时，因 `playlist` 或 `creator` 等字段缺失引起的闪退
+- 修复连续点击导致的分享失败问题，并补充了分享按钮的加载状态反馈
+- orpheus：修复播放器因数据 (`data`) 为空时引发的解析异常
+- 修复播放器页面底部偶现的异常白块问题
+- 修复无网状态下，频繁弹出网络报错提示的问题
+- orpheus：修复桌面歌词拖拽边界判定失效的问题，防止歌词被拖入状态栏区域导致无法触达
+- orpheus：修复 `onDestroy` 方法在非预期线程执行的问题
 
 ## [2.3.0] - 2026-02-07
 
 ### Added
 
+- 基于 `react-native-gesture-handler` 封装了 `Button` 组件，样式与 `react-native-paper` 保持一致
 - 支持酷狗音乐歌词搜索
 - 集成 Firebase Analytics
 - 支持从 QQ 音乐 / 网易云音乐导入歌单并匹配 B 站视频
@@ -55,7 +106,8 @@
 - 修复播放列表结束后点击播放按钮无效的问题，现会从头开始播放
 - 修复 `external-sync` 和 `useExternalPlaylistSyncStore` 中的 React Compiler 优化跳过问题
 - 优化播放列表在屏幕较窄时的布局显示
-- 修复播放器进度条时间在屏幕较窄时可能换行的问题
+- 修复播放队列模态框中使用 `RectButton` 无法点击的问题，并移除删除按钮的涟漪效果
+- 修复播放器页面在部分小屏设备上无法滚动的问题
 - 优化播放器页面在小屏设备上的显示，支持滚动查看完整内容
 
 ## [2.2.4] - 2026-01-30
@@ -339,7 +391,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.0...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -358,3 +410,5 @@
 [2.2.3]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.2...v2.2.3
 [2.2.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.3...v2.2.4
 [2.3.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.2.4...v2.3.0
+[2.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.0...v2.3.2
+[2.4.1]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.2...v2.4.1

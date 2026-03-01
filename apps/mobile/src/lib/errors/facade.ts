@@ -11,6 +11,21 @@ export type FacadeErrorType =
 	| 'BatchAddTracksToLocalPlaylistFailed'
 	| 'PlaylistCreateFailed'
 	| 'SavePlaylistFailed'
+	| 'SharedPlaylistEnableFailed'
+	| 'SharedPlaylistSubscribeFailed'
+	| 'SharedPlaylistRestoreFailed'
+	| 'SharedPlaylistPullFailed'
+	| 'SharedPlaylistDeleted'
+	| 'SharedPlaylistUnsubscribeFailed'
+	| 'RemoveTracksFromPlaylistFailed'
+	| 'ReorderPlaylistTrackFailed'
+	| 'UpdatePlaylistMetadataFailed'
+	| 'PlaylistPermissionDenied'
+	| 'PlaylistDeleteFailed'
+	| 'InviteCodeRotateFailed'
+	| 'InviteCodeFetchFailed'
+	| 'SharedPlaylistNotFound'
+	| 'SharedPlaylistPreviewFailed'
 
 export class FacadeError extends BaseFacadeError {
 	constructor(

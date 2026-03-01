@@ -39,7 +39,7 @@ function convertToOrpheusTrack(
 	// 如果没有有效的 URL，返回错误
 	if (!url) {
 		const errorMsg = '没有找到有效的音频流 URL'
-		logger.warning(`${errorMsg}`, track)
+		logger.warning(errorMsg, track)
 		return err(
 			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
 		)
@@ -243,31 +243,33 @@ async function finalizeAndRecordCurrentTrack(
 	}
 }
 
-let debouncedSetDesktopLyrics: number | null = null
-let lastSetDesktopLyricsTimestamp: number | null = null
+let debouncedPushLyricsToOverlays: number | null = null
+let lastPushLyricsToOverlaysTimestamp: number | null = null
 
-function setDesktopLyrics(
+function pushLyricsToOverlays(
 	trackId: string,
 	_transitionReason: TransitionReason,
 ) {
-	if (!Orpheus.isDesktopLyricsShown) return
-	const currentTimestamp = Date.now()
-	lastSetDesktopLyricsTimestamp = currentTimestamp
+	const wantDesktop = Orpheus.isDesktopLyricsShown
+	const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
+	if (!wantDesktop && !wantStatusBar) return
 
-	if (debouncedSetDesktopLyrics) {
-		clearTimeout(debouncedSetDesktopLyrics)
+	const currentTimestamp = Date.now()
+	lastPushLyricsToOverlaysTimestamp = currentTimestamp
+
+	if (debouncedPushLyricsToOverlays) {
+		clearTimeout(debouncedPushLyricsToOverlays)
 	}
 	const setIt = async () => {
 		try {
-			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
-			await Orpheus.setDesktopLyrics(JSON.stringify({ lyrics: [] }))
+			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
 			const trackResult = await trackService.getTrackByUniqueKey(trackId)
 			if (trackResult.isErr()) {
 				toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
 				return
 			}
 			const track = trackResult.value
-			if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
+			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
 			const lyricsResult = await lyricService.smartFetchLyrics(track)
 			if (lyricsResult.isErr()) {
 				toastAndLogError('获取歌词失败：', lyricsResult.error, 'Utils.Player')
@@ -286,26 +288,38 @@ function setDesktopLyrics(
 						translation: line.translations[0],
 					}
 				})
-				if (currentTimestamp !== lastSetDesktopLyricsTimestamp) return
-				await Orpheus.setDesktopLyrics(
-					JSON.stringify({
-						lyrics: orpheusLyrics,
-						offset: lyricsResult.value.misc?.userOffset ?? 0,
-					}),
-				)
+				if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
+				const payload = JSON.stringify({
+					lyrics: orpheusLyrics,
+					offset: lyricsResult.value.misc?.userOffset ?? 0,
+				})
+				if (Orpheus.isDesktopLyricsShown) {
+					try {
+						await Orpheus.setDesktopLyrics(payload)
+					} catch (e) {
+						toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
+					}
+				}
+				if (Orpheus.isStatusBarLyricsEnabled) {
+					try {
+						await Orpheus.setStatusBarLyrics(payload)
+					} catch (e) {
+						toastAndLogError('设置状态栏歌词失败：', e, 'Utils.Player')
+					}
+				}
 			} catch (e) {
-				toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
+				toastAndLogError('解析歌词失败：', e, 'Utils.Player')
 				return
 			}
 		} catch (e) {
-			toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
+			toastAndLogError('设置歌词失败：', e, 'Utils.Player')
 			return
 		}
 	}
-	debouncedSetDesktopLyrics = setTimeout(() => {
+	debouncedPushLyricsToOverlays = setTimeout(() => {
 		void setIt()
-		debouncedSetDesktopLyrics = null
-	}, 1000)
+		debouncedPushLyricsToOverlays = null
+	}, 300)
 }
 
 export {
@@ -313,6 +327,6 @@ export {
 	convertToOrpheusTrack,
 	finalizeAndRecordCurrentTrack,
 	getInternalPlayUri,
+	pushLyricsToOverlays,
 	reportPlaybackHistory,
-	setDesktopLyrics,
 }

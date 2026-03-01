@@ -7,6 +7,7 @@ import type { Track } from '@/types/core/media'
 
 queryClient.setMutationDefaults(['db', 'track'], {
 	retry: false,
+	networkMode: 'always',
 })
 
 export const useRenameTrack = () => {
@@ -34,7 +35,6 @@ export const useRenameTrack = () => {
 				queryKey: [...playlistKeys.all, 'playlistContents'],
 			})
 		},
-		onError: (error, { trackId }) =>
-			console.error('重命名歌曲失败', trackId, error),
+		onError: () => {},
 	})
 }

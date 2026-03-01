@@ -4,7 +4,10 @@ import { Pressable, StyleSheet } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller'
 import { useTheme } from 'react-native-paper'
-import Animated, { useAnimatedStyle } from 'react-native-reanimated'
+import {
+	createAnimatedComponent,
+	useAnimatedStyle,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface Props {
@@ -14,7 +17,7 @@ interface Props {
 	contentStyle?: ViewStyle
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+const AnimatedPressable = createAnimatedComponent(Pressable)
 
 export default function AnimatedModalOverlay({
 	visible,

@@ -2,13 +2,11 @@ package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 object GeneralStorage {
     private var kv: MMKV? = null
@@ -24,6 +22,7 @@ object GeneralStorage {
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
+    private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
 
 
     @Synchronized
@@ -87,7 +86,7 @@ object GeneralStorage {
         }
     }
 
-    fun restoreQueue(): List<MediaItem> {
+    fun restoreQueue(context: Context): List<MediaItem> {
         return try {
             val jsonListString = kv?.decodeString(KEY_SAVED_QUEUE)
 
@@ -99,7 +98,7 @@ object GeneralStorage {
                 try {
                     val track = json.decodeFromString<TrackRecord>(trackJson)
 
-                    track.toMediaItem()
+                    track.toMediaItem(context)
 
                 } catch (e: Exception) {
                     Log.e("MediaItemStorer", "Failed to parse track json: $trackJson", e)
@@ -130,4 +129,7 @@ object GeneralStorage {
 
     fun isDesktopLyricsLocked() = kv?.decodeBool(KEY_DESKTOP_LYRICS_LOCKED, false) ?: false
     fun setDesktopLyricsLocked(locked: Boolean) = safeKv.encode(KEY_DESKTOP_LYRICS_LOCKED, locked)
+
+    fun isStatusBarLyricsEnabled() = kv?.decodeBool(KEY_STATUS_BAR_LYRICS_ENABLED, false) ?: false
+    fun setStatusBarLyricsEnabled(enabled: Boolean) = safeKv.encode(KEY_STATUS_BAR_LYRICS_ENABLED, enabled)
 }

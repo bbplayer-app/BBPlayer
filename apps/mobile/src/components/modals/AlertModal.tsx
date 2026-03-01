@@ -1,5 +1,7 @@
-import { Button, Dialog, Text } from 'react-native-paper'
+import React from 'react'
+import { Dialog, Text } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export interface AlertButton {
@@ -13,7 +15,7 @@ export interface AlertOptions {
 
 export interface AlertModalProps {
 	title: string
-	message?: string
+	message?: React.ReactNode
 	buttons: readonly [AlertButton, AlertButton?] // [negative, positive]
 	options?: AlertOptions
 }
@@ -33,7 +35,6 @@ export default function AlertModal({
 					<Button
 						key={index}
 						onPress={button.onPress ?? (() => close('Alert'))}
-						uppercase={false}
 						mode='text'
 					>
 						{button.text}
@@ -42,14 +43,15 @@ export default function AlertModal({
 			}
 			case 1: {
 				const handlePress = () => {
-					button.onPress?.()
 					close('Alert')
+					useModalStore.getState().doAfterModalHostClosed(() => {
+						button.onPress?.()
+					})
 				}
 				return (
 					<Button
 						key={index}
 						onPress={handlePress}
-						uppercase={false}
 						mode='text'
 					>
 						{button.text}
@@ -63,7 +65,11 @@ export default function AlertModal({
 		<>
 			<Dialog.Title>{title}</Dialog.Title>
 			<Dialog.Content>
-				<Text variant='bodyMedium'>{message}</Text>
+				{typeof message === 'string' || typeof message === 'number' ? (
+					<Text variant='bodyMedium'>{message}</Text>
+				) : (
+					message
+				)}
 			</Dialog.Content>
 			<Dialog.Actions>{buttons.map(renderButton)}</Dialog.Actions>
 		</>
@@ -72,7 +78,7 @@ export default function AlertModal({
 
 export function alert(
 	title: string,
-	message: string,
+	message: React.ReactNode,
 	buttons: readonly [AlertButton, AlertButton?],
 	options?: AlertOptions,
 ) {

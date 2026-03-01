@@ -1,7 +1,8 @@
 import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
-import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
+import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
 import db from '@/lib/db/db'
@@ -17,7 +18,7 @@ import {
 import type { Playlist, Track } from '@/types/core/media'
 import type {
 	CreatePlaylistPayload,
-	ReorderSingleTrackPayload,
+	ReorderLocalPlaylistTrackPayload,
 	UpdatePlaylistPayload,
 } from '@/types/services/playlist'
 
@@ -58,33 +59,27 @@ export class PlaylistService {
 	> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				// Check for duplicate title
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:playlist:duplicate', op: 'db' },
-					() =>
-						this.db.query.playlists.findFirst({
-							where: eq(schema.playlists.title, payload.title),
-							columns: { id: true },
-						}),
-				)
-				if (existing) {
-					throw createPlaylistAlreadyExists(payload.title)
+				const insertValues: typeof schema.playlists.$inferInsert = {
+					title: payload.title,
+					authorId: payload.authorId ?? null,
+					description: payload.description ?? null,
+					coverUrl: payload.coverUrl ?? null,
+					type: payload.type,
+					remoteSyncId: payload.remoteSyncId ?? null,
+					shareId: payload.shareId ?? null,
+					shareRole: payload.shareRole ?? null,
+					lastShareSyncAt:
+						payload.lastShareSyncAt === undefined
+							? undefined
+							: payload.lastShareSyncAt === null
+								? null
+								: new Date(payload.lastShareSyncAt),
 				}
 
 				const [result] = await Sentry.startSpan(
 					{ name: 'db:insert:playlist', op: 'db' },
 					() =>
-						this.db
-							.insert(schema.playlists)
-							.values({
-								title: payload.title,
-								authorId: payload.authorId,
-								description: payload.description,
-								coverUrl: payload.coverUrl,
-								type: payload.type,
-								remoteSyncId: payload.remoteSyncId,
-							} satisfies CreatePlaylistPayload)
-							.returning(),
+						this.db.insert(schema.playlists).values(insertValues).returning(),
 				)
 				return result
 			})(),
@@ -154,7 +149,14 @@ export class PlaylistService {
 								title: payload.title ?? undefined,
 								description: payload.description,
 								coverUrl: payload.coverUrl,
-							} satisfies UpdatePlaylistPayload)
+								shareId: payload.shareId,
+								shareRole: payload.shareRole,
+								lastShareSyncAt: payload.lastShareSyncAt
+									? new Date(payload.lastShareSyncAt)
+									: payload.lastShareSyncAt === null
+										? null
+										: undefined,
+							})
 							.where(eq(schema.playlists.id, playlistId))
 							.returning(),
 				)
@@ -215,6 +217,7 @@ export class PlaylistService {
 
 	/**
 	 * 批量添加 tracks 到本地播放列表。
+	 * 新 track 总是追加到末尾（sort_key 最大值）。
 	 */
 	public addManyTracksToLocalPlaylist(
 		playlistId: number,
@@ -245,27 +248,31 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				// 获取当前最大 order
-				const maxOrderResult = await Sentry.startSpan(
-					{ name: 'db:query:max_order', op: 'db' },
+				// 获取当前最大 sort_key（DESC 排序下，最大值对应最新加入的歌曲）
+				const maxKeyResult = await Sentry.startSpan(
+					{ name: 'db:query:max_sort_key', op: 'db' },
 					() =>
 						this.db
 							.select({
-								maxOrder: sql<
-									number | null
-								>`MAX(${schema.playlistTracks.order})`,
+								maxKey: sql<
+									string | null
+								>`MAX(${schema.playlistTracks.sortKey})`,
 							})
 							.from(schema.playlistTracks)
 							.where(eq(schema.playlistTracks.playlistId, playlistId)),
 				)
-				let nextOrder = (maxOrderResult[0].maxOrder ?? -1) + 1
+				let prevKey: string | null = maxKeyResult[0].maxKey ?? null
 
-				// 构造批量插入的行
-				const values = trackIds.map((tid) => ({
-					playlistId,
-					trackId: tid,
-					order: nextOrder++,
-				}))
+				// 构造批量插入的行，每条用 generateKeyBetween(prevKey, null) 追加到末端
+				const values = trackIds.map((tid) => {
+					const sortKey = generateKeyBetween(prevKey, null)
+					prevKey = sortKey
+					return {
+						playlistId,
+						trackId: tid,
+						sortKey,
+					}
+				})
 
 				// 批量插入（忽略已存在的）
 				const inserted = await Sentry.startSpan(
@@ -388,20 +395,18 @@ export class PlaylistService {
 	}
 
 	/**
-	 * 在本地播放列表中移动单个歌曲的位置。
+	 * 在本地播放列表中移动单个歌曲的位置（fractional indexing）。
+	 * 只需知道目标槽位两侧的 sort_key 即可，单行写入，无需移动其他行。
+	 *
 	 * @param playlistId - 目标播放列表的 ID。
-	 * @param payload - 包含歌曲ID、原始位置和目标位置的对象。
+	 * @param payload - 包含 trackId 和目标位置前后两项的 sortKey。
 	 * @returns ResultAsync
 	 */
 	public reorderSingleLocalPlaylistTrack(
 		playlistId: number,
-		payload: ReorderSingleTrackPayload,
+		payload: ReorderLocalPlaylistTrackPayload,
 	): ResultAsync<true, DatabaseError | ServiceError> {
-		const { trackId, fromOrder, toOrder } = payload
-
-		if (fromOrder === toOrder) {
-			return okAsync(true)
-		}
+		const { trackId, prevSortKey, nextSortKey } = payload
 
 		return ResultAsync.fromPromise(
 			(async () => {
@@ -420,72 +425,26 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				// 验证要移动的歌曲确实在 fromOrder 位置
-				const trackToMove = await Sentry.startSpan(
-					{ name: 'db:query:playlistTrack', op: 'db' },
-					() =>
-						this.db.query.playlistTracks.findFirst({
-							where: and(
-								eq(schema.playlistTracks.playlistId, playlistId),
-								eq(schema.playlistTracks.trackId, trackId),
-								eq(schema.playlistTracks.order, fromOrder),
-							),
-						}),
-				)
-				if (!trackToMove) {
-					// 这也太操蛋了，我觉得我不可能写出这种前后端不一致的代码
+				// 前置校验：prevSortKey 必须小于 nextSortKey
+				if (
+					prevSortKey !== null &&
+					nextSortKey !== null &&
+					prevSortKey >= nextSortKey
+				) {
 					throw new ServiceError(
-						`数据不一致：歌曲 ${trackId} 不在播放列表 ${playlistId} 的 ${fromOrder} 位置。`,
+						`Invalid sort keys: prevSortKey must be less than nextSortKey (got "${prevSortKey}" >= "${nextSortKey}")`,
 					)
 				}
 
-				if (toOrder > fromOrder) {
-					// 往列表尾部移动
-					// 把从 fromOrder+1 到 toOrder 的所有歌曲的 order 都减 1 (向上挪一位)
-					await Sentry.startSpan(
-						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
-						() =>
-							this.db
-								.update(schema.playlistTracks)
-								.set({
-									order: sql`${schema.playlistTracks.order} - 1`,
-								})
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										sql`${schema.playlistTracks.order} > ${fromOrder}`,
-										sql`${schema.playlistTracks.order} <= ${toOrder}`,
-									),
-								),
-					)
-				} else {
-					// 往列表头部移动
-					// 把从 toOrder 到 fromOrder-1 的所有歌曲的 order 都加 1 (向下挪一位)
-					await Sentry.startSpan(
-						{ name: 'db:update:playlistTracks:reorder', op: 'db' },
-						() =>
-							this.db
-								.update(schema.playlistTracks)
-								.set({
-									order: sql`${schema.playlistTracks.order} + 1`,
-								})
-								.where(
-									and(
-										eq(schema.playlistTracks.playlistId, playlistId),
-										sql`${schema.playlistTracks.order} >= ${toOrder}`,
-										sql`${schema.playlistTracks.order} < ${fromOrder}`,
-									),
-								),
-					)
-				}
+				// 生成新的 sort_key（在 prevSortKey 和 nextSortKey 之间）
+				const newSortKey = generateKeyBetween(prevSortKey, nextSortKey)
 
-				// 把被移动的歌曲放到目标位置
 				await Sentry.startSpan(
-					{ name: 'db:update:playlistTrack:order', op: 'db' },
+					{ name: 'db:update:playlistTrack:sortKey', op: 'db' },
 					() =>
 						this.db
 							.update(schema.playlistTracks)
-							.set({ order: toOrder })
+							.set({ sortKey: newSortKey })
 							.where(
 								and(
 									eq(schema.playlistTracks.playlistId, playlistId),
@@ -499,7 +458,7 @@ export class PlaylistService {
 			(e) =>
 				e instanceof ServiceError
 					? e
-					: new DatabaseError('重排序播放列表歌曲的事务失败', {
+					: new DatabaseError('重排序播放列表歌曲失败', {
 							cause: e,
 						}),
 		)
@@ -524,10 +483,8 @@ export class PlaylistService {
 						}),
 				)
 				if (!type) throw createPlaylistNotFound(playlistId)
-				const orderBy =
-					type.type === 'local'
-						? desc(schema.playlistTracks.order)
-						: asc(schema.playlistTracks.order)
+				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
+				const orderBy = desc(schema.playlistTracks.sortKey)
 
 				return Sentry.startSpan(
 					{ name: 'db:query:playlistTracks', op: 'db' },
@@ -602,6 +559,7 @@ export class PlaylistService {
 				author: typeof schema.artists.$inferSelect | null
 		  } & {
 				validTrackCount: number
+				totalDuration: number
 		  })
 		| undefined,
 		DatabaseError
@@ -619,9 +577,19 @@ export class PlaylistService {
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
               ON pt.track_id = bm.track_id
-            WHERE pt.playlist_id = ${schema.playlists.id}
+            WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
+						totalDuration: sql<number>`(
+            SELECT COALESCE(SUM(t.duration), 0)
+            FROM ${schema.playlistTracks} AS pt
+            JOIN ${schema.tracks} AS t
+              ON pt.track_id = t.id
+            LEFT JOIN ${schema.bilibiliMetadata} AS bm
+              ON pt.track_id = bm.track_id
+            WHERE pt.playlist_id = ${playlistId}
+              AND (bm.video_is_valid IS NOT false)
+          )`.as('total_duration'),
 					},
 				}),
 			),
@@ -665,19 +633,6 @@ export class PlaylistService {
 					return existingPlaylist
 				}
 
-				// Check for duplicate title
-				const duplicate = await Sentry.startSpan(
-					{ name: 'db:query:playlist:duplicate', op: 'db' },
-					() =>
-						this.db.query.playlists.findFirst({
-							where: eq(schema.playlists.title, payload.title),
-							columns: { id: true },
-						}),
-				)
-				if (duplicate) {
-					throw createPlaylistAlreadyExists(payload.title)
-				}
-
 				const [newPlaylist] = await Sentry.startSpan(
 					{ name: 'db:insert:playlist', op: 'db' },
 					() =>
@@ -690,7 +645,7 @@ export class PlaylistService {
 								coverUrl: payload.coverUrl,
 								type: payload.type,
 								remoteSyncId: payload.remoteSyncId,
-							} satisfies CreatePlaylistPayload)
+							})
 							.returning(),
 				)
 
@@ -726,10 +681,18 @@ export class PlaylistService {
 				)
 
 				if (trackIds.length > 0) {
-					const newPlaylistTracks = trackIds.map((id, index) => ({
+					// 倒序生成 sort_key：trackIds[0]（排列首位）获得最大的 sort_key
+					// 与 local playlist 约定一致：位置越靠前 sort_key 越大，查询时统一使用 DESC
+					let prevKey: string | null = null
+					const sortKeys: string[] = new Array(trackIds.length)
+					for (let i = trackIds.length - 1; i >= 0; i--) {
+						sortKeys[i] = generateKeyBetween(prevKey, null)
+						prevKey = sortKeys[i]!
+					}
+					const newPlaylistTracks = trackIds.map((id, i) => ({
 						playlistId: playlistId,
 						trackId: id,
-						order: index,
+						sortKey: sortKeys[i],
 					}))
 					await Sentry.startSpan(
 						{ name: 'db:insert:playlistTracks', op: 'db' },
@@ -953,7 +916,7 @@ export class PlaylistService {
 									},
 								},
 							},
-							orderBy: asc(schema.playlistTracks.order),
+							orderBy: desc(schema.playlistTracks.sortKey),
 						}),
 				)
 
@@ -992,7 +955,7 @@ export class PlaylistService {
 		limit: number
 		cursor:
 			| {
-					lastOrder: number
+					lastSortKey: string
 					createdAt: number
 					lastId: number
 			  }
@@ -1000,11 +963,13 @@ export class PlaylistService {
 	}): ResultAsync<
 		{
 			tracks: Track[]
+			sortKeys: string[]
 			nextCursor?: {
-				lastOrder: number
+				lastSortKey: string
 				createdAt: number
 				lastId: number
 			}
+			nextPageFirstSortKey?: string
 		},
 		DatabaseError | ServiceError
 	> {
@@ -1024,12 +989,12 @@ export class PlaylistService {
 				)
 				if (!playlist) throw createPlaylistNotFound(playlistId)
 
-				const isDesc = playlist.type === 'local'
-				const sortDirection = isDesc ? desc : asc
-				const operator = isDesc ? lt : gt
+				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
+				const sortDirection = desc
+				const operator = lt
 
 				const orderBy = [
-					sortDirection(schema.playlistTracks.order),
+					sortDirection(schema.playlistTracks.sortKey),
 					sortDirection(schema.playlistTracks.createdAt),
 					sortDirection(schema.playlistTracks.trackId),
 				]
@@ -1039,18 +1004,18 @@ export class PlaylistService {
 				]
 
 				if (cursor) {
-					const { lastOrder, createdAt, lastId } = cursor
+					const { lastSortKey, createdAt, lastId } = cursor
 					const dateObj = new Date(createdAt)
 
 					whereClauses.push(
 						or(
-							operator(schema.playlistTracks.order, lastOrder),
+							operator(schema.playlistTracks.sortKey, lastSortKey),
 							and(
-								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.sortKey, lastSortKey),
 								operator(schema.playlistTracks.createdAt, dateObj),
 							),
 							and(
-								eq(schema.playlistTracks.order, lastOrder),
+								eq(schema.playlistTracks.sortKey, lastSortKey),
 								eq(schema.playlistTracks.createdAt, dateObj),
 								operator(schema.playlistTracks.trackId, lastId),
 							),
@@ -1090,6 +1055,7 @@ export class PlaylistService {
 						}),
 		).andThen((data) => {
 			const newTracks: Track[] = []
+			const sortKeys: string[] = []
 			for (const pt of data) {
 				const t = this.trackService.formatTrack(pt.track)
 				if (!t) {
@@ -1100,25 +1066,66 @@ export class PlaylistService {
 					)
 				}
 				newTracks.push(t)
+				sortKeys.push(pt.sortKey)
 			}
 
 			let nextCursor
+			let nextPageFirstSortKey
 			const hasMore = data.length === effectiveLimit + 1
 
 			if (hasMore) {
 				const lastItem = data[effectiveLimit - 1]
 				nextCursor = {
-					lastOrder: lastItem.order,
+					lastSortKey: lastItem.sortKey,
 					createdAt: lastItem.createdAt.getTime(),
 					lastId: lastItem.trackId,
 				}
+				nextPageFirstSortKey = data[effectiveLimit].sortKey
 			}
 
 			return okAsync({
 				tracks: hasMore ? newTracks.slice(0, effectiveLimit) : newTracks,
+				sortKeys: hasMore ? sortKeys.slice(0, effectiveLimit) : sortKeys,
 				nextCursor,
+				nextPageFirstSortKey,
 			})
 		})
+	}
+
+	/**
+	 * 根据 shareId（后端 UUID）查找本地歌单
+	 */
+	public findPlaylistByShareId(
+		shareId: string,
+	): ResultAsync<typeof schema.playlists.$inferSelect | false, DatabaseError> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlist:byShareId', op: 'db' }, () =>
+				this.db.query.playlists.findFirst({
+					where: eq(schema.playlists.shareId, shareId),
+				}),
+			),
+			(e) => new DatabaseError('根据 shareId 查找歌单失败', { cause: e }),
+		).andThen((playlist) => {
+			if (!playlist) return okAsync(false as const)
+			return okAsync(playlist)
+		})
+	}
+
+	/**
+	 * 获取所有已共享（shareId 不为 null）的本地歌单
+	 */
+	public getSharedPlaylists(): ResultAsync<
+		(typeof schema.playlists.$inferSelect)[],
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:playlists:shared', op: 'db' }, () =>
+				this.db.query.playlists.findMany({
+					where: (p, { isNotNull }) => isNotNull(p.shareId),
+				}),
+			),
+			(e) => new DatabaseError('获取共享歌单列表失败', { cause: e }),
+		)
 	}
 }
 

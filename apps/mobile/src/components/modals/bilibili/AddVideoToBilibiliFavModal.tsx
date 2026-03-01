@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
-import { Button, Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useDealFavoriteForOneVideo } from '@/hooks/mutations/bilibili/favorite'
 import {
 	favoriteListQueryKeys,
@@ -76,7 +77,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 				.filter((item) => item.fav_state === 1)
 				.map((item) => item.id.toString())
 
-			// eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state -- 暂时没想到更好的解决办法
+			// oxlint-disable-next-line react-you-might-not-need-an-effect/no-derived-state -- 暂时没想到更好的解决办法
 			setCheckedList(initialCheckedIds)
 		}
 	}, [playlists])

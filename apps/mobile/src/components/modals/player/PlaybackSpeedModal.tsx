@@ -1,8 +1,9 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text, TextInput } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'

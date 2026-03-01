@@ -1,9 +1,12 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	fetch as fetchNetInfo,
+	addEventListener as addNetInfoEventListener,
+} from '@react-native-community/netinfo'
 import { useLogger } from '@react-navigation/devtools'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import * as Network from 'expo-network'
 import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
@@ -23,10 +26,12 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
+import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
+import { isActuallyOffline } from '@/utils/network'
 import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
@@ -59,10 +64,14 @@ export default Sentry.wrap(function RootLayout() {
 	useLogger(ref)
 
 	onlineManager.setEventListener((setOnline) => {
-		const eventSubscription = Network.addNetworkStateListener((state) => {
-			setOnline(!!state.isConnected)
+		void fetchNetInfo().then((state) => {
+			setOnline(!isActuallyOffline(state))
 		})
-		return eventSubscription.remove.bind(eventSubscription)
+
+		const unsubscribe = addNetInfoEventListener((state) => {
+			setOnline(!isActuallyOffline(state))
+		})
+		return unsubscribe
 	})
 
 	useEffect(() => {
@@ -122,7 +131,7 @@ export default Sentry.wrap(function RootLayout() {
 			logger.error('初始化失败:', error)
 			reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
 		} finally {
-			// eslint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
+			// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
 			setIsReady(true)
 		}
 	}, [])
@@ -130,6 +139,11 @@ export default Sentry.wrap(function RootLayout() {
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
 			SplashScreen.hide()
+
+			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
+			playlistSyncWorker.recoverStuckRows().catch((error) => {
+				logger.error('恢复同步任务失败:', error)
+			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
@@ -225,6 +239,10 @@ export default Sentry.wrap(function RootLayout() {
 					name='playlist/local/[id]'
 					options={{ headerShown: false }}
 				/>
+				<Stack.Screen
+					name='share/playlist'
+					options={{ headerShown: false }}
+				/>
 
 				<Stack.Screen
 					name='leaderboard'
@@ -263,6 +281,26 @@ export default Sentry.wrap(function RootLayout() {
 				/>
 				<Stack.Screen
 					name='playlist/external-sync'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/appearance'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/playback'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/lyrics'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/general'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/donate'
 					options={{ headerShown: false }}
 				/>
 			</Stack>

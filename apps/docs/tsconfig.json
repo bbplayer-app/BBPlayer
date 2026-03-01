@@ -6,6 +6,7 @@
 		"moduleResolution": "bundler",
 		"strict": true,
 		"skipLibCheck": true,
+		"exactOptionalPropertyTypes": true,
 		"isolatedModules": true,
 		"jsx": "preserve",
 		"esModuleInterop": true,

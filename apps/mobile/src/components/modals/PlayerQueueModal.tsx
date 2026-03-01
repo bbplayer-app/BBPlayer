@@ -6,7 +6,6 @@ import {
 } from '@lodev09/react-native-true-sheet'
 import type { FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
-import { useQuery } from '@tanstack/react-query'
 import {
 	memo,
 	useCallback,
@@ -18,15 +17,15 @@ import {
 } from 'react'
 import { View } from 'react-native'
 import {
-	IconButton,
-	Surface,
-	Text,
-	TouchableRipple,
-	useTheme,
-} from 'react-native-paper'
+	GestureHandlerRootView,
+	RectButton,
+} from 'react-native-gesture-handler'
+import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 const TrackItem = memo(
@@ -45,18 +44,16 @@ const TrackItem = memo(
 	}) => {
 		const colors = useTheme().colors
 		return (
-			<TouchableRipple onPress={() => onSwitchTrack(index)}>
-				<Surface
-					style={{
-						backgroundColor: isCurrentTrack
-							? colors.elevation.level5
-							: undefined,
-						overflow: 'hidden',
-						borderRadius: 8,
-						minHeight: 56, // Enforce min height for visual consistency
-					}}
-					elevation={0}
-				>
+			<Surface
+				style={{
+					backgroundColor: isCurrentTrack ? colors.elevation.level5 : undefined,
+					overflow: 'hidden',
+					borderRadius: 8,
+					minHeight: 56, // Enforce min height for visual consistency
+				}}
+				elevation={0}
+			>
+				<RectButton onPress={() => onSwitchTrack(index)}>
 					<View
 						style={{
 							flexDirection: 'row',
@@ -92,14 +89,13 @@ const TrackItem = memo(
 						<IconButton
 							icon='close-circle-outline'
 							size={24}
-							onPress={(e) => {
-								e.stopPropagation()
+							onPress={() => {
 								onRemoveTrack(index)
 							}}
 						/>
 					</View>
-				</Surface>
-			</TouchableRipple>
+				</RectButton>
+			</Surface>
 		)
 	},
 )
@@ -121,16 +117,7 @@ function PlayerQueueModal({
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
 
-	const { data: queue, refetch } = useQuery<OrpheusTrack[]>({
-		queryKey: ['player', 'queue'],
-		queryFn: async () => {
-			const q = await Orpheus.getQueue()
-			return q
-		},
-		staleTime: 0,
-		enabled: isVisible,
-		gcTime: 0,
-	})
+	const { data: queue, refetch } = usePlayerQueue(isVisible)
 
 	const currentIndex = useMemo(() => {
 		if (!currentTrackId || !queue) return -1
@@ -175,7 +162,7 @@ function PlayerQueueModal({
 		[switchTrackHandler, removeTrackHandler, currentTrackId],
 	)
 
-	// eslint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
+	// oxlint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
 	useEffect(() => {
 		if (isVisible) {
 			void refetch()
@@ -212,50 +199,51 @@ function PlayerQueueModal({
 			scrollable
 			{...props}
 		>
-			<View
-				style={{
-					height: '100%',
-					paddingBottom: insets.bottom,
-				}}
-			>
+			<GestureHandlerRootView style={{ flex: 1 }}>
 				<View
 					style={{
-						flexDirection: 'row',
-						justifyContent: 'space-between',
-						alignItems: 'center',
-						paddingHorizontal: 16,
-						paddingTop: 8,
-						borderBottomWidth: 1,
-						borderBottomColor: theme.colors.elevation.level2,
+						height: '100%',
 					}}
 				>
-					<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
-					<IconButton
-						icon='content-save-outline'
-						onPress={() => {
-							if (queue && queue.length > 0) {
-								useModalStore.getState().open('SaveQueueToPlaylist', {
-									trackIds: queue.map((t) => t.id),
-								})
-							}
+					<View
+						style={{
+							flexDirection: 'row',
+							justifyContent: 'space-between',
+							alignItems: 'center',
+							paddingHorizontal: 16,
+							paddingTop: 8,
+							borderBottomWidth: 1,
+							borderBottomColor: theme.colors.elevation.level2,
 						}}
-						disabled={!queue || queue.length === 0}
-					/>
+					>
+						<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
+						<IconButton
+							icon='content-save-outline'
+							onPress={() => {
+								if (queue && queue.length > 0) {
+									useModalStore.getState().open('SaveQueueToPlaylist', {
+										trackIds: queue.map((t) => t.id),
+									})
+								}
+							}}
+							disabled={!queue || queue.length === 0}
+						/>
+					</View>
+					<View style={{ flex: 1, minHeight: 2 }}>
+						<FlashList
+							ref={flatListRef}
+							data={queue}
+							renderItem={renderItem}
+							keyExtractor={keyExtractor}
+							contentContainerStyle={{
+								paddingBottom: insets.bottom + 20,
+							}}
+							showsVerticalScrollIndicator={false}
+							nestedScrollEnabled
+						/>
+					</View>
 				</View>
-				<View style={{ flex: 1, minHeight: 2 }}>
-					<FlashList
-						ref={flatListRef}
-						data={queue}
-						renderItem={renderItem}
-						keyExtractor={keyExtractor}
-						contentContainerStyle={{
-							paddingBottom: insets.bottom + 20,
-						}}
-						showsVerticalScrollIndicator={false}
-						nestedScrollEnabled
-					/>
-				</View>
-			</View>
+			</GestureHandlerRootView>
 		</TrueSheet>
 	)
 }

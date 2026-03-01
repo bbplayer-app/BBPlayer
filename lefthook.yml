@@ -1,9 +1,22 @@
 pre-commit:
   parallel: true
   commands:
+    gitleaks:
+      run: |
+        if command -v gitleaks > /dev/null 2>&1; then
+          gitleaks protect --staged --verbose $([ -f .gitleaks-baseline.json ] && echo "--baseline-path .gitleaks-baseline.json")
+        else
+          echo "⚠️ gitleaks is not installed, skipping secret scan. Install with: brew install gitleaks"
+        fi
     lint-and-format-codes:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
-      run: pnpm eslint "{staged_files}" && pnpm oxfmt --write "{staged_files}"
+      run: |
+        if [ -z "{staged_files}" ]; then
+          echo "No staged files to lint or format."
+          exit 0
+        fi
+
+        pnpm oxfmt --write "{staged_files}" && pnpm oxlint --type-aware "{staged_files}" && pnpm eslint "{staged_files}"
       stage_fixed: true
     format-plain-text:
       glob: '*.{md,mdx}'

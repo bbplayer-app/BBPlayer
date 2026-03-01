@@ -6,18 +6,66 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Button, Dialog, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 
+import Button from '@/components/common/Button'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'
 
 const titles = ['欢迎使用 BBPlayer', '登录？']
+
+function Step0() {
+	return (
+		<View>
+			<Text>
+				看起来你是第一次打开 BBPlayer，容我介绍一下：BBPlayer
+				是一款开源、简洁的音乐播放器，你可以使用他播放来自
+				{' BiliBili '}的歌曲。
+				{'\n\n'}
+				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
+				<Text style={styles.boldText}>仍不保证</Text>
+				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
+				{'\n\n'}
+				如果您选择「游客模式」，本地播放列表、搜索、查看合集等大部分功能仍可使用，但无法访问并即时查看您自己收藏夹中的更新。
+			</Text>
+		</View>
+	)
+}
+
+function Step1({
+	onLogin,
+	onGuestMode,
+}: {
+	onLogin: () => void
+	onGuestMode: () => void
+}) {
+	return (
+		<View>
+			<Text>最后一步！选择登录还是游客模式？</Text>
+
+			<View style={styles.stepButtonContainer}>
+				<Button
+					mode='contained'
+					onPress={onLogin}
+				>
+					登录
+				</Button>
+				<Button
+					onPress={onGuestMode}
+					testID='welcome-guest-mode'
+				>
+					游客模式
+				</Button>
+			</View>
+		</View>
+	)
+}
 
 export default function WelcomeModal() {
 	const _close = useModalStore((s) => s.close)
@@ -43,7 +91,7 @@ export default function WelcomeModal() {
 	}))
 
 	useEffect(() => {
-		// eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
 		if (measuredWidth <= 0) return
 		translateX.set(withTiming(-step * measuredWidth, { duration: 300 }))
 		containerHeight.set(withTiming(stepHeights[step], { duration: 300 }))
@@ -56,56 +104,20 @@ export default function WelcomeModal() {
 	}, [containerRef])
 
 	const goToStep = (index: number) => {
-		const idx = Math.max(0, Math.min(2 - 1, index))
+		const maxIndex = Math.max(0, (titles.length || stepHeights.length) - 1)
+		const idx = Math.max(0, Math.min(maxIndex, index))
 		setStep(idx)
 	}
 
-	const confirmGuestMode = () => {
+	const confirmGuestMode = useCallback(() => {
 		storage.set('first_open', false)
 		close()
-	}
-	const confirmLogin = () => {
+	}, [close])
+	const confirmLogin = useCallback(() => {
 		storage.set('first_open', false)
 		open('QRCodeLogin', undefined)
 		close()
-	}
-
-	const Step0 = () => (
-		<View>
-			<Text>
-				看起来你是第一次打开{' '}BBPlayer，容我介绍一下：BBPlayer
-				是一款开源、简洁的音乐播放器，你可以使用他播放来自
-				{' BiliBili '}的歌曲。
-				{'\n\n'}
-				风险声明：虽然开发者尽力负责任地调用{' BiliBili API'}，但
-				<Text style={styles.boldText}>仍不保证</Text>
-				您的账号安全无虞，你可能会遇到包括但不限于：账号被风控、短期封禁乃至永久封禁等风险。请权衡利弊后再选择登录。（虽然我用了这么久还没遇到任何问题）
-				{'\n\n'}
-				如果您选择「游客模式」，本地播放列表、搜索、查看合集等大部分功能仍可使用，但无法访问并即时查看您自己收藏夹中的更新。
-			</Text>
-		</View>
-	)
-
-	const Step1 = () => (
-		<View>
-			<Text>最后一步！选择登录还是游客模式？</Text>
-
-			<View style={styles.stepButtonContainer}>
-				<Button
-					mode='contained'
-					onPress={confirmLogin}
-				>
-					登录
-				</Button>
-				<Button
-					onPress={confirmGuestMode}
-					testID='welcome-guest-mode'
-				>
-					游客模式
-				</Button>
-			</View>
-		</View>
-	)
+	}, [close, open])
 
 	usePreventRemove(true, () => goToStep(step - 1))
 
@@ -139,7 +151,10 @@ export default function WelcomeModal() {
 						setStepHeights((s) => [s[0], height])
 					}}
 				>
-					<Step1 />
+					<Step1
+						onLogin={confirmLogin}
+						onGuestMode={confirmGuestMode}
+					/>
 				</View>
 			</View>
 			<Dialog.Title>{titles[step]}</Dialog.Title>
@@ -159,7 +174,10 @@ export default function WelcomeModal() {
 							<Step0 />
 						</View>
 						<View style={{ width: measuredWidth }}>
-							<Step1 />
+							<Step1
+								onLogin={confirmLogin}
+								onGuestMode={confirmGuestMode}
+							/>
 						</View>
 					</Animated.View>
 				</Animated.View>

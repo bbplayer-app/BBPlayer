@@ -2,7 +2,7 @@ import { forwardRef, type ComponentRef } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, View } from 'react-native'
 import { BaseButton } from 'react-native-gesture-handler'
-import { Icon, useTheme } from 'react-native-paper'
+import { ActivityIndicator, Icon, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
@@ -152,12 +152,11 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 			disabled,
 			onPress,
 			selected = false,
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			// oxlint-disable-next-line @typescript-eslint/no-unused-vars
 			animated = false,
 			mode,
 			style,
 			testID = 'icon-button',
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			loading = false,
 			contentStyle,
 			...rest
@@ -216,11 +215,18 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 				{...rest}
 			>
 				<View style={styles.content}>
-					<Icon
-						source={icon}
-						color={iconColor}
-						size={size}
-					/>
+					{loading ? (
+						<ActivityIndicator
+							size={size}
+							color={iconColor}
+						/>
+					) : (
+						<Icon
+							source={icon}
+							color={iconColor}
+							size={size}
+						/>
+					)}
 				</View>
 			</BaseButton>
 		)

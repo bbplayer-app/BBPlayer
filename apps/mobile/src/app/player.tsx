@@ -17,13 +17,14 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import PagerView from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
-import Animated, {
+import {
+	createAnimatedComponent,
 	Easing,
-	interpolate,
-	useAnimatedStyle,
 	useDerivedValue,
+	useEvent,
+	useHandler,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
@@ -35,10 +36,41 @@ import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useScreenDimensions } from '@/hooks/ui/useScreenDimensions'
 import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
+
+const AnimatedPagerView = createAnimatedComponent(PagerView)
+
+interface PageScrollEvent {
+	offset: number
+	position: number
+}
+
+function usePageScrollHandler(
+	handlers: {
+		onPageScroll: (e: PageScrollEvent, context: Record<string, unknown>) => void
+	},
+	dependencies?: unknown[],
+) {
+	const { context, doDependenciesDiffer } = useHandler(handlers, dependencies)
+	const subscribeForEvents = ['onPageScroll']
+
+	return useEvent(
+		(event) => {
+			'worklet'
+			const { onPageScroll } = handlers
+			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
+				onPageScroll(event as unknown as PageScrollEvent, context)
+			}
+		},
+		subscribeForEvents,
+		doDependenciesDiffer,
+	)
+}
 
 const logger = log.extend('App.Player')
 
@@ -47,11 +79,15 @@ export default function PlayerPage() {
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
 	const sheetRef = useRef<TrueSheet>(null)
+	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(currentTrack?.coverUrl ?? '', {
-		onError: () => void 0,
-	})
-	const { width, height } = useWindowDimensions()
+	const coverRef = useImage(
+		resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
+	const { width } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -62,8 +98,7 @@ export default function PlayerPage() {
 	)
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
-	const [activeTab, setActiveTab] = useState<'main' | 'lyrics'>('main')
-	const index = activeTab === 'lyrics' ? 1 : 0
+	const [index, setIndex] = useState(0)
 
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)
@@ -73,8 +108,8 @@ export default function PlayerPage() {
 	}
 
 	const handleDismiss = () => {
-		if (activeTab === 'lyrics') {
-			setActiveTab('main')
+		if (index === 1) {
+			pagerRef.current?.setPage(0)
 			return
 		}
 		dismissPlayer()
@@ -90,23 +125,16 @@ export default function PlayerPage() {
 		}
 	}, [])
 
-	const realHeight = useMemo(() => {
-		return height
-	}, [height])
+	const { height: realHeight } = useScreenDimensions()
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
 
 	const [menuVisible, setMenuVisible] = useState(false)
 
-	useEffect(() => {
-		scrollX.value = withTiming(activeTab === 'lyrics' ? 1 : 0, {
-			duration: 300,
-		})
-	}, [activeTab, scrollX])
-
 	const jumpTo = (key: string) => {
-		setActiveTab(key === 'lyrics' ? 'lyrics' : 'main')
+		const targetIndex = key === 'lyrics' ? 1 : 0
+		pagerRef.current?.setPage(targetIndex)
 	}
 
 	const gradientColors = useDerivedValue(() => {
@@ -125,6 +153,8 @@ export default function PlayerPage() {
 		}
 		ImageThemeColors.extractThemeColorAsync(coverRef)
 			.then((palette) => {
+				if (!palette) return
+
 				const animationConfig = {
 					duration: 400,
 					easing: Easing.out(Easing.quad),
@@ -189,8 +219,8 @@ export default function PlayerPage() {
 				})
 			return
 		}
-		if (activeTab === 'lyrics') {
-			setActiveTab('main')
+		if (index === 1) {
+			pagerRef.current?.setPage(0)
 			return
 		}
 		handleDismiss()
@@ -208,20 +238,11 @@ export default function PlayerPage() {
 		}
 	}, [playerBackgroundStyle, setSettings])
 
-	const mainTabStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [1, 0, 0])
-		return {
-			opacity,
-			pointerEvents: scrollX.value > 0.5 ? 'none' : 'auto',
-		}
-	})
-
-	const lyricsTabStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(scrollX.value, [0, 0.5, 1], [0, 0, 1])
-		return {
-			opacity,
-			pointerEvents: scrollX.value < 0.5 ? 'none' : 'auto',
-		}
+	const pageScrollHandler = usePageScrollHandler({
+		onPageScroll: (e) => {
+			'worklet'
+			scrollX.set(e.offset + e.position)
+		},
 	})
 
 	return (
@@ -286,23 +307,35 @@ export default function PlayerPage() {
 							index={index}
 							scrollX={scrollX}
 						/>
-						<View style={styles.tabView}>
-							<Animated.View style={[StyleSheet.absoluteFill, mainTabStyle]}>
+						<AnimatedPagerView
+							ref={pagerRef}
+							style={styles.tabView}
+							initialPage={0}
+							onPageScroll={pageScrollHandler}
+							onPageSelected={(e) => setIndex(e.nativeEvent.position)}
+						>
+							<View
+								key='main'
+								style={styles.tabView}
+							>
 								<PlayerMainTab
 									sheetRef={sheetRef}
 									jumpTo={jumpTo}
 									imageRef={coverRef}
 									onPresent={() => setQueueVisible(true)}
-									danmakuEnabled={activeTab === 'main'}
+									danmakuEnabled={index === 0}
 								/>
-							</Animated.View>
-							<Animated.View style={[StyleSheet.absoluteFill, lyricsTabStyle]}>
+							</View>
+							<View
+								key='lyrics'
+								style={styles.tabView}
+							>
 								<Lyrics
 									currentIndex={index}
 									onPressBackground={() => jumpTo('main')}
 								/>
-							</Animated.View>
-						</View>
+							</View>
+						</AnimatedPagerView>
 					</View>
 
 					<PlayerFunctionalMenu

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
+	createAnimatedComponent,
 	type SharedValue,
 	useAnimatedStyle,
 	useDerivedValue,
@@ -13,14 +14,14 @@ import Animated, {
 
 import { KaraokeWord } from './KaraokeWord'
 
-const AnimatedRectButton = Animated.createAnimatedComponent(RectButton)
+const AnimatedRectButton = createAnimatedComponent(RectButton)
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
 	isHighlighted: boolean
 	jumpToThisLyric: (index: number) => void
 	index: number
-	onPressBackground?: () => void
+	onPressBackground?: (() => void) | undefined
 	currentTime: SharedValue<number>
 	enableVerbatimLyrics: boolean
 }
@@ -38,24 +39,32 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	const isHighlightedShared = useSharedValue(isHighlighted)
 
 	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
+		isHighlightedShared.set(isHighlighted)
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const gatedCurrentTime = useDerivedValue(() => {
 		return isHighlightedShared.value ? currentTime.value : -1
 	})
 
+	const isVerbatim = !!(
+		enableVerbatimLyrics &&
+		item.isDynamic &&
+		item.spans &&
+		item.spans.length > 0
+	)
+
 	const animatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		const duration = isVerbatim ? 0 : 300
+		if (isHighlightedShared.value) {
 			return {
-				opacity: withTiming(1, { duration: 300 }),
-				color: withTiming(colors.primary, { duration: 300 }),
+				opacity: withTiming(1, { duration }),
+				color: withTiming(colors.primary, { duration }),
 			}
 		}
 
 		return {
-			opacity: withTiming(0.7, { duration: 300 }),
-			color: withTiming(colors.onSurfaceDisabled, { duration: 300 }),
+			opacity: withTiming(0.7, { duration }),
+			color: withTiming(colors.onSurfaceDisabled, { duration }),
 		}
 	})
 	return (
@@ -68,10 +77,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
 			>
-				{enableVerbatimLyrics &&
-				item.isDynamic &&
-				item.spans &&
-				item.spans.length > 0 ? (
+				{isVerbatim ? (
 					<View
 						style={{
 							flexDirection: 'row',
@@ -81,6 +87,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 					>
 						{item.spans.map((span, idx) => (
 							<KaraokeWord
+								// oxlint-disable-next-line react/no-array-index-key
 								key={`${index}_${idx}`}
 								span={span}
 								currentTime={gatedCurrentTime}
@@ -121,7 +128,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	const isHighlightedShared = useSharedValue(isHighlighted)
 
 	useEffect(() => {
-		isHighlightedShared.value = isHighlighted
+		isHighlightedShared.set(isHighlighted)
 	}, [isHighlighted, item.startTime, index, isHighlightedShared])
 
 	const gatedCurrentTime = useDerivedValue(() => {
@@ -129,7 +136,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		if (isHighlightedShared.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				transform: [
@@ -148,28 +155,32 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		}
 	})
 
+	const isVerbatim = !!(
+		enableVerbatimLyrics &&
+		item.isDynamic &&
+		item.spans &&
+		item.spans.length > 0
+	)
+
 	const textAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value === true) {
+		const duration = isVerbatim ? 0 : 300
+		if (isHighlightedShared.value) {
 			return {
-				color: withTiming(theme.colors.primary, { duration: 300 }),
+				color: withTiming(theme.colors.primary, { duration }),
 			}
 		}
 		return {
-			color: withTiming(theme.colors.onSurfaceDisabled, { duration: 300 }),
+			color: withTiming(theme.colors.onSurfaceDisabled, { duration }),
 		}
 	})
 
 	const renderContent = () => {
-		if (
-			enableVerbatimLyrics &&
-			item.isDynamic &&
-			item.spans &&
-			item.spans.length > 0
-		) {
+		if (isVerbatim) {
 			return (
 				<View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
 					{item.spans.map((span, idx) => (
 						<KaraokeWord
+							// oxlint-disable-next-line react/no-array-index-key
 							key={`${index}_${idx}`}
 							span={span}
 							currentTime={gatedCurrentTime}

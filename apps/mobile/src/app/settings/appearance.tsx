@@ -7,24 +7,21 @@ import {
 	StyleSheet,
 	View,
 } from 'react-native'
-import {
-	Appbar,
-	Checkbox,
-	IconButton,
-	Switch,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Checkbox, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
+import NowPlayingBar from '@/components/NowPlayingBar'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 
 export default function AppearanceSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
+	const haveTrack = useCurrentTrack()
 
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -100,7 +97,7 @@ export default function AppearanceSettingsPage() {
 				style={styles.scrollView}
 				contentContainerStyle={[
 					styles.scrollContent,
-					{ paddingBottom: insets.bottom + 20 },
+					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
 				<View style={styles.settingRow}>
@@ -182,6 +179,9 @@ export default function AppearanceSettingsPage() {
 					</FunctionalMenu>
 				</View>
 			</ScrollView>
+			<View style={styles.nowPlayingBarContainer}>
+				<NowPlayingBar />
+			</View>
 		</View>
 	)
 }
@@ -205,5 +205,11 @@ const styles = StyleSheet.create({
 	settingTextContainer: {
 		flex: 1,
 		marginRight: 16,
+	},
+	nowPlayingBarContainer: {
+		position: 'absolute',
+		bottom: 0,
+		left: 0,
+		right: 0,
 	},
 })

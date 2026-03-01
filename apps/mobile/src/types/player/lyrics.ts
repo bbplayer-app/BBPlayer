@@ -52,13 +52,18 @@ export interface LyricFileData {
 	updateTime: number // 缓存时间
 
 	// 所有歌词都是 SPL 格式
-	lrc?: string // 主歌词
-	tlyric?: string // 翻译歌词
-	romalrc?: string // 罗马音歌词
+	lrc?: string | undefined // 主歌词
+	tlyric?: string | undefined // 翻译歌词
+	romalrc?: string | undefined // 罗马音歌词
 
-	misc?: {
-		userOffset?: number // 用户设置的歌词偏移量
-	}
+	/** 当歌词获取失败时（如离线状态），存储错误信息直接展示，不走解析流程 */
+	errorMessage?: string | undefined
+
+	misc?:
+		| {
+				userOffset?: number | undefined // 用户设置的歌词偏移量
+		  }
+		| undefined
 }
 
 // 歌词提供者最终应该返回的数据结构

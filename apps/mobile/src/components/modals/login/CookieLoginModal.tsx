@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Button, Dialog, Divider, Text, TextInput } from 'react-native-paper'
+import { Dialog, Divider, Text, TextInput } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { userQueryKeys } from '@/hooks/queries/bilibili/user'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'

@@ -12,8 +12,8 @@
 
 ## 📝 代码风格
 
-- **Prettier**: 项目配置了 Prettier，请确保编辑器开启了保存自动格式化。
-- **ESLint**: 提交前请修复所有的 ESLint 警告。
+- **Oxfmt**: 项目配置了 Oxfmt，请确保编辑器开启了保存自动格式化。
+- **Oxlint/ESLint**: 提交前请修复所有的 lint 警告。
 - **组件命名**: 使用帕斯卡命名法 (PascalCase)，如 `MyComponent.tsx`。
 - **Hook 命名**: 使用 `use` 前缀，如 `usePlayerState.ts`。
 

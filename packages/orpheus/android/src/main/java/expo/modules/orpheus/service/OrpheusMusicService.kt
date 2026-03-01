@@ -11,8 +11,8 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -23,21 +23,21 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.util.concurrent.CopyOnWriteArrayList
 import expo.modules.orpheus.R
+import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.manager.StatusBarLyricsManager
+import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
-import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.GlideBitmapLoader
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.calculateLoudnessGain
 import expo.modules.orpheus.util.fadeInTo
-import expo.modules.orpheus.manager.FloatingLyricsManager
-import expo.modules.orpheus.util.CustomCommands
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
 class OrpheusMusicService : MediaLibraryService() {
@@ -49,16 +49,19 @@ class OrpheusMusicService : MediaLibraryService() {
     private var scope = MainScope()
 
     lateinit var floatingLyricsManager: FloatingLyricsManager
+    lateinit var statusBarLyricsManager: StatusBarLyricsManager
     private val serviceHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    
+
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
-            player?.let {
-                if (it.isPlaying) {
-                    floatingLyricsManager.updateTime(it.currentPosition / 1000.0)
+            player?.let { p ->
+                if (p.isPlaying) {
+                    val seconds = p.currentPosition / 1000.0
+                    floatingLyricsManager.updateTime(seconds)
+                    statusBarLyricsManager.updateTime(seconds)
                 }
             }
             serviceHandler.postDelayed(this, 200)
@@ -93,7 +96,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0){
+        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
             stopSelf()
         }
         super.onTaskRemoved(rootIntent)
@@ -171,7 +174,12 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 builder.add(
                     CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-                        .setSessionCommand(SessionCommand(CustomCommands.CMD_TOGGLE_REPEAT_MODE, Bundle.EMPTY))
+                        .setSessionCommand(
+                            SessionCommand(
+                                CustomCommands.CMD_TOGGLE_REPEAT_MODE,
+                                Bundle.EMPTY
+                            )
+                        )
                         .setCustomIconResId(repeatIcon)
                         .setDisplayName("Repeat Mode")
                         .setEnabled(true)
@@ -182,12 +190,19 @@ class OrpheusMusicService : MediaLibraryService() {
             }
         })
 
+        initializePlayer()
+    }
 
+    /**
+     * 创建/重建 ExoPlayer、MediaSession 及相关组件。
+     * 可多次调用，每次调用前应确保旧 player 已释放或为 null。
+     */
+    @OptIn(UnstableApi::class)
+    private fun initializePlayer() {
         val dataSourceFactory = DownloadUtil.getPlayerDataSourceFactory(this)
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
-
 
         val renderersFactory = DefaultRenderersFactory(this)
             .experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
@@ -208,6 +223,9 @@ class OrpheusMusicService : MediaLibraryService() {
         if (GeneralStorage.isDesktopLyricsShown()) {
             serviceHandler.post { floatingLyricsManager.show() }
         }
+
+        statusBarLyricsManager = StatusBarLyricsManager(this)
+        statusBarLyricsManager.enabled = GeneralStorage.isStatusBarLyricsEnabled()
 
         setupListeners()
 
@@ -244,6 +262,19 @@ class OrpheusMusicService : MediaLibraryService() {
         sleepTimerManager = SleepTimeController(player!!)
     }
 
+    /**
+     * 检查 player 是否存在，不存在则重建。
+     * 供外部（如 ExpoOrpheusModule）调用。
+     */
+    @OptIn(UnstableApi::class)
+    fun ensurePlayer(): ExoPlayer {
+        if (player == null) {
+            Log.w("OrpheusMusicService", "Player was null, reinitializing...")
+            initializePlayer()
+        }
+        return player!!
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
@@ -251,6 +282,7 @@ class OrpheusMusicService : MediaLibraryService() {
     override fun onDestroy() {
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         floatingLyricsManager.hide()
+        statusBarLyricsManager.onStop()
         scope.cancel()
         instance = null
 
@@ -259,6 +291,7 @@ class OrpheusMusicService : MediaLibraryService() {
             release()
             mediaSession = null
         }
+        this.player = null
         super.onDestroy()
     }
 
@@ -331,7 +364,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun restorePlayerState(restorePosition: Boolean) {
         val player = player ?: return
 
-        val restoredItems = GeneralStorage.restoreQueue()
+        val restoredItems = GeneralStorage.restoreQueue(this)
 
         if (restoredItems.isNotEmpty()) {
             player.setMediaItems(restoredItems)
@@ -355,7 +388,10 @@ class OrpheusMusicService : MediaLibraryService() {
 
             // 软件冷启动时，恢复的歌曲并不会触发 onMediaTransition 事件，我们需要手动补发一个
             if (player.currentMediaItem != null) {
-                sendTrackStartEvent(player.currentMediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
+                sendTrackStartEvent(
+                    player.currentMediaItem,
+                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED
+                )
             }
         }
     }
@@ -378,7 +414,7 @@ class OrpheusMusicService : MediaLibraryService() {
     @OptIn(UnstableApi::class)
     private fun sendTrackStartEvent(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
         if (mediaItem == null) return
-        
+
         // Notify local listeners
         trackEventListeners.forEach { it.onTrackStarted(mediaItem.mediaId, reason) }
 
@@ -432,6 +468,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
@@ -447,9 +484,19 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                val reasonStr = when (reason) {
+                    Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "PLAYLIST_CHANGED"
+                    Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
+                    else -> "UNKNOWN($reason)"
+                }
+                android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=${mediaItem?.mediaId} reason=$reasonStr ts=${System.currentTimeMillis()}")
                 sendTrackStartEvent(mediaItem, reason)
 
                 floatingLyricsManager.setLyrics(emptyList())
+                statusBarLyricsManager.onStop()
+
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
 
@@ -463,7 +510,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 val currentItem = player.currentMediaItem ?: return
                 val duration = player.duration
                 if (duration != C.TIME_UNSET && duration > 0) {
-                     durationCache[currentItem.mediaId] = duration
+                    durationCache[currentItem.mediaId] = duration
                 }
             }
 
@@ -477,7 +524,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 val isIndexChanged = oldPosition.mediaItemIndex != newPosition.mediaItemIndex
                 val lastMediaItem = oldPosition.mediaItem ?: return
                 val currentTime = System.currentTimeMillis()
-                
+
                 // Debounce
                 if ((currentTime - lastTrackFinishedAt) < 200) {
                     return
@@ -486,7 +533,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 if (isAutoTransition || isIndexChanged) {
                     val duration = durationCache[lastMediaItem.mediaId] ?: return
                     lastTrackFinishedAt = currentTime
-                    
+
                     sendTrackFinishedEvent(
                         lastMediaItem.mediaId,
                         oldPosition.positionMs / 1000.0,

@@ -1,6 +1,9 @@
 package expo.modules.orpheus
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -19,23 +22,33 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.typedarray.Float32Array
+import expo.modules.orpheus.util.DirectoryPickerContract
+import expo.modules.orpheus.exception.ControllerNotInitializedException
+import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.service.OrpheusDownloadService
+import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
+import expo.modules.orpheus.util.ExportOptions
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
-import expo.modules.kotlin.typedarray.Float32Array
-import expo.modules.orpheus.service.OrpheusMusicService
-import expo.modules.orpheus.service.OrpheusDownloadService
-import expo.modules.orpheus.manager.SpectrumManager
-import expo.modules.orpheus.exception.ControllerNotInitializedException
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -51,9 +64,17 @@ class ExpoOrpheusModule : Module() {
     private val spectrumManager = SpectrumManager()
     private var tempBuffer: FloatArray? = null
 
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // applicationContext 在 OnCreate 时缓存，生命周期与 Application 一致，
+    // 不受 React Native 组件卸载导致 reactContext 变 null 的影响。
+    private var cachedAppContext: Context? = null
+
+    private lateinit var directoryPickerLauncher: AppContextActivityResultLauncher<String, String?>
+
     // 记录上一首歌曲的 ID，用于在切歌时发送给 JS
     private var lastMediaId: String? = null
-    
+
     val json = Json { ignoreUnknownKeys = true }
 
     private val playerListener = object : Player.Listener {
@@ -83,7 +104,6 @@ class ExpoOrpheusModule : Module() {
         }
 
 
-
         /**
          * 处理播放状态改变
          */
@@ -107,15 +127,15 @@ class ExpoOrpheusModule : Module() {
                     "status" to isPlaying
                 )
             )
-             
+
             if (isPlaying) {
-                 player?.audioSessionId?.let { sessionId ->
-                     if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                         spectrumManager.start(sessionId)
-                     }
-                 }
+                player?.audioSessionId?.let { sessionId ->
+                    if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                        spectrumManager.start(sessionId)
+                    }
+                }
             } else {
-                 spectrumManager.stop()
+                spectrumManager.stop()
             }
 
             updateProgressRunnerState()
@@ -161,13 +181,21 @@ class ExpoOrpheusModule : Module() {
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
             "onTrackStarted",
-            "onTrackFinished"
+            "onTrackFinished",
+            "onCoverDownloadProgress",
+            "onExportProgress"
         )
+
+        RegisterActivityContracts {
+            directoryPickerLauncher = registerForActivityResult(DirectoryPickerContract())
+        }
 
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
+            cachedAppContext = context.applicationContext
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
+            expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(
                 context,
                 ComponentName(context, OrpheusMusicService::class.java)
@@ -183,21 +211,29 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
-                    
+
                     service.addTrackEventListener(object : OrpheusMusicService.TrackEventListener {
                         override fun onTrackStarted(trackId: String, reason: Int) {
-                            sendEvent("onTrackStarted", mapOf(
-                                "trackId" to trackId,
-                                "reason" to reason
-                            ))
+                            sendEvent(
+                                "onTrackStarted", mapOf(
+                                    "trackId" to trackId,
+                                    "reason" to reason
+                                )
+                            )
                         }
 
-                        override fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double) {
-                            sendEvent("onTrackFinished", mapOf(
-                                "trackId" to trackId,
-                                "finalPosition" to finalPosition,
-                                "duration" to duration
-                            ))
+                        override fun onTrackFinished(
+                            trackId: String,
+                            finalPosition: Double,
+                            duration: Double
+                        ) {
+                            sendEvent(
+                                "onTrackFinished", mapOf(
+                                    "trackId" to trackId,
+                                    "finalPosition" to finalPosition,
+                                    "duration" to duration
+                                )
+                            )
                         }
                     })
                 }
@@ -208,16 +244,19 @@ class ExpoOrpheusModule : Module() {
         }
 
         OnDestroy {
-            mainHandler.removeCallbacks(progressSendEventRunnable)
-            mainHandler.removeCallbacks(progressSaveRunnable)
-            mainHandler.removeCallbacks(downloadProgressRunnable)
-            controllerFuture?.let { MediaController.releaseFuture(it) }
-            downloadManager?.removeListener(downloadListener)
-            player?.removeListener(playerListener)
-            OrpheusMusicService.removeOnServiceReadyListener { }
-            player = null
-            spectrumManager.stop()
-            Log.d("Orpheus", "Destroy media controller")
+            mainHandler.post {
+                mainHandler.removeCallbacks(progressSendEventRunnable)
+                mainHandler.removeCallbacks(progressSaveRunnable)
+                mainHandler.removeCallbacks(downloadProgressRunnable)
+                controllerFuture?.let { MediaController.releaseFuture(it) }
+                downloadManager?.removeListener(downloadListener)
+                player?.removeListener(playerListener)
+                OrpheusMusicService.removeOnServiceReadyListener { }
+                player = null
+                spectrumManager.stop()
+                ioScope.cancel()
+                Log.d("Orpheus", "Destroy media controller")
+            }
         }
 
         Property("restorePlaybackPositionEnabled")
@@ -243,39 +282,49 @@ class ExpoOrpheusModule : Module() {
                 }
             }
 
+        Property("isStatusBarLyricsEnabled")
+            .get { GeneralStorage.isStatusBarLyricsEnabled() }
+            .set { enabled: Boolean ->
+                GeneralStorage.setStatusBarLyricsEnabled(enabled)
+                OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+            }
+
+        Property("isSuperLyricApiEnabled")
+            .get { com.hchen.superlyricapi.SuperLyricTool.isEnabled }
+
 
         Function("setBilibiliCookie") { cookie: String ->
             OrpheusConfig.bilibiliCookie = cookie
         }
 
         AsyncFunction("getPosition") {
-            checkPlayer()
+            ensurePlayer()
             player?.currentPosition?.toDouble()?.div(1000.0) ?: 0.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getDuration") {
-            checkPlayer()
+            ensurePlayer()
             val d = player?.duration ?: C.TIME_UNSET
             if (d == C.TIME_UNSET) 0.0 else d.toDouble() / 1000.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getBuffered") {
-            checkPlayer()
+            ensurePlayer()
             player?.bufferedPosition?.toDouble()?.div(1000.0) ?: 0.0
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIsPlaying") {
-            checkPlayer()
+            ensurePlayer()
             player?.isPlaying ?: false
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getCurrentIndex") {
-            checkPlayer()
+            ensurePlayer()
             player?.currentMediaItemIndex ?: -1
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getCurrentTrack") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
             val currentItem = p.currentMediaItem ?: return@AsyncFunction null
 
@@ -283,12 +332,12 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getShuffleMode") {
-            checkPlayer()
+            ensurePlayer()
             player?.shuffleModeEnabled
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIndexTrack") { index: Int ->
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
 
             if (index < 0 || index >= p.mediaItemCount) {
@@ -301,7 +350,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("play") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction null
             if (p.playbackState == Player.STATE_ENDED) {
                 p.seekTo(0)
@@ -310,23 +359,23 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("pause") {
-            checkPlayer()
+            ensurePlayer()
             player?.pause()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("clear") {
-            checkPlayer()
+            ensurePlayer()
             player?.clearMediaItems()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipTo") { index: Int ->
             // 跳转到指定索引的开头
-            checkPlayer()
+            ensurePlayer()
             player?.seekTo(index, C.TIME_UNSET)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToNext") {
-            checkPlayer()
+            ensurePlayer()
 
             // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
             val mediaItemCount = player?.mediaItemCount ?: 0
@@ -339,35 +388,37 @@ class ExpoOrpheusModule : Module() {
             }
 
             if (player?.hasNextMediaItem() == true) {
-                player?.seekToNextMediaItem()
+                player?.seekToNext()
             }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToPrevious") {
-            checkPlayer()
+            ensurePlayer()
+            val p = player ?: return@AsyncFunction null
 
             // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
             val mediaItemCount = player?.mediaItemCount ?: 0
             if (player?.repeatMode == Player.REPEAT_MODE_ONE
                 && mediaItemCount > 0
-                && !(player?.hasPreviousMediaItem() ?: false)
+                && !p.hasPreviousMediaItem()
             ) {
-                player?.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                p.seekTo(mediaItemCount - 1, C.TIME_UNSET)
                 return@AsyncFunction Unit
             }
-            if (player?.hasPreviousMediaItem() == true) {
-                player?.seekToPreviousMediaItem()
+
+            if (p.hasPreviousMediaItem()) {
+                p.seekToPreviousMediaItem()
             }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("seekTo") { seconds: Double ->
-            checkPlayer()
+            ensurePlayer()
             val ms = (seconds * 1000).toLong()
             player?.seekTo(ms)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setRepeatMode") { mode: Int ->
-            checkPlayer()
+            ensurePlayer()
             // mode: 0=OFF, 1=TRACK, 2=QUEUE
             val repeatMode = when (mode) {
                 1 -> Player.REPEAT_MODE_ONE
@@ -378,24 +429,24 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
-            checkPlayer()
+            ensurePlayer()
             player?.shuffleModeEnabled = enabled
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getRepeatMode") {
-            checkPlayer()
+            ensurePlayer()
             player?.repeatMode
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("removeTrack") { index: Int ->
-            checkPlayer()
+            ensurePlayer()
             if (index >= 0 && index < (player?.mediaItemCount ?: 0)) {
                 player?.removeMediaItem(index)
             }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getQueue") {
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction emptyList<TrackRecord>()
             val count = p.mediaItemCount
             val queue = ArrayList<TrackRecord>(count)
@@ -423,9 +474,10 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
-            checkPlayer()
+            ensurePlayer()
+            val context = appContext.reactContext
             val mediaItems = tracks.map { track ->
-                track.toMediaItem()
+                track.toMediaItem(context)
             }
             val p = player ?: return@AsyncFunction
             if (clearQueue == true) {
@@ -454,10 +506,11 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("playNext") { track: TrackRecord ->
-            checkPlayer()
+            ensurePlayer()
             val p = player ?: return@AsyncFunction
 
-            val mediaItem = track.toMediaItem()
+            val context = appContext.reactContext
+            val mediaItem = track.toMediaItem(context)
             val targetIndex = p.currentMediaItemIndex + 1
 
             var existingIndex = -1
@@ -525,6 +578,20 @@ class ExpoOrpheusModule : Module() {
                 id,
                 false
             )
+            CoverDownloadManager.deleteCover(context, id)
+        }
+
+        AsyncFunction("removeDownloads") { ids: List<String> ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            for (id in ids) {
+                DownloadService.sendRemoveDownload(
+                    context,
+                    OrpheusDownloadService::class.java,
+                    id,
+                    false
+                )
+                CoverDownloadManager.deleteCover(context, id)
+            }
         }
 
         AsyncFunction("removeAllDownloads") {
@@ -534,6 +601,7 @@ class ExpoOrpheusModule : Module() {
                 OrpheusDownloadService::class.java,
                 false
             )
+            CoverDownloadManager.deleteAllCovers(context)
         }
 
         AsyncFunction("getDownloads") {
@@ -596,6 +664,100 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        AsyncFunction("downloadMissingCovers") {
+            val context =
+                appContext.reactContext ?: return@AsyncFunction 0
+            val downloadManager = DownloadUtil.getDownloadManager(context)
+            val downloadIndex = downloadManager.downloadIndex
+            val cursor = downloadIndex.getDownloads()
+
+            // 先收集所有待下载项
+            data class PendingCover(val trackId: String, val artworkUrl: String)
+
+            val pendingList = mutableListOf<PendingCover>()
+
+            try {
+                while (cursor.moveToNext()) {
+                    val download = cursor.download
+                    if (download.state != Download.STATE_COMPLETED) continue
+                    if (download.request.data.isEmpty()) continue
+
+                    val trackId = download.request.id
+                    if (CoverDownloadManager.getCoverFile(context, trackId) != null) continue
+
+                    try {
+                        val track = json.decodeFromString<TrackRecord>(
+                            String(download.request.data)
+                        )
+                        val artwork = track.artwork
+                        if (!artwork.isNullOrEmpty()) {
+                            pendingList.add(PendingCover(trackId, artwork))
+                        }
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Failed to parse track for cover: ${e.message}")
+                    }
+                }
+            } finally {
+                cursor.close()
+            }
+
+            val total = pendingList.size
+            if (total == 0) return@AsyncFunction 0
+
+            // 在 IO 线程顺序下载，逐个发送进度事件
+            ioScope.launch {
+                pendingList.forEachIndexed { index, item ->
+                    val status = try {
+                        CoverDownloadManager.downloadCover(context, item.trackId, item.artworkUrl)
+                        "success"
+                    } catch (e: Exception) {
+                        Log.e("Orpheus", "Cover download failed for ${item.trackId}: ${e.message}")
+                        "failed"
+                    }
+                    sendEvent(
+                        "onCoverDownloadProgress", mapOf(
+                            "current" to (index + 1),
+                            "total" to total,
+                            "trackId" to item.trackId,
+                            "status" to status
+                        )
+                    )
+                }
+            }
+
+            return@AsyncFunction total
+        }
+
+        AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean, cropCoverArt: Boolean ->
+            val context = appContext.reactContext ?: run {
+                sendEvent("onExportProgress", mapOf(
+                    "status" to "error",
+                    "message" to "React context is null"
+                ))
+                return@AsyncFunction
+            }
+            runExportDownloads(
+                ids = ids,
+                destinationUri = destinationUri,
+                context = context,
+                options = ExportOptions(
+                    filenamePattern = filenamePattern,
+                    embedLyrics = embedLyrics,
+                    convertToLrc = convertToLrc,
+                    cropCoverArt = cropCoverArt,
+                ),
+                json = json,
+                ioScope = ioScope,
+                sendEvent = ::sendEvent,
+            )
+        }
+
+        Function("getDownloadedCoverUri") { trackId: String ->
+            val context = appContext.reactContext ?: return@Function null
+            val file = CoverDownloadManager.getCoverFile(context, trackId)
+            file?.let { "file://${it.absolutePath}" }
+        }
+
         AsyncFunction("getUncompletedDownloadTasks") {
             val context =
                 appContext.reactContext ?: return@AsyncFunction emptyList<Map<String, Any>>()
@@ -646,44 +808,78 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(data.lyrics, data.offset)
+                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
+                    data.lyrics,
+                    data.offset
+                )
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }.runOnQueue(Queues.MAIN)
 
+        AsyncFunction("setStatusBarLyrics") { lyricsJson: String ->
+            try {
+                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
+                val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
+                Log.d("StatusBarLyrics", "[Module] setStatusBarLyrics: ${data.lyrics.size} lines offset=${data.offset} ts=${System.currentTimeMillis()} first=\"$firstLine\" | serviceAlive=${OrpheusMusicService.instance != null}")
+                OrpheusMusicService.instance?.statusBarLyricsManager?.setLyrics(
+                    data.lyrics,
+                    data.offset
+                )
+            } catch (e: Exception) {
+                Log.e("StatusBarLyrics", "[Module] setStatusBarLyrics parse error: ${e.message}", e)
+                e.printStackTrace()
+            }
+        }.runOnQueue(Queues.MAIN)
+
         AsyncFunction("setPlaybackSpeed") { speed: Float ->
-            checkPlayer()
+            ensurePlayer()
             player?.setPlaybackSpeed(speed)
         }.runOnQueue(Queues.MAIN)
 
+        AsyncFunction("selectDirectory") Coroutine { ->
+            val context = appContext.reactContext ?: return@Coroutine null
+            val uriString = directoryPickerLauncher.launch("")
+            if (uriString != null) {
+                try {
+                    val treeUri = uriString.toUri()
+                    context.contentResolver.takePersistableUriPermission(
+                        treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to take persistable URI permission: ${e.message}")
+                }
+            }
+            uriString
+        }
+
         AsyncFunction("getPlaybackSpeed") {
-            checkPlayer()
+            ensurePlayer()
             player?.playbackParameters?.speed ?: 1.0f
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("debugTriggerError") {
-            val rootCause = RuntimeException("This is a simulated root cause exception")
-            val exception = PlaybackException(
-                "Simulated PlaybackException for debugging",
-                rootCause,
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
-            )
-            playerListener.onPlayerError(exception)
-            playerListener.onPlayerError(exception)
-        }.runOnQueue(Queues.MAIN)
+        Function("getLruCachedUris") { uris: List<String> ->
+            try {
+                uris.filter { uri -> 
+                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri) 
+                }
+            } catch (e: Exception) {
+                emptyList<String>()
+            }
+        }
 
         Function("updateSpectrumData") { destination: Float32Array ->
-             val size = destination.length
-             if (tempBuffer == null || tempBuffer!!.size != size) {
-                 tempBuffer = FloatArray(size)
-             }
-             val buffer = tempBuffer!!
-             spectrumManager.getSpectrumData(buffer)
-             
-             val byteBuffer = destination.toDirectBuffer()
-             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
-             byteBuffer.asFloatBuffer().put(buffer)
+            val size = destination.length
+            if (tempBuffer == null || tempBuffer!!.size != size) {
+                tempBuffer = FloatArray(size)
+            }
+            val buffer = tempBuffer!!
+            spectrumManager.getSpectrumData(buffer)
+
+            val byteBuffer = destination.toDirectBuffer()
+            byteBuffer.order(java.nio.ByteOrder.nativeOrder())
+            byteBuffer.asFloatBuffer().put(buffer)
         }
     }
 
@@ -719,6 +915,26 @@ class ExpoOrpheusModule : Module() {
         ) {
             sendEvent("onDownloadUpdated", getDownloadMap(download))
             updateDownloadProgressRunnerState()
+
+            // 歌曲下载完成后，异步下载封面
+            if (download.state == Download.STATE_COMPLETED && download.request.data.isNotEmpty()) {
+                // 封面下载只需能访问文件系统的 Context，使用 OnCreate 时缓存的
+                // applicationContext，避免 reactContext 为 null 时封面静默跳过。
+                val context = cachedAppContext ?: appContext.reactContext ?: return
+                try {
+                    val track = json.decodeFromString<TrackRecord>(
+                        String(download.request.data)
+                    )
+                    val artwork = track.artwork
+                    if (!artwork.isNullOrEmpty()) {
+                        ioScope.launch {
+                            CoverDownloadManager.downloadCover(context, track.id, artwork)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Orpheus", "Failed to trigger cover download: ${e.message}")
+                }
+            }
         }
     }
 
@@ -822,9 +1038,14 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun checkPlayer() {
-        if (player == null) {
-            throw ControllerNotInitializedException()
+    private fun ensurePlayer() {
+        val service = OrpheusMusicService.instance
+            ?: throw ControllerNotInitializedException()
+        val servicePlayer = service.ensurePlayer()
+        if (this.player !== servicePlayer) {
+            this.player?.removeListener(playerListener)
+            this.player = servicePlayer
+            servicePlayer.addListener(playerListener)
         }
     }
 }

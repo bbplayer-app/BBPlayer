@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { Image } from 'expo-image'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
@@ -18,10 +19,42 @@ export const userQueryKeys = {
 export const usePersonalInformation = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
+
 	return useQuery({
 		queryKey: userQueryKeys.personalInformation(),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getUserInfo()),
+		queryFn: async () => {
+			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo())
+			// 缓存用户信息和头像供离线时显示
+			if (res.name) {
+				useAppStore.getState().setBilibiliUserInfo({
+					mid: res.mid,
+					name: res.name,
+					face: res.face,
+					cachedAt: Date.now(),
+				})
+				if (res.face) {
+					Image.prefetch(res.face, 'disk').catch(() => {
+						// Ignore error
+					})
+				}
+			}
+			return res
+		},
 		enabled,
+		initialData: () => {
+			const storeData = useAppStore.getState().bilibiliUserInfo
+			if (storeData && storeData.name) {
+				return {
+					mid: storeData.mid ?? 0,
+					name: storeData.name,
+					face: storeData.face,
+				} as import('@/types/apis/bilibili').BilibiliUserInfo
+			}
+			return undefined
+		},
+		initialDataUpdatedAt: () => {
+			return useAppStore.getState().bilibiliUserInfo?.cachedAt ?? 0
+		},
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})
 }

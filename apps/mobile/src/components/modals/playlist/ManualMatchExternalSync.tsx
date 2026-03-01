@@ -4,13 +4,13 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Button,
 	Dialog,
 	Searchbar,
 	Text,
 	TouchableRipple,
 } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'

@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class BilibiliApiResponse<TData>(
     @SerialName("code") val code: Int,
-    @SerialName("message") val message: String,
-    @SerialName("data") val data: TData?
+    @SerialName("message") val message: String? = null,
+    @SerialName("data") val data: TData? = null
 )
 
 @Serializable
@@ -61,6 +61,7 @@ data class VolumeData(
 @Serializable
 data class BilibiliNavResponse(
     @SerialName("code") val code: Int,
+    @SerialName("message") val message: String? = null,
     @SerialName("data") val data: NavData?
 )
 

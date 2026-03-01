@@ -45,6 +45,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
     private var textSize = 18f
     private var textColor = "#FFFFFF".toColorInt()
     private var isLocked = false
+    private var cachedStatusBarHeight = 0
 
     private val colors = listOf(
         "#FFFFFF", "#CCCCCC",
@@ -61,6 +62,10 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
 
     init {
         isLocked = GeneralStorage.isDesktopLyricsLocked()
+        val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+        if (resourceId > 0) {
+            cachedStatusBarHeight = context.resources.getDimensionPixelSize(resourceId)
+        }
     }
 
     fun show() {
@@ -85,6 +90,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
         params?.y = 200
 
         createView()
+        updateTouchableFlags()
 
         try {
             windowManager.addView(floatingView, params)
@@ -187,7 +193,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
 
     private fun createView() {
         val frame = FrameLayout(uiContext)
-        
+
         val contentContainer = LinearLayout(uiContext).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -201,7 +207,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
             setShadowLayer(4f, 0f, 0f, Color.BLACK)
             gravity = Gravity.CENTER
             setPadding(20, 10, 20, 10)
-            
+
             setOnClickListener {
                 toggleSettings()
             }
@@ -211,31 +217,35 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
         settingsPanel = createSettingsPanel()
         settingsPanel?.visibility = View.GONE
 
-        contentContainer.addView(lyricsTextView, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            bottomMargin = 10
-        })
+        contentContainer.addView(
+            lyricsTextView, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = 10
+            })
 
-        contentContainer.addView(settingsPanel, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ))
+        contentContainer.addView(
+            settingsPanel, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
-        frame.addView(contentContainer, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            Gravity.CENTER_HORIZONTAL
-        ))
+        frame.addView(
+            contentContainer, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_HORIZONTAL
+            )
+        )
 
         var initialY = 0
         var initialTouchY = 0f
         var isClick = false
         val touchSlop = 10
 
-        lyricsTextView?.setOnTouchListener {
-            v, event ->
+        lyricsTextView?.setOnTouchListener { v, event ->
             if (isLocked) return@setOnTouchListener false
 
             when (event.action) {
@@ -245,11 +255,12 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     isClick = true
                     true
                 }
+
                 MotionEvent.ACTION_MOVE -> {
                     val dy = (event.rawY - initialTouchY).toInt()
                     if (abs(dy) > touchSlop) {
                         isClick = false
-                        params?.y = initialY + dy
+                        params?.y = maxOf(cachedStatusBarHeight, initialY + dy)
                         try {
                             windowManager.updateViewLayout(floatingView, params)
                         } catch (e: Exception) {
@@ -258,12 +269,14 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     }
                     true
                 }
+
                 MotionEvent.ACTION_UP -> {
                     if (isClick) {
                         v.performClick()
                     }
                     true
                 }
+
                 else -> false
             }
         }
@@ -289,11 +302,13 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
             setPadding(0, 0, 0, 24)
         }
 
-        val prevBtn = createControlButton(R.drawable.outline_skip_previous_24) { player?.seekToPreviousMediaItem() }
+        val prevBtn =
+            createControlButton(R.drawable.outline_skip_previous_24) { player?.seekToPreviousMediaItem() }
         playPauseButton = createControlButton(R.drawable.outline_play_arrow_24) {
             if (player?.isPlaying == true) player.pause() else player?.play()
         }.apply { textSize = 28f }
-        val nextBtn = createControlButton(R.drawable.outline_skip_next_24) { player?.seekToNextMediaItem() }
+        val nextBtn =
+            createControlButton(R.drawable.outline_skip_next_24) { player?.seekToNextMediaItem() }
 
         controlsRow.addView(prevBtn)
         controlsRow.addView(View(uiContext), LinearLayout.LayoutParams(40, 1)) // Spacer
@@ -320,14 +335,17 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                     textSize = (p1 + 10).toFloat()
                     lyricsTextView?.textSize = textSize
                 }
+
                 override fun onStartTrackingTouch(p0: SeekBar?) {}
                 override fun onStopTrackingTouch(p0: SeekBar?) {}
             })
         }
         sizeRow.addView(sizeLabel)
-        sizeRow.addView(sizeSeekBar, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-            marginStart = 16
-        })
+        sizeRow.addView(
+            sizeSeekBar,
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = 16
+            })
 
         // Row 3: Colors
         val colorsScroll = HorizontalScrollView(uiContext).apply {
@@ -339,7 +357,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        
+
         colors.forEach { colorString ->
             val color = colorString.toColorInt()
             val colorView = View(uiContext).apply {
@@ -352,7 +370,7 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
                 circle.setColor(color)
                 circle.setStroke(2, Color.DKGRAY)
                 background = circle
-                
+
                 setOnClickListener {
                     textColor = color
                     lyricsTextView?.setTextColor(textColor)
@@ -367,16 +385,26 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        
-        val lockBtn = createActionButton(R.string.lock, R.drawable.outline_lock_24) { setLocked(true) }
-        val closeBtn = createActionButton(R.string.close, R.drawable.outline_close_24) { settingsPanel?.visibility = View.GONE }
+
+        val lockBtn =
+            createActionButton(R.string.lock, R.drawable.outline_lock_24) { setLocked(true) }
+        val closeBtn = createActionButton(
+            R.string.close,
+            R.drawable.outline_close_24
+        ) { settingsPanel?.visibility = View.GONE }
 
         actionsRow.addView(lockBtn)
         actionsRow.addView(View(uiContext), LinearLayout.LayoutParams(32, 1)) // Spacer
         actionsRow.addView(closeBtn)
 
         panel.addView(controlsRow)
-        panel.addView(sizeRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        panel.addView(
+            sizeRow,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
         panel.addView(colorsScroll)
         panel.addView(actionsRow)
 

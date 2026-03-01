@@ -1,3 +1,4 @@
+import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import * as FileSystem from 'expo-file-system'
 import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
@@ -18,6 +19,7 @@ import type {
 } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
+import { isActuallyOffline } from '@/utils/network'
 
 const logger = log.extend('Service.Lyric')
 type oldLyricFileType =
@@ -145,7 +147,7 @@ class LyricService {
 			const errors = Array.from(aggregateError.errors || [])
 			const errorMessages = errors
 				.map((err) => {
-					return `${err instanceof Error ? err.message : String(err)}`
+					return err instanceof Error ? err.message : String(err)
 				})
 				.join('; ')
 
@@ -220,7 +222,16 @@ class LyricService {
 				return e
 			},
 		).orElse(() => {
-			return fetchFromNetwork()
+			return ResultAsync.fromSafePromise(fetchNetInfo()).andThen(
+				(networkState) => {
+					if (isActuallyOffline(networkState)) {
+						return errAsync(
+							new LyricNotFoundError('当前处于离线状态，无法获取网络歌词'),
+						)
+					}
+					return fetchFromNetwork()
+				},
+			)
 		})
 	}
 
@@ -347,6 +358,7 @@ class LyricService {
 				if (!file.name.endsWith('.json')) continue
 
 				try {
+					// oxlint-disable-next-line no-await-in-loop
 					const content = await file.text()
 					let parsed: oldLyricFileType | LyricFileData | ParsedLrc
 					try {
@@ -396,6 +408,7 @@ class LyricService {
 						},
 					}
 
+					// oxlint-disable-next-line no-await-in-loop
 					await this.saveLyricsToFile(newLyricData, uniqueKey)
 				} catch (e) {
 					logger.warning(`文件 ${file.name} 迁移失败`, e)

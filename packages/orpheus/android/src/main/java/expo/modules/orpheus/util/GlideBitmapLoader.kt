@@ -19,8 +19,7 @@ class GlideBitmapLoader(private val context: Context) : BitmapLoader {
         MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
 
     override fun loadBitmapFromMetadata(metadata: MediaMetadata): ListenableFuture<Bitmap> {
-        val uri = metadata.artworkUri ?:
-        return executorService.submit<Bitmap> {
+        val uri = metadata.artworkUri ?: return executorService.submit<Bitmap> {
             throw IllegalArgumentException("Metadata artworkUri is null")
         }
         return loadBitmap(uri)
@@ -42,7 +41,7 @@ class GlideBitmapLoader(private val context: Context) : BitmapLoader {
             val glideBitmap = Glide.with(context)
                 .asBitmap()
                 .load(uri)
-                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .submit(512, 512)
                 .get()
 
