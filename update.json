@@ -1,11 +1,11 @@
 {
-	"version": "2.3.2",
-	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.3.2",
+	"version": "2.4.1",
+	"url": "https://github.com/bbplayer-app/BBPlayer/releases/tag/v2.4.1",
 	"notes": "你版本太低了，赶紧更新！",
 	"listed_notes": [
-		"1. 大幅优化离线模式下的体验",
-		"2. 修复 b23.tv 短链无法解析的问题",
-		"3. 支持本地播放列表拖拽排序",
+		"1. 支持共享歌单和协同编辑",
+		"2. 支持导出歌曲",
+		"3. 支持通知栏歌词",
 		"4. 修复一些已知的 bug"
 	],
 	"forced": false
