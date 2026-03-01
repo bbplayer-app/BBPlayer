@@ -1,0 +1,32 @@
+[
+	{
+		"relation": ["delegate_permission/common.handle_all_urls"],
+		"target": {
+			"namespace": "android_app",
+			"package_name": "com.roitium.bbplayer",
+			"sha256_cert_fingerprints": [
+				"DD:DE:56:26:1C:CB:62:DC:F8:11:75:16:49:9E:04:FF:E9:DD:F3:1E:59:BA:4C:B8:0E:1D:04:7F:D6:97:79:36"
+			]
+		}
+	},
+	{
+		"relation": ["delegate_permission/common.handle_all_urls"],
+		"target": {
+			"namespace": "android_app",
+			"package_name": "com.roitium.bbplayer.dev",
+			"sha256_cert_fingerprints": [
+				"75:43:E1:8A:C5:F8:82:76:67:F6:DD:7E:87:3D:78:FD:6A:02:BC:12:16:35:C4:11:AC:EA:E6:DC:3B:E2:F8:C2"
+			]
+		}
+	},
+	{
+		"relation": ["delegate_permission/common.handle_all_urls"],
+		"target": {
+			"namespace": "android_app",
+			"package_name": "com.roitium.bbplayer.preview",
+			"sha256_cert_fingerprints": [
+				"BD:36:EF:A3:91:05:49:8F:79:1B:3A:88:23:36:5A:36:3B:BA:29:EE:88:F4:ED:E1:33:FA:C6:6F:5E:65:C5:03"
+			]
+		}
+	}
+]

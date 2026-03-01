@@ -3,5 +3,3 @@ docs/.vitepress/cache
 node_modules
 dist
 docs/.vitepress/dist
-.next
-.source

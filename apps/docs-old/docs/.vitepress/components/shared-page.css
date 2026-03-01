@@ -1,0 +1,209 @@
+/* shared-page.css — BBPlayer 共享页面设计系统 */
+
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+.page {
+	--bg: #dde1e7;
+	--card-bg: #ffffff;
+	--text-1: #0f172a;
+	--text-2: #64748b;
+	--text-3: #94a3b8;
+	--primary: #0f172a;
+	--primary-fg: #ffffff;
+	--secondary-bg: #f1f5f9;
+	--secondary-fg: #334155;
+	--border: rgba(0, 0, 0, 0.08);
+	--card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+	.page {
+		--bg: #0a0a0f;
+		--card-bg: #16161e;
+		--text-1: #f1f5f9;
+		--text-2: #94a3b8;
+		--text-3: #475569;
+		--primary: #f1f5f9;
+		--primary-fg: #0f172a;
+		--secondary-bg: #1e1e2a;
+		--secondary-fg: #cbd5e1;
+		--border: rgba(255, 255, 255, 0.08);
+		--card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+	}
+}
+
+/* ── Page layout ───────────────────────────────────────────────────────── */
+.page {
+	min-height: 100dvh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 20px 16px 12px;
+	background-color: var(--bg);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+		Arial, sans-serif;
+	color: var(--text-1);
+	box-sizing: border-box;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────── */
+.card {
+	background: var(--card-bg);
+	border-radius: 20px;
+	max-width: 480px;
+	width: 100%;
+	border: 1px solid var(--border);
+	box-shadow: var(--card-shadow);
+	animation: fadeUp 0.45s ease-out both;
+	display: flex;
+	flex-direction: column;
+}
+
+@keyframes fadeUp {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.button-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 14px 16px 16px;
+	flex-shrink: 0;
+	border-top: 1px solid var(--border);
+}
+
+.btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 13px 20px;
+	border-radius: 12px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	text-decoration: none;
+	transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+	cursor: pointer;
+	line-height: 1;
+}
+
+.btn-primary {
+	background-color: var(--primary);
+	color: var(--primary-fg);
+}
+
+.btn-primary:hover {
+	opacity: 0.85;
+	transform: translateY(-1px);
+}
+
+.btn-secondary {
+	background-color: var(--secondary-bg);
+	color: var(--secondary-fg);
+	font-weight: 500;
+}
+
+.btn-secondary:hover {
+	opacity: 0.75;
+}
+
+.btn-icon {
+	flex-shrink: 0;
+}
+
+/* ── Error state ───────────────────────────────────────────────────────── */
+.error-icon {
+	color: #f87171;
+	margin-bottom: 16px;
+	display: flex;
+	justify-content: center;
+}
+
+.error-title {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin: 0 0 8px;
+	color: var(--text-1);
+}
+
+.error-desc {
+	font-size: 0.875rem;
+	color: var(--text-2);
+	margin: 0;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+.footer {
+	margin-top: 12px;
+	text-align: center;
+}
+
+.footer-link {
+	font-size: 0.78rem;
+	color: var(--text-3);
+	text-decoration: none;
+}
+
+.footer-link:hover {
+	color: var(--text-2);
+}
+
+/* ── In-app browser overlay ────────────────────────────────────────────── */
+.browser-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.88);
+	backdrop-filter: blur(10px);
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 32px;
+}
+
+.overlay-content {
+	text-align: center;
+	color: white;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	max-width: 280px;
+}
+
+.overlay-icon {
+	opacity: 0.85;
+}
+
+.overlay-title {
+	font-size: 1.4rem;
+	font-weight: 700;
+	margin: 0;
+}
+
+.overlay-desc {
+	font-size: 0.95rem;
+	opacity: 0.75;
+	line-height: 1.6;
+	margin: 0;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+	.page {
+		padding: 12px 12px 10px;
+	}
+
+	.card {
+		border-radius: 16px;
+	}
+}

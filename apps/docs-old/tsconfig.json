@@ -1,0 +1,18 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"exactOptionalPropertyTypes": true,
+		"isolatedModules": true,
+		"jsx": "preserve",
+		"esModuleInterop": true,
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"types": ["vitepress/client"]
+	},
+	"include": ["env.d.ts", "docs/**/*", "docs/.vitepress/**/*"],
+	"exclude": ["node_modules", "dist"]
+}
