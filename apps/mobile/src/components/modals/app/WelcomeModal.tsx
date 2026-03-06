@@ -39,10 +39,12 @@ function Step0() {
 }
 
 function Step1({
-	onLogin,
+	onLoginQRCode,
+	onLoginPhone,
 	onGuestMode,
 }: {
-	onLogin: () => void
+	onLoginQRCode: () => void
+	onLoginPhone: () => void
 	onGuestMode: () => void
 }) {
 	return (
@@ -52,9 +54,15 @@ function Step1({
 			<View style={styles.stepButtonContainer}>
 				<Button
 					mode='contained'
-					onPress={onLogin}
+					onPress={onLoginQRCode}
 				>
-					登录
+					扫码登录
+				</Button>
+				<Button
+					mode='contained-tonal'
+					onPress={onLoginPhone}
+				>
+					手机号登录
 				</Button>
 				<Button
 					onPress={onGuestMode}
@@ -113,9 +121,14 @@ export default function WelcomeModal() {
 		storage.set('first_open', false)
 		close()
 	}, [close])
-	const confirmLogin = useCallback(() => {
+	const confirmLoginQRCode = useCallback(() => {
 		storage.set('first_open', false)
 		open('QRCodeLogin', undefined)
+		close()
+	}, [close, open])
+	const confirmLoginPhone = useCallback(() => {
+		storage.set('first_open', false)
+		open('PhoneLogin', undefined)
 		close()
 	}, [close, open])
 
@@ -152,7 +165,8 @@ export default function WelcomeModal() {
 					}}
 				>
 					<Step1
-						onLogin={confirmLogin}
+						onLoginQRCode={confirmLoginQRCode}
+						onLoginPhone={confirmLoginPhone}
 						onGuestMode={confirmGuestMode}
 					/>
 				</View>
@@ -175,7 +189,8 @@ export default function WelcomeModal() {
 						</View>
 						<View style={{ width: measuredWidth }}>
 							<Step1
-								onLogin={confirmLogin}
+								onLoginQRCode={confirmLoginQRCode}
+								onLoginPhone={confirmLoginPhone}
 								onGuestMode={confirmGuestMode}
 							/>
 						</View>
