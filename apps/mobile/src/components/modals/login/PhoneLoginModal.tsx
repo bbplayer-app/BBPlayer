@@ -1,11 +1,11 @@
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
-import * as Clipboard from 'expo-clipboard'
-import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
 import * as setCookieParser from 'set-cookie-parser'
+import { WebView } from 'react-native-webview'
+import type { WebViewMessageEvent } from 'react-native-webview'
 
 import Button from '@/components/common/Button'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
@@ -16,7 +16,15 @@ import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
-type Step = 'input_phone' | 'input_code' | 'success'
+type Step = 'input_phone' | 'geetest_verify' | 'input_code' | 'success'
+
+interface CaptchaParams {
+	token: string
+	gt: string
+	challenge: string
+	tel: string
+	cid: string
+}
 
 const COUNTRY_CODES = [
 	{ label: '中国大陆 (+86)', value: '86' },
@@ -27,6 +35,64 @@ const COUNTRY_CODES = [
 	{ label: '韩国 (+82)', value: '82' },
 	{ label: '英国 (+44)', value: '44' },
 ]
+
+function buildGeetestHtml(gt: string, challenge: string): string {
+	const gtJson = JSON.stringify(gt)
+	const challengeJson = JSON.stringify(challenge)
+	return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; background: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .card {
+      background: #fff; border-radius: 8px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12); width: 90%; max-width: 340px;
+    }
+    h3 { text-align: center; margin-bottom: 16px; font-size: 16px; color: #333; }
+    .err { color: #d32f2f; text-align: center; margin-top: 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3>请完成安全验证</h3>
+    <div id="captcha"></div>
+    <div class="err" id="err-msg"></div>
+  </div>
+  <script src="https://static.geetest.com/static/js/gt.0.4.9.js"></script>
+  <script>
+    initGeetest({
+      gt: ${gtJson},
+      challenge: ${challengeJson},
+      offline: false,
+      new_captcha: true,
+      product: 'bind',
+      width: '100%'
+    }, function(captchaObj) {
+      captchaObj.appendTo('#captcha');
+      captchaObj.onSuccess(function() {
+        var r = captchaObj.getValidate();
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          validate: r.geetest_validate,
+          seccode: r.geetest_seccode,
+          challenge: r.geetest_challenge
+        }));
+      });
+      captchaObj.onError(function() {
+        document.getElementById('err-msg').textContent = '验证出错，请关闭后重试';
+      });
+    });
+  </script>
+</body>
+</html>`
+}
 
 export default function PhoneLoginModal() {
 	const queryClient = useQueryClient()
@@ -39,6 +105,7 @@ export default function PhoneLoginModal() {
 	const [tel, setTel] = useState('')
 	const [smsCode, setSmsCode] = useState('')
 	const [captchaKey, setCaptchaKey] = useState('')
+	const [captchaParams, setCaptchaParams] = useState<CaptchaParams | null>(null)
 	const [isSendingCode, setIsSendingCode] = useState(false)
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
 	const [phoneError, setPhoneError] = useState('')
@@ -74,31 +141,56 @@ export default function PhoneLoginModal() {
 				return
 			}
 			const captcha = captchaResult.value
-
-			// 第二步：使用图形验证 token 发送短信
-			// 注意：Bilibili 的短信发送接口需要 GEETEST 滑块验证码。
-			// validate 和 seccode 在完整流程中应由用户完成 GEETEST 滑块后由 SDK 回调提供。
-			// 由于本应用暂不内嵌 GEETEST SDK，此处先以空字符串尝试；
-			// 若 Bilibili 返回 86211（需要图形验证），则引导用户前往浏览器完成验证后重试。
-			const smsResult = await bilibiliApi.sendPhoneLoginSms(
-				trimmedTel,
+			// 第二步：跳转到 GEETEST 验证步骤
+			setCaptchaParams({
+				token: captcha.token,
+				gt: captcha.geetest.gt,
+				challenge: captcha.geetest.challenge,
+				tel: trimmedTel,
 				cid,
-				captcha.token,
-				captcha.geetest.challenge,
-				'',
-				'',
+			})
+			setStep('geetest_verify')
+		} catch (error) {
+			toastAndLogError(
+				'获取验证码失败',
+				error,
+				'PhoneLoginModal.handleRequestCode',
+			)
+		}
+		setIsSendingCode(false)
+	}
+
+	const handleGeetestMessage = async (event: WebViewMessageEvent) => {
+		if (!captchaParams) return
+
+		let parsed: { validate?: string; seccode?: string; challenge?: string }
+		try {
+			parsed = JSON.parse(event.nativeEvent.data) as typeof parsed
+		} catch {
+			return
+		}
+
+		const { validate, seccode, challenge } = parsed
+		if (!validate || !seccode || !challenge) return
+
+		// 第三步：使用 GEETEST 验证结果发送短信
+		try {
+			const smsResult = await bilibiliApi.sendPhoneLoginSms(
+				captchaParams.tel,
+				captchaParams.cid,
+				captchaParams.token,
+				challenge,
+				validate,
+				seccode,
 			)
 			if (smsResult.isErr()) {
 				const errCode = smsResult.error.data.msgCode
 				if (errCode === 86211 || errCode === -105) {
-					// 需要图形验证码，引导用户完成后重试
-					setPhoneError(
-						'Bilibili 需要图形验证，请点击下方「在浏览器中完成验证」按钮',
-					)
+					setPhoneError('图形验证已过期，请重新获取验证码')
 				} else {
 					setPhoneError(smsResult.error.message || '发送验证码失败，请稍后重试')
 				}
-				setIsSendingCode(false)
+				setStep('input_phone')
 				return
 			}
 
@@ -109,10 +201,10 @@ export default function PhoneLoginModal() {
 			toastAndLogError(
 				'发送验证码失败',
 				error,
-				'PhoneLoginModal.handleRequestCode',
+				'PhoneLoginModal.handleGeetestMessage',
 			)
+			setStep('input_phone')
 		}
-		setIsSendingCode(false)
 	}
 
 	const handleLogin = async () => {
@@ -141,10 +233,10 @@ export default function PhoneLoginModal() {
 				return
 			}
 
-			const splitedCookie = setCookieParser.splitCookiesString(
+			const splitCookies = setCookieParser.splitCookiesString(
 				loginResult.value,
 			)
-			const parsedCookie = setCookieParser.parse(splitedCookie)
+			const parsedCookie = setCookieParser.parse(splitCookies)
 			const finalCookieObject = Object.fromEntries(
 				parsedCookie.map((c) => [c.name, c.value]),
 			)
@@ -170,16 +262,6 @@ export default function PhoneLoginModal() {
 			toastAndLogError('登录失败', error, 'PhoneLoginModal.handleLogin')
 		}
 		setIsLoggingIn(false)
-	}
-
-	const handleOpenBrowserForCaptcha = () => {
-		const loginUrl = 'https://www.bilibili.com/login?source=main_mini_login'
-		WebBrowser.openBrowserAsync(loginUrl).catch((e) => {
-			void Clipboard.setStringAsync(loginUrl)
-			toast.error('无法调用浏览器，已将链接复制到剪贴板', {
-				description: String(e),
-			})
-		})
 	}
 
 	const renderInputPhoneStep = () => (
@@ -229,15 +311,6 @@ export default function PhoneLoginModal() {
 						{phoneError}
 					</HelperText>
 				) : null}
-				{phoneError.includes('图形验证') ? (
-					<Button
-						mode='outlined'
-						onPress={handleOpenBrowserForCaptcha}
-						style={styles.browserButton}
-					>
-						在浏览器中完成验证后重新获取验证码
-					</Button>
-				) : null}
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={close}>取消</Button>
@@ -252,6 +325,41 @@ export default function PhoneLoginModal() {
 			</Dialog.Actions>
 		</>
 	)
+
+	const renderGeetestStep = () => {
+		if (!captchaParams) return null
+		return (
+			<>
+				<Dialog.Title>安全验证</Dialog.Title>
+				<Dialog.Content style={styles.geetestContent}>
+					<WebView
+						style={styles.geetestWebView}
+						source={{ html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge) }}
+						onMessage={handleGeetestMessage}
+						javaScriptEnabled
+						originWhitelist={['*']}
+						startInLoadingState
+						renderLoading={() => (
+							<ActivityIndicator
+								style={StyleSheet.absoluteFill}
+								size='large'
+							/>
+						)}
+					/>
+				</Dialog.Content>
+				<Dialog.Actions>
+					<Button
+						onPress={() => {
+							setStep('input_phone')
+							setCaptchaParams(null)
+						}}
+					>
+						取消
+					</Button>
+				</Dialog.Actions>
+			</>
+		)
+	}
 
 	const renderInputCodeStep = () => (
 		<>
@@ -323,6 +431,7 @@ export default function PhoneLoginModal() {
 
 	if (step === 'success') return renderSuccessStep()
 	if (step === 'input_code') return renderInputCodeStep()
+	if (step === 'geetest_verify') return renderGeetestStep()
 	return renderInputPhoneStep()
 }
 
@@ -351,7 +460,11 @@ const styles = StyleSheet.create({
 	countryButton: {
 		minWidth: 56,
 	},
-	browserButton: {
-		marginTop: 12,
+	geetestContent: {
+		padding: 0,
+	},
+	geetestWebView: {
+		height: 280,
+		borderRadius: 4,
 	},
 })
