@@ -31,6 +31,7 @@ import expo.modules.kotlin.typedarray.Float32Array
 import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
@@ -289,8 +290,23 @@ class ExpoOrpheusModule : Module() {
                 OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
             }
 
+        Property("statusBarLyricsProvider")
+            .get { GeneralStorage.getStatusBarLyricsProvider() }
+            .set { provider: String ->
+                GeneralStorage.setStatusBarLyricsProvider(provider)
+                val service = OrpheusMusicService.instance ?: return@set
+                service.statusBarLyricsManager.backend = service.createStatusBarBackend(provider)
+            }
+
         Property("isSuperLyricApiEnabled")
             .get { com.hchen.superlyricapi.SuperLyricTool.isEnabled }
+
+        Property("isLyriconApiEnabled")
+            .get {
+                OrpheusMusicService.instance?.statusBarLyricsManager?.backend
+                    ?.let { it is LyriconBackend && it.isAvailable }
+                    ?: false
+            }
 
 
         Function("setBilibiliCookie") { cookie: String ->

@@ -25,7 +25,9 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.StatusBarLyricsManager
+import expo.modules.orpheus.manager.SuperLyricBackend
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -225,6 +227,7 @@ class OrpheusMusicService : MediaLibraryService() {
         }
 
         statusBarLyricsManager = StatusBarLyricsManager(this)
+        statusBarLyricsManager.backend = createStatusBarBackend(GeneralStorage.getStatusBarLyricsProvider())
         statusBarLyricsManager.enabled = GeneralStorage.isStatusBarLyricsEnabled()
 
         setupListeners()
@@ -549,6 +552,14 @@ class OrpheusMusicService : MediaLibraryService() {
         val queue = List(player.mediaItemCount) { i -> player.getMediaItemAt(i) }
         if (queue.isNotEmpty()) {
             GeneralStorage.saveQueue(queue)
+        }
+    }
+
+    fun createStatusBarBackend(provider: String): expo.modules.orpheus.manager.StatusBarLyricsBackend {
+        return if (provider == "lyricon" && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            LyriconBackend(this)
+        } else {
+            SuperLyricBackend(this)
         }
     }
 
