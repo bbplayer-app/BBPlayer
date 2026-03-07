@@ -334,10 +334,14 @@ export default function PhoneLoginModal() {
 				<Dialog.Content style={styles.geetestContent}>
 					<WebView
 						style={styles.geetestWebView}
-						source={{ html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge) }}
+						source={{
+							html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge),
+							baseUrl: 'https://www.bilibili.com',
+						}}
 						onMessage={handleGeetestMessage}
 						javaScriptEnabled
 						originWhitelist={['*']}
+						mixedContentMode='always'
 						startInLoadingState
 						renderLoading={() => (
 							<ActivityIndicator
