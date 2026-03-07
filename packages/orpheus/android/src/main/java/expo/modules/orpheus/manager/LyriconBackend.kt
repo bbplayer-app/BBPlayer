@@ -2,7 +2,9 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
+import androidx.media3.common.C
 import expo.modules.orpheus.model.LyricsLine
+import expo.modules.orpheus.service.OrpheusMusicService
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.model.RichLyricLine
 import io.github.proify.lyricon.provider.model.Song
@@ -46,12 +48,29 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         if (lyrics.isEmpty()) return
 
         val richLines = buildRichLines(lyrics, offset)
-        val song = Song(lyrics = richLines)
+
+        // Read current track metadata from the player so Lyricon can use it for its own
+        // lyrics cache/management UI. Cover art is NOT passed here — Lyricon auto-reads
+        // that from the system MediaSession that BBPlayer already publishes via media3.
+        val player = OrpheusMusicService.instance?.player
+        val mediaItem = player?.currentMediaItem
+        val title = mediaItem?.mediaMetadata?.title?.toString()
+        val artist = mediaItem?.mediaMetadata?.artist?.toString()
+        val trackId = mediaItem?.mediaId
+        val durationMs = player?.duration?.takeIf { it != C.TIME_UNSET }
+
+        val song = Song(
+            id = trackId,
+            name = title,
+            artist = artist,
+            duration = durationMs,
+            lyrics = richLines,
+        )
 
         try {
             provider.player.setSong(song)
             provider.player.setPlaybackState(true)
-            Log.d(TAG, "[setLyrics] setSong with ${richLines.size} lines")
+            Log.d(TAG, "[setLyrics] setSong lines=${richLines.size} id=$trackId name=$title artist=$artist")
         } catch (e: Exception) {
             Log.e(TAG, "[setLyrics] FAILED: ${e.message}", e)
         }
