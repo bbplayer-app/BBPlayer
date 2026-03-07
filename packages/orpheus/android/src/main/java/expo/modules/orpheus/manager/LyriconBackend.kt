@@ -1,7 +1,9 @@
 package expo.modules.orpheus.manager
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.service.OrpheusMusicService
@@ -11,6 +13,7 @@ import io.github.proify.lyricon.provider.model.Song
 
 private const val TAG = "LyriconBackend"
 
+@RequiresApi(Build.VERSION_CODES.O_MR1)
 class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
 
     private val provider = LyriconFactory.createProvider(context)
@@ -45,7 +48,19 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
 
     override fun setLyrics(lyrics: List<LyricsLine>, offset: Double) {
         this.offset = offset
-        if (lyrics.isEmpty()) return
+
+        if (lyrics.isEmpty()) {
+            // Explicitly clear Lyricon state so stale lyrics from the previous track
+            // are not left visible when the current track has no lyrics.
+            try {
+                provider.player.setSong(Song(lyrics = emptyList<RichLyricLine>()))
+                provider.player.setPlaybackState(false)
+                Log.d(TAG, "[setLyrics] cleared: empty song sent")
+            } catch (e: Exception) {
+                Log.e(TAG, "[setLyrics] FAILED to clear: ${e.message}", e)
+            }
+            return
+        }
 
         val richLines = buildRichLines(lyrics, offset)
 
@@ -58,6 +73,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         val artist = mediaItem?.mediaMetadata?.artist?.toString()
         val trackId = mediaItem?.mediaId
         val durationMs = player?.duration?.takeIf { it != C.TIME_UNSET }
+        // Reflect actual player state instead of unconditionally assuming playback is active.
+        val isPlaying = player?.isPlaying ?: false
 
         val song = Song(
             id = trackId,
@@ -69,8 +86,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         try {
             provider.player.setSong(song)
-            provider.player.setPlaybackState(true)
-            Log.d(TAG, "[setLyrics] setSong lines=${richLines.size} id=$trackId name=$title artist=$artist")
+            provider.player.setPlaybackState(isPlaying)
+            Log.d(TAG, "[setLyrics] setSong lines=${richLines.size} id=$trackId name=$title artist=$artist playing=$isPlaying")
         } catch (e: Exception) {
             Log.e(TAG, "[setLyrics] FAILED: ${e.message}", e)
         }

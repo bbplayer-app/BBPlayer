@@ -14,7 +14,7 @@ abstract class StatusBarLyricsBackend(protected val context: Context) {
     /**
      * Called when a new lyrics list is ready (e.g. on track change).
      * @param lyrics sorted by timestamp (seconds)
-     * @param offset playback offset in seconds to add to timestamps
+     * @param offset playback offset in seconds subtracted from playback time / line timestamps
      */
     abstract fun setLyrics(lyrics: List<LyricsLine>, offset: Double)
 

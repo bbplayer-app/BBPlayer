@@ -211,7 +211,7 @@ export default function LyricsSettingsPage() {
 								/>
 								<Checkbox.Item
 									mode='ios'
-									label={`词幕 (Lyricon)${!isLyriconApiEnabled ? '（未连接）' : ''}`}
+									label={`词幕 (Lyricon)${statusBarLyricsProvider === 'lyricon' && !isLyriconApiEnabled ? '（未连接）' : ''}`}
 									status={statusBarLyricsProvider === 'lyricon' ? 'checked' : 'unchecked'}
 									onPress={() => {
 										try {

@@ -21,13 +21,19 @@ class StatusBarLyricsManager(private val context: Context) {
     /** Active backend; swap to switch between SuperLyric and Lyricon. */
     var backend: StatusBarLyricsBackend? = null
         set(value) {
-            field?.destroy()
+            val previous = field
+            if (previous != null) {
+                if (enabled) {
+                    previous.onStop()
+                }
+                previous.destroy()
+            }
             field = value
             Log.d(TAG, "[backend] switched to ${value?.javaClass?.simpleName}")
-            // Re-apply cached lyrics to the new backend regardless of enabled state,
-            // so it is ready when the feature is toggled on.
+            // Re-apply cached lyrics to the new backend only when enabled,
+            // to avoid activating lyrics while the feature is turned off.
             val cachedLyrics = lastLyrics
-            if (cachedLyrics != null) {
+            if (enabled && cachedLyrics != null) {
                 value?.setLyrics(cachedLyrics, lastOffset)
             }
         }

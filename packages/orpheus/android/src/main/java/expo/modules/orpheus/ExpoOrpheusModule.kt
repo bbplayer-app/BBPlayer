@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -293,9 +294,16 @@ class ExpoOrpheusModule : Module() {
         Property("statusBarLyricsProvider")
             .get { GeneralStorage.getStatusBarLyricsProvider() }
             .set { provider: String ->
-                GeneralStorage.setStatusBarLyricsProvider(provider)
+                // Lyricon requires API 27+; silently fall back to superlyric on older devices
+                // so the persisted value always reflects what is actually used.
+                val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+                    "superlyric"
+                } else {
+                    provider
+                }
+                GeneralStorage.setStatusBarLyricsProvider(effective)
                 val service = OrpheusMusicService.instance ?: return@set
-                service.statusBarLyricsManager.backend = service.createStatusBarBackend(provider)
+                service.statusBarLyricsManager.backend = service.createStatusBarBackend(effective)
             }
 
         Property("isSuperLyricApiEnabled")
@@ -303,6 +311,7 @@ class ExpoOrpheusModule : Module() {
 
         Property("isLyriconApiEnabled")
             .get {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return@get false
                 OrpheusMusicService.instance?.statusBarLyricsManager?.backend
                     ?.let { it is LyriconBackend && it.isAvailable }
                     ?: false
