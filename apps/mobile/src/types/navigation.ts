@@ -17,6 +17,7 @@ export interface ModalPropsMap {
 	EditTrackMetadata: { track: Track }
 	QRCodeLogin: undefined
 	CookieLogin: undefined
+	PhoneLogin: undefined
 	CreatePlaylist: { redirectToNewPlaylist?: boolean }
 	UpdateApp: { version: string; notes: string; url: string; forced?: boolean }
 	UpdateTrackLocalPlaylists: { track: Track }

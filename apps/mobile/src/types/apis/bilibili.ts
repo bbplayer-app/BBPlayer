@@ -351,6 +351,46 @@ enum BilibiliQrCodeLoginStatus {
 }
 
 /**
+ * 手机号登录 - 获取验证码图形验证信息
+ */
+interface BilibiliCaptchaTokenData {
+	token: string
+	geetest: {
+		gt: string
+		challenge: string
+	}
+	tencent: {
+		appid: string
+	}
+}
+
+/**
+ * 手机号登录 - 发送短信验证码结果
+ */
+interface BilibiliSmsSendData {
+	captcha_key: string
+}
+
+/**
+ * 手机号登录 - 登录结果
+ */
+interface BilibiliSmsLoginData {
+	status: number
+	message: string
+	url: string
+	mid: number
+	access_token: string
+	refresh_token: string
+	expires_in: number
+	token_info: {
+		mid: number
+		access_token: string
+		refresh_token: string
+		expires_in: number
+	} | null
+}
+
+/**
  * 搜索建议
  */
 interface BilibiliSearchSuggestionItem {
@@ -508,6 +548,7 @@ interface BilibiliDanmakuItem {
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
+	BilibiliCaptchaTokenData,
 	BilibiliCollection,
 	BilibiliCollectionAllContents,
 	BilibiliCollectionContent,
@@ -528,6 +569,8 @@ export type {
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliSearchVideo,
+	BilibiliSmsLoginData,
+	BilibiliSmsSendData,
 	BilibiliToViewVideoList,
 	BilibiliUserInfo,
 	BilibiliUserUploadedVideosResponse,

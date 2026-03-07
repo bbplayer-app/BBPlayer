@@ -128,6 +128,14 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
+					<Text>手机号登录</Text>
+					<IconButton
+						icon='open-in-new'
+						size={20}
+						onPress={() => openModal('PhoneLogin', undefined)}
+					/>
+				</View>
+				<View style={styles.settingRow}>
 					<Text>分享今日运行日志</Text>
 					<IconButton
 						icon='share-variant'
