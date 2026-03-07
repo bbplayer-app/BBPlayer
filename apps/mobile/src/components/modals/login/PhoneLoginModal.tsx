@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
-import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
+import { Dialog, HelperText, Menu, Text, TextInput } from 'react-native-paper'
 import * as setCookieParser from 'set-cookie-parser'
 import { WebView } from 'react-native-webview'
 import type { WebViewMessageEvent } from 'react-native-webview'
@@ -35,6 +35,26 @@ const COUNTRY_CODES = [
 	{ label: '韩国 (+82)', value: '82' },
 	{ label: '英国 (+44)', value: '44' },
 ]
+
+/** Form validation model — validation rules are embedded here, not scattered in handlers */
+const phoneFormModel = {
+	tel: {
+		validate(v: string): string {
+			const trimmed = v.trim()
+			if (!trimmed) return '请输入手机号'
+			if (!/^\d{5,15}$/.test(trimmed)) return '手机号格式不正确'
+			return ''
+		},
+	},
+	smsCode: {
+		validate(v: string): string {
+			const trimmed = v.trim()
+			if (!trimmed) return '请输入验证码'
+			if (!/^\d{4,8}$/.test(trimmed)) return '验证码格式不正确'
+			return ''
+		},
+	},
+}
 
 function buildGeetestHtml(gt: string, challenge: string): string {
 	const gtJson = JSON.stringify(gt)
@@ -111,20 +131,16 @@ export default function PhoneLoginModal() {
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
 	const [phoneError, setPhoneError] = useState('')
 	const [codeError, setCodeError] = useState('')
+	const [countryMenuVisible, setCountryMenuVisible] = useState(false)
 
 	const selectedCountryLabel =
 		COUNTRY_CODES.find((c) => c.value === cid)?.label ?? `+${cid}`
 
 	const handleRequestCode = async () => {
 		setPhoneError('')
-		const trimmedTel = tel.trim()
-		if (!trimmedTel) {
-			setPhoneError('请输入手机号')
-			return
-		}
-		// 5~15 位数字，覆盖绝大多数国际手机号
-		if (!/^\d{5,15}$/.test(trimmedTel)) {
-			setPhoneError('手机号格式不正确')
+		const telError = phoneFormModel.tel.validate(tel)
+		if (telError) {
+			setPhoneError(telError)
 			return
 		}
 
@@ -147,7 +163,7 @@ export default function PhoneLoginModal() {
 				token: captcha.token,
 				gt: captcha.geetest.gt,
 				challenge: captcha.geetest.challenge,
-				tel: trimmedTel,
+				tel: tel.trim(),
 				cid,
 			})
 			setStep('geetest_verify')
@@ -210,13 +226,9 @@ export default function PhoneLoginModal() {
 
 	const handleLogin = async () => {
 		setCodeError('')
-		const trimmedCode = smsCode.trim()
-		if (!trimmedCode) {
-			setCodeError('请输入验证码')
-			return
-		}
-		if (!/^\d{4,8}$/.test(trimmedCode)) {
-			setCodeError('验证码格式不正确')
+		const codeErr = phoneFormModel.smsCode.validate(smsCode)
+		if (codeErr) {
+			setCodeError(codeErr)
 			return
 		}
 
@@ -225,7 +237,7 @@ export default function PhoneLoginModal() {
 			const loginResult = await bilibiliApi.loginWithPhoneSmsCode(
 				tel.trim(),
 				cid,
-				trimmedCode,
+				smsCode.trim(),
 				captchaKey,
 			)
 			if (loginResult.isErr()) {
@@ -269,28 +281,33 @@ export default function PhoneLoginModal() {
 		<>
 			<Dialog.Title>手机号登录</Dialog.Title>
 			<Dialog.Content>
-				<View style={styles.countryRow}>
-					<Text
-						variant='bodyMedium'
-						style={styles.countryLabel}
-					>
-						国家/地区
-					</Text>
-					<Text variant='bodyMedium'>{selectedCountryLabel}</Text>
-				</View>
-				<View style={styles.countryPickerRow}>
-					{COUNTRY_CODES.map((country) => (
+				<Menu
+					visible={countryMenuVisible}
+					onDismiss={() => setCountryMenuVisible(false)}
+					anchor={
 						<Button
-							key={country.value}
-							mode={cid === country.value ? 'contained' : 'outlined'}
-							onPress={() => setCid(country.value)}
-							style={styles.countryButton}
-							compact
+							mode='outlined'
+							onPress={() => setCountryMenuVisible(true)}
+							style={styles.countryAnchor}
+							icon='chevron-down'
+							contentStyle={styles.countryAnchorContent}
 						>
-							+{country.value}
+							{selectedCountryLabel}
 						</Button>
+					}
+				>
+					{COUNTRY_CODES.map((country) => (
+						<Menu.Item
+							key={country.value}
+							title={country.label}
+							onPress={() => {
+								setCid(country.value)
+								setCountryMenuVisible(false)
+							}}
+							trailingIcon={cid === country.value ? 'check' : undefined}
+						/>
 					))}
-				</View>
+				</Menu>
 				<TextInput
 					label='手机号'
 					value={tel}
@@ -473,23 +490,12 @@ const styles = StyleSheet.create({
 	description: {
 		marginBottom: 8,
 	},
-	countryRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		marginBottom: 4,
-	},
-	countryLabel: {
-		opacity: 0.6,
-	},
-	countryPickerRow: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: 4,
+	countryAnchor: {
 		marginBottom: 8,
+		alignSelf: 'stretch',
 	},
-	countryButton: {
-		minWidth: 56,
+	countryAnchorContent: {
+		flexDirection: 'row-reverse',
 	},
 	geetestLoading: {
 		marginVertical: 24,
