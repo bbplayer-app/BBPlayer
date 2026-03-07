@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
 import * as setCookieParser from 'set-cookie-parser'
 import { WebView } from 'react-native-webview'
@@ -326,41 +326,67 @@ export default function PhoneLoginModal() {
 		</>
 	)
 
+	const handleCancelGeetest = () => {
+		setStep('input_phone')
+		setCaptchaParams(null)
+	}
+
 	const renderGeetestStep = () => {
 		if (!captchaParams) return null
 		return (
 			<>
+				{/* Keep the parent dialog visible with minimal content while the native Modal is shown */}
 				<Dialog.Title>安全验证</Dialog.Title>
-				<Dialog.Content style={styles.geetestContent}>
-					<WebView
-						style={styles.geetestWebView}
-						source={{
-							html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge),
-							baseUrl: 'https://www.bilibili.com',
-						}}
-						onMessage={handleGeetestMessage}
-						javaScriptEnabled
-						originWhitelist={['*']}
-						mixedContentMode='always'
-						startInLoadingState
-						renderLoading={() => (
-							<ActivityIndicator
-								style={StyleSheet.absoluteFill}
-								size='large'
-							/>
-						)}
-					/>
+				<Dialog.Content>
+					<ActivityIndicator size='large' style={styles.geetestLoading} />
 				</Dialog.Content>
 				<Dialog.Actions>
-					<Button
-						onPress={() => {
-							setStep('input_phone')
-							setCaptchaParams(null)
-						}}
-					>
-						取消
-					</Button>
+					<Button onPress={handleCancelGeetest}>取消</Button>
 				</Dialog.Actions>
+				{/*
+				  * Use a native React Native Modal so the WebView renders in its own
+				  * native window, bypassing the overflow:hidden in AnimatedModalOverlay.
+				  */}
+				<Modal
+					visible
+					animationType='slide'
+					onRequestClose={handleCancelGeetest}
+				>
+					<SafeAreaView style={styles.geetestModalContainer}>
+						<View style={styles.geetestModalHeader}>
+							<Text
+								variant='titleMedium'
+								style={styles.geetestModalTitle}
+							>
+								安全验证
+							</Text>
+							<Pressable
+								onPress={handleCancelGeetest}
+								style={styles.geetestModalClose}
+							>
+								<Text variant='labelLarge'>取消</Text>
+							</Pressable>
+						</View>
+						<WebView
+							style={styles.geetestWebView}
+							source={{
+								html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge),
+								baseUrl: 'https://www.bilibili.com',
+							}}
+							onMessage={handleGeetestMessage}
+							javaScriptEnabled
+							originWhitelist={['*']}
+							mixedContentMode='always'
+							startInLoadingState
+							renderLoading={() => (
+								<ActivityIndicator
+									style={StyleSheet.absoluteFill}
+									size='large'
+								/>
+							)}
+						/>
+					</SafeAreaView>
+				</Modal>
 			</>
 		)
 	}
@@ -464,11 +490,31 @@ const styles = StyleSheet.create({
 	countryButton: {
 		minWidth: 56,
 	},
-	geetestContent: {
-		padding: 0,
+	geetestLoading: {
+		marginVertical: 24,
+	},
+	geetestModalContainer: {
+		flex: 1,
+		backgroundColor: '#f5f5f5',
+	},
+	geetestModalHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+		backgroundColor: '#fff',
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: 'rgba(0,0,0,0.1)',
+	},
+	geetestModalTitle: {
+		flex: 1,
+	},
+	geetestModalClose: {
+		paddingLeft: 16,
+		paddingVertical: 4,
 	},
 	geetestWebView: {
-		height: 280,
-		borderRadius: 4,
+		flex: 1,
 	},
 })
