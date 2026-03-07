@@ -119,8 +119,12 @@ declare class OrpheusModule extends NativeModule<OrpheusEvents> {
 	isDesktopLyricsShown: boolean
 	isDesktopLyricsLocked: boolean
 	isStatusBarLyricsEnabled: boolean
+	/** Status bar lyrics provider: "superlyric" | "lyricon" */
+	statusBarLyricsProvider: string
 	/** SuperLyric Xposed 模块是否已激活（只读）*/
 	readonly isSuperLyricApiEnabled: boolean
+	/** Lyricon 服务是否已连接（只读）*/
+	readonly isLyriconApiEnabled: boolean
 
 	/**
 	 * 获取当前进度（秒）

@@ -33,6 +33,12 @@ export default function LyricsSettingsPage() {
 	const [isSuperLyricApiEnabled, setIsSuperLyricApiEnabled] = useState(
 		Orpheus.isSuperLyricApiEnabled,
 	)
+	const [isLyriconApiEnabled, setIsLyriconApiEnabled] = useState(
+		Orpheus.isLyriconApiEnabled,
+	)
+	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
+		Orpheus.statusBarLyricsProvider ?? 'superlyric',
+	)
 
 	const lyricSource = useAppStore((state) => state.settings.lyricSource)
 	const enableVerbatimLyrics = useAppStore(
@@ -44,6 +50,12 @@ export default function LyricsSettingsPage() {
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [lyricSourceMenuVisible, setLyricSourceMenuVisible] = useState(false)
+	const [providerMenuVisible, setProviderMenuVisible] = useState(false)
+
+	const isStatusBarLyricsProviderActive =
+		statusBarLyricsProvider === 'lyricon'
+			? isLyriconApiEnabled
+			: isSuperLyricApiEnabled
 
 	const enableDesktopLyrics = async () => {
 		try {
@@ -84,6 +96,8 @@ export default function LyricsSettingsPage() {
 			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
 			setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
 			setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
+			setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
+			setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'superlyric')
 		})
 		return () => {
 			listener.remove()
@@ -95,6 +109,8 @@ export default function LyricsSettingsPage() {
 		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
 		setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
 		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
+		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
+		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'superlyric')
 	})
 
 	return (
@@ -167,14 +183,65 @@ export default function LyricsSettingsPage() {
 							/>
 						</View>
 						<View style={styles.settingRow}>
+							<Text>状态栏歌词框架</Text>
+							<FunctionalMenu
+								visible={providerMenuVisible}
+								onDismiss={() => setProviderMenuVisible(false)}
+								anchor={
+									<IconButton
+										icon='playlist-music'
+										size={20}
+										onPress={() => setProviderMenuVisible(true)}
+									/>
+								}
+							>
+								<Checkbox.Item
+									mode='ios'
+									label={`SuperLyric${!isSuperLyricApiEnabled ? '（未激活）' : ''}`}
+									status={statusBarLyricsProvider === 'superlyric' ? 'checked' : 'unchecked'}
+									onPress={() => {
+										try {
+											Orpheus.statusBarLyricsProvider = 'superlyric'
+											setStatusBarLyricsProvider('superlyric')
+										} catch (e) {
+											toastAndLogError('设置失败', e, 'Settings')
+										}
+										setProviderMenuVisible(false)
+									}}
+								/>
+								<Checkbox.Item
+									mode='ios'
+									label={`词幕 (Lyricon)${statusBarLyricsProvider === 'lyricon' && !isLyriconApiEnabled ? '（未连接）' : ''}`}
+									status={statusBarLyricsProvider === 'lyricon' ? 'checked' : 'unchecked'}
+									onPress={() => {
+										try {
+											Orpheus.statusBarLyricsProvider = 'lyricon'
+											setStatusBarLyricsProvider('lyricon')
+										} catch (e) {
+											toastAndLogError('设置失败', e, 'Settings')
+										}
+										setProviderMenuVisible(false)
+									}}
+								/>
+							</FunctionalMenu>
+						</View>
+						<View style={styles.settingRow}>
 							<Text
-								style={!isSuperLyricApiEnabled ? { opacity: 0.4 } : undefined}
+								style={
+									!isStatusBarLyricsProviderActive
+										? { opacity: 0.4 }
+										: undefined
+								}
 							>
 								状态栏歌词
-								{!isSuperLyricApiEnabled ? '（需安装 SuperLyric 模块）' : ''}
+								{!isStatusBarLyricsProviderActive
+									? statusBarLyricsProvider === 'lyricon'
+										? '（需安装词幕模块）'
+										: '（需安装 SuperLyric 模块）'
+									: ''}
 							</Text>
 							<Switch
-								disabled={!isSuperLyricApiEnabled}
+								disabled={!isStatusBarLyricsProviderActive}
 								value={isStatusBarLyricsEnabled}
 								onValueChange={async () => {
 									try {

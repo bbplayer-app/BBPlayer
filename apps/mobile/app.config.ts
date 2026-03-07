@@ -207,6 +207,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 # --- 来自 SuperLyricApi ---
 -keep class com.hchen.superlyricapi.* {*;}
 # --- 来自 SuperLyricApi ---
+# --- 来自 Lyricon ---
+-keep class io.github.proify.lyricon.** {*;}
+# --- 来自 Lyricon ---
 -dontwarn java.awt.**
 -dontwarn javax.imageio.**
 -dontwarn org.jaudiotagger.**

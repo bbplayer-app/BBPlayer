@@ -51,6 +51,7 @@ android {
 
 dependencies {
     implementation 'com.github.HChenX:SuperLyricApi:2.4'
+    implementation 'io.github.proify.lyricon:provider:0.1.68'
     implementation "androidx.media3:media3-exoplayer:1.9.0"
     implementation "androidx.media3:media3-session:1.9.0"
     implementation "androidx.media3:media3-transformer:1.9.0"
