@@ -73,8 +73,9 @@ function buildGeetestHtml(gt: string, challenge: string): string {
       challenge: ${challengeJson},
       offline: false,
       new_captcha: true,
-      product: 'bind',
-      width: '100%'
+      product: 'popup',
+      width: '100%',
+      https: true
     }, function(captchaObj) {
       captchaObj.appendTo('#captcha');
       captchaObj.onSuccess(function() {
