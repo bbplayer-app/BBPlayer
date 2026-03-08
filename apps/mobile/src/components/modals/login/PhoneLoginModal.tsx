@@ -1,8 +1,9 @@
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
-import { Dialog, HelperText, Menu, Text, TextInput } from 'react-native-paper'
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
 import * as setCookieParser from 'set-cookie-parser'
 import { WebView } from 'react-native-webview'
 import type { WebViewMessageEvent } from 'react-native-webview'
@@ -26,15 +27,7 @@ interface CaptchaParams {
 	cid: string
 }
 
-const COUNTRY_CODES = [
-	{ label: '中国大陆 (+86)', value: '86' },
-	{ label: '中国香港 (+852)', value: '852' },
-	{ label: '中国台湾 (+886)', value: '886' },
-	{ label: '美国/加拿大 (+1)', value: '1' },
-	{ label: '日本 (+81)', value: '81' },
-	{ label: '韩国 (+82)', value: '82' },
-	{ label: '英国 (+44)', value: '44' },
-]
+const COUNTRY_CODE = '86'
 
 /** Form validation model — validation rules are embedded here, not scattered in handlers */
 const phoneFormModel = {
@@ -120,9 +113,9 @@ export default function PhoneLoginModal() {
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
 	const _close = useModalStore((state) => state.close)
 	const close = useCallback(() => _close('PhoneLogin'), [_close])
+	const insets = useSafeAreaInsets()
 
 	const [step, setStep] = useState<Step>('input_phone')
-	const [cid, setCid] = useState('86')
 	const [tel, setTel] = useState('')
 	const [smsCode, setSmsCode] = useState('')
 	const [captchaKey, setCaptchaKey] = useState('')
@@ -131,10 +124,6 @@ export default function PhoneLoginModal() {
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
 	const [phoneError, setPhoneError] = useState('')
 	const [codeError, setCodeError] = useState('')
-	const [countryMenuVisible, setCountryMenuVisible] = useState(false)
-
-	const selectedCountryLabel =
-		COUNTRY_CODES.find((c) => c.value === cid)?.label ?? `+${cid}`
 
 	const handleRequestCode = async () => {
 		setPhoneError('')
@@ -164,7 +153,7 @@ export default function PhoneLoginModal() {
 				gt: captcha.geetest.gt,
 				challenge: captcha.geetest.challenge,
 				tel: tel.trim(),
-				cid,
+				cid: COUNTRY_CODE,
 			})
 			setStep('geetest_verify')
 		} catch (error) {
@@ -236,7 +225,7 @@ export default function PhoneLoginModal() {
 		try {
 			const loginResult = await bilibiliApi.loginWithPhoneSmsCode(
 				tel.trim(),
-				cid,
+				COUNTRY_CODE,
 				smsCode.trim(),
 				captchaKey,
 			)
@@ -281,33 +270,6 @@ export default function PhoneLoginModal() {
 		<>
 			<Dialog.Title>手机号登录</Dialog.Title>
 			<Dialog.Content>
-				<Menu
-					visible={countryMenuVisible}
-					onDismiss={() => setCountryMenuVisible(false)}
-					anchor={
-						<Button
-							mode='outlined'
-							onPress={() => setCountryMenuVisible(true)}
-							style={styles.countryAnchor}
-							icon='chevron-down'
-							contentStyle={styles.countryAnchorContent}
-						>
-							{selectedCountryLabel}
-						</Button>
-					}
-				>
-					{COUNTRY_CODES.map((country) => (
-						<Menu.Item
-							key={country.value}
-							title={country.label}
-							onPress={() => {
-								setCid(country.value)
-								setCountryMenuVisible(false)
-							}}
-							trailingIcon={cid === country.value ? 'check' : undefined}
-						/>
-					))}
-				</Menu>
 				<TextInput
 					label='手机号'
 					value={tel}
@@ -320,6 +282,7 @@ export default function PhoneLoginModal() {
 					autoComplete='tel'
 					style={styles.input}
 					error={!!phoneError}
+					left={<TextInput.Affix text='+86' />}
 				/>
 				{phoneError ? (
 					<HelperText
@@ -370,7 +333,12 @@ export default function PhoneLoginModal() {
 					animationType='slide'
 					onRequestClose={handleCancelGeetest}
 				>
-					<SafeAreaView style={styles.geetestModalContainer}>
+					<View
+						style={[
+							styles.geetestModalContainer,
+							{ paddingTop: insets.top, paddingBottom: insets.bottom },
+						]}
+					>
 						<View style={styles.geetestModalHeader}>
 							<Text
 								variant='titleMedium'
@@ -403,7 +371,7 @@ export default function PhoneLoginModal() {
 								/>
 							)}
 						/>
-					</SafeAreaView>
+					</View>
 				</Modal>
 			</>
 		)
@@ -417,7 +385,7 @@ export default function PhoneLoginModal() {
 					variant='bodyMedium'
 					style={styles.description}
 				>
-					验证码已发送至 +{cid} {tel}
+					验证码已发送至 +{COUNTRY_CODE} {tel}
 				</Text>
 				<TextInput
 					label='短信验证码'
@@ -489,13 +457,6 @@ const styles = StyleSheet.create({
 	},
 	description: {
 		marginBottom: 8,
-	},
-	countryAnchor: {
-		marginBottom: 8,
-		alignSelf: 'stretch',
-	},
-	countryAnchorContent: {
-		flexDirection: 'row-reverse',
 	},
 	geetestLoading: {
 		marginVertical: 24,
