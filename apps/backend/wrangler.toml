@@ -1,10 +1,9 @@
+# JWT_SECRET 和 DATABASE_URL 通过 `wrangler secret put` 设置
 name = "bbplayer-backend"
 main = "src/index.ts"
 compatibility_date = "2025-02-01"
 compatibility_flags = ["nodejs_compat"]
 routes = [{ pattern = "be.bbplayer.roitium.com", custom_domain = true }]
-
-# JWT_SECRET 和 DATABASE_URL 通过 `wrangler secret put` 设置
 
 [[kv_namespaces]]
 binding = "KV"
