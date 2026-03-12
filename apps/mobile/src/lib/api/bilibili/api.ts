@@ -3,10 +3,13 @@ import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import type {
+	BilibiliCaptchaTokenData,
 	BilibiliCommentsResponse,
 	BilibiliDanmakuItem,
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
+	BilibiliSmsLoginData,
+	BilibiliSmsSendData,
 	BilibiliToViewVideoList,
 	BilibiliWebPlayerInfo,
 } from '@/types/apis/bilibili'
@@ -37,6 +40,12 @@ import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
 const logger = log.extend('3Party.Bilibili.Api')
+
+/**
+ * Bilibili passport API 请求所使用的 User-Agent
+ */
+const PASSPORT_UA =
+	'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0'
 
 /**
  * B站 API 客户端类
@@ -1006,6 +1015,219 @@ export class BilibiliApi {
 		return bilibiliApiClient.postWithCsrf<undefined>(
 			'/x/v2/history/toview/clear',
 		)
+	}
+
+	/**
+	 * 获取手机号登录所需的图形验证 token
+	 */
+	getPhoneLoginCaptchaToken(): ResultAsync<
+		BilibiliCaptchaTokenData,
+		BilibiliApiError
+	> {
+		const reqFunction = async () => {
+			const response = await fetch(
+				`https://passport.bilibili.com/x/passport-login/captcha?source=main_web&t=${Date.now()}`,
+				{
+					method: 'GET',
+					headers: {
+						'User-Agent': PASSPORT_UA,
+						Referer: 'https://www.bilibili.com/',
+					},
+					// 手动管理 cookie，避免原生 cookie jar 干扰 passport 接口
+					credentials: 'omit',
+				},
+			)
+			if (!response.ok) {
+				throw new BilibiliApiError({
+					message: `获取验证码 token 失败: ${response.status} ${response.statusText}`,
+					msgCode: response.status,
+					type: 'RequestFailed',
+				})
+			}
+			const data = (await response.json()) as {
+				code: number
+				message?: string
+				data: BilibiliCaptchaTokenData
+			}
+			if (data.code !== 0) {
+				throw new BilibiliApiError({
+					message: `获取验证码 token 失败: ${data.message ?? data.code}`,
+					msgCode: data.code,
+					rawData: data,
+					type: 'ResponseFailed',
+				})
+			}
+			return data.data
+		}
+
+		return ResultAsync.fromPromise(reqFunction(), (error) => {
+			if (error instanceof BilibiliApiError) return error
+			return new BilibiliApiError({
+				message: error instanceof Error ? error.message : String(error),
+				msgCode: 0,
+				rawData: null,
+				type: 'ResponseFailed',
+			})
+		})
+	}
+
+	/**
+	 * 发送手机短信验证码
+	 * @param tel 手机号
+	 * @param cid 国家代码（中国大陆为 86）
+	 * @param token 图形验证 token
+	 * @param challenge geetest challenge
+	 * @param validate geetest validate
+	 * @param seccode geetest seccode
+	 */
+	sendPhoneLoginSms(
+		tel: string,
+		cid: string,
+		token: string,
+		challenge: string,
+		validate: string,
+		seccode: string,
+	): ResultAsync<BilibiliSmsSendData, BilibiliApiError> {
+		const reqFunction = async () => {
+			const body = new URLSearchParams({
+				cid,
+				tel,
+				source: 'main_mini_login',
+				token,
+				challenge,
+				validate,
+				seccode,
+			}).toString()
+
+			const response = await fetch(
+				'https://passport.bilibili.com/x/passport-login/web/sms/send',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'User-Agent': PASSPORT_UA,
+						Referer: 'https://www.bilibili.com/',
+						Origin: 'https://www.bilibili.com',
+					},
+					body,
+					// 手动管理 cookie，避免原生 cookie jar 干扰 passport 接口
+					credentials: 'omit',
+				},
+			)
+			if (!response.ok) {
+				throw new BilibiliApiError({
+					message: `发送短信验证码失败: ${response.status} ${response.statusText}`,
+					msgCode: response.status,
+					type: 'RequestFailed',
+				})
+			}
+			const data = (await response.json()) as {
+				code: number
+				message?: string
+				data: BilibiliSmsSendData
+			}
+			if (data.code !== 0) {
+				throw new BilibiliApiError({
+					message: `发送短信验证码失败: ${data.message ?? data.code}`,
+					msgCode: data.code,
+					rawData: data,
+					type: 'ResponseFailed',
+				})
+			}
+			return data.data
+		}
+
+		return ResultAsync.fromPromise(reqFunction(), (error) => {
+			if (error instanceof BilibiliApiError) return error
+			return new BilibiliApiError({
+				message: error instanceof Error ? error.message : String(error),
+				msgCode: 0,
+				rawData: null,
+				type: 'ResponseFailed',
+			})
+		})
+	}
+
+	/**
+	 * 使用短信验证码登录
+	 * @param tel 手机号
+	 * @param cid 国家代码（中国大陆为 86）
+	 * @param code 短信验证码
+	 * @param captchaKey 发送短信验证码时返回的 captcha_key
+	 * @returns 返回 Set-Cookie 字符串
+	 */
+	loginWithPhoneSmsCode(
+		tel: string,
+		cid: string,
+		code: string,
+		captchaKey: string,
+	): ResultAsync<string, BilibiliApiError> {
+		const reqFunction = async () => {
+			const body = new URLSearchParams({
+				cid,
+				tel,
+				code,
+				source: 'main_mini_login',
+				captcha_key: captchaKey,
+				keep: '1',
+			}).toString()
+
+			const response = await fetch(
+				'https://passport.bilibili.com/x/passport-login/web/login/sms',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'User-Agent': PASSPORT_UA,
+						Referer: 'https://www.bilibili.com/',
+						Origin: 'https://www.bilibili.com',
+					},
+					body,
+					// 手动管理 cookie，避免原生 cookie jar 干扰 passport 接口
+					credentials: 'omit',
+				},
+			)
+			if (!response.ok) {
+				throw new BilibiliApiError({
+					message: `短信验证码登录失败: ${response.status} ${response.statusText}`,
+					msgCode: response.status,
+					type: 'RequestFailed',
+				})
+			}
+			const data = (await response.json()) as {
+				code: number
+				message?: string
+				data: BilibiliSmsLoginData
+			}
+			if (data.code !== 0) {
+				throw new BilibiliApiError({
+					message: `短信验证码登录失败: ${data.message ?? data.code}`,
+					msgCode: data.code,
+					rawData: data,
+					type: 'ResponseFailed',
+				})
+			}
+			const combinedCookieHeader = response.headers.get('Set-Cookie')
+			if (!combinedCookieHeader) {
+				throw new BilibiliApiError({
+					message: '登录成功但未获取到 Set-Cookie 头信息',
+					msgCode: 0,
+					rawData: null,
+					type: 'ResponseFailed',
+				})
+			}
+			return combinedCookieHeader
+		}
+
+		return ResultAsync.fromPromise(reqFunction(), (error) => {
+			if (error instanceof BilibiliApiError) return error
+			return new BilibiliApiError({
+				message: error instanceof Error ? error.message : String(error),
+				msgCode: 0,
+				rawData: null,
+				type: 'ResponseFailed',
+			})
+		})
 	}
 }
 

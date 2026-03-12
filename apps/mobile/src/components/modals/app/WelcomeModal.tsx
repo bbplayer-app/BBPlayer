@@ -6,7 +6,9 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text } from 'react-native-paper'
+import { Dialog, Menu, Text } from 'react-native-paper'
+
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -39,23 +41,50 @@ function Step0() {
 }
 
 function Step1({
-	onLogin,
+	onLoginQRCode,
+	onLoginPhone,
 	onGuestMode,
 }: {
-	onLogin: () => void
+	onLoginQRCode: () => void
+	onLoginPhone: () => void
 	onGuestMode: () => void
 }) {
+	const [menuVisible, setMenuVisible] = useState(false)
 	return (
 		<View>
 			<Text>最后一步！选择登录还是游客模式？</Text>
 
 			<View style={styles.stepButtonContainer}>
-				<Button
-					mode='contained'
-					onPress={onLogin}
+				<FunctionalMenu
+					visible={menuVisible}
+					onDismiss={() => setMenuVisible(false)}
+					anchor={
+						<Button
+							mode='contained'
+							icon='chevron-down'
+							onPress={() => setMenuVisible(true)}
+						>
+							登录账号
+						</Button>
+					}
 				>
-					登录
-				</Button>
+					<Menu.Item
+						leadingIcon='qrcode-scan'
+						title='扫码登录'
+						onPress={() => {
+							setMenuVisible(false)
+							onLoginQRCode()
+						}}
+					/>
+					<Menu.Item
+						leadingIcon='cellphone'
+						title='手机号登录'
+						onPress={() => {
+							setMenuVisible(false)
+							onLoginPhone()
+						}}
+					/>
+				</FunctionalMenu>
 				<Button
 					onPress={onGuestMode}
 					testID='welcome-guest-mode'
@@ -113,9 +142,14 @@ export default function WelcomeModal() {
 		storage.set('first_open', false)
 		close()
 	}, [close])
-	const confirmLogin = useCallback(() => {
+	const confirmLoginQRCode = useCallback(() => {
 		storage.set('first_open', false)
 		open('QRCodeLogin', undefined)
+		close()
+	}, [close, open])
+	const confirmLoginPhone = useCallback(() => {
+		storage.set('first_open', false)
+		open('PhoneLogin', undefined)
 		close()
 	}, [close, open])
 
@@ -152,7 +186,8 @@ export default function WelcomeModal() {
 					}}
 				>
 					<Step1
-						onLogin={confirmLogin}
+						onLoginQRCode={confirmLoginQRCode}
+						onLoginPhone={confirmLoginPhone}
 						onGuestMode={confirmGuestMode}
 					/>
 				</View>
@@ -175,7 +210,8 @@ export default function WelcomeModal() {
 						</View>
 						<View style={{ width: measuredWidth }}>
 							<Step1
-								onLogin={confirmLogin}
+								onLoginQRCode={confirmLoginQRCode}
+								onLoginPhone={confirmLoginPhone}
 								onGuestMode={confirmGuestMode}
 							/>
 						</View>
@@ -208,6 +244,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 		paddingTop: 20,
 		justifyContent: 'flex-end',
+		alignItems: 'center',
 	},
 	hiddenStepsContainer: {
 		position: 'absolute',
