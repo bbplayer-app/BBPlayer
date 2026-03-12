@@ -9,6 +9,9 @@ on:
 jobs:
   check-updates:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,6 +69,20 @@ jobs:
           script: |
             const latestCommit = '${{ steps.fetch_commit.outputs.latest_commit }}';
             const currentCommit = '${{ steps.fetch_commit.outputs.current_commit }}';
+
+            // 检查是否已经存在标题中包含该 commit 的 issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'lyricon'
+            });
+
+            const duplicateIssue = issues.data.find(issue => issue.body.includes(latestCommit.substring(0, 7)));
+            if (duplicateIssue) {
+              console.log(`Issue already exists for commit ${latestCommit.substring(0, 7)}: ${duplicateIssue.html_url}`);
+              return;
+            }
 
             let body = `检测到上游库 \`tomakino/lyricon\` 的 \`provider\` 或 \`model\` 代码可能发生了更新。\n\n`;
 
