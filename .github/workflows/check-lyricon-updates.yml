@@ -15,9 +15,19 @@ jobs:
 
       - name: Fetch latest commit from Lyricon
         id: fetch_commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 获取 proify/lyricon 仓库 master 分支的最新 commit hash
-          LATEST_COMMIT=$(curl -s "https://api.github.com/repos/proify/lyricon/commits/master" | jq -r '.sha')
+          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/proify/lyricon/commits/master")
+          LATEST_COMMIT=$(echo "$RESPONSE" | jq -r '.sha // empty')
+
+          if [ -z "$LATEST_COMMIT" ] || [ "$LATEST_COMMIT" = "null" ]; then
+            echo "Error: Could not fetch latest commit hash. Response was:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
           echo "latest_commit=$LATEST_COMMIT" >> $GITHUB_OUTPUT
 
           # 获取我们当前记录的 commit (如果有的话)
@@ -33,11 +43,13 @@ jobs:
       - name: Check if there are changes in provider or model directories
         if: steps.fetch_commit.outputs.current_commit != steps.fetch_commit.outputs.latest_commit && steps.fetch_commit.outputs.current_commit != 'unknown'
         id: check_diff
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 比较我们记录的 commit 和最新的 commit 之间，provider 和 model 目录是否有变动
           DIFF_URL="https://api.github.com/repos/proify/lyricon/compare/${{ steps.fetch_commit.outputs.current_commit }}...${{ steps.fetch_commit.outputs.latest_commit }}"
 
-          HAS_CHANGES=$(curl -s "$DIFF_URL" | jq -r '.files[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
+          HAS_CHANGES=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "$DIFF_URL" | jq -r '(.files // [])[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
 
           if [ "$HAS_CHANGES" -gt 0 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
