@@ -47,6 +47,10 @@ android {
     lintOptions {
         abortOnError false
     }
+    kotlinOptions {
+        // lyricon provider is compiled with Kotlin 2.3; suppress metadata version mismatch
+        freeCompilerArgs += ['-Xskip-metadata-version-check']
+    }
 }
 
 dependencies {
