@@ -6,7 +6,9 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text } from 'react-native-paper'
+import { Dialog, Menu, Text } from 'react-native-paper'
+
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -47,23 +49,42 @@ function Step1({
 	onLoginPhone: () => void
 	onGuestMode: () => void
 }) {
+	const [menuVisible, setMenuVisible] = useState(false)
 	return (
 		<View>
 			<Text>最后一步！选择登录还是游客模式？</Text>
 
 			<View style={styles.stepButtonContainer}>
-				<Button
-					mode='contained'
-					onPress={onLoginQRCode}
+				<FunctionalMenu
+					visible={menuVisible}
+					onDismiss={() => setMenuVisible(false)}
+					anchor={
+						<Button
+							mode='contained'
+							icon='chevron-down'
+							onPress={() => setMenuVisible(true)}
+						>
+							登录账号
+						</Button>
+					}
 				>
-					扫码登录
-				</Button>
-				<Button
-					mode='contained-tonal'
-					onPress={onLoginPhone}
-				>
-					手机号登录
-				</Button>
+					<Menu.Item
+						leadingIcon='qrcode-scan'
+						title='扫码登录'
+						onPress={() => {
+							setMenuVisible(false)
+							onLoginQRCode()
+						}}
+					/>
+					<Menu.Item
+						leadingIcon='cellphone'
+						title='手机号登录'
+						onPress={() => {
+							setMenuVisible(false)
+							onLoginPhone()
+						}}
+					/>
+				</FunctionalMenu>
 				<Button
 					onPress={onGuestMode}
 					testID='welcome-guest-mode'
@@ -223,6 +244,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 		paddingTop: 20,
 		justifyContent: 'flex-end',
+		alignItems: 'center',
 	},
 	hiddenStepsContainer: {
 		position: 'absolute',

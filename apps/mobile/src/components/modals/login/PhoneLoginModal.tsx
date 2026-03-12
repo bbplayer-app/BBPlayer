@@ -1,9 +1,8 @@
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Dialog, HelperText, Portal, Text, TextInput } from 'react-native-paper'
+import { ActivityIndicator, StyleSheet } from 'react-native'
+import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
 import * as setCookieParser from 'set-cookie-parser'
 import { WebView } from 'react-native-webview'
 import type { WebViewMessageEvent } from 'react-native-webview'
@@ -123,8 +122,6 @@ export default function PhoneLoginModal() {
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
 	const [phoneError, setPhoneError] = useState('')
 	const [codeError, setCodeError] = useState('')
-
-	const insets = useSafeAreaInsets()
 
 	const handleRequestCode = async () => {
 		setPhoneError('')
@@ -318,58 +315,29 @@ export default function PhoneLoginModal() {
 		return (
 			<>
 				<Dialog.Title>安全验证</Dialog.Title>
-				<Dialog.Content>
-					<ActivityIndicator size='large' style={styles.geetestLoading} />
+				<Dialog.Content style={styles.geetestContent}>
+					<WebView
+						style={styles.geetestWebView}
+						source={{
+							html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge),
+							baseUrl: 'https://www.bilibili.com',
+						}}
+						onMessage={handleGeetestMessage}
+						javaScriptEnabled
+						originWhitelist={['*']}
+						mixedContentMode='always'
+						startInLoadingState
+						renderLoading={() => (
+							<ActivityIndicator
+								style={StyleSheet.absoluteFill}
+								size='large'
+							/>
+						)}
+					/>
 				</Dialog.Content>
 				<Dialog.Actions>
 					<Button onPress={handleCancelGeetest}>取消</Button>
 				</Dialog.Actions>
-				{/*
-				 * Portal renders outside of the SquircleView so overflow:hidden
-				 * does not clip the full-screen WebView.
-				 */}
-				<Portal>
-					<View
-						style={[
-							StyleSheet.absoluteFill,
-							styles.geetestPortalContainer,
-							{ paddingTop: insets.top, paddingBottom: insets.bottom },
-						]}
-					>
-						<View style={styles.geetestModalHeader}>
-							<Text
-								variant='titleMedium'
-								style={styles.geetestModalTitle}
-							>
-								安全验证
-							</Text>
-							<Pressable
-								onPress={handleCancelGeetest}
-								style={styles.geetestModalClose}
-							>
-								<Text variant='labelLarge'>取消</Text>
-							</Pressable>
-						</View>
-						<WebView
-							style={styles.geetestWebView}
-							source={{
-								html: buildGeetestHtml(captchaParams.gt, captchaParams.challenge),
-								baseUrl: 'https://www.bilibili.com',
-							}}
-							onMessage={handleGeetestMessage}
-							javaScriptEnabled
-							originWhitelist={['*']}
-							mixedContentMode='always'
-							startInLoadingState
-							renderLoading={() => (
-								<ActivityIndicator
-									style={StyleSheet.absoluteFill}
-									size='large'
-								/>
-							)}
-						/>
-					</View>
-				</Portal>
 			</>
 		)
 	}
@@ -455,30 +423,11 @@ const styles = StyleSheet.create({
 	description: {
 		marginBottom: 8,
 	},
-	geetestLoading: {
-		marginVertical: 24,
-	},
-	geetestPortalContainer: {
-		backgroundColor: '#f5f5f5',
-	},
-	geetestModalHeader: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-		backgroundColor: '#fff',
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: 'rgba(0,0,0,0.1)',
-	},
-	geetestModalTitle: {
-		flex: 1,
-	},
-	geetestModalClose: {
-		paddingLeft: 16,
-		paddingVertical: 4,
+	geetestContent: {
+		paddingHorizontal: 0,
+		paddingBottom: 0,
 	},
 	geetestWebView: {
-		flex: 1,
+		height: 350,
 	},
 })
