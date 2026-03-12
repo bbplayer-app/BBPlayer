@@ -71,6 +71,11 @@ class StatusBarLyricsManager(private val context: Context) {
         backend?.updateTime(seconds)
     }
 
+    fun setPlaybackState(isPlaying: Boolean) {
+        if (!enabled) return
+        backend?.setPlaybackState(isPlaying)
+    }
+
     fun onStop() {
         Log.d(TAG, "[onStop] enabled=$enabled")
         lastLyrics = null

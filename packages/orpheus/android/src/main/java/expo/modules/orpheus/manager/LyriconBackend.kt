@@ -24,6 +24,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var connected: Boolean = false
     private var offset: Double = 0.0
+    
+    @Volatile private var lastSong: Song? = null
+    @Volatile private var lastIsPlaying: Boolean = false
 
     override val isAvailable: Boolean
         get() = connected
@@ -32,14 +35,14 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         provider.service.addConnectionListener {
             onConnected {
                 connected = true
-                provider.player.setDisplayTranslation(true)
-                Log.d(TAG, "Lyricon service connected (translation enabled)")
+                Log.d(TAG, "Lyricon service connected (syncing state)")
+                syncState()
                 OrpheusMusicService.instance?.statusBarLyricsManager?.notifyStatusChanged()
             }
             onReconnected {
                 connected = true
-                provider.player.setDisplayTranslation(true)
-                Log.d(TAG, "Lyricon service reconnected")
+                Log.d(TAG, "Lyricon service reconnected (syncing state)")
+                syncState()
                 OrpheusMusicService.instance?.statusBarLyricsManager?.notifyStatusChanged()
             }
             onDisconnected {
@@ -57,6 +60,22 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         Log.d(TAG, "LyriconBackend registered")
     }
 
+    private fun syncState() {
+        mainHandler.post {
+            try {
+                provider.player.setDisplayTranslation(true)
+                val song = lastSong
+                if (song != null) {
+                    provider.player.setSong(song)
+                    provider.player.setPlaybackState(lastIsPlaying)
+                    Log.d(TAG, "[syncState] Resent song and playbackState ($lastIsPlaying)")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "[syncState] FAILED: ${e.message}", e)
+            }
+        }
+    }
+
     override fun setLyrics(lyrics: List<LyricsLine>, offset: Double) {
         this.offset = offset
         Log.d(TAG, "[setLyrics] Called with ${lyrics.size} lines, offset: $offset")
@@ -64,6 +83,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         if (lyrics.isEmpty()) {
             // Explicitly clear Lyricon state so stale lyrics from the previous track
             // are not left visible when the current track has no lyrics.
+            lastSong = null
+            lastIsPlaying = false
             try {
                 provider.player.setSong(Song(lyrics = emptyList<RichLyricLine>()))
                 provider.player.setPlaybackState(false)
@@ -98,11 +119,15 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
                 duration = durationMs ?: 0L,
                 lyrics = richLines,
             )
+            
+            lastSong = song
+            lastIsPlaying = isPlaying
 
             try {
                 provider.player.setSong(song)
-                provider.player.setPlaybackState(isPlaying)
-                Log.d(TAG, "[setLyrics] setSong lines=${richLines.size} id=$trackId name=$title artist=$artist playing=$isPlaying")
+                // Force state to true so it shows up even if currently paused.
+                provider.player.setPlaybackState(true)
+                Log.d(TAG, "[setLyrics] setSong lines=${richLines.size} id=$trackId name=$title artist=$artist (forced playing=true)")
             } catch (e: Exception) {
                 Log.e(TAG, "[setLyrics] FAILED: ${e.message}", e)
             }
@@ -123,8 +148,27 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         }
     }
 
+    override fun setPlaybackState(isPlaying: Boolean) {
+        lastIsPlaying = isPlaying
+        mainHandler.post {
+            try {
+                if (isPlaying) {
+                    // Only send 'true' to ensure the status bar stays visible.
+                    // We don't send 'false' here because most Lyricon consumers 
+                    // will immediately hide the lyrics bar, which contradicts
+                    // the user's preference for persistent lyrics.
+                    provider.player.setPlaybackState(true)
+                    Log.d(TAG, "[setPlaybackState] Sent 'true' to keep visible")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "[setPlaybackState] FAILED: ${e.message}", e)
+            }
+        }
+    }
+
     override fun onStop() {
         offset = 0.0
+        lastIsPlaying = false
         mainHandler.post {
             try {
                 provider.player.setPlaybackState(false)
@@ -141,6 +185,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
      * so we send a stop signal to ensure the framework shows no stale lyrics.
      */
     override fun destroy() {
+        lastSong = null
+        lastIsPlaying = false
         mainHandler.post {
             try {
                 provider.player.setPlaybackState(false)

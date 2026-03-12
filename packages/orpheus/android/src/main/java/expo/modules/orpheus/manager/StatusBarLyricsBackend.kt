@@ -18,11 +18,11 @@ abstract class StatusBarLyricsBackend(protected val context: Context) {
      */
     abstract fun setLyrics(lyrics: List<LyricsLine>, offset: Double)
 
-    /**
-     * Called continuously with the current playback position.
-     * @param seconds current position in seconds
-     */
+    /** Called continuously with the current playback position. */
     abstract fun updateTime(seconds: Double)
+
+    /** Called when the player starts or pauses. */
+    abstract fun setPlaybackState(isPlaying: Boolean)
 
     /** Called when playback stops or the track changes. */
     abstract fun onStop()

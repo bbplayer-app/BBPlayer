@@ -14,15 +14,16 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
     override val isAvailable: Boolean
         get() = SuperLyricTool.isEnabled
 
-    private var lyrics: List<LyricsLine> = emptyList()
-    private var offset: Double = 0.0
-    private var currentLineIndex: Int = -1
+    private var lastLyrics: List<LyricsLine> = emptyList()
+    private var lastOffset: Double = 0.0
+    private var lastLineIndex: Int = -1
     private var lastSkipLogTime: Long = 0L
 
     override fun setLyrics(lyrics: List<LyricsLine>, offset: Double) {
-        this.lyrics = lyrics
-        this.offset = offset
-        currentLineIndex = -1
+        this.lastLyrics = lyrics
+        this.lastOffset = offset
+        this.lastLineIndex = -1
+        Log.d(TAG, "[setLyrics] cached ${lyrics.size} lines")
     }
 
     override fun updateTime(seconds: Double) {
@@ -35,7 +36,7 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
             return
         }
 
-        if (lyrics.isEmpty()) {
+        if (lastLyrics.isEmpty()) {
             val now = System.currentTimeMillis()
             if (now - lastSkipLogTime > 2000) {
                 Log.d(TAG, "[updateTime] SKIP: lyrics empty at ${seconds}s")
@@ -46,23 +47,27 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         lastSkipLogTime = 0L
 
-        val adjustedTime = seconds - offset
-        val index = lyrics.indexOfLast { it.timestamp <= adjustedTime }
+        val adjustedTime = seconds - lastOffset
+        val index = lastLyrics.indexOfLast { it.timestamp <= adjustedTime }
 
-        if (index < 0 || index == currentLineIndex) return
+        if (index < 0 || index == lastLineIndex) return
 
-        val line = lyrics[index]
-        val delayMs = if (index + 1 < lyrics.size) {
-            ((lyrics[index + 1].timestamp - line.timestamp) * 1000).toInt()
+        sendLineToSuperLyric(index, seconds, adjustedTime)
+    }
+
+    private fun sendLineToSuperLyric(index: Int, seconds: Double, adjustedTime: Double) {
+        if (index < 0 || index >= lastLyrics.size) return
+        val line = lastLyrics[index]
+        val delayMs = if (index + 1 < lastLyrics.size) {
+            ((lastLyrics[index + 1].timestamp - line.timestamp) * 1000).toInt()
         } else {
             0
         }
 
         val translation = line.translations?.getOrNull(0)
-        Log.d(TAG, "[updateTime] line[$index/${lyrics.size - 1}] pos=${seconds}s adj=${adjustedTime}s delay=${delayMs}ms | \"${line.text}\"" +
-                if (!translation.isNullOrEmpty()) " / \"$translation\"" else "")
+        Log.d(TAG, "[sendLine] line[$index/${lastLyrics.size - 1}] pos=${seconds}s adj=${adjustedTime}s delay=${delayMs}ms | \"${line.text}\"")
 
-        currentLineIndex = index
+        lastLineIndex = index
 
         val data = SuperLyricData()
             .setLyric(line.text)
@@ -75,15 +80,21 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         try {
             SuperLyricPush.onSuperLyric(data)
-            Log.d(TAG, "[updateTime] onSuperLyric sent OK")
         } catch (e: Exception) {
-            Log.e(TAG, "[updateTime] onSuperLyric FAILED: ${e.message}", e)
+            Log.e(TAG, "[sendLine] FAILED: ${e.message}", e)
+        }
+    }
+
+    override fun setPlaybackState(isPlaying: Boolean) {
+        if (isPlaying && lastLineIndex >= 0) {
+            // Re-send current line on resume to ensure it's visible
+            sendLineToSuperLyric(lastLineIndex, 0.0, 0.0)
         }
     }
 
     override fun onStop() {
-        lyrics = emptyList()
-        currentLineIndex = -1
+        lastLyrics = emptyList()
+        lastLineIndex = -1
         lastSkipLogTime = 0L
 
         if (!SuperLyricTool.isEnabled) {
