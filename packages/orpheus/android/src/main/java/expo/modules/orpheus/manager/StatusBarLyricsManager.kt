@@ -2,117 +2,85 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
-import com.hchen.superlyricapi.SuperLyricData
-import com.hchen.superlyricapi.SuperLyricPush
-import com.hchen.superlyricapi.SuperLyricTool
 import expo.modules.orpheus.model.LyricsLine
 
 private const val TAG = "StatusBarLyrics"
 
+/**
+ * Orchestrates status bar lyrics by switching between providers
+ * and maintaining playback state / lyric cache.
+ */
 class StatusBarLyricsManager(private val context: Context) {
+
+    interface StatusChangeListener {
+        fun onStatusChanged()
+    }
+
+    private var statusChangeListener: StatusChangeListener? = null
+
+    fun setStatusChangeListener(listener: StatusChangeListener?) {
+        statusChangeListener = listener
+    }
+
+    fun notifyStatusChanged() {
+        statusChangeListener?.onStatusChanged()
+    }
 
     var enabled: Boolean = false
         set(value) {
             val prev = field
             field = value
-            Log.d(TAG, "[enabled] $prev -> $value | superLyricActive=${SuperLyricTool.isEnabled}")
             if (prev && !value) {
-                pushStop()
+                backend?.onStop()
             }
         }
 
-    private var lyrics: List<LyricsLine> = emptyList()
-    private var offset: Double = 0.0
-    private var currentLineIndex: Int = -1
-    private var lastSkipLogTime: Long = 0L
+    /** Active backend; swap to switch between SuperLyric and Lyricon. */
+    var backend: StatusBarLyricsBackend? = null
+        set(value) {
+            val previous = field
+            if (previous != null) {
+                if (enabled) previous.onStop()
+                previous.destroy()
+            }
+            field = value
+            Log.d(TAG, "[backend] switched to ${value?.javaClass?.simpleName}")
+            
+            // Re-apply cached lyrics to the new backend immediately
+            val cachedLyrics = lastLyrics
+            if (enabled && cachedLyrics != null) {
+                value?.setLyrics(cachedLyrics, lastOffset)
+            }
+        }
+
+    private var lastLyrics: List<LyricsLine>? = null
+    private var lastOffset: Double = 0.0
 
     fun setLyrics(newLyrics: List<LyricsLine>, newOffset: Double = 0.0) {
-        val firstLine = newLyrics.firstOrNull()?.text ?: "(none)"
-        Log.d(TAG, "[setLyrics] count=${newLyrics.size} offset=$newOffset | enabled=$enabled superLyricActive=${SuperLyricTool.isEnabled} | first=\"$firstLine\"")
-        lyrics = newLyrics.sortedBy { it.timestamp }
-        offset = newOffset
-        currentLineIndex = -1
+        val sorted = newLyrics.sortedBy { it.timestamp }
+        lastLyrics = sorted
+        lastOffset = newOffset
+        
+        if (enabled) {
+            backend?.setLyrics(sorted, newOffset)
+        }
     }
 
     fun updateTime(seconds: Double) {
-        if (!enabled) return
-
-        if (!SuperLyricTool.isEnabled) {
-            val now = System.currentTimeMillis()
-            if (now - lastSkipLogTime > 5000) {
-                Log.w(TAG, "[updateTime] SKIP: SuperLyric NOT active at ${seconds}s")
-                lastSkipLogTime = now
-            }
-            return
+        if (enabled) {
+            backend?.updateTime(seconds)
         }
+    }
 
-        if (lyrics.isEmpty()) {
-            val now = System.currentTimeMillis()
-            if (now - lastSkipLogTime > 2000) {
-                Log.d(TAG, "[updateTime] SKIP: lyrics empty at ${seconds}s (currentLineIndex=$currentLineIndex)")
-                lastSkipLogTime = now
-            }
-            return
-        }
-
-        lastSkipLogTime = 0L
-
-        val adjustedTime = seconds - offset
-        val index = lyrics.indexOfLast { it.timestamp <= adjustedTime }
-
-        if (index < 0 || index == currentLineIndex) return
-
-        val line = lyrics[index]
-        val delayMs = if (index + 1 < lyrics.size) {
-            ((lyrics[index + 1].timestamp - line.timestamp) * 1000).toInt()
-        } else {
-            0
-        }
-
-        Log.d(TAG, "[updateTime] line[$index/${lyrics.size - 1}] pos=${seconds}s adj=${adjustedTime}s delay=${delayMs}ms | \"${line.text}\"" +
-                if (!line.translation.isNullOrEmpty()) " / \"${line.translation}\"" else "")
-
-        currentLineIndex = index
-
-        val data = SuperLyricData()
-            .setLyric(line.text)
-            .setPackageName(context.packageName)
-            .setDelay(delayMs)
-
-        if (!line.translation.isNullOrEmpty()) {
-            data.setTranslation(line.translation)
-        }
-
-        try {
-            SuperLyricPush.onSuperLyric(data)
-            Log.d(TAG, "[updateTime] onSuperLyric sent OK")
-        } catch (e: Exception) {
-            Log.e(TAG, "[updateTime] onSuperLyric FAILED: ${e.message}", e)
+    fun setPlaybackState(isPlaying: Boolean) {
+        if (enabled) {
+            backend?.setPlaybackState(isPlaying)
         }
     }
 
     fun onStop() {
-        Log.d(TAG, "[onStop] had ${lyrics.size} lines lastIndex=$currentLineIndex | enabled=$enabled superLyricActive=${SuperLyricTool.isEnabled}")
-        lyrics = emptyList()
-        currentLineIndex = -1
-        lastSkipLogTime = 0L
-        pushStop()
-    }
-
-    private fun pushStop() {
-        if (!SuperLyricTool.isEnabled) {
-            Log.d(TAG, "[pushStop] skipped: SuperLyric not active")
-            return
-        }
-
-        val data = SuperLyricData()
-            .setPackageName(context.packageName)
-
-        try {
-            SuperLyricPush.onStop(data)
-            Log.d(TAG, "[pushStop] onStop sent OK pkg=${context.packageName}")
-        } catch (e: Exception) {
-            Log.e(TAG, "[pushStop] FAILED: ${e.message}", e)
-        }
+        lastLyrics = null
+        lastOffset = 0.0
+        backend?.onStop()
     }
 }

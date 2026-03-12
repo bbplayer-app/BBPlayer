@@ -1,6 +1,7 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import * as WebBrowser from 'expo-web-browser'
+import { useCallback, useEffect, useState } from 'react'
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Checkbox, Switch, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -33,6 +34,12 @@ export default function LyricsSettingsPage() {
 	const [isSuperLyricApiEnabled, setIsSuperLyricApiEnabled] = useState(
 		Orpheus.isSuperLyricApiEnabled,
 	)
+	const [isLyriconApiEnabled, setIsLyriconApiEnabled] = useState(
+		Orpheus.isLyriconApiEnabled,
+	)
+	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
+		Orpheus.statusBarLyricsProvider ?? 'lyricon',
+	)
 
 	const lyricSource = useAppStore((state) => state.settings.lyricSource)
 	const enableVerbatimLyrics = useAppStore(
@@ -44,13 +51,30 @@ export default function LyricsSettingsPage() {
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [lyricSourceMenuVisible, setLyricSourceMenuVisible] = useState(false)
+	const [providerMenuVisible, setProviderMenuVisible] = useState(false)
+
+	const isStatusBarLyricsProviderActive =
+		statusBarLyricsProvider === 'lyricon'
+			? isLyriconApiEnabled
+			: isSuperLyricApiEnabled
+
+	const syncStates = useCallback(async () => {
+		const hasPermission = await Orpheus.checkOverlayPermission()
+		// UI 开关仅在「设置开启」且「有权限」时显示为 ON
+		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown && hasPermission)
+		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
+		setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
+		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
+		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
+		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'lyricon')
+	}, [])
 
 	const enableDesktopLyrics = async () => {
 		try {
-			const hadPermission = await Orpheus.checkOverlayPermission()
-			if (hadPermission) {
+			const hasPermission = await Orpheus.checkOverlayPermission()
+			if (hasPermission) {
 				await Orpheus.showDesktopLyrics()
-				setIsDesktopLyricsShown(true)
+				void syncStates()
 				// 立即推送当前正在播放的歌词，不等下一首
 				const currentTrack = await Orpheus.getCurrentTrack()
 				if (currentTrack) {
@@ -62,40 +86,46 @@ export default function LyricsSettingsPage() {
 				'桌面歌词',
 				'启用桌面歌词需要启用悬浮窗权限。跳转到设置后，请找到 BBPlayer，并允许显示悬浮窗',
 				[
+					{ text: '取消' },
 					{
 						text: '去设置',
 						onPress: async () => {
 							await Orpheus.requestOverlayPermission()
 						},
 					},
-					{ text: '取消' },
 				],
 				{ cancelable: true },
 			)
 		} catch (e) {
 			toastAndLogError('设置桌面歌词失败', e, 'Settings')
-			return
 		}
 	}
 
 	useEffect(() => {
-		const listener = AppState.addEventListener('change', () => {
-			setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
-			setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
-			setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
-			setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
+		const listener = AppState.addEventListener('change', (state) => {
+			if (state === 'active') {
+				void syncStates()
+			}
 		})
+
+		const statusListener = Orpheus.addListener(
+			'onStatusBarLyricsStatusChanged',
+			() => {
+				void syncStates()
+			},
+		)
+
 		return () => {
 			listener.remove()
+			statusListener.remove()
 		}
-	}, [])
+	}, [syncStates])
 
-	useFocusEffect(() => {
-		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown)
-		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
-		setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
-		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
-	})
+	useFocusEffect(
+		useCallback(() => {
+			void syncStates()
+		}, [syncStates]),
+	)
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -138,15 +168,17 @@ export default function LyricsSettingsPage() {
 								value={isDesktopLyricsShown}
 								onValueChange={async () => {
 									try {
+										// 如果当前视觉上是开着的，点击必定是想关掉
 										if (isDesktopLyricsShown) {
 											await Orpheus.hideDesktopLyrics()
-											setIsDesktopLyricsShown(false)
+											void syncStates()
 										} else {
+											// 如果当前视觉上是关着的（可能是没权限，也可能是设置就是关的）
+											// 我们统一走 enable 流程（含权限检查）
 											await enableDesktopLyrics()
 										}
 									} catch (e) {
 										toastAndLogError('设置失败', e, 'Settings')
-										return
 									}
 								}}
 							/>
@@ -155,32 +187,110 @@ export default function LyricsSettingsPage() {
 							<Text>桌面歌词锁定</Text>
 							<Switch
 								value={isDesktopLyricsLocked}
-								onValueChange={() => {
+								onValueChange={async () => {
 									try {
 										Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
+										await syncStates()
 									} catch (e) {
 										toastAndLogError('设置失败', e, 'Settings')
-										return
 									}
-									setIsDesktopLyricsLocked(!isDesktopLyricsLocked)
 								}}
 							/>
 						</View>
 						<View style={styles.settingRow}>
-							<Text
-								style={!isSuperLyricApiEnabled ? { opacity: 0.4 } : undefined}
+							<Text>状态栏歌词框架</Text>
+							<FunctionalMenu
+								visible={providerMenuVisible}
+								onDismiss={() => setProviderMenuVisible(false)}
+								anchor={
+									<IconButton
+										icon='playlist-music'
+										size={20}
+										onPress={() => setProviderMenuVisible(true)}
+									/>
+								}
 							>
-								状态栏歌词
-								{!isSuperLyricApiEnabled ? '（需安装 SuperLyric 模块）' : ''}
-							</Text>
+								<Checkbox.Item
+									mode='ios'
+									label={`SuperLyric${!isSuperLyricApiEnabled ? '（未激活）' : ''}`}
+									status={
+										statusBarLyricsProvider === 'superlyric'
+											? 'checked'
+											: 'unchecked'
+									}
+									onPress={() => {
+										try {
+											Orpheus.statusBarLyricsProvider = 'superlyric'
+											void syncStates()
+										} catch (e) {
+											toastAndLogError('设置失败', e, 'Settings')
+										}
+										setProviderMenuVisible(false)
+									}}
+								/>
+								<Checkbox.Item
+									mode='ios'
+									label={`词幕 (Lyricon)${statusBarLyricsProvider === 'lyricon' && !isLyriconApiEnabled ? '（未连接）' : ''}`}
+									status={
+										statusBarLyricsProvider === 'lyricon'
+											? 'checked'
+											: 'unchecked'
+									}
+									onPress={() => {
+										try {
+											Orpheus.statusBarLyricsProvider = 'lyricon'
+											void syncStates()
+										} catch (e) {
+											toastAndLogError('设置失败', e, 'Settings')
+										}
+										setProviderMenuVisible(false)
+									}}
+								/>
+							</FunctionalMenu>
+						</View>
+						<View style={styles.settingRow}>
+							<View style={{ flex: 1, marginRight: 16 }}>
+								<Text
+									style={
+										!isStatusBarLyricsProviderActive
+											? { opacity: 0.4 }
+											: undefined
+									}
+								>
+									状态栏歌词
+									{!isStatusBarLyricsProviderActive
+										? statusBarLyricsProvider === 'lyricon'
+											? '（需安装词幕模块）'
+											: '（需安装 SuperLyric 模块）'
+										: ''}
+								</Text>
+								{!isStatusBarLyricsProviderActive && (
+									<Text
+										style={{
+											fontSize: 12,
+											opacity: 0.5,
+											marginTop: 4,
+											color: colors.primary,
+											textDecorationLine: 'underline',
+										}}
+										onPress={() =>
+											WebBrowser.openBrowserAsync(
+												'https://bbplayer.roitium.com/guides/lyrics.html#status-bar-lyric',
+											)
+										}
+									>
+										未检测到可用环境，请点击查看配置文档
+									</Text>
+								)}
+							</View>
 							<Switch
-								disabled={!isSuperLyricApiEnabled}
+								disabled={!isStatusBarLyricsProviderActive}
 								value={isStatusBarLyricsEnabled}
 								onValueChange={async () => {
 									try {
 										const next = !isStatusBarLyricsEnabled
 										Orpheus.isStatusBarLyricsEnabled = next
-										setIsStatusBarLyricsEnabled(next)
+										await syncStates()
 										if (next) {
 											// 立即推送当前歌词
 											const currentTrack = await Orpheus.getCurrentTrack()

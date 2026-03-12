@@ -4,4 +4,13 @@
     <string name="size">大小</string>
     <string name="lock">锁定</string>
     <string name="close">关闭</string>
+    
+    <string name="lyric_mode_all">全显</string>
+    <string name="lyric_mode_trans">翻译</string>
+    <string name="lyric_mode_roma">罗马音</string>
+    <string name="lyric_mode_none">无</string>
+
+    <string-array name="lyricon_module_tags">
+        <item>$translation</item>
+    </string-array>
 </resources>

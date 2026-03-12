@@ -11,7 +11,19 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        Lyricon requires Android 8.1 (API 27) per its own manifest, but our app supports API 24+.
+        This override allows the manifest merger to succeed; runtime guards in
+        OrpheusMusicService.createStatusBarBackend() prevent Lyricon from being instantiated
+        on API < 27 devices.
+    -->
+    <uses-sdk tools:overrideLibrary="io.github.proify.lyricon.provider" />
+
     <application>
+        <meta-data android:name="lyricon_module" android:value="true" />
+        <meta-data android:name="lyricon_module_author" android:value="Roitium" />
+        <meta-data android:name="lyricon_module_description" android:value="感谢使用 BBPlayer 喵！" />
+        <meta-data android:name="lyricon_module_tags" android:resource="@array/lyricon_module_tags" />
         <service
             android:name=".service.OrpheusMusicService"
             android:enabled="true"

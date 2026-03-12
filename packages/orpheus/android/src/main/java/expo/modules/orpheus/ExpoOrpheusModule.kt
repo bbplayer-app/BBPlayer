@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -31,6 +32,7 @@ import expo.modules.kotlin.typedarray.Float32Array
 import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
@@ -183,7 +185,8 @@ class ExpoOrpheusModule : Module() {
             "onTrackStarted",
             "onTrackFinished",
             "onCoverDownloadProgress",
-            "onExportProgress"
+            "onExportProgress",
+            "onStatusBarLyricsStatusChanged"
         )
 
         RegisterActivityContracts {
@@ -211,6 +214,12 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
+
+                    service.statusBarLyricsManager.setStatusChangeListener(object : expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
+                        override fun onStatusChanged() {
+                            sendEvent("onStatusBarLyricsStatusChanged", emptyMap<String, Any>())
+                        }
+                    })
 
                     service.addTrackEventListener(object : OrpheusMusicService.TrackEventListener {
                         override fun onTrackStarted(trackId: String, reason: Int) {
@@ -285,12 +294,39 @@ class ExpoOrpheusModule : Module() {
         Property("isStatusBarLyricsEnabled")
             .get { GeneralStorage.isStatusBarLyricsEnabled() }
             .set { enabled: Boolean ->
-                GeneralStorage.setStatusBarLyricsEnabled(enabled)
-                OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+                mainHandler.post {
+                    GeneralStorage.setStatusBarLyricsEnabled(enabled)
+                    OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+                }
+            }
+
+        Property("statusBarLyricsProvider")
+            .get { GeneralStorage.getStatusBarLyricsProvider() }
+            .set { provider: String ->
+                mainHandler.post {
+                    // Lyricon requires API 27+; silently fall back to superlyric on older devices
+                    // so the persisted value always reflects what is actually used.
+                    val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+                        "superlyric"
+                    } else {
+                        provider
+                    }
+                    GeneralStorage.setStatusBarLyricsProvider(effective)
+                    val service = OrpheusMusicService.instance ?: return@post
+                    service.statusBarLyricsManager.backend = service.createStatusBarBackend(effective)
+                }
             }
 
         Property("isSuperLyricApiEnabled")
             .get { com.hchen.superlyricapi.SuperLyricTool.isEnabled }
+
+        Property("isLyriconApiEnabled")
+            .get {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return@get false
+                OrpheusMusicService.instance?.statusBarLyricsManager?.backend
+                    ?.let { it is LyriconBackend && it.isAvailable }
+                    ?: false
+            }
 
 
         Function("setBilibiliCookie") { cookie: String ->
@@ -805,7 +841,7 @@ class ExpoOrpheusModule : Module() {
             OrpheusMusicService.instance?.floatingLyricsManager?.hide()
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
+        AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
@@ -817,7 +853,7 @@ class ExpoOrpheusModule : Module() {
             }
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("setStatusBarLyrics") { lyricsJson: String ->
+        AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"

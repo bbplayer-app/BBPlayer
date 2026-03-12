@@ -73,7 +73,7 @@ export default function useSmoothProgress(background = false) {
 			}
 		})
 
-		const stateSub = Orpheus.addListener('onPlaybackStateChange', (_state) => {
+		const stateSub = Orpheus.addListener('onPlaybackStateChanged', (_state) => {
 			if (AppState.currentState !== 'active' && !background) return
 			syncState()
 		})
