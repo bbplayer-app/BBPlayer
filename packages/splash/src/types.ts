@@ -22,7 +22,11 @@ export interface LyricLine {
 	endTime: number
 	/** 主歌词内容（第一次出现的） */
 	content: string
-	/** 翻译歌词列表，支持多行翻译 */
+	/** 翻译内容 (可选) */
+	translation?: string
+	/** 罗马音内容 (可选) */
+	romaji?: string
+	/** 翻译歌词列表，支持多行翻译 (旧版兼容) */
 	translations: string[]
 	/** 是否为动态歌词（包含逐字 spans） */
 	isDynamic: boolean

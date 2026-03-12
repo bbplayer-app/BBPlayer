@@ -1,6 +1,10 @@
 import type { TransitionReason } from '@bbplayer/orpheus'
-import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
-import { parseSpl } from '@bbplayer/splash'
+import {
+	Orpheus,
+	type Track as OrpheusTrack,
+	type LyricsData,
+} from '@bbplayer/orpheus'
+import { parseAndMergeLyrics } from '@bbplayer/splash'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 
@@ -273,17 +277,22 @@ function pushLyricsToOverlays(
 			)
 			if (lyricsResult.isErr()) throw lyricsResult.error
 
-			const mergedLyrics =
-				(lyricsResult.value.lrc ?? '') +
-				'\n' +
-				(lyricsResult.value.tlyric ?? '')
-			const parsedLyrics = parseSpl(mergedLyrics)
+			const lyrics = lyricsResult.value
+			if (!lyrics.lrc) return
 
-			const orpheusLyrics = parsedLyrics.lines.map((line) => ({
+			// 使用 splash 的结构化对齐合并方法
+			const parsedLines = parseAndMergeLyrics({
+				lrc: lyrics.lrc,
+				tlyric: lyrics.tlyric,
+				romalrc: lyrics.romalrc,
+			})
+
+			const orpheusLyrics = parsedLines.map((line) => ({
 				timestamp: line.startTime / 1000,
 				endTime: line.endTime / 1000,
 				text: line.content,
-				translations: line.translations,
+				translation: line.translation,
+				romaji: line.romaji,
 				spans: line.isDynamic
 					? line.spans.map((span) => ({
 							text: span.text,
@@ -296,9 +305,9 @@ function pushLyricsToOverlays(
 
 			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
 
-			const payload = {
+			const payload: LyricsData = {
 				lyrics: orpheusLyrics,
-				offset: lyricsResult.value.misc?.userOffset ?? 0,
+				offset: lyrics.misc?.userOffset ?? 0,
 			}
 
 			if (Orpheus.isDesktopLyricsShown) {

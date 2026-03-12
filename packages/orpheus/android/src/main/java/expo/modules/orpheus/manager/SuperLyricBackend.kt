@@ -60,7 +60,8 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
             0
         }
 
-        val translation = line.translations?.firstOrNull()
+        // Use the new explicit translation field
+        val translation = line.translation ?: line.romaji
         lastLineIndex = index
 
         val data = SuperLyricData()

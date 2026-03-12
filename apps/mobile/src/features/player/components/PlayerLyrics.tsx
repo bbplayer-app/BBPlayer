@@ -1,4 +1,4 @@
-import { parseSpl, type LyricLine } from '@bbplayer/splash'
+import { parseAndMergeLyrics, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
 import {
@@ -6,7 +6,6 @@ import {
 	useCallback,
 	useEffect,
 	useLayoutEffect,
-	useMemo,
 	useRef,
 	useState,
 } from 'react'
@@ -35,7 +34,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
-import toast from '@/utils/toast'
 
 import {
 	ModernLyricLineItem,
@@ -124,82 +122,17 @@ const Lyrics = memo(function Lyrics({
 		return currentTime.value - offsetSharedValue.value
 	})
 
-	const { secondaryLyrics: effectiveSecondaryLyrics, isMismatch } =
-		useMemo(() => {
-			if (!lyrics?.lrc) return { secondaryLyrics: undefined, isMismatch: false }
-
-			const currentLyrics = lyrics
-			// 判断可用性
-			const hasTranslation = !!currentLyrics.tlyric
-			const hasRomaji = !!currentLyrics.romalrc
-
-			let activeType = preferredLyricType
-			if (hasTranslation && !hasRomaji) activeType = 'translation'
-			else if (!hasTranslation && hasRomaji) activeType = 'romaji'
-			else if (!hasTranslation && !hasRomaji) activeType = 'translation'
-
-			const candidateSecondaryLyrics =
-				activeType === 'romaji' ? currentLyrics.romalrc : currentLyrics.tlyric
-
-			if (!candidateSecondaryLyrics) {
-				return { secondaryLyrics: undefined, isMismatch: false }
-			}
-
-			let mainParsed, secondaryParsed
-			try {
-				mainParsed = parseSpl(currentLyrics.lrc!)
-				secondaryParsed = parseSpl(candidateSecondaryLyrics)
-			} catch {
-				// 解析失败，返回原始歌词
-				return {
-					secondaryLyrics: candidateSecondaryLyrics,
-					isMismatch: false,
-				}
-			}
-
-			const mainTimestamps = new Set(mainParsed.lines.map((l) => l.startTime))
-			let matchCount = 0
-			if (secondaryParsed.lines.length > 0) {
-				for (const line of secondaryParsed.lines) {
-					if (mainTimestamps.has(line.startTime)) {
-						matchCount++
-					}
-				}
-
-				const matchRatio = matchCount / secondaryParsed.lines.length
-
-				// 如果匹配度低于 20%，则视为不匹配
-				if (matchRatio < 0.2) {
-					return { secondaryLyrics: undefined, isMismatch: true }
-				}
-			}
-
-			return {
-				secondaryLyrics: candidateSecondaryLyrics,
-				isMismatch: false,
-			}
-		}, [lyrics, preferredLyricType])
-
-	useEffect(() => {
-		if (isMismatch) {
-			toast.info('歌词时间轴不匹配，已自动隐藏翻译/音译', {
-				duration: 3000,
-			})
-		}
-	}, [isMismatch, track?.uniqueKey])
-
 	// so bro I trust react compiler
 	const finalLyrics = (() => {
-		const lrc = lyrics?.lrc
-		if (!lrc) return []
-
-		// 主播亲测这样 hack 没问题！
-		const mergedSpl = lrc + '\n' + (effectiveSecondaryLyrics ?? '')
+		if (!lyrics?.lrc) return []
 
 		let parsedLines
 		try {
-			const result = parseSpl(mergedSpl)
-			parsedLines = result.lines
+			parsedLines = parseAndMergeLyrics({
+				lrc: lyrics.lrc,
+				tlyric: lyrics.tlyric,
+				romalrc: lyrics.romalrc,
+			})
 		} catch (e) {
 			toastAndLogError('解析歌词失败', e, 'Player.PlayerLyrics')
 			return null
@@ -428,6 +361,7 @@ const Lyrics = memo(function Lyrics({
 										onPressBackground={onPressBackground}
 										currentTime={adjustedCurrentTime}
 										enableVerbatimLyrics={enableVerbatimLyrics}
+										preferredLyricType={preferredLyricType}
 									/>
 								) : (
 									<ModernLyricLineItem
@@ -438,6 +372,7 @@ const Lyrics = memo(function Lyrics({
 										onPressBackground={onPressBackground}
 										currentTime={adjustedCurrentTime}
 										enableVerbatimLyrics={enableVerbatimLyrics}
+										preferredLyricType={preferredLyricType}
 									/>
 								)}
 							</View>

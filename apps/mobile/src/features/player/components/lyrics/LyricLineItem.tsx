@@ -24,6 +24,7 @@ export interface LyricLineItemProps {
 	onPressBackground?: (() => void) | undefined
 	currentTime: SharedValue<number>
 	enableVerbatimLyrics: boolean
+	preferredLyricType?: 'translation' | 'romaji'
 }
 
 export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
@@ -34,6 +35,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	onPressBackground,
 	currentTime,
 	enableVerbatimLyrics,
+	preferredLyricType = 'translation',
 }: LyricLineItemProps) {
 	const colors = useTheme().colors
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -67,6 +69,12 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 			color: withTiming(colors.onSurfaceDisabled, { duration }),
 		}
 	})
+
+	const subText =
+		preferredLyricType === 'romaji'
+			? item.romaji || item.translation || item.translations?.[0]
+			: item.translation || item.romaji || item.translations?.[0]
+
 	return (
 		<View style={styles.oldSchoolItemWrapper}>
 			<Pressable
@@ -103,11 +111,11 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 						{item.content}
 					</Animated.Text>
 				)}
-				{item.translations?.[0] && (
+				{subText && (
 					<Animated.Text
 						style={[styles.oldSchoolItemTranslation, animatedStyle]}
 					>
-						{item.translations[0]}
+						{subText}
 					</Animated.Text>
 				)}
 			</RectButton>
@@ -123,6 +131,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	onPressBackground,
 	currentTime,
 	enableVerbatimLyrics,
+	preferredLyricType = 'translation',
 }: LyricLineItemProps) {
 	const theme = useTheme()
 	const isHighlightedShared = useSharedValue(isHighlighted)
@@ -201,6 +210,11 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		)
 	}
 
+	const subText =
+		preferredLyricType === 'romaji'
+			? item.romaji || item.translation || item.translations?.[0]
+			: item.translation || item.romaji || item.translations?.[0]
+
 	return (
 		<View style={styles.modernItemWrapper}>
 			<Pressable
@@ -212,11 +226,11 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				onPress={() => jumpToThisLyric(index)}
 			>
 				{renderContent()}
-				{item.translations?.[0] && (
+				{subText && (
 					<Animated.Text
 						style={[styles.modernItemTranslation, textAnimatedStyle]}
 					>
-						{item.translations[0]}
+						{subText}
 					</Animated.Text>
 				)}
 			</AnimatedRectButton>

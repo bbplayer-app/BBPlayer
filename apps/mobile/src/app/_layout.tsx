@@ -15,6 +15,7 @@ import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
+import { alert } from '@/components/modals/AlertModal'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
@@ -113,6 +114,30 @@ export default Sentry.wrap(function RootLayout() {
 
 			// 初始化播放器状态
 			usePlayerStore.getState().initialize()
+
+			// 桌面歌词权限启动检查
+			const checkOverlayPermissionOnStart = async () => {
+				if (Orpheus.isDesktopLyricsShown) {
+					const hasPermission = await Orpheus.checkOverlayPermission()
+					if (!hasPermission) {
+						// 延迟显示，确保 UI 已经加载
+						setTimeout(() => {
+							alert(
+								'桌面歌词',
+								'检测到桌面歌词已开启，但缺少悬浮窗权限，请授权以恢复显示。',
+								[
+									{ text: '取消' },
+									{
+										text: '去授权',
+										onPress: () => Orpheus.requestOverlayPermission(),
+									},
+								],
+							)
+						}, 1000)
+					}
+				}
+			}
+			void checkOverlayPermissionOnStart()
 
 			// 初始化播放器 Cookie
 			try {

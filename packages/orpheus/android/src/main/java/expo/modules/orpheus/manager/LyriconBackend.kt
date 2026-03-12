@@ -202,7 +202,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
                 end = endMs,
                 text = line.text,
                 words = words,
-                translation = line.translations?.getOrNull(0)?.takeIf { it.isNotEmpty() }
+                translation = line.translation ?: line.romaji
             )
         }
     }

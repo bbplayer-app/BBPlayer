@@ -2,6 +2,7 @@ package expo.modules.orpheus.util
 
 import android.content.Context
 import android.util.Log
+import androidx.core.graphics.toColorInt
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
@@ -24,6 +25,9 @@ object GeneralStorage {
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
     private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
     private const val KEY_STATUS_BAR_LYRICS_PROVIDER = "config_status_bar_lyrics_provider"
+    private const val KEY_DESKTOP_LYRICS_DISPLAY_MODE = "config_desktop_lyrics_display_mode"
+    private const val KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR = "config_desktop_lyrics_highlight_color"
+    private const val KEY_DESKTOP_LYRICS_TEXT_SIZE = "config_desktop_lyrics_text_size"
 
 
     @Synchronized
@@ -137,4 +141,19 @@ object GeneralStorage {
     /** Returns "superlyric" or "lyricon" */
     fun getStatusBarLyricsProvider() = kv?.decodeString(KEY_STATUS_BAR_LYRICS_PROVIDER, "superlyric") ?: "superlyric"
     fun setStatusBarLyricsProvider(provider: String) = safeKv.encode(KEY_STATUS_BAR_LYRICS_PROVIDER, provider)
+
+    /**
+     * Desktop Lyrics Display Mode:
+     * 0: Translation
+     * 1: Romaji
+     * 2: None
+     */
+    fun getDesktopLyricsMode() = kv?.decodeInt(KEY_DESKTOP_LYRICS_DISPLAY_MODE, 0) ?: 0
+    fun setDesktopLyricsMode(mode: Int) = safeKv.encode(KEY_DESKTOP_LYRICS_DISPLAY_MODE, mode)
+
+    fun getDesktopLyricsHighlightColor() = kv?.decodeInt(KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR, "#FFC107".toColorInt()) ?: "#FFC107".toColorInt()
+    fun setDesktopLyricsHighlightColor(color: Int) = safeKv.encode(KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR, color)
+
+    fun getDesktopLyricsTextSize() = kv?.decodeFloat(KEY_DESKTOP_LYRICS_TEXT_SIZE, 18f) ?: 18f
+    fun setDesktopLyricsTextSize(size: Float) = safeKv.encode(KEY_DESKTOP_LYRICS_TEXT_SIZE, size)
 }

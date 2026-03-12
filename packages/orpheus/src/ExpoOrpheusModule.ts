@@ -40,7 +40,8 @@ export interface LyricLine {
 	timestamp: number // seconds
 	endTime?: number // seconds
 	text: string
-	translations?: string[]
+	translation?: string
+	romaji?: string
 	spans?: LyricSpan[]
 }
 
@@ -69,7 +70,7 @@ export type PlaybackErrorEvent =
 	| AndroidPlaybackErrorEvent
 	| IosPlaybackErrorEvent
 
-export interface OrpheusEvents {
+export type OrpheusEvents = {
 	onPlaybackStateChanged(event: { state: PlaybackState }): void
 	onTrackStarted(event: { trackId: string; reason: number }): void
 	onTrackFinished(event: {
@@ -102,10 +103,7 @@ export interface OrpheusEvents {
 		message?: string
 	}): void
 	onStatusBarLyricsStatusChanged(): void
-	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
-	[key: string]: (...args: any[]) => void
 }
-
 export interface OrpheusHeadlessTrackStartedEvent {
 	eventName: 'onTrackStarted'
 	trackId: string
@@ -199,8 +197,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	requestOverlayPermission(): Promise<void>
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
-	setDesktopLyrics(lyricsJson: string): Promise<void>
-	setStatusBarLyrics(lyricsJson: string): Promise<void>
+	setDesktopLyricsInternal(lyricsJson: string): Promise<void>
+	setStatusBarLyricsInternal(lyricsJson: string): Promise<void>
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
 	debugTriggerError(): Promise<void>
@@ -213,23 +211,27 @@ const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')
 /**
  * Orpheus 模块的包装对象，提供更好的类型支持和便捷方法。
  */
-export const Orpheus = Object.assign(Object.create(NativeModuleInstance), {
-	/**
-	 * 设置桌面歌词数据
-	 */
-	setDesktopLyrics: async (data: LyricsData) => {
-		return await NativeModuleInstance.setDesktopLyrics(JSON.stringify(data))
-	},
-
-	/**
-	 * 设置状态栏歌词数据
-	 */
-	setStatusBarLyrics: async (data: LyricsData) => {
-		return await NativeModuleInstance.setStatusBarLyrics(JSON.stringify(data))
-	},
-}) as NativeOrpheusModule & {
+export const Orpheus = NativeModuleInstance as NativeOrpheusModule & {
 	setDesktopLyrics(data: LyricsData): Promise<void>
 	setStatusBarLyrics(data: LyricsData): Promise<void>
+}
+
+/**
+ * 设置桌面歌词数据
+ */
+Orpheus.setDesktopLyrics = async (data: LyricsData) => {
+	return await NativeModuleInstance.setDesktopLyricsInternal(
+		JSON.stringify(data),
+	)
+}
+
+/**
+ * 设置状态栏歌词数据
+ */
+Orpheus.setStatusBarLyrics = async (data: LyricsData) => {
+	return await NativeModuleInstance.setStatusBarLyricsInternal(
+		JSON.stringify(data),
+	)
 }
 
 export const SPECTRUM_SIZE = 512

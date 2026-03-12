@@ -100,7 +100,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 			package: getUniqueIdentifier(),
 			versionCode: versionCode,
-			edgeToEdgeEnabled: true,
 			runtimeVersion: version,
 			intentFilters: [
 				{

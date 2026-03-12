@@ -16,7 +16,8 @@ data class LyricsLine(
     @SerialName("timestamp") val timestamp: Double, // 秒
     @SerialName("endTime") val endTime: Double? = null, // 秒
     @SerialName("text") val text: String,
-    @SerialName("translations") val translations: List<String>? = null,
+    @SerialName("translation") val translation: String? = null,
+    @SerialName("romaji") val romaji: String? = null,
     @SerialName("spans") val spans: List<LyricSpan>? = null
 )
 

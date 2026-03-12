@@ -841,7 +841,7 @@ class ExpoOrpheusModule : Module() {
             OrpheusMusicService.instance?.floatingLyricsManager?.hide()
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("setDesktopLyrics") { lyricsJson: String ->
+        AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
@@ -853,7 +853,7 @@ class ExpoOrpheusModule : Module() {
             }
         }.runOnQueue(Queues.MAIN)
 
-        AsyncFunction("setStatusBarLyrics") { lyricsJson: String ->
+        AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
