@@ -15,8 +15,10 @@ echo "🔄 Updating Lyricon source to version/commit: $VERSION"
 
 # 1. Clone the repository
 echo "📥 Cloning $LYRICON_REPO..."
-git clone --depth 1 --branch "$VERSION" "$LYRICON_REPO" "$TEMP_DIR" || \
-(git clone "$LYRICON_REPO" "$TEMP_DIR" && cd "$TEMP_DIR" && git checkout "$VERSION")
+git clone "$LYRICON_REPO" "$TEMP_DIR"
+cd "$TEMP_DIR"
+git checkout "$VERSION"
+cd - > /dev/null
 
 # 2. Prepare target directories (Clean up specifically the io/github/proify/lyricon path)
 echo "🧹 Cleaning up old Lyricon source..."
@@ -53,7 +55,15 @@ else
     echo "⚠️  Warning: ProviderBinder.kt not found at $BINDER_FILE"
 fi
 
-# 5. Cleanup
+# 5. Update .lyricon_version
+echo "📝 Updating .lyricon_version..."
+cd "$TEMP_DIR"
+ACTUAL_COMMIT=$(git rev-parse HEAD)
+cd - > /dev/null
+echo "$ACTUAL_COMMIT" > .lyricon_version
+echo "  - Set .lyricon_version to $ACTUAL_COMMIT"
+
+# 6. Cleanup
 echo "🧹 Cleaning up temporary files..."
 rm -rf "$TEMP_DIR"
 

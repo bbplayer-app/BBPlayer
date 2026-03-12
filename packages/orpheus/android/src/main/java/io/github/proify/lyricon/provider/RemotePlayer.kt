@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.provider
 
+import android.media.session.PlaybackState
 import androidx.annotation.IntRange
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.Song
@@ -86,4 +87,11 @@ interface RemotePlayer {
      * @param displayRoma 是否显示罗马音
      */
     fun setDisplayRoma(displayRoma: Boolean): Boolean
+
+    /**
+     * 设置远程使用[PlaybackState]实现判断播放状态，计算播放位置。
+     *
+     * @param state 播放状态
+     */
+    fun setPlaybackState(state: PlaybackState?): Boolean
 }

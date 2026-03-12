@@ -6,7 +6,10 @@
 
 package io.github.proify.lyricon.provider
 
+import android.media.session.PlaybackState
 import io.github.proify.lyricon.lyric.model.Song
+import io.github.proify.lyricon.provider.CachedRemotePlayer.PlaybackStateSyncType.Auto
+import io.github.proify.lyricon.provider.CachedRemotePlayer.PlaybackStateSyncType.Manually
 
 /**
  * [RemotePlayer] 的装饰器实现，支持断线重连后的状态恢复。
@@ -24,9 +27,9 @@ class CachedRemotePlayer(
     var lastSong: Song? = null
         private set
 
-    /** 最近的播放状态（正在播放为 true） */
+    /** 最近的播放状态 */
     @Volatile
-    var lastPlaybackState: Boolean = false
+    var isPlaying: Boolean = false
         private set
 
     /** 最近的播放位置（毫秒） */
@@ -56,8 +59,18 @@ class CachedRemotePlayer(
     @Volatile
     private var lastLyricType = LastLyricType.NONE
 
+    @Volatile
+    private var lastPlaybackState: PlaybackState? = null
+
+    @Volatile
+    private var lastPlaybackStateSyncType = Manually
+
     private enum class LastLyricType {
         SONG, TEXT, NONE
+    }
+
+    private enum class PlaybackStateSyncType {
+        Manually, Auto
     }
 
     /**
@@ -65,23 +78,28 @@ class CachedRemotePlayer(
      */
     @Synchronized
     internal fun syncs() {
-        player.setPlaybackState(lastPlaybackState)
-
         val interval = lastPositionUpdateInterval
-        if (interval >= 0) {
-            player.setPositionUpdateInterval(interval)
-        }
+        if (interval >= 0) setPositionUpdateInterval(interval)
 
-        lastDisplayTranslation?.let { player.setDisplayTranslation(it) }
-        lastDisplayRoma?.let { player.setDisplayRoma(it) }
+        lastDisplayTranslation?.let { setDisplayTranslation(it) }
+        lastDisplayRoma?.let { setDisplayRoma(it) }
 
         when (lastLyricType) {
-            LastLyricType.SONG -> player.setSong(lastSong)
-            LastLyricType.TEXT -> player.sendText(lastText)
+            LastLyricType.SONG -> setSong(lastSong)
+            LastLyricType.TEXT -> sendText(lastText)
             else -> Unit
         }
 
-        player.seekTo(lastPosition.coerceAtLeast(0))
+        when (lastPlaybackStateSyncType) {
+            Manually -> {
+                setPlaybackState(isPlaying)
+                seekTo(lastPosition.coerceAtLeast(0))
+            }
+
+            Auto -> {
+                setPlaybackState(lastPlaybackState)
+            }
+        }
     }
 
     override val isActive: Boolean get() = player.isActive
@@ -93,16 +111,19 @@ class CachedRemotePlayer(
     }
 
     override fun setPlaybackState(playing: Boolean): Boolean {
-        lastPlaybackState = playing
+        lastPlaybackStateSyncType = Manually
+        isPlaying = playing
         return player.setPlaybackState(playing)
     }
 
     override fun seekTo(position: Long): Boolean {
+        lastPlaybackStateSyncType = Manually
         lastPosition = position
         return player.seekTo(position)
     }
 
     override fun setPosition(position: Long): Boolean {
+        lastPlaybackStateSyncType = Manually
         lastPosition = position
         return player.setPosition(position)
     }
@@ -126,5 +147,11 @@ class CachedRemotePlayer(
     override fun setDisplayRoma(displayRoma: Boolean): Boolean {
         lastDisplayRoma = displayRoma
         return player.setDisplayRoma(displayRoma)
+    }
+
+    override fun setPlaybackState(state: PlaybackState?): Boolean {
+        lastPlaybackStateSyncType = Auto
+        lastPlaybackState = state
+        return player.setPlaybackState(state)
     }
 }

@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.provider.impl
 
+import android.media.session.PlaybackState
 import android.os.Build
 import android.os.SharedMemory
 import android.util.Log
@@ -97,6 +98,11 @@ internal class RemotePlayerProxy : RemotePlayer, RemoteServiceBinder<IRemotePlay
 
     override fun setDisplayRoma(displayRoma: Boolean): Boolean =
         executeRemoteCall { it.setDisplayRoma(displayRoma) }
+
+    override fun setPlaybackState(state: PlaybackState?): Boolean =
+        executeRemoteCall {
+            it.setPlaybackState2(state)
+        }
 
     override val isActive: Boolean
         get() = iRemotePlayer?.asBinder()?.isBinderAlive == true

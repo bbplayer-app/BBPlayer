@@ -32,3 +32,9 @@ BBPlayer 高性能核心音频播放模块。
 ## 声明
 
 该库主要供 BBPlayer 内部使用。虽然代码开源，但我们主要关注满足 BBPlayer 的功能需求。
+
+## 关于 Lyricon
+
+本项目在 `packages/orpheus/android` 中内置了来自 [tomakino/lyricon](https://github.com/tomakino/lyricon) 的部分核心代码，用于处理 Lyricon 相关的连接逻辑。
+
+采用直接克隆代码而非引入依赖库的方式，是因为 Lyricon 使用了 kotlin 2.3.0，而我们主项目的 kotlin 版本更低，导致 metadata 不兼容，无法直接引入。

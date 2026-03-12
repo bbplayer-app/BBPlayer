@@ -4,8 +4,6 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-@file:Suppress("unused")
-
 package io.github.proify.lyricon.provider
 
 import android.app.ActivityManager

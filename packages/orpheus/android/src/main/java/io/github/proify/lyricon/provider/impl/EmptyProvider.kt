@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.provider.impl
 
+import android.media.session.PlaybackState
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.ConnectionListener
 import io.github.proify.lyricon.provider.ConnectionStatus
@@ -42,5 +43,6 @@ class EmptyProvider(override val providerInfo: ProviderInfo) : LyriconProvider {
         override fun sendText(text: String?): Boolean = false
         override fun setDisplayTranslation(displayTranslation: Boolean): Boolean = false
         override fun setDisplayRoma(displayRoma: Boolean): Boolean = false
+        override fun setPlaybackState(state: PlaybackState?): Boolean = false
     }
 }
