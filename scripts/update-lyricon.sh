@@ -60,8 +60,9 @@ echo "📝 Updating .lyricon_version..."
 cd "$TEMP_DIR"
 ACTUAL_COMMIT=$(git rev-parse HEAD)
 cd - > /dev/null
-echo "$ACTUAL_COMMIT" > .lyricon_version
-echo "  - Set .lyricon_version to $ACTUAL_COMMIT"
+VERSION_FILE="packages/orpheus/.lyricon_version"
+echo "$ACTUAL_COMMIT" > "$VERSION_FILE"
+echo "  - Set $VERSION_FILE to $ACTUAL_COMMIT"
 
 # 6. Cleanup
 echo "🧹 Cleaning up temporary files..."

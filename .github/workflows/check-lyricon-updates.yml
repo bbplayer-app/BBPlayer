@@ -35,8 +35,9 @@ jobs:
 
           # 获取我们当前记录的 commit (如果有的话)
           CURRENT_COMMIT="unknown"
-          if [ -f .lyricon_version ]; then
-            CURRENT_COMMIT=$(cat .lyricon_version)
+          VERSION_FILE="packages/orpheus/.lyricon_version"
+          if [ -f "$VERSION_FILE" ]; then
+            CURRENT_COMMIT=$(cat "$VERSION_FILE")
           fi
           echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
 
@@ -92,7 +93,7 @@ jobs:
 
             body += `如果确认需要同步，请在本地运行以下命令更新代码：\n`;
             body += "```bash\n./scripts/update-lyricon.sh " + latestCommit.substring(0, 7) + "\n```\n\n";
-            body += `*更新完成后，请记得修改 \`.lyricon_version\` 文件记录最新的 commit hash。*`;
+            body += `*更新完成后，请记得修改 \`packages/orpheus/.lyricon_version\` 文件记录最新的 commit hash。*`;
 
             github.rest.issues.create({
               owner: context.repo.owner,

@@ -279,8 +279,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			eas: {
 				projectId: '1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
 			},
-			updateManifestUrl:
-				'https://cdn.jsdelivr.net/gh/bbplayer-app/bbplayer@master/update.json',
+			updateManifestUrl: 'https://be.bbplayer.roitium.com/update.json',
 		},
 		owner: 'roitium',
 		updates: {

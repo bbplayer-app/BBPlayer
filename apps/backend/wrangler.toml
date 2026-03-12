@@ -6,6 +6,10 @@ routes = [{ pattern = "be.bbplayer.roitium.com", custom_domain = true }]
 
 # JWT_SECRET 和 DATABASE_URL 通过 `wrangler secret put` 设置
 
+[[kv_namespaces]]
+binding = "KV"
+id = "bf12576248b9475f99b8465d8b962e65"
+
 [dev]
 local_protocol = "http"
 
