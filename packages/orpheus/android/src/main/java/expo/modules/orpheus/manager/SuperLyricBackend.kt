@@ -9,6 +9,10 @@ import expo.modules.orpheus.model.LyricsLine
 
 private const val TAG = "SuperLyricBackend"
 
+/**
+ * SuperLyric implementation for status bar lyrics.
+ * Simple line-by-line display protocol.
+ */
 class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
     override val isAvailable: Boolean
@@ -23,25 +27,16 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
         this.lastLyrics = lyrics
         this.lastOffset = offset
         this.lastLineIndex = -1
-        Log.d(TAG, "[setLyrics] cached ${lyrics.size} lines")
     }
 
     override fun updateTime(seconds: Double) {
         if (!SuperLyricTool.isEnabled) {
-            val now = System.currentTimeMillis()
-            if (now - lastSkipLogTime > 5000) {
-                Log.w(TAG, "[updateTime] SKIP: SuperLyric NOT active at ${seconds}s")
-                lastSkipLogTime = now
-            }
+            logThrottle("SuperLyric not active")
             return
         }
 
         if (lastLyrics.isEmpty()) {
-            val now = System.currentTimeMillis()
-            if (now - lastSkipLogTime > 2000) {
-                Log.d(TAG, "[updateTime] SKIP: lyrics empty at ${seconds}s")
-                lastSkipLogTime = now
-            }
+            logThrottle("Lyrics empty")
             return
         }
 
@@ -58,15 +53,14 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
     private fun sendLineToSuperLyric(index: Int, seconds: Double, adjustedTime: Double) {
         if (index < 0 || index >= lastLyrics.size) return
         val line = lastLyrics[index]
-        val delayMs = if (index + 1 < lastLyrics.size) {
-            ((lastLyrics[index + 1].timestamp - line.timestamp) * 1000).toInt()
+        val nextTimestamp = lastLyrics.getOrNull(index + 1)?.timestamp
+        val delayMs = if (nextTimestamp != null) {
+            ((nextTimestamp - line.timestamp) * 1000).toInt()
         } else {
             0
         }
 
-        val translation = line.translations?.getOrNull(0)
-        Log.d(TAG, "[sendLine] line[$index/${lastLyrics.size - 1}] pos=${seconds}s adj=${adjustedTime}s delay=${delayMs}ms | \"${line.text}\"")
-
+        val translation = line.translations?.firstOrNull()
         lastLineIndex = index
 
         val data = SuperLyricData()
@@ -80,14 +74,15 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         try {
             SuperLyricPush.onSuperLyric(data)
+            Log.d(TAG, "[sendLine] index=$index text=\"${line.text}\"")
         } catch (e: Exception) {
-            Log.e(TAG, "[sendLine] FAILED: ${e.message}", e)
+            Log.e(TAG, "[sendLine] Failed: ${e.message}")
         }
     }
 
     override fun setPlaybackState(isPlaying: Boolean) {
         if (isPlaying && lastLineIndex >= 0) {
-            // Re-send current line on resume to ensure it's visible
+            // Re-send current line on resume to ensure it remains visible
             sendLineToSuperLyric(lastLineIndex, 0.0, 0.0)
         }
     }
@@ -97,17 +92,20 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
         lastLineIndex = -1
         lastSkipLogTime = 0L
 
-        if (!SuperLyricTool.isEnabled) {
-            Log.d(TAG, "[onStop] skipped: SuperLyric not active")
-            return
-        }
+        if (!SuperLyricTool.isEnabled) return
 
-        val data = SuperLyricData().setPackageName(context.packageName)
         try {
-            SuperLyricPush.onStop(data)
-            Log.d(TAG, "[onStop] onStop sent OK pkg=${context.packageName}")
+            SuperLyricPush.onStop(SuperLyricData().setPackageName(context.packageName))
         } catch (e: Exception) {
-            Log.e(TAG, "[onStop] FAILED: ${e.message}", e)
+            Log.e(TAG, "[onStop] Failed: ${e.message}")
+        }
+    }
+
+    private fun logThrottle(message: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastSkipLogTime > 5000) {
+            Log.w(TAG, message)
+            lastSkipLogTime = now
         }
     }
 }

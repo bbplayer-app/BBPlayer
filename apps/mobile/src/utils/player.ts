@@ -261,68 +261,54 @@ function pushLyricsToOverlays(
 		clearTimeout(debouncedPushLyricsToOverlays)
 	}
 	const setIt = async () => {
+		if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
+
 		try {
-			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
 			const trackResult = await trackService.getTrackByUniqueKey(trackId)
-			if (trackResult.isErr()) {
-				toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
-				return
-			}
-			const track = trackResult.value
+			if (trackResult.isErr()) throw trackResult.error
+
 			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
-			const lyricsResult = await lyricService.smartFetchLyrics(track)
-			if (lyricsResult.isErr()) {
-				toastAndLogError('获取歌词失败：', lyricsResult.error, 'Utils.Player')
-				return
+			const lyricsResult = await lyricService.smartFetchLyrics(
+				trackResult.value,
+			)
+			if (lyricsResult.isErr()) throw lyricsResult.error
+
+			const mergedLyrics =
+				(lyricsResult.value.lrc ?? '') +
+				'\n' +
+				(lyricsResult.value.tlyric ?? '')
+			const parsedLyrics = parseSpl(mergedLyrics)
+
+			const orpheusLyrics = parsedLyrics.lines.map((line) => ({
+				timestamp: line.startTime / 1000,
+				endTime: line.endTime / 1000,
+				text: line.content,
+				translations: line.translations,
+				spans: line.isDynamic
+					? line.spans.map((span) => ({
+							text: span.text,
+							startTime: span.startTime,
+							endTime: span.endTime,
+							duration: span.duration,
+						}))
+					: undefined,
+			}))
+
+			if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
+
+			const payload = {
+				lyrics: orpheusLyrics,
+				offset: lyricsResult.value.misc?.userOffset ?? 0,
 			}
-			try {
-				const mergedLyrics =
-					(lyricsResult.value.lrc ?? '') +
-					'\n' +
-					(lyricsResult.value.tlyric ?? '')
-				const parsedLyrics = parseSpl(mergedLyrics)
-				const orpheusLyrics = parsedLyrics.lines.map((line) => {
-					return {
-						timestamp: line.startTime / 1000,
-						endTime: line.endTime / 1000,
-						text: line.content,
-						translations: line.translations,
-						spans: line.isDynamic
-							? line.spans.map((span) => ({
-									text: span.text,
-									startTime: span.startTime,
-									endTime: span.endTime,
-									duration: span.duration,
-								}))
-							: undefined,
-					}
-				})
-				if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return
-				const payload = JSON.stringify({
-					lyrics: orpheusLyrics,
-					offset: lyricsResult.value.misc?.userOffset ?? 0,
-				})
-				if (Orpheus.isDesktopLyricsShown) {
-					try {
-						await Orpheus.setDesktopLyrics(payload)
-					} catch (e) {
-						toastAndLogError('设置桌面歌词失败：', e, 'Utils.Player')
-					}
-				}
-				if (Orpheus.isStatusBarLyricsEnabled) {
-					try {
-						await Orpheus.setStatusBarLyrics(payload)
-					} catch (e) {
-						toastAndLogError('设置状态栏歌词失败：', e, 'Utils.Player')
-					}
-				}
-			} catch (e) {
-				toastAndLogError('解析歌词失败：', e, 'Utils.Player')
-				return
+
+			if (Orpheus.isDesktopLyricsShown) {
+				await Orpheus.setDesktopLyrics(payload)
+			}
+			if (Orpheus.isStatusBarLyricsEnabled) {
+				await Orpheus.setStatusBarLyrics(payload)
 			}
 		} catch (e) {
-			toastAndLogError('设置歌词失败：', e, 'Utils.Player')
-			return
+			toastAndLogError('更新歌词显示失败', e, 'Utils.Player')
 		}
 	}
 	debouncedPushLyricsToOverlays = setTimeout(() => {

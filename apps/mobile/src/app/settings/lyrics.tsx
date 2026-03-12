@@ -37,7 +37,7 @@ export default function LyricsSettingsPage() {
 		Orpheus.isLyriconApiEnabled,
 	)
 	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
-		Orpheus.statusBarLyricsProvider ?? 'superlyric',
+		Orpheus.statusBarLyricsProvider ?? 'lyricon',
 	)
 
 	const lyricSource = useAppStore((state) => state.settings.lyricSource)
@@ -246,20 +246,39 @@ export default function LyricsSettingsPage() {
 							</FunctionalMenu>
 						</View>
 						<View style={styles.settingRow}>
-							<Text
-								style={
-									!isStatusBarLyricsProviderActive
-										? { opacity: 0.4 }
-										: undefined
-								}
-							>
-								状态栏歌词
-								{!isStatusBarLyricsProviderActive
-									? statusBarLyricsProvider === 'lyricon'
-										? '（需安装词幕模块）'
-										: '（需安装 SuperLyric 模块）'
-									: ''}
-							</Text>
+							<View style={{ flex: 1, marginRight: 16 }}>
+								<Text
+									style={
+										!isStatusBarLyricsProviderActive
+											? { opacity: 0.4 }
+											: undefined
+									}
+								>
+									状态栏歌词
+									{!isStatusBarLyricsProviderActive
+										? statusBarLyricsProvider === 'lyricon'
+											? '（需安装词幕模块）'
+											: '（需安装 SuperLyric 模块）'
+										: ''}
+								</Text>
+								{!isStatusBarLyricsProviderActive && (
+									<Text
+										style={{
+											fontSize: 12,
+											opacity: 0.5,
+											marginTop: 4,
+											color: colors.primary,
+										}}
+										onPress={() =>
+											router.push(
+												'https://bbplayer.roitium.com/guides/lyrics.html#status-bar-lyric',
+											)
+										}
+									>
+										未检测到可用环境，请点击查看配置文档
+									</Text>
+								)}
+							</View>
 							<Switch
 								disabled={!isStatusBarLyricsProviderActive}
 								value={isStatusBarLyricsEnabled}

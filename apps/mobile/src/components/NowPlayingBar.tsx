@@ -369,6 +369,7 @@ const styles = StyleSheet.create({
 	nowPlayingBarControls: {
 		flexDirection: 'row',
 		alignItems: 'center',
+		marginRight: 4,
 	},
 	nowPlayingBarControlButton: {
 		borderRadius: 99999,
