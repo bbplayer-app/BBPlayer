@@ -8,7 +8,7 @@ set -e
 VERSION=${1:-master}
 TARGET_JAVA_DIR="packages/orpheus/android/src/main/java"
 TARGET_AIDL_DIR="packages/orpheus/android/src/main/aidl"
-LYRICON_REPO="https://github.com/proify/lyricon.git"
+LYRICON_REPO="https://github.com/tomakino/lyricon.git"
 TEMP_DIR="/tmp/lyricon-update-$$"
 
 echo "🔄 Updating Lyricon source to version/commit: $VERSION"

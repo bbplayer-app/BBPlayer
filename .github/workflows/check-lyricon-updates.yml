@@ -18,8 +18,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 获取 proify/lyricon 仓库 master 分支的最新 commit hash
-          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/proify/lyricon/commits/master")
+          # 获取 tomakino/lyricon 仓库 master 分支的最新 commit hash
+          RESPONSE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/tomakino/lyricon/commits/master")
           LATEST_COMMIT=$(echo "$RESPONSE" | jq -r '.sha // empty')
 
           if [ -z "$LATEST_COMMIT" ] || [ "$LATEST_COMMIT" = "null" ]; then
@@ -47,9 +47,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 比较我们记录的 commit 和最新的 commit 之间，provider 和 model 目录是否有变动
-          DIFF_URL="https://api.github.com/repos/proify/lyricon/compare/${{ steps.fetch_commit.outputs.current_commit }}...${{ steps.fetch_commit.outputs.latest_commit }}"
+          DIFF_URL="https://api.github.com/repos/tomakino/lyricon/compare/${{ steps.fetch_commit.outputs.current_commit }}...${{ steps.fetch_commit.outputs.latest_commit }}"
 
-          HAS_CHANGES=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "$DIFF_URL" | jq -r '(.files // [])[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
+          HAS_CHANGES=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" "$DIFF_URL" | jq -r '(.files // [])[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
 
           if [ "$HAS_CHANGES" -gt 0 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -67,10 +67,10 @@ jobs:
             const latestCommit = '${{ steps.fetch_commit.outputs.latest_commit }}';
             const currentCommit = '${{ steps.fetch_commit.outputs.current_commit }}';
 
-            let body = `检测到上游库 \`proify/lyricon\` 的 \`provider\` 或 \`model\` 代码可能发生了更新。\n\n`;
+            let body = `检测到上游库 \`tomakino/lyricon\` 的 \`provider\` 或 \`model\` 代码可能发生了更新。\n\n`;
 
             if (currentCommit !== 'unknown') {
-              body += `您可以查看变更详情: [Compare ${currentCommit.substring(0,7)}...${latestCommit.substring(0,7)}](https://github.com/proify/lyricon/compare/${currentCommit}...${latestCommit})\n\n`;
+              body += `您可以查看变更详情: [Compare ${currentCommit.substring(0,7)}...${latestCommit.substring(0,7)}](https://github.com/tomakino/lyricon/compare/${currentCommit}...${latestCommit})\n\n`;
             }
 
             body += `如果确认需要同步，请在本地运行以下命令更新代码：\n`;
