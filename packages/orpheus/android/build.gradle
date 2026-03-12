@@ -1,6 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'kotlinx-serialization'
+apply plugin: 'kotlin-parcelize'
 
 import groovy.json.JsonSlurper
 
@@ -44,18 +45,22 @@ android {
         versionCode 1
         versionName packageJson.version
     }
+    buildFeatures {
+        aidl = true
+    }
     lintOptions {
         abortOnError false
     }
     kotlinOptions {
-        // lyricon provider is compiled with Kotlin 2.3; suppress metadata version mismatch
-        freeCompilerArgs += ['-Xskip-metadata-version-check']
+        freeCompilerArgs += [
+            "-opt-in=kotlin.io.encoding.ExperimentalEncodingApi",
+            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+        ]
     }
 }
 
 dependencies {
     implementation 'com.github.HChenX:SuperLyricApi:2.4'
-    implementation 'io.github.proify.lyricon:provider:0.1.68'
     implementation "androidx.media3:media3-exoplayer:1.9.0"
     implementation "androidx.media3:media3-session:1.9.0"
     implementation "androidx.media3:media3-transformer:1.9.0"

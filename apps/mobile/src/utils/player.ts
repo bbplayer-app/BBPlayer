@@ -275,17 +275,26 @@ function pushLyricsToOverlays(
 				toastAndLogError('获取歌词失败：', lyricsResult.error, 'Utils.Player')
 				return
 			}
-			const mergedLyrics =
-				(lyricsResult.value.lrc ?? '') +
-				'\n' +
-				(lyricsResult.value.tlyric ?? '')
 			try {
+				const mergedLyrics =
+					(lyricsResult.value.lrc ?? '') +
+					'\n' +
+					(lyricsResult.value.tlyric ?? '')
 				const parsedLyrics = parseSpl(mergedLyrics)
 				const orpheusLyrics = parsedLyrics.lines.map((line) => {
 					return {
 						timestamp: line.startTime / 1000,
+						endTime: line.endTime / 1000,
 						text: line.content,
-						translation: line.translations[0],
+						translations: line.translations,
+						spans: line.isDynamic
+							? line.spans.map((span) => ({
+									text: span.text,
+									startTime: span.startTime,
+									endTime: span.endTime,
+									duration: span.duration,
+								}))
+							: undefined,
 					}
 				})
 				if (currentTimestamp !== lastPushLyricsToOverlaysTimestamp) return

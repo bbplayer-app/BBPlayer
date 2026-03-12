@@ -97,10 +97,22 @@ export default function LyricsSettingsPage() {
 			setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
 			setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 			setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
-			setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'superlyric')
+			setStatusBarLyricsProvider(
+				Orpheus.statusBarLyricsProvider ?? 'superlyric',
+			)
 		})
+
+		const statusListener = Orpheus.addListener(
+			'onStatusBarLyricsStatusChanged',
+			() => {
+				setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
+				setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
+			},
+		)
+
 		return () => {
 			listener.remove()
+			statusListener.remove()
 		}
 	}, [])
 
@@ -198,7 +210,11 @@ export default function LyricsSettingsPage() {
 								<Checkbox.Item
 									mode='ios'
 									label={`SuperLyric${!isSuperLyricApiEnabled ? '（未激活）' : ''}`}
-									status={statusBarLyricsProvider === 'superlyric' ? 'checked' : 'unchecked'}
+									status={
+										statusBarLyricsProvider === 'superlyric'
+											? 'checked'
+											: 'unchecked'
+									}
 									onPress={() => {
 										try {
 											Orpheus.statusBarLyricsProvider = 'superlyric'
@@ -212,7 +228,11 @@ export default function LyricsSettingsPage() {
 								<Checkbox.Item
 									mode='ios'
 									label={`词幕 (Lyricon)${statusBarLyricsProvider === 'lyricon' && !isLyriconApiEnabled ? '（未连接）' : ''}`}
-									status={statusBarLyricsProvider === 'lyricon' ? 'checked' : 'unchecked'}
+									status={
+										statusBarLyricsProvider === 'lyricon'
+											? 'checked'
+											: 'unchecked'
+									}
 									onPress={() => {
 										try {
 											Orpheus.statusBarLyricsProvider = 'lyricon'

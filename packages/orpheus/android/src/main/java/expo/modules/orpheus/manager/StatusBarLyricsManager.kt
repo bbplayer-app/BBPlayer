@@ -8,6 +8,20 @@ private const val TAG = "StatusBarLyrics"
 
 class StatusBarLyricsManager(private val context: Context) {
 
+    interface StatusChangeListener {
+        fun onStatusChanged()
+    }
+
+    private var statusChangeListener: StatusChangeListener? = null
+
+    fun setStatusChangeListener(listener: StatusChangeListener?) {
+        statusChangeListener = listener
+    }
+
+    fun notifyStatusChanged() {
+        statusChangeListener?.onStatusChanged()
+    }
+
     var enabled: Boolean = false
         set(value) {
             val prev = field

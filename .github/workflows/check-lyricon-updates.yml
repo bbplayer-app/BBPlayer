@@ -1,0 +1,74 @@
+name: Check Lyricon Updates
+
+on:
+  schedule:
+    # 每天凌晨 2 点运行一次 (UTC 时间)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch latest commit from Lyricon
+        id: fetch_commit
+        run: |
+          # 获取 proify/lyricon 仓库 master 分支的最新 commit hash
+          LATEST_COMMIT=$(curl -s "https://api.github.com/repos/proify/lyricon/commits/master" | jq -r '.sha')
+          echo "latest_commit=$LATEST_COMMIT" >> $GITHUB_OUTPUT
+
+          # 获取我们当前记录的 commit (如果有的话)
+          CURRENT_COMMIT="unknown"
+          if [ -f .lyricon_version ]; then
+            CURRENT_COMMIT=$(cat .lyricon_version)
+          fi
+          echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
+
+          echo "Current: $CURRENT_COMMIT"
+          echo "Latest:  $LATEST_COMMIT"
+
+      - name: Check if there are changes in provider or model directories
+        if: steps.fetch_commit.outputs.current_commit != steps.fetch_commit.outputs.latest_commit && steps.fetch_commit.outputs.current_commit != 'unknown'
+        id: check_diff
+        run: |
+          # 比较我们记录的 commit 和最新的 commit 之间，provider 和 model 目录是否有变动
+          DIFF_URL="https://api.github.com/repos/proify/lyricon/compare/${{ steps.fetch_commit.outputs.current_commit }}...${{ steps.fetch_commit.outputs.latest_commit }}"
+
+          HAS_CHANGES=$(curl -s "$DIFF_URL" | jq -r '.files[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
+
+          if [ "$HAS_CHANGES" -gt 0 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Found changes in relevant directories."
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes in provider or model directories."
+          fi
+
+      - name: Create Issue if updates found
+        if: steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const latestCommit = '${{ steps.fetch_commit.outputs.latest_commit }}';
+            const currentCommit = '${{ steps.fetch_commit.outputs.current_commit }}';
+
+            let body = `检测到上游库 \`proify/lyricon\` 的 \`provider\` 或 \`model\` 代码可能发生了更新。\n\n`;
+
+            if (currentCommit !== 'unknown') {
+              body += `您可以查看变更详情: [Compare ${currentCommit.substring(0,7)}...${latestCommit.substring(0,7)}](https://github.com/proify/lyricon/compare/${currentCommit}...${latestCommit})\n\n`;
+            }
+
+            body += `如果确认需要同步，请在本地运行以下命令更新代码：\n`;
+            body += "```bash\n./scripts/update-lyricon.sh " + latestCommit.substring(0, 7) + "\n```\n\n";
+            body += `*更新完成后，请记得修改 \`.lyricon_version\` 文件记录最新的 commit hash。*`;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔄 Lyricon Provider 上游代码有更新',
+              body: body,
+              labels: ['dependencies', 'lyricon']
+            });

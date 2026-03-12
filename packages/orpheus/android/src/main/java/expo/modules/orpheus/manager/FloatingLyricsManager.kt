@@ -171,10 +171,11 @@ class FloatingLyricsManager(context: Context, private val player: ExoPlayer?) {
             if (line == null) {
                 lyricsTextView?.text = ""
             } else {
-                val text = if (line.translation.isNullOrEmpty()) {
+                val translation = line.translations?.firstOrNull()
+                val text = if (translation.isNullOrEmpty()) {
                     line.text
                 } else {
-                    "${line.text}\n${line.translation}"
+                    "${line.text}\n$translation"
                 }
                 lyricsTextView?.text = text
             }

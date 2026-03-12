@@ -4,10 +4,20 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LyricsLine(
-    @SerialName("timestamp") val timestamp: Double,
+data class LyricSpan(
     @SerialName("text") val text: String,
-    @SerialName("translation") val translation: String? = null
+    @SerialName("startTime") val startTime: Long, // 毫秒
+    @SerialName("endTime") val endTime: Long,     // 毫秒
+    @SerialName("duration") val duration: Long    // 毫秒
+)
+
+@Serializable
+data class LyricsLine(
+    @SerialName("timestamp") val timestamp: Double, // 秒
+    @SerialName("endTime") val endTime: Double? = null, // 秒
+    @SerialName("text") val text: String,
+    @SerialName("translations") val translations: List<String>? = null,
+    @SerialName("spans") val spans: List<LyricSpan>? = null
 )
 
 @Serializable

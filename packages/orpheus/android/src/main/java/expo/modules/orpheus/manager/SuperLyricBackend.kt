@@ -58,8 +58,9 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
             0
         }
 
+        val translation = line.translations?.getOrNull(0)
         Log.d(TAG, "[updateTime] line[$index/${lyrics.size - 1}] pos=${seconds}s adj=${adjustedTime}s delay=${delayMs}ms | \"${line.text}\"" +
-                if (!line.translation.isNullOrEmpty()) " / \"${line.translation}\"" else "")
+                if (!translation.isNullOrEmpty()) " / \"$translation\"" else "")
 
         currentLineIndex = index
 
@@ -68,8 +69,8 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
             .setPackageName(context.packageName)
             .setDelay(delayMs)
 
-        if (!line.translation.isNullOrEmpty()) {
-            data.setTranslation(line.translation)
+        if (!translation.isNullOrEmpty()) {
+            data.setTranslation(translation)
         }
 
         try {

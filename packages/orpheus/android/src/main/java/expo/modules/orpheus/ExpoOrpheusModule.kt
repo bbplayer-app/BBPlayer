@@ -185,7 +185,8 @@ class ExpoOrpheusModule : Module() {
             "onTrackStarted",
             "onTrackFinished",
             "onCoverDownloadProgress",
-            "onExportProgress"
+            "onExportProgress",
+            "onStatusBarLyricsStatusChanged"
         )
 
         RegisterActivityContracts {
@@ -213,6 +214,12 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
+
+                    service.statusBarLyricsManager.setStatusChangeListener(object : expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
+                        override fun onStatusChanged() {
+                            sendEvent("onStatusBarLyricsStatusChanged", emptyMap<String, Any>())
+                        }
+                    })
 
                     service.addTrackEventListener(object : OrpheusMusicService.TrackEventListener {
                         override fun onTrackStarted(trackId: String, reason: Int) {
@@ -287,23 +294,27 @@ class ExpoOrpheusModule : Module() {
         Property("isStatusBarLyricsEnabled")
             .get { GeneralStorage.isStatusBarLyricsEnabled() }
             .set { enabled: Boolean ->
-                GeneralStorage.setStatusBarLyricsEnabled(enabled)
-                OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+                mainHandler.post {
+                    GeneralStorage.setStatusBarLyricsEnabled(enabled)
+                    OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+                }
             }
 
         Property("statusBarLyricsProvider")
             .get { GeneralStorage.getStatusBarLyricsProvider() }
             .set { provider: String ->
-                // Lyricon requires API 27+; silently fall back to superlyric on older devices
-                // so the persisted value always reflects what is actually used.
-                val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
-                    "superlyric"
-                } else {
-                    provider
+                mainHandler.post {
+                    // Lyricon requires API 27+; silently fall back to superlyric on older devices
+                    // so the persisted value always reflects what is actually used.
+                    val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+                        "superlyric"
+                    } else {
+                        provider
+                    }
+                    GeneralStorage.setStatusBarLyricsProvider(effective)
+                    val service = OrpheusMusicService.instance ?: return@post
+                    service.statusBarLyricsManager.backend = service.createStatusBarBackend(effective)
                 }
-                GeneralStorage.setStatusBarLyricsProvider(effective)
-                val service = OrpheusMusicService.instance ?: return@set
-                service.statusBarLyricsManager.backend = service.createStatusBarBackend(effective)
             }
 
         Property("isSuperLyricApiEnabled")
