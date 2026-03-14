@@ -49,6 +49,7 @@ export interface ModalPropsMap {
 		shareRole?: 'owner' | 'editor' | 'subscriber' | null
 	}
 	SubscribeToSharedPlaylist: undefined
+	MergePlaylists: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

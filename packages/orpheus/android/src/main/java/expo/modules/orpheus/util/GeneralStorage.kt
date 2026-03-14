@@ -28,6 +28,7 @@ object GeneralStorage {
     private const val KEY_DESKTOP_LYRICS_DISPLAY_MODE = "config_desktop_lyrics_display_mode"
     private const val KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR = "config_desktop_lyrics_highlight_color"
     private const val KEY_DESKTOP_LYRICS_TEXT_SIZE = "config_desktop_lyrics_text_size"
+    private const val KEY_DESKTOP_LYRICS_Y = "config_desktop_lyrics_y"
 
 
     @Synchronized
@@ -156,4 +157,7 @@ object GeneralStorage {
 
     fun getDesktopLyricsTextSize() = kv?.decodeFloat(KEY_DESKTOP_LYRICS_TEXT_SIZE, 18f) ?: 18f
     fun setDesktopLyricsTextSize(size: Float) = safeKv.encode(KEY_DESKTOP_LYRICS_TEXT_SIZE, size)
+
+    fun getDesktopLyricsY() = kv?.decodeInt(KEY_DESKTOP_LYRICS_Y, 200) ?: 200
+    fun setDesktopLyricsY(y: Int) = safeKv.encode(KEY_DESKTOP_LYRICS_Y, y)
 }

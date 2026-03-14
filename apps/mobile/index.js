@@ -1,15 +1,16 @@
 import { Orpheus, registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
 
 import useAppStore from './src/hooks/stores/useAppStore'
+import { playerSideEffects } from './src/lib/player/PlayerSideEffects'
 import { analyticsService } from './src/lib/services/analyticsService'
+import lyricService from './src/lib/services/lyricService'
 import log, { reportErrorToSentry } from './src/utils/log'
-import {
-	finalizeAndRecordCurrentTrack,
-	pushLyricsToOverlays,
-} from './src/utils/player'
+import { finalizeAndRecordCurrentTrack } from './src/utils/player'
 import toast from './src/utils/toast'
 
 global.isUIReady = false
+
+playerSideEffects.initialize()
 
 const parsePlayerError = (error) => {
 	if (!error) {
@@ -98,7 +99,7 @@ registerOrpheusHeadlessTask(async (event) => {
 	if (event.eventName === 'onTrackStarted') {
 		lastResumedTime = Date.now()
 		totalPlayedTime = 0
-		pushLyricsToOverlays(event.trackId, event.reason)
+		lyricService.pushLyricsToOverlays(event.trackId)
 	} else if (event.eventName === 'onTrackResumed') {
 		lastResumedTime = Date.now()
 	} else if (event.eventName === 'onTrackPaused') {

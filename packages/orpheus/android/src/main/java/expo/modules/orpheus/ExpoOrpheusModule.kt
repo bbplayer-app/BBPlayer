@@ -186,7 +186,8 @@ class ExpoOrpheusModule : Module() {
             "onTrackFinished",
             "onCoverDownloadProgress",
             "onExportProgress",
-            "onStatusBarLyricsStatusChanged"
+            "onStatusBarLyricsStatusChanged",
+            "onRequestClearLyrics"
         )
 
         RegisterActivityContracts {
@@ -241,6 +242,16 @@ class ExpoOrpheusModule : Module() {
                                     "trackId" to trackId,
                                     "finalPosition" to finalPosition,
                                     "duration" to duration
+                                )
+                            )
+                        }
+                    })
+
+                    service.addLyricEventListener(object : OrpheusMusicService.LyricEventListener {
+                        override fun onLyricCleared(trackId: String) {
+                            sendEvent(
+                                "onRequestClearLyrics", mapOf(
+                                    "trackId" to trackId
                                 )
                             )
                         }
@@ -844,13 +855,23 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
-                    data.lyrics,
-                    data.offset
-                )
+                val mgr = OrpheusMusicService.instance?.floatingLyricsManager ?: return@AsyncFunction
+                // Auto-show the panel if the user has it enabled but it was soft-hidden
+                // (e.g. previous track had no lyrics)
+                if (GeneralStorage.isDesktopLyricsShown() && !mgr.isShowing) {
+                    mgr.show()
+                }
+                mgr.setLyrics(data.lyrics, data.offset)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }.runOnQueue(Queues.MAIN)
+
+        AsyncFunction("clearOverlaysInternal") {
+            // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
+            // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
+            OrpheusMusicService.instance?.floatingLyricsManager?.softHide()
+            OrpheusMusicService.instance?.statusBarLyricsManager?.onStop()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->

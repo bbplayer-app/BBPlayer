@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync, errAsync } from 'neverthrow'
 
@@ -107,6 +108,61 @@ export class PlaylistFacade {
 			}),
 			(e) =>
 				createFacadeError('PlaylistDuplicateFailed', '复制播放列表失败', {
+					cause: e,
+				}),
+		)
+	}
+
+	/**
+	 * 合并多个本地歌单到一个新歌单，自动去重。
+	 */
+	public async mergePlaylists(sourcePlaylistIds: number[], title: string) {
+		logger.info('开始合并播放列表', { sourcePlaylistIds, title })
+		return ResultAsync.fromPromise(
+			this.db.transaction(async (tx) => {
+				const playlistSvc = this.playlistService.withDB(tx)
+
+				// 1. 创建新歌单
+				const newPlaylistRes = await playlistSvc.createPlaylist({
+					title,
+					type: 'local',
+					authorId: null,
+					remoteSyncId: null,
+				})
+				if (newPlaylistRes.isErr()) throw newPlaylistRes.error
+				const newPlaylist = newPlaylistRes.value
+
+				// 2. 收集排重 trackId
+				const trackIdsSet = new Set<number>()
+				for (const pid of sourcePlaylistIds) {
+					const links = await tx.query.playlistTracks.findMany({
+						columns: { trackId: true },
+						where: eq(schema.playlistTracks.playlistId, pid),
+					})
+					for (const link of links) {
+						trackIdsSet.add(link.trackId)
+					}
+				}
+
+				// 3. 批量添加
+				if (trackIdsSet.size > 0) {
+					const addRes = await playlistSvc.addManyTracksToLocalPlaylist(
+						newPlaylist.id,
+						Array.from(trackIdsSet),
+					)
+					if (addRes.isErr()) throw addRes.error
+				}
+
+				logger.info('合并播放列表成功', {
+					sourcePlaylistIds,
+					newPlaylistId: newPlaylist.id,
+					trackCount: trackIdsSet.size,
+				})
+
+				return newPlaylist.id
+			}),
+			(e) =>
+				createFacadeError('PlaylistMergeFailed', '合并播放列表失败', {
 					cause: e,
 				}),
 		)

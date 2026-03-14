@@ -103,6 +103,7 @@ export type OrpheusEvents = {
 		message?: string
 	}): void
 	onStatusBarLyricsStatusChanged(): void
+	onRequestClearLyrics(event: { trackId: string }): void
 }
 export interface OrpheusHeadlessTrackStartedEvent {
 	eventName: 'onTrackStarted'
@@ -198,6 +199,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
 	setDesktopLyricsInternal(lyricsJson: string): Promise<void>
+	clearOverlaysInternal(): Promise<void>
 	setStatusBarLyricsInternal(lyricsJson: string): Promise<void>
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
@@ -214,6 +216,7 @@ const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')
 export const Orpheus = NativeModuleInstance as NativeOrpheusModule & {
 	setDesktopLyrics(data: LyricsData): Promise<void>
 	setStatusBarLyrics(data: LyricsData): Promise<void>
+	clearOverlays(): Promise<void>
 }
 
 /**
@@ -232,6 +235,13 @@ Orpheus.setStatusBarLyrics = async (data: LyricsData) => {
 	return await NativeModuleInstance.setStatusBarLyricsInternal(
 		JSON.stringify(data),
 	)
+}
+
+/**
+ * 当没有歌词时清除并隐藏所有歌词 overlay（桌面歌词面板 + 状态栏歌词）
+ */
+Orpheus.clearOverlays = async () => {
+	return await NativeModuleInstance.clearOverlaysInternal()
 }
 
 export const SPECTRUM_SIZE = 512

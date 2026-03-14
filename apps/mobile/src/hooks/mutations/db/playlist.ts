@@ -339,6 +339,41 @@ export const useCreateNewLocalPlaylist = () => {
 	})
 }
 
+export const useMergePlaylists = () => {
+	return useMutation({
+		mutationKey: ['db', 'playlist', 'mergePlaylists'],
+		mutationFn: async ({
+			sourcePlaylistIds,
+			title,
+		}: {
+			sourcePlaylistIds: number[]
+			title: string
+		}) => {
+			const result = await playlistFacade.mergePlaylists(
+				sourcePlaylistIds,
+				title,
+			)
+			if (result.isErr()) throw result.error
+			return result.value
+		},
+		onSuccess: async (newPlaylistId) => {
+			toast.success('合并成功')
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistLists(),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistContents(newPlaylistId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: playlistKeys.playlistMetadata(newPlaylistId),
+				}),
+			])
+		},
+		onError: (error) => toastAndLogError('合并播放列表失败', error, SCOPE),
+	})
+}
+
 export const useReorderLocalPlaylistTrack = () => {
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'reorderLocalPlaylistTrack'],

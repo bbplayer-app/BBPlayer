@@ -1,3 +1,5 @@
+import { Orpheus, type LyricsData } from '@bbplayer/orpheus'
+import { parseAndMergeLyrics } from '@bbplayer/splash'
 import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
 import * as FileSystem from 'expo-file-system'
@@ -10,6 +12,7 @@ import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
 import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
+import { trackService } from '@/lib/services/trackService'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type {
 	LyricFileData,
@@ -34,6 +37,10 @@ class LyricService {
 		readonly qqMusicApi: QQMusicApi,
 		readonly kugouApi: KugouApi,
 	) {}
+
+	private debouncedPushLyricsToOverlays: ReturnType<typeof setTimeout> | null =
+		null
+	private lastPushLyricsToOverlaysTimestamp: number | null = null
 
 	private cleanKeyword(keyword: string): string {
 		const priorityRegex = /《(.+?)》|「(.+?)」/
@@ -211,7 +218,16 @@ class LyricService {
 
 				const parsed = JSON.parse(content) as LyricFileData
 
-				if (!parsed || typeof parsed.lrc !== 'string') {
+				if (!parsed) {
+					throw new Error('Invalid lyric format')
+				}
+
+				// manualSkip 为 true 时直接返回缓存，不走网络
+				if (parsed.manualSkip) {
+					return parsed
+				}
+
+				if (typeof parsed.lrc !== 'string') {
 					throw new Error('Invalid lyric format')
 				}
 
@@ -233,6 +249,22 @@ class LyricService {
 				},
 			)
 		})
+	}
+
+	/**
+	 * 标记该曲目的歌词为「已跳过」，阻止自动重新获取。
+	 * 用户可随时通过手动搜索或编辑歌词来覆盖此状态。
+	 */
+	public skipLyric(
+		uniqueKey: string,
+	): ResultAsync<LyricFileData, FileSystemError> {
+		const payload: LyricFileData = {
+			id: uniqueKey,
+			updateTime: Date.now(),
+			manualSkip: true,
+		}
+		logger.info('用户跳过歌词获取', { uniqueKey })
+		return this.saveLyricsToFile(payload, uniqueKey)
 	}
 
 	// 统一处理网络返回的歌词并保存
@@ -263,10 +295,16 @@ class LyricService {
 				intermediates: true,
 				idempotent: true,
 			})
+			// 当用户主动提供歌词内容时，清除 manualSkip 标记
+			const toWrite: LyricFileData = lyrics.manualSkip
+				? lyrics
+				: { ...lyrics, manualSkip: false }
 			Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-				lyricFile.write(JSON.stringify(lyrics)),
+				lyricFile.write(JSON.stringify(toWrite)),
 			)
-			return okAsync(lyrics)
+			// 自动同步到悬浮窗/状态栏
+			this.pushLyricsToOverlays(uniqueKey)
+			return okAsync(toWrite)
 		} catch (e) {
 			return errAsync(
 				new FileSystemError(`保存歌词文件失败`, {
@@ -470,6 +508,125 @@ class LyricService {
 			logger.info('歌词缓存已清理')
 			return true as const
 		})()
+	}
+
+	/**
+	 * 立即推送指定曲目的歌词到桌面歌词和状态栏
+	 */
+	public pushLyricsToOverlays(trackId: string) {
+		const wantDesktop = Orpheus.isDesktopLyricsShown
+		const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
+		if (!wantDesktop && !wantStatusBar) return
+
+		const currentTimestamp = Date.now()
+		this.lastPushLyricsToOverlaysTimestamp = currentTimestamp
+
+		if (this.debouncedPushLyricsToOverlays) {
+			clearTimeout(this.debouncedPushLyricsToOverlays)
+		}
+
+		const setIt = async () => {
+			if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
+
+			try {
+				const currentOrpheusTrack = await Orpheus.getCurrentTrack()
+				if (currentOrpheusTrack && currentOrpheusTrack.id !== trackId) {
+					logger.debug('pushLyricsToOverlays: trackId 不再是当前曲目，跳过', {
+						trackId,
+						currentId: currentOrpheusTrack.id,
+					})
+					return
+				}
+
+				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
+
+				const trackResult = await trackService.getTrackByUniqueKey(trackId)
+				if (trackResult.isErr()) throw trackResult.error
+
+				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
+				const lyricsResult = await this.smartFetchLyrics(trackResult.value)
+				if (lyricsResult.isErr()) throw lyricsResult.error
+
+				const lyrics = lyricsResult.value
+				if (!lyrics.lrc) {
+					// 歌词为空（如 manualSkip 或搜索失败），隐藏所有 overlay
+					await Orpheus.clearOverlays()
+					return
+				}
+
+				const parsedLines = parseAndMergeLyrics({
+					lrc: lyrics.lrc,
+					tlyric: lyrics.tlyric,
+					romalrc: lyrics.romalrc,
+				})
+
+				const orpheusLyrics = parsedLines.map((line) => ({
+					timestamp: line.startTime / 1000,
+					endTime: line.endTime / 1000,
+					text: line.content,
+					translation: line.translation,
+					romaji: line.romaji,
+					spans: line.isDynamic
+						? line.spans.map((span) => ({
+								text: span.text,
+								startTime: span.startTime,
+								endTime: span.endTime,
+								duration: span.duration,
+							}))
+						: undefined,
+				}))
+
+				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
+
+				const payload: LyricsData = {
+					lyrics: orpheusLyrics,
+					offset: lyrics.misc?.userOffset ?? 0,
+				}
+
+				if (Orpheus.isDesktopLyricsShown) {
+					await Orpheus.setDesktopLyrics(payload)
+				}
+				if (Orpheus.isStatusBarLyricsEnabled) {
+					await Orpheus.setStatusBarLyrics(payload)
+				}
+			} catch (e) {
+				logger.warning('更新歌词显示失败', e)
+			}
+		}
+
+		this.debouncedPushLyricsToOverlays = setTimeout(() => {
+			void setIt()
+			this.debouncedPushLyricsToOverlays = null
+		}, 300)
+	}
+
+	/**
+	 * 预加载下一首歌曲的歌词
+	 */
+	public async preloadNextTrackLyrics() {
+		try {
+			const [currentIndex, queue] = await Promise.all([
+				Orpheus.getCurrentIndex(),
+				Orpheus.getQueue(),
+			])
+
+			if (currentIndex !== -1 && currentIndex + 1 < queue.length) {
+				const nextOrpheusTrack = queue[currentIndex + 1]
+				if (nextOrpheusTrack?.id) {
+					const nextTrackResult = await trackService.getTrackByUniqueKey(
+						nextOrpheusTrack.id,
+					)
+					if (nextTrackResult.isOk() && nextTrackResult.value) {
+						logger.debug('预加载下一首歌词', {
+							title: nextTrackResult.value.title,
+						})
+						void this.smartFetchLyrics(nextTrackResult.value)
+					}
+				}
+			}
+		} catch (e) {
+			logger.warning('预加载歌词失败', e)
+		}
 	}
 }
 

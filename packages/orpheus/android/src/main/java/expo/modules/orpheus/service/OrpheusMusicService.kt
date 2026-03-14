@@ -222,6 +222,9 @@ class OrpheusMusicService : MediaLibraryService() {
             .build()
 
         floatingLyricsManager = FloatingLyricsManager(this, player)
+        floatingLyricsManager.onClearLyricsRequested = { trackId ->
+            lyricEventListeners.forEach { it.onLyricCleared(trackId) }
+        }
         if (GeneralStorage.isDesktopLyricsShown()) {
             serviceHandler.post { floatingLyricsManager.show() }
         }
@@ -404,7 +407,12 @@ class OrpheusMusicService : MediaLibraryService() {
         fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double)
     }
 
+    interface LyricEventListener {
+        fun onLyricCleared(trackId: String)
+    }
+
     private val trackEventListeners = CopyOnWriteArrayList<TrackEventListener>()
+    private val lyricEventListeners = CopyOnWriteArrayList<LyricEventListener>()
 
     fun addTrackEventListener(listener: TrackEventListener) {
         trackEventListeners.add(listener)
@@ -412,6 +420,14 @@ class OrpheusMusicService : MediaLibraryService() {
 
     fun removeTrackEventListener(listener: TrackEventListener) {
         trackEventListeners.remove(listener)
+    }
+
+    fun addLyricEventListener(listener: LyricEventListener) {
+        lyricEventListeners.add(listener)
+    }
+
+    fun removeLyricEventListener(listener: LyricEventListener) {
+        lyricEventListeners.remove(listener)
     }
 
     @OptIn(UnstableApi::class)

@@ -1,5 +1,6 @@
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { eq } from 'drizzle-orm'
+import { desc } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
@@ -22,18 +23,20 @@ import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
 import {
 	ActivityIndicator,
-	Chip,
 	Searchbar,
 	Text,
 	useTheme,
 } from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
-import SearchSuggestions from '@/features/home/SearchSuggestions'
+import SearchSuggestions, {
+	type SearchHistoryItem,
+} from '@/features/home/SearchSuggestions'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -49,12 +52,6 @@ import toast from '@/utils/toast'
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
-
-interface SearchHistoryItem {
-	id: string
-	text: string
-	timestamp: number
-}
 
 const getGreetingMsg = () => {
 	const hour = new Date().getHours()
@@ -74,6 +71,7 @@ function HomePage() {
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
+	const [searchFocused, setSearchFocused] = useState(false)
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useIncomingShare()
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
@@ -91,6 +89,20 @@ function HomePage() {
 			.limit(1),
 	)
 	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
+
+	const { data: recentPlaylists } = useLiveQuery(
+		db
+			.select({
+				id: schema.playlists.id,
+				title: schema.playlists.title,
+				coverUrl: schema.playlists.coverUrl,
+				type: schema.playlists.type,
+				itemCount: schema.playlists.itemCount,
+			})
+			.from(schema.playlists)
+			.orderBy(desc(schema.playlists.updatedAt))
+			.limit(6),
+	)
 
 	const greeting = getGreetingMsg()
 
@@ -154,21 +166,57 @@ function HomePage() {
 			}
 			setIsLoading(false)
 			setSearchQuery('')
+			setSearchFocused(false)
 		},
 		[addSearchHistory, router],
 	)
 
-	const handleSuggestionPress = (query: string) => {
-		void handleEnter(query)
-	}
+	const handleSuggestionPress = useCallback(
+		(query: string) => {
+			void handleEnter(query)
+		},
+		[handleEnter],
+	)
 
-	const handleSearchItemClick = (query: string) => {
-		// 直接跳转到搜索页面，我们可以确定，所有保存的搜索历史都是有效的关键词，而非 url/id 什么的
-		router.push({
-			pathname: '/playlist/remote/search-result/global/[query]',
-			params: { query },
-		})
-	}
+	const handleClearHistory = useCallback(() => {
+		alert(
+			'清空搜索历史？',
+			'确定要清空吗？',
+			[
+				{ text: '取消' },
+				{
+					text: '确定',
+					onPress: () => {
+						setSearchHistory([])
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}, [setSearchHistory])
+
+	const handleRemoveHistoryItem = useCallback(
+		(id: string) => {
+			const item = searchHistory?.find((h) => h.id === id)
+			if (!item) return
+			alert(
+				'删除搜索历史？',
+				`确定要删除「${item.text}」吗？`,
+				[
+					{ text: '取消' },
+					{
+						text: '确定',
+						onPress: () => {
+							const newHistory = searchHistory?.filter((h) => h.id !== id)
+							setSearchHistory(newHistory)
+						},
+					},
+				],
+				{ cancelable: true },
+			)
+		},
+		[searchHistory, setSearchHistory],
+	)
 
 	useEffect(() => {
 		if (resolvedSharedPayloads.length === 0) return
@@ -299,6 +347,8 @@ function HomePage() {
 								icon={isLoading ? 'loading' : 'magnify'}
 								onClearIconPress={() => setSearchQuery('')}
 								onSubmitEditing={() => handleEnter(searchQuery)}
+								onFocus={() => setSearchFocused(true)}
+								onBlur={() => setSearchFocused(false)}
 								elevation={0}
 								mode='bar'
 								style={[
@@ -310,89 +360,147 @@ function HomePage() {
 						</View>
 						<SearchSuggestions
 							query={deferredSearchQuery}
-							visible={searchQuery.length > 0}
+							visible={searchFocused || searchQuery.length > 0}
 							onSuggestionPress={handleSuggestionPress}
 							searchBarRef={searchBarRef}
+							searchHistory={searchHistory}
+							onClearHistory={handleClearHistory}
+							onRemoveHistoryItem={handleRemoveHistoryItem}
 						/>
 					</View>
+				</View>
 
-					{/* 搜索历史 */}
-					<View style={styles.historySection}>
-						<View style={styles.historyHeader}>
+				{/* 快捷操作与内容区，加上 ScrollView 让它可滚动 */}
+				<Animated.ScrollView
+					contentContainerStyle={styles.scrollContent}
+					showsVerticalScrollIndicator={false}
+				>
+					{/* 快捷导航 (Quick Actions) */}
+					<View style={styles.quickActionsContainer}>
+						<View style={styles.quickActionItem}>
+							<IconButton
+								icon='folder-music'
+								size={32}
+								mode='contained-tonal'
+								onPress={() => router.push('/(tabs)/library/0')}
+							/>
+							<Text
+								variant='labelMedium'
+								style={styles.quickActionText}
+							>
+								本地音乐
+							</Text>
+						</View>
+						<View style={styles.quickActionItem}>
+							<IconButton
+								icon='clock-outline'
+								size={32}
+								mode='contained-tonal'
+								onPress={() =>
+									router.push({
+										pathname: '/playlist/remote/toview',
+									})
+								}
+							/>
+							<Text
+								variant='labelMedium'
+								style={styles.quickActionText}
+							>
+								稍后再看
+							</Text>
+						</View>
+						<View style={styles.quickActionItem}>
+							<IconButton
+								icon='heart'
+								size={32}
+								mode='contained-tonal'
+								onPress={() => router.push('/(tabs)/library/1')}
+							/>
+							<Text
+								variant='labelMedium'
+								style={styles.quickActionText}
+							>
+								我的收藏
+							</Text>
+						</View>
+						<View style={styles.quickActionItem}>
+							<IconButton
+								icon='history'
+								size={32}
+								mode='contained-tonal'
+								onPress={() => router.push('/leaderboard')} // 或新做个最近播放页面
+							/>
+							<Text
+								variant='labelMedium'
+								style={styles.quickActionText}
+							>
+								最近播放
+							</Text>
+						</View>
+					</View>
+
+					{/* 最近常听/最近更新歌单 */}
+					{recentPlaylists && recentPlaylists.length > 0 && (
+						<View style={styles.recentPlaylistsSection}>
 							<Text
 								variant='titleMedium'
-								style={styles.historyTitle}
+								style={styles.sectionTitle}
 							>
-								最近搜索
+								近期歌单
 							</Text>
-							{searchHistory && searchHistory.length > 0 && (
-								<IconButton
-									icon='trash-can-outline'
-									size={20}
-									onPress={() =>
-										alert(
-											'清空搜索历史？',
-											'确定要清空吗？',
-											[
-												{ text: '取消' },
-												{
-													text: '确定',
-													onPress: () => {
-														setSearchHistory([])
-													},
-												},
-											],
-											{ cancelable: true },
-										)
-									}
-								/>
-							)}
-						</View>
-						{searchHistory && searchHistory.length > 0 ? (
-							<View style={styles.historyChipsContainer}>
-								{searchHistory.map((item) => (
-									<Chip
+							<Animated.ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								contentContainerStyle={styles.horizontalScrollContent}
+							>
+								{recentPlaylists.map((item) => (
+									<RectButton
 										key={item.id}
-										onPress={() => handleSearchItemClick(item.text)}
-										onLongPress={() =>
-											alert(
-												'删除搜索历史？',
-												`确定要删除「${item.text}」吗？`,
-												[
-													{ text: '取消' },
-													{
-														text: '确定',
-														onPress: () => {
-															// 优化：使用 filter 创建新数组，避免直接修改 state
-															const newHistory = searchHistory.filter(
-																(h) => h.id !== item.id,
-															)
-															setSearchHistory(newHistory)
-														},
-													},
-												],
-												{ cancelable: true },
-											)
-										}
-										style={styles.chip}
-										mode='outlined'
+										style={[
+											styles.playlistCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => {
+											if (item.type === 'local') {
+												router.push(`/playlist/local/${item.id}`)
+											} else {
+												// @ts-expect-error router typing issue
+												router.push(`/playlist/remote/${item.id}`)
+											}
+										}}
 									>
-										{item.text}
-									</Chip>
+										<Image
+											source={
+												item.coverUrl
+													? { uri: item.coverUrl }
+													: require('../../../assets/images/bilibili-default-avatar.jpg')
+											}
+											style={styles.playlistCover}
+											contentFit='cover'
+										/>
+										<View style={styles.playlistInfo}>
+											<Text
+												variant='labelMedium'
+												numberOfLines={2}
+												style={styles.playlistTitle}
+											>
+												{item.title}
+											</Text>
+											<Text
+												variant='bodySmall'
+												style={{ color: colors.onSurfaceVariant }}
+											>
+												{item.itemCount} 首
+											</Text>
+										</View>
+									</RectButton>
 								))}
-							</View>
-						) : (
-							<Text
-								style={[
-									styles.noHistoryText,
-									{ color: colors.onSurfaceVariant },
-								]}
-							>
-								暂无搜索历史
-							</Text>
-						)}
-					</View>
-				</View>
+							</Animated.ScrollView>
+						</View>
+					)}
+					{/* 底部留白给播放条 */}
+					<View style={{ height: 100 }} />
+				</Animated.ScrollView>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
@@ -438,32 +546,52 @@ const styles = StyleSheet.create({
 	searchbar: {
 		borderRadius: 9999,
 	},
-	historySection: {
-		marginTop: 16,
-		marginBottom: 24,
-		marginHorizontal: 16,
+	scrollContent: {
+		paddingTop: 16,
 	},
-	historyHeader: {
-		marginBottom: 8,
+	quickActionsContainer: {
 		flexDirection: 'row',
+		justifyContent: 'space-evenly',
+		paddingHorizontal: 16,
+		marginBottom: 32,
+	},
+	quickActionItem: {
 		alignItems: 'center',
-		justifyContent: 'space-between',
+		gap: 8,
 	},
-	historyTitle: {
+	quickActionText: {
+		fontWeight: '600',
+	},
+	recentPlaylistsSection: {
+		marginBottom: 32,
+	},
+	sectionTitle: {
+		paddingHorizontal: 16,
 		fontWeight: 'bold',
+		marginBottom: 16,
 	},
-	historyChipsContainer: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		marginHorizontal: 5,
+	horizontalScrollContent: {
+		paddingHorizontal: 16,
+		gap: 16,
 	},
-	chip: {
-		marginRight: 8,
-		marginBottom: 8,
+	playlistCard: {
+		width: 140,
+		borderRadius: 12,
+		overflow: 'hidden',
+		paddingBottom: 12,
 	},
-	noHistoryText: {
-		paddingVertical: 8,
-		textAlign: 'center',
+	playlistCover: {
+		width: '100%',
+		aspectRatio: 1,
+		borderRadius: 12,
+	},
+	playlistInfo: {
+		paddingHorizontal: 12,
+		paddingTop: 10,
+	},
+	playlistTitle: {
+		fontWeight: '600',
+		marginBottom: 4,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

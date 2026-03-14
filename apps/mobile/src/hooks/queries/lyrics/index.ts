@@ -37,6 +37,19 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 				}
 				throw result.error
 			}
+			// manualSkip: 用户已手动跳过该曲目的歌词获取
+			if (result.value.manualSkip) {
+				return {
+					id: track!.uniqueKey,
+					updateTime: result.value.updateTime,
+					lrc: undefined,
+					tlyric: undefined,
+					romalrc: undefined,
+					manualSkip: true,
+					errorMessage: '已跳过歌词获取，但你可以重新搜索或编辑歌词',
+					misc: undefined,
+				} satisfies LyricFileData
+			}
 			return result.value
 		},
 		enabled,

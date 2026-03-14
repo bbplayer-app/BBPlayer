@@ -10,6 +10,7 @@ export type FacadeErrorType =
 	| 'UpdateTrackLocalPlaylistsFailed'
 	| 'BatchAddTracksToLocalPlaylistFailed'
 	| 'PlaylistCreateFailed'
+	| 'PlaylistMergeFailed'
 	| 'SavePlaylistFailed'
 	| 'SharedPlaylistEnableFailed'
 	| 'SharedPlaylistSubscribeFailed'

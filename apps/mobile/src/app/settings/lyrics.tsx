@@ -12,8 +12,8 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useAppStore } from '@/hooks/stores/useAppStore'
+import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
-import { pushLyricsToOverlays } from '@/utils/player'
 import toast from '@/utils/toast'
 
 export default function LyricsSettingsPage() {
@@ -78,7 +78,7 @@ export default function LyricsSettingsPage() {
 				// 立即推送当前正在播放的歌词，不等下一首
 				const currentTrack = await Orpheus.getCurrentTrack()
 				if (currentTrack) {
-					pushLyricsToOverlays(currentTrack.id, 0)
+					lyricService.pushLyricsToOverlays(currentTrack.id)
 				}
 				return
 			}
@@ -295,7 +295,7 @@ export default function LyricsSettingsPage() {
 											// 立即推送当前歌词
 											const currentTrack = await Orpheus.getCurrentTrack()
 											if (currentTrack) {
-												pushLyricsToOverlays(currentTrack.id, 0)
+												lyricService.pushLyricsToOverlays(currentTrack.id)
 											}
 										}
 									} catch (e) {
