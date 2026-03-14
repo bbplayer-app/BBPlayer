@@ -1,0 +1,10 @@
+{
+	"version": 1,
+	"skills": {
+		"react-native-ease-refactor": {
+			"source": "appandflow/react-native-ease",
+			"sourceType": "github",
+			"computedHash": "54e548edf12233522cc48731cb4bca613aa54d7062625618e325d79471bd1d12"
+		}
+	}
+}
