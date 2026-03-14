@@ -56,6 +56,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
+    lateinit var shuffleManager: ShuffleManager
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
@@ -221,6 +222,8 @@ class OrpheusMusicService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
+        shuffleManager = ShuffleManager { player }
+
         floatingLyricsManager = FloatingLyricsManager(this, player)
         floatingLyricsManager.onClearLyricsRequested = { trackId ->
             lyricEventListeners.forEach { it.onLyricCleared(trackId) }
@@ -299,6 +302,15 @@ class OrpheusMusicService : MediaLibraryService() {
         }
         this.player = null
         super.onDestroy()
+    }
+
+    /**
+     * Enable or disable custom shuffle. When enabling, the queue is physically
+     * reordered with the current track at index 0. When a full loop completes,
+     * the queue is re-shuffled automatically.
+     */
+    fun applyShuffleMode(enabled: Boolean) {
+        shuffleManager.setShuffleEnabled(enabled)
     }
 
     fun startSleepTimer(durationMs: Long) {
@@ -386,7 +398,8 @@ class OrpheusMusicService : MediaLibraryService() {
                 player.seekTo(0, 0L)
             }
 
-            player.shuffleModeEnabled = savedShuffleMode
+            // Restore shuffle state without re-shuffling the saved queue order
+            shuffleManager.restoreShuffleEnabled(savedShuffleMode)
             player.repeatMode = savedRepeatMode
 
             player.playWhenReady = GeneralStorage.isAutoplayOnStartEnabled()
@@ -513,6 +526,9 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
                 android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=${mediaItem?.mediaId} reason=$reasonStr ts=${System.currentTimeMillis()}")
                 sendTrackStartEvent(mediaItem, reason)
+
+                // Notify ShuffleManager of the track change for loop detection
+                mediaItem?.mediaId?.let { shuffleManager.onTrackChanged(it) }
 
                 floatingLyricsManager.setLyrics(emptyList())
                 statusBarLyricsManager.onStop()

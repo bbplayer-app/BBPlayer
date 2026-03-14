@@ -159,7 +159,7 @@ class ExpoOrpheusModule : Module() {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             super.onShuffleModeEnabledChanged(shuffleModeEnabled)
-            GeneralStorage.saveShuffleMode(shuffleModeEnabled)
+            // Persistence is handled by ShuffleManager.setShuffleEnabled; nothing to do here.
         }
 
         override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
@@ -379,8 +379,9 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getShuffleMode") {
-            ensurePlayer()
-            player?.shuffleModeEnabled
+            // Read from persisted state (managed by ShuffleManager) rather than the
+            // Media3 shuffleModeEnabled flag, which we always keep false.
+            GeneralStorage.getShuffleMode()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIndexTrack") { index: Int ->
@@ -476,8 +477,15 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
-            ensurePlayer()
-            player?.shuffleModeEnabled = enabled
+            // Delegate to the service's ShuffleManager which physically reorders
+            // the MediaItem list instead of relying on Media3's internal ShuffleOrder.
+            val service = OrpheusMusicService.instance
+            if (service != null) {
+                service.applyShuffleMode(enabled)
+            } else {
+                // Service not yet bound — persist the preference for restorePlayerState to pick up
+                GeneralStorage.saveShuffleMode(enabled)
+            }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getRepeatMode") {
