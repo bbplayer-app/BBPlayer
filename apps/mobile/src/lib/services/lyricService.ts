@@ -216,10 +216,21 @@ class LyricService {
 					() => lyricFile.text(),
 				)
 
-				const parsed = JSON.parse(content) as LyricFileData
+				const parsedResult = Result.fromThrowable(
+					() => JSON.parse(content) as LyricFileData,
+					(e) => e,
+				)()
+
+				if (parsedResult.isErr()) {
+					throw new Error('JSON parsing failed', { cause: parsedResult.error })
+				}
+
+				const parsed = parsedResult.value
 
 				if (!parsed) {
-					throw new Error('Invalid lyric format')
+					throw new Error('Invalid lyric format', {
+						cause: new Error('Parsed result is null'),
+					})
 				}
 
 				// manualSkip 为 true 时直接返回缓存，不走网络
@@ -228,7 +239,9 @@ class LyricService {
 				}
 
 				if (typeof parsed.lrc !== 'string') {
-					throw new Error('Invalid lyric format')
+					throw new Error('Invalid lyric format', {
+						cause: new Error('lrc property is not a string'),
+					})
 				}
 
 				return parsed

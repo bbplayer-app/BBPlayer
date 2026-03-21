@@ -19,7 +19,13 @@
 
 ### Changed
 
-- 重构歌词功能按钮，统一收纳至 Action Sheet 中
+- 播放器主页标题平滑渐变效果重构为独立 Hook，实现 UI 与动画逻辑解耦
+- 重构手机登录模块，采用自定义 Hook (`usePhoneLogin`) 与分步组件化架构，并将状态管理迁移至 **有限状态机 (FSM)**，大幅简化状态逻辑并提升可维护性
+- **新增 `useGeetest` Hook**：将极验验证与发送验证码逻辑独立，实现验证逻辑的解耦与复用
+- 重构数据库 (`db.ts`) 与全局状态存储 (`AppStore`) 的初始化逻辑，采用延迟加载 Proxy，解决模块导入时的同步耦合问题
+- 模块化 `PlaylistSyncWorker`，解耦复杂的同步逻辑与 API 请求处理
+- 为 `lyricService`、`lottie` 及 `crypto` 中的 `JSON.parse` 调用增加安全处理，防止非法数据导致崩溃
+- 清理项目内多处未使用的导入及变量，优化代码体积
 
 ## [2.4.2] - 2026-03-12
 
@@ -297,6 +303,12 @@
 
 ### Fixed
 
+- **Refactored `PhoneLoginModal`** into a modular, hook-based architecture.
+- **`usePhoneLogin` FSM Refactor**: Further refined the login hook by implementing a **Finite State Machine (FSM)** using `useReducer`. This consolidated scattered state variables (like `isSendingCode`, `isLoggingIn`, and various error strings) into a single, predictable state object, reducing potential bugs from invalid state combinations.
+- **Refined with FSM**: Implemented a **Finite State Machine (FSM)** using `useReducer` within the hook to consolidate many `isXXX` and `xxError` variables into a single, predictable state object.
+- **`useGeetest` Hook Extraction**: Extracted the Geetest captcha parsing and SMS sending logic into a dedicated `useGeetest` hook. This further modularizes the authentication flow and makes the captcha logic reusable for other potential entry points.
+- Splitting the UI into modular step components: `InputPhoneStep`, `GeetestVerifyStep`, `InputCodeStep`, and `SuccessStep`.
+- **Decoupled database and store initialization** in `db.ts` to prevent startup race conditions.
 - 修复 `DatabaseLauncher has already started. Create a new instance in order to launch a new version.` 错误
 
 ## [1.4.2] - 2025-11-09

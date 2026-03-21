@@ -11,7 +11,11 @@ export function tintLottieSource(
 	const r = (parseInt(hex.slice(0, 2), 16) / 255).toFixed(4)
 	const g = (parseInt(hex.slice(2, 4), 16) / 255).toFixed(4)
 	const b = (parseInt(hex.slice(4, 6), 16) / 255).toFixed(4)
-	return JSON.parse(
-		JSON.stringify(source).replace(/\[1,1,1,1\]/g, `[${r},${g},${b},1]`),
-	) as AnimationObject
+	try {
+		return JSON.parse(
+			JSON.stringify(source).replace(/\[1,1,1,1\]/g, `[${r},${g},${b},1]`),
+		) as AnimationObject
+	} catch {
+		return source
+	}
 }
