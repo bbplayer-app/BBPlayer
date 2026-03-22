@@ -1,4 +1,6 @@
+import { WeeklyHeatMap } from '@bbplayer/heatmap'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import Color from 'color'
 import { eq } from 'drizzle-orm'
 import { desc } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
@@ -39,6 +41,7 @@ import SearchSuggestions, {
 } from '@/features/home/SearchSuggestions'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistoryHeatmap'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
@@ -63,7 +66,8 @@ const getGreetingMsg = () => {
 }
 
 function HomePage() {
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
 	const [searchQuery, setSearchQuery] = useState('')
@@ -80,6 +84,7 @@ function HomePage() {
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
 	const { data: personalInfo } = usePersonalInformation()
+	const { data: heatmapData } = usePlayHistoryHeatmap()
 
 	const { data: syncFailures } = useLiveQuery(
 		db
@@ -375,6 +380,23 @@ function HomePage() {
 					contentContainerStyle={styles.scrollContent}
 					showsVerticalScrollIndicator={false}
 				>
+					<WeeklyHeatMap
+						data={heatmapData || {}}
+						cellSize={10}
+						cellGap={2}
+						cellRadius={2}
+						scheme={theme.dark ? 'dark' : 'light'}
+						cellColor={{
+							1: Color(colors.primary).alpha(0.2).rgb().string(),
+							2: Color(colors.primary).alpha(0.4).rgb().string(),
+							3: Color(colors.primary).alpha(0.6).rgb().string(),
+							4: colors.primary,
+						}}
+						cellDefaultColor={colors.surfaceVariant}
+						headerTextColor={colors.onSurfaceVariant}
+						sidebarTextColor={colors.onSurfaceVariant}
+						scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
+					/>
 					{/* 快捷导航 (Quick Actions) */}
 					<View style={styles.quickActionsContainer}>
 						<View style={styles.quickActionItem}>

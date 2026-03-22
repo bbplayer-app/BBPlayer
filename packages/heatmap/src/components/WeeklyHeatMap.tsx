@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { JSX, useMemo } from 'react'
+import { JSX } from 'react'
 import { ScrollView, View } from 'react-native'
 import Svg, { G, Text as SvgText } from 'react-native-svg'
 
@@ -11,8 +11,8 @@ import HeatMapCell from './HeatMapCell'
 
 export const WeeklyHeatMap = ({
 	data,
-	startDate = dayjs().subtract(1, 'year').toDate(),
-	endDate = new Date(),
+	startDate,
+	endDate,
 	weekStartsOn = 0,
 	cellSize = 20,
 	cellRadius = 2,
@@ -37,29 +37,21 @@ export const WeeklyHeatMap = ({
 	sidebarTextFormat = 'ddd',
 	...props
 }: HeatMapProps) => {
-	const theme = useMemo(() => {
-		const baseTheme =
-			scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
-		const customTheme = props[scheme] || {}
-		return { ...baseTheme, ...props, ...customTheme }
-	}, [scheme, props])
+	const resolvedStartDate = startDate || dayjs().subtract(1, 'year').toDate()
+	const resolvedEndDate = endDate || new Date()
 
-	const counts = useMemo(() => countData(data), [data])
+	const baseTheme =
+		scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
+	const customTheme = props[scheme] || {}
+	const theme = { ...baseTheme, ...props, ...customTheme }
 
-	const localeName = useMemo(() => {
-		if (typeof locale === 'string') return locale
-		return locale?.name || 'en'
-	}, [locale])
+	const counts = countData(data)
 
-	const weeks = useMemo(
-		() => getWeeklyData(startDate, endDate, weekStartsOn),
-		[startDate, endDate, weekStartsOn],
-	)
+	const localeName = typeof locale === 'string' ? locale : locale?.name || 'en'
 
-	const displayedWeeks = useMemo(
-		() => (rtl ? [...weeks].toReversed() : weeks),
-		[weeks, rtl],
-	)
+	const weeks = getWeeklyData(resolvedStartDate, resolvedEndDate, weekStartsOn)
+
+	const displayedWeeks = rtl ? [...weeks].toReversed() : weeks
 
 	const sidebarWidth = isSidebarVisible ? sideBarTextFontSize * 3 : 0
 	const headerHeight = isHeaderVisible

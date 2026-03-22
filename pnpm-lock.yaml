@@ -122,6 +122,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@bbplayer/heatmap':
+        specifier: workspace:*
+        version: link:../../packages/heatmap
       '@bbplayer/image-theme-colors':
         specifier: workspace:*
         version: link:../../packages/image-theme-colors
@@ -548,6 +551,21 @@ importers:
         version: 8.55.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
 
   packages/eslint-plugin: {}
+
+  packages/heatmap:
+    dependencies:
+      dayjs:
+        specifier: '*'
+        version: 1.11.19
+      react:
+        specifier: '*'
+        version: 19.2.0
+      react-native:
+        specifier: '*'
+        version: 0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+      react-native-svg:
+        specifier: '*'
+        version: 15.15.3(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.2(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
 
   packages/image-theme-colors:
     devDependencies:

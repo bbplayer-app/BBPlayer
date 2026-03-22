@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import React, { useMemo } from 'react'
+import React from 'react'
 import { ScrollView, View } from 'react-native'
 import Svg, { G, Text as SvgText } from 'react-native-svg'
 
@@ -11,8 +11,8 @@ import HeatMapCell from './HeatMapCell'
 
 export const MonthlyHeatMap = ({
 	data,
-	startDate = dayjs().startOf('year').toDate(),
-	endDate = dayjs().endOf('year').toDate(),
+	startDate,
+	endDate,
 	weekStartsOn = 0,
 	cellSize = 20,
 	cellRadius = 2,
@@ -37,29 +37,21 @@ export const MonthlyHeatMap = ({
 	sidebarTextFormat = 'ddd',
 	...props
 }: HeatMapProps) => {
-	const theme = useMemo(() => {
-		const baseTheme =
-			scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
-		const customTheme = props[scheme] || {}
-		return { ...baseTheme, ...props, ...customTheme }
-	}, [scheme, props])
+	const resolvedStartDate = startDate || dayjs().startOf('year').toDate()
+	const resolvedEndDate = endDate || dayjs().endOf('year').toDate()
 
-	const counts = useMemo(() => countData(data), [data])
+	const baseTheme =
+		scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
+	const customTheme = props[scheme] || {}
+	const theme = { ...baseTheme, ...props, ...customTheme }
 
-	const localeName = useMemo(() => {
-		if (typeof locale === 'string') return locale
-		return locale?.name || 'en'
-	}, [locale])
+	const counts = countData(data)
 
-	const months = useMemo(
-		() => getMonthlyData(startDate, endDate),
-		[startDate, endDate],
-	)
+	const localeName = typeof locale === 'string' ? locale : locale?.name || 'en'
 
-	const displayedMonths = useMemo(
-		() => (rtl ? [...months].toReversed() : months),
-		[months, rtl],
-	)
+	const months = getMonthlyData(resolvedStartDate, resolvedEndDate)
+
+	const displayedMonths = rtl ? [...months].toReversed() : months
 
 	const monthWidth = (cellSize + cellGap) * 7
 	const monthHeight =

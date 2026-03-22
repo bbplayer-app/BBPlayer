@@ -13,6 +13,7 @@
 		"test": "jest --watchAll"
 	},
 	"dependencies": {
+		"@bbplayer/heatmap": "workspace:*",
 		"@bbplayer/image-theme-colors": "workspace:*",
 		"@bbplayer/logs": "workspace:*",
 		"@bbplayer/orpheus": "workspace:*",
