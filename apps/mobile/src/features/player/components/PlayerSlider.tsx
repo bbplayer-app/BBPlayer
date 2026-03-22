@@ -99,7 +99,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const scrubPosition = useSharedValue(0)
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
-	const seekTimeoutRef = useRef<number | null>(null)
+	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const sliderContainerRef = useRef<View>(null)
 
 	const displayPosition = useDerivedValue(() => {
@@ -203,7 +203,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 					seekPosition.set(targetTime)
 					isSeeking.set(true)
 
-					 scheduleOnRN(handleSeek, targetTime)
+					scheduleOnRN(handleSeek, targetTime)
 					scheduleOnRN(
 						Haptics.performHaptics,
 						Haptics.AndroidHaptics.Gesture_End,

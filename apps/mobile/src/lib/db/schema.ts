@@ -9,8 +9,6 @@ import {
 	uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
-import type { PlayRecord } from '@/types/core/media'
-
 export const artists = sqliteTable(
 	'artists',
 	{
@@ -60,12 +58,6 @@ export const tracks = sqliteTable(
 		}),
 		coverUrl: text('cover_url'),
 		duration: integer('duration'),
-		playHistory: text('play_history', {
-			// 每次播放的时间
-			mode: 'json',
-		})
-			.$type<PlayRecord[]>()
-			.default(sql`'[]'`),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(unixepoch() * 1000)`),
@@ -81,6 +73,26 @@ export const tracks = sqliteTable(
 		index('tracks_artist_idx').on(table.artistId),
 		index('tracks_title_idx').on(table.title),
 		index('tracks_source_idx').on(table.source),
+	],
+)
+
+export const playHistory = sqliteTable(
+	'play_history',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		trackId: integer('track_id')
+			.notNull()
+			.references(() => tracks.id, { onDelete: 'cascade' }),
+		startTime: integer('start_time').notNull(), // 播放开始的时间戳 (ms)
+		durationPlayed: integer('duration_played').notNull(), // 实际播放的秒数
+		completed: integer('completed', { mode: 'boolean' }).notNull(), // 是否完整播放
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+	},
+	(table) => [
+		index('play_history_track_idx').on(table.trackId),
+		index('play_history_start_time_idx').on(table.startTime),
 	],
 )
 
@@ -221,6 +233,14 @@ export const trackRelations = relations(tracks, ({ one, many }) => ({
 	localMetadata: one(localMetadata, {
 		fields: [tracks.id],
 		references: [localMetadata.trackId],
+	}),
+	playHistory: many(playHistory),
+}))
+
+export const playHistoryRelations = relations(playHistory, ({ one }) => ({
+	track: one(tracks, {
+		fields: [playHistory.trackId],
+		references: [tracks.id],
 	}),
 }))
 

@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
-import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, lt, or, sql, sum } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
 
@@ -34,22 +34,12 @@ import generateUniqueTrackKey from './genKey'
 const logger = log.extend('Service.Track')
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
-type SelectTrackBaseFull = typeof schema.tracks.$inferSelect
-type SelectTrackBaseSlim = Omit<
-	typeof schema.tracks.$inferSelect,
-	'playHistory'
->
-type SelectTrackWithMetadata =
-	| (SelectTrackBaseFull & {
-			artist: typeof schema.artists.$inferSelect | null
-			bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
-			localMetadata: typeof schema.localMetadata.$inferSelect | null
-	  })
-	| (SelectTrackBaseSlim & {
-			artist: typeof schema.artists.$inferSelect | null
-			bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
-			localMetadata: typeof schema.localMetadata.$inferSelect | null
-	  })
+type SelectTrackBase = typeof schema.tracks.$inferSelect
+type SelectTrackWithMetadata = SelectTrackBase & {
+	artist: typeof schema.artists.$inferSelect | null
+	bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
+	localMetadata: typeof schema.localMetadata.$inferSelect | null
+}
 
 export class TrackService {
 	constructor(private readonly db: DBLike) {}
@@ -242,7 +232,6 @@ export class TrackService {
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.id, id),
-					columns: { playHistory: false },
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -303,21 +292,15 @@ export class TrackService {
 	): ResultAsync<true, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				const recordJson = JSON.stringify(record)
-
 				await Sentry.startSpan(
-					{ name: 'db:update:track:playHistory', op: 'db' },
+					{ name: 'db:insert:play_history', op: 'db' },
 					() =>
-						this.db
-							.update(schema.tracks)
-							.set({
-								playHistory: sql`json_insert(
-              play_history,
-              '$[#]',
-              json(${recordJson})
-            )`,
-							})
-							.where(eq(schema.tracks.id, trackId)),
+						this.db.insert(schema.playHistory).values({
+							trackId,
+							startTime: record.startTime,
+							durationPlayed: record.durationPlayed,
+							completed: record.completed,
+						}),
 				)
 
 				return true as const
@@ -378,7 +361,6 @@ export class TrackService {
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq }) => eq(track.uniqueKey, identifier.value),
-					columns: { playHistory: false },
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -429,7 +411,6 @@ export class TrackService {
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq }) => eq(track.uniqueKey, uniqueKey),
-					columns: { playHistory: false },
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -681,19 +662,25 @@ export class TrackService {
 
 		const effectiveLimit = cursor ? limit : (initialLimit ?? limit)
 
-		const playCountSql = onlyCompleted
-			? sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
-			: sql<number>`json_array_length(${schema.tracks.playHistory})`
+		const playCountSql = this.db
+			.select({
+				trackId: schema.playHistory.trackId,
+				count: count().as('count'),
+			})
+			.from(schema.playHistory)
+			.where(onlyCompleted ? eq(schema.playHistory.completed, true) : undefined)
+			.groupBy(schema.playHistory.trackId)
+			.as('play_counts')
 
-		const whereConditions: (SQL | undefined)[] = [gt(playCountSql, 0)]
+		const whereConditions: (SQL | undefined)[] = []
 
 		if (cursor) {
 			const cursorUpdatedAt = new Date(cursor.lastUpdatedAt)
 			whereConditions.push(
 				or(
-					lt(playCountSql, cursor.lastPlayCount),
+					lt(playCountSql.count, cursor.lastPlayCount),
 					and(
-						eq(playCountSql, cursor.lastPlayCount),
+						eq(playCountSql.count, cursor.lastPlayCount),
 						or(
 							lt(schema.tracks.updatedAt, cursorUpdatedAt),
 							and(
@@ -709,24 +696,35 @@ export class TrackService {
 		const leaderboardQuery = Sentry.startSpan(
 			{ name: 'db:query:leaderboard', op: 'db' },
 			() =>
-				this.db.query.tracks.findMany({
-					columns: { playHistory: false },
-					with: {
-						artist: true,
-						bilibiliMetadata: true,
-						localMetadata: true,
-					},
-					extras: {
-						playCount: playCountSql.mapWith(Number).as('play_count'),
-					},
-					where: and(...whereConditions),
-					orderBy: [
-						desc(playCountSql),
+				this.db
+					.select({
+						track: schema.tracks,
+						artist: schema.artists,
+						bilibiliMetadata: schema.bilibiliMetadata,
+						localMetadata: schema.localMetadata,
+						playCount: playCountSql.count,
+					})
+					.from(schema.tracks)
+					.innerJoin(playCountSql, eq(schema.tracks.id, playCountSql.trackId))
+					.leftJoin(
+						schema.artists,
+						eq(schema.tracks.artistId, schema.artists.id),
+					)
+					.leftJoin(
+						schema.bilibiliMetadata,
+						eq(schema.tracks.id, schema.bilibiliMetadata.trackId),
+					)
+					.leftJoin(
+						schema.localMetadata,
+						eq(schema.tracks.id, schema.localMetadata.trackId),
+					)
+					.where(and(...whereConditions))
+					.orderBy(
+						desc(playCountSql.count),
 						desc(schema.tracks.updatedAt),
 						desc(schema.tracks.id),
-					],
-					limit: effectiveLimit + 1,
-				}),
+					)
+					.limit(effectiveLimit + 1),
 		)
 
 		return ResultAsync.fromPromise(
@@ -738,9 +736,14 @@ export class TrackService {
 
 			const items: { track: Track; playCount: number }[] = []
 			for (const row of resultItems) {
-				const track = this.formatTrack(row)
+				const track = this.formatTrack({
+					...row.track,
+					artist: row.artist,
+					bilibiliMetadata: row.bilibiliMetadata,
+					localMetadata: row.localMetadata,
+				})
 				if (!track) continue
-				items.push({ track, playCount: row.playCount })
+				items.push({ track, playCount: row.playCount ?? 0 })
 			}
 
 			let nextCursor
@@ -748,9 +751,9 @@ export class TrackService {
 				const lastRow = resultItems[resultItems.length - 1]
 				if (lastRow) {
 					nextCursor = {
-						lastPlayCount: lastRow.playCount,
-						lastUpdatedAt: lastRow.updatedAt.getTime(),
-						lastId: lastRow.id,
+						lastPlayCount: lastRow.playCount ?? 0,
+						lastUpdatedAt: lastRow.track.updatedAt.getTime(),
+						lastId: lastRow.track.id,
 					}
 				}
 			}
@@ -774,31 +777,58 @@ export class TrackService {
 	}): ResultAsync<number, DatabaseError> {
 		const onlyCompleted = options?.onlyCompleted ?? true
 
-		let totalDurationSql
-
 		if (onlyCompleted) {
-			const playCountSql = sql<number>`(select count(*) from json_each(${schema.tracks.playHistory}) as je where json_extract(je.value, '$.completed') = 1)`
-			totalDurationSql = sql`sum(${schema.tracks.duration} * ${playCountSql})`
-		} else {
-			const durationPlayedSumPerTrack = sql`(select sum(cast(json_extract(value, '$.durationPlayed') as real)) from json_each(${schema.tracks.playHistory}))`
-			totalDurationSql = sql`sum(${durationPlayedSumPerTrack})`
-		}
+			const playCountSql = this.db
+				.select({
+					trackId: schema.playHistory.trackId,
+					count: count().as('count'),
+				})
+				.from(schema.playHistory)
+				.where(eq(schema.playHistory.completed, true))
+				.groupBy(schema.playHistory.trackId)
+				.as('play_counts')
 
-		return ResultAsync.fromPromise(
-			Sentry.startSpan(
-				{ name: 'db:query:totalPlaybackDuration', op: 'db' },
-				() =>
-					this.db
-						.select({
-							totalDuration: totalDurationSql.mapWith(Number),
-						})
-						.from(schema.tracks),
-			),
-			(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
-		).andThen((rows) => {
-			const totalDuration = rows[0]?.totalDuration
-			return okAsync(totalDuration ?? 0)
-		})
+			return ResultAsync.fromPromise(
+				Sentry.startSpan(
+					{ name: 'db:query:totalPlaybackDuration:completed', op: 'db' },
+					() =>
+						this.db
+							.select({
+								totalDuration:
+									sql<number>`sum(${schema.tracks.duration} * ${playCountSql.count})`.mapWith(
+										Number,
+									),
+							})
+							.from(schema.tracks)
+							.innerJoin(
+								playCountSql,
+								eq(schema.tracks.id, playCountSql.trackId),
+							),
+				),
+				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
+			).andThen((rows) => {
+				const totalDuration = rows[0]?.totalDuration
+				return okAsync(totalDuration ?? 0)
+			})
+		} else {
+			return ResultAsync.fromPromise(
+				Sentry.startSpan(
+					{ name: 'db:query:totalPlaybackDuration:all', op: 'db' },
+					() =>
+						this.db
+							.select({
+								totalDuration: sum(schema.playHistory.durationPlayed).mapWith(
+									Number,
+								),
+							})
+							.from(schema.playHistory),
+				),
+				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
+			).andThen((rows) => {
+				const totalDuration = rows[0]?.totalDuration
+				return okAsync(totalDuration ?? 0)
+			})
+		}
 	}
 
 	public getTrackByUniqueKey(
@@ -808,9 +838,6 @@ export class TrackService {
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.uniqueKey, uniqueKey),
-					columns: {
-						playHistory: false,
-					},
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
