@@ -24,6 +24,10 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
 
     private var isShuffleEnabled = false
     private val playedIds = mutableSetOf<String>()
+    private var originalOrder: List<String>? = null
+
+    var isReshuffling = false
+        private set
 
     val isEnabled: Boolean get() = isShuffleEnabled
 
@@ -32,16 +36,28 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
      * Call this from the main thread.
      */
     fun setShuffleEnabled(enabled: Boolean) {
+        val player = getPlayer() ?: return
         isShuffleEnabled = enabled
         GeneralStorage.saveShuffleMode(enabled)
 
         if (enabled) {
             playedIds.clear()
+            // Store original order before shuffling if not already stored
+            if (originalOrder == null) {
+                val currentIds = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
+                originalOrder = currentIds
+                GeneralStorage.saveOriginalOrder(currentIds)
+            }
             reshuffleQueue()
         } else {
             playedIds.clear()
+            // Restore original order if we have it
+            val orderToRestore = originalOrder ?: GeneralStorage.getOriginalOrder()
+            orderToRestore?.let { restoreOriginalQueue(it) }
+            originalOrder = null
+            GeneralStorage.clearOriginalOrder()
             // Disable Media3's own shuffle flag too (we never set it true, but be defensive)
-            getPlayer()?.shuffleModeEnabled = false
+            player.shuffleModeEnabled = false
         }
     }
 
@@ -51,8 +67,9 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
      */
     fun restoreShuffleEnabled(enabled: Boolean) {
         isShuffleEnabled = enabled
-        // Don't call reshuffleQueue() — trust the restored queue order
-        if (!enabled) {
+        if (enabled) {
+            originalOrder = GeneralStorage.getOriginalOrder()
+        } else {
             getPlayer()?.shuffleModeEnabled = false
         }
     }
@@ -75,8 +92,37 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
     }
 
     /**
+     * Restores the physical queue to the provided order.
+     */
+    private fun restoreOriginalQueue(targetIds: List<String>) {
+        val player = getPlayer() ?: return
+        val count = player.mediaItemCount
+        if (count <= 1) return
+
+        isReshuffling = true
+        try {
+            var nextInsertPos = 0
+            for (id in targetIds) {
+                for (j in nextInsertPos until count) {
+                    if (player.getMediaItemAt(j).mediaId == id) {
+                        if (j != nextInsertPos) {
+                            player.moveMediaItem(j, nextInsertPos)
+                        }
+                        nextInsertPos++
+                        break
+                    }
+                }
+            }
+        } finally {
+            isReshuffling = false
+        }
+        Log.d("ShuffleManager", "Queue restored to original order")
+    }
+
+    /**
      * Physically reorders the player's MediaItem list:
      * current track → index 0, rest shuffled randomly.
+     * Uses moveMediaItem to ensure seamless playback without resetting the player.
      */
     private fun reshuffleQueue() {
         val player = getPlayer() ?: return
@@ -84,18 +130,36 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         if (count <= 1) return
 
         val currentIndex = player.currentMediaItemIndex
-        val currentPosition = player.currentPosition
-
         val items = (0 until count).map { player.getMediaItemAt(it) }.toMutableList()
+
+        // 1. Prepare the target shuffled list
         val current = items.removeAt(currentIndex)
         items.shuffle()
-        val newList = listOf(current) + items
+        val targetList = listOf(current) + items
 
-        // Replace the queue atomically; seek to position 0 (current track) preserving playback position
-        player.setMediaItems(newList, /* startIndex= */ 0, currentPosition)
+        isReshuffling = true
+        try {
+            // 2. Align the physical queue with targetList using moveMediaItem
+            // We iterate through targetList and move the corresponding item in the player to position 'i'
+            for (i in 0 until count) {
+                val targetId = targetList[i].mediaId
+                // Find where this item is currently in the player's timeline
+                for (j in i until count) {
+                    if (player.getMediaItemAt(j).mediaId == targetId) {
+                        if (i != j) {
+                            player.moveMediaItem(j, i)
+                        }
+                        break
+                    }
+                }
+            }
+        } finally {
+            isReshuffling = false
+        }
+
         // Ensure Media3's own shuffle traversal is off — we manage order ourselves
         player.shuffleModeEnabled = false
 
-        Log.d("ShuffleManager", "Queue reshuffled: ${newList.map { it.mediaId }}")
+        Log.d("ShuffleManager", "Queue reshuffled smoothly: ${targetList.map { it.mediaId }}")
     }
 }

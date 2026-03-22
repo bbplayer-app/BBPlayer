@@ -20,6 +20,7 @@ object GeneralStorage {
     private const val KEY_SAVED_POSITION = "saved_position"
     private const val KEY_SAVED_REPEAT_MODE = "saved_repeat_mode"
     private const val KEY_SAVED_SHUFFLE_MODE = "saved_shuffle_mode"
+    private const val KEY_ORIGINAL_ORDER = "original_order_ids"
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
@@ -124,11 +125,35 @@ object GeneralStorage {
 
     fun saveRepeatMode(repeatMode: Int) = safeKv.encode(KEY_SAVED_REPEAT_MODE, repeatMode)
     fun saveShuffleMode(shuffleMode: Boolean) = safeKv.encode(KEY_SAVED_SHUFFLE_MODE, shuffleMode)
+    fun getShuffleMode() = kv?.decodeBool(KEY_SAVED_SHUFFLE_MODE, false) ?: false
+
+    fun saveOriginalOrder(ids: List<String>) {
+        try {
+            val jsonString = json.encodeToString(ids)
+            safeKv.encode(KEY_ORIGINAL_ORDER, jsonString)
+        } catch (e: Exception) {
+            Log.e("GeneralStorage", "Failed to save original order", e)
+        }
+    }
+
+    fun getOriginalOrder(): List<String>? {
+        return try {
+            val jsonString = kv?.decodeString(KEY_ORIGINAL_ORDER)
+            if (jsonString.isNullOrEmpty()) return null
+            json.decodeFromString<List<String>>(jsonString)
+        } catch (e: Exception) {
+            Log.e("GeneralStorage", "Failed to get original order", e)
+            null
+        }
+    }
+
+    fun clearOriginalOrder() {
+        safeKv.removeValueForKey(KEY_ORIGINAL_ORDER)
+    }
 
     fun getSavedIndex() = kv?.decodeInt(KEY_SAVED_INDEX, 0) ?: 0
     fun getSavedPosition() = kv?.decodeLong(KEY_SAVED_POSITION, 0L) ?: 0L
     fun getRepeatMode() = kv?.decodeInt(KEY_SAVED_REPEAT_MODE, 0) ?: 0
-    fun getShuffleMode() = kv?.decodeBool(KEY_SAVED_SHUFFLE_MODE, false) ?: false
 
     fun isDesktopLyricsShown() = kv?.decodeBool(KEY_DESKTOP_LYRICS_SHOWN, false) ?: false
     fun setDesktopLyricsShown(shown: Boolean) = safeKv.encode(KEY_DESKTOP_LYRICS_SHOWN, shown)

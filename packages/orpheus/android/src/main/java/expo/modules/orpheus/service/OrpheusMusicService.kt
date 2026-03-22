@@ -57,6 +57,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
+    private var currentMediaId: String? = null
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
@@ -402,6 +403,8 @@ class OrpheusMusicService : MediaLibraryService() {
             shuffleManager.restoreShuffleEnabled(savedShuffleMode)
             player.repeatMode = savedRepeatMode
 
+            currentMediaId = player.currentMediaItem?.mediaId
+
             player.playWhenReady = GeneralStorage.isAutoplayOnStartEnabled()
             player.prepare()
 
@@ -517,6 +520,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                val mediaId = mediaItem?.mediaId
                 val reasonStr = when (reason) {
                     Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
                     Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "SEEK"
@@ -524,11 +528,21 @@ class OrpheusMusicService : MediaLibraryService() {
                     Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "REPEAT"
                     else -> "UNKNOWN($reason)"
                 }
-                android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=${mediaItem?.mediaId} reason=$reasonStr ts=${System.currentTimeMillis()}")
+                android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=$mediaId reason=$reasonStr ts=${System.currentTimeMillis()}")
+
+                // If the track hasn't actually changed (e.g. we just physically moved it for shuffle),
+                // we should NOT reset lyrics or notify JS as it causes a UI flash and audio stutter.
+                if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && mediaId == currentMediaId) {
+                    Log.d("OrpheusMusicService", "Ignoring onMediaItemTransition as track hasn't changed.")
+                    saveCurrentQueue()
+                    return
+                }
+                currentMediaId = mediaId
+
                 sendTrackStartEvent(mediaItem, reason)
 
                 // Notify ShuffleManager of the track change for loop detection
-                mediaItem?.mediaId?.let { shuffleManager.onTrackChanged(it) }
+                mediaId?.let { shuffleManager.onTrackChanged(it) }
 
                 floatingLyricsManager.setLyrics(emptyList())
                 statusBarLyricsManager.onStop()
@@ -541,7 +555,9 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                saveCurrentQueue()
+                if (!shuffleManager.isReshuffling) {
+                    saveCurrentQueue()
+                }
                 val player = player ?: return
                 val currentItem = player.currentMediaItem ?: return
                 val duration = player.duration
