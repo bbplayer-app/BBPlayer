@@ -1,0 +1,12 @@
+{
+	"name": "@bbplayer/react-native-heatmap",
+	"version": "1.0.0",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"peerDependencies": {
+		"dayjs": "*",
+		"react": "*",
+		"react-native": "*",
+		"react-native-svg": "*"
+	}
+}
