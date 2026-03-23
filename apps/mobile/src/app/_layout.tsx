@@ -270,7 +270,11 @@ export default Sentry.wrap(function RootLayout() {
 				/>
 
 				<Stack.Screen
-					name='leaderboard'
+					name='history/overall'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='history/[date]'
 					options={{ headerShown: false }}
 				/>
 				<Stack.Screen

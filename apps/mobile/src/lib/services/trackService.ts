@@ -642,7 +642,7 @@ export class TrackService {
 	 * @param {number} [options.cursor.lastId] 上一页最后一个项目的 ID。
 	 * @returns 播放次数排行榜及下一页游标的异步结果。
 	 */
-	public getPlayCountLeaderBoardPaginated(options: {
+	public getPlayCountHistoryPaginated(options: {
 		limit: number
 		initialLimit?: number
 		onlyCompleted?: boolean
@@ -693,8 +693,8 @@ export class TrackService {
 			)
 		}
 
-		const leaderboardQuery = Sentry.startSpan(
-			{ name: 'db:query:leaderboard', op: 'db' },
+		const historyQuery = Sentry.startSpan(
+			{ name: 'db:query:playHistory', op: 'db' },
 			() =>
 				this.db
 					.select({
@@ -728,8 +728,8 @@ export class TrackService {
 		)
 
 		return ResultAsync.fromPromise(
-			leaderboardQuery,
-			(e) => new DatabaseError('获取播放次数排行榜失败', { cause: e }),
+			historyQuery,
+			(e) => new DatabaseError('获取播放次数排行失败', { cause: e }),
 		).andThen((rows) => {
 			const hasNextPage = rows.length > effectiveLimit
 			const resultItems = hasNextPage ? rows.slice(0, effectiveLimit) : rows

@@ -12,34 +12,30 @@ queryClient.setQueryDefaults(['db', 'tracks'], {
 
 export const trackKeys = {
 	all: ['db', 'tracks'] as const,
-	leaderBoard: () => [...trackKeys.all, 'leaderBoard'] as const,
-	leaderBoardContentPaginated: (
+	history: () => [...trackKeys.all, 'history'] as const,
+	historyContentPaginated: (
 		limit: number,
 		onlyCompleted: boolean,
 		initialLimit?: number,
 	) =>
 		[
-			...trackKeys.leaderBoard(),
+			...trackKeys.history(),
 			'contentPaginated',
 			limit,
 			onlyCompleted,
 			initialLimit,
 		] as const,
 	totalPlaybackDuration: (onlyCompleted: boolean) =>
-		[
-			...trackKeys.leaderBoard(),
-			'totalPlaybackDuration',
-			onlyCompleted,
-		] as const,
+		[...trackKeys.history(), 'totalPlaybackDuration', onlyCompleted] as const,
 }
 
-export function usePlayCountLeaderBoardPaginated(
+export function usePlayCountHistoryPaginated(
 	limit: number,
 	onlyCompleted: boolean,
 	initialLimit?: number,
 ) {
 	return useInfiniteQuery({
-		queryKey: trackKeys.leaderBoardContentPaginated(
+		queryKey: trackKeys.historyContentPaginated(
 			limit,
 			onlyCompleted,
 			initialLimit,
@@ -47,7 +43,7 @@ export function usePlayCountLeaderBoardPaginated(
 
 		queryFn: async ({ pageParam }) =>
 			returnOrThrowAsync(
-				trackService.getPlayCountLeaderBoardPaginated({
+				trackService.getPlayCountHistoryPaginated({
 					limit,
 					onlyCompleted,
 					initialLimit,

@@ -9,5 +9,4 @@ CREATE TABLE `play_history` (
 );
 --> statement-breakpoint
 CREATE INDEX `play_history_track_idx` ON `play_history` (`track_id`);--> statement-breakpoint
-CREATE INDEX `play_history_start_time_idx` ON `play_history` (`start_time`);--> statement-breakpoint
-ALTER TABLE `tracks` DROP COLUMN `play_history`;
+CREATE INDEX `play_history_start_time_idx` ON `play_history` (`start_time`);

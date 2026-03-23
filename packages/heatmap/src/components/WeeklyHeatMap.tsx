@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { JSX } from 'react'
+import { JSX, useCallback, useRef } from 'react'
 import { ScrollView, View } from 'react-native'
 import Svg, { G, Text as SvgText } from 'react-native-svg'
 
@@ -32,11 +32,22 @@ export const WeeklyHeatMap = ({
 	onMouseLeave,
 	scrollable = true,
 	rtl = false,
+	initialScrollEnd = false,
 	locale,
 	headerTextFormat = 'MMM',
 	sidebarTextFormat = 'ddd',
 	...props
 }: HeatMapProps) => {
+	const scrollViewRef = useRef<ScrollView>(null)
+	const scrolledRef = useRef(false)
+
+	const onLayout = useCallback(() => {
+		if (!scrolledRef.current && (rtl || initialScrollEnd)) {
+			scrolledRef.current = true
+			scrollViewRef.current?.scrollToEnd({ animated: false })
+		}
+	}, [rtl, initialScrollEnd])
+
 	const resolvedStartDate = startDate || dayjs().subtract(1, 'year').toDate()
 	const resolvedEndDate = endDate || new Date()
 
@@ -181,6 +192,8 @@ export const WeeklyHeatMap = ({
 		return (
 			<ScrollView
 				horizontal
+				ref={scrollViewRef}
+				onLayout={onLayout}
 				showsHorizontalScrollIndicator={false}
 				contentOffset={rtl ? { x: width, y: 0 } : { x: 0, y: 0 }}
 				style={props.scrollStyle}

@@ -74,7 +74,7 @@ export default function Library() {
 						/>
 						<IconButton
 							icon='trophy'
-							onPress={() => router.push('/leaderboard')}
+							onPress={() => router.push('/history/overall')}
 						/>
 					</View>
 				</View>

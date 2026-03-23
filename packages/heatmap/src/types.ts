@@ -47,6 +47,7 @@ export type HeatMapControllerProps = {
 	hoverable?: boolean
 	scrollable?: boolean
 	rtl?: boolean
+	initialScrollEnd?: boolean
 	isHeaderVisible?: boolean
 	isCellTextVisible?: boolean
 	isSidebarVisible?: boolean

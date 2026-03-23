@@ -229,7 +229,7 @@ async function finalizeAndRecordCurrentTrack(
 		})
 
 		void queryClient.invalidateQueries({
-			queryKey: trackKeys.leaderBoard(),
+			queryKey: trackKeys.history(),
 		})
 
 		void reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>

@@ -1,6 +1,7 @@
 import { WeeklyHeatMap } from '@bbplayer/heatmap'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import Color from 'color'
+import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
 import { desc } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
@@ -41,7 +42,7 @@ import SearchSuggestions, {
 } from '@/features/home/SearchSuggestions'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
-import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistoryHeatmap'
+import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
@@ -382,9 +383,15 @@ function HomePage() {
 				>
 					<WeeklyHeatMap
 						data={heatmapData || {}}
-						cellSize={10}
-						cellGap={2}
-						cellRadius={2}
+						cellSize={18}
+						cellGap={4}
+						cellRadius={4}
+						initialScrollEnd={true}
+						locale='zh-cn'
+						onCellPress={({ date }) => {
+							const dateStr = dayjs(date).format('YYYY-MM-DD')
+							router.push(`/history/${dateStr}`)
+						}}
 						scheme={theme.dark ? 'dark' : 'light'}
 						cellColor={{
 							1: Color(colors.primary).alpha(0.2).rgb().string(),
@@ -450,7 +457,7 @@ function HomePage() {
 								icon='history'
 								size={32}
 								mode='contained-tonal'
-								onPress={() => router.push('/leaderboard')} // 或新做个最近播放页面
+								onPress={() => router.push('/history/overall')} // 或新做个最近播放页面
 							/>
 							<Text
 								variant='labelMedium'
