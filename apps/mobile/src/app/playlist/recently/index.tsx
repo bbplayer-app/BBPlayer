@@ -7,12 +7,14 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
+import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMenu'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useMostPlayedTracks } from '@/hooks/queries/playHistory'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { addToQueue } from '@/utils/player'
+import toast from '@/utils/toast'
 
 export default function RecentlyPlayedPage() {
 	const router = useRouter()
@@ -43,6 +45,18 @@ export default function RecentlyPlayedPage() {
 		return tracksData.map((item) => item.track)
 	}, [tracksData])
 
+	const playTrack = useCallback(
+		async (track: BilibiliTrack, playNext: boolean) => {
+			await addToQueue({
+				tracks: [track],
+				playNow: false,
+				clearQueue: false,
+				playNext: playNext,
+			})
+		},
+		[],
+	)
+
 	const handlePlay = useCallback(async (track: Track) => {
 		await addToQueue({
 			tracks: [track],
@@ -52,7 +66,21 @@ export default function RecentlyPlayedPage() {
 		})
 	}, [])
 
-	const trackMenuItems = useCallback(() => [], [])
+	const handlePlayAll = useCallback(async () => {
+		if (!tracksData) {
+			toast.error('没有可播放的歌曲')
+			return
+		}
+		const tracks = tracksData.map((item) => item.track)
+		await addToQueue({
+			tracks,
+			playNow: true,
+			clearQueue: true,
+			playNext: false,
+		})
+	}, [tracksData])
+
+	const trackMenuItems = usePlaylistMenu(playTrack)
 
 	const bilibiliTracks = useMemo(() => {
 		return tracks as BilibiliTrack[]
@@ -97,6 +125,7 @@ export default function RecentlyPlayedPage() {
 								mainButtonIcon='play'
 								mainButtonText='播放全部'
 								id='recently-played'
+								onClickMainButton={handlePlayAll}
 							/>
 						}
 					/>

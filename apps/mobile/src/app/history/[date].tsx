@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list'
+import dayjs from 'dayjs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -11,14 +12,11 @@ import {
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import Button from '@/components/common/Button'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { HistoryListItem } from '@/features/history/HistoryListItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { usePlayHistoryByDate } from '@/hooks/queries/playHistory'
+import { usePlayHistoryByDayOfMonth } from '@/hooks/queries/playHistory'
 import type { Track } from '@/types/core/media'
-import { addToQueue } from '@/utils/player'
-import toast from '@/utils/toast'
 
 interface HistoryItemData {
 	track: Track
@@ -60,12 +58,13 @@ export default function DateHistoryPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const { date } = useLocalSearchParams<{ date: string }>()
+	const dayOfMonth = date ? dayjs(date).date() : null
 
 	const {
 		data: historyRecords,
 		isLoading: isHistoryLoading,
 		isError: isHistoryError,
-	} = usePlayHistoryByDate(date ?? '')
+	} = usePlayHistoryByDayOfMonth(dayOfMonth ?? 0)
 
 	const { aggregatedTracks, totalDuration } = useMemo(() => {
 		if (!historyRecords) return { aggregatedTracks: [], totalDuration: 0 }
@@ -98,27 +97,6 @@ export default function DateHistoryPage() {
 		(item: HistoryItemData) => item.track.uniqueKey,
 		[],
 	)
-
-	const handlePlayAll = useCallback(async () => {
-		const allTracks = aggregatedTracks.map((t) => t.track)
-
-		const playableTracks = allTracks.filter((track) => {
-			if (track.source === 'local') return true
-			return !!(track as unknown as { localMetadata?: unknown }).localMetadata
-		})
-
-		if (playableTracks.length === 0) {
-			toast.error('没有可播放的歌曲')
-			return
-		}
-
-		await addToQueue({
-			tracks: playableTracks,
-			playNow: true,
-			clearQueue: true,
-			playNext: false,
-		})
-	}, [aggregatedTracks])
 
 	const renderContent = () => {
 		if (isHistoryLoading) {
@@ -163,7 +141,7 @@ export default function DateHistoryPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title={`${date} 统计`} />
+				<Appbar.Content title='那月今日' />
 			</Appbar.Header>
 			{aggregatedTracks.length > 0 && !isHistoryError && (
 				<>
@@ -179,15 +157,6 @@ export default function DateHistoryPage() {
 							{totalDurationStr}
 						</Text>
 					</Surface>
-					<View style={styles.playAllContainer}>
-						<Button
-							mode='contained'
-							icon='play'
-							onPress={handlePlayAll}
-						>
-							播放全部
-						</Button>
-					</View>
 				</>
 			)}
 
@@ -223,11 +192,7 @@ const styles = StyleSheet.create({
 	totalDurationText: {
 		marginTop: 8,
 	},
-	playAllContainer: {
-		marginHorizontal: 16,
-		marginTop: 8,
-		marginBottom: 8,
-	},
+
 	contentContainer: {
 		flex: 1,
 	},

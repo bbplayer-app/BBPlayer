@@ -880,8 +880,7 @@ export class TrackService {
 			(Date.now() - days * 24 * 60 * 60 * 1000) / 1000,
 		)
 
-		// Normalize startTime: handle both ms and seconds timestamps
-		const normalizedStartTime = sql<number>`CASE WHEN ${schema.playHistory.startTime} > 10000000000 THEN ${schema.playHistory.startTime} / 1000 ELSE ${schema.playHistory.startTime} END`
+		const normalizedStartTime = schema.playHistory.startTime
 
 		// Subquery: aggregate total duration played per track
 		const durationSumSql = this.db

@@ -11,6 +11,8 @@ export const playHistoryKeys = {
 	all: ['playHistory'] as const,
 	heatmap: () => [...playHistoryKeys.all, 'heatmap'] as const,
 	byDate: (date: string) => [...playHistoryKeys.all, 'byDate', date] as const,
+	byDayOfMonth: (day: number) =>
+		[...playHistoryKeys.all, 'byDayOfMonth', day] as const,
 	topPlayed: (days: number, limit: number) =>
 		[...playHistoryKeys.all, 'topPlayed', days, limit] as const,
 }
@@ -66,10 +68,9 @@ export const usePlayHistoryByDate = (dateStr: string) => {
 
 			const historyRows = await drizzleDb.query.playHistory.findMany({
 				where: (ph, { and, sql }) => {
-					const normalizedTs = sql`CASE WHEN ${ph.startTime} > 10000000000 THEN ${ph.startTime} / 1000 ELSE ${ph.startTime} END`
 					return and(
-						sql`${normalizedTs} >= ${startTimeS}`,
-						sql`${normalizedTs} <= ${endTimeS}`,
+						sql`${ph.startTime} >= ${startTimeS * 1000}`,
+						sql`${ph.startTime} <= ${endTimeS * 1000}`,
 					)
 				},
 				with: {
@@ -97,6 +98,45 @@ export const usePlayHistoryByDate = (dateStr: string) => {
 				})
 		},
 		enabled: !!dateStr,
+		networkMode: 'always',
+		staleTime: 0,
+	})
+}
+
+export const usePlayHistoryByDayOfMonth = (dayOfMonth: number) => {
+	return useQuery({
+		queryKey: playHistoryKeys.byDayOfMonth(dayOfMonth),
+		queryFn: async () => {
+			const historyRows = await drizzleDb.query.playHistory.findMany({
+				where: (ph, { sql }) => {
+					const dayOfMonthSql = sql`strftime('%d', ${ph.startTime} / 1000, 'unixepoch', 'localtime')`
+					return sql`${dayOfMonthSql} = ${String(dayOfMonth).padStart(2, '0')}`
+				},
+				with: {
+					track: {
+						with: {
+							artist: true,
+							bilibiliMetadata: true,
+							localMetadata: true,
+						},
+					},
+				},
+				orderBy: [desc(schema.playHistory.startTime)],
+			})
+
+			// 过滤掉没有 track 的异常数据，并转换类型
+			return historyRows
+				.filter((row) => row.track !== null && row.track !== undefined)
+				.map((row) => {
+					const track = row.track as unknown as Track
+					return {
+						...track,
+						historyId: row.id,
+						playedAt: row.startTime,
+					}
+				})
+		},
+		enabled: !!dayOfMonth && dayOfMonth >= 1 && dayOfMonth <= 31,
 		networkMode: 'always',
 		staleTime: 0,
 	})

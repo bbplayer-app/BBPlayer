@@ -26,6 +26,7 @@ import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
 import {
 	ActivityIndicator,
+	Icon,
 	Searchbar,
 	Text,
 	useTheme,
@@ -43,6 +44,7 @@ import SearchSuggestions, {
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
+import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
@@ -95,6 +97,8 @@ function HomePage() {
 			.limit(1),
 	)
 	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
+
+	const { data: recentPlaylists } = useRecentPlaylists()
 
 	const greeting = getGreetingMsg()
 
@@ -406,7 +410,7 @@ function HomePage() {
 							decelerationRate='fast'
 							contentContainerStyle={styles.quickAccessScrollContent}
 						>
-							{/* 那年今日 */}
+							{/* 那月今日 */}
 							<RectButton
 								key='on-this-day'
 								style={[
@@ -414,22 +418,32 @@ function HomePage() {
 									{ backgroundColor: colors.surfaceVariant },
 								]}
 								onPress={() => {
-									const lastYear = dayjs()
-										.subtract(1, 'year')
+									const lastMonth = dayjs()
+										.subtract(1, 'month')
 										.format('YYYY-MM-DD')
-									router.push(`/history/${lastYear}`)
+									router.push(`/history/${lastMonth}`)
 								}}
 							>
-								<IconButton
-									icon='calendar-star'
-									size={32}
-									mode='contained-tonal'
-								/>
+								<View
+									style={{
+										width: 48,
+										height: 48,
+										borderRadius: 24,
+										justifyContent: 'center',
+										alignItems: 'center',
+									}}
+								>
+									<Icon
+										source='calendar-month'
+										size={32}
+										color={colors.onSurfaceVariant}
+									/>
+								</View>
 								<Text
 									variant='labelMedium'
 									style={styles.quickAccessText}
 								>
-									那年今日
+									那月今日
 								</Text>
 							</RectButton>
 
@@ -442,11 +456,21 @@ function HomePage() {
 								]}
 								onPress={() => router.push('/playlist/recently')}
 							>
-								<IconButton
-									icon='history'
-									size={32}
-									mode='contained-tonal'
-								/>
+								<View
+									style={{
+										width: 48,
+										height: 48,
+										borderRadius: 24,
+										justifyContent: 'center',
+										alignItems: 'center',
+									}}
+								>
+									<Icon
+										source='history'
+										size={32}
+										color={colors.onSurfaceVariant}
+									/>
+								</View>
 								<Text
 									variant='labelMedium'
 									style={styles.quickAccessText}
@@ -465,11 +489,21 @@ function HomePage() {
 									]}
 									onPress={() => router.push('/playlist/remote/toview')}
 								>
-									<IconButton
-										icon='clock-outline'
-										size={32}
-										mode='contained-tonal'
-									/>
+									<View
+										style={{
+											width: 48,
+											height: 48,
+											borderRadius: 24,
+											justifyContent: 'center',
+											alignItems: 'center',
+										}}
+									>
+										<Icon
+											source='clock-outline'
+											size={32}
+											color={colors.onSurfaceVariant}
+										/>
+									</View>
 									<Text
 										variant='labelMedium'
 										style={styles.quickAccessText}
@@ -480,8 +514,66 @@ function HomePage() {
 							)}
 						</ScrollView>
 					</View>
+
+					{/* 近期歌单 */}
+					{recentPlaylists && recentPlaylists.length > 0 && (
+						<View style={styles.recentPlaylistsSection}>
+							<Text
+								variant='titleMedium'
+								style={styles.sectionTitle}
+							>
+								近期歌单
+							</Text>
+							<Animated.ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								snapToInterval={156}
+								snapToAlignment='start'
+								decelerationRate='fast'
+								contentContainerStyle={styles.horizontalScrollContent}
+							>
+								{recentPlaylists.map((item) => (
+									<RectButton
+										key={item.id}
+										style={[
+											styles.playlistCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => {
+											router.push(`/playlist/local/${item.id}`)
+										}}
+									>
+										<Image
+											source={
+												item.coverUrl
+													? { uri: item.coverUrl }
+													: require('../../../assets/images/bilibili-default-avatar.jpg')
+											}
+											style={styles.playlistCover}
+											contentFit='cover'
+										/>
+										<View style={styles.playlistInfo}>
+											<Text
+												variant='labelMedium'
+												numberOfLines={2}
+												style={styles.playlistTitle}
+											>
+												{item.title}
+											</Text>
+											<Text
+												variant='bodySmall'
+												style={{ color: colors.onSurfaceVariant }}
+											>
+												{item.itemCount} 首
+											</Text>
+										</View>
+									</RectButton>
+								))}
+							</Animated.ScrollView>
+						</View>
+					)}
 					{/* 底部留白给播放条 */}
-					<View style={{ height: 100 }} />
+					<View style={{ height: 200 }} />
 				</Animated.ScrollView>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
@@ -555,6 +647,32 @@ const styles = StyleSheet.create({
 	quickAccessScrollContent: {
 		paddingHorizontal: 16,
 		gap: 16,
+	},
+	recentPlaylistsSection: {
+		marginBottom: 32,
+	},
+	horizontalScrollContent: {
+		paddingHorizontal: 16,
+		gap: 16,
+	},
+	playlistCard: {
+		width: 140,
+		borderRadius: 12,
+		overflow: 'hidden',
+		paddingBottom: 12,
+	},
+	playlistCover: {
+		width: '100%',
+		aspectRatio: 1,
+		borderRadius: 12,
+	},
+	playlistInfo: {
+		paddingHorizontal: 12,
+		paddingTop: 10,
+	},
+	playlistTitle: {
+		fontWeight: '600',
+		marginBottom: 4,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',
