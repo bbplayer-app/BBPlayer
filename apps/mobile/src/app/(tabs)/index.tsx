@@ -3,7 +3,6 @@ import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import Color from 'color'
 import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
-import { desc } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
@@ -18,6 +17,7 @@ import {
 import {
 	Keyboard,
 	Platform,
+	ScrollView,
 	StyleSheet,
 	ToastAndroid,
 	View,
@@ -95,20 +95,6 @@ function HomePage() {
 			.limit(1),
 	)
 	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
-
-	const { data: recentPlaylists } = useLiveQuery(
-		db
-			.select({
-				id: schema.playlists.id,
-				title: schema.playlists.title,
-				coverUrl: schema.playlists.coverUrl,
-				type: schema.playlists.type,
-				itemCount: schema.playlists.itemCount,
-			})
-			.from(schema.playlists)
-			.orderBy(desc(schema.playlists.updatedAt))
-			.limit(6),
-	)
 
 	const greeting = getGreetingMsg()
 
@@ -404,129 +390,96 @@ function HomePage() {
 						sidebarTextColor={colors.onSurfaceVariant}
 						scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
 					/>
-					{/* 快捷导航 (Quick Actions) */}
-					<View style={styles.quickActionsContainer}>
-						<View style={styles.quickActionItem}>
-							<IconButton
-								icon='folder-music'
-								size={32}
-								mode='contained-tonal'
-								onPress={() => router.push('/(tabs)/library/0')}
-							/>
-							<Text
-								variant='labelMedium'
-								style={styles.quickActionText}
+					{/* 快捷入口 */}
+					<View style={styles.quickAccessSection}>
+						<Text
+							variant='titleMedium'
+							style={styles.sectionTitle}
+						>
+							快捷入口
+						</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							snapToInterval={156}
+							snapToAlignment='start'
+							decelerationRate='fast'
+							contentContainerStyle={styles.quickAccessScrollContent}
+						>
+							{/* 那年今日 */}
+							<RectButton
+								key='on-this-day'
+								style={[
+									styles.quickAccessCard,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								onPress={() => {
+									const lastYear = dayjs()
+										.subtract(1, 'year')
+										.format('YYYY-MM-DD')
+									router.push(`/history/${lastYear}`)
+								}}
 							>
-								本地音乐
-							</Text>
-						</View>
-						<View style={styles.quickActionItem}>
-							<IconButton
-								icon='clock-outline'
-								size={32}
-								mode='contained-tonal'
-								onPress={() =>
-									router.push({
-										pathname: '/playlist/remote/toview',
-									})
-								}
-							/>
-							<Text
-								variant='labelMedium'
-								style={styles.quickActionText}
-							>
-								稍后再看
-							</Text>
-						</View>
-						<View style={styles.quickActionItem}>
-							<IconButton
-								icon='heart'
-								size={32}
-								mode='contained-tonal'
-								onPress={() => router.push('/(tabs)/library/1')}
-							/>
-							<Text
-								variant='labelMedium'
-								style={styles.quickActionText}
-							>
-								我的收藏
-							</Text>
-						</View>
-						<View style={styles.quickActionItem}>
-							<IconButton
-								icon='history'
-								size={32}
-								mode='contained-tonal'
-								onPress={() => router.push('/history/overall')} // 或新做个最近播放页面
-							/>
-							<Text
-								variant='labelMedium'
-								style={styles.quickActionText}
-							>
-								最近播放
-							</Text>
-						</View>
-					</View>
+								<IconButton
+									icon='calendar-star'
+									size={32}
+									mode='contained-tonal'
+								/>
+								<Text
+									variant='labelMedium'
+									style={styles.quickAccessText}
+								>
+									那年今日
+								</Text>
+							</RectButton>
 
-					{/* 最近常听/最近更新歌单 */}
-					{recentPlaylists && recentPlaylists.length > 0 && (
-						<View style={styles.recentPlaylistsSection}>
-							<Text
-								variant='titleMedium'
-								style={styles.sectionTitle}
+							{/* 最近常听 */}
+							<RectButton
+								key='recently-played'
+								style={[
+									styles.quickAccessCard,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								onPress={() => router.push('/playlist/recently')}
 							>
-								近期歌单
-							</Text>
-							<Animated.ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								contentContainerStyle={styles.horizontalScrollContent}
-							>
-								{recentPlaylists.map((item) => (
-									<RectButton
-										key={item.id}
-										style={[
-											styles.playlistCard,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-										onPress={() => {
-											if (item.type === 'local') {
-												router.push(`/playlist/local/${item.id}`)
-											} else {
-												// @ts-expect-error router typing issue
-												router.push(`/playlist/remote/${item.id}`)
-											}
-										}}
+								<IconButton
+									icon='history'
+									size={32}
+									mode='contained-tonal'
+								/>
+								<Text
+									variant='labelMedium'
+									style={styles.quickAccessText}
+								>
+									最近常听
+								</Text>
+							</RectButton>
+
+							{/* 稍后再看 - conditional on Bilibili cookie */}
+							{hasBilibiliCookie() && (
+								<RectButton
+									key='watch-later'
+									style={[
+										styles.quickAccessCard,
+										{ backgroundColor: colors.surfaceVariant },
+									]}
+									onPress={() => router.push('/playlist/remote/toview')}
+								>
+									<IconButton
+										icon='clock-outline'
+										size={32}
+										mode='contained-tonal'
+									/>
+									<Text
+										variant='labelMedium'
+										style={styles.quickAccessText}
 									>
-										<Image
-											source={
-												item.coverUrl
-													? { uri: item.coverUrl }
-													: require('../../../assets/images/bilibili-default-avatar.jpg')
-											}
-											style={styles.playlistCover}
-											contentFit='cover'
-										/>
-										<View style={styles.playlistInfo}>
-											<Text
-												variant='labelMedium'
-												numberOfLines={2}
-												style={styles.playlistTitle}
-											>
-												{item.title}
-											</Text>
-											<Text
-												variant='bodySmall'
-												style={{ color: colors.onSurfaceVariant }}
-											>
-												{item.itemCount} 首
-											</Text>
-										</View>
-									</RectButton>
-								))}
-							</Animated.ScrollView>
-						</View>
-					)}
+										稍后再看
+									</Text>
+								</RectButton>
+							)}
+						</ScrollView>
+					</View>
 					{/* 底部留白给播放条 */}
 					<View style={{ height: 100 }} />
 				</Animated.ScrollView>
@@ -578,49 +531,30 @@ const styles = StyleSheet.create({
 	scrollContent: {
 		paddingTop: 16,
 	},
-	quickActionsContainer: {
-		flexDirection: 'row',
-		justifyContent: 'space-evenly',
-		paddingHorizontal: 16,
-		marginBottom: 32,
-	},
-	quickActionItem: {
-		alignItems: 'center',
-		gap: 8,
-	},
-	quickActionText: {
-		fontWeight: '600',
-	},
-	recentPlaylistsSection: {
-		marginBottom: 32,
-	},
 	sectionTitle: {
 		paddingHorizontal: 16,
 		fontWeight: 'bold',
 		marginBottom: 16,
 	},
-	horizontalScrollContent: {
-		paddingHorizontal: 16,
-		gap: 16,
+	quickAccessSection: {
+		marginBottom: 32,
 	},
-	playlistCard: {
+	quickAccessCard: {
 		width: 140,
 		borderRadius: 12,
 		overflow: 'hidden',
-		paddingBottom: 12,
-	},
-	playlistCover: {
-		width: '100%',
-		aspectRatio: 1,
-		borderRadius: 12,
-	},
-	playlistInfo: {
+		paddingVertical: 16,
 		paddingHorizontal: 12,
-		paddingTop: 10,
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 8,
 	},
-	playlistTitle: {
+	quickAccessText: {
 		fontWeight: '600',
-		marginBottom: 4,
+	},
+	quickAccessScrollContent: {
+		paddingHorizontal: 16,
+		gap: 16,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

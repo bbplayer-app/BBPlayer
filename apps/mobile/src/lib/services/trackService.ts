@@ -857,6 +857,98 @@ export class TrackService {
 			return okAsync(formattedTrack)
 		})
 	}
+
+	/**
+	 * 获取最近 N 天内播放时长最多的歌曲。
+	 *
+	 * @param {object} options 配置项
+	 * @param {number} options.days 最近的天数
+	 * @param {number} options.limit 返回的最大数量
+	 * @returns 播放时长排行及总播放时长的异步结果。
+	 */
+	public getMostPlayedTracksInLastDays(options: {
+		days: number
+		limit: number
+	}): ResultAsync<
+		Array<{ track: Track; totalDuration: number }>,
+		DatabaseError
+	> {
+		const { days, limit } = options
+
+		// Calculate cutoff timestamp in seconds
+		const cutoffTimeS = Math.floor(
+			(Date.now() - days * 24 * 60 * 60 * 1000) / 1000,
+		)
+
+		// Normalize startTime: handle both ms and seconds timestamps
+		const normalizedStartTime = sql<number>`CASE WHEN ${schema.playHistory.startTime} > 10000000000 THEN ${schema.playHistory.startTime} / 1000 ELSE ${schema.playHistory.startTime} END`
+
+		// Subquery: aggregate total duration played per track
+		const durationSumSql = this.db
+			.select({
+				trackId: schema.playHistory.trackId,
+				totalDuration: sum(schema.playHistory.durationPlayed).as(
+					'total_duration',
+				),
+			})
+			.from(schema.playHistory)
+			.where(sql`${normalizedStartTime} >= ${cutoffTimeS}`)
+			.groupBy(schema.playHistory.trackId)
+			.as('duration_sums')
+
+		const historyQuery = Sentry.startSpan(
+			{ name: 'db:query:mostPlayedTracksByDuration', op: 'db' },
+			() =>
+				this.db
+					.select({
+						track: schema.tracks,
+						artist: schema.artists,
+						bilibiliMetadata: schema.bilibiliMetadata,
+						localMetadata: schema.localMetadata,
+						totalDuration: durationSumSql.totalDuration,
+					})
+					.from(schema.tracks)
+					.innerJoin(
+						durationSumSql,
+						eq(schema.tracks.id, durationSumSql.trackId),
+					)
+					.leftJoin(
+						schema.artists,
+						eq(schema.tracks.artistId, schema.artists.id),
+					)
+					.leftJoin(
+						schema.bilibiliMetadata,
+						eq(schema.tracks.id, schema.bilibiliMetadata.trackId),
+					)
+					.leftJoin(
+						schema.localMetadata,
+						eq(schema.tracks.id, schema.localMetadata.trackId),
+					)
+					.orderBy(desc(durationSumSql.totalDuration))
+					.limit(limit),
+		)
+
+		return ResultAsync.fromPromise(
+			historyQuery,
+			(e) => new DatabaseError('获取最近播放时长排行失败', { cause: e }),
+		).andThen((rows) => {
+			const results: Array<{ track: Track; totalDuration: number }> = []
+			for (const row of rows) {
+				const track = this.formatTrack({
+					...row.track,
+					artist: row.artist,
+					bilibiliMetadata: row.bilibiliMetadata,
+					localMetadata: row.localMetadata,
+				})
+				if (!track) continue
+				results.push({
+					track,
+					totalDuration: Number(row.totalDuration ?? 0),
+				})
+			}
+			return okAsync(results)
+		})
+	}
 }
 
 export const trackService = new TrackService(db)

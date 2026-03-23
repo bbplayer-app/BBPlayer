@@ -11,11 +11,14 @@ import {
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { HistoryListItem } from '@/features/history/HistoryListItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlayHistoryByDate } from '@/hooks/queries/playHistory'
 import type { Track } from '@/types/core/media'
+import { addToQueue } from '@/utils/player'
+import toast from '@/utils/toast'
 
 interface HistoryItemData {
 	track: Track
@@ -96,6 +99,27 @@ export default function DateHistoryPage() {
 		[],
 	)
 
+	const handlePlayAll = useCallback(async () => {
+		const allTracks = aggregatedTracks.map((t) => t.track)
+
+		const playableTracks = allTracks.filter((track) => {
+			if (track.source === 'local') return true
+			return !!(track as unknown as { localMetadata?: unknown }).localMetadata
+		})
+
+		if (playableTracks.length === 0) {
+			toast.error('没有可播放的歌曲')
+			return
+		}
+
+		await addToQueue({
+			tracks: playableTracks,
+			playNow: true,
+			clearQueue: true,
+			playNext: false,
+		})
+	}, [aggregatedTracks])
+
 	const renderContent = () => {
 		if (isHistoryLoading) {
 			return (
@@ -142,18 +166,29 @@ export default function DateHistoryPage() {
 				<Appbar.Content title={`${date} 统计`} />
 			</Appbar.Header>
 			{aggregatedTracks.length > 0 && !isHistoryError && (
-				<Surface
-					style={styles.totalDurationSurface}
-					elevation={2}
-				>
-					<Text variant='titleMedium'>当日听歌时长</Text>
-					<Text
-						variant='headlineMedium'
-						style={[styles.totalDurationText, { color: colors.primary }]}
+				<>
+					<Surface
+						style={styles.totalDurationSurface}
+						elevation={2}
 					>
-						{totalDurationStr}
-					</Text>
-				</Surface>
+						<Text variant='titleMedium'>当日听歌时长</Text>
+						<Text
+							variant='headlineMedium'
+							style={[styles.totalDurationText, { color: colors.primary }]}
+						>
+							{totalDurationStr}
+						</Text>
+					</Surface>
+					<View style={styles.playAllContainer}>
+						<Button
+							mode='contained'
+							icon='play'
+							onPress={handlePlayAll}
+						>
+							播放全部
+						</Button>
+					</View>
+				</>
 			)}
 
 			<View style={styles.contentContainer}>{renderContent()}</View>
@@ -187,6 +222,11 @@ const styles = StyleSheet.create({
 	},
 	totalDurationText: {
 		marginTop: 8,
+	},
+	playAllContainer: {
+		marginHorizontal: 16,
+		marginTop: 8,
+		marginBottom: 8,
 	},
 	contentContainer: {
 		flex: 1,

@@ -4,12 +4,15 @@ import { count, desc, sql } from 'drizzle-orm'
 
 import drizzleDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
+import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 
 export const playHistoryKeys = {
 	all: ['playHistory'] as const,
 	heatmap: () => [...playHistoryKeys.all, 'heatmap'] as const,
 	byDate: (date: string) => [...playHistoryKeys.all, 'byDate', date] as const,
+	topPlayed: (days: number, limit: number) =>
+		[...playHistoryKeys.all, 'topPlayed', days, limit] as const,
 }
 
 export const usePlayHistoryHeatmap = () => {
@@ -96,5 +99,24 @@ export const usePlayHistoryByDate = (dateStr: string) => {
 		enabled: !!dateStr,
 		networkMode: 'always',
 		staleTime: 0,
+	})
+}
+
+export const useMostPlayedTracks = (days: number, limit: number) => {
+	return useQuery({
+		queryKey: playHistoryKeys.topPlayed(days, limit),
+		queryFn: async () => {
+			const result = await trackService.getMostPlayedTracksInLastDays({
+				days,
+				limit,
+			})
+			if (result.isErr()) {
+				throw result.error
+			}
+			return result.value
+		},
+		enabled: true,
+		networkMode: 'always',
+		staleTime: 60 * 1000,
 	})
 }

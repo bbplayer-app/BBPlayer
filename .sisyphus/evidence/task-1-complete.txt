@@ -1,0 +1,25 @@
+Task 1 Complete: Add getMostPlayedTracksInLastDays method
+
+## Summary
+Added `getMostPlayedTracksInLastDays` method to TrackService class in `apps/mobile/src/lib/services/trackService.ts`
+
+## Implementation Details
+- **Method signature**: `getMostPlayedTracksInLastDays(options: { days: number; limit: number }): ResultAsync<Array<{ track: Track; totalDuration: number }>, DatabaseError>`
+- **Returns**: Array of tracks with their total play duration, ordered by totalDuration DESC
+- **Timestamp handling**: Normalizes both ms and seconds timestamps using `CASE WHEN startTime > 10000000000 THEN startTime / 1000 ELSE startTime END`
+- **Filter**: Uses cutoff time calculated as `Date.now() - days * 24 * 60 * 60 * 1000`
+- **Subquery pattern**: Aggregates durationPlayed by trackId using `sum()`
+- **Joins**: tracks, artists, bilibiliMetadata, localMetadata
+- **Instrumentation**: Uses Sentry.startSpan
+- **Error handling**: Returns ResultAsync with DatabaseError
+
+## Pattern Followed
+- Exact pattern from `getPlayCountHistoryPaginated` for subqueries and joins
+- Timestamp normalization pattern from `playHistory.ts:66`
+- Consistent with existing TrackService method style
+
+## Notes
+- No pagination (limit only as specified)
+- No caching (as specified)
+- No new dependencies
+- Existing codebase has pre-existing type errors in node_modules (unrelated to this change)
