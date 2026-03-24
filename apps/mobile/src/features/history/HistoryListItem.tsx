@@ -11,7 +11,7 @@ import type { Track } from '@/types/core/media'
 import { addToQueue } from '@/utils/player'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
-interface LeaderBoardItemProps {
+interface HistoryListItemProps {
 	item: {
 		track: Track
 		playCount: number
@@ -19,10 +19,10 @@ interface LeaderBoardItemProps {
 	index: number
 }
 
-export const LeaderBoardListItem = memo(function LeaderBoardListItem({
+export const HistoryListItem = memo(function HistoryListItem({
 	item,
 	index,
-}: LeaderBoardItemProps) {
+}: HistoryListItemProps) {
 	const { colors } = useTheme()
 	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(item.track.uniqueKey)

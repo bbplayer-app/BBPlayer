@@ -5,6 +5,29 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 主页面集成播放历史热力图（GitHub 风格），展示每日播放统计
+- 完全重构主页
+- 桌面歌词坐标记忆功能（Y 坐标持久化）
+- 歌词预加载下一首功能，提升切歌体验
+- 歌单合并功能，支持多选本地歌单并去重合并
+- 桌面/状态栏歌词在歌词修改或偏移调整时自动同步更新
+- 桌面歌词面板新增「清空歌词」快捷按钮，点击后跳过该曲目的歌词自动获取，并在应用内显示提示；用户可随时通过手动搜索或编辑歌词来重新启用
+- 无歌词（包括已跳过/未找到）时，自动隐藏桌面歌词面板和状态栏歌词，而非显示空白
+- orpheus：重构随机播放模式，开启时直接将播放队列替换为随机后的顺序（当前歌曲置顶），播完一轮后自动重新打乱
+
+### Changed
+
+- 播放器主页标题平滑渐变效果重构为独立 Hook，实现 UI 与动画逻辑解耦
+- 重构手机登录模块，采用自定义 Hook (`usePhoneLogin`) 与分步组件化架构，大幅简化状态逻辑并提升可维护性
+- 新增 `useGeetest` Hook：将极验验证与发送验证码逻辑独立，实现验证逻辑的解耦与复用
+- 模块化 `PlaylistSyncWorker`，解耦复杂的同步逻辑与 API 请求处理
+- 为 `lyricService`、`lottie` 及 `crypto` 中的 `JSON.parse` 调用增加安全处理，防止非法数据导致崩溃
+- 清理项目内多处未使用的导入及变量，优化代码体积
+
 ## [2.4.2] - 2026-03-12
 
 ### Added
@@ -281,6 +304,12 @@
 
 ### Fixed
 
+- **Refactored `PhoneLoginModal`** into a modular, hook-based architecture.
+- **`usePhoneLogin` FSM Refactor**: Further refined the login hook by implementing a **Finite State Machine (FSM)** using `useReducer`. This consolidated scattered state variables (like `isSendingCode`, `isLoggingIn`, and various error strings) into a single, predictable state object, reducing potential bugs from invalid state combinations.
+- **Refined with FSM**: Implemented a **Finite State Machine (FSM)** using `useReducer` within the hook to consolidate many `isXXX` and `xxError` variables into a single, predictable state object.
+- **`useGeetest` Hook Extraction**: Extracted the Geetest captcha parsing and SMS sending logic into a dedicated `useGeetest` hook. This further modularizes the authentication flow and makes the captcha logic reusable for other potential entry points.
+- Splitting the UI into modular step components: `InputPhoneStep`, `GeetestVerifyStep`, `InputCodeStep`, and `SuccessStep`.
+- **Decoupled database and store initialization** in `db.ts` to prevent startup race conditions.
 - 修复 `DatabaseLauncher has already started. Create a new instance in order to launch a new version.` 错误
 
 ## [1.4.2] - 2025-11-09

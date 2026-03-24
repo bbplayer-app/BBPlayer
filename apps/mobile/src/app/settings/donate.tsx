@@ -53,6 +53,23 @@ export default function DonateSettingsPage() {
 					)}
 					onPress={() => openModal('DonationQR', { type: 'wechat' })}
 				/>
+				<List.Item
+					title='支付宝'
+					description='点击显示收款码'
+					left={(props) => (
+						<List.Icon
+							{...props}
+							icon='wallet'
+						/>
+					)}
+					right={(props) => (
+						<List.Icon
+							{...props}
+							icon='chevron-right'
+						/>
+					)}
+					onPress={() => openModal('DonationQR', { type: 'alipay' })}
+				/>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />

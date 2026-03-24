@@ -39,6 +39,9 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     private val uiContext = ContextThemeWrapper(context, android.R.style.Theme_DeviceDefault)
 
+    /** Callback invoked when the user clicks "清空歌词" in the settings panel. */
+    var onClearLyricsRequested: ((trackId: String) -> Unit)? = null
+
     private var lyrics: List<LyricsLine> = emptyList()
     private var offset: Double = 0.0
     private var currentLineIndex = -1
@@ -70,6 +73,13 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     fun show() {
         if (floatingView != null) return
+        
+        // Re-read latest settings from storage before showing
+        isLocked = GeneralStorage.isDesktopLyricsLocked()
+        displayMode = GeneralStorage.getDesktopLyricsMode().coerceIn(0, 2)
+        textColor = GeneralStorage.getDesktopLyricsHighlightColor()
+        textSize = GeneralStorage.getDesktopLyricsTextSize()
+        
         @Suppress("DEPRECATION")
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
         params = WindowManager.LayoutParams(
@@ -78,7 +88,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            y = 200
+            y = GeneralStorage.getDesktopLyricsY()
         }
         createView()
         updateTouchableFlags()
@@ -100,6 +110,9 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
         Handler(Looper.getMainLooper()).post { lyricView?.setTrackInfo(title, artist) }
     }
 
+    /** Whether the floating window is currently attached to the screen. */
+    val isShowing: Boolean get() = floatingView != null
+
     fun hide() {
         floatingView?.let {
             try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
@@ -110,6 +123,24 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             playPauseButton = null
             colorViews.clear()
             GeneralStorage.setDesktopLyricsShown(false)
+        }
+    }
+
+    /**
+     * Temporarily hides the floating window WITHOUT persisting the state to GeneralStorage.
+     * Used when there are no lyrics for the current track so the panel vanishes,
+     * but it will be re-shown automatically when lyrics become available again.
+     */
+    fun softHide() {
+        floatingView?.let {
+            try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
+            player?.removeListener(playerListener)
+            floatingView = null
+            lyricView = null
+            settingsPanel = null
+            playPauseButton = null
+            colorViews.clear()
+            // Note: intentionally NOT calling GeneralStorage.setDesktopLyricsShown(false)
         }
     }
 
@@ -197,7 +228,11 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
                     if (abs(dy) > touchSlop) { isClick = false; params?.y = maxOf(cachedStatusBarHeight, initialY + dy); updateLayout() }
                     true
                 }
-                MotionEvent.ACTION_UP -> { if (isClick) v.performClick(); true }
+                MotionEvent.ACTION_UP -> { 
+                    if (isClick) v.performClick()
+                    else params?.y?.let { GeneralStorage.setDesktopLyricsY(it) }
+                    true 
+                }
                 else -> false
             }
         }
@@ -231,6 +266,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             progress = (textSize - 10).toInt()
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
+                    if (!p2) return // Only handle user-initiated changes
                     textSize = (p1 + 10).toFloat()
                     GeneralStorage.setDesktopLyricsTextSize(textSize)
                     lyricView?.setStyle(textSize, textColor)
@@ -276,6 +312,15 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             updateLayout()
         }
         actionsRow.addView(modeBtn)
+        actionsRow.addView(View(uiContext), LinearLayout.LayoutParams(24, 1))
+        actionsRow.addView(createActionButton(R.string.clear_lyrics, R.drawable.outline_lyrics_off_24) {
+            settingsPanel?.visibility = View.GONE
+            updateLayout()
+            val trackId = player?.currentMediaItem?.mediaId ?: return@createActionButton
+            // Clear the overlay immediately for instant feedback
+            setLyrics(emptyList())
+            onClearLyricsRequested?.invoke(trackId)
+        })
         actionsRow.addView(View(uiContext), LinearLayout.LayoutParams(24, 1))
         actionsRow.addView(createActionButton(R.string.close, R.drawable.outline_close_24) { settingsPanel?.visibility = View.GONE; updateLayout() })
 

@@ -12,6 +12,7 @@ const SCHEMA_VERSION_KEY = 'db_schema_version'
 
 const SORT_KEY_MIGRATED_V2_KEY = 'sort_key_migrated_v2' // gitleaks:allow
 const SORT_KEY_MIGRATED_V3_KEY = 'sort_key_migrated_v3' // gitleaks:allow
+const PLAY_HISTORY_MIGRATED_V1_KEY = 'play_history_migrated_v1' // gitleaks:allow
 
 interface MigrationConfig {
 	journal: {
@@ -158,6 +159,78 @@ function migrateSortKeysV3(): void {
 	}
 }
 
+/**
+ * 迁移播放历史数据：从 tracks 表的 JSON 迁移到 play_history 表。
+ */
+function migratePlayHistory(): void {
+	if (storage.getBoolean(PLAY_HISTORY_MIGRATED_V1_KEY)) return
+
+	try {
+		// 1. 检查 tracks 表是否还有 play_history 列
+		const tracksTableInfo = expoDb.getAllSync<{ name: string }>(
+			`PRAGMA table_info(tracks)`,
+		)
+		const hasOldColumn = tracksTableInfo.some(
+			(col) => col.name === 'play_history',
+		)
+
+		if (!hasOldColumn) {
+			logger.info(
+				'[play_history] tracks 表中无 play_history 字段，无需执行数据迁移',
+			)
+			storage.set(PLAY_HISTORY_MIGRATED_V1_KEY, true)
+			return
+		}
+
+		// 2. 检查 play_history 表是否已经创建
+		const masterInfo = expoDb.getAllSync<{ name: string }>(
+			`SELECT name FROM sqlite_master WHERE type='table' AND name='play_history'`,
+		)
+		if (masterInfo.length === 0) {
+			logger.warning('[play_history] play_history 表尚未创建，跳过本次数据迁移')
+			return
+		}
+
+		expoDb.withTransactionSync(() => {
+			type Row = { id: number; play_history: string }
+			const rows = expoDb.getAllSync<Row>(
+				`SELECT id, play_history FROM tracks WHERE play_history IS NOT NULL AND play_history != '[]'`,
+			)
+
+			if (rows.length > 0) {
+				logger.info(
+					`[play_history] 发现 ${rows.length} 个带有播放记录的歌曲，准备迁移...`,
+				)
+				for (const row of rows) {
+					const history = JSON.parse(row.play_history)
+					if (Array.isArray(history)) {
+						for (const record of history) {
+							expoDb.runSync(
+								`INSERT INTO play_history (track_id, start_time, duration_played, completed, created_at) 
+								 VALUES (?, ?, ?, ?, (unixepoch() * 1000))`,
+								[
+									row.id,
+									record.startTime,
+									record.durationPlayed,
+									record.completed ? 1 : 0,
+								],
+							)
+						}
+					}
+				}
+				logger.info(
+					`[play_history] 播放记录迁移完成，共处理 ${rows.length} 条歌曲记录`,
+				)
+			}
+		})
+
+		storage.set(PLAY_HISTORY_MIGRATED_V1_KEY, true)
+	} catch (error) {
+		// 这里不吃掉错误，而是让它打印出来，并且不设置 storage 标记，下次启动还会重试
+		logger.error('[play_history] 迁移过程中发生致命错误:', error)
+	}
+}
+
 export const useFastMigrations = (
 	db: ExpoSQLiteDatabase<Record<string, unknown>>,
 	migrations: MigrationConfig,
@@ -195,6 +268,7 @@ export const useFastMigrations = (
 				// SQL 迁移已是最新，检查/执行 JS 层迁移
 				migrateSortKeysV2()
 				migrateSortKeysV3()
+				migratePlayHistory()
 				dispatch({ type: 'migrated', payload: true })
 				return
 			}
@@ -206,6 +280,7 @@ export const useFastMigrations = (
 				// SQL 迁移完成后立刻检查/执行 JS 层迁移
 				migrateSortKeysV2()
 				migrateSortKeysV3()
+				migratePlayHistory()
 
 				storage.set(SCHEMA_VERSION_KEY, latestVersion)
 				dispatch({ type: 'migrated', payload: true })

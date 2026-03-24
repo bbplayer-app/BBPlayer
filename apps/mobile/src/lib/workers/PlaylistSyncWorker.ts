@@ -157,35 +157,7 @@ class PlaylistSyncWorker {
 		playlistId: number,
 		rows: QueueRow[],
 	): Promise<void> {
-		// 拆分三种 track 操作
-		const addOps: QueueRow[] = []
-		const removeOps: QueueRow[] = []
-		const reorderOps: QueueRow[] = []
-		for (const row of rows) {
-			if (row.operation === 'add_tracks') addOps.push(row)
-			else if (row.operation === 'remove_tracks') removeOps.push(row)
-			else if (row.operation === 'reorder_track') reorderOps.push(row)
-		}
-
-		const trackIds = new Set<number>()
-		for (const row of addOps) {
-			const payload = this.parsePayload(row.payload) as { trackIds?: number[] }
-			payload.trackIds?.forEach((id) => {
-				trackIds.add(id)
-			})
-		}
-		for (const row of removeOps) {
-			const payload = this.parsePayload(row.payload) as {
-				removedTrackIds?: number[]
-			}
-			payload.removedTrackIds?.forEach((id) => {
-				trackIds.add(id)
-			})
-		}
-		for (const row of reorderOps) {
-			const payload = this.parsePayload(row.payload) as { trackId?: number }
-			if (payload.trackId !== undefined) trackIds.add(payload.trackId)
-		}
+		const trackIds = this.collectTrackIds(rows)
 
 		if (trackIds.size === 0) {
 			// payload 损坏，无法解析出任何 trackId，永久无效，直接清理
@@ -195,135 +167,10 @@ class PlaylistSyncWorker {
 
 		const metaMap = await this.fetchTrackMetadata(playlistId, [...trackIds])
 
-		const invalidRowIds: number[] = []
-		const validRowIds = new Set<number>()
-		const changes: Array<
-			| {
-					op: 'upsert'
-					track: {
-						unique_key: string
-						title: string
-						artist_name?: string
-						artist_id?: string
-						cover_url?: string
-						duration?: number
-						bilibili_bvid: string
-						bilibili_cid?: string
-					}
-					sort_key: string
-					operation_at: number
-			  }
-			| {
-					op: 'remove'
-					track_unique_key: string
-					operation_at: number
-			  }
-			| {
-					op: 'reorder'
-					track_unique_key: string
-					sort_key: string
-					operation_at: number
-			  }
-		> = []
-
-		// add_tracks → upsert
-		for (const row of addOps) {
-			const payload = this.parsePayload(row.payload) as { trackIds?: number[] }
-			if (!payload.trackIds || payload.trackIds.length === 0) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-
-			const rowChanges: typeof changes = []
-			let rowValid = true
-			for (const tid of payload.trackIds) {
-				const meta = metaMap.get(tid)
-				if (!meta || !meta.sortKey || !meta.bvid) {
-					rowValid = false
-					break
-				}
-				rowChanges.push({
-					op: 'upsert',
-					track: {
-						unique_key: meta.uniqueKey,
-						title: meta.title,
-						artist_name: meta.artistName ?? undefined,
-						artist_id: meta.artistId ?? undefined,
-						cover_url: meta.coverUrl ?? undefined,
-						duration: meta.duration ?? undefined,
-						bilibili_bvid: meta.bvid,
-						bilibili_cid:
-							meta.cid !== null && meta.cid !== undefined
-								? String(meta.cid)
-								: undefined,
-					},
-					sort_key: meta.sortKey,
-					operation_at: this.toMillis(row.operationAt),
-				})
-			}
-
-			if (!rowValid) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-
-			changes.push(...rowChanges)
-			validRowIds.add(row.id)
-		}
-
-		// remove_tracks
-		for (const row of removeOps) {
-			const payload = this.parsePayload(row.payload) as {
-				removedTrackIds?: number[]
-			}
-			if (!payload.removedTrackIds || payload.removedTrackIds.length === 0) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-			let rowValid = true
-			const rowChanges: typeof changes = []
-			for (const tid of payload.removedTrackIds) {
-				const meta = metaMap.get(tid)
-				if (!meta) {
-					rowValid = false
-					break
-				}
-				rowChanges.push({
-					op: 'remove',
-					track_unique_key: meta.uniqueKey,
-					operation_at: this.toMillis(row.operationAt),
-				})
-			}
-			if (!rowValid) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-			changes.push(...rowChanges)
-			validRowIds.add(row.id)
-		}
-
-		// reorder_track
-		for (const row of reorderOps) {
-			const payload = this.parsePayload(row.payload) as {
-				trackId?: number
-			}
-			if (payload.trackId === undefined) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-			const meta = metaMap.get(payload.trackId)
-			if (!meta || !meta.sortKey) {
-				invalidRowIds.push(row.id)
-				continue
-			}
-			changes.push({
-				op: 'reorder',
-				track_unique_key: meta.uniqueKey,
-				sort_key: meta.sortKey,
-				operation_at: this.toMillis(row.operationAt),
-			})
-			validRowIds.add(row.id)
-		}
+		const { changes, validRowIds, invalidRowIds } = this.mapTrackChangesToApi(
+			rows,
+			metaMap,
+		)
 
 		if (invalidRowIds.length > 0) {
 			// payload 损坏或对应 track 已被删除，永久无效，直接清理
@@ -372,6 +219,132 @@ class PlaylistSyncWorker {
 			})
 			await this.markRows([...validRowIds], 'failed')
 		}
+	}
+
+	private collectTrackIds(rows: QueueRow[]): Set<number> {
+		const trackIds = new Set<number>()
+		for (const row of rows) {
+			const payload = this.parsePayload(row.payload)
+			if (row.operation === 'add_tracks') {
+				;(payload.trackIds as number[] | undefined)?.forEach((id) =>
+					trackIds.add(id),
+				)
+			} else if (row.operation === 'remove_tracks') {
+				;(payload.removedTrackIds as number[] | undefined)?.forEach((id) =>
+					trackIds.add(id),
+				)
+			} else if (row.operation === 'reorder_track') {
+				if (typeof payload.trackId === 'number') trackIds.add(payload.trackId)
+			}
+		}
+		return trackIds
+	}
+
+	private mapTrackChangesToApi(
+		rows: QueueRow[],
+		metaMap: Map<number, TrackMeta>,
+	) {
+		type SyncChange =
+			| {
+					op: 'upsert'
+					track: {
+						unique_key: string
+						title: string
+						artist_name?: string
+						artist_id?: string
+						cover_url?: string
+						duration?: number
+						bilibili_bvid: string
+						bilibili_cid?: string
+					}
+					sort_key: string
+					operation_at: number
+			  }
+			| {
+					op: 'remove'
+					track_unique_key: string
+					operation_at: number
+			  }
+			| {
+					op: 'reorder'
+					track_unique_key: string
+					sort_key: string
+					operation_at: number
+			  }
+
+		const invalidRowIds: number[] = []
+		const validRowIds = new Set<number>()
+		const changes: SyncChange[] = []
+
+		for (const row of rows) {
+			const payload = this.parsePayload(row.payload)
+			let rowValid = true
+			const rowChanges: SyncChange[] = []
+
+			if (row.operation === 'add_tracks') {
+				const ids = (payload.trackIds as number[]) || []
+				if (ids.length === 0) rowValid = false
+				for (const tid of ids) {
+					const meta = metaMap.get(tid)
+					if (!meta || !meta.sortKey || !meta.bvid) {
+						rowValid = false
+						break
+					}
+					rowChanges.push({
+						op: 'upsert',
+						track: {
+							unique_key: meta.uniqueKey,
+							title: meta.title,
+							artist_name: meta.artistName ?? undefined,
+							artist_id: meta.artistId ?? undefined,
+							cover_url: meta.coverUrl ?? undefined,
+							duration: meta.duration ?? undefined,
+							bilibili_bvid: meta.bvid,
+							bilibili_cid: meta.cid?.toString(),
+						},
+						sort_key: meta.sortKey,
+						operation_at: this.toMillis(row.operationAt),
+					})
+				}
+			} else if (row.operation === 'remove_tracks') {
+				const ids = (payload.removedTrackIds as number[]) || []
+				if (ids.length === 0) rowValid = false
+				for (const tid of ids) {
+					const meta = metaMap.get(tid)
+					if (!meta) {
+						rowValid = false
+						break
+					}
+					rowChanges.push({
+						op: 'remove',
+						track_unique_key: meta.uniqueKey,
+						operation_at: this.toMillis(row.operationAt),
+					})
+				}
+			} else if (row.operation === 'reorder_track') {
+				const tid = payload.trackId as number
+				const meta = metaMap.get(tid)
+				if (!meta || !meta.sortKey) {
+					rowValid = false
+				} else {
+					rowChanges.push({
+						op: 'reorder',
+						track_unique_key: meta.uniqueKey,
+						sort_key: meta.sortKey,
+						operation_at: this.toMillis(row.operationAt),
+					})
+				}
+			}
+
+			if (rowValid && rowChanges.length > 0) {
+				changes.push(...rowChanges)
+				validRowIds.add(row.id)
+			} else {
+				invalidRowIds.push(row.id)
+			}
+		}
+
+		return { changes, validRowIds, invalidRowIds }
 	}
 
 	private async pushMetadataChanges(

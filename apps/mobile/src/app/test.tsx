@@ -1,6 +1,9 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
-import { asc } from 'drizzle-orm'
+import dayjs from 'dayjs'
+import { asc, sql } from 'drizzle-orm'
+import * as DocumentPicker from 'expo-document-picker'
+import { Directory, File, Paths } from 'expo-file-system'
 import * as Updates from 'expo-updates'
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -34,6 +37,7 @@ export default function TestPage() {
 	const [updateChannel, setUpdateChannel] = useState('')
 	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
 		useState(false)
+	const [queryDate, setQueryDate] = useState('')
 
 	const testCheckUpdate = async () => {
 		setLoading(true)
@@ -177,6 +181,137 @@ export default function TestPage() {
 		}
 	}
 
+	const handleImportDatabase = async () => {
+		alert(
+			'导入数据库',
+			'导入将覆盖当前数据库并自动重启应用，是否继续？',
+			[
+				{ text: '取消' },
+				{
+					text: '确定',
+					onPress: async () => {
+						setLoading(true)
+						try {
+							const result = await DocumentPicker.getDocumentAsync({
+								type: '*/*',
+								copyToCacheDirectory: true,
+							})
+
+							if (result.canceled) return
+
+							const pickedFile = new File(result.assets[0].uri)
+							const dbDir = new Directory(Paths.document, 'SQLite')
+							const dbFile = new File(dbDir, 'db.db')
+
+							if (!dbDir.exists) {
+								dbDir.create()
+							}
+
+							expoDb.closeSync()
+							if (dbFile.exists) {
+								dbFile.delete()
+							}
+							pickedFile.copy(dbFile)
+
+							toast.success('导入成功')
+						} catch (error) {
+							toastAndLogError('导入数据库失败', error, 'TestPage')
+						} finally {
+							setLoading(false)
+						}
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}
+
+	const handleImportMMKV = async () => {
+		alert(
+			'导入 MMKV 数据',
+			'请同时选择 mmkv.default 和 mmkv.default.crc 文件进行导入。',
+			[
+				{ text: '取消' },
+				{
+					text: '确定',
+					onPress: async () => {
+						setLoading(true)
+						try {
+							const result = await DocumentPicker.getDocumentAsync({
+								type: '*/*',
+								copyToCacheDirectory: true,
+								multiple: true,
+							})
+
+							if (result.canceled) return
+
+							const mmkvDir = new Directory(Paths.document, 'mmkv')
+							if (!mmkvDir.exists) {
+								mmkvDir.create()
+							}
+
+							for (const asset of result.assets) {
+								const pickedFile = new File(asset.uri)
+								const targetFile = new File(mmkvDir, asset.name)
+								if (targetFile.exists) {
+									targetFile.delete()
+								}
+								pickedFile.copy(targetFile)
+							}
+
+							toast.success('MMKV 导入成功')
+						} catch (error) {
+							toastAndLogError('导入 MMKV 失败', error, 'TestPage')
+						} finally {
+							setLoading(false)
+						}
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}
+
+	const handleQueryPlayHistoryByDate = async () => {
+		if (!queryDate) {
+			toast.error('请输入日期')
+			return
+		}
+
+		const date = dayjs(queryDate, 'YYYY/MM/DD', true)
+		if (!date.isValid()) {
+			toast.error('日期格式不正确，请使用 YYYY/MM/DD')
+			return
+		}
+
+		const startTime = date.startOf('day').valueOf()
+		const endTime = date.endOf('day').valueOf()
+
+		setLoading(true)
+		try {
+			// 兼容秒和毫秒时间戳。
+			// 如果 startTime > 1e11，认为是毫秒；否则认为是秒。
+			// 我们查询时可以简单地查询两个范围，或者使用 SQL 表达式转换。
+			// 为了简单起见，我们在 JS 端处理或者用 OR。
+			const rows = await db
+				.select()
+				.from(schema.playHistory)
+				.where(
+					sql`${schema.playHistory.startTime} BETWEEN ${startTime} AND ${endTime}
+                        OR (${schema.playHistory.startTime} * 1000) BETWEEN ${startTime} AND ${endTime}`,
+				)
+
+			logger.info(`查询 ${queryDate} 的播放历史:`, rows)
+			toast.success(`查询成功: ${queryDate}`, {
+				description: `共找到 ${rows.length} 条记录（详见日志）`,
+			})
+		} catch (error) {
+			toastAndLogError('查询播放历史失败', error, 'TestPage')
+		} finally {
+			setLoading(false)
+		}
+	}
+
 	const openModal = useModalStore((state) => state.open)
 
 	return (
@@ -266,6 +401,40 @@ export default function TestPage() {
 					>
 						预览同步失败记录 Sheet
 					</Button>
+					<Button
+						mode='contained'
+						onPress={handleImportDatabase}
+						loading={loading}
+						style={styles.button}
+					>
+						导入数据库 (Import db.db)
+					</Button>
+					<Button
+						mode='contained'
+						onPress={handleImportMMKV}
+						loading={loading}
+						style={styles.button}
+					>
+						导入 MMKV 数据 (Import mmkv)
+					</Button>
+
+					<View style={{ marginTop: 16 }}>
+						<TextInput
+							mode='outlined'
+							label='查询日期 (YYYY/MM/DD)'
+							value={queryDate}
+							onChangeText={setQueryDate}
+							placeholder='例如 2024/03/22'
+							style={{ marginBottom: 8 }}
+						/>
+						<Button
+							mode='contained'
+							onPress={handleQueryPlayHistoryByDate}
+							loading={loading}
+						>
+							查询指定日期的播放历史
+						</Button>
+					</View>
 				</View>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>

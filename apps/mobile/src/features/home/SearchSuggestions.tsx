@@ -8,7 +8,7 @@ import {
 } from 'react-native'
 import { useBottomTabBarHeight } from 'react-native-bottom-tabs'
 import { RectButton } from 'react-native-gesture-handler'
-import { Divider, Text, useTheme } from 'react-native-paper'
+import { Chip, Divider, IconButton, Text, useTheme } from 'react-native-paper'
 import type { AnimatedRef } from 'react-native-reanimated'
 import Animated, {
 	Easing,
@@ -30,7 +30,16 @@ export interface SearchSuggestionsProps {
 	query: string
 	visible: boolean
 	searchBarRef: AnimatedRef<View>
+	searchHistory?: SearchHistoryItem[]
 	onSuggestionPress: (q: string) => void
+	onClearHistory?: () => void
+	onRemoveHistoryItem?: (id: string) => void
+}
+
+export interface SearchHistoryItem {
+	id: string
+	text: string
+	timestamp: number
 }
 
 /**
@@ -70,7 +79,10 @@ export default function SearchSuggestions({
 	query,
 	visible,
 	searchBarRef,
+	searchHistory,
 	onSuggestionPress,
+	onClearHistory,
+	onRemoveHistoryItem,
 }: SearchSuggestionsProps) {
 	const { colors } = useTheme()
 	const dimensions = useWindowDimensions()
@@ -202,13 +214,60 @@ export default function SearchSuggestions({
 			style={[styles.container, { backgroundColor: colors.surface }, aStyle]}
 		>
 			<View style={styles.listContainer}>
-				<FlatList
-					data={parsedItems ?? []}
-					keyExtractor={keyExtractor}
-					keyboardShouldPersistTaps='handled'
-					renderItem={renderItem}
-					ItemSeparatorComponent={() => <Divider />}
-				/>
+				{query.trim().length === 0 ? (
+					<View style={styles.historySection}>
+						<View style={styles.historyHeader}>
+							<Text
+								variant='titleMedium'
+								style={styles.historyTitle}
+							>
+								最近搜索
+							</Text>
+							{searchHistory && searchHistory.length > 0 && onClearHistory && (
+								<IconButton
+									icon='trash-can-outline'
+									size={20}
+									onPress={onClearHistory}
+								/>
+							)}
+						</View>
+						<View style={styles.historyChipsContainer}>
+							{searchHistory && searchHistory.length > 0 ? (
+								searchHistory.map((item) => (
+									<Chip
+										key={item.id}
+										onPress={() => {
+											Keyboard.dismiss()
+											onSuggestionPress(item.text)
+										}}
+										onLongPress={() => onRemoveHistoryItem?.(item.id)}
+										style={styles.chip}
+										mode='outlined'
+									>
+										{item.text}
+									</Chip>
+								))
+							) : (
+								<Text
+									style={[
+										styles.noHistoryText,
+										{ color: colors.onSurfaceVariant },
+									]}
+								>
+									暂无搜索历史
+								</Text>
+							)}
+						</View>
+					</View>
+				) : (
+					<FlatList
+						data={parsedItems ?? []}
+						keyExtractor={keyExtractor}
+						keyboardShouldPersistTaps='handled'
+						renderItem={renderItem}
+						ItemSeparatorComponent={() => <Divider />}
+					/>
+				)}
 			</View>
 		</Animated.View>
 	)
@@ -234,5 +293,31 @@ const styles = StyleSheet.create({
 	},
 	itemText: {
 		fontWeight: 'bold',
+	},
+	historySection: {
+		flex: 1,
+		paddingHorizontal: 16,
+		paddingTop: 12,
+	},
+	historyHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+		marginBottom: 8,
+	},
+	historyTitle: {
+		fontWeight: 'bold',
+	},
+	historyChipsContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+	},
+	chip: {
+		marginRight: 8,
+		marginBottom: 8,
+	},
+	noHistoryText: {
+		paddingVertical: 16,
+		textAlign: 'center',
 	},
 })

@@ -1,0 +1,140 @@
+// ============================================================
+// QUICK ACCESS SECTION STRUCTURE (Task 6)
+// This structure will be integrated into homepage in Task 7
+// ============================================================
+
+// ============================================================
+// REQUIRED IMPORTS (add to existing imports)
+// ============================================================
+// Note: dayjs is already imported in index.tsx
+// Note: RectButton is already imported
+// Note: IconButton is already imported
+// Note: useAppStore is already imported
+
+// ============================================================
+// COMPONENT STRUCTURE (to be inserted in render)
+// ============================================================
+// Insert after the WeeklyHeatMap component, before recentPlaylistsSection
+
+{/* 快捷入口 */}
+<View style={styles.quickAccessSection}>
+	<Text variant='titleMedium' style={styles.sectionTitle}>
+		快捷入口
+	</Text>
+	<ScrollView
+		horizontal
+		showsHorizontalScrollIndicator={false}
+		snapToInterval={156}  // 140 (card width) + 16 (gap)
+		snapToAlignment='start'
+		decelerationRate='fast'
+		contentContainerStyle={styles.quickAccessScrollContent}
+	>
+		{/* 那年今日 */}
+		<RectButton
+			key="on-this-day"
+			style={[styles.quickAccessCard, { backgroundColor: colors.surfaceVariant }]}
+			onPress={() => {
+				const lastYear = dayjs().subtract(1, 'year').format('YYYY-MM-DD')
+				router.push(`/history/${lastYear}`)
+			}}
+		>
+			<IconButton icon='calendar-star' size={32} mode='contained-tonal' />
+			<Text variant='labelMedium' style={styles.quickAccessText}>
+				那年今日
+			</Text>
+		</RectButton>
+
+		{/* 最近常听 */}
+		<RectButton
+			key="recently-played"
+			style={[styles.quickAccessCard, { backgroundColor: colors.surfaceVariant }]}
+			onPress={() => router.push('/playlist/recently')}
+		>
+			<IconButton icon='history' size={32} mode='contained-tonal' />
+			<Text variant='labelMedium' style={styles.quickAccessText}>
+				最近常听
+			</Text>
+		</RectButton>
+
+		{/* 稍后再看 - conditional on Bilibili cookie */}
+		{hasBilibiliCookie() && (
+			<RectButton
+				key="watch-later"
+				style={[styles.quickAccessCard, { backgroundColor: colors.surfaceVariant }]}
+				onPress={() => router.push('/playlist/remote/toview')}
+			>
+				<IconButton icon='clock-outline' size={32} mode='contained-tonal' />
+				<Text variant='labelMedium' style={styles.quickAccessText}>
+					稍后再看
+				</Text>
+			</RectButton>
+		)}
+	</ScrollView>
+</View>
+
+// ============================================================
+// STYLES (add to StyleSheet.create)
+// ============================================================
+quickAccessSection: {
+	marginBottom: 32,
+},
+quickAccessCard: {
+	width: 140,
+	borderRadius: 12,
+	overflow: 'hidden',
+	paddingVertical: 16,
+	paddingHorizontal: 12,
+	alignItems: 'center',
+	justifyContent: 'center',
+	gap: 8,
+},
+quickAccessText: {
+	fontWeight: '600',
+},
+quickAccessScrollContent: {
+	paddingHorizontal: 16,
+	gap: 16,
+},
+
+// ============================================================
+// ADDITIONAL IMPORT NEEDED
+// ============================================================
+// Add ScrollView to react-native imports:
+// import { ..., ScrollView, ... } from 'react-native'
+
+// ============================================================
+// PLACEMENT NOTES
+// ============================================================
+// 1. Insert the Quick Access section AFTER WeeklyHeatMap
+// 2. Insert BEFORE the recentPlaylistsSection check
+// 3. The section title uses existing sectionTitle style
+// 4. Uses existing colors.surfaceVariant for card background
+// 5. Uses existing IconButton component (already imported)
+// 6. Uses existing hasBilibiliCookie from useAppStore (already imported)
+// 7. Uses existing dayjs (already imported)
+// 8. Uses existing router from expo-router (already imported)
+
+// ============================================================
+// SNAP BEHAVIOR EXPLANATION
+// ============================================================
+// snapToInterval: 156 = 140 (card width) + 16 (gap)
+// This ensures cards snap to the left edge when scrolling stops
+// decelerationRate='fast' provides snappy scrolling feel
+
+// ============================================================
+// CARD DETAILS
+// ============================================================
+// Card 1: 那年今日 (On This Day)
+//   - Icon: calendar-star
+//   - Navigates to: /history/[YYYY-MM-DD] (last year's date)
+//   - Always visible
+//
+// Card 2: 最近常听 (Recently Played)
+//   - Icon: history
+//   - Navigates to: /playlist/recently
+//   - Always visible
+//
+// Card 3: 稍后再看 (Watch Later)
+//   - Icon: clock-outline
+//   - Navigates to: /playlist/remote/toview
+//   - Only visible when hasBilibiliCookie() returns true

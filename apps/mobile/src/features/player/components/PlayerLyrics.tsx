@@ -1,14 +1,7 @@
 import { parseAndMergeLyrics, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-	memo,
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
 	Pressable,
 	ScrollView,
@@ -35,6 +28,7 @@ import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 
+import { LyricActionSheet } from './lyrics/LyricActionSheet'
 import {
 	ModernLyricLineItem,
 	OldSchoolLyricLineItem,
@@ -54,6 +48,7 @@ const Lyrics = memo(function Lyrics({
 	const windowHeight = dimensions.height
 	const colors = useTheme().colors
 	const scrollViewRef = useRef<Animated.ScrollView>(null)
+	const [actionMenuVisible, setActionMenuVisible] = useState(false)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
 
 	const scrollToIndex = useCallback(
@@ -76,7 +71,6 @@ const Lyrics = memo(function Lyrics({
 		width: number
 		height: number
 	} | null>(null)
-	const offsetMenuAnchorRef = useRef<View>(null)
 	const scrollDirection = useSharedValue<'up' | 'down' | 'idle'>('idle')
 	const lastScrollY = useSharedValue(0)
 	const track = useCurrentTrack()
@@ -202,32 +196,24 @@ const Lyrics = memo(function Lyrics({
 
 		requestAnimationFrame(async () => {
 			const currentLyrics = lyrics
+			const newLyrics = {
+				...currentLyrics,
+				misc: {
+					...currentLyrics.misc,
+					userOffset: tempOffset,
+				},
+			}
 			queryClient.setQueryData(
 				lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
-				() => {
-					return {
-						...currentLyrics,
-						misc: {
-							...currentLyrics.misc,
-							userOffset: tempOffset,
-						},
-					}
-				},
+				newLyrics,
 			)
 
 			const saveResult = await lyricService.saveLyricsToFile(
-				{
-					...currentLyrics,
-					misc: {
-						...currentLyrics.misc,
-						userOffset: tempOffset,
-					},
-				},
+				newLyrics,
 				track.uniqueKey,
 			)
 			if (saveResult.isErr()) {
 				toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
-				return
 			}
 		})
 	}
@@ -243,14 +229,6 @@ const Lyrics = memo(function Lyrics({
 	const handleOpenOffsetMenu = useCallback(() => {
 		setOffsetMenuVisible(true)
 	}, [])
-
-	useLayoutEffect(() => {
-		if (offsetMenuAnchorRef.current) {
-			offsetMenuAnchorRef.current.measureInWindow((x, y, width, height) => {
-				setOffsetMenuAnchor({ x, y, width, height })
-			})
-		}
-	}, [offsetMenuVisible])
 
 	if (!track) return null
 
@@ -325,7 +303,8 @@ const Lyrics = memo(function Lyrics({
 				ref={scrollViewRef}
 				contentContainerStyle={{
 					justifyContent: 'center',
-					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
+					pointerEvents:
+						offsetMenuVisible || actionMenuVisible ? 'none' : 'auto',
 					paddingTop: windowHeight * 0.02,
 				}}
 				showsVerticalScrollIndicator={false}
@@ -429,9 +408,16 @@ const Lyrics = memo(function Lyrics({
 			<LyricsControlOverlay
 				scrollDirection={scrollDirection}
 				offsetMenuVisible={offsetMenuVisible}
-				onEditLyrics={handleEditLyrics}
-				onOpenOffsetMenu={handleOpenOffsetMenu}
-				offsetMenuAnchorRef={offsetMenuAnchorRef}
+				onOpenActionMenu={(anchor) => {
+					setOffsetMenuAnchor(anchor)
+					setActionMenuVisible(true)
+				}}
+			/>
+
+			<LyricActionSheet
+				visible={actionMenuVisible}
+				anchor={offsetMenuAnchor}
+				onDismiss={() => setActionMenuVisible(false)}
 				showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
 				translationType={preferredLyricType}
 				onToggleTranslation={() =>
@@ -439,6 +425,8 @@ const Lyrics = memo(function Lyrics({
 						prev === 'translation' ? 'romaji' : 'translation',
 					)
 				}
+				onEditLyrics={handleEditLyrics}
+				onOpenOffsetMenu={handleOpenOffsetMenu}
 			/>
 
 			{/* 歌词偏移量调整面板 */}

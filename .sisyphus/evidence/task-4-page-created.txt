@@ -1,0 +1,53 @@
+Task 4: Create "最近常听" (Recently Played) Page - COMPLETED
+
+Evidence of Completion:
+============================
+
+1. PAGE FILE CREATED:
+   Location: apps/mobile/src/app/playlist/recently/index.tsx
+   Lines: 138
+
+2. VERIFICATION CHECKLIST:
+   ✅ Page shows "最近常听" title (line 84: Appbar.Content title='最近常听')
+   ✅ Shows subtitle "最近14天最常播放的歌曲" (line 101: subtitles='最近14天最常播放的歌曲')
+   ✅ Uses useMostPlayedTracks(14, 10) hook (line 45)
+   ✅ Displays tracks ordered by total play duration (data from service, pre-sorted)
+   ✅ Empty state shows "暂无播放记录" (line 90)
+   ✅ Uses PlaylistPageSkeleton for loading (line 68)
+   ✅ Uses PlaylistError text='加载失败' for errors (line 72)
+
+3. STRUCTURE COPIED FROM toview.tsx:
+   ✅ Appbar.Header with back button
+   ✅ PlaylistHeader with title and subtitle
+   ✅ TrackList for displaying tracks
+   ✅ NowPlayingBar at bottom
+   ✅ Background color handling via usePlaylistBackgroundColor
+
+4. ADAPTED FOR LOCAL DATA:
+   ✅ Uses useMostPlayedTracks(14, 10) instead of useGetToViewVideoList
+   ✅ Data already sorted by totalDuration from service
+   ✅ No progress display (not applicable)
+   ✅ Track.play() uses addToQueue with playNow: true
+
+5. MUST NOT DO - VERIFIED:
+   ✅ No filter/sort options added
+   ✅ No selection mode added
+   ✅ No custom item renderer (uses default TrackListItem)
+   ✅ No refresh control (local data, not remote)
+
+6. TYPE CHECK:
+   ✅ TypeScript compilation passed (pnpm tsc --noEmit)
+   No errors in the mobile app
+
+7. ROUTE ACCESSIBILITY:
+   Page accessible at: /playlist/recently
+   (Expo Router file-based routing)
+
+Dependencies Used:
+- useMostPlayedTracks from @/hooks/queries/playHistory
+- PlaylistHeader from @/features/playlist/remote/components/PlaylistHeader
+- TrackList from @/features/playlist/remote/components/RemoteTrackList
+- PlaylistPageSkeleton from @/features/playlist/skeletons/PlaylistSkeleton
+- PlaylistError from @/features/playlist/local/components/PlaylistError
+- NowPlayingBar from @/components/NowPlayingBar
+- addToQueue from @/utils/player

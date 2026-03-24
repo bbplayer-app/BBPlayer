@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list'
-import { useRouter } from 'expo-router'
+import dayjs from 'dayjs'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
@@ -12,15 +13,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import NowPlayingBar from '@/components/NowPlayingBar'
-import { LeaderBoardListItem } from '@/features/leaderboard/LeaderBoardItem'
+import { HistoryListItem } from '@/features/history/HistoryListItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import {
-	usePlayCountLeaderBoardPaginated,
-	useTotalPlaybackDuration,
-} from '@/hooks/queries/db/track'
+import { usePlayHistoryByDayOfMonth } from '@/hooks/queries/playHistory'
 import type { Track } from '@/types/core/media'
 
-interface LeaderBoardItemData {
+interface HistoryItemData {
 	track: Track
 	playCount: number
 }
@@ -45,54 +43,63 @@ const renderItem = ({
 	item,
 	index,
 }: {
-	item: LeaderBoardItemData
+	item: HistoryItemData
 	index: number
 }) => (
-	<LeaderBoardListItem
+	<HistoryListItem
 		item={item}
 		index={index}
 	/>
 )
 
-export default function LeaderBoardPage() {
+export default function DateHistoryPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+	const { date } = useLocalSearchParams<{ date: string }>()
+	const dayOfMonth = date ? dayjs(date).date() : null
 
 	const {
-		data: leaderBoardData,
-		isLoading: isLeaderBoardLoading,
-		isError: isLeaderBoardError,
-		fetchNextPage,
-		hasNextPage,
-		isFetchingNextPage,
-	} = usePlayCountLeaderBoardPaginated(30, true, 15)
-	const { data: totalDurationData, isError: isTotalDurationError } =
-		useTotalPlaybackDuration(true)
+		data: historyRecords,
+		isLoading: isHistoryLoading,
+		isError: isHistoryError,
+	} = usePlayHistoryByDayOfMonth(dayOfMonth ?? 0)
 
-	const allTracks = useMemo(() => {
-		return leaderBoardData?.pages.flatMap((page) => page.items) ?? []
-	}, [leaderBoardData])
+	const { aggregatedTracks, totalDuration } = useMemo(() => {
+		if (!historyRecords) return { aggregatedTracks: [], totalDuration: 0 }
 
-	const totalDuration = useMemo(() => {
-		if (isTotalDurationError || !totalDurationData) return '0\u2009秒'
-		return formatDurationToWords(totalDurationData)
-	}, [totalDurationData, isTotalDurationError])
+		const trackMap = new Map<string, { track: Track; playCount: number }>()
+		let duration = 0
+
+		for (const record of historyRecords) {
+			const key = record.uniqueKey
+			if (!trackMap.has(key)) {
+				trackMap.set(key, { track: record as Track, playCount: 0 })
+			}
+			trackMap.get(key)!.playCount += 1
+			duration += record.duration ?? 0
+		}
+
+		const sortedTracks = Array.from(trackMap.values()).sort(
+			(a, b) => b.playCount - a.playCount,
+		)
+
+		return { aggregatedTracks: sortedTracks, totalDuration: duration }
+	}, [historyRecords])
+
+	const totalDurationStr = useMemo(() => {
+		if (isHistoryError || !historyRecords) return '0\u2009秒'
+		return formatDurationToWords(totalDuration)
+	}, [totalDuration, isHistoryError, historyRecords])
 
 	const keyExtractor = useCallback(
-		(item: LeaderBoardItemData) => item.track.uniqueKey,
+		(item: HistoryItemData) => item.track.uniqueKey,
 		[],
 	)
 
-	const onEndReached = () => {
-		if (hasNextPage && !isFetchingNextPage) {
-			void fetchNextPage()
-		}
-	}
-
 	const renderContent = () => {
-		if (isLeaderBoardLoading) {
+		if (isHistoryLoading) {
 			return (
 				<ActivityIndicator
 					animating={true}
@@ -101,7 +108,7 @@ export default function LeaderBoardPage() {
 			)
 		}
 
-		if (isLeaderBoardError) {
+		if (isHistoryError) {
 			return (
 				<View style={styles.centeredContainer}>
 					<Text>加载失败</Text>
@@ -109,7 +116,7 @@ export default function LeaderBoardPage() {
 			)
 		}
 
-		if (allTracks.length === 0) {
+		if (aggregatedTracks.length === 0) {
 			return (
 				<View style={styles.centeredContainer}>
 					<Text>暂无数据</Text>
@@ -119,29 +126,13 @@ export default function LeaderBoardPage() {
 
 		return (
 			<FlashList
-				data={allTracks}
+				data={aggregatedTracks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
 				contentContainerStyle={{
 					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 				}}
-				onEndReached={onEndReached}
-				onEndReachedThreshold={0.8}
 				showsVerticalScrollIndicator={false}
-				ListFooterComponent={
-					isFetchingNextPage ? (
-						<View style={styles.footerLoadingContainer}>
-							<ActivityIndicator size='small' />
-						</View>
-					) : !hasNextPage ? (
-						<Text
-							variant='bodyMedium'
-							style={[styles.footerText, { color: colors.onSurfaceVariant }]}
-						>
-							已经到底啦
-						</Text>
-					) : null
-				}
 			/>
 		)
 	}
@@ -150,30 +141,23 @@ export default function LeaderBoardPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='统计' />
+				<Appbar.Content title='那月今日' />
 			</Appbar.Header>
-			{allTracks.length > 0 && !isTotalDurationError && (
-				<Surface
-					style={styles.totalDurationSurface}
-					elevation={2}
-				>
-					<Text variant='titleMedium'>总计听歌时长</Text>
-					<Text
-						variant='headlineMedium'
-						style={[styles.totalDurationText, { color: colors.primary }]}
+			{aggregatedTracks.length > 0 && !isHistoryError && (
+				<>
+					<Surface
+						style={styles.totalDurationSurface}
+						elevation={2}
 					>
-						{totalDuration}
-					</Text>
-					<Text
-						variant='bodySmall'
-						style={[
-							styles.totalDurationSubText,
-							{ color: colors.onSurfaceVariant },
-						]}
-					>
-						（仅统计完整播放的歌曲）
-					</Text>
-				</Surface>
+						<Text variant='titleMedium'>当日听歌时长</Text>
+						<Text
+							variant='headlineMedium'
+							style={[styles.totalDurationText, { color: colors.primary }]}
+						>
+							{totalDurationStr}
+						</Text>
+					</Surface>
+				</>
 			)}
 
 			<View style={styles.contentContainer}>{renderContent()}</View>
@@ -197,16 +181,6 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
-	footerLoadingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 16,
-	},
-	footerText: {
-		textAlign: 'center',
-		paddingTop: 10,
-	},
 	totalDurationSurface: {
 		marginHorizontal: 16,
 		marginTop: 16,
@@ -218,9 +192,7 @@ const styles = StyleSheet.create({
 	totalDurationText: {
 		marginTop: 8,
 	},
-	totalDurationSubText: {
-		marginTop: 4,
-	},
+
 	contentContainer: {
 		flex: 1,
 	},

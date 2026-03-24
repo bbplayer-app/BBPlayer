@@ -109,5 +109,9 @@ const aesDecrypt = (
 
 export const eapiResDecrypt = (encryptedParams: string) => {
 	const decryptedData = aesDecrypt(encryptedParams, eapiKey, '', 'hex')
-	return JSON.parse(decryptedData)
+	try {
+		return JSON.parse(decryptedData)
+	} catch {
+		return null
+	}
 }

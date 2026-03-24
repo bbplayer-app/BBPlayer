@@ -906,9 +906,6 @@ export class PlaylistService {
 							),
 							with: {
 								track: {
-									columns: {
-										playHistory: false,
-									},
 									with: {
 										artist: true,
 										bilibiliMetadata: true,
@@ -1036,9 +1033,6 @@ export class PlaylistService {
 										artist: true,
 										bilibiliMetadata: true,
 										localMetadata: true,
-									},
-									columns: {
-										playHistory: false,
 									},
 								},
 							},

@@ -140,6 +140,14 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='订阅共享歌单'
 						/>
+						<Menu.Item
+							leadingIcon='merge'
+							onPress={() => {
+								setMenuVisible(false)
+								openModal('MergePlaylists', undefined)
+							}}
+							title='合并歌单'
+						/>
 					</FunctionalMenu>
 				</View>
 			</View>

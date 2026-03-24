@@ -159,7 +159,7 @@ class ExpoOrpheusModule : Module() {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             super.onShuffleModeEnabledChanged(shuffleModeEnabled)
-            GeneralStorage.saveShuffleMode(shuffleModeEnabled)
+            // Persistence is handled by ShuffleManager.setShuffleEnabled; nothing to do here.
         }
 
         override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
@@ -186,7 +186,8 @@ class ExpoOrpheusModule : Module() {
             "onTrackFinished",
             "onCoverDownloadProgress",
             "onExportProgress",
-            "onStatusBarLyricsStatusChanged"
+            "onStatusBarLyricsStatusChanged",
+            "onRequestClearLyrics"
         )
 
         RegisterActivityContracts {
@@ -241,6 +242,16 @@ class ExpoOrpheusModule : Module() {
                                     "trackId" to trackId,
                                     "finalPosition" to finalPosition,
                                     "duration" to duration
+                                )
+                            )
+                        }
+                    })
+
+                    service.addLyricEventListener(object : OrpheusMusicService.LyricEventListener {
+                        override fun onLyricCleared(trackId: String) {
+                            sendEvent(
+                                "onRequestClearLyrics", mapOf(
+                                    "trackId" to trackId
                                 )
                             )
                         }
@@ -368,8 +379,9 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getShuffleMode") {
-            ensurePlayer()
-            player?.shuffleModeEnabled
+            // Read from persisted state (managed by ShuffleManager) rather than the
+            // Media3 shuffleModeEnabled flag, which we always keep false.
+            GeneralStorage.getShuffleMode()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getIndexTrack") { index: Int ->
@@ -465,8 +477,15 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
-            ensurePlayer()
-            player?.shuffleModeEnabled = enabled
+            // Delegate to the service's ShuffleManager which physically reorders
+            // the MediaItem list instead of relying on Media3's internal ShuffleOrder.
+            val service = OrpheusMusicService.instance
+            if (service != null) {
+                service.applyShuffleMode(enabled)
+            } else {
+                // Service not yet bound — persist the preference for restorePlayerState to pick up
+                GeneralStorage.saveShuffleMode(enabled)
+            }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getRepeatMode") {
@@ -844,13 +863,23 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                OrpheusMusicService.instance?.floatingLyricsManager?.setLyrics(
-                    data.lyrics,
-                    data.offset
-                )
+                val mgr = OrpheusMusicService.instance?.floatingLyricsManager ?: return@AsyncFunction
+                // Auto-show the panel if the user has it enabled but it was soft-hidden
+                // (e.g. previous track had no lyrics)
+                if (GeneralStorage.isDesktopLyricsShown() && !mgr.isShowing) {
+                    mgr.show()
+                }
+                mgr.setLyrics(data.lyrics, data.offset)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }.runOnQueue(Queues.MAIN)
+
+        AsyncFunction("clearOverlaysInternal") {
+            // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
+            // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
+            OrpheusMusicService.instance?.floatingLyricsManager?.softHide()
+            OrpheusMusicService.instance?.statusBarLyricsManager?.onStop()
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->

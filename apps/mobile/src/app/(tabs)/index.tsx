@@ -1,4 +1,7 @@
+import { WeeklyHeatMap } from '@bbplayer/heatmap'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import Color from 'color'
+import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
@@ -14,6 +17,7 @@ import {
 import {
 	Keyboard,
 	Platform,
+	ScrollView,
 	StyleSheet,
 	ToastAndroid,
 	View,
@@ -22,20 +26,25 @@ import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
 import {
 	ActivityIndicator,
-	Chip,
+	Icon,
 	Searchbar,
 	Text,
 	useTheme,
 } from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
-import SearchSuggestions from '@/features/home/SearchSuggestions'
+import SearchSuggestions, {
+	type SearchHistoryItem,
+} from '@/features/home/SearchSuggestions'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
+import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
@@ -50,12 +59,6 @@ import toast from '@/utils/toast'
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
 
-interface SearchHistoryItem {
-	id: string
-	text: string
-	timestamp: number
-}
-
 const getGreetingMsg = () => {
 	const hour = new Date().getHours()
 	if (hour >= 0 && hour < 6) return '凌晨好'
@@ -66,7 +69,8 @@ const getGreetingMsg = () => {
 }
 
 function HomePage() {
-	const { colors } = useTheme()
+	const theme = useTheme()
+	const { colors } = theme
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
 	const [searchQuery, setSearchQuery] = useState('')
@@ -74,6 +78,7 @@ function HomePage() {
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
+	const [searchFocused, setSearchFocused] = useState(false)
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useIncomingShare()
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
@@ -82,6 +87,7 @@ function HomePage() {
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
 	const { data: personalInfo } = usePersonalInformation()
+	const { data: heatmapData } = usePlayHistoryHeatmap()
 
 	const { data: syncFailures } = useLiveQuery(
 		db
@@ -91,6 +97,8 @@ function HomePage() {
 			.limit(1),
 	)
 	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
+
+	const { data: recentPlaylists } = useRecentPlaylists()
 
 	const greeting = getGreetingMsg()
 
@@ -154,21 +162,57 @@ function HomePage() {
 			}
 			setIsLoading(false)
 			setSearchQuery('')
+			setSearchFocused(false)
 		},
 		[addSearchHistory, router],
 	)
 
-	const handleSuggestionPress = (query: string) => {
-		void handleEnter(query)
-	}
+	const handleSuggestionPress = useCallback(
+		(query: string) => {
+			void handleEnter(query)
+		},
+		[handleEnter],
+	)
 
-	const handleSearchItemClick = (query: string) => {
-		// 直接跳转到搜索页面，我们可以确定，所有保存的搜索历史都是有效的关键词，而非 url/id 什么的
-		router.push({
-			pathname: '/playlist/remote/search-result/global/[query]',
-			params: { query },
-		})
-	}
+	const handleClearHistory = useCallback(() => {
+		alert(
+			'清空搜索历史？',
+			'确定要清空吗？',
+			[
+				{ text: '取消' },
+				{
+					text: '确定',
+					onPress: () => {
+						setSearchHistory([])
+					},
+				},
+			],
+			{ cancelable: true },
+		)
+	}, [setSearchHistory])
+
+	const handleRemoveHistoryItem = useCallback(
+		(id: string) => {
+			const item = searchHistory?.find((h) => h.id === id)
+			if (!item) return
+			alert(
+				'删除搜索历史？',
+				`确定要删除「${item.text}」吗？`,
+				[
+					{ text: '取消' },
+					{
+						text: '确定',
+						onPress: () => {
+							const newHistory = searchHistory?.filter((h) => h.id !== id)
+							setSearchHistory(newHistory)
+						},
+					},
+				],
+				{ cancelable: true },
+			)
+		},
+		[searchHistory, setSearchHistory],
+	)
 
 	useEffect(() => {
 		if (resolvedSharedPayloads.length === 0) return
@@ -299,6 +343,8 @@ function HomePage() {
 								icon={isLoading ? 'loading' : 'magnify'}
 								onClearIconPress={() => setSearchQuery('')}
 								onSubmitEditing={() => handleEnter(searchQuery)}
+								onFocus={() => setSearchFocused(true)}
+								onBlur={() => setSearchFocused(false)}
 								elevation={0}
 								mode='bar'
 								style={[
@@ -310,89 +356,225 @@ function HomePage() {
 						</View>
 						<SearchSuggestions
 							query={deferredSearchQuery}
-							visible={searchQuery.length > 0}
+							visible={searchFocused || searchQuery.length > 0}
 							onSuggestionPress={handleSuggestionPress}
 							searchBarRef={searchBarRef}
+							searchHistory={searchHistory}
+							onClearHistory={handleClearHistory}
+							onRemoveHistoryItem={handleRemoveHistoryItem}
 						/>
 					</View>
+				</View>
 
-					{/* 搜索历史 */}
-					<View style={styles.historySection}>
-						<View style={styles.historyHeader}>
+				{/* 快捷操作与内容区，加上 ScrollView 让它可滚动 */}
+				<Animated.ScrollView
+					contentContainerStyle={styles.scrollContent}
+					showsVerticalScrollIndicator={false}
+				>
+					<WeeklyHeatMap
+						data={heatmapData || {}}
+						cellSize={18}
+						cellGap={4}
+						cellRadius={4}
+						initialScrollEnd={true}
+						locale='zh-cn'
+						onCellPress={({ date }) => {
+							const dateStr = dayjs(date).format('YYYY-MM-DD')
+							router.push(`/history/${dateStr}`)
+						}}
+						scheme={theme.dark ? 'dark' : 'light'}
+						cellColor={{
+							1: Color(colors.primary).alpha(0.2).rgb().string(),
+							2: Color(colors.primary).alpha(0.4).rgb().string(),
+							3: Color(colors.primary).alpha(0.6).rgb().string(),
+							4: colors.primary,
+						}}
+						cellDefaultColor={colors.surfaceVariant}
+						headerTextColor={colors.onSurfaceVariant}
+						sidebarTextColor={colors.onSurfaceVariant}
+						scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
+					/>
+					{/* 快捷入口 */}
+					<View style={styles.quickAccessSection}>
+						<Text
+							variant='titleMedium'
+							style={styles.sectionTitle}
+						>
+							快捷入口
+						</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							snapToInterval={156}
+							snapToAlignment='start'
+							decelerationRate='fast'
+							contentContainerStyle={styles.quickAccessScrollContent}
+						>
+							{/* 那月今日 */}
+							<RectButton
+								key='on-this-day'
+								style={[
+									styles.quickAccessCard,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								onPress={() => {
+									const lastMonth = dayjs()
+										.subtract(1, 'month')
+										.format('YYYY-MM-DD')
+									router.push(`/history/${lastMonth}`)
+								}}
+							>
+								<View
+									style={{
+										width: 48,
+										height: 48,
+										borderRadius: 24,
+										justifyContent: 'center',
+										alignItems: 'center',
+									}}
+								>
+									<Icon
+										source='calendar-month'
+										size={32}
+										color={colors.onSurfaceVariant}
+									/>
+								</View>
+								<Text
+									variant='labelMedium'
+									style={styles.quickAccessText}
+								>
+									那月今日
+								</Text>
+							</RectButton>
+
+							{/* 最近常听 */}
+							<RectButton
+								key='recently-played'
+								style={[
+									styles.quickAccessCard,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								onPress={() => router.push('/playlist/recently')}
+							>
+								<View
+									style={{
+										width: 48,
+										height: 48,
+										borderRadius: 24,
+										justifyContent: 'center',
+										alignItems: 'center',
+									}}
+								>
+									<Icon
+										source='history'
+										size={32}
+										color={colors.onSurfaceVariant}
+									/>
+								</View>
+								<Text
+									variant='labelMedium'
+									style={styles.quickAccessText}
+								>
+									最近常听
+								</Text>
+							</RectButton>
+
+							{/* 稍后再看 - conditional on Bilibili cookie */}
+							{hasBilibiliCookie() && (
+								<RectButton
+									key='watch-later'
+									style={[
+										styles.quickAccessCard,
+										{ backgroundColor: colors.surfaceVariant },
+									]}
+									onPress={() => router.push('/playlist/remote/toview')}
+								>
+									<View
+										style={{
+											width: 48,
+											height: 48,
+											borderRadius: 24,
+											justifyContent: 'center',
+											alignItems: 'center',
+										}}
+									>
+										<Icon
+											source='clock-outline'
+											size={32}
+											color={colors.onSurfaceVariant}
+										/>
+									</View>
+									<Text
+										variant='labelMedium'
+										style={styles.quickAccessText}
+									>
+										稍后再看
+									</Text>
+								</RectButton>
+							)}
+						</ScrollView>
+					</View>
+
+					{/* 近期歌单 */}
+					{recentPlaylists && recentPlaylists.length > 0 && (
+						<View style={styles.recentPlaylistsSection}>
 							<Text
 								variant='titleMedium'
-								style={styles.historyTitle}
+								style={styles.sectionTitle}
 							>
-								最近搜索
+								近期歌单
 							</Text>
-							{searchHistory && searchHistory.length > 0 && (
-								<IconButton
-									icon='trash-can-outline'
-									size={20}
-									onPress={() =>
-										alert(
-											'清空搜索历史？',
-											'确定要清空吗？',
-											[
-												{ text: '取消' },
-												{
-													text: '确定',
-													onPress: () => {
-														setSearchHistory([])
-													},
-												},
-											],
-											{ cancelable: true },
-										)
-									}
-								/>
-							)}
-						</View>
-						{searchHistory && searchHistory.length > 0 ? (
-							<View style={styles.historyChipsContainer}>
-								{searchHistory.map((item) => (
-									<Chip
+							<Animated.ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								snapToInterval={156}
+								snapToAlignment='start'
+								decelerationRate='fast'
+								contentContainerStyle={styles.horizontalScrollContent}
+							>
+								{recentPlaylists.map((item) => (
+									<RectButton
 										key={item.id}
-										onPress={() => handleSearchItemClick(item.text)}
-										onLongPress={() =>
-											alert(
-												'删除搜索历史？',
-												`确定要删除「${item.text}」吗？`,
-												[
-													{ text: '取消' },
-													{
-														text: '确定',
-														onPress: () => {
-															// 优化：使用 filter 创建新数组，避免直接修改 state
-															const newHistory = searchHistory.filter(
-																(h) => h.id !== item.id,
-															)
-															setSearchHistory(newHistory)
-														},
-													},
-												],
-												{ cancelable: true },
-											)
-										}
-										style={styles.chip}
-										mode='outlined'
+										style={[
+											styles.playlistCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => {
+											router.push(`/playlist/local/${item.id}`)
+										}}
 									>
-										{item.text}
-									</Chip>
+										<Image
+											source={
+												item.coverUrl
+													? { uri: item.coverUrl }
+													: require('../../../assets/images/bilibili-default-avatar.jpg')
+											}
+											style={styles.playlistCover}
+											contentFit='cover'
+										/>
+										<View style={styles.playlistInfo}>
+											<Text
+												variant='labelMedium'
+												numberOfLines={2}
+												style={styles.playlistTitle}
+											>
+												{item.title}
+											</Text>
+											<Text
+												variant='bodySmall'
+												style={{ color: colors.onSurfaceVariant }}
+											>
+												{item.itemCount} 首
+											</Text>
+										</View>
+									</RectButton>
 								))}
-							</View>
-						) : (
-							<Text
-								style={[
-									styles.noHistoryText,
-									{ color: colors.onSurfaceVariant },
-								]}
-							>
-								暂无搜索历史
-							</Text>
-						)}
-					</View>
-				</View>
+							</Animated.ScrollView>
+						</View>
+					)}
+					{/* 底部留白给播放条 */}
+					<View style={{ height: 200 }} />
+				</Animated.ScrollView>
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
@@ -438,32 +620,59 @@ const styles = StyleSheet.create({
 	searchbar: {
 		borderRadius: 9999,
 	},
-	historySection: {
-		marginTop: 16,
-		marginBottom: 24,
-		marginHorizontal: 16,
+	scrollContent: {
+		paddingTop: 16,
 	},
-	historyHeader: {
-		marginBottom: 8,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-	},
-	historyTitle: {
+	sectionTitle: {
+		paddingHorizontal: 16,
 		fontWeight: 'bold',
+		marginBottom: 16,
 	},
-	historyChipsContainer: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		marginHorizontal: 5,
+	quickAccessSection: {
+		marginBottom: 32,
 	},
-	chip: {
-		marginRight: 8,
-		marginBottom: 8,
+	quickAccessCard: {
+		width: 140,
+		borderRadius: 12,
+		overflow: 'hidden',
+		paddingVertical: 16,
+		paddingHorizontal: 12,
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 8,
 	},
-	noHistoryText: {
-		paddingVertical: 8,
-		textAlign: 'center',
+	quickAccessText: {
+		fontWeight: '600',
+	},
+	quickAccessScrollContent: {
+		paddingHorizontal: 16,
+		gap: 16,
+	},
+	recentPlaylistsSection: {
+		marginBottom: 32,
+	},
+	horizontalScrollContent: {
+		paddingHorizontal: 16,
+		gap: 16,
+	},
+	playlistCard: {
+		width: 140,
+		borderRadius: 12,
+		overflow: 'hidden',
+		paddingBottom: 12,
+	},
+	playlistCover: {
+		width: '100%',
+		aspectRatio: 1,
+		borderRadius: 12,
+	},
+	playlistInfo: {
+		paddingHorizontal: 12,
+		paddingTop: 10,
+	},
+	playlistTitle: {
+		fontWeight: '600',
+		marginBottom: 4,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

@@ -13,6 +13,7 @@ module.exports = {
 				'root',
 				'splash',
 				'backend',
+				'heatmap',
 			],
 		],
 		'scope-empty': [2, 'never'],

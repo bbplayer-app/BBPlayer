@@ -32,7 +32,7 @@ export interface ModalPropsMap {
 	EditLyrics: { uniqueKey: string; lyrics: LyricFileData }
 	SleepTimer: undefined
 	SaveQueueToPlaylist: { trackIds: string[] }
-	DonationQR: { type: 'wechat' }
+	DonationQR: { type: 'wechat' | 'alipay' }
 	PlaybackSpeed: undefined
 	LyricsSelection: undefined
 	SongShare: undefined
@@ -49,6 +49,7 @@ export interface ModalPropsMap {
 		shareRole?: 'owner' | 'editor' | 'subscriber' | null
 	}
 	SubscribeToSharedPlaylist: undefined
+	MergePlaylists: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

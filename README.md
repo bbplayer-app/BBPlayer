@@ -88,11 +88,24 @@
 
 如果你觉得 BBPlayer 对你有所帮助，欢迎考虑捐赠支持，你的所有捐赠都将用于让 Roitium 吃顿疯狂星期四或是买一部 GalGame！
 
+<table>
+<tr>
+<td align="center">
 <details>
-<summary>点击展开查看微信收款码</summary>
+<summary>微信支付</summary>
 <br />
 <img src="./apps/mobile/assets/images/wechat.png" alt="WeChat Donation" width="200" />
 </details>
+</td>
+<td align="center">
+<details>
+<summary>支付宝</summary>
+<br />
+<img src="./apps/mobile/assets/images/alipay.jpg" alt="Alipay Donation" width="200" />
+</details>
+</td>
+</tr>
+</table>
 
 ## 感谢
 

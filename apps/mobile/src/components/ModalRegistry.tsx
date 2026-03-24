@@ -71,6 +71,9 @@ const EnableSharingModal = lazy(
 const SubscribeToSharedPlaylistModal = lazy(
 	() => import('./modals/playlist/SubscribeToSharedPlaylistModal'),
 )
+const MergePlaylistsModal = lazy(
+	() => import('./modals/playlist/MergePlaylistsModal'),
+)
 
 type ModalComponent<K extends ModalKey> = ComponentType<ModalPropsMap[K] & {}>
 
@@ -104,4 +107,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	CoverDownloadProgress: CoverDownloadProgressModal,
 	EnableSharing: EnableSharingModal,
 	SubscribeToSharedPlaylist: SubscribeToSharedPlaylistModal,
+	MergePlaylists: MergePlaylistsModal,
 }

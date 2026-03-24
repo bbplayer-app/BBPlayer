@@ -27,25 +27,23 @@ const AUTO_HIDE_DELAY = 3000
 interface LyricsControlOverlayProps {
 	scrollDirection: SharedValue<'up' | 'down' | 'idle'>
 	offsetMenuVisible: boolean
-	onEditLyrics: () => void
-	onOpenOffsetMenu: () => void
-	offsetMenuAnchorRef: React.RefObject<View | null>
-	showTranslationToggle: boolean
-	translationType: 'translation' | 'romaji'
-	onToggleTranslation: () => void
+	onOpenActionMenu: (anchor: {
+		x: number
+		y: number
+		width: number
+		height: number
+	}) => void
+	onControlsVisibilityChange?: (visible: boolean) => void
 }
 
 export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	scrollDirection,
 	offsetMenuVisible,
-	onEditLyrics,
-	onOpenOffsetMenu,
-	offsetMenuAnchorRef,
-	showTranslationToggle,
-	translationType,
-	onToggleTranslation,
+	onOpenActionMenu,
+	onControlsVisibilityChange,
 }: LyricsControlOverlayProps) {
 	const { colors, dark } = useTheme()
+	const actionButtonRef = useRef<View>(null)
 	const controlsOpacity = useSharedValue(0)
 	const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -65,13 +63,15 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 
 	const showControls = useCallback(() => {
 		controlsOpacity.set(withTiming(1, { duration: 200 }))
+		onControlsVisibilityChange?.(true)
 		startHideTimer()
-	}, [controlsOpacity, startHideTimer])
+	}, [controlsOpacity, startHideTimer, onControlsVisibilityChange])
 
 	const hideControls = useCallback(() => {
 		clearHideTimer()
 		controlsOpacity.set(withTiming(0, { duration: 200 }))
-	}, [clearHideTimer, controlsOpacity])
+		onControlsVisibilityChange?.(false)
+	}, [clearHideTimer, controlsOpacity, onControlsVisibilityChange])
 
 	const resetHideTimer = useCallback(() => {
 		startHideTimer()
@@ -117,15 +117,12 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	// 按钮动画样式
 	const utilityButtonsAnimatedStyle = useAnimatedStyle(() => {
 		return {
-			transform: [
-				{
-					translateY: interpolate(
-						controlsOpacity.value,
-						[0, 1],
-						[0, -150], // 当控件显示时，向上移动按钮以避免重叠
-					),
-				},
-			],
+			opacity: interpolate(
+				controlsOpacity.value,
+				[0, 1],
+				[1, 0], // 当控件显示时，完全隐藏按钮
+			),
+			pointerEvents: controlsOpacity.value > 0.5 ? 'none' : 'auto',
 		}
 	})
 
@@ -163,44 +160,19 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 			<Animated.View
 				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
 			>
-				{showTranslationToggle && (
-					<RectButton
-						style={styles.utilityButton}
-						onPress={onToggleTranslation}
-					>
-						<Icon
-							source={
-								translationType === 'translation'
-									? 'translate'
-									: 'alphabetical-variant'
-							}
-							size={20}
-							color={colors.primary}
-						/>
-					</RectButton>
-				)}
-				<RectButton
-					style={styles.utilityButton}
-					enabled={!offsetMenuVisible}
-					onPress={onEditLyrics}
-				>
-					<Icon
-						source='pencil'
-						size={20}
-						color={
-							offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-						}
-					/>
-				</RectButton>
 				<RectButton
 					style={styles.utilityButton}
 					// @ts-expect-error -- RectButton ref typing
-					ref={offsetMenuAnchorRef}
+					ref={actionButtonRef}
 					enabled={!offsetMenuVisible}
-					onPress={onOpenOffsetMenu}
+					onPress={() => {
+						actionButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+							onOpenActionMenu({ x: pageX, y: pageY, width: w, height: h })
+						})
+					}}
 				>
 					<Icon
-						source='swap-vertical-circle-outline'
+						source='dots-vertical'
 						size={20}
 						color={
 							offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary

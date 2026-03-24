@@ -253,6 +253,8 @@ export const useAppStore = create<AppState>()(
 					return mergedState
 				}
 
+				// Note: Migration logic is kept within merge to handle one-time transfer from old MMKV keys.
+				// This runs only once when app-storage is missing.
 				logger.info('没找到 "app-storage" 存储项. 检查旧的 MMKV 键并尝试迁移')
 				let hasOldData = false
 				const migratedState = { ...currentState }

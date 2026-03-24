@@ -36,6 +36,7 @@ import type { BilibiliTrack, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
+import toast from '@/utils/toast'
 
 const mapApiItemToTrack = (
 	apiItem: BilibiliToViewVideoList['list'][0],
@@ -144,6 +145,20 @@ export default function ToViewPage() {
 		})
 	}, [])
 
+	const handlePlayAll = useCallback(async () => {
+		if (!tracksData || tracksData.length === 0) {
+			toast.error('没有可播放的歌曲')
+			return
+		}
+
+		await addToQueue({
+			tracks: tracksData,
+			playNow: true,
+			clearQueue: true,
+			playNext: false,
+		})
+	}, [tracksData])
+
 	if (isToViewDataPending) {
 		return <PlaylistPageSkeleton />
 	}
@@ -224,7 +239,7 @@ export default function ToViewPage() {
 							title={'稍后再看'}
 							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
 							description={undefined}
-							// onClickMainButton={handlePlayAll}
+							onClickMainButton={handlePlayAll}
 							mainButtonIcon={'play'}
 							linkedPlaylistId={undefined}
 							mainButtonText='播放全部'

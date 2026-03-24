@@ -59,6 +59,13 @@ export interface LyricFileData {
 	/** 当歌词获取失败时（如离线状态），存储错误信息直接展示，不走解析流程 */
 	errorMessage?: string | undefined
 
+	/**
+	 * 用户手动跳过了该歌曲的歌词获取。
+	 * 为 true 时，smartFetchLyrics 不会尝试重新获取网络歌词。
+	 * 当用户手动搜索或编辑歌词时，此字段应被重置为 false。
+	 */
+	manualSkip?: boolean | undefined
+
 	misc?:
 		| {
 				userOffset?: number | undefined // 用户设置的歌词偏移量

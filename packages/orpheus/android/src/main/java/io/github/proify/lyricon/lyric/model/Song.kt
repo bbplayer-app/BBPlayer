@@ -32,6 +32,7 @@ data class Song(
 ) : DeepCopyable<Song>, Normalize<Song> {
 
     override fun deepCopy(): Song = copy(lyrics = lyrics?.deepCopy())
+
     override fun normalize(): Song = deepCopy().apply {
         lyrics = lyrics?.mapNotNull { line ->
             if (line.duration <= 0) line.duration = line.end - line.begin
