@@ -1,9 +1,10 @@
 import { Asset } from 'expo-asset'
 import { Image } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
+import { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
-import { Dialog, Text } from 'react-native-paper'
+import { Dialog, SegmentedButtons, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 /* oxlint-disable @typescript-eslint/no-unsafe-argument */
@@ -12,9 +13,18 @@ import toast from '@/utils/toast'
 
 // oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const WECHAT_QR = require('../../../../assets/images/wechat.png')
+// oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+const ALIPAY_QR = require('../../../../assets/images/alipay.jpg')
 
-export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
+type DonationType = 'wechat' | 'alipay'
+
+export default function DonationQRModal({
+	type: initialType,
+}: {
+	type: DonationType
+}) {
 	const close = useModalStore((state) => state.close)
+	const [currentType, setCurrentType] = useState<DonationType>(initialType)
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 
 	const handleLongPress = async () => {
@@ -40,7 +50,9 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 				}
 			}
 
-			const asset = Asset.fromModule(WECHAT_QR)
+			const asset = Asset.fromModule(
+				currentType === 'wechat' ? WECHAT_QR : ALIPAY_QR,
+			)
 			if (!asset.downloaded) {
 				await asset.downloadAsync()
 			}
@@ -62,10 +74,29 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 		}
 	}
 
+	const qrImage = currentType === 'wechat' ? WECHAT_QR : ALIPAY_QR
+	const title = currentType === 'wechat' ? '微信支付' : '支付宝'
+
 	return (
 		<>
-			<Dialog.Title style={{ textAlign: 'center' }}>微信支付</Dialog.Title>
+			<Dialog.Title style={{ textAlign: 'center' }}>{title}</Dialog.Title>
 			<Dialog.Content>
+				<View style={styles.tabContainer}>
+					<SegmentedButtons
+						value={currentType}
+						onValueChange={(value) => setCurrentType(value)}
+						buttons={[
+							{
+								value: 'wechat',
+								label: '微信支付',
+							},
+							{
+								value: 'alipay',
+								label: '支付宝',
+							},
+						]}
+					/>
+				</View>
 				<View style={styles.imageContainer}>
 					<Pressable
 						onLongPress={handleLongPress}
@@ -77,18 +108,18 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 						>
 							<Image
 								// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment
-								source={WECHAT_QR}
+								source={qrImage}
 								style={styles.imageInner}
 								contentFit='contain'
 							/>
 						</SquircleView>
+						<Text
+							variant='bodySmall'
+							style={styles.hint}
+						>
+							长按保存收款码
+						</Text>
 					</Pressable>
-					<Text
-						variant='bodySmall'
-						style={styles.hint}
-					>
-						长按保存收款码
-					</Text>
 				</View>
 			</Dialog.Content>
 			<Dialog.Actions>
@@ -99,6 +130,9 @@ export default function DonationQRModal({ type: _type }: { type: 'wechat' }) {
 }
 
 const styles = StyleSheet.create({
+	tabContainer: {
+		marginBottom: 20,
+	},
 	imageContainer: {
 		alignItems: 'center',
 		justifyContent: 'center',
