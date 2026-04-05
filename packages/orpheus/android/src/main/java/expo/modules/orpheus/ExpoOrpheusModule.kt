@@ -417,8 +417,20 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("skipTo") { index: Int ->
             // 跳转到指定索引的开头
+            // When shuffle is enabled, `index` is the position in the shuffle-traversal
+            // order (as returned by getQueue). Convert to the physical queue index first.
             ensurePlayer()
-            player?.seekTo(index, C.TIME_UNSET)
+            val p = player ?: return@AsyncFunction
+            val service = OrpheusMusicService.instance
+            if (service != null && service.shuffleManager.isEnabled) {
+                val order = service.shuffleManager.getTraversalOrder()
+                val physicalIndex = order?.getOrElse(index) { C.INDEX_UNSET } ?: C.INDEX_UNSET
+                if (physicalIndex != C.INDEX_UNSET) {
+                    p.seekTo(physicalIndex, C.TIME_UNSET)
+                }
+            } else {
+                p.seekTo(index, C.TIME_UNSET)
+            }
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToNext") {
@@ -494,8 +506,19 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("removeTrack") { index: Int ->
             ensurePlayer()
-            if (index >= 0 && index < (player?.mediaItemCount ?: 0)) {
-                player?.removeMediaItem(index)
+            val p = player ?: return@AsyncFunction
+            val service = OrpheusMusicService.instance
+            if (service != null && service.shuffleManager.isEnabled) {
+                // index is the shuffle-traversal position; resolve to physical index.
+                val order = service.shuffleManager.getTraversalOrder()
+                val physicalIndex = order?.getOrElse(index) { -1 } ?: -1
+                if (physicalIndex >= 0 && physicalIndex < p.mediaItemCount) {
+                    p.removeMediaItem(physicalIndex)
+                }
+            } else {
+                if (index >= 0 && index < p.mediaItemCount) {
+                    p.removeMediaItem(index)
+                }
             }
         }.runOnQueue(Queues.MAIN)
 
@@ -505,9 +528,23 @@ class ExpoOrpheusModule : Module() {
             val count = p.mediaItemCount
             val queue = ArrayList<TrackRecord>(count)
 
-            for (i in 0 until count) {
-                val item = p.getMediaItemAt(i)
-                queue.add(mediaItemToTrackRecord(item))
+            // When shuffle is enabled, return items in the logical playback (shuffle traversal)
+            // order so the UI displays what will actually be played next.
+            val service = OrpheusMusicService.instance
+            val traversal = if (service != null && service.shuffleManager.isEnabled) {
+                service.shuffleManager.getTraversalOrder()
+            } else {
+                null
+            }
+
+            if (traversal != null) {
+                for (physicalIdx in traversal) {
+                    queue.add(mediaItemToTrackRecord(p.getMediaItemAt(physicalIdx)))
+                }
+            } else {
+                for (i in 0 until count) {
+                    queue.add(mediaItemToTrackRecord(p.getMediaItemAt(i)))
+                }
             }
 
             return@AsyncFunction queue
@@ -565,7 +602,8 @@ class ExpoOrpheusModule : Module() {
 
             val context = appContext.reactContext
             val mediaItem = track.toMediaItem(context)
-            val targetIndex = p.currentMediaItemIndex + 1
+            val service = OrpheusMusicService.instance
+            val shuffleEnabled = service?.shuffleManager?.isEnabled == true
 
             var existingIndex = -1
             for (i in 0 until p.mediaItemCount) {
@@ -579,14 +617,27 @@ class ExpoOrpheusModule : Module() {
                 if (existingIndex == p.currentMediaItemIndex) {
                     return@AsyncFunction
                 }
-                val safeTargetIndex = targetIndex.coerceAtMost(p.mediaItemCount)
-
-                p.moveMediaItem(existingIndex, safeTargetIndex)
-
+                if (shuffleEnabled) {
+                    // Remove the existing instance then re-add right after the current item.
+                    // Using remove+add (rather than moveMediaItem) keeps the physical insertion
+                    // index deterministic: after removing existingIndex, currentMediaItemIndex
+                    // is automatically adjusted, so +1 always points to the correct next slot.
+                    p.removeMediaItem(existingIndex)
+                    val insertPhysical = (p.currentMediaItemIndex + 1).coerceAtMost(p.mediaItemCount)
+                    p.addMediaItem(insertPhysical, mediaItem)
+                    service?.shuffleManager?.repositionAsNext(insertPhysical)
+                } else {
+                    val targetIndex = p.currentMediaItemIndex + 1
+                    val safeTargetIndex = targetIndex.coerceAtMost(p.mediaItemCount)
+                    p.moveMediaItem(existingIndex, safeTargetIndex)
+                }
             } else {
+                val targetIndex = p.currentMediaItemIndex + 1
                 val safeTargetIndex = targetIndex.coerceAtMost(p.mediaItemCount)
-
                 p.addMediaItem(safeTargetIndex, mediaItem)
+                if (shuffleEnabled) {
+                    service?.shuffleManager?.repositionAsNext(safeTargetIndex)
+                }
             }
 
             if (p.playbackState == Player.STATE_IDLE) {
