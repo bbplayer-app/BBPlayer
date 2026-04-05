@@ -5,7 +5,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultShuffleOrder
+import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.exoplayer.ExoPlayer
 import expo.modules.orpheus.util.GeneralStorage
 
@@ -91,7 +91,7 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         // Safety: if traversal doesn't cover all items, fall back to physical order.
         if (result.size != count) {
             Log.w("ShuffleManager", "Traversal size mismatch: got ${result.size}, expected $count")
-            return (0 until count).toIntArray()
+            return (0 until count).toList().toIntArray()
         }
 
         return result.toIntArray()
