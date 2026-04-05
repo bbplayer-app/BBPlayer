@@ -306,9 +306,8 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     /**
-     * Enable or disable custom shuffle. When enabling, the queue is physically
-     * reordered with the current track at index 0. When a full loop completes,
-     * the queue is re-shuffled automatically.
+     * Enable or disable shuffle mode. Delegates to ShuffleManager which uses
+     * Media3's built-in shuffleModeEnabled flag for zero-cost queue traversal.
      */
     fun applyShuffleMode(enabled: Boolean) {
         shuffleManager.setShuffleEnabled(enabled)
@@ -530,7 +529,8 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
                 android.util.Log.d("StatusBarLyrics", "[Service] onMediaItemTransition: id=$mediaId reason=$reasonStr ts=${System.currentTimeMillis()}")
 
-                // If the track hasn't actually changed (e.g. we just physically moved it for shuffle),
+                // If the same track is still current (e.g. an item was added/removed elsewhere
+                // in the queue causing a PLAYLIST_CHANGED transition with the same media ID),
                 // we should NOT reset lyrics or notify JS as it causes a UI flash and audio stutter.
                 if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && mediaId == currentMediaId) {
                     Log.d("OrpheusMusicService", "Ignoring onMediaItemTransition as track hasn't changed.")
@@ -540,9 +540,6 @@ class OrpheusMusicService : MediaLibraryService() {
                 currentMediaId = mediaId
 
                 sendTrackStartEvent(mediaItem, reason)
-
-                // Notify ShuffleManager of the track change for loop detection
-                mediaId?.let { shuffleManager.onTrackChanged(it) }
 
                 floatingLyricsManager.setLyrics(emptyList())
                 statusBarLyricsManager.onStop()
@@ -555,9 +552,7 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                if (!shuffleManager.isReshuffling) {
-                    saveCurrentQueue()
-                }
+                saveCurrentQueue()
                 val player = player ?: return
                 val currentItem = player.currentMediaItem ?: return
                 val duration = player.duration

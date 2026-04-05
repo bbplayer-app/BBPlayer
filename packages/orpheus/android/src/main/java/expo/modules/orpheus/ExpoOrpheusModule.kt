@@ -379,8 +379,7 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("getShuffleMode") {
-            // Read from persisted state (managed by ShuffleManager) rather than the
-            // Media3 shuffleModeEnabled flag, which we always keep false.
+            // Read from persisted state (managed by ShuffleManager).
             GeneralStorage.getShuffleMode()
         }.runOnQueue(Queues.MAIN)
 
@@ -477,8 +476,8 @@ class ExpoOrpheusModule : Module() {
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
-            // Delegate to the service's ShuffleManager which physically reorders
-            // the MediaItem list instead of relying on Media3's internal ShuffleOrder.
+            // Delegate to the service's ShuffleManager which uses Media3's built-in
+            // shuffleModeEnabled for O(1) shuffle toggle without physical queue reordering.
             val service = OrpheusMusicService.instance
             if (service != null) {
                 service.applyShuffleMode(enabled)
