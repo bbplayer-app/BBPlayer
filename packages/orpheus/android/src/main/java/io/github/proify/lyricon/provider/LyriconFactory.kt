@@ -87,7 +87,7 @@ object LyriconFactory {
         }
     }
 
-    fun getCurrentProcessName(context: Context): String? {
+   private fun getCurrentProcessName(context: Context): String? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             Application.getProcessName()
         } else {
