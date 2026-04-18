@@ -19,7 +19,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
 +  tryWiggleToast,
 +} from './toast-queue';
  import { type toast as toastType } from './types';
- 
+
 +export { flushToastQueue } from './toast-queue';
 +
  export const toast: typeof toastType = (title, options) => {
@@ -30,7 +30,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      ...options,
 @@ -10,7 +16,7 @@ export const toast: typeof toastType = (title, options) => {
  };
- 
+
  toast.success = (title, options = {}) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -39,12 +39,12 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      variant: 'success',
 @@ -18,11 +24,11 @@ toast.success = (title, options = {}) => {
  };
- 
+
  toast.wiggle = (id) => {
 -  return getToastContext().wiggleToast(id);
 +  return tryWiggleToast(id);
  };
- 
+
  toast.error = (title: string, options = {}) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -53,7 +53,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      variant: 'error',
 @@ -30,7 +36,7 @@ toast.error = (title: string, options = {}) => {
  };
- 
+
  toast.warning = (title: string, options = {}) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -62,7 +62,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      variant: 'warning',
 @@ -38,7 +44,7 @@ toast.warning = (title: string, options = {}) => {
  };
- 
+
  toast.info = (title: string, options = {}) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -71,7 +71,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      variant: 'info',
 @@ -46,7 +52,7 @@ toast.info = (title: string, options = {}) => {
  };
- 
+
  toast.promise = (promise, options) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -80,7 +80,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      variant: 'info',
 @@ -59,7 +65,7 @@ toast.promise = (promise, options) => {
  };
- 
+
  toast.custom = (jsx, options) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -89,7 +89,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      jsx,
 @@ -68,7 +74,7 @@ toast.custom = (jsx, options) => {
  };
- 
+
  toast.loading = (title, options = {}) => {
 -  return getToastContext().addToast({
 +  return tryAddToast({
@@ -98,7 +98,7 @@ index eec6ea0e9e8294da8035743a541482c844ff2642..5b878287614443e61863291c63c352a0
      ...options,
 @@ -76,5 +82,5 @@ toast.loading = (title, options = {}) => {
  };
- 
+
  toast.dismiss = (id) => {
 -  return getToastContext().dismissToast(id);
 +  return tryDismissToast(id);
@@ -108,7 +108,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..efaee5c1dac9c75614e9b2fbc0da09b3694738b3
 --- /dev/null
 +++ b/src/toast-queue.ts
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,107 @@
 +import { type ToastProps } from './types';
 +
 +type QueuedToast =
@@ -141,8 +141,11 @@ index 0000000000000000000000000000000000000000..efaee5c1dac9c75614e9b2fbc0da09b3
 +
 +let contextRef: ToastContextType | null = null;
 +
-+export const setToastContext = (ctx: ToastContextType): void => {
++export const setToastContext = (ctx: ToastContextType | null): void => {
 +  contextRef = ctx;
++  if (!ctx) {
++    isToasterReady = false;
++  }
 +};
 +
 +export const getToastContext = (): ToastContextType => {
@@ -207,6 +210,7 @@ index 0000000000000000000000000000000000000000..efaee5c1dac9c75614e9b2fbc0da09b3
 +          break;
 +      }
 +    } catch {
++      isToasterReady = false;
 +      if (item) toastQueue.unshift(item);
 +      break;
 +    }
@@ -221,21 +225,21 @@ index bc417793bdb5bc6a57d6b1dd195e0ee7477ad5a7..30012c0196258e447dafbb8cc36229fa
  import { areToastsEqual } from './toast-comparator';
  import { ANIMATION_DURATION } from './animations';
 +import { setToastContext, flushToastQueue } from './toast-queue';
- 
+
  let addToastHandler: AddToastContextHandler;
  let dismissToastHandler: typeof toast.dismiss;
  let wiggleHandler: typeof toast.wiggle;
- 
+
 +export { flushToastQueue };
 +export { getToastContext } from './toast-queue';
 +
  export const Toaster: React.FC<ToasterProps> = ({
    ToasterOverlayWrapper,
    ...toasterProps
-@@ -231,6 +235,15 @@ export const ToasterUI: React.FC<
+@@ -231,6 +235,19 @@ export const ToasterUI: React.FC<
      [toastRefs]
    );
- 
+
 +  React.useEffect(() => {
 +    setToastContext({
 +      addToast: addToastHandler,
@@ -243,15 +247,19 @@ index bc417793bdb5bc6a57d6b1dd195e0ee7477ad5a7..30012c0196258e447dafbb8cc36229fa
 +      wiggleToast: wiggleHandler,
 +    });
 +    flushToastQueue();
++
++    return () => {
++      setToastContext(null);
++    };
 +  }, []);
 +
    const { unstyled } = toastOptions;
- 
+
    const value = React.useMemo<ToasterContextType>(
 @@ -399,13 +412,4 @@ export const ToasterUI: React.FC<
    );
  };
- 
+
 -export const getToastContext = () => {
 -  if (!addToastHandler || !dismissToastHandler || !wiggleHandler) {
 -    throw new Error('ToastContext is not initialized');

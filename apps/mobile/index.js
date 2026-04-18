@@ -72,15 +72,6 @@ const getPlayerErrorInfo = async (event) => {
 		}
 	}
 
-	if (
-		rawMessage.includes('Unable to connect') ||
-		rawMessage.includes('UnknownHostException') ||
-		rawMessage.includes('ConnectException') ||
-		rawMessage.includes('SocketTimeoutException')
-	) {
-		return { message: '网络连接失败，请检查网络设置', shouldReport: false }
-	}
-
 	if (event.platform === 'android') {
 		const networkState = await NetInfoFetch()
 		const rootMessage = [
@@ -92,9 +83,10 @@ const getPlayerErrorInfo = async (event) => {
 			.filter(Boolean)
 			.join(' ')
 
+		// 2000-2999 是关于 IO 或 NETWORK 的问题。
 		if (isActuallyOffline(networkState) && code >= 2000 && code < 3000) {
 			return {
-				message: '当前歌曲未缓存，离线状态下无法播放',
+				message: '当前歌曲未缓存，离线状态下无法播放(或存在其他IO/网络问题)',
 				shouldReport: false,
 			}
 		}
@@ -108,6 +100,15 @@ const getPlayerErrorInfo = async (event) => {
 				shouldReport: false,
 			}
 		}
+	}
+
+	if (
+		rawMessage.includes('Unable to connect') ||
+		rawMessage.includes('UnknownHostException') ||
+		rawMessage.includes('ConnectException') ||
+		rawMessage.includes('SocketTimeoutException')
+	) {
+		return { message: '网络连接失败，请检查网络设置', shouldReport: false }
 	}
 
 	return {
@@ -131,14 +132,31 @@ const toSentryError = (event) => {
 Orpheus.addListener('onPlayerError', async (event) => {
 	log.error('播放器错误事件：', { event })
 
-	const { message, shouldReport } = await getPlayerErrorInfo(event)
+	let playerErrorInfo = {
+		message: event.message || '播放器发生未知错误',
+		shouldReport: true,
+	}
 
-	toast.error(message, {
-		description: event.code || event.errorCode,
-	})
+	try {
+		try {
+			playerErrorInfo = await getPlayerErrorInfo(event)
+		} catch (error) {
+			log.error('解析播放器错误失败：', { error, event })
+		}
 
-	if (shouldReport) {
-		reportErrorToSentry(toSentryError(event), '播放器错误事件', 'Native.Player')
+		toast.error(playerErrorInfo.message, {
+			description: event.code || event.errorCode,
+		})
+
+		if (playerErrorInfo.shouldReport) {
+			reportErrorToSentry(
+				toSentryError(event),
+				'播放器错误事件',
+				'Native.Player',
+			)
+		}
+	} catch (error) {
+		log.error('处理播放器错误事件失败：', { error, event })
 	}
 })
 

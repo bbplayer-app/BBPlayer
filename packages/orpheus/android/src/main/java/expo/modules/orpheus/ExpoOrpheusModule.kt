@@ -428,6 +428,8 @@ class ExpoOrpheusModule : Module() {
                 val physicalIndex = order?.getOrElse(index) { C.INDEX_UNSET } ?: C.INDEX_UNSET
                 if (physicalIndex != C.INDEX_UNSET) {
                     p.seekTo(physicalIndex, C.TIME_UNSET)
+                } else {
+                    return@AsyncFunction
                 }
             } else {
                 p.seekTo(index, C.TIME_UNSET)
@@ -461,8 +463,8 @@ class ExpoOrpheusModule : Module() {
             val p = player ?: return@AsyncFunction null
 
             // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
-            val mediaItemCount = player?.mediaItemCount ?: 0
-            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+            val mediaItemCount = p.mediaItemCount
+            if (p.repeatMode == Player.REPEAT_MODE_ONE
                 && mediaItemCount > 0
                 && !p.hasPreviousMediaItem()
             ) {
