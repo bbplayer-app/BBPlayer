@@ -36,10 +36,10 @@ data class ExportOptions(
     val cropCoverArt: Boolean = false,
 )
 
-private const val PUBLIC_DOWNLOADS_DESTINATION_HOST = "public-downloads"
+private const val PUBLIC_MUSIC_DESTINATION_HOST = "public-music"
 
-private fun isPublicDownloadsDestination(uri: Uri): Boolean {
-    return uri.scheme == "orpheus" && uri.host == PUBLIC_DOWNLOADS_DESTINATION_HOST
+private fun isPublicMusicDestination(uri: Uri): Boolean {
+    return uri.scheme == "orpheus" && uri.host == PUBLIC_MUSIC_DESTINATION_HOST
 }
 
 
@@ -57,15 +57,15 @@ fun runExportDownloads(
     val downloadIndex = downloadManager.downloadIndex
     val dataSource = DownloadUtil.getReadOnlyCacheDataSource(context)
     val treeUri = Uri.parse(destinationUri)
-    val isPublicDownloads = isPublicDownloadsDestination(treeUri)
+    val isPublicMusic = isPublicMusicDestination(treeUri)
     val pickedDir =
-        if (isPublicDownloads) {
+        if (isPublicMusic) {
             null
         } else {
             DocumentFile.fromTreeUri(context, treeUri)
         }
 
-    if (!isPublicDownloads && (pickedDir == null || !pickedDir.canWrite())) {
+    if (!isPublicMusic && (pickedDir == null || !pickedDir.canWrite())) {
         Log.e("OrpheusExport", "Destination directory is not writable: $destinationUri")
         return
     }
@@ -81,7 +81,7 @@ fun runExportDownloads(
                 downloadIndex = downloadIndex,
                 dataSource = dataSource,
                 pickedDir = pickedDir,
-                isPublicDownloads = isPublicDownloads,
+                isPublicMusic = isPublicMusic,
                 options = options,
                 json = json,
                 sendEvent = sendEvent,
@@ -100,7 +100,7 @@ private suspend fun exportSingleItem(
     downloadIndex: DownloadIndex,
     dataSource: CacheDataSource,
     pickedDir: DocumentFile?,
-    isPublicDownloads: Boolean,
+    isPublicMusic: Boolean,
     options: ExportOptions,
     json: Json,
     sendEvent: (name: String, payload: Map<String, Any?>) -> Unit,
@@ -158,7 +158,7 @@ private suspend fun exportSingleItem(
             tempM4a = tempM4a,
             fileName = fileName,
             pickedDir = pickedDir,
-            isPublicDownloads = isPublicDownloads,
+            isPublicMusic = isPublicMusic,
         )
 
         sendEvent(
@@ -191,21 +191,22 @@ private fun writeExportedFile(
     tempM4a: File,
     fileName: String,
     pickedDir: DocumentFile?,
-    isPublicDownloads: Boolean,
+    isPublicMusic: Boolean,
 ) {
-    if (isPublicDownloads) {
+    if (isPublicMusic) {
         writeToPublicMusic(context, tempM4a, fileName)
         return
     }
 
     val targetDir = pickedDir ?: throw Exception("Destination directory is not available")
-    val newFile = targetDir.createFile("audio/mp4", fileName)
-    if (newFile != null) {
+    val newFile = targetDir.createFile("audio/mp4", fileName) ?: throw Exception("Failed to create file $fileName in destination")
+    try {
         context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
             tempM4a.inputStream().use { it.copyTo(outputStream) }
         } ?: throw Exception("Failed to open output stream for $fileName")
-    } else {
-        throw Exception("Failed to create file $fileName in destination")
+    } catch (e: Exception) {
+        runCatching { newFile.delete() }
+        throw e
     }
 }
 
@@ -215,6 +216,47 @@ private fun writeToPublicMusic(
     fileName: String,
 ) {
     val resolver = context.contentResolver
+
+    // Pre-Q (API < 29): Use legacy external storage directory
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+        val bbplayerDir = File(musicDir, "BBPlayer")
+        if (!bbplayerDir.exists()) {
+            bbplayerDir.mkdirs()
+        }
+
+        val targetFile = File(bbplayerDir, fileName)
+        try {
+            tempM4a.inputStream().use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } catch (e: Exception) {
+            // Clean up partially written file on failure
+            runCatching { targetFile.delete() }
+            throw Exception("Failed to write file to public music directory: ${e.message}", e)
+        }
+
+        // Insert into MediaStore with DATA column (legacy approach)
+        val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "audio/mp4")
+            put(MediaStore.MediaColumns.DATA, targetFile.absolutePath)
+        }
+
+        val itemUri = resolver.insert(collection, values)
+        if (itemUri == null) {
+            // Clean up file if MediaStore insertion failed
+            runCatching { targetFile.delete() }
+            throw Exception("Failed to insert public Music item for $fileName into MediaStore")
+        }
+
+        return
+    }
+
+    // Q+ (API >= 29): Use RELATIVE_PATH approach
     val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
     val itemUri = resolver.insert(
         collection,
@@ -225,9 +267,7 @@ private fun writeToPublicMusic(
                 MediaStore.MediaColumns.RELATIVE_PATH,
                 "${Environment.DIRECTORY_MUSIC}/BBPlayer",
             )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         },
     ) ?: throw Exception("Failed to create public Music item for $fileName")
 
@@ -236,16 +276,14 @@ private fun writeToPublicMusic(
             tempM4a.inputStream().use { it.copyTo(outputStream) }
         } ?: throw Exception("Failed to open public Music output stream for $fileName")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            resolver.update(
-                itemUri,
-                ContentValues().apply {
-                    put(MediaStore.MediaColumns.IS_PENDING, 0)
-                },
-                null,
-                null,
-            )
-        }
+        resolver.update(
+            itemUri,
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            },
+            null,
+            null,
+        )
     } catch (e: Exception) {
         resolver.delete(itemUri, null, null)
         throw e

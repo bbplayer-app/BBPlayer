@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Required for exporting to public music directory on API < 29 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
@@ -18,6 +22,12 @@
         on API < 27 devices.
     -->
     <uses-sdk tools:overrideLibrary="io.github.proify.lyricon.provider" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+        </intent>
+    </queries>
 
     <application>
         <meta-data android:name="lyricon_module" android:value="true" />

@@ -978,8 +978,8 @@ class ExpoOrpheusModule : Module() {
             uriString
         }
 
-        Function("isDirectoryPickerAvailable") {
-            val context = appContext.reactContext ?: return@Function false
+        AsyncFunction("isDirectoryPickerAvailable") {
+            val context = appContext.reactContext ?: return@AsyncFunction false
             Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(context.packageManager) != null
         }
 

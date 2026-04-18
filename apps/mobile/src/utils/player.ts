@@ -78,7 +78,7 @@ async function reportPlaybackHistory(
 		return
 	}
 	let cid = track.bilibiliMetadata.cid
-	if (!cid) {
+	if (!cid && !track.bilibiliMetadata.isMultiPage) {
 		const videoPageResult = await bilibiliApi.getPageList(
 			track.bilibiliMetadata.bvid,
 		)
@@ -97,6 +97,11 @@ async function reportPlaybackHistory(
 			return
 		}
 		cid = videoPageResult.value[0].cid
+	} else if (track.bilibiliMetadata.isMultiPage) {
+		logger.warning('多 p 视频无法上报播放记录，不存在 cid', {
+			bvid: track.bilibiliMetadata.bvid,
+		})
+		return
 	}
 	logger.debug('上报播放记录', {
 		bvid: track.bilibiliMetadata.bvid,
@@ -105,7 +110,7 @@ async function reportPlaybackHistory(
 	})
 	const result = await bilibiliApi.reportPlaybackHistory(
 		track.bilibiliMetadata.bvid,
-		cid,
+		cid!,
 		position,
 	)
 	if (result.isErr()) {
