@@ -574,8 +574,12 @@ export default function DownloadedPage() {
 					title='下一首播放'
 					onPress={async () => {
 						if (currentMenuTask && currentMenuTask.track) {
-							await Orpheus.playNext(currentMenuTask.track)
-							toast.success('添加到下一首播放成功')
+							try {
+								await Orpheus.playNext(currentMenuTask.track)
+								toast.success('添加到下一首播放成功')
+							} catch (error) {
+								toastAndLogError(error, '添加到下一首播放失败')
+							}
 						}
 						dismissItemMenu()
 					}}
