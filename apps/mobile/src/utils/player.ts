@@ -74,27 +74,50 @@ async function reportPlaybackHistory(
 		return
 	}
 	const track = trackResult.value
-	if (
-		track.source !== 'bilibili' ||
-		!track.bilibiliMetadata.cid ||
-		!track.bilibiliMetadata.bvid
-	)
+	if (track.source !== 'bilibili') {
 		return
+	}
+	let cid = track.bilibiliMetadata.cid
+	if (!cid && !track.bilibiliMetadata.isMultiPage) {
+		const videoPageResult = await bilibiliApi.getPageList(
+			track.bilibiliMetadata.bvid,
+		)
+		if (videoPageResult.isErr()) {
+			toastAndLogError(
+				'查询视频信息失败：',
+				videoPageResult.error,
+				'Utils.Player',
+			)
+			return
+		}
+		if (videoPageResult.value.length === 0) {
+			logger.warning('视频无分 p 信息，无法上报播放记录', {
+				bvid: track.bilibiliMetadata.bvid,
+			})
+			return
+		}
+		cid = videoPageResult.value[0].cid
+	} else if (track.bilibiliMetadata.isMultiPage) {
+		logger.warning('多 p 视频无法上报播放记录，不存在 cid', {
+			bvid: track.bilibiliMetadata.bvid,
+		})
+		return
+	}
 	logger.debug('上报播放记录', {
 		bvid: track.bilibiliMetadata.bvid,
-		cid: track.bilibiliMetadata.cid,
+		cid,
 		position,
 	})
 	const result = await bilibiliApi.reportPlaybackHistory(
 		track.bilibiliMetadata.bvid,
-		track.bilibiliMetadata.cid,
+		cid!,
 		position,
 	)
 	if (result.isErr()) {
 		logger.warning('上报播放记录到 bilibili 失败', {
 			params: {
 				bvid: track.bilibiliMetadata.bvid,
-				cid: track.bilibiliMetadata.cid,
+				cid,
 			},
 			error: result.error,
 		})

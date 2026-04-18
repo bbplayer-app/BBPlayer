@@ -9,7 +9,14 @@ import {
 	useRef,
 	useState,
 } from 'react'
-import { StyleSheet, ToastAndroid, View, Platform, Alert } from 'react-native'
+import {
+	StyleSheet,
+	ToastAndroid,
+	View,
+	Platform,
+	Alert,
+	PermissionsAndroid,
+} from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
@@ -41,6 +48,9 @@ import {
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
+
+const PUBLIC_MUSIC_EXPORT_URI = 'orpheus://public-music'
 
 interface DownloadedItemExtraData {
 	selectMode: boolean
@@ -264,6 +274,37 @@ export default function DownloadedPage() {
 		setMenuState((prev) => ({ ...prev, visible: false }))
 	}, [])
 
+	const resolveExportDestination = useCallback(async () => {
+		const hasDirectoryPicker = await Orpheus.isDirectoryPickerAvailable()
+		if (!hasDirectoryPicker) {
+			// For API < 29, we need WRITE_EXTERNAL_STORAGE permission for public music export
+			if (Platform.OS === 'android' && Platform.Version < 29) {
+				const permissionResult = await PermissionsAndroid.request(
+					PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+					{
+						title: '存储权限',
+						message: '导出歌曲到公共音乐目录需要存储权限',
+						buttonPositive: '确定',
+						buttonNegative: '取消',
+					},
+				)
+				if (permissionResult !== PermissionsAndroid.RESULTS.GRANTED) {
+					toast.error('需要存储权限才能导出到公共音乐目录')
+					return null
+				}
+			}
+			toast.info('系统不支持目录选择，回退到 Music/BBPlayer')
+			return PUBLIC_MUSIC_EXPORT_URI
+		}
+
+		ToastAndroid.showWithGravity(
+			'请选择需要导出到的目录',
+			ToastAndroid.SHORT,
+			ToastAndroid.BOTTOM,
+		)
+		return await Orpheus.selectDirectory()
+	}, [])
+
 	const handleSingleExport = useCallback(async () => {
 		dismissItemMenu()
 		const id = menuState.id
@@ -274,17 +315,12 @@ export default function DownloadedPage() {
 			return
 		}
 
-		ToastAndroid.showWithGravity(
-			'请选择需要导出到的目录',
-			ToastAndroid.SHORT,
-			ToastAndroid.BOTTOM,
-		)
-		const directoryUri = await Orpheus.selectDirectory()
+		const directoryUri = await resolveExportDestination()
 		if (directoryUri) {
 			setExportConfig({ ids: [id], destinationUri: directoryUri })
 			void exportSheetRef.current?.present()
 		}
-	}, [dismissItemMenu, menuState.id])
+	}, [dismissItemMenu, menuState.id, resolveExportDestination])
 
 	const handleDelete = useCallback(() => {
 		dismissItemMenu()
@@ -337,12 +373,7 @@ export default function DownloadedPage() {
 			return
 		}
 
-		ToastAndroid.showWithGravity(
-			'请选择需要导出到的目录',
-			ToastAndroid.SHORT,
-			ToastAndroid.BOTTOM,
-		)
-		const directoryUri = await Orpheus.selectDirectory()
+		const directoryUri = await resolveExportDestination()
 		if (directoryUri) {
 			setExportConfig({ ids: idsToExport, destinationUri: directoryUri })
 			void exportSheetRef.current?.present()
