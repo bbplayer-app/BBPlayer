@@ -17,3 +17,4 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   react-native-mmkv: patches/react-native-mmkv.patch
+  sonner-native@0.23.0: patches/sonner-native@0.23.0.patch

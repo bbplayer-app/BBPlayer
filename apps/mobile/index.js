@@ -1,22 +1,33 @@
 import { Orpheus, registerOrpheusHeadlessTask } from '@bbplayer/orpheus'
+import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
 
-import useAppStore from './src/hooks/stores/useAppStore'
 import { playerSideEffects } from './src/lib/player/PlayerSideEffects'
-import { analyticsService } from './src/lib/services/analyticsService'
 import lyricService from './src/lib/services/lyricService'
 import log, { reportErrorToSentry } from './src/utils/log'
+import { isActuallyOffline } from './src/utils/network'
 import { finalizeAndRecordCurrentTrack } from './src/utils/player'
 import toast from './src/utils/toast'
 
-global.isUIReady = false
-
 playerSideEffects.initialize()
 
-const parsePlayerError = (error) => {
-	if (!error) {
-		return { message: '播放器发生未知错误', shouldReport: true }
+registerOrpheusHeadlessTask(async (event) => {
+	if (event.eventName === 'onTrackStarted') {
+		lyricService.pushLyricsToOverlays(event.trackId)
+	} else if (event.eventName === 'onTrackFinished') {
+		void finalizeAndRecordCurrentTrack(
+			event.trackId,
+			event.duration,
+			event.finalPosition,
+		)
 	}
-	const rawMessage = error.rootCauseMessage || error.message || ''
+})
+
+const offlinePlaybackErrorPattern =
+	/resolve url failed|unknownhost|failed to connect|network is unreachable|unable to resolve host/i
+
+const getPlayerErrorInfo = async (event) => {
+	const rawMessage = event.rootCauseMessage || event.message || ''
+	const code = event.code || event.errorCode
 
 	if (rawMessage.includes('Bilibili API Error')) {
 		const codeMatch = rawMessage.match(/code=(-?\d+)/)
@@ -33,7 +44,6 @@ const parsePlayerError = (error) => {
 		if (code === '-101') {
 			return { message: 'Bilibili 账号未登录', shouldReport: false }
 		}
-
 		return {
 			message: `Bilibili API 错误: ${msg} (${code})`,
 			shouldReport: false,
@@ -62,6 +72,36 @@ const parsePlayerError = (error) => {
 		}
 	}
 
+	if (event.platform === 'android') {
+		const networkState = await NetInfoFetch()
+		const rootMessage = [
+			event.rootCauseClass,
+			event.rootCauseMessage,
+			event.message,
+			event.errorCodeName,
+		]
+			.filter(Boolean)
+			.join(' ')
+
+		// 2000-2999 是关于 IO 或 NETWORK 的问题。
+		if (isActuallyOffline(networkState) && code >= 2000 && code < 3000) {
+			return {
+				message: '当前歌曲未缓存，离线状态下无法播放(或存在其他IO/网络问题)',
+				shouldReport: false,
+			}
+		}
+
+		if (
+			isActuallyOffline(networkState) &&
+			offlinePlaybackErrorPattern.test(rootMessage)
+		) {
+			return {
+				message: '当前歌曲未缓存，离线状态下无法播放',
+				shouldReport: false,
+			}
+		}
+	}
+
 	if (
 		rawMessage.includes('Unable to connect') ||
 		rawMessage.includes('UnknownHostException') ||
@@ -72,69 +112,51 @@ const parsePlayerError = (error) => {
 	}
 
 	return {
-		message: error.message || '播放器发生未知错误',
+		message: event.message || '播放器发生未知错误',
 		shouldReport: true,
 	}
 }
 
-Orpheus.addListener('onPlayerError', (error) => {
-	log.error('播放器错误事件：', { error })
-	const { message, shouldReport } = parsePlayerError(error)
-
-	if (global.isUIReady) {
-		toast.error(message, {
-			description: error.code,
-		})
-	}
-
-	if (shouldReport) {
-		reportErrorToSentry(error, '播放器错误事件', 'Native.Player')
-	}
-})
-
-let lastResumedTime = 0
-let totalPlayedTime = 0
-
-registerOrpheusHeadlessTask(async (event) => {
-	if (event.eventName === 'onTrackStarted') {
-		lastResumedTime = Date.now()
-		totalPlayedTime = 0
-		lyricService.pushLyricsToOverlays(event.trackId)
-	} else if (event.eventName === 'onTrackResumed') {
-		lastResumedTime = Date.now()
-	} else if (event.eventName === 'onTrackPaused') {
-		if (lastResumedTime > 0) {
-			const segment = (Date.now() - lastResumedTime) / 1000
-			if (segment > 0) {
-				totalPlayedTime += segment
-			}
-			lastResumedTime = 0
-		}
-	} else if (event.eventName === 'onTrackFinished') {
-		// 如果在播放中结束（没经过 pause），补加上最后一段
-		if (lastResumedTime > 0) {
-			const segment = (Date.now() - lastResumedTime) / 1000
-			if (segment > 0) {
-				totalPlayedTime += segment
-			}
-			lastResumedTime = 0
-		}
-
-		// 过滤掉异常的短播放（例如 < 1秒）或异常长（例如系统时间回调错误）
-		if (totalPlayedTime > 1 && totalPlayedTime < 86400) {
-			const enableDataCollection =
-				useAppStore.getState().settings.enableDataCollection ?? true
-			if (enableDataCollection) {
-				void analyticsService.logPlaybackSession(totalPlayedTime)
-			}
-		}
-		totalPlayedTime = 0
-
-		void finalizeAndRecordCurrentTrack(
-			event.trackId,
-			event.duration,
-			event.finalPosition,
+const toSentryError = (event) => {
+	if (event.platform === 'android') {
+		return new Error(
+			event.rootCauseMessage ||
+				event.message ||
+				event.errorCodeName ||
+				'Unknown playback error',
 		)
+	}
+	return new Error(event.error)
+}
+
+Orpheus.addListener('onPlayerError', async (event) => {
+	log.error('播放器错误事件：', { event })
+
+	let playerErrorInfo = {
+		message: event.message || '播放器发生未知错误',
+		shouldReport: true,
+	}
+
+	try {
+		try {
+			playerErrorInfo = await getPlayerErrorInfo(event)
+		} catch (error) {
+			log.error('解析播放器错误失败：', { error, event })
+		}
+
+		toast.error(playerErrorInfo.message, {
+			description: event.code || event.errorCode,
+		})
+
+		if (playerErrorInfo.shouldReport) {
+			reportErrorToSentry(
+				toSentryError(event),
+				'播放器错误事件',
+				'Native.Player',
+			)
+		}
+	} catch (error) {
+		log.error('处理播放器错误事件失败：', { error, event })
 	}
 })
 
