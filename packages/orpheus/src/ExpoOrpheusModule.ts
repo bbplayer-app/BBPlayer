@@ -103,7 +103,6 @@ export type OrpheusEvents = {
 		message?: string
 	}): void
 	onStatusBarLyricsStatusChanged(): void
-	onRequestClearLyrics(event: { trackId: string }): void
 }
 export interface OrpheusHeadlessTrackStartedEvent {
 	eventName: 'onTrackStarted'
@@ -126,11 +125,17 @@ export interface OrpheusHeadlessTrackResumedEvent {
 	eventName: 'onTrackResumed'
 }
 
+export interface OrpheusHeadlessRequestClearLyricsEvent {
+	eventName: 'onRequestClearLyrics'
+	trackId: string
+}
+
 export type OrpheusHeadlessEvent =
 	| OrpheusHeadlessTrackStartedEvent
 	| OrpheusHeadlessTrackFinishedEvent
 	| OrpheusHeadlessTrackPausedEvent
 	| OrpheusHeadlessTrackResumedEvent
+	| OrpheusHeadlessRequestClearLyricsEvent
 
 /** 内部使用的原生接口定义 */
 declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
@@ -194,6 +199,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 		cropCoverArt: boolean,
 	): Promise<void>
 	selectDirectory(): Promise<string | null>
+	isDirectoryPickerAvailable(): Promise<boolean>
 	checkOverlayPermission(): Promise<boolean>
 	requestOverlayPermission(): Promise<void>
 	showDesktopLyrics(): Promise<void>

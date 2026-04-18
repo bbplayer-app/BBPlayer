@@ -62,6 +62,7 @@ export default function RecentlyPlayedPage() {
 			tracks: [track],
 			playNow: true,
 			clearQueue: false,
+			startFromKey: track.uniqueKey,
 			playNext: false,
 		})
 	}, [])

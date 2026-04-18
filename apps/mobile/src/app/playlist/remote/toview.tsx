@@ -141,6 +141,7 @@ export default function ToViewPage() {
 			tracks: [track],
 			playNow: true,
 			clearQueue: false,
+			startFromKey: track.uniqueKey,
 			playNext: false,
 		})
 	}, [])

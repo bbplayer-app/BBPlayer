@@ -41,6 +41,9 @@ import {
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
+import toast from '@/utils/toast'
+
+const PUBLIC_MUSIC_EXPORT_URI = 'orpheus://public-downloads'
 
 interface DownloadedItemExtraData {
 	selectMode: boolean
@@ -264,6 +267,21 @@ export default function DownloadedPage() {
 		setMenuState((prev) => ({ ...prev, visible: false }))
 	}, [])
 
+	const resolveExportDestination = useCallback(async () => {
+		const hasDirectoryPicker = await Orpheus.isDirectoryPickerAvailable()
+		if (!hasDirectoryPicker) {
+			toast.info('系统不支持目录选择，回退到 Music/BBPlayer')
+			return PUBLIC_MUSIC_EXPORT_URI
+		}
+
+		ToastAndroid.showWithGravity(
+			'请选择需要导出到的目录',
+			ToastAndroid.SHORT,
+			ToastAndroid.BOTTOM,
+		)
+		return await Orpheus.selectDirectory()
+	}, [])
+
 	const handleSingleExport = useCallback(async () => {
 		dismissItemMenu()
 		const id = menuState.id
@@ -274,17 +292,12 @@ export default function DownloadedPage() {
 			return
 		}
 
-		ToastAndroid.showWithGravity(
-			'请选择需要导出到的目录',
-			ToastAndroid.SHORT,
-			ToastAndroid.BOTTOM,
-		)
-		const directoryUri = await Orpheus.selectDirectory()
+		const directoryUri = await resolveExportDestination()
 		if (directoryUri) {
 			setExportConfig({ ids: [id], destinationUri: directoryUri })
 			void exportSheetRef.current?.present()
 		}
-	}, [dismissItemMenu, menuState.id])
+	}, [dismissItemMenu, menuState.id, resolveExportDestination])
 
 	const handleDelete = useCallback(() => {
 		dismissItemMenu()
@@ -337,12 +350,7 @@ export default function DownloadedPage() {
 			return
 		}
 
-		ToastAndroid.showWithGravity(
-			'请选择需要导出到的目录',
-			ToastAndroid.SHORT,
-			ToastAndroid.BOTTOM,
-		)
-		const directoryUri = await Orpheus.selectDirectory()
+		const directoryUri = await resolveExportDestination()
 		if (directoryUri) {
 			setExportConfig({ ids: idsToExport, destinationUri: directoryUri })
 			void exportSheetRef.current?.present()

@@ -1,8 +1,12 @@
 package expo.modules.orpheus.util
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.request.RequestOptions
@@ -32,6 +36,12 @@ data class ExportOptions(
     val cropCoverArt: Boolean = false,
 )
 
+private const val PUBLIC_DOWNLOADS_DESTINATION_HOST = "public-downloads"
+
+private fun isPublicDownloadsDestination(uri: Uri): Boolean {
+    return uri.scheme == "orpheus" && uri.host == PUBLIC_DOWNLOADS_DESTINATION_HOST
+}
+
 
 @UnstableApi
 fun runExportDownloads(
@@ -47,9 +57,15 @@ fun runExportDownloads(
     val downloadIndex = downloadManager.downloadIndex
     val dataSource = DownloadUtil.getReadOnlyCacheDataSource(context)
     val treeUri = Uri.parse(destinationUri)
-    val pickedDir = DocumentFile.fromTreeUri(context, treeUri)
+    val isPublicDownloads = isPublicDownloadsDestination(treeUri)
+    val pickedDir =
+        if (isPublicDownloads) {
+            null
+        } else {
+            DocumentFile.fromTreeUri(context, treeUri)
+        }
 
-    if (pickedDir == null || !pickedDir.canWrite()) {
+    if (!isPublicDownloads && (pickedDir == null || !pickedDir.canWrite())) {
         Log.e("OrpheusExport", "Destination directory is not writable: $destinationUri")
         return
     }
@@ -65,6 +81,7 @@ fun runExportDownloads(
                 downloadIndex = downloadIndex,
                 dataSource = dataSource,
                 pickedDir = pickedDir,
+                isPublicDownloads = isPublicDownloads,
                 options = options,
                 json = json,
                 sendEvent = sendEvent,
@@ -82,7 +99,8 @@ private suspend fun exportSingleItem(
     context: Context,
     downloadIndex: DownloadIndex,
     dataSource: CacheDataSource,
-    pickedDir: DocumentFile,
+    pickedDir: DocumentFile?,
+    isPublicDownloads: Boolean,
     options: ExportOptions,
     json: Json,
     sendEvent: (name: String, payload: Map<String, Any?>) -> Unit,
@@ -135,14 +153,13 @@ private suspend fun exportSingleItem(
 
         // 4. 拷贝到 SAF 目标路径
         val fileName = buildFileName(id, download, track, options.filenamePattern)
-        val newFile = pickedDir.createFile("audio/mp4", fileName)
-        if (newFile != null) {
-            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-                tempM4a.inputStream().use { it.copyTo(outputStream) }
-            } ?: throw Exception("Failed to open output stream for $fileName")
-        } else {
-            throw Exception("Failed to create file $fileName in destination")
-        }
+        writeExportedFile(
+            context = context,
+            tempM4a = tempM4a,
+            fileName = fileName,
+            pickedDir = pickedDir,
+            isPublicDownloads = isPublicDownloads,
+        )
 
         sendEvent(
             "onExportProgress", mapOf(
@@ -166,6 +183,72 @@ private suspend fun exportSingleItem(
         )
     } finally {
         tempM4a?.delete()
+    }
+}
+
+private fun writeExportedFile(
+    context: Context,
+    tempM4a: File,
+    fileName: String,
+    pickedDir: DocumentFile?,
+    isPublicDownloads: Boolean,
+) {
+    if (isPublicDownloads) {
+        writeToPublicMusic(context, tempM4a, fileName)
+        return
+    }
+
+    val targetDir = pickedDir ?: throw Exception("Destination directory is not available")
+    val newFile = targetDir.createFile("audio/mp4", fileName)
+    if (newFile != null) {
+        context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+            tempM4a.inputStream().use { it.copyTo(outputStream) }
+        } ?: throw Exception("Failed to open output stream for $fileName")
+    } else {
+        throw Exception("Failed to create file $fileName in destination")
+    }
+}
+
+private fun writeToPublicMusic(
+    context: Context,
+    tempM4a: File,
+    fileName: String,
+) {
+    val resolver = context.contentResolver
+    val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+    val itemUri = resolver.insert(
+        collection,
+        ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "audio/mp4")
+            put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                "${Environment.DIRECTORY_MUSIC}/BBPlayer",
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        },
+    ) ?: throw Exception("Failed to create public Music item for $fileName")
+
+    try {
+        resolver.openOutputStream(itemUri)?.use { outputStream ->
+            tempM4a.inputStream().use { it.copyTo(outputStream) }
+        } ?: throw Exception("Failed to open public Music output stream for $fileName")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            resolver.update(
+                itemUri,
+                ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                },
+                null,
+                null,
+            )
+        }
+    } catch (e: Exception) {
+        resolver.delete(itemUri, null, null)
+        throw e
     }
 }
 

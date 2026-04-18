@@ -228,6 +228,7 @@ class OrpheusMusicService : MediaLibraryService() {
         floatingLyricsManager = FloatingLyricsManager(this, player)
         floatingLyricsManager.onClearLyricsRequested = { trackId ->
             lyricEventListeners.forEach { it.onLyricCleared(trackId) }
+            sendRequestClearLyricsEvent(trackId)
         }
         if (GeneralStorage.isDesktopLyricsShown()) {
             serviceHandler.post { floatingLyricsManager.show() }
@@ -493,6 +494,17 @@ class OrpheusMusicService : MediaLibraryService() {
         try {
             val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
             intent.putExtra("eventName", "onTrackResumed")
+            startService(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun sendRequestClearLyricsEvent(trackId: String) {
+        try {
+            val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
+            intent.putExtra("eventName", "onRequestClearLyrics")
+            intent.putExtra("trackId", trackId)
             startService(intent)
         } catch (e: Exception) {
             e.printStackTrace()

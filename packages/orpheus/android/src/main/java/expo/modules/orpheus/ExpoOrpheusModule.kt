@@ -978,6 +978,11 @@ class ExpoOrpheusModule : Module() {
             uriString
         }
 
+        Function("isDirectoryPickerAvailable") {
+            val context = appContext.reactContext ?: return@Function false
+            Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(context.packageManager) != null
+        }
+
         AsyncFunction("getPlaybackSpeed") {
             ensurePlayer()
             player?.playbackParameters?.speed ?: 1.0f

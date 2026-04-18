@@ -454,6 +454,7 @@ const styles = StyleSheet.create({
 	errorContentContainer: {
 		justifyContent: 'center',
 		alignItems: 'center',
+		marginTop: 40, // 不被渐变 mask 遮挡到
 	},
 	errorText: {
 		textAlign: 'center',
