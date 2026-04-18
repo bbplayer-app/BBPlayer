@@ -289,7 +289,7 @@ export default function DownloadedPage() {
 			return
 		}
 
-		void Orpheus.addToEnd([item.track], item.id, false)
+		void Orpheus.addToEnd([item.track], item.track.id, false)
 	}, [])
 
 	const resolveExportDestination = useCallback(async () => {
