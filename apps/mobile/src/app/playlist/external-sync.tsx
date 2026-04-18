@@ -199,6 +199,7 @@ const ExternalPlaylistSyncPageInner = () => {
 		progress,
 		results,
 	} = useExternalPlaylistSyncStore((state) => state)
+	const tracks = data?.tracks ?? []
 
 	useEffect(() => {
 		reset()
@@ -207,7 +208,6 @@ const ExternalPlaylistSyncPageInner = () => {
 
 	const abortControllerRef = useRef<AbortController | null>(null)
 	const sessionStartTimeRef = useRef<number>(0)
-	const sessionStartCountRef = useRef<number>(0)
 	const [etaSeconds, setEtaSeconds] = useState<number | null>(null)
 
 	const [isExiting, setIsExiting] = useState(false)
@@ -309,50 +309,65 @@ const ExternalPlaylistSyncPageInner = () => {
 		}
 	}
 
+	const processedIndexes = Object.keys(results).map(Number)
+	const hasProcessedAny = processedIndexes.length > 0
+	const failedIndexes = processedIndexes.filter(
+		(index) => results[index]?.matchedVideo === null,
+	)
+	const unprocessedIndexes = tracks
+		.map((_, index) => index)
+		.filter((index) => !Object.hasOwn(results, index))
+	const syncButtonText = syncing
+		? '暂停'
+		: !hasProcessedAny
+			? '开始匹配'
+			: unprocessedIndexes.length > 0
+				? '继续匹配'
+				: failedIndexes.length > 0
+					? '继续匹配失败项'
+					: '重新匹配全部'
+
 	const handleSync = async () => {
 		if (!data?.tracks) return
 
 		if (syncing) {
 			abortControllerRef.current?.abort()
 			setSyncing(false)
+			setEtaSeconds(null)
 			toast.info('已暂停匹配')
 			return
 		}
 
-		const startIndex = Object.keys(results).length
-		// 如果已经匹配完了，就默认用户的意思是重新匹配
-		if (startIndex >= data.tracks.length) {
-			reset()
+		let indexesToProcess = unprocessedIndexes
+
+		if (indexesToProcess.length === 0 && failedIndexes.length > 0) {
+			indexesToProcess = failedIndexes
 		}
 
-		const effectiveStartIndex =
-			Object.keys(results).length === data.tracks.length
-				? 0
-				: Object.keys(results).length
+		if (indexesToProcess.length === 0) {
+			reset()
+			indexesToProcess = data.tracks.map((_, index) => index)
+		}
 
 		setSyncing(true)
-		if (effectiveStartIndex === 0) {
-			setProgress(0, data.tracks.length)
-		}
+		setProgress(0, indexesToProcess.length)
 
 		abortControllerRef.current = new AbortController()
 		sessionStartTimeRef.current = Date.now()
-		sessionStartCountRef.current = effectiveStartIndex
 
 		// Initial rough estimate
-		setEtaSeconds((data.tracks.length - effectiveStartIndex) * 1.2)
+		setEtaSeconds(indexesToProcess.length * 1.2)
 
 		const result = await externalPlaylistService.matchExternalPlaylist(
 			data.tracks,
-			(current, total, matchResult) => {
-				// Index is current - 1 because current starts at 1
-				setResult(current - 1, matchResult)
+			(current, total, matchResult, trackIndex) => {
+				setResult(trackIndex, matchResult)
 				setProgress(current, total)
 
 				// ETA Calculation
 				const now = Date.now()
 				const elapsed = now - sessionStartTimeRef.current
-				const processedInSession = current - sessionStartCountRef.current
+				const processedInSession = current
 
 				if (processedInSession > 0) {
 					const avgTimePerItem = elapsed / processedInSession
@@ -362,12 +377,13 @@ const ExternalPlaylistSyncPageInner = () => {
 				}
 			},
 			{
-				startIndex: effectiveStartIndex,
+				trackIndexes: indexesToProcess,
 				signal: abortControllerRef.current.signal,
 			},
 		)
 
 		setSyncing(false)
+		setEtaSeconds(null)
 		if (result.isErr()) {
 			if (result.error.message !== 'Aborted') {
 				toast.error(`匹配出错: ${result.error.message}`)
@@ -406,8 +422,6 @@ const ExternalPlaylistSyncPageInner = () => {
 			</View>
 		)
 	}
-
-	const { tracks } = data
 
 	return (
 		<View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -470,6 +484,7 @@ const ExternalPlaylistSyncPageInner = () => {
 				syncing={syncing}
 				progress={progress}
 				etaSeconds={etaSeconds}
+				buttonText={syncButtonText}
 			/>
 		</View>
 	)
@@ -480,11 +495,13 @@ const ExternalPlaylistSyncFooter = ({
 	syncing,
 	progress,
 	etaSeconds,
+	buttonText,
 }: {
 	onSync: () => void
 	syncing: boolean
 	progress: number
 	etaSeconds: number | null
+	buttonText: string
 }) => {
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
@@ -548,7 +565,7 @@ const ExternalPlaylistSyncFooter = ({
 						]}
 					>
 						<Text style={{ color: theme.colors.onPrimaryContainer }}>
-							{progress > 0 && progress < 1 ? '继续匹配' : '开始匹配'}
+							{buttonText}
 						</Text>
 					</TouchableRipple>
 				)}

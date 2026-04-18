@@ -122,21 +122,40 @@ export class ExternalPlaylistService {
 
 	public matchExternalPlaylist(
 		tracks: GenericTrack[],
-		onProgress: (current: number, total: number, result: MatchResult) => void,
-		options?: { signal?: AbortSignal; startIndex?: number },
+		onProgress: (
+			current: number,
+			total: number,
+			result: MatchResult,
+			trackIndex: number,
+		) => void,
+		options?: {
+			signal?: AbortSignal
+			startIndex?: number
+			trackIndexes?: number[]
+		},
 	): ResultAsync<MatchResult[], Error> {
 		return ResultAsync.fromPromise(
 			(async () => {
 				const results: MatchResult[] = []
 				const total = tracks.length
 				const startIndex = options?.startIndex ?? 0
+				const indexesToProcess =
+					options?.trackIndexes ??
+					Array.from(
+						{ length: Math.max(total - startIndex, 0) },
+						(_, index) => startIndex + index,
+					)
+				const processingTotal = indexesToProcess.length
 
-				for (let i = startIndex; i < total; i++) {
+				for (const [processedCount, trackIndex] of indexesToProcess.entries()) {
 					if (options?.signal?.aborted) {
 						throw new Error('Aborted')
 					}
 
-					const song = tracks[i]
+					const song = tracks[trackIndex]
+					if (!song) {
+						continue
+					}
 					// oxlint-disable-next-line no-await-in-loop
 					await wait(MIN_DELAY)
 
@@ -182,7 +201,7 @@ export class ExternalPlaylistService {
 						matchedVideo: matchedVideo,
 					}
 					results.push(result)
-					onProgress(i + 1, total, result)
+					onProgress(processedCount + 1, processingTotal, result, trackIndex)
 				}
 
 				return results
