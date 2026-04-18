@@ -27,6 +27,7 @@ import kotlinx.serialization.Serializable
  * @property secondaryWords 次要文本单词列表
  * @property translation 主要翻译文本
  * @property translationWords 主要翻译文本单词列表
+ * @property roma 罗马音
  */
 @Serializable
 data class RichLyricLine(
