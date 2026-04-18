@@ -5,7 +5,7 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.4.4] - 2026-04-18
 
 ### Fixed
 
@@ -21,6 +21,7 @@
 ### Changed
 
 - 把 player 相关监听器注册统一封装到 PlayerSideEffects 中
+- Orpheus: 不再在主线程上运行所有异步函数，只把 player 调用部分放在主线程
 
 ## [2.4.3]
 
@@ -444,7 +445,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.2...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.4...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -466,3 +467,4 @@
 [2.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.0...v2.3.2
 [2.4.1]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.2...v2.4.1
 [2.4.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.2
+[2.4.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.4

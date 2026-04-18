@@ -25,7 +25,6 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
 import expo.modules.kotlin.functions.Coroutine
-import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.typedarray.Float32Array
@@ -51,6 +50,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -345,314 +346,289 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("getPosition") {
-            ensurePlayer()
-            player?.currentPosition?.toDouble()?.div(1000.0) ?: 0.0
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.currentPosition.toDouble() / 1000.0 }
+        }
 
         AsyncFunction("getDuration") {
-            ensurePlayer()
-            val d = player?.duration ?: C.TIME_UNSET
+            val d = withPlayerOnMainThread { it.duration }
             if (d == C.TIME_UNSET) 0.0 else d.toDouble() / 1000.0
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getBuffered") {
-            ensurePlayer()
-            player?.bufferedPosition?.toDouble()?.div(1000.0) ?: 0.0
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.bufferedPosition.toDouble() / 1000.0 }
+        }
 
         AsyncFunction("getIsPlaying") {
-            ensurePlayer()
-            player?.isPlaying ?: false
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.isPlaying }
+        }
 
         AsyncFunction("getCurrentIndex") {
-            ensurePlayer()
-            player?.currentMediaItemIndex ?: -1
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.currentMediaItemIndex }
+        }
 
         AsyncFunction("getCurrentTrack") {
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction null
-            val currentItem = p.currentMediaItem ?: return@AsyncFunction null
+            val currentItem = withPlayerOnMainThread { it.currentMediaItem } ?: return@AsyncFunction null
 
             mediaItemToTrackRecord(currentItem)
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getShuffleMode") {
             // Read from persisted state (managed by ShuffleManager).
             GeneralStorage.getShuffleMode()
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getIndexTrack") { index: Int ->
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction null
+            val item = withPlayerOnMainThread { currentPlayer ->
+                if (index < 0 || index >= currentPlayer.mediaItemCount) {
+                    return@withPlayerOnMainThread null
+                }
 
-            if (index < 0 || index >= p.mediaItemCount) {
-                return@AsyncFunction null
+                currentPlayer.getMediaItemAt(index)
             }
-
-            val item = p.getMediaItemAt(index)
+                ?: return@AsyncFunction null
 
             mediaItemToTrackRecord(item)
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("play") {
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction null
-            if (p.playbackState == Player.STATE_ENDED) {
-                p.seekTo(0)
+            withPlayerOnMainThread { currentPlayer ->
+                if (currentPlayer.playbackState == Player.STATE_ENDED) {
+                    currentPlayer.seekTo(0)
+                }
+                prepareIfIdle(currentPlayer)
+                currentPlayer.play()
             }
-            prepareIfIdle(p)
-            p.play()
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("pause") {
-            ensurePlayer()
-            player?.pause()
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.pause() }
+        }
 
         AsyncFunction("clear") {
-            ensurePlayer()
-            player?.clearMediaItems()
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.clearMediaItems() }
+        }
 
         AsyncFunction("skipTo") { index: Int ->
             // 跳转到指定索引的开头
             // When shuffle is enabled, `index` is the position in the shuffle-traversal
             // order (as returned by getQueue). Convert to the physical queue index first.
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction
-            val service = OrpheusMusicService.instance
-            if (service != null && service.shuffleManager.isEnabled) {
-                val order = service.shuffleManager.getTraversalOrder()
-                val physicalIndex = order?.getOrElse(index) { C.INDEX_UNSET } ?: C.INDEX_UNSET
-                if (physicalIndex != C.INDEX_UNSET) {
-                    p.seekTo(physicalIndex, C.TIME_UNSET)
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                if (service.shuffleManager.isEnabled) {
+                    val order = service.shuffleManager.getTraversalOrder()
+                    val physicalIndex = order?.getOrElse(index) { C.INDEX_UNSET } ?: C.INDEX_UNSET
+                    if (physicalIndex != C.INDEX_UNSET) {
+                        currentPlayer.seekTo(physicalIndex, C.TIME_UNSET)
+                    } else {
+                        return@withServiceAndPlayerOnMainThread
+                    }
                 } else {
-                    return@AsyncFunction
+                    currentPlayer.seekTo(index, C.TIME_UNSET)
                 }
-            } else {
-                p.seekTo(index, C.TIME_UNSET)
+                prepareIfIdle(currentPlayer)
             }
-            prepareIfIdle(p)
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("skipToNext") {
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction null
+            withPlayerOnMainThread { currentPlayer ->
+                // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
+                val mediaItemCount = currentPlayer.mediaItemCount
+                if (currentPlayer.repeatMode == Player.REPEAT_MODE_ONE
+                    && mediaItemCount > 0
+                    && !currentPlayer.hasNextMediaItem()
+                ) {
+                    currentPlayer.seekTo(0, C.TIME_UNSET)
+                    prepareIfIdle(currentPlayer)
+                    return@withPlayerOnMainThread
+                }
 
-            // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
-            val mediaItemCount = p.mediaItemCount
-            if (p.repeatMode == Player.REPEAT_MODE_ONE
-                && mediaItemCount > 0
-                && !p.hasNextMediaItem()
-            ) {
-                p.seekTo(0, C.TIME_UNSET)
-                prepareIfIdle(p)
-                return@AsyncFunction Unit
+                if (currentPlayer.hasNextMediaItem()) {
+                    currentPlayer.seekToNext()
+                    prepareIfIdle(currentPlayer)
+                }
             }
-
-            if (p.hasNextMediaItem()) {
-                p.seekToNext()
-                prepareIfIdle(p)
-            }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("skipToPrevious") {
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction null
+            withPlayerOnMainThread { currentPlayer ->
+                // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
+                val mediaItemCount = currentPlayer.mediaItemCount
+                if (currentPlayer.repeatMode == Player.REPEAT_MODE_ONE
+                    && mediaItemCount > 0
+                    && !currentPlayer.hasPreviousMediaItem()
+                ) {
+                    currentPlayer.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                    prepareIfIdle(currentPlayer)
+                    return@withPlayerOnMainThread
+                }
 
-            // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
-            val mediaItemCount = p.mediaItemCount
-            if (p.repeatMode == Player.REPEAT_MODE_ONE
-                && mediaItemCount > 0
-                && !p.hasPreviousMediaItem()
-            ) {
-                p.seekTo(mediaItemCount - 1, C.TIME_UNSET)
-                prepareIfIdle(p)
-                return@AsyncFunction Unit
+                if (currentPlayer.hasPreviousMediaItem()) {
+                    currentPlayer.seekToPreviousMediaItem()
+                    prepareIfIdle(currentPlayer)
+                }
             }
-
-            if (p.hasPreviousMediaItem()) {
-                p.seekToPreviousMediaItem()
-                prepareIfIdle(p)
-            }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("seekTo") { seconds: Double ->
-            ensurePlayer()
             val ms = (seconds * 1000).toLong()
-            player?.seekTo(ms)
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.seekTo(ms) }
+        }
 
         AsyncFunction("setRepeatMode") { mode: Int ->
-            ensurePlayer()
             // mode: 0=OFF, 1=TRACK, 2=QUEUE
             val repeatMode = when (mode) {
                 1 -> Player.REPEAT_MODE_ONE
                 2 -> Player.REPEAT_MODE_ALL
                 else -> Player.REPEAT_MODE_OFF
             }
-            player?.repeatMode = repeatMode
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.repeatMode = repeatMode }
+        }
 
         AsyncFunction("setShuffleMode") { enabled: Boolean ->
             // Delegate to the service's ShuffleManager which uses Media3's built-in
             // shuffleModeEnabled for O(1) shuffle toggle without physical queue reordering.
-            val service = OrpheusMusicService.instance
-            if (service != null) {
-                service.applyShuffleMode(enabled)
-            } else {
-                // Service not yet bound — persist the preference for restorePlayerState to pick up
-                GeneralStorage.saveShuffleMode(enabled)
+            withServiceOnMainThread { service ->
+                if (service != null) {
+                    service.applyShuffleMode(enabled)
+                } else {
+                    // Service not yet bound — persist the preference for restorePlayerState to pick up
+                    GeneralStorage.saveShuffleMode(enabled)
+                }
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getRepeatMode") {
-            ensurePlayer()
-            player?.repeatMode
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.repeatMode }
+        }
 
         AsyncFunction("removeTrack") { index: Int ->
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction
-            val service = OrpheusMusicService.instance
-            if (service != null && service.shuffleManager.isEnabled) {
-                // index is the shuffle-traversal position; resolve to physical index.
-                val order = service.shuffleManager.getTraversalOrder()
-                val physicalIndex = order?.getOrElse(index) { -1 } ?: -1
-                if (physicalIndex >= 0 && physicalIndex < p.mediaItemCount) {
-                    p.removeMediaItem(physicalIndex)
-                }
-            } else {
-                if (index >= 0 && index < p.mediaItemCount) {
-                    p.removeMediaItem(index)
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                if (service.shuffleManager.isEnabled) {
+                    // index is the shuffle-traversal position; resolve to physical index.
+                    val order = service.shuffleManager.getTraversalOrder()
+                    val physicalIndex = order?.getOrElse(index) { -1 } ?: -1
+                    if (physicalIndex >= 0 && physicalIndex < currentPlayer.mediaItemCount) {
+                        currentPlayer.removeMediaItem(physicalIndex)
+                    }
+                } else {
+                    if (index >= 0 && index < currentPlayer.mediaItemCount) {
+                        currentPlayer.removeMediaItem(index)
+                    }
                 }
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getQueue") {
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction emptyList<TrackRecord>()
-            val count = p.mediaItemCount
-            val queue = ArrayList<TrackRecord>(count)
-
-            // When shuffle is enabled, return items in the logical playback (shuffle traversal)
-            // order so the UI displays what will actually be played next.
-            val service = OrpheusMusicService.instance
-            val traversal = if (service != null && service.shuffleManager.isEnabled) {
-                service.shuffleManager.getTraversalOrder()
-            } else {
-                null
-            }
-
-            if (traversal != null) {
-                for (physicalIdx in traversal) {
-                    queue.add(mediaItemToTrackRecord(p.getMediaItemAt(physicalIdx)))
+            val items = withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                // When shuffle is enabled, return items in the logical playback (shuffle traversal)
+                // order so the UI displays what will actually be played next.
+                val traversal = if (service.shuffleManager.isEnabled) {
+                    service.shuffleManager.getTraversalOrder()
+                } else {
+                    null
                 }
-            } else {
-                for (i in 0 until count) {
-                    queue.add(mediaItemToTrackRecord(p.getMediaItemAt(i)))
+
+                if (traversal != null) {
+                    traversal.map { physicalIdx -> currentPlayer.getMediaItemAt(physicalIdx) }
+                } else {
+                    List(currentPlayer.mediaItemCount) { index -> currentPlayer.getMediaItemAt(index) }
                 }
             }
 
-            return@AsyncFunction queue
-        }.runOnQueue(Queues.MAIN)
+            items.map(::mediaItemToTrackRecord)
+        }
 
         AsyncFunction("setSleepTimer") { durationMs: Long ->
             OrpheusMusicService.instance?.startSleepTimer(durationMs)
             return@AsyncFunction null
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("getSleepTimerEndTime") {
             return@AsyncFunction OrpheusMusicService.instance?.getSleepTimerRemaining()
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("cancelSleepTimer") {
             OrpheusMusicService.instance?.cancelSleepTimer()
             return@AsyncFunction null
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
-            ensurePlayer()
             val context = appContext.reactContext
             val mediaItems = tracks.map { track ->
                 track.toMediaItem(context)
             }
-            val p = player ?: return@AsyncFunction
-            if (clearQueue == true) {
-                p.clearMediaItems()
-            }
-            val initialSize = p.mediaItemCount
-            p.addMediaItems(mediaItems)
+            withPlayerOnMainThread { currentPlayer ->
+                if (clearQueue == true) {
+                    currentPlayer.clearMediaItems()
+                }
+                val initialSize = currentPlayer.mediaItemCount
+                currentPlayer.addMediaItems(mediaItems)
 
-            if (!startFromId.isNullOrEmpty()) {
-                val relativeIndex = tracks.indexOfFirst { it.id == startFromId }
+                if (!startFromId.isNullOrEmpty()) {
+                    val relativeIndex = tracks.indexOfFirst { it.id == startFromId }
 
-                if (relativeIndex != -1) {
-                    val targetIndex = initialSize + relativeIndex
+                    if (relativeIndex != -1) {
+                        val targetIndex = initialSize + relativeIndex
 
-                    p.seekTo(targetIndex, C.TIME_UNSET)
-                    p.prepare()
-                    p.play()
+                        currentPlayer.seekTo(targetIndex, C.TIME_UNSET)
+                        currentPlayer.prepare()
+                        currentPlayer.play()
 
-                    return@AsyncFunction
+                        return@withPlayerOnMainThread
+                    }
+                }
+
+                if (currentPlayer.playbackState == Player.STATE_IDLE) {
+                    currentPlayer.prepare()
                 }
             }
-
-            if (p.playbackState == Player.STATE_IDLE) {
-                p.prepare()
-            }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("playNext") { track: TrackRecord ->
-            ensurePlayer()
-            val p = player ?: return@AsyncFunction
-
             val context = appContext.reactContext
             val mediaItem = track.toMediaItem(context)
-            val service = OrpheusMusicService.instance
-            val shuffleEnabled = service?.shuffleManager?.isEnabled == true
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                val shuffleEnabled = service.shuffleManager.isEnabled
 
-            var existingIndex = -1
-            for (i in 0 until p.mediaItemCount) {
-                if (p.getMediaItemAt(i).mediaId == track.id) {
-                    existingIndex = i
-                    break
+                var existingIndex = -1
+                for (i in 0 until currentPlayer.mediaItemCount) {
+                    if (currentPlayer.getMediaItemAt(i).mediaId == track.id) {
+                        existingIndex = i
+                        break
+                    }
                 }
-            }
 
-            if (existingIndex != -1) {
-                if (existingIndex == p.currentMediaItemIndex) {
-                    return@AsyncFunction
-                }
-                if (shuffleEnabled) {
-                    // Remove the existing instance then re-add right after the current item.
-                    // Using remove+add (rather than moveMediaItem) keeps the physical insertion
-                    // index deterministic: after removing existingIndex, currentMediaItemIndex
-                    // is automatically adjusted, so +1 always points to the correct next slot.
-                    p.removeMediaItem(existingIndex)
-                    val insertPhysical = (p.currentMediaItemIndex + 1).coerceAtMost(p.mediaItemCount)
-                    p.addMediaItem(insertPhysical, mediaItem)
-                    service?.shuffleManager?.repositionAsNext(insertPhysical)
+                if (existingIndex != -1) {
+                    if (existingIndex == currentPlayer.currentMediaItemIndex) {
+                        return@withServiceAndPlayerOnMainThread
+                    }
+                    if (shuffleEnabled) {
+                        // Remove the existing instance then re-add right after the current item.
+                        // Using remove+add (rather than moveMediaItem) keeps the physical insertion
+                        // index deterministic: after removing existingIndex, currentMediaItemIndex
+                        // is automatically adjusted, so +1 always points to the correct next slot.
+                        currentPlayer.removeMediaItem(existingIndex)
+                        val insertPhysical = (currentPlayer.currentMediaItemIndex + 1).coerceAtMost(currentPlayer.mediaItemCount)
+                        currentPlayer.addMediaItem(insertPhysical, mediaItem)
+                        service.shuffleManager.repositionAsNext(insertPhysical)
+                    } else {
+                        val targetIndex = currentPlayer.currentMediaItemIndex + 1
+                        val safeTargetIndex = targetIndex.coerceAtMost(currentPlayer.mediaItemCount)
+                        currentPlayer.moveMediaItem(existingIndex, safeTargetIndex)
+                    }
                 } else {
-                    val targetIndex = p.currentMediaItemIndex + 1
-                    val safeTargetIndex = targetIndex.coerceAtMost(p.mediaItemCount)
-                    p.moveMediaItem(existingIndex, safeTargetIndex)
+                    val targetIndex = currentPlayer.currentMediaItemIndex + 1
+                    val safeTargetIndex = targetIndex.coerceAtMost(currentPlayer.mediaItemCount)
+                    currentPlayer.addMediaItem(safeTargetIndex, mediaItem)
+                    if (shuffleEnabled) {
+                        service.shuffleManager.repositionAsNext(safeTargetIndex)
+                    }
                 }
-            } else {
-                val targetIndex = p.currentMediaItemIndex + 1
-                val safeTargetIndex = targetIndex.coerceAtMost(p.mediaItemCount)
-                p.addMediaItem(safeTargetIndex, mediaItem)
-                if (shuffleEnabled) {
-                    service?.shuffleManager?.repositionAsNext(safeTargetIndex)
-                }
-            }
 
-            if (p.playbackState == Player.STATE_IDLE) {
-                p.prepare()
+                if (currentPlayer.playbackState == Player.STATE_IDLE) {
+                    currentPlayer.prepare()
+                }
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("downloadTrack") { track: TrackRecord ->
             val context = appContext.reactContext ?: return@AsyncFunction
@@ -897,69 +873,76 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("checkOverlayPermission") {
             val context = appContext.reactContext ?: return@AsyncFunction false
             android.provider.Settings.canDrawOverlays(context)
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("requestOverlayPermission") {
             val context = appContext.reactContext ?: return@AsyncFunction false
-            if (!android.provider.Settings.canDrawOverlays(context)) {
-                val intent = android.content.Intent(
-                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    "package:${context.packageName}".toUri()
-                )
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
+            runOnMainThreadBlocking {
+                if (!android.provider.Settings.canDrawOverlays(context)) {
+                    val intent = android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        "package:${context.packageName}".toUri()
+                    )
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                }
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("showDesktopLyrics") {
-            OrpheusMusicService.instance?.floatingLyricsManager?.show()
-        }.runOnQueue(Queues.MAIN)
+            withServiceOnMainThread { it?.floatingLyricsManager?.show() }
+        }
 
         AsyncFunction("hideDesktopLyrics") {
-            OrpheusMusicService.instance?.floatingLyricsManager?.hide()
-        }.runOnQueue(Queues.MAIN)
+            withServiceOnMainThread { it?.floatingLyricsManager?.hide() }
+        }
 
         AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                val mgr = OrpheusMusicService.instance?.floatingLyricsManager ?: return@AsyncFunction
-                // Auto-show the panel if the user has it enabled but it was soft-hidden
-                // (e.g. previous track had no lyrics)
-                if (GeneralStorage.isDesktopLyricsShown() && !mgr.isShowing) {
-                    mgr.show()
+                withServiceOnMainThread { service ->
+                    val mgr = service?.floatingLyricsManager ?: return@withServiceOnMainThread
+                    // Auto-show the panel if the user has it enabled but it was soft-hidden
+                    // (e.g. previous track had no lyrics)
+                    if (GeneralStorage.isDesktopLyricsShown() && !mgr.isShowing) {
+                        mgr.show()
+                    }
+                    mgr.setLyrics(data.lyrics, data.offset)
                 }
-                mgr.setLyrics(data.lyrics, data.offset)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("clearOverlaysInternal") {
             // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
             // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
-            OrpheusMusicService.instance?.floatingLyricsManager?.softHide()
-            OrpheusMusicService.instance?.statusBarLyricsManager?.onStop()
-        }.runOnQueue(Queues.MAIN)
+            withServiceOnMainThread { service ->
+                service?.floatingLyricsManager?.softHide()
+                service?.statusBarLyricsManager?.onStop()
+            }
+        }
 
         AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
                 Log.d("StatusBarLyrics", "[Module] setStatusBarLyrics: ${data.lyrics.size} lines offset=${data.offset} ts=${System.currentTimeMillis()} first=\"$firstLine\" | serviceAlive=${OrpheusMusicService.instance != null}")
-                OrpheusMusicService.instance?.statusBarLyricsManager?.setLyrics(
-                    data.lyrics,
-                    data.offset
-                )
+                withServiceOnMainThread { service ->
+                    service?.statusBarLyricsManager?.setLyrics(
+                        data.lyrics,
+                        data.offset
+                    )
+                }
             } catch (e: Exception) {
                 Log.e("StatusBarLyrics", "[Module] setStatusBarLyrics parse error: ${e.message}", e)
                 e.printStackTrace()
             }
-        }.runOnQueue(Queues.MAIN)
+        }
 
         AsyncFunction("setPlaybackSpeed") { speed: Float ->
-            ensurePlayer()
-            player?.setPlaybackSpeed(speed)
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.setPlaybackSpeed(speed) }
+        }
 
         AsyncFunction("selectDirectory") Coroutine { ->
             val context = appContext.reactContext ?: return@Coroutine null
@@ -984,9 +967,8 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("getPlaybackSpeed") {
-            ensurePlayer()
-            player?.playbackParameters?.speed ?: 1.0f
-        }.runOnQueue(Queues.MAIN)
+            withPlayerOnMainThread { it.playbackParameters.speed }
+        }
 
         Function("getLruCachedUris") { uris: List<String> ->
             try {
@@ -1183,4 +1165,48 @@ class ExpoOrpheusModule : Module() {
             player.prepare()
         }
     }
+
+    private fun <T> runOnMainThreadBlocking(block: () -> T): T {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            return block()
+        }
+
+        val result = AtomicReference<Result<T>>()
+        val latch = CountDownLatch(1)
+
+        mainHandler.post {
+            result.set(runCatching(block))
+            latch.countDown()
+        }
+
+        try {
+            latch.await()
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw RuntimeException("Interrupted while waiting for main-thread work", e)
+        }
+
+        return result.get()?.getOrThrow()
+            ?: throw IllegalStateException("Main-thread work completed without a result")
+    }
+
+    private fun <T> withPlayerOnMainThread(block: (Player) -> T): T =
+        runOnMainThreadBlocking {
+            ensurePlayer()
+            val currentPlayer = player ?: throw ControllerNotInitializedException()
+            block(currentPlayer)
+        }
+
+    private fun <T> withServiceAndPlayerOnMainThread(block: (OrpheusMusicService, Player) -> T): T =
+        runOnMainThreadBlocking {
+            ensurePlayer()
+            val service = OrpheusMusicService.instance ?: throw ControllerNotInitializedException()
+            val currentPlayer = player ?: throw ControllerNotInitializedException()
+            block(service, currentPlayer)
+        }
+
+    private fun <T> withServiceOnMainThread(block: (OrpheusMusicService?) -> T): T =
+        runOnMainThreadBlocking {
+            block(OrpheusMusicService.instance)
+        }
 }
