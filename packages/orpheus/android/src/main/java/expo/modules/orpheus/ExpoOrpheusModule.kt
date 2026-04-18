@@ -402,6 +402,7 @@ class ExpoOrpheusModule : Module() {
             if (p.playbackState == Player.STATE_ENDED) {
                 p.seekTo(0)
             }
+            prepareIfIdle(p)
             p.play()
         }.runOnQueue(Queues.MAIN)
 
@@ -431,23 +432,27 @@ class ExpoOrpheusModule : Module() {
             } else {
                 p.seekTo(index, C.TIME_UNSET)
             }
+            prepareIfIdle(p)
         }.runOnQueue(Queues.MAIN)
 
         AsyncFunction("skipToNext") {
             ensurePlayer()
+            val p = player ?: return@AsyncFunction null
 
             // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
-            val mediaItemCount = player?.mediaItemCount ?: 0
-            if (player?.repeatMode == Player.REPEAT_MODE_ONE
+            val mediaItemCount = p.mediaItemCount
+            if (p.repeatMode == Player.REPEAT_MODE_ONE
                 && mediaItemCount > 0
-                && !(player?.hasNextMediaItem() ?: false)
+                && !p.hasNextMediaItem()
             ) {
-                player?.seekTo(0, C.TIME_UNSET)
+                p.seekTo(0, C.TIME_UNSET)
+                prepareIfIdle(p)
                 return@AsyncFunction Unit
             }
 
-            if (player?.hasNextMediaItem() == true) {
-                player?.seekToNext()
+            if (p.hasNextMediaItem()) {
+                p.seekToNext()
+                prepareIfIdle(p)
             }
         }.runOnQueue(Queues.MAIN)
 
@@ -462,11 +467,13 @@ class ExpoOrpheusModule : Module() {
                 && !p.hasPreviousMediaItem()
             ) {
                 p.seekTo(mediaItemCount - 1, C.TIME_UNSET)
+                prepareIfIdle(p)
                 return@AsyncFunction Unit
             }
 
             if (p.hasPreviousMediaItem()) {
                 p.seekToPreviousMediaItem()
+                prepareIfIdle(p)
             }
         }.runOnQueue(Queues.MAIN)
 
@@ -976,8 +983,8 @@ class ExpoOrpheusModule : Module() {
 
         Function("getLruCachedUris") { uris: List<String> ->
             try {
-                uris.filter { uri -> 
-                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri) 
+                uris.filter { uri ->
+                    expo.modules.orpheus.manager.CachedUriManager.isFullyCached(uri)
                 }
             } catch (e: Exception) {
                 emptyList<String>()
@@ -1161,6 +1168,12 @@ class ExpoOrpheusModule : Module() {
             this.player?.removeListener(playerListener)
             this.player = servicePlayer
             servicePlayer.addListener(playerListener)
+        }
+    }
+
+    private fun prepareIfIdle(player: Player) {
+        if (player.playbackState == Player.STATE_IDLE && player.mediaItemCount > 0) {
+            player.prepare()
         }
     }
 }

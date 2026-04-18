@@ -96,7 +96,6 @@ export default Sentry.wrap(function RootLayout() {
 	useEffect(() => {
 		try {
 			useAppStore.getState()
-			global.isUIReady = true
 
 			// 清理旧日志
 			cleanOldLogFiles(7)
