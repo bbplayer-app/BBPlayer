@@ -48,10 +48,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicReference
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -345,29 +344,29 @@ class ExpoOrpheusModule : Module() {
             OrpheusConfig.bilibiliCookie = cookie
         }
 
-        AsyncFunction("getPosition") {
+        AsyncFunction("getPosition") Coroutine { ->
             withPlayerOnMainThread { it.currentPosition.toDouble() / 1000.0 }
         }
 
-        AsyncFunction("getDuration") {
+        AsyncFunction("getDuration") Coroutine { ->
             val d = withPlayerOnMainThread { it.duration }
             if (d == C.TIME_UNSET) 0.0 else d.toDouble() / 1000.0
         }
 
-        AsyncFunction("getBuffered") {
+        AsyncFunction("getBuffered") Coroutine { ->
             withPlayerOnMainThread { it.bufferedPosition.toDouble() / 1000.0 }
         }
 
-        AsyncFunction("getIsPlaying") {
+        AsyncFunction("getIsPlaying") Coroutine { ->
             withPlayerOnMainThread { it.isPlaying }
         }
 
-        AsyncFunction("getCurrentIndex") {
+        AsyncFunction("getCurrentIndex") Coroutine { ->
             withPlayerOnMainThread { it.currentMediaItemIndex }
         }
 
-        AsyncFunction("getCurrentTrack") {
-            val currentItem = withPlayerOnMainThread { it.currentMediaItem } ?: return@AsyncFunction null
+        AsyncFunction("getCurrentTrack") Coroutine { ->
+            val currentItem = withPlayerOnMainThread { it.currentMediaItem } ?: return@Coroutine null
 
             mediaItemToTrackRecord(currentItem)
         }
@@ -377,7 +376,7 @@ class ExpoOrpheusModule : Module() {
             GeneralStorage.getShuffleMode()
         }
 
-        AsyncFunction("getIndexTrack") { index: Int ->
+        AsyncFunction("getIndexTrack") Coroutine { index: Int ->
             val item = withPlayerOnMainThread { currentPlayer ->
                 if (index < 0 || index >= currentPlayer.mediaItemCount) {
                     return@withPlayerOnMainThread null
@@ -385,12 +384,12 @@ class ExpoOrpheusModule : Module() {
 
                 currentPlayer.getMediaItemAt(index)
             }
-                ?: return@AsyncFunction null
+                ?: return@Coroutine null
 
             mediaItemToTrackRecord(item)
         }
 
-        AsyncFunction("play") {
+        AsyncFunction("play") Coroutine { ->
             withPlayerOnMainThread { currentPlayer ->
                 if (currentPlayer.playbackState == Player.STATE_ENDED) {
                     currentPlayer.seekTo(0)
@@ -400,15 +399,15 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("pause") {
+        AsyncFunction("pause") Coroutine { ->
             withPlayerOnMainThread { it.pause() }
         }
 
-        AsyncFunction("clear") {
+        AsyncFunction("clear") Coroutine { ->
             withPlayerOnMainThread { it.clearMediaItems() }
         }
 
-        AsyncFunction("skipTo") { index: Int ->
+        AsyncFunction("skipTo") Coroutine { index: Int ->
             // 跳转到指定索引的开头
             // When shuffle is enabled, `index` is the position in the shuffle-traversal
             // order (as returned by getQueue). Convert to the physical queue index first.
@@ -428,7 +427,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("skipToNext") {
+        AsyncFunction("skipToNext") Coroutine { ->
             withPlayerOnMainThread { currentPlayer ->
                 // When in REPEAT_MODE_ONE, always allow next - wrap around if at the end
                 val mediaItemCount = currentPlayer.mediaItemCount
@@ -448,7 +447,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("skipToPrevious") {
+        AsyncFunction("skipToPrevious") Coroutine { ->
             withPlayerOnMainThread { currentPlayer ->
                 // When in REPEAT_MODE_ONE, always allow previous - wrap around if at the beginning
                 val mediaItemCount = currentPlayer.mediaItemCount
@@ -468,12 +467,12 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("seekTo") { seconds: Double ->
+        AsyncFunction("seekTo") Coroutine { seconds: Double ->
             val ms = (seconds * 1000).toLong()
             withPlayerOnMainThread { it.seekTo(ms) }
         }
 
-        AsyncFunction("setRepeatMode") { mode: Int ->
+        AsyncFunction("setRepeatMode") Coroutine { mode: Int ->
             // mode: 0=OFF, 1=TRACK, 2=QUEUE
             val repeatMode = when (mode) {
                 1 -> Player.REPEAT_MODE_ONE
@@ -483,7 +482,7 @@ class ExpoOrpheusModule : Module() {
             withPlayerOnMainThread { it.repeatMode = repeatMode }
         }
 
-        AsyncFunction("setShuffleMode") { enabled: Boolean ->
+        AsyncFunction("setShuffleMode") Coroutine { enabled: Boolean ->
             // Delegate to the service's ShuffleManager which uses Media3's built-in
             // shuffleModeEnabled for O(1) shuffle toggle without physical queue reordering.
             withServiceOnMainThread { service ->
@@ -496,11 +495,11 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("getRepeatMode") {
+        AsyncFunction("getRepeatMode") Coroutine { ->
             withPlayerOnMainThread { it.repeatMode }
         }
 
-        AsyncFunction("removeTrack") { index: Int ->
+        AsyncFunction("removeTrack") Coroutine { index: Int ->
             withServiceAndPlayerOnMainThread { service, currentPlayer ->
                 if (service.shuffleManager.isEnabled) {
                     // index is the shuffle-traversal position; resolve to physical index.
@@ -517,7 +516,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("getQueue") {
+        AsyncFunction("getQueue") Coroutine { ->
             val items = withServiceAndPlayerOnMainThread { service, currentPlayer ->
                 // When shuffle is enabled, return items in the logical playback (shuffle traversal)
                 // order so the UI displays what will actually be played next.
@@ -551,7 +550,7 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction null
         }
 
-        AsyncFunction("addToEnd") { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
+        AsyncFunction("addToEnd") Coroutine { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
             val context = appContext.reactContext
             val mediaItems = tracks.map { track ->
                 track.toMediaItem(context)
@@ -583,7 +582,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("playNext") { track: TrackRecord ->
+        AsyncFunction("playNext") Coroutine { track: TrackRecord ->
             val context = appContext.reactContext
             val mediaItem = track.toMediaItem(context)
             withServiceAndPlayerOnMainThread { service, currentPlayer ->
@@ -875,9 +874,9 @@ class ExpoOrpheusModule : Module() {
             android.provider.Settings.canDrawOverlays(context)
         }
 
-        AsyncFunction("requestOverlayPermission") {
-            val context = appContext.reactContext ?: return@AsyncFunction false
-            runOnMainThreadBlocking {
+        AsyncFunction("requestOverlayPermission") Coroutine { ->
+            val context = appContext.reactContext ?: return@Coroutine false
+            withContext(Dispatchers.Main.immediate) {
                 if (!android.provider.Settings.canDrawOverlays(context)) {
                     val intent = android.content.Intent(
                         android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -889,15 +888,15 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("showDesktopLyrics") {
+        AsyncFunction("showDesktopLyrics") Coroutine { ->
             withServiceOnMainThread { it?.floatingLyricsManager?.show() }
         }
 
-        AsyncFunction("hideDesktopLyrics") {
+        AsyncFunction("hideDesktopLyrics") Coroutine { ->
             withServiceOnMainThread { it?.floatingLyricsManager?.hide() }
         }
 
-        AsyncFunction("setDesktopLyricsInternal") { lyricsJson: String ->
+        AsyncFunction("setDesktopLyricsInternal") Coroutine { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 withServiceOnMainThread { service ->
@@ -914,7 +913,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("clearOverlaysInternal") {
+        AsyncFunction("clearOverlaysInternal") Coroutine { ->
             // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
             // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
             withServiceOnMainThread { service ->
@@ -923,7 +922,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("setStatusBarLyricsInternal") { lyricsJson: String ->
+        AsyncFunction("setStatusBarLyricsInternal") Coroutine { lyricsJson: String ->
             try {
                 val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
                 val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
@@ -940,7 +939,7 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
-        AsyncFunction("setPlaybackSpeed") { speed: Float ->
+        AsyncFunction("setPlaybackSpeed") Coroutine { speed: Float ->
             withPlayerOnMainThread { it.setPlaybackSpeed(speed) }
         }
 
@@ -966,7 +965,7 @@ class ExpoOrpheusModule : Module() {
             Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).resolveActivity(context.packageManager) != null
         }
 
-        AsyncFunction("getPlaybackSpeed") {
+        AsyncFunction("getPlaybackSpeed") Coroutine { ->
             withPlayerOnMainThread { it.playbackParameters.speed }
         }
 
@@ -1166,47 +1165,23 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun <T> runOnMainThreadBlocking(block: () -> T): T {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            return block()
-        }
-
-        val result = AtomicReference<Result<T>>()
-        val latch = CountDownLatch(1)
-
-        mainHandler.post {
-            result.set(runCatching(block))
-            latch.countDown()
-        }
-
-        try {
-            latch.await()
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw RuntimeException("Interrupted while waiting for main-thread work", e)
-        }
-
-        return result.get()?.getOrThrow()
-            ?: throw IllegalStateException("Main-thread work completed without a result")
-    }
-
-    private fun <T> withPlayerOnMainThread(block: (Player) -> T): T =
-        runOnMainThreadBlocking {
+    private suspend fun <T> withPlayerOnMainThread(block: (Player) -> T): T =
+        withContext(Dispatchers.Main.immediate) {
             ensurePlayer()
             val currentPlayer = player ?: throw ControllerNotInitializedException()
             block(currentPlayer)
         }
 
-    private fun <T> withServiceAndPlayerOnMainThread(block: (OrpheusMusicService, Player) -> T): T =
-        runOnMainThreadBlocking {
+    private suspend fun <T> withServiceAndPlayerOnMainThread(block: (OrpheusMusicService, Player) -> T): T =
+        withContext(Dispatchers.Main.immediate) {
             ensurePlayer()
             val service = OrpheusMusicService.instance ?: throw ControllerNotInitializedException()
             val currentPlayer = player ?: throw ControllerNotInitializedException()
             block(service, currentPlayer)
         }
 
-    private fun <T> withServiceOnMainThread(block: (OrpheusMusicService?) -> T): T =
-        runOnMainThreadBlocking {
+    private suspend fun <T> withServiceOnMainThread(block: (OrpheusMusicService?) -> T): T =
+        withContext(Dispatchers.Main.immediate) {
             block(OrpheusMusicService.instance)
         }
 }
