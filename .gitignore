@@ -61,3 +61,4 @@ apps/**/android
 apps/**/ios
 # Desloppify
 .desloppify/
+external-playlist-experiment/

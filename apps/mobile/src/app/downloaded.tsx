@@ -57,6 +57,7 @@ interface DownloadedItemExtraData {
 	selected: Set<string>
 	toggleSelected: (id: string) => void
 	enterSelectMode: (id: string) => void
+	onItemPress: (item: DownloadTask) => void
 	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
 }
 
@@ -77,6 +78,7 @@ function renderDownloadedItem({
 			isSelected={extraData?.selected.has(item.id) ?? false}
 			toggleSelected={extraData?.toggleSelected ?? (() => {})}
 			enterSelectMode={extraData?.enterSelectMode ?? (() => {})}
+			onItemPress={extraData?.onItemPress ?? (() => {})}
 			onMenuPress={extraData?.onMenuPress ?? (() => {})}
 		/>
 	)
@@ -89,6 +91,7 @@ function DownloadedItem({
 	isSelected,
 	toggleSelected,
 	enterSelectMode,
+	onItemPress,
 	onMenuPress,
 }: {
 	item: DownloadTask
@@ -97,6 +100,7 @@ function DownloadedItem({
 	isSelected: boolean
 	toggleSelected: (id: string) => void
 	enterSelectMode: (id: string) => void
+	onItemPress: (item: DownloadTask) => void
 	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
 }) {
 	const theme = useTheme()
@@ -118,7 +122,9 @@ function DownloadedItem({
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(item.id)
+					return
 				}
+				onItemPress(item)
 			}}
 			onLongPress={() => {
 				if (!selectMode) {
@@ -262,6 +268,9 @@ export default function DownloadedPage() {
 		id: string | null
 		anchor: { x: number; y: number }
 	}>({ visible: false, id: null, anchor: { x: 0, y: 0 } })
+	const currentMenuTask = completedTasks.find(
+		(task) => task.id === menuState.id,
+	)
 
 	const handleItemMenuPress = useCallback(
 		(id: string, anchor: { x: number; y: number }) => {
@@ -272,6 +281,15 @@ export default function DownloadedPage() {
 
 	const dismissItemMenu = useCallback(() => {
 		setMenuState((prev) => ({ ...prev, visible: false }))
+	}, [])
+
+	const handlePlayItem = useCallback((item: DownloadTask) => {
+		if (!item.track) {
+			toast.error('当前下载项缺少歌曲信息，无法播放')
+			return
+		}
+
+		void Orpheus.addToEnd([item.track], item.track.id, false)
 	}, [])
 
 	const resolveExportDestination = useCallback(async () => {
@@ -425,9 +443,17 @@ export default function DownloadedPage() {
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
 				enterSelectMode(id)
 			},
+			onItemPress: handlePlayItem,
 			onMenuPress: handleItemMenuPress,
 		}),
-		[selectMode, selected, toggle, enterSelectMode, handleItemMenuPress],
+		[
+			selectMode,
+			selected,
+			toggle,
+			enterSelectMode,
+			handleItemMenuPress,
+			handlePlayItem,
+		],
 	)
 
 	if (isPending) {
@@ -542,6 +568,22 @@ export default function DownloadedPage() {
 					leadingIcon='trash-can-outline'
 					title='删除'
 					onPress={handleDelete}
+				/>
+				<Menu.Item
+					leadingIcon='skip-next-circle-outline'
+					title='下一首播放'
+					onPress={async () => {
+						if (currentMenuTask && currentMenuTask.track) {
+							try {
+								await Orpheus.playNext(currentMenuTask.track)
+								toast.success('添加到下一首播放成功')
+							} catch (error) {
+								toastAndLogError(error, '添加到下一首播放失败')
+							}
+						}
+						dismissItemMenu()
+					}}
+					disabled={!currentMenuTask?.track}
 				/>
 			</FunctionalMenu>
 
