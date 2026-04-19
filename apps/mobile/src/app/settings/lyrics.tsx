@@ -31,6 +31,9 @@ export default function LyricsSettingsPage() {
 	const [isStatusBarLyricsEnabled, setIsStatusBarLyricsEnabled] = useState(
 		Orpheus.isStatusBarLyricsEnabled,
 	)
+	const [isCarLyricsEnabled, setIsCarLyricsEnabled] = useState(
+		Orpheus.isCarLyricsEnabled,
+	)
 	const [isSuperLyricApiEnabled, setIsSuperLyricApiEnabled] = useState(
 		Orpheus.isSuperLyricApiEnabled,
 	)
@@ -64,6 +67,7 @@ export default function LyricsSettingsPage() {
 		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown && hasPermission)
 		setIsDesktopLyricsLocked(Orpheus.isDesktopLyricsLocked)
 		setIsStatusBarLyricsEnabled(Orpheus.isStatusBarLyricsEnabled)
+		setIsCarLyricsEnabled(Orpheus.isCarLyricsEnabled)
 		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
 		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'lyricon')
@@ -191,6 +195,38 @@ export default function LyricsSettingsPage() {
 									try {
 										Orpheus.isDesktopLyricsLocked = !isDesktopLyricsLocked
 										await syncStates()
+									} catch (e) {
+										toastAndLogError('设置失败', e, 'Settings')
+									}
+								}}
+							/>
+						</View>
+						<View style={styles.settingRow}>
+							<View style={{ flex: 1, marginRight: 16 }}>
+								<Text>车载歌词（蓝牙 / Android Auto）</Text>
+								<Text
+									style={{
+										fontSize: 12,
+										opacity: 0.55,
+										marginTop: 4,
+									}}
+								>
+									启用后会把当前歌词同步到车机和部分蓝牙设备的媒体信息里。
+								</Text>
+							</View>
+							<Switch
+								value={isCarLyricsEnabled}
+								onValueChange={async () => {
+									try {
+										const next = !isCarLyricsEnabled
+										Orpheus.isCarLyricsEnabled = next
+										await syncStates()
+										if (next) {
+											const currentTrack = await Orpheus.getCurrentTrack()
+											if (currentTrack) {
+												lyricService.pushLyricsToOverlays(currentTrack.id)
+											}
+										}
 									} catch (e) {
 										toastAndLogError('设置失败', e, 'Settings')
 									}

@@ -8,6 +8,8 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
@@ -28,6 +30,8 @@ import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
+import expo.modules.orpheus.model.LyricsLine
+import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -39,6 +43,8 @@ import expo.modules.orpheus.util.fadeInTo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
@@ -58,6 +64,10 @@ class OrpheusMusicService : MediaLibraryService() {
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
     private var currentMediaId: String? = null
+    private val json = Json { ignoreUnknownKeys = true }
+    private var carLyrics: List<LyricsLine> = emptyList()
+    private var carLyricsOffset: Double = 0.0
+    private var lastCarLyricText: String? = null
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
@@ -66,6 +76,7 @@ class OrpheusMusicService : MediaLibraryService() {
                     val seconds = p.currentPosition / 1000.0
                     floatingLyricsManager.updateTime(seconds)
                     statusBarLyricsManager.updateTime(seconds)
+                    updateCarLyrics(seconds)
                 }
             }
             serviceHandler.postDelayed(this, 200)
@@ -555,6 +566,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 floatingLyricsManager.setLyrics(emptyList())
                 statusBarLyricsManager.onStop()
+                clearCarLyrics()
 
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
@@ -616,6 +628,101 @@ class OrpheusMusicService : MediaLibraryService() {
             LyriconBackend(this)
         } else {
             SuperLyricBackend(this)
+        }
+    }
+
+    fun setCarLyricsEnabled(enabled: Boolean) {
+        if (enabled) {
+            player?.let { updateCarLyrics(it.currentPosition / 1000.0, force = true) }
+        } else {
+            lastCarLyricText = null
+            restoreCurrentMetadata()
+        }
+    }
+
+    fun setCarLyrics(lyrics: List<LyricsLine>, offset: Double = 0.0) {
+        carLyrics = lyrics.filter { it.text.isNotBlank() }.sortedBy { it.timestamp }
+        carLyricsOffset = offset
+        lastCarLyricText = null
+
+        if (GeneralStorage.isCarLyricsEnabled()) {
+            player?.let { updateCarLyrics(it.currentPosition / 1000.0, force = true) }
+        }
+    }
+
+    fun clearCarLyrics() {
+        carLyrics = emptyList()
+        carLyricsOffset = 0.0
+        lastCarLyricText = null
+        restoreCurrentMetadata()
+    }
+
+    private fun updateCarLyrics(seconds: Double, force: Boolean = false) {
+        if (!GeneralStorage.isCarLyricsEnabled()) return
+
+        val nextLyric = findCurrentCarLyric(seconds)
+        if (!force && nextLyric == lastCarLyricText) return
+
+        lastCarLyricText = nextLyric
+        updateCurrentMetadata(nextLyric)
+    }
+
+    private fun findCurrentCarLyric(seconds: Double): String? {
+        if (carLyrics.isEmpty()) return null
+
+        val adjustedTime = seconds - carLyricsOffset
+        val index = carLyrics.indexOfLast { it.timestamp <= adjustedTime }
+        if (index < 0) return null
+
+        return carLyrics[index].text.takeIf { it.isNotBlank() }
+    }
+
+    private fun restoreCurrentMetadata() {
+        updateCurrentMetadata(null)
+    }
+
+    private fun updateCurrentMetadata(currentLyric: String?) {
+        val player = player ?: return
+        val currentIndex = player.currentMediaItemIndex
+        if (currentIndex == C.INDEX_UNSET || currentIndex >= player.mediaItemCount) return
+
+        val currentItem = player.getMediaItemAt(currentIndex)
+        val updatedItem = currentItem.buildUpon()
+            .setMediaMetadata(buildPlaybackMetadata(currentItem, currentLyric))
+            .build()
+
+        player.replaceMediaItem(currentIndex, updatedItem)
+        saveCurrentQueue()
+    }
+
+    private fun buildPlaybackMetadata(item: MediaItem, currentLyric: String?): MediaMetadata {
+        val originalTrack = extractTrackRecord(item)
+        val baseTitle = originalTrack?.title ?: item.mediaMetadata.title?.toString().orEmpty()
+        val baseArtist = originalTrack?.artist ?: item.mediaMetadata.artist?.toString().orEmpty()
+        val displayArtist = listOf(baseTitle, baseArtist)
+            .filter { it.isNotBlank() }
+            .joinToString(" - ")
+
+        return MediaMetadata.Builder()
+            .setTitle(currentLyric?.takeIf { it.isNotBlank() } ?: baseTitle)
+            .setArtist(
+                if (currentLyric.isNullOrBlank()) {
+                    baseArtist
+                } else {
+                    displayArtist
+                }
+            )
+            .setArtworkUri(item.mediaMetadata.artworkUri)
+            .setExtras(item.mediaMetadata.extras)
+            .build()
+    }
+
+    private fun extractTrackRecord(item: MediaItem): TrackRecord? {
+        val trackJson = item.mediaMetadata.extras?.getString("track_json") ?: return null
+        return try {
+            json.decodeFromString<TrackRecord>(trackJson)
+        } catch (_: Exception) {
+            null
         }
     }
 

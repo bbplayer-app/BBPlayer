@@ -145,6 +145,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	isDesktopLyricsShown: boolean
 	isDesktopLyricsLocked: boolean
 	isStatusBarLyricsEnabled: boolean
+	isCarLyricsEnabled: boolean
 	statusBarLyricsProvider: string
 	readonly isSuperLyricApiEnabled: boolean
 	readonly isLyriconApiEnabled: boolean
@@ -207,6 +208,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	setDesktopLyricsInternal(lyricsJson: string): Promise<void>
 	clearOverlaysInternal(): Promise<void>
 	setStatusBarLyricsInternal(lyricsJson: string): Promise<void>
+	setCarLyricsInternal(lyricsJson: string): Promise<void>
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>
 	debugTriggerError(): Promise<void>
@@ -222,6 +224,7 @@ const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')
 export const Orpheus = NativeModuleInstance as NativeOrpheusModule & {
 	setDesktopLyrics(data: LyricsData): Promise<void>
 	setStatusBarLyrics(data: LyricsData): Promise<void>
+	setCarLyrics(data: LyricsData): Promise<void>
 	clearOverlays(): Promise<void>
 }
 
@@ -243,8 +246,12 @@ Orpheus.setStatusBarLyrics = async (data: LyricsData) => {
 	)
 }
 
+Orpheus.setCarLyrics = async (data: LyricsData) => {
+	return await NativeModuleInstance.setCarLyricsInternal(JSON.stringify(data))
+}
+
 /**
- * 当没有歌词时清除并隐藏所有歌词 overlay（桌面歌词面板 + 状态栏歌词）
+ * 当没有歌词时清除并隐藏所有歌词显示（桌面歌词面板 + 状态栏歌词 + 车载歌词）
  */
 Orpheus.clearOverlays = async () => {
 	return await NativeModuleInstance.clearOverlaysInternal()

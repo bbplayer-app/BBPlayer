@@ -311,6 +311,15 @@ class ExpoOrpheusModule : Module() {
                 }
             }
 
+        Property("isCarLyricsEnabled")
+            .get { GeneralStorage.isCarLyricsEnabled() }
+            .set { enabled: Boolean ->
+                mainHandler.post {
+                    GeneralStorage.setCarLyricsEnabled(enabled)
+                    OrpheusMusicService.instance?.setCarLyricsEnabled(enabled)
+                }
+            }
+
         Property("statusBarLyricsProvider")
             .get { GeneralStorage.getStatusBarLyricsProvider() }
             .set { provider: String ->
@@ -919,6 +928,7 @@ class ExpoOrpheusModule : Module() {
             withServiceOnMainThread { service ->
                 service?.floatingLyricsManager?.softHide()
                 service?.statusBarLyricsManager?.onStop()
+                service?.clearCarLyrics()
             }
         }
 
@@ -935,6 +945,18 @@ class ExpoOrpheusModule : Module() {
                 }
             } catch (e: Exception) {
                 Log.e("StatusBarLyrics", "[Module] setStatusBarLyrics parse error: ${e.message}", e)
+                e.printStackTrace()
+            }
+        }
+
+        AsyncFunction("setCarLyricsInternal") Coroutine { lyricsJson: String ->
+            try {
+                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
+                withServiceOnMainThread { service ->
+                    service?.setCarLyrics(data.lyrics, data.offset)
+                }
+            } catch (e: Exception) {
+                Log.e("CarLyrics", "[Module] setCarLyrics parse error: ${e.message}", e)
                 e.printStackTrace()
             }
         }

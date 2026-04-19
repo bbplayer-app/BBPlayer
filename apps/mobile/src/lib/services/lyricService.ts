@@ -524,12 +524,13 @@ class LyricService {
 	}
 
 	/**
-	 * 立即推送指定曲目的歌词到桌面歌词和状态栏
+	 * 立即推送指定曲目的歌词到桌面歌词、状态栏和车载歌词
 	 */
 	public pushLyricsToOverlays(trackId: string) {
 		const wantDesktop = Orpheus.isDesktopLyricsShown
 		const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
-		if (!wantDesktop && !wantStatusBar) return
+		const wantCar = Orpheus.isCarLyricsEnabled
+		if (!wantDesktop && !wantStatusBar && !wantCar) return
 
 		const currentTimestamp = Date.now()
 		this.lastPushLyricsToOverlaysTimestamp = currentTimestamp
@@ -601,6 +602,9 @@ class LyricService {
 				}
 				if (Orpheus.isStatusBarLyricsEnabled) {
 					await Orpheus.setStatusBarLyrics(payload)
+				}
+				if (Orpheus.isCarLyricsEnabled) {
+					await Orpheus.setCarLyrics(payload)
 				}
 			} catch (e) {
 				logger.warning('更新歌词显示失败', e)

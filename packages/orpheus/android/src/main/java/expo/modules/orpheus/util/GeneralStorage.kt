@@ -25,6 +25,7 @@ object GeneralStorage {
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
     private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
     private const val KEY_STATUS_BAR_LYRICS_PROVIDER = "config_status_bar_lyrics_provider"
+    private const val KEY_CAR_LYRICS_ENABLED = "config_car_lyrics_enabled"
     private const val KEY_DESKTOP_LYRICS_DISPLAY_MODE = "config_desktop_lyrics_display_mode"
     private const val KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR = "config_desktop_lyrics_highlight_color"
     private const val KEY_DESKTOP_LYRICS_TEXT_SIZE = "config_desktop_lyrics_text_size"
@@ -142,6 +143,9 @@ object GeneralStorage {
     /** Returns "superlyric" or "lyricon" */
     fun getStatusBarLyricsProvider() = kv?.decodeString(KEY_STATUS_BAR_LYRICS_PROVIDER, "superlyric") ?: "superlyric"
     fun setStatusBarLyricsProvider(provider: String) = safeKv.encode(KEY_STATUS_BAR_LYRICS_PROVIDER, provider)
+
+    fun isCarLyricsEnabled() = kv?.decodeBool(KEY_CAR_LYRICS_ENABLED, false) ?: false
+    fun setCarLyricsEnabled(enabled: Boolean) = safeKv.encode(KEY_CAR_LYRICS_ENABLED, enabled)
 
     /**
      * Desktop Lyrics Display Mode:
