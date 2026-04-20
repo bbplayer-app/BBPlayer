@@ -50,6 +50,8 @@ export interface LyricsData {
 	offset: number
 }
 
+export type LyricConsumer = 'desktop' | 'statusBar' | 'car'
+
 export interface AndroidPlaybackErrorEvent {
 	platform: 'android'
 	errorCode: number
@@ -205,6 +207,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	requestOverlayPermission(): Promise<void>
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
+	setLyricsInternal?(lyricsJson: string, consumers: string[]): Promise<void>
 	setDesktopLyricsInternal(lyricsJson: string): Promise<void>
 	clearOverlaysInternal(): Promise<void>
 	setStatusBarLyricsInternal(lyricsJson: string): Promise<void>
@@ -222,32 +225,60 @@ const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')
  * Orpheus 模块的包装对象，提供更好的类型支持和便捷方法。
  */
 export const Orpheus = NativeModuleInstance as NativeOrpheusModule & {
+	setLyrics(data: LyricsData, consumers?: LyricConsumer[]): Promise<void>
 	setDesktopLyrics(data: LyricsData): Promise<void>
 	setStatusBarLyrics(data: LyricsData): Promise<void>
 	setCarLyrics(data: LyricsData): Promise<void>
 	clearOverlays(): Promise<void>
 }
 
+Orpheus.setLyrics = async (
+	data: LyricsData,
+	consumers: LyricConsumer[] = ['desktop', 'statusBar', 'car'],
+) => {
+	if (NativeModuleInstance.setLyricsInternal) {
+		return await NativeModuleInstance.setLyricsInternal(
+			JSON.stringify(data),
+			consumers,
+		)
+	}
+
+	await Promise.all(
+		consumers.map(async (consumer) => {
+			switch (consumer) {
+				case 'desktop':
+					return await NativeModuleInstance.setDesktopLyricsInternal(
+						JSON.stringify(data),
+					)
+				case 'statusBar':
+					return await NativeModuleInstance.setStatusBarLyricsInternal(
+						JSON.stringify(data),
+					)
+				case 'car':
+					return await NativeModuleInstance.setCarLyricsInternal(
+						JSON.stringify(data),
+					)
+			}
+		}),
+	)
+}
+
 /**
  * 设置桌面歌词数据
  */
 Orpheus.setDesktopLyrics = async (data: LyricsData) => {
-	return await NativeModuleInstance.setDesktopLyricsInternal(
-		JSON.stringify(data),
-	)
+	return await Orpheus.setLyrics(data, ['desktop'])
 }
 
 /**
  * 设置状态栏歌词数据
  */
 Orpheus.setStatusBarLyrics = async (data: LyricsData) => {
-	return await NativeModuleInstance.setStatusBarLyricsInternal(
-		JSON.stringify(data),
-	)
+	return await Orpheus.setLyrics(data, ['statusBar'])
 }
 
 Orpheus.setCarLyrics = async (data: LyricsData) => {
-	return await NativeModuleInstance.setCarLyricsInternal(JSON.stringify(data))
+	return await Orpheus.setLyrics(data, ['car'])
 }
 
 /**

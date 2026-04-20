@@ -27,9 +27,12 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
+import expo.modules.orpheus.manager.UnifiedLyricsManager
+import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.util.CustomCommands
@@ -63,20 +66,16 @@ class OrpheusMusicService : MediaLibraryService() {
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
+    lateinit var lyricsManager: UnifiedLyricsManager
     private var currentMediaId: String? = null
     private val json = Json { ignoreUnknownKeys = true }
-    private var carLyrics: List<LyricsLine> = emptyList()
-    private var carLyricsOffset: Double = 0.0
-    private var lastCarLyricText: String? = null
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
             player?.let { p ->
                 if (p.isPlaying) {
                     val seconds = p.currentPosition / 1000.0
-                    floatingLyricsManager.updateTime(seconds)
-                    statusBarLyricsManager.updateTime(seconds)
-                    updateCarLyrics(seconds)
+                    lyricsManager.updateTime(seconds)
                 }
             }
             serviceHandler.postDelayed(this, 200)
@@ -248,6 +247,12 @@ class OrpheusMusicService : MediaLibraryService() {
         statusBarLyricsManager = StatusBarLyricsManager(this)
         statusBarLyricsManager.backend = createStatusBarBackend(GeneralStorage.getStatusBarLyricsProvider())
         statusBarLyricsManager.enabled = GeneralStorage.isStatusBarLyricsEnabled()
+        lyricsManager = UnifiedLyricsManager(
+            floatingLyricsManager = floatingLyricsManager,
+            statusBarLyricsManager = statusBarLyricsManager,
+            currentPlaybackSeconds = { player?.currentPosition?.toDouble()?.div(1000.0) },
+            onCarLyricsChanged = ::updateCurrentMetadata,
+        )
 
         setupListeners()
 
@@ -526,7 +531,7 @@ class OrpheusMusicService : MediaLibraryService() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
-                statusBarLyricsManager.setPlaybackState(isPlaying)
+                lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
@@ -564,9 +569,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 sendTrackStartEvent(mediaItem, reason)
 
-                floatingLyricsManager.setLyrics(emptyList())
-                statusBarLyricsManager.onStop()
-                clearCarLyrics()
+                lyricsManager.clearConsumers(LyricsConsumer.all())
 
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
@@ -632,49 +635,18 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     fun setCarLyricsEnabled(enabled: Boolean) {
-        if (enabled) {
-            player?.let { updateCarLyrics(it.currentPosition / 1000.0, force = true) }
-        } else {
-            lastCarLyricText = null
-            restoreCurrentMetadata()
-        }
+        lyricsManager.setCarLyricsEnabled(enabled)
     }
 
     fun setCarLyrics(lyrics: List<LyricsLine>, offset: Double = 0.0) {
-        carLyrics = lyrics.filter { it.text.isNotBlank() }.sortedBy { it.timestamp }
-        carLyricsOffset = offset
-        lastCarLyricText = null
-
-        if (GeneralStorage.isCarLyricsEnabled()) {
-            player?.let { updateCarLyrics(it.currentPosition / 1000.0, force = true) }
-        }
+        lyricsManager.submitLyrics(
+            LyricsData(lyrics = lyrics, offset = offset),
+            setOf(LyricsConsumer.CAR),
+        )
     }
 
     fun clearCarLyrics() {
-        carLyrics = emptyList()
-        carLyricsOffset = 0.0
-        lastCarLyricText = null
-        restoreCurrentMetadata()
-    }
-
-    private fun updateCarLyrics(seconds: Double, force: Boolean = false) {
-        if (!GeneralStorage.isCarLyricsEnabled()) return
-
-        val nextLyric = findCurrentCarLyric(seconds)
-        if (!force && nextLyric == lastCarLyricText) return
-
-        lastCarLyricText = nextLyric
-        updateCurrentMetadata(nextLyric)
-    }
-
-    private fun findCurrentCarLyric(seconds: Double): String? {
-        if (carLyrics.isEmpty()) return null
-
-        val adjustedTime = seconds - carLyricsOffset
-        val index = carLyrics.indexOfLast { it.timestamp <= adjustedTime }
-        if (index < 0) return null
-
-        return carLyrics[index].text.takeIf { it.isNotBlank() }
+        lyricsManager.clearConsumers(setOf(LyricsConsumer.CAR))
     }
 
     private fun restoreCurrentMetadata() {
