@@ -2,13 +2,12 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
-import expo.modules.orpheus.model.LyricsLine
 
 private const val TAG = "StatusBarLyrics"
 
 /**
  * Orchestrates status bar lyrics by switching between providers
- * and maintaining playback state / lyric cache.
+ * and maintaining the currently rendered line state.
  */
 class StatusBarLyricsManager(private val context: Context) {
 
@@ -32,6 +31,8 @@ class StatusBarLyricsManager(private val context: Context) {
             field = value
             if (prev && !value) {
                 backend?.onStop()
+            } else if (!prev && value) {
+                reapplyCurrentState()
             }
         }
 
@@ -45,42 +46,48 @@ class StatusBarLyricsManager(private val context: Context) {
             }
             field = value
             Log.d(TAG, "[backend] switched to ${value?.javaClass?.simpleName}")
-            
-            // Re-apply cached lyrics to the new backend immediately
-            val cachedLyrics = lastLyrics
-            if (enabled && cachedLyrics != null) {
-                value?.setLyrics(cachedLyrics, lastOffset)
+
+            if (enabled) {
+                reapplyCurrentState()
             }
         }
 
-    private var lastLyrics: List<LyricsLine>? = null
-    private var lastOffset: Double = 0.0
+    private var lastFrame: StatusBarLyricFrame? = null
+    private var lastIsPlaying: Boolean = false
 
-    fun setLyrics(newLyrics: List<LyricsLine>, newOffset: Double = 0.0) {
-        val sorted = newLyrics.sortedBy { it.timestamp }
-        lastLyrics = sorted
-        lastOffset = newOffset
-        
-        if (enabled) {
-            backend?.setLyrics(sorted, newOffset)
-        }
+    fun renderLyricFrame(frame: StatusBarLyricFrame?) {
+        lastFrame = frame
+
+        if (!enabled) return
+
+        backend?.renderLyricFrame(frame)
     }
 
-    fun updateTime(seconds: Double) {
-        if (enabled) {
-            backend?.updateTime(seconds)
-        }
+    fun updateProgress(positionMs: Long) {
+        lastFrame = lastFrame?.copy(lineProgressMs = positionMs)
+
+        if (!enabled) return
+
+        backend?.updateProgress(positionMs)
     }
 
     fun setPlaybackState(isPlaying: Boolean) {
-        if (enabled) {
-            backend?.setPlaybackState(isPlaying)
-        }
+        lastIsPlaying = isPlaying
+
+        if (!enabled) return
+
+        backend?.setPlaybackState(isPlaying)
     }
 
     fun onStop() {
-        lastLyrics = null
-        lastOffset = 0.0
+        lastFrame = null
+        lastIsPlaying = false
         backend?.onStop()
+    }
+
+    private fun reapplyCurrentState() {
+        backend?.renderLyricFrame(lastFrame)
+        backend?.setPlaybackState(lastIsPlaying)
+        lastFrame?.let { backend?.updateProgress(it.lineProgressMs) }
     }
 }

@@ -18,5 +18,6 @@
 	"oxc.typeAware": true,
 	"editor.codeActionsOnSave": {
 		"source.fixAll.oxc": "always"
-	}
+	},
+	"typescript.native-preview.tsdk": "${workspaceFolder}/node_modules/@typescript/native-preview"
 }

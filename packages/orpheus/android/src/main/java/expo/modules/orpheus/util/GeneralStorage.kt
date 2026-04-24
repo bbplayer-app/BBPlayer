@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 object GeneralStorage {
     private var kv: MMKV? = null
     private val json = Json { ignoreUnknownKeys = true }
+    private var lastSavedQueueSnapshot: List<String>? = null
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
@@ -25,6 +26,7 @@ object GeneralStorage {
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
     private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
     private const val KEY_STATUS_BAR_LYRICS_PROVIDER = "config_status_bar_lyrics_provider"
+    private const val KEY_CAR_LYRICS_ENABLED = "config_car_lyrics_enabled"
     private const val KEY_DESKTOP_LYRICS_DISPLAY_MODE = "config_desktop_lyrics_display_mode"
     private const val KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR = "config_desktop_lyrics_highlight_color"
     private const val KEY_DESKTOP_LYRICS_TEXT_SIZE = "config_desktop_lyrics_text_size"
@@ -84,6 +86,9 @@ object GeneralStorage {
                 item.mediaMetadata.extras?.getString("track_json")
             }
 
+            if (jsonList == lastSavedQueueSnapshot) return
+            lastSavedQueueSnapshot = jsonList
+
             val jsonListString = json.encodeToString(jsonList)
             safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
 
@@ -99,6 +104,7 @@ object GeneralStorage {
             if (jsonListString.isNullOrEmpty()) return emptyList()
 
             val trackJsonList: List<String> = json.decodeFromString(jsonListString)
+            lastSavedQueueSnapshot = trackJsonList
 
             trackJsonList.mapNotNull { trackJson ->
                 try {
@@ -142,6 +148,9 @@ object GeneralStorage {
     /** Returns "superlyric" or "lyricon" */
     fun getStatusBarLyricsProvider() = kv?.decodeString(KEY_STATUS_BAR_LYRICS_PROVIDER, "superlyric") ?: "superlyric"
     fun setStatusBarLyricsProvider(provider: String) = safeKv.encode(KEY_STATUS_BAR_LYRICS_PROVIDER, provider)
+
+    fun isCarLyricsEnabled() = kv?.decodeBool(KEY_CAR_LYRICS_ENABLED, false) ?: false
+    fun setCarLyricsEnabled(enabled: Boolean) = safeKv.encode(KEY_CAR_LYRICS_ENABLED, enabled)
 
     /**
      * Desktop Lyrics Display Mode:

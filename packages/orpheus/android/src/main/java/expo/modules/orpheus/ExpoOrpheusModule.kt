@@ -31,6 +31,7 @@ import expo.modules.kotlin.typedarray.Float32Array
 import expo.modules.orpheus.util.DirectoryPickerContract
 import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
+import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
@@ -44,6 +45,7 @@ import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -308,6 +310,15 @@ class ExpoOrpheusModule : Module() {
                 mainHandler.post {
                     GeneralStorage.setStatusBarLyricsEnabled(enabled)
                     OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
+                }
+            }
+
+        Property("isCarLyricsEnabled")
+            .get { GeneralStorage.isCarLyricsEnabled() }
+            .set { enabled: Boolean ->
+                mainHandler.post {
+                    GeneralStorage.setCarLyricsEnabled(enabled)
+                    OrpheusMusicService.instance?.setCarLyricsEnabled(enabled)
                 }
             }
 
@@ -896,46 +907,15 @@ class ExpoOrpheusModule : Module() {
             withServiceOnMainThread { it?.floatingLyricsManager?.hide() }
         }
 
-        AsyncFunction("setDesktopLyricsInternal") Coroutine { lyricsJson: String ->
-            try {
-                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                withServiceOnMainThread { service ->
-                    val mgr = service?.floatingLyricsManager ?: return@withServiceOnMainThread
-                    // Auto-show the panel if the user has it enabled but it was soft-hidden
-                    // (e.g. previous track had no lyrics)
-                    if (GeneralStorage.isDesktopLyricsShown() && !mgr.isShowing) {
-                        mgr.show()
-                    }
-                    mgr.setLyrics(data.lyrics, data.offset)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        AsyncFunction("setLyricsInternal") Coroutine { lyricsJson: String, consumerIds: List<String> ->
+            submitLyricsInternal(lyricsJson, resolveLyricsConsumers(consumerIds))
         }
 
-        AsyncFunction("clearOverlaysInternal") Coroutine { ->
+        AsyncFunction("clearOverlays") Coroutine { ->
             // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
-            // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
+            // 当再次收到歌词时，桌面歌词会按用户偏好重新 show()
             withServiceOnMainThread { service ->
-                service?.floatingLyricsManager?.softHide()
-                service?.statusBarLyricsManager?.onStop()
-            }
-        }
-
-        AsyncFunction("setStatusBarLyricsInternal") Coroutine { lyricsJson: String ->
-            try {
-                val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
-                val firstLine = data.lyrics.firstOrNull()?.text ?: "(none)"
-                Log.d("StatusBarLyrics", "[Module] setStatusBarLyrics: ${data.lyrics.size} lines offset=${data.offset} ts=${System.currentTimeMillis()} first=\"$firstLine\" | serviceAlive=${OrpheusMusicService.instance != null}")
-                withServiceOnMainThread { service ->
-                    service?.statusBarLyricsManager?.setLyrics(
-                        data.lyrics,
-                        data.offset
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("StatusBarLyrics", "[Module] setStatusBarLyrics parse error: ${e.message}", e)
-                e.printStackTrace()
+                service?.lyricsManager?.clearConsumers(LyricsConsumer.all(), softHideDesktop = true)
             }
         }
 
@@ -1184,4 +1164,34 @@ class ExpoOrpheusModule : Module() {
         withContext(Dispatchers.Main.immediate) {
             block(OrpheusMusicService.instance)
         }
+
+    private suspend fun submitLyricsInternal(
+        lyricsJson: String,
+        consumers: Set<LyricsConsumer>,
+    ) {
+        try {
+            val data = json.decodeFromString<expo.modules.orpheus.model.LyricsData>(lyricsJson)
+            withServiceOnMainThread { service ->
+                service?.lyricsManager?.submitLyrics(data, consumers)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(
+                "OrpheusLyrics",
+                "[Module] submitLyrics failed consumers=${consumers.joinToString()} reason=${e.message}",
+                e,
+            )
+        }
+    }
+
+    private fun resolveLyricsConsumers(consumerIds: List<String>): Set<LyricsConsumer> {
+        if (consumerIds.isEmpty()) return LyricsConsumer.all()
+
+        val resolved = consumerIds.mapNotNull { LyricsConsumer.fromIdentifier(it) }.toSet()
+        if (resolved.isEmpty()) {
+            Log.w("OrpheusLyrics", "[Module] No valid consumers resolved from $consumerIds")
+        }
+        return resolved
+    }
 }

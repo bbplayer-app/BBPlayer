@@ -1,4 +1,4 @@
-import { Orpheus, type LyricsData } from '@bbplayer/orpheus'
+import { Orpheus, type LyricConsumer, type LyricsData } from '@bbplayer/orpheus'
 import { parseAndMergeLyrics } from '@bbplayer/splash'
 import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
@@ -524,12 +524,13 @@ class LyricService {
 	}
 
 	/**
-	 * 立即推送指定曲目的歌词到桌面歌词和状态栏
+	 * 立即推送指定曲目的歌词到桌面歌词、状态栏和车载歌词
 	 */
 	public pushLyricsToOverlays(trackId: string) {
 		const wantDesktop = Orpheus.isDesktopLyricsShown
 		const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
-		if (!wantDesktop && !wantStatusBar) return
+		const wantCar = Orpheus.isCarLyricsEnabled
+		if (!wantDesktop && !wantStatusBar && !wantCar) return
 
 		const currentTimestamp = Date.now()
 		this.lastPushLyricsToOverlaysTimestamp = currentTimestamp
@@ -596,11 +597,19 @@ class LyricService {
 					offset: lyrics.misc?.userOffset ?? 0,
 				}
 
+				const consumers: LyricConsumer[] = []
 				if (Orpheus.isDesktopLyricsShown) {
-					await Orpheus.setDesktopLyrics(payload)
+					consumers.push('desktop')
 				}
 				if (Orpheus.isStatusBarLyricsEnabled) {
-					await Orpheus.setStatusBarLyrics(payload)
+					consumers.push('statusBar')
+				}
+				if (Orpheus.isCarLyricsEnabled) {
+					consumers.push('car')
+				}
+
+				if (consumers.length > 0) {
+					await Orpheus.setLyrics(payload, consumers)
 				}
 			} catch (e) {
 				logger.warning('更新歌词显示失败', e)

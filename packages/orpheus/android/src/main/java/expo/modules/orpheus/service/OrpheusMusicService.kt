@@ -8,6 +8,8 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
@@ -25,9 +27,14 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.FloatingLyricsManager
+import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
+import expo.modules.orpheus.manager.UnifiedLyricsManager
+import expo.modules.orpheus.model.LyricsData
+import expo.modules.orpheus.model.LyricsLine
+import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -39,6 +46,8 @@ import expo.modules.orpheus.util.fadeInTo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
@@ -57,15 +66,16 @@ class OrpheusMusicService : MediaLibraryService() {
     private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
+    lateinit var lyricsManager: UnifiedLyricsManager
     private var currentMediaId: String? = null
+    private val json = Json { ignoreUnknownKeys = true }
 
     private val lyricsUpdateRunnable = object : Runnable {
         override fun run() {
             player?.let { p ->
                 if (p.isPlaying) {
                     val seconds = p.currentPosition / 1000.0
-                    floatingLyricsManager.updateTime(seconds)
-                    statusBarLyricsManager.updateTime(seconds)
+                    lyricsManager.updateTime(seconds)
                 }
             }
             serviceHandler.postDelayed(this, 200)
@@ -237,6 +247,12 @@ class OrpheusMusicService : MediaLibraryService() {
         statusBarLyricsManager = StatusBarLyricsManager(this)
         statusBarLyricsManager.backend = createStatusBarBackend(GeneralStorage.getStatusBarLyricsProvider())
         statusBarLyricsManager.enabled = GeneralStorage.isStatusBarLyricsEnabled()
+        lyricsManager = UnifiedLyricsManager(
+            floatingLyricsManager = floatingLyricsManager,
+            statusBarLyricsManager = statusBarLyricsManager,
+            currentPlaybackSeconds = { player?.currentPosition?.toDouble()?.div(1000.0) },
+            onCarLyricsChanged = ::updateCurrentMetadata,
+        )
 
         setupListeners()
 
@@ -515,7 +531,7 @@ class OrpheusMusicService : MediaLibraryService() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
-                statusBarLyricsManager.setPlaybackState(isPlaying)
+                lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
@@ -553,8 +569,8 @@ class OrpheusMusicService : MediaLibraryService() {
 
                 sendTrackStartEvent(mediaItem, reason)
 
-                floatingLyricsManager.setLyrics(emptyList())
-                statusBarLyricsManager.onStop()
+                lyricsManager.clearConsumers(LyricsConsumer.all())
+                floatingLyricsManager.syncTrackInfo()
 
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
@@ -616,6 +632,69 @@ class OrpheusMusicService : MediaLibraryService() {
             LyriconBackend(this)
         } else {
             SuperLyricBackend(this)
+        }
+    }
+
+    fun setCarLyricsEnabled(enabled: Boolean) {
+        lyricsManager.setCarLyricsEnabled(enabled)
+    }
+
+    fun setCarLyrics(lyrics: List<LyricsLine>, offset: Double = 0.0) {
+        lyricsManager.submitLyrics(
+            LyricsData(lyrics = lyrics, offset = offset),
+            setOf(LyricsConsumer.CAR),
+        )
+    }
+
+    fun clearCarLyrics() {
+        lyricsManager.clearConsumers(setOf(LyricsConsumer.CAR))
+    }
+
+    private fun updateCurrentMetadata(currentLyric: String?) {
+        val player = player ?: return
+        val currentIndex = player.currentMediaItemIndex
+        if (currentIndex == C.INDEX_UNSET || currentIndex >= player.mediaItemCount) return
+
+        val currentItem = player.getMediaItemAt(currentIndex)
+        val updatedMetadata = buildPlaybackMetadata(currentItem, currentLyric)
+        if (currentItem.mediaMetadata == updatedMetadata) return
+
+        val updatedItem = currentItem.buildUpon()
+            .setMediaMetadata(updatedMetadata)
+            .build()
+
+        // Lyric-only metadata refresh should not trigger extra queue persistence.
+        player.replaceMediaItem(currentIndex, updatedItem)
+    }
+
+    private fun buildPlaybackMetadata(item: MediaItem, currentLyric: String?): MediaMetadata {
+        val originalTrack = extractTrackRecord(item)
+        val baseTitle = originalTrack?.title ?: item.mediaMetadata.title?.toString().orEmpty()
+        val baseArtist = originalTrack?.artist ?: item.mediaMetadata.artist?.toString().orEmpty()
+        val displayArtist = listOf(baseTitle, baseArtist)
+            .filter { it.isNotBlank() }
+            .joinToString(" - ")
+
+        return MediaMetadata.Builder()
+            .setTitle(currentLyric?.takeIf { it.isNotBlank() } ?: baseTitle)
+            .setArtist(
+                if (currentLyric.isNullOrBlank()) {
+                    baseArtist
+                } else {
+                    displayArtist
+                }
+            )
+            .setArtworkUri(item.mediaMetadata.artworkUri)
+            .setExtras(item.mediaMetadata.extras)
+            .build()
+    }
+
+    private fun extractTrackRecord(item: MediaItem): TrackRecord? {
+        val trackJson = item.mediaMetadata.extras?.getString("track_json") ?: return null
+        return try {
+            json.decodeFromString<TrackRecord>(trackJson)
+        } catch (_: Exception) {
+            null
         }
     }
 
