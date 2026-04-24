@@ -910,24 +910,12 @@ class ExpoOrpheusModule : Module() {
             submitLyricsInternal(lyricsJson, resolveLyricsConsumers(consumerIds))
         }
 
-        AsyncFunction("setDesktopLyricsInternal") Coroutine { lyricsJson: String ->
-            submitLyricsInternal(lyricsJson, setOf(LyricsConsumer.DESKTOP))
-        }
-
-        AsyncFunction("clearOverlaysInternal") Coroutine { ->
+        AsyncFunction("clearOverlays") Coroutine { ->
             // 无歌词时临时隐藏 overlay，但不修改 GeneralStorage（用户偏好保持 true）
-            // 当下一首歌有歌词时，setDesktopLyricsInternal 会自动重新 show()
+            // 当再次收到歌词时，桌面歌词会按用户偏好重新 show()
             withServiceOnMainThread { service ->
                 service?.lyricsManager?.clearConsumers(LyricsConsumer.all(), softHideDesktop = true)
             }
-        }
-
-        AsyncFunction("setStatusBarLyricsInternal") Coroutine { lyricsJson: String ->
-            submitLyricsInternal(lyricsJson, setOf(LyricsConsumer.STATUS_BAR))
-        }
-
-        AsyncFunction("setCarLyricsInternal") Coroutine { lyricsJson: String ->
-            submitLyricsInternal(lyricsJson, setOf(LyricsConsumer.CAR))
         }
 
         AsyncFunction("setPlaybackSpeed") Coroutine { speed: Float ->

@@ -259,6 +259,10 @@ public class ExpoOrpheusModule: Module {
     AsyncFunction("hideDesktopLyrics") {
          throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
+
+    AsyncFunction("clearOverlays") {
+        throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
+    }
     
     AsyncFunction("setDesktopLyricsInternal") { (lyricsJson: String) in
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])

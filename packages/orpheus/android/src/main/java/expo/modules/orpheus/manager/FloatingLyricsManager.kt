@@ -42,9 +42,8 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
     /** Callback invoked when the user clicks "清空歌词" in the settings panel. */
     var onClearLyricsRequested: ((trackId: String) -> Unit)? = null
 
-    private var lyrics: List<LyricsLine> = emptyList()
-    private var offset: Double = 0.0
-    private var currentLineIndex = -1
+    private var currentLine: LyricsLine? = null
+    private var currentProgressMs: Long = 0L
 
     private var textSize = 18f
     private var textColor = "#FFC107".toColorInt()
@@ -98,6 +97,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             val playing = player?.isPlaying == true
             updatePlayPauseButton(playing)
             lyricView?.setPlaybackState(playing)
+            applyCurrentLyricState()
             GeneralStorage.setDesktopLyricsShown(true)
             syncTrackInfo()
         } catch (e: Exception) { e.printStackTrace() }
@@ -144,29 +144,24 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
         }
     }
 
-    fun setLyrics(newLyrics: List<LyricsLine>, newOffset: Double = 0.0) {
-        lyrics = newLyrics.filter { it.text.isNotBlank() }.sortedBy { it.timestamp }
-        offset = newOffset
-        currentLineIndex = -1
+    fun setCurrentLine(line: LyricsLine?) {
+        currentLine = line
         syncTrackInfo()
-        updateText(null)
+        updateText(line)
     }
 
-    fun updateTime(seconds: Double) {
-        if (floatingView == null || lyrics.isEmpty()) return
-        val adjustedTime = seconds - offset
-        val adjustedTimeMs = (adjustedTime * 1000).toLong()
-        val index = lyrics.indexOfLast { it.timestamp <= adjustedTime }
-        if (index == -1) {
-            if (currentLineIndex != -1) {
-                currentLineIndex = -1
-                updateText(null)
-            }
-        } else if (index != currentLineIndex) {
-            currentLineIndex = index
-            updateText(lyrics[index])
+    fun updateLyricProgress(progressMs: Long) {
+        currentProgressMs = progressMs.coerceAtLeast(0L)
+        Handler(Looper.getMainLooper()).post { lyricView?.updateProgress(currentProgressMs) }
+    }
+
+    fun clearLyrics() {
+        currentLine = null
+        currentProgressMs = 0L
+        Handler(Looper.getMainLooper()).post {
+            lyricView?.setLine(null)
+            lyricView?.updateProgress(0L)
         }
-        Handler(Looper.getMainLooper()).post { lyricView?.updateProgress(adjustedTimeMs) }
     }
 
     fun setLocked(locked: Boolean) {
@@ -188,6 +183,13 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     private fun updateText(line: LyricsLine?) {
         Handler(Looper.getMainLooper()).post { lyricView?.setLine(line) }
+    }
+
+    private fun applyCurrentLyricState() {
+        Handler(Looper.getMainLooper()).post {
+            lyricView?.setLine(currentLine)
+            lyricView?.updateProgress(currentProgressMs)
+        }
     }
 
     private fun updatePlayPauseButton(isPlaying: Boolean) {
@@ -318,7 +320,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             updateLayout()
             val trackId = player?.currentMediaItem?.mediaId ?: return@createActionButton
             // Clear the overlay immediately for instant feedback
-            setLyrics(emptyList())
+            clearLyrics()
             onClearLyricsRequested?.invoke(trackId)
         })
         actionsRow.addView(View(uiContext), LinearLayout.LayoutParams(24, 1))

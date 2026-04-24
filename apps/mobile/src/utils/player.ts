@@ -97,7 +97,7 @@ async function reportPlaybackHistory(
 			return
 		}
 		cid = videoPageResult.value[0].cid
-	} else if (track.bilibiliMetadata.isMultiPage) {
+	} else if (track.bilibiliMetadata.isMultiPage && !cid) {
 		logger.warning('多 p 视频无法上报播放记录，不存在 cid', {
 			bvid: track.bilibiliMetadata.bvid,
 		})

@@ -1,4 +1,4 @@
-import { Orpheus, type LyricsData } from '@bbplayer/orpheus'
+import { Orpheus, type LyricConsumer, type LyricsData } from '@bbplayer/orpheus'
 import { parseAndMergeLyrics } from '@bbplayer/splash'
 import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
 import * as Sentry from '@sentry/react-native'
@@ -597,14 +597,19 @@ class LyricService {
 					offset: lyrics.misc?.userOffset ?? 0,
 				}
 
+				const consumers: LyricConsumer[] = []
 				if (Orpheus.isDesktopLyricsShown) {
-					await Orpheus.setDesktopLyrics(payload)
+					consumers.push('desktop')
 				}
 				if (Orpheus.isStatusBarLyricsEnabled) {
-					await Orpheus.setStatusBarLyrics(payload)
+					consumers.push('statusBar')
 				}
 				if (Orpheus.isCarLyricsEnabled) {
-					await Orpheus.setCarLyrics(payload)
+					consumers.push('car')
+				}
+
+				if (consumers.length > 0) {
+					await Orpheus.setLyrics(payload, consumers)
 				}
 			} catch (e) {
 				logger.warning('更新歌词显示失败', e)

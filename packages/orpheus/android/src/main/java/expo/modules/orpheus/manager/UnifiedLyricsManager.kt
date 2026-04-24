@@ -47,11 +47,19 @@ class UnifiedLyricsManager(
 
     private var sharedLyrics: LyricsData = EMPTY_LYRICS
     private val consumerOverrides = mutableMapOf<LyricsConsumer, LyricsData>()
+    private val projectedLyrics = mutableMapOf<LyricsConsumer, LyricsData>()
     private var lastCarLyricText: String? = null
+    private var lastDesktopLineIndex: Int = UNSET_LINE_INDEX
+    private var lastStatusBarLineIndex: Int = UNSET_LINE_INDEX
 
     fun submitLyrics(data: LyricsData, consumers: Set<LyricsConsumer> = LyricsConsumer.all()) {
         val normalized = normalize(data)
         val allConsumers = LyricsConsumer.all()
+        val affectedConsumers = if (consumers.size == allConsumers.size && consumers.containsAll(allConsumers)) {
+            allConsumers
+        } else {
+            consumers
+        }
 
         if (consumers.size == allConsumers.size && consumers.containsAll(allConsumers)) {
             sharedLyrics = normalized
@@ -62,7 +70,8 @@ class UnifiedLyricsManager(
             }
         }
 
-        consumers.forEach(::applyLyricsToConsumer)
+        refreshProjectedLyrics(affectedConsumers)
+        affectedConsumers.forEach(::applyLyricsToConsumer)
     }
 
     fun clearConsumers(consumers: Set<LyricsConsumer>, softHideDesktop: Boolean = false) {
@@ -73,18 +82,24 @@ class UnifiedLyricsManager(
             sharedLyrics = EMPTY_LYRICS
             consumerOverrides.clear()
         } else {
-            consumers.forEach { consumerOverrides.remove(it) }
+            consumers.forEach { consumerOverrides[it] = EMPTY_LYRICS }
         }
+
+        refreshProjectedLyrics(consumers)
 
         consumers.forEach { consumer ->
             when (consumer) {
                 LyricsConsumer.DESKTOP -> {
-                    floatingLyricsManager.setLyrics(emptyList())
+                    lastDesktopLineIndex = UNSET_LINE_INDEX
+                    floatingLyricsManager.clearLyrics()
                     if (softHideDesktop) {
                         floatingLyricsManager.softHide()
                     }
                 }
-                LyricsConsumer.STATUS_BAR -> statusBarLyricsManager.onStop()
+                LyricsConsumer.STATUS_BAR -> {
+                    lastStatusBarLineIndex = UNSET_LINE_INDEX
+                    statusBarLyricsManager.onStop()
+                }
                 LyricsConsumer.CAR -> {
                     lastCarLyricText = null
                     onCarLyricsChanged(null)
@@ -94,8 +109,8 @@ class UnifiedLyricsManager(
     }
 
     fun updateTime(seconds: Double) {
-        floatingLyricsManager.updateTime(seconds)
-        statusBarLyricsManager.updateTime(seconds)
+        updateDesktopConsumer(seconds)
+        updateStatusBarConsumer(seconds)
         updateCarLyrics(seconds)
     }
 
@@ -115,7 +130,7 @@ class UnifiedLyricsManager(
     }
 
     private fun applyLyricsToConsumer(consumer: LyricsConsumer) {
-        val projected = projectLyrics(dataForConsumer(consumer), consumer)
+        val projected = projectedLyrics[consumer] ?: EMPTY_LYRICS
 
         when (consumer) {
             LyricsConsumer.DESKTOP -> {
@@ -126,10 +141,13 @@ class UnifiedLyricsManager(
                 ) {
                     floatingLyricsManager.show()
                 }
-                floatingLyricsManager.setLyrics(projected.lyrics, projected.offset)
+                lastDesktopLineIndex = UNSET_LINE_INDEX
+                currentPlaybackSeconds()?.let(::updateDesktopConsumer) ?: floatingLyricsManager.clearLyrics()
             }
             LyricsConsumer.STATUS_BAR -> {
-                statusBarLyricsManager.setLyrics(projected.lyrics, projected.offset)
+                lastStatusBarLineIndex = UNSET_LINE_INDEX
+                currentPlaybackSeconds()?.let(::updateStatusBarConsumer)
+                    ?: statusBarLyricsManager.renderLyricFrame(null)
             }
             LyricsConsumer.CAR -> {
                 lastCarLyricText = null
@@ -148,25 +166,97 @@ class UnifiedLyricsManager(
         return consumerOverrides[consumer] ?: sharedLyrics
     }
 
+    private fun refreshProjectedLyrics(consumers: Set<LyricsConsumer>) {
+        consumers.forEach { consumer ->
+            projectedLyrics[consumer] = projectLyrics(dataForConsumer(consumer), consumer)
+        }
+    }
+
+    private fun updateDesktopConsumer(seconds: Double) {
+        val snapshot = snapshotFor(LyricsConsumer.DESKTOP, seconds)
+
+        if (snapshot.lineIndex != lastDesktopLineIndex) {
+            floatingLyricsManager.setCurrentLine(snapshot.line)
+            lastDesktopLineIndex = snapshot.lineIndex
+        }
+
+        floatingLyricsManager.updateLyricProgress(snapshot.adjustedTimeMs)
+    }
+
+    private fun updateStatusBarConsumer(seconds: Double) {
+        val snapshot = snapshotFor(LyricsConsumer.STATUS_BAR, seconds)
+
+        if (snapshot.lineIndex != lastStatusBarLineIndex) {
+            statusBarLyricsManager.renderLyricFrame(
+                snapshot.line?.let { line ->
+                    StatusBarLyricFrame(
+                        line = line,
+                        lineDurationMs = snapshot.lineDurationMs,
+                        lineProgressMs = snapshot.lineProgressMs,
+                        delayMs = snapshot.delayMs,
+                    )
+                },
+            )
+            lastStatusBarLineIndex = snapshot.lineIndex
+        } else if (snapshot.line != null) {
+            statusBarLyricsManager.updateProgress(snapshot.lineProgressMs)
+        }
+    }
+
     private fun updateCarLyrics(seconds: Double, force: Boolean = false) {
         if (!GeneralStorage.isCarLyricsEnabled()) return
 
-        val line = currentLineFor(projectLyrics(dataForConsumer(LyricsConsumer.CAR), LyricsConsumer.CAR), seconds)
-        val nextLyric = line?.text?.takeIf { it.isNotBlank() }
+        val nextLyric = snapshotFor(LyricsConsumer.CAR, seconds).line?.text?.takeIf { it.isNotBlank() }
         if (!force && nextLyric == lastCarLyricText) return
 
         lastCarLyricText = nextLyric
         onCarLyricsChanged(nextLyric)
     }
 
-    private fun currentLineFor(data: LyricsData, seconds: Double): LyricsLine? {
-        if (data.lyrics.isEmpty()) return null
+    private fun snapshotFor(consumer: LyricsConsumer, seconds: Double): LyricSnapshot {
+        val data = projectedLyrics[consumer] ?: EMPTY_LYRICS
+        if (data.lyrics.isEmpty()) {
+            return LyricSnapshot(
+                lineIndex = NO_LINE_INDEX,
+                line = null,
+                adjustedTimeMs = 0L,
+                lineProgressMs = 0L,
+                lineDurationMs = 0L,
+                delayMs = 0,
+            )
+        }
 
         val adjustedTime = seconds - data.offset
+        val adjustedTimeMs = (adjustedTime * 1000).toLong().coerceAtLeast(0L)
         val index = data.lyrics.indexOfLast { it.timestamp <= adjustedTime }
-        if (index < 0) return null
+        if (index < 0) {
+            return LyricSnapshot(
+                lineIndex = NO_LINE_INDEX,
+                line = null,
+                adjustedTimeMs = adjustedTimeMs,
+                lineProgressMs = 0L,
+                lineDurationMs = 0L,
+                delayMs = 0,
+            )
+        }
 
-        return data.lyrics[index]
+        val line = data.lyrics[index]
+        val lineStartMs = (line.timestamp * 1000).toLong().coerceAtLeast(0L)
+        val lineEndMs = resolveLineEndMs(data, index, lineStartMs)
+        val lineProgressMs = (adjustedTimeMs - lineStartMs).coerceAtLeast(0L)
+        val nextLineStartMs = data.lyrics.getOrNull(index + 1)
+            ?.timestamp
+            ?.times(1000)
+            ?.toLong()
+
+        return LyricSnapshot(
+            lineIndex = index,
+            line = line,
+            adjustedTimeMs = adjustedTimeMs,
+            lineProgressMs = lineProgressMs,
+            lineDurationMs = (lineEndMs - lineStartMs).coerceAtLeast(1L),
+            delayMs = nextLineStartMs?.minus(lineStartMs)?.toInt() ?: 0,
+        )
     }
 
     private fun projectLyrics(data: LyricsData, consumer: LyricsConsumer): LyricsData {
@@ -244,7 +334,37 @@ class UnifiedLyricsManager(
         )
     }
 
+    private fun resolveLineEndMs(data: LyricsData, index: Int, lineStartMs: Long): Long {
+        val line = data.lyrics[index]
+
+        line.endTime?.let {
+            return (it * 1000).toLong().coerceAtLeast(lineStartMs)
+        }
+
+        data.lyrics.getOrNull(index + 1)?.let {
+            return (it.timestamp * 1000).toLong().coerceAtLeast(lineStartMs)
+        }
+
+        line.spans?.lastOrNull()?.let {
+            return it.endTime.coerceAtLeast(lineStartMs)
+        }
+
+        return lineStartMs + DEFAULT_LINE_DURATION_MS
+    }
+
     private companion object {
         val EMPTY_LYRICS = LyricsData(emptyList(), 0.0)
+        const val DEFAULT_LINE_DURATION_MS = 5000L
+        const val NO_LINE_INDEX = -1
+        const val UNSET_LINE_INDEX = Int.MIN_VALUE
     }
+
+    private data class LyricSnapshot(
+        val lineIndex: Int,
+        val line: LyricsLine?,
+        val adjustedTimeMs: Long,
+        val lineProgressMs: Long,
+        val lineDurationMs: Long,
+        val delayMs: Int,
+    )
 }

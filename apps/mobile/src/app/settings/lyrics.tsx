@@ -203,7 +203,7 @@ export default function LyricsSettingsPage() {
 						</View>
 						<View style={styles.settingRow}>
 							<View style={{ flex: 1, marginRight: 16 }}>
-								<Text>车载歌词（蓝牙 / Android Auto）</Text>
+								<Text>车载歌词</Text>
 								<Text
 									style={{
 										fontSize: 12,
@@ -211,7 +211,7 @@ export default function LyricsSettingsPage() {
 										marginTop: 4,
 									}}
 								>
-									启用后会把当前歌词同步到车机和部分蓝牙设备的媒体信息里。
+									启用后会把当前歌词显示到媒体信息的标题部分
 								</Text>
 							</View>
 							<Switch

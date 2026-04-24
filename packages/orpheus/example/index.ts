@@ -16,7 +16,7 @@ registerOrpheusHeadlessTask(async (event) => {
 			event.reason,
 		)
 		if (event.trackId === 'bilibili--BV1DL4y1V7xH--584235509') {
-			await Orpheus.setDesktopLyrics(JSON.stringify(LYRICS_DATA))
+			await Orpheus.setLyrics(LYRICS_DATA, ['desktop'])
 		}
 	} else if (event.eventName === 'onTrackFinished') {
 		console.log(
