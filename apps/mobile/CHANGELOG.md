@@ -5,6 +5,16 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 支持车载歌词（通过修改歌曲元数据标题为歌词实现，到底是不是这么做的？？？）
+
+### Fixed
+
+- 修复因为开发者脑子进水导致的又一次无法上传播放记录的问题
+
 ## [2.4.4] - 2026-04-18
 
 ### Fixed
