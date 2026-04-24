@@ -111,16 +111,27 @@ jobs:
         run: pnpm install
 
       - name: ⚙️ Prepare Variables
+        id: prepare-vars
         run: |
           APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
           VERSION_CODE=$(git rev-list --count HEAD)
 
           # e.g. bbplayer-v1.0.0-prod-arm64-v8a
           APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}-${{ matrix.arch }}"
+          MAPPING_NAME="${APK_NAME}-mapping.txt"
+          ARTIFACT_DIR="${{runner.temp}}/${APK_NAME}"
+
+          mkdir -p "$ARTIFACT_DIR"
 
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
-          echo "APK_TEMP_PATH=${{runner.temp}}/${APK_NAME}.apk" >> $GITHUB_ENV
+          echo "MAPPING_NAME=${MAPPING_NAME}" >> $GITHUB_ENV
+          echo "ARTIFACT_DIR=${ARTIFACT_DIR}" >> $GITHUB_ENV
+          echo "APK_TEMP_PATH=${ARTIFACT_DIR}/${APK_NAME}.apk" >> $GITHUB_ENV
+          echo "MAPPING_TEMP_PATH=${ARTIFACT_DIR}/${MAPPING_NAME}" >> $GITHUB_ENV
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
+
+          echo "apkName=${APK_NAME}" >> $GITHUB_OUTPUT
+          echo "artifactDir=${ARTIFACT_DIR}" >> $GITHUB_OUTPUT
 
       - name: ⚙️ Prepare Firebase Config
         env:
@@ -132,18 +143,30 @@ jobs:
 
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
-        run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output=${{ env.APK_TEMP_PATH }}
+        run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output="$APK_TEMP_PATH"
+
+      - name: 📦 Collect R8 Mapping
+        if: env.BUILD_TYPE != 'blank-test' && env.EAS_PROFILE != 'dev'
+        run: |
+          MAPPING_SOURCE=$(find apps/mobile/android/app/build/outputs/mapping -path "*/release/mapping.txt" -type f -print -quit)
+
+          if [[ -z "$MAPPING_SOURCE" ]]; then
+            echo "Expected R8 mapping file was not found."
+            exit 1
+          fi
+
+          cp "$MAPPING_SOURCE" "$MAPPING_TEMP_PATH"
 
       - name: 🧪 Create Dummy APK
         if: env.BUILD_TYPE == 'blank-test'
         run: |
-          echo "Dummy APK ${{ env.APK_NAME }}" > ${{ env.APK_TEMP_PATH }}
+          echo "Dummy APK $APK_NAME" > "$APK_TEMP_PATH"
 
       - name: 🚀 Upload Artifact
         uses: actions/upload-artifact@v5
         with:
-          name: ${{ env.APK_NAME }}
-          path: ${{ env.APK_TEMP_PATH }}
+          name: ${{ steps.prepare-vars.outputs.apkName }}
+          path: ${{ steps.prepare-vars.outputs.artifactDir }}
           if-no-files-found: error
 
   release:
@@ -167,16 +190,17 @@ jobs:
       - name: ⚙️ Prepare Release Variables
         run: |
           APP_VERSION=$(node -p "require('./apps/mobile/package.json').version")
-          echo "RELEASE_TAG=v${APP_VERSION}" >> $GITHUB_ENV
+          RELEASE_TAG="v${APP_VERSION}"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
           ls -R dist/
 
       - name: 🎁 Create Release
         run: |
-          FILES=$(find dist -name "*.apk" -type f) 
+          mapfile -t FILES < <(find dist -type f \( -name "*.apk" -o -name "*-mapping.txt" \) | sort)
 
-          gh release create ${{ env.RELEASE_TAG }} \
-            $FILES \
-            --title "${{ env.RELEASE_TAG }}" \
+          gh release create "$RELEASE_TAG" \
+            "${FILES[@]}" \
+            --title "$RELEASE_TAG" \
             --draft \
             --notes "auto release by GitHub Actions"
 
@@ -207,7 +231,7 @@ jobs:
             ${mention}, 新版触发的构建已经完成
 
             - **状态:** ${buildResult}
-            - **提交:** 
+            - **提交:**
             ${commitSha.substring(0, 7)}
             - **详细信息:** [Workflow](${runUrl})
             `;
