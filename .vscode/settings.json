@@ -14,10 +14,10 @@
 	"[javascript]": {
 		"editor.defaultFormatter": "oxc.oxc-vscode"
 	},
-	"js/ts.tsdk.path": "node_modules/typescript/lib",
+	"typescript.tsdk": "node_modules/typescript/lib",
 	"oxc.typeAware": true,
 	"editor.codeActionsOnSave": {
 		"source.fixAll.oxc": "always"
 	},
-	"typescript.native-preview.tsdk": "/Users/roitium/Programming/BBPlayer/node_modules/@typescript/native-preview"
+	"typescript.native-preview.tsdk": "${workspaceFolder}/node_modules/@typescript/native-preview"
 }

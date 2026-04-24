@@ -45,6 +45,7 @@ import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -1173,18 +1174,24 @@ class ExpoOrpheusModule : Module() {
             withServiceOnMainThread { service ->
                 service?.lyricsManager?.submitLyrics(data, consumers)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(
                 "OrpheusLyrics",
                 "[Module] submitLyrics failed consumers=${consumers.joinToString()} reason=${e.message}",
                 e,
             )
-            e.printStackTrace()
         }
     }
 
     private fun resolveLyricsConsumers(consumerIds: List<String>): Set<LyricsConsumer> {
+        if (consumerIds.isEmpty()) return LyricsConsumer.all()
+
         val resolved = consumerIds.mapNotNull { LyricsConsumer.fromIdentifier(it) }.toSet()
-        return resolved.ifEmpty { LyricsConsumer.all() }
+        if (resolved.isEmpty()) {
+            Log.w("OrpheusLyrics", "[Module] No valid consumers resolved from $consumerIds")
+        }
+        return resolved
     }
 }

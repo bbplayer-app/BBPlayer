@@ -54,14 +54,10 @@ class UnifiedLyricsManager(
 
     fun submitLyrics(data: LyricsData, consumers: Set<LyricsConsumer> = LyricsConsumer.all()) {
         val normalized = normalize(data)
-        val allConsumers = LyricsConsumer.all()
-        val affectedConsumers = if (consumers.size == allConsumers.size && consumers.containsAll(allConsumers)) {
-            allConsumers
-        } else {
-            consumers
-        }
+        val isAllConsumers = consumers.size == LyricsConsumer.entries.size
+        val affectedConsumers = if (isAllConsumers) LyricsConsumer.all() else consumers
 
-        if (consumers.size == allConsumers.size && consumers.containsAll(allConsumers)) {
+        if (isAllConsumers) {
             sharedLyrics = normalized
             consumerOverrides.clear()
         } else {
@@ -77,8 +73,7 @@ class UnifiedLyricsManager(
     fun clearConsumers(consumers: Set<LyricsConsumer>, softHideDesktop: Boolean = false) {
         if (consumers.isEmpty()) return
 
-        val allConsumers = LyricsConsumer.all()
-        if (consumers.size == allConsumers.size && consumers.containsAll(allConsumers)) {
+        if (consumers.size == LyricsConsumer.entries.size) {
             sharedLyrics = EMPTY_LYRICS
             consumerOverrides.clear()
         } else {

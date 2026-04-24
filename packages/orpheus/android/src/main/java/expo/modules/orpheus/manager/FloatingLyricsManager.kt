@@ -103,7 +103,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    private fun syncTrackInfo() {
+    fun syncTrackInfo() {
         val mediaItem = player?.currentMediaItem
         val title = mediaItem?.mediaMetadata?.title?.toString() ?: ""
         val artist = mediaItem?.mediaMetadata?.artist?.toString() ?: ""
@@ -146,7 +146,6 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     fun setCurrentLine(line: LyricsLine?) {
         currentLine = line
-        syncTrackInfo()
         updateText(line)
     }
 

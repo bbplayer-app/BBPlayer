@@ -207,7 +207,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	requestOverlayPermission(): Promise<void>
 	showDesktopLyrics(): Promise<void>
 	hideDesktopLyrics(): Promise<void>
-	setLyricsInternal(lyricsJson: string, consumers: string[]): Promise<void>
+	setLyricsInternal(
+		lyricsJson: string,
+		consumers: LyricConsumer[],
+	): Promise<void>
 	clearOverlays(): Promise<void>
 	setPlaybackSpeed(speed: number): Promise<void>
 	getPlaybackSpeed(): Promise<number>

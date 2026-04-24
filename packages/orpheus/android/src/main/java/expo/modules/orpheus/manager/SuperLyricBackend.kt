@@ -5,7 +5,6 @@ import android.util.Log
 import com.hchen.superlyricapi.SuperLyricData
 import com.hchen.superlyricapi.SuperLyricPush
 import com.hchen.superlyricapi.SuperLyricTool
-import expo.modules.orpheus.model.LyricsLine
 
 private const val TAG = "SuperLyricBackend"
 
@@ -31,6 +30,7 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
         sendFrame(frame)
     }
 
+    // SuperLyric is line-by-line; progress is ignored.
     override fun updateProgress(positionMs: Long) = Unit
 
     private fun sendFrame(frame: StatusBarLyricFrame) {
@@ -57,7 +57,15 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
     override fun setPlaybackState(isPlaying: Boolean) {
         if (isPlaying) {
-            lastFrame?.let(::sendFrame)
+            lastFrame?.let { frame ->
+                sendFrame(
+                    frame.copy(
+                        delayMs = (frame.delayMs.toLong() - frame.lineProgressMs)
+                            .coerceAtLeast(0L)
+                            .toInt(),
+                    ),
+                )
+            }
         }
     }
 

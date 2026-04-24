@@ -13,7 +13,7 @@
 
 ### Added
 
-- 支持车载歌词（通过修改歌曲元数据标题为歌词实现，到底是不是这么做的？？？）
+- 支持车载歌词（Android：通过把当前歌词写入 MediaMetadata.title，在蓝牙 AVRCP 车机上显示）
 
 ### Fixed
 

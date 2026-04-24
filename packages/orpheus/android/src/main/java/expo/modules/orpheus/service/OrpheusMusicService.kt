@@ -570,6 +570,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 sendTrackStartEvent(mediaItem, reason)
 
                 lyricsManager.clearConsumers(LyricsConsumer.all())
+                floatingLyricsManager.syncTrackInfo()
 
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
@@ -649,22 +650,21 @@ class OrpheusMusicService : MediaLibraryService() {
         lyricsManager.clearConsumers(setOf(LyricsConsumer.CAR))
     }
 
-    private fun restoreCurrentMetadata() {
-        updateCurrentMetadata(null)
-    }
-
     private fun updateCurrentMetadata(currentLyric: String?) {
         val player = player ?: return
         val currentIndex = player.currentMediaItemIndex
         if (currentIndex == C.INDEX_UNSET || currentIndex >= player.mediaItemCount) return
 
         val currentItem = player.getMediaItemAt(currentIndex)
+        val updatedMetadata = buildPlaybackMetadata(currentItem, currentLyric)
+        if (currentItem.mediaMetadata == updatedMetadata) return
+
         val updatedItem = currentItem.buildUpon()
-            .setMediaMetadata(buildPlaybackMetadata(currentItem, currentLyric))
+            .setMediaMetadata(updatedMetadata)
             .build()
 
+        // Lyric-only metadata refresh should not trigger extra queue persistence.
         player.replaceMediaItem(currentIndex, updatedItem)
-        saveCurrentQueue()
     }
 
     private fun buildPlaybackMetadata(item: MediaItem, currentLyric: String?): MediaMetadata {

@@ -24,6 +24,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
 
     private val provider = LyriconFactory.createProvider(context)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val frameLock = Any()
     
     @Volatile private var connected: Boolean = false
     @Volatile private var lastFrame: StatusBarLyricFrame? = null
@@ -65,10 +66,11 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     private fun syncState() {
+        val frame = synchronized(frameLock) { lastFrame }
         mainHandler.post {
             try {
                 provider.player.setDisplayTranslation(true)
-                lastFrame?.let(::renderFrameInternal)
+                frame?.let(::renderFrameInternal)
                 provider.player.setPlaybackState(lastIsPlaying)
                 Log.d(TAG, "[syncState] Restored current lyric frame and state ($lastIsPlaying)")
             } catch (e: Exception) {
@@ -78,7 +80,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun renderLyricFrame(frame: StatusBarLyricFrame?) {
-        lastFrame = frame
+        synchronized(frameLock) {
+            lastFrame = frame
+        }
 
         if (frame == null) {
             clearLyrics()
@@ -91,7 +95,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     private fun clearLyrics() {
-        lastFrame = null
+        synchronized(frameLock) {
+            lastFrame = null
+        }
         mainHandler.post {
             try {
                 provider.player.setSong(Song(lyrics = emptyList()))
@@ -106,11 +112,18 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     override fun updateProgress(positionMs: Long) {
         if (!connected) return
 
-        lastFrame = lastFrame?.copy(lineProgressMs = positionMs.coerceAtLeast(0L))
-        try {
-            provider.player.setPosition(positionMs.coerceAtLeast(0L))
-        } catch (e: Exception) {
-            // Suppress frequent logging in updateTime
+        val clamped = positionMs.coerceAtLeast(0L)
+        mainHandler.post {
+            if (!connected) return@post
+
+            synchronized(frameLock) {
+                lastFrame = lastFrame?.copy(lineProgressMs = clamped)
+            }
+            try {
+                provider.player.setPosition(clamped)
+            } catch (_: Exception) {
+                // Suppress frequent logging in updateProgress
+            }
         }
     }
 
@@ -127,7 +140,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun onStop() {
-        lastFrame = null
+        synchronized(frameLock) {
+            lastFrame = null
+        }
         lastIsPlaying = false
         mainHandler.post {
             try {
@@ -139,7 +154,9 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun destroy() {
-        lastFrame = null
+        synchronized(frameLock) {
+            lastFrame = null
+        }
         lastIsPlaying = false
         mainHandler.post {
             try {
@@ -172,7 +189,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             end = frame.lineDurationMs.coerceAtLeast(1L),
             text = line.text,
             words = words,
-            translation = line.translation ?: line.romaji,
+            translation = line.translation?.ifEmpty { null } ?: line.romaji?.ifEmpty { null },
         )
         val song = Song(
             id = mediaItem?.mediaId ?: "",

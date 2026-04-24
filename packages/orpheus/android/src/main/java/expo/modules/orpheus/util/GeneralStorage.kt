@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 object GeneralStorage {
     private var kv: MMKV? = null
     private val json = Json { ignoreUnknownKeys = true }
+    private var lastSavedQueueSnapshot: List<String>? = null
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
@@ -85,6 +86,9 @@ object GeneralStorage {
                 item.mediaMetadata.extras?.getString("track_json")
             }
 
+            if (jsonList == lastSavedQueueSnapshot) return
+            lastSavedQueueSnapshot = jsonList
+
             val jsonListString = json.encodeToString(jsonList)
             safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
 
@@ -100,6 +104,7 @@ object GeneralStorage {
             if (jsonListString.isNullOrEmpty()) return emptyList()
 
             val trackJsonList: List<String> = json.decodeFromString(jsonListString)
+            lastSavedQueueSnapshot = trackJsonList
 
             trackJsonList.mapNotNull { trackJson ->
                 try {
