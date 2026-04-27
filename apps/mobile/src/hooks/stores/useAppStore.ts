@@ -108,6 +108,12 @@ export const useAppStore = create<AppState>()(
 					enableDataCollection: true,
 					enableDanmaku: false,
 					danmakuFilterLevel: 0,
+					enableLlmTagging: false,
+					allowLlmMetadataUpload: false,
+					llmBaseUrl: 'https://api.openai.com/v1',
+					llmApiKey: '',
+					llmModel: 'gpt-4o-mini',
+					llmDefaultPreference: '',
 				},
 				bilibiliUserInfo: null,
 

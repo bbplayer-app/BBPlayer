@@ -769,6 +769,9 @@ export default function LocalPlaylistPage() {
 							playlist={playlistMetadata}
 							totalDuration={playlistMetadata.totalDuration}
 							onClickPlayAll={playAll}
+							onClickSmartShuffle={() =>
+								openModal('SmartShuffle', { playlistId: Number(id) })
+							}
 							onClickSync={handleSync}
 							onClickCopyToLocalPlaylist={() =>
 								openModal('DuplicateLocalPlaylist', {

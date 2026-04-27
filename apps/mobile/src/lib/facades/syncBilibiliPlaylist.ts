@@ -18,6 +18,7 @@ import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import { artistService } from '@/lib/services/artistService'
 import generateUniqueTrackKey from '@/lib/services/genKey'
+import { llmSmartShuffleService } from '@/lib/services/llmSmartShuffleService'
 import type { PlaylistService } from '@/lib/services/playlistService'
 import { playlistService } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
@@ -39,6 +40,7 @@ export interface FavoriteSyncProgress {
 		| 'calculating_diff'
 		| 'fetching_details'
 		| 'saving'
+		| 'indexing'
 		| 'completed'
 		| 'error'
 }
@@ -161,7 +163,8 @@ export class SyncBilibiliPlaylistFacade {
 						)
 					}
 					return ResultAsync.fromPromise(
-						this.db.transaction(async (tx) => {
+						(async () => {
+							const playlistId = await this.db.transaction(async (tx) => {
 							const playlistSvc = this.playlistService.withDB(tx)
 							const trackSvc = this.trackService.withDB(tx)
 							const artistSvc = this.artistService.withDB(tx)
@@ -250,7 +253,14 @@ export class SyncBilibiliPlaylistFacade {
 								trackIds.length,
 							)
 							return playlistRes.value.id
-						}),
+							})
+							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
+								sourceType: 'collection',
+								sourceId: String(collectionId),
+								sourceSyncedAt: new Date(),
+							})
+							return playlistId
+						})(),
 						(e) =>
 							createFacadeError('SyncCollectionFailed', '同步合集失败', {
 								cause: e,
@@ -291,7 +301,8 @@ export class SyncBilibiliPlaylistFacade {
 						pages: data.pages.length,
 					})
 					return ResultAsync.fromPromise(
-						this.db.transaction(async () => {
+						(async () => {
+							const playlistId = await this.db.transaction(async () => {
 							const playlistSvc = this.playlistService.withDB(this.db)
 							const trackSvc = this.trackService.withDB(this.db)
 							const artistSvc = this.artistService.withDB(this.db)
@@ -361,7 +372,14 @@ export class SyncBilibiliPlaylistFacade {
 							)
 
 							return playlistRes.value.id
-						}),
+							})
+							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
+								sourceType: 'multi_page',
+								sourceId: bvid,
+								sourceSyncedAt: new Date(),
+							})
+							return playlistId
+						})(),
 						(e) =>
 							createFacadeError('SyncMultiPageFailed', '同步多集视频失败', {
 								cause: e,
@@ -751,6 +769,15 @@ export class SyncBilibiliPlaylistFacade {
 			if (txResult.isErr()) {
 				return err(txResult.error)
 			}
+			onProgress?.({
+				message: '正在创建 LLM 标签索引...',
+				stage: 'indexing',
+			})
+			await llmSmartShuffleService.indexPlaylistTracks(txResult.value, {
+				sourceType: 'favorite',
+				sourceId: String(favoriteId),
+				sourceSyncedAt: new Date(),
+			})
 			return ok(txResult.value)
 		} finally {
 			this.syncingIds.delete(`favorite::${favoriteId}`)

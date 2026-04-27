@@ -4,6 +4,7 @@ import {
 	index,
 	integer,
 	primaryKey,
+	real,
 	sqliteTable,
 	text,
 	uniqueIndex,
@@ -181,6 +182,41 @@ export const localMetadata = sqliteTable('local_metadata', {
 	localPath: text('local_path').notNull(),
 })
 
+export const trackLlmTags = sqliteTable(
+	'track_llm_tags',
+	{
+		trackId: integer('track_id')
+			.primaryKey()
+			.references(() => tracks.id, { onDelete: 'cascade' }),
+		tags: text('tags', { mode: 'json' })
+			.$type<{
+				language: string[]
+				vocalType: string[]
+				genre: string[]
+				mood: string[]
+				scene: string[]
+				timePreference: string[]
+			}>()
+			.notNull(),
+		confidence: real('confidence').notNull().default(0),
+		reason: text('reason'),
+		model: text('model').notNull(),
+		sourceType: text('source_type', {
+			enum: ['favorite', 'collection', 'multi_page', 'local'],
+		}),
+		sourceId: text('source_id'),
+		sourceSyncedAt: integer('source_synced_at', { mode: 'timestamp_ms' }),
+		indexedAt: integer('indexed_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index('track_llm_tags_source_idx').on(table.sourceType, table.sourceId),
+		index('track_llm_tags_indexed_at_idx').on(table.indexedAt),
+	],
+)
+
 export const playlistSyncQueue = sqliteTable(
 	'playlist_sync_queue',
 	{
@@ -234,6 +270,10 @@ export const trackRelations = relations(tracks, ({ one, many }) => ({
 		fields: [tracks.id],
 		references: [localMetadata.trackId],
 	}),
+	llmTags: one(trackLlmTags, {
+		fields: [tracks.id],
+		references: [trackLlmTags.trackId],
+	}),
 	playHistory: many(playHistory),
 }))
 
@@ -276,6 +316,13 @@ export const bilibiliMetadataRelations = relations(
 export const localMetadataRelations = relations(localMetadata, ({ one }) => ({
 	track: one(tracks, {
 		fields: [localMetadata.trackId],
+		references: [tracks.id],
+	}),
+}))
+
+export const trackLlmTagsRelations = relations(trackLlmTags, ({ one }) => ({
+	track: one(tracks, {
+		fields: [trackLlmTags.trackId],
 		references: [tracks.id],
 	}),
 }))

@@ -19,6 +19,7 @@ import m0015 from './0015_flippant_skaar.sql'
 import m0016 from './0016_cheerful_stark_industries.sql'
 import m0017 from './0017_rare_lifeguard.sql'
 import m0018 from './0018_green_dracula.sql'
+import m0019 from './0019_smart_shuffle_tags.sql'
 import journal from './meta/_journal.json'
 
 export default {
@@ -43,5 +44,6 @@ export default {
 		m0016,
 		m0017,
 		m0018,
+		m0019,
 	},
 }

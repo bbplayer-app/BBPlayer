@@ -30,6 +30,7 @@ interface PlaylistHeaderProps {
 	playlist: Playlist & { validTrackCount: number }
 	totalDuration?: number
 	onClickPlayAll: () => void
+	onClickSmartShuffle: () => void
 	onClickSync: () => void
 	onClickCopyToLocalPlaylist: () => void
 	/** 当作者为 bilibili 时触发。可选，未提供时仅视觉提示不响应 */
@@ -88,6 +89,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	playlist,
 	totalDuration,
 	onClickPlayAll,
+	onClickSmartShuffle,
 	onClickSync,
 	onClickCopyToLocalPlaylist,
 	onPressAuthor,
@@ -352,6 +354,14 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					>
 						播放全部
 					</Button>
+
+					<IconButton
+						mode='contained'
+						icon='shuffle-variant'
+						size={20}
+						onPress={onClickSmartShuffle}
+						testID='playlist-smart-shuffle'
+					/>
 
 					{playlist.type !== 'local' && (
 						<IconButton
