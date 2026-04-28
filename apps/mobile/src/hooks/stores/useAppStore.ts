@@ -111,7 +111,6 @@ export const useAppStore = create<AppState>()(
 					enableLlmTagging: false,
 					allowLlmMetadataUpload: false,
 					llmBaseUrl: 'https://api.openai.com/v1',
-					llmApiKey: '',
 					llmModel: 'gpt-4o-mini',
 					llmDefaultPreference: '',
 				},
@@ -255,6 +254,7 @@ export const useAppStore = create<AppState>()(
 					delete mergedState.settings.enableSentryReport
 					// @ts-expect-error -- cleanup
 					delete mergedState.settings.enableAnalytics
+					delete mergedState.settings.llmApiKey
 
 					return mergedState
 				}

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Dialog, Switch, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { llmCredentialService } from '@/lib/services/llmCredentialService'
+import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
 export default function LlmSmartShuffleSettingsModal() {
@@ -19,18 +21,54 @@ export default function LlmSmartShuffleSettingsModal() {
 		settings.allowLlmMetadataUpload,
 	)
 	const [llmBaseUrl, setLlmBaseUrl] = useState(settings.llmBaseUrl)
-	const [llmApiKey, setLlmApiKey] = useState(settings.llmApiKey)
+	const [llmApiKey, setLlmApiKey] = useState('')
 	const [llmModel, setLlmModel] = useState(settings.llmModel)
 	const [llmDefaultPreference, setLlmDefaultPreference] = useState(
 		settings.llmDefaultPreference,
 	)
+	const [isLoadingApiKey, setIsLoadingApiKey] = useState(true)
 
-	const handleSave = () => {
+	useEffect(() => {
+		let isMounted = true
+		llmCredentialService
+			.migrateFromPlainSettings()
+			.then(() => llmCredentialService.getApiKey())
+			.then((apiKey) => {
+				if (!isMounted) return
+				setLlmApiKey(apiKey)
+			})
+			.catch((error) => {
+				toastAndLogError(
+					'读取 LLM API Key 失败',
+					error,
+					'LlmSmartShuffleSettings',
+				)
+			})
+			.finally(() => {
+				if (!isMounted) return
+				setIsLoadingApiKey(false)
+			})
+
+		return () => {
+			isMounted = false
+		}
+	}, [])
+
+	const handleSave = async () => {
+		try {
+			await llmCredentialService.setApiKey(llmApiKey)
+		} catch (error) {
+			toastAndLogError(
+				'保存 LLM API Key 失败',
+				error,
+				'LlmSmartShuffleSettings',
+			)
+			return
+		}
 		setSettings({
 			enableLlmTagging,
 			allowLlmMetadataUpload,
 			llmBaseUrl: llmBaseUrl.trim() || 'https://api.openai.com/v1',
-			llmApiKey: llmApiKey.trim(),
 			llmModel: llmModel.trim() || 'gpt-4o-mini',
 			llmDefaultPreference: llmDefaultPreference.trim(),
 		})
@@ -90,6 +128,7 @@ export default function LlmSmartShuffleSettingsModal() {
 						mode='outlined'
 						style={styles.input}
 						secureTextEntry
+						disabled={isLoadingApiKey}
 					/>
 					<TextInput
 						label='模型名称'
@@ -114,7 +153,12 @@ export default function LlmSmartShuffleSettingsModal() {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => close('LlmSmartShuffleSettings')}>取消</Button>
-				<Button onPress={handleSave}>保存</Button>
+				<Button
+					onPress={handleSave}
+					disabled={isLoadingApiKey}
+				>
+					保存
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

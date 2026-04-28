@@ -15,7 +15,7 @@ interface Settings {
 	enableLlmTagging: boolean
 	allowLlmMetadataUpload: boolean
 	llmBaseUrl: string
-	llmApiKey: string
+	llmApiKey?: string
 	llmModel: string
 	llmDefaultPreference: string
 }

@@ -3,6 +3,7 @@ import { inArray, sql } from 'drizzle-orm'
 import useAppStore from '@/hooks/stores/useAppStore'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
+import { llmCredentialService } from '@/lib/services/llmCredentialService'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -183,8 +184,10 @@ export class LlmSmartShuffleService {
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (settings.llmApiKey.trim()) {
-			headers.Authorization = `Bearer ${settings.llmApiKey.trim()}`
+		await llmCredentialService.migrateFromPlainSettings()
+		const apiKey = await llmCredentialService.getApiKey()
+		if (apiKey) {
+			headers.Authorization = `Bearer ${apiKey}`
 		}
 
 		const response = await fetch(url, {
