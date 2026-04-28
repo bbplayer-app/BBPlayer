@@ -242,34 +242,37 @@ export class LlmSmartShuffleService {
 					'优先识别语种、Vocaloid/中V/日V、风格、情绪、场景。',
 					'无法判断的字段返回空数组。',
 				],
-				tracks: contexts.map(({ track, sourceType, sourceId, sourceSyncedAt }) => ({
-					trackId: track.id,
-					title: track.title,
-					artist: track.artist?.name,
-					source: track.source,
-					sourceType,
-					sourceId,
-					sourceSyncedAt: sourceSyncedAt?.toISOString(),
-					firstSeenAt: track.createdAt.toISOString(),
-				})),
+				tracks: contexts.map(
+					({ track, sourceType, sourceId, sourceSyncedAt }) => ({
+						trackId: track.id,
+						title: track.title,
+						artist: track.artist?.name,
+						source: track.source,
+						sourceType,
+						sourceId,
+						sourceSyncedAt: sourceSyncedAt?.toISOString(),
+						firstSeenAt: track.createdAt.toISOString(),
+					}),
+				),
 			}),
 		)
 
-		const indexes: TrackTagIndex[] = (response.tracks ?? [])
+		const indexes = (response.tracks ?? [])
 			.map((item) => {
 				if (!item || typeof item !== 'object') return null
 				const row = item as Record<string, unknown>
 				const trackId = Number(row.trackId)
 				if (!Number.isFinite(trackId)) return null
-				return {
+				const index: TrackTagIndex = {
 					trackId,
 					tags: normalizeTags(row.tags),
 					confidence:
 						typeof row.confidence === 'number'
 							? Math.max(0, Math.min(1, row.confidence))
 							: 0,
-					reason: typeof row.reason === 'string' ? row.reason : undefined,
 				}
+				if (typeof row.reason === 'string') index.reason = row.reason
+				return index
 			})
 			.filter((item): item is TrackTagIndex => item !== null)
 
