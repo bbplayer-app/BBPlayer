@@ -95,6 +95,26 @@ export default function PlaybackSettingsPage() {
 						}
 					/>
 				</View>
+
+				<View style={styles.settingRow}>
+					<View style={styles.settingText}>
+						<Text>智能随机播放</Text>
+						<Text
+							variant='bodySmall'
+							style={styles.description}
+						>
+							配置 OpenAI 兼容 LLM API、标签索引和默认听歌取向
+						</Text>
+					</View>
+					<IconButton
+						icon='shuffle-variant'
+						onPress={() =>
+							useModalStore
+								.getState()
+								.open('LlmSmartShuffleSettings', undefined)
+						}
+					/>
+				</View>
 			</ScrollView>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
@@ -118,6 +138,14 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
+	},
+	settingText: {
+		flex: 1,
+		marginRight: 16,
+	},
+	description: {
+		opacity: 0.7,
+		marginTop: 4,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

@@ -65,6 +65,12 @@ const DanmakuSettingsModal = lazy(
 const CoverDownloadProgressModal = lazy(
 	() => import('./modals/settings/CoverDownloadProgressModal'),
 )
+const LlmSmartShuffleSettingsModal = lazy(
+	() => import('./modals/settings/LlmSmartShuffleSettingsModal'),
+)
+const SmartShuffleModal = lazy(
+	() => import('./modals/playlist/SmartShuffleModal'),
+)
 const EnableSharingModal = lazy(
 	() => import('./modals/playlist/EnableSharingModal'),
 )
@@ -105,6 +111,8 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	ManualMatchExternalSync: ManualMatchExternalSyncModal,
 	DanmakuSettings: DanmakuSettingsModal,
 	CoverDownloadProgress: CoverDownloadProgressModal,
+	LlmSmartShuffleSettings: LlmSmartShuffleSettingsModal,
+	SmartShuffle: SmartShuffleModal,
 	EnableSharing: EnableSharingModal,
 	SubscribeToSharedPlaylist: SubscribeToSharedPlaylistModal,
 	MergePlaylists: MergePlaylistsModal,

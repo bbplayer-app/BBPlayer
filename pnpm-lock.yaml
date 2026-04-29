@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  expo-modules-core@55.0.13:
+    hash: 90bbfc6b7629bb733ac4a8b5d5cc858dc25242348ea530be70f11cc57f99929e
+    path: patches/expo-modules-core@55.0.13.patch
   react-native-mmkv:
     hash: 6e8deefa8d5d01876543db78916bed5aaa62cd8d7b33c0557e486f0f9d8d4b52
     path: patches/react-native-mmkv.patch
@@ -275,6 +278,9 @@ importers:
       expo-router:
         specifier: 55.0.3
         version: 55.0.3(2187545d5958cd362e6c0e2e98a9b4ea)
+      expo-secure-store:
+        specifier: ~55.0.13
+        version: 55.0.13(expo@55.0.4)
       expo-sharing:
         specifier: ~55.0.11
         version: 55.0.11(expo@55.0.4)(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -489,6 +495,9 @@ importers:
       babel-plugin-transform-remove-console:
         specifier: ^6.9.4
         version: 6.9.4
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
@@ -1575,6 +1584,9 @@ packages:
 
   '@emotion/memoize@0.7.4':
     resolution: {integrity: sha512-Ja/Vfqe3HpuzRsG1oBtWTHk2PGZ7GR+2Vz5iYGelAw8dx32K0y7PjVuxK6z1nMpZOqAFsRUPCkK1YjJ56qJlgw==}
+
+  '@epic-web/invariant@1.0.0':
+    resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
@@ -5491,6 +5503,11 @@ packages:
     resolution: {integrity: sha512-YKGmAy84hKH+hHIIER07VCAHf9u0Ldelx1uU6EBxsRPDXIA1m5fsKmJfyC3xBhw6cVC/1i83VdbL4PvepTrt8A==}
     hasBin: true
 
+  cross-env@10.1.0:
+    resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
 
@@ -6416,6 +6433,11 @@ packages:
         optional: true
       react-server-dom-webpack:
         optional: true
+
+  expo-secure-store@55.0.13:
+    resolution: {integrity: sha512-I6r0JNO1Fd4o0Gu7Ixiic7s89lqgdUHq17uBH9y1f/AntoyKn71TdtYJH82RgfsBbu5qNVzrwImmvlANyOlITQ==}
+    peerDependencies:
+      expo: '*'
 
   expo-server@55.0.6:
     resolution: {integrity: sha512-xI72FTm469FfuuBL2R5aNtthgH+GR7ygOpsx/KcPS0K8AZaZd7VjtEExbzn9/qyyYkWW3T+3dAmCDKOMX8gdmQ==}
@@ -9286,7 +9308,6 @@ packages:
 
   shaka-player@4.16.1:
     resolution: {integrity: sha512-ieaC0pcn7EPMSXzTi5aXho7gFg2OlduKRgzKPSEMauJMe/pkt6mTWLmVqSsCH7jTRPpiuzF7pFB+/ZHCTWqgHA==}
-    engines: {node: '>=18'}
 
   shallowequal@1.1.0:
     resolution: {integrity: sha512-y0m1JoUZSlPAjXVtPPW70aZWfIL/dSP7AFkRnniLCrK/8MDKog3TySTBmckD+RObVxH0v4Tox67+F14PdED2oQ==}
@@ -11551,6 +11572,8 @@ snapshots:
 
   '@emotion/memoize@0.7.4':
     optional: true
+
+  '@epic-web/invariant@1.0.0': {}
 
   '@esbuild-kit/core-utils@3.3.2':
     dependencies:
@@ -15941,6 +15964,11 @@ snapshots:
 
   cronstrue@2.59.0: {}
 
+  cross-env@10.1.0:
+    dependencies:
+      '@epic-web/invariant': 1.0.0
+      cross-spawn: 7.0.6
+
   cross-fetch@3.2.0:
     dependencies:
       node-fetch: 2.7.0
@@ -17082,7 +17110,7 @@ snapshots:
       - supports-color
       - typescript
 
-  expo-modules-core@55.0.13(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+  expo-modules-core@55.0.13(patch_hash=90bbfc6b7629bb733ac4a8b5d5cc858dc25242348ea530be70f11cc57f99929e)(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
     dependencies:
       invariant: 2.2.4
       react: 19.2.0
@@ -17187,6 +17215,10 @@ snapshots:
       - supports-color
     optional: true
 
+  expo-secure-store@55.0.13(expo@55.0.4):
+    dependencies:
+      expo: 55.0.4(@babel/core@7.28.6)(@expo/dom-webview@0.2.8)(@expo/metro-runtime@55.0.6)(expo-router@55.0.3)(react-dom@19.1.0(react@19.2.0))(react-native-webview@13.15.0(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
   expo-server@55.0.6: {}
 
   expo-sharing@55.0.11(expo@55.0.4)(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
@@ -17290,7 +17322,7 @@ snapshots:
       expo-font: 55.0.4(expo@55.0.4)(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       expo-keep-awake: 55.0.4(expo@55.0.4)(react@19.2.0)
       expo-modules-autolinking: 55.0.8(typescript@5.9.3)
-      expo-modules-core: 55.0.13(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
+      expo-modules-core: 55.0.13(patch_hash=90bbfc6b7629bb733ac4a8b5d5cc858dc25242348ea530be70f11cc57f99929e)(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       pretty-format: 29.7.0
       react: 19.2.0
       react-native: 0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)

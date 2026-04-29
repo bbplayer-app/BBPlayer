@@ -12,6 +12,12 @@ interface Settings {
 	enableDataCollection: boolean
 	enableDanmaku: boolean
 	danmakuFilterLevel: number
+	enableLlmTagging: boolean
+	allowLlmMetadataUpload: boolean
+	llmBaseUrl: string
+	llmApiKey?: string
+	llmModel: string
+	llmDefaultPreference: string
 }
 
 interface BilibiliUserSummary {

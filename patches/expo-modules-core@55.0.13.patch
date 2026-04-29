@@ -1,0 +1,18 @@
+diff --git a/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt b/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
+index 9bfae8d7961d6f63c1b17c1b0d4f01557e15a424..4e14872b82c053c0bddb6d95bab9a7e127a29803 100644
+--- a/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
++++ b/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
+@@ -6,7 +6,12 @@ internal fun LibraryExtension.applySDKVersions(compileSdk: Int, minSdk: Int, tar
+   this.compileSdk = compileSdk
+   defaultConfig {
+     this@defaultConfig.minSdk = minSdk
+-    this@defaultConfig.targetSdk = targetSdk
++  }
++  testOptions {
++    this@testOptions.targetSdk = targetSdk
++  }
++  lint {
++    this@lint.targetSdk = targetSdk
+   }
+ }
+ 

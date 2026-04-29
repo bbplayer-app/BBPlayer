@@ -43,6 +43,8 @@ export interface ModalPropsMap {
 	}
 	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined
+	LlmSmartShuffleSettings: undefined
+	SmartShuffle: { playlistId: number }
 	EnableSharing: {
 		playlistId: number
 		shareId?: string | null

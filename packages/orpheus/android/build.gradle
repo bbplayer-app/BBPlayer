@@ -31,25 +31,25 @@ if (useManagedAndroidSdkVersions) {
         }
     }
     project.android {
-        compileSdkVersion safeExtGet("compileSdkVersion", 36)
+        compileSdkVersion = safeExtGet("compileSdkVersion", 36)
         defaultConfig {
-            minSdkVersion safeExtGet("minSdkVersion", 24)
-            targetSdkVersion safeExtGet("targetSdkVersion", 36)
+            minSdkVersion = safeExtGet("minSdkVersion", 24)
+            targetSdkVersion = safeExtGet("targetSdkVersion", 36)
         }
     }
 }
 
 android {
-    namespace "expo.modules.orpheus"
+    namespace = "expo.modules.orpheus"
     defaultConfig {
-        versionCode 1
-        versionName packageJson.version
+        versionCode = 1
+        versionName = packageJson.version
     }
     buildFeatures {
         aidl = true
     }
-    lintOptions {
-        abortOnError false
+    lint {
+        abortOnError = false
     }
     kotlinOptions {
         freeCompilerArgs += [
