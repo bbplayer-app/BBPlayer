@@ -16,5 +16,6 @@ onlyBuiltDependencies:
   - workerd
 
 patchedDependencies:
+  expo-modules-core@55.0.13: patches/expo-modules-core@55.0.13.patch
   react-native-mmkv: patches/react-native-mmkv.patch
   sonner-native@0.23.0: patches/sonner-native@0.23.0.patch

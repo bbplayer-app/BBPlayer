@@ -158,26 +158,178 @@ function allTags(tags: TrackLlmTags) {
 	].map((tag) => tag.toLowerCase())
 }
 
+type TrackLlmTagCategory = keyof TrackLlmTags
+
+interface LocalTitleTagRule {
+	category: TrackLlmTagCategory
+	tag: string
+	pattern: RegExp
+}
+
+const LOCAL_TITLE_TAG_RULES: LocalTitleTagRule[] = [
+	{
+		category: 'language',
+		tag: '中文',
+		pattern:
+			/中文|国语|华语|普通话|中配|洛天依|乐正绫|言和|星尘|心华|诗岸|海伊|苍穹|赤羽|墨清弦|徵羽摩柯|乐正龙牙|五维介质|ace虚拟歌姬/i,
+	},
+	{
+		category: 'language',
+		tag: '日文',
+		pattern:
+			/日语|日文|日本語|j-?pop|anime|アニメ|初音|镜音|鏡音|巡音|重音|miku|rin|len|luka|teto|gumi|kafu|可不/i,
+	},
+	{
+		category: 'language',
+		tag: '英文',
+		pattern: /英文|英语|欧美|\b(english|eng|en|us|uk)\b/i,
+	},
+	{
+		category: 'vocalType',
+		tag: '中V',
+		pattern:
+			/中v|中文vocaloid|洛天依|乐正绫|言和|星尘|心华|诗岸|海伊|苍穹|赤羽|墨清弦|徵羽摩柯|乐正龙牙|五维介质|ace虚拟歌姬/i,
+	},
+	{
+		category: 'vocalType',
+		tag: '日V',
+		pattern:
+			/日v|初音|镜音|鏡音|巡音|重音|miku|rin|len|luka|teto|gumi|kafu|可不|flower|ia\b/i,
+	},
+	{
+		category: 'vocalType',
+		tag: 'Vocaloid',
+		pattern:
+			/vocaloid|术力口|ボカロ|初音|镜音|鏡音|巡音|重音|miku|rin|len|luka|teto|gumi|kafu|可不|flower|ia\b/i,
+	},
+	{
+		category: 'vocalType',
+		tag: '翻唱',
+		pattern: /翻唱|cover|歌ってみた|试唱|remake/i,
+	},
+	{
+		category: 'vocalType',
+		tag: '合唱',
+		pattern: /合唱|对唱|chorus|duet|feat\.?|ft\./i,
+	},
+	{
+		category: 'vocalType',
+		tag: '纯音乐',
+		pattern: /纯音乐|instrumental|伴奏|off vocal|karaoke|\bbgm\b/i,
+	},
+	{ category: 'genre', tag: '古风', pattern: /古风|古韵|戏腔/i },
+	{
+		category: 'genre',
+		tag: '国风',
+		pattern: /国风|中国风|民乐|笛子|古筝|二胡/i,
+	},
+	{
+		category: 'genre',
+		tag: '电子',
+		pattern:
+			/电音|电子|edm|future bass|dubstep|synthwave|trance|house|techno|hardstyle/i,
+	},
+	{
+		category: 'genre',
+		tag: '摇滚',
+		pattern: /摇滚|rock|punk|alternative|后摇|post-?rock/i,
+	},
+	{ category: 'genre', tag: '金属', pattern: /金属|metal|metalcore/i },
+	{
+		category: 'genre',
+		tag: '流行',
+		pattern: /流行|pop|j-?pop|k-?pop|city pop/i,
+	},
+	{ category: 'genre', tag: '说唱', pattern: /说唱|rap|hip-?hop|trap/i },
+	{ category: 'genre', tag: '爵士', pattern: /爵士|jazz|swing|blues/i },
+	{ category: 'genre', tag: '民谣', pattern: /民谣|folk|acoustic|吉他弹唱/i },
+	{ category: 'genre', tag: '钢琴', pattern: /钢琴|piano/i },
+	{ category: 'genre', tag: '交响', pattern: /交响|管弦|orchestra|symphony/i },
+	{ category: 'genre', tag: 'Lo-fi', pattern: /lo-?fi|chillhop/i },
+	{
+		category: 'genre',
+		tag: 'ACG',
+		pattern: /acg|anime|アニメ|二次元|番剧|op\b|ed\b/i,
+	},
+	{
+		category: 'genre',
+		tag: '游戏音乐',
+		pattern: /游戏|game|ost|原声|soundtrack/i,
+	},
+	{
+		category: 'mood',
+		tag: '治愈',
+		pattern: /治愈|疗愈|healing|放松|舒缓|安心/i,
+	},
+	{ category: 'mood', tag: '温柔', pattern: /温柔|柔和|轻柔|soft|gentle/i },
+	{ category: 'mood', tag: '安静', pattern: /安静|静谧|宁静|quiet|calm/i },
+	{ category: 'mood', tag: '燃', pattern: /燃|热血|高燃|战斗|battle|激昂/i },
+	{
+		category: 'mood',
+		tag: '高能',
+		pattern: /高能|炸裂|爆裂|狂气|hardcore|high energy/i,
+	},
+	{ category: 'mood', tag: '悲伤', pattern: /悲伤|伤感|失恋|泪|sad|cry/i },
+	{ category: 'mood', tag: '致郁', pattern: /致郁|压抑|抑郁|黑暗|dark/i },
+	{ category: 'mood', tag: '甜', pattern: /甜|甜蜜|恋爱|love|可爱|萌/i },
+	{
+		category: 'mood',
+		tag: '梦幻',
+		pattern: /梦幻|空灵|幻想|fantasy|ethereal/i,
+	},
+	{ category: 'mood', tag: '怀旧', pattern: /怀旧|复古|retro|nostalgic/i },
+	{ category: 'mood', tag: '史诗', pattern: /史诗|epic|恢弘|宏大/i },
+	{
+		category: 'scene',
+		tag: '夜晚',
+		pattern: /夜|夜晚|深夜|午夜|晚安|moon|night/i,
+	},
+	{ category: 'scene', tag: '睡前', pattern: /睡前|助眠|催眠|入眠|sleep|眠/i },
+	{ category: 'scene', tag: '学习', pattern: /学习|自习|专注|study|focus/i },
+	{
+		category: 'scene',
+		tag: '工作',
+		pattern: /工作|办公|效率|work|coding|编程/i,
+	},
+	{ category: 'scene', tag: '通勤', pattern: /通勤|地铁|公交|路上|commute/i },
+	{
+		category: 'scene',
+		tag: '运动',
+		pattern: /运动|健身|跑步|workout|running/i,
+	},
+	{ category: 'scene', tag: '驾驶', pattern: /驾驶|开车|车载|drive|driving/i },
+	{ category: 'scene', tag: '雨天', pattern: /雨|雨天|rain/i },
+	{ category: 'scene', tag: '派对', pattern: /派对|party|club|蹦迪/i },
+	{
+		category: 'timePreference',
+		tag: '经典老歌',
+		pattern: /经典|老歌|回忆|怀旧|80s|90s|00s|昭和|平成/i,
+	},
+	{
+		category: 'timePreference',
+		tag: '新歌',
+		pattern: /新歌|新曲|新作|202[3-9]|20[3-9]\d/i,
+	},
+]
+
+function addLocalTag(
+	tags: TrackLlmTags,
+	category: TrackLlmTagCategory,
+	tag: string,
+) {
+	const values = tags[category]
+	if (!values.includes(tag)) values.push(tag)
+}
+
 function getLocalTitleTags(track: Track): TrackLlmTags {
 	const text = `${track.title} ${track.artist?.name ?? ''}`.toLowerCase()
 	const tags = createEmptyTags()
 
-	if (/中v|中文vocaloid|洛天依|乐正绫|言和|星尘|心华/.test(text)) {
-		tags.language.push('中文')
-		tags.vocalType.push('中V')
+	for (const rule of LOCAL_TITLE_TAG_RULES) {
+		if (rule.pattern.test(text)) {
+			addLocalTag(tags, rule.category, rule.tag)
+		}
 	}
-	if (/vocaloid|初音|miku|镜音|巡音|gumi/.test(text)) {
-		tags.vocalType.push('Vocaloid')
-	}
-	if (/日v|日语|jpop|jp|初音|miku/.test(text)) {
-		tags.language.push('日文')
-	}
-	if (/古风|国风/.test(text)) tags.genre.push('古风')
-	if (/电音|电子|edm|remix/.test(text)) tags.genre.push('电子')
-	if (/摇滚|rock/.test(text)) tags.genre.push('摇滚')
-	if (/治愈|安静|温柔|轻/.test(text)) tags.mood.push('治愈')
-	if (/燃|热血|快|high/.test(text)) tags.mood.push('燃')
-	if (/夜|晚安|睡/.test(text)) tags.scene.push('夜晚')
 
 	return tags
 }
