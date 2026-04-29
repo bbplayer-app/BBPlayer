@@ -18,6 +18,7 @@ import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import { artistService } from '@/lib/services/artistService'
 import generateUniqueTrackKey from '@/lib/services/genKey'
+import { llmSmartShuffleDatasetService } from '@/lib/services/llmSmartShuffleDatasetService'
 import { llmSmartShuffleService } from '@/lib/services/llmSmartShuffleService'
 import type { PlaylistService } from '@/lib/services/playlistService'
 import { playlistService } from '@/lib/services/playlistService'
@@ -41,6 +42,7 @@ export interface FavoriteSyncProgress {
 		| 'fetching_details'
 		| 'saving'
 		| 'indexing'
+		| 'creating_dataset'
 		| 'completed'
 		| 'error'
 }
@@ -165,94 +167,100 @@ export class SyncBilibiliPlaylistFacade {
 					return ResultAsync.fromPromise(
 						(async () => {
 							const playlistId = await this.db.transaction(async (tx) => {
-							const playlistSvc = this.playlistService.withDB(tx)
-							const trackSvc = this.trackService.withDB(tx)
-							const artistSvc = this.artistService.withDB(tx)
+								const playlistSvc = this.playlistService.withDB(tx)
+								const trackSvc = this.trackService.withDB(tx)
+								const artistSvc = this.artistService.withDB(tx)
 
-							const playlistArtistId = await artistSvc.findOrCreateArtist({
-								name: contents.info.upper.name,
-								source: 'bilibili',
-								remoteId: String(contents.info.upper.mid),
-							})
-							if (playlistArtistId.isErr()) throw playlistArtistId.error
+								const playlistArtistId = await artistSvc.findOrCreateArtist({
+									name: contents.info.upper.name,
+									source: 'bilibili',
+									remoteId: String(contents.info.upper.mid),
+								})
+								if (playlistArtistId.isErr()) throw playlistArtistId.error
 
-							const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
-								title: contents.info.title,
-								description: contents.info.intro,
-								coverUrl: contents.info.cover,
-								type: 'collection',
-								remoteSyncId: collectionId,
-								authorId: playlistArtistId.value.id,
-							})
-							if (playlistRes.isErr()) throw playlistRes.error
-							logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-								id: playlistRes.value.id,
-							})
-
-							const uniqueArtists = new Map<number, { name: string }>()
-							for (const media of medias) {
-								if (!uniqueArtists.has(media.upper.mid)) {
-									uniqueArtists.set(media.upper.mid, {
-										name: media.upper.name,
+								const playlistRes =
+									await playlistSvc.findOrCreateRemotePlaylist({
+										title: contents.info.title,
+										description: contents.info.intro,
+										coverUrl: contents.info.cover,
+										type: 'collection',
+										remoteSyncId: collectionId,
+										authorId: playlistArtistId.value.id,
 									})
-								}
-							}
-
-							const artistRes = await artistSvc.findOrCreateManyRemoteArtists(
-								Array.from(uniqueArtists, ([remoteId, artistInfo]) => ({
-									name: artistInfo.name,
-									source: 'bilibili',
-									remoteId: String(remoteId),
-									avatarUrl: undefined,
-								})),
-							)
-							if (artistRes.isErr()) throw artistRes.error
-							const localArtistIdMap = artistRes.value
-							logger.debug('step 3: 创建 artist 完成', {
-								uniqueCount: uniqueArtists.size,
-							})
-
-							const tracksCreateResult = await trackSvc.findOrCreateManyTracks(
-								medias.map((v) => ({
-									title: v.title,
-									source: 'bilibili',
-									bilibiliMetadata: {
-										bvid: v.bvid,
-										isMultiPage: false,
-										cid: undefined,
-										videoIsValid: true,
+								if (playlistRes.isErr()) throw playlistRes.error
+								logger.debug(
+									'step 2: 创建 playlist 和其对应的 artist 信息完成',
+									{
+										id: playlistRes.value.id,
 									},
-									coverUrl: v.cover,
-									duration: v.duration,
-									artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
-								})),
-								'bilibili',
-							)
-							if (tracksCreateResult.isErr()) throw tracksCreateResult.error
-							const trackIds = Array.from(tracksCreateResult.value.values())
-							logger.debug('step 4: 创建 tracks 完成', {
-								total: trackIds.length,
-							})
+								)
 
-							// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
-							const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-								playlistRes.value.id,
-								trackIds,
-							)
-							if (replaceResult.isErr()) {
-								throw replaceResult.error
-							}
-							logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
-							logger.info('同步合集完成', {
-								remoteId: contents.info.id,
-								playlistId: playlistRes.value.id,
-							})
-							void analyticsService.logPlaylistSync(
-								'sync_bilibili',
-								'collection',
-								trackIds.length,
-							)
-							return playlistRes.value.id
+								const uniqueArtists = new Map<number, { name: string }>()
+								for (const media of medias) {
+									if (!uniqueArtists.has(media.upper.mid)) {
+										uniqueArtists.set(media.upper.mid, {
+											name: media.upper.name,
+										})
+									}
+								}
+
+								const artistRes = await artistSvc.findOrCreateManyRemoteArtists(
+									Array.from(uniqueArtists, ([remoteId, artistInfo]) => ({
+										name: artistInfo.name,
+										source: 'bilibili',
+										remoteId: String(remoteId),
+										avatarUrl: undefined,
+									})),
+								)
+								if (artistRes.isErr()) throw artistRes.error
+								const localArtistIdMap = artistRes.value
+								logger.debug('step 3: 创建 artist 完成', {
+									uniqueCount: uniqueArtists.size,
+								})
+
+								const tracksCreateResult =
+									await trackSvc.findOrCreateManyTracks(
+										medias.map((v) => ({
+											title: v.title,
+											source: 'bilibili',
+											bilibiliMetadata: {
+												bvid: v.bvid,
+												isMultiPage: false,
+												cid: undefined,
+												videoIsValid: true,
+											},
+											coverUrl: v.cover,
+											duration: v.duration,
+											artistId: localArtistIdMap.get(String(v.upper.mid))?.id,
+										})),
+										'bilibili',
+									)
+								if (tracksCreateResult.isErr()) throw tracksCreateResult.error
+								const trackIds = Array.from(tracksCreateResult.value.values())
+								logger.debug('step 4: 创建 tracks 完成', {
+									total: trackIds.length,
+								})
+
+								// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
+								const replaceResult =
+									await playlistSvc.replacePlaylistAllTracks(
+										playlistRes.value.id,
+										trackIds,
+									)
+								if (replaceResult.isErr()) {
+									throw replaceResult.error
+								}
+								logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
+								logger.info('同步合集完成', {
+									remoteId: contents.info.id,
+									playlistId: playlistRes.value.id,
+								})
+								void analyticsService.logPlaylistSync(
+									'sync_bilibili',
+									'collection',
+									trackIds.length,
+								)
+								return playlistRes.value.id
 							})
 							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
 								sourceType: 'collection',
@@ -303,75 +311,80 @@ export class SyncBilibiliPlaylistFacade {
 					return ResultAsync.fromPromise(
 						(async () => {
 							const playlistId = await this.db.transaction(async () => {
-							const playlistSvc = this.playlistService.withDB(this.db)
-							const trackSvc = this.trackService.withDB(this.db)
-							const artistSvc = this.artistService.withDB(this.db)
+								const playlistSvc = this.playlistService.withDB(this.db)
+								const trackSvc = this.trackService.withDB(this.db)
+								const artistSvc = this.artistService.withDB(this.db)
 
-							const playlistAuthor = await artistSvc.findOrCreateArtist({
-								name: data.owner.name,
-								source: 'bilibili',
-								remoteId: String(data.owner.mid),
-								avatarUrl: data.owner.face,
-							})
-							if (playlistAuthor.isErr()) throw playlistAuthor.error
-
-							const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
-								title: data.title,
-								description: data.desc,
-								coverUrl: data.pic,
-								type: 'multi_page',
-								remoteSyncId: bv2av(bvid),
-								authorId: playlistAuthor.value.id,
-							})
-							if (playlistRes.isErr()) throw playlistRes.error
-							logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
-								id: playlistRes.value.id,
-							})
-
-							const trackCreateResult = await trackSvc.findOrCreateManyTracks(
-								data.pages.map((page) => ({
-									title: page.part,
+								const playlistAuthor = await artistSvc.findOrCreateArtist({
+									name: data.owner.name,
 									source: 'bilibili',
-									bilibiliMetadata: {
-										bvid: bvid,
-										isMultiPage: true,
-										cid: page.cid,
-										videoIsValid: true,
-										mainTrackTitle: data.title,
+									remoteId: String(data.owner.mid),
+									avatarUrl: data.owner.face,
+								})
+								if (playlistAuthor.isErr()) throw playlistAuthor.error
+
+								const playlistRes =
+									await playlistSvc.findOrCreateRemotePlaylist({
+										title: data.title,
+										description: data.desc,
+										coverUrl: data.pic,
+										type: 'multi_page',
+										remoteSyncId: bv2av(bvid),
+										authorId: playlistAuthor.value.id,
+									})
+								if (playlistRes.isErr()) throw playlistRes.error
+								logger.debug(
+									'step 2: 创建 playlist 和其对应的 artist 信息完成',
+									{
+										id: playlistRes.value.id,
 									},
-									coverUrl: data.pic,
-									duration: page.duration,
-									artistId: playlistAuthor.value.id,
-								})),
-								'bilibili',
-							)
-							if (trackCreateResult.isErr()) throw trackCreateResult.error
-							const trackIds = Array.from(trackCreateResult.value.values())
-							logger.debug('step 3: 创建 tracks 完成', {
-								total: trackIds.length,
-							})
+								)
 
-							// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
-							const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-								playlistRes.value.id,
-								trackIds,
-							)
-							if (replaceResult.isErr()) {
-								throw replaceResult.error
-							}
-							logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
-							logger.info('同步合集完成', {
-								remoteId: bv2av(bvid),
-								playlistId: playlistRes.value.id,
-							})
+								const trackCreateResult = await trackSvc.findOrCreateManyTracks(
+									data.pages.map((page) => ({
+										title: page.part,
+										source: 'bilibili',
+										bilibiliMetadata: {
+											bvid: bvid,
+											isMultiPage: true,
+											cid: page.cid,
+											videoIsValid: true,
+											mainTrackTitle: data.title,
+										},
+										coverUrl: data.pic,
+										duration: page.duration,
+										artistId: playlistAuthor.value.id,
+									})),
+									'bilibili',
+								)
+								if (trackCreateResult.isErr()) throw trackCreateResult.error
+								const trackIds = Array.from(trackCreateResult.value.values())
+								logger.debug('step 3: 创建 tracks 完成', {
+									total: trackIds.length,
+								})
 
-							void analyticsService.logPlaylistSync(
-								'sync_bilibili',
-								'multi_page',
-								trackIds.length,
-							)
+								// 我们不需要去更新 lastSyncedAt 字段，因为在 replacePlaylistAllTracks 中会更新
+								const replaceResult =
+									await playlistSvc.replacePlaylistAllTracks(
+										playlistRes.value.id,
+										trackIds,
+									)
+								if (replaceResult.isErr()) {
+									throw replaceResult.error
+								}
+								logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
+								logger.info('同步合集完成', {
+									remoteId: bv2av(bvid),
+									playlistId: playlistRes.value.id,
+								})
 
-							return playlistRes.value.id
+								void analyticsService.logPlaylistSync(
+									'sync_bilibili',
+									'multi_page',
+									trackIds.length,
+								)
+
+								return playlistRes.value.id
 							})
 							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
 								sourceType: 'multi_page',
@@ -506,6 +519,25 @@ export class SyncBilibiliPlaylistFacade {
 			})
 			if (bvidsToAddSet.size === 0 && bvidsToRemoveSet.size === 0) {
 				logger.info('收藏夹为空或与上次相比无变化，无需同步')
+				if (localPlaylist.value?.id) {
+					onProgress?.({
+						message: '正在创建 LLM 排序 JSON...',
+						stage: 'creating_dataset',
+					})
+					try {
+						await llmSmartShuffleDatasetService.writePlaylistDatasetFiles(
+							localPlaylist.value.id,
+							{
+								type: 'favorite',
+								sourceId: favoriteId,
+								title: bilibiliFavoriteListMetadata.info.title,
+								count: bilibiliFavoriteListMetadata.info.media_count,
+							},
+						)
+					} catch (error) {
+						logger.warning('创建 LLM 排序 JSON 失败', { error })
+					}
+				}
 				return ok(localPlaylist.value?.id)
 			}
 
@@ -778,6 +810,23 @@ export class SyncBilibiliPlaylistFacade {
 				sourceId: String(favoriteId),
 				sourceSyncedAt: new Date(),
 			})
+			onProgress?.({
+				message: '正在创建 LLM 排序 JSON...',
+				stage: 'creating_dataset',
+			})
+			try {
+				await llmSmartShuffleDatasetService.writePlaylistDatasetFiles(
+					txResult.value,
+					{
+						type: 'favorite',
+						sourceId: favoriteId,
+						title: bilibiliFavoriteListMetadata.info.title,
+						count: bilibiliFavoriteListMetadata.info.media_count,
+					},
+				)
+			} catch (error) {
+				logger.warning('创建 LLM 排序 JSON 失败', { error })
+			}
 			return ok(txResult.value)
 		} finally {
 			this.syncingIds.delete(`favorite::${favoriteId}`)

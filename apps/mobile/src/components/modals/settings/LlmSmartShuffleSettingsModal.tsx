@@ -88,7 +88,8 @@ export default function LlmSmartShuffleSettingsModal() {
 								variant='bodySmall'
 								style={styles.description}
 							>
-								同步收藏夹后读取标题和基础元数据，生成本地标签索引。
+								同步收藏夹后读取标题和基础元数据，生成本地标签索引，并用于 LLM
+								排序。
 							</Text>
 						</View>
 						<Switch

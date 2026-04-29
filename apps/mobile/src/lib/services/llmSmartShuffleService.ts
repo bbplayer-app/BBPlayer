@@ -4,6 +4,15 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { llmCredentialService } from '@/lib/services/llmCredentialService'
+import {
+	LLM_PREFERENCE_SYSTEM_PROMPT,
+	LLM_QUEUE_SORT_SYSTEM_PROMPT,
+	LLM_TAG_INDEX_SYSTEM_PROMPT,
+	buildPreferencePrompt,
+	buildSmartQueueSortPrompt,
+	buildTrackTagIndexPrompt,
+} from '@/lib/services/llmSmartShufflePrompts'
+import type { TrackSortPromptItem } from '@/lib/services/llmSmartShufflePrompts'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -16,6 +25,9 @@ import type {
 import log from '@/utils/log'
 
 const logger = log.extend('Service.LlmSmartShuffle')
+
+const MAX_LLM_SORT_TRACKS_PER_PAYLOAD = 200
+const MAX_LLM_SORT_PAYLOAD_BYTES = 200 * 1024
 
 const EMPTY_TAGS: TrackLlmTags = {
 	language: [],
@@ -52,6 +64,13 @@ interface OpenAIChatCompletionResponse {
 			content?: string
 		}
 	}[]
+}
+
+interface TrackLlmTagRow {
+	trackId: number
+	tags: TrackLlmTags
+	confidence: number
+	reason: string | null
 }
 
 function normalizeBaseUrl(baseUrl: string) {
@@ -167,6 +186,60 @@ function stableShuffle<T>(items: T[]) {
 	return array
 }
 
+function asNumberArray(value: unknown): number[] {
+	if (!Array.isArray(value)) return []
+	return value
+		.map((item) => Number(item))
+		.filter((item) => Number.isInteger(item))
+}
+
+function extractOrderedTrackIds(response: {
+	orderedTrackIds?: unknown
+	trackIds?: unknown
+	tracks?: unknown
+}) {
+	const direct = asNumberArray(response.orderedTrackIds)
+	if (direct.length > 0) return direct
+
+	const trackIds = asNumberArray(response.trackIds)
+	if (trackIds.length > 0) return trackIds
+
+	if (!Array.isArray(response.tracks)) return []
+	return response.tracks
+		.map((item) => {
+			if (typeof item === 'number' || typeof item === 'string')
+				return Number(item)
+			if (!item || typeof item !== 'object') return NaN
+			return Number((item as Record<string, unknown>).trackId)
+		})
+		.filter((item) => Number.isInteger(item))
+}
+
+function getTrackTags(
+	track: Track,
+	tagsByTrackId: Map<number, TrackLlmTagRow>,
+) {
+	return tagsByTrackId.get(track.id)?.tags ?? getLocalTitleTags(track)
+}
+
+function utf8ByteLength(value: string) {
+	let length = 0
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i)
+		if (code < 0x80) {
+			length += 1
+		} else if (code < 0x800) {
+			length += 2
+		} else if (code >= 0xd800 && code <= 0xdbff) {
+			length += 4
+			i += 1
+		} else {
+			length += 3
+		}
+	}
+	return length
+}
+
 export class LlmSmartShuffleService {
 	private isConfigured() {
 		const settings = useAppStore.getState().settings
@@ -227,37 +300,8 @@ export class LlmSmartShuffleService {
 		const settings = useAppStore.getState().settings
 
 		const response = await this.callJson<{ tracks?: unknown[] }>(
-			'你是 BBPlayer 的本地曲库标签索引器。只返回 JSON。不要返回自然语言说明。',
-			JSON.stringify({
-				task: '根据 Bilibili 音频标题和基础元数据生成结构化听歌标签。',
-				outputSchema: {
-					tracks: [
-						{
-							trackId: 'number',
-							tags: EMPTY_TAGS,
-							confidence: '0 到 1',
-							reason: '简短中文原因',
-						},
-					],
-				},
-				rules: [
-					'不要臆造敏感信息。',
-					'优先识别语种、Vocaloid/中V/日V、风格、情绪、场景。',
-					'无法判断的字段返回空数组。',
-				],
-				tracks: contexts.map(
-					({ track, sourceType, sourceId, sourceSyncedAt }) => ({
-						trackId: track.id,
-						title: track.title,
-						artist: track.artist?.name,
-						source: track.source,
-						sourceType,
-						sourceId,
-						sourceSyncedAt: sourceSyncedAt?.toISOString(),
-						firstSeenAt: track.createdAt.toISOString(),
-					}),
-				),
-			}),
+			LLM_TAG_INDEX_SYSTEM_PROMPT,
+			buildTrackTagIndexPrompt(contexts, EMPTY_TAGS),
 		)
 
 		const indexes = (response.tracks ?? [])
@@ -350,12 +394,8 @@ export class LlmSmartShuffleService {
 
 		try {
 			const response = await this.callJson<Partial<SmartShufflePreference>>(
-				'你是 BBPlayer 的听歌取向解析器。只返回 JSON，不要解释。',
-				JSON.stringify({
-					task: '把用户的自然语言听歌取向转换成结构化偏好。',
-					userPreference: trimmed,
-					outputSchema: DEFAULT_PREFERENCE,
-				}),
+				LLM_PREFERENCE_SYSTEM_PROMPT,
+				buildPreferencePrompt(trimmed, DEFAULT_PREFERENCE),
 			)
 			return {
 				preferredTags: asStringArray(response.preferredTags),
@@ -396,8 +436,210 @@ export class LlmSmartShuffleService {
 				tracks.map((track) => track.id),
 			),
 		})
-		const tagsByTrackId = new Map(tagRows.map((row) => [row.trackId, row]))
+		const tagsByTrackId = new Map<number, TrackLlmTagRow>(
+			tagRows.map((row) => [row.trackId, row]),
+		)
 
+		const llmSortedQueue = await this.createLlmSortedQueue(
+			tracks,
+			prompt,
+			preference,
+			tagsByTrackId,
+		)
+		if (llmSortedQueue) return llmSortedQueue
+
+		return this.createLocalScoredQueue(tracks, preference, tagsByTrackId)
+	}
+
+	private async createLlmSortedQueue(
+		tracks: Track[],
+		prompt: string,
+		preference: SmartShufflePreference,
+		tagsByTrackId: Map<number, TrackLlmTagRow>,
+	) {
+		if (!this.isConfigured()) return null
+
+		try {
+			const fallbackOrder = this.createLocalScoredQueue(
+				tracks,
+				preference,
+				tagsByTrackId,
+			)
+			const items = tracks.map((track) =>
+				this.createSortPromptItem(track, tagsByTrackId),
+			)
+			const chunks = this.createSortPayloadChunks(prompt, preference, items)
+			const chunkOrders = await Promise.all(
+				chunks.map(async (chunk, index) => {
+					const response = await this.callJson<{
+						orderedTrackIds?: unknown
+						trackIds?: unknown
+						tracks?: unknown
+					}>(
+						LLM_QUEUE_SORT_SYSTEM_PROMPT,
+						buildSmartQueueSortPrompt({
+							userPreference: prompt,
+							preference,
+							items: chunk,
+							chunkIndex: index + 1,
+							chunkCount: chunks.length,
+						}),
+					)
+					const chunkTrackIds = new Set(chunk.map((item) => item.track.id))
+					const chunkFallback = fallbackOrder.filter((track) =>
+						chunkTrackIds.has(track.id),
+					)
+					return this.mergeLlmOrderWithFallback(
+						chunk.map((item) => item.track),
+						extractOrderedTrackIds(response),
+						chunkFallback,
+					)
+				}),
+			)
+
+			if (chunkOrders.some((chunk) => chunk === null)) return null
+
+			const orderedTrackIds =
+				chunkOrders.length === 1
+					? (chunkOrders[0]?.map((track) => track.id) ?? [])
+					: this.mergeChunkOrders(
+							chunkOrders.filter((chunk): chunk is Track[] => chunk !== null),
+							fallbackOrder,
+						).map((track) => track.id)
+
+			return this.mergeLlmOrderWithFallback(
+				tracks,
+				orderedTrackIds,
+				fallbackOrder,
+			)
+		} catch (error) {
+			logger.warning('LLM 直接排序失败，使用本地标签打分', { error })
+			return null
+		}
+	}
+
+	private createSortPromptItem(
+		track: Track,
+		tagsByTrackId: Map<number, TrackLlmTagRow>,
+	): TrackSortPromptItem {
+		const row = tagsByTrackId.get(track.id)
+		return {
+			track,
+			tags: getTrackTags(track, tagsByTrackId),
+			confidence: row?.confidence,
+			reason: row?.reason,
+		}
+	}
+
+	private createSortPayloadChunks(
+		prompt: string,
+		preference: SmartShufflePreference,
+		items: TrackSortPromptItem[],
+	) {
+		const chunks: TrackSortPromptItem[][] = []
+		let current: TrackSortPromptItem[] = []
+
+		for (const item of items) {
+			const candidate = [...current, item]
+			const payloadBytes = utf8ByteLength(
+				buildSmartQueueSortPrompt({
+					userPreference: prompt,
+					preference,
+					items: candidate,
+				}),
+			)
+			const shouldSplit =
+				candidate.length > MAX_LLM_SORT_TRACKS_PER_PAYLOAD ||
+				payloadBytes > MAX_LLM_SORT_PAYLOAD_BYTES
+
+			if (shouldSplit && current.length > 0) {
+				chunks.push(current)
+				current = [item]
+				continue
+			}
+
+			current = candidate
+		}
+
+		if (current.length > 0) chunks.push(current)
+		if (chunks.length > 1) {
+			logger.info('LLM 排序 payload 已按上下文限制分片', {
+				chunkCount: chunks.length,
+				totalTracks: items.length,
+			})
+		}
+		return chunks
+	}
+
+	private mergeChunkOrders(chunkOrders: Track[][], fallbackOrder: Track[]) {
+		const fallbackRank = new Map(
+			fallbackOrder.map((track, index) => [track.id, index]),
+		)
+		const queues = [...chunkOrders].sort((left, right) => {
+			const leftRank =
+				fallbackRank.get(left[0]?.id ?? -1) ?? Number.MAX_SAFE_INTEGER
+			const rightRank =
+				fallbackRank.get(right[0]?.id ?? -1) ?? Number.MAX_SAFE_INTEGER
+			return leftRank - rightRank
+		})
+		const merged: Track[] = []
+		let hasRemaining = true
+
+		while (hasRemaining) {
+			hasRemaining = false
+			queues.sort((left, right) => {
+				const leftRank =
+					fallbackRank.get(left[0]?.id ?? -1) ?? Number.MAX_SAFE_INTEGER
+				const rightRank =
+					fallbackRank.get(right[0]?.id ?? -1) ?? Number.MAX_SAFE_INTEGER
+				return leftRank - rightRank
+			})
+
+			for (const queue of queues) {
+				const next = queue.shift()
+				if (!next) continue
+				merged.push(next)
+				hasRemaining = true
+			}
+		}
+
+		return merged
+	}
+
+	private mergeLlmOrderWithFallback(
+		tracks: Track[],
+		orderedTrackIds: number[],
+		fallbackOrder: Track[],
+	) {
+		if (orderedTrackIds.length === 0) {
+			return fallbackOrder.length > 0 ? fallbackOrder : null
+		}
+
+		const tracksById = new Map(tracks.map((track) => [track.id, track]))
+		const seen = new Set<number>()
+		const sorted: Track[] = []
+
+		for (const trackId of orderedTrackIds) {
+			const track = tracksById.get(trackId)
+			if (!track || seen.has(trackId)) continue
+			seen.add(trackId)
+			sorted.push(track)
+		}
+
+		for (const track of fallbackOrder) {
+			if (seen.has(track.id)) continue
+			seen.add(track.id)
+			sorted.push(track)
+		}
+
+		return sorted.length > 0 ? sorted : null
+	}
+
+	private createLocalScoredQueue(
+		tracks: Track[],
+		preference: SmartShufflePreference,
+		tagsByTrackId: Map<number, TrackLlmTagRow>,
+	): Track[] {
 		const now = Date.now()
 		const preferredTags = preference.preferredTags.map((tag) =>
 			tag.toLowerCase(),
@@ -407,7 +649,7 @@ export class LlmSmartShuffleService {
 		return stableShuffle(tracks)
 			.map((track) => {
 				const row = tagsByTrackId.get(track.id)
-				const tags = row?.tags ?? getLocalTitleTags(track)
+				const tags = getTrackTags(track, tagsByTrackId)
 				const trackTags = allTags(tags)
 				let score = 1
 

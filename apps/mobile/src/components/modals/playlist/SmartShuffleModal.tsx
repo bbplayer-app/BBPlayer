@@ -39,7 +39,11 @@ export default function SmartShuffleModal({
 		try {
 			const tracksResult = await playlistService.getPlaylistTracks(playlistId)
 			if (tracksResult.isErr()) {
-				toastAndLogError('获取播放列表内容失败', tracksResult.error, 'SmartShuffle')
+				toastAndLogError(
+					'获取播放列表内容失败',
+					tracksResult.error,
+					'SmartShuffle',
+				)
 				setIsLoading(false)
 				return
 			}
@@ -63,7 +67,7 @@ export default function SmartShuffleModal({
 				clearQueue: true,
 				playNext: false,
 			})
-			toast.success('已按取向生成智能随机队列')
+			toast.success('已按取向生成智能排序队列')
 			close('SmartShuffle')
 		} catch (error) {
 			toastAndLogError('智能随机播放失败', error, 'SmartShuffle')
@@ -79,7 +83,8 @@ export default function SmartShuffleModal({
 					variant='bodySmall'
 					style={styles.description}
 				>
-					描述这次想听什么，或直接点一个快捷取向。系统会根据本地标签索引生成播放队列。
+					描述这次想听什么，或直接点一个快捷取向。系统会让 LLM
+					基于整份歌单生成播放队列，失败时回退到本地标签排序。
 				</Text>
 				<TextInput
 					label='这次想听什么？'

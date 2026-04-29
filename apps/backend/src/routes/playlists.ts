@@ -22,6 +22,7 @@ import {
 	sharedTracks,
 	users,
 } from '../db/schema'
+import type { Env } from '../env'
 import { authMiddleware } from '../middleware/auth'
 import type { ChangeEvent, JwtTokenPayload, TrackInput } from '../types'
 import {
