@@ -49,7 +49,9 @@ export default function SmartShuffleModal({
 			}
 
 			const tracks = tracksResult.value.filter((item) =>
-				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+				item.source === 'bilibili'
+					? (item.bilibiliMetadata?.videoIsValid ?? false)
+					: true,
 			)
 			if (tracks.length === 0) {
 				toast.show('没有可播放的歌曲')
@@ -57,12 +59,25 @@ export default function SmartShuffleModal({
 				return
 			}
 
-			const smartQueue = await llmSmartShuffleService.createSmartQueue(tracks, {
-				prompt,
-				defaultPreference,
-			})
+			const smartQueueResult = await llmSmartShuffleService.createSmartQueue(
+				tracks,
+				{
+					prompt,
+					defaultPreference,
+				},
+			)
+			if (smartQueueResult.isErr()) {
+				toastAndLogError(
+					'智能随机播放失败',
+					smartQueueResult.error,
+					'SmartShuffle',
+				)
+				setIsLoading(false)
+				return
+			}
+
 			await addToQueue({
-				tracks: smartQueue,
+				tracks: smartQueueResult.value,
 				playNow: true,
 				clearQueue: true,
 				playNext: false,

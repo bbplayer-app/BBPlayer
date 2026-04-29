@@ -1,4 +1,12 @@
 import { inArray, sql } from 'drizzle-orm'
+import {
+	err,
+	errAsync,
+	ok,
+	okAsync,
+	ResultAsync,
+	type Result,
+} from 'neverthrow'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import db from '@/lib/db/db'
@@ -28,6 +36,7 @@ const logger = log.extend('Service.LlmSmartShuffle')
 
 const MAX_LLM_SORT_TRACKS_PER_PAYLOAD = 200
 const MAX_LLM_SORT_PAYLOAD_BYTES = 200 * 1024
+const DEFAULT_LLM_REQUEST_TIMEOUT_MS = 30_000
 
 const EMPTY_TAGS: TrackLlmTags = {
 	language: [],
@@ -98,13 +107,43 @@ function normalizeTags(value: unknown): TrackLlmTags {
 	}
 }
 
-function parseJsonObject<T>(content: string): T {
+function toError(error: unknown): Error {
+	return error instanceof Error ? error : new Error(String(error))
+}
+
+function getLlmRequestTimeoutMs() {
+	const configuredTimeout = Number(
+		process.env.EXPO_PUBLIC_LLM_REQUEST_TIMEOUT_MS,
+	)
+	return Number.isFinite(configuredTimeout) && configuredTimeout > 0
+		? configuredTimeout
+		: DEFAULT_LLM_REQUEST_TIMEOUT_MS
+}
+
+function toLlmRequestError(error: unknown, timeoutMs: number): Error {
+	const requestError = toError(error)
+	if (requestError.name === 'AbortError') {
+		return new Error(`LLM API 请求超时：${timeoutMs}ms`)
+	}
+	return requestError
+}
+
+function parseJsonObject<T>(content: string): Result<T, Error> {
 	try {
-		return JSON.parse(content) as T
+		return ok(JSON.parse(content) as T)
 	} catch {
 		const match = content.match(/\{[\s\S]*\}/)
-		if (!match) throw new Error('LLM 没有返回 JSON 对象')
-		return JSON.parse(match[0]) as T
+		if (!match) return err(new Error('LLM 没有返回 JSON 对象'))
+
+		try {
+			return ok(JSON.parse(match[0]) as T)
+		} catch (fallbackError) {
+			return err(
+				new Error(
+					`LLM 返回的 JSON 对象无效：${toError(fallbackError).message}`,
+				),
+			)
+		}
 	}
 }
 
@@ -251,153 +290,192 @@ export class LlmSmartShuffleService {
 		)
 	}
 
-	private async callJson<T>(system: string, user: string): Promise<T> {
+	private callJson<T>(system: string, user: string): ResultAsync<T, Error> {
 		const settings = useAppStore.getState().settings
 		const url = `${normalizeBaseUrl(settings.llmBaseUrl)}/chat/completions`
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		await llmCredentialService.migrateFromPlainSettings()
-		const apiKey = await llmCredentialService.getApiKey()
-		if (apiKey) {
-			headers.Authorization = `Bearer ${apiKey}`
-		}
+		const timeoutMs = getLlmRequestTimeoutMs()
 
-		const response = await fetch(url, {
-			method: 'POST',
-			headers,
-			body: JSON.stringify({
-				model: settings.llmModel.trim(),
-				temperature: 0.1,
-				response_format: { type: 'json_object' },
-				messages: [
-					{ role: 'system', content: system },
-					{ role: 'user', content: user },
-				],
-			}),
-		})
+		return ResultAsync.fromPromise(
+			(async () => {
+				await llmCredentialService.migrateFromPlainSettings()
+				const apiKey = await llmCredentialService.getApiKey()
+				if (apiKey) {
+					headers.Authorization = `Bearer ${apiKey}`
+				}
 
-		if (!response.ok) {
-			throw new Error(`LLM API 请求失败：${response.status}`)
-		}
-
-		const data = (await response.json()) as OpenAIChatCompletionResponse
-		const content = data.choices?.[0]?.message?.content
-		if (!content) {
-			throw new Error('LLM API 没有返回内容')
-		}
-		return parseJsonObject<T>(content)
+				const controller = new AbortController()
+				const timeout = setTimeout(() => controller.abort(), timeoutMs)
+				try {
+					return await fetch(url, {
+						method: 'POST',
+						headers,
+						signal: controller.signal,
+						body: JSON.stringify({
+							model: settings.llmModel.trim(),
+							temperature: 0.1,
+							response_format: { type: 'json_object' },
+							messages: [
+								{ role: 'system', content: system },
+								{ role: 'user', content: user },
+							],
+						}),
+					})
+				} finally {
+					clearTimeout(timeout)
+				}
+			})(),
+			(error) => toLlmRequestError(error, timeoutMs),
+		)
+			.andThen((response) => {
+				if (!response.ok) {
+					return errAsync(new Error(`LLM API 请求失败：${response.status}`))
+				}
+				return ResultAsync.fromPromise(
+					response.json() as Promise<OpenAIChatCompletionResponse>,
+					toError,
+				)
+			})
+			.andThen((data) => {
+				const content = data.choices?.[0]?.message?.content
+				if (!content) {
+					return errAsync(new Error('LLM API 没有返回内容'))
+				}
+				const parsed = parseJsonObject<T>(content)
+				return parsed.isOk() ? okAsync(parsed.value) : errAsync(parsed.error)
+			})
 	}
 
-	async indexTracks(contexts: TrackIndexContext[]) {
-		if (!this.isConfigured() || contexts.length === 0) return
+	indexTracks(contexts: TrackIndexContext[]): ResultAsync<void, Error> {
+		if (!this.isConfigured() || contexts.length === 0) return okAsync(undefined)
+
+		let result = okAsync<void, Error>(undefined)
 		for (let i = 0; i < contexts.length; i += 25) {
-			await this.indexTrackBatch(contexts.slice(i, i + 25))
+			const batch = contexts.slice(i, i + 25)
+			result = result.andThen(() => this.indexTrackBatch(batch))
 		}
+		return result
 	}
 
-	private async indexTrackBatch(contexts: TrackIndexContext[]) {
+	private indexTrackBatch(
+		contexts: TrackIndexContext[],
+	): ResultAsync<void, Error> {
 		const settings = useAppStore.getState().settings
 
-		const response = await this.callJson<{ tracks?: unknown[] }>(
+		return this.callJson<{ tracks?: unknown[] }>(
 			LLM_TAG_INDEX_SYSTEM_PROMPT,
 			buildTrackTagIndexPrompt(contexts, EMPTY_TAGS),
 		)
+			.map((response) =>
+				(response.tracks ?? [])
+					.map((item) => {
+						if (!item || typeof item !== 'object') return null
+						const row = item as Record<string, unknown>
+						const trackId = Number(row.trackId)
+						if (!Number.isFinite(trackId)) return null
+						const index: TrackTagIndex = {
+							trackId,
+							tags: normalizeTags(row.tags),
+							confidence:
+								typeof row.confidence === 'number'
+									? Math.max(0, Math.min(1, row.confidence))
+									: 0,
+						}
+						if (typeof row.reason === 'string') index.reason = row.reason
+						return index
+					})
+					.filter((item): item is TrackTagIndex => item !== null),
+			)
+			.andThen((indexes) => {
+				if (indexes.length === 0) return okAsync(undefined)
 
-		const indexes = (response.tracks ?? [])
-			.map((item) => {
-				if (!item || typeof item !== 'object') return null
-				const row = item as Record<string, unknown>
-				const trackId = Number(row.trackId)
-				if (!Number.isFinite(trackId)) return null
-				const index: TrackTagIndex = {
-					trackId,
-					tags: normalizeTags(row.tags),
-					confidence:
-						typeof row.confidence === 'number'
-							? Math.max(0, Math.min(1, row.confidence))
-							: 0,
-				}
-				if (typeof row.reason === 'string') index.reason = row.reason
-				return index
-			})
-			.filter((item): item is TrackTagIndex => item !== null)
-
-		if (indexes.length === 0) return
-
-		const contextById = new Map(contexts.map((item) => [item.track.id, item]))
-		await db
-			.insert(schema.trackLlmTags)
-			.values(
-				indexes.map((index) => {
+				const contextById = new Map(
+					contexts.map((item) => [item.track.id, item]),
+				)
+				const values = indexes.flatMap((index) => {
 					const context = contextById.get(index.trackId)
+					if (!context) return []
+
 					return {
-						trackId: index.trackId,
+						trackId: context.track.id,
 						tags: index.tags,
 						confidence: index.confidence,
 						reason: index.reason,
 						model: settings.llmModel.trim(),
-						sourceType: context?.sourceType,
-						sourceId: context?.sourceId,
-						sourceSyncedAt: context?.sourceSyncedAt,
+						sourceType: context.sourceType,
+						sourceId: context.sourceId,
+						sourceSyncedAt: context.sourceSyncedAt,
 						indexedAt: new Date(),
 					}
-				}),
-			)
-			.onConflictDoUpdate({
-				target: schema.trackLlmTags.trackId,
-				set: {
-					tags: sql`excluded.tags`,
-					confidence: sql`excluded.confidence`,
-					reason: sql`excluded.reason`,
-					model: sql`excluded.model`,
-					sourceType: sql`excluded.source_type`,
-					sourceId: sql`excluded.source_id`,
-					sourceSyncedAt: sql`excluded.source_synced_at`,
-					indexedAt: new Date(),
-				},
+				})
+				if (values.length === 0) return okAsync(undefined)
+
+				return ResultAsync.fromPromise(
+					db
+						.insert(schema.trackLlmTags)
+						.values(values)
+						.onConflictDoUpdate({
+							target: schema.trackLlmTags.trackId,
+							set: {
+								tags: sql`excluded.tags`,
+								confidence: sql`excluded.confidence`,
+								reason: sql`excluded.reason`,
+								model: sql`excluded.model`,
+								sourceType: sql`excluded.source_type`,
+								sourceId: sql`excluded.source_id`,
+								sourceSyncedAt: sql`excluded.source_synced_at`,
+								indexedAt: new Date(),
+							},
+						}),
+					toError,
+				).map(() => undefined)
 			})
 	}
 
-	async indexPlaylistTracks(
+	indexPlaylistTracks(
 		playlistId: number,
 		options?: {
 			sourceType?: Playlist['type']
 			sourceId?: string
 			sourceSyncedAt?: Date
 		},
-	) {
-		try {
-			const tracksResult = await playlistService.getPlaylistTracks(playlistId)
-			if (tracksResult.isErr()) {
-				logger.warning('获取歌单歌曲用于 LLM 索引失败', tracksResult.error)
-				return
-			}
-			await this.indexTracks(
-				tracksResult.value.map((track) => ({
-					track,
-					sourceType: options?.sourceType,
-					sourceId: options?.sourceId,
-					sourceSyncedAt: options?.sourceSyncedAt,
-				})),
-			)
-		} catch (error) {
-			logger.warning('LLM 标签索引失败', { error })
-		}
+	): ResultAsync<void, Error> {
+		return ResultAsync.fromPromise(
+			playlistService.getPlaylistTracks(playlistId),
+			toError,
+		)
+			.andThen((tracksResult) => {
+				if (tracksResult.isErr()) {
+					return errAsync(toError(tracksResult.error))
+				}
+				return this.indexTracks(
+					tracksResult.value.map((track) => ({
+						track,
+						sourceType: options?.sourceType,
+						sourceId: options?.sourceId,
+						sourceSyncedAt: options?.sourceSyncedAt,
+					})),
+				)
+			})
+			.mapErr((error) => {
+				logger.warning('LLM 标签索引失败', { error })
+				return error
+			})
 	}
 
-	async parsePreference(prompt: string): Promise<SmartShufflePreference> {
+	parsePreference(prompt: string): ResultAsync<SmartShufflePreference, Error> {
 		const trimmed = prompt.trim()
 		if (!trimmed || !this.isConfigured()) {
-			return parsePreferenceLocally(trimmed)
+			return okAsync(parsePreferenceLocally(trimmed))
 		}
 
-		try {
-			const response = await this.callJson<Partial<SmartShufflePreference>>(
-				LLM_PREFERENCE_SYSTEM_PROMPT,
-				buildPreferencePrompt(trimmed, DEFAULT_PREFERENCE),
-			)
-			return {
+		return this.callJson<Partial<SmartShufflePreference>>(
+			LLM_PREFERENCE_SYSTEM_PROMPT,
+			buildPreferencePrompt(trimmed, DEFAULT_PREFERENCE),
+		)
+			.map((response) => ({
 				preferredTags: asStringArray(response.preferredTags),
 				downrankTags: asStringArray(response.downrankTags),
 				timeBias:
@@ -414,64 +492,69 @@ export class LlmSmartShuffleService {
 						: 'balanced',
 				repeatAvoidance: response.repeatAvoidance ?? true,
 				temporary: response.temporary ?? true,
-			}
-		} catch (error) {
-			logger.warning('LLM 解析偏好失败，使用本地关键词规则', { error })
-			return parsePreferenceLocally(trimmed)
-		}
+			}))
+			.orElse((error) => {
+				logger.warning('LLM 解析偏好失败，使用本地关键词规则', { error })
+				return okAsync(parsePreferenceLocally(trimmed))
+			})
 	}
 
-	async createSmartQueue(
+	createSmartQueue(
 		tracks: Track[],
 		options?: SmartQueueOptions,
-	): Promise<Track[]> {
-		if (tracks.length <= 1) return tracks
+	): ResultAsync<Track[], Error> {
+		if (tracks.length <= 1) return okAsync(tracks)
 
 		const prompt =
 			options?.prompt?.trim() || options?.defaultPreference?.trim() || ''
-		const preference = await this.parsePreference(prompt)
-		const tagRows = await db.query.trackLlmTags.findMany({
-			where: inArray(
-				schema.trackLlmTags.trackId,
-				tracks.map((track) => track.id),
-			),
-		})
-		const tagsByTrackId = new Map<number, TrackLlmTagRow>(
-			tagRows.map((row) => [row.trackId, row]),
+		return this.parsePreference(prompt).andThen((preference) =>
+			ResultAsync.fromPromise(
+				db.query.trackLlmTags.findMany({
+					where: inArray(
+						schema.trackLlmTags.trackId,
+						tracks.map((track) => track.id),
+					),
+				}),
+				toError,
+			).andThen((tagRows) => {
+				const tagsByTrackId = new Map<number, TrackLlmTagRow>(
+					tagRows.map((row) => [row.trackId, row]),
+				)
+				return this.createLlmSortedQueue(
+					tracks,
+					prompt,
+					preference,
+					tagsByTrackId,
+				).map(
+					(llmSortedQueue) =>
+						llmSortedQueue ??
+						this.createLocalScoredQueue(tracks, preference, tagsByTrackId),
+				)
+			}),
 		)
-
-		const llmSortedQueue = await this.createLlmSortedQueue(
-			tracks,
-			prompt,
-			preference,
-			tagsByTrackId,
-		)
-		if (llmSortedQueue) return llmSortedQueue
-
-		return this.createLocalScoredQueue(tracks, preference, tagsByTrackId)
 	}
 
-	private async createLlmSortedQueue(
+	private createLlmSortedQueue(
 		tracks: Track[],
 		prompt: string,
 		preference: SmartShufflePreference,
 		tagsByTrackId: Map<number, TrackLlmTagRow>,
-	) {
-		if (!this.isConfigured()) return null
+	): ResultAsync<Track[] | null, Error> {
+		if (!this.isConfigured()) return okAsync(null)
 
-		try {
-			const fallbackOrder = this.createLocalScoredQueue(
-				tracks,
-				preference,
-				tagsByTrackId,
-			)
-			const items = tracks.map((track) =>
-				this.createSortPromptItem(track, tagsByTrackId),
-			)
-			const chunks = this.createSortPayloadChunks(prompt, preference, items)
-			const chunkOrders = await Promise.all(
+		const fallbackOrder = this.createLocalScoredQueue(
+			tracks,
+			preference,
+			tagsByTrackId,
+		)
+		const items = tracks.map((track) =>
+			this.createSortPromptItem(track, tagsByTrackId),
+		)
+		const chunks = this.createSortPayloadChunks(prompt, preference, items)
+		return ResultAsync.fromPromise(
+			Promise.all(
 				chunks.map(async (chunk, index) => {
-					const response = await this.callJson<{
+					const chunkOrderResult = await this.callJson<{
 						orderedTrackIds?: unknown
 						trackIds?: unknown
 						tracks?: unknown
@@ -484,20 +567,42 @@ export class LlmSmartShuffleService {
 							chunkIndex: index + 1,
 							chunkCount: chunks.length,
 						}),
-					)
-					const chunkTrackIds = new Set(chunk.map((item) => item.track.id))
-					const chunkFallback = fallbackOrder.filter((track) =>
-						chunkTrackIds.has(track.id),
-					)
-					return this.mergeLlmOrderWithFallback(
-						chunk.map((item) => item.track),
-						extractOrderedTrackIds(response),
-						chunkFallback,
-					)
+					).map((response) => {
+						const chunkTrackIds = new Set(chunk.map((item) => item.track.id))
+						const chunkFallback = fallbackOrder.filter((track) =>
+							chunkTrackIds.has(track.id),
+						)
+						return this.mergeLlmOrderWithFallback(
+							chunk.map((item) => item.track),
+							extractOrderedTrackIds(response),
+							chunkFallback,
+						)
+					})
+					if (chunkOrderResult.isErr()) {
+						logger.warning('LLM 排序分片失败', {
+							error: chunkOrderResult.error,
+							chunkIndex: index + 1,
+						})
+						return err(chunkOrderResult.error)
+					}
+					return ok(chunkOrderResult.value)
 				}),
-			)
-
-			if (chunkOrders.some((chunk) => chunk === null)) return null
+			),
+			toError,
+		).andThen((chunkOrderResults) => {
+			const failedChunk = chunkOrderResults.find((result) => result.isErr())
+			if (failedChunk?.isErr()) {
+				logger.warning('LLM 直接排序失败，使用本地标签打分', {
+					error: failedChunk.error,
+				})
+				return okAsync(null)
+			}
+			const chunkOrders: (Track[] | null)[] = []
+			for (const result of chunkOrderResults) {
+				if (result.isErr()) return okAsync(null)
+				chunkOrders.push(result.value)
+			}
+			if (chunkOrders.some((chunk) => chunk === null)) return okAsync(null)
 
 			const orderedTrackIds =
 				chunkOrders.length === 1
@@ -507,15 +612,10 @@ export class LlmSmartShuffleService {
 							fallbackOrder,
 						).map((track) => track.id)
 
-			return this.mergeLlmOrderWithFallback(
-				tracks,
-				orderedTrackIds,
-				fallbackOrder,
+			return okAsync(
+				this.mergeLlmOrderWithFallback(tracks, orderedTrackIds, fallbackOrder),
 			)
-		} catch (error) {
-			logger.warning('LLM 直接排序失败，使用本地标签打分', { error })
-			return null
-		}
+		})
 	}
 
 	private createSortPromptItem(

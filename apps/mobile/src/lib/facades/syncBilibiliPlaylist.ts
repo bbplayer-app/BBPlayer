@@ -262,11 +262,17 @@ export class SyncBilibiliPlaylistFacade {
 								)
 								return playlistRes.value.id
 							})
-							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
-								sourceType: 'collection',
-								sourceId: String(collectionId),
-								sourceSyncedAt: new Date(),
-							})
+							const indexResult =
+								await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
+									sourceType: 'collection',
+									sourceId: String(collectionId),
+									sourceSyncedAt: new Date(),
+								})
+							if (indexResult.isErr()) {
+								logger.warning('LLM 标签索引失败', {
+									error: indexResult.error,
+								})
+							}
 							return playlistId
 						})(),
 						(e) =>
@@ -310,10 +316,10 @@ export class SyncBilibiliPlaylistFacade {
 					})
 					return ResultAsync.fromPromise(
 						(async () => {
-							const playlistId = await this.db.transaction(async () => {
-								const playlistSvc = this.playlistService.withDB(this.db)
-								const trackSvc = this.trackService.withDB(this.db)
-								const artistSvc = this.artistService.withDB(this.db)
+							const playlistId = await this.db.transaction(async (tx) => {
+								const playlistSvc = this.playlistService.withDB(tx)
+								const trackSvc = this.trackService.withDB(tx)
+								const artistSvc = this.artistService.withDB(tx)
 
 								const playlistAuthor = await artistSvc.findOrCreateArtist({
 									name: data.owner.name,
@@ -386,11 +392,17 @@ export class SyncBilibiliPlaylistFacade {
 
 								return playlistRes.value.id
 							})
-							await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
-								sourceType: 'multi_page',
-								sourceId: bvid,
-								sourceSyncedAt: new Date(),
-							})
+							const indexResult =
+								await llmSmartShuffleService.indexPlaylistTracks(playlistId, {
+									sourceType: 'multi_page',
+									sourceId: bvid,
+									sourceSyncedAt: new Date(),
+								})
+							if (indexResult.isErr()) {
+								logger.warning('LLM 标签索引失败', {
+									error: indexResult.error,
+								})
+							}
 							return playlistId
 						})(),
 						(e) =>
@@ -805,11 +817,17 @@ export class SyncBilibiliPlaylistFacade {
 				message: '正在创建 LLM 标签索引...',
 				stage: 'indexing',
 			})
-			await llmSmartShuffleService.indexPlaylistTracks(txResult.value, {
-				sourceType: 'favorite',
-				sourceId: String(favoriteId),
-				sourceSyncedAt: new Date(),
-			})
+			const indexResult = await llmSmartShuffleService.indexPlaylistTracks(
+				txResult.value,
+				{
+					sourceType: 'favorite',
+					sourceId: String(favoriteId),
+					sourceSyncedAt: new Date(),
+				},
+			)
+			if (indexResult.isErr()) {
+				logger.warning('LLM 标签索引失败', { error: indexResult.error })
+			}
 			onProgress?.({
 				message: '正在创建 LLM 排序 JSON...',
 				stage: 'creating_dataset',

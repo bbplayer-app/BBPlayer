@@ -3,14 +3,23 @@ const {
 	withAppBuildGradle,
 } = require('expo/config-plugins')
 
+const ABI_FILTERS_BEGIN_MARKER = '// BEGIN expo-plugins/withAbiFilters'
+const ABI_FILTERS_END_MARKER = '// END expo-plugins/withAbiFilters'
+const MANAGED_ABI_FILTERS_BLOCK_REGEX = new RegExp(
+	`\\n\\s*${ABI_FILTERS_BEGIN_MARKER}\\s*\\r?\\n[\\s\\S]*?\\r?\\n\\s*${ABI_FILTERS_END_MARKER}\\s*\\r?\\n?`,
+	'g',
+)
+
 const upsertAbiFilters = (contents, abiFiltersString) => {
-	const ndkBlock = `        ndk {
+	const ndkBlock = `        ${ABI_FILTERS_BEGIN_MARKER}
+        ndk {
             abiFilters ${abiFiltersString}
         }
+        ${ABI_FILTERS_END_MARKER}
 `
 
 	const contentsWithoutManagedBlock = contents.replace(
-		/\n\s*ndk\s*\{\s*\n\s*abiFilters\s+[^\n]+\n\s*\}/g,
+		MANAGED_ABI_FILTERS_BLOCK_REGEX,
 		'',
 	)
 

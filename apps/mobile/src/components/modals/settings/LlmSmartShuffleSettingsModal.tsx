@@ -121,6 +121,8 @@ export default function LlmSmartShuffleSettingsModal() {
 						mode='outlined'
 						style={styles.input}
 						placeholder='https://api.openai.com/v1'
+						autoCapitalize='none'
+						autoCorrect={false}
 					/>
 					<TextInput
 						label='API Key'
@@ -130,6 +132,8 @@ export default function LlmSmartShuffleSettingsModal() {
 						style={styles.input}
 						secureTextEntry
 						disabled={isLoadingApiKey}
+						autoCapitalize='none'
+						autoCorrect={false}
 					/>
 					<TextInput
 						label='模型名称'
@@ -138,6 +142,8 @@ export default function LlmSmartShuffleSettingsModal() {
 						mode='outlined'
 						style={styles.input}
 						placeholder='gpt-4o-mini'
+						autoCapitalize='none'
+						autoCorrect={false}
 					/>
 					<TextInput
 						label='默认听歌取向'
