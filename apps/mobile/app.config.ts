@@ -8,6 +8,9 @@ import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+const DEFAULT_ANDROID_ABI_FILTERS = IS_DEV
+	? ['arm64-v8a', 'x86_64']
+	: ['arm64-v8a']
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
@@ -138,7 +141,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					abiFilters:
 						typeof process.env.ABI_FILTERS === 'string'
 							? process.env.ABI_FILTERS.split(',')
-							: ['arm64-v8a'],
+							: DEFAULT_ANDROID_ABI_FILTERS,
 				},
 			],
 			[

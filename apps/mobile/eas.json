@@ -13,7 +13,7 @@
 			},
 			"env": {
 				"APP_VARIANT": "development",
-				"ABI_FILTERS": "arm64-v8a"
+				"ABI_FILTERS": "arm64-v8a,x86_64"
 			}
 		},
 		"prod-v8a": {
