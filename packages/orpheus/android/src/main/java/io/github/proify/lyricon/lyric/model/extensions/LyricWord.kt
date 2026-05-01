@@ -10,6 +10,13 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 /**
  * 规范化歌词单词列表。
  * 处理无效的时间戳、修正持续时间、合并碎片单词以及填充空隙。
+ *
+ * 规则说明：
+ * - 空文本单词会被丢弃，空白文本会保留为分隔符。
+ * - 时间有效的单词必须满足 begin >= 0 且 end > begin。
+ * - 时间无效的单词会先缓存，之后按可用时间空隙填充，或合并到相邻有效单词。
+ * - 正数 duration 会保留；duration 非正数时使用 end - begin 兜底。
+ * - ASCII 字母/数字片段之间如果没有空白分隔符，会按同一个英文单词合并。
  */
 fun List<LyricWord>.normalize(): List<LyricWord> {
     // 1. 过滤掉没有文本内容的单词
@@ -90,5 +97,37 @@ fun List<LyricWord>.normalize(): List<LyricWord> {
         }
     }
 
-    return result.normalizeSortByTime()
+    return result.normalizeSortByTime().mergeAsciiWordFragments()
 }
+
+/**
+ * 合并没有空白分隔的 ASCII 字母/数字片段。
+ *
+ * 部分歌词源会把英文复合词拆成多个有时间戳的片段，例如 under + ground。
+ * 这些片段之间没有独立空格词，因此规范化后应作为同一个词显示。
+ */
+private fun List<LyricWord>.mergeAsciiWordFragments(): List<LyricWord> {
+    if (size < 2) return this
+
+    val result = ArrayList<LyricWord>(size)
+
+    for (word in this) {
+        val previous = result.lastOrNull()
+
+        if (previous != null && previous.canMergeAsciiWordFragmentWith(word)) {
+            previous.text = previous.text.orEmpty() + word.text.orEmpty()
+            previous.end = maxOf(previous.end, word.end)
+            previous.duration += word.duration
+        } else {
+            result.add(word)
+        }
+    }
+
+    return result
+}
+
+private fun LyricWord.canMergeAsciiWordFragmentWith(next: LyricWord): Boolean =
+    text.isAsciiWordFragment() && next.text.isAsciiWordFragment() && end == next.begin
+
+private fun String?.isAsciiWordFragment(): Boolean =
+    !isNullOrEmpty() && all { it.isLetterOrDigit() && it.code < 128 }

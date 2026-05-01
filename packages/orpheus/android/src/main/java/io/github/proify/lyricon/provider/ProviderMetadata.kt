@@ -12,11 +12,11 @@ import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 /**
- * 提供者元数据封装类。
+ * 提供端元数据。
  *
- * 使用键值对存储提供者相关信息
+ * 用键值对携带额外展示或能力信息。该类型委托实现 [Map]，可直接按普通 Map 读取。
  *
- * @property map 内部存储的键值对
+ * @property map 元数据键值对。
  */
 @Parcelize
 @Serializable
@@ -24,11 +24,6 @@ class ProviderMetadata(
     private val map: Map<String, String?> = emptyMap()
 ) : Map<String, String?> by map, Parcelable
 
-/**
- * 创建 [ProviderMetadata] 的简便方法。
- *
- * @param pairs 键值对数组
- * @return 对应的 [ProviderMetadata] 实例
- */
+/** 使用键值对快速创建 [ProviderMetadata]。 */
 fun providerMetadataOf(vararg pairs: Pair<String, String?>): ProviderMetadata =
     ProviderMetadata(mapOf(*pairs))

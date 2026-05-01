@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 
+/** 模块内统一使用的宽松 JSON 编解码器。 */
 internal val json: Json = Json {
     coerceInputValues = true     // 尝试转换类型
     ignoreUnknownKeys = true     // 忽略未知字段
@@ -18,9 +19,7 @@ internal val json: Json = Json {
     encodeDefaults = false       // 不序列化默认值
 }
 
-/**
- * ZLIB压缩字节数组
- */
+/** 使用 ZLIB 压缩字节数组。 */
 internal fun ByteArray.deflate(): ByteArray {
     if (isEmpty()) return byteArrayOf()
 

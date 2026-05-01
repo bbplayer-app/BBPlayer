@@ -13,12 +13,13 @@ import io.github.proify.lyricon.provider.CachedRemotePlayer.PlaybackStateSyncTyp
 
 /**
  * [RemotePlayer] 的装饰器实现，支持断线重连后的状态恢复。
- * * 内部公开维护最近一次设置的播放上下文。当远程连接断开时，外部调用仍能更新这些缓存值；
+ *
+ * 内部维护最近一次设置的播放上下文。当远程连接断开时，外部调用仍能更新这些缓存值；
  * 当连接恢复并调用 [syncs] 时，缓存的状态将原子化地同步至远程播放器。
  *
  * @property player 实际的远程播放器实例。
  */
-class CachedRemotePlayer(
+internal class CachedRemotePlayer(
     val player: RemotePlayer
 ) : RemotePlayer {
 
@@ -52,7 +53,7 @@ class CachedRemotePlayer(
     var lastDisplayTranslation: Boolean? = null
         private set
 
-    /** 最近的显示罗马音 */
+    /** 最近的罗马音显示配置。 */
     @Volatile
     var lastDisplayRoma: Boolean? = null
 
@@ -139,14 +140,14 @@ class CachedRemotePlayer(
         return player.sendText(text)
     }
 
-    override fun setDisplayTranslation(displayTranslation: Boolean): Boolean {
-        lastDisplayTranslation = displayTranslation
-        return player.setDisplayTranslation(displayTranslation)
+    override fun setDisplayTranslation(isDisplayTranslation: Boolean): Boolean {
+        lastDisplayTranslation = isDisplayTranslation
+        return player.setDisplayTranslation(isDisplayTranslation)
     }
 
-    override fun setDisplayRoma(displayRoma: Boolean): Boolean {
-        lastDisplayRoma = displayRoma
-        return player.setDisplayRoma(displayRoma)
+    override fun setDisplayRoma(isDisplayRoma: Boolean): Boolean {
+        lastDisplayRoma = isDisplayRoma
+        return player.setDisplayRoma(isDisplayRoma)
     }
 
     override fun setPlaybackState(state: PlaybackState?): Boolean {

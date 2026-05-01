@@ -10,18 +10,18 @@ import android.content.Intent
 import android.os.Bundle
 
 /**
- * 提供者服务接口，用于处理远程调用。
+ * 提供端本地命令处理器。
  *
- * 实现该接口的类将用于处理来自中心服务的远程调用，并返回结果。
- *
- * **目前未实现相关功能，仅作为未来扩展。**
+ * 中心服务可通过该接口向提供端发起扩展命令。当前核心歌词同步流程不依赖该接口，
+ * 它主要用于后续能力扩展。
  */
 interface ProviderService {
 
     /**
-     * 由远程调用，处理相关命令
+     * 处理中心服务发送的命令。
      *
-     * @return 返回值
+     * @param intent 命令参数，可为空。
+     * @return 命令结果，可为空。
      */
     fun onRunCommand(intent: Intent?): Bundle?
 }
