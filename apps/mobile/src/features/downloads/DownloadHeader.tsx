@@ -5,6 +5,8 @@ import Button from '@/components/common/Button'
 
 interface DownloadHeaderProps {
 	taskCount: number
+	retryableCount: number
+	onRetryAll: () => void
 	onClearAll: () => void
 }
 
@@ -13,6 +15,8 @@ interface DownloadHeaderProps {
  */
 export default function DownloadHeader({
 	taskCount,
+	retryableCount,
+	onRetryAll,
 	onClearAll,
 }: DownloadHeaderProps) {
 	const { colors } = useTheme()
@@ -28,6 +32,13 @@ export default function DownloadHeader({
 				总共 {taskCount} 个任务
 			</Text>
 			<View style={styles.buttonContainer}>
+				<Button
+					mode='outlined'
+					onPress={onRetryAll}
+					disabled={retryableCount === 0}
+				>
+					重试失败
+				</Button>
 				<Button
 					mode='outlined'
 					onPress={onClearAll}

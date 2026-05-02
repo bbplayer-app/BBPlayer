@@ -99,6 +99,24 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='下载'
+						description='相关设置'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='download'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/download')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='通用'
 						description='账号、更新、日志、调试'
 						left={(props) => (

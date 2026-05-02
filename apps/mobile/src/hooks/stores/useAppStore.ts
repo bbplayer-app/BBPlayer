@@ -108,6 +108,7 @@ export const useAppStore = create<AppState>()(
 					enableDataCollection: true,
 					enableDanmaku: false,
 					danmakuFilterLevel: 0,
+					downloadMaxParallelTasks: 1,
 				},
 				bilibiliUserInfo: null,
 
@@ -176,6 +177,12 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						Object.assign(state.settings, updates)
 					})
+
+					if (updates.downloadMaxParallelTasks !== undefined) {
+						void Orpheus.setDownloadMaxParallelTasks(
+							updates.downloadMaxParallelTasks,
+						)
+					}
 				},
 
 				setEnableDataCollection: (value: boolean) => {

@@ -32,6 +32,11 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             startDownload(url: urlString, track: track)
         }
     }
+
+    func resumeDownload(id: String) {
+        guard let track = stateQueue.sync(execute: { trackMap[id] }) else { return }
+        downloadTrack(track: track)
+    }
     
     private func resolveAndDownload(track: Track) {
         guard let uri = URL(string: track.url),

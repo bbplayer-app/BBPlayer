@@ -21,7 +21,12 @@ import java.util.concurrent.Executors
 
 @UnstableApi
 object DownloadUtil {
+    private const val DEFAULT_MAX_PARALLEL_DOWNLOADS = 1
+    private const val MIN_MAX_PARALLEL_DOWNLOADS = 1
+    private const val MAX_MAX_PARALLEL_DOWNLOADS = 6
+
     private var downloadManager: DownloadManager? = null
+    private var maxParallelDownloads = DEFAULT_MAX_PARALLEL_DOWNLOADS
 
     private var playerDataSourceFactory: DataSource.Factory? = null
     private var downloadDataSourceFactory: DataSource.Factory? = null
@@ -39,11 +44,20 @@ object DownloadUtil {
                 getDownloadDataSourceFactory(),
                 Executors.newFixedThreadPool(6)
             ).apply {
-                maxParallelDownloads = 3
+                maxParallelDownloads = this@DownloadUtil.maxParallelDownloads
                 requirements = Requirements(0)
             }
         }
         return downloadManager!!
+    }
+
+    @Synchronized
+    fun setMaxParallelDownloads(context: Context, value: Int) {
+        maxParallelDownloads = value.coerceIn(
+            MIN_MAX_PARALLEL_DOWNLOADS,
+            MAX_MAX_PARALLEL_DOWNLOADS
+        )
+        getDownloadManager(context).maxParallelDownloads = maxParallelDownloads
     }
 
     @Synchronized
