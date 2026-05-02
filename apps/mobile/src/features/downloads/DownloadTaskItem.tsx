@@ -15,6 +15,10 @@ import {
 } from '@/hooks/stores/useDownloadManagerStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
+const canRetryDownloadTask = (task: DownloadTask) =>
+	!!task.track &&
+	(task.state === DownloadState.FAILED || task.state === DownloadState.STOPPED)
+
 const DownloadTaskItem = memo(function DownloadTaskItem({
 	initTask,
 }: {
@@ -27,6 +31,9 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	const sharedProgress = useSharedValue(0)
 	const progressBackgroundWidth = useSharedValue(0)
 	const containerRef = useRef<View>(null)
+	const retryable = canRetryDownloadTask(task)
+	const retryTrack = task.track
+	const retryState = task.state
 
 	useEffect(() => {
 		const handler = (e: ProgressEvent['progress:uniqueKey']) => {
@@ -73,6 +80,12 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 				return '正在下载...'
 			case DownloadState.FAILED:
 				return '下载失败'
+			case DownloadState.STOPPED:
+				return '已停止'
+			case DownloadState.REMOVING:
+				return '正在删除...'
+			case DownloadState.RESTARTING:
+				return '正在重试...'
 			case DownloadState.COMPLETED:
 				return '下载完成'
 			default:
@@ -129,13 +142,17 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 		return (
 			<>
 				<View style={styles.iconsContainer}>
-					{task.state === DownloadState.FAILED && (
+					{retryable && (
 						<IconButton
 							icon='reload'
 							onPress={async () => {
-								if (!task.track) return
+								if (!retryTrack) return
 								try {
-									await Orpheus.downloadTrack(task.track)
+									if (retryState === DownloadState.STOPPED) {
+										await Orpheus.resumeDownload(task.id)
+									} else {
+										await Orpheus.retryDownload(retryTrack)
+									}
 								} catch (e) {
 									toastAndLogError(
 										'重新下载失败',
@@ -164,7 +181,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 				</View>
 			</>
 		)
-	}, [colors.error, task.id, task.state, task.track])
+	}, [colors.error, retryState, retryTrack, retryable, task.id, task.state])
 
 	return (
 		<>

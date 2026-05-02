@@ -186,6 +186,9 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	removeDownload(id: string): Promise<void>
 	removeDownloads(ids: string[]): Promise<void>
 	multiDownload(tracks: Track[]): Promise<void>
+	resumeDownload(id: string): Promise<void>
+	retryDownload(track: Track): Promise<void>
+	setDownloadMaxParallelTasks(maxParallelTasks: number): Promise<void>
 	removeAllDownloads(): Promise<void>
 	getDownloads(): Promise<DownloadTask[]>
 	getDownloadStatusByIds(ids: string[]): Promise<Record<string, DownloadState>>

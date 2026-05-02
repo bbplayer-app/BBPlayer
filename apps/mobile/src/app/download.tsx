@@ -1,5 +1,4 @@
-import type { DownloadTask } from '@bbplayer/orpheus'
-import { Orpheus } from '@bbplayer/orpheus'
+import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
@@ -13,6 +12,10 @@ import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { orpheusQueryKeys, useDownloadTasks } from '@/hooks/queries/orpheus'
 import { queryClient } from '@/lib/config/queryClient'
+
+const canRetryDownloadTask = (task: DownloadTask) =>
+	!!task.track &&
+	(task.state === DownloadState.FAILED || task.state === DownloadState.STOPPED)
 
 const renderItem = ({ item }: { item: DownloadTask }) => {
 	return <DownloadTaskItem initTask={item} />
@@ -69,6 +72,20 @@ export default function DownloadPage() {
 
 			<DownloadHeader
 				taskCount={tasks.length}
+				retryableCount={tasks.filter(canRetryDownloadTask).length}
+				onRetryAll={async () => {
+					await Promise.all(
+						tasks.filter(canRetryDownloadTask).map((task) => {
+							if (task.state === DownloadState.STOPPED) {
+								return Orpheus.resumeDownload(task.id)
+							}
+							return task.track ? Orpheus.retryDownload(task.track) : undefined
+						}),
+					)
+					await queryClient.invalidateQueries({
+						queryKey: orpheusQueryKeys.downloadTasks(),
+					})
+				}}
 				onClearAll={async () => {
 					await Orpheus.clearUncompletedDownloadTasks()
 					await queryClient.invalidateQueries({

@@ -12,6 +12,7 @@ interface Settings {
 	enableDataCollection: boolean
 	enableDanmaku: boolean
 	danmakuFilterLevel: number
+	downloadMaxParallelTasks: number
 }
 
 interface BilibiliUserSummary {

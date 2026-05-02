@@ -670,6 +670,35 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction
         }
 
+        AsyncFunction("resumeDownload") { id: String ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            DownloadService.sendSetStopReason(
+                context,
+                OrpheusDownloadService::class.java,
+                id,
+                Download.STOP_REASON_NONE,
+                false
+            )
+        }
+
+        AsyncFunction("retryDownload") { track: TrackRecord ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            val downloadRequest = DownloadRequest.Builder(track.id, track.url.toUri())
+                .setData(json.encodeToString(track).toByteArray())
+                .build()
+            DownloadService.sendAddDownload(
+                context,
+                OrpheusDownloadService::class.java,
+                downloadRequest,
+                false
+            )
+        }
+
+        AsyncFunction("setDownloadMaxParallelTasks") { maxParallelTasks: Int ->
+            val context = appContext.reactContext ?: return@AsyncFunction
+            DownloadUtil.setMaxParallelDownloads(context, maxParallelTasks)
+        }
+
         AsyncFunction("removeDownload") { id: String ->
             val context = appContext.reactContext ?: return@AsyncFunction
             DownloadService.sendRemoveDownload(

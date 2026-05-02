@@ -140,6 +140,11 @@ export default Sentry.wrap(function RootLayout() {
 
 			// 初始化播放器 Cookie
 			try {
+				const settings = useAppStore.getState().settings
+				void Orpheus.setDownloadMaxParallelTasks(
+					settings.downloadMaxParallelTasks,
+				)
+
 				const cookie = useAppStore.getState().bilibiliCookie
 				if (cookie) {
 					logger.debug('初始化 orpheus bilibili cookie')
@@ -321,6 +326,10 @@ export default Sentry.wrap(function RootLayout() {
 				/>
 				<Stack.Screen
 					name='settings/lyrics'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
+					name='settings/download'
 					options={{ headerShown: false }}
 				/>
 				<Stack.Screen
