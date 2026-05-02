@@ -11,13 +11,16 @@ import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 /**
- * 提供者信息
+ * 提供端注册信息。
  *
- * @property providerPackageName 提供者包名
- * @property playerPackageName 播放器包名
- * @property logo 播放器Logo
- * @property metadata 元数据
- * @property processName 播放器进程名
+ * 中心服务通过该对象识别歌词提供端。相等性仅比较包名、播放器包名和进程名，
+ * [logo] 与 [metadata] 只作为展示信息，不参与身份判断。
+ *
+ * @property providerPackageName 提供端应用包名。
+ * @property playerPackageName 播放器应用包名。
+ * @property logo 提供端或播放器图标。
+ * @property metadata 提供端附加元数据。
+ * @property processName 播放器所在进程名。
  */
 @Serializable
 @Parcelize
@@ -35,7 +38,6 @@ data class ProviderInfo(
         return providerPackageName == other.providerPackageName
                 && playerPackageName == other.playerPackageName
                 && processName == other.processName
-
     }
 
     override fun hashCode(): Int {

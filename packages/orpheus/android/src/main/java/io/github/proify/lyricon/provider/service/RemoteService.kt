@@ -11,39 +11,37 @@ import io.github.proify.lyricon.provider.ConnectionStatus
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.RemotePlayer
 
-/**
- * 远程服务接口，定义与中心服务的交互。
- */
+/** 提供端连接中心服务后的远端服务入口。 */
 interface RemoteService {
 
-    /** 播放器控制接口 */
+    /** 播放器状态发送接口。 */
     val player: RemotePlayer
 
-    /** 当前服务是否激活 */
+    /** 当前远端 Binder 是否仍然可用。 */
     val isActive: Boolean
 
-    /** 当前连接状态 */
+    /** 当前连接状态。 */
     val connectionStatus: ConnectionStatus
 
     /**
-     * 注册连接状态监听器
+     * 注册连接状态监听器。
      *
-     * @param listener 监听器实例
-     * @return 是否成功添加
+     * @param listener 监听器实例。
+     * @return 是否成功添加。
      */
     fun addConnectionListener(listener: ConnectionListener): Boolean
 
     /**
-     * 移除已注册的连接状态监听器
+     * 移除已注册的连接状态监听器。
      *
-     * @param listener 之前注册的监听器实例
-     * @return 是否成功移除
+     * @param listener 之前注册的监听器实例。
+     * @return 是否成功移除。
      */
     fun removeConnectionListener(listener: ConnectionListener): Boolean
 }
 
 /**
- * 构建连接状态监听器的便捷函数
+ * 构建连接状态监听器的便捷函数。
  *
  * 使用 [ConnectionListenerBuilder] 定义各类事件回调。
  */
@@ -69,7 +67,7 @@ fun buildConnectionListener(block: ConnectionListenerBuilder.() -> Unit): Connec
 }
 
 /**
- * 扩展函数，向 [RemoteService] 注册连接状态监听器
+ * 向 [RemoteService] 注册由 DSL 构建的连接状态监听器。
  *
  * @param block 使用 [ConnectionListenerBuilder] 定义回调
  * @return 注册的监听器实例
@@ -82,7 +80,7 @@ fun RemoteService.addConnectionListener(block: ConnectionListenerBuilder.() -> U
 }
 
 /**
- * 连接状态监听器构建器
+ * 连接状态监听器构建器。
  *
  * 用于按需设置各类连接状态回调。
  *
