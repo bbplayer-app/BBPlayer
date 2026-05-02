@@ -13,7 +13,7 @@ const LocalPlaylistItem = memo(
 		const router = useRouter()
 		const { colors } = useTheme()
 		const isShared = !!item.shareId
-		const isRemote = item.type !== 'local'
+		const isRemote = item.type !== 'local' && item.type !== 'dynamic'
 
 		return (
 			<View>
@@ -55,6 +55,13 @@ const LocalPlaylistItem = memo(
 									{!isShared && isRemote && (
 										<Icon
 											source={'cloud'}
+											color={colors.primary}
+											size={13}
+										/>
+									)}
+									{item.type === 'dynamic' && (
+										<Icon
+											source='merge'
 											color={colors.primary}
 											size={13}
 										/>

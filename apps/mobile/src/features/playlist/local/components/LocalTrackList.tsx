@@ -251,7 +251,8 @@ export function LocalTrackList({
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
-	const isReadOnly = playlist.shareRole === 'subscriber'
+	const isReadOnly =
+		playlist.shareRole === 'subscriber' || playlist.type === 'dynamic'
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)

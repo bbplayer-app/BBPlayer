@@ -781,6 +781,9 @@ export class SyncBilibiliPlaylistFacade {
 			case 'local': {
 				return okAsync(undefined)
 			}
+			case 'dynamic': {
+				return okAsync(undefined)
+			}
 		}
 	}
 

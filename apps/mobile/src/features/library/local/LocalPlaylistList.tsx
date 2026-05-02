@@ -146,7 +146,7 @@ const LocalPlaylistListComponent = memo(() => {
 								setMenuVisible(false)
 								openModal('MergePlaylists', undefined)
 							}}
-							title='合并歌单'
+							title='动态合并歌单'
 						/>
 					</FunctionalMenu>
 				</View>

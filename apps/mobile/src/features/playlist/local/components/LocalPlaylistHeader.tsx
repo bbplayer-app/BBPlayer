@@ -52,7 +52,7 @@ function buildSubtitlePieces(
 	playlist: Playlist & { validTrackCount: number },
 	totalDuration: number | undefined,
 ): SubtitlePieces {
-	const isLocal = playlist.type === 'local'
+	const isLocal = playlist.type === 'local' || playlist.type === 'dynamic'
 
 	const countRaw =
 		playlist.validTrackCount !== playlist.itemCount
@@ -353,7 +353,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						播放全部
 					</Button>
 
-					{playlist.type !== 'local' && (
+					{playlist.type !== 'local' && playlist.type !== 'dynamic' && (
 						<IconButton
 							mode='contained'
 							icon='sync'

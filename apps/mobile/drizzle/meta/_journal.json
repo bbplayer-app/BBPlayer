@@ -134,6 +134,13 @@
 			"when": 1774146549533,
 			"tag": "0018_green_dracula",
 			"breakpoints": true
+		},
+		{
+			"idx": 19,
+			"version": "6",
+			"when": 1777691519059,
+			"tag": "0019_icy_mandarin",
+			"breakpoints": true
 		}
 	]
 }

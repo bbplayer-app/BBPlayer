@@ -357,7 +357,7 @@ export const useMergePlaylists = () => {
 			return result.value
 		},
 		onSuccess: async (newPlaylistId) => {
-			toast.success('合并成功')
+			toast.success('动态合并歌单已创建')
 			await Promise.all([
 				queryClient.invalidateQueries({
 					queryKey: playlistKeys.playlistLists(),
@@ -370,7 +370,7 @@ export const useMergePlaylists = () => {
 				}),
 			])
 		},
-		onError: (error) => toastAndLogError('合并播放列表失败', error, SCOPE),
+		onError: (error) => toastAndLogError('创建动态合并歌单失败', error, SCOPE),
 	})
 }
 

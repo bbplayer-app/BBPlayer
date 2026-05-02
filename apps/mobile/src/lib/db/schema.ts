@@ -108,7 +108,7 @@ export const playlists = sqliteTable(
 		coverUrl: text('cover_url'),
 		itemCount: integer('item_count').notNull().default(0),
 		type: text('type', {
-			enum: ['favorite', 'collection', 'multi_page', 'local'],
+			enum: ['favorite', 'collection', 'multi_page', 'local', 'dynamic'],
 		}).notNull(),
 		remoteSyncId: integer('remote_sync_id'), // 当存在这个值时，这个 playlist 只能从远程同步，而不能从本地直接修改（或许也可以？因为我们已经实现了大量本地有关收藏夹的操作逻辑，先不管了~）
 		lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
@@ -131,6 +131,27 @@ export const playlists = sqliteTable(
 		index('playlists_type_idx').on(table.type),
 		index('playlists_author_idx').on(table.authorId),
 		index('playlists_share_id_idx').on(table.shareId),
+	],
+)
+
+export const dynamicPlaylistSources = sqliteTable(
+	'dynamic_playlist_sources',
+	{
+		playlistId: integer('playlist_id')
+			.notNull()
+			.references(() => playlists.id, { onDelete: 'cascade' }),
+		sourcePlaylistId: integer('source_playlist_id')
+			.notNull()
+			.references(() => playlists.id, { onDelete: 'cascade' }),
+		position: integer('position').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+	},
+	(table) => [
+		primaryKey({ columns: [table.playlistId, table.sourcePlaylistId] }),
+		index('dynamic_playlist_sources_playlist_idx').on(table.playlistId),
+		index('dynamic_playlist_sources_source_idx').on(table.sourcePlaylistId),
 	],
 )
 
@@ -250,7 +271,29 @@ export const playlistRelations = relations(playlists, ({ one, many }) => ({
 		references: [artists.id],
 	}),
 	trackLinks: many(playlistTracks),
+	dynamicSources: many(dynamicPlaylistSources, {
+		relationName: 'dynamicPlaylist',
+	}),
+	dynamicDependents: many(dynamicPlaylistSources, {
+		relationName: 'dynamicSourcePlaylist',
+	}),
 }))
+
+export const dynamicPlaylistSourceRelations = relations(
+	dynamicPlaylistSources,
+	({ one }) => ({
+		playlist: one(playlists, {
+			fields: [dynamicPlaylistSources.playlistId],
+			references: [playlists.id],
+			relationName: 'dynamicPlaylist',
+		}),
+		sourcePlaylist: one(playlists, {
+			fields: [dynamicPlaylistSources.sourcePlaylistId],
+			references: [playlists.id],
+			relationName: 'dynamicSourcePlaylist',
+		}),
+	}),
+)
 
 export const playlistTrackRelations = relations(playlistTracks, ({ one }) => ({
 	playlist: one(playlists, {

@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list'
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -15,8 +15,9 @@ import { useMergePlaylists } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
+import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 
-const LocalPlaylistItem = ({
+const SelectablePlaylistItem = memo(function SelectablePlaylistItem({
 	item,
 	isSelected,
 	onToggle,
@@ -24,30 +25,51 @@ const LocalPlaylistItem = ({
 	item: Playlist
 	isSelected: boolean
 	onToggle: (id: number) => void
-}) => (
-	<TouchableRipple onPress={() => onToggle(item.id)}>
-		<View style={styles.itemContainer}>
-			<View style={{ flex: 1 }}>
-				<Text
-					variant='bodyLarge'
-					numberOfLines={1}
-				>
-					{item.title}
-				</Text>
-				<Text
-					variant='bodySmall'
-					style={{ opacity: 0.7 }}
-				>
-					{item.itemCount} 首歌曲
-				</Text>
+}) {
+	return (
+		<TouchableRipple onPress={() => onToggle(item.id)}>
+			<View style={styles.itemContainer}>
+				<View style={{ flex: 1 }}>
+					<Text
+						variant='bodyLarge'
+						numberOfLines={1}
+					>
+						{item.title}
+					</Text>
+					<Text
+						variant='bodySmall'
+						style={{ opacity: 0.7 }}
+					>
+						{item.itemCount} 首歌曲
+					</Text>
+				</View>
+				<Checkbox
+					status={isSelected ? 'checked' : 'unchecked'}
+					onPress={() => onToggle(item.id)}
+				/>
 			</View>
-			<Checkbox
-				status={isSelected ? 'checked' : 'unchecked'}
-				onPress={() => onToggle(item.id)}
-			/>
-		</View>
-	</TouchableRipple>
-)
+		</TouchableRipple>
+	)
+})
+
+type RenderExtraData = {
+	selectedIds: Set<number>
+	onToggle: (id: number) => void
+}
+
+const renderPlaylistItem = ({
+	item,
+	extraData,
+}: ListRenderItemInfoWithExtraData<Playlist, RenderExtraData>) => {
+	if (!extraData) return null
+	return (
+		<SelectablePlaylistItem
+			item={item}
+			isSelected={extraData.selectedIds.has(item.id)}
+			onToggle={extraData.onToggle}
+		/>
+	)
+}
 
 export default function MergePlaylistsModal() {
 	const close = useModalStore((state) => state.close)
@@ -57,6 +79,10 @@ export default function MergePlaylistsModal() {
 	const { data: playlists, isPending, isError } = usePlaylistLists()
 	const { mutateAsync: mergePlaylists, isPending: isMerging } =
 		useMergePlaylists()
+	const availablePlaylists = useMemo(
+		() => playlists?.filter((playlist) => playlist.type !== 'dynamic') ?? [],
+		[playlists],
+	)
 
 	const toggleSelection = useCallback((id: number) => {
 		setSelectedIds((prev) => {
@@ -71,7 +97,7 @@ export default function MergePlaylistsModal() {
 	}, [])
 
 	const handleConfirm = async () => {
-		if (selectedIds.size === 0) return
+		if (selectedIds.size < 2) return
 		if (!newTitle.trim()) return
 
 		try {
@@ -85,20 +111,14 @@ export default function MergePlaylistsModal() {
 		}
 	}
 
-	const renderItem = useCallback(
-		({ item }: { item: Playlist }) => (
-			<LocalPlaylistItem
-				item={item}
-				isSelected={selectedIds.has(item.id)}
-				onToggle={toggleSelection}
-			/>
-		),
+	const extraData = useMemo(
+		() => ({ selectedIds, onToggle: toggleSelection }),
 		[selectedIds, toggleSelection],
 	)
 
 	return (
 		<>
-			<Dialog.Title>合并歌单</Dialog.Title>
+			<Dialog.Title>动态合并歌单</Dialog.Title>
 			<Dialog.Content style={styles.content}>
 				{isPending ? (
 					<View style={styles.center}>
@@ -108,7 +128,7 @@ export default function MergePlaylistsModal() {
 					<View style={styles.center}>
 						<Text style={{ opacity: 0.7 }}>加载本地歌单失败</Text>
 					</View>
-				) : !playlists || playlists.length === 0 ? (
+				) : availablePlaylists.length === 0 ? (
 					<View style={styles.center}>
 						<Text style={{ opacity: 0.7 }}>没有本地歌单</Text>
 					</View>
@@ -125,12 +145,13 @@ export default function MergePlaylistsModal() {
 							variant='labelMedium'
 							style={styles.subtitle}
 						>
-							选择要合并的歌单（将自动去重）：
+							选择至少两个源歌单（显示时动态合并并自动去重）：
 						</Text>
 						<View style={styles.listContainer}>
 							<FlashList
-								data={playlists}
-								renderItem={renderItem}
+								data={availablePlaylists}
+								renderItem={renderPlaylistItem}
+								extraData={extraData}
 								keyExtractor={(item) => item.id.toString()}
 								showsVerticalScrollIndicator={false}
 							/>
@@ -148,12 +169,10 @@ export default function MergePlaylistsModal() {
 				<Button
 					mode='contained'
 					onPress={handleConfirm}
-					disabled={
-						isMerging || selectedIds.size === 0 || newTitle.trim() === ''
-					}
+					disabled={isMerging || selectedIds.size < 2 || newTitle.trim() === ''}
 					loading={isMerging}
 				>
-					合并
+					创建
 				</Button>
 			</Dialog.Actions>
 		</>

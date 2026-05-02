@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
-import { and, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
@@ -44,6 +44,63 @@ export class PlaylistService {
 	 */
 	withDB(conn: DBLike) {
 		return new PlaylistService(conn, this.trackService.withDB(conn))
+	}
+
+	private async getDynamicPlaylistSourceIds(playlistId: number) {
+		const sources = await this.db.query.dynamicPlaylistSources.findMany({
+			columns: { sourcePlaylistId: true },
+			where: eq(schema.dynamicPlaylistSources.playlistId, playlistId),
+			orderBy: asc(schema.dynamicPlaylistSources.position),
+		})
+		return sources.map((source) => source.sourcePlaylistId)
+	}
+
+	private async getDynamicPlaylistTrackRows(playlistId: number) {
+		const sourceIds = await this.getDynamicPlaylistSourceIds(playlistId)
+		const rowsBySource = await Promise.all(
+			sourceIds.map((sourcePlaylistId) =>
+				this.db.query.playlistTracks.findMany({
+					where: eq(schema.playlistTracks.playlistId, sourcePlaylistId),
+					orderBy: [
+						desc(schema.playlistTracks.sortKey),
+						desc(schema.playlistTracks.createdAt),
+						desc(schema.playlistTracks.trackId),
+					],
+					with: {
+						track: {
+							with: {
+								artist: true,
+								bilibiliMetadata: true,
+								localMetadata: true,
+							},
+						},
+					},
+				}),
+			),
+		)
+
+		const seenTrackIds = new Set<number>()
+		return rowsBySource.flat().filter((row) => {
+			if (seenTrackIds.has(row.trackId)) return false
+			seenTrackIds.add(row.trackId)
+			return true
+		})
+	}
+
+	private formatDynamicPlaylistRows(
+		rows: Awaited<ReturnType<PlaylistService['getDynamicPlaylistTrackRows']>>,
+	) {
+		const tracks: Track[] = []
+		for (const row of rows) {
+			const track = this.trackService.formatTrack(row.track)
+			if (!track) {
+				throw new ServiceError(
+					`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
+				)
+			}
+			tracks.push(track)
+		}
+		return tracks
 	}
 
 	/**
@@ -483,6 +540,9 @@ export class PlaylistService {
 						}),
 				)
 				if (!type) throw createPlaylistNotFound(playlistId)
+				if (type.type === 'dynamic') {
+					return this.getDynamicPlaylistTrackRows(playlistId)
+				}
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
 				const orderBy = desc(schema.playlistTracks.sortKey)
 
@@ -536,14 +596,26 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
-				this.db.query.playlists.findMany({
-					orderBy: desc(schema.playlists.updatedAt),
-					with: {
-						author: true,
-					},
-				}),
-			),
+			(async () => {
+				const playlists = await Sentry.startSpan(
+					{ name: 'db:query:playlists', op: 'db' },
+					() =>
+						this.db.query.playlists.findMany({
+							orderBy: desc(schema.playlists.updatedAt),
+							with: {
+								author: true,
+							},
+						}),
+				)
+
+				return Promise.all(
+					playlists.map(async (playlist) => {
+						if (playlist.type !== 'dynamic') return playlist
+						const rows = await this.getDynamicPlaylistTrackRows(playlist.id)
+						return { ...playlist, itemCount: rows.length }
+					}),
+				)
+			})(),
 			(e) => new DatabaseError('获取所有 playlists 失败', { cause: e }),
 		).andThen((playlists) => {
 			return okAsync(playlists)
@@ -565,14 +637,27 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
-				this.db.query.playlists.findFirst({
-					where: eq(schema.playlists.id, playlistId),
-					with: {
-						author: true,
-					},
-					extras: {
-						validTrackCount: sql<number>`(
+			(async () => {
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							where: eq(schema.playlists.id, playlistId),
+							with: {
+								author: true,
+							},
+						}),
+				)
+
+				if (!playlist || playlist.type !== 'dynamic') {
+					return Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+						this.db.query.playlists.findFirst({
+							where: eq(schema.playlists.id, playlistId),
+							with: {
+								author: true,
+							},
+							extras: {
+								validTrackCount: sql<number>`(
             SELECT COUNT(pt.track_id)
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
@@ -580,7 +665,7 @@ export class PlaylistService {
             WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
-						totalDuration: sql<number>`(
+								totalDuration: sql<number>`(
             SELECT COALESCE(SUM(t.duration), 0)
             FROM ${schema.playlistTracks} AS pt
             JOIN ${schema.tracks} AS t
@@ -589,10 +674,30 @@ export class PlaylistService {
               ON pt.track_id = bm.track_id
             WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
-          )`.as('total_duration'),
-					},
-				}),
-			),
+						)`.as('total_duration'),
+							},
+						}),
+					)
+				}
+
+				const rows = await this.getDynamicPlaylistTrackRows(playlistId)
+				const tracks = this.formatDynamicPlaylistRows(rows)
+				const validTracks = tracks.filter((track) => {
+					if (track.source !== 'bilibili') return true
+					return track.bilibiliMetadata.videoIsValid
+				})
+				const totalDuration = validTracks.reduce(
+					(total, track) => total + (track.duration ?? 0),
+					0,
+				)
+
+				return {
+					...playlist,
+					itemCount: tracks.length,
+					validTrackCount: validTracks.length,
+					totalDuration,
+				}
+			})(),
 			(e) => new DatabaseError('获取 playlist 元数据失败', { cause: e }),
 		)
 	}
@@ -609,7 +714,7 @@ export class PlaylistService {
 		DatabaseError | ServiceError
 	> {
 		const { remoteSyncId, type } = payload
-		if (!remoteSyncId || type === 'local') {
+		if (!remoteSyncId || type === 'local' || type === 'dynamic') {
 			return errAsync(
 				createValidationError(
 					'无效的 remoteSyncId 或 type，调用 findOrCreateRemotePlaylist 时必须提供 remoteSyncId 和非 local 的 type',
@@ -861,15 +966,27 @@ export class PlaylistService {
 			return okAsync([])
 		}
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:searchPlaylists', op: 'db' }, () =>
-				this.db.query.playlists.findMany({
-					where: like(schema.playlists.title, `%${trimmed}%`),
-					orderBy: desc(schema.playlists.updatedAt),
-					with: {
-						author: true,
-					},
-				}),
-			),
+			(async () => {
+				const playlists = await Sentry.startSpan(
+					{ name: 'db:query:searchPlaylists', op: 'db' },
+					() =>
+						this.db.query.playlists.findMany({
+							where: like(schema.playlists.title, `%${trimmed}%`),
+							orderBy: desc(schema.playlists.updatedAt),
+							with: {
+								author: true,
+							},
+						}),
+				)
+
+				return Promise.all(
+					playlists.map(async (playlist) => {
+						if (playlist.type !== 'dynamic') return playlist
+						const rows = await this.getDynamicPlaylistTrackRows(playlist.id)
+						return { ...playlist, itemCount: rows.length }
+					}),
+				)
+			})(),
 			(e) => new DatabaseError('搜索播放列表失败', { cause: e }),
 		)
 	}
@@ -887,6 +1004,22 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
+				const playlist = await Sentry.startSpan(
+					{ name: 'db:query:playlist:type', op: 'db' },
+					() =>
+						this.db.query.playlists.findFirst({
+							columns: { type: true },
+							where: eq(schema.playlists.id, playlistId),
+						}),
+				)
+				if (!playlist) throw createPlaylistNotFound(playlistId)
+				if (playlist.type === 'dynamic') {
+					const rows = await this.getDynamicPlaylistTrackRows(playlistId)
+					return this.formatDynamicPlaylistRows(rows).filter((track) =>
+						track.title.toLowerCase().includes(query.trim().toLowerCase()),
+					)
+				}
+
 				const trackIdSubq = db
 					.select({ id: schema.tracks.id })
 					.from(schema.tracks)
@@ -985,6 +1118,13 @@ export class PlaylistService {
 						}),
 				)
 				if (!playlist) throw createPlaylistNotFound(playlistId)
+				if (playlist.type === 'dynamic') {
+					const rows = await this.getDynamicPlaylistTrackRows(playlistId)
+					const startIndex = cursor
+						? rows.findIndex((row) => row.trackId === cursor.lastId) + 1
+						: 0
+					return rows.slice(startIndex, startIndex + effectiveLimit + 1)
+				}
 
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
 				const sortDirection = desc

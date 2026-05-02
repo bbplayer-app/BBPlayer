@@ -72,7 +72,7 @@ export interface Playlist {
 	coverUrl: string | null
 	itemCount: number
 	contents?: Track[]
-	type: 'favorite' | 'collection' | 'multi_page' | 'local'
+	type: 'favorite' | 'collection' | 'multi_page' | 'local' | 'dynamic'
 	remoteSyncId: number | null
 	lastSyncedAt: Date | null
 	// 歌单分享功能字段
