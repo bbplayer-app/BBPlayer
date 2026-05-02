@@ -151,6 +151,10 @@ export const dynamicPlaylistSources = sqliteTable(
 	(table) => [
 		primaryKey({ columns: [table.playlistId, table.sourcePlaylistId] }),
 		index('dynamic_playlist_sources_playlist_idx').on(table.playlistId),
+		index('dynamic_playlist_sources_playlist_position_idx').on(
+			table.playlistId,
+			table.position,
+		),
 		index('dynamic_playlist_sources_source_idx').on(table.sourcePlaylistId),
 	],
 )

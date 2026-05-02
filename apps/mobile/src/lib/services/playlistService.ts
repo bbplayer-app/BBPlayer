@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
-import { and, asc, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
@@ -27,6 +27,49 @@ import { trackService } from './trackService'
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
+type PlaylistTrackRow = typeof schema.playlistTracks.$inferSelect & {
+	track: typeof schema.tracks.$inferSelect & {
+		artist: typeof schema.artists.$inferSelect | null
+		bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
+		localMetadata: typeof schema.localMetadata.$inferSelect | null
+	}
+}
+type DynamicPlaylistTrackSqlRow = {
+	sourcePosition: number
+	trackId: number
+	sourceSortKey: string
+	sortKey: string
+	createdAt: number
+	trackUniqueKey: string
+	trackTitle: string
+	trackArtistId: number | null
+	trackCoverUrl: string | null
+	trackDuration: number
+	trackCreatedAt: number
+	trackSource: 'bilibili' | 'local'
+	trackUpdatedAt: number
+	artistId: number | null
+	artistName: string | null
+	artistAvatarUrl: string | null
+	artistSignature: string | null
+	artistSource: 'bilibili' | 'local' | null
+	artistRemoteId: string | null
+	artistCreatedAt: number | null
+	artistUpdatedAt: number | null
+	bilibiliTrackId: number | null
+	bilibiliBvid: string | null
+	bilibiliCid: number | null
+	bilibiliIsMultiPage: number | boolean | null
+	bilibiliMainTrackTitle: string | null
+	bilibiliVideoIsValid: number | boolean | null
+	localTrackId: number | null
+	localPath: string | null
+}
+type DynamicPlaylistStats = {
+	itemCount: number
+	validTrackCount: number
+	totalDuration: number
+}
 
 /**
  * 对于内部 tracks 的增删改操作只有 local playlist 才可以，注意方法名。
@@ -46,61 +89,268 @@ export class PlaylistService {
 		return new PlaylistService(conn, this.trackService.withDB(conn))
 	}
 
-	private async getDynamicPlaylistSourceIds(playlistId: number) {
-		const sources = await this.db.query.dynamicPlaylistSources.findMany({
-			columns: { sourcePlaylistId: true },
-			where: eq(schema.dynamicPlaylistSources.playlistId, playlistId),
-			orderBy: asc(schema.dynamicPlaylistSources.position),
-		})
-		return sources.map((source) => source.sourcePlaylistId)
+	private parseDynamicCursor(cursor?: {
+		lastSortKey: string
+		createdAt: number
+		lastId: number
+	}) {
+		if (!cursor) return undefined
+
+		const separatorIndex = cursor.lastSortKey.indexOf('|')
+		if (separatorIndex < 0) return undefined
+
+		const sourcePosition = Number(cursor.lastSortKey.slice(0, separatorIndex))
+		const sourceSortKey = cursor.lastSortKey.slice(separatorIndex + 1)
+		if (!Number.isFinite(sourcePosition) || !sourceSortKey) return undefined
+
+		return {
+			sourcePosition,
+			sourceSortKey,
+			createdAt: cursor.createdAt,
+			lastId: cursor.lastId,
+		}
 	}
 
-	private async getDynamicPlaylistTrackRows(playlistId: number) {
-		const sourceIds = await this.getDynamicPlaylistSourceIds(playlistId)
-		const rowsBySource = await Promise.all(
-			sourceIds.map((sourcePlaylistId) =>
-				this.db.query.playlistTracks.findMany({
-					where: eq(schema.playlistTracks.playlistId, sourcePlaylistId),
-					orderBy: [
-						desc(schema.playlistTracks.sortKey),
-						desc(schema.playlistTracks.createdAt),
-						desc(schema.playlistTracks.trackId),
-					],
-					with: {
-						track: {
-							with: {
-								artist: true,
-								bilibiliMetadata: true,
-								localMetadata: true,
+	private mapDynamicPlaylistTrackRow(
+		row: DynamicPlaylistTrackSqlRow,
+	): PlaylistTrackRow {
+		return {
+			playlistId: 0,
+			trackId: row.trackId,
+			sortKey: row.sortKey,
+			createdAt: new Date(row.createdAt),
+			track: {
+				id: row.trackId,
+				uniqueKey: row.trackUniqueKey,
+				title: row.trackTitle,
+				artistId: row.trackArtistId,
+				coverUrl: row.trackCoverUrl,
+				duration: row.trackDuration,
+				createdAt: new Date(row.trackCreatedAt),
+				source: row.trackSource,
+				updatedAt: new Date(row.trackUpdatedAt),
+				artist:
+					row.artistId === null || row.artistName === null
+						? null
+						: {
+								id: row.artistId,
+								name: row.artistName,
+								avatarUrl: row.artistAvatarUrl,
+								signature: row.artistSignature,
+								source: row.artistSource ?? 'local',
+								remoteId: row.artistRemoteId,
+								createdAt: new Date(row.artistCreatedAt ?? 0),
+								updatedAt: new Date(row.artistUpdatedAt ?? 0),
 							},
-						},
-					},
-				}),
+				bilibiliMetadata:
+					row.bilibiliTrackId === null || row.bilibiliBvid === null
+						? null
+						: {
+								trackId: row.bilibiliTrackId,
+								bvid: row.bilibiliBvid,
+								cid: row.bilibiliCid,
+								isMultiPage: Boolean(row.bilibiliIsMultiPage),
+								mainTrackTitle: row.bilibiliMainTrackTitle,
+								videoIsValid: Boolean(row.bilibiliVideoIsValid),
+							},
+				localMetadata:
+					row.localTrackId === null || row.localPath === null
+						? null
+						: {
+								trackId: row.localTrackId,
+								localPath: row.localPath,
+							},
+			},
+		}
+	}
+
+	private dynamicPlaylistRowsCte(playlistId: number) {
+		return sql`
+			WITH ranked_tracks AS (
+				SELECT
+					pt.track_id,
+					dps.position AS source_position,
+					pt.sort_key AS source_sort_key,
+					(dps.position || '|' || pt.sort_key) AS sort_key,
+					pt.created_at,
+					ROW_NUMBER() OVER (
+						PARTITION BY pt.track_id
+						ORDER BY dps.position ASC, pt.sort_key DESC, pt.created_at DESC, pt.track_id DESC
+					) AS row_number
+				FROM ${schema.dynamicPlaylistSources} AS dps
+				JOIN ${schema.playlistTracks} AS pt
+					ON pt.playlist_id = dps.source_playlist_id
+				WHERE dps.playlist_id = ${playlistId}
 			),
+			dynamic_tracks AS (
+				SELECT *
+				FROM ranked_tracks
+				WHERE row_number = 1
+			)
+		`
+	}
+
+	private async queryDynamicPlaylistTrackRows({
+		playlistId,
+		query,
+		limit,
+		cursor,
+	}: {
+		playlistId: number
+		query?: string
+		limit?: number
+		cursor?: {
+			lastSortKey: string
+			createdAt: number
+			lastId: number
+		}
+	}): Promise<PlaylistTrackRow[]> {
+		const trimmed = query?.trim().toLowerCase()
+		const likeQuery = trimmed ? `%${trimmed}%` : undefined
+		const parsedCursor = this.parseDynamicCursor(cursor)
+		const rows = this.db.all<DynamicPlaylistTrackSqlRow>(sql`
+			${this.dynamicPlaylistRowsCte(playlistId)}
+			SELECT
+				dt.source_position AS sourcePosition,
+				dt.track_id AS trackId,
+				dt.source_sort_key AS sourceSortKey,
+				dt.sort_key AS sortKey,
+				dt.created_at AS createdAt,
+				t.unique_key AS trackUniqueKey,
+				t.title AS trackTitle,
+				t.artist_id AS trackArtistId,
+				t.cover_url AS trackCoverUrl,
+				t.duration AS trackDuration,
+				t.created_at AS trackCreatedAt,
+				t.source AS trackSource,
+				t.updated_at AS trackUpdatedAt,
+				a.id AS artistId,
+				a.name AS artistName,
+				a.avatar_url AS artistAvatarUrl,
+				a.signature AS artistSignature,
+				a.source AS artistSource,
+				a.remote_id AS artistRemoteId,
+				a.created_at AS artistCreatedAt,
+				a.updated_at AS artistUpdatedAt,
+				bm.track_id AS bilibiliTrackId,
+				bm.bvid AS bilibiliBvid,
+				bm.cid AS bilibiliCid,
+				bm.is_multi_page AS bilibiliIsMultiPage,
+				bm.main_track_title AS bilibiliMainTrackTitle,
+				bm.video_is_valid AS bilibiliVideoIsValid,
+				lm.track_id AS localTrackId,
+				lm.local_path AS localPath
+			FROM dynamic_tracks AS dt
+			JOIN ${schema.tracks} AS t
+				ON t.id = dt.track_id
+			LEFT JOIN ${schema.artists} AS a
+				ON a.id = t.artist_id
+			LEFT JOIN ${schema.bilibiliMetadata} AS bm
+				ON bm.track_id = t.id
+			LEFT JOIN ${schema.localMetadata} AS lm
+				ON lm.track_id = t.id
+			WHERE
+				${likeQuery === undefined ? sql`1 = 1` : sql`lower(t.title) LIKE ${likeQuery}`}
+				AND ${
+					parsedCursor === undefined
+						? sql`1 = 1`
+						: sql`(
+								dt.source_position > ${parsedCursor.sourcePosition}
+								OR (
+									dt.source_position = ${parsedCursor.sourcePosition}
+									AND (
+										dt.source_sort_key < ${parsedCursor.sourceSortKey}
+										OR (
+											dt.source_sort_key = ${parsedCursor.sourceSortKey}
+											AND dt.created_at < ${parsedCursor.createdAt}
+										)
+										OR (
+											dt.source_sort_key = ${parsedCursor.sourceSortKey}
+											AND dt.created_at = ${parsedCursor.createdAt}
+											AND dt.track_id < ${parsedCursor.lastId}
+										)
+									)
+								)
+							)`
+				}
+			ORDER BY
+				dt.source_position ASC,
+				dt.source_sort_key DESC,
+				dt.created_at DESC,
+				dt.track_id DESC
+			${limit === undefined ? sql`` : sql`LIMIT ${limit}`}
+		`)
+
+		return rows.map((row) => this.mapDynamicPlaylistTrackRow(row))
+	}
+
+	private async getDynamicPlaylistStats(
+		playlistId: number,
+	): Promise<DynamicPlaylistStats> {
+		const row = this.db.get<DynamicPlaylistStats>(sql`
+			${this.dynamicPlaylistRowsCte(playlistId)}
+			SELECT
+				COUNT(dt.track_id) AS itemCount,
+				COUNT(
+					CASE
+						WHEN bm.video_is_valid IS NOT false THEN dt.track_id
+					END
+				) AS validTrackCount,
+				COALESCE(SUM(
+					CASE
+						WHEN bm.video_is_valid IS NOT false THEN t.duration
+						ELSE 0
+					END
+				), 0) AS totalDuration
+			FROM dynamic_tracks AS dt
+			JOIN ${schema.tracks} AS t
+				ON t.id = dt.track_id
+			LEFT JOIN ${schema.bilibiliMetadata} AS bm
+				ON bm.track_id = t.id
+		`)
+
+		return {
+			itemCount: Number(row?.itemCount ?? 0),
+			validTrackCount: Number(row?.validTrackCount ?? 0),
+			totalDuration: Number(row?.totalDuration ?? 0),
+		}
+	}
+
+	private async getDynamicPlaylistCounts(playlistIds: number[]) {
+		const uniqueIds = Array.from(new Set(playlistIds))
+		if (uniqueIds.length === 0) return new Map<number, number>()
+
+		const rows = this.db.all<{ playlistId: number; itemCount: number }>(
+			sql`
+				WITH ranked_tracks AS (
+					SELECT
+						dps.playlist_id,
+						pt.track_id,
+						ROW_NUMBER() OVER (
+							PARTITION BY dps.playlist_id, pt.track_id
+							ORDER BY dps.position ASC, pt.sort_key DESC, pt.created_at DESC, pt.track_id DESC
+						) AS row_number
+					FROM ${schema.dynamicPlaylistSources} AS dps
+					JOIN ${schema.playlistTracks} AS pt
+						ON pt.playlist_id = dps.source_playlist_id
+					WHERE dps.playlist_id IN (${sql.join(
+						uniqueIds.map((id) => sql`${id}`),
+						sql`, `,
+					)})
+				)
+				SELECT playlist_id AS playlistId, COUNT(track_id) AS itemCount
+				FROM ranked_tracks
+				WHERE row_number = 1
+				GROUP BY playlist_id
+			`,
 		)
 
-		const seenTrackIds = new Set<number>()
-		return rowsBySource.flat().filter((row) => {
-			if (seenTrackIds.has(row.trackId)) return false
-			seenTrackIds.add(row.trackId)
-			return true
-		})
-	}
-
-	private formatDynamicPlaylistRows(
-		rows: Awaited<ReturnType<PlaylistService['getDynamicPlaylistTrackRows']>>,
-	) {
-		const tracks: Track[] = []
-		for (const row of rows) {
-			const track = this.trackService.formatTrack(row.track)
-			if (!track) {
-				throw new ServiceError(
-					`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
-				)
-			}
-			tracks.push(track)
-		}
-		return tracks
+		return new Map(
+			uniqueIds.map((id) => [
+				id,
+				Number(rows.find((row) => row.playlistId === id)?.itemCount ?? 0),
+			]),
+		)
 	}
 
 	/**
@@ -541,7 +791,7 @@ export class PlaylistService {
 				)
 				if (!type) throw createPlaylistNotFound(playlistId)
 				if (type.type === 'dynamic') {
-					return this.getDynamicPlaylistTrackRows(playlistId)
+					return this.queryDynamicPlaylistTrackRows({ playlistId })
 				}
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
 				const orderBy = desc(schema.playlistTracks.sortKey)
@@ -608,13 +858,19 @@ export class PlaylistService {
 						}),
 				)
 
-				return Promise.all(
-					playlists.map(async (playlist) => {
-						if (playlist.type !== 'dynamic') return playlist
-						const rows = await this.getDynamicPlaylistTrackRows(playlist.id)
-						return { ...playlist, itemCount: rows.length }
-					}),
+				const countMap = await this.getDynamicPlaylistCounts(
+					playlists
+						.filter((playlist) => playlist.type === 'dynamic')
+						.map((playlist) => playlist.id),
 				)
+
+				return playlists.map((playlist) => {
+					if (playlist.type !== 'dynamic') return playlist
+					return {
+						...playlist,
+						itemCount: countMap.get(playlist.id) ?? 0,
+					}
+				})
 			})(),
 			(e) => new DatabaseError('获取所有 playlists 失败', { cause: e }),
 		).andThen((playlists) => {
@@ -680,22 +936,13 @@ export class PlaylistService {
 					)
 				}
 
-				const rows = await this.getDynamicPlaylistTrackRows(playlistId)
-				const tracks = this.formatDynamicPlaylistRows(rows)
-				const validTracks = tracks.filter((track) => {
-					if (track.source !== 'bilibili') return true
-					return track.bilibiliMetadata.videoIsValid
-				})
-				const totalDuration = validTracks.reduce(
-					(total, track) => total + (track.duration ?? 0),
-					0,
-				)
+				const stats = await this.getDynamicPlaylistStats(playlistId)
 
 				return {
 					...playlist,
-					itemCount: tracks.length,
-					validTrackCount: validTracks.length,
-					totalDuration,
+					itemCount: stats.itemCount,
+					validTrackCount: stats.validTrackCount,
+					totalDuration: stats.totalDuration,
 				}
 			})(),
 			(e) => new DatabaseError('获取 playlist 元数据失败', { cause: e }),
@@ -979,13 +1226,19 @@ export class PlaylistService {
 						}),
 				)
 
-				return Promise.all(
-					playlists.map(async (playlist) => {
-						if (playlist.type !== 'dynamic') return playlist
-						const rows = await this.getDynamicPlaylistTrackRows(playlist.id)
-						return { ...playlist, itemCount: rows.length }
-					}),
+				const countMap = await this.getDynamicPlaylistCounts(
+					playlists
+						.filter((playlist) => playlist.type === 'dynamic')
+						.map((playlist) => playlist.id),
 				)
+
+				return playlists.map((playlist) => {
+					if (playlist.type !== 'dynamic') return playlist
+					return {
+						...playlist,
+						itemCount: countMap.get(playlist.id) ?? 0,
+					}
+				})
 			})(),
 			(e) => new DatabaseError('搜索播放列表失败', { cause: e }),
 		)
@@ -1014,10 +1267,21 @@ export class PlaylistService {
 				)
 				if (!playlist) throw createPlaylistNotFound(playlistId)
 				if (playlist.type === 'dynamic') {
-					const rows = await this.getDynamicPlaylistTrackRows(playlistId)
-					return this.formatDynamicPlaylistRows(rows).filter((track) =>
-						track.title.toLowerCase().includes(query.trim().toLowerCase()),
-					)
+					const rows = await this.queryDynamicPlaylistTrackRows({
+						playlistId,
+						query,
+					})
+					const tracks: Track[] = []
+					for (const row of rows) {
+						const track = this.trackService.formatTrack(row.track)
+						if (!track) {
+							throw new ServiceError(
+								`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
+							)
+						}
+						tracks.push(track)
+					}
+					return tracks
 				}
 
 				const trackIdSubq = db
@@ -1119,11 +1383,11 @@ export class PlaylistService {
 				)
 				if (!playlist) throw createPlaylistNotFound(playlistId)
 				if (playlist.type === 'dynamic') {
-					const rows = await this.getDynamicPlaylistTrackRows(playlistId)
-					const startIndex = cursor
-						? rows.findIndex((row) => row.trackId === cursor.lastId) + 1
-						: 0
-					return rows.slice(startIndex, startIndex + effectiveLimit + 1)
+					return this.queryDynamicPlaylistTrackRows({
+						playlistId,
+						limit: effectiveLimit + 1,
+						cursor,
+					})
 				}
 
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大

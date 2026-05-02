@@ -20,6 +20,7 @@ import m0016 from './0016_cheerful_stark_industries.sql'
 import m0017 from './0017_rare_lifeguard.sql'
 import m0018 from './0018_green_dracula.sql'
 import m0019 from './0019_icy_mandarin.sql'
+import m0020 from './0020_ambitious_sheva_callister.sql'
 import journal from './meta/_journal.json'
 
 export default {
@@ -45,5 +46,6 @@ export default {
 		m0017,
 		m0018,
 		m0019,
+		m0020,
 	},
 }
