@@ -5,7 +5,7 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.4.5] - 2026-05-09
 
 ### Changed
 
@@ -14,6 +14,7 @@
 ### Added
 
 - 支持车载歌词（Android：通过把当前歌词写入 MediaMetadata.title，在蓝牙 AVRCP 车机上显示）
+- 支持自动下载新版并安装
 
 ### Fixed
 
