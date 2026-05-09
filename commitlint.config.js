@@ -14,6 +14,7 @@ module.exports = {
 				'splash',
 				'backend',
 				'heatmap',
+				'native',
 			],
 		],
 		'scope-empty': [2, 'never'],

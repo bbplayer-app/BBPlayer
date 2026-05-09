@@ -16,6 +16,7 @@
 		"@bbplayer/heatmap": "workspace:*",
 		"@bbplayer/image-theme-colors": "workspace:*",
 		"@bbplayer/logs": "workspace:*",
+		"@bbplayer/native": "workspace:*",
 		"@bbplayer/orpheus": "workspace:*",
 		"@bbplayer/splash": "workspace:*",
 		"@bottom-tabs/react-navigation": "^0.10.2",

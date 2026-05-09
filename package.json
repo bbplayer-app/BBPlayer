@@ -11,7 +11,8 @@
 		"format": "oxfmt --write .",
 		"lint": "oxlint --type-aware && eslint .",
 		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
-		"postinstall": "lefthook install"
+		"postinstall": "lefthook install",
+		"publish:update": "pnpm --filter @bbplayer/update-publisher start"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",

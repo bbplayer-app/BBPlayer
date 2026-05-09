@@ -10,6 +10,7 @@
 		{ "path": "./packages/splash/tsconfig.json" },
 		{ "path": "./packages/heatmap/tsconfig.json" },
 		{ "path": "./packages/logs/tsconfig.json" },
+		{ "path": "./apps/update-publisher/tsconfig.json" },
 		{ "path": "./apps/backend/tsconfig.json" }
 	],
 	"compilerOptions": {

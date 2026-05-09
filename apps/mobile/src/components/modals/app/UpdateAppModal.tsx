@@ -1,11 +1,18 @@
+import {
+	canRequestPackageInstallsAsync,
+	downloadAndInstallApkAsync,
+	getSupportedAbisAsync,
+	openPackageInstallerSettingsAsync,
+} from '@bbplayer/native'
 import * as Clipboard from 'expo-clipboard'
 import * as WebBrowser from 'expo-web-browser'
-import { useCallback } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { Platform, StyleSheet, View } from 'react-native'
 import { Dialog, Text, useTheme } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { UpdateDownloads } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 
@@ -15,6 +22,7 @@ export interface UpdateModalProps {
 	listed_notes?: string[]
 	forced?: boolean
 	url: string
+	downloads?: UpdateDownloads
 }
 
 export default function UpdateAppModal({
@@ -22,13 +30,61 @@ export default function UpdateAppModal({
 	notes,
 	listed_notes,
 	url,
+	downloads,
 	forced = false,
 }: UpdateModalProps) {
 	const colors = useTheme().colors
 	const _close = useModalStore((state) => state.close)
 	const close = useCallback(() => _close('UpdateApp'), [_close])
+	const [isUpdating, setIsUpdating] = useState(false)
 
 	const onUpdate = async () => {
+		if (isUpdating) return
+		if (Platform.OS !== 'android') {
+			await openReleaseUrl()
+			return
+		}
+
+		let toastId: string | number | undefined
+		try {
+			const canInstall = await canRequestPackageInstallsAsync()
+			if (!canInstall) {
+				await openPackageInstallerSettingsAsync()
+				toast.info('请允许 BBPlayer 安装未知来源应用后再次更新')
+				return
+			}
+
+			setIsUpdating(true)
+			toastId = toast.loading('正在下载更新包', {
+				description: '下载完成后会打开系统安装器',
+				duration: Infinity,
+			})
+			const downloadUrl = await resolveAndroidDownloadUrl()
+			if (!downloadUrl) {
+				toast.dismiss(toastId)
+				await openReleaseUrl()
+				return
+			}
+			await downloadAndInstallApkAsync({
+				url: downloadUrl,
+				fileName: `BBPlayer-${version}-${Date.now()}.apk`,
+				title: `BBPlayer ${version}`,
+				description: '下载完成后安装更新',
+			})
+			toast.success('更新包下载完成', { id: toastId })
+			close()
+		} catch (e) {
+			toast.error('更新失败，已将下载链接复制到剪贴板', {
+				description: String(e),
+				id: toastId,
+			})
+			void Clipboard.setStringAsync(url)
+		} finally {
+			setIsUpdating(false)
+		}
+	}
+
+	const openReleaseUrl = async () => {
 		try {
 			if (url) await WebBrowser.openBrowserAsync(url)
 		} catch (e) {
@@ -38,6 +94,16 @@ export default function UpdateAppModal({
 			})
 		}
 		close()
+	}
+
+	const resolveAndroidDownloadUrl = async (): Promise<string | null> => {
+		if (!downloads?.android) return isApkUrl(url) ? url : null
+		const supportedAbis = await getSupportedAbisAsync()
+		for (const abi of supportedAbis) {
+			const abiUrl = downloads.android[abi]
+			if (abiUrl) return abiUrl
+		}
+		return downloads.android.universal ?? (isApkUrl(url) ? url : null)
 	}
 
 	const onSkip = () => {
@@ -77,20 +143,36 @@ export default function UpdateAppModal({
 				)}
 			</Dialog.Content>
 			<Dialog.Actions style={styles.actionsContainer}>
-				{!forced ? <Button onPress={onSkip}>跳过此版本</Button> : <View />}
+				{!forced ? (
+					<Button
+						onPress={onSkip}
+						disabled={isUpdating}
+					>
+						跳过此版本
+					</Button>
+				) : (
+					<View />
+				)}
 				<View style={styles.rightActionsContainer}>
 					<Button
 						onPress={onCancel}
-						disabled={forced}
+						disabled={forced || isUpdating}
 					>
 						取消
 					</Button>
-					<Button onPress={onUpdate}>去更新</Button>
+					<Button
+						onPress={onUpdate}
+						disabled={isUpdating}
+					>
+						{isUpdating ? '下载中' : '去更新'}
+					</Button>
 				</View>
 			</Dialog.Actions>
 		</>
 	)
 }
+
+const isApkUrl = (value: string) => value.toLowerCase().includes('.apk')
 
 const styles = StyleSheet.create({
 	forcedText: {
