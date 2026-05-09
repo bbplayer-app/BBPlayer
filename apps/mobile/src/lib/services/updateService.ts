@@ -8,7 +8,12 @@ export interface ReleaseInfo {
 	notes: string
 	listed_notes?: string[]
 	url: string
+	downloads?: UpdateDownloads
 	forced: boolean
+}
+
+export interface UpdateDownloads {
+	android?: Record<string, string>
 }
 
 export interface UpdateManifest {
@@ -16,6 +21,7 @@ export interface UpdateManifest {
 	notes?: string
 	listed_notes?: string[]
 	url: string
+	downloads?: UpdateDownloads
 	forced?: boolean
 }
 
@@ -82,11 +88,16 @@ export async function fetchLatestRelease(): Promise<
 				? obj.listed_notes
 				: undefined
 		const forced = typeof obj.forced === 'boolean' ? obj.forced : false
+		const downloads =
+			typeof obj.downloads === 'object' && obj.downloads !== null
+				? parseDownloads(obj.downloads)
+				: undefined
 		const releaseInfo = {
 			version: normalizeVersion(version),
 			url,
 			notes,
 			listed_notes,
+			downloads,
 			forced,
 		}
 		return ok(releaseInfo)
@@ -112,4 +123,26 @@ export async function checkForAppUpdate(): Promise<
 		return ok({ update: null, currentVersion })
 	}
 	return ok({ update: info, currentVersion })
+}
+
+const parseDownloads = (value: object): UpdateDownloads | undefined => {
+	const downloads = value as Record<string, unknown>
+	const android = parseStringRecord(downloads.android)
+	if (!android) return undefined
+	return { android }
+}
+
+const parseStringRecord = (
+	value: unknown,
+): Record<string, string> | undefined => {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return undefined
+	}
+
+	const entries = Object.entries(value)
+		.filter(([, v]) => typeof v === 'string')
+		.map(([k, v]) => [k, v] as const)
+
+	if (entries.length === 0) return undefined
+	return Object.fromEntries(entries)
 }

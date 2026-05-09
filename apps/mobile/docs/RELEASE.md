@@ -18,16 +18,12 @@
 
 用于应用内检查更新。
 
-- **文件位置**：仓库根目录 `./update.json`。
+- **推荐方式**：运行 `pnpm publish:update`，在 TUI 中选择 GitHub Release，确认生成的 update metadata，并发布到 Cloudflare Workers KV。
+- **存储位置**：Cloudflare Workers KV 的 `update_json` key，由 backend 的 `/update.json` 路由读取。
 - **字段说明**：
   - `version`：语义化版本号（如 `1.2.3`）。
-  - `url`：下载链接（APK 直链或 GitHub Release 页面）。
+  - `url`：GitHub Release 页面，作为回退链接。
+  - `downloads.android`：按 ABI 保存的 APK 直链，例如 `arm64-v8a`。
   - `notes`：更新说明（支持多行文本）。
   - `listed_notes`：更新说明列表（推荐）。当存在此字段时，`notes` 会被忽略。
   - `forced`：布尔值，是否强制用户更新。
-
-## 4. 刷新缓存
-
-更新 `update.json` 后，需要刷新 CDN 缓存以确保用户能立即检测到更新。
-
-- **操作**：使用 `https://www.jsdelivr.com/tools/purge` 刷新 `update.json` 的缓存。
