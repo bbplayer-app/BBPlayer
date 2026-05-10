@@ -140,6 +140,7 @@ class UnifiedLyricsManager(
                 currentPlaybackSeconds()?.let(::updateDesktopConsumer) ?: floatingLyricsManager.clearLyrics()
             }
             LyricsConsumer.STATUS_BAR -> {
+                statusBarLyricsManager.setLyricsData(projected)
                 lastStatusBarLineIndex = UNSET_LINE_INDEX
                 currentPlaybackSeconds()?.let(::updateStatusBarConsumer)
                     ?: statusBarLyricsManager.renderLyricFrame(null)
@@ -186,15 +187,19 @@ class UnifiedLyricsManager(
                 snapshot.line?.let { line ->
                     StatusBarLyricFrame(
                         line = line,
+                        positionMs = snapshot.adjustedTimeMs,
                         lineDurationMs = snapshot.lineDurationMs,
                         lineProgressMs = snapshot.lineProgressMs,
                         delayMs = snapshot.delayMs,
                     )
                 },
             )
+            if (snapshot.line == null) {
+                statusBarLyricsManager.updateProgress(snapshot.adjustedTimeMs, snapshot.lineProgressMs)
+            }
             lastStatusBarLineIndex = snapshot.lineIndex
         } else if (snapshot.line != null) {
-            statusBarLyricsManager.updateProgress(snapshot.lineProgressMs)
+            statusBarLyricsManager.updateProgress(snapshot.adjustedTimeMs, snapshot.lineProgressMs)
         }
     }
 

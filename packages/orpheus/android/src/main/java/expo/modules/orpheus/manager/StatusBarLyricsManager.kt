@@ -2,6 +2,7 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
+import expo.modules.orpheus.model.LyricsData
 
 private const val TAG = "StatusBarLyrics"
 
@@ -53,7 +54,16 @@ class StatusBarLyricsManager(private val context: Context) {
         }
 
     private var lastFrame: StatusBarLyricFrame? = null
+    private var lastLyricsData: LyricsData? = null
     private var lastIsPlaying: Boolean = false
+
+    fun setLyricsData(data: LyricsData) {
+        lastLyricsData = data
+
+        if (!enabled) return
+
+        backend?.setLyricsData(data)
+    }
 
     fun renderLyricFrame(frame: StatusBarLyricFrame?) {
         lastFrame = frame
@@ -63,8 +73,11 @@ class StatusBarLyricsManager(private val context: Context) {
         backend?.renderLyricFrame(frame)
     }
 
-    fun updateProgress(positionMs: Long) {
-        lastFrame = lastFrame?.copy(lineProgressMs = positionMs)
+    fun updateProgress(positionMs: Long, lineProgressMs: Long) {
+        lastFrame = lastFrame?.copy(
+            positionMs = positionMs,
+            lineProgressMs = lineProgressMs,
+        )
 
         if (!enabled) return
 
@@ -81,13 +94,15 @@ class StatusBarLyricsManager(private val context: Context) {
 
     fun onStop() {
         lastFrame = null
+        lastLyricsData = null
         lastIsPlaying = false
         backend?.onStop()
     }
 
     private fun reapplyCurrentState() {
+        lastLyricsData?.let { backend?.setLyricsData(it) }
         backend?.renderLyricFrame(lastFrame)
         backend?.setPlaybackState(lastIsPlaying)
-        lastFrame?.let { backend?.updateProgress(it.lineProgressMs) }
+        lastFrame?.let { backend?.updateProgress(it.positionMs) }
     }
 }
