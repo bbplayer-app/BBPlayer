@@ -81,6 +81,8 @@ jobs:
       BUILD_TYPE: ${{ needs.setup.outputs.buildType }}
       EAS_PROFILE: ${{ needs.setup.outputs.profile }}
       ABI_FILTERS: ${{ matrix.arch }}
+      EAS_LOCAL_BUILD_SKIP_CLEANUP: 1
+      EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/eas-local-build-${{ matrix.arch }}
 
     environment: ${{ (github.event_name == 'pull_request' && 'production') || null }}
 
@@ -148,10 +150,28 @@ jobs:
       - name: 📦 Collect R8 Mapping
         if: env.BUILD_TYPE != 'blank-test' && env.EAS_PROFILE != 'dev'
         run: |
-          MAPPING_SOURCE=$(find apps/mobile/android/app/build/outputs/mapping -path "*/release/mapping.txt" -type f -print -quit)
+          SEARCH_ROOTS=()
+
+          if [[ -d "$EAS_LOCAL_BUILD_WORKINGDIR" ]]; then
+            SEARCH_ROOTS+=("$EAS_LOCAL_BUILD_WORKINGDIR")
+          fi
+
+          if [[ -d apps/mobile/android/app/build/outputs/mapping ]]; then
+            SEARCH_ROOTS+=(apps/mobile/android/app/build/outputs/mapping)
+          fi
+
+          if [[ ${#SEARCH_ROOTS[@]} -eq 0 ]]; then
+            echo "No Android mapping output directories were found."
+            echo "Checked EAS local build working directory: $EAS_LOCAL_BUILD_WORKINGDIR"
+            exit 1
+          fi
+
+          MAPPING_SOURCE=$(find "${SEARCH_ROOTS[@]}" -path "*/release/mapping.txt" -type f -print -quit)
 
           if [[ -z "$MAPPING_SOURCE" ]]; then
             echo "Expected R8 mapping file was not found."
+            printf 'Checked directories:\n'
+            printf ' - %s\n' "${SEARCH_ROOTS[@]}"
             exit 1
           fi
 
