@@ -23,7 +23,7 @@ abstract class StatusBarLyricsBackend(protected val context: Context) {
     /** Called when the full status bar lyric set changes. */
     open fun setLyricsData(data: LyricsData) {}
 
-    /** Called when UnifiedLyricsManager selects a new current line. */
+    /** Called when the status bar lyrics consumer selects a new current line. */
     abstract fun renderLyricFrame(frame: StatusBarLyricFrame?)
 
     /** Called continuously with the current projected song position. */

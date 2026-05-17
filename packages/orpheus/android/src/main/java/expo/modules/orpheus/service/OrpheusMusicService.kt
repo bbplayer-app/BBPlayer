@@ -570,6 +570,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 sendTrackStartEvent(mediaItem, reason)
 
                 lyricsManager.clearConsumers(LyricsConsumer.all())
+                lyricsManager.setPlaybackState(player?.isPlaying == true)
                 floatingLyricsManager.syncTrackInfo()
 
                 saveCurrentQueue()
