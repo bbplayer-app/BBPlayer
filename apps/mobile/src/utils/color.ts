@@ -134,6 +134,24 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
 	}
 }
 
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max)
+}
+
 export function hslToString(h: number, s: number, l: number): string {
-	return `hsl(${h}, ${s}%, ${l}%)`
+	return `hsl(${Math.round(h)}, ${Math.round(clamp(s, 0, 100))}%, ${Math.round(clamp(l, 0, 100))}%)`
+}
+
+export function clampHslLightness(
+	hexColor: string,
+	minLightness: number,
+	maxLightness: number,
+	maxSaturation?: number,
+): string {
+	const hsl = hexToHsl(hexColor)
+	return hslToString(
+		hsl.h,
+		maxSaturation === undefined ? hsl.s : Math.min(hsl.s, maxSaturation),
+		clamp(hsl.l, minLightness, maxLightness),
+	)
 }
