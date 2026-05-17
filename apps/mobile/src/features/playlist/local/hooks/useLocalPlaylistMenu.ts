@@ -138,7 +138,7 @@ export function useLocalPlaylistMenu({
 				},
 			},
 			{
-				title: '改名',
+				title: '编辑信息',
 				leadingIcon: 'pencil',
 				onPress: () => openEditTrackModal(item),
 			},

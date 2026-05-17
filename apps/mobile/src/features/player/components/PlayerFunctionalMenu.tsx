@@ -249,6 +249,21 @@ export function PlayerFunctionalMenu({
 						}
 					/>
 					<List.Item
+						title='编辑信息'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='pencil'
+							/>
+						)}
+						onPress={() =>
+							handleAction(() => {
+								if (!currentTrack) return
+								openModal('EditTrackMetadata', { track: currentTrack })
+							})
+						}
+					/>
+					<List.Item
 						title='查看作者'
 						left={(props) => (
 							<List.Icon
