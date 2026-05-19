@@ -97,9 +97,8 @@ export default function useDanmakuLoader(
 					loadedSegmentsRef.current.delete(segIndex)
 					delete retryTimersRef.current[segIndex]
 				}, delay)
-			} finally {
-				isLoadingRef.current = false
 			}
+			isLoadingRef.current = false
 		},
 		[bvid, cid, rawDataSV, danmakuFilterLevel, isOffline],
 	)

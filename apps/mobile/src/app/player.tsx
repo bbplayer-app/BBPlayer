@@ -81,12 +81,12 @@ export default function PlayerPage() {
 	const sheetRef = useRef<TrueSheet>(null)
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const coverRef = useImage(
-		resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ?? '',
-		{
-			onError: () => void 0,
-		},
-	)
+	const currentTrackCover = currentTrack
+		? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
+		: null
+	const coverRef = useImage(currentTrackCover ?? '', {
+		onError: () => void 0,
+	})
 	const { width } = useWindowDimensions()
 	const colorScheme = useColorScheme()
 	const playerBackgroundStyle = useAppStore(

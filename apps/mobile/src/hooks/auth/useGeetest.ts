@@ -52,8 +52,18 @@ export function useGeetest({
 				)
 				if (smsResult.isErr()) {
 					const errCode = smsResult.error.data.msgCode
-					let errorMsg = smsResult.error.message || '发送验证码失败，请稍后重试'
-					if (errCode === 86211 || errCode === -105) {
+					let errorMsg = smsResult.error.message
+					if (!errorMsg) {
+						errorMsg = '发送验证码失败，请稍后重试'
+					}
+					let isExpiredCaptcha = false
+					if (errCode === 86211) {
+						isExpiredCaptcha = true
+					}
+					if (errCode === -105) {
+						isExpiredCaptcha = true
+					}
+					if (isExpiredCaptcha) {
 						errorMsg = '图形验证已过期，请重新获取验证码'
 					}
 					onFail(errorMsg)

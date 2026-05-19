@@ -218,13 +218,13 @@ const Lyrics = memo(function Lyrics({
 		})
 	}
 
-	const handleEditLyrics = useCallback(() => {
+	const handleEditLyrics = () => {
 		if (!track || !lyrics) return
 		useModalStore.getState().open('EditLyrics', {
 			uniqueKey: track.uniqueKey,
 			lyrics: lyrics,
 		})
-	}, [track, lyrics])
+	}
 
 	const handleOpenOffsetMenu = useCallback(() => {
 		setOffsetMenuVisible(true)

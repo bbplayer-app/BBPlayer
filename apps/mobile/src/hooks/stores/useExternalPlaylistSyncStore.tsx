@@ -1,4 +1,4 @@
-import { createContext, use, useRef } from 'react'
+import { createContext, use, useState } from 'react'
 import { createStore, useStore } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
@@ -119,12 +119,9 @@ export const ExternalPlaylistSyncStoreProvider = ({
 }: {
 	children: React.ReactNode
 }) => {
-	const storeRef = useRef<SyncStore | null>(null)
-	if (!storeRef.current) {
-		storeRef.current = createExternalPlaylistSyncStore()
-	}
+	const [store] = useState(createExternalPlaylistSyncStore)
 	return (
-		<ExternalPlaylistSyncStoreContext.Provider value={storeRef.current}>
+		<ExternalPlaylistSyncStoreContext.Provider value={store}>
 			{children}
 		</ExternalPlaylistSyncStoreContext.Provider>
 	)

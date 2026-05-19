@@ -19,6 +19,16 @@ export default function useLyricSync(
 	const [isActive, setIsActive] = useState(true)
 	const latestJumpRequestRef = useRef(0)
 
+	const updateCurrentLyricIndex = useCallback(
+		(index: number) => {
+			setCurrentLyricIndex(index)
+			if (!enabled) return
+			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
+			scrollToIndex(index, true)
+		},
+		[enabled, scrollToIndex],
+	)
+
 	const findIndexForTime = useCallback(
 		(timestamp: number) => {
 			let lo = 0,
@@ -67,14 +77,14 @@ export default function useLyricSync(
 			const requestId = ++latestJumpRequestRef.current
 			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
 			if (latestJumpRequestRef.current !== requestId) return
-			setCurrentLyricIndex(index)
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
 				manualScrollTimeoutRef.current = null
 			}
 			isManualScrollingRef.current = false
+			updateCurrentLyricIndex(index)
 		},
-		[lyrics, offset],
+		[lyrics, offset, updateCurrentLyricIndex],
 	)
 
 	useEffect(() => {
@@ -97,13 +107,20 @@ export default function useLyricSync(
 			}
 			const index = findIndexForTime(offsetedPosition)
 			if (index === currentLyricIndex) return
-			setCurrentLyricIndex(index)
+			updateCurrentLyricIndex(index)
 		})
 		return () => {
 			handler()
 			appStateSubscription.remove()
 		}
-	}, [currentLyricIndex, enabled, findIndexForTime, isActive, offset])
+	}, [
+		currentLyricIndex,
+		enabled,
+		findIndexForTime,
+		isActive,
+		offset,
+		updateCurrentLyricIndex,
+	])
 
 	useEffect(() => {
 		if (!enabled) return
@@ -114,16 +131,16 @@ export default function useLyricSync(
 			}
 			const index = findIndexForTime(offsetedPosition)
 			if (index === currentLyricIndex) return
-			setCurrentLyricIndex(index)
+			updateCurrentLyricIndex(index)
 		})
-	}, [currentLyricIndex, enabled, findIndexForTime, isActive, offset])
-
-	// 当歌词发生变化且用户没自己滚时，滚动到当前歌词
-	useEffect(() => {
-		if (!enabled) return
-		if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
-		scrollToIndex(currentLyricIndex, true)
-	}, [currentLyricIndex, enabled, lyrics.length, scrollToIndex])
+	}, [
+		currentLyricIndex,
+		enabled,
+		findIndexForTime,
+		isActive,
+		offset,
+		updateCurrentLyricIndex,
+	])
 
 	useEffect(() => {
 		return () => {

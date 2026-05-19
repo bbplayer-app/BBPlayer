@@ -146,15 +146,18 @@ export default function TestPage() {
 		setLoading(true)
 		try {
 			const result = await sharedPlaylistFacade.pullChanges(44)
-			if (result.isErr()) throw result.error
+			if (result.isErr()) {
+				toastAndLogError('拉取共享歌单失败', result.error, 'TestPage')
+				setLoading(false)
+				return
+			}
 			toast.success('拉取共享歌单成功', {
 				description: `applied=${result.value.applied}`,
 			})
 		} catch (error) {
 			toastAndLogError('拉取共享歌单失败', error, 'TestPage')
-		} finally {
-			setLoading(false)
 		}
+		setLoading(false)
 	}
 
 	const dumpSyncQueue = async () => {
@@ -170,9 +173,8 @@ export default function TestPage() {
 			})
 		} catch (error) {
 			toastAndLogError('读取 playlist_sync_queue 失败', error, 'TestPage')
-		} finally {
-			setLoading(false)
 		}
+		setLoading(false)
 	}
 
 	const openSyncFailuresSheet = () => {
@@ -197,7 +199,10 @@ export default function TestPage() {
 								copyToCacheDirectory: true,
 							})
 
-							if (result.canceled) return
+							if (result.canceled) {
+								setLoading(false)
+								return
+							}
 
 							const pickedFile = new File(result.assets[0].uri)
 							const dbDir = new Directory(Paths.document, 'SQLite')
@@ -216,9 +221,8 @@ export default function TestPage() {
 							toast.success('导入成功')
 						} catch (error) {
 							toastAndLogError('导入数据库失败', error, 'TestPage')
-						} finally {
-							setLoading(false)
 						}
+						setLoading(false)
 					},
 				},
 			],
@@ -243,7 +247,10 @@ export default function TestPage() {
 								multiple: true,
 							})
 
-							if (result.canceled) return
+							if (result.canceled) {
+								setLoading(false)
+								return
+							}
 
 							const mmkvDir = new Directory(Paths.document, 'mmkv')
 							if (!mmkvDir.exists) {
@@ -262,9 +269,8 @@ export default function TestPage() {
 							toast.success('MMKV 导入成功')
 						} catch (error) {
 							toastAndLogError('导入 MMKV 失败', error, 'TestPage')
-						} finally {
-							setLoading(false)
 						}
+						setLoading(false)
 					},
 				},
 			],
@@ -307,9 +313,8 @@ export default function TestPage() {
 			})
 		} catch (error) {
 			toastAndLogError('查询播放历史失败', error, 'TestPage')
-		} finally {
-			setLoading(false)
 		}
+		setLoading(false)
 	}
 
 	const openModal = useModalStore((state) => state.open)

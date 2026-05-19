@@ -104,9 +104,8 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 				success = true
 			} catch (error) {
 				toastAndLogError('重试同步失败', error, SCOPE)
-			} finally {
-				setLoading(false)
 			}
+			setLoading(false)
 
 			if (success) {
 				if (ref && 'current' in ref && ref.current) {

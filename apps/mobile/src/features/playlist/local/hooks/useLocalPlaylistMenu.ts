@@ -109,13 +109,21 @@ export function useLocalPlaylistMenu({
 								toastAndLogError('获取内部播放地址失败', '失败了！', SCOPE)
 								return
 							}
+							let artistName: string | undefined
+							if (item.artist) {
+								artistName = item.artist.name
+							}
+							let artwork: string | undefined
+							if (item.coverUrl) {
+								artwork = item.coverUrl
+							}
 
 							await Orpheus.downloadTrack({
 								id: item.uniqueKey,
 								url: url,
 								title: item.title,
-								artist: item.artist?.name,
-								artwork: item.coverUrl ?? undefined,
+								artist: artistName,
+								artwork: artwork,
 								duration: item.duration,
 							})
 

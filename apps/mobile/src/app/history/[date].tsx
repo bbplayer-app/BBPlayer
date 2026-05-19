@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list'
 import dayjs from 'dayjs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
@@ -66,7 +66,7 @@ export default function DateHistoryPage() {
 		isError: isHistoryError,
 	} = usePlayHistoryByDayOfMonth(dayOfMonth ?? 0)
 
-	const { aggregatedTracks, totalDuration } = useMemo(() => {
+	const getAggregatedHistory = () => {
 		if (!historyRecords) return { aggregatedTracks: [], totalDuration: 0 }
 
 		const trackMap = new Map<string, { track: Track; playCount: number }>()
@@ -86,12 +86,14 @@ export default function DateHistoryPage() {
 		)
 
 		return { aggregatedTracks: sortedTracks, totalDuration: duration }
-	}, [historyRecords])
+	}
+	const { aggregatedTracks, totalDuration } = getAggregatedHistory()
 
-	const totalDurationStr = useMemo(() => {
+	const getTotalDurationStr = () => {
 		if (isHistoryError || !historyRecords) return '0\u2009秒'
 		return formatDurationToWords(totalDuration)
-	}, [totalDuration, isHistoryError, historyRecords])
+	}
+	const totalDurationStr = getTotalDurationStr()
 
 	const keyExtractor = useCallback(
 		(item: HistoryItemData) => item.track.uniqueKey,

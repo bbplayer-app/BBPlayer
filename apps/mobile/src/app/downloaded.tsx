@@ -578,7 +578,7 @@ export default function DownloadedPage() {
 								await Orpheus.playNext(currentMenuTask.track)
 								toast.success('添加到下一首播放成功')
 							} catch (error) {
-								toastAndLogError(error, '添加到下一首播放失败')
+								toastAndLogError('添加到下一首播放失败', error, 'Download')
 							}
 						}
 						dismissItemMenu()

@@ -50,9 +50,11 @@ export default function DonationQRModal({
 				}
 			}
 
-			const asset = Asset.fromModule(
-				currentType === 'wechat' ? WECHAT_QR : ALIPAY_QR,
-			)
+			let qrAsset = ALIPAY_QR
+			if (currentType === 'wechat') {
+				qrAsset = WECHAT_QR
+			}
+			const asset = Asset.fromModule(qrAsset)
 			if (!asset.downloaded) {
 				await asset.downloadAsync()
 			}

@@ -205,9 +205,13 @@ export function usePhoneLogin() {
 				state.captchaKey,
 			)
 			if (loginResult.isErr()) {
+				let errorMessage = loginResult.error.message
+				if (!errorMessage) {
+					errorMessage = '登录失败，请检查验证码'
+				}
 				dispatch({
 					type: 'LOGIN_FAIL',
-					payload: loginResult.error.message || '登录失败，请检查验证码',
+					payload: errorMessage,
 				})
 				return
 			}

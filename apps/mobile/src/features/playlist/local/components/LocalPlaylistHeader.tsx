@@ -103,6 +103,13 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		() => buildSubtitlePieces(playlist, totalDuration),
 		[playlist, totalDuration],
 	)
+	let subscriberOwner: SharedPlaylistMember | undefined
+	if (shareMembers) {
+		subscriberOwner = shareMembers.find((m) => m.role === 'owner')
+		if (!subscriberOwner) {
+			subscriberOwner = shareMembers[0]
+		}
+	}
 
 	const onClickDownloadAll = useCallback(async () => {
 		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
@@ -234,43 +241,36 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							}}
 						>
 							<View style={styles.shareInfoRow}>
-								{playlist.shareRole === 'subscriber' ? (
-									(() => {
-										const owner =
-											shareMembers.find((m) => m.role === 'owner') ||
-											shareMembers[0]
-										return (
-											<>
-												<View
-													style={[
-														styles.avatarWrapper,
-														{ borderColor: colors.background },
-													]}
-												>
-													{owner.avatarUrl ? (
-														<Avatar.Image
-															size={24}
-															source={{ uri: owner.avatarUrl }}
-														/>
-													) : (
-														<Avatar.Text
-															size={24}
-															label={owner.name.slice(0, 1)}
-														/>
-													)}
-												</View>
-												<Text
-													variant='bodySmall'
-													style={{
-														marginLeft: 6,
-														color: colors.onSurfaceVariant,
-													}}
-												>
-													{owner.name}
-												</Text>
-											</>
-										)
-									})()
+								{playlist.shareRole === 'subscriber' && subscriberOwner ? (
+									<>
+										<View
+											style={[
+												styles.avatarWrapper,
+												{ borderColor: colors.background },
+											]}
+										>
+											{subscriberOwner.avatarUrl ? (
+												<Avatar.Image
+													size={24}
+													source={{ uri: subscriberOwner.avatarUrl }}
+												/>
+											) : (
+												<Avatar.Text
+													size={24}
+													label={subscriberOwner.name.slice(0, 1)}
+												/>
+											)}
+										</View>
+										<Text
+											variant='bodySmall'
+											style={{
+												marginLeft: 6,
+												color: colors.onSurfaceVariant,
+											}}
+										>
+											{subscriberOwner.name}
+										</Text>
+									</>
 								) : (
 									<>
 										{shareMembers.slice(0, 3).map((member, index) => (

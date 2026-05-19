@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Dialog, Text, TextInput } from 'react-native-paper'
 
@@ -38,7 +38,7 @@ export default function SubscribeToSharedPlaylistModal() {
 	const close = useModalStore((state) => state.close)
 	const router = useRouter()
 
-	const parsed = useMemo(() => parseShareLink(input), [input])
+	const parsed = parseShareLink(input)
 	const shareId = parsed.shareId ?? ''
 	const isValidId = UUID_RE.test(shareId)
 

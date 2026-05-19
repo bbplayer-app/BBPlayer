@@ -63,6 +63,7 @@ export default function UpdateAppModal({
 			if (!downloadUrl) {
 				toast.dismiss(toastId)
 				await openReleaseUrl()
+				setIsUpdating(false)
 				return
 			}
 			await downloadAndInstallApkAsync({
@@ -79,9 +80,8 @@ export default function UpdateAppModal({
 				id: toastId,
 			})
 			void Clipboard.setStringAsync(url)
-		} finally {
-			setIsUpdating(false)
 		}
+		setIsUpdating(false)
 	}
 
 	const openReleaseUrl = async () => {

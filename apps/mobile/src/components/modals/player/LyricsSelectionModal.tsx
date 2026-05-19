@@ -199,11 +199,12 @@ const LyricsSelectionModal = () => {
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(false)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+	const currentTrackCover = currentTrack
+		? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
+		: null
 	const imageRef = useImage(
 		{
-			uri:
-				resolveTrackCover(currentTrack?.uniqueKey, currentTrack?.coverUrl) ??
-				'',
+			uri: currentTrackCover ?? '',
 		},
 		{
 			onError: () => void 0,
