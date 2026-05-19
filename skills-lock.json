@@ -1,10 +1,22 @@
 {
 	"version": 1,
 	"skills": {
+		"expo-module": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"skillPath": "plugins/expo/skills/expo-module/SKILL.md",
+			"computedHash": "439263df82d935eb35fa3074b7cc176b1cbc26cd95c619ba8c1f9331242016ec"
+		},
 		"react-native-ease-refactor": {
 			"source": "appandflow/react-native-ease",
 			"sourceType": "github",
 			"computedHash": "54e548edf12233522cc48731cb4bca613aa54d7062625618e325d79471bd1d12"
+		},
+		"upgrading-expo": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"skillPath": "plugins/expo/skills/upgrading-expo/SKILL.md",
+			"computedHash": "2c65483a035341da654b92b130fd5b45690b139b624613dc94c414bae1067f6c"
 		}
 	}
 }

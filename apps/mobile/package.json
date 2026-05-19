@@ -168,6 +168,20 @@
 			"app/test.tsx"
 		]
 	},
+	"expo": {
+		"install": {
+			"exclude": [
+				"@sentry/react-native",
+				"react-native-reanimated",
+				"react-native-gesture-handler",
+				"react-native-screens",
+				"react-native-keyboard-controller",
+				"@shopify/react-native-skia",
+				"react-native-worklets",
+				"@shopify/flash-list"
+			]
+		}
+	},
 	"reanimated": {
 		"staticFeatureFlags": {
 			"ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS": false,

@@ -12,3 +12,6 @@ env = { NODE_ENV = "development", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(com
 run = 'eas build --profile preview --platform android --local --output=./temp-builds/{{arg(name="version")}}-preview.apk'
 [env]
 _.file = { path = ".env.local", redact = true }
+
+[tools]
+"npm:eas-cli" = "latest"
