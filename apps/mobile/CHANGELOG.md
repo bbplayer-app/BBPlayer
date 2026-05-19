@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Changed
+
+- 使用 react-native-boost 对部分 View、Text 组件加速
+
 ### Added
 
 - 修改歌曲封面

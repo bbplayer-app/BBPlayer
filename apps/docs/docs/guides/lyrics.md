@@ -60,7 +60,7 @@ BBPlayer 内部采用 **SPL (Salt Player Lyirc)** 格式作为歌词存储与交
 
 ## 状态栏歌词 (Status Bar Lyric) {#status-bar-lyric}
 
-BBPlayer 支持通过 Xposed 插件在系统状态栏显示当前播放的歌词。目前支持两种框架：**词幕 (Lyricon)** 和 **SuperLyric**，可在设置页面自由切换。
+BBPlayer 支持在系统状态栏显示当前播放的歌词。目前支持三种方案：**词幕 (Lyricon)**、**魅族状态栏歌词** 和 **SuperLyric**，可在设置页面自由切换。
 
 ### 方案一：词幕 (Lyricon) —— **推荐**
 
@@ -71,7 +71,12 @@ BBPlayer 支持通过 Xposed 插件在系统状态栏显示当前播放的歌词
 3. **激活模块**：在 LSPosed 管理器中启用"词幕"，并确保勾选 **系统界面 (System UI)** 作用域，重启生效。
 4. **开启功能**：打开 BBPlayer，进入 **设置 -> 歌词设置** 页面，将框架选为 **词幕 (Lyricon)**，并启用 **状态栏歌词** 即可。
 
-### 方案二：SuperLyric
+### 方案二：魅族状态栏歌词
+
+1. **选择框架**：打开 BBPlayer，进入 **设置 -> 歌词设置** 页面，将 **状态栏歌词框架** 选为 **魅族状态栏歌词**。
+2. **开启功能**：启用 **状态栏歌词** 开关。播放有歌词的歌曲时，BBPlayer 会把当前歌词逐行推送到 Flyme 状态栏。
+
+### 方案三：SuperLyric
 
 1. **环境准备**：确保你的设备已安装 **Xposed** 或 **LSPosed** 环境。
 2. **下载并安装 SuperLyric**：前往 [HChenX/SuperLyric](https://github.com/HChenX/SuperLyric) 下载并安装最新版插件。
