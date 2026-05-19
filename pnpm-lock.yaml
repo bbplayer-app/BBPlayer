@@ -335,6 +335,9 @@ importers:
       react-native:
         specifier: 0.83.2
         version: 0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+      react-native-boost:
+        specifier: ^1.1.0
+        version: 1.1.0(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
       react-native-bottom-tabs:
         specifier: ^0.10.2
         version: 0.10.2(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0)
@@ -8855,6 +8858,12 @@ packages:
 
   react-is@19.2.3:
     resolution: {integrity: sha512-qJNJfu81ByyabuG7hPFEbXqNcWSU3+eVus+KJs+0ncpGfMyYdvSmxiJxbWR65lYi1I+/0HBcliO029gc4F+PnA==}
+
+  react-native-boost@1.1.0:
+    resolution: {integrity: sha512-pGQUiqHIy5/TRV2/kp409vTtKMe96NyqnxCY6EFWlpcayrkhDjacWiIECd7wbwM04bp4NOsxVMgxgeG2uHNYBg==}
+    peerDependencies:
+      react: '*'
+      react-native: '>=0.83.0'
 
   react-native-bottom-tabs@0.10.2:
     resolution: {integrity: sha512-GoTVV0BPN7zWBpp6iQc2qDmzLTkMbn1bbqCBu+BIJzhZ6FQgX9gLzQ+vOsua56QbsTCOfG6NFOwSZtiOYjC/4A==}
@@ -20294,6 +20303,17 @@ snapshots:
   react-is@18.3.1: {}
 
   react-is@19.2.3: {}
+
+  react-native-boost@1.1.0(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@babel/core': 7.28.6
+      '@babel/helper-module-imports': 7.28.6
+      '@babel/helper-plugin-utils': 7.28.6
+      minimatch: 10.2.4
+      react: 19.2.0
+      react-native: 0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0)
+    transitivePeerDependencies:
+      - supports-color
 
   react-native-bottom-tabs@0.10.2(react-native@0.83.2(@babel/core@7.28.6)(@react-native-community/cli@20.1.3(typescript@5.9.3))(@types/react@19.2.9)(react@19.2.0))(react@19.2.0):
     dependencies:

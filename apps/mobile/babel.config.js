@@ -33,6 +33,18 @@ export default (api) => {
 					},
 				},
 			],
+			[
+				'react-native-boost/plugin',
+				{
+					ignores: ['node_modules/**', '../../node_modules/**'],
+					optimizations: {
+						text: true,
+						view: true,
+					},
+					silent: false,
+					verbose: true,
+				},
+			],
 			['inline-import', { extensions: ['.sql'] }],
 		],
 	}

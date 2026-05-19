@@ -5,6 +5,21 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 修改歌曲封面
+- 魅族状态栏歌词
+
+### Fixed
+
+- 优化歌单列表的背景颜色提取算法
+- 优化外部歌单导入功能，支持保存进度
+- 优化组件，提高 React Compiler 编译通过率
+- 共享歌单无法使用
+- 设置页面按钮闪烁
+
 ## [2.4.5] - 2026-05-09
 
 ### Changed

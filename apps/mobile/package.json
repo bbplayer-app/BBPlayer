@@ -84,6 +84,7 @@
 		"protobufjs": "^8.0.0",
 		"react": "19.2.0",
 		"react-native": "0.83.2",
+		"react-native-boost": "^1.1.0",
 		"react-native-bottom-tabs": "^0.10.2",
 		"react-native-edge-to-edge": "^1.7.0",
 		"react-native-fast-shimmer": "^1.3.4",
