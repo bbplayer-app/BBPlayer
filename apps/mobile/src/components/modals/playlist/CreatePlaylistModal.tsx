@@ -81,7 +81,7 @@ export default function CreatePlaylistModal({
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
-		assetFile.copy(coverFile)
+		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [])
 

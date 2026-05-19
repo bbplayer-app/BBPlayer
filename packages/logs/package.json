@@ -41,13 +41,13 @@
 		"test:verbose": "jest --verbose"
 	},
 	"devDependencies": {
-		"@types/react": "~19.2.9",
+		"@types/react": "~19.2.14",
 		"jest": "^30.2.0",
-		"react": "19.2.0",
-		"react-native": "0.83.2"
+		"react": "19.2.3",
+		"react-native": "0.85.3"
 	},
 	"peerDependencies": {
-		"react": "19.2.0",
-		"react-native": "0.83.2"
+		"react": "19.2.3",
+		"react-native": "0.85.3"
 	}
 }

@@ -34,7 +34,7 @@
 		"oxlint": "^1.47.0",
 		"oxlint-tsgolint": "^0.12.1",
 		"syncpack": "^13.0.4",
-		"typescript": "~5.9.3",
+		"typescript": "~6.0.3",
 		"typescript-eslint": "^8.55.0"
 	},
 	"packageManager": "pnpm@10.32.1"

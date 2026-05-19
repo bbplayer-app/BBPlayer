@@ -88,7 +88,7 @@ export default function EditPlaylistMetadataModal({
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
-		assetFile.copy(coverFile)
+		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [])
 

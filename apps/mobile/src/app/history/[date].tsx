@@ -143,7 +143,7 @@ export default function DateHistoryPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='那月今日' />
+				<Appbar.Content title={date} />
 			</Appbar.Header>
 			{aggregatedTracks.length > 0 && !isHistoryError && (
 				<>

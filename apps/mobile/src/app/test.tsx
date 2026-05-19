@@ -216,7 +216,7 @@ export default function TestPage() {
 							if (dbFile.exists) {
 								dbFile.delete()
 							}
-							pickedFile.copy(dbFile)
+							pickedFile.copySync(dbFile)
 
 							toast.success('导入成功')
 						} catch (error) {
@@ -263,7 +263,7 @@ export default function TestPage() {
 								if (targetFile.exists) {
 									targetFile.delete()
 								}
-								pickedFile.copy(targetFile)
+								pickedFile.copySync(targetFile)
 							}
 
 							toast.success('MMKV 导入成功')

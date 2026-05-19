@@ -64,7 +64,7 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
-		assetFile.copy(coverFile)
+		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [track.uniqueKey])
 
