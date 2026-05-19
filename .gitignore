@@ -52,7 +52,6 @@ temp-builds
 !/.vscode/tasks.json
 !/.vscode/launch.json
 
-.zed
 .idea
 
 gha-creds-*.json
@@ -62,3 +61,4 @@ apps/**/ios
 # Desloppify
 .desloppify/
 external-playlist-experiment/
+.tmp
