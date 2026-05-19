@@ -2,8 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 
 import { playlistKeys } from '@/hooks/queries/db/playlist'
-import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
-import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
+import { ensureBBPlayerToken } from '@/lib/api/bbplayer/client'
 import { queryClient } from '@/lib/config/queryClient'
 import { CustomError } from '@/lib/errors'
 import { playlistFacade } from '@/lib/facades/playlist'
@@ -17,30 +16,6 @@ import type { UpdatePlaylistPayload } from '@/types/services/playlist'
 import type { CreateTrackPayload } from '@/types/services/track'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-
-/** 若当前无 BBPlayer JWT，尝试用 Bilibili Cookie 自动换取。无 cookie 时抛出异常。 */
-async function ensureBBPlayerToken(): Promise<void> {
-	const store = useAppStore.getState()
-	if (store.bbplayerToken) return
-
-	const cookie = store.bilibiliCookie
-	if (!cookie || Object.keys(cookie).length === 0) {
-		throw new Error('请先登录 Bilibili，才能使用共享功能')
-	}
-
-	const cookieStr = serializeCookieObject(cookie)
-	const resp = await bbplayerApi.auth.login.$post({
-		json: { cookie: cookieStr },
-	})
-	if (!resp.ok) {
-		const body = await resp.json().catch(() => ({}))
-		throw new Error(
-			`BBPlayer 身份验证失败（${resp.status}）：${JSON.stringify(body)}`,
-		)
-	}
-	const data = (await resp.json()) as { token: string }
-	store.setBbplayerToken(data.token)
-}
 
 const SCOPE = 'Mutation.DB.Playlist'
 

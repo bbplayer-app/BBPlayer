@@ -90,7 +90,6 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 				{
 					sub: String(mid),
 					role: 'user',
-					exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
 				},
 				c.env.JWT_SECRET,
 			)
