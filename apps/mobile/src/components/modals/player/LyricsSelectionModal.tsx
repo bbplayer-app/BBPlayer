@@ -1,6 +1,6 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { parseSpl, type LyricLine } from '@bbplayer/splash'
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
@@ -24,6 +24,7 @@ import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import type { ModalPropsMap } from '@/types/navigation'
 import toast from '@/utils/toast'
 
@@ -76,6 +77,33 @@ const LyricItem = memo(function LyricItem({
 		</TouchableRipple>
 	)
 })
+
+type LyricItemExtraData = {
+	selectedIndices: Set<number>
+	toggleSelection: (index: number) => void
+	primaryColor: string
+	onSurfaceColor: string
+	onSurfaceVariantColor: string
+}
+
+const renderItem = ({
+	item,
+	index,
+	extraData,
+}: LegendListRenderItemPropsWithExtraData<LyricLine, LyricItemExtraData>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	return (
+		<LyricItem
+			item={item}
+			index={index}
+			isSelected={extraData.selectedIndices.has(index)}
+			onToggle={extraData.toggleSelection}
+			primaryColor={extraData.primaryColor}
+			onSurfaceColor={extraData.onSurfaceColor}
+			onSurfaceVariantColor={extraData.onSurfaceVariantColor}
+		/>
+	)
+}
 
 const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 
@@ -331,24 +359,20 @@ const LyricsSelectionModal = () => {
 		)
 	}
 
-	const renderItem = useCallback(
-		({ item, index }: { item: LyricLine; index: number }) => (
-			<LyricItem
-				item={item}
-				index={index}
-				isSelected={selectedIndices.has(index)}
-				onToggle={toggleSelection}
-				primaryColor={theme.colors.primary}
-				onSurfaceColor={theme.colors.onSurface}
-				onSurfaceVariantColor={theme.colors.onSurfaceVariant}
-			/>
-		),
+	const extraData = useMemo(
+		() => ({
+			selectedIndices,
+			toggleSelection,
+			primaryColor: theme.colors.primary,
+			onSurfaceColor: theme.colors.onSurface,
+			onSurfaceVariantColor: theme.colors.onSurfaceVariant,
+		}),
 		[
 			selectedIndices,
+			toggleSelection,
 			theme.colors.onSurface,
 			theme.colors.onSurfaceVariant,
 			theme.colors.primary,
-			toggleSelection,
 		],
 	)
 
@@ -497,10 +521,12 @@ const LyricsSelectionModal = () => {
 		<>
 			<Dialog.Title>选择歌词分享 ({selectedIndices.size}/5)</Dialog.Title>
 			<Dialog.ScrollArea style={styles.scrollArea}>
-				<FlashList
+				<LegendList
 					data={lyrics}
 					keyExtractor={keyExtractor}
 					renderItem={renderItem}
+					extraData={extraData}
+					estimatedItemSize={64}
 					showsVerticalScrollIndicator={false}
 				/>
 			</Dialog.ScrollArea>

@@ -1,11 +1,11 @@
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
+import type { LegendListRef } from '@legendapp/list/react-native'
+import { LegendList } from '@legendapp/list/react-native'
 import {
 	TrueSheet,
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
-import type { FlashListRef } from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
 import {
 	memo,
 	useCallback,
@@ -27,6 +27,7 @@ import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 
 const TrackItem = memo(
 	({
@@ -100,6 +101,32 @@ const TrackItem = memo(
 	},
 )
 
+type QueueItemExtraData = {
+	currentTrackId?: string
+	switchTrackHandler: (index: number) => Promise<void>
+	removeTrackHandler: (index: number) => Promise<void>
+}
+
+const renderItem = ({
+	item,
+	index,
+	extraData,
+}: LegendListRenderItemPropsWithExtraData<
+	OrpheusTrack,
+	QueueItemExtraData
+>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	return (
+		<TrackItem
+			track={item}
+			onSwitchTrack={extraData.switchTrackHandler}
+			onRemoveTrack={extraData.removeTrackHandler}
+			isCurrentTrack={item.id === extraData.currentTrackId}
+			index={index}
+		/>
+	)
+}
+
 TrackItem.displayName = 'TrackItem'
 
 interface PlayerQueueModalProps extends TrueSheetProps {
@@ -115,7 +142,7 @@ function PlayerQueueModal({
 	const currentTrackId = useCurrentTrackId()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
-	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
+	const flatListRef = useRef<LegendListRef>(null)
 
 	const { data: queue, refetch } = usePlayerQueue(isVisible)
 
@@ -149,17 +176,13 @@ function PlayerQueueModal({
 
 	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
 
-	const renderItem = useCallback(
-		({ item, index }: { item: OrpheusTrack; index: number }) => (
-			<TrackItem
-				track={item}
-				onSwitchTrack={switchTrackHandler}
-				onRemoveTrack={removeTrackHandler}
-				isCurrentTrack={item.id === currentTrackId}
-				index={index}
-			/>
-		),
-		[switchTrackHandler, removeTrackHandler, currentTrackId],
+	const extraData = useMemo(
+		() => ({
+			currentTrackId,
+			switchTrackHandler,
+			removeTrackHandler,
+		}),
+		[currentTrackId, removeTrackHandler, switchTrackHandler],
 	)
 
 	// oxlint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
@@ -230,11 +253,13 @@ function PlayerQueueModal({
 						/>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>
-						<FlashList
+						<LegendList
 							ref={flatListRef}
 							data={queue}
 							renderItem={renderItem}
+							extraData={extraData}
 							keyExtractor={keyExtractor}
+							estimatedItemSize={72}
 							contentContainerStyle={{
 								paddingBottom: insets.bottom + 20,
 							}}

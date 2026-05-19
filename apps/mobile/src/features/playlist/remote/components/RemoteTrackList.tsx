@@ -1,9 +1,8 @@
 import type {
-	FlashListProps,
-	FlashListRef,
-	ListRenderItem,
-} from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
+	LegendListProps,
+	LegendListRef,
+} from '@legendapp/list/react-native'
+import { LegendList } from '@legendapp/list/react-native'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -20,15 +19,15 @@ import FunctionalMenu from '@/components/common/FunctionalMenu'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
 import type {
-	ListRenderItemInfoWithExtraData,
+	LegendListRenderItemPropsWithExtraData,
 	SelectionState,
-} from '@/types/flashlist'
+} from '@/types/list'
 import * as Haptics from '@/utils/haptics'
 
 import { TrackListItem } from './PlaylistItem'
 
 interface TrackListProps extends Omit<
-	FlashListProps<BilibiliTrack>,
+	LegendListProps<BilibiliTrack>,
 	'data' | 'renderItem' | 'extraData'
 > {
 	/**
@@ -53,6 +52,8 @@ interface TrackListProps extends Omit<
 	 * 是否显示封面图片，默认为 true
 	 */
 	showItemCover?: boolean
+	/** 自定义列表项可读取的高亮曲目 id */
+	highlightTrackId?: string
 	/**
 	 * 是否正在获取下一页数据
 	 */
@@ -65,12 +66,12 @@ interface TrackListProps extends Omit<
 	 * 自定义渲染列表项的函数（可选）
 	 */
 	renderCustomItem?: (
-		info: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>,
+		info: LegendListRenderItemPropsWithExtraData<BilibiliTrack, ExtraData>,
 	) => React.ReactElement | null
 	/**
 	 * 列表引用（可选）
 	 */
-	listRef?: React.Ref<FlashListRef<BilibiliTrack>>
+	listRef?: React.Ref<LegendListRef>
 }
 
 export interface ExtraData {
@@ -81,6 +82,7 @@ export interface ExtraData {
 	) => void
 	selection: SelectionState
 	showItemCover?: boolean
+	highlightTrackId?: string
 	currentTrackIdRef: RefObject<string | undefined>
 }
 
@@ -88,7 +90,7 @@ const renderItemDefault = ({
 	item,
 	index,
 	extraData,
-}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
+}: LegendListRenderItemPropsWithExtraData<BilibiliTrack, ExtraData>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		playTrack,
@@ -135,6 +137,7 @@ export function TrackList({
 	trackMenuItems,
 	selection,
 	showItemCover,
+	highlightTrackId,
 	isFetchingNextPage,
 	hasNextPage,
 	renderCustomItem,
@@ -180,23 +183,25 @@ export function TrackList({
 			selection,
 			playTrack,
 			showItemCover,
+			highlightTrackId,
 			currentTrackIdRef,
 			handleMenuPress,
 		}),
-		[selection, playTrack, showItemCover, handleMenuPress],
+		[selection, playTrack, showItemCover, highlightTrackId, handleMenuPress],
 	)
 
 	const renderItem = renderCustomItem ?? renderItemDefault
 
 	return (
 		<>
-			<FlashList
+			<LegendList
 				ref={listRef}
 				data={tracks}
 				extraData={extraData}
-				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
+				renderItem={renderItem}
 				ItemSeparatorComponent={() => <Divider />}
 				keyExtractor={keyExtractor}
+				estimatedItemSize={72}
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{
 					// 实现一个在 menu 弹出时，列表不可触摸的效果

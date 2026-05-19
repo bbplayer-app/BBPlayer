@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
@@ -7,18 +7,20 @@ import { Appbar, Divider, Text, useTheme } from 'react-native-paper'
 import { CommentItem } from '@/features/comments/components/CommentItem'
 import { useReplyComments } from '@/hooks/queries/bilibili/comments'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 
 const renderItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<BilibiliCommentItem, { bvid: string }>) => {
+}: LegendListRenderItemPropsWithExtraData<
+	BilibiliCommentItem,
+	{ bvid: string }
+>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { bvid } = extraData
 	return (
 		<CommentItem
 			item={item}
-			bvid={bvid}
+			bvid={extraData.bvid}
 		/>
 	)
 }
@@ -39,7 +41,6 @@ export default function ReplyCommentsPage() {
 
 	const replies = data?.pages.flatMap((page) => page.replies ?? []) ?? []
 	const rootComment = data?.pages[0]?.root
-
 	const extraData = useMemo(() => ({ bvid }), [bvid])
 
 	const keyExtractor = useCallback(
@@ -82,10 +83,11 @@ export default function ReplyCommentsPage() {
 					/>
 				</View>
 			) : (
-				<FlashList
+				<LegendList
 					data={replies}
 					extraData={extraData}
 					keyExtractor={keyExtractor}
+					estimatedItemSize={120}
 					ListHeaderComponent={() =>
 						rootComment ? (
 							<View

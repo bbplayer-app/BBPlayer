@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
@@ -77,9 +77,10 @@ const CollectionListComponent = memo(() => {
 					{'\u2009'}个追更
 				</Text>
 			</View>
-			<FlashList
+			<LegendList
 				data={collections.pages.flatMap((page) => page.list)}
 				renderItem={renderCollectionItem}
+				estimatedItemSize={88}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing || collectionsIsRefetching}

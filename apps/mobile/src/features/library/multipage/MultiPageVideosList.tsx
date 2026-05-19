@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
@@ -104,12 +104,13 @@ const MultiPageVideosListComponent = memo(() => {
 					&thinsp;个分&thinsp;P&thinsp;视频
 				</Text>
 			</View>
-			<FlashList
+			<LegendList
 				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={favoriteData.pages.flatMap((page) => page.medias ?? []) ?? []}
 				renderItem={renderPlaylistItem}
 				keyExtractor={keyExtractor}
+				estimatedItemSize={88}
 				refreshControl={
 					<RefreshControl
 						refreshing={

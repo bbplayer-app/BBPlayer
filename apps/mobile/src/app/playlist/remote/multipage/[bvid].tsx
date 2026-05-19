@@ -1,4 +1,4 @@
-import type { FlashListRef } from '@shopify/flash-list'
+import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -30,7 +30,7 @@ import type {
 	BilibiliVideoDetails,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import * as Haptics from '@/utils/haptics'
 import toast from '@/utils/toast'
 
@@ -63,6 +63,44 @@ const mapApiItemToTrack = (
 			mainTrackTitle: video.title,
 		},
 	}
+}
+
+const renderCustomItem = ({
+	item,
+	index,
+	extraData,
+}: LegendListRenderItemPropsWithExtraData<BilibiliTrack, ExtraData>) => {
+	if (!extraData) throw new Error('Extradata 不存在')
+	const shouldFlash = String(item.id) === extraData.highlightTrackId
+
+	return (
+		<FlashingTrackListItem
+			shouldFlash={shouldFlash}
+			index={index}
+			onTrackPress={() => extraData.playTrack(item)}
+			onMenuPress={(anchor) => extraData.handleMenuPress(item, anchor)}
+			showCoverImage={extraData.showItemCover ?? true}
+			data={{
+				cover: item.coverUrl ?? undefined,
+				title: item.title,
+				duration: item.duration,
+				id: item.id,
+				artistName: item.artist?.name,
+				uniqueKey: item.uniqueKey,
+				titleHtml: item.titleHtml,
+			}}
+			toggleSelected={() => {
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
+				extraData.selection.toggle(item.id)
+			}}
+			isSelected={extraData.selection.selected.has(item.id)}
+			selectMode={extraData.selection.active}
+			enterSelectMode={() => {
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
+				extraData.selection.enter(item.id)
+			}}
+		/>
+	)
 }
 
 export default function MultipagePage() {
@@ -118,7 +156,7 @@ export default function MultipagePage() {
 	const { mutate: syncMultipage } = usePlaylistSync()
 
 	const { playTrack } = useRemotePlaylist()
-	const listRef = useRef<FlashListRef<BilibiliTrack>>(null)
+	const listRef = useRef<LegendListRef>(null)
 	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
@@ -164,54 +202,6 @@ export default function MultipagePage() {
 			}
 		}
 	}, [cid, tracksData])
-
-	const renderCustomItem = useCallback(
-		({
-			item,
-			index,
-			extraData,
-		}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
-			if (!extraData) throw new Error('Extradata 不存在')
-			const {
-				playTrack: play,
-				handleMenuPress,
-				selection,
-				showItemCover,
-			} = extraData
-
-			const shouldFlash = String(item.id) === cid
-
-			return (
-				<FlashingTrackListItem
-					shouldFlash={shouldFlash}
-					index={index}
-					onTrackPress={() => play(item)}
-					onMenuPress={(anchor) => handleMenuPress(item, anchor)}
-					showCoverImage={showItemCover ?? true}
-					data={{
-						cover: item.coverUrl ?? undefined,
-						title: item.title,
-						duration: item.duration,
-						id: item.id,
-						artistName: item.artist?.name,
-						uniqueKey: item.uniqueKey,
-						titleHtml: item.titleHtml,
-					}}
-					toggleSelected={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Clock_Tick)
-						selection.toggle(item.id)
-					}}
-					isSelected={selection.selected.has(item.id)}
-					selectMode={selection.active}
-					enterSelectMode={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Long_Press)
-						selection.enter(item.id)
-					}}
-				/>
-			)
-		},
-		[cid],
-	)
 
 	useEffect(() => {
 		if (typeof bvid !== 'string') {
@@ -297,6 +287,7 @@ export default function MultipagePage() {
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					showItemCover={false}
+					highlightTrackId={cid}
 					ListHeaderComponent={
 						<PlaylistHeader
 							cover={coverRef ?? undefined}

@@ -11,7 +11,7 @@ import {
 	LIST_ITEM_COVER_SIZE,
 } from '@/theme/dimensions'
 import type { BilibiliTrack } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -248,7 +248,7 @@ const renderToViewItem = ({
 	item,
 	index,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	BilibiliTrack & { progress: number },
 	ExtraData
 >) => {

@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -34,7 +34,7 @@ import {
 	LIST_ITEM_COVER_SIZE,
 } from '@/theme/dimensions'
 import type { GenericTrack } from '@/types/external_playlist'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import toast from '@/utils/toast'
 
 const ItemSeparator = () => <Divider />
@@ -155,11 +155,10 @@ const renderItem = ({
 	item,
 	index,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	GenericTrack,
 	{
 		openManualMatch: (track: GenericTrack, index: number) => void
-		syncing: boolean
 	}
 >) => {
 	if (!extraData) return null
@@ -423,6 +422,12 @@ const ExternalPlaylistSyncPageInner = () => {
 		(item: GenericTrack, index: number) => `${index}-${item.title}`,
 		[],
 	)
+	const extraData = useMemo(
+		() => ({
+			openManualMatch: handleOpenManualMatch,
+		}),
+		[handleOpenManualMatch],
+	)
 
 	if (isLoading) {
 		return <PlaylistPageSkeleton />
@@ -464,15 +469,13 @@ const ExternalPlaylistSyncPageInner = () => {
 			>
 				匹配进度已临时保存。完成后请点击右上角或下方的保存按钮写入本地歌单。
 			</Banner>
-			<FlashList
+			<LegendList
 				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
-				extraData={{
-					openManualMatch: handleOpenManualMatch,
-					syncing,
-				}}
+				extraData={extraData}
 				keyExtractor={keyExtractor}
+				estimatedItemSize={96}
 				ItemSeparatorComponent={ItemSeparator}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,

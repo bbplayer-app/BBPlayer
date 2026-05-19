@@ -7,8 +7,6 @@ import {
 } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Menu, Text } from 'react-native-paper'
-
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -16,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import Button from '@/components/common/Button'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'

@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Dialog, RadioButton, Text, useTheme } from 'react-native-paper'
@@ -8,28 +8,30 @@ import { useBatchAddTracksToLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 
 const renderPlaylistItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	Playlist,
-	{ selectedPlaylistId: number; setSelectedPlaylistId: (id: number) => void }
+	{
+		selectedPlaylistId: number | null
+		setSelectedPlaylistId: (id: number) => void
+	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const isChecked = extraData.selectedPlaylistId === item.id
 	const isDisabled = item.type !== 'local'
-	const setSelectedPlaylistId = extraData.setSelectedPlaylistId
 
 	return (
 		<RadioButton.Item
 			label={item.title}
 			value={String(item.id)}
 			status={isChecked ? 'checked' : 'unchecked'}
-			onPress={() => !isDisabled && setSelectedPlaylistId(item.id)}
+			onPress={() => !isDisabled && extraData.setSelectedPlaylistId(item.id)}
 			disabled={isDisabled}
 		/>
 	)
@@ -134,11 +136,12 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 			return (
 				<>
 					<Dialog.ScrollArea style={styles.listContainer}>
-						<FlashList
+						<LegendList
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
 							keyExtractor={keyExtractor}
 							extraData={extraData}
+							estimatedItemSize={56}
 							showsVerticalScrollIndicator={false}
 							ListEmptyComponent={
 								<View style={styles.emptyListContainer}>

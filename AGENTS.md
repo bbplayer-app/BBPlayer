@@ -136,8 +136,8 @@ pnpm test                      # expo-module test
 
 - Use Expo Go - requires custom dev build (native code)
 - Throw errors in business logic - use `neverthrow` Result pattern
-- Define `renderItem` inside component - FlashList performance
-- Skip `extraData` with `useMemo` for FlashList dependencies
+- Pass inline anonymous `renderItem` functions to LegendList
+- Use LegendList `extraData` for state that an item can read directly
 - Use npm/yarn - pnpm only
 
 ### ⚠️ CAUTION
@@ -184,16 +184,20 @@ throw new Error('...')
 - Mutations: `src/hooks/mutations/<domain>/useXxx.ts`
 - Strict exhaustive-deps enforced
 
-### FlashList Rules
+### LegendList Rules
 
 ```typescript
-// Define OUTSIDE component
-const renderItem = ({ item }) => <Item {...item} />
+const keyExtractor = (item) => item.id.toString()
+const renderItem = ({ item, extraData }) => (
+  <Item item={item} selected={extraData.selected.has(item.id)} />
+)
 
-// Use with memoized extraData
-<FlashList
+<LegendList
+  data={items}
   renderItem={renderItem}
-  extraData={useMemo(() => ({ selected }), [selected])}
+  extraData={extraData}
+  keyExtractor={keyExtractor}
+  estimatedItemSize={56}
 />
 ```
 

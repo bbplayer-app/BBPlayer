@@ -449,7 +449,7 @@ export default function LocalPlaylistPage() {
 	const containerHeightRef = useRef(0)
 	const listContainerRef = useRef<View>(null)
 
-	/** Current FlashList scroll offset */
+	/** Current LegendList scroll offset */
 	const scrollOffsetRef = useRef(0)
 
 	/** Auto-scroll interval handle */
@@ -472,7 +472,7 @@ export default function LocalPlaylistPage() {
 		autoScrollRef.current = setInterval(() => {
 			const delta = direction === 'down' ? SCROLL_SPEED : -SCROLL_SPEED
 			const next = Math.max(0, scrollOffsetRef.current + delta)
-			listRef.current?.scrollToOffset({ offset: next, animated: false })
+			void listRef.current?.scrollToOffset({ offset: next, animated: false })
 			scrollOffsetRef.current = next
 		}, 16)
 	}

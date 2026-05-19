@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { decode } from 'he'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -17,13 +17,13 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { GenericTrack } from '@/types/external_playlist'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
 const renderItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	BilibiliSearchVideo,
 	{
 		handlePressItem: (item: BilibiliSearchVideo) => void
@@ -144,11 +144,12 @@ export default function ManualMatchExternalSync({
 		}
 		if (allVideos.length > 0) {
 			return (
-				<FlashList
+				<LegendList
 					data={allVideos}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
 					extraData={extraData}
+					estimatedItemSize={56}
 					onEndReached={() => {
 						if (hasNextPage && !isFetchingNextPage) {
 							void fetchNextPage()

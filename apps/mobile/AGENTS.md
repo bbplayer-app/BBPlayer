@@ -92,19 +92,26 @@ router.push('/playlist/local')
 router.back()
 ```
 
-### FlashList (MANDATORY)
+### LegendList (MANDATORY)
 
 ```typescript
-// Define OUTSIDE component - NOT inside, NOT useCallback
-const renderPlaylistItem = ({ item }: { item: Playlist }) => (
-  <PlaylistItem playlist={item} />
+const keyExtractor = (item: Playlist) => item.id.toString()
+
+const renderPlaylistItem = ({ item, extraData }: RenderItemInfo) => (
+	<PlaylistItem
+		playlist={item}
+		selected={extraData.selectedId === item.id}
+	/>
 )
 
-// In component:
-<FlashList
-  data={playlists}
-  renderItem={renderPlaylistItem}
-  extraData={useMemo(() => ({ selectedId }), [selectedId])}
+const extraData = useMemo(() => ({ selectedId }), [selectedId])
+
+<LegendList
+	data={playlists}
+	renderItem={renderPlaylistItem}
+	extraData={extraData}
+	keyExtractor={keyExtractor}
+	estimatedItemSize={56}
 />
 ```
 
@@ -144,7 +151,7 @@ export function useCreatePlaylistMutation() {
 ### 🚫 NEVER
 
 - Use Expo Go - requires custom dev build
-- Define FlashList `renderItem` inside component
+- Pass inline anonymous `renderItem` functions to LegendList
 - Throw errors in Facades/Services (use neverthrow)
 - Use `console.log` (enforced by oxlint)
 

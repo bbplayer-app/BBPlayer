@@ -1,7 +1,7 @@
-import type { ListRenderItemInfo } from '@shopify/flash-list'
+import type { LegendListRenderItemProps } from '@legendapp/list/react-native'
 
-export type ListRenderItemInfoWithExtraData<TItem, TExtraData> = Omit<
-	ListRenderItemInfo<TItem>,
+export type LegendListRenderItemPropsWithExtraData<TItem, TExtraData> = Omit<
+	LegendListRenderItemProps<TItem>,
 	'extraData'
 > & {
 	extraData?: TExtraData

@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
@@ -7,22 +7,21 @@ import { Appbar, Divider, Text, useTheme } from 'react-native-paper'
 import { CommentItem } from '@/features/comments/components/CommentItem'
 import { useComments } from '@/hooks/queries/bilibili/comments'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 
 const renderItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	BilibiliCommentItem,
 	{ bvid: string; onReplyPress: (item: BilibiliCommentItem) => void }
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { bvid, onReplyPress } = extraData
 	return (
 		<CommentItem
 			item={item}
-			bvid={bvid}
-			onReplyPress={onReplyPress}
+			bvid={extraData.bvid}
+			onReplyPress={extraData.onReplyPress}
 		/>
 	)
 }
@@ -89,11 +88,12 @@ export default function CommentsPage() {
 					/>
 				</View>
 			) : (
-				<FlashList
+				<LegendList
 					data={comments}
 					extraData={extraData}
 					keyExtractor={keyExtractor}
 					renderItem={renderItem}
+					estimatedItemSize={120}
 					onEndReached={() => {
 						if (hasNextPage) void fetchNextPage()
 					}}

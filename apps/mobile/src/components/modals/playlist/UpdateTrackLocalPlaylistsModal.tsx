@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
@@ -12,13 +12,13 @@ import {
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { Playlist, Track } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import toast from '@/utils/toast'
 
 const renderPlaylistItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	Playlist,
 	{
 		checkedPlaylistIds: number[]
@@ -221,11 +221,12 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			return (
 				<>
 					<Dialog.ScrollArea style={styles.listContainer}>
-						<FlashList
+						<LegendList
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
 							keyExtractor={keyExtractor}
 							extraData={extraData}
+							estimatedItemSize={56}
 							ListEmptyComponent={
 								<View style={styles.emptyListContainer}>
 									<Text>你还没有创建任何歌单</Text>

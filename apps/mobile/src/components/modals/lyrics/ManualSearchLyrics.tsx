@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
@@ -13,7 +13,7 @@ import Button from '@/components/common/Button'
 import { useFetchLyrics } from '@/hooks/mutations/lyrics'
 import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 import type { LyricSearchResult } from '@/types/player/lyrics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -28,7 +28,7 @@ const SOURCE_MAP = {
 const renderItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<
+}: LegendListRenderItemPropsWithExtraData<
 	LyricSearchResult[0],
 	{
 		isFetchingLyrics: boolean
@@ -128,11 +128,12 @@ const ManualSearchLyricsModal = ({
 
 		if (searchResult.length > 0) {
 			return (
-				<FlashList
+				<LegendList
 					data={searchResult}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
 					extraData={extraData}
+					estimatedItemSize={64}
 				/>
 			)
 		}

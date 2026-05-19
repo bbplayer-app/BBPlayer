@@ -84,7 +84,7 @@ pnpm expo start
 为了更好地理解项目，建议按以下顺序阅读文档：
 
 1.  **[架构指南 (ARCHITECTURE.md)](./ARCHITECTURE.md)**: 必读。了解项目的核心架构、分层模式（Facade/Service）以及目录结构。
-2.  **[开发规范 (BEST_PRACTICES.md)](./BEST_PRACTICES.md)**: 了解 UI 开发优化（FlashList）、代码风格等最佳实践。
+2.  **[开发规范 (BEST_PRACTICES.md)](./BEST_PRACTICES.md)**: 了解 UI 开发优化（LegendList）、代码风格等最佳实践。
 3.  **[发版流程 (RELEASE.md)](./RELEASE.md)**: 版本发布的操作指南。
 4.  **[技术债与路线图 (TECHNICAL_DEBT.md)](./TECHNICAL_DEBT.md)**: 了解当前已知问题和待改进项。
 

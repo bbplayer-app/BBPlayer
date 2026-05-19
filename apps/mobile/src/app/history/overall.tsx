@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -119,10 +119,11 @@ export default function OverallHistoryPage() {
 		}
 
 		return (
-			<FlashList
+			<LegendList
 				data={allTracks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
+				estimatedItemSize={72}
 				contentContainerStyle={{
 					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 				}}

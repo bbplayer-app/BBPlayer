@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import dayjs from 'dayjs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback } from 'react'
@@ -127,10 +127,11 @@ export default function DateHistoryPage() {
 		}
 
 		return (
-			<FlashList
+			<LegendList
 				data={aggregatedTracks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
+				estimatedItemSize={72}
 				contentContainerStyle={{
 					paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 				}}

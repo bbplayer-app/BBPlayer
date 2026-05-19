@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
@@ -15,7 +15,7 @@ import { useMergePlaylists } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { LegendListRenderItemPropsWithExtraData } from '@/types/list'
 
 const SelectablePlaylistItem = memo(function SelectablePlaylistItem({
 	item,
@@ -60,7 +60,7 @@ type RenderExtraData = {
 const renderPlaylistItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<Playlist, RenderExtraData>) => {
+}: LegendListRenderItemPropsWithExtraData<Playlist, RenderExtraData>) => {
 	if (!extraData) return null
 	return (
 		<SelectablePlaylistItem
@@ -148,11 +148,12 @@ export default function MergePlaylistsModal() {
 							选择至少两个源歌单（显示时动态合并并自动去重）：
 						</Text>
 						<View style={styles.listContainer}>
-							<FlashList
+							<LegendList
 								data={availablePlaylists}
 								renderItem={renderPlaylistItem}
 								extraData={extraData}
 								keyExtractor={(item) => item.id.toString()}
+								estimatedItemSize={56}
 								showsVerticalScrollIndicator={false}
 							/>
 						</View>

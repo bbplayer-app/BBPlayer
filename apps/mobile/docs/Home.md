@@ -18,7 +18,7 @@
   - 深入了解分层架构、Facade 模式、Service 层以及数据流向。
 
 - **[开发规范 (BEST_PRACTICES.md)](BEST_PRACTICES)**
-  - UI 开发技巧 (FlashList 优化)、代码风格与日志规范。
+  - UI 开发技巧 (LegendList 优化)、代码风格与日志规范。
 
 - **[发版流程 (RELEASE.md)](RELEASE)**
   - 版本发布步骤与 update.json 维护说明。

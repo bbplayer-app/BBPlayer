@@ -1,6 +1,6 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import { LegendList } from '@legendapp/list/react-native'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
-import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import {
 	type ComponentRef,
@@ -530,11 +530,12 @@ export default function DownloadedPage() {
 			)}
 
 			<View style={styles.listContainer}>
-				<FlashList
+				<LegendList
 					data={filteredTasks}
 					renderItem={renderDownloadedItem}
 					extraData={extraData}
 					keyExtractor={(item) => item.id}
+					estimatedItemSize={72}
 					ItemSeparatorComponent={() => <Divider />}
 					contentContainerStyle={{
 						paddingBottom: insets.bottom + 70,
