@@ -187,7 +187,7 @@ export class BilibiliApi {
 	searchVideos(
 		keyword: string,
 		page: number,
-		options?: { skipCookie?: boolean },
+		options?: { skipCookie?: boolean; signal?: AbortSignal },
 	): ResultAsync<
 		{ result: BilibiliSearchVideo[]; numPages: number },
 		BilibiliApiError
@@ -208,6 +208,7 @@ export class BilibiliApi {
 					params,
 					undefined,
 					options?.skipCookie,
+					options?.signal,
 				)
 			})
 			.andThen((res) => {

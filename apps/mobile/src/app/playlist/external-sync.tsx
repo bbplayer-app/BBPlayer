@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
@@ -195,19 +195,32 @@ const ExternalPlaylistSyncPageInner = () => {
 		setProgress,
 		setResult,
 		reset,
+		setSessionKey,
+		clearSession,
 		syncing,
 		progress,
 		results,
 	} = useExternalPlaylistSyncStore((state) => state)
 	const tracks = data?.tracks ?? []
-
-	useEffect(() => {
-		reset()
-		return () => reset()
-	}, [reset])
-
+	const sessionKey = useMemo(() => {
+		if (!id || !source) return null
+		return `${source}:${id}`
+	}, [id, source])
 	const abortControllerRef = useRef<AbortController | null>(null)
 	const sessionStartTimeRef = useRef<number>(0)
+
+	useEffect(() => {
+		if (!sessionKey || tracks.length === 0) return
+		setSessionKey(sessionKey, tracks.length)
+	}, [sessionKey, setSessionKey, tracks.length])
+
+	useEffect(() => {
+		return () => {
+			abortControllerRef.current?.abort()
+			setSyncing(false)
+		}
+	}, [setSyncing])
+
 	const [etaSeconds, setEtaSeconds] = useState<number | null>(null)
 
 	const [isExiting, setIsExiting] = useState(false)
@@ -217,7 +230,7 @@ const ExternalPlaylistSyncPageInner = () => {
 		openModal('Alert', {
 			title: '确定要退出吗？',
 			message:
-				'退出后，当前的匹配结果将会丢失，未保存的进度将无法恢复。（注意，匹配完毕必须手动保存！）',
+				'当前匹配结果已临时保存，下次进入这个歌单可以继续匹配。匹配完成后仍需要手动保存到本地歌单。',
 			buttons: [
 				{
 					text: '取消',
@@ -235,7 +248,9 @@ const ExternalPlaylistSyncPageInner = () => {
 
 	const handleSave = async () => {
 		if (!data?.playlist || !data?.tracks || !results) return
-		const matchResults = Object.values(results)
+		const matchResults = data.tracks
+			.map((_, index) => results[index])
+			.filter((result) => result !== undefined)
 		if (matchResults.length === 0) {
 			toast.error('没有可保存的内容')
 			return
@@ -268,7 +283,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					await queryClient.invalidateQueries({
 						queryKey: playlistKeys.playlistLists(),
 					})
-					reset()
+					clearSession()
 					const playlistId = saveResult.value
 					useModalStore
 						.getState()
@@ -447,7 +462,7 @@ const ExternalPlaylistSyncPageInner = () => {
 				]}
 				icon='information'
 			>
-				匹配完成后，请务必点击右上角或下方的保存按钮，否则进度将丢失。
+				匹配进度已临时保存。完成后请点击右上角或下方的保存按钮写入本地歌单。
 			</Banner>
 			<FlashList
 				ref={listRef}

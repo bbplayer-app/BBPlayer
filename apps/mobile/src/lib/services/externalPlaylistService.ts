@@ -14,10 +14,31 @@ const logger = log.extend('Services.ExternalPlaylist')
 
 // 全局配置
 const MIN_DELAY = 1200 // 防封号延迟 (ms)
+const SEARCH_TIMEOUT = 15_000
 const BLACKLIST_ZONES = new Set([26, 29, 31, 201, 238]) // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
 const PRIORITY_ZONES = new Set([193, 130, 267]) // 优先分区 (MV, 音乐综合, 电台)
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const createSearchSignal = (parentSignal?: AbortSignal) => {
+	const controller = new AbortController()
+	const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT)
+	const abortFromParent = () => controller.abort()
+
+	if (parentSignal?.aborted) {
+		controller.abort()
+	} else {
+		parentSignal?.addEventListener('abort', abortFromParent, { once: true })
+	}
+
+	return {
+		signal: controller.signal,
+		cleanup: () => {
+			clearTimeout(timeoutId)
+			parentSignal?.removeEventListener('abort', abortFromParent)
+		},
+	}
+}
 
 interface MatchCandidate {
 	video: BilibiliSearchVideo
@@ -170,15 +191,19 @@ export class ExternalPlaylistService {
 					let matchedVideo: BilibiliSearchVideo | null = null
 
 					try {
+						const { signal, cleanup } = createSearchSignal(options?.signal)
 						// oxlint-disable-next-line no-await-in-loop
-						const searchResult = await bilibiliApi.searchVideos(
-							searchQuery,
-							1,
-							{
-								// 一点小巧思：带 cookie 调用搜索是会有个性化内容的，但在匹配时我认为个性化内容反而会干扰准确度
-								skipCookie: true,
-							},
-						)
+						const searchResult = await (async () => {
+							try {
+								return await bilibiliApi.searchVideos(searchQuery, 1, {
+									// 一点小巧思：带 cookie 调用搜索是会有个性化内容的，但在匹配时我认为个性化内容反而会干扰准确度
+									skipCookie: true,
+									signal,
+								})
+							} finally {
+								cleanup()
+							}
+						})()
 
 						if (searchResult.isOk()) {
 							const decodedResults = searchResult.value.result.map((video) => ({
@@ -194,6 +219,10 @@ export class ExternalPlaylistService {
 						}
 					} catch (e) {
 						logger.error(`Error processing ${song.title}:`, e)
+					}
+
+					if (options?.signal?.aborted) {
+						throw new Error('Aborted')
 					}
 
 					const result: MatchResult = {

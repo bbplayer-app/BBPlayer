@@ -113,6 +113,7 @@ class ApiClient {
 		params?: Record<string, string | undefined> | string,
 		fullUrl?: string,
 		skipCookie?: boolean,
+		signal?: AbortSignal,
 	): ResultAsync<T, BilibiliApiError> {
 		let url = endpoint
 		if (typeof params === 'string') {
@@ -126,7 +127,7 @@ class ApiClient {
 			}
 			url = `${endpoint}?${searchParams.toString()}`
 		}
-		return this.request<T>(url, { method: 'GET' }, fullUrl, skipCookie)
+		return this.request<T>(url, { method: 'GET', signal }, fullUrl, skipCookie)
 	}
 
 	/**
