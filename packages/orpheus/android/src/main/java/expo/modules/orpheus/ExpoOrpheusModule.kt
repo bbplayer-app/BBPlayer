@@ -300,6 +300,7 @@ class ExpoOrpheusModule : Module() {
         Property("isDesktopLyricsLocked")
             .get { GeneralStorage.isDesktopLyricsLocked() }
             .set { locked: Boolean ->
+                GeneralStorage.setDesktopLyricsLocked(locked)
                 mainHandler.post {
                     OrpheusMusicService.instance?.floatingLyricsManager?.setLocked(locked)
                 }
@@ -308,8 +309,8 @@ class ExpoOrpheusModule : Module() {
         Property("isStatusBarLyricsEnabled")
             .get { GeneralStorage.isStatusBarLyricsEnabled() }
             .set { enabled: Boolean ->
+                GeneralStorage.setStatusBarLyricsEnabled(enabled)
                 mainHandler.post {
-                    GeneralStorage.setStatusBarLyricsEnabled(enabled)
                     OrpheusMusicService.instance?.statusBarLyricsManager?.enabled = enabled
                 }
             }
@@ -317,8 +318,8 @@ class ExpoOrpheusModule : Module() {
         Property("isCarLyricsEnabled")
             .get { GeneralStorage.isCarLyricsEnabled() }
             .set { enabled: Boolean ->
+                GeneralStorage.setCarLyricsEnabled(enabled)
                 mainHandler.post {
-                    GeneralStorage.setCarLyricsEnabled(enabled)
                     OrpheusMusicService.instance?.setCarLyricsEnabled(enabled)
                 }
             }
@@ -326,14 +327,15 @@ class ExpoOrpheusModule : Module() {
         Property("statusBarLyricsProvider")
             .get { GeneralStorage.getStatusBarLyricsProvider() }
             .set { provider: String ->
+                // Lyricon requires API 27+; silently fall back to superlyric on older devices
+                // so the persisted value always reflects what is actually used.
+                val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+                    "superlyric"
+                } else {
+                    provider
+                }
+                GeneralStorage.setStatusBarLyricsProvider(effective)
                 mainHandler.post {
-                    // Lyricon requires API 27+; silently fall back to superlyric on older devices
-                    // so the persisted value always reflects what is actually used.
-                    val effective = if (provider == "lyricon" && Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
-                        "superlyric"
-                    } else {
-                        provider
-                    }
                     GeneralStorage.setStatusBarLyricsProvider(effective)
                     val service = OrpheusMusicService.instance ?: return@post
                     service.statusBarLyricsManager.backend = service.createStatusBarBackend(effective)
