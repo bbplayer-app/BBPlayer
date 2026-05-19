@@ -40,6 +40,10 @@ export default function LyricsSettingsPage() {
 	const [isLyriconApiEnabled, setIsLyriconApiEnabled] = useState(
 		Orpheus.isLyriconApiEnabled,
 	)
+	const [
+		isMeizuStatusBarLyricsApiEnabled,
+		setIsMeizuStatusBarLyricsApiEnabled,
+	] = useState(Orpheus.isMeizuStatusBarLyricsApiEnabled)
 	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
 		Orpheus.statusBarLyricsProvider ?? 'lyricon',
 	)
@@ -59,7 +63,16 @@ export default function LyricsSettingsPage() {
 	const isStatusBarLyricsProviderActive =
 		statusBarLyricsProvider === 'lyricon'
 			? isLyriconApiEnabled
-			: isSuperLyricApiEnabled
+			: statusBarLyricsProvider === 'meizu'
+				? isMeizuStatusBarLyricsApiEnabled
+				: isSuperLyricApiEnabled
+
+	const inactiveStatusBarLyricsProviderText =
+		statusBarLyricsProvider === 'lyricon'
+			? '（需安装词幕模块）'
+			: statusBarLyricsProvider === 'meizu'
+				? '（仅支持 Flyme / 魅族状态栏歌词）'
+				: '（需安装 SuperLyric 模块）'
 
 	const syncStates = useCallback(async () => {
 		const hasPermission = await Orpheus.checkOverlayPermission()
@@ -70,6 +83,9 @@ export default function LyricsSettingsPage() {
 		setIsCarLyricsEnabled(Orpheus.isCarLyricsEnabled)
 		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
+		setIsMeizuStatusBarLyricsApiEnabled(
+			Orpheus.isMeizuStatusBarLyricsApiEnabled,
+		)
 		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'lyricon')
 	}, [])
 
@@ -282,6 +298,24 @@ export default function LyricsSettingsPage() {
 										setProviderMenuVisible(false)
 									}}
 								/>
+								<Checkbox.Item
+									mode='ios'
+									label={`魅族状态栏歌词${statusBarLyricsProvider === 'meizu' && !isMeizuStatusBarLyricsApiEnabled ? '（不可用）' : ''}`}
+									status={
+										statusBarLyricsProvider === 'meizu'
+											? 'checked'
+											: 'unchecked'
+									}
+									onPress={() => {
+										try {
+											Orpheus.statusBarLyricsProvider = 'meizu'
+											void syncStates()
+										} catch (e) {
+											toastAndLogError('设置失败', e, 'Settings')
+										}
+										setProviderMenuVisible(false)
+									}}
+								/>
 							</FunctionalMenu>
 						</View>
 						<View style={styles.settingRow}>
@@ -295,9 +329,7 @@ export default function LyricsSettingsPage() {
 								>
 									状态栏歌词
 									{!isStatusBarLyricsProviderActive
-										? statusBarLyricsProvider === 'lyricon'
-											? '（需安装词幕模块）'
-											: '（需安装 SuperLyric 模块）'
+										? inactiveStatusBarLyricsProviderText
 										: ''}
 								</Text>
 								{!isStatusBarLyricsProviderActive && (

@@ -29,6 +29,7 @@ import expo.modules.orpheus.R
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
+import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
 import expo.modules.orpheus.manager.UnifiedLyricsManager
@@ -629,10 +630,16 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     fun createStatusBarBackend(provider: String): expo.modules.orpheus.manager.StatusBarLyricsBackend {
-        return if (provider == "lyricon" && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
-            LyriconBackend(this)
-        } else {
-            SuperLyricBackend(this)
+        return when {
+            provider == "lyricon" && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1 -> {
+                LyriconBackend(this)
+            }
+            provider == "meizu" -> {
+                MeizuStatusBarLyricsBackend(this)
+            }
+            else -> {
+                SuperLyricBackend(this)
+            }
         }
     }
 

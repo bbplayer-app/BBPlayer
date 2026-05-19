@@ -151,6 +151,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	statusBarLyricsProvider: string
 	readonly isSuperLyricApiEnabled: boolean
 	readonly isLyriconApiEnabled: boolean
+	readonly isMeizuStatusBarLyricsApiEnabled: boolean
 
 	getPosition(): Promise<number>
 	getDuration(): Promise<number>

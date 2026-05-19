@@ -145,7 +145,7 @@ object GeneralStorage {
     fun isStatusBarLyricsEnabled() = kv?.decodeBool(KEY_STATUS_BAR_LYRICS_ENABLED, false) ?: false
     fun setStatusBarLyricsEnabled(enabled: Boolean) = safeKv.encode(KEY_STATUS_BAR_LYRICS_ENABLED, enabled)
 
-    /** Returns "superlyric" or "lyricon" */
+    /** Returns "superlyric", "lyricon", or "meizu" */
     fun getStatusBarLyricsProvider() = kv?.decodeString(KEY_STATUS_BAR_LYRICS_PROVIDER, "superlyric") ?: "superlyric"
     fun setStatusBarLyricsProvider(provider: String) = safeKv.encode(KEY_STATUS_BAR_LYRICS_PROVIDER, provider)
 
