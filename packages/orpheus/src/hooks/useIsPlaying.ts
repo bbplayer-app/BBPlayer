@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 
 import { Orpheus } from '../ExpoOrpheusModule'
 
+/**
+ * 订阅原生播放/暂停变化，并返回当前是否正在播放。
+ */
 export function useIsPlaying() {
 	const [isPlaying, setIsPlaying] = useState(false)
 

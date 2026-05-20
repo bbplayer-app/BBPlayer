@@ -5,6 +5,11 @@ import { Orpheus } from '../ExpoOrpheusModule'
 
 type OrpheusSubscription = ReturnType<typeof Orpheus.addListener>
 
+/**
+ * 跟踪播放位置、曲目时长和缓冲位置，单位均为秒。
+ *
+ * App 处于前台时监听原生进度事件；回到前台时会主动向原生同步一次最新进度。
+ */
 export function useProgress() {
 	const [progress, setProgress] = useState({
 		position: 0,

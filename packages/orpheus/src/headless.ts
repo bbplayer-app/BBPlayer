@@ -4,6 +4,12 @@ import { Orpheus, type OrpheusHeadlessEvent } from './ExpoOrpheusModule'
 
 const ORPHEUS_HEADLESS_TASK = 'OrpheusHeadlessTask'
 
+/**
+ * 注册接收原生播放事件的后台任务。
+ *
+ * Android 会注册一个由 `OrpheusHeadlessTaskService` 消费的 React Native headless task。
+ * iOS 这里没有原生 headless service，因此会在 JS 存活时从前台模块事件桥接到同一个回调。
+ */
 export function registerOrpheusHeadlessTask(
 	task: (event: OrpheusHeadlessEvent) => Promise<void>,
 ) {
