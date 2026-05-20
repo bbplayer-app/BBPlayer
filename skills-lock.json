@@ -1,6 +1,18 @@
 {
 	"version": 1,
 	"skills": {
+		"Expo UI Jetpack Compose": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"skillPath": "plugins/expo/skills/expo-ui-jetpack-compose/SKILL.md",
+			"computedHash": "52db319a6e4b0a5c6fe4d4add7ee32ede16abffab2143a1d81da48cd610a5b1b"
+		},
+		"Expo UI SwiftUI": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"skillPath": "plugins/expo/skills/expo-ui-swift-ui/SKILL.md",
+			"computedHash": "409d466e43888f62987ceaf5c8be34aa76a49328528ebe290bab866f6d07e958"
+		},
 		"expo-module": {
 			"source": "expo/skills",
 			"sourceType": "github",
