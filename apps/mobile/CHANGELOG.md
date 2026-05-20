@@ -5,12 +5,13 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.4.7] - 2026-05-20
 
 ### Changed
 
 - 优化热力图组件 WeeklyHeatMap，使其左侧星期几固定显示，不再随水平滑动而移动
 - 使用 react-native-boost 对部分 View、Text 组件加速
+- 优化 GitHub Actions 构建的 R8 映射文件名，只保留架构名与 r8-mapping 后缀，防止在 Release 页面与 APK 文件混淆导致误点
 
 ### Added
 
@@ -480,7 +481,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.4...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.7...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -503,3 +504,4 @@
 [2.4.1]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.2...v2.4.1
 [2.4.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.2
 [2.4.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.4
+[2.4.7]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.6...v2.4.7

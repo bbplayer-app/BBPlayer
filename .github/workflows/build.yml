@@ -119,7 +119,7 @@ jobs:
 
           # e.g. bbplayer-v1.0.0-prod-arm64-v8a
           APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}-${{ matrix.arch }}"
-          MAPPING_NAME="${APK_NAME}-mapping.txt"
+          MAPPING_NAME="${{ matrix.arch }}-r8-mapping.txt"
           ARTIFACT_DIR="${RUNNER_TEMP}/${APK_NAME}"
 
           mkdir -p "$ARTIFACT_DIR"
@@ -216,7 +216,7 @@ jobs:
 
       - name: 🎁 Create Release
         run: |
-          mapfile -t FILES < <(find dist -type f \( -name "*.apk" -o -name "*-mapping.txt" \) | sort)
+          mapfile -t FILES < <(find dist -type f \( -name "*.apk" -o -name "*mapping.txt" \) | sort)
 
           gh release create "$RELEASE_TAG" \
             "${FILES[@]}" \
