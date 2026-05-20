@@ -1,40 +1,128 @@
-import type { PropsWithChildren } from 'react'
-import { memo, useEffect } from 'react'
-import { Menu } from 'react-native-paper'
+import {
+	MenuView,
+	type MenuAction,
+	type NativeActionEvent,
+} from '@expo/ui/community/menu'
+import {
+	Children,
+	isValidElement,
+	memo,
+	type PropsWithChildren,
+	type ReactElement,
+	type ReactNode,
+	useCallback,
+	useMemo,
+} from 'react'
+import { StyleSheet, type StyleProp, type TextStyle } from 'react-native'
 
 import * as Haptics from '@/utils/haptics'
 
-type FunctionalMenuProps = PropsWithChildren<Parameters<typeof Menu>[0]>
+type FunctionalMenuItemProps = {
+	title?: string
+	label?: string
+	leadingIcon?: string
+	onPress?: () => void
+	disabled?: boolean
+	status?: 'checked' | 'unchecked' | 'indeterminate'
+	state?: 'on' | 'off'
+	destructive?: boolean
+	titleStyle?: StyleProp<TextStyle>
+}
 
-const FunctionalMenu = memo(function FunctionalMenu({
+type FunctionalMenuProps = PropsWithChildren<{
+	anchor: ReactNode
+	visible?: boolean
+	onDismiss?: () => void
+	title?: string
+	anchorPosition?: 'top' | 'bottom'
+	statusBarHeight?: number
+}>
+
+type FunctionalMenuAction = MenuAction & {
+	onPress?: () => void
+}
+
+function FunctionalMenuItem(_props: FunctionalMenuItemProps) {
+	return null
+}
+
+function toAction(
+	child: ReactElement<FunctionalMenuItemProps>,
+	index: number,
+): FunctionalMenuAction | null {
+	const title = child.props.title ?? child.props.label
+	if (!title) return null
+	const titleColor = StyleSheet.flatten(child.props.titleStyle)?.color
+
+	return {
+		id: String(index),
+		title,
+		titleColor,
+		attributes: {
+			disabled: child.props.disabled,
+			destructive: child.props.destructive,
+		},
+		state:
+			child.props.state ??
+			(child.props.status
+				? child.props.status === 'checked'
+					? 'on'
+					: 'off'
+				: undefined),
+		onPress: child.props.onPress,
+	}
+}
+
+const FunctionalMenuComponent = memo(function FunctionalMenu({
+	anchor,
 	children,
 	onDismiss,
-	visible,
-	...props
+	title,
 }: FunctionalMenuProps) {
-	useEffect(() => {
-		if (visible) {
-			void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-		}
-	}, [visible])
+	const actions = useMemo(
+		() =>
+			Children.toArray(children)
+				.filter(isValidElement)
+				.map((child, index) =>
+					toAction(child as ReactElement<FunctionalMenuItemProps>, index),
+				)
+				.filter((action): action is FunctionalMenuAction => action !== null),
+		[children],
+	)
+
+	const menuActions = useMemo(
+		() => actions.map(({ onPress, ...action }) => action),
+		[actions],
+	)
+
+	const handlePressAction = useCallback(
+		(event: NativeActionEvent) => {
+			actions
+				.find((action) => action.id === event.nativeEvent.event)
+				?.onPress?.()
+		},
+		[actions],
+	)
+
+	const handleOpenMenu = useCallback(() => {
+		void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+	}, [])
 
 	return (
-		<>
-			<Menu
-				{...props}
-				onDismiss={onDismiss}
-				visible={visible}
-			>
-				{/* 在 react-native-paper 5.15.1 中修复 */}
-				{/*<View
-					// new arch issue: 第一次打开 Menu 时会有闪烁，采用这种方法躲闪...
-					onLayout={() => {
-						setTimeout(() => setShowContent(true), 100)
-					}}
-				/>*/}
-				{children}
-			</Menu>
-		</>
+		<MenuView
+			actions={menuActions}
+			onCloseMenu={onDismiss}
+			onOpenMenu={handleOpenMenu}
+			onPressAction={handlePressAction}
+			title={title}
+		>
+			{anchor}
+		</MenuView>
 	)
 })
+
+const FunctionalMenu = Object.assign(FunctionalMenuComponent, {
+	Item: FunctionalMenuItem,
+})
+
 export default FunctionalMenu

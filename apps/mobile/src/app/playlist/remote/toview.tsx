@@ -1,14 +1,8 @@
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import {
-	RefreshControl,
-	StyleSheet,
-	useWindowDimensions,
-	View,
-} from 'react-native'
-import { Appbar, Menu, Portal, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { RefreshControl, StyleSheet, View } from 'react-native'
+import { Appbar, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
@@ -74,9 +68,6 @@ export default function ToViewPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const theme = useTheme()
 	const { colors } = theme
-	const [menuVisiable, setMenuVisiable] = useState(false)
-	const insets = useSafeAreaInsets()
-	const dimensions = useWindowDimensions()
 
 	const coverRef = useImage('', {
 		onError: () => void 0,
@@ -221,10 +212,41 @@ export default function ToViewPage() {
 				) : (
 					<Appbar.BackAction onPress={() => router.back()} />
 				)}
-				<Appbar.Action
-					icon='dots-vertical'
-					onPress={() => setMenuVisiable(true)}
-				/>
+				<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
+					<FunctionalMenu.Item
+						onPress={() => {
+							deleteToViewVideo({
+								deleteAllViewed: true,
+								avid: undefined,
+							})
+						}}
+						title='清除所有已播放歌曲'
+						leadingIcon='trash-can'
+					/>
+					<FunctionalMenu.Item
+						onPress={() => {
+							alert(
+								'清除所有稍后再看歌曲',
+								'确定要清除所有稍后再看的歌曲吗？',
+								[
+									{
+										text: '取消',
+									},
+									{
+										text: '确定',
+										onPress: () => {
+											clearToViewVideoList()
+										},
+									},
+								],
+								{ cancelable: true },
+							)
+						}}
+						title='清除所有歌曲'
+						leadingIcon='delete'
+						titleStyle={{ color: colors.error }}
+					/>
+				</FunctionalMenu>
 			</Appbar.Header>
 
 			<View style={styles.listContainer}>
@@ -266,53 +288,6 @@ export default function ToViewPage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
 			</View>
-
-			<Portal>
-				<FunctionalMenu
-					visible={menuVisiable}
-					onDismiss={() => setMenuVisiable(false)}
-					anchor={{
-						x: dimensions.width - 10,
-						y: 60 + insets.top,
-					}}
-				>
-					<Menu.Item
-						onPress={() => {
-							setMenuVisiable(false)
-							deleteToViewVideo({
-								deleteAllViewed: true,
-								avid: undefined,
-							})
-						}}
-						title='清除所有已播放歌曲'
-						leadingIcon='trash-can'
-					/>
-					<Menu.Item
-						onPress={() => {
-							setMenuVisiable(false)
-							alert(
-								'清除所有稍后再看歌曲',
-								'确定要清除所有稍后再看的歌曲吗？',
-								[
-									{
-										text: '取消',
-									},
-									{
-										text: '确定',
-										onPress: () => {
-											clearToViewVideoList()
-										},
-									},
-								],
-								{ cancelable: true },
-							)
-						}}
-						title='清除所有歌曲'
-						leadingIcon='delete'
-						titleStyle={{ color: colors.error }}
-					/>
-				</FunctionalMenu>
-			</Portal>
 		</View>
 	)
 }

@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -89,7 +90,7 @@ export default function GeneralSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
-					<Switch
+					<UniversalSwitch
 						value={sendPlayHistory}
 						onValueChange={() =>
 							setSettings({ sendPlayHistory: !sendPlayHistory })
@@ -98,14 +99,14 @@ export default function GeneralSettingsPage() {
 				</View>
 				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableDataCollection}
 						onValueChange={setEnableDataCollection}
 					/>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>打开{'\u2009Debug\u2009'}日志</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableDebugLog}
 						onValueChange={setEnableDebugLog}
 					/>

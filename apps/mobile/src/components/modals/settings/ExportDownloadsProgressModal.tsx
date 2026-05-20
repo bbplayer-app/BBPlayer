@@ -9,7 +9,6 @@ import {
 	Divider,
 	HelperText,
 	ProgressBar,
-	Switch,
 	Text,
 	TextInput,
 	useTheme,
@@ -17,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { toastAndLogError } from '@/utils/error-handling'
 
 type Stage = 'config' | 'exporting' | 'completed' | 'error'
@@ -300,7 +300,7 @@ const ExportDownloadsProgressModal = memo(
 									<View style={styles.switchLabel}>
 										<Text variant='labelLarge'>内嵌歌词</Text>
 									</View>
-									<Switch
+									<UniversalSwitch
 										value={embedLyrics}
 										onValueChange={setEmbedLyrics}
 									/>
@@ -321,7 +321,7 @@ const ExportDownloadsProgressModal = memo(
 											<View style={styles.switchLabel}>
 												<Text variant='labelLarge'>转换为标准 LRC</Text>
 											</View>
-											<Switch
+											<UniversalSwitch
 												value={convertToLrc}
 												onValueChange={setConvertToLrc}
 											/>
@@ -346,7 +346,7 @@ const ExportDownloadsProgressModal = memo(
 									<View style={styles.switchLabel}>
 										<Text variant='labelLarge'>裁剪封面为正方形</Text>
 									</View>
-									<Switch
+									<UniversalSwitch
 										value={cropCoverArt}
 										onValueChange={setCropCoverArt}
 									/>

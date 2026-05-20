@@ -2,17 +2,11 @@ import { Image } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import {
-	Appbar,
-	Avatar,
-	SegmentedButtons,
-	Text,
-	TextInput,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Avatar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import NativeSegmentedButtons from '@/components/common/NativeSegmentedButtons'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
@@ -297,7 +291,7 @@ export default function AccountSettingsPage() {
 								登录后可以开启歌单共享、邀请他人协同编辑，并在新设备上自动恢复你的云端共享歌单。
 							</Text>
 						</View>
-						<SegmentedButtons
+						<NativeSegmentedButtons
 							value={mode}
 							onValueChange={setMode}
 							buttons={[

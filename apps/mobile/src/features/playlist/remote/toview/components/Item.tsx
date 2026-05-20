@@ -1,9 +1,11 @@
-import { memo, useRef } from 'react'
+import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import {
@@ -42,7 +44,7 @@ export interface TrackNecessaryData {
 interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
-	onMenuPress: (anchor: { x: number; y: number }) => void
+	menuItems: TrackMenuItem[]
 	showCoverImage?: boolean
 	data: TrackNecessaryData & { progress: number }
 	disabled?: boolean
@@ -58,7 +60,7 @@ interface TrackListItemProps {
 export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 	index,
 	onTrackPress,
-	onMenuPress,
+	menuItems,
 	showCoverImage = true,
 	data,
 	disabled = false,
@@ -68,7 +70,6 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 	enterSelectMode,
 }: TrackListItemProps) {
 	const { colors } = useTheme()
-	const menuRef = useRef<View>(null)
 	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
@@ -115,7 +116,9 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 								{ opacity: selectMode ? 1 : 0 },
 							]}
 						>
-							<Checkbox status={isSelected ? 'checked' : 'unchecked'} />
+							<UniversalCheckbox
+								status={isSelected ? 'checked' : 'unchecked'}
+							/>
 						</View>
 
 						{/* 序号也是 */}
@@ -173,26 +176,27 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 					/>
 
 					{/* Context Menu */}
-					{!disabled && (
-						<RectButton
-							// @ts-expect-error -- 不理解
-							ref={menuRef}
-							style={styles.menuButton}
-							onPress={() =>
-								menuRef.current?.measure(
-									(_x, _y, _width, _height, pageX, pageY) => {
-										onMenuPress({ x: pageX, y: pageY })
-									},
-								)
+					{!disabled && !selectMode && (
+						<FunctionalMenu
+							anchor={
+								<RectButton style={styles.menuButton}>
+									<Icon
+										source='dots-vertical'
+										size={20}
+										color={colors.primary}
+									/>
+								</RectButton>
 							}
-							enabled={!selectMode}
 						>
-							<Icon
-								source='dots-vertical'
-								size={20}
-								color={selectMode ? colors.onSurfaceDisabled : colors.primary}
-							/>
-						</RectButton>
+							{menuItems.map((menuItem) => (
+								<FunctionalMenu.Item
+									key={menuItem.title}
+									leadingIcon={menuItem.leadingIcon}
+									onPress={menuItem.onPress}
+									title={menuItem.title}
+								/>
+							))}
+						</FunctionalMenu>
 					)}
 				</View>
 			</Surface>
@@ -253,13 +257,13 @@ const renderToViewItem = ({
 	ExtraData
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
-	const { playTrack, handleMenuPress, selection, showItemCover } = extraData
+	const { playTrack, trackMenuItems, selection, showItemCover } = extraData
 
 	return (
 		<ToViewTrackListItem
 			index={index}
 			onTrackPress={() => playTrack(item)}
-			onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+			menuItems={trackMenuItems(item)}
 			showCoverImage={showItemCover ?? true}
 			data={{
 				cover: item.coverUrl ?? undefined,

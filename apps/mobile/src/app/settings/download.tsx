@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Checkbox, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -66,7 +67,7 @@ export default function DownloadSettingsPage() {
 						}
 					>
 						{DOWNLOAD_PARALLEL_OPTIONS.map((option) => (
-							<Checkbox.Item
+							<UniversalCheckboxItem
 								key={option.value}
 								mode='ios'
 								label={option.label}

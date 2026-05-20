@@ -3,7 +3,6 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Checkbox,
 	Dialog,
 	Text,
 	TextInput,
@@ -11,6 +10,7 @@ import {
 } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { useMergePlaylists } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -43,7 +43,7 @@ const SelectablePlaylistItem = memo(function SelectablePlaylistItem({
 						{item.itemCount} 首歌曲
 					</Text>
 				</View>
-				<Checkbox
+				<UniversalCheckbox
 					status={isSelected ? 'checked' : 'unchecked'}
 					onPress={() => onToggle(item.id)}
 				/>

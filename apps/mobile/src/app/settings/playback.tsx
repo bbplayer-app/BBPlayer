@@ -2,10 +2,11 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Switch, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -40,7 +41,7 @@ export default function PlaybackSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<Text>在应用启动时恢复上次播放进度</Text>
-					<Switch
+					<UniversalSwitch
 						value={enablePersistCurrentPosition}
 						onValueChange={() => {
 							try {
@@ -56,7 +57,7 @@ export default function PlaybackSettingsPage() {
 				</View>
 				<View style={styles.settingRow}>
 					<Text>响度均衡（实验性）</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableLoudnessNormalization}
 						onValueChange={() => {
 							try {
@@ -72,7 +73,7 @@ export default function PlaybackSettingsPage() {
 				</View>
 				<View style={styles.settingRow}>
 					<Text>软件启动时自动播放（易社死）</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableAutostartPlayOnStart}
 						onValueChange={() => {
 							try {

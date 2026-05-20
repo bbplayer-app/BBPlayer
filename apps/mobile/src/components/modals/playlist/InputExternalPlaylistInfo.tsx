@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, SegmentedButtons, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import NativeSegmentedButtons from '@/components/common/NativeSegmentedButtons'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { parseExternalPlaylistInfo } from '@/lib/utils/playlistUrlParser'
 
@@ -47,7 +48,7 @@ const InputExternalPlaylistInfoModal = () => {
 				/>
 				<View style={styles.segmentedContainer}>
 					<Text style={styles.label}>来源：</Text>
-					<SegmentedButtons
+					<NativeSegmentedButtons
 						value={source}
 						onValueChange={(value) => setSource(value)}
 						buttons={[

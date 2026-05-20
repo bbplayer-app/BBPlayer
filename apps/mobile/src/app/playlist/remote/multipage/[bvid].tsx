@@ -174,7 +174,7 @@ export default function MultipagePage() {
 			if (!extraData) throw new Error('Extradata 不存在')
 			const {
 				playTrack: play,
-				handleMenuPress,
+				trackMenuItems,
 				selection,
 				showItemCover,
 			} = extraData
@@ -186,7 +186,7 @@ export default function MultipagePage() {
 					shouldFlash={shouldFlash}
 					index={index}
 					onTrackPress={() => play(item)}
-					onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+					menuItems={trackMenuItems(item)}
 					showCoverImage={showItemCover ?? true}
 					data={{
 						cover: item.coverUrl ?? undefined,

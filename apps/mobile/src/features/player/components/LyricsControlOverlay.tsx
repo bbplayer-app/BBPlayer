@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
 import { PlayerSlider } from '@/features/player/components/PlayerSlider'
 
@@ -33,6 +34,11 @@ interface LyricsControlOverlayProps {
 		width: number
 		height: number
 	}) => void
+	showTranslationToggle: boolean
+	translationType: 'translation' | 'romaji'
+	onToggleTranslation: () => void
+	onEditLyrics: () => void
+	onOpenOffsetMenu: () => void
 	onControlsVisibilityChange?: (visible: boolean) => void
 }
 
@@ -40,6 +46,11 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	scrollDirection,
 	offsetMenuVisible,
 	onOpenActionMenu,
+	showTranslationToggle,
+	translationType,
+	onToggleTranslation,
+	onEditLyrics,
+	onOpenOffsetMenu,
 	onControlsVisibilityChange,
 }: LyricsControlOverlayProps) {
 	const { colors, dark } = useTheme()
@@ -160,25 +171,58 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 			<Animated.View
 				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
 			>
-				<RectButton
-					style={styles.utilityButton}
-					// @ts-expect-error -- RectButton ref typing
-					ref={actionButtonRef}
-					enabled={!offsetMenuVisible}
-					onPress={() => {
-						actionButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-							onOpenActionMenu({ x: pageX, y: pageY, width: w, height: h })
-						})
-					}}
+				<FunctionalMenu
+					anchor={
+						<RectButton
+							style={styles.utilityButton}
+							// @ts-expect-error -- RectButton ref typing
+							ref={actionButtonRef}
+							enabled={!offsetMenuVisible}
+						>
+							<Icon
+								source='dots-vertical'
+								size={20}
+								color={
+									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
+								}
+							/>
+						</RectButton>
+					}
 				>
-					<Icon
-						source='dots-vertical'
-						size={20}
-						color={
-							offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-						}
+					{showTranslationToggle && (
+						<FunctionalMenu.Item
+							title={
+								translationType === 'translation' ? '切换罗马音' : '切换翻译'
+							}
+							leadingIcon={
+								translationType === 'translation'
+									? 'alphabetical-variant'
+									: 'translate'
+							}
+							onPress={onToggleTranslation}
+						/>
+					)}
+					<FunctionalMenu.Item
+						title='编辑歌词'
+						leadingIcon='pencil'
+						onPress={onEditLyrics}
 					/>
-				</RectButton>
+					<FunctionalMenu.Item
+						title='时间轴偏移'
+						leadingIcon='swap-vertical-circle-outline'
+						onPress={() => {
+							actionButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+								onOpenActionMenu({
+									x: pageX,
+									y: pageY,
+									width: w,
+									height: h,
+								})
+								onOpenOffsetMenu()
+							})
+						}}
+					/>
+				</FunctionalMenu>
 			</Animated.View>
 
 			{/* 播放器控件 - 条件显示 */}

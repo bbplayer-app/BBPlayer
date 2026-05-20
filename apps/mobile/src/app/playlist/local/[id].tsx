@@ -5,13 +5,11 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet, View, useWindowDimensions } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
 	Appbar,
 	MD3Theme,
-	Menu,
-	Portal,
 	Searchbar,
 	Text,
 	useTheme,
@@ -21,7 +19,6 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
@@ -118,8 +115,6 @@ export default function LocalPlaylistPage() {
 	const theme = useTheme()
 	const { colors } = theme
 	const router = useRouter()
-	const insets = useSafeAreaInsets()
-	const dimensions = useWindowDimensions()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
@@ -145,7 +140,6 @@ export default function LocalPlaylistPage() {
 		enter: enterSelectMode,
 	}
 	const openModal = useModalStore((state) => state.open)
-	const [functionalMenuVisible, setFunctionalMenuVisible] = useState(false)
 
 	const {
 		data: playlistData,
@@ -614,6 +608,84 @@ export default function LocalPlaylistPage() {
 		return <PlaylistError text='加载播放列表内容失败' />
 	if (!playlistMetadata) return <PlaylistError text='未找到播放列表元数据' />
 
+	const playlistActionsMenu = (
+		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
+			{playlistMetadata.type === 'local' && !isSharedSubscriber && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						enterSelectMode()
+					}}
+					title='排序'
+					leadingIcon='sort'
+				/>
+			)}
+			{!isSharedSubscriber && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EditPlaylistMetadata', {
+							playlist: playlistMetadata,
+						})
+					}}
+					title='编辑播放列表信息'
+					leadingIcon='pencil'
+				/>
+			)}
+			{playlistMetadata.type === 'local' &&
+				playlistMetadata.remoteSyncId === null &&
+				!isSharedSubscriber && (
+					<FunctionalMenu.Item
+						onPress={() => {
+							openModal(
+								'SyncLocalToBilibili',
+								{ playlistId: Number(id) },
+								{ dismissible: false },
+							)
+						}}
+						title='同步到 B 站'
+						leadingIcon='sync'
+					/>
+				)}
+			{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EnableSharing', { playlistId: Number(id) })
+					}}
+					title='设为共享歌单'
+					leadingIcon='share-variant'
+				/>
+			)}
+			{playlistMetadata.shareId && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EnableSharing', {
+							playlistId: Number(id),
+							shareId: playlistMetadata.shareId,
+							shareRole: playlistMetadata.shareRole,
+						})
+					}}
+					title='共享设置'
+					leadingIcon='link-variant'
+				/>
+			)}
+			<FunctionalMenu.Item
+				onPress={() => {
+					alert(
+						'删除播放列表',
+						deletePlaylistDialogPrompt(playlistMetadata, colors),
+						[
+							{ text: '取消' },
+							{ text: '确定', onPress: onClickDeletePlaylist },
+						],
+						{ cancelable: true },
+					)
+				}}
+				title='删除播放列表'
+				leadingIcon='delete'
+				titleStyle={{ color: colors.error }}
+			/>
+		</FunctionalMenu>
+	)
+
 	return (
 		<View style={[styles.container, { backgroundColor }]}>
 			<Appbar.Header
@@ -696,10 +768,7 @@ export default function LocalPlaylistPage() {
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
 						/>
-						<Appbar.Action
-							icon='dots-vertical'
-							onPress={() => setFunctionalMenuVisible(true)}
-						/>
+						{playlistActionsMenu}
 					</>
 				)}
 			</Appbar.Header>
@@ -837,97 +906,6 @@ export default function LocalPlaylistPage() {
 					</Animated.View>
 				)}
 			</View>
-
-			<Portal>
-				<FunctionalMenu
-					visible={functionalMenuVisible}
-					onDismiss={() => setFunctionalMenuVisible(false)}
-					anchor={{
-						x: dimensions.width - 10,
-						y: 60 + insets.top,
-					}}
-				>
-					{playlistMetadata.type === 'local' && !isSharedSubscriber && (
-						<Menu.Item
-							onPress={() => {
-								setFunctionalMenuVisible(false)
-								enterSelectMode()
-							}}
-							title='排序'
-							leadingIcon='sort'
-						/>
-					)}
-					{!isSharedSubscriber && (
-						<Menu.Item
-							onPress={() => {
-								setFunctionalMenuVisible(false)
-								openModal('EditPlaylistMetadata', {
-									playlist: playlistMetadata,
-								})
-							}}
-							title='编辑播放列表信息'
-							leadingIcon='pencil'
-						/>
-					)}
-					{playlistMetadata.type === 'local' &&
-						playlistMetadata.remoteSyncId === null &&
-						!isSharedSubscriber && (
-							<Menu.Item
-								onPress={() => {
-									setFunctionalMenuVisible(false)
-									openModal(
-										'SyncLocalToBilibili',
-										{ playlistId: Number(id) },
-										{ dismissible: false },
-									)
-								}}
-								title='同步到 B 站'
-								leadingIcon='sync'
-							/>
-						)}
-					{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
-						<Menu.Item
-							onPress={() => {
-								setFunctionalMenuVisible(false)
-								openModal('EnableSharing', { playlistId: Number(id) })
-							}}
-							title='设为共享歌单'
-							leadingIcon='share-variant'
-						/>
-					)}
-					{playlistMetadata.shareId && (
-						<Menu.Item
-							onPress={() => {
-								setFunctionalMenuVisible(false)
-								openModal('EnableSharing', {
-									playlistId: Number(id),
-									shareId: playlistMetadata.shareId,
-									shareRole: playlistMetadata.shareRole,
-								})
-							}}
-							title='共享设置'
-							leadingIcon='link-variant'
-						/>
-					)}
-					<Menu.Item
-						onPress={() => {
-							setFunctionalMenuVisible(false)
-							alert(
-								'删除播放列表',
-								deletePlaylistDialogPrompt(playlistMetadata, colors),
-								[
-									{ text: '取消' },
-									{ text: '确定', onPress: onClickDeletePlaylist },
-								],
-								{ cancelable: true },
-							)
-						}}
-						title='删除播放列表'
-						leadingIcon='delete'
-						titleStyle={{ color: colors.error }}
-					/>
-				</FunctionalMenu>
-			</Portal>
 
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar backgroundColor={nowPlayingBarColor} />

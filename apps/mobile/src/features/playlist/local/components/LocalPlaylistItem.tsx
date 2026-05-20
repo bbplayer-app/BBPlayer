@@ -6,10 +6,11 @@ import {
 	GestureDetector,
 	RectButton,
 } from 'react-native-gesture-handler'
-import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import {
@@ -163,7 +164,9 @@ export const TrackListItem = memo(function TrackListItem({
 								{ opacity: selectMode ? 1 : 0 },
 							]}
 						>
-							<Checkbox status={isSelected ? 'checked' : 'unchecked'} />
+							<UniversalCheckbox
+								status={isSelected ? 'checked' : 'unchecked'}
+							/>
 						</View>
 
 						{/* 序号也是 */}

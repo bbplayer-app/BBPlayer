@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Menu, Searchbar, Text, useTheme } from 'react-native-paper'
+import { Searchbar, Text, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -116,7 +116,7 @@ const LocalPlaylistListComponent = memo(() => {
 							/>
 						}
 					>
-						<Menu.Item
+						<FunctionalMenu.Item
 							leadingIcon='playlist-plus'
 							onPress={() => {
 								setMenuVisible(false)
@@ -124,7 +124,7 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='新建播放列表'
 						/>
-						<Menu.Item
+						<FunctionalMenu.Item
 							leadingIcon='link-plus'
 							onPress={() => {
 								setMenuVisible(false)
@@ -132,7 +132,7 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='导入外部歌单'
 						/>
-						<Menu.Item
+						<FunctionalMenu.Item
 							leadingIcon='account-group'
 							onPress={() => {
 								setMenuVisible(false)
@@ -140,7 +140,7 @@ const LocalPlaylistListComponent = memo(() => {
 							}}
 							title='订阅共享歌单'
 						/>
-						<Menu.Item
+						<FunctionalMenu.Item
 							leadingIcon='merge'
 							onPress={() => {
 								setMenuVisible(false)

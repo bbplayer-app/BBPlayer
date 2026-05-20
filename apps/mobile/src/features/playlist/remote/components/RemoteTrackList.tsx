@@ -5,18 +5,11 @@ import type {
 } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Divider,
-	Menu,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { ActivityIndicator, Divider, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
 import type {
@@ -75,10 +68,9 @@ interface TrackListProps extends Omit<
 
 export interface ExtraData {
 	playTrack: (track: BilibiliTrack) => void
-	handleMenuPress: (
+	trackMenuItems: (
 		track: BilibiliTrack,
-		anchor: { x: number; y: number },
-	) => void
+	) => { title: string; leadingIcon: string; onPress: () => void }[]
 	selection: SelectionState
 	showItemCover?: boolean
 	currentTrackIdRef: RefObject<string | undefined>
@@ -92,7 +84,7 @@ const renderItemDefault = ({
 	if (!extraData) throw new Error('Extradata 不存在')
 	const {
 		playTrack,
-		handleMenuPress,
+		trackMenuItems,
 		selection,
 		showItemCover,
 		currentTrackIdRef,
@@ -104,7 +96,7 @@ const renderItemDefault = ({
 				if (item.uniqueKey === currentTrackIdRef.current) return
 				playTrack(item)
 			}}
-			onMenuPress={(anchor) => handleMenuPress(item, anchor)}
+			menuItems={trackMenuItems(item)}
 			showCoverImage={showItemCover ?? true}
 			data={{
 				cover: item.coverUrl ?? undefined,
@@ -150,30 +142,9 @@ export function TrackList({
 	}, [currentTrackId])
 	const insets = useSafeAreaInsets()
 
-	const [menuState, setMenuState] = useState<{
-		visible: boolean
-		anchor: { x: number; y: number }
-		track: BilibiliTrack | null
-	}>({
-		visible: false,
-		anchor: { x: 0, y: 0 },
-		track: null,
-	})
-
-	const handleDismissMenu = useCallback(() => {
-		setMenuState((prev) => ({ ...prev, visible: false }))
-	}, [])
-
 	const keyExtractor = useCallback((item: BilibiliTrack) => {
 		return String(item.id)
 	}, [])
-
-	const handleMenuPress = useCallback(
-		(track: BilibiliTrack, anchor: { x: number; y: number }) => {
-			setMenuState({ visible: true, anchor, track })
-		},
-		[],
-	)
 
 	const extraData = useMemo(
 		() => ({
@@ -181,9 +152,9 @@ export function TrackList({
 			playTrack,
 			showItemCover,
 			currentTrackIdRef,
-			handleMenuPress,
+			trackMenuItems,
 		}),
-		[selection, playTrack, showItemCover, handleMenuPress],
+		[selection, playTrack, showItemCover, trackMenuItems],
 	)
 
 	const renderItem = renderCustomItem ?? renderItemDefault
@@ -199,8 +170,6 @@ export function TrackList({
 				keyExtractor={keyExtractor}
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={{
-					// 实现一个在 menu 弹出时，列表不可触摸的效果
-					pointerEvents: menuState.visible ? 'none' : 'auto',
 					paddingBottom: currentTrackId ? 70 + insets.bottom : insets.bottom,
 				}}
 				ListFooterComponent={
@@ -228,26 +197,6 @@ export function TrackList({
 				}
 				{...flashListProps}
 			/>
-			{menuState.track && (
-				<FunctionalMenu
-					visible={menuState.visible}
-					onDismiss={handleDismissMenu}
-					anchor={menuState.anchor}
-					anchorPosition='bottom'
-				>
-					{trackMenuItems(menuState.track).map((item) => (
-						<Menu.Item
-							key={item.title}
-							leadingIcon={item.leadingIcon}
-							onPress={() => {
-								item.onPress()
-								handleDismissMenu()
-							}}
-							title={item.title}
-						/>
-					))}
-				</FunctionalMenu>
-			)}
 		</>
 	)
 }

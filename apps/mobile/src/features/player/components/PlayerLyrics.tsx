@@ -28,7 +28,6 @@ import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 
-import { LyricActionSheet } from './lyrics/LyricActionSheet'
 import {
 	ModernLyricLineItem,
 	OldSchoolLyricLineItem,
@@ -48,7 +47,6 @@ const Lyrics = memo(function Lyrics({
 	const windowHeight = dimensions.height
 	const colors = useTheme().colors
 	const scrollViewRef = useRef<Animated.ScrollView>(null)
-	const [actionMenuVisible, setActionMenuVisible] = useState(false)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
 
 	const scrollToIndex = useCallback(
@@ -303,8 +301,7 @@ const Lyrics = memo(function Lyrics({
 				ref={scrollViewRef}
 				contentContainerStyle={{
 					justifyContent: 'center',
-					pointerEvents:
-						offsetMenuVisible || actionMenuVisible ? 'none' : 'auto',
+					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
 					paddingTop: windowHeight * 0.02,
 				}}
 				showsVerticalScrollIndicator={false}
@@ -410,14 +407,7 @@ const Lyrics = memo(function Lyrics({
 				offsetMenuVisible={offsetMenuVisible}
 				onOpenActionMenu={(anchor) => {
 					setOffsetMenuAnchor(anchor)
-					setActionMenuVisible(true)
 				}}
-			/>
-
-			<LyricActionSheet
-				visible={actionMenuVisible}
-				anchor={offsetMenuAnchor}
-				onDismiss={() => setActionMenuVisible(false)}
 				showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
 				translationType={preferredLyricType}
 				onToggleTranslation={() =>

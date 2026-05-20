@@ -3,11 +3,13 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useEffect, useState } from 'react'
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Checkbox, Switch, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -155,7 +157,7 @@ export default function LyricsSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<Text>显示逐字歌词</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableVerbatimLyrics}
 						onValueChange={() =>
 							setSettings({ enableVerbatimLyrics: !enableVerbatimLyrics })
@@ -164,7 +166,7 @@ export default function LyricsSettingsPage() {
 				</View>
 				<View style={styles.settingRow}>
 					<Text>恢复旧版歌词样式</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableOldSchoolStyleLyric}
 						onValueChange={() =>
 							setSettings({
@@ -177,7 +179,7 @@ export default function LyricsSettingsPage() {
 					<>
 						<View style={styles.settingRow}>
 							<Text>桌面歌词</Text>
-							<Switch
+							<UniversalSwitch
 								value={isDesktopLyricsShown}
 								onValueChange={async () => {
 									try {
@@ -198,7 +200,7 @@ export default function LyricsSettingsPage() {
 						</View>
 						<View style={styles.settingRow}>
 							<Text>桌面歌词锁定</Text>
-							<Switch
+							<UniversalSwitch
 								value={isDesktopLyricsLocked}
 								onValueChange={async () => {
 									try {
@@ -223,7 +225,7 @@ export default function LyricsSettingsPage() {
 									启用后会把当前歌词显示到媒体信息的标题部分
 								</Text>
 							</View>
-							<Switch
+							<UniversalSwitch
 								value={isCarLyricsEnabled}
 								onValueChange={async () => {
 									try {
@@ -255,7 +257,7 @@ export default function LyricsSettingsPage() {
 									/>
 								}
 							>
-								<Checkbox.Item
+								<UniversalCheckboxItem
 									mode='ios'
 									label={`SuperLyric${!isSuperLyricApiEnabled ? '（未激活）' : ''}`}
 									status={
@@ -273,7 +275,7 @@ export default function LyricsSettingsPage() {
 										setProviderMenuVisible(false)
 									}}
 								/>
-								<Checkbox.Item
+								<UniversalCheckboxItem
 									mode='ios'
 									label={`词幕 (Lyricon)${statusBarLyricsProvider === 'lyricon' && !isLyriconApiEnabled ? '（未连接）' : ''}`}
 									status={
@@ -291,7 +293,7 @@ export default function LyricsSettingsPage() {
 										setProviderMenuVisible(false)
 									}}
 								/>
-								<Checkbox.Item
+								<UniversalCheckboxItem
 									mode='ios'
 									label='魅族状态栏歌词'
 									status={
@@ -344,7 +346,7 @@ export default function LyricsSettingsPage() {
 									</Text>
 								)}
 							</View>
-							<Switch
+							<UniversalSwitch
 								disabled={!isStatusBarLyricsProviderActive}
 								value={isStatusBarLyricsEnabled}
 								onValueChange={async () => {
@@ -380,7 +382,7 @@ export default function LyricsSettingsPage() {
 							/>
 						}
 					>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='网易云音乐'
 							status={lyricSource === 'netease' ? 'checked' : 'unchecked'}
@@ -389,7 +391,7 @@ export default function LyricsSettingsPage() {
 								setLyricSourceMenuVisible(false)
 							}}
 						/>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='QQ 音乐'
 							status={lyricSource === 'qqmusic' ? 'checked' : 'unchecked'}
@@ -398,7 +400,7 @@ export default function LyricsSettingsPage() {
 								setLyricSourceMenuVisible(false)
 							}}
 						/>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='酷狗音乐'
 							status={lyricSource === 'kugou' ? 'checked' : 'unchecked'}
@@ -407,7 +409,7 @@ export default function LyricsSettingsPage() {
 								setLyricSourceMenuVisible(false)
 							}}
 						/>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='自动 (选择最先返回的数据源)'
 							status={lyricSource === 'auto' ? 'checked' : 'unchecked'}

@@ -6,7 +6,7 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Menu, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -67,7 +67,7 @@ function Step1({
 						</Button>
 					}
 				>
-					<Menu.Item
+					<FunctionalMenu.Item
 						leadingIcon='qrcode-scan'
 						title='扫码登录'
 						onPress={() => {
@@ -75,7 +75,7 @@ function Step1({
 							onLoginQRCode()
 						}}
 					/>
-					<Menu.Item
+					<FunctionalMenu.Item
 						leadingIcon='cellphone'
 						title='手机号登录'
 						onPress={() => {

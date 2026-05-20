@@ -1,9 +1,11 @@
-import { memo, useRef } from 'react'
+import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import { Checkbox, Icon, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import { analyticsService } from '@/lib/services/analyticsService'
 import {
@@ -38,7 +40,7 @@ export interface TrackNecessaryData {
 interface TrackListItemProps {
 	index: number
 	onTrackPress: () => void
-	onMenuPress: (anchor: { x: number; y: number }) => void
+	menuItems: TrackMenuItem[]
 	showCoverImage?: boolean
 	data: TrackNecessaryData
 	disabled?: boolean
@@ -82,7 +84,7 @@ const HighlightedText = ({
 export const TrackListItem = memo(function TrackListItem({
 	index,
 	onTrackPress,
-	onMenuPress,
+	menuItems,
 	showCoverImage = true,
 	data,
 	disabled = false,
@@ -93,7 +95,6 @@ export const TrackListItem = memo(function TrackListItem({
 }: TrackListItemProps) {
 	const { colors } = useTheme()
 	const dark = useColorScheme() === 'dark'
-	const menuRef = useRef<View>(null)
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	// 在非选择模式下，当前播放歌曲高亮；在选择模式下，歌曲被选中时高亮
@@ -142,7 +143,9 @@ export const TrackListItem = memo(function TrackListItem({
 								{ opacity: selectMode ? 1 : 0 },
 							]}
 						>
-							<Checkbox status={isSelected ? 'checked' : 'unchecked'} />
+							<UniversalCheckbox
+								status={isSelected ? 'checked' : 'unchecked'}
+							/>
 						</View>
 
 						{/* 序号也是 */}
@@ -202,26 +205,27 @@ export const TrackListItem = memo(function TrackListItem({
 					</View>
 
 					{/* Context Menu */}
-					{!disabled && (
-						<RectButton
-							// @ts-expect-error -- 不理解
-							ref={menuRef}
-							style={styles.menuButton}
-							onPress={() =>
-								menuRef.current?.measure(
-									(_x, _y, _width, _height, pageX, pageY) => {
-										onMenuPress({ x: pageX, y: pageY })
-									},
-								)
+					{!disabled && !selectMode && (
+						<FunctionalMenu
+							anchor={
+								<RectButton style={styles.menuButton}>
+									<Icon
+										source='dots-vertical'
+										size={20}
+										color={colors.primary}
+									/>
+								</RectButton>
 							}
-							enabled={!selectMode}
 						>
-							<Icon
-								source='dots-vertical'
-								size={20}
-								color={selectMode ? colors.onSurfaceDisabled : colors.primary}
-							/>
-						</RectButton>
+							{menuItems.map((item) => (
+								<FunctionalMenu.Item
+									key={item.title}
+									leadingIcon={item.leadingIcon}
+									onPress={item.onPress}
+									title={item.title}
+								/>
+							))}
+						</FunctionalMenu>
 					)}
 				</View>
 			</Surface>

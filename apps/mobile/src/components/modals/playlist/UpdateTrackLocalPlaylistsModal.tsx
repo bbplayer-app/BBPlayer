@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Dialog, Text, useTheme } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import { useUpdateTrackLocalPlaylists } from '@/hooks/mutations/db/playlist'
 import {
 	usePlaylistLists,
@@ -59,7 +60,7 @@ const PlaylistListItem = memo(function PlaylistListItem({
 	}, [id, onPress])
 
 	return (
-		<Checkbox.Item
+		<UniversalCheckboxItem
 			label={title}
 			status={isChecked ? 'checked' : 'unchecked'}
 			onPress={handlePress}

@@ -1,9 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
-import { Checkbox, Dialog, Text, useTheme } from 'react-native-paper'
+import { Dialog, Text, useTheme } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import { useDealFavoriteForOneVideo } from '@/hooks/mutations/bilibili/favorite'
 import {
 	favoriteListQueryKeys,
@@ -34,7 +35,7 @@ const FavoriteListItem = memo(function FavoriteListItem({
 	}, [checkedList, id, setCheckedList])
 
 	return (
-		<Checkbox.Item
+		<UniversalCheckboxItem
 			status={checkedList.includes(id.toString()) ? 'checked' : 'unchecked'}
 			onPress={handlePress}
 			label={name}

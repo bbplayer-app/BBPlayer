@@ -8,7 +8,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
 	ActivityIndicator,
-	Checkbox,
 	Dialog,
 	Text,
 	TouchableRipple,
@@ -18,6 +17,7 @@ import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
 import Button from '@/components/common/Button'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { resolveTrackCover } from '@/hooks/player/useLocalCover'
@@ -68,7 +68,7 @@ const LyricItem = memo(function LyricItem({
 						</Text>
 					)}
 				</View>
-				<Checkbox
+				<UniversalCheckbox
 					status={isSelected ? 'checked' : 'unchecked'}
 					onPress={() => onToggle(index)}
 				/>
@@ -82,7 +82,7 @@ const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 async function performShare(
 	action: 'save' | 'share',
 	previewUri: string | null,
-	viewShotRef: { current: ViewShot | null },
+	viewShotRef: { current: typeof ViewShot | null },
 	permissionStatus: MediaLibrary.PermissionStatus | undefined,
 	requestPermission: () => Promise<{ status: MediaLibrary.PermissionStatus }>,
 	setIsSharing: (value: boolean) => void,
@@ -228,7 +228,7 @@ const LyricsSelectionModal = () => {
 		}
 	}
 
-	const viewShotRef = useRef<ViewShot>(null)
+	const viewShotRef = useRef<typeof ViewShot>(null)
 
 	useEffect(() => {
 		if (imageRef) {

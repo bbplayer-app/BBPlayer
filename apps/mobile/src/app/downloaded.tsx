@@ -2,13 +2,7 @@ import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
-import {
-	type ComponentRef,
-	useCallback,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
 	StyleSheet,
 	ToastAndroid,
@@ -21,9 +15,7 @@ import { RectButton } from 'react-native-gesture-handler'
 import {
 	ActivityIndicator,
 	Appbar,
-	Checkbox,
 	Divider,
-	Menu,
 	Searchbar,
 	Surface,
 	Text,
@@ -34,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { alert } from '@/components/modals/AlertModal'
 import ExportDownloadsProgressModal from '@/components/modals/settings/ExportDownloadsProgressModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -58,7 +51,9 @@ interface DownloadedItemExtraData {
 	toggleSelected: (id: string) => void
 	enterSelectMode: (id: string) => void
 	onItemPress: (item: DownloadTask) => void
-	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
+	onSingleExport: (id: string) => void
+	onDelete: (id: string) => void
+	onPlayNext: (item: DownloadTask) => void
 }
 
 function renderDownloadedItem({
@@ -79,7 +74,9 @@ function renderDownloadedItem({
 			toggleSelected={extraData?.toggleSelected ?? (() => {})}
 			enterSelectMode={extraData?.enterSelectMode ?? (() => {})}
 			onItemPress={extraData?.onItemPress ?? (() => {})}
-			onMenuPress={extraData?.onMenuPress ?? (() => {})}
+			onSingleExport={extraData?.onSingleExport ?? (() => {})}
+			onDelete={extraData?.onDelete ?? (() => {})}
+			onPlayNext={extraData?.onPlayNext ?? (() => {})}
 		/>
 	)
 }
@@ -92,7 +89,9 @@ function DownloadedItem({
 	toggleSelected,
 	enterSelectMode,
 	onItemPress,
-	onMenuPress,
+	onSingleExport,
+	onDelete,
+	onPlayNext,
 }: {
 	item: DownloadTask
 	index: number
@@ -101,11 +100,12 @@ function DownloadedItem({
 	toggleSelected: (id: string) => void
 	enterSelectMode: (id: string) => void
 	onItemPress: (item: DownloadTask) => void
-	onMenuPress: (id: string, anchor: { x: number; y: number }) => void
+	onSingleExport: (id: string) => void
+	onDelete: (id: string) => void
+	onPlayNext: (item: DownloadTask) => void
 }) {
 	const theme = useTheme()
 	const track = item.track
-	const menuButtonRef = useRef<ComponentRef<typeof IconButton>>(null)
 
 	return (
 		<RectButton
@@ -144,7 +144,9 @@ function DownloadedItem({
 								{ opacity: selectMode ? 1 : 0 },
 							]}
 						>
-							<Checkbox status={isSelected ? 'checked' : 'unchecked'} />
+							<UniversalCheckbox
+								status={isSelected ? 'checked' : 'unchecked'}
+							/>
 						</View>
 						<View style={{ opacity: selectMode ? 0 : 1 }}>
 							<Text
@@ -194,26 +196,32 @@ function DownloadedItem({
 					</View>
 
 					{!selectMode && (
-						<IconButton
-							ref={menuButtonRef}
-							icon='dots-vertical'
-							size={20}
-							iconColor={theme.colors.onSurfaceVariant}
-							onPress={() => {
-								;(menuButtonRef.current as unknown as View)?.measure(
-									(
-										_x: number,
-										_y: number,
-										_w: number,
-										_h: number,
-										pageX: number,
-										pageY: number,
-									) => {
-										onMenuPress(item.id, { x: pageX, y: pageY })
-									},
-								)
-							}}
-						/>
+						<FunctionalMenu
+							anchor={
+								<IconButton
+									icon='dots-vertical'
+									size={20}
+									iconColor={theme.colors.onSurfaceVariant}
+								/>
+							}
+						>
+							<FunctionalMenu.Item
+								leadingIcon='export-variant'
+								title='导出'
+								onPress={() => onSingleExport(item.id)}
+							/>
+							<FunctionalMenu.Item
+								leadingIcon='trash-can-outline'
+								title='删除'
+								onPress={() => onDelete(item.id)}
+							/>
+							<FunctionalMenu.Item
+								leadingIcon='skip-next-circle-outline'
+								title='下一首播放'
+								onPress={() => onPlayNext(item)}
+								disabled={!item.track}
+							/>
+						</FunctionalMenu>
 					)}
 				</View>
 			</Surface>
@@ -263,26 +271,6 @@ export default function DownloadedPage() {
 
 	const removeDownloadsMutation = useRemoveDownloadsMutation()
 
-	const [menuState, setMenuState] = useState<{
-		visible: boolean
-		id: string | null
-		anchor: { x: number; y: number }
-	}>({ visible: false, id: null, anchor: { x: 0, y: 0 } })
-	const currentMenuTask = completedTasks.find(
-		(task) => task.id === menuState.id,
-	)
-
-	const handleItemMenuPress = useCallback(
-		(id: string, anchor: { x: number; y: number }) => {
-			setMenuState({ visible: true, id, anchor })
-		},
-		[],
-	)
-
-	const dismissItemMenu = useCallback(() => {
-		setMenuState((prev) => ({ ...prev, visible: false }))
-	}, [])
-
 	const handlePlayItem = useCallback((item: DownloadTask) => {
 		if (!item.track) {
 			toast.error('当前下载项缺少歌曲信息，无法播放')
@@ -323,51 +311,60 @@ export default function DownloadedPage() {
 		return await Orpheus.selectDirectory()
 	}, [])
 
-	const handleSingleExport = useCallback(async () => {
-		dismissItemMenu()
-		const id = menuState.id
-		if (!id) return
+	const handleSingleExport = useCallback(
+		async (id: string) => {
+			if (Platform.OS !== 'android') {
+				Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
+				return
+			}
 
-		if (Platform.OS !== 'android') {
-			Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
-			return
-		}
+			const directoryUri = await resolveExportDestination()
+			if (directoryUri) {
+				setExportConfig({ ids: [id], destinationUri: directoryUri })
+				void exportSheetRef.current?.present()
+			}
+		},
+		[resolveExportDestination],
+	)
 
-		const directoryUri = await resolveExportDestination()
-		if (directoryUri) {
-			setExportConfig({ ids: [id], destinationUri: directoryUri })
-			void exportSheetRef.current?.present()
-		}
-	}, [dismissItemMenu, menuState.id, resolveExportDestination])
-
-	const handleDelete = useCallback(() => {
-		dismissItemMenu()
-		const id = menuState.id
-		if (!id) return
-		const task = completedTasks.find((t) => t.id === id)
-		const title = task?.track?.title ?? id
-		alert(
-			'删除下载',
-			`确定要删除「${title}」的下载记录及缓存文件吗？`,
-			[
-				{ text: '取消' },
-				{
-					text: '删除',
-					onPress: async () => {
-						try {
-							await Orpheus.removeDownload(id)
-							await queryClient.invalidateQueries({
-								queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
-							})
-						} catch (e) {
-							toastAndLogError('删除下载失败', e, 'Downloaded.Page')
-						}
+	const handleDelete = useCallback(
+		(id: string) => {
+			const task = completedTasks.find((t) => t.id === id)
+			const title = task?.track?.title ?? id
+			alert(
+				'删除下载',
+				`确定要删除「${title}」的下载记录及缓存文件吗？`,
+				[
+					{ text: '取消' },
+					{
+						text: '删除',
+						onPress: async () => {
+							try {
+								await Orpheus.removeDownload(id)
+								await queryClient.invalidateQueries({
+									queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
+								})
+							} catch (e) {
+								toastAndLogError('删除下载失败', e, 'Downloaded.Page')
+							}
+						},
 					},
-				},
-			],
-			{ cancelable: true },
-		)
-	}, [dismissItemMenu, menuState.id, completedTasks])
+				],
+				{ cancelable: true },
+			)
+		},
+		[completedTasks],
+	)
+
+	const handlePlayNext = useCallback(async (task: DownloadTask) => {
+		if (!task.track) return
+		try {
+			await Orpheus.playNext(task.track)
+			toast.success('添加到下一首播放成功')
+		} catch (error) {
+			toastAndLogError('添加到下一首播放失败', error, 'Download')
+		}
+	}, [])
 
 	const handleExport = async () => {
 		const idsToExport =
@@ -444,15 +441,19 @@ export default function DownloadedPage() {
 				enterSelectMode(id)
 			},
 			onItemPress: handlePlayItem,
-			onMenuPress: handleItemMenuPress,
+			onSingleExport: handleSingleExport,
+			onDelete: handleDelete,
+			onPlayNext: handlePlayNext,
 		}),
 		[
 			selectMode,
 			selected,
 			toggle,
 			enterSelectMode,
-			handleItemMenuPress,
 			handlePlayItem,
+			handleSingleExport,
+			handleDelete,
+			handlePlayNext,
 		],
 	)
 
@@ -550,42 +551,6 @@ export default function DownloadedPage() {
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
-
-			<FunctionalMenu
-				visible={menuState.visible}
-				onDismiss={dismissItemMenu}
-				anchor={menuState.anchor}
-				anchorPosition='bottom'
-			>
-				<Menu.Item
-					leadingIcon='export-variant'
-					title='导出'
-					onPress={() => {
-						void handleSingleExport()
-					}}
-				/>
-				<Menu.Item
-					leadingIcon='trash-can-outline'
-					title='删除'
-					onPress={handleDelete}
-				/>
-				<Menu.Item
-					leadingIcon='skip-next-circle-outline'
-					title='下一首播放'
-					onPress={async () => {
-						if (currentMenuTask && currentMenuTask.track) {
-							try {
-								await Orpheus.playNext(currentMenuTask.track)
-								toast.success('添加到下一首播放成功')
-							} catch (error) {
-								toastAndLogError('添加到下一首播放失败', error, 'Download')
-							}
-						}
-						dismissItemMenu()
-					}}
-					disabled={!currentMenuTask?.track}
-				/>
-			</FunctionalMenu>
 
 			<ExportDownloadsProgressModal
 				sheetRef={exportSheetRef}

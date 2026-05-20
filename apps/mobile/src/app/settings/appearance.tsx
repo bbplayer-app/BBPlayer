@@ -7,11 +7,13 @@ import {
 	StyleSheet,
 	View,
 } from 'react-native'
-import { Appbar, Checkbox, Switch, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -110,7 +112,7 @@ export default function AppearanceSettingsPage() {
 							开启后封面将变为圆形
 						</Text>
 					</View>
-					<Switch
+					<UniversalSwitch
 						value={enableSpectrumVisualizer}
 						onValueChange={handleSpectrumToggle}
 					/>
@@ -130,7 +132,7 @@ export default function AppearanceSettingsPage() {
 								/>
 							}
 						>
-							<Checkbox.Item
+							<UniversalCheckboxItem
 								mode='ios'
 								label='悬浮（默认）'
 								status={
@@ -138,7 +140,7 @@ export default function AppearanceSettingsPage() {
 								}
 								onPress={() => setNowPlayingBarStyle('float')}
 							/>
-							<Checkbox.Item
+							<UniversalCheckboxItem
 								mode='ios'
 								label='沉浸'
 								status={
@@ -162,7 +164,7 @@ export default function AppearanceSettingsPage() {
 							/>
 						}
 					>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='渐变'
 							status={
@@ -170,7 +172,7 @@ export default function AppearanceSettingsPage() {
 							}
 							onPress={() => setPlayerBackgroundStyle('gradient')}
 						/>
-						<Checkbox.Item
+						<UniversalCheckboxItem
 							mode='ios'
 							label='默认背景'
 							status={playerBackgroundStyle === 'md3' ? 'checked' : 'unchecked'}

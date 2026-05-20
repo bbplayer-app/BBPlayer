@@ -4,9 +4,10 @@ import * as MediaLibrary from 'expo-media-library'
 import { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
-import { Dialog, SegmentedButtons, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import NativeSegmentedButtons from '@/components/common/NativeSegmentedButtons'
 /* oxlint-disable @typescript-eslint/no-unsafe-argument */
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
@@ -84,7 +85,7 @@ export default function DonationQRModal({
 			<Dialog.Title style={{ textAlign: 'center' }}>{title}</Dialog.Title>
 			<Dialog.Content>
 				<View style={styles.tabContainer}>
-					<SegmentedButtons
+					<NativeSegmentedButtons
 						value={currentType}
 						onValueChange={(value) => setCurrentType(value)}
 						buttons={[

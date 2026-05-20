@@ -1,9 +1,10 @@
-import Slider from '@react-native-community/slider'
+import { Slider } from '@expo/ui/community/slider'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Switch, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
@@ -23,7 +24,7 @@ const DanmakuSettingsModal = () => {
 			<Dialog.Content>
 				<View style={styles.row}>
 					<Text variant='bodyLarge'>启用弹幕</Text>
-					<Switch
+					<UniversalSwitch
 						value={enableDanmaku}
 						onValueChange={(value) => setSettings({ enableDanmaku: value })}
 					/>
@@ -44,10 +45,10 @@ const DanmakuSettingsModal = () => {
 					maximumValue={10}
 					step={1}
 					value={tempFilterLevel}
-					onValueChange={setTempFilterLevel}
-					onSlidingComplete={(value) =>
+					onValueChange={(value) => {
+						setTempFilterLevel(value)
 						setSettings({ danmakuFilterLevel: value })
-					}
+					}}
 					minimumTrackTintColor='#6200ee'
 					maximumTrackTintColor='#000000'
 				/>
