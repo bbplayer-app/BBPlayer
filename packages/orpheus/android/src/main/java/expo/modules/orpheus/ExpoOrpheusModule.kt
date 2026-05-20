@@ -33,7 +33,6 @@ import expo.modules.orpheus.exception.ControllerNotInitializedException
 import expo.modules.orpheus.manager.CoverDownloadManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
-import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
@@ -354,7 +353,7 @@ class ExpoOrpheusModule : Module() {
             }
 
         Property("isMeizuStatusBarLyricsApiEnabled")
-            .get { MeizuStatusBarLyricsBackend.isFlyme() }
+            .get { true }
 
 
         Function("setBilibiliCookie") { cookie: String ->

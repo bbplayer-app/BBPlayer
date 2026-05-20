@@ -1,6 +1,5 @@
 import type { PropsWithChildren } from 'react'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { View } from 'react-native'
+import { memo, useEffect } from 'react'
 import { Menu } from 'react-native-paper'
 
 import * as Haptics from '@/utils/haptics'
@@ -13,12 +12,6 @@ const FunctionalMenu = memo(function FunctionalMenu({
 	visible,
 	...props
 }: FunctionalMenuProps) {
-	const [showContent, setShowContent] = useState(false)
-	const onClose = useCallback(() => {
-		setShowContent(false)
-		onDismiss?.()
-	}, [onDismiss])
-
 	useEffect(() => {
 		if (visible) {
 			void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
@@ -29,17 +22,16 @@ const FunctionalMenu = memo(function FunctionalMenu({
 		<>
 			<Menu
 				{...props}
-				onDismiss={onClose}
+				onDismiss={onDismiss}
 				visible={visible}
-				key={String(visible)}
-				style={[{ opacity: showContent ? 1 : 0 }, props.style]}
 			>
-				<View
+				{/* 在 react-native-paper 5.15.1 中修复 */}
+				{/*<View
 					// new arch issue: 第一次打开 Menu 时会有闪烁，采用这种方法躲闪...
 					onLayout={() => {
 						setTimeout(() => setShowContent(true), 100)
 					}}
-				/>
+				/>*/}
 				{children}
 			</Menu>
 		</>

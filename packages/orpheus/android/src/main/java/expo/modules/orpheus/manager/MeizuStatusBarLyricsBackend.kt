@@ -39,7 +39,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
     private var lastText: String? = null
 
     override val isAvailable: Boolean
-        get() = isFlyme()
+        get() = true
 
     override fun renderLyricFrame(frame: StatusBarLyricFrame?) {
         if (frame == null) {
@@ -188,11 +188,6 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
         const val EXTRA_TICKER_APP_NAME = "ticker_app_name"
         const val EXTRA_APP_NAME = "app_name"
 
-        fun isFlyme(): Boolean {
-            return Build.MANUFACTURER.equals("meizu", ignoreCase = true) ||
-                getSystemProperty("ro.flyme.ui.version.name").isNotBlank()
-        }
-
         fun getNotificationFlag(name: String, fallback: Int): Int {
             return runCatching {
                 val field = Notification::class.java.getDeclaredField(name)
@@ -202,14 +197,6 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 Log.w(TAG, "Flyme ticker flag not found: $name, fallback=$fallback")
                 fallback
             }
-        }
-
-        fun getSystemProperty(key: String): String {
-            return runCatching {
-                val clazz = Class.forName("android.os.SystemProperties")
-                val getMethod = clazz.getMethod("get", String::class.java)
-                getMethod.invoke(null, key) as String
-            }.getOrDefault("")
         }
     }
 }

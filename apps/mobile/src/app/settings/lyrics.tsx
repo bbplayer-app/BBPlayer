@@ -40,10 +40,6 @@ export default function LyricsSettingsPage() {
 	const [isLyriconApiEnabled, setIsLyriconApiEnabled] = useState(
 		Orpheus.isLyriconApiEnabled,
 	)
-	const [
-		isMeizuStatusBarLyricsApiEnabled,
-		setIsMeizuStatusBarLyricsApiEnabled,
-	] = useState(Orpheus.isMeizuStatusBarLyricsApiEnabled)
 	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
 		Orpheus.statusBarLyricsProvider ?? 'lyricon',
 	)
@@ -64,7 +60,7 @@ export default function LyricsSettingsPage() {
 		statusBarLyricsProvider === 'lyricon'
 			? isLyriconApiEnabled
 			: statusBarLyricsProvider === 'meizu'
-				? isMeizuStatusBarLyricsApiEnabled
+				? true
 				: isSuperLyricApiEnabled
 
 	const inactiveStatusBarLyricsProviderText =
@@ -83,9 +79,6 @@ export default function LyricsSettingsPage() {
 		setIsCarLyricsEnabled(Orpheus.isCarLyricsEnabled)
 		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
-		setIsMeizuStatusBarLyricsApiEnabled(
-			Orpheus.isMeizuStatusBarLyricsApiEnabled,
-		)
 		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'lyricon')
 	}, [])
 
@@ -300,7 +293,7 @@ export default function LyricsSettingsPage() {
 								/>
 								<Checkbox.Item
 									mode='ios'
-									label={`魅族状态栏歌词${statusBarLyricsProvider === 'meizu' && !isMeizuStatusBarLyricsApiEnabled ? '（不可用）' : ''}`}
+									label='魅族状态栏歌词'
 									status={
 										statusBarLyricsProvider === 'meizu'
 											? 'checked'
