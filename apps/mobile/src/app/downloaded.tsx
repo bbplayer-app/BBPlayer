@@ -13,17 +13,11 @@ import {
 	PermissionsAndroid,
 } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import {
-	ActivityIndicator,
-	Appbar,
-	Divider,
-	Searchbar,
-	Surface,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Divider, Surface, Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -537,7 +531,7 @@ export default function DownloadedPage() {
 			</Appbar.Header>
 
 			{isSearching && !selectMode && (
-				<Searchbar
+				<SearchBar
 					placeholder='搜索已下载歌曲'
 					onChangeText={setSearchQuery}
 					value={searchQuery}

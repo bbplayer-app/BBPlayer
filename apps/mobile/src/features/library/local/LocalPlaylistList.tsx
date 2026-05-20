@@ -2,7 +2,8 @@ import { Icon } from '@expo/ui'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Searchbar, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -172,7 +173,7 @@ const LocalPlaylistListComponent = memo(() => {
 					</FunctionalMenu>
 				</View>
 			</View>
-			<Searchbar
+			<SearchBar
 				placeholder='搜索播放列表'
 				onChangeText={setSearchQuery}
 				value={searchQuery}

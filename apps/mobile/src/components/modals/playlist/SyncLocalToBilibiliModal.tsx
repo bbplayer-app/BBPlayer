@@ -1,13 +1,8 @@
 import { useEffect, useReducer } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Divider,
-	ProgressBar,
-	Text,
-} from 'react-native-paper'
+import { Dialog, Divider, ProgressBar, Text } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'

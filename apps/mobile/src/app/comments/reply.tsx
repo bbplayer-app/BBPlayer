@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Appbar, Divider, Text, useTheme } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { CommentItem } from '@/features/comments/components/CommentItem'
 import { useReplyComments } from '@/hooks/queries/bilibili/comments'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'

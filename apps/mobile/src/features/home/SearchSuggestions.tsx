@@ -73,7 +73,7 @@ function parseEmTags(text: string | undefined) {
 // 搜索建议组件的一些边距
 const MARGIN_HORIZONTAL = 16
 const MARGIN_TOP = 12
-const MARGIN_BOTTOM = 12
+const MARGIN_BOTTOM = 24
 
 export default function SearchSuggestions({
 	query,

@@ -6,16 +6,11 @@ import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Text,
-	TouchableRipple,
-	useTheme,
-} from 'react-native-paper'
+import { Dialog, Text, TouchableRipple, useTheme } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'

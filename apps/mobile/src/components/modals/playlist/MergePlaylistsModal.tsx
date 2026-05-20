@@ -1,14 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Text,
-	TextInput,
-	TouchableRipple,
-} from 'react-native-paper'
+import { Dialog, Text, TextInput, TouchableRipple } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { useMergePlaylists } from '@/hooks/mutations/db/playlist'

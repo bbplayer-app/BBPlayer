@@ -13,7 +13,7 @@ interface LyricsShareCardProps {
 	imageRef?: ImageRef | null
 	shareUrl: string
 	selectedLyrics: LyricLine[]
-	viewShotRef: React.RefObject<ViewShot | null>
+	viewShotRef: React.RefObject<View | null>
 	backgroundColor: string
 }
 

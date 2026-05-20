@@ -24,17 +24,12 @@ import {
 } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
-import {
-	ActivityIndicator,
-	Icon,
-	Searchbar,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Icon, Searchbar, Text, useTheme } from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
 import Animated from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
