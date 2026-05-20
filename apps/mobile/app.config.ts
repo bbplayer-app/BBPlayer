@@ -2,6 +2,17 @@ import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
+import expoAsset from 'expo-asset/plugin'
+import expoBuildProperties from 'expo-build-properties/plugin'
+import expoDevClient from 'expo-dev-client/plugin/build/index.js'
+import expoFont from 'expo-font/plugin'
+import expoImage from 'expo-image/plugin/build/index.js'
+import expoMediaLibrary from 'expo-media-library/plugin/build/index.js'
+import expoRouter from 'expo-router/plugin/build/index.js'
+import expoSharing from 'expo-sharing/plugin/build/index.js'
+import expoSplashScreen from 'expo-splash-screen/plugin'
+import expoSqlite from 'expo-sqlite/plugin'
+import expoWebBrowser from 'expo-web-browser/plugin/build/index.js'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 
 import { version } from './package.json'
@@ -141,20 +152,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 							: ['arm64-v8a'],
 				},
 			],
-			[
-				'expo-dev-client',
-				{
-					launchMode: 'most-recent',
-				},
-			],
-			[
-				'expo-splash-screen',
-				{
-					image: './assets/images/splash-icon.png',
-					imageWidth: 200,
-					resizeMode: 'contain',
-				},
-			],
+			expoDevClient({
+				launchMode: 'most-recent',
+			}),
+			expoSplashScreen({
+				image: './assets/images/splash-icon.png',
+				imageWidth: 200,
+				resizeMode: 'contain',
+			}),
 			[
 				'@sentry/react-native/expo',
 				{
@@ -163,19 +168,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					organization: 'roitium',
 				},
 			],
-			[
-				'expo-build-properties',
-				{
-					android: {
-						usesCleartextTraffic: true,
-						enableMinifyInReleaseBuilds: true,
-						enableShrinkResourcesInReleaseBuilds: true,
-						minSdkVersion: 26,
-						packagingOptions: {
-							pickFirst: ['lib/*/libNitroModules.so'],
-						},
-						extraProguardRules: `
--dontwarn expo.modules.kotlin.**
+			expoBuildProperties({
+				android: {
+					usesCleartextTraffic: true,
+					enableMinifyInReleaseBuilds: true,
+					enableShrinkResourcesInReleaseBuilds: true,
+					minSdkVersion: 26,
+					packagingOptions: {
+						pickFirst: ['lib/*/libNitroModules.so'],
+					},
+					usePrecompiledHeaders: true,
+					extraProguardRules: `
+          -dontwarn expo.modules.kotlin.**
 -dontwarn expo.modules.webview.**
 # --- 修复模态框打不开的问题 ---
 -keepclassmembers class * {
@@ -215,20 +219,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 -keep class org.jaudiotagger.** { *; }
 -keep class expo.modules.kotlin.services.FilePermissionService$** { *; }
 -keep class expo.modules.kotlin.services.FilePermissionService { *; }
-					`,
-					},
-					ios: {
-						useFrameworks: 'static',
-					},
+			`,
 				},
-			],
-			[
-				'expo-asset',
-				{
-					assets: ['./assets/images/media3_notification_small_icon.png'],
+				ios: {
+					useFrameworks: 'static',
 				},
-			],
-			'expo-font',
+			}),
+			expoAsset({
+				assets: ['./assets/images/media3_notification_small_icon.png'],
+			}),
+			expoFont(),
 			[
 				'react-native-bottom-tabs',
 				{
@@ -243,33 +243,27 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					},
 				},
 			],
-			'expo-web-browser',
-			'expo-sqlite',
-			'expo-router',
+			expoWebBrowser(),
+			expoSqlite(),
+			expoRouter(),
 			'@rnrepo/expo-config-plugin',
-			[
-				'expo-media-library',
-				{
-					photosPermission: '允许 $(PRODUCT_NAME) 访问您的相册',
-					savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
-					isAccessMediaLocationEnabled: true,
-				},
-			],
+			expoMediaLibrary({
+				photosPermission: '允许 $(PRODUCT_NAME) 访问您的相册',
+				savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
+				isAccessMediaLocationEnabled: true,
+			}),
 			'@react-native-firebase/app',
-			'expo-image',
-			[
-				'expo-sharing',
-				{
-					ios: {
-						enabled: false,
-					},
-					android: {
-						enabled: true,
-						singleShareMimeTypes: ['text/*'],
-						multipleShareMimeTypes: ['text/*'],
-					},
+			expoImage(),
+			expoSharing({
+				ios: {
+					enabled: false,
 				},
-			],
+				android: {
+					enabled: true,
+					singleShareMimeTypes: ['text/*'],
+					multipleShareMimeTypes: ['text/*'],
+				},
+			}),
 		],
 		experiments: {
 			reactCompiler: true,
