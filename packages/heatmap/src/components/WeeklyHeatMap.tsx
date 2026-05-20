@@ -128,13 +128,9 @@ export const WeeklyHeatMap = ({
 		return dayLabels
 	}
 
-	const content = (
-		<Svg
-			width={width}
-			height={height}
-		>
+	const gridContent = (
+		<G x={-sidebarWidth}>
 			{renderHeader()}
-			{renderSidebar()}
 			<G
 				x={sidebarWidth}
 				y={headerHeight}
@@ -185,23 +181,58 @@ export const WeeklyHeatMap = ({
 					</G>
 				))}
 			</G>
-		</Svg>
+		</G>
 	)
 
 	if (scrollable) {
 		return (
-			<ScrollView
-				horizontal
-				ref={scrollViewRef}
-				onLayout={onLayout}
-				showsHorizontalScrollIndicator={false}
-				contentOffset={rtl ? { x: width, y: 0 } : { x: 0, y: 0 }}
-				style={props.scrollStyle}
-			>
-				{content}
-			</ScrollView>
+			<View style={[{ flexDirection: 'row' as const }, props.scrollStyle]}>
+				{isSidebarVisible && (
+					<Svg
+						width={sidebarWidth}
+						height={height}
+					>
+						{renderSidebar()}
+					</Svg>
+				)}
+				<ScrollView
+					horizontal
+					ref={scrollViewRef}
+					onLayout={onLayout}
+					showsHorizontalScrollIndicator={false}
+					contentOffset={
+						rtl ? { x: width - sidebarWidth, y: 0 } : { x: 0, y: 0 }
+					}
+				>
+					<Svg
+						width={width - sidebarWidth}
+						height={height}
+					>
+						{gridContent}
+					</Svg>
+				</ScrollView>
+			</View>
 		)
 	}
 
-	return <View style={props.scrollStyle}>{content}</View>
+	return (
+		<View style={[{ flexDirection: 'row' as const }, props.scrollStyle]}>
+			{isSidebarVisible && (
+				<Svg
+					width={sidebarWidth}
+					height={height}
+				>
+					{renderSidebar()}
+				</Svg>
+			)}
+			<View>
+				<Svg
+					width={width - sidebarWidth}
+					height={height}
+				>
+					{gridContent}
+				</Svg>
+			</View>
+		</View>
+	)
 }

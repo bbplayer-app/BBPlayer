@@ -92,7 +92,10 @@ const authRoute = new Hono<{ Bindings: Env }>().post(
 		}
 
 		if (biliJson.code !== 0 || !biliJson.data?.isLogin) {
-			return c.json({ error: 'Invalid Bilibili cookie' }, 401)
+			return c.json(
+				{ error: 'Invalid Bilibili cookie', rawResponse: biliJson },
+				401,
+			)
 		}
 
 		const { mid, uname, face } = biliJson.data
