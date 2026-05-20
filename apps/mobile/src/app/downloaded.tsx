@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import { Icon } from '@expo/ui'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
@@ -42,6 +43,21 @@ import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import toast from '@/utils/toast'
+
+const EXPORT_ICON = Icon.select({
+	ios: 'square.and.arrow.up',
+	android: import('@expo/material-symbols/ios_share.xml'),
+})
+
+const DELETE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
+
+const PLAY_NEXT_ICON = Icon.select({
+	ios: 'arrow.right.to.line.circle',
+	android: import('@expo/material-symbols/skip_next.xml'),
+})
 
 const PUBLIC_MUSIC_EXPORT_URI = 'orpheus://public-music'
 
@@ -206,17 +222,17 @@ function DownloadedItem({
 							}
 						>
 							<FunctionalMenu.Item
-								leadingIcon='export-variant'
+								leadingIcon={EXPORT_ICON}
 								title='导出'
 								onPress={() => onSingleExport(item.id)}
 							/>
 							<FunctionalMenu.Item
-								leadingIcon='trash-can-outline'
+								leadingIcon={DELETE_ICON}
 								title='删除'
 								onPress={() => onDelete(item.id)}
 							/>
 							<FunctionalMenu.Item
-								leadingIcon='skip-next-circle-outline'
+								leadingIcon={PLAY_NEXT_ICON}
 								title='下一首播放'
 								onPress={() => onPlayNext(item)}
 								disabled={!item.track}

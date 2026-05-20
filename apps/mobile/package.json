@@ -21,6 +21,7 @@
 		"@bbplayer/orpheus": "workspace:*",
 		"@bbplayer/splash": "workspace:*",
 		"@bottom-tabs/react-navigation": "^1.2.0",
+		"@expo/material-symbols": "^0.1.1",
 		"@expo/metro-runtime": "~56.0.9",
 		"@expo/ui": "~56.0.9",
 		"@gorhom/bottom-sheet": "^5.2.14",

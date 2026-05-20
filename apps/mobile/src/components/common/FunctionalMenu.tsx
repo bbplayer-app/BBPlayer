@@ -1,3 +1,4 @@
+import { Icon } from '@expo/ui'
 import {
 	MenuView,
 	type MenuAction,
@@ -20,7 +21,7 @@ import * as Haptics from '@/utils/haptics'
 type FunctionalMenuItemProps = {
 	title?: string
 	label?: string
-	leadingIcon?: string
+	leadingIcon?: ReturnType<typeof Icon.select>
 	onPress?: () => void
 	disabled?: boolean
 	status?: 'checked' | 'unchecked' | 'indeterminate'
@@ -58,6 +59,7 @@ function toAction(
 		id: String(index),
 		title,
 		titleColor,
+		image: child.props.leadingIcon,
 		attributes: {
 			disabled: child.props.disabled,
 			destructive: child.props.destructive,

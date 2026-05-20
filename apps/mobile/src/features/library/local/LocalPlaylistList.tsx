@@ -1,3 +1,4 @@
+import { Icon } from '@expo/ui'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -17,6 +18,26 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
 
 import LocalPlaylistItem from './LocalPlaylistItem'
+
+const CREATE_PLAYLIST_ICON = Icon.select({
+	ios: 'plus.rectangle.on.rectangle',
+	android: import('@expo/material-symbols/playlist_add.xml'),
+})
+
+const IMPORT_PLAYLIST_ICON = Icon.select({
+	ios: 'link',
+	android: import('@expo/material-symbols/link.xml'),
+})
+
+const SUBSCRIBE_PLAYLIST_ICON = Icon.select({
+	ios: 'person.2',
+	android: import('@expo/material-symbols/group.xml'),
+})
+
+const MERGE_PLAYLIST_ICON = Icon.select({
+	ios: 'arrow.merge',
+	android: import('@expo/material-symbols/merge.xml'),
+})
 
 const renderPlaylistItem = ({
 	item,
@@ -117,7 +138,7 @@ const LocalPlaylistListComponent = memo(() => {
 						}
 					>
 						<FunctionalMenu.Item
-							leadingIcon='playlist-plus'
+							leadingIcon={CREATE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('CreatePlaylist', { redirectToNewPlaylist: true })
@@ -125,7 +146,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='新建播放列表'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='link-plus'
+							leadingIcon={IMPORT_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('InputExternalPlaylistInfo', undefined)
@@ -133,7 +154,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='导入外部歌单'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='account-group'
+							leadingIcon={SUBSCRIBE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('SubscribeToSharedPlaylist', undefined)
@@ -141,7 +162,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='订阅共享歌单'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='merge'
+							leadingIcon={MERGE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('MergePlaylists', undefined)

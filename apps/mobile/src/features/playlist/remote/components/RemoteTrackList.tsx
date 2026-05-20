@@ -18,7 +18,7 @@ import type {
 } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 
-import { TrackListItem } from './PlaylistItem'
+import { TrackListItem, type TrackMenuItem } from './PlaylistItem'
 
 interface TrackListProps extends Omit<
 	FlashListProps<BilibiliTrack>,
@@ -35,9 +35,7 @@ interface TrackListProps extends Omit<
 	/**
 	 * 生成曲目菜单项的函数
 	 */
-	trackMenuItems: (
-		track: BilibiliTrack,
-	) => { title: string; leadingIcon: string; onPress: () => void }[]
+	trackMenuItems: (track: BilibiliTrack) => TrackMenuItem[]
 	/**
 	 * 多选状态管理
 	 */
@@ -68,9 +66,7 @@ interface TrackListProps extends Omit<
 
 export interface ExtraData {
 	playTrack: (track: BilibiliTrack) => void
-	trackMenuItems: (
-		track: BilibiliTrack,
-	) => { title: string; leadingIcon: string; onPress: () => void }[]
+	trackMenuItems: (track: BilibiliTrack) => TrackMenuItem[]
 	selection: SelectionState
 	showItemCover?: boolean
 	currentTrackIdRef: RefObject<string | undefined>

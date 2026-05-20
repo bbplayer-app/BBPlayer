@@ -1,3 +1,4 @@
+import { Icon as ExpoIcon } from '@expo/ui'
 import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
@@ -16,13 +17,13 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 
 export interface TrackMenuItem {
 	title: string
-	leadingIcon: string
+	leadingIcon?: ReturnType<typeof ExpoIcon.select>
 	onPress: () => void
 }
 
 export const TrackMenuItemDividerToken: TrackMenuItem = {
 	title: 'divider',
-	leadingIcon: '',
+	leadingIcon: undefined,
 	onPress: () => void 0,
 }
 

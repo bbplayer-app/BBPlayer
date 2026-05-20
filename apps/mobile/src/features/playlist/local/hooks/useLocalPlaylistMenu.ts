@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import { Icon } from '@expo/ui'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
@@ -10,6 +11,51 @@ import type { Playlist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import { convertToOrpheusTrack, getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+
+const PLAY_NEXT_ICON = Icon.select({
+	ios: 'arrow.right.to.line.circle',
+	android: import('@expo/material-symbols/skip_next.xml'),
+})
+
+const ADD_TO_PLAYLIST_ICON = Icon.select({
+	ios: 'plus.rectangle.on.rectangle',
+	android: import('@expo/material-symbols/playlist_add.xml'),
+})
+
+const INFO_ICON = Icon.select({
+	ios: 'doc.text',
+	android: import('@expo/material-symbols/description.xml'),
+})
+
+const ARTIST_ICON = Icon.select({
+	ios: 'person.crop.circle',
+	android: import('@expo/material-symbols/person.xml'),
+})
+
+const DOWNLOAD_ICON = Icon.select({
+	ios: 'arrow.down.circle',
+	android: import('@expo/material-symbols/download.xml'),
+})
+
+const REMOVE_CACHE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete_sweep.xml'),
+})
+
+const LINK_ICON = Icon.select({
+	ios: 'link',
+	android: import('@expo/material-symbols/link.xml'),
+})
+
+const EDIT_ICON = Icon.select({
+	ios: 'pencil',
+	android: import('@expo/material-symbols/edit.xml'),
+})
+
+const DELETE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
 
 const SCOPE = 'UI.Playlist.Local.Menu'
 
@@ -51,13 +97,13 @@ export function useLocalPlaylistMenu({
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',
-				leadingIcon: 'skip-next-circle-outline',
+				leadingIcon: PLAY_NEXT_ICON,
 				onPress: () => playNext(item),
 				isHighFreq: true,
 			},
 			{
 				title: '添加到本地歌单',
-				leadingIcon: 'playlist-plus',
+				leadingIcon: ADD_TO_PLAYLIST_ICON,
 				onPress: () => openAddToPlaylistModal(item),
 				isHighFreq: true,
 			},
@@ -66,7 +112,7 @@ export function useLocalPlaylistMenu({
 			menuItems.push(
 				{
 					title: '查看详细信息',
-					leadingIcon: 'file-document-outline',
+					leadingIcon: INFO_ICON,
 					onPress: () =>
 						router.push({
 							pathname: '/playlist/remote/multipage/[bvid]',
@@ -75,7 +121,7 @@ export function useLocalPlaylistMenu({
 				},
 				{
 					title: '查看 up 主作品',
-					leadingIcon: 'account-music',
+					leadingIcon: ARTIST_ICON,
 					onPress: () => {
 						if (!item.artist?.remoteId) {
 							return
@@ -91,8 +137,8 @@ export function useLocalPlaylistMenu({
 						downloadState === DownloadState.COMPLETED ? '删除缓存' : '缓存音频',
 					leadingIcon:
 						downloadState === DownloadState.COMPLETED
-							? 'delete-sweep'
-							: 'download',
+							? REMOVE_CACHE_ICON
+							: DOWNLOAD_ICON,
 					onPress: async () => {
 						if (downloadState === DownloadState.COMPLETED) {
 							await Orpheus.removeDownload(item.uniqueKey)
@@ -139,7 +185,7 @@ export function useLocalPlaylistMenu({
 		menuItems.push(
 			{
 				title: '复制封面链接',
-				leadingIcon: 'link',
+				leadingIcon: LINK_ICON,
 				onPress: () => {
 					void Clipboard.setStringAsync(item.coverUrl ?? '')
 					toast.success('已复制到剪贴板')
@@ -147,14 +193,14 @@ export function useLocalPlaylistMenu({
 			},
 			{
 				title: '编辑信息',
-				leadingIcon: 'pencil',
+				leadingIcon: EDIT_ICON,
 				onPress: () => openEditTrackModal(item),
 			},
 		)
 		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
-				leadingIcon: 'playlist-remove',
+				leadingIcon: DELETE_ICON,
 				onPress: () =>
 					alert(
 						'确定？',
