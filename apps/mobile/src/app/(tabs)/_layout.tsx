@@ -4,11 +4,11 @@ import type {
 } from '@bottom-tabs/react-navigation'
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
+import { withLayoutContext } from 'expo-router'
 import type {
 	ParamListBase,
 	TabNavigationState,
-} from '@react-navigation/native'
-import { withLayoutContext } from 'expo-router'
+} from 'expo-router/react-navigation'
 import { useTheme } from 'react-native-paper'
 
 const BottomTabNavigator = createNativeBottomTabNavigator().Navigator

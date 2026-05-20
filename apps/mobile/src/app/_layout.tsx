@@ -3,11 +3,10 @@ import {
 	fetch as fetchNetInfo,
 	addEventListener as addNetInfoEventListener,
 } from '@react-native-community/netinfo'
-import { useLogger } from '@react-navigation/devtools'
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import { Stack, useNavigationContainerRef, SplashScreen } from 'expo-router'
+import { Stack, SplashScreen } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -58,11 +57,8 @@ export default Sentry.wrap(function RootLayout() {
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
 	const open = useModalStore((state) => state.open)
-	const ref = useNavigationContainerRef()
 	useCheckUpdate()
 	useFeatureTracking()
-
-	useLogger(ref)
 
 	onlineManager.setEventListener((setOnline) => {
 		void fetchNetInfo().then((state) => {

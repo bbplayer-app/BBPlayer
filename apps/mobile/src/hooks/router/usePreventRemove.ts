@@ -1,5 +1,5 @@
-import type { EventArg, NavigationAction } from '@react-navigation/native'
 import { useNavigation } from 'expo-router'
+import type { EventArg, NavigationAction } from 'expo-router/react-navigation'
 import { useEffect, useRef } from 'react'
 
 export default function usePreventRemove(
