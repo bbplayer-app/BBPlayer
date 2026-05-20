@@ -111,6 +111,7 @@ export const useAppStore = create<AppState>()(
 					downloadMaxParallelTasks: 1,
 				},
 				bilibiliUserInfo: null,
+				bbplayerAccount: null,
 
 				hasBilibiliCookie: () => {
 					const { bilibiliCookie } = get()
@@ -126,7 +127,6 @@ export const useAppStore = create<AppState>()(
 					const cookieObj = result.value
 					set((state) => {
 						state.bilibiliCookie = cookieObj
-						state.bbplayerToken = null
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(cookieObj))
 					logger.info('设置 cookie 到 orpheus')
@@ -140,7 +140,6 @@ export const useAppStore = create<AppState>()(
 
 					set((state) => {
 						state.bilibiliCookie = newCookie
-						state.bbplayerToken = null
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
 					logger.info('更新 cookie 到 orpheus')
@@ -151,7 +150,6 @@ export const useAppStore = create<AppState>()(
 					set((state) => {
 						state.bilibiliCookie = null
 						state.bilibiliUserInfo = null
-						state.bbplayerToken = null
 					})
 				},
 
@@ -167,9 +165,22 @@ export const useAppStore = create<AppState>()(
 					})
 				},
 
+				setBBPlayerAccount: (account) => {
+					set((state) => {
+						state.bbplayerAccount = account
+					})
+				},
+
 				clearBbplayerToken: () => {
 					set((state) => {
 						state.bbplayerToken = null
+					})
+				},
+
+				clearBBPlayerAccount: () => {
+					set((state) => {
+						state.bbplayerToken = null
+						state.bbplayerAccount = null
 					})
 				},
 
@@ -220,14 +231,27 @@ export const useAppStore = create<AppState>()(
 		{
 			name: 'app-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 1,
+			version: 2,
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
 				bilibiliUserInfo: state.bilibiliUserInfo,
 				bbplayerToken: state.bbplayerToken,
+				bbplayerAccount: state.bbplayerAccount,
 				settings: state.settings,
 			}),
+
+			migrate: (persistedState, version) => {
+				const state = persistedState as Partial<AppState>
+				if (version < 2) {
+					return {
+						...state,
+						bbplayerToken: null,
+						bbplayerAccount: null,
+					}
+				}
+				return persistedState
+			},
 
 			merge: (persistedState, currentState) => {
 				if (persistedState) {

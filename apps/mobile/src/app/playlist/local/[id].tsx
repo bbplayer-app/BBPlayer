@@ -51,6 +51,7 @@ import {
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import { useSharedPlaylistMembers } from '@/hooks/queries/sharedPlaylistMembers'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
@@ -119,6 +120,7 @@ export default function LocalPlaylistPage() {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const dimensions = useWindowDimensions()
+	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
@@ -253,6 +255,7 @@ export default function LocalPlaylistPage() {
 
 	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
+	const isSharedLoggedOut = !!playlistMetadata?.shareId && !bbplayerToken
 
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
 		onError: () => void 0,
@@ -272,6 +275,10 @@ export default function LocalPlaylistPage() {
 		usePullSharedPlaylist()
 
 	const handlePressShareMember = () => {
+		if (isSharedLoggedOut) {
+			toast.error('登陆 BBPlayer 账号后才能查看共享成员')
+			return
+		}
 		if (playlistMetadata?.shareId) {
 			void membersSheetRef.current?.present()
 		}
@@ -382,6 +389,7 @@ export default function LocalPlaylistPage() {
 		if (typeof id !== 'string') return
 		if (!playlistMetadata?.shareId || !playlistMetadata.shareRole) return
 		if (isOffline) return
+		if (!bbplayerToken) return
 		pullSharedPlaylist(
 			{ playlistId: Number(id) },
 			{
@@ -407,6 +415,7 @@ export default function LocalPlaylistPage() {
 		isOffline,
 		playlistMetadata?.shareId,
 		playlistMetadata?.shareRole,
+		bbplayerToken,
 		handledRemoteDeletionRef,
 		deletePlaylist,
 		router,
@@ -764,28 +773,46 @@ export default function LocalPlaylistPage() {
 						scrollOffsetRef.current = e.nativeEvent.contentOffset.y
 					}}
 					ListHeaderComponent={
-						<PlaylistHeader
-							coverRef={coverRef}
-							playlist={playlistMetadata}
-							totalDuration={playlistMetadata.totalDuration}
-							onClickPlayAll={playAll}
-							onClickSync={handleSync}
-							onClickCopyToLocalPlaylist={() =>
-								openModal('DuplicateLocalPlaylist', {
-									sourcePlaylistId: Number(id),
-									rawName: playlistMetadata.title,
-								})
-							}
-							onPressAuthor={(author) =>
-								author.remoteId &&
-								router.push({
-									pathname: '/playlist/remote/uploader/[mid]',
-									params: { mid: author.remoteId },
-								})
-							}
-							shareMembers={shareMembers}
-							onPressShareMember={handlePressShareMember}
-						/>
+						<>
+							<PlaylistHeader
+								coverRef={coverRef}
+								playlist={playlistMetadata}
+								totalDuration={playlistMetadata.totalDuration}
+								onClickPlayAll={playAll}
+								onClickSync={handleSync}
+								onClickCopyToLocalPlaylist={() =>
+									openModal('DuplicateLocalPlaylist', {
+										sourcePlaylistId: Number(id),
+										rawName: playlistMetadata.title,
+									})
+								}
+								onPressAuthor={(author) =>
+									author.remoteId &&
+									router.push({
+										pathname: '/playlist/remote/uploader/[mid]',
+										params: { mid: author.remoteId },
+									})
+								}
+								shareMembers={shareMembers}
+								onPressShareMember={handlePressShareMember}
+							/>
+							{isSharedLoggedOut && (
+								<View
+									style={[
+										styles.syncPausedNotice,
+										{ backgroundColor: colors.surfaceVariant },
+									]}
+								>
+									<Text
+										variant='bodyMedium'
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										登录 BBPlayer
+										账号后才能使用共享同步功能。当前修改会保存在本地，并在下次登录后继续同步。
+									</Text>
+								</View>
+							)}
+						</>
 					}
 				/>
 
@@ -939,5 +966,12 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 4 },
 		shadowOpacity: 0.3,
 		shadowRadius: 6,
+	},
+	syncPausedNotice: {
+		marginHorizontal: 16,
+		marginBottom: 12,
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
 	},
 })

@@ -2,4 +2,3 @@
 .wrangler/
 node_modules/
 dist/
-drizzle/

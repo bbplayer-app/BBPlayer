@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useAppStore from '@/hooks/stores/useAppStore'
 import toast from '@/utils/toast'
 
 const updateTime = Updates.createdAt
@@ -21,6 +22,7 @@ export default function SettingsPage() {
 	const haveTrack = useCurrentTrack()
 	const colors = useTheme().colors
 	const router = useRouter()
+	const account = useAppStore((state) => state.bbplayerAccount)
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -117,8 +119,30 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='BBPlayer 账号'
+						description={
+							account
+								? `${account.name}（@${account.username}）`
+								: '注册、登录、个人资料'
+						}
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='account-circle'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/account' as never)}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='通用'
-						description='账号、更新、日志、调试'
+						description='Bilibili 登录、更新、日志、调试'
 						left={(props) => (
 							<List.Icon
 								{...props}

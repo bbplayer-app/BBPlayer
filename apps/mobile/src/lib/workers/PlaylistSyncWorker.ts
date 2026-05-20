@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import { api as bbplayerApi } from '@/lib/api/bbplayer/client'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
@@ -64,6 +65,11 @@ class PlaylistSyncWorker {
 	}
 
 	private async syncAllPlaylists(): Promise<void> {
+		if (!useAppStore.getState().bbplayerToken) {
+			logger.debug('未登录 BBPlayer 账号，暂停共享歌单同步')
+			return
+		}
+
 		if (this.isRunning) {
 			this.runAgain = true
 			return

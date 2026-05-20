@@ -6,7 +6,7 @@ import type { JwtTokenPayload } from '../types'
 /**
  * JWT 鉴权中间件。
  * 校验通过后将 payload 注入 `c.var.jwtPayload`，
- * 路由层通过 `c.var.jwtPayload` 读取 mid 及 jwtVersion。
+ * 路由层通过 `c.var.jwtPayload.sub` 读取 BBPlayer account id。
  */
 export const authMiddleware = createMiddleware<{
 	Bindings: Env

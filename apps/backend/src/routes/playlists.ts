@@ -60,7 +60,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				title: sharedPlaylists.title,
 				description: sharedPlaylists.description,
 				coverUrl: sharedPlaylists.coverUrl,
-				ownerMid: sharedPlaylists.ownerMid,
+				ownerId: sharedPlaylists.ownerId,
 				createdAt: sharedPlaylists.createdAt,
 				updatedAt: sharedPlaylists.updatedAt,
 			})
@@ -78,12 +78,12 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 		const [owner] = await db
 			.select({
-				mid: users.mid,
+				userId: users.id,
 				name: users.name,
 				avatarUrl: users.face,
 			})
 			.from(users)
-			.where(eq(users.mid, playlist.ownerMid))
+			.where(eq(users.id, playlist.ownerId))
 
 		const [{ count: trackCount }] = await db
 			.select({ count: sql<number>`count(*)` })
@@ -144,7 +144,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			},
 			owner: owner
 				? {
-						mid: owner.mid,
+						account_id: owner.userId,
 						name: owner.name,
 						avatar_url: owner.avatarUrl,
 					}
@@ -160,7 +160,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		arktypeValidator('json', createPlaylistRequestSchema, validationHook),
 		async (c) => {
 			const { sub } = c.var.jwtPayload
-			const mid = sub
+			const userId = sub
 			const body = c.req.valid('json')
 			const { db } = await createDb(c.env.DATABASE_URL)
 
@@ -170,7 +170,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				const [newPlaylist] = await tx
 					.insert(sharedPlaylists)
 					.values({
-						ownerMid: mid,
+						ownerId: userId,
 						title: body.title,
 						description: body.description,
 						coverUrl: body.cover_url,
@@ -180,13 +180,13 @@ const playlistsRoute = new Hono<HonoEnv>()
 				// 2. 将创建者写入 playlist_members（role=owner）
 				await tx.insert(playlistMembers).values({
 					playlistId: newPlaylist.id,
-					mid,
+					userId,
 					role: 'owner',
 				})
 
 				// 3. 可选：携带初始曲目
 				if (body.tracks?.length) {
-					await upsertTracks(tx, newPlaylist.id, mid, body.tracks)
+					await upsertTracks(tx, newPlaylist.id, userId, body.tracks)
 				}
 
 				return newPlaylist
@@ -200,13 +200,13 @@ const playlistsRoute = new Hono<HonoEnv>()
 		arktypeValidator('json', updatePlaylistRequestSchema, validationHook),
 		async (c) => {
 			const { sub } = c.var.jwtPayload
-			const mid = sub
+			const userId = sub
 			const playlistId = c.req.param('id')
 			const body = c.req.valid('json')
 			const { db } = await createDb(c.env.DATABASE_URL)
 
 			// 权限校验
-			const member = await getMember(db, playlistId, mid)
+			const member = await getMember(db, playlistId, userId)
 			if (!member || member.role !== 'owner') {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -232,12 +232,12 @@ const playlistsRoute = new Hono<HonoEnv>()
 		arktypeValidator('json', playlistChangesRequestSchema, validationHook),
 		async (c) => {
 			const { sub } = c.var.jwtPayload
-			const mid = sub
+			const userId = sub
 			const playlistId = c.req.param('id')
 			const { changes } = c.req.valid('json')
 			const { db } = await createDb(c.env.DATABASE_URL)
 
-			const member = await getMember(db, playlistId, mid)
+			const member = await getMember(db, playlistId, userId)
 			if (!member || member.role === 'subscriber') {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -290,7 +290,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 								playlistId,
 								trackUniqueKey: c.track.unique_key,
 								sortKey: c.sort_key,
-								addedByMid: mid,
+								addedByUserId: userId,
 								updatedAt: new Date(c.operation_at),
 								deletedAt: null,
 							})),
@@ -349,8 +349,8 @@ const playlistsRoute = new Hono<HonoEnv>()
 								trackUniqueKey: change.track_unique_key,
 								sortKey: change.sort_key,
 								updatedAt: new Date(change.operation_at),
-								// addedByMid 是 nullable，新建时若无信息可暂空，或填当前操作者
-								addedByMid: mid,
+								// addedByUserId 是 nullable，新建时若无信息可暂空，或填当前操作者
+								addedByUserId: userId,
 							})),
 						)
 						.onConflictDoUpdate({
@@ -380,7 +380,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		arktypeValidator('query', getPlaylistChangesRequestSchema),
 		async (c) => {
 			const { sub } = c.var.jwtPayload
-			const mid = sub
+			const userId = sub
 			const playlistId = c.req.param('id')
 			const sinceMs = c.req.valid('query').since
 			const { db } = await createDb(c.env.DATABASE_URL)
@@ -400,7 +400,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			}
 
 			// 歌单存在时再校验成员关系
-			const member = await getMember(db, playlistId, mid)
+			const member = await getMember(db, playlistId, userId)
 			if (!member) {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -475,13 +475,13 @@ const playlistsRoute = new Hono<HonoEnv>()
 			// 成员列表（仅 owner + editor）
 			const members = await db
 				.select({
-					mid: playlistMembers.mid,
+					userId: playlistMembers.userId,
 					role: playlistMembers.role,
 					name: users.name,
 					avatar_url: users.face,
 				})
 				.from(playlistMembers)
-				.innerJoin(users, eq(users.mid, playlistMembers.mid))
+				.innerJoin(users, eq(users.id, playlistMembers.userId))
 				.where(
 					and(
 						eq(playlistMembers.playlistId, playlistId),
@@ -496,8 +496,10 @@ const playlistsRoute = new Hono<HonoEnv>()
 				metadata,
 				tracks,
 				members: members.map((m) => ({
-					...m,
-					mid: Number(m.mid),
+					account_id: m.userId,
+					role: m.role,
+					name: m.name,
+					avatar_url: m.avatar_url,
 				})),
 				has_more: false,
 				server_time: serverTime,
@@ -509,7 +511,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		arktypeValidator('json', subscribePlaylistRequestSchema, validationHook),
 		async (c) => {
 			const { sub } = c.var.jwtPayload
-			const mid = sub
+			const userId = sub
 			const playlistId = c.req.param('id')
 			const body = c.req.valid('json') ?? {}
 			const inviteCode =
@@ -533,7 +535,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			}
 
 			// 已是成员：owner/editor 直接返回；subscriber 在邀请码匹配时升级
-			const existing = await getMember(db, playlistId, mid)
+			const existing = await getMember(db, playlistId, userId)
 			if (existing) {
 				if (existing.role === 'subscriber') {
 					const shouldUpgrade =
@@ -545,7 +547,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 							.where(
 								and(
 									eq(playlistMembers.playlistId, playlistId),
-									eq(playlistMembers.mid, mid),
+									eq(playlistMembers.userId, userId),
 								),
 							)
 						return c.json({
@@ -565,7 +567,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 					: 'subscriber'
 			await db.insert(playlistMembers).values({
 				playlistId,
-				mid,
+				userId,
 				role: newRole,
 			})
 
@@ -579,7 +581,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 		const [playlist] = await db
 			.select({
-				ownerMid: sharedPlaylists.ownerMid,
+				ownerId: sharedPlaylists.ownerId,
 				editorInviteCode: sharedPlaylists.editorInviteCode,
 			})
 			.from(sharedPlaylists)
@@ -593,7 +595,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		if (!playlist) {
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
-		if (playlist.ownerMid !== sub) {
+		if (playlist.ownerId !== sub) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
@@ -605,7 +607,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		const { db } = await createDb(c.env.DATABASE_URL)
 
 		const [playlist] = await db
-			.select({ ownerMid: sharedPlaylists.ownerMid })
+			.select({ ownerId: sharedPlaylists.ownerId })
 			.from(sharedPlaylists)
 			.where(
 				and(
@@ -617,7 +619,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		if (!playlist) {
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
-		if (playlist.ownerMid !== sub) {
+		if (playlist.ownerId !== sub) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
@@ -647,11 +649,11 @@ const playlistsRoute = new Hono<HonoEnv>()
 	 */
 	.delete('/:id', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const mid = sub
+		const userId = sub
 		const playlistId = c.req.param('id')
 		const { db } = await createDb(c.env.DATABASE_URL)
 
-		const member = await getMember(db, playlistId, mid)
+		const member = await getMember(db, playlistId, userId)
 		if (!member || member.role !== 'owner') {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
@@ -675,32 +677,34 @@ const playlistsRoute = new Hono<HonoEnv>()
 	 */
 	.get('/:id/members', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const mid = sub
+		const userId = sub
 		const playlistId = c.req.param('id')
 		const { db } = await createDb(c.env.DATABASE_URL)
 
-		const member = await getMember(db, playlistId, mid)
+		const member = await getMember(db, playlistId, userId)
 		if (!member || (member.role !== 'owner' && member.role !== 'editor')) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
 		const members = await db
 			.select({
-				mid: playlistMembers.mid,
+				userId: playlistMembers.userId,
 				role: playlistMembers.role,
 				name: users.name,
 				avatar_url: users.face,
 				joined_at: playlistMembers.joinedAt,
 			})
 			.from(playlistMembers)
-			.innerJoin(users, eq(users.mid, playlistMembers.mid))
+			.innerJoin(users, eq(users.id, playlistMembers.userId))
 			.where(eq(playlistMembers.playlistId, playlistId))
 			.orderBy(asc(playlistMembers.joinedAt))
 
 		return c.json({
 			members: members.map((m) => ({
-				...m,
-				mid: Number(m.mid),
+				account_id: m.userId,
+				role: m.role,
+				name: m.name,
+				avatar_url: m.avatar_url,
 				joined_at: m.joined_at.getTime(),
 			})),
 		})
@@ -715,11 +719,11 @@ const playlistsRoute = new Hono<HonoEnv>()
 	 */
 	.delete('/:id/members/me', async (c) => {
 		const { sub } = c.var.jwtPayload
-		const mid = sub
+		const userId = sub
 		const playlistId = c.req.param('id')
 		const { db } = await createDb(c.env.DATABASE_URL)
 
-		const member = await getMember(db, playlistId, mid)
+		const member = await getMember(db, playlistId, userId)
 		if (!member) {
 			// 已不是成员，幂等返回成功
 			return c.json({ removed: true })
@@ -736,7 +740,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			.where(
 				and(
 					eq(playlistMembers.playlistId, playlistId),
-					eq(playlistMembers.mid, mid),
+					eq(playlistMembers.userId, userId),
 				),
 			)
 
@@ -746,14 +750,14 @@ const playlistsRoute = new Hono<HonoEnv>()
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
-async function getMember(db: DrizzleDb, playlistId: string, mid: string) {
+async function getMember(db: DrizzleDb, playlistId: string, userId: string) {
 	const [member] = await db
 		.select()
 		.from(playlistMembers)
 		.where(
 			and(
 				eq(playlistMembers.playlistId, playlistId),
-				eq(playlistMembers.mid, mid),
+				eq(playlistMembers.userId, userId),
 			),
 		)
 	return member ?? null
@@ -762,7 +766,7 @@ async function getMember(db: DrizzleDb, playlistId: string, mid: string) {
 async function upsertTracks(
 	db: DrizzleDb,
 	playlistId: string,
-	mid: string,
+	userId: string,
 	tracks: Array<{ track: TrackInput; sort_key: string }>,
 ) {
 	await db
@@ -788,7 +792,7 @@ async function upsertTracks(
 				playlistId,
 				trackUniqueKey: track.unique_key,
 				sortKey: sort_key,
-				addedByMid: mid,
+				addedByUserId: userId,
 			})),
 		)
 		.onConflictDoNothing()

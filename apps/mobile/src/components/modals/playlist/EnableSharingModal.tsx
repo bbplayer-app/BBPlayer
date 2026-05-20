@@ -1,5 +1,6 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
 import * as Clipboard from 'expo-clipboard'
+import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Text, TextInput } from 'react-native-paper'
@@ -25,7 +26,11 @@ export default function EnableSharingModal({
 	shareId?: string | null
 	shareRole?: 'owner' | 'editor' | 'subscriber' | null
 }) {
+	const router = useRouter()
 	const close = useModalStore((state) => state.close)
+	const doAfterModalHostClosed = useModalStore(
+		(state) => state.doAfterModalHostClosed,
+	)
 	const { mutate: enableSharing, isPending } = useEnableSharing()
 	const { mutateAsync: rotateInvite, isPending: isRotating } =
 		useRotateEditorInviteCode()
@@ -48,6 +53,16 @@ export default function EnableSharingModal({
 	}, [fetchedInviteCode])
 
 	const handleConfirm = () => {
+		if (!hasToken) {
+			doAfterModalHostClosed(() => {
+				router.push({
+					pathname: '/settings/account',
+					params: { returnTo: `/playlist/local/${playlistId}` },
+				} as never)
+			})
+			close('EnableSharing')
+			return
+		}
 		enableSharing(
 			{ playlistId },
 			{ onSuccess: ({ shareId: id }) => setShareId(id) },
@@ -68,6 +83,17 @@ export default function EnableSharingModal({
 
 	const handleRotateInvite = async () => {
 		if (!shareId) return
+		if (!hasToken) {
+			toast.error('请先登录 BBPlayer 账号')
+			doAfterModalHostClosed(() => {
+				router.push({
+					pathname: '/settings/account',
+					params: { returnTo: `/playlist/local/${playlistId}` },
+				} as never)
+			})
+			close('EnableSharing')
+			return
+		}
 		const result = await rotateInvite({ shareId })
 		setInviteCode(result.editorInviteCode)
 		toast.success('已生成新的编辑者邀请码')
@@ -177,9 +203,7 @@ export default function EnableSharingModal({
 								variant='bodySmall'
 								style={styles.warningText}
 							>
-								开启共享需要验证身份。点击确认后，你的 Bilibili Cookie
-								将被上传至服务器以确认你是真实用户。BBPlayer
-								完全开源，你可以随时审计相关代码。
+								开启共享需要先登录 BBPlayer 账号。
 							</Text>
 						</View>
 					)}

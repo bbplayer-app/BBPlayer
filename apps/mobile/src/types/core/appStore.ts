@@ -22,10 +22,18 @@ interface BilibiliUserSummary {
 	cachedAt?: number
 }
 
+interface BBPlayerAccount {
+	id: string
+	username: string
+	name: string
+	face?: string | null
+}
+
 interface AppState {
 	bilibiliCookie: Record<string, string> | null
 	bilibiliUserInfo: BilibiliUserSummary | null
 	bbplayerToken: string | null
+	bbplayerAccount: BBPlayerAccount | null
 	settings: Settings
 
 	// Cookies
@@ -37,7 +45,9 @@ interface AppState {
 
 	// Auth
 	setBbplayerToken: (token: string) => void
+	setBBPlayerAccount: (account: BBPlayerAccount | null) => void
 	clearBbplayerToken: () => void
+	clearBBPlayerAccount: () => void
 
 	// Settings
 	setSettings: (updates: Partial<Settings>) => void
@@ -46,4 +56,4 @@ interface AppState {
 	setEnableDataCollection: (value: boolean) => void
 }
 
-export type { AppState, BilibiliUserSummary, Settings }
+export type { AppState, BBPlayerAccount, BilibiliUserSummary, Settings }

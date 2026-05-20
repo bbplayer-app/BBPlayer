@@ -44,7 +44,7 @@ export interface SharedPlaylistPreview {
 		trackCount: number
 	}
 	owner: {
-		mid: number
+		accountId: string
 		name: string
 		avatarUrl?: string | null
 	} | null
@@ -342,7 +342,7 @@ export class SharedPlaylistFacade {
 						track_count: number
 					}
 					owner: {
-						mid: number
+						account_id: string
 						name: string
 						avatar_url?: string | null
 					} | null
@@ -362,7 +362,7 @@ export class SharedPlaylistFacade {
 					},
 					owner: data.owner
 						? {
-								mid: data.owner.mid,
+								accountId: data.owner.account_id,
 								name: data.owner.name,
 								avatarUrl: data.owner.avatar_url ?? null,
 							}
@@ -747,7 +747,7 @@ export class SharedPlaylistFacade {
 				cover_url?: string | null
 			} | null
 			members?: Array<{
-				mid: number
+				account_id: string
 				name: string
 				avatar_url?: string | null
 				role: 'owner' | 'editor' | 'subscriber'
@@ -806,18 +806,21 @@ export class SharedPlaylistFacade {
 		}
 
 		if (Array.isArray(data.members)) {
-			type narrowedMember = Omit<(typeof data.members)[number], 'role'> & {
+			type ServerEditableMember = (typeof data.members)[number] & {
 				role: 'owner' | 'editor'
 			}
 			const members = data.members
-				.filter((m) => m.role === 'owner' || m.role === 'editor')
+				.filter(
+					(m): m is ServerEditableMember =>
+						m.role === 'owner' || m.role === 'editor',
+				)
 				.map((m) => ({
-					mid: Number(m.mid),
+					accountId: m.account_id,
 					name: m.name,
 					avatarUrl: m.avatar_url ?? null,
 					role: m.role,
 				}))
-				.filter((m) => Number.isFinite(m.mid) && !!m.name) as narrowedMember[]
+				.filter((m) => !!m.accountId && !!m.name)
 
 			if (members.length > 0) {
 				setSharedPlaylistMembers(shareId, members)

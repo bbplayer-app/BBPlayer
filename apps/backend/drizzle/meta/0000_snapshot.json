@@ -1,0 +1,442 @@
+{
+	"id": "3916a4ae-262a-4188-8d51-b765876885c3",
+	"prevId": "00000000-0000-0000-0000-000000000000",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.playlist_members": {
+			"name": "playlist_members",
+			"schema": "",
+			"columns": {
+				"playlist_id": {
+					"name": "playlist_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"joined_at": {
+					"name": "joined_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"playlist_members_playlist_id_shared_playlists_id_fk": {
+					"name": "playlist_members_playlist_id_shared_playlists_id_fk",
+					"tableFrom": "playlist_members",
+					"tableTo": "shared_playlists",
+					"columnsFrom": ["playlist_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"playlist_members_user_id_users_id_fk": {
+					"name": "playlist_members_user_id_users_id_fk",
+					"tableFrom": "playlist_members",
+					"tableTo": "users",
+					"columnsFrom": ["user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"playlist_members_playlist_id_user_id_pk": {
+					"name": "playlist_members_playlist_id_user_id_pk",
+					"columns": ["playlist_id", "user_id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.shared_playlist_tracks": {
+			"name": "shared_playlist_tracks",
+			"schema": "",
+			"columns": {
+				"playlist_id": {
+					"name": "playlist_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"track_unique_key": {
+					"name": "track_unique_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"sort_key": {
+					"name": "sort_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"added_by_user_id": {
+					"name": "added_by_user_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"spt_playlist_updated_idx": {
+					"name": "spt_playlist_updated_idx",
+					"columns": [
+						{
+							"expression": "playlist_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "updated_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"spt_playlist_deleted_idx": {
+					"name": "spt_playlist_deleted_idx",
+					"columns": [
+						{
+							"expression": "playlist_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "deleted_at",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"shared_playlist_tracks_playlist_id_shared_playlists_id_fk": {
+					"name": "shared_playlist_tracks_playlist_id_shared_playlists_id_fk",
+					"tableFrom": "shared_playlist_tracks",
+					"tableTo": "shared_playlists",
+					"columnsFrom": ["playlist_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"shared_playlist_tracks_track_unique_key_shared_tracks_unique_key_fk": {
+					"name": "shared_playlist_tracks_track_unique_key_shared_tracks_unique_key_fk",
+					"tableFrom": "shared_playlist_tracks",
+					"tableTo": "shared_tracks",
+					"columnsFrom": ["track_unique_key"],
+					"columnsTo": ["unique_key"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"shared_playlist_tracks_added_by_user_id_users_id_fk": {
+					"name": "shared_playlist_tracks_added_by_user_id_users_id_fk",
+					"tableFrom": "shared_playlist_tracks",
+					"tableTo": "users",
+					"columnsFrom": ["added_by_user_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"shared_playlist_tracks_playlist_id_track_unique_key_pk": {
+					"name": "shared_playlist_tracks_playlist_id_track_unique_key_pk",
+					"columns": ["playlist_id", "track_unique_key"]
+				}
+			},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.shared_playlists": {
+			"name": "shared_playlists",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"owner_id": {
+					"name": "owner_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"cover_url": {
+					"name": "cover_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"editor_invite_code": {
+					"name": "editor_invite_code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"editor_invite_code_unq": {
+					"name": "editor_invite_code_unq",
+					"columns": [
+						{
+							"expression": "editor_invite_code",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"where": "\"shared_playlists\".\"editor_invite_code\" IS NOT NULL",
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"shared_playlists_owner_id_users_id_fk": {
+					"name": "shared_playlists_owner_id_users_id_fk",
+					"tableFrom": "shared_playlists",
+					"tableTo": "users",
+					"columnsFrom": ["owner_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.shared_tracks": {
+			"name": "shared_tracks",
+			"schema": "",
+			"columns": {
+				"unique_key": {
+					"name": "unique_key",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"title": {
+					"name": "title",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"artist_name": {
+					"name": "artist_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"artist_id": {
+					"name": "artist_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"cover_url": {
+					"name": "cover_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"duration": {
+					"name": "duration",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"bilibili_bvid": {
+					"name": "bilibili_bvid",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"bilibili_cid": {
+					"name": "bilibili_cid",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.users": {
+			"name": "users",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"username": {
+					"name": "username",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"password_hash": {
+					"name": "password_hash",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"face": {
+					"name": "face",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_login_at": {
+					"name": "last_login_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"users_username_unique": {
+					"name": "users_username_unique",
+					"nullsNotDistinct": false,
+					"columns": ["username"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {},
+	"schemas": {},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
+}

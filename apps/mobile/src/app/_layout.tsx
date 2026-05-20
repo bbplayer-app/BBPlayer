@@ -333,6 +333,10 @@ export default Sentry.wrap(function RootLayout() {
 					options={{ headerShown: false }}
 				/>
 				<Stack.Screen
+					name='settings/account'
+					options={{ headerShown: false }}
+				/>
+				<Stack.Screen
 					name='settings/donate'
 					options={{ headerShown: false }}
 				/>

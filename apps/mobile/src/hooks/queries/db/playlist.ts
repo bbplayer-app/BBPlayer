@@ -5,6 +5,7 @@ import {
 	useQuery,
 } from '@tanstack/react-query'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
@@ -151,7 +152,8 @@ export const usePlaylistByShareId = (shareId?: string) => {
 }
 
 export const useEditorInviteCode = (shareId?: string | null) => {
-	const enabled = !!shareId
+	const hasToken = useAppStore((state) => !!state.bbplayerToken)
+	const enabled = !!shareId && hasToken
 	return useQuery({
 		queryKey: playlistKeys.editorInviteCode(shareId ?? ''),
 		queryFn: enabled

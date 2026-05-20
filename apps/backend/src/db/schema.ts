@@ -11,8 +11,9 @@ import {
 } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
-	/** B 站 mid */
-	mid: text('mid').primaryKey(),
+	id: text('id').primaryKey(),
+	username: text('username').notNull().unique(),
+	passwordHash: text('password_hash').notNull(),
 	name: text('name').notNull(),
 	face: text('face'),
 	lastLoginAt: timestamp('last_login_at', { withTimezone: true })
@@ -26,9 +27,9 @@ export const sharedPlaylists = pgTable(
 		id: uuid('id')
 			.primaryKey()
 			.default(sql`gen_random_uuid()`),
-		ownerMid: text('owner_mid')
+		ownerId: text('owner_id')
 			.notNull()
-			.references(() => users.mid, { onDelete: 'cascade' }),
+			.references(() => users.id, { onDelete: 'cascade' }),
 		title: text('title').notNull(),
 		description: text('description'),
 		coverUrl: text('cover_url'),
@@ -56,15 +57,15 @@ export const playlistMembers = pgTable(
 		playlistId: uuid('playlist_id')
 			.notNull()
 			.references(() => sharedPlaylists.id, { onDelete: 'cascade' }),
-		mid: text('mid')
+		userId: text('user_id')
 			.notNull()
-			.references(() => users.mid, { onDelete: 'cascade' }),
+			.references(() => users.id, { onDelete: 'cascade' }),
 		role: text('role', { enum: ['owner', 'editor', 'subscriber'] }).notNull(),
 		joinedAt: timestamp('joined_at', { withTimezone: true })
 			.notNull()
 			.default(sql`now()`),
 	},
-	(t) => [primaryKey({ columns: [t.playlistId, t.mid] })],
+	(t) => [primaryKey({ columns: [t.playlistId, t.userId] })],
 )
 
 export const sharedTracks = pgTable('shared_tracks', {
@@ -72,7 +73,7 @@ export const sharedTracks = pgTable('shared_tracks', {
 	title: text('title').notNull(),
 	/** 反归一化，简化查询 */
 	artistName: text('artist_name'),
-	/** 可能是 mid 或其他标识 */
+	/** 来源站点的作者标识 */
 	artistId: text('artist_id'),
 	coverUrl: text('cover_url'),
 	duration: integer('duration'),
@@ -96,7 +97,7 @@ export const sharedPlaylistTracks = pgTable(
 			.notNull()
 			.references(() => sharedTracks.uniqueKey, { onDelete: 'cascade' }),
 		sortKey: text('sort_key').notNull(),
-		addedByMid: text('added_by_mid').references(() => users.mid, {
+		addedByUserId: text('added_by_user_id').references(() => users.id, {
 			onDelete: 'set null',
 		}),
 		createdAt: timestamp('created_at', { withTimezone: true })

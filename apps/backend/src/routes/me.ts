@@ -38,7 +38,7 @@ const meRoute = new Hono<{
 					isNull(sharedPlaylists.deletedAt),
 				),
 			)
-			.where(eq(playlistMembers.mid, sub))
+			.where(eq(playlistMembers.userId, sub))
 			.orderBy(desc(playlistMembers.joinedAt))
 
 		return c.json({ playlists: rows })

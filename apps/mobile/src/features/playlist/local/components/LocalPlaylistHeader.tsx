@@ -275,7 +275,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 									<>
 										{shareMembers.slice(0, 3).map((member, index) => (
 											<View
-												key={member.mid}
+												key={member.accountId}
 												style={[
 													styles.avatarWrapper,
 													{

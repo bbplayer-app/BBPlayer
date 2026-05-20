@@ -1,0 +1,13 @@
+{
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1779246857185,
+			"tag": "0000_bouncy_shooting_star",
+			"breakpoints": true
+		}
+	]
+}

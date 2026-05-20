@@ -5,7 +5,7 @@ import { immer } from 'zustand/middleware/immer'
 import { zustandStorage } from '@/utils/mmkv'
 
 export type SharedPlaylistMember = {
-	mid: number
+	accountId: string
 	name: string
 	avatarUrl?: string | null
 	role: 'owner' | 'editor'
@@ -17,6 +17,7 @@ interface SharedPlaylistMembersState {
 	membersByShareId: Record<string, SharedPlaylistMember[]>
 	setMembers: (shareId: string, members: SharedPlaylistMember[]) => void
 	clearMembers: (shareId: string) => void
+	clearAll: () => void
 }
 
 export const useSharedPlaylistMembersStore =
@@ -32,6 +33,11 @@ export const useSharedPlaylistMembersStore =
 				clearMembers: (shareId) => {
 					set((state) => {
 						delete state.membersByShareId[shareId]
+					})
+				},
+				clearAll: () => {
+					set((state) => {
+						state.membersByShareId = {}
 					})
 				},
 			})),
@@ -63,4 +69,8 @@ export const clearSharedPlaylistMembers = (
 ): void => {
 	if (!shareId) return
 	useSharedPlaylistMembersStore.getState().clearMembers(shareId)
+}
+
+export const clearAllSharedPlaylistMembers = (): void => {
+	useSharedPlaylistMembersStore.getState().clearAll()
 }

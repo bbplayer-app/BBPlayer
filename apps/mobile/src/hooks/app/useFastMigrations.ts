@@ -13,6 +13,7 @@ const SCHEMA_VERSION_KEY = 'db_schema_version'
 const SORT_KEY_MIGRATED_V2_KEY = 'sort_key_migrated_v2' // gitleaks:allow
 const SORT_KEY_MIGRATED_V3_KEY = 'sort_key_migrated_v3' // gitleaks:allow
 const PLAY_HISTORY_MIGRATED_V1_KEY = 'play_history_migrated_v1' // gitleaks:allow
+const INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY = 'independent_account_migrated_v1' // gitleaks:allow
 
 interface MigrationConfig {
 	journal: {
@@ -206,7 +207,7 @@ function migratePlayHistory(): void {
 					if (Array.isArray(history)) {
 						for (const record of history) {
 							expoDb.runSync(
-								`INSERT INTO play_history (track_id, start_time, duration_played, completed, created_at) 
+								`INSERT INTO play_history (track_id, start_time, duration_played, completed, created_at)
 								 VALUES (?, ?, ?, ?, (unixepoch() * 1000))`,
 								[
 									row.id,
@@ -228,6 +229,35 @@ function migratePlayHistory(): void {
 	} catch (error) {
 		// 这里不吃掉错误，而是让它打印出来，并且不设置 storage 标记，下次启动还会重试
 		logger.error('[play_history] 迁移过程中发生致命错误:', error)
+	}
+}
+
+/**
+ * 旧共享歌单以 B 站身份为账号边界。新账号体系独立后，升级时将本地共享状态全部退回普通本地歌单。
+ */
+function migrateIndependentAccountReset(): void {
+	if (storage.getBoolean(INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY)) return
+
+	try {
+		expoDb.withTransactionSync(() => {
+			expoDb.runSync(
+				`UPDATE playlists
+				 SET share_id = NULL,
+					 share_role = NULL,
+					 last_share_sync_at = NULL
+				 WHERE share_id IS NOT NULL
+					OR share_role IS NOT NULL
+					OR last_share_sync_at IS NOT NULL`,
+			)
+			expoDb.runSync(`DELETE FROM playlist_sync_queue`)
+		})
+
+		storage.remove('shared-playlist-members')
+		storage.remove('bbplayer_jwt')
+		storage.set(INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY, true)
+		logger.info('[account] 已清空旧共享歌单状态与同步队列')
+	} catch (error) {
+		logger.error('[account] 清空旧共享歌单状态失败:', error)
 	}
 }
 
@@ -269,6 +299,7 @@ export const useFastMigrations = (
 				migrateSortKeysV2()
 				migrateSortKeysV3()
 				migratePlayHistory()
+				migrateIndependentAccountReset()
 				dispatch({ type: 'migrated', payload: true })
 				return
 			}
@@ -281,6 +312,7 @@ export const useFastMigrations = (
 				migrateSortKeysV2()
 				migrateSortKeysV3()
 				migratePlayHistory()
+				migrateIndependentAccountReset()
 
 				storage.set(SCHEMA_VERSION_KEY, latestVersion)
 				dispatch({ type: 'migrated', payload: true })

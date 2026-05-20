@@ -56,7 +56,7 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 						>
 							{members.map((item) => (
 								<View
-									key={item.mid}
+									key={item.accountId}
 									style={styles.memberRow}
 								>
 									{item.avatarUrl ? (

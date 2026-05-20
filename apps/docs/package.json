@@ -6,8 +6,8 @@
 		"docs:preview": "vitepress preview docs"
 	},
 	"devDependencies": {
-		"lucide-vue-next": "^0.562.0",
-		"vitepress": "2.0.0-alpha.12",
-		"vue": "^3.5.27"
+		"lucide-vue-next": "^1.0.0",
+		"vitepress": "^2.0.0-alpha.17",
+		"vue": "^3.5.34"
 	}
 }

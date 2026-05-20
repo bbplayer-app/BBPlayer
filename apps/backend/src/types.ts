@@ -1,6 +1,6 @@
 /** JWT payload 结构 */
 export interface JwtTokenPayload {
-	sub: string // B 站 mid（text 存储，避免大数精度丢失）
+	sub: string // BBPlayer account id
 	jwtVersion?: number
 	iat?: number
 	exp?: number
@@ -53,7 +53,7 @@ export type ChangeEvent =
 	  }
 
 export interface PlaylistMemberInfo {
-	mid: number
+	account_id: string
 	name: string
 	avatar_url?: string | null
 	role: 'owner' | 'editor'

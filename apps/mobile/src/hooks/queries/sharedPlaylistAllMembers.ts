@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api/bbplayer/client'
 
 export type SharedPlaylistAllMember = {
-	mid: number
+	accountId: string
 	name: string
 	avatarUrl?: string | null
 	role: 'owner' | 'editor' | 'subscriber'
@@ -23,7 +23,7 @@ export function useSharedPlaylistAllMembers(shareId?: string | null) {
 			}
 			const data = await resp.json()
 			return data.members.map((m) => ({
-				mid: m.mid,
+				accountId: m.account_id,
 				name: m.name,
 				avatarUrl: m.avatar_url,
 				role: m.role,
