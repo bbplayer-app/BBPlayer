@@ -149,7 +149,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			return Math.min(Math.max(pos / dur, 0), 1)
 		},
 		(value) => {
-			// eslint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
 			progressState.value = value
 		},
 		[progressState],
@@ -161,7 +161,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			return Math.min(Math.max(buffered.value / dur, 0), 1)
 		},
 		(value) => {
-			// eslint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
 			bufferedProgressState.value = value
 		},
 		[bufferedProgressState],

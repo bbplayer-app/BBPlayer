@@ -9,7 +9,7 @@ pre-commit:
           echo "⚠️ gitleaks is not installed, skipping secret scan. Install with: brew install gitleaks"
         fi
     format-codes:
-      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}"
       run: |
         if [ -z "{staged_files}" ]; then
           echo "No staged files to format."
@@ -19,7 +19,7 @@ pre-commit:
         pnpm oxfmt --write --no-error-on-unmatched-pattern "{staged_files}"
       stage_fixed: true
     lint-codes:
-      glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx}'
+      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx}"
       run: |
         if [ -z "{staged_files}" ]; then
           echo "No staged code files to lint."
@@ -29,7 +29,7 @@ pre-commit:
         pnpm oxlint --type-aware "{staged_files}" && pnpm eslint "{staged_files}"
       stage_fixed: true
     format-plain-text:
-      glob: '*.{md,mdx}'
+      glob: "*.{md,mdx}"
       run: pnpm oxfmt --write "{staged_files}"
       stage_fixed: true
 
