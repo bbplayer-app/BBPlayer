@@ -1,4 +1,5 @@
 import type { ColorValue, ViewProps } from 'react-native'
+import type { SharedValue } from 'react-native-reanimated'
 
 import type { ObservableState } from './hooks/useNativeState'
 
@@ -50,13 +51,29 @@ export type WavySliderColors = {
 export type WavySliderWaveDirection = 'left' | 'right' | 'tail' | 'head'
 
 /**
- * A numeric prop that can be passed as a plain number or as a native observable
- * state created by `useNativeState()`.
+ * A value that can be updated from the UI runtime.
  *
- * When an `ObservableState<number>` is used, worklets can update `.value`
- * directly and drive the native Compose UI without a React render.
+ * Shared values are bridged to an internal ObservableState with Reanimated
+ * `startMapper()`. ObservableState values are passed through directly.
  */
-export type ObservableNumber = number | ObservableState<number>
+export type WavySliderAnimatedValue<T> = SharedValue<T> | ObservableState<T>
+
+/**
+ * A numeric slider prop.
+ *
+ * Pass a plain number for static values, or pass a Reanimated
+ * `SharedValue<number>` / `ObservableState<number>` for values that should
+ * update from the UI runtime.
+ */
+export type WavySliderNumberValue = number | WavySliderAnimatedValue<number>
+
+/**
+ * Progress values are expected to be driven from the UI runtime.
+ *
+ * Pass either a Reanimated `SharedValue<number>` or an
+ * `ObservableState<number>`.
+ */
+export type WavySliderProgressValue = WavySliderAnimatedValue<number>
 
 /**
  * Props for the Android WavySlider view.
@@ -79,13 +96,13 @@ export type WavySliderProps = ViewProps & {
 	 */
 	value?: number
 	/**
-	 * Native observable state for the current progress.
+	 * Native or shared progress state for the current value.
 	 *
-	 * JS or UI runtime code can write `progress.value = nextValue` to drive the
-	 * native Compose UI directly, avoiding React re-renders for high-frequency
-	 * progress updates.
+	 * Pass a Reanimated `SharedValue<number>` or an `ObservableState<number>` to
+	 * drive the native Compose UI directly, avoiding React re-renders for
+	 * high-frequency progress updates.
 	 */
-	progress?: ObservableState<number>
+	progress?: WavySliderProgressValue
 	/**
 	 * Buffered or loaded progress value.
 	 *
@@ -96,12 +113,12 @@ export type WavySliderProps = ViewProps & {
 	 */
 	bufferedValue?: number
 	/**
-	 * Native observable state for buffered or loaded progress.
+	 * Native or shared state for buffered or loaded progress.
 	 *
 	 * This works like `progress` and is intended for buffered progress updates
 	 * that do not need to pass through React.
 	 */
-	bufferedProgress?: ObservableState<number>
+	bufferedProgress?: WavySliderProgressValue
 	/**
 	 * Minimum selectable value.
 	 *
@@ -146,27 +163,27 @@ export type WavySliderProps = ViewProps & {
 	 *
 	 * @default 16
 	 */
-	waveLength?: ObservableNumber
+	waveLength?: WavySliderNumberValue
 	/**
 	 * Wave height in dp.
 	 *
-	 * Set this to `0` to render a regular straight slider. Pass an
-	 * `ObservableState<number>` if you want to animate pause flattening,
-	 * drag flattening, or other effects from a worklet.
+	 * Set this to `0` to render a regular straight slider. Pass a
+	 * `SharedValue<number>` or `ObservableState<number>` if you want to animate
+	 * pause flattening, drag flattening, or other effects from a worklet.
 	 *
 	 * @default 16
 	 */
-	waveHeight?: ObservableNumber
+	waveHeight?: WavySliderNumberValue
 	/**
 	 * Wave velocity in dp per second.
 	 *
 	 * Set this to `0` to stop the wave, which is useful for paused media.
-	 * Pass an `ObservableState<number>` to animate between playback states from
-	 * a worklet.
+	 * Pass a `SharedValue<number>` or `ObservableState<number>` to animate
+	 * between playback states from a worklet.
 	 *
 	 * @default 15
 	 */
-	waveVelocity?: ObservableNumber
+	waveVelocity?: WavySliderNumberValue
 	/**
 	 * Wave movement direction.
 	 *
@@ -178,13 +195,13 @@ export type WavySliderProps = ViewProps & {
 	 *
 	 * @default 4
 	 */
-	waveThickness?: ObservableNumber
+	waveThickness?: WavySliderNumberValue
 	/**
 	 * Stroke thickness for the inactive and buffered tracks in dp.
 	 *
 	 * @default 4
 	 */
-	trackThickness?: ObservableNumber
+	trackThickness?: WavySliderNumberValue
 	/**
 	 * Whether the wave height gradually increases from the track start toward
 	 * the thumb.

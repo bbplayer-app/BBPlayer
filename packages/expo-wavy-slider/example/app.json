@@ -1,0 +1,13 @@
+{
+	"expo": {
+		"name": "Wavy Slider Example",
+		"slug": "wavy-slider-example",
+		"version": "0.0.0",
+		"orientation": "portrait",
+		"newArchEnabled": true,
+		"platforms": ["android"],
+		"android": {
+			"package": "dev.roitium.expowavyslider.example"
+		}
+	}
+}

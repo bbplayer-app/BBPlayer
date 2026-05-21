@@ -1,0 +1,22 @@
+{
+	"name": "expo-wavy-slider-example",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.ts",
+	"scripts": {
+		"android": "expo run:android",
+		"start": "expo start",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"expo": "56.0.0-preview.13",
+		"expo-wavy-slider": "workspace:*",
+		"react": "19.2.3",
+		"react-native": "0.85.3",
+		"react-native-reanimated": "~4.3.1",
+		"react-native-worklets": "0.8.3"
+	},
+	"devDependencies": {
+		"typescript": "~6.0.3"
+	}
+}

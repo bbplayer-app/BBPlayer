@@ -23,7 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
@@ -95,6 +98,10 @@ private fun fractionInRange(start: Float, end: Float, value: Float): Float {
     if (end - start == 0f) return 0f
     return ((value - start) / (end - start)).coerceIn(0f, 1f)
 }
+
+// Matches Material 3 default Slider track gap: HandleWidth / 2 + ActiveHandleLeadingSpace.
+private val BufferedThumbTrackGapSize = 8.dp
+private val BufferedTrackInsideCornerSize = 2.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
@@ -278,27 +285,43 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                             max,
                                             clampedBufferedValue
                                         )
-                                        val startFraction =
-                                            minOf(valueFraction, bufferedFraction)
-                                        val endFraction =
-                                            maxOf(valueFraction, bufferedFraction)
 
-                                        if (endFraction > valueFraction) {
+                                        if (bufferedFraction > valueFraction) {
                                             val thicknessPx = effectiveTrackThickness.toPx()
-                                            val startX = size.width * startFraction
-                                            val endX = size.width * endFraction
+                                            val thumbGapPx = BufferedThumbTrackGapSize.toPx()
+                                            val startX = size.width * valueFraction + thumbGapPx
+                                            val endX = size.width * bufferedFraction
                                             if (thicknessPx > 0f && endX > startX) {
-                                                drawRoundRect(
-                                                    color = color,
-                                                    topLeft = Offset(
-                                                        startX,
-                                                        center.y - thicknessPx / 2
-                                                    ),
-                                                    size = Size(endX - startX, thicknessPx),
-                                                    cornerRadius = CornerRadius(
-                                                        thicknessPx / 2,
-                                                        thicknessPx / 2
+                                                val insideCornerSize =
+                                                    BufferedTrackInsideCornerSize.toPx()
+                                                val innerCorner = CornerRadius(
+                                                    insideCornerSize,
+                                                    insideCornerSize
+                                                )
+                                                val outerCorner = CornerRadius(
+                                                    thicknessPx / 2,
+                                                    thicknessPx / 2
+                                                )
+                                                val bufferedTrackPath = Path().apply {
+                                                    addRoundRect(
+                                                        RoundRect(
+                                                            rect = Rect(
+                                                                offset = Offset(
+                                                                    startX,
+                                                                    center.y - thicknessPx / 2
+                                                                ),
+                                                                size = Size(endX - startX, thicknessPx)
+                                                            ),
+                                                            topLeft = innerCorner,
+                                                            bottomLeft = innerCorner,
+                                                            topRight = outerCorner,
+                                                            bottomRight = outerCorner
+                                                        )
                                                     )
+                                                }
+                                                drawPath(
+                                                    path = bufferedTrackPath,
+                                                    color = color
                                                 )
                                             }
                                         }

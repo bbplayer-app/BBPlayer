@@ -3,7 +3,8 @@
 	"private": true,
 	"workspaces": [
 		"apps/*",
-		"packages/*"
+		"packages/*",
+		"packages/*/example"
 	],
 	"scripts": {
 		"check:deps": "syncpack list-mismatches",

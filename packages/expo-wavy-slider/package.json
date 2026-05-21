@@ -1,5 +1,5 @@
 {
-	"name": "@bbplayer/wavy-slider",
+	"name": "expo-wavy-slider",
 	"version": "0.3.0",
 	"description": "Expo native Android wrapper for the WavySlider Jetpack Compose component.",
 	"keywords": [
@@ -8,25 +8,28 @@
 		"react-native",
 		"wavy-slider"
 	],
-	"homepage": "https://github.com/bbplayer-app/bbplayer/tree/dev/packages/expo-wavy-slider",
+	"homepage": "https://github.com/roitium/expo-wavy-slider",
 	"bugs": {
-		"url": "https://github.com/bbplayer-app/bbplayer/issues"
+		"url": "https://github.com/roitium/expo-wavy-slider/issues"
 	},
 	"license": "MIT",
 	"author": "Roitium <65794453+roitium@users.noreply.github.com> (https://github.com/roitium)",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/bbplayer-app/bbplayer.git",
+		"url": "https://github.com/roitium/expo-wavy-slider.git",
 		"directory": "packages/expo-wavy-slider"
 	},
 	"files": [
 		"build",
 		"src",
-		"android",
-		"ios",
+		"android/src",
+		"android/build.gradle",
 		"expo-module.config.json"
 	],
-	"sideEffects": false,
+	"sideEffects": [
+		"src/worklets.fx.ts",
+		"build/worklets.fx.js"
+	],
 	"main": "src/index.ts",
 	"types": "src/index.ts",
 	"scripts": {
@@ -44,12 +47,14 @@
 		"expo-module-scripts": "^56.0.2",
 		"react": "19.2.3",
 		"react-native": "0.85.3",
+		"react-native-reanimated": "~4.3.1",
 		"react-native-worklets": "0.8.3"
 	},
 	"peerDependencies": {
-		"expo": "56.0.0-preview.13",
-		"react": "19.2.3",
-		"react-native": "0.85.3",
-		"react-native-worklets": "0.8.3"
+		"expo": "*",
+		"react": "*",
+		"react-native": "*",
+		"react-native-reanimated": ">=4.0.0",
+		"react-native-worklets": ">=0.4.0"
 	}
 }

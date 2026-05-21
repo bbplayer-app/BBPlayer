@@ -1,6 +1,6 @@
 import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
-import { WavySlider, useNativeState } from '@bbplayer/wavy-slider'
 import Color from 'color'
+import { WavySlider } from 'expo-wavy-slider'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
@@ -91,12 +91,6 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
-	const progressState = useNativeState(0)
-	const bufferedProgressState = useNativeState(0)
-	const waveHeightState = useNativeState(isPlaying ? 6 : 0)
-	const waveVelocityState = useNativeState(isPlaying ? 15 : 0)
-	const waveThicknessState = useNativeState(3)
-	const trackThicknessState = useNativeState(3)
 
 	const isScrubbing = useSharedValue(false)
 	const scrubPosition = useSharedValue(0)
@@ -114,12 +108,6 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		isPlayingShared.set(isPlaying)
 	}, [isPlaying, isPlayingShared])
 
-	const displayPosition = useDerivedValue(() => {
-		if (isScrubbing.value) return scrubPosition.value
-		if (isSeeking.value) return seekPosition.value
-		return position.value
-	})
-
 	const handleSeek = useCallback(
 		(time: number) => {
 			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
@@ -127,7 +115,8 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			void Orpheus.seekTo(time)
 
 			seekTimeoutRef.current = setTimeout(() => {
-				// 获取实际播放位置并同步，避免暂停状态下 position 未更新导致进度条回退
+				// Sync the actual native playback position to avoid a stale paused
+				// position snapping the progress bar backward.
 				void Orpheus.getPosition().then((actualPosition) => {
 					position.set(actualPosition)
 					isSeeking.set(false)
@@ -137,6 +126,12 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		},
 		[isSeeking, position],
 	)
+
+	const displayPosition = useDerivedValue(() => {
+		if (isScrubbing.value) return scrubPosition.value
+		if (isSeeking.value) return seekPosition.value
+		return position.value
+	})
 
 	useAnimatedReaction(
 		() => position.value,
@@ -181,67 +176,21 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		],
 	)
 
-	useAnimatedReaction(
-		() =>
-			[
-				animatedWaveHeight.value,
-				animatedWaveVelocity.value,
-				animatedWaveThickness.value,
-				animatedTrackThickness.value,
-			] as const,
-		([waveHeight, waveVelocity, waveThickness, trackThickness]) => {
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			waveHeightState.value = waveHeight
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			waveVelocityState.value = waveVelocity
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			waveThicknessState.value = waveThickness
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			trackThicknessState.value = trackThickness
-		},
-		[
-			animatedTrackThickness,
-			animatedWaveHeight,
-			animatedWaveThickness,
-			animatedWaveVelocity,
-			trackThicknessState,
-			waveHeightState,
-			waveThicknessState,
-			waveVelocityState,
-		],
-	)
+	const progressFraction = useDerivedValue(() => {
+		const dur = duration.value || 1
+		let pos = position.value
+		if (isScrubbing.value) {
+			pos = scrubPosition.value
+		} else if (isSeeking.value) {
+			pos = seekPosition.value
+		}
+		return Math.min(Math.max(pos / dur, 0), 1)
+	})
 
-	useAnimatedReaction(
-		() => {
-			const dur = duration.value || 1
-			let pos = position.value
-			if (isScrubbing.value) {
-				pos = scrubPosition.value
-			} else if (isSeeking.value) {
-				pos = seekPosition.value
-			}
-			return Math.min(Math.max(pos / dur, 0), 1)
-		},
-		(value) => {
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			progressState.value = value
-		},
-		[progressState],
-	)
-
-	console.log('rerender')
-
-	useAnimatedReaction(
-		() => {
-			const dur = duration.value || 1
-			return Math.min(Math.max(buffered.value / dur, 0), 1)
-		},
-		(value) => {
-			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
-			bufferedProgressState.value = value
-		},
-		[bufferedProgressState],
-	)
+	const bufferedFraction = useDerivedValue(() => {
+		const dur = duration.value || 1
+		return Math.min(Math.max(buffered.value / dur, 0), 1)
+	})
 
 	const handleValueChange = useCallback(
 		(value: number) => {
@@ -268,7 +217,6 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			seekPosition.set(targetTime)
 			isSeeking.set(true)
 			isScrubbing.set(false)
-
 			scheduleOnRN(handleSeek, targetTime)
 			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Gesture_End)
 			if (onInteraction) {
@@ -300,15 +248,15 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		<View style={styles.root}>
 			<WavySlider
 				style={styles.slider}
-				progress={progressState}
-				bufferedProgress={bufferedProgressState}
+				progress={progressFraction}
+				bufferedProgress={bufferedFraction}
 				colors={sliderColors}
 				waveLength={30}
-				waveVelocity={waveVelocityState}
+				waveVelocity={animatedWaveVelocity}
 				waveDirection='head'
-				waveHeight={waveHeightState}
-				waveThickness={waveThicknessState}
-				trackThickness={trackThicknessState}
+				waveHeight={animatedWaveHeight}
+				waveThickness={animatedWaveThickness}
+				trackThickness={animatedTrackThickness}
 				incremental={false}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}

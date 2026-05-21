@@ -4,6 +4,7 @@
 	"compilerOptions": {
 		"skipLibCheck": true,
 		"exactOptionalPropertyTypes": false,
+		"rootDir": "./src",
 		"outDir": "./build"
 	},
 	"include": ["./src"],

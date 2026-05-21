@@ -30,7 +30,7 @@ export type ObservableState<T> = SharedObject & {
 	 * useEffect(() => {
 	 *   state.onChange = (value) => {
 	 *     'worklet';
-	 *     console.log('changed to', value);
+	 *     // React to the native value change on the UI runtime.
 	 *   };
 	 *   return () => {
 	 *     state.onChange = null;

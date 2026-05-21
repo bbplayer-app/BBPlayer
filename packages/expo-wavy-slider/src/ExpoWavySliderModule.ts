@@ -1,5 +1,6 @@
 import { requireNativeModule } from 'expo'
 import { SharedObject } from 'expo-modules-core'
+import { Platform } from 'react-native'
 
 type NativeSharedObject = InstanceType<typeof SharedObject>
 
@@ -12,4 +13,17 @@ declare class ExpoWavySliderModule {
 	WorkletCallback: new (worklet: object) => NativeSharedObject
 }
 
-export default requireNativeModule<ExpoWavySliderModule>('ExpoWavySlider')
+const unsupportedPlatformModule = new Proxy(
+	{},
+	{
+		get() {
+			throw new Error(
+				'[expo-wavy-slider] WavySlider is only implemented on Android.',
+			)
+		},
+	},
+) as ExpoWavySliderModule
+
+export default Platform.OS === 'android'
+	? requireNativeModule<ExpoWavySliderModule>('ExpoWavySlider')
+	: unsupportedPlatformModule
