@@ -7,7 +7,6 @@ import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
-	ActivityIndicator,
 	Divider,
 	List,
 	Surface,
@@ -18,6 +17,7 @@ import {
 import type { MD3Theme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'

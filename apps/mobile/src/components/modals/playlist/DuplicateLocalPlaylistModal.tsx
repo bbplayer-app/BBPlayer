@@ -1,11 +1,18 @@
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Dialog, TextInput } from 'react-native-paper'
+import { Dialog } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useDuplicatePlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 
 export default function DuplicateLocalPlaylistModal({
 	sourcePlaylistId,
@@ -17,6 +24,7 @@ export default function DuplicateLocalPlaylistModal({
 	const [duplicatePlaylistName, setDuplicatePlaylistName] = useState(
 		`${rawName}-副本`,
 	)
+	const duplicatePlaylistNameState = useTextFieldState(duplicatePlaylistName)
 	const { mutate: duplicatePlaylist } = useDuplicatePlaylist()
 	const close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
@@ -53,15 +61,21 @@ export default function DuplicateLocalPlaylistModal({
 		<>
 			<Dialog.Title>复制播放列表</Dialog.Title>
 			<Dialog.Content>
-				<TextInput
-					label='新播放列表名称'
-					value={duplicatePlaylistName}
-					onChangeText={setDuplicatePlaylistName}
-					mode='outlined'
-					numberOfLines={1}
+				<Host
+					matchContents={{ vertical: true }}
 					style={styles.textInput}
-					textAlignVertical='top'
-				/>
+				>
+					<OutlinedTextField
+						value={duplicatePlaylistNameState}
+						onValueChange={setDuplicatePlaylistName}
+						singleLine
+						modifiers={[fillMaxWidth()]}
+					>
+						<OutlinedTextField.Label>
+							<ComposeText>新播放列表名称</ComposeText>
+						</OutlinedTextField.Label>
+					</OutlinedTextField>
+				</Host>
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => close('DuplicateLocalPlaylist')}>取消</Button>

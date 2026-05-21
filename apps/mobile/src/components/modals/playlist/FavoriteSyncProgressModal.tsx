@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, ProgressBar, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
@@ -99,7 +100,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 					>
 						{progress?.message ?? '准备中...'}
 					</Text>
-					<ProgressBar
+					<LinearProgressIndicator
 						progress={localProgress}
 						indeterminate={localProgress === undefined}
 						style={styles.progressBar}

@@ -1,7 +1,14 @@
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { StyleSheet } from 'react-native'
-import { Dialog, HelperText, Text, TextInput } from 'react-native-paper'
+import { Dialog, HelperText, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import useTextFieldState from '@/hooks/useTextFieldState'
 
 interface Props {
 	tel: string
@@ -24,6 +31,8 @@ export default function InputCodeStep({
 	onPrev,
 	onLogin,
 }: Props) {
+	const smsCodeState = useTextFieldState(smsCode)
+
 	return (
 		<>
 			<Dialog.Title>输入验证码</Dialog.Title>
@@ -34,19 +43,26 @@ export default function InputCodeStep({
 				>
 					验证码已发送至 +86 {tel}
 				</Text>
-				<TextInput
-					label='短信验证码'
-					value={smsCode}
-					onChangeText={(v) => {
-						setSmsCode(v)
-						setCodeError('')
-					}}
-					mode='outlined'
-					keyboardType='number-pad'
-					autoComplete='one-time-code'
+				<Host
+					matchContents={{ vertical: true }}
 					style={styles.input}
-					error={!!codeError}
-				/>
+				>
+					<OutlinedTextField
+						value={smsCodeState}
+						onValueChange={(v) => {
+							setSmsCode(v)
+							setCodeError('')
+						}}
+						singleLine
+						isError={!!codeError}
+						keyboardOptions={{ keyboardType: 'number' }}
+						modifiers={[fillMaxWidth()]}
+					>
+						<OutlinedTextField.Label>
+							<ComposeText>短信验证码</ComposeText>
+						</OutlinedTextField.Label>
+					</OutlinedTextField>
+				</Host>
 				{codeError ? (
 					<HelperText
 						type='error'

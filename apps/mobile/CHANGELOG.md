@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [Unreleased]
+
+### Changed
+
+- 移除 NativeSegmentedButtons 封装组件，直接使用 SegmentedControl
+
 ## [2.4.7] - 2026-05-20
 
 ### Changed

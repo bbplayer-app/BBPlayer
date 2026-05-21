@@ -1,3 +1,4 @@
+import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Asset } from 'expo-asset'
 import { Image } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
@@ -7,7 +8,6 @@ import SquircleView from 'react-native-fast-squircle'
 import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-import NativeSegmentedButtons from '@/components/common/NativeSegmentedButtons'
 /* oxlint-disable @typescript-eslint/no-unsafe-argument */
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import toast from '@/utils/toast'
@@ -85,19 +85,13 @@ export default function DonationQRModal({
 			<Dialog.Title style={{ textAlign: 'center' }}>{title}</Dialog.Title>
 			<Dialog.Content>
 				<View style={styles.tabContainer}>
-					<NativeSegmentedButtons
-						value={currentType}
-						onValueChange={(value) => setCurrentType(value)}
-						buttons={[
-							{
-								value: 'wechat',
-								label: '微信支付',
-							},
-							{
-								value: 'alipay',
-								label: '支付宝',
-							},
-						]}
+					<SegmentedControl
+						selectedIndex={currentType === 'wechat' ? 0 : 1}
+						onChange={(event) => {
+							const selectedIndex = event.nativeEvent.selectedSegmentIndex
+							setCurrentType(selectedIndex === 0 ? 'wechat' : 'alipay')
+						}}
+						values={['微信支付', '支付宝']}
 					/>
 				</View>
 				<View style={styles.imageContainer}>

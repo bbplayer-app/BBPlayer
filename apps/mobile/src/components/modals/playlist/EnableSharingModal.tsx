@@ -1,9 +1,16 @@
-import Icon from '@react-native-vector-icons/material-design-icons'
+import {
+	Host,
+	Icon,
+	IconButton,
+	OutlinedTextField,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
+import WarningIcon from '@react-native-vector-icons/material-design-icons'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import {
@@ -13,9 +20,11 @@ import {
 import { useEditorInviteCode } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import toast from '@/utils/toast'
 
 const SHARE_BASE_URL = 'https://bbplayer.roitium.com/share/playlist'
+const copyIcon = require('@expo/material-symbols/content_copy.xml')
 
 export default function EnableSharingModal({
 	playlistId,
@@ -47,6 +56,9 @@ export default function EnableSharingModal({
 	const editorUrl = shareId
 		? `${subscribeUrl}${inviteCode ? `&inviteCode=${encodeURIComponent(inviteCode)}` : ''}`
 		: ''
+	const subscribeUrlState = useTextFieldState(subscribeUrl)
+	const editorUrlState = useTextFieldState(editorUrl)
+	const inviteCodeState = useTextFieldState(inviteCode ?? '')
 
 	useEffect(() => {
 		if (fetchedInviteCode) setInviteCode(fetchedInviteCode)
@@ -117,19 +129,28 @@ export default function EnableSharingModal({
 						</Text>
 						<View style={styles.linkSection}>
 							<Text variant='bodySmall'>订阅链接（只读）</Text>
-							<TextInput
-								value={subscribeUrl}
-								editable={false}
-								mode='outlined'
-								dense
-								style={styles.linkInput}
-								right={
-									<TextInput.Icon
-										icon='content-copy'
-										onPress={handleCopySubscribe}
-									/>
-								}
-							/>
+							<Host
+								matchContents={{ vertical: true }}
+								style={styles.linkHost}
+							>
+								<OutlinedTextField
+									value={subscribeUrlState}
+									readOnly
+									singleLine
+									textStyle={styles.linkText}
+									modifiers={[fillMaxWidth()]}
+								>
+									<OutlinedTextField.TrailingIcon>
+										<IconButton onClick={handleCopySubscribe}>
+											<Icon
+												source={copyIcon}
+												size={20}
+												contentDescription='复制订阅链接'
+											/>
+										</IconButton>
+									</OutlinedTextField.TrailingIcon>
+								</OutlinedTextField>
+							</Host>
 						</View>
 						{(!shareRole || shareRole === 'owner') && (
 							<View style={styles.inviteSection}>
@@ -139,19 +160,28 @@ export default function EnableSharingModal({
 								{inviteCode && (
 									<View style={styles.linkSection}>
 										<Text variant='bodySmall'>协作编辑邀请链接</Text>
-										<TextInput
-											value={editorUrl}
-											editable={false}
-											mode='outlined'
-											dense
-											style={styles.linkInput}
-											right={
-												<TextInput.Icon
-													icon='content-copy'
-													onPress={handleCopyEditorLink}
-												/>
-											}
-										/>
+										<Host
+											matchContents={{ vertical: true }}
+											style={styles.linkHost}
+										>
+											<OutlinedTextField
+												value={editorUrlState}
+												readOnly
+												singleLine
+												textStyle={styles.linkText}
+												modifiers={[fillMaxWidth()]}
+											>
+												<OutlinedTextField.TrailingIcon>
+													<IconButton onClick={handleCopyEditorLink}>
+														<Icon
+															source={copyIcon}
+															size={20}
+															contentDescription='复制协作编辑邀请链接'
+														/>
+													</IconButton>
+												</OutlinedTextField.TrailingIcon>
+											</OutlinedTextField>
+										</Host>
 									</View>
 								)}
 								{!inviteCode && inviteFetching && (
@@ -166,7 +196,6 @@ export default function EnableSharingModal({
 									onPress={handleRotateInvite}
 									loading={isRotating}
 									disabled={isRotating || inviteFetching}
-									mode='outlined'
 								>
 									{inviteCode ? '重置协作编辑邀请链接' : '生成协作编辑邀请链接'}
 								</Button>
@@ -194,7 +223,7 @@ export default function EnableSharingModal({
 				<View style={styles.body}>
 					{!hasToken && (
 						<View style={styles.warningBox}>
-							<Icon
+							<WarningIcon
 								name='alert-circle-outline'
 								size={16}
 								style={styles.warningIcon}
@@ -207,22 +236,34 @@ export default function EnableSharingModal({
 							</Text>
 						</View>
 					)}
+					{inviteCode && (
+						<View style={styles.linkSection}>
+							<Text variant='bodySmall'>邀请码</Text>
+							<Host
+								matchContents={{ vertical: true }}
+								style={styles.linkHost}
+							>
+								<OutlinedTextField
+									value={inviteCodeState}
+									readOnly
+									singleLine
+									textStyle={styles.linkText}
+									modifiers={[fillMaxWidth()]}
+								>
+									<OutlinedTextField.TrailingIcon>
+										<IconButton onClick={handleCopyInvite}>
+											<Icon
+												source={copyIcon}
+												size={20}
+												contentDescription='复制邀请码'
+											/>
+										</IconButton>
+									</OutlinedTextField.TrailingIcon>
+								</OutlinedTextField>
+							</Host>
+						</View>
+					)}
 					<Text variant='bodyMedium'>
-						{inviteCode && (
-							<TextInput
-								value={inviteCode}
-								editable={false}
-								mode='outlined'
-								dense
-								style={styles.linkInput}
-								right={
-									<TextInput.Icon
-										icon='content-copy'
-										onPress={handleCopyInvite}
-									/>
-								}
-							/>
-						)}
 						共享后，其他用户可通过链接订阅此歌单。
 					</Text>
 					<Text
@@ -258,14 +299,14 @@ const styles = StyleSheet.create({
 	body: {
 		gap: 12,
 	},
-	linkRow: {
-		marginTop: 4,
-	},
 	linkSection: {
 		marginTop: 4,
 		gap: 4,
 	},
-	linkInput: {
+	linkHost: {
+		width: '100%',
+	},
+	linkText: {
 		fontSize: 12,
 	},
 	inviteSection: {

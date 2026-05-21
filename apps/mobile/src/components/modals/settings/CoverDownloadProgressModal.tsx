@@ -1,9 +1,10 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { memo, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, ProgressBar, Text } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
@@ -99,7 +100,7 @@ const CoverDownloadProgressModal = memo(function CoverDownloadProgressModal() {
 					>
 						{progress.message}
 					</Text>
-					<ProgressBar
+					<LinearProgressIndicator
 						progress={isFinished ? 1 : progressValue}
 						indeterminate={!isFinished && progressValue === undefined}
 						style={styles.progressBar}

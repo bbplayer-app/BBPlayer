@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { LibraryTabSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'

@@ -1,13 +1,20 @@
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Dialog, Divider, Text, TextInput } from 'react-native-paper'
+import { Dialog, Divider, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { userQueryKeys } from '@/hooks/queries/bilibili/user'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -25,6 +32,7 @@ export default function CookieLoginModal() {
 	}, [cookieObjectFromStore])
 
 	const [inputCookie, setInputCookie] = useState(displayCookieString)
+	const inputCookieState = useTextFieldState(inputCookie)
 	const [isLoading, setIsLoading] = useState(false)
 
 	const handleConfirm = async () => {
@@ -75,18 +83,23 @@ export default function CookieLoginModal() {
 		<>
 			<Dialog.Title>设置 Bilibili Cookie</Dialog.Title>
 			<Dialog.Content>
-				<TextInput
-					label='Cookie'
+				<Host
 					key={displayCookieString}
-					value={inputCookie}
-					onChangeText={setInputCookie}
-					mode='outlined'
-					numberOfLines={5}
-					multiline
+					matchContents={{ vertical: true }}
 					style={styles.cookieInput}
-					textAlignVertical='top'
-					testID='cookie-input'
-				/>
+				>
+					<OutlinedTextField
+						value={inputCookieState}
+						onValueChange={setInputCookie}
+						minLines={5}
+						maxLines={5}
+						modifiers={[fillMaxWidth(), testID('cookie-input')]}
+					>
+						<OutlinedTextField.Label>
+							<ComposeText>Cookie</ComposeText>
+						</OutlinedTextField.Label>
+					</OutlinedTextField>
+				</Host>
 				<Text
 					variant='bodySmall'
 					style={styles.cookieDescription}

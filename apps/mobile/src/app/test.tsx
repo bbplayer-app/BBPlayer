@@ -1,4 +1,10 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import dayjs from 'dayjs'
 import { asc, sql } from 'drizzle-orm'
@@ -7,7 +13,7 @@ import { Directory, File, Paths } from 'expo-file-system'
 import * as Updates from 'expo-updates'
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Dialog, Portal, Text, TextInput, useTheme } from 'react-native-paper'
+import { Dialog, Portal, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
@@ -17,6 +23,7 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import db, { expoDb } from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
@@ -38,6 +45,8 @@ export default function TestPage() {
 	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
 		useState(false)
 	const [queryDate, setQueryDate] = useState('')
+	const updateChannelState = useTextFieldState(updateChannel)
+	const queryDateState = useTextFieldState(queryDate)
 
 	const testCheckUpdate = async () => {
 		setLoading(true)
@@ -336,7 +345,6 @@ export default function TestPage() {
 						同步外部歌单
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={testPullSharedPlaylist}
 						loading={loading}
 						style={styles.button}
@@ -344,7 +352,6 @@ export default function TestPage() {
 						测试共享歌单增量拉取
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={() => setUpdateChannelModalVisible(true)}
 						loading={loading}
 						style={styles.button}
@@ -352,7 +359,6 @@ export default function TestPage() {
 						更改热更新渠道
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={testCheckUpdate}
 						loading={loading}
 						style={styles.button}
@@ -360,7 +366,6 @@ export default function TestPage() {
 						查询是否有可热更新的包
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={testUpdatePackage}
 						loading={loading}
 						style={styles.button}
@@ -368,7 +373,6 @@ export default function TestPage() {
 						拉取热更新并重载
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={handleDeleteAllDownloadRecords}
 						loading={loading}
 						style={styles.button}
@@ -376,7 +380,6 @@ export default function TestPage() {
 						清空下载缓存
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={clearAllLyrcis}
 						loading={loading}
 						style={styles.button}
@@ -384,7 +387,6 @@ export default function TestPage() {
 						清空所有歌词缓存
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={() => Orpheus.clear()}
 						loading={loading}
 						style={styles.button}
@@ -392,7 +394,6 @@ export default function TestPage() {
 						清空播放器队列
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={dumpSyncQueue}
 						loading={loading}
 						style={styles.button}
@@ -400,7 +401,6 @@ export default function TestPage() {
 						输出 playlist_sync_queue
 					</Button>
 					<Button
-						mode='outlined'
 						onPress={openSyncFailuresSheet}
 						style={styles.button}
 					>
@@ -424,14 +424,21 @@ export default function TestPage() {
 					</Button>
 
 					<View style={{ marginTop: 16 }}>
-						<TextInput
-							mode='outlined'
-							label='查询日期 (YYYY/MM/DD)'
-							value={queryDate}
-							onChangeText={setQueryDate}
-							placeholder='例如 2024/03/22'
-							style={{ marginBottom: 8 }}
-						/>
+						<Host
+							matchContents={{ vertical: true }}
+							style={{ marginBottom: 8, width: '100%' }}
+						>
+							<OutlinedTextField
+								value={queryDateState}
+								onValueChange={setQueryDate}
+								singleLine
+								modifiers={[fillMaxWidth()]}
+							>
+								<OutlinedTextField.Placeholder>
+									<ComposeText>例如 2024/03/22</ComposeText>
+								</OutlinedTextField.Placeholder>
+							</OutlinedTextField>
+						</Host>
 						<Button
 							mode='contained'
 							onPress={handleQueryPlayHistoryByDate}
@@ -464,12 +471,21 @@ export default function TestPage() {
 							（注意：所设置的 channel
 							是持久化的，如果需要恢复请点击下面的按钮）
 						</Text>
-						<TextInput
-							style={{ marginTop: 16 }}
-							onChangeText={setUpdateChannel}
-							mode='outlined'
-							label='更新渠道'
-						/>
+						<Host
+							matchContents={{ vertical: true }}
+							style={{ marginTop: 16, width: '100%' }}
+						>
+							<OutlinedTextField
+								value={updateChannelState}
+								onValueChange={setUpdateChannel}
+								singleLine
+								modifiers={[fillMaxWidth()]}
+							>
+								<OutlinedTextField.Label>
+									<ComposeText>更新渠道</ComposeText>
+								</OutlinedTextField.Label>
+							</OutlinedTextField>
+						</Host>
 					</Dialog.Content>
 					<Dialog.Actions>
 						<Button onPress={() => setUpdateChannelModalVisible(false)}>

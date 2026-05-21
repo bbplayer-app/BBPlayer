@@ -1,10 +1,18 @@
+import {
+	Column,
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Dialog, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 
@@ -35,6 +43,8 @@ function parseShareLink(input: string): {
 export default function SubscribeToSharedPlaylistModal() {
 	const [input, setInput] = useState('')
 	const [inviteCode, setInviteCode] = useState('')
+	const inputState = useTextFieldState(input)
+	const inviteCodeState = useTextFieldState(inviteCode)
 	const close = useModalStore((state) => state.close)
 	const router = useRouter()
 
@@ -75,28 +85,50 @@ export default function SubscribeToSharedPlaylistModal() {
 				>
 					粘贴对方分享的链接或歌单 ID（UUID 格式）即可订阅。
 				</Text>
-				<TextInput
-					label='分享链接 / 歌单 ID'
-					value={input}
-					onChangeText={handleChangeInput}
-					mode='outlined'
-					autoCapitalize='none'
-					autoCorrect={false}
-					style={styles.input}
-					error={input.trim().length > 0 && !isValidId}
-				/>
-				<TextInput
-					label='编辑者邀请码（可选）'
-					value={inviteCode}
-					onChangeText={setInviteCode}
-					mode='outlined'
-					autoCapitalize='characters'
-					autoCorrect={false}
-					style={styles.input}
-					placeholder={
-						parsed.inviteCode ? `已从链接填充：${parsed.inviteCode}` : ''
-					}
-				/>
+				<Host
+					matchContents={{ vertical: true }}
+					style={styles.formHost}
+				>
+					<Column
+						modifiers={[fillMaxWidth()]}
+						verticalArrangement={{ spacedBy: 8 }}
+					>
+						<OutlinedTextField
+							value={inputState}
+							onValueChange={handleChangeInput}
+							singleLine
+							isError={input.trim().length > 0 && !isValidId}
+							keyboardOptions={{
+								capitalization: 'none',
+								autoCorrectEnabled: false,
+							}}
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>分享链接 / 歌单 ID</ComposeText>
+							</OutlinedTextField.Label>
+						</OutlinedTextField>
+						<OutlinedTextField
+							value={inviteCodeState}
+							onValueChange={setInviteCode}
+							singleLine
+							keyboardOptions={{
+								capitalization: 'characters',
+								autoCorrectEnabled: false,
+							}}
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>编辑者邀请码（可选）</ComposeText>
+							</OutlinedTextField.Label>
+							{parsed.inviteCode ? (
+								<OutlinedTextField.SupportingText>
+									<ComposeText>已从链接填充：{parsed.inviteCode}</ComposeText>
+								</OutlinedTextField.SupportingText>
+							) : null}
+						</OutlinedTextField>
+					</Column>
+				</Host>
 				{input.trim().length > 0 && !isValidId && (
 					<Text
 						variant='bodySmall'
@@ -133,7 +165,8 @@ const styles = StyleSheet.create({
 		opacity: 0.7,
 		marginBottom: 4,
 	},
-	input: {
+	formHost: {
+		width: '100%',
 		marginTop: 4,
 	},
 	errorText: {

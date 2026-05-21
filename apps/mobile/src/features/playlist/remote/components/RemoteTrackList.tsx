@@ -7,9 +7,10 @@ import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Divider, Text, useTheme } from 'react-native-paper'
+import { Divider, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
 import type {

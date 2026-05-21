@@ -1,22 +1,23 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { RefObject } from 'react'
 import { memo, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import {
-	Divider,
-	HelperText,
-	ProgressBar,
-	Text,
-	TextInput,
-	useTheme,
-} from 'react-native-paper'
+import { Divider, HelperText, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { toastAndLogError } from '@/utils/error-handling'
 
 type Stage = 'config' | 'exporting' | 'completed' | 'error'
@@ -69,6 +70,7 @@ const ExportDownloadsProgressModal = memo(
 		const insets = useSafeAreaInsets()
 
 		const [filenamePattern, setFilenamePattern] = useState('{name}')
+		const filenamePatternState = useTextFieldState(filenamePattern)
 		const [embedLyrics, setEmbedLyrics] = useState(false)
 		const [convertToLrc, setConvertToLrc] = useState(false)
 		const [cropCoverArt, setCropCoverArt] = useState(false)
@@ -240,16 +242,25 @@ const ExportDownloadsProgressModal = memo(
 								>
 									文件名模板
 								</Text>
-								<TextInput
-									label='文件名模板'
-									value={filenamePattern}
-									onChangeText={setFilenamePattern}
-									mode='outlined'
-									placeholder='{name}'
-									autoCapitalize='none'
-									autoCorrect={false}
-									dense
-								/>
+								<Host
+									matchContents={{ vertical: true }}
+									style={styles.inputHost}
+								>
+									<OutlinedTextField
+										value={filenamePatternState}
+										onValueChange={setFilenamePattern}
+										singleLine
+										keyboardOptions={{
+											capitalization: 'none',
+											autoCorrectEnabled: false,
+										}}
+										modifiers={[fillMaxWidth()]}
+									>
+										<OutlinedTextField.Placeholder>
+											<ComposeText>{'{name}'}</ComposeText>
+										</OutlinedTextField.Placeholder>
+									</OutlinedTextField>
+								</Host>
 								<HelperText
 									type={
 										!filenamePattern.trim() ||
@@ -382,7 +393,7 @@ const ExportDownloadsProgressModal = memo(
 									>
 										{progress.message}
 									</Text>
-									<ProgressBar
+									<LinearProgressIndicator
 										progress={isFinished ? 1 : progressValue}
 										indeterminate={!isFinished && progressValue === undefined}
 										style={styles.progressBar}
@@ -425,6 +436,9 @@ const styles = StyleSheet.create({
 	sectionTitle: {
 		marginBottom: 6,
 		marginTop: 4,
+	},
+	inputHost: {
+		width: '100%',
 	},
 	helperText: {
 		marginTop: 0,

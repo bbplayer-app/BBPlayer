@@ -1,11 +1,18 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { width } from '@expo/ui/jetpack-compose/modifiers'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useSleepTimerEndTime } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { toastAndLogError } from '@/utils/error-handling'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import toast from '@/utils/toast'
@@ -18,6 +25,7 @@ const SleepTimerModal = () => {
 	const [remainingTime, setRemainingTime] = useState<number | null>(null)
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customMinutes, setCustomMinutes] = useState('')
+	const customMinutesState = useTextFieldState(customMinutes)
 
 	useEffect(() => {
 		if (sleepTimerEndAt) {
@@ -87,15 +95,23 @@ const SleepTimerModal = () => {
 				</View>
 				{customInputVisible ? (
 					<View style={styles.customInputContainer}>
-						<TextInput
-							label='分钟'
-							value={customMinutes}
-							onChangeText={setCustomMinutes}
-							keyboardType='numeric'
-							autoFocus
-							mode='outlined'
+						<Host
+							matchContents
 							style={styles.customInput}
-						/>
+						>
+							<OutlinedTextField
+								value={customMinutesState}
+								onValueChange={setCustomMinutes}
+								autoFocus
+								singleLine
+								keyboardOptions={{ keyboardType: 'number' }}
+								modifiers={[width(120)]}
+							>
+								<OutlinedTextField.Label>
+									<ComposeText>分钟</ComposeText>
+								</OutlinedTextField.Label>
+							</OutlinedTextField>
+						</Host>
 						<Button
 							mode='contained'
 							onPress={async () => {

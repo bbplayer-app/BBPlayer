@@ -1,16 +1,24 @@
+import { SegmentedControl } from '@expo/ui/community/segmented-control'
+import {
+	Column,
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Avatar, Text, TextInput, useTheme } from 'react-native-paper'
+import { Appbar, Avatar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import NativeSegmentedButtons from '@/components/common/NativeSegmentedButtons'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { api } from '@/lib/api/bbplayer/client'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
@@ -40,6 +48,10 @@ export default function AccountSettingsPage() {
 	const [password, setPassword] = useState('')
 	const [name, setName] = useState('')
 	const [face, setFace] = useState('')
+	const usernameState = useTextFieldState(username)
+	const passwordState = useTextFieldState(password)
+	const nameState = useTextFieldState(name)
+	const faceState = useTextFieldState(face)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [isRefreshing, setIsRefreshing] = useState(false)
 	const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -249,19 +261,37 @@ export default function AccountSettingsPage() {
 								<Text variant='bodySmall'>@{account.username}</Text>
 							</View>
 						</View>
-						<TextInput
-							label='昵称'
-							value={name}
-							mode='outlined'
-							onChangeText={setName}
-						/>
-						<TextInput
-							label='头像 URL'
-							value={face}
-							mode='outlined'
-							onChangeText={setFace}
-							autoCapitalize='none'
-						/>
+						<Host
+							matchContents={{ vertical: true }}
+							style={styles.formHost}
+						>
+							<Column
+								modifiers={[fillMaxWidth()]}
+								verticalArrangement={{ spacedBy: 8 }}
+							>
+								<OutlinedTextField
+									value={nameState}
+									onValueChange={setName}
+									singleLine
+									modifiers={[fillMaxWidth()]}
+								>
+									<OutlinedTextField.Label>
+										<ComposeText>昵称</ComposeText>
+									</OutlinedTextField.Label>
+								</OutlinedTextField>
+								<OutlinedTextField
+									value={faceState}
+									onValueChange={setFace}
+									singleLine
+									keyboardOptions={{ capitalization: 'none' }}
+									modifiers={[fillMaxWidth()]}
+								>
+									<OutlinedTextField.Label>
+										<ComposeText>头像 URL</ComposeText>
+									</OutlinedTextField.Label>
+								</OutlinedTextField>
+							</Column>
+						</Host>
 						<Button
 							mode='contained'
 							onPress={handleSaveProfile}
@@ -271,7 +301,6 @@ export default function AccountSettingsPage() {
 							保存资料
 						</Button>
 						<Button
-							mode='outlined'
 							onPress={() => {
 								clearAccount()
 								toast.success('已退出 BBPlayer 账号')
@@ -291,52 +320,79 @@ export default function AccountSettingsPage() {
 								登录后可以开启歌单共享、邀请他人协同编辑，并在新设备上自动恢复你的云端共享歌单。
 							</Text>
 						</View>
-						<NativeSegmentedButtons
-							value={mode}
-							onValueChange={setMode}
-							buttons={[
-								{ value: 'login', label: '登录' },
-								{ value: 'register', label: '注册' },
-							]}
+						<SegmentedControl
+							selectedIndex={mode === 'login' ? 0 : 1}
+							onChange={(event) => {
+								const selectedIndex = event.nativeEvent.selectedSegmentIndex
+								setMode(selectedIndex === 0 ? 'login' : 'register')
+							}}
+							values={['登录', '注册']}
 						/>
-						<TextInput
-							label='用户名'
-							value={username}
-							mode='outlined'
-							onChangeText={setUsername}
-							autoCapitalize='none'
-						/>
-						<TextInput
-							label='密码'
-							value={password}
-							mode='outlined'
-							onChangeText={setPassword}
-							secureTextEntry
-						/>
-						{mode === 'register' && (
-							<>
-								<TextInput
-									label='昵称'
-									value={name}
-									mode='outlined'
-									onChangeText={setName}
-								/>
-								<TextInput
-									label='头像 URL'
-									value={face}
-									mode='outlined'
-									onChangeText={setFace}
-									autoCapitalize='none'
-								/>
-								<Button
-									mode='outlined'
-									onPress={fillProfileFromBilibili}
-									loading={isFillingProfile}
-									disabled={isSubmitting || isFillingProfile}
+						<Host
+							matchContents={{ vertical: true }}
+							style={styles.formHost}
+						>
+							<Column
+								modifiers={[fillMaxWidth()]}
+								verticalArrangement={{ spacedBy: 8 }}
+							>
+								<OutlinedTextField
+									value={usernameState}
+									onValueChange={setUsername}
+									singleLine
+									keyboardOptions={{ capitalization: 'none' }}
+									modifiers={[fillMaxWidth()]}
 								>
-									使用 Bilibili 资料填充
-								</Button>
-							</>
+									<OutlinedTextField.Label>
+										<ComposeText>用户名</ComposeText>
+									</OutlinedTextField.Label>
+								</OutlinedTextField>
+								<OutlinedTextField
+									value={passwordState}
+									onValueChange={setPassword}
+									singleLine
+									visualTransformation='password'
+									modifiers={[fillMaxWidth()]}
+								>
+									<OutlinedTextField.Label>
+										<ComposeText>密码</ComposeText>
+									</OutlinedTextField.Label>
+								</OutlinedTextField>
+								{mode === 'register' && (
+									<>
+										<OutlinedTextField
+											value={nameState}
+											onValueChange={setName}
+											singleLine
+											modifiers={[fillMaxWidth()]}
+										>
+											<OutlinedTextField.Label>
+												<ComposeText>昵称</ComposeText>
+											</OutlinedTextField.Label>
+										</OutlinedTextField>
+										<OutlinedTextField
+											value={faceState}
+											onValueChange={setFace}
+											singleLine
+											keyboardOptions={{ capitalization: 'none' }}
+											modifiers={[fillMaxWidth()]}
+										>
+											<OutlinedTextField.Label>
+												<ComposeText>头像 URL</ComposeText>
+											</OutlinedTextField.Label>
+										</OutlinedTextField>
+									</>
+								)}
+							</Column>
+						</Host>
+						{mode === 'register' && (
+							<Button
+								onPress={fillProfileFromBilibili}
+								loading={isFillingProfile}
+								disabled={isSubmitting || isFillingProfile}
+							>
+								使用 Bilibili 资料填充
+							</Button>
 						)}
 						<Button
 							mode='contained'
@@ -381,6 +437,9 @@ const styles = StyleSheet.create({
 	descriptionBlock: {
 		gap: 6,
 		marginBottom: 4,
+	},
+	formHost: {
+		width: '100%',
 	},
 	profileHeader: {
 		flexDirection: 'row',
