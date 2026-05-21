@@ -65,8 +65,10 @@ function registerSharedObjectSerializer(): void {
 }
 
 /*
-  我依然搞不明白为什么 _WORKLET_RUNTIME 是在 reanimated 中设置的。按道理 reanimated 应该和 worklets 解耦了啊。
-  而 installOnUIRuntime 依赖于 _WORKLET_RUNTIME 去获取 runtime pointer，间接就依赖了 reanimated...神经
+  `installOnUIRuntime()` currently depends on the runtime pointer exposed via
+  `_WORKLET_RUNTIME`. In practice that value is installed by Reanimated's
+  runtime decorator, so this package requires Reanimated even though the direct
+  worklet APIs come from `react-native-worklets`.
   https://github.com/software-mansion/react-native-reanimated/blob/cfb12d0f747ad189d2ff7717b0774de8ec6f9897/packages/react-native-reanimated/Common/cpp/reanimated/RuntimeDecorators/RNRuntimeDecorator.cpp#L20
 */
 try {

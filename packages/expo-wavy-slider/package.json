@@ -1,7 +1,7 @@
 {
 	"name": "@bbplayer/wavy-slider",
 	"version": "0.3.0",
-	"description": "A module to extract theme colors using expo ImageRef",
+	"description": "Expo native Android wrapper for the WavySlider Jetpack Compose component.",
 	"keywords": [
 		"ExpoWavySlider",
 		"expo",

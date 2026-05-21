@@ -3,199 +3,214 @@ import type { ColorValue, ViewProps } from 'react-native'
 import type { ObservableState } from './hooks/useNativeState'
 
 /**
- * WavySlider 的颜色配置。
+ * Color configuration for the Android WavySlider.
  *
- * 未传入的颜色会交给 Compose Material3 Slider 的默认颜色系统处理。
+ * Any omitted color falls back to the Compose Material3 Slider defaults.
  */
 export type WavySliderColors = {
 	/**
-	 * 手柄颜色。
+	 * Thumb color.
 	 */
 	thumbColor?: ColorValue
 	/**
-	 * 当前进度区间的轨道颜色，也就是从最小值到当前 value 的波浪部分。
+	 * Track color for the selected range, from `min` to the current value.
 	 */
 	activeTrackColor?: ColorValue
 	/**
-	 * 未播放/未选中区间的轨道颜色，也就是当前 value 到最大值的背景轨道。
+	 * Track color for the unselected range, from the current value to `max`.
 	 */
 	inactiveTrackColor?: ColorValue
 	/**
-	 * active tick 的颜色。当前组件暂未暴露 steps，但保留该字段以对齐 Material Slider 颜色模型。
+	 * Active tick color. Steps are not exposed yet, but this keeps the color
+	 * model aligned with Material Slider.
 	 */
 	activeTickColor?: ColorValue
 	/**
-	 * inactive tick 的颜色。当前组件暂未暴露 steps，但保留该字段以对齐 Material Slider 颜色模型。
+	 * Inactive tick color. Steps are not exposed yet, but this keeps the color
+	 * model aligned with Material Slider.
 	 */
 	inactiveTickColor?: ColorValue
 	/**
-	 * 缓冲/加载进度的轨道颜色。
+	 * Track color for buffered or loaded progress.
 	 *
-	 * 该颜色只会绘制在当前 value 到 bufferedValue 之间，不会覆盖当前进度左侧的 active wave。
+	 * This is drawn only between the current value and `bufferedValue`; it does
+	 * not cover the active wave before the current value.
 	 */
 	bufferedTrackColor?: ColorValue
 }
 
 /**
- * 波浪移动方向。
+ * Direction used by the animated wave.
  *
- * - `left`: 始终向左移动。
- * - `right`: 始终向右移动。
- * - `tail`: 向轨道起点方向移动，会跟随布局方向。
- * - `head`: 向手柄方向移动，会跟随布局方向。
+ * - `left`: Always moves left.
+ * - `right`: Always moves right.
+ * - `tail`: Moves toward the start of the track and follows layout direction.
+ * - `head`: Moves toward the thumb and follows layout direction.
  */
 export type WavySliderWaveDirection = 'left' | 'right' | 'tail' | 'head'
 
 /**
- * 可直接传普通数字，也可传 `useNativeState()` 创建的原生可观察状态。
+ * A numeric prop that can be passed as a plain number or as a native observable
+ * state created by `useNativeState()`.
  *
- * 传入 `ObservableState<number>` 后，可以在 worklet 中更新 `.value`，
- * 绕过 React 渲染直接驱动原生 Compose UI。
+ * When an `ObservableState<number>` is used, worklets can update `.value`
+ * directly and drive the native Compose UI without a React render.
  */
 export type ObservableNumber = number | ObservableState<number>
 
 /**
- * Android WavySlider 组件属性。
+ * Props for the Android WavySlider view.
  *
- * 组件支持两种更新模式：
+ * The component supports two update modes:
  *
- * - 普通 prop 模式：使用 `value` / `bufferedValue`，适合低频更新。
- * - 原生状态模式：使用 `progress` / `bufferedProgress`，适合播放器进度这类高频更新，可绕过 React 渲染直接更新 Compose UI。
+ * - Regular prop mode: use `value` / `bufferedValue` for low-frequency updates.
+ * - Native state mode: use `progress` / `bufferedProgress` for high-frequency
+ *   updates such as media playback progress, bypassing React renders and
+ *   updating Compose directly.
  */
 export type WavySliderProps = ViewProps & {
 	/**
-	 * 当前进度值。
+	 * Current slider value.
 	 *
-	 * 当传入 `progress` 时，`progress.value` 会优先作为当前进度；此字段仅作为兜底值。
+	 * When `progress` is provided, `progress.value` takes precedence and this
+	 * field is used only as the fallback value.
 	 *
 	 * @default 0
 	 */
 	value?: number
 	/**
-	 * 当前进度的原生可观察状态。
+	 * Native observable state for the current progress.
 	 *
-	 * 传入后，JS/UI runtime 可以通过 `progress.value = nextValue` 直接驱动原生 Compose UI，
-	 * 避免高频进度更新触发 React 重渲染。
+	 * JS or UI runtime code can write `progress.value = nextValue` to drive the
+	 * native Compose UI directly, avoiding React re-renders for high-frequency
+	 * progress updates.
 	 */
 	progress?: ObservableState<number>
 	/**
-	 * 缓冲/加载进度值。
+	 * Buffered or loaded progress value.
 	 *
-	 * 当传入 `bufferedProgress` 时，`bufferedProgress.value` 会优先作为缓冲进度；此字段仅作为兜底值。
+	 * When `bufferedProgress` is provided, `bufferedProgress.value` takes
+	 * precedence and this field is used only as the fallback value.
 	 *
 	 * @default 0
 	 */
 	bufferedValue?: number
 	/**
-	 * 缓冲/加载进度的原生可观察状态。
+	 * Native observable state for buffered or loaded progress.
 	 *
-	 * 用法和 `progress` 相同，适合播放器缓冲进度这类高频但不需要经过 React 的 UI 更新。
+	 * This works like `progress` and is intended for buffered progress updates
+	 * that do not need to pass through React.
 	 */
 	bufferedProgress?: ObservableState<number>
 	/**
-	 * 可选值范围的最小值。
+	 * Minimum selectable value.
 	 *
-	 * `value`、`progress.value`、`bufferedValue` 和 `bufferedProgress.value` 都会按该范围计算比例并裁剪。
+	 * `value`, `progress.value`, `bufferedValue`, and `bufferedProgress.value`
+	 * are normalized and clamped against this range.
 	 *
 	 * @default 0
 	 */
 	min?: number
 	/**
-	 * 可选值范围的最大值。
+	 * Maximum selectable value.
 	 *
 	 * @default 1
 	 */
 	max?: number
 	/**
-	 * 实际可拖动范围的下限。
+	 * Lower bound for user interaction.
 	 *
-	 * 该值会和 `min` 一起取更严格的下限。
+	 * The stricter value between this prop and `min` is used.
 	 */
 	lowerLimit?: number
 	/**
-	 * 实际可拖动范围的上限。
+	 * Upper bound for user interaction.
 	 *
-	 * 该值会和 `max` 一起取更严格的上限。
+	 * The stricter value between this prop and `max` is used.
 	 */
 	upperLimit?: number
 	/**
-	 * 是否允许用户交互。
+	 * Whether user interaction is enabled.
 	 *
 	 * @default true
 	 */
 	enabled?: boolean
 	/**
-	 * 颜色配置。
+	 * Color configuration.
 	 */
 	colors?: WavySliderColors
 	/**
-	 * 波长，单位为 dp。
+	 * Wave length in dp.
 	 *
-	 * 设置为 `0` 时会退化为普通直线 Slider。
+	 * Set this to `0` to render a regular straight slider.
 	 *
 	 * @default 16
 	 */
 	waveLength?: ObservableNumber
 	/**
-	 * 波浪高度，单位为 dp。
+	 * Wave height in dp.
 	 *
-	 * 设置为 `0` 时会退化为普通直线 Slider。
-	 * 可传 `ObservableState<number>`，用 Reanimated 自行实现暂停展平、拖动展平等动画。
+	 * Set this to `0` to render a regular straight slider. Pass an
+	 * `ObservableState<number>` if you want to animate pause flattening,
+	 * drag flattening, or other effects from a worklet.
 	 *
 	 * @default 16
 	 */
 	waveHeight?: ObservableNumber
 	/**
-	 * 波浪移动速度，单位为 dp/秒。
+	 * Wave velocity in dp per second.
 	 *
-	 * 设置为 `0` 时波浪停止移动，适合播放器暂停态。
-	 * 可传 `ObservableState<number>`，用 Reanimated 在播放/暂停之间自行过渡。
+	 * Set this to `0` to stop the wave, which is useful for paused media.
+	 * Pass an `ObservableState<number>` to animate between playback states from
+	 * a worklet.
 	 *
 	 * @default 15
 	 */
 	waveVelocity?: ObservableNumber
 	/**
-	 * 波浪移动方向。
+	 * Wave movement direction.
 	 *
 	 * @default 'head'
 	 */
 	waveDirection?: WavySliderWaveDirection
 	/**
-	 * active wave 的线条厚度，单位为 dp。
+	 * Stroke thickness for the active wave in dp.
 	 *
 	 * @default 4
 	 */
 	waveThickness?: ObservableNumber
 	/**
-	 * inactive track 与 buffered track 的线条厚度，单位为 dp。
+	 * Stroke thickness for the inactive and buffered tracks in dp.
 	 *
 	 * @default 4
 	 */
 	trackThickness?: ObservableNumber
 	/**
-	 * 是否让波浪高度从轨道起点到手柄位置逐渐增加。
+	 * Whether the wave height gradually increases from the track start toward
+	 * the thumb.
 	 *
 	 * @default false
 	 */
 	incremental?: boolean
 	/**
-	 * 拖动过程中的高频回调。
+	 * High-frequency callback fired while the value is changing.
 	 *
-	 * 必须是 worklet 函数
+	 * This must be a worklet function.
 	 */
 	onValueChange?: (value: number) => void
 	/**
-	 * 用户完成拖动/点击 seek 后触发的回调。
+	 * Callback fired when the user finishes dragging or tap-seeking.
 	 *
-	 * 必须是 worklet 函数
+	 * This must be a worklet function.
 	 */
 	onValueChangeFinished?: (value: number) => void
 	/**
-	 * 原生拖动状态变化回调。
+	 * Callback fired when the native dragging state changes.
 	 *
-	 * 该回调在 Compose 的 `interactionSource.collectIsDraggedAsState()` 变化时触发。
-	 * 必须是 worklet 函数，适合把拖动状态写入 Reanimated SharedValue，再由 JS/UI runtime 自行驱动
-	 * `waveHeight`、`waveThickness` 和 `trackThickness` 等 ObservableState 参数。
+	 * This mirrors Compose `interactionSource.collectIsDraggedAsState()`. It
+	 * must be a worklet function and is useful for writing the drag state into a
+	 * Reanimated shared value, then driving ObservableState props such as
+	 * `waveHeight`, `waveThickness`, and `trackThickness` from the UI runtime.
 	 */
 	onDragStateChange?: (isDragged: boolean) => void
 }

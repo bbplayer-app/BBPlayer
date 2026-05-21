@@ -1,4 +1,4 @@
-// 用于初始化 worklets 的自定义 Serializer
+// Registers the custom serializer required for SharedObject values in worklets.
 // oxlint-disable-next-line
 import './worklets.fx'
 
@@ -13,7 +13,7 @@ import type {
 import useWorkletProp from './hooks/useWorkletProp'
 import getStateId from './utils/getStateId'
 
-// WavySliderProps 中的这几个 props 是 SharedObject，但实际传递给组件时应该转为 __expo_shared_object_id__
+// SharedObject values are normalized before they are passed to the native view.
 type NativeWavySliderProps = Omit<
 	WavySliderProps,
 	| 'progress'

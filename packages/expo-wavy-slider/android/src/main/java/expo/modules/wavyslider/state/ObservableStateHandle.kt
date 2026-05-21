@@ -18,7 +18,7 @@ fun Either<ObservableStateHandle, Float>.setObservableFloat(
     setState: (ObservableState?) -> Unit,
     setFallback: (Float) -> Unit
 ) {
-    // 这部分逻辑来自 `expo/modules/kotlin/sharedobjects/SharedObjectTypeConverter.kt`，目的是根据 SharedObject Id 在 Registry 里取得对应的 SharedObject 实例
+    // Mirrors SharedObjectTypeConverter: resolve the SharedObject instance from the registry by id.
     if (`is`(ObservableStateHandle::class)) {
         val handle = get(ObservableStateHandle::class)
         val sharedObject = SharedObjectId(handle.stateId).toNativeObject(appContext.runtime)
