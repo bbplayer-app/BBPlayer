@@ -47,6 +47,14 @@ export type WavySliderColors = {
 export type WavySliderWaveDirection = 'left' | 'right' | 'tail' | 'head'
 
 /**
+ * 可直接传普通数字，也可传 `useNativeState()` 创建的原生可观察状态。
+ *
+ * 传入 `ObservableState<number>` 后，可以在 worklet 中更新 `.value`，
+ * 绕过 React 渲染直接驱动原生 Compose UI。
+ */
+export type ObservableNumber = number | ObservableState<number>
+
+/**
  * Android WavySlider 组件属性。
  *
  * 组件支持两种更新模式：
@@ -127,23 +135,25 @@ export type WavySliderProps = ViewProps & {
 	 *
 	 * @default 16
 	 */
-	waveLength?: number
+	waveLength?: ObservableNumber
 	/**
 	 * 波浪高度，单位为 dp。
 	 *
 	 * 设置为 `0` 时会退化为普通直线 Slider。
+	 * 可传 `ObservableState<number>`，用 Reanimated 自行实现暂停展平、拖动展平等动画。
 	 *
 	 * @default 16
 	 */
-	waveHeight?: number
+	waveHeight?: ObservableNumber
 	/**
 	 * 波浪移动速度，单位为 dp/秒。
 	 *
 	 * 设置为 `0` 时波浪停止移动，适合播放器暂停态。
+	 * 可传 `ObservableState<number>`，用 Reanimated 在播放/暂停之间自行过渡。
 	 *
 	 * @default 15
 	 */
-	waveVelocity?: number
+	waveVelocity?: ObservableNumber
 	/**
 	 * 波浪移动方向。
 	 *
@@ -155,81 +165,19 @@ export type WavySliderProps = ViewProps & {
 	 *
 	 * @default 4
 	 */
-	waveThickness?: number
+	waveThickness?: ObservableNumber
 	/**
 	 * inactive track 与 buffered track 的线条厚度，单位为 dp。
 	 *
 	 * @default 4
 	 */
-	trackThickness?: number
+	trackThickness?: ObservableNumber
 	/**
 	 * 是否让波浪高度从轨道起点到手柄位置逐渐增加。
 	 *
 	 * @default false
 	 */
 	incremental?: boolean
-	/**
-	 * 用户拖动时是否将波浪高度动画到 `flattenedWaveHeight`。
-	 *
-	 * 常用于拖动时把波浪展平成普通轨道，减少 seek 过程中的视觉干扰。
-	 *
-	 * @default false
-	 */
-	flattenOnDrag?: boolean
-	/**
-	 * `flattenOnDrag` 启用时，拖动期间的目标波浪高度，单位为 dp。
-	 *
-	 * 传 `0` 时拖动期间 active 部分会变成直线。
-	 *
-	 * @default 0
-	 */
-	flattenedWaveHeight?: number
-	/**
-	 * 拖动开始后，波浪高度动画到 `flattenedWaveHeight` 的时长，单位为毫秒。
-	 *
-	 * @default 100
-	 */
-	flattenAnimationDurationMs?: number
-	/**
-	 * 拖动结束后，波浪高度从 `flattenedWaveHeight` 恢复到 `waveHeight` 的动画时长，单位为毫秒。
-	 *
-	 * 该属性只控制波浪高度恢复，不控制轨道粗细恢复；轨道粗细恢复请使用 `trackRestoreAnimationDurationMs`。
-	 *
-	 * @default 300
-	 */
-	restoreWaveHeightAnimationDurationMs?: number
-	/**
-	 * 用户拖动时是否将轨道粗细动画到 `draggedTrackThickness`。
-	 *
-	 * @default false
-	 */
-	expandTrackOnDrag?: boolean
-	/**
-	 * `expandTrackOnDrag` 启用时，拖动期间 active、inactive 与 buffered 轨道的目标厚度，单位为 dp。
-	 *
-	 * @default 12
-	 */
-	draggedTrackThickness?: number
-	/**
-	 * 拖动开始后，轨道粗细动画到 `draggedTrackThickness` 的时长，单位为毫秒。
-	 *
-	 * @default 200
-	 */
-	trackExpansionAnimationDurationMs?: number
-	/**
-	 * 拖动结束后，轨道粗细恢复到 `waveThickness` / `trackThickness` 的时长，单位为毫秒。
-	 *
-	 * @default 200
-	 */
-	trackRestoreAnimationDurationMs?: number
-	/**
-	 * 组件首次进入组合时，波浪从平直到完整波形的展开动画时长，单位为毫秒。
-	 *
-	 * 上游库默认值较长；播放器场景通常可以传 `0`，避免暂停态仍出现波浪展开动画。
-	 *
-	 * @default 6000
-	 */
-	waveAppearanceAnimationDurationMs?: number
 	/**
 	 * 拖动过程中的高频回调。
 	 *
@@ -242,4 +190,12 @@ export type WavySliderProps = ViewProps & {
 	 * 必须是 worklet 函数
 	 */
 	onValueChangeFinished?: (value: number) => void
+	/**
+	 * 原生拖动状态变化回调。
+	 *
+	 * 该回调在 Compose 的 `interactionSource.collectIsDraggedAsState()` 变化时触发。
+	 * 必须是 worklet 函数，适合把拖动状态写入 Reanimated SharedValue，再由 JS/UI runtime 自行驱动
+	 * `waveHeight`、`waveThickness` 和 `trackThickness` 等 ObservableState 参数。
+	 */
+	onDragStateChange?: (isDragged: boolean) => void
 }

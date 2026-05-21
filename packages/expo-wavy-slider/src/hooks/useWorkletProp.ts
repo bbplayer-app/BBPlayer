@@ -6,7 +6,7 @@ import { worklets } from '../utils/ensureWorklets'
 type InstancedSharedObject = InstanceType<typeof SharedObject>
 
 export default function useWorkletProp(
-	callback: ((value: number) => void) | undefined,
+	callback: ((value: number) => void) | ((value: boolean) => void) | undefined,
 	propName: string,
 ): InstancedSharedObject | null {
 	return useReleasingSharedObject(() => {

@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import android.view.ViewGroup.LayoutParams
 import android.widget.Space
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -111,23 +111,20 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
     var sliderEnabled by mutableStateOf(true)
     var colors by mutableStateOf(WavySliderColors())
     var waveLength by mutableFloatStateOf(16.0f)
+    var waveLengthState by mutableStateOf<ObservableState?>(null)
     var waveHeight by mutableFloatStateOf(16.0f)
+    var waveHeightState by mutableStateOf<ObservableState?>(null)
     var waveVelocity by mutableFloatStateOf(15.0f)
+    var waveVelocityState by mutableStateOf<ObservableState?>(null)
     var waveDirection by mutableStateOf(WavySliderWaveDirection.HEAD)
     var waveThickness by mutableFloatStateOf(4.0f)
+    var waveThicknessState by mutableStateOf<ObservableState?>(null)
     var trackThickness by mutableFloatStateOf(4.0f)
+    var trackThicknessState by mutableStateOf<ObservableState?>(null)
     var incremental by mutableStateOf(false)
-    var flattenOnDrag by mutableStateOf(false)
-    var flattenedWaveHeight by mutableFloatStateOf(0.0f)
-    var flattenAnimationDurationMs by mutableStateOf(100)
-    var restoreWaveHeightAnimationDurationMs by mutableStateOf(300)
-    var expandTrackOnDrag by mutableStateOf(false)
-    var draggedTrackThickness by mutableFloatStateOf(12.0f)
-    var trackExpansionAnimationDurationMs by mutableStateOf(200)
-    var trackRestoreAnimationDurationMs by mutableStateOf(200)
-    var waveAppearanceAnimationDurationMs by mutableStateOf(6000)
     var onValueChange by mutableStateOf<WorkletCallback?>(null)
     var onValueChangeFinished by mutableStateOf<WorkletCallback?>(null)
+    var onDragStateChange by mutableStateOf<WorkletCallback?>(null)
 
     private var composeView: ComposeView? = null
     private val placeholderView = Space(context).also {
@@ -185,46 +182,29 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                     val bufferedPropsValue = bufferedProgress?.floatValue(bufferedValue) ?: bufferedValue
                     val clampedBufferedValue =
                         bufferedPropsValue.coerceIn(effectiveLower, effectiveUpper)
-                    val isFlattened = flattenOnDrag && isDragged
-                    val isTrackExpanded = expandTrackOnDrag && isDragged
+                    val effectiveWaveLength =
+                        (waveLengthState?.floatValue(waveLength) ?: waveLength).dp
                     val effectiveWaveHeight =
-                        if (isFlattened) flattenedWaveHeight.dp else waveHeight.dp
-                    val waveHeightAnimationDuration =
-                        if (isFlattened) {
-                            flattenAnimationDurationMs
-                        } else {
-                            restoreWaveHeightAnimationDurationMs
-                        }
-                    val trackThicknessAnimationDuration =
-                        if (isTrackExpanded) {
-                            trackExpansionAnimationDurationMs
-                        } else {
-                            trackRestoreAnimationDurationMs
-                        }
-                    val effectiveWaveThickness by animateDpAsState(
-                        targetValue =
-                            if (isTrackExpanded) draggedTrackThickness.dp else waveThickness.dp,
-                        animationSpec = tween(durationMillis = trackThicknessAnimationDuration),
-                        label = "wavySliderWaveThickness"
-                    )
-                    val effectiveTrackThickness by animateDpAsState(
-                        targetValue =
-                            if (isTrackExpanded) draggedTrackThickness.dp else trackThickness.dp,
-                        animationSpec = tween(durationMillis = trackThicknessAnimationDuration),
-                        label = "wavySliderTrackThickness"
-                    )
-                    val animationSpecs = remember(
-                        waveHeightAnimationDuration,
-                        waveAppearanceAnimationDurationMs
-                    ) {
+                        (waveHeightState?.floatValue(waveHeight) ?: waveHeight).dp
+                    val effectiveWaveVelocity =
+                        (waveVelocityState?.floatValue(waveVelocity) ?: waveVelocity).dp
+                    val effectiveWaveThickness =
+                        (waveThicknessState?.floatValue(waveThickness) ?: waveThickness).dp
+                    val effectiveTrackThickness =
+                        (trackThicknessState?.floatValue(trackThickness) ?: trackThickness).dp
+                    val animationSpecs = remember {
                         SliderDefaults.WaveAnimationSpecs.copy(
                             waveHeightAnimationSpec = tween(
-                                durationMillis = waveHeightAnimationDuration
+                                durationMillis = 0
                             ),
                             waveAppearanceAnimationSpec = tween(
-                                durationMillis = waveAppearanceAnimationDurationMs
+                                durationMillis = 0
                             )
                         )
+                    }
+
+                    LaunchedEffect(isDragged) {
+                        onDragStateChange?.invoke(isDragged)
                     }
 
                     var localValue by remember { mutableFloatStateOf(clampedPropsValue) }
@@ -265,9 +245,9 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                             onValueChangeFinished?.invoke(localValue)
                         },
                         colors = sliderColors,
-                        waveLength = waveLength.dp,
+                        waveLength = effectiveWaveLength,
                         waveHeight = effectiveWaveHeight,
-                        waveVelocity = waveVelocity.dp to waveDirection.toWaveDirection(),
+                        waveVelocity = effectiveWaveVelocity to waveDirection.toWaveDirection(),
                         waveThickness = effectiveWaveThickness,
                         trackThickness = effectiveTrackThickness,
                         incremental = incremental,
@@ -278,9 +258,9 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                     colors = sliderColors,
                                     enabled = sliderEnabled,
                                     sliderState = sliderState,
-                                    waveLength = waveLength.dp,
+                                    waveLength = effectiveWaveLength,
                                     waveHeight = effectiveWaveHeight,
-                                    waveVelocity = waveVelocity.dp to waveDirection.toWaveDirection(),
+                                    waveVelocity = effectiveWaveVelocity to waveDirection.toWaveDirection(),
                                     waveThickness = effectiveWaveThickness,
                                     trackThickness = effectiveTrackThickness,
                                     incremental = incremental,

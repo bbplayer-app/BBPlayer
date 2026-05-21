@@ -93,12 +93,24 @@ class ExpoWavySliderModule : Module() {
                 view.waveLength = waveLength
             }
 
+            Prop("waveLengthState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
+                view.waveLengthState = state
+            }
+
             Prop("waveHeight") { view: ExpoWavySliderView, waveHeight: Float ->
                 view.waveHeight = waveHeight
             }
 
+            Prop("waveHeightState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
+                view.waveHeightState = state
+            }
+
             Prop("waveVelocity") { view: ExpoWavySliderView, waveVelocity: Float ->
                 view.waveVelocity = waveVelocity
+            }
+
+            Prop("waveVelocityState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
+                view.waveVelocityState = state
             }
 
             Prop("waveDirection") { view: ExpoWavySliderView, waveDirection: WavySliderWaveDirection ->
@@ -109,48 +121,20 @@ class ExpoWavySliderModule : Module() {
                 view.waveThickness = waveThickness
             }
 
+            Prop("waveThicknessState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
+                view.waveThicknessState = state
+            }
+
             Prop("trackThickness") { view: ExpoWavySliderView, trackThickness: Float ->
                 view.trackThickness = trackThickness
             }
 
+            Prop("trackThicknessState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
+                view.trackThicknessState = state
+            }
+
             Prop("incremental") { view: ExpoWavySliderView, incremental: Boolean ->
                 view.incremental = incremental
-            }
-
-            Prop("flattenOnDrag") { view: ExpoWavySliderView, flattenOnDrag: Boolean ->
-                view.flattenOnDrag = flattenOnDrag
-            }
-
-            Prop("flattenedWaveHeight") { view: ExpoWavySliderView, flattenedWaveHeight: Float ->
-                view.flattenedWaveHeight = flattenedWaveHeight
-            }
-
-            Prop("flattenAnimationDurationMs") { view: ExpoWavySliderView, durationMs: Int ->
-                view.flattenAnimationDurationMs = durationMs
-            }
-
-            Prop("restoreWaveHeightAnimationDurationMs") { view: ExpoWavySliderView, durationMs: Int ->
-                view.restoreWaveHeightAnimationDurationMs = durationMs
-            }
-
-            Prop("expandTrackOnDrag") { view: ExpoWavySliderView, expand: Boolean ->
-                view.expandTrackOnDrag = expand
-            }
-
-            Prop("draggedTrackThickness") { view: ExpoWavySliderView, thickness: Float ->
-                view.draggedTrackThickness = thickness
-            }
-
-            Prop("trackExpansionAnimationDurationMs") { view: ExpoWavySliderView, durationMs: Int ->
-                view.trackExpansionAnimationDurationMs = durationMs
-            }
-
-            Prop("trackRestoreAnimationDurationMs") { view: ExpoWavySliderView, durationMs: Int ->
-                view.trackRestoreAnimationDurationMs = durationMs
-            }
-
-            Prop("waveAppearanceAnimationDurationMs") { view: ExpoWavySliderView, durationMs: Int ->
-                view.waveAppearanceAnimationDurationMs = durationMs
             }
 
             Prop("onValueChange", null as WorkletCallback?) { view: ExpoWavySliderView, callback: WorkletCallback? ->
@@ -159,6 +143,10 @@ class ExpoWavySliderModule : Module() {
 
             Prop("onValueChangeFinished", null as WorkletCallback?) { view: ExpoWavySliderView, callback: WorkletCallback? ->
                 view.onValueChangeFinished = callback
+            }
+
+            Prop("onDragStateChange", null as WorkletCallback?) { view: ExpoWavySliderView, callback: WorkletCallback? ->
+                view.onDragStateChange = callback
             }
         }
     }

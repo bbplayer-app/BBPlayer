@@ -1,13 +1,14 @@
 import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
 import { WavySlider, useNativeState } from '@bbplayer/wavy-slider'
 import Color from 'color'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import {
 	useAnimatedReaction,
 	useDerivedValue,
 	useSharedValue,
+	withTiming,
 	type SharedValue,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -92,12 +93,26 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const isPlaying = useIsPlaying()
 	const progressState = useNativeState(0)
 	const bufferedProgressState = useNativeState(0)
+	const waveHeightState = useNativeState(isPlaying ? 6 : 0)
+	const waveVelocityState = useNativeState(isPlaying ? 15 : 0)
+	const waveThicknessState = useNativeState(3)
+	const trackThicknessState = useNativeState(3)
 
 	const isScrubbing = useSharedValue(false)
 	const scrubPosition = useSharedValue(0)
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
+	const isPlayingShared = useSharedValue(isPlaying)
+	const isNativeDragging = useSharedValue(false)
+	const animatedWaveHeight = useSharedValue(isPlaying ? 6 : 0)
+	const animatedWaveVelocity = useSharedValue(isPlaying ? 15 : 0)
+	const animatedWaveThickness = useSharedValue(3)
+	const animatedTrackThickness = useSharedValue(3)
 	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		isPlayingShared.set(isPlaying)
+	}, [isPlaying, isPlayingShared])
 
 	const displayPosition = useDerivedValue(() => {
 		if (isScrubbing.value) return scrubPosition.value
@@ -135,6 +150,65 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			}
 		},
 		[position, isSeeking, seekPosition],
+	)
+
+	useAnimatedReaction(
+		() =>
+			[
+				isPlayingShared.value,
+				isNativeDragging.value || isScrubbing.value,
+			] as const,
+		([playing, dragging]) => {
+			const shouldShowWave = playing && !dragging
+			const thickness = dragging ? 12 : 3
+			animatedWaveHeight.set(
+				withTiming(shouldShowWave ? 6 : 0, { duration: dragging ? 100 : 300 }),
+			)
+			animatedWaveVelocity.set(
+				withTiming(playing ? 15 : 0, { duration: playing ? 150 : 100 }),
+			)
+			animatedWaveThickness.set(withTiming(thickness, { duration: 200 }))
+			animatedTrackThickness.set(withTiming(thickness, { duration: 200 }))
+		},
+		[
+			animatedTrackThickness,
+			animatedWaveHeight,
+			animatedWaveThickness,
+			animatedWaveVelocity,
+			isNativeDragging,
+			isScrubbing,
+			isPlayingShared,
+		],
+	)
+
+	useAnimatedReaction(
+		() =>
+			[
+				animatedWaveHeight.value,
+				animatedWaveVelocity.value,
+				animatedWaveThickness.value,
+				animatedTrackThickness.value,
+			] as const,
+		([waveHeight, waveVelocity, waveThickness, trackThickness]) => {
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			waveHeightState.value = waveHeight
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			waveVelocityState.value = waveVelocity
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			waveThicknessState.value = waveThickness
+			// oxlint-disable-next-line react-compiler/react-compiler -- ObservableState is a native shared object; writing .value updates Compose without a React state mutation.
+			trackThicknessState.value = trackThickness
+		},
+		[
+			animatedTrackThickness,
+			animatedWaveHeight,
+			animatedWaveThickness,
+			animatedWaveVelocity,
+			trackThicknessState,
+			waveHeightState,
+			waveThicknessState,
+			waveVelocityState,
+		],
 	)
 
 	useAnimatedReaction(
@@ -202,6 +276,14 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		[duration, isScrubbing, isSeeking, onInteraction, seekPosition, handleSeek],
 	)
 
+	const handleDragStateChange = useCallback(
+		(dragging: boolean) => {
+			'worklet'
+			isNativeDragging.set(dragging)
+		},
+		[isNativeDragging],
+	)
+
 	const sliderColors = useMemo(
 		() => ({
 			activeTrackColor: colors.primary,
@@ -220,23 +302,15 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				bufferedProgress={bufferedProgressState}
 				colors={sliderColors}
 				waveLength={30}
-				waveVelocity={isPlaying ? 15 : 0}
+				waveVelocity={waveVelocityState}
 				waveDirection='head'
-				waveHeight={6}
-				waveThickness={3}
-				trackThickness={3}
+				waveHeight={waveHeightState}
+				waveThickness={waveThicknessState}
+				trackThickness={trackThicknessState}
 				incremental={false}
-				flattenOnDrag
-				flattenedWaveHeight={0}
-				flattenAnimationDurationMs={100}
-				restoreWaveHeightAnimationDurationMs={300}
-				expandTrackOnDrag
-				draggedTrackThickness={12}
-				trackExpansionAnimationDurationMs={200}
-				trackRestoreAnimationDurationMs={200}
-				waveAppearanceAnimationDurationMs={0}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}
+				onDragStateChange={handleDragStateChange}
 			/>
 
 			<View style={styles.timeContainer}>
