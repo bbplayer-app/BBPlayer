@@ -229,6 +229,8 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		[progressState],
 	)
 
+	console.log('rerender')
+
 	useAnimatedReaction(
 		() => {
 			const dur = duration.value || 1

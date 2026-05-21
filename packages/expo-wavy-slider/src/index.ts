@@ -29,20 +29,17 @@ type NativeWavySliderProps = Omit<
 > & {
 	progress?: number
 	bufferedProgress?: number
-	waveLength?: number
-	waveLengthState?: number
-	waveHeight?: number
-	waveHeightState?: number
-	waveVelocity?: number
-	waveVelocityState?: number
-	waveThickness?: number
-	waveThicknessState?: number
-	trackThickness?: number
-	trackThicknessState?: number
+	waveLength?: NativeObservableNumber
+	waveHeight?: NativeObservableNumber
+	waveVelocity?: NativeObservableNumber
+	waveThickness?: NativeObservableNumber
+	trackThickness?: NativeObservableNumber
 	onValueChange?: number
 	onValueChangeFinished?: number
 	onDragStateChange?: number
 }
+
+type NativeObservableNumber = number | { stateId: number }
 
 const NativeWavySlider = requireNativeView<NativeWavySliderProps>(
 	'ExpoWavySlider',
@@ -88,12 +85,12 @@ function WavySlider({
 		min,
 		max,
 		enabled,
-		...normalizeObservableNumber('waveLength', waveLength, 16),
-		...normalizeObservableNumber('waveHeight', waveHeight, 16),
-		...normalizeObservableNumber('waveVelocity', waveVelocity, 15),
+		waveLength: normalizeObservableNumber(waveLength),
+		waveHeight: normalizeObservableNumber(waveHeight),
+		waveVelocity: normalizeObservableNumber(waveVelocity),
 		waveDirection,
-		...normalizeObservableNumber('waveThickness', waveThickness, 4),
-		...normalizeObservableNumber('trackThickness', trackThickness, 4),
+		waveThickness: normalizeObservableNumber(waveThickness),
+		trackThickness: normalizeObservableNumber(trackThickness),
 		incremental,
 		onValueChange: getStateId(onValueChangeCallback),
 		onValueChangeFinished: getStateId(onValueChangeFinishedCallback),
@@ -102,18 +99,16 @@ function WavySlider({
 }
 
 function normalizeObservableNumber(
-	name: string,
 	value: ObservableNumber,
-	fallback: number,
-): Record<string, number | undefined> {
+): NativeObservableNumber {
 	if (typeof value === 'number') {
-		return { [name]: value, [`${name}State`]: undefined }
+		return value
 	}
 	const id = getStateId(value)
 	if (id == null) {
 		throw new Error('Observable number prop received an invalid native state.')
 	}
-	return { [name]: fallback, [`${name}State`]: id }
+	return { stateId: id }
 }
 
 export type { ObservableNumber, WavySliderProps, WavySliderColors }

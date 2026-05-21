@@ -4,8 +4,11 @@ import android.os.Looper
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.jni.worklets.Worklet
+import expo.modules.kotlin.types.Either
 import expo.modules.wavyslider.state.ObservableState
+import expo.modules.wavyslider.state.ObservableStateHandle
 import expo.modules.wavyslider.state.WorkletCallback
+import expo.modules.wavyslider.state.setObservableFloat
 import kotlinx.coroutines.launch
 
 class ExpoWavySliderModule : Module() {
@@ -89,48 +92,28 @@ class ExpoWavySliderModule : Module() {
                 view.colors = colors
             }
 
-            Prop("waveLength") { view: ExpoWavySliderView, waveLength: Float ->
-                view.waveLength = waveLength
+            Prop("waveLength") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
+                value.setObservableFloat(appContext, { view.waveLengthState = it }, { view.waveLength = it })
             }
 
-            Prop("waveLengthState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
-                view.waveLengthState = state
+            Prop("waveHeight") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
+                value.setObservableFloat(appContext, { view.waveHeightState = it }, { view.waveHeight = it })
             }
 
-            Prop("waveHeight") { view: ExpoWavySliderView, waveHeight: Float ->
-                view.waveHeight = waveHeight
-            }
-
-            Prop("waveHeightState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
-                view.waveHeightState = state
-            }
-
-            Prop("waveVelocity") { view: ExpoWavySliderView, waveVelocity: Float ->
-                view.waveVelocity = waveVelocity
-            }
-
-            Prop("waveVelocityState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
-                view.waveVelocityState = state
+            Prop("waveVelocity") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
+                value.setObservableFloat(appContext, { view.waveVelocityState = it }, { view.waveVelocity = it })
             }
 
             Prop("waveDirection") { view: ExpoWavySliderView, waveDirection: WavySliderWaveDirection ->
                 view.waveDirection = waveDirection
             }
 
-            Prop("waveThickness") { view: ExpoWavySliderView, waveThickness: Float ->
-                view.waveThickness = waveThickness
+            Prop("waveThickness") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
+                value.setObservableFloat(appContext, { view.waveThicknessState = it }, { view.waveThickness = it })
             }
 
-            Prop("waveThicknessState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
-                view.waveThicknessState = state
-            }
-
-            Prop("trackThickness") { view: ExpoWavySliderView, trackThickness: Float ->
-                view.trackThickness = trackThickness
-            }
-
-            Prop("trackThicknessState", null as ObservableState?) { view: ExpoWavySliderView, state: ObservableState? ->
-                view.trackThicknessState = state
+            Prop("trackThickness") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
+                value.setObservableFloat(appContext, { view.trackThicknessState = it }, { view.trackThickness = it })
             }
 
             Prop("incremental") { view: ExpoWavySliderView, incremental: Boolean ->
