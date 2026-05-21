@@ -7,7 +7,7 @@ import {
 import { fillMaxSize } from '@expo/ui/jetpack-compose/modifiers'
 import * as WebBrowser from 'expo-web-browser'
 import { useState } from 'react'
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { Dialog, useTheme } from 'react-native-paper'
 import { TabBar, TabView } from 'react-native-tab-view'
 
@@ -31,7 +31,6 @@ export default function EditLyricsModal({
 }) {
 	const close = useModalStore((state) => state.close)
 	const theme = useTheme()
-	const layout = useWindowDimensions()
 
 	const [lrc, setLrc] = useState(lyrics.lrc ?? '')
 	const [tlyric, setTlyric] = useState(lyrics.tlyric ?? '')
@@ -160,18 +159,6 @@ export default function EditLyricsModal({
 		}
 	}
 
-	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
-	const renderTabBar = (props: any) => (
-		<TabBar
-			{...props}
-			indicatorStyle={{ backgroundColor: theme.colors.onSecondaryContainer }}
-			style={[styles.tabBar, { backgroundColor: theme.colors.surface }]}
-			labelStyle={{ fontWeight: 'bold' }}
-			activeColor={theme.colors.onSecondaryContainer}
-			inactiveColor={theme.colors.onSurface}
-		/>
-	)
-
 	return (
 		<>
 			<Dialog.Title>编辑歌词</Dialog.Title>
@@ -196,10 +183,21 @@ export default function EditLyricsModal({
 				</View>
 				<TabView
 					navigationState={{ index, routes }}
+					renderTabBar={(props) => (
+						<TabBar
+							style={{
+								backgroundColor: theme.colors.background,
+							}}
+							indicatorStyle={{
+								backgroundColor: theme.colors.onSecondaryContainer,
+							}}
+							activeColor={theme.colors.onSecondaryContainer}
+							inactiveColor={theme.colors.onSurface}
+							{...props}
+						/>
+					)}
 					renderScene={renderScene}
 					onIndexChange={setIndex}
-					initialLayout={{ width: layout.width }}
-					renderTabBar={renderTabBar}
 					style={styles.tabView}
 				/>
 			</Dialog.Content>
@@ -215,6 +213,7 @@ const styles = StyleSheet.create({
 	content: {
 		paddingHorizontal: 0,
 		paddingBottom: 0,
+		marginBottom: 8,
 		height: 350,
 	},
 	header: {
@@ -225,14 +224,6 @@ const styles = StyleSheet.create({
 	},
 	tabView: {
 		flex: 1,
-	},
-	tabBar: {
-		overflow: 'hidden',
-		justifyContent: 'center',
-		maxHeight: 70,
-		marginBottom: 0,
-		marginTop: 10,
-		elevation: 0,
 	},
 	inputContainer: {
 		flex: 1,

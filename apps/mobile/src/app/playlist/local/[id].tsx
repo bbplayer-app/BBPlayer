@@ -348,8 +348,7 @@ export default function LocalPlaylistPage() {
 	const pullingIcon = useMemo(
 		() => () => (
 			<ActivityIndicator
-				size={18}
-				animating
+				size='small'
 				color={colors.primary}
 			/>
 		),

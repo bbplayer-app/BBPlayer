@@ -136,5 +136,7 @@ const styles = StyleSheet.create({
 	},
 	footer: {
 		padding: 16,
+		justifyContent: 'center',
+		alignItems: 'center',
 	},
 })

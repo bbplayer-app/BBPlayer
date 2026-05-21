@@ -89,12 +89,7 @@ export default function OverallHistoryPage() {
 
 	const renderContent = () => {
 		if (isHistoryLoading) {
-			return (
-				<ActivityIndicator
-					animating={true}
-					style={styles.loadingIndicator}
-				/>
-			)
+			return <ActivityIndicator style={styles.loadingIndicator} />
 		}
 
 		if (isHistoryError) {

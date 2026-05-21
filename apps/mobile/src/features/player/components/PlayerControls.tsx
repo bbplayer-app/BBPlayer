@@ -195,7 +195,7 @@ export function MainPlaybackControls({
 			>
 				{debouncedBuffering ? (
 					<ActivityIndicator
-						size={playButtonSize * 0.4}
+						size={playButtonSize * 0.6}
 						color={colors.primary}
 					/>
 				) : (

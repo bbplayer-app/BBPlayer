@@ -1,50 +1,39 @@
 import { CircularWavyProgressIndicator, Host } from '@expo/ui/jetpack-compose'
+import { align } from '@expo/ui/jetpack-compose/modifiers'
 import { memo } from 'react'
+import { Platform } from 'react-native'
 import {
-	ActivityIndicator as RNActivityIndicator,
-	Platform,
-	type StyleProp,
-	type ViewStyle,
-} from 'react-native'
-import { useTheme } from 'react-native-paper'
+	ActivityIndicator as PaperActivityIndicator,
+	type ActivityIndicatorProps as PaperActivityIndicatorProps,
+	useTheme,
+} from 'react-native-paper'
 
-export type ActivityIndicatorProps = {
-	animating?: boolean
-	color?: string
-	size?: 'small' | 'large' | number
-	style?: StyleProp<ViewStyle>
-	hidesWhenStopped?: boolean
-}
+const SMALL_INDICATOR_SIZE = 24
+const LARGE_INDICATOR_SIZE = 48
+
+export type ActivityIndicatorProps = Pick<
+	PaperActivityIndicatorProps,
+	'color' | 'size' | 'style'
+>
 
 export const ActivityIndicator = memo(function ActivityIndicator({
-	animating = true,
 	color,
-	hidesWhenStopped = true,
 	size = 'small',
 	style,
 }: ActivityIndicatorProps) {
 	const { colors } = useTheme()
-
-	if (!animating && hidesWhenStopped) {
-		return null
-	}
+	const resolvedColor = color || colors.primary
 
 	if (Platform.OS === 'android') {
 		const indicatorSize =
 			size === 'small'
-				? 24
+				? SMALL_INDICATOR_SIZE
 				: size === 'large'
-					? 48
-					: typeof size === 'number'
-						? size
-						: 36
-
-		// Use colors.primary if no explicit color is provided
-		const resolvedColor = color || colors.primary
+					? LARGE_INDICATOR_SIZE
+					: size
 
 		return (
 			<Host
-				matchContents
 				style={[
 					{
 						width: indicatorSize,
@@ -55,18 +44,18 @@ export const ActivityIndicator = memo(function ActivityIndicator({
 					style,
 				]}
 			>
-				<CircularWavyProgressIndicator color={resolvedColor} />
+				<CircularWavyProgressIndicator
+					color={resolvedColor}
+					modifiers={[align('center')]}
+				/>
 			</Host>
 		)
 	}
 
-	const resolvedColor = color || colors.primary
-
 	return (
-		<RNActivityIndicator
-			animating={animating}
+		<PaperActivityIndicator
 			color={resolvedColor}
-			size={typeof size === 'number' ? size : size}
+			size={size}
 			style={style}
 		/>
 	)

@@ -548,10 +548,7 @@ const ExternalPlaylistSyncFooter = ({
 						]}
 					>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<ActivityIndicator
-								animating={true}
-								color={theme.colors.primary}
-							/>
+							<ActivityIndicator color={theme.colors.primary} />
 							<View style={{ marginLeft: 12 }}>
 								<Text variant='bodyMedium'>
 									正在匹配... {(progress * 100).toFixed(0)}%

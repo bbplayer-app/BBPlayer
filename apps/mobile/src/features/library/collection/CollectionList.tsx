@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
+		height: 48,
 		marginBottom: 8,
 		flexDirection: 'row',
 		alignItems: 'center',

@@ -97,12 +97,7 @@ export default function DateHistoryPage() {
 
 	const renderContent = () => {
 		if (isHistoryLoading) {
-			return (
-				<ActivityIndicator
-					animating={true}
-					style={styles.loadingIndicator}
-				/>
-			)
+			return <ActivityIndicator style={styles.loadingIndicator} />
 		}
 
 		if (isHistoryError) {

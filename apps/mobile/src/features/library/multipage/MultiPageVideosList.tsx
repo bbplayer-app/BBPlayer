@@ -6,7 +6,7 @@ import { Text, useTheme } from 'react-native-paper'
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
-import { LibraryTabSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
+import { MultiPageVideosListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	useGetFavoritePlaylists,
@@ -66,7 +66,7 @@ const MultiPageVideosListComponent = memo(() => {
 	}
 
 	if (playlistsIsPending || isFavoriteDataPending) {
-		return <LibraryTabSkeleton />
+		return <MultiPageVideosListSkeleton />
 	}
 
 	if (playlistsIsError || isFavoriteDataError) {
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
+		height: 48,
 		marginBottom: 8,
 		flexDirection: 'row',
 		alignItems: 'center',
