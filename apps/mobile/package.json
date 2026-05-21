@@ -20,6 +20,7 @@
 		"@bbplayer/native": "workspace:*",
 		"@bbplayer/orpheus": "workspace:*",
 		"@bbplayer/splash": "workspace:*",
+		"@bbplayer/wavy-slider": "workspace:*",
 		"@bottom-tabs/react-navigation": "^1.2.0",
 		"@expo/material-symbols": "^0.1.1",
 		"@expo/metro-runtime": "~56.0.9",

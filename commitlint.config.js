@@ -15,6 +15,7 @@ module.exports = {
 				'backend',
 				'heatmap',
 				'native',
+				'slider',
 			],
 		],
 		'scope-empty': [2, 'never'],
