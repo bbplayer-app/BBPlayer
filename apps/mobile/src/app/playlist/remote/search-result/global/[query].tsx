@@ -4,12 +4,14 @@ import { useMemo, useEffect, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
+import { SearchUserHeader } from '@/features/playlist/remote/search-result/components/SearchUserHeader'
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
-import { PlaylistTrackListSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
+import { TrackListItemSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -72,6 +74,7 @@ export default function SearchResultsPage() {
 		isPending: isPendingSearchData,
 		isError: isErrorSearchData,
 		hasNextPage,
+		isFetchingNextPage,
 		refetch,
 		fetchNextPage,
 	} = useSearchResults(query)
@@ -102,10 +105,6 @@ export default function SearchResultsPage() {
 		const uniqueTracks = [...uniqueMap.values()]
 		return uniqueTracks.map(mapApiItemToTrack)
 	}, [searchData])
-
-	if (isPendingSearchData) {
-		return <PlaylistTrackListSkeleton />
-	}
 
 	if (isErrorSearchData) {
 		return <PlaylistError text='加载失败' />
@@ -175,7 +174,8 @@ export default function SearchResultsPage() {
 					selection={selection}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 					hasNextPage={hasNextPage}
-					ListHeaderComponent={null}
+					isFetchingNextPage={isFetchingNextPage}
+					ListHeaderComponent={<SearchUserHeader query={query} />}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
@@ -189,11 +189,37 @@ export default function SearchResultsPage() {
 						/>
 					}
 					ListEmptyComponent={
-						<Text
-							style={[styles.emptyListText, { color: colors.onSurfaceVariant }]}
-						>
-							没有找到与&thinsp;&ldquo;{query}&rdquo;&thinsp;相关的内容
-						</Text>
+						isPendingSearchData ? (
+							<View>
+								<View style={styles.videoLoadingRow}>
+									<Text
+										variant='titleMedium'
+										style={[
+											styles.videoSectionTitle,
+											{ color: colors.onSurface },
+										]}
+									>
+										相关视频
+									</Text>
+									<ActivityIndicator
+										size='small'
+										style={{ marginLeft: 8 }}
+									/>
+								</View>
+								{Array.from({ length: 10 }, (_, index) => (
+									<TrackListItemSkeleton key={index} />
+								))}
+							</View>
+						) : (
+							<Text
+								style={[
+									styles.emptyListText,
+									{ color: colors.onSurfaceVariant },
+								]}
+							>
+								没有找到与&thinsp;&ldquo;{query}&rdquo;&thinsp;相关的内容
+							</Text>
+						)
 					}
 				/>
 			</View>
@@ -214,6 +240,16 @@ const styles = StyleSheet.create({
 	emptyListText: {
 		paddingVertical: 32,
 		textAlign: 'center',
+	},
+	videoLoadingRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 16,
+		marginTop: 18,
+		marginBottom: 4,
+	},
+	videoSectionTitle: {
+		fontWeight: 'bold',
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

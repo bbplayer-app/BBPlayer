@@ -16,7 +16,7 @@ export type ActivityIndicatorProps = Pick<
 	'color' | 'size' | 'style'
 >
 
-export const ActivityIndicator = memo(function ActivityIndicator({
+const ActivityIndicator = memo(function ActivityIndicator({
 	color,
 	size = 'small',
 	style,

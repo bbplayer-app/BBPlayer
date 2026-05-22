@@ -132,6 +132,25 @@ interface BilibiliSearchVideo {
 }
 
 /**
+ * 搜索结果UP主信息
+ */
+interface BilibiliSearchUser {
+	type: 'bili_user'
+	mid: number
+	uname: string
+	usign: string
+	fans: number
+	videos: number
+	upic: string
+	verify_info?: string
+	level: number
+	gender?: number
+	is_upuser?: number
+	is_live?: number
+	room_id?: number
+}
+
+/**
  * 热门搜索信息
  */
 interface BilibiliHotSearch {
@@ -569,6 +588,7 @@ export type {
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliSearchVideo,
+	BilibiliSearchUser,
 	BilibiliSmsLoginData,
 	BilibiliSmsSendData,
 	BilibiliToViewVideoList,

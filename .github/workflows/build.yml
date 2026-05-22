@@ -119,16 +119,13 @@ jobs:
 
           # e.g. bbplayer-v1.0.0-prod-arm64-v8a
           APK_NAME="bbplayer-v${APP_VERSION}-${{ env.BUILD_TYPE }}-${{ matrix.arch }}"
-          MAPPING_NAME="${{ matrix.arch }}-r8-mapping.txt"
           ARTIFACT_DIR="${RUNNER_TEMP}/${APK_NAME}"
 
           mkdir -p "$ARTIFACT_DIR"
 
           echo "APK_NAME=${APK_NAME}" >> $GITHUB_ENV
-          echo "MAPPING_NAME=${MAPPING_NAME}" >> $GITHUB_ENV
           echo "ARTIFACT_DIR=${ARTIFACT_DIR}" >> $GITHUB_ENV
           echo "APK_TEMP_PATH=${ARTIFACT_DIR}/${APK_NAME}.apk" >> $GITHUB_ENV
-          echo "MAPPING_TEMP_PATH=${ARTIFACT_DIR}/${MAPPING_NAME}" >> $GITHUB_ENV
           echo "EAS_LOCAL_BUILD_WORKINGDIR=${RUNNER_TEMP}/eas-local-build-${{ matrix.arch }}" >> $GITHUB_ENV
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_ENV
 
@@ -146,36 +143,6 @@ jobs:
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
         run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output="$APK_TEMP_PATH"
-
-      - name: 📦 Collect R8 Mapping
-        if: env.BUILD_TYPE != 'blank-test' && env.EAS_PROFILE != 'dev'
-        run: |
-          SEARCH_ROOTS=()
-
-          if [[ -d "$EAS_LOCAL_BUILD_WORKINGDIR" ]]; then
-            SEARCH_ROOTS+=("$EAS_LOCAL_BUILD_WORKINGDIR")
-          fi
-
-          if [[ -d apps/mobile/android/app/build/outputs/mapping ]]; then
-            SEARCH_ROOTS+=(apps/mobile/android/app/build/outputs/mapping)
-          fi
-
-          if [[ ${#SEARCH_ROOTS[@]} -eq 0 ]]; then
-            echo "No Android mapping output directories were found."
-            echo "Checked EAS local build working directory: $EAS_LOCAL_BUILD_WORKINGDIR"
-            exit 1
-          fi
-
-          MAPPING_SOURCE=$(find "${SEARCH_ROOTS[@]}" -path "*/release/mapping.txt" -type f -print -quit)
-
-          if [[ -z "$MAPPING_SOURCE" ]]; then
-            echo "Expected R8 mapping file was not found."
-            printf 'Checked directories:\n'
-            printf ' - %s\n' "${SEARCH_ROOTS[@]}"
-            exit 1
-          fi
-
-          cp "$MAPPING_SOURCE" "$MAPPING_TEMP_PATH"
 
       - name: 🧪 Create Dummy APK
         if: env.BUILD_TYPE == 'blank-test'
@@ -216,7 +183,7 @@ jobs:
 
       - name: 🎁 Create Release
         run: |
-          mapfile -t FILES < <(find dist -type f \( -name "*.apk" -o -name "*mapping.txt" \) | sort)
+          mapfile -t FILES < <(find dist -type f -name "*.apk" | sort)
 
           gh release create "$RELEASE_TAG" \
             "${FILES[@]}" \

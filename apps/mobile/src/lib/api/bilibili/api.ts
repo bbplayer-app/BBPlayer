@@ -27,6 +27,7 @@ import {
 	type BilibiliPlaylist,
 	BilibiliQrCodeLoginStatus,
 	type BilibiliSearchVideo,
+	type BilibiliSearchUser,
 	type BilibiliUserInfo,
 	type BilibiliUserUploadedVideosResponse,
 	type BilibiliVideoDetails,
@@ -202,6 +203,44 @@ export class BilibiliApi {
 			.andThen((params) => {
 				return bilibiliApiClient.get<{
 					result: BilibiliSearchVideo[]
+					numPages: number
+				}>(
+					'/x/web-interface/wbi/search/type',
+					params,
+					undefined,
+					options?.skipCookie,
+					options?.signal,
+				)
+			})
+			.andThen((res) => {
+				if (!res.result) {
+					res.result = []
+				}
+				return okAsync(res)
+			})
+	}
+
+	/**
+	 * 搜索 UP 主
+	 */
+	searchUsers(
+		keyword: string,
+		page: number = 1,
+		options?: { skipCookie?: boolean; signal?: AbortSignal },
+	): ResultAsync<
+		{ result: BilibiliSearchUser[]; numPages: number },
+		BilibiliApiError
+	> {
+		const params = getWbiEncodedParams({
+			keyword,
+			search_type: 'bili_user',
+			page: page.toString(),
+		})
+
+		return params
+			.andThen((params) => {
+				return bilibiliApiClient.get<{
+					result: BilibiliSearchUser[]
 					numPages: number
 				}>(
 					'/x/web-interface/wbi/search/type',

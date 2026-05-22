@@ -11,7 +11,7 @@
 
 - 优化热力图组件 WeeklyHeatMap，使其左侧星期几固定显示，不再随水平滑动而移动
 - 使用 react-native-boost 对部分 View、Text 组件加速
-- 优化 GitHub Actions 构建的 R8 映射文件名，只保留架构名与 r8-mapping 后缀，防止在 Release 页面与 APK 文件混淆导致误点
+- 关闭 r8 混淆并从构建工作流中移除上传 mapping 的步骤
 - 将大量组件替换为 ExpoUI 原生组件
 - 废弃并关闭弹幕功能，移除设置入口
 - 重构播放器进度条
@@ -19,6 +19,7 @@
 
 ### Added
 
+- 搜索页面集成 up 主搜索
 - 修改歌曲封面
 - 魅族状态栏歌词
 
