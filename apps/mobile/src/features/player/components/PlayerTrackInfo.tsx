@@ -2,7 +2,6 @@ import { useIsPlaying } from '@bbplayer/orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useState } from 'react'
 import type { ColorSchemeName } from 'react-native'
 import {
 	Dimensions,
@@ -22,7 +21,6 @@ import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getGradientColors } from '@/utils/color'
 
-import { DanmakuView } from './danmaku/DanmakuView'
 import { SpectrumVisualizer } from './SpectrumVisualizer'
 
 const { width: screenWidth } = Dimensions.get('window')
@@ -34,7 +32,6 @@ export function TrackInfo({
 	onArtistPress,
 	onPressCover,
 	coverRef,
-	danmakuEnabled,
 }: {
 	onArtistPress: () => void
 	onPressCover: () => void
@@ -44,8 +41,6 @@ export function TrackInfo({
 	const { colors } = useTheme()
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
-	const [size, setSize] = useState({ width: 0, height: 0 })
-	const enableDanmaku = useAppStore((state) => state.settings.enableDanmaku)
 
 	const currentTrack = useCurrentTrack()
 	const isPlaying = useIsPlaying()
@@ -93,10 +88,6 @@ export function TrackInfo({
 
 	return (
 		<View
-			onLayout={(e) => {
-				const { width, height } = e.nativeEvent.layout
-				setSize({ width, height })
-			}}
 			style={{
 				position: 'relative',
 			}}
@@ -205,18 +196,21 @@ export function TrackInfo({
 						</SquircleView>
 					)}
 				</TouchableOpacity>
-				{currentTrack.source === 'bilibili' &&
-					enableDanmaku &&
-					size.width > 0 &&
-					size.height > 0 && (
-						<DanmakuView
-							bvid={currentTrack.bilibiliMetadata.bvid}
-							cid={currentTrack.bilibiliMetadata.cid ?? undefined}
-							width={size.width}
-							height={COVER_SIZE_RECT + 48}
-							enable={danmakuEnabled}
-						/>
-					)}
+				{/* 弹幕功能已废弃并关闭，不再渲染 DanmakuView */}
+				{/*
+				currentTrack.source === 'bilibili' &&
+				enableDanmaku &&
+				size.width > 0 &&
+				size.height > 0 && (
+					<DanmakuView
+						bvid={currentTrack.bilibiliMetadata.bvid}
+						cid={currentTrack.bilibiliMetadata.cid ?? undefined}
+						width={size.width}
+						height={COVER_SIZE_RECT + 48}
+						enable={danmakuEnabled}
+					/>
+				)
+				*/}
 			</Pressable>
 
 			<View style={styles.trackInfoContainer}>

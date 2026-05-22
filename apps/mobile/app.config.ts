@@ -171,8 +171,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			expoBuildProperties({
 				android: {
 					usesCleartextTraffic: true,
-					enableMinifyInReleaseBuilds: true,
-					enableShrinkResourcesInReleaseBuilds: true,
+					enableMinifyInReleaseBuilds: false,
+					enableShrinkResourcesInReleaseBuilds: false,
 					minSdkVersion: 26,
 					packagingOptions: {
 						pickFirst: ['lib/*/libNitroModules.so'],
@@ -219,6 +219,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 -keep class org.jaudiotagger.** { *; }
 -keep class expo.modules.kotlin.services.FilePermissionService$** { *; }
 -keep class expo.modules.kotlin.services.FilePermissionService { *; }
+-keepclassmembers class expo.modules.kotlin.jni.worklets.WorkletNativeRuntime {
+    com.facebook.jni.HybridData mHybridData;
+}
 			`,
 				},
 				ios: {
