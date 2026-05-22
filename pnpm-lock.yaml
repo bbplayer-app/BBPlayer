@@ -288,8 +288,8 @@ importers:
         specifier: ~56.0.15
         version: 56.0.15(expo-dev-client@56.0.14(expo@56.0.3)(react-native@0.85.3(@babel/core@7.29.0)(@react-native-community/cli@20.1.3(typescript@6.0.3))(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3)))(expo@56.0.3)(react-native@0.85.3(@babel/core@7.29.0)(@react-native-community/cli@20.1.3(typescript@6.0.3))(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))(react@19.2.3)
       expo-wavy-slider:
-        specifier: ^0.4.3
-        version: 0.4.3(f4f9a01d900c0377c76687889025314a)
+        specifier: ^0.4.4
+        version: 0.4.4(f4f9a01d900c0377c76687889025314a)
       expo-web-browser:
         specifier: ~56.0.5
         version: 56.0.5(expo@56.0.3)(react-native@0.85.3(@babel/core@7.29.0)(@react-native-community/cli@20.1.3(typescript@6.0.3))(@react-native/jest-preset@0.85.3(@babel/core@7.29.0)(react@19.2.3))(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))
@@ -6949,8 +6949,8 @@ packages:
       expo-dev-client:
         optional: true
 
-  expo-wavy-slider@0.4.3:
-    resolution: {integrity: sha512-qKtL1p4rnbYcoYT3X3aGV6SN5wWaubPnxnQB4Yp/+Vr0IXb+L6aj7rUitj6XBM7b1BvwWf6dCHfRRiQVDEJ15g==}
+  expo-wavy-slider@0.4.4:
+    resolution: {integrity: sha512-MzF+CpzWPHwiaj9aqwGVSWnaDZicqMjXokV37zdDOJu4RwAYCnaKfx8El7YOxuPtvGDg97pYlziJrGw7iAEm4w==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -18643,7 +18643,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  expo-wavy-slider@0.4.3(f4f9a01d900c0377c76687889025314a):
+  expo-wavy-slider@0.4.4(f4f9a01d900c0377c76687889025314a):
     dependencies:
       expo: 56.0.3(dcfedbb1dc81f664eed06d9c94152925)
       react: 19.2.3

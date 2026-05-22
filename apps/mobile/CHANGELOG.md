@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.5.1] - 2026-05-22
+
+### Fixed
+
+- 修复在 ComposeView attach 之前就 measure 导致的崩溃问题
+
 ## [2.5.0] - 2026-05-22
 
 ### Changed
