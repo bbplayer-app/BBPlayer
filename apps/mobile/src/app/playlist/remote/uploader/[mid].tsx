@@ -2,7 +2,8 @@ import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, Searchbar, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
@@ -264,8 +265,7 @@ export default function UploaderPage() {
 			<Animated.View
 				style={[styles.searchbarContainer, searchbarAnimatedStyle]}
 			>
-				<Searchbar
-					mode='view'
+				<SearchBar
 					placeholder='搜索歌曲'
 					onChangeText={setSearchQuery}
 					value={searchQuery}

@@ -1,4 +1,5 @@
 import type { DownloadState } from '@bbplayer/orpheus'
+import { Icon as ExpoIcon } from '@expo/ui'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
@@ -6,9 +7,7 @@ import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
-	ActivityIndicator,
 	Divider,
-	Icon,
 	List,
 	Surface,
 	Text,
@@ -18,6 +17,7 @@ import {
 import type { MD3Theme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
@@ -210,9 +210,10 @@ const HighFreqButton = ({
 						height: 80,
 					}}
 				>
-					<Icon
-						source={item.leadingIcon}
+					<ExpoIcon
+						name={item.leadingIcon}
 						size={28}
+						color={theme.colors.onSurface}
 					/>
 					<Text
 						variant='labelMedium'
@@ -432,15 +433,28 @@ export function LocalTrackList({
 									}
 									left={(props) =>
 										menuItem.leadingIcon ? (
-											<List.Icon
-												{...props}
-												icon={menuItem.leadingIcon}
-												color={
-													menuItem.danger
-														? theme.colors.error
-														: theme.colors.onSurface
-												}
-											/>
+											<View
+												style={[
+													props.style,
+													{
+														width: 40,
+														height: 40,
+														alignItems: 'center',
+														justifyContent: 'center',
+													},
+												]}
+												pointerEvents='none'
+											>
+												<ExpoIcon
+													name={menuItem.leadingIcon}
+													size={24}
+													color={
+														menuItem.danger
+															? theme.colors.error
+															: theme.colors.onSurface
+													}
+												/>
+											</View>
 										) : null
 									}
 									onPress={() => {

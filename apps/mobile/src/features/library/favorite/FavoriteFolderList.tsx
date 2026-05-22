@@ -2,7 +2,8 @@ import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Searchbar, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
@@ -81,7 +82,7 @@ const FavoriteFolderListComponent = memo(() => {
 					{playlists.length ?? 0}&thinsp;个收藏夹
 				</Text>
 			</View>
-			<Searchbar
+			<SearchBar
 				placeholder='搜索我的收藏夹内容'
 				value={query}
 				mode='bar'
@@ -130,6 +131,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
+		height: 48, // 为了与 LocalPlaylistList 保持一致（LocalPlaylistList 上方存在一个 IconButton，所以会间隔更大一些）
 		marginBottom: 8,
 		flexDirection: 'row',
 		alignItems: 'center',

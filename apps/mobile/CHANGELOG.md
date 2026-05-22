@@ -5,16 +5,21 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [2.4.7] - 2026-05-20
+## [2.5.0] - 2026-05-22
 
 ### Changed
 
 - 优化热力图组件 WeeklyHeatMap，使其左侧星期几固定显示，不再随水平滑动而移动
 - 使用 react-native-boost 对部分 View、Text 组件加速
-- 优化 GitHub Actions 构建的 R8 映射文件名，只保留架构名与 r8-mapping 后缀，防止在 Release 页面与 APK 文件混淆导致误点
+- 关闭 r8 混淆并从构建工作流中移除上传 mapping 的步骤
+- 将大量组件替换为 ExpoUI 原生组件
+- 废弃并关闭弹幕功能，移除设置入口
+- 重构播放器进度条
+- 升级 react-native-tab-view，样式更新
 
 ### Added
 
+- 搜索页面集成 up 主搜索
 - 修改歌曲封面
 - 魅族状态栏歌词
 
@@ -481,7 +486,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.7...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.5.0...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -504,4 +509,4 @@
 [2.4.1]: https://github.com/bbplayer-app/BBPlayer/compare/v2.3.2...v2.4.1
 [2.4.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.2
 [2.4.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.4
-[2.4.7]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.6...v2.4.7
+[2.5.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.6...v2.5.0

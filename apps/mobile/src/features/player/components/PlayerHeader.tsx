@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
 		height: 40,
 	},
 	headerTextContainer: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		justifyContent: 'center',
 		alignItems: 'center',
 	},

@@ -10,8 +10,9 @@ import LottieView, { type AnimationObject } from 'lottie-react-native'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import { ActivityIndicator, useTheme } from 'react-native-paper'
+import { useTheme } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
@@ -194,7 +195,7 @@ export function MainPlaybackControls({
 			>
 				{debouncedBuffering ? (
 					<ActivityIndicator
-						size={playButtonSize * 0.4}
+						size={playButtonSize * 0.6}
 						color={colors.primary}
 					/>
 				) : (

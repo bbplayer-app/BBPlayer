@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router'
 import { Suspense, useEffect, useState } from 'react'
-import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native'
+import { Keyboard, StyleSheet, View } from 'react-native'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import { modalRegistry } from '@/components/ModalRegistry'
 import usePreventRemove from '@/hooks/router/usePreventRemove'

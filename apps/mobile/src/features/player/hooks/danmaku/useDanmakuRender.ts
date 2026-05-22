@@ -28,8 +28,12 @@ interface ActiveBullet {
 	birthTime: number
 }
 
-function binarySearch(data: BilibiliDanmakuItem[], targetTime: number): number {
+function binarySearch(
+	data: BilibiliDanmakuItem[] | undefined,
+	targetTime: number,
+): number {
 	'worklet'
+	if (!data) return 0
 	let left = 0
 	let right = data.length - 1
 	let result = data.length
@@ -169,11 +173,14 @@ export const useDanmakuRender = ({
 		const MAX_SPAWN_PER_FRAME = 10
 		let spawnedCount = 0
 
+		const rawData = rawDataSV.value
+		if (!rawData) return
+
 		while (
-			cursor.value < rawDataSV.value.length &&
+			cursor.value < rawData.length &&
 			spawnedCount < MAX_SPAWN_PER_FRAME
 		) {
-			const item = rawDataSV.value[cursor.value]
+			const item = rawData[cursor.value]
 
 			if (item.progress > now) break
 

@@ -1,7 +1,7 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useState, useTransition } from 'react'
-import { Dimensions, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
@@ -82,14 +82,17 @@ export default function Library() {
 					style={[styles.tabView, { backgroundColor: colors.background }]}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
-					overScrollMode={'never'}
 					renderTabBar={(props) => (
 						<TabBar
-							{...props}
-							style={[styles.tabBar, { backgroundColor: colors.background }]}
+							style={{
+								backgroundColor: colors.background,
+								marginBottom: 8,
+								marginTop: 8,
+							}}
 							indicatorStyle={{ backgroundColor: colors.onSecondaryContainer }}
 							activeColor={colors.onSecondaryContainer}
 							inactiveColor={colors.onSurface}
+							{...props}
 						/>
 					)}
 					onIndexChange={(i) => {
@@ -97,51 +100,42 @@ export default function Library() {
 							setIndex(i)
 						})
 					}}
-					initialLayout={{ width: Dimensions.get('window').width, height: 0 }}
 					options={{
 						favorite: {
-							icon: ({ focused }) => (
+							icon: ({ focused, color, size }) => (
 								<Icon
 									name={
 										focused ? 'star-box-multiple' : 'star-box-multiple-outline'
 									}
-									size={20}
-									color={
-										focused ? colors.onSecondaryContainer : colors.onSurface
-									}
+									size={size}
+									color={color}
 								/>
 							),
 						},
 						collection: {
-							icon: ({ focused }) => (
+							icon: ({ focused, color, size }) => (
 								<Icon
 									name={focused ? 'folder' : 'folder-outline'}
-									size={20}
-									color={
-										focused ? colors.onSecondaryContainer : colors.onSurface
-									}
+									size={size}
+									color={color}
 								/>
 							),
 						},
 						multiPage: {
-							icon: ({ focused }) => (
+							icon: ({ focused, color, size }) => (
 								<Icon
 									name={focused ? 'folder-play' : 'folder-play-outline'}
-									size={20}
-									color={
-										focused ? colors.onSecondaryContainer : colors.onSurface
-									}
+									size={size}
+									color={color}
 								/>
 							),
 						},
 						local: {
-							icon: ({ focused }) => (
+							icon: ({ focused, color, size }) => (
 								<Icon
 									name={focused ? 'list-box' : 'list-box-outline'}
-									size={20}
-									color={
-										focused ? colors.onSecondaryContainer : colors.onSurface
-									}
+									size={size}
+									color={color}
 								/>
 							),
 						},
@@ -173,14 +167,6 @@ const styles = StyleSheet.create({
 	},
 	tabView: {
 		flex: 1,
-	},
-	tabBar: {
-		overflow: 'hidden',
-		justifyContent: 'center',
-		maxHeight: 70,
-		marginBottom: 20,
-		marginTop: 20,
-		elevation: 0,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',

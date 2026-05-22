@@ -1,7 +1,14 @@
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { StyleSheet } from 'react-native'
-import { Dialog, HelperText, TextInput } from 'react-native-paper'
+import { Dialog, HelperText } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import useTextFieldState from '@/hooks/useTextFieldState'
 
 interface Props {
 	tel: string
@@ -22,24 +29,32 @@ export default function InputPhoneStep({
 	onBack,
 	onRequestCode,
 }: Props) {
+	const telState = useTextFieldState(tel)
+
 	return (
 		<>
 			<Dialog.Title>手机号登录</Dialog.Title>
 			<Dialog.Content>
-				<TextInput
-					label='手机号'
-					value={tel}
-					onChangeText={(v) => {
-						setTel(v)
-						setPhoneError('')
-					}}
-					mode='outlined'
-					keyboardType='phone-pad'
-					autoComplete='tel'
+				<Host
+					matchContents={{ vertical: true }}
 					style={styles.input}
-					error={!!phoneError}
-					left={<TextInput.Affix text='+86' />}
-				/>
+				>
+					<OutlinedTextField
+						value={telState}
+						onValueChange={(v) => {
+							setTel(v)
+							setPhoneError('')
+						}}
+						singleLine
+						isError={!!phoneError}
+						keyboardOptions={{ keyboardType: 'phone' }}
+						modifiers={[fillMaxWidth()]}
+					>
+						<OutlinedTextField.Label>
+							<ComposeText>+86 手机号</ComposeText>
+						</OutlinedTextField.Label>
+					</OutlinedTextField>
+				</Host>
 				{phoneError ? (
 					<HelperText
 						type='error'

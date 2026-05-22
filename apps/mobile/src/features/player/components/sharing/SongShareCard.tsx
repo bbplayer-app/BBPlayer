@@ -11,7 +11,7 @@ interface SongShareCardProps {
 	artistName: string
 	imageRef?: ImageRef | null
 	shareUrl: string
-	viewShotRef: React.RefObject<ViewShot | null>
+	viewShotRef: React.RefObject<View | null>
 	backgroundColor: string
 }
 

@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Banner,
@@ -13,6 +13,7 @@ import {
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import IconButton from '@/components/common/IconButton'
@@ -547,10 +548,7 @@ const ExternalPlaylistSyncFooter = ({
 						]}
 					>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<ActivityIndicator
-								animating={true}
-								color={theme.colors.primary}
-							/>
+							<ActivityIndicator color={theme.colors.primary} />
 							<View style={{ marginLeft: 12 }}>
 								<Text variant='bodyMedium'>
 									正在匹配... {(progress * 100).toFixed(0)}%

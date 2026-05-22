@@ -1,10 +1,17 @@
 import { Orpheus } from '@bbplayer/orpheus'
+import {
+	Host,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { width } from '@expo/ui/jetpack-compose/modifiers'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text, TextInput } from 'react-native-paper'
+import { Dialog, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -15,6 +22,7 @@ const PlaybackSpeedModal = () => {
 	const [speed, setSpeed] = useState<number>(1.0)
 	const [customInputVisible, setCustomInputVisible] = useState(false)
 	const [customSpeed, setCustomSpeed] = useState('')
+	const customSpeedState = useTextFieldState(customSpeed)
 
 	useEffect(() => {
 		void Orpheus.getPlaybackSpeed().then(setSpeed)
@@ -81,16 +89,27 @@ const PlaybackSpeedModal = () => {
 
 				{customInputVisible ? (
 					<View style={styles.customInputContainer}>
-						<TextInput
-							label='自定义速度 (0.1 - 5.0)'
-							value={customSpeed}
-							onChangeText={setCustomSpeed}
-							keyboardType='numeric'
-							autoFocus
-							mode='outlined'
+						<Host
+							matchContents
 							style={styles.customInput}
-							onSubmitEditing={handleCustomSpeedSubmit}
-						/>
+						>
+							<OutlinedTextField
+								value={customSpeedState}
+								onValueChange={setCustomSpeed}
+								autoFocus
+								singleLine
+								keyboardOptions={{
+									keyboardType: 'decimal',
+									imeAction: 'done',
+								}}
+								keyboardActions={{ onDone: handleCustomSpeedSubmit }}
+								modifiers={[width(180)]}
+							>
+								<OutlinedTextField.Label>
+									<ComposeText>自定义速度 (0.1 - 5.0)</ComposeText>
+								</OutlinedTextField.Label>
+							</OutlinedTextField>
+						</Host>
 						<Button
 							mode='contained'
 							onPress={handleCustomSpeedSubmit}

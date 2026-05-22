@@ -7,9 +7,10 @@ import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Divider, Text, useTheme } from 'react-native-paper'
+import { Divider, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import type { BilibiliTrack } from '@/types/core/media'
 import type {
@@ -18,7 +19,7 @@ import type {
 } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
 
-import { TrackListItem } from './PlaylistItem'
+import { TrackListItem, type TrackMenuItem } from './PlaylistItem'
 
 interface TrackListProps extends Omit<
 	FlashListProps<BilibiliTrack>,
@@ -35,9 +36,7 @@ interface TrackListProps extends Omit<
 	/**
 	 * 生成曲目菜单项的函数
 	 */
-	trackMenuItems: (
-		track: BilibiliTrack,
-	) => { title: string; leadingIcon: string; onPress: () => void }[]
+	trackMenuItems: (track: BilibiliTrack) => TrackMenuItem[]
 	/**
 	 * 多选状态管理
 	 */
@@ -68,9 +67,7 @@ interface TrackListProps extends Omit<
 
 export interface ExtraData {
 	playTrack: (track: BilibiliTrack) => void
-	trackMenuItems: (
-		track: BilibiliTrack,
-	) => { title: string; leadingIcon: string; onPress: () => void }[]
+	trackMenuItems: (track: BilibiliTrack) => TrackMenuItem[]
 	selection: SelectionState
 	showItemCover?: boolean
 	currentTrackIdRef: RefObject<string | undefined>

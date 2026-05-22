@@ -1,3 +1,4 @@
+import { Icon } from '@expo/ui'
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
@@ -31,6 +32,11 @@ import { toastAndLogError } from '@/utils/error-handling'
 import { reportErrorToSentry } from '@/utils/log'
 import { addToQueue } from '@/utils/player'
 import toast from '@/utils/toast'
+
+const DELETE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
 
 const mapApiItemToTrack = (
 	apiItem: BilibiliToViewVideoList['list'][0],
@@ -221,7 +227,7 @@ export default function ToViewPage() {
 							})
 						}}
 						title='清除所有已播放歌曲'
-						leadingIcon='trash-can'
+						leadingIcon={DELETE_ICON}
 					/>
 					<FunctionalMenu.Item
 						onPress={() => {
@@ -243,7 +249,7 @@ export default function ToViewPage() {
 							)
 						}}
 						title='清除所有歌曲'
-						leadingIcon='delete'
+						leadingIcon={DELETE_ICON}
 						titleStyle={{ color: colors.error }}
 					/>
 				</FunctionalMenu>

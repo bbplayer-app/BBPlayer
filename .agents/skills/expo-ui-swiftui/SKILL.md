@@ -25,7 +25,6 @@ A native rebuild is required after installation (`npx expo run:ios`).
 ```jsx
 import { Host, VStack, RNHostView } from '@expo-ui/swift-ui'
 import { Pressable } from 'react-native'
-
 ;<Host matchContents>
 	<VStack>
 		<RNHostView matchContents>

@@ -3,15 +3,11 @@ import { type ComponentRef, forwardRef } from 'react'
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native'
 import { StyleSheet, View } from 'react-native'
 import { BaseButton } from 'react-native-gesture-handler'
-import {
-	ActivityIndicator,
-	Icon,
-	Surface,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
+
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 
 export type ButtonMode =
 	| 'text'

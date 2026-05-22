@@ -1,13 +1,22 @@
+import {
+	Column,
+	Host,
+	Icon,
+	IconButton,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useCallback, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, TextInput } from 'react-native-paper'
+import { Dialog } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-import IconButton from '@/components/common/IconButton'
 import { useEditPlaylistMetadata } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import { bilibiliFacade } from '@/lib/facades/bilibili'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -15,6 +24,7 @@ import log from '@/utils/log'
 import toast from '@/utils/toast'
 
 const logger = log.extend('Components.EditPlaylistMetadataModal')
+const imagePlusIcon = require('@expo/material-symbols/add_photo_alternate.xml')
 
 export default function EditPlaylistMetadataModal({
 	playlist,
@@ -25,6 +35,9 @@ export default function EditPlaylistMetadataModal({
 	const [title, setTitle] = useState(playlist.title)
 	const [description, setDescription] = useState(playlist.description)
 	const [coverUrl, setCoverUrl] = useState(playlist.coverUrl)
+	const titleState = useTextFieldState(title)
+	const descriptionState = useTextFieldState(description ?? '')
+	const coverUrlState = useTextFieldState(coverUrl ?? '')
 	const _close = useModalStore((state) => state.close)
 	const close = useCallback(() => _close('EditPlaylistMetadata'), [_close])
 
@@ -103,40 +116,56 @@ export default function EditPlaylistMetadataModal({
 		<>
 			<Dialog.Title>编辑信息</Dialog.Title>
 			<Dialog.Content style={styles.content}>
-				<TextInput
-					label='标题'
-					value={title}
-					onChangeText={setTitle}
-					mode='outlined'
-					numberOfLines={1}
-					textAlignVertical='top'
-				/>
-				<TextInput
-					label='描述'
-					onChangeText={setDescription}
-					value={description ?? undefined}
-					mode='outlined'
-					multiline
-					style={styles.descriptionInput}
-					textAlignVertical='top'
-				/>
-				<View style={styles.coverUrlContainer}>
-					<TextInput
-						label='封面'
-						onChangeText={setCoverUrl}
-						value={coverUrl ?? undefined}
-						mode='outlined'
-						numberOfLines={1}
-						textAlignVertical='top'
-						style={styles.coverUrlInput}
-					/>
-					<IconButton
-						icon='image-plus'
-						size={20}
-						style={styles.imagePickerButton}
-						onPress={handleImagePicker}
-					/>
-				</View>
+				<Host
+					matchContents={{ vertical: true }}
+					style={styles.formHost}
+				>
+					<Column
+						modifiers={[fillMaxWidth()]}
+						verticalArrangement={{ spacedBy: 8 }}
+					>
+						<OutlinedTextField
+							value={titleState}
+							onValueChange={setTitle}
+							singleLine
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>标题</ComposeText>
+							</OutlinedTextField.Label>
+						</OutlinedTextField>
+						<OutlinedTextField
+							value={descriptionState}
+							onValueChange={setDescription}
+							minLines={3}
+							maxLines={3}
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>描述</ComposeText>
+							</OutlinedTextField.Label>
+						</OutlinedTextField>
+						<OutlinedTextField
+							value={coverUrlState}
+							onValueChange={setCoverUrl}
+							singleLine
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>封面</ComposeText>
+							</OutlinedTextField.Label>
+							<OutlinedTextField.TrailingIcon>
+								<IconButton onClick={handleImagePicker}>
+									<Icon
+										source={imagePlusIcon}
+										size={20}
+										contentDescription='选择封面'
+									/>
+								</IconButton>
+							</OutlinedTextField.TrailingIcon>
+						</OutlinedTextField>
+					</Column>
+				</Host>
 			</Dialog.Content>
 			<Dialog.Actions style={styles.actionsContainer}>
 				{playlist.type !== 'local' && playlist.type !== 'dynamic' ? (
@@ -157,18 +186,8 @@ const styles = StyleSheet.create({
 	content: {
 		gap: 5,
 	},
-	descriptionInput: {
-		maxHeight: 150,
-	},
-	coverUrlContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	coverUrlInput: {
-		flex: 1,
-	},
-	imagePickerButton: {
-		marginTop: 13,
+	formHost: {
+		width: '100%',
 	},
 	actionsContainer: {
 		justifyContent: 'space-between',

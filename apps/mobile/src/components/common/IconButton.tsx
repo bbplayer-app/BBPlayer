@@ -2,9 +2,11 @@ import { forwardRef, type ComponentRef } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, View } from 'react-native'
 import { BaseButton } from 'react-native-gesture-handler'
-import { ActivityIndicator, Icon, useTheme } from 'react-native-paper'
+import { Icon, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
+
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 
 type IconButtonMode = 'outlined' | 'contained' | 'contained-tonal'
 

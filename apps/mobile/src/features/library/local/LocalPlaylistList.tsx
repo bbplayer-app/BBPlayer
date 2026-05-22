@@ -1,7 +1,9 @@
+import { Host, Icon, Text as ExpoText } from '@expo/ui'
+import { DockedSearchBar } from '@expo/ui/jetpack-compose'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Searchbar, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -17,6 +19,26 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
 
 import LocalPlaylistItem from './LocalPlaylistItem'
+
+const CREATE_PLAYLIST_ICON = Icon.select({
+	ios: 'plus.rectangle.on.rectangle',
+	android: import('@expo/material-symbols/playlist_add.xml'),
+})
+
+const IMPORT_PLAYLIST_ICON = Icon.select({
+	ios: 'link',
+	android: import('@expo/material-symbols/link.xml'),
+})
+
+const SUBSCRIBE_PLAYLIST_ICON = Icon.select({
+	ios: 'person.2',
+	android: import('@expo/material-symbols/group.xml'),
+})
+
+const MERGE_PLAYLIST_ICON = Icon.select({
+	ios: 'arrow.merge',
+	android: import('@expo/material-symbols/merge.xml'),
+})
 
 const renderPlaylistItem = ({
 	item,
@@ -117,7 +139,7 @@ const LocalPlaylistListComponent = memo(() => {
 						}
 					>
 						<FunctionalMenu.Item
-							leadingIcon='playlist-plus'
+							leadingIcon={CREATE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('CreatePlaylist', { redirectToNewPlaylist: true })
@@ -125,7 +147,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='新建播放列表'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='link-plus'
+							leadingIcon={IMPORT_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('InputExternalPlaylistInfo', undefined)
@@ -133,7 +155,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='导入外部歌单'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='account-group'
+							leadingIcon={SUBSCRIBE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('SubscribeToSharedPlaylist', undefined)
@@ -141,7 +163,7 @@ const LocalPlaylistListComponent = memo(() => {
 							title='订阅共享歌单'
 						/>
 						<FunctionalMenu.Item
-							leadingIcon='merge'
+							leadingIcon={MERGE_PLAYLIST_ICON}
 							onPress={() => {
 								setMenuVisible(false)
 								openModal('MergePlaylists', undefined)
@@ -151,14 +173,21 @@ const LocalPlaylistListComponent = memo(() => {
 					</FunctionalMenu>
 				</View>
 			</View>
-			<Searchbar
-				placeholder='搜索播放列表'
-				onChangeText={setSearchQuery}
-				value={searchQuery}
-				mode='bar'
-				style={styles.searchbar}
-				inputStyle={styles.searchInput}
-			/>
+			<Host matchContents>
+				<DockedSearchBar onQueryChange={setSearchQuery}>
+					<DockedSearchBar.Placeholder>
+						<ExpoText>搜索播放列表</ExpoText>
+					</DockedSearchBar.Placeholder>
+					<DockedSearchBar.LeadingIcon>
+						<Icon
+							name={Icon.select({
+								ios: 'magnifyingglass',
+								android: import('@expo/material-symbols/search.xml'),
+							})}
+						/>
+					</DockedSearchBar.LeadingIcon>
+				</DockedSearchBar>
+			</Host>
 			<View
 				style={{
 					flex: 1,
@@ -202,6 +231,7 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
+		height: 48,
 		marginBottom: 8,
 		flexDirection: 'row',
 		alignItems: 'center',

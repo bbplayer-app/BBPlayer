@@ -1,14 +1,13 @@
-import { Orpheus } from '@bbplayer/orpheus'
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
+import Color from 'color'
+import { WavySlider } from 'expo-wavy-slider'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
-import Animated, {
+import {
 	useAnimatedReaction,
-	useAnimatedStyle,
 	useDerivedValue,
 	useSharedValue,
-	withSpring,
 	withTiming,
 	type SharedValue,
 } from 'react-native-reanimated'
@@ -17,8 +16,6 @@ import { scheduleOnRN } from 'react-native-worklets'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
-
-const THUMB_SIZE = 12
 
 function TextWithAnimation({
 	sharedPosition,
@@ -93,20 +90,23 @@ interface PlayerSliderProps {
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
 	const { position, duration, buffered } = useSmoothProgress()
+	const isPlaying = useIsPlaying()
 
-	const containerWidth = useSharedValue(0)
 	const isScrubbing = useSharedValue(false)
 	const scrubPosition = useSharedValue(0)
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
+	const isPlayingShared = useSharedValue(isPlaying)
+	const isNativeDragging = useSharedValue(false)
+	const animatedWaveHeight = useSharedValue(isPlaying ? 6 : 0)
+	const animatedWaveVelocity = useSharedValue(isPlaying ? 15 : 0)
+	const animatedWaveThickness = useSharedValue(3)
+	const animatedTrackThickness = useSharedValue(3)
 	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-	const sliderContainerRef = useRef<View>(null)
 
-	const displayPosition = useDerivedValue(() => {
-		if (isScrubbing.value) return scrubPosition.value
-		if (isSeeking.value) return seekPosition.value
-		return position.value
-	})
+	useEffect(() => {
+		isPlayingShared.set(isPlaying)
+	}, [isPlaying, isPlayingShared])
 
 	const handleSeek = useCallback(
 		(time: number) => {
@@ -115,7 +115,8 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			void Orpheus.seekTo(time)
 
 			seekTimeoutRef.current = setTimeout(() => {
-				// 获取实际播放位置并同步，避免暂停状态下 position 未更新导致进度条回退
+				// Sync the actual native playback position to avoid a stale paused
+				// position snapping the progress bar backward.
 				void Orpheus.getPosition().then((actualPosition) => {
 					position.set(actualPosition)
 					isSeeking.set(false)
@@ -125,6 +126,12 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		},
 		[isSeeking, position],
 	)
+
+	const displayPosition = useDerivedValue(() => {
+		if (isScrubbing.value) return scrubPosition.value
+		if (isSeeking.value) return seekPosition.value
+		return position.value
+	})
 
 	useAnimatedReaction(
 		() => position.value,
@@ -140,7 +147,36 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		[position, isSeeking, seekPosition],
 	)
 
-	const progress = useDerivedValue(() => {
+	useAnimatedReaction(
+		() =>
+			[
+				isPlayingShared.value,
+				isNativeDragging.value || isScrubbing.value,
+			] as const,
+		([playing, dragging]) => {
+			const shouldShowWave = playing && !dragging
+			const thickness = dragging ? 12 : 3
+			animatedWaveHeight.set(
+				withTiming(shouldShowWave ? 6 : 0, { duration: dragging ? 100 : 300 }),
+			)
+			animatedWaveVelocity.set(
+				withTiming(playing ? 15 : 0, { duration: playing ? 150 : 100 }),
+			)
+			animatedWaveThickness.set(withTiming(thickness, { duration: 200 }))
+			animatedTrackThickness.set(withTiming(thickness, { duration: 200 }))
+		},
+		[
+			animatedTrackThickness,
+			animatedWaveHeight,
+			animatedWaveThickness,
+			animatedWaveVelocity,
+			isNativeDragging,
+			isScrubbing,
+			isPlayingShared,
+		],
+	)
+
+	const progressFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
 		let pos = position.value
 		if (isScrubbing.value) {
@@ -151,164 +187,81 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		return Math.min(Math.max(pos / dur, 0), 1)
 	})
 
-	const trackHeight = useDerivedValue(() => {
-		return withTiming(isScrubbing.value ? 12 : 4, { duration: 200 })
+	const bufferedFraction = useDerivedValue(() => {
+		const dur = duration.value || 1
+		return Math.min(Math.max(buffered.value / dur, 0), 1)
 	})
 
-	useLayoutEffect(() => {
-		if (sliderContainerRef.current) {
-			sliderContainerRef.current.measure((_x, _y, width) => {
-				if (width > 0) {
-					containerWidth.set(width)
-				}
-			})
-		}
-	}, [containerWidth])
+	const handleValueChange = useCallback(
+		(value: number) => {
+			'worklet'
+			const wasScrubbing = isScrubbing.value
+			isScrubbing.set(true)
+			scrubPosition.set(value * (duration.value || 1))
 
-	const pan = useMemo(
-		() =>
-			Gesture.Pan()
-				.minDistance(1)
-				.onBegin((e) => {
-					if (containerWidth.value === 0) return
-					isScrubbing.set(true)
-					const newProgress = Math.min(
-						Math.max(e.x / containerWidth.value, 0),
-						1,
-					)
-					scrubPosition.set(newProgress * (duration.value || 1))
-					scheduleOnRN(
-						Haptics.performHaptics,
-						Haptics.AndroidHaptics.Drag_Start,
-					)
-					if (onInteraction) {
-						scheduleOnRN(onInteraction)
-					}
-				})
-				.onUpdate((e) => {
-					if (containerWidth.value === 0) return
-					const newProgress = Math.min(
-						Math.max(e.x / containerWidth.value, 0),
-						1,
-					)
-					scrubPosition.set(newProgress * (duration.value || 1))
-					if (onInteraction) {
-						scheduleOnRN(onInteraction)
-					}
-				})
-				.onFinalize(() => {
-					if (containerWidth.value === 0) return
-					const targetTime = scrubPosition.value
-
-					seekPosition.set(targetTime)
-					isSeeking.set(true)
-
-					scheduleOnRN(handleSeek, targetTime)
-					scheduleOnRN(
-						Haptics.performHaptics,
-						Haptics.AndroidHaptics.Gesture_End,
-					)
-					if (onInteraction) {
-						scheduleOnRN(onInteraction)
-					}
-
-					isScrubbing.set(false)
-				})
-				.hitSlop({ top: 20, bottom: 20, left: 20, right: 20 }),
-		[
-			containerWidth,
-			isScrubbing,
-			scrubPosition,
-			duration,
-			onInteraction,
-			seekPosition,
-			isSeeking,
-			handleSeek,
-		],
+			if (!wasScrubbing) {
+				scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Drag_Start)
+			}
+			if (onInteraction) {
+				scheduleOnRN(onInteraction)
+			}
+		},
+		[duration, isScrubbing, onInteraction, scrubPosition],
 	)
 
-	const trackAnimatedStyle = useAnimatedStyle(() => {
-		return {
-			height: trackHeight.value,
-			borderRadius: trackHeight.value / 2,
-			overflow: 'hidden',
-		}
-	})
+	const handleValueChangeFinished = useCallback(
+		(value: number) => {
+			'worklet'
+			const targetTime = value * (duration.value || 1)
 
-	const activeTrackInnerStyle = useAnimatedStyle(() => {
-		const translateX = (progress.value - 1) * containerWidth.value
-		return {
-			transform: [{ translateX }],
-			width: containerWidth.value,
-			height: '100%',
-		}
-	})
+			seekPosition.set(targetTime)
+			isSeeking.set(true)
+			isScrubbing.set(false)
+			scheduleOnRN(handleSeek, targetTime)
+			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Gesture_End)
+			if (onInteraction) {
+				scheduleOnRN(onInteraction)
+			}
+		},
+		[duration, isScrubbing, isSeeking, onInteraction, seekPosition, handleSeek],
+	)
 
-	const bufferedProgress = useDerivedValue(() => {
-		const dur = duration.value || 1
-		const buf = buffered.value
-		return Math.min(Math.max(buf / dur, 0), 1)
-	})
+	const handleDragStateChange = useCallback(
+		(dragging: boolean) => {
+			'worklet'
+			isNativeDragging.set(dragging)
+		},
+		[isNativeDragging],
+	)
 
-	const bufferedTrackInnerStyle = useAnimatedStyle(() => {
-		const translateX = (bufferedProgress.value - 1) * containerWidth.value
-		return {
-			transform: [{ translateX }],
-			width: containerWidth.value,
-			height: '100%',
-		}
-	})
-
-	const thumbAnimatedStyle = useAnimatedStyle(() => {
-		const translateX = progress.value * containerWidth.value - THUMB_SIZE / 2
-		return {
-			transform: [
-				{ translateX },
-				{ scale: withSpring(isScrubbing.value ? 1.5 : 1) },
-			],
-			opacity: containerWidth.value > 0 ? 1 : 0,
-		}
-	})
+	const sliderColors = useMemo(
+		() => ({
+			activeTrackColor: colors.primary,
+			bufferedTrackColor: Color(colors.primary).alpha(0.28).rgb().string(),
+			inactiveTrackColor: colors.surfaceVariant,
+			thumbColor: colors.primary,
+		}),
+		[colors.primary, colors.surfaceVariant],
+	)
 
 	return (
 		<View style={styles.root}>
-			<GestureDetector gesture={pan}>
-				<View
-					style={styles.sliderContainer}
-					ref={sliderContainerRef}
-				>
-					<Animated.View
-						style={[
-							styles.track,
-							{ backgroundColor: colors.surfaceVariant },
-							trackAnimatedStyle,
-						]}
-					>
-						<Animated.View
-							style={[
-								styles.trackItem,
-								{ backgroundColor: colors.inverseSurface, opacity: 0.3 },
-								bufferedTrackInnerStyle,
-							]}
-						/>
-						<Animated.View
-							style={[
-								styles.trackItem,
-								{ backgroundColor: colors.primary },
-								activeTrackInnerStyle,
-							]}
-						/>
-					</Animated.View>
-
-					<Animated.View
-						style={[
-							styles.thumb,
-							{ backgroundColor: colors.primary },
-							thumbAnimatedStyle,
-						]}
-					/>
-				</View>
-			</GestureDetector>
+			<WavySlider
+				style={styles.slider}
+				progress={progressFraction}
+				bufferedProgress={bufferedFraction}
+				colors={sliderColors}
+				waveLength={30}
+				waveVelocity={animatedWaveVelocity}
+				waveDirection='head'
+				waveHeight={animatedWaveHeight}
+				waveThickness={animatedWaveThickness}
+				trackThickness={animatedTrackThickness}
+				incremental={false}
+				onValueChange={handleValueChange}
+				onValueChangeFinished={handleValueChangeFinished}
+				onDragStateChange={handleDragStateChange}
+			/>
 
 			<View style={styles.timeContainer}>
 				<TextWithAnimation
@@ -325,9 +278,8 @@ const styles = StyleSheet.create({
 		width: '100%',
 		justifyContent: 'center',
 	},
-	sliderContainer: {
-		height: 40,
-		justifyContent: 'center',
+	slider: {
+		height: 25,
 		width: '90%',
 		alignSelf: 'center',
 	},
@@ -337,22 +289,5 @@ const styles = StyleSheet.create({
 		justifyContent: 'space-between',
 		width: '90%',
 		alignSelf: 'center',
-	},
-	track: {
-		position: 'absolute',
-		width: '100%',
-		left: 0,
-	},
-	thumb: {
-		position: 'absolute',
-		width: THUMB_SIZE,
-		height: THUMB_SIZE,
-		borderRadius: THUMB_SIZE / 2,
-		left: 0,
-	},
-	trackItem: {
-		position: 'absolute',
-		left: 0,
-		top: 0,
 	},
 })

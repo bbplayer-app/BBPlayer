@@ -1,9 +1,30 @@
+import { Icon } from '@expo/ui'
 import { usePathname, useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { BilibiliTrack } from '@/types/core/media'
 import toast from '@/utils/toast'
+
+const PLAY_NEXT_ICON = Icon.select({
+	ios: 'arrow.right.to.line.circle',
+	android: import('@expo/material-symbols/skip_next.xml'),
+})
+
+const INFO_ICON = Icon.select({
+	ios: 'doc.text',
+	android: import('@expo/material-symbols/description.xml'),
+})
+
+const ADD_TO_PLAYLIST_ICON = Icon.select({
+	ios: 'plus.rectangle.on.rectangle',
+	android: import('@expo/material-symbols/playlist_add.xml'),
+})
+
+const ARTIST_ICON = Icon.select({
+	ios: 'person.crop.circle',
+	android: import('@expo/material-symbols/person.xml'),
+})
 
 export function usePlaylistMenu(
 	playTrack: (track: BilibiliTrack, playNext: boolean) => void,
@@ -16,12 +37,15 @@ export function usePlaylistMenu(
 		(item: BilibiliTrack) => [
 			{
 				title: '下一首播放',
-				leadingIcon: 'skip-next-circle-outline',
-				onPress: () => playTrack(item, true),
+				leadingIcon: PLAY_NEXT_ICON,
+				onPress: () => {
+					playTrack(item, true)
+					toast.success('添加到下一首播放成功')
+				},
 			},
 			{
 				title: '查看详细信息',
-				leadingIcon: 'file-document-outline',
+				leadingIcon: INFO_ICON,
 				onPress: () => {
 					if (pathname.includes('multipage')) {
 						toast.info('你已经在这里了，没法更深入了！')
@@ -35,14 +59,14 @@ export function usePlaylistMenu(
 			},
 			{
 				title: '添加到本地歌单',
-				leadingIcon: 'playlist-plus',
+				leadingIcon: ADD_TO_PLAYLIST_ICON,
 				onPress: () => {
 					openModal('UpdateTrackLocalPlaylists', { track: item })
 				},
 			},
 			{
 				title: '查看 up 主作品',
-				leadingIcon: 'account-music',
+				leadingIcon: ARTIST_ICON,
 				onPress: () => {
 					if (!item.artist?.remoteId) {
 						toast.error('未找到 up 主信息')

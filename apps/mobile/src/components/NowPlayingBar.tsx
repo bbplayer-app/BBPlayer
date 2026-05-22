@@ -30,6 +30,8 @@ import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
 
+import ActivityIndicator from './common/ActivityIndicator'
+
 const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =
 		useSmoothProgress(false)
@@ -98,8 +100,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		(state) => state.settings.nowPlayingBarStyle,
 	)
 
-	const finalPlayingIndicator =
-		state === PlaybackState.BUFFERING ? 'loading' : isPlaying ? 'pause' : 'play'
+	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
 	const prevTap = Gesture.Tap().onEnd((_e, success) => {
 		if (success) {
@@ -264,11 +265,15 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 								<GestureDetector gesture={playTap}>
 									<RectButton style={styles.nowPlayingBarControlButton}>
-										<Icon
-											source={finalPlayingIndicator}
-											size={24}
-											color={colors.primary}
-										/>
+										{state === PlaybackState.BUFFERING ? (
+											<ActivityIndicator size='small' />
+										) : (
+											<Icon
+												source={finalPlayingIndicator}
+												size={24}
+												color={colors.primary}
+											/>
+										)}
 									</RectButton>
 								</GestureDetector>
 

@@ -4,10 +4,11 @@ import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ActivityIndicator, Dialog, Text, useTheme } from 'react-native-paper'
+import { Dialog, Text, useTheme } from 'react-native-paper'
 import type ViewShot from 'react-native-view-shot'
 import { captureRef } from 'react-native-view-shot'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
@@ -21,7 +22,7 @@ const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 async function performShare(
 	action: 'save' | 'share',
 	previewUri: string | null,
-	viewShotRef: { current: ViewShot | null },
+	viewShotRef: { current: View | null },
 	uniqueKey: string,
 	permissionResponse: MediaLibrary.PermissionResponse | null,
 	requestPermission: () => Promise<MediaLibrary.PermissionResponse>,

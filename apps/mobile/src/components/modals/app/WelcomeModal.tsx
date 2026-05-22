@@ -1,3 +1,4 @@
+import { Icon } from '@expo/ui'
 import {
 	useCallback,
 	useEffect,
@@ -20,6 +21,16 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { storage } from '@/utils/mmkv'
 
 const titles = ['欢迎使用 BBPlayer', '登录？']
+
+const QRCODE_SCAN_ICON = Icon.select({
+	ios: 'qrcode.viewfinder',
+	android: import('@expo/material-symbols/qr_code_scanner.xml'),
+})
+
+const CELLPHONE_ICON = Icon.select({
+	ios: 'iphone',
+	android: import('@expo/material-symbols/mobile.xml'),
+})
 
 function Step0() {
 	return (
@@ -68,7 +79,7 @@ function Step1({
 					}
 				>
 					<FunctionalMenu.Item
-						leadingIcon='qrcode-scan'
+						leadingIcon={QRCODE_SCAN_ICON}
 						title='扫码登录'
 						onPress={() => {
 							setMenuVisible(false)
@@ -76,7 +87,7 @@ function Step1({
 						}}
 					/>
 					<FunctionalMenu.Item
-						leadingIcon='cellphone'
+						leadingIcon={CELLPHONE_ICON}
 						title='手机号登录'
 						onPress={() => {
 							setMenuVisible(false)

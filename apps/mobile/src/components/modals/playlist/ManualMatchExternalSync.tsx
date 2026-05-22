@@ -2,14 +2,10 @@ import { FlashList } from '@shopify/flash-list'
 import { decode } from 'he'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Searchbar,
-	Text,
-	TouchableRipple,
-} from 'react-native-paper'
+import { Dialog, Text, TouchableRipple } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
@@ -176,7 +172,7 @@ export default function ManualMatchExternalSync({
 		<>
 			<Dialog.Title>手动匹配视频</Dialog.Title>
 			<Dialog.Content>
-				<Searchbar
+				<SearchBar
 					value={query}
 					onChangeText={setQuery}
 					placeholder='输入关键词搜索'

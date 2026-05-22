@@ -5,11 +5,9 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
 export default function PlaybackSettingsPage() {
@@ -84,16 +82,6 @@ export default function PlaybackSettingsPage() {
 							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
 						}}
-					/>
-				</View>
-
-				<View style={styles.settingRow}>
-					<Text>启用弹幕（听歌看弹幕到底有神魔用～）</Text>
-					<IconButton
-						icon='format-list-checks'
-						onPress={() =>
-							useModalStore.getState().open('DanmakuSettings', undefined)
-						}
 					/>
 				</View>
 			</ScrollView>

@@ -13,6 +13,7 @@ export const searchQueryKeys = {
 	hotSearches: () => [...searchQueryKeys.all, 'hotSearches'] as const,
 	suggestions: (query: string) =>
 		[...searchQueryKeys.all, 'suggestions', query] as const,
+	users: (query: string) => [...searchQueryKeys.all, 'users', query],
 } as const
 
 // 搜索结果查询
@@ -34,6 +35,17 @@ export const useSearchResults = (query: string) => {
 			}
 			return allPages.length + 1
 		},
+	})
+}
+
+// 搜索用户查询
+export const useUserSearchResults = (query: string) => {
+	const enabled = query.trim().length > 0
+	return useQuery({
+		queryKey: searchQueryKeys.users(query),
+		queryFn: () => returnOrThrowAsync(bilibiliApi.searchUsers(query)),
+		enabled,
+		staleTime: 5 * 60 * 1000,
 	})
 }
 

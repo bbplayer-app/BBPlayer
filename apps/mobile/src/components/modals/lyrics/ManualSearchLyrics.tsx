@@ -1,14 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Searchbar,
-	Text,
-	TouchableRipple,
-} from 'react-native-paper'
+import { Dialog, Text, TouchableRipple } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { useFetchLyrics } from '@/hooks/mutations/lyrics'
 import { useManualSearchLyrics } from '@/hooks/queries/lyrics'
@@ -164,7 +160,7 @@ const ManualSearchLyricsModal = ({
 				</View>
 			</Dialog.Title>
 			<Dialog.Content>
-				<Searchbar
+				<SearchBar
 					value={query}
 					onChangeText={setQuery}
 					placeholder='输入歌曲名'

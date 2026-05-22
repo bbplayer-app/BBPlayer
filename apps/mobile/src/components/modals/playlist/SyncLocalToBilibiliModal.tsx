@@ -1,14 +1,10 @@
 import { useEffect, useReducer } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Dialog,
-	Divider,
-	ProgressBar,
-	Text,
-} from 'react-native-paper'
+import { Dialog, Divider, Text } from 'react-native-paper'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
+import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlaylistMetadata } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -355,7 +351,7 @@ export default function SyncLocalToBilibiliModal({
 								<Text style={{ marginTop: 20, marginBottom: 10 }}>
 									同步中...
 								</Text>
-								<ProgressBar
+								<LinearProgressIndicator
 									progress={totalOps > 0 ? progress / totalOps : 0}
 									style={{ width: '100%' }}
 								/>

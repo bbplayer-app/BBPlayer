@@ -1,15 +1,26 @@
+import {
+	Column,
+	Host,
+	Icon,
+	IconButton,
+	OutlinedTextField,
+	Text as ComposeText,
+} from '@expo/ui/jetpack-compose'
+import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useCallback, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { Dialog, TextInput } from 'react-native-paper'
+import { StyleSheet } from 'react-native'
+import { Dialog } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
-import IconButton from '@/components/common/IconButton'
 import { useEditTrackMetadata } from '@/hooks/mutations/db/track'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useTextFieldState from '@/hooks/useTextFieldState'
 import type { Track } from '@/types/core/media'
 import toast from '@/utils/toast'
+
+const imagePlusIcon = require('@expo/material-symbols/add_photo_alternate.xml')
 
 const sanitizeFileName = (name: string) =>
 	name.replaceAll(/[^a-zA-Z0-9._-]/g, '_')
@@ -17,6 +28,8 @@ const sanitizeFileName = (name: string) =>
 export default function EditTrackMetadataModal({ track }: { track: Track }) {
 	const [title, setTitle] = useState<string>(track.title)
 	const [coverUrl, setCoverUrl] = useState(track.coverUrl)
+	const titleState = useTextFieldState(title)
+	const coverUrlState = useTextFieldState(coverUrl ?? '')
 	const _close = useModalStore((state) => state.close)
 	const close = useCallback(() => _close('EditTrackMetadata'), [_close])
 
@@ -78,31 +91,45 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 		<>
 			<Dialog.Title>编辑歌曲信息</Dialog.Title>
 			<Dialog.Content style={styles.content}>
-				<TextInput
-					label='标题'
-					value={title}
-					onChangeText={setTitle}
-					mode='outlined'
-					numberOfLines={1}
-					textAlignVertical='top'
-				/>
-				<View style={styles.coverUrlContainer}>
-					<TextInput
-						label='封面'
-						value={coverUrl ?? undefined}
-						onChangeText={setCoverUrl}
-						mode='outlined'
-						numberOfLines={1}
-						textAlignVertical='top'
-						style={styles.coverUrlInput}
-					/>
-					<IconButton
-						icon='image-plus'
-						size={20}
-						style={styles.imagePickerButton}
-						onPress={handleImagePicker}
-					/>
-				</View>
+				<Host
+					matchContents={{ vertical: true }}
+					style={styles.formHost}
+				>
+					<Column
+						modifiers={[fillMaxWidth()]}
+						verticalArrangement={{ spacedBy: 8 }}
+					>
+						<OutlinedTextField
+							value={titleState}
+							onValueChange={setTitle}
+							singleLine
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>标题</ComposeText>
+							</OutlinedTextField.Label>
+						</OutlinedTextField>
+						<OutlinedTextField
+							value={coverUrlState}
+							onValueChange={setCoverUrl}
+							singleLine
+							modifiers={[fillMaxWidth()]}
+						>
+							<OutlinedTextField.Label>
+								<ComposeText>封面</ComposeText>
+							</OutlinedTextField.Label>
+							<OutlinedTextField.TrailingIcon>
+								<IconButton onClick={handleImagePicker}>
+									<Icon
+										source={imagePlusIcon}
+										size={20}
+										contentDescription='选择封面'
+									/>
+								</IconButton>
+							</OutlinedTextField.TrailingIcon>
+						</OutlinedTextField>
+					</Column>
+				</Host>
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
@@ -116,14 +143,7 @@ const styles = StyleSheet.create({
 	content: {
 		gap: 5,
 	},
-	coverUrlContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	coverUrlInput: {
-		flex: 1,
-	},
-	imagePickerButton: {
-		marginTop: 13,
+	formHost: {
+		width: '100%',
 	},
 })

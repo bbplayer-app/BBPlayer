@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import { Icon } from '@expo/ui'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
@@ -12,17 +13,11 @@ import {
 	PermissionsAndroid,
 } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
-import {
-	ActivityIndicator,
-	Appbar,
-	Divider,
-	Searchbar,
-	Surface,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Divider, Surface, Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -42,6 +37,21 @@ import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 import toast from '@/utils/toast'
+
+const EXPORT_ICON = Icon.select({
+	ios: 'square.and.arrow.up',
+	android: import('@expo/material-symbols/ios_share.xml'),
+})
+
+const DELETE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
+
+const PLAY_NEXT_ICON = Icon.select({
+	ios: 'arrow.right.to.line.circle',
+	android: import('@expo/material-symbols/skip_next.xml'),
+})
 
 const PUBLIC_MUSIC_EXPORT_URI = 'orpheus://public-music'
 
@@ -206,17 +216,17 @@ function DownloadedItem({
 							}
 						>
 							<FunctionalMenu.Item
-								leadingIcon='export-variant'
+								leadingIcon={EXPORT_ICON}
 								title='导出'
 								onPress={() => onSingleExport(item.id)}
 							/>
 							<FunctionalMenu.Item
-								leadingIcon='trash-can-outline'
+								leadingIcon={DELETE_ICON}
 								title='删除'
 								onPress={() => onDelete(item.id)}
 							/>
 							<FunctionalMenu.Item
-								leadingIcon='skip-next-circle-outline'
+								leadingIcon={PLAY_NEXT_ICON}
 								title='下一首播放'
 								onPress={() => onPlayNext(item)}
 								disabled={!item.track}
@@ -521,7 +531,7 @@ export default function DownloadedPage() {
 			</Appbar.Header>
 
 			{isSearching && !selectMode && (
-				<Searchbar
+				<SearchBar
 					placeholder='搜索已下载歌曲'
 					onChangeText={setSearchQuery}
 					value={searchQuery}

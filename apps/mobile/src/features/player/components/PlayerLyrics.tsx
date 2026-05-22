@@ -9,7 +9,7 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { ActivityIndicator, Text, useTheme } from 'react-native-paper'
+import { Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedScrollHandler,
 	useSharedValue,
@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
 import useLyricSync from '@/features/player/hooks/useLyricSync'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'

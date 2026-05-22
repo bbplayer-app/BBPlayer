@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import { Icon } from '@expo/ui'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { and, eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
@@ -6,20 +7,15 @@ import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Appbar,
-	MD3Theme,
-	Searchbar,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
+import { Searchbar as SearchBar } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -61,6 +57,36 @@ import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+
+const SORT_ICON = Icon.select({
+	ios: 'arrow.up.and.down.text.left.to.right',
+	android: import('@expo/material-symbols/sort.xml'),
+})
+
+const EDIT_ICON = Icon.select({
+	ios: 'pencil',
+	android: import('@expo/material-symbols/edit.xml'),
+})
+
+const SYNC_ICON = Icon.select({
+	ios: 'arrow.triangle.2.circlepath',
+	android: import('@expo/material-symbols/sync.xml'),
+})
+
+const SHARE_ICON = Icon.select({
+	ios: 'square.and.arrow.up',
+	android: import('@expo/material-symbols/share.xml'),
+})
+
+const LINK_ICON = Icon.select({
+	ios: 'link',
+	android: import('@expo/material-symbols/link.xml'),
+})
+
+const DELETE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
 
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'
@@ -322,8 +348,7 @@ export default function LocalPlaylistPage() {
 	const pullingIcon = useMemo(
 		() => () => (
 			<ActivityIndicator
-				size={18}
-				animating
+				size='small'
 				color={colors.primary}
 			/>
 		),
@@ -616,7 +641,7 @@ export default function LocalPlaylistPage() {
 						enterSelectMode()
 					}}
 					title='排序'
-					leadingIcon='sort'
+					leadingIcon={SORT_ICON}
 				/>
 			)}
 			{!isSharedSubscriber && (
@@ -627,7 +652,7 @@ export default function LocalPlaylistPage() {
 						})
 					}}
 					title='编辑播放列表信息'
-					leadingIcon='pencil'
+					leadingIcon={EDIT_ICON}
 				/>
 			)}
 			{playlistMetadata.type === 'local' &&
@@ -642,7 +667,7 @@ export default function LocalPlaylistPage() {
 							)
 						}}
 						title='同步到 B 站'
-						leadingIcon='sync'
+						leadingIcon={SYNC_ICON}
 					/>
 				)}
 			{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
@@ -651,7 +676,7 @@ export default function LocalPlaylistPage() {
 						openModal('EnableSharing', { playlistId: Number(id) })
 					}}
 					title='设为共享歌单'
-					leadingIcon='share-variant'
+					leadingIcon={SHARE_ICON}
 				/>
 			)}
 			{playlistMetadata.shareId && (
@@ -664,7 +689,7 @@ export default function LocalPlaylistPage() {
 						})
 					}}
 					title='共享设置'
-					leadingIcon='link-variant'
+					leadingIcon={LINK_ICON}
 				/>
 			)}
 			<FunctionalMenu.Item
@@ -680,7 +705,7 @@ export default function LocalPlaylistPage() {
 					)
 				}}
 				title='删除播放列表'
-				leadingIcon='delete'
+				leadingIcon={DELETE_ICON}
 				titleStyle={{ color: colors.error }}
 			/>
 		</FunctionalMenu>
@@ -777,8 +802,7 @@ export default function LocalPlaylistPage() {
 			<Animated.View
 				style={[styles.searchbarContainer, searchbarAnimatedStyle]}
 			>
-				<Searchbar
-					mode='view'
+				<SearchBar
 					placeholder='搜索歌曲'
 					onChangeText={setSearchQuery}
 					value={searchQuery}

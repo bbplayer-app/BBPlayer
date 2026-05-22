@@ -2,15 +2,10 @@ import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import {
-	ActivityIndicator,
-	Appbar,
-	Surface,
-	Text,
-	useTheme,
-} from 'react-native-paper'
+import { Appbar, Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { HistoryListItem } from '@/features/history/HistoryListItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -94,12 +89,7 @@ export default function OverallHistoryPage() {
 
 	const renderContent = () => {
 		if (isHistoryLoading) {
-			return (
-				<ActivityIndicator
-					animating={true}
-					style={styles.loadingIndicator}
-				/>
-			)
+			return <ActivityIndicator style={styles.loadingIndicator} />
 		}
 
 		if (isHistoryError) {

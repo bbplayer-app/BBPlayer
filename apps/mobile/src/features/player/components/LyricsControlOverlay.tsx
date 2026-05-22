@@ -1,3 +1,4 @@
+import { Icon as ExpoIcon } from '@expo/ui'
 import { LinearGradient } from 'expo-linear-gradient'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
@@ -20,6 +21,26 @@ import { scheduleOnRN } from 'react-native-worklets'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
 import { PlayerSlider } from '@/features/player/components/PlayerSlider'
+
+const ALPHABETICAL_ICON = ExpoIcon.select({
+	ios: 'abc',
+	android: import('@expo/material-symbols/abc.xml'),
+})
+
+const TRANSLATE_ICON = ExpoIcon.select({
+	ios: 'translate',
+	android: import('@expo/material-symbols/translate.xml'),
+})
+
+const EDIT_ICON = ExpoIcon.select({
+	ios: 'pencil',
+	android: import('@expo/material-symbols/edit.xml'),
+})
+
+const OFFSET_ICON = ExpoIcon.select({
+	ios: 'arrow.up.arrow.down.circle',
+	android: import('@expo/material-symbols/swap_vertical_circle.xml'),
+})
 
 const { height: windowHeight } = Dimensions.get('window')
 const OVERLAY_HEIGHT = windowHeight * 0.4
@@ -196,20 +217,20 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 							}
 							leadingIcon={
 								translationType === 'translation'
-									? 'alphabetical-variant'
-									: 'translate'
+									? ALPHABETICAL_ICON
+									: TRANSLATE_ICON
 							}
 							onPress={onToggleTranslation}
 						/>
 					)}
 					<FunctionalMenu.Item
 						title='编辑歌词'
-						leadingIcon='pencil'
+						leadingIcon={EDIT_ICON}
 						onPress={onEditLyrics}
 					/>
 					<FunctionalMenu.Item
 						title='时间轴偏移'
-						leadingIcon='swap-vertical-circle-outline'
+						leadingIcon={OFFSET_ICON}
 						onPress={() => {
 							actionButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
 								onOpenActionMenu({

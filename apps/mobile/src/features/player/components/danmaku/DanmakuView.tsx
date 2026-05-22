@@ -31,6 +31,11 @@ const typeface = fontMgr.matchFamilyStyle(familyName, FontStyle.Bold)
 const customFontMgr = Skia.TypefaceFontProvider.Make()
 customFontMgr.registerFont(typeface, 'BBPlayerFont')
 
+/**
+ * 弹幕展示组件
+ *
+ * @deprecated 弹幕功能已废弃并关闭，该组件已停止维护。
+ */
 export const DanmakuView = ({
 	bvid,
 	cid,

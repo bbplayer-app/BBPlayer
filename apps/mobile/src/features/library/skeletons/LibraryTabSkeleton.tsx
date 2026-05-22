@@ -91,6 +91,15 @@ export function LocalPlaylistListSkeleton() {
 				</View>
 			</View>
 
+			<View
+				style={[
+					styles.searchBarSkeleton,
+					{ backgroundColor: colors.surfaceVariant },
+				]}
+			>
+				<Shimmer />
+			</View>
+
 			{Array.from({ length: 8 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
@@ -169,6 +178,37 @@ export function CollectionListSkeleton() {
 	)
 }
 
+export function MultiPageVideosListSkeleton() {
+	const { colors } = useTheme()
+
+	return (
+		<View style={styles.listContainer}>
+			<View style={styles.listHeaderContainer}>
+				<View
+					style={[
+						styles.headerTitleSkeleton,
+						{ backgroundColor: colors.surfaceVariant, width: 120 },
+					]}
+				>
+					<Shimmer />
+				</View>
+				<View
+					style={[
+						styles.headerCountSkeleton,
+						{ backgroundColor: colors.surfaceVariant },
+					]}
+				>
+					<Shimmer />
+				</View>
+			</View>
+
+			{Array.from({ length: 8 }, (_, index) => (
+				<LibraryListItemSkeleton key={index} />
+			))}
+		</View>
+	)
+}
+
 // Default export can act as a fallback or the main entry point if needed.
 // Since existing code imports { LibraryTabSkeleton }, we keep it.
 // We'll map it to LocalPlaylistListSkeleton as a default since it's the first tab.
@@ -187,7 +227,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
-		height: 40,
+		height: 48,
 	},
 	headerTitleSkeleton: {
 		width: 80,
