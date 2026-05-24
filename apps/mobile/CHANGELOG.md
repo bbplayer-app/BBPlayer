@@ -13,6 +13,7 @@
 
 ### Changed
 
+- 将部分 ExpoUI TextField 回滚为 RNPaper TextField
 - 优化播放列表与分享页面操作按钮样式，使其背景和图标颜色根据封面动态提取的主题色自动计算匹配，增强视觉一致性与美观度。
 - 优化设置页面排序，添加许可证页面搜索及动画（支持 useTransition），重新设计手机号与二维码登录界面为美观的原生页面，并将分步组件重构迁移至 Bilibili 账号设置目录下的局部组件。
 - 将 `bilibiliApi` 与 `bilibiliApiClient` 及其所有调用处的参数由位置参数重构为对象参数

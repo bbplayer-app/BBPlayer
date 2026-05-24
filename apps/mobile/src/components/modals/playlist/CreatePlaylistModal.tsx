@@ -1,26 +1,15 @@
-import {
-	Column,
-	Host,
-	Icon,
-	IconButton,
-	OutlinedTextField,
-	Text as ComposeText,
-} from '@expo/ui/jetpack-compose'
-import { fillMaxWidth, testID } from '@expo/ui/jetpack-compose/modifiers'
 import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Dialog } from 'react-native-paper'
+import { StyleSheet, View } from 'react-native'
+import { Dialog, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
+import IconButton from '@/components/common/IconButton'
 import { useCreateNewLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import useTextFieldState from '@/hooks/useTextFieldState'
 import toast from '@/utils/toast'
-
-const imagePlusIcon = require('@expo/material-symbols/add_photo_alternate.xml')
 
 export default function CreatePlaylistModal({
 	redirectToNewPlaylist,
@@ -31,9 +20,6 @@ export default function CreatePlaylistModal({
 	const [title, setTitle] = useState('')
 	const [description, setDescription] = useState('')
 	const [coverUrl, setCoverUrl] = useState('')
-	const titleState = useTextFieldState(title)
-	const descriptionState = useTextFieldState(description)
-	const coverUrlState = useTextFieldState(coverUrl)
 	const _close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
 	const close = useCallback(() => _close('CreatePlaylist'), [_close])
@@ -110,59 +96,41 @@ export default function CreatePlaylistModal({
 		<>
 			<Dialog.Title>创建播放列表</Dialog.Title>
 			<Dialog.Content style={styles.content}>
-				<Host
-					matchContents={{ vertical: true }}
-					style={styles.formHost}
-				>
-					<Column
-						modifiers={[fillMaxWidth()]}
-						verticalArrangement={{ spacedBy: 8 }}
-					>
-						<OutlinedTextField
-							value={titleState}
-							onValueChange={setTitle}
-							singleLine
-							modifiers={[
-								fillMaxWidth(),
-								testID('create-playlist-title-input'),
-							]}
-						>
-							<OutlinedTextField.Label>
-								<ComposeText>标题</ComposeText>
-							</OutlinedTextField.Label>
-						</OutlinedTextField>
-						<OutlinedTextField
-							value={descriptionState}
-							onValueChange={setDescription}
-							minLines={3}
-							maxLines={3}
-							modifiers={[fillMaxWidth()]}
-						>
-							<OutlinedTextField.Label>
-								<ComposeText>描述</ComposeText>
-							</OutlinedTextField.Label>
-						</OutlinedTextField>
-						<OutlinedTextField
-							value={coverUrlState}
-							onValueChange={setCoverUrl}
-							singleLine
-							modifiers={[fillMaxWidth()]}
-						>
-							<OutlinedTextField.Label>
-								<ComposeText>封面</ComposeText>
-							</OutlinedTextField.Label>
-							<OutlinedTextField.TrailingIcon>
-								<IconButton onClick={handleImagePicker}>
-									<Icon
-										source={imagePlusIcon}
-										size={20}
-										contentDescription='选择封面'
-									/>
-								</IconButton>
-							</OutlinedTextField.TrailingIcon>
-						</OutlinedTextField>
-					</Column>
-				</Host>
+				<TextInput
+					label='标题'
+					value={title}
+					onChangeText={setTitle}
+					mode='outlined'
+					numberOfLines={1}
+					textAlignVertical='top'
+					testID='create-playlist-title-input'
+				/>
+				<TextInput
+					label='描述'
+					onChangeText={setDescription}
+					value={description ?? undefined}
+					mode='outlined'
+					multiline
+					style={styles.descriptionInput}
+					textAlignVertical='top'
+				/>
+				<View style={styles.coverUrlContainer}>
+					<TextInput
+						label='封面'
+						onChangeText={setCoverUrl}
+						value={coverUrl ?? undefined}
+						mode='outlined'
+						numberOfLines={1}
+						textAlignVertical='top'
+						style={styles.coverUrlInput}
+					/>
+					<IconButton
+						icon='image-plus'
+						size={20}
+						style={styles.imagePickerButton}
+						onPress={handleImagePicker}
+					/>
+				</View>
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
@@ -181,7 +149,17 @@ const styles = StyleSheet.create({
 	content: {
 		gap: 5,
 	},
-	formHost: {
-		width: '100%',
+	descriptionInput: {
+		maxHeight: 150,
+	},
+	coverUrlContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	coverUrlInput: {
+		flex: 1,
+	},
+	imagePickerButton: {
+		marginTop: 13,
 	},
 })
