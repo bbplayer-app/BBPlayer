@@ -22,10 +22,7 @@ export default function GeneralSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
-	const setSettings = useAppStore((state) => state.setSettings)
 	const haveTrack = useCurrentTrack()
-
-	const sendPlayHistory = useAppStore((state) => state.settings.sendPlayHistory)
 
 	const setEnableDataCollection = useAppStore(
 		(state) => state.setEnableDataCollection,
@@ -89,15 +86,6 @@ export default function GeneralSettingsPage() {
 				]}
 			>
 				<View style={styles.settingRow}>
-					<Text>向{'\u2009Bilibili\u2009'}上报观看进度</Text>
-					<UniversalSwitch
-						value={sendPlayHistory}
-						onValueChange={() =>
-							setSettings({ sendPlayHistory: !sendPlayHistory })
-						}
-					/>
-				</View>
-				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>
 					<UniversalSwitch
 						value={enableDataCollection}
@@ -109,31 +97,6 @@ export default function GeneralSettingsPage() {
 					<UniversalSwitch
 						value={enableDebugLog}
 						onValueChange={setEnableDebugLog}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>手动设置{'\u2009Cookie'}</Text>
-					<IconButton
-						icon='open-in-new'
-						size={20}
-						onPress={() => openModal('CookieLogin', undefined)}
-						testID='cookie-login-button'
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>重新扫码登录</Text>
-					<IconButton
-						icon='open-in-new'
-						size={20}
-						onPress={() => openModal('QRCodeLogin', undefined)}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>手机号登录</Text>
-					<IconButton
-						icon='open-in-new'
-						size={20}
-						onPress={() => openModal('PhoneLogin', undefined)}
 					/>
 				</View>
 				<View style={styles.settingRow}>

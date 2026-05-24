@@ -23,6 +23,7 @@ export default function SettingsPage() {
 	const colors = useTheme().colors
 	const router = useRouter()
 	const account = useAppStore((state) => state.bbplayerAccount)
+	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -141,8 +142,30 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='Bilibili 账号'
+						description={
+							hasBilibiliCookie
+								? '已登录，管理 Cookie 和播放记录'
+								: '扫码、手机号或 Cookie 登录'
+						}
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='account-box'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/bilibili-account' as never)}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='通用'
-						description='Bilibili 登录、更新、日志、调试'
+						description='更新、日志、调试'
 						left={(props) => (
 							<List.Icon
 								{...props}

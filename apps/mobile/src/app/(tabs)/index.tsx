@@ -41,7 +41,6 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -49,7 +48,6 @@ import {
 	matchSearchStrategies,
 	navigateWithSearchStrategy,
 } from '@/utils/search'
-import toast from '@/utils/toast'
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
@@ -76,7 +74,6 @@ function HomePage() {
 	const [searchFocused, setSearchFocused] = useState(false)
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useIncomingShare()
-	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
@@ -289,26 +286,7 @@ function HomePage() {
 							/>
 						)}
 						<RectButton
-							enabled={hasBilibiliCookie()}
-							onPress={() =>
-								alert(
-									'退出登录？',
-									'是否退出登录？',
-									[
-										{ text: '取消' },
-										{
-											text: '确定',
-											onPress: async () => {
-												clearBilibiliCookie()
-												await queryClient.cancelQueries()
-												queryClient.clear()
-												toast.success('Cookie\u2009已清除')
-											},
-										},
-									],
-									{ cancelable: true },
-								)
-							}
+							onPress={() => router.push('/settings/bilibili-account' as never)}
 							style={styles.avatarButton}
 						>
 							<Image
