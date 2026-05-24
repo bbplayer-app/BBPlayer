@@ -1,12 +1,19 @@
 import { useRouter } from 'expo-router'
-import { StyleSheet, View } from 'react-native'
-import { Appbar, Surface, useTheme } from 'react-native-paper'
+import {
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	StyleSheet,
+	View,
+} from 'react-native'
+import { Appbar, useTheme } from 'react-native-paper'
 
-import GeetestVerifyStep from '@/components/modals/login/steps/GeetestVerifyStep'
-import InputCodeStep from '@/components/modals/login/steps/InputCodeStep'
-import InputPhoneStep from '@/components/modals/login/steps/InputPhoneStep'
-import SuccessStep from '@/components/modals/login/steps/SuccessStep'
 import { usePhoneLogin } from '@/hooks/auth/usePhoneLogin'
+
+import GeetestVerifyStep from './_components/GeetestVerifyStep'
+import InputCodeStep from './_components/InputCodeStep'
+import InputPhoneStep from './_components/InputPhoneStep'
+import SuccessStep from './_components/SuccessStep'
 
 export default function PhoneLoginPage() {
 	const router = useRouter()
@@ -70,14 +77,18 @@ export default function PhoneLoginPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='手机号登录 Bilibili' />
 			</Appbar.Header>
-			<View style={styles.content}>
-				<Surface
-					mode='flat'
-					style={[styles.panel, { backgroundColor: colors.surface }]}
+			<KeyboardAvoidingView
+				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				style={styles.keyboardView}
+			>
+				<ScrollView
+					style={styles.scrollView}
+					contentContainerStyle={styles.scrollContent}
+					keyboardShouldPersistTaps='handled'
 				>
-					{content}
-				</Surface>
-			</View>
+					<View style={styles.formContainer}>{content}</View>
+				</ScrollView>
+			</KeyboardAvoidingView>
 		</View>
 	)
 }
@@ -86,14 +97,17 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	content: {
+	keyboardView: {
 		flex: 1,
-		justifyContent: 'center',
-		paddingHorizontal: 20,
 	},
-	panel: {
-		borderRadius: 8,
-		overflow: 'hidden',
-		paddingVertical: 8,
+	scrollView: {
+		flex: 1,
+	},
+	scrollContent: {
+		flexGrow: 1,
+		paddingVertical: 24,
+	},
+	formContainer: {
+		width: '100%',
 	},
 })

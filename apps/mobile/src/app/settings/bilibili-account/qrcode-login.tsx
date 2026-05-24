@@ -5,10 +5,11 @@ import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useEffect, useReducer } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { Appbar, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme, Icon } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import * as setCookieParser from 'set-cookie-parser'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { userQueryKeys } from '@/hooks/queries/bilibili/user'
@@ -66,12 +67,12 @@ function reducer(state: State, action: Action): State {
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_WAIT:
 					return { ...state, statusText: '等待扫码' }
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SCANNED_BUT_NOT_CONFIRMED:
-					return { ...state, statusText: '等待确认' }
+					return { ...state, statusText: '已扫码，等待确认' }
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_QRCODE_EXPIRED:
 					return {
 						...state,
 						status: 'expired',
-						statusText: '二维码已过期，请重新生成',
+						statusText: '二维码已过期',
 						qrcodeKey: '',
 						qrcodeUrl: '',
 					}
@@ -159,51 +160,143 @@ export default function QrCodeLoginPage() {
 		return () => clearInterval(interval)
 	}, [qrcodeKey, queryClient, router, setCookie, status])
 
+	const handleOpenLink = () => {
+		if (!qrcodeUrl) return
+		WebBrowser.openBrowserAsync(qrcodeUrl).catch((e) => {
+			void Clipboard.setStringAsync(qrcodeUrl)
+			toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
+				description: String(e),
+			})
+		})
+	}
+
+	const getDotColor = () => {
+		switch (status) {
+			case 'generating':
+				return colors.primary
+			case 'polling':
+				return statusText.includes('确认') ? '#4CAF50' : '#FFB300'
+			case 'success':
+				return '#4CAF50'
+			case 'expired':
+			case 'error':
+				return colors.error
+			default:
+				return colors.outline
+		}
+	}
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header>
+			<Appbar.Header elevated>
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='扫码登录 Bilibili' />
 			</Appbar.Header>
 			<View style={styles.content}>
-				<Text
-					variant='titleMedium'
-					style={styles.statusText}
-				>
-					{statusText}
-				</Text>
-				{qrcodeUrl ? (
-					<Pressable
-						onPress={() => {
-							WebBrowser.openBrowserAsync(qrcodeUrl).catch((e) => {
-								void Clipboard.setStringAsync(qrcodeUrl)
-								toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
-									description: String(e),
-								})
-							})
-						}}
-						style={styles.qrcode}
+				<View style={styles.brandHeader}>
+					<Icon
+						source='television-play'
+						size={48}
+					/>
+					<Text
+						variant='headlineSmall'
+						style={styles.brandTitle}
 					>
-						<QRCode
-							value={qrcodeUrl}
-							size={220}
-						/>
-					</Pressable>
-				) : null}
-				<Text
-					variant='bodyMedium'
-					style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}
+						Bilibili 扫码登录
+					</Text>
+				</View>
+
+				<View
+					style={[
+						styles.card,
+						{
+							backgroundColor: colors.elevation.level1,
+							borderColor: colors.outlineVariant,
+						},
+					]}
 				>
-					使用 Bilibili 客户端扫码确认。点击二维码可以尝试直接打开登录链接。
-				</Text>
-				{status === 'expired' || status === 'error' ? (
+					<View style={styles.statusRow}>
+						<View
+							style={[styles.statusDot, { backgroundColor: getDotColor() }]}
+						/>
+						<Text
+							variant='titleMedium'
+							style={[styles.statusText, { color: colors.onSurface }]}
+						>
+							{statusText}
+						</Text>
+					</View>
+
+					<View style={styles.qrcodeWrapper}>
+						{qrcodeUrl ? (
+							<Pressable
+								onPress={handleOpenLink}
+								style={styles.qrcodePressable}
+							>
+								<QRCode
+									value={qrcodeUrl}
+									size={200}
+								/>
+							</Pressable>
+						) : (
+							<View style={styles.qrcodePlaceholder}>
+								<ActivityIndicator
+									size='large'
+									color={colors.primary}
+								/>
+							</View>
+						)}
+
+						{(status === 'expired' || status === 'error') && (
+							<View
+								style={[
+									styles.overlay,
+									{ backgroundColor: 'rgba(0,0,0,0.75)' },
+								]}
+							>
+								<Icon
+									source='alert-circle-outline'
+									size={48}
+								/>
+								<Text
+									variant='titleMedium'
+									style={styles.overlayText}
+								>
+									{status === 'expired' ? '二维码已失效' : '获取失败'}
+								</Text>
+								<Button
+									mode='contained'
+									onPress={() => dispatch({ type: 'RESET' })}
+									style={styles.refreshButton}
+								>
+									刷新二维码
+								</Button>
+							</View>
+						)}
+					</View>
+				</View>
+
+				{qrcodeUrl && (status === 'polling' || status === 'success') ? (
 					<Button
 						mode='contained'
-						onPress={() => dispatch({ type: 'RESET' })}
+						onPress={handleOpenLink}
+						style={styles.brandButton}
+						contentStyle={styles.brandButtonContent}
+						labelStyle={styles.brandButtonLabel}
+						icon='open-in-new'
 					>
-						重新生成
+						在 Bilibili 客户端打开
 					</Button>
 				) : null}
+
+				<Text
+					variant='bodyMedium'
+					style={[styles.hintText, { color: colors.onSurfaceVariant }]}
+				>
+					请使用 Bilibili 客户端扫描上方二维码。
+					{'\n'}
+					若处于同一台设备，可点击按钮直接跳转 B 站进行确认。
+				</Text>
 			</View>
 		</View>
 	)
@@ -217,15 +310,90 @@ const styles = StyleSheet.create({
 		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',
-		gap: 20,
 		paddingHorizontal: 24,
+		gap: 24,
+	},
+	brandHeader: {
+		alignItems: 'center',
+		gap: 10,
+		marginBottom: 8,
+	},
+	brandTitle: {
+		fontWeight: 'bold',
+	},
+	card: {
+		borderRadius: 24,
+		padding: 24,
+		borderWidth: 1,
+		alignItems: 'center',
+		gap: 20,
+		elevation: 2,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.05,
+		shadowRadius: 12,
+		width: '100%',
+		maxWidth: 320,
+	},
+	statusRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	statusDot: {
+		width: 10,
+		height: 10,
+		borderRadius: 5,
 	},
 	statusText: {
-		textAlign: 'center',
+		fontWeight: 'bold',
 	},
-	qrcode: {
-		padding: 16,
+	qrcodeWrapper: {
+		width: 220,
+		height: 220,
+		borderRadius: 16,
+		overflow: 'hidden',
 		backgroundColor: '#fff',
-		borderRadius: 8,
+		alignItems: 'center',
+		justifyContent: 'center',
+		position: 'relative',
+		borderWidth: 1,
+		borderColor: 'rgba(0,0,0,0.05)',
+	},
+	qrcodePressable: {
+		padding: 10,
+	},
+	qrcodePlaceholder: {
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	overlay: {
+		...StyleSheet.absoluteFill,
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 12,
+		padding: 16,
+	},
+	overlayText: {
+		color: '#fff',
+		fontWeight: 'bold',
+	},
+	refreshButton: {
+		borderRadius: 20,
+	},
+	brandButton: {
+		width: '100%',
+		maxWidth: 280,
+	},
+	brandButtonContent: {
+		height: 48,
+	},
+	brandButtonLabel: {
+		color: '#fff',
+		fontWeight: 'bold',
+	},
+	hintText: {
+		textAlign: 'center',
+		lineHeight: 20,
 	},
 })

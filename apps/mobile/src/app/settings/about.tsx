@@ -101,7 +101,7 @@ export default function AboutSettingsPage() {
 				<View style={styles.section}>
 					<List.Item
 						title='开源许可证'
-						description='由 Callstack license-kit 生成'
+						description='使用到的开源库'
 						left={(props) => (
 							<List.Icon
 								{...props}

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native'
-import { Dialog, Portal, Text } from 'react-native-paper'
+import { Portal, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { WebView } from 'react-native-webview'
 import type { WebViewMessageEvent } from 'react-native-webview'
@@ -80,31 +80,73 @@ export default function GeetestVerifyStep({
 	onCancel,
 }: Props) {
 	const insets = useSafeAreaInsets()
+	const { colors } = useTheme()
 
 	return (
-		<>
-			<Dialog.Title>安全验证</Dialog.Title>
-			<Dialog.Content>
+		<View style={styles.container}>
+			<View style={styles.header}>
+				<Text
+					variant='headlineMedium'
+					style={styles.title}
+				>
+					安全验证
+				</Text>
+				<Text
+					variant='bodyMedium'
+					style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
+				>
+					请在下方完成 Bilibili 安全验证。
+				</Text>
+			</View>
+
+			<View style={styles.loadingContainer}>
 				<ActivityIndicator
 					size='large'
+					color={colors.primary}
 					style={styles.geetestLoading}
 				/>
-			</Dialog.Content>
-			<Dialog.Actions>
-				<Button onPress={onCancel}>取消</Button>
-			</Dialog.Actions>
+				<Text
+					variant='bodyMedium'
+					style={{ color: colors.onSurfaceVariant }}
+				>
+					正在加载验证模块...
+				</Text>
+			</View>
+
+			<View style={styles.actions}>
+				<Button
+					mode='text'
+					onPress={onCancel}
+					style={styles.button}
+				>
+					取消
+				</Button>
+			</View>
+
 			<Portal>
 				<View
 					style={[
 						StyleSheet.absoluteFill,
 						styles.geetestPortalContainer,
-						{ paddingTop: insets.top, paddingBottom: insets.bottom },
+						{
+							paddingTop: insets.top,
+							paddingBottom: insets.bottom,
+							backgroundColor: colors.background,
+						},
 					]}
 				>
-					<View style={styles.geetestModalHeader}>
+					<View
+						style={[
+							styles.geetestModalHeader,
+							{
+								backgroundColor: colors.surface,
+								borderBottomColor: colors.outlineVariant,
+							},
+						]}
+					>
 						<Text
 							variant='titleMedium'
-							style={styles.geetestModalTitle}
+							style={[styles.geetestModalTitle, { color: colors.onSurface }]}
 						>
 							安全验证
 						</Text>
@@ -112,11 +154,19 @@ export default function GeetestVerifyStep({
 							onPress={onCancel}
 							style={styles.geetestModalClose}
 						>
-							<Text variant='labelLarge'>取消</Text>
+							<Text
+								variant='labelLarge'
+								style={{ color: colors.primary }}
+							>
+								取消
+							</Text>
 						</Pressable>
 					</View>
 					<WebView
-						style={styles.geetestWebView}
+						style={[
+							styles.geetestWebView,
+							{ backgroundColor: colors.background },
+						]}
 						source={{
 							html: buildGeetestHtml(gt, challenge),
 							baseUrl: 'https://www.bilibili.com',
@@ -130,18 +180,39 @@ export default function GeetestVerifyStep({
 							<ActivityIndicator
 								style={StyleSheet.absoluteFill}
 								size='large'
+								color={colors.primary}
 							/>
 						)}
 					/>
 				</View>
 			</Portal>
-		</>
+		</View>
 	)
 }
 
 const styles = StyleSheet.create({
+	container: {
+		padding: 24,
+		gap: 24,
+	},
+	header: {
+		gap: 8,
+		marginBottom: 8,
+	},
+	title: {
+		fontWeight: 'bold',
+	},
+	subtitle: {
+		lineHeight: 20,
+	},
+	loadingContainer: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 32,
+		gap: 16,
+	},
 	geetestLoading: {
-		marginVertical: 24,
+		marginVertical: 8,
 	},
 	geetestPortalContainer: {
 		backgroundColor: '#f5f5f5',
@@ -151,13 +222,12 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		paddingHorizontal: 16,
-		paddingVertical: 12,
-		backgroundColor: '#fff',
+		paddingVertical: 16,
 		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: 'rgba(0,0,0,0.1)',
 	},
 	geetestModalTitle: {
 		flex: 1,
+		fontWeight: 'bold',
 	},
 	geetestModalClose: {
 		paddingLeft: 16,
@@ -165,5 +235,11 @@ const styles = StyleSheet.create({
 	},
 	geetestWebView: {
 		flex: 1,
+	},
+	actions: {
+		marginTop: 16,
+	},
+	button: {
+		borderRadius: 28,
 	},
 })

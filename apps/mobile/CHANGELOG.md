@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Changed
+
+- 优化设置页面排序，添加许可证页面搜索及动画（支持 useTransition），重新设计手机号与二维码登录界面为美观的原生页面，并将分步组件重构迁移至 Bilibili 账号设置目录下的局部组件。
+
 ### Fixed
 
 - orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
