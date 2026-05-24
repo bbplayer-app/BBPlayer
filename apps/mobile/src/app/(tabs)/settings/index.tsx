@@ -1,9 +1,4 @@
-import * as Application from 'expo-application'
-import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
-import * as Updates from 'expo-updates'
-import * as WebBrowser from 'expo-web-browser'
-import { memo } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -11,11 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
-import toast from '@/utils/toast'
-
-const updateTime = Updates.createdAt
-	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`
-	: ''
 
 export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
@@ -199,9 +189,25 @@ export default function SettingsPage() {
 						)}
 						onPress={() => router.push('/settings/donate')}
 					/>
+					<Divider style={styles.divider} />
+					<List.Item
+						title='关于 BBPlayer'
+						description='版本、链接、开源许可证'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='information'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/about' as never)}
+					/>
 				</ScrollView>
-				<Divider style={styles.sectionDivider} />
-				<AboutSection />
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
@@ -209,59 +215,6 @@ export default function SettingsPage() {
 		</View>
 	)
 }
-
-const AboutSection = memo(function AboutSection() {
-	return (
-		<View style={styles.aboutSectionContainer}>
-			<Text
-				variant='titleLarge'
-				style={styles.aboutTitle}
-			>
-				BBPlayer
-			</Text>
-			<Text
-				variant='bodySmall'
-				style={styles.aboutVersion}
-			>
-				v{Application.nativeApplicationVersion}:{Application.nativeBuildVersion}{' '}
-				{Updates.updateId
-					? `(hotfix-${Updates.updateId.slice(0, 7)}-${updateTime})`
-					: ''}
-			</Text>
-
-			<Text
-				variant='bodyMedium'
-				style={styles.aboutSubtitle}
-			>
-				又一个{'\u2009Bilibili\u2009'}音乐播放器
-			</Text>
-			<Text
-				variant='bodyMedium'
-				style={styles.aboutWebsite}
-			>
-				官网：
-				<Text
-					variant='bodyMedium'
-					onPress={() =>
-						WebBrowser.openBrowserAsync('https://bbplayer.roitium.com').catch(
-							(e) => {
-								void Clipboard.setStringAsync('https://bbplayer.roitium.com')
-								toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
-									description: String(e),
-								})
-							},
-						)
-					}
-					style={styles.aboutWebsiteLink}
-				>
-					https://bbplayer.roitium.com
-				</Text>
-			</Text>
-		</View>
-	)
-})
-
-AboutSection.displayName = 'AboutSection'
 
 const styles = StyleSheet.create({
 	container: {
@@ -287,35 +240,10 @@ const styles = StyleSheet.create({
 		marginVertical: 4,
 		backgroundColor: 'transparent', // Spacer
 	},
-	sectionDivider: {
-		marginTop: 24,
-		marginBottom: 24,
-	},
 	nowPlayingBarContainer: {
 		position: 'absolute',
 		bottom: 0,
 		left: 0,
 		right: 0,
-	},
-	aboutSectionContainer: {
-		paddingBottom: 15,
-	},
-	aboutTitle: {
-		textAlign: 'center',
-		marginBottom: 5,
-	},
-	aboutVersion: {
-		textAlign: 'center',
-		marginBottom: 5,
-	},
-	aboutSubtitle: {
-		textAlign: 'center',
-	},
-	aboutWebsite: {
-		textAlign: 'center',
-		marginTop: 8,
-	},
-	aboutWebsiteLink: {
-		textDecorationLine: 'underline',
 	},
 })
