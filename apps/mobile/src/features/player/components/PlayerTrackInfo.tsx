@@ -20,6 +20,7 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getGradientColors } from '@/utils/color'
+import toast from '@/utils/toast'
 
 import { SpectrumVisualizer } from './SpectrumVisualizer'
 
@@ -216,13 +217,23 @@ export function TrackInfo({
 			<View style={styles.trackInfoContainer}>
 				<View style={styles.trackTitleContainer}>
 					<View style={styles.trackTitleTextContainer}>
-						<Text
-							variant='titleLarge'
-							style={styles.trackTitle}
-							numberOfLines={4}
+						<TouchableRipple
+							onPress={() =>
+								toast.info('完整标题', {
+									description: currentTrack.title,
+									id: 'player-track-full-title',
+								})
+							}
 						>
-							{currentTrack.title}
-						</Text>
+							<Text
+								variant='titleLarge'
+								style={styles.trackTitle}
+								numberOfLines={1}
+								ellipsizeMode='tail'
+							>
+								{currentTrack.title}
+							</Text>
+						</TouchableRipple>
 						{currentTrack.artist?.name && (
 							<TouchableRipple onPress={onArtistPress}>
 								<Text
