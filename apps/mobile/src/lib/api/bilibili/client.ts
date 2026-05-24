@@ -11,6 +11,22 @@ export interface ReqResponse<T> {
 	data: T
 }
 
+const toRequestError = (error: unknown) => {
+	if (error instanceof Error && error.name === 'AbortError') {
+		return new BilibiliApiError({
+			message: '请求被取消',
+			type: 'RequestAborted',
+			cause: error,
+		})
+	}
+
+	return new BilibiliApiError({
+		message: `请求失败: ${error instanceof Error ? error.message : String(error)}`,
+		type: 'RequestFailed',
+		cause: error,
+	})
+}
+
 class ApiClient {
 	private baseUrl = 'https://api.bilibili.com'
 
@@ -55,12 +71,7 @@ class ApiClient {
 				// TODO: 应该采用 react-native-cookie 库实现与原生请求库 cookie jar 的更紧密集成。但现阶段我们直接忽略原生注入的 cookie。
 				credentials: 'omit',
 			}),
-			(error) =>
-				new BilibiliApiError({
-					message: `请求失败: ${error instanceof Error ? error.message : String(error)}`,
-					type: 'RequestFailed',
-					cause: error,
-				}),
+			toRequestError,
 		)
 			.andThen((response) => {
 				if (!response.ok) {
@@ -144,6 +155,7 @@ class ApiClient {
 		headers?: Record<string, string>,
 		fullUrl?: string,
 		skipCookie?: boolean,
+		signal?: AbortSignal,
 	): ResultAsync<ArrayBuffer, BilibiliApiError> {
 		let url = endpoint
 		if (typeof params === 'string') {
@@ -175,14 +187,10 @@ class ApiClient {
 			fetch(requestUrl, {
 				method: 'GET',
 				headers: requestHeaders,
+				signal,
 				credentials: 'omit',
 			}),
-			(error) =>
-				new BilibiliApiError({
-					message: `请求失败: ${error instanceof Error ? error.message : String(error)}`,
-					type: 'RequestFailed',
-					cause: error,
-				}),
+			toRequestError,
 		).andThen((response) => {
 			if (!response.ok) {
 				return errAsync(

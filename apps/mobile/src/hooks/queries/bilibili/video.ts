@@ -25,7 +25,8 @@ export const useGetMultiPageList = (bvid: string | undefined) => {
 	const enabled = !!bvid
 	return useQuery({
 		queryKey: videoDataQueryKeys.getMultiPageList(bvid),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getPageList(bvid!)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getPageList(bvid!, signal)),
 		enabled,
 		staleTime: 1,
 	})
@@ -38,7 +39,8 @@ export const useGetVideoDetails = (bvid: string | undefined) => {
 	const enabled = !!bvid
 	return useQuery({
 		queryKey: videoDataQueryKeys.getVideoDetails(bvid),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getVideoDetails(bvid!)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getVideoDetails(bvid!, signal)),
 		enabled,
 		staleTime: 60 * 60 * 1000, // 我们不需要获取实时的视频详细信息
 	})
@@ -52,7 +54,8 @@ export const useGetVideoIsThumbUp = (bvid: string | undefined) => {
 	const enabled = !!bvid && hasCookie
 	return useQuery({
 		queryKey: videoDataQueryKeys.getVideoIsThumbUp(bvid),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.checkVideoIsThumbUp(bvid!)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.checkVideoIsThumbUp(bvid!, signal)),
 		enabled,
 		staleTime: 0,
 	})
@@ -68,8 +71,8 @@ export const useGetWebPlayerInfo = (
 	const enabled = !!bvid && !!cid
 	return useQuery({
 		queryKey: videoDataQueryKeys.getWebPlayerInfo(bvid, cid),
-		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getWebPlayerInfo(bvid!, cid!)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getWebPlayerInfo(bvid!, cid!, signal)),
 		enabled,
 		staleTime: 5 * 60 * 1000,
 	})
@@ -83,7 +86,8 @@ export const useGetToViewVideoList = () => {
 	const enabled = hasCookie
 	return useQuery({
 		queryKey: videoDataQueryKeys.getToViewVideoList(),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getToViewVideoList()),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getToViewVideoList(signal)),
 		enabled,
 		staleTime: 0,
 	})

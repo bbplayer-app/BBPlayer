@@ -14,9 +14,9 @@ export const commentQueryKeys = {
 export function useComments(bvid: string, mode = 3) {
 	return useInfiniteQuery({
 		queryKey: commentQueryKeys.results(bvid, mode),
-		queryFn: async ({ pageParam }) => {
+		queryFn: async ({ pageParam, signal }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getComments(bvid, pageParam, mode),
+				bilibiliApi.getComments(bvid, pageParam, mode, signal),
 			)
 			return res
 		},
@@ -31,9 +31,9 @@ export function useComments(bvid: string, mode = 3) {
 export function useReplyComments(bvid: string, rpid: number) {
 	return useInfiniteQuery({
 		queryKey: commentQueryKeys.reply(bvid, rpid),
-		queryFn: async ({ pageParam }) => {
+		queryFn: async ({ pageParam, signal }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getReplyComments(bvid, rpid, pageParam),
+				bilibiliApi.getReplyComments(bvid, rpid, pageParam, signal),
 			)
 			return res
 		},

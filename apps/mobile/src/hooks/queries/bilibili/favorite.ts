@@ -60,9 +60,9 @@ export const useInfiniteFavoriteList = (favoriteId?: number) => {
 	const enabled = hasCookie && !!favoriteId
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteFavoriteList(favoriteId),
-		queryFn: ({ pageParam }) =>
+		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getFavoriteListContents(favoriteId!, pageParam),
+				bilibiliApi.getFavoriteListContents(favoriteId!, pageParam, signal),
 			),
 		enabled,
 		initialPageParam: 1,
@@ -82,8 +82,8 @@ export const useGetFavoritePlaylists = (userMid?: number) => {
 	const enabled = hasCookie && !!userMid
 	return useQuery({
 		queryKey: favoriteListQueryKeys.allFavoriteList(userMid),
-		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getFavoritePlaylists(userMid!)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getFavoritePlaylists(userMid!, signal)),
 		enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	})
@@ -97,8 +97,10 @@ export const useInfiniteCollectionsList = (mid?: number) => {
 	const enabled = hasCookie && !!mid
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteCollectionList(mid),
-		queryFn: ({ pageParam }) =>
-			returnOrThrowAsync(bilibiliApi.getCollectionsList(pageParam, mid!)),
+		queryFn: ({ pageParam, signal }) =>
+			returnOrThrowAsync(
+				bilibiliApi.getCollectionsList(pageParam, mid!, signal),
+			),
 		enabled,
 		initialPageParam: 1,
 		getNextPageParam: (lastPage, _allPages, lastPageParam) =>
@@ -114,8 +116,10 @@ export const useInfiniteCollectionsList = (mid?: number) => {
 export const useCollectionAllContents = (collectionId: number) => {
 	return useQuery({
 		queryKey: favoriteListQueryKeys.collectionAllContents(collectionId),
-		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getCollectionAllContents(collectionId)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(
+				bilibiliApi.getCollectionAllContents(collectionId, signal),
+			),
 		staleTime: 1,
 	})
 }
@@ -128,9 +132,9 @@ export const useGetFavoriteForOneVideo = (bvid: string, userMid?: number) => {
 	const enabled = hasCookie && !!userMid && bvid.length > 0
 	return useQuery({
 		queryKey: favoriteListQueryKeys.favoriteForOneVideo(bvid, userMid),
-		queryFn: () =>
+		queryFn: ({ signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getTargetVideoFavoriteStatus(userMid!, bvid),
+				bilibiliApi.getTargetVideoFavoriteStatus(userMid!, bvid, signal),
 			),
 		enabled,
 		staleTime: 0,
@@ -155,13 +159,14 @@ export const useInfiniteSearchFavoriteItems = (
 			keyword,
 			favoriteId,
 		),
-		queryFn: ({ pageParam }) =>
+		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
 				bilibiliApi.searchFavoriteListContents(
 					favoriteId!,
 					scope,
 					pageParam,
 					keyword!,
+					signal,
 				),
 			),
 		enabled,

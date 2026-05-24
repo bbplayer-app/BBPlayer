@@ -15,8 +15,10 @@ export async function fetchDanmakuSegmentQuery(
 ) {
 	return queryClient.fetchQuery({
 		queryKey: danmakuQueryKeys.segment(bvid, cid, segmentIndex),
-		queryFn: () =>
-			returnOrThrowAsync(bilibiliApi.getSegDanmaku(bvid, cid, segmentIndex)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(
+				bilibiliApi.getSegDanmaku(bvid, cid, segmentIndex, signal),
+			),
 		staleTime: 1000 * 60 * 5,
 		gcTime: 1000 * 60 * 10,
 	})

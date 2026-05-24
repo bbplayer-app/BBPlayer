@@ -55,10 +55,15 @@ export class BilibiliApi {
 	/**
 	 * 获取用户观看历史记录
 	 */
-	getHistory(): ResultAsync<BilibiliHistoryVideo[], BilibiliApiError> {
+	getHistory(
+		signal?: AbortSignal,
+	): ResultAsync<BilibiliHistoryVideo[], BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliHistoryVideo[]>(
 			'/x/v2/history',
 			undefined,
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
@@ -67,11 +72,18 @@ export class BilibiliApi {
 	 */
 	getPopularVideos(
 		partition: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliVideoDetails[], BilibiliApiError> {
 		return bilibiliApiClient
 			.get<{
 				list: BilibiliVideoDetails[]
-			} | null>(`/x/web-interface/ranking/v2?rid=${partition}`, undefined)
+			} | null>(
+				`/x/web-interface/ranking/v2?rid=${partition}`,
+				undefined,
+				undefined,
+				undefined,
+				signal,
+			)
 			.map((response) => response?.list ?? [])
 	}
 
@@ -80,6 +92,7 @@ export class BilibiliApi {
 	 */
 	getFavoritePlaylists(
 		userMid: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
 		return bilibiliApiClient
 			.get<{
@@ -87,6 +100,9 @@ export class BilibiliApi {
 			} | null>(
 				`/x/v3/fav/folder/created/list-all?up_mid=${userMid}`,
 				undefined,
+				undefined,
+				undefined,
+				signal,
 			)
 			.map((response) => response?.list ?? [])
 	}
@@ -126,6 +142,7 @@ export class BilibiliApi {
 		bvid: string,
 		cid: number,
 		segment_index: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliDanmakuItem[], BilibiliApiError> {
 		const params = getWbiEncodedParams({
 			type: 1,
@@ -136,7 +153,14 @@ export class BilibiliApi {
 
 		return params
 			.andThen((params) => {
-				return bilibiliApiClient.getBuffer('/x/v2/dm/wbi/web/seg.so', params)
+				return bilibiliApiClient.getBuffer(
+					'/x/v2/dm/wbi/web/seg.so',
+					params,
+					undefined,
+					undefined,
+					undefined,
+					signal,
+				)
 			})
 			.andThen((buffer) => {
 				try {
@@ -261,13 +285,21 @@ export class BilibiliApi {
 	/**
 	 * 获取热门搜索关键词
 	 */
-	getHotSearches(): ResultAsync<BilibiliHotSearch[], BilibiliApiError> {
+	getHotSearches(
+		signal?: AbortSignal,
+	): ResultAsync<BilibiliHotSearch[], BilibiliApiError> {
 		return bilibiliApiClient
 			.get<{
 				trending: { list: BilibiliHotSearch[] }
-			} | null>('/x/web-interface/search/square', {
-				limit: '10',
-			})
+			} | null>(
+				'/x/web-interface/search/square',
+				{
+					limit: '10',
+				},
+				undefined,
+				undefined,
+				signal,
+			)
 			.map((response) => response?.trending.list ?? [])
 	}
 
@@ -479,26 +511,38 @@ export class BilibiliApi {
 	 */
 	getPageList(
 		bvid: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliMultipageVideo[], BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliMultipageVideo[]>(
 			'/x/player/pagelist',
 			{
 				bvid,
 			},
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
 	/**
 	 * 获取登录本人信息
 	 */
-	getUserInfo(): ResultAsync<BilibiliUserInfo, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliUserInfo>('/x/space/myinfo', undefined)
+	getUserInfo(
+		signal?: AbortSignal,
+	): ResultAsync<BilibiliUserInfo, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliUserInfo>(
+			'/x/space/myinfo',
+			undefined,
+			undefined,
+			undefined,
+			signal,
+		)
 	}
 
 	/**
 	 * 获取别人用户信息
 	 */
-	getOtherUserInfo(mid: number) {
+	getOtherUserInfo(mid: number, signal?: AbortSignal) {
 		const params = getWbiEncodedParams({
 			mid: mid.toString(),
 		})
@@ -507,6 +551,8 @@ export class BilibiliApi {
 				'/x/space/wbi/acc/info',
 				params,
 				undefined,
+				undefined,
+				signal,
 			)
 		})
 	}
@@ -517,6 +563,7 @@ export class BilibiliApi {
 	getFavoriteListContents(
 		favoriteId: number,
 		pn: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliFavoriteListContents, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliFavoriteListContents>(
 			'/x/v3/fav/resource/list',
@@ -525,6 +572,9 @@ export class BilibiliApi {
 				pn: pn.toString(),
 				ps: '40',
 			},
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
@@ -537,15 +587,22 @@ export class BilibiliApi {
 		scope: 'all' | 'this',
 		pn: number,
 		keyword: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliFavoriteListContents, BilibiliApiError> {
 		return bilibiliApiClient
-			.get<BilibiliFavoriteListContents>('/x/v3/fav/resource/list', {
-				media_id: favoriteId.toString(),
-				pn: pn.toString(),
-				ps: '40',
-				keyword,
-				type: scope === 'this' ? '0' : '1',
-			})
+			.get<BilibiliFavoriteListContents>(
+				'/x/v3/fav/resource/list',
+				{
+					media_id: favoriteId.toString(),
+					pn: pn.toString(),
+					ps: '40',
+					keyword,
+					type: scope === 'this' ? '0' : '1',
+				},
+				undefined,
+				undefined,
+				signal,
+			)
 			.andThen((res) => {
 				res.medias ??= []
 				return okAsync(res)
@@ -558,11 +615,18 @@ export class BilibiliApi {
 	 */
 	getFavoriteListAllContents(
 		favoriteId: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliFavoriteListAllContents, BilibiliApiError> {
 		return bilibiliApiClient
-			.get<BilibiliFavoriteListAllContents>('/x/v3/fav/resource/ids', {
-				media_id: favoriteId.toString(),
-			})
+			.get<BilibiliFavoriteListAllContents>(
+				'/x/v3/fav/resource/ids',
+				{
+					media_id: favoriteId.toString(),
+				},
+				undefined,
+				undefined,
+				signal,
+			)
 			.map((response) => response.filter((item) => item.type === 2)) // 过滤非视频稿件 (type 2 is video)
 	}
 
@@ -571,12 +635,16 @@ export class BilibiliApi {
 	 */
 	getVideoDetails(
 		bvid: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliVideoDetails, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliVideoDetails>(
 			'/x/web-interface/view',
 			{
 				bvid,
 			},
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
@@ -601,6 +669,7 @@ export class BilibiliApi {
 	getCollectionsList(
 		pageNumber: number,
 		mid: number,
+		signal?: AbortSignal,
 	): ResultAsync<
 		{ list: BilibiliCollection[]; count: number; hasMore: boolean },
 		BilibiliApiError
@@ -610,12 +679,18 @@ export class BilibiliApi {
 				list: BilibiliCollection[]
 				count: number
 				has_more: boolean
-			}>('/x/v3/fav/folder/collected/list', {
-				pn: pageNumber.toString(),
-				ps: '20', // Page size
-				up_mid: mid.toString(),
-				platform: 'web',
-			})
+			}>(
+				'/x/v3/fav/folder/collected/list',
+				{
+					pn: pageNumber.toString(),
+					ps: '20', // Page size
+					up_mid: mid.toString(),
+					platform: 'web',
+				},
+				undefined,
+				undefined,
+				signal,
+			)
 			.map((response) => ({
 				list: response.list ?? [],
 				count: response.count,
@@ -628,6 +703,7 @@ export class BilibiliApi {
 	 */
 	getCollectionAllContents(
 		collectionId: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliCollectionAllContents, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliCollectionAllContents>(
 			'/x/space/fav/season/list',
@@ -636,6 +712,9 @@ export class BilibiliApi {
 				ps: '20', // Page size, adjust if needed
 				pn: '1', // Start from page 1
 			},
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
@@ -669,6 +748,7 @@ export class BilibiliApi {
 	getTargetVideoFavoriteStatus(
 		userMid: number,
 		bvid: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
 		const avid = bv2av(bvid)
 		return bilibiliApiClient
@@ -679,6 +759,9 @@ export class BilibiliApi {
 					rid: String(avid),
 					type: '2',
 				},
+				undefined,
+				undefined,
+				signal,
 			)
 			.map((response) => {
 				if (!response.list) {
@@ -714,6 +797,7 @@ export class BilibiliApi {
 		mid: number,
 		pn: number,
 		keyword?: string,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliUserUploadedVideosResponse, BilibiliApiError> {
 		const params = getWbiEncodedParams({
 			mid: mid.toString(),
@@ -725,6 +809,9 @@ export class BilibiliApi {
 			return bilibiliApiClient.get<BilibiliUserUploadedVideosResponse>(
 				'/x/space/wbi/arc/search',
 				params,
+				undefined,
+				undefined,
+				signal,
 			)
 		})
 	}
@@ -739,15 +826,22 @@ export class BilibiliApi {
 		bvid: string,
 		next: number,
 		mode = 3,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
-		return bilibiliApiClient.get<BilibiliCommentsResponse>('/x/v2/reply/main', {
-			oid: String(avid),
-			type: '1', // 1 for video
-			mode: String(mode),
-			next: String(next),
-			plat: '1',
-		})
+		return bilibiliApiClient.get<BilibiliCommentsResponse>(
+			'/x/v2/reply/main',
+			{
+				oid: String(avid),
+				type: '1', // 1 for video
+				mode: String(mode),
+				next: String(next),
+				plat: '1',
+			},
+			undefined,
+			undefined,
+			signal,
+		)
 	}
 
 	/**
@@ -760,6 +854,7 @@ export class BilibiliApi {
 		bvid: string,
 		rpid: number,
 		pn: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliReplyCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
 		return bilibiliApiClient.get<BilibiliReplyCommentsResponse>(
@@ -771,6 +866,9 @@ export class BilibiliApi {
 				pn: String(pn),
 				ps: '20',
 			},
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 
@@ -947,10 +1045,16 @@ export class BilibiliApi {
 	 * 检查视频是否已经点赞
 	 * （文档中说该接口实际查询的是 **近期** 是否被点赞）
 	 */
-	checkVideoIsThumbUp(bvid: string) {
-		return bilibiliApiClient.get<0 | 1>('/x/web-interface/archive/has/like', {
-			bvid,
-		})
+	checkVideoIsThumbUp(bvid: string, signal?: AbortSignal) {
+		return bilibiliApiClient.get<0 | 1>(
+			'/x/web-interface/archive/has/like',
+			{
+				bvid,
+			},
+			undefined,
+			undefined,
+			signal,
+		)
 	}
 
 	/**
@@ -987,6 +1091,7 @@ export class BilibiliApi {
 	getWebPlayerInfo(
 		bvid: string,
 		cid: number,
+		signal?: AbortSignal,
 	): ResultAsync<BilibiliWebPlayerInfo, BilibiliApiError> {
 		const params = getWbiEncodedParams({
 			bvid,
@@ -996,6 +1101,9 @@ export class BilibiliApi {
 			return bilibiliApiClient.get<BilibiliWebPlayerInfo>(
 				'/x/player/wbi/v2',
 				params,
+				undefined,
+				undefined,
+				signal,
 			)
 		})
 	}
@@ -1003,10 +1111,15 @@ export class BilibiliApi {
 	/**
 	 * 获取稍后再看视频列表
 	 */
-	getToViewVideoList(): ResultAsync<BilibiliToViewVideoList, BilibiliApiError> {
+	getToViewVideoList(
+		signal?: AbortSignal,
+	): ResultAsync<BilibiliToViewVideoList, BilibiliApiError> {
 		return bilibiliApiClient.get<BilibiliToViewVideoList>(
 			'/x/v2/history/toview',
 			undefined,
+			undefined,
+			undefined,
+			signal,
 		)
 	}
 

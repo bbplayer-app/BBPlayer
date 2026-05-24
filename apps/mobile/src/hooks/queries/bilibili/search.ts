@@ -21,8 +21,10 @@ export const useSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
 	return useInfiniteQuery({
 		queryKey: searchQueryKeys.results(query),
-		queryFn: ({ pageParam = 1 }) =>
-			returnOrThrowAsync(bilibiliApi.searchVideos(query, pageParam)),
+		queryFn: ({ pageParam = 1, signal }) =>
+			returnOrThrowAsync(
+				bilibiliApi.searchVideos(query, pageParam, { signal }),
+			),
 		enabled,
 		staleTime: 5 * 60 * 1000,
 		initialPageParam: 1,
@@ -43,7 +45,8 @@ export const useUserSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
 	return useQuery({
 		queryKey: searchQueryKeys.users(query),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.searchUsers(query)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.searchUsers(query, 1, { signal })),
 		enabled,
 		staleTime: 5 * 60 * 1000,
 	})
@@ -53,7 +56,8 @@ export const useUserSearchResults = (query: string) => {
 export const useHotSearches = () => {
 	return useQuery({
 		queryKey: searchQueryKeys.hotSearches(),
-		queryFn: () => returnOrThrowAsync(bilibiliApi.getHotSearches()),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getHotSearches(signal)),
 		staleTime: 15 * 60 * 1000,
 	})
 }
@@ -63,8 +67,8 @@ export const useSearchSuggestions = (query: string) => {
 	const enabled = query.trim().length > 0
 	return useQuery({
 		queryKey: searchQueryKeys.suggestions(query),
-		queryFn: async () => {
-			const result = await bilibiliApi.getSearchSuggestions(query)
+		queryFn: async ({ signal }) => {
+			const result = await bilibiliApi.getSearchSuggestions(query, signal)
 			if (result.isErr()) {
 				logger.warning('搜索建议查询失败，但无关紧要', { query })
 				return []

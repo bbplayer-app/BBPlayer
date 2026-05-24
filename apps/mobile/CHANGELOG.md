@@ -10,6 +10,7 @@
 ### Fixed
 
 - orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
+- Bilibili 相关 React Query 请求现在会把 `AbortSignal` 传递到底层 API 请求。
 - 播放器页面歌曲标题过长时改为单行截断，避免挤占下方控制区域。
 - 音乐库播放列表搜索框恢复使用 React Native Paper 实现。
 - 修复从云端恢复或拉取共享歌单时，同名本地歌单会导致播放列表重复报错的问题。
