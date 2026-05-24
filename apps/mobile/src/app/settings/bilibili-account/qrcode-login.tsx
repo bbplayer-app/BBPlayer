@@ -114,7 +114,7 @@ export default function QrCodeLoginPage() {
 		if (status !== 'polling' || !qrcodeKey) return
 
 		const interval = setInterval(async () => {
-			const response = await bilibiliApi.pollQrCodeLoginStatus(qrcodeKey)
+			const response = await bilibiliApi.pollQrCodeLoginStatus({ qrcodeKey })
 			if (response.isErr()) {
 				toast.error('获取二维码登录状态失败', {
 					id: 'bilibili-qrcode-login-status-error',

@@ -78,7 +78,7 @@ async function performShare(
 	action: 'save' | 'share',
 	previewUri: string | null,
 	viewShotRef: { current: typeof ViewShot | null },
-	permissionStatus: MediaLibrary.PermissionStatus | undefined,
+	permissionStatus: unknown,
 	requestPermission: () => Promise<{ status: MediaLibrary.PermissionStatus }>,
 	setIsSharing: (value: boolean) => void,
 	isSharingRef: { current: boolean },

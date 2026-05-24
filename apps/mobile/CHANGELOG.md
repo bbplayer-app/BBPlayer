@@ -10,6 +10,7 @@
 ### Changed
 
 - 优化设置页面排序，添加许可证页面搜索及动画（支持 useTransition），重新设计手机号与二维码登录界面为美观的原生页面，并将分步组件重构迁移至 Bilibili 账号设置目录下的局部组件。
+- 将 `bilibiliApi` 与 `bilibiliApiClient` 及其所有调用处的参数由位置参数重构为对象参数
 
 ### Fixed
 

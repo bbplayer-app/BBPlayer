@@ -195,7 +195,9 @@ export class ExternalPlaylistService {
 						// oxlint-disable-next-line no-await-in-loop
 						const searchResult = await (async () => {
 							try {
-								return await bilibiliApi.searchVideos(searchQuery, 1, {
+								return await bilibiliApi.searchVideos({
+									keyword: searchQuery,
+									page: 1,
 									// 一点小巧思：带 cookie 调用搜索是会有个性化内容的，但在匹配时我认为个性化内容反而会干扰准确度
 									skipCookie: true,
 									signal,

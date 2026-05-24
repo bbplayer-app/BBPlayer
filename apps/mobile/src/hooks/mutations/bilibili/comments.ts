@@ -12,7 +12,7 @@ export const useLikeComment = () => {
 		}) => {
 			const { bvid, rpid, newAction } = params
 			return await returnOrThrowAsync(
-				bilibiliApi.likeComment(bvid, rpid, newAction),
+				bilibiliApi.likeComment({ bvid, rpid, action: newAction }),
 			)
 		},
 	})

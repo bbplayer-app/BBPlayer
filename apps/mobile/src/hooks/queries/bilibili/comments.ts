@@ -16,7 +16,7 @@ export function useComments(bvid: string, mode = 3) {
 		queryKey: commentQueryKeys.results(bvid, mode),
 		queryFn: async ({ pageParam, signal }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getComments(bvid, pageParam, mode, signal),
+				bilibiliApi.getComments({ bvid, next: pageParam, mode, signal }),
 			)
 			return res
 		},
@@ -33,7 +33,7 @@ export function useReplyComments(bvid: string, rpid: number) {
 		queryKey: commentQueryKeys.reply(bvid, rpid),
 		queryFn: async ({ pageParam, signal }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getReplyComments(bvid, rpid, pageParam, signal),
+				bilibiliApi.getReplyComments({ bvid, rpid, pn: pageParam, signal }),
 			)
 			return res
 		},

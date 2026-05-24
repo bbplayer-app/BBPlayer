@@ -23,7 +23,11 @@ export const useSearchResults = (query: string) => {
 		queryKey: searchQueryKeys.results(query),
 		queryFn: ({ pageParam = 1, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.searchVideos(query, pageParam, { signal }),
+				bilibiliApi.searchVideos({
+					keyword: query,
+					page: pageParam,
+					signal,
+				}),
 			),
 		enabled,
 		staleTime: 5 * 60 * 1000,
@@ -46,7 +50,9 @@ export const useUserSearchResults = (query: string) => {
 	return useQuery({
 		queryKey: searchQueryKeys.users(query),
 		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.searchUsers(query, 1, { signal })),
+			returnOrThrowAsync(
+				bilibiliApi.searchUsers({ keyword: query, page: 1, signal }),
+			),
 		enabled,
 		staleTime: 5 * 60 * 1000,
 	})
@@ -57,7 +63,7 @@ export const useHotSearches = () => {
 	return useQuery({
 		queryKey: searchQueryKeys.hotSearches(),
 		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getHotSearches(signal)),
+			returnOrThrowAsync(bilibiliApi.getHotSearches({ signal })),
 		staleTime: 15 * 60 * 1000,
 	})
 }
@@ -68,7 +74,10 @@ export const useSearchSuggestions = (query: string) => {
 	return useQuery({
 		queryKey: searchQueryKeys.suggestions(query),
 		queryFn: async ({ signal }) => {
-			const result = await bilibiliApi.getSearchSuggestions(query, signal)
+			const result = await bilibiliApi.getSearchSuggestions({
+				term: query,
+				signal,
+			})
 			if (result.isErr()) {
 				logger.warning('搜索建议查询失败，但无关紧要', { query })
 				return []

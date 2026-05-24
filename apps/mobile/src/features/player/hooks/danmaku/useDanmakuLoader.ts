@@ -49,7 +49,7 @@ export default function useDanmakuLoader(
 			isLoadingRef.current = true
 			let cidToUse = cid
 			if (!cid) {
-				const cidResult = await bilibiliApi.getPageList(bvid)
+				const cidResult = await bilibiliApi.getPageList({ bvid })
 				if (cidResult.isErr()) {
 					logger.error('获取 cid 失败', cidResult.error)
 					isLoadingRef.current = false

@@ -66,7 +66,7 @@ export class SyncBilibiliPlaylistFacade {
 		cid?: number,
 	): ResultAsync<Track, BilibiliApiError | DatabaseError | ServiceError> {
 		logger.info('开始添加 Track（Bilibili）', { bvid, cid })
-		const apiData = this.bilibiliApi.getVideoDetails(bvid)
+		const apiData = this.bilibiliApi.getVideoDetails({ bvid })
 		return apiData.andThen((data) => {
 			const trackPayload = {
 				title: data.title,
@@ -140,7 +140,7 @@ export class SyncBilibiliPlaylistFacade {
 			logger.info('开始同步合集', { collectionId })
 			logger.debug('syncCollection', { collectionId })
 			return this.bilibiliApi
-				.getCollectionAllContents(collectionId)
+				.getCollectionAllContents({ collectionId })
 				.andTee(() =>
 					logger.debug(
 						'step 1: 调用 bilibiliapi getCollectionAllContents 完成',
@@ -281,7 +281,7 @@ export class SyncBilibiliPlaylistFacade {
 			logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
 			logger.info('开始同步多集视频', { bvid })
 			return this.bilibiliApi
-				.getVideoDetails(bvid)
+				.getVideoDetails({ bvid })
 				.andTee(() =>
 					logger.debug('step 1: 调用 bilibiliapi getVideoDetails 完成'),
 				)
@@ -402,8 +402,8 @@ export class SyncBilibiliPlaylistFacade {
 				stage: 'fetching_metadata',
 			})
 			const bilibiliResult = await ResultAsync.combine([
-				this.bilibiliApi.getFavoriteListAllContents(favoriteId),
-				this.bilibiliApi.getFavoriteListContents(favoriteId, 1),
+				this.bilibiliApi.getFavoriteListAllContents({ favoriteId }),
+				this.bilibiliApi.getFavoriteListContents({ favoriteId, pn: 1 }),
 			])
 			if (bilibiliResult.isErr()) {
 				return err(bilibiliResult.error)
@@ -519,10 +519,10 @@ export class SyncBilibiliPlaylistFacade {
 				})
 				logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
 				// oxlint-disable-next-line no-await-in-loop
-				const pageResult = await this.bilibiliApi.getFavoriteListContents(
+				const pageResult = await this.bilibiliApi.getFavoriteListContents({
 					favoriteId,
-					nowPageNumber,
-				)
+					pn: nowPageNumber,
+				})
 				if (pageResult.isErr()) {
 					return errAsync(pageResult.error)
 				}

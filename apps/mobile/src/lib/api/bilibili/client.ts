@@ -31,17 +31,19 @@ class ApiClient {
 	private baseUrl = 'https://api.bilibili.com'
 
 	/**
-	 * 核心请求方法，使用 neverthrow 进行封装
-	 * @param endpoint API 端点
-	 * @param options Fetch 请求选项
-	 * @returns ResultAsync 包含成功数据或错误
+	 * 核心请求 method，使用 neverthrow 进行封装
 	 */
-	private request = <T>(
-		endpoint: string,
-		options: RequestInit = {},
-		fullUrl?: string,
-		skipCookie?: boolean,
-	): ResultAsync<T, BilibiliApiError> => {
+	private request = <T>({
+		endpoint,
+		options = {},
+		fullUrl,
+		skipCookie,
+	}: {
+		endpoint: string
+		options?: RequestInit
+		fullUrl?: string
+		skipCookie?: boolean
+	}): ResultAsync<T, BilibiliApiError> => {
 		const url = fullUrl ?? `${this.baseUrl}${endpoint}`
 		const cookieList = useAppStore.getState().bilibiliCookie
 		const cookie =
@@ -113,19 +115,21 @@ class ApiClient {
 
 	/**
 	 * 发送 GET 请求
-	 * @param endpoint API 端点
-	 * @param params URL 查询参数
-	 * @param fullUrl 完整的 URL，如果提供则忽略 baseUrl
-	 * @param skipCookie 是否跳过 cookie 注入
 	 * @returns ResultAsync 包含成功数据或错误
 	 */
-	get<T>(
-		endpoint: string,
-		params?: Record<string, string | undefined> | string,
-		fullUrl?: string,
-		skipCookie?: boolean,
-		signal?: AbortSignal,
-	): ResultAsync<T, BilibiliApiError> {
+	get<T>({
+		endpoint,
+		params,
+		fullUrl,
+		skipCookie,
+		signal,
+	}: {
+		endpoint: string
+		params?: Record<string, string | undefined> | string
+		fullUrl?: string
+		skipCookie?: boolean
+		signal?: AbortSignal
+	}): ResultAsync<T, BilibiliApiError> {
 		let url = endpoint
 		if (typeof params === 'string') {
 			url = `${endpoint}?${params}`
@@ -138,25 +142,33 @@ class ApiClient {
 			}
 			url = `${endpoint}?${searchParams.toString()}`
 		}
-		return this.request<T>(url, { method: 'GET', signal }, fullUrl, skipCookie)
+		return this.request<T>({
+			endpoint: url,
+			options: { method: 'GET', signal },
+			fullUrl,
+			skipCookie,
+		})
 	}
 
 	/**
 	 * 发送 GET 请求并返回 ArrayBuffer
-	 * @param endpoint API 端点
-	 * @param params URL 查询参数
-	 * @param fullUrl 完整的 URL，如果提供则忽略 baseUrl
-	 * @param skipCookie 是否跳过 cookie 注入
 	 * @returns ResultAsync 包含 ArrayBuffer 或错误
 	 */
-	getBuffer(
-		endpoint: string,
-		params?: Record<string, string | undefined> | string,
-		headers?: Record<string, string>,
-		fullUrl?: string,
-		skipCookie?: boolean,
-		signal?: AbortSignal,
-	): ResultAsync<ArrayBuffer, BilibiliApiError> {
+	getBuffer({
+		endpoint,
+		params,
+		headers,
+		fullUrl,
+		skipCookie,
+		signal,
+	}: {
+		endpoint: string
+		params?: Record<string, string | undefined> | string
+		headers?: Record<string, string>
+		fullUrl?: string
+		skipCookie?: boolean
+		signal?: AbortSignal
+	}): ResultAsync<ArrayBuffer, BilibiliApiError> {
 		let url = endpoint
 		if (typeof params === 'string') {
 			url = `${endpoint}?${params}`
@@ -214,22 +226,24 @@ class ApiClient {
 
 	/**
 	 * 发送 POST 请求
-	 * @param endpoint API 端点
-	 * @param data 请求体数据
-	 * @param headers 请求头（默认请求类型为 application/x-www-form-urlencoded）
-	 * @param fullUrl 完整的 URL，如果提供则忽略 baseUrl
 	 * @returns ResultAsync 包含成功数据或错误
 	 */
-	post<T>(
-		endpoint: string,
-		data?: BodyInit,
-		headers?: Record<string, string>,
-		fullUrl?: string,
-		skipCookie?: boolean,
-	): ResultAsync<T, BilibiliApiError> {
-		return this.request<T>(
+	post<T>({
+		endpoint,
+		data,
+		headers,
+		fullUrl,
+		skipCookie,
+	}: {
+		endpoint: string
+		data?: BodyInit
+		headers?: Record<string, string>
+		fullUrl?: string
+		skipCookie?: boolean
+	}): ResultAsync<T, BilibiliApiError> {
+		return this.request<T>({
 			endpoint,
-			{
+			options: {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/x-www-form-urlencoded',
@@ -239,19 +253,19 @@ class ApiClient {
 			},
 			fullUrl,
 			skipCookie,
-		)
+		})
 	}
 
 	/**
 	 * 自动处理 CSRF token 并发送 POST 请求 (x-www-form-urlencoded)
-	 * @param url 请求的 URL
-	 * @param payload 请求体数据
-	 * @returns
 	 */
-	public postWithCsrf<T>(
-		url: string,
-		payload: Record<string, string> = {},
-	): ResultAsync<T, BilibiliApiError> {
+	public postWithCsrf<T>({
+		endpoint,
+		payload = {},
+	}: {
+		endpoint: string
+		payload?: Record<string, string>
+	}): ResultAsync<T, BilibiliApiError> {
 		return getCsrfToken().asyncAndThen((csrfToken) => {
 			const dataWithCsrf = {
 				...payload,
@@ -260,7 +274,7 @@ class ApiClient {
 
 			const body = new URLSearchParams(dataWithCsrf).toString()
 
-			return this.post<T>(url, body)
+			return this.post<T>({ endpoint, data: body })
 		})
 	}
 }

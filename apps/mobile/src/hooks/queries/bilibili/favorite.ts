@@ -62,7 +62,11 @@ export const useInfiniteFavoriteList = (favoriteId?: number) => {
 		queryKey: favoriteListQueryKeys.infiniteFavoriteList(favoriteId),
 		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getFavoriteListContents(favoriteId!, pageParam, signal),
+				bilibiliApi.getFavoriteListContents({
+					favoriteId: favoriteId!,
+					pn: pageParam,
+					signal,
+				}),
 			),
 		enabled,
 		initialPageParam: 1,
@@ -83,7 +87,9 @@ export const useGetFavoritePlaylists = (userMid?: number) => {
 	return useQuery({
 		queryKey: favoriteListQueryKeys.allFavoriteList(userMid),
 		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getFavoritePlaylists(userMid!, signal)),
+			returnOrThrowAsync(
+				bilibiliApi.getFavoritePlaylists({ userMid: userMid!, signal }),
+			),
 		enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	})
@@ -99,7 +105,11 @@ export const useInfiniteCollectionsList = (mid?: number) => {
 		queryKey: favoriteListQueryKeys.infiniteCollectionList(mid),
 		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getCollectionsList(pageParam, mid!, signal),
+				bilibiliApi.getCollectionsList({
+					pageNumber: pageParam,
+					mid: mid!,
+					signal,
+				}),
 			),
 		enabled,
 		initialPageParam: 1,
@@ -118,7 +128,7 @@ export const useCollectionAllContents = (collectionId: number) => {
 		queryKey: favoriteListQueryKeys.collectionAllContents(collectionId),
 		queryFn: ({ signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getCollectionAllContents(collectionId, signal),
+				bilibiliApi.getCollectionAllContents({ collectionId, signal }),
 			),
 		staleTime: 1,
 	})
@@ -134,7 +144,11 @@ export const useGetFavoriteForOneVideo = (bvid: string, userMid?: number) => {
 		queryKey: favoriteListQueryKeys.favoriteForOneVideo(bvid, userMid),
 		queryFn: ({ signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getTargetVideoFavoriteStatus(userMid!, bvid, signal),
+				bilibiliApi.getTargetVideoFavoriteStatus({
+					userMid: userMid!,
+					bvid,
+					signal,
+				}),
 			),
 		enabled,
 		staleTime: 0,
@@ -161,13 +175,13 @@ export const useInfiniteSearchFavoriteItems = (
 		),
 		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.searchFavoriteListContents(
-					favoriteId!,
+				bilibiliApi.searchFavoriteListContents({
+					favoriteId: favoriteId!,
 					scope,
-					pageParam,
-					keyword!,
+					pn: pageParam,
+					keyword: keyword!,
 					signal,
-				),
+				}),
 			),
 		enabled,
 		initialPageParam: 1,

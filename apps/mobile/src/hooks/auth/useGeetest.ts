@@ -42,14 +42,14 @@ export function useGeetest({
 
 			onStartRequest()
 			try {
-				const smsResult = await bilibiliApi.sendPhoneLoginSms(
-					captchaParams.tel,
-					captchaParams.cid,
-					captchaParams.token,
+				const smsResult = await bilibiliApi.sendPhoneLoginSms({
+					tel: captchaParams.tel,
+					cid: captchaParams.cid,
+					token: captchaParams.token,
 					challenge,
 					validate,
 					seccode,
-				)
+				})
 				if (smsResult.isErr()) {
 					const errCode = smsResult.error.data.msgCode
 					let errorMsg = smsResult.error.message

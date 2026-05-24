@@ -23,7 +23,7 @@ export const usePersonalInformation = () => {
 	return useQuery({
 		queryKey: userQueryKeys.personalInformation(),
 		queryFn: async ({ signal }) => {
-			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo(signal))
+			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo({ signal }))
 			// 缓存用户信息和头像供离线时显示
 			if (res.name) {
 				useAppStore.getState().setBilibiliUserInfo({
@@ -64,7 +64,8 @@ export const useRecentlyPlayed = () => {
 	const enabled = hasCookie
 	return useQuery({
 		queryKey: userQueryKeys.recentlyPlayed(),
-		queryFn: ({ signal }) => returnOrThrowAsync(bilibiliApi.getHistory(signal)),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getHistory({ signal })),
 		enabled,
 		staleTime: 1 * 60 * 1000,
 	})
@@ -81,7 +82,12 @@ export const useInfiniteGetUserUploadedVideos = (
 		queryKey: userQueryKeys.uploadedVideos(mid, keyword),
 		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getUserUploadedVideos(mid, pageParam, keyword, signal),
+				bilibiliApi.getUserUploadedVideos({
+					mid,
+					pn: pageParam,
+					keyword,
+					signal,
+				}),
 			),
 		enabled,
 		getNextPageParam: (lastPage) => {
@@ -103,7 +109,7 @@ export const useOtherUserInfo = (mid: number) => {
 	return useQuery({
 		queryKey: userQueryKeys.otherUserInfo(mid),
 		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getOtherUserInfo(mid, signal)),
+			returnOrThrowAsync(bilibiliApi.getOtherUserInfo({ mid, signal })),
 		enabled,
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})

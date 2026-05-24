@@ -79,9 +79,9 @@ async function reportPlaybackHistory(
 	}
 	let cid = track.bilibiliMetadata.cid
 	if (!cid && !track.bilibiliMetadata.isMultiPage) {
-		const videoPageResult = await bilibiliApi.getPageList(
-			track.bilibiliMetadata.bvid,
-		)
+		const videoPageResult = await bilibiliApi.getPageList({
+			bvid: track.bilibiliMetadata.bvid,
+		})
 		if (videoPageResult.isErr()) {
 			toastAndLogError(
 				'查询视频信息失败：',
@@ -108,11 +108,11 @@ async function reportPlaybackHistory(
 		cid,
 		position,
 	})
-	const result = await bilibiliApi.reportPlaybackHistory(
-		track.bilibiliMetadata.bvid,
-		cid!,
-		position,
-	)
+	const result = await bilibiliApi.reportPlaybackHistory({
+		bvid: track.bilibiliMetadata.bvid,
+		cid: cid!,
+		progress: position,
+	})
 	if (result.isErr()) {
 		logger.warning('上报播放记录到 bilibili 失败', {
 			params: {

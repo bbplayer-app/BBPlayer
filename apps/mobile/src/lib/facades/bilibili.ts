@@ -17,7 +17,9 @@ export class BilibiliFacade {
 	) {
 		switch (type) {
 			case 'collection': {
-				const result = await this.bilibiliApi.getCollectionAllContents(remoteId)
+				const result = await this.bilibiliApi.getCollectionAllContents({
+					collectionId: remoteId,
+				})
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -35,7 +37,9 @@ export class BilibiliFacade {
 				})
 			}
 			case 'multi_page': {
-				const result = await this.bilibiliApi.getVideoDetails(av2bv(remoteId))
+				const result = await this.bilibiliApi.getVideoDetails({
+					bvid: av2bv(remoteId),
+				})
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -53,10 +57,10 @@ export class BilibiliFacade {
 				})
 			}
 			case 'favorite': {
-				const result = await this.bilibiliApi.getFavoriteListContents(
-					remoteId,
-					1,
-				)
+				const result = await this.bilibiliApi.getFavoriteListContents({
+					favoriteId: remoteId,
+					pn: 1,
+				})
 				if (result.isErr()) {
 					return err(
 						createFacadeError(

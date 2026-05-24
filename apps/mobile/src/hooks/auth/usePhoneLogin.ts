@@ -199,12 +199,12 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 
 		dispatch({ type: 'START_REQUEST' })
 		try {
-			const loginResult = await bilibiliApi.loginWithPhoneSmsCode(
-				state.tel.trim(),
-				COUNTRY_CODE,
-				state.smsCode.trim(),
-				state.captchaKey,
-			)
+			const loginResult = await bilibiliApi.loginWithPhoneSmsCode({
+				tel: state.tel.trim(),
+				cid: COUNTRY_CODE,
+				code: state.smsCode.trim(),
+				captchaKey: state.captchaKey,
+			})
 			if (loginResult.isErr()) {
 				let errorMessage = loginResult.error.message
 				if (!errorMessage) {

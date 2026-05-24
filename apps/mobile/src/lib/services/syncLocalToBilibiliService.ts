@@ -20,7 +20,7 @@ class SyncLocalToBilibiliService {
 		{ id: number; title: string; media_count: number } | null,
 		Error
 	> {
-		return bilibiliApi.getFavoritePlaylists(userMid).map((list) => {
+		return bilibiliApi.getFavoritePlaylists({ userMid }).map((list) => {
 			const found = list.find((p) => p.title.trim() === name.trim())
 			return found
 				? { id: found.id, title: found.title, media_count: found.media_count }
@@ -35,9 +35,11 @@ class SyncLocalToBilibiliService {
 		name: string,
 		intro?: string,
 	): ResultAsync<{ id: number }, Error> {
-		return bilibiliApi.createFavoriteFolder(name, intro).map((res) => ({
-			id: res.id,
-		}))
+		return bilibiliApi
+			.createFavoriteFolder({ title: name, intro })
+			.map((res) => ({
+				id: res.id,
+			}))
 	}
 
 	/**
@@ -58,8 +60,9 @@ class SyncLocalToBilibiliService {
 		>
 	> {
 		// 1. 获取所有远程内容
-		const remoteContentsResult =
-			await bilibiliApi.getFavoriteListAllContents(remotePlaylistId)
+		const remoteContentsResult = await bilibiliApi.getFavoriteListAllContents({
+			favoriteId: remotePlaylistId,
+		})
 
 		if (remoteContentsResult.isErr()) {
 			return err(remoteContentsResult.error)
@@ -110,11 +113,11 @@ class SyncLocalToBilibiliService {
 
 				// 添加到 folderId，不从任何文件夹移除
 				// oxlint-disable-next-line no-await-in-loop
-				const res = await bilibiliApi.dealFavoriteForOneVideo(
+				const res = await bilibiliApi.dealFavoriteForOneVideo({
 					bvid,
-					[String(folderId)],
-					[],
-				)
+					addToFavoriteIds: [String(folderId)],
+					delInFavoriteIds: [],
+				})
 
 				if (res.isOk()) {
 					successCount++
@@ -161,10 +164,10 @@ class SyncLocalToBilibiliService {
 		for (let i = 0; i < tokensToRemove.length; i += CHUNK_SIZE) {
 			const chunk = tokensToRemove.slice(i, i + CHUNK_SIZE)
 			// oxlint-disable-next-line no-await-in-loop
-			const res = await bilibiliApi.batchDeleteFavoriteListContents(
-				folderId,
-				chunk,
-			)
+			const res = await bilibiliApi.batchDeleteFavoriteListContents({
+				favoriteId: folderId,
+				bvids: chunk,
+			})
 			if (res.isErr()) {
 				return err(res.error)
 			}

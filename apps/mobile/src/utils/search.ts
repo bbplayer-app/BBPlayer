@@ -1,4 +1,4 @@
-import type { Router } from 'expo-router'
+import { useRouter } from 'expo-router'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
@@ -8,6 +8,7 @@ import log from './log'
 import toast from './toast'
 
 const logger = log.extend('Utils.Search')
+type Router = ReturnType<typeof useRouter>
 
 const BV_REGEX = /(?<![A-Za-z0-9])(bv[0-9A-Za-z]{10})(?![A-Za-z0-9])/i
 const AV_REGEX = /(?<![A-Za-z0-9])av(\d+)(?![A-Za-z0-9])/i
@@ -138,7 +139,9 @@ export async function matchSearchStrategies(
 
 			// 1.1 如果是 b23.tv 短链的话，去解析并把解析结果当作完整 URL 继续解析
 			if (/(^|\.)b23\.tv$/i.test(url.hostname)) {
-				const resolved = await bilibiliApi.getB23ResolvedUrl(url.toString())
+				const resolved = await bilibiliApi.getB23ResolvedUrl({
+					b23Url: url.toString(),
+				})
 				if (resolved.isErr()) {
 					logger.debug('1.1 短链解析失败', { query })
 					return { type: 'B23_RESOLVE_ERROR', query, error: resolved.error }

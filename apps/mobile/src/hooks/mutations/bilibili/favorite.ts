@@ -23,11 +23,11 @@ export const useDealFavoriteForOneVideo = () => {
 			delInFavoriteIds: string[]
 		}) =>
 			await returnOrThrowAsync(
-				bilibiliApi.dealFavoriteForOneVideo(
-					params.bvid,
-					params.addToFavoriteIds,
-					params.delInFavoriteIds,
-				),
+				bilibiliApi.dealFavoriteForOneVideo({
+					bvid: params.bvid,
+					addToFavoriteIds: params.addToFavoriteIds,
+					delInFavoriteIds: params.delInFavoriteIds,
+				}),
 			),
 		onSuccess: async (_data, _value) => {
 			toast.success('操作成功', {
@@ -70,10 +70,10 @@ export const useBatchDeleteFavoriteListContents = () => {
 	return useMutation({
 		mutationFn: (params: { bvids: string[]; favoriteId: number }) =>
 			returnOrThrowAsync(
-				bilibiliApi.batchDeleteFavoriteListContents(
-					params.favoriteId,
-					params.bvids,
-				),
+				bilibiliApi.batchDeleteFavoriteListContents({
+					favoriteId: params.favoriteId,
+					bvids: params.bvids,
+				}),
 			),
 		onSuccess: async (_data, variables) => {
 			toast.success('删除成功')

@@ -12,7 +12,7 @@ export const useThumbUpVideo = () => {
 	return useMutation({
 		mutationFn: ({ bvid, like }: { bvid: string; like: boolean }) =>
 			returnOrThrowAsync(
-				bilibiliApi.thumbUpVideo(bvid, like).map((res) => res ?? undefined),
+				bilibiliApi.thumbUpVideo({ bvid, like }).map((res) => res ?? undefined),
 			),
 		onSuccess: (_, { bvid, like }) => {
 			queryClient.setQueryData(
@@ -37,7 +37,9 @@ export const useDeleteToViewVideo = () => {
 			avid?: number
 		}) =>
 			returnOrThrowAsync(
-				bilibiliApi.deleteToViewVideo(deleteAllViewed, avid).map(() => true),
+				bilibiliApi
+					.deleteToViewVideo({ deleteAllViewed, avid })
+					.map(() => true),
 			),
 		onMutate: async ({ deleteAllViewed, avid }, context) => {
 			await context.client.cancelQueries({
