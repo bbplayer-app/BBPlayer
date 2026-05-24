@@ -1,9 +1,8 @@
-import { Host, Icon, Text as ExpoText } from '@expo/ui'
-import { DockedSearchBar } from '@expo/ui/jetpack-compose'
+import { Icon } from '@expo/ui'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Searchbar, Text, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
@@ -173,21 +172,14 @@ const LocalPlaylistListComponent = memo(() => {
 					</FunctionalMenu>
 				</View>
 			</View>
-			<Host matchContents>
-				<DockedSearchBar onQueryChange={setSearchQuery}>
-					<DockedSearchBar.Placeholder>
-						<ExpoText>搜索播放列表</ExpoText>
-					</DockedSearchBar.Placeholder>
-					<DockedSearchBar.LeadingIcon>
-						<Icon
-							name={Icon.select({
-								ios: 'magnifyingglass',
-								android: import('@expo/material-symbols/search.xml'),
-							})}
-						/>
-					</DockedSearchBar.LeadingIcon>
-				</DockedSearchBar>
-			</Host>
+			<Searchbar
+				placeholder='搜索播放列表'
+				onChangeText={setSearchQuery}
+				value={searchQuery}
+				mode='bar'
+				style={styles.searchbar}
+				inputStyle={styles.searchInput}
+			/>
 			<View
 				style={{
 					flex: 1,
