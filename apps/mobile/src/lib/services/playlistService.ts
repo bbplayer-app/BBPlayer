@@ -408,6 +408,7 @@ export class PlaylistService {
 	public updatePlaylistMetadata(
 		playlistId: number,
 		payload: UpdatePlaylistPayload,
+		options?: { allowDuplicateTitle?: boolean },
 	): ResultAsync<
 		typeof schema.playlists.$inferSelect,
 		DatabaseError | ServiceError
@@ -429,7 +430,7 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				if (payload.title) {
+				if (payload.title && !options?.allowDuplicateTitle) {
 					const duplicate = await Sentry.startSpan(
 						{ name: 'db:query:playlist:duplicate', op: 'db' },
 						() =>

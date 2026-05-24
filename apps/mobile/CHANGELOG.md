@@ -10,6 +10,7 @@
 ### Fixed
 
 - orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
+- 修复从云端恢复或拉取共享歌单时，同名本地歌单会导致播放列表重复报错的问题。
 
 ## [2.5.1] - 2026-05-22
 
