@@ -68,7 +68,7 @@
 		"expo-sqlite": "~56.0.4",
 		"expo-system-ui": "~56.0.5",
 		"expo-updates": "~56.0.16",
-		"expo-wavy-slider": "^0.4.5",
+		"expo-wavy-slider": "^0.4.6",
 		"expo-web-browser": "~56.0.5",
 		"fractional-indexing": "^3.2.0",
 		"he": "^1.2.0",
