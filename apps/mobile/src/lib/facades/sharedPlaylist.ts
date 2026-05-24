@@ -800,7 +800,6 @@ export class SharedPlaylistFacade {
 				const metaResult = await playlistService.updatePlaylistMetadata(
 					localPlaylistId,
 					metaUpdate,
-					{ allowDuplicateTitle: true },
 				)
 				if (metaResult.isErr()) throw metaResult.error
 			}

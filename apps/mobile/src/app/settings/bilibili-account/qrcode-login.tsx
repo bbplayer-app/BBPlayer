@@ -1,10 +1,11 @@
 import * as Sentry from '@sentry/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import * as Clipboard from 'expo-clipboard'
+import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { useCallback, useEffect, useReducer } from 'react'
-import { Pressable, StyleSheet } from 'react-native'
-import { Dialog, Text } from 'react-native-paper'
+import { useEffect, useReducer } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
 import * as setCookieParser from 'set-cookie-parser'
 
@@ -12,18 +13,11 @@ import Button from '@/components/common/Button'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { userQueryKeys } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { BilibiliQrCodeLoginStatus } from '@/types/apis/bilibili'
 import toast from '@/utils/toast'
 
-type Status =
-	| 'prompting'
-	| 'generating'
-	| 'polling'
-	| 'expired'
-	| 'success'
-	| 'error'
+type Status = 'generating' | 'polling' | 'expired' | 'success' | 'error'
 
 interface State {
 	status: Status
@@ -33,7 +27,6 @@ interface State {
 }
 
 type Action =
-	| { type: 'START_LOGIN' }
 	| { type: 'RESET' }
 	| {
 			type: 'GENERATE_SUCCESS'
@@ -44,16 +37,14 @@ type Action =
 	| { type: 'LOGIN_SUCCESS' }
 
 const initialState: State = {
-	status: 'prompting',
-	statusText: '是否开始扫码登录？',
+	status: 'generating',
+	statusText: '正在生成二维码...',
 	qrcodeKey: '',
 	qrcodeUrl: '',
 }
 
 function reducer(state: State, action: Action): State {
 	switch (action.type) {
-		case 'START_LOGIN':
-			return { ...state, status: 'generating', statusText: '正在生成二维码...' }
 		case 'RESET':
 			return initialState
 		case 'GENERATE_SUCCESS':
@@ -68,7 +59,7 @@ function reducer(state: State, action: Action): State {
 			return {
 				...state,
 				status: 'error',
-				statusText: `获取二维码失败:\u2009${action.payload}`,
+				statusText: `获取二维码失败: ${action.payload}`,
 			}
 		case 'POLL_UPDATE':
 			switch (action.payload.code as BilibiliQrCodeLoginStatus) {
@@ -80,7 +71,7 @@ function reducer(state: State, action: Action): State {
 					return {
 						...state,
 						status: 'expired',
-						statusText: '二维码已过期，请重新打开窗口',
+						statusText: '二维码已过期，请重新生成',
 						qrcodeKey: '',
 						qrcodeUrl: '',
 					}
@@ -89,17 +80,14 @@ function reducer(state: State, action: Action): State {
 			}
 		case 'LOGIN_SUCCESS':
 			return { ...state, status: 'success', statusText: '登录成功' }
-		default:
-			return state
 	}
 }
 
-const QrCodeLoginModal = () => {
+export default function QrCodeLoginPage() {
+	const router = useRouter()
 	const queryClient = useQueryClient()
+	const { colors } = useTheme()
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('QRCodeLogin'), [_close])
-
 	const [state, dispatch] = useReducer(reducer, initialState)
 	const { status, statusText, qrcodeKey, qrcodeUrl } = state
 
@@ -114,13 +102,12 @@ const QrCodeLoginModal = () => {
 					payload: String(response.error.message),
 				})
 				toast.error('获取二维码失败', { id: 'bilibili-qrcode-login-error' })
-				setTimeout(() => close(), 2000)
 			} else {
 				dispatch({ type: 'GENERATE_SUCCESS', payload: response.value })
 			}
 		}
 		void generateQrCode()
-	}, [status, close])
+	}, [status])
 
 	useEffect(() => {
 		if (status !== 'polling' || !qrcodeKey) return
@@ -139,7 +126,7 @@ const QrCodeLoginModal = () => {
 				pollData.status ===
 				BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS
 			) {
-				clearInterval(interval) // 成功后立刻停止轮询
+				clearInterval(interval)
 				dispatch({ type: 'LOGIN_SUCCESS' })
 
 				const splitedCookie = setCookieParser.splitCookiesString(
@@ -151,9 +138,9 @@ const QrCodeLoginModal = () => {
 				)
 				const result = setCookie(finalCookieObject)
 				if (result.isErr()) {
-					toast.error('保存 cookie 失败：' + result.error.message)
+					toast.error('保存 Cookie 失败：' + result.error.message)
 					Sentry.captureException(result.error, {
-						tags: { Component: 'QrCodeLoginModal' },
+						tags: { Page: 'QrCodeLoginPage' },
 					})
 					return
 				}
@@ -163,83 +150,82 @@ const QrCodeLoginModal = () => {
 					queryKey: favoriteListQueryKeys.all,
 				})
 				await queryClient.invalidateQueries({ queryKey: userQueryKeys.all })
-				setTimeout(() => close(), 1000)
+				setTimeout(() => router.back(), 800)
 			} else {
 				dispatch({ type: 'POLL_UPDATE', payload: { code: pollData.status } })
 			}
 		}, 2000)
 
 		return () => clearInterval(interval)
-	}, [status, qrcodeKey, setCookie, queryClient, close])
-
-	const renderDialogContent = () => {
-		if (status === 'prompting') {
-			return (
-				<>
-					<Text style={styles.statusText}>{statusText}</Text>
-					<Button
-						mode='contained'
-						onPress={() => dispatch({ type: 'START_LOGIN' })}
-					>
-						开始
-					</Button>
-				</>
-			)
-		}
-
-		if (status === 'generating' || status === 'error' || status === 'expired') {
-			return <Text style={styles.statusText}>{statusText}</Text>
-		}
-
-		return (
-			<>
-				<Text style={styles.statusText}>
-					{statusText}
-					{'（点击二维码可直接跳转登录）'}
-				</Text>
-				<Pressable
-					onPress={() => {
-						if (!qrcodeUrl) return
-						WebBrowser.openBrowserAsync(qrcodeUrl).catch((e) => {
-							void Clipboard.setStringAsync(qrcodeUrl)
-							toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
-								description: String(e),
-							})
-						})
-					}}
-				>
-					{qrcodeUrl ? (
-						<QRCode
-							value={qrcodeUrl}
-							size={200}
-						/>
-					) : (
-						<Text style={styles.statusText}>正在生成二维码...</Text>
-					)}
-				</Pressable>
-			</>
-		)
-	}
+	}, [qrcodeKey, queryClient, router, setCookie, status])
 
 	return (
-		<>
-			<Dialog.Title>扫码登录</Dialog.Title>
-			<Dialog.Content style={styles.content}>
-				{renderDialogContent()}
-			</Dialog.Content>
-		</>
+		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			<Appbar.Header>
+				<Appbar.BackAction onPress={() => router.back()} />
+				<Appbar.Content title='扫码登录 Bilibili' />
+			</Appbar.Header>
+			<View style={styles.content}>
+				<Text
+					variant='titleMedium'
+					style={styles.statusText}
+				>
+					{statusText}
+				</Text>
+				{qrcodeUrl ? (
+					<Pressable
+						onPress={() => {
+							WebBrowser.openBrowserAsync(qrcodeUrl).catch((e) => {
+								void Clipboard.setStringAsync(qrcodeUrl)
+								toast.error('无法调用浏览器打开网页，已将链接复制到剪贴板', {
+									description: String(e),
+								})
+							})
+						}}
+						style={styles.qrcode}
+					>
+						<QRCode
+							value={qrcodeUrl}
+							size={220}
+						/>
+					</Pressable>
+				) : null}
+				<Text
+					variant='bodyMedium'
+					style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}
+				>
+					使用 Bilibili 客户端扫码确认。点击二维码可以尝试直接打开登录链接。
+				</Text>
+				{status === 'expired' || status === 'error' ? (
+					<Button
+						mode='contained'
+						onPress={() => dispatch({ type: 'RESET' })}
+					>
+						重新生成
+					</Button>
+				) : null}
+			</View>
+		</View>
 	)
 }
 
 const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
 	content: {
-		justifyContent: 'center',
+		flex: 1,
 		alignItems: 'center',
+		justifyContent: 'center',
+		gap: 20,
+		paddingHorizontal: 24,
 	},
 	statusText: {
 		textAlign: 'center',
+	},
+	qrcode: {
 		padding: 16,
+		backgroundColor: '#fff',
+		borderRadius: 8,
 	},
 })
-
-export default QrCodeLoginModal

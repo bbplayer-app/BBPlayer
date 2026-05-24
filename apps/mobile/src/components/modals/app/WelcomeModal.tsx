@@ -1,4 +1,5 @@
 import { Icon } from '@expo/ui'
+import { router } from 'expo-router'
 import {
 	useCallback,
 	useEffect,
@@ -109,7 +110,6 @@ function Step1({
 export default function WelcomeModal() {
 	const _close = useModalStore((s) => s.close)
 	const close = useCallback(() => _close('Welcome'), [_close])
-	const open = useModalStore((s) => s.open)
 
 	const [step, setStep] = useState(0)
 
@@ -154,14 +154,14 @@ export default function WelcomeModal() {
 	}, [close])
 	const confirmLoginQRCode = useCallback(() => {
 		storage.set('first_open', false)
-		open('QRCodeLogin', undefined)
+		router.push('/settings/bilibili-account/qrcode-login' as never)
 		close()
-	}, [close, open])
+	}, [close])
 	const confirmLoginPhone = useCallback(() => {
 		storage.set('first_open', false)
-		open('PhoneLogin', undefined)
+		router.push('/settings/bilibili-account/phone-login' as never)
 		close()
-	}, [close, open])
+	}, [close])
 
 	usePreventRemove(true, () => goToStep(step - 1))
 

@@ -10,7 +10,6 @@ import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
 	DatabaseError,
-	createPlaylistAlreadyExists,
 	createPlaylistNotFound,
 	createTrackNotInPlaylist,
 	createValidationError,
@@ -408,7 +407,6 @@ export class PlaylistService {
 	public updatePlaylistMetadata(
 		playlistId: number,
 		payload: UpdatePlaylistPayload,
-		options?: { allowDuplicateTitle?: boolean },
 	): ResultAsync<
 		typeof schema.playlists.$inferSelect,
 		DatabaseError | ServiceError
@@ -428,24 +426,6 @@ export class PlaylistService {
 				)
 				if (!existing) {
 					throw createPlaylistNotFound(playlistId)
-				}
-
-				if (payload.title && !options?.allowDuplicateTitle) {
-					const duplicate = await Sentry.startSpan(
-						{ name: 'db:query:playlist:duplicate', op: 'db' },
-						() =>
-							this.db.query.playlists.findFirst({
-								where: and(
-									eq(schema.playlists.title, payload.title!),
-									// 排除自己
-									sql`${schema.playlists.id} != ${playlistId}`,
-								),
-								columns: { id: true },
-							}),
-					)
-					if (duplicate) {
-						throw createPlaylistAlreadyExists(payload.title)
-					}
 				}
 
 				const [updated] = await Sentry.startSpan(

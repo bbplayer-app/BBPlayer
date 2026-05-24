@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { FlatList, StyleSheet, View } from 'react-native'
 import { Dialog, Text, useTheme } from 'react-native-paper'
@@ -59,7 +60,6 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 		() => _close('AddVideoToBilibiliFavorite'),
 		[_close],
 	)
-	const open = useModalStore((state) => state.open)
 
 	const {
 		data: playlists,
@@ -173,8 +173,8 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 					<Button
 						mode='contained'
 						onPress={() => {
+							router.push('/settings/bilibili-account/qrcode-login' as never)
 							close()
-							open('QRCodeLogin', undefined)
 						}}
 					>
 						登录

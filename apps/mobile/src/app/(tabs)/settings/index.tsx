@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
@@ -34,7 +35,10 @@ export default function SettingsPage() {
 				</View>
 				<ScrollView
 					style={styles.scrollView}
-					contentContainerStyle={styles.scrollContent}
+					contentContainerStyle={[
+						styles.scrollContent,
+						{ paddingBottom: insets.bottom + (haveTrack ? 132 : 40) },
+					]}
 					contentInsetAdjustmentBehavior='automatic'
 				>
 					<List.Item
@@ -209,6 +213,11 @@ export default function SettingsPage() {
 					/>
 				</ScrollView>
 			</View>
+			<LinearGradient
+				pointerEvents='none'
+				colors={['rgba(0,0,0,0)', colors.background]}
+				style={[styles.bottomFade, { bottom: haveTrack ? 70 : 0 }]}
+			/>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />
 			</View>
@@ -245,5 +254,11 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		left: 0,
 		right: 0,
+	},
+	bottomFade: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		height: 40,
 	},
 })

@@ -88,7 +88,7 @@ export default function BilibiliAccountSettingsPage() {
 							) : (
 								<Avatar.Image
 									size={72}
-									source={require('../../../assets/images/bilibili-default-avatar.jpg')}
+									source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
 								/>
 							)}
 							<View style={styles.profileText}>
@@ -141,7 +141,11 @@ export default function BilibiliAccountSettingsPage() {
 										icon='chevron-right'
 									/>
 								)}
-								onPress={() => openModal('QRCodeLogin', undefined)}
+								onPress={() =>
+									router.push(
+										'/settings/bilibili-account/qrcode-login' as never,
+									)
+								}
 							/>
 							<Divider />
 							<List.Item
@@ -159,7 +163,9 @@ export default function BilibiliAccountSettingsPage() {
 										icon='chevron-right'
 									/>
 								)}
-								onPress={() => openModal('PhoneLogin', undefined)}
+								onPress={() =>
+									router.push('/settings/bilibili-account/phone-login' as never)
+								}
 							/>
 							<Divider />
 							<List.Item
@@ -192,7 +198,7 @@ export default function BilibiliAccountSettingsPage() {
 						<View style={styles.loginHero}>
 							<Avatar.Image
 								size={72}
-								source={require('../../../assets/images/bilibili-default-avatar.jpg')}
+								source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
 							/>
 							<View style={styles.loginHeroText}>
 								<Text variant='headlineSmall'>连接 Bilibili</Text>
@@ -208,14 +214,20 @@ export default function BilibiliAccountSettingsPage() {
 							<Button
 								mode='contained'
 								icon='qrcode-scan'
-								onPress={() => openModal('QRCodeLogin', undefined)}
+								onPress={() =>
+									router.push(
+										'/settings/bilibili-account/qrcode-login' as never,
+									)
+								}
 							>
 								扫码登录
 							</Button>
 							<Button
 								mode='outlined'
 								icon='cellphone-key'
-								onPress={() => openModal('PhoneLogin', undefined)}
+								onPress={() =>
+									router.push('/settings/bilibili-account/phone-login' as never)
+								}
 							>
 								手机号登录
 							</Button>

@@ -159,6 +159,37 @@ export default function EditLyricsModal({
 		}
 	}
 
+	const clearLyrics = () => {
+		alert(
+			'清除歌词？',
+			'清除后会标记该歌曲跳过自动歌词获取，并立即隐藏桌面歌词、状态栏歌词等歌词显示。',
+			[
+				{ text: '取消' },
+				{
+					text: '清除',
+					onPress: async () => {
+						const result = await lyricService.skipLyric(uniqueKey)
+						if (result.isErr()) {
+							toastAndLogError(
+								'清除歌词失败',
+								result.error,
+								'Components.EditLyricsModal',
+							)
+							return
+						}
+
+						queryClient.setQueryData(
+							lyricsQueryKeys.smartFetchLyrics(uniqueKey),
+							result.value,
+						)
+						toast.success('歌词已清除')
+						close('EditLyrics')
+					},
+				},
+			],
+		)
+	}
+
 	return (
 		<>
 			<Dialog.Title>编辑歌词</Dialog.Title>
@@ -202,6 +233,7 @@ export default function EditLyricsModal({
 				/>
 			</Dialog.Content>
 			<Dialog.Actions>
+				<Button onPress={clearLyrics}>清除歌词</Button>
 				<Button onPress={() => close('EditLyrics')}>取消</Button>
 				<Button onPress={handleConfirm}>确定</Button>
 			</Dialog.Actions>

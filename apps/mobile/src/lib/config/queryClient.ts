@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/react-native'
 import { QueryCache, QueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
 
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { ThirdPartyError } from '@/lib/errors'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -26,7 +26,7 @@ export const queryClient = new QueryClient({
 						error.data.msgCode === -101
 					) {
 						toast.error('登录状态失效，请重新登录')
-						useModalStore.getState().open('QRCodeLogin', undefined)
+						router.navigate('/settings/bilibili-account/qrcode-login' as never)
 						return
 					}
 

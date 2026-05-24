@@ -2,6 +2,7 @@ import { useIsPlaying } from '@bbplayer/orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useEffect, useState } from 'react'
 import type { ColorSchemeName } from 'react-native'
 import {
 	Dimensions,
@@ -20,7 +21,6 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getGradientColors } from '@/utils/color'
-import toast from '@/utils/toast'
 
 import { SpectrumVisualizer } from './SpectrumVisualizer'
 
@@ -45,6 +45,7 @@ export function TrackInfo({
 
 	const currentTrack = useCurrentTrack()
 	const isPlaying = useIsPlaying()
+	const [isTitleExpanded, setIsTitleExpanded] = useState(false)
 
 	const enableSpectrumVisualizer = useAppStore(
 		(state) => state.settings.enableSpectrumVisualizer,
@@ -84,6 +85,10 @@ export function TrackInfo({
 			like: !isThumbUp,
 		})
 	}
+
+	useEffect(() => {
+		setIsTitleExpanded(false)
+	}, [currentTrack?.uniqueKey])
 
 	if (!currentTrack) return null
 
@@ -218,17 +223,12 @@ export function TrackInfo({
 				<View style={styles.trackTitleContainer}>
 					<View style={styles.trackTitleTextContainer}>
 						<TouchableRipple
-							onPress={() =>
-								toast.info('完整标题', {
-									description: currentTrack.title,
-									id: 'player-track-full-title',
-								})
-							}
+							onPress={() => setIsTitleExpanded((expanded) => !expanded)}
 						>
 							<Text
 								variant='titleLarge'
 								style={styles.trackTitle}
-								numberOfLines={1}
+								numberOfLines={isTitleExpanded ? undefined : 1}
 								ellipsizeMode='tail'
 							>
 								{currentTrack.title}

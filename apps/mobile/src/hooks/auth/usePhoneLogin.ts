@@ -6,7 +6,6 @@ import * as setCookieParser from 'set-cookie-parser'
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
 import { userQueryKeys } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
@@ -133,11 +132,13 @@ function loginReducer(state: LoginState, action: LoginAction): LoginState {
 	}
 }
 
-export function usePhoneLogin() {
+export function usePhoneLogin(options?: { onClose?: () => void }) {
 	const queryClient = useQueryClient()
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('PhoneLogin'), [_close])
+	const onClose = options?.onClose
+	const close = useCallback(() => {
+		onClose?.()
+	}, [onClose])
 
 	const [state, dispatch] = useReducer(loginReducer, initialState)
 
