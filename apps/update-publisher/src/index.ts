@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, stat } from 'node:fs/promises'
 import { dirname, basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -60,7 +60,7 @@ async function main() {
 	const manifest = createManifest(selected)
 	const tempPath = await writeTempManifest(manifest)
 
-	await openInVSCode(tempPath)
+	await openInZed(tempPath)
 
 	const edited = await readManifest(tempPath)
 	printManifestSummary(edited)
@@ -247,11 +247,21 @@ async function writeTempManifest(manifest: UpdateManifest): Promise<string> {
 	return path
 }
 
-async function openInVSCode(path: string): Promise<void> {
+async function getZedCommand(): Promise<string> {
+	try {
+		await stat('/Applications/Zed.app/Contents/MacOS/cli')
+		return '/Applications/Zed.app/Contents/MacOS/cli'
+	} catch {
+		return 'zed'
+	}
+}
+
+async function openInZed(path: string): Promise<void> {
 	log.info(
-		`Opening ${basename(path)} in VS Code. Save and close the editor tab/window to continue.`,
+		`Opening ${basename(path)} in Zed. Save and close the editor tab/window to continue.`,
 	)
-	await run('code', ['--wait', path], { cwd: REPO_ROOT })
+	const zedCmd = await getZedCommand()
+	await run(zedCmd, ['--wait', path], { cwd: REPO_ROOT })
 }
 
 async function readManifest(path: string): Promise<UpdateManifest> {

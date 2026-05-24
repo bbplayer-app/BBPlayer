@@ -72,6 +72,13 @@ const getAppName = () => {
 	return 'BBPlayer'
 }
 
+const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
+	if (fs.existsSync(path.resolve(process.cwd(), realPath))) {
+		return realPath
+	}
+	return defaultPath
+}
+
 // oxlint-disable-next-line @typescript-eslint/no-unused-vars
 export default ({ config }: ConfigContext): ExpoConfig => {
 	const googleServicesJsonPath =
@@ -82,13 +89,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		'./assets/config/google-services/GoogleService-Info.plist'
 	const googleServicesPlistRealPath =
 		'./assets/config/google-services/GoogleService-Info.real.plist'
-
-	const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
-		if (fs.existsSync(path.resolve(process.cwd(), realPath))) {
-			return realPath
-		}
-		return defaultPath
-	}
 
 	return {
 		name: getAppName(),

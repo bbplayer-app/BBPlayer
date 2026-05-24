@@ -5,7 +5,17 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
+
 ## [2.5.1] - 2026-05-22
+
+### Changed
+
+- 将 update-publisher 中的默认编辑器由 VS Code 修改为 Zed
 
 ### Fixed
 

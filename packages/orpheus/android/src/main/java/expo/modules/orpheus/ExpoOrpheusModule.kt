@@ -218,7 +218,8 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
 
-                    service.statusBarLyricsManager.setStatusChangeListener(object : expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
+                    service.statusBarLyricsManager.setStatusChangeListener(object :
+                        expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
                         override fun onStatusChanged() {
                             sendEvent("onStatusBarLyricsStatusChanged", emptyMap<String, Any>())
                         }
@@ -622,7 +623,8 @@ class ExpoOrpheusModule : Module() {
                         // index deterministic: after removing existingIndex, currentMediaItemIndex
                         // is automatically adjusted, so +1 always points to the correct next slot.
                         currentPlayer.removeMediaItem(existingIndex)
-                        val insertPhysical = (currentPlayer.currentMediaItemIndex + 1).coerceAtMost(currentPlayer.mediaItemCount)
+                        val insertPhysical =
+                            (currentPlayer.currentMediaItemIndex + 1).coerceAtMost(currentPlayer.mediaItemCount)
                         currentPlayer.addMediaItem(insertPhysical, mediaItem)
                         service.shuffleManager.repositionAsNext(insertPhysical)
                     } else {
@@ -864,10 +866,12 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("exportDownloads") { ids: List<String>, destinationUri: String, filenamePattern: String?, embedLyrics: Boolean, convertToLrc: Boolean, cropCoverArt: Boolean ->
             val context = appContext.reactContext ?: run {
-                sendEvent("onExportProgress", mapOf(
-                    "status" to "error",
-                    "message" to "React context is null"
-                ))
+                sendEvent(
+                    "onExportProgress", mapOf(
+                        "status" to "error",
+                        "message" to "React context is null"
+                    )
+                )
                 return@AsyncFunction
             }
             runExportDownloads(
@@ -959,7 +963,12 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("selectDirectory") Coroutine { ->
             val context = appContext.reactContext ?: return@Coroutine null
-            val uriString = directoryPickerLauncher.launch("")
+            val uriString = try {
+                directoryPickerLauncher.launch("")
+            } catch (e: Exception) {
+                Log.e("Orpheus", "Directory picker launch failed (framework race condition): ${e.message}")
+                null
+            }
             if (uriString != null) {
                 try {
                     val treeUri = uriString.toUri()
