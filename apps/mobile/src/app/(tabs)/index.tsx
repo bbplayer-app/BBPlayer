@@ -75,6 +75,9 @@ function HomePage() {
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useIncomingShare()
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
+	const enableMinimalistMode = useAppStore(
+		(state) => state.settings.enableMinimalistMode,
+	)
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -340,127 +343,63 @@ function HomePage() {
 				</View>
 
 				{/* 快捷操作与内容区，加上 ScrollView 让它可滚动 */}
-				<Animated.ScrollView
-					contentContainerStyle={styles.scrollContent}
-					showsVerticalScrollIndicator={false}
-				>
-					<WeeklyHeatMap
-						data={heatmapData || {}}
-						cellSize={18}
-						cellGap={4}
-						cellRadius={4}
-						initialScrollEnd={true}
-						locale='zh-cn'
-						onCellPress={({ date }) => {
-							const dateStr = dayjs(date).format('YYYY-MM-DD')
-							router.push(`/history/${dateStr}`)
-						}}
-						scheme={theme.dark ? 'dark' : 'light'}
-						cellColor={{
-							1: Color(colors.primary).alpha(0.2).rgb().string(),
-							2: Color(colors.primary).alpha(0.4).rgb().string(),
-							3: Color(colors.primary).alpha(0.6).rgb().string(),
-							4: colors.primary,
-						}}
-						cellDefaultColor={colors.surfaceVariant}
-						headerTextColor={colors.onSurfaceVariant}
-						sidebarTextColor={colors.onSurfaceVariant}
-						scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
-					/>
-					{/* 快捷入口 */}
-					<View style={styles.quickAccessSection}>
-						<Text
-							variant='titleMedium'
-							style={styles.sectionTitle}
-						>
-							快捷入口
-						</Text>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							snapToInterval={156}
-							snapToAlignment='start'
-							decelerationRate='fast'
-							contentContainerStyle={styles.quickAccessScrollContent}
-						>
-							{/* 那月今日 */}
-							<RectButton
-								key='on-this-day'
-								style={[
-									styles.quickAccessCard,
-									{ backgroundColor: colors.surfaceVariant },
-								]}
-								onPress={() => {
-									const lastMonth = dayjs()
-										.subtract(1, 'month')
-										.format('YYYY-MM-DD')
-									router.push(`/history/${lastMonth}`)
-								}}
+				{!enableMinimalistMode && (
+					<Animated.ScrollView
+						contentContainerStyle={styles.scrollContent}
+						showsVerticalScrollIndicator={false}
+					>
+						<WeeklyHeatMap
+							data={heatmapData || {}}
+							cellSize={18}
+							cellGap={4}
+							cellRadius={4}
+							initialScrollEnd={true}
+							locale='zh-cn'
+							onCellPress={({ date }) => {
+								const dateStr = dayjs(date).format('YYYY-MM-DD')
+								router.push(`/history/${dateStr}`)
+							}}
+							scheme={theme.dark ? 'dark' : 'light'}
+							cellColor={{
+								1: Color(colors.primary).alpha(0.2).rgb().string(),
+								2: Color(colors.primary).alpha(0.4).rgb().string(),
+								3: Color(colors.primary).alpha(0.6).rgb().string(),
+								4: colors.primary,
+							}}
+							cellDefaultColor={colors.surfaceVariant}
+							headerTextColor={colors.onSurfaceVariant}
+							sidebarTextColor={colors.onSurfaceVariant}
+							scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
+						/>
+						{/* 快捷入口 */}
+						<View style={styles.quickAccessSection}>
+							<Text
+								variant='titleMedium'
+								style={styles.sectionTitle}
 							>
-								<View
-									style={{
-										width: 48,
-										height: 48,
-										borderRadius: 24,
-										justifyContent: 'center',
-										alignItems: 'center',
-									}}
-								>
-									<Icon
-										source='calendar-month'
-										size={32}
-										color={colors.onSurfaceVariant}
-									/>
-								</View>
-								<Text
-									variant='labelMedium'
-									style={styles.quickAccessText}
-								>
-									那月今日
-								</Text>
-							</RectButton>
-
-							{/* 最近常听 */}
-							<RectButton
-								key='recently-played'
-								style={[
-									styles.quickAccessCard,
-									{ backgroundColor: colors.surfaceVariant },
-								]}
-								onPress={() => router.push('/playlist/recently')}
+								快捷入口
+							</Text>
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								snapToInterval={156}
+								snapToAlignment='start'
+								decelerationRate='fast'
+								contentContainerStyle={styles.quickAccessScrollContent}
 							>
-								<View
-									style={{
-										width: 48,
-										height: 48,
-										borderRadius: 24,
-										justifyContent: 'center',
-										alignItems: 'center',
-									}}
-								>
-									<Icon
-										source='history'
-										size={32}
-										color={colors.onSurfaceVariant}
-									/>
-								</View>
-								<Text
-									variant='labelMedium'
-									style={styles.quickAccessText}
-								>
-									最近常听
-								</Text>
-							</RectButton>
-
-							{/* 稍后再看 - conditional on Bilibili cookie */}
-							{hasBilibiliCookie() && (
+								{/* 那月今日 */}
 								<RectButton
-									key='watch-later'
+									key='on-this-day'
 									style={[
 										styles.quickAccessCard,
 										{ backgroundColor: colors.surfaceVariant },
 									]}
-									onPress={() => router.push('/playlist/remote/toview')}
+									onPress={() => {
+										const lastMonth = dayjs()
+											.subtract(1, 'month')
+											.format('YYYY-MM-DD')
+										router.push(`/history/${lastMonth}`)
+									}}
 								>
 									<View
 										style={{
@@ -472,7 +411,7 @@ function HomePage() {
 										}}
 									>
 										<Icon
-											source='clock-outline'
+											source='calendar-month'
 											size={32}
 											color={colors.onSurfaceVariant}
 										/>
@@ -481,73 +420,139 @@ function HomePage() {
 										variant='labelMedium'
 										style={styles.quickAccessText}
 									>
-										稍后再看
+										那月今日
 									</Text>
 								</RectButton>
-							)}
-						</ScrollView>
-					</View>
 
-					{/* 近期歌单 */}
-					{recentPlaylists && recentPlaylists.length > 0 && (
-						<View style={styles.recentPlaylistsSection}>
-							<Text
-								variant='titleMedium'
-								style={styles.sectionTitle}
-							>
-								近期歌单
-							</Text>
-							<Animated.ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								snapToInterval={156}
-								snapToAlignment='start'
-								decelerationRate='fast'
-								contentContainerStyle={styles.horizontalScrollContent}
-							>
-								{recentPlaylists.map((item) => (
-									<RectButton
-										key={item.id}
-										style={[
-											styles.playlistCard,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-										onPress={() => {
-											router.push(`/playlist/local/${item.id}`)
+								{/* 最近常听 */}
+								<RectButton
+									key='recently-played'
+									style={[
+										styles.quickAccessCard,
+										{ backgroundColor: colors.surfaceVariant },
+									]}
+									onPress={() => router.push('/playlist/recently')}
+								>
+									<View
+										style={{
+											width: 48,
+											height: 48,
+											borderRadius: 24,
+											justifyContent: 'center',
+											alignItems: 'center',
 										}}
 									>
-										<Image
-											source={
-												item.coverUrl
-													? { uri: item.coverUrl }
-													: require('../../../assets/images/bilibili-default-avatar.jpg')
-											}
-											style={styles.playlistCover}
-											contentFit='cover'
+										<Icon
+											source='history'
+											size={32}
+											color={colors.onSurfaceVariant}
 										/>
-										<View style={styles.playlistInfo}>
-											<Text
-												variant='labelMedium'
-												numberOfLines={2}
-												style={styles.playlistTitle}
-											>
-												{item.title}
-											</Text>
-											<Text
-												variant='bodySmall'
-												style={{ color: colors.onSurfaceVariant }}
-											>
-												{item.itemCount} 首
-											</Text>
+									</View>
+									<Text
+										variant='labelMedium'
+										style={styles.quickAccessText}
+									>
+										最近常听
+									</Text>
+								</RectButton>
+
+								{/* 稍后再看 - conditional on Bilibili cookie */}
+								{hasBilibiliCookie() && (
+									<RectButton
+										key='watch-later'
+										style={[
+											styles.quickAccessCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => router.push('/playlist/remote/toview')}
+									>
+										<View
+											style={{
+												width: 48,
+												height: 48,
+												borderRadius: 24,
+												justifyContent: 'center',
+												alignItems: 'center',
+											}}
+										>
+											<Icon
+												source='clock-outline'
+												size={32}
+												color={colors.onSurfaceVariant}
+											/>
 										</View>
+										<Text
+											variant='labelMedium'
+											style={styles.quickAccessText}
+										>
+											稍后再看
+										</Text>
 									</RectButton>
-								))}
-							</Animated.ScrollView>
+								)}
+							</ScrollView>
 						</View>
-					)}
-					{/* 底部留白给播放条 */}
-					<View style={{ height: 200 }} />
-				</Animated.ScrollView>
+
+						{/* 近期歌单 */}
+						{recentPlaylists && recentPlaylists.length > 0 && (
+							<View style={styles.recentPlaylistsSection}>
+								<Text
+									variant='titleMedium'
+									style={styles.sectionTitle}
+								>
+									近期歌单
+								</Text>
+								<Animated.ScrollView
+									horizontal
+									showsHorizontalScrollIndicator={false}
+									snapToInterval={156}
+									snapToAlignment='start'
+									decelerationRate='fast'
+									contentContainerStyle={styles.horizontalScrollContent}
+								>
+									{recentPlaylists.map((item) => (
+										<RectButton
+											key={item.id}
+											style={[
+												styles.playlistCard,
+												{ backgroundColor: colors.surfaceVariant },
+											]}
+											onPress={() => {
+												router.push(`/playlist/local/${item.id}`)
+											}}
+										>
+											<Image
+												source={
+													item.coverUrl
+														? { uri: item.coverUrl }
+														: require('../../../assets/images/bilibili-default-avatar.jpg')
+												}
+												style={styles.playlistCover}
+												contentFit='cover'
+											/>
+											<View style={styles.playlistInfo}>
+												<Text
+													variant='labelMedium'
+													numberOfLines={2}
+													style={styles.playlistTitle}
+												>
+													{item.title}
+												</Text>
+												<Text
+													variant='bodySmall'
+													style={{ color: colors.onSurfaceVariant }}
+												>
+													{item.itemCount} 首
+												</Text>
+											</View>
+										</RectButton>
+									))}
+								</Animated.ScrollView>
+							</View>
+						)}
+						{/* 底部留白给播放条 */}
+						<View style={{ height: 200 }} />
+					</Animated.ScrollView>
+				)}
 			</View>
 			<View style={styles.nowPlayingBarContainer}>
 				<NowPlayingBar />

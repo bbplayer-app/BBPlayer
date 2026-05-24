@@ -13,6 +13,7 @@ interface Settings {
 	enableDanmaku: boolean
 	danmakuFilterLevel: number
 	downloadMaxParallelTasks: number
+	enableMinimalistMode: boolean
 }
 
 interface BilibiliUserSummary {

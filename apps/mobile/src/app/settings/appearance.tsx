@@ -34,6 +34,9 @@ export default function AppearanceSettingsPage() {
 	const enableSpectrumVisualizer = useAppStore(
 		(state) => state.settings.enableSpectrumVisualizer,
 	)
+	const enableMinimalistMode = useAppStore(
+		(state) => state.settings.enableMinimalistMode,
+	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
@@ -115,6 +118,24 @@ export default function AppearanceSettingsPage() {
 					<UniversalSwitch
 						value={enableSpectrumVisualizer}
 						onValueChange={handleSpectrumToggle}
+					/>
+				</View>
+
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>清爽模式</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							开启后主页仅显示顶部搜索框，隐藏其他推荐及历史组件
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={enableMinimalistMode}
+						onValueChange={(value) =>
+							setSettings({ enableMinimalistMode: value })
+						}
 					/>
 				</View>
 
