@@ -1,14 +1,17 @@
 import { Galeria } from '@nandorojo/galeria'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { Appearance, StyleSheet, TouchableOpacity, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Text, useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
 import { useLikeComment } from '@/hooks/mutations/bilibili/comments'
-import type { BilibiliCommentItem } from '@/types/apis/bilibili'
+import type {
+	BilibiliCommentEmote,
+	BilibiliCommentItem,
+} from '@/types/apis/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import { formatRelativeTime } from '@/utils/time'
 
@@ -17,6 +20,112 @@ interface CommentItemProps {
 	onReplyPress?: (item: BilibiliCommentItem) => void
 	bvid: string
 }
+
+type MessageSegment =
+	| { type: 'text'; key: string; text: string }
+	| { type: 'emote'; key: string; text: string; emote: BilibiliCommentEmote }
+
+const escapeRegExp = (value: string) =>
+	value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const parseMessageSegments = (
+	message: string,
+	emotes?: Record<string, BilibiliCommentEmote>,
+): MessageSegment[] => {
+	const emoteKeys = Object.keys(emotes ?? {}).sort(
+		(a, b) => b.length - a.length,
+	)
+	if (emoteKeys.length === 0) {
+		return [{ type: 'text', key: 'text-0', text: message }]
+	}
+
+	const pattern = new RegExp(`(${emoteKeys.map(escapeRegExp).join('|')})`, 'g')
+	const segments: MessageSegment[] = []
+	let cursor = 0
+	let index = 0
+
+	for (const match of message.matchAll(pattern)) {
+		const rawText = match[0]
+		const start = match.index ?? 0
+		if (start > cursor) {
+			segments.push({
+				type: 'text',
+				key: `text-${index++}`,
+				text: message.slice(cursor, start),
+			})
+		}
+		const emote = emotes?.[rawText]
+		if (emote?.url) {
+			segments.push({
+				type: 'emote',
+				key: `emote-${index++}-${emote.id}`,
+				text: rawText,
+				emote,
+			})
+		} else {
+			segments.push({ type: 'text', key: `text-${index++}`, text: rawText })
+		}
+		cursor = start + rawText.length
+	}
+
+	if (cursor < message.length) {
+		segments.push({
+			type: 'text',
+			key: `text-${index}`,
+			text: message.slice(cursor),
+		})
+	}
+
+	return segments.length > 0
+		? segments
+		: [{ type: 'text', key: 'text-0', text: message }]
+}
+
+const CommentMessage = memo(function CommentMessage({
+	message,
+	emotes,
+	color,
+}: {
+	message: string
+	emotes?: Record<string, BilibiliCommentEmote>
+	color: string
+}) {
+	const segments = useMemo(
+		() => parseMessageSegments(message, emotes),
+		[emotes, message],
+	)
+
+	return (
+		<View style={styles.messageContainer}>
+			{segments.map((segment) => {
+				if (segment.type === 'text') {
+					return (
+						<Text
+							key={segment.key}
+							style={[styles.message, { color }]}
+							selectable
+						>
+							{segment.text}
+						</Text>
+					)
+				}
+
+				const size = segment.emote.meta?.size === 2 ? 48 : 24
+				return (
+					<Image
+						key={segment.key}
+						source={{ uri: segment.emote.url }}
+						style={{ width: size, height: size }}
+						contentFit='contain'
+						cachePolicy='disk'
+						recyclingKey={segment.emote.url}
+						accessibilityLabel={segment.text}
+					/>
+				)
+			})}
+		</View>
+	)
+})
 
 export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	const theme = useTheme()
@@ -82,12 +191,11 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 						</Text>
 					</View>
 
-					<Text
-						style={[styles.message, { color: theme.colors.onSurface }]}
-						selectable
-					>
-						{item.content.message}
-					</Text>
+					<CommentMessage
+						message={item.content.message}
+						emotes={item.content.emote}
+						color={theme.colors.onSurface}
+					/>
 
 					{item.content.pictures && item.content.pictures.length > 0 && (
 						<View style={styles.imagesContainer}>
@@ -165,19 +273,27 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 								cornerSmoothing={0.6}
 							>
 								{item.replies.slice(0, 3).map((reply) => (
-									<Text
+									<View
 										key={reply.rpid}
-										numberOfLines={1}
-										style={[
-											styles.replyPreviewText,
-											{ color: theme.colors.onSurfaceVariant },
-										]}
+										style={styles.replyPreviewRow}
 									>
-										<Text style={{ fontWeight: 'bold' }}>
+										<Text
+											style={[
+												styles.replyPreviewText,
+												{
+													color: theme.colors.onSurfaceVariant,
+													fontWeight: 'bold',
+												},
+											]}
+										>
 											{reply.member.uname}:{' '}
 										</Text>
-										{reply.content.message}
-									</Text>
+										<CommentMessage
+											message={reply.content.message}
+											emotes={reply.content.emote}
+											color={theme.colors.onSurfaceVariant}
+										/>
+									</View>
 								))}
 								{item.rcount > 3 && (
 									<Text
@@ -228,10 +344,16 @@ const styles = StyleSheet.create({
 	time: {
 		fontSize: 12,
 	},
+	messageContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		alignItems: 'center',
+		columnGap: 2,
+		marginBottom: 8,
+	},
 	message: {
 		fontSize: 15,
 		lineHeight: 22,
-		marginBottom: 8,
 	},
 	imagesContainer: {
 		flexDirection: 'row',
@@ -272,6 +394,10 @@ const styles = StyleSheet.create({
 	replyPreviewText: {
 		fontSize: 13,
 		marginBottom: 4,
+	},
+	replyPreviewRow: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
 	},
 	viewMoreText: {
 		fontSize: 13,

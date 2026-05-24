@@ -467,11 +467,27 @@ interface BilibiliCommentMember {
 /**
  * 评论内容
  */
+interface BilibiliCommentEmote {
+	id: number
+	package_id: number
+	state: number
+	type: number
+	attr: number
+	text: string
+	url: string
+	meta?: {
+		size?: number
+	}
+	mtime: number
+	jump_title?: string
+}
+
 interface BilibiliCommentContent {
 	message: string
 	plat: number
 	device: string
 	members: unknown[]
+	emote?: Record<string, BilibiliCommentEmote>
 	jump_url: Record<string, unknown>
 	max_line: number
 	pictures?: {
@@ -573,6 +589,7 @@ export type {
 	BilibiliCollectionContent,
 	BilibiliCollectionInfo,
 	BilibiliCommentContent,
+	BilibiliCommentEmote,
 	BilibiliCommentItem,
 	BilibiliCommentMember,
 	BilibiliCommentsResponse,

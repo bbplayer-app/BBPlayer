@@ -10,6 +10,7 @@
 ### Fixed
 
 - orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
+- 评论区支持把 Bilibili 表情占位符渲染为对应图片。
 - 设置页移除底部关于信息，新增关于页面和开源许可证页面。
 - 将 Bilibili 账号管理从通用设置拆出为独立页面，首页头像现在会进入该页面。
 - Bilibili 相关 React Query 请求现在会把 `AbortSignal` 传递到底层 API 请求。
