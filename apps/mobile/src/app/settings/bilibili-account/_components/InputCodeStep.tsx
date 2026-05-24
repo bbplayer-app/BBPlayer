@@ -1,4 +1,3 @@
-import { Icon } from '@expo/ui'
 import {
 	Host,
 	OutlinedTextField,
@@ -6,7 +5,7 @@ import {
 } from '@expo/ui/jetpack-compose'
 import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { StyleSheet, View } from 'react-native'
-import { HelperText, Text, useTheme } from 'react-native-paper'
+import { HelperText, Text, useTheme, Icon } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import useTextFieldState from '@/hooks/useTextFieldState'
@@ -39,7 +38,7 @@ export default function InputCodeStep({
 		<View style={styles.container}>
 			<View style={styles.header}>
 				<Icon
-					name='message-processing-outline'
+					source='message-processing-outline'
 					size={56}
 					color={colors.primary}
 				/>

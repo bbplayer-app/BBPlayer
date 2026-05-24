@@ -1,11 +1,12 @@
 import { type LyricLine } from '@bbplayer/splash'
 import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import { RefObject } from 'react'
 import { StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Icon, Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
-import ViewShot from 'react-native-view-shot'
+import ViewShot, { ViewShotRef } from 'react-native-view-shot'
 
 interface LyricsShareCardProps {
 	title: string
@@ -13,7 +14,7 @@ interface LyricsShareCardProps {
 	imageRef?: ImageRef | null
 	shareUrl: string
 	selectedLyrics: LyricLine[]
-	viewShotRef: React.RefObject<View | null>
+	viewShotRef: RefObject<ViewShotRef | null>
 	backgroundColor: string
 }
 
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
 		zIndex: 1,
 	},
 	quoteContainer: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		zIndex: 0,
 		justifyContent: 'space-between',
 		padding: 0,

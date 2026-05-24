@@ -1,17 +1,18 @@
 import { Image, type ImageRef } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
+import { RefObject } from 'react'
 import { StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Text } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
-import ViewShot from 'react-native-view-shot'
+import ViewShot, { ViewShotRef } from 'react-native-view-shot'
 
 interface SongShareCardProps {
 	title: string
 	artistName: string
 	imageRef?: ImageRef | null
 	shareUrl: string
-	viewShotRef: React.RefObject<View | null>
+	viewShotRef: RefObject<ViewShotRef | null>
 	backgroundColor: string
 }
 

@@ -20,6 +20,12 @@
 						"name": "oxfmt"
 					}
 				}
+			],
+			"language_servers": [
+				"tsgo",
+				"!vtsls",
+				"!typescript-language-server",
+				"..."
 			]
 		},
 		"TSX": {
@@ -31,6 +37,12 @@
 						"name": "oxfmt"
 					}
 				}
+			],
+			"language_servers": [
+				"tsgo",
+				"!vtsls",
+				"!typescript-language-server",
+				"..."
 			]
 		},
 		"JSON": {

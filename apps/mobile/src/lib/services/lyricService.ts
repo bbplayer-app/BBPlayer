@@ -478,7 +478,7 @@ class LyricService {
 	) {
 		if (!metadata.cid || !metadata.bvid) return undefined
 		const result = await bilibiliApi
-			.getWebPlayerInfo(metadata.bvid, metadata.cid)
+			.getWebPlayerInfo({ bvid: metadata.bvid, cid: metadata.cid })
 			.andThen((res) => {
 				if (!res.bgm_info) {
 					return errAsync(new Error('没有获取到歌曲信息'))

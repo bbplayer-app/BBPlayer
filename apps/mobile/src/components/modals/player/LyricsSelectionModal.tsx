@@ -1,14 +1,14 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { parseSpl, type LyricLine } from '@bbplayer/splash'
 import { FlashList } from '@shopify/flash-list'
+import { PermissionStatus } from 'expo'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Text, TouchableRipple, useTheme } from 'react-native-paper'
-import type ViewShot from 'react-native-view-shot'
-import { captureRef } from 'react-native-view-shot'
+import { captureRef, ViewShotRef } from 'react-native-view-shot'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
@@ -77,9 +77,9 @@ const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 async function performShare(
 	action: 'save' | 'share',
 	previewUri: string | null,
-	viewShotRef: { current: typeof ViewShot | null },
+	viewShotRef: { current: ViewShotRef | null },
 	permissionStatus: unknown,
-	requestPermission: () => Promise<{ status: MediaLibrary.PermissionStatus }>,
+	requestPermission: () => Promise<MediaLibrary.PermissionResponse>,
 	setIsSharing: (value: boolean) => void,
 	isSharingRef: { current: boolean },
 	close: (name: keyof ModalPropsMap) => void,
@@ -110,19 +110,16 @@ async function performShare(
 			return
 		}
 
-		if (
-			action === 'save' &&
-			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
-		) {
+		if (action === 'save' && permissionStatus !== PermissionStatus.GRANTED) {
 			const { status } = await requestPermission()
-			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+			if (status !== PermissionStatus.GRANTED) {
 				toast.error('无法保存图片', { description: '请允许访问相册' })
 				return
 			}
 		}
 
 		if (action === 'save') {
-			await MediaLibrary.saveToLibraryAsync(uri)
+			await MediaLibrary.Asset.create(uri)
 			toast.success('已保存到相册')
 		} else {
 			const sharingAvailable = await Sharing.isAvailableAsync()
@@ -223,7 +220,7 @@ const LyricsSelectionModal = () => {
 		}
 	}
 
-	const viewShotRef = useRef<typeof ViewShot>(null)
+	const viewShotRef = useRef<ViewShotRef>(null)
 
 	useEffect(() => {
 		if (imageRef) {

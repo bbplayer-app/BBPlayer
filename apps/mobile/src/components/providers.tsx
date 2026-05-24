@@ -37,7 +37,6 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 	useTanStackQueryDevTools(queryClient)
 	useMMKVDevTools({
 		storages: {
-			// @ts-expect-error
 			app: storage,
 		},
 	})

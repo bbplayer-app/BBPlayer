@@ -29,21 +29,12 @@ export default function DonationQRModal({
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 
 	const handleLongPress = async () => {
-		const permissionStatus = permissionResponse
-			? permissionResponse.status
-			: undefined
-		const accessPrivileges = permissionResponse
-			? permissionResponse.accessPrivileges
-			: undefined
-
-		const needsPermission =
-			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED &&
-			accessPrivileges !== 'all'
+		const needsPermission = permissionResponse?.granted
 
 		try {
 			if (needsPermission) {
-				const { status } = await requestPermission()
-				if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+				const { granted } = await requestPermission()
+				if (!granted) {
 					toast.error('无法保存图片', {
 						description: '请在设置中允许访问相册',
 					})
@@ -70,7 +61,7 @@ export default function DonationQRModal({
 				return
 			}
 
-			await MediaLibrary.saveToLibraryAsync(uri)
+			await MediaLibrary.Asset.create(uri)
 			toast.success('已保存到相册')
 		} catch (e) {
 			toast.error('保存失败', { description: String(e) })

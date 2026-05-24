@@ -1,6 +1,5 @@
-import { Icon } from '@expo/ui'
 import { StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Text, useTheme, Icon } from 'react-native-paper'
 
 export default function SuccessStep() {
 	const { colors } = useTheme()
@@ -9,7 +8,7 @@ export default function SuccessStep() {
 		<View style={styles.container}>
 			<View style={styles.iconContainer}>
 				<Icon
-					name='check-circle'
+					source='check-circle'
 					size={64}
 					color={colors.primary}
 				/>

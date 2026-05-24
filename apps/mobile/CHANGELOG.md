@@ -14,6 +14,7 @@
 
 ### Fixed
 
+- 修复因 `expo-media-library` 重构而不再导出 `MediaLibrary.PermissionStatus` 导致的 TypeScript 编译报错问题，替换为直接从 `expo` 导入并使用 `PermissionStatus`。
 - orpheus: 修复 `selectDirectory` 在部分设备上因 Android 框架竞态条件导致的 NullPointerException 崩溃。
 - 移除播放列表更新元数据时的标题重复校验，保持歌单允许同名的设计。
 - 播放器页面标题点击后直接展开/收起完整标题，不再使用 toast 展示。

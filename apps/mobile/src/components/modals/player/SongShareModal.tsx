@@ -1,12 +1,12 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
+import { PermissionStatus } from 'expo'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, Text, useTheme } from 'react-native-paper'
-import type ViewShot from 'react-native-view-shot'
-import { captureRef } from 'react-native-view-shot'
+import { captureRef, ViewShotRef } from 'react-native-view-shot'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
@@ -22,7 +22,7 @@ const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
 async function performShare(
 	action: 'save' | 'share',
 	previewUri: string | null,
-	viewShotRef: { current: View | null },
+	viewShotRef: { current: ViewShotRef | null },
 	uniqueKey: string,
 	permissionResponse: MediaLibrary.PermissionResponse | null,
 	requestPermission: () => Promise<MediaLibrary.PermissionResponse>,
@@ -57,19 +57,16 @@ async function performShare(
 		}
 
 		const permissionStatus = permissionResponse?.status
-		if (
-			action === 'save' &&
-			permissionStatus !== MediaLibrary.PermissionStatus.GRANTED
-		) {
+		if (action === 'save' && permissionStatus !== PermissionStatus.GRANTED) {
 			const { status } = await requestPermission()
-			if (status !== MediaLibrary.PermissionStatus.GRANTED) {
+			if (status !== PermissionStatus.GRANTED) {
 				toast.error('无法保存图片', { description: '请允许访问相册' })
 				return
 			}
 		}
 
 		if (action === 'save') {
-			await MediaLibrary.saveToLibraryAsync(uri)
+			await MediaLibrary.Asset.create(uri)
 			toast.success('已保存到相册')
 		} else {
 			const sharingAvailable = await Sharing.isAvailableAsync()
@@ -122,7 +119,7 @@ const SongShareModal = () => {
 		},
 	)
 
-	const viewShotRef = useRef<ViewShot>(null)
+	const viewShotRef = useRef<ViewShotRef>(null)
 
 	useEffect(() => {
 		if (imageRef) {

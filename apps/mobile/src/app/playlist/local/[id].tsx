@@ -59,7 +59,7 @@ import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 const SORT_ICON = Icon.select({
-	ios: 'arrow.up.and.down.text.left.to.right',
+	ios: 'arrow.up.and.down.text.horizontal',
 	android: import('@expo/material-symbols/sort.xml'),
 })
 
