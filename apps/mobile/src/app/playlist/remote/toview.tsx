@@ -78,11 +78,14 @@ export default function ToViewPage() {
 	const coverRef = useImage('', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
@@ -273,6 +276,10 @@ export default function ToViewPage() {
 							linkedPlaylistId={undefined}
 							mainButtonText='播放全部'
 							id={'稍后再看'}
+							primaryButtonColor={primaryButtonColor}
+							primaryButtonTextColor={primaryButtonTextColor}
+							secondaryButtonContainerColor={secondaryButtonContainerColor}
+							secondaryButtonIconColor={secondaryButtonIconColor}
 						/>
 					}
 					refreshControl={

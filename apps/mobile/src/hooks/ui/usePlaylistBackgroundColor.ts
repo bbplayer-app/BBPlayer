@@ -4,7 +4,7 @@ import type { ImageRef } from 'expo-image'
 import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
 
-import { clampHslLightness } from '@/utils/color'
+import { clampHslLightness, hexToHsl, hslToString } from '@/utils/color'
 import { reportErrorToSentry } from '@/utils/log'
 
 const DARK_BACKGROUND_MIN_LIGHTNESS = 10
@@ -79,6 +79,10 @@ function computeNowPlayingBarColor(
 export interface PlaylistBackgroundColorResult {
 	backgroundColor: string
 	nowPlayingBarColor: string | undefined
+	primaryButtonColor?: string
+	primaryButtonTextColor?: string
+	secondaryButtonContainerColor?: string
+	secondaryButtonIconColor?: string
 }
 
 /**
@@ -152,9 +156,38 @@ export function usePlaylistBackgroundColor(
 			isDarkMode,
 		)
 
+		let primaryButtonColor: string | undefined
+		let primaryButtonTextColor: string | undefined
+		let secondaryButtonContainerColor: string | undefined
+		let secondaryButtonIconColor: string | undefined
+
+		if (dominantColor) {
+			const hsl = hexToHsl(dominantColor)
+			primaryButtonColor = hslToString(
+				hsl.h,
+				Math.max(hsl.s, 40),
+				isDarkMode ? 50 : 40,
+			)
+			primaryButtonTextColor = '#FFFFFF'
+			secondaryButtonContainerColor = hslToString(
+				hsl.h,
+				Math.max(hsl.s, 40),
+				isDarkMode ? 22 : 88,
+			)
+			secondaryButtonIconColor = hslToString(
+				hsl.h,
+				Math.max(hsl.s, 50),
+				isDarkMode ? 75 : 30,
+			)
+		}
+
 		return {
 			backgroundColor,
 			nowPlayingBarColor,
+			primaryButtonColor,
+			primaryButtonTextColor,
+			secondaryButtonContainerColor,
+			secondaryButtonIconColor,
 		}
 	}, [palette, isDarkMode, fallbackColor])
 

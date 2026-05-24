@@ -26,6 +26,10 @@ interface PlaylistHeaderProps {
 	secondaryButtonIcon?: string
 	onClickSecondaryButton?: () => void
 	disableSecondaryButton?: boolean
+	primaryButtonColor?: string
+	primaryButtonTextColor?: string
+	secondaryButtonContainerColor?: string
+	secondaryButtonIconColor?: string
 }
 
 /**
@@ -41,6 +45,10 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	mainButtonText,
 	linkedPlaylistId,
 	id,
+	primaryButtonColor,
+	primaryButtonTextColor,
+	secondaryButtonContainerColor,
+	secondaryButtonIconColor,
 	...props
 }: PlaylistHeaderProps) {
 	const router = useRouter()
@@ -95,6 +103,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						onPress={() => onClickMainButton()}
 						disabled={props.disableMainButton}
 						testID='playlist-header-main-button'
+						buttonColor={primaryButtonColor}
+						textColor={primaryButtonTextColor}
 					>
 						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
 					</Button>
@@ -106,6 +116,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						onPress={props.onClickSecondaryButton}
 						style={{ marginLeft: 8 }}
 						disabled={props.disableSecondaryButton}
+						textColor={secondaryButtonIconColor}
 					>
 						{props.secondaryButtonText}
 					</Button>
@@ -121,6 +132,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 								params: { id: linkedPlaylistId.toString() },
 							})
 						}
+						containerColor={secondaryButtonContainerColor}
+						iconColor={secondaryButtonIconColor}
 					/>
 				)}
 			</View>

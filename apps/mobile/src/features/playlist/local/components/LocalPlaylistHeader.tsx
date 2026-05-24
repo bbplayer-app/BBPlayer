@@ -37,6 +37,10 @@ interface PlaylistHeaderProps {
 	coverRef?: ImageRef | null
 	shareMembers?: SharedPlaylistMember[]
 	onPressShareMember?: () => void
+	primaryButtonColor?: string
+	primaryButtonTextColor?: string
+	secondaryButtonContainerColor?: string
+	secondaryButtonIconColor?: string
 }
 
 interface SubtitlePieces {
@@ -94,6 +98,10 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	coverRef,
 	shareMembers,
 	onPressShareMember,
+	primaryButtonColor,
+	primaryButtonTextColor,
+	secondaryButtonContainerColor,
+	secondaryButtonIconColor,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
@@ -349,6 +357,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						icon='play'
 						onPress={() => onClickPlayAll()}
 						testID='playlist-play-all'
+						buttonColor={primaryButtonColor}
+						textColor={primaryButtonTextColor}
 					>
 						播放全部
 					</Button>
@@ -360,6 +370,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							size={20}
 							onPress={onClickSync}
 							testID='playlist-sync'
+							containerColor={secondaryButtonContainerColor}
+							iconColor={secondaryButtonIconColor}
 						/>
 					)}
 
@@ -369,6 +381,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						size={20}
 						onPress={onClickCopyToLocalPlaylist}
 						testID='playlist-copy'
+						containerColor={secondaryButtonContainerColor}
+						iconColor={secondaryButtonIconColor}
 					/>
 					<IconButton
 						mode='contained'
@@ -391,6 +405,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							)
 						}
 						testID='playlist-download'
+						containerColor={secondaryButtonContainerColor}
+						iconColor={secondaryButtonIconColor}
 					/>
 				</View>
 			</View>

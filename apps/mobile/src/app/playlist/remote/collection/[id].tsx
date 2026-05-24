@@ -88,11 +88,14 @@ export default function CollectionPage() {
 	const coverRef = useImage(collectionData?.info?.cover ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { playTrack } = useRemotePlaylist()
 	const openModal = useModalStore((state) => state.open)
@@ -218,6 +221,10 @@ export default function CollectionPage() {
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
 							id={id}
+							primaryButtonColor={primaryButtonColor}
+							primaryButtonTextColor={primaryButtonTextColor}
+							secondaryButtonContainerColor={secondaryButtonContainerColor}
+							secondaryButtonIconColor={secondaryButtonIconColor}
 						/>
 					}
 					refreshControl={

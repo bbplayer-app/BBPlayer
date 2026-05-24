@@ -21,11 +21,14 @@ export default function RecentlyPlayedPage() {
 	const theme = useTheme()
 	const { colors } = theme
 
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		null,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(null, theme.dark, colors.background)
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
@@ -127,6 +130,10 @@ export default function RecentlyPlayedPage() {
 								mainButtonText='播放全部'
 								id='recently-played'
 								onClickMainButton={handlePlayAll}
+								primaryButtonColor={primaryButtonColor}
+								primaryButtonTextColor={primaryButtonTextColor}
+								secondaryButtonContainerColor={secondaryButtonContainerColor}
+								secondaryButtonIconColor={secondaryButtonIconColor}
 							/>
 						}
 					/>

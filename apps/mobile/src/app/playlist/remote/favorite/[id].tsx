@@ -95,11 +95,14 @@ export default function FavoritePage() {
 	const coverRef = useImage(favoriteData?.pages[0]?.info?.cover ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { playTrack } = useRemotePlaylist()
 
@@ -221,6 +224,10 @@ export default function FavoritePage() {
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
 							id={id}
+							primaryButtonColor={primaryButtonColor}
+							primaryButtonTextColor={primaryButtonTextColor}
+							secondaryButtonContainerColor={secondaryButtonContainerColor}
+							secondaryButtonIconColor={secondaryButtonIconColor}
 						/>
 					}
 					refreshControl={

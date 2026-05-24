@@ -140,11 +140,14 @@ export default function UploaderPage() {
 	const coverRef = useImage(uploaderUserInfo?.face ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { playTrack } = useRemotePlaylist()
 
@@ -288,6 +291,10 @@ export default function UploaderPage() {
 							onClickMainButton={undefined}
 							mainButtonIcon={'sync'}
 							id={Number(mid)}
+							primaryButtonColor={primaryButtonColor}
+							primaryButtonTextColor={primaryButtonTextColor}
+							secondaryButtonContainerColor={secondaryButtonContainerColor}
+							secondaryButtonIconColor={secondaryButtonIconColor}
 						/>
 					}
 					refreshControl={

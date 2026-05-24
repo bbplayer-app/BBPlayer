@@ -109,11 +109,14 @@ export default function MultipagePage() {
 	const coverRef = useImage(videoData?.pic ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { mutate: syncMultipage } = usePlaylistSync()
 
@@ -307,6 +310,10 @@ export default function MultipagePage() {
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
 							id={bv2av(bvid)}
+							primaryButtonColor={primaryButtonColor}
+							primaryButtonTextColor={primaryButtonTextColor}
+							secondaryButtonContainerColor={secondaryButtonContainerColor}
+							secondaryButtonIconColor={secondaryButtonIconColor}
 						/>
 					}
 					refreshControl={

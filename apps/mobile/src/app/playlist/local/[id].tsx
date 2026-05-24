@@ -276,15 +276,18 @@ export default function LocalPlaylistPage() {
 	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
 	const isSharedLoggedOut = !!playlistMetadata?.shareId && !bbplayerToken
-
 	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonContainerColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
@@ -888,6 +891,10 @@ export default function LocalPlaylistPage() {
 								}
 								shareMembers={shareMembers}
 								onPressShareMember={handlePressShareMember}
+								primaryButtonColor={primaryButtonColor}
+								primaryButtonTextColor={primaryButtonTextColor}
+								secondaryButtonContainerColor={secondaryButtonContainerColor}
+								secondaryButtonIconColor={secondaryButtonIconColor}
 							/>
 							{isSharedLoggedOut && (
 								<View

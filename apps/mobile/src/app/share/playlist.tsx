@@ -133,11 +133,13 @@ export default function SharedPlaylistPreviewPage() {
 	const coverRef = useImage(data?.playlist.coverUrl ?? '', {
 		onError: () => void 0,
 	})
-	const { backgroundColor, nowPlayingBarColor } = usePlaylistBackgroundColor(
-		coverRef,
-		theme.dark,
-		colors.background,
-	)
+	const {
+		backgroundColor,
+		nowPlayingBarColor,
+		primaryButtonColor,
+		primaryButtonTextColor,
+		secondaryButtonIconColor,
+	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const nowForTracks = new Date()
 	const previewTracks = data
@@ -261,6 +263,8 @@ export default function SharedPlaylistPreviewPage() {
 											icon='playlist-music'
 											onPress={handleGoToPlaylist}
 											testID='playlist-header-main-button'
+											buttonColor={primaryButtonColor}
+											textColor={primaryButtonTextColor}
 										>
 											前往歌单
 										</Button>
@@ -272,6 +276,8 @@ export default function SharedPlaylistPreviewPage() {
 											loading={isSubscribing}
 											disabled={isSubscribing}
 											testID='playlist-header-main-button'
+											buttonColor={primaryButtonColor}
+											textColor={primaryButtonTextColor}
 										>
 											升级为协作编辑者
 										</Button>
@@ -281,6 +287,7 @@ export default function SharedPlaylistPreviewPage() {
 											icon='playlist-music'
 											onPress={handleGoToPlaylist}
 											testID='playlist-header-main-button'
+											textColor={secondaryButtonIconColor}
 										>
 											已订阅，前往查看
 										</Button>
@@ -292,6 +299,8 @@ export default function SharedPlaylistPreviewPage() {
 											loading={isSubscribing}
 											disabled={isSubscribing}
 											testID='playlist-header-main-button'
+											buttonColor={primaryButtonColor}
+											textColor={primaryButtonTextColor}
 										>
 											{parsedInviteCode ? '加入协作编辑' : '订阅共享歌单'}
 										</Button>
