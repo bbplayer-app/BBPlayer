@@ -82,6 +82,14 @@ interface Props<Route extends BaseRoute> {
 	 */
 	tabBarInactiveTintColor?: ColorValue
 	/**
+	 * Whether tab icons should keep their original colors instead of using active/inactive tint colors. (Android only)
+	 */
+	disableTintColor?: boolean
+	/**
+	 * Icon size in density-independent pixels. (Android only)
+	 */
+	iconSize?: number
+	/**
 	 * State for the tab view.
 	 *
 	 * The state should contain a `routes` prop which is an array of objects containing `key` and `title` props, such as `{ key: 'music', title: 'Music' }`.

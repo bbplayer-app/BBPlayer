@@ -53,11 +53,13 @@ export interface TabViewProps extends ViewProps {
 	rippleColor?: ColorValue
 	activeTintColor?: ColorValue
 	inactiveTintColor?: ColorValue
+	disableTintColor?: boolean
 	disablePageAnimations?: boolean
 	activeIndicatorColor?: ColorValue
 	hapticFeedbackEnabled?: boolean
 	layoutDirection?: string
 	minimizeBehavior?: string
+	iconSize?: Int32
 	fontFamily?: string
 	fontWeight?: string
 	fontSize?: Int32

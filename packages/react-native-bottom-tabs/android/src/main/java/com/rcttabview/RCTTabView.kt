@@ -30,6 +30,7 @@ import coil3.size.Scale
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.assets.ReactFontManager
 import com.facebook.react.modules.core.ReactChoreographer
+import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.views.text.ReactTypefaceUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_AUTO
@@ -55,6 +56,7 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
   var items: MutableList<TabInfo> = mutableListOf()
   private val iconSources: MutableMap<Int, ImageSource> = mutableMapOf()
   private val drawableCache: MutableMap<ImageSource, Drawable> = mutableMapOf()
+  private val defaultIconSize = bottomNavigation.itemIconSize
 
   private var isLayoutEnqueued = false
   private var selectedItem: String? = null
@@ -69,6 +71,7 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
   private var labeled: Boolean? = null
   private var lastReportedSize: Size? = null
   private var hasCustomAppearance = false
+  private var disableTintColor = false
   private var uiModeConfiguration: Int = Configuration.UI_MODE_NIGHT_UNDEFINED
 
   private val imageLoader = ImageLoader.Builder(context)
@@ -324,6 +327,27 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
     }
   }
 
+  fun setDisableTintColor(disabled: Boolean) {
+    disableTintColor = disabled
+    updateTintColors()
+  }
+
+  fun setIconSize(size: Int) {
+    val iconSizePx = if (size > 0) {
+      PixelUtil.toPixelFromDIP(size.toDouble()).toInt()
+    } else {
+      defaultIconSize
+    }
+
+    if (bottomNavigation.itemIconSize == iconSizePx) {
+      return
+    }
+
+    bottomNavigation.itemIconSize = iconSizePx
+    drawableCache.clear()
+    updateIconDrawables()
+  }
+
   fun setLabeled(labeled: Boolean?) {
     this.labeled = labeled
     bottomNavigation.labelVisibilityMode = when (labeled) {
@@ -370,6 +394,16 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
       .build()
 
     imageLoader.enqueue(request)
+  }
+
+  private fun updateIconDrawables() {
+    iconSources.forEach { (index, imageSource) ->
+      bottomNavigation.menu.findItem(index)?.let { menuItem ->
+        getDrawable(imageSource) {
+          menuItem.icon = it
+        }
+      }
+    }
   }
 
   fun setBarTintColor(color: Int?) {
@@ -476,8 +510,7 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
 
     ColorStateList(states, colors).apply {
       this@ReactBottomNavigationView.bottomNavigation.itemTextColor = this
-      val hasLocalThemeIcons = iconSources.values.any { it.uri?.contains("bilibili_skin_exp") == true }
-      if (hasLocalThemeIcons) {
+      if (disableTintColor) {
         this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = null
       } else {
         this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = this

@@ -151,6 +151,14 @@ class RCTTabViewManager(context: ReactApplicationContext) :
       view.setInactiveTintColor(value)
   }
 
+  override fun setDisableTintColor(view: ReactBottomNavigationView?, value: Boolean) {
+    view?.setDisableTintColor(value)
+  }
+
+  override fun setIconSize(view: ReactBottomNavigationView?, value: Int) {
+    view?.setIconSize(value)
+  }
+
   override fun setActiveIndicatorColor(view: ReactBottomNavigationView?, value: Int?) {
     if (view != null && value != null) {
       val color = ColorStateList.valueOf(value)
