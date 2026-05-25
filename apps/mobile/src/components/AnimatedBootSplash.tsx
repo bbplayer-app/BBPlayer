@@ -145,7 +145,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 					<Image
 						source={bootSplashAsset.card}
 						style={styles.video}
-						contentFit='fill'
+						contentFit='cover'
 						cachePolicy='memory-disk'
 					/>
 				) : null}
