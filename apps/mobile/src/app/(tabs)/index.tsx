@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
+import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions, {
 	type SearchHistoryItem,
@@ -258,6 +259,7 @@ function HomePage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			<SkinAppbarBackground height={insets.top + 152} />
 			{/*顶部欢迎区域*/}
 			<View
 				style={{

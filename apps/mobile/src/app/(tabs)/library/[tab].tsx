@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
 
 import IconButton from '@/components/common/IconButton'
+import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import CollectionListComponent from '@/features/library/collection/CollectionList'
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
@@ -53,6 +54,7 @@ export default function Library() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			<SkinAppbarBackground height={insets.top + 132} />
 			<View
 				style={{
 					paddingBottom: 0,

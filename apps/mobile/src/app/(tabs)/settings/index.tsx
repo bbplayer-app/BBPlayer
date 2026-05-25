@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -19,6 +20,7 @@ export default function SettingsPage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			<SkinAppbarBackground height={insets.top + 104} />
 			<View
 				style={{
 					flex: 1,
