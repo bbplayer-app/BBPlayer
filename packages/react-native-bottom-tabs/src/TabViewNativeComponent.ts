@@ -1,13 +1,17 @@
-import type { ColorValue, ProcessedColorValue, ViewProps } from 'react-native'
+import type {
+	ColorValue,
+	ImageSource,
+	ProcessedColorValue,
+	ViewProps,
+} from 'react-native'
+import { codegenNativeComponent } from 'react-native'
 //@ts-ignore
-import type { ImageSource } from 'react-native/Libraries/Image/ImageSource'
 import type {
 	DirectEventHandler,
 	Double,
 	Int32,
 	WithDefault,
 } from 'react-native/Libraries/Types/CodegenTypes'
-import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent'
 
 export type OnPageSelectedEventData = Readonly<{
 	key: string
