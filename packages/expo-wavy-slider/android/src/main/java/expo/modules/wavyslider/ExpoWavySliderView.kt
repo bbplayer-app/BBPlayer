@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -163,7 +164,9 @@ private fun WavySliderThumb(
             bitmap = thumbImage.asImageBitmap(),
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(thumbImageSize.dp)
+            modifier = Modifier
+                .size(thumbImageSize.dp)
+                .offset(x = -(thumbImageSize / 2).dp)
         )
         return
     }
