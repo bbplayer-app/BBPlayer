@@ -226,6 +226,18 @@ export type WavySliderProps = ViewProps & {
 	 */
 	thumbImageSize?: number
 	/**
+	 * Image thumb horizontal offset in dp.
+	 *
+	 * @default 0
+	 */
+	thumbImageOffsetX?: number
+	/**
+	 * Image thumb vertical offset in dp.
+	 *
+	 * @default 0
+	 */
+	thumbImageOffsetY?: number
+	/**
 	 * Stroke thickness for the active wave in dp.
 	 *
 	 * @default 4

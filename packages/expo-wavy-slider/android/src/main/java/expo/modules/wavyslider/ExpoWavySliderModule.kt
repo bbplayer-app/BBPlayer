@@ -136,6 +136,14 @@ class ExpoWavySliderModule : Module() {
                 view.thumbImageSize = size
             }
 
+            Prop("thumbImageOffsetX") { view: ExpoWavySliderView, offsetX: Float ->
+                view.thumbImageOffsetX = offsetX
+            }
+
+            Prop("thumbImageOffsetY") { view: ExpoWavySliderView, offsetY: Float ->
+                view.thumbImageOffsetY = offsetY
+            }
+
             Prop("waveThickness") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
                 value.setObservableFloat(appContext, { view.waveThicknessState = it }, { view.waveThickness = it })
             }

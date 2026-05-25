@@ -153,7 +153,9 @@ private fun WavySliderThumb(
     configuredColors: WavySliderColors,
     thumbShape: WavySliderThumbShape,
     thumbImageUri: String?,
-    thumbImageSize: Float
+    thumbImageSize: Float,
+    thumbImageOffsetX: Float,
+    thumbImageOffsetY: Float
 ) {
     val thumbImage = remember(thumbImageUri) {
         loadBitmapFromUri(context, thumbImageUri)
@@ -166,7 +168,7 @@ private fun WavySliderThumb(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .size(thumbImageSize.dp)
-                .offset(x = -(thumbImageSize / 2).dp)
+                .offset(x = thumbImageOffsetX.dp, y = thumbImageOffsetY.dp)
         )
         return
     }
@@ -230,6 +232,8 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
     var thumbImageDragLeftUri by mutableStateOf<String?>(null)
     var thumbImageDragRightUri by mutableStateOf<String?>(null)
     var thumbImageSize by mutableFloatStateOf(DefaultThumbImageSize)
+    var thumbImageOffsetX by mutableFloatStateOf(0f)
+    var thumbImageOffsetY by mutableFloatStateOf(0f)
     var waveThickness by mutableFloatStateOf(4.0f)
     var waveThicknessState by mutableStateOf<ObservableState?>(null)
     var trackThickness by mutableFloatStateOf(4.0f)
@@ -398,7 +402,9 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                 configuredColors = colors,
                                 thumbShape = thumbShape,
                                 thumbImageUri = activeThumbImageUri,
-                                thumbImageSize = thumbImageSize
+                                thumbImageSize = thumbImageSize,
+                                thumbImageOffsetX = thumbImageOffsetX,
+                                thumbImageOffsetY = thumbImageOffsetY
                             )
                         },
                         track = { sliderState ->

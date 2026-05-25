@@ -27,6 +27,8 @@ export interface AppSkin {
 			dragLeft: SkinImageSource
 			dragRight: SkinImageSource
 			preview: SkinImageSource
+			offsetX?: number
+			offsetY?: number
 		}
 		thumbUp: {
 			svgaBin: SkinImageSource
@@ -181,6 +183,8 @@ export const mygoSunnySkySkin: AppSkin = {
 			preview: {
 				uri: skinUri(localSkinRoot, 'play_icon/static_icon_image.png'),
 			},
+			offsetX: 0,
+			offsetY: 0,
 		},
 		thumbUp: {
 			svgaBin: {
