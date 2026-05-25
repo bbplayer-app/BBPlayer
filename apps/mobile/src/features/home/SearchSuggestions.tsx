@@ -6,7 +6,6 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { useBottomTabBarHeight } from 'react-native-bottom-tabs'
 import { RectButton } from 'react-native-gesture-handler'
 import { Chip, Divider, IconButton, Text, useTheme } from 'react-native-paper'
 import type { AnimatedRef } from 'react-native-reanimated'
@@ -24,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnUI } from 'react-native-worklets'
 
 import { useSearchSuggestions } from '@/hooks/queries/bilibili/search'
+import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import type { BilibiliSearchSuggestionItem } from '@/types/apis/bilibili'
 
 export interface SearchSuggestionsProps {

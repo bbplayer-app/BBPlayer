@@ -180,9 +180,12 @@ export default function AppearanceSettingsPage() {
 						</View>
 						<UniversalSwitch
 							value={useSkinJsBottomTabs}
-							onValueChange={(value) =>
+							onValueChange={(value) => {
 								setSettings({ useSkinJsBottomTabs: value })
-							}
+								alert('需要重启应用', '底栏渲染方式会在下次启动时生效。', [
+									{ text: '知道了' },
+								])
+							}}
 						/>
 					</View>
 				)}

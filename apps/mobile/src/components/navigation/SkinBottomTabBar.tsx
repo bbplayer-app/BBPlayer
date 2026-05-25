@@ -1,14 +1,13 @@
-import type { BottomTabBarProps } from '@bottom-tabs/react-navigation'
 import { Image } from 'expo-image'
+import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { skinImageSource } from '@/lib/theme/skins'
 
-const TAB_ICON_SIZE = 50
-const TAB_BAR_HEIGHT = 72
+const TAB_ICON_SIZE = 58
+export const SKIN_BOTTOM_TAB_BAR_HEIGHT = 92
 
 export default function SkinBottomTabBar({
 	state,
@@ -16,7 +15,6 @@ export default function SkinBottomTabBar({
 	navigation,
 }: BottomTabBarProps) {
 	const skin = useActiveSkin()
-	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 
 	if (!skin) return null
@@ -26,9 +24,8 @@ export default function SkinBottomTabBar({
 			style={[
 				styles.container,
 				{
-					height: TAB_BAR_HEIGHT + insets.bottom,
+					height: SKIN_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
 					paddingBottom: insets.bottom,
-					backgroundColor: colors.elevation.level1,
 				},
 			]}
 		>
@@ -92,20 +89,6 @@ export default function SkinBottomTabBar({
 								contentFit='contain'
 								cachePolicy='memory-disk'
 							/>
-							<Text
-								variant='labelSmall'
-								numberOfLines={1}
-								style={[
-									styles.label,
-									{
-										color: focused
-											? skin.tabBar.labelSelectedColor
-											: skin.tabBar.labelColor,
-									},
-								]}
-							>
-								{label}
-							</Text>
 						</Pressable>
 					)
 				})}
@@ -129,14 +112,10 @@ const styles = StyleSheet.create({
 		height: '100%',
 		alignItems: 'center',
 		justifyContent: 'center',
-		gap: 0,
 	},
 	icon: {
 		width: TAB_ICON_SIZE,
 		height: TAB_ICON_SIZE,
-	},
-	label: {
-		includeFontPadding: false,
-		marginTop: -6,
+		marginTop: -14,
 	},
 })

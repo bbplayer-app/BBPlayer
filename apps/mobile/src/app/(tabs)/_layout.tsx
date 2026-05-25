@@ -4,11 +4,12 @@ import type {
 } from '@bottom-tabs/react-navigation'
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
-import { withLayoutContext } from 'expo-router'
+import { Tabs as JsTabs, withLayoutContext } from 'expo-router'
 import type {
 	ParamListBase,
 	TabNavigationState,
 } from 'expo-router/react-navigation'
+import { useRef } from 'react'
 import { useTheme } from 'react-native-paper'
 
 import SkinBottomTabBar from '@/components/navigation/SkinBottomTabBar'
@@ -41,6 +42,46 @@ export default function TabLayout() {
 	const useSkinJsBottomTabs = useAppStore(
 		(state) => state.settings.useSkinJsBottomTabs,
 	)
+	const useSkinJsBottomTabsOnLaunch = useRef(useSkinJsBottomTabs).current
+
+	if (useSkinTabs && useSkinJsBottomTabsOnLaunch) {
+		return (
+			<JsTabs
+				initialRouteName='index'
+				screenOptions={{
+					headerShown: false,
+					tabBarShowLabel: false,
+					tabBarStyle: { display: 'none' },
+					tabBar: (props) => <SkinBottomTabBar {...props} />,
+				}}
+			>
+				<JsTabs.Screen
+					name='index'
+					options={{
+						title: '主页',
+						tabBarLabel: '主页',
+						lazy: true,
+					}}
+				/>
+				<JsTabs.Screen
+					name='library/[tab]'
+					options={{
+						title: '音乐库',
+						tabBarLabel: '音乐库',
+						lazy: true,
+					}}
+				/>
+				<JsTabs.Screen
+					name='settings/index'
+					options={{
+						title: '设置',
+						tabBarLabel: '设置',
+						lazy: true,
+					}}
+				/>
+			</JsTabs>
+		)
+	}
 
 	return (
 		<Tabs
@@ -50,11 +91,6 @@ export default function TabLayout() {
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={'transparent'}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
-			tabBar={
-				useSkinTabs && useSkinJsBottomTabs
-					? (props) => <SkinBottomTabBar {...props} />
-					: undefined
-			}
 			initialRouteName='index'
 		>
 			<Tabs.Screen
