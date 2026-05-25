@@ -29,6 +29,12 @@ export interface AppSkin {
 		thumbUp: {
 			svgaBin: SkinImageSource
 			preview: SkinImageSource
+			frames: {
+				directoryUri: string
+				count: number
+				fps: number
+				size: number
+			}
 		}
 	}
 	background: {
@@ -109,6 +115,12 @@ export const mygoSunnySkySkin: AppSkin = {
 			},
 			preview: {
 				uri: skinUri(localSkinRoot, 'thumbup/image_preview.png'),
+			},
+			frames: {
+				directoryUri: skinUri(localSkinRoot, 'thumbup/frames'),
+				count: 50,
+				fps: 20,
+				size: 360,
 			},
 		},
 	},

@@ -20,8 +20,10 @@ import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { getGradientColors } from '@/utils/color'
 
+import SkinThumbUpBurst from './SkinThumbUpBurst'
 import { SpectrumVisualizer } from './SpectrumVisualizer'
 
 const { width: screenWidth } = Dimensions.get('window')
@@ -46,6 +48,8 @@ export function TrackInfo({
 	const currentTrack = useCurrentTrack()
 	const isPlaying = useIsPlaying()
 	const [isTitleExpanded, setIsTitleExpanded] = useState(false)
+	const [thumbUpBurstSignal, setThumbUpBurstSignal] = useState(0)
+	const activeSkin = useActiveSkin()
 
 	const enableSpectrumVisualizer = useAppStore(
 		(state) => state.settings.enableSpectrumVisualizer,
@@ -80,6 +84,9 @@ export function TrackInfo({
 
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
+		if (!isThumbUp) {
+			setThumbUpBurstSignal((signal) => signal + 1)
+		}
 		doThumbUpAction({
 			bvid: currentTrack.bilibiliMetadata.bvid,
 			like: !isThumbUp,
@@ -247,12 +254,18 @@ export function TrackInfo({
 						)}
 					</View>
 					{isBilibiliVideo && (
-						<IconButton
-							icon={isThumbUp ? 'heart' : 'heart-outline'}
-							size={24}
-							iconColor={isThumbUp ? colors.error : colors.onSurfaceVariant}
-							onPress={onThumbUpPress}
-						/>
+						<View style={styles.thumbUpButtonContainer}>
+							<SkinThumbUpBurst
+								skin={activeSkin}
+								playSignal={thumbUpBurstSignal}
+							/>
+							<IconButton
+								icon={isThumbUp ? 'heart' : 'heart-outline'}
+								size={24}
+								iconColor={isThumbUp ? colors.error : colors.onSurfaceVariant}
+								onPress={onThumbUpPress}
+							/>
+						</View>
 					)}
 				</View>
 			</View>
@@ -290,5 +303,8 @@ const styles = StyleSheet.create({
 	},
 	trackTitle: {
 		fontWeight: 'bold',
+	},
+	thumbUpButtonContainer: {
+		position: 'relative',
 	},
 })
