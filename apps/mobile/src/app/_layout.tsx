@@ -89,10 +89,6 @@ export default Sentry.wrap(function RootLayout() {
 	}, [])
 
 	useEffect(() => {
-		void hideBootSplash({ fade: false })
-	}, [])
-
-	useEffect(() => {
 		try {
 			useAppStore.getState()
 

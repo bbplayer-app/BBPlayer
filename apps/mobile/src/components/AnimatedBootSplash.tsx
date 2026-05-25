@@ -1,8 +1,8 @@
 import { Image } from 'expo-image'
 import { useVideoPlayer, VideoView } from 'expo-video'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { StyleSheet, useWindowDimensions } from 'react-native'
-import { hide as hideBootSplash } from 'react-native-bootsplash'
+import { useHideAnimation, type Manifest } from 'react-native-bootsplash'
 import Animated, {
 	Easing,
 	useAnimatedStyle,
@@ -14,6 +14,9 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+
+const bootSplashManifest =
+	require('../../assets/bootsplash/manifest.json') as Manifest
 
 const logoSource = require('../../assets/bootsplash/logo.png') as number
 
@@ -30,70 +33,89 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const selectedAssetId = useAppStore(
 		(state) => state.settings.selectedSkinBootSplashAssetId,
 	)
+	const selectedMode = useAppStore(
+		(state) => state.settings.selectedSkinBootSplashMode,
+	)
+	const playFullAnimation = useAppStore(
+		(state) => state.settings.playFullSkinBootSplashAnimation,
+	)
 	const bootSplashAsset =
 		activeSkin?.bootSplash.items.find((item) => item.id === selectedAssetId) ??
 		activeSkin?.bootSplash.items[0] ??
 		null
+	const bootSplashVideo =
+		selectedMode === 'video' ? (bootSplashAsset?.video ?? null) : null
 	const [visible, setVisible] = useState(true)
 	const [introFinished, setIntroFinished] = useState(false)
-	const startedRef = useRef(false)
+	const [videoEnded, setVideoEnded] = useState(false)
 	const logoTranslateY = useSharedValue(0)
 	const logoScale = useSharedValue(1)
 	const mediaOpacity = useSharedValue(0)
 	const containerOpacity = useSharedValue(1)
 
-	const player = useVideoPlayer(
-		bootSplashAsset?.video?.uri ?? null,
-		(video) => {
-			video.loop = false
-			video.muted = true
-		},
-	)
+	const player = useVideoPlayer(bootSplashVideo?.uri ?? null, (video) => {
+		video.loop = false
+		video.muted = true
+	})
 
 	useEffect(() => {
-		if (startedRef.current) return
+		setVideoEnded(!bootSplashVideo)
+	}, [bootSplashVideo])
 
-		startedRef.current = true
-		void hideBootSplash({ fade: false })
-		logoTranslateY.value = withTiming(height / 2 - insets.bottom - 42, {
-			duration: 620,
-			easing: Easing.out(Easing.cubic),
+	useEffect(() => {
+		if (!bootSplashVideo) return
+
+		const subscription = player.addListener('playToEnd', () => {
+			setVideoEnded(true)
 		})
-		logoScale.value = withTiming(
-			0.48,
-			{
+		return () => subscription.remove()
+	}, [bootSplashVideo, player])
+
+	const { container, logo } = useHideAnimation({
+		manifest: bootSplashManifest,
+		logo: logoSource,
+		ready: true,
+		animate: () => {
+			logoTranslateY.value = withTiming(height / 2 - insets.bottom - 41, {
 				duration: 620,
 				easing: Easing.out(Easing.cubic),
-			},
-			(finished) => {
-				if (finished) scheduleOnRN(setIntroFinished, true)
-			},
-		)
-		mediaOpacity.value = withTiming(1, {
-			duration: 420,
-			easing: Easing.out(Easing.quad),
-		})
+			})
+			logoScale.value = withTiming(
+				0.48,
+				{
+					duration: 620,
+					easing: Easing.out(Easing.cubic),
+				},
+				(finished) => {
+					if (finished) scheduleOnRN(setIntroFinished, true)
+				},
+			)
+			mediaOpacity.value = withTiming(1, {
+				duration: 420,
+				easing: Easing.out(Easing.quad),
+			})
 
-		if (bootSplashAsset?.video) {
-			player.play()
-		}
-	}, [
-		bootSplashAsset,
-		height,
-		insets.bottom,
-		logoScale,
-		logoTranslateY,
-		mediaOpacity,
-		player,
-	])
+			if (bootSplashVideo) {
+				player.replay()
+			}
+		},
+	})
 
 	useEffect(() => {
 		if (!ready || !introFinished) return
+		if (playFullAnimation && bootSplashVideo && !videoEnded) return
 
 		containerOpacity.value = withTiming(0, { duration: 280 }, (finished) => {
 			if (finished) scheduleOnRN(setVisible, false)
 		})
-	}, [containerOpacity, introFinished, ready])
+	}, [
+		bootSplashVideo,
+		containerOpacity,
+		introFinished,
+		playFullAnimation,
+		ready,
+		videoEnded,
+	])
 
 	const logoStyle = useAnimatedStyle(() => ({
 		transform: [
@@ -115,18 +137,19 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	return (
 		<Animated.View
 			pointerEvents='none'
-			style={[styles.container, containerStyle]}
+			{...container}
+			style={[container.style, styles.container, containerStyle]}
 		>
 			<Animated.View style={[styles.mediaContainer, mediaStyle]}>
 				{bootSplashAsset ? (
 					<Image
 						source={bootSplashAsset.card}
-						style={styles.card}
-						contentFit='contain'
+						style={styles.video}
+						contentFit='fill'
 						cachePolicy='memory-disk'
 					/>
 				) : null}
-				{bootSplashAsset?.video ? (
+				{bootSplashVideo ? (
 					<VideoView
 						player={player}
 						style={[
@@ -143,9 +166,8 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 				) : null}
 			</Animated.View>
 			<Animated.Image
-				source={logoSource}
-				style={[styles.logo, logoStyle]}
-				resizeMode='contain'
+				{...logo}
+				style={[logo.style, styles.logo, logoStyle]}
 			/>
 		</Animated.View>
 	)
