@@ -19,6 +19,7 @@ interface Settings {
 	useSkinJsBottomTabs: boolean
 	playFullSkinBootSplashAnimation: boolean
 	selectedSkinBootSplashAssetId: string | null
+	selectedSkinBootSplashMode: 'poster' | 'video'
 }
 
 interface BilibiliUserSummary {

@@ -18,14 +18,12 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
-import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
 export default function AppearanceSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
-	const activeSkin = useActiveSkin()
 
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -39,21 +37,10 @@ export default function AppearanceSettingsPage() {
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
-	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
-	const useSkinJsBottomTabs = useAppStore(
-		(state) => state.settings.useSkinJsBottomTabs,
-	)
-	const playFullSkinBootSplashAnimation = useAppStore(
-		(state) => state.settings.playFullSkinBootSplashAnimation,
-	)
-	const selectedSkinBootSplashAssetId = useAppStore(
-		(state) => state.settings.selectedSkinBootSplashAssetId,
-	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
-	const [bootSplashMenuVisible, setBootSplashMenuVisible] = useState(false)
 
 	const setNowPlayingBarStyle = (style: 'float' | 'bottom') => {
 		setSettings({ nowPlayingBarStyle: style })
@@ -64,11 +51,6 @@ export default function AppearanceSettingsPage() {
 		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}
-
-	const selectedBootSplashAsset =
-		activeSkin?.bootSplash.items.find(
-			(item) => item.id === selectedSkinBootSplashAssetId,
-		) ?? activeSkin?.bootSplash.items[0]
 
 	const handleSpectrumToggle = () => {
 		if (enableSpectrumVisualizer) {
@@ -156,111 +138,6 @@ export default function AppearanceSettingsPage() {
 						}
 					/>
 				</View>
-
-				<View style={styles.settingRow}>
-					<View style={styles.settingTextContainer}>
-						<Text>MyGO!!!!! 晴空向光行主题</Text>
-						<Text
-							variant='bodySmall'
-							style={{ color: colors.onSurfaceVariant }}
-						>
-							开启后底栏按钮替换为 MyGO!!!!! 联动专属吉他/猫耳图标
-						</Text>
-					</View>
-					<UniversalSwitch
-						value={activeSkinId === 'mygo-sunny-sky'}
-						onValueChange={(value) =>
-							setSettings({
-								activeSkinId: value ? 'mygo-sunny-sky' : null,
-								enableMygoTheme: value,
-							})
-						}
-					/>
-				</View>
-
-				{activeSkinId && (
-					<View style={styles.settingRow}>
-						<View style={styles.settingTextContainer}>
-							<Text>使用皮肤底栏背景</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								开启后使用 JS 底栏展示主题背景，可随时切回原生底栏
-							</Text>
-						</View>
-						<UniversalSwitch
-							value={useSkinJsBottomTabs}
-							onValueChange={(value) => {
-								setSettings({ useSkinJsBottomTabs: value })
-								alert('需要重启应用', '底栏渲染方式会在下次启动时生效。', [
-									{ text: '知道了' },
-								])
-							}}
-						/>
-					</View>
-				)}
-
-				{activeSkinId && activeSkin ? (
-					<View style={styles.settingRow}>
-						<View style={styles.settingTextContainer}>
-							<Text>启动动画素材</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								{selectedBootSplashAsset?.name ?? '默认素材'}
-							</Text>
-						</View>
-						<FunctionalMenu
-							visible={bootSplashMenuVisible}
-							onDismiss={() => setBootSplashMenuVisible(false)}
-							title='启动动画素材'
-							anchor={
-								<IconButton
-									icon='chevron-down'
-									onPress={() => setBootSplashMenuVisible(true)}
-								/>
-							}
-						>
-							{activeSkin.bootSplash.items.map((item) => (
-								<FunctionalMenu.Item
-									key={item.id}
-									title={item.name}
-									status={
-										item.id === selectedBootSplashAsset?.id
-											? 'checked'
-											: 'unchecked'
-									}
-									onPress={() => {
-										setSettings({ selectedSkinBootSplashAssetId: item.id })
-										setBootSplashMenuVisible(false)
-									}}
-								/>
-							))}
-						</FunctionalMenu>
-					</View>
-				) : null}
-
-				{activeSkinId && (
-					<View style={styles.settingRow}>
-						<View style={styles.settingTextContainer}>
-							<Text>完整播放主题启动动画</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								关闭时应用加载完成后立即淡出启动动画
-							</Text>
-						</View>
-						<UniversalSwitch
-							value={playFullSkinBootSplashAnimation}
-							onValueChange={(value) =>
-								setSettings({ playFullSkinBootSplashAnimation: value })
-							}
-						/>
-					</View>
-				)}
 
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>

@@ -48,7 +48,7 @@ export default function SettingsPage() {
 				>
 					<List.Item
 						title='外观'
-						description='主题、播放器样式'
+						description='播放器样式、显示模式'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -62,6 +62,24 @@ export default function SettingsPage() {
 							/>
 						)}
 						onPress={() => router.push('/settings/appearance')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
+						title='主题'
+						description='动态皮肤、底栏、启动动画'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='palette-swatch'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/theme')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
