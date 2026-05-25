@@ -1,6 +1,15 @@
 import { Image } from 'expo-image'
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs'
+import { BottomTabBarHeightCallbackContext } from 'expo-router/build/react-navigation/bottom-tabs'
+import { useContext, useEffect } from 'react'
+import type { ImageSourcePropType } from 'react-native'
 import { Pressable, StyleSheet, View } from 'react-native'
+import Animated, {
+	Easing,
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
@@ -16,18 +25,22 @@ export default function SkinBottomTabBar({
 }: BottomTabBarProps) {
 	const skin = useActiveSkin()
 	const insets = useSafeAreaInsets()
+	const setTabBarHeight = useContext(BottomTabBarHeightCallbackContext)
 
 	if (!skin) return null
+
+	const tabBarHeight = SKIN_BOTTOM_TAB_BAR_HEIGHT + insets.bottom
 
 	return (
 		<View
 			style={[
 				styles.container,
 				{
-					height: SKIN_BOTTOM_TAB_BAR_HEIGHT + insets.bottom,
+					height: tabBarHeight,
 					paddingBottom: insets.bottom,
 				},
 			]}
+			onLayout={() => setTabBarHeight?.(tabBarHeight)}
 		>
 			<Image
 				source={skin.tabBar.background}
@@ -58,13 +71,12 @@ export default function SkinBottomTabBar({
 									: skin.tabBar.icons.settings.default
 
 					return (
-						<Pressable
+						<SkinTabButton
 							key={route.key}
-							accessibilityRole='button'
-							accessibilityState={focused ? { selected: true } : {}}
-							accessibilityLabel={label}
+							focused={focused}
+							icon={skinImageSource(icon)}
+							label={label}
 							testID={options.tabBarButtonTestID}
-							style={styles.item}
 							onPress={() => {
 								const event = navigation.emit({
 									type: 'tabPress',
@@ -82,14 +94,7 @@ export default function SkinBottomTabBar({
 									target: route.key,
 								})
 							}}
-						>
-							<Image
-								source={skinImageSource(icon)}
-								style={styles.icon}
-								contentFit='contain'
-								cachePolicy='memory-disk'
-							/>
-						</Pressable>
+						/>
 					)
 				})}
 			</View>
@@ -97,10 +102,65 @@ export default function SkinBottomTabBar({
 	)
 }
 
+function SkinTabButton({
+	focused,
+	icon,
+	label,
+	testID,
+	onPress,
+	onLongPress,
+}: {
+	focused: boolean
+	icon: ImageSourcePropType
+	label: string
+	testID?: string
+	onPress: () => void
+	onLongPress: () => void
+}) {
+	const progress = useSharedValue(focused ? 1 : 0)
+
+	useEffect(() => {
+		progress.value = withTiming(focused ? 1 : 0, {
+			duration: 260,
+			easing: Easing.out(Easing.cubic),
+		})
+	}, [focused, progress])
+
+	const iconStyle = useAnimatedStyle(() => ({
+		opacity: 0.72 + progress.value * 0.28,
+		transform: [
+			{ translateY: 8 - progress.value * 12 },
+			{ scale: 0.92 + progress.value * 0.1 },
+		],
+	}))
+
+	return (
+		<Pressable
+			accessibilityRole='button'
+			accessibilityState={focused ? { selected: true } : {}}
+			accessibilityLabel={label}
+			testID={testID}
+			style={styles.item}
+			onPress={onPress}
+			onLongPress={onLongPress}
+		>
+			<Animated.Image
+				source={icon}
+				style={[styles.icon, iconStyle]}
+				resizeMode='contain'
+			/>
+		</Pressable>
+	)
+}
+
 const styles = StyleSheet.create({
 	container: {
-		position: 'relative',
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
 		overflow: 'hidden',
+		backgroundColor: 'transparent',
 	},
 	items: {
 		flex: 1,
