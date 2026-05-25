@@ -1,5 +1,5 @@
 import { Image } from 'expo-image'
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import Animated, {
 	Easing,
@@ -27,11 +27,22 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	const translateY = useSharedValue(0)
 	const scale = useSharedValue(0.4)
 	const [visible, setVisible] = useState(false)
+	const imageRef = useRef<Image>(null)
 
 	const thumbUp = skin?.player.thumbUp
+	const playbackDuration = useMemo(() => {
+		if (!thumbUp) return 0
+
+		return Math.round(
+			(thumbUp.frames.count / Math.max(1, thumbUp.frames.fps)) * 1000,
+		)
+	}, [thumbUp])
 
 	useEffect(() => {
 		if (!thumbUp || playSignal === 0) return
+
+		const fadeDelay = Math.max(0, playbackDuration - 460)
+		const visibleDuration = playbackDuration + 520
 
 		setVisible(true)
 		opacity.value = 0
@@ -41,12 +52,12 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 		opacity.value = withSequence(
 			withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
 			withDelay(
-				1300,
-				withTiming(0, { duration: 520, easing: Easing.in(Easing.quad) }),
+				fadeDelay,
+				withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }),
 			),
 		)
-		translateY.value = withTiming(-72, {
-			duration: 1900,
+		translateY.value = withTiming(-84, {
+			duration: visibleDuration,
 			easing: Easing.out(Easing.cubic),
 		})
 		scale.value = withTiming(1, {
@@ -54,9 +65,15 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 			easing: Easing.out(Easing.back(1.4)),
 		})
 
-		const timer = setTimeout(() => setVisible(false), 2000)
-		return () => clearTimeout(timer)
-	}, [opacity, playSignal, scale, thumbUp, translateY])
+		const stopTimer = setTimeout(() => {
+			void imageRef.current?.stopAnimating()
+		}, playbackDuration)
+		const hideTimer = setTimeout(() => setVisible(false), visibleDuration)
+		return () => {
+			clearTimeout(stopTimer)
+			clearTimeout(hideTimer)
+		}
+	}, [opacity, playSignal, playbackDuration, scale, thumbUp, translateY])
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
@@ -71,10 +88,16 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 			style={[styles.container, animatedStyle]}
 		>
 			<Image
+				ref={imageRef}
 				source={thumbUp.gif}
 				style={styles.image}
 				contentFit='contain'
 				cachePolicy='memory-disk'
+				autoplay={false}
+				recyclingKey={`${thumbUp.gif.uri}:${playSignal}`}
+				onLoadEnd={() => {
+					void imageRef.current?.startAnimating()
+				}}
 			/>
 		</Animated.View>
 	)

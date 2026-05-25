@@ -17,7 +17,7 @@ if (!inputDir || !outputFile) {
 }
 
 const fps = Number(fpsArg)
-const delay = Math.max(1, Math.round(100 / (Number.isFinite(fps) ? fps : 20)))
+const delay = Math.max(1, Math.round(1000 / (Number.isFinite(fps) ? fps : 20)))
 const frameFiles = fs
 	.readdirSync(inputDir)
 	.filter((file) => file.endsWith('.png'))
@@ -68,7 +68,7 @@ for (const [index, file] of frameFiles.entries()) {
 		delay,
 		dispose: 2,
 		palette,
-		repeat: 0,
+		repeat: -1,
 		transparent: true,
 		transparentIndex: 0,
 	})
