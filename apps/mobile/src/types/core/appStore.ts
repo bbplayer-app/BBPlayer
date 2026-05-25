@@ -18,6 +18,7 @@ interface Settings {
 	activeSkinId: string | null
 	useSkinJsBottomTabs: boolean
 	playFullSkinBootSplashAnimation: boolean
+	selectedSkinBootSplashAssetId: string | null
 }
 
 interface BilibiliUserSummary {

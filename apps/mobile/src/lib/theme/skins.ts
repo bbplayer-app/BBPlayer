@@ -51,14 +51,78 @@ export interface AppSkin {
 	}
 	bootSplash: {
 		card: SkinImageSource
-		video: SkinImageSource
+		video: SkinImageSource | null
+		items: SkinBootSplashAsset[]
 	}
+}
+
+export interface SkinBootSplashAsset {
+	id: string
+	name: string
+	card: SkinImageSource
+	video: SkinImageSource | null
 }
 
 const localSkinRoot =
 	'file:///sdcard/Android/data/com.roitium.bbplayer/files/bilibili_skin_exp/lottery_102857_zip'
 
 const skinUri = (rootUri: string, path: string): string => `${rootUri}/${path}`
+
+const bootSplashItemIds = [
+	'1778726160002',
+	'1778726160003',
+	'1778726160004',
+	'1778726160005',
+	'1778726160006',
+	'1778726160007',
+	'1778726160008',
+	'1778726160009',
+	'1778726160010',
+	'1778726160011',
+	'1778726160012',
+	'1778726160013',
+	'1778726160014',
+	'1778726160015',
+	'1778726160016',
+	'1778726160017',
+	'1778726160018',
+	'1778726160019',
+	'1778726160020',
+	'1778726160021',
+	'1778726160022',
+	'1778726160023',
+	'1778726160024',
+	'1778726160025',
+	'1778726160026',
+]
+
+const bootSplashVideoItemIds = new Set([
+	'1778726160002',
+	'1778726160003',
+	'1778726160004',
+	'1778726160005',
+	'1778726160006',
+	'1778726160007',
+	'1778726160008',
+	'1778726160024',
+	'1778726160025',
+	'1778726160026',
+])
+
+const mygoBootSplashItems: SkinBootSplashAsset[] = bootSplashItemIds.map(
+	(id, index) => ({
+		id,
+		name: `启动动画 ${index + 1}`,
+		card: {
+			uri: skinUri(localSkinRoot, `splash/items/${id}/card.png`),
+		},
+		video: bootSplashVideoItemIds.has(id)
+			? {
+					uri: skinUri(localSkinRoot, `splash/items/${id}/intro.mp4`),
+				}
+			: null,
+	}),
+)
 
 export const mygoSunnySkySkin: AppSkin = {
 	id: 'mygo-sunny-sky',
@@ -157,11 +221,10 @@ export const mygoSunnySkySkin: AppSkin = {
 	},
 	bootSplash: {
 		card: {
-			uri: skinUri(localSkinRoot, 'splash/card.png'),
+			uri: mygoBootSplashItems[0].card.uri,
 		},
-		video: {
-			uri: skinUri(localSkinRoot, 'splash/intro.mp4'),
-		},
+		video: mygoBootSplashItems[0].video,
+		items: mygoBootSplashItems,
 	},
 }
 

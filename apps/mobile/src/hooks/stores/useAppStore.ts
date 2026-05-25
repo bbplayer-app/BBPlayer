@@ -114,6 +114,7 @@ export const useAppStore = create<AppState>()(
 					activeSkinId: null,
 					useSkinJsBottomTabs: false,
 					playFullSkinBootSplashAnimation: false,
+					selectedSkinBootSplashAssetId: null,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,

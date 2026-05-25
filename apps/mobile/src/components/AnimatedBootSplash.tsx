@@ -5,12 +5,12 @@ import { StyleSheet, useWindowDimensions } from 'react-native'
 import { hide as hideBootSplash } from 'react-native-bootsplash'
 import Animated, {
 	Easing,
-	runOnJS,
 	useAnimatedStyle,
 	useSharedValue,
 	withDelay,
 	withTiming,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
@@ -29,6 +29,13 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const playFullAnimation = useAppStore(
 		(state) => state.settings.playFullSkinBootSplashAnimation,
 	)
+	const selectedAssetId = useAppStore(
+		(state) => state.settings.selectedSkinBootSplashAssetId,
+	)
+	const bootSplashAsset =
+		activeSkin?.bootSplash.items.find((item) => item.id === selectedAssetId) ??
+		activeSkin?.bootSplash.items[0] ??
+		null
 	const [visible, setVisible] = useState(true)
 	const [nativeHidden, setNativeHidden] = useState(false)
 	const logoTranslateY = useSharedValue(0)
@@ -37,7 +44,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const containerOpacity = useSharedValue(1)
 
 	const player = useVideoPlayer(
-		activeSkin?.bootSplash.video.uri ?? null,
+		bootSplashAsset?.video?.uri ?? null,
 		(video) => {
 			video.loop = false
 			video.muted = true
@@ -52,7 +59,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	useEffect(() => {
 		if (!ready || !nativeHidden) return
 
-		const hideDelay = playFullAnimation ? 6000 : 1200
+		const hideDelay = playFullAnimation ? 6000 : 300
 
 		logoTranslateY.value = withTiming(height * 0.32, {
 			duration: 620,
@@ -69,15 +76,16 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		containerOpacity.value = withDelay(
 			hideDelay,
 			withTiming(0, { duration: 280 }, (finished) => {
-				if (finished) runOnJS(setVisible)(false)
+				if (finished) scheduleOnRN(setVisible, false)
 			}),
 		)
 
-		if (activeSkin) {
+		if (bootSplashAsset?.video) {
 			player.play()
 		}
 	}, [
 		activeSkin,
+		bootSplashAsset,
 		containerOpacity,
 		height,
 		logoScale,
@@ -112,7 +120,15 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 			style={[styles.container, containerStyle]}
 		>
 			<Animated.View style={[styles.mediaContainer, mediaStyle]}>
-				{activeSkin ? (
+				{bootSplashAsset ? (
+					<Image
+						source={bootSplashAsset.card}
+						style={styles.card}
+						contentFit='contain'
+						cachePolicy='memory-disk'
+					/>
+				) : null}
+				{bootSplashAsset?.video ? (
 					<VideoView
 						player={player}
 						style={[
@@ -127,14 +143,6 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 						surfaceType='textureView'
 					/>
 				) : null}
-				{activeSkin ? (
-					<Image
-						source={activeSkin.bootSplash.card}
-						style={styles.card}
-						contentFit='contain'
-						cachePolicy='memory-disk'
-					/>
-				) : null}
 			</Animated.View>
 			<Animated.Image
 				source={logoSource}
@@ -147,19 +155,19 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 
 const styles = StyleSheet.create({
 	container: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		zIndex: 9999,
 		alignItems: 'center',
 		justifyContent: 'center',
 		backgroundColor: '#FFFFFF',
 	},
 	mediaContainer: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	video: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	card: {
 		width: '72%',

@@ -18,12 +18,14 @@ import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
 export default function AppearanceSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+	const activeSkin = useActiveSkin()
 
 	const playerBackgroundStyle = useAppStore(
 		(state) => state.settings.playerBackgroundStyle,
@@ -44,10 +46,14 @@ export default function AppearanceSettingsPage() {
 	const playFullSkinBootSplashAnimation = useAppStore(
 		(state) => state.settings.playFullSkinBootSplashAnimation,
 	)
+	const selectedSkinBootSplashAssetId = useAppStore(
+		(state) => state.settings.selectedSkinBootSplashAssetId,
+	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
 	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
+	const [bootSplashMenuVisible, setBootSplashMenuVisible] = useState(false)
 
 	const setNowPlayingBarStyle = (style: 'float' | 'bottom') => {
 		setSettings({ nowPlayingBarStyle: style })
@@ -58,6 +64,11 @@ export default function AppearanceSettingsPage() {
 		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}
+
+	const selectedBootSplashAsset =
+		activeSkin?.bootSplash.items.find(
+			(item) => item.id === selectedSkinBootSplashAssetId,
+		) ?? activeSkin?.bootSplash.items[0]
 
 	const handleSpectrumToggle = () => {
 		if (enableSpectrumVisualizer) {
@@ -189,6 +200,47 @@ export default function AppearanceSettingsPage() {
 						/>
 					</View>
 				)}
+
+				{activeSkinId && activeSkin ? (
+					<View style={styles.settingRow}>
+						<View style={styles.settingTextContainer}>
+							<Text>启动动画素材</Text>
+							<Text
+								variant='bodySmall'
+								style={{ color: colors.onSurfaceVariant }}
+							>
+								{selectedBootSplashAsset?.name ?? '默认素材'}
+							</Text>
+						</View>
+						<FunctionalMenu
+							visible={bootSplashMenuVisible}
+							onDismiss={() => setBootSplashMenuVisible(false)}
+							title='启动动画素材'
+							anchor={
+								<IconButton
+									icon='chevron-down'
+									onPress={() => setBootSplashMenuVisible(true)}
+								/>
+							}
+						>
+							{activeSkin.bootSplash.items.map((item) => (
+								<FunctionalMenu.Item
+									key={item.id}
+									title={item.name}
+									status={
+										item.id === selectedBootSplashAsset?.id
+											? 'checked'
+											: 'unchecked'
+									}
+									onPress={() => {
+										setSettings({ selectedSkinBootSplashAssetId: item.id })
+										setBootSplashMenuVisible(false)
+									}}
+								/>
+							))}
+						</FunctionalMenu>
+					</View>
+				) : null}
 
 				{activeSkinId && (
 					<View style={styles.settingRow}>
