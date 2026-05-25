@@ -64,9 +64,9 @@ export default function TabLayout() {
 		<Tabs
 			disablePageAnimations
 			disableTintColor={enableMygoTheme}
-			iconSize={enableMygoTheme ? 40 : undefined}
+			iconSize={enableMygoTheme ? 50 : undefined}
 			tabBarActiveTintColor={themes.primary}
-			activeIndicatorColor={themes.primaryContainer}
+			activeIndicatorColor={'transparent'}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
 			initialRouteName='index'
 		>
