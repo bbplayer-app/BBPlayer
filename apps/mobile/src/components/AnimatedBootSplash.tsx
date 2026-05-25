@@ -35,6 +35,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		activeSkin?.bootSplash.items[0] ??
 		null
 	const [visible, setVisible] = useState(true)
+	const [introFinished, setIntroFinished] = useState(false)
 	const startedRef = useRef(false)
 	const logoTranslateY = useSharedValue(0)
 	const logoScale = useSharedValue(1)
@@ -58,10 +59,16 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 			duration: 620,
 			easing: Easing.out(Easing.cubic),
 		})
-		logoScale.value = withTiming(0.48, {
-			duration: 620,
-			easing: Easing.out(Easing.cubic),
-		})
+		logoScale.value = withTiming(
+			0.48,
+			{
+				duration: 620,
+				easing: Easing.out(Easing.cubic),
+			},
+			(finished) => {
+				if (finished) scheduleOnRN(setIntroFinished, true)
+			},
+		)
 		mediaOpacity.value = withTiming(1, {
 			duration: 420,
 			easing: Easing.out(Easing.quad),
@@ -81,12 +88,12 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	])
 
 	useEffect(() => {
-		if (!ready) return
+		if (!ready || !introFinished) return
 
 		containerOpacity.value = withTiming(0, { duration: 280 }, (finished) => {
 			if (finished) scheduleOnRN(setVisible, false)
 		})
-	}, [containerOpacity, ready])
+	}, [containerOpacity, introFinished, ready])
 
 	const logoStyle = useAnimatedStyle(() => ({
 		transform: [
