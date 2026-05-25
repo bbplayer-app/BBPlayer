@@ -48,11 +48,10 @@ export default function TabLayout() {
 		return (
 			<JsTabs
 				initialRouteName='index'
+				tabBar={(props) => <SkinBottomTabBar {...props} />}
 				screenOptions={{
 					headerShown: false,
 					tabBarShowLabel: false,
-					tabBarStyle: { display: 'none' },
-					tabBar: (props) => <SkinBottomTabBar {...props} />,
 				}}
 			>
 				<JsTabs.Screen
