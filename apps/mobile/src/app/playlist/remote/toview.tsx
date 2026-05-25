@@ -2,10 +2,11 @@ import { Icon } from '@expo/ui'
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
@@ -283,7 +284,7 @@ export default function ToViewPage() {
 						/>
 					}
 					refreshControl={
-						<RefreshControl
+						<SkinRefreshControl
 							refreshing={refreshing}
 							onRefresh={async () => {
 								setRefreshing(true)

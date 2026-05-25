@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useState } from 'react'
-import { RefreshControl, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { CollectionListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -82,7 +83,7 @@ const CollectionListComponent = memo(() => {
 				data={collections.pages.flatMap((page) => page.list)}
 				renderItem={renderCollectionItem}
 				refreshControl={
-					<RefreshControl
+					<SkinRefreshControl
 						refreshing={refreshing || collectionsIsRefetching}
 						onRefresh={onRefresh}
 						colors={[colors.primary]}

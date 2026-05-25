@@ -216,7 +216,7 @@ export const mygoSunnySkySkin: AppSkin = {
 			uri: skinUri(localSkinRoot, 'loading/loading_frame.png'),
 		},
 		preview: {
-			uri: skinUri(localSkinRoot, 'loading/loading.png'),
+			uri: skinUri(localSkinRoot, 'loading/loading.webp'),
 		},
 	},
 	bootSplash: {

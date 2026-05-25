@@ -16,6 +16,7 @@ import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
+import SkinRefreshOverlay from '@/components/common/SkinRefreshOverlay'
 import { alert } from '@/components/modals/AlertModal'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
@@ -342,6 +343,7 @@ export default Sentry.wrap(function RootLayout() {
 					</Stack>
 				) : null}
 				<Toaster />
+				<SkinRefreshOverlay />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>
