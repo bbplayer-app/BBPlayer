@@ -9,8 +9,8 @@ import {
 	View,
 	type ViewStyle,
 	processColor,
+	type ImageSource,
 } from 'react-native'
-import type { ImageSource } from 'react-native/Libraries/Image/ImageSource'
 import useLatestCallback from 'use-latest-callback'
 
 import {

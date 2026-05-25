@@ -1,9 +1,8 @@
 import { codegenNativeComponent } from 'react-native'
-import type { ViewProps } from 'react-native'
-import type {
-	DirectEventHandler,
-	Double,
-} from 'react-native/Libraries/Types/CodegenTypes'
+import type { CodegenTypes, ViewProps } from 'react-native'
+
+type DirectEventHandler<T> = CodegenTypes.DirectEventHandler<T>
+type Double = CodegenTypes.Double
 
 export type OnNativeLayout = Readonly<{
 	width: Double

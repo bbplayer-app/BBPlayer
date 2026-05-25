@@ -1,17 +1,19 @@
 import type {
+	CodegenTypes,
 	ColorValue,
 	ImageSource,
 	ProcessedColorValue,
 	ViewProps,
 } from 'react-native'
 import { codegenNativeComponent } from 'react-native'
-//@ts-ignore
-import type {
-	DirectEventHandler,
-	Double,
-	Int32,
-	WithDefault,
-} from 'react-native/Libraries/Types/CodegenTypes'
+
+type DirectEventHandler<T> = CodegenTypes.DirectEventHandler<T>
+type Double = CodegenTypes.Double
+type Int32 = CodegenTypes.Int32
+type WithDefault<
+	T extends number | boolean | string | ReadonlyArray<string>,
+	U extends T | string | undefined | null,
+> = CodegenTypes.WithDefault<T, U>
 
 export type OnPageSelectedEventData = Readonly<{
 	key: string
