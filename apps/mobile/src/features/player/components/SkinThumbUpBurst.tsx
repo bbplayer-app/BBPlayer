@@ -1,6 +1,14 @@
 import { Image } from 'expo-image'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, StyleSheet } from 'react-native'
+import { memo, useEffect, useState } from 'react'
+import { StyleSheet } from 'react-native'
+import Animated, {
+	Easing,
+	useAnimatedStyle,
+	useSharedValue,
+	withDelay,
+	withSequence,
+	withTiming,
+} from 'react-native-reanimated'
 
 import type { AppSkin } from '@/lib/theme/skins'
 
@@ -15,93 +23,55 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	skin,
 	playSignal,
 }: SkinThumbUpBurstProps) {
-	const opacity = useRef(new Animated.Value(0)).current
-	const translateY = useRef(new Animated.Value(0)).current
-	const scale = useRef(new Animated.Value(0.4)).current
+	const opacity = useSharedValue(0)
+	const translateY = useSharedValue(0)
+	const scale = useSharedValue(0.4)
 	const [visible, setVisible] = useState(false)
-	const [frame, setFrame] = useState(0)
 
 	const thumbUp = skin?.player.thumbUp
-	const frameSources = useMemo(() => {
-		if (!thumbUp) return []
-		return Array.from({ length: thumbUp.frames.count }, (_, index) => ({
-			uri: `${thumbUp.frames.directoryUri}/frame_${String(index).padStart(3, '0')}.png`,
-		}))
-	}, [thumbUp])
 
 	useEffect(() => {
 		if (!thumbUp || playSignal === 0) return
 
 		setVisible(true)
-		setFrame(0)
-		opacity.setValue(0)
-		translateY.setValue(0)
-		scale.setValue(0.4)
+		opacity.value = 0
+		translateY.value = 0
+		scale.value = 0.4
 
-		const frameDuration = 1000 / thumbUp.frames.fps
-		const frameTimer = setInterval(() => {
-			setFrame((current) => {
-				const next = current + 1
-				if (next >= thumbUp.frames.count) {
-					clearInterval(frameTimer)
-					return current
-				}
-				return next
-			})
-		}, frameDuration)
-
-		Animated.parallel([
-			Animated.sequence([
-				Animated.timing(opacity, {
-					toValue: 1,
-					duration: 120,
-					easing: Easing.out(Easing.quad),
-					useNativeDriver: true,
-				}),
-				Animated.timing(opacity, {
-					toValue: 0,
-					duration: 520,
-					delay: 1300,
-					easing: Easing.in(Easing.quad),
-					useNativeDriver: true,
-				}),
-			]),
-			Animated.timing(translateY, {
-				toValue: -72,
-				duration: 1900,
-				easing: Easing.out(Easing.cubic),
-				useNativeDriver: true,
-			}),
-			Animated.timing(scale, {
-				toValue: 1,
-				duration: 360,
-				easing: Easing.out(Easing.back(1.4)),
-				useNativeDriver: true,
-			}),
-		]).start(({ finished }) => {
-			if (finished) setVisible(false)
+		opacity.value = withSequence(
+			withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
+			withDelay(
+				1300,
+				withTiming(0, { duration: 520, easing: Easing.in(Easing.quad) }),
+			),
+		)
+		translateY.value = withTiming(-72, {
+			duration: 1900,
+			easing: Easing.out(Easing.cubic),
+		})
+		scale.value = withTiming(1, {
+			duration: 360,
+			easing: Easing.out(Easing.back(1.4)),
 		})
 
-		return () => {
-			clearInterval(frameTimer)
-		}
+		const timer = setTimeout(() => setVisible(false), 2000)
+		return () => clearTimeout(timer)
 	}, [opacity, playSignal, scale, thumbUp, translateY])
+
+	const animatedStyle = useAnimatedStyle(() => ({
+		opacity: opacity.value,
+		transform: [{ translateY: translateY.value }, { scale: scale.value }],
+	}))
 
 	if (!visible || !thumbUp) return null
 
 	return (
 		<Animated.View
 			pointerEvents='none'
-			style={[
-				styles.container,
-				{
-					opacity,
-					transform: [{ translateY }, { scale }],
-				},
-			]}
+			style={[styles.container, animatedStyle]}
 		>
 			<Image
-				source={frameSources[frame] ?? thumbUp.preview}
+				source={thumbUp.gif}
 				style={styles.image}
 				contentFit='contain'
 				cachePolicy='memory-disk'

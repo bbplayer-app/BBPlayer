@@ -30,6 +30,7 @@ export interface AppSkin {
 		}
 		thumbUp: {
 			svgaBin: SkinImageSource
+			gif: SkinImageSource
 			preview: SkinImageSource
 			frames: {
 				directoryUri: string
@@ -116,6 +117,9 @@ export const mygoSunnySkySkin: AppSkin = {
 		thumbUp: {
 			svgaBin: {
 				uri: skinUri(localSkinRoot, 'thumbup/image_ani.bin'),
+			},
+			gif: {
+				uri: skinUri(localSkinRoot, 'thumbup/image_ani.gif'),
 			},
 			preview: {
 				uri: skinUri(localSkinRoot, 'thumbup/image_preview.png'),

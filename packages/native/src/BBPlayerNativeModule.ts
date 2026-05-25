@@ -4,6 +4,8 @@ import { Platform } from 'react-native'
 import type {
 	AppUpdateDownloadOptions,
 	AppUpdateInstallResult,
+	SvgaToGifOptions,
+	SvgaToGifResult,
 } from './BBPlayerNative.types'
 
 declare class BBPlayerNativeModule extends NativeModule {
@@ -13,6 +15,7 @@ declare class BBPlayerNativeModule extends NativeModule {
 	downloadAndInstallApkAsync(
 		options: AppUpdateDownloadOptions,
 	): Promise<AppUpdateInstallResult>
+	convertSvgaBinToGifAsync(options: SvgaToGifOptions): Promise<SvgaToGifResult>
 }
 
 let nativeModule: BBPlayerNativeModule | null = null
@@ -38,3 +41,6 @@ export const openPackageInstallerSettingsAsync = () =>
 
 export const downloadAndInstallApkAsync = (options: AppUpdateDownloadOptions) =>
 	getNativeModule().downloadAndInstallApkAsync(options)
+
+export const convertSvgaBinToGifAsync = (options: SvgaToGifOptions) =>
+	getNativeModule().convertSvgaBinToGifAsync(options)
