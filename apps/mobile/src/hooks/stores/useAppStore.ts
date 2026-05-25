@@ -111,6 +111,7 @@ export const useAppStore = create<AppState>()(
 					downloadMaxParallelTasks: 1,
 					enableMinimalistMode: false,
 					enableMygoTheme: false,
+					activeSkinId: null,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,

@@ -37,7 +37,7 @@ export default function AppearanceSettingsPage() {
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
-	const enableMygoTheme = useAppStore((state) => state.settings.enableMygoTheme)
+	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
@@ -151,8 +151,13 @@ export default function AppearanceSettingsPage() {
 						</Text>
 					</View>
 					<UniversalSwitch
-						value={enableMygoTheme}
-						onValueChange={(value) => setSettings({ enableMygoTheme: value })}
+						value={activeSkinId === 'mygo-sunny-sky'}
+						onValueChange={(value) =>
+							setSettings({
+								activeSkinId: value ? 'mygo-sunny-sky' : null,
+								enableMygoTheme: value,
+							})
+						}
 					/>
 				</View>
 

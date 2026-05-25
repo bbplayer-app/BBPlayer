@@ -15,6 +15,7 @@ interface Settings {
 	downloadMaxParallelTasks: number
 	enableMinimalistMode: boolean
 	enableMygoTheme: boolean
+	activeSkinId: string | null
 }
 
 interface BilibiliUserSummary {
