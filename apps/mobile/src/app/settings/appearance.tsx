@@ -37,6 +37,7 @@ export default function AppearanceSettingsPage() {
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
+	const enableMygoTheme = useAppStore((state) => state.settings.enableMygoTheme)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
@@ -136,6 +137,22 @@ export default function AppearanceSettingsPage() {
 						onValueChange={(value) =>
 							setSettings({ enableMinimalistMode: value })
 						}
+					/>
+				</View>
+
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>MyGO!!!!! 晴空向光行主题</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							开启后底栏按钮替换为 MyGO!!!!! 联动专属吉他/猫耳图标
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={enableMygoTheme}
+						onValueChange={(value) => setSettings({ enableMygoTheme: value })}
 					/>
 				</View>
 

@@ -1,0 +1,28 @@
+diff --git a/android/src/main/java/com/rcttabview/RCTTabView.kt b/android/src/main/java/com/rcttabview/RCTTabView.kt
+index 1d0c4047e10cb9398208ea572463cd08d88699e6..5f2ef43102bdf5b2fe904e97f480c83713c1766e 100644
+--- a/android/src/main/java/com/rcttabview/RCTTabView.kt
++++ b/android/src/main/java/com/rcttabview/RCTTabView.kt
+@@ -319,6 +319,9 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
+         }
+       }
+     }
++    post {
++      updateTintColors()
++    }
+   }
+ 
+   fun setLabeled(labeled: Boolean?) {
+@@ -473,7 +476,12 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
+ 
+     ColorStateList(states, colors).apply {
+       this@ReactBottomNavigationView.bottomNavigation.itemTextColor = this
+-      this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = this
++      val hasLocalThemeIcons = iconSources.values.any { it.uri?.contains("bilibili_skin_exp") == true }
++      if (hasLocalThemeIcons) {
++        this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = null
++      } else {
++        this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = this
++      }
+     }
+   }
+ 

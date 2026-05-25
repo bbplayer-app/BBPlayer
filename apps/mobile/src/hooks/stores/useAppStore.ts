@@ -110,6 +110,7 @@ export const useAppStore = create<AppState>()(
 					danmakuFilterLevel: 0,
 					downloadMaxParallelTasks: 1,
 					enableMinimalistMode: false,
+					enableMygoTheme: false,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,
