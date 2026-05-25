@@ -2,7 +2,7 @@ import * as Clipboard from 'expo-clipboard'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
 	Avatar,
@@ -15,7 +15,6 @@ import {
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -340,7 +339,7 @@ export default function SharedPlaylistPreviewPage() {
 						</>
 					}
 					refreshControl={
-						<SkinRefreshControl
+						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={async () => {
 								setRefreshing(true)

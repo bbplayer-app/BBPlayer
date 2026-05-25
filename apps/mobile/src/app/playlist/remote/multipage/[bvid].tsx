@@ -2,10 +2,9 @@ import type { FlashListRef } from '@shopify/flash-list'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
-import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
@@ -318,7 +317,7 @@ export default function MultipagePage() {
 						/>
 					}
 					refreshControl={
-						<SkinRefreshControl
+						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={async () => {
 								setRefreshing(true)

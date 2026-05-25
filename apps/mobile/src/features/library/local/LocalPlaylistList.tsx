@@ -1,12 +1,11 @@
 import { Icon } from '@expo/ui'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
-import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -193,7 +192,7 @@ const LocalPlaylistListComponent = memo(() => {
 					data={finalPlaylists ?? []}
 					renderItem={renderPlaylistItem}
 					refreshControl={
-						<SkinRefreshControl
+						<RefreshControl
 							refreshing={refreshing || playlistsIsRefetching}
 							onRefresh={onRefresh}
 							colors={[colors.primary]}

@@ -1,11 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
 
-import SkinRefreshControl from '@/components/common/SkinRefreshControl'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { FavoriteFolderListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -104,7 +103,7 @@ const FavoriteFolderListComponent = memo(() => {
 				data={filteredPlaylists}
 				renderItem={renderPlaylistItem}
 				refreshControl={
-					<SkinRefreshControl
+					<RefreshControl
 						refreshing={refreshing || playlistsIsRefetching}
 						onRefresh={onRefresh}
 						colors={[colors.primary]}
