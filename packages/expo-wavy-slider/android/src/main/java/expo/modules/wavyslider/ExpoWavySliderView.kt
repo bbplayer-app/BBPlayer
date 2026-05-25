@@ -2,10 +2,14 @@ package expo.modules.wavyslider
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.view.ViewGroup.LayoutParams
 import android.widget.Space
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -33,8 +37,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.records.Field
@@ -117,16 +123,51 @@ private val BufferedThumbTrackGapSize = 8.dp
 private val BufferedTrackInsideCornerSize = 2.dp
 private val CustomThumbSize = 18.dp
 private val CircleThumbSize = 20.dp
+private const val DefaultThumbImageSize = 32.0f
+
+private fun loadBitmapFromUri(context: Context, uri: String?): Bitmap? {
+    if (uri.isNullOrBlank()) return null
+    return try {
+        val parsedUri = Uri.parse(uri)
+        when (parsedUri.scheme) {
+            "file" -> BitmapFactory.decodeFile(parsedUri.path)
+            "content" -> context.contentResolver.openInputStream(parsedUri)?.use {
+                BitmapFactory.decodeStream(it)
+            }
+            null -> BitmapFactory.decodeFile(uri)
+            else -> null
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun WavySliderThumb(
+    context: Context,
     interactionSource: MutableInteractionSource,
     sliderColors: androidx.compose.material3.SliderColors,
     sliderEnabled: Boolean,
     configuredColors: WavySliderColors,
-    thumbShape: WavySliderThumbShape
+    thumbShape: WavySliderThumbShape,
+    thumbImageUri: String?,
+    thumbImageSize: Float
 ) {
+    val thumbImage = remember(thumbImageUri) {
+        loadBitmapFromUri(context, thumbImageUri)
+    }
+
+    if (thumbImage != null) {
+        Image(
+            bitmap = thumbImage.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(thumbImageSize.dp)
+        )
+        return
+    }
+
     when (thumbShape) {
         WavySliderThumbShape.DEFAULT -> SliderDefaults.Thumb(
             interactionSource = interactionSource,
@@ -182,6 +223,10 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
     var waveVelocityState by mutableStateOf<ObservableState?>(null)
     var waveDirection by mutableStateOf(WavySliderWaveDirection.HEAD)
     var thumbShape by mutableStateOf(WavySliderThumbShape.DEFAULT)
+    var thumbImageUri by mutableStateOf<String?>(null)
+    var thumbImageDragLeftUri by mutableStateOf<String?>(null)
+    var thumbImageDragRightUri by mutableStateOf<String?>(null)
+    var thumbImageSize by mutableFloatStateOf(DefaultThumbImageSize)
     var waveThickness by mutableFloatStateOf(4.0f)
     var waveThicknessState by mutableStateOf<ObservableState?>(null)
     var trackThickness by mutableFloatStateOf(4.0f)
@@ -289,6 +334,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
 
                     var localValue by remember { mutableFloatStateOf(clampedPropsValue) }
                     var isDragging by remember { mutableStateOf(false) }
+                    var dragDirection by remember { mutableFloatStateOf(0.0f) }
                     var prevPropsValue by remember { mutableFloatStateOf(clampedPropsValue) }
 
                     if (clampedPropsValue != prevPropsValue) {
@@ -314,6 +360,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         interactionSource = interactionSource,
                         onValueChange = {
                             val clamped = it.coerceIn(effectiveLower, effectiveUpper)
+                            dragDirection = clamped - localValue
                             isDragging = true
                             localValue = clamped
                             progress?.value = clamped
@@ -321,6 +368,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         },
                         onValueChangeFinished = {
                             isDragging = false
+                            dragDirection = 0.0f
                             progress?.value = localValue
                             onValueChangeFinished?.invoke(localValue)
                         },
@@ -333,12 +381,21 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         incremental = incremental,
                         animationSpecs = animationSpecs,
                         thumb = {
+                            val activeThumbImageUri = when {
+                                !isDragging -> thumbImageUri
+                                dragDirection < 0f -> thumbImageDragLeftUri ?: thumbImageUri
+                                dragDirection > 0f -> thumbImageDragRightUri ?: thumbImageUri
+                                else -> thumbImageUri
+                            }
                             WavySliderThumb(
+                                context = context,
                                 interactionSource = interactionSource,
                                 sliderColors = sliderColors,
                                 sliderEnabled = sliderEnabled,
                                 configuredColors = colors,
-                                thumbShape = thumbShape
+                                thumbShape = thumbShape,
+                                thumbImageUri = activeThumbImageUri,
+                                thumbImageSize = thumbImageSize
                             )
                         },
                         track = { sliderState ->

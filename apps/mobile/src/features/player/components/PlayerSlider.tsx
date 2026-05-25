@@ -14,6 +14,7 @@ import {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -89,6 +90,7 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
+	const activeSkin = useActiveSkin()
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
 
@@ -257,6 +259,10 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				waveHeight={animatedWaveHeight}
 				waveThickness={animatedWaveThickness}
 				trackThickness={animatedTrackThickness}
+				thumbImageUri={activeSkin?.player.sliderThumb.normal.uri}
+				thumbImageDragLeftUri={activeSkin?.player.sliderThumb.dragLeft.uri}
+				thumbImageDragRightUri={activeSkin?.player.sliderThumb.dragRight.uri}
+				thumbImageSize={activeSkin ? 34 : undefined}
 				incremental={false}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}

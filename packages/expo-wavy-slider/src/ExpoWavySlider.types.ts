@@ -207,6 +207,25 @@ export type WavySliderProps = ViewProps & {
 	 */
 	thumbShape?: WavySliderThumbShape
 	/**
+	 * Optional image URI used as the slider thumb. Runtime-downloaded skins
+	 * should pass a local file URI.
+	 */
+	thumbImageUri?: string | null
+	/**
+	 * Optional image URI used while dragging toward the start of the slider.
+	 */
+	thumbImageDragLeftUri?: string | null
+	/**
+	 * Optional image URI used while dragging toward the end of the slider.
+	 */
+	thumbImageDragRightUri?: string | null
+	/**
+	 * Image thumb size in dp.
+	 *
+	 * @default 32
+	 */
+	thumbImageSize?: number
+	/**
 	 * Stroke thickness for the active wave in dp.
 	 *
 	 * @default 4

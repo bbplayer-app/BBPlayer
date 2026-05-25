@@ -120,6 +120,22 @@ class ExpoWavySliderModule : Module() {
                 view.thumbShape = thumbShape
             }
 
+            Prop("thumbImageUri", null as String?) { view: ExpoWavySliderView, uri: String? ->
+                view.thumbImageUri = uri
+            }
+
+            Prop("thumbImageDragLeftUri", null as String?) { view: ExpoWavySliderView, uri: String? ->
+                view.thumbImageDragLeftUri = uri
+            }
+
+            Prop("thumbImageDragRightUri", null as String?) { view: ExpoWavySliderView, uri: String? ->
+                view.thumbImageDragRightUri = uri
+            }
+
+            Prop("thumbImageSize") { view: ExpoWavySliderView, size: Float ->
+                view.thumbImageSize = size
+            }
+
             Prop("waveThickness") { view: ExpoWavySliderView, value: Either<ObservableStateHandle, Float> ->
                 value.setObservableFloat(appContext, { view.waveThicknessState = it }, { view.waveThickness = it })
             }
