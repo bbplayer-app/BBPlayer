@@ -18,4 +18,3 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   '@bottom-tabs/react-navigation@1.2.0': patches/@bottom-tabs__react-navigation@1.2.0.patch
-  react-native-mmkv: patches/react-native-mmkv.patch
