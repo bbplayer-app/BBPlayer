@@ -89,6 +89,10 @@ export default Sentry.wrap(function RootLayout() {
 	}, [])
 
 	useEffect(() => {
+		void hideBootSplash({ fade: false })
+	}, [])
+
+	useEffect(() => {
 		try {
 			useAppStore.getState()
 
@@ -207,138 +211,136 @@ export default Sentry.wrap(function RootLayout() {
 		)
 	}
 
-	if (!migrationsSuccess || !isReady) {
-		return null
-	}
-
 	return (
 		<View style={styles.appContainer}>
 			<AppProviders>
-				<Stack screenOptions={{ headerShown: false }}>
-					<Stack.Screen
-						name='(tabs)'
-						options={{ headerShown: false }}
-					/>
+				{migrationsSuccess && isReady ? (
+					<Stack screenOptions={{ headerShown: false }}>
+						<Stack.Screen
+							name='(tabs)'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='player'
-						options={{
-							animation: 'slide_from_bottom',
-							headerShown: false,
-						}}
-					/>
+						<Stack.Screen
+							name='player'
+							options={{
+								animation: 'slide_from_bottom',
+								headerShown: false,
+							}}
+						/>
 
-					<Stack.Screen
-						name='test'
-						options={{ headerShown: false }}
-					/>
+						<Stack.Screen
+							name='test'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='playlist/remote/search-result/global/[query]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/remote/collection/[id]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/remote/favorite/[id]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/remote/multipage/[bvid]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/remote/uploader/[mid]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/remote/search-result/fav/[query]'
-						options={{ headerShown: false }}
-					/>
+						<Stack.Screen
+							name='playlist/remote/search-result/global/[query]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/remote/collection/[id]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/remote/favorite/[id]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/remote/multipage/[bvid]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/remote/uploader/[mid]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/remote/search-result/fav/[query]'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='playlist/local/[id]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='share/playlist'
-						options={{ headerShown: false }}
-					/>
+						<Stack.Screen
+							name='playlist/local/[id]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='share/playlist'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='history/overall'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='history/[date]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='download'
-						options={{ headerShown: false }}
-					/>
+						<Stack.Screen
+							name='history/overall'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='history/[date]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='download'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='+not-found'
-						options={{ headerShown: false }}
-					/>
+						<Stack.Screen
+							name='+not-found'
+							options={{ headerShown: false }}
+						/>
 
-					<Stack.Screen
-						name='modal'
-						options={{
-							presentation: 'transparentModal',
-							gestureEnabled: false,
-							animation: 'fade',
-							headerShown: false,
-						}}
-					/>
-					<Stack.Screen
-						name='playlist/remote/toview'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='comments/[bvid]'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='comments/reply'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='playlist/external-sync'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/appearance'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/playback'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/lyrics'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/download'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/general'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/account'
-						options={{ headerShown: false }}
-					/>
-					<Stack.Screen
-						name='settings/donate'
-						options={{ headerShown: false }}
-					/>
-				</Stack>
+						<Stack.Screen
+							name='modal'
+							options={{
+								presentation: 'transparentModal',
+								gestureEnabled: false,
+								animation: 'fade',
+								headerShown: false,
+							}}
+						/>
+						<Stack.Screen
+							name='playlist/remote/toview'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='comments/[bvid]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='comments/reply'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/external-sync'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/appearance'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/playback'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/lyrics'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/download'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/general'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/account'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/donate'
+							options={{ headerShown: false }}
+						/>
+					</Stack>
+				) : null}
 				<Toaster />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
