@@ -49,6 +49,10 @@ export interface AppSkin {
 		frameStrip: SkinImageSource
 		preview: SkinImageSource
 	}
+	bootSplash: {
+		card: SkinImageSource
+		video: SkinImageSource
+	}
 }
 
 const localSkinRoot =
@@ -149,6 +153,14 @@ export const mygoSunnySkySkin: AppSkin = {
 		},
 		preview: {
 			uri: skinUri(localSkinRoot, 'loading/loading.png'),
+		},
+	},
+	bootSplash: {
+		card: {
+			uri: skinUri(localSkinRoot, 'splash/card.png'),
+		},
+		video: {
+			uri: skinUri(localSkinRoot, 'splash/intro.mp4'),
 		},
 	},
 }

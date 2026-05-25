@@ -10,7 +10,6 @@ import expoImage from 'expo-image/plugin'
 import expoMediaLibrary from 'expo-media-library/plugin'
 import expoRouter from 'expo-router/plugin'
 import expoSharing from 'expo-sharing/plugin'
-import expoSplashScreen from 'expo-splash-screen/plugin'
 import expoSqlite from 'expo-sqlite/plugin'
 import expoWebBrowser from 'expo-web-browser/plugin'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
@@ -152,14 +151,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 							: ['arm64-v8a'],
 				},
 			],
+			'./expo-plugins/withAndroidSplashScreenCompat',
+			'./expo-plugins/withRemoveExpoSplashScreen',
 			expoDevClient({
 				launchMode: 'most-recent',
 			}),
-			expoSplashScreen({
-				image: './assets/images/splash-icon.png',
-				imageWidth: 200,
-				resizeMode: 'contain',
-			}),
+			[
+				'react-native-bootsplash',
+				{
+					logo: './assets/images/splash-icon.png',
+					logoWidth: 120,
+					background: '#ffffff',
+					assetsOutput: 'assets/bootsplash',
+				},
+			],
 			[
 				'@sentry/react-native/expo',
 				{

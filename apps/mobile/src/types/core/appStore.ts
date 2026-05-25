@@ -17,6 +17,7 @@ interface Settings {
 	enableMygoTheme: boolean
 	activeSkinId: string | null
 	useSkinJsBottomTabs: boolean
+	playFullSkinBootSplashAnimation: boolean
 }
 
 interface BilibiliUserSummary {

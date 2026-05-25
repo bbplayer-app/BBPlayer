@@ -41,6 +41,9 @@ export default function AppearanceSettingsPage() {
 	const useSkinJsBottomTabs = useAppStore(
 		(state) => state.settings.useSkinJsBottomTabs,
 	)
+	const playFullSkinBootSplashAnimation = useAppStore(
+		(state) => state.settings.playFullSkinBootSplashAnimation,
+	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
@@ -179,6 +182,26 @@ export default function AppearanceSettingsPage() {
 							value={useSkinJsBottomTabs}
 							onValueChange={(value) =>
 								setSettings({ useSkinJsBottomTabs: value })
+							}
+						/>
+					</View>
+				)}
+
+				{activeSkinId && (
+					<View style={styles.settingRow}>
+						<View style={styles.settingTextContainer}>
+							<Text>完整播放主题启动动画</Text>
+							<Text
+								variant='bodySmall'
+								style={{ color: colors.onSurfaceVariant }}
+							>
+								关闭时应用加载完成后立即淡出启动动画
+							</Text>
+						</View>
+						<UniversalSwitch
+							value={playFullSkinBootSplashAnimation}
+							onValueChange={(value) =>
+								setSettings({ playFullSkinBootSplashAnimation: value })
 							}
 						/>
 					</View>

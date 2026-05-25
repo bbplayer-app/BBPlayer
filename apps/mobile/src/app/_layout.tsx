@@ -6,14 +6,16 @@ import {
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import { Stack, SplashScreen } from 'expo-router'
+import { Stack } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, StyleSheet, View } from 'react-native'
+import { hide as hideBootSplash } from 'react-native-bootsplash'
 import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
+import AnimatedBootSplash from '@/components/AnimatedBootSplash'
 import { alert } from '@/components/modals/AlertModal'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
@@ -37,9 +39,6 @@ import toast from '@/utils/toast'
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
-
-// 在获取资源时保持启动画面可见
-void SplashScreen.preventAutoHideAsync()
 
 // 初始化 Sentry
 initializeSentry()
@@ -163,8 +162,6 @@ export default Sentry.wrap(function RootLayout() {
 
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
-			SplashScreen.hide()
-
 			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 			playlistSyncWorker.recoverStuckRows().catch((error) => {
 				logger.error('恢复同步任务失败:', error)
@@ -179,7 +176,7 @@ export default Sentry.wrap(function RootLayout() {
 
 	useEffect(() => {
 		if (migrationsError) {
-			SplashScreen.hide()
+			void hideBootSplash({ fade: true })
 			logger.error('数据库迁移失败：', migrationsError)
 		}
 	}, [migrationsError])
@@ -215,138 +212,144 @@ export default Sentry.wrap(function RootLayout() {
 	}
 
 	return (
-		<AppProviders>
-			<Stack screenOptions={{ headerShown: false }}>
-				<Stack.Screen
-					name='(tabs)'
-					options={{ headerShown: false }}
-				/>
+		<View style={styles.appContainer}>
+			<AppProviders>
+				<Stack screenOptions={{ headerShown: false }}>
+					<Stack.Screen
+						name='(tabs)'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='player'
-					options={{
-						animation: 'slide_from_bottom',
-						headerShown: false,
-					}}
-				/>
+					<Stack.Screen
+						name='player'
+						options={{
+							animation: 'slide_from_bottom',
+							headerShown: false,
+						}}
+					/>
 
-				<Stack.Screen
-					name='test'
-					options={{ headerShown: false }}
-				/>
+					<Stack.Screen
+						name='test'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='playlist/remote/search-result/global/[query]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/remote/collection/[id]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/remote/favorite/[id]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/remote/multipage/[bvid]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/remote/uploader/[mid]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/remote/search-result/fav/[query]'
-					options={{ headerShown: false }}
-				/>
+					<Stack.Screen
+						name='playlist/remote/search-result/global/[query]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/remote/collection/[id]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/remote/favorite/[id]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/remote/multipage/[bvid]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/remote/uploader/[mid]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/remote/search-result/fav/[query]'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='playlist/local/[id]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='share/playlist'
-					options={{ headerShown: false }}
-				/>
+					<Stack.Screen
+						name='playlist/local/[id]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='share/playlist'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='history/overall'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='history/[date]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='download'
-					options={{ headerShown: false }}
-				/>
+					<Stack.Screen
+						name='history/overall'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='history/[date]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='download'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='+not-found'
-					options={{ headerShown: false }}
-				/>
+					<Stack.Screen
+						name='+not-found'
+						options={{ headerShown: false }}
+					/>
 
-				<Stack.Screen
-					name='modal'
-					options={{
-						presentation: 'transparentModal',
-						gestureEnabled: false,
-						animation: 'fade',
-						headerShown: false,
-					}}
-				/>
-				<Stack.Screen
-					name='playlist/remote/toview'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='comments/[bvid]'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='comments/reply'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='playlist/external-sync'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/appearance'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/playback'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/lyrics'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/download'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/general'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/account'
-					options={{ headerShown: false }}
-				/>
-				<Stack.Screen
-					name='settings/donate'
-					options={{ headerShown: false }}
-				/>
-			</Stack>
-			<Toaster />
-		</AppProviders>
+					<Stack.Screen
+						name='modal'
+						options={{
+							presentation: 'transparentModal',
+							gestureEnabled: false,
+							animation: 'fade',
+							headerShown: false,
+						}}
+					/>
+					<Stack.Screen
+						name='playlist/remote/toview'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='comments/[bvid]'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='comments/reply'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='playlist/external-sync'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/appearance'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/playback'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/lyrics'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/download'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/general'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/account'
+						options={{ headerShown: false }}
+					/>
+					<Stack.Screen
+						name='settings/donate'
+						options={{ headerShown: false }}
+					/>
+				</Stack>
+				<Toaster />
+			</AppProviders>
+			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
+		</View>
 	)
 })
 
 const styles = StyleSheet.create({
+	appContainer: {
+		flex: 1,
+	},
 	errorContainer: {
 		flex: 1,
 		justifyContent: 'center',
