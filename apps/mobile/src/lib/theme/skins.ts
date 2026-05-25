@@ -13,6 +13,8 @@ export interface AppSkin {
 	rootUri: string
 	tabBar: {
 		background: SkinImageSource
+		labelColor: string
+		labelSelectedColor: string
 		icons: {
 			home: { default: SkinImageSource; selected: SkinImageSource }
 			library: { default: SkinImageSource; selected: SkinImageSource }
@@ -61,6 +63,8 @@ export const mygoSunnySkySkin: AppSkin = {
 		background: {
 			uri: skinUri(localSkinRoot, 'skin/tail_bg.png'),
 		},
+		labelColor: '#FFFFFF',
+		labelSelectedColor: '#FFFFFF',
 		icons: {
 			home: {
 				default: {

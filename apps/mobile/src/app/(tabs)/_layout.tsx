@@ -11,6 +11,8 @@ import type {
 } from 'expo-router/react-navigation'
 import { useTheme } from 'react-native-paper'
 
+import SkinBottomTabBar from '@/components/navigation/SkinBottomTabBar'
+import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { skinImageSource } from '@/lib/theme/skins'
 
@@ -36,6 +38,9 @@ export default function TabLayout() {
 	const themes = useTheme().colors
 	const activeSkin = useActiveSkin()
 	const useSkinTabs = activeSkin !== null
+	const useSkinJsBottomTabs = useAppStore(
+		(state) => state.settings.useSkinJsBottomTabs,
+	)
 
 	return (
 		<Tabs
@@ -45,6 +50,11 @@ export default function TabLayout() {
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={'transparent'}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
+			tabBar={
+				useSkinTabs && useSkinJsBottomTabs
+					? (props) => <SkinBottomTabBar {...props} />
+					: undefined
+			}
 			initialRouteName='index'
 		>
 			<Tabs.Screen

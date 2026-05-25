@@ -16,6 +16,7 @@ interface Settings {
 	enableMinimalistMode: boolean
 	enableMygoTheme: boolean
 	activeSkinId: string | null
+	useSkinJsBottomTabs: boolean
 }
 
 interface BilibiliUserSummary {

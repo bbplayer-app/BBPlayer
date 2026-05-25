@@ -38,6 +38,9 @@ export default function AppearanceSettingsPage() {
 		(state) => state.settings.enableMinimalistMode,
 	)
 	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
+	const useSkinJsBottomTabs = useAppStore(
+		(state) => state.settings.useSkinJsBottomTabs,
+	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
@@ -160,6 +163,26 @@ export default function AppearanceSettingsPage() {
 						}
 					/>
 				</View>
+
+				{activeSkinId && (
+					<View style={styles.settingRow}>
+						<View style={styles.settingTextContainer}>
+							<Text>使用皮肤底栏背景</Text>
+							<Text
+								variant='bodySmall'
+								style={{ color: colors.onSurfaceVariant }}
+							>
+								开启后使用 JS 底栏展示主题背景，可随时切回原生底栏
+							</Text>
+						</View>
+						<UniversalSwitch
+							value={useSkinJsBottomTabs}
+							onValueChange={(value) =>
+								setSettings({ useSkinJsBottomTabs: value })
+							}
+						/>
+					</View>
+				)}
 
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>

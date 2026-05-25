@@ -112,6 +112,7 @@ export const useAppStore = create<AppState>()(
 					enableMinimalistMode: false,
 					enableMygoTheme: false,
 					activeSkinId: null,
+					useSkinJsBottomTabs: false,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,
