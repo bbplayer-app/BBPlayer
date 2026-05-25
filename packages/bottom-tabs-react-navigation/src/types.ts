@@ -6,7 +6,7 @@ import type {
 	RouteProp,
 	TabActionHelpers,
 	TabNavigationState,
-} from '@react-navigation/native'
+} from 'expo-router/react-navigation'
 import type { ImageSourcePropType, StyleProp, ViewStyle } from 'react-native'
 import type TabView from 'react-native-bottom-tabs'
 import type { AppleIcon, TabRole } from 'react-native-bottom-tabs'

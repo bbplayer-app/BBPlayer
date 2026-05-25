@@ -319,6 +319,9 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
         }
       }
     }
+    post {
+      updateTintColors()
+    }
   }
 
   fun setLabeled(labeled: Boolean?) {
@@ -473,7 +476,12 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
 
     ColorStateList(states, colors).apply {
       this@ReactBottomNavigationView.bottomNavigation.itemTextColor = this
-      this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = this
+      val hasLocalThemeIcons = iconSources.values.any { it.uri?.contains("bilibili_skin_exp") == true }
+      if (hasLocalThemeIcons) {
+        this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = null
+      } else {
+        this@ReactBottomNavigationView.bottomNavigation.itemIconTintList = this
+      }
     }
   }
 

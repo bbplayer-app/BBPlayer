@@ -3,7 +3,7 @@ import {
 	type TabNavigationState,
 	type Route,
 	CommonActions,
-} from '@react-navigation/native'
+} from 'expo-router/react-navigation'
 import TabView from 'react-native-bottom-tabs'
 
 import type {

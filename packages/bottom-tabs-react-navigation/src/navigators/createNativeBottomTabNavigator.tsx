@@ -1,3 +1,4 @@
+import Color from 'color'
 import {
 	createNavigatorFactory,
 	type DefaultNavigatorOptions,
@@ -11,8 +12,7 @@ import {
 	type TypedNavigator,
 	useNavigationBuilder,
 	useTheme,
-} from '@react-navigation/native'
-import Color from 'color'
+} from 'expo-router/react-navigation'
 
 import type {
 	NativeBottomTabNavigationConfig,
