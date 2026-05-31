@@ -17,7 +17,14 @@ import type {
 
 interface InstallSkinPackageOptions {
 	item: GarbSkinSearchResult
-	onProgress?: (progress: number) => void
+	onProgress?: (progress: SkinDownloadProgress) => void
+}
+
+export interface SkinDownloadProgress {
+	progress: number
+	completed: number
+	total: number
+	label: string
 }
 
 const SEMANTIC_SKIN_ROOT = 'skins'
@@ -31,11 +38,23 @@ const sanitizeSegment = (value: string): string =>
 		.replace(/^-+|-+$/g, '')
 		.slice(0, 80)
 
+const ensureDirectory = (directory: FileSystem.Directory) => {
+	if (directory.exists) return
+
+	try {
+		directory.create({ idempotent: true, intermediates: true })
+	} catch (error) {
+		if (!directory.exists) {
+			throw error
+		}
+	}
+}
+
 const ensureCleanDirectory = (directory: FileSystem.Directory) => {
 	if (directory.exists) {
 		directory.delete()
 	}
-	directory.create({ idempotent: true, intermediates: true })
+	ensureDirectory(directory)
 }
 
 const extensionFromUrl = (url: string, fallback: string) => {
@@ -55,18 +74,18 @@ const downloadFile = async (
 	root: FileSystem.Directory,
 	url: string | null | undefined,
 	localPath: string,
-	onDownloaded?: () => void,
+	onDownloaded?: (label: string) => void,
 ) => {
 	if (!isRemoteUrl(url)) return null
 
 	const file = new FileSystem.File(root, localPath)
-	file.parentDirectory.create({ idempotent: true, intermediates: true })
 	try {
+		ensureDirectory(file.parentDirectory)
 		await FileSystem.File.downloadFileAsync(url, file, { idempotent: true })
-		onDownloaded?.()
+		onDownloaded?.(localPath)
 		return localPath
 	} catch {
-		onDownloaded?.()
+		onDownloaded?.(`跳过 ${localPath}`)
 		return null
 	}
 }
@@ -137,14 +156,64 @@ const countRemoteFiles = (value: unknown): number => {
 	return 0
 }
 
+const countSemanticFiles = (assets: UnifiedAssets): number =>
+	[
+		assets.skin?.head_bg,
+		assets.skin?.head_tab_bg,
+		assets.skin?.head_myself_bg,
+		assets.skin?.head_myself_squared_bg,
+		assets.skin?.head_myself_mp4_bg,
+		assets.skin?.side_bg,
+		assets.skin?.side_bg_bottom,
+		assets.skin?.tail_bg,
+		assets.skin?.tail_icon_main,
+		assets.skin?.tail_icon_channel,
+		assets.skin?.tail_icon_dynamic,
+		assets.skin?.tail_icon_shop,
+		assets.skin?.tail_icon_myself,
+		assets.skin?.tail_icon_pub_btn_bg,
+		assets.skin?.tail_icon_selected_main,
+		assets.skin?.tail_icon_selected_channel,
+		assets.skin?.tail_icon_selected_dynamic,
+		assets.skin?.tail_icon_selected_shop,
+		assets.skin?.tail_icon_selected_myself,
+		assets.play_icon?.drag_left_png,
+		assets.play_icon?.drag_right_png,
+		assets.play_icon?.middle_png,
+		assets.play_icon?.static_icon_image,
+		assets.play_icon?.squared_image,
+		assets.loading?.loading_url,
+		assets.loading?.loading_frame_url,
+		assets.loading?.preview,
+		assets.thumbup?.ani_file,
+		assets.thumbup?.ani_cut,
+		assets.thumbup?.preview,
+		...(assets.cards ?? []).flatMap((card) => [
+			card.image_no_watermark,
+			card.image_watermark,
+			...card.video_no_watermark,
+		]),
+		...(assets.space_bg ?? []).flatMap((spaceBg) => [
+			spaceBg.landscape,
+			spaceBg.portrait,
+			spaceBg.landscape_video,
+			spaceBg.portrait_video,
+		]),
+	].filter(isRemoteUrl).length
+
 const makeProgress = (
 	total: number,
-	onProgress?: (progress: number) => void,
+	onProgress?: (progress: SkinDownloadProgress) => void,
 ) => {
 	let completed = 0
-	return () => {
+	return (label: string) => {
 		completed += 1
-		onProgress?.(total > 0 ? Math.min(1, completed / total) : 0)
+		onProgress?.({
+			progress: total > 0 ? Math.min(1, completed / total) : 0,
+			completed,
+			total,
+			label,
+		})
 	}
 }
 
@@ -156,7 +225,7 @@ const downloadRawAssets = async (
 	value: unknown,
 	path: string,
 	downloadedFiles: Record<string, string>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (typeof value === 'string') {
 		if (!isRemoteUrl(value)) return
@@ -204,7 +273,7 @@ const downloadSkinAssets = async (
 	root: FileSystem.Directory,
 	assets: UnifiedAssets,
 	localAssets: Partial<UnifiedAssets>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (!assets.skin) return
 
@@ -331,7 +400,7 @@ const downloadPlayIconAssets = async (
 	root: FileSystem.Directory,
 	assets: UnifiedAssets,
 	localAssets: Partial<UnifiedAssets>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (!assets.play_icon) return
 
@@ -374,7 +443,7 @@ const downloadLoadingAssets = async (
 	root: FileSystem.Directory,
 	assets: UnifiedAssets,
 	localAssets: Partial<UnifiedAssets>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (!assets.loading) return
 
@@ -404,7 +473,7 @@ const downloadThumbupAssets = async (
 	root: FileSystem.Directory,
 	assets: UnifiedAssets,
 	localAssets: Partial<UnifiedAssets>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (!assets.thumbup) return null
 
@@ -443,7 +512,7 @@ const downloadThumbupAssets = async (
 const downloadCards = async (
 	root: FileSystem.Directory,
 	cards: CardAsset[] | null,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	if (!cards?.length) return null
 
@@ -487,7 +556,7 @@ const downloadOtherAssetGroups = async (
 	root: FileSystem.Directory,
 	assets: UnifiedAssets,
 	localAssets: Partial<UnifiedAssets>,
-	onDownloaded: () => void,
+	onDownloaded: (label: string) => void,
 ) => {
 	localAssets.cards = await downloadCards(root, assets.cards, onDownloaded)
 
@@ -527,9 +596,10 @@ const downloadOtherAssetGroups = async (
 const downloadManifestAssets = async (
 	root: FileSystem.Directory,
 	manifest: UnifiedAssetManifest,
-	onProgress?: (progress: number) => void,
+	onProgress?: (progress: SkinDownloadProgress) => void,
 ) => {
-	const totalRemoteFiles = countRemoteFiles(manifest.assets)
+	const totalRemoteFiles =
+		countRemoteFiles(manifest.assets) + countSemanticFiles(manifest.assets)
 	const onDownloaded = makeProgress(totalRemoteFiles, onProgress)
 	const localAssets: Partial<UnifiedAssets> = {}
 	const downloadedFiles: Record<string, string> = {}
@@ -585,7 +655,12 @@ export async function installSkinPackage({
 	ensureCleanDirectory(tempDirectory)
 	ensureCleanDirectory(installDirectory)
 
-	onProgress?.(0)
+	onProgress?.({
+		progress: 0,
+		completed: 0,
+		total: 0,
+		label: '读取 B 站资产清单',
+	})
 	const manifest = await buildGarbAssetManifest(item)
 	const { downloadedFiles, frames, localAssets } = await downloadManifestAssets(
 		installDirectory,
@@ -598,7 +673,12 @@ export async function installSkinPackage({
 		localAssets,
 	}
 	const assetManifestPath = writeManifest(installDirectory, completedManifest)
-	onProgress?.(1)
+	onProgress?.({
+		progress: 1,
+		completed: 1,
+		total: 1,
+		label: '写入资产声明文件',
+	})
 	const bootSplashAssets = createBootSplashAssets(manifest.assets, localAssets)
 
 	return {

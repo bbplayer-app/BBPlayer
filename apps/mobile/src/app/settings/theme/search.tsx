@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native'
 import { Appbar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { alert } from '@/components/modals/AlertModal'
@@ -27,6 +28,8 @@ export default function ThemeSkinSearchPage() {
 	const [searching, setSearching] = useState(false)
 	const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
 	const [progress, setProgress] = useState(0)
+	const [progressLabel, setProgressLabel] = useState('')
+	const [progressCount, setProgressCount] = useState({ completed: 0, total: 0 })
 
 	const search = async () => {
 		const trimmed = query.trim()
@@ -52,10 +55,19 @@ export default function ThemeSkinSearchPage() {
 
 		setDownloadingKey(resultKey(item))
 		setProgress(0)
+		setProgressLabel('准备下载')
+		setProgressCount({ completed: 0, total: 0 })
 		try {
 			const installedSkin = await installSkinPackage({
 				item,
-				onProgress: setProgress,
+				onProgress: (event) => {
+					setProgress(event.progress)
+					setProgressLabel(event.label)
+					setProgressCount({
+						completed: event.completed,
+						total: event.total,
+					})
+				},
 			})
 			setSettings({
 				installedSkins: [
@@ -79,6 +91,8 @@ export default function ThemeSkinSearchPage() {
 		} finally {
 			setDownloadingKey(null)
 			setProgress(0)
+			setProgressLabel('')
+			setProgressCount({ completed: 0, total: 0 })
 		}
 	}
 
@@ -181,6 +195,34 @@ export default function ThemeSkinSearchPage() {
 					}
 				/>
 			</View>
+			<AnimatedModalOverlay
+				visible={downloadingKey !== null}
+				onDismiss={() => {}}
+				contentStyle={styles.downloadModal}
+			>
+				<View style={styles.downloadContent}>
+					<Text variant='titleMedium'>正在下载主题资产</Text>
+					<Text
+						variant='bodySmall'
+						numberOfLines={2}
+						style={{ color: colors.onSurfaceVariant }}
+					>
+						{progressLabel || '准备下载'}
+					</Text>
+					<LinearProgressIndicator
+						progress={progress}
+						style={styles.modalProgress}
+					/>
+					<Text
+						variant='bodySmall'
+						style={{ color: colors.onSurfaceVariant }}
+					>
+						{progressCount.total > 0
+							? `${progressCount.completed}/${progressCount.total}`
+							: '正在获取资产清单'}
+					</Text>
+				</View>
+			</AnimatedModalOverlay>
 		</View>
 	)
 }
@@ -226,5 +268,15 @@ const styles = StyleSheet.create({
 	empty: {
 		marginTop: 32,
 		textAlign: 'center',
+	},
+	downloadModal: {
+		paddingHorizontal: 18,
+		paddingBottom: 18,
+	},
+	downloadContent: {
+		gap: 12,
+	},
+	modalProgress: {
+		marginTop: 4,
 	},
 })
