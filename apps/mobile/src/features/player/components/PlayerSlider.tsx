@@ -14,6 +14,7 @@ import {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
@@ -91,6 +92,15 @@ interface PlayerSliderProps {
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
 	const activeSkin = useActiveSkin()
+	const skinSliderThumbSize = useAppStore(
+		(state) => state.settings.skinSliderThumbSize ?? 20,
+	)
+	const skinSliderThumbOffsetX = useAppStore(
+		(state) => state.settings.skinSliderThumbOffsetX ?? 0,
+	)
+	const skinSliderThumbOffsetY = useAppStore(
+		(state) => state.settings.skinSliderThumbOffsetY ?? 0,
+	)
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
 
@@ -262,9 +272,9 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				thumbImageUri={activeSkin?.player.sliderThumb.normal.uri}
 				thumbImageDragLeftUri={activeSkin?.player.sliderThumb.dragLeft.uri}
 				thumbImageDragRightUri={activeSkin?.player.sliderThumb.dragRight.uri}
-				thumbImageSize={activeSkin ? 20 : undefined}
-				thumbImageOffsetX={activeSkin?.player.sliderThumb.offsetX}
-				thumbImageOffsetY={activeSkin?.player.sliderThumb.offsetY}
+				thumbImageSize={activeSkin ? skinSliderThumbSize : undefined}
+				thumbImageOffsetX={activeSkin ? skinSliderThumbOffsetX : undefined}
+				thumbImageOffsetY={activeSkin ? skinSliderThumbOffsetY : undefined}
 				incremental={false}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}

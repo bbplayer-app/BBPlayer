@@ -18,6 +18,9 @@ interface Settings {
 	enableMinimalistMode: boolean
 	activeSkinId: string | null
 	installedSkins: InstalledSkin[]
+	skinSliderThumbSize: number
+	skinSliderThumbOffsetX: number
+	skinSliderThumbOffsetY: number
 	playFullSkinBootSplashAnimation: boolean
 	selectedSkinBootSplashAssetId: string | null
 	selectedSkinBootSplashMode: 'poster' | 'video'

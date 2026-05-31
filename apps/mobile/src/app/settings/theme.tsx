@@ -1,9 +1,13 @@
+import { SegmentedControl } from '@expo/ui/community/segmented-control'
+import { Slider } from '@expo/ui/community/slider'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useVideoPlayer, VideoView } from 'expo-video'
+import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Icon, Text, useTheme } from 'react-native-paper'
+import { useSharedValue } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
@@ -33,6 +37,15 @@ export default function ThemeSettingsPage() {
 	)
 	const selectedSkinBootSplashMode = useAppStore(
 		(state) => state.settings.selectedSkinBootSplashMode,
+	)
+	const skinSliderThumbSize = useAppStore(
+		(state) => state.settings.skinSliderThumbSize ?? 20,
+	)
+	const skinSliderThumbOffsetX = useAppStore(
+		(state) => state.settings.skinSliderThumbOffsetX ?? 0,
+	)
+	const skinSliderThumbOffsetY = useAppStore(
+		(state) => state.settings.skinSliderThumbOffsetY ?? 0,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
 	const [previewAsset, setPreviewAsset] = useState<SkinBootSplashAsset | null>(
@@ -105,6 +118,62 @@ export default function ThemeSettingsPage() {
 						添加主题
 					</Button>
 				</View>
+
+				{installedSkins.length > 0 ? (
+					<View style={styles.section}>
+						<Text variant='titleMedium'>已安装主题</Text>
+						<View style={styles.skinList}>
+							{installedSkins.map((skin) => {
+								const selected = skin.id === activeSkinId
+								return (
+									<Pressable
+										key={skin.id}
+										style={[
+											styles.skinRow,
+											{
+												borderColor: selected
+													? colors.primary
+													: colors.outlineVariant,
+											},
+										]}
+										onPress={() => setSettings({ activeSkinId: skin.id })}
+									>
+										{skin.coverUri ? (
+											<Image
+												source={{ uri: skin.coverUri }}
+												style={styles.skinCover}
+												contentFit='cover'
+											/>
+										) : (
+											<View
+												style={[
+													styles.skinCover,
+													{ backgroundColor: colors.surfaceVariant },
+												]}
+											/>
+										)}
+										<View style={styles.skinText}>
+											<Text numberOfLines={1}>{skin.name}</Text>
+											<Text
+												variant='bodySmall'
+												style={{ color: colors.onSurfaceVariant }}
+											>
+												{selected ? '正在使用' : '点击切换'}
+											</Text>
+										</View>
+										{selected ? (
+											<Icon
+												source='check-circle'
+												size={20}
+												color={colors.primary}
+											/>
+										) : null}
+									</Pressable>
+								)
+							})}
+						</View>
+					</View>
+				) : null}
 
 				{activeSkinId && activeSkin ? (
 					<View style={styles.section}>
@@ -197,6 +266,55 @@ export default function ThemeSettingsPage() {
 						/>
 					</View>
 				) : null}
+
+				{activeSkin ? (
+					<View style={styles.section}>
+						<Text variant='titleMedium'>播放器滑块</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							尺寸 {skinSliderThumbSize} · X {skinSliderThumbOffsetX} · Y{' '}
+							{skinSliderThumbOffsetY}
+						</Text>
+						<Slider
+							style={styles.controlSlider}
+							minimumValue={12}
+							maximumValue={36}
+							step={1}
+							value={skinSliderThumbSize}
+							onValueChange={(value) =>
+								setSettings({ skinSliderThumbSize: Math.round(value) })
+							}
+						/>
+						<Slider
+							style={styles.controlSlider}
+							minimumValue={-24}
+							maximumValue={24}
+							step={1}
+							value={skinSliderThumbOffsetX}
+							onValueChange={(value) =>
+								setSettings({ skinSliderThumbOffsetX: Math.round(value) })
+							}
+						/>
+						<Slider
+							style={styles.controlSlider}
+							minimumValue={-24}
+							maximumValue={24}
+							step={1}
+							value={skinSliderThumbOffsetY}
+							onValueChange={(value) =>
+								setSettings({ skinSliderThumbOffsetY: Math.round(value) })
+							}
+						/>
+						<SliderPreview
+							thumbUri={activeSkin.player.sliderThumb.normal.uri}
+							thumbSize={skinSliderThumbSize}
+							offsetX={skinSliderThumbOffsetX}
+							offsetY={skinSliderThumbOffsetY}
+						/>
+					</View>
+				) : null}
 			</ScrollView>
 
 			<BootSplashAssetPreview
@@ -212,6 +330,54 @@ export default function ThemeSettingsPage() {
 	)
 }
 
+function SliderPreview({
+	offsetX,
+	offsetY,
+	thumbSize,
+	thumbUri,
+}: {
+	offsetX: number
+	offsetY: number
+	thumbSize: number
+	thumbUri: string
+}) {
+	const colors = useTheme().colors
+	const progress = useSharedValue(0.45)
+	const waveHeight = useSharedValue(0)
+	const waveVelocity = useSharedValue(0)
+	const thickness = useSharedValue(3)
+
+	return (
+		<View style={styles.sliderPreview}>
+			<WavySlider
+				style={styles.previewSlider}
+				progress={progress}
+				colors={{
+					activeTrackColor: colors.primary,
+					bufferedTrackColor: colors.primary,
+					inactiveTrackColor: colors.surfaceVariant,
+					thumbColor: colors.primary,
+				}}
+				waveLength={30}
+				waveVelocity={waveVelocity}
+				waveDirection='head'
+				waveHeight={waveHeight}
+				waveThickness={thickness}
+				trackThickness={thickness}
+				thumbImageUri={thumbUri}
+				thumbImageSize={thumbSize}
+				thumbImageOffsetX={offsetX}
+				thumbImageOffsetY={offsetY}
+				incremental={false}
+				onValueChange={(value) => {
+					'worklet'
+					progress.set(value)
+				}}
+			/>
+		</View>
+	)
+}
+
 function BootSplashAssetPreview({
 	asset,
 	onDismiss,
@@ -222,15 +388,20 @@ function BootSplashAssetPreview({
 	onSelect: (asset: SkinBootSplashAsset, mode: 'poster' | 'video') => void
 }) {
 	const colors = useTheme().colors
+	const [mode, setMode] = useState<'poster' | 'video'>('poster')
 	const player = useVideoPlayer(asset?.video?.uri ?? null, (video) => {
 		video.loop = true
 		video.muted = true
 	})
 
 	useEffect(() => {
-		if (!asset?.video) return
+		if (!asset) return
 
-		player.replay()
+		const nextMode = asset.video ? 'video' : 'poster'
+		setMode(nextMode)
+		if (asset.video) {
+			player.replay()
+		}
 	}, [asset, player])
 
 	return (
@@ -246,19 +417,35 @@ function BootSplashAssetPreview({
 					>
 						{asset.name}
 					</Text>
+					{asset.video ? (
+						<View style={styles.segmentedControlContainer}>
+							<SegmentedControl
+								selectedIndex={mode === 'poster' ? 0 : 1}
+								onChange={(event) => {
+									const selectedIndex = event.nativeEvent.selectedSegmentIndex
+									setMode(selectedIndex === 0 ? 'poster' : 'video')
+									if (selectedIndex === 1) {
+										player.replay()
+									}
+								}}
+								values={['静态海报', '动图']}
+							/>
+						</View>
+					) : null}
 					<View
 						style={[
 							styles.previewFrame,
 							{ backgroundColor: colors.elevation.level2 },
 						]}
 					>
-						<Image
-							source={asset.card}
-							style={styles.previewMedia}
-							contentFit='contain'
-							cachePolicy='memory-disk'
-						/>
-						{asset.video ? (
+						{mode === 'poster' || !asset.video ? (
+							<Image
+								source={asset.card}
+								style={styles.previewMedia}
+								contentFit='contain'
+								cachePolicy='memory-disk'
+							/>
+						) : (
 							<VideoView
 								player={player}
 								style={styles.previewMedia}
@@ -266,18 +453,18 @@ function BootSplashAssetPreview({
 								nativeControls={false}
 								surfaceType='textureView'
 							/>
-						) : null}
+						)}
 					</View>
 					<View style={styles.previewActions}>
 						<Button
 							mode='outlined'
-							onPress={() => onSelect(asset, 'poster')}
+							onPress={onDismiss}
 						>
-							使用静态海报
+							取消
 						</Button>
-						{asset.video ? (
-							<Button onPress={() => onSelect(asset, 'video')}>使用动图</Button>
-						) : null}
+						<Button onPress={() => onSelect(asset, mode)}>
+							使用该{mode === 'poster' ? '海报' : '视频'}
+						</Button>
 					</View>
 				</View>
 			) : null}
@@ -307,6 +494,26 @@ const styles = StyleSheet.create({
 	},
 	section: {
 		marginTop: 22,
+	},
+	skinList: {
+		gap: 10,
+		marginTop: 12,
+	},
+	skinRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 12,
+		borderWidth: 1,
+		borderRadius: 8,
+		padding: 10,
+	},
+	skinCover: {
+		width: 48,
+		height: 48,
+		borderRadius: 6,
+	},
+	skinText: {
+		flex: 1,
 	},
 	sectionHeader: {
 		flexDirection: 'row',
@@ -358,6 +565,9 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 		textAlign: 'center',
 	},
+	segmentedControlContainer: {
+		marginBottom: 12,
+	},
 	previewFrame: {
 		width: '100%',
 		aspectRatio: 522 / 696,
@@ -372,6 +582,19 @@ const styles = StyleSheet.create({
 		justifyContent: 'flex-end',
 		gap: 10,
 		marginTop: 16,
+	},
+	controlSlider: {
+		width: '100%',
+		marginTop: 8,
+	},
+	sliderPreview: {
+		marginTop: 12,
+		height: 48,
+		justifyContent: 'center',
+	},
+	previewSlider: {
+		width: '100%',
+		height: 32,
 	},
 	nowPlayingBarContainer: {
 		position: 'absolute',
