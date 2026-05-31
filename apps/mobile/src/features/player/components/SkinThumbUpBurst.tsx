@@ -1,6 +1,6 @@
 import { Image } from 'expo-image'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet } from 'react-native'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
 import Animated, {
 	Easing,
 	useAnimatedStyle,
@@ -26,20 +26,27 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	const opacity = useSharedValue(0)
 	const translateY = useSharedValue(0)
 	const scale = useSharedValue(0.4)
+	const frame = useSharedValue(0)
 	const [visible, setVisible] = useState(false)
-	const imageRef = useRef<Image>(null)
 
 	const thumbUp = skin?.player.thumbUp
+	const frames = thumbUp?.frames
 	const playbackDuration = useMemo(() => {
-		if (!thumbUp) return 0
+		if (!frames) return 0
 
-		return Math.round(
-			(thumbUp.frames.count / Math.max(1, thumbUp.frames.fps)) * 1000,
-		)
-	}, [thumbUp])
+		return Math.round((frames.count / Math.max(1, frames.fps)) * 1000)
+	}, [frames])
+
+	const frameSources = useMemo(() => {
+		if (!frames) return []
+
+		return Array.from({ length: frames.count }, (_, index) => ({
+			uri: `${frames.directoryUri}/frame_${String(index).padStart(3, '0')}.png`,
+		}))
+	}, [frames])
 
 	useEffect(() => {
-		if (!thumbUp || playSignal === 0) return
+		if (!frames || playSignal === 0) return
 
 		const fadeDelay = Math.max(0, playbackDuration - 460)
 		const visibleDuration = playbackDuration + 520
@@ -48,6 +55,7 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 		opacity.value = 0
 		translateY.value = 0
 		scale.value = 0.4
+		frame.value = 0
 
 		opacity.value = withSequence(
 			withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
@@ -64,41 +72,51 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 			duration: 360,
 			easing: Easing.out(Easing.back(1.4)),
 		})
+		frame.value = withTiming(frames.count - 1, {
+			duration: playbackDuration,
+			easing: Easing.linear,
+		})
 
-		const stopTimer = setTimeout(() => {
-			void imageRef.current?.stopAnimating()
-		}, playbackDuration)
 		const hideTimer = setTimeout(() => setVisible(false), visibleDuration)
 		return () => {
-			clearTimeout(stopTimer)
 			clearTimeout(hideTimer)
 		}
-	}, [opacity, playSignal, playbackDuration, scale, thumbUp, translateY])
+	}, [frame, frames, opacity, playSignal, playbackDuration, scale, translateY])
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
 		transform: [{ translateY: translateY.value }, { scale: scale.value }],
 	}))
 
-	if (!visible || !thumbUp) return null
+	const stripStyle = useAnimatedStyle(() => ({
+		transform: [
+			{
+				translateY: -Math.floor(frame.value) * ANIMATION_SIZE,
+			},
+		],
+	}))
+
+	if (!visible || !thumbUp || frameSources.length === 0) return null
 
 	return (
 		<Animated.View
 			pointerEvents='none'
 			style={[styles.container, animatedStyle]}
 		>
-			<Image
-				ref={imageRef}
-				source={thumbUp.gif}
-				style={styles.image}
-				contentFit='contain'
-				cachePolicy='memory-disk'
-				autoplay={false}
-				recyclingKey={`${thumbUp.gif.uri}:${playSignal}`}
-				onLoadEnd={() => {
-					void imageRef.current?.startAnimating()
-				}}
-			/>
+			<View style={styles.viewport}>
+				<Animated.View style={stripStyle}>
+					{frameSources.map((source, index) => (
+						<Image
+							key={`${source.uri}:${playSignal}`}
+							source={source}
+							style={styles.image}
+							contentFit='contain'
+							cachePolicy='memory-disk'
+							recyclingKey={`${source.uri}:${playSignal}:${index}`}
+						/>
+					))}
+				</Animated.View>
+			</View>
 		</Animated.View>
 	)
 })
@@ -112,9 +130,14 @@ const styles = StyleSheet.create({
 		height: ANIMATION_SIZE,
 		zIndex: 10,
 	},
+	viewport: {
+		width: ANIMATION_SIZE,
+		height: ANIMATION_SIZE,
+		overflow: 'hidden',
+	},
 	image: {
-		width: '100%',
-		height: '100%',
+		width: ANIMATION_SIZE,
+		height: ANIMATION_SIZE,
 	},
 })
 
