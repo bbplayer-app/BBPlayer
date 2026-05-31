@@ -63,3 +63,4 @@ apps/**/ios
 external-playlist-experiment/
 .tmp
 bilibili_skin_exp
+codedb.snapshot

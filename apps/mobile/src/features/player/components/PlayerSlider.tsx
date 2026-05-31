@@ -189,7 +189,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		return Math.min(Math.max(pos / dur, 0), 1)
 	})
 
-	const bufferedFraction = useDerivedValue(() => {
+	const _bufferedFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
 		return Math.min(Math.max(buffered.value / dur, 0), 1)
 	})
@@ -251,7 +251,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			<WavySlider
 				style={styles.slider}
 				progress={progressFraction}
-				bufferedProgress={bufferedFraction}
+				// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
 				colors={sliderColors}
 				waveLength={30}
 				waveVelocity={animatedWaveVelocity}
@@ -262,7 +262,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				thumbImageUri={activeSkin?.player.sliderThumb.normal.uri}
 				thumbImageDragLeftUri={activeSkin?.player.sliderThumb.dragLeft.uri}
 				thumbImageDragRightUri={activeSkin?.player.sliderThumb.dragRight.uri}
-				thumbImageSize={activeSkin ? 34 : undefined}
+				thumbImageSize={activeSkin ? 20 : undefined}
 				thumbImageOffsetX={activeSkin?.player.sliderThumb.offsetX}
 				thumbImageOffsetY={activeSkin?.player.sliderThumb.offsetY}
 				incremental={false}

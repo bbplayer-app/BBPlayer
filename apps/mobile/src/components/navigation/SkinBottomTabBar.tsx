@@ -1,3 +1,4 @@
+import MaskedView from '@react-native-masked-view/masked-view'
 import { Image } from 'expo-image'
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs'
 import { BottomTabBarHeightCallbackContext } from 'expo-router/build/react-navigation/bottom-tabs'
@@ -15,8 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { skinImageSource } from '@/lib/theme/skins'
 
-const TAB_ICON_SIZE = 58
-export const SKIN_BOTTOM_TAB_BAR_HEIGHT = 92
+const TAB_ICON_SIZE = 70
+export const SKIN_BOTTOM_TAB_BAR_HEIGHT = 64
 
 export default function SkinBottomTabBar({
 	state,
@@ -32,15 +33,17 @@ export default function SkinBottomTabBar({
 	const tabBarHeight = SKIN_BOTTOM_TAB_BAR_HEIGHT + insets.bottom
 
 	return (
-		<View
-			style={[
-				styles.container,
-				{
-					height: tabBarHeight,
-					paddingBottom: insets.bottom,
-				},
-			]}
+		<MaskedView
+			style={[styles.container, { height: tabBarHeight }]}
 			onLayout={() => setTabBarHeight?.(tabBarHeight)}
+			maskElement={
+				<Image
+					source={skin.tabBar.background}
+					style={StyleSheet.absoluteFill}
+					contentFit='cover'
+					cachePolicy='memory-disk'
+				/>
+			}
 		>
 			<Image
 				source={skin.tabBar.background}
@@ -48,7 +51,7 @@ export default function SkinBottomTabBar({
 				contentFit='cover'
 				cachePolicy='memory-disk'
 			/>
-			<View style={styles.items}>
+			<View style={[styles.items, { paddingBottom: insets.bottom }]}>
 				{state.routes.map((route, index) => {
 					const focused = state.index === index
 					const descriptor = descriptors[route.key]
@@ -98,7 +101,7 @@ export default function SkinBottomTabBar({
 					)
 				})}
 			</View>
-		</View>
+		</MaskedView>
 	)
 }
 
@@ -129,8 +132,9 @@ function SkinTabButton({
 	const iconStyle = useAnimatedStyle(() => ({
 		opacity: 0.72 + progress.value * 0.28,
 		transform: [
-			{ translateY: 8 - progress.value * 12 },
-			{ scale: 0.92 + progress.value * 0.1 },
+			// 聚焦时从下方浮入正常位置（+8→0），而不是整体偏移
+			{ translateY: (1 - progress.value) * 8 },
+			{ scale: 0.95 + progress.value * 0.05 },
 		],
 	}))
 
@@ -155,11 +159,7 @@ function SkinTabButton({
 
 const styles = StyleSheet.create({
 	container: {
-		position: 'absolute',
-		left: 0,
-		right: 0,
-		bottom: 0,
-		overflow: 'hidden',
+		width: '100%',
 		backgroundColor: 'transparent',
 	},
 	items: {
