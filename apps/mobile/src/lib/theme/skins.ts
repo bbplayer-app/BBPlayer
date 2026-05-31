@@ -1,16 +1,36 @@
 import type { ImageSourcePropType } from 'react-native'
 
-export type SkinId = 'mygo-sunny-sky'
+export type SkinId = string
 
 export interface SkinImageSource {
 	uri: string
 	scale?: number
 }
 
+export interface InstalledSkinBootSplashAsset {
+	id: string
+	name: string
+	cardPath: string
+	videoPath?: string | null
+}
+
+export interface InstalledSkin {
+	id: SkinId
+	name: string
+	rootUri: string
+	coverUri?: string | null
+	downloadedAt: number
+	bootSplashAssets?: InstalledSkinBootSplashAsset[]
+	thumbUpFrameCount?: number
+	thumbUpFrameFps?: number
+	thumbUpFrameSize?: number
+}
+
 export interface AppSkin {
 	id: SkinId
 	name: string
 	rootUri: string
+	coverUri?: string | null
 	tabBar: {
 		background: SkinImageSource
 		labelColor: string
@@ -32,7 +52,6 @@ export interface AppSkin {
 		}
 		thumbUp: {
 			svgaBin: SkinImageSource
-			gif: SkinImageSource
 			preview: SkinImageSource
 			frames: {
 				directoryUri: string
@@ -65,182 +84,129 @@ export interface SkinBootSplashAsset {
 	video: SkinImageSource | null
 }
 
-const localSkinRoot =
-	'file:///sdcard/Android/data/com.roitium.bbplayer/files/bilibili_skin_exp/lottery_102857_zip'
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '')
 
-const skinUri = (rootUri: string, path: string): string => `${rootUri}/${path}`
+const skinUri = (rootUri: string, path: string): string => {
+	if (/^(file|https?):\/\//.test(path)) return path
+	return `${trimTrailingSlash(rootUri)}/${path.replace(/^\/+/, '')}`
+}
 
-const bootSplashItemIds = [
-	'1778726160002',
-	'1778726160003',
-	'1778726160004',
-	'1778726160005',
-	'1778726160006',
-	'1778726160007',
-	'1778726160008',
-	'1778726160009',
-	'1778726160010',
-	'1778726160011',
-	'1778726160012',
-	'1778726160013',
-	'1778726160014',
-	'1778726160015',
-	'1778726160016',
-	'1778726160017',
-	'1778726160018',
-	'1778726160019',
-	'1778726160020',
-	'1778726160021',
-	'1778726160022',
-	'1778726160023',
-	'1778726160024',
-	'1778726160025',
-	'1778726160026',
+const source = (
+	rootUri: string,
+	path: string,
+	scale?: number,
+): SkinImageSource => ({
+	uri: skinUri(rootUri, path),
+	scale,
+})
+
+const defaultBootSplashAssets = (rootUri: string): SkinBootSplashAsset[] => [
+	{
+		id: 'default',
+		name: '默认海报',
+		card: source(rootUri, 'splash/card.png'),
+		video: null,
+	},
 ]
 
-const bootSplashVideoItemIds = new Set([
-	'1778726160002',
-	'1778726160003',
-	'1778726160004',
-	'1778726160005',
-	'1778726160006',
-	'1778726160007',
-	'1778726160008',
-	'1778726160024',
-	'1778726160025',
-	'1778726160026',
-])
+const createBootSplashAssets = (skin: InstalledSkin): SkinBootSplashAsset[] => {
+	const assets = skin.bootSplashAssets?.map((item) => ({
+		id: item.id,
+		name: item.name,
+		card: source(skin.rootUri, item.cardPath),
+		video: item.videoPath ? source(skin.rootUri, item.videoPath) : null,
+	}))
 
-const mygoBootSplashItems: SkinBootSplashAsset[] = bootSplashItemIds.map(
-	(id, index) => ({
-		id,
-		name: `启动动画 ${index + 1}`,
-		card: {
-			uri: skinUri(localSkinRoot, `splash/items/${id}/card.png`),
+	return assets && assets.length > 0
+		? assets
+		: defaultBootSplashAssets(skin.rootUri)
+}
+
+export function createAppSkinFromInstalledSkin(skin: InstalledSkin): AppSkin {
+	const bootSplashItems = createBootSplashAssets(skin)
+	const firstBootSplashItem = bootSplashItems[0]
+
+	return {
+		id: skin.id,
+		name: skin.name,
+		rootUri: trimTrailingSlash(skin.rootUri),
+		coverUri: skin.coverUri ?? null,
+		tabBar: {
+			background: source(skin.rootUri, 'skin/tail_bg.png'),
+			labelColor: '#FFFFFF',
+			labelSelectedColor: '#FFFFFF',
+			icons: {
+				home: {
+					default: source(skin.rootUri, 'skin/tail_icon_main.png', 3),
+					selected: source(skin.rootUri, 'skin/tail_icon_selected_main.png', 3),
+				},
+				library: {
+					default: source(skin.rootUri, 'skin/tail_icon_channel.png', 3),
+					selected: source(
+						skin.rootUri,
+						'skin/tail_icon_selected_channel.png',
+						3,
+					),
+				},
+				settings: {
+					default: source(skin.rootUri, 'skin/tail_icon_myself.png', 3),
+					selected: source(
+						skin.rootUri,
+						'skin/tail_icon_selected_myself.png',
+						3,
+					),
+				},
+			},
 		},
-		video: bootSplashVideoItemIds.has(id)
-			? {
-					uri: skinUri(localSkinRoot, `splash/items/${id}/intro.mp4`),
-				}
-			: null,
-	}),
-)
-
-export const mygoSunnySkySkin: AppSkin = {
-	id: 'mygo-sunny-sky',
-	name: 'MyGO!!!!! 晴空向光行',
-	rootUri: localSkinRoot,
-	tabBar: {
+		player: {
+			sliderThumb: {
+				normal: source(skin.rootUri, 'play_icon/middle.png'),
+				dragLeft: source(skin.rootUri, 'play_icon/drag_left.png'),
+				dragRight: source(skin.rootUri, 'play_icon/drag_right.png'),
+				preview: source(skin.rootUri, 'play_icon/static_icon_image.png'),
+				offsetX: 0,
+				offsetY: 0,
+			},
+			thumbUp: {
+				svgaBin: source(skin.rootUri, 'thumbup/image_ani.bin'),
+				preview: source(skin.rootUri, 'thumbup/image_preview.png'),
+				frames: {
+					directoryUri: skinUri(skin.rootUri, 'thumbup/frames'),
+					count: skin.thumbUpFrameCount ?? 50,
+					fps: skin.thumbUpFrameFps ?? 20,
+					size: skin.thumbUpFrameSize ?? 360,
+				},
+			},
+		},
 		background: {
-			uri: skinUri(localSkinRoot, 'skin/tail_bg.png'),
+			head: source(skin.rootUri, 'skin/head_bg.jpg'),
+			headTab: source(skin.rootUri, 'skin/head_tab_bg.png'),
+			tail: source(skin.rootUri, 'skin/tail_bg.png'),
 		},
-		labelColor: '#FFFFFF',
-		labelSelectedColor: '#FFFFFF',
-		icons: {
-			home: {
-				default: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_main.png'),
-					scale: 3,
-				},
-				selected: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_selected_main.png'),
-					scale: 3,
-				},
-			},
-			library: {
-				default: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_channel.png'),
-					scale: 3,
-				},
-				selected: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_selected_channel.png'),
-					scale: 3,
-				},
-			},
-			settings: {
-				default: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_myself.png'),
-					scale: 3,
-				},
-				selected: {
-					uri: skinUri(localSkinRoot, 'skin/tail_icon_selected_myself.png'),
-					scale: 3,
-				},
-			},
+		refresh: {
+			frameStrip: source(skin.rootUri, 'loading/loading_frame.png'),
+			preview: source(skin.rootUri, 'loading/loading.png'),
 		},
-	},
-	player: {
-		sliderThumb: {
-			normal: {
-				uri: skinUri(localSkinRoot, 'play_icon/middle.png'),
-			},
-			dragLeft: {
-				uri: skinUri(localSkinRoot, 'play_icon/drag_left.png'),
-			},
-			dragRight: {
-				uri: skinUri(localSkinRoot, 'play_icon/drag_right.png'),
-			},
-			preview: {
-				uri: skinUri(localSkinRoot, 'play_icon/static_icon_image.png'),
-			},
-			offsetX: 0,
-			offsetY: 0,
+		bootSplash: {
+			card: firstBootSplashItem.card,
+			video: firstBootSplashItem.video,
+			items: bootSplashItems,
 		},
-		thumbUp: {
-			svgaBin: {
-				uri: skinUri(localSkinRoot, 'thumbup/image_ani.bin'),
-			},
-			gif: {
-				uri: skinUri(localSkinRoot, 'thumbup/image_ani.gif'),
-			},
-			preview: {
-				uri: skinUri(localSkinRoot, 'thumbup/image_preview.png'),
-			},
-			frames: {
-				directoryUri: skinUri(localSkinRoot, 'thumbup/frames'),
-				count: 50,
-				fps: 20,
-				size: 360,
-			},
-		},
-	},
-	background: {
-		head: {
-			uri: skinUri(localSkinRoot, 'skin/head_bg.jpg'),
-		},
-		headTab: {
-			uri: skinUri(localSkinRoot, 'skin/head_tab_bg.png'),
-		},
-		tail: {
-			uri: skinUri(localSkinRoot, 'skin/tail_bg.png'),
-		},
-	},
-	refresh: {
-		frameStrip: {
-			uri: skinUri(localSkinRoot, 'loading/loading_frame.png'),
-		},
-		preview: {
-			uri: skinUri(localSkinRoot, 'loading/loading.png'),
-		},
-	},
-	bootSplash: {
-		card: {
-			uri: mygoBootSplashItems[0].card.uri,
-		},
-		video: mygoBootSplashItems[0].video,
-		items: mygoBootSplashItems,
-	},
+	}
 }
 
-export const appSkins: Record<SkinId, AppSkin> = {
-	[mygoSunnySkySkin.id]: mygoSunnySkySkin,
-}
-
-export function getSkin(id: string | null | undefined): AppSkin | null {
+export function getSkin(
+	installedSkins: InstalledSkin[],
+	id: string | null | undefined,
+): AppSkin | null {
 	if (!id) return null
-	return appSkins[id as SkinId] ?? null
+
+	const installedSkin = installedSkins.find((skin) => skin.id === id)
+	return installedSkin ? createAppSkinFromInstalledSkin(installedSkin) : null
 }
 
-export function skinImageSource(source: SkinImageSource): ImageSourcePropType {
-	return source
+export function skinImageSource(
+	sourceValue: SkinImageSource,
+): ImageSourcePropType {
+	return sourceValue
 }

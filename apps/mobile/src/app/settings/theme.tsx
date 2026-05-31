@@ -22,6 +22,9 @@ export default function ThemeSettingsPage() {
 	const haveTrack = useCurrentTrack()
 	const activeSkin = useActiveSkin()
 	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
+	const installedSkins = useAppStore(
+		(state) => state.settings.installedSkins ?? [],
+	)
 	const playFullSkinBootSplashAnimation = useAppStore(
 		(state) => state.settings.playFullSkinBootSplashAnimation,
 	)
@@ -71,22 +74,26 @@ export default function ThemeSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<View style={styles.settingTextContainer}>
-						<Text>MyGO!!!!! 晴空向光行主题</Text>
+						<Text>动态主题</Text>
 						<Text
 							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							开启后启用当前测试皮肤资源包
+							{activeSkin
+								? activeSkin.name
+								: installedSkins.length > 0
+									? '开启后使用已选择的皮肤资源包'
+									: '下载皮肤资源包后可启用'}
 						</Text>
 					</View>
 					<UniversalSwitch
-						value={activeSkinId === 'mygo-sunny-sky'}
+						value={activeSkinId !== null}
 						onValueChange={(value) =>
 							setSettings({
-								activeSkinId: value ? 'mygo-sunny-sky' : null,
-								enableMygoTheme: value,
+								activeSkinId: value ? (installedSkins[0]?.id ?? null) : null,
 							})
 						}
+						disabled={installedSkins.length === 0}
 					/>
 				</View>
 
