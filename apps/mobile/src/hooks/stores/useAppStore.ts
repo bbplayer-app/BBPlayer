@@ -112,7 +112,6 @@ export const useAppStore = create<AppState>()(
 					enableMinimalistMode: false,
 					enableMygoTheme: false,
 					activeSkinId: null,
-					useSkinJsBottomTabs: false,
 					playFullSkinBootSplashAnimation: false,
 					selectedSkinBootSplashAssetId: null,
 					selectedSkinBootSplashMode: 'video',

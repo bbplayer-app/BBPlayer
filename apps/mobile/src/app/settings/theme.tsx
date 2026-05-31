@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
-import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -23,9 +22,6 @@ export default function ThemeSettingsPage() {
 	const haveTrack = useCurrentTrack()
 	const activeSkin = useActiveSkin()
 	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
-	const useSkinJsBottomTabs = useAppStore(
-		(state) => state.settings.useSkinJsBottomTabs,
-	)
 	const playFullSkinBootSplashAnimation = useAppStore(
 		(state) => state.settings.playFullSkinBootSplashAnimation,
 	)
@@ -93,29 +89,6 @@ export default function ThemeSettingsPage() {
 						}
 					/>
 				</View>
-
-				{activeSkinId ? (
-					<View style={styles.settingRow}>
-						<View style={styles.settingTextContainer}>
-							<Text>使用皮肤 JS 底栏</Text>
-							<Text
-								variant='bodySmall'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								开启后使用 JS 底栏展示主题背景和切换动画
-							</Text>
-						</View>
-						<UniversalSwitch
-							value={useSkinJsBottomTabs}
-							onValueChange={(value) => {
-								setSettings({ useSkinJsBottomTabs: value })
-								alert('需要重启应用', '底栏渲染方式会在下次启动时生效。', [
-									{ text: '知道了' },
-								])
-							}}
-						/>
-					</View>
-				) : null}
 
 				{activeSkinId && activeSkin ? (
 					<View style={styles.section}>

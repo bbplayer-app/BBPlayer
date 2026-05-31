@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 	},
 	image: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	fade: {
 		position: 'absolute',

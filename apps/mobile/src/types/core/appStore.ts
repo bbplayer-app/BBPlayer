@@ -16,7 +16,6 @@ interface Settings {
 	enableMinimalistMode: boolean
 	enableMygoTheme: boolean
 	activeSkinId: string | null
-	useSkinJsBottomTabs: boolean
 	playFullSkinBootSplashAnimation: boolean
 	selectedSkinBootSplashAssetId: string | null
 	selectedSkinBootSplashMode: 'poster' | 'video'
