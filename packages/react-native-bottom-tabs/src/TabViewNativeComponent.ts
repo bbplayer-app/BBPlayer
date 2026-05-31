@@ -7,7 +7,6 @@ import type {
 } from 'react-native'
 import { codegenNativeComponent } from 'react-native'
 
-type DirectEventHandler<T> = CodegenTypes.DirectEventHandler<T>
 type Double = CodegenTypes.Double
 type Int32 = CodegenTypes.Int32
 type WithDefault<
@@ -45,10 +44,10 @@ export type TabViewItems = ReadonlyArray<{
 export interface TabViewProps extends ViewProps {
 	items: TabViewItems
 	selectedPage: string
-	onPageSelected?: DirectEventHandler<OnPageSelectedEventData>
-	onTabLongPress?: DirectEventHandler<OnPageSelectedEventData>
-	onTabBarMeasured?: DirectEventHandler<OnTabBarMeasured>
-	onNativeLayout?: DirectEventHandler<OnNativeLayout>
+	onPageSelected?: CodegenTypes.DirectEventHandler<OnPageSelectedEventData>
+	onTabLongPress?: CodegenTypes.DirectEventHandler<OnPageSelectedEventData>
+	onTabBarMeasured?: CodegenTypes.DirectEventHandler<OnTabBarMeasured>
+	onNativeLayout?: CodegenTypes.DirectEventHandler<OnNativeLayout>
 	icons?: ReadonlyArray<ImageSource>
 	tabBarHidden?: boolean
 	labeled?: boolean
