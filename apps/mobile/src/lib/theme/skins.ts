@@ -14,12 +14,27 @@ export interface InstalledSkinBootSplashAsset {
 	videoPath?: string | null
 }
 
+export interface SkinAssetFeatures {
+	cards: boolean
+	redeems: boolean
+	skin: boolean
+	playIcon: boolean
+	loading: boolean
+	emojiPackage: boolean
+	thumbup: boolean
+	spaceBg: boolean
+	card: boolean
+	cardBg: boolean
+}
+
 export interface InstalledSkin {
 	id: SkinId
 	name: string
 	rootUri: string
 	coverUri?: string | null
 	downloadedAt: number
+	assetManifestPath?: string
+	assetFeatures?: SkinAssetFeatures
 	bootSplashAssets?: InstalledSkinBootSplashAsset[]
 	thumbUpFrameCount?: number
 	thumbUpFrameFps?: number

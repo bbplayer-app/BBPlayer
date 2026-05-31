@@ -17,7 +17,20 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import type { SkinBootSplashAsset } from '@/lib/theme/skins'
+import type { SkinAssetFeatures, SkinBootSplashAsset } from '@/lib/theme/skins'
+
+const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
+	['skin', '主题'],
+	['playIcon', '滑块'],
+	['thumbup', '点赞'],
+	['loading', '刷新'],
+	['cards', '卡牌'],
+	['spaceBg', '海报'],
+	['emojiPackage', '表情'],
+	['card', '头像框'],
+	['cardBg', '卡片背景'],
+	['redeems', '兑换'],
+]
 
 export default function ThemeSettingsPage() {
 	const router = useRouter()
@@ -71,6 +84,10 @@ export default function ThemeSettingsPage() {
 		})
 		setPreviewAsset(null)
 	}
+
+	const activeInstalledSkin = installedSkins.find(
+		(skin) => skin.id === activeSkinId,
+	)
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -160,6 +177,7 @@ export default function ThemeSettingsPage() {
 											>
 												{selected ? '正在使用' : '点击切换'}
 											</Text>
+											<AssetFeatureSummary features={skin.assetFeatures} />
 										</View>
 										{selected ? (
 											<Icon
@@ -177,6 +195,9 @@ export default function ThemeSettingsPage() {
 
 				{activeSkinId && activeSkin ? (
 					<View style={styles.section}>
+						{activeInstalledSkin?.assetFeatures ? (
+							<AssetFeaturePanel features={activeInstalledSkin.assetFeatures} />
+						) : null}
 						<View style={styles.sectionHeader}>
 							<View style={styles.settingTextContainer}>
 								<Text>启动动画素材</Text>
@@ -378,6 +399,71 @@ function SliderPreview({
 	)
 }
 
+function AssetFeatureSummary({ features }: { features?: SkinAssetFeatures }) {
+	const colors = useTheme().colors
+	if (!features) return null
+
+	const availableCount = SKIN_FEATURE_LABELS.filter(
+		([key]) => features[key],
+	).length
+	return (
+		<Text
+			variant='bodySmall'
+			style={{ color: colors.onSurfaceVariant }}
+		>
+			已包含 {availableCount}/{SKIN_FEATURE_LABELS.length} 类资产
+		</Text>
+	)
+}
+
+function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
+	const colors = useTheme().colors
+
+	return (
+		<View style={styles.featurePanel}>
+			<Text variant='titleMedium'>资产覆盖</Text>
+			<View style={styles.featureGrid}>
+				{SKIN_FEATURE_LABELS.map(([key, label]) => {
+					const available = features[key]
+					return (
+						<View
+							key={key}
+							style={[
+								styles.featurePill,
+								{
+									backgroundColor: available
+										? colors.primaryContainer
+										: colors.surfaceVariant,
+								},
+							]}
+						>
+							<Icon
+								source={available ? 'check' : 'close'}
+								size={14}
+								color={
+									available
+										? colors.onPrimaryContainer
+										: colors.onSurfaceVariant
+								}
+							/>
+							<Text
+								variant='bodySmall'
+								style={{
+									color: available
+										? colors.onPrimaryContainer
+										: colors.onSurfaceVariant,
+								}}
+							>
+								{label}
+							</Text>
+						</View>
+					)
+				})}
+			</View>
+		</View>
+	)
+}
+
 function BootSplashAssetPreview({
 	asset,
 	onDismiss,
@@ -514,6 +600,23 @@ const styles = StyleSheet.create({
 	},
 	skinText: {
 		flex: 1,
+	},
+	featurePanel: {
+		gap: 10,
+		marginBottom: 18,
+	},
+	featureGrid: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
+	},
+	featurePill: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 4,
+		borderRadius: 8,
+		paddingHorizontal: 8,
+		paddingVertical: 5,
 	},
 	sectionHeader: {
 		flexDirection: 'row',

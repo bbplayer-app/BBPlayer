@@ -14,6 +14,9 @@ import { searchGarbSkins } from '@/lib/api/bilibili/garb'
 import { installSkinPackage } from '@/lib/theme/skinInstall'
 import toast from '@/utils/toast'
 
+const resultKey = (item: GarbSkinSearchResult) =>
+	`${item.kind ?? 'unknown'}-${item.actId ?? item.itemId}-${item.name}`
+
 export default function ThemeSkinSearchPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
@@ -22,9 +25,7 @@ export default function ThemeSkinSearchPage() {
 	const [query, setQuery] = useState('')
 	const [results, setResults] = useState<GarbSkinSearchResult[]>([])
 	const [searching, setSearching] = useState(false)
-	const [downloadingItemId, setDownloadingItemId] = useState<number | null>(
-		null,
-	)
+	const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
 	const [progress, setProgress] = useState(0)
 
 	const search = async () => {
@@ -42,21 +43,18 @@ export default function ThemeSkinSearchPage() {
 	}
 
 	const startDownload = async (item: GarbSkinSearchResult) => {
-		if (!item.packageUrl) {
-			alert(
-				'暂时无法下载',
-				'当前搜索接口没有返回这个主题的资源包下载地址。需要拿到 app 主题接口里的 package_url 后才能安装。',
-				[{ text: '知道了' }],
-			)
+		if (!item.kind) {
+			alert('暂时无法下载', '当前只支持下载收藏集和主题装扮。', [
+				{ text: '知道了' },
+			])
 			return
 		}
 
-		setDownloadingItemId(item.itemId)
+		setDownloadingKey(resultKey(item))
 		setProgress(0)
 		try {
 			const installedSkin = await installSkinPackage({
 				item,
-				packageUrl: item.packageUrl,
 				onProgress: setProgress,
 			})
 			setSettings({
@@ -79,13 +77,14 @@ export default function ThemeSkinSearchPage() {
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : String(error))
 		} finally {
-			setDownloadingItemId(null)
+			setDownloadingKey(null)
 			setProgress(0)
 		}
 	}
 
 	const confirmDownload = (item: GarbSkinSearchResult) => {
-		alert('下载主题资源包', `是否下载「${item.name}」？`, [
+		const label = item.kind === 'collection' ? '收藏集' : '主题装扮'
+		alert('下载主题资源包', `是否下载「${item.name}」${label}资产？`, [
 			{ text: '取消' },
 			{
 				text: '下载',
@@ -124,10 +123,10 @@ export default function ThemeSkinSearchPage() {
 
 				<FlatList
 					data={results}
-					keyExtractor={(item) => String(item.itemId)}
+					keyExtractor={resultKey}
 					contentContainerStyle={styles.resultList}
 					renderItem={({ item }) => {
-						const downloading = downloadingItemId === item.itemId
+						const downloading = downloadingKey === resultKey(item)
 						return (
 							<Pressable
 								style={[
@@ -135,7 +134,7 @@ export default function ThemeSkinSearchPage() {
 									{ borderBottomColor: colors.outlineVariant },
 								]}
 								onPress={() => confirmDownload(item)}
-								disabled={downloadingItemId !== null}
+								disabled={downloadingKey !== null}
 							>
 								{item.coverUri ? (
 									<Image
@@ -157,7 +156,11 @@ export default function ThemeSkinSearchPage() {
 										variant='bodySmall'
 										style={{ color: colors.onSurfaceVariant }}
 									>
-										{item.packageUrl ? '可下载资源包' : '未返回资源包地址'}
+										{item.kind === 'collection'
+											? `收藏集 · act_id=${item.actId ?? '-'}`
+											: item.kind === 'suit'
+												? `主题装扮 · item_id=${item.itemId}`
+												: '暂不支持的装扮类型'}
 									</Text>
 									<LinearProgressIndicator
 										visible={downloading}
