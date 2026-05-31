@@ -97,6 +97,15 @@ export default function ThemeSettingsPage() {
 					/>
 				</View>
 
+				<View style={styles.section}>
+					<Button
+						mode='outlined'
+						onPress={() => router.push('/settings/theme/search')}
+					>
+						添加主题
+					</Button>
+				</View>
+
 				{activeSkinId && activeSkin ? (
 					<View style={styles.section}>
 						<View style={styles.sectionHeader}>

@@ -316,6 +316,10 @@ export default Sentry.wrap(function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
+							name='settings/theme/search'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='settings/playback'
 							options={{ headerShown: false }}
 						/>
