@@ -24,3 +24,28 @@ export interface SvgaToGifResult {
 	frames: number
 	fps: number
 }
+
+export interface UnzipOptions {
+	inputUri: string
+	outputUri: string
+}
+
+export interface UnzipResult {
+	uri: string
+	fileCount: number
+}
+
+export interface SvgaToFramesOptions {
+	inputUri: string
+	outputDirectoryUri: string
+	width?: number
+	height?: number
+}
+
+export interface SvgaToFramesResult {
+	directoryUri: string
+	width: number
+	height: number
+	frames: number
+	fps: number
+}
