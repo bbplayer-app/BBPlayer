@@ -17,7 +17,11 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import type { SkinAssetFeatures, SkinBootSplashAsset } from '@/lib/theme/skins'
+import type {
+	InstalledSkin,
+	SkinAssetFeatures,
+	SkinBootSplashAsset,
+} from '@/lib/theme/skins'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['skin', '主题'],
@@ -32,6 +36,8 @@ const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['redeems', '兑换'],
 ]
 
+const EMPTY_INSTALLED_SKINS: InstalledSkin[] = []
+
 export default function ThemeSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
@@ -40,7 +46,7 @@ export default function ThemeSettingsPage() {
 	const activeSkin = useActiveSkin()
 	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
 	const installedSkins = useAppStore(
-		(state) => state.settings.installedSkins ?? [],
+		(state) => state.settings.installedSkins ?? EMPTY_INSTALLED_SKINS,
 	)
 	const playFullSkinBootSplashAnimation = useAppStore(
 		(state) => state.settings.playFullSkinBootSplashAnimation,

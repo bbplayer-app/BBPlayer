@@ -500,15 +500,10 @@ const downloadThumbupAssets = async (
 
 	if (!localThumbup.ani_file) return null
 
-	try {
-		return await extractSvgaBinFramesAsync({
-			inputUri: new FileSystem.File(root, localThumbup.ani_file).uri,
-			outputDirectoryUri: new FileSystem.Directory(root, 'thumbup', 'frames')
-				.uri,
-		})
-	} catch {
-		return null
-	}
+	return extractSvgaBinFramesAsync({
+		inputUri: new FileSystem.File(root, localThumbup.ani_file).uri,
+		outputDirectoryUri: new FileSystem.Directory(root, 'thumbup', 'frames').uri,
+	})
 }
 
 const downloadCards = async (

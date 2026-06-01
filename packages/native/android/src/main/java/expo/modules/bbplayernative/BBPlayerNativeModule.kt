@@ -642,7 +642,18 @@ private class ProtoReader(private val data: ByteArray) {
         when (wireType) {
             0 -> readVarint()
             1 -> position += 8
-            2 -> position += readVarint().toInt()
+            2 -> {
+                val length = readVarint().toInt()
+                position += length
+            }
+            3 -> {
+                while (!isAtEnd()) {
+                    nextField()
+                    if (lastWireType == 4) break
+                    skipLast()
+                }
+            }
+            4 -> Unit
             5 -> position += 4
             else -> throw IllegalArgumentException("不支持的 protobuf wire type: $wireType")
         }

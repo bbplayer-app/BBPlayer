@@ -1,11 +1,18 @@
+import { useMemo } from 'react'
+
 import useAppStore from '@/hooks/stores/useAppStore'
-import { getSkin } from '@/lib/theme/skins'
+import { getSkin, type InstalledSkin } from '@/lib/theme/skins'
+
+const EMPTY_INSTALLED_SKINS: InstalledSkin[] = []
 
 export default function useActiveSkin() {
-	return useAppStore((state) => {
-		return getSkin(
-			state.settings.installedSkins ?? [],
-			state.settings.activeSkinId,
-		)
-	})
+	const installedSkins = useAppStore(
+		(state) => state.settings.installedSkins ?? EMPTY_INSTALLED_SKINS,
+	)
+	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
+
+	return useMemo(
+		() => getSkin(installedSkins, activeSkinId),
+		[activeSkinId, installedSkins],
+	)
 }

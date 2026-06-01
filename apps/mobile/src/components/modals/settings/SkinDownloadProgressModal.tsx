@@ -1,33 +1,105 @@
-import { memo } from 'react'
+import { useRouter } from 'expo-router'
+import { memo, useEffect, useRef, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Modal, Portal, Surface, Text, useTheme } from 'react-native-paper'
+import { Dialog, Text, useTheme } from 'react-native-paper'
 
+import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
-import type { SkinDownloadProgress } from '@/lib/theme/skinInstall'
+import { alert } from '@/components/modals/AlertModal'
+import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
+import {
+	installSkinPackage,
+	type SkinDownloadProgress,
+} from '@/lib/theme/skinInstall'
+import toast from '@/utils/toast'
 
 interface SkinDownloadProgressModalProps {
-	visible: boolean
-	progress: SkinDownloadProgress | null
+	item: GarbSkinSearchResult
 }
 
 const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
-	progress,
-	visible,
+	item,
 }: SkinDownloadProgressModalProps) {
+	const router = useRouter()
 	const colors = useTheme().colors
+	const close = useModalStore((state) => state.close)
+	const [progress, setProgress] = useState<SkinDownloadProgress | null>(null)
+	const [isFinished, setIsFinished] = useState(false)
+	const [hasError, setHasError] = useState(false)
+	const hasStarted = useRef(false)
+
+	useEffect(() => {
+		if (hasStarted.current) return
+		hasStarted.current = true
+
+		let cancelled = false
+
+		installSkinPackage({
+			item,
+			onProgress: (event) => {
+				if (!cancelled) setProgress(event)
+			},
+		})
+			.then((installedSkin) => {
+				if (cancelled) return
+				useAppStore.getState().setSettings({
+					installedSkins: [
+						installedSkin,
+						...(useAppStore.getState().settings.installedSkins ?? []).filter(
+							(skin) => skin.id !== installedSkin.id,
+						),
+					],
+				})
+				setProgress((previous) =>
+					previous
+						? {
+								...previous,
+								completed: previous.total,
+								progress: 1,
+								label: '下载完成',
+							}
+						: {
+								completed: 1,
+								total: 1,
+								progress: 1,
+								label: '下载完成',
+							},
+				)
+				setIsFinished(true)
+				close('SkinDownloadProgress')
+				useModalStore.getState().doAfterModalHostClosed(() => {
+					alert('主题下载完成', '是否现在去启用这个主题？', [
+						{ text: '稍后' },
+						{
+							text: '去启用',
+							onPress: () => router.replace('/settings/theme'),
+						},
+					])
+				})
+			})
+			.catch((error: unknown) => {
+				if (cancelled) return
+				setHasError(true)
+				setIsFinished(true)
+				toast.error(error instanceof Error ? error.message : String(error))
+			})
+
+		return () => {
+			cancelled = true
+		}
+	}, [close, item, router])
+
+	const canClose = isFinished || hasError
 
 	return (
-		<Portal>
-			<Modal
-				visible={visible}
-				dismissable={false}
-				contentContainerStyle={styles.modalContainer}
-			>
-				<Surface
-					elevation={5}
-					style={styles.surface}
-				>
-					<Text variant='titleMedium'>正在下载主题资产</Text>
+		<>
+			<Dialog.Title>
+				{hasError ? '下载失败' : isFinished ? '下载完成' : '正在下载主题资产'}
+			</Dialog.Title>
+			<Dialog.Content>
+				<View style={styles.content}>
 					<Text
 						variant='bodySmall'
 						numberOfLines={2}
@@ -40,36 +112,37 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 						indeterminate={!progress}
 						style={styles.progress}
 					/>
-					<View style={styles.footer}>
-						<Text
-							variant='bodySmall'
-							style={{ color: colors.onSurfaceVariant }}
-						>
-							{progress && progress.total > 0
-								? `${progress.completed}/${progress.total}`
-								: '正在获取资产清单'}
-						</Text>
-					</View>
-				</Surface>
-			</Modal>
-		</Portal>
+					<Text
+						variant='bodySmall'
+						style={[styles.footer, { color: colors.onSurfaceVariant }]}
+					>
+						{progress && progress.total > 0
+							? `${progress.completed}/${progress.total}`
+							: '正在获取资产清单'}
+					</Text>
+				</View>
+			</Dialog.Content>
+			<Dialog.Actions>
+				<Button
+					onPress={() => close('SkinDownloadProgress')}
+					disabled={!canClose}
+				>
+					{canClose ? '关闭' : '请稍候'}
+				</Button>
+			</Dialog.Actions>
+		</>
 	)
 })
 
 const styles = StyleSheet.create({
-	modalContainer: {
-		marginHorizontal: 28,
-	},
-	surface: {
+	content: {
 		gap: 12,
-		borderRadius: 12,
-		padding: 18,
 	},
 	progress: {
 		marginTop: 2,
 	},
 	footer: {
-		alignItems: 'flex-end',
+		textAlign: 'right',
 	},
 })
 

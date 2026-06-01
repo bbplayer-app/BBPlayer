@@ -6,16 +6,10 @@ import { Appbar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { alert } from '@/components/modals/AlertModal'
-import SkinDownloadProgressModal from '@/components/modals/settings/SkinDownloadProgressModal'
-import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import { searchGarbSkins } from '@/lib/api/bilibili/garb'
-import {
-	installSkinPackage,
-	type SkinDownloadProgress,
-} from '@/lib/theme/skinInstall'
 import toast from '@/utils/toast'
 
 const resultKey = (item: GarbSkinSearchResult) =>
@@ -25,14 +19,10 @@ export default function ThemeSkinSearchPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
-	const setSettings = useAppStore((state) => state.setSettings)
+	const openModal = useModalStore((state) => state.open)
 	const [query, setQuery] = useState('')
 	const [results, setResults] = useState<GarbSkinSearchResult[]>([])
 	const [searching, setSearching] = useState(false)
-	const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
-	const [progress, setProgress] = useState(0)
-	const [downloadProgress, setDownloadProgress] =
-		useState<SkinDownloadProgress | null>(null)
 
 	const search = async () => {
 		const trimmed = query.trim()
@@ -48,7 +38,7 @@ export default function ThemeSkinSearchPage() {
 		}
 	}
 
-	const startDownload = async (item: GarbSkinSearchResult) => {
+	const startDownload = (item: GarbSkinSearchResult) => {
 		if (!item.kind) {
 			alert('暂时无法下载', '当前只支持下载收藏集和主题装扮。', [
 				{ text: '知道了' },
@@ -56,41 +46,7 @@ export default function ThemeSkinSearchPage() {
 			return
 		}
 
-		setDownloadingKey(resultKey(item))
-		setProgress(0)
-		setDownloadProgress(null)
-		try {
-			const installedSkin = await installSkinPackage({
-				item,
-				onProgress: (event) => {
-					setProgress(event.progress)
-					setDownloadProgress(event)
-				},
-			})
-			setSettings({
-				installedSkins: [
-					installedSkin,
-					...useAppStore
-						.getState()
-						.settings.installedSkins.filter(
-							(skin) => skin.id !== installedSkin.id,
-						),
-				],
-			})
-			alert('主题下载完成', '是否现在去启用这个主题？', [
-				{ text: '稍后' },
-				{
-					text: '去启用',
-					onPress: () => router.replace('/settings/theme'),
-				},
-			])
-		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error))
-		} finally {
-			setDownloadingKey(null)
-			setProgress(0)
-			setDownloadProgress(null)
-		}
+		openModal('SkinDownloadProgress', { item }, { dismissible: false })
 	}
 
 	const confirmDownload = (item: GarbSkinSearchResult) => {
@@ -100,7 +56,7 @@ export default function ThemeSkinSearchPage() {
 			{
 				text: '下载',
 				onPress: () => {
-					void startDownload(item)
+					startDownload(item)
 				},
 			},
 		])
@@ -137,7 +93,6 @@ export default function ThemeSkinSearchPage() {
 					keyExtractor={resultKey}
 					contentContainerStyle={styles.resultList}
 					renderItem={({ item }) => {
-						const downloading = downloadingKey === resultKey(item)
 						return (
 							<Pressable
 								style={[
@@ -145,7 +100,6 @@ export default function ThemeSkinSearchPage() {
 									{ borderBottomColor: colors.outlineVariant },
 								]}
 								onPress={() => confirmDownload(item)}
-								disabled={downloadingKey !== null}
 							>
 								{item.coverUri ? (
 									<Image
@@ -173,11 +127,6 @@ export default function ThemeSkinSearchPage() {
 												? `主题装扮 · item_id=${item.itemId}`
 												: '暂不支持的装扮类型'}
 									</Text>
-									<LinearProgressIndicator
-										visible={downloading}
-										progress={progress}
-										style={styles.progress}
-									/>
 								</View>
 							</Pressable>
 						)
@@ -192,10 +141,6 @@ export default function ThemeSkinSearchPage() {
 					}
 				/>
 			</View>
-			<SkinDownloadProgressModal
-				visible={downloadingKey !== null}
-				progress={downloadProgress}
-			/>
 		</View>
 	)
 }
@@ -234,9 +179,6 @@ const styles = StyleSheet.create({
 	resultText: {
 		flex: 1,
 		gap: 4,
-	},
-	progress: {
-		marginTop: 4,
 	},
 	empty: {
 		marginTop: 32,
