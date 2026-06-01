@@ -24,6 +24,7 @@ export interface AppStorageSchema {
 	play_history_migrated_v1: boolean
 	independent_account_migrated_v1: boolean
 	'shared-playlist-members': string
+	'skin-storage': string
 }
 
 export type StorageKey = keyof AppStorageSchema
