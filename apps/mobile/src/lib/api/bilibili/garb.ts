@@ -8,7 +8,6 @@ import {
 } from '@/lib/theme/skins'
 import type {
 	BilibiliGarbAssetBagItem,
-	BilibiliGarbAssetBagResponse,
 	BilibiliGarbCollectEntry,
 } from '@/types/apis/bilibili'
 
@@ -29,18 +28,6 @@ export interface GarbSkinSearchResult {
 	name: string
 	partId: number | null
 }
-
-// ============================================================
-// 工具函数
-// ============================================================
-
-const defaultString = <T extends string>(value: unknown, fallback: T): T =>
-	typeof value === 'string' && value.trim().length > 0
-		? (value.trim() as T)
-		: fallback
-
-const nullableString = (value: unknown): string | null =>
-	typeof value === 'string' && value.trim() ? value.trim() : null
 
 // ============================================================
 // 卡牌解析：API raw → SkinCardAsset
@@ -78,7 +65,6 @@ const parseCollectCardItem = (
 // 组件解析：API raw → 组件
 // ============================================================
 
-// TODO: 这里后续需要更改，把所有 part_id 所对应的返回内容全部声明为强类型
 /**
  * 获取并解析收藏集的额外奖励
  */
@@ -94,162 +80,100 @@ const resolveComponent = async (
 	if (result.isErr()) throw result.error
 
 	const data = result.value
-	const partId = data.part_id ?? null
 	const id = Number(componentId) || 0
-	const suitItems = data.suit_items
 
-	switch (partId) {
+	switch (data.part_id) {
 		case 1: {
-			const props =
-				suitItems?.emoji_package?.[0]?.properties ?? data.properties ?? {}
+			const props = data.properties ?? {}
 			return {
 				data: {
 					id,
-					image: nullableString(props.image),
+					image: props.image ?? null,
 					name: componentName,
 				},
-				partId,
+				partId: 1,
 			}
 		}
 		case 3: {
-			const props =
-				suitItems?.emoji_package?.[0]?.properties ?? data.properties ?? {}
+			const props = data.properties ?? {}
 			return {
 				data: {
-					ani_cut: nullableString(props.image_ani_cut),
-					ani_file: nullableString(props.image_ani),
+					ani_cut: props.image_ani_cut ?? null,
+					ani_file: props.image_ani ?? null,
 					id,
 					name: componentName,
-					preview: nullableString(props.image_preview),
+					preview: props.image_preview ?? null,
 				},
-				partId,
-			}
-		}
-		case 5: {
-			const topProps = data.properties ?? {}
-			const packageItem = suitItems?.emoji_package?.[0]
-			const packageProps = packageItem?.properties ?? {}
-
-			const fromJson = (() => {
-				const raw = topProps.item_emoji_list ?? packageProps.item_emoji_list
-				if (typeof raw !== 'string' || !raw) return []
-				try {
-					return (JSON.parse(raw) as Record<string, unknown>[]).map((item) => ({
-						image_gif: nullableString(item.image_gif as string | undefined),
-						image_static: nullableString(item.image as string | undefined),
-						image_webp: nullableString(item.image_webp as string | undefined),
-						name: defaultString(item.name as string | undefined, '表情'),
-					}))
-				} catch {
-					return []
-				}
-			})()
-
-			const fromItems = [
-				...(suitItems?.emoji ?? []).map((item) => ({
-					image_gif: nullableString(item.properties?.image_gif),
-					image_static: nullableString(item.properties?.image),
-					image_webp: nullableString(item.properties?.image_webp),
-					name: item.name || '表情',
-				})),
-				...(packageItem?.items ?? []).map((item) => ({
-					image_gif: nullableString(item.properties?.image_gif),
-					image_static: nullableString(item.properties?.image),
-					image_webp: nullableString(item.properties?.image_webp),
-					name: item.name || '表情',
-				})),
-			]
-
-			return {
-				data: {
-					emojis: [...fromJson, ...fromItems],
-					id,
-					name: componentName,
-				},
-				partId,
+				partId: 3,
 			}
 		}
 		case 9: {
-			const props =
-				suitItems?.emoji_package?.[0]?.properties ?? data.properties ?? {}
+			const props = data.properties ?? {}
 			return {
 				data: {
-					color: nullableString(props.color),
-					color_mode: nullableString(props.color_mode),
-					color_second_page: nullableString(props.color_second_page),
-					head_bg: nullableString(props.head_bg),
-					head_myself_bg: nullableString(props.head_myself_bg),
-					head_myself_mp4_bg: nullableString(props.head_myself_mp4_bg),
-					head_myself_squared_bg: nullableString(props.head_myself_squared_bg),
-					head_tab_bg: nullableString(props.head_tab_bg),
+					color: props.color ?? null,
+					color_mode: props.color_mode ?? null,
+					color_second_page: props.color_second_page ?? null,
+					head_bg: props.head_bg ?? null,
+					head_myself_bg: props.head_myself_bg ?? null,
+					head_myself_mp4_bg: props.head_myself_mp4_bg ?? null,
+					head_myself_squared_bg: props.head_myself_squared_bg ?? null,
+					head_tab_bg: props.head_tab_bg ?? null,
 					id,
-					image_cover: nullableString(props.image_cover),
-					image_preview: nullableString(props.image_preview),
+					image_cover: props.image_cover ?? null,
+					image_preview: props.image_preview ?? null,
 					name: componentName,
-					package_md5: nullableString(props.package_md5),
-					package_url: nullableString(props.package_url),
-					side_bg: nullableString(props.side_bg),
-					side_bg_bottom: nullableString(props.side_bg_bottom),
-					tail_bg: nullableString(props.tail_bg),
-					tail_color: nullableString(props.tail_color),
-					tail_color_selected: nullableString(props.tail_color_selected),
-					tail_icon_ani: nullableString(props.tail_icon_ani),
-					tail_icon_channel: nullableString(props.tail_icon_channel),
-					tail_icon_dynamic: nullableString(props.tail_icon_dynamic),
-					tail_icon_main: nullableString(props.tail_icon_main),
-					tail_icon_myself: nullableString(props.tail_icon_myself),
-					tail_icon_pub_btn_bg: nullableString(props.tail_icon_pub_btn_bg),
-					tail_icon_selected_channel: nullableString(
-						props.tail_icon_selected_channel,
-					),
-					tail_icon_selected_dynamic: nullableString(
-						props.tail_icon_selected_dynamic,
-					),
-					tail_icon_selected_main: nullableString(
-						props.tail_icon_selected_main,
-					),
-					tail_icon_selected_myself: nullableString(
-						props.tail_icon_selected_myself,
-					),
-					tail_icon_selected_pub_btn_bg: nullableString(
-						props.tail_icon_selected_pub_btn_bg,
-					),
-					tail_icon_selected_shop: nullableString(
-						props.tail_icon_selected_shop,
-					),
-					tail_icon_shop: nullableString(props.tail_icon_shop),
+					package_md5: props.package_md5 ?? null,
+					package_url: props.package_url ?? null,
+					side_bg: props.side_bg ?? null,
+					side_bg_bottom: props.side_bg_bottom ?? null,
+					tail_bg: props.tail_bg ?? null,
+					tail_color: props.tail_color ?? null,
+					tail_color_selected: props.tail_color_selected ?? null,
+					tail_icon_ani: props.tail_icon_ani ?? null,
+					tail_icon_channel: props.tail_icon_channel ?? null,
+					tail_icon_dynamic: props.tail_icon_dynamic ?? null,
+					tail_icon_main: props.tail_icon_main ?? null,
+					tail_icon_myself: props.tail_icon_myself ?? null,
+					tail_icon_pub_btn_bg: props.tail_icon_pub_btn_bg ?? null,
+					tail_icon_selected_channel: props.tail_icon_selected_channel ?? null,
+					tail_icon_selected_dynamic: props.tail_icon_selected_dynamic ?? null,
+					tail_icon_selected_main: props.tail_icon_selected_main ?? null,
+					tail_icon_selected_myself: props.tail_icon_selected_myself ?? null,
+					tail_icon_selected_pub_btn_bg:
+						props.tail_icon_selected_pub_btn_bg ?? null,
+					tail_icon_selected_shop: props.tail_icon_selected_shop ?? null,
+					tail_icon_shop: props.tail_icon_shop ?? null,
 				},
-				partId,
+				partId: 9,
 			}
 		}
 		case 10: {
-			const props =
-				suitItems?.emoji_package?.[0]?.properties ?? data.properties ?? {}
+			const props = data.properties ?? {}
 			return {
 				data: {
 					id,
-					loading_frame_url: nullableString(props.loading_frame_url),
-					loading_url: nullableString(props.loading_url),
+					loading_frame_url: props.loading_frame_url ?? null,
+					loading_url: props.loading_url ?? null,
 					name: componentName,
-					preview: nullableString(props.image_preview_small),
+					preview: props.image_preview_small ?? null,
 				},
-				partId,
+				partId: 10,
 			}
 		}
 		case 11: {
-			const props =
-				suitItems?.emoji_package?.[0]?.properties ?? data.properties ?? {}
+			const props = data.properties ?? {}
 			return {
 				data: {
-					drag_left_png: nullableString(props.drag_left_png),
-					drag_right_png: nullableString(props.drag_right_png),
+					drag_left_png: props.drag_left_png ?? null,
+					drag_right_png: props.drag_right_png ?? null,
 					id,
-					middle_png: nullableString(props.middle_png),
+					middle_png: props.middle_png ?? null,
 					name: componentName,
-					squared_image: nullableString(props.squared_image),
-					static_icon_image: nullableString(props.static_icon_image),
+					squared_image: props.squared_image ?? null,
+					static_icon_image: props.static_icon_image ?? null,
 				},
-				partId,
+				partId: 11,
 			}
 		}
 		default:
@@ -275,11 +199,6 @@ const appendComponent = (
 			break
 		case 3:
 			table.thumbups.push(data as SkinAssetDeclaration['thumbups'][number])
-			break
-		case 5:
-			table.emoji_packages.push(
-				data as SkinAssetDeclaration['emoji_packages'][number],
-			)
 			break
 		case 9:
 			table.skins.push(data as SkinAssetDeclaration['skins'][number])
@@ -354,21 +273,12 @@ const emptyAssetDeclaration = (
 	avatar_frames: [],
 	card_backgrounds: [],
 	cards: [],
-	emoji_packages: [],
 	loadings: [],
 	play_icons: [],
 	skins: [],
 	space_backgrounds: [],
 	thumbups: [],
 })
-
-const collectListEntries = (
-	value: BilibiliGarbAssetBagResponse['collect_list'],
-): BilibiliGarbCollectEntry[] => {
-	if (Array.isArray(value)) return value
-	if (!value) return []
-	return [...(value.collect_infos ?? []), ...(value.collect_chain ?? [])]
-}
 
 const buildCollectionAssetDeclaration = async (
 	item: GarbSkinSearchResult,
@@ -399,8 +309,7 @@ const buildCollectionAssetDeclaration = async (
 		}
 	})
 
-	const rewards = collectListEntries(data.collect_list)
-	for (const [index, entry] of rewards.entries()) {
+	for (const [index, entry] of (data.collect_list ?? []).entries()) {
 		await parseReward(table, entry, index, signal)
 	}
 
@@ -432,7 +341,7 @@ const buildSuitAssetDeclaration = async (
 	for (const entry of suitItems.card ?? []) {
 		table.avatar_frames.push({
 			id: entry.item_id,
-			image: nullableString(entry.properties?.image),
+			image: entry.properties?.image ?? null,
 			name: entry.name,
 		})
 	}
@@ -440,9 +349,9 @@ const buildSuitAssetDeclaration = async (
 	for (const entry of suitItems.card_bg ?? []) {
 		table.card_backgrounds.push({
 			id: entry.item_id,
-			image: nullableString(entry.properties?.image),
+			image: entry.properties?.image ?? null,
 			name: entry.name || item.name,
-			preview: nullableString(entry.properties?.image_preview_small),
+			preview: entry.properties?.image_preview_small ?? null,
 		})
 	}
 
@@ -474,91 +383,53 @@ const buildSuitAssetDeclaration = async (
 		})
 	}
 
-	for (const entry of suitItems.emoji_package ?? []) {
-		const topProps = entry.properties ?? {}
-		const fromJson = (() => {
-			const raw = topProps.item_emoji_list
-			if (typeof raw !== 'string' || !raw) return []
-			try {
-				return (JSON.parse(raw) as Record<string, unknown>[]).map((e) => ({
-					image_gif: nullableString(e.image_gif as string | undefined),
-					image_static: nullableString(e.image as string | undefined),
-					image_webp: nullableString(e.image_webp as string | undefined),
-					name: defaultString(e.name as string | undefined, '表情'),
-				}))
-			} catch {
-				return []
-			}
-		})()
-
-		const fromItems = (entry.items ?? []).map((e) => ({
-			image_gif: nullableString(e.properties?.image_gif),
-			image_static: nullableString(e.properties?.image),
-			image_webp: nullableString(e.properties?.image_webp),
-			name: e.name || '表情',
-		}))
-
-		table.emoji_packages.push({
-			emojis: [...fromJson, ...fromItems],
-			id: entry.item_id,
-			name: entry.name,
-		})
-	}
-
 	for (const entry of suitItems.thumbup ?? []) {
 		const props = entry.properties ?? {}
 		table.thumbups.push({
-			ani_cut: nullableString(props.image_ani_cut),
-			ani_file: nullableString(props.image_ani),
+			ani_cut: props.image_ani_cut ?? null,
+			ani_file: props.image_ani ?? null,
 			id: entry.item_id,
 			name: entry.name,
-			preview: nullableString(props.image_preview),
+			preview: props.image_preview ?? null,
 		})
 	}
 
 	for (const entry of suitItems.skin ?? []) {
 		const props = entry.properties ?? {}
 		table.skins.push({
-			color: nullableString(props.color),
-			color_mode: nullableString(props.color_mode),
-			color_second_page: nullableString(props.color_second_page),
-			head_bg: nullableString(props.head_bg),
-			head_myself_bg: nullableString(props.head_myself_bg),
-			head_myself_mp4_bg: nullableString(props.head_myself_mp4_bg),
-			head_myself_squared_bg: nullableString(props.head_myself_squared_bg),
-			head_tab_bg: nullableString(props.head_tab_bg),
+			color: props.color ?? null,
+			color_mode: props.color_mode ?? null,
+			color_second_page: props.color_second_page ?? null,
+			head_bg: props.head_bg ?? null,
+			head_myself_bg: props.head_myself_bg ?? null,
+			head_myself_mp4_bg: props.head_myself_mp4_bg ?? null,
+			head_myself_squared_bg: props.head_myself_squared_bg ?? null,
+			head_tab_bg: props.head_tab_bg ?? null,
 			id: entry.item_id,
-			image_cover: nullableString(props.image_cover),
-			image_preview: nullableString(props.image_preview),
+			image_cover: props.image_cover ?? null,
+			image_preview: props.image_preview ?? null,
 			name: entry.name,
-			package_md5: nullableString(props.package_md5),
-			package_url: nullableString(props.package_url),
-			side_bg: nullableString(props.side_bg),
-			side_bg_bottom: nullableString(props.side_bg_bottom),
-			tail_bg: nullableString(props.tail_bg),
-			tail_color: nullableString(props.tail_color),
-			tail_color_selected: nullableString(props.tail_color_selected),
-			tail_icon_ani: nullableString(props.tail_icon_ani),
-			tail_icon_channel: nullableString(props.tail_icon_channel),
-			tail_icon_dynamic: nullableString(props.tail_icon_dynamic),
-			tail_icon_main: nullableString(props.tail_icon_main),
-			tail_icon_myself: nullableString(props.tail_icon_myself),
-			tail_icon_pub_btn_bg: nullableString(props.tail_icon_pub_btn_bg),
-			tail_icon_selected_channel: nullableString(
-				props.tail_icon_selected_channel,
-			),
-			tail_icon_selected_dynamic: nullableString(
-				props.tail_icon_selected_dynamic,
-			),
-			tail_icon_selected_main: nullableString(props.tail_icon_selected_main),
-			tail_icon_selected_myself: nullableString(
-				props.tail_icon_selected_myself,
-			),
-			tail_icon_selected_pub_btn_bg: nullableString(
-				props.tail_icon_selected_pub_btn_bg,
-			),
-			tail_icon_selected_shop: nullableString(props.tail_icon_selected_shop),
-			tail_icon_shop: nullableString(props.tail_icon_shop),
+			package_md5: props.package_md5 ?? null,
+			package_url: props.package_url ?? null,
+			side_bg: props.side_bg ?? null,
+			side_bg_bottom: props.side_bg_bottom ?? null,
+			tail_bg: props.tail_bg ?? null,
+			tail_color: props.tail_color ?? null,
+			tail_color_selected: props.tail_color_selected ?? null,
+			tail_icon_ani: props.tail_icon_ani ?? null,
+			tail_icon_channel: props.tail_icon_channel ?? null,
+			tail_icon_dynamic: props.tail_icon_dynamic ?? null,
+			tail_icon_main: props.tail_icon_main ?? null,
+			tail_icon_myself: props.tail_icon_myself ?? null,
+			tail_icon_pub_btn_bg: props.tail_icon_pub_btn_bg ?? null,
+			tail_icon_selected_channel: props.tail_icon_selected_channel ?? null,
+			tail_icon_selected_dynamic: props.tail_icon_selected_dynamic ?? null,
+			tail_icon_selected_main: props.tail_icon_selected_main ?? null,
+			tail_icon_selected_myself: props.tail_icon_selected_myself ?? null,
+			tail_icon_selected_pub_btn_bg:
+				props.tail_icon_selected_pub_btn_bg ?? null,
+			tail_icon_selected_shop: props.tail_icon_selected_shop ?? null,
+			tail_icon_shop: props.tail_icon_shop ?? null,
 		})
 	}
 
@@ -566,23 +437,23 @@ const buildSuitAssetDeclaration = async (
 		const props = entry.properties ?? {}
 		table.loadings.push({
 			id: entry.item_id,
-			loading_frame_url: nullableString(props.loading_frame_url),
-			loading_url: nullableString(props.loading_url),
+			loading_frame_url: props.loading_frame_url ?? null,
+			loading_url: props.loading_url ?? null,
 			name: entry.name,
-			preview: nullableString(props.image_preview_small),
+			preview: props.image_preview_small ?? null,
 		})
 	}
 
 	for (const entry of suitItems.play_icon ?? []) {
 		const props = entry.properties ?? {}
 		table.play_icons.push({
-			drag_left_png: nullableString(props.drag_left_png),
-			drag_right_png: nullableString(props.drag_right_png),
+			drag_left_png: props.drag_left_png ?? null,
+			drag_right_png: props.drag_right_png ?? null,
 			id: entry.item_id,
-			middle_png: nullableString(props.middle_png),
+			middle_png: props.middle_png ?? null,
 			name: entry.name,
-			squared_image: nullableString(props.squared_image),
-			static_icon_image: nullableString(props.static_icon_image),
+			squared_image: props.squared_image ?? null,
+			static_icon_image: props.static_icon_image ?? null,
 		})
 	}
 

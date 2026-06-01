@@ -1,3 +1,8 @@
+import {
+	BilibiliGarbBenefitResponse,
+	BilibiliGarbSuitDetailResponse,
+} from './garb'
+
 /**
  * 获取音频流入参（dash）
  */
@@ -610,12 +615,6 @@ interface BilibiliGarbAssetBagItem {
 	}
 }
 
-/** asset_bag 彩票池条目 */
-interface BilibiliGarbLotterySimpleItem {
-	lottery_id: number
-	lottery_name: string
-}
-
 /** asset_bag 奖励条目 (collect_list) */
 interface BilibiliGarbCollectEntry {
 	redeem_item_type: number
@@ -624,7 +623,6 @@ interface BilibiliGarbCollectEntry {
 	redeem_item_image?: string
 	require_item_amount?: number
 	card_item?: {
-		card_type_info?: Record<string, unknown>
 		card_asset_info?: {
 			card_item?: {
 				card_type_id?: number | string
@@ -640,52 +638,7 @@ interface BilibiliGarbCollectEntry {
 /** asset_bag API 返回 */
 interface BilibiliGarbAssetBagResponse {
 	item_list?: BilibiliGarbAssetBagItem[]
-	collect_list?:
-		| BilibiliGarbCollectEntry[]
-		| {
-				collect_infos?: BilibiliGarbCollectEntry[]
-				collect_chain?: BilibiliGarbCollectEntry[]
-		  }
-	lottery_simple_list?: BilibiliGarbLotterySimpleItem[]
-}
-
-/** suit/detail 组件条目 */
-interface BilibiliGarbSuitItem {
-	item_id: number
-	name: string
-	properties: Record<string, string | undefined>
-	items?: BilibiliGarbSuitItem[]
-}
-
-/** suit/detail API 返回 */
-interface BilibiliGarbSuitDetailResponse {
-	item_id: number
-	name: string
-	suit_items: {
-		card?: BilibiliGarbSuitItem[]
-		card_bg?: BilibiliGarbSuitItem[]
-		emoji_package?: BilibiliGarbSuitItem[]
-		loading?: BilibiliGarbSuitItem[]
-		play_icon?: BilibiliGarbSuitItem[]
-		skin?: BilibiliGarbSuitItem[]
-		space_bg?: BilibiliGarbSuitItem[]
-		thumbup?: BilibiliGarbSuitItem[]
-	}
-}
-
-/** benefit API 返回 */
-interface BilibiliGarbBenefitResponse {
-	part_id?: number
-	properties?: Record<string, unknown>
-	suit_items?: {
-		emoji?: {
-			name: string
-			properties: {
-				image: string
-			}
-			item_id: number
-		}[]
-	}
+	collect_list?: BilibiliGarbCollectEntry[]
 }
 
 interface BilibiliDanmakuItem {
@@ -720,12 +673,9 @@ export type {
 	BilibiliGarbAssetBagResponse,
 	BilibiliGarbBenefitResponse,
 	BilibiliGarbCollectEntry,
-	BilibiliGarbLotterySimpleItem,
 	BilibiliGarbSearchItem,
 	BilibiliGarbSearchResponse,
 	BilibiliGarbSuitDetailResponse,
-	BilibiliGarbSuitItem,
-	BilibiliGarbSuitItemProperties,
 	BilibiliHistoryVideo,
 	BilibiliHotSearch,
 	BilibiliMediaItemInCollection,
@@ -745,3 +695,5 @@ export type {
 }
 
 export { BilibiliQrCodeLoginStatus }
+
+export type * from './garb'

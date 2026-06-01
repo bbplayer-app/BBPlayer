@@ -23,19 +23,6 @@ const thumbUpAssetSchema = arkType({
 	preview: nullableString,
 })
 
-const emojiAssetSchema = arkType({
-	name: 'string',
-	image_static: nullableString,
-	image_gif: nullableString,
-	image_webp: nullableString,
-})
-
-const emojiPackageAssetSchema = arkType({
-	id: 'number',
-	name: nullableString,
-	emojis: emojiAssetSchema.array(),
-})
-
 const skinAssetSchema = arkType({
 	id: 'number',
 	name: nullableString,
@@ -116,7 +103,6 @@ export const skinAssetDeclarationSchema = arkType({
 	card_backgrounds: cardBackgroundAssetSchema.array(),
 	space_backgrounds: spaceBackgroundAssetSchema.array(),
 	thumbups: thumbUpAssetSchema.array(),
-	emoji_packages: emojiPackageAssetSchema.array(),
 	skins: skinAssetSchema.array(),
 	loadings: loadingAssetSchema.array(),
 	play_icons: playIconAssetSchema.array(),
@@ -133,7 +119,6 @@ export interface SkinAssetFeatures {
 	avatarFrames: boolean
 	cardBackgrounds: boolean
 	cards: boolean
-	emojiPackages: boolean
 	loadings: boolean
 	playIcons: boolean
 	skins: boolean
@@ -334,7 +319,6 @@ export const createSkinAssetFeatures = (
 	avatarFrames: assets.avatar_frames.length > 0,
 	cardBackgrounds: assets.card_backgrounds.length > 0,
 	cards: assets.cards.length > 0,
-	emojiPackages: assets.emoji_packages.length > 0,
 	loadings: assets.loadings.length > 0,
 	playIcons: assets.play_icons.length > 0,
 	skins: assets.skins.length > 0,
