@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Icon, Text, useTheme } from 'react-native-paper'
 import { useSharedValue } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,8 +15,9 @@ import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import { deleteInstalledSkinPackage } from '@/lib/theme/skinInstall'
 import type {
 	InstalledSkin,
 	SkinAssetFeatures,
@@ -24,16 +25,15 @@ import type {
 } from '@/lib/theme/skins'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
-	['skin', '主题'],
-	['playIcon', '滑块'],
-	['thumbup', '点赞'],
-	['loading', '刷新'],
-	['cards', '卡牌'],
-	['spaceBg', '海报'],
-	['emojiPackage', '表情'],
-	['card', '头像框'],
-	['cardBg', '卡片背景'],
-	['redeems', '兑换'],
+	['cards', '海报'],
+	// ['spaceBackgrounds', '海报'],
+	['skins', '应用主题'],
+	['playIcons', '滑块'],
+	['thumbups', '点赞动画'],
+	['loadings', '刷新动画'],
+	['avatarFrames', '头像框'],
+	// ['cardBackgrounds', '卡片背景'],
+	// ['emojiPackages', '表情'],
 ]
 
 const EMPTY_INSTALLED_SKINS: InstalledSkin[] = []
@@ -44,29 +44,30 @@ export default function ThemeSettingsPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const activeSkin = useActiveSkin()
-	const activeSkinId = useAppStore((state) => state.settings.activeSkinId)
-	const installedSkins = useAppStore(
-		(state) => state.settings.installedSkins ?? EMPTY_INSTALLED_SKINS,
+	const activeSkinId = useSkinStore((state) => state.activeSkinId)
+	const installedSkins = useSkinStore(
+		(state) => state.installedSkins ?? EMPTY_INSTALLED_SKINS,
 	)
-	const playFullSkinBootSplashAnimation = useAppStore(
-		(state) => state.settings.playFullSkinBootSplashAnimation,
+	const playFullSkinBootSplashAnimation = useSkinStore(
+		(state) => state.playFullSkinBootSplashAnimation,
 	)
-	const selectedSkinBootSplashAssetId = useAppStore(
-		(state) => state.settings.selectedSkinBootSplashAssetId,
+	const selectedSkinBootSplashAssetId = useSkinStore(
+		(state) => state.selectedSkinBootSplashAssetId,
 	)
-	const selectedSkinBootSplashMode = useAppStore(
-		(state) => state.settings.selectedSkinBootSplashMode,
+	const selectedSkinBootSplashMode = useSkinStore(
+		(state) => state.selectedSkinBootSplashMode,
 	)
-	const skinSliderThumbSize = useAppStore(
-		(state) => state.settings.skinSliderThumbSize ?? 20,
+	const skinSliderThumbSize = useSkinStore(
+		(state) => state.skinSliderThumbSize ?? 20,
 	)
-	const skinSliderThumbOffsetX = useAppStore(
-		(state) => state.settings.skinSliderThumbOffsetX ?? 0,
+	const skinSliderThumbOffsetX = useSkinStore(
+		(state) => state.skinSliderThumbOffsetX ?? 0,
 	)
-	const skinSliderThumbOffsetY = useAppStore(
-		(state) => state.settings.skinSliderThumbOffsetY ?? 0,
+	const skinSliderThumbOffsetY = useSkinStore(
+		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
-	const setSettings = useAppStore((state) => state.setSettings)
+	const setSkinSettings = useSkinStore((state) => state.setSkinSettings)
+	const removeInstalledSkin = useSkinStore((state) => state.removeInstalledSkin)
 	const [previewAsset, setPreviewAsset] = useState<SkinBootSplashAsset | null>(
 		null,
 	)
@@ -84,7 +85,7 @@ export default function ThemeSettingsPage() {
 		item: SkinBootSplashAsset,
 		mode: 'poster' | 'video',
 	) => {
-		setSettings({
+		setSkinSettings({
 			selectedSkinBootSplashAssetId: item.id,
 			selectedSkinBootSplashMode: item.video ? mode : 'poster',
 		})
@@ -94,6 +95,20 @@ export default function ThemeSettingsPage() {
 	const activeInstalledSkin = installedSkins.find(
 		(skin) => skin.id === activeSkinId,
 	)
+
+	const deleteSkin = (skin: InstalledSkin) => {
+		Alert.alert('删除装扮', `确定删除「${skin.name}」吗？`, [
+			{ text: '取消', style: 'cancel' },
+			{
+				text: '删除',
+				style: 'destructive',
+				onPress: () => {
+					deleteInstalledSkinPackage(skin)
+					removeInstalledSkin(skin.id)
+				},
+			},
+		])
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -125,7 +140,7 @@ export default function ThemeSettingsPage() {
 					<UniversalSwitch
 						value={activeSkinId !== null}
 						onValueChange={(value) =>
-							setSettings({
+							setSkinSettings({
 								activeSkinId: value ? (installedSkins[0]?.id ?? null) : null,
 							})
 						}
@@ -159,7 +174,7 @@ export default function ThemeSettingsPage() {
 													: colors.outlineVariant,
 											},
 										]}
-										onPress={() => setSettings({ activeSkinId: skin.id })}
+										onPress={() => setSkinSettings({ activeSkinId: skin.id })}
 									>
 										{skin.coverUri ? (
 											<Image
@@ -192,6 +207,20 @@ export default function ThemeSettingsPage() {
 												color={colors.primary}
 											/>
 										) : null}
+										<Pressable
+											style={styles.iconAction}
+											onPress={(event) => {
+												event.stopPropagation()
+												deleteSkin(skin)
+											}}
+											hitSlop={8}
+										>
+											<Icon
+												source='trash-can-outline'
+												size={20}
+												color={colors.error}
+											/>
+										</Pressable>
 									</Pressable>
 								)
 							})}
@@ -203,6 +232,9 @@ export default function ThemeSettingsPage() {
 					<View style={styles.section}>
 						{activeInstalledSkin?.assetFeatures ? (
 							<AssetFeaturePanel features={activeInstalledSkin.assetFeatures} />
+						) : null}
+						{activeInstalledSkin ? (
+							<InstalledAssetSections skin={activeInstalledSkin} />
 						) : null}
 						<View style={styles.sectionHeader}>
 							<View style={styles.settingTextContainer}>
@@ -288,7 +320,9 @@ export default function ThemeSettingsPage() {
 						<UniversalSwitch
 							value={playFullSkinBootSplashAnimation}
 							onValueChange={(value) =>
-								setSettings({ playFullSkinBootSplashAnimation: value })
+								setSkinSettings({
+									playFullSkinBootSplashAnimation: value,
+								})
 							}
 						/>
 					</View>
@@ -296,50 +330,64 @@ export default function ThemeSettingsPage() {
 
 				{activeSkin ? (
 					<View style={styles.section}>
-						<Text variant='titleMedium'>播放器滑块</Text>
-						<Text
-							variant='bodySmall'
-							style={{ color: colors.onSurfaceVariant }}
+						<View
+							style={[
+								styles.sliderPanel,
+								{ backgroundColor: colors.elevation.level1 },
+							]}
 						>
-							尺寸 {skinSliderThumbSize} · X {skinSliderThumbOffsetX} · Y{' '}
-							{skinSliderThumbOffsetY}
-						</Text>
-						<Slider
-							style={styles.controlSlider}
-							minimumValue={12}
-							maximumValue={36}
-							step={1}
-							value={skinSliderThumbSize}
-							onValueChange={(value) =>
-								setSettings({ skinSliderThumbSize: Math.round(value) })
-							}
-						/>
-						<Slider
-							style={styles.controlSlider}
-							minimumValue={-24}
-							maximumValue={24}
-							step={1}
-							value={skinSliderThumbOffsetX}
-							onValueChange={(value) =>
-								setSettings({ skinSliderThumbOffsetX: Math.round(value) })
-							}
-						/>
-						<Slider
-							style={styles.controlSlider}
-							minimumValue={-24}
-							maximumValue={24}
-							step={1}
-							value={skinSliderThumbOffsetY}
-							onValueChange={(value) =>
-								setSettings({ skinSliderThumbOffsetY: Math.round(value) })
-							}
-						/>
-						<SliderPreview
-							thumbUri={activeSkin.player.sliderThumb.normal.uri}
-							thumbSize={skinSliderThumbSize}
-							offsetX={skinSliderThumbOffsetX}
-							offsetY={skinSliderThumbOffsetY}
-						/>
+							<View style={styles.sectionHeader}>
+								<View style={styles.settingTextContainer}>
+									<Text variant='titleMedium'>播放器滑块</Text>
+									<Text
+										variant='bodySmall'
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										尺寸 {skinSliderThumbSize} · X {skinSliderThumbOffsetX} · Y{' '}
+										{skinSliderThumbOffsetY}
+									</Text>
+								</View>
+							</View>
+							<SliderPreview
+								thumbUri={activeSkin.player.sliderThumb.normal.uri}
+								thumbSize={skinSliderThumbSize}
+								offsetX={skinSliderThumbOffsetX}
+								offsetY={skinSliderThumbOffsetY}
+							/>
+							<SliderControl
+								label='尺寸'
+								value={skinSliderThumbSize}
+								minimumValue={12}
+								maximumValue={36}
+								onValueChange={(value) =>
+									setSkinSettings({
+										skinSliderThumbSize: Math.round(value),
+									})
+								}
+							/>
+							<SliderControl
+								label='水平'
+								value={skinSliderThumbOffsetX}
+								minimumValue={-24}
+								maximumValue={24}
+								onValueChange={(value) =>
+									setSkinSettings({
+										skinSliderThumbOffsetX: Math.round(value),
+									})
+								}
+							/>
+							<SliderControl
+								label='垂直'
+								value={skinSliderThumbOffsetY}
+								minimumValue={-24}
+								maximumValue={24}
+								onValueChange={(value) =>
+									setSkinSettings({
+										skinSliderThumbOffsetY: Math.round(value),
+									})
+								}
+							/>
+						</View>
 					</View>
 				) : null}
 			</ScrollView>
@@ -470,6 +518,185 @@ function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
 	)
 }
 
+function localAssetUri(skin: InstalledSkin, path: string | null | undefined) {
+	if (!path) return null
+	if (/^(file|https?):\/\//.test(path)) return path
+	return `${skin.rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
+function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
+	const assets = skin.localAssets
+
+	return (
+		<View style={styles.installedAssets}>
+			<AssetStrip
+				title='海报'
+				items={[
+					...(assets?.cards ?? []).map((item) => ({
+						id: `card-${item.type_id}-${item.img}`,
+						name: item.name,
+						uri: localAssetUri(skin, item.img),
+					})),
+					...(assets?.space_backgrounds ?? []).flatMap((background) =>
+						background.images.map((image, index) => ({
+							id: `space-${background.id}-${index}`,
+							name: `${background.name ?? '空间海报'} ${index + 1}`,
+							uri: localAssetUri(skin, image.portrait ?? image.landscape),
+						})),
+					),
+				]}
+			/>
+			<AssetStrip
+				title='应用主题'
+				items={(assets?.skins ?? []).map((item, index) => ({
+					id: `skin-${item.id}-${index}`,
+					name: item.name ?? `主题 ${index + 1}`,
+					uri: localAssetUri(skin, item.head_bg ?? item.tail_bg),
+				}))}
+			/>
+			<AssetStrip
+				title='滑块'
+				items={(assets?.play_icons ?? []).map((item, index) => ({
+					id: `play-icon-${item.id}-${index}`,
+					name: item.name ?? `滑块 ${index + 1}`,
+					uri: localAssetUri(skin, item.static_icon_image ?? item.middle_png),
+				}))}
+				compact
+			/>
+			<AssetStrip
+				title='点赞动画'
+				items={(assets?.thumbups ?? []).map((item, index) => ({
+					id: `thumbup-${item.id}-${index}`,
+					name: item.name ?? `点赞动画 ${index + 1}`,
+					uri: localAssetUri(
+						skin,
+						`${skin.thumbUpFrames?.[index]?.directoryPath ?? `thumbups/${String(index).padStart(2, '0')}/frames`}/frame_000.png`,
+					),
+				}))}
+				compact
+			/>
+			<AssetStrip
+				title='刷新动画'
+				items={(assets?.loadings ?? []).map((item, index) => ({
+					id: `loading-${item.id}-${index}`,
+					name: item.name ?? `刷新动画 ${index + 1}`,
+					uri: localAssetUri(skin, item.loading_frame_url),
+				}))}
+				compact
+			/>
+			<AssetStrip
+				title='头像框'
+				items={(assets?.avatar_frames ?? []).map((item, index) => ({
+					id: `avatar-${item.id}-${index}`,
+					name: item.name ?? `头像框 ${index + 1}`,
+					uri: localAssetUri(skin, item.image),
+				}))}
+				compact
+			/>
+		</View>
+	)
+}
+
+function AssetStrip({
+	compact,
+	items,
+	title,
+}: {
+	compact?: boolean
+	items: Array<{ id: string; name: string; uri: string | null }>
+	title: string
+}) {
+	const colors = useTheme().colors
+	if (items.length === 0) return null
+
+	return (
+		<View style={styles.assetStrip}>
+			<View style={styles.assetStripHeader}>
+				<Text variant='titleSmall'>{title}</Text>
+				<Text
+					variant='bodySmall'
+					style={{ color: colors.onSurfaceVariant }}
+				>
+					{items.length}
+				</Text>
+			</View>
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				contentContainerStyle={styles.assetStripContent}
+			>
+				{items.map((item) => (
+					<View
+						key={item.id}
+						style={compact ? styles.assetTileCompact : styles.assetTile}
+					>
+						<View
+							style={[
+								styles.assetTileImage,
+								compact && styles.assetTileImageCompact,
+								{ backgroundColor: colors.surfaceVariant },
+							]}
+						>
+							{item.uri ? (
+								<Image
+									source={{ uri: item.uri }}
+									style={StyleSheet.absoluteFill}
+									contentFit='cover'
+									cachePolicy='memory-disk'
+								/>
+							) : null}
+						</View>
+						<Text
+							variant='bodySmall'
+							numberOfLines={1}
+						>
+							{item.name}
+						</Text>
+					</View>
+				))}
+			</ScrollView>
+		</View>
+	)
+}
+
+function SliderControl({
+	label,
+	maximumValue,
+	minimumValue,
+	onValueChange,
+	value,
+}: {
+	label: string
+	maximumValue: number
+	minimumValue: number
+	onValueChange: (value: number) => void
+	value: number
+}) {
+	const colors = useTheme().colors
+
+	return (
+		<View style={styles.sliderControlRow}>
+			<View style={styles.sliderControlLabel}>
+				<Text variant='bodyMedium'>{label}</Text>
+				<Text
+					variant='bodySmall'
+					style={{ color: colors.onSurfaceVariant }}
+				>
+					{value}
+				</Text>
+			</View>
+			<Slider
+				style={styles.controlSlider}
+				minimumValue={minimumValue}
+				maximumValue={maximumValue}
+				step={1}
+				value={value}
+				onValueChange={onValueChange}
+			/>
+		</View>
+	)
+}
+
 function BootSplashAssetPreview({
 	asset,
 	onDismiss,
@@ -480,18 +707,23 @@ function BootSplashAssetPreview({
 	onSelect: (asset: SkinBootSplashAsset, mode: 'poster' | 'video') => void
 }) {
 	const colors = useTheme().colors
-	const [mode, setMode] = useState<'poster' | 'video'>('poster')
+	const [selectedMode, setSelectedMode] = useState<{
+		assetId: string
+		mode: 'poster' | 'video'
+	} | null>(null)
 	const player = useVideoPlayer(asset?.video?.uri ?? null, (video) => {
 		video.loop = true
 		video.muted = true
 	})
+	const mode =
+		asset && selectedMode?.assetId === asset.id
+			? selectedMode.mode
+			: asset?.video
+				? 'video'
+				: 'poster'
 
 	useEffect(() => {
-		if (!asset) return
-
-		const nextMode = asset.video ? 'video' : 'poster'
-		setMode(nextMode)
-		if (asset.video) {
+		if (asset?.video) {
 			player.replay()
 		}
 	}, [asset, player])
@@ -515,7 +747,10 @@ function BootSplashAssetPreview({
 								selectedIndex={mode === 'poster' ? 0 : 1}
 								onChange={(event) => {
 									const selectedIndex = event.nativeEvent.selectedSegmentIndex
-									setMode(selectedIndex === 0 ? 'poster' : 'video')
+									setSelectedMode({
+										assetId: asset.id,
+										mode: selectedIndex === 0 ? 'poster' : 'video',
+									})
 									if (selectedIndex === 1) {
 										player.replay()
 									}
@@ -607,6 +842,12 @@ const styles = StyleSheet.create({
 	skinText: {
 		flex: 1,
 	},
+	iconAction: {
+		width: 34,
+		height: 34,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
 	featurePanel: {
 		gap: 10,
 		marginBottom: 18,
@@ -623,6 +864,39 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		paddingHorizontal: 8,
 		paddingVertical: 5,
+	},
+	installedAssets: {
+		gap: 14,
+		marginBottom: 18,
+	},
+	assetStrip: {
+		gap: 8,
+	},
+	assetStripHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	assetStripContent: {
+		gap: 10,
+		paddingRight: 8,
+	},
+	assetTile: {
+		width: 92,
+		gap: 6,
+	},
+	assetTileCompact: {
+		width: 76,
+		gap: 6,
+	},
+	assetTileImage: {
+		width: '100%',
+		aspectRatio: 522 / 696,
+		borderRadius: 8,
+		overflow: 'hidden',
+	},
+	assetTileImageCompact: {
+		aspectRatio: 1,
 	},
 	sectionHeader: {
 		flexDirection: 'row',
@@ -692,13 +966,24 @@ const styles = StyleSheet.create({
 		gap: 10,
 		marginTop: 16,
 	},
+	sliderPanel: {
+		borderRadius: 8,
+		padding: 14,
+	},
+	sliderControlRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 12,
+		marginTop: 10,
+	},
+	sliderControlLabel: {
+		width: 46,
+	},
 	controlSlider: {
-		width: '100%',
-		marginTop: 8,
+		flex: 1,
 	},
 	sliderPreview: {
-		marginTop: 12,
-		height: 48,
+		height: 54,
 		justifyContent: 'center',
 	},
 	previewSlider: {

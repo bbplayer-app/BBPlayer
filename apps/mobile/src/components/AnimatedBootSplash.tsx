@@ -12,7 +12,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
 const bootSplashManifest =
@@ -30,14 +30,12 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const { height, width } = useWindowDimensions()
 	const insets = useSafeAreaInsets()
 	const activeSkin = useActiveSkin()
-	const selectedAssetId = useAppStore(
-		(state) => state.settings.selectedSkinBootSplashAssetId,
+	const selectedAssetId = useSkinStore(
+		(state) => state.selectedSkinBootSplashAssetId,
 	)
-	const selectedMode = useAppStore(
-		(state) => state.settings.selectedSkinBootSplashMode,
-	)
-	const playFullAnimation = useAppStore(
-		(state) => state.settings.playFullSkinBootSplashAnimation,
+	const selectedMode = useSkinStore((state) => state.selectedSkinBootSplashMode)
+	const playFullAnimation = useSkinStore(
+		(state) => state.playFullSkinBootSplashAnimation,
 	)
 	const bootSplashAsset =
 		activeSkin?.bootSplash.items.find((item) => item.id === selectedAssetId) ??

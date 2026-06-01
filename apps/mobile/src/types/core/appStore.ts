@@ -1,7 +1,5 @@
 import type { Result } from 'neverthrow'
 
-import type { InstalledSkin } from '@/lib/theme/skins'
-
 interface Settings {
 	sendPlayHistory: boolean
 	enableDebugLog: boolean
@@ -16,14 +14,6 @@ interface Settings {
 	danmakuFilterLevel: number
 	downloadMaxParallelTasks: number
 	enableMinimalistMode: boolean
-	activeSkinId: string | null
-	installedSkins: InstalledSkin[]
-	skinSliderThumbSize: number
-	skinSliderThumbOffsetX: number
-	skinSliderThumbOffsetY: number
-	playFullSkinBootSplashAnimation: boolean
-	selectedSkinBootSplashAssetId: string | null
-	selectedSkinBootSplashMode: 'poster' | 'video'
 }
 
 interface BilibiliUserSummary {

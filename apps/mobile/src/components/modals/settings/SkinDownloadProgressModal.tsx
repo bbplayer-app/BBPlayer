@@ -6,8 +6,8 @@ import { Dialog, Text, useTheme } from 'react-native-paper'
 import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { alert } from '@/components/modals/AlertModal'
-import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import {
 	installSkinPackage,
@@ -25,6 +25,7 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 	const router = useRouter()
 	const colors = useTheme().colors
 	const close = useModalStore((state) => state.close)
+	const addInstalledSkin = useSkinStore((state) => state.addInstalledSkin)
 	const [progress, setProgress] = useState<SkinDownloadProgress | null>(null)
 	const [isFinished, setIsFinished] = useState(false)
 	const [hasError, setHasError] = useState(false)
@@ -44,14 +45,7 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 		})
 			.then((installedSkin) => {
 				if (cancelled) return
-				useAppStore.getState().setSettings({
-					installedSkins: [
-						installedSkin,
-						...(useAppStore.getState().settings.installedSkins ?? []).filter(
-							(skin) => skin.id !== installedSkin.id,
-						),
-					],
-				})
+				addInstalledSkin(installedSkin)
 				setProgress((previous) =>
 					previous
 						? {
@@ -89,7 +83,7 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 		return () => {
 			cancelled = true
 		}
-	}, [close, item, router])
+	}, [addInstalledSkin, close, item, router])
 
 	const canClose = isFinished || hasError
 
