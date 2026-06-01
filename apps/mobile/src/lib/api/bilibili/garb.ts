@@ -412,6 +412,10 @@ const resolveComponent = async (
 		`${API_BENEFIT}?${params.toString()}`,
 		signal,
 	)
+	if (!isRecord(data)) {
+		return { type: 'unknown', raw_part_id: null, raw_data: data }
+	}
+
 	const partId = numberValue(data.part_id)
 	const suitItems = isRecord(data.suit_items) ? data.suit_items : {}
 	const props = firstProps(suitItems, 'emoji_package')
@@ -495,13 +499,11 @@ const buildCollectionManifest = async (
 			rarity: numberValue(card.card_scarcity),
 			is_dynamic: numberValue(card.card_type) === 2,
 			image_no_watermark: stringValue(card.card_img),
-			image_watermark: stringValue(card.card_img_download),
-			video_no_watermark: arrayValue(card.video_list).filter(
-				(value): value is string => typeof value === 'string',
-			),
-			video_watermark: arrayValue(card.video_list_download).filter(
-				(value): value is string => typeof value === 'string',
-			),
+			image_watermark: null,
+			video_no_watermark: arrayValue(card.video_list)
+				.filter((value): value is string => typeof value === 'string')
+				.slice(0, 1),
+			video_watermark: [],
 			width: numberValue(card.width),
 			height: numberValue(card.height),
 		}))

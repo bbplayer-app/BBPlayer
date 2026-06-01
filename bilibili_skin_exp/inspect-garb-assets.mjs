@@ -164,6 +164,10 @@ const resolveComponent = async (componentId) => {
 		part: 'emoji_package',
 	})
 	const data = await getJsonData(`${API_BENEFIT}?${params.toString()}`)
+	if (!isRecord(data)) {
+		return { type: 'unknown', raw_part_id: null, raw_data: data }
+	}
+
 	const partId = numberValue(data.part_id)
 	const suitItems = isRecord(data.suit_items) ? data.suit_items : {}
 	const props = firstProps(suitItems, 'emoji_package')
@@ -231,13 +235,11 @@ const buildCollectionManifest = async (item) => {
 			rarity: numberValue(card.card_scarcity),
 			is_dynamic: numberValue(card.card_type) === 2,
 			image_no_watermark: stringValue(card.card_img),
-			image_watermark: stringValue(card.card_img_download),
-			video_no_watermark: arrayValue(card.video_list).filter(
-				(value) => typeof value === 'string',
-			),
-			video_watermark: arrayValue(card.video_list_download).filter(
-				(value) => typeof value === 'string',
-			),
+			image_watermark: null,
+			video_no_watermark: arrayValue(card.video_list)
+				.filter((value) => typeof value === 'string')
+				.slice(0, 1),
+			video_watermark: [],
 			width: numberValue(card.width),
 			height: numberValue(card.height),
 		}))
@@ -420,8 +422,6 @@ const semanticPaths = (assets) =>
 			return [
 				card.image_no_watermark &&
 					`${prefix}/image_no_watermark${extensionFromUrl(card.image_no_watermark, '.png')}`,
-				card.image_watermark &&
-					`${prefix}/image_watermark${extensionFromUrl(card.image_watermark, '.png')}`,
 				...card.video_no_watermark.map(
 					(_, videoIndex) => `${prefix}/video_no_watermark_${videoIndex}.mp4`,
 				),

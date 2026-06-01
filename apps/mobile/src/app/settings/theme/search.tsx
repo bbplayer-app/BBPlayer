@@ -5,14 +5,17 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native'
 import { Appbar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { alert } from '@/components/modals/AlertModal'
+import SkinDownloadProgressModal from '@/components/modals/settings/SkinDownloadProgressModal'
 import useAppStore from '@/hooks/stores/useAppStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import { searchGarbSkins } from '@/lib/api/bilibili/garb'
-import { installSkinPackage } from '@/lib/theme/skinInstall'
+import {
+	installSkinPackage,
+	type SkinDownloadProgress,
+} from '@/lib/theme/skinInstall'
 import toast from '@/utils/toast'
 
 const resultKey = (item: GarbSkinSearchResult) =>
@@ -28,8 +31,8 @@ export default function ThemeSkinSearchPage() {
 	const [searching, setSearching] = useState(false)
 	const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
 	const [progress, setProgress] = useState(0)
-	const [progressLabel, setProgressLabel] = useState('')
-	const [progressCount, setProgressCount] = useState({ completed: 0, total: 0 })
+	const [downloadProgress, setDownloadProgress] =
+		useState<SkinDownloadProgress | null>(null)
 
 	const search = async () => {
 		const trimmed = query.trim()
@@ -55,18 +58,13 @@ export default function ThemeSkinSearchPage() {
 
 		setDownloadingKey(resultKey(item))
 		setProgress(0)
-		setProgressLabel('准备下载')
-		setProgressCount({ completed: 0, total: 0 })
+		setDownloadProgress(null)
 		try {
 			const installedSkin = await installSkinPackage({
 				item,
 				onProgress: (event) => {
 					setProgress(event.progress)
-					setProgressLabel(event.label)
-					setProgressCount({
-						completed: event.completed,
-						total: event.total,
-					})
+					setDownloadProgress(event)
 				},
 			})
 			setSettings({
@@ -91,8 +89,7 @@ export default function ThemeSkinSearchPage() {
 		} finally {
 			setDownloadingKey(null)
 			setProgress(0)
-			setProgressLabel('')
-			setProgressCount({ completed: 0, total: 0 })
+			setDownloadProgress(null)
 		}
 	}
 
@@ -195,34 +192,10 @@ export default function ThemeSkinSearchPage() {
 					}
 				/>
 			</View>
-			<AnimatedModalOverlay
+			<SkinDownloadProgressModal
 				visible={downloadingKey !== null}
-				onDismiss={() => {}}
-				contentStyle={styles.downloadModal}
-			>
-				<View style={styles.downloadContent}>
-					<Text variant='titleMedium'>正在下载主题资产</Text>
-					<Text
-						variant='bodySmall'
-						numberOfLines={2}
-						style={{ color: colors.onSurfaceVariant }}
-					>
-						{progressLabel || '准备下载'}
-					</Text>
-					<LinearProgressIndicator
-						progress={progress}
-						style={styles.modalProgress}
-					/>
-					<Text
-						variant='bodySmall'
-						style={{ color: colors.onSurfaceVariant }}
-					>
-						{progressCount.total > 0
-							? `${progressCount.completed}/${progressCount.total}`
-							: '正在获取资产清单'}
-					</Text>
-				</View>
-			</AnimatedModalOverlay>
+				progress={downloadProgress}
+			/>
 		</View>
 	)
 }
@@ -268,15 +241,5 @@ const styles = StyleSheet.create({
 	empty: {
 		marginTop: 32,
 		textAlign: 'center',
-	},
-	downloadModal: {
-		paddingHorizontal: 18,
-		paddingBottom: 18,
-	},
-	downloadContent: {
-		gap: 12,
-	},
-	modalProgress: {
-		marginTop: 4,
 	},
 })

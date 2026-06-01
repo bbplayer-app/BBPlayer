@@ -190,7 +190,6 @@ const countSemanticFiles = (assets: UnifiedAssets): number =>
 		assets.thumbup?.preview,
 		...(assets.cards ?? []).flatMap((card) => [
 			card.image_no_watermark,
-			card.image_watermark,
 			...card.video_no_watermark,
 		]),
 		...(assets.space_bg ?? []).flatMap((spaceBg) => [
@@ -501,12 +500,15 @@ const downloadThumbupAssets = async (
 
 	if (!localThumbup.ani_file) return null
 
-	const frames = await extractSvgaBinFramesAsync({
-		inputUri: new FileSystem.File(root, localThumbup.ani_file).uri,
-		outputDirectoryUri: new FileSystem.Directory(root, 'thumbup', 'frames').uri,
-	})
-
-	return frames
+	try {
+		return await extractSvgaBinFramesAsync({
+			inputUri: new FileSystem.File(root, localThumbup.ani_file).uri,
+			outputDirectoryUri: new FileSystem.Directory(root, 'thumbup', 'frames')
+				.uri,
+		})
+	} catch {
+		return null
+	}
 }
 
 const downloadCards = async (
@@ -538,12 +540,7 @@ const downloadCards = async (
 				`${prefix}/image_no_watermark${extensionFromUrl(card.image_no_watermark ?? '', '.png')}`,
 				onDownloaded,
 			),
-			image_watermark: await downloadFile(
-				root,
-				card.image_watermark,
-				`${prefix}/image_watermark${extensionFromUrl(card.image_watermark ?? '', '.png')}`,
-				onDownloaded,
-			),
+			image_watermark: null,
 			video_no_watermark: videoNoWatermark,
 			video_watermark: [],
 		})
@@ -690,7 +687,7 @@ export async function installSkinPackage({
 		assetManifestPath,
 		assetFeatures: featureMap(manifest),
 		bootSplashAssets,
-		thumbUpFrameCount: frames?.frames,
+		thumbUpFrameCount: frames?.frames ?? 0,
 		thumbUpFrameFps: frames?.fps,
 		thumbUpFrameSize: frames?.width,
 	}
