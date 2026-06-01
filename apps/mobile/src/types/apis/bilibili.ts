@@ -592,6 +592,9 @@ interface BilibiliGarbSearchItem {
 /** 搜索 API 返回 */
 interface BilibiliGarbSearchResponse {
 	list: BilibiliGarbSearchItem[]
+	pn: number
+	ps: number
+	total: number
 }
 
 /** asset_bag 卡牌条目 */

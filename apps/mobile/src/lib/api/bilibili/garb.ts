@@ -1,3 +1,7 @@
+/**
+ * 从这个文件可以看出你 b 的装扮/收藏集相关 api 有多复杂。。。
+ * 并且每个装扮/收藏集含有的资产可能都不相同，所以我们内部构建了一个统一的资产清单，尽可能去抹平这些差异
+ */
 import {
 	parseSkinAssetDeclaration,
 	type SkinAssetDeclaration,
@@ -6,7 +10,6 @@ import type {
 	BilibiliGarbAssetBagItem,
 	BilibiliGarbAssetBagResponse,
 	BilibiliGarbCollectEntry,
-	BilibiliGarbSearchItem,
 } from '@/types/apis/bilibili'
 
 import { bilibiliApi } from './api'
@@ -40,39 +43,12 @@ const nullableString = (value: unknown): string | null =>
 	typeof value === 'string' && value.trim() ? value.trim() : null
 
 // ============================================================
-// 搜索：API raw → GarbSkinSearchResult
-// ============================================================
-
-const mapSearchItem = (item: BilibiliGarbSearchItem): GarbSkinSearchResult => {
-	const { part_id: partId, properties: props } = item
-	return {
-		actId: Number(props.dlc_act_id) || null,
-		coverUri:
-			props.image_cover ??
-			props.image_cover_long ??
-			props.fan_share_image ??
-			null,
-		itemId: item.item_id || null,
-		kind: partId === 0 ? 'collection' : partId === 6 ? 'suit' : null,
-		lotteryId: Number(props.dlc_lottery_id) || null,
-		name: item.name || '未命名装扮',
-		partId: partId ?? null,
-	}
-}
-
-export const searchGarbSkins = async (
-	keyword: string,
-	signal?: AbortSignal,
-): Promise<GarbSkinSearchResult[]> => {
-	const result = await bilibiliApi.searchGarbSkins({ keyword, signal })
-	if (result.isErr()) throw result.error
-	return result.value.list.map(mapSearchItem)
-}
-
-// ============================================================
 // 卡牌解析：API raw → SkinCardAsset
 // ============================================================
 
+/**
+ * 收藏集的抽卡
+ */
 const parseCardItem = (
 	card: NonNullable<BilibiliGarbAssetBagItem['card_item']>,
 	index: number,
@@ -83,6 +59,9 @@ const parseCardItem = (
 	video_list: card.video_list?.length ? card.video_list : null,
 })
 
+/**
+ * 部分收藏集抽满固定抽数会有这些额外的卡牌奖励，咱们把它转换为我们的数据结构
+ */
 const parseCollectCardItem = (
 	card: NonNullable<
 		NonNullable<BilibiliGarbCollectEntry['card_item']>['card_asset_info']
@@ -99,6 +78,10 @@ const parseCollectCardItem = (
 // 组件解析：API raw → 组件
 // ============================================================
 
+// TODO: 这里后续需要更改，把所有 part_id 所对应的返回内容全部声明为强类型
+/**
+ * 获取并解析收藏集的额外奖励
+ */
 const resolveComponent = async (
 	componentId: string,
 	componentName: string | null,
