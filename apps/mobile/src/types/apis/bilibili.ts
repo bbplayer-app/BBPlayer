@@ -649,14 +649,11 @@ interface BilibiliGarbAssetBagResponse {
 	lottery_simple_list?: BilibiliGarbLotterySimpleItem[]
 }
 
-/** suit/detail 组件条目属性（各类型共用，字段名不同但形状一致） */
-type BilibiliGarbSuitItemProperties = Record<string, string | undefined>
-
 /** suit/detail 组件条目 */
 interface BilibiliGarbSuitItem {
 	item_id: number
 	name: string
-	properties: BilibiliGarbSuitItemProperties
+	properties: Record<string, string | undefined>
 	items?: BilibiliGarbSuitItem[]
 }
 
@@ -681,8 +678,13 @@ interface BilibiliGarbBenefitResponse {
 	part_id?: number
 	properties?: Record<string, unknown>
 	suit_items?: {
-		emoji_package?: BilibiliGarbSuitItem[]
-		emoji?: { name: string; properties: BilibiliGarbSuitItemProperties }[]
+		emoji?: {
+			name: string
+			properties: {
+				image: string
+			}
+			item_id: number
+		}[]
 	}
 }
 
