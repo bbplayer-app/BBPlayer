@@ -4,7 +4,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { WavySlider } from 'expo-wavy-slider'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Icon, Text, useTheme } from 'react-native-paper'
 import { useSharedValue } from 'react-native-reanimated'
@@ -18,8 +18,10 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { deleteInstalledSkinPackage } from '@/lib/theme/skinInstall'
+import { loadSkinAssets } from '@/lib/theme/skins'
 import type {
-	InstalledSkin,
+	InstalledSkinMeta,
+	SkinAssetDeclaration,
 	SkinAssetFeatures,
 	SkinBootSplashAsset,
 } from '@/lib/theme/skins'
@@ -36,7 +38,7 @@ const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	// ['emojiPackages', '表情'],
 ]
 
-const EMPTY_INSTALLED_SKINS: InstalledSkin[] = []
+const EMPTY_INSTALLED_SKINS: InstalledSkinMeta[] = []
 
 export default function ThemeSettingsPage() {
 	const router = useRouter()
@@ -96,7 +98,7 @@ export default function ThemeSettingsPage() {
 		(skin) => skin.id === activeSkinId,
 	)
 
-	const deleteSkin = (skin: InstalledSkin) => {
+	const deleteSkin = (skin: InstalledSkinMeta) => {
 		Alert.alert('删除装扮', `确定删除「${skin.name}」吗？`, [
 			{ text: '取消', style: 'cancel' },
 			{
@@ -518,14 +520,29 @@ function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
 	)
 }
 
-function localAssetUri(skin: InstalledSkin, path: string | null | undefined) {
+function localAssetUri(rootUri: string, path: string | null | undefined) {
 	if (!path) return null
 	if (/^(file|https?):\/\//.test(path)) return path
-	return `${skin.rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
-	const assets = skin.localAssets
+function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
+	const [assets, setAssets] = useState<SkinAssetDeclaration | null>(null)
+	const { id, rootUri } = skin
+	const skinRef = useRef(skin)
+	skinRef.current = skin
+
+	useEffect(() => {
+		let cancelled = false
+		void loadSkinAssets(skinRef.current).then((a) => {
+			if (!cancelled) setAssets(a)
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [id, rootUri])
+
+	if (!assets) return null
 
 	return (
 		<View style={styles.installedAssets}>
@@ -535,13 +552,13 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 					...(assets?.cards ?? []).map((item) => ({
 						id: `card-${item.type_id}-${item.img}`,
 						name: item.name,
-						uri: localAssetUri(skin, item.img),
+						uri: localAssetUri(rootUri, item.img),
 					})),
 					...(assets?.space_backgrounds ?? []).flatMap((background) =>
 						background.images.map((image, index) => ({
 							id: `space-${background.id}-${index}`,
 							name: `${background.name ?? '空间海报'} ${index + 1}`,
-							uri: localAssetUri(skin, image.portrait ?? image.landscape),
+							uri: localAssetUri(rootUri, image.portrait ?? image.landscape),
 						})),
 					),
 				]}
@@ -551,7 +568,7 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 				items={(assets?.skins ?? []).map((item, index) => ({
 					id: `skin-${item.id}-${index}`,
 					name: item.name ?? `主题 ${index + 1}`,
-					uri: localAssetUri(skin, item.head_bg ?? item.tail_bg),
+					uri: localAssetUri(rootUri, item.head_bg ?? item.tail_bg),
 				}))}
 			/>
 			<AssetStrip
@@ -559,7 +576,10 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 				items={(assets?.play_icons ?? []).map((item, index) => ({
 					id: `play-icon-${item.id}-${index}`,
 					name: item.name ?? `滑块 ${index + 1}`,
-					uri: localAssetUri(skin, item.static_icon_image ?? item.middle_png),
+					uri: localAssetUri(
+						rootUri,
+						item.static_icon_image ?? item.middle_png,
+					),
 				}))}
 				compact
 			/>
@@ -569,8 +589,8 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 					id: `thumbup-${item.id}-${index}`,
 					name: item.name ?? `点赞动画 ${index + 1}`,
 					uri: localAssetUri(
-						skin,
-						`${skin.thumbUpFrames?.[index]?.directoryPath ?? `thumbups/${String(index).padStart(2, '0')}/frames`}/frame_000.png`,
+						rootUri,
+						`thumbups/${String(index).padStart(2, '0')}/frames/frame_000.png`,
 					),
 				}))}
 				compact
@@ -580,7 +600,7 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 				items={(assets?.loadings ?? []).map((item, index) => ({
 					id: `loading-${item.id}-${index}`,
 					name: item.name ?? `刷新动画 ${index + 1}`,
-					uri: localAssetUri(skin, item.loading_frame_url),
+					uri: localAssetUri(rootUri, item.loading_frame_url),
 				}))}
 				compact
 			/>
@@ -589,7 +609,7 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkin }) {
 				items={(assets?.avatar_frames ?? []).map((item, index) => ({
 					id: `avatar-${item.id}-${index}`,
 					name: item.name ?? `头像框 ${index + 1}`,
-					uri: localAssetUri(skin, item.image),
+					uri: localAssetUri(rootUri, item.image),
 				}))}
 				compact
 			/>

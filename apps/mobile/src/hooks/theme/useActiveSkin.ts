@@ -1,20 +1,40 @@
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
-import { buildAppSkin } from '@/lib/theme/skins'
+import { loadActiveSkin, invalidateSkinCache } from '@/lib/theme/skins'
+import type { AppSkin } from '@/lib/theme/skins'
 
-export default function useActiveSkin() {
+export default function useActiveSkin(): AppSkin | null {
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
+	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const installedSkins = useSkinStore((state) => state.installedSkins)
 
-	return useMemo(() => {
-		if (!activeSkinId) return null
+	const [appSkin, setAppSkin] = useState<AppSkin | null>(null)
 
-		const installedSkin = installedSkins.find(
-			(skin) => skin.id === activeSkinId,
-		)
-		if (!installedSkin) return null
+	useEffect(() => {
+		if (!activeSkinId) {
+			setAppSkin(null)
+			return
+		}
 
-		return buildAppSkin(installedSkin)
-	}, [activeSkinId, installedSkins])
+		const meta = installedSkins.find((skin) => skin.id === activeSkinId)
+		if (!meta) {
+			setAppSkin(null)
+			return
+		}
+
+		let cancelled = false
+
+		void loadActiveSkin(meta, activeSkinIndex).then((skin) => {
+			if (!cancelled) setAppSkin(skin)
+		})
+
+		return () => {
+			cancelled = true
+		}
+	}, [activeSkinId, activeSkinIndex, installedSkins])
+
+	return appSkin
 }
+
+export { invalidateSkinCache }

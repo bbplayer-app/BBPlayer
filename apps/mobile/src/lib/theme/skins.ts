@@ -177,6 +177,29 @@ export interface InstalledSkin {
 	thumbUpFrames?: SkinFrameSequence[]
 }
 
+/** 存储在 Zustand 里的轻量元数据（不含 localAssets） */
+export interface InstalledSkinMeta {
+	assetFeatures: SkinAssetFeatures
+	coverUri: string | null
+	id: string
+	installedAt: number
+	name: string
+	rootUri: string
+	source: InstalledSkin['source']
+}
+
+export const installedSkinToMeta = (
+	skin: InstalledSkin,
+): InstalledSkinMeta => ({
+	assetFeatures: skin.assetFeatures,
+	coverUri: skin.coverUri,
+	id: skin.id,
+	installedAt: skin.installedAt,
+	name: skin.name,
+	rootUri: skin.rootUri,
+	source: skin.source,
+})
+
 export interface SkinImageResource {
 	scale?: number
 	uri: string
@@ -246,6 +269,63 @@ export const parseSkinAssetDeclaration = (
 		throw new Error(`装扮资产声明格式不正确：${result.summary}`)
 	}
 	return result
+}
+
+// ============================================================
+// 磁盘加载 + 内存缓存
+// ============================================================
+
+const appSkinCache = new Map<string, AppSkin | null>()
+
+/** 从磁盘加载完整资产并构建 AppSkin（有内存缓存） */
+export const loadSkinAssets = async (
+	meta: InstalledSkinMeta,
+): Promise<SkinAssetDeclaration | null> => {
+	const { File, Directory } = await import('expo-file-system')
+	const file = new File(new Directory(meta.rootUri), 'assets.json')
+	if (!file.exists) return null
+	const text = await file.text()
+	return parseSkinAssetDeclaration(JSON.parse(text))
+}
+
+/**
+ * 从磁盘加载完整 InstalledSkin（含 localAssets + thumbUpFrames），
+ * 然后调用 buildAppSkin 构建运行时皮肤对象。
+ * 结果会缓存在内存中，调用 invalidateSkinCache 可清除。
+ */
+export const loadActiveSkin = async (
+	meta: InstalledSkinMeta,
+	skinIndex = 0,
+	playIconIndex = 0,
+	thumbUpIndex = 0,
+): Promise<AppSkin | null> => {
+	const cacheKey = `${meta.id}:${skinIndex}:${playIconIndex}:${thumbUpIndex}`
+	const cached = appSkinCache.get(cacheKey)
+	if (cached !== undefined) return cached
+
+	const assets = await loadSkinAssets(meta)
+	if (!assets) {
+		appSkinCache.set(cacheKey, null)
+		return null
+	}
+
+	const skin: InstalledSkin = {
+		...meta,
+		localAssets: assets,
+		packageDirectories: undefined,
+		thumbUpFrames: undefined,
+	}
+
+	const appSkin = buildAppSkin(skin, skinIndex, playIconIndex, thumbUpIndex)
+	appSkinCache.set(cacheKey, appSkin)
+	return appSkin
+}
+
+/** 清除指定皮肤的缓存（卸载或更换皮肤后调用） */
+export const invalidateSkinCache = (skinId: string) => {
+	for (const key of appSkinCache.keys()) {
+		if (key.startsWith(`${skinId}:`)) appSkinCache.delete(key)
+	}
 }
 
 export const createSkinAssetFeatures = (
@@ -321,12 +401,17 @@ const bootSplashItemsFromSpaceBackgrounds = (
 		}),
 	)
 
-export const buildAppSkin = (skin: InstalledSkin): AppSkin | null => {
+export const buildAppSkin = (
+	skin: InstalledSkin,
+	skinIndex = 0,
+	playIconIndex = 0,
+	thumbUpIndex = 0,
+): AppSkin | null => {
 	const assets = skin.localAssets
-	const themeSkin = assets.skins[0] ?? null
-	const playIcon = assets.play_icons[0] ?? null
-	const thumbUp = assets.thumbups[0] ?? null
-	const thumbUpFrames = skin.thumbUpFrames?.[0] ?? null
+	const themeSkin = assets.skins[skinIndex] ?? null
+	const playIcon = assets.play_icons[playIconIndex] ?? null
+	const thumbUp = assets.thumbups[thumbUpIndex] ?? null
+	const thumbUpFrames = skin.thumbUpFrames?.[thumbUpIndex] ?? null
 	const fallbackUri = firstUri(
 		skin,
 		themeSkin?.image_cover,

@@ -470,7 +470,7 @@ export const installSkinPackage = async ({
 	}
 }
 
-export const deleteInstalledSkinPackage = (skin: InstalledSkin) => {
+export const deleteInstalledSkinPackage = (skin: { rootUri: string }) => {
 	const directory = new FileSystem.Directory(skin.rootUri)
 	if (directory.exists) {
 		directory.delete()

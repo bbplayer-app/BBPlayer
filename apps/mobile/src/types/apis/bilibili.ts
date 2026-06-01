@@ -570,6 +570,119 @@ interface BilibiliReplyCommentsResponse {
 /**
  * 单条弹幕数据（项目内使用）
  */
+
+// ============================================================
+// Garb 装扮 API 返回类型（仅声明 API raw 形状，不做任何解析）
+// ============================================================
+
+/** 搜索 API 返回的单个项目 */
+interface BilibiliGarbSearchItem {
+	item_id: number
+	name: string
+	part_id: number
+	properties: {
+		dlc_act_id?: string
+		dlc_lottery_id?: string
+		image_cover?: string
+		image_cover_long?: string
+		fan_share_image?: string
+	}
+}
+
+/** 搜索 API 返回 */
+interface BilibiliGarbSearchResponse {
+	list: BilibiliGarbSearchItem[]
+}
+
+/** asset_bag 卡牌条目 */
+interface BilibiliGarbAssetBagItem {
+	item_type: number
+	card_item?: {
+		card_type_id?: number | string
+		card_name?: string
+		card_img?: string
+		card_type?: number
+		video_list?: string[] | null
+		card_scarcity?: number
+	}
+}
+
+/** asset_bag 彩票池条目 */
+interface BilibiliGarbLotterySimpleItem {
+	lottery_id: number
+	lottery_name: string
+}
+
+/** asset_bag 奖励条目 (collect_list) */
+interface BilibiliGarbCollectEntry {
+	redeem_item_type: number
+	redeem_item_id: string
+	redeem_item_name: string
+	redeem_item_image?: string
+	require_item_amount?: number
+	card_item?: {
+		card_type_info?: Record<string, unknown>
+		card_asset_info?: {
+			card_item?: {
+				card_type_id?: number | string
+				card_name?: string
+				card_img?: string
+				card_type?: number
+				video_list?: string[] | null
+			}
+		}
+	}
+}
+
+/** asset_bag API 返回 */
+interface BilibiliGarbAssetBagResponse {
+	item_list?: BilibiliGarbAssetBagItem[]
+	collect_list?:
+		| BilibiliGarbCollectEntry[]
+		| {
+				collect_infos?: BilibiliGarbCollectEntry[]
+				collect_chain?: BilibiliGarbCollectEntry[]
+		  }
+	lottery_simple_list?: BilibiliGarbLotterySimpleItem[]
+}
+
+/** suit/detail 组件条目属性（各类型共用，字段名不同但形状一致） */
+type BilibiliGarbSuitItemProperties = Record<string, string | undefined>
+
+/** suit/detail 组件条目 */
+interface BilibiliGarbSuitItem {
+	item_id: number
+	name: string
+	properties: BilibiliGarbSuitItemProperties
+	items?: BilibiliGarbSuitItem[]
+}
+
+/** suit/detail API 返回 */
+interface BilibiliGarbSuitDetailResponse {
+	item_id: number
+	name: string
+	suit_items: {
+		card?: BilibiliGarbSuitItem[]
+		card_bg?: BilibiliGarbSuitItem[]
+		emoji_package?: BilibiliGarbSuitItem[]
+		loading?: BilibiliGarbSuitItem[]
+		play_icon?: BilibiliGarbSuitItem[]
+		skin?: BilibiliGarbSuitItem[]
+		space_bg?: BilibiliGarbSuitItem[]
+		thumbup?: BilibiliGarbSuitItem[]
+	}
+}
+
+/** benefit API 返回 */
+interface BilibiliGarbBenefitResponse {
+	part_id?: number
+	properties?: Record<string, unknown>
+	suit_items?: {
+		emoji_package?: BilibiliGarbSuitItem[]
+		emoji?: { name: string; properties: BilibiliGarbSuitItemProperties }[]
+	}
+}
+
 interface BilibiliDanmakuItem {
 	id: number | Long
 	progress: number // 弹幕出现时间（ms）
@@ -593,10 +706,21 @@ export type {
 	BilibiliCommentItem,
 	BilibiliCommentMember,
 	BilibiliCommentsResponse,
+	BilibiliDanmakuItem,
 	BilibiliDealFavoriteForOneVideoResponse,
 	BilibiliFavoriteListAllContents,
 	BilibiliFavoriteListContent,
 	BilibiliFavoriteListContents,
+	BilibiliGarbAssetBagItem,
+	BilibiliGarbAssetBagResponse,
+	BilibiliGarbBenefitResponse,
+	BilibiliGarbCollectEntry,
+	BilibiliGarbLotterySimpleItem,
+	BilibiliGarbSearchItem,
+	BilibiliGarbSearchResponse,
+	BilibiliGarbSuitDetailResponse,
+	BilibiliGarbSuitItem,
+	BilibiliGarbSuitItemProperties,
 	BilibiliHistoryVideo,
 	BilibiliHotSearch,
 	BilibiliMediaItemInCollection,
@@ -613,7 +737,6 @@ export type {
 	BilibiliUserUploadedVideosResponse,
 	BilibiliVideoDetails,
 	BilibiliWebPlayerInfo,
-	BilibiliDanmakuItem,
 }
 
 export { BilibiliQrCodeLoginStatus }

@@ -1,13 +1,15 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
-import type { InstalledSkin } from '@/lib/theme/skins'
+import type { InstalledSkin, InstalledSkinMeta } from '@/lib/theme/skins'
+import { installedSkinToMeta } from '@/lib/theme/skins'
 import { zustandStorage } from '@/utils/mmkv'
 
 export type SkinBootSplashMode = 'poster' | 'video'
 
 export interface SkinSettingsUpdate {
 	activeSkinId?: string | null
+	activeSkinIndex?: number
 	playFullSkinBootSplashAnimation?: boolean
 	selectedSkinBootSplashAssetId?: string | null
 	selectedSkinBootSplashMode?: SkinBootSplashMode
@@ -18,8 +20,9 @@ export interface SkinSettingsUpdate {
 
 interface SkinStoreState {
 	activeSkinId: string | null
+	activeSkinIndex: number
 	addInstalledSkin: (skin: InstalledSkin) => void
-	installedSkins: InstalledSkin[]
+	installedSkins: InstalledSkinMeta[]
 	playFullSkinBootSplashAnimation: boolean
 	removeInstalledSkin: (id: string) => void
 	selectedSkinBootSplashAssetId: string | null
@@ -36,6 +39,7 @@ const useSkinStore = create<SkinStoreState>()(
 	persist(
 		(set) => ({
 			activeSkinId: null,
+			activeSkinIndex: 0,
 			installedSkins: [],
 			playFullSkinBootSplashAnimation: false,
 			selectedSkinBootSplashAssetId: null,
@@ -45,9 +49,10 @@ const useSkinStore = create<SkinStoreState>()(
 			skinSliderThumbSize: DEFAULT_SLIDER_THUMB_SIZE,
 
 			addInstalledSkin: (skin) => {
+				const meta = installedSkinToMeta(skin)
 				set((state) => ({
 					installedSkins: [
-						skin,
+						meta,
 						...state.installedSkins.filter(
 							(installedSkin) => installedSkin.id !== skin.id,
 						),
@@ -76,10 +81,11 @@ const useSkinStore = create<SkinStoreState>()(
 		{
 			name: 'skin-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 1,
+			version: 2,
 
 			partialize: (state) => ({
 				activeSkinId: state.activeSkinId,
+				activeSkinIndex: state.activeSkinIndex,
 				installedSkins: state.installedSkins,
 				playFullSkinBootSplashAnimation: state.playFullSkinBootSplashAnimation,
 				selectedSkinBootSplashAssetId: state.selectedSkinBootSplashAssetId,
@@ -97,6 +103,7 @@ const useSkinStore = create<SkinStoreState>()(
 					...currentState,
 					...persisted,
 					installedSkins: persisted.installedSkins ?? [],
+					activeSkinIndex: persisted.activeSkinIndex ?? 0,
 					playFullSkinBootSplashAnimation:
 						persisted.playFullSkinBootSplashAnimation ?? false,
 					selectedSkinBootSplashMode:
