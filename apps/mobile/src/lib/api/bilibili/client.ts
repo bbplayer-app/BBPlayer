@@ -2,6 +2,7 @@ import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import log from '@/utils/log'
 
 import { getCsrfToken } from './utils'
 
@@ -85,8 +86,9 @@ class ApiClient {
 						}),
 					)
 				}
+				const data = response.json() as Promise<ReqResponse<T>>
 				return ResultAsync.fromPromise(
-					response.json() as Promise<ReqResponse<T>>,
+					data,
 					(error) =>
 						new BilibiliApiError({
 							message: error instanceof Error ? error.message : String(error),

@@ -1,8 +1,4 @@
-import {
-	extractSvgaBinFramesAsync,
-	unzipAsync,
-	type SvgaToFramesResult,
-} from '@bbplayer/native'
+import { convertSvgaBinToGifAsync, unzipAsync } from '@bbplayer/native'
 import * as FileSystem from 'expo-file-system'
 import { Platform } from 'react-native'
 
@@ -14,8 +10,8 @@ import {
 	skinRelativeUri,
 	type InstalledSkin,
 	type InstalledSkinPackageDirectory,
+	type InstalledSkinThumbUpGif,
 	type SkinAssetDeclaration,
-	type SkinFrameSequence,
 } from '@/lib/theme/skins'
 
 export interface SkinDownloadProgress {
@@ -149,7 +145,18 @@ const localizeRemoteAssets = (
 
 const createDownloadPlan = (assets: SkinAssetDeclaration) => {
 	const downloads: RemoteAssetDownload[] = []
-	const localized = localizeRemoteAssets(assets, [], downloads)
+	const assetsWithFirstCardVideo = {
+		...assets,
+		cards: assets.cards.map((card) => ({
+			...card,
+			video_list: card.video_list ? card.video_list.slice(0, 1) : null,
+		})),
+	}
+	const localized = localizeRemoteAssets(
+		assetsWithFirstCardVideo,
+		[],
+		downloads,
+	)
 	return {
 		downloads,
 		localAssets: parseSkinAssetDeclaration(localized),
@@ -252,7 +259,7 @@ const thumbUpTasksFor = (assets: SkinAssetDeclaration) =>
 		}
 	})
 
-const extractThumbUpFrames = async ({
+const convertThumbUpsToGifs = async ({
 	assets,
 	emitProgress,
 	onTaskCompleted,
@@ -265,32 +272,32 @@ const extractThumbUpFrames = async ({
 }) => {
 	if (Platform.OS !== 'android') return []
 
-	const frames: SkinFrameSequence[] = []
+	const gifs: Array<InstalledSkinThumbUpGif | null> = Array.from(
+		{ length: assets.thumbups.length },
+		() => null,
+	)
 	for (const task of thumbUpTasksFor(assets)) {
 		const inputUri = `${rootDirectory.uri.replace(/\/+$/, '')}/${task.inputPath.replace(/^\/+/, '')}`
-		const directoryPath = `thumbups/${String(task.index).padStart(2, '0')}/frames`
-		const outputDirectory = new FileSystem.Directory(
-			rootDirectory,
-			directoryPath,
-		)
-		emitProgress(`解析 ${task.name ?? '点赞动画'}`)
-		const result: SvgaToFramesResult = await extractSvgaBinFramesAsync({
+		const gifPath = `thumbups/${String(task.index).padStart(2, '0')}/thumbup.gif`
+		const outputFile = fileForRelativePath(rootDirectory, gifPath)
+		if (outputFile.exists) {
+			outputFile.delete()
+		}
+		emitProgress(`转换 ${task.name ?? '点赞动画'}`)
+		const result = await convertSvgaBinToGifAsync({
 			height: 96,
 			inputUri,
-			outputDirectoryUri: outputDirectory.uri,
+			outputUri: outputFile.uri,
 			width: 96,
 		})
-		frames.push({
-			count: result.frames,
-			directoryPath,
-			fps: result.fps,
-			height: result.height,
-			width: result.width,
-		})
+		gifs[task.index] = {
+			durationMs: Math.round((result.frames / Math.max(1, result.fps)) * 1000),
+			path: gifPath,
+		}
 		onTaskCompleted()
 	}
 
-	return frames
+	return gifs
 }
 
 const firstCoverPath = (assets: SkinAssetDeclaration) =>
@@ -307,13 +314,13 @@ const createInstalledSkin = ({
 	item,
 	packageDirectories,
 	rootUri,
-	thumbUpFrames,
+	thumbUpGifs,
 }: {
 	assets: SkinAssetDeclaration
 	item: GarbSkinSearchResult
 	packageDirectories: InstalledSkinPackageDirectory[]
 	rootUri: string
-	thumbUpFrames: SkinFrameSequence[]
+	thumbUpGifs: Array<InstalledSkinThumbUpGif | null>
 }): InstalledSkin => {
 	const id = sourceId(item)
 	if (!id) throw new Error('装扮安装源缺少有效 ID')
@@ -338,7 +345,7 @@ const createInstalledSkin = ({
 						itemId: item.itemId ?? 0,
 						kind: 'suit',
 					},
-		thumbUpFrames,
+		thumbUpGifs,
 	}
 
 	installed.coverUri = skinRelativeUri(installed, firstCoverPath(assets))
@@ -428,12 +435,12 @@ export const installSkinPackage = async ({
 			},
 			rootDirectory: tempDirectory,
 		})
-		const thumbUpFrames = await extractThumbUpFrames({
+		const thumbUpGifs = await convertThumbUpsToGifs({
 			assets: localAssets,
 			emitProgress,
 			onTaskCompleted: () => {
 				completed += 1
-				emitProgress('已解析点赞动画')
+				emitProgress('已转换点赞动画')
 			},
 			rootDirectory: tempDirectory,
 		})
@@ -443,10 +450,9 @@ export const installSkinPackage = async ({
 			item,
 			packageDirectories,
 			rootUri: finalDirectory.uri,
-			thumbUpFrames,
+			thumbUpGifs,
 		})
 
-		writeJsonFile(tempDirectory, 'assets.json', localAssets)
 		writeJsonFile(tempDirectory, 'installed-skin.json', installedSkin)
 
 		if (finalDirectory.exists) {

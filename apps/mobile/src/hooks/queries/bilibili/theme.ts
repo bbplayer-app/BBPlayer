@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 export const themeQueryKeys = {
@@ -17,12 +18,12 @@ export function useThemeSearch(keyword: string) {
 					keyword,
 					signal,
 					page: pageParam,
-					pageSize: 10,
+					pageSize: 5,
 				}),
 			)
 			return res
 		},
-		initialPageParam: 0,
+		initialPageParam: 1,
 		enabled: !!keyword,
 		getNextPageParam: (lastPage) => {
 			const isEnd = lastPage.pn * lastPage.ps >= lastPage.total

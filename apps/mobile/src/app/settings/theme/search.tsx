@@ -1,10 +1,10 @@
 import { FlashList } from '@shopify/flash-list'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useMemo } from 'hono/jsx'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, TextInput, useTheme } from 'react-native-paper'
+import { MD3Colors } from 'react-native-paper/src/types'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -14,6 +14,7 @@ import { useThemeSearch } from '@/hooks/queries/bilibili/theme'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import { BilibiliGarbSearchItem } from '@/types/apis/bilibili'
+import { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 
 const resultKey = (item: GarbSkinSearchResult) =>
 	`${item.kind ?? 'unknown'}-${item.actId ?? item.itemId}-${item.name}`
@@ -56,8 +57,15 @@ const confirmDownload = (item: GarbSkinSearchResult) => {
 	])
 }
 
-const renderItem = ({ item }: { item: GarbSkinSearchResult }) => {
-	const colors = useTheme().colors
+const renderItem = ({
+	item,
+	extraData,
+}: ListRenderItemInfoWithExtraData<
+	GarbSkinSearchResult,
+	{ colors: MD3Colors }
+>) => {
+	if (!extraData) throw new Error('extraData is undefined')
+	const colors = extraData.colors
 	return (
 		<Pressable
 			style={[styles.resultRow, { borderBottomColor: colors.outlineVariant }]}
@@ -100,7 +108,7 @@ export default function ThemeSkinSearchPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const {
 		data: searchResult,
-		isPending,
+		isFetching,
 		isFetchingNextPage,
 		hasNextPage,
 		refetch,
@@ -111,6 +119,7 @@ export default function ThemeSkinSearchPage() {
 			searchResult?.pages.flatMap((page) => page.list).map(mapSearchItem) ?? []
 		)
 	}, [searchResult])
+	const extraData = useMemo(() => ({ colors }), [colors])
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -123,7 +132,7 @@ export default function ThemeSkinSearchPage() {
 					<TextInput
 						mode='outlined'
 						label='主题名称'
-						value={query}
+						value={bufferedInput}
 						onChangeText={setBufferedInput}
 						style={styles.searchInput}
 						onSubmitEditing={() => setQuery(bufferedInput)}
@@ -131,8 +140,8 @@ export default function ThemeSkinSearchPage() {
 					/>
 					<Button
 						onPress={() => setQuery(bufferedInput)}
-						loading={isPending}
-						disabled={isPending}
+						loading={isFetching}
+						disabled={isFetching}
 					>
 						搜索
 					</Button>
@@ -156,6 +165,7 @@ export default function ThemeSkinSearchPage() {
 							progressViewOffset={50}
 						/>
 					}
+					extraData={extraData}
 					renderItem={renderItem}
 					ListEmptyComponent={
 						<Text

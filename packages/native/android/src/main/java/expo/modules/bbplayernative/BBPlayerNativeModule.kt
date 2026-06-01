@@ -86,21 +86,6 @@ class BBPlayerNativeModule : Module() {
             )
         }
 
-        AsyncFunction("extractSvgaBinFramesAsync") Coroutine { options: SvgaToFramesOptions ->
-            val context = requireContext()
-            val result = withContext(Dispatchers.IO) {
-                extractSvgaBinFrames(context, options)
-            }
-
-            return@Coroutine mapOf(
-                "directoryUri" to result.directoryUri,
-                "width" to result.width,
-                "height" to result.height,
-                "frames" to result.frames,
-                "fps" to result.fps,
-            )
-        }
-
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
             val result = withContext(Dispatchers.IO) {
                 unzip(options)
@@ -274,46 +259,6 @@ class BBPlayerNativeModule : Module() {
         )
     }
 
-    private fun extractSvgaBinFrames(
-        context: Context,
-        options: SvgaToFramesOptions,
-    ): SvgaToFramesResult {
-        if (options.inputUri.isBlank()) {
-            throw IllegalArgumentException("SVGA 输入路径不能为空")
-        }
-        if (options.outputDirectoryUri.isBlank()) {
-            throw IllegalArgumentException("SVGA 帧输出目录不能为空")
-        }
-
-        val input = readUriBytes(context, options.inputUri)
-        val movie = SvgaMovieParser.parse(inflateZlib(input))
-        val width = options.width ?: movie.width
-        val height = options.height ?: movie.height
-        val outputDirectory = fileFromUri(options.outputDirectoryUri)
-
-        if (outputDirectory.exists()) {
-            outputDirectory.deleteRecursively()
-        }
-        outputDirectory.mkdirs()
-
-        val frames = movie.renderFrames(width, height)
-        frames.forEachIndexed { index, frame ->
-            val outputFile = File(outputDirectory, "frame_${index.toString().padStart(3, '0')}.png")
-            FileOutputStream(outputFile).use { stream ->
-                frame.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            }
-            frame.recycle()
-        }
-
-        return SvgaToFramesResult(
-            directoryUri = Uri.fromFile(outputDirectory).toString(),
-            width = width,
-            height = height,
-            frames = movie.frameCount,
-            fps = movie.fps,
-        )
-    }
-
     private fun unzip(options: UnzipOptions): UnzipResult {
         if (options.inputUri.isBlank()) {
             throw IllegalArgumentException("ZIP 输入路径不能为空")
@@ -428,31 +373,9 @@ class UnzipOptions : Record {
     var outputUri: String = ""
 }
 
-class SvgaToFramesOptions : Record {
-    @Field
-    var inputUri: String = ""
-
-    @Field
-    var outputDirectoryUri: String = ""
-
-    @Field
-    var width: Int? = null
-
-    @Field
-    var height: Int? = null
-}
-
 private data class UnzipResult(
     val uri: String,
     val fileCount: Int,
-)
-
-private data class SvgaToFramesResult(
-    val directoryUri: String,
-    val width: Int,
-    val height: Int,
-    val frames: Int,
-    val fps: Int,
 )
 
 private data class SvgaToGifResult(

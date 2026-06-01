@@ -38,8 +38,8 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		(state) => state.playFullSkinBootSplashAnimation,
 	)
 	const bootSplashAsset =
-		activeSkin?.bootSplash.items.find((item) => item.id === selectedAssetId) ??
-		activeSkin?.bootSplash.items[0] ??
+		activeSkin?.bootSplash.items?.find((item) => item.id === selectedAssetId) ??
+		activeSkin?.bootSplash.items?.[0] ??
 		null
 	const bootSplashVideo =
 		selectedMode === 'video' ? (bootSplashAsset?.video ?? null) : null
@@ -139,7 +139,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 			style={[container.style, styles.container, containerStyle]}
 		>
 			<Animated.View style={[styles.mediaContainer, mediaStyle]}>
-				{bootSplashAsset ? (
+				{bootSplashAsset?.card ? (
 					<Image
 						source={bootSplashAsset.card}
 						style={styles.video}

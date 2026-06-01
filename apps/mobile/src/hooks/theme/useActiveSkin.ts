@@ -7,6 +7,12 @@ import type { AppSkin } from '@/lib/theme/skins'
 export default function useActiveSkin(): AppSkin | null {
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
+	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
+	const activeThumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
+	const activeLoadingIndex = useSkinStore((state) => state.activeLoadingIndex)
 	const installedSkins = useSkinStore((state) => state.installedSkins)
 
 	const [appSkin, setAppSkin] = useState<AppSkin | null>(null)
@@ -25,14 +31,29 @@ export default function useActiveSkin(): AppSkin | null {
 
 		let cancelled = false
 
-		void loadActiveSkin(meta, activeSkinIndex).then((skin) => {
+		void loadActiveSkin(
+			meta,
+			activeSkinIndex,
+			activePlayIconIndex,
+			activeThumbUpIndex,
+			activeAvatarFrameIndex,
+			activeLoadingIndex,
+		).then((skin) => {
 			if (!cancelled) setAppSkin(skin)
 		})
 
 		return () => {
 			cancelled = true
 		}
-	}, [activeSkinId, activeSkinIndex, installedSkins])
+	}, [
+		activeAvatarFrameIndex,
+		activeLoadingIndex,
+		activePlayIconIndex,
+		activeSkinId,
+		activeSkinIndex,
+		activeThumbUpIndex,
+		installedSkins,
+	])
 
 	return appSkin
 }

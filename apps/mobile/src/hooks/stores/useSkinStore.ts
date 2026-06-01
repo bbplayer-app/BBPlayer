@@ -8,8 +8,12 @@ import { zustandStorage } from '@/utils/mmkv'
 export type SkinBootSplashMode = 'poster' | 'video'
 
 export interface SkinSettingsUpdate {
+	activeAvatarFrameIndex?: number
+	activeLoadingIndex?: number
+	activePlayIconIndex?: number
 	activeSkinId?: string | null
 	activeSkinIndex?: number
+	activeThumbUpIndex?: number
 	playFullSkinBootSplashAnimation?: boolean
 	selectedSkinBootSplashAssetId?: string | null
 	selectedSkinBootSplashMode?: SkinBootSplashMode
@@ -19,8 +23,12 @@ export interface SkinSettingsUpdate {
 }
 
 interface SkinStoreState {
+	activeAvatarFrameIndex: number
+	activeLoadingIndex: number
+	activePlayIconIndex: number
 	activeSkinId: string | null
 	activeSkinIndex: number
+	activeThumbUpIndex: number
 	addInstalledSkin: (skin: InstalledSkin) => void
 	installedSkins: InstalledSkinMeta[]
 	playFullSkinBootSplashAnimation: boolean
@@ -38,8 +46,12 @@ const DEFAULT_SLIDER_THUMB_SIZE = 20
 const useSkinStore = create<SkinStoreState>()(
 	persist(
 		(set) => ({
+			activeAvatarFrameIndex: 0,
+			activeLoadingIndex: 0,
+			activePlayIconIndex: 0,
 			activeSkinId: null,
 			activeSkinIndex: 0,
+			activeThumbUpIndex: 0,
 			installedSkins: [],
 			playFullSkinBootSplashAnimation: false,
 			selectedSkinBootSplashAssetId: null,
@@ -84,8 +96,12 @@ const useSkinStore = create<SkinStoreState>()(
 			version: 2,
 
 			partialize: (state) => ({
+				activeAvatarFrameIndex: state.activeAvatarFrameIndex,
+				activeLoadingIndex: state.activeLoadingIndex,
+				activePlayIconIndex: state.activePlayIconIndex,
 				activeSkinId: state.activeSkinId,
 				activeSkinIndex: state.activeSkinIndex,
+				activeThumbUpIndex: state.activeThumbUpIndex,
 				installedSkins: state.installedSkins,
 				playFullSkinBootSplashAnimation: state.playFullSkinBootSplashAnimation,
 				selectedSkinBootSplashAssetId: state.selectedSkinBootSplashAssetId,
@@ -103,7 +119,11 @@ const useSkinStore = create<SkinStoreState>()(
 					...currentState,
 					...persisted,
 					installedSkins: persisted.installedSkins ?? [],
+					activeAvatarFrameIndex: persisted.activeAvatarFrameIndex ?? 0,
+					activeLoadingIndex: persisted.activeLoadingIndex ?? 0,
+					activePlayIconIndex: persisted.activePlayIconIndex ?? 0,
 					activeSkinIndex: persisted.activeSkinIndex ?? 0,
+					activeThumbUpIndex: persisted.activeThumbUpIndex ?? 0,
 					playFullSkinBootSplashAnimation:
 						persisted.playFullSkinBootSplashAnimation ?? false,
 					selectedSkinBootSplashMode:

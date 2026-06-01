@@ -47,6 +47,13 @@ export default function ThemeSettingsPage() {
 	const haveTrack = useCurrentTrack()
 	const activeSkin = useActiveSkin()
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
+	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
+	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
+	const activeThumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
+	const activeLoadingIndex = useSkinStore((state) => state.activeLoadingIndex)
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
 	const installedSkins = useSkinStore(
 		(state) => state.installedSkins ?? EMPTY_INSTALLED_SKINS,
 	)
@@ -75,9 +82,9 @@ export default function ThemeSettingsPage() {
 	)
 
 	const selectedBootSplashAsset =
-		activeSkin?.bootSplash.items.find(
+		activeSkin?.bootSplash.items?.find(
 			(item) => item.id === selectedSkinBootSplashAssetId,
-		) ?? activeSkin?.bootSplash.items[0]
+		) ?? activeSkin?.bootSplash.items?.[0]
 	const selectedMode =
 		selectedBootSplashAsset?.video && selectedSkinBootSplashMode === 'video'
 			? '动图'
@@ -143,7 +150,12 @@ export default function ThemeSettingsPage() {
 						value={activeSkinId !== null}
 						onValueChange={(value) =>
 							setSkinSettings({
+								activeAvatarFrameIndex: 0,
+								activeLoadingIndex: 0,
+								activePlayIconIndex: 0,
 								activeSkinId: value ? (installedSkins[0]?.id ?? null) : null,
+								activeSkinIndex: 0,
+								activeThumbUpIndex: 0,
 							})
 						}
 						disabled={installedSkins.length === 0}
@@ -176,7 +188,16 @@ export default function ThemeSettingsPage() {
 													: colors.outlineVariant,
 											},
 										]}
-										onPress={() => setSkinSettings({ activeSkinId: skin.id })}
+										onPress={() =>
+											setSkinSettings({
+												activeAvatarFrameIndex: 0,
+												activeLoadingIndex: 0,
+												activePlayIconIndex: 0,
+												activeSkinId: skin.id,
+												activeSkinIndex: 0,
+												activeThumbUpIndex: 0,
+											})
+										}
 									>
 										{skin.coverUri ? (
 											<Image
@@ -236,7 +257,29 @@ export default function ThemeSettingsPage() {
 							<AssetFeaturePanel features={activeInstalledSkin.assetFeatures} />
 						) : null}
 						{activeInstalledSkin ? (
-							<InstalledAssetSections skin={activeInstalledSkin} />
+							<InstalledAssetSections
+								activeAvatarFrameIndex={activeAvatarFrameIndex}
+								activeLoadingIndex={activeLoadingIndex}
+								activePlayIconIndex={activePlayIconIndex}
+								activeSkinIndex={activeSkinIndex}
+								activeThumbUpIndex={activeThumbUpIndex}
+								onSelectAvatarFrame={(index) =>
+									setSkinSettings({ activeAvatarFrameIndex: index })
+								}
+								onSelectLoading={(index) =>
+									setSkinSettings({ activeLoadingIndex: index })
+								}
+								onSelectPlayIcon={(index) =>
+									setSkinSettings({ activePlayIconIndex: index })
+								}
+								onSelectSkin={(index) =>
+									setSkinSettings({ activeSkinIndex: index })
+								}
+								onSelectThumbUp={(index) =>
+									setSkinSettings({ activeThumbUpIndex: index })
+								}
+								skin={activeInstalledSkin}
+							/>
 						) : null}
 						<View style={styles.sectionHeader}>
 							<View style={styles.settingTextContainer}>
@@ -252,58 +295,62 @@ export default function ThemeSettingsPage() {
 							</View>
 						</View>
 						<View style={styles.assetGrid}>
-							{activeSkin.bootSplash.items.map((item) => {
-								const selected = item.id === selectedBootSplashAsset?.id
-								return (
-									<Pressable
-										key={item.id}
-										style={[
-											styles.assetCard,
-											{
-												borderColor: selected
-													? colors.primary
-													: colors.outlineVariant,
-											},
-										]}
-										onPress={() => setPreviewAsset(item)}
-									>
-										<Image
-											source={item.card}
-											style={styles.assetPoster}
-											contentFit='cover'
-											cachePolicy='memory-disk'
-										/>
-										{item.video ? (
-											<View
+							{activeSkin.bootSplash.items
+								? activeSkin.bootSplash.items?.map((item) => {
+										const selected = item.id === selectedBootSplashAsset?.id
+										return (
+											<Pressable
+												key={item.id}
 												style={[
-													styles.videoBadge,
-													{ backgroundColor: colors.inverseSurface },
+													styles.assetCard,
+													{
+														borderColor: selected
+															? colors.primary
+															: colors.outlineVariant,
+													},
 												]}
+												onPress={() => setPreviewAsset(item)}
 											>
-												<Icon
-													source='play'
-													size={14}
-													color={colors.inverseOnSurface}
-												/>
-											</View>
-										) : null}
-										{selected ? (
-											<View
-												style={[
-													styles.selectedBadge,
-													{ backgroundColor: colors.primary },
-												]}
-											>
-												<Icon
-													source='check'
-													size={16}
-													color={colors.onPrimary}
-												/>
-											</View>
-										) : null}
-									</Pressable>
-								)
-							})}
+												{item.card ? (
+													<Image
+														source={item.card}
+														style={styles.assetPoster}
+														contentFit='cover'
+														cachePolicy='memory-disk'
+													/>
+												) : null}
+												{item.video ? (
+													<View
+														style={[
+															styles.videoBadge,
+															{ backgroundColor: colors.inverseSurface },
+														]}
+													>
+														<Icon
+															source='play'
+															size={14}
+															color={colors.inverseOnSurface}
+														/>
+													</View>
+												) : null}
+												{selected ? (
+													<View
+														style={[
+															styles.selectedBadge,
+															{ backgroundColor: colors.primary },
+														]}
+													>
+														<Icon
+															source='check'
+															size={16}
+															color={colors.onPrimary}
+														/>
+													</View>
+												) : null}
+											</Pressable>
+										)
+									})
+								: null}
 						</View>
 					</View>
 				) : null}
@@ -351,7 +398,7 @@ export default function ThemeSettingsPage() {
 								</View>
 							</View>
 							<SliderPreview
-								thumbUri={activeSkin.player.sliderThumb.normal.uri}
+								thumbUri={activeSkin.player.sliderThumb.normal?.uri}
 								thumbSize={skinSliderThumbSize}
 								offsetX={skinSliderThumbOffsetX}
 								offsetY={skinSliderThumbOffsetY}
@@ -416,7 +463,7 @@ function SliderPreview({
 	offsetX: number
 	offsetY: number
 	thumbSize: number
-	thumbUri: string
+	thumbUri?: string | null
 }) {
 	const colors = useTheme().colors
 	const progress = useSharedValue(0.45)
@@ -441,10 +488,10 @@ function SliderPreview({
 				waveHeight={waveHeight}
 				waveThickness={thickness}
 				trackThickness={thickness}
-				thumbImageUri={thumbUri}
-				thumbImageSize={thumbSize}
-				thumbImageOffsetX={offsetX}
-				thumbImageOffsetY={offsetY}
+				thumbImageUri={thumbUri ?? undefined}
+				thumbImageSize={thumbUri ? thumbSize : undefined}
+				thumbImageOffsetX={thumbUri ? offsetX : undefined}
+				thumbImageOffsetY={thumbUri ? offsetY : undefined}
 				incremental={false}
 				onValueChange={(value) => {
 					'worklet'
@@ -526,7 +573,31 @@ function localAssetUri(rootUri: string, path: string | null | undefined) {
 	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
+function InstalledAssetSections({
+	activeAvatarFrameIndex,
+	activeLoadingIndex,
+	activePlayIconIndex,
+	activeSkinIndex,
+	activeThumbUpIndex,
+	onSelectAvatarFrame,
+	onSelectLoading,
+	onSelectPlayIcon,
+	onSelectSkin,
+	onSelectThumbUp,
+	skin,
+}: {
+	activeAvatarFrameIndex: number
+	activeLoadingIndex: number
+	activePlayIconIndex: number
+	activeSkinIndex: number
+	activeThumbUpIndex: number
+	onSelectAvatarFrame: (index: number) => void
+	onSelectLoading: (index: number) => void
+	onSelectPlayIcon: (index: number) => void
+	onSelectSkin: (index: number) => void
+	onSelectThumbUp: (index: number) => void
+	skin: InstalledSkinMeta
+}) {
 	const [assets, setAssets] = useState<SkinAssetDeclaration | null>(null)
 	const { id, rootUri } = skin
 	const skinRef = useRef(skin)
@@ -547,27 +618,12 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
 	return (
 		<View style={styles.installedAssets}>
 			<AssetStrip
-				title='海报'
-				items={[
-					...(assets?.cards ?? []).map((item) => ({
-						id: `card-${item.type_id}-${item.img}`,
-						name: item.name,
-						uri: localAssetUri(rootUri, item.img),
-					})),
-					...(assets?.space_backgrounds ?? []).flatMap((background) =>
-						background.images.map((image, index) => ({
-							id: `space-${background.id}-${index}`,
-							name: `${background.name ?? '空间海报'} ${index + 1}`,
-							uri: localAssetUri(rootUri, image.portrait ?? image.landscape),
-						})),
-					),
-				]}
-			/>
-			<AssetStrip
 				title='应用主题'
 				items={(assets?.skins ?? []).map((item, index) => ({
 					id: `skin-${item.id}-${index}`,
 					name: item.name ?? `主题 ${index + 1}`,
+					onPress: () => onSelectSkin(index),
+					selected: index === activeSkinIndex,
 					uri: localAssetUri(rootUri, item.head_bg ?? item.tail_bg),
 				}))}
 			/>
@@ -576,6 +632,8 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
 				items={(assets?.play_icons ?? []).map((item, index) => ({
 					id: `play-icon-${item.id}-${index}`,
 					name: item.name ?? `滑块 ${index + 1}`,
+					onPress: () => onSelectPlayIcon(index),
+					selected: index === activePlayIconIndex,
 					uri: localAssetUri(
 						rootUri,
 						item.static_icon_image ?? item.middle_png,
@@ -588,9 +646,11 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
 				items={(assets?.thumbups ?? []).map((item, index) => ({
 					id: `thumbup-${item.id}-${index}`,
 					name: item.name ?? `点赞动画 ${index + 1}`,
+					onPress: () => onSelectThumbUp(index),
+					selected: index === activeThumbUpIndex,
 					uri: localAssetUri(
 						rootUri,
-						`thumbups/${String(index).padStart(2, '0')}/frames/frame_000.png`,
+						`thumbups/${String(index).padStart(2, '0')}/thumbup.gif`,
 					),
 				}))}
 				compact
@@ -600,6 +660,8 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
 				items={(assets?.loadings ?? []).map((item, index) => ({
 					id: `loading-${item.id}-${index}`,
 					name: item.name ?? `刷新动画 ${index + 1}`,
+					onPress: () => onSelectLoading(index),
+					selected: index === activeLoadingIndex,
 					uri: localAssetUri(rootUri, item.loading_frame_url),
 				}))}
 				compact
@@ -609,6 +671,8 @@ function InstalledAssetSections({ skin }: { skin: InstalledSkinMeta }) {
 				items={(assets?.avatar_frames ?? []).map((item, index) => ({
 					id: `avatar-${item.id}-${index}`,
 					name: item.name ?? `头像框 ${index + 1}`,
+					onPress: () => onSelectAvatarFrame(index),
+					selected: index === activeAvatarFrameIndex,
 					uri: localAssetUri(rootUri, item.image),
 				}))}
 				compact
@@ -623,7 +687,13 @@ function AssetStrip({
 	title,
 }: {
 	compact?: boolean
-	items: Array<{ id: string; name: string; uri: string | null }>
+	items: Array<{
+		id: string
+		name: string
+		onPress?: () => void
+		selected?: boolean
+		uri: string | null
+	}>
 	title: string
 }) {
 	const colors = useTheme().colors
@@ -646,15 +716,21 @@ function AssetStrip({
 				contentContainerStyle={styles.assetStripContent}
 			>
 				{items.map((item) => (
-					<View
+					<Pressable
 						key={item.id}
 						style={compact ? styles.assetTileCompact : styles.assetTile}
+						onPress={item.onPress}
 					>
 						<View
 							style={[
 								styles.assetTileImage,
 								compact && styles.assetTileImageCompact,
-								{ backgroundColor: colors.surfaceVariant },
+								{
+									backgroundColor: colors.surfaceVariant,
+									borderColor: item.selected
+										? colors.primary
+										: colors.outlineVariant,
+								},
 							]}
 						>
 							{item.uri ? (
@@ -665,14 +741,29 @@ function AssetStrip({
 									cachePolicy='memory-disk'
 								/>
 							) : null}
+							{item.selected ? (
+								<View
+									style={[
+										styles.assetTileSelectedBadge,
+										{ backgroundColor: colors.primary },
+									]}
+								>
+									<Icon
+										source='check'
+										size={14}
+										color={colors.onPrimary}
+									/>
+								</View>
+							) : null}
 						</View>
 						<Text
 							variant='bodySmall'
 							numberOfLines={1}
+							style={item.selected ? { color: colors.primary } : undefined}
 						>
 							{item.name}
 						</Text>
-					</View>
+					</Pressable>
 				))}
 			</ScrollView>
 		</View>
@@ -786,12 +877,14 @@ function BootSplashAssetPreview({
 						]}
 					>
 						{mode === 'poster' || !asset.video ? (
-							<Image
-								source={asset.card}
-								style={styles.previewMedia}
-								contentFit='contain'
-								cachePolicy='memory-disk'
-							/>
+							asset.card ? (
+								<Image
+									source={asset.card}
+									style={styles.previewMedia}
+									contentFit='contain'
+									cachePolicy='memory-disk'
+								/>
+							) : null
 						) : (
 							<VideoView
 								player={player}
@@ -912,11 +1005,22 @@ const styles = StyleSheet.create({
 	assetTileImage: {
 		width: '100%',
 		aspectRatio: 522 / 696,
+		borderWidth: 2,
 		borderRadius: 8,
 		overflow: 'hidden',
 	},
 	assetTileImageCompact: {
 		aspectRatio: 1,
+	},
+	assetTileSelectedBadge: {
+		position: 'absolute',
+		right: 5,
+		top: 5,
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	sectionHeader: {
 		flexDirection: 'row',

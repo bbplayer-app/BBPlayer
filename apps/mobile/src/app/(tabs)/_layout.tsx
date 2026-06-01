@@ -35,7 +35,15 @@ const settingsIcon = Icon.getImageSourceSync('cog', 24) as nonNullableIcon
 export default function TabLayout() {
 	const themes = useTheme().colors
 	const activeSkin = useActiveSkin()
-	const useSkinTabs = activeSkin !== null
+	const skinIcons = activeSkin?.tabBar.icons
+	const useSkinTabs = Boolean(
+		skinIcons?.home.default &&
+		skinIcons.home.selected &&
+		skinIcons.library.default &&
+		skinIcons.library.selected &&
+		skinIcons.settings.default &&
+		skinIcons.settings.selected,
+	)
 
 	return (
 		<Tabs
@@ -51,14 +59,12 @@ export default function TabLayout() {
 				name='index'
 				options={{
 					title: '主页',
-					tabBarIcon: ({ focused }) =>
-						activeSkin
-							? skinImageSource(
-									focused
-										? activeSkin.tabBar.icons.home.selected
-										: activeSkin.tabBar.icons.home.default,
-								)
-							: homeIcon,
+					tabBarIcon: ({ focused }) => {
+						const icon = focused
+							? skinIcons?.home.selected
+							: skinIcons?.home.default
+						return icon ? skinImageSource(icon) : homeIcon
+					},
 					tabBarLabel: '主页',
 					lazy: true,
 				}}
@@ -67,14 +73,12 @@ export default function TabLayout() {
 				name='library/[tab]'
 				options={{
 					title: '音乐库',
-					tabBarIcon: ({ focused }) =>
-						activeSkin
-							? skinImageSource(
-									focused
-										? activeSkin.tabBar.icons.library.selected
-										: activeSkin.tabBar.icons.library.default,
-								)
-							: libraryIcon,
+					tabBarIcon: ({ focused }) => {
+						const icon = focused
+							? skinIcons?.library.selected
+							: skinIcons?.library.default
+						return icon ? skinImageSource(icon) : libraryIcon
+					},
 					tabBarLabel: '音乐库',
 					lazy: true,
 				}}
@@ -83,14 +87,12 @@ export default function TabLayout() {
 				name='settings/index'
 				options={{
 					title: '设置',
-					tabBarIcon: ({ focused }) =>
-						activeSkin
-							? skinImageSource(
-									focused
-										? activeSkin.tabBar.icons.settings.selected
-										: activeSkin.tabBar.icons.settings.default,
-								)
-							: settingsIcon,
+					tabBarIcon: ({ focused }) => {
+						const icon = focused
+							? skinIcons?.settings.selected
+							: skinIcons?.settings.default
+						return icon ? skinImageSource(icon) : settingsIcon
+					},
 					tabBarLabel: '设置',
 					lazy: true,
 				}}

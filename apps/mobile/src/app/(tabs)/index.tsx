@@ -42,6 +42,7 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -79,6 +80,7 @@ function HomePage() {
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
+	const activeSkin = useActiveSkin()
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -304,6 +306,14 @@ function HomePage() {
 								}
 								cachePolicy={'disk'}
 							/>
+							{activeSkin?.profile.avatarFrame ? (
+								<Image
+									style={styles.avatarFrame}
+									source={activeSkin.profile.avatarFrame}
+									contentFit='contain'
+									cachePolicy='memory-disk'
+								/>
+							) : null}
 						</RectButton>
 					</View>
 				</View>
@@ -577,8 +587,10 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 	},
 	avatarButton: {
-		borderRadius: 20,
-		overflow: 'hidden',
+		width: 48,
+		height: 48,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	headerRight: {
 		flexDirection: 'row',
@@ -588,6 +600,11 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
+	},
+	avatarFrame: {
+		position: 'absolute',
+		width: 54,
+		height: 54,
 	},
 	searchSection: {
 		marginTop: 16,

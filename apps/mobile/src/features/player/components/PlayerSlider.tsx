@@ -255,6 +255,8 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}),
 		[colors.primary, colors.surfaceVariant],
 	)
+	const sliderThumb = activeSkin?.player.sliderThumb
+	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
 	return (
 		<View style={styles.root}>
@@ -269,12 +271,16 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				waveHeight={animatedWaveHeight}
 				waveThickness={animatedWaveThickness}
 				trackThickness={animatedTrackThickness}
-				thumbImageUri={activeSkin?.player.sliderThumb.normal.uri}
-				thumbImageDragLeftUri={activeSkin?.player.sliderThumb.dragLeft.uri}
-				thumbImageDragRightUri={activeSkin?.player.sliderThumb.dragRight.uri}
-				thumbImageSize={activeSkin ? skinSliderThumbSize : undefined}
-				thumbImageOffsetX={activeSkin ? skinSliderThumbOffsetX : undefined}
-				thumbImageOffsetY={activeSkin ? skinSliderThumbOffsetY : undefined}
+				thumbImageUri={sliderThumb?.normal?.uri}
+				thumbImageDragLeftUri={sliderThumb?.dragLeft?.uri}
+				thumbImageDragRightUri={sliderThumb?.dragRight?.uri}
+				thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
+				thumbImageOffsetX={
+					hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
+				}
+				thumbImageOffsetY={
+					hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
+				}
 				incremental={false}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}

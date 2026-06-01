@@ -16,7 +16,8 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 	const activeSkin = useActiveSkin()
 	const colors = useTheme().colors
 
-	if (!activeSkin) return null
+	const head = activeSkin?.background.head
+	if (!head) return null
 
 	return (
 		<View
@@ -24,7 +25,7 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 			style={[styles.container, { height }]}
 		>
 			<Image
-				source={activeSkin.background.head}
+				source={head}
 				style={styles.image}
 				contentFit='cover'
 				cachePolicy='memory-disk'

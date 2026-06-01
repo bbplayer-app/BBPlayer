@@ -34,18 +34,3 @@ export interface UnzipResult {
 	uri: string
 	fileCount: number
 }
-
-export interface SvgaToFramesOptions {
-	inputUri: string
-	outputDirectoryUri: string
-	width?: number
-	height?: number
-}
-
-export interface SvgaToFramesResult {
-	directoryUri: string
-	width: number
-	height: number
-	frames: number
-	fps: number
-}

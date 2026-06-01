@@ -1488,17 +1488,13 @@ export class BilibiliApi {
 		})
 	}
 
-	// ============================================================
-	// Garb 装扮 API（只声明返回类型，不做解析）
-	// ============================================================
-
 	/**
 	 * 搜索装扮 / 收藏集
 	 */
 	searchGarbSkins({
 		keyword,
 		page = 1,
-		pageSize = 20,
+		pageSize = 5,
 		signal,
 	}: {
 		keyword: string
@@ -1506,6 +1502,7 @@ export class BilibiliApi {
 		pageSize?: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbSearchResponse, BilibiliApiError> {
+		log.debug('searchGarbSkins', { keyword, page, pageSize })
 		return bilibiliApiClient.get<BilibiliGarbSearchResponse>({
 			endpoint: '/x/garb/v2/mall/home/search',
 			params: {

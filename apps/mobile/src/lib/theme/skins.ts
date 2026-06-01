@@ -1,4 +1,5 @@
 import { ArkErrors, type as arkType } from 'arktype'
+import { Directory, File } from 'expo-file-system'
 
 const nullableString = 'string | null = null'
 
@@ -126,12 +127,9 @@ export interface SkinAssetFeatures {
 	thumbups: boolean
 }
 
-export interface SkinFrameSequence {
-	count: number
-	directoryPath: string
-	fps: number
-	height: number
-	width: number
+export interface InstalledSkinThumbUpGif {
+	durationMs: number
+	path: string
 }
 
 export interface InstalledSkinPackageDirectory {
@@ -159,7 +157,7 @@ export interface InstalledSkin {
 				itemId: number
 				kind: 'suit'
 		  }
-	thumbUpFrames?: SkinFrameSequence[]
+	thumbUpGifs?: Array<InstalledSkinThumbUpGif | null>
 }
 
 /** 存储在 Zustand 里的轻量元数据（不含 localAssets） */
@@ -191,7 +189,7 @@ export interface SkinImageResource {
 }
 
 export interface SkinBootSplashAsset {
-	card: SkinImageResource
+	card: SkinImageResource | null
 	id: string
 	name: string
 	video?: SkinImageResource | null
@@ -199,10 +197,10 @@ export interface SkinBootSplashAsset {
 
 export interface AppSkin {
 	background: {
-		head: SkinImageResource
+		head: SkinImageResource | null
 	}
 	bootSplash: {
-		items: SkinBootSplashAsset[]
+		items: SkinBootSplashAsset[] | null
 	}
 	colors: {
 		color: string | null
@@ -212,39 +210,63 @@ export interface AppSkin {
 		tailColorSelected: string | null
 	}
 	id: string
+	loading: {
+		animation: SkinImageResource | null
+		frame: SkinImageResource | null
+		preview: SkinImageResource | null
+	} | null
 	name: string
 	player: {
 		sliderThumb: {
-			dragLeft: SkinImageResource
-			dragRight: SkinImageResource
-			normal: SkinImageResource
+			dragLeft: SkinImageResource | null
+			dragRight: SkinImageResource | null
+			normal: SkinImageResource | null
 		}
 		thumbUp: {
-			frames: (SkinFrameSequence & { directoryUri: string }) | null
+			animation: SkinImageResource | null
+			durationMs: number | null
 			preview: SkinImageResource | null
 		} | null
+	}
+	profile: {
+		avatarFrame: SkinImageResource | null
 	}
 	tabBar: {
 		background: SkinImageResource | null
 		icons: {
 			home: {
-				default: SkinImageResource
-				selected: SkinImageResource
+				default: SkinImageResource | null
+				selected: SkinImageResource | null
 			}
 			library: {
-				default: SkinImageResource
-				selected: SkinImageResource
+				default: SkinImageResource | null
+				selected: SkinImageResource | null
 			}
 			settings: {
-				default: SkinImageResource
-				selected: SkinImageResource
+				default: SkinImageResource | null
+				selected: SkinImageResource | null
 			}
 		}
 	}
 }
 
-const TRANSPARENT_PIXEL =
-	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEElEQVR42mP8z8BQDwAFgwJ/l8QFzAAAAABJRU5ErkJggg=='
+const itemAt = <T>(items: readonly T[], index: number): T | null =>
+	index >= 0 && index < items.length ? (items[index] ?? null) : null
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null
+
+const isInstalledSkinThumbUpGif = (
+	value: unknown,
+): value is InstalledSkinThumbUpGif => {
+	if (!isRecord(value)) return false
+	return typeof value.durationMs === 'number' && typeof value.path === 'string'
+}
+
+interface InstalledSkinFileData {
+	localAssets: SkinAssetDeclaration
+	thumbUpGifs: Array<InstalledSkinThumbUpGif | null>
+}
 
 export const parseSkinAssetDeclaration = (
 	value: unknown,
@@ -262,19 +284,35 @@ export const parseSkinAssetDeclaration = (
 
 const appSkinCache = new Map<string, AppSkin | null>()
 
+const loadInstalledSkinFileData = async (
+	meta: InstalledSkinMeta,
+): Promise<InstalledSkinFileData | null> => {
+	const file = new File(new Directory(meta.rootUri), 'installed-skin.json')
+	if (!file.exists) return null
+
+	const value = JSON.parse(await file.text()) as unknown
+	if (!isRecord(value)) return null
+
+	const thumbUpGifs = Array.isArray(value.thumbUpGifs)
+		? value.thumbUpGifs.map((gif) =>
+				isInstalledSkinThumbUpGif(gif) ? gif : null,
+			)
+		: []
+
+	return {
+		localAssets: parseSkinAssetDeclaration(value.localAssets),
+		thumbUpGifs,
+	}
+}
+
 /** 从磁盘加载完整资产并构建 AppSkin（有内存缓存） */
 export const loadSkinAssets = async (
 	meta: InstalledSkinMeta,
-): Promise<SkinAssetDeclaration | null> => {
-	const { File, Directory } = await import('expo-file-system')
-	const file = new File(new Directory(meta.rootUri), 'assets.json')
-	if (!file.exists) return null
-	const text = await file.text()
-	return parseSkinAssetDeclaration(JSON.parse(text))
-}
+): Promise<SkinAssetDeclaration | null> =>
+	(await loadInstalledSkinFileData(meta))?.localAssets ?? null
 
 /**
- * 从磁盘加载完整 InstalledSkin（含 localAssets + thumbUpFrames），
+ * 从磁盘加载完整 InstalledSkin（含 localAssets + thumbUpGifs），
  * 然后调用 buildAppSkin 构建运行时皮肤对象。
  * 结果会缓存在内存中，调用 invalidateSkinCache 可清除。
  */
@@ -283,25 +321,34 @@ export const loadActiveSkin = async (
 	skinIndex = 0,
 	playIconIndex = 0,
 	thumbUpIndex = 0,
+	avatarFrameIndex = 0,
+	loadingIndex = 0,
 ): Promise<AppSkin | null> => {
-	const cacheKey = `${meta.id}:${skinIndex}:${playIconIndex}:${thumbUpIndex}`
+	const cacheKey = `${meta.id}:${skinIndex}:${playIconIndex}:${thumbUpIndex}:${avatarFrameIndex}:${loadingIndex}`
 	const cached = appSkinCache.get(cacheKey)
 	if (cached !== undefined) return cached
 
-	const assets = await loadSkinAssets(meta)
-	if (!assets) {
+	const installedSkinFile = await loadInstalledSkinFileData(meta)
+	if (!installedSkinFile) {
 		appSkinCache.set(cacheKey, null)
 		return null
 	}
 
 	const skin: InstalledSkin = {
 		...meta,
-		localAssets: assets,
+		localAssets: installedSkinFile.localAssets,
 		packageDirectories: undefined,
-		thumbUpFrames: undefined,
+		thumbUpGifs: installedSkinFile.thumbUpGifs,
 	}
 
-	const appSkin = buildAppSkin(skin, skinIndex, playIconIndex, thumbUpIndex)
+	const appSkin = buildAppSkin(
+		skin,
+		skinIndex,
+		playIconIndex,
+		thumbUpIndex,
+		avatarFrameIndex,
+		loadingIndex,
+	)
 	appSkinCache.set(cacheKey, appSkin)
 	return appSkin
 }
@@ -331,6 +378,9 @@ export const skinImageSource = (resource: SkinImageResource) => ({
 	uri: resource.uri,
 })
 
+/**
+ * 将相对路径转换为可以访问到的绝对路径
+ */
 export const skinRelativeUri = (
 	skin: Pick<InstalledSkin, 'rootUri'>,
 	path: string | null | undefined,
@@ -340,20 +390,8 @@ export const skinRelativeUri = (
 	return `${skin.rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-const firstUri = (
-	skin: Pick<InstalledSkin, 'rootUri'>,
-	...paths: Array<string | null | undefined>
-) => {
-	for (const path of paths) {
-		const uri = skinRelativeUri(skin, path)
-		if (uri) return uri
-	}
-	return null
-}
-
-const imageResource = (uri: string | null): SkinImageResource => ({
-	uri: uri ?? TRANSPARENT_PIXEL,
-})
+const imageResource = (uri: string | null): SkinImageResource | null =>
+	uri ? { uri } : null
 
 const bootSplashItemsFromCards = (
 	skin: InstalledSkin,
@@ -369,99 +407,47 @@ const bootSplashItemsFromCards = (
 				: null,
 	}))
 
-const bootSplashItemsFromSpaceBackgrounds = (
-	skin: InstalledSkin,
-): SkinBootSplashAsset[] =>
-	skin.localAssets.space_backgrounds.flatMap((background) =>
-		background.images.flatMap((image, index) => {
-			const cardUri = skinRelativeUri(skin, image.portrait ?? image.landscape)
-			if (!cardUri) return []
-			return {
-				id: `space-${background.id}-${index}`,
-				name: `${background.name} ${index + 1}`,
-				card: imageResource(cardUri),
-				video: null,
-			}
-		}),
-	)
-
 export const buildAppSkin = (
 	skin: InstalledSkin,
 	skinIndex = 0,
 	playIconIndex = 0,
 	thumbUpIndex = 0,
+	avatarFrameIndex = 0,
+	loadingIndex = 0,
 ): AppSkin | null => {
 	const assets = skin.localAssets
-	const themeSkin = assets.skins[skinIndex] ?? null
-	const playIcon = assets.play_icons[playIconIndex] ?? null
-	const thumbUp = assets.thumbups[thumbUpIndex] ?? null
-	const thumbUpFrames = skin.thumbUpFrames?.[thumbUpIndex] ?? null
-	const fallbackUri = firstUri(
-		skin,
-		themeSkin?.image_cover,
-		themeSkin?.image_preview,
-		assets.cards[0]?.img,
-	)
-	const headUri = firstUri(
-		skin,
-		themeSkin?.head_bg,
-		themeSkin?.head_tab_bg,
-		themeSkin?.image_cover,
-		fallbackUri,
-	)
-	const normalThumbUri = firstUri(
-		skin,
-		playIcon?.static_icon_image,
-		playIcon?.squared_image,
-		playIcon?.middle_png,
-		fallbackUri,
-	)
-	const defaultHomeUri = firstUri(
-		skin,
-		themeSkin?.tail_icon_main,
-		themeSkin?.tail_icon_selected_main,
-		fallbackUri,
-	)
-	const selectedHomeUri = firstUri(
+	const themeSkin = itemAt(assets.skins, skinIndex)
+	const playIcon = itemAt(assets.play_icons, playIconIndex)
+	const thumbUp = itemAt(assets.thumbups, thumbUpIndex)
+	const avatarFrame = itemAt(assets.avatar_frames, avatarFrameIndex)
+	const loading = itemAt(assets.loadings, loadingIndex)
+	const thumbUpGif = itemAt(skin.thumbUpGifs ?? [], thumbUpIndex)
+	const headUri = skinRelativeUri(skin, themeSkin?.head_bg)
+	const defaultHomeUri = skinRelativeUri(skin, themeSkin?.tail_icon_main)
+	const selectedHomeUri = skinRelativeUri(
 		skin,
 		themeSkin?.tail_icon_selected_main,
-		themeSkin?.tail_icon_main,
-		fallbackUri,
 	)
-	const defaultLibraryUri = firstUri(
-		skin,
-		themeSkin?.tail_icon_channel,
-		themeSkin?.tail_icon_dynamic,
-		themeSkin?.tail_icon_selected_channel,
-		fallbackUri,
-	)
-	const selectedLibraryUri = firstUri(
+	const defaultLibraryUri = skinRelativeUri(skin, themeSkin?.tail_icon_channel)
+	const selectedLibraryUri = skinRelativeUri(
 		skin,
 		themeSkin?.tail_icon_selected_channel,
-		themeSkin?.tail_icon_selected_dynamic,
-		themeSkin?.tail_icon_channel,
-		fallbackUri,
 	)
-	const defaultSettingsUri = firstUri(
-		skin,
-		themeSkin?.tail_icon_myself,
-		themeSkin?.tail_icon_shop,
-		themeSkin?.tail_icon_selected_myself,
-		fallbackUri,
-	)
-	const selectedSettingsUri = firstUri(
+	const defaultSettingsUri = skinRelativeUri(skin, themeSkin?.tail_icon_myself)
+	const selectedSettingsUri = skinRelativeUri(
 		skin,
 		themeSkin?.tail_icon_selected_myself,
-		themeSkin?.tail_icon_selected_shop,
-		themeSkin?.tail_icon_myself,
-		fallbackUri,
 	)
-	const bootSplashItems = [
-		...bootSplashItemsFromCards(skin, assets.cards),
-		...bootSplashItemsFromSpaceBackgrounds(skin),
-	]
+	const bootSplashItems = bootSplashItemsFromCards(skin, assets.cards)
 
-	if (!headUri && !normalThumbUri && bootSplashItems.length === 0) {
+	if (
+		!themeSkin &&
+		!playIcon &&
+		!thumbUp &&
+		!avatarFrame &&
+		!loading &&
+		bootSplashItems.length === 0
+	) {
 		return null
 	}
 
@@ -470,17 +456,7 @@ export const buildAppSkin = (
 			head: imageResource(headUri),
 		},
 		bootSplash: {
-			items:
-				bootSplashItems.length > 0
-					? bootSplashItems
-					: [
-							{
-								card: imageResource(headUri ?? fallbackUri),
-								id: 'fallback',
-								name: skin.name,
-								video: null,
-							},
-						],
+			items: bootSplashItems.length > 0 ? bootSplashItems : null,
 		},
 		colors: {
 			color: themeSkin?.color ?? null,
@@ -490,32 +466,36 @@ export const buildAppSkin = (
 			tailColorSelected: themeSkin?.tail_color_selected ?? null,
 		},
 		id: skin.id,
+		loading: loading
+			? {
+					animation: imageResource(skinRelativeUri(skin, loading.loading_url)),
+					frame: imageResource(
+						skinRelativeUri(skin, loading.loading_frame_url),
+					),
+					preview: imageResource(skinRelativeUri(skin, loading.preview)),
+				}
+			: null,
 		name: skin.name,
 		player: {
 			sliderThumb: {
-				dragLeft: imageResource(
-					firstUri(skin, playIcon?.drag_left_png, normalThumbUri),
-				),
+				dragLeft: imageResource(skinRelativeUri(skin, playIcon?.drag_left_png)),
 				dragRight: imageResource(
-					firstUri(skin, playIcon?.drag_right_png, normalThumbUri),
+					skinRelativeUri(skin, playIcon?.drag_right_png),
 				),
-				normal: imageResource(normalThumbUri),
+				normal: imageResource(skinRelativeUri(skin, playIcon?.middle_png)),
 			},
 			thumbUp: thumbUp
 				? {
-						frames: thumbUpFrames
-							? {
-									...thumbUpFrames,
-									directoryUri:
-										skinRelativeUri(skin, thumbUpFrames.directoryPath) ??
-										thumbUpFrames.directoryPath,
-								}
-							: null,
+						animation: imageResource(skinRelativeUri(skin, thumbUpGif?.path)),
+						durationMs: thumbUpGif?.durationMs ?? null,
 						preview: thumbUp.preview
 							? imageResource(skinRelativeUri(skin, thumbUp.preview))
 							: null,
 					}
 				: null,
+		},
+		profile: {
+			avatarFrame: imageResource(skinRelativeUri(skin, avatarFrame?.image)),
 		},
 		tabBar: {
 			background: themeSkin?.tail_bg
