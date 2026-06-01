@@ -1,13 +1,7 @@
-import {
-	Host,
-	OutlinedTextField,
-	Text as ComposeText,
-} from '@expo/ui/jetpack-compose'
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { FlashList } from '@shopify/flash-list'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text, TouchableRipple } from 'react-native-paper'
+import { Dialog, Text, TextInput, TouchableRipple } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
@@ -15,7 +9,6 @@ import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { useMergePlaylists } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import useTextFieldState from '@/hooks/useTextFieldState'
 import type { Playlist } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 
@@ -77,7 +70,6 @@ export default function MergePlaylistsModal() {
 	const close = useModalStore((state) => state.close)
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
 	const [newTitle, setNewTitle] = useState('')
-	const newTitleState = useTextFieldState(newTitle)
 
 	const { data: playlists, isPending, isError } = usePlaylistLists()
 	const { mutateAsync: mergePlaylists, isPending: isMerging } =
@@ -137,21 +129,13 @@ export default function MergePlaylistsModal() {
 					</View>
 				) : (
 					<View style={{ flex: 1 }}>
-						<Host
-							matchContents={{ vertical: true }}
+						<TextInput
+							label='新歌单名称'
+							value={newTitle}
+							onChangeText={setNewTitle}
+							mode='outlined'
 							style={styles.input}
-						>
-							<OutlinedTextField
-								value={newTitleState}
-								onValueChange={setNewTitle}
-								singleLine
-								modifiers={[fillMaxWidth()]}
-							>
-								<OutlinedTextField.Label>
-									<ComposeText>新歌单名称</ComposeText>
-								</OutlinedTextField.Label>
-							</OutlinedTextField>
-						</Host>
+						/>
 						<Text
 							variant='labelMedium'
 							style={styles.subtitle}
