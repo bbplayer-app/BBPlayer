@@ -5,7 +5,7 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.5.2] - 2025-05-25
 
 ### Added
 
@@ -527,7 +527,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.5.0...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.5.2...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -551,3 +551,4 @@
 [2.4.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.2
 [2.4.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.1...v2.4.4
 [2.5.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.4.6...v2.5.0
+[2.5.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.5.1...v2.5.2

@@ -1,5 +1,5 @@
 import type { DownloadState } from '@bbplayer/orpheus'
-import { Icon as ExpoIcon } from '@expo/ui'
+import { Icon as ExpoIcon, Host } from '@expo/ui'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
 import { FlashList } from '@shopify/flash-list'
@@ -210,11 +210,13 @@ const HighFreqButton = ({
 						height: 80,
 					}}
 				>
-					<ExpoIcon
-						name={item.leadingIcon}
-						size={28}
-						color={theme.colors.onSurface}
-					/>
+					<Host matchContents>
+						<ExpoIcon
+							name={item.leadingIcon}
+							size={28}
+							color={theme.colors.onSurface}
+						/>
+					</Host>
 					<Text
 						variant='labelMedium'
 						style={{ marginTop: 8 }}
@@ -445,15 +447,17 @@ export function LocalTrackList({
 												]}
 												pointerEvents='none'
 											>
-												<ExpoIcon
-													name={menuItem.leadingIcon}
-													size={24}
-													color={
-														menuItem.danger
-															? theme.colors.error
-															: theme.colors.onSurface
-													}
-												/>
+												<Host matchContents>
+													<ExpoIcon
+														name={menuItem.leadingIcon}
+														size={24}
+														color={
+															menuItem.danger
+																? theme.colors.error
+																: theme.colors.onSurface
+														}
+													/>
+												</Host>
 											</View>
 										) : null
 									}

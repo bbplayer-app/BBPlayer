@@ -15,6 +15,3 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - workerd
-
-patchedDependencies:
-  react-native-mmkv: patches/react-native-mmkv.patch
