@@ -17,7 +17,6 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import { deleteInstalledSkinPackage } from '@/lib/theme/skinInstall'
 import { loadSkinAssets } from '@/lib/theme/skins'
 import type {
 	InstalledSkinMeta,
@@ -25,6 +24,7 @@ import type {
 	SkinAssetFeatures,
 	SkinBootSplashAsset,
 } from '@/lib/theme/skins'
+import { uninstallSkin } from '@/services/theme/SkinManager'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['cards', '海报'],
@@ -39,6 +39,19 @@ const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 ]
 
 const EMPTY_INSTALLED_SKINS: InstalledSkinMeta[] = []
+
+const deleteSkin = (skin: InstalledSkinMeta) => {
+	Alert.alert('删除装扮', `确定删除「${skin.name}」吗？`, [
+		{ text: '取消', style: 'cancel' },
+		{
+			text: '删除',
+			style: 'destructive',
+			onPress: () => {
+				void uninstallSkin(skin.id)
+			},
+		},
+	])
+}
 
 export default function ThemeSettingsPage() {
 	const router = useRouter()
@@ -76,7 +89,6 @@ export default function ThemeSettingsPage() {
 		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
 	const setSkinSettings = useSkinStore((state) => state.setSkinSettings)
-	const removeInstalledSkin = useSkinStore((state) => state.removeInstalledSkin)
 	const [previewAsset, setPreviewAsset] = useState<SkinBootSplashAsset | null>(
 		null,
 	)
@@ -104,20 +116,6 @@ export default function ThemeSettingsPage() {
 	const activeInstalledSkin = installedSkins.find(
 		(skin) => skin.id === activeSkinId,
 	)
-
-	const deleteSkin = (skin: InstalledSkinMeta) => {
-		Alert.alert('删除装扮', `确定删除「${skin.name}」吗？`, [
-			{ text: '取消', style: 'cancel' },
-			{
-				text: '删除',
-				style: 'destructive',
-				onPress: () => {
-					deleteInstalledSkinPackage(skin)
-					removeInstalledSkin(skin.id)
-				},
-			},
-		])
-	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>

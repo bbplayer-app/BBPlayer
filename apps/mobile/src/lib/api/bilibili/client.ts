@@ -2,7 +2,6 @@ import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import log from '@/utils/log'
 
 import { getCsrfToken } from './utils'
 

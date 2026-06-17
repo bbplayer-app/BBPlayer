@@ -7,12 +7,9 @@ import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { alert } from '@/components/modals/AlertModal'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import useSkinStore from '@/hooks/stores/useSkinStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
-import {
-	installSkinPackage,
-	type SkinDownloadProgress,
-} from '@/lib/theme/skinInstall'
+import { installSkin } from '@/services/theme/SkinManager'
+import type { SkinDownloadProgress } from '@/services/theme/types'
 import toast from '@/utils/toast'
 
 interface SkinDownloadProgressModalProps {
@@ -25,7 +22,6 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 	const router = useRouter()
 	const colors = useTheme().colors
 	const close = useModalStore((state) => state.close)
-	const addInstalledSkin = useSkinStore((state) => state.addInstalledSkin)
 	const [progress, setProgress] = useState<SkinDownloadProgress | null>(null)
 	const [isFinished, setIsFinished] = useState(false)
 	const [hasError, setHasError] = useState(false)
@@ -37,15 +33,14 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 
 		let cancelled = false
 
-		installSkinPackage({
+		installSkin({
 			item,
 			onProgress: (event) => {
 				if (!cancelled) setProgress(event)
 			},
 		})
-			.then((installedSkin) => {
+			.then(() => {
 				if (cancelled) return
-				addInstalledSkin(installedSkin)
 				setProgress((previous) =>
 					previous
 						? {
@@ -83,7 +78,7 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 		return () => {
 			cancelled = true
 		}
-	}, [addInstalledSkin, close, item, router])
+	}, [close, item, router])
 
 	const canClose = isFinished || hasError
 

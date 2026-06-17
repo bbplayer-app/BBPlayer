@@ -6,8 +6,6 @@
 	"scripts": {
 		"android": "WITH_ROZENITE=true expo run:android",
 		"format": "oxfmt --write .",
-		"lint": "oxlint --type-aware && eslint .",
-		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
 		"postinstall": "patch-package",
 		"prepare": "pbjs -t static-module -w commonjs -o src/lib/api/bilibili/proto/dm.js src/lib/api/bilibili/proto/dm.proto && pbts -o src/lib/api/bilibili/proto/dm.d.ts src/lib/api/bilibili/proto/dm.js",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start",

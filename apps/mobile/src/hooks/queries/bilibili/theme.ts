@@ -1,7 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 export const themeQueryKeys = {

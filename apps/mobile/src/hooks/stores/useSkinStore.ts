@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
-import type { InstalledSkin, InstalledSkinMeta } from '@/lib/theme/skins'
-import { installedSkinToMeta } from '@/lib/theme/skins'
+import type { InstalledSkin, InstalledSkinMeta } from '@/services/theme/types'
+import { installedSkinToMeta } from '@/services/theme/types'
 import { zustandStorage } from '@/utils/mmkv'
 
 export type SkinBootSplashMode = 'poster' | 'video'
