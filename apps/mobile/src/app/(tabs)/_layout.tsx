@@ -11,8 +11,8 @@ import type {
 } from 'expo-router/react-navigation'
 import { useTheme } from 'react-native-paper'
 
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import { skinImageSource } from '@/lib/theme/skins'
 
 const BottomTabNavigator = createNativeBottomTabNavigator().Navigator
 
@@ -35,7 +35,8 @@ const settingsIcon = Icon.getImageSourceSync('cog', 24) as nonNullableIcon
 export default function TabLayout() {
 	const themes = useTheme().colors
 	const activeSkin = useActiveSkin()
-	const skinIcons = activeSkin?.tabBar.icons
+	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
+	const skinIcons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
 	const useSkinTabs = Boolean(
 		skinIcons?.home.default &&
 		skinIcons.home.selected &&
@@ -63,7 +64,7 @@ export default function TabLayout() {
 						const icon = focused
 							? skinIcons?.home.selected
 							: skinIcons?.home.default
-						return icon ? skinImageSource(icon) : homeIcon
+						return icon ? { uri: icon, scale: 1 } : homeIcon
 					},
 					tabBarLabel: '主页',
 					lazy: true,
@@ -77,7 +78,7 @@ export default function TabLayout() {
 						const icon = focused
 							? skinIcons?.library.selected
 							: skinIcons?.library.default
-						return icon ? skinImageSource(icon) : libraryIcon
+						return icon ? { uri: icon, scale: 1 } : libraryIcon
 					},
 					tabBarLabel: '音乐库',
 					lazy: true,
@@ -91,7 +92,7 @@ export default function TabLayout() {
 						const icon = focused
 							? skinIcons?.settings.selected
 							: skinIcons?.settings.default
-						return icon ? skinImageSource(icon) : settingsIcon
+						return icon ? { uri: icon, scale: 1 } : settingsIcon
 					},
 					tabBarLabel: '设置',
 					lazy: true,

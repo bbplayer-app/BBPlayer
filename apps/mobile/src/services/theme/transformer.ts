@@ -1,3 +1,5 @@
+import log from '@/utils/log'
+
 import type { SkinAssetDeclaration } from './schema'
 import type { ThumbUpGifResult } from './thumbUpConverter'
 import type { AppSkin, InstalledSkin, SkinBootSplashAsset } from './types'
@@ -41,6 +43,12 @@ export const transformManifestToInstalledSkin = ({
 	source,
 	thumbUpGifs,
 }: TransformOptions): InstalledSkin => {
+	log.debug('[transform] building InstalledSkin', {
+		cards: manifest.cards.length,
+		skins: manifest.skins.length,
+		thumbups: manifest.thumbups.length,
+		skinId,
+	})
 	const appSkin: AppSkin = {
 		skins: manifest.skins.map((skin) => ({
 			background: {
@@ -113,6 +121,7 @@ export const transformManifestToInstalledSkin = ({
 		coverUri: coverUrl ? (mapping[coverUrl] ?? coverUrl) : null,
 		id: skinId,
 		installedAt: Date.now(),
+		manifest,
 		name: manifest.name,
 		rootUri,
 		source,

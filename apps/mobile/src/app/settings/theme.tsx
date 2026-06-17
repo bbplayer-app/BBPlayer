@@ -17,14 +17,15 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import { loadSkinAssets } from '@/lib/theme/skins'
+import { loadSkinAssets } from '@/services/theme/runtime'
+import { uninstallSkin } from '@/services/theme/SkinManager'
 import type {
 	InstalledSkinMeta,
 	SkinAssetDeclaration,
 	SkinAssetFeatures,
 	SkinBootSplashAsset,
-} from '@/lib/theme/skins'
-import { uninstallSkin } from '@/services/theme/SkinManager'
+} from '@/services/theme/types'
+import { assetFeaturesFromManifest } from '@/services/theme/types'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['cards', '海报'],
@@ -219,7 +220,6 @@ export default function ThemeSettingsPage() {
 											>
 												{selected ? '正在使用' : '点击切换'}
 											</Text>
-											<AssetFeatureSummary features={skin.assetFeatures} />
 										</View>
 										{selected ? (
 											<Icon
@@ -251,9 +251,6 @@ export default function ThemeSettingsPage() {
 
 				{activeSkinId && activeSkin ? (
 					<View style={styles.section}>
-						{activeInstalledSkin?.assetFeatures ? (
-							<AssetFeaturePanel features={activeInstalledSkin.assetFeatures} />
-						) : null}
 						{activeInstalledSkin ? (
 							<InstalledAssetSections
 								activeAvatarFrameIndex={activeAvatarFrameIndex}
@@ -396,7 +393,7 @@ export default function ThemeSettingsPage() {
 								</View>
 							</View>
 							<SliderPreview
-								thumbUri={activeSkin.player.sliderThumb.normal?.uri}
+								thumbUri={activeSkin.sliderThumbs[activePlayIconIndex]?.normal}
 								thumbSize={skinSliderThumbSize}
 								offsetX={skinSliderThumbOffsetX}
 								offsetY={skinSliderThumbOffsetY}
@@ -500,23 +497,6 @@ function SliderPreview({
 	)
 }
 
-function AssetFeatureSummary({ features }: { features?: SkinAssetFeatures }) {
-	const colors = useTheme().colors
-	if (!features) return null
-
-	const availableCount = SKIN_FEATURE_LABELS.filter(
-		([key]) => features[key],
-	).length
-	return (
-		<Text
-			variant='bodySmall'
-			style={{ color: colors.onSurfaceVariant }}
-		>
-			已包含 {availableCount}/{SKIN_FEATURE_LABELS.length} 类资产
-		</Text>
-	)
-}
-
 function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
 	const colors = useTheme().colors
 
@@ -613,8 +593,11 @@ function InstalledAssetSections({
 
 	if (!assets) return null
 
+	const features = assetFeaturesFromManifest(assets)
+
 	return (
 		<View style={styles.installedAssets}>
+			<AssetFeaturePanel features={features} />
 			<AssetStrip
 				title='应用主题'
 				items={(assets?.skins ?? []).map((item, index) => ({
@@ -820,7 +803,7 @@ function BootSplashAssetPreview({
 		assetId: string
 		mode: 'poster' | 'video'
 	} | null>(null)
-	const player = useVideoPlayer(asset?.video?.uri ?? null, (video) => {
+	const player = useVideoPlayer(asset?.video ?? null, (video) => {
 		video.loop = true
 		video.muted = true
 	})

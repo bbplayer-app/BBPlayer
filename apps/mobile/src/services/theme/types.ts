@@ -1,7 +1,23 @@
+import type { SkinAssetDeclaration } from './schema'
+
+export type { SkinAssetDeclaration }
+
+export interface SkinAssetFeatures {
+	avatarFrames: boolean
+	cardBackgrounds: boolean
+	cards: boolean
+	loadings: boolean
+	playIcons: boolean
+	skins: boolean
+	spaceBackgrounds: boolean
+	thumbups: boolean
+}
+
 export interface InstalledSkin {
 	coverUri: string | null
 	id: string
 	installedAt: number
+	manifest: SkinAssetDeclaration
 	name: string
 	rootUri: string
 	source:
@@ -113,4 +129,17 @@ export const installedSkinToMeta = (
 	name: skin.name,
 	rootUri: skin.rootUri,
 	source: skin.source,
+})
+
+export const assetFeaturesFromManifest = (
+	m: SkinAssetDeclaration,
+): SkinAssetFeatures => ({
+	avatarFrames: m.avatar_frames.length > 0,
+	cardBackgrounds: m.card_backgrounds.length > 0,
+	cards: m.cards.length > 0,
+	loadings: m.loadings.length > 0,
+	playIcons: m.play_icons.length > 0,
+	skins: m.skins.length > 0,
+	spaceBackgrounds: m.space_backgrounds.length > 0,
+	thumbups: m.thumbups.length > 0,
 })

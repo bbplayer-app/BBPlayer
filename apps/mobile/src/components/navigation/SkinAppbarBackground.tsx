@@ -4,6 +4,7 @@ import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
 interface SkinAppbarBackgroundProps {
@@ -14,9 +15,10 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 	height,
 }: SkinAppbarBackgroundProps) {
 	const activeSkin = useActiveSkin()
+	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const colors = useTheme().colors
 
-	const head = activeSkin?.background.head
+	const head = activeSkin?.skins[activeSkinIndex]?.background.head
 	if (!head) return null
 
 	return (

@@ -2,6 +2,8 @@ import { convertSvgaBinToGifAsync } from '@bbplayer/native'
 import * as FileSystem from 'expo-file-system'
 import { Platform } from 'react-native'
 
+import log from '@/utils/log'
+
 import type { SkinAssetDeclaration } from './schema'
 
 export interface ThumbUpGifResult {
@@ -27,7 +29,16 @@ export const convertThumbUpsToGifs = async ({
 	workDir: FileSystem.Directory
 	onProgress?: (label: string) => void
 }): Promise<ThumbUpGifResult[]> => {
-	if (Platform.OS !== 'android') return []
+	if (Platform.OS !== 'android') {
+		log.debug(
+			'[thumbUp] skipping SVGA→GIF conversion on non-Android platform',
+			{
+				count: manifest.thumbups.length,
+				platform: Platform.OS,
+			},
+		)
+		return []
+	}
 
 	const results: ThumbUpGifResult[] = []
 
@@ -66,5 +77,6 @@ export const convertThumbUpsToGifs = async ({
 		})
 	}
 
+	log.debug('[thumbUp] SVGA→GIF conversion complete', { count: results.length })
 	return results
 }

@@ -23,6 +23,7 @@ import type {
 	BilibiliGarbSuitSpaceBgProperties,
 	BilibiliGarbThumbUpProperties,
 } from '@/types/apis/garb'
+import log from '@/utils/log'
 
 import { parseSkinAssetDeclaration, type SkinAssetDeclaration } from './schema'
 
@@ -73,8 +74,14 @@ const resolveComponent = async (
 		itemId: componentId,
 		signal,
 	})
-	if (result.isErr()) throw result.error
-
+	if (result.isErr()) {
+		log.warning('[adapter] failed to resolve component', {
+			componentId,
+			componentName,
+			error: result.error.message,
+		})
+		throw result.error
+	}
 	const data: BilibiliGarbBenefitResponse = result.value
 	const id = Number(componentId) || 0
 
@@ -294,7 +301,13 @@ const buildCollectionAssetDeclaration = async (
 		lotteryId: item.lotteryId,
 		signal,
 	})
-	if (result.isErr()) throw result.error
+	if (result.isErr()) {
+		log.error('[adapter] fetchGarbAssetBag failed', {
+			actId: item.actId,
+			error: result.error.message,
+		})
+		throw result.error
+	}
 
 	const data = result.value
 	const table = emptyAssetDeclaration({
@@ -334,7 +347,13 @@ const buildSuitAssetDeclaration = async (
 		itemId: item.itemId,
 		signal,
 	})
-	if (result.isErr()) throw result.error
+	if (result.isErr()) {
+		log.error('[adapter] fetchGarbSuitDetail failed', {
+			error: result.error.message,
+			itemId: item.itemId,
+		})
+		throw result.error
+	}
 
 	const suitItems = result.value.suit_items
 	const table = emptyAssetDeclaration({
@@ -484,15 +503,38 @@ const buildSuitAssetDeclaration = async (
  * 根据搜索结果获取统一的资产声明。
  * 内部根据 kind 分发到收藏集 / 装扮构建器，统一返回经过 arktype 校验的 SkinAssetDeclaration。
  */
-export const fetchGarbSkinAssetDeclaration = (
+export const fetchGarbSkinAssetDeclaration = async (
 	item: GarbSkinSearchResult,
 	signal?: AbortSignal,
 ): Promise<SkinAssetDeclaration> => {
 	switch (item.kind) {
-		case 'collection':
-			return buildCollectionAssetDeclaration(item, signal)
-		case 'suit':
-			return buildSuitAssetDeclaration(item, signal)
+		case 'collection': {
+			log.debug('[adapter] building collection asset declaration', {
+				actId: item.actId,
+				lotteryId: item.lotteryId,
+				name: item.name,
+			})
+			const result = await buildCollectionAssetDeclaration(item, signal)
+			log.debug('[adapter] collection declaration built', {
+				cards: result.cards.length,
+				skins: result.skins.length,
+				thumbups: result.thumbups.length,
+			})
+			return result
+		}
+		case 'suit': {
+			log.debug('[adapter] building suit asset declaration', {
+				itemId: item.itemId,
+				name: item.name,
+			})
+			const result = await buildSuitAssetDeclaration(item, signal)
+			log.debug('[adapter] suit declaration built', {
+				cards: result.cards.length,
+				skins: result.skins.length,
+				thumbups: result.thumbups.length,
+			})
+			return result
+		}
 		default:
 			throw new Error('当前只支持下载收藏集和主题装扮')
 	}

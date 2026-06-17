@@ -10,7 +10,8 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated'
 
-import type { AppSkin } from '@/lib/theme/skins'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import type { AppSkin } from '@/services/theme/types'
 
 interface SkinThumbUpBurstProps {
 	skin: AppSkin | null
@@ -28,7 +29,8 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	const scale = useSharedValue(0.4)
 	const [visible, setVisible] = useState(false)
 
-	const thumbUp = skin?.player.thumbUp
+	const thumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
+	const thumbUp = skin?.thumbUps[thumbUpIndex]
 	const animation = thumbUp?.animation
 	const playbackDuration = thumbUp?.durationMs ?? 1400
 
@@ -78,12 +80,12 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 			style={[styles.container, animatedStyle]}
 		>
 			<Image
-				key={`${animation.uri}:${playSignal}`}
+				key={`${animation}:${playSignal}`}
 				source={animation}
 				style={styles.image}
 				contentFit='contain'
 				cachePolicy='memory-disk'
-				recyclingKey={`${animation.uri}:${playSignal}`}
+				recyclingKey={`${animation}:${playSignal}`}
 			/>
 		</Animated.View>
 	)

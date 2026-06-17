@@ -12,6 +12,7 @@ import * as FileSystem from 'expo-file-system'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
+import log from '@/utils/log'
 
 import { fetchGarbSkinAssetDeclaration } from './adapter'
 import { downloadManifestAssets } from './downloadManager'
@@ -103,6 +104,11 @@ export const installSkin = async (
 	options: InstallSkinOptions = {},
 ): Promise<InstalledSkin> => {
 	const skinId = deriveSkinId(item)
+	log.debug('[skin-mgr] install started', {
+		skinId,
+		kind: item.kind,
+		name: item.name,
+	})
 
 	const manifest = await fetchGarbSkinAssetDeclaration(item, options.signal)
 
@@ -177,8 +183,16 @@ export const installSkin = async (
 		await tempDir.move(finalDir)
 		useSkinStore.getState().addInstalledSkin(installedSkin)
 
+		log.debug('[skin-mgr] install completed', {
+			skinId,
+			finalDir: finalDir.uri,
+		})
 		return installedSkin
 	} catch (error) {
+		log.error('[skin-mgr] install failed', {
+			skinId,
+			error: error instanceof Error ? error.message : String(error),
+		})
 		if (tempDir.exists) {
 			try {
 				tempDir.delete()
@@ -195,8 +209,12 @@ export const installSkin = async (
 // ============================================================
 
 export const uninstallSkin = async (skinId: string): Promise<void> => {
+	log.debug('[skin-mgr] uninstall started', { skinId })
 	const store = useSkinStore.getState()
-	if (!store.installedSkins.some((e) => e.id === skinId)) return
+	if (!store.installedSkins.some((e) => e.id === skinId)) {
+		log.debug('[skin-mgr] uninstall skipped: not installed', { skinId })
+		return
+	}
 
 	const dir = new FileSystem.Directory(skinsDir, `${skinId}/`)
 	if (dir.exists) {
@@ -204,6 +222,7 @@ export const uninstallSkin = async (skinId: string): Promise<void> => {
 	}
 
 	store.removeInstalledSkin(skinId)
+	log.debug('[skin-mgr] uninstall completed', { skinId })
 }
 
 export const uninstallSkinBySource = async (

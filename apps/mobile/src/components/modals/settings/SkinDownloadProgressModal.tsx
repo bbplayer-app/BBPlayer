@@ -33,8 +33,7 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 
 		let cancelled = false
 
-		installSkin({
-			item,
+		installSkin(item, {
 			onProgress: (event) => {
 				if (!cancelled) setProgress(event)
 			},

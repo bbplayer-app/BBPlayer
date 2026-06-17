@@ -101,6 +101,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const skinSliderThumbOffsetY = useSkinStore(
 		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
+	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
 
@@ -255,7 +256,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}),
 		[colors.primary, colors.surfaceVariant],
 	)
-	const sliderThumb = activeSkin?.player.sliderThumb
+	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
 	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
 	return (
@@ -271,9 +272,9 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				waveHeight={animatedWaveHeight}
 				waveThickness={animatedWaveThickness}
 				trackThickness={animatedTrackThickness}
-				thumbImageUri={sliderThumb?.normal?.uri}
-				thumbImageDragLeftUri={sliderThumb?.dragLeft?.uri}
-				thumbImageDragRightUri={sliderThumb?.dragRight?.uri}
+				thumbImageUri={sliderThumb?.normal}
+				thumbImageDragLeftUri={sliderThumb?.dragLeft}
+				thumbImageDragRightUri={sliderThumb?.dragRight}
 				thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
 				thumbImageOffsetX={
 					hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined

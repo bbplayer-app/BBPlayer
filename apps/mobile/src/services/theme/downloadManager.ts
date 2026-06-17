@@ -13,6 +13,8 @@
  */
 import * as FileSystem from 'expo-file-system'
 
+import log from '@/utils/log'
+
 import type { SkinAssetDeclaration } from './schema'
 import type { SkinDownloadProgress } from './types'
 
@@ -49,7 +51,7 @@ const collectRemoteUrls = (manifest: SkinAssetDeclaration): string[] => {
 
 	for (const card of manifest.cards) {
 		urls.push(card.img)
-		if (card.video_list) urls.push(...card.video_list)
+		if (card.video_list) urls.push(card.video_list[0])
 	}
 
 	for (const item of manifest.avatar_frames) {
@@ -147,6 +149,11 @@ export const downloadManifestAssets = async ({
 }): Promise<DownloadManifestResult> => {
 	const urls = collectRemoteUrls(manifest)
 
+	log.debug('[download] collected remote URLs', {
+		count: urls.length,
+		remoteCount: urls.filter((u) => /^https?:\/\//.test(u)).length,
+	})
+
 	const plan = urls.map((url, index) => ({
 		localPath: `asset-${String(index).padStart(4, '0')}${extensionFromUrl(url)}`,
 		url,
@@ -195,5 +202,6 @@ export const downloadManifestAssets = async ({
 		})
 	}
 
+	log.debug('[download] all assets downloaded', { count: completed, total })
 	return { mapping }
 }

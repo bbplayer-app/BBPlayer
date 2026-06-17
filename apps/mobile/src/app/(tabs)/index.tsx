@@ -42,6 +42,7 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
@@ -81,6 +82,9 @@ function HomePage() {
 		(state) => state.settings.enableMinimalistMode,
 	)
 	const activeSkin = useActiveSkin()
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -306,10 +310,10 @@ function HomePage() {
 								}
 								cachePolicy={'disk'}
 							/>
-							{activeSkin?.profile.avatarFrame ? (
+							{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
 								<Image
 									style={styles.avatarFrame}
-									source={activeSkin.profile.avatarFrame}
+									source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
 									contentFit='contain'
 									cachePolicy='memory-disk'
 								/>

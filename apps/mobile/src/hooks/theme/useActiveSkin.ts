@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
-import { loadActiveSkin, invalidateSkinCache } from '@/lib/theme/skins'
-import type { AppSkin } from '@/lib/theme/skins'
+import { loadActiveSkin, invalidateSkinCache } from '@/services/theme/runtime'
+import type { AppSkin } from '@/services/theme/types'
 
 export default function useActiveSkin(): AppSkin | null {
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
-	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
-	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
-	const activeThumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
-	const activeAvatarFrameIndex = useSkinStore(
-		(state) => state.activeAvatarFrameIndex,
-	)
-	const activeLoadingIndex = useSkinStore((state) => state.activeLoadingIndex)
 	const installedSkins = useSkinStore((state) => state.installedSkins)
 
 	const [appSkin, setAppSkin] = useState<AppSkin | null>(null)
@@ -31,29 +24,14 @@ export default function useActiveSkin(): AppSkin | null {
 
 		let cancelled = false
 
-		void loadActiveSkin(
-			meta,
-			activeSkinIndex,
-			activePlayIconIndex,
-			activeThumbUpIndex,
-			activeAvatarFrameIndex,
-			activeLoadingIndex,
-		).then((skin) => {
+		void loadActiveSkin(meta).then((skin) => {
 			if (!cancelled) setAppSkin(skin)
 		})
 
 		return () => {
 			cancelled = true
 		}
-	}, [
-		activeAvatarFrameIndex,
-		activeLoadingIndex,
-		activePlayIconIndex,
-		activeSkinId,
-		activeSkinIndex,
-		activeThumbUpIndex,
-		installedSkins,
-	])
+	}, [activeSkinId, installedSkins])
 
 	return appSkin
 }

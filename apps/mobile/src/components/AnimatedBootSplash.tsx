@@ -51,7 +51,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const mediaOpacity = useSharedValue(0)
 	const containerOpacity = useSharedValue(1)
 
-	const player = useVideoPlayer(bootSplashVideo?.uri ?? null, (video) => {
+	const player = useVideoPlayer(bootSplashVideo ?? null, (video) => {
 		video.loop = false
 		video.muted = true
 	})
