@@ -148,6 +148,13 @@
 			"when": 1777696930773,
 			"tag": "0020_ambitious_sheva_callister",
 			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "6",
+			"when": 1781704505310,
+			"tag": "0021_heavy_next_avengers",
+			"breakpoints": true
 		}
 	]
 }

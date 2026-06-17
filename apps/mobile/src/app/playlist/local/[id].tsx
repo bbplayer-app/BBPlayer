@@ -32,6 +32,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import {
 	useBatchDeleteTracksFromLocalPlaylist,
 	useDeletePlaylist,
+	useEditPlaylistMetadata,
 	usePullSharedPlaylist,
 	usePlaylistSync,
 	useReorderLocalPlaylistTrack,
@@ -86,6 +87,16 @@ const LINK_ICON = Icon.select({
 const DELETE_ICON = Icon.select({
 	ios: 'trash',
 	android: import('@expo/material-symbols/delete.xml'),
+})
+
+const PIN_ICON = Icon.select({
+	ios: 'pin.fill',
+	android: import('@expo/material-symbols/keep.xml'),
+})
+
+const UNPIN_ICON = Icon.select({
+	ios: 'pin',
+	android: import('@expo/material-symbols/keep_off.xml'),
 })
 
 const SEARCHBAR_HEIGHT = 72
@@ -291,6 +302,7 @@ export default function LocalPlaylistPage() {
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
+	const { mutate: editPlaylistMetadata } = useEditPlaylistMetadata()
 	const { mutate: deleteTrackFromLocalPlaylist } =
 		useBatchDeleteTracksFromLocalPlaylist()
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
@@ -695,6 +707,18 @@ export default function LocalPlaylistPage() {
 					leadingIcon={LINK_ICON}
 				/>
 			)}
+			<FunctionalMenu.Item
+				onPress={() => {
+					editPlaylistMetadata({
+						playlistId: Number(id),
+						payload: {
+							isPinned: !playlistMetadata.isPinned,
+						},
+					})
+				}}
+				title={playlistMetadata.isPinned ? '取消置顶' : '置顶'}
+				leadingIcon={playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON}
+			/>
 			<FunctionalMenu.Item
 				onPress={() => {
 					alert(

@@ -444,6 +444,7 @@ export class PlaylistService {
 									: payload.lastShareSyncAt === null
 										? null
 										: undefined,
+								isPinned: payload.isPinned ?? undefined,
 							})
 							.where(eq(schema.playlists.id, playlistId))
 							.returning(),
@@ -832,7 +833,10 @@ export class PlaylistService {
 					{ name: 'db:query:playlists', op: 'db' },
 					() =>
 						this.db.query.playlists.findMany({
-							orderBy: desc(schema.playlists.updatedAt),
+							orderBy: [
+								desc(schema.playlists.isPinned),
+								desc(schema.playlists.updatedAt),
+							],
 							with: {
 								author: true,
 							},
@@ -1200,7 +1204,10 @@ export class PlaylistService {
 					() =>
 						this.db.query.playlists.findMany({
 							where: like(schema.playlists.title, `%${trimmed}%`),
-							orderBy: desc(schema.playlists.updatedAt),
+							orderBy: [
+								desc(schema.playlists.isPinned),
+								desc(schema.playlists.updatedAt),
+							],
 							with: {
 								author: true,
 							},

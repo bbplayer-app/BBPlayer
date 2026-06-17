@@ -79,6 +79,7 @@ export interface Playlist {
 	shareId: string | null
 	shareRole: 'owner' | 'editor' | 'subscriber' | null
 	lastShareSyncAt: Date | null
+	isPinned?: boolean
 	createdAt: Date
 	updatedAt: Date
 }

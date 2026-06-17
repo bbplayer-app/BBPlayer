@@ -45,6 +45,13 @@ const LocalPlaylistItem = memo(
 											? '与\u2009B\u2009站「稍后再看」同步'
 											: `${item.itemCount}\u2009首歌曲`}
 									</Text>
+									{item.isPinned && (
+										<Icon
+											source='pin'
+											color={colors.primary}
+											size={13}
+										/>
+									)}
 									{isShared && (
 										<Icon
 											source='account-group'

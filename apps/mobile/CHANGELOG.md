@@ -5,6 +5,14 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 动态主题功能（❤️ https://github.com/lovegaoshi/azusa-player-mobile ）
+- 歌单置顶
+- 数据备份与恢复
+
 ## [2.5.2] - 2025-05-25
 
 ### Added

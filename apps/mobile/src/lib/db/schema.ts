@@ -118,6 +118,9 @@ export const playlists = sqliteTable(
 			enum: ['owner', 'editor', 'subscriber'],
 		}), // null 表示不参与任何共享歌单
 		lastShareSyncAt: integer('last_share_sync_at', { mode: 'timestamp_ms' }), // 增量同步游标，存服务端 server_time
+		isPinned: integer('is_pinned', { mode: 'boolean' })
+			.notNull()
+			.default(false),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.default(sql`(unixepoch() * 1000)`),

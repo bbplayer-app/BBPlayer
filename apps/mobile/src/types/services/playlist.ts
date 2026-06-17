@@ -20,6 +20,7 @@ export interface UpdatePlaylistPayload {
 	shareId?: string | null
 	shareRole?: SharedPlaylistRole | null
 	lastShareSyncAt?: number | null
+	isPinned?: boolean | null
 }
 
 export interface ReorderLocalPlaylistTrackPayload {

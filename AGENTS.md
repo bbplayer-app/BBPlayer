@@ -272,3 +272,11 @@ Agent skills in `.agent/skills/`:
 - `react-native-ease-refactor/` - RN refactoring
 - `gesture-handler-3-migration/` - RNGH migration
 - `upgrading-expo/` - Expo upgrade guide
+
+## HOW TO SEARCH FILE/SYMBOL
+
+- use `codedb` mcp to search for files and symbols
+
+## RUN TypeScript Type Checking after finishing each task
+
+- use `pnpm tsgo --noEmit` to run type checking
