@@ -81,13 +81,13 @@ export default function Library() {
 					</View>
 				</View>
 				<TabView
-					style={[styles.tabView, { backgroundColor: colors.background }]}
+					style={[styles.tabView, { backgroundColor: 'transparent' }]}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
 					renderTabBar={(props) => (
 						<TabBar
 							style={{
-								backgroundColor: colors.background,
+								backgroundColor: 'transparent',
 								marginBottom: 8,
 								marginTop: 8,
 							}}

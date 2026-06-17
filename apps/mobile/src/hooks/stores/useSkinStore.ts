@@ -93,7 +93,26 @@ const useSkinStore = create<SkinStoreState>()(
 		{
 			name: 'skin-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 2,
+			version: 3,
+
+			migrate: (persistedState, version) => {
+				if (version < 3) {
+					// 这个版本主要是把 coverUri 字段迁移到 coverPath 字段，因为 coverUri 字段本身存的就是相对路径，重命名后避免混淆
+					const state = persistedState as Record<string, unknown>
+					if (Array.isArray(state.installedSkins)) {
+						state.installedSkins = state.installedSkins.map(
+							(skin: Record<string, unknown>) => {
+								if ('coverUri' in skin && !('coverPath' in skin)) {
+									const { coverUri, ...rest } = skin
+									return { ...rest, coverPath: coverUri }
+								}
+								return skin
+							},
+						)
+					}
+				}
+				return persistedState as SkinStoreState
+			},
 
 			partialize: (state) => ({
 				activeAvatarFrameIndex: state.activeAvatarFrameIndex,
