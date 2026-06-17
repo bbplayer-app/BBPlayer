@@ -54,7 +54,7 @@ export default function Library() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<SkinAppbarBackground height={insets.top + 132} />
+			<SkinAppbarBackground height={insets.top + 100} />
 			<View
 				style={{
 					paddingBottom: 0,
@@ -62,7 +62,7 @@ export default function Library() {
 					paddingTop: insets.top + 8,
 				}}
 			>
-				<View style={styles.header}>
+				<View style={[styles.header]}>
 					<Text
 						variant='headlineSmall'
 						style={styles.title}

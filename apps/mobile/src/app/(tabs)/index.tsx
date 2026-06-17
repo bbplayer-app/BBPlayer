@@ -265,14 +265,19 @@ function HomePage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<SkinAppbarBackground height={insets.top + 152} />
+			<SkinAppbarBackground height={insets.top + 100} />
 			{/*顶部欢迎区域*/}
 			<View
 				style={{
-					paddingTop: insets.top + 8,
+					paddingTop: insets.top,
 				}}
 			>
-				<View style={[styles.greetingContainer, { paddingHorizontal: 16 }]}>
+				<View
+					style={[
+						styles.greetingContainer,
+						{ paddingHorizontal: 16, height: 56 },
+					]}
+				>
 					<View>
 						<Text
 							variant='headlineSmall'

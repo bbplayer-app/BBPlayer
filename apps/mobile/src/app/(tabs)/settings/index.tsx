@@ -20,7 +20,7 @@ export default function SettingsPage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<SkinAppbarBackground height={insets.top + 104} />
+			<SkinAppbarBackground height={insets.top + 100} />
 			<View
 				style={{
 					flex: 1,
@@ -28,7 +28,7 @@ export default function SettingsPage() {
 					paddingBottom: haveTrack ? 70 : 0,
 				}}
 			>
-				<View style={styles.header}>
+				<View style={[styles.header]}>
 					<Text
 						variant='headlineSmall'
 						style={styles.title}

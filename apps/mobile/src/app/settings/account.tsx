@@ -11,6 +11,8 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { api } from '@/lib/api/bbplayer/client'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
@@ -34,6 +36,10 @@ export default function AccountSettingsPage() {
 	const setAccount = useAppStore((state) => state.setBBPlayerAccount)
 	const clearAccount = useAppStore((state) => state.clearBBPlayerAccount)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
+	const activeSkin = useActiveSkin()
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
 
 	const [mode, setMode] = useState<Mode>('login')
 	const [username, setUsername] = useState('')
@@ -233,17 +239,27 @@ export default function AccountSettingsPage() {
 				{account ? (
 					<View style={styles.section}>
 						<View style={styles.profileHeader}>
-							{account.face ? (
-								<Avatar.Image
-									size={64}
-									source={{ uri: account.face }}
-								/>
-							) : (
-								<Avatar.Text
-									size={64}
-									label={account.name.slice(0, 1)}
-								/>
-							)}
+							<View style={styles.avatarWrapper}>
+								{account.face ? (
+									<Avatar.Image
+										size={64}
+										source={{ uri: account.face }}
+									/>
+								) : (
+									<Avatar.Text
+										size={64}
+										label={account.name.slice(0, 1)}
+									/>
+								)}
+								{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
+									<Image
+										source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
+										style={styles.avatarFrame64}
+										contentFit='contain'
+										cachePolicy='memory-disk'
+									/>
+								) : null}
+							</View>
 							<View style={styles.profileText}>
 								<Text variant='titleMedium'>{account.name}</Text>
 								<Text variant='bodySmall'>@{account.username}</Text>
@@ -387,6 +403,18 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		gap: 14,
 		marginBottom: 8,
+	},
+	avatarWrapper: {
+		position: 'relative',
+		width: 64,
+		height: 64,
+	},
+	avatarFrame64: {
+		position: 'absolute',
+		top: -12,
+		left: -12,
+		width: 88,
+		height: 88,
 	},
 	profileText: {
 		flex: 1,

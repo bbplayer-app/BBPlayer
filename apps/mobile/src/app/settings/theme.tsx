@@ -2,17 +2,19 @@ import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Slider } from '@expo/ui/community/slider'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
+import * as Updates from 'expo-updates'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Icon, Text, useTheme } from 'react-native-paper'
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Appbar, Dialog, Icon, Text, useTheme } from 'react-native-paper'
 import { useSharedValue } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
+import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
@@ -28,6 +30,7 @@ import type {
 } from '@/services/theme/types'
 import { assetFeaturesFromManifest } from '@/services/theme/types'
 import { storage } from '@/utils/mmkv'
+import toast from '@/utils/toast'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['cards', '海报'],
@@ -44,16 +47,20 @@ const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 const EMPTY_INSTALLED_SKINS: InstalledSkinMeta[] = []
 
 const deleteSkin = (skin: InstalledSkinMeta) => {
-	Alert.alert('删除装扮', `确定删除「${skin.name}」吗？`, [
-		{ text: '取消', style: 'cancel' },
-		{
-			text: '删除',
-			style: 'destructive',
-			onPress: () => {
-				void uninstallSkin(skin.id)
+	alert(
+		'删除装扮',
+		`确定删除「${skin.name}」吗？`,
+		[
+			{ text: '取消' },
+			{
+				text: '删除',
+				onPress: () => {
+					void uninstallSkin(skin.id)
+				},
 			},
-		},
-	])
+		],
+		{ cancelable: true },
+	)
 }
 
 export default function ThemeSettingsPage() {
@@ -284,6 +291,34 @@ export default function ThemeSettingsPage() {
 								onSelectThumbUp={(index) =>
 									setSkinSettings({ activeThumbUpIndex: index })
 								}
+								onDisableSkin={() => {
+									setSkinSettings({ activeSkinIndex: -1 })
+									alert('关闭应用主题', '需要重启软件才能应用更改', [
+										{ text: '取消' },
+										{
+											text: '关闭并重启',
+											onPress: () => {
+												void Updates.reloadAsync()
+											},
+										},
+									])
+								}}
+								onDisablePlayIcon={() => {
+									setSkinSettings({ activePlayIconIndex: -1 })
+									toast.success('已关闭显示滑块')
+								}}
+								onDisableThumbUp={() => {
+									setSkinSettings({ activeThumbUpIndex: -1 })
+									toast.success('已关闭显示点赞动画')
+								}}
+								onDisableLoading={() => {
+									setSkinSettings({ activeLoadingIndex: -1 })
+									toast.success('已关闭显示刷新动画')
+								}}
+								onDisableAvatarFrame={() => {
+									setSkinSettings({ activeAvatarFrameIndex: -1 })
+									toast.success('已关闭显示头像框')
+								}}
 								skin={activeInstalledSkin}
 								thumbUpSprites={activeSkin.thumbUpSprites}
 							/>
@@ -576,6 +611,11 @@ function InstalledAssetSections({
 	onSelectPlayIcon,
 	onSelectSkin,
 	onSelectThumbUp,
+	onDisableSkin,
+	onDisablePlayIcon,
+	onDisableThumbUp,
+	onDisableLoading,
+	onDisableAvatarFrame,
 	skin,
 	thumbUpSprites,
 }: {
@@ -589,6 +629,11 @@ function InstalledAssetSections({
 	onSelectPlayIcon: (index: number) => void
 	onSelectSkin: (index: number) => void
 	onSelectThumbUp: (index: number) => void
+	onDisableSkin?: () => void
+	onDisablePlayIcon?: () => void
+	onDisableThumbUp?: () => void
+	onDisableLoading?: () => void
+	onDisableAvatarFrame?: () => void
 	skin: InstalledSkinMeta
 	thumbUpSprites: AppSkin['thumbUpSprites']
 }) {
@@ -616,6 +661,8 @@ function InstalledAssetSections({
 			<AssetFeaturePanel features={features} />
 			<AssetStrip
 				title='应用主题'
+				onDisable={onDisableSkin}
+				disableActive={activeSkinIndex === -1}
 				items={(assets?.skins ?? []).map((item, index) => ({
 					id: `skin-${item.id}-${index}`,
 					name: item.name ?? `主题 ${index + 1}`,
@@ -626,6 +673,8 @@ function InstalledAssetSections({
 			/>
 			<AssetStrip
 				title='滑块'
+				onDisable={onDisablePlayIcon}
+				disableActive={activePlayIconIndex === -1}
 				items={(assets?.play_icons ?? []).map((item, index) => ({
 					id: `play-icon-${item.id}-${index}`,
 					name: item.name ?? `滑块 ${index + 1}`,
@@ -640,6 +689,8 @@ function InstalledAssetSections({
 			/>
 			<AssetStrip
 				title='点赞动画'
+				onDisable={onDisableThumbUp}
+				disableActive={activeThumbUpIndex === -1}
 				items={(assets?.thumbups ?? []).map((item, index) => ({
 					id: `thumbup-${item.id}-${index}`,
 					name: item.name ?? `点赞动画 ${index + 1}`,
@@ -652,6 +703,8 @@ function InstalledAssetSections({
 			/>
 			<AssetStrip
 				title='刷新动画'
+				onDisable={onDisableLoading}
+				disableActive={activeLoadingIndex === -1}
 				items={(assets?.loadings ?? []).map((item, index) => ({
 					id: `loading-${item.id}-${index}`,
 					name: item.name ?? `刷新动画 ${index + 1}`,
@@ -663,6 +716,8 @@ function InstalledAssetSections({
 			/>
 			<AssetStrip
 				title='头像框'
+				onDisable={onDisableAvatarFrame}
+				disableActive={activeAvatarFrameIndex === -1}
 				items={(assets?.avatar_frames ?? []).map((item, index) => ({
 					id: `avatar-${item.id}-${index}`,
 					name: item.name ?? `头像框 ${index + 1}`,
@@ -678,10 +733,13 @@ function InstalledAssetSections({
 
 function AssetStrip({
 	compact,
+	disableActive,
 	items,
+	onDisable,
 	title,
 }: {
 	compact?: boolean
+	disableActive?: boolean
 	items: Array<{
 		id: string
 		name: string
@@ -690,6 +748,7 @@ function AssetStrip({
 		sprite?: ThumbUpSpritePreview | null
 		uri: string | null
 	}>
+	onDisable?: () => void
 	title: string
 }) {
 	const colors = useTheme().colors
@@ -699,12 +758,27 @@ function AssetStrip({
 		<View style={styles.assetStrip}>
 			<View style={styles.assetStripHeader}>
 				<Text variant='titleSmall'>{title}</Text>
-				<Text
-					variant='bodySmall'
-					style={{ color: colors.onSurfaceVariant }}
-				>
-					{items.length}
-				</Text>
+				<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+					<Text
+						variant='bodySmall'
+						style={{ color: colors.onSurfaceVariant }}
+					>
+						{items.length}
+					</Text>
+					{onDisable ? (
+						<Pressable
+							onPress={onDisable}
+							disabled={disableActive}
+							hitSlop={8}
+						>
+							<Icon
+								source='trash-can-outline'
+								size={18}
+								color={disableActive ? colors.onSurfaceVariant : colors.error}
+							/>
+						</Pressable>
+					) : null}
+				</View>
 			</View>
 			<ScrollView
 				horizontal
@@ -911,57 +985,54 @@ function BootSplashAssetPreview({
 			onDismiss={onDismiss}
 		>
 			{asset ? (
-				<View style={styles.previewContent}>
-					<Text
-						variant='titleMedium'
-						style={styles.previewTitle}
-					>
-						{asset.name}
-					</Text>
-					{asset.video ? (
-						<View style={styles.segmentedControlContainer}>
-							<SegmentedControl
-								selectedIndex={mode === 'poster' ? 0 : 1}
-								onChange={(event) => {
-									const selectedIndex = event.nativeEvent.selectedSegmentIndex
-									setSelectedMode({
-										assetId: asset.id,
-										mode: selectedIndex === 0 ? 'poster' : 'video',
-									})
-									if (selectedIndex === 1) {
-										player.replay()
-									}
-								}}
-								values={['静态海报', '动图']}
-							/>
-						</View>
-					) : null}
-					<View
-						style={[
-							styles.previewFrame,
-							{ backgroundColor: colors.elevation.level2 },
-						]}
-					>
-						{mode === 'poster' || !asset.video ? (
-							asset.card ? (
-								<Image
-									source={asset.card}
+				<>
+					<Dialog.Title>{asset.name}</Dialog.Title>
+					<Dialog.Content>
+						{asset.video ? (
+							<View style={styles.segmentedControlContainer}>
+								<SegmentedControl
+									selectedIndex={mode === 'poster' ? 0 : 1}
+									onChange={(event) => {
+										const selectedIndex = event.nativeEvent.selectedSegmentIndex
+										setSelectedMode({
+											assetId: asset.id,
+											mode: selectedIndex === 0 ? 'poster' : 'video',
+										})
+										if (selectedIndex === 1) {
+											player.replay()
+										}
+									}}
+									values={['静态海报', '动图']}
+								/>
+							</View>
+						) : null}
+						<View
+							style={[
+								styles.previewFrame,
+								{ backgroundColor: colors.elevation.level2 },
+							]}
+						>
+							{mode === 'poster' || !asset.video ? (
+								asset.card ? (
+									<Image
+										source={asset.card}
+										style={styles.previewMedia}
+										contentFit='contain'
+										cachePolicy='memory-disk'
+									/>
+								) : null
+							) : (
+								<VideoView
+									player={player}
 									style={styles.previewMedia}
 									contentFit='contain'
-									cachePolicy='memory-disk'
+									nativeControls={false}
+									surfaceType='textureView'
 								/>
-							) : null
-						) : (
-							<VideoView
-								player={player}
-								style={styles.previewMedia}
-								contentFit='contain'
-								nativeControls={false}
-								surfaceType='textureView'
-							/>
-						)}
-					</View>
-					<View style={styles.previewActions}>
+							)}
+						</View>
+					</Dialog.Content>
+					<Dialog.Actions>
 						<Button
 							mode='outlined'
 							onPress={onDismiss}
@@ -971,8 +1042,8 @@ function BootSplashAssetPreview({
 						<Button onPress={() => onSelect(asset, mode)}>
 							使用该{mode === 'poster' ? '海报' : '视频'}
 						</Button>
-					</View>
-				</View>
+					</Dialog.Actions>
+				</>
 			) : null}
 		</AnimatedModalOverlay>
 	)
@@ -1138,14 +1209,6 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
-	previewContent: {
-		paddingHorizontal: 18,
-		paddingBottom: 18,
-	},
-	previewTitle: {
-		marginBottom: 12,
-		textAlign: 'center',
-	},
 	segmentedControlContainer: {
 		marginBottom: 12,
 	},
@@ -1157,12 +1220,6 @@ const styles = StyleSheet.create({
 	},
 	previewMedia: {
 		...StyleSheet.absoluteFill,
-	},
-	previewActions: {
-		flexDirection: 'row',
-		justifyContent: 'flex-end',
-		gap: 10,
-		marginTop: 16,
 	},
 	sliderPanel: {
 		borderRadius: 8,
