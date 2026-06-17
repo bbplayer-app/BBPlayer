@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"@hono/arktype-validator": "^2.0.1",
-		"arktype": "^2.1.29",
+		"arktype": "^2.2.0",
 		"drizzle-orm": "^0.44.7",
 		"hono": "^4.12.2",
 		"pg": "^8.19.0"
