@@ -25,6 +25,19 @@ export interface SvgaToGifResult {
 	fps: number
 }
 
+export interface SvgaToSpriteSheetOptions {
+	inputUri: string
+	outputUri: string
+}
+
+export interface SvgaToSpriteSheetResult {
+	spriteSheetUri: string
+	frameCount: number
+	fps: number
+	frameWidth: number
+	frameHeight: number
+}
+
 export interface UnzipOptions {
 	inputUri: string
 	outputUri: string

@@ -62,10 +62,10 @@ const resolveAppSkinUris = (appSkin: AppSkin, rootUri: string): AppSkin => ({
 	avatarFrames: appSkin.avatarFrames
 		.map((f) => toAbsolute(rootUri, f))
 		.filter((f): f is string => f !== null),
-	thumbUpGifs:
-		appSkin.thumbUpGifs?.map((g) => ({
-			durationMs: g.durationMs,
-			relativeUri: toAbsolute(rootUri, g.relativeUri) ?? g.relativeUri,
+	thumbUpSprites:
+		appSkin.thumbUpSprites?.map((s) => ({
+			...s,
+			spriteSheetUri: toAbsolute(rootUri, s.spriteSheetUri) ?? s.spriteSheetUri,
 		})) ?? null,
 })
 

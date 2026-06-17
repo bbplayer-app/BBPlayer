@@ -1,7 +1,8 @@
 import { Image } from 'expo-image'
-import { memo, useEffect, useState } from 'react'
-import { StyleSheet } from 'react-native'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
 import Animated, {
+	cancelAnimation,
 	Easing,
 	useAnimatedStyle,
 	useSharedValue,
@@ -9,6 +10,7 @@ import Animated, {
 	withSequence,
 	withTiming,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import type { AppSkin } from '@/services/theme/types'
@@ -18,75 +20,167 @@ interface SkinThumbUpBurstProps {
 	playSignal: number
 }
 
-const ANIMATION_SIZE = 96
+const ICON_BUTTON_SLOT_SIZE = 52
+const MAX_BURST_SIZE = 104
+const ENTRY_DURATION_MS = 180
+const EXIT_DURATION_MS = 260
+const ENTRY_SCALE = 0.42
+const FALLBACK_FPS = 24
 
 const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	skin,
 	playSignal,
 }: SkinThumbUpBurstProps) {
 	const opacity = useSharedValue(0)
-	const translateY = useSharedValue(0)
-	const scale = useSharedValue(0.4)
+	const scale = useSharedValue(ENTRY_SCALE)
+	const frameProgress = useSharedValue(0)
 	const [visible, setVisible] = useState(false)
 
 	const thumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
-	const thumbUp = skin?.thumbUps[thumbUpIndex]
-	const animation = thumbUp?.animation
-	const playbackDuration = thumbUp?.durationMs ?? 1400
+	const thumbUpSprite = skin?.thumbUpSprites?.[thumbUpIndex]
+
+	const metrics = useMemo(() => {
+		if (!thumbUpSprite?.spriteSheetUri) return null
+
+		const frameCount = Math.floor(thumbUpSprite.frameCount)
+		const frameWidth = Math.floor(thumbUpSprite.frameWidth)
+		const frameHeight = Math.floor(thumbUpSprite.frameHeight)
+		if (frameCount <= 0 || frameWidth <= 0 || frameHeight <= 0) return null
+
+		const aspectRatio = frameWidth / frameHeight
+		const viewportWidth =
+			aspectRatio >= 1 ? MAX_BURST_SIZE : MAX_BURST_SIZE * aspectRatio
+		const viewportHeight =
+			aspectRatio >= 1 ? MAX_BURST_SIZE / aspectRatio : MAX_BURST_SIZE
+		const fps = thumbUpSprite.fps > 0 ? thumbUpSprite.fps : FALLBACK_FPS
+
+		return {
+			frameCount,
+			playbackDuration: (frameCount / fps) * 1000,
+			sheetHeight: viewportHeight * frameCount,
+			viewportHeight,
+			viewportWidth,
+		}
+	}, [thumbUpSprite])
 
 	useEffect(() => {
-		if (!animation || playSignal === 0) return
+		if (!metrics || !thumbUpSprite || playSignal === 0) {
+			setVisible(false)
+			return
+		}
 
-		const fadeDelay = Math.max(0, playbackDuration - 460)
-		const visibleDuration = playbackDuration + 520
+		const fadeDelay = Math.max(0, metrics.playbackDuration - EXIT_DURATION_MS)
 
 		setVisible(true)
+		cancelAnimation(opacity)
+		cancelAnimation(scale)
+		cancelAnimation(frameProgress)
+
 		opacity.value = 0
-		translateY.value = 0
-		scale.value = 0.4
+		scale.value = ENTRY_SCALE
+		frameProgress.value = 0
 
 		opacity.value = withSequence(
-			withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
+			withTiming(1, {
+				duration: ENTRY_DURATION_MS,
+				easing: Easing.out(Easing.quad),
+			}),
 			withDelay(
 				fadeDelay,
-				withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }),
+				withTiming(
+					0,
+					{ duration: EXIT_DURATION_MS, easing: Easing.in(Easing.quad) },
+					(finished) => {
+						if (finished) scheduleOnRN(setVisible, false)
+					},
+				),
 			),
 		)
-		translateY.value = withTiming(-84, {
-			duration: visibleDuration,
-			easing: Easing.out(Easing.cubic),
-		})
 		scale.value = withTiming(1, {
-			duration: 360,
-			easing: Easing.out(Easing.back(1.4)),
+			duration: ENTRY_DURATION_MS,
+			easing: Easing.out(Easing.back(1.35)),
 		})
+		frameProgress.value = withDelay(
+			ENTRY_DURATION_MS,
+			withTiming(metrics.frameCount, {
+				duration: metrics.playbackDuration,
+				easing: Easing.linear,
+			}),
+		)
 
-		const hideTimer = setTimeout(() => setVisible(false), visibleDuration)
 		return () => {
-			clearTimeout(hideTimer)
+			cancelAnimation(opacity)
+			cancelAnimation(scale)
+			cancelAnimation(frameProgress)
 		}
-	}, [animation, opacity, playSignal, playbackDuration, scale, translateY])
+	}, [frameProgress, metrics, opacity, playSignal, scale, thumbUpSprite])
 
-	const animatedStyle = useAnimatedStyle(() => ({
+	const containerStyle = useAnimatedStyle(() => ({
 		opacity: opacity.value,
-		transform: [{ translateY: translateY.value }, { scale: scale.value }],
+		transform: [{ scale: scale.value }],
 	}))
 
-	if (!visible || !animation) return null
+	const spriteStyle = useAnimatedStyle(() => {
+		const frameIndex = Math.min(
+			Math.max(0, Math.floor(frameProgress.value)),
+			(metrics?.frameCount ?? 1) - 1,
+		)
+
+		return {
+			transform: [
+				{
+					translateY: -frameIndex * (metrics?.viewportHeight ?? 0),
+				},
+			],
+		}
+	})
+
+	if (!visible || !metrics || !thumbUpSprite) return null
 
 	return (
 		<Animated.View
 			pointerEvents='none'
-			style={[styles.container, animatedStyle]}
+			style={[
+				styles.container,
+				{
+					bottom: ICON_BUTTON_SLOT_SIZE - 10,
+					height: metrics.viewportHeight,
+					right: (ICON_BUTTON_SLOT_SIZE - metrics.viewportWidth) / 2,
+					width: metrics.viewportWidth,
+				},
+				containerStyle,
+			]}
 		>
-			<Image
-				key={`${animation}:${playSignal}`}
-				source={animation}
-				style={styles.image}
-				contentFit='contain'
-				cachePolicy='memory-disk'
-				recyclingKey={`${animation}:${playSignal}`}
-			/>
+			<View
+				style={[
+					styles.frame,
+					{
+						height: metrics.viewportHeight,
+						width: metrics.viewportWidth,
+					},
+				]}
+			>
+				<Animated.View
+					style={[
+						{
+							height: metrics.sheetHeight,
+							width: metrics.viewportWidth,
+						},
+						spriteStyle,
+					]}
+				>
+					<Image
+						source={thumbUpSprite.spriteSheetUri}
+						style={{
+							height: metrics.sheetHeight,
+							width: metrics.viewportWidth,
+						}}
+						contentFit='fill'
+						cachePolicy='memory-disk'
+						recyclingKey={thumbUpSprite.spriteSheetUri}
+					/>
+				</Animated.View>
+			</View>
 		</Animated.View>
 	)
 })
@@ -94,15 +188,10 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 const styles = StyleSheet.create({
 	container: {
 		position: 'absolute',
-		right: -32,
-		bottom: 8,
-		width: ANIMATION_SIZE,
-		height: ANIMATION_SIZE,
 		zIndex: 10,
 	},
-	image: {
-		width: ANIMATION_SIZE,
-		height: ANIMATION_SIZE,
+	frame: {
+		overflow: 'hidden',
 	},
 })
 

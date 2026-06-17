@@ -13,10 +13,11 @@ import * as FileSystem from 'expo-file-system'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import log from '@/utils/log'
+import { storage } from '@/utils/mmkv'
 
 import { fetchGarbSkinAssetDeclaration } from './adapter'
 import { downloadManifestAssets } from './downloadManager'
-import { convertThumbUpsToGifs } from './thumbUpConverter'
+import { convertThumbUpsToSpriteSheets } from './thumbUpConverter'
 import { transformManifestToInstalledSkin } from './transformer'
 import type { InstalledSkin, InstalledSkinMeta } from './types'
 
@@ -135,7 +136,7 @@ export const installSkin = async (
 			signal: options.signal,
 		})
 
-		const thumbUpGifs = await convertThumbUpsToGifs({
+		const thumbUpSprites = await convertThumbUpsToSpriteSheets({
 			manifest,
 			mapping,
 			workDir: tempDir,
@@ -168,7 +169,7 @@ export const installSkin = async (
 							itemId: item.itemId!,
 							kind: 'suit',
 						},
-			thumbUpGifs,
+			thumbUpSprites,
 		})
 
 		await writeSkinJson(installedSkin, tempDir)
@@ -222,6 +223,7 @@ export const uninstallSkin = async (skinId: string): Promise<void> => {
 	}
 
 	store.removeInstalledSkin(skinId)
+	storage.remove('boot_splash_preload')
 	log.debug('[skin-mgr] uninstall completed', { skinId })
 }
 

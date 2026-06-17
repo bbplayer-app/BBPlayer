@@ -14,6 +14,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import { storage } from '@/utils/mmkv'
 
 const bootSplashManifest =
 	require('../../assets/bootsplash/manifest.json') as Manifest
@@ -41,8 +42,25 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		activeSkin?.bootSplash.items?.find((item) => item.id === selectedAssetId) ??
 		activeSkin?.bootSplash.items?.[0] ??
 		null
+
+	// 同步 MMKV 预加载 — 绕过 useActiveSkin 的异步 I/O，
+	// 确保 useHideAnimation 的 animate 回调中 bootSplashVideo 不为 null
+	const preloadRaw = storage.getString('boot_splash_preload')
+	let preloadedVideo: string | null = null
+	let preloadedCard: string | null = null
+	if (preloadRaw) {
+		const pipeIdx = preloadRaw.indexOf('|')
+		preloadedVideo = preloadRaw.slice(0, pipeIdx) || null
+		preloadedCard = preloadRaw.slice(pipeIdx + 1) || null
+	}
+
 	const bootSplashVideo =
-		selectedMode === 'video' ? (bootSplashAsset?.video ?? null) : null
+		preloadedVideo && selectedMode === 'video'
+			? preloadedVideo
+			: selectedMode === 'video'
+				? (bootSplashAsset?.video ?? null)
+				: null
+	const bootSplashAssetCard = preloadedCard || bootSplashAsset?.card || null
 	const [visible, setVisible] = useState(true)
 	const [introFinished, setIntroFinished] = useState(false)
 	const [videoEnded, setVideoEnded] = useState(false)
@@ -139,9 +157,9 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 			style={[container.style, styles.container, containerStyle]}
 		>
 			<Animated.View style={[styles.mediaContainer, mediaStyle]}>
-				{bootSplashAsset?.card ? (
+				{bootSplashAssetCard ? (
 					<Image
-						source={bootSplashAsset.card}
+						source={bootSplashAssetCard}
 						style={styles.video}
 						contentFit='cover'
 						cachePolicy='memory-disk'

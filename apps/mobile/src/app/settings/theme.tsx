@@ -20,12 +20,14 @@ import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { loadSkinAssets } from '@/services/theme/runtime'
 import { uninstallSkin } from '@/services/theme/SkinManager'
 import type {
+	AppSkin,
 	InstalledSkinMeta,
 	SkinAssetDeclaration,
 	SkinAssetFeatures,
 	SkinBootSplashAsset,
 } from '@/services/theme/types'
 import { assetFeaturesFromManifest } from '@/services/theme/types'
+import { storage } from '@/utils/mmkv'
 
 const SKIN_FEATURE_LABELS: Array<[keyof SkinAssetFeatures, string]> = [
 	['cards', '海报'],
@@ -112,6 +114,14 @@ export default function ThemeSettingsPage() {
 			selectedSkinBootSplashMode: item.video ? mode : 'poster',
 		})
 		setPreviewAsset(null)
+
+		const resolvedAsset = activeSkin?.bootSplash.items?.find(
+			(i) => i.id === item.id,
+		)
+		const cardPath = resolvedAsset?.card ?? ''
+		const videoPath =
+			item.video && mode === 'video' ? (resolvedAsset?.video ?? '') : ''
+		storage.set('boot_splash_preload', `${videoPath}|${cardPath}`)
 	}
 
 	const activeInstalledSkin = installedSkins.find(
@@ -175,6 +185,7 @@ export default function ThemeSettingsPage() {
 						<Text variant='titleMedium'>已安装主题</Text>
 						<View style={styles.skinList}>
 							{installedSkins.map((skin) => {
+								const coverUri = localAssetUri(skin.rootUri, skin.coverPath)
 								const selected = skin.id === activeSkinId
 								return (
 									<Pressable
@@ -198,9 +209,9 @@ export default function ThemeSettingsPage() {
 											})
 										}
 									>
-										{skin.coverUri ? (
+										{coverUri ? (
 											<Image
-												source={{ uri: skin.coverUri }}
+												source={{ uri: coverUri }}
 												style={styles.skinCover}
 												contentFit='cover'
 											/>
@@ -274,6 +285,7 @@ export default function ThemeSettingsPage() {
 									setSkinSettings({ activeThumbUpIndex: index })
 								}
 								skin={activeInstalledSkin}
+								thumbUpSprites={activeSkin.thumbUpSprites}
 							/>
 						) : null}
 						<View style={styles.sectionHeader}>
@@ -551,6 +563,8 @@ function localAssetUri(rootUri: string, path: string | null | undefined) {
 	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
+type ThumbUpSpritePreview = NonNullable<AppSkin['thumbUpSprites']>[number]
+
 function InstalledAssetSections({
 	activeAvatarFrameIndex,
 	activeLoadingIndex,
@@ -563,6 +577,7 @@ function InstalledAssetSections({
 	onSelectSkin,
 	onSelectThumbUp,
 	skin,
+	thumbUpSprites,
 }: {
 	activeAvatarFrameIndex: number
 	activeLoadingIndex: number
@@ -575,6 +590,7 @@ function InstalledAssetSections({
 	onSelectSkin: (index: number) => void
 	onSelectThumbUp: (index: number) => void
 	skin: InstalledSkinMeta
+	thumbUpSprites: AppSkin['thumbUpSprites']
 }) {
 	const [assets, setAssets] = useState<SkinAssetDeclaration | null>(null)
 	const { id, rootUri } = skin
@@ -629,10 +645,8 @@ function InstalledAssetSections({
 					name: item.name ?? `点赞动画 ${index + 1}`,
 					onPress: () => onSelectThumbUp(index),
 					selected: index === activeThumbUpIndex,
-					uri: localAssetUri(
-						rootUri,
-						`thumbups/${String(index).padStart(2, '0')}/thumbup.gif`,
-					),
+					sprite: normalizeThumbUpSprite(rootUri, thumbUpSprites?.[index]),
+					uri: null,
 				}))}
 				compact
 			/>
@@ -673,6 +687,7 @@ function AssetStrip({
 		name: string
 		onPress?: () => void
 		selected?: boolean
+		sprite?: ThumbUpSpritePreview | null
 		uri: string | null
 	}>
 	title: string
@@ -714,7 +729,9 @@ function AssetStrip({
 								},
 							]}
 						>
-							{item.uri ? (
+							{item.sprite ? (
+								<ThumbUpSpriteFirstFrame sprite={item.sprite} />
+							) : item.uri ? (
 								<Image
 									source={{ uri: item.uri }}
 									style={StyleSheet.absoluteFill}
@@ -747,6 +764,74 @@ function AssetStrip({
 					</Pressable>
 				))}
 			</ScrollView>
+		</View>
+	)
+}
+
+const THUMB_UP_PREVIEW_SIZE = 76
+
+function normalizeThumbUpSprite(
+	rootUri: string,
+	sprite: ThumbUpSpritePreview | null | undefined,
+): ThumbUpSpritePreview | null {
+	if (!sprite) return null
+
+	const spriteSheetUri =
+		localAssetUri(rootUri, sprite.spriteSheetUri) ?? sprite.spriteSheetUri
+
+	return {
+		...sprite,
+		spriteSheetUri,
+	}
+}
+
+function ThumbUpSpriteFirstFrame({ sprite }: { sprite: ThumbUpSpritePreview }) {
+	const frameCount = Math.floor(sprite.frameCount)
+	const frameWidth = Math.floor(sprite.frameWidth)
+	const frameHeight = Math.floor(sprite.frameHeight)
+	const previewFrame = Math.floor(frameCount / 2) // 这个动画可能前几帧是空白的，咱们直接截取中间一个
+	if (
+		!sprite.spriteSheetUri ||
+		frameCount <= 0 ||
+		frameWidth <= 0 ||
+		frameHeight <= 0
+	) {
+		return null
+	}
+
+	const aspectRatio = frameWidth / frameHeight
+	const viewportWidth =
+		aspectRatio >= 1
+			? THUMB_UP_PREVIEW_SIZE
+			: THUMB_UP_PREVIEW_SIZE * aspectRatio
+	const viewportHeight =
+		aspectRatio >= 1
+			? THUMB_UP_PREVIEW_SIZE / aspectRatio
+			: THUMB_UP_PREVIEW_SIZE
+
+	return (
+		<View style={styles.thumbUpSpritePreview}>
+			<View
+				style={[
+					styles.thumbUpSpriteFrame,
+					{
+						height: viewportHeight,
+						width: viewportWidth,
+					},
+				]}
+			>
+				<Image
+					source={sprite.spriteSheetUri}
+					style={{
+						height: viewportHeight * frameCount,
+						width: viewportWidth,
+						transform: [{ translateY: -viewportHeight * previewFrame }],
+					}}
+					contentFit='fill'
+					cachePolicy='memory-disk'
+					recyclingKey={sprite.spriteSheetUri}
+				/>
+			</View>
 		</View>
 	)
 }
@@ -992,6 +1077,14 @@ const styles = StyleSheet.create({
 	},
 	assetTileImageCompact: {
 		aspectRatio: 1,
+	},
+	thumbUpSpritePreview: {
+		...StyleSheet.absoluteFill,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	thumbUpSpriteFrame: {
+		overflow: 'hidden',
 	},
 	assetTileSelectedBadge: {
 		position: 'absolute',

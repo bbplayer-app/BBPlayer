@@ -1,4 +1,4 @@
-import { convertSvgaBinToGifAsync } from '@bbplayer/native'
+import { convertSvgaBinToSpriteSheetAsync } from '@bbplayer/native'
 import * as FileSystem from 'expo-file-system'
 import { Platform } from 'react-native'
 
@@ -6,19 +6,22 @@ import log from '@/utils/log'
 
 import type { SkinAssetDeclaration } from './schema'
 
-export interface ThumbUpGifResult {
-	durationMs: number
-	relativeUri: string
+export interface ThumbUpSpriteResult {
+	spriteSheetUri: string
+	frameCount: number
+	fps: number
+	frameWidth: number
+	frameHeight: number
 }
 
 /**
- * 将 manifest 中每个 thumbup 的 SVGA 动画转换为 GIF。
+ * 将 manifest 中每个 thumbup 的 SVGA 动画转换为纵向雪碧图 PNG。
  *
  * - Android 专有（其他平台返回空数组）
  * - 输入文件从 workDir 中按 mapping 查找
- * - 输出到 workDir/thumbups/NN/thumbup.gif
+ * - 输出到 workDir/thumbups/NN/sprite.png
  */
-export const convertThumbUpsToGifs = async ({
+export const convertThumbUpsToSpriteSheets = async ({
 	manifest,
 	mapping,
 	workDir,
@@ -28,10 +31,10 @@ export const convertThumbUpsToGifs = async ({
 	mapping: Record<string, string>
 	workDir: FileSystem.Directory
 	onProgress?: (label: string) => void
-}): Promise<ThumbUpGifResult[]> => {
+}): Promise<ThumbUpSpriteResult[]> => {
 	if (Platform.OS !== 'android') {
 		log.debug(
-			'[thumbUp] skipping SVGA→GIF conversion on non-Android platform',
+			'[thumbUp] skipping SVGA→sprite conversion on non-Android platform',
 			{
 				count: manifest.thumbups.length,
 				platform: Platform.OS,
@@ -40,7 +43,7 @@ export const convertThumbUpsToGifs = async ({
 		return []
 	}
 
-	const results: ThumbUpGifResult[] = []
+	const results: ThumbUpSpriteResult[] = []
 
 	for (let index = 0; index < manifest.thumbups.length; index++) {
 		const thumbup = manifest.thumbups[index]
@@ -51,32 +54,35 @@ export const convertThumbUpsToGifs = async ({
 		if (!localPath) continue
 
 		const inputUri = `${workDir.uri.replace(/\/+$/, '')}/${localPath.replace(/^\/+/, '')}`
-		const gifDir = `thumbups/${String(index).padStart(2, '0')}`
-		const gifRelativeUri = `${gifDir}/thumbup.gif`
+		const spriteDir = `thumbups/${String(index).padStart(2, '0')}`
+		const spriteRelativeUri = `${spriteDir}/sprite.png`
 
-		const gifDirectory = new FileSystem.Directory(workDir, gifDir)
-		gifDirectory.create({ idempotent: true, intermediates: true })
+		const spriteDirectory = new FileSystem.Directory(workDir, spriteDir)
+		spriteDirectory.create({ idempotent: true, intermediates: true })
 
-		const outputFile = new FileSystem.File(gifDirectory, 'thumbup.gif')
+		const outputFile = new FileSystem.File(spriteDirectory, 'sprite.png')
 		if (outputFile.exists) {
 			outputFile.delete()
 		}
 
 		onProgress?.(`转换 ${thumbup.name ?? '点赞动画'}`)
 
-		const result = await convertSvgaBinToGifAsync({
-			height: 96,
+		const result = await convertSvgaBinToSpriteSheetAsync({
 			inputUri,
 			outputUri: outputFile.uri,
-			width: 96,
 		})
 
 		results.push({
-			durationMs: Math.round((result.frames / Math.max(1, result.fps)) * 1000),
-			relativeUri: gifRelativeUri,
+			spriteSheetUri: spriteRelativeUri,
+			frameCount: result.frameCount,
+			fps: result.fps,
+			frameWidth: result.frameWidth,
+			frameHeight: result.frameHeight,
 		})
 	}
 
-	log.debug('[thumbUp] SVGA→GIF conversion complete', { count: results.length })
+	log.debug('[thumbUp] SVGA→sprite sheet conversion complete', {
+		count: results.length,
+	})
 	return results
 }

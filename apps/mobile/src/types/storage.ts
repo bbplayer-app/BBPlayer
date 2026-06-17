@@ -25,6 +25,7 @@ export interface AppStorageSchema {
 	independent_account_migrated_v1: boolean
 	'shared-playlist-members': string
 	'skin-storage': string
+	boot_splash_preload: string
 }
 
 export type StorageKey = keyof AppStorageSchema

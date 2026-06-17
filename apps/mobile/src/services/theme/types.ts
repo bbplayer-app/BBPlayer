@@ -14,7 +14,7 @@ export interface SkinAssetFeatures {
 }
 
 export interface InstalledSkin {
-	coverUri: string | null
+	coverPath: string | null
 	id: string
 	installedAt: number
 	manifest: SkinAssetDeclaration
@@ -35,7 +35,7 @@ export interface InstalledSkin {
 
 /** Lightweight metadata stored in Zustand (excludes `localAssets`) */
 export interface InstalledSkinMeta {
-	coverUri: string | null
+	coverPath: string | null
 	id: string
 	installedAt: number
 	name: string
@@ -101,10 +101,13 @@ export interface AppSkin {
 		preview: string | null
 	}[]
 	avatarFrames: string[]
-	thumbUpGifs:
+	thumbUpSprites:
 		| {
-				durationMs: number
-				relativeUri: string
+				spriteSheetUri: string
+				frameCount: number
+				fps: number
+				frameWidth: number
+				frameHeight: number
 		  }[]
 		| null
 }
@@ -123,7 +126,7 @@ export interface SkinDownloadProgress {
 export const installedSkinToMeta = (
 	skin: InstalledSkin,
 ): InstalledSkinMeta => ({
-	coverUri: skin.coverUri,
+	coverPath: skin.coverPath,
 	id: skin.id,
 	installedAt: skin.installedAt,
 	name: skin.name,

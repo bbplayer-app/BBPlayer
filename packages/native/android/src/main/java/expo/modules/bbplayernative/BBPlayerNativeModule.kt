@@ -86,6 +86,21 @@ class BBPlayerNativeModule : Module() {
             )
         }
 
+        AsyncFunction("convertSvgaBinToSpriteSheetAsync") Coroutine { options: SvgaToSpriteSheetOptions ->
+            val context = requireContext()
+            val result = withContext(Dispatchers.IO) {
+                convertSvgaBinToSpriteSheet(context, options)
+            }
+
+            return@Coroutine mapOf(
+                "spriteSheetUri" to result.spriteSheetUri,
+                "frameCount" to result.frameCount,
+                "fps" to result.fps,
+                "frameWidth" to result.frameWidth,
+                "frameHeight" to result.frameHeight,
+            )
+        }
+
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
             val result = withContext(Dispatchers.IO) {
                 unzip(options)
@@ -259,6 +274,49 @@ class BBPlayerNativeModule : Module() {
         )
     }
 
+    private fun convertSvgaBinToSpriteSheet(
+        context: Context,
+        options: SvgaToSpriteSheetOptions,
+    ): SvgaToSpriteSheetResult {
+        if (options.inputUri.isBlank()) {
+            throw IllegalArgumentException("SVGA 输入路径不能为空")
+        }
+        if (options.outputUri.isBlank()) {
+            throw IllegalArgumentException("雪碧图输出路径不能为空")
+        }
+
+        val input = readUriBytes(context, options.inputUri)
+        val movie = SvgaMovieParser.parse(inflateZlib(input))
+        val width = movie.width
+        val height = movie.height
+        val frames = movie.renderFrames(width, height)
+
+        val totalHeight = height * frames.size
+        val spriteSheet = Bitmap.createBitmap(width, totalHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(spriteSheet)
+
+        for (index in frames.indices) {
+            canvas.drawBitmap(frames[index], 0f, (index * height).toFloat(), null)
+            frames[index].recycle()
+        }
+
+        val outputFile = fileFromUri(options.outputUri)
+        outputFile.parentFile?.mkdirs()
+
+        FileOutputStream(outputFile).use { stream ->
+            spriteSheet.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        }
+        spriteSheet.recycle()
+
+        return SvgaToSpriteSheetResult(
+            spriteSheetUri = Uri.fromFile(outputFile).toString(),
+            frameCount = movie.frameCount,
+            fps = movie.fps,
+            frameWidth = width,
+            frameHeight = height,
+        )
+    }
+
     private fun unzip(options: UnzipOptions): UnzipResult {
         if (options.inputUri.isBlank()) {
             throw IllegalArgumentException("ZIP 输入路径不能为空")
@@ -365,6 +423,14 @@ class SvgaToGifOptions : Record {
     var height: Int? = null
 }
 
+class SvgaToSpriteSheetOptions : Record {
+    @Field
+    var inputUri: String = ""
+
+    @Field
+    var outputUri: String = ""
+}
+
 class UnzipOptions : Record {
     @Field
     var inputUri: String = ""
@@ -384,6 +450,14 @@ private data class SvgaToGifResult(
     val height: Int,
     val frames: Int,
     val fps: Int,
+)
+
+private data class SvgaToSpriteSheetResult(
+    val spriteSheetUri: String,
+    val frameCount: Int,
+    val fps: Int,
+    val frameWidth: Int,
+    val frameHeight: Int,
 )
 
 private data class SvgaMovie(
