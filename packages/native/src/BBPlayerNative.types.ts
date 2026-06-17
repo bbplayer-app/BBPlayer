@@ -9,3 +9,41 @@ export interface AppUpdateInstallResult {
 	downloadId: number
 	uri: string
 }
+
+export interface SvgaToGifOptions {
+	inputUri: string
+	outputUri: string
+	width?: number
+	height?: number
+}
+
+export interface SvgaToGifResult {
+	uri: string
+	width: number
+	height: number
+	frames: number
+	fps: number
+}
+
+export interface SvgaToSpriteSheetOptions {
+	inputUri: string
+	outputUri: string
+}
+
+export interface SvgaToSpriteSheetResult {
+	spriteSheetUri: string
+	frameCount: number
+	fps: number
+	frameWidth: number
+	frameHeight: number
+}
+
+export interface UnzipOptions {
+	inputUri: string
+	outputUri: string
+}
+
+export interface UnzipResult {
+	uri: string
+	fileCount: number
+}

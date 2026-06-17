@@ -1,3 +1,8 @@
+import {
+	BilibiliGarbBenefitResponse,
+	BilibiliGarbSuitDetailResponse,
+} from './garb'
+
 /**
  * 获取音频流入参（dash）
  */
@@ -570,6 +575,72 @@ interface BilibiliReplyCommentsResponse {
 /**
  * 单条弹幕数据（项目内使用）
  */
+
+// ============================================================
+// Garb 装扮 API 返回类型（仅声明 API raw 形状，不做任何解析）
+// ============================================================
+
+/** 搜索 API 返回的单个项目 */
+interface BilibiliGarbSearchItem {
+	item_id: number
+	name: string
+	part_id: number
+	properties: {
+		dlc_act_id?: string
+		dlc_lottery_id?: string
+		image_cover?: string
+		image_cover_long?: string
+		fan_share_image?: string
+	}
+}
+
+/** 搜索 API 返回 */
+interface BilibiliGarbSearchResponse {
+	list: BilibiliGarbSearchItem[]
+	pn: number
+	ps: number
+	total: number
+}
+
+/** asset_bag 卡牌条目 */
+interface BilibiliGarbAssetBagItem {
+	item_type: number
+	card_item?: {
+		card_type_id?: number | string
+		card_name?: string
+		card_img?: string
+		card_type?: number
+		video_list?: string[] | null
+		card_scarcity?: number
+	}
+}
+
+/** asset_bag 奖励条目 (collect_list) */
+interface BilibiliGarbCollectEntry {
+	redeem_item_type: number
+	redeem_item_id: string
+	redeem_item_name: string
+	redeem_item_image?: string
+	require_item_amount?: number
+	card_item?: {
+		card_asset_info?: {
+			card_item?: {
+				card_type_id?: number | string
+				card_name?: string
+				card_img?: string
+				card_type?: number
+				video_list?: string[] | null
+			}
+		}
+	}
+}
+
+/** asset_bag API 返回 */
+interface BilibiliGarbAssetBagResponse {
+	item_list?: BilibiliGarbAssetBagItem[]
+	collect_list?: BilibiliGarbCollectEntry[]
+}
+
 interface BilibiliDanmakuItem {
 	id: number | Long
 	progress: number // 弹幕出现时间（ms）
@@ -593,10 +664,18 @@ export type {
 	BilibiliCommentItem,
 	BilibiliCommentMember,
 	BilibiliCommentsResponse,
+	BilibiliDanmakuItem,
 	BilibiliDealFavoriteForOneVideoResponse,
 	BilibiliFavoriteListAllContents,
 	BilibiliFavoriteListContent,
 	BilibiliFavoriteListContents,
+	BilibiliGarbAssetBagItem,
+	BilibiliGarbAssetBagResponse,
+	BilibiliGarbBenefitResponse,
+	BilibiliGarbCollectEntry,
+	BilibiliGarbSearchItem,
+	BilibiliGarbSearchResponse,
+	BilibiliGarbSuitDetailResponse,
 	BilibiliHistoryVideo,
 	BilibiliHotSearch,
 	BilibiliMediaItemInCollection,
@@ -613,7 +692,8 @@ export type {
 	BilibiliUserUploadedVideosResponse,
 	BilibiliVideoDetails,
 	BilibiliWebPlayerInfo,
-	BilibiliDanmakuItem,
 }
 
 export { BilibiliQrCodeLoginStatus }
+
+export type * from './garb'

@@ -10,12 +10,14 @@
 ### Added
 
 - 主页清爽模式
+- 外观设置中支持一键切换 MyGO!!!!! 联动皮肤（动态切换底栏图标）
 
 ### Changed
 
+- 重构 Bilibili 装扮/Garb API 的类型声明与解析逻辑，在 `types/apis/garb.ts` 中引入基于 `part_id` 辨识联合（Discriminated Union）的精确 API 返回结构。使用 TS 模版字面量体操动态生成空间背景键名，并全面清理了所有组件属性接口中的冗余未用字段，从而完全移除了 `resolveComponent` 中手动的类型强转以及冗余的 `nullableString` 工具函数。
 - 将部分 ExpoUI TextField 回滚为 RNPaper TextField
 - 优化播放列表与分享页面操作按钮样式，使其背景和图标颜色根据封面动态提取的主题色自动计算匹配，增强视觉一致性与美观度。
-- 优化设置页面排序，添加许可证页面搜索及动画（支持 useTransition），重新设计手机号与二维码登录界面为美观的原生页面，并将分步组件重构迁移至 Bilibili 账号设置目录下的局部组件。
+- 优化设置页面排序，添加许可证页面搜索及动画（支持 useTransition），重新设计手机号与二维码登录界面为美观的原生页面，并将分步组件重隔迁移至 Bilibili 账号设置目录下的局部组件。
 - 将 `bilibiliApi` 与 `bilibiliApiClient` 及其所有调用处的参数由位置参数重构为对象参数
 
 ### Fixed

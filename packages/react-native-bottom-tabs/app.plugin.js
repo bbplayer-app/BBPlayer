@@ -1,0 +1,41 @@
+const {
+	createRunOncePlugin,
+	withAndroidStyles,
+} = require('@expo/config-plugins')
+
+const MATERIAL3_THEME_DYANMIC =
+	'Theme.Material3.DynamicColors.DayNight.NoActionBar'
+const MATERIAL3_THEME = 'Theme.Material3.DayNight.NoActionBar'
+const MATERIAL2_THEME = 'Theme.MaterialComponents.DayNight.NoActionBar'
+const MATERIAL3_EXPRESSIVE_THEME =
+	'Theme.Material3Expressive.DayNight.NoActionBar'
+
+const withMaterial3Theme = (config, options) => {
+	const theme = options?.theme
+
+	return withAndroidStyles(config, (stylesConfig) => {
+		stylesConfig.modResults.resources.style =
+			stylesConfig.modResults.resources.style?.map((style) => {
+				if (style.$.name === 'AppTheme') {
+					if (theme === 'material3-dynamic') {
+						style.$.parent = MATERIAL3_THEME_DYANMIC
+					} else if (theme === 'material2') {
+						style.$.parent = MATERIAL2_THEME
+					} else if (theme === 'material3-expressive') {
+						style.$.parent = MATERIAL3_EXPRESSIVE_THEME
+					} else {
+						style.$.parent = MATERIAL3_THEME
+					}
+				}
+
+				return style
+			})
+
+		return stylesConfig
+	})
+}
+
+module.exports = createRunOncePlugin(
+	withMaterial3Theme,
+	'react-native-bottom-tabs',
+)

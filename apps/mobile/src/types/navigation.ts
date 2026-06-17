@@ -1,4 +1,5 @@
 import type { AlertModalProps } from '@/components/modals/AlertModal'
+import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import type { Playlist, Track } from '@/types/core/media'
 import type { GenericTrack } from '@/types/external_playlist'
@@ -41,6 +42,7 @@ export interface ModalPropsMap {
 	}
 	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined
+	SkinDownloadProgress: { item: GarbSkinSearchResult }
 	EnableSharing: {
 		playlistId: number
 		shareId?: string | null

@@ -4,16 +4,16 @@ import path from 'path'
 
 import expoAsset from 'expo-asset/plugin'
 import expoBuildProperties from 'expo-build-properties/plugin'
-import expoDevClient from 'expo-dev-client/plugin/build/index.js'
+import expoDevClient from 'expo-dev-client/plugin'
 import expoFont from 'expo-font/plugin'
-import expoImage from 'expo-image/plugin/build/index.js'
+import expoImage from 'expo-image/plugin'
 import expoMediaLibrary from 'expo-media-library/plugin'
-import expoRouter from 'expo-router/plugin/build/index.js'
-import expoSharing from 'expo-sharing/plugin/build/index.js'
-import expoSplashScreen from 'expo-splash-screen/plugin'
+import expoRouter from 'expo-router/plugin'
+import expoSharing from 'expo-sharing/plugin'
 import expoSqlite from 'expo-sqlite/plugin'
-import expoWebBrowser from 'expo-web-browser/plugin/build/index.js'
+import expoWebBrowser from 'expo-web-browser/plugin'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
+import bootsplash from 'react-native-bootsplash/expo'
 
 import { version } from './package.json'
 
@@ -155,10 +155,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			expoDevClient({
 				launchMode: 'most-recent',
 			}),
-			expoSplashScreen({
-				image: './assets/images/splash-icon.png',
-				imageWidth: 200,
-				resizeMode: 'contain',
+			bootsplash({
+				logo: './assets/images/splash-icon.png',
+				logoWidth: 120,
+				background: '#ffffff',
+				assetsOutput: 'assets/bootsplash',
 			}),
 			[
 				'@sentry/react-native/expo',
@@ -235,7 +236,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			[
 				'react-native-bottom-tabs',
 				{
-					theme: 'material3-dynamic',
+					theme: 'material3-expressive',
 				},
 			],
 			[

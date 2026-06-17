@@ -1,4 +1,0 @@
-
-> @bbplayer/mobile@2.4.2 lint /Users/roitium/Programming/BBPlayer/apps/mobile
-> eslint .
-

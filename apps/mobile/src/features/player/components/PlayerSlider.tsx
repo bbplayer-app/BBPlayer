@@ -14,6 +14,8 @@ import {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -89,6 +91,17 @@ interface PlayerSliderProps {
 
 export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const { colors } = useTheme()
+	const activeSkin = useActiveSkin()
+	const skinSliderThumbSize = useSkinStore(
+		(state) => state.skinSliderThumbSize ?? 20,
+	)
+	const skinSliderThumbOffsetX = useSkinStore(
+		(state) => state.skinSliderThumbOffsetX ?? 0,
+	)
+	const skinSliderThumbOffsetY = useSkinStore(
+		(state) => state.skinSliderThumbOffsetY ?? 0,
+	)
+	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
 
@@ -187,7 +200,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		return Math.min(Math.max(pos / dur, 0), 1)
 	})
 
-	const bufferedFraction = useDerivedValue(() => {
+	const _bufferedFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
 		return Math.min(Math.max(buffered.value / dur, 0), 1)
 	})
@@ -243,13 +256,15 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		}),
 		[colors.primary, colors.surfaceVariant],
 	)
+	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
+	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
 	return (
 		<View style={styles.root}>
 			<WavySlider
 				style={styles.slider}
 				progress={progressFraction}
-				bufferedProgress={bufferedFraction}
+				// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
 				colors={sliderColors}
 				waveLength={30}
 				waveVelocity={animatedWaveVelocity}
@@ -257,6 +272,16 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				waveHeight={animatedWaveHeight}
 				waveThickness={animatedWaveThickness}
 				trackThickness={animatedTrackThickness}
+				thumbImageUri={sliderThumb?.normal}
+				thumbImageDragLeftUri={sliderThumb?.dragLeft}
+				thumbImageDragRightUri={sliderThumb?.dragRight}
+				thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
+				thumbImageOffsetX={
+					hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
+				}
+				thumbImageOffsetY={
+					hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
+				}
 				incremental={false}
 				onValueChange={handleValueChange}
 				onValueChangeFinished={handleValueChangeFinished}

@@ -15,6 +15,3 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - workerd
-
-patchedDependencies:
-  '@bottom-tabs/react-navigation@1.2.0': patches/@bottom-tabs__react-navigation@1.2.0.patch

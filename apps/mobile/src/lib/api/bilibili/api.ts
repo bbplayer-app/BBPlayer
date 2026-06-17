@@ -6,6 +6,10 @@ import type {
 	BilibiliCaptchaTokenData,
 	BilibiliCommentsResponse,
 	BilibiliDanmakuItem,
+	BilibiliGarbAssetBagResponse,
+	BilibiliGarbBenefitResponse,
+	BilibiliGarbSearchResponse,
+	BilibiliGarbSuitDetailResponse,
 	BilibiliReplyCommentsResponse,
 	BilibiliSearchSuggestionItem,
 	BilibiliSmsLoginData,
@@ -1481,6 +1485,91 @@ export class BilibiliApi {
 				rawData: null,
 				type: 'ResponseFailed',
 			})
+		})
+	}
+
+	/**
+	 * 搜索装扮 / 收藏集
+	 */
+	searchGarbSkins({
+		keyword,
+		page = 1,
+		pageSize = 5,
+		signal,
+	}: {
+		keyword: string
+		page?: number
+		pageSize?: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliGarbSearchResponse, BilibiliApiError> {
+		log.debug('searchGarbSkins', { keyword, page, pageSize })
+		return bilibiliApiClient.get<BilibiliGarbSearchResponse>({
+			endpoint: '/x/garb/v2/mall/home/search',
+			params: {
+				key_word: keyword,
+				pn: String(page),
+				ps: String(pageSize),
+			},
+			signal,
+		})
+	}
+
+	/**
+	 * 获取收藏集资产包（卡牌 + 奖励列表）
+	 */
+	fetchGarbAssetBag({
+		actId,
+		lotteryId,
+		signal,
+	}: {
+		actId: number
+		lotteryId: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliGarbAssetBagResponse, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliGarbAssetBagResponse>({
+			endpoint: '/x/vas/dlc_act/asset_bag',
+			params: {
+				act_id: String(actId),
+				lottery_id: String(lotteryId),
+			},
+			signal,
+		})
+	}
+
+	/**
+	 * 获取主题装扮详情（一次返回所有组件）
+	 */
+	fetchGarbSuitDetail({
+		itemId,
+		signal,
+	}: {
+		itemId: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliGarbSuitDetailResponse, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliGarbSuitDetailResponse>({
+			endpoint: '/x/garb/v2/mall/suit/detail',
+			params: { item_id: String(itemId) },
+			signal,
+		})
+	}
+
+	/**
+	 * 获取组件详情（benefit）
+	 */
+	fetchGarbBenefit({
+		itemId,
+		signal,
+	}: {
+		itemId: number | string
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliGarbBenefitResponse, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliGarbBenefitResponse>({
+			endpoint: '/x/garb/v2/user/suit/benefit',
+			params: {
+				item_id: String(itemId),
+				part: 'emoji_package',
+			},
+			signal,
 		})
 	}
 }

@@ -4,6 +4,12 @@ import { Platform } from 'react-native'
 import type {
 	AppUpdateDownloadOptions,
 	AppUpdateInstallResult,
+	SvgaToGifOptions,
+	SvgaToGifResult,
+	SvgaToSpriteSheetOptions,
+	SvgaToSpriteSheetResult,
+	UnzipOptions,
+	UnzipResult,
 } from './BBPlayerNative.types'
 
 declare class BBPlayerNativeModule extends NativeModule {
@@ -13,6 +19,11 @@ declare class BBPlayerNativeModule extends NativeModule {
 	downloadAndInstallApkAsync(
 		options: AppUpdateDownloadOptions,
 	): Promise<AppUpdateInstallResult>
+	convertSvgaBinToGifAsync(options: SvgaToGifOptions): Promise<SvgaToGifResult>
+	convertSvgaBinToSpriteSheetAsync(
+		options: SvgaToSpriteSheetOptions,
+	): Promise<SvgaToSpriteSheetResult>
+	unzipAsync(options: UnzipOptions): Promise<UnzipResult>
 }
 
 let nativeModule: BBPlayerNativeModule | null = null
@@ -38,3 +49,13 @@ export const openPackageInstallerSettingsAsync = () =>
 
 export const downloadAndInstallApkAsync = (options: AppUpdateDownloadOptions) =>
 	getNativeModule().downloadAndInstallApkAsync(options)
+
+export const convertSvgaBinToGifAsync = (options: SvgaToGifOptions) =>
+	getNativeModule().convertSvgaBinToGifAsync(options)
+
+export const convertSvgaBinToSpriteSheetAsync = (
+	options: SvgaToSpriteSheetOptions,
+) => getNativeModule().convertSvgaBinToSpriteSheetAsync(options)
+
+export const unzipAsync = (options: UnzipOptions) =>
+	getNativeModule().unzipAsync(options)

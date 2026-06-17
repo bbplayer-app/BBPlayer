@@ -1,0 +1,105 @@
+{
+	"name": "react-native-bottom-tabs",
+	"version": "1.2.0",
+	"description": "Native Bottom Tabs for React Native",
+	"keywords": [
+		"android",
+		"ios",
+		"react-native"
+	],
+	"homepage": "https://github.com/callstack/react-native-bottom-tabs#readme",
+	"bugs": {
+		"url": "https://github.com/callstack/react-native-bottom-tabs/issues"
+	},
+	"license": "MIT",
+	"author": "Oskar Kwasniewski <oskarkwasniewski@icloud.com> (https://github.com/okwasniewski)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/callstack/react-native-bottom-tabs.git"
+	},
+	"source": "./src/index.tsx",
+	"files": [
+		"src",
+		"android",
+		"ios",
+		"cpp",
+		"common",
+		"react-native.config.js",
+		"app.plugin.js",
+		"*.podspec",
+		"!ios/build",
+		"!android/build",
+		"!android/gradle",
+		"!android/gradlew",
+		"!android/gradlew.bat",
+		"!android/local.properties",
+		"!**/__tests__",
+		"!**/__fixtures__",
+		"!**/__mocks__",
+		"!**/.*"
+	],
+	"sideEffects": false,
+	"main": "./src/index.tsx",
+	"types": "./src/index.tsx",
+	"exports": {
+		".": {
+			"types": "./src/index.tsx",
+			"source": "./src/index.tsx",
+			"default": "./src/index.tsx"
+		},
+		"./package.json": "./package.json",
+		"./app.plugin.js": "./app.plugin.js"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"scripts": {
+		"build": "tsc -b --noEmit",
+		"lint": "eslint \"**/*.{js,ts,tsx}\"",
+		"test": "jest",
+		"typecheck": "tsc -b"
+	},
+	"dependencies": {
+		"react-freeze": "^1.0.0",
+		"sf-symbols-typescript": "^2.0.0",
+		"use-latest-callback": "^0.2.1"
+	},
+	"devDependencies": {
+		"@expo/config-plugins": "^7.0.0 || ^8.0.0",
+		"@react-native/babel-plugin-codegen": "0.81.1",
+		"@react-native/eslint-config": "0.81.1",
+		"@types/jest": "^29.5.14",
+		"@types/react": "19.2.15",
+		"react": "19.2.3",
+		"react-native": "0.85.3",
+		"typescript": "~6.0.3"
+	},
+	"peerDependencies": {
+		"react": "19.2.3",
+		"react-native": "0.85.3"
+	},
+	"codegenConfig": {
+		"name": "RNCTabView",
+		"type": "all",
+		"jsSrcsDir": "./src",
+		"android": {
+			"javaPackageName": "com.rcttabview"
+		},
+		"ios": {
+			"componentProvider": {
+				"RNCTabView": "RCTTabViewComponentView",
+				"BottomAccessoryView": "RCTBottomAccessoryComponentView"
+			},
+			"modulesConformingToProtocol": {
+				"RCTImageDataDecoder": [
+					"SvgDecoder"
+				]
+			}
+		}
+	},
+	"create-react-native-library": {
+		"type": "view-mixed",
+		"version": "0.41.2"
+	}
+}

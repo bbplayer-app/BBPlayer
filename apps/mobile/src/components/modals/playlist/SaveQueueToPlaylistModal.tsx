@@ -1,17 +1,10 @@
-import {
-	Host,
-	OutlinedTextField,
-	Text as ComposeText,
-} from '@expo/ui/jetpack-compose'
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Dialog } from 'react-native-paper'
+import { Dialog, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import useTextFieldState from '@/hooks/useTextFieldState'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistFacade } from '@/lib/facades/playlist'
 import type { ModalPropsMap } from '@/types/navigation'
@@ -25,7 +18,6 @@ export default function SaveQueueToPlaylistModal({
 	trackIds,
 }: ModalPropsMap['SaveQueueToPlaylist']) {
 	const [name, setName] = useState('')
-	const nameState = useTextFieldState(name)
 	const [loading, setLoading] = useState(false)
 	const close = useModalStore((state) => state.close)
 
@@ -66,21 +58,13 @@ export default function SaveQueueToPlaylistModal({
 		<>
 			<Dialog.Title>保存队列到播放列表</Dialog.Title>
 			<Dialog.Content>
-				<Host
-					matchContents={{ vertical: true }}
+				<TextInput
+					label='播放列表名称'
+					value={name}
+					onChangeText={setName}
+					mode='outlined'
 					style={styles.textInput}
-				>
-					<OutlinedTextField
-						value={nameState}
-						onValueChange={setName}
-						singleLine
-						modifiers={[fillMaxWidth()]}
-					>
-						<OutlinedTextField.Label>
-							<ComposeText>播放列表名称</ComposeText>
-						</OutlinedTextField.Label>
-					</OutlinedTextField>
-				</Host>
+				/>
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button

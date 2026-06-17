@@ -1,16 +1,9 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
-import {
-	Column,
-	Host,
-	OutlinedTextField,
-	Text as ComposeText,
-} from '@expo/ui/jetpack-compose'
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Avatar, Text, useTheme } from 'react-native-paper'
+import { Appbar, Avatar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
@@ -18,7 +11,8 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
-import useTextFieldState from '@/hooks/useTextFieldState'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { api } from '@/lib/api/bbplayer/client'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
@@ -42,16 +36,16 @@ export default function AccountSettingsPage() {
 	const setAccount = useAppStore((state) => state.setBBPlayerAccount)
 	const clearAccount = useAppStore((state) => state.clearBBPlayerAccount)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
+	const activeSkin = useActiveSkin()
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
 
 	const [mode, setMode] = useState<Mode>('login')
 	const [username, setUsername] = useState('')
 	const [password, setPassword] = useState('')
 	const [name, setName] = useState('')
 	const [face, setFace] = useState('')
-	const usernameState = useTextFieldState(username)
-	const passwordState = useTextFieldState(password)
-	const nameState = useTextFieldState(name)
-	const faceState = useTextFieldState(face)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [isRefreshing, setIsRefreshing] = useState(false)
 	const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -245,53 +239,45 @@ export default function AccountSettingsPage() {
 				{account ? (
 					<View style={styles.section}>
 						<View style={styles.profileHeader}>
-							{account.face ? (
-								<Avatar.Image
-									size={64}
-									source={{ uri: account.face }}
-								/>
-							) : (
-								<Avatar.Text
-									size={64}
-									label={account.name.slice(0, 1)}
-								/>
-							)}
+							<View style={styles.avatarWrapper}>
+								{account.face ? (
+									<Avatar.Image
+										size={64}
+										source={{ uri: account.face }}
+									/>
+								) : (
+									<Avatar.Text
+										size={64}
+										label={account.name.slice(0, 1)}
+									/>
+								)}
+								{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
+									<Image
+										source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
+										style={styles.avatarFrame64}
+										contentFit='contain'
+										cachePolicy='memory-disk'
+									/>
+								) : null}
+							</View>
 							<View style={styles.profileText}>
 								<Text variant='titleMedium'>{account.name}</Text>
 								<Text variant='bodySmall'>@{account.username}</Text>
 							</View>
 						</View>
-						<Host
-							matchContents={{ vertical: true }}
-							style={styles.formHost}
-						>
-							<Column
-								modifiers={[fillMaxWidth()]}
-								verticalArrangement={{ spacedBy: 8 }}
-							>
-								<OutlinedTextField
-									value={nameState}
-									onValueChange={setName}
-									singleLine
-									modifiers={[fillMaxWidth()]}
-								>
-									<OutlinedTextField.Label>
-										<ComposeText>昵称</ComposeText>
-									</OutlinedTextField.Label>
-								</OutlinedTextField>
-								<OutlinedTextField
-									value={faceState}
-									onValueChange={setFace}
-									singleLine
-									keyboardOptions={{ capitalization: 'none' }}
-									modifiers={[fillMaxWidth()]}
-								>
-									<OutlinedTextField.Label>
-										<ComposeText>头像 URL</ComposeText>
-									</OutlinedTextField.Label>
-								</OutlinedTextField>
-							</Column>
-						</Host>
+						<TextInput
+							label='昵称'
+							value={name}
+							mode='outlined'
+							onChangeText={setName}
+						/>
+						<TextInput
+							label='头像 URL'
+							value={face}
+							mode='outlined'
+							onChangeText={setFace}
+							autoCapitalize='none'
+						/>
 						<Button
 							mode='contained'
 							onPress={handleSaveProfile}
@@ -328,63 +314,37 @@ export default function AccountSettingsPage() {
 							}}
 							values={['登录', '注册']}
 						/>
-						<Host
-							matchContents={{ vertical: true }}
-							style={styles.formHost}
-						>
-							<Column
-								modifiers={[fillMaxWidth()]}
-								verticalArrangement={{ spacedBy: 8 }}
-							>
-								<OutlinedTextField
-									value={usernameState}
-									onValueChange={setUsername}
-									singleLine
-									keyboardOptions={{ capitalization: 'none' }}
-									modifiers={[fillMaxWidth()]}
-								>
-									<OutlinedTextField.Label>
-										<ComposeText>用户名</ComposeText>
-									</OutlinedTextField.Label>
-								</OutlinedTextField>
-								<OutlinedTextField
-									value={passwordState}
-									onValueChange={setPassword}
-									singleLine
-									visualTransformation='password'
-									modifiers={[fillMaxWidth()]}
-								>
-									<OutlinedTextField.Label>
-										<ComposeText>密码</ComposeText>
-									</OutlinedTextField.Label>
-								</OutlinedTextField>
-								{mode === 'register' && (
-									<>
-										<OutlinedTextField
-											value={nameState}
-											onValueChange={setName}
-											singleLine
-											modifiers={[fillMaxWidth()]}
-										>
-											<OutlinedTextField.Label>
-												<ComposeText>昵称</ComposeText>
-											</OutlinedTextField.Label>
-										</OutlinedTextField>
-										<OutlinedTextField
-											value={faceState}
-											onValueChange={setFace}
-											singleLine
-											keyboardOptions={{ capitalization: 'none' }}
-											modifiers={[fillMaxWidth()]}
-										>
-											<OutlinedTextField.Label>
-												<ComposeText>头像 URL</ComposeText>
-											</OutlinedTextField.Label>
-										</OutlinedTextField>
-									</>
-								)}
-							</Column>
-						</Host>
+						<TextInput
+							label='用户名'
+							value={username}
+							mode='outlined'
+							onChangeText={setUsername}
+							autoCapitalize='none'
+						/>
+						<TextInput
+							label='密码'
+							value={password}
+							mode='outlined'
+							onChangeText={setPassword}
+							secureTextEntry
+						/>
+						{mode === 'register' && (
+							<>
+								<TextInput
+									label='昵称'
+									value={name}
+									mode='outlined'
+									onChangeText={setName}
+								/>
+								<TextInput
+									label='头像 URL'
+									value={face}
+									mode='outlined'
+									onChangeText={setFace}
+									autoCapitalize='none'
+								/>
+							</>
+						)}
 						{mode === 'register' && (
 							<Button
 								onPress={fillProfileFromBilibili}
@@ -438,14 +398,23 @@ const styles = StyleSheet.create({
 		gap: 6,
 		marginBottom: 4,
 	},
-	formHost: {
-		width: '100%',
-	},
 	profileHeader: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 14,
 		marginBottom: 8,
+	},
+	avatarWrapper: {
+		position: 'relative',
+		width: 64,
+		height: 64,
+	},
+	avatarFrame64: {
+		position: 'absolute',
+		top: -12,
+		left: -12,
+		width: 88,
+		height: 88,
 	},
 	profileText: {
 		flex: 1,

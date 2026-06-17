@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
+import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions, {
 	type SearchHistoryItem,
@@ -41,6 +42,8 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -77,6 +80,10 @@ function HomePage() {
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
+	)
+	const activeSkin = useActiveSkin()
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
 	)
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
@@ -258,13 +265,19 @@ function HomePage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
+			<SkinAppbarBackground height={insets.top + 100} />
 			{/*顶部欢迎区域*/}
 			<View
 				style={{
-					paddingTop: insets.top + 8,
+					paddingTop: insets.top,
 				}}
 			>
-				<View style={[styles.greetingContainer, { paddingHorizontal: 16 }]}>
+				<View
+					style={[
+						styles.greetingContainer,
+						{ paddingHorizontal: 16, height: 56 },
+					]}
+				>
 					<View>
 						<Text
 							variant='headlineSmall'
@@ -302,6 +315,14 @@ function HomePage() {
 								}
 								cachePolicy={'disk'}
 							/>
+							{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
+								<Image
+									style={styles.avatarFrame}
+									source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
+									contentFit='contain'
+									cachePolicy='memory-disk'
+								/>
+							) : null}
 						</RectButton>
 					</View>
 				</View>
@@ -575,8 +596,10 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 	},
 	avatarButton: {
-		borderRadius: 20,
-		overflow: 'hidden',
+		width: 48,
+		height: 48,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	headerRight: {
 		flexDirection: 'row',
@@ -586,6 +609,11 @@ const styles = StyleSheet.create({
 		width: 40,
 		height: 40,
 		borderRadius: 20,
+	},
+	avatarFrame: {
+		position: 'absolute',
+		width: 54,
+		height: 54,
 	},
 	searchSection: {
 		marginTop: 16,

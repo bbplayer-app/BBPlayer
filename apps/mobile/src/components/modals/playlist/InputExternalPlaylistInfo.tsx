@@ -1,23 +1,15 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
-import {
-	Host,
-	OutlinedTextField,
-	Text as ComposeText,
-} from '@expo/ui/jetpack-compose'
-import { fillMaxWidth } from '@expo/ui/jetpack-compose/modifiers'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Dialog, Text } from 'react-native-paper'
+import { Dialog, Text, TextInput } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import useTextFieldState from '@/hooks/useTextFieldState'
 import { parseExternalPlaylistInfo } from '@/lib/utils/playlistUrlParser'
 
 const InputExternalPlaylistInfoModal = () => {
 	const [input, setInput] = useState('')
-	const inputState = useTextFieldState(input)
 	const [source, setSource] = useState<'netease' | 'qq'>('netease')
 	const router = useRouter()
 	const close = useModalStore((state) => state.close)
@@ -41,27 +33,19 @@ const InputExternalPlaylistInfoModal = () => {
 		<>
 			<Dialog.Title>输入外部歌单信息</Dialog.Title>
 			<Dialog.Content>
-				<Host
-					matchContents={{ vertical: true }}
+				<TextInput
+					label='歌单 ID / 链接'
+					value={input}
+					onChangeText={(text) => {
+						setInput(text)
+						const result = parseExternalPlaylistInfo(text)
+						if (result) {
+							setSource(result.source)
+						}
+					}}
+					mode='outlined'
 					style={styles.input}
-				>
-					<OutlinedTextField
-						value={inputState}
-						onValueChange={(text) => {
-							setInput(text)
-							const result = parseExternalPlaylistInfo(text)
-							if (result) {
-								setSource(result.source)
-							}
-						}}
-						singleLine
-						modifiers={[fillMaxWidth()]}
-					>
-						<OutlinedTextField.Label>
-							<ComposeText>歌单 ID / 链接</ComposeText>
-						</OutlinedTextField.Label>
-					</OutlinedTextField>
-				</Host>
+				/>
 				<View style={styles.segmentedContainer}>
 					<Text style={styles.label}>来源：</Text>
 					<SegmentedControl

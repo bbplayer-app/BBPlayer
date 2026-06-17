@@ -85,8 +85,9 @@ class ApiClient {
 						}),
 					)
 				}
+				const data = response.json() as Promise<ReqResponse<T>>
 				return ResultAsync.fromPromise(
-					response.json() as Promise<ReqResponse<T>>,
+					data,
 					(error) =>
 						new BilibiliApiError({
 							message: error instanceof Error ? error.message : String(error),

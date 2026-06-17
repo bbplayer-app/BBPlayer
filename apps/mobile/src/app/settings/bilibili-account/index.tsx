@@ -20,6 +20,8 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import useSkinStore from '@/hooks/stores/useSkinStore'
+import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { queryClient } from '@/lib/config/queryClient'
 import toast from '@/utils/toast'
 
@@ -36,6 +38,10 @@ export default function BilibiliAccountSettingsPage() {
 	const setSettings = useAppStore((state) => state.setSettings)
 	const { data: personalInfo } = usePersonalInformation()
 	const profile = personalInfo ?? cachedUserInfo
+	const activeSkin = useActiveSkin()
+	const activeAvatarFrameIndex = useSkinStore(
+		(state) => state.activeAvatarFrameIndex,
+	)
 
 	const clearAccount = () => {
 		alert(
@@ -79,18 +85,28 @@ export default function BilibiliAccountSettingsPage() {
 								{ backgroundColor: colors.surfaceVariant },
 							]}
 						>
-							{profile?.face ? (
-								<Image
-									source={{ uri: profile.face }}
-									style={styles.profileImage}
-									cachePolicy='disk'
-								/>
-							) : (
-								<Avatar.Image
-									size={72}
-									source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
-								/>
-							)}
+							<View style={styles.avatarWrapper}>
+								{profile?.face ? (
+									<Image
+										source={{ uri: profile.face }}
+										style={styles.profileImage}
+										cachePolicy='disk'
+									/>
+								) : (
+									<Avatar.Image
+										size={72}
+										source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
+									/>
+								)}
+								{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
+									<Image
+										source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
+										style={styles.avatarFrame72}
+										contentFit='contain'
+										cachePolicy='memory-disk'
+									/>
+								) : null}
+							</View>
 							<View style={styles.profileText}>
 								<Text
 									variant='titleLarge'
@@ -196,10 +212,20 @@ export default function BilibiliAccountSettingsPage() {
 				) : (
 					<>
 						<View style={styles.loginHero}>
-							<Avatar.Image
-								size={72}
-								source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
-							/>
+							<View style={styles.avatarWrapper}>
+								<Avatar.Image
+									size={72}
+									source={require('../../../../assets/images/bilibili-default-avatar.jpg')}
+								/>
+								{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
+									<Image
+										source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
+										style={styles.avatarFrame72}
+										contentFit='contain'
+										cachePolicy='memory-disk'
+									/>
+								) : null}
+							</View>
 							<View style={styles.loginHeroText}>
 								<Text variant='headlineSmall'>连接 Bilibili</Text>
 								<Text
@@ -272,6 +298,18 @@ const styles = StyleSheet.create({
 		width: 72,
 		height: 72,
 		borderRadius: 36,
+	},
+	avatarWrapper: {
+		position: 'relative',
+		width: 72,
+		height: 72,
+	},
+	avatarFrame72: {
+		position: 'absolute',
+		top: -12,
+		left: -12,
+		width: 96,
+		height: 96,
 	},
 	profileText: {
 		flex: 1,
