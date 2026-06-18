@@ -187,6 +187,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	})
 
 	let bottomMargin = 0
+	let bottomPadding = 0
 	if (Platform.OS === 'ios') {
 		if (bottomBarHeight === 0) {
 			bottomMargin = insets.bottom + 10
@@ -194,7 +195,12 @@ const NowPlayingBar = memo(function NowPlayingBar({
 			bottomMargin = 10 + bottomBarHeight
 		}
 	} else {
-		bottomMargin = nowPlayingBarStyle === 'bottom' ? 0 : insets.bottom + 10
+		if (nowPlayingBarStyle === 'bottom') {
+			bottomMargin = 0
+			bottomPadding = Math.max(bottomBarHeight, insets.bottom)
+		} else {
+			bottomMargin = insets.bottom + 10
+		}
 	}
 
 	return (
@@ -210,6 +216,11 @@ const NowPlayingBar = memo(function NowPlayingBar({
 							{
 								backgroundColor: backgroundColor ?? colors.elevation.level2,
 								marginBottom: bottomMargin,
+								paddingBottom: bottomPadding,
+								height:
+									nowPlayingBarStyle === 'bottom'
+										? 70 + bottomPadding
+										: undefined,
 							},
 							animatedStyle,
 						]}
