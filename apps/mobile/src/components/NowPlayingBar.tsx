@@ -196,8 +196,15 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		}
 	} else {
 		if (nowPlayingBarStyle === 'bottom') {
-			bottomMargin = 0
-			bottomPadding = Math.max(bottomBarHeight, insets.bottom)
+			if (bottomBarHeight > 0) {
+				// 这样就是正常的，但是为什么是 20？？？？？？？？
+				bottomMargin = 20
+				bottomPadding = 0
+			} else {
+				// No tabs: extend background into system nav area
+				bottomMargin = 0
+				bottomPadding = insets.bottom
+			}
 		} else {
 			bottomMargin = insets.bottom + 10
 		}
