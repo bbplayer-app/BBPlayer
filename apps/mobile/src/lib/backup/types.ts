@@ -1,6 +1,6 @@
 /** 备份清单，嵌入 ZIP 文件的 manifest.json。 */
 export interface BackupManifest {
-	version: 1
+	version: number
 	exportedAt: string
 	mmkv: {
 		'app-storage': string
