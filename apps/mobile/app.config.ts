@@ -268,6 +268,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					multipleShareMimeTypes: ['text/*'],
 				},
 			}),
+			'expo-video',
 		],
 		experiments: {
 			reactCompiler: true,
