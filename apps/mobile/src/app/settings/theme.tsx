@@ -22,6 +22,7 @@ import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { loadSkinAssets } from '@/services/theme/runtime'
 import { uninstallSkin } from '@/services/theme/SkinManager'
 import type {
+	AppSkin,
 	InstalledSkinMeta,
 	SkinAssetDeclaration,
 	SkinAssetFeatures,
@@ -319,6 +320,7 @@ export default function ThemeSettingsPage() {
 									toast.success('已关闭显示头像框')
 								}}
 								skin={activeInstalledSkin}
+								activeSkin={activeSkin}
 							/>
 						) : null}
 						<View style={styles.sectionHeader}>
@@ -439,6 +441,12 @@ export default function ThemeSettingsPage() {
 							</View>
 							<SliderPreview
 								thumbUri={activeSkin.sliderThumbs[activePlayIconIndex]?.normal}
+								thumbDragLeftUri={
+									activeSkin.sliderThumbs[activePlayIconIndex]?.dragLeft
+								}
+								thumbDragRightUri={
+									activeSkin.sliderThumbs[activePlayIconIndex]?.dragRight
+								}
 								thumbSize={skinSliderThumbSize}
 								offsetX={skinSliderThumbOffsetX}
 								offsetY={skinSliderThumbOffsetY}
@@ -497,11 +505,15 @@ export default function ThemeSettingsPage() {
 function SliderPreview({
 	offsetX,
 	offsetY,
+	thumbDragLeftUri,
+	thumbDragRightUri,
 	thumbSize,
 	thumbUri,
 }: {
 	offsetX: number
 	offsetY: number
+	thumbDragLeftUri?: string | null
+	thumbDragRightUri?: string | null
 	thumbSize: number
 	thumbUri?: string | null
 }) {
@@ -529,6 +541,8 @@ function SliderPreview({
 				waveThickness={thickness}
 				trackThickness={thickness}
 				thumbImageUri={thumbUri ?? undefined}
+				thumbImageDragLeftUri={thumbDragLeftUri ?? undefined}
+				thumbImageDragRightUri={thumbDragRightUri ?? undefined}
 				thumbImageSize={thumbUri ? thumbSize : undefined}
 				thumbImageOffsetX={thumbUri ? offsetX : undefined}
 				thumbImageOffsetY={thumbUri ? offsetY : undefined}
@@ -613,8 +627,10 @@ function InstalledAssetSections({
 	onDisableLoading,
 	onDisableAvatarFrame,
 	skin,
+	activeSkin,
 }: {
 	activeAvatarFrameIndex: number
+	activeSkin: AppSkin | null
 	activeLoadingIndex: number
 	activePlayIconIndex: number
 	activeSkinIndex: number
@@ -646,7 +662,7 @@ function InstalledAssetSections({
 		}
 	}, [id, rootUri])
 
-	if (!assets) return null
+	if (!assets || !activeSkin) return null
 
 	const features = assetFeaturesFromManifest(assets)
 
@@ -657,27 +673,24 @@ function InstalledAssetSections({
 				title='应用主题'
 				onDisable={onDisableSkin}
 				disableActive={activeSkinIndex === -1}
-				items={(assets?.skins ?? []).map((item, index) => ({
-					id: `skin-${item.id}-${index}`,
-					name: item.name ?? `主题 ${index + 1}`,
+				items={(assets?.skins ?? []).map((_item, index) => ({
+					id: `skin-${_item.id}-${index}`,
+					name: _item.name ?? `主题 ${index + 1}`,
 					onPress: () => onSelectSkin(index),
 					selected: index === activeSkinIndex,
-					uri: localAssetUri(rootUri, item.head_bg ?? item.tail_bg),
+					uri: activeSkin.skins[index]?.background.head ?? null,
 				}))}
 			/>
 			<AssetStrip
 				title='滑块'
 				onDisable={onDisablePlayIcon}
 				disableActive={activePlayIconIndex === -1}
-				items={(assets?.play_icons ?? []).map((item, index) => ({
-					id: `play-icon-${item.id}-${index}`,
-					name: item.name ?? `滑块 ${index + 1}`,
+				items={(assets?.play_icons ?? []).map((_item, index) => ({
+					id: `play-icon-${_item.id}-${index}`,
+					name: _item.name ?? `滑块 ${index + 1}`,
 					onPress: () => onSelectPlayIcon(index),
 					selected: index === activePlayIconIndex,
-					uri: localAssetUri(
-						rootUri,
-						item.static_icon_image ?? item.middle_png,
-					),
+					uri: activeSkin.sliderThumbs[index]?.normal ?? null,
 				}))}
 				compact
 			/>
@@ -685,12 +698,12 @@ function InstalledAssetSections({
 				title='点赞动画'
 				onDisable={onDisableThumbUp}
 				disableActive={activeThumbUpIndex === -1}
-				items={(assets?.thumbups ?? []).map((item, index) => ({
-					id: `thumbup-${item.id}-${index}`,
-					name: item.name ?? `点赞动画 ${index + 1}`,
+				items={(assets?.thumbups ?? []).map((_item, index) => ({
+					id: `thumbup-${_item.id}-${index}`,
+					name: _item.name ?? `点赞动画 ${index + 1}`,
 					onPress: () => onSelectThumbUp(index),
 					selected: index === activeThumbUpIndex,
-					uri: localAssetUri(rootUri, item.ani_file ?? item.preview),
+					uri: activeSkin.thumbUps[index]?.preview ?? null,
 				}))}
 				compact
 			/>
@@ -698,12 +711,12 @@ function InstalledAssetSections({
 				title='刷新动画'
 				onDisable={onDisableLoading}
 				disableActive={activeLoadingIndex === -1}
-				items={(assets?.loadings ?? []).map((item, index) => ({
-					id: `loading-${item.id}-${index}`,
-					name: item.name ?? `刷新动画 ${index + 1}`,
+				items={(assets?.loadings ?? []).map((_item, index) => ({
+					id: `loading-${_item.id}-${index}`,
+					name: _item.name ?? `刷新动画 ${index + 1}`,
 					onPress: () => onSelectLoading(index),
 					selected: index === activeLoadingIndex,
-					uri: localAssetUri(rootUri, item.loading_frame_url),
+					uri: activeSkin.loadings[index]?.frame ?? null,
 				}))}
 				compact
 			/>
@@ -711,12 +724,12 @@ function InstalledAssetSections({
 				title='头像框'
 				onDisable={onDisableAvatarFrame}
 				disableActive={activeAvatarFrameIndex === -1}
-				items={(assets?.avatar_frames ?? []).map((item, index) => ({
-					id: `avatar-${item.id}-${index}`,
-					name: item.name ?? `头像框 ${index + 1}`,
+				items={(assets?.avatar_frames ?? []).map((_item, index) => ({
+					id: `avatar-${_item.id}-${index}`,
+					name: _item.name ?? `头像框 ${index + 1}`,
 					onPress: () => onSelectAvatarFrame(index),
 					selected: index === activeAvatarFrameIndex,
-					uri: localAssetUri(rootUri, item.image),
+					uri: activeSkin.avatarFrames[index] ?? null,
 				}))}
 				compact
 			/>

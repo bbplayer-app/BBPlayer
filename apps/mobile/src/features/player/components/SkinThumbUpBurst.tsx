@@ -1,12 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import Animated, {
-	Easing,
-	useAnimatedStyle,
-	useSharedValue,
-	withDelay,
-	withSequence,
-	withTiming,
-} from 'react-native-reanimated'
+import { View } from 'react-native'
 import { RNSvgaPlayer, SvgaPlayerRef } from 'rn-newarch-svga-player'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
@@ -24,9 +17,6 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 	skin,
 	playSignal,
 }: SkinThumbUpBurstProps) {
-	const opacity = useSharedValue(0)
-	const containerTranslateY = useSharedValue(0)
-	const scale = useSharedValue(0.4)
 	const [visible, setVisible] = useState(false)
 	const playerRef = useRef<SvgaPlayerRef>(null)
 
@@ -46,25 +36,6 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 		const visibleDuration = playbackDuration + 520
 
 		setVisible(true)
-		opacity.value = 0
-		containerTranslateY.value = 0
-		scale.value = 0.4
-
-		opacity.value = withSequence(
-			withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
-			withDelay(
-				playbackDuration - 460,
-				withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }),
-			),
-		)
-		containerTranslateY.value = withTiming(-84, {
-			duration: visibleDuration,
-			easing: Easing.out(Easing.cubic),
-		})
-		scale.value = withTiming(1, {
-			duration: 360,
-			easing: Easing.out(Easing.back(1.4)),
-		})
 
 		playerRef.current?.startAnimation()
 
@@ -72,44 +43,28 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 		return () => {
 			clearTimeout(hideTimer)
 		}
-	}, [
-		animation,
-		opacity,
-		playSignal,
-		playbackDuration,
-		scale,
-		containerTranslateY,
-	])
-
-	const animatedStyle = useAnimatedStyle(() => ({
-		opacity: opacity.value,
-		transform: [
-			{ translateY: containerTranslateY.value },
-			{ scale: scale.value },
-		],
-	}))
+	}, [animation, playSignal, playbackDuration])
 
 	if (!visible || !animation) return null
 
 	return (
-		<Animated.View
+		<View
 			pointerEvents='none'
 			style={[
 				{
 					position: 'absolute',
-					right: -32,
-					bottom: 8,
+					right: -25,
+					bottom: 40,
 					width: DISPLAY_SIZE,
 					height: DISPLAY_SIZE,
 					zIndex: 10,
 				},
-				animatedStyle,
 			]}
 		>
 			<RNSvgaPlayer
 				ref={playerRef}
 				source={animation}
-				autoPlay={false}
+				autoPlay={true}
 				loops={1}
 				clearsAfterStop={false}
 				style={{
@@ -117,7 +72,7 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 					height: DISPLAY_SIZE,
 				}}
 			/>
-		</Animated.View>
+		</View>
 	)
 })
 
