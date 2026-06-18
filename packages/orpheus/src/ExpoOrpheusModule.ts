@@ -392,6 +392,25 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 缓存状态由 Android 缓存监听器异步维护。
 	 */
 	getLruCachedUris(uris: string[]): string[]
+	/**
+	 * 导出所有 Orpheus 原生配置数据。
+	 *
+	 * 返回包含 `playerQueue`（播放器队列 store 的 10 个配置键）和
+	 * `loudness`（所有已计算响度数据）的对象。
+	 */
+	exportData(): {
+		playerQueue: Record<string, boolean | string | number>
+		loudness: Record<string, number>
+	}
+	/**
+	 * 批量导入 Orpheus 原生配置数据。
+	 *
+	 * 接受与 `exportData()` 返回结构相同的对象。
+	 */
+	importData(data: {
+		playerQueue: Record<string, boolean | string | number>
+		loudness: Record<string, number>
+	}): void
 }
 
 const NativeModuleInstance = requireNativeModule<NativeOrpheusModule>('Orpheus')

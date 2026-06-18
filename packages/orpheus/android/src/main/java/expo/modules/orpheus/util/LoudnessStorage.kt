@@ -37,4 +37,13 @@ object LoudnessStorage {
             return 0.0
         }
     }
+
+    fun exportAll(): Map<String, Double> {
+        val keys = kv?.allKeys() ?: return emptyMap()
+        return keys.associate { it to getLoudnessData(it) }
+    }
+
+    fun importAll(data: Map<String, Double>) {
+        data.forEach { (key, value) -> setLoudnessData(key, value) }
+    }
 }

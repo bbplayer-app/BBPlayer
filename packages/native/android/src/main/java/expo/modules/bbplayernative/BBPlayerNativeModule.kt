@@ -1,6 +1,7 @@
 package expo.modules.bbplayernative
 
 import android.app.DownloadManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
@@ -10,6 +11,7 @@ import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
 import com.squareup.gifencoder.GifEncoder
 import com.squareup.gifencoder.ImageOptions
@@ -110,6 +112,44 @@ class BBPlayerNativeModule : Module() {
                 "uri" to result.uri,
                 "fileCount" to result.fileCount,
             )
+        }
+
+        Function("exportBackupToDownloads") { sourceUri: String, fileName: String, mimeType: String ->
+            val context = requireContext()
+            val uri = android.net.Uri.parse(sourceUri)
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: return@Function null
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/bbplayer-backup")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val downloadUri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return@Function null
+                context.contentResolver.openOutputStream(downloadUri)?.use { out ->
+                    inputStream.use { it.copyTo(out) }
+                }
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                context.contentResolver.update(downloadUri, values, null, null)
+                downloadUri.toString()
+            } else {
+                val subDir = java.io.File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "bbplayer-backup",
+                )
+                subDir.mkdirs()
+                val destFile = java.io.File(subDir, fileName)
+                inputStream.use { input ->
+                    java.io.FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                android.net.Uri.fromFile(destFile).toString()
+            }
         }
     }
 

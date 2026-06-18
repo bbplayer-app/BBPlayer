@@ -1014,6 +1014,22 @@ class ExpoOrpheusModule : Module() {
             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
             byteBuffer.asFloatBuffer().put(buffer)
         }
+
+        Function("exportData") {
+            val playerQueue = GeneralStorage.exportConfig()
+            val loudness = LoudnessStorage.exportAll()
+            mapOf("playerQueue" to playerQueue, "loudness" to loudness)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        Function("importData") { data: Map<String, Any> ->
+            val playerQueue = (data["playerQueue"] as? Map<String, Any>) ?: emptyMap()
+            val loudness = (data["loudness"] as? Map<String, Any>) ?: emptyMap()
+            GeneralStorage.importConfig(playerQueue)
+            loudness.forEach { (key, value) ->
+                LoudnessStorage.setLoudnessData(key, (value as Number).toDouble())
+            }
+        }
     }
 
     private fun getDownloadMap(download: Download): Map<String, Any> {

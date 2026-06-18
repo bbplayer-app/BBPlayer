@@ -169,4 +169,32 @@ object GeneralStorage {
 
     fun getDesktopLyricsY() = kv?.decodeInt(KEY_DESKTOP_LYRICS_Y, 200) ?: 200
     fun setDesktopLyricsY(y: Int) = safeKv.encode(KEY_DESKTOP_LYRICS_Y, y)
+
+    fun exportConfig(): Map<String, Any> {
+        return mapOf(
+            KEY_RESTORE_POSITION_ENABLED to isRestoreEnabled(),
+            KEY_LOUDNESS_NORMALIZATION_ENABLED to isLoudnessNormalizationEnabled(),
+            KEY_AUTOPLAY_ON_START_ENABLED to isAutoplayOnStartEnabled(),
+            KEY_STATUS_BAR_LYRICS_ENABLED to isStatusBarLyricsEnabled(),
+            KEY_STATUS_BAR_LYRICS_PROVIDER to getStatusBarLyricsProvider(),
+            KEY_CAR_LYRICS_ENABLED to isCarLyricsEnabled(),
+            KEY_DESKTOP_LYRICS_DISPLAY_MODE to getDesktopLyricsMode(),
+            KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR to getDesktopLyricsHighlightColor(),
+            KEY_DESKTOP_LYRICS_TEXT_SIZE to getDesktopLyricsTextSize(),
+            KEY_DESKTOP_LYRICS_Y to getDesktopLyricsY(),
+        )
+    }
+
+    fun importConfig(data: Map<String, Any>) {
+        (data[KEY_RESTORE_POSITION_ENABLED] as? Boolean)?.let { setRestoreEnabled(it) }
+        (data[KEY_LOUDNESS_NORMALIZATION_ENABLED] as? Boolean)?.let { setLoudnessNormalizationEnabled(it) }
+        (data[KEY_AUTOPLAY_ON_START_ENABLED] as? Boolean)?.let { setAutoplayOnStartEnabled(it) }
+        (data[KEY_STATUS_BAR_LYRICS_ENABLED] as? Boolean)?.let { setStatusBarLyricsEnabled(it) }
+        (data[KEY_STATUS_BAR_LYRICS_PROVIDER] as? String)?.let { setStatusBarLyricsProvider(it) }
+        (data[KEY_CAR_LYRICS_ENABLED] as? Boolean)?.let { setCarLyricsEnabled(it) }
+        (data[KEY_DESKTOP_LYRICS_DISPLAY_MODE] as? Int)?.let { setDesktopLyricsMode(it) }
+        (data[KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR] as? Int)?.let { setDesktopLyricsHighlightColor(it) }
+        (data[KEY_DESKTOP_LYRICS_TEXT_SIZE] as? Float)?.let { setDesktopLyricsTextSize(it) }
+        (data[KEY_DESKTOP_LYRICS_Y] as? Int)?.let { setDesktopLyricsY(it) }
+    }
 }
