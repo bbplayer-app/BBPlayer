@@ -28,8 +28,8 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 		>
 			<Image
 				source={head}
-				style={[styles.image, { height }]}
-				contentFit='fill'
+				style={styles.image}
+				contentFit='cover'
 				cachePolicy='memory-disk'
 			/>
 			<LinearGradient
@@ -49,10 +49,7 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 	},
 	image: {
-		width: '100%',
-		position: 'absolute',
-		top: 0,
-		left: 0,
+		...StyleSheet.absoluteFill,
 	},
 	fade: {
 		position: 'absolute',

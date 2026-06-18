@@ -101,15 +101,6 @@ export interface AppSkin {
 		preview: string | null
 	}[]
 	avatarFrames: string[]
-	thumbUpSprites:
-		| {
-				spriteSheetUri: string
-				frameCount: number
-				fps: number
-				frameWidth: number
-				frameHeight: number
-		  }[]
-		| null
 }
 
 // ============================================================

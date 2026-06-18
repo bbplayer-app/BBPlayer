@@ -23,5 +23,4 @@ android {
 }
 
 dependencies {
-  implementation 'com.squareup:gifencoder:0.10.1'
 }

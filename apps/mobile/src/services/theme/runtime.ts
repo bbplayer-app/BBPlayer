@@ -62,11 +62,6 @@ const resolveAppSkinUris = (appSkin: AppSkin, rootUri: string): AppSkin => ({
 	avatarFrames: appSkin.avatarFrames
 		.map((f) => toAbsolute(rootUri, f))
 		.filter((f): f is string => f !== null),
-	thumbUpSprites:
-		appSkin.thumbUpSprites?.map((s) => ({
-			...s,
-			spriteSheetUri: toAbsolute(rootUri, s.spriteSheetUri) ?? s.spriteSheetUri,
-		})) ?? null,
 })
 
 const loadInstalledSkin = async (

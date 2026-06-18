@@ -17,7 +17,6 @@ import { storage } from '@/utils/mmkv'
 
 import { fetchGarbSkinAssetDeclaration } from './adapter'
 import { downloadManifestAssets } from './downloadManager'
-import { convertThumbUpsToSpriteSheets } from './thumbUpConverter'
 import { transformManifestToInstalledSkin } from './transformer'
 import type { InstalledSkin, InstalledSkinMeta } from './types'
 
@@ -136,22 +135,6 @@ export const installSkin = async (
 			signal: options.signal,
 		})
 
-		const thumbUpSprites = await convertThumbUpsToSpriteSheets({
-			manifest,
-			mapping,
-			workDir: tempDir,
-			onProgress: options.onProgress
-				? (label) => {
-						options.onProgress?.({
-							completed: 0,
-							label,
-							progress: 0,
-							total: 0,
-						})
-					}
-				: undefined,
-		})
-
 		const finalDir = new FileSystem.Directory(skinsDir, `${skinId}/`)
 		const installedSkin: InstalledSkin = transformManifestToInstalledSkin({
 			manifest,
@@ -169,7 +152,6 @@ export const installSkin = async (
 							itemId: item.itemId!,
 							kind: 'suit',
 						},
-			thumbUpSprites,
 		})
 
 		await writeSkinJson(installedSkin, tempDir)

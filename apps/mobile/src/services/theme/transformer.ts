@@ -1,7 +1,6 @@
 import log from '@/utils/log'
 
 import type { SkinAssetDeclaration } from './schema'
-import type { ThumbUpSpriteResult } from './thumbUpConverter'
 import type { AppSkin, InstalledSkin, SkinBootSplashAsset } from './types'
 
 const resource = (
@@ -32,7 +31,6 @@ export interface TransformOptions {
 	rootUri: string
 	skinId: string
 	source: InstalledSkin['source']
-	thumbUpSprites: ThumbUpSpriteResult[]
 }
 
 export const transformManifestToInstalledSkin = ({
@@ -41,7 +39,6 @@ export const transformManifestToInstalledSkin = ({
 	rootUri,
 	skinId,
 	source,
-	thumbUpSprites,
 }: TransformOptions): InstalledSkin => {
 	log.debug('[transform] building InstalledSkin', {
 		cards: manifest.cards.length,
@@ -105,16 +102,6 @@ export const transformManifestToInstalledSkin = ({
 		avatarFrames: manifest.avatar_frames
 			.map((f) => resource(f.image, mapping))
 			.filter((r): r is string => r !== null),
-		thumbUpSprites:
-			thumbUpSprites.length > 0
-				? thumbUpSprites.map((s) => ({
-						spriteSheetUri: s.spriteSheetUri,
-						frameCount: s.frameCount,
-						fps: s.fps,
-						frameWidth: s.frameWidth,
-						frameHeight: s.frameHeight,
-					}))
-				: null,
 	}
 
 	const coverUrl = manifest.coverUri

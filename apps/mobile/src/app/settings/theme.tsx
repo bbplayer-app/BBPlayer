@@ -22,7 +22,6 @@ import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { loadSkinAssets } from '@/services/theme/runtime'
 import { uninstallSkin } from '@/services/theme/SkinManager'
 import type {
-	AppSkin,
 	InstalledSkinMeta,
 	SkinAssetDeclaration,
 	SkinAssetFeatures,
@@ -320,7 +319,6 @@ export default function ThemeSettingsPage() {
 									toast.success('已关闭显示头像框')
 								}}
 								skin={activeInstalledSkin}
-								thumbUpSprites={activeSkin.thumbUpSprites}
 							/>
 						) : null}
 						<View style={styles.sectionHeader}>
@@ -598,8 +596,6 @@ function localAssetUri(rootUri: string, path: string | null | undefined) {
 	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-type ThumbUpSpritePreview = NonNullable<AppSkin['thumbUpSprites']>[number]
-
 function InstalledAssetSections({
 	activeAvatarFrameIndex,
 	activeLoadingIndex,
@@ -617,7 +613,6 @@ function InstalledAssetSections({
 	onDisableLoading,
 	onDisableAvatarFrame,
 	skin,
-	thumbUpSprites,
 }: {
 	activeAvatarFrameIndex: number
 	activeLoadingIndex: number
@@ -635,7 +630,6 @@ function InstalledAssetSections({
 	onDisableLoading?: () => void
 	onDisableAvatarFrame?: () => void
 	skin: InstalledSkinMeta
-	thumbUpSprites: AppSkin['thumbUpSprites']
 }) {
 	const [assets, setAssets] = useState<SkinAssetDeclaration | null>(null)
 	const { id, rootUri } = skin
@@ -696,8 +690,7 @@ function InstalledAssetSections({
 					name: item.name ?? `点赞动画 ${index + 1}`,
 					onPress: () => onSelectThumbUp(index),
 					selected: index === activeThumbUpIndex,
-					sprite: normalizeThumbUpSprite(rootUri, thumbUpSprites?.[index]),
-					uri: null,
+					uri: localAssetUri(rootUri, item.ani_file ?? item.preview),
 				}))}
 				compact
 			/>
@@ -745,7 +738,6 @@ function AssetStrip({
 		name: string
 		onPress?: () => void
 		selected?: boolean
-		sprite?: ThumbUpSpritePreview | null
 		uri: string | null
 	}>
 	onDisable?: () => void
@@ -803,9 +795,7 @@ function AssetStrip({
 								},
 							]}
 						>
-							{item.sprite ? (
-								<ThumbUpSpriteFirstFrame sprite={item.sprite} />
-							) : item.uri ? (
+							{item.uri ? (
 								<Image
 									source={{ uri: item.uri }}
 									style={StyleSheet.absoluteFill}
@@ -838,74 +828,6 @@ function AssetStrip({
 					</Pressable>
 				))}
 			</ScrollView>
-		</View>
-	)
-}
-
-const THUMB_UP_PREVIEW_SIZE = 76
-
-function normalizeThumbUpSprite(
-	rootUri: string,
-	sprite: ThumbUpSpritePreview | null | undefined,
-): ThumbUpSpritePreview | null {
-	if (!sprite) return null
-
-	const spriteSheetUri =
-		localAssetUri(rootUri, sprite.spriteSheetUri) ?? sprite.spriteSheetUri
-
-	return {
-		...sprite,
-		spriteSheetUri,
-	}
-}
-
-function ThumbUpSpriteFirstFrame({ sprite }: { sprite: ThumbUpSpritePreview }) {
-	const frameCount = Math.floor(sprite.frameCount)
-	const frameWidth = Math.floor(sprite.frameWidth)
-	const frameHeight = Math.floor(sprite.frameHeight)
-	const previewFrame = Math.floor(frameCount / 2) // 这个动画可能前几帧是空白的，咱们直接截取中间一个
-	if (
-		!sprite.spriteSheetUri ||
-		frameCount <= 0 ||
-		frameWidth <= 0 ||
-		frameHeight <= 0
-	) {
-		return null
-	}
-
-	const aspectRatio = frameWidth / frameHeight
-	const viewportWidth =
-		aspectRatio >= 1
-			? THUMB_UP_PREVIEW_SIZE
-			: THUMB_UP_PREVIEW_SIZE * aspectRatio
-	const viewportHeight =
-		aspectRatio >= 1
-			? THUMB_UP_PREVIEW_SIZE / aspectRatio
-			: THUMB_UP_PREVIEW_SIZE
-
-	return (
-		<View style={styles.thumbUpSpritePreview}>
-			<View
-				style={[
-					styles.thumbUpSpriteFrame,
-					{
-						height: viewportHeight,
-						width: viewportWidth,
-					},
-				]}
-			>
-				<Image
-					source={sprite.spriteSheetUri}
-					style={{
-						height: viewportHeight * frameCount,
-						width: viewportWidth,
-						transform: [{ translateY: -viewportHeight * previewFrame }],
-					}}
-					contentFit='fill'
-					cachePolicy='memory-disk'
-					recyclingKey={sprite.spriteSheetUri}
-				/>
-			</View>
 		</View>
 	)
 }
@@ -1148,14 +1070,6 @@ const styles = StyleSheet.create({
 	},
 	assetTileImageCompact: {
 		aspectRatio: 1,
-	},
-	thumbUpSpritePreview: {
-		...StyleSheet.absoluteFill,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	thumbUpSpriteFrame: {
-		overflow: 'hidden',
 	},
 	assetTileSelectedBadge: {
 		position: 'absolute',
