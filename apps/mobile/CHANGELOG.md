@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- 修复了在按键导航栏模式下 NowPlayingBar 显示错误的问题
+
 ## [2.6.0] - 2026-06-18
 
 ### Added
