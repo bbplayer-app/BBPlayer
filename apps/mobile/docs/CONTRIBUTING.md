@@ -22,8 +22,6 @@ pnpm install
 
 你可以通过 `.env.local` 文件或 export 命令配置以下环境变量：
 
-- **VERSION_CODE**: (必须) 用于标记构建版本。
-  - 推荐命令: `git rev-list --count HEAD`
 - **SENTRY_AUTH_TOKEN**: (可选) Sentry 错误追踪。
   - **dev 构建**: 不需要此 Token
   - **production / preview 构建**: 需要真实 Token 以上传符号表。
@@ -37,25 +35,16 @@ pnpm install
 参考 `apps/mobile/mise.toml`，运行构建命令：
 
 ```bash
-# 如果安装了 mise (需要传入 version 参数)
 mise run builddev --version 1.0.0
-
-# 或者直接运行 eas 命令
-cd apps/mobile
-VERSION_CODE=$(git rev-list --count HEAD) eas build --profile dev --platform android --local --output=./temp-builds/bbplayer-1.0.0-dev.apk
 ```
 
-**方式 B: 传统 Prebuild**
+**方式 B: 全自动**
 
 如果你更习惯使用原生工具链：
 
 ```bash
 cd apps/mobile
-# 生成原生目录 (android/ios). 推荐加上 --clean 以确保配置生效
-npx expo prebuild --clean
-
-# 编译并安装到设备
-npx expo run:android
+pnpm android
 ```
 
 ### 5. 启动开发
@@ -92,32 +81,22 @@ pnpm expo start
 
 ### 分支管理
 
-- **master**: 主分支，对应最新版本的代码。
-- **dev**: 开发分支，所有的 PR 请提交到此分支。
+- **dev**: 主分支，所有的 PR 请提交到此分支。
 - **feat/xyz**: 新功能分支。
 - **fix/xyz**: 问题修复分支。
 
 ### 提交规范
 
-我们推荐使用语义化提交信息 (Conventional Commits)：
+我们推荐使用 Scoped Commits：
 
-- `feat`: 新功能
-- `fix`: 修复 bug
-- `docs`: 文档变更
-- `style`: 代码格式修改 (不影响逻辑)
-- `refactor`: 代码重构
-- `chore`: 构建过程或辅助工具的变动
+```text
+<scope>: <description>
+
+[optional body]
+
+[optional trailer(s)]
+```
 
 ### 代码质量
 
 我们使用 lefthook 来自动执行代码检查和格式化（oxlint, oxfmt, eslint），请确保你配置好了 lefthook。
-
-## 🤝 贡献代码
-
-1. Fork 本仓库。
-2. 基于 `dev` 分支创建你的功能分支 (`git checkout -b feat/amazing-feature`)。
-3. 提交你的修改。
-4. 推送到你的 Fork 仓库。
-5. 提交 Pull Request 到本仓库的 `dev` 分支。
-
-感谢你的参与！

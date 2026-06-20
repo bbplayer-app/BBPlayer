@@ -4,14 +4,12 @@
 
 ## 1. 准备版本
 
-- **更新 `package.json`**：同步修改 `version` 字段与 `android.versionCode`。
+- **更新 `package.json`**：修改 `version` 字段。
 - **编写变更说明**：整理本次发布的要点，更新 `apps/mobile/CHANGELOG.md` 文件。
 
 ## 2. 发起更新
 
-- 提交一个 Pull Request (PR)，将 `dev` 分支的更改合并到 `master` 分支。
-- PR 合并后，GitHub Actions 会自动触发。
-- 在审批 (Approve) 通过后，CI 将开始运行构建流程并生成 Draft Release。
+- 在 GitHub Action 页面手动运行 `Build and Release` workflow
 - 在 Draft Release 中填写详细的发布说明 (Release Notes)，确认无误后点击 Publish。
 
 ## 3. 更新 update.json

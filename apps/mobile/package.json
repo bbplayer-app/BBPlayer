@@ -4,7 +4,7 @@
 	"private": true,
 	"main": "index.js",
 	"scripts": {
-		"android": "WITH_ROZENITE=true expo run:android",
+		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
 		"format": "oxfmt --write .",
 		"postinstall": "patch-package",
 		"prepare": "pbjs -t static-module -w commonjs -o src/lib/api/bilibili/proto/dm.js src/lib/api/bilibili/proto/dm.proto && pbts -o src/lib/api/bilibili/proto/dm.d.ts src/lib/api/bilibili/proto/dm.js",

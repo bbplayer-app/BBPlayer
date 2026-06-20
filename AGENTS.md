@@ -1,282 +1,47 @@
-# BBPlayer Project Knowledge Base
+# BBPlayer
 
-**Generated:** 2026-03-23
-**Project:** BBPlayer - Bilibili Audio Player (React Native)
-**Repository:** https://github.com/bbplayer-app/bbplayer
+BBPlayer 是一个基于 React Native 开发的 BiliBili 流媒体音乐软件，整个仓库为 monorepo
 
----
-
-## OVERVIEW
-
-BBPlayer is a local-first Bilibili audio player built with React Native and Expo. It features offline playback, lyrics support (SPL format), Bilibili integration, and Material Design 3 UI.
-
-**Core Stack:**
-
-- React Native 0.83.2 + Expo 55 + React 19
-- TypeScript with project references
-- pnpm workspaces (monorepo)
-- Zustand (state) + TanStack Query (data)
-- Drizzle ORM + expo-sqlite
-- Material Design 3 (React Native Paper)
-
----
-
-## STRUCTURE
-
-```
-.
-├── apps/
-│   ├── mobile/          # Main React Native app (Expo)
-│   ├── backend/         # Cloudflare Workers API (Hono)
-│   └── docs/            # VitePress documentation
-├── packages/
-│   ├── orpheus/         # Native audio module (Media3/AVFoundation)
-│   ├── splash/          # Lyric parser (SPL format)
-│   ├── image-theme-colors/  # Color extraction
-│   ├── logs/            # Logging utility
-│   ├── heatmap/         # Audio visualization
-│   └── eslint-plugin/   # Custom ESLint rules
-├── .agent/              # AI agent rules & skills
-└── .github/workflows/   # CI/CD
-```
-
----
-
-## WHERE TO LOOK
-
-| Task                | Location                         | Notes                          |
-| ------------------- | -------------------------------- | ------------------------------ |
-| **Mobile Screens**  | `apps/mobile/src/app/`           | Expo Router file-based routing |
-| **UI Components**   | `apps/mobile/src/components/`    | Shared components              |
-| **Feature Modules** | `apps/mobile/src/features/`      | Domain-organized features      |
-| **Global State**    | `apps/mobile/src/hooks/stores/`  | Zustand stores                 |
-| **API Calls**       | `apps/mobile/src/hooks/queries/` | TanStack Query hooks           |
-| **Business Logic**  | `apps/mobile/src/lib/`           | Facades, Services, DB          |
-| **Audio Player**    | `packages/orpheus/src/`          | Native module entry            |
-| **Lyrics Parsing**  | `packages/splash/src/`           | LRC/SPL parser                 |
-| **Custom ESLint**   | `packages/eslint-plugin/rules/`  | Project-specific rules         |
-| **Documentation**   | `apps/docs/docs/`                | VitePress site                 |
-
----
-
-## COMMANDS
+## 命令
 
 ```bash
-# Development
-pnpm install                    # Install deps (pnpm only!)
-pnpm lefthook install          # Setup git hooks
-
-# Code Quality
+pnpm install                   # Only pnpm — npm/yarn breaks workspace resolution
 pnpm lint                      # oxlint + eslint
 pnpm lint:fix                  # Auto-fix
 pnpm format                    # oxfmt
-pnpm check:deps                # syncpack dependency check
-
-# Mobile App
-cd apps/mobile
-pnpm android                   # Run Android (dev build required)
-pnpm start                     # Start Metro (WITH_ROZENITE=true)
-pnpm test                      # Jest tests
-
-# Backend
-cd apps/backend
-pnpm dev                       # Wrangler dev
-pnpm deploy                    # Deploy to Cloudflare
-
-# Native Modules
-cd packages/orpheus
-pnpm build                     # expo-module build
-pnpm test                      # expo-module test
+pnpm tsgo --noEmit             # TypeScript type checking
 ```
 
----
+## 最佳实践
 
-## CONVENTIONS
+### 运行检查和构建
 
-### Import Aliases
+如果任务涉及 TypeScript / JavaScript，你应当在每个任务完成后都运行一次 `pnpm tsgo --noEmit` 与 `pnpm lint`，检查是否引入了新的错误。
 
-- **Mobile app:** `@/*` → `./apps/mobile/src/*`
-- **Configured in:** `eslint.config.mjs` (via `@dword-design/eslint-plugin-import-alias`)
-- **Must use** for all imports in mobile app (not relative paths)
+如果任务涉及原生代码，你应当在每个任务完成后**只对那个包**运行一次 `gradlew build`，并检查是否有构建错误。
 
-### Linting Stack
+### 搜索文件和 symbol
 
-| Tool       | Purpose             | Config              |
-| ---------- | ------------------- | ------------------- |
-| **oxlint** | Primary linter      | `.oxlintrc.json`    |
-| **eslint** | Secondary + plugins | `eslint.config.mjs` |
-| **oxfmt**  | Formatter           | CLI only            |
+我们推荐使用 codedb mcp 搜索，而非使用 grep 手动搜索
 
-### Commit Format
+## 仓库结构
 
-```
-<type>(<scope>): <message>
+### /apps
 
-# Types: feat, fix, docs, style, refactor, chore
-# Scopes: mobile, backend, docs, orpheus, splash, logs, root
-# Example: feat(mobile): add playlist shuffle
-```
+- mobile - React Native 移动应用（技术栈：Expo + Drizzle ORM + Material Design 3 + Zustand + TanStack Query）
+- backend - 后端服务，主要提供歌单共享与软件更新查询（技术栈：Hono + ArkType + Drizzle ORM + CloudFlare Worker）
+- docs - VuePress 文档网站
+- update-publisher - 用于发布更新的工具
 
-### Git Hooks (Lefthook)
+### /packages
 
-- **pre-commit:** oxfmt + oxlint + eslint + gitleaks
-- **commit-msg:** commitlint validation
-- Stage-fixed files auto-committed
-
-### Package Manager
-
-- **ONLY pnpm** - npm/yarn will break workspace resolution
-- Version: `pnpm@10.30.3`
-
----
-
-## ANTI-PATTERNS
-
-### 🚫 NEVER
-
-- Use Expo Go - requires custom dev build (native code)
-- Throw errors in business logic - use `neverthrow` Result pattern
-- Define `renderItem` inside component - FlashList performance
-- Skip `extraData` with `useMemo` for FlashList dependencies
-- Use npm/yarn - pnpm only
-
-### ⚠️ CAUTION
-
-- iOS support is minimal ("birth without nurture") - Android focus
-- `console.log` is forbidden (error in oxlint) except in packages/
-- MMKV migration code exists - don't remove until migration complete
-- Multi-P Bilibili videos may have duplicate DB records
-
-### Type Workarounds
-
-- 27 `@ts-expect-error` in codebase (mostly Zustand/MM migrations)
-- Each has explanatory comment - understand before modifying
-- Key locations: `useAppStore.ts`, `mmkv.ts`, `LyricsControlOverlay.tsx`
-
----
-
-## UNIQUE STYLES
-
-### Architecture: Facade + Service Pattern
-
-```
-UI Layer (app/, features/)
-    ↓ calls
-Facade Layer (lib/facades/) - orchestrates, manages transactions
-    ↓ calls
-Service Layer (lib/services/) - single domain logic, DB access
-```
-
-### Error Handling
-
-```typescript
-// GOOD - neverthrow Result
-import { ok, err } from 'neverthrow'
-return ok(data) // or err(new MyError())
-
-// BAD - throwing
-throw new Error('...')
-```
-
-### React Query Patterns
-
-- Queries: `src/hooks/queries/<domain>/useXxx.ts`
-- Mutations: `src/hooks/mutations/<domain>/useXxx.ts`
-- Strict exhaustive-deps enforced
-
-### FlashList Rules
-
-```typescript
-// Define OUTSIDE component
-const renderItem = ({ item }) => <Item {...item} />
-
-// Use with memoized extraData
-<FlashList
-  renderItem={renderItem}
-  extraData={useMemo(() => ({ selected }), [selected])}
-/>
-```
-
----
-
-## CI/CD
-
-| Workflow      | Trigger      | Purpose                 |
-| ------------- | ------------ | ----------------------- |
-| **pr-checks** | PR           | Lint + dependency check |
-| **build**     | Manual/merge | EAS Android build       |
-| **nightly**   | Manual/daily | Dev build distribution  |
-| **update**    | Manual       | OTA update + Sentry     |
-| **wiki**      | Push to dev  | Docs sync               |
-
----
-
-## NOTES
-
-### Development Build Required
-
-Expo Go won't work - native modules (orpheus, image-theme-colors) require custom dev build:
-
-```bash
-cd apps/mobile
-VERSION_CODE=$(git rev-list --count HEAD) \
-  eas build --profile dev --platform android --local
-```
-
-### Rozenite Metro Plugins
-
-Custom Metro config uses `@rozenite/*` plugins for:
-
-- MMKV optimization
-- TanStack Query profiling
-- Bundle analysis
-
-### Firebase Config
-
-- Mock configs included (safe to use)
-- Real configs: `apps/mobile/assets/config/google-services/`
-  - `google-services.real.json`
-  - `GoogleService-Info.real.plist`
-
-### iOS Limitations
-
-Many features Android-only:
-
-- Desktop lyrics (impossible)
-- Spectrum visualizer
-- Seamless playback
-- Loudness normalization
-- Cover download for offline
-
-### Proto Files
-
-Mobile has protobuf build step in `prepare` script:
-
-```bash
-pbjs -t static-module ... dm.proto
-pbts -o dm.d.ts dm.js
-```
-
----
-
-## AGENT RULES
-
-Project-specific AI agent rules in `.agent/rules/`:
-
-- `changelog.md` - Changelog conventions
-- `measure-layout.md` - Layout measurement patterns
-
-Agent skills in `.agent/skills/`:
-
-- `react-doctor/` - React code analysis
-- `react-native-ease-refactor/` - RN refactoring
-- `gesture-handler-3-migration/` - RNGH migration
-- `upgrading-expo/` - Expo upgrade guide
-
-## HOW TO SEARCH FILE/SYMBOL
-
-- use `codedb` mcp to search for files and symbols
-
-## RUN TypeScript Type Checking after finishing each task
-
-- use `pnpm tsgo --noEmit` to run type checking
+- bottom-tabs-react-navigation — React Native 原生底部标签栏与 React Navigation 的桥接适配层
+- eslint-plugin — 项目自定义 ESLint 规则集合
+- expo-wavy-slider — Android 原生波形滑动条（Jetpack Compose）的 Expo 模块封装
+- heatmap — 基于 SVG 的日期热力图组件
+- image-theme-colors — 从图片中提取主题色的 Expo 原生模块
+- logs — React Native 日志库
+- native — BBPlayer 原生能力集成模块
+- orpheus — BBPlayer 核心音频播放引擎
+- react-native-bottom-tabs — 跨平台原生底部标签栏组件
+- splash — 歌词转换与解析库
