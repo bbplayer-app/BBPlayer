@@ -1,0 +1,14 @@
+diff --git a/android/src/compose/expo/modules/kotlin/views/ExpoComposeView.kt b/android/src/compose/expo/modules/kotlin/views/ExpoComposeView.kt
+index 54c00879b11ac96f6a63d615fd38a7b99318ad60..fba7214bfdce01258beb258bccefd9702ea8be29 100644
+--- a/android/src/compose/expo/modules/kotlin/views/ExpoComposeView.kt
++++ b/android/src/compose/expo/modules/kotlin/views/ExpoComposeView.kt
+@@ -88,6 +88,9 @@ abstract class ExpoComposeView<T : ComposeProps>(
+   }
+ 
+   override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
++    if (shouldUseAndroidLayout && !isAttachedToWindow) {
++      return
++    }
+     super.onLayout(changed, left, top, right, bottom)
+ 
+     // Makes sure the child ComposeView is sticky with the current hosting view

@@ -15,3 +15,5 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - workerd
+patchedDependencies:
+  expo-modules-core@56.0.17: patches/expo-modules-core@56.0.17.patch
