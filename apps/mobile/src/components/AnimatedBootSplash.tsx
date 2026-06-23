@@ -1,7 +1,7 @@
 import { Image } from 'expo-image'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { memo, useEffect, useState } from 'react'
-import { StyleSheet, useWindowDimensions } from 'react-native'
+import { AppState, StyleSheet, useWindowDimensions } from 'react-native'
 import { useHideAnimation, type Manifest } from 'react-native-bootsplash'
 import Animated, {
 	Easing,
@@ -86,6 +86,29 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		})
 		return () => subscription.remove()
 	}, [bootSplashVideo, player])
+
+	// 后台切回前台时 TextureView 可能被销毁，视频停在当前位置，
+	// playToEnd 不会再触发 → 卡死。重播一次让视频走完。
+	useEffect(() => {
+		const subscription = AppState.addEventListener('change', (nextState) => {
+			if (
+				nextState === 'active' &&
+				playFullAnimation &&
+				bootSplashVideo &&
+				!videoEnded
+			) {
+				player.play()
+			}
+		})
+		return () => subscription.remove()
+	}, [playFullAnimation, bootSplashVideo, videoEnded, player])
+
+	// 安全兜底：即使视频卡住，最多等 3s 也强制淡出
+	useEffect(() => {
+		if (!introFinished || !bootSplashVideo) return
+		const timer = setTimeout(() => setVideoEnded(true), 3000)
+		return () => clearTimeout(timer)
+	}, [introFinished, bootSplashVideo])
 
 	const { container, logo } = useHideAnimation({
 		manifest: bootSplashManifest,
