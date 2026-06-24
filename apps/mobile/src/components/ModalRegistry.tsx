@@ -6,7 +6,6 @@ import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
 const UpdateAppModal = lazy(() => import('./modals/app/UpdateAppModal'))
-const WelcomeModal = lazy(() => import('./modals/app/WelcomeModal'))
 const AddToFavoriteListsModal = lazy(
 	() => import('./modals/bilibili/AddVideoToBilibiliFavModal'),
 )
@@ -87,7 +86,6 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	CookieLogin: CookieLoginModal,
 	CreatePlaylist: CreatePlaylistModal,
 	UpdateApp: UpdateAppModal,
-	Welcome: WelcomeModal,
 	UpdateTrackLocalPlaylists: UpdateTrackLocalPlaylistsModal,
 	DuplicateLocalPlaylist: DuplicateLocalPlaylistModal,
 	ManualSearchLyrics: ManualSearchLyricsModal,

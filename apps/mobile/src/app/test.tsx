@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import { asc, sql } from 'drizzle-orm'
 import * as DocumentPicker from 'expo-document-picker'
 import { Directory, File, Paths } from 'expo-file-system'
+import { router } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -23,6 +24,7 @@ import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
+import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 
 const logger = log.extend('TestPage')
@@ -327,6 +329,24 @@ export default function TestPage() {
 				contentInsetAdjustmentBehavior='automatic'
 			>
 				<View style={styles.buttonContainer}>
+					<Button
+						mode='contained'
+						onPress={() => router.push('/onboarding')}
+						style={styles.button}
+					>
+						Onboarding 页面测试
+					</Button>
+					<Button
+						mode='contained'
+						onPress={() => {
+							storage.set('first_open', true)
+							expoDb.closeSync()
+							void Updates.reloadAsync()
+						}}
+						style={styles.button}
+					>
+						重置 first_open 并重启
+					</Button>
 					<Button
 						mode='contained'
 						onPress={() => openModal('InputExternalPlaylistInfo', undefined)}

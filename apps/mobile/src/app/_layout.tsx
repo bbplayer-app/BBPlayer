@@ -6,7 +6,7 @@ import {
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import { Stack } from 'expo-router'
+import { Stack, router } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -22,7 +22,6 @@ import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
@@ -55,7 +54,6 @@ export default Sentry.wrap(function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
-	const open = useModalStore((state) => state.open)
 	useCheckUpdate()
 	useFeatureTracking()
 
@@ -172,10 +170,10 @@ export default Sentry.wrap(function RootLayout() {
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
-				open('Welcome', undefined, { dismissible: false })
+				router.push('/onboarding')
 			}
 		}
-	}, [isReady, migrationsSuccess, open])
+	}, [isReady, migrationsSuccess])
 
 	useEffect(() => {
 		if (migrationsError) {
@@ -230,6 +228,11 @@ export default Sentry.wrap(function RootLayout() {
 
 						<Stack.Screen
 							name='test'
+							options={{ headerShown: false }}
+						/>
+
+						<Stack.Screen
+							name='onboarding'
 							options={{ headerShown: false }}
 						/>
 

@@ -20,7 +20,6 @@ export interface ModalPropsMap {
 	CreatePlaylist: { redirectToNewPlaylist?: boolean }
 	UpdateApp: { version: string; notes: string; url: string; forced?: boolean }
 	UpdateTrackLocalPlaylists: { track: Track }
-	Welcome: undefined
 	BatchAddTracksToLocalPlaylist: {
 		payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
 	}
