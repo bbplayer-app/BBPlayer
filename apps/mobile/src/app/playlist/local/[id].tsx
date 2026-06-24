@@ -56,6 +56,7 @@ import { CustomError } from '@/lib/errors'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
@@ -287,9 +288,12 @@ export default function LocalPlaylistPage() {
 	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
 	const isSharedLoggedOut = !!playlistMetadata?.shareId && !bbplayerToken
-	const coverRef = useImage(playlistMetadata?.coverUrl ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveBilibiliImageUrl(playlistMetadata?.coverUrl) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 
 	const {
 		backgroundColor,

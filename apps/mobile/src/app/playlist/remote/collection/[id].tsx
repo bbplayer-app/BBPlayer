@@ -21,6 +21,7 @@ import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColo
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliMediaItemInCollection } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const mapApiItemToTrack = (
@@ -85,9 +86,12 @@ export default function CollectionPage() {
 		[collectionData],
 	)
 
-	const coverRef = useImage(collectionData?.info?.cover ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveBilibiliImageUrl(collectionData?.info?.cover) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 	const {
 		backgroundColor,
 		nowPlayingBarColor,

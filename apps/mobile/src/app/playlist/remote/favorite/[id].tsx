@@ -20,6 +20,7 @@ import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColo
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const mapApiItemToTrack = (
@@ -92,9 +93,12 @@ export default function FavoritePage() {
 		)
 	}, [favoriteData])
 
-	const coverRef = useImage(favoriteData?.pages[0]?.info?.cover ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveBilibiliImageUrl(favoriteData?.pages[0]?.info?.cover) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 	const {
 		backgroundColor,
 		nowPlayingBarColor,

@@ -5,9 +5,9 @@ import { Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
-import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Track } from '@/types/core/media'
+import { resolveTrackCover } from '@/utils/imageUrl'
 import { addToQueue } from '@/utils/player'
 import { formatDurationToHHMMSS } from '@/utils/time'
 

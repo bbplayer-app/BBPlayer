@@ -12,9 +12,9 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { SongShareCard } from '@/features/player/components/sharing/SongShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
-import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { resolveTrackCover } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')

@@ -8,6 +8,7 @@ import SquircleView from 'react-native-fast-squircle'
 import { runes } from 'runes2'
 
 import { getGradientColors } from '@/utils/color'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 
 /**
  * 组件 Props 定义
@@ -73,7 +74,8 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 
 	const coverSource = useMemo(() => {
 		if (typeof cover === 'string') {
-			return { uri: cover }
+			const resolvedUri = resolveBilibiliImageUrl(cover, 400)
+			return resolvedUri ? { uri: resolvedUri } : cover
 		}
 		return cover
 	}, [cover])

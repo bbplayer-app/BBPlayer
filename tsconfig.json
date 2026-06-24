@@ -3,9 +3,7 @@
 	"references": [
 		{ "path": "./apps/mobile/tsconfig.json" },
 		{ "path": "./packages/orpheus/tsconfig.json" },
-		{ "path": "./packages/orpheus/example/tsconfig.json" },
 		{ "path": "./packages/image-theme-colors/tsconfig.json" },
-		{ "path": "./packages/image-theme-colors/example/tsconfig.json" },
 		{ "path": "./apps/docs/tsconfig.json" },
 		{ "path": "./packages/splash/tsconfig.json" },
 		{ "path": "./packages/heatmap/tsconfig.json" },

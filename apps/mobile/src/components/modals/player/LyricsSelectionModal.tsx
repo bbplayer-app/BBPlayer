@@ -15,11 +15,11 @@ import Button from '@/components/common/Button'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { LyricsShareCard } from '@/features/player/components/sharing/LyricsShareCard'
 import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
-import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { ModalPropsMap } from '@/types/navigation'
+import { resolveTrackCover } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({

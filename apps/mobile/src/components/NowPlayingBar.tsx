@@ -24,11 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
+import { resolveTrackCover } from '@/utils/imageUrl'
 
 import ActivityIndicator from './common/ActivityIndicator'
 

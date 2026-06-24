@@ -32,6 +32,7 @@ import type {
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
 import * as Haptics from '@/utils/haptics'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const mapApiItemToTrack = (
@@ -106,7 +107,7 @@ export default function MultipagePage() {
 		return rawMultipageData.map((item) => mapApiItemToTrack(item, videoData))
 	}, [rawMultipageData, videoData])
 
-	const coverRef = useImage(videoData?.pic ?? '', {
+	const coverRef = useImage(resolveBilibiliImageUrl(videoData?.pic) ?? '', {
 		onError: () => void 0,
 	})
 	const {

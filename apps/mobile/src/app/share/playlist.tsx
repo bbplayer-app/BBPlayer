@@ -28,6 +28,7 @@ import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColo
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { SharedPlaylistPreview } from '@/lib/facades/sharedPlaylist'
 import type { BilibiliTrack } from '@/types/core/media'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
 
 const mapPreviewTrackToBilibiliTrack = (
@@ -130,9 +131,12 @@ export default function SharedPlaylistPreviewPage() {
 	const { playTrack } = useRemotePlaylist()
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
 
-	const coverRef = useImage(data?.playlist.coverUrl ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveBilibiliImageUrl(data?.playlist.coverUrl) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 	const {
 		backgroundColor,
 		nowPlayingBarColor,

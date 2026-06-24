@@ -13,12 +13,12 @@ import TextTicker from 'react-native-text-ticker'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
-import { resolveTrackCover } from '@/hooks/player/useLocalCover'
 import {
 	LIST_ITEM_COVER_SIZE,
 	LIST_ITEM_BORDER_RADIUS,
 } from '@/theme/dimensions'
 import type { Playlist, Track } from '@/types/core/media'
+import { resolveTrackCover } from '@/utils/imageUrl'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
 export interface TrackMenuItem {

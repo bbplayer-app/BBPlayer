@@ -35,6 +35,7 @@ import type {
 	BilibiliUserUploadedVideosResponse,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import { formatMMSSToSeconds } from '@/utils/time'
 
 const SEARCHBAR_HEIGHT = 72
@@ -137,9 +138,12 @@ export default function UploaderPage() {
 			.map((item) => mapApiItemToTrack(item, uploaderUserInfo))
 	}, [uploadedVideos, uploaderUserInfo])
 
-	const coverRef = useImage(uploaderUserInfo?.face ?? '', {
-		onError: () => void 0,
-	})
+	const coverRef = useImage(
+		resolveBilibiliImageUrl(uploaderUserInfo?.face) ?? '',
+		{
+			onError: () => void 0,
+		},
+	)
 	const {
 		backgroundColor,
 		nowPlayingBarColor,
