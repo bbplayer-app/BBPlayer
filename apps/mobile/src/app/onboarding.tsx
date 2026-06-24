@@ -139,6 +139,7 @@ export default function OnboardingPage() {
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
 	const translateX = useSharedValue(0)
+	const [isClickFinalButton, setIsClickFinalButton] = useState(false)
 
 	const goToStep = useCallback(
 		(index: number) => {
@@ -152,12 +153,13 @@ export default function OnboardingPage() {
 		if (step < 2) goToStep(step + 1)
 	}, [step, goToStep])
 
-	usePreventRemove(true, () => {
+	usePreventRemove(!isClickFinalButton, () => {
 		if (step > 0) goToStep(step - 1)
 	})
 
 	const complete = useCallback(() => {
 		storage.set('first_open', false)
+		setIsClickFinalButton(true)
 		if (router.canGoBack()) {
 			router.back()
 		} else {
@@ -167,11 +169,13 @@ export default function OnboardingPage() {
 
 	const handleQRCode = useCallback(() => {
 		storage.set('first_open', false)
+		setIsClickFinalButton(true)
 		router.replace('/settings/bilibili-account/qrcode-login' as never)
 	}, [])
 
 	const handlePhone = useCallback(() => {
 		storage.set('first_open', false)
+		setIsClickFinalButton(true)
 		router.replace('/settings/bilibili-account/phone-login' as never)
 	}, [])
 
