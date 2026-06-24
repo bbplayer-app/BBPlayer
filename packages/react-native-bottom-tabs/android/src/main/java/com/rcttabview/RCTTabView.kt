@@ -19,6 +19,9 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.forEachIndexed
 import coil3.ImageLoader
 import coil3.asDrawable
@@ -114,6 +117,12 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
           lastReportedSize = Size(newWidth, newHeight)
         }
       }
+    }
+
+    ViewCompat.setOnApplyWindowInsetsListener(this) { _, windowInsets ->
+      WindowInsetsCompat.Builder(windowInsets)
+        .setInsets(WindowInsetsCompat.Type.ime(), Insets.NONE)
+        .build()
     }
   }
 
