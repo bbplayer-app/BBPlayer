@@ -132,7 +132,7 @@ class PlayerSideEffects {
 				.join(' ')
 
 			const offlinePlaybackErrorPattern =
-				/resolve url failed|unknownhost|failed to connect|network is unreachable|unable to resolve host/i
+				/resolve url failed|unknownhost|failed to connect|network is unreachable|unable to resolve host|no address associated with hostname/i
 
 			// 2000-2999 是关于 IO 或 NETWORK 的问题。
 			if (
@@ -158,11 +158,31 @@ class PlayerSideEffects {
 			}
 		}
 
+		// ponytail: network errors leaking from player native layer.
+		// Grouped by pattern: connection-refused, DNS, SSL, timeout, socket, http.
+		// If false positives appear, split into narrower patterns.
 		if (
 			rawMessage.includes('Unable to connect') ||
 			rawMessage.includes('UnknownHostException') ||
 			rawMessage.includes('ConnectException') ||
-			rawMessage.includes('SocketTimeoutException')
+			rawMessage.includes('SocketTimeoutException') ||
+			rawMessage.includes('EAI_NODATA') ||
+			rawMessage.includes('ECONNREFUSED') ||
+			rawMessage.includes('ECONNABORTED') ||
+			rawMessage.includes('ETIMEDOUT') ||
+			rawMessage.includes('EHOSTUNREACH') ||
+			rawMessage.includes('EACCES') ||
+			rawMessage.includes('Connection refused') ||
+			rawMessage.includes('connection closed') ||
+			rawMessage.includes('Connection reset') ||
+			rawMessage.includes('Software caused connection abort') ||
+			rawMessage.includes('Socket closed') ||
+			rawMessage.includes('timed out') ||
+			rawMessage.includes('Trust anchor') ||
+			rawMessage.includes('Response code: 404') ||
+			rawMessage.includes('No route to host') ||
+			rawMessage.includes('failed to connect') ||
+			rawMessage === 'timeout'
 		) {
 			return { message: '网络连接失败，请检查网络设置', shouldReport: false }
 		}
