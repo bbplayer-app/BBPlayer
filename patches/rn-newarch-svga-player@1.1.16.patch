@@ -1,0 +1,21 @@
+diff --git a/android/build.gradle b/android/build.gradle
+index 290f7bf55efaa66ea5a2fca4bfab154fd852b6ce..11a406dd0480c3d163e442a542f78681e7fcc9d3 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -4,14 +4,12 @@ buildscript {
+         rootProject.ext.has(prop) ? rootProject.ext.get(prop) : project.properties['SvgaPlayer_' + prop]
+     }
+   repositories {
+-    // 使用阿里云镜像源
++    google()
++    mavenCentral()
+     maven { url 'https://maven.aliyun.com/repository/google' }
+     maven { url 'https://maven.aliyun.com/repository/central' }
+     maven { url 'https://maven.aliyun.com/repository/jcenter' }
+     maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+-    // 备用官方源
+-    google()
+-    mavenCentral()
+   }
+ 
+   dependencies {

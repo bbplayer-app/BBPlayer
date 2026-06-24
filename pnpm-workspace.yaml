@@ -17,3 +17,4 @@ onlyBuiltDependencies:
   - workerd
 patchedDependencies:
   expo-modules-core@56.0.17: patches/expo-modules-core@56.0.17.patch
+  rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch
