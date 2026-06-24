@@ -110,6 +110,7 @@ export const useAppStore = create<AppState>()(
 					danmakuFilterLevel: 0,
 					downloadMaxParallelTasks: 1,
 					enableMinimalistMode: false,
+					allowSimultaneousPlayback: false,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,
@@ -193,6 +194,11 @@ export const useAppStore = create<AppState>()(
 					if (updates.downloadMaxParallelTasks !== undefined) {
 						void Orpheus.setDownloadMaxParallelTasks(
 							updates.downloadMaxParallelTasks,
+						)
+					}
+					if (updates.allowSimultaneousPlayback !== undefined) {
+						void Orpheus.setAllowSimultaneousPlayback(
+							updates.allowSimultaneousPlayback,
 						)
 					}
 				},

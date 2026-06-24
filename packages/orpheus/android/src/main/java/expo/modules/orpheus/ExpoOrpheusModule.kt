@@ -10,6 +10,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -704,6 +705,16 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("setDownloadMaxParallelTasks") { maxParallelTasks: Int ->
             val context = appContext.reactContext ?: return@AsyncFunction
             DownloadUtil.setMaxParallelDownloads(context, maxParallelTasks)
+        }
+
+        AsyncFunction("setAllowSimultaneousPlayback") Coroutine { enabled: Boolean ->
+            withPlayerOnMainThread { player ->
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build()
+                player.setAudioAttributes(audioAttributes, !enabled)
+            }
         }
 
         AsyncFunction("removeDownload") { id: String ->

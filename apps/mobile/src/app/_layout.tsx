@@ -139,6 +139,9 @@ export default Sentry.wrap(function RootLayout() {
 				void Orpheus.setDownloadMaxParallelTasks(
 					settings.downloadMaxParallelTasks,
 				)
+				void Orpheus.setAllowSimultaneousPlayback(
+					settings.allowSimultaneousPlayback,
+				)
 
 				const cookie = useAppStore.getState().bilibiliCookie
 				if (cookie) {

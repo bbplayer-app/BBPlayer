@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { toastAndLogError } from '@/utils/error-handling'
 
 export default function PlaybackSettingsPage() {
@@ -15,6 +16,11 @@ export default function PlaybackSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+
+	const allowSimultaneousPlayback = useAppStore(
+		(state) => state.settings.allowSimultaneousPlayback,
+	)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
 		useState(Orpheus.restorePlaybackPositionEnabled)
@@ -81,6 +87,15 @@ export default function PlaybackSettingsPage() {
 								return
 							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>允许与其他软件同时播放</Text>
+					<UniversalSwitch
+						value={allowSimultaneousPlayback}
+						onValueChange={(value) => {
+							setSettings({ allowSimultaneousPlayback: value })
 						}}
 					/>
 				</View>

@@ -296,6 +296,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	retryDownload(track: Track): Promise<void>
 	/** 设置 Media3 下载任务的最大并行数量。 */
 	setDownloadMaxParallelTasks(maxParallelTasks: number): Promise<void>
+	/** 设置是否允许与其他软件同时播放（Android）。默认关闭，打开后音频不会因其他应用而暂停。 */
+	setAllowSimultaneousPlayback(enabled: boolean): Promise<void>
 	/** 移除所有下载任务以及全部本地缓存封面。 */
 	removeAllDownloads(): Promise<void>
 	/** 返回 Media3 DownloadManager 当前已知的全部任务。 */

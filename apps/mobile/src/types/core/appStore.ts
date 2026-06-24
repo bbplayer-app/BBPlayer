@@ -14,6 +14,7 @@ interface Settings {
 	danmakuFilterLevel: number
 	downloadMaxParallelTasks: number
 	enableMinimalistMode: boolean
+	allowSimultaneousPlayback: boolean
 }
 
 interface BilibiliUserSummary {
