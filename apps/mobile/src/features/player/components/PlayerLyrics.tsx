@@ -1,7 +1,7 @@
 import { parseAndMergeLyrics, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	Pressable,
 	ScrollView,
@@ -115,8 +115,7 @@ const Lyrics = memo(function Lyrics({
 		return currentTime.value - offsetSharedValue.value
 	})
 
-	// so bro I trust react compiler
-	const finalLyrics = (() => {
+	const finalLyrics = useMemo(() => {
 		if (!lyrics?.lrc) return []
 
 		let parsedLines
@@ -126,8 +125,7 @@ const Lyrics = memo(function Lyrics({
 				tlyric: lyrics.tlyric,
 				romalrc: lyrics.romalrc,
 			})
-		} catch (e) {
-			toastAndLogError('解析歌词失败', e, 'Player.PlayerLyrics')
+		} catch (_e) {
 			return null
 		}
 
@@ -148,7 +146,7 @@ const Lyrics = memo(function Lyrics({
 				isPaddingItem: true,
 			} as LyricLine & { isPaddingItem?: boolean },
 		]
-	})()
+	}, [lyrics])
 
 	const {
 		currentLyricIndex,
