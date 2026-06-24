@@ -116,7 +116,9 @@ export default function ThemeSkinSearchPage() {
 	} = useThemeSearch(query)
 	const resultsToDisplay = useMemo(() => {
 		return (
-			searchResult?.pages.flatMap((page) => page.list).map(mapSearchItem) ?? []
+			searchResult?.pages
+				.flatMap((page) => page.list ?? [])
+				.map(mapSearchItem) ?? []
 		)
 	}, [searchResult])
 	const extraData = useMemo(() => ({ colors }), [colors])
@@ -168,12 +170,25 @@ export default function ThemeSkinSearchPage() {
 					extraData={extraData}
 					renderItem={renderItem}
 					ListEmptyComponent={
-						<Text
-							variant='bodySmall'
-							style={[styles.empty, { color: colors.onSurfaceVariant }]}
-						>
-							输入主题名称搜索 B 站装扮
-						</Text>
+						isFetching ? (
+							<View style={styles.emptyLoadingContainer}>
+								<ActivityIndicator size='small' />
+							</View>
+						) : query ? (
+							<Text
+								variant='bodyMedium'
+								style={[styles.empty, { color: colors.onSurfaceVariant }]}
+							>
+								没有找到相关装扮
+							</Text>
+						) : (
+							<Text
+								variant='bodySmall'
+								style={[styles.empty, { color: colors.onSurfaceVariant }]}
+							>
+								输入主题名称搜索 B 站装扮
+							</Text>
+						)
 					}
 					ListFooterComponent={
 						isFetchingNextPage ? (
@@ -233,6 +248,12 @@ const styles = StyleSheet.create({
 	empty: {
 		marginTop: 32,
 		textAlign: 'center',
+	},
+	emptyLoadingContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingTop: 32,
 	},
 	footerLoadingContainer: {
 		flexDirection: 'row',

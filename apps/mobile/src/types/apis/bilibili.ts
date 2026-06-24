@@ -596,7 +596,7 @@ interface BilibiliGarbSearchItem {
 
 /** 搜索 API 返回 */
 interface BilibiliGarbSearchResponse {
-	list: BilibiliGarbSearchItem[]
+	list: BilibiliGarbSearchItem[] | null
 	pn: number
 	ps: number
 	total: number

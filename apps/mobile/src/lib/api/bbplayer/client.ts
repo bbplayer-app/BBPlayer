@@ -31,6 +31,7 @@ export async function ensureBBPlayerToken(options?: {
 
 const fetchWithAuthRetry: typeof fetch = async (input, init) => {
 	const response = await fetch(input, init)
+	// @ts-expect-error
 	if (response.status !== 401 || isAuthLoginRequest(input)) {
 		return response
 	}

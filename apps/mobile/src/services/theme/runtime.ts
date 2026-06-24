@@ -1,5 +1,8 @@
 import { File } from 'expo-file-system'
+import { okAsync, ResultAsync } from 'neverthrow'
 
+import { ServiceError } from '@/lib/errors'
+import { createSkinNotFound } from '@/lib/errors/service'
 import log from '@/utils/log'
 
 import type { SkinAssetDeclaration } from './schema'
@@ -64,44 +67,49 @@ const resolveAppSkinUris = (appSkin: AppSkin, rootUri: string): AppSkin => ({
 		.filter((f): f is string => f !== null),
 })
 
-const loadInstalledSkin = async (
+const loadInstalledSkin = (
 	meta: InstalledSkinMeta,
-): Promise<InstalledSkin | null> => {
-	const file = new File(meta.rootUri, 'skin.json')
-	if (!file.exists) return null
-	try {
-		return JSON.parse(await file.text()) as InstalledSkin
-	} catch {
-		return null
-	}
+): ResultAsync<InstalledSkin | null, ServiceError> => {
+	return ResultAsync.fromPromise(
+		(async () => {
+			const file = new File(meta.rootUri, 'skin.json')
+			if (!file.exists) return null
+			return JSON.parse(await file.text()) as InstalledSkin
+		})(),
+		(e) => createSkinNotFound(meta.id, e),
+	)
 }
 
-export const loadSkinAssets = async (
+export const loadSkinAssets = (
 	meta: InstalledSkinMeta,
-): Promise<SkinAssetDeclaration | null> => {
-	const skin = await loadInstalledSkin(meta)
-	return skin?.manifest ?? null
+): ResultAsync<SkinAssetDeclaration | null, ServiceError> => {
+	return loadInstalledSkin(meta).map((skin) => skin?.manifest ?? null)
 }
 
-export const loadActiveSkin = async (
+export const loadActiveSkin = (
 	meta: InstalledSkinMeta,
-): Promise<AppSkin | null> => {
+): ResultAsync<AppSkin | null, ServiceError> => {
 	const cached = appSkinCache.get(meta.id)
 	if (cached !== undefined) {
 		log.debug('[runtime] cache hit', { skinId: meta.id, appSkin: !!cached })
-		return cached
+		return okAsync(cached)
 	}
 
-	const skin = await loadInstalledSkin(meta)
-	const raw = skin?.appSkin
-	if (!raw) {
-		appSkinCache.set(meta.id, null)
-		return null
-	}
+	return loadInstalledSkin(meta).andThen((skin) => {
+		if (!skin) {
+			appSkinCache.set(meta.id, null)
+			return okAsync(null)
+		}
 
-	const resolved = resolveAppSkinUris(raw, meta.rootUri)
-	appSkinCache.set(meta.id, resolved)
-	return resolved
+		return ResultAsync.fromPromise(
+			(async () => {
+				const resolved = resolveAppSkinUris(skin.appSkin, meta.rootUri)
+				appSkinCache.set(meta.id, resolved)
+				return resolved
+			})(),
+			(e) => createSkinNotFound(meta.id, e),
+		)
+	})
 }
 
 export const invalidateSkinCache = (skinId: string) => {

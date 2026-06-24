@@ -33,12 +33,12 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 
 		let cancelled = false
 
-		installSkin(item, {
+		void installSkin(item, {
 			onProgress: (event) => {
 				if (!cancelled) setProgress(event)
 			},
-		})
-			.then(() => {
+		}).match(
+			() => {
 				if (cancelled) return
 				setProgress((previous) =>
 					previous
@@ -66,13 +66,14 @@ const SkinDownloadProgressModal = memo(function SkinDownloadProgressModal({
 						},
 					])
 				})
-			})
-			.catch((error: unknown) => {
+			},
+			(error: unknown) => {
 				if (cancelled) return
 				setHasError(true)
 				setIsFinished(true)
 				toast.error(error instanceof Error ? error.message : String(error))
-			})
+			},
+		)
 
 		return () => {
 			cancelled = true

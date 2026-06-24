@@ -24,9 +24,14 @@ export default function useActiveSkin(): AppSkin | null {
 
 		let cancelled = false
 
-		void loadActiveSkin(meta).then((skin) => {
-			if (!cancelled) setAppSkin(skin)
-		})
+		void loadActiveSkin(meta).match(
+			(skin) => {
+				if (!cancelled) setAppSkin(skin)
+			},
+			() => {
+				if (!cancelled) setAppSkin(null)
+			},
+		)
 
 		return () => {
 			cancelled = true

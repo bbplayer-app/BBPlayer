@@ -12,7 +12,10 @@
  * - InstalledSkin 构建
  */
 import * as FileSystem from 'expo-file-system'
+import { ResultAsync } from 'neverthrow'
 
+import { ServiceError } from '@/lib/errors'
+import { createSkinDownloadFailed } from '@/lib/errors/service'
 import log from '@/utils/log'
 
 import type { SkinAssetDeclaration } from './schema'
@@ -136,7 +139,7 @@ export interface DownloadManifestResult {
  * - 返回的 mapping 中 key 为原始远程 URL，value 为本地相对路径
  * - 重复 URL 只下载一次
  */
-export const downloadManifestAssets = async ({
+export const downloadManifestAssets = ({
 	manifest,
 	outputDirectory,
 	onProgress,
@@ -146,7 +149,7 @@ export const downloadManifestAssets = async ({
 	outputDirectory: FileSystem.Directory
 	onProgress?: (progress: SkinDownloadProgress) => void
 	signal?: AbortSignal
-}): Promise<DownloadManifestResult> => {
+}): ResultAsync<DownloadManifestResult, ServiceError> => {
 	const urls = collectRemoteUrls(manifest)
 
 	log.debug('[download] collected remote URLs', {
@@ -171,37 +174,48 @@ export const downloadManifestAssets = async ({
 	const total = plan.length
 	let completed = 0
 
-	for (const item of plan) {
-		const label = item.url.split('/').pop() ?? 'asset'
-		const file = new FileSystem.File(outputDirectory, item.localPath)
+	return ResultAsync.combine(
+		plan.map((item) =>
+			ResultAsync.fromPromise(
+				(async () => {
+					const label = item.url.split('/').pop() ?? 'asset'
+					const file = new FileSystem.File(outputDirectory, item.localPath)
 
-		onProgress?.({
-			completed,
-			label: `下载 ${label}`,
-			progress: total > 0 ? completed / total : 0,
-			total,
-		})
+					onProgress?.({
+						completed,
+						label: `下载 ${label}`,
+						progress: total > 0 ? completed / total : 0,
+						total,
+					})
 
-		if (file.exists) {
-			file.delete()
-		}
+					if (file.exists) {
+						file.delete()
+					}
 
-		await FileSystem.File.downloadFileAsync(item.url, file, {
-			headers: DOWNLOAD_HEADERS,
-			idempotent: true,
-			signal,
-		})
+					await FileSystem.File.downloadFileAsync(item.url, file, {
+						headers: DOWNLOAD_HEADERS,
+						idempotent: true,
+						signal,
+					})
 
-		completed += 1
+					completed += 1
 
-		onProgress?.({
-			completed,
-			label: `已下载 ${label}`,
-			progress: total > 0 ? completed / total : 0,
-			total: Math.max(1, total),
-		})
-	}
-
-	log.debug('[download] all assets downloaded', { count: completed, total })
-	return { mapping }
+					onProgress?.({
+						completed,
+						label: `已下载 ${label}`,
+						progress: total > 0 ? completed / total : 0,
+						total: Math.max(1, total),
+					})
+				})(),
+				(e) =>
+					createSkinDownloadFailed(
+						e instanceof Error ? e.message : String(e),
+						e,
+					),
+			),
+		),
+	).map(() => {
+		log.debug('[download] all assets downloaded', { count: completed, total })
+		return { mapping }
+	})
 }

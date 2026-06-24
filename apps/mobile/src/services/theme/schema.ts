@@ -1,4 +1,8 @@
 import { ArkErrors, type as arkType } from 'arktype'
+import { err, ok, type Result } from 'neverthrow'
+
+import { ServiceError } from '@/lib/errors'
+import { createSkinValidationFailed } from '@/lib/errors/service'
 
 // ============================================================
 // Helpers
@@ -138,10 +142,10 @@ export type SkinLoadingAsset = typeof loadingAssetSchema.infer
 
 export const parseSkinAssetDeclaration = (
 	value: unknown,
-): SkinAssetDeclaration => {
+): Result<SkinAssetDeclaration, ServiceError> => {
 	const result = skinAssetDeclarationSchema(value)
 	if (result instanceof ArkErrors) {
-		throw new Error(`装扮资产声明格式不正确：${result.summary}`)
+		return err(createSkinValidationFailed(result.summary))
 	}
-	return result
+	return ok(result)
 }

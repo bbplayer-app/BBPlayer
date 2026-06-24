@@ -654,9 +654,14 @@ function InstalledAssetSections({
 
 	useEffect(() => {
 		let cancelled = false
-		void loadSkinAssets(skinRef.current).then((a) => {
-			if (!cancelled) setAssets(a)
-		})
+		void loadSkinAssets(skinRef.current).match(
+			(a) => {
+				if (!cancelled) setAssets(a)
+			},
+			() => {
+				if (!cancelled) setAssets(null)
+			},
+		)
 		return () => {
 			cancelled = true
 		}
