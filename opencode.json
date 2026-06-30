@@ -5,8 +5,16 @@
 			"type": "remote",
 			"url": "https://mcp.sentry.dev/mcp",
 			"oauth": {}
+		},
+		"argent": {
+			"type": "local",
+			"command": ["argent", "mcp"],
+			"enabled": true
 		}
 	},
 	"lsp": false,
-	"instructions": ["packages/*/AGENTS.md", "apps/*/AGENTS.md"]
+	"instructions": ["packages/*/AGENTS.md", "apps/*/AGENTS.md"],
+	"tools": {
+		"argent*": true
+	}
 }

@@ -56,5 +56,17 @@
 				}
 			]
 		}
+	},
+	"context_servers": {
+		"argent": {
+			"source": "custom",
+			"command": "argent",
+			"args": ["mcp"]
+		}
+	},
+	"agent": {
+		"tool_permissions": {
+			"default": "allow"
+		}
 	}
 }

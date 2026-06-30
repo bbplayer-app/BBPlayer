@@ -1,0 +1,9 @@
+{
+	"mcpServers": {
+		"argent": {
+			"command": "argent",
+			"args": ["mcp"],
+			"trust": true
+		}
+	}
+}
