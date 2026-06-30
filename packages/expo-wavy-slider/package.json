@@ -52,7 +52,7 @@
 		"eslint-plugin-react-compiler": "19.1.0-rc.1",
 		"eslint-plugin-react-hooks-extra": "^1.53.1",
 		"eslint-plugin-react-you-might-not-need-an-effect": "^0.5.6",
-		"expo": "56.0.4",
+		"expo": "56.0.12",
 		"expo-module-scripts": "^56.0.2",
 		"expo-modules-core": "56.0.11",
 		"oxfmt": "^0.27.0",
