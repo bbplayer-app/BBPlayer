@@ -129,7 +129,7 @@ export default function SharedPlaylistPreviewPage() {
 
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const { playTrack } = useRemotePlaylist()
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const coverRef = useImage(
 		resolveBilibiliImageUrl(data?.playlist.coverUrl) ?? '',

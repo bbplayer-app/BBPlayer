@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Dialog, RadioButton, Text, useTheme } from 'react-native-paper'
@@ -9,7 +9,7 @@ import { useBatchAddTracksToLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { usePlaylistLists } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Playlist } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type { CreateTrackPayload } from '@/types/services/track'
 
@@ -135,11 +135,12 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 			return (
 				<>
 					<Dialog.ScrollArea style={styles.listContainer}>
-						<FlashList
+						<LegendList
 							data={filteredPlaylists ?? []}
 							renderItem={renderPlaylistItem}
 							keyExtractor={keyExtractor}
 							extraData={extraData}
+							recycleItems
 							showsVerticalScrollIndicator={false}
 							ListEmptyComponent={
 								<View style={styles.emptyListContainer}>

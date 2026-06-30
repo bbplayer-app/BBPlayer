@@ -1,6 +1,6 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { parseSpl, type LyricLine } from '@bbplayer/splash'
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { PermissionStatus } from 'expo'
 import { Image, useImage } from 'expo-image'
 import * as MediaLibrary from 'expo-media-library'
@@ -489,10 +489,11 @@ const LyricsSelectionModal = () => {
 		<>
 			<Dialog.Title>选择歌词分享 ({selectedIndices.size}/5)</Dialog.Title>
 			<Dialog.ScrollArea style={styles.scrollArea}>
-				<FlashList
+				<LegendList
 					data={lyrics}
 					keyExtractor={keyExtractor}
 					renderItem={renderItem}
+					recycleItems
 					showsVerticalScrollIndicator={false}
 				/>
 			</Dialog.ScrollArea>

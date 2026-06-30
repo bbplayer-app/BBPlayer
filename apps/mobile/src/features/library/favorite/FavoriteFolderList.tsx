@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
@@ -97,11 +97,12 @@ const FavoriteFolderListComponent = memo(() => {
 					})
 				}}
 			/>
-			<FlashList
+			<LegendList
 				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={filteredPlaylists}
 				renderItem={renderPlaylistItem}
+				recycleItems
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing || playlistsIsRefetching}

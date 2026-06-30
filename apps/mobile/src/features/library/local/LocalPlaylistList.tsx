@@ -1,5 +1,5 @@
 import { Icon } from '@expo/ui'
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
@@ -186,11 +186,12 @@ const LocalPlaylistListComponent = memo(() => {
 					opacity: searchQuery !== deferredSearchQuery ? 0.5 : 1,
 				}}
 			>
-				<FlashList
+				<LegendList
 					contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 					showsVerticalScrollIndicator={false}
 					data={finalPlaylists ?? []}
 					renderItem={renderPlaylistItem}
+					recycleItems
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing || playlistsIsRefetching}

@@ -1,5 +1,5 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -96,10 +96,11 @@ export default function DownloadPage() {
 			/>
 
 			<View style={styles.listContainer}>
-				<FlashList
+				<LegendList
 					data={tasks}
 					renderItem={renderItem}
 					keyExtractor={keyExtractor}
+					recycleItems
 					contentContainerStyle={{
 						paddingBottom: haveTrack ? 70 + insets.bottom : insets.bottom,
 					}}

@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 
 type LicenseEntry = {
 	key: string
@@ -212,11 +212,12 @@ export default function OpenSourceLicensesPage() {
 				/>
 			</Animated.View>
 
-			<FlashList
+			<LegendList
 				data={filteredLicenses}
 				renderItem={renderLicenseItem}
 				keyExtractor={(item) => item.key}
 				extraData={extraData}
+				recycleItems
 				contentContainerStyle={{
 					paddingBottom: insets.bottom + (haveTrack ? 90 : 24),
 				}}

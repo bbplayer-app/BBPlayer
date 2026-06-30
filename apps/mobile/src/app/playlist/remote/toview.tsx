@@ -100,7 +100,7 @@ export default function ToViewPage() {
 	)
 	const openModal = useModalStore((state) => state.open)
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const {
 		data: rawToViewData,

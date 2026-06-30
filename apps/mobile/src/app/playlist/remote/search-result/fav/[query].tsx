@@ -70,7 +70,7 @@ export default function SearchResultsPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const { data: userData } = usePersonalInformation()
 	const { data: favoriteFolderList } = useGetFavoritePlaylists(userData?.mid)

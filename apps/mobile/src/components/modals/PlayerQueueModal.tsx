@@ -1,11 +1,11 @@
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
+import type { LegendListRef } from '@legendapp/list/react-native'
+import { LegendList } from '@legendapp/list/react-native'
 import {
 	TrueSheet,
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
-import type { FlashListRef } from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
 import {
 	memo,
 	useCallback,
@@ -115,7 +115,7 @@ function PlayerQueueModal({
 	const currentTrackId = useCurrentTrackId()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
-	const flatListRef = useRef<FlashListRef<OrpheusTrack>>(null)
+	const flatListRef = useRef<LegendListRef>(null)
 
 	const { data: queue, refetch } = usePlayerQueue(isVisible)
 
@@ -230,11 +230,12 @@ function PlayerQueueModal({
 						/>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>
-						<FlashList
+						<LegendList
 							ref={flatListRef}
 							data={queue}
 							renderItem={renderItem}
 							keyExtractor={keyExtractor}
+							recycleItems
 							contentContainerStyle={{
 								paddingBottom: insets.bottom + 20,
 							}}

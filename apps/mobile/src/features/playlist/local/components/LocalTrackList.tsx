@@ -1,8 +1,11 @@
 import type { DownloadState } from '@bbplayer/orpheus'
 import { Icon as ExpoIcon, Host } from '@expo/ui'
+import type {
+	LegendListProps,
+	LegendListRef,
+} from '@legendapp/list/react-native'
+import { LegendList } from '@legendapp/list/react-native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
-import type { FlashListProps, FlashListRef } from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
 import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -25,14 +28,14 @@ import type { Playlist, Track } from '@/types/core/media'
 import type {
 	ListRenderItemInfoWithExtraData,
 	SelectionState,
-} from '@/types/flashlist'
+} from '@/types/legendlist'
 import * as Haptics from '@/utils/haptics'
 
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
 
 interface LocalTrackListProps extends Omit<
-	FlashListProps<Track>,
+	LegendListProps<Track>,
 	'data' | 'renderItem' | 'extraData'
 > {
 	/** 要显示的本地曲目数组 */
@@ -49,7 +52,7 @@ interface LocalTrackListProps extends Omit<
 	/** 多选状态管理 */
 	selection: SelectionState
 	/** 列表引用 */
-	listRef?: RefObject<FlashListRef<Track> | null>
+	listRef?: RefObject<LegendListRef | null>
 	/** 是否还有下一页数据（可选） */
 	hasNextPage?: boolean
 	/** 是否正在获取下一页数据（可选） */
@@ -343,11 +346,12 @@ export function LocalTrackList({
 
 	return (
 		<>
-			<FlashList
+			<LegendList
 				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
 				extraData={extraData}
+				recycleItems
 				ItemSeparatorComponent={() => <Divider />}
 				ListHeaderComponent={ListHeaderComponent}
 				keyExtractor={keyExtractor}

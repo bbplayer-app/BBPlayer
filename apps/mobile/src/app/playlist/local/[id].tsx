@@ -167,7 +167,7 @@ export default function LocalPlaylistPage() {
 		setSelected,
 	} = useTrackSelection()
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<Track>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 	const membersSheetRef = useRef<TrueSheet>(null)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -516,10 +516,10 @@ export default function LocalPlaylistPage() {
 
 	const startAutoScroll = (direction: 'up' | 'down') => {
 		stopAutoScroll()
-		autoScrollRef.current = setInterval(() => {
+		autoScrollRef.current = setInterval(async () => {
 			const delta = direction === 'down' ? SCROLL_SPEED : -SCROLL_SPEED
 			const next = Math.max(0, scrollOffsetRef.current + delta)
-			listRef.current?.scrollToOffset({ offset: next, animated: false })
+			await listRef.current?.scrollToOffset({ offset: next, animated: false })
 			scrollOffsetRef.current = next
 		}, 16)
 	}

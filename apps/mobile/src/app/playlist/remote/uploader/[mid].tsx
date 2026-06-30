@@ -104,7 +104,7 @@ export default function UploaderPage() {
 	const debouncedQuery = useDebouncedValue(searchQuery, 200)
 	const openModal = useModalStore((state) => state.open)
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const searchbarAnimatedStyle = useAnimatedStyle(() => ({
 		height: searchbarHeight.value,
