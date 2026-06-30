@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -35,7 +35,7 @@ import {
 	LIST_ITEM_COVER_SIZE,
 } from '@/theme/dimensions'
 import type { GenericTrack } from '@/types/external_playlist'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 import toast from '@/utils/toast'
 
 const ItemSeparator = () => <Divider />
@@ -184,7 +184,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	const openModal = useModalStore((state) => state.open)
 	const queryClient = useQueryClient()
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<GenericTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const { data, isLoading, error } = useExternalPlaylist(
 		id ?? '',
@@ -465,7 +465,7 @@ const ExternalPlaylistSyncPageInner = () => {
 			>
 				匹配进度已临时保存。完成后请点击右上角或下方的保存按钮写入本地歌单。
 			</Banner>
-			<FlashList
+			<LegendList
 				ref={listRef}
 				data={tracks}
 				renderItem={renderItem}
@@ -474,6 +474,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					syncing,
 				}}
 				keyExtractor={keyExtractor}
+				recycleItems
 				ItemSeparatorComponent={ItemSeparator}
 				contentContainerStyle={{
 					paddingBottom: insets.bottom,

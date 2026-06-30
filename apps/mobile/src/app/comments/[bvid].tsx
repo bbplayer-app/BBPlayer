@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -8,7 +8,7 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { CommentItem } from '@/features/comments/components/CommentItem'
 import { useComments } from '@/hooks/queries/bilibili/comments'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 
 const renderItem = ({
 	item,
@@ -90,11 +90,12 @@ export default function CommentsPage() {
 					/>
 				</View>
 			) : (
-				<FlashList
+				<LegendList
 					data={comments}
 					extraData={extraData}
 					keyExtractor={keyExtractor}
 					renderItem={renderItem}
+					recycleItems
 					onEndReached={() => {
 						if (hasNextPage) void fetchNextPage()
 					}}

@@ -1,22 +1,22 @@
-import type { FlashListRef } from '@shopify/flash-list'
+import type { LegendListRef } from '@legendapp/list/react-native'
 import type { RefObject } from 'react'
 import { useCallback, useRef } from 'react'
 import type { GestureResponderEvent } from 'react-native'
 
-export function useDoubleTapScrollToTop<T>(
-	passedRef?: RefObject<FlashListRef<T> | null>,
+export function useDoubleTapScrollToTop(
+	passedRef?: RefObject<LegendListRef | null>,
 ) {
-	const localRef = useRef<FlashListRef<T>>(null)
+	const localRef = useRef<LegendListRef>(null)
 	const listRef = passedRef ?? localRef
 
 	const lastTapRef = useRef<number>(0)
 
 	const handleDoubleTap = useCallback(
-		(_e: GestureResponderEvent) => {
+		async (_e: GestureResponderEvent) => {
 			const now = Date.now()
 			const DOUBLE_TAP_DELAY = 300
 			if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-				listRef.current?.scrollToOffset({ offset: 0, animated: true })
+				await listRef.current?.scrollToOffset({ offset: 0, animated: true })
 				lastTapRef.current = 0
 			} else {
 				lastTapRef.current = now

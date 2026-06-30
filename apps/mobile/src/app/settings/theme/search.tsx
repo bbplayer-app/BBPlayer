@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useMemo, useState } from 'react'
@@ -14,7 +14,7 @@ import { useThemeSearch } from '@/hooks/queries/bilibili/theme'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
 import { BilibiliGarbSearchItem } from '@/types/apis/bilibili'
-import { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 
 const resultKey = (item: GarbSkinSearchResult) =>
 	`${item.kind ?? 'unknown'}-${item.actId ?? item.itemId}-${item.name}`
@@ -149,12 +149,15 @@ export default function ThemeSkinSearchPage() {
 					</Button>
 				</View>
 
-				<FlashList
+				<LegendList
 					data={resultsToDisplay}
 					keyExtractor={resultKey}
+					recycleItems
 					contentContainerStyle={styles.resultList}
 					showsVerticalScrollIndicator={false}
-					onEndReached={fetchNextPage}
+					onEndReached={() => {
+						if (hasNextPage) void fetchNextPage()
+					}}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}

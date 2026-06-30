@@ -73,7 +73,7 @@ export default function CollectionPage() {
 		[selectMode, selected, toggle, enterSelectMode],
 	)
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const {
 		data: collectionData,

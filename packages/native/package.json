@@ -37,7 +37,7 @@
 		"test": "expo-module test"
 	},
 	"devDependencies": {
-		"expo": "56.0.4",
+		"expo": "56.0.12",
 		"expo-module-scripts": "^56.0.2",
 		"react": "19.2.3",
 		"react-native": "0.85.3"

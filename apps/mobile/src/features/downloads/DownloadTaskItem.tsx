@@ -1,5 +1,5 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
-import { useRecyclingState } from '@shopify/flash-list'
+import { useRecyclingState } from '@legendapp/list/react-native'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
@@ -25,9 +25,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	initTask: DownloadTask
 }) {
 	const { colors } = useTheme()
-	const [task, setTask] = useRecyclingState<DownloadTask>(initTask, [
-		initTask.id,
-	])
+	const [task, setTask] = useRecyclingState<DownloadTask>(initTask)
 	const sharedProgress = useSharedValue(0)
 	const progressBackgroundWidth = useSharedValue(0)
 	const containerRef = useRef<View>(null)

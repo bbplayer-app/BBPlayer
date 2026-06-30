@@ -74,7 +74,7 @@ export default function FavoritePage() {
 	)
 	const openModal = useModalStore((state) => state.open)
 
-	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop<BilibiliTrack>()
+	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const {
 		data: favoriteData,

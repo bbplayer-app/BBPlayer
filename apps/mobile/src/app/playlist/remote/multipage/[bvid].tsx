@@ -1,4 +1,4 @@
-import type { FlashListRef } from '@shopify/flash-list'
+import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -30,7 +30,7 @@ import type {
 	BilibiliVideoDetails,
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
-import type { ListRenderItemInfoWithExtraData } from '@/types/flashlist'
+import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 import * as Haptics from '@/utils/haptics'
 import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import toast from '@/utils/toast'
@@ -122,7 +122,7 @@ export default function MultipagePage() {
 	const { mutate: syncMultipage } = usePlaylistSync()
 
 	const { playTrack } = useRemotePlaylist()
-	const listRef = useRef<FlashListRef<BilibiliTrack>>(null)
+	const listRef = useRef<LegendListRef>(null)
 	const { handleDoubleTap } = useDoubleTapScrollToTop(listRef)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)

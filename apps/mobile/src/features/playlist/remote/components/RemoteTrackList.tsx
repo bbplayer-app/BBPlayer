@@ -1,9 +1,8 @@
 import type {
-	FlashListProps,
-	FlashListRef,
-	ListRenderItem,
-} from '@shopify/flash-list'
-import { FlashList } from '@shopify/flash-list'
+	LegendListProps,
+	LegendListRef,
+} from '@legendapp/list/react-native'
+import { LegendList } from '@legendapp/list/react-native'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -16,13 +15,13 @@ import type { BilibiliTrack } from '@/types/core/media'
 import type {
 	ListRenderItemInfoWithExtraData,
 	SelectionState,
-} from '@/types/flashlist'
+} from '@/types/legendlist'
 import * as Haptics from '@/utils/haptics'
 
 import { TrackListItem, type TrackMenuItem } from './PlaylistItem'
 
 interface TrackListProps extends Omit<
-	FlashListProps<BilibiliTrack>,
+	LegendListProps<BilibiliTrack>,
 	'data' | 'renderItem' | 'extraData'
 > {
 	/**
@@ -62,7 +61,7 @@ interface TrackListProps extends Omit<
 	/**
 	 * 列表引用（可选）
 	 */
-	listRef?: React.Ref<FlashListRef<BilibiliTrack>>
+	listRef?: React.Ref<LegendListRef>
 }
 
 export interface ExtraData {
@@ -158,11 +157,12 @@ export function TrackList({
 
 	return (
 		<>
-			<FlashList
+			<LegendList
 				ref={listRef}
 				data={tracks}
 				extraData={extraData}
-				renderItem={renderItem as ListRenderItem<BilibiliTrack>}
+				renderItem={renderItem}
+				recycleItems
 				ItemSeparatorComponent={() => <Divider />}
 				keyExtractor={keyExtractor}
 				showsVerticalScrollIndicator={false}
