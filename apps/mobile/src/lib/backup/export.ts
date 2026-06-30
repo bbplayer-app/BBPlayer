@@ -2,10 +2,9 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { Directory, File, Paths } from 'expo-file-system'
 import JSZip from 'jszip'
 
+import { expoDb } from '@/lib/db/db'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
-
-import { expoDb } from '../db/db'
 
 import type { BackupManifest } from './types'
 

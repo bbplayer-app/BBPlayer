@@ -155,7 +155,9 @@ export default function ThemeSkinSearchPage() {
 					recycleItems
 					contentContainerStyle={styles.resultList}
 					showsVerticalScrollIndicator={false}
-					onEndReached={() => fetchNextPage()}
+					onEndReached={() => {
+						if (hasNextPage) void fetchNextPage()
+					}}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
