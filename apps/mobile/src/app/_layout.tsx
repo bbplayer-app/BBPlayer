@@ -17,6 +17,7 @@ import { Toaster } from 'sonner-native'
 
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
 import { alert } from '@/components/modals/AlertModal'
+import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
@@ -352,6 +353,7 @@ export default Sentry.wrap(function RootLayout() {
 					</Stack>
 				) : null}
 				<Toaster />
+				<PlayerQueueModal isVisible={true} />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>

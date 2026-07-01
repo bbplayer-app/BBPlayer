@@ -1,7 +1,7 @@
 import { Icon as ExpoIcon } from '@expo/ui'
 import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -77,7 +77,9 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
 
 	return (
-		<RectButton
+		<Touchable
+			underlayColor='black'
+			animationDuration={0}
 			style={[
 				styles.rectButton,
 				{
@@ -89,7 +91,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 				},
 			]}
 			delayLongPress={500}
-			enabled={!disabled}
+			disabled={disabled}
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(data.id)
@@ -180,13 +182,17 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 					{!disabled && !selectMode && (
 						<FunctionalMenu
 							anchor={
-								<RectButton style={styles.menuButton}>
+								<Touchable
+									underlayColor='black'
+									animationDuration={0}
+									style={styles.menuButton}
+								>
 									<Icon
 										source='dots-vertical'
 										size={20}
 										color={colors.primary}
 									/>
-								</RectButton>
+								</Touchable>
 							}
 						>
 							{menuItems.map((menuItem) => (
@@ -201,7 +207,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 					)}
 				</View>
 			</Surface>
-		</RectButton>
+		</Touchable>
 	)
 })
 

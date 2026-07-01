@@ -1,7 +1,7 @@
 import { type LyricLine } from '@bbplayer/splash'
 import { memo, useEffect } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	createAnimatedComponent,
@@ -14,7 +14,7 @@ import Animated, {
 
 import { KaraokeWord } from './KaraokeWord'
 
-const AnimatedRectButton = createAnimatedComponent(RectButton)
+const AnimatedTouchable = createAnimatedComponent(Touchable)
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
@@ -81,7 +81,9 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				style={StyleSheet.absoluteFill}
 				onPress={onPressBackground}
 			/>
-			<RectButton
+			<Touchable
+				underlayColor='black'
+				animationDuration={0}
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
 			>
@@ -118,7 +120,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 						{subText}
 					</Animated.Text>
 				)}
-			</RectButton>
+			</Touchable>
 		</View>
 	)
 })
@@ -221,7 +223,9 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				style={StyleSheet.absoluteFill}
 				onPress={onPressBackground}
 			/>
-			<AnimatedRectButton
+			<AnimatedTouchable
+				underlayColor='black'
+				animationDuration={0}
 				style={[styles.modernItemButton, containerAnimatedStyle]}
 				onPress={() => jumpToThisLyric(index)}
 			>
@@ -233,7 +237,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 						{subText}
 					</Animated.Text>
 				)}
-			</AnimatedRectButton>
+			</AnimatedTouchable>
 		</View>
 	)
 })

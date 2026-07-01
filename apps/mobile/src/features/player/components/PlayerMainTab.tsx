@@ -1,7 +1,7 @@
-import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { memo, type RefObject } from 'react'
+import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -14,7 +14,6 @@ import { PlayerSlider } from './PlayerSlider'
 import { TrackInfo } from './PlayerTrackInfo'
 
 interface PlayerMainTabProps {
-	sheetRef: RefObject<TrueSheet | null>
 	jumpTo: (key: string) => void
 	imageRef: ImageRef | null
 	onPresent: () => void
@@ -22,7 +21,6 @@ interface PlayerMainTabProps {
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
-	sheetRef,
 	jumpTo,
 	imageRef,
 	onPresent,
@@ -65,8 +63,8 @@ const PlayerMainTab = memo(function PlayerMainTab({
 				<PlayerControls
 					onOpenQueue={() => {
 						onPresent()
-						sheetRef.current?.present().catch(() => {
-							// Ignore error
+						TrueSheet.present('playerQueueModal').catch(() => {
+							// Ignore error if view not found or already dismissed
 						})
 					}}
 				/>

@@ -4,21 +4,23 @@ import {
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import {
 	Directions,
-	Gesture,
+	useTapGesture,
+	useFlingGesture,
+	useCompetingGestures,
 	GestureDetector,
-	RectButton,
+	Touchable,
 } from 'react-native-gesture-handler'
 import { Icon, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
-	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -92,7 +94,6 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
-	const opacity = useSharedValue(1)
 	const isVisible = currentTrack !== null
 	const bottomBarHeight = useBottomTabBarHeight()
 
@@ -102,73 +103,47 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
-	const prevTap = Gesture.Tap().onEnd((_e, success) => {
-		if (success) {
-			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
-			scheduleOnRN(() => Orpheus.skipToPrevious())
+	const playPause = async () => {
+		void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+		const isPlaying = await Orpheus.getIsPlaying()
+		if (isPlaying) {
+			void Orpheus.pause()
+		} else {
+			await Orpheus.pause()
+			await Orpheus.play()
 		}
-	})
-	const playTap = Gesture.Tap().onEnd((_e, success) => {
-		if (success) {
-			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
-			scheduleOnRN(async (_isPlaying) => {
-				const isPlaying = await Orpheus.getIsPlaying()
-				if (isPlaying) {
-					void Orpheus.pause()
-				} else {
-					// 或许可以解决 play 无响应的问题？
-					await Orpheus.pause()
-					await Orpheus.play()
-				}
-			}, isPlaying)
-		}
-	})
-	const nextTap = Gesture.Tap().onEnd((_e, success) => {
-		if (success) {
-			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Context_Click)
-			scheduleOnRN(() => Orpheus.skipToNext())
-		}
-	})
+	}
 
-	const navigateOnPlayerUpFling = Gesture.Fling()
-		.direction(Directions.UP)
-		.onStart(() => {
+	const navigateOnPlayerUpFling = useFlingGesture({
+		direction: Directions.UP,
+		onActivate: () => {
 			scheduleOnRN(router.navigate, '/player')
-		})
+		},
+	})
 
-	const preFling = Gesture.Fling()
-		.direction(Directions.LEFT)
-		.onStart(() => {
+	const preFling = useFlingGesture({
+		direction: Directions.LEFT,
+		onActivate: () => {
 			scheduleOnRN(() => Orpheus.skipToPrevious())
-		})
+		},
+	})
 
-	const nextFling = Gesture.Fling()
-		.direction(Directions.RIGHT)
-		.onStart(() => {
+	const nextFling = useFlingGesture({
+		direction: Directions.RIGHT,
+		onActivate: () => {
 			scheduleOnRN(() => Orpheus.skipToNext())
-		})
+		},
+	})
 
-	const outerTap = Gesture.Tap()
-		.requireExternalGestureToFail(
-			prevTap,
-			playTap,
-			nextTap,
-			navigateOnPlayerUpFling,
-			preFling,
-			nextFling,
-		)
-		.onBegin(() => {
-			opacity.value = withTiming(0.7, { duration: 100 })
-		})
-		.onFinalize((_e, success) => {
-			opacity.value = withTiming(1, { duration: 100 })
-
-			if (success) {
+	const outerTap = useTapGesture({
+		onDeactivate: (e) => {
+			if (!e.canceled) {
 				scheduleOnRN(router.navigate, '/player')
 			}
-		})
+		},
+	})
 
-	const combinedGesture = Gesture.Race(
+	const combinedGesture = useCompetingGestures(
 		navigateOnPlayerUpFling,
 		preFling,
 		nextFling,
@@ -179,12 +154,6 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		nowPlayingBarStyle === 'bottom'
 			? [styles.nowPlayingBarBottom]
 			: [styles.nowPlayingBarFloat]
-
-	const animatedStyle = useAnimatedStyle(() => {
-		return {
-			opacity: opacity.get(),
-		}
-	})
 
 	let bottomMargin = 0
 	let bottomPadding = 0
@@ -217,7 +186,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		>
 			{isVisible && (
 				<GestureDetector gesture={combinedGesture}>
-					<Animated.View
+					<View
 						style={[
 							playerStyle,
 							{
@@ -229,7 +198,6 @@ const NowPlayingBar = memo(function NowPlayingBar({
 										? 70 + bottomPadding
 										: undefined,
 							},
-							animatedStyle,
 						]}
 						testID='now-playing-bar'
 					>
@@ -271,39 +239,35 @@ const NowPlayingBar = memo(function NowPlayingBar({
 							</View>
 
 							<View style={styles.nowPlayingBarControls}>
-								<GestureDetector gesture={prevTap}>
-									<RectButton style={styles.nowPlayingBarControlButton}>
+								<Touchable
+									style={styles.nowPlayingBarControlButton}
+									onPress={() => playPause()}
+								>
+									{state === PlaybackState.BUFFERING ? (
+										<ActivityIndicator size='small' />
+									) : (
 										<Icon
-											source='skip-previous'
-											size={16}
+											source={finalPlayingIndicator}
+											size={24}
 											color={colors.onSurface}
 										/>
-									</RectButton>
-								</GestureDetector>
+									)}
+								</Touchable>
 
-								<GestureDetector gesture={playTap}>
-									<RectButton style={styles.nowPlayingBarControlButton}>
-										{state === PlaybackState.BUFFERING ? (
-											<ActivityIndicator size='small' />
-										) : (
-											<Icon
-												source={finalPlayingIndicator}
-												size={24}
-												color={colors.primary}
-											/>
-										)}
-									</RectButton>
-								</GestureDetector>
-
-								<GestureDetector gesture={nextTap}>
-									<RectButton style={styles.nowPlayingBarControlButton}>
-										<Icon
-											source='skip-next'
-											size={16}
-											color={colors.onSurface}
-										/>
-									</RectButton>
-								</GestureDetector>
+								<Touchable
+									style={styles.nowPlayingBarControlButton}
+									onPress={() =>
+										TrueSheet.present('playerQueueModal').catch(() => {
+											// Ignore error if view not found or already dismissed
+										})
+									}
+								>
+									<Icon
+										source='format-list-bulleted'
+										size={20}
+										color={colors.onSurface}
+									/>
+								</Touchable>
 							</View>
 						</View>
 						<View
@@ -316,7 +280,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 						>
 							<ProgressBar />
 						</View>
-					</Animated.View>
+					</View>
 				</GestureDetector>
 			)}
 		</View>

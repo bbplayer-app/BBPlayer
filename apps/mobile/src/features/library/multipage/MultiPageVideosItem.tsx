@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -16,7 +16,9 @@ const MultiPageVideosItem = memo(
 		return (
 			<>
 				<View>
-					<RectButton
+					<Touchable
+						underlayColor='black'
+						animationDuration={0}
 						onPress={() => {
 							router.push({
 								pathname: '/playlist/remote/multipage/[bvid]',
@@ -50,7 +52,7 @@ const MultiPageVideosItem = memo(
 								size={24}
 							/>
 						</View>
-					</RectButton>
+					</Touchable>
 				</View>
 				<Divider />
 			</>

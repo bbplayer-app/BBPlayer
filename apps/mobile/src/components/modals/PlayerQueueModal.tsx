@@ -16,10 +16,7 @@ import {
 	type RefObject,
 } from 'react'
 import { View } from 'react-native'
-import {
-	GestureHandlerRootView,
-	RectButton,
-} from 'react-native-gesture-handler'
+import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -53,7 +50,11 @@ const TrackItem = memo(
 				}}
 				elevation={0}
 			>
-				<RectButton onPress={() => onSwitchTrack(index)}>
+				<Touchable
+					underlayColor='black'
+					animationDuration={0}
+					onPress={() => onSwitchTrack(index)}
+				>
 					<View
 						style={{
 							flexDirection: 'row',
@@ -94,7 +95,7 @@ const TrackItem = memo(
 							}}
 						/>
 					</View>
-				</RectButton>
+				</Touchable>
 			</Surface>
 		)
 	},
@@ -103,7 +104,7 @@ const TrackItem = memo(
 TrackItem.displayName = 'TrackItem'
 
 interface PlayerQueueModalProps extends TrueSheetProps {
-	sheetRef: RefObject<TrueSheet | null>
+	sheetRef?: RefObject<TrueSheet | null>
 	isVisible: boolean
 }
 
@@ -192,6 +193,7 @@ function PlayerQueueModal({
 
 	return (
 		<TrueSheet
+			name='playerQueueModal'
 			ref={sheetRef}
 			detents={[0.75]}
 			cornerRadius={24}

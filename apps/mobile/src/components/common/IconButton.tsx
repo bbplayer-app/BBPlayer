@@ -1,7 +1,7 @@
 import { forwardRef, type ComponentRef } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, View } from 'react-native'
-import { BaseButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
@@ -143,7 +143,7 @@ const getIconButtonColor = ({
 	}
 }
 
-const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
+const IconButton = forwardRef<ComponentRef<typeof Touchable>, IconButtonProps>(
 	(
 		{
 			icon,
@@ -193,11 +193,11 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 		}
 
 		return (
-			<BaseButton
+			<Touchable
 				ref={ref}
 				onPress={handlePress}
-				enabled={!disabled}
-				rippleColor={rippleColorFinal}
+				disabled={disabled}
+				androidRipple={{ color: rippleColorFinal }}
 				style={[
 					{
 						width: buttonSize,
@@ -230,7 +230,7 @@ const IconButton = forwardRef<ComponentRef<typeof BaseButton>, IconButtonProps>(
 						/>
 					)}
 				</View>
-			</BaseButton>
+			</Touchable>
 		)
 	},
 )

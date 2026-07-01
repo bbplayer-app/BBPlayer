@@ -22,7 +22,7 @@ import {
 	ToastAndroid,
 	View,
 } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
 import { Icon, Searchbar, Text, useTheme } from 'react-native-paper'
 import { useAnimatedRef } from 'react-native-reanimated'
@@ -301,7 +301,9 @@ function HomePage() {
 								onPress={() => void syncFailuresSheetRef.current?.present()}
 							/>
 						)}
-						<RectButton
+						<Touchable
+							underlayColor='black'
+							animationDuration={0}
 							onPress={() => router.push('/settings/bilibili-account' as never)}
 							style={styles.avatarButton}
 						>
@@ -323,7 +325,7 @@ function HomePage() {
 									cachePolicy='memory-disk'
 								/>
 							) : null}
-						</RectButton>
+						</Touchable>
 					</View>
 				</View>
 
@@ -409,7 +411,9 @@ function HomePage() {
 								contentContainerStyle={styles.quickAccessScrollContent}
 							>
 								{/* 那月今日 */}
-								<RectButton
+								<Touchable
+									underlayColor='black'
+									animationDuration={0}
 									key='on-this-day'
 									style={[
 										styles.quickAccessCard,
@@ -443,10 +447,12 @@ function HomePage() {
 									>
 										那月今日
 									</Text>
-								</RectButton>
+								</Touchable>
 
 								{/* 最近常听 */}
-								<RectButton
+								<Touchable
+									underlayColor='black'
+									animationDuration={0}
 									key='recently-played'
 									style={[
 										styles.quickAccessCard,
@@ -475,11 +481,13 @@ function HomePage() {
 									>
 										最近常听
 									</Text>
-								</RectButton>
+								</Touchable>
 
 								{/* 稍后再看 - conditional on Bilibili cookie */}
 								{hasBilibiliCookie() && (
-									<RectButton
+									<Touchable
+										underlayColor='black'
+										animationDuration={0}
 										key='watch-later'
 										style={[
 											styles.quickAccessCard,
@@ -508,7 +516,7 @@ function HomePage() {
 										>
 											稍后再看
 										</Text>
-									</RectButton>
+									</Touchable>
 								)}
 							</ScrollView>
 						</View>
@@ -531,7 +539,9 @@ function HomePage() {
 									contentContainerStyle={styles.horizontalScrollContent}
 								>
 									{recentPlaylists.map((item) => (
-										<RectButton
+										<Touchable
+											underlayColor='black'
+											animationDuration={0}
 											key={item.id}
 											style={[
 												styles.playlistCard,
@@ -565,7 +575,7 @@ function HomePage() {
 													{item.itemCount} 首
 												</Text>
 											</View>
-										</RectButton>
+										</Touchable>
 									))}
 								</Animated.ScrollView>
 							</View>

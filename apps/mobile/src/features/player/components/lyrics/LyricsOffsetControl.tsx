@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { StyleSheet, useWindowDimensions, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Divider, Icon, Text, useTheme } from 'react-native-paper'
 
 export interface LyricsOffsetControlProps {
@@ -36,7 +36,9 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 				},
 			]}
 		>
-			<RectButton
+			<Touchable
+				underlayColor='black'
+				animationDuration={0}
 				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(0.5)}
 			>
@@ -45,14 +47,16 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 					size={20}
 					color={colors.onSurface}
 				/>
-			</RectButton>
+			</Touchable>
 			<Text
 				variant='titleSmall'
 				style={[styles.offsetControlText, { color: colors.onSurface }]}
 			>
 				{offset.toFixed(1)}s
 			</Text>
-			<RectButton
+			<Touchable
+				underlayColor='black'
+				animationDuration={0}
 				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(-0.5)}
 			>
@@ -61,9 +65,11 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 					size={20}
 					color={colors.onSurface}
 				/>
-			</RectButton>
+			</Touchable>
 			<Divider />
-			<RectButton
+			<Touchable
+				underlayColor='black'
+				animationDuration={0}
 				style={styles.offsetControlButton}
 				onPress={onClose}
 			>
@@ -72,7 +78,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 					size={20}
 					color={colors.onSurface}
 				/>
-			</RectButton>
+			</Touchable>
 		</View>
 	)
 })

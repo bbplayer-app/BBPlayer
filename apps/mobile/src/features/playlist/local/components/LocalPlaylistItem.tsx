@@ -3,9 +3,9 @@ import { Icon as ExpoIcon } from '@expo/ui'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
 import {
-	Gesture,
+	usePanGesture,
 	GestureDetector,
-	RectButton,
+	Touchable,
 } from 'react-native-gesture-handler'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
@@ -84,6 +84,14 @@ export const TrackListItem = memo(function TrackListItem({
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
 
+	const dragPan = usePanGesture({
+		activateAfterLongPress: 200,
+		runOnJS: true,
+		onActivate: (e) => onDragStart?.(e.absoluteY),
+		onUpdate: (e) => onDragUpdate?.(e.absoluteY),
+		onFinalize: () => onDragEnd?.(),
+	})
+
 	const renderDownloadStatus = useCallback(() => {
 		if (!downloadState) return null
 		let iconConfig
@@ -124,7 +132,9 @@ export const TrackListItem = memo(function TrackListItem({
 	])
 
 	return (
-		<RectButton
+		<Touchable
+			underlayColor='black'
+			animationDuration={0}
 			style={[
 				styles.rectButton,
 				{
@@ -136,7 +146,7 @@ export const TrackListItem = memo(function TrackListItem({
 				},
 			]}
 			delayLongPress={500}
-			enabled={!disabled}
+			disabled={disabled}
 			testID={`track-item-${index}`}
 			onPress={() => {
 				if (selectMode) {
@@ -251,14 +261,7 @@ export const TrackListItem = memo(function TrackListItem({
 						<View>
 							{selectMode ? (
 								playlist.type === 'local' && !isSearching ? (
-									<GestureDetector
-										gesture={Gesture.Pan()
-											.activateAfterLongPress(200)
-											.runOnJS(true)
-											.onStart((e) => onDragStart?.(e.absoluteY))
-											.onUpdate((e) => onDragUpdate?.(e.absoluteY))
-											.onFinalize(() => onDragEnd?.())}
-									>
+									<GestureDetector gesture={dragPan}>
 										<View style={styles.menuButton}>
 											<Icon
 												source='drag-vertical'
@@ -269,9 +272,11 @@ export const TrackListItem = memo(function TrackListItem({
 									</GestureDetector>
 								) : null
 							) : (
-								<RectButton
+								<Touchable
+									underlayColor='black'
+									animationDuration={0}
 									style={styles.menuButton}
-									enabled={!!onMenuPress}
+									disabled={!onMenuPress}
 									onPress={() => onMenuPress?.()}
 								>
 									<Icon
@@ -279,13 +284,13 @@ export const TrackListItem = memo(function TrackListItem({
 										size={20}
 										color={theme.colors.primary}
 									/>
-								</RectButton>
+								</Touchable>
 							)}
 						</View>
 					)}
 				</View>
 			</Surface>
-		</RectButton>
+		</Touchable>
 	)
 })
 

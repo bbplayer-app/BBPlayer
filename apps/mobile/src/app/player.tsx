@@ -1,5 +1,5 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
-import type { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import {
 	Canvas,
 	Group,
@@ -78,7 +78,6 @@ export default function PlayerPage() {
 	const theme = useTheme()
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
-	const sheetRef = useRef<TrueSheet>(null)
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
 	const currentTrackCover = resolveBilibiliImageUrl(
@@ -206,13 +205,12 @@ export default function PlayerPage() {
 			return
 		}
 		if (queueVisible) {
-			const sheet = sheetRef.current
-			if (!sheet) {
-				setQueueVisible(false)
-				return
-			}
-			sheet
-				.dismiss()
+			// const sheet = sheetRef.current
+			// if (!sheet) {
+			// 	setQueueVisible(false)
+			// 	return
+			// }
+			TrueSheet.dismiss('PlayerQueueModal')
 				.catch(() => {
 					// Ignore error if view not found or already dismissed
 				})
@@ -321,7 +319,6 @@ export default function PlayerPage() {
 								style={styles.tabView}
 							>
 								<PlayerMainTab
-									sheetRef={sheetRef}
 									jumpTo={jumpTo}
 									imageRef={coverRef}
 									onPresent={() => setQueueVisible(true)}
@@ -346,7 +343,6 @@ export default function PlayerPage() {
 					/>
 
 					<PlayerQueueModal
-						sheetRef={sheetRef}
 						isVisible={queueVisible}
 						onDidDismiss={() => setQueueVisible(false)}
 						onDidPresent={() => setQueueVisible(true)}

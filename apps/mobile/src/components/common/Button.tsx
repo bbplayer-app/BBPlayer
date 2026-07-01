@@ -2,7 +2,7 @@ import color from 'color'
 import { type ComponentRef, forwardRef } from 'react'
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native'
 import { StyleSheet, View } from 'react-native'
-import { BaseButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import type { MD3Theme } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
@@ -153,7 +153,7 @@ const getButtonColors = ({
 	}
 }
 
-const Button = forwardRef<ComponentRef<typeof BaseButton>, ButtonProps>(
+const Button = forwardRef<ComponentRef<typeof Touchable>, ButtonProps>(
 	(
 		{
 			mode = 'text',
@@ -225,11 +225,11 @@ const Button = forwardRef<ComponentRef<typeof BaseButton>, ButtonProps>(
 				]}
 				elevation={hasElevation && !disabled ? (isMode('elevated') ? 1 : 2) : 0}
 			>
-				<BaseButton
+				<Touchable
 					ref={ref}
 					onPress={onPress}
-					enabled={!disabled}
-					rippleColor={rippleColor}
+					disabled={disabled}
+					androidRipple={{ color: rippleColor }}
 					style={[
 						styles.button,
 						compact && styles.compact,
@@ -275,7 +275,7 @@ const Button = forwardRef<ComponentRef<typeof BaseButton>, ButtonProps>(
 							{children}
 						</Text>
 					</View>
-				</BaseButton>
+				</Touchable>
 			</Surface>
 		)
 	},
