@@ -8,8 +8,8 @@ import LinearProgressIndicator from '@/components/common/LinearProgressIndicator
 import { alert } from '@/components/modals/AlertModal'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { GarbSkinSearchResult } from '@/lib/api/bilibili/garb'
-import { installSkin } from '@/services/theme/SkinManager'
-import type { SkinDownloadProgress } from '@/services/theme/types'
+import { installSkin } from '@/lib/theme/SkinManager'
+import type { SkinDownloadProgress } from '@/lib/theme/types'
 import toast from '@/utils/toast'
 
 interface SkinDownloadProgressModalProps {

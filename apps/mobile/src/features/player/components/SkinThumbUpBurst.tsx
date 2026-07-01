@@ -3,7 +3,7 @@ import { View } from 'react-native'
 import { RNSvgaPlayer, SvgaPlayerRef } from 'rn-newarch-svga-player'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
-import type { AppSkin } from '@/services/theme/types'
+import type { AppSkin } from '@/lib/theme/types'
 import log from '@/utils/log'
 
 interface SkinThumbUpBurstProps {

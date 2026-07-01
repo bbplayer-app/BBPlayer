@@ -19,16 +19,16 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
-import { loadSkinAssets } from '@/services/theme/runtime'
-import { uninstallSkin } from '@/services/theme/SkinManager'
+import { loadSkinAssets } from '@/lib/theme/runtime'
+import { uninstallSkin } from '@/lib/theme/SkinManager'
 import type {
 	AppSkin,
 	InstalledSkinMeta,
 	SkinAssetDeclaration,
 	SkinAssetFeatures,
 	SkinBootSplashAsset,
-} from '@/services/theme/types'
-import { assetFeaturesFromManifest } from '@/services/theme/types'
+} from '@/lib/theme/types'
+import { assetFeaturesFromManifest } from '@/lib/theme/types'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 

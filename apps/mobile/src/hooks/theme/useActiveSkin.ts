@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
-import { loadActiveSkin, invalidateSkinCache } from '@/services/theme/runtime'
-import type { AppSkin } from '@/services/theme/types'
+import { loadActiveSkin, invalidateSkinCache } from '@/lib/theme/runtime'
+import type { AppSkin } from '@/lib/theme/types'
 
 export default function useActiveSkin(): AppSkin | null {
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
