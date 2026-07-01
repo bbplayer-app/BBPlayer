@@ -12,6 +12,7 @@ import { Platform, StyleSheet, View } from 'react-native'
 import {
 	Directions,
 	useTapGesture,
+	usePanGesture,
 	useFlingGesture,
 	useCompetingGestures,
 	GestureDetector,
@@ -21,12 +22,15 @@ import { Icon, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
 	useSharedValue,
+	withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import * as Haptics from '@/utils/haptics'
@@ -58,7 +62,7 @@ const ProgressBar = memo(function ProgressBar() {
 
 	useLayoutEffect(() => {
 		trackViewRef.current?.measure((_x, _y, width) => {
-			sharedTrackViewWidth.value = width
+			sharedTrackViewWidth.set(width)
 		})
 	}, [sharedTrackViewWidth, trackViewRef])
 
@@ -103,6 +107,30 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
+	const { data: queue } = usePlayerQueue(isVisible)
+	const currentTrackId = useCurrentTrackId()
+	const queueIndex =
+		queue && currentTrackId
+			? queue.findIndex((t) => t.id === currentTrackId)
+			: -1
+	const prevTrack = queueIndex > 0 ? queue![queueIndex - 1] : null
+	const nextTrack =
+		queue && queueIndex < queue.length - 1 ? queue[queueIndex + 1] : null
+
+	const dragOffset = useSharedValue(0)
+
+	const normalOpacity = useAnimatedStyle(() => ({
+		opacity: 1 - Math.min(Math.abs(dragOffset.value) / 40, 1),
+	}))
+
+	const prevIndicatorOpacity = useAnimatedStyle(() => ({
+		opacity: Math.min(Math.max(dragOffset.value / 40, 0), 1),
+	}))
+
+	const nextIndicatorOpacity = useAnimatedStyle(() => ({
+		opacity: Math.min(Math.max(-dragOffset.value / 40, 0), 1),
+	}))
+
 	const playPause = async () => {
 		void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 		const isPlaying = await Orpheus.getIsPlaying()
@@ -121,17 +149,23 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		},
 	})
 
-	const preFling = useFlingGesture({
-		direction: Directions.LEFT,
-		onActivate: () => {
-			scheduleOnRN(() => Orpheus.skipToPrevious())
-		},
-	})
+	const SWIPE_THRESHOLD = 80
 
-	const nextFling = useFlingGesture({
-		direction: Directions.RIGHT,
-		onActivate: () => {
-			scheduleOnRN(() => Orpheus.skipToNext())
+	const panGesture = usePanGesture({
+		activeOffsetX: [-10, 10],
+		failOffsetY: [-20, 20],
+		onUpdate: (e) => {
+			'worklet'
+			dragOffset.set(e.translationX)
+		},
+		onDeactivate: () => {
+			'worklet'
+			if (dragOffset.value > SWIPE_THRESHOLD) {
+				scheduleOnRN(() => void Orpheus.skipToPrevious())
+			} else if (dragOffset.value < -SWIPE_THRESHOLD) {
+				scheduleOnRN(() => void Orpheus.skipToNext())
+			}
+			dragOffset.set(withTiming(0))
 		},
 	})
 
@@ -145,8 +179,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 	const combinedGesture = useCompetingGestures(
 		navigateOnPlayerUpFling,
-		preFling,
-		nextFling,
+		panGesture,
 		outerTap,
 	)
 
@@ -221,21 +254,81 @@ const NowPlayingBar = memo(function NowPlayingBar({
 								cachePolicy={'disk'}
 							/>
 
-							<View style={styles.nowPlayingBarTextContainer}>
-								<Text
-									variant='titleSmall'
-									numberOfLines={1}
-									style={{ color: colors.onSurface }}
+							<View
+								style={[
+									styles.nowPlayingBarTextContainer,
+									{ position: 'relative' },
+								]}
+							>
+								{/* Normal state: displayed inline so the parent has height */}
+								<Animated.View
+									style={[normalOpacity, { flex: 1, justifyContent: 'center' }]}
+									pointerEvents='none'
 								>
-									{currentTrack.title ?? '未知曲目'}
-								</Text>
-								<Text
-									variant='bodySmall'
-									numberOfLines={1}
-									style={{ color: colors.onSurfaceVariant }}
+									<Text
+										variant='titleSmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurface }}
+									>
+										{currentTrack.title ?? '未知曲目'}
+									</Text>
+									<Text
+										variant='bodySmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										{currentTrack.artist?.name ?? '未知'}
+									</Text>
+								</Animated.View>
+
+								{/* Prev/next indicators: absolutely positioned on top */}
+								<Animated.View
+									style={[
+										prevIndicatorOpacity,
+										StyleSheet.absoluteFill,
+										{ justifyContent: 'center' },
+									]}
+									pointerEvents='none'
 								>
-									{currentTrack.artist?.name ?? '未知'}
-								</Text>
+									<Text
+										variant='titleSmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurface, fontWeight: 'bold' }}
+									>
+										上一首
+									</Text>
+									<Text
+										variant='bodySmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										{prevTrack?.title ?? ''}
+									</Text>
+								</Animated.View>
+
+								<Animated.View
+									style={[
+										nextIndicatorOpacity,
+										StyleSheet.absoluteFill,
+										{ justifyContent: 'center' },
+									]}
+									pointerEvents='none'
+								>
+									<Text
+										variant='titleSmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurface, fontWeight: 'bold' }}
+									>
+										下一首
+									</Text>
+									<Text
+										variant='bodySmall'
+										numberOfLines={1}
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										{nextTrack?.title ?? ''}
+									</Text>
+								</Animated.View>
 							</View>
 
 							<View style={styles.nowPlayingBarControls}>
