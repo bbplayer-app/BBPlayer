@@ -1,5 +1,4 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import {
 	Canvas,
 	Group,
@@ -30,7 +29,6 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
@@ -38,6 +36,7 @@ import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { useScreenDimensions } from '@/hooks/ui/useScreenDimensions'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
@@ -197,26 +196,14 @@ export default function PlayerPage() {
 		}
 	}, [colorScheme, playerBackgroundStyle])
 
-	const [queueVisible, setQueueVisible] = useState(false)
-
 	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
 			setMenuVisible(false)
 			return
 		}
-		if (queueVisible) {
-			// const sheet = sheetRef.current
-			// if (!sheet) {
-			// 	setQueueVisible(false)
-			// 	return
-			// }
-			TrueSheet.dismiss('PlayerQueueModal')
-				.catch(() => {
-					// Ignore error if view not found or already dismissed
-				})
-				.finally(() => {
-					setQueueVisible(false)
-				})
+
+		if (usePlayerQueueSheetStore.getState().isOpen) {
+			void usePlayerQueueSheetStore.getState().close()
 			return
 		}
 		if (index === 1) {
@@ -321,7 +308,7 @@ export default function PlayerPage() {
 								<PlayerMainTab
 									jumpTo={jumpTo}
 									imageRef={coverRef}
-									onPresent={() => setQueueVisible(true)}
+									onPresent={() => {}}
 									danmakuEnabled={index === 0}
 								/>
 							</View>
@@ -340,12 +327,6 @@ export default function PlayerPage() {
 					<PlayerFunctionalMenu
 						menuVisible={menuVisible}
 						setMenuVisible={setMenuVisible}
-					/>
-
-					<PlayerQueueModal
-						isVisible={queueVisible}
-						onDidDismiss={() => setQueueVisible(false)}
-						onDidPresent={() => setQueueVisible(true)}
 					/>
 				</View>
 			</View>

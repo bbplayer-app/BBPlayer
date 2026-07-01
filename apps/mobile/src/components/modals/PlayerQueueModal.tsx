@@ -24,6 +24,7 @@ import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 
 const TrackItem = memo(
 	({
@@ -199,6 +200,8 @@ function PlayerQueueModal({
 			cornerRadius={24}
 			backgroundColor={theme.colors.elevation.level1}
 			scrollable
+			onDidPresent={() => usePlayerQueueSheetStore.getState().setOpen(true)}
+			onDidDismiss={() => usePlayerQueueSheetStore.getState().setOpen(false)}
 			{...props}
 		>
 			<GestureHandlerRootView style={{ flex: 1 }}>

@@ -1,4 +1,3 @@
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
@@ -7,6 +6,7 @@ import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
 
 import { PlayerControls } from './PlayerControls'
@@ -63,9 +63,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 				<PlayerControls
 					onOpenQueue={() => {
 						onPresent()
-						TrueSheet.present('playerQueueModal').catch(() => {
-							// Ignore error if view not found or already dismissed
-						})
+						void usePlayerQueueSheetStore.getState().open()
 					}}
 				/>
 			</View>

@@ -4,7 +4,6 @@ import {
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useLayoutEffect, useRef } from 'react'
@@ -33,6 +32,7 @@ import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
 import { resolveTrackCover } from '@/utils/imageUrl'
 
@@ -367,11 +367,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 								<Touchable
 									style={styles.nowPlayingBarControlButton}
-									onPress={() =>
-										TrueSheet.present('playerQueueModal').catch(() => {
-											// Ignore error if view not found or already dismissed
-										})
-									}
+									onPress={() => usePlayerQueueSheetStore.getState().open()}
 								>
 									<Icon
 										source='format-list-bulleted'
