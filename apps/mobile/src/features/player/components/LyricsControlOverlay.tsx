@@ -3,9 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
 import {
-	Gesture,
+	useTapGesture,
 	GestureDetector,
-	RectButton,
+	Touchable,
 } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
 import Animated, {
@@ -132,13 +132,16 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	}, [clearHideTimer])
 
 	// 点击手势切换控件显示
-	const tapGesture = Gesture.Tap().onEnd(() => {
-		'worklet'
-		if (controlsOpacity.value < 0.5) {
-			scheduleOnRN(showControls)
-		} else {
-			scheduleOnRN(resetHideTimer)
-		}
+	const tapGesture = useTapGesture({
+		onDeactivate: (e) => {
+			'worklet'
+			if (e.canceled) return
+			if (controlsOpacity.value < 0.5) {
+				scheduleOnRN(showControls)
+			} else {
+				scheduleOnRN(resetHideTimer)
+			}
+		},
 	})
 
 	// 控件交互时重置隐藏定时器
@@ -194,11 +197,11 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 			>
 				<FunctionalMenu
 					anchor={
-						<RectButton
+						<Touchable
+							androidRipple={{}}
 							style={styles.utilityButton}
-							// @ts-expect-error -- RectButton ref typing
 							ref={actionButtonRef}
-							enabled={!offsetMenuVisible}
+							disabled={offsetMenuVisible}
 						>
 							<Icon
 								source='dots-vertical'
@@ -207,7 +210,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
 								}
 							/>
-						</RectButton>
+						</Touchable>
 					}
 				>
 					{showTranslationToggle && (

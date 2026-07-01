@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -13,8 +13,9 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 
 	return (
 		<View>
-			<RectButton
-				enabled={item.state !== 1}
+			<Touchable
+				androidRipple={{}}
+				disabled={item.state === 1}
 				onPress={() => {
 					if (item.attr === 0) {
 						router.push({
@@ -58,7 +59,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 						/>
 					</View>
 				</View>
-			</RectButton>
+			</Touchable>
 			<Divider />
 		</View>
 	)

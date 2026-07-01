@@ -6,7 +6,7 @@ import {
 	useWindowDimensions,
 	View,
 } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Chip, Divider, IconButton, Text, useTheme } from 'react-native-paper'
 import type { AnimatedRef } from 'react-native-reanimated'
 import Animated, {
@@ -175,7 +175,8 @@ export default function SearchSuggestions({
 			index: number
 		}) => {
 			return (
-				<RectButton
+				<Touchable
+					androidRipple={{}}
 					onPress={() => {
 						Keyboard.dismiss()
 						onSuggestionPress(item.value)
@@ -202,7 +203,7 @@ export default function SearchSuggestions({
 							),
 						)}
 					</Text>
-				</RectButton>
+				</Touchable>
 			)
 		},
 		[colors.onSurface, colors.primary, colors.surface, onSuggestionPress],

@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useColorScheme, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -28,7 +28,8 @@ export const HistoryListItem = memo(function HistoryListItem({
 	const isCurrentTrack = useIsCurrentTrack(item.track.uniqueKey)
 
 	return (
-		<RectButton
+		<Touchable
+			androidRipple={{}}
 			style={{
 				backgroundColor: isCurrentTrack
 					? dark
@@ -133,6 +134,6 @@ export const HistoryListItem = memo(function HistoryListItem({
 					</Text>
 				</View>
 			</View>
-		</RectButton>
+		</Touchable>
 	)
 })

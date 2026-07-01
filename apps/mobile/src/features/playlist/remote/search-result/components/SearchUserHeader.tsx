@@ -3,7 +3,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { decode } from 'he'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Text, useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -155,11 +155,10 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 						},
 					]}
 				>
-					<RectButton
+					<Touchable
+						androidRipple={{}}
 						onPress={() => handleUserPress(user.mid)}
 						style={styles.singleCardButton}
-						activeOpacity={0.08}
-						rippleColor={Color(colors.primary).alpha(0.12).rgb().string()}
 					>
 						<View style={styles.singleRow}>
 							<Image
@@ -228,7 +227,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 								</Text>
 							</View>
 						) : null}
-					</RectButton>
+					</Touchable>
 				</View>
 				<Text
 					variant='titleMedium'
@@ -275,11 +274,10 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 								},
 							]}
 						>
-							<RectButton
+							<Touchable
+								androidRipple={{}}
 								onPress={() => handleUserPress(user.mid)}
 								style={styles.cardButton}
-								activeOpacity={0.08}
-								rippleColor={Color(colors.primary).alpha(0.1).rgb().string()}
 							>
 								<Image
 									source={{ uri: avatarUrl }}
@@ -301,7 +299,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 								>
 									{formatFansCount(user.fans)} 粉丝
 								</Text>
-							</RectButton>
+							</Touchable>
 						</View>
 					)
 				})}

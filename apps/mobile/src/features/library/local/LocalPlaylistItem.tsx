@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Divider, Icon, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -17,7 +17,8 @@ const LocalPlaylistItem = memo(
 
 		return (
 			<View>
-				<RectButton
+				<Touchable
+					androidRipple={{}}
 					style={styles.rectButton}
 					onPress={() => {
 						router.push({
@@ -81,7 +82,7 @@ const LocalPlaylistItem = memo(
 							/>
 						</View>
 					</View>
-				</RectButton>
+				</Touchable>
 				<Divider />
 			</View>
 		)

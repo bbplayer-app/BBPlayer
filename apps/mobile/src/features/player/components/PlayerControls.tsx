@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router'
 import LottieView, { type AnimationObject } from 'lottie-react-native'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppState, StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -138,7 +138,8 @@ export function MainPlaybackControls({
 
 	return (
 		<View style={[styles.mainControlsContainer, { gap }]}>
-			<RectButton
+			<Touchable
+				androidRipple={{}}
 				style={{
 					width: skipButtonSize,
 					height: skipButtonSize,
@@ -163,8 +164,9 @@ export function MainPlaybackControls({
 					speed={2}
 					loop={false}
 				/>
-			</RectButton>
-			<RectButton
+			</Touchable>
+			<Touchable
+				androidRipple={{}}
 				style={{
 					width: playButtonSize,
 					height: playButtonSize,
@@ -208,8 +210,9 @@ export function MainPlaybackControls({
 						loop={false}
 					/>
 				)}
-			</RectButton>
-			<RectButton
+			</Touchable>
+			<Touchable
+				androidRipple={{}}
 				style={{
 					width: skipButtonSize,
 					height: skipButtonSize,
@@ -234,7 +237,7 @@ export function MainPlaybackControls({
 					speed={2}
 					loop={false}
 				/>
-			</RectButton>
+			</Touchable>
 		</View>
 	)
 }

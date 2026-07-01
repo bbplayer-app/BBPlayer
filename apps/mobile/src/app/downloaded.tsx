@@ -12,7 +12,7 @@ import {
 	Alert,
 	PermissionsAndroid,
 } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Appbar, Divider, Surface, Text, useTheme } from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -118,7 +118,8 @@ function DownloadedItem({
 	const track = item.track
 
 	return (
-		<RectButton
+		<Touchable
+			androidRipple={{}}
 			style={[
 				styles.rectButton,
 				{
@@ -235,7 +236,7 @@ function DownloadedItem({
 					)}
 				</View>
 			</Surface>
-		</RectButton>
+		</Touchable>
 	)
 }
 

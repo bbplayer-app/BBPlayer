@@ -105,6 +105,16 @@ class OrpheusPlayerManager: NSObject {
         guard index >= 0 && index < queue.count else { return nil }
         return queue[index]
     }
+
+    func getAdjacentTracks() -> [String: Track?] {
+        let prevIdx = queueManager.getPreviousIndex(repeatMode: repeatMode)
+        let nextIdx = queueManager.getNextIndex(repeatMode: repeatMode)
+        let queue = queueManager.getQueue()
+        return [
+            "previous": prevIdx.flatMap { $0 >= 0 && $0 < queue.count ? queue[$0] : nil },
+            "next": nextIdx.flatMap { $0 >= 0 && $0 < queue.count ? queue[$0] : nil },
+        ]
+    }
     
     func getCurrentIndex() -> Int {
         return queueManager.getCurrentIndex()

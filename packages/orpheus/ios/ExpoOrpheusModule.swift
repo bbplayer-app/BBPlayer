@@ -129,6 +129,10 @@ public class ExpoOrpheusModule: Module {
         return OrpheusPlayerManager.shared.repeatMode.rawValue
     }
 
+    AsyncFunction("getAdjacentTracks") { () -> [String: Track?] in
+        return OrpheusPlayerManager.shared.getAdjacentTracks()
+    }
+
     AsyncFunction("getShuffleMode") { () -> Bool in
         return OrpheusPlayerManager.shared.shuffleMode
     }

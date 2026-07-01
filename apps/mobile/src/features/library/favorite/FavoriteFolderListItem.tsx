@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { RectButton } from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Divider, Icon, Text } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
@@ -13,7 +13,8 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 
 	return (
 		<View>
-			<RectButton
+			<Touchable
+				androidRipple={{}}
 				onPress={() => {
 					router.push({
 						pathname: '/playlist/remote/favorite/[id]',
@@ -46,7 +47,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 						/>
 					</View>
 				</View>
-			</RectButton>
+			</Touchable>
 			<Divider />
 		</View>
 	)

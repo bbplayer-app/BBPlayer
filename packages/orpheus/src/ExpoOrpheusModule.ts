@@ -191,6 +191,12 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	getIndexTrack(index: number): Promise<Track | null>
 	/** 返回当前重复模式，取值使用导出的 `RepeatMode`。 */
 	getRepeatMode(): Promise<RepeatMode>
+	/**
+	 * 返回当前曲目的上一首和下一首，考虑循环模式与随机播放。
+	 *
+	 * 没有上一首/下一首时对应字段为 `null`。
+	 */
+	getAdjacentTracks(): Promise<{ previous: Track | null; next: Track | null }>
 	/** 保存原生 Bilibili 网络请求使用的 Cookie。 */
 	setBilibiliCookie(cookie: string): void
 	/**

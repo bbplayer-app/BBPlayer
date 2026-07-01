@@ -5,6 +5,15 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- 重新设计播放条
+- 升级到 RNGH v3
+- 切换到 LegendList
+- 优化进入播放列表页面时的流畅性
+
 ## [2.6.1] - 2026-06-24
 
 ### Changed

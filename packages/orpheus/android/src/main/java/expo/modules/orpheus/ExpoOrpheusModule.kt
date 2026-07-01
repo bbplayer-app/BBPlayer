@@ -517,6 +517,46 @@ class ExpoOrpheusModule : Module() {
             withPlayerOnMainThread { it.repeatMode }
         }
 
+        AsyncFunction("getAdjacentTracks") Coroutine { ->
+            withPlayerOnMainThread { currentPlayer ->
+                val mediaItemCount = currentPlayer.mediaItemCount
+                val currentIdx = currentPlayer.currentMediaItemIndex
+
+                fun resolvePrev(): TrackRecord? {
+                    if (mediaItemCount == 0 || currentIdx == C.INDEX_UNSET) return null
+                    if (currentPlayer.hasPreviousMediaItem()) {
+                        val idx = currentPlayer.previousMediaItemIndex
+                        if (idx in 0 until mediaItemCount) {
+                            return mediaItemToTrackRecord(currentPlayer.getMediaItemAt(idx))
+                        }
+                    }
+                    if (currentPlayer.repeatMode == Player.REPEAT_MODE_ONE) {
+                        return mediaItemToTrackRecord(currentPlayer.getMediaItemAt(mediaItemCount - 1))
+                    }
+                    return null
+                }
+
+                fun resolveNext(): TrackRecord? {
+                    if (mediaItemCount == 0 || currentIdx == C.INDEX_UNSET) return null
+                    if (currentPlayer.hasNextMediaItem()) {
+                        val idx = currentPlayer.nextMediaItemIndex
+                        if (idx in 0 until mediaItemCount) {
+                            return mediaItemToTrackRecord(currentPlayer.getMediaItemAt(idx))
+                        }
+                    }
+                    if (currentPlayer.repeatMode == Player.REPEAT_MODE_ONE) {
+                        return mediaItemToTrackRecord(currentPlayer.getMediaItemAt(0))
+                    }
+                    return null
+                }
+
+                mapOf(
+                    "previous" to resolvePrev(),
+                    "next" to resolveNext()
+                )
+            }
+        }
+
         AsyncFunction("removeTrack") Coroutine { index: Int ->
             withServiceAndPlayerOnMainThread { service, currentPlayer ->
                 if (service.shuffleManager.isEnabled) {
