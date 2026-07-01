@@ -176,8 +176,7 @@ export default function SearchSuggestions({
 		}) => {
 			return (
 				<Touchable
-					underlayColor='black'
-					animationDuration={0}
+					androidRipple={{}}
 					onPress={() => {
 						Keyboard.dismiss()
 						onSuggestionPress(item.value)

@@ -1,12 +1,13 @@
 import {
 	Orpheus,
 	PlaybackState,
+	useAdjacentTracks,
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
-import { useRouter } from 'expo-router'
-import { memo, useLayoutEffect, useRef } from 'react'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import {
 	Directions,
@@ -27,9 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
-import { usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
@@ -107,15 +106,22 @@ const NowPlayingBar = memo(function NowPlayingBar({
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
-	const { data: queue } = usePlayerQueue(isVisible)
-	const currentTrackId = useCurrentTrackId()
-	const queueIndex =
-		queue && currentTrackId
-			? queue.findIndex((t) => t.id === currentTrackId)
-			: -1
-	const prevTrack = queueIndex > 0 ? queue![queueIndex - 1] : null
-	const nextTrack =
-		queue && queueIndex < queue.length - 1 ? queue[queueIndex + 1] : null
+	const {
+		adjacent: { previous: prevTrack, next: nextTrack },
+		refresh: refreshAdjacent,
+	} = useAdjacentTracks()
+
+	useFocusEffect(() => {
+		refreshAdjacent()
+	})
+
+	const hasPrevSv = useSharedValue(false)
+	const hasNextSv = useSharedValue(false)
+
+	useEffect(() => {
+		hasPrevSv.value = prevTrack != null
+		hasNextSv.value = nextTrack != null
+	}, [hasPrevSv, hasNextSv, prevTrack, nextTrack])
 
 	const dragOffset = useSharedValue(0)
 	const hapticFired = useSharedValue(0)
@@ -138,7 +144,6 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		if (isPlaying) {
 			void Orpheus.pause()
 		} else {
-			await Orpheus.pause()
 			await Orpheus.play()
 		}
 	}
@@ -157,8 +162,18 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		failOffsetY: [-20, 20],
 		onUpdate: (e) => {
 			'worklet'
+			if (
+				(e.translationX > 0 && !hasPrevSv.value) ||
+				(e.translationX < 0 && !hasNextSv.value)
+			) {
+				return
+			}
 			dragOffset.set(e.translationX)
-			if (e.translationX > SWIPE_THRESHOLD && hapticFired.value !== 1) {
+			if (
+				e.translationX > SWIPE_THRESHOLD &&
+				hapticFired.value !== 1 &&
+				hasPrevSv.value
+			) {
 				hapticFired.set(1)
 				scheduleOnRN(
 					Haptics.performHaptics,
@@ -166,7 +181,8 @@ const NowPlayingBar = memo(function NowPlayingBar({
 				)
 			} else if (
 				e.translationX < -SWIPE_THRESHOLD &&
-				hapticFired.value !== -1
+				hapticFired.value !== -1 &&
+				hasNextSv.value
 			) {
 				hapticFired.set(-1)
 				scheduleOnRN(
@@ -177,9 +193,9 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		},
 		onDeactivate: () => {
 			'worklet'
-			if (dragOffset.value > SWIPE_THRESHOLD) {
+			if (dragOffset.value > SWIPE_THRESHOLD && hasPrevSv.value) {
 				scheduleOnRN(() => void Orpheus.skipToPrevious())
-			} else if (dragOffset.value < -SWIPE_THRESHOLD) {
+			} else if (dragOffset.value < -SWIPE_THRESHOLD && hasNextSv.value) {
 				scheduleOnRN(() => void Orpheus.skipToNext())
 			}
 			dragOffset.set(withTiming(0))

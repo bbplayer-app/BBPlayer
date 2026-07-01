@@ -82,8 +82,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 				onPress={onPressBackground}
 			/>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={styles.oldSchoolItemButton}
 				onPress={() => jumpToThisLyric(index)}
 			>
@@ -224,8 +223,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 				onPress={onPressBackground}
 			/>
 			<AnimatedTouchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={[styles.modernItemButton, containerAnimatedStyle]}
 				onPress={() => jumpToThisLyric(index)}
 			>

@@ -78,8 +78,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 	return (
 		<Touchable
-			underlayColor='black'
-			animationDuration={0}
+			androidRipple={{}}
 			style={[
 				styles.rectButton,
 				{
@@ -183,8 +182,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 						<FunctionalMenu
 							anchor={
 								<Touchable
-									underlayColor='black'
-									animationDuration={0}
+									androidRipple={{}}
 									style={styles.menuButton}
 								>
 									<Icon

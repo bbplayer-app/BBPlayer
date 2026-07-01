@@ -29,8 +29,7 @@ export const HistoryListItem = memo(function HistoryListItem({
 
 	return (
 		<Touchable
-			underlayColor='black'
-			animationDuration={0}
+			androidRipple={{}}
 			style={{
 				backgroundColor: isCurrentTrack
 					? dark

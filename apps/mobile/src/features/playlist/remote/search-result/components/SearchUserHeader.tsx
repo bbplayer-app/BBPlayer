@@ -156,11 +156,9 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 					]}
 				>
 					<Touchable
-						underlayColor='black'
-						animationDuration={0}
+						androidRipple={{}}
 						onPress={() => handleUserPress(user.mid)}
 						style={styles.singleCardButton}
-						activeOpacity={0.08}
 					>
 						<View style={styles.singleRow}>
 							<Image
@@ -277,11 +275,9 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 							]}
 						>
 							<Touchable
-								underlayColor='black'
-								animationDuration={0}
+								androidRipple={{}}
 								onPress={() => handleUserPress(user.mid)}
 								style={styles.cardButton}
-								activeOpacity={0.08}
 							>
 								<Image
 									source={{ uri: avatarUrl }}

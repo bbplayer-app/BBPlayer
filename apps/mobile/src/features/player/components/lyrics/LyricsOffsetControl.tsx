@@ -37,8 +37,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 			]}
 		>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(0.5)}
 			>
@@ -55,8 +54,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 				{offset.toFixed(1)}s
 			</Text>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={styles.offsetControlButton}
 				onPress={() => onChangeOffset(-0.5)}
 			>
@@ -68,8 +66,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 			</Touchable>
 			<Divider />
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={styles.offsetControlButton}
 				onPress={onClose}
 			>

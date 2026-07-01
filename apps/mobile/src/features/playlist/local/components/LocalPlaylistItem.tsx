@@ -133,8 +133,7 @@ export const TrackListItem = memo(function TrackListItem({
 
 	return (
 		<Touchable
-			underlayColor='black'
-			animationDuration={0}
+			androidRipple={{}}
 			style={[
 				styles.rectButton,
 				{
@@ -273,8 +272,7 @@ export const TrackListItem = memo(function TrackListItem({
 								) : null
 							) : (
 								<Touchable
-									underlayColor='black'
-									animationDuration={0}
+									androidRipple={{}}
 									style={styles.menuButton}
 									disabled={!onMenuPress}
 									onPress={() => onMenuPress?.()}

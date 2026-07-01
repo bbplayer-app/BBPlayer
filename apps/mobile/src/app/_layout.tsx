@@ -353,7 +353,7 @@ export default Sentry.wrap(function RootLayout() {
 					</Stack>
 				) : null}
 				<Toaster />
-				<PlayerQueueModal isVisible={true} />
+				<PlayerQueueModal />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>

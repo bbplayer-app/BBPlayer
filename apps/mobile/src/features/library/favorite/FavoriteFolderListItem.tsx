@@ -14,8 +14,7 @@ const FavoriteFolderListItem = memo(({ item }: { item: BilibiliPlaylist }) => {
 	return (
 		<View>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				onPress={() => {
 					router.push({
 						pathname: '/playlist/remote/favorite/[id]',

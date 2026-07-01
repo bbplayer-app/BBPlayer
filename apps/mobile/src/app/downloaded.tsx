@@ -119,8 +119,7 @@ function DownloadedItem({
 
 	return (
 		<Touchable
-			underlayColor='black'
-			animationDuration={0}
+			androidRipple={{}}
 			style={[
 				styles.rectButton,
 				{

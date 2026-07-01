@@ -103,8 +103,7 @@ export const TrackListItem = memo(function TrackListItem({
 
 	return (
 		<Touchable
-			underlayColor='black'
-			animationDuration={0}
+			androidRipple={{}}
 			style={[
 				styles.rectButton,
 				{
@@ -212,8 +211,7 @@ export const TrackListItem = memo(function TrackListItem({
 						<FunctionalMenu
 							anchor={
 								<Touchable
-									underlayColor='black'
-									animationDuration={0}
+									androidRipple={{}}
 									style={styles.menuButton}
 								>
 									<Icon

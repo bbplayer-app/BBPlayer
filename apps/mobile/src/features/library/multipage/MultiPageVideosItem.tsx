@@ -17,8 +17,7 @@ const MultiPageVideosItem = memo(
 			<>
 				<View>
 					<Touchable
-						underlayColor='black'
-						animationDuration={0}
+						androidRipple={{}}
 						onPress={() => {
 							router.push({
 								pathname: '/playlist/remote/multipage/[bvid]',

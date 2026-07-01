@@ -18,8 +18,7 @@ const LocalPlaylistItem = memo(
 		return (
 			<View>
 				<Touchable
-					underlayColor='black'
-					animationDuration={0}
+					androidRipple={{}}
 					style={styles.rectButton}
 					onPress={() => {
 						router.push({

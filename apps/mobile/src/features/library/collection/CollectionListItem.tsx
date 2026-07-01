@@ -14,8 +14,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 	return (
 		<View>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				disabled={item.state === 1}
 				onPress={() => {
 					if (item.attr === 0) {

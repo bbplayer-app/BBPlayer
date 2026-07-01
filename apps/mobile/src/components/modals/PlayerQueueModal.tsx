@@ -22,25 +22,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
-import { usePlayerQueue } from '@/hooks/queries/orpheus'
+import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
+import { orpheusQueryKeys, usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { queryClient } from '@/lib/config/queryClient'
 
 const TrackItem = memo(
 	({
 		track,
 		onSwitchTrack,
 		onRemoveTrack,
-		isCurrentTrack,
 		index,
 	}: {
 		track: OrpheusTrack
 		onSwitchTrack: (index: number) => void
 		onRemoveTrack: (index: number) => void
-		isCurrentTrack: boolean
 		index: number
 	}) => {
 		const colors = useTheme().colors
+		const isCurrentTrack = useIsCurrentTrack(track.id)
 		return (
 			<Surface
 				style={{
@@ -52,8 +53,7 @@ const TrackItem = memo(
 				elevation={0}
 			>
 				<Touchable
-					underlayColor='black'
-					animationDuration={0}
+					androidRipple={{}}
 					onPress={() => onSwitchTrack(index)}
 				>
 					<View
@@ -106,20 +106,16 @@ TrackItem.displayName = 'TrackItem'
 
 interface PlayerQueueModalProps extends TrueSheetProps {
 	sheetRef?: RefObject<TrueSheet | null>
-	isVisible: boolean
 }
 
-function PlayerQueueModal({
-	sheetRef,
-	isVisible,
-	...props
-}: PlayerQueueModalProps) {
+function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const currentTrackId = useCurrentTrackId()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<LegendListRef>(null)
+	const isSheetOpen = usePlayerQueueSheetStore((state) => state.isOpen)
 
-	const { data: queue, refetch } = usePlayerQueue(isVisible)
+	const { data: queue, refetch } = usePlayerQueue(isSheetOpen)
 
 	const currentIndex = useMemo(() => {
 		if (!currentTrackId || !queue) return -1
@@ -157,25 +153,29 @@ function PlayerQueueModal({
 				track={item}
 				onSwitchTrack={switchTrackHandler}
 				onRemoveTrack={removeTrackHandler}
-				isCurrentTrack={item.id === currentTrackId}
 				index={index}
 			/>
 		),
-		[switchTrackHandler, removeTrackHandler, currentTrackId],
+		[switchTrackHandler, removeTrackHandler],
 	)
 
-	// oxlint-disable-next-line react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change
 	useEffect(() => {
-		if (isVisible) {
+		if (isSheetOpen) {
 			void refetch()
 		} else {
 			setDidInitialScroll(false)
 		}
-	}, [isVisible, refetch])
+	}, [isSheetOpen, refetch])
+
+	useEffect(() => {
+		if (!isSheetOpen) {
+			queryClient.removeQueries({ queryKey: orpheusQueryKeys.playerQueue() })
+		}
+	}, [isSheetOpen])
 
 	useEffect(() => {
 		if (
-			isVisible &&
+			isSheetOpen &&
 			currentIndex !== -1 &&
 			!didInitialScroll &&
 			queue?.length
@@ -190,7 +190,7 @@ function PlayerQueueModal({
 			}, 100)
 			return () => clearTimeout(timer)
 		}
-	}, [isVisible, currentIndex, didInitialScroll, queue])
+	}, [isSheetOpen, currentIndex, didInitialScroll, queue])
 
 	return (
 		<TrueSheet
@@ -200,8 +200,12 @@ function PlayerQueueModal({
 			cornerRadius={24}
 			backgroundColor={theme.colors.elevation.level1}
 			scrollable
-			onDidPresent={() => usePlayerQueueSheetStore.getState().setOpen(true)}
-			onDidDismiss={() => usePlayerQueueSheetStore.getState().setOpen(false)}
+			onDidPresent={() => {
+				usePlayerQueueSheetStore.getState().setOpen(true)
+			}}
+			onDidDismiss={() => {
+				usePlayerQueueSheetStore.getState().setOpen(false)
+			}}
 			{...props}
 		>
 			<GestureHandlerRootView style={{ flex: 1 }}>

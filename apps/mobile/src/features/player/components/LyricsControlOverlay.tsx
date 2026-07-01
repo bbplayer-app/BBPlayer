@@ -133,8 +133,9 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 
 	// 点击手势切换控件显示
 	const tapGesture = useTapGesture({
-		onDeactivate: () => {
+		onDeactivate: (e) => {
 			'worklet'
+			if (e.canceled) return
 			if (controlsOpacity.value < 0.5) {
 				scheduleOnRN(showControls)
 			} else {
@@ -197,8 +198,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 				<FunctionalMenu
 					anchor={
 						<Touchable
-							underlayColor='black'
-							animationDuration={0}
+							androidRipple={{}}
 							style={styles.utilityButton}
 							ref={actionButtonRef}
 							disabled={offsetMenuVisible}

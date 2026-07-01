@@ -302,8 +302,7 @@ function HomePage() {
 							/>
 						)}
 						<Touchable
-							underlayColor='black'
-							animationDuration={0}
+							androidRipple={{}}
 							onPress={() => router.push('/settings/bilibili-account' as never)}
 							style={styles.avatarButton}
 						>
@@ -412,8 +411,7 @@ function HomePage() {
 							>
 								{/* 那月今日 */}
 								<Touchable
-									underlayColor='black'
-									animationDuration={0}
+									androidRipple={{}}
 									key='on-this-day'
 									style={[
 										styles.quickAccessCard,
@@ -451,8 +449,7 @@ function HomePage() {
 
 								{/* 最近常听 */}
 								<Touchable
-									underlayColor='black'
-									animationDuration={0}
+									androidRipple={{}}
 									key='recently-played'
 									style={[
 										styles.quickAccessCard,
@@ -486,8 +483,7 @@ function HomePage() {
 								{/* 稍后再看 - conditional on Bilibili cookie */}
 								{hasBilibiliCookie() && (
 									<Touchable
-										underlayColor='black'
-										animationDuration={0}
+										androidRipple={{}}
 										key='watch-later'
 										style={[
 											styles.quickAccessCard,
@@ -540,8 +536,7 @@ function HomePage() {
 								>
 									{recentPlaylists.map((item) => (
 										<Touchable
-											underlayColor='black'
-											animationDuration={0}
+											androidRipple={{}}
 											key={item.id}
 											style={[
 												styles.playlistCard,

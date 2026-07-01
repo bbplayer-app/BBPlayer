@@ -139,8 +139,7 @@ export function MainPlaybackControls({
 	return (
 		<View style={[styles.mainControlsContainer, { gap }]}>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={{
 					width: skipButtonSize,
 					height: skipButtonSize,
@@ -167,8 +166,7 @@ export function MainPlaybackControls({
 				/>
 			</Touchable>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={{
 					width: playButtonSize,
 					height: playButtonSize,
@@ -214,8 +212,7 @@ export function MainPlaybackControls({
 				)}
 			</Touchable>
 			<Touchable
-				underlayColor='black'
-				animationDuration={0}
+				androidRipple={{}}
 				style={{
 					width: skipButtonSize,
 					height: skipButtonSize,
