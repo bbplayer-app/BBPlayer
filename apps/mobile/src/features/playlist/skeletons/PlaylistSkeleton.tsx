@@ -22,7 +22,7 @@ export function PlaylistPageSkeleton() {
 			<View style={styles.contentContainer}>
 				<PlaylistHeaderSkeleton />
 				<View style={styles.trackList}>
-					{Array.from({ length: 15 }, (_, index) => (
+					{Array.from({ length: 2 }, (_, index) => (
 						<TrackListItemSkeleton key={index} />
 					))}
 				</View>
