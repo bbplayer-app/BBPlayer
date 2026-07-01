@@ -118,6 +118,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		queue && queueIndex < queue.length - 1 ? queue[queueIndex + 1] : null
 
 	const dragOffset = useSharedValue(0)
+	const hapticFired = useSharedValue(0)
 
 	const normalOpacity = useAnimatedStyle(() => ({
 		opacity: 1 - Math.min(Math.abs(dragOffset.value) / 40, 1),
@@ -157,6 +158,22 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		onUpdate: (e) => {
 			'worklet'
 			dragOffset.set(e.translationX)
+			if (e.translationX > SWIPE_THRESHOLD && hapticFired.value !== 1) {
+				hapticFired.set(1)
+				scheduleOnRN(
+					Haptics.performHaptics,
+					Haptics.AndroidHaptics.Context_Click,
+				)
+			} else if (
+				e.translationX < -SWIPE_THRESHOLD &&
+				hapticFired.value !== -1
+			) {
+				hapticFired.set(-1)
+				scheduleOnRN(
+					Haptics.performHaptics,
+					Haptics.AndroidHaptics.Context_Click,
+				)
+			}
 		},
 		onDeactivate: () => {
 			'worklet'
@@ -166,6 +183,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 				scheduleOnRN(() => void Orpheus.skipToNext())
 			}
 			dragOffset.set(withTiming(0))
+			hapticFired.set(0)
 		},
 	})
 
