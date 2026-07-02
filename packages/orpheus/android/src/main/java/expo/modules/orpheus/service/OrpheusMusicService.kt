@@ -1,10 +1,17 @@
 package expo.modules.orpheus.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -59,6 +66,11 @@ class OrpheusMusicService : MediaLibraryService() {
     private var sleepTimerManager: SleepTimeController? = null
     private var volumeFadeJob: Job? = null
     private var scope = MainScope()
+
+    // 通知相关
+    private var notificationManager: NotificationManager? = null
+    private val NOTIFICATION_ID = 1001
+    private val CHANNEL_ID = "orpheus_playback"
 
     lateinit var floatingLyricsManager: FloatingLyricsManager
     lateinit var statusBarLyricsManager: StatusBarLyricsManager
@@ -117,14 +129,13 @@ class OrpheusMusicService : MediaLibraryService() {
         super.onTaskRemoved(rootIntent)
     }
 
-    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-        super.onUpdateNotification(session, true)
-    }
-
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        createNotificationChannel()
 
         GeneralStorage.initialize(this)
         LoudnessStorage.initialize(this)
@@ -288,6 +299,9 @@ class OrpheusMusicService : MediaLibraryService() {
 
         restorePlayerState(GeneralStorage.isRestoreEnabled())
         sleepTimerManager = SleepTimeController(player!!)
+
+        // 服务启动后立即进入前台，确保通知栏控制始终可见
+        updateNotification()
     }
 
     /**
@@ -307,10 +321,88 @@ class OrpheusMusicService : MediaLibraryService() {
         return mediaSession
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "播放控制",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "显示正在播放的音乐和控制按钮"
+                setShowBadge(false)
+            }
+            notificationManager?.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(): Notification {
+        val player = player
+        val mediaItem = player?.currentMediaItem
+        val title = mediaItem?.mediaMetadata?.title?.toString() ?: "BBPlayer"
+        val artist = mediaItem?.mediaMetadata?.artist?.toString() ?: ""
+        val isPlaying = player?.isPlaying == true
+
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: Intent()
+        launchIntent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        val contentPendingIntent = PendingIntent.getActivity(
+            this, 0, launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // 上一首
+        val prevIntent = Intent("orpheus.PREV").apply { setPackage(packageName) }
+        val prevPendingIntent = PendingIntent.getBroadcast(
+            this, 1, prevIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // 播放/暂停
+        val playPauseIntent = Intent("orpheus.PLAY_PAUSE").apply { setPackage(packageName) }
+        val playPausePendingIntent = PendingIntent.getBroadcast(
+            this, 2, playPauseIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // 下一首
+        val nextIntent = Intent("orpheus.NEXT").apply { setPackage(packageName) }
+        val nextPendingIntent = PendingIntent.getBroadcast(
+            this, 3, nextIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(artist)
+            .setSmallIcon(R.drawable.outline_play_arrow_24)
+            .setContentIntent(contentPendingIntent)
+            .setOngoing(isPlaying)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(R.drawable.outline_skip_previous_24, "上一首", prevPendingIntent)
+            .addAction(
+                if (isPlaying) R.drawable.outline_pause_24 else R.drawable.outline_play_arrow_24,
+                if (isPlaying) "暂停" else "播放",
+                playPausePendingIntent
+            )
+            .addAction(R.drawable.outline_skip_next_24, "下一首", nextPendingIntent)
+            .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
+                .setShowActionsInCompactView(0, 1, 2))
+            .build()
+    }
+
+    fun updateNotification() {
+        val notification = buildNotification()
+        notificationManager?.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun removeNotification() {
+        notificationManager?.cancel(NOTIFICATION_ID)
+    }
+
     override fun onDestroy() {
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         floatingLyricsManager.hide()
         statusBarLyricsManager.onStop()
+        removeNotification()
         scope.cancel()
         instance = null
 
@@ -533,6 +625,7 @@ class OrpheusMusicService : MediaLibraryService() {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 lyricsManager.setPlaybackState(isPlaying)
+                updateNotification()
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
@@ -569,6 +662,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 currentMediaId = mediaId
 
                 sendTrackStartEvent(mediaItem, reason)
+                updateNotification()
 
                 lyricsManager.clearConsumers(LyricsConsumer.all())
                 lyricsManager.setPlaybackState(player?.isPlaying == true)
