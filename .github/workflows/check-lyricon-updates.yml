@@ -1,0 +1,349 @@
+name: Check Lyricon Updates
+
+on:
+  schedule:
+    # 每天凌晨 2 点运行一次 (UTC 时间)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 允许手动触发
+    inputs:
+      force_update:
+        description: '强制更新（即使无变化也创建/更新 PR）'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  ISSUE_TITLE: '🔄 Lyricon Provider 上游代码有更新'
+  ISSUE_LABELS: 'dependencies,lyricon'
+  PR_BRANCH: 'bot/lyricon-update'
+  PR_TITLE: '[Bot] Update Lyricon Provider'
+  LYRICON_REPO: 'tomakino/lyricon'
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch latest commit from Lyricon
+        id: fetch_commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 获取 tomakino/lyricon 仓库 master 分支的最新 commit hash
+          RESPONSE=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ env.LYRICON_REPO }}/commits/master")
+          LATEST_COMMIT=$(echo "$RESPONSE" | jq -r '.sha // empty')
+
+          if [ -z "$LATEST_COMMIT" ] || [ "$LATEST_COMMIT" = "null" ]; then
+            echo "Error: Could not fetch latest commit hash. Response was:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "latest_commit=$LATEST_COMMIT" >> $GITHUB_OUTPUT
+
+          # 获取我们当前记录的 commit (如果有的话)
+          CURRENT_COMMIT="unknown"
+          VERSION_FILE="packages/orpheus/.lyricon_version"
+          if [ -f "$VERSION_FILE" ]; then
+            CURRENT_COMMIT=$(cat "$VERSION_FILE")
+          fi
+          echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
+
+          echo "Current: $CURRENT_COMMIT"
+          echo "Latest:  $LATEST_COMMIT"
+
+      - name: Check if there are changes in provider or model directories
+        if: steps.fetch_commit.outputs.current_commit != steps.fetch_commit.outputs.latest_commit || github.event.inputs.force_update == 'true'
+        id: check_diff
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 比较我们记录的 commit 和最新的 commit 之间，provider 和 model 目录是否有变动
+          if [ "${{ github.event.inputs.force_update }}" = "true" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Force update enabled."
+            exit 0
+          fi
+
+          DIFF_URL="https://api.github.com/repos/${{ env.LYRICON_REPO }}/compare/${{ steps.fetch_commit.outputs.current_commit }}...${{ steps.fetch_commit.outputs.latest_commit }}"
+
+          HAS_CHANGES=$(curl -sL -H "Authorization: Bearer $GITHUB_TOKEN" "$DIFF_URL" | jq -r '(.files // [])[] | select(.filename | test("lyric/bridge/provider/src/main/|lyric/model/src/main/")) | .filename' | wc -l)
+
+          if [ "$HAS_CHANGES" -gt 0 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Found changes in relevant directories."
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes in provider or model directories."
+          fi
+
+      - name: Find or create tracking issue
+        if: steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown'
+        id: manage_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTitle = '${{ env.ISSUE_TITLE }}';
+            const labels = '${{ env.ISSUE_LABELS }}'.split(',');
+
+            // 查找已有的 lyricon issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: labels[1] // 'lyricon'
+            });
+
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes('Lyricon') && issue.title.includes('更新')
+            );
+
+            if (existingIssue) {
+              console.log(`Found existing issue: #${existingIssue.number}`);
+              core.setOutput('issue_number', existingIssue.number);
+              core.setOutput('issue_exists', 'true');
+            } else {
+              console.log('No existing issue found');
+              core.setOutput('issue_exists', 'false');
+            }
+
+      - name: Update issue and add comment
+        if: steps.manage_issue.outputs.issue_exists == 'true' || steps.manage_issue.outputs.issue_exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const latestCommit = '${{ steps.fetch_commit.outputs.latest_commit }}';
+            const currentCommit = '${{ steps.fetch_commit.outputs.current_commit }}';
+            const issueNumber = '${{ steps.manage_issue.outputs.issue_number }}';
+            const issueExists = '${{ steps.manage_issue.outputs.issue_exists }}' === 'true';
+            const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+
+            // 构建 issue body
+            let body = `## 📢 Lyricon Provider 上游代码更新跟踪\n\n`;
+            body += `**检测时间**: ${now}\n\n`;
+            body += `### 当前状态\n`;
+            body += `- **当前版本**: \`${currentCommit === 'unknown' ? '未知' : currentCommit.substring(0, 7)}\`\n`;
+            body += `- **最新版本**: \`${latestCommit.substring(0, 7)}\`\n\n`;
+
+            if (currentCommit !== 'unknown') {
+              body += `### 变更详情\n`;
+              body += `[查看完整对比](https://github.com/${{ env.LYRICON_REPO }}/compare/${currentCommit}...${latestCommit})\n\n`;
+            }
+
+            body += `### 自动更新\n`;
+            body += `🤖 已自动创建 Draft PR 进行代码同步，请查看下方的 PR 链接。\n\n`;
+
+            body += `### 手动更新\n`;
+            body += `如需手动更新，请运行：\n`;
+            body += "\`\`\`bash\n";
+            body += `./scripts/update-lyricon.sh ${latestCommit.substring(0, 7)}\n`;
+            body += "\`\`\`\n\n";
+
+            body += `---\n`;
+            body += `*此 Issue 由 GitHub Actions 自动维护，会在代码同步完成后自动关闭。*`;
+
+            if (issueExists) {
+              // 更新现有 issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(issueNumber),
+                body: body
+              });
+              console.log(`Updated issue #${issueNumber}`);
+              
+              // 添加评论通知
+              let commentBody = `## 🔔 检测到新的更新\n\n`;
+              commentBody += `**时间**: ${now}\n`;
+              commentBody += `**最新 Commit**: \`${latestCommit.substring(0, 7)}\`\n\n`;
+              commentBody += `Issue 描述已更新，请查看最新的变更详情。`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(issueNumber),
+                body: commentBody
+              });
+              console.log(`Added comment to issue #${issueNumber}`);
+            } else {
+              // 创建新 issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '${{ env.ISSUE_TITLE }}',
+                body: body,
+                labels: '${{ env.ISSUE_LABELS }}'.split(',')
+              });
+              console.log(`Created new issue #${newIssue.data.number}`);
+              core.setOutput('issue_number', newIssue.data.number);
+            }
+
+      - name: Setup Git
+        if: steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Check for existing PR branch
+        if: steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown'
+        id: check_branch
+        run: |
+          BRANCH_NAME="${{ env.PR_BRANCH }}"
+
+          # 检查远程分支是否存在
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Remote branch $BRANCH_NAME exists"
+          else
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "Remote branch $BRANCH_NAME does not exist"
+          fi
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Update existing branch
+        if: steps.check_branch.outputs.branch_exists == 'true'
+        run: |
+          BRANCH_NAME="${{ steps.check_branch.outputs.branch_name }}"
+          LATEST_COMMIT="${{ steps.fetch_commit.outputs.latest_commit }}"
+
+          # 获取远程分支
+          git fetch origin "$BRANCH_NAME"
+
+          # 检出分支
+          git checkout -B "$BRANCH_NAME" origin/"$BRANCH_NAME"
+
+          # 运行更新脚本
+          ./scripts/update-lyricon.sh "$LATEST_COMMIT"
+
+          # 提交更改
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(orpheus): update lyricon to ${LATEST_COMMIT:0:7}"
+            git push origin "$BRANCH_NAME"
+            echo "Updated branch $BRANCH_NAME"
+          fi
+
+      - name: Create new branch
+        if: steps.check_branch.outputs.branch_exists == 'false'
+        run: |
+          BRANCH_NAME="${{ steps.check_branch.outputs.branch_name }}"
+          LATEST_COMMIT="${{ steps.fetch_commit.outputs.latest_commit }}"
+
+          # 创建并切换到新分支
+          git checkout -b "$BRANCH_NAME"
+
+          # 运行更新脚本
+          ./scripts/update-lyricon.sh "$LATEST_COMMIT"
+
+          # 提交更改
+          git add -A
+          git commit -m "chore(orpheus): update lyricon to ${LATEST_COMMIT:0:7}"
+          git push -u origin "$BRANCH_NAME"
+          echo "Created and pushed branch $BRANCH_NAME"
+
+      - name: Find or create Draft PR
+        if: steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown'
+        id: manage_pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const latestCommit = '${{ steps.fetch_commit.outputs.latest_commit }}';
+            const currentCommit = '${{ steps.fetch_commit.outputs.current_commit }}';
+            const branchName = '${{ steps.check_branch.outputs.branch_name }}';
+            const issueNumber = '${{ steps.manage_issue.outputs.issue_number }}' || '${{ steps.manage_issue_issue_number }}';
+
+            // 查找已有的 PR
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${branchName}`
+            });
+
+            const existingPR = prs.data[0];
+
+            // 构建 PR body
+            let body = `## 🤖 自动更新: Lyricon Provider\n\n`;
+            body += `此 PR 自动同步上游 [tomakino/lyricon](https://github.com/tomakino/lyricon) 的最新更改。\n\n`;
+            body += `### 更新详情\n`;
+            body += `- **从**: \`${currentCommit === 'unknown' ? '未知' : currentCommit.substring(0, 7)}\`\n`;
+            body += `- **到**: \`${latestCommit.substring(0, 7)}\`\n\n`;
+
+            if (currentCommit !== 'unknown') {
+              body += `### 变更摘要\n`;
+              body += `[查看完整对比](https://github.com/${{ env.LYRICON_REPO }}/compare/${currentCommit}...${latestCommit})\n\n`;
+            }
+
+            body += `### 相关 Issue\n`;
+            body += `Closes #${issueNumber}\n\n`;
+
+            body += `---\n`;
+            body += `*此 PR 由 GitHub Actions 自动创建和维护。*`;
+
+            if (existingPR) {
+              // 更新现有 PR
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: existingPR.number,
+                body: body
+              });
+              console.log(`Updated existing PR #${existingPR.number}`);
+              core.setOutput('pr_number', existingPR.number);
+              core.setOutput('pr_url', existingPR.html_url);
+            } else {
+              // 创建新 PR
+              const newPR = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '${{ env.PR_TITLE }}',
+                head: branchName,
+                base: 'dev',
+                body: body,
+                draft: true
+              });
+              console.log(`Created new PR #${newPR.data.number}`);
+              core.setOutput('pr_number', newPR.data.number);
+              core.setOutput('pr_url', newPR.data.html_url);
+              
+              // 添加标签
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: newPR.data.number,
+                labels: ['dependencies', 'lyricon', 'automated']
+              });
+            }
+
+      - name: Summary
+        if: always() && (steps.check_diff.outputs.has_changes == 'true' || steps.fetch_commit.outputs.current_commit == 'unknown')
+        run: |
+          echo "## 📋 工作流执行摘要" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **当前 Commit**: ${{ steps.fetch_commit.outputs.current_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **最新 Commit**: ${{ steps.fetch_commit.outputs.latest_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.manage_issue.outputs.issue_exists }}" = "true" ]; then
+            echo "- **Issue**: #${{ steps.manage_issue.outputs.issue_number }} (已更新)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Issue**: #${{ steps.manage_issue.outputs.issue_number }} (新创建)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "- **PR**: ${{ steps.manage_pr.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **分支**: ${{ steps.check_branch.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY

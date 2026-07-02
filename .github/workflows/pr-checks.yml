@@ -1,0 +1,31 @@
+name: 'PR Checks'
+
+on: pull_request
+
+jobs:
+  lint:
+    name: 🚨 Lint Codebase
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+
+      - name: 🏗 Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: 🕵️ Check Dependencies
+        run: pnpm check:deps
+
+      - name: 🚀 Run Lint
+        run: pnpm lint
