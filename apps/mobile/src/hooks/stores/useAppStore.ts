@@ -25,7 +25,7 @@ export const parseCookieToObject = (
 		return ok({})
 	}
 	try {
-		const cookieObj = parseCookie.parse(cookie)
+		const cookieObj = parseCookie.parseCookie(cookie)
 		const sanitizedObj: Record<string, string> = {}
 		let hasInvalidKeys = false
 
@@ -67,10 +67,13 @@ export const serializeCookieObject = (
 	return Object.entries(cookieObj)
 		.map(([key, value]) => {
 			try {
-				return parseCookie.serialize(key, value)
+				return parseCookie.stringifySetCookie({ name: key, value })
 			} catch {
 				try {
-					return parseCookie.serialize(key.trim(), value.trim())
+					return parseCookie.stringifySetCookie({
+						name: key.trim(),
+						value: value.trim(),
+					})
 				} catch {
 					return null
 				}

@@ -13,6 +13,12 @@
 - 升级到 RNGH v3
 - 切换到 LegendList
 - 优化进入播放列表页面时的流畅性
+- 升级到 Expo 57，更新了大部分依赖
+- 启用 Worklets Bundle Mode
+
+### Fixed
+
+- 修复在频繁切歌时可能导致 bitmap 转换失败的问题
 
 ## [2.6.1] - 2026-06-24
 

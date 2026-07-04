@@ -100,7 +100,7 @@ export function LocalPlaylistListSkeleton() {
 				<Shimmer />
 			</View>
 
-			{Array.from({ length: 8 }, (_, index) => (
+			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
 		</View>
@@ -140,7 +140,7 @@ export function FavoriteFolderListSkeleton() {
 				<Shimmer />
 			</View>
 
-			{Array.from({ length: 8 }, (_, index) => (
+			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
 		</View>
@@ -171,7 +171,7 @@ export function CollectionListSkeleton() {
 				</View>
 			</View>
 
-			{Array.from({ length: 8 }, (_, index) => (
+			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
 		</View>
@@ -202,7 +202,7 @@ export function MultiPageVideosListSkeleton() {
 				</View>
 			</View>
 
-			{Array.from({ length: 8 }, (_, index) => (
+			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
 		</View>

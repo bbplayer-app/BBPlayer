@@ -4,25 +4,27 @@ BBPlayer 是一个基于 React Native 开发的 BiliBili 流媒体音乐软件�
 
 ## 命令
 
+注意，所有命令都应当在项目根目录运行
+
 ```bash
 pnpm install                   # Only pnpm — npm/yarn breaks workspace resolution
 pnpm lint                      # oxlint + eslint
 pnpm lint:fix                  # Auto-fix
 pnpm format                    # oxfmt
-pnpm tsgo --noEmit             # TypeScript type checking
+pnpm type-check             # TypeScript type checking
 ```
 
 ## 最佳实践
 
 ### 运行检查和构建
 
-如果任务涉及 TypeScript / JavaScript，你应当在每个任务完成后都运行一次 `pnpm tsgo --noEmit` 与 `pnpm lint`，检查是否引入了新的错误。
+如果任务涉及 TypeScript / JavaScript，你应当在每个任务完成后都**在项目根目录**运行一次 `pnpm type-check` 与 `pnpm lint`，检查是否引入了新的错误。
 
 如果任务涉及原生代码，你应当在每个任务完成后**只对那个包**运行一次 `gradlew build`，并检查是否有构建错误。
 
 ### 搜索文件和 symbol
 
-我们推荐使用 codedb mcp 搜索，而非使用 grep 手动搜索
+我们推荐使用 `codedb` mcp 搜索，而非使用 grep 手动搜索
 
 ## 仓库结构
 

@@ -16,5 +16,6 @@ onlyBuiltDependencies:
   - unrs-resolver
   - workerd
 patchedDependencies:
-  expo-modules-core@56.0.17: patches/expo-modules-core@56.0.17.patch
+  metro-runtime@0.84.4: patches/metro-runtime@0.84.4.patch
+  metro@0.84.4: patches/metro@0.84.4.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch

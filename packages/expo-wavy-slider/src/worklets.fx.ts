@@ -2,7 +2,7 @@
   huge thx to expo-ui
   inspired by https://github.com/expo/expo/blob/main/packages/expo-ui/src/State/index.fx.ts
 */
-import { installOnUIRuntime } from 'expo'
+// import { installOnUIRuntime } from 'expo'
 
 import { worklets } from './utils/ensureWorklets'
 import {
@@ -84,5 +84,5 @@ try {
 		'[expo-wavy-slider] react-native-reanimated is required. Please install it first.',
 	)
 }
-installOnUIRuntime()
+// installOnUIRuntime()
 registerSharedObjectSerializer()

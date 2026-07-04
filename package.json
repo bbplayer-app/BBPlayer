@@ -13,13 +13,14 @@
 		"lint": "oxlint --type-aware && eslint .",
 		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
 		"postinstall": "lefthook install",
-		"publish:update": "pnpm --filter @bbplayer/update-publisher start"
+		"publish:update": "pnpm --filter @bbplayer/update-publisher start",
+		"type-check": "tsgo --build --noEmit"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",
 		"@dword-design/eslint-plugin-import-alias": "^6.0.3",
 		"@eslint/js": "^9.39.4",
-		"@tanstack/eslint-plugin-query": "^5.100.11",
+		"@tanstack/eslint-plugin-query": "^5.101.2",
 		"@types/node": "^25.2.3",
 		"@typescript/native-preview": "beta",
 		"eslint": "^9.39.2",
@@ -29,7 +30,7 @@
 		"eslint-plugin-react-hooks-extra": "^1.53.1",
 		"eslint-plugin-react-you-might-not-need-an-effect": "^0.5.6",
 		"gifenc": "^1.0.3",
-		"lefthook": "^1.13.6",
+		"lefthook": "^2.1.9",
 		"oxfmt": "^0.27.0",
 		"oxlint": "^1.47.0",
 		"oxlint-tsgolint": "^0.12.1",

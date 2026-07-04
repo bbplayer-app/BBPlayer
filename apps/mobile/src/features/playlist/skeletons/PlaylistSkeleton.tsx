@@ -47,7 +47,7 @@ export function PlaylistTrackListSkeleton() {
 		>
 			<View style={styles.contentContainer}>
 				<View style={styles.trackList}>
-					{Array.from({ length: 20 }, (_, index) => (
+					{Array.from({ length: 2 }, (_, index) => (
 						<TrackListItemSkeleton key={index} />
 					))}
 				</View>

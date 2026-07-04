@@ -20,6 +20,7 @@ import { useSmartFetchLyrics } from '@/hooks/queries/lyrics'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { ModalPropsMap } from '@/types/navigation'
 import { resolveTrackCover } from '@/utils/imageUrl'
+import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 
 const LyricItem = memo(function LyricItem({
@@ -241,7 +242,9 @@ const LyricsSelectionModal = () => {
 						setCardColor(theme.colors.elevation.level3)
 					}
 				})
-				.catch(() => {
+				.catch((e) => {
+					log.error('提取图片主题色失败', e)
+					reportErrorToSentry(e, '提取图片主题色失败', 'LyricsSelectionModal')
 					setCardColor(theme.colors.elevation.level3)
 				})
 		} else {

@@ -36,89 +36,23 @@ export namespace bilibili {
                          */
                         static create(rpcImpl: $protobuf.RPCImpl, requestDelimited?: boolean, responseDelimited?: boolean): DM;
 
-                        /**
-                         * Calls DmSegMobile.
-                         * @param request DmSegMobileReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and DmSegMobileReply
-                         */
-                        dmSegMobile(request: bilibili.community.service.dm.v1.IDmSegMobileReq, callback: bilibili.community.service.dm.v1.DM.DmSegMobileCallback): void;
+                        /** Calls DmSegMobile. */
+                        dmSegMobile: bilibili.community.service.dm.v1.DM.DmSegMobile;
 
-                        /**
-                         * Calls DmSegMobile.
-                         * @param request DmSegMobileReq message or plain object
-                         * @returns Promise
-                         */
-                        dmSegMobile(request: bilibili.community.service.dm.v1.IDmSegMobileReq): Promise<bilibili.community.service.dm.v1.DmSegMobileReply>;
+                        /** Calls DmView. */
+                        dmView: bilibili.community.service.dm.v1.DM.DmView;
 
-                        /**
-                         * Calls DmView.
-                         * @param request DmViewReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and DmViewReply
-                         */
-                        dmView(request: bilibili.community.service.dm.v1.IDmViewReq, callback: bilibili.community.service.dm.v1.DM.DmViewCallback): void;
+                        /** Calls DmPlayerConfig. */
+                        dmPlayerConfig: bilibili.community.service.dm.v1.DM.DmPlayerConfig;
 
-                        /**
-                         * Calls DmView.
-                         * @param request DmViewReq message or plain object
-                         * @returns Promise
-                         */
-                        dmView(request: bilibili.community.service.dm.v1.IDmViewReq): Promise<bilibili.community.service.dm.v1.DmViewReply>;
+                        /** Calls DmSegOtt. */
+                        dmSegOtt: bilibili.community.service.dm.v1.DM.DmSegOtt;
 
-                        /**
-                         * Calls DmPlayerConfig.
-                         * @param request DmPlayerConfigReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and Response
-                         */
-                        dmPlayerConfig(request: bilibili.community.service.dm.v1.IDmPlayerConfigReq, callback: bilibili.community.service.dm.v1.DM.DmPlayerConfigCallback): void;
+                        /** Calls DmSegSDK. */
+                        dmSegSDK: bilibili.community.service.dm.v1.DM.DmSegSDK;
 
-                        /**
-                         * Calls DmPlayerConfig.
-                         * @param request DmPlayerConfigReq message or plain object
-                         * @returns Promise
-                         */
-                        dmPlayerConfig(request: bilibili.community.service.dm.v1.IDmPlayerConfigReq): Promise<bilibili.community.service.dm.v1.Response>;
-
-                        /**
-                         * Calls DmSegOtt.
-                         * @param request DmSegOttReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and DmSegOttReply
-                         */
-                        dmSegOtt(request: bilibili.community.service.dm.v1.IDmSegOttReq, callback: bilibili.community.service.dm.v1.DM.DmSegOttCallback): void;
-
-                        /**
-                         * Calls DmSegOtt.
-                         * @param request DmSegOttReq message or plain object
-                         * @returns Promise
-                         */
-                        dmSegOtt(request: bilibili.community.service.dm.v1.IDmSegOttReq): Promise<bilibili.community.service.dm.v1.DmSegOttReply>;
-
-                        /**
-                         * Calls DmSegSDK.
-                         * @param request DmSegSDKReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and DmSegSDKReply
-                         */
-                        dmSegSDK(request: bilibili.community.service.dm.v1.IDmSegSDKReq, callback: bilibili.community.service.dm.v1.DM.DmSegSDKCallback): void;
-
-                        /**
-                         * Calls DmSegSDK.
-                         * @param request DmSegSDKReq message or plain object
-                         * @returns Promise
-                         */
-                        dmSegSDK(request: bilibili.community.service.dm.v1.IDmSegSDKReq): Promise<bilibili.community.service.dm.v1.DmSegSDKReply>;
-
-                        /**
-                         * Calls DmExpoReport.
-                         * @param request DmExpoReportReq message or plain object
-                         * @param callback Node-style callback called with the error, if any, and DmExpoReportRes
-                         */
-                        dmExpoReport(request: bilibili.community.service.dm.v1.IDmExpoReportReq, callback: bilibili.community.service.dm.v1.DM.DmExpoReportCallback): void;
-
-                        /**
-                         * Calls DmExpoReport.
-                         * @param request DmExpoReportReq message or plain object
-                         * @returns Promise
-                         */
-                        dmExpoReport(request: bilibili.community.service.dm.v1.IDmExpoReportReq): Promise<bilibili.community.service.dm.v1.DmExpoReportRes>;
+                        /** Calls DmExpoReport. */
+                        dmExpoReport: bilibili.community.service.dm.v1.DM.DmExpoReport;
                     }
 
                     namespace DM {
@@ -130,12 +64,36 @@ export namespace bilibili {
                          */
                         type DmSegMobileCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.DmSegMobileReply) => void;
 
+                        /** Calls DmSegMobile. */
+                        type DmSegMobile = {
+                          (request: bilibili.community.service.dm.v1.IDmSegMobileReq, callback: bilibili.community.service.dm.v1.DM.DmSegMobileCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmSegMobileReq): Promise<bilibili.community.service.dm.v1.DmSegMobileReply>;
+                          readonly name: "DmSegMobile";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmSegMobile";
+                          readonly requestType: "DmSegMobileReq";
+                          readonly responseType: "DmSegMobileReply";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
+
                         /**
                          * Callback as used by {@link bilibili.community.service.dm.v1.DM#dmView}.
                          * @param error Error, if any
                          * @param [response] DmViewReply
                          */
                         type DmViewCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.DmViewReply) => void;
+
+                        /** Calls DmView. */
+                        type DmView = {
+                          (request: bilibili.community.service.dm.v1.IDmViewReq, callback: bilibili.community.service.dm.v1.DM.DmViewCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmViewReq): Promise<bilibili.community.service.dm.v1.DmViewReply>;
+                          readonly name: "DmView";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmView";
+                          readonly requestType: "DmViewReq";
+                          readonly responseType: "DmViewReply";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
 
                         /**
                          * Callback as used by {@link bilibili.community.service.dm.v1.DM#dmPlayerConfig}.
@@ -144,12 +102,36 @@ export namespace bilibili {
                          */
                         type DmPlayerConfigCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.Response) => void;
 
+                        /** Calls DmPlayerConfig. */
+                        type DmPlayerConfig = {
+                          (request: bilibili.community.service.dm.v1.IDmPlayerConfigReq, callback: bilibili.community.service.dm.v1.DM.DmPlayerConfigCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmPlayerConfigReq): Promise<bilibili.community.service.dm.v1.Response>;
+                          readonly name: "DmPlayerConfig";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmPlayerConfig";
+                          readonly requestType: "DmPlayerConfigReq";
+                          readonly responseType: "Response";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
+
                         /**
                          * Callback as used by {@link bilibili.community.service.dm.v1.DM#dmSegOtt}.
                          * @param error Error, if any
                          * @param [response] DmSegOttReply
                          */
                         type DmSegOttCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.DmSegOttReply) => void;
+
+                        /** Calls DmSegOtt. */
+                        type DmSegOtt = {
+                          (request: bilibili.community.service.dm.v1.IDmSegOttReq, callback: bilibili.community.service.dm.v1.DM.DmSegOttCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmSegOttReq): Promise<bilibili.community.service.dm.v1.DmSegOttReply>;
+                          readonly name: "DmSegOtt";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmSegOtt";
+                          readonly requestType: "DmSegOttReq";
+                          readonly responseType: "DmSegOttReply";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
 
                         /**
                          * Callback as used by {@link bilibili.community.service.dm.v1.DM#dmSegSDK}.
@@ -158,12 +140,36 @@ export namespace bilibili {
                          */
                         type DmSegSDKCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.DmSegSDKReply) => void;
 
+                        /** Calls DmSegSDK. */
+                        type DmSegSDK = {
+                          (request: bilibili.community.service.dm.v1.IDmSegSDKReq, callback: bilibili.community.service.dm.v1.DM.DmSegSDKCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmSegSDKReq): Promise<bilibili.community.service.dm.v1.DmSegSDKReply>;
+                          readonly name: "DmSegSDK";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmSegSDK";
+                          readonly requestType: "DmSegSDKReq";
+                          readonly responseType: "DmSegSDKReply";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
+
                         /**
                          * Callback as used by {@link bilibili.community.service.dm.v1.DM#dmExpoReport}.
                          * @param error Error, if any
                          * @param [response] DmExpoReportRes
                          */
                         type DmExpoReportCallback = (error: (Error|null), response?: bilibili.community.service.dm.v1.DmExpoReportRes) => void;
+
+                        /** Calls DmExpoReport. */
+                        type DmExpoReport = {
+                          (request: bilibili.community.service.dm.v1.IDmExpoReportReq, callback: bilibili.community.service.dm.v1.DM.DmExpoReportCallback): void;
+                          (request: bilibili.community.service.dm.v1.IDmExpoReportReq): Promise<bilibili.community.service.dm.v1.DmExpoReportRes>;
+                          readonly name: "DmExpoReport";
+                          readonly path: "/bilibili.community.service.dm.v1.DM/DmExpoReport";
+                          readonly requestType: "DmExpoReportReq";
+                          readonly responseType: "DmExpoReportRes";
+                          readonly requestStream: undefined;
+                          readonly responseStream: undefined;
+                        };
                     }
 
                     /**
@@ -182,7 +188,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Avatar.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Avatar id. */
@@ -287,7 +293,7 @@ export namespace bilibili {
                             /** Avatar avatarType */
                             avatarType?: (bilibili.community.service.dm.v1.AvatarType|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -321,7 +327,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Bubble.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Bubble text. */
@@ -420,7 +426,7 @@ export namespace bilibili {
                             /** Bubble url */
                             url?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -457,7 +463,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.BubbleV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** BubbleV2 text. */
@@ -574,7 +580,7 @@ export namespace bilibili {
                             /** BubbleV2 exposureType */
                             exposureType?: (bilibili.community.service.dm.v1.ExposureType|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -598,7 +604,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Button.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Button text. */
@@ -697,7 +703,7 @@ export namespace bilibili {
                             /** Button action */
                             action?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -721,7 +727,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.BuzzwordConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** BuzzwordConfig keywords. */
@@ -814,7 +820,7 @@ export namespace bilibili {
                             /** BuzzwordConfig keywords */
                             keywords?: (bilibili.community.service.dm.v1.BuzzwordShowConfig.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -838,7 +844,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.BuzzwordShowConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** BuzzwordShowConfig name. */
@@ -961,7 +967,7 @@ export namespace bilibili {
                             /** BuzzwordShowConfig schemaType */
                             schemaType?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -985,7 +991,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.CheckBox.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** CheckBox text. */
@@ -1096,7 +1102,7 @@ export namespace bilibili {
                             /** CheckBox show */
                             show?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1133,7 +1139,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.CheckBoxV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** CheckBoxV2 text. */
@@ -1238,7 +1244,7 @@ export namespace bilibili {
                             /** CheckBoxV2 defaultValue */
                             defaultValue?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1262,7 +1268,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.ClickButton.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** ClickButton portraitText. */
@@ -1391,7 +1397,7 @@ export namespace bilibili {
                             /** ClickButton bubble */
                             bubble?: (bilibili.community.service.dm.v1.Bubble.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1415,7 +1421,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.ClickButtonV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** ClickButtonV2 portraitText. */
@@ -1550,7 +1556,7 @@ export namespace bilibili {
                             /** ClickButtonV2 exposureType */
                             exposureType?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1574,7 +1580,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.CommandDm.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** CommandDm id. */
@@ -1721,7 +1727,7 @@ export namespace bilibili {
                             /** CommandDm idStr */
                             idStr?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1745,7 +1751,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmakuAIFlag.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmakuAIFlag dmFlags. */
@@ -1838,7 +1844,7 @@ export namespace bilibili {
                             /** DanmakuAIFlag dmFlags */
                             dmFlags?: (bilibili.community.service.dm.v1.DanmakuFlag.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -1862,7 +1868,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmakuElem.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmakuElem id. */
@@ -2039,7 +2045,7 @@ export namespace bilibili {
                             /** DanmakuElem colorful */
                             colorful?: (bilibili.community.service.dm.v1.DmColorfulType|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2063,7 +2069,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmakuFlag.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmakuFlag dmid. */
@@ -2162,7 +2168,7 @@ export namespace bilibili {
                             /** DanmakuFlag flag */
                             flag?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2186,7 +2192,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmakuFlagConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmakuFlagConfig recFlag. */
@@ -2291,7 +2297,7 @@ export namespace bilibili {
                             /** DanmakuFlagConfig recSwitch */
                             recSwitch?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2315,7 +2321,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuDefaultPlayerConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuDefaultPlayerConfig playerDanmakuUseDefaultConfig. */
@@ -2504,7 +2510,7 @@ export namespace bilibili {
                             /** DanmuDefaultPlayerConfig playerDanmakuAiRecommendedLevelV2Map */
                             playerDanmakuAiRecommendedLevelV2Map?: ({ [k: string]: number }|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2528,7 +2534,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuPlayerConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuPlayerConfig playerDanmakuSwitch. */
@@ -2747,7 +2753,7 @@ export namespace bilibili {
                             /** DanmuPlayerConfig playerDanmakuAiRecommendedLevelV2Map */
                             playerDanmakuAiRecommendedLevelV2Map?: ({ [k: string]: number }|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2771,7 +2777,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuPlayerConfigPanel.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuPlayerConfigPanel selectionText. */
@@ -2864,7 +2870,7 @@ export namespace bilibili {
                             /** DanmuPlayerConfigPanel selectionText */
                             selectionText?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -2888,7 +2894,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuPlayerDynamicConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuPlayerDynamicConfig progress. */
@@ -2987,7 +2993,7 @@ export namespace bilibili {
                             /** DanmuPlayerDynamicConfig playerDanmakuDomain */
                             playerDanmakuDomain?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3011,7 +3017,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuPlayerViewConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuPlayerViewConfig danmukuDefaultPlayerConfig. */
@@ -3122,7 +3128,7 @@ export namespace bilibili {
                             /** DanmuPlayerViewConfig danmukuPlayerConfigPanel */
                             danmukuPlayerConfigPanel?: (bilibili.community.service.dm.v1.DanmuPlayerConfigPanel.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3146,7 +3152,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DanmuWebPlayerConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DanmuWebPlayerConfig dmSwitch. */
@@ -3371,7 +3377,7 @@ export namespace bilibili {
                             /** DanmuWebPlayerConfig aiLevelV2Map */
                             aiLevelV2Map?: ({ [k: string]: number }|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3408,7 +3414,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmColorful.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmColorful type. */
@@ -3507,7 +3513,7 @@ export namespace bilibili {
                             /** DmColorful src */
                             src?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3541,7 +3547,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmExpoReportReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmExpoReportReq sessionId. */
@@ -3646,7 +3652,7 @@ export namespace bilibili {
                             /** DmExpoReportReq spmid */
                             spmid?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3670,7 +3676,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmExpoReportRes.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /**
@@ -3757,7 +3763,7 @@ export namespace bilibili {
                         /** Properties of a DmExpoReportRes. */
                         interface $Properties {
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -3781,7 +3787,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmPlayerConfigReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmPlayerConfigReq ts. */
@@ -3988,7 +3994,7 @@ export namespace bilibili {
                             /** DmPlayerConfigReq aiRecommendedLevelV2 */
                             aiRecommendedLevelV2?: (bilibili.community.service.dm.v1.PlayerDanmakuAiRecommendedLevelV2.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4012,7 +4018,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegConfig pageSize. */
@@ -4111,7 +4117,7 @@ export namespace bilibili {
                             /** DmSegConfig total */
                             total?: (number|Long|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4135,7 +4141,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegMobileReply.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegMobileReply elems. */
@@ -4246,7 +4252,7 @@ export namespace bilibili {
                             /** DmSegMobileReply colorfulSrc */
                             colorfulSrc?: (bilibili.community.service.dm.v1.DmColorful.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4270,7 +4276,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegMobileReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegMobileReq pid. */
@@ -4411,7 +4417,7 @@ export namespace bilibili {
                             /** DmSegMobileReq fromScene */
                             fromScene?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4435,7 +4441,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegOttReply.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegOttReply closed. */
@@ -4534,7 +4540,7 @@ export namespace bilibili {
                             /** DmSegOttReply elems */
                             elems?: (bilibili.community.service.dm.v1.DanmakuElem.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4558,7 +4564,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegOttReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegOttReq pid. */
@@ -4669,7 +4675,7 @@ export namespace bilibili {
                             /** DmSegOttReq segmentIndex */
                             segmentIndex?: (number|Long|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4693,7 +4699,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegSDKReply.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegSDKReply closed. */
@@ -4792,7 +4798,7 @@ export namespace bilibili {
                             /** DmSegSDKReply elems */
                             elems?: (bilibili.community.service.dm.v1.DanmakuElem.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4816,7 +4822,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmSegSDKReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmSegSDKReq pid. */
@@ -4927,7 +4933,7 @@ export namespace bilibili {
                             /** DmSegSDKReq segmentIndex */
                             segmentIndex?: (number|Long|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -4951,7 +4957,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmViewReply.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmViewReply closed. */
@@ -5152,7 +5158,7 @@ export namespace bilibili {
                             /** DmViewReply postPanel2 */
                             postPanel2?: (bilibili.community.service.dm.v1.PostPanelV2.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5176,7 +5182,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmViewReq.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmViewReq pid. */
@@ -5293,7 +5299,7 @@ export namespace bilibili {
                             /** DmViewReq isHardBoot */
                             isHardBoot?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5317,7 +5323,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.DmWebViewReply.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** DmWebViewReply state. */
@@ -5488,7 +5494,7 @@ export namespace bilibili {
                             /** DmWebViewReply activityMeta */
                             activityMeta?: (string[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5512,7 +5518,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.ExpoReport.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** ExpoReport shouldReportAtEnd. */
@@ -5605,7 +5611,7 @@ export namespace bilibili {
                             /** ExpoReport shouldReportAtEnd */
                             shouldReportAtEnd?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5639,7 +5645,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Expression.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Expression keyword. */
@@ -5744,7 +5750,7 @@ export namespace bilibili {
                             /** Expression period */
                             period?: (bilibili.community.service.dm.v1.Period.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5768,7 +5774,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Expressions.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Expressions data. */
@@ -5861,7 +5867,7 @@ export namespace bilibili {
                             /** Expressions data */
                             data?: (bilibili.community.service.dm.v1.Expression.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -5885,7 +5891,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.InlinePlayerDanmakuSwitch.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** InlinePlayerDanmakuSwitch value. */
@@ -5978,7 +5984,7 @@ export namespace bilibili {
                             /** InlinePlayerDanmakuSwitch value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6002,7 +6008,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Label.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Label title. */
@@ -6101,7 +6107,7 @@ export namespace bilibili {
                             /** Label content */
                             content?: (string[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6125,7 +6131,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.LabelV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** LabelV2 title. */
@@ -6236,7 +6242,7 @@ export namespace bilibili {
                             /** LabelV2 exposureType */
                             exposureType?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6260,7 +6266,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Period.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Period start. */
@@ -6359,7 +6365,7 @@ export namespace bilibili {
                             /** Period end */
                             end?: (number|Long|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6383,7 +6389,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuAiRecommendedLevel.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuAiRecommendedLevel value. */
@@ -6476,7 +6482,7 @@ export namespace bilibili {
                             /** PlayerDanmakuAiRecommendedLevel value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6500,7 +6506,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuAiRecommendedLevelV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuAiRecommendedLevelV2 value. */
@@ -6593,7 +6599,7 @@ export namespace bilibili {
                             /** PlayerDanmakuAiRecommendedLevelV2 value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6617,7 +6623,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuAiRecommendedSwitch.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuAiRecommendedSwitch value. */
@@ -6710,7 +6716,7 @@ export namespace bilibili {
                             /** PlayerDanmakuAiRecommendedSwitch value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6734,7 +6740,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlockbottom.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlockbottom value. */
@@ -6827,7 +6833,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlockbottom value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6851,7 +6857,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlockcolorful.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlockcolorful value. */
@@ -6944,7 +6950,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlockcolorful value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -6968,7 +6974,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlockrepeat.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlockrepeat value. */
@@ -7061,7 +7067,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlockrepeat value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7085,7 +7091,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlockscroll.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlockscroll value. */
@@ -7178,7 +7184,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlockscroll value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7202,7 +7208,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlockspecial.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlockspecial value. */
@@ -7295,7 +7301,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlockspecial value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7319,7 +7325,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuBlocktop.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuBlocktop value. */
@@ -7412,7 +7418,7 @@ export namespace bilibili {
                             /** PlayerDanmakuBlocktop value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7436,7 +7442,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuDomain.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuDomain value. */
@@ -7529,7 +7535,7 @@ export namespace bilibili {
                             /** PlayerDanmakuDomain value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7553,7 +7559,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuEnableblocklist.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuEnableblocklist value. */
@@ -7646,7 +7652,7 @@ export namespace bilibili {
                             /** PlayerDanmakuEnableblocklist value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7670,7 +7676,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuOpacity.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuOpacity value. */
@@ -7763,7 +7769,7 @@ export namespace bilibili {
                             /** PlayerDanmakuOpacity value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7787,7 +7793,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuScalingfactor.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuScalingfactor value. */
@@ -7880,7 +7886,7 @@ export namespace bilibili {
                             /** PlayerDanmakuScalingfactor value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -7904,7 +7910,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuSeniorModeSwitch.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuSeniorModeSwitch value. */
@@ -7997,7 +8003,7 @@ export namespace bilibili {
                             /** PlayerDanmakuSeniorModeSwitch value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8021,7 +8027,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuSpeed.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuSpeed value. */
@@ -8114,7 +8120,7 @@ export namespace bilibili {
                             /** PlayerDanmakuSpeed value */
                             value?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8138,7 +8144,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuSwitch.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuSwitch value. */
@@ -8237,7 +8243,7 @@ export namespace bilibili {
                             /** PlayerDanmakuSwitch canIgnore */
                             canIgnore?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8261,7 +8267,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuSwitchSave.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuSwitchSave value. */
@@ -8354,7 +8360,7 @@ export namespace bilibili {
                             /** PlayerDanmakuSwitchSave value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8378,7 +8384,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PlayerDanmakuUseDefaultConfig.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PlayerDanmakuUseDefaultConfig value. */
@@ -8471,7 +8477,7 @@ export namespace bilibili {
                             /** PlayerDanmakuUseDefaultConfig value */
                             value?: (boolean|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8495,7 +8501,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PostPanel.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PostPanel start. */
@@ -8636,7 +8642,7 @@ export namespace bilibili {
                             /** PostPanel toast */
                             toast?: (bilibili.community.service.dm.v1.Toast.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8682,7 +8688,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.PostPanelV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** PostPanelV2 start. */
@@ -8829,7 +8835,7 @@ export namespace bilibili {
                             /** PostPanelV2 postStatus */
                             postStatus?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -8876,7 +8882,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Response.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Response code. */
@@ -8975,7 +8981,7 @@ export namespace bilibili {
                             /** Response message */
                             message?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9022,7 +9028,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.SubtitleItem.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** SubtitleItem id. */
@@ -9169,7 +9175,7 @@ export namespace bilibili {
                             /** SubtitleItem aiStatus */
                             aiStatus?: (bilibili.community.service.dm.v1.SubtitleAiStatus|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9203,7 +9209,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.TextInput.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** TextInput portraitPlaceholder. */
@@ -9338,7 +9344,7 @@ export namespace bilibili {
                             /** TextInput label */
                             label?: (bilibili.community.service.dm.v1.Label.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9362,7 +9368,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.TextInputV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** TextInputV2 portraitPlaceholder. */
@@ -9485,7 +9491,7 @@ export namespace bilibili {
                             /** TextInputV2 textInputLimit */
                             textInputLimit?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9509,7 +9515,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.Toast.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** Toast text. */
@@ -9620,7 +9626,7 @@ export namespace bilibili {
                             /** Toast button */
                             button?: (bilibili.community.service.dm.v1.Button.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9644,7 +9650,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.ToastButtonV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** ToastButtonV2 text. */
@@ -9743,7 +9749,7 @@ export namespace bilibili {
                             /** ToastButtonV2 action */
                             action?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9777,7 +9783,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.ToastV2.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** ToastV2 text. */
@@ -9882,7 +9888,7 @@ export namespace bilibili {
                             /** ToastV2 toastButtonV2 */
                             toastButtonV2?: (bilibili.community.service.dm.v1.ToastButtonV2.$Properties|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -9906,7 +9912,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.UserInfo.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** UserInfo mid. */
@@ -10029,7 +10035,7 @@ export namespace bilibili {
                             /** UserInfo rank */
                             rank?: (number|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -10053,7 +10059,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.VideoMask.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** VideoMask cid. */
@@ -10170,7 +10176,7 @@ export namespace bilibili {
                             /** VideoMask maskUrl */
                             maskUrl?: (string|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
@@ -10194,7 +10200,7 @@ export namespace bilibili {
                          */
                         constructor(properties?: bilibili.community.service.dm.v1.VideoSubtitle.$Properties);
 
-                        /** Unknown fields preserved while decoding */
+                        /** Unknown fields preserved while decoding when enabled */
                         $unknowns?: Uint8Array[];
 
                         /** VideoSubtitle lan. */
@@ -10299,7 +10305,7 @@ export namespace bilibili {
                             /** VideoSubtitle subtitles */
                             subtitles?: (bilibili.community.service.dm.v1.SubtitleItem.$Properties[]|null);
 
-                            /** Unknown fields preserved while decoding */
+                            /** Unknown fields preserved while decoding when enabled */
                             $unknowns?: Uint8Array[];
                         }
 
