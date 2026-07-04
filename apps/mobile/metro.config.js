@@ -11,21 +11,23 @@ const {
 const {
 	wrapWithReanimatedMetroConfig,
 } = require('react-native-reanimated/metro-config')
+const { getBundleModeMetroConfig } = require('react-native-worklets/bundleMode')
 
-module.exports = withRozenite(
-	(async () => {
-		const config = getSentryExpoConfig(__dirname, {
-			annotateReactComponents: true,
-		})
+const sentryConfig = getSentryExpoConfig(__dirname, {
+	annotateReactComponents: true,
+})
 
-		config.resolver.unstable_enablePackageExports = true
-		config.resolver.sourceExts.push('sql')
+sentryConfig.resolver.unstable_enablePackageExports = true
+sentryConfig.resolver.sourceExts.push('sql')
 
-		return wrapWithReanimatedMetroConfig(config)
-	})(),
-	{
-		enabled: process.env.WITH_ROZENITE === 'true',
-		enhanceMetroConfig: (config) =>
-			withRozeniteBundleDiscoveryPlugin(withRozeniteRequireProfiler(config)),
-	},
-)
+const withReanimated = wrapWithReanimatedMetroConfig(sentryConfig)
+
+const withWorklets = getBundleModeMetroConfig(withReanimated)
+
+const config = withRozenite(withWorklets, {
+	enabled: process.env.WITH_ROZENITE === 'true',
+	enhanceMetroConfig: (config) =>
+		withRozeniteBundleDiscoveryPlugin(withRozeniteRequireProfiler(config)),
+})
+
+module.exports = config

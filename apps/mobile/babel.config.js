@@ -1,3 +1,10 @@
+/** @type {import('react-native-worklets/plugin').PluginOptions} */
+const workletsPluginOptions = {
+	bundleMode: false,
+	strictGlobal: true, // optional, but recommended
+	importForwarding: { moduleNames: ['react-native-skia'] },
+}
+
 export default (api) => {
 	api.cache(true)
 	return {
@@ -46,6 +53,7 @@ export default (api) => {
 				},
 			],
 			['inline-import', { extensions: ['.sql'] }],
+			['react-native-worklets/plugin', workletsPluginOptions],
 		],
 	}
 }

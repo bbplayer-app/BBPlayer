@@ -13,6 +13,8 @@
 - 升级到 RNGH v3
 - 切换到 LegendList
 - 优化进入播放列表页面时的流畅性
+- 升级到 Expo 57
+- 启用 Worklets Bundle Mode
 
 ## [2.6.1] - 2026-06-24
 
