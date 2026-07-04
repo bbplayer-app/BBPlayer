@@ -15,6 +15,7 @@ import { useCurrentTrack } from '@/hooks/player/useCurrentTrack'
 import { useGetMultiPageList } from '@/hooks/queries/bilibili/video'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { resolveTrackCover } from '@/utils/imageUrl'
+import log, { reportErrorToSentry } from '@/utils/log'
 import toast from '@/utils/toast'
 
 const sanitizeFileName = (name: string) => name.replace(/[/\\?%*:|"<>]/g, '-')
@@ -135,7 +136,11 @@ const SongShareModal = () => {
 						setCardColor(bgColor)
 					}
 				})
-				.catch(() => undefined)
+				.catch((e) => {
+					log.error('提取图片主题色失败', e)
+					reportErrorToSentry(e, '提取图片主题色失败', 'SongShareModal')
+					return undefined
+				})
 		}
 	}, [imageRef, theme.dark])
 
