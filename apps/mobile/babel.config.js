@@ -1,8 +1,8 @@
 /** @type {import('react-native-worklets/plugin').PluginOptions} */
 const workletsPluginOptions = {
-	bundleMode: false,
+	bundleMode: true,
 	strictGlobal: true, // optional, but recommended
-	importForwarding: { moduleNames: ['react-native-skia'] },
+	importForwarding: { moduleNames: [] },
 }
 
 export default (api) => {
