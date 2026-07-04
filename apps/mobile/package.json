@@ -1,6 +1,6 @@
 {
 	"name": "@bbplayer/mobile",
-	"version": "2.6.1",
+	"version": "2.6.2-beta",
 	"private": true,
 	"main": "index.js",
 	"scripts": {
