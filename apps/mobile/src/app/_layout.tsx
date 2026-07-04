@@ -6,6 +6,7 @@ import {
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
+import { ObserveRoot, useObserve } from 'expo-observe'
 import { Stack, router } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
@@ -51,8 +52,9 @@ function onAppStateChange(status: AppStateStatus) {
 	}
 }
 
-export default Sentry.wrap(function RootLayout() {
+function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
+	const { markInteractive } = useObserve()
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
 	useCheckUpdate()
@@ -164,6 +166,8 @@ export default Sentry.wrap(function RootLayout() {
 
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
+			markInteractive()
+
 			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 			playlistSyncWorker.recoverStuckRows().catch((error) => {
 				logger.error('恢复同步任务失败:', error)
@@ -174,7 +178,7 @@ export default Sentry.wrap(function RootLayout() {
 				router.push('/onboarding')
 			}
 		}
-	}, [isReady, migrationsSuccess])
+	}, [isReady, migrationsSuccess, markInteractive])
 
 	useEffect(() => {
 		if (migrationsError) {
@@ -358,7 +362,9 @@ export default Sentry.wrap(function RootLayout() {
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>
 	)
-})
+}
+
+export default Sentry.wrap(ObserveRoot.wrap(RootLayout))
 
 const styles = StyleSheet.create({
 	appContainer: {

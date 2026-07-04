@@ -13,7 +13,8 @@
 		"lint": "oxlint --type-aware && eslint .",
 		"lint:fix": "oxlint --type-aware --fix && eslint . --fix",
 		"postinstall": "lefthook install",
-		"publish:update": "pnpm --filter @bbplayer/update-publisher start"
+		"publish:update": "pnpm --filter @bbplayer/update-publisher start",
+		"type-check": "tsgo --build --noEmit"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",

@@ -5,7 +5,6 @@
 	"main": "index.js",
 	"scripts": {
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
-		"format": "oxfmt --write .",
 		"postinstall": "patch-package",
 		"prepare": "pbjs -t static-module -w commonjs -o src/lib/api/bilibili/proto/dm.js src/lib/api/bilibili/proto/dm.proto && pbts -o src/lib/api/bilibili/proto/dm.d.ts src/lib/api/bilibili/proto/dm.js",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start",
@@ -61,6 +60,7 @@
 		"expo-linear-gradient": "~57.0.0",
 		"expo-linking": "~57.0.1",
 		"expo-media-library": "~57.0.1",
+		"expo-observe": "~57.0.3",
 		"expo-router": "57.0.3",
 		"expo-sharing": "~57.0.2",
 		"expo-sqlite": "~57.0.0",

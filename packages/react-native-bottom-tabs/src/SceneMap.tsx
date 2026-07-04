@@ -26,6 +26,7 @@ export function SceneMap<T>(scenes: { [key: string]: React.ComponentType<T> }) {
 			<SceneComponent
 				key={route.key}
 				jumpTo={jumpTo}
+				/* @ts-expect-error: generic SceneMap<T> vs fixed SceneProps */
 				component={component}
 				route={route}
 			/>
