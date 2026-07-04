@@ -1,7 +1,9 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import type { LyricLine } from '@bbplayer/splash'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { AppState } from 'react-native'
+import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import playerProgressEmitter from '@/lib/player/progressListener'
 
@@ -11,22 +13,54 @@ export default function useLyricSync(
 	offset: number, // 单位秒
 	enabled: boolean,
 ) {
-	const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
+	const currentLyricIndex = useSharedValue(0)
 	const isManualScrollingRef = useRef(false)
 	const manualScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	)
-	const [isActive, setIsActive] = useState(true)
+	const isActiveRef = useRef(true)
 	const latestJumpRequestRef = useRef(0)
 
-	const updateCurrentLyricIndex = useCallback(
-		(index: number) => {
-			setCurrentLyricIndex(index)
+	const onUserScrollStart = useCallback(() => {
+		if (!lyrics.length) return
+		if (manualScrollTimeoutRef.current) {
+			clearTimeout(manualScrollTimeoutRef.current)
+			manualScrollTimeoutRef.current = null
+		}
+		isManualScrollingRef.current = true
+	}, [lyrics.length])
+
+	const onUserScrollEnd = useCallback(() => {
+		if (!lyrics.length) return
+		if (manualScrollTimeoutRef.current)
+			clearTimeout(manualScrollTimeoutRef.current)
+
+		manualScrollTimeoutRef.current = setTimeout(() => {
+			manualScrollTimeoutRef.current = null
+			isManualScrollingRef.current = false
+
+			scrollToIndex(currentLyricIndex.get(), true)
+		}, 2000)
+	}, [lyrics.length, scrollToIndex, currentLyricIndex])
+
+	const handleJumpToLyric = useCallback(
+		async (index: number) => {
+			if (lyrics.length === 0) return
+			if (!lyrics[index]) return
+			const requestId = ++latestJumpRequestRef.current
+			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
+			if (latestJumpRequestRef.current !== requestId) return
+			if (manualScrollTimeoutRef.current) {
+				clearTimeout(manualScrollTimeoutRef.current)
+				manualScrollTimeoutRef.current = null
+			}
+			isManualScrollingRef.current = false
+			currentLyricIndex.set(index)
 			if (!enabled) return
 			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
 			scrollToIndex(index, true)
 		},
-		[enabled, scrollToIndex],
+		[lyrics, offset, enabled, scrollToIndex, currentLyricIndex],
 	)
 
 	const findIndexForTime = useCallback(
@@ -48,99 +82,45 @@ export default function useLyricSync(
 		[lyrics],
 	)
 
-	const onUserScrollStart = () => {
-		if (!lyrics.length) return
-		if (manualScrollTimeoutRef.current) {
-			clearTimeout(manualScrollTimeoutRef.current)
-			manualScrollTimeoutRef.current = null
-		}
-		isManualScrollingRef.current = true
-	}
-
-	const onUserScrollEnd = () => {
-		if (!lyrics.length) return
-		if (manualScrollTimeoutRef.current)
-			clearTimeout(manualScrollTimeoutRef.current)
-
-		manualScrollTimeoutRef.current = setTimeout(() => {
-			manualScrollTimeoutRef.current = null
-			isManualScrollingRef.current = false
-
-			scrollToIndex(currentLyricIndex, true)
-		}, 2000)
-	}
-
-	const handleJumpToLyric = useCallback(
-		async (index: number) => {
-			if (lyrics.length === 0) return
-			if (!lyrics[index]) return
-			const requestId = ++latestJumpRequestRef.current
-			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
-			if (latestJumpRequestRef.current !== requestId) return
-			if (manualScrollTimeoutRef.current) {
-				clearTimeout(manualScrollTimeoutRef.current)
-				manualScrollTimeoutRef.current = null
-			}
-			isManualScrollingRef.current = false
-			updateCurrentLyricIndex(index)
+	// ponytail: animated reaction to scroll on index change without React state
+	useAnimatedReaction(
+		() => currentLyricIndex.value,
+		(index, prevIndex) => {
+			if (index === prevIndex) return
+			if (!enabled) return
+			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
+			scheduleOnRN(scrollToIndex, index, true)
 		},
-		[lyrics, offset, updateCurrentLyricIndex],
+		[enabled, scrollToIndex],
 	)
 
 	useEffect(() => {
-		const appStateSubscription = AppState.addEventListener(
-			'change',
-			(nextAppState) => {
-				if (nextAppState === 'active') {
-					setIsActive(true)
-				} else {
-					setIsActive(false)
-				}
-			},
-		)
+		const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+			isActiveRef.current = nextAppState === 'active'
+		})
 		const handler = playerProgressEmitter.subscribe('progress', (data) => {
 			if (!enabled) return
 
 			const offsetedPosition = data.position + offset
-			if (!isActive || offsetedPosition <= 0) {
-				return
-			}
+			if (!isActiveRef.current || offsetedPosition <= 0) return
 			const index = findIndexForTime(offsetedPosition)
-			if (index === currentLyricIndex) return
-			updateCurrentLyricIndex(index)
+			currentLyricIndex.set(index)
 		})
 		return () => {
 			handler()
-			appStateSubscription.remove()
+			appStateSub.remove()
 		}
-	}, [
-		currentLyricIndex,
-		enabled,
-		findIndexForTime,
-		isActive,
-		offset,
-		updateCurrentLyricIndex,
-	])
+	}, [enabled, findIndexForTime, offset, currentLyricIndex])
 
 	useEffect(() => {
 		if (!enabled) return
 		void Orpheus.getPosition().then((data) => {
 			const offsetedPosition = data + offset
-			if (!isActive || offsetedPosition <= 0) {
-				return
-			}
+			if (!isActiveRef.current || offsetedPosition <= 0) return
 			const index = findIndexForTime(offsetedPosition)
-			if (index === currentLyricIndex) return
-			updateCurrentLyricIndex(index)
+			currentLyricIndex.set(index)
 		})
-	}, [
-		currentLyricIndex,
-		enabled,
-		findIndexForTime,
-		isActive,
-		offset,
-		updateCurrentLyricIndex,
-	])
+	}, [enabled, findIndexForTime, offset, currentLyricIndex])
 
 	useEffect(() => {
 		return () => {

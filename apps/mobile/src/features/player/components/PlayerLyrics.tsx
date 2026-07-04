@@ -330,7 +330,7 @@ const Lyrics = memo(function Lyrics({
 								{enableOldSchoolStyleLyric ? (
 									<OldSchoolLyricLineItem
 										item={item}
-										isHighlighted={index === currentLyricIndex}
+										currentHighlightIndex={currentLyricIndex}
 										index={index}
 										jumpToThisLyric={handleJumpToLyric}
 										onPressBackground={onPressBackground}
@@ -341,7 +341,7 @@ const Lyrics = memo(function Lyrics({
 								) : (
 									<ModernLyricLineItem
 										item={item}
-										isHighlighted={index === currentLyricIndex}
+										currentHighlightIndex={currentLyricIndex}
 										index={index}
 										jumpToThisLyric={handleJumpToLyric}
 										onPressBackground={onPressBackground}

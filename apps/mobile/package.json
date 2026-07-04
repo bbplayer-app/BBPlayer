@@ -83,6 +83,7 @@
 		"protobufjs": "^8.6.6",
 		"react": "19.2.3",
 		"react-native": "0.86.0",
+		"react-native-animateable-text": "^0.19.2",
 		"react-native-boost": "^1.5.0",
 		"react-native-bootsplash": "^7.3.2",
 		"react-native-bottom-tabs": "workspace:*",

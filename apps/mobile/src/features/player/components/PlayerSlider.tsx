@@ -1,10 +1,12 @@
 import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
 import Color from 'color'
 import { WavySlider } from 'expo-wavy-slider'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import AnimateableText from 'react-native-animateable-text'
+import { useTheme } from 'react-native-paper'
 import {
+	useAnimatedProps,
 	useAnimatedReaction,
 	useDerivedValue,
 	useSharedValue,
@@ -26,61 +28,63 @@ function TextWithAnimation({
 	sharedPosition: SharedValue<number>
 	sharedDuration: SharedValue<number>
 }) {
-	const { colors } = useTheme()
-	const [duration, setDuration] = useState(0)
-	const [position, setPosition] = useState(0)
+	const { colors, fonts } = useTheme()
+
+	const positionText = useSharedValue('00:00')
+	const durationText = useSharedValue('00:00')
 
 	useAnimatedReaction(
-		() => {
-			const truncDuration = sharedDuration.value
-				? Math.trunc(sharedDuration.value)
-				: 0
-			const truncPosition = sharedPosition.value
-				? Math.trunc(sharedPosition.value)
-				: 0
-			return [truncDuration, truncPosition]
-		},
-		([curDuration, curPosition], prev) => {
-			if (!prev) {
-				scheduleOnRN(setDuration, curDuration)
-				scheduleOnRN(setPosition, curPosition)
-				return
-			}
-			if (curDuration !== prev[0]) {
-				scheduleOnRN(setDuration, curDuration)
-			}
-			if (curPosition !== prev[1]) {
-				scheduleOnRN(setPosition, curPosition)
+		() => (sharedPosition.value ? Math.trunc(sharedPosition.value) : 0),
+		(pos, prev) => {
+			if (pos !== prev) {
+				positionText.value = formatDurationToHHMMSS(pos)
 			}
 		},
 	)
 
+	useAnimatedReaction(
+		() => (sharedDuration.value ? Math.trunc(sharedDuration.value) : 0),
+		(dur, prev) => {
+			if (dur !== prev) {
+				durationText.value = formatDurationToHHMMSS(dur)
+			}
+		},
+	)
+
+	const textStyle = useMemo(
+		() => ({
+			...fonts.bodySmall,
+			color: colors.onSurfaceVariant,
+			fontVariant: ['tabular-nums'],
+			includeFontPadding: false,
+		}),
+		[colors.onSurfaceVariant, fonts.bodySmall],
+	)
+	const positionTextProp = useAnimatedProps(() => {
+		return {
+			text: positionText.value,
+		}
+	})
+	const durationTextProp = useAnimatedProps(() => {
+		return {
+			text: durationText.value,
+		}
+	})
+
 	return (
 		<>
-			<Text
-				variant='bodySmall'
+			<AnimateableText
 				numberOfLines={1}
 				adjustsFontSizeToFit
-				style={{
-					color: colors.onSurfaceVariant,
-					fontVariant: ['tabular-nums'],
-					includeFontPadding: false,
-				}}
-			>
-				{formatDurationToHHMMSS(position)}
-			</Text>
-			<Text
-				variant='bodySmall'
+				style={textStyle}
+				animatedProps={positionTextProp}
+			/>
+			<AnimateableText
 				numberOfLines={1}
 				adjustsFontSizeToFit
-				style={{
-					color: colors.onSurfaceVariant,
-					fontVariant: ['tabular-nums'],
-					includeFontPadding: false,
-				}}
-			>
-				{formatDurationToHHMMSS(duration)}
-			</Text>
+				style={textStyle}
+				animatedProps={durationTextProp}
+			/>
 		</>
 	)
 }

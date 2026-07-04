@@ -2,7 +2,7 @@
   huge thx to expo-ui
   inspired by https://github.com/expo/expo/blob/main/packages/expo-ui/src/State/index.fx.ts
 */
-// import { installOnUIRuntime } from 'expo'
+import { installOnUIRuntime } from 'expo'
 
 import { worklets } from './utils/ensureWorklets'
 import {
@@ -69,20 +69,5 @@ function registerSharedObjectSerializer(): void {
 	})
 }
 
-/*
-  `installOnUIRuntime()` currently depends on the runtime pointer exposed via
-  `_WORKLET_RUNTIME`. In practice that value is installed by Reanimated's
-  runtime decorator, so this package requires Reanimated even though the direct
-  worklet APIs come from `react-native-worklets`.
-  https://github.com/software-mansion/react-native-reanimated/blob/cfb12d0f747ad189d2ff7717b0774de8ec6f9897/packages/react-native-reanimated/Common/cpp/reanimated/RuntimeDecorators/RNRuntimeDecorator.cpp#L20
-*/
-try {
-	// oxlint-disable-next-line
-	require('react-native-reanimated')
-} catch {
-	throw new Error(
-		'[expo-wavy-slider] react-native-reanimated is required. Please install it first.',
-	)
-}
-// installOnUIRuntime()
+installOnUIRuntime(worklets.getUIRuntimeHolder())
 registerSharedObjectSerializer()

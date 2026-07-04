@@ -20,7 +20,6 @@ interface KaraokeWordProps {
 	baseStyle?: StyleProp<TextStyle>
 	activeColor: string
 	inactiveColor: string
-	isHighlighted: boolean
 }
 
 export const KaraokeWord = memo(function KaraokeWord({
@@ -29,7 +28,6 @@ export const KaraokeWord = memo(function KaraokeWord({
 	baseStyle,
 	activeColor,
 	inactiveColor,
-	isHighlighted,
 }: KaraokeWordProps) {
 	const localProgress = useSharedValue(0)
 	const layoutWidth = useSharedValue(0)
@@ -37,13 +35,6 @@ export const KaraokeWord = memo(function KaraokeWord({
 	useAnimatedReaction(
 		() => currentTime.value,
 		(currentVal: number) => {
-			if (!isHighlighted) {
-				if (localProgress.value !== 0) {
-					localProgress.set(0)
-				}
-				return
-			}
-
 			const timeMs = currentVal * 1000
 			if (timeMs < span.startTime) {
 				localProgress.set(0)
@@ -60,13 +51,13 @@ export const KaraokeWord = memo(function KaraokeWord({
 				)
 			}
 		},
-		[isHighlighted, span],
+		[span],
 	)
 
 	const maskStyle = useAnimatedStyle(() => {
 		return {
 			width: layoutWidth.value * localProgress.value,
-			opacity: isHighlighted ? 1 : 0,
+			opacity: currentTime.value >= 0 ? 1 : 0,
 		}
 	})
 
@@ -92,14 +83,12 @@ export const KaraokeWord = memo(function KaraokeWord({
 			</Text>
 
 			<Animated.View style={[styles.mask, maskStyle]}>
-				{isHighlighted && (
-					<AnimatedText
-						style={[baseStyle, activeTextStyle]}
-						numberOfLines={1}
-					>
-						{span.text}
-					</AnimatedText>
-				)}
+				<AnimatedText
+					style={[baseStyle, activeTextStyle]}
+					numberOfLines={1}
+				>
+					{span.text}
+				</AnimatedText>
 			</Animated.View>
 		</View>
 	)

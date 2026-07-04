@@ -1,5 +1,5 @@
 import { type LyricLine } from '@bbplayer/splash'
-import { memo, useEffect } from 'react'
+import { memo } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
@@ -8,7 +8,6 @@ import Animated, {
 	type SharedValue,
 	useAnimatedStyle,
 	useDerivedValue,
-	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
 
@@ -18,7 +17,7 @@ const AnimatedTouchable = createAnimatedComponent(Touchable)
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
-	isHighlighted: boolean
+	currentHighlightIndex: SharedValue<number>
 	jumpToThisLyric: (index: number) => void
 	index: number
 	onPressBackground?: (() => void) | undefined
@@ -29,7 +28,7 @@ export interface LyricLineItemProps {
 
 export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	item,
-	isHighlighted,
+	currentHighlightIndex,
 	jumpToThisLyric,
 	index,
 	onPressBackground,
@@ -38,14 +37,13 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	preferredLyricType = 'translation',
 }: LyricLineItemProps) {
 	const colors = useTheme().colors
-	const isHighlightedShared = useSharedValue(isHighlighted)
 
-	useEffect(() => {
-		isHighlightedShared.set(isHighlighted)
-	}, [isHighlighted, item.startTime, index, isHighlightedShared])
+	const isHighlighted = useDerivedValue(() => {
+		return currentHighlightIndex.value === index
+	})
 
 	const gatedCurrentTime = useDerivedValue(() => {
-		return isHighlightedShared.value ? currentTime.value : -1
+		return isHighlighted.value ? currentTime.value : -1
 	})
 
 	const isVerbatim = !!(
@@ -57,7 +55,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 
 	const animatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
-		if (isHighlightedShared.value) {
+		if (isHighlighted.value) {
 			return {
 				opacity: withTiming(1, { duration }),
 				color: withTiming(colors.primary, { duration }),
@@ -103,7 +101,6 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 								baseStyle={styles.oldSchoolItemText}
 								activeColor={colors.primary}
 								inactiveColor={colors.onSurfaceDisabled}
-								isHighlighted={isHighlighted}
 							/>
 						))}
 					</View>
@@ -126,7 +123,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 
 export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	item,
-	isHighlighted,
+	currentHighlightIndex,
 	jumpToThisLyric,
 	index,
 	onPressBackground,
@@ -135,18 +132,17 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	preferredLyricType = 'translation',
 }: LyricLineItemProps) {
 	const theme = useTheme()
-	const isHighlightedShared = useSharedValue(isHighlighted)
 
-	useEffect(() => {
-		isHighlightedShared.set(isHighlighted)
-	}, [isHighlighted, item.startTime, index, isHighlightedShared])
+	const isHighlighted = useDerivedValue(() => {
+		return currentHighlightIndex.value === index
+	})
 
 	const gatedCurrentTime = useDerivedValue(() => {
-		return isHighlightedShared.value ? currentTime.value : -1
+		return isHighlighted.value ? currentTime.value : -1
 	})
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
-		if (isHighlightedShared.value) {
+		if (isHighlighted.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
 				transform: [
@@ -174,7 +170,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 
 	const textAnimatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
-		if (isHighlightedShared.value) {
+		if (isHighlighted.value) {
 			return {
 				color: withTiming(theme.colors.primary, { duration }),
 			}
@@ -197,7 +193,6 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 							baseStyle={styles.modernItemText}
 							activeColor={theme.colors.primary}
 							inactiveColor={theme.colors.onSurfaceDisabled}
-							isHighlighted={isHighlighted}
 						/>
 					))}
 				</View>
