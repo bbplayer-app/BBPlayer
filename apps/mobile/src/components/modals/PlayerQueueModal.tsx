@@ -9,7 +9,6 @@ import {
 import {
 	memo,
 	useCallback,
-	useEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -23,10 +22,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
-import { orpheusQueryKeys, usePlayerQueue } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
-import { queryClient } from '@/lib/config/queryClient'
+import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 
 const TrackItem = memo(
 	({
@@ -113,12 +111,11 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<LegendListRef>(null)
-	const isSheetOpen = usePlayerQueueSheetStore((state) => state.isOpen)
 
-	const { data: queue, refetch } = usePlayerQueue(isSheetOpen)
+	const queue = usePlayerQueueStore((state) => state.tracks)
 
 	const currentIndex = useMemo(() => {
-		if (!currentTrackId || !queue) return -1
+		if (!currentTrackId) return -1
 		return queue.findIndex((t) => t.id === currentTrackId)
 	}, [currentTrackId, queue])
 
@@ -126,24 +123,18 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	const switchTrackHandler = useCallback(
 		async (index: number) => {
-			if (!queue) return
 			if (index === -1) return
 			const target = queue[index]
 			if (!target) return
 			if (target.id === currentTrackId) return
 			await Orpheus.skipTo(index)
-			void refetch()
 		},
-		[queue, refetch, currentTrackId],
+		[queue, currentTrackId],
 	)
 
-	const removeTrackHandler = useCallback(
-		async (index: number) => {
-			await Orpheus.removeTrack(index)
-			void refetch()
-		},
-		[refetch],
-	)
+	const removeTrackHandler = useCallback(async (index: number) => {
+		await Orpheus.removeTrack(index)
+	}, [])
 
 	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
 
@@ -159,38 +150,15 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		[switchTrackHandler, removeTrackHandler],
 	)
 
-	useEffect(() => {
-		if (isSheetOpen) {
-			void refetch()
-		} else {
-			setDidInitialScroll(false)
-		}
-	}, [isSheetOpen, refetch])
-
-	useEffect(() => {
-		if (!isSheetOpen) {
-			queryClient.removeQueries({ queryKey: orpheusQueryKeys.playerQueue() })
-		}
-	}, [isSheetOpen])
-
-	useEffect(() => {
-		if (
-			isSheetOpen &&
-			currentIndex !== -1 &&
-			!didInitialScroll &&
-			queue?.length
-		) {
-			const timer = setTimeout(() => {
-				void flatListRef.current?.scrollToIndex({
-					animated: false,
-					index: currentIndex,
-					viewPosition: 0.5,
-				})
-				setDidInitialScroll(true)
-			}, 100)
-			return () => clearTimeout(timer)
-		}
-	}, [isSheetOpen, currentIndex, didInitialScroll, queue])
+	const scrollToCurrent = useCallback(() => {
+		if (currentIndex === -1 || !queue.length || didInitialScroll) return
+		void flatListRef.current?.scrollToIndex({
+			animated: false,
+			index: currentIndex,
+			viewPosition: 0.5,
+		})
+		setDidInitialScroll(true)
+	}, [currentIndex, queue.length, didInitialScroll])
 
 	return (
 		<TrueSheet
@@ -200,11 +168,13 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			cornerRadius={24}
 			backgroundColor={theme.colors.elevation.level1}
 			scrollable
+			onMount={scrollToCurrent}
 			onDidPresent={() => {
 				usePlayerQueueSheetStore.getState().setOpen(true)
 			}}
 			onDidDismiss={() => {
 				usePlayerQueueSheetStore.getState().setOpen(false)
+				setDidInitialScroll(false)
 			}}
 			{...props}
 		>
@@ -225,17 +195,17 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 							borderBottomColor: theme.colors.elevation.level2,
 						}}
 					>
-						<Text variant='titleMedium'>播放队列 ({queue?.length ?? 0})</Text>
+						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
 						<IconButton
 							icon='content-save-outline'
 							onPress={() => {
-								if (queue && queue.length > 0) {
+								if (queue.length > 0) {
 									useModalStore.getState().open('SaveQueueToPlaylist', {
 										trackIds: queue.map((t) => t.id),
 									})
 								}
 							}}
-							disabled={!queue || queue.length === 0}
+							disabled={queue.length === 0}
 						/>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>

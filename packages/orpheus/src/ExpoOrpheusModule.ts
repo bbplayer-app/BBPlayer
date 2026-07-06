@@ -105,6 +105,7 @@ export type OrpheusEvents = {
 		message?: string
 	}): void
 	onStatusBarLyricsStatusChanged(): void
+	onQueueChanged(): void
 }
 export interface OrpheusHeadlessTrackStartedEvent {
 	eventName: 'onTrackStarted'

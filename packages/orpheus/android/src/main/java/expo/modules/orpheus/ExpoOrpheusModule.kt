@@ -97,7 +97,7 @@ class ExpoOrpheusModule : Module() {
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-            // Logic moved to Service
+            sendEvent("onQueueChanged", emptyMap())
         }
 
         override fun onPositionDiscontinuity(
@@ -162,7 +162,7 @@ class ExpoOrpheusModule : Module() {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
             super.onShuffleModeEnabledChanged(shuffleModeEnabled)
-            // Persistence is handled by ShuffleManager.setShuffleEnabled; nothing to do here.
+            sendEvent("onQueueChanged", emptyMap())
         }
 
         override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
@@ -190,7 +190,8 @@ class ExpoOrpheusModule : Module() {
             "onCoverDownloadProgress",
             "onExportProgress",
             "onStatusBarLyricsStatusChanged",
-            "onRequestClearLyrics"
+            "onRequestClearLyrics",
+            "onQueueChanged"
         )
 
         RegisterActivityContracts {

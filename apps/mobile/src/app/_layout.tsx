@@ -24,6 +24,7 @@ import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
+import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
@@ -109,6 +110,9 @@ function RootLayout() {
 
 			// 初始化播放器状态
 			usePlayerStore.getState().initialize()
+
+			// 初始化播放队列监听
+			initPlayerQueueStore()
 
 			// 桌面歌词权限启动检查
 			const checkOverlayPermissionOnStart = async () => {

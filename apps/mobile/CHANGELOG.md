@@ -16,6 +16,7 @@
 - 升级到 Expo 57，更新了大部分依赖
 - 启用 Worklets Bundle Mode
 - 优化播放器和歌词页面流畅度
+- 优化播放队列体验
 
 ### Fixed
 
