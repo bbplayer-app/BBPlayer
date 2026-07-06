@@ -1,15 +1,17 @@
 import { type LyricLine } from '@bbplayer/splash'
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	createAnimatedComponent,
 	type SharedValue,
+	useAnimatedReaction,
 	useAnimatedStyle,
 	useDerivedValue,
 	withTiming,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 import { KaraokeWord } from './KaraokeWord'
 
@@ -137,9 +139,23 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		return currentHighlightIndex.value === index
 	})
 
-	const gatedCurrentTime = useDerivedValue(() => {
-		return isHighlighted.value ? currentTime.value : -1
-	})
+	const [isVerbatim, setIsVerbatim] = useState(false)
+
+	useAnimatedReaction(
+		() => currentHighlightIndex.value,
+		(currentVal) => {
+			scheduleOnRN(
+				setIsVerbatim,
+				!!(
+					enableVerbatimLyrics &&
+					item.isDynamic &&
+					item.spans &&
+					item.spans.length > 0 &&
+					currentVal === index
+				),
+			)
+		},
+	)
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
 		if (isHighlighted.value) {
@@ -161,16 +177,9 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		}
 	})
 
-	const isVerbatim = !!(
-		enableVerbatimLyrics &&
-		item.isDynamic &&
-		item.spans &&
-		item.spans.length > 0
-	)
-
 	const textAnimatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
-		if (isHighlighted.value) {
+		if (isHighlighted.value && isVerbatim) {
 			return {
 				color: withTiming(theme.colors.primary, { duration }),
 			}
@@ -189,7 +198,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 							// oxlint-disable-next-line react/no-array-index-key
 							key={`${index}_${idx}`}
 							span={span}
-							currentTime={gatedCurrentTime}
+							currentTime={currentTime}
 							baseStyle={styles.modernItemText}
 							activeColor={theme.colors.primary}
 							inactiveColor={theme.colors.onSurfaceDisabled}
