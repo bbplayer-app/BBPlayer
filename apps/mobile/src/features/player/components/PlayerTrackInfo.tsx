@@ -39,7 +39,6 @@ export function TrackInfo({
 	onArtistPress: () => void
 	onPressCover: () => void
 	coverRef: ImageRef | null
-	danmakuEnabled: boolean
 }) {
 	const { colors } = useTheme()
 	const colorScheme: ColorSchemeName = useColorScheme()
@@ -209,21 +208,6 @@ export function TrackInfo({
 						</SquircleView>
 					)}
 				</TouchableOpacity>
-				{/* 弹幕功能已废弃并关闭，不再渲染 DanmakuView */}
-				{/*
-				currentTrack.source === 'bilibili' &&
-				enableDanmaku &&
-				size.width > 0 &&
-				size.height > 0 && (
-					<DanmakuView
-						bvid={currentTrack.bilibiliMetadata.bvid}
-						cid={currentTrack.bilibiliMetadata.cid ?? undefined}
-						width={size.width}
-						height={COVER_SIZE_RECT + 48}
-						enable={danmakuEnabled}
-					/>
-				)
-				*/}
 			</Pressable>
 
 			<View style={styles.trackInfoContainer}>

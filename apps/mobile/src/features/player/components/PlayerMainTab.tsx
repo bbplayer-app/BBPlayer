@@ -17,14 +17,12 @@ interface PlayerMainTabProps {
 	jumpTo: (key: string) => void
 	imageRef: ImageRef | null
 	onPresent: () => void
-	danmakuEnabled: boolean
 }
 
 const PlayerMainTab = memo(function PlayerMainTab({
 	jumpTo,
 	imageRef,
 	onPresent,
-	danmakuEnabled,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
@@ -50,7 +48,6 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					jumpTo('lyrics')
 				}}
 				coverRef={imageRef}
-				danmakuEnabled={danmakuEnabled}
 			/>
 
 			<View

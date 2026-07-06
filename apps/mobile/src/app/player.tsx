@@ -309,7 +309,6 @@ export default function PlayerPage() {
 									jumpTo={jumpTo}
 									imageRef={coverRef}
 									onPresent={() => {}}
-									danmakuEnabled={index === 0}
 								/>
 							</View>
 							<View
