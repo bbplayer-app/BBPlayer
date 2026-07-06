@@ -140,6 +140,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	})
 
 	const [isVerbatim, setIsVerbatim] = useState(false)
+	const [isHighlightedRState, setIsHighlightedRState] = useState(false)
 
 	useAnimatedReaction(
 		() => currentHighlightIndex.value,
@@ -154,6 +155,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 					currentVal === index
 				),
 			)
+			scheduleOnRN(setIsHighlightedRState, currentVal === index)
 		},
 	)
 
@@ -179,7 +181,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 
 	const textAnimatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
-		if (isHighlighted.value && isVerbatim) {
+		if (isHighlighted.value && isHighlightedRState) {
 			return {
 				color: withTiming(theme.colors.primary, { duration }),
 			}
