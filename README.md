@@ -122,7 +122,13 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=bbplayer-app/bbplayer&type=date&legend=top-left)](https://www.star-history.com/#bbplayer-app/bbplayer&type=date&legend=top-left)
+<a href="https://www.star-history.com/?repos=bbplayer-app%2Fbbplayer&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&theme=dark&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
+ </picture>
+</a>
 
 ## 开源许可
 
