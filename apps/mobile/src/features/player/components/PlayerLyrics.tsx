@@ -79,6 +79,7 @@ const Lyrics = memo(function Lyrics({
 	const enableVerbatimLyrics = useAppStore(
 		(state) => state.settings.enableVerbatimLyrics,
 	)
+	const isUserScrolling = useSharedValue(false)
 
 	const { position: currentTime } = useSmoothProgress()
 
@@ -175,9 +176,11 @@ const Lyrics = memo(function Lyrics({
 			lastScrollY.set(currentY)
 		},
 		onBeginDrag: () => {
+			isUserScrolling.set(true)
 			scheduleOnRN(onUserScrollStart)
 		},
 		onEndDrag: () => {
+			isUserScrolling.set(false)
 			scrollDirection.set('idle')
 			scheduleOnRN(onUserScrollEnd)
 		},
@@ -416,6 +419,7 @@ const Lyrics = memo(function Lyrics({
 				}
 				onEditLyrics={handleEditLyrics}
 				onOpenOffsetMenu={handleOpenOffsetMenu}
+				isUserScrolling={isUserScrolling}
 			/>
 
 			{/* 歌词偏移量调整面板 */}

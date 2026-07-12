@@ -1,12 +1,7 @@
 import { Icon as ExpoIcon } from '@expo/ui'
-import { LinearGradient } from 'expo-linear-gradient'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
-import {
-	useTapGesture,
-	GestureDetector,
-	Touchable,
-} from 'react-native-gesture-handler'
+import { Touchable } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedReaction,
@@ -61,6 +56,7 @@ interface LyricsControlOverlayProps {
 	onEditLyrics: () => void
 	onOpenOffsetMenu: () => void
 	onControlsVisibilityChange?: (visible: boolean) => void
+	isUserScrolling: SharedValue<boolean>
 }
 
 export const LyricsControlOverlay = memo(function LyricsControlOverlay({
@@ -73,6 +69,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	onEditLyrics,
 	onOpenOffsetMenu,
 	onControlsVisibilityChange,
+	isUserScrolling,
 }: LyricsControlOverlayProps) {
 	const { colors, dark } = useTheme()
 	const actionButtonRef = useRef<View>(null)
@@ -114,6 +111,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 		() => scrollDirection.value,
 		(current, previous) => {
 			if (current === previous) return
+			if (!isUserScrolling.value) return
 			if (current === 'up') {
 				// 上滑 - 隐藏控件
 				scheduleOnRN(hideControls)
@@ -132,17 +130,17 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	}, [clearHideTimer])
 
 	// 点击手势切换控件显示
-	const tapGesture = useTapGesture({
-		onDeactivate: (e) => {
-			'worklet'
-			if (e.canceled) return
-			if (controlsOpacity.value < 0.5) {
-				scheduleOnRN(showControls)
-			} else {
-				scheduleOnRN(resetHideTimer)
-			}
-		},
-	})
+	// const tapGesture = useTapGesture({
+	// 	onDeactivate: (e) => {
+	// 		'worklet'
+	// 		if (e.canceled) return
+	// 		if (controlsOpacity.value < 0.5) {
+	// 			scheduleOnRN(showControls)
+	// 		} else {
+	// 			scheduleOnRN(resetHideTimer)
+	// 		}
+	// 	},
+	// })
 
 	// 控件交互时重置隐藏定时器
 	const handleInteraction = useCallback(() => {
@@ -163,34 +161,26 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 
 	const controlsAnimatedStyle = useAnimatedStyle(() => ({
 		opacity: controlsOpacity.value,
+		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'auto',
+	}))
+
+	const rootAnimatedStyle = useAnimatedStyle(() => ({
 		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'none',
 	}))
 
 	// 渐变颜色
-	const gradientColors = dark
-		? (['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)'] as const)
-		: ([
-				'rgba(255,255,255,0)',
-				'rgba(255,255,255,0.4)',
-				'rgba(255,255,255,0.8)',
-			] as const)
+	const linearGradientCss = dark
+		? 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.8) 100%)'
+		: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 40%, rgba(255,255,255,0.8) 100%)'
 
 	return (
-		<View
-			style={styles.overlayContainer}
-			pointerEvents='box-none'
+		<Animated.View
+			style={[
+				styles.overlayContainer,
+				rootAnimatedStyle,
+				{ experimental_backgroundImage: linearGradientCss },
+			]}
 		>
-			{/* 渐变背景 + 点击区域 */}
-			<GestureDetector gesture={tapGesture}>
-				<Animated.View style={styles.gradient}>
-					<LinearGradient
-						style={styles.gradientInner}
-						colors={gradientColors}
-						locations={[0, 0.4, 1]}
-					/>
-				</Animated.View>
-			</GestureDetector>
-
 			{/* 功能按钮 - 始终可见，右下角 */}
 			<Animated.View
 				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
@@ -259,7 +249,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 					/>
 				</View>
 			</Animated.View>
-		</View>
+		</Animated.View>
 	)
 })
 
