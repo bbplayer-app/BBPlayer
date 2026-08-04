@@ -165,7 +165,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	}))
 
 	const rootAnimatedStyle = useAnimatedStyle(() => ({
-		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'none',
+		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'box-none',
 	}))
 
 	// 渐变颜色
@@ -181,7 +181,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 				{ experimental_backgroundImage: linearGradientCss },
 			]}
 		>
-			{/* 功能按钮 - 始终可见，右下角 */}
+			{/* 功能按钮 - 仅当播放器控件不可见时可见，右下角 */}
 			<Animated.View
 				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
 			>
@@ -276,6 +276,7 @@ const styles = StyleSheet.create({
 		bottom: 40,
 		right: 16,
 		flexDirection: 'column',
+		zIndex: 99999,
 	},
 	utilityButton: {
 		borderRadius: 99999,
