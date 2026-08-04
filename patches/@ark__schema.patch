@@ -1,0 +1,12 @@
+diff --git a/out/scope.js b/out/scope.js
+index ed17995b473f7742000c25184e3ce4abb518f141..5a4b0b9c17d5b9249e8dd713d8a61e98a9598e64 100644
+--- a/out/scope.js
++++ b/out/scope.js
+@@ -2,6 +2,7 @@ import { ParseError, flatMorph, hasDomain, isArray, isThunk, printable, throwInt
+ import { mergeConfigs } from "./config.js";
+ import { GenericRoot, LazyGenericBody } from "./generic.js";
+ import { nodeImplementationsByKind } from "./kinds.js";
++void nodeImplementationsByKind;
+ import { RootModule, bindModule } from "./module.js";
+ import { nodesByRegisteredId, parseNode, registerNodeId, schemaKindOf, withId } from "./parse.js";
+ import { Alias } from "./roots/alias.js";

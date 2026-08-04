@@ -15,6 +15,8 @@ const { getBundleModeMetroConfig } = require('react-native-worklets/bundleMode')
 
 const sentryConfig = getSentryExpoConfig(__dirname, {
 	annotateReactComponents: true,
+	includeWebReplay: false,
+	includeWebFeedback: false,
 })
 
 sentryConfig.resolver.unstable_enablePackageExports = true
