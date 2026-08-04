@@ -23,6 +23,7 @@ export interface AppStorageSchema {
 	sort_key_migrated_v3: boolean
 	play_history_migrated_v1: boolean
 	independent_account_migrated_v1: boolean
+	play_history_ms_migrated_v1: boolean
 	'shared-playlist-members': string
 	'skin-storage': string
 	boot_splash_preload: string

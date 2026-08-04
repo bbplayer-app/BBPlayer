@@ -235,7 +235,7 @@ async function finalizeAndRecordCurrentTrack(
 		})
 
 		const res = await trackService.addPlayRecordFromUniqueKey(uniqueKey, {
-			startTime: (Date.now() - playedSeconds * 1000) / 1000,
+			startTime: Date.now() - playedSeconds * 1000,
 			durationPlayed: effectivePlayed,
 			completed,
 		})

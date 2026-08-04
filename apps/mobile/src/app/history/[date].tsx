@@ -1,5 +1,4 @@
 import { LegendList } from '@legendapp/list/react-native'
-import dayjs from 'dayjs'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -10,7 +9,7 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { HistoryListItem } from '@/features/history/HistoryListItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { usePlayHistoryByDayOfMonth } from '@/hooks/queries/playHistory'
+import { usePlayHistoryByDate } from '@/hooks/queries/playHistory'
 import type { Track } from '@/types/core/media'
 
 interface HistoryItemData {
@@ -53,13 +52,12 @@ export default function DateHistoryPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const { date } = useLocalSearchParams<{ date: string }>()
-	const dayOfMonth = date ? dayjs(date).date() : null
 
 	const {
 		data: historyRecords,
 		isLoading: isHistoryLoading,
 		isError: isHistoryError,
-	} = usePlayHistoryByDayOfMonth(dayOfMonth ?? 0)
+	} = usePlayHistoryByDate(date ?? '')
 
 	const getAggregatedHistory = () => {
 		if (!historyRecords) return { aggregatedTracks: [], totalDuration: 0 }

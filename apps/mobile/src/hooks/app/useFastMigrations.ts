@@ -14,6 +14,7 @@ const SORT_KEY_MIGRATED_V2_KEY = 'sort_key_migrated_v2' // gitleaks:allow
 const SORT_KEY_MIGRATED_V3_KEY = 'sort_key_migrated_v3' // gitleaks:allow
 const PLAY_HISTORY_MIGRATED_V1_KEY = 'play_history_migrated_v1' // gitleaks:allow
 const INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY = 'independent_account_migrated_v1' // gitleaks:allow
+const PLAY_HISTORY_MS_MIGRATED_V1_KEY = 'play_history_ms_migrated_v1' // gitleaks:allow
 
 interface MigrationConfig {
 	journal: {
@@ -233,6 +234,28 @@ function migratePlayHistory(): void {
 }
 
 /**
+ * 将 play_history.start_time 中秒级（< 1e10）的存量数据统一转为毫秒级。
+ * 历史 bug 曾把 ms 时间戳除以 1000 写入，导致 2025-12 ~ 2026-08 的记录为秒级。
+ */
+function migratePlayHistoryToMs(): void {
+	if (storage.getBoolean(PLAY_HISTORY_MS_MIGRATED_V1_KEY)) return
+
+	try {
+		expoDb.withTransactionSync(() => {
+			// 秒级时间戳可能带小数（如 1765277829.281），乘 1000 后为精确整数，CAST 为 INTEGER 无损
+			expoDb.runSync(
+				`UPDATE play_history SET start_time = CAST(start_time * 1000 AS INTEGER) WHERE start_time < 10000000000`,
+			)
+		})
+		storage.set(PLAY_HISTORY_MS_MIGRATED_V1_KEY, true)
+		logger.info('[play_history] 秒级 start_time 已统一转为毫秒级')
+	} catch (error) {
+		// 不设置标记，下次启动重试
+		logger.error('[play_history] 秒级 start_time 转换失败:', error)
+	}
+}
+
+/**
  * 旧共享歌单以 B 站身份为账号边界。新账号体系独立后，升级时将本地共享状态全部退回普通本地歌单。
  */
 function migrateIndependentAccountReset(): void {
@@ -300,6 +323,7 @@ export const useFastMigrations = (
 				migrateSortKeysV3()
 				migratePlayHistory()
 				migrateIndependentAccountReset()
+				migratePlayHistoryToMs()
 				dispatch({ type: 'migrated', payload: true })
 				return
 			}
@@ -313,6 +337,7 @@ export const useFastMigrations = (
 				migrateSortKeysV3()
 				migratePlayHistory()
 				migrateIndependentAccountReset()
+				migratePlayHistoryToMs()
 
 				storage.set(SCHEMA_VERSION_KEY, latestVersion)
 				dispatch({ type: 'migrated', payload: true })
