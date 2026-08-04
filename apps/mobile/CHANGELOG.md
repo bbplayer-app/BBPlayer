@@ -5,6 +5,15 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [2.6.4]
+
+### Fixed
+
+- 修复播放历史显示错误
+- 「近期歌单」忽略动态合并歌单
+- 修复歌词页面无法点击菜单按钮的问题
+- 修复主题无法下载的问题
+
 ## [2.6.2] - 2026-07-13
 
 ### Changed
