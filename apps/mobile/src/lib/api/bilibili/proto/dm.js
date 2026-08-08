@@ -453,7 +453,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Avatar.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -786,7 +786,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Bubble.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -1125,7 +1125,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         BubbleV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -1495,7 +1495,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Button.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -1776,7 +1776,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         BuzzwordConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -2106,7 +2106,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         BuzzwordShowConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -2522,7 +2522,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         CheckBox.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -2890,7 +2890,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         CheckBoxV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -3261,7 +3261,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         ClickButton.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -3773,7 +3773,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         ClickButtonV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -4301,7 +4301,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         CommandDm.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -4758,7 +4758,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmakuAIFlag.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -5187,7 +5187,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmakuElem.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -5754,7 +5754,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmakuFlag.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -6071,7 +6071,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmakuFlagConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -6546,7 +6546,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuDefaultPlayerConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -7370,7 +7370,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuPlayerConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -8051,7 +8051,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuPlayerConfigPanel.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -8322,7 +8322,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuPlayerDynamicConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -8636,7 +8636,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuPlayerViewConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -9214,7 +9214,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DanmuWebPlayerConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -9940,7 +9940,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmColorful.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -10266,7 +10266,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmExpoReportReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -10568,7 +10568,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmExpoReportRes.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -11007,7 +11007,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmPlayerConfigReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -11656,7 +11656,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -12004,7 +12004,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegMobileReply.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -12440,7 +12440,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegMobileReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -12938,7 +12938,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegOttReply.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -13265,7 +13265,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegOttReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -13641,7 +13641,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegSDKReply.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -13968,7 +13968,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmSegSDKReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -14541,7 +14541,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmViewReply.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -15253,7 +15253,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmViewReq.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -15773,7 +15773,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         DmWebViewReply.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -16364,7 +16364,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         ExpoReport.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -16664,7 +16664,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Expression.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -16989,7 +16989,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Expressions.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -17264,7 +17264,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         InlinePlayerDanmakuSwitch.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -17537,7 +17537,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Label.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -17861,7 +17861,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         LabelV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -18198,7 +18198,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Period.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -18509,7 +18509,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuAiRecommendedLevel.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -18769,7 +18769,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuAiRecommendedLevelV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -19029,7 +19029,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuAiRecommendedSwitch.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -19289,7 +19289,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlockbottom.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -19549,7 +19549,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlockcolorful.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -19809,7 +19809,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlockrepeat.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -20069,7 +20069,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlockscroll.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -20329,7 +20329,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlockspecial.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -20589,7 +20589,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuBlocktop.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -20849,7 +20849,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuDomain.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -21109,7 +21109,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuEnableblocklist.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -21369,7 +21369,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuOpacity.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -21629,7 +21629,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuScalingfactor.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -21889,7 +21889,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuSeniorModeSwitch.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -22149,7 +22149,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuSpeed.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -22420,7 +22420,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuSwitch.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -22699,7 +22699,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuSwitchSave.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -22959,7 +22959,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PlayerDanmakuUseDefaultConfig.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -23307,7 +23307,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PostPanel.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -23928,7 +23928,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         PostPanelV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -24430,7 +24430,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Response.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -24838,7 +24838,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         SubtitleItem.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -25412,7 +25412,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         TextInput.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -25924,7 +25924,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         TextInputV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -26360,7 +26360,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         Toast.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -26687,7 +26687,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         ToastButtonV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -27002,7 +27002,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         ToastV2.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -27355,7 +27355,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         UserInfo.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -27766,7 +27766,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         VideoMask.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
@@ -28155,7 +28155,7 @@ $root.bilibili = (function() {
                          * @returns {$protobuf.Writer} Writer
                          */
                         VideoSubtitle.encodeDelimited = function(message, writer) {
-                            return this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim();
+                            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
                         };
 
                         /**
