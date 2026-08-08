@@ -339,11 +339,18 @@ export default function LocalPlaylistPage() {
 		}
 
 		if (playlistMetadata.type === 'favorite') {
+			const { expandMultiPageOnSync } = useAppStore.getState().settings
+			if (expandMultiPageOnSync === null) {
+				openModal('SyncOptions', {
+					favoriteId: Number(playlistMetadata.remoteSyncId),
+				})
+				return
+			}
 			openModal(
 				'FavoriteSyncProgress',
 				{
 					favoriteId: Number(playlistMetadata.remoteSyncId),
-					shouldRedirectToLocalPlaylist: false,
+					expandMultiPage: expandMultiPageOnSync,
 				},
 				{ dismissible: false },
 			)

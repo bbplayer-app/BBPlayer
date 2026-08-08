@@ -12,9 +12,11 @@ import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	favoriteId,
 	shouldRedirectToLocalPlaylist,
+	expandMultiPage,
 }: {
 	favoriteId: number
 	shouldRedirectToLocalPlaylist?: boolean
+	expandMultiPage?: boolean
 }) {
 	const _close = useModalStore((state) => state.close)
 	const router = useRouter()
@@ -44,6 +46,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 				remoteSyncId: favoriteId,
 				type: 'favorite',
 				onProgress: setProgress,
+				expandMultiPage,
 			},
 			{
 				onSuccess: (id) => {
@@ -65,7 +68,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 				},
 			},
 		)
-	}, [favoriteId, syncFavorite])
+	}, [favoriteId, syncFavorite, expandMultiPage])
 
 	let localProgress: number | undefined
 	if (

@@ -49,6 +49,9 @@ const SyncLocalToBilibiliModal = lazy(
 const FavoriteSyncProgressModal = lazy(
 	() => import('./modals/playlist/FavoriteSyncProgressModal'),
 )
+const SyncOptionsModal = lazy(
+	() => import('./modals/playlist/SyncOptionsModal'),
+)
 const ManualMatchExternalSyncModal = lazy(
 	() => import('./modals/playlist/ManualMatchExternalSync'),
 )
@@ -98,6 +101,7 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	LyricsSelection: LyricsSelectionModal,
 	SongShare: SongShareModal,
 	SyncLocalToBilibili: SyncLocalToBilibiliModal,
+	SyncOptions: SyncOptionsModal,
 	FavoriteSyncProgress: FavoriteSyncProgressModal,
 	ManualMatchExternalSync: ManualMatchExternalSyncModal,
 	DanmakuSettings: DanmakuSettingsModal,

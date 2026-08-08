@@ -35,9 +35,14 @@ export interface ModalPropsMap {
 	LyricsSelection: undefined
 	SongShare: undefined
 	SyncLocalToBilibili: { playlistId: number }
+	SyncOptions: {
+		favoriteId: number
+		shouldRedirectToLocalPlaylist?: boolean
+	}
 	FavoriteSyncProgress: {
 		favoriteId: number
 		shouldRedirectToLocalPlaylist?: boolean
+		expandMultiPage?: boolean
 	}
 	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined

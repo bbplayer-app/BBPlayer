@@ -188,7 +188,7 @@ interface BilibiliFavoriteListContent {
 	cover: string
 	duration: number
 	pubdate: number
-	page: number
+	page: number // 分P数量
 	type: number // 2：视频稿件 12：音频 21：视频合集
 	attr: number // 失效	0: 正常；9: up自己删除；1: 其他原因删除
 }

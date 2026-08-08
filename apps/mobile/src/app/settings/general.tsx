@@ -40,6 +40,10 @@ export default function GeneralSettingsPage() {
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
 
+	const expandMultiPageOnSync = useAppStore(
+		(state) => state.settings.expandMultiPageOnSync,
+	)
+
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
 
 	const handleCheckForUpdate = async () => {
@@ -167,6 +171,19 @@ export default function GeneralSettingsPage() {
 					<UniversalSwitch
 						value={enableDataCollection}
 						onValueChange={setEnableDataCollection}
+					/>
+				</View>
+				<View style={styles.settingRow}>
+					<Text>同步时展开分 P 视频</Text>
+					<UniversalSwitch
+						value={expandMultiPageOnSync ?? false}
+						onValueChange={(v) =>
+							// 使用 setSettings 方法会跳转到「2025-08-05 播放」的页面？but why？只能先使用 setState
+							useAppStore.setState((state) => {
+								state.settings.expandMultiPageOnSync = v
+								return state
+							})
+						}
 					/>
 				</View>
 				<View style={styles.settingRow}>

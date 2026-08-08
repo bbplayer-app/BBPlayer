@@ -33,13 +33,20 @@ export const usePlaylistSync = () => {
 			remoteSyncId,
 			type,
 			onProgress,
+			expandMultiPage,
 		}: {
 			remoteSyncId: number
 			type: Playlist['type']
 			toastId?: string
 			onProgress?: (progress: FavoriteSyncProgress) => void
+			expandMultiPage?: boolean
 		}) => {
-			const result = await syncFacade.sync(remoteSyncId, type, onProgress)
+			const result = await syncFacade.sync(
+				remoteSyncId,
+				type,
+				onProgress,
+				expandMultiPage,
+			)
 			if (result.isErr()) {
 				throw result.error
 			}
