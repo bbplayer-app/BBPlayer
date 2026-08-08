@@ -4,7 +4,7 @@
 	"main": "src/index.ts",
 	"types": "src/index.ts",
 	"peerDependencies": {
-		"dayjs": "^1.11.20",
+		"dayjs": "^1.11.21",
 		"react": "19.2.3",
 		"react-native": "0.85.3",
 		"react-native-svg": "15.15.4"

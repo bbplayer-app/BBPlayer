@@ -42,11 +42,11 @@
 		"test": "expo-module test"
 	},
 	"devDependencies": {
-		"expo": "57.0.2",
+		"expo": "57.0.11",
 		"expo-module-scripts": "^56.0.2",
 		"react": "19.2.3",
-		"react-native": "0.86.0",
-		"react-native-worklets": "0.10.1"
+		"react-native": "0.86.2",
+		"react-native-worklets": "0.11.3"
 	},
 	"peerDependencies": {
 		"expo": "56.0.4",

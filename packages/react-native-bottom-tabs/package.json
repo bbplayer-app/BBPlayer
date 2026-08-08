@@ -72,7 +72,7 @@
 		"@types/jest": "^29.5.14",
 		"@types/react": "19.2.15",
 		"react": "19.2.3",
-		"react-native": "0.86.0",
+		"react-native": "0.86.2",
 		"typescript": "~6.0.3"
 	},
 	"peerDependencies": {
