@@ -97,6 +97,7 @@
 		"react-native-nitro-modules": "^0.35.10",
 		"react-native-pager-view": "8.0.2",
 		"react-native-paper": "^5.15.3",
+		"react-native-plain-text": "^0.6.1",
 		"react-native-qrcode-svg": "^6.3.21",
 		"react-native-reanimated": "~4.5.3",
 		"react-native-safe-area-context": "~5.7.0",

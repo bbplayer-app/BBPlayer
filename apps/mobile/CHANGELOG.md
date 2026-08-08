@@ -10,6 +10,7 @@
 ### Added
 
 - 支持同步收藏夹时展开所有分 p 视频
+- 使用 `react-native-plain-text` 优化列表性能
 
 ### Fixed
 

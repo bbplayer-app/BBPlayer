@@ -2,11 +2,12 @@ import { Icon as ExpoIcon } from '@expo/ui'
 import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
-import { Icon, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
+import { VariantPlainText } from '@/components/common/VariantPlainText'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import {
@@ -125,12 +126,12 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 						{/* 序号也是 */}
 						<View style={{ opacity: selectMode ? 0 : 1 }}>
-							<Text
+							<VariantPlainText
 								variant='bodyMedium'
 								style={{ color: colors.onSurfaceVariant }}
 							>
-								{index + 1}
-							</Text>
+								{String(index + 1)}
+							</VariantPlainText>
 						</View>
 					</View>
 
@@ -146,29 +147,31 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
-						<Text variant='bodySmall'>{data.title}</Text>
+						<VariantPlainText variant='bodySmall'>
+							{data.title}
+						</VariantPlainText>
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artistName && (
 								<>
-									<Text
+									<VariantPlainText
 										variant='bodySmall'
 										numberOfLines={1}
 									>
 										{data.artistName ?? '未知'}
-									</Text>
-									<Text
+									</VariantPlainText>
+									<VariantPlainText
 										style={styles.dotSeparator}
 										variant='bodySmall'
 									>
 										•
-									</Text>
+									</VariantPlainText>
 								</>
 							)}
 							{/* Display Duration */}
-							<Text variant='bodySmall'>
+							<VariantPlainText variant='bodySmall'>
 								{data.duration ? formatDurationToHHMMSS(data.duration) : ''}
-							</Text>
+							</VariantPlainText>
 						</View>
 					</View>
 

@@ -7,11 +7,12 @@ import {
 	GestureDetector,
 	Touchable,
 } from 'react-native-gesture-handler'
-import { Icon, Surface, Text, useTheme } from 'react-native-paper'
+import { Icon, Surface, useTheme } from 'react-native-paper'
 import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
+import { VariantPlainText } from '@/components/common/VariantPlainText'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
 import {
 	LIST_ITEM_COVER_SIZE,
@@ -181,12 +182,12 @@ export const TrackListItem = memo(function TrackListItem({
 
 						{/* 序号也是 */}
 						<View style={{ opacity: selectMode ? 0 : 1 }}>
-							<Text
+							<VariantPlainText
 								variant='bodyMedium'
 								style={{ color: theme.colors.onSurfaceVariant }}
 							>
-								{index + 1}
-							</Text>
+								{String(index + 1)}
+							</VariantPlainText>
 						</View>
 					</View>
 
@@ -206,34 +207,34 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
-						<Text
+						<VariantPlainText
 							variant='bodySmall'
 							numberOfLines={selectMode ? 1 : 0}
 						>
 							{data.title}
-						</Text>
+						</VariantPlainText>
 						<View style={styles.detailsContainer}>
 							{/* Display Artist if available */}
 							{data.artist && (
 								<>
-									<Text
+									<VariantPlainText
 										variant='bodySmall'
 										numberOfLines={1}
 									>
 										{data.artist.name ?? '未知'}
-									</Text>
-									<Text
+									</VariantPlainText>
+									<VariantPlainText
 										style={styles.dotSeparator}
 										variant='bodySmall'
 									>
 										•
-									</Text>
+									</VariantPlainText>
 								</>
 							)}
 							{/* Display Duration */}
-							<Text variant='bodySmall'>
+							<VariantPlainText variant='bodySmall'>
 								{data.duration ? formatDurationToHHMMSS(data.duration) : ''}
-							</Text>
+							</VariantPlainText>
 							{/* 显示下载状态 */}
 							{renderDownloadStatus()}
 						</View>
