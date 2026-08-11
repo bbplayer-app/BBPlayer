@@ -32,8 +32,8 @@
 		"gifenc": "^1.0.3",
 		"lefthook": "^2.1.10",
 		"oxfmt": "^0.27.0",
-		"oxlint": "^1.77.0",
-		"oxlint-tsgolint": "^0.12.1",
+		"oxlint": "^1.78.0",
+		"oxlint-tsgolint": "^7.0.2001",
 		"syncpack": "^13.0.4",
 		"typescript": "~6.0.3",
 		"typescript-eslint": "^8.55.0"
