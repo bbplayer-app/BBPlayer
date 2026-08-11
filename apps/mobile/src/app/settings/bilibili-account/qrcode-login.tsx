@@ -63,7 +63,7 @@ function reducer(state: State, action: Action): State {
 				statusText: `获取二维码失败: ${action.payload}`,
 			}
 		case 'POLL_UPDATE':
-			switch (action.payload.code as BilibiliQrCodeLoginStatus) {
+			switch (action.payload.code) {
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_WAIT:
 					return { ...state, statusText: '等待扫码' }
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SCANNED_BUT_NOT_CONFIRMED:

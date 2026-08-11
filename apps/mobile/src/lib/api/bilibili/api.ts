@@ -1019,7 +1019,7 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
-			const code = data.data.code as BilibiliQrCodeLoginStatus
+			const code = data.data.code
 			if (code !== BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS) {
 				return {
 					status: code,

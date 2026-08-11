@@ -158,9 +158,7 @@ export default function BilibiliAccountSettingsPage() {
 									/>
 								)}
 								onPress={() =>
-									router.push(
-										'/settings/bilibili-account/qrcode-login' as never,
-									)
+									router.push('/settings/bilibili-account/qrcode-login')
 								}
 							/>
 							<Divider />
@@ -180,7 +178,7 @@ export default function BilibiliAccountSettingsPage() {
 									/>
 								)}
 								onPress={() =>
-									router.push('/settings/bilibili-account/phone-login' as never)
+									router.push('/settings/bilibili-account/phone-login')
 								}
 							/>
 							<Divider />
@@ -241,9 +239,7 @@ export default function BilibiliAccountSettingsPage() {
 								mode='contained'
 								icon='qrcode-scan'
 								onPress={() =>
-									router.push(
-										'/settings/bilibili-account/qrcode-login' as never,
-									)
+									router.push('/settings/bilibili-account/qrcode-login')
 								}
 							>
 								扫码登录
@@ -252,7 +248,7 @@ export default function BilibiliAccountSettingsPage() {
 								mode='outlined'
 								icon='cellphone-key'
 								onPress={() =>
-									router.push('/settings/bilibili-account/phone-login' as never)
+									router.push('/settings/bilibili-account/phone-login')
 								}
 							>
 								手机号登录

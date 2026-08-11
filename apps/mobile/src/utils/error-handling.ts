@@ -34,7 +34,7 @@ export function toastAndLogError(
 		})
 	} else {
 		toast.error(message, {
-			description: String(error as unknown),
+			description: String(error),
 			duration: Number.POSITIVE_INFINITY,
 		})
 		log.extend(scope).error(message, error)

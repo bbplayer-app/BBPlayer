@@ -470,7 +470,7 @@ export class SharedPlaylistFacade {
 							await this._applyPullResponse(
 								localId,
 								remote.id,
-								changesData as Parameters<typeof this._applyPullResponse>[2],
+								changesData,
 								tx,
 								{
 									playlistService: txPlaylist,
@@ -695,9 +695,7 @@ export class SharedPlaylistFacade {
 						`生成编辑者邀请码失败：${resp.status}`,
 					)
 				}
-				const data = (await resp.json()) as {
-					editor_invite_code: string
-				}
+				const data = await resp.json()
 				return { editorInviteCode: data.editor_invite_code }
 			})(),
 			(e) =>
