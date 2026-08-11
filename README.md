@@ -16,9 +16,9 @@
 
 ## 屏幕截图
 
-|                  首页                  |                   播放器                   |                    播放列表                    |                     下载页                     |                    库页面                    |
-| :------------------------------------: | :----------------------------------------: | :--------------------------------------------: | :--------------------------------------------: | :------------------------------------------: |
-| ![home](./assets/screenshots/home.jpg) | ![player](./assets/screenshots/player.jpg) | ![playlist](./assets/screenshots/playlist.jpg) | ![download](./assets/screenshots/download.jpg) | ![library](./assets/screenshots/library.jpg) |
+|                  首页                  |                   播放器                   |                    播放列表                    |                    歌词页                    |                    库页面                    |
+| :------------------------------------: | :----------------------------------------: | :--------------------------------------------: | :------------------------------------------: | :------------------------------------------: |
+| ![home](./assets/screenshots/home.jpg) | ![player](./assets/screenshots/player.jpg) | ![playlist](./assets/screenshots/playlist.jpg) | ![download](./assets/screenshots/lyrics.jpg) | ![library](./assets/screenshots/library.jpg) |
 
 ## 主要功能
 
@@ -28,7 +28,6 @@
 - **播放源**: 自由添加本地播放列表，登录账号后也可直接访问账号内收藏夹、订阅合集等，兼顾快速与方便。
 - **导入外部歌单**: 支持从 **网易云音乐** 和 **QQ 音乐** 的歌单自动匹配到 B 站视频并保存为播放列表。
 - **全功能播放器**: 提供播放/暂停、循环、随机、播放队列、响度均衡、断点续播、启动自动播放等功能。
-- **弹幕**: 在播放器页面直接展示视频弹幕，还原最原汁原味的 B 站体验。
 - **搜索**: 智能搜索，支持 BV/AV 号、b23.tv 短链解析。同时提供收藏夹和本地播放列表内搜索。
 
 ### 歌词系统
@@ -36,6 +35,17 @@
 - **支持 SPL**: 基于 [SPL 规范](https://bbplayer.roitium.com/SPL)，支持**逐字进度**、**罗马音注音**及**翻译歌词**展示。
 - **智能获取**: 支持自动匹配歌词（网易云/QQ 音乐/酷狗音乐），并支持手动搜索、粘贴 LRC/SPL 文本及偏移量调整。
 - **多样展示**: 支持桌面歌词（悬浮窗）、状态栏歌词。
+
+### 主题系统
+
+可以在软件内搜索并应用**任意**b 站主题装扮，支持：
+
+- 导航栏
+- 开屏动画
+- 进度条拖拽图标
+- 点赞动画
+- 页面头部背景
+- 头像框
 
 ### 其他特性
 
@@ -50,20 +60,25 @@
 - **框架**: React Native, Expo
 - **状态管理**: Zustand
 - **数据请求**: React Query
-- **UI**: Material Design 3 (React Native Paper)
+- **UI**: Material Design 3 (React Native Paper + ExpoUI)
 - **播放库**: [@bbplayer/orpheus](./packages/orpheus) (基于 Media3)
 - **ORM**: Drizzle ORM
 
 ## 项目结构 (Monorepo)
 
 - **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
+- **[apps/backend](./apps/backend)**: 后端服务，提供歌单共享与软件更新查询（Cloudflare Worker）。
 - **[apps/docs](./apps/docs)**: 项目文档站点。
+- **[apps/update-publisher](./apps/update-publisher)**: 用于发布更新的工具。
 - **[packages/](./packages)**: 共享库与工具包。
   - **[@bbplayer/splash](./packages/splash)**: 歌词解析与转换核心库。
   - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 ESLint 规则。
-  - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Orpheus 的 Expo 音频播放模块。
+  - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Media3 的音频播放引擎。
   - **[@bbplayer/logs](./packages/logs)**: 日志库。
   - **[@bbplayer/image-theme-colors](./packages/image-theme-colors)**: 封面颜色提取工具。
+  - **[@bbplayer/native](./packages/native)**: BBPlayer 原生能力集成模块。
+  - **[@bbplayer/heatmap](./packages/heatmap)**: 基于 SVG 的日期热力图组件。
+  - **[expo-wavy-slider](./packages/expo-wavy-slider)**: Jetpack Compose WavySlider 的 Expo 模块封装。
 
 ## IOS 支持
 
@@ -122,11 +137,11 @@
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=bbplayer-app%2Fbbplayer&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=bbplayer-app%2FBBPlayer&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&theme=dark&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bbplayer-app/bbplayer&type=date&legend=top-left&sealed_token=-GnjQCaa9mVLhm4W-dWZDnwOPmJBNGCMrbU3vbvJsFLG8IPd2OYmT2jxG3uYg6_b_hU-nCmONT3gEUkyoK0RicjqC5vDoCWky_rHaboc73bSgvG2Le0sIKaWnPExYfbShNdlrTwckeb6sAMRsubdiBPg45M1P_MdQl42Vsb34WLO5xDclC74MYJ3jzhm" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&theme=dark&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
  </picture>
 </a>
 
