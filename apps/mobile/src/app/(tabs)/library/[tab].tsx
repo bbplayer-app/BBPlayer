@@ -1,6 +1,7 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
+import { useObserve } from 'expo-observe'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -42,6 +43,11 @@ export default function Library() {
 	const colors = useTheme().colors
 	const router = useRouter()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
+	const { markInteractive } = useObserve()
+
+	useEffect(() => {
+		markInteractive()
+	}, [markInteractive])
 
 	useFocusEffect(() => {
 		if (tab === undefined) return

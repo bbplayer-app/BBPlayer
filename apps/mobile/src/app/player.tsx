@@ -7,6 +7,7 @@ import {
 	vec,
 } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
+import { useObserve } from 'expo-observe'
 import { router } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -78,6 +79,11 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
+	const { markInteractive } = useObserve()
+
+	useEffect(() => {
+		markInteractive()
+	}, [markInteractive])
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
 			? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)

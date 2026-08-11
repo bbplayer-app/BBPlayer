@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { Image } from 'expo-image'
+import { useObserve } from 'expo-observe'
 import { useRouter } from 'expo-router'
 import { useIncomingShare } from 'expo-sharing'
 import {
@@ -101,6 +102,12 @@ function HomePage() {
 	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
 
 	const { data: recentPlaylists } = useRecentPlaylists()
+
+	const { markInteractive } = useObserve()
+
+	useEffect(() => {
+		markInteractive()
+	}, [markInteractive])
 
 	const greeting = getGreetingMsg()
 

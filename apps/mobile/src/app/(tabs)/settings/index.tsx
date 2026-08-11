@@ -1,5 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient'
+import { useObserve } from 'expo-observe'
 import { useRouter } from 'expo-router'
+import { useEffect } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -17,6 +19,11 @@ export default function SettingsPage() {
 	const account = useAppStore((state) => state.bbplayerAccount)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
 	const bilibiliUserInfo = useAppStore((state) => state.bilibiliUserInfo)
+	const { markInteractive } = useObserve()
+
+	useEffect(() => {
+		markInteractive()
+	}, [markInteractive])
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -155,7 +162,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/bilibili-account' as never)}
+						onPress={() => router.push('/settings/bilibili-account')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -177,7 +184,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/account' as never)}
+						onPress={() => router.push('/settings/account')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -232,7 +239,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/about' as never)}
+						onPress={() => router.push('/settings/about')}
 					/>
 				</ScrollView>
 			</View>
