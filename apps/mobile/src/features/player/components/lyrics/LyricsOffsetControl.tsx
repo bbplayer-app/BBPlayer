@@ -1,11 +1,15 @@
-import { memo } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
-import { Touchable } from 'react-native-gesture-handler'
+import { memo, useCallback, useEffect } from 'react'
+import { Modal, Pressable, StyleSheet, View } from 'react-native'
 import { Divider, Icon, Text, useTheme } from 'react-native-paper'
+import Animated, {
+	useAnimatedStyle,
+	useSharedValue,
+	withTiming,
+} from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 export interface LyricsOffsetControlProps {
 	visible: boolean
-	anchor: { x: number; y: number; width: number; height: number } | null
 	offset: number
 	onChangeOffset: (delta: number) => void
 	onClose: () => void
@@ -13,88 +17,123 @@ export interface LyricsOffsetControlProps {
 
 export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 	visible,
-	anchor,
 	offset,
 	onChangeOffset,
 	onClose,
 }: LyricsOffsetControlProps) {
-	const dimensions = useWindowDimensions()
-	const windowHeight = dimensions.height
-	const windowWidth = dimensions.width
 	const colors = useTheme().colors
+	const translateX = useSharedValue(200)
+	const isAnimatingOut = useSharedValue(false)
+
+	useEffect(() => {
+		if (visible) {
+			isAnimatingOut.value = false
+			translateX.value = withTiming(0, { duration: 250 })
+		}
+	}, [visible, translateX, isAnimatingOut])
+
+	const handleDismiss = useCallback(() => {
+		if (isAnimatingOut.value) return
+		isAnimatingOut.set(true)
+		translateX.set(
+			withTiming(250, { duration: 200 }, (finished) => {
+				if (finished) {
+					scheduleOnRN(onClose)
+				}
+			}),
+		)
+	}, [isAnimatingOut, translateX, onClose])
+
+	const panelStyle = useAnimatedStyle(() => ({
+		transform: [{ translateX: translateX.value }],
+	}))
 
 	return (
-		<View
-			style={[
-				styles.offsetControlContainer,
-				{
-					right: anchor ? windowWidth - (anchor.x + anchor.width) : 0,
-					bottom: anchor ? windowHeight - anchor.y : 0,
-					backgroundColor: colors.elevation.level2,
-					opacity: visible ? 1 : 0,
-					pointerEvents: visible ? 'auto' : 'none',
-				},
-			]}
+		<Modal
+			transparent
+			visible={visible}
+			onRequestClose={handleDismiss}
+			animationType='none'
+			statusBarTranslucent
 		>
-			<Touchable
-				androidRipple={{}}
-				style={styles.offsetControlButton}
-				onPress={() => onChangeOffset(0.5)}
-			>
-				<Icon
-					source='arrow-up'
-					size={20}
-					color={colors.onSurface}
+			<View style={styles.modalRoot}>
+				<Pressable
+					style={StyleSheet.absoluteFill}
+					onPress={handleDismiss}
 				/>
-			</Touchable>
-			<Text
-				variant='titleSmall'
-				style={[styles.offsetControlText, { color: colors.onSurface }]}
-			>
-				{offset.toFixed(1)}s
-			</Text>
-			<Touchable
-				androidRipple={{}}
-				style={styles.offsetControlButton}
-				onPress={() => onChangeOffset(-0.5)}
-			>
-				<Icon
-					source='arrow-down'
-					size={20}
-					color={colors.onSurface}
-				/>
-			</Touchable>
-			<Divider />
-			<Touchable
-				androidRipple={{}}
-				style={styles.offsetControlButton}
-				onPress={onClose}
-			>
-				<Icon
-					source='check'
-					size={20}
-					color={colors.onSurface}
-				/>
-			</Touchable>
-		</View>
+				<Animated.View
+					style={[
+						styles.panel,
+						{ backgroundColor: colors.elevation.level2 },
+						panelStyle,
+					]}
+				>
+					<Pressable
+						android_ripple={{}}
+						style={styles.offsetControlButton}
+						onPress={() => onChangeOffset(0.5)}
+					>
+						<Icon
+							source='arrow-up'
+							size={28}
+							color={colors.onSurface}
+						/>
+					</Pressable>
+					<Text
+						variant='titleMedium'
+						style={[styles.offsetControlText, { color: colors.onSurface }]}
+					>
+						{offset.toFixed(1)}s
+					</Text>
+					<Pressable
+						android_ripple={{}}
+						style={styles.offsetControlButton}
+						onPress={() => onChangeOffset(-0.5)}
+					>
+						<Icon
+							source='arrow-down'
+							size={28}
+							color={colors.onSurface}
+						/>
+					</Pressable>
+					<Divider />
+					<Pressable
+						android_ripple={{}}
+						style={styles.offsetControlButton}
+						onPress={handleDismiss}
+					>
+						<Icon
+							source='check'
+							size={28}
+							color={colors.onSurface}
+						/>
+					</Pressable>
+				</Animated.View>
+			</View>
+		</Modal>
 	)
 })
 
 const styles = StyleSheet.create({
-	offsetControlContainer: {
-		position: 'absolute',
-		gap: 8,
-		borderRadius: 12,
+	modalRoot: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'flex-end',
+	},
+	panel: {
+		gap: 12,
+		borderRadius: 20,
 		elevation: 10,
-		paddingHorizontal: 2,
-		paddingVertical: 4,
-		zIndex: 99999,
+		paddingHorizontal: 4,
+		paddingVertical: 8,
+		marginRight: 16,
 	},
 	offsetControlButton: {
 		borderRadius: 99999,
-		padding: 10,
+		padding: 14,
 	},
 	offsetControlText: {
 		textAlign: 'center',
+		minWidth: 56,
 	},
 })

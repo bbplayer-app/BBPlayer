@@ -35,8 +35,6 @@ import {
 } from './lyrics/LyricLineItem'
 import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
 
-const SCROLL_DIRECTION_THRESHOLD = 8
-
 const Lyrics = memo(function Lyrics({
 	currentIndex,
 	onPressBackground,
@@ -64,14 +62,6 @@ const Lyrics = memo(function Lyrics({
 	)
 
 	const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
-	const [offsetMenuAnchor, setOffsetMenuAnchor] = useState<{
-		x: number
-		y: number
-		width: number
-		height: number
-	} | null>(null)
-	const scrollDirection = useSharedValue<'up' | 'down' | 'idle'>('idle')
-	const lastScrollY = useSharedValue(0)
 	const track = useCurrentTrack()
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
@@ -79,7 +69,6 @@ const Lyrics = memo(function Lyrics({
 	const enableVerbatimLyrics = useAppStore(
 		(state) => state.settings.enableVerbatimLyrics,
 	)
-	const isUserScrolling = useSharedValue(false)
 
 	const { position: currentTime } = useSmoothProgress()
 
@@ -164,24 +153,10 @@ const Lyrics = memo(function Lyrics({
 	)
 
 	const scrollHandler = useAnimatedScrollHandler({
-		onScroll: (e) => {
-			const currentY = e.contentOffset.y
-			const deltaY = currentY - lastScrollY.get()
-
-			// 检测滚动方向
-			if (Math.abs(deltaY) > SCROLL_DIRECTION_THRESHOLD) {
-				scrollDirection.set(deltaY > 0 ? 'up' : 'down')
-			}
-
-			lastScrollY.set(currentY)
-		},
 		onBeginDrag: () => {
-			isUserScrolling.set(true)
 			scheduleOnRN(onUserScrollStart)
 		},
 		onEndDrag: () => {
-			isUserScrolling.set(false)
-			scrollDirection.set('idle')
 			scheduleOnRN(onUserScrollEnd)
 		},
 	})
@@ -405,11 +380,7 @@ const Lyrics = memo(function Lyrics({
 
 			{/* 播放器控件覆盖层 */}
 			<LyricsControlOverlay
-				scrollDirection={scrollDirection}
 				offsetMenuVisible={offsetMenuVisible}
-				onOpenActionMenu={(anchor) => {
-					setOffsetMenuAnchor(anchor)
-				}}
 				showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
 				translationType={preferredLyricType}
 				onToggleTranslation={() =>
@@ -419,13 +390,11 @@ const Lyrics = memo(function Lyrics({
 				}
 				onEditLyrics={handleEditLyrics}
 				onOpenOffsetMenu={handleOpenOffsetMenu}
-				isUserScrolling={isUserScrolling}
 			/>
 
 			{/* 歌词偏移量调整面板 */}
 			<LyricsOffsetControl
 				visible={offsetMenuVisible}
-				anchor={offsetMenuAnchor}
 				offset={tempOffset}
 				onChangeOffset={handleChangeOffset}
 				onClose={handleCloseOffsetMenu}

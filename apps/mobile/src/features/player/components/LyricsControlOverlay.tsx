@@ -1,17 +1,10 @@
 import { Icon as ExpoIcon } from '@expo/ui'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import MaskedView from '@react-native-masked-view/masked-view'
+import { LinearGradient } from 'expo-linear-gradient'
+import { memo } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
-import Animated, {
-	useAnimatedReaction,
-	useAnimatedStyle,
-	useSharedValue,
-	withTiming,
-	interpolate,
-	type SharedValue,
-} from 'react-native-reanimated'
-import { scheduleOnRN } from 'react-native-worklets'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
@@ -38,218 +31,109 @@ const OFFSET_ICON = ExpoIcon.select({
 })
 
 const { height: windowHeight } = Dimensions.get('window')
-const OVERLAY_HEIGHT = windowHeight * 0.4
-const AUTO_HIDE_DELAY = 3000
+// 面板高度 = 底部控件（~211px）+ 顶部 60px 渐隐条，刚好延伸到菜单按钮上方
+const OVERLAY_HEIGHT = Math.min(windowHeight * 0.4, 280)
 
 interface LyricsControlOverlayProps {
-	scrollDirection: SharedValue<'up' | 'down' | 'idle'>
 	offsetMenuVisible: boolean
-	onOpenActionMenu: (anchor: {
-		x: number
-		y: number
-		width: number
-		height: number
-	}) => void
 	showTranslationToggle: boolean
 	translationType: 'translation' | 'romaji'
 	onToggleTranslation: () => void
 	onEditLyrics: () => void
 	onOpenOffsetMenu: () => void
-	onControlsVisibilityChange?: (visible: boolean) => void
-	isUserScrolling: SharedValue<boolean>
 }
 
 export const LyricsControlOverlay = memo(function LyricsControlOverlay({
-	scrollDirection,
 	offsetMenuVisible,
-	onOpenActionMenu,
 	showTranslationToggle,
 	translationType,
 	onToggleTranslation,
 	onEditLyrics,
 	onOpenOffsetMenu,
-	onControlsVisibilityChange,
-	isUserScrolling,
 }: LyricsControlOverlayProps) {
-	const { colors, dark } = useTheme()
-	const actionButtonRef = useRef<View>(null)
-	const controlsOpacity = useSharedValue(0)
-	const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-	const clearHideTimer = useCallback(() => {
-		if (hideTimerRef.current) {
-			clearTimeout(hideTimerRef.current)
-			hideTimerRef.current = null
-		}
-	}, [])
-
-	const startHideTimer = useCallback(() => {
-		clearHideTimer()
-		hideTimerRef.current = setTimeout(() => {
-			controlsOpacity.set(withTiming(0, { duration: 300 }))
-		}, AUTO_HIDE_DELAY)
-	}, [clearHideTimer, controlsOpacity])
-
-	const showControls = useCallback(() => {
-		controlsOpacity.set(withTiming(1, { duration: 200 }))
-		onControlsVisibilityChange?.(true)
-		startHideTimer()
-	}, [controlsOpacity, startHideTimer, onControlsVisibilityChange])
-
-	const hideControls = useCallback(() => {
-		clearHideTimer()
-		controlsOpacity.set(withTiming(0, { duration: 200 }))
-		onControlsVisibilityChange?.(false)
-	}, [clearHideTimer, controlsOpacity, onControlsVisibilityChange])
-
-	const resetHideTimer = useCallback(() => {
-		startHideTimer()
-	}, [startHideTimer])
-
-	// 监听滚动方向变化
-	useAnimatedReaction(
-		() => scrollDirection.value,
-		(current, previous) => {
-			if (current === previous) return
-			if (!isUserScrolling.value) return
-			if (current === 'up') {
-				// 上滑 - 隐藏控件
-				scheduleOnRN(hideControls)
-			} else if (current === 'down') {
-				// 下滑 - 显示控件
-				scheduleOnRN(showControls)
-			}
-		},
-	)
-
-	// 清理定时器
-	useEffect(() => {
-		return () => {
-			clearHideTimer()
-		}
-	}, [clearHideTimer])
-
-	// 点击手势切换控件显示
-	// const tapGesture = useTapGesture({
-	// 	onDeactivate: (e) => {
-	// 		'worklet'
-	// 		if (e.canceled) return
-	// 		if (controlsOpacity.value < 0.5) {
-	// 			scheduleOnRN(showControls)
-	// 		} else {
-	// 			scheduleOnRN(resetHideTimer)
-	// 		}
-	// 	},
-	// })
-
-	// 控件交互时重置隐藏定时器
-	const handleInteraction = useCallback(() => {
-		resetHideTimer()
-	}, [resetHideTimer])
-
-	// 按钮动画样式
-	const utilityButtonsAnimatedStyle = useAnimatedStyle(() => {
-		return {
-			opacity: interpolate(
-				controlsOpacity.value,
-				[0, 1],
-				[1, 0], // 当控件显示时，完全隐藏按钮
-			),
-			pointerEvents: controlsOpacity.value > 0.5 ? 'none' : 'auto',
-		}
-	})
-
-	const controlsAnimatedStyle = useAnimatedStyle(() => ({
-		opacity: controlsOpacity.value,
-		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'auto',
-	}))
-
-	const rootAnimatedStyle = useAnimatedStyle(() => ({
-		pointerEvents: controlsOpacity.value > 0.5 ? 'auto' : 'box-none',
-	}))
-
-	// 渐变颜色
-	const linearGradientCss = dark
-		? 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.8) 100%)'
-		: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 40%, rgba(255,255,255,0.8) 100%)'
+	const { colors } = useTheme()
 
 	return (
-		<Animated.View
-			style={[
-				styles.overlayContainer,
-				rootAnimatedStyle,
-				{ experimental_backgroundImage: linearGradientCss },
-			]}
-		>
-			{/* 功能按钮 - 仅当播放器控件不可见时可见，右下角 */}
-			<Animated.View
-				style={[styles.utilityButtons, utilityButtonsAnimatedStyle]}
-			>
-				<FunctionalMenu
-					anchor={
-						<Touchable
-							androidRipple={{}}
-							style={styles.utilityButton}
-							ref={actionButtonRef}
-							disabled={offsetMenuVisible}
-						>
-							<Icon
-								source='dots-vertical'
-								size={20}
-								color={
-									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
-								}
-							/>
-						</Touchable>
-					}
+		<MaskedView
+			style={styles.overlayContainer}
+			maskElement={
+				<View
+					style={styles.maskElement}
+					pointerEvents='none'
 				>
-					{showTranslationToggle && (
-						<FunctionalMenu.Item
-							title={
-								translationType === 'translation' ? '切换罗马音' : '切换翻译'
-							}
-							leadingIcon={
-								translationType === 'translation'
-									? ALPHABETICAL_ICON
-									: TRANSLATE_ICON
-							}
-							onPress={onToggleTranslation}
-						/>
-					)}
-					<FunctionalMenu.Item
-						title='编辑歌词'
-						leadingIcon={EDIT_ICON}
-						onPress={onEditLyrics}
+					<LinearGradient
+						style={styles.gradient}
+						start={{ x: 0, y: 0 }}
+						end={{ x: 0, y: 1 }}
+						colors={['transparent', colors.background]}
+						locations={[0, 1]}
 					/>
-					<FunctionalMenu.Item
-						title='时间轴偏移'
-						leadingIcon={OFFSET_ICON}
-						onPress={() => {
-							actionButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-								onOpenActionMenu({
-									x: pageX,
-									y: pageY,
-									width: w,
-									height: h,
-								})
-								onOpenOffsetMenu()
-							})
-						}}
-					/>
-				</FunctionalMenu>
-			</Animated.View>
-
-			{/* 播放器控件 - 条件显示 */}
-			<Animated.View style={[styles.playerControls, controlsAnimatedStyle]}>
-				<PlayerSlider onInteraction={handleInteraction} />
-				<View style={styles.playbackButtonsWrapper}>
-					<MainPlaybackControls
-						size='compact'
-						onInteraction={handleInteraction}
+					<View
+						style={[styles.maskSolid, { backgroundColor: colors.background }]}
 					/>
 				</View>
-			</Animated.View>
-		</Animated.View>
+			}
+		>
+			{/* 面板背景：底部不透明，顶部渐隐 */}
+			<View
+				style={[
+					StyleSheet.absoluteFill,
+					{ backgroundColor: colors.background },
+				]}
+			/>
+			<View style={styles.playerControls}>
+				{/* 功能按钮，位于 slider 上方右侧 */}
+				<View style={styles.actionMenuRow}>
+					<FunctionalMenu
+						anchor={
+							<Touchable
+								androidRipple={{}}
+								style={styles.actionMenuButton}
+								disabled={offsetMenuVisible}
+							>
+								<Icon
+									source='dots-vertical'
+									size={20}
+									color={
+										offsetMenuVisible
+											? colors.onSurfaceDisabled
+											: colors.primary
+									}
+								/>
+							</Touchable>
+						}
+					>
+						{showTranslationToggle && (
+							<FunctionalMenu.Item
+								title={
+									translationType === 'translation' ? '切换罗马音' : '切换翻译'
+								}
+								leadingIcon={
+									translationType === 'translation'
+										? ALPHABETICAL_ICON
+										: TRANSLATE_ICON
+								}
+								onPress={onToggleTranslation}
+							/>
+						)}
+						<FunctionalMenu.Item
+							title='编辑歌词'
+							leadingIcon={EDIT_ICON}
+							onPress={onEditLyrics}
+						/>
+						<FunctionalMenu.Item
+							title='时间轴偏移'
+							leadingIcon={OFFSET_ICON}
+							onPress={onOpenOffsetMenu}
+						/>
+					</FunctionalMenu>
+				</View>
+				<PlayerSlider />
+				<View style={styles.playbackButtonsWrapper}>
+					<MainPlaybackControls size='compact' />
+				</View>
+			</View>
+		</MaskedView>
 	)
 })
 
@@ -261,32 +145,30 @@ const styles = StyleSheet.create({
 		right: 0,
 		height: OVERLAY_HEIGHT,
 	},
-	gradient: {
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-	},
-	gradientInner: {
+	maskElement: {
 		flex: 1,
 	},
-	utilityButtons: {
-		position: 'absolute',
-		bottom: 40,
-		right: 16,
-		flexDirection: 'column',
-		zIndex: 99999,
+	maskSolid: {
+		flex: 1,
 	},
-	utilityButton: {
-		borderRadius: 99999,
-		padding: 10,
+	gradient: {
+		height: 60,
 	},
 	playerControls: {
 		position: 'absolute',
 		bottom: 50,
 		left: 0,
 		right: 0,
+	},
+	actionMenuRow: {
+		flexDirection: 'row',
+		justifyContent: 'flex-end',
+		paddingHorizontal: 16,
+		marginBottom: 4,
+	},
+	actionMenuButton: {
+		borderRadius: 99999,
+		padding: 10,
 	},
 	playbackButtonsWrapper: {
 		marginTop: 8,
