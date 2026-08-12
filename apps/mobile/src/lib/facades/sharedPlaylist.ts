@@ -358,7 +358,7 @@ export class SharedPlaylistFacade {
 						coverUrl: data.playlist.cover_url ?? null,
 						createdAt: new Date(data.playlist.created_at),
 						updatedAt: new Date(data.playlist.updated_at),
-						trackCount: Number(data.playlist.track_count ?? 0),
+						trackCount: data.playlist.track_count ?? 0,
 					},
 					owner: data.owner
 						? {

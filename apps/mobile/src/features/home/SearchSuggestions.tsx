@@ -48,7 +48,7 @@ export interface SearchHistoryItem {
  * - 强调段 { text, emphasized: true }
  */
 function parseEmTags(text: string | undefined) {
-	const s = String(text ?? '')
+	const s = text ?? ''
 	const regex = /<em[^>]*>(.*?)<\/em>/gi
 	const segments: { text: string; emphasized: boolean }[] = []
 	let lastIndex = 0

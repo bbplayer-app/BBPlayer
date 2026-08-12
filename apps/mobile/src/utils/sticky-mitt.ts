@@ -52,6 +52,7 @@ function createStickyEmitter<Events extends Record<string, any>>() {
 		/**
 		 * 清除某个事件类型的粘性状态。
 		 */
+		// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 		clearSticky<Key extends keyof Events>(type: Key): void {
 			stickyEvents.delete(type)
 		},

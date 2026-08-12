@@ -167,10 +167,10 @@ export class BilibiliApi {
 		})
 
 		return params
-			.andThen((params) => {
+			.andThen((encodedParams) => {
 				return bilibiliApiClient.getBuffer({
 					endpoint: '/x/v2/dm/wbi/web/seg.so',
-					params,
+					params: encodedParams,
 					signal,
 				})
 			})
@@ -239,13 +239,13 @@ export class BilibiliApi {
 		})
 
 		return params
-			.andThen((params) => {
+			.andThen((encodedParams) => {
 				return bilibiliApiClient.get<{
 					result: BilibiliSearchVideo[]
 					numPages: number
 				}>({
 					endpoint: '/x/web-interface/wbi/search/type',
-					params,
+					params: encodedParams,
 					skipCookie,
 					signal,
 				})
@@ -282,13 +282,13 @@ export class BilibiliApi {
 		})
 
 		return params
-			.andThen((params) => {
+			.andThen((encodedParams) => {
 				return bilibiliApiClient.get<{
 					result: BilibiliSearchUser[]
 					numPages: number
 				}>({
 					endpoint: '/x/web-interface/wbi/search/type',
-					params,
+					params: encodedParams,
 					skipCookie,
 					signal,
 				})
@@ -416,10 +416,10 @@ export class BilibiliApi {
 		})
 
 		return wbiParams
-			.andThen((params) => {
+			.andThen((encodedParams) => {
 				return bilibiliApiClient.get<BilibiliAudioStreamResponse>({
 					endpoint: '/x/player/wbi/playurl',
-					params,
+					params: encodedParams,
 				})
 			})
 			.andThen((response) => {
@@ -572,10 +572,10 @@ export class BilibiliApi {
 		const params = getWbiEncodedParams({
 			mid: mid.toString(),
 		})
-		return params.andThen((params) => {
+		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliUserInfo>({
 				endpoint: '/x/space/wbi/acc/info',
-				params,
+				params: encodedParams,
 				signal,
 			})
 		})
@@ -866,10 +866,10 @@ export class BilibiliApi {
 			keyword: keyword ?? '',
 			ps: '30',
 		})
-		return params.andThen((params) => {
+		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliUserUploadedVideosResponse>({
 				endpoint: '/x/space/wbi/arc/search',
-				params,
+				params: encodedParams,
 				signal,
 			})
 		})
@@ -1008,7 +1008,7 @@ export class BilibiliApi {
 				})
 			}
 			const data = (await response.json()) as {
-				data: { code: number }
+				data: { code: BilibiliQrCodeLoginStatus }
 				code: number
 			}
 			if (data.code !== 0) {
@@ -1190,10 +1190,10 @@ export class BilibiliApi {
 			bvid,
 			cid: String(cid),
 		})
-		return params.andThen((params) => {
+		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliWebPlayerInfo>({
 				endpoint: '/x/player/wbi/v2',
-				params,
+				params: encodedParams,
 				signal,
 			})
 		})

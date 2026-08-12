@@ -56,6 +56,8 @@
 		"typescript/no-explicit-any": "error",
 		"typescript/no-misused-promises": ["error", { "checksVoidReturn": false }],
 		"typescript/no-unsafe-type-assertion": "allow",
+		"typescript/consistent-return": "off",
+		"no-underscore-dangle": ["error", { "allow": ["__csrf"] }],
 
 		// tanstack query
 		"@tanstack/query/exhaustive-deps": "error",

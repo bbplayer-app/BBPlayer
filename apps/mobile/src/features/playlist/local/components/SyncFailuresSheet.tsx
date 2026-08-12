@@ -64,7 +64,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 		const insets = useSafeAreaInsets()
 		const [loading, setLoading] = useState(false)
 
-		const { data: dbRows = [] } = useLiveQuery(
+		const { data: dbRows } = useLiveQuery(
 			db
 				.select()
 				.from(schema.playlistSyncQueue)

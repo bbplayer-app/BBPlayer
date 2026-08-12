@@ -50,6 +50,7 @@ interface RequestPayload {
 	signal?: AbortSignal
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 const buildRequestPayload = <T extends object>(
 	uri: string,
 	data: T,
@@ -173,6 +174,7 @@ const executeFetch = <TReturnBody>(
 	).andThen((res) => res as Result<FetchResult<TReturnBody>, NeteaseApiError>)
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 export const createRequest = <TData extends object, TReturnBody>(
 	uri: string,
 	data: TData,

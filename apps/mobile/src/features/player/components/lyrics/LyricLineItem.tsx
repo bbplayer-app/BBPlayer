@@ -48,12 +48,11 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 		return isHighlighted.value ? currentTime.value : -1
 	})
 
-	const isVerbatim = !!(
+	const isVerbatim =
 		enableVerbatimLyrics &&
 		item.isDynamic &&
 		item.spans &&
 		item.spans.length > 0
-	)
 
 	const animatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
@@ -147,13 +146,11 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		(currentVal) => {
 			scheduleOnRN(
 				setIsVerbatim,
-				!!(
-					enableVerbatimLyrics &&
+				enableVerbatimLyrics &&
 					item.isDynamic &&
 					item.spans &&
 					item.spans.length > 0 &&
-					currentVal === index
-				),
+					currentVal === index,
 			)
 			scheduleOnRN(setIsHighlightedRState, currentVal === index)
 		},

@@ -140,7 +140,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				cover_url: playlist.coverUrl,
 				created_at: playlist.createdAt.getTime(),
 				updated_at: playlist.updatedAt.getTime(),
-				track_count: Number(trackCount ?? 0),
+				track_count: trackCount ?? 0,
 			},
 			owner: owner
 				? {

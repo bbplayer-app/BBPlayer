@@ -36,7 +36,7 @@ const mapPreviewTrackToBilibiliTrack = (
 	index: number,
 	now: Date,
 ): BilibiliTrack => {
-	const baseId = Number(bv2av(track.bilibili_bvid))
+	const baseId = bv2av(track.bilibili_bvid)
 	const cidNum = track.bilibili_cid ? Number(track.bilibili_cid) : undefined
 	const id = Number.isFinite(baseId)
 		? baseId * 1000 + (cidNum ?? 0) + index

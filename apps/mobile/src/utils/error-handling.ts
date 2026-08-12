@@ -34,6 +34,7 @@ export function toastAndLogError(
 		})
 	} else {
 		toast.error(message, {
+			// oxlint-disable-next-line typescript/no-base-to-string
 			description: String(error),
 			duration: Number.POSITIVE_INFINITY,
 		})

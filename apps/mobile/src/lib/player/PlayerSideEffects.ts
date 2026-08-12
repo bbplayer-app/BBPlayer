@@ -206,7 +206,7 @@ class PlayerSideEffects {
 					'Unknown playback error',
 			)
 		}
-		return new Error(String(event.error || 'Unknown playback error'))
+		return new Error(event.error || 'Unknown playback error')
 	}
 
 	/**

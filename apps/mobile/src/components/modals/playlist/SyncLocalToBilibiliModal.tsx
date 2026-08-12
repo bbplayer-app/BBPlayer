@@ -118,7 +118,7 @@ export default function SyncLocalToBilibiliModal({
 
 		const check = async () => {
 			const res = await syncLocalToBilibiliService.findRemotePlaylistByName(
-				Number(userInfo.mid),
+				userInfo.mid,
 				playlist.title,
 			)
 			if (res.isErr()) {

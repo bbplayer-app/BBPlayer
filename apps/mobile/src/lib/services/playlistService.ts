@@ -309,9 +309,9 @@ export class PlaylistService {
 		`)
 
 		return {
-			itemCount: Number(row?.itemCount ?? 0),
-			validTrackCount: Number(row?.validTrackCount ?? 0),
-			totalDuration: Number(row?.totalDuration ?? 0),
+			itemCount: row?.itemCount ?? 0,
+			validTrackCount: row?.validTrackCount ?? 0,
+			totalDuration: row?.totalDuration ?? 0,
 		}
 	}
 
@@ -347,7 +347,7 @@ export class PlaylistService {
 		return new Map(
 			uniqueIds.map((id) => [
 				id,
-				Number(rows.find((row) => row.playlistId === id)?.itemCount ?? 0),
+				rows.find((row) => row.playlistId === id)?.itemCount ?? 0,
 			]),
 		)
 	}
