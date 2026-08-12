@@ -27,6 +27,7 @@ import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { initPerformanceObserver } from '@/lib/performance'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
@@ -39,6 +40,8 @@ import { isActuallyOffline } from '@/utils/network'
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
+
+initPerformanceObserver()
 
 Observe.configure({
 	integrations: { 'expo-router': true },
@@ -206,6 +209,11 @@ function RootLayout() {
 					<Stack screenOptions={{ headerShown: false }}>
 						<Stack.Screen
 							name='(tabs)'
+							options={{ headerShown: false }}
+						/>
+
+						<Stack.Screen
+							name='performance'
 							options={{ headerShown: false }}
 						/>
 

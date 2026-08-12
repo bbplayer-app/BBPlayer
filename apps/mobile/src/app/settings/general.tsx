@@ -245,6 +245,14 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
+					<Text>性能指标</Text>
+					<IconButton
+						icon='speedometer'
+						size={20}
+						onPress={() => router.push('/performance')}
+					/>
+				</View>
+				<View style={styles.settingRow}>
 					<Text>导出数据</Text>
 					<IconButton
 						icon='export-variant'
