@@ -1,29 +1,22 @@
-{
-	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": [
-		"react",
-		"typescript",
-		"unicorn",
-		"eslint",
-		"oxc",
-		"import",
-		"promise"
-	],
-	"categories": {
-		"correctness": "error",
-		"suspicious": "error",
-		"pedantic": "allow",
-		"perf": "error",
-		"style": "allow",
-		"restriction": "allow"
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+	plugins: ["react", "typescript", "unicorn", "eslint", "oxc", "import", "promise"],
+	categories: {
+		correctness: "error",
+		suspicious: "error",
+		pedantic: "allow",
+		perf: "error",
+		style: "allow",
+		restriction: "allow",
 	},
-	"env": {
-		"builtin": true,
-		"es2022": true,
-		"browser": true,
-		"node": true
+	env: {
+		builtin: true,
+		es2022: true,
+		browser: true,
+		node: true,
 	},
-	"ignorePatterns": [
+	ignorePatterns: [
 		"dist/*",
 		"**/dm.d.ts",
 		"**/dm.js",
@@ -34,31 +27,33 @@
 		"**/*.config.mjs",
 		"**/*.js",
 		"packages/logs/**",
+		"packages/bottom-tabs-react-navigation/**",
+		"packages/react-native-bottom-tabs/**",
 		"**/worker-configuration.d.ts",
 		"**/package-lock.json",
-		"**/pnpm-lock.yaml"
+		"**/pnpm-lock.yaml",
 	],
-	"rules": {
+	rules: {
 		"react/react-in-jsx-scope": "off",
 		"no-unused-vars": [
 			"error",
 			{
-				"args": "all",
-				"argsIgnorePattern": "^_",
-				"caughtErrors": "all",
-				"caughtErrorsIgnorePattern": "^_",
-				"destructuredArrayIgnorePattern": "^_",
-				"varsIgnorePattern": "^_",
-				"ignoreRestSiblings": true
-			}
+				args: "all",
+				argsIgnorePattern: "^_",
+				caughtErrors: "all",
+				caughtErrorsIgnorePattern: "^_",
+				destructuredArrayIgnorePattern: "^_",
+				varsIgnorePattern: "^_",
+				ignoreRestSiblings: true,
+			},
 		],
 		"no-console": "error",
 		"react-hooks/exhaustive-deps": "error",
 		"typescript/no-explicit-any": "error",
-		"typescript/no-misused-promises": ["error", { "checksVoidReturn": false }],
+		"typescript/no-misused-promises": ["error", { checksVoidReturn: false }],
 		"typescript/no-unsafe-type-assertion": "allow",
 		"typescript/consistent-return": "off",
-		"no-underscore-dangle": ["error", { "allow": ["__csrf"] }],
+		"no-underscore-dangle": ["error", { allow: ["__csrf"] }],
 		"react/no-unstable-nested-components": "off",
 
 		// tanstack query
@@ -99,30 +94,27 @@
 		"no-new-array": "allow",
 		"style-prop-object": "allow",
 		"no-map-spread": "allow",
-		"no-await-in-loop": "allow"
+		"no-await-in-loop": "allow",
 	},
-	"settings": {
-		"react": {
-			"version": "19.2"
-		}
+	settings: {
+		react: {
+			version: "19.2",
+		},
 	},
-	"jsPlugins": [
+	jsPlugins: [
 		"@tanstack/eslint-plugin-query",
 		"eslint-plugin-react-compiler",
-		{
-			"name": "bbplayer",
-			"specifier": "./packages/eslint-plugin/index.js"
-		},
+		{ name: "bbplayer", specifier: "./packages/eslint-plugin/index.js" },
 		"eslint-plugin-react-hooks-extra",
 		"eslint-plugin-react-you-might-not-need-an-effect",
-		"eslint-plugin-drizzle"
+		"eslint-plugin-drizzle",
 	],
-	"overrides": [
+	overrides: [
 		{
-			"files": ["packages/**/*.{ts,tsx,js,jsx}"],
-			"rules": {
-				"no-console": "allow"
-			}
-		}
-	]
-}
+			files: ["packages/**/*.{ts,tsx,js,jsx}"],
+			rules: {
+				"no-console": "allow",
+			},
+		},
+	],
+});
