@@ -71,7 +71,7 @@ export default function AccountSettingsPage() {
 		}
 		playlistSyncWorker.triggerSync()
 		if (returnTo) {
-			router.replace(returnTo)
+			router.replace(returnTo as Parameters<typeof router.replace>[0])
 		}
 	}
 
