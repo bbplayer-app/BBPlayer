@@ -10,8 +10,6 @@ interface Settings {
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean
 	enableDataCollection: boolean
-	enableDanmaku: boolean
-	danmakuFilterLevel: number
 	downloadMaxParallelTasks: number
 	enableMinimalistMode: boolean
 	allowSimultaneousPlayback: boolean

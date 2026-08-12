@@ -30,11 +30,6 @@ export function useFeatureTracking() {
 			settings.nowPlayingBarStyle,
 		)
 		void analyticsService.setUserProperty(
-			'setting_danmaku_enable',
-			String(settings.enableDanmaku),
-		)
-
-		void analyticsService.setUserProperty(
 			'setting_desktop_lyric',
 			String(Orpheus.isDesktopLyricsShown),
 		)

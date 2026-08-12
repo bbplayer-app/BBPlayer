@@ -641,16 +641,6 @@ interface BilibiliGarbAssetBagResponse {
 	collect_list?: BilibiliGarbCollectEntry[]
 }
 
-interface BilibiliDanmakuItem {
-	id: number | Long
-	progress: number // 弹幕出现时间（ms）
-	mode: number // 弹幕模式：1/2/3：滚动；4：底部；5：顶部
-	fontsize?: 18 | 25 | 36 | null // 我们可能不会使用这个值，统一归一化
-	color?: number | null // 十进制 RGB888
-	content: string // 弹幕内容
-	weight?: number | null // 弹幕权重 [0-10]，我们在过滤弹幕时有用，值越大权重越高
-}
-
 export type {
 	BilibiliAudioStreamParams,
 	BilibiliAudioStreamResponse,
@@ -664,7 +654,6 @@ export type {
 	BilibiliCommentItem,
 	BilibiliCommentMember,
 	BilibiliCommentsResponse,
-	BilibiliDanmakuItem,
 	BilibiliDealFavoriteForOneVideoResponse,
 	BilibiliFavoriteListAllContents,
 	BilibiliFavoriteListContent,

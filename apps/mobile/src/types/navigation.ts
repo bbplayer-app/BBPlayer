@@ -44,7 +44,6 @@ export interface ModalPropsMap {
 		shouldRedirectToLocalPlaylist?: boolean
 		expandMultiPage?: boolean
 	}
-	DanmakuSettings: undefined
 	CoverDownloadProgress: undefined
 	SkinDownloadProgress: { item: GarbSkinSearchResult }
 	EnableSharing: {

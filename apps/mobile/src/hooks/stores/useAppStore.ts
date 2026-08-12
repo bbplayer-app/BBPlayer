@@ -109,8 +109,6 @@ export const useAppStore = create<AppState>()(
 					lyricSource: 'netease',
 					enableVerbatimLyrics: true,
 					enableDataCollection: true,
-					enableDanmaku: false,
-					danmakuFilterLevel: 0,
 					downloadMaxParallelTasks: 1,
 					enableMinimalistMode: false,
 					allowSimultaneousPlayback: false,
