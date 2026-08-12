@@ -2,6 +2,9 @@ import * as Sentry from '@sentry/react-native'
 import * as Application from 'expo-application'
 import Constants from 'expo-constants'
 import { err, ok, type Result } from 'neverthrow'
+import { fetch, prefetchOnAppStart } from 'react-native-nitro-fetch'
+
+const UPDATE_PREFETCH_KEY = 'update-manifest'
 
 export interface ReleaseInfo {
 	version: string
@@ -23,6 +26,12 @@ export interface UpdateManifest {
 	url: string
 	downloads?: UpdateDownloads
 	forced?: boolean
+}
+
+export function registerUpdatePrefetch(): void {
+	const manifestUrl = getManifestUrl()
+	if (!manifestUrl) return
+	void prefetchOnAppStart(manifestUrl, { prefetchKey: UPDATE_PREFETCH_KEY })
 }
 
 const getManifestUrl = (): string | undefined => {
@@ -66,7 +75,11 @@ export async function fetchLatestRelease(): Promise<
 		}
 		const res = await Sentry.startSpan(
 			{ name: 'http:fetch:update-manifest', op: 'http' },
-			() => fetch(manifestUrl, { cache: 'no-store' }),
+			() =>
+				fetch(manifestUrl, {
+					cache: 'no-store',
+					headers: { prefetchKey: UPDATE_PREFETCH_KEY },
+				}),
 		)
 		if (!res.ok) {
 			return err(new Error(`拉取更新信息: ${res.status} ${res.statusText}`))

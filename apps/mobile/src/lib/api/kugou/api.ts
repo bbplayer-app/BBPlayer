@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js'
 import { errAsync, ResultAsync } from 'neverthrow'
+import { fetch } from 'react-native-nitro-fetch'
 
 import type {
 	KugouLyricDownloadResponse,

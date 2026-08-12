@@ -1,12 +1,13 @@
 import type { AppType } from '@bbplayer/backend'
 import { hc } from 'hono/client'
+import { fetch } from 'react-native-nitro-fetch'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 
 const BASE_URL =
 	process.env.EXPO_PUBLIC_BBPLAYER_API_URL ?? 'https://be.bbplayer.roitium.com'
 
-const isAuthLoginRequest = (input: Parameters<typeof fetch>[0]) => {
+const isAuthLoginRequest = (input: Parameters<typeof globalThis.fetch>[0]) => {
 	const url =
 		typeof input === 'string'
 			? input

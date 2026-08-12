@@ -6,7 +6,6 @@
 	"scripts": {
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
 		"postinstall": "patch-package",
-		"prepare": "pbjs -t static-module -w commonjs -o src/lib/api/bilibili/proto/dm.js src/lib/api/bilibili/proto/dm.proto && pbts -o src/lib/api/bilibili/proto/dm.d.ts src/lib/api/bilibili/proto/dm.js",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start",
 		"test": "jest --watchAll"
 	},
@@ -28,6 +27,7 @@
 		"@react-native-firebase/analytics": "^25.1.0",
 		"@react-native-firebase/app": "^25.1.0",
 		"@react-native-masked-view/masked-view": "^0.3.2",
+		"@react-native-vector-icons/get-image": "^13.0.0",
 		"@react-native-vector-icons/material-design-icons": "^13.1.2",
 		"@rnrepo/expo-config-plugin": "0.3.6",
 		"@sentry/react-native": "~8.21.0",
@@ -90,7 +90,8 @@
 		"react-native-gradle-plugin": "^0.71.19",
 		"react-native-keyboard-controller": "1.21.13",
 		"react-native-mmkv": "^4.3.2",
-		"react-native-nitro-modules": "^0.35.10",
+		"react-native-nitro-fetch": "^1.6.0",
+		"react-native-nitro-modules": "^0.36.5",
 		"react-native-pager-view": "8.0.2",
 		"react-native-paper": "^5.15.3",
 		"react-native-plain-text": "^0.6.1",
@@ -137,6 +138,7 @@
 		"babel-plugin-react-compiler": "19.1.0-rc.1",
 		"babel-plugin-transform-remove-console": "^6.9.4",
 		"drizzle-kit": "^0.31.10",
+		"expo-atlas": "^0.4.3",
 		"globals": "^16.5.0",
 		"jest-expo": "^57.0.3",
 		"protobufjs-cli": "^2.6.1",

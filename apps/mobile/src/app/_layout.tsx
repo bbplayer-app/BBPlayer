@@ -29,6 +29,7 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
+import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -77,6 +78,8 @@ const checkOverlayPermissionOnStart = async () => {
 function runAppInit() {
 	try {
 		useAppStore.getState()
+
+		registerUpdatePrefetch()
 
 		cleanOldLogFiles(7)
 			.andTee((deleted) => {
