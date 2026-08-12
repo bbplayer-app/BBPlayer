@@ -29,8 +29,8 @@ export default function useObservableStateAdapter<T>(
 	const isActive = useSharedValue(false)
 
 	useEffect(() => {
-		if (!value || isObservableState<T>(value)) return
-		if (sharedValueAdapterId == null) return
+		if (!value || isObservableState<T>(value)) return undefined
+		if (sharedValueAdapterId == null) return undefined
 
 		isActive.set(true)
 
@@ -76,6 +76,7 @@ function resolveObservableStateInWorklet(
 
 	const sharedObject = expo?.SharedObject
 	try {
+		// oxlint-disable-next-line no-underscore-dangle
 		return sharedObject?.__resolveInWorklet?.(stateId)
 	} catch {
 		return undefined

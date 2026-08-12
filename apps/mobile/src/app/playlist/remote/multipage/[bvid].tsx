@@ -214,7 +214,7 @@ export default function MultipagePage() {
 				/>
 			)
 		},
-		[cid],
+		[cid, selection],
 	)
 
 	useEffect(() => {

@@ -21,12 +21,18 @@ import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { FacadeError, createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
-import { artistService as artistServiceInstance, type ArtistService } from '@/lib/services/artistService'
+import {
+	artistService as artistServiceInstance,
+	type ArtistService,
+} from '@/lib/services/artistService'
 import {
 	playlistService as playlistServiceInstance,
 	type PlaylistService,
 } from '@/lib/services/playlistService'
-import { trackService as trackServiceInstance, type TrackService } from '@/lib/services/trackService'
+import {
+	trackService as trackServiceInstance,
+	type TrackService,
+} from '@/lib/services/trackService'
 import log from '@/utils/log'
 
 type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
@@ -284,7 +290,7 @@ export class SharedPlaylistFacade {
 					if (createResult.isErr()) throw createResult.error
 					const id = createResult.value.id
 
-					await this._applyPullResponse(id, shareId, changesData, tx, {
+					await this.applyPullResponse(id, shareId, changesData, tx, {
 						playlistService: txPlaylist,
 						trackService: txTrack,
 						artistService: txArtist,
@@ -467,7 +473,7 @@ export class SharedPlaylistFacade {
 							if (createResult.isErr()) throw createResult.error
 							const localId = createResult.value.id
 
-							await this._applyPullResponse(
+							await this.applyPullResponse(
 								localId,
 								remote.id,
 								changesData,
@@ -565,7 +571,7 @@ export class SharedPlaylistFacade {
 					const txTrack = this.trackService.withDB(tx)
 					const txArtist = this.artistService.withDB(tx)
 
-					const n = await this._applyPullResponse(
+					const n = await this.applyPullResponse(
 						localPlaylistId,
 						playlist.shareId!,
 						data,
@@ -735,7 +741,7 @@ export class SharedPlaylistFacade {
 		)
 	}
 
-	private async _applyPullResponse(
+	private async applyPullResponse(
 		localPlaylistId: number,
 		shareId: string,
 		data: {
@@ -781,14 +787,16 @@ export class SharedPlaylistFacade {
 			artistService: ArtistService
 		},
 	): Promise<number> {
-		const { playlistService: plSvc, trackService: trkSvc, artistService: artSvc } = services
+		const {
+			playlistService: plSvc,
+			trackService: trkSvc,
+			artistService: artSvc,
+		} = services
 		let applied = 0
 
 		// ---- 应用元数据更新 ----
 		if (data.metadata) {
-			const metaUpdate: Parameters<
-				typeof plSvc.updatePlaylistMetadata
-			>[1] = {}
+			const metaUpdate: Parameters<typeof plSvc.updatePlaylistMetadata>[1] = {}
 			if (data.metadata.title != null) metaUpdate.title = data.metadata.title
 			if (data.metadata.description !== undefined)
 				metaUpdate.description = data.metadata.description
@@ -924,8 +932,7 @@ export class SharedPlaylistFacade {
 		// ---- 应用 delete 变更 ----
 		if (deleteChanges.length > 0) {
 			const uniqueKeys = deleteChanges.map((c) => c.track_unique_key)
-			const trackIdsResult =
-				await trkSvc.findTrackIdsByUniqueKeys(uniqueKeys)
+			const trackIdsResult = await trkSvc.findTrackIdsByUniqueKeys(uniqueKeys)
 			if (trackIdsResult.isErr()) {
 				throw trackIdsResult.error
 			}

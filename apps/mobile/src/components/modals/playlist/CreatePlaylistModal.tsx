@@ -20,9 +20,9 @@ export default function CreatePlaylistModal({
 	const [title, setTitle] = useState('')
 	const [description, setDescription] = useState('')
 	const [coverUrl, setCoverUrl] = useState('')
-	const _close = useModalStore((state) => state.close)
+	const modalClose = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
-	const close = useCallback(() => _close('CreatePlaylist'), [_close])
+	const close = useCallback(() => modalClose('CreatePlaylist'), [modalClose])
 	const router = useRouter()
 
 	const handleConfirm = useCallback(() => {

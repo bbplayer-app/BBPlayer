@@ -16,8 +16,8 @@ export default function CookieLoginModal() {
 	const cookieObjectFromStore = useAppStore((state) => state.bilibiliCookie)
 	const setBilibiliCookie = useAppStore((state) => state.setBilibiliCookie)
 	const clearBilibiliCookie = useAppStore((state) => state.clearBilibiliCookie)
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('CookieLogin'), [_close])
+	const modalClose = useModalStore((state) => state.close)
+	const close = useCallback(() => modalClose('CookieLogin'), [modalClose])
 
 	const displayCookieString = useMemo(() => {
 		if (!cookieObjectFromStore) return ''

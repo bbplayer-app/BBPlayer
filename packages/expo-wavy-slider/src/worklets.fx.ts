@@ -46,6 +46,7 @@ function registerSharedObjectSerializer(): void {
 					}
 				}
 			).expo.SharedObject
+			// oxlint-disable-next-line no-underscore-dangle
 			const obj = sharedObject.__resolveInWorklet(packed.objectId)
 
 			if (

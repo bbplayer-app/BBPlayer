@@ -55,10 +55,10 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 	const queryClient = useQueryClient()
 	const { data: personalInfo } = usePersonalInformation()
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
-	const _close = useModalStore((state) => state.close)
+	const modalClose = useModalStore((state) => state.close)
 	const close = useCallback(
-		() => _close('AddVideoToBilibiliFavorite'),
-		[_close],
+		() => modalClose('AddVideoToBilibiliFavorite'),
+		[modalClose],
 	)
 
 	const {

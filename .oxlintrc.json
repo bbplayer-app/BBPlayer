@@ -34,6 +34,7 @@
 		"**/*.config.mjs",
 		"**/*.js",
 		"packages/logs/**",
+		"**/worker-configuration.d.ts",
 		"**/package-lock.json",
 		"**/pnpm-lock.yaml"
 	],
@@ -58,6 +59,7 @@
 		"typescript/no-unsafe-type-assertion": "allow",
 		"typescript/consistent-return": "off",
 		"no-underscore-dangle": ["error", { "allow": ["__csrf"] }],
+		"react/no-unstable-nested-components": "off",
 
 		// tanstack query
 		"@tanstack/query/exhaustive-deps": "error",

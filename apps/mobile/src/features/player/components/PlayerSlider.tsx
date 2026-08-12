@@ -204,6 +204,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		return Math.min(Math.max(pos / dur, 0), 1)
 	})
 
+	// oxlint-disable-next-line no-underscore-dangle
 	const _bufferedFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
 		return Math.min(Math.max(buffered.value / dur, 0), 1)

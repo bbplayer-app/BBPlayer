@@ -94,7 +94,7 @@ export default function SearchSuggestions({
 		return (
 			items?.map((item) => ({
 				...item,
-				_segments: parseEmTags(item.name),
+				segments: parseEmTags(item.name),
 			})) ?? []
 		)
 	}, [items])
@@ -170,7 +170,7 @@ export default function SearchSuggestions({
 			index,
 		}: {
 			item: BilibiliSearchSuggestionItem & {
-				_segments?: { text: string; emphasized: boolean }[]
+				segments?: { text: string; emphasized: boolean }[]
 			}
 			index: number
 		}) => {
@@ -188,7 +188,7 @@ export default function SearchSuggestions({
 						numberOfLines={1}
 						style={{ color: colors.onSurface }}
 					>
-						{(item._segments ?? [{ text: item.value, emphasized: false }]).map(
+						{(item.segments ?? [{ text: item.value, emphasized: false }]).map(
 							(seg, i) => (
 								<Text
 									// oxlint-disable-next-line react/no-array-index-key

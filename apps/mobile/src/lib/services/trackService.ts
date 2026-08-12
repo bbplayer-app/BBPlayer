@@ -100,7 +100,7 @@ export class TrackService {
 	 * @param payload - 创建 track 所需的数据。
 	 * @returns ResultAsync 包含成功创建的 Track 或一个错误。
 	 */
-	private _createTrack(
+	private createTrack(
 		payload: CreateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		// validate
@@ -360,7 +360,8 @@ export class TrackService {
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
-					where: (track, { eq: eqFn }) => eqFn(track.uniqueKey, identifier.value),
+					where: (track, { eq: eqFn }) =>
+						eqFn(track.uniqueKey, identifier.value),
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -441,7 +442,7 @@ export class TrackService {
 			})
 			.orElse((error) => {
 				if (error instanceof ServiceError && error.type === 'TrackNotFound') {
-					return this._createTrack(payload)
+					return this.createTrack(payload)
 				}
 				return errAsync(error)
 			})

@@ -23,7 +23,7 @@ const aesEncrypt = (
 		CryptoJS.enc.Utf8.parse(text),
 		CryptoJS.enc.Utf8.parse(key),
 		{
-			iv: CryptoJS.enc.Utf8.parse(iv),
+			iv: CryptoJS.enc.Utf8.parse(aesIv),
 			mode: CryptoJS.mode[mode.toUpperCase() as keyof typeof CryptoJS.mode],
 			padding: CryptoJS.pad.Pkcs7,
 		},
@@ -98,7 +98,7 @@ const aesDecrypt = (
 			{ ciphertext: CryptoJS.enc.Hex.parse(ciphertext) },
 			CryptoJS.enc.Utf8.parse(key),
 			{
-		iv: CryptoJS.enc.Utf8.parse(aesIv),
+				iv: CryptoJS.enc.Utf8.parse(aesIv),
 				mode: CryptoJS.mode.ECB,
 				padding: CryptoJS.pad.Pkcs7,
 			},
