@@ -58,7 +58,7 @@ export default function EnableSharingModal({
 				router.push({
 					pathname: '/settings/account',
 					params: { returnTo: `/playlist/local/${playlistId}` },
-				} as never)
+				})
 			})
 			close('EnableSharing')
 			return
@@ -89,7 +89,7 @@ export default function EnableSharingModal({
 				router.push({
 					pathname: '/settings/account',
 					params: { returnTo: `/playlist/local/${playlistId}` },
-				} as never)
+				})
 			})
 			close('EnableSharing')
 			return
