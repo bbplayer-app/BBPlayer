@@ -1,18 +1,11 @@
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
 import * as Application from 'expo-application'
-import * as Updates from 'expo-updates'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import log from '@/utils/log'
 
 const logger = log.extend('Utils.Sentry')
-
-const manifest = Updates.manifest
-const metadata = 'metadata' in manifest ? manifest.metadata : undefined
-const extra = 'extra' in manifest ? manifest.extra : undefined
-const updateGroup =
-	metadata && 'updateGroup' in metadata ? metadata.updateGroup : undefined
 
 const identifier = Application.applicationId
 const development = process.env.NODE_ENV === 'development'
@@ -56,24 +49,6 @@ export function initializeSentry() {
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],
 	})
-
-	const scope = Sentry.getGlobalScope()
-
-	scope.setTag('expo-update-id', Updates.updateId)
-	scope.setTag('expo-is-embedded-update', Updates.isEmbeddedLaunch)
-
-	if (typeof updateGroup === 'string') {
-		scope.setTag('expo-update-group-id', updateGroup)
-
-		const owner = extra?.expoClient?.owner ?? '[account]'
-		const slug = extra?.expoClient?.slug ?? '[project]'
-		scope.setTag(
-			'expo-update-debug-url',
-			`https://expo.dev/accounts/${owner}/projects/${slug}/updates/${updateGroup}`,
-		)
-	} else if (Updates.isEmbeddedLaunch) {
-		scope.setTag('expo-update-debug-url', 'not applicable for embedded updates')
-	}
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
 	if (!development) {

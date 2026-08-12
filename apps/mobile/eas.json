@@ -7,7 +7,6 @@
 		"dev": {
 			"developmentClient": true,
 			"distribution": "internal",
-			"channel": "development",
 			"android": {
 				"gradleCommand": ":app:assembleDebug"
 			},
@@ -22,7 +21,6 @@
 				"buildType": "apk",
 				"gradleCommand": ":app:assembleRelease"
 			},
-			"channel": "production",
 			"env": {
 				"APP_VARIANT": "production",
 				"ABI_FILTERS": "arm64-v8a"
@@ -34,7 +32,6 @@
 				"buildType": "apk",
 				"gradleCommand": ":app:assembleRelease"
 			},
-			"channel": "production",
 			"env": {
 				"APP_VARIANT": "production"
 			}
@@ -45,7 +42,6 @@
 				"buildType": "apk",
 				"gradleCommand": ":app:assembleRelease"
 			},
-			"channel": "production",
 			"env": {
 				"APP_VARIANT": "production",
 				"ABI_FILTERS": "armeabi-v7a,arm64-v8a,x86,x86_64"
@@ -58,7 +54,6 @@
 				"buildType": "apk",
 				"gradleCommand": ":app:assembleRelease"
 			},
-			"channel": "preview",
 			"env": {
 				"APP_VARIANT": "preview",
 				"ABI_FILTERS": "arm64-v8a"

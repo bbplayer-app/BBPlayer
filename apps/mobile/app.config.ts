@@ -281,10 +281,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			updateManifestUrl: 'https://be.bbplayer.roitium.com/update.json',
 		},
 		owner: 'roitium',
-		updates: {
-			url: 'https://u.expo.dev/1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
-			enableBsdiffPatchSupport: true,
-		},
 		ios: {
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {

@@ -65,7 +65,6 @@
 		"expo-sharing": "~57.0.10",
 		"expo-sqlite": "~57.0.1",
 		"expo-system-ui": "~57.0.2",
-		"expo-updates": "~57.0.12",
 		"expo-video": "~57.0.2",
 		"expo-wavy-slider": "workspace:*",
 		"expo-web-browser": "~57.0.2",

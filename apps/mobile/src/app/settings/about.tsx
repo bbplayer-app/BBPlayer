@@ -1,7 +1,6 @@
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
-import * as Updates from 'expo-updates'
 import * as WebBrowser from 'expo-web-browser'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
@@ -19,10 +18,6 @@ import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import toast from '@/utils/toast'
 
-const updateTime = Updates.createdAt
-	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`
-	: ''
-
 const openExternalLink = async (url: string) => {
 	try {
 		await WebBrowser.openBrowserAsync(url)
@@ -39,11 +34,7 @@ export default function AboutSettingsPage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
-	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}${
-		Updates.updateId
-			? ` hotfix-${Updates.updateId.slice(0, 7)}-${updateTime}`
-			: ''
-	}`
+	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}`
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>

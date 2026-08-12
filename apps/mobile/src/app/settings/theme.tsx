@@ -1,8 +1,8 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Slider } from '@expo/ui/community/slider'
+import * as Expo from 'expo'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import * as Updates from 'expo-updates'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useRef, useState } from 'react'
@@ -298,7 +298,7 @@ export default function ThemeSettingsPage() {
 										{
 											text: '关闭并重启',
 											onPress: () => {
-												void Updates.reloadAsync()
+												void Expo.reloadAppAsync()
 											},
 										},
 									])

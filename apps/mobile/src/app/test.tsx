@@ -5,13 +5,11 @@ import { asc, sql } from 'drizzle-orm'
 import * as DocumentPicker from 'expo-document-picker'
 import { Directory, File, Paths } from 'expo-file-system'
 import { router } from 'expo-router'
-import * as Updates from 'expo-updates'
 import { useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Dialog, Portal, Text, TextInput, useTheme } from 'react-native-paper'
+import { TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -32,61 +30,10 @@ const logger = log.extend('TestPage')
 export default function TestPage() {
 	const [loading, setLoading] = useState(false)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
-	const { isUpdatePending } = Updates.useUpdates()
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
 	const haveTrack = useCurrentTrack()
-	const [updateChannel, setUpdateChannel] = useState('')
-	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
-		useState(false)
 	const [queryDate, setQueryDate] = useState('')
-
-	const testCheckUpdate = async () => {
-		setLoading(true)
-		try {
-			const result = await Updates.checkForUpdateAsync()
-			toast.success('检查更新结果', {
-				description: `isAvailable: ${result.isAvailable}, whyNotAvailable: ${result.reason}, isRollbackToEmbedding: ${result.isRollBackToEmbedded}`,
-				duration: Number.POSITIVE_INFINITY,
-			})
-		} catch (error) {
-			toast.error('检查更新失败', { description: String(error) })
-		}
-		setLoading(false)
-	}
-
-	const testUpdatePackage = async () => {
-		setLoading(true)
-		try {
-			if (isUpdatePending) {
-				expoDb.closeSync()
-				await Updates.reloadAsync()
-				return
-			}
-			setLoading(true)
-			const result = await Updates.checkForUpdateAsync()
-			if (!result.isAvailable) {
-				toast.error('没有可用的更新', {
-					description: '当前已是最新版本',
-				})
-				return
-			}
-			const updateResult = await Updates.fetchUpdateAsync()
-			if (updateResult.isNew) {
-				toast.success('有新版本可用', {
-					description: '现在更新',
-				})
-				setTimeout(() => {
-					expoDb.closeSync()
-					setLoading(false) // I thought this is meaningless
-					void Updates.reloadAsync()
-				}, 1000)
-			}
-		} catch (error) {
-			toast.error('更新失败', { description: String(error) })
-		}
-		setLoading(false)
-	}
 
 	const handleDeleteAllDownloadRecords = () => {
 		alert(
@@ -341,7 +288,8 @@ export default function TestPage() {
 						onPress={() => {
 							storage.set('first_open', true)
 							expoDb.closeSync()
-							void Updates.reloadAsync()
+							const { DevSettings } = require('react-native')
+							DevSettings.reload()
 						}}
 						style={styles.button}
 					>
@@ -361,27 +309,6 @@ export default function TestPage() {
 						style={styles.button}
 					>
 						测试共享歌单增量拉取
-					</Button>
-					<Button
-						onPress={() => setUpdateChannelModalVisible(true)}
-						loading={loading}
-						style={styles.button}
-					>
-						更改热更新渠道
-					</Button>
-					<Button
-						onPress={testCheckUpdate}
-						loading={loading}
-						style={styles.button}
-					>
-						查询是否有可热更新的包
-					</Button>
-					<Button
-						onPress={testUpdatePackage}
-						loading={loading}
-						style={styles.button}
-					>
-						拉取热更新并重载
 					</Button>
 					<Button
 						onPress={handleDeleteAllDownloadRecords}
@@ -457,59 +384,6 @@ export default function TestPage() {
 				<NowPlayingBar />
 			</View>
 
-			<Portal>
-				<AnimatedModalOverlay
-					visible={updateChannelModalVisible}
-					onDismiss={() => setUpdateChannelModalVisible(false)}
-				>
-					<Dialog.Title>
-						设置热更新渠道
-						<Text style={{ color: 'red' }}>&thinsp;(高危)&thinsp;</Text>
-					</Dialog.Title>
-					<Dialog.Content>
-						<Text style={{ color: 'red' }}>
-							如果您不知道您正在做什么，请关闭此弹窗！
-						</Text>
-						<Text>
-							{'\n'}
-							（注意：所设置的 channel
-							是持久化的，如果需要恢复请点击下面的按钮）
-						</Text>
-						<TextInput
-							style={{ marginTop: 16 }}
-							onChangeText={setUpdateChannel}
-							mode='outlined'
-							label='更新渠道'
-						/>
-					</Dialog.Content>
-					<Dialog.Actions>
-						<Button onPress={() => setUpdateChannelModalVisible(false)}>
-							取消
-						</Button>
-						<Button
-							onPress={() => {
-								setUpdateChannelModalVisible(false)
-								Updates.setUpdateRequestHeadersOverride({
-									'expo-channel-name': 'production',
-								})
-							}}
-						>
-							恢复默认
-						</Button>
-						<Button
-							onPress={() => {
-								setUpdateChannelModalVisible(false)
-								Updates.setUpdateRequestHeadersOverride({
-									'expo-channel-name': updateChannel,
-								})
-								void testCheckUpdate()
-							}}
-						>
-							保存并查询是否有更新
-						</Button>
-					</Dialog.Actions>
-				</AnimatedModalOverlay>
-			</Portal>
 			<SyncFailuresSheet
 				ref={syncFailuresSheetRef}
 				useMockData
