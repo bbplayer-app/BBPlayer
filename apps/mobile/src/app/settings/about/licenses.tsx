@@ -2,6 +2,8 @@ import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
+import type { Library } from 'react-native-legal'
+import { ReactNativeLegal } from 'react-native-legal'
 import {
 	Appbar,
 	Divider,
@@ -22,39 +24,23 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import type { ListRenderItemInfoWithExtraData } from '@/types/legendlist'
 
-type LicenseEntry = {
-	key: string
-	name: string
-	version?: string
-	type?: string
-	url?: string
-	content?: string
-	dependencyType?: string
-}
-
 type ExtraData = {
 	selectedKey: string | null
-	onPress: (key: string) => void
+	onPress: (id: string) => void
 	onSurfaceVariant: string
 }
 
 const SEARCHBAR_HEIGHT = 72
 
-// oxlint-disable-next-line @typescript-eslint/no-require-imports
-const rawLicenses = require('@/assets/openSourceLicenses.json') as Record<
-	string,
-	Omit<LicenseEntry, 'key'>
->
-
 const renderLicenseItem = ({
 	item,
 	extraData,
-}: ListRenderItemInfoWithExtraData<LicenseEntry, ExtraData>) => {
-	const expanded = extraData?.selectedKey === item.key
+}: ListRenderItemInfoWithExtraData<Library, ExtraData>) => {
+	const expanded = extraData?.selectedKey === item.id
+	const license = item.licenses[0]
 	const description = [
-		item.type ?? 'Unknown license',
+		license?.name ?? 'Unknown license',
 		item.version ? `v${item.version}` : undefined,
-		item.dependencyType,
 	]
 		.filter(Boolean)
 		.join(' · ')
@@ -76,16 +62,16 @@ const renderLicenseItem = ({
 						icon={expanded ? 'chevron-up' : 'chevron-down'}
 					/>
 				)}
-				onPress={() => extraData?.onPress(item.key)}
+				onPress={() => extraData?.onPress(item.id)}
 			/>
 			{expanded && (
 				<View style={styles.licenseDetail}>
-					{item.url && (
+					{license?.url && (
 						<Text
 							variant='bodySmall'
 							style={{ color: extraData?.onSurfaceVariant }}
 						>
-							{item.url}
+							{license.url}
 						</Text>
 					)}
 					<Text
@@ -93,7 +79,7 @@ const renderLicenseItem = ({
 						numberOfLines={12}
 						style={styles.licenseText}
 					>
-						{item.content ?? '该依赖没有提供可展示的许可证正文。'}
+						{license?.licenseContent ?? '该依赖没有提供可展示的许可证正文。'}
 					</Text>
 				</View>
 			)}
@@ -147,36 +133,37 @@ export default function OpenSourceLicensesPage() {
 		})
 	}
 
-	const licenses = useMemo(
-		() =>
-			Object.entries(rawLicenses)
-				.map(([key, item]) => ({
-					key,
-					...item,
-				}))
-				.sort((a, b) => a.name.localeCompare(b.name)),
-		[],
-	)
+	const [libraries, setLibraries] = useState<Library[]>([])
+	const [loading, setLoading] = useState(true)
+
+	useEffect(() => {
+		void ReactNativeLegal.getLibrariesAsync().then((result) => {
+			setLibraries(
+				result.data.slice().sort((a, b) => a.name.localeCompare(b.name)),
+			)
+			setLoading(false)
+		})
+	}, [])
 
 	const filteredLicenses = useMemo(() => {
 		if (!filteredQuery.trim()) {
-			return licenses
+			return libraries
 		}
 		const lowerQuery = filteredQuery.toLowerCase()
-		return licenses.filter(
-			(license) =>
-				license.name.toLowerCase().includes(lowerQuery) ||
-				license.key.toLowerCase().includes(lowerQuery) ||
-				(license.type && license.type.toLowerCase().includes(lowerQuery)) ||
-				(license.content && license.content.toLowerCase().includes(lowerQuery)),
+		return libraries.filter(
+			(lib) =>
+				lib.name.toLowerCase().includes(lowerQuery) ||
+				lib.id.toLowerCase().includes(lowerQuery) ||
+				lib.licenses[0]?.name?.toLowerCase().includes(lowerQuery) ||
+				lib.licenses[0]?.licenseContent?.toLowerCase().includes(lowerQuery),
 		)
-	}, [licenses, filteredQuery])
+	}, [libraries, filteredQuery])
 
 	const extraData = useMemo<ExtraData>(
 		() => ({
 			selectedKey,
-			onPress: (key) =>
-				setSelectedKey((current) => (current === key ? null : key)),
+			onPress: (id) =>
+				setSelectedKey((current) => (current === id ? null : id)),
 			onSurfaceVariant: colors.onSurfaceVariant,
 		}),
 		[colors.onSurfaceVariant, selectedKey],
@@ -192,7 +179,7 @@ export default function OpenSourceLicensesPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content
 					title='开源许可证'
-					subtitle={`${filteredLicenses.length} 个依赖`}
+					subtitle={loading ? '加载中...' : `${filteredLicenses.length} 个依赖`}
 				/>
 				<Appbar.Action
 					icon={startSearch ? 'close' : 'magnify'}
@@ -215,7 +202,7 @@ export default function OpenSourceLicensesPage() {
 			<LegendList
 				data={filteredLicenses}
 				renderItem={renderLicenseItem}
-				keyExtractor={(item) => item.key}
+				keyExtractor={(item) => item.id}
 				extraData={extraData}
 				recycleItems
 				contentContainerStyle={{

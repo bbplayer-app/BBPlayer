@@ -269,6 +269,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 			}),
 			'expo-video',
+			[
+				'react-native-legal',
+				{
+					devDepsMode: 'root-only',
+					includeOptionalDeps: true,
+					transitiveDepsMode: 'all',
+				},
+			],
 		],
 		experiments: {
 			reactCompiler: true,
