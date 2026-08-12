@@ -73,7 +73,7 @@ export default function useDanmakuLoader(
 				const nextData = [...rawDataSV.value, ...cleaned].sort(
 					(a, b) => a.progress - b.progress,
 				)
-				rawDataSV.value = nextData
+				rawDataSV.set(nextData)
 				loadedSegmentsRef.current.add(segIndex)
 				retryCountRef.current[segIndex] = 0
 				if (retryTimersRef.current[segIndex]) {

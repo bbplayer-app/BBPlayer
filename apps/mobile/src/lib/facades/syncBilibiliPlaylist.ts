@@ -1017,7 +1017,7 @@ export class SyncBilibiliPlaylistFacade {
 					})
 
 					const replaceResult = await playlistSvc.replacePlaylistAllTracks(
-						localPlaylist.value.id,
+						playlistResult.value.id,
 						finalOrderedTrackIds,
 					)
 					if (replaceResult.isErr()) {
@@ -1026,7 +1026,7 @@ export class SyncBilibiliPlaylistFacade {
 					logger.debug('step 11: 替换 playlist 中所有 tracks 完成')
 					logger.info('同步收藏夹完成', {
 						remoteId: favoriteId,
-						playlistId: localPlaylist.value.id,
+						playlistId: playlistResult.value.id,
 					})
 
 					void analyticsService.logPlaylistSync(
@@ -1035,7 +1035,7 @@ export class SyncBilibiliPlaylistFacade {
 						finalOrderedTrackIds.length,
 					)
 
-					return localPlaylist.value.id
+					return playlistResult.value.id
 				}),
 				(e) =>
 					createFacadeError('SyncFavoriteFailed', '同步收藏夹失败', {

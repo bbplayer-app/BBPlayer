@@ -27,6 +27,42 @@ import toast from '@/utils/toast'
 
 const logger = log.extend('TestPage')
 
+async function queryPlayHistoryByDateRange(startTime: number, endTime: number) {
+	return db
+		.select()
+		.from(schema.playHistory)
+		.where(
+			sql`${schema.playHistory.startTime} BETWEEN ${startTime} AND ${endTime}
+                        OR (${schema.playHistory.startTime} * 1000) BETWEEN ${startTime} AND ${endTime}`,
+		)
+}
+
+async function importMMKVFiles() {
+	const result = await DocumentPicker.getDocumentAsync({
+		type: '*/*',
+		copyToCacheDirectory: true,
+		multiple: true,
+	})
+
+	if (result.canceled) return
+
+	const mmkvDir = new Directory(Paths.document, 'mmkv')
+	if (!mmkvDir.exists) {
+		mmkvDir.create()
+	}
+
+	for (const asset of result.assets) {
+		const pickedFile = new File(asset.uri)
+		const targetFile = new File(mmkvDir, asset.name)
+		if (targetFile.exists) {
+			targetFile.delete()
+		}
+		pickedFile.copySync(targetFile)
+	}
+
+	toast.success('MMKV 导入成功')
+}
+
 export default function TestPage() {
 	const [loading, setLoading] = useState(false)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
@@ -190,32 +226,7 @@ export default function TestPage() {
 					onPress: async () => {
 						setLoading(true)
 						try {
-							const result = await DocumentPicker.getDocumentAsync({
-								type: '*/*',
-								copyToCacheDirectory: true,
-								multiple: true,
-							})
-
-							if (result.canceled) {
-								setLoading(false)
-								return
-							}
-
-							const mmkvDir = new Directory(Paths.document, 'mmkv')
-							if (!mmkvDir.exists) {
-								mmkvDir.create()
-							}
-
-							for (const asset of result.assets) {
-								const pickedFile = new File(asset.uri)
-								const targetFile = new File(mmkvDir, asset.name)
-								if (targetFile.exists) {
-									targetFile.delete()
-								}
-								pickedFile.copySync(targetFile)
-							}
-
-							toast.success('MMKV 导入成功')
+							await importMMKVFiles()
 						} catch (error) {
 							toastAndLogError('导入 MMKV 失败', error, 'TestPage')
 						}
@@ -244,17 +255,7 @@ export default function TestPage() {
 
 		setLoading(true)
 		try {
-			// 兼容秒和毫秒时间戳。
-			// 如果 startTime > 1e11，认为是毫秒；否则认为是秒。
-			// 我们查询时可以简单地查询两个范围，或者使用 SQL 表达式转换。
-			// 为了简单起见，我们在 JS 端处理或者用 OR。
-			const rows = await db
-				.select()
-				.from(schema.playHistory)
-				.where(
-					sql`${schema.playHistory.startTime} BETWEEN ${startTime} AND ${endTime}
-                        OR (${schema.playHistory.startTime} * 1000) BETWEEN ${startTime} AND ${endTime}`,
-				)
+			const rows = await queryPlayHistoryByDateRange(startTime, endTime)
 
 			logger.info(`查询 ${queryDate} 的播放历史:`, rows)
 			toast.success(`查询成功: ${queryDate}`, {

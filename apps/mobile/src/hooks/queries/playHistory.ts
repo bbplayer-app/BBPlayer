@@ -14,65 +14,68 @@ export const playHistoryKeys = {
 		[...playHistoryKeys.all, 'topPlayed', days, limit] as const,
 }
 
+async function fetchPlayHistoryHeatmap() {
+	const result = await drizzleDb
+		.select({
+			date: sql<string>`date(${schema.playHistory.startTime} / 1000, 'unixepoch', 'localtime')`,
+			count: count(),
+		})
+		.from(schema.playHistory)
+		.groupBy(
+			sql`date(${schema.playHistory.startTime} / 1000, 'unixepoch', 'localtime')`,
+		)
+
+	const data: Record<string, number> = {}
+	result.forEach((row) => {
+		if (row.date) {
+			data[row.date] = row.count
+		}
+	})
+	return data
+}
+
 export const usePlayHistoryHeatmap = () => {
 	return useQuery({
 		queryKey: playHistoryKeys.heatmap(),
-		queryFn: async () => {
-			const result = await drizzleDb
-				.select({
-					date: sql<string>`date(${schema.playHistory.startTime} / 1000, 'unixepoch', 'localtime')`,
-					count: count(),
-				})
-				.from(schema.playHistory)
-				.groupBy(
-					sql`date(${schema.playHistory.startTime} / 1000, 'unixepoch', 'localtime')`,
-				)
-
-			const data: Record<string, number> = {}
-			result.forEach((row) => {
-				if (row.date) {
-					data[row.date] = row.count
-				}
-			})
-			return data
-		},
+		queryFn: fetchPlayHistoryHeatmap,
 		networkMode: 'always',
 		staleTime: 0,
 	})
 }
 
+async function fetchPlayHistoryByDate(dateStr: string) {
+	const historyRows = await drizzleDb.query.playHistory.findMany({
+		where: (ph, { sql: sqlFn }) => {
+			return sqlFn`date(${ph.startTime} / 1000, 'unixepoch', 'localtime') = ${dateStr}`
+		},
+		with: {
+			track: {
+				with: {
+					artist: true,
+					bilibiliMetadata: true,
+					localMetadata: true,
+				},
+			},
+		},
+		orderBy: [desc(schema.playHistory.startTime)],
+	})
+
+	return historyRows
+		.filter((row) => row.track !== null && row.track !== undefined)
+		.map((row) => {
+			const track = row.track as unknown as Track
+			return {
+				...track,
+				historyId: row.id,
+				playedAt: row.startTime,
+			}
+		})
+}
+
 export const usePlayHistoryByDate = (dateStr: string) => {
 	return useQuery({
 		queryKey: playHistoryKeys.byDate(dateStr),
-		queryFn: async () => {
-			const historyRows = await drizzleDb.query.playHistory.findMany({
-				where: (ph, { sql: sqlFn }) => {
-					return sqlFn`date(${ph.startTime} / 1000, 'unixepoch', 'localtime') = ${dateStr}`
-				},
-				with: {
-					track: {
-						with: {
-							artist: true,
-							bilibiliMetadata: true,
-							localMetadata: true,
-						},
-					},
-				},
-				orderBy: [desc(schema.playHistory.startTime)],
-			})
-
-			// 过滤掉没有 track 的异常数据，并转换类型
-			return historyRows
-				.filter((row) => row.track !== null && row.track !== undefined)
-				.map((row) => {
-					const track = row.track as unknown as Track
-					return {
-						...track,
-						historyId: row.id,
-						playedAt: row.startTime,
-					}
-				})
-		},
+		queryFn: () => fetchPlayHistoryByDate(dateStr),
 		enabled: !!dateStr,
 		networkMode: 'always',
 		staleTime: 0,

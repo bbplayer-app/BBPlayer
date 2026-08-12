@@ -110,10 +110,9 @@ export default function GeneralSettingsPage() {
 				}
 			} catch (e) {
 				toastAndLogError('导出失败', e, 'UI.Settings.General')
-			} finally {
-				setIsExporting(false)
-				isExportingRef.current = false
 			}
+			setIsExporting(false)
+			isExportingRef.current = false
 		})()
 	}
 
@@ -128,7 +127,9 @@ export default function GeneralSettingsPage() {
 			try {
 				const result = await DocumentPicker.getDocumentAsync()
 				if (result.canceled) return
-				const file = result.assets?.[0]
+				const assets = result.assets
+				if (!assets) return
+				const file = assets[0]
 				if (!file) return
 				await restoreBackup(file.uri)
 				alert(
@@ -146,10 +147,9 @@ export default function GeneralSettingsPage() {
 				)
 			} catch (e) {
 				toastAndLogError('导入失败', e, 'UI.Settings.General')
-			} finally {
-				setIsImporting(false)
-				isImportingRef.current = false
 			}
+			setIsImporting(false)
+			isImportingRef.current = false
 		})()
 	}
 

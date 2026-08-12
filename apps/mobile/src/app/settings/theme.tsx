@@ -650,7 +650,10 @@ function InstalledAssetSections({
 	const [assets, setAssets] = useState<SkinAssetDeclaration | null>(null)
 	const { id, rootUri } = skin
 	const skinRef = useRef(skin)
-	skinRef.current = skin
+
+	useEffect(() => {
+		skinRef.current = skin
+	}, [skin])
 
 	useEffect(() => {
 		let cancelled = false

@@ -125,9 +125,8 @@ export default function AccountSettingsPage() {
 			toast.error('读取 Bilibili 资料失败', {
 				description: e instanceof Error ? e.message : String(e),
 			})
-		} finally {
-			setIsFillingProfile(false)
 		}
+		setIsFillingProfile(false)
 	}
 
 	const handleRegister = async () => {
@@ -138,20 +137,28 @@ export default function AccountSettingsPage() {
 		}
 		setIsSubmitting(true)
 		setAuthStatusText('正在创建 BBPlayer 账号...')
+		const registerName = name.trim() || normalizedUsername
+		const registerFace = face.trim() || undefined
 		try {
 			setAuthStatusText('正在注册 BBPlayer 账号...')
 			const resp = await api.auth.register.$post({
 				json: {
 					username: normalizedUsername,
 					password,
-					name: name.trim() || normalizedUsername,
-					face: face.trim() || undefined,
+					name: registerName,
+					face: registerFace,
 				},
 			})
 			if (!resp.ok) {
-				throw new Error(
-					`注册失败：${resp.status} ${JSON.stringify(await resp.json().catch(() => ({})))}`,
+				const errBody = await resp.json().catch(() => ({}))
+				setAuthStatusText(null)
+				setIsSubmitting(false)
+				toastAndLogError(
+					'注册失败',
+					new Error(`注册失败：${resp.status} ${JSON.stringify(errBody)}`),
+					'Settings.Account',
 				)
+				return
 			}
 			const data = await resp.json()
 			setToken(data.token)
@@ -162,9 +169,8 @@ export default function AccountSettingsPage() {
 		} catch (e) {
 			setAuthStatusText(null)
 			toastAndLogError('注册失败', e, 'Settings.Account')
-		} finally {
-			setIsSubmitting(false)
 		}
+		setIsSubmitting(false)
 	}
 
 	const handleLogin = async () => {
@@ -183,9 +189,15 @@ export default function AccountSettingsPage() {
 				},
 			})
 			if (!resp.ok) {
-				throw new Error(
-					`登录失败：${resp.status} ${JSON.stringify(await resp.json().catch(() => ({})))}`,
+				const errBody = await resp.json().catch(() => ({}))
+				setAuthStatusText(null)
+				setIsSubmitting(false)
+				toastAndLogError(
+					'登录失败',
+					new Error(`登录失败：${resp.status} ${JSON.stringify(errBody)}`),
+					'Settings.Account',
 				)
+				return
 			}
 			const data = await resp.json()
 			setToken(data.token)
@@ -196,31 +208,37 @@ export default function AccountSettingsPage() {
 		} catch (e) {
 			setAuthStatusText(null)
 			toastAndLogError('登录失败', e, 'Settings.Account')
-		} finally {
-			setIsSubmitting(false)
 		}
+		setIsSubmitting(false)
 	}
 
 	const handleSaveProfile = async () => {
 		setIsSavingProfile(true)
+		const profileName = name.trim()
+		const profileFace = face.trim() || undefined
 		try {
 			const resp = await api.auth.profile.$patch({
 				json: {
-					name: name.trim(),
-					face: face.trim() || undefined,
+					name: profileName,
+					face: profileFace,
 				},
 			})
 			if (!resp.ok) {
-				throw new Error(`保存失败：${resp.status}`)
+				setIsSavingProfile(false)
+				toastAndLogError(
+					'保存资料失败',
+					new Error(`保存失败：${resp.status}`),
+					'Settings.Account',
+				)
+				return
 			}
 			const data = await resp.json()
 			setAccount(data.account)
 			toast.success('已保存')
 		} catch (e) {
 			toastAndLogError('保存资料失败', e, 'Settings.Account')
-		} finally {
-			setIsSavingProfile(false)
 		}
+		setIsSavingProfile(false)
 	}
 
 	return (

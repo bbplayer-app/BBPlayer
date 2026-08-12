@@ -27,8 +27,7 @@ export default function useSmoothProgress(background = false) {
 				) {
 					return
 				}
-				position.value =
-					position.value + frameInfo.timeSincePreviousFrame / 1000
+				position.set(position.value + frameInfo.timeSincePreviousFrame / 1000)
 			},
 			[isAppActive, isPlaying, position],
 		),

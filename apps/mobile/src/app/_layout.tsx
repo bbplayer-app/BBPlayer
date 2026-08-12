@@ -74,6 +74,54 @@ const checkOverlayPermissionOnStart = async () => {
 	}
 }
 
+function runAppInit() {
+	try {
+		useAppStore.getState()
+
+		cleanOldLogFiles(7)
+			.andTee((deleted) => {
+				if (deleted > 0) {
+					logger.info(`已清理 ${deleted} 个旧日志文件`)
+				}
+			})
+			.orTee((e) => {
+				logger.warning('清理旧日志失败', { error: e.message })
+			})
+
+		void lyricService.migrateFromOldFormat()
+
+		usePlayerStore.getState().initialize()
+
+		initPlayerQueueStore()
+
+		void checkOverlayPermissionOnStart()
+
+		try {
+			const settings = useAppStore.getState().settings
+			void Orpheus.setDownloadMaxParallelTasks(
+				settings.downloadMaxParallelTasks,
+			)
+			void Orpheus.setAllowSimultaneousPlayback(
+				settings.allowSimultaneousPlayback,
+			)
+
+			const cookie = useAppStore.getState().bilibiliCookie
+			if (cookie) {
+				logger.debug('初始化 orpheus bilibili cookie')
+				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
+			} else {
+				logger.info('没有 bilibili cookie，跳过播放器初始化')
+			}
+		} catch (error) {
+			logger.error('播放器初始化失败: ', error)
+			reportErrorToSentry(error, '播放器初始化失败', ProjectScope.Player)
+		}
+	} catch (error) {
+		logger.error('初始化失败:', error)
+		reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
+	}
+}
+
 function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
 	const { markInteractive } = useObserve()
@@ -111,60 +159,9 @@ function RootLayout() {
 	}, [])
 
 	useEffect(() => {
-		try {
-			useAppStore.getState()
-
-			// 清理旧日志
-			cleanOldLogFiles(7)
-				.andTee((deleted) => {
-					if (deleted > 0) {
-						logger.info(`已清理 ${deleted} 个旧日志文件`)
-					}
-				})
-				.orTee((e) => {
-					logger.warning('清理旧日志失败', { error: e.message })
-				})
-
-			// 迁移旧格式歌词
-			void lyricService.migrateFromOldFormat()
-
-			// 初始化播放器状态
-			usePlayerStore.getState().initialize()
-
-			// 初始化播放队列监听
-			initPlayerQueueStore()
-
-			// 桌面歌词权限启动检查
-			void checkOverlayPermissionOnStart()
-
-			// 初始化播放器 Cookie
-			try {
-				const settings = useAppStore.getState().settings
-				void Orpheus.setDownloadMaxParallelTasks(
-					settings.downloadMaxParallelTasks,
-				)
-				void Orpheus.setAllowSimultaneousPlayback(
-					settings.allowSimultaneousPlayback,
-				)
-
-				const cookie = useAppStore.getState().bilibiliCookie
-				if (cookie) {
-					logger.debug('初始化 orpheus bilibili cookie')
-					Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
-				} else {
-					logger.info('没有 bilibili cookie，跳过播放器初始化')
-				}
-			} catch (error) {
-				logger.error('播放器初始化失败: ', error)
-				reportErrorToSentry(error, '播放器初始化失败', ProjectScope.Player)
-			}
-		} catch (error) {
-			logger.error('初始化失败:', error)
-			reportErrorToSentry(error, '初始化失败', ProjectScope.UI)
-		} finally {
-			// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
-			setIsReady(true)
-		}
+		runAppInit()
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
+		setIsReady(true)
 	}, [])
 
 	useEffect(() => {
