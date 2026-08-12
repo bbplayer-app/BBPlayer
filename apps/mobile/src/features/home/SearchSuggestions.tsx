@@ -113,9 +113,9 @@ export default function SearchSuggestions({
 
 	useEffect(() => {
 		scheduleOnUI(
-			(visible: boolean, tabBarHeight: number) => {
-				visibleShared.value = visible ? 1 : 0
-				tabBarHeightShared.value = tabBarHeight
+			(vis: boolean, barHeight: number) => {
+				visibleShared.value = vis ? 1 : 0
+				tabBarHeightShared.value = barHeight
 			},
 			visible,
 			tabBarHeight,

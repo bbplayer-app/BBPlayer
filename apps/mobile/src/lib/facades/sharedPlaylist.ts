@@ -17,19 +17,19 @@ import {
 	clearSharedPlaylistMembers,
 } from '@/hooks/stores/useSharedPlaylistMembersStore'
 import { api as bbplayerApiClient } from '@/lib/api/bbplayer/client'
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { FacadeError, createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
-import { artistService, type ArtistService } from '@/lib/services/artistService'
+import { artistService as artistServiceInstance, type ArtistService } from '@/lib/services/artistService'
 import {
-	playlistService,
+	playlistService as playlistServiceInstance,
 	type PlaylistService,
 } from '@/lib/services/playlistService'
-import { trackService, type TrackService } from '@/lib/services/trackService'
+import { trackService as trackServiceInstance, type TrackService } from '@/lib/services/trackService'
 import log from '@/utils/log'
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
 
 const logger = log.extend('SharedPlaylistFacade')
 
@@ -781,13 +781,13 @@ export class SharedPlaylistFacade {
 			artistService: ArtistService
 		},
 	): Promise<number> {
-		const { playlistService, trackService, artistService } = services
+		const { playlistService: plSvc, trackService: trkSvc, artistService: artSvc } = services
 		let applied = 0
 
 		// ---- 应用元数据更新 ----
 		if (data.metadata) {
 			const metaUpdate: Parameters<
-				typeof playlistService.updatePlaylistMetadata
+				typeof plSvc.updatePlaylistMetadata
 			>[1] = {}
 			if (data.metadata.title != null) metaUpdate.title = data.metadata.title
 			if (data.metadata.description !== undefined)
@@ -795,7 +795,7 @@ export class SharedPlaylistFacade {
 			if (data.metadata.cover_url !== undefined)
 				metaUpdate.coverUrl = data.metadata.cover_url
 			if (Object.keys(metaUpdate).length > 0) {
-				const metaResult = await playlistService.updatePlaylistMetadata(
+				const metaResult = await plSvc.updatePlaylistMetadata(
 					localPlaylistId,
 					metaUpdate,
 				)
@@ -851,7 +851,7 @@ export class SharedPlaylistFacade {
 				}))
 			if (artistsToCreate.length > 0) {
 				const artistResult =
-					await artistService.findOrCreateManyRemoteArtists(artistsToCreate)
+					await artSvc.findOrCreateManyRemoteArtists(artistsToCreate)
 				if (artistResult.isOk()) {
 					for (const [remoteId, artist] of artistResult.value.entries()) {
 						artistMap.set(remoteId, artist.id)
@@ -884,7 +884,7 @@ export class SharedPlaylistFacade {
 				}
 			})
 
-			const trackIdsResult = await trackService.findOrCreateManyTracks(
+			const trackIdsResult = await trkSvc.findOrCreateManyTracks(
 				trackPayloads,
 				'bilibili',
 			)
@@ -925,7 +925,7 @@ export class SharedPlaylistFacade {
 		if (deleteChanges.length > 0) {
 			const uniqueKeys = deleteChanges.map((c) => c.track_unique_key)
 			const trackIdsResult =
-				await trackService.findTrackIdsByUniqueKeys(uniqueKeys)
+				await trkSvc.findTrackIdsByUniqueKeys(uniqueKeys)
 			if (trackIdsResult.isErr()) {
 				throw trackIdsResult.error
 			}
@@ -960,9 +960,9 @@ export class SharedPlaylistFacade {
 }
 
 export const sharedPlaylistFacade = new SharedPlaylistFacade(
-	db,
-	playlistService,
-	trackService,
-	artistService,
+	defaultDb,
+	playlistServiceInstance,
+	trackServiceInstance,
+	artistServiceInstance,
 	bbplayerApiClient,
 )

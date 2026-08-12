@@ -104,11 +104,11 @@ export default function ManualMatchExternalSync({
 
 		const allTracks = data.pages.flatMap((page) => page.result)
 		const uniqueMap = new Map(
-			allTracks.map((track) => [
-				track.bvid,
+			allTracks.map((t) => [
+				t.bvid,
 				{
-					...track,
-					title: decode(track.title),
+					...t,
+					title: decode(t.title),
 				},
 			]),
 		)

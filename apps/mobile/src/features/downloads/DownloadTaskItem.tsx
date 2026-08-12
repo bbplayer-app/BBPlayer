@@ -37,7 +37,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 		const handler = (e: ProgressEvent['progress:uniqueKey']) => {
 			sharedProgress.value = e.percent
 			if (e.state !== task.state) {
-				setTask((task) => ({ ...task, state: e.state }))
+				setTask((t) => ({ ...t, state: e.state }))
 			}
 		}
 		eventListner.on(`progress:${task.id}`, handler)

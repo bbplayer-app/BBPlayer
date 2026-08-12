@@ -111,7 +111,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const bottomBarHeight = useBottomTabBarHeight()
 
 	const nowPlayingBarStyle = useAppStore(
-		(state) => state.settings.nowPlayingBarStyle,
+		(s) => s.settings.nowPlayingBarStyle,
 	)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'

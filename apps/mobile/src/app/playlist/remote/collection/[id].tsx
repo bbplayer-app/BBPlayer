@@ -119,11 +119,11 @@ export default function CollectionPage() {
 				toastId,
 			},
 			{
-				onSuccess: (id) => {
-					if (!id) return
+				onSuccess: (localId) => {
+					if (!localId) return
 					router.replace({
 						pathname: '/playlist/local/[id]',
-						params: { id: String(id) },
+						params: { id: String(localId) },
 					})
 				},
 			},
@@ -188,8 +188,8 @@ export default function CollectionPage() {
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
-								for (const id of selected) {
-									const track = tracks.find((t) => t.id === id)
+							for (const selectedId of selected) {
+								const track = tracks.find((t) => t.id === selectedId)
 									if (track) {
 										payloads.push({
 											track: track as Track,

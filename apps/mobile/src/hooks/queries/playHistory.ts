@@ -46,8 +46,8 @@ export const usePlayHistoryByDate = (dateStr: string) => {
 		queryKey: playHistoryKeys.byDate(dateStr),
 		queryFn: async () => {
 			const historyRows = await drizzleDb.query.playHistory.findMany({
-				where: (ph, { sql }) => {
-					return sql`date(${ph.startTime} / 1000, 'unixepoch', 'localtime') = ${dateStr}`
+				where: (ph, { sql: sqlFn }) => {
+					return sqlFn`date(${ph.startTime} / 1000, 'unixepoch', 'localtime') = ${dateStr}`
 				},
 				with: {
 					track: {

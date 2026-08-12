@@ -7,9 +7,9 @@ import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { kugouApi, type KugouApi } from '@/lib/api/kugou/api'
-import { neteaseApi, type NeteaseApi } from '@/lib/api/netease/api'
-import { qqMusicApi, type QQMusicApi } from '@/lib/api/qqmusic/api'
+import { kugouApi as kugouApiInstance, type KugouApi } from '@/lib/api/kugou/api'
+import { neteaseApi as neteaseApiInstance, type NeteaseApi } from '@/lib/api/netease/api'
+import { qqMusicApi as qqMusicApiInstance, type QQMusicApi } from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
 import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
 import { trackService } from '@/lib/services/trackService'
@@ -652,5 +652,5 @@ class LyricService {
 	}
 }
 
-const lyricService = new LyricService(neteaseApi, qqMusicApi, kugouApi)
+const lyricService = new LyricService(neteaseApiInstance, qqMusicApiInstance, kugouApiInstance)
 export default lyricService

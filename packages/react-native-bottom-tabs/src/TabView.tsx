@@ -291,7 +291,7 @@ const TabView = <Route extends BaseRoute>({
 
 	if (!loaded.includes(focusedKey)) {
 		// Set the current tab to be loaded if it was not loaded before
-		setLoaded((loaded) => [...loaded, focusedKey])
+		setLoaded((prev) => [...prev, focusedKey])
 	}
 
 	const icons = React.useMemo(

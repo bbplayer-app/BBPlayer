@@ -3,7 +3,7 @@ import { and, eq, or } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
@@ -18,9 +18,9 @@ import type {
 } from '@/types/services/artist'
 
 import type { TrackService } from './trackService'
-import { trackService } from './trackService'
+import { trackService as trackServiceInstance } from './trackService'
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
 
 export class ArtistService {
@@ -400,4 +400,4 @@ export class ArtistService {
 	}
 }
 
-export const artistService = new ArtistService(db, trackService)
+export const artistService = new ArtistService(defaultDb, trackServiceInstance)
