@@ -43,10 +43,10 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 		payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
 	}) {
 		const { colors } = useTheme()
-		const _close = useModalStore((state) => state.close)
+		const modalClose = useModalStore((state) => state.close)
 		const close = useCallback(
-			() => _close('BatchAddTracksToLocalPlaylist'),
-			[_close],
+			() => modalClose('BatchAddTracksToLocalPlaylist'),
+			[modalClose],
 		)
 		const openModal = useModalStore((state) => state.open)
 

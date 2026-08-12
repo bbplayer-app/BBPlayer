@@ -358,7 +358,7 @@ async function run(
 }
 
 main().catch((error: unknown) => {
-	// oxlint-disable-next-line eslint(no-console)
+	// oxlint-disable-next-line no-console
 	console.error(error instanceof Error ? error.message : String(error))
 	process.exitCode = 1
 })

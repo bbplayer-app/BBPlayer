@@ -111,7 +111,7 @@ const useSkinStore = create<SkinStoreState>()(
 						)
 					}
 				}
-				return persistedState as SkinStoreState
+				return persistedState
 			},
 
 			partialize: (state) => ({

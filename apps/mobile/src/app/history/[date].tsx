@@ -68,7 +68,7 @@ export default function DateHistoryPage() {
 		for (const record of historyRecords) {
 			const key = record.uniqueKey
 			if (!trackMap.has(key)) {
-				trackMap.set(key, { track: record as Track, playCount: 0 })
+				trackMap.set(key, { track: record, playCount: 0 })
 			}
 			trackMap.get(key)!.playCount += 1
 			duration += record.duration ?? 0

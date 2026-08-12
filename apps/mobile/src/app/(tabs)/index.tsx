@@ -310,7 +310,7 @@ function HomePage() {
 						)}
 						<Touchable
 							androidRipple={{}}
-							onPress={() => router.push('/settings/bilibili-account' as never)}
+							onPress={() => router.push('/settings/bilibili-account')}
 							style={styles.avatarButton}
 						>
 							<Image

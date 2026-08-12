@@ -25,8 +25,11 @@ export default function EditPlaylistMetadataModal({
 	const [title, setTitle] = useState(playlist.title)
 	const [description, setDescription] = useState(playlist.description)
 	const [coverUrl, setCoverUrl] = useState(playlist.coverUrl)
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('EditPlaylistMetadata'), [_close])
+	const modalClose = useModalStore((state) => state.close)
+	const close = useCallback(
+		() => modalClose('EditPlaylistMetadata'),
+		[modalClose],
+	)
 
 	const fetchRemoteMetadata = useCallback(async () => {
 		if (!playlist.remoteSyncId) {

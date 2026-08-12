@@ -55,10 +55,10 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 	const queryClient = useQueryClient()
 	const { data: personalInfo } = usePersonalInformation()
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
-	const _close = useModalStore((state) => state.close)
+	const modalClose = useModalStore((state) => state.close)
 	const close = useCallback(
-		() => _close('AddVideoToBilibiliFavorite'),
-		[_close],
+		() => modalClose('AddVideoToBilibiliFavorite'),
+		[modalClose],
 	)
 
 	const {
@@ -173,7 +173,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 					<Button
 						mode='contained'
 						onPress={() => {
-							router.push('/settings/bilibili-account/qrcode-login' as never)
+							router.push('/settings/bilibili-account/qrcode-login')
 							close()
 						}}
 					>

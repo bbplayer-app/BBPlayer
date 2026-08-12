@@ -114,7 +114,7 @@ export default function AboutSettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/about/licenses' as never)}
+						onPress={() => router.push('/settings/about/licenses')}
 					/>
 					<Divider />
 					<List.Item

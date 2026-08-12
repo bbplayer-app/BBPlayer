@@ -75,25 +75,25 @@ class PlayerSideEffects {
 			('rootCauseMessage' in event ? event.rootCauseMessage : null) ||
 			('message' in event ? event.message : null) ||
 			''
-		const code = 'errorCode' in event ? event.errorCode : null
+		const errorCode = 'errorCode' in event ? event.errorCode : null
 
 		if (rawMessage.includes('Bilibili API Error')) {
 			const codeMatch = rawMessage.match(/code=(-?\d+)/)
 			const msgMatch = rawMessage.match(/msg=(.+)/)
-			const code = codeMatch ? codeMatch[1] : 'Unknown'
+			const biliCode = codeMatch ? codeMatch[1] : 'Unknown'
 			const msg = msgMatch ? msgMatch[1] : 'Unknown Error'
 
-			if (code === '-412') {
+			if (biliCode === '-412') {
 				return {
 					message: 'Bilibili 触发验证码，请尝试重新登录或稍后再试',
 					shouldReport: false,
 				}
 			}
-			if (code === '-101') {
+			if (biliCode === '-101') {
 				return { message: 'Bilibili 账号未登录', shouldReport: false }
 			}
 			return {
-				message: `Bilibili API 错误: ${msg} (${code})`,
+				message: `Bilibili API 错误: ${msg} (${biliCode})`,
 				shouldReport: false,
 			}
 		}
@@ -137,9 +137,9 @@ class PlayerSideEffects {
 			// 2000-2999 是关于 IO 或 NETWORK 的问题。
 			if (
 				isActuallyOffline(networkState) &&
-				code &&
-				code >= 2000 &&
-				code < 3000
+				errorCode &&
+				errorCode >= 2000 &&
+				errorCode < 3000
 			) {
 				return {
 					message: '当前歌曲未缓存，离线状态下无法播放(或存在其他IO/网络问题)',
@@ -206,7 +206,7 @@ class PlayerSideEffects {
 					'Unknown playback error',
 			)
 		}
-		return new Error(String(event.error || 'Unknown playback error'))
+		return new Error(event.error || 'Unknown playback error')
 	}
 
 	/**

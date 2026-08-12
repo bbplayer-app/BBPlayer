@@ -34,8 +34,8 @@ export default function UpdateAppModal({
 	forced = false,
 }: UpdateModalProps) {
 	const colors = useTheme().colors
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('UpdateApp'), [_close])
+	const modalClose = useModalStore((state) => state.close)
+	const close = useCallback(() => modalClose('UpdateApp'), [modalClose])
 	const [isUpdating, setIsUpdating] = useState(false)
 
 	const onUpdate = async () => {

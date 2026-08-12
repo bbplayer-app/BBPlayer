@@ -34,7 +34,7 @@ type Action =
 			payload: { qrcode_key: string; url: string }
 	  }
 	| { type: 'GENERATE_FAILURE'; payload: string }
-	| { type: 'POLL_UPDATE'; payload: { code: number } }
+	| { type: 'POLL_UPDATE'; payload: { code: BilibiliQrCodeLoginStatus } }
 	| { type: 'LOGIN_SUCCESS' }
 
 const initialState: State = {
@@ -63,7 +63,7 @@ function reducer(state: State, action: Action): State {
 				statusText: `获取二维码失败: ${action.payload}`,
 			}
 		case 'POLL_UPDATE':
-			switch (action.payload.code as BilibiliQrCodeLoginStatus) {
+			switch (action.payload.code) {
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_WAIT:
 					return { ...state, statusText: '等待扫码' }
 				case BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SCANNED_BUT_NOT_CONFIRMED:
@@ -100,7 +100,7 @@ export default function QrCodeLoginPage() {
 			if (response.isErr()) {
 				dispatch({
 					type: 'GENERATE_FAILURE',
-					payload: String(response.error.message),
+					payload: response.error.message,
 				})
 				toast.error('获取二维码失败', { id: 'bilibili-qrcode-login-error' })
 			} else {

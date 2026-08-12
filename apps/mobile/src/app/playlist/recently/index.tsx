@@ -75,9 +75,9 @@ export default function RecentlyPlayedPage() {
 			toast.error('没有可播放的歌曲')
 			return
 		}
-		const tracks = tracksData.map((item) => item.track)
+		const playlistTracks = tracksData.map((item) => item.track)
 		await addToQueue({
-			tracks,
+			tracks: playlistTracks,
 			playNow: true,
 			clearQueue: true,
 			playNext: false,

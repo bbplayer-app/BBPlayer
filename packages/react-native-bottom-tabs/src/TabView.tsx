@@ -234,28 +234,30 @@ const TabView = <Route extends BaseRoute>({
 	rippleColor,
 	tabBarActiveTintColor: activeTintColor,
 	tabBarInactiveTintColor: inactiveTintColor,
-	getBadge = ({ route }: { route: Route }) => route.badge,
+	getBadge = ({ route }: { route: Route }) => route.badge, // oxlint-disable-line react/no-object-type-as-default-prop
+	// oxlint-disable-next-line react/no-object-type-as-default-prop
 	getBadgeBackgroundColor = ({ route }: { route: Route }) =>
 		route.badgeBackgroundColor,
-	getBadgeTextColor = ({ route }: { route: Route }) => route.badgeTextColor,
-	getLazy = ({ route }: { route: Route }) => route.lazy,
-	getLabelText = ({ route }: { route: Route }) => route.title,
+	getBadgeTextColor = ({ route }: { route: Route }) => route.badgeTextColor, // oxlint-disable-line react/no-object-type-as-default-prop
+	getLazy = ({ route }: { route: Route }) => route.lazy, // oxlint-disable-line react/no-object-type-as-default-prop
+	getLabelText = ({ route }: { route: Route }) => route.title, // oxlint-disable-line react/no-object-type-as-default-prop
+	// oxlint-disable-next-line react/no-object-type-as-default-prop
 	getIcon = ({ route, focused }: { route: Route; focused: boolean }) =>
 		route.unfocusedIcon
 			? focused
 				? route.focusedIcon
 				: route.unfocusedIcon
 			: route.focusedIcon,
-	getHidden = ({ route }: { route: Route }) => route.hidden,
-	getActiveTintColor = ({ route }: { route: Route }) => route.activeTintColor,
-	getTestID = ({ route }: { route: Route }) => route.testID,
-	getRole = ({ route }: { route: Route }) => route.role,
-	getSceneStyle = ({ route }: { route: Route }) => route.style,
-	getPreventsDefault = ({ route }: { route: Route }) => route.preventsDefault,
+	getHidden = ({ route }: { route: Route }) => route.hidden, // oxlint-disable-line react/no-object-type-as-default-prop
+	getActiveTintColor = ({ route }: { route: Route }) => route.activeTintColor, // oxlint-disable-line react/no-object-type-as-default-prop
+	getTestID = ({ route }: { route: Route }) => route.testID, // oxlint-disable-line react/no-object-type-as-default-prop
+	getRole = ({ route }: { route: Route }) => route.role, // oxlint-disable-line react/no-object-type-as-default-prop
+	getSceneStyle = ({ route }: { route: Route }) => route.style, // oxlint-disable-line react/no-object-type-as-default-prop
+	getPreventsDefault = ({ route }: { route: Route }) => route.preventsDefault, // oxlint-disable-line react/no-object-type-as-default-prop
 	hapticFeedbackEnabled = false,
 	// Android's native behavior is to show labels when there are less than 4 tabs. We leave it as undefined to use the platform default behavior.
 	labeled = Platform.OS !== 'android' ? true : undefined,
-	getFreezeOnBlur = ({ route }: { route: Route }) => route.freezeOnBlur,
+	getFreezeOnBlur = ({ route }: { route: Route }) => route.freezeOnBlur, // oxlint-disable-line react/no-object-type-as-default-prop
 	tabBar: renderCustomTabBar,
 	tabBarStyle,
 	tabLabelStyle,
@@ -291,7 +293,7 @@ const TabView = <Route extends BaseRoute>({
 
 	if (!loaded.includes(focusedKey)) {
 		// Set the current tab to be loaded if it was not loaded before
-		setLoaded((loaded) => [...loaded, focusedKey])
+		setLoaded((prev) => [...prev, focusedKey])
 	}
 
 	const icons = React.useMemo(

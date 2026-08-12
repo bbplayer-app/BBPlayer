@@ -18,9 +18,7 @@ export default function TabDisable() {
 			</Text>
 			<Button
 				mode='contained'
-				onPress={() =>
-					router.push('/settings/bilibili-account/qrcode-login' as never)
-				}
+				onPress={() => router.push('/settings/bilibili-account/qrcode-login')}
 			>
 				登录
 			</Button>

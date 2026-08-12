@@ -48,7 +48,7 @@ export interface SearchHistoryItem {
  * - 强调段 { text, emphasized: true }
  */
 function parseEmTags(text: string | undefined) {
-	const s = String(text ?? '')
+	const s = text ?? ''
 	const regex = /<em[^>]*>(.*?)<\/em>/gi
 	const segments: { text: string; emphasized: boolean }[] = []
 	let lastIndex = 0
@@ -94,7 +94,7 @@ export default function SearchSuggestions({
 		return (
 			items?.map((item) => ({
 				...item,
-				_segments: parseEmTags(item.name),
+				segments: parseEmTags(item.name),
 			})) ?? []
 		)
 	}, [items])
@@ -113,9 +113,9 @@ export default function SearchSuggestions({
 
 	useEffect(() => {
 		scheduleOnUI(
-			(visible: boolean, tabBarHeight: number) => {
-				visibleShared.value = visible ? 1 : 0
-				tabBarHeightShared.value = tabBarHeight
+			(vis: boolean, barHeight: number) => {
+				visibleShared.value = vis ? 1 : 0
+				tabBarHeightShared.value = barHeight
 			},
 			visible,
 			tabBarHeight,
@@ -170,7 +170,7 @@ export default function SearchSuggestions({
 			index,
 		}: {
 			item: BilibiliSearchSuggestionItem & {
-				_segments?: { text: string; emphasized: boolean }[]
+				segments?: { text: string; emphasized: boolean }[]
 			}
 			index: number
 		}) => {
@@ -188,7 +188,7 @@ export default function SearchSuggestions({
 						numberOfLines={1}
 						style={{ color: colors.onSurface }}
 					>
-						{(item._segments ?? [{ text: item.value, emphasized: false }]).map(
+						{(item.segments ?? [{ text: item.value, emphasized: false }]).map(
 							(seg, i) => (
 								<Text
 									// oxlint-disable-next-line react/no-array-index-key

@@ -170,13 +170,13 @@ export default function OnboardingPage() {
 	const handleQRCode = useCallback(() => {
 		storage.set('first_open', false)
 		setIsClickFinalButton(true)
-		router.replace('/settings/bilibili-account/qrcode-login' as never)
+		router.replace('/settings/bilibili-account/qrcode-login')
 	}, [])
 
 	const handlePhone = useCallback(() => {
 		storage.set('first_open', false)
 		setIsClickFinalButton(true)
-		router.replace('/settings/bilibili-account/phone-login' as never)
+		router.replace('/settings/bilibili-account/phone-login')
 	}, [])
 
 	const animatedRowStyle = useAnimatedStyle(() => ({

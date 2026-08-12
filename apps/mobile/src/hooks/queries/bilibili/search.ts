@@ -21,7 +21,7 @@ export const useSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
 	return useInfiniteQuery({
 		queryKey: searchQueryKeys.results(query),
-		queryFn: ({ pageParam = 1, signal }) =>
+		queryFn: ({ pageParam, signal }) =>
 			returnOrThrowAsync(
 				bilibiliApi.searchVideos({
 					keyword: query,

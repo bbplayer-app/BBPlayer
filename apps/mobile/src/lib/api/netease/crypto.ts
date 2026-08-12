@@ -16,14 +16,14 @@ const aesEncrypt = (
 	text: string,
 	mode: 'cbc' | 'ecb',
 	key: string,
-	iv: string,
+	aesIv: string,
 	format = 'base64',
 ): string => {
 	const encrypted = CryptoJS.AES.encrypt(
 		CryptoJS.enc.Utf8.parse(text),
 		CryptoJS.enc.Utf8.parse(key),
 		{
-			iv: CryptoJS.enc.Utf8.parse(iv),
+			iv: CryptoJS.enc.Utf8.parse(aesIv),
 			mode: CryptoJS.mode[mode.toUpperCase() as keyof typeof CryptoJS.mode],
 			padding: CryptoJS.pad.Pkcs7,
 		},
@@ -82,13 +82,13 @@ export const eapi = (
 const aesDecrypt = (
 	ciphertext: string,
 	key: string,
-	iv: string,
+	aesIv: string,
 	format = 'base64',
 ): string => {
 	let bytes
 	if (format === 'base64') {
 		bytes = CryptoJS.AES.decrypt(ciphertext, CryptoJS.enc.Utf8.parse(key), {
-			iv: CryptoJS.enc.Utf8.parse(iv),
+			iv: CryptoJS.enc.Utf8.parse(aesIv),
 			mode: CryptoJS.mode.ECB,
 			padding: CryptoJS.pad.Pkcs7,
 		})
@@ -98,7 +98,7 @@ const aesDecrypt = (
 			{ ciphertext: CryptoJS.enc.Hex.parse(ciphertext) },
 			CryptoJS.enc.Utf8.parse(key),
 			{
-				iv: CryptoJS.enc.Utf8.parse(iv),
+				iv: CryptoJS.enc.Utf8.parse(aesIv),
 				mode: CryptoJS.mode.ECB,
 				padding: CryptoJS.pad.Pkcs7,
 			},

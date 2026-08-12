@@ -74,10 +74,10 @@ PlaylistListItem.displayName = 'PlaylistListItem'
 const UpdateTrackLocalPlaylistsModal = memo(
 	function UpdateTrackLocalPlaylistsModal({ track }: { track: Track }) {
 		const { colors } = useTheme()
-		const _close = useModalStore((state) => state.close)
+		const modalClose = useModalStore((state) => state.close)
 		const close = useCallback(
-			() => _close('UpdateTrackLocalPlaylists'),
-			[_close],
+			() => modalClose('UpdateTrackLocalPlaylists'),
+			[modalClose],
 		)
 		const open = useModalStore((state) => state.open)
 

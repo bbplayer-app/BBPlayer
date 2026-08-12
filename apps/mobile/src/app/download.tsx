@@ -75,14 +75,19 @@ export default function DownloadPage() {
 				taskCount={tasks.length}
 				retryableCount={tasks.filter(canRetryDownloadTask).length}
 				onRetryAll={async () => {
-					await Promise.all(
-						tasks.filter(canRetryDownloadTask).map((task) => {
+					const promises = tasks
+						.filter(canRetryDownloadTask)
+						.map((task) => {
 							if (task.state === DownloadState.STOPPED) {
 								return Orpheus.resumeDownload(task.id)
 							}
-							return task.track ? Orpheus.retryDownload(task.track) : undefined
-						}),
-					)
+							if (task.track) {
+								return Orpheus.retryDownload(task.track)
+							}
+							return undefined
+						})
+						.filter(Boolean) as Promise<void>[]
+					await Promise.all(promises)
 					await queryClient.invalidateQueries({
 						queryKey: orpheusQueryKeys.downloadTasks(),
 					})

@@ -17,8 +17,8 @@ const sanitizeFileName = (name: string) =>
 export default function EditTrackMetadataModal({ track }: { track: Track }) {
 	const [title, setTitle] = useState<string>(track.title)
 	const [coverUrl, setCoverUrl] = useState(track.coverUrl)
-	const _close = useModalStore((state) => state.close)
-	const close = useCallback(() => _close('EditTrackMetadata'), [_close])
+	const modalClose = useModalStore((state) => state.close)
+	const close = useCallback(() => modalClose('EditTrackMetadata'), [modalClose])
 
 	const { mutate: editTrackMetadata } = useEditTrackMetadata()
 

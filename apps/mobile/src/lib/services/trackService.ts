@@ -4,7 +4,7 @@ import { and, count, desc, eq, inArray, lt, or, sql, sum } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { Result, ResultAsync, err, errAsync, okAsync } from 'neverthrow'
 
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
@@ -32,7 +32,7 @@ import log from '@/utils/log'
 import generateUniqueTrackKey from './genKey'
 
 const logger = log.extend('Service.Track')
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
 type SelectTrackBase = typeof schema.tracks.$inferSelect
 type SelectTrackWithMetadata = SelectTrackBase & {
@@ -100,7 +100,7 @@ export class TrackService {
 	 * @param payload - 创建 track 所需的数据。
 	 * @returns ResultAsync 包含成功创建的 Track 或一个错误。
 	 */
-	private _createTrack(
+	private createTrack(
 		payload: CreateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		// validate
@@ -360,7 +360,8 @@ export class TrackService {
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
-					where: (track, { eq }) => eq(track.uniqueKey, identifier.value),
+					where: (track, { eq: eqFn }) =>
+						eqFn(track.uniqueKey, identifier.value),
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -410,7 +411,7 @@ export class TrackService {
 		return ResultAsync.fromPromise(
 			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
-					where: (track, { eq }) => eq(track.uniqueKey, uniqueKey),
+					where: (track, { eq: eqFn }) => eqFn(track.uniqueKey, uniqueKey),
 					with: {
 						artist: true,
 						bilibiliMetadata: true,
@@ -441,7 +442,7 @@ export class TrackService {
 			})
 			.orElse((error) => {
 				if (error instanceof ServiceError && error.type === 'TrackNotFound') {
-					return this._createTrack(payload)
+					return this.createTrack(payload)
 				}
 				return errAsync(error)
 			})
@@ -950,4 +951,4 @@ export class TrackService {
 	}
 }
 
-export const trackService = new TrackService(db)
+export const trackService = new TrackService(defaultDb)

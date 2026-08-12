@@ -18,19 +18,19 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	shouldRedirectToLocalPlaylist?: boolean
 	expandMultiPage?: boolean
 }) {
-	const _close = useModalStore((state) => state.close)
+	const modalClose = useModalStore((state) => state.close)
 	const router = useRouter()
 	const syncedPlaylistId = useRef<number | undefined>(undefined)
 
 	const close = useCallback(() => {
-		_close('FavoriteSyncProgress')
+		modalClose('FavoriteSyncProgress')
 		if (shouldRedirectToLocalPlaylist && syncedPlaylistId.current) {
 			const targetId = syncedPlaylistId.current
 			useModalStore.getState().doAfterModalHostClosed(() => {
 				router.push(`/playlist/local/${targetId}`)
 			})
 		}
-	}, [_close, shouldRedirectToLocalPlaylist, router])
+	}, [modalClose, shouldRedirectToLocalPlaylist, router])
 
 	const [progress, setProgress] = useState<FavoriteSyncProgress | null>(null)
 	const { mutate: syncFavorite, isPending } = usePlaylistSync()

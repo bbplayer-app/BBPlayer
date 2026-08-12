@@ -5,7 +5,7 @@ import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { generateKeyBetween } from 'fractional-indexing'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { ServiceError } from '@/lib/errors'
 import {
@@ -22,9 +22,9 @@ import type {
 } from '@/types/services/playlist'
 
 import type { TrackService } from './trackService'
-import { trackService } from './trackService'
+import { trackService as trackServiceInstance } from './trackService'
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
 type PlaylistTrackRow = typeof schema.playlistTracks.$inferSelect & {
 	track: typeof schema.tracks.$inferSelect & {
@@ -309,9 +309,9 @@ export class PlaylistService {
 		`)
 
 		return {
-			itemCount: Number(row?.itemCount ?? 0),
-			validTrackCount: Number(row?.validTrackCount ?? 0),
-			totalDuration: Number(row?.totalDuration ?? 0),
+			itemCount: row?.itemCount ?? 0,
+			validTrackCount: row?.validTrackCount ?? 0,
+			totalDuration: row?.totalDuration ?? 0,
 		}
 	}
 
@@ -347,7 +347,7 @@ export class PlaylistService {
 		return new Map(
 			uniqueIds.map((id) => [
 				id,
-				Number(rows.find((row) => row.playlistId === id)?.itemCount ?? 0),
+				rows.find((row) => row.playlistId === id)?.itemCount ?? 0,
 			]),
 		)
 	}
@@ -1272,7 +1272,7 @@ export class PlaylistService {
 					return tracks
 				}
 
-				const trackIdSubq = db
+				const trackIdSubq = defaultDb
 					.select({ id: schema.tracks.id })
 					.from(schema.tracks)
 					.leftJoin(
@@ -1284,7 +1284,7 @@ export class PlaylistService {
 				const rows = await Sentry.startSpan(
 					{ name: 'db:query:playlistTracks', op: 'db' },
 					() =>
-						db.query.playlistTracks.findMany({
+						defaultDb.query.playlistTracks.findMany({
 							where: and(
 								eq(schema.playlistTracks.playlistId, playlistId),
 								inArray(schema.playlistTracks.trackId, trackIdSubq),
@@ -1515,4 +1515,4 @@ export class PlaylistService {
 	}
 }
 
-export const playlistService = new PlaylistService(db, trackService)
+export const playlistService = new PlaylistService(defaultDb, trackServiceInstance)

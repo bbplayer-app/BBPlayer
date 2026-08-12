@@ -149,28 +149,28 @@ export function reportErrorToSentry(
 	message?: string,
 	scope?: ProjectScope | string,
 ) {
-	const _error =
+	const normalizedError =
 		error instanceof Error
 			? error
 			: new Error(`非 Error 类型错误：${stringifyError(error)}`, {
 					cause: error,
 				})
 
-	const isCustom = _error instanceof CustomError
+	const isCustom = normalizedError instanceof CustomError
 
 	const tags: Record<string, string | number | boolean | undefined> = {
 		appScope: scope,
 	}
-	if (isCustom && typeof _error.type === 'string') {
-		tags.errorType = _error.type
+	if (isCustom && typeof normalizedError.type === 'string') {
+		tags.errorType = normalizedError.type
 	}
 
 	const extra: Record<string, unknown> = { message }
-	if (isCustom && _error.data !== undefined) {
-		extra.errorData = _error.data
+	if (isCustom && normalizedError.data !== undefined) {
+		extra.errorData = normalizedError.data
 	}
 
-	const id = Sentry.captureException(_error, { tags, extra })
+	const id = Sentry.captureException(normalizedError, { tags, extra })
 	log.error(`已上报错误到 sentry，id: ${id}`)
 }
 

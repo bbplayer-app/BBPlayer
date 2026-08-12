@@ -2,9 +2,9 @@ import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import type { bilibiliApi as BilibiliApiService } from '@/lib/api/bilibili/api'
-import { bilibiliApi } from '@/lib/api/bilibili/api'
+import { bilibiliApi as bilibiliApiInstance } from '@/lib/api/bilibili/api'
 import { av2bv, bv2av } from '@/lib/api/bilibili/utils'
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import type * as schema from '@/lib/db/schema'
 import type { DatabaseError, ServiceError } from '@/lib/errors'
 import type { FacadeError } from '@/lib/errors/facade'
@@ -16,12 +16,12 @@ import { createValidationError } from '@/lib/errors/service'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
-import { artistService } from '@/lib/services/artistService'
+import { artistService as artistServiceInstance } from '@/lib/services/artistService'
 import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { PlaylistService } from '@/lib/services/playlistService'
-import { playlistService } from '@/lib/services/playlistService'
+import { playlistService as playlistServiceInstance } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
-import { trackService } from '@/lib/services/trackService'
+import { trackService as trackServiceInstance } from '@/lib/services/trackService'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliMultipageVideo } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Playlist, Track } from '@/types/core/media'
@@ -844,7 +844,7 @@ export class SyncBilibiliPlaylistFacade {
 						throw playlistAuthor.error
 					}
 
-					const localPlaylist = await playlistSvc.findOrCreateRemotePlaylist({
+					const playlistResult = await playlistSvc.findOrCreateRemotePlaylist({
 						title: bilibiliFavoriteListMetadata.info!.title,
 						description: bilibiliFavoriteListMetadata.info!.intro,
 						coverUrl: bilibiliFavoriteListMetadata.info!.cover,
@@ -852,11 +852,11 @@ export class SyncBilibiliPlaylistFacade {
 						remoteSyncId: favoriteId,
 						authorId: playlistAuthor.value.id,
 					})
-					if (localPlaylist.isErr()) {
-						throw localPlaylist.error
+					if (playlistResult.isErr()) {
+						throw playlistResult.error
 					}
 					logger.debug('step 5: 创建 playlist 和其对应的 author 信息完成', {
-						localPlaylistId: localPlaylist.value.id,
+						localPlaylistId: playlistResult.value.id,
 						artistId: playlistAuthor.value.id,
 					})
 
@@ -1089,9 +1089,9 @@ export class SyncBilibiliPlaylistFacade {
 }
 
 export const syncFacade = new SyncBilibiliPlaylistFacade(
-	trackService,
-	bilibiliApi,
-	playlistService,
-	artistService,
-	db,
+	trackServiceInstance,
+	bilibiliApiInstance,
+	playlistServiceInstance,
+	artistServiceInstance,
+	defaultDb,
 )

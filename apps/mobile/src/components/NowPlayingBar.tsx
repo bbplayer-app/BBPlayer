@@ -86,6 +86,16 @@ const ProgressBar = memo(function ProgressBar() {
 	)
 })
 
+const playPause = async () => {
+	void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+	const isPlaying = await Orpheus.getIsPlaying()
+	if (isPlaying) {
+		void Orpheus.pause()
+	} else {
+		await Orpheus.play()
+	}
+}
+
 const NowPlayingBar = memo(function NowPlayingBar({
 	backgroundColor,
 }: {
@@ -101,7 +111,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const bottomBarHeight = useBottomTabBarHeight()
 
 	const nowPlayingBarStyle = useAppStore(
-		(state) => state.settings.nowPlayingBarStyle,
+		(s) => s.settings.nowPlayingBarStyle,
 	)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
@@ -137,16 +147,6 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const nextIndicatorOpacity = useAnimatedStyle(() => ({
 		opacity: Math.min(Math.max(-dragOffset.value / 40, 0), 1),
 	}))
-
-	const playPause = async () => {
-		void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-		const isPlaying = await Orpheus.getIsPlaying()
-		if (isPlaying) {
-			void Orpheus.pause()
-		} else {
-			await Orpheus.play()
-		}
-	}
 
 	const navigateOnPlayerUpFling = useFlingGesture({
 		direction: Directions.UP,

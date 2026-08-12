@@ -26,7 +26,7 @@ export default function DuplicateLocalPlaylistModal({
 		if (!duplicatePlaylistName) return
 		duplicatePlaylist(
 			{
-				playlistId: Number(sourcePlaylistId),
+				playlistId: sourcePlaylistId,
 				name: duplicatePlaylistName,
 			},
 			{

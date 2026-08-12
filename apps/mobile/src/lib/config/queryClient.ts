@@ -26,7 +26,7 @@ export const queryClient = new QueryClient({
 						error.data.msgCode === -101
 					) {
 						toast.error('登录状态失效，请重新登录')
-						router.navigate('/settings/bilibili-account/qrcode-login' as never)
+						router.navigate('/settings/bilibili-account/qrcode-login')
 						return
 					}
 

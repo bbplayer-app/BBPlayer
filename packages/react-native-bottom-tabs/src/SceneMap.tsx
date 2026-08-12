@@ -6,6 +6,7 @@ type SceneProps = {
 }
 
 const SceneComponent = React.memo(
+	// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 	<T extends { component: React.ComponentType<SceneProps> } & SceneProps>({
 		component,
 		...rest

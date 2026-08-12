@@ -1,20 +1,20 @@
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync } from 'neverthrow'
 
-import db from '@/lib/db/db'
+import defaultDb from '@/lib/db/db'
 import type * as schema from '@/lib/db/schema'
 import type { DatabaseError, ServiceError } from '@/lib/errors'
 import type { FacadeError } from '@/lib/errors/facade'
 import { createFacadeError } from '@/lib/errors/facade'
 import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
-import { artistService } from '@/lib/services/artistService'
+import { artistService as artistServiceInstance } from '@/lib/services/artistService'
 import type { MatchResult } from '@/lib/services/externalPlaylistService'
 import generateUniqueTrackKey from '@/lib/services/genKey'
 import type { PlaylistService } from '@/lib/services/playlistService'
-import { playlistService } from '@/lib/services/playlistService'
+import { playlistService as playlistServiceInstance } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
-import { trackService } from '@/lib/services/trackService'
+import { trackService as trackServiceInstance } from '@/lib/services/trackService'
 import log from '@/utils/log'
 import { parseDurationString } from '@/utils/time'
 
@@ -162,8 +162,8 @@ export class SyncExternalPlaylistFacade {
 }
 
 export const syncExternalPlaylistFacade = new SyncExternalPlaylistFacade(
-	trackService,
-	playlistService,
-	artistService,
-	db,
+	trackServiceInstance,
+	playlistServiceInstance,
+	artistServiceInstance,
+	defaultDb,
 )

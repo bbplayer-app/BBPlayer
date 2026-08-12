@@ -2,26 +2,26 @@ import { useState, useEffect } from 'react'
 
 import { type Track, Orpheus } from '../ExpoOrpheusModule'
 
+const fetchTrack = async () => {
+	try {
+		const [currentTrack, currentIndex] = await Promise.all([
+			Orpheus.getCurrentTrack(),
+			Orpheus.getCurrentIndex(),
+		])
+		console.log(currentTrack)
+		return { currentTrack, currentIndex }
+	} catch (e) {
+		console.warn('Failed to fetch current track', e)
+		return { currentTrack: null, currentIndex: -1 }
+	}
+}
+
 /**
  * 订阅原生曲目开始事件，并暴露当前曲目和队列索引。
  */
 export function useCurrentTrack() {
 	const [track, setTrack] = useState<Track | null>(null)
 	const [index, setIndex] = useState<number>(-1)
-
-	const fetchTrack = async () => {
-		try {
-			const [currentTrack, currentIndex] = await Promise.all([
-				Orpheus.getCurrentTrack(),
-				Orpheus.getCurrentIndex(),
-			])
-			console.log(currentTrack)
-			return { currentTrack, currentIndex }
-		} catch (e) {
-			console.warn('Failed to fetch current track', e)
-			return { currentTrack: null, currentIndex: -1 }
-		}
-	}
 
 	useEffect(() => {
 		let isMounted = true

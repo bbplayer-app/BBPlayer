@@ -19,8 +19,7 @@ export const lyricsQueryKeys = {
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
 	return useQuery({
-		// oxlint-disable-next-line @tanstack/query/exhaustive-deps
-		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
+		queryKey: [...lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey), track],
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
 			if (result.isErr()) {

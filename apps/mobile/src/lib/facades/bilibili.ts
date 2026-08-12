@@ -1,7 +1,7 @@
 import { err, ok } from 'neverthrow'
 
 import {
-	bilibiliApi,
+	bilibiliApi as bilibiliApiInstance,
 	type bilibiliApi as BilibiliApiService,
 } from '@/lib/api/bilibili/api'
 import { av2bv } from '@/lib/api/bilibili/utils'
@@ -96,4 +96,4 @@ export class BilibiliFacade {
 	}
 }
 
-export const bilibiliFacade = new BilibiliFacade(bilibiliApi)
+	export const bilibiliFacade = new BilibiliFacade(bilibiliApiInstance)
