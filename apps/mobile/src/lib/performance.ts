@@ -1,33 +1,26 @@
-import performance, { PerformanceObserver } from 'react-native-performance'
-import { startProfiling, stopProfiling } from 'react-native-release-profiler'
+import AppMetrics from 'expo-app-metrics'
+import { stopProfiling } from 'react-native-release-profiler'
 
 export interface StartupMetrics {
-	/** Total cold start: nativeLaunchStart → contentAppeared (ms) */
-	startTime: number | null
-	/** JS bundle parse & execution: runJsBundleStart → runJsBundleEnd (ms) */
+	coldLaunchTime: number | null
+	warmLaunchTime: number | null
 	bundleLoadTime: number | null
-	/** Time to first render: nativeLaunchStart → contentAppeared (ms) */
-	timeToRender: number | null
-	/** Time to interactive: nativeLaunchStart → tti_mark (ms) */
+	timeToFirstRender: number | null
 	timeToInteractive: number | null
-	/** Path to the release profiler trace, saved when profiling stops */
 	profilerTracePath: string | null
-	nativeMarks: Array<{ name: string; startTime: number }>
-	customMarks: Array<{ name: string; startTime: number; duration: number }>
 }
 
 const noMetrics: StartupMetrics = {
-	startTime: null,
+	coldLaunchTime: null,
+	warmLaunchTime: null,
 	bundleLoadTime: null,
-	timeToRender: null,
+	timeToFirstRender: null,
 	timeToInteractive: null,
 	profilerTracePath: null,
-	nativeMarks: [],
-	customMarks: [],
 }
 
 let metrics: StartupMetrics = { ...noMetrics }
-let initialized = false
+let fetched = false
 const listeners = new Set<() => void>()
 
 export function subscribeToMetrics(fn: () => void) {
@@ -39,97 +32,71 @@ export function subscribeToMetrics(fn: () => void) {
 
 function emit() {
 	listeners.forEach((fn) => fn())
+	persistMetrics()
 }
 
 export function getMetrics(): Readonly<StartupMetrics> {
 	return metrics
 }
 
-function measure(name: string, start: string, end: string): number | null {
+function persistMetrics() {
+	const summary = {
+		coldLaunchTime: metrics.coldLaunchTime,
+		warmLaunchTime: metrics.warmLaunchTime,
+		bundleLoadTime: metrics.bundleLoadTime,
+		timeToFirstRender: metrics.timeToFirstRender,
+		timeToInteractive: metrics.timeToInteractive,
+	}
+	// oxlint-disable-next-line no-console
+	console.log(`__PERF_METRICS__${JSON.stringify(summary)}__PERF_END__`)
+}
+
+async function fetchStartupMetrics(): Promise<void> {
+	if (fetched) return
 	try {
-		performance.measure(name, start, end)
-		const entries = performance.getEntriesByName(name, 'measure')
-		return entries.length > 0 ? entries[entries.length - 1].duration : null
+		const session = AppMetrics.getMainSession()
+		for (let attempt = 0; attempt < 20; attempt++) {
+			const entries = await session.getMetrics()
+			for (const entry of entries) {
+				const ms = entry.value * 1000
+				switch (entry.name) {
+					case 'coldLaunchTime':
+						metrics.coldLaunchTime = ms
+						break
+					case 'warmLaunchTime':
+						metrics.warmLaunchTime = ms
+						break
+					case 'bundleLoadTime':
+						metrics.bundleLoadTime = ms
+						break
+					case 'timeToFirstRender':
+						metrics.timeToFirstRender = ms
+						break
+					case 'timeToInteractive':
+						metrics.timeToInteractive = ms
+						break
+				}
+			}
+			// 原生侧 markInteractive 后异步持久化，TTI 可能尚未写入，重试
+			if (metrics.timeToInteractive !== null) break
+			await new Promise((resolve) => setTimeout(resolve, 250))
+		}
+		fetched = true
+		emit()
 	} catch {
-		return null
+		// metrics unavailable in this build
 	}
 }
 
-function hasMark(name: string): boolean {
-	return performance.getEntriesByName(name, 'react-native-mark').length > 0
-}
-
-function snapNativeMarks() {
-	const entries = performance.getEntriesByType(
-		'react-native-mark',
-	) as PerformanceEntry[]
-	metrics.nativeMarks = entries.map((e) => ({
-		name: e.name,
-		startTime: e.startTime,
-	}))
-}
-
-function snapCustom() {
-	const nativeNames = new Set(metrics.nativeMarks.map((m) => m.name))
-	const entries = [
-		...performance.getEntriesByType('mark'),
-		...performance.getEntriesByType('measure'),
-	].filter((e) => !nativeNames.has(e.name)) as PerformanceEntry[]
-
-	metrics.customMarks = entries.map((e) => ({
-		name: e.name,
-		startTime: e.startTime,
-		duration: e.duration,
-	}))
-}
-
-export async function markInteractive(): Promise<void> {
-	if (!hasMark('nativeLaunchStart')) return
-	performance.mark('tti_mark')
-	metrics.timeToInteractive = measure('tti', 'nativeLaunchStart', 'tti_mark')
-	snapCustom()
-
+export async function markPerfInteractive(): Promise<void> {
 	try {
-		const path = await stopProfiling(true, 'bbplayer-startup-trace')
-		metrics.profilerTracePath = path
+		metrics.profilerTracePath = await stopProfiling(
+			true,
+			'bbplayer-startup-trace',
+		)
 	} catch {
 		// profiling may already be stopped or not supported in this build
 	}
 
-	emit()
-}
-
-export function initPerformanceObserver(): void {
-	if (initialized) return
-	initialized = true
-
-	try {
-		startProfiling()
-	} catch {
-		// profiling not available in this build
-	}
-
-	let resolved = false
-
-	function compute() {
-		if (resolved) return
-		if (!hasMark('contentAppeared')) return
-		resolved = true
-
-		metrics.startTime = measure('start', 'nativeLaunchStart', 'contentAppeared')
-		metrics.bundleLoadTime = measure(
-			'bundleLoad',
-			'runJsBundleStart',
-			'runJsBundleEnd',
-		)
-		metrics.timeToRender = metrics.startTime
-
-		snapNativeMarks()
-		snapCustom()
-		emit()
-	}
-
-	new PerformanceObserver((_list, _observer) => {
-		compute()
-	}).observe({ type: 'react-native-mark', buffered: true })
+	await fetchStartupMetrics()
 }

@@ -50,53 +50,6 @@ function MetricRow({
 	)
 }
 
-function MarksList({
-	marks,
-	title,
-}: {
-	marks: Array<{ name: string; startTime: number; duration?: number }>
-	title: string
-}) {
-	const theme = useTheme()
-	if (marks.length === 0) return null
-	return (
-		<View style={styles.section}>
-			<Text
-				variant='titleSmall'
-				style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-			>
-				{title}
-			</Text>
-			{marks.map((m) => {
-				const key = `${m.name}-${m.startTime}`
-				return (
-					<View
-						key={key}
-						style={styles.markRow}
-					>
-						<Text
-							variant='bodySmall'
-							numberOfLines={1}
-							style={styles.markName}
-						>
-							{m.name}
-						</Text>
-						<Text
-							variant='bodySmall'
-							style={{ fontVariant: ['tabular-nums'] }}
-						>
-							{formatMs(m.startTime)}
-							{'duration' in m && m.duration
-								? ` (${formatMs(m.duration)})`
-								: ''}
-						</Text>
-					</View>
-				)
-			})}
-		</View>
-	)
-}
-
 export default function PerformanceScreen() {
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
@@ -143,27 +96,33 @@ export default function PerformanceScreen() {
 				]}
 			>
 				<MetricRow
-					label='启动耗时'
-					value={metrics.startTime}
-					description='nativeLaunchStart → contentAppeared'
+					label='冷启动'
+					value={metrics.coldLaunchTime}
+					description='process start → activity load'
+				/>
+				<Divider />
+				<MetricRow
+					label='温启动'
+					value={metrics.warmLaunchTime}
+					description='launch → activity create'
+				/>
+				<Divider />
+				<MetricRow
+					label='首帧渲染 (TTFR)'
+					value={metrics.timeToFirstRender}
+					description='markLoaded → markFirstRender'
 				/>
 				<Divider />
 				<MetricRow
 					label='Bundle 加载'
 					value={metrics.bundleLoadTime}
-					description='runJsBundleStart → runJsBundleEnd'
-				/>
-				<Divider />
-				<MetricRow
-					label='首帧渲染 (TTR)'
-					value={metrics.timeToRender}
-					description='nativeLaunchStart → contentAppeared'
+					description='RUN_JS_BUNDLE_START → END'
 				/>
 				<Divider />
 				<MetricRow
 					label='可交互时间 (TTI)'
 					value={metrics.timeToInteractive}
-					description='nativeLaunchStart → markInteractive'
+					description='markLoaded → markInteractive'
 				/>
 
 				{metrics.profilerTracePath ? (
@@ -187,15 +146,6 @@ export default function PerformanceScreen() {
 						</View>
 					</>
 				) : null}
-
-				<MarksList
-					title='Native Marks'
-					marks={metrics.nativeMarks}
-				/>
-				<MarksList
-					title='Custom Marks'
-					marks={metrics.customMarks}
-				/>
 			</ScrollView>
 		</View>
 	)
@@ -224,23 +174,6 @@ const styles = StyleSheet.create({
 	metricLabel: {
 		flex: 1,
 		marginRight: 16,
-	},
-	section: {
-		marginTop: 24,
-	},
-	sectionTitle: {
-		marginBottom: 8,
-	},
-	markRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		paddingVertical: 4,
-	},
-	markName: {
-		flex: 1,
-		marginRight: 12,
-		fontVariant: ['tabular-nums'],
 	},
 	traceSection: {
 		paddingVertical: 12,

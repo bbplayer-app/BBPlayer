@@ -11,7 +11,7 @@ export default (api) => {
 		presets: [['babel-preset-expo']],
 		env: {
 			production: {
-				plugins: ['react-native-paper/babel', 'transform-remove-console'],
+				plugins: ['react-native-paper/babel'],
 			},
 		},
 		plugins: [

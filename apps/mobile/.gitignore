@@ -14,3 +14,5 @@ GoogleService-Info-*.plist
 src/lib/api/bilibili/proto/dm.js
 src/lib/api/bilibili/proto/dm.d.ts
 src/lib/api/bilibili/proto/dm.ts
+# performance measurement runs
+metrics_runs/

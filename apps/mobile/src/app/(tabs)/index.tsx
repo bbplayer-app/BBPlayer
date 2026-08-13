@@ -47,7 +47,7 @@ import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
-import { markInteractive as markPerfInteractive } from '@/lib/performance'
+import { markPerfInteractive } from '@/lib/performance'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
 	matchSearchStrategies,
