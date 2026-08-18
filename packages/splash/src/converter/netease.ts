@@ -41,14 +41,16 @@ export function parseYrc(yrcContent: string): string {
 			// 若非 JSON，则继续正则解析
 		}
 
-		// 标准 LRC 行: [mm:ss.xx] 或 [mm:ss.xxx]
-		// SPL 兼容此类格式，透传即可
+		// 标准 LRC 行: [mm:ss.xx]、[mm:ss.xxx]，以及网易云偶尔返回的
+		// [mm:ss:xx]。SPL 仅接受小数点作为秒与小数部分的分隔符，故将后者规范化。
 		// 同时需支持元数据标签，如 [ar:Author]
-		if (
-			/^\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/.test(trimmed) ||
-			/^\[[a-zA-Z]+:/.test(trimmed)
-		) {
-			splLines.push(trimmed)
+		const standardLrcLine = /^(?:\[\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?\])+/.test(
+			trimmed,
+		)
+		if (standardLrcLine || /^\[[a-zA-Z]+:/.test(trimmed)) {
+			splLines.push(
+				trimmed.replace(/\[(\d{1,2}):(\d{1,2}):(\d{1,3})\]/g, '[$1:$2.$3]'),
+			)
 			continue
 		}
 

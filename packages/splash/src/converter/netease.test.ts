@@ -1,6 +1,8 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+import { parseSpl } from '../parser'
+
 import { parseYrc, formatSplTime } from './netease'
 
 describe('网易云 YRC 转换器', () => {
@@ -74,6 +76,34 @@ describe('网易云 YRC 转换器', () => {
 		expect(lines).toContain('[00:01.000]作曲: DECO*27')
 		expect(lines).toContain('[00:20.848]特別な君と 特別な日を')
 		expect(lines).toContain('[00:25.915]笑い合って バカもしたいな')
+	})
+
+	it('应该规范化 songId 3340114786 实际返回的冒号百分秒 LRC', () => {
+		// 2026-08-18 从 https://music.163.com/api/song/lyric?id=3340114786 拉取的 lrc.lyric 摘录。
+		const input = `[00:00.00] 作词 : 藤原基央
+[00:01.00] 作曲 : 藤原基央
+[00:22:25]お別れしたのはもっと　前の事だったような
+[00:28:96]悲しい光は封じ込めて　踵すり減らしたんだ`
+
+		const output = parseYrc(input)
+		expect(output).toBe(`[00:00.00] 作词 : 藤原基央
+[00:01.00] 作曲 : 藤原基央
+[00:22.25]お別れしたのはもっと　前の事だったような
+[00:28.96]悲しい光は封じ込めて　踵すり減らしたんだ`)
+
+		const parsed = parseSpl(output)
+		expect(parsed.lines).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					startTime: 22250,
+					content: 'お別れしたのはもっと　前の事だったような',
+				}),
+				expect.objectContaining({
+					startTime: 28960,
+					content: '悲しい光は封じ込めて　踵すり減らしたんだ',
+				}),
+			]),
+		)
 	})
 
 	it('应该正确处理过长的间奏（遵循词的持续时间）', () => {
