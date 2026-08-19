@@ -90,6 +90,7 @@ async function fetchStartupMetrics(): Promise<void> {
 
 export async function markPerfInteractive(): Promise<void> {
 	try {
+		await new Promise((resolve) => setTimeout(resolve, 3000))
 		metrics.profilerTracePath = await stopProfiling(
 			true,
 			'bbplayer-startup-trace',

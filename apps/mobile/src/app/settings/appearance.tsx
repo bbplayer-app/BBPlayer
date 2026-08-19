@@ -1,3 +1,4 @@
+import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -31,9 +32,7 @@ export default function AppearanceSettingsPage() {
 	const nowPlayingBarStyle = useAppStore(
 		(state) => state.settings.nowPlayingBarStyle,
 	)
-	const enableSpectrumVisualizer = useAppStore(
-		(state) => state.settings.enableSpectrumVisualizer,
-	)
+	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
@@ -54,7 +53,7 @@ export default function AppearanceSettingsPage() {
 
 	const handleSpectrumToggle = () => {
 		if (enableSpectrumVisualizer) {
-			setSettings({ enableSpectrumVisualizer: false })
+			Orpheus.isSpectrumVisualizerEnabled = false
 			return
 		}
 
@@ -63,7 +62,7 @@ export default function AppearanceSettingsPage() {
 				PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
 			).then((hasPermission) => {
 				if (hasPermission) {
-					setSettings({ enableSpectrumVisualizer: true })
+					Orpheus.isSpectrumVisualizerEnabled = true
 				} else {
 					alert(
 						'需要麦克风权限',
@@ -77,7 +76,7 @@ export default function AppearanceSettingsPage() {
 										PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
 									).then((granted) => {
 										if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-											setSettings({ enableSpectrumVisualizer: true })
+											Orpheus.isSpectrumVisualizerEnabled = true
 										}
 									})
 								},
@@ -88,7 +87,7 @@ export default function AppearanceSettingsPage() {
 				}
 			})
 		} else {
-			setSettings({ enableSpectrumVisualizer: true })
+			Orpheus.isSpectrumVisualizerEnabled = true
 		}
 	}
 

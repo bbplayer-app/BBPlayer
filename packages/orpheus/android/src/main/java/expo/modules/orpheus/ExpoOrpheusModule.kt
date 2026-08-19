@@ -67,6 +67,12 @@ class ExpoOrpheusModule : Module() {
     private var downloadManager: DownloadManager? = null
 
     private val spectrumManager = SpectrumManager { audioSessionId, error ->
+        GeneralStorage.setSpectrumVisualizerEnabled(false)
+        sendEvent(
+            "onSpectrumVisualizerEnabledChanged", mapOf(
+                "enabled" to false
+            )
+        )
         sendEvent(
             "onSpectrumVisualizerError", mapOf(
                 "audioSessionId" to audioSessionId,
@@ -74,7 +80,6 @@ class ExpoOrpheusModule : Module() {
             )
         )
     }
-    private var isSpectrumVisualizerEnabled = false
     private var tempBuffer: FloatArray? = null
 
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -150,6 +155,15 @@ class ExpoOrpheusModule : Module() {
             updateProgressRunnerState()
         }
 
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) {
+                spectrumManager.stop()
+                return
+            }
+
+            startSpectrumVisualizerIfEnabled(audioSessionId)
+        }
+
         /**
          * 处理错误
          */
@@ -178,14 +192,14 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun startSpectrumVisualizerIfEnabled() {
-        if (!isSpectrumVisualizerEnabled) return
+    private fun startSpectrumVisualizerIfEnabled(
+        audioSessionId: Int = player?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET
+    ) {
+        if (!GeneralStorage.isSpectrumVisualizerEnabled()) return
+        if (player?.isPlaying != true) return
+        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
 
-        player?.audioSessionId?.let { sessionId ->
-            if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
-                spectrumManager.start(sessionId)
-            }
-        }
+        spectrumManager.start(audioSessionId)
     }
 
     @OptIn(UnstableApi::class)
@@ -205,6 +219,7 @@ class ExpoOrpheusModule : Module() {
             "onExportProgress",
             "onStatusBarLyricsStatusChanged",
             "onSpectrumVisualizerError",
+            "onSpectrumVisualizerEnabledChanged",
             "onRequestClearLyrics",
             "onQueueChanged"
         )
@@ -234,6 +249,8 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player = service.player
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
+
+                    startSpectrumVisualizerIfEnabled()
 
                     service.statusBarLyricsManager.setStatusChangeListener(object :
                         expo.modules.orpheus.manager.StatusBarLyricsManager.StatusChangeListener {
@@ -310,6 +327,24 @@ class ExpoOrpheusModule : Module() {
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.isAutoplayOnStartEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setAutoplayOnStartEnabled(enabled) }
+
+        Property("isSpectrumVisualizerEnabled")
+            .get { GeneralStorage.isSpectrumVisualizerEnabled() }
+            .set { enabled: Boolean ->
+                GeneralStorage.setSpectrumVisualizerEnabled(enabled)
+                mainHandler.post {
+                    if (enabled) {
+                        startSpectrumVisualizerIfEnabled()
+                    } else {
+                        spectrumManager.stop()
+                    }
+                    sendEvent(
+                        "onSpectrumVisualizerEnabledChanged", mapOf(
+                            "enabled" to GeneralStorage.isSpectrumVisualizerEnabled()
+                        )
+                    )
+                }
+            }
 
         Property("isDesktopLyricsShown")
             .get { GeneralStorage.isDesktopLyricsShown() }
@@ -1080,17 +1115,6 @@ class ExpoOrpheusModule : Module() {
             val byteBuffer = destination.toDirectBuffer()
             byteBuffer.order(java.nio.ByteOrder.nativeOrder())
             byteBuffer.asFloatBuffer().put(buffer)
-        }
-
-        Function("setSpectrumVisualizerEnabled") { enabled: Boolean ->
-            mainHandler.post {
-                isSpectrumVisualizerEnabled = enabled
-                if (enabled) {
-                    startSpectrumVisualizerIfEnabled()
-                } else {
-                    spectrumManager.stop()
-                }
-            }
         }
 
         Function("exportData") {

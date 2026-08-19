@@ -7,7 +7,6 @@ import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
 import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
-import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
@@ -256,8 +255,6 @@ class PlayerSideEffects {
 			if (this.isHandlingSpectrumVisualizerError) return
 
 			void (async () => {
-				if (!useAppStore.getState().settings.enableSpectrumVisualizer) return
-
 				this.isHandlingSpectrumVisualizerError = true
 				try {
 					const hasPermission =
@@ -265,10 +262,6 @@ class PlayerSideEffects {
 						(await PermissionsAndroid.check(
 							PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
 						))
-
-					useAppStore
-						.getState()
-						.setSettings({ enableSpectrumVisualizer: false })
 
 					if (!hasPermission) {
 						toast.info('未获得麦克风权限，已关闭频谱显示')

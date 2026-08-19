@@ -86,6 +86,7 @@ export type OrpheusEvents = {
 		audioSessionId: number
 		message: string
 	}): void
+	onSpectrumVisualizerEnabledChanged(event: { enabled: boolean }): void
 	onPositionUpdate(event: {
 		position: number
 		duration: number
@@ -152,6 +153,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	loudnessNormalizationEnabled: boolean
 	/** Android 服务恢复状态后是否自动开始播放。 */
 	autoplayOnStartEnabled: boolean
+	/** 是否显示并启用音频频谱分析。 */
+	isSpectrumVisualizerEnabled: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */
 	isDesktopLyricsShown: boolean
 	/** 桌面悬浮歌词窗口是否锁定为不可拖动。 */
@@ -399,8 +402,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 建议复用长度为 `SPECTRUM_SIZE` 的 `Float32Array`，避免在动画循环中反复分配。
 	 */
 	updateSpectrumData(destination: Float32Array): void
-	/** 启用或停用原生频谱分析。停用后不会创建 Android Visualizer。 */
-	setSpectrumVisualizerEnabled(enabled: boolean): void
 	/**
 	 * 从 `uris` 中筛出原生 LRU 缓存当前已知的完整缓存 URI。
 	 *
@@ -410,7 +411,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	/**
 	 * 导出所有 Orpheus 原生配置数据。
 	 *
-	 * 返回包含 `playerQueue`（播放器队列 store 的 10 个配置键）和
+	 * 返回包含 `playerQueue`（播放器队列 store 的配置键）和
 	 * `loudness`（所有已计算响度数据）的对象。
 	 */
 	exportData(): {

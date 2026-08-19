@@ -1,4 +1,4 @@
-import { useIsPlaying } from '@bbplayer/orpheus'
+import { useIsPlaying, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -18,7 +18,6 @@ import IconButton from '@/components/common/IconButton'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
-import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { getGradientColors } from '@/utils/color'
 
@@ -48,9 +47,7 @@ export function TrackInfo({
 	const [thumbUpBurstSignal, setThumbUpBurstSignal] = useState(0)
 	const activeSkin = useActiveSkin()
 
-	const enableSpectrumVisualizer = useAppStore(
-		(state) => state.settings.enableSpectrumVisualizer,
-	)
+	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 
 	const { data: isThumbUp, isPending: isThumbUpPending } = useGetVideoIsThumbUp(
 		currentTrack?.source === 'bilibili'

@@ -64,6 +64,7 @@ public class ExpoOrpheusModule: Module {
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
             "onSpectrumVisualizerError",
+            "onSpectrumVisualizerEnabledChanged",
             "onHeadlessEvent",
             "onTrackStarted",
             "onTrackFinished"
@@ -87,6 +88,13 @@ public class ExpoOrpheusModule: Module {
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.shared.isAutoplayOnStartEnabled }
             .set { GeneralStorage.shared.isAutoplayOnStartEnabled = $0 }
+
+        Property("isSpectrumVisualizerEnabled")
+            .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
+            .set {
+                GeneralStorage.shared.isSpectrumVisualizerEnabled = $0
+                self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": $0])
+            }
 
     // MARK: - Getters
 
@@ -307,8 +315,5 @@ public class ExpoOrpheusModule: Module {
         }
     }
 
-    Function("setSpectrumVisualizerEnabled") { (_: Bool) in
-        // iOS 使用 AVAudioMix tap，不需要 Android Visualizer 的显式启停。
-    }
   }
 }

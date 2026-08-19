@@ -103,7 +103,6 @@ export const useAppStore = create<AppState>()(
 					sendPlayHistory: false,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
-					enableSpectrumVisualizer: false,
 					playerBackgroundStyle: 'gradient',
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
@@ -203,11 +202,6 @@ export const useAppStore = create<AppState>()(
 							updates.allowSimultaneousPlayback,
 						)
 					}
-					if (updates.enableSpectrumVisualizer !== undefined) {
-						Orpheus.setSpectrumVisualizerEnabled(
-							updates.enableSpectrumVisualizer,
-						)
-					}
 				},
 
 				setEnableDataCollection: (value: boolean) => {
@@ -245,7 +239,7 @@ export const useAppStore = create<AppState>()(
 		{
 			name: 'app-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 3,
+			version: 4,
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
@@ -257,7 +251,9 @@ export const useAppStore = create<AppState>()(
 
 			migrate: (persistedState, version) => {
 				const state = persistedState as Partial<Omit<AppState, 'settings'>> & {
-					settings?: Partial<Settings>
+					settings?: Partial<Settings> & {
+						enableSpectrumVisualizer?: boolean
+					}
 				}
 				let migratedState = state
 
@@ -269,8 +265,6 @@ export const useAppStore = create<AppState>()(
 					}
 				}
 				if (version < 3) {
-					// v2 中此值同时控制圆形封面和频谱；圆形封面现为固定样式，
-					// 因此将原值一对一迁移为独立的频谱开关。
 					migratedState = {
 						...migratedState,
 						settings: {
@@ -278,6 +272,17 @@ export const useAppStore = create<AppState>()(
 							enableSpectrumVisualizer:
 								migratedState.settings?.enableSpectrumVisualizer ?? false,
 						},
+					}
+				}
+				if (version < 4) {
+					const legacySettings = migratedState.settings
+					Orpheus.isSpectrumVisualizerEnabled =
+						legacySettings?.enableSpectrumVisualizer ?? false
+
+					if (legacySettings) {
+						const settings = { ...legacySettings }
+						delete settings.enableSpectrumVisualizer
+						migratedState = { ...migratedState, settings }
 					}
 				}
 

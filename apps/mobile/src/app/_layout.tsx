@@ -109,8 +109,6 @@ function runAppInit() {
 			void Orpheus.setAllowSimultaneousPlayback(
 				settings.allowSimultaneousPlayback,
 			)
-			Orpheus.setSpectrumVisualizerEnabled(settings.enableSpectrumVisualizer)
-
 			const cookie = useAppStore.getState().bilibiliCookie
 			if (cookie) {
 				logger.debug('初始化 orpheus bilibili cookie')

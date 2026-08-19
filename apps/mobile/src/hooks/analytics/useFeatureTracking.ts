@@ -1,4 +1,4 @@
-import { Orpheus } from '@bbplayer/orpheus'
+import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import { useEffect } from 'react'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
@@ -11,6 +11,7 @@ import { analyticsService } from '@/lib/services/analyticsService'
 export function useFeatureTracking() {
 	const settings = useAppStore((state) => state.settings)
 	const { enableDataCollection } = settings
+	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 
 	useEffect(() => {
 		void analyticsService.setAnalyticsCollectionEnabled(enableDataCollection)
@@ -48,11 +49,11 @@ export function useFeatureTracking() {
 
 		void analyticsService.setUserProperty(
 			'setting_visualizer',
-			String(settings.enableSpectrumVisualizer),
+			String(enableSpectrumVisualizer),
 		)
 		void analyticsService.setUserProperty(
 			'setting_persist_pos',
 			String(Orpheus.restorePlaybackPositionEnabled),
 		)
-	}, [settings, enableDataCollection])
+	}, [settings, enableDataCollection, enableSpectrumVisualizer])
 }

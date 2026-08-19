@@ -22,6 +22,7 @@ object GeneralStorage {
     private const val KEY_SAVED_REPEAT_MODE = "saved_repeat_mode"
     private const val KEY_SAVED_SHUFFLE_MODE = "saved_shuffle_mode"
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
+    private const val KEY_SPECTRUM_VISUALIZER_ENABLED = "config_spectrum_visualizer_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
     private const val KEY_STATUS_BAR_LYRICS_ENABLED = "config_status_bar_lyrics_enabled"
@@ -77,6 +78,18 @@ object GeneralStorage {
             safeKv.encode(KEY_AUTOPLAY_ON_START_ENABLED, enabled)
         } catch (e: Exception) {
             Log.e("MediaItemStorer", "Failed to set autoplay on start enabled", e)
+        }
+    }
+
+    fun isSpectrumVisualizerEnabled(): Boolean {
+        return safeKv.decodeBool(KEY_SPECTRUM_VISUALIZER_ENABLED, false)
+    }
+
+    fun setSpectrumVisualizerEnabled(enabled: Boolean) {
+        try {
+            safeKv.encode(KEY_SPECTRUM_VISUALIZER_ENABLED, enabled)
+        } catch (e: Exception) {
+            Log.e("MediaItemStorer", "Failed to set spectrum visualizer enabled", e)
         }
     }
 
@@ -175,6 +188,7 @@ object GeneralStorage {
             KEY_RESTORE_POSITION_ENABLED to isRestoreEnabled(),
             KEY_LOUDNESS_NORMALIZATION_ENABLED to isLoudnessNormalizationEnabled(),
             KEY_AUTOPLAY_ON_START_ENABLED to isAutoplayOnStartEnabled(),
+            KEY_SPECTRUM_VISUALIZER_ENABLED to isSpectrumVisualizerEnabled(),
             KEY_STATUS_BAR_LYRICS_ENABLED to isStatusBarLyricsEnabled(),
             KEY_STATUS_BAR_LYRICS_PROVIDER to getStatusBarLyricsProvider(),
             KEY_CAR_LYRICS_ENABLED to isCarLyricsEnabled(),
@@ -189,6 +203,7 @@ object GeneralStorage {
         (data[KEY_RESTORE_POSITION_ENABLED] as? Boolean)?.let { setRestoreEnabled(it) }
         (data[KEY_LOUDNESS_NORMALIZATION_ENABLED] as? Boolean)?.let { setLoudnessNormalizationEnabled(it) }
         (data[KEY_AUTOPLAY_ON_START_ENABLED] as? Boolean)?.let { setAutoplayOnStartEnabled(it) }
+        (data[KEY_SPECTRUM_VISUALIZER_ENABLED] as? Boolean)?.let { setSpectrumVisualizerEnabled(it) }
         (data[KEY_STATUS_BAR_LYRICS_ENABLED] as? Boolean)?.let { setStatusBarLyricsEnabled(it) }
         (data[KEY_STATUS_BAR_LYRICS_PROVIDER] as? String)?.let { setStatusBarLyricsProvider(it) }
         (data[KEY_CAR_LYRICS_ENABLED] as? Boolean)?.let { setCarLyricsEnabled(it) }
