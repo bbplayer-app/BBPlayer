@@ -9,11 +9,19 @@
 
 ### Changed
 
+- 集成 expo-observer navigation matrics
+- 移除 expo-updates
+- 使用 `react-native-nitro-fetch` 替换内置 fetch
+- 彻底移除弹幕相关代码
 - 备份格式升级至 v2；旧版本备份不再支持导入
 
 ### Fixed
 
 - 修复 Android 深色模式下启动页背景颜色不一致的问题
+- 初始化频谱显示时正确捕获错误
+- 修复大量 oxlint 报错
+- 网易云部分特殊格式歌词解析失败
+- 展开分 p 同步收藏夹失败
 
 ## [2.6.4] - 2026-08-08
 
