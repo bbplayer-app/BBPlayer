@@ -4,8 +4,10 @@ import {
 	type PlaybackErrorEvent,
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
+import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
@@ -17,6 +19,7 @@ const logger = log.extend('Manager.PlayerSideEffects')
 
 class PlayerSideEffects {
 	private initialized = false
+	private isHandlingSpectrumVisualizerError = false
 
 	public initialize() {
 		if (this.initialized) return
@@ -35,6 +38,7 @@ class PlayerSideEffects {
 
 		// 设置播放器错误处理
 		this.setupErrorHandler()
+		this.setupSpectrumVisualizerErrorHandler()
 	}
 
 	/**
@@ -244,6 +248,42 @@ class PlayerSideEffects {
 			} catch (error) {
 				logger.error('处理播放器错误事件失败：', { error, event })
 			}
+		})
+	}
+
+	private setupSpectrumVisualizerErrorHandler() {
+		Orpheus.addListener('onSpectrumVisualizerError', (event) => {
+			if (this.isHandlingSpectrumVisualizerError) return
+
+			void (async () => {
+				if (!useAppStore.getState().settings.enableSpectrumVisualizer) return
+
+				this.isHandlingSpectrumVisualizerError = true
+				try {
+					const hasPermission =
+						Platform.OS !== 'android' ||
+						(await PermissionsAndroid.check(
+							PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+						))
+
+					useAppStore
+						.getState()
+						.setSettings({ enableSpectrumVisualizer: false })
+
+					if (!hasPermission) {
+						toast.info('未获得麦克风权限，已关闭频谱显示')
+						return
+					}
+
+					toast.error('当前设备或音频输出不支持系统频谱分析，已关闭频谱显示', {
+						description: event.message,
+					})
+				} catch (error) {
+					logger.error('处理频谱初始化错误失败', { error, event })
+				} finally {
+					this.isHandlingSpectrumVisualizerError = false
+				}
+			})()
 		})
 	}
 }

@@ -10,13 +10,7 @@ import { Observe, ObserveRoot, useObserve } from 'expo-observe'
 import { router, Stack } from 'expo-router'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
-import {
-	AppState,
-	PermissionsAndroid,
-	Platform,
-	StyleSheet,
-	View,
-} from 'react-native'
+import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { hide as hideBootSplash } from 'react-native-bootsplash'
 import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
@@ -33,6 +27,7 @@ import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
@@ -41,12 +36,10 @@ import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import { isActuallyOffline } from '@/utils/network'
-import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
 
 const logger = log.extend('UI.RootLayout')
-let isHandlingSpectrumVisualizerError = false
 
 Observe.configure({
 	integrations: { 'expo-router': true },
@@ -59,40 +52,6 @@ function onAppStateChange(status: AppStateStatus) {
 	if (Platform.OS !== 'web') {
 		focusManager.setFocused(status === 'active')
 	}
-}
-
-function setupSpectrumVisualizerErrorHandler() {
-	Orpheus.addListener('onSpectrumVisualizerError', (event) => {
-		if (isHandlingSpectrumVisualizerError) return
-
-		void (async () => {
-			if (!useAppStore.getState().settings.enableSpectrumVisualizer) return
-
-			isHandlingSpectrumVisualizerError = true
-			try {
-				const hasPermission =
-					Platform.OS !== 'android' ||
-					(await PermissionsAndroid.check(
-						PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-					))
-
-				useAppStore.getState().setSettings({ enableSpectrumVisualizer: false })
-
-				if (!hasPermission) {
-					toast.info('未获得麦克风权限，已关闭频谱显示')
-					return
-				}
-
-				toast.error('当前设备或音频输出不支持系统频谱分析，已关闭频谱显示', {
-					description: event.message,
-				})
-			} catch (error) {
-				logger.error('处理频谱初始化错误失败', { error, event })
-			} finally {
-				isHandlingSpectrumVisualizerError = false
-			}
-		})()
-	})
 }
 
 const checkOverlayPermissionOnStart = async () => {
@@ -120,7 +79,6 @@ const checkOverlayPermissionOnStart = async () => {
 function runAppInit() {
 	try {
 		useAppStore.getState()
-		setupSpectrumVisualizerErrorHandler()
 
 		registerUpdatePrefetch()
 
@@ -137,6 +95,7 @@ function runAppInit() {
 		void lyricService.migrateFromOldFormat()
 
 		usePlayerStore.getState().initialize()
+		playerSideEffects.initialize()
 
 		initPlayerQueueStore()
 
