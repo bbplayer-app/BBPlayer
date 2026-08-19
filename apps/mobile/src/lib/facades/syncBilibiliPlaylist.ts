@@ -699,9 +699,6 @@ export class SyncBilibiliPlaylistFacade {
 			// 展开分 P：为收藏夹内所有 bvid 构建展开后的 track 数据
 			// 新增 bvid 与本地为折叠态的 bvid 需要查分 P 列表；本地已展开的 bvid 直接复用，不发请求
 			let expandedTracksMap: Map<string, ExpandedTrackData[]> | null = null
-			const addedBvidSet = new Set(
-				Array.from(addedTracksMetadata).map((item) => item.bvid),
-			)
 			if (expandMultiPage) {
 				onProgress?.({
 					message: '正在获取分 P 信息...',
@@ -885,27 +882,27 @@ export class SyncBilibiliPlaylistFacade {
 						total: artistsMap.value.size,
 					})
 
-					const addedTrackPayloads = expandedTracksMap
-						? Array.from(expandedTracksMap.entries())
-								.filter(([bvid]) => addedBvidSet.has(bvid))
-								.flatMap(([, tracks]) =>
-									tracks.map((t) => ({
-										title: t.title,
-										source: 'bilibili' as const,
-										bilibiliMetadata: {
-											bvid: t.bvid,
-											isMultiPage: t.isMultiPage,
-											cid: t.cid ?? null,
-											mainTrackTitle: t.mainTrackTitle,
-											videoIsValid: t.videoIsValid,
-										},
-										coverUrl: t.coverUrl,
-										duration: t.duration,
-										artistId:
-											t.artistId ??
-											artistsMap.value.get(String(t.upperMid))?.id,
-									})),
-								)
+					// All expanded entries must be included, including BVIDs that were
+					// previously stored in collapsed form. Otherwise their new `bvid::cid`
+					// keys are used for ordering without ever being created.
+					const trackPayloads = expandedTracksMap
+						? Array.from(expandedTracksMap.entries()).flatMap(([, tracks]) =>
+								tracks.map((t) => ({
+									title: t.title,
+									source: 'bilibili' as const,
+									bilibiliMetadata: {
+										bvid: t.bvid,
+										isMultiPage: t.isMultiPage,
+										cid: t.cid ?? null,
+										mainTrackTitle: t.mainTrackTitle,
+										videoIsValid: t.videoIsValid,
+									},
+									coverUrl: t.coverUrl,
+									duration: t.duration,
+									artistId:
+										t.artistId ?? artistsMap.value.get(String(t.upperMid))?.id,
+								})),
+							)
 						: Array.from(addedTracksMetadata).map((v) => ({
 								title: v.title,
 								source: 'bilibili' as const,
@@ -921,7 +918,7 @@ export class SyncBilibiliPlaylistFacade {
 							}))
 
 					const trackPayloadsWithKeysResult = Result.combine(
-						addedTrackPayloads.map((p) =>
+						trackPayloads.map((p) =>
 							generateUniqueTrackKey(p).map((uniqueKey) => ({
 								payload: p,
 								uniqueKey,
