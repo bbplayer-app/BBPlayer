@@ -23,6 +23,10 @@ import { storage } from '@/utils/mmkv'
 
 const bootSplashManifest =
 	require('../../assets/bootsplash/manifest.json') as Manifest
+const bootSplashColors = require('../../boot-splash-colors.json') as {
+	light: string
+	dark: string
+}
 
 const logoSource = require('../../assets/bootsplash/logo.png') as number
 
@@ -226,12 +230,13 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 const styles = StyleSheet.create({
 	container: {
 		...StyleSheet.absoluteFill,
+		backgroundColor: bootSplashColors.light,
 		zIndex: 9999,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
 	containerDark: {
-		backgroundColor: '#1C1B1F',
+		backgroundColor: bootSplashColors.dark,
 	},
 	mediaContainer: {
 		...StyleSheet.absoluteFill,

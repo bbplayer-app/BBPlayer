@@ -15,6 +15,7 @@ import expoWebBrowser from 'expo-web-browser/plugin'
 import type { ConfigContext, ExpoConfig } from 'expo/config'
 import bootsplash from 'react-native-bootsplash/expo'
 
+import bootSplashColors from './boot-splash-colors.json'
 import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
@@ -158,7 +159,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			bootsplash({
 				logo: './assets/images/splash-icon.png',
 				logoWidth: 120,
-				background: '#ffffff',
+				background: bootSplashColors.light,
 				assetsOutput: 'assets/bootsplash',
 			}),
 			'./expo-plugins/withDynamicBootSplash',
