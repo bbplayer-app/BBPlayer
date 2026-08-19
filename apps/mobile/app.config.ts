@@ -161,6 +161,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				background: '#ffffff',
 				assetsOutput: 'assets/bootsplash',
 			}),
+			'./expo-plugins/withDynamicBootSplash',
 			[
 				'@sentry/react-native/expo',
 				{

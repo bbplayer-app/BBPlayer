@@ -1,7 +1,12 @@
 import { Image } from 'expo-image'
 import { useVideoPlayer, VideoView } from 'expo-video'
 import { memo, useEffect, useState } from 'react'
-import { AppState, StyleSheet, useWindowDimensions } from 'react-native'
+import {
+	AppState,
+	StyleSheet,
+	useColorScheme,
+	useWindowDimensions,
+} from 'react-native'
 import { useHideAnimation, type Manifest } from 'react-native-bootsplash'
 import Animated, {
 	Easing,
@@ -29,6 +34,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	ready,
 }: AnimatedBootSplashProps) {
 	const { height, width } = useWindowDimensions()
+	const isDarkMode = useColorScheme() === 'dark'
 	const insets = useSafeAreaInsets()
 	const activeSkin = useActiveSkin()
 	const selectedAssetId = useSkinStore(
@@ -177,7 +183,12 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		<Animated.View
 			pointerEvents='none'
 			{...container}
-			style={[container.style, styles.container, containerStyle]}
+			style={[
+				container.style,
+				styles.container,
+				isDarkMode && styles.containerDark,
+				containerStyle,
+			]}
 		>
 			<Animated.View style={[styles.mediaContainer, mediaStyle]}>
 				{bootSplashAssetCard ? (
@@ -218,7 +229,9 @@ const styles = StyleSheet.create({
 		zIndex: 9999,
 		alignItems: 'center',
 		justifyContent: 'center',
-		backgroundColor: '#FFFFFF',
+	},
+	containerDark: {
+		backgroundColor: '#1C1B1F',
 	},
 	mediaContainer: {
 		...StyleSheet.absoluteFill,
