@@ -7,9 +7,20 @@ import { expoDb } from '@/lib/db/db'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 
+import { BACKUP_VERSION } from './types'
 import type { BackupManifest } from './types'
 
 const logger = log.extend('backup.import')
+
+const LEGACY_MIGRATION_KEYS = [
+	'db_schema_version',
+	'sort_key_migrated_v1',
+	'sort_key_migrated_v2', // gitleaks:allow
+	'sort_key_migrated_v3',
+	'play_history_migrated_v1',
+	'independent_account_migrated_v1',
+	'play_history_ms_migrated_v1',
+] as const
 
 /**
  * 从备份文件恢复数据。
@@ -29,8 +40,10 @@ export async function restoreBackup(filePath: string): Promise<void> {
 	const manifestJson = await manifestEntry.async('string')
 	const manifest: BackupManifest = JSON.parse(manifestJson)
 
-	if (manifest.version !== 1) {
-		throw new Error(`不支持的备份版本：${manifest.version}`)
+	if (manifest.version !== BACKUP_VERSION) {
+		throw new Error(
+			`不支持的备份版本：${String(manifest.version)}。旧版本备份无法安全导入，请使用当前版本重新导出备份。`,
+		)
 	}
 
 	const dbEntry = zip.file('database.db')
@@ -67,6 +80,12 @@ export async function restoreBackup(filePath: string): Promise<void> {
 	} catch (e) {
 		logger.error('数据库恢复失败', e)
 		throw e
+	}
+
+	// The restored database now owns migration state. Never let this device's
+	// legacy MMKV flags seed state for a different database.
+	for (const key of LEGACY_MIGRATION_KEYS) {
+		storage.remove(key)
 	}
 
 	if (manifest.mmkv['app-storage']) {

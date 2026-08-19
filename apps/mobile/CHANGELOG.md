@@ -5,6 +5,12 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- 备份格式升级至 v2；旧版本备份不再支持导入
+
 ## [2.6.4] - 2026-08-08
 
 ### Added

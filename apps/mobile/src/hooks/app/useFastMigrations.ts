@@ -9,12 +9,12 @@ import { storage } from '@/utils/mmkv'
 
 const logger = log.extend('useFastMigrations')
 const SCHEMA_VERSION_KEY = 'db_schema_version'
-
 const SORT_KEY_MIGRATED_V2_KEY = 'sort_key_migrated_v2' // gitleaks:allow
 const SORT_KEY_MIGRATED_V3_KEY = 'sort_key_migrated_v3' // gitleaks:allow
 const PLAY_HISTORY_MIGRATED_V1_KEY = 'play_history_migrated_v1' // gitleaks:allow
 const INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY = 'independent_account_migrated_v1' // gitleaks:allow
 const PLAY_HISTORY_MS_MIGRATED_V1_KEY = 'play_history_ms_migrated_v1' // gitleaks:allow
+const DATA_MIGRATIONS_TABLE = '__bbplayer_data_migrations'
 
 interface MigrationConfig {
 	journal: {
@@ -33,8 +33,50 @@ type Action =
 	| { type: 'migrated'; payload: true }
 	| { type: 'error'; payload: Error }
 
+/**
+ * Migrate a legacy MMKV completion flag into the database that it describes.
+ * Once consumed, MMKV no longer participates in migration decisions.
+ */
+function isDataMigrationApplied(
+	migration: string,
+	legacyStorageKey:
+		| typeof SORT_KEY_MIGRATED_V2_KEY
+		| typeof SORT_KEY_MIGRATED_V3_KEY
+		| typeof PLAY_HISTORY_MIGRATED_V1_KEY
+		| typeof INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY
+		| typeof PLAY_HISTORY_MS_MIGRATED_V1_KEY,
+): boolean {
+	expoDb.execSync(
+		`CREATE TABLE IF NOT EXISTS ${DATA_MIGRATIONS_TABLE} (name TEXT PRIMARY KEY NOT NULL)`,
+	)
+
+	const applied = expoDb.getFirstSync<{ name: string }>(
+		`SELECT name FROM ${DATA_MIGRATIONS_TABLE} WHERE name = ?`,
+		[migration],
+	)
+	if (applied) {
+		storage.remove(legacyStorageKey)
+		return true
+	}
+
+	const appliedInLegacyStorage = storage.getBoolean(legacyStorageKey) === true
+	if (appliedInLegacyStorage) {
+		markDataMigrationApplied(migration)
+	}
+	storage.remove(legacyStorageKey)
+
+	return appliedInLegacyStorage
+}
+
+function markDataMigrationApplied(migration: string): void {
+	expoDb.runSync(
+		`INSERT OR IGNORE INTO ${DATA_MIGRATIONS_TABLE} (name) VALUES (?)`,
+		[migration],
+	)
+}
+
 function migrateSortKeysV2(): void {
-	if (storage.getBoolean(SORT_KEY_MIGRATED_V2_KEY)) return
+	if (isDataMigrationApplied('sort_key_v2', SORT_KEY_MIGRATED_V2_KEY)) return
 
 	try {
 		const tableInfo = expoDb.getAllSync<{ name: string }>(
@@ -44,7 +86,7 @@ function migrateSortKeysV2(): void {
 
 		if (!hasOrderColumn) {
 			logger.info('[v2] 物理表中已无 order 字段，无需执行数据迁移与删除操作')
-			storage.set(SORT_KEY_MIGRATED_V2_KEY, true)
+			markDataMigrationApplied('sort_key_v2')
 			return
 		}
 
@@ -98,10 +140,9 @@ function migrateSortKeysV2(): void {
 			}
 
 			expoDb.runSync(`ALTER TABLE playlist_tracks DROP COLUMN "order"`)
+			markDataMigrationApplied('sort_key_v2')
 			logger.info('[v2] 已成功从物理表中删除 order 字段')
 		})
-
-		storage.set(SORT_KEY_MIGRATED_V2_KEY, true)
 	} catch (error) {
 		logger.error('[v2] 迁移过程中发生错误，事务已回滚:', error)
 	}
@@ -111,7 +152,7 @@ function migrateSortKeysV2(): void {
  * V3 迁移：将非 local 播放列表的 sort_key 翻转。
  */
 function migrateSortKeysV3(): void {
-	if (storage.getBoolean(SORT_KEY_MIGRATED_V3_KEY)) return
+	if (isDataMigrationApplied('sort_key_v3', SORT_KEY_MIGRATED_V3_KEY)) return
 
 	try {
 		expoDb.withTransactionSync(() => {
@@ -150,12 +191,12 @@ function migrateSortKeysV3(): void {
 					totalUpdated++
 				}
 			}
+			markDataMigrationApplied('sort_key_v3')
 
 			logger.info(
 				`[v3] 非 local 播放列表 sort_key 翻转迁移完成，共处理 ${totalUpdated} 行`,
 			)
 		})
-		storage.set(SORT_KEY_MIGRATED_V3_KEY, true)
 	} catch (error) {
 		logger.error('[v3] 迁移过程中发生错误，事务已回滚:', error)
 	}
@@ -165,7 +206,9 @@ function migrateSortKeysV3(): void {
  * 迁移播放历史数据：从 tracks 表的 JSON 迁移到 play_history 表。
  */
 function migratePlayHistory(): void {
-	if (storage.getBoolean(PLAY_HISTORY_MIGRATED_V1_KEY)) return
+	if (isDataMigrationApplied('play_history_v1', PLAY_HISTORY_MIGRATED_V1_KEY)) {
+		return
+	}
 
 	try {
 		// 1. 检查 tracks 表是否还有 play_history 列
@@ -180,7 +223,7 @@ function migratePlayHistory(): void {
 			logger.info(
 				'[play_history] tracks 表中无 play_history 字段，无需执行数据迁移',
 			)
-			storage.set(PLAY_HISTORY_MIGRATED_V1_KEY, true)
+			markDataMigrationApplied('play_history_v1')
 			return
 		}
 
@@ -224,9 +267,8 @@ function migratePlayHistory(): void {
 					`[play_history] 播放记录迁移完成，共处理 ${rows.length} 条歌曲记录`,
 				)
 			}
+			markDataMigrationApplied('play_history_v1')
 		})
-
-		storage.set(PLAY_HISTORY_MIGRATED_V1_KEY, true)
 	} catch (error) {
 		// 这里不吃掉错误，而是让它打印出来，并且不设置 storage 标记，下次启动还会重试
 		logger.error('[play_history] 迁移过程中发生致命错误:', error)
@@ -238,7 +280,14 @@ function migratePlayHistory(): void {
  * 历史 bug 曾把 ms 时间戳除以 1000 写入，导致 2025-12 ~ 2026-08 的记录为秒级。
  */
 function migratePlayHistoryToMs(): void {
-	if (storage.getBoolean(PLAY_HISTORY_MS_MIGRATED_V1_KEY)) return
+	if (
+		isDataMigrationApplied(
+			'play_history_ms_v1',
+			PLAY_HISTORY_MS_MIGRATED_V1_KEY,
+		)
+	) {
+		return
+	}
 
 	try {
 		expoDb.withTransactionSync(() => {
@@ -246,8 +295,8 @@ function migratePlayHistoryToMs(): void {
 			expoDb.runSync(
 				`UPDATE play_history SET start_time = CAST(start_time * 1000 AS INTEGER) WHERE start_time < 10000000000`,
 			)
+			markDataMigrationApplied('play_history_ms_v1')
 		})
-		storage.set(PLAY_HISTORY_MS_MIGRATED_V1_KEY, true)
 		logger.info('[play_history] 秒级 start_time 已统一转为毫秒级')
 	} catch (error) {
 		// 不设置标记，下次启动重试
@@ -259,7 +308,14 @@ function migratePlayHistoryToMs(): void {
  * 旧共享歌单以 B 站身份为账号边界。新账号体系独立后，升级时将本地共享状态全部退回普通本地歌单。
  */
 function migrateIndependentAccountReset(): void {
-	if (storage.getBoolean(INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY)) return
+	if (
+		isDataMigrationApplied(
+			'independent_account_v1',
+			INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY,
+		)
+	) {
+		return
+	}
 
 	try {
 		expoDb.withTransactionSync(() => {
@@ -273,11 +329,11 @@ function migrateIndependentAccountReset(): void {
 					OR last_share_sync_at IS NOT NULL`,
 			)
 			expoDb.runSync(`DELETE FROM playlist_sync_queue`)
+			markDataMigrationApplied('independent_account_v1')
 		})
 
 		storage.remove('shared-playlist-members')
 		storage.remove('bbplayer_jwt')
-		storage.set(INDEPENDENT_ACCOUNT_MIGRATED_V1_KEY, true)
 		logger.info('[account] 已清空旧共享歌单状态与同步队列')
 	} catch (error) {
 		logger.error('[account] 清空旧共享歌单状态失败:', error)
@@ -314,32 +370,18 @@ export const useFastMigrations = (
 
 	useEffect(() => {
 		const runMigration = async () => {
-			const cachedVersion = storage.getNumber(SCHEMA_VERSION_KEY)
-			const latestVersion = migrations.journal.entries.at(-1)?.when ?? 0
-
-			if (cachedVersion === latestVersion) {
-				// SQL 迁移已是最新，检查/执行 JS 层迁移
-				migrateSortKeysV2()
-				migrateSortKeysV3()
-				migratePlayHistory()
-				migrateIndependentAccountReset()
-				migratePlayHistoryToMs()
-				dispatch({ type: 'migrated', payload: true })
-				return
-			}
-
 			dispatch({ type: 'migrating' })
 
 			try {
 				await migrate(db, migrations)
+				storage.remove('sort_key_migrated_v1')
+				storage.remove(SCHEMA_VERSION_KEY)
 				// SQL 迁移完成后立刻检查/执行 JS 层迁移
 				migrateSortKeysV2()
 				migrateSortKeysV3()
 				migratePlayHistory()
 				migrateIndependentAccountReset()
 				migratePlayHistoryToMs()
-
-				storage.set(SCHEMA_VERSION_KEY, latestVersion)
 				dispatch({ type: 'migrated', payload: true })
 			} catch (error) {
 				logger.error('迁移失败:', error)
