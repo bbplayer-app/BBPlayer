@@ -11,12 +11,13 @@ class SpectrumManager {
     private var fftBytes = ByteArray(fftSize)
 
     fun start(audioSessionId: Int) {
-        if (visualizer != null) {
-            stop()
-        }
+        stop()
 
+        var newVisualizer: Visualizer? = null
         try {
-            visualizer = Visualizer(audioSessionId).apply {
+            val initializedVisualizer = Visualizer(audioSessionId)
+            newVisualizer = initializedVisualizer
+            initializedVisualizer.apply {
                 captureSize = fftSize
                 setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                     override fun onWaveFormDataCapture(
@@ -37,9 +38,11 @@ class SpectrumManager {
                 }, Visualizer.getMaxCaptureRate() / 2, false, true)
                 enabled = true
             }
+            visualizer = initializedVisualizer
             isEnabled = true
         } catch (e: Exception) {
-            Log.e("Orpheus", "Failed to initialize Visualizer: ${e.message}")
+            runCatching { newVisualizer?.release() }
+            Log.w("Orpheus", "Spectrum visualizer is unavailable", e)
             isEnabled = false
         }
     }
@@ -67,7 +70,10 @@ class SpectrumManager {
         }
 
         try {
-            visualizer?.getFft(fftBytes)
+            if (visualizer?.getFft(fftBytes) != Visualizer.SUCCESS) {
+                destination.fill(0f)
+                return
+            }
 
             val n = fftBytes.size
             val outputSize = minOf(destination.size, n / 2)
