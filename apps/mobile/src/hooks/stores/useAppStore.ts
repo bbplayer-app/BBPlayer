@@ -203,6 +203,11 @@ export const useAppStore = create<AppState>()(
 							updates.allowSimultaneousPlayback,
 						)
 					}
+					if (updates.enableSpectrumVisualizer !== undefined) {
+						Orpheus.setSpectrumVisualizerEnabled(
+							updates.enableSpectrumVisualizer,
+						)
+					}
 				},
 
 				setEnableDataCollection: (value: boolean) => {

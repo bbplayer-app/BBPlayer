@@ -82,6 +82,10 @@ export type OrpheusEvents = {
 	}): void
 	onHeadlessEvent(event: OrpheusHeadlessEvent): void
 	onPlayerError(event: PlaybackErrorEvent): void
+	onSpectrumVisualizerError(event: {
+		audioSessionId: number
+		message: string
+	}): void
 	onPositionUpdate(event: {
 		position: number
 		duration: number
@@ -395,6 +399,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 建议复用长度为 `SPECTRUM_SIZE` 的 `Float32Array`，避免在动画循环中反复分配。
 	 */
 	updateSpectrumData(destination: Float32Array): void
+	/** 启用或停用原生频谱分析。停用后不会创建 Android Visualizer。 */
+	setSpectrumVisualizerEnabled(enabled: boolean): void
 	/**
 	 * 从 `uris` 中筛出原生 LRU 缓存当前已知的完整缓存 URI。
 	 *

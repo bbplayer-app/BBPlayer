@@ -4,7 +4,9 @@ import android.media.audiofx.Visualizer
 import android.util.Log
 import kotlin.math.hypot
 
-class SpectrumManager {
+class SpectrumManager(
+    private val onInitializationError: (audioSessionId: Int, error: Exception) -> Unit = { _, _ -> }
+) {
     private var visualizer: Visualizer? = null
     private var isEnabled = false
     private val fftSize = Visualizer.getCaptureSizeRange()[1] // Max capture size (usually 1024)
@@ -44,6 +46,7 @@ class SpectrumManager {
             runCatching { newVisualizer?.release() }
             Log.w("Orpheus", "Spectrum visualizer is unavailable", e)
             isEnabled = false
+            runCatching { onInitializationError(audioSessionId, e) }
         }
     }
 

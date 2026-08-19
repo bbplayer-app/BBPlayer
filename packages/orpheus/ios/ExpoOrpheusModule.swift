@@ -63,6 +63,7 @@ public class ExpoOrpheusModule: Module {
             "onIsPlayingChanged",
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
+            "onSpectrumVisualizerError",
             "onHeadlessEvent",
             "onTrackStarted",
             "onTrackFinished"
@@ -304,6 +305,10 @@ public class ExpoOrpheusModule: Module {
         if let ptr = pointer {
             AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: ptr, count: count)
         }
+    }
+
+    Function("setSpectrumVisualizerEnabled") { (_: Bool) in
+        // iOS 使用 AVAudioMix tap，不需要 Android Visualizer 的显式启停。
     }
   }
 }

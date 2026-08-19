@@ -1,11 +1,8 @@
 import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
 import { useEffect, useRef, useState } from 'react'
-import { AppState, PermissionsAndroid, Platform, View } from 'react-native'
+import { AppState, View } from 'react-native'
 import { useDerivedValue, useSharedValue } from 'react-native-reanimated'
-
-import { alert } from '@/components/modals/AlertModal'
-import useAppStore from '@/hooks/stores/useAppStore'
 
 interface SpectrumVisualizerProps {
 	isPlaying: boolean
@@ -32,56 +29,6 @@ export const SpectrumVisualizer = ({
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
 	)
-	const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-
-	const setSettings = useAppStore((state) => state.setSettings)
-
-	useEffect(() => {
-		const checkPermission = async () => {
-			if (Platform.OS === 'android') {
-				const granted = await PermissionsAndroid.check(
-					PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-				)
-				setHasPermission(granted)
-
-				if (!granted) {
-					alert(
-						'需要麦克风权限',
-						'音频频谱功能需要访问麦克风以分析音频数据。请授予权限以继续使用此功能。',
-						[
-							{
-								text: '取消',
-								onPress: () => {
-									setSettings({ enableSpectrumVisualizer: false })
-								},
-							},
-							{
-								text: '授权',
-								onPress: () => {
-									void PermissionsAndroid.request(
-										PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-									).then((result) => {
-										const isGranted =
-											result === PermissionsAndroid.RESULTS.GRANTED
-										setHasPermission(isGranted)
-										if (!isGranted) {
-											setSettings({ enableSpectrumVisualizer: false })
-										}
-									})
-								},
-							},
-						],
-						{ cancelable: false },
-					)
-				}
-			} else {
-				setHasPermission(true)
-			}
-		}
-
-		void checkPermission()
-	}, [setSettings])
-
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
 			setIsAppActive(nextAppState === 'active')
@@ -132,8 +79,6 @@ export const SpectrumVisualizer = ({
 	}, [geometry])
 
 	useEffect(() => {
-		if (!hasPermission) return
-
 		let animationFrameId: number
 		let lastFrameTime = 0
 		const TARGET_FPS = 30
@@ -235,11 +180,7 @@ export const SpectrumVisualizer = ({
 				cancelAnimationFrame(animationFrameId)
 			}
 		}
-	}, [frequencyData, isPlaying, isAppActive, hasPermission])
-
-	if (hasPermission !== true) {
-		return null
-	}
+	}, [frequencyData, isPlaying, isAppActive])
 
 	const containerSize = size + MAX_BAR_HEIGHT * 2
 
