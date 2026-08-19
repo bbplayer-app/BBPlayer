@@ -240,7 +240,7 @@ export const useAppStore = create<AppState>()(
 		{
 			name: 'app-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 2,
+			version: 3,
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
@@ -251,15 +251,32 @@ export const useAppStore = create<AppState>()(
 			}),
 
 			migrate: (persistedState, version) => {
-				const state = persistedState as Partial<AppState>
+				const state = persistedState as Partial<Omit<AppState, 'settings'>> & {
+					settings?: Partial<Settings>
+				}
+				let migratedState = state
+
 				if (version < 2) {
-					return {
-						...state,
+					migratedState = {
+						...migratedState,
 						bbplayerToken: null,
 						bbplayerAccount: null,
 					}
 				}
-				return persistedState
+				if (version < 3) {
+					// v2 中此值同时控制圆形封面和频谱；圆形封面现为固定样式，
+					// 因此将原值一对一迁移为独立的频谱开关。
+					migratedState = {
+						...migratedState,
+						settings: {
+							...migratedState.settings,
+							enableSpectrumVisualizer:
+								migratedState.settings?.enableSpectrumVisualizer ?? false,
+						},
+					}
+				}
+
+				return migratedState
 			},
 
 			merge: (persistedState, currentState) => {

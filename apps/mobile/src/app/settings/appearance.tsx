@@ -112,7 +112,7 @@ export default function AppearanceSettingsPage() {
 							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							开启后封面将变为圆形
+							在播放器封面周围显示实时音频频谱
 						</Text>
 					</View>
 					<UniversalSwitch

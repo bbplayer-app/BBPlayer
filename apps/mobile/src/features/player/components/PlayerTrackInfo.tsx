@@ -12,7 +12,6 @@ import {
 	useColorScheme,
 	View,
 } from 'react-native'
-import SquircleView from 'react-native-fast-squircle'
 import { Text, TouchableRipple, useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
@@ -28,8 +27,7 @@ import { SpectrumVisualizer } from './SpectrumVisualizer'
 
 const { width: screenWidth } = Dimensions.get('window')
 
-const COVER_SIZE_RECT = screenWidth - 80
-const COVER_SIZE_CIRCLE = screenWidth - 120
+const COVER_SIZE = screenWidth - 120
 
 export function TrackInfo({
 	onArtistPress,
@@ -74,12 +72,8 @@ export function TrackInfo({
 			? currentTrack?.title.charAt(0).toUpperCase()
 			: undefined)
 
-	const coverSize = enableSpectrumVisualizer
-		? COVER_SIZE_CIRCLE
-		: COVER_SIZE_RECT
-	const coverBorderRadius = enableSpectrumVisualizer
-		? coverSize / 2
-		: COVER_SIZE_RECT * 0.22
+	const coverSize = COVER_SIZE
+	const coverBorderRadius = coverSize / 2
 
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
@@ -129,83 +123,36 @@ export function TrackInfo({
 					testID='player-cover'
 				>
 					{!coverRef ? (
-						enableSpectrumVisualizer ? (
-							<LinearGradient
-								colors={[color1, color2]}
+						<LinearGradient
+							colors={[color1, color2]}
+							style={[
+								styles.coverGradient,
+								{ borderRadius: coverBorderRadius },
+							]}
+							start={{ x: 0, y: 0 }}
+							end={{ x: 1, y: 1 }}
+						>
+							<Text
 								style={[
-									styles.coverGradient,
-									{ borderRadius: coverBorderRadius },
+									styles.coverPlaceholderText,
+									{ fontSize: coverSize * 0.45 },
 								]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 1, y: 1 }}
 							>
-								<Text
-									style={[
-										styles.coverPlaceholderText,
-										{ fontSize: coverSize * 0.45 },
-									]}
-								>
-									{firstChar}
-								</Text>
-							</LinearGradient>
-						) : (
-							<SquircleView
-								style={[
-									styles.coverGradient,
-									{ borderRadius: coverBorderRadius, overflow: 'hidden' },
-								]}
-								cornerSmoothing={0.6}
-							>
-								<LinearGradient
-									colors={[color1, color2]}
-									style={StyleSheet.absoluteFill}
-									start={{ x: 0, y: 0 }}
-									end={{ x: 1, y: 1 }}
-								/>
-								<Text
-									style={[
-										styles.coverPlaceholderText,
-										{ fontSize: coverSize * 0.45 },
-									]}
-								>
-									{firstChar}
-								</Text>
-							</SquircleView>
-						)
-					) : enableSpectrumVisualizer ? (
+								{firstChar}
+							</Text>
+						</LinearGradient>
+					) : (
 						<Image
 							source={coverRef}
 							style={{
 								width: coverSize,
 								height: coverSize,
 								borderRadius: coverBorderRadius,
-								zIndex: -1,
 							}}
 							recyclingKey={currentTrack.uniqueKey}
 							cachePolicy={'disk'}
 							transition={300}
 						/>
-					) : (
-						<SquircleView
-							style={{
-								width: coverSize,
-								height: coverSize,
-								borderRadius: coverBorderRadius,
-								overflow: 'hidden',
-							}}
-							cornerSmoothing={0.6}
-						>
-							<Image
-								source={coverRef}
-								style={{
-									width: coverSize,
-									height: coverSize,
-								}}
-								recyclingKey={currentTrack.uniqueKey}
-								cachePolicy={'disk'}
-								transition={300}
-							/>
-						</SquircleView>
 					)}
 				</TouchableOpacity>
 			</Pressable>
@@ -261,7 +208,7 @@ const styles = StyleSheet.create({
 	coverContainer: {
 		alignItems: 'center',
 		justifyContent: 'center',
-		height: COVER_SIZE_RECT + 48,
+		height: COVER_SIZE + 48,
 		paddingHorizontal: 32,
 	},
 	coverGradient: {
