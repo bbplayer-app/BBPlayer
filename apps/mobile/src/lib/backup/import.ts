@@ -4,6 +4,7 @@ import * as SQLite from 'expo-sqlite'
 import JSZip from 'jszip'
 
 import { expoDb } from '@/lib/db/db'
+import { clearLegacyMigrationKeys } from '@/lib/db/migrations'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 
@@ -11,16 +12,6 @@ import { BACKUP_VERSION } from './types'
 import type { BackupManifest } from './types'
 
 const logger = log.extend('backup.import')
-
-const LEGACY_MIGRATION_KEYS = [
-	'db_schema_version',
-	'sort_key_migrated_v1',
-	'sort_key_migrated_v2', // gitleaks:allow
-	'sort_key_migrated_v3',
-	'play_history_migrated_v1',
-	'independent_account_migrated_v1',
-	'play_history_ms_migrated_v1',
-] as const
 
 /**
  * 从备份文件恢复数据。
@@ -84,9 +75,7 @@ export async function restoreBackup(filePath: string): Promise<void> {
 
 	// The restored database now owns migration state. Never let this device's
 	// legacy MMKV flags seed state for a different database.
-	for (const key of LEGACY_MIGRATION_KEYS) {
-		storage.remove(key)
-	}
+	clearLegacyMigrationKeys()
 
 	if (manifest.mmkv['app-storage']) {
 		storage.set('app-storage', manifest.mmkv['app-storage'])
