@@ -244,7 +244,7 @@ export default function SettingsPage() {
 					<Divider style={styles.divider} />
 					<List.Item
 						title='关于 BBPlayer'
-						description='版本、开源许可证'
+						description='版本、项目主页'
 						left={(props) => (
 							<List.Icon
 								{...props}

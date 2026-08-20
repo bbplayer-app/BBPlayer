@@ -91,24 +91,6 @@ export default function AboutSettingsPage() {
 				</Surface>
 				<View style={styles.section}>
 					<List.Item
-						title='开源许可证'
-						description='使用到的开源库'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='file-certificate'
-							/>
-						)}
-						right={(props) => (
-							<List.Icon
-								{...props}
-								icon='chevron-right'
-							/>
-						)}
-						onPress={() => router.push('/settings/about/licenses')}
-					/>
-					<Divider />
-					<List.Item
 						title='项目主页'
 						description='github.com/bbplayer-app/BBPlayer'
 						left={(props) => (
