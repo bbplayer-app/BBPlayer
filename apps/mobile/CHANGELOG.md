@@ -7,6 +7,10 @@
 
 ## [UNRELEASED]
 
+### Added
+
+- 支持通过 WebDAV 手动备份和恢复本地歌单与应用设置
+
 ### Changed
 
 - 集成 expo-observer navigation matrics

@@ -341,6 +341,10 @@ function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
+							name='settings/backup'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='settings/account'
 							options={{ headerShown: false }}
 						/>

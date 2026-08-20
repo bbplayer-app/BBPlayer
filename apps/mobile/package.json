@@ -7,7 +7,8 @@
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
 		"postinstall": "patch-package",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start",
-		"test": "jest --watchAll"
+		"test": "jest --watchAll",
+		"test:backup": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.webdav.config.cjs --runInBand && jest --config jest.backup.config.cjs"
 	},
 	"dependencies": {
 		"@bbplayer/heatmap": "workspace:*",
@@ -60,6 +61,7 @@
 		"expo-media-library": "~57.0.3",
 		"expo-observe": "~57.0.11",
 		"expo-router": "57.0.11",
+		"expo-secure-store": "~57.0.1",
 		"expo-sharing": "~57.0.10",
 		"expo-sqlite": "~57.0.1",
 		"expo-system-ui": "~57.0.2",
@@ -113,6 +115,7 @@
 		"runes2": "^1.1.4",
 		"set-cookie-parser": "^3.1.1",
 		"sonner-native": "^0.26.4",
+		"webdav": "^5.10.0",
 		"zustand": "^5.0.14"
 	},
 	"devDependencies": {

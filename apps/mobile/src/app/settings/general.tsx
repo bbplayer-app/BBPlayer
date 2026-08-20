@@ -1,6 +1,3 @@
-import { exportBackupToDownloads } from '@bbplayer/native'
-import * as Expo from 'expo'
-import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
@@ -12,13 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
-import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { createBackup } from '@/lib/backup/export'
-import { restoreBackup } from '@/lib/backup/import'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
@@ -80,77 +74,6 @@ export default function GeneralSettingsPage() {
 		isSharingRef.current = true
 		setIsSharing(true)
 		void performShareLog(setIsSharing, isSharingRef)
-	}
-
-	const [isExporting, setIsExporting] = useState(false)
-	const isExportingRef = useRef(false)
-
-	const handleExport = () => {
-		if (isExportingRef.current) return
-		isExportingRef.current = true
-		setIsExporting(true)
-		void (async () => {
-			try {
-				const uri = await createBackup()
-				const fileName = `backup-${Date.now()}.zip`
-
-				const downloadsUri = exportBackupToDownloads(
-					uri,
-					fileName,
-					'application/zip',
-				)
-				if (downloadsUri) {
-					toast.success('已导出到下载目录/bbplayer-backup')
-				} else {
-					toastAndLogError(
-						'导出失败',
-						new Error('无法写入文件'),
-						'UI.Settings.General',
-					)
-				}
-			} catch (e) {
-				toastAndLogError('导出失败', e, 'UI.Settings.General')
-			}
-			setIsExporting(false)
-			isExportingRef.current = false
-		})()
-	}
-
-	const [isImporting, setIsImporting] = useState(false)
-	const isImportingRef = useRef(false)
-
-	const handleImport = () => {
-		if (isImportingRef.current) return
-		isImportingRef.current = true
-		setIsImporting(true)
-		void (async () => {
-			try {
-				const result = await DocumentPicker.getDocumentAsync()
-				if (result.canceled) return
-				const assets = result.assets
-				if (!assets) return
-				const file = assets[0]
-				if (!file) return
-				await restoreBackup(file.uri)
-				alert(
-					'恢复完成',
-					'数据已恢复，需要重启应用才能完全生效。是否立即重启？',
-					[
-						{ text: '稍后' },
-						{
-							text: '立即重启',
-							onPress: () => {
-								void Expo.reloadAppAsync()
-							},
-						},
-					],
-				)
-			} catch (e) {
-				toastAndLogError('导入失败', e, 'UI.Settings.General')
-			}
-			setIsImporting(false)
-			isImportingRef.current = false
-		})()
 	}
 
 	return (
@@ -250,26 +173,6 @@ export default function GeneralSettingsPage() {
 						icon='speedometer'
 						size={20}
 						onPress={() => router.push('/performance')}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>导出数据</Text>
-					<IconButton
-						icon='export-variant'
-						size={20}
-						onPress={handleExport}
-						loading={isExporting}
-						disabled={isExporting}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>导入数据</Text>
-					<IconButton
-						icon='import'
-						size={20}
-						onPress={handleImport}
-						loading={isImporting}
-						disabled={isImporting}
 					/>
 				</View>
 			</ScrollView>

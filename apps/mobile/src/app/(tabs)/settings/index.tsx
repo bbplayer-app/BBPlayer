@@ -188,6 +188,24 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='备份与恢复'
+						description='本地备份、WebDAV 云端备份'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='cloud-sync'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/backup')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='通用'
 						description='更新、日志、调试'
 						left={(props) => (

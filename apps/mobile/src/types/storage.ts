@@ -29,6 +29,9 @@ export interface AppStorageSchema {
 	boot_splash_preload: string
 	enable_startup_profiling: boolean
 	enable_shake_profiling: boolean
+	webdav_backup_url: string
+	webdav_backup_username: string
+	webdav_backup_directory: string
 }
 
 export type StorageKey = keyof AppStorageSchema
