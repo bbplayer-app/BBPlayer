@@ -1,5 +1,9 @@
 import AppMetrics from 'expo-app-metrics'
-import { stopProfiling } from 'react-native-release-profiler'
+import { startProfiling, stopProfiling } from 'react-native-release-profiler'
+
+import { storage } from '@/utils/mmkv'
+
+export const PROFILING_DURATION_MS = 10_000
 
 export interface StartupMetrics {
 	coldLaunchTime: number | null
@@ -21,6 +25,8 @@ const noMetrics: StartupMetrics = {
 
 let metrics: StartupMetrics = { ...noMetrics }
 let fetched = false
+let startupProfilingActive = false
+let profilingActive = false
 const listeners = new Set<() => void>()
 
 export function subscribeToMetrics(fn: () => void) {
@@ -37,6 +43,53 @@ function emit() {
 
 export function getMetrics(): Readonly<StartupMetrics> {
 	return metrics
+}
+
+export function isStartupProfilingEnabled(): boolean {
+	return storage.getBoolean('enable_startup_profiling') ?? false
+}
+
+export function setStartupProfilingEnabled(enabled: boolean): void {
+	storage.set('enable_startup_profiling', enabled)
+}
+
+export function isShakeProfilingEnabled(): boolean {
+	return storage.getBoolean('enable_shake_profiling') ?? false
+}
+
+export function setShakeProfilingEnabled(enabled: boolean): void {
+	storage.set('enable_shake_profiling', enabled)
+}
+
+export function startStartupProfiling(): void {
+	if (!isStartupProfilingEnabled() || profilingActive) return
+
+	try {
+		profilingActive = startProfiling()
+		startupProfilingActive = profilingActive
+	} catch {
+		// profiling is unavailable in this build
+	}
+}
+
+export async function captureProfiling(
+	durationMs = PROFILING_DURATION_MS,
+): Promise<string | null> {
+	if (profilingActive) return null
+
+	try {
+		profilingActive = startProfiling()
+		if (!profilingActive) return null
+
+		await new Promise((resolve) => setTimeout(resolve, durationMs))
+		metrics.profilerTracePath = await stopProfiling(true)
+		emit()
+		return metrics.profilerTracePath
+	} catch {
+		return null
+	} finally {
+		profilingActive = false
+	}
 }
 
 function persistMetrics() {
@@ -89,14 +142,16 @@ async function fetchStartupMetrics(): Promise<void> {
 }
 
 export async function markPerfInteractive(): Promise<void> {
-	try {
-		await new Promise((resolve) => setTimeout(resolve, 3000))
-		metrics.profilerTracePath = await stopProfiling(
-			true,
-			'bbplayer-startup-trace',
-		)
-	} catch {
-		// profiling may already be stopped or not supported in this build
+	if (startupProfilingActive) {
+		try {
+			await new Promise((resolve) => setTimeout(resolve, 3000))
+			metrics.profilerTracePath = await stopProfiling(true)
+		} catch {
+			// profiling may already be stopped or not supported in this build
+		} finally {
+			startupProfilingActive = false
+			profilingActive = false
+		}
 	}
 
 	await fetchStartupMetrics()

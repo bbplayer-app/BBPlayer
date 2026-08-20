@@ -102,6 +102,7 @@
 		"react-native-release-profiler": "^0.4.4",
 		"react-native-safe-area-context": "~5.7.0",
 		"react-native-screens": "~4.25.1",
+		"react-native-shake": "^5.6.2",
 		"react-native-svg": "15.15.4",
 		"react-native-tab-view": "5.0.0-alpha.9",
 		"react-native-text-ticker": "^1.16.0",

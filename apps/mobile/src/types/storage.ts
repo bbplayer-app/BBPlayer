@@ -27,6 +27,8 @@ export interface AppStorageSchema {
 	'shared-playlist-members': string
 	'skin-storage': string
 	boot_splash_preload: string
+	enable_startup_profiling: boolean
+	enable_shake_profiling: boolean
 }
 
 export type StorageKey = keyof AppStorageSchema

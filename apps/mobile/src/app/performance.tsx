@@ -4,8 +4,13 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Button, Divider, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import UniversalSwitch from '@/components/common/UniversalSwitch'
 import {
 	getMetrics,
+	isShakeProfilingEnabled,
+	isStartupProfilingEnabled,
+	setShakeProfilingEnabled,
+	setStartupProfilingEnabled,
 	subscribeToMetrics,
 	type StartupMetrics,
 } from '@/lib/performance'
@@ -55,6 +60,12 @@ export default function PerformanceScreen() {
 	const theme = useTheme()
 	const router = useRouter()
 	const [metrics, setMetrics] = useState<StartupMetrics>(getMetrics)
+	const [startupProfilingEnabled, setStartupProfilingEnabledState] = useState(
+		isStartupProfilingEnabled,
+	)
+	const [shakeProfilingEnabled, setShakeProfilingEnabledState] = useState(
+		isShakeProfilingEnabled,
+	)
 
 	useEffect(() => {
 		return subscribeToMetrics(() => {
@@ -64,6 +75,16 @@ export default function PerformanceScreen() {
 
 	const handleRefresh = useCallback(() => {
 		setMetrics({ ...getMetrics() })
+	}, [])
+
+	const handleStartupProfilingChange = useCallback((enabled: boolean) => {
+		setStartupProfilingEnabled(enabled)
+		setStartupProfilingEnabledState(enabled)
+	}, [])
+
+	const handleShakeProfilingChange = useCallback((enabled: boolean) => {
+		setShakeProfilingEnabled(enabled)
+		setShakeProfilingEnabledState(enabled)
 	}, [])
 
 	return (
@@ -95,6 +116,38 @@ export default function PerformanceScreen() {
 					{ paddingBottom: insets.bottom + 40 },
 				]}
 			>
+				<View style={styles.settingRow}>
+					<View style={styles.settingLabel}>
+						<Text variant='bodyLarge'>自动记录启动性能</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: theme.colors.onSurfaceVariant }}
+						>
+							下次启动时采集，并保存到 Downloads 文件夹
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={startupProfilingEnabled}
+						onValueChange={handleStartupProfilingChange}
+					/>
+				</View>
+				<Divider />
+				<View style={styles.settingRow}>
+					<View style={styles.settingLabel}>
+						<Text variant='bodyLarge'>摇一摇记录性能</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: theme.colors.onSurfaceVariant }}
+						>
+							摇动设备后确认，记录 10 秒并保存到 Downloads 文件夹
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={shakeProfilingEnabled}
+						onValueChange={handleShakeProfilingChange}
+					/>
+				</View>
+				<Divider />
 				<MetricRow
 					label='冷启动'
 					value={metrics.coldLaunchTime}
@@ -174,6 +227,15 @@ const styles = StyleSheet.create({
 	metricLabel: {
 		flex: 1,
 		marginRight: 16,
+	},
+	settingRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingVertical: 12,
+		gap: 16,
+	},
+	settingLabel: {
+		flex: 1,
 	},
 	traceSection: {
 		paddingVertical: 12,

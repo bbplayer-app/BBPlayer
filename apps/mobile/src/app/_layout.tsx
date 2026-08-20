@@ -27,6 +27,7 @@ import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
+import { startStartupProfiling } from '@/lib/performance'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
@@ -47,6 +48,7 @@ Observe.configure({
 
 // 初始化 Sentry
 initializeSentry()
+startStartupProfiling()
 
 function onAppStateChange(status: AppStateStatus) {
 	if (Platform.OS !== 'web') {
