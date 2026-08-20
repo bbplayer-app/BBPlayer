@@ -130,6 +130,23 @@ class OrpheusQueueManager {
             currentIndex = backingIndex
         }
     }
+
+    /// Keeps the current track and its playback index unchanged while reversing only
+    /// the tracks that have not played yet. Shuffle traversal has no stable direction.
+    func reverseRemainingQueue() -> Bool {
+        guard shuffleIndices == nil,
+              currentIndex >= 0,
+              currentIndex < backingQueue.count - 1 else {
+            return false
+        }
+
+        let remainingRange = (currentIndex + 1)..<backingQueue.count
+        backingQueue.replaceSubrange(
+            remainingRange,
+            with: backingQueue[remainingRange].reversed()
+        )
+        return true
+    }
     
     // MARK: - Modification
     

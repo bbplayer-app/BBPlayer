@@ -28,6 +28,7 @@ class OrpheusPlayerManager: NSObject {
     var onPositionUpdate: ((Double, Double, Double) -> Void)?
     var onIsPlayingChanged: ((Bool) -> Void)?
     var onPlayerError: ((String) -> Void)?
+    var onQueueChanged: (() -> Void)?
     
     override init() {
         self.player = AVPlayer()
@@ -161,6 +162,12 @@ class OrpheusPlayerManager: NSObject {
         stopPlayback()
         updateNowPlayingInfo()
         saveState()
+    }
+
+    func reverseRemainingQueue() {
+        guard queueManager.reverseRemainingQueue() else { return }
+        saveState()
+        onQueueChanged?()
     }
     
     private func stopPlayback() {

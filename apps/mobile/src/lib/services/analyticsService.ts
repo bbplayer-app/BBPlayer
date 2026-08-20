@@ -17,7 +17,7 @@ type PlayerAction =
 	| 'skip_prev'
 	| 'shuffle'
 	| 'repeat'
-type PlayerQueueAction = 'open_queue' | 'play_item'
+type PlayerQueueAction = 'open_queue' | 'play_item' | 'reverse_remaining'
 type PlaylistSyncAction = 'sync_bilibili' | 'sync_external'
 
 class AnalyticsService {

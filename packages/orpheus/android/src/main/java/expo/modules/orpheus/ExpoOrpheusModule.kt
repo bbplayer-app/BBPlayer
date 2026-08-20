@@ -645,6 +645,34 @@ class ExpoOrpheusModule : Module() {
             items.map(::mediaItemToTrackRecord)
         }
 
+        AsyncFunction("reverseRemainingQueue") Coroutine { ->
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                // Shuffle traversal has its own order. The queue UI disables this action
+                // while shuffle is enabled, and the native guard keeps the API safe for
+                // callers outside that UI.
+                if (service.shuffleManager.isEnabled) return@withServiceAndPlayerOnMainThread
+
+                val currentIndex = currentPlayer.currentMediaItemIndex
+                val lastIndex = currentPlayer.mediaItemCount - 1
+                if (currentIndex == C.INDEX_UNSET || currentIndex >= lastIndex) {
+                    return@withServiceAndPlayerOnMainThread
+                }
+
+                // Build the reversed pending suffix in one pass, then replace it in a
+                // single playlist operation. The current item is outside that range, so
+                // Media3 keeps its playback position and play state intact.
+                val reversedRemaining = ArrayList<MediaItem>(lastIndex - currentIndex)
+                for (index in lastIndex downTo currentIndex + 1) {
+                    reversedRemaining.add(currentPlayer.getMediaItemAt(index))
+                }
+                currentPlayer.replaceMediaItems(
+                    currentIndex + 1,
+                    currentPlayer.mediaItemCount,
+                    reversedRemaining
+                )
+            }
+        }
+
         AsyncFunction("setSleepTimer") { durationMs: Long ->
             OrpheusMusicService.instance?.startSleepTimer(durationMs)
             return@AsyncFunction null

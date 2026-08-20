@@ -22,9 +22,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
+import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
+import { analyticsService } from '@/lib/services/analyticsService'
+import * as Haptics from '@/utils/haptics'
 
 const TrackItem = memo(
 	({
@@ -113,6 +116,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const flatListRef = useRef<LegendListRef>(null)
 
 	const queue = usePlayerQueueStore((state) => state.tracks)
+	const { data: shuffleMode } = useShuffleMode()
 
 	const currentIndex = useMemo(() => {
 		if (!currentTrackId) return -1
@@ -134,6 +138,12 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	const removeTrackHandler = useCallback(async (index: number) => {
 		await Orpheus.removeTrack(index)
+	}, [])
+
+	const reverseRemainingQueueHandler = useCallback(async () => {
+		void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+		await Orpheus.reverseRemainingQueue()
+		void analyticsService.logPlayerQueueAction('reverse_remaining')
 	}, [])
 
 	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
@@ -196,17 +206,31 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 						}}
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
-						<IconButton
-							icon='content-save-outline'
-							onPress={() => {
-								if (queue.length > 0) {
-									useModalStore.getState().open('SaveQueueToPlaylist', {
-										trackIds: queue.map((t) => t.id),
-									})
+						<View style={{ flexDirection: 'row' }}>
+							<IconButton
+								icon='sort-reverse-variant'
+								onPress={() => {
+									void reverseRemainingQueueHandler()
+								}}
+								disabled={
+									queue.length === 0 ||
+									currentIndex === -1 ||
+									shuffleMode !== false
 								}
-							}}
-							disabled={queue.length === 0}
-						/>
+								testID='player-queue-reverse-remaining'
+							/>
+							<IconButton
+								icon='content-save-outline'
+								onPress={() => {
+									if (queue.length > 0) {
+										useModalStore.getState().open('SaveQueueToPlaylist', {
+											trackIds: queue.map((t) => t.id),
+										})
+									}
+								}}
+								disabled={queue.length === 0}
+							/>
+						</View>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>
 						<LegendList

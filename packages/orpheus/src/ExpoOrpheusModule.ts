@@ -255,6 +255,12 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	getQueue(): Promise<Track[]>
 	/**
+	 * 保持当前曲目不变，反转其后的待播放队列。
+	 *
+	 * 随机播放开启时不会改变队列。
+	 */
+	reverseRemainingQueue(): Promise<void>
+	/**
 	 * 将曲目追加到队列末尾。
 	 *
 	 * `clearQueue` 为 true 时会先清空现有队列。`startFromId` 命中本次追加的曲目时，

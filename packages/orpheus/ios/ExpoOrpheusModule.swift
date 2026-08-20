@@ -50,6 +50,10 @@ public class ExpoOrpheusModule: Module {
         manager.onIsPlayingChanged = { [weak self] isPlaying in
             self?.sendEvent("onIsPlayingChanged", ["status": isPlaying])
         }
+
+        manager.onQueueChanged = { [weak self] in
+            self?.sendEvent("onQueueChanged", [:])
+        }
     }
 
     public func definition() -> ModuleDefinition {
@@ -67,7 +71,8 @@ public class ExpoOrpheusModule: Module {
             "onSpectrumVisualizerEnabledChanged",
             "onHeadlessEvent",
             "onTrackStarted",
-            "onTrackFinished"
+            "onTrackFinished",
+            "onQueueChanged"
         )
 
         OnCreate {
@@ -185,6 +190,10 @@ public class ExpoOrpheusModule: Module {
 
     AsyncFunction("clear") {
          OrpheusPlayerManager.shared.clearQueue()
+    }
+
+    AsyncFunction("reverseRemainingQueue") {
+        OrpheusPlayerManager.shared.reverseRemainingQueue()
     }
 
     AsyncFunction("setPlaybackSpeed") { (speed: Double) in
