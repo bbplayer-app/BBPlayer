@@ -95,6 +95,8 @@ export default function EditLyricsModal({
 			tlyric: tlyric || undefined,
 			romalrc: romalrc || undefined,
 			updateTime: Date.now(),
+			manualSkip: false,
+			errorMessage: undefined,
 		}
 
 		const result = await lyricService.saveLyricsToFile(newLyricData, uniqueKey)
@@ -134,6 +136,7 @@ export default function EditLyricsModal({
 					{
 						text: '仍要保存',
 						onPress: saveLyrics,
+						afterModalHostClosed: false,
 					},
 				],
 			)
@@ -148,6 +151,7 @@ export default function EditLyricsModal({
 				{ text: '取消' },
 				{
 					text: '清除',
+					afterModalHostClosed: false,
 					onPress: async () => {
 						const result = await lyricService.skipLyric(uniqueKey)
 						if (result.isErr()) {
@@ -161,7 +165,15 @@ export default function EditLyricsModal({
 
 						queryClient.setQueryData(
 							lyricsQueryKeys.smartFetchLyrics(uniqueKey),
-							result.value,
+							{
+								...result.value,
+								lrc: undefined,
+								tlyric: undefined,
+								romalrc: undefined,
+								manualSkip: true,
+								errorMessage: '已跳过歌词获取，但你可以重新搜索或编辑歌词',
+								misc: undefined,
+							},
 						)
 						toast.success('歌词已清除')
 						close('EditLyrics')

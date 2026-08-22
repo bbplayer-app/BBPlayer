@@ -18,8 +18,11 @@ export const lyricsQueryKeys = {
 
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
+	// oxlint-disable-next-line @tanstack/query/exhaustive-deps -- 同一 uniqueKey 的歌词是唯一缓存实体，track 仅供缓存未命中时获取歌词。
 	return useQuery({
-		queryKey: [...lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey), track],
+		// 缓存以曲目唯一标识为准，保证编辑、清除和偏移量调整写入的
+		// lyricsQueryKeys.smartFetchLyrics(uniqueKey) 能立即更新当前歌词页。
+		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
 			if (result.isErr()) {

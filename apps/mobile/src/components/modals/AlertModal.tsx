@@ -7,6 +7,8 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 export interface AlertButton {
 	text: string
 	onPress?: () => void
+	/** 默认等待所有 modal 关闭后再执行，设为 false 可在关闭当前 Alert 后立即执行。 */
+	afterModalHostClosed?: boolean
 }
 
 export interface AlertOptions {
@@ -44,6 +46,10 @@ export default function AlertModal({
 			case 1: {
 				const handlePress = () => {
 					close('Alert')
+					if (button.afterModalHostClosed === false) {
+						button.onPress?.()
+						return
+					}
 					useModalStore.getState().doAfterModalHostClosed(() => {
 						button.onPress?.()
 					})
