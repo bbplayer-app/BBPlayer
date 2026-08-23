@@ -11,11 +11,18 @@ package io.github.proify.lyricon.lyric.model
 import kotlinx.serialization.Serializable
 
 /**
- * 歌词元数据模型类
+ * 歌词元数据模型类。
+ *
  * 使用委托模式继承自 [Map]，用于存储和获取歌词相关的配置信息。
- * 提供了多种基本类型的扩展获取方法，并包含默认值处理。
+ * 底层 [map] 为只读的 `Map<String, String?>`，对象本身不可变，因此可以安全地在
+ * 各处共享；委托给 [Map] 的遍历/查询行为与普通 `Map` 完全一致。
+ *
+ * 提供多种基本类型的扩展获取方法（[getDouble]、[getBoolean]、[getFloat]、
+ * [getLong]、[getInt]、[getString]）：键不存在或类型解析失败时返回 [default]。
  *
  * @property map 存储元数据的底层映射表，键和值均为字符串类型（值可为空）
+ *
+ * @see lyricMetadataOf
  */
 @Serializable
 data class LyricMetadata(
@@ -99,9 +106,12 @@ data class LyricMetadata(
 }
 
 /**
- * 构建 [LyricMetadata] 的便捷工厂函数
- * * @param pairs 键值对序列
+ * 构建 [LyricMetadata] 的便捷工厂函数。
+ *
+ * @param pairs 键值对序列
  * @return 包含指定数据的 LyricMetadata 实例
+ *
+ * @see LyricMetadata
  */
 fun lyricMetadataOf(vararg pairs: Pair<String, String?>): LyricMetadata =
     LyricMetadata(mapOf(*pairs))
