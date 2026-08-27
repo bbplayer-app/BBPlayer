@@ -6,7 +6,7 @@ import {
 import * as Sentry from '@sentry/react-native'
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
-import { Observe, ObserveRoot, useObserve } from 'expo-observe'
+import { Observe, ObserveRoot } from 'expo-observe'
 import { router, Stack } from 'expo-router'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
@@ -22,7 +22,8 @@ import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
-import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
+import { serializeCookieObject } from '@/hooks/stores/useAppStore'
+import useAppStoreObj from '@/hooks/stores/useAppStore'
 import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
@@ -80,7 +81,7 @@ const checkOverlayPermissionOnStart = async () => {
 
 function runAppInit() {
 	try {
-		useAppStore.getState()
+		useAppStoreObj.getState()
 
 		registerUpdatePrefetch()
 
@@ -104,14 +105,14 @@ function runAppInit() {
 		void checkOverlayPermissionOnStart()
 
 		try {
-			const settings = useAppStore.getState().settings
+			const settings = useAppStoreObj.getState().settings
 			void Orpheus.setDownloadMaxParallelTasks(
 				settings.downloadMaxParallelTasks,
 			)
 			void Orpheus.setAllowSimultaneousPlayback(
 				settings.allowSimultaneousPlayback,
 			)
-			const cookie = useAppStore.getState().bilibiliCookie
+			const cookie = useAppStoreObj.getState().bilibiliCookie
 			if (cookie) {
 				logger.debug('初始化 orpheus bilibili cookie')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
@@ -130,7 +131,6 @@ function runAppInit() {
 
 function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
-	const { markInteractive } = useObserve()
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
 	useCheckUpdate()
@@ -166,14 +166,12 @@ function RootLayout() {
 
 	useEffect(() => {
 		runAppInit()
-		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state, set-state-in-effect
 		setIsReady(true)
 	}, [])
 
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
-			markInteractive()
-
 			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 			playlistSyncWorker.recoverStuckRows().catch((error) => {
 				logger.error('恢复同步任务失败:', error)
@@ -184,7 +182,7 @@ function RootLayout() {
 				router.push('/onboarding')
 			}
 		}
-	}, [isReady, migrationsSuccess, markInteractive])
+	}, [isReady, migrationsSuccess])
 
 	useEffect(() => {
 		if (migrationsError) {
