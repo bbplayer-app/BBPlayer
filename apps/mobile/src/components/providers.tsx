@@ -2,6 +2,7 @@ import { useMMKVDevTools } from '@rozenite/mmkv-plugin'
 import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
 import { useTanStackQueryDevTools } from '@rozenite/tanstack-query-plugin'
 import * as Sentry from '@sentry/react-native'
+import { BottomSheetProvider } from '@swmansion/react-native-bottom-sheet'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
@@ -105,9 +106,13 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 						<GestureHandlerRootView style={styles.container}>
 							<QueryClientProvider client={queryClient}>
 								<PaperProvider theme={paperTheme}>
-									{__DEV__ ? <DevTools /> : null}
-									<ShakeProfiler />
-									<ShimmerProvider duration={1500}>{children}</ShimmerProvider>
+									<BottomSheetProvider>
+										{__DEV__ ? <DevTools /> : null}
+										<ShakeProfiler />
+										<ShimmerProvider duration={1500}>
+											{children}
+										</ShimmerProvider>
+									</BottomSheetProvider>
 								</PaperProvider>
 							</QueryClientProvider>
 						</GestureHandlerRootView>

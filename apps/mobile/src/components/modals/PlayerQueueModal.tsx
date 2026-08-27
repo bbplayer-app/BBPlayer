@@ -2,20 +2,10 @@ import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { LegendList } from '@legendapp/list/react-native'
-import {
-	TrueSheet,
-	type TrueSheetProps,
-} from '@lodev09/react-native-true-sheet'
-import {
-	memo,
-	useCallback,
-	useMemo,
-	useRef,
-	useState,
-	type RefObject,
-} from 'react'
-import { View } from 'react-native'
-import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
+import { ModalBottomSheet } from '@swmansion/react-native-bottom-sheet'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useWindowDimensions, View } from 'react-native'
+import { Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -105,15 +95,14 @@ const TrackItem = memo(
 
 TrackItem.displayName = 'TrackItem'
 
-interface PlayerQueueModalProps extends TrueSheetProps {
-	sheetRef?: RefObject<TrueSheet | null>
-}
-
-function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
+function PlayerQueueModal() {
 	const currentTrackId = useCurrentTrackId()
 	const theme = useTheme()
-	const [didInitialScroll, setDidInitialScroll] = useState(false)
+	const { height: windowHeight } = useWindowDimensions()
 	const flatListRef = useRef<LegendListRef>(null)
+	const didInitialScrollRef = useRef(false)
+	const sheetIndex = usePlayerQueueSheetStore((state) => state.index)
+	const setSheetIndex = usePlayerQueueSheetStore((state) => state.setIndex)
 
 	const queue = usePlayerQueueStore((state) => state.tracks)
 	const { data: shuffleMode } = useShuffleMode()
@@ -157,38 +146,49 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 				index={index}
 			/>
 		),
-		[switchTrackHandler, removeTrackHandler],
+		[removeTrackHandler, switchTrackHandler],
 	)
 
 	const scrollToCurrent = useCallback(() => {
-		if (currentIndex === -1 || !queue.length || didInitialScroll) return
+		if (currentIndex === -1 || !queue.length || didInitialScrollRef.current) {
+			return
+		}
 		void flatListRef.current?.scrollToIndex({
 			animated: false,
 			index: currentIndex,
 			viewPosition: 0.5,
 		})
-		setDidInitialScroll(true)
-	}, [currentIndex, queue.length, didInitialScroll])
+		didInitialScrollRef.current = true
+	}, [currentIndex, queue.length])
+
+	useEffect(() => {
+		if (sheetIndex === 0) {
+			didInitialScrollRef.current = false
+			return
+		}
+		scrollToCurrent()
+	}, [scrollToCurrent, sheetIndex])
 
 	return (
-		<TrueSheet
-			name='playerQueueModal'
-			ref={sheetRef}
-			detents={[0.75]}
-			cornerRadius={24}
-			backgroundColor={theme.colors.elevation.level1}
-			scrollable
-			onMount={scrollToCurrent}
-			onDidPresent={() => {
-				usePlayerQueueSheetStore.getState().setOpen(true)
-			}}
-			onDidDismiss={() => {
-				usePlayerQueueSheetStore.getState().setOpen(false)
-				setDidInitialScroll(false)
-			}}
-			{...props}
+		<ModalBottomSheet
+			detents={[0, windowHeight * 0.75, windowHeight]}
+			index={sheetIndex}
+			onIndexChange={setSheetIndex}
+			scrimColor='rgba(0, 0, 0, 0.5)'
+			surface={
+				<View
+					style={{
+						position: 'absolute',
+						top: 0,
+						right: 0,
+						bottom: 0,
+						left: 0,
+						backgroundColor: theme.colors.elevation.level1,
+					}}
+				/>
+			}
 		>
-			<GestureHandlerRootView style={{ flex: 1 }}>
+			<View style={{ flex: 1 }}>
 				<View
 					style={{
 						height: '100%',
@@ -247,8 +247,8 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 						/>
 					</View>
 				</View>
-			</GestureHandlerRootView>
-		</TrueSheet>
+			</View>
+		</ModalBottomSheet>
 	)
 }
 

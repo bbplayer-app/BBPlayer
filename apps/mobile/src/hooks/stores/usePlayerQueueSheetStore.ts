@@ -1,27 +1,25 @@
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { create } from 'zustand'
 
 interface PlayerQueueSheetState {
 	isOpen: boolean
+	index: number
 	open: () => Promise<void>
 	close: () => Promise<void>
+	setIndex: (index: number) => void
 	setOpen: (value: boolean) => void
 }
 
 export const usePlayerQueueSheetStore = create<PlayerQueueSheetState>(
 	(set) => ({
 		isOpen: false,
+		index: 0,
 
-		open: async () =>
-			TrueSheet.present('playerQueueModal').catch(() => {
-				// Ignore error if view not found or already presented
-			}),
+		open: async () => set({ isOpen: true, index: 1 }),
 
-		close: async () =>
-			TrueSheet.dismiss('playerQueueModal').catch(() => {
-				// Ignore error if view not found or already dismissed
-			}),
+		close: async () => set({ isOpen: false, index: 0 }),
 
-		setOpen: (value: boolean) => set({ isOpen: value }),
+		setIndex: (index) => set({ index, isOpen: index !== 0 }),
+
+		setOpen: (isOpen) => set({ isOpen, index: isOpen ? 1 : 0 }),
 	}),
 )

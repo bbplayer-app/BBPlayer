@@ -271,6 +271,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 			}),
 			'expo-video',
+			'react-native-nitro-fetch',
 		],
 		experiments: {
 			reactCompiler: true,

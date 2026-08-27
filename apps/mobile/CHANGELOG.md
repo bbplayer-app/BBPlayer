@@ -18,6 +18,7 @@
 - 使用 `react-native-nitro-fetch` 替换内置 fetch
 - 彻底移除弹幕相关代码
 - 备份格式升级至 v2；旧版本备份不再支持导入
+- 将 PlayerQueue 切换到 `@swmansion/react-native-bottom-sheet` 实现
 
 ### Fixed
 
