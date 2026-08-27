@@ -272,6 +272,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			}),
 			'expo-video',
 			'react-native-nitro-fetch',
+			'expo-secure-store',
 		],
 		experiments: {
 			reactCompiler: true,

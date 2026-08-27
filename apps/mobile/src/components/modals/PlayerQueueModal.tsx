@@ -10,7 +10,7 @@ import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -96,7 +96,7 @@ const TrackItem = memo(
 TrackItem.displayName = 'TrackItem'
 
 function PlayerQueueModal() {
-	const currentTrackId = useCurrentTrackId()
+	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
 	const { height: windowHeight } = useWindowDimensions()
 	const flatListRef = useRef<LegendListRef>(null)
