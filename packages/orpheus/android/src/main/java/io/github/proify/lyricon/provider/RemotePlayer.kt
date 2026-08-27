@@ -101,7 +101,7 @@ interface RemotePlayer {
      *
      * 中心服务可根据 [PlaybackState.position]、播放速度和更新时间计算实时进度。
      *
-     * @param state 播放状态，传入 `null` 表示停止使用该模式。
+     * @param state 播放状态，传入 null 表示停止使用该模式。
      * @return 命令是否成功发送。
      */
     fun setPlaybackState(state: PlaybackState?): Boolean

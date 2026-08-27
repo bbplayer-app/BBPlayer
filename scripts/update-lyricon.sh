@@ -15,7 +15,7 @@ echo "🔄 Updating Lyricon source to version/commit: $VERSION"
 
 # 1. Clone the repository
 echo "📥 Cloning $LYRICON_REPO..."
-git clone "$LYRICON_REPO" "$TEMP_DIR"
+git clone "$LYRICON_REPO" "$TEMP_DIR" --depth=1
 cd "$TEMP_DIR"
 git checkout "$VERSION"
 cd - > /dev/null

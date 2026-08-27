@@ -22,8 +22,23 @@ import kotlinx.serialization.Serializable
 @Serializable
 class ProviderMetadata(
     private val map: Map<String, String?> = emptyMap()
-) : Map<String, String?> by map, Parcelable
+) : Map<String, String?> by map, Parcelable {
 
-/** 使用键值对快速创建 [ProviderMetadata]。 */
+    companion object {
+        /** 使用键值对快速创建 [ProviderMetadata]。 */
+        fun of(vararg pairs: Pair<String, String?>): ProviderMetadata =
+            ProviderMetadata(mapOf(*pairs))
+    }
+}
+
+/**
+ * 使用键值对快速创建 [ProviderMetadata]。
+ *
+ * @deprecated 使用 [ProviderMetadata.of]。
+ */
+@Deprecated(
+    message = "Use ProviderMetadata.of(...) instead",
+    replaceWith = ReplaceWith("ProviderMetadata.of(*pairs)")
+)
 fun providerMetadataOf(vararg pairs: Pair<String, String?>): ProviderMetadata =
-    ProviderMetadata(mapOf(*pairs))
+    ProviderMetadata.of(*pairs)

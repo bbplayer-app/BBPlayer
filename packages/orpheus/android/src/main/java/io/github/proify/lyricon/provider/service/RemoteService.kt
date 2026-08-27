@@ -95,15 +95,19 @@ class ConnectionListenerBuilder(
     var onDisconnected: ((LyriconProvider) -> Unit)? = null,
     var onConnectTimeout: ((LyriconProvider) -> Unit)? = null
 ) {
+    /** 设置首次连接成功的回调，返回自身以便链式调用。 */
     fun onConnected(block: (LyriconProvider) -> Unit): ConnectionListenerBuilder =
         apply { onConnected = block }
 
+    /** 设置重新连接成功的回调，返回自身以便链式调用。 */
     fun onReconnected(block: (LyriconProvider) -> Unit): ConnectionListenerBuilder =
         apply { onReconnected = block }
 
+    /** 设置连接断开的回调，返回自身以便链式调用。 */
     fun onDisconnected(block: (LyriconProvider) -> Unit): ConnectionListenerBuilder =
         apply { onDisconnected = block }
 
+    /** 设置注册超时的回调，返回自身以便链式调用。 */
     fun onConnectTimeout(block: (LyriconProvider) -> Unit): ConnectionListenerBuilder =
         apply { onConnectTimeout = block }
 }

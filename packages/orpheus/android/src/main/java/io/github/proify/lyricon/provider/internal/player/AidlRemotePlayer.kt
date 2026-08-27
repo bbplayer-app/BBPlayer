@@ -4,7 +4,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.proify.lyricon.provider.impl
+package io.github.proify.lyricon.provider.internal.player
 
 import android.media.session.PlaybackState
 import android.os.Build
@@ -14,38 +14,55 @@ import androidx.annotation.RequiresApi
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.IRemotePlayer
 import io.github.proify.lyricon.provider.RemotePlayer
-import io.github.proify.lyricon.provider.deflate
-import io.github.proify.lyricon.provider.json
+import io.github.proify.lyricon.provider.internal.wire.deflate
+import io.github.proify.lyricon.provider.internal.wire.json
 import java.nio.ByteBuffer
 
 /**
- * [RemotePlayer] 的 Binder 代理实现。
+ * [RemotePlayer] 的 Binder 通道实现。
  *
  * 普通播放器命令通过 [IRemotePlayer] 发送，播放进度写入共享内存，减少高频 Binder 调用。
  */
 @RequiresApi(Build.VERSION_CODES.O_MR1)
-internal class RemotePlayerProxy : RemotePlayer {
-    /** 当前连接状态是否允许发送播放器命令。 */
-    @Volatile
-    var allowSending: Boolean = false
+internal class AidlRemotePlayer : RemotePlayer {
 
+    /** 当前连接状态是否允许发送播放器命令（由连接端点随状态转移更新）。 */
+    @Volatile
+    var isSendingEnabled: Boolean = false
+
+    /** 远端播放器 AIDL 代理，null 表示未连接。 */
     private var remotePlayer: IRemotePlayer? = null
-    private var positionMemory: SharedMemory? = null
+
+    /** 中心服务返回的共享内存句柄。 */
+    private var positionSharedMemory: SharedMemory? = null
+
+    /** [positionSharedMemory] 的读写映射缓冲。 */
     private var positionBuffer: ByteBuffer? = null
 
     override val isActive: Boolean
         get() = remotePlayer?.asBinder()?.isBinderAlive == true
 
-    /** 绑定或清空远端播放器 Binder。 */
-    fun bindRemoteService(player: IRemotePlayer?) {
-        closePositionMemory()
+    /**
+     * 绑定或清空远端播放器 Binder。
+     *
+     * 会同时重建位置共享内存映射；映射失败时立即关闭已取得的共享内存，避免泄漏。
+     *
+     * @param player 远端播放器，null 表示清空。
+     */
+    fun attachPlayer(player: IRemotePlayer?) {
+        detachPositionMemory()
         remotePlayer = player
-        positionMemory = runCatching { player?.positionMemory }
+        positionSharedMemory = runCatching { player?.positionMemory }
             .onFailure { Log.e(TAG, "Failed to get position memory", it) }
             .getOrNull()
-        positionBuffer = runCatching { positionMemory?.mapReadWrite() }
-            .onFailure { Log.e(TAG, "Failed to map position memory", it) }
-            .getOrNull()
+        positionBuffer = try {
+            positionSharedMemory?.mapReadWrite()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to map position memory", e)
+            positionSharedMemory?.close()
+            positionSharedMemory = null
+            null
+        }
     }
 
     override fun setSong(song: Song?): Boolean = send {
@@ -61,7 +78,7 @@ internal class RemotePlayerProxy : RemotePlayer {
     }
 
     override fun setPosition(position: Long): Boolean {
-        if (!allowSending) return false
+        if (!isSendingEnabled) return false
 
         return try {
             positionBuffer?.putLong(0, position.coerceAtLeast(0L))
@@ -92,9 +109,14 @@ internal class RemotePlayerProxy : RemotePlayer {
         setPlaybackState2(state)
     }
 
+    /**
+     * 在允许发送且已连接时执行一次远端命令。
+     *
+     * @return 命令是否成功发出。
+     */
     private inline fun send(block: IRemotePlayer.() -> Unit): Boolean {
         val player = remotePlayer
-        if (!allowSending || player == null) return false
+        if (!isSendingEnabled || player == null) return false
 
         return try {
             block(player)
@@ -105,13 +127,14 @@ internal class RemotePlayerProxy : RemotePlayer {
         }
     }
 
-    private fun closePositionMemory() {
+    /** 关闭位置共享内存映射并释放句柄。 */
+    private fun detachPositionMemory() {
         positionBuffer = null
-        positionMemory?.close()
-        positionMemory = null
+        positionSharedMemory?.close()
+        positionSharedMemory = null
     }
 
     private companion object {
-        private const val TAG = "RemotePlayerProxy"
+        private const val TAG = "AidlRemotePlayer"
     }
 }

@@ -9,14 +9,21 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 
 /**
  * 规范化歌词单词列表。
- * 处理无效的时间戳、修正持续时间、合并碎片单词以及填充空隙。
+ *
+ * 处理无效的时间戳、修正持续时间、合并碎片单词以及填充空隙，返回新列表，
+ * **不修改原列表及原单词**。常作为 [io.github.proify.lyricon.lyric.model.LyricLine.normalize]
+ * 等规范化流程的中间步骤。
  *
  * 规则说明：
- * - 空文本单词会被丢弃，空白文本会保留为分隔符。
- * - 时间有效的单词必须满足 begin >= 0 且 end > begin。
- * - 时间无效的单词会先缓存，之后按可用时间空隙填充，或合并到相邻有效单词。
- * - 正数 duration 会保留；duration 非正数时使用 end - begin 兜底。
+ * - 空文本单词会被丢弃，空白文本会保留为分隔符；
+ * - 时间有效的单词必须满足 `begin >= 0` 且 `end > begin`；
+ * - 时间无效的单词会先缓存，之后按可用时间空隙填充，或合并到相邻有效单词；
+ * - `duration > 0` 会保留；`duration <= 0` 时使用 `end - begin` 兜底；
  * - ASCII 字母/数字片段之间如果没有空白分隔符，会按同一个英文单词合并。
+ *
+ * @return 规范化后的新列表；原列表不含任何有效文本时返回空列表
+ *
+ * @see LyricWord
  */
 fun List<LyricWord>.normalize(): List<LyricWord> {
     // 1. 过滤掉没有文本内容的单词

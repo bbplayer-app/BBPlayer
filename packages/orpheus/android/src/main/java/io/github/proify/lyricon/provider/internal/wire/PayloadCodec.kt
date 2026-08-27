@@ -4,13 +4,13 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.proify.lyricon.provider
+package io.github.proify.lyricon.provider.internal.wire
 
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 
-/** 模块内统一使用的宽松 JSON 编解码器。 */
+/** 模块内跨进程载荷统一使用的宽松 JSON 编解码器。 */
 internal val json: Json = Json {
     coerceInputValues = true     // 尝试转换类型
     ignoreUnknownKeys = true     // 忽略未知字段

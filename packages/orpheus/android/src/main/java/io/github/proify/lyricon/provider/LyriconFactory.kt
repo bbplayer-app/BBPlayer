@@ -10,8 +10,8 @@ import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.os.Build
-import io.github.proify.lyricon.provider.impl.EmptyProvider
-import io.github.proify.lyricon.provider.impl.LyriconProviderImpl
+import io.github.proify.lyricon.provider.internal.LyriconProviderImpl
+import io.github.proify.lyricon.provider.internal.registration.CentralBootReceiver
 
 /** 创建 [LyriconProvider] 的工厂。 */
 object LyriconFactory {
@@ -82,12 +82,14 @@ object LyriconFactory {
         return EmptyProvider(providerInfo)
     }
 
+    /** 初始化中央启动广播接收器（幂等）。 */
     private fun initialize(context: Context) {
-        if (!CentralServiceReceiver.isInitialized) {
-            CentralServiceReceiver.initialize(context)
+        if (!CentralBootReceiver.isInitialized) {
+            CentralBootReceiver.initialize(context)
         }
     }
 
+    /** 读取当前进程名；Android 9 以下回退到 ActivityManager 遍历。 */
     private fun getCurrentProcessName(context: Context): String? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             Application.getProcessName()
