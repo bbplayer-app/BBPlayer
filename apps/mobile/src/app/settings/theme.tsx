@@ -1,9 +1,9 @@
+import { BootSplashVideoView } from '@bbplayer/native'
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Slider } from '@expo/ui/community/slider'
 import * as Expo from 'expo'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useVideoPlayer, VideoView } from 'expo-video'
 import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
@@ -905,22 +905,12 @@ function BootSplashAssetPreview({
 		assetId: string
 		mode: 'poster' | 'video'
 	} | null>(null)
-	const player = useVideoPlayer(asset?.video ?? null, (video) => {
-		video.loop = true
-		video.muted = true
-	})
 	const mode =
 		asset && selectedMode?.assetId === asset.id
 			? selectedMode.mode
 			: asset?.video
 				? 'video'
 				: 'poster'
-
-	useEffect(() => {
-		if (asset?.video) {
-			player.replay()
-		}
-	}, [asset, player])
 
 	return (
 		<AnimatedModalOverlay
@@ -941,9 +931,6 @@ function BootSplashAssetPreview({
 											assetId: asset.id,
 											mode: selectedIndex === 0 ? 'poster' : 'video',
 										})
-										if (selectedIndex === 1) {
-											player.replay()
-										}
 									}}
 									values={['静态海报', '动图']}
 								/>
@@ -965,12 +952,13 @@ function BootSplashAssetPreview({
 									/>
 								) : null
 							) : (
-								<VideoView
-									player={player}
+								<BootSplashVideoView
+									sourceUri={asset.video}
 									style={styles.previewMedia}
 									contentFit='contain'
-									nativeControls={false}
-									surfaceType='textureView'
+									autoPlay
+									loop
+									muted
 								/>
 							)}
 						</View>

@@ -1,12 +1,7 @@
+import { BootSplashVideoView } from '@bbplayer/native'
 import { Image } from 'expo-image'
-import { useVideoPlayer, VideoView } from 'expo-video'
 import { memo, useEffect, useState } from 'react'
-import {
-	AppState,
-	StyleSheet,
-	useColorScheme,
-	useWindowDimensions,
-} from 'react-native'
+import { StyleSheet, useColorScheme, useWindowDimensions } from 'react-native'
 import { useHideAnimation, type Manifest } from 'react-native-bootsplash'
 import Animated, {
 	Easing,
@@ -74,44 +69,15 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const [visible, setVisible] = useState(true)
 	const [introFinished, setIntroFinished] = useState(false)
 	const [videoEnded, setVideoEnded] = useState(false)
+	const [videoPlaybackRequested, setVideoPlaybackRequested] = useState(false)
 	const logoTranslateY = useSharedValue(0)
 	const logoScale = useSharedValue(1)
 	const mediaOpacity = useSharedValue(0)
 	const containerOpacity = useSharedValue(1)
 
-	const player = useVideoPlayer(bootSplashVideo ?? null, (video) => {
-		video.loop = false
-		video.muted = true
-	})
-
 	useEffect(() => {
 		setVideoEnded(!bootSplashVideo)
 	}, [bootSplashVideo])
-
-	useEffect(() => {
-		if (!bootSplashVideo) return
-
-		const subscription = player.addListener('playToEnd', () => {
-			setVideoEnded(true)
-		})
-		return () => subscription.remove()
-	}, [bootSplashVideo, player])
-
-	// 后台切回前台时 TextureView 可能被销毁，视频停在当前位置，
-	// playToEnd 不会再触发 → 卡死。重播一次让视频走完。
-	useEffect(() => {
-		const subscription = AppState.addEventListener('change', (nextState) => {
-			if (
-				nextState === 'active' &&
-				playFullAnimation &&
-				bootSplashVideo &&
-				!videoEnded
-			) {
-				player.play()
-			}
-		})
-		return () => subscription.remove()
-	}, [playFullAnimation, bootSplashVideo, videoEnded, player])
 
 	// 安全兜底：即使视频卡住，最多等 3s 也强制淡出
 	useEffect(() => {
@@ -143,9 +109,8 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 				duration: 420,
 				easing: Easing.out(Easing.quad),
 			})
-
 			if (bootSplashVideo) {
-				player.replay()
+				scheduleOnRN(setVideoPlaybackRequested, true)
 			}
 		},
 	})
@@ -204,8 +169,8 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 					/>
 				) : null}
 				{bootSplashVideo ? (
-					<VideoView
-						player={player}
+					<BootSplashVideoView
+						sourceUri={bootSplashVideo}
 						style={[
 							styles.video,
 							{
@@ -214,8 +179,10 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 							},
 						]}
 						contentFit='cover'
-						nativeControls={false}
-						surfaceType='textureView'
+						autoPlay={videoPlaybackRequested}
+						muted
+						onPlaybackEnd={() => setVideoEnded(true)}
+						onPlaybackError={() => setVideoEnded(true)}
 					/>
 				) : null}
 			</Animated.View>

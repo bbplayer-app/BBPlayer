@@ -270,7 +270,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					multipleShareMimeTypes: ['text/*'],
 				},
 			}),
-			'expo-video',
 			'react-native-nitro-fetch',
 			'expo-secure-store',
 		],
