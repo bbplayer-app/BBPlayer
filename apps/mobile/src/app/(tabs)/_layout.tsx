@@ -11,6 +11,7 @@ import type {
 } from 'expo-router/react-navigation'
 import { useTheme } from 'react-native-paper'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
@@ -34,6 +35,7 @@ const settingsIcon = Icon.getImageSourceSync('cog', 24) as nonNullableIcon
 
 export default function TabLayout() {
 	const themes = useTheme().colors
+	const startupScreen = useAppStore((state) => state.settings.startupScreen)
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const skinIcons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
@@ -54,7 +56,7 @@ export default function TabLayout() {
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={'transparent'}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
-			initialRouteName='index'
+			initialRouteName={startupScreen === 'library' ? 'library/[tab]' : 'index'}
 		>
 			<Tabs.Screen
 				name='index'

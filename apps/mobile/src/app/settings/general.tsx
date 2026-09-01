@@ -7,6 +7,7 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -37,8 +38,17 @@ export default function GeneralSettingsPage() {
 	const expandMultiPageOnSync = useAppStore(
 		(state) => state.settings.expandMultiPageOnSync,
 	)
+	const startupScreen = useAppStore((state) => state.settings.startupScreen)
+	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
+	const [startupScreenMenuVisible, setStartupScreenMenuVisible] =
+		useState(false)
+
+	const setStartupScreen = (screen: 'home' | 'library') => {
+		setSettings({ startupScreen: screen })
+		setStartupScreenMenuVisible(false)
+	}
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -89,6 +99,31 @@ export default function GeneralSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
+				<View style={styles.settingRow}>
+					<Text>启动时打开{startupScreen === 'home' ? '主页' : '音乐库'}</Text>
+					<FunctionalMenu
+						visible={startupScreenMenuVisible}
+						onDismiss={() => setStartupScreenMenuVisible(false)}
+						anchor={
+							<IconButton
+								icon='chevron-down'
+								size={20}
+								onPress={() => setStartupScreenMenuVisible(true)}
+							/>
+						}
+					>
+						<FunctionalMenu.Item
+							title='主页'
+							status={startupScreen === 'home' ? 'checked' : 'unchecked'}
+							onPress={() => setStartupScreen('home')}
+						/>
+						<FunctionalMenu.Item
+							title='音乐库'
+							status={startupScreen === 'library' ? 'checked' : 'unchecked'}
+							onPress={() => setStartupScreen('library')}
+						/>
+					</FunctionalMenu>
+				</View>
 				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>
 					<UniversalSwitch

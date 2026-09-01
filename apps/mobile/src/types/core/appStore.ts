@@ -13,6 +13,7 @@ interface Settings {
 	enableMinimalistMode: boolean
 	allowSimultaneousPlayback: boolean
 	expandMultiPageOnSync: boolean | null // null = 用户尚未选择过（首次同步时询问）
+	startupScreen: 'home' | 'library'
 }
 
 interface BilibiliUserSummary {
