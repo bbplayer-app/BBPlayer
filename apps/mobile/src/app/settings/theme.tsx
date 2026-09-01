@@ -405,7 +405,7 @@ export default function ThemeSettingsPage() {
 								variant='bodySmall'
 								style={{ color: colors.onSurfaceVariant }}
 							>
-								关闭时应用加载完成后立即淡出启动动画
+								软件启动时会等待开屏动画播放完成后再进入主页（多数开屏动画时间较长，不建议开）
 							</Text>
 						</View>
 						<UniversalSwitch

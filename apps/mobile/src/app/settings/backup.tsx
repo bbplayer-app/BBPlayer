@@ -1,7 +1,6 @@
 import { exportBackupToDownloads } from '@bbplayer/native'
 import * as Expo from 'expo'
 import * as DocumentPicker from 'expo-document-picker'
-import { File, Paths } from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -19,22 +18,27 @@ import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
+import {
+	useCloudBackupMutation,
+	useCloudRestoreMutation,
+	useTestWebDavConnectionMutation,
+} from '@/hooks/mutations/backup'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import {
+	normalizeWebDavBackupConfig,
+	useWebDavBackups,
+} from '@/hooks/queries/backup'
 import { createBackup } from '@/lib/backup/export'
 import { restoreBackup } from '@/lib/backup/import'
 import {
 	createMobileWebDavClient,
 	getWebDavPassword,
 	getStoredWebDavConfig,
-	joinWebDavPath,
-	normalizeDirectory,
 	saveWebDavConfig,
 } from '@/lib/backup/webdav'
 import type { WebDavEntry } from '@/lib/backup/webdav-client'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
-
-const BACKUP_FILE_PATTERN = /^backup-.+\.bbplayer$/
 
 export default function BackupSettingsPage() {
 	const router = useRouter()
@@ -50,11 +54,6 @@ export default function BackupSettingsPage() {
 	const [directory, setDirectory] = useState(
 		initialConfig?.directory ?? '/BBPlayer',
 	)
-	const [entries, setEntries] = useState<WebDavEntry[]>([])
-	const [isTesting, setIsTesting] = useState(false)
-	const [isRefreshing, setIsRefreshing] = useState(false)
-	const [isBackingUp, setIsBackingUp] = useState(false)
-	const [restoringPath, setRestoringPath] = useState<string | null>(null)
 	const [isExporting, setIsExporting] = useState(false)
 	const [isImporting, setIsImporting] = useState(false)
 	const isExportingRef = useRef(false)
@@ -62,53 +61,33 @@ export default function BackupSettingsPage() {
 	const isPasswordEditedRef = useRef(false)
 
 	const currentConfig = useCallback(
-		() => ({
-			baseUrl: baseUrl.trim(),
-			username: username.trim(),
-			directory: normalizeDirectory(directory),
-		}),
+		() => normalizeWebDavBackupConfig({ baseUrl, username, directory }),
 		[baseUrl, directory, username],
 	)
 
-	const loadBackups = useCallback(
-		async (showSuccess = false) => {
-			const config = currentConfig()
-			if (!config.baseUrl) return
-			setIsRefreshing(true)
-			try {
-				const client = await createMobileWebDavClient(config, password)
-				const remoteEntries = await client.listDirectory(config.directory)
-				setEntries(
-					remoteEntries
-						.filter(
-							(entry) =>
-								entry.type === 'file' && BACKUP_FILE_PATTERN.test(entry.name),
-						)
-						.sort(
-							(a, b) =>
-								(b.lastModified?.getTime() ?? 0) -
-								(a.lastModified?.getTime() ?? 0),
-						),
-				)
-				if (showSuccess) toast.success('云端备份列表已刷新')
-			} catch (error) {
-				toastAndLogError('读取云端备份失败', error, 'UI.Settings.Backup')
-			} finally {
-				setIsRefreshing(false)
-			}
-		},
-		[currentConfig, password],
-	)
+	const {
+		data: entries,
+		isFetching: isRefreshing,
+		refetch: refetchBackups,
+	} = useWebDavBackups(currentConfig(), password)
+	const testConnectionMutation = useTestWebDavConnectionMutation()
+	const cloudBackupMutation = useCloudBackupMutation()
+	const cloudRestoreMutation = useCloudRestoreMutation(showRestartPrompt)
 
 	useEffect(() => {
 		if (!initialConfig || didInitialRefresh.current) return
 		didInitialRefresh.current = true
-		void loadBackups()
-	}, [initialConfig, loadBackups])
+		void refetchBackups({ throwOnError: true }).catch((error) =>
+			toastAndLogError('读取云端备份失败', error, 'UI.Settings.Backup'),
+		)
+	}, [initialConfig, refetchBackups])
 
 	useEffect(() => {
 		void getWebDavPassword().then((savedPassword) => {
-			if (!isPasswordEditedRef.current) setPassword(savedPassword ?? '')
+			if (!isPasswordEditedRef.current) {
+				const value = savedPassword ?? ''
+				setPassword(value)
+			}
 		})
 	}, [])
 
@@ -123,66 +102,12 @@ export default function BackupSettingsPage() {
 		}
 	}
 
-	const handleTestConnection = async () => {
-		if (isTesting) return
-		setIsTesting(true)
+	const handleRefreshBackups = async () => {
 		try {
-			const config = currentConfig()
-			const client = await createMobileWebDavClient(config, password)
-			await client.checkConnection('/')
-			await client.ensureDirectory(config.directory)
-			await client.checkConnection(config.directory)
-			toast.success('WebDAV 连接成功')
+			await refetchBackups({ throwOnError: true })
+			toast.success('云端备份列表已刷新')
 		} catch (error) {
-			toastAndLogError('WebDAV 连接失败', error, 'UI.Settings.Backup')
-		} finally {
-			setIsTesting(false)
-		}
-	}
-
-	const handleCloudBackup = async () => {
-		if (isBackingUp) return
-		setIsBackingUp(true)
-		try {
-			const config = currentConfig()
-			const client = await createMobileWebDavClient(config, password)
-			await client.ensureDirectory(config.directory)
-			const uri = await createBackup()
-			const bytes = new File(uri).bytesSync()
-			const data = Uint8Array.from(bytes).buffer
-			const timestamp = new Date()
-				.toISOString()
-				.replaceAll(':', '-')
-				.replace('.', '-')
-			const fileName = `backup-${timestamp}.bbplayer`
-			await client.uploadFile(joinWebDavPath(config.directory, fileName), data)
-			await saveWebDavConfig(config, password || undefined)
-			toast.success('云端备份完成')
-			await loadBackups()
-		} catch (error) {
-			toastAndLogError('云端备份失败', error, 'UI.Settings.Backup')
-		} finally {
-			setIsBackingUp(false)
-		}
-	}
-
-	const performCloudRestore = async (entry: WebDavEntry) => {
-		if (restoringPath) return
-		setRestoringPath(entry.path)
-		try {
-			const client = await createMobileWebDavClient(currentConfig(), password)
-			const data = await client.downloadFile(entry.path)
-			const cacheFile = new File(
-				Paths.cache,
-				'bbplayer-webdav-restore.bbplayer',
-			)
-			cacheFile.write(new Uint8Array(data))
-			await restoreBackup(cacheFile.uri)
-			showRestartPrompt()
-		} catch (error) {
-			toastAndLogError('恢复云端备份失败', error, 'UI.Settings.Backup')
-		} finally {
-			setRestoringPath(null)
+			toastAndLogError('读取云端备份失败', error, 'UI.Settings.Backup')
 		}
 	}
 
@@ -317,9 +242,14 @@ export default function BackupSettingsPage() {
 				<View style={styles.buttonRow}>
 					<Button
 						mode='outlined'
-						loading={isTesting}
-						disabled={!baseUrl.trim() || isTesting}
-						onPress={() => void handleTestConnection()}
+						loading={testConnectionMutation.isPending}
+						disabled={!baseUrl.trim() || testConnectionMutation.isPending}
+						onPress={() =>
+							testConnectionMutation.mutate({
+								config: currentConfig(),
+								password,
+							})
+						}
 					>
 						测试连接
 					</Button>
@@ -334,9 +264,24 @@ export default function BackupSettingsPage() {
 				<Button
 					mode='contained'
 					icon='cloud-upload'
-					loading={isBackingUp}
-					disabled={!baseUrl.trim() || isBackingUp}
-					onPress={() => void handleCloudBackup()}
+					loading={cloudBackupMutation.isPending}
+					disabled={!baseUrl.trim() || cloudBackupMutation.isPending}
+					onPress={() =>
+						cloudBackupMutation.mutate(
+							{ config: currentConfig(), password },
+							{
+								onSuccess: () => {
+									void refetchBackups({ throwOnError: true }).catch((error) =>
+										toastAndLogError(
+											'读取云端备份失败',
+											error,
+											'UI.Settings.Backup',
+										),
+									)
+								},
+							},
+						)
+					}
 					style={styles.primaryButton}
 				>
 					立即备份到云端
@@ -349,10 +294,10 @@ export default function BackupSettingsPage() {
 						size={20}
 						loading={isRefreshing}
 						disabled={!baseUrl.trim() || isRefreshing}
-						onPress={() => void loadBackups(true)}
+						onPress={() => void handleRefreshBackups()}
 					/>
 				</View>
-				{entries.length === 0 ? (
+				{(entries?.length ?? 0) === 0 ? (
 					<Text
 						variant='bodyMedium'
 						style={{ color: colors.onSurfaceVariant }}
@@ -360,7 +305,7 @@ export default function BackupSettingsPage() {
 						暂无云端备份
 					</Text>
 				) : (
-					entries.map((entry) => (
+					entries?.map((entry) => (
 						<List.Item
 							key={entry.path}
 							title={formatBackupDate(entry)}
@@ -375,10 +320,19 @@ export default function BackupSettingsPage() {
 								<IconButton
 									icon='cloud-download'
 									size={20}
-									loading={restoringPath === entry.path}
-									disabled={restoringPath !== null}
+									loading={
+										cloudRestoreMutation.isPending &&
+										cloudRestoreMutation.variables?.entry.path === entry.path
+									}
+									disabled={cloudRestoreMutation.isPending}
 									onPress={() =>
-										confirmCloudRestore(entry, performCloudRestore)
+										confirmCloudRestore(entry, (selectedEntry) =>
+											cloudRestoreMutation.mutate({
+												config: currentConfig(),
+												password,
+												entry: selectedEntry,
+											}),
+										)
 									}
 								/>
 							)}
@@ -395,11 +349,11 @@ export default function BackupSettingsPage() {
 
 function confirmCloudRestore(
 	entry: WebDavEntry,
-	restore: (entry: WebDavEntry) => Promise<void>,
+	restore: (entry: WebDavEntry) => void,
 ) {
 	alert('恢复云端备份', '恢复将覆盖当前的本地歌单和应用设置。确定继续吗？', [
 		{ text: '取消' },
-		{ text: '恢复', onPress: () => void restore(entry) },
+		{ text: '恢复', onPress: () => restore(entry) },
 	])
 }
 
