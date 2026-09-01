@@ -255,7 +255,7 @@ async function finalizeAndRecordCurrentTrack(
 			queryKey: trackKeys.history(),
 		})
 
-		void reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
+		await reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
 			logger.error('上报播放历史失败', error),
 		)
 	} catch (error) {

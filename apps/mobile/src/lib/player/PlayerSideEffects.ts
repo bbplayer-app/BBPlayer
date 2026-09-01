@@ -47,9 +47,9 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
-				lyricService.pushLyricsToOverlays(event.trackId)
+				await lyricService.pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
-				void finalizeAndRecordCurrentTrack(
+				await finalizeAndRecordCurrentTrack(
 					event.trackId,
 					event.duration,
 					event.finalPosition,
@@ -59,6 +59,7 @@ class PlayerSideEffects {
 				logger.info('收到清空歌词请求', { trackId: event.trackId })
 				await lyricService.skipLyric(event.trackId)
 				// 使 React Query 缓存失效，让歌词面板立即显示跳过提示
+				// 使用 void 是因为软件在后台时不需要这个强制完成，可以等待到前台后再完成
 				void queryClient.invalidateQueries({
 					queryKey: lyricsQueryKeys.smartFetchLyrics(event.trackId),
 				})

@@ -13,7 +13,7 @@ class OrpheusHeadlessTaskService : HeadlessJsTaskService() {
             HeadlessJsTaskConfig(
                 "OrpheusHeadlessTask",
                 Arguments.fromBundle(extras),
-                5000, // timeout for the task
+                30_000, // Lyrics fetching and playback-history reporting may require network I/O.
                 true // allowed in foreground
             )
         } else {

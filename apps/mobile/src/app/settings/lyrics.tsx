@@ -93,7 +93,7 @@ export default function LyricsSettingsPage() {
 				// 立即推送当前正在播放的歌词，不等下一首
 				const currentTrack = await Orpheus.getCurrentTrack()
 				if (currentTrack) {
-					lyricService.pushLyricsToOverlays(currentTrack.id)
+					void lyricService.pushLyricsToOverlays(currentTrack.id)
 				}
 				return
 			}
@@ -235,7 +235,7 @@ export default function LyricsSettingsPage() {
 										if (next) {
 											const currentTrack = await Orpheus.getCurrentTrack()
 											if (currentTrack) {
-												lyricService.pushLyricsToOverlays(currentTrack.id)
+												void lyricService.pushLyricsToOverlays(currentTrack.id)
 											}
 										}
 									} catch (e) {
@@ -358,7 +358,7 @@ export default function LyricsSettingsPage() {
 											// 立即推送当前歌词
 											const currentTrack = await Orpheus.getCurrentTrack()
 											if (currentTrack) {
-												lyricService.pushLyricsToOverlays(currentTrack.id)
+												void lyricService.pushLyricsToOverlays(currentTrack.id)
 											}
 										}
 									} catch (e) {

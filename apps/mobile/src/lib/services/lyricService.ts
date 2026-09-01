@@ -7,9 +7,18 @@ import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
-import { kugouApi as kugouApiInstance, type KugouApi } from '@/lib/api/kugou/api'
-import { neteaseApi as neteaseApiInstance, type NeteaseApi } from '@/lib/api/netease/api'
-import { qqMusicApi as qqMusicApiInstance, type QQMusicApi } from '@/lib/api/qqmusic/api'
+import {
+	kugouApi as kugouApiInstance,
+	type KugouApi,
+} from '@/lib/api/kugou/api'
+import {
+	neteaseApi as neteaseApiInstance,
+	type NeteaseApi,
+} from '@/lib/api/netease/api'
+import {
+	qqMusicApi as qqMusicApiInstance,
+	type QQMusicApi,
+} from '@/lib/api/qqmusic/api'
 import type { CustomError } from '@/lib/errors'
 import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
 import { trackService } from '@/lib/services/trackService'
@@ -38,9 +47,10 @@ class LyricService {
 		readonly kugouApi: KugouApi,
 	) {}
 
-	private debouncedPushLyricsToOverlays: ReturnType<typeof setTimeout> | null =
-		null
-	private lastPushLyricsToOverlaysTimestamp: number | null = null
+	private pushLyricsToOverlaysRevision = 0
+	private pushLyricsToOverlaysRequestedAt = 0
+	private requestedPushLyricsTrackId: string | null = null
+	private pushLyricsToOverlaysPromise: Promise<void> | null = null
 
 	private cleanKeyword(keyword: string): string {
 		const priorityRegex = /《(.+?)》|「(.+?)」/
@@ -316,7 +326,7 @@ class LyricService {
 				lyricFile.write(JSON.stringify(toWrite)),
 			)
 			// 自动同步到悬浮窗/状态栏
-			this.pushLyricsToOverlays(uniqueKey)
+			void this.pushLyricsToOverlays(uniqueKey)
 			return okAsync(toWrite)
 		} catch (e) {
 			return errAsync(
@@ -526,100 +536,129 @@ class LyricService {
 	/**
 	 * 立即推送指定曲目的歌词到桌面歌词、状态栏和车载歌词
 	 */
-	public pushLyricsToOverlays(trackId: string) {
+	public pushLyricsToOverlays(trackId: string): Promise<void> {
 		const wantDesktop = Orpheus.isDesktopLyricsShown
 		const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
 		const wantCar = Orpheus.isCarLyricsEnabled
-		if (!wantDesktop && !wantStatusBar && !wantCar) return
+		if (!wantDesktop && !wantStatusBar && !wantCar) return Promise.resolve()
 
-		const currentTimestamp = Date.now()
-		this.lastPushLyricsToOverlaysTimestamp = currentTimestamp
+		this.pushLyricsToOverlaysRevision += 1
+		this.pushLyricsToOverlaysRequestedAt = Date.now()
+		this.requestedPushLyricsTrackId = trackId
 
-		if (this.debouncedPushLyricsToOverlays) {
-			clearTimeout(this.debouncedPushLyricsToOverlays)
+		if (!this.pushLyricsToOverlaysPromise) {
+			const promise = this.drainPushLyricsToOverlays()
+			this.pushLyricsToOverlaysPromise = promise.finally(() => {
+				this.pushLyricsToOverlaysPromise = null
+			})
 		}
 
-		const setIt = async () => {
-			if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
+		return this.pushLyricsToOverlaysPromise
+	}
 
-			try {
-				const currentOrpheusTrack = await Orpheus.getCurrentTrack()
-				if (currentOrpheusTrack && currentOrpheusTrack.id !== trackId) {
-					logger.debug('pushLyricsToOverlays: trackId 不再是当前曲目，跳过', {
-						trackId,
-						currentId: currentOrpheusTrack.id,
-					})
-					return
+	private async drainPushLyricsToOverlays(): Promise<void> {
+		while (this.requestedPushLyricsTrackId !== null) {
+			let revision = this.pushLyricsToOverlaysRevision
+
+			while (true) {
+				const remainingDelay = Math.max(
+					0,
+					this.pushLyricsToOverlaysRequestedAt + 300 - Date.now(),
+				)
+				if (remainingDelay > 0) {
+					await new Promise<void>((resolve) =>
+						setTimeout(resolve, remainingDelay),
+					)
 				}
 
-				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
-
-				const trackResult = await trackService.getTrackByUniqueKey(trackId)
-				if (trackResult.isErr()) throw trackResult.error
-
-				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
-				const lyricsResult = await this.smartFetchLyrics(trackResult.value)
-				if (lyricsResult.isErr()) throw lyricsResult.error
-
-				const lyrics = lyricsResult.value
-				if (!lyrics.lrc) {
-					// 歌词为空（如 manualSkip 或搜索失败），隐藏所有 overlay
-					await Orpheus.clearOverlays()
-					return
-				}
-
-				const parsedLines = parseAndMergeLyrics({
-					lrc: lyrics.lrc,
-					tlyric: lyrics.tlyric,
-					romalrc: lyrics.romalrc,
-				})
-
-				const orpheusLyrics = parsedLines.map((line) => ({
-					timestamp: line.startTime / 1000,
-					endTime: line.endTime / 1000,
-					text: line.content,
-					translation: line.translation,
-					romaji: line.romaji,
-					spans: line.isDynamic
-						? line.spans.map((span) => ({
-								text: span.text,
-								startTime: span.startTime,
-								endTime: span.endTime,
-								duration: span.duration,
-							}))
-						: undefined,
-				}))
-
-				if (currentTimestamp !== this.lastPushLyricsToOverlaysTimestamp) return
-
-				const payload: LyricsData = {
-					lyrics: orpheusLyrics,
-					offset: lyrics.misc?.userOffset ?? 0,
-				}
-
-				const consumers: LyricConsumer[] = []
-				if (Orpheus.isDesktopLyricsShown) {
-					consumers.push('desktop')
-				}
-				if (Orpheus.isStatusBarLyricsEnabled) {
-					consumers.push('statusBar')
-				}
-				if (Orpheus.isCarLyricsEnabled) {
-					consumers.push('car')
-				}
-
-				if (consumers.length > 0) {
-					await Orpheus.setLyrics(payload, consumers)
-				}
-			} catch (e) {
-				logger.warning('更新歌词显示失败', e)
+				if (revision === this.pushLyricsToOverlaysRevision) break
+				revision = this.pushLyricsToOverlaysRevision
 			}
-		}
 
-		this.debouncedPushLyricsToOverlays = setTimeout(() => {
-			void setIt()
-			this.debouncedPushLyricsToOverlays = null
-		}, 300)
+			const trackId = this.requestedPushLyricsTrackId
+			this.requestedPushLyricsTrackId = null
+			await this.performPushLyricsToOverlays(trackId, revision)
+		}
+	}
+
+	private async performPushLyricsToOverlays(
+		trackId: string,
+		revision: number,
+	): Promise<void> {
+		if (revision !== this.pushLyricsToOverlaysRevision) return
+
+		try {
+			const currentOrpheusTrack = await Orpheus.getCurrentTrack()
+			if (currentOrpheusTrack && currentOrpheusTrack.id !== trackId) {
+				logger.debug('pushLyricsToOverlays: trackId 不再是当前曲目，跳过', {
+					trackId,
+					currentId: currentOrpheusTrack.id,
+				})
+				return
+			}
+
+			if (revision !== this.pushLyricsToOverlaysRevision) return
+
+			const trackResult = await trackService.getTrackByUniqueKey(trackId)
+			if (trackResult.isErr()) throw trackResult.error
+
+			if (revision !== this.pushLyricsToOverlaysRevision) return
+			const lyricsResult = await this.smartFetchLyrics(trackResult.value)
+			if (lyricsResult.isErr()) throw lyricsResult.error
+
+			const lyrics = lyricsResult.value
+			if (!lyrics.lrc) {
+				// 歌词为空（如 manualSkip 或搜索失败），隐藏所有 overlay
+				await Orpheus.clearOverlays()
+				return
+			}
+
+			const parsedLines = parseAndMergeLyrics({
+				lrc: lyrics.lrc,
+				tlyric: lyrics.tlyric,
+				romalrc: lyrics.romalrc,
+			})
+
+			const orpheusLyrics = parsedLines.map((line) => ({
+				timestamp: line.startTime / 1000,
+				endTime: line.endTime / 1000,
+				text: line.content,
+				translation: line.translation,
+				romaji: line.romaji,
+				spans: line.isDynamic
+					? line.spans.map((span) => ({
+							text: span.text,
+							startTime: span.startTime,
+							endTime: span.endTime,
+							duration: span.duration,
+						}))
+					: undefined,
+			}))
+
+			if (revision !== this.pushLyricsToOverlaysRevision) return
+
+			const payload: LyricsData = {
+				lyrics: orpheusLyrics,
+				offset: lyrics.misc?.userOffset ?? 0,
+			}
+
+			const consumers: LyricConsumer[] = []
+			if (Orpheus.isDesktopLyricsShown) {
+				consumers.push('desktop')
+			}
+			if (Orpheus.isStatusBarLyricsEnabled) {
+				consumers.push('statusBar')
+			}
+			if (Orpheus.isCarLyricsEnabled) {
+				consumers.push('car')
+			}
+
+			if (consumers.length > 0) {
+				await Orpheus.setLyrics(payload, consumers)
+			}
+		} catch (e) {
+			logger.warning('更新歌词显示失败', e)
+		}
 	}
 
 	/**
@@ -652,5 +691,9 @@ class LyricService {
 	}
 }
 
-const lyricService = new LyricService(neteaseApiInstance, qqMusicApiInstance, kugouApiInstance)
+const lyricService = new LyricService(
+	neteaseApiInstance,
+	qqMusicApiInstance,
+	kugouApiInstance,
+)
 export default lyricService
