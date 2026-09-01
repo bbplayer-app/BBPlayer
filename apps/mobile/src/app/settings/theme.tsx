@@ -954,7 +954,7 @@ function BootSplashAssetPreview({
 							) : (
 								<BootSplashVideoView
 									sourceUri={asset.video}
-									style={styles.previewMedia}
+									style={styles.previewVideo}
 									contentFit='contain'
 									autoPlay
 									loop
@@ -1143,6 +1143,13 @@ const styles = StyleSheet.create({
 	},
 	previewMedia: {
 		...StyleSheet.absoluteFill,
+	},
+	previewVideo: {
+		...StyleSheet.absoluteFill,
+		top: 8,
+		right: 8,
+		bottom: 8,
+		left: 8,
 	},
 	sliderPanel: {
 		borderRadius: 8,

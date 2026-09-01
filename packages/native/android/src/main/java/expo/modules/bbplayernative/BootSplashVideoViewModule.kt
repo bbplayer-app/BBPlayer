@@ -191,14 +191,21 @@ class BootSplashVideoView(context: Context, appContext: AppContext) : ExpoView(c
     private fun updateTextureTransform() {
         if (videoWidth <= 0 || videoHeight <= 0 || width <= 0 || height <= 0) return
 
-        val scale = when (contentFit) {
-            "contain" -> minOf(width.toFloat() / videoWidth, height.toFloat() / videoHeight)
-            else -> max(width.toFloat() / videoWidth, height.toFloat() / videoHeight)
+        // TextureView initially stretches its buffer to fill its own bounds. The
+        // transform must therefore correct that stretch, rather than apply the
+        // video-to-view scale a second time.
+        val viewScaleX = width.toFloat() / videoWidth
+        val viewScaleY = height.toFloat() / videoHeight
+        val videoScale = when (contentFit) {
+            "contain" -> minOf(viewScaleX, viewScaleY)
+            else -> max(viewScaleX, viewScaleY)
         }
-        val scaledWidth = videoWidth * scale
-        val scaledHeight = videoHeight * scale
+        val textureScaleX = videoScale / viewScaleX
+        val textureScaleY = videoScale / viewScaleY
+        val scaledWidth = width * textureScaleX
+        val scaledHeight = height * textureScaleY
         val matrix = Matrix().apply {
-            setScale(scale, scale)
+            setScale(textureScaleX, textureScaleY)
             postTranslate((width - scaledWidth) / 2f, (height - scaledHeight) / 2f)
         }
         textureView.setTransform(matrix)
