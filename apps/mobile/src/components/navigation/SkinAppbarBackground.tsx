@@ -1,4 +1,3 @@
-import Color from 'color'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { memo } from 'react'
@@ -18,8 +17,6 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const colors = useTheme().colors
-	const scrimColor = Color(colors.background).alpha(0.88).rgb().string()
-	const scrimMidColor = Color(colors.background).alpha(0.48).rgb().string()
 
 	const head = activeSkin?.skins[activeSkinIndex]?.background.head
 	if (!head) return null
@@ -34,11 +31,6 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 				style={styles.image}
 				contentFit='cover'
 				cachePolicy='memory-disk'
-			/>
-			<LinearGradient
-				colors={[scrimColor, scrimMidColor, 'transparent']}
-				locations={[0, 0.55, 1]}
-				style={styles.topScrim}
 			/>
 			<LinearGradient
 				colors={['rgba(255,255,255,0)', colors.background]}
@@ -58,13 +50,6 @@ const styles = StyleSheet.create({
 	},
 	image: {
 		...StyleSheet.absoluteFill,
-	},
-	topScrim: {
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		height: 88,
 	},
 	fade: {
 		position: 'absolute',

@@ -10,11 +10,13 @@ import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
+import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 
 export default function SettingsPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const colors = useTheme().colors
+	const headerForegroundColor = useSkinForegroundColor()
 	const router = useRouter()
 	const account = useAppStore((state) => state.bbplayerAccount)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
@@ -38,7 +40,7 @@ export default function SettingsPage() {
 				<View style={[styles.header]}>
 					<Text
 						variant='headlineSmall'
-						style={styles.title}
+						style={[styles.title, { color: headerForegroundColor }]}
 					>
 						设置
 					</Text>

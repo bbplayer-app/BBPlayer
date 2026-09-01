@@ -45,6 +45,7 @@ import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { markPerfInteractive } from '@/lib/performance'
@@ -87,6 +88,7 @@ function HomePage() {
 	const activeAvatarFrameIndex = useSkinStore(
 		(state) => state.activeAvatarFrameIndex,
 	)
+	const headerForegroundColor = useSkinForegroundColor()
 	const searchBarRef = useAnimatedRef<View>()
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -290,13 +292,13 @@ function HomePage() {
 					<View>
 						<Text
 							variant='headlineSmall'
-							style={styles.headline}
+							style={[styles.headline, { color: headerForegroundColor }]}
 						>
 							BBPlayer
 						</Text>
 						<Text
 							variant='bodyMedium'
-							style={{ color: colors.onSurfaceVariant }}
+							style={{ color: headerForegroundColor }}
 						>
 							{greeting}，{personalInfo?.name || '陌生人'}
 						</Text>

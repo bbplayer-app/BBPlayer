@@ -19,6 +19,8 @@
 - 彻底移除弹幕相关代码
 - 备份格式升级至 v2；旧版本备份不再支持导入
 - 将 PlayerQueue 切换到 `@swmansion/react-native-bottom-sheet` 实现
+- 切换到轻量实现的 SplashVideoView，不再使用 expo-video
+- 升级大量依赖
 
 ### Fixed
 
@@ -28,6 +30,7 @@
 - 网易云部分特殊格式歌词解析失败
 - 展开分 p 同步收藏夹失败
 - 清除歌词后无法编辑
+- 存在自定义 AppBar 背景时文字对比度不够
 
 ## [2.6.4] - 2026-08-08
 

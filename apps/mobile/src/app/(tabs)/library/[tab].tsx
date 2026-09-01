@@ -14,6 +14,7 @@ import CollectionListComponent from '@/features/library/collection/CollectionLis
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
 import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
+import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 
 const renderScene = SceneMap({
 	local: LocalPlaylistListComponent,
@@ -41,6 +42,7 @@ export default function Library() {
 	const [_, startTransition] = useTransition()
 	const insets = useSafeAreaInsets()
 	const colors = useTheme().colors
+	const headerForegroundColor = useSkinForegroundColor()
 	const router = useRouter()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
 	const { markInteractive } = useObserve()
@@ -71,17 +73,19 @@ export default function Library() {
 				<View style={[styles.header]}>
 					<Text
 						variant='headlineSmall'
-						style={styles.title}
+						style={[styles.title, { color: headerForegroundColor }]}
 					>
 						音乐库
 					</Text>
 					<View style={styles.headerIcons}>
 						<IconButton
 							icon='download-box'
+							iconColor={headerForegroundColor}
 							onPress={() => router.push('/downloaded')}
 						/>
 						<IconButton
 							icon='trophy'
+							iconColor={headerForegroundColor}
 							onPress={() => router.push('/history/overall')}
 						/>
 					</View>
