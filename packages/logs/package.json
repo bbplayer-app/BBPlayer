@@ -44,7 +44,7 @@
 		"@types/react": "19.2.15",
 		"jest": "^30.2.0",
 		"react": "19.2.3",
-		"react-native": "0.86.2"
+		"react-native": "0.86.3"
 	},
 	"peerDependencies": {
 		"react": "19.2.3",

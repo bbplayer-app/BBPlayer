@@ -57,7 +57,7 @@
 		"@types/color": "^4.2.1",
 		"jest": "^30.2.0",
 		"react": "19.2.3",
-		"react-native": "0.86.2",
+		"react-native": "0.86.3",
 		"react-native-bottom-tabs": "workspace:*",
 		"typescript": "~6.0.3"
 	},
