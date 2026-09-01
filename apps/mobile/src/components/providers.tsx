@@ -1,5 +1,8 @@
-import { useMMKVDevTools } from '@rozenite/mmkv-plugin'
 import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
+import {
+	createMMKVStorageAdapter,
+	useRozeniteStoragePlugin,
+} from '@rozenite/storage-plugin'
 import { useTanStackQueryDevTools } from '@rozenite/tanstack-query-plugin'
 import * as Sentry from '@sentry/react-native'
 import { BottomSheetProvider } from '@swmansion/react-native-bottom-sheet'
@@ -29,10 +32,14 @@ import { storage } from '@/utils/mmkv'
 
 function DevTools() {
 	useTanStackQueryDevTools(queryClient)
-	useMMKVDevTools({
-		storages: {
-			app: storage,
-		},
+	useRozeniteStoragePlugin({
+		storages: [
+			createMMKVStorageAdapter({
+				storages: {
+					app: storage,
+				},
+			}),
+		],
 	})
 	useRequireProfilerDevTools()
 	return null
