@@ -1,34 +1,24 @@
 package server
 
-// EventType is the versioned client telemetry vocabulary accepted by
+// ClientEventType is the versioned client telemetry vocabulary accepted by
 // POST /api/events. Keep values stable: they are stored and queried as data.
-type EventType string
+//
+// The vocabulary is intentionally minimal: the app currently emits only
+// activity / launch_succeeded / launch_failed. Per-update launch and crash
+// stats are primarily inferred from expo-updates' manifest request headers
+// (see manifest_insights.go); these events carry installation attribution and
+// the emergency-launch fallback signal that headers cannot express.
+type ClientEventType string
 
 const (
-	EventTypeActivity             EventType = "activity"
-	EventTypeUpdateCheckStarted   EventType = "update_check_started"
-	EventTypeUpdateCheckSucceeded EventType = "update_check_succeeded"
-	EventTypeUpdateCheckFailed    EventType = "update_check_failed"
-	EventTypeDownloadStarted      EventType = "download_started"
-	EventTypeDownloadSucceeded    EventType = "download_succeeded"
-	EventTypeDownloadFailed       EventType = "download_failed"
-	EventTypeLaunchStarted        EventType = "launch_started"
-	EventTypeLaunchSucceeded      EventType = "launch_succeeded"
-	EventTypeLaunchHealthy        EventType = "launch_healthy"
-	EventTypeLaunchFailed         EventType = "launch_failed"
-	EventTypeLaunchCrashed        EventType = "launch_crashed"
-	EventTypeErrorRecovery        EventType = "error_recovery"
-	EventTypeEmergencyLaunch      EventType = "emergency_launch"
+	EventTypeActivity        ClientEventType = "activity"
+	EventTypeLaunchSucceeded ClientEventType = "launch_succeeded"
+	EventTypeLaunchFailed    ClientEventType = "launch_failed"
 )
 
-func (t EventType) valid() bool {
+func (t ClientEventType) valid() bool {
 	switch t {
-	case EventTypeActivity,
-		EventTypeUpdateCheckStarted, EventTypeUpdateCheckSucceeded, EventTypeUpdateCheckFailed,
-		EventTypeDownloadStarted, EventTypeDownloadSucceeded, EventTypeDownloadFailed,
-		EventTypeLaunchStarted, EventTypeLaunchSucceeded, EventTypeLaunchHealthy,
-		EventTypeLaunchFailed, EventTypeLaunchCrashed, EventTypeErrorRecovery,
-		EventTypeEmergencyLaunch:
+	case EventTypeActivity, EventTypeLaunchSucceeded, EventTypeLaunchFailed:
 		return true
 	default:
 		return false

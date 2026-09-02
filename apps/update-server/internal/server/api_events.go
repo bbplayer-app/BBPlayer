@@ -2,9 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -18,23 +15,25 @@ import (
 )
 
 type Event struct {
-	ID                     uuid.UUID      `json:"event_id"`
-	Schema                 int            `json:"schema_version"`
-	Type                   EventType      `json:"event_type"`
-	Occurred               time.Time      `json:"occurred_at"`
-	Installation           string         `json:"installation_id"`
-	ClientVersion          string         `json:"client_version"`
-	ClientBuild            string         `json:"client_build_version"`
-	ExpoUpdatesVersion     string         `json:"expo_updates_version"`
-	UpdatesProtocolVersion string         `json:"updates_protocol_version"`
-	Platform               string         `json:"platform"`
-	Runtime                string         `json:"runtime_version"`
-	Channel                string         `json:"channel"`
-	UpdateID               *uuid.UUID     `json:"launched_update_id"`
-	EmbeddedUpdateID       *uuid.UUID     `json:"embedded_update_id"`
-	GroupID                *uuid.UUID     `json:"update_group_id"`
-	LaunchSource           string         `json:"launch_source"`
-	Payload                map[string]any `json:"payload"`
+	ID                     uuid.UUID       `json:"event_id"`
+	Schema                 int             `json:"schema_version"`
+	Type                   ClientEventType `json:"event_type"`
+	Occurred               time.Time       `json:"occurred_at"`
+	Installation           string          `json:"installation_id"`
+	ClientVersion          string          `json:"client_version"`
+	ClientBuild            string          `json:"client_build_version"`
+	ExpoUpdatesVersion     string          `json:"expo_updates_version"`
+	UpdatesProtocolVersion string          `json:"updates_protocol_version"`
+	Platform               string          `json:"platform"`
+	Runtime                string          `json:"runtime_version"`
+	Channel                string          `json:"channel"`
+	UpdateID               *uuid.UUID      `json:"launched_update_id"`
+	EmbeddedUpdateID       *uuid.UUID      `json:"embedded_update_id"`
+	// GroupID is never supplied by clients; the server resolves it from
+	// UpdateID and fills it in before persisting the event.
+	GroupID      *uuid.UUID     `json:"update_group_id"`
+	LaunchSource string         `json:"launch_source"`
+	Payload      map[string]any `json:"payload"`
 }
 
 func (s *Server) event(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +49,7 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 	}
 	var fields map[string]json.RawMessage
 	var e Event
-	mandatory := []string{"schema_version", "event_id", "event_type", "occurred_at", "installation_id", "client_version", "client_build_version", "expo_updates_version", "updates_protocol_version", "platform", "runtime_version", "channel", "launched_update_id", "embedded_update_id", "update_group_id", "launch_source"}
+	mandatory := []string{"schema_version", "event_id", "event_type", "occurred_at", "installation_id", "client_version", "client_build_version", "expo_updates_version", "updates_protocol_version", "platform", "runtime_version", "channel", "launched_update_id", "embedded_update_id", "launch_source"}
 	if json.Unmarshal(body, &fields) != nil || json.Unmarshal(body, &e) != nil || e.Schema != 1 || e.ID == uuid.Nil || !e.Type.valid() || e.Occurred.IsZero() || e.Installation == "" || e.ClientVersion == "" || e.ClientBuild == "" || e.ExpoUpdatesVersion == "" || e.UpdatesProtocolVersion == "" || e.Platform == "" || e.Runtime == "" || e.Channel == "" || e.LaunchSource == "" {
 		http.Error(w, "invalid event schema v1", 400)
 		return
@@ -72,9 +71,7 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	m := hmac.New(sha256.New, []byte(s.C.InstallationHMACKey))
-	_, _ = m.Write([]byte(e.Installation))
-	installationHMAC := base64.RawURLEncoding.EncodeToString(m.Sum(nil))
+	installationHMAC := installationHMAC(s.C.InstallationHMACKey, e.Installation)
 	p, _ := json.Marshal(e.Payload)
 	err = s.DB.Queries.InsertClientEvent(
 		r.Context(),
@@ -132,9 +129,9 @@ func (s *Server) recordClientInsights(ctx context.Context, e Event, installation
 	}
 	params := dbq.RecordKnownLaunchParams{InstallationHmac: installationHMAC, UpdateID: pgUUID(e.UpdateID), GroupID: pgUUID(e.GroupID), Channel: e.Channel, RuntimeVersion: e.Runtime, Platform: e.Platform, ConfirmedAt: pgtype.Timestamptz{Time: seenAt, Valid: true}}
 	switch e.Type {
-	case EventTypeLaunchSucceeded, EventTypeLaunchHealthy:
+	case EventTypeLaunchSucceeded:
 		return s.DB.Queries.RecordKnownLaunch(ctx, params)
-	case EventTypeLaunchFailed, EventTypeLaunchCrashed, EventTypeErrorRecovery:
+	case EventTypeLaunchFailed:
 		return s.DB.Queries.RecordKnownCrash(ctx, dbq.RecordKnownCrashParams(params))
 	default:
 		return nil

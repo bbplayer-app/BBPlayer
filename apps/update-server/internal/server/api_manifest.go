@@ -26,8 +26,11 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing Expo platform, runtime version, or channel", 400)
 		return
 	}
+	// Record launch / crash observations from the expo-updates request headers
+	// before the response is decided, so 204 / rollback responses still count.
+	s.recordUpdateRequestInsights(r, platform, runtime, channel)
 	head, err := s.DB.Queries.GetChannelHead(r.Context(), dbq.GetChannelHeadParams{Channel: channel, RuntimeVersion: runtime, Platform: platform})
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
