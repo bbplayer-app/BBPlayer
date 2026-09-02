@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: updates
+      POSTGRES_USER: updates
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U updates -d updates"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
+    command: ["migrate"]
+    environment: &server-env
+      DATABASE_URL: postgres://updates:${POSTGRES_PASSWORD}@postgres:5432/updates?sslmode=disable
+      R2_BUCKET: ${R2_BUCKET}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      INSTALLATION_HMAC_KEY: ${INSTALLATION_HMAC_KEY}
+      CODE_SIGNING_PRIVATE_KEY: ${CODE_SIGNING_PRIVATE_KEY:-}
+      CODE_SIGNING_KEY_ID: ${CODE_SIGNING_KEY_ID:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+  api:
+    image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
+    command: ["api"]
+    environment: *server-env
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    ports: ["127.0.0.1:8080:8080"]
+  worker:
+    image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
+    command: ["worker"]
+    environment: *server-env
+    depends_on: { migrate: { condition: service_completed_successfully } }
+volumes:
+  postgres-data:

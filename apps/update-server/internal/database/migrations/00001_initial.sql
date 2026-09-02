@@ -1,0 +1,13 @@
+-- +goose Up
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE update_groups (id uuid PRIMARY KEY, channel text NOT NULL, runtime_version text NOT NULL, message text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), source jsonb NOT NULL, expo_config jsonb NOT NULL, metadata_sha256 text NOT NULL, status text NOT NULL DEFAULT 'active');
+CREATE TABLE updates (id uuid PRIMARY KEY, group_id uuid NOT NULL REFERENCES update_groups(id), platform text NOT NULL CHECK(platform IN ('android','ios')), launch_key text NOT NULL, launch_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(group_id, platform));
+CREATE TABLE assets (id bigserial PRIMARY KEY, update_id uuid NOT NULL REFERENCES updates(id), asset_key text NOT NULL, object_key text NOT NULL UNIQUE, sha256 text NOT NULL, content_type text NOT NULL, size_bytes bigint NOT NULL, is_launch boolean NOT NULL DEFAULT false);
+CREATE TABLE channel_heads (channel text NOT NULL, runtime_version text NOT NULL, platform text NOT NULL, group_id uuid REFERENCES update_groups(id), mode text NOT NULL DEFAULT 'ota' CHECK(mode IN ('ota','embedded')), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(channel,runtime_version,platform));
+CREATE TABLE channel_history (id bigserial PRIMARY KEY, channel text NOT NULL, runtime_version text NOT NULL, platform text NOT NULL, group_id uuid, mode text NOT NULL, action text NOT NULL, actor text, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE patches (id bigserial PRIMARY KEY, from_update_id uuid NOT NULL REFERENCES updates(id), to_update_id uuid NOT NULL REFERENCES updates(id), platform text NOT NULL, status text NOT NULL DEFAULT 'pending', object_key text, sha256 text, size_bytes bigint, attempts integer NOT NULL DEFAULT 0, served_count bigint NOT NULL DEFAULT 0, error text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE(from_update_id,to_update_id));
+CREATE TABLE update_events (id uuid PRIMARY KEY, schema_version integer NOT NULL, event_type text NOT NULL, occurred_at timestamptz NOT NULL, installation_hmac text, client_version text, client_build_version text, expo_updates_version text, updates_protocol_version text, platform text, runtime_version text, channel text, update_id uuid, embedded_update_id uuid, group_id uuid, launch_source text, payload jsonb NOT NULL DEFAULT '{}', created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX update_events_group_time ON update_events(group_id, occurred_at);
+CREATE INDEX update_groups_source_commit ON update_groups ((source->>'commit_sha'));
+-- +goose Down
+DROP TABLE IF EXISTS update_events, patches, channel_history, channel_heads, assets, updates, update_groups;

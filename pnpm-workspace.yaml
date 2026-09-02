@@ -3,18 +3,18 @@ packages:
   - packages/*
   - packages/*/example
 
-onlyBuiltDependencies:
-  - '@evilmartians/lefthook'
-  - '@firebase/util'
-  - '@sentry/cli'
-  - '@shopify/react-native-skia'
-  - esbuild
-  - lefthook
-  - protobufjs
-  - react-native-logs
-  - sharp
-  - unrs-resolver
-  - workerd
+allowBuilds:
+  '@firebase/util': true
+  '@sentry/cli': true
+  esbuild: true
+  lefthook: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - expo-eas-client@57.0.3
+  - expo-updates@57.0.21
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   metro-runtime@0.84.4: patches/metro-runtime@0.84.4.patch
