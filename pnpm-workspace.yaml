@@ -1,5 +1,6 @@
 packages:
   - apps/*
+  - apps/*/web
   - packages/*
   - packages/*/example
 
@@ -15,6 +16,7 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
   - expo-updates@57.0.21
+  - lucide-react@1.39.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   metro-runtime@0.84.4: patches/metro-runtime@0.84.4.patch

@@ -122,7 +122,7 @@ func (s *Server) insights(ctx context.Context, input *adminInsightsInput) (*admi
 	out := &adminInsightsOutput{}
 	out.Body.Events = make([]adminInsightEvent, 0, len(rows))
 	for _, row := range rows {
-		out.Body.Events = append(out.Body.Events, adminInsightEvent{ClientEventType: row.EventType, Events: row.EventCount, UniqueInstallations: row.UniqueInstallations})
+		out.Body.Events = append(out.Body.Events, adminInsightEvent{EventType: row.EventType, Events: row.EventCount, UniqueInstallations: row.UniqueInstallations})
 	}
 	out.Body.Summary.UniqueUsers, out.Body.Summary.UpdateChecks, out.Body.Summary.Downloads, out.Body.Summary.Launches, out.Body.Summary.LaunchSuccesses, out.Body.Summary.LaunchFailures, out.Body.Summary.EmergencyLaunches = summary.UniqueInstallations, summary.UpdateChecks, summary.Downloads, summary.Launches, summary.LaunchSuccesses, summary.LaunchFailures, summary.EmergencyLaunches
 	if summary.Launches > 0 {

@@ -1,3 +1,4 @@
 .env
 bin/
 dist/
+web/.env.local

@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	min-width: 320px;
+}
+button,
+input {
+	font: inherit;
+}
+th,
+td {
+	padding: 1.05rem 1.5rem;
+}
+th {
+	font-weight: 500;
+}
+@media (max-width: 800px) {
+	th,
+	td {
+		padding: 0.9rem 0.75rem;
+	}
+	table {
+		min-width: 720px;
+	}
+	section {
+		overflow-x: auto;
+	}
+}
