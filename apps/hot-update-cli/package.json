@@ -1,0 +1,21 @@
+{
+	"name": "@bbplayer/hot-update-cli",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit",
+		"start": "tsx src/index.ts"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.3.0",
+		"@expo/fingerprint": "0.20.11",
+		"archiver": "^7.0.1"
+	},
+	"devDependencies": {
+		"@types/archiver": "^6.0.4",
+		"@types/node": "^25.2.3",
+		"tsx": "^4.21.0",
+		"typescript": "~6.0.3"
+	}
+}

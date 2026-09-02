@@ -20,31 +20,18 @@ jobs:
           node-version: 22.x
           cache: pnpm
 
-      - name: 🏗 Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: '1.27.x'
-
       - name: 📦 Install dependencies
         run: pnpm install
 
       - name: 🚀 Export and publish update
         env:
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
+          BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
         run: |
           cd apps/mobile
-          npx expo export --clear --platform android --output-dir dist
-          npx expo config --type public --json > dist/expoConfig.json
-          runtime_version="$(npx --yes eas-cli@latest fingerprint:generate --platform android --json --non-interactive | jq -r '.hash')"
-          test -n "$runtime_version"
-          cd ../..
-          go -C apps/update-server run ./cmd/bbplayer-updates publish \
-            --server "$UPDATE_SERVER_URL" \
-            --token "$UPDATE_SERVER_TOKEN" \
+          pnpm hot-update -- publish \
+            --non-interactive \
             --channel production \
-            --dist ../mobile/dist \
-            --runtime-version "$runtime_version" \
             --message "$(git log -1 --format=%s)"
 
       - name: 🚀 Submit source map

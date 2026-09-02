@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime"
 	"net/http"
@@ -24,6 +25,14 @@ type publishRequest struct {
 	RuntimeVersion string          `json:"runtime_version"`
 	Message        string          `json:"message"`
 	Source         json.RawMessage `json:"source"`
+	Fingerprint    struct {
+		Hash    string          `json:"hash"`
+		Sources json.RawMessage `json:"sources"`
+	} `json:"fingerprint"`
+}
+type publishSource struct {
+	CommitSHA        string `json:"commit_sha"`
+	WorkingTreeClean bool   `json:"working_tree_clean"`
 }
 type exportMeta struct {
 	FileMetadata map[string]struct {
@@ -46,6 +55,23 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid publish request", 400)
 		return
 	}
+	var source publishSource
+	if json.Unmarshal(req.Source, &source) != nil || source.CommitSHA == "" {
+		http.Error(w, "invalid source or fingerprint", 400)
+		return
+	}
+	var fingerprintHash any
+	var fingerprintSources any
+	if req.Fingerprint.Hash != "" || len(req.Fingerprint.Sources) != 0 {
+		if req.Fingerprint.Hash == "" || len(req.Fingerprint.Sources) == 0 || req.Fingerprint.Hash != req.RuntimeVersion || !json.Valid(req.Fingerprint.Sources) {
+			http.Error(w, "invalid source or fingerprint", 400)
+			return
+		}
+		fingerprintHash, fingerprintSources = req.Fingerprint.Hash, req.Fingerprint.Sources
+	}
+	// Persist only the deliberately small Git provenance contract. Fingerprint
+	// sources are a separate, immutable record of the native input surface.
+	req.Source, _ = json.Marshal(source)
 	f, _, e := r.FormFile("archive")
 	if e != nil {
 		http.Error(w, "archive required", 400)
@@ -116,28 +142,10 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
-	_, e = tx.Exec(r.Context(), "INSERT INTO update_groups(id,channel,runtime_version,message,source,expo_config,metadata_sha256) VALUES($1,$2,$3,$4,$5,$6,$7)", gid, req.Channel, req.RuntimeVersion, req.Message, req.Source, cfg, sha(mb))
+	_, e = tx.Exec(r.Context(), "INSERT INTO update_groups(id,channel,runtime_version,message,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)", gid, req.Channel, req.RuntimeVersion, req.Message, req.Source, fingerprintHash, fingerprintSources, cfg, sha(mb))
 	if e != nil {
 		http.Error(w, "database", 500)
 		return
-	}
-	var provenance struct {
-		Commits []struct {
-			SHA        string    `json:"sha"`
-			ParentSHA  string    `json:"parent_sha"`
-			Subject    string    `json:"subject"`
-			Author     string    `json:"author"`
-			AuthoredAt time.Time `json:"authored_at"`
-		} `json:"commits"`
-	}
-	if json.Unmarshal(req.Source, &provenance) == nil {
-		for ordinal, commit := range provenance.Commits {
-			_, e = tx.Exec(r.Context(), "INSERT INTO source_commits(update_group_id,ordinal,commit_sha,parent_sha,subject,author_name,authored_at) VALUES($1,$2,$3,$4,$5,$6,$7)", gid, ordinal, commit.SHA, commit.ParentSHA, commit.Subject, commit.Author, commit.AuthoredAt)
-			if e != nil {
-				http.Error(w, "database", 500)
-				return
-			}
-		}
 	}
 	for platform, m := range meta.FileMetadata {
 		if platform != "android" && platform != "ios" {
@@ -149,7 +157,7 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		err := tx.QueryRow(r.Context(), `SELECT u.id
 FROM channel_heads h JOIN updates u ON u.group_id=h.group_id AND u.platform=h.platform
 WHERE h.channel=$1 AND h.runtime_version=$2 AND h.platform=$3 AND h.mode='ota'`, req.Channel, req.RuntimeVersion, platform).Scan(&previousUpdate)
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			previousUpdate = nil
 		} else if err != nil {
 			http.Error(w, "database", 500)
@@ -219,7 +227,17 @@ WHERE h.channel=$1 AND h.runtime_version=$2 AND h.platform=$3 AND h.mode='ota'`,
 	writeJSON(w, 201, map[string]any{"group_id": gid})
 }
 func (s *Server) list(w http.ResponseWriter, r *http.Request) {
-	rows, e := s.DB.Query(r.Context(), "SELECT id,channel,runtime_version,message,created_at,source FROM update_groups ORDER BY created_at DESC LIMIT 100")
+	limit, offset := 10, 0
+	if n, e := strconv.Atoi(r.URL.Query().Get("limit")); e == nil && n > 0 {
+		if n > 100 {
+			n = 100
+		}
+		limit = n
+	}
+	if n, e := strconv.Atoi(r.URL.Query().Get("offset")); e == nil && n >= 0 {
+		offset = n
+	}
+	rows, e := s.DB.Query(r.Context(), "SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash FROM update_groups ORDER BY created_at DESC LIMIT $1 OFFSET $2", limit, offset)
 	if e != nil {
 		http.Error(w, "database", 500)
 		return
@@ -231,8 +249,9 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 		var c, rv, m string
 		var t time.Time
 		var src json.RawMessage
-		_ = rows.Scan(&id, &c, &rv, &m, &t, &src)
-		out = append(out, map[string]any{"id": id, "channel": c, "runtime_version": rv, "message": m, "created_at": t, "source": json.RawMessage(src)})
+		var fingerprintHash *string
+		_ = rows.Scan(&id, &c, &rv, &m, &t, &src, &fingerprintHash)
+		out = append(out, map[string]any{"id": id, "channel": c, "runtime_version": rv, "message": m, "created_at": t, "source": json.RawMessage(src), "fingerprint_hash": fingerprintHash})
 	}
 	writeJSON(w, 200, out)
 }
@@ -240,8 +259,9 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var c, rv, m string
 	var t time.Time
-	var src json.RawMessage
-	e := s.DB.Pool.QueryRow(r.Context(), "SELECT channel,runtime_version,message,created_at,source FROM update_groups WHERE id=$1", id).Scan(&c, &rv, &m, &t, &src)
+	var src, fingerprintSources json.RawMessage
+	var fingerprintHash *string
+	e := s.DB.Pool.QueryRow(r.Context(), "SELECT channel,runtime_version,message,created_at,source,fingerprint_hash,fingerprint_sources FROM update_groups WHERE id=$1", id).Scan(&c, &rv, &m, &t, &src, &fingerprintHash, &fingerprintSources)
 	if e == pgx.ErrNoRows {
 		http.NotFound(w, r)
 		return
@@ -250,7 +270,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database", 500)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"id": id, "channel": c, "runtime_version": rv, "message": m, "created_at": t, "source": json.RawMessage(src)})
+	writeJSON(w, 200, map[string]any{"id": id, "channel": c, "runtime_version": rv, "message": m, "created_at": t, "source": json.RawMessage(src), "fingerprint": map[string]any{"hash": fingerprintHash, "sources": json.RawMessage(fingerprintSources)}})
 }
 func (s *Server) rollback(w http.ResponseWriter, r *http.Request) {
 	var q struct {

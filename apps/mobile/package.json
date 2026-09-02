@@ -5,6 +5,7 @@
 	"main": "index.js",
 	"scripts": {
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
+		"hot-update": "pnpm --dir ../hot-update-cli start --",
 		"postinstall": "patch-package",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start",
 		"test": "jest --watchAll",

@@ -186,7 +186,7 @@ func publish(t *testing.T, base string, archive []byte, message string) uuid.UUI
 	t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
-	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `"}}`
+	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `","working_tree_clean":true},"fingerprint":{"hash":"fingerprint-1","sources":[{"type":"contents","id":"fixture","reasons":["test"],"hash":"fixture"}]}}`
 	if err := mw.WriteField("request", req); err != nil {
 		t.Fatal(err)
 	}

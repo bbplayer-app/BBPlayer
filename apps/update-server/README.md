@@ -38,42 +38,56 @@ required only after the native app is configured to expect Expo code signing.
 
 ## Publish and operations
 
-`bbplayer-updates publish --server https://updates.example --token ... --channel production --dist apps/mobile/dist --message "..."`
-
-`publish` refuses a dirty Git checkout, archives the export, and stores source
-provenance alongside the update. A new release creates one asynchronous bsdiff
-job from the previous visible channel head to the new head for each compatible
-platform. Until it is `ready`, clients receive the complete immutable bundle.
-
-For `runtimeVersion: { policy: 'fingerprint' }`, Expo config intentionally does
-not contain a resolved runtime string. Generate it against the same source and
-environment as the native build, then pass it explicitly:
+The developer-facing hot-update CLI is TypeScript, so it can call Expo's own
+`@expo/fingerprint` library and retain its complete source report. From
+`apps/mobile` run:
 
 ```sh
-runtime_version="$(npx --yes eas-cli@latest fingerprint:generate --platform android --json --non-interactive | jq -r '.hash')"
-bbplayer-updates publish --runtime-version "$runtime_version" ...
+pnpm hot-update
 ```
 
-The checked-in GitHub workflow performs this automatically. String and
-`appVersion` runtime policies are resolved from `expoConfig.json` by the CLI.
+It interactively asks for the channel, release message and missing server
+credentials, warns before publishing a dirty worktree, runs `expo export`,
+exports the public Expo config, generates the Android fingerprint, and uploads
+the archive. Its only Git provenance is `commit_sha` plus
+`working_tree_clean`. When a fingerprint is uploaded, its complete `{ hash,
+sources }` is stored with the update group and its hash must equal the supplied
+`runtimeVersion`. `--no-fingerprint` instead requires an explicit
+`--runtime-version` and stores no fingerprint record.
+
+CI uses the exact same command non-interactively:
+
+```sh
+pnpm hot-update -- publish --non-interactive --channel production --message "..."
+```
+
+Non-interactive publishing rejects a dirty checkout unless `--allow-dirty` is
+specified explicitly. A new release creates one asynchronous bsdiff job from
+the previous visible channel head to the new head for each compatible platform.
+Until it is `ready`, clients receive the complete immutable bundle.
+
+The hot-update CLI calls `createFingerprintAsync(projectDir, { platforms:
+['android'] })`, rather than shelling out to EAS CLI. This keeps the generated
+runtime hash and the human-debuggable source list from the same library call.
 
 The independent `apps/update-client` CLI issues Expo-style manifest requests,
 downloads and verifies returned assets, and posts versioned test event envelopes.
 Pass `--current-update-id <uuid>` to `check` to exercise a ready bsdiff response;
 the CLI checks the `226`, `IM: bsdiff`, and `BSDIFF40` invariants.
 
-Operational commands use tables by default and `--json` for scripting:
+All management operations are provided by the interactive TypeScript CLI (and
+support `--json` for scripting):
 
 ```sh
-bbplayer-updates list --server https://updates.example --token ...
-bbplayer-updates channel history production --server https://updates.example --token ... --json
-bbplayer-updates insights --server https://updates.example --token ... --json
-bbplayer-updates source compare <from-group> <to-group> --server https://updates.example --token ...
+pnpm --dir apps/hot-update-cli start -- list --server https://updates.example --token ...
+pnpm --dir apps/hot-update-cli start -- channel --action history --channel production --server https://updates.example --token ... --json
+pnpm --dir apps/hot-update-cli start -- insights --server https://updates.example --token ... --json
+pnpm --dir apps/hot-update-cli start -- source --action compare --from <from-group> --to <to-group> --server https://updates.example --token ...
 ```
 
-`source compare` includes the published commit candidates, a GitHub compare URL
-when both groups are in the same GitHub repository, and metadata/config/launch
-bundle hash values for each side. `insights` exposes client outcomes plus full
+`source compare` retains compatibility with earlier detailed provenance, while
+new publications are intentionally limited to the single recorded commit. The
+`insights` command exposes client outcomes plus full
 and bsdiff request counts, bytes, saved bytes, hit rate, and fallbacks.
 
 ## Integration verification
