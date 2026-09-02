@@ -90,6 +90,36 @@ new publications are intentionally limited to the single recorded commit. The
 `insights` command exposes client outcomes plus full
 and bsdiff request counts, bytes, saved bytes, hit rate, and fallbacks.
 
+## Observability
+
+PostgreSQL is the metrics backend; this service deliberately does not expose a
+Prometheus endpoint or require an OTel collector. Request counts, 5xx errors,
+and duration are rolled into one-minute `service_metric_minutes` buckets.
+Launch-bundle and bsdiff deliveries are similarly aggregated in
+`delivery_metric_minutes`; ordinary update assets deliberately stay on the R2
+custom domain and are not counted by the API.
+
+Authenticated WebUI consumers can query:
+
+```text
+GET /admin/metrics/service?start=<RFC3339>&end=<RFC3339>&route=<optional>
+GET /admin/metrics/delivery?start=<RFC3339>&end=<RFC3339>&channel=<optional>&group_id=<optional>
+GET /admin/insights/activity?start=<RFC3339>&end=<RFC3339>&channel=<optional>
+GET /admin/insights/groups/<group-id>/lifecycle?start=<RFC3339>&end=<RFC3339>
+```
+
+Both endpoints default to the last seven days and accept at most 90 days.
+Raw client lifecycle events are retained for 35 days; minute metrics for 90
+days. The worker performs retention cleanup daily. `activity` is deduplicated
+per installation HMAC, running update, app version, and day. `launch_succeeded`
+or `launch_healthy` creates one known launch per installation/update;
+`launch_failed` or `launch_crashed` creates one known crash. Client
+activity/version charts and these conservative lifecycle counts are emitted by
+the mobile OTA integration. Production builds request manifests from
+`https://updates.bbplayer.roitium.com/api/manifest` and post telemetry to the
+same origin's `/api/events`; deploy the API at that origin before shipping such
+a build.
+
 ## Integration verification
 
 `docker compose -f docker-compose.e2e.yml up -d` starts PostgreSQL 17 and

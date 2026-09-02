@@ -28,12 +28,3 @@ WHERE occurred_at >= now()-interval '7 days'
   AND (sqlc.narg(runtime_version)::text IS NULL OR runtime_version=sqlc.narg(runtime_version)::text)
   AND (sqlc.narg(platform)::text IS NULL OR platform=sqlc.narg(platform)::text)
   AND (sqlc.narg(group_id)::uuid IS NULL OR group_id=sqlc.narg(group_id)::uuid);
-
--- name: GetTransportInsightSummary :one
-SELECT count(*) FILTER (WHERE event_type='patch_served') AS patch_requests,count(*) FILTER (WHERE event_type='patch_fallback_full') AS patch_fallbacks,count(*) FILTER (WHERE event_type='asset_served') AS full_requests,COALESCE(sum((payload->>'bytes')::bigint) FILTER (WHERE event_type='patch_served'),0)::bigint AS patch_bytes,COALESCE(sum((payload->>'target_bytes')::bigint) FILTER (WHERE event_type='patch_served'),0)::bigint AS patch_target_bytes,COALESCE(sum((payload->>'bytes')::bigint) FILTER (WHERE event_type='asset_served'),0)::bigint AS full_bytes
-FROM update_events
-WHERE occurred_at >= now()-interval '7 days'
-  AND (sqlc.narg(channel)::text IS NULL OR channel=sqlc.narg(channel)::text)
-  AND (sqlc.narg(runtime_version)::text IS NULL OR runtime_version=sqlc.narg(runtime_version)::text)
-  AND (sqlc.narg(platform)::text IS NULL OR platform=sqlc.narg(platform)::text)
-  AND (sqlc.narg(group_id)::uuid IS NULL OR group_id=sqlc.narg(group_id)::uuid);

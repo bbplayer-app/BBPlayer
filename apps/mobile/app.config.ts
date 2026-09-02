@@ -20,6 +20,12 @@ import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+const UPDATE_SERVER_URL = 'https://updates.bbplayer.roitium.com'
+const UPDATE_CHANNEL = IS_DEV
+	? 'development'
+	: IS_PREVIEW
+		? 'preview'
+		: 'production'
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
@@ -282,6 +288,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				projectId: '1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
 			},
 			updateManifestUrl: 'https://be.bbplayer.roitium.com/update.json',
+			updateServerUrl: UPDATE_SERVER_URL,
+			updateChannel: UPDATE_CHANNEL,
 		},
 		owner: 'roitium',
 		ios: {
@@ -296,6 +304,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		},
 		updates: {
 			enabled: true,
+			url: `${UPDATE_SERVER_URL}/api/manifest`,
+			requestHeaders: {
+				'expo-channel-name': UPDATE_CHANNEL,
+			},
 		},
 	}
 }

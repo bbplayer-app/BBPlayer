@@ -40,23 +40,23 @@ func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
 						s.logError(r, "asset: increment patch served counter", err, "from", base.String(), "to", uuid.UUID(asset.ID.Bytes).String())
 					}
 					gid := uuid.UUID(asset.GroupID.Bytes)
-					s.recordServerPayloadContext(r.Context(), "patch_served", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"bytes": size, "target_bytes": asset.SizeBytes, "base_update_id": base.String()})
+					s.recordDeliveryMetric(r.Context(), deliveryMetricPatch, deliveryMetricServed, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, size, asset.SizeBytes)
 					return
 				}
 				gid := uuid.UUID(asset.GroupID.Bytes)
-				s.recordServerPayloadContext(r.Context(), "patch_object_error", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"base_update_id": base.String()})
+				s.recordDeliveryMetric(r.Context(), deliveryMetricPatch, deliveryMetricObjectError, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, 0, 0)
 				return
 			}
 		}
 		gid := uuid.UUID(asset.GroupID.Bytes)
-		s.recordServerPayloadContext(r.Context(), "patch_fallback_full", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"reason": "not_ready_or_invalid_base"})
+		s.recordDeliveryMetric(r.Context(), deliveryMetricPatchFallback, deliveryMetricFallback, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, 0, 0)
 	}
 	served, size := s.writeObjectStatus(w, r, asset.ObjectKey, asset.ContentType, http.StatusOK, nil)
 	gid := uuid.UUID(asset.GroupID.Bytes)
 	if served {
-		s.recordServerPayloadContext(r.Context(), "asset_served", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"bytes": size, "launch": asset.IsLaunch})
+		s.recordDeliveryMetric(r.Context(), deliveryMetricLaunchBundle, deliveryMetricServed, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, size, asset.SizeBytes)
 	} else {
-		s.recordServerPayloadContext(r.Context(), "asset_object_error", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"launch": asset.IsLaunch})
+		s.recordDeliveryMetric(r.Context(), deliveryMetricLaunchBundle, deliveryMetricObjectError, &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, 0, 0)
 	}
 }
 

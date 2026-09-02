@@ -16,5 +16,9 @@ func registerAdminRoutes(s *Server, r chi.Router) {
 		a.Get("/admin/source/compare/{from}/{to}", s.sourceCompare)
 		a.Get("/admin/source/{commit}", s.sourceFind)
 		a.Get("/admin/insights", s.insights)
+		a.Get("/admin/insights/activity", s.activitySeries)
+		a.Get("/admin/insights/groups/{groupID}/lifecycle", s.updateGroupLifecycleSeries)
+		a.Get("/admin/metrics/service", s.serviceMetricSeries)
+		a.Get("/admin/metrics/delivery", s.deliveryMetricSeries)
 	})
 }

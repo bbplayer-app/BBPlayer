@@ -69,51 +69,6 @@ func (q *Queries) GetEventInsightSummary(ctx context.Context, arg GetEventInsigh
 	return i, err
 }
 
-const getTransportInsightSummary = `-- name: GetTransportInsightSummary :one
-SELECT count(*) FILTER (WHERE event_type='patch_served') AS patch_requests,count(*) FILTER (WHERE event_type='patch_fallback_full') AS patch_fallbacks,count(*) FILTER (WHERE event_type='asset_served') AS full_requests,COALESCE(sum((payload->>'bytes')::bigint) FILTER (WHERE event_type='patch_served'),0)::bigint AS patch_bytes,COALESCE(sum((payload->>'target_bytes')::bigint) FILTER (WHERE event_type='patch_served'),0)::bigint AS patch_target_bytes,COALESCE(sum((payload->>'bytes')::bigint) FILTER (WHERE event_type='asset_served'),0)::bigint AS full_bytes
-FROM update_events
-WHERE occurred_at >= now()-interval '7 days'
-  AND ($1::text IS NULL OR channel=$1::text)
-  AND ($2::text IS NULL OR runtime_version=$2::text)
-  AND ($3::text IS NULL OR platform=$3::text)
-  AND ($4::uuid IS NULL OR group_id=$4::uuid)
-`
-
-type GetTransportInsightSummaryParams struct {
-	Channel        pgtype.Text
-	RuntimeVersion pgtype.Text
-	Platform       pgtype.Text
-	GroupID        pgtype.UUID
-}
-
-type GetTransportInsightSummaryRow struct {
-	PatchRequests    int64
-	PatchFallbacks   int64
-	FullRequests     int64
-	PatchBytes       int64
-	PatchTargetBytes int64
-	FullBytes        int64
-}
-
-func (q *Queries) GetTransportInsightSummary(ctx context.Context, arg GetTransportInsightSummaryParams) (GetTransportInsightSummaryRow, error) {
-	row := q.db.QueryRow(ctx, getTransportInsightSummary,
-		arg.Channel,
-		arg.RuntimeVersion,
-		arg.Platform,
-		arg.GroupID,
-	)
-	var i GetTransportInsightSummaryRow
-	err := row.Scan(
-		&i.PatchRequests,
-		&i.PatchFallbacks,
-		&i.FullRequests,
-		&i.PatchBytes,
-		&i.PatchTargetBytes,
-		&i.FullBytes,
-	)
-	return i, err
-}
-
 const insertClientEvent = `-- name: InsertClientEvent :exec
 INSERT INTO update_events(id,schema_version,event_type,occurred_at,installation_hmac,client_version,client_build_version,expo_updates_version,updates_protocol_version,platform,runtime_version,channel,update_id,embedded_update_id,group_id,launch_source,payload)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)

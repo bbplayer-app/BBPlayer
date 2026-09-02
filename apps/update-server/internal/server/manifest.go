@@ -18,12 +18,9 @@ import (
 	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"go.opentelemetry.io/otel"
 )
 
 func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
-	_, span := otel.Tracer("updates").Start(r.Context(), "manifest")
-	defer span.End()
 	platform, runtime, channel := r.Header.Get("expo-platform"), r.Header.Get("expo-runtime-version"), r.Header.Get("expo-channel-name")
 	if platform != "android" && platform != "ios" || runtime == "" || channel == "" {
 		http.Error(w, "missing Expo platform, runtime version, or channel", 400)
@@ -31,7 +28,6 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	}
 	head, err := s.DB.Queries.GetChannelHead(r.Context(), dbq.GetChannelHeadParams{Channel: channel, RuntimeVersion: runtime, Platform: platform})
 	if err == pgx.ErrNoRows {
-		s.recordServer(r, "manifest_no_update", nil)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -41,7 +37,6 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if head.Mode == "embedded" {
-		s.recordServer(r, "manifest_embedded_rollback", nil)
 		s.writeDirective(w, r, map[string]any{"type": "rollBackToEmbedded"})
 		return
 	}
@@ -81,7 +76,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("expo-sfv-version", "0")
 	w.Header().Set("cache-control", "private, max-age=0")
 	gid := uuid.UUID(head.GroupID.Bytes)
-	s.recordServer(r, "manifest_served", &gid)
+	s.recordServer(r, deliveryMetricManifestServed, &gid)
 	s.writeManifest(w, r, manifest)
 }
 func (s *Server) writeDirective(w http.ResponseWriter, r *http.Request, directive any) {

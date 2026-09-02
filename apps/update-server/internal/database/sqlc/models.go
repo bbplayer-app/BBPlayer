@@ -51,6 +51,53 @@ type DailyUpdateMetric struct {
 	UniqueInstallations int64
 }
 
+type DeliveryMetricMinute struct {
+	Minute          pgtype.Timestamptz
+	Channel         string
+	RuntimeVersion  string
+	Platform        string
+	GroupID         pgtype.UUID
+	Kind            string
+	Outcome         string
+	RequestCount    int64
+	ByteCount       int64
+	TargetByteCount int64
+}
+
+type InstallationActivityDay struct {
+	Day                pgtype.Date
+	InstallationHmac   string
+	Channel            string
+	RuntimeVersion     string
+	Platform           string
+	ClientVersion      string
+	ClientBuildVersion string
+	UpdateID           pgtype.UUID
+	GroupID            pgtype.UUID
+	FirstSeenAt        pgtype.Timestamptz
+	LastSeenAt         pgtype.Timestamptz
+}
+
+type KnownUpdateCrash struct {
+	InstallationHmac string
+	UpdateID         pgtype.UUID
+	GroupID          pgtype.UUID
+	Channel          string
+	RuntimeVersion   string
+	Platform         string
+	ConfirmedAt      pgtype.Timestamptz
+}
+
+type KnownUpdateLaunch struct {
+	InstallationHmac string
+	UpdateID         pgtype.UUID
+	GroupID          pgtype.UUID
+	Channel          string
+	RuntimeVersion   string
+	Platform         string
+	ConfirmedAt      pgtype.Timestamptz
+}
+
 type Patch struct {
 	ID                  int64
 	FromUpdateID        pgtype.UUID
@@ -66,6 +113,14 @@ type Patch struct {
 	ProcessingStartedAt pgtype.Timestamptz
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
+}
+
+type ServiceMetricMinute struct {
+	Minute       pgtype.Timestamptz
+	Route        string
+	Status       int32
+	RequestCount int64
+	DurationMs   int64
 }
 
 type SourceCommit struct {

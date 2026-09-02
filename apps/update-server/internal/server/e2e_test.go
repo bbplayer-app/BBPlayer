@@ -46,7 +46,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if err = db.Migrate(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Pool.Exec(ctx, "TRUNCATE update_events, patches, channel_history, channel_heads, assets, updates, source_commits, update_groups CASCADE"); err != nil {
+	if _, err = db.Pool.Exec(ctx, "TRUNCATE service_metric_minutes, delivery_metric_minutes, update_events, patches, channel_history, channel_heads, assets, updates, source_commits, update_groups CASCADE"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,7 +128,9 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if r := request(t, http.MethodPost, h.URL+"/api/events", bad, nil); r.StatusCode != http.StatusBadRequest {
 		t.Fatalf("invalid event status: %s", r.Status)
 	}
-	event := map[string]any{"event_id": uuid.New(), "schema_version": 1, "event_type": "launch_succeeded", "occurred_at": time.Now().UTC(), "installation_id": "device-id", "client_version": "1", "client_build_version": "1", "expo_updates_version": "57", "updates_protocol_version": "1", "platform": "android", "runtime_version": "1", "channel": "test", "launched_update_id": decoded.ID, "embedded_update_id": nil, "update_group_id": nil, "launch_source": "ota", "payload": map[string]any{}}
+	// Mobile clients know the running update ID but not the server-side group ID;
+	// the event endpoint must resolve that association before aggregating insights.
+	event := map[string]any{"event_id": uuid.New(), "schema_version": 1, "event_type": string(server.EventTypeLaunchSucceeded), "occurred_at": time.Now().UTC(), "installation_id": "device-id", "client_version": "1", "client_build_version": "1", "expo_updates_version": "57", "updates_protocol_version": "1", "platform": "android", "runtime_version": "1", "channel": "test", "launched_update_id": decoded.ID, "embedded_update_id": nil, "update_group_id": nil, "launch_source": "ota", "payload": map[string]any{}}
 	missingRequired := make(map[string]any, len(event))
 	maps.Copy(missingRequired, event)
 	delete(missingRequired, "embedded_update_id")
@@ -136,12 +138,28 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if r := request(t, http.MethodPost, h.URL+"/api/events", missingRequiredBody, nil); r.StatusCode != http.StatusBadRequest {
 		t.Fatalf("missing event field status: %s", r.Status)
 	}
+	unknownEvent := make(map[string]any, len(event))
+	maps.Copy(unknownEvent, event)
+	unknownEvent["event_id"] = uuid.New()
+	unknownEvent["event_type"] = "future_event_without_schema_upgrade"
+	unknownEventBody, _ := json.Marshal(unknownEvent)
+	if r := request(t, http.MethodPost, h.URL+"/api/events", unknownEventBody, nil); r.StatusCode != http.StatusBadRequest {
+		t.Fatalf("unknown event type status: %s", r.Status)
+	}
 	body, _ := json.Marshal(event)
 	if r := request(t, http.MethodPost, h.URL+"/api/events", body, nil); r.StatusCode != http.StatusAccepted {
 		t.Fatalf("event status: %s", r.Status)
 	}
 	if r := request(t, http.MethodPost, h.URL+"/api/events", body, nil); r.StatusCode != http.StatusAccepted {
 		t.Fatalf("idempotent event status: %s", r.Status)
+	}
+	crashEvent := make(map[string]any, len(event))
+	maps.Copy(crashEvent, event)
+	crashEvent["event_id"] = uuid.New()
+	crashEvent["event_type"] = string(server.EventTypeLaunchFailed)
+	crashBody, _ := json.Marshal(crashEvent)
+	if r := request(t, http.MethodPost, h.URL+"/api/events", crashBody, nil); r.StatusCode != http.StatusAccepted {
+		t.Fatalf("crash event status: %s", r.Status)
 	}
 	count, err := db.Queries.CountEventsByID(ctx, pgtype.UUID{Bytes: [16]byte(event["event_id"].(uuid.UUID)), Valid: true})
 	if err != nil || count != 1 {
@@ -152,6 +170,30 @@ func TestE2EExpoProtocol(t *testing.T) {
 	_ = insights.Body.Close()
 	if insights.StatusCode != http.StatusOK || !bytes.Contains(insightBody, []byte(`"unique_users":1`)) || !bytes.Contains(insightBody, []byte(`"bsdiff_fallbacks":1`)) {
 		t.Fatalf("insights response: %s %s", insights.Status, insightBody)
+	}
+	deliveryMetrics := request(t, http.MethodGet, h.URL+"/admin/metrics/delivery?channel=test", nil, map[string]string{"Authorization": "Bearer admin"})
+	deliveryMetricBody, _ := io.ReadAll(deliveryMetrics.Body)
+	_ = deliveryMetrics.Body.Close()
+	if deliveryMetrics.StatusCode != http.StatusOK || !bytes.Contains(deliveryMetricBody, []byte(`"kind":"launch_bundle"`)) || !bytes.Contains(deliveryMetricBody, []byte(`"kind":"patch_fallback"`)) {
+		t.Fatalf("delivery metric response: %s %s", deliveryMetrics.Status, deliveryMetricBody)
+	}
+	serviceMetrics := request(t, http.MethodGet, h.URL+"/admin/metrics/service", nil, map[string]string{"Authorization": "Bearer admin"})
+	serviceMetricBody, _ := io.ReadAll(serviceMetrics.Body)
+	_ = serviceMetrics.Body.Close()
+	if serviceMetrics.StatusCode != http.StatusOK || !bytes.Contains(serviceMetricBody, []byte(`"requests":`)) {
+		t.Fatalf("service metric response: %s %s", serviceMetrics.Status, serviceMetricBody)
+	}
+	activity := request(t, http.MethodGet, h.URL+"/admin/insights/activity?channel=test", nil, map[string]string{"Authorization": "Bearer admin"})
+	activityBody, _ := io.ReadAll(activity.Body)
+	_ = activity.Body.Close()
+	if activity.StatusCode != http.StatusOK || !bytes.Contains(activityBody, []byte(`"active_installations":1`)) || !bytes.Contains(activityBody, []byte(`"client_version":"1"`)) {
+		t.Fatalf("activity insight response: %s %s", activity.Status, activityBody)
+	}
+	lifecycle := request(t, http.MethodGet, h.URL+"/admin/insights/groups/"+secondGroup.String()+"/lifecycle", nil, map[string]string{"Authorization": "Bearer admin"})
+	lifecycleBody, _ := io.ReadAll(lifecycle.Body)
+	_ = lifecycle.Body.Close()
+	if lifecycle.StatusCode != http.StatusOK || !bytes.Contains(lifecycleBody, []byte(`"known_launches":1`)) || !bytes.Contains(lifecycleBody, []byte(`"known_crashes":1`)) {
+		t.Fatalf("lifecycle insight response: %s %s", lifecycle.Status, lifecycleBody)
 	}
 	rollback := []byte(`{"runtime_version":"1","platform":"android","mode":"embedded"}`)
 	if r := request(t, http.MethodPost, h.URL+"/admin/channels/test/rollback", rollback, map[string]string{"Authorization": "Bearer admin", "Content-Type": "application/json"}); r.StatusCode != http.StatusOK {

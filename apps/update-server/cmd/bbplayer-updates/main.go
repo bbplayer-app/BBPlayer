@@ -71,6 +71,8 @@ func workerCmd() *cobra.Command {
 		defer patchTicker.Stop()
 		rollupTicker := time.NewTicker(5 * time.Minute)
 		defer rollupTicker.Stop()
+		cleanupTicker := time.NewTicker(24 * time.Hour)
+		defer cleanupTicker.Stop()
 		for {
 			select {
 			case <-patchTicker.C:
@@ -80,6 +82,16 @@ func workerCmd() *cobra.Command {
 			case <-rollupTicker.C:
 				if e = db.Queries.RollupDailyMetrics(ctx); e != nil {
 					slog.Error("worker: metrics rollup", "error", e)
+				}
+			case <-cleanupTicker.C:
+				if e = db.Queries.DeleteExpiredRawEvents(ctx); e != nil {
+					slog.Error("worker: raw event cleanup", "error", e)
+				}
+				if e = db.Queries.DeleteExpiredServiceMetrics(ctx); e != nil {
+					slog.Error("worker: service metric cleanup", "error", e)
+				}
+				if e = db.Queries.DeleteExpiredDeliveryMetrics(ctx); e != nil {
+					slog.Error("worker: delivery metric cleanup", "error", e)
 				}
 			}
 		}

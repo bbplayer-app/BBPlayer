@@ -17,12 +17,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/config"
+	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/objectstore"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Server struct {
@@ -32,19 +32,6 @@ type Server struct {
 	Log     *slog.Logger
 	Signer  *rsa.PrivateKey
 	KeyID   string
-	Metrics *metrics
-}
-type metrics struct {
-	registry *prometheus.Registry
-	requests *prometheus.CounterVec
-	duration *prometheus.HistogramVec
-}
-
-func newMetrics() *metrics {
-	r := prometheus.NewRegistry()
-	m := &metrics{registry: r, requests: prometheus.NewCounterVec(prometheus.CounterOpts{Name: "bbplayer_updates_http_requests_total", Help: "Update service responses"}, []string{"route", "status"}), duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "bbplayer_updates_http_duration_seconds", Help: "Update service request durations"}, []string{"route"})}
-	r.MustRegister(m.requests, m.duration)
-	return m
 }
 
 func New(ctx context.Context, c config.Config, db *store.Store) (*Server, error) {
@@ -68,7 +55,7 @@ func New(ctx context.Context, c config.Config, db *store.Store) (*Server, error)
 	return s, nil
 }
 func NewWithObjectStore(c config.Config, db *store.Store, objects objectstore.Store) *Server {
-	return &Server{C: c, DB: db, Objects: objects, Log: slog.Default(), Metrics: newMetrics()}
+	return &Server{C: c, DB: db, Objects: objects, Log: slog.Default()}
 }
 
 type statusWriter struct {
@@ -98,8 +85,9 @@ func (s *Server) instrument(next http.Handler) http.Handler {
 		if wrapped.status == 0 {
 			wrapped.status = http.StatusOK
 		}
-		s.Metrics.requests.WithLabelValues(route, fmt.Sprint(wrapped.status)).Inc()
-		s.Metrics.duration.WithLabelValues(route).Observe(time.Since(started).Seconds())
+		if err := s.DB.Queries.RecordServiceMetric(r.Context(), dbq.RecordServiceMetricParams{Route: route, Status: int32(wrapped.status), DurationMs: time.Since(started).Milliseconds()}); err != nil {
+			s.Log.Error("service metric: record", "error", err, "route", route, "status", wrapped.status)
+		}
 	})
 }
 func (s *Server) admin(next http.Handler) http.Handler {

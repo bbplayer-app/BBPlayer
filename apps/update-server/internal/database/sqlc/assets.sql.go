@@ -66,6 +66,17 @@ func (q *Queries) GetChannelHead(ctx context.Context, arg GetChannelHeadParams) 
 	return i, err
 }
 
+const getGroupIDForUpdate = `-- name: GetGroupIDForUpdate :one
+SELECT group_id FROM updates WHERE id=$1
+`
+
+func (q *Queries) GetGroupIDForUpdate(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getGroupIDForUpdate, id)
+	var group_id pgtype.UUID
+	err := row.Scan(&group_id)
+	return group_id, err
+}
+
 const getUpdateForGroupPlatform = `-- name: GetUpdateForGroupPlatform :one
 SELECT u.id,u.launch_key,u.launch_hash,g.created_at FROM updates u JOIN update_groups g ON g.id=u.group_id WHERE u.group_id=$1 AND u.platform=$2
 `

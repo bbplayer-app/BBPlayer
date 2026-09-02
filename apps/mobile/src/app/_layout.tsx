@@ -33,6 +33,10 @@ import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
 import lyricService from '@/lib/services/lyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
+import {
+	reportUpdateActivity,
+	reportUpdateLaunch,
+} from '@/lib/services/updateTelemetry'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
@@ -159,6 +163,7 @@ function RootLayout() {
 			}
 		}
 		void logAppInfo()
+		reportUpdateActivity()
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
 		return () => subscription.remove()
@@ -172,6 +177,7 @@ function RootLayout() {
 
 	useEffect(() => {
 		if (isReady && migrationsSuccess) {
+			reportUpdateLaunch()
 			// 恢复上次被中断的同步任务（syncing → pending），并触发同步
 			playlistSyncWorker.recoverStuckRows().catch((error) => {
 				logger.error('恢复同步任务失败:', error)

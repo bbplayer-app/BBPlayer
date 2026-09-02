@@ -10,5 +10,8 @@ SELECT id,asset_key,object_key,sha256,content_type,is_launch FROM assets WHERE u
 -- name: GetAsset :one
 SELECT a.object_key,a.content_type,a.size_bytes,u.group_id,u.id,a.is_launch,u.platform,g.runtime_version,g.channel FROM assets a JOIN updates u ON u.id=a.update_id JOIN update_groups g ON g.id=u.group_id WHERE a.id=$1;
 
+-- name: GetGroupIDForUpdate :one
+SELECT group_id FROM updates WHERE id=$1;
+
 -- name: InsertAsset :exec
 INSERT INTO assets(update_id,asset_key,object_key,sha256,content_type,size_bytes,is_launch) VALUES($1,$2,$3,$4,$5,$6,$7);

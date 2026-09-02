@@ -13,13 +13,14 @@ import (
 
 	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Event struct {
 	ID                     uuid.UUID      `json:"event_id"`
 	Schema                 int            `json:"schema_version"`
-	Type                   string         `json:"event_type"`
+	Type                   EventType      `json:"event_type"`
 	Occurred               time.Time      `json:"occurred_at"`
 	Installation           string         `json:"installation_id"`
 	ClientVersion          string         `json:"client_version"`
@@ -50,7 +51,7 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 	var fields map[string]json.RawMessage
 	var e Event
 	mandatory := []string{"schema_version", "event_id", "event_type", "occurred_at", "installation_id", "client_version", "client_build_version", "expo_updates_version", "updates_protocol_version", "platform", "runtime_version", "channel", "launched_update_id", "embedded_update_id", "update_group_id", "launch_source"}
-	if json.Unmarshal(body, &fields) != nil || json.Unmarshal(body, &e) != nil || e.Schema != 1 || e.ID == uuid.Nil || e.Type == "" || e.Occurred.IsZero() || e.Installation == "" || e.ClientVersion == "" || e.ClientBuild == "" || e.ExpoUpdatesVersion == "" || e.UpdatesProtocolVersion == "" || e.Platform == "" || e.Runtime == "" || e.Channel == "" || e.LaunchSource == "" {
+	if json.Unmarshal(body, &fields) != nil || json.Unmarshal(body, &e) != nil || e.Schema != 1 || e.ID == uuid.Nil || !e.Type.valid() || e.Occurred.IsZero() || e.Installation == "" || e.ClientVersion == "" || e.ClientBuild == "" || e.ExpoUpdatesVersion == "" || e.UpdatesProtocolVersion == "" || e.Platform == "" || e.Runtime == "" || e.Channel == "" || e.LaunchSource == "" {
 		http.Error(w, "invalid event schema v1", 400)
 		return
 	}
@@ -60,17 +61,29 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if e.GroupID == nil && e.UpdateID != nil {
+		groupID, lookupErr := s.DB.Queries.GetGroupIDForUpdate(r.Context(), pgUUID(e.UpdateID))
+		if lookupErr == nil {
+			resolved := uuid.UUID(groupID.Bytes)
+			e.GroupID = &resolved
+		} else if !errors.Is(lookupErr, pgx.ErrNoRows) {
+			s.logError(r, "event: resolve update group", lookupErr, "update_id", e.UpdateID.String())
+			http.Error(w, "database", http.StatusInternalServerError)
+			return
+		}
+	}
 	m := hmac.New(sha256.New, []byte(s.C.InstallationHMACKey))
 	_, _ = m.Write([]byte(e.Installation))
+	installationHMAC := base64.RawURLEncoding.EncodeToString(m.Sum(nil))
 	p, _ := json.Marshal(e.Payload)
 	err = s.DB.Queries.InsertClientEvent(
 		r.Context(),
 		dbq.InsertClientEventParams{
 			ID:                     pgUUID(&e.ID),
 			SchemaVersion:          int32(e.Schema),
-			EventType:              e.Type,
+			EventType:              string(e.Type),
 			OccurredAt:             pgtype.Timestamptz{Time: e.Occurred, Valid: true},
-			InstallationHmac:       pgtype.Text{String: base64.RawURLEncoding.EncodeToString(m.Sum(nil)), Valid: true},
+			InstallationHmac:       pgtype.Text{String: installationHMAC, Valid: true},
 			ClientVersion:          pgtype.Text{String: e.ClientVersion, Valid: true},
 			ClientBuildVersion:     pgtype.Text{String: e.ClientBuild, Valid: true},
 			ExpoUpdatesVersion:     pgtype.Text{String: e.ExpoUpdatesVersion, Valid: true},
@@ -90,26 +103,53 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database", 500)
 		return
 	}
+	if err := s.recordClientInsights(r.Context(), e, installationHMAC); err != nil {
+		s.logError(r, "event: record client insights", err, "event_id", e.ID.String(), "event_type", e.Type)
+		http.Error(w, "database", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (s *Server) recordServer(r *http.Request, typ string, gid *uuid.UUID) {
-	s.recordServerPayload(r, typ, gid, map[string]any{})
+func (s *Server) recordClientInsights(ctx context.Context, e Event, installationHMAC string) error {
+	if e.UpdateID == nil {
+		return nil
+	}
+	seenAt := e.Occurred.UTC()
+	if err := s.DB.Queries.RecordInstallationActivity(ctx, dbq.RecordInstallationActivityParams{
+		Day:                pgtype.Date{Time: seenAt, Valid: true},
+		InstallationHmac:   installationHMAC,
+		Channel:            e.Channel,
+		RuntimeVersion:     e.Runtime,
+		Platform:           e.Platform,
+		ClientVersion:      e.ClientVersion,
+		ClientBuildVersion: e.ClientBuild,
+		UpdateID:           pgUUID(e.UpdateID),
+		GroupID:            pgUUID(e.GroupID),
+		FirstSeenAt:        pgtype.Timestamptz{Time: seenAt, Valid: true},
+	}); err != nil {
+		return err
+	}
+	params := dbq.RecordKnownLaunchParams{InstallationHmac: installationHMAC, UpdateID: pgUUID(e.UpdateID), GroupID: pgUUID(e.GroupID), Channel: e.Channel, RuntimeVersion: e.Runtime, Platform: e.Platform, ConfirmedAt: pgtype.Timestamptz{Time: seenAt, Valid: true}}
+	switch e.Type {
+	case EventTypeLaunchSucceeded, EventTypeLaunchHealthy:
+		return s.DB.Queries.RecordKnownLaunch(ctx, params)
+	case EventTypeLaunchFailed, EventTypeLaunchCrashed, EventTypeErrorRecovery:
+		return s.DB.Queries.RecordKnownCrash(ctx, dbq.RecordKnownCrashParams(params))
+	default:
+		return nil
+	}
 }
-func (s *Server) recordServerPayload(r *http.Request, typ string, gid *uuid.UUID, payload map[string]any) {
-	s.recordServerPayloadContext(r.Context(), typ, gid, r.Header.Get("expo-platform"), r.Header.Get("expo-runtime-version"), r.Header.Get("expo-channel-name"), payload)
+
+func (s *Server) recordServer(r *http.Request, kind deliveryMetricKind, gid *uuid.UUID) {
+	s.recordDeliveryMetric(r.Context(), kind, deliveryMetricServed, gid, r.Header.Get("expo-platform"), r.Header.Get("expo-runtime-version"), r.Header.Get("expo-channel-name"), 0, 0)
 }
-func (s *Server) recordServerPayloadContext(ctx context.Context, typ string, gid *uuid.UUID, platform, runtime, channel string, payload map[string]any) {
-	p, err := json.Marshal(payload)
-	if err != nil {
-		s.Log.Error("server event: marshal payload", "error", err, "event_type", typ)
+
+func (s *Server) recordDeliveryMetric(ctx context.Context, kind deliveryMetricKind, outcome deliveryMetricOutcome, gid *uuid.UUID, platform, runtime, channel string, bytes, targetBytes int64) {
+	if gid == nil {
 		return
 	}
-	if err := s.DB.Queries.InsertServerEvent(ctx, dbq.InsertServerEventParams{EventType: typ, Platform: pgtype.Text{String: platform, Valid: true}, RuntimeVersion: pgtype.Text{String: runtime, Valid: true}, Channel: pgtype.Text{String: channel, Valid: true}, GroupID: pgUUID(gid), Payload: p}); err != nil {
-		attrs := []any{"error", err, "event_type", typ, "platform", platform, "runtime_version", runtime, "channel", channel}
-		if gid != nil {
-			attrs = append(attrs, "group_id", gid.String())
-		}
-		s.Log.Error("server event: insert", attrs...)
+	if err := s.DB.Queries.RecordDeliveryMetric(ctx, dbq.RecordDeliveryMetricParams{Channel: channel, RuntimeVersion: runtime, Platform: platform, GroupID: pgUUID(gid), Kind: string(kind), Outcome: string(outcome), ByteCount: bytes, TargetByteCount: targetBytes}); err != nil {
+		s.Log.Error("delivery metric: record", "error", err, "kind", kind, "outcome", outcome, "channel", channel, "runtime_version", runtime, "platform", platform, "group_id", gid.String())
 	}
 }
