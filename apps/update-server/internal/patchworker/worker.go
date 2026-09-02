@@ -11,10 +11,12 @@ import (
 	"os/exec"
 	"path"
 
+	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/objectstore"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/store"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const minimumSaving = 0.10
@@ -37,24 +39,14 @@ func RunOnce(ctx context.Context, db *store.Store, objects objectstore.Store) (b
 	}
 	defer tx.Rollback(ctx)
 	var j job
-	err = tx.QueryRow(ctx, `WITH claimed AS (
- SELECT p.id,p.from_update_id,p.to_update_id,a1.object_key AS from_key,a2.object_key AS to_key,a2.size_bytes
- FROM patches p
- JOIN assets a1 ON a1.update_id=p.from_update_id AND a1.is_launch
- JOIN assets a2 ON a2.update_id=p.to_update_id AND a2.is_launch
- WHERE p.status='pending'
-    OR (p.status='processing' AND p.processing_started_at < now() - interval '10 minutes')
- ORDER BY p.created_at FOR UPDATE SKIP LOCKED LIMIT 1
- ) UPDATE patches p SET status='processing',attempts=p.attempts+1,processing_started_at=now(),updated_at=now()
- FROM claimed c WHERE p.id=c.id
- RETURNING c.id,c.from_update_id,c.to_update_id,c.from_key,c.to_key,c.size_bytes`,
-	).Scan(&j.id, &j.from, &j.to, &j.fromKey, &j.toKey, &j.targetSize)
+	claimed, err := db.Queries.WithTx(tx).ClaimPatch(ctx)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return false, tx.Commit(ctx)
 		}
 		return false, err
 	}
+	j.id, j.from, j.to, j.fromKey, j.toKey, j.targetSize = claimed.ID, claimed.FromUpdateID.Bytes, claimed.ToUpdateID.Bytes, claimed.FromKey, claimed.ToKey, claimed.SizeBytes
 	if err = tx.Commit(ctx); err != nil {
 		return false, err
 	}
@@ -64,11 +56,9 @@ func RunOnce(ctx context.Context, db *store.Store, objects objectstore.Store) (b
 		if err == ErrNotBeneficial {
 			status = "not_beneficial"
 		}
-		_, updateErr := db.Pool.Exec(ctx, "UPDATE patches SET status=$2,error=$3,processing_started_at=NULL,updated_at=now() WHERE id=$1", j.id, status, err.Error())
-		return true, updateErr
+		return true, db.Queries.FailPatch(ctx, dbq.FailPatchParams{ID: j.id, Status: status, Error: pgtype.Text{String: err.Error(), Valid: true}})
 	}
-	_, err = db.Pool.Exec(ctx, "UPDATE patches SET status='ready',object_key=$2,sha256=$3,size_bytes=$4,error=NULL,processing_started_at=NULL,updated_at=now() WHERE id=$1", j.id, patch.key, patch.sha, patch.size)
-	return true, err
+	return true, db.Queries.CompletePatch(ctx, dbq.CompletePatchParams{ID: j.id, ObjectKey: pgtype.Text{String: patch.key, Valid: true}, Sha256: pgtype.Text{String: patch.sha, Valid: true}, SizeBytes: pgtype.Int8{Int64: patch.size, Valid: true}})
 }
 
 type result struct {
@@ -142,9 +132,5 @@ func Hash(b []byte) string { h := sha256.Sum256(b); return base64.RawURLEncoding
 // RollupDaily keeps raw events immutable while maintaining an inexpensive
 // query table for Insights. Re-running it is idempotent for the current day.
 func RollupDaily(ctx context.Context, db *store.Store) error {
-	_, err := db.Pool.Exec(ctx, `INSERT INTO daily_update_metrics(day,channel,runtime_version,platform,group_id,event_type,event_count,unique_installations)
-SELECT occurred_at::date,COALESCE(channel,''),COALESCE(runtime_version,''),COALESCE(platform,''),COALESCE(group_id,'00000000-0000-0000-0000-000000000000'::uuid),event_type,count(*),count(DISTINCT installation_hmac)
-FROM update_events WHERE occurred_at::date >= current_date - 1 GROUP BY 1,2,3,4,5,6
-ON CONFLICT(day,channel,runtime_version,platform,group_id,event_type) DO UPDATE SET event_count=excluded.event_count,unique_installations=excluded.unique_installations`)
-	return err
+	return db.Queries.RollupDailyMetrics(ctx)
 }

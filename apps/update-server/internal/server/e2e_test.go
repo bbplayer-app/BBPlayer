@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -20,10 +21,12 @@ import (
 	"time"
 
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/config"
+	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/objectstore"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/server"
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/store"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // This suite is intentionally opt-in: it exercises the real PostgreSQL schema
@@ -86,10 +89,11 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if asset.StatusCode != http.StatusOK || len(b) == 0 {
 		t.Fatalf("asset delivery failed: %s", asset.Status)
 	}
-	var firstUpdate uuid.UUID
-	if err := db.Pool.QueryRow(ctx, "SELECT id FROM updates WHERE group_id=$1 AND platform='android'", firstGroup).Scan(&firstUpdate); err != nil {
+	update, err := db.Queries.GetUpdateForGroupPlatform(ctx, dbq.GetUpdateForGroupPlatformParams{GroupID: pgtype.UUID{Bytes: [16]byte(firstGroup), Valid: true}, Platform: "android"})
+	if err != nil {
 		t.Fatal(err)
 	}
+	firstUpdate := uuid.UUID(update.ID.Bytes)
 	// The second update owns a pending adjacent patch. Expo's bsdiff request
 	// must safely receive the full bundle until a worker marks it ready.
 	fallback := request(t, http.MethodGet, decoded.LaunchAsset.URL, nil, map[string]string{"A-IM": "bsdiff", "Expo-Current-Update-ID": firstUpdate.String()})
@@ -126,9 +130,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 	}
 	event := map[string]any{"event_id": uuid.New(), "schema_version": 1, "event_type": "launch_succeeded", "occurred_at": time.Now().UTC(), "installation_id": "device-id", "client_version": "1", "client_build_version": "1", "expo_updates_version": "57", "updates_protocol_version": "1", "platform": "android", "runtime_version": "1", "channel": "test", "launched_update_id": decoded.ID, "embedded_update_id": nil, "update_group_id": nil, "launch_source": "ota", "payload": map[string]any{}}
 	missingRequired := make(map[string]any, len(event))
-	for key, value := range event {
-		missingRequired[key] = value
-	}
+	maps.Copy(missingRequired, event)
 	delete(missingRequired, "embedded_update_id")
 	missingRequiredBody, _ := json.Marshal(missingRequired)
 	if r := request(t, http.MethodPost, h.URL+"/api/events", missingRequiredBody, nil); r.StatusCode != http.StatusBadRequest {
@@ -141,8 +143,8 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if r := request(t, http.MethodPost, h.URL+"/api/events", body, nil); r.StatusCode != http.StatusAccepted {
 		t.Fatalf("idempotent event status: %s", r.Status)
 	}
-	var count int
-	if err := db.Pool.QueryRow(ctx, "SELECT count(*) FROM update_events WHERE id=$1", event["event_id"]).Scan(&count); err != nil || count != 1 {
+	count, err := db.Queries.CountEventsByID(ctx, pgtype.UUID{Bytes: [16]byte(event["event_id"].(uuid.UUID)), Valid: true})
+	if err != nil || count != 1 {
 		t.Fatalf("event idempotency: %d %v", count, err)
 	}
 	insights := request(t, http.MethodGet, h.URL+"/admin/insights?channel=test", nil, map[string]string{"Authorization": "Bearer admin"})
@@ -186,7 +188,7 @@ func publish(t *testing.T, base string, archive []byte, message string) uuid.UUI
 	t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
-	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `","working_tree_clean":true},"fingerprint":{"hash":"fingerprint-1","sources":[{"type":"contents","id":"fixture","reasons":["test"],"hash":"fixture"}]}}`
+	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `","working_tree_clean":true},"fingerprint":{"hash":"1","sources":[{"type":"contents","id":"fixture","reasons":["test"],"hash":"fixture"}]}}`
 	if err := mw.WriteField("request", req); err != nil {
 		t.Fatal(err)
 	}

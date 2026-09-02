@@ -63,9 +63,9 @@ type Patch struct {
 	Attempts            int32
 	ServedCount         int64
 	Error               pgtype.Text
+	ProcessingStartedAt pgtype.Timestamptz
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
-	ProcessingStartedAt pgtype.Timestamptz
 }
 
 type SourceCommit struct {
@@ -109,13 +109,15 @@ type UpdateEvent struct {
 }
 
 type UpdateGroup struct {
-	ID             pgtype.UUID
-	Channel        string
-	RuntimeVersion string
-	Message        string
-	CreatedAt      pgtype.Timestamptz
-	Source         []byte
-	ExpoConfig     []byte
-	MetadataSha256 string
-	Status         string
+	ID                 pgtype.UUID
+	Channel            string
+	RuntimeVersion     string
+	Message            string
+	CreatedAt          pgtype.Timestamptz
+	Source             []byte
+	FingerprintHash    pgtype.Text
+	FingerprintSources []byte
+	ExpoConfig         []byte
+	MetadataSha256     string
+	Status             string
 }
