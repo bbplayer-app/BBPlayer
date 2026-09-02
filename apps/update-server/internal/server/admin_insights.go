@@ -1,204 +1,182 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	db "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
-	"github.com/go-chi/chi/v5"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
-	filters := db.ListEventInsightsParams{
-		Channel:        pgtype.Text{String: r.URL.Query().Get("channel"), Valid: r.URL.Query().Get("channel") != ""},
-		RuntimeVersion: pgtype.Text{String: r.URL.Query().Get("runtime_version"), Valid: r.URL.Query().Get("runtime_version") != ""},
-		Platform:       pgtype.Text{String: r.URL.Query().Get("platform"), Valid: r.URL.Query().Get("platform") != ""},
+type adminActivityInput struct {
+	Start    time.Time `query:"start" format:"date-time"`
+	End      time.Time `query:"end" format:"date-time"`
+	Channel  string    `query:"channel"`
+	Platform string    `query:"platform"`
+}
+type adminActivePoint struct {
+	Day                 time.Time `json:"day"`
+	ActiveInstallations int64     `json:"active_installations"`
+}
+type adminVersionPoint struct {
+	Day                 time.Time `json:"day"`
+	ClientVersion       string    `json:"client_version"`
+	ClientBuildVersion  string    `json:"client_build_version"`
+	ActiveInstallations int64     `json:"active_installations"`
+}
+type adminActivityOutput struct {
+	Body struct {
+		Start               time.Time           `json:"start"`
+		End                 time.Time           `json:"end"`
+		ActiveInstallations []adminActivePoint  `json:"active_installations"`
+		Versions            []adminVersionPoint `json:"versions"`
 	}
-	if group := r.URL.Query().Get("group_id"); group != "" {
-		id, err := uuid.Parse(group)
-		if err != nil {
-			http.Error(w, "group_id", http.StatusBadRequest)
-			return
+}
+type adminLifecycleInput struct {
+	GroupID uuid.UUID `path:"groupID"`
+	Start   time.Time `query:"start" format:"date-time"`
+	End     time.Time `query:"end" format:"date-time"`
+}
+type adminLifecyclePoint struct {
+	Day           time.Time `json:"day"`
+	KnownLaunches int64     `json:"known_launches"`
+	KnownCrashes  int64     `json:"known_crashes"`
+}
+type adminLifecycleOutput struct {
+	Body struct {
+		Start  time.Time             `json:"start"`
+		End    time.Time             `json:"end"`
+		Series []adminLifecyclePoint `json:"series"`
+	}
+}
+type adminInsightsInput struct {
+	Channel        string `query:"channel"`
+	RuntimeVersion string `query:"runtime_version"`
+	Platform       string `query:"platform"`
+	GroupID        string `query:"group_id" format:"uuid"`
+}
+type adminInsightEvent struct {
+	EventType           string `json:"event_type"`
+	Events              int64  `json:"events"`
+	UniqueInstallations int64  `json:"unique_installations"`
+}
+type adminInsightsOutput struct {
+	Body struct {
+		Events  []adminInsightEvent `json:"events"`
+		Summary struct {
+			UniqueUsers       int64   `json:"unique_users"`
+			UpdateChecks      int64   `json:"update_checks"`
+			Downloads         int64   `json:"downloads"`
+			Launches          int64   `json:"launches"`
+			LaunchSuccesses   int64   `json:"launch_successes"`
+			LaunchFailures    int64   `json:"launch_failures"`
+			EmergencyLaunches int64   `json:"emergency_launches"`
+			LaunchFailureRate float64 `json:"launch_failure_rate"`
+		} `json:"summary"`
+		Transport struct {
+			FullRequests      int64   `json:"full_requests"`
+			FullBytes         int64   `json:"full_bytes"`
+			BsdiffRequests    int64   `json:"bsdiff_requests"`
+			BsdiffBytes       int64   `json:"bsdiff_bytes"`
+			BsdiffTargetBytes int64   `json:"bsdiff_target_bytes"`
+			BsdiffSavedBytes  int64   `json:"bsdiff_saved_bytes"`
+			BsdiffFallbacks   int64   `json:"bsdiff_fallbacks"`
+			BsdiffHitRate     float64 `json:"bsdiff_hit_rate"`
+		} `json:"transport"`
+	}
+}
+
+func registerAdminInsightRoutes(s *Server, api huma.API) {
+	security := []map[string][]string{{adminSecurityScheme: {}}}
+	huma.Register(api, huma.Operation{OperationID: "getActivitySeries", Method: http.MethodGet, Path: "/admin/insights/activity", Summary: "Get activity series", Tags: []string{"Insights"}, Security: security}, s.activity)
+	huma.Register(api, huma.Operation{OperationID: "getUpdateGroupLifecycle", Method: http.MethodGet, Path: "/admin/insights/groups/{groupID}/lifecycle", Summary: "Get update group lifecycle", Tags: []string{"Insights"}, Security: security}, s.lifecycle)
+}
+func registerAdminInsightsSummaryRoute(s *Server, api huma.API) {
+	huma.Register(api, huma.Operation{OperationID: "getInsights", Method: http.MethodGet, Path: "/admin/insights", Summary: "Get update insights", Tags: []string{"Insights"}, Security: []map[string][]string{{adminSecurityScheme: {}}}}, s.insights)
+}
+
+func (s *Server) insights(ctx context.Context, input *adminInsightsInput) (*adminInsightsOutput, error) {
+	filters := db.ListEventInsightsParams{Channel: pgtype.Text{String: input.Channel, Valid: input.Channel != ""}, RuntimeVersion: pgtype.Text{String: input.RuntimeVersion, Valid: input.RuntimeVersion != ""}, Platform: pgtype.Text{String: input.Platform, Valid: input.Platform != ""}}
+	if input.GroupID != "" {
+		id, parseErr := uuid.Parse(input.GroupID)
+		if parseErr != nil {
+			return nil, huma.Error400BadRequest("group_id")
 		}
 		filters.GroupID = pgUUID(&id)
 	}
-	rows, err := s.DB.Queries.ListEventInsights(r.Context(), filters)
+	rows, err := s.DB.Queries.ListEventInsights(ctx, filters)
 	if err != nil {
-		s.logError(r, "insights: list events", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError("database")
 	}
-	events := make([]any, 0, len(rows))
+	summary, err := s.DB.Queries.GetEventInsightSummary(ctx, db.GetEventInsightSummaryParams(filters))
+	if err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	transport, err := s.DB.Queries.GetTransportInsightSummary(ctx, db.GetTransportInsightSummaryParams(filters))
+	if err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	out := &adminInsightsOutput{}
+	out.Body.Events = make([]adminInsightEvent, 0, len(rows))
 	for _, row := range rows {
-		events = append(events, map[string]any{"event_type": row.EventType, "events": row.EventCount, "unique_installations": row.UniqueInstallations})
+		out.Body.Events = append(out.Body.Events, adminInsightEvent{EventType: row.EventType, Events: row.EventCount, UniqueInstallations: row.UniqueInstallations})
 	}
-	summary, err := s.DB.Queries.GetEventInsightSummary(r.Context(), db.GetEventInsightSummaryParams(filters))
-	if err != nil {
-		s.logError(r, "insights: event summary", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
-	}
-	transport, err := s.DB.Queries.GetTransportInsightSummary(r.Context(), db.GetTransportInsightSummaryParams(filters))
-	if err != nil {
-		s.logError(r, "insights: transport summary", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
-	}
-	failureRate, patchHitRate := float64(0), float64(0)
+	out.Body.Summary.UniqueUsers, out.Body.Summary.UpdateChecks, out.Body.Summary.Downloads, out.Body.Summary.Launches, out.Body.Summary.LaunchSuccesses, out.Body.Summary.LaunchFailures, out.Body.Summary.EmergencyLaunches = summary.UniqueInstallations, summary.UpdateChecks, summary.Downloads, summary.Launches, summary.LaunchSuccesses, summary.LaunchFailures, summary.EmergencyLaunches
 	if summary.Launches > 0 {
-		failureRate = float64(summary.LaunchFailures) / float64(summary.Launches)
+		out.Body.Summary.LaunchFailureRate = float64(summary.LaunchFailures) / float64(summary.Launches)
 	}
+	out.Body.Transport.FullRequests, out.Body.Transport.FullBytes, out.Body.Transport.BsdiffRequests, out.Body.Transport.BsdiffBytes, out.Body.Transport.BsdiffTargetBytes, out.Body.Transport.BsdiffFallbacks = transport.FullRequests, transport.FullBytes, transport.PatchRequests, transport.PatchBytes, transport.PatchTargetBytes, transport.PatchFallbacks
+	out.Body.Transport.BsdiffSavedBytes = transport.PatchTargetBytes - transport.PatchBytes
 	if transport.PatchRequests+transport.PatchFallbacks > 0 {
-		patchHitRate = float64(transport.PatchRequests) / float64(transport.PatchRequests+transport.PatchFallbacks)
+		out.Body.Transport.BsdiffHitRate = float64(transport.PatchRequests) / float64(transport.PatchRequests+transport.PatchFallbacks)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"events": events, "summary": map[string]any{"unique_users": summary.UniqueInstallations, "update_checks": summary.UpdateChecks, "downloads": summary.Downloads, "launches": summary.Launches, "launch_successes": summary.LaunchSuccesses, "launch_failures": summary.LaunchFailures, "emergency_launches": summary.EmergencyLaunches, "launch_failure_rate": failureRate}, "transport": map[string]any{"full_requests": transport.FullRequests, "full_bytes": transport.FullBytes, "bsdiff_requests": transport.PatchRequests, "bsdiff_bytes": transport.PatchBytes, "bsdiff_target_bytes": transport.PatchTargetBytes, "bsdiff_saved_bytes": transport.PatchTargetBytes - transport.PatchBytes, "bsdiff_fallbacks": transport.PatchFallbacks, "bsdiff_hit_rate": patchHitRate}})
+	return out, nil
 }
 
-func metricRange(w http.ResponseWriter, r *http.Request) (time.Time, time.Time, bool) {
-	end := time.Now().UTC()
-	start := end.AddDate(0, 0, -7)
-	if raw := r.URL.Query().Get("start"); raw != "" {
-		parsed, err := time.Parse(time.RFC3339, raw)
-		if err != nil {
-			http.Error(w, "start must be RFC3339", http.StatusBadRequest)
-			return time.Time{}, time.Time{}, false
-		}
-		start = parsed.UTC()
-	}
-	if raw := r.URL.Query().Get("end"); raw != "" {
-		parsed, err := time.Parse(time.RFC3339, raw)
-		if err != nil {
-			http.Error(w, "end must be RFC3339", http.StatusBadRequest)
-			return time.Time{}, time.Time{}, false
-		}
-		end = parsed.UTC()
-	}
-	if !start.Before(end) || end.Sub(start) > 90*24*time.Hour {
-		http.Error(w, "range must be positive and at most 90 days", http.StatusBadRequest)
-		return time.Time{}, time.Time{}, false
-	}
-	return start, end, true
-}
-
-func (s *Server) serviceMetricSeries(w http.ResponseWriter, r *http.Request) {
-	start, end, ok := metricRange(w, r)
-	if !ok {
-		return
-	}
-	rows, err := s.DB.Queries.GetServiceMetricSeries(r.Context(), db.GetServiceMetricSeriesParams{
-		Minute:   pgtype.Timestamptz{Time: start, Valid: true},
-		Minute_2: pgtype.Timestamptz{Time: end, Valid: true},
-		Route:    pgtype.Text{String: r.URL.Query().Get("route"), Valid: r.URL.Query().Get("route") != ""},
-	})
+func (s *Server) activity(ctx context.Context, input *adminActivityInput) (*adminActivityOutput, error) {
+	start, end, err := metricRangeValues(input.Start, input.End)
 	if err != nil {
-		s.logError(r, "metrics: service series", err)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
-	series := make([]any, 0, len(rows))
-	for _, row := range rows {
-		errorRate, averageDuration := float64(0), float64(0)
-		if row.RequestCount > 0 {
-			errorRate = float64(row.ErrorCount) / float64(row.RequestCount)
-			averageDuration = float64(row.DurationMs) / float64(row.RequestCount)
-		}
-		series = append(series, map[string]any{"minute": row.Minute.Time, "requests": row.RequestCount, "errors": row.ErrorCount, "error_rate": errorRate, "average_duration_ms": averageDuration})
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"start": start, "end": end, "series": series})
-}
-
-func (s *Server) deliveryMetricSeries(w http.ResponseWriter, r *http.Request) {
-	start, end, ok := metricRange(w, r)
-	if !ok {
-		return
-	}
-	filters := db.GetDeliveryMetricSeriesParams{
-		Minute:         pgtype.Timestamptz{Time: start, Valid: true},
-		Minute_2:       pgtype.Timestamptz{Time: end, Valid: true},
-		Channel:        pgtype.Text{String: r.URL.Query().Get("channel"), Valid: r.URL.Query().Get("channel") != ""},
-		RuntimeVersion: pgtype.Text{String: r.URL.Query().Get("runtime_version"), Valid: r.URL.Query().Get("runtime_version") != ""},
-		Platform:       pgtype.Text{String: r.URL.Query().Get("platform"), Valid: r.URL.Query().Get("platform") != ""},
-	}
-	if group := r.URL.Query().Get("group_id"); group != "" {
-		id, err := uuid.Parse(group)
-		if err != nil {
-			http.Error(w, "group_id", http.StatusBadRequest)
-			return
-		}
-		filters.GroupID = pgUUID(&id)
-	}
-	rows, err := s.DB.Queries.GetDeliveryMetricSeries(r.Context(), filters)
+	filters := db.GetChannelActivitySeriesParams{Day: pgtype.Date{Time: start, Valid: true}, Day_2: pgtype.Date{Time: end.AddDate(0, 0, 1), Valid: true}, Channel: pgtype.Text{String: input.Channel, Valid: input.Channel != ""}, Platform: pgtype.Text{String: input.Platform, Valid: input.Platform != ""}}
+	active, err := s.DB.Queries.GetChannelActivitySeries(ctx, filters)
 	if err != nil {
-		s.logError(r, "metrics: delivery series", err)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError("database")
 	}
-	series := make([]any, 0, len(rows))
-	for _, row := range rows {
-		averageBytes := float64(0)
-		if row.RequestCount > 0 {
-			averageBytes = float64(row.ByteCount) / float64(row.RequestCount)
-		}
-		series = append(series, map[string]any{"day": row.Day.Time, "kind": row.Kind, "outcome": row.Outcome, "requests": row.RequestCount, "bytes": row.ByteCount, "target_bytes": row.TargetByteCount, "average_bytes": averageBytes})
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"start": start, "end": end, "series": series})
-}
-
-func (s *Server) activitySeries(w http.ResponseWriter, r *http.Request) {
-	start, end, ok := metricRange(w, r)
-	if !ok {
-		return
-	}
-	filters := db.GetChannelActivitySeriesParams{
-		Day:      pgtype.Date{Time: start, Valid: true},
-		Day_2:    pgtype.Date{Time: end.AddDate(0, 0, 1), Valid: true},
-		Channel:  pgtype.Text{String: r.URL.Query().Get("channel"), Valid: r.URL.Query().Get("channel") != ""},
-		Platform: pgtype.Text{String: r.URL.Query().Get("platform"), Valid: r.URL.Query().Get("platform") != ""},
-	}
-	activeRows, err := s.DB.Queries.GetChannelActivitySeries(r.Context(), filters)
+	versions, err := s.DB.Queries.GetVersionActivitySeries(ctx, db.GetVersionActivitySeriesParams(filters))
 	if err != nil {
-		s.logError(r, "insights: activity series", err)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError("database")
 	}
-	versions, err := s.DB.Queries.GetVersionActivitySeries(r.Context(), db.GetVersionActivitySeriesParams(filters))
-	if err != nil {
-		s.logError(r, "insights: version series", err)
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+	out := &adminActivityOutput{}
+	out.Body.Start, out.Body.End = start, end
+	out.Body.ActiveInstallations = make([]adminActivePoint, 0, len(active))
+	out.Body.Versions = make([]adminVersionPoint, 0, len(versions))
+	for _, row := range active {
+		out.Body.ActiveInstallations = append(out.Body.ActiveInstallations, adminActivePoint{Day: row.Day.Time, ActiveInstallations: row.ActiveInstallations})
 	}
-	active := make([]any, 0, len(activeRows))
-	for _, row := range activeRows {
-		active = append(active, map[string]any{"day": row.Day.Time, "active_installations": row.ActiveInstallations})
-	}
-	versionSeries := make([]any, 0, len(versions))
 	for _, row := range versions {
-		versionSeries = append(versionSeries, map[string]any{"day": row.Day.Time, "client_version": row.ClientVersion, "client_build_version": row.ClientBuildVersion, "active_installations": row.ActiveInstallations})
+		out.Body.Versions = append(out.Body.Versions, adminVersionPoint{Day: row.Day.Time, ClientVersion: row.ClientVersion, ClientBuildVersion: row.ClientBuildVersion, ActiveInstallations: row.ActiveInstallations})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"start": start, "end": end, "active_installations": active, "versions": versionSeries})
+	return out, nil
 }
 
-func (s *Server) updateGroupLifecycleSeries(w http.ResponseWriter, r *http.Request) {
-	start, end, ok := metricRange(w, r)
-	if !ok {
-		return
-	}
-	groupID, err := uuid.Parse(chi.URLParam(r, "groupID"))
+func (s *Server) lifecycle(ctx context.Context, input *adminLifecycleInput) (*adminLifecycleOutput, error) {
+	start, end, err := metricRangeValues(input.Start, input.End)
 	if err != nil {
-		http.Error(w, "group_id", http.StatusBadRequest)
-		return
+		return nil, err
 	}
-	rows, err := s.DB.Queries.GetUpdateGroupLifecycleSeries(r.Context(), db.GetUpdateGroupLifecycleSeriesParams{GroupID: pgUUID(&groupID), ConfirmedAt: pgtype.Timestamptz{Time: start, Valid: true}, ConfirmedAt_2: pgtype.Timestamptz{Time: end, Valid: true}})
+	rows, err := s.DB.Queries.GetUpdateGroupLifecycleSeries(ctx, db.GetUpdateGroupLifecycleSeriesParams{GroupID: pgUUID(&input.GroupID), ConfirmedAt: pgtype.Timestamptz{Time: start, Valid: true}, ConfirmedAt_2: pgtype.Timestamptz{Time: end, Valid: true}})
 	if err != nil {
-		s.logError(r, "insights: update group lifecycle", err, "group_id", groupID.String())
-		http.Error(w, "database", http.StatusInternalServerError)
-		return
+		return nil, huma.Error500InternalServerError("database")
 	}
-	series := make([]any, 0, len(rows))
+	out := &adminLifecycleOutput{}
+	out.Body.Start, out.Body.End = start, end
+	out.Body.Series = make([]adminLifecyclePoint, 0, len(rows))
 	for _, row := range rows {
-		series = append(series, map[string]any{"day": row.Day.Time, "known_launches": row.KnownLaunches, "known_crashes": row.KnownCrashes})
+		out.Body.Series = append(out.Body.Series, adminLifecyclePoint{Day: row.Day.Time, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"start": start, "end": end, "series": series})
+	return out, nil
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"archive/zip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"strings"
 
 	db "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -44,64 +46,70 @@ type exportMeta struct {
 }
 
 func sha(b []byte) string { h := sha256.Sum256(b); return base64.RawURLEncoding.EncodeToString(h[:]) }
-func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
-	if e := r.ParseMultipartForm(1 << 30); e != nil {
-		http.Error(w, "multipart archive required", 400)
-		return
+
+type adminPublishInput struct {
+	RawBody huma.MultipartFormFiles[struct {
+		Request publishRequest `form:"request" contentType:"application/json" required:"true"`
+		Archive huma.FormFile  `form:"archive" contentType:"application/octet-stream" required:"true"`
+	}]
+}
+type adminPublishOutput struct {
+	Body struct {
+		GroupID uuid.UUID `json:"group_id"`
 	}
-	var req publishRequest
-	if json.Unmarshal([]byte(r.FormValue("request")), &req) != nil || req.Channel == "" || req.RuntimeVersion == "" || req.Message == "" || len(req.Source) == 0 {
-		http.Error(w, "invalid publish request", 400)
-		return
+}
+
+func registerAdminPublishRoute(s *Server, api huma.API) {
+	huma.Register(api, huma.Operation{OperationID: "publishUpdate", Method: http.MethodPost, Path: "/admin/publish", Summary: "Publish update", Description: "Upload an Expo export ZIP and create an update group.", Tags: []string{"Updates"}, Security: []map[string][]string{{adminSecurityScheme: {}}}, DefaultStatus: http.StatusCreated, MaxBodyBytes: -1}, s.publish)
+}
+
+func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminPublishOutput, error) {
+	data := input.RawBody.Data()
+	req := data.Request
+	if req.Channel == "" || req.RuntimeVersion == "" || req.Message == "" || len(req.Source) == 0 {
+		return nil, huma.Error400BadRequest("invalid publish request")
 	}
 	var source publishSource
 	if json.Unmarshal(req.Source, &source) != nil || source.CommitSHA == "" {
-		http.Error(w, "invalid source or fingerprint", 400)
-		return
+		return nil, huma.Error400BadRequest("invalid source or fingerprint")
 	}
 	var fingerprintHash string
 	var fingerprintSources []byte
 	hasFingerprint := false
 	if req.Fingerprint.Hash != "" || len(req.Fingerprint.Sources) != 0 {
 		if req.Fingerprint.Hash == "" || len(req.Fingerprint.Sources) == 0 || req.Fingerprint.Hash != req.RuntimeVersion || !json.Valid(req.Fingerprint.Sources) {
-			http.Error(w, "invalid source or fingerprint", 400)
-			return
+			return nil, huma.Error400BadRequest("invalid source or fingerprint")
 		}
 		fingerprintHash, fingerprintSources, hasFingerprint = req.Fingerprint.Hash, req.Fingerprint.Sources, true
 	}
 	// Persist only the deliberately small Git provenance contract. Fingerprint
 	// sources are a separate, immutable record of the native input surface.
 	req.Source, _ = json.Marshal(source)
-	f, _, e := r.FormFile("archive")
-	if e != nil {
-		http.Error(w, "archive required", 400)
-		return
+	archive, err := io.ReadAll(data.Archive)
+	if err != nil {
+		return nil, huma.Error400BadRequest("archive")
 	}
-	defer f.Close()
-	tmp, e := os.CreateTemp("", "update-*.zip")
-	if e != nil {
-		s.logError(r, "publish: create temp file", e)
-		http.Error(w, "temp", 500)
-		return
+	tmp, err := os.CreateTemp("", "update-*.zip")
+	if err != nil {
+		s.Log.Error("publish: create temp file", "error", err)
+		return nil, huma.Error500InternalServerError("temp")
 	}
 	defer os.Remove(tmp.Name())
-	if _, e = io.Copy(tmp, f); e != nil {
-		s.logError(r, "publish: copy archive to temp", e)
-		http.Error(w, "archive", 400)
-		return
+	if _, err = tmp.Write(archive); err != nil {
+		_ = tmp.Close()
+		s.Log.Error("publish: copy archive to temp", "error", err)
+		return nil, huma.Error400BadRequest("archive")
 	}
 	_ = tmp.Close()
-	zr, e := zip.OpenReader(tmp.Name())
-	if e != nil {
-		http.Error(w, "invalid zip", 400)
-		return
+	zr, err := zip.OpenReader(tmp.Name())
+	if err != nil {
+		return nil, huma.Error400BadRequest("invalid zip")
 	}
 	defer zr.Close()
 	files := map[string]*zip.File{}
 	for _, z := range zr.File {
 		if strings.HasPrefix(z.Name, "/") || strings.Contains(z.Name, "..") {
-			http.Error(w, "unsafe archive path", 400)
-			return
+			return nil, huma.Error400BadRequest("unsafe archive path")
 		}
 		files[strings.ReplaceAll(z.Name, "\\", "/")] = z
 	}
@@ -117,41 +125,35 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		defer x.Close()
 		return io.ReadAll(x)
 	}
-	mb, e := read("metadata.json")
-	if e != nil {
-		http.Error(w, "metadata.json missing", 400)
-		return
+	mb, err := read("metadata.json")
+	if err != nil {
+		return nil, huma.Error400BadRequest("metadata.json missing")
 	}
-	cb, e := read("expoConfig.json")
-	if e != nil {
-		http.Error(w, "expoConfig.json missing", 400)
-		return
+	cb, err := read("expoConfig.json")
+	if err != nil {
+		return nil, huma.Error400BadRequest("expoConfig.json missing")
 	}
 	var meta exportMeta
 	if json.Unmarshal(mb, &meta) != nil || len(meta.FileMetadata) == 0 {
-		http.Error(w, "invalid metadata.json", 400)
-		return
+		return nil, huma.Error400BadRequest("invalid metadata.json")
 	}
 	var cfg any
 	if json.Unmarshal(cb, &cfg) != nil {
-		http.Error(w, "invalid expoConfig.json", 400)
-		return
+		return nil, huma.Error400BadRequest("invalid expoConfig.json")
 	}
 	gid := uuid.New()
-	tx, e := s.DB.Pool.Begin(r.Context())
+	tx, e := s.DB.Pool.Begin(ctx)
 	if e != nil {
-		s.logError(r, "publish: begin transaction", e, "group_id", gid.String())
-		http.Error(w, "database", 500)
-		return
+		s.Log.Error("publish: begin transaction", "error", e, "group_id", gid.String())
+		return nil, huma.Error500InternalServerError("database")
 	}
-	defer tx.Rollback(r.Context())
+	defer tx.Rollback(ctx)
 	txq := s.DB.Queries.WithTx(tx)
 	_ = cfg // JSON validation above intentionally precedes persistence.
-	e = txq.InsertUpdateGroup(r.Context(), db.InsertUpdateGroupParams{ID: pgUUID(&gid), Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Message: req.Message, Source: req.Source, FingerprintHash: pgtype.Text{String: fingerprintHash, Valid: hasFingerprint}, FingerprintSources: fingerprintSources, ExpoConfig: cb, MetadataSha256: sha(mb)})
+	e = txq.InsertUpdateGroup(ctx, db.InsertUpdateGroupParams{ID: pgUUID(&gid), Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Message: req.Message, Source: req.Source, FingerprintHash: pgtype.Text{String: fingerprintHash, Valid: hasFingerprint}, FingerprintSources: fingerprintSources, ExpoConfig: cb, MetadataSha256: sha(mb)})
 	if e != nil {
-		s.logError(r, "publish: insert update group", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion)
-		http.Error(w, "database", 500)
-		return
+		s.Log.Error("publish: insert update group", "error", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion)
+		return nil, huma.Error500InternalServerError("database")
 	}
 	for platform, m := range meta.FileMetadata {
 		if platform != "android" && platform != "ios" {
@@ -160,7 +162,7 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		// Capture the currently visible launch bundle before the channel pointer
 		// changes. The worker will create exactly this adjacent-head patch.
 		var previousUpdate *uuid.UUID
-		previous, err := txq.GetPreviousChannelUpdate(r.Context(), db.GetPreviousChannelUpdateParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform})
+		previous, err := txq.GetPreviousChannelUpdate(ctx, db.GetPreviousChannelUpdateParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform})
 		if err == nil {
 			id := uuid.UUID(previous.Bytes)
 			previousUpdate = &id
@@ -168,41 +170,35 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			previousUpdate = nil
 		} else if err != nil {
-			s.logError(r, "publish: query previous channel update", err, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
-			http.Error(w, "database", 500)
-			return
+			s.Log.Error("publish: query previous channel update", "error", err, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
+			return nil, huma.Error500InternalServerError("database")
 		}
 
 		bundle, e := read(m.Bundle)
 		if e != nil {
-			http.Error(w, "bundle missing", 400)
-			return
+			return nil, huma.Error400BadRequest("bundle missing")
 		}
 		uid := uuid.New()
 		launchKey := path.Base(m.Bundle)
 		object := path.Join("updates", gid.String(), platform, m.Bundle)
-		if e = s.Objects.Put(r.Context(), object, "application/javascript", bundle); e != nil {
-			s.logError(r, "publish: upload launch bundle", e, "group_id", gid.String(), "platform", platform, "object", object)
-			http.Error(w, "r2 upload", 502)
-			return
+		if e = s.Objects.Put(ctx, object, "application/javascript", bundle); e != nil {
+			s.Log.Error("publish: upload launch bundle", "error", e, "group_id", gid.String(), "platform", platform, "object", object)
+			return nil, huma.NewError(http.StatusBadGateway, "r2 upload")
 		}
-		e = txq.InsertUpdate(r.Context(), db.InsertUpdateParams{ID: pgUUID(&uid), GroupID: pgUUID(&gid), Platform: platform, LaunchKey: launchKey, LaunchHash: sha(bundle)})
+		e = txq.InsertUpdate(ctx, db.InsertUpdateParams{ID: pgUUID(&uid), GroupID: pgUUID(&gid), Platform: platform, LaunchKey: launchKey, LaunchHash: sha(bundle)})
 		if e != nil {
-			s.logError(r, "publish: insert update", e, "group_id", gid.String(), "platform", platform)
-			http.Error(w, "database", 500)
-			return
+			s.Log.Error("publish: insert update", "error", e, "group_id", gid.String(), "platform", platform)
+			return nil, huma.Error500InternalServerError("database")
 		}
-		e = txq.InsertAsset(r.Context(), db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: launchKey, ObjectKey: object, Sha256: sha(bundle), ContentType: "application/javascript", SizeBytes: int64(len(bundle)), IsLaunch: true})
+		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: launchKey, ObjectKey: object, Sha256: sha(bundle), ContentType: "application/javascript", SizeBytes: int64(len(bundle)), IsLaunch: true})
 		if e != nil {
-			s.logError(r, "publish: insert launch asset", e, "group_id", gid.String(), "platform", platform)
-			http.Error(w, "database", 500)
-			return
+			s.Log.Error("publish: insert launch asset", "error", e, "group_id", gid.String(), "platform", platform)
+			return nil, huma.Error500InternalServerError("database")
 		}
 		for _, a := range m.Assets {
 			b, e := read(a.Path)
 			if e != nil {
-				http.Error(w, "asset missing", 400)
-				return
+				return nil, huma.Error400BadRequest("asset missing")
 			}
 			k := path.Base(a.Path)
 			ct := mime.TypeByExtension("." + a.Ext)
@@ -210,38 +206,36 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request) {
 				ct = "application/octet-stream"
 			}
 			obj := path.Join("updates", gid.String(), platform, a.Path)
-			if e = s.Objects.Put(r.Context(), obj, ct, b); e != nil {
-				s.logError(r, "publish: upload asset", e, "group_id", gid.String(), "platform", platform, "object", obj)
-				http.Error(w, "r2 upload", 502)
-				return
+			if e = s.Objects.Put(ctx, obj, ct, b); e != nil {
+				s.Log.Error("publish: upload asset", "error", e, "group_id", gid.String(), "platform", platform, "object", obj)
+				return nil, huma.NewError(http.StatusBadGateway, "r2 upload")
 			}
-			e = txq.InsertAsset(r.Context(), db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: k, ObjectKey: obj, Sha256: sha(b), ContentType: ct, SizeBytes: int64(len(b))})
+			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: k, ObjectKey: obj, Sha256: sha(b), ContentType: ct, SizeBytes: int64(len(b))})
 			if e != nil {
-				s.logError(r, "publish: insert asset", e, "group_id", gid.String(), "platform", platform, "object", obj)
-				http.Error(w, "database", 500)
-				return
+				s.Log.Error("publish: insert asset", "error", e, "group_id", gid.String(), "platform", platform, "object", obj)
+				return nil, huma.Error500InternalServerError("database")
 			}
 		}
 		if previousUpdate != nil {
-			e = txq.InsertPendingPatch(r.Context(), db.InsertPendingPatchParams{FromUpdateID: pgUUID(previousUpdate), ToUpdateID: pgUUID(&uid), Platform: platform})
+			e = txq.InsertPendingPatch(ctx, db.InsertPendingPatchParams{FromUpdateID: pgUUID(previousUpdate), ToUpdateID: pgUUID(&uid), Platform: platform})
 			if e != nil {
-				s.logError(r, "publish: insert pending patch", e, "group_id", gid.String(), "platform", platform, "from", previousUpdate.String(), "to", uid.String())
-				http.Error(w, "database", 500)
-				return
+				s.Log.Error("publish: insert pending patch", "error", e, "group_id", gid.String(), "platform", platform, "from", previousUpdate.String(), "to", uid.String())
+				return nil, huma.Error500InternalServerError("database")
 			}
 		}
-		e = txq.UpsertChannelHead(r.Context(), db.UpsertChannelHeadParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform, GroupID: pgUUID(&gid), Mode: "ota"})
+		e = txq.UpsertChannelHead(ctx, db.UpsertChannelHeadParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform, GroupID: pgUUID(&gid), Mode: "ota"})
 		if e == nil {
-			e = txq.InsertChannelHistory(r.Context(), db.InsertChannelHistoryParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform, GroupID: pgUUID(&gid), Mode: "ota", Action: "publish", Actor: pgtype.Text{String: "admin", Valid: true}})
+			e = txq.InsertChannelHistory(ctx, db.InsertChannelHistoryParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform, GroupID: pgUUID(&gid), Mode: "ota", Action: "publish", Actor: pgtype.Text{String: "admin", Valid: true}})
 		}
 		if e != nil {
-			s.logError(r, "publish: point channel head", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
+			s.Log.Error("publish: point channel head", "error", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
 		}
 	}
-	if e = tx.Commit(r.Context()); e != nil {
-		s.logError(r, "publish: commit transaction", e, "group_id", gid.String())
-		http.Error(w, "database", 500)
-		return
+	if e = tx.Commit(ctx); e != nil {
+		s.Log.Error("publish: commit transaction", "error", e, "group_id", gid.String())
+		return nil, huma.Error500InternalServerError("database")
 	}
-	writeJSON(w, 201, map[string]any{"group_id": gid})
+	out := &adminPublishOutput{}
+	out.Body.GroupID = gid
+	return out, nil
 }

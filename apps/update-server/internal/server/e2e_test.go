@@ -54,6 +54,28 @@ func TestE2EExpoProtocol(t *testing.T) {
 	h := httptest.NewServer(s.Router())
 	defer h.Close()
 	s.C.PublicBaseURL = h.URL
+	if r := request(t, http.MethodGet, h.URL+"/admin/openapi.json", nil, nil); r.StatusCode != http.StatusUnauthorized {
+		_ = r.Body.Close()
+		t.Fatalf("unauthenticated OpenAPI status: %s", r.Status)
+	}
+	spec := request(t, http.MethodGet, h.URL+"/admin/openapi.json", nil, map[string]string{"Authorization": "Bearer admin"})
+	var openAPI struct {
+		OpenAPI string                     `json:"openapi"`
+		Paths   map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.NewDecoder(spec.Body).Decode(&openAPI); err != nil {
+		_ = spec.Body.Close()
+		t.Fatal(err)
+	}
+	_ = spec.Body.Close()
+	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 15 {
+		t.Fatalf("admin OpenAPI document: version=%q paths=%d", openAPI.OpenAPI, len(openAPI.Paths))
+	}
+	for _, path := range []string{"/admin/publish", "/admin/updates/{id}", "/admin/channels/{channel}/rollback", "/admin/source/compare/{from}/{to}", "/admin/insights/groups/{groupID}/lifecycle", "/admin/metrics/delivery"} {
+		if _, ok := openAPI.Paths[path]; !ok {
+			t.Fatalf("admin OpenAPI missing path %q", path)
+		}
+	}
 	firstGroup := publish(t, h.URL, archive(t), "first")
 	secondGroup := publish(t, h.URL, archive(t), "second")
 	compare := request(t, http.MethodGet, h.URL+"/admin/source/compare/"+firstGroup.String()+"/"+secondGroup.String(), nil, map[string]string{"Authorization": "Bearer admin"})

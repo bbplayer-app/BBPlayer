@@ -90,6 +90,19 @@ new publications are intentionally limited to the single recorded commit. The
 `insights` command exposes client outcomes plus full
 and bsdiff request counts, bytes, saved bytes, hit rate, and fallbacks.
 
+The complete management surface is also generated as OpenAPI 3.1 from the
+existing Chi router. It uses the same `Authorization: Bearer <ADMIN_TOKEN>`
+authentication as every other `/admin` route:
+
+```text
+GET /admin/openapi.json
+GET /admin/openapi.yaml
+GET /admin/docs
+```
+
+The public Expo protocol routes under `/api` intentionally stay outside this
+document; their multipart and content-negotiation contracts remain unchanged.
+
 ## Observability
 
 PostgreSQL is the metrics backend; this service deliberately does not expose a
