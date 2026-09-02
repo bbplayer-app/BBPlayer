@@ -25,6 +25,7 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.DB.Queries.ListUpdateGroups(r.Context(), db.ListUpdateGroupsParams{Limit: int32(limit), Offset: int32(offset)})
 	if err != nil {
+		s.logError(r, "updates: list groups", err, "limit", limit, "offset", offset)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
@@ -51,6 +52,7 @@ func (s *Server) show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		s.logError(r, "updates: get group", err, "group_id", id.String())
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}

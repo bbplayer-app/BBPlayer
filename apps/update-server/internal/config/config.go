@@ -1,26 +1,38 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"strings"
+
+	"github.com/caarlos0/env/v11"
 )
 
 type Config struct {
-	DatabaseURL, R2Bucket, R2AccountID, R2AccessKeyID, R2SecretAccessKey, R2Endpoint string
-	PublicBaseURL, R2PublicBaseURL                                                   string
-	AdminToken, InstallationHMACKey, CodeSigningPrivateKey, CodeSigningKeyID         string
+	DatabaseURL           string `env:"DATABASE_URL,required,notEmpty"`
+	R2Bucket              string `env:"R2_BUCKET,required,notEmpty"`
+	R2AccountID           string `env:"R2_ACCOUNT_ID,required,notEmpty"`
+	R2AccessKeyID         string `env:"R2_ACCESS_KEY_ID,required,notEmpty"`
+	R2SecretAccessKey     string `env:"R2_SECRET_ACCESS_KEY,required,notEmpty"`
+	R2Endpoint            string `env:"R2_ENDPOINT"`
+	PublicBaseURL         string `env:"PUBLIC_BASE_URL,required,notEmpty"`
+	R2PublicBaseURL       string `env:"R2_PUBLIC_BASE_URL,required,notEmpty"`
+	AdminToken            string `env:"ADMIN_TOKEN,required,notEmpty"`
+	InstallationHMACKey   string `env:"INSTALLATION_HMAC_KEY,required,notEmpty"`
+	CodeSigningPrivateKey string `env:"CODE_SIGNING_PRIVATE_KEY"`
+	CodeSigningKeyID      string `env:"CODE_SIGNING_KEY_ID"`
 }
 
 func Load() (Config, error) {
-	c := Config{DatabaseURL: os.Getenv("DATABASE_URL"), R2Bucket: os.Getenv("R2_BUCKET"), R2AccountID: os.Getenv("R2_ACCOUNT_ID"), R2AccessKeyID: os.Getenv("R2_ACCESS_KEY_ID"), R2SecretAccessKey: os.Getenv("R2_SECRET_ACCESS_KEY"), R2Endpoint: strings.TrimRight(os.Getenv("R2_ENDPOINT"), "/"), PublicBaseURL: strings.TrimRight(os.Getenv("PUBLIC_BASE_URL"), "/"), R2PublicBaseURL: strings.TrimRight(os.Getenv("R2_PUBLIC_BASE_URL"), "/"), AdminToken: os.Getenv("ADMIN_TOKEN"), InstallationHMACKey: os.Getenv("INSTALLATION_HMAC_KEY"), CodeSigningPrivateKey: os.Getenv("CODE_SIGNING_PRIVATE_KEY"), CodeSigningKeyID: os.Getenv("CODE_SIGNING_KEY_ID")}
-	for k, v := range map[string]string{"DATABASE_URL": c.DatabaseURL, "R2_BUCKET": c.R2Bucket, "R2_ACCOUNT_ID": c.R2AccountID, "R2_ACCESS_KEY_ID": c.R2AccessKeyID, "R2_SECRET_ACCESS_KEY": c.R2SecretAccessKey, "R2_PUBLIC_BASE_URL": c.R2PublicBaseURL, "PUBLIC_BASE_URL": c.PublicBaseURL, "ADMIN_TOKEN": c.AdminToken, "INSTALLATION_HMAC_KEY": c.InstallationHMACKey} {
-		if v == "" {
-			return c, fmt.Errorf("%s is required", k)
-		}
+	var c Config
+	if err := env.Parse(&c); err != nil {
+		return c, err
 	}
+	c.R2Endpoint = strings.TrimRight(c.R2Endpoint, "/")
+	c.PublicBaseURL = strings.TrimRight(c.PublicBaseURL, "/")
+	c.R2PublicBaseURL = strings.TrimRight(c.R2PublicBaseURL, "/")
 	if c.CodeSigningPrivateKey != "" && c.CodeSigningKeyID == "" {
-		return c, fmt.Errorf("CODE_SIGNING_KEY_ID is required when CODE_SIGNING_PRIVATE_KEY is set")
+		return c, errors.New("CODE_SIGNING_KEY_ID is required when CODE_SIGNING_PRIVATE_KEY is set")
 	}
 	return c, nil
 }
@@ -30,7 +42,7 @@ func Load() (Config, error) {
 func DatabaseURL() (string, error) {
 	value := os.Getenv("DATABASE_URL")
 	if value == "" {
-		return "", fmt.Errorf("DATABASE_URL is required")
+		return "", errors.New("DATABASE_URL is required")
 	}
 	return value, nil
 }

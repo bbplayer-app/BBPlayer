@@ -24,6 +24,7 @@ func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.DB.Queries.ListEventInsights(r.Context(), filters)
 	if err != nil {
+		s.logError(r, "insights: list events", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
@@ -33,11 +34,13 @@ func (s *Server) insights(w http.ResponseWriter, r *http.Request) {
 	}
 	summary, err := s.DB.Queries.GetEventInsightSummary(r.Context(), db.GetEventInsightSummaryParams(filters))
 	if err != nil {
+		s.logError(r, "insights: event summary", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
 	transport, err := s.DB.Queries.GetTransportInsightSummary(r.Context(), db.GetTransportInsightSummaryParams(filters))
 	if err != nil {
+		s.logError(r, "insights: transport summary", err, "channel", filters.Channel.String, "runtime_version", filters.RuntimeVersion.String, "platform", filters.Platform.String)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}

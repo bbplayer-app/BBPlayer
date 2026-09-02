@@ -13,8 +13,10 @@ import (
 )
 
 func (s *Server) sourceFind(w http.ResponseWriter, r *http.Request) {
-	rows, e := s.DB.Queries.FindGroupsOrSourceCommitsByCommit(r.Context(), []byte(chi.URLParam(r, "commit")))
+	commit := chi.URLParam(r, "commit")
+	rows, e := s.DB.Queries.FindGroupsOrSourceCommitsByCommit(r.Context(), []byte(commit))
 	if e != nil {
+		s.logError(r, "source: find by commit", e, "commit", commit)
 		http.Error(w, "database", 500)
 		return
 	}
@@ -32,6 +34,7 @@ func (s *Server) sourceLatest(w http.ResponseWriter, r *http.Request) {
 		err = nil
 	}
 	if err != nil {
+		s.logError(r, "source: latest commit", err, "channel", channel, "runtime_version", runtimeVersion)
 		http.Error(w, "database", 500)
 		return
 	}
@@ -47,11 +50,17 @@ func (s *Server) sourceCompare(w http.ResponseWriter, r *http.Request) {
 	}
 	fromSource, e := s.DB.Queries.GetUpdateGroupSource(r.Context(), pgUUID(&fromID))
 	if e != nil {
+		if !errors.Is(e, pgx.ErrNoRows) {
+			s.logError(r, "source: get from group", e, "from", from)
+		}
 		http.NotFound(w, r)
 		return
 	}
 	toSource, e := s.DB.Queries.GetUpdateGroupSource(r.Context(), pgUUID(&toID))
 	if e != nil {
+		if !errors.Is(e, pgx.ErrNoRows) {
+			s.logError(r, "source: get to group", e, "to", to)
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -63,6 +72,7 @@ func (s *Server) sourceCompare(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal(toSource, &b)
 	rows, e := s.DB.Queries.ListSourceCommitsForGroups(r.Context(), db.ListSourceCommitsForGroupsParams{UpdateGroupID: pgUUID(&fromID), UpdateGroupID_2: pgUUID(&toID)})
 	if e != nil {
+		s.logError(r, "source: list commits", e, "from", from, "to", to)
 		http.Error(w, "database", 500)
 		return
 	}
@@ -88,10 +98,14 @@ func (s *Server) sourceCompare(w http.ResponseWriter, r *http.Request) {
 		}
 		artifacts, e := s.DB.Queries.GetUpdateGroupArtifacts(r.Context(), pgUUID(&id))
 		if e != nil {
+			if !errors.Is(e, pgx.ErrNoRows) {
+				s.logError(r, "source: group artifacts", e, "group", group)
+			}
 			return nil
 		}
 		rows, e := s.DB.Queries.ListUpdatesForGroup(r.Context(), pgUUID(&id))
 		if e != nil {
+			s.logError(r, "source: list group updates", e, "group", group)
 			return nil
 		}
 		launch := map[string]string{}

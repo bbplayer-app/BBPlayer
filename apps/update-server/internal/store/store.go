@@ -29,16 +29,17 @@ func Open(ctx context.Context, url string) (*Store, error) {
 }
 func (s *Store) Close() { s.Pool.Close() }
 func (s *Store) Migrate(ctx context.Context) error {
-	db, err := sql.Open("pgx", s.Pool.Config().ConnString())
+	_db, err := sql.Open("pgx", s.Pool.Config().ConnString())
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer _db.Close()
 	locker, err := lock.NewPostgresSessionLocker()
 	if err != nil {
 		return err
 	}
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrations.FS, goose.WithSessionLocker(locker))
+	//goland:noinspection GoResourceLeak
+	provider, err := goose.NewProvider(goose.DialectPostgres, _db, migrations.FS, goose.WithSessionLocker(locker))
 	if err != nil {
 		return err
 	}

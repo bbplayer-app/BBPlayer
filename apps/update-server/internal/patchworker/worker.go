@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -41,7 +42,7 @@ func RunOnce(ctx context.Context, db *store.Store, objects objectstore.Store) (b
 	var j job
 	claimed, err := db.Queries.WithTx(tx).ClaimPatch(ctx)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, tx.Commit(ctx)
 		}
 		return false, err
@@ -126,11 +127,4 @@ func read(ctx context.Context, objects objectstore.Store, key string) ([]byte, e
 	}
 	defer b.Close()
 	return io.ReadAll(b)
-}
-func Hash(b []byte) string { h := sha256.Sum256(b); return base64.RawURLEncoding.EncodeToString(h[:]) }
-
-// RollupDaily keeps raw events immutable while maintaining an inexpensive
-// query table for Insights. Re-running it is idempotent for the current day.
-func RollupDaily(ctx context.Context, db *store.Store) error {
-	return db.Queries.RollupDailyMetrics(ctx)
 }

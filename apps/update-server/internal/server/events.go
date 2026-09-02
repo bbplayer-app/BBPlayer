@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -38,7 +39,12 @@ type Event struct {
 func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 64<<10))
 	if err != nil {
-		http.Error(w, "event too large", http.StatusRequestEntityTooLarge)
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			http.Error(w, "event too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
 	var fields map[string]json.RawMessage
@@ -57,8 +63,30 @@ func (s *Server) event(w http.ResponseWriter, r *http.Request) {
 	m := hmac.New(sha256.New, []byte(s.C.InstallationHMACKey))
 	_, _ = m.Write([]byte(e.Installation))
 	p, _ := json.Marshal(e.Payload)
-	err = s.DB.Queries.InsertClientEvent(r.Context(), dbq.InsertClientEventParams{ID: pgUUID(&e.ID), SchemaVersion: int32(e.Schema), EventType: e.Type, OccurredAt: pgtype.Timestamptz{Time: e.Occurred, Valid: true}, InstallationHmac: pgtype.Text{String: base64.RawURLEncoding.EncodeToString(m.Sum(nil)), Valid: true}, ClientVersion: pgtype.Text{String: e.ClientVersion, Valid: true}, ClientBuildVersion: pgtype.Text{String: e.ClientBuild, Valid: true}, ExpoUpdatesVersion: pgtype.Text{String: e.ExpoUpdatesVersion, Valid: true}, UpdatesProtocolVersion: pgtype.Text{String: e.UpdatesProtocolVersion, Valid: true}, Platform: pgtype.Text{String: e.Platform, Valid: true}, RuntimeVersion: pgtype.Text{String: e.Runtime, Valid: true}, Channel: pgtype.Text{String: e.Channel, Valid: true}, UpdateID: pgUUID(e.UpdateID), EmbeddedUpdateID: pgUUID(e.EmbeddedUpdateID), GroupID: pgUUID(e.GroupID), LaunchSource: pgtype.Text{String: e.LaunchSource, Valid: true}, Payload: p})
+	err = s.DB.Queries.InsertClientEvent(
+		r.Context(),
+		dbq.InsertClientEventParams{
+			ID:                     pgUUID(&e.ID),
+			SchemaVersion:          int32(e.Schema),
+			EventType:              e.Type,
+			OccurredAt:             pgtype.Timestamptz{Time: e.Occurred, Valid: true},
+			InstallationHmac:       pgtype.Text{String: base64.RawURLEncoding.EncodeToString(m.Sum(nil)), Valid: true},
+			ClientVersion:          pgtype.Text{String: e.ClientVersion, Valid: true},
+			ClientBuildVersion:     pgtype.Text{String: e.ClientBuild, Valid: true},
+			ExpoUpdatesVersion:     pgtype.Text{String: e.ExpoUpdatesVersion, Valid: true},
+			UpdatesProtocolVersion: pgtype.Text{String: e.UpdatesProtocolVersion, Valid: true},
+			Platform:               pgtype.Text{String: e.Platform, Valid: true},
+			RuntimeVersion:         pgtype.Text{String: e.Runtime, Valid: true},
+			Channel:                pgtype.Text{String: e.Channel, Valid: true},
+			UpdateID:               pgUUID(e.UpdateID),
+			EmbeddedUpdateID:       pgUUID(e.EmbeddedUpdateID),
+			GroupID:                pgUUID(e.GroupID),
+			LaunchSource:           pgtype.Text{String: e.LaunchSource, Valid: true},
+			Payload:                p,
+		},
+	)
 	if err != nil {
+		s.logError(r, "event: insert client event", err, "event_id", e.ID.String(), "event_type", e.Type)
 		http.Error(w, "database", 500)
 		return
 	}
@@ -74,7 +102,14 @@ func (s *Server) recordServerPayload(r *http.Request, typ string, gid *uuid.UUID
 func (s *Server) recordServerPayloadContext(ctx context.Context, typ string, gid *uuid.UUID, platform, runtime, channel string, payload map[string]any) {
 	p, err := json.Marshal(payload)
 	if err != nil {
+		s.Log.Error("server event: marshal payload", "error", err, "event_type", typ)
 		return
 	}
-	_ = s.DB.Queries.InsertServerEvent(ctx, dbq.InsertServerEventParams{EventType: typ, Platform: pgtype.Text{String: platform, Valid: true}, RuntimeVersion: pgtype.Text{String: runtime, Valid: true}, Channel: pgtype.Text{String: channel, Valid: true}, GroupID: pgUUID(gid), Payload: p})
+	if err := s.DB.Queries.InsertServerEvent(ctx, dbq.InsertServerEventParams{EventType: typ, Platform: pgtype.Text{String: platform, Valid: true}, RuntimeVersion: pgtype.Text{String: runtime, Valid: true}, Channel: pgtype.Text{String: channel, Valid: true}, GroupID: pgUUID(gid), Payload: p}); err != nil {
+		attrs := []any{"error", err, "event_type", typ, "platform", platform, "runtime_version", runtime, "channel", channel}
+		if gid != nil {
+			attrs = append(attrs, "group_id", gid.String())
+		}
+		s.Log.Error("server event: insert", attrs...)
+	}
 }

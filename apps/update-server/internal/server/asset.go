@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	dbq "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
@@ -20,6 +22,11 @@ func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
 	}
 	asset, e := s.DB.Queries.GetAsset(r.Context(), id)
 	if e != nil {
+		if !errors.Is(e, pgx.ErrNoRows) {
+			s.logError(r, "asset: lookup", e, "asset_id", id)
+			http.Error(w, "database", http.StatusInternalServerError)
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -29,7 +36,9 @@ func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
 			patchKey, err := s.DB.Queries.GetReadyPatchObjectKey(r.Context(), dbq.GetReadyPatchObjectKeyParams{FromUpdateID: pgUUID(&base), ToUpdateID: asset.ID})
 			if err == nil {
 				if served, size := s.writeObjectStatus(w, r, patchKey.String, "application/octet-stream", http.StatusIMUsed, map[string]string{"IM": "bsdiff", "expo-base-update-id": base.String()}); served {
-					_ = s.DB.Queries.IncrementPatchServed(r.Context(), dbq.IncrementPatchServedParams{FromUpdateID: pgUUID(&base), ToUpdateID: asset.ID})
+					if err := s.DB.Queries.IncrementPatchServed(r.Context(), dbq.IncrementPatchServedParams{FromUpdateID: pgUUID(&base), ToUpdateID: asset.ID}); err != nil {
+						s.logError(r, "asset: increment patch served counter", err, "from", base.String(), "to", uuid.UUID(asset.ID.Bytes).String())
+					}
 					gid := uuid.UUID(asset.GroupID.Bytes)
 					s.recordServerPayloadContext(r.Context(), "patch_served", &gid, asset.Platform, asset.RuntimeVersion, asset.Channel, map[string]any{"bytes": size, "target_bytes": asset.SizeBytes, "base_update_id": base.String()})
 					return
@@ -54,6 +63,7 @@ func (s *Server) asset(w http.ResponseWriter, r *http.Request) {
 func (s *Server) writeObjectStatus(w http.ResponseWriter, r *http.Request, object, ct string, status int, headers map[string]string) (bool, int64) {
 	body, storedContentType, e := s.Objects.Get(r.Context(), object)
 	if e != nil {
+		s.logError(r, "asset: object store get", e, "object", object)
 		http.Error(w, "asset unavailable", 502)
 		return false, 0
 	}
@@ -67,6 +77,9 @@ func (s *Server) writeObjectStatus(w http.ResponseWriter, r *http.Request, objec
 		w.Header().Set(key, value)
 	}
 	w.WriteHeader(status)
-	n, _ := io.Copy(w, body)
+	n, err := io.Copy(w, body)
+	if err != nil {
+		s.logError(r, "asset: stream to client", err, "object", object)
+	}
 	return true, n
 }

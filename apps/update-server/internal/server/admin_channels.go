@@ -22,6 +22,7 @@ func (s *Server) rollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var groupID *uuid.UUID
+	channel := chi.URLParam(r, "channel")
 	if request.Mode == "ota" {
 		id, err := uuid.Parse(request.GroupID)
 		if err != nil {
@@ -29,25 +30,33 @@ func (s *Server) rollback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		groupID = &id
-		compatible, err := s.DB.Queries.IsCompatibleUpdateGroup(r.Context(), db.IsCompatibleUpdateGroupParams{ID: pgUUID(groupID), Channel: chi.URLParam(r, "channel"), RuntimeVersion: request.RuntimeVersion, Platform: request.Platform})
-		if err != nil || !compatible {
+		compatible, err := s.DB.Queries.IsCompatibleUpdateGroup(r.Context(), db.IsCompatibleUpdateGroupParams{ID: pgUUID(groupID), Channel: channel, RuntimeVersion: request.RuntimeVersion, Platform: request.Platform})
+		if err != nil {
+			s.logError(r, "rollback: compatibility check", err, "channel", channel, "runtime_version", request.RuntimeVersion, "platform", request.Platform, "group_id", request.GroupID)
+			http.Error(w, "database", http.StatusInternalServerError)
+			return
+		}
+		if !compatible {
 			http.Error(w, "incompatible update group", http.StatusBadRequest)
 			return
 		}
 	}
-	channel := chi.URLParam(r, "channel")
 	err := s.DB.Queries.UpsertChannelHead(r.Context(), db.UpsertChannelHeadParams{Channel: channel, RuntimeVersion: request.RuntimeVersion, Platform: request.Platform, GroupID: pgUUID(groupID), Mode: request.Mode})
 	if err != nil {
+		s.logError(r, "rollback: upsert channel head", err, "channel", channel, "runtime_version", request.RuntimeVersion, "platform", request.Platform, "group_id", request.GroupID)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
-	_ = s.DB.Queries.InsertChannelHistory(r.Context(), db.InsertChannelHistoryParams{Channel: channel, RuntimeVersion: request.RuntimeVersion, Platform: request.Platform, GroupID: pgUUID(groupID), Mode: request.Mode, Action: "rollback", Actor: pgtype.Text{String: "admin", Valid: true}})
+	if err := s.DB.Queries.InsertChannelHistory(r.Context(), db.InsertChannelHistoryParams{Channel: channel, RuntimeVersion: request.RuntimeVersion, Platform: request.Platform, GroupID: pgUUID(groupID), Mode: request.Mode, Action: "rollback", Actor: pgtype.Text{String: "admin", Valid: true}}); err != nil {
+		s.logError(r, "rollback: insert channel history", err, "channel", channel, "runtime_version", request.RuntimeVersion, "platform", request.Platform)
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "rolled back"})
 }
 
 func (s *Server) channels(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.DB.Queries.ListChannelHeads(r.Context())
 	if err != nil {
+		s.logError(r, "channels: list heads", err)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
@@ -59,8 +68,10 @@ func (s *Server) channels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) channel(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.DB.Queries.ListChannelHeadsByChannel(r.Context(), chi.URLParam(r, "channel"))
+	channel := chi.URLParam(r, "channel")
+	rows, err := s.DB.Queries.ListChannelHeadsByChannel(r.Context(), channel)
 	if err != nil {
+		s.logError(r, "channel: list heads", err, "channel", channel)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}
@@ -72,8 +83,10 @@ func (s *Server) channel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.DB.Queries.ListChannelHistory(r.Context(), chi.URLParam(r, "channel"))
+	channel := chi.URLParam(r, "channel")
+	rows, err := s.DB.Queries.ListChannelHistory(r.Context(), channel)
 	if err != nil {
+		s.logError(r, "channel: list history", err, "channel", channel)
 		http.Error(w, "database", http.StatusInternalServerError)
 		return
 	}

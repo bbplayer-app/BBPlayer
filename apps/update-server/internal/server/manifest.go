@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -35,6 +36,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		s.logError(r, "manifest: channel head query", err, "channel", channel, "runtime_version", runtime, "platform", platform)
 		http.Error(w, "database", 500)
 		return
 	}
@@ -45,6 +47,10 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	}
 	update, err := s.DB.Queries.GetUpdateForGroupPlatform(r.Context(), dbq.GetUpdateForGroupPlatformParams{GroupID: head.GroupID, Platform: platform})
 	if err != nil {
+		// A group without an update for this platform is a legitimate single-platform publish.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			s.logError(r, "manifest: update for group/platform", err, "channel", channel, "platform", platform, "group_id", uuid.UUID(head.GroupID.Bytes).String())
+		}
 		http.Error(w, "update unavailable", 404)
 		return
 	}
@@ -52,6 +58,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	var assets []map[string]any
 	rows, e := s.DB.Queries.ListAssetsForUpdate(r.Context(), update.ID)
 	if e != nil {
+		s.logError(r, "manifest: list assets", e, "update_id", uuid.UUID(update.ID.Bytes).String())
 		http.Error(w, "database", 500)
 		return
 	}
@@ -64,6 +71,8 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		assets = append(assets, a)
 	}
 	if launch == nil {
+		// Data integrity failure: the group's update row exists but its launch asset is gone.
+		s.logError(r, "manifest: launch asset missing for update", nil, "update_id", uuid.UUID(update.ID.Bytes).String(), "group_id", uuid.UUID(head.GroupID.Bytes).String())
 		http.Error(w, "launch asset unavailable", 404)
 		return
 	}
@@ -82,6 +91,7 @@ func (s *Server) writeDirective(w http.ResponseWriter, r *http.Request, directiv
 	}
 	body, err := json.Marshal(directive)
 	if err != nil {
+		s.logError(r, "directive: marshal", err)
 		http.Error(w, "directive", 500)
 		return
 	}
@@ -94,6 +104,7 @@ func (s *Server) writeDirective(w http.ResponseWriter, r *http.Request, directiv
 		digest := sha256.Sum256(body)
 		raw, err := rsa.SignPKCS1v15(rand.Reader, s.Signer, crypto.SHA256, digest[:])
 		if err != nil {
+			s.logError(r, "directive: sign", err, "key_id", s.KeyID)
 			http.Error(w, "signature", 500)
 			return
 		}
@@ -118,6 +129,7 @@ func (s *Server) writeDirective(w http.ResponseWriter, r *http.Request, directiv
 func (s *Server) writeManifest(w http.ResponseWriter, r *http.Request, manifest any) {
 	body, err := json.Marshal(manifest)
 	if err != nil {
+		s.logError(r, "manifest: marshal", err)
 		http.Error(w, "manifest", 500)
 		return
 	}
@@ -129,6 +141,7 @@ func (s *Server) writeManifest(w http.ResponseWriter, r *http.Request, manifest 
 		digest := sha256.Sum256(body)
 		signature, err := rsa.SignPKCS1v15(rand.Reader, s.Signer, crypto.SHA256, digest[:])
 		if err != nil {
+			s.logError(r, "manifest: sign", err, "key_id", s.KeyID)
 			http.Error(w, "signature", 500)
 			return
 		}
