@@ -72,6 +72,37 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	}
 	return w.ResponseWriter.Write(b)
 }
+
+// access logs every HTTP request with its route pattern, status and latency.
+// Errors surface above the surrounding noise: 5xx at error level, 4xx at warn,
+// everything else at info. Liveness probes stay at debug so pollers do not
+// flood the log.
+func (s *Server) access(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		started := time.Now()
+		wrapped := &statusWriter{ResponseWriter: w}
+		next.ServeHTTP(wrapped, r)
+		route := r.URL.Path
+		if pattern := chi.RouteContext(r.Context()).RoutePattern(); pattern != "" {
+			route = pattern
+		}
+		status := wrapped.status
+		if status == 0 {
+			status = http.StatusOK
+		}
+		kv := []any{"method", r.Method, "route", route, "status", status, "duration_ms", time.Since(started).Milliseconds(), "remote", r.RemoteAddr, "user_agent", r.UserAgent()}
+		switch {
+		case status >= 500:
+			s.Log.Error("http request", kv...)
+		case status >= 400:
+			s.Log.Warn("http request", kv...)
+		case route == "/health":
+			s.Log.Debug("http request", kv...)
+		default:
+			s.Log.Info("http request", kv...)
+		}
+	})
+}
 func (s *Server) instrument(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()

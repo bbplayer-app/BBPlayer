@@ -226,6 +226,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 	if e = tx.Commit(ctx); e != nil {
 		return nil, s.dbError("publish: commit transaction", e, "group_id", gid.String())
 	}
+	s.Log.Info("publish completed", "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "commit_sha", source.CommitSHA, "clean", source.WorkingTreeClean, "message", req.Message)
 	out := &adminPublishOutput{}
 	out.Body.GroupID = gid
 	return out, nil

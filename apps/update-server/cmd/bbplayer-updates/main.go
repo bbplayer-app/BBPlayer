@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bbplayer-app/BBPlayer/apps/update-server/internal/config"
@@ -22,11 +23,31 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+// initLogging installs a text logger on stderr at the configured level. It
+// must run before any package builds loggers, so Server.Log keeps tracking
+// the process-wide default.
+func initLogging(level string) {
+	var l slog.Level
+	switch strings.ToLower(level) {
+	case "debug":
+		l = slog.LevelDebug
+	case "warn":
+		l = slog.LevelWarn
+	case "error":
+		l = slog.LevelError
+	default:
+		l = slog.LevelInfo
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: l})))
+}
+
 func runtime(ctx context.Context) (*server.Server, *store.Store, error) {
 	c, e := config.Load()
 	if e != nil {
 		return nil, nil, e
 	}
+	initLogging(c.LogLevel)
 	db, e := store.Open(ctx, c.DatabaseURL)
 	if e != nil {
 		return nil, nil, e
@@ -42,6 +63,7 @@ func apiCmd() *cobra.Command {
 			return e
 		}
 		defer db.Close()
+		slog.Info("api server listening", "addr", ":8080")
 		return http.ListenAndServe(":8080", s.Router())
 	}}
 }
@@ -56,6 +78,7 @@ func migrateCmd() *cobra.Command {
 			return e
 		}
 		defer db.Close()
+		slog.Info("migrations starting")
 		return db.Migrate(context.Background())
 	}}
 }
@@ -73,25 +96,35 @@ func workerCmd() *cobra.Command {
 		defer rollupTicker.Stop()
 		cleanupTicker := time.NewTicker(24 * time.Hour)
 		defer cleanupTicker.Stop()
+		slog.Info("worker started", "patch_interval", "15s", "rollup_interval", "5m", "cleanup_interval", "24h")
 		for {
 			select {
 			case <-patchTicker.C:
-				if _, e = patchworker.RunOnce(ctx, db, s.Objects); e != nil {
+				if _, e = patchworker.RunOnce(ctx, s.Log, db, s.Objects); e != nil {
 					slog.Error("worker: patch run", "error", e)
 				}
 			case <-rollupTicker.C:
 				if e = db.Queries.RollupDailyMetrics(ctx); e != nil {
 					slog.Error("worker: metrics rollup", "error", e)
+				} else {
+					slog.Info("worker: metrics rollup completed")
 				}
 			case <-cleanupTicker.C:
-				if e = db.Queries.DeleteExpiredRawEvents(ctx); e != nil {
-					slog.Error("worker: raw event cleanup", "error", e)
+				started := time.Now()
+				var firstErr error
+				if e = db.Queries.DeleteExpiredRawEvents(ctx); e != nil && firstErr == nil {
+					firstErr = e
 				}
-				if e = db.Queries.DeleteExpiredServiceMetrics(ctx); e != nil {
-					slog.Error("worker: service metric cleanup", "error", e)
+				if e = db.Queries.DeleteExpiredServiceMetrics(ctx); e != nil && firstErr == nil {
+					firstErr = e
 				}
-				if e = db.Queries.DeleteExpiredDeliveryMetrics(ctx); e != nil {
-					slog.Error("worker: delivery metric cleanup", "error", e)
+				if e = db.Queries.DeleteExpiredDeliveryMetrics(ctx); e != nil && firstErr == nil {
+					firstErr = e
+				}
+				if firstErr != nil {
+					slog.Error("worker: retention cleanup", "error", firstErr, "duration_ms", time.Since(started).Milliseconds())
+				} else {
+					slog.Info("worker: retention cleanup completed", "duration_ms", time.Since(started).Milliseconds())
 				}
 			}
 		}

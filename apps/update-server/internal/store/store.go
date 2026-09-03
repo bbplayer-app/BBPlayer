@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"database/sql"
@@ -43,7 +44,12 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = provider.Up(ctx)
+	applied, err := provider.Up(ctx)
+	for _, r := range applied {
+		if r.Source != nil {
+			slog.Info("migration applied", "version", r.Source.Version, "source", r.Source.Path, "duration_ms", r.Duration.Milliseconds())
+		}
+	}
 	return err
 }
 func (s *Store) Query(ctx context.Context, q string, args ...any) (pgx.Rows, error) {

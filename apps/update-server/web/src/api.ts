@@ -130,3 +130,30 @@ export const service = () =>
 			average_duration_ms: number
 		}[]
 	}>('/admin/metrics/service')
+export type PatchEndpoint = {
+	id: number
+	platform: 'android' | 'ios'
+	status: 'pending' | 'processing' | 'ready' | 'failed' | 'not_beneficial'
+	object_key?: string
+	sha256?: string
+	size_bytes?: number
+	attempts: number
+	served_count: number
+	target_size: number
+	error?: string
+	processing_started_at?: string
+	created_at: string
+	updated_at: string
+	from: PatchEndpointRef
+	to: PatchEndpointRef
+}
+export type PatchEndpointRef = {
+	update_id: string
+	group_id: string
+	channel: string
+	runtime_version: string
+	message: string
+	version: string
+}
+export const patches = () =>
+	api<PatchEndpoint[]>('/admin/patches?limit=100')

@@ -110,6 +110,8 @@ GET /admin/docs
 
 ## 可观测性
 
+结构化日志由 `api`、`worker` 与 `migrate` 进程写到 stderr（TextHandler），级别由可选的 `LOG_LEVEL`（`debug`/`info`/`warn`/`error`，默认 `info`）控制。API 进程为每个请求输出一行访问日志（5xx 记 error、4xx 记 warn、其余记 info，`/health` 只在 debug 级别记录）；补丁 worker 为每个认领的任务记录 claim、耗时、补丁大小与节省百分比，失败时记录任务与错误上下文；发布与迁移完成时同样留有日志。
+
 PostgreSQL 就是指标后端；本服务刻意不暴露 Prometheus 端点，也不要求 OTel collector。请求数、5xx 错误数与耗时按分钟聚合到 `service_metric_minutes` 桶里。启动 bundle 与 bsdiff 分发在 `delivery_metric_minutes` 中按同样的方式聚合；普通更新资源刻意留在 R2 自定义域名上，不计入 API 指标。
 
 通过认证的 WebUI 用户可以查询：

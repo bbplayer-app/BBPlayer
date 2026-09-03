@@ -1,4 +1,10 @@
-import { Blocks, Boxes, Gauge, RadioTower } from 'lucide-react'
+import {
+	Blocks,
+	Boxes,
+	FileDiff,
+	Gauge,
+	RadioTower,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Separator } from '@/components/ui/separator'
@@ -17,7 +23,12 @@ import {
 	SidebarTrigger,
 } from '@/components/ui/sidebar'
 
-export type Section = 'overview' | 'channels' | 'updates' | 'runtimes'
+export type Section =
+	| 'overview'
+	| 'channels'
+	| 'updates'
+	| 'runtimes'
+	| 'patches'
 
 const primary = [
 	{ id: 'overview' as const, label: 'Overview', href: '/', icon: Gauge },
@@ -40,6 +51,12 @@ const ota = [
 		label: 'Runtimes',
 		href: '/runtimes/',
 		icon: Blocks,
+	},
+	{
+		id: 'patches' as const,
+		label: 'Patches',
+		href: '/patches/',
+		icon: FileDiff,
 	},
 ]
 

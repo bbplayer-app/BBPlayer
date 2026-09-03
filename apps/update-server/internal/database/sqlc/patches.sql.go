@@ -103,3 +103,91 @@ func (q *Queries) IncrementPatchServed(ctx context.Context, arg IncrementPatchSe
 	_, err := q.db.Exec(ctx, incrementPatchServed, arg.FromUpdateID, arg.ToUpdateID)
 	return err
 }
+
+const listPatches = `-- name: ListPatches :many
+SELECT p.id,p.platform,p.status,p.object_key,p.sha256,p.size_bytes,p.attempts,p.served_count,p.error,p.processing_started_at,p.created_at,p.updated_at,
+COALESCE((SELECT a.size_bytes FROM assets a WHERE a.update_id=tu.id AND a.is_launch),0)::bigint AS target_size,
+fu.id::uuid AS from_update_id,fug.id::uuid AS from_group_id,fug.channel AS from_channel,fug.runtime_version AS from_runtime,fug.message AS from_message,COALESCE(fug.expo_config->>'version','')::text AS from_version,
+tu.id::uuid AS to_update_id,tug.id::uuid AS to_group_id,tug.channel AS to_channel,tug.runtime_version AS to_runtime,tug.message AS to_message,COALESCE(tug.expo_config->>'version','')::text AS to_version
+FROM patches p
+JOIN updates fu ON fu.id=p.from_update_id
+JOIN update_groups fug ON fug.id=fu.group_id
+JOIN updates tu ON tu.id=p.to_update_id
+JOIN update_groups tug ON tug.id=tu.group_id
+ORDER BY p.updated_at DESC
+LIMIT $1
+`
+
+type ListPatchesRow struct {
+	ID                  int64
+	Platform            string
+	Status              string
+	ObjectKey           pgtype.Text
+	Sha256              pgtype.Text
+	SizeBytes           pgtype.Int8
+	Attempts            int32
+	ServedCount         int64
+	Error               pgtype.Text
+	ProcessingStartedAt pgtype.Timestamptz
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	TargetSize          int64
+	FromUpdateID        pgtype.UUID
+	FromGroupID         pgtype.UUID
+	FromChannel         string
+	FromRuntime         string
+	FromMessage         string
+	FromVersion         string
+	ToUpdateID          pgtype.UUID
+	ToGroupID           pgtype.UUID
+	ToChannel           string
+	ToRuntime           string
+	ToMessage           string
+	ToVersion           string
+}
+
+func (q *Queries) ListPatches(ctx context.Context, limit int32) ([]ListPatchesRow, error) {
+	rows, err := q.db.Query(ctx, listPatches, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPatchesRow
+	for rows.Next() {
+		var i ListPatchesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Platform,
+			&i.Status,
+			&i.ObjectKey,
+			&i.Sha256,
+			&i.SizeBytes,
+			&i.Attempts,
+			&i.ServedCount,
+			&i.Error,
+			&i.ProcessingStartedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TargetSize,
+			&i.FromUpdateID,
+			&i.FromGroupID,
+			&i.FromChannel,
+			&i.FromRuntime,
+			&i.FromMessage,
+			&i.FromVersion,
+			&i.ToUpdateID,
+			&i.ToGroupID,
+			&i.ToChannel,
+			&i.ToRuntime,
+			&i.ToMessage,
+			&i.ToVersion,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

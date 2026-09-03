@@ -68,7 +68,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = spec.Body.Close()
-	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 15 {
+	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 16 {
 		t.Fatalf("admin OpenAPI document: version=%q paths=%d", openAPI.OpenAPI, len(openAPI.Paths))
 	}
 	for _, path := range []string{"/admin/publish", "/admin/updates/{id}", "/admin/channels/{channel}/rollback", "/admin/source/compare/{from}/{to}", "/admin/insights/groups/{groupID}/lifecycle", "/admin/metrics/delivery"} {

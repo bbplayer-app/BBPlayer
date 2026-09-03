@@ -24,6 +24,7 @@ func configureAdminOpenAPI(api huma.API) {
 		{Name: "Source", Description: "Git provenance for published updates."},
 		{Name: "Insights", Description: "Client activity and update lifecycle metrics."},
 		{Name: "Metrics", Description: "Service and update-delivery metrics."},
+		{Name: "Patches", Description: "Bsdiff patch generation status."},
 	}
 }
 
@@ -45,6 +46,7 @@ func registerAdminRoutes(s *Server, r chi.Router) {
 		registerAdminInsightRoutes(s, api)
 		registerAdminMetricRoutes(s, api)
 		registerAdminDashboardRoutes(s, api)
+		registerAdminPatchRoutes(s, api)
 	})
 	registerAdminSessionRoute(s, r)
 }

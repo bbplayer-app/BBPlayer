@@ -27,6 +27,7 @@ export default defineConfig({
 					import.meta.dirname,
 					'runtimes/detail.html',
 				),
+				patches: path.resolve(import.meta.dirname, 'patches/index.html'),
 			},
 		},
 	},

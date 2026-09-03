@@ -21,12 +21,16 @@ type Config struct {
 	InstallationHMACKey   string `env:"INSTALLATION_HMAC_KEY,required,notEmpty"`
 	CodeSigningPrivateKey string `env:"CODE_SIGNING_PRIVATE_KEY"`
 	CodeSigningKeyID      string `env:"CODE_SIGNING_KEY_ID"`
+	LogLevel              string `env:"LOG_LEVEL"`
 }
 
 func Load() (Config, error) {
 	var c Config
 	if err := env.Parse(&c); err != nil {
 		return c, err
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = "info"
 	}
 	c.R2Endpoint = strings.TrimRight(c.R2Endpoint, "/")
 	c.PublicBaseURL = strings.TrimRight(c.PublicBaseURL, "/")
