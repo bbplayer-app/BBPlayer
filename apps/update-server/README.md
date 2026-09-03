@@ -81,6 +81,14 @@ CI 以非交互方式使用完全相同的命令：
 pnpm hot-update -- publish --non-interactive --channel production --message "..."
 ```
 
+可在发布前查看当前项目的 Android fingerprint；默认仅输出 runtime hash，传入
+`--json` 会输出完整的 `{ hash, sources }` 报告：
+
+```sh
+pnpm hot-update -- fingerprint
+pnpm hot-update -- fingerprint --json
+```
+
 非交互发布会拒绝脏 checkout，除非显式指定 `--allow-dirty`。每次新发布都会为每个兼容平台从上一个可见的 channel head 到新 head 创建一个异步 bsdiff 任务。在任务变为 `ready` 之前，客户端收到的是完整的不可变 bundle。
 
 热更新 CLI 调用 `createFingerprintAsync(projectDir, { platforms: ['android'] })`，而不是调用 EAS CLI。这让生成的运行时 hash 与人类可调试的源码列表来自同一次库调用。

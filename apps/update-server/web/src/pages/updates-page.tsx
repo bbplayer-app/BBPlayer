@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 
 import { groups } from '@/api'
 import { AppShell } from '@/components/app-shell'
+import { Identifier } from '@/components/identifier'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +17,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
-import { formatDate, shortID, sourceCommit } from '@/lib/utils'
+import { formatDate, sourceCommit } from '@/lib/utils'
 
 export function UpdatesPage() {
 	const query = useQuery({ queryKey: ['groups'], queryFn: groups })
@@ -114,8 +115,8 @@ export function UpdatesPage() {
 											<TableCell className='hidden font-mono text-xs lg:table-cell'>
 												{sourceCommit(item.source)}
 											</TableCell>
-											<TableCell className='hidden font-mono text-xs text-muted-foreground xl:table-cell'>
-												{shortID(item.id)}
+											<TableCell className='hidden xl:table-cell'>
+												<Identifier value={item.id} />
 											</TableCell>
 										</TableRow>
 									))}

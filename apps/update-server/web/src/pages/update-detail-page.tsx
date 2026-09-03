@@ -1,6 +1,10 @@
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import {
+	useQuery,
+	useQueryClient,
+	type QueryClient,
+} from '@tanstack/react-query'
 import { MoreHorizontalIcon, RotateCcwIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import {
@@ -14,6 +18,8 @@ import {
 	type Head,
 } from '@/api'
 import { AppShell } from '@/components/app-shell'
+import { FingerprintMetadataDialog } from '@/components/fingerprint-metadata-dialog'
+import { Identifier } from '@/components/identifier'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
@@ -62,7 +68,6 @@ import {
 	number,
 	percent,
 	queryParam,
-	shortID,
 	sourceCommit,
 } from '@/lib/utils'
 
@@ -134,9 +139,7 @@ export function UpdateDetailPage() {
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align='end'>
 							<DropdownMenuItem
-								disabled={
-									!update.channel || update.platforms.length === 0
-								}
+								disabled={!update.channel || update.platforms.length === 0}
 								variant='destructive'
 								onSelect={() => setRollbackOpen(true)}
 							>
@@ -171,8 +174,12 @@ export function UpdateDetailPage() {
 				<CardContent className='grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4'>
 					<Info
 						label='Group ID'
-						value={shortID(update.id)}
-						mono
+						value={
+							<Identifier
+								label='group ID'
+								value={update.id}
+							/>
+						}
 					/>
 					<Info
 						label='Channel'
@@ -195,11 +202,21 @@ export function UpdateDetailPage() {
 					<Info
 						label='Fingerprint'
 						value={
-							update.fingerprint_hash
-								? shortID(update.fingerprint_hash)
-								: 'Not recorded'
+							update.fingerprint_hash ? (
+								<div className='flex flex-wrap items-center gap-2'>
+									<Identifier
+										label='fingerprint'
+										value={update.fingerprint_hash}
+									/>
+									<FingerprintMetadataDialog
+										hash={update.fingerprint_hash}
+										sources={update.fingerprint_sources}
+									/>
+								</div>
+							) : (
+								'Not recorded'
+							)
 						}
-						mono
 					/>
 				</CardContent>
 			</Card>
@@ -250,8 +267,11 @@ export function UpdateDetailPage() {
 													{item.platform}
 												</Badge>
 											</TableCell>
-											<TableCell className='hidden font-mono text-xs sm:table-cell'>
-												{shortID(item.id)}
+											<TableCell className='hidden sm:table-cell'>
+												<Identifier
+													label='update ID'
+													value={item.id}
+												/>
 											</TableCell>
 											<TableCell>
 												{channelHeadsQuery.isPending ? (
@@ -377,28 +397,26 @@ function findHead(
 	)
 }
 
-function HeadLabel({ head, groupId }: { head: Head | undefined; groupId: string }) {
+function HeadLabel({
+	head,
+	groupId,
+}: {
+	head: Head | undefined
+	groupId: string
+}) {
 	if (!head)
 		return <span className='text-xs text-muted-foreground'>No head</span>
-	if (head.mode === 'embedded')
-		return <StatusBadge value='embedded' />
+	if (head.mode === 'embedded') return <StatusBadge value='embedded' />
 	const current = headGroupID(head)
 	if (current === groupId)
-		return (
-			<Badge className='whitespace-nowrap'>
-				Current head
-			</Badge>
-		)
+		return <Badge className='whitespace-nowrap'>Current head</Badge>
 	if (!current)
 		return <span className='text-xs text-muted-foreground'>No head</span>
 	return (
-		<a
-			className='font-mono text-xs text-muted-foreground hover:text-foreground hover:underline'
-			href={`/updates/detail.html?id=${encodeURIComponent(current)}`}
-			title='Current head update group'
-		>
-			{shortID(current)}
-		</a>
+		<Identifier
+			label='current head group ID'
+			value={current}
+		/>
 	)
 }
 
@@ -599,15 +617,15 @@ function Info({
 	mono = false,
 }: {
 	label: string
-	value: string
+	value: ReactNode
 	mono?: boolean
 }) {
 	return (
 		<div>
 			<p className='text-xs font-medium text-muted-foreground'>{label}</p>
-			<p className={`mt-1 break-all text-sm ${mono ? 'font-mono' : ''}`}>
+			<div className={`mt-1 break-all text-sm ${mono ? 'font-mono' : ''}`}>
 				{value}
-			</p>
+			</div>
 		</div>
 	)
 }

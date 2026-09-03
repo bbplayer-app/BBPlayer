@@ -3,10 +3,12 @@ import { cancel, intro, isCancel, select } from '@clack/prompts'
 
 import { parseCommandArguments } from './cli/arguments.js'
 import { runAdminCommand } from './commands/admin.js'
+import { showFingerprint } from './commands/fingerprint.js'
 import { publishUpdate } from './commands/publish.js'
 
 const COMMAND_NAMES = [
 	'publish',
+	'fingerprint',
 	'list',
 	'show',
 	'channel',
@@ -46,6 +48,8 @@ async function main(): Promise<void> {
 		...commandArguments,
 	])
 	if (commandName === 'publish') return await publishUpdate(parsedArguments)
+	if (commandName === 'fingerprint')
+		return await showFingerprint(parsedArguments)
 	return await runAdminCommand(commandName, parsedArguments)
 }
 

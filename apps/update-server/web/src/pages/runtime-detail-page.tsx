@@ -6,6 +6,7 @@ import {
 	runtime as getRuntime,
 } from '@/api'
 import { AppShell } from '@/components/app-shell'
+import { Identifier } from '@/components/identifier'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
@@ -19,7 +20,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
-import { formatDate, queryParam, shortID, sourceCommit } from '@/lib/utils'
+import { formatDate, queryParam, sourceCommit } from '@/lib/utils'
 
 export function RuntimeDetailPage() {
 	const runtime = queryParam('runtime')
@@ -136,15 +137,10 @@ export function RuntimeDetailPage() {
 												{item.mode === 'embedded' ? (
 													<StatusBadge value='embedded' />
 												) : (
-													<a
-														className='font-mono text-xs text-muted-foreground hover:text-foreground hover:underline'
-														href={`/updates/detail.html?id=${encodeURIComponent(headGroupID(item) ?? '')}`}
-														title='Head update group'
-													>
-														{headGroupID(item)
-															? shortID(headGroupID(item) ?? '')
-															: '—'}
-													</a>
+													<Identifier
+														label='head group ID'
+														value={headGroupID(item) ?? ''}
+													/>
 												)}
 											</TableCell>
 											<TableCell className='hidden text-muted-foreground sm:table-cell'>

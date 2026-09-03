@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function shortID(value: string) {
-	return value.length > 13 ? `${value.slice(0, 8)}…${value.slice(-4)}` : value
+	return value.length > 12 ? `${value.slice(0, 8)}…${value.slice(-4)}` : value
 }
 
 export function formatDate(value: string) {

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { LoginScreen } from '@/components/login-screen'
+import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import {
 	clearToken,
@@ -24,6 +25,10 @@ export function mount(page: ReactNode) {
 	createRoot(document.querySelector('#root')!).render(
 		<QueryClientProvider client={client}>
 			<TooltipProvider>
+				<Toaster
+					closeButton
+					position='bottom-right'
+				/>
 				<AuthGate>{page}</AuthGate>
 			</TooltipProvider>
 		</QueryClientProvider>,

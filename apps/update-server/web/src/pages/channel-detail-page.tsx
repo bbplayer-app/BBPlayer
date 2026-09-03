@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import { activity, channel } from '@/api'
 import { AppShell } from '@/components/app-shell'
+import { Identifier } from '@/components/identifier'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
@@ -29,7 +30,7 @@ import {
 	TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { chartDate, formatDate, queryParam, shortID } from '@/lib/utils'
+import { chartDate, formatDate, queryParam } from '@/lib/utils'
 
 const config = {
 	active_installations: {
@@ -220,12 +221,10 @@ export function ChannelDetailPage() {
 											</TableCell>
 											<TableCell className='hidden font-mono text-xs lg:table-cell'>
 												{item.head_group_id ? (
-													<a
-														className='hover:underline'
-														href={`/updates/detail.html?id=${encodeURIComponent(item.head_group_id)}`}
-													>
-														{shortID(item.head_group_id)}
-													</a>
+													<Identifier
+														label='head group ID'
+														value={item.head_group_id}
+													/>
 												) : (
 													'Embedded'
 												)}
