@@ -8,6 +8,7 @@ import { focusManager, onlineManager } from '@tanstack/react-query'
 import * as Application from 'expo-application'
 import { Observe, ObserveRoot } from 'expo-observe'
 import { router, Stack } from 'expo-router'
+import * as Updates from 'expo-updates'
 import { useEffect, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, StyleSheet, View } from 'react-native'
@@ -39,9 +40,11 @@ import {
 } from '@/lib/services/updateTelemetry'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
+import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import { isActuallyOffline } from '@/utils/network'
+import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
 
@@ -173,6 +176,24 @@ function RootLayout() {
 		runAppInit()
 		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state, set-state-in-effect
 		setIsReady(true)
+	}, [])
+
+	useEffect(() => {
+		if (__DEV__ || !Updates.isEnabled) {
+			return
+		}
+
+		Updates.checkForUpdateAsync()
+			.then((result) => {
+				if (result.isAvailable) {
+					toast.show('有新的热更新，将在下次启动时应用', {
+						id: 'update',
+					})
+				}
+			})
+			.catch((error: Error) => {
+				toastAndLogError('检测更新失败', error, 'UI.RootLayout')
+			})
 	}, [])
 
 	useEffect(() => {

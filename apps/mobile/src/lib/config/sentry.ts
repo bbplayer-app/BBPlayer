@@ -1,8 +1,10 @@
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
 import * as Application from 'expo-application'
+import * as Updates from 'expo-updates'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import { configuredChannel } from '@/lib/services/updateTelemetry'
 import log from '@/utils/log'
 
 const logger = log.extend('Utils.Sentry')
@@ -49,6 +51,19 @@ export function initializeSentry() {
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],
 	})
+
+	const scope = Sentry.getGlobalScope()
+	const launchSource = Updates.isEmergencyLaunch
+		? 'emergency'
+		: Updates.isEmbeddedLaunch
+			? 'embedded'
+			: 'ota'
+
+	scope.setTag('expo-update-id', Updates.updateId ?? 'none')
+	scope.setTag('expo-is-embedded-update', String(Updates.isEmbeddedLaunch))
+	scope.setTag('expo-channel', configuredChannel())
+	scope.setTag('expo-runtime-version', Updates.runtimeVersion ?? 'unknown')
+	scope.setTag('expo-launch-source', launchSource)
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
 	if (!development) {

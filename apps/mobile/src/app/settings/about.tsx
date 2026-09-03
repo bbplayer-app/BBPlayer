@@ -1,6 +1,7 @@
 import * as Application from 'expo-application'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
+import * as Updates from 'expo-updates'
 import * as WebBrowser from 'expo-web-browser'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import {
@@ -29,12 +30,20 @@ const openExternalLink = async (url: string) => {
 	}
 }
 
+const updateTime = Updates.createdAt
+	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`
+	: ''
+
 export default function AboutSettingsPage() {
 	const router = useRouter()
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
-	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}`
+	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}${
+		Updates.updateId
+			? ` hotfix-${Updates.updateId.slice(0, 7)}-${updateTime}`
+			: ''
+	}`
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
