@@ -15,8 +15,16 @@ Cloudflare Worker dependency.
 
 ## Deployment
 
-Build `apps/update-server/Dockerfile`, then run `docker compose up -d` behind
-an HTTPS reverse proxy. The one-shot `migrate` service uses embedded Goose
+Build `apps/update-server/Dockerfile` and the WebUI image
+(`apps/update-server/web/Dockerfile`, build context is the monorepo root), then
+run `docker compose up -d` behind an HTTPS reverse proxy. The compose stack
+exposes exactly one port: `127.0.0.1:8080` belongs to the `web` nginx service,
+which serves the admin UI and proxies `/admin/*`, `/api/*` and `/health` to the
+`api` container over the compose network — the UI and API share one origin
+(`PUBLIC_BASE_URL`, e.g. `https://updates.bbplayer.roitium.com`). Static
+immutable assets are served from R2's custom domain
+(`R2_PUBLIC_BASE_URL`, e.g. `https://assets-updates.bbplayer.roitium.com`).
+The one-shot `migrate` service uses embedded Goose
 migrations, protects them with a PostgreSQL advisory lock, and must complete
 before API and patch worker start. The `worker` is deliberately a separate
 process: bsdiff is CPU/memory intensive and must not delay manifest responses.
@@ -25,6 +33,28 @@ The Docker build pins Expo's `bsdiff` source and fails if it cannot produce a
 Patch claims have a ten-minute lease, so an interrupted worker cannot leave a
 channel permanently stuck in `processing`; clients keep receiving full bundles
 until a replacement worker completes the job.
+
+### Production behind a shared reverse proxy
+
+To run the same stack behind an existing proxy (e.g. Caddy) that publishes
+HTTPS on the host, attach the `web` service to the shared `proxy` docker
+network and drop its host port:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+The overlay removes the `127.0.0.1:8080:80` binding and joins `web` to an
+external network named `proxy`; no other service joins that network. Point the
+proxy at the service by name — Caddy resolves `web:80` through the shared
+network, terminates TLS, and nginx inside `web` keeps proxying `/admin/*`,
+`/api/*` and `/health` to `api:8080` over the internal compose network:
+
+```caddyfile
+updates.bbplayer.roitium.com {
+	reverse_proxy web:80
+}
+```
 
 Required deployment settings are all listed in [`.env.example`](.env.example):
 
@@ -120,6 +150,16 @@ GET /admin/metrics/delivery?start=<RFC3339>&end=<RFC3339>&channel=<optional>&gro
 GET /admin/insights/activity?start=<RFC3339>&end=<RFC3339>&channel=<optional>
 GET /admin/insights/groups/<group-id>/lifecycle?start=<RFC3339>&end=<RFC3339>
 ```
+
+### WebUI sign-in
+
+The admin UI never embeds a token. Visiting any page at the same origin shows
+a sign-in screen; the token the operator enters is validated against
+`GET /admin/session` (behind the same bearer middleware as every `/admin`
+route), stored in `localStorage`, and sent as
+`Authorization: Bearer <ADMIN_TOKEN>` on every request. Any `401` clears it
+and returns to the sign-in screen, so rotating `ADMIN_TOKEN` logs active
+browsers out.
 
 Both endpoints default to the last seven days and accept at most 90 days.
 Raw client lifecycle events are retained for 35 days; minute metrics for 90

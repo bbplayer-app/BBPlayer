@@ -46,4 +46,5 @@ func registerAdminRoutes(s *Server, r chi.Router) {
 		registerAdminMetricRoutes(s, api)
 		registerAdminDashboardRoutes(s, api)
 	})
+	registerAdminSessionRoute(s, r)
 }

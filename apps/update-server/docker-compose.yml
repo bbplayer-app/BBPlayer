@@ -34,11 +34,18 @@ services:
     command: ["api"]
     environment: *server-env
     depends_on: { migrate: { condition: service_completed_successfully } }
-    ports: ["127.0.0.1:8080:8080"]
   worker:
     image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
     command: ["worker"]
     environment: *server-env
     depends_on: { migrate: { condition: service_completed_successfully } }
+  web:
+    image: ${UPDATE_SERVER_WEB_IMAGE:-bbplayer-updates-web:dev}
+    build:
+      context: ../..
+      dockerfile: apps/update-server/web/Dockerfile
+    depends_on: [api]
+    ports: ["127.0.0.1:8080:80"]
+    restart: unless-stopped
 volumes:
   postgres-data:

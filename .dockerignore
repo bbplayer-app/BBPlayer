@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/.expo
+**/dist
+**/.turbo
+**/build
+**/.gradle
+**/Pods
+**/coverage
+apps/mobile/android
+apps/mobile/ios

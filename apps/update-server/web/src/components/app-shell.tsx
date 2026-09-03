@@ -17,8 +17,6 @@ import {
 	SidebarTrigger,
 } from '@/components/ui/sidebar'
 
-import bbplayerIcon from '../../../../mobile/assets/images/icon.png'
-
 export type Section = 'overview' | 'channels' | 'updates' | 'runtimes'
 
 const primary = [
@@ -67,7 +65,7 @@ export function AppShell({
 							<img
 								alt=''
 								className='absolute inset-0 size-full scale-[2.15] object-contain'
-								src={bbplayerIcon}
+								src='/icon.png'
 							/>
 						</span>
 						<div className='min-w-0'>

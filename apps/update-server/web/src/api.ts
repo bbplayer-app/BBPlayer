@@ -1,3 +1,5 @@
+import { getToken, reportUnauthorized } from '@/lib/auth'
+
 export type Group = {
 	id: string
 	channel: string
@@ -38,18 +40,24 @@ export type Asset = {
 	downloads: number
 }
 const base = import.meta.env.VITE_API_BASE_URL ?? ''
-const token = import.meta.env.VITE_ADMIN_TOKEN
 async function api<T>(path: string) {
+	const token = getToken()
 	const r = await fetch(base + path, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 	})
+	if (r.status === 401) {
+		reportUnauthorized()
+		throw new Error('Unauthorized')
+	}
 	if (!r.ok)
-		throw new Error(
-			r.status === 401
-				? 'Set VITE_ADMIN_TOKEN in apps/update-server/web/.env.local.'
-				: `Request failed (${r.status})`,
-		)
+		throw new Error(`Request failed (${r.status})`)
 	return r.json() as Promise<T>
+}
+export async function verifyToken(token: string) {
+	const r = await fetch(base + '/admin/session', {
+		headers: { Authorization: `Bearer ${token}` },
+	})
+	return r.ok
 }
 export const channels = () =>
 	api<{ channel: string; updated_at: string; runtime_count: number }[]>(
