@@ -17,6 +17,7 @@ export async function runCommand(
 	command: string,
 	argumentsList: string[],
 	workingDirectory: string,
+	options: { forwardOutput?: boolean } = {},
 ): Promise<string> {
 	return await new Promise((resolve, reject) => {
 		const childProcess = spawn(command, argumentsList, {
@@ -33,10 +34,14 @@ export async function runCommand(
 		}
 
 		childProcess.stdout.on('data', (chunk: Buffer) => {
-			output += chunk.toString()
+			const text = chunk.toString()
+			output += text
+			if (options.forwardOutput) process.stdout.write(text)
 		})
 		childProcess.stderr.on('data', (chunk: Buffer) => {
-			output += chunk.toString()
+			const text = chunk.toString()
+			output += text
+			if (options.forwardOutput) process.stderr.write(text)
 		})
 		childProcess.once('error', settleWithError)
 		childProcess.once('close', (exitCode) => {
@@ -45,7 +50,12 @@ export async function runCommand(
 			if (exitCode === 0) resolve(output)
 			else
 				reject(
-					new ExternalCommandError(command, argumentsList, exitCode, output),
+					new ExternalCommandError(
+						command,
+						argumentsList,
+						exitCode,
+						options.forwardOutput ? '' : output,
+					),
 				)
 		})
 	})

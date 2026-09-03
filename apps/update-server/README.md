@@ -17,7 +17,7 @@ docker build -t bbplayer-updates:VERSION apps/update-server
 docker build -t bbplayer-updates-web:VERSION -f apps/update-server/web/Dockerfile .
 ```
 
-在服务器上把两个 tag 配为 `UPDATE_SERVER_IMAGE` / `UPDATE_SERVER_WEB_IMAGE`（见 [`.env.example`](.env.example)）；`dev` tag 对应本地直接 `docker build`、不经镜像仓库的开发流程。然后在一个 HTTPS 反向代理后面运行 `docker compose up -d`。所有服务都位于 `internal` docker 网络上（`internal: true`，无外部连通、不向宿主机暴露端口）；只有 `update-server-web` 发布一个宿主机端口——普通 compose 栈中是 `127.0.0.1:8080`——并且它是唯一入口：这个 nginx 服务对外提供管理后台，并把 `/admin/*`、`/api/*`、`/health` 经 internal 网络代理到 `api` 容器——UI 与 API 因此共享同一源（`PUBLIC_BASE_URL`，如 `https://updates.bbplayer.roitium.com`）。不可变的静态资源由 R2 自定义域名提供（`R2_PUBLIC_BASE_URL`，如 `https://assets-updates.bbplayer.roitium.com`）。一次性 `migrate` 服务使用内嵌的 Goose 迁移，用 PostgreSQL advisory lock 保护迁移过程，并且必须在 API 与补丁 worker 启动前完成。`worker` 刻意作为独立进程运行：bsdiff 的 CPU/内存开销很高，不能拖慢 manifest 响应。Docker 构建固定住 Expo 的 `bsdiff` 源码，若它无法产出其配套 `bspatch` 能逐字节还原的 `BSDIFF40` 补丁，构建就会失败。补丁认领（claim）有十分钟租约，因此被中断的 worker 不会让 channel 永久卡在 `processing`；在新的 worker 完成该任务之前，客户端会持续收到完整 bundle。
+在服务器上把两个 tag 配为 `UPDATE_SERVER_IMAGE` / `UPDATE_SERVER_WEB_IMAGE`（见 [`.env.example`](.env.example)）；`dev` tag 对应本地直接 `docker build`、不经镜像仓库的开发流程。然后在一个 HTTPS 反向代理后面运行 `docker compose up -d`。PostgreSQL 与 nginx/API 通信位于 `internal` docker 网络；`api` 和 `worker` 还加入一个不发布端口的 `egress` 网络，以访问 Cloudflare R2 的公共 S3 endpoint。只有 `update-server-web` 发布一个宿主机端口——普通 compose 栈中是 `127.0.0.1:8080`——并且它是唯一入口：这个 nginx 服务对外提供管理后台，并把 `/admin/*`、`/api/*`、`/health` 经 internal 网络代理到 `api` 容器——UI 与 API 因此共享同一源（`PUBLIC_BASE_URL`，如 `https://updates.bbplayer.roitium.com`）。不可变的静态资源由 R2 自定义域名提供（`R2_PUBLIC_BASE_URL`，如 `https://assets-updates.bbplayer.roitium.com`）。一次性 `migrate` 服务使用内嵌的 Goose 迁移，用 PostgreSQL advisory lock 保护迁移过程，并且必须在 API 与补丁 worker 启动前完成。`worker` 刻意作为独立进程运行：bsdiff 的 CPU/内存开销很高，不能拖慢 manifest 响应。Docker 构建固定住 Expo 的 `bsdiff` 源码，若它无法产出其配套 `bspatch` 能逐字节还原的 `BSDIFF40` 补丁，构建就会失败。补丁认领（claim）有十分钟租约，因此被中断的 worker 不会让 channel 永久卡在 `processing`；在新的 worker 完成该任务之前，客户端会持续收到完整 bundle。
 
 ### 共享反向代理之后的生产部署
 
@@ -66,6 +66,14 @@ pnpm hot-update
 ```
 
 它会交互式询问 channel、发布说明和缺失的服务器凭据，在发布前警告脏工作区，运行 `expo export`，导出公开的 Expo 配置，生成 Android fingerprint，并上传归档。它的 Git 溯源信息只有 `commit_sha` 与 `working_tree_clean`。上传 fingerprint 时，完整的 `{ hash, sources }` 会与更新组一同保存，且其 hash 必须等于提供的 `runtimeVersion`。`--no-fingerprint` 则要求显式给出 `--runtime-version`，并且不保存 fingerprint 记录。
+
+若 `dist` 已由同一项目的 Expo export 生成，可使用 `--skip-export` 跳过 bundler：CLI 会
+校验其中的 `metadata.json`、写入当前公开 Expo 配置，然后直接归档上传。
+
+首次成功提供 URL 与 token 后，CLI 会把它们保存到项目的
+`.bbplayer-updates/credentials.json`（Git 已忽略，目录权限为仅当前用户）。后续会优先
+使用命令行参数，其次是 `BBPLAYER_UPDATE_SERVER_URL` /
+`BBPLAYER_UPDATE_SERVER_TOKEN`，最后才是该本地凭据文件。
 
 CI 以非交互方式使用完全相同的命令：
 

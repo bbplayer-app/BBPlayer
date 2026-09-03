@@ -7,7 +7,11 @@ import { createFingerprintAsync } from '@expo/fingerprint'
 
 import { promptForRequiredValue } from '../cli/prompts.js'
 import { createZipArchive } from '../services/archive.js'
-import { getPublicExpoConfig, exportAndroidUpdate } from '../services/expo.js'
+import {
+	ensureExpoExportExists,
+	exportAndroidUpdate,
+	getPublicExpoConfig,
+} from '../services/expo.js'
 import { runGitCommand } from '../services/git.js'
 import { resolveProjectDirectory } from '../services/project.js'
 import { getUpdateServerCredentials } from '../services/update-server.js'
@@ -80,6 +84,7 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 		argumentsMap['project-dir'],
 	)
 	const isNonInteractive = argumentsMap['non-interactive'] === true
+	const shouldSkipExport = argumentsMap['skip-export'] === true
 	let channelName = String(argumentsMap.channel ?? 'production')
 	let releaseMessage = String(argumentsMap.message ?? '')
 
@@ -116,11 +121,11 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 	)
 	if (!isNonInteractive) {
 		note(
-			`channel: ${channelName}\nruntimeVersion: ${runtimeVersion}\ncommit: ${commitSha}\nworking tree: ${hasUncommittedChanges ? 'dirty' : 'clean'}\nfingerprint: ${fingerprint ? `${fingerprint.sources.length} sources` : 'not uploaded'}`,
+			`channel: ${channelName}\nruntimeVersion: ${runtimeVersion}\ncommit: ${commitSha}\nworking tree: ${hasUncommittedChanges ? 'dirty' : 'clean'}\nexport: ${shouldSkipExport ? 'existing dist' : 'build Android export'}\nfingerprint: ${fingerprint ? `${fingerprint.sources.length} sources` : 'not uploaded'}`,
 			'Publish summary',
 		)
 		const shouldPublish = await confirm({
-			message: 'Export and publish?',
+			message: shouldSkipExport ? 'Publish existing export?' : 'Export and publish?',
 			initialValue: true,
 		})
 		if (isCancel(shouldPublish) || !shouldPublish) throw new Error('Cancelled')
@@ -130,19 +135,26 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 		projectDirectory,
 		String(argumentsMap.dist ?? 'dist'),
 	)
-	const exportProgress = spinner()
-	exportProgress.start('Exporting')
+	log.step(
+		shouldSkipExport
+			? 'Using existing Android export'
+			: 'Exporting Android update',
+	)
 	try {
-		// exportAndroidUpdate rejects on every non-zero Expo exit. Do not create an
-		// archive or make a network request unless this command completed.
-		await exportAndroidUpdate(projectDirectory, distributionDirectory)
+		if (shouldSkipExport) {
+			await ensureExpoExportExists(distributionDirectory)
+		} else {
+			// exportAndroidUpdate rejects on every non-zero Expo exit. Do not create
+			// an archive or make a network request unless this command completed.
+			await exportAndroidUpdate(projectDirectory, distributionDirectory)
+		}
 		await writeFile(
 			join(distributionDirectory, 'expoConfig.json'),
 			await getPublicExpoConfig(projectDirectory),
 		)
-		exportProgress.stop('Exported')
+		log.success(shouldSkipExport ? 'Existing export is ready' : 'Exported')
 	} catch (error) {
-		exportProgress.stop('Export failed')
+		log.error(shouldSkipExport ? 'Existing export is invalid' : 'Export failed')
 		throw error
 	}
 

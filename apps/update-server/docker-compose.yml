@@ -44,7 +44,9 @@ services:
     image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
     command: ["api"]
     environment: *server-env
-    networks: [internal]
+    # Internal serves PostgreSQL and nginx; egress is required for R2's public
+    # S3 endpoint. Neither network publishes an API port.
+    networks: [internal, egress]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health >/dev/null || exit 1"]
       interval: 10s
@@ -56,7 +58,8 @@ services:
     image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
     command: ["worker"]
     environment: *server-env
-    networks: [internal]
+    # The patch worker reads and writes complete bundles and patches in R2.
+    networks: [internal, egress]
     depends_on: { migrate: { condition: service_completed_successfully } }
   update-server-web:
     image: ${UPDATE_SERVER_WEB_IMAGE:-bbplayer-updates-web:dev}
@@ -68,3 +71,6 @@ services:
 networks:
   internal:
     internal: true
+  # Normal Docker bridge network used only for outbound R2 S3 traffic. API and
+  # worker remain unreachable from the host because they declare no ports.
+  egress: {}

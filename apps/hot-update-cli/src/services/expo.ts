@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { access } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import { runCommand } from '../cli/command-runner.js'
@@ -20,9 +21,15 @@ function resolveExpoCliPath(projectDirectory: string): string {
 export async function runExpoCommand(
 	projectDirectory: string,
 	argumentsList: string[],
+	forwardOutput = false,
 ): Promise<string> {
 	const expoCliPath = resolveExpoCliPath(projectDirectory)
-	return await runCommand(process.execPath, [expoCliPath, ...argumentsList], projectDirectory)
+	return await runCommand(
+		process.execPath,
+		[expoCliPath, ...argumentsList],
+		projectDirectory,
+		{ forwardOutput },
+	)
 }
 
 export async function exportAndroidUpdate(
@@ -36,11 +43,23 @@ export async function exportAndroidUpdate(
 		'android',
 		'--output-dir',
 		distributionDirectory,
-	])
+	], true)
 }
 
 export async function getPublicExpoConfig(
 	projectDirectory: string,
 ): Promise<string> {
 	return await runExpoCommand(projectDirectory, ['config', '--type', 'public', '--json'])
+}
+
+export async function ensureExpoExportExists(
+	distributionDirectory: string,
+): Promise<void> {
+	try {
+		await access(resolve(distributionDirectory, 'metadata.json'))
+	} catch {
+		throw new Error(
+			`No Expo export found at ${distributionDirectory}. Run expo export first, or omit --skip-export.`,
+		)
+	}
 }

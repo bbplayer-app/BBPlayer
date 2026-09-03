@@ -6,6 +6,7 @@ const BOOLEAN_ARGUMENT_NAMES = new Set([
 	'allow-dirty',
 	'no-fingerprint',
 	'embedded',
+	'skip-export',
 ])
 
 export function parseCommandArguments(
