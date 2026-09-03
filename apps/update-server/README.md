@@ -65,7 +65,7 @@ location = /admin/publish {
 pnpm hot-update
 ```
 
-它会交互式询问 channel、发布说明和缺失的服务器凭据，在发布前警告脏工作区，运行 `expo export`，导出公开的 Expo 配置，生成 Android fingerprint，并上传归档。它的 Git 溯源信息只有 `commit_sha` 与 `working_tree_clean`。上传 fingerprint 时，完整的 `{ hash, sources }` 会与更新组一同保存，且其 hash 必须等于提供的 `runtimeVersion`。`--no-fingerprint` 则要求显式给出 `--runtime-version`，并且不保存 fingerprint 记录。
+它会交互式询问 channel、发布说明和缺失的服务器凭据，在发布前警告脏工作区，运行 `expo export`，导出公开的 Expo 配置，并上传归档。它的 Git 溯源信息只有 `commit_sha` 与 `working_tree_clean`。当 Android 的 runtime version policy 是 `appVersion` 时，CLI 自动使用公开 Expo 配置的 `version` 作为 `runtimeVersion`，不上传 fingerprint；传入的 `--runtime-version` 必须与该版本一致。其他策略下，CLI 默认生成 Android fingerprint：完整的 `{ hash, sources }` 会与更新组一同保存，且其 hash 必须等于提供的 `runtimeVersion`。`--no-fingerprint` 则要求显式给出 `--runtime-version`，并且不保存 fingerprint 记录。
 
 若 `dist` 已由同一项目的 Expo export 生成，可使用 `--skip-export` 跳过 bundler：CLI 会
 校验其中的 `metadata.json`、写入当前公开 Expo 配置，然后直接归档上传。

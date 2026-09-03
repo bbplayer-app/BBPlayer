@@ -118,7 +118,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 			package: getUniqueIdentifier(),
 			versionCode: versionCode,
-			runtimeVersion: { policy: 'fingerprint' },
+			runtimeVersion: { policy: 'appVersion' },
 			intentFilters: [
 				{
 					action: 'VIEW',
@@ -295,7 +295,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		ios: {
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {
-				policy: 'fingerprint',
+				policy: 'appVersion',
 			},
 			googleServicesFile: getGoogleServicesFile(
 				googleServicesPlistPath,

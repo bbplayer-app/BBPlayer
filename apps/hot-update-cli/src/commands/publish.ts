@@ -17,6 +17,22 @@ import { resolveProjectDirectory } from '../services/project.js'
 import { getUpdateServerCredentials } from '../services/update-server.js'
 import type { CommandArguments, Fingerprint } from '../types.js'
 
+interface PublicExpoConfig {
+	version?: unknown
+	android?: {
+		runtimeVersion?: unknown
+	}
+}
+
+function isAppVersionPolicy(runtimeVersion: unknown): boolean {
+	return (
+		typeof runtimeVersion === 'object' &&
+		runtimeVersion !== null &&
+		'policy' in runtimeVersion &&
+		runtimeVersion.policy === 'appVersion'
+	)
+}
+
 function writeResult(argumentsMap: CommandArguments, result: unknown): void {
 	if (argumentsMap.json) process.stdout.write(`${JSON.stringify(result)}\n`)
 	else console.table(Array.isArray(result) ? result : [result])
@@ -27,6 +43,22 @@ async function getRuntimeVersion(
 	argumentsMap: CommandArguments,
 ): Promise<{ runtimeVersion: string; fingerprint?: Fingerprint }> {
 	let runtimeVersion = String(argumentsMap['runtime-version'] ?? '')
+	const publicConfig = JSON.parse(
+		await getPublicExpoConfig(projectDirectory),
+	) as PublicExpoConfig
+	if (isAppVersionPolicy(publicConfig.android?.runtimeVersion)) {
+		if (typeof publicConfig.version !== 'string' || !publicConfig.version) {
+			throw new Error(
+				'Expo config appVersion policy requires a non-empty version',
+			)
+		}
+		if (runtimeVersion && runtimeVersion !== publicConfig.version) {
+			throw new Error(
+				`runtimeVersion must equal app version (${publicConfig.version}) for appVersion policy`,
+			)
+		}
+		return { runtimeVersion: publicConfig.version }
+	}
 	if (argumentsMap['no-fingerprint']) {
 		if (!runtimeVersion) {
 			throw new Error('--runtime-version is required with --no-fingerprint')
@@ -79,7 +111,9 @@ async function uploadUpdate(
 	writeResult(argumentsMap, JSON.parse(responseText))
 }
 
-export async function publishUpdate(argumentsMap: CommandArguments): Promise<void> {
+export async function publishUpdate(
+	argumentsMap: CommandArguments,
+): Promise<void> {
 	const projectDirectory = await resolveProjectDirectory(
 		argumentsMap['project-dir'],
 	)
@@ -95,7 +129,10 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 			'-1',
 			'--format=%s',
 		])
-		releaseMessage = await promptForRequiredValue('Release message', releaseMessage)
+		releaseMessage = await promptForRequiredValue(
+			'Release message',
+			releaseMessage,
+		)
 	}
 	if (!releaseMessage) throw new Error('--message is required')
 
@@ -103,7 +140,11 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 	const hasUncommittedChanges = Boolean(
 		await runGitCommand(projectDirectory, ['status', '--porcelain']),
 	)
-	if (hasUncommittedChanges && isNonInteractive && !argumentsMap['allow-dirty']) {
+	if (
+		hasUncommittedChanges &&
+		isNonInteractive &&
+		!argumentsMap['allow-dirty']
+	) {
 		throw new Error('Dirty worktree; use --allow-dirty explicitly')
 	}
 	if (hasUncommittedChanges && !isNonInteractive) {
@@ -112,7 +153,8 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 			message: 'Continue?',
 			initialValue: false,
 		})
-		if (isCancel(shouldContinue) || !shouldContinue) throw new Error('Cancelled')
+		if (isCancel(shouldContinue) || !shouldContinue)
+			throw new Error('Cancelled')
 	}
 
 	const { runtimeVersion, fingerprint } = await getRuntimeVersion(
@@ -125,7 +167,9 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 			'Publish summary',
 		)
 		const shouldPublish = await confirm({
-			message: shouldSkipExport ? 'Publish existing export?' : 'Export and publish?',
+			message: shouldSkipExport
+				? 'Publish existing export?'
+				: 'Export and publish?',
 			initialValue: true,
 		})
 		if (isCancel(shouldPublish) || !shouldPublish) throw new Error('Cancelled')
@@ -158,7 +202,9 @@ export async function publishUpdate(argumentsMap: CommandArguments): Promise<voi
 		throw error
 	}
 
-	const temporaryDirectory = await mkdtemp(join(tmpdir(), 'bbplayer-hot-update-'))
+	const temporaryDirectory = await mkdtemp(
+		join(tmpdir(), 'bbplayer-hot-update-'),
+	)
 	try {
 		const archivePath = join(temporaryDirectory, 'update.zip')
 		await createZipArchive(distributionDirectory, archivePath)
