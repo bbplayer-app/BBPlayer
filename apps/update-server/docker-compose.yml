@@ -1,3 +1,10 @@
+# Local development stack. Services reach each other over the `internal`
+# network (internal: true — no outside connectivity, no host exposure).
+# `update-server-web` additionally joins the ordinary `default` network purely
+# so compose can publish its host port; on an internal-only network Docker
+# refuses port publishing. In production, add docker-compose.prod.yml and let
+# an external reverse proxy reach `update-server-web` through the shared
+# `proxy` network instead.
 services:
   postgres:
     image: postgres:17
@@ -5,7 +12,10 @@ services:
       POSTGRES_DB: updates
       POSTGRES_USER: updates
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-    volumes: [postgres-data:/var/lib/postgresql/data]
+    volumes:
+      # Host path is configurable; default is ./data/postgres next to this file.
+      - ${POSTGRES_DATA_PATH:-./data/postgres}:/var/lib/postgresql/data
+    networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U updates -d updates"]
       interval: 5s
@@ -27,25 +37,34 @@ services:
       INSTALLATION_HMAC_KEY: ${INSTALLATION_HMAC_KEY}
       CODE_SIGNING_PRIVATE_KEY: ${CODE_SIGNING_PRIVATE_KEY:-}
       CODE_SIGNING_KEY_ID: ${CODE_SIGNING_KEY_ID:-}
+    networks: [internal]
     depends_on:
       postgres: { condition: service_healthy }
   api:
     image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
     command: ["api"]
     environment: *server-env
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     depends_on: { migrate: { condition: service_completed_successfully } }
   worker:
     image: ${UPDATE_SERVER_IMAGE:-bbplayer-updates:latest}
     command: ["worker"]
     environment: *server-env
+    networks: [internal]
     depends_on: { migrate: { condition: service_completed_successfully } }
-  web:
+  update-server-web:
     image: ${UPDATE_SERVER_WEB_IMAGE:-bbplayer-updates-web:dev}
-    build:
-      context: ../..
-      dockerfile: apps/update-server/web/Dockerfile
-    depends_on: [api]
+    networks: [internal, default]
     ports: ["127.0.0.1:8080:80"]
+    depends_on:
+      api: { condition: service_healthy }
     restart: unless-stopped
-volumes:
-  postgres-data:
+networks:
+  internal:
+    internal: true

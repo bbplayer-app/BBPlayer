@@ -20,7 +20,7 @@ RUN go test ./...
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/bbplayer-updates ./cmd/bbplayer-updates
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends libbrotli1 libdivsufsort3 libbz2-1.0 ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libbrotli1 libdivsufsort3 libbz2-1.0 ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY --from=bsdiff /work/bsdiff/bsdiff /usr/local/bin/bsdiff
 COPY --from=bsdiff /work/bsdiff/bspatch /usr/local/bin/bspatch
 COPY --from=build /out/bbplayer-updates /usr/local/bin/bbplayer-updates

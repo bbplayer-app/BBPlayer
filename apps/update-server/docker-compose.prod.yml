@@ -1,14 +1,17 @@
 # Production overlay: serves the web UI and API behind a shared external
 # reverse proxy (Caddy) on the "proxy" docker network. No host ports are
-# published; only the "web" service joins the proxy network.
+# published; `update-server-web` joins the shared `proxy` network while the
+# rest of the stack stays on the internal network. Images are built ahead of
+# time (CI or a build machine) and pulled on the server — nothing is compiled
+# at runtime.
 #
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 services:
-  web:
+  update-server-web:
     expose: ["80"]
     ports: !reset []
-    networks:
-      - default
+    networks: !override
+      - internal
       - proxy
     restart: unless-stopped
 
