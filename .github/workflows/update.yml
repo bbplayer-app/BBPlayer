@@ -13,12 +13,10 @@ jobs:
 
       - uses: pnpm/setup@v2
         with:
-          version: 11
+          # version: 11 -- use packageManager in package.json
           runtime: node@26
           cache: true
-
-      - name: 📦 Install dependencies
-        run: pnpm install
+          install: true
 
       - name: 🚀 Export and publish update
         env:

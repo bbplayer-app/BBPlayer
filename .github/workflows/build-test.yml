@@ -65,11 +65,17 @@ jobs:
           ref: ${{ needs.setup.outputs.commitSha }}
           fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
 
-      - uses: pnpm/setup@v2
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v6
         with:
-          version: 11
-          runtime: node@26
+          node-version: 26.x
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/setup@v2
+        with:
+          # version: 11 -- use packageManager in package.json
           cache: true
+          install: true
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v9
@@ -79,9 +85,6 @@ jobs:
           # The action installs EAS CLI in its own temporary directory, outside
           # this repository's pnpm allowBuilds configuration.
           packager: npm
-
-      - name: 📦 Install dependencies
-        run: pnpm install
 
       - name: ⚙️ Prepare Variables
         id: prepare-vars
