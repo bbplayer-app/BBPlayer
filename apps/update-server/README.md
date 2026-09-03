@@ -35,6 +35,19 @@ updates.bbplayer.roitium.com {
 }
 ```
 
+若外层 HTTPS 代理也是 nginx，必须同时允许发布归档通过；否则请求会在到达
+`update-server-web` 前返回 `413 Request Entity Too Large`：
+
+```nginx
+location = /admin/publish {
+	client_max_body_size 256m;
+	proxy_pass http://update-server-web:80;
+}
+```
+
+内置的 `update-server-web` nginx 已对同一路径设置 256 MiB 限制；变更后需重建并
+部署该 Web 镜像。外层 nginx 的限制不会自动继承这一设置。
+
 所有必填的部署配置都列在 [`.env.example`](.env.example)：
 
 - `POSTGRES_PASSWORD`、`DATABASE_URL` 与 `POSTGRES_DATA_PATH`（PostgreSQL 数据的宿主机目录）
