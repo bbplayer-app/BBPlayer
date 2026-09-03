@@ -34,6 +34,5 @@
 		"oxlint-tsgolint": "^7.0.2001",
 		"syncpack": "^13.0.4",
 		"typescript": "~6.0.3"
-	},
-	"packageManager": "pnpm@11.25.0"
+	}
 }
