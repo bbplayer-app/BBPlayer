@@ -33,7 +33,7 @@ export default function DonateSettingsPage() {
 						style={styles.introText}
 					>
 						如果觉得好用的话，欢迎给 Roitium 打赏！您的所有打赏都将用于让
-						Roitium 吃顿疯狂星期四或是买一部 GalGame！ 😋
+						Roitium 吃顿疯狂星期四或是买一部 GalGame！
 					</Text>
 				</View>
 				<List.Item

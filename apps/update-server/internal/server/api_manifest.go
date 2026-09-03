@@ -31,7 +31,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	s.recordUpdateRequestInsights(r, platform, runtime, channel)
 	head, err := s.DB.Queries.GetChannelHead(r.Context(), dbq.GetChannelHeadParams{Channel: channel, RuntimeVersion: runtime, Platform: platform})
 	if errors.Is(err, pgx.ErrNoRows) {
-		w.WriteHeader(http.StatusNoContent)
+		s.writeNoUpdate(w)
 		return
 	}
 	if err != nil {
@@ -50,6 +50,11 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 			s.logError(r, "manifest: update for group/platform", err, "channel", channel, "platform", platform, "group_id", uuid.UUID(head.GroupID.Bytes).String())
 		}
 		http.Error(w, "update unavailable", 404)
+		return
+	}
+	updateID := uuid.UUID(update.ID.Bytes)
+	if currentID, err := uuid.Parse(strings.TrimSpace(r.Header.Get(expoCurrentUpdateIDHeader))); err == nil && currentID == updateID {
+		s.writeNoUpdate(w)
 		return
 	}
 	var launch map[string]any
@@ -74,7 +79,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "launch asset unavailable", 404)
 		return
 	}
-	manifest := map[string]any{"id": uuid.UUID(update.ID.Bytes), "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{}}
+	manifest := map[string]any{"id": updateID, "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{}}
 	w.Header().Set("expo-protocol-version", "1")
 	w.Header().Set("expo-sfv-version", "0")
 	w.Header().Set("cache-control", "private, max-age=0")
@@ -82,6 +87,17 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 	s.recordServer(r, deliveryMetricManifestServed, &gid)
 	s.writeManifest(w, r, manifest)
 }
+
+// writeNoUpdate emits the Expo Updates protocol's explicit no-op response.
+// A bare 204 is invalid: expo-updates requires expo-protocol-version to
+// distinguish it from an empty or malformed manifest response.
+func (s *Server) writeNoUpdate(w http.ResponseWriter) {
+	w.Header().Set("expo-protocol-version", "1")
+	w.Header().Set("expo-sfv-version", "0")
+	w.Header().Set("cache-control", "private, max-age=0")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) writeDirective(w http.ResponseWriter, r *http.Request, directive any) {
 	if !strings.Contains(r.Header.Get("Accept"), "multipart/mixed") {
 		http.Error(w, "directive requires multipart/mixed", http.StatusNotAcceptable)

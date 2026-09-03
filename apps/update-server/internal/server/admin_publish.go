@@ -22,14 +22,15 @@ import (
 )
 
 type publishRequest struct {
-	Channel        string          `json:"channel"`
-	RuntimeVersion string          `json:"runtime_version"`
-	Message        string          `json:"message"`
-	Source         json.RawMessage `json:"source"`
-	Fingerprint    struct {
-		Hash    string          `json:"hash"`
-		Sources json.RawMessage `json:"sources"`
-	} `json:"fingerprint"`
+	Channel        string              `json:"channel"`
+	RuntimeVersion string              `json:"runtime_version"`
+	Message        string              `json:"message"`
+	Source         json.RawMessage     `json:"source"`
+	Fingerprint    *publishFingerprint `json:"fingerprint,omitempty"`
+}
+type publishFingerprint struct {
+	Hash    string          `json:"hash"`
+	Sources json.RawMessage `json:"sources"`
 }
 type publishSource struct {
 	CommitSHA        string `json:"commit_sha"`
@@ -76,7 +77,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 	var fingerprintHash string
 	var fingerprintSources []byte
 	hasFingerprint := false
-	if req.Fingerprint.Hash != "" || len(req.Fingerprint.Sources) != 0 {
+	if req.Fingerprint != nil {
 		if req.Fingerprint.Hash == "" || len(req.Fingerprint.Sources) == 0 || req.Fingerprint.Hash != req.RuntimeVersion || !json.Valid(req.Fingerprint.Sources) {
 			return nil, huma.Error400BadRequest("invalid source or fingerprint")
 		}

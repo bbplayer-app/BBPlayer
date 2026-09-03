@@ -76,7 +76,15 @@ func TestE2EExpoProtocol(t *testing.T) {
 			t.Fatalf("admin OpenAPI missing path %q", path)
 		}
 	}
-	firstGroup := publish(t, h.URL, archive(t), "first")
+	noHead := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test"})
+	if noHead.StatusCode != http.StatusNoContent || noHead.Header.Get("expo-protocol-version") != "1" {
+		_ = noHead.Body.Close()
+		t.Fatalf("no-head manifest response: status=%s protocol=%q", noHead.Status, noHead.Header.Get("expo-protocol-version"))
+	}
+	_ = noHead.Body.Close()
+	// Android appVersion runtime policies deliberately omit fingerprint metadata.
+	// Keep this wire case covered so Huma does not make it required again.
+	firstGroup := publish(t, h.URL, archive(t), "first", false)
 	secondGroup := publish(t, h.URL, archive(t), "second")
 	compare := request(t, http.MethodGet, h.URL+"/admin/source/compare/"+firstGroup.String()+"/"+secondGroup.String(), nil, map[string]string{"Authorization": "Bearer admin"})
 	compareBody, _ := io.ReadAll(compare.Body)
@@ -105,6 +113,12 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = manifest.Body.Close()
+	current := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Expo-Current-Update-ID": decoded.ID.String()})
+	if current.StatusCode != http.StatusNoContent || current.Header.Get("expo-protocol-version") != "1" {
+		_ = current.Body.Close()
+		t.Fatalf("current-head manifest response: status=%s protocol=%q", current.Status, current.Header.Get("expo-protocol-version"))
+	}
+	_ = current.Body.Close()
 	asset := request(t, http.MethodGet, decoded.LaunchAsset.URL, nil, nil)
 	b, _ := io.ReadAll(asset.Body)
 	_ = asset.Body.Close()
@@ -116,6 +130,12 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	firstUpdate := uuid.UUID(update.ID.Bytes)
+	stale := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Expo-Current-Update-ID": firstUpdate.String()})
+	if stale.StatusCode != http.StatusOK {
+		_ = stale.Body.Close()
+		t.Fatalf("stale manifest response: %s", stale.Status)
+	}
+	_ = stale.Body.Close()
 	// The second update owns a pending adjacent patch. Expo's bsdiff request
 	// must safely receive the full bundle until a worker marks it ready.
 	fallback := request(t, http.MethodGet, decoded.LaunchAsset.URL, nil, map[string]string{"A-IM": "bsdiff", "Expo-Current-Update-ID": firstUpdate.String()})
@@ -242,11 +262,15 @@ func archive(t *testing.T) []byte {
 	}
 	return b.Bytes()
 }
-func publish(t *testing.T, base string, archive []byte, message string) uuid.UUID {
+func publish(t *testing.T, base string, archive []byte, message string, withFingerprint ...bool) uuid.UUID {
 	t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
-	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `","working_tree_clean":true},"fingerprint":{"hash":"1","sources":[{"type":"contents","id":"fixture","reasons":["test"],"hash":"fixture"}]}}`
+	fingerprint := `,"fingerprint":{"hash":"1","sources":[{"type":"contents","id":"fixture","reasons":["test"],"hash":"fixture"}]}`
+	if len(withFingerprint) > 0 && !withFingerprint[0] {
+		fingerprint = ""
+	}
+	req := `{"channel":"test","runtime_version":"1","message":"` + message + `","source":{"commit_sha":"` + uuid.NewString() + `","working_tree_clean":true}` + fingerprint + `}`
 	if err := mw.WriteField("request", req); err != nil {
 		t.Fatal(err)
 	}
