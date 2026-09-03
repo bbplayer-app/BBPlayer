@@ -1,0 +1,29 @@
+name: Compute Hot Update Fingerprint
+on: workflow_dispatch
+jobs:
+  fingerprint:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    steps:
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/setup@v2
+        with:
+          version: 11
+          runtime: node@26
+          cache: true
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: 🔍 Compute update fingerprint
+        env:
+          BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
+        run: |
+          cd apps/mobile
+          pnpm hot-update fingerprint --json
