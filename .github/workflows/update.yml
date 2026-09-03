@@ -11,14 +11,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🤖 Setup PNPM
-        uses: pnpm/action-setup@v4
-
-      - name: 🏗 Setup Node
-        uses: actions/setup-node@v6
+      - uses: pnpm/setup@v2
         with:
-          node-version: 22.x
-          cache: pnpm
+          version: 11
+          runtime: node@26
+          cache: true
 
       - name: 📦 Install dependencies
         run: pnpm install

@@ -20,7 +20,6 @@ on:
       - master
 
 env:
-  NODE_VERSION: 22.x
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -92,14 +91,11 @@ jobs:
           ref: ${{ needs.setup.outputs.commitSha }}
           fetch-depth: 0 # 获取完整历史记录以计算 commit 数量
 
-      - name: 🤖 Setup PNPM
-        uses: pnpm/action-setup@v4
-
-      - name: 🏗 Setup Node
-        uses: actions/setup-node@v6
+      - uses: pnpm/setup@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
+          version: 11
+          runtime: node@26
+          cache: true
 
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
