@@ -1,11 +1,24 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { MoreHorizontalIcon, RotateCcwIcon } from 'lucide-react'
+import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
-import { assets, detail, lifecycle, type Detail } from '@/api'
+import {
+	assets,
+	detail,
+	headGroupID,
+	heads,
+	lifecycle,
+	rollbackChannel,
+	type Detail,
+	type Head,
+} from '@/api'
 import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/query-state'
+import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
 	Card,
 	CardContent,
@@ -19,6 +32,20 @@ import {
 	ChartTooltipContent,
 	type ChartConfig,
 } from '@/components/ui/chart'
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
 	Table,
 	TableBody,
@@ -51,6 +78,14 @@ export function UpdateDetailPage() {
 		queryFn: () => detail(id),
 		enabled: Boolean(id),
 	})
+	const channel = detailQuery.data?.channel
+	const channelHeadsQuery = useQuery({
+		queryKey: ['heads', channel],
+		queryFn: () => heads(channel ?? ''),
+		enabled: Boolean(channel),
+	})
+	const queryClient = useQueryClient()
+	const [rollbackOpen, setRollbackOpen] = useState(false)
 	const lifecycleQuery = useQuery({
 		queryKey: ['lifecycle', id],
 		queryFn: () => lifecycle(id),
@@ -84,7 +119,48 @@ export function UpdateDetailPage() {
 				title={update.message || 'Update group'}
 				parent={{ label: 'Update groups', href: '/updates/' }}
 				description={`Published ${formatDate(update.created_at)}`}
+				action={
+					<DropdownMenu>
+						<DropdownMenuTrigger
+							aria-label='Update group actions'
+							asChild
+						>
+							<Button
+								variant='outline'
+								size='icon-sm'
+							>
+								<MoreHorizontalIcon />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align='end'>
+							<DropdownMenuItem
+								disabled={
+									!update.channel || update.platforms.length === 0
+								}
+								variant='destructive'
+								onSelect={() => setRollbackOpen(true)}
+							>
+								<RotateCcwIcon />
+								{!update.channel
+									? 'Roll back (requires a channel)'
+									: update.platforms.length === 0
+										? 'Roll back (no platform updates)'
+										: 'Roll back to this update'}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				}
 			/>
+			{update.channel && (
+				<RollbackDialog
+					headsQueryData={channelHeadsQuery.data}
+					headsQueryPending={channelHeadsQuery.isPending}
+					onOpenChange={setRollbackOpen}
+					open={rollbackOpen}
+					queryClient={queryClient}
+					update={update}
+				/>
+			)}
 			<Card>
 				<CardHeader>
 					<CardTitle>Update group</CardTitle>
@@ -145,7 +221,10 @@ export function UpdateDetailPage() {
 									<TableHead className='hidden sm:table-cell'>
 										Update ID
 									</TableHead>
-									<TableHead>Bundle size</TableHead>
+									<TableHead>Channel head</TableHead>
+									<TableHead className='hidden lg:table-cell'>
+										Bundle size
+									</TableHead>
 									<TableHead className='hidden lg:table-cell'>
 										Downloads
 									</TableHead>
@@ -155,34 +234,55 @@ export function UpdateDetailPage() {
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{update.platforms.map((item) => (
-									<TableRow key={item.id}>
-										<TableCell>
-											<Badge
-												variant='secondary'
-												className='capitalize'
-											>
-												{item.platform}
-											</Badge>
-										</TableCell>
-										<TableCell className='hidden font-mono text-xs sm:table-cell'>
-											{shortID(item.id)}
-										</TableCell>
-										<TableCell>{bytes(item.launch_size)}</TableCell>
-										<TableCell className='hidden tabular-nums lg:table-cell'>
-											{number(item.downloads)}
-										</TableCell>
-										<TableCell className='hidden xl:table-cell'>
-											{number(item.known_launches)} launches ·{' '}
-											{percent(
-												item.known_launches
-													? item.known_crashes / item.known_launches
-													: 0,
-											)}{' '}
-											crashes
-										</TableCell>
-									</TableRow>
-								))}
+								{update.platforms.map((item) => {
+									const head = findHead(
+										channelHeadsQuery.data,
+										update.runtime_version,
+										item.platform,
+									)
+									return (
+										<TableRow key={item.id}>
+											<TableCell>
+												<Badge
+													variant='secondary'
+													className='capitalize'
+												>
+													{item.platform}
+												</Badge>
+											</TableCell>
+											<TableCell className='hidden font-mono text-xs sm:table-cell'>
+												{shortID(item.id)}
+											</TableCell>
+											<TableCell>
+												{channelHeadsQuery.isPending ? (
+													<span className='text-xs text-muted-foreground'>
+														Loading…
+													</span>
+												) : (
+													<HeadLabel
+														groupId={update.id}
+														head={head}
+													/>
+												)}
+											</TableCell>
+											<TableCell className='hidden tabular-nums lg:table-cell'>
+												{bytes(item.launch_size)}
+											</TableCell>
+											<TableCell className='hidden tabular-nums lg:table-cell'>
+												{number(item.downloads)}
+											</TableCell>
+											<TableCell className='hidden xl:table-cell'>
+												{number(item.known_launches)} launches ·{' '}
+												{percent(
+													item.known_launches
+														? item.known_crashes / item.known_launches
+														: 0,
+												)}{' '}
+												crashes
+											</TableCell>
+										</TableRow>
+									)
+								})}
 							</TableBody>
 						</Table>
 					</div>
@@ -264,6 +364,232 @@ export function UpdateDetailPage() {
 				/>
 			</div>
 		</AppShell>
+	)
+}
+
+function findHead(
+	headsData: Head[] | undefined,
+	runtime: string,
+	platform: string,
+) {
+	return headsData?.find(
+		(item) => item.runtime_version === runtime && item.platform === platform,
+	)
+}
+
+function HeadLabel({ head, groupId }: { head: Head | undefined; groupId: string }) {
+	if (!head)
+		return <span className='text-xs text-muted-foreground'>No head</span>
+	if (head.mode === 'embedded')
+		return <StatusBadge value='embedded' />
+	const current = headGroupID(head)
+	if (current === groupId)
+		return (
+			<Badge className='whitespace-nowrap'>
+				Current head
+			</Badge>
+		)
+	if (!current)
+		return <span className='text-xs text-muted-foreground'>No head</span>
+	return (
+		<a
+			className='font-mono text-xs text-muted-foreground hover:text-foreground hover:underline'
+			href={`/updates/detail.html?id=${encodeURIComponent(current)}`}
+			title='Current head update group'
+		>
+			{shortID(current)}
+		</a>
+	)
+}
+
+type RollbackOutcome = { platform: string; ok: boolean; message?: string }
+
+function RollbackDialog({
+	update,
+	headsQueryData,
+	headsQueryPending,
+	open,
+	onOpenChange,
+	queryClient,
+}: {
+	update: Detail
+	headsQueryData: Head[] | undefined
+	headsQueryPending: boolean
+	open: boolean
+	onOpenChange: (value: boolean) => void
+	queryClient: QueryClient
+}) {
+	const channel = update.channel
+	const [running, setRunning] = useState(false)
+	const [outcomes, setOutcomes] = useState<RollbackOutcome[] | null>(null)
+	const rows = update.platforms.map((item) => ({
+		platform: item.platform,
+		head: findHead(headsQueryData, update.runtime_version, item.platform),
+	}))
+	const actionable = rows.filter(
+		(row) => !(row.head?.mode === 'ota' && headGroupID(row.head) === update.id),
+	)
+	const pending = headsQueryPending || headsQueryData === undefined
+
+	async function run() {
+		if (!channel) return
+		setRunning(true)
+		setOutcomes([])
+		const result: RollbackOutcome[] = []
+		for (const row of actionable) {
+			try {
+				await rollbackChannel(channel, {
+					runtime_version: update.runtime_version,
+					platform: row.platform,
+					mode: 'ota',
+					group_id: update.id,
+				})
+				result.push({ platform: row.platform, ok: true })
+			} catch (error) {
+				result.push({
+					platform: row.platform,
+					ok: false,
+					message: error instanceof Error ? error.message : 'Rollback failed',
+				})
+			}
+		}
+		setOutcomes(result)
+		setRunning(false)
+		void queryClient.invalidateQueries({ queryKey: ['heads', channel] })
+		void queryClient.invalidateQueries({ queryKey: ['channel', channel] })
+	}
+
+	const failed = outcomes?.filter((outcome) => !outcome.ok)
+
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={(value) => {
+				if (running) return
+				onOpenChange(value)
+				setOutcomes(null)
+			}}
+		>
+			<DialogContent showCloseButton={!running}>
+				<DialogHeader>
+					<DialogTitle>Roll back to this update</DialogTitle>
+					<DialogDescription>
+						Point the {channel} channel back to this update group. Clients
+						running runtime {update.runtime_version} will receive this release
+						again on their next update check. Nothing is deleted.
+					</DialogDescription>
+				</DialogHeader>
+				<div className='overflow-hidden rounded-xl border'>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Platform</TableHead>
+								<TableHead>Current head</TableHead>
+								<TableHead>After rollback</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{rows.map((row) => {
+								const isCurrent =
+									row.head?.mode === 'ota' &&
+									headGroupID(row.head) === update.id
+								const outcome = outcomes?.find(
+									(item) => item.platform === row.platform,
+								)
+								return (
+									<TableRow key={row.platform}>
+										<TableCell>
+											<Badge
+												variant='secondary'
+												className='capitalize'
+											>
+												{row.platform}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											{pending ? (
+												<span className='text-xs text-muted-foreground'>
+													Checking…
+												</span>
+											) : (
+												<HeadLabel
+													groupId={update.id}
+													head={row.head}
+												/>
+											)}
+										</TableCell>
+										<TableCell>
+											{isCurrent ? (
+												<span className='text-xs text-muted-foreground'>
+													Unchanged
+												</span>
+											) : outcome ? (
+												outcome.ok ? (
+													<StatusBadge value='ota' />
+												) : (
+													<span className='text-xs text-destructive'>
+														{outcome.message}
+													</span>
+												)
+											) : (
+												<Badge
+													variant='outline'
+													className='whitespace-nowrap'
+												>
+													This update
+												</Badge>
+											)}
+										</TableCell>
+									</TableRow>
+								)
+							})}
+						</TableBody>
+					</Table>
+				</div>
+				{failed && failed.length > 0 && (
+					<p className='text-sm text-destructive'>
+						Rollback failed on {failed.length}{' '}
+						{failed.length === 1 ? 'platform' : 'platforms'}. Other platforms
+						were updated.
+					</p>
+				)}
+				{!pending && actionable.length === 0 && !outcomes && (
+					<p className='text-sm text-muted-foreground'>
+						This update is already the current head on every platform of this
+						channel.
+					</p>
+				)}
+				<DialogFooter>
+					<Button
+						disabled={running}
+						variant='outline'
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					{running ? (
+						<Button
+							disabled
+							variant='destructive'
+						>
+							<RotateCcwIcon />
+							Rolling back…
+						</Button>
+					) : outcomes === null ? (
+						<Button
+							disabled={pending || actionable.length === 0}
+							variant='destructive'
+							onClick={() => void run()}
+						>
+							<RotateCcwIcon />
+							{`Roll back ${actionable.length} platform${actionable.length === 1 ? '' : 's'}`}
+						</Button>
+					) : (
+						<Button onClick={() => onOpenChange(false)}>Done</Button>
+					)}
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
 

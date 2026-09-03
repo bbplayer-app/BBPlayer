@@ -39,6 +39,13 @@ export type Asset = {
 	is_launch: boolean
 	downloads: number
 }
+export type Head = {
+	runtime_version: string
+	platform: 'android' | 'ios'
+	group_id: string
+	mode: 'ota' | 'embedded'
+	updated_at: string
+}
 const base = import.meta.env.VITE_API_BASE_URL ?? ''
 async function api<T>(path: string) {
 	const token = getToken()
@@ -52,6 +59,35 @@ async function api<T>(path: string) {
 	if (!r.ok)
 		throw new Error(`Request failed (${r.status})`)
 	return r.json() as Promise<T>
+}
+async function apiPost(path: string, body: unknown) {
+	const token = getToken()
+	const r = await fetch(base + path, {
+		method: 'POST',
+		headers: {
+			...(token ? { Authorization: `Bearer ${token}` } : {}),
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+	})
+	if (r.status === 401) {
+		reportUnauthorized()
+		throw new Error('Unauthorized')
+	}
+	if (!r.ok) {
+		let message = `Request failed (${r.status})`
+		try {
+			const payload = (await r.json()) as { detail?: string; error?: string }
+			message = payload.detail ?? payload.error ?? message
+		} catch {
+			// keep the generic message
+		}
+		throw new Error(message)
+	}
+}
+const zeroUUID = '00000000-0000-0000-0000-000000000000'
+export function headGroupID(head: Head): string | null {
+	return head.group_id === zeroUUID ? null : head.group_id
 }
 export async function verifyToken(token: string) {
 	const r = await fetch(base + '/admin/session', {
@@ -157,3 +193,13 @@ export type PatchEndpointRef = {
 }
 export const patches = () =>
 	api<PatchEndpoint[]>('/admin/patches?limit=100')
+export const heads = (channel: string) =>
+	api<Head[]>(`/admin/channels/${encodeURIComponent(channel)}`)
+export type RollbackTarget = {
+	runtime_version: string
+	platform: 'android' | 'ios'
+	mode: 'ota' | 'embedded'
+	group_id?: string
+}
+export const rollbackChannel = (channel: string, target: RollbackTarget) =>
+	apiPost(`/admin/channels/${encodeURIComponent(channel)}/rollback`, target)
