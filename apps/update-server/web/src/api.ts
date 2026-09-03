@@ -26,7 +26,8 @@ export type Detail = Group & {
 		launch_key: string
 		launch_hash: string
 		launch_size: number
-		downloads: number
+		full_downloads: number
+		patch_downloads: number
 		known_launches: number
 		known_crashes: number
 	}[]
@@ -37,7 +38,6 @@ export type Asset = {
 	content_type: string
 	size_bytes: number
 	is_launch: boolean
-	downloads: number
 }
 export type Head = {
 	runtime_version: string
@@ -56,8 +56,7 @@ async function api<T>(path: string) {
 		reportUnauthorized()
 		throw new Error('Unauthorized')
 	}
-	if (!r.ok)
-		throw new Error(`Request failed (${r.status})`)
+	if (!r.ok) throw new Error(`Request failed (${r.status})`)
 	return r.json() as Promise<T>
 }
 async function apiPost(path: string, body: unknown) {
@@ -137,12 +136,9 @@ export const insights = () =>
 	api<{
 		summary: {
 			unique_users: number
-			update_checks: number
 			downloads: number
-			launches: number
 			launch_successes: number
 			launch_failures: number
-			emergency_launches: number
 			launch_failure_rate: number
 		}
 		transport: {
@@ -191,8 +187,7 @@ export type PatchEndpointRef = {
 	message: string
 	version: string
 }
-export const patches = () =>
-	api<PatchEndpoint[]>('/admin/patches?limit=100')
+export const patches = () => api<PatchEndpoint[]>('/admin/patches?limit=100')
 export const heads = (channelName: string) =>
 	api<Head[]>(`/admin/channels/${encodeURIComponent(channelName)}`)
 export type RollbackTarget = {

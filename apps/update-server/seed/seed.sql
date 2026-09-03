@@ -13,7 +13,7 @@ BEGIN;
 -- 0. wipe
 -- ---------------------------------------------------------------------------
 TRUNCATE TABLE update_groups, updates, assets, channel_heads, channel_history,
-  patches, update_events, source_commits, daily_update_metrics,
+  patches, update_events, source_commits,
   installation_activity_days, known_update_launches, known_update_crashes,
   service_metric_minutes, delivery_metric_minutes
   RESTART IDENTITY CASCADE;
@@ -488,17 +488,8 @@ WHERE event_type = 'launch_failed' AND update_id IS NOT NULL
 ORDER BY installation_hmac, update_id, occurred_at;
 
 -- ---------------------------------------------------------------------------
--- 16. daily aggregates and transport/server metrics for dashboard charts
+-- 16. transport and server metrics for dashboard charts
 -- ---------------------------------------------------------------------------
-INSERT INTO daily_update_metrics
-  (day, channel, runtime_version, platform, group_id, event_type, event_count, unique_installations)
-SELECT occurred_at::date, channel, runtime_version, platform,
-       COALESCE(group_id, '00000000-0000-0000-0000-000000000000'::uuid),
-       event_type, count(*), count(DISTINCT installation_hmac)
-FROM update_events
-GROUP BY occurred_at::date, channel, runtime_version, platform,
-         COALESCE(group_id, '00000000-0000-0000-0000-000000000000'::uuid), event_type;
-
 INSERT INTO service_metric_minutes (minute, route, status, request_count, duration_ms)
 SELECT bb_seed_day(k) + make_interval(hours => h), route, status,
        bb_seed_int('svc:n:' || k || ':' || h || ':' || route || ':' || status, 35, 220),

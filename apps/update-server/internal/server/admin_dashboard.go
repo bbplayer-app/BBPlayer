@@ -65,14 +65,15 @@ type adminDashboardUpdateInput struct {
 	ID uuid.UUID `path:"id"`
 }
 type adminDashboardPlatformUpdate struct {
-	ID            uuid.UUID `json:"id"`
-	Platform      string    `json:"platform"`
-	LaunchKey     string    `json:"launch_key"`
-	LaunchHash    string    `json:"launch_hash"`
-	LaunchSize    int64     `json:"launch_size"`
-	Downloads     int64     `json:"downloads"`
-	KnownLaunches int64     `json:"known_launches"`
-	KnownCrashes  int64     `json:"known_crashes"`
+	ID             uuid.UUID `json:"id"`
+	Platform       string    `json:"platform"`
+	LaunchKey      string    `json:"launch_key"`
+	LaunchHash     string    `json:"launch_hash"`
+	LaunchSize     int64     `json:"launch_size"`
+	FullDownloads  int64     `json:"full_downloads"`
+	PatchDownloads int64     `json:"patch_downloads"`
+	KnownLaunches  int64     `json:"known_launches"`
+	KnownCrashes   int64     `json:"known_crashes"`
 }
 type adminDashboardUpdateOutput struct {
 	Body struct {
@@ -99,7 +100,6 @@ type adminDashboardAsset struct {
 	ContentType string `json:"content_type"`
 	SizeBytes   int64  `json:"size_bytes"`
 	IsLaunch    bool   `json:"is_launch"`
-	Downloads   int64  `json:"downloads"`
 }
 type adminDashboardAssetsOutput struct{ Body []adminDashboardAsset }
 
@@ -259,7 +259,7 @@ func (s *Server) dashboardUpdate(ctx context.Context, input *adminDashboardUpdat
 		return nil, s.dbError("dashboard: update platforms", err)
 	}
 	for _, row := range rows {
-		out.Body.Platforms = append(out.Body.Platforms, adminDashboardPlatformUpdate{ID: uuid.UUID(row.ID.Bytes), Platform: row.Platform, LaunchKey: row.LaunchKey, LaunchHash: row.LaunchHash, LaunchSize: row.SizeBytes, Downloads: row.Downloads, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes})
+		out.Body.Platforms = append(out.Body.Platforms, adminDashboardPlatformUpdate{ID: uuid.UUID(row.ID.Bytes), Platform: row.Platform, LaunchKey: row.LaunchKey, LaunchHash: row.LaunchHash, LaunchSize: row.SizeBytes, FullDownloads: row.FullDownloads, PatchDownloads: row.PatchDownloads, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes})
 	}
 	return out, nil
 }
@@ -271,7 +271,7 @@ func (s *Server) dashboardAssets(ctx context.Context, input *adminDashboardAsset
 	}
 	out := &adminDashboardAssetsOutput{Body: make([]adminDashboardAsset, 0, len(rows))}
 	for _, row := range rows {
-		out.Body = append(out.Body, adminDashboardAsset{ID: row.ID, AssetKey: row.AssetKey, ContentType: row.ContentType, SizeBytes: row.SizeBytes, IsLaunch: row.IsLaunch, Downloads: row.Downloads})
+		out.Body = append(out.Body, adminDashboardAsset{ID: row.ID, AssetKey: row.AssetKey, ContentType: row.ContentType, SizeBytes: row.SizeBytes, IsLaunch: row.IsLaunch})
 	}
 	return out, nil
 }

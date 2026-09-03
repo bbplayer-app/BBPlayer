@@ -1,6 +1,3 @@
--- name: RollupDailyMetrics :exec
-INSERT INTO daily_update_metrics(day,channel,runtime_version,platform,group_id,event_type,event_count,unique_installations) SELECT occurred_at::date,COALESCE(channel,''),COALESCE(runtime_version,''),COALESCE(platform,''),COALESCE(group_id,'00000000-0000-0000-0000-000000000000'::uuid),event_type,count(*),count(DISTINCT installation_hmac) FROM update_events WHERE occurred_at::date>=current_date-1 GROUP BY 1,2,3,4,5,6 ON CONFLICT(day,channel,runtime_version,platform,group_id,event_type) DO UPDATE SET event_count=excluded.event_count,unique_installations=excluded.unique_installations;
-
 -- name: RecordServiceMetric :exec
 INSERT INTO service_metric_minutes(minute,route,status,request_count,duration_ms)
 VALUES(date_trunc('minute', now()), $1, $2, 1, $3)
@@ -82,24 +79,6 @@ ON CONFLICT(installation_hmac,update_id) DO NOTHING;
 INSERT INTO known_update_crashes(installation_hmac,update_id,group_id,channel,runtime_version,platform,confirmed_at)
 VALUES($1,$2,$3,$4,$5,$6,$7)
 ON CONFLICT(installation_hmac,update_id) DO NOTHING;
-
--- name: GetChannelActivitySeries :many
-SELECT day, count(DISTINCT installation_hmac)::bigint AS active_installations
-FROM installation_activity_days
-WHERE day >= $1 AND day < $2
-  AND (sqlc.narg(channel)::text IS NULL OR channel=sqlc.narg(channel)::text)
-  AND (sqlc.narg(platform)::text IS NULL OR platform=sqlc.narg(platform)::text)
-GROUP BY day
-ORDER BY day;
-
--- name: GetVersionActivitySeries :many
-SELECT day, client_version, client_build_version, count(DISTINCT installation_hmac)::bigint AS active_installations
-FROM installation_activity_days
-WHERE day >= $1 AND day < $2
-  AND (sqlc.narg(channel)::text IS NULL OR channel=sqlc.narg(channel)::text)
-  AND (sqlc.narg(platform)::text IS NULL OR platform=sqlc.narg(platform)::text)
-GROUP BY day,client_version,client_build_version
-ORDER BY day,client_version,client_build_version;
 
 -- name: GetUpdateGroupLifecycleSeries :many
 SELECT day, sum(known_launches)::bigint AS known_launches, sum(known_crashes)::bigint AS known_crashes

@@ -122,7 +122,8 @@ export function ChannelDetailPage() {
 						<CardHeader>
 							<CardTitle>Active installations</CardTitle>
 							<CardDescription>
-								Daily unique installations reporting this runtime on {name}.
+								Daily unique installations reporting this runtime on {name},
+								over the last seven days.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>

@@ -127,7 +127,6 @@ PostgreSQL 就是指标后端；本服务刻意不暴露 Prometheus 端点，也
 ```text
 GET /admin/metrics/service?start=<RFC3339>&end=<RFC3339>&route=<optional>
 GET /admin/metrics/delivery?start=<RFC3339>&end=<RFC3339>&channel=<optional>&group_id=<optional>
-GET /admin/insights/activity?start=<RFC3339>&end=<RFC3339>&channel=<optional>
 GET /admin/insights/groups/<group-id>/lifecycle?start=<RFC3339>&end=<RFC3339>
 ```
 
@@ -135,7 +134,7 @@ GET /admin/insights/groups/<group-id>/lifecycle?start=<RFC3339>&end=<RFC3339>
 
 管理后台从不内嵌 token。访问同源下的任何页面都会显示登录页；运维人员输入的 token 会先经 `GET /admin/session` 校验（与所有 `/admin` 路由一样位于同一 bearer 中间件之后），随后存入 `localStorage`，并在每次请求中以 `Authorization: Bearer <ADMIN_TOKEN>` 发送。任何 `401` 都会清掉它并回到登录页，因此轮换 `ADMIN_TOKEN` 会把活跃的浏览器登出。
 
-两个端点默认最近七天，最多接受 90 天。原始客户端生命周期事件保留 35 天；分钟级指标保留 90 天。worker 每天做保留期清理。`activity` 按安装 HMAC、运行中的更新、应用版本与日期去重。`launch_succeeded` 或 `launch_healthy` 会为每次安装/更新创建一条 known launch 记录；`launch_failed` 或 `launch_crashed` 创建一条 known crash。客户端的 activity/version 图表与这些保守的生命周期计数由移动端 OTA 集成上报。生产构建从 `https://updates.bbplayer.roitium.com/api/manifest` 请求 manifest，并把遥测上报到同一源的 `/api/events`；在发布这种构建之前，先把 API 部署到该源上。
+窗口化端点默认最近七天，最多接受 90 天。原始客户端生命周期事件保留 35 天；分钟级指标保留 90 天。worker 每天做保留期清理。活跃安装按安装 HMAC、channel、runtime、平台、客户端版本、更新与日期去重，供 channel 详情的活跃安装图表使用。`launch_succeeded` 或 `launch_healthy` 会为每次安装/更新创建一条 known launch 记录；`launch_failed` 或 `launch_crashed` 创建一条 known crash。客户端的活跃安装图表与这些保守的生命周期计数由移动端 OTA 集成上报。生产构建从 `https://updates.bbplayer.roitium.com/api/manifest` 请求 manifest，并把遥测上报到同一源的 `/api/events`；在发布这种构建之前，先把 API 部署到该源上。
 
 ## 集成验证
 

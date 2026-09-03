@@ -56,6 +56,7 @@ import {
 	Table,
 	TableBody,
 	TableCell,
+	TableFooter,
 	TableHead,
 	TableHeader,
 	TableRow,
@@ -242,9 +243,6 @@ export function UpdateDetailPage() {
 									<TableHead className='hidden lg:table-cell'>
 										Bundle size
 									</TableHead>
-									<TableHead className='hidden lg:table-cell'>
-										Downloads
-									</TableHead>
 									<TableHead className='hidden xl:table-cell'>
 										Known health
 									</TableHead>
@@ -288,9 +286,6 @@ export function UpdateDetailPage() {
 											<TableCell className='hidden tabular-nums lg:table-cell'>
 												{bytes(item.launch_size)}
 											</TableCell>
-											<TableCell className='hidden tabular-nums lg:table-cell'>
-												{number(item.downloads)}
-											</TableCell>
 											<TableCell className='hidden xl:table-cell'>
 												{number(item.known_launches)} launches ·{' '}
 												{percent(
@@ -308,12 +303,84 @@ export function UpdateDetailPage() {
 					</div>
 				)}
 			</section>
+			<section className='mt-8'>
+				<h2 className='mb-3 text-lg font-semibold'>Downloads</h2>
+				{update.platforms.length === 0 ? (
+					<EmptyState
+						title='No download data'
+						description='This group does not contain a platform release.'
+					/>
+				) : (
+					<Card>
+						<CardHeader>
+							<CardDescription>
+								Full launch bundles and bsdiff patches served to clients,
+								counted by the server. Delivery metrics are retained for 90
+								days.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Platform</TableHead>
+										<TableHead className='text-right'>Full bundles</TableHead>
+										<TableHead className='text-right'>Patch (bsdiff)</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{update.platforms.map((item) => (
+										<TableRow key={item.id}>
+											<TableCell>
+												<Badge
+													variant='secondary'
+													className='capitalize'
+												>
+													{item.platform}
+												</Badge>
+											</TableCell>
+											<TableCell className='text-right tabular-nums'>
+												{number(item.full_downloads)}
+											</TableCell>
+											<TableCell className='text-right tabular-nums'>
+												{number(item.patch_downloads)}
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+								<TableFooter>
+									<TableRow>
+										<TableCell>All platforms</TableCell>
+										<TableCell className='text-right tabular-nums'>
+											{number(
+												update.platforms.reduce(
+													(total, item) => total + item.full_downloads,
+													0,
+												),
+											)}
+										</TableCell>
+										<TableCell className='text-right tabular-nums'>
+											{number(
+												update.platforms.reduce(
+													(total, item) => total + item.patch_downloads,
+													0,
+												),
+											)}
+										</TableCell>
+									</TableRow>
+								</TableFooter>
+							</Table>
+						</CardContent>
+					</Card>
+				)}
+			</section>
 			<div className='mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.8fr)]'>
 				<Card>
 					<CardHeader>
 						<CardTitle>Lifecycle</CardTitle>
 						<CardDescription>
-							Known launches and crashes reported by clients.
+							Known launches and crashes reported by clients over the last seven
+							days.
 						</CardDescription>
 					</CardHeader>
 					<CardContent>

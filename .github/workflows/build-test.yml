@@ -72,11 +72,13 @@ jobs:
           cache: true
 
       - name: 🏗 Setup EAS
-        uses: expo/expo-github-action@v8
+        uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
-          packager: pnpm
+          # The action installs EAS CLI in its own temporary directory, outside
+          # this repository's pnpm allowBuilds configuration.
+          packager: npm
 
       - name: 📦 Install dependencies
         run: pnpm install

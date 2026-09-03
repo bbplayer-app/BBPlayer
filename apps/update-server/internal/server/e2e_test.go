@@ -183,8 +183,8 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if r := request(t, http.MethodPost, h.URL+"/api/events", crashBody, nil); r.StatusCode != http.StatusAccepted {
 		t.Fatalf("crash event status: %s", r.Status)
 	}
-	count, err := db.Queries.CountEventsByID(ctx, pgtype.UUID{Bytes: [16]byte(event["event_id"].(uuid.UUID)), Valid: true})
-	if err != nil || count != 1 {
+	var count int64
+	if err := db.Pool.QueryRow(ctx, "SELECT count(*) FROM update_events WHERE id=$1", pgtype.UUID{Bytes: [16]byte(event["event_id"].(uuid.UUID)), Valid: true}).Scan(&count); err != nil || count != 1 {
 		t.Fatalf("event idempotency: %d %v", count, err)
 	}
 	insights := request(t, http.MethodGet, h.URL+"/admin/insights?channel=test", nil, map[string]string{"Authorization": "Bearer admin"})
@@ -204,12 +204,6 @@ func TestE2EExpoProtocol(t *testing.T) {
 	_ = serviceMetrics.Body.Close()
 	if serviceMetrics.StatusCode != http.StatusOK || !bytes.Contains(serviceMetricBody, []byte(`"requests":`)) {
 		t.Fatalf("service metric response: %s %s", serviceMetrics.Status, serviceMetricBody)
-	}
-	activity := request(t, http.MethodGet, h.URL+"/admin/insights/activity?channel=test", nil, map[string]string{"Authorization": "Bearer admin"})
-	activityBody, _ := io.ReadAll(activity.Body)
-	_ = activity.Body.Close()
-	if activity.StatusCode != http.StatusOK || !bytes.Contains(activityBody, []byte(`"active_installations":1`)) || !bytes.Contains(activityBody, []byte(`"client_version":"1"`)) {
-		t.Fatalf("activity insight response: %s %s", activity.Status, activityBody)
 	}
 	lifecycle := request(t, http.MethodGet, h.URL+"/admin/insights/groups/"+secondGroup.String()+"/lifecycle", nil, map[string]string{"Authorization": "Bearer admin"})
 	lifecycleBody, _ := io.ReadAll(lifecycle.Body)

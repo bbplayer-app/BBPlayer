@@ -92,22 +92,14 @@ func workerCmd() *cobra.Command {
 		defer db.Close()
 		patchTicker := time.NewTicker(15 * time.Second)
 		defer patchTicker.Stop()
-		rollupTicker := time.NewTicker(5 * time.Minute)
-		defer rollupTicker.Stop()
 		cleanupTicker := time.NewTicker(24 * time.Hour)
 		defer cleanupTicker.Stop()
-		slog.Info("worker started", "patch_interval", "15s", "rollup_interval", "5m", "cleanup_interval", "24h")
+		slog.Info("worker started", "patch_interval", "15s", "cleanup_interval", "24h")
 		for {
 			select {
 			case <-patchTicker.C:
 				if _, e = patchworker.RunOnce(ctx, s.Log, db, s.Objects); e != nil {
 					slog.Error("worker: patch run", "error", e)
-				}
-			case <-rollupTicker.C:
-				if e = db.Queries.RollupDailyMetrics(ctx); e != nil {
-					slog.Error("worker: metrics rollup", "error", e)
-				} else {
-					slog.Info("worker: metrics rollup completed")
 				}
 			case <-cleanupTicker.C:
 				started := time.Now()

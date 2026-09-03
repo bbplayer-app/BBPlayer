@@ -38,53 +38,6 @@ func (q *Queries) DeleteExpiredServiceMetrics(ctx context.Context) error {
 	return err
 }
 
-const getChannelActivitySeries = `-- name: GetChannelActivitySeries :many
-SELECT day, count(DISTINCT installation_hmac)::bigint AS active_installations
-FROM installation_activity_days
-WHERE day >= $1 AND day < $2
-  AND ($3::text IS NULL OR channel=$3::text)
-  AND ($4::text IS NULL OR platform=$4::text)
-GROUP BY day
-ORDER BY day
-`
-
-type GetChannelActivitySeriesParams struct {
-	Day      pgtype.Date
-	Day_2    pgtype.Date
-	Channel  pgtype.Text
-	Platform pgtype.Text
-}
-
-type GetChannelActivitySeriesRow struct {
-	Day                 pgtype.Date
-	ActiveInstallations int64
-}
-
-func (q *Queries) GetChannelActivitySeries(ctx context.Context, arg GetChannelActivitySeriesParams) ([]GetChannelActivitySeriesRow, error) {
-	rows, err := q.db.Query(ctx, getChannelActivitySeries,
-		arg.Day,
-		arg.Day_2,
-		arg.Channel,
-		arg.Platform,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetChannelActivitySeriesRow
-	for rows.Next() {
-		var i GetChannelActivitySeriesRow
-		if err := rows.Scan(&i.Day, &i.ActiveInstallations); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getDeliveryMetricSeries = `-- name: GetDeliveryMetricSeries :many
 SELECT minute::date AS day,
        kind,
@@ -303,60 +256,6 @@ func (q *Queries) GetUpdateGroupLifecycleSeries(ctx context.Context, arg GetUpda
 	return items, nil
 }
 
-const getVersionActivitySeries = `-- name: GetVersionActivitySeries :many
-SELECT day, client_version, client_build_version, count(DISTINCT installation_hmac)::bigint AS active_installations
-FROM installation_activity_days
-WHERE day >= $1 AND day < $2
-  AND ($3::text IS NULL OR channel=$3::text)
-  AND ($4::text IS NULL OR platform=$4::text)
-GROUP BY day,client_version,client_build_version
-ORDER BY day,client_version,client_build_version
-`
-
-type GetVersionActivitySeriesParams struct {
-	Day      pgtype.Date
-	Day_2    pgtype.Date
-	Channel  pgtype.Text
-	Platform pgtype.Text
-}
-
-type GetVersionActivitySeriesRow struct {
-	Day                 pgtype.Date
-	ClientVersion       string
-	ClientBuildVersion  string
-	ActiveInstallations int64
-}
-
-func (q *Queries) GetVersionActivitySeries(ctx context.Context, arg GetVersionActivitySeriesParams) ([]GetVersionActivitySeriesRow, error) {
-	rows, err := q.db.Query(ctx, getVersionActivitySeries,
-		arg.Day,
-		arg.Day_2,
-		arg.Channel,
-		arg.Platform,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetVersionActivitySeriesRow
-	for rows.Next() {
-		var i GetVersionActivitySeriesRow
-		if err := rows.Scan(
-			&i.Day,
-			&i.ClientVersion,
-			&i.ClientBuildVersion,
-			&i.ActiveInstallations,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const recordDeliveryMetric = `-- name: RecordDeliveryMetric :exec
 INSERT INTO delivery_metric_minutes(minute,channel,runtime_version,platform,group_id,kind,outcome,request_count,byte_count,target_byte_count)
 VALUES(date_trunc('minute', now()), $1, $2, $3, $4, $5, $6, 1, $7, $8)
@@ -502,14 +401,5 @@ type RecordServiceMetricParams struct {
 
 func (q *Queries) RecordServiceMetric(ctx context.Context, arg RecordServiceMetricParams) error {
 	_, err := q.db.Exec(ctx, recordServiceMetric, arg.Route, arg.Status, arg.DurationMs)
-	return err
-}
-
-const rollupDailyMetrics = `-- name: RollupDailyMetrics :exec
-INSERT INTO daily_update_metrics(day,channel,runtime_version,platform,group_id,event_type,event_count,unique_installations) SELECT occurred_at::date,COALESCE(channel,''),COALESCE(runtime_version,''),COALESCE(platform,''),COALESCE(group_id,'00000000-0000-0000-0000-000000000000'::uuid),event_type,count(*),count(DISTINCT installation_hmac) FROM update_events WHERE occurred_at::date>=current_date-1 GROUP BY 1,2,3,4,5,6 ON CONFLICT(day,channel,runtime_version,platform,group_id,event_type) DO UPDATE SET event_count=excluded.event_count,unique_installations=excluded.unique_installations
-`
-
-func (q *Queries) RollupDailyMetrics(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, rollupDailyMetrics)
 	return err
 }

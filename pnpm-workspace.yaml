@@ -12,6 +12,8 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+  dtrace-provider: true
+
 minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
   - expo-updates@57.0.21

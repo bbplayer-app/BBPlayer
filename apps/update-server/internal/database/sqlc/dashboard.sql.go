@@ -206,7 +206,7 @@ func (q *Queries) ListDashboardRuntimes(ctx context.Context) ([]ListDashboardRun
 }
 
 const listDashboardUpdateAssets = `-- name: ListDashboardUpdateAssets :many
-SELECT a.id,a.asset_key,a.content_type,a.size_bytes,a.is_launch,COALESCE((SELECT count(*) FROM update_events e WHERE e.update_id=u.id AND e.event_type='download_succeeded'),0)::bigint AS downloads FROM updates u JOIN assets a ON a.update_id=u.id WHERE u.group_id=$1 AND u.platform=$2 ORDER BY a.is_launch DESC,a.size_bytes DESC
+SELECT a.id,a.asset_key,a.content_type,a.size_bytes,a.is_launch FROM updates u JOIN assets a ON a.update_id=u.id WHERE u.group_id=$1 AND u.platform=$2 ORDER BY a.is_launch DESC,a.size_bytes DESC
 `
 
 type ListDashboardUpdateAssetsParams struct {
@@ -220,7 +220,6 @@ type ListDashboardUpdateAssetsRow struct {
 	ContentType string
 	SizeBytes   int64
 	IsLaunch    bool
-	Downloads   int64
 }
 
 func (q *Queries) ListDashboardUpdateAssets(ctx context.Context, arg ListDashboardUpdateAssetsParams) ([]ListDashboardUpdateAssetsRow, error) {
@@ -238,7 +237,6 @@ func (q *Queries) ListDashboardUpdateAssets(ctx context.Context, arg ListDashboa
 			&i.ContentType,
 			&i.SizeBytes,
 			&i.IsLaunch,
-			&i.Downloads,
 		); err != nil {
 			return nil, err
 		}
@@ -251,18 +249,19 @@ func (q *Queries) ListDashboardUpdateAssets(ctx context.Context, arg ListDashboa
 }
 
 const listDashboardUpdatePlatforms = `-- name: ListDashboardUpdatePlatforms :many
-SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,(SELECT count(*) FROM update_events e WHERE e.group_id=u.group_id AND e.platform=u.platform AND e.event_type='download_succeeded') AS downloads,(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform) AS known_launches,(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) AS known_crashes FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform
+SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='launch_bundle') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS full_downloads,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_downloads,(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform) AS known_launches,(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) AS known_crashes FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform
 `
 
 type ListDashboardUpdatePlatformsRow struct {
-	ID            pgtype.UUID
-	Platform      string
-	LaunchKey     string
-	LaunchHash    string
-	SizeBytes     int64
-	Downloads     int64
-	KnownLaunches int64
-	KnownCrashes  int64
+	ID             pgtype.UUID
+	Platform       string
+	LaunchKey      string
+	LaunchHash     string
+	SizeBytes      int64
+	FullDownloads  int64
+	PatchDownloads int64
+	KnownLaunches  int64
+	KnownCrashes   int64
 }
 
 func (q *Queries) ListDashboardUpdatePlatforms(ctx context.Context, groupID pgtype.UUID) ([]ListDashboardUpdatePlatformsRow, error) {
@@ -280,7 +279,8 @@ func (q *Queries) ListDashboardUpdatePlatforms(ctx context.Context, groupID pgty
 			&i.LaunchKey,
 			&i.LaunchHash,
 			&i.SizeBytes,
-			&i.Downloads,
+			&i.FullDownloads,
+			&i.PatchDownloads,
 			&i.KnownLaunches,
 			&i.KnownCrashes,
 		); err != nil {

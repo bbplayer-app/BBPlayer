@@ -11,19 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countEventsByID = `-- name: CountEventsByID :one
-SELECT count(*) AS event_count FROM update_events WHERE id=$1
-`
-
-func (q *Queries) CountEventsByID(ctx context.Context, id pgtype.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, countEventsByID, id)
-	var event_count int64
-	err := row.Scan(&event_count)
-	return event_count, err
-}
-
 const getEventInsightSummary = `-- name: GetEventInsightSummary :one
-SELECT count(DISTINCT installation_hmac) AS unique_installations,count(*) FILTER (WHERE event_type LIKE 'update_check%') AS update_checks,count(*) FILTER (WHERE event_type LIKE 'download%') AS downloads,count(*) FILTER (WHERE event_type='launch_started') AS launches,count(*) FILTER (WHERE event_type='launch_succeeded') AS launch_successes,count(*) FILTER (WHERE event_type IN ('launch_failed','error_recovery')) AS launch_failures,count(*) FILTER (WHERE event_type='emergency_launch') AS emergency_launches
+SELECT count(DISTINCT installation_hmac) AS unique_users,count(*) FILTER (WHERE event_type='launch_succeeded') AS launch_successes,count(*) FILTER (WHERE event_type='launch_failed') AS launch_failures
 FROM update_events
 WHERE occurred_at >= now()-interval '7 days'
   AND ($1::text IS NULL OR channel=$1::text)
@@ -40,13 +29,9 @@ type GetEventInsightSummaryParams struct {
 }
 
 type GetEventInsightSummaryRow struct {
-	UniqueInstallations int64
-	UpdateChecks        int64
-	Downloads           int64
-	Launches            int64
-	LaunchSuccesses     int64
-	LaunchFailures      int64
-	EmergencyLaunches   int64
+	UniqueUsers     int64
+	LaunchSuccesses int64
+	LaunchFailures  int64
 }
 
 func (q *Queries) GetEventInsightSummary(ctx context.Context, arg GetEventInsightSummaryParams) (GetEventInsightSummaryRow, error) {
@@ -57,15 +42,7 @@ func (q *Queries) GetEventInsightSummary(ctx context.Context, arg GetEventInsigh
 		arg.GroupID,
 	)
 	var i GetEventInsightSummaryRow
-	err := row.Scan(
-		&i.UniqueInstallations,
-		&i.UpdateChecks,
-		&i.Downloads,
-		&i.Launches,
-		&i.LaunchSuccesses,
-		&i.LaunchFailures,
-		&i.EmergencyLaunches,
-	)
+	err := row.Scan(&i.UniqueUsers, &i.LaunchSuccesses, &i.LaunchFailures)
 	return i, err
 }
 
@@ -116,79 +93,4 @@ func (q *Queries) InsertClientEvent(ctx context.Context, arg InsertClientEventPa
 		arg.Payload,
 	)
 	return err
-}
-
-const insertServerEvent = `-- name: InsertServerEvent :exec
-INSERT INTO update_events(id,schema_version,event_type,occurred_at,platform,runtime_version,channel,group_id,payload)
-VALUES(gen_random_uuid(),1,$1,now(),$2,$3,$4,$5,$6)
-`
-
-type InsertServerEventParams struct {
-	EventType      string
-	Platform       pgtype.Text
-	RuntimeVersion pgtype.Text
-	Channel        pgtype.Text
-	GroupID        pgtype.UUID
-	Payload        []byte
-}
-
-func (q *Queries) InsertServerEvent(ctx context.Context, arg InsertServerEventParams) error {
-	_, err := q.db.Exec(ctx, insertServerEvent,
-		arg.EventType,
-		arg.Platform,
-		arg.RuntimeVersion,
-		arg.Channel,
-		arg.GroupID,
-		arg.Payload,
-	)
-	return err
-}
-
-const listEventInsights = `-- name: ListEventInsights :many
-SELECT event_type,count(*) AS event_count,count(DISTINCT installation_hmac) AS unique_installations
-FROM update_events
-WHERE occurred_at >= now()-interval '7 days'
-  AND ($1::text IS NULL OR channel=$1::text)
-  AND ($2::text IS NULL OR runtime_version=$2::text)
-  AND ($3::text IS NULL OR platform=$3::text)
-  AND ($4::uuid IS NULL OR group_id=$4::uuid)
-GROUP BY event_type ORDER BY event_type
-`
-
-type ListEventInsightsParams struct {
-	Channel        pgtype.Text
-	RuntimeVersion pgtype.Text
-	Platform       pgtype.Text
-	GroupID        pgtype.UUID
-}
-
-type ListEventInsightsRow struct {
-	EventType           string
-	EventCount          int64
-	UniqueInstallations int64
-}
-
-func (q *Queries) ListEventInsights(ctx context.Context, arg ListEventInsightsParams) ([]ListEventInsightsRow, error) {
-	rows, err := q.db.Query(ctx, listEventInsights,
-		arg.Channel,
-		arg.RuntimeVersion,
-		arg.Platform,
-		arg.GroupID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListEventInsightsRow
-	for rows.Next() {
-		var i ListEventInsightsRow
-		if err := rows.Scan(&i.EventType, &i.EventCount, &i.UniqueInstallations); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

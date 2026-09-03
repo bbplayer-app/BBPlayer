@@ -73,11 +73,13 @@ export function OverviewPage() {
 					icon={Users}
 					label='Unique users'
 					value={number(summary.unique_users)}
+					hint='Active installations, last 7 days'
 				/>
 				<Metric
 					icon={Download}
 					label='Downloads'
 					value={number(summary.downloads)}
+					hint='Full + patch bundles, last 7 days'
 				/>
 				<Metric
 					icon={Radio}
@@ -88,6 +90,7 @@ export function OverviewPage() {
 					icon={Activity}
 					label='Launch failure rate'
 					value={percent(summary.launch_failure_rate)}
+					hint='Client-reported, last 7 days'
 				/>
 			</div>
 			<div className='mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.8fr)]'>
@@ -154,7 +157,7 @@ export function OverviewPage() {
 					<CardHeader>
 						<CardTitle>Delivery mix</CardTitle>
 						<CardDescription>
-							How clients received launch bundles.
+							How clients received launch bundles over the last seven days.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className='space-y-5'>
@@ -169,10 +172,6 @@ export function OverviewPage() {
 						<Fact
 							label='Bsdiff hit rate'
 							value={percent(insightQuery.data!.transport.bsdiff_hit_rate)}
-						/>
-						<Fact
-							label='Emergency launches'
-							value={number(summary.emergency_launches)}
 						/>
 					</CardContent>
 				</Card>
@@ -248,10 +247,12 @@ function Metric({
 	icon: Icon,
 	label,
 	value,
+	hint,
 }: {
 	icon: typeof Users
 	label: string
 	value: string
+	hint?: string
 }) {
 	return (
 		<Card>
@@ -259,6 +260,7 @@ function Metric({
 				<div>
 					<p className='text-sm text-muted-foreground'>{label}</p>
 					<p className='mt-2 text-2xl font-semibold tabular-nums'>{value}</p>
+					{hint && <p className='mt-1 text-xs text-muted-foreground'>{hint}</p>}
 				</div>
 				<div className='rounded-lg bg-muted p-2'>
 					<Icon className='size-4' />

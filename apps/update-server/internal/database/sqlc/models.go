@@ -40,17 +40,6 @@ type ChannelHistory struct {
 	CreatedAt      pgtype.Timestamptz
 }
 
-type DailyUpdateMetric struct {
-	Day                 pgtype.Date
-	Channel             string
-	RuntimeVersion      string
-	Platform            string
-	GroupID             pgtype.UUID
-	EventType           string
-	EventCount          int64
-	UniqueInstallations int64
-}
-
 type DeliveryMetricMinute struct {
 	Minute          pgtype.Timestamptz
 	Channel         string
