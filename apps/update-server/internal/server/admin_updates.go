@@ -22,6 +22,7 @@ type adminUpdateGroup struct {
 	ID              uuid.UUID       `json:"id"`
 	Channel         string          `json:"channel"`
 	RuntimeVersion  string          `json:"runtime_version"`
+	AppVersion      string          `json:"app_version"`
 	Message         string          `json:"message"`
 	CreatedAt       time.Time       `json:"created_at"`
 	Source          json.RawMessage `json:"source"`
@@ -108,7 +109,7 @@ func (s *Server) listUpdates(ctx context.Context, input *adminListUpdatesInput) 
 	}
 	out := &adminListUpdatesOutput{Body: make([]adminUpdateGroup, 0, len(rows))}
 	for _, row := range rows {
-		item := adminUpdateGroup{ID: uuid.UUID(row.ID.Bytes), Channel: row.Channel, RuntimeVersion: row.RuntimeVersion, Message: row.Message, CreatedAt: row.CreatedAt.Time, Source: row.Source}
+		item := adminUpdateGroup{ID: uuid.UUID(row.ID.Bytes), Channel: row.Channel, RuntimeVersion: row.RuntimeVersion, AppVersion: row.AppVersion, Message: row.Message, CreatedAt: row.CreatedAt.Time, Source: row.Source}
 		if row.FingerprintHash.Valid {
 			value := row.FingerprintHash.String
 			item.FingerprintHash = &value

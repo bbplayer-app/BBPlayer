@@ -154,7 +154,7 @@ func (q *Queries) LatestSourceCommit(ctx context.Context, arg LatestSourceCommit
 }
 
 const listUpdateGroups = `-- name: ListUpdateGroups :many
-SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash FROM update_groups ORDER BY created_at DESC LIMIT $2 OFFSET $1
+SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash FROM update_groups ORDER BY created_at DESC LIMIT $2 OFFSET $1
 `
 
 type ListUpdateGroupsParams struct {
@@ -166,6 +166,7 @@ type ListUpdateGroupsRow struct {
 	ID              pgtype.UUID
 	Channel         string
 	RuntimeVersion  string
+	AppVersion      string
 	Message         string
 	CreatedAt       pgtype.Timestamptz
 	Source          []byte
@@ -185,6 +186,7 @@ func (q *Queries) ListUpdateGroups(ctx context.Context, arg ListUpdateGroupsPara
 			&i.ID,
 			&i.Channel,
 			&i.RuntimeVersion,
+			&i.AppVersion,
 			&i.Message,
 			&i.CreatedAt,
 			&i.Source,

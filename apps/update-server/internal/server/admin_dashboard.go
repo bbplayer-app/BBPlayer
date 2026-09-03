@@ -27,6 +27,7 @@ type adminDashboardChannelInput struct {
 }
 type adminDashboardRuntime struct {
 	RuntimeVersion string     `json:"runtime_version"`
+	Version        string     `json:"version"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 	HeadGroupID    *uuid.UUID `json:"head_group_id,omitempty"`
 	Mode           string     `json:"mode"`
@@ -76,6 +77,7 @@ type adminDashboardUpdateOutput struct {
 		ID                 uuid.UUID                      `json:"id"`
 		Channel            string                         `json:"channel"`
 		RuntimeVersion     string                         `json:"runtime_version"`
+		AppVersion         string                         `json:"app_version"`
 		Message            string                         `json:"message"`
 		CreatedAt          time.Time                      `json:"created_at"`
 		Source             json.RawMessage                `json:"source"`
@@ -99,6 +101,28 @@ type adminDashboardAsset struct {
 }
 type adminDashboardAssetsOutput struct{ Body []adminDashboardAsset }
 
+type adminDashboardRuntimeSummary struct {
+	RuntimeVersion string    `json:"runtime_version"`
+	Version        string    `json:"version"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	UpdateCount    int64     `json:"update_count"`
+	Channels       []string  `json:"channels"`
+}
+type adminDashboardRuntimesOutput struct {
+	Body []adminDashboardRuntimeSummary
+}
+type adminDashboardRuntimeInput struct {
+	RuntimeVersion string `path:"runtimeVersion" minLength:"1"`
+}
+type adminDashboardRuntimeOutput struct {
+	Body struct {
+		RuntimeVersion string             `json:"runtime_version"`
+		Version        string             `json:"version"`
+		Channels       []string           `json:"channels"`
+		Updates        []adminUpdateGroup `json:"updates"`
+	}
+}
+
 func registerAdminDashboardRoutes(s *Server, api huma.API) {
 	security := []map[string][]string{{adminSecurityScheme: {}}}
 	huma.Register(api, huma.Operation{OperationID: "listDashboardChannels", Method: http.MethodGet, Path: "/admin/dashboard/channels", Summary: "List dashboard channels", Tags: []string{"Dashboard"}, Security: security}, s.dashboardChannels)
@@ -106,6 +130,62 @@ func registerAdminDashboardRoutes(s *Server, api huma.API) {
 	huma.Register(api, huma.Operation{OperationID: "getDashboardChannelActivity", Method: http.MethodGet, Path: "/admin/dashboard/channels/{channel}/activity", Summary: "Get channel update activity", Tags: []string{"Dashboard"}, Security: security}, s.dashboardActivity)
 	huma.Register(api, huma.Operation{OperationID: "getDashboardUpdate", Method: http.MethodGet, Path: "/admin/dashboard/updates/{id}", Summary: "Get dashboard update detail", Tags: []string{"Dashboard"}, Security: security}, s.dashboardUpdate)
 	huma.Register(api, huma.Operation{OperationID: "listDashboardUpdateAssets", Method: http.MethodGet, Path: "/admin/dashboard/updates/{id}/platforms/{platform}/assets", Summary: "List dashboard update assets", Tags: []string{"Dashboard"}, Security: security}, s.dashboardAssets)
+	huma.Register(api, huma.Operation{OperationID: "listDashboardRuntimes", Method: http.MethodGet, Path: "/admin/dashboard/runtimes", Summary: "List dashboard runtimes", Tags: []string{"Dashboard"}, Security: security}, s.dashboardRuntimes)
+	huma.Register(api, huma.Operation{OperationID: "getDashboardRuntime", Method: http.MethodGet, Path: "/admin/dashboard/runtimes/{runtimeVersion}", Summary: "Get dashboard runtime", Tags: []string{"Dashboard"}, Security: security}, s.dashboardRuntime)
+}
+
+func (s *Server) dashboardRuntimes(ctx context.Context, _ *struct{}) (*adminDashboardRuntimesOutput, error) {
+	rows, err := s.DB.Pool.Query(ctx, `SELECT runtime_version,(array_agg(COALESCE(expo_config->>'version','') ORDER BY created_at DESC))[1],max(created_at),count(*)::bigint,array_agg(DISTINCT channel ORDER BY channel) FROM update_groups GROUP BY runtime_version ORDER BY max(created_at) DESC`)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	defer rows.Close()
+	out := &adminDashboardRuntimesOutput{Body: []adminDashboardRuntimeSummary{}}
+	for rows.Next() {
+		var item adminDashboardRuntimeSummary
+		if err := rows.Scan(&item.RuntimeVersion, &item.Version, &item.UpdatedAt, &item.UpdateCount, &item.Channels); err != nil {
+			return nil, huma.Error500InternalServerError("database")
+		}
+		out.Body = append(out.Body, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	return out, nil
+}
+
+func (s *Server) dashboardRuntime(ctx context.Context, input *adminDashboardRuntimeInput) (*adminDashboardRuntimeOutput, error) {
+	rows, err := s.DB.Pool.Query(ctx, `SELECT id,channel,runtime_version,COALESCE(expo_config->>'version',''),message,created_at,source,fingerprint_hash FROM update_groups WHERE runtime_version=$1 ORDER BY created_at DESC`, input.RuntimeVersion)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	defer rows.Close()
+	out := &adminDashboardRuntimeOutput{}
+	out.Body.RuntimeVersion = input.RuntimeVersion
+	out.Body.Channels = []string{}
+	out.Body.Updates = []adminUpdateGroup{}
+	channelSet := map[string]struct{}{}
+	for rows.Next() {
+		var item adminUpdateGroup
+		if err := rows.Scan(&item.ID, &item.Channel, &item.RuntimeVersion, &item.AppVersion, &item.Message, &item.CreatedAt, &item.Source, &item.FingerprintHash); err != nil {
+			return nil, huma.Error500InternalServerError("database")
+		}
+		if out.Body.Version == "" {
+			out.Body.Version = item.AppVersion
+		}
+		if _, exists := channelSet[item.Channel]; !exists && item.Channel != "" {
+			channelSet[item.Channel] = struct{}{}
+			out.Body.Channels = append(out.Body.Channels, item.Channel)
+		}
+		out.Body.Updates = append(out.Body.Updates, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, huma.Error500InternalServerError("database")
+	}
+	if len(out.Body.Updates) == 0 {
+		return nil, huma.Error404NotFound("runtime not found")
+	}
+	return out, nil
 }
 
 func (s *Server) dashboardChannels(ctx context.Context, _ *struct{}) (*adminDashboardChannelsOutput, error) {
@@ -129,7 +209,7 @@ func (s *Server) dashboardChannels(ctx context.Context, _ *struct{}) (*adminDash
 }
 
 func (s *Server) dashboardChannel(ctx context.Context, input *adminDashboardChannelInput) (*adminDashboardChannelOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT runtime_version, max(updated_at), (array_agg(group_id ORDER BY updated_at DESC))[1]::text, (array_agg(mode ORDER BY updated_at DESC))[1], array_agg(platform ORDER BY platform) FROM channel_heads WHERE channel=$1 GROUP BY runtime_version ORDER BY max(updated_at) DESC`, input.Channel)
+	rows, err := s.DB.Pool.Query(ctx, `SELECT h.runtime_version, max(h.updated_at), (array_agg(g.expo_config->>'version' ORDER BY h.updated_at DESC))[1], (array_agg(h.group_id ORDER BY h.updated_at DESC))[1]::text, (array_agg(h.mode ORDER BY h.updated_at DESC))[1], array_agg(h.platform ORDER BY h.platform) FROM channel_heads h LEFT JOIN update_groups g ON g.id=h.group_id WHERE h.channel=$1 GROUP BY h.runtime_version ORDER BY max(h.updated_at) DESC`, input.Channel)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("database")
 	}
@@ -140,7 +220,7 @@ func (s *Server) dashboardChannel(ctx context.Context, input *adminDashboardChan
 	for rows.Next() {
 		var row adminDashboardRuntime
 		var id *string
-		if err := rows.Scan(&row.RuntimeVersion, &row.UpdatedAt, &id, &row.Mode, &row.Platforms); err != nil {
+		if err := rows.Scan(&row.RuntimeVersion, &row.UpdatedAt, &row.Version, &id, &row.Mode, &row.Platforms); err != nil {
 			return nil, huma.Error500InternalServerError("database")
 		}
 		if id != nil {
@@ -196,6 +276,11 @@ func (s *Server) dashboardUpdate(ctx context.Context, input *adminDashboardUpdat
 	}
 	out := &adminDashboardUpdateOutput{}
 	out.Body.ID, out.Body.Channel, out.Body.RuntimeVersion, out.Body.Message, out.Body.CreatedAt = input.ID, group.Channel, group.RuntimeVersion, group.Message, group.CreatedAt.Time
+	var expoConfig struct {
+		Version string `json:"version"`
+	}
+	_ = json.Unmarshal(group.ExpoConfig, &expoConfig)
+	out.Body.AppVersion = expoConfig.Version
 	out.Body.Source, out.Body.FingerprintSources = group.Source, group.FingerprintSources
 	out.Body.Platforms = []adminDashboardPlatformUpdate{}
 	if group.FingerprintHash.Valid {

@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log/slog"
@@ -98,11 +97,6 @@ func (s *Server) admin(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
 }
 
 // logError records a server-side error that a handler is about to fold into a

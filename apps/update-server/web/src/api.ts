@@ -2,6 +2,7 @@ export type Group = {
 	id: string
 	channel: string
 	runtime_version: string
+	app_version: string
 	message: string
 	created_at: string
 	fingerprint_hash?: string
@@ -9,6 +10,7 @@ export type Group = {
 }
 export type Runtime = {
 	runtime_version: string
+	version: string
 	updated_at: string
 	head_group_id?: string
 	mode: string
@@ -55,13 +57,30 @@ export const channels = () =>
 	)
 export const channel = (v: string) =>
 	api<{ channel: string; runtimes: Runtime[] }>(
-		`/admin/dashboard/channels/${v}`,
+		`/admin/dashboard/channels/${encodeURIComponent(v)}`,
 	)
 export const activity = (c: string, r: string) =>
 	api<{
 		series: { day: string; group_id?: string; active_installations: number }[]
-	}>(`/admin/dashboard/channels/${c}/activity?runtime_version=${r}`)
+	}>(
+		`/admin/dashboard/channels/${encodeURIComponent(c)}/activity?runtime_version=${encodeURIComponent(r)}`,
+	)
 export const groups = () => api<Group[]>('/admin/updates?limit=100')
+export type RuntimeSummary = {
+	runtime_version: string
+	version: string
+	updated_at: string
+	update_count: number
+	channels: string[]
+}
+export const runtimes = () => api<RuntimeSummary[]>('/admin/dashboard/runtimes')
+export const runtime = (value: string) =>
+	api<{
+		runtime_version: string
+		version: string
+		channels: string[]
+		updates: Group[]
+	}>(`/admin/dashboard/runtimes/${encodeURIComponent(value)}`)
 export const detail = (id: string) =>
 	api<Detail>(`/admin/dashboard/updates/${id}`)
 export const assets = (id: string, p: string) =>
@@ -71,10 +90,35 @@ export const lifecycle = (id: string) =>
 		series: { day: string; known_launches: number; known_crashes: number }[]
 	}>(`/admin/insights/groups/${id}/lifecycle`)
 export const insights = () =>
-	api<{ summary: { unique_users: number; downloads: number } }>(
-		'/admin/insights',
-	)
+	api<{
+		summary: {
+			unique_users: number
+			update_checks: number
+			downloads: number
+			launches: number
+			launch_successes: number
+			launch_failures: number
+			emergency_launches: number
+			launch_failure_rate: number
+		}
+		transport: {
+			full_requests: number
+			full_bytes: number
+			bsdiff_requests: number
+			bsdiff_bytes: number
+			bsdiff_target_bytes: number
+			bsdiff_saved_bytes: number
+			bsdiff_fallbacks: number
+			bsdiff_hit_rate: number
+		}
+	}>('/admin/insights')
 export const service = () =>
-	api<{ series: { minute: string; requests: number; errors: number }[] }>(
-		'/admin/metrics/service',
-	)
+	api<{
+		series: {
+			minute: string
+			requests: number
+			errors: number
+			error_rate: number
+			average_duration_ms: number
+		}[]
+	}>('/admin/metrics/service')
