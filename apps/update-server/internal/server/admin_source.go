@@ -63,18 +63,18 @@ func (s *Server) sourceCompare(ctx context.Context, input *adminSourceCompareInp
 		return nil, huma.Error404NotFound("from update group not found")
 	}
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: compare from", err)
 	}
 	b, err := s.DB.Queries.GetUpdateGroupSource(ctx, pgUUID(&input.To))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, huma.Error404NotFound("to update group not found")
 	}
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: compare to", err)
 	}
 	rows, err := s.DB.Queries.ListSourceCommitsForGroups(ctx, db.ListSourceCommitsForGroupsParams{UpdateGroupID: pgUUID(&input.From), UpdateGroupID_2: pgUUID(&input.To)})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: compare commits", err)
 	}
 	out := &adminSourceCompareOutput{}
 	out.Body.From, out.Body.To = input.From, input.To
@@ -112,11 +112,11 @@ func (s *Server) sourceCompare(ctx context.Context, input *adminSourceCompareInp
 	}
 	out.Body.FromArtifacts, err = artifacts(input.From)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: compare artifacts from", err)
 	}
 	out.Body.ToArtifacts, err = artifacts(input.To)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: compare artifacts to", err)
 	}
 	return out, nil
 }
@@ -128,7 +128,7 @@ func (s *Server) sourceLatest(ctx context.Context, input *adminSourceLatestInput
 		err = nil
 	}
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: latest", err)
 	}
 	out := &adminSourceLatestOutput{}
 	out.Body.CommitSHA = commit
@@ -138,7 +138,7 @@ func (s *Server) sourceLatest(ctx context.Context, input *adminSourceLatestInput
 func (s *Server) sourceFind(ctx context.Context, input *adminSourceCommitInput) (*adminSourceFindOutput, error) {
 	rows, err := s.DB.Queries.FindGroupsOrSourceCommitsByCommit(ctx, []byte(input.Commit))
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("source: find", err)
 	}
 	out := &adminSourceFindOutput{Body: make([]adminSourceGroup, 0, len(rows))}
 	for _, row := range rows {

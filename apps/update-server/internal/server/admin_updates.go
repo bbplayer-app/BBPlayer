@@ -105,7 +105,7 @@ func registerAdminChannelRoutes(s *Server, api huma.API) {
 func (s *Server) listUpdates(ctx context.Context, input *adminListUpdatesInput) (*adminListUpdatesOutput, error) {
 	rows, err := s.DB.Queries.ListUpdateGroups(ctx, db.ListUpdateGroupsParams{Limit: input.Limit, Offset: input.Offset})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: list", err)
 	}
 	out := &adminListUpdatesOutput{Body: make([]adminUpdateGroup, 0, len(rows))}
 	for _, row := range rows {
@@ -125,7 +125,7 @@ func (s *Server) getUpdate(ctx context.Context, input *adminGetUpdateInput) (*ad
 		return nil, huma.Error404NotFound("update group not found")
 	}
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: get", err)
 	}
 	out := &adminGetUpdateOutput{}
 	out.Body.adminUpdateGroup = adminUpdateGroup{ID: input.ID, Channel: group.Channel, RuntimeVersion: group.RuntimeVersion, Message: group.Message, CreatedAt: group.CreatedAt.Time, Source: group.Source}
@@ -140,7 +140,7 @@ func (s *Server) getUpdate(ctx context.Context, input *adminGetUpdateInput) (*ad
 func (s *Server) listChannels(ctx context.Context, _ *struct{}) (*adminListChannelsOutput, error) {
 	rows, err := s.DB.Queries.ListChannelHeads(ctx)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: channel heads", err)
 	}
 	out := &adminListChannelsOutput{Body: make([]adminChannelHead, 0, len(rows))}
 	for _, row := range rows {
@@ -152,7 +152,7 @@ func (s *Server) listChannels(ctx context.Context, _ *struct{}) (*adminListChann
 func (s *Server) channel(ctx context.Context, input *adminChannelInput) (*adminListChannelsOutput, error) {
 	rows, err := s.DB.Queries.ListChannelHeadsByChannel(ctx, input.Channel)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: channel heads by channel", err)
 	}
 	out := &adminListChannelsOutput{Body: make([]adminChannelHead, 0, len(rows))}
 	for _, row := range rows {
@@ -164,7 +164,7 @@ func (s *Server) channel(ctx context.Context, input *adminChannelInput) (*adminL
 func (s *Server) history(ctx context.Context, input *adminChannelInput) (*adminChannelHistoryOutput, error) {
 	rows, err := s.DB.Queries.ListChannelHistory(ctx, input.Channel)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: channel history", err)
 	}
 	out := &adminChannelHistoryOutput{Body: make([]adminChannelHistory, 0, len(rows))}
 	for _, row := range rows {
@@ -182,14 +182,14 @@ func (s *Server) rollback(ctx context.Context, input *adminRollbackInput) (*admi
 		groupID = input.Body.GroupID
 		compatible, err := s.DB.Queries.IsCompatibleUpdateGroup(ctx, db.IsCompatibleUpdateGroupParams{ID: pgUUID(groupID), Channel: input.Channel, RuntimeVersion: input.Body.RuntimeVersion, Platform: input.Body.Platform})
 		if err != nil {
-			return nil, huma.Error500InternalServerError("database")
+			return nil, s.dbError("updates: compatibility check", err)
 		}
 		if !compatible {
 			return nil, huma.Error400BadRequest("incompatible update group")
 		}
 	}
 	if err := s.DB.Queries.UpsertChannelHead(ctx, db.UpsertChannelHeadParams{Channel: input.Channel, RuntimeVersion: input.Body.RuntimeVersion, Platform: input.Body.Platform, GroupID: pgUUID(groupID), Mode: input.Body.Mode}); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("updates: rollback head", err)
 	}
 	if err := s.DB.Queries.InsertChannelHistory(ctx, db.InsertChannelHistoryParams{Channel: input.Channel, RuntimeVersion: input.Body.RuntimeVersion, Platform: input.Body.Platform, GroupID: pgUUID(groupID), Mode: input.Body.Mode, Action: "rollback", Actor: pgtype.Text{String: "admin", Valid: true}}); err != nil {
 		s.Log.Error("rollback: insert channel history", "error", err)

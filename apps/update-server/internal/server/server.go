@@ -99,11 +99,6 @@ func (s *Server) admin(next http.Handler) http.Handler {
 	})
 }
 
-// logError records a server-side error that a handler is about to fold into a
-// generic HTTP response, so operators can tell failures apart.
-func (s *Server) logError(r *http.Request, msg string, err error, kv ...any) {
-	s.Log.Error(msg, append([]any{"error", err, "method", r.Method, "path", r.URL.Path}, kv...)...)
-}
 func pgUUID(id *uuid.UUID) pgtype.UUID {
 	if id == nil {
 		return pgtype.UUID{}

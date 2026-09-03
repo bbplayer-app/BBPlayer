@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	db "github.com/bbplayer-app/BBPlayer/apps/update-server/internal/database/sqlc"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // The dashboard endpoints deliberately return display-oriented aggregates. The
@@ -135,40 +137,32 @@ func registerAdminDashboardRoutes(s *Server, api huma.API) {
 }
 
 func (s *Server) dashboardRuntimes(ctx context.Context, _ *struct{}) (*adminDashboardRuntimesOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT runtime_version,(array_agg(COALESCE(expo_config->>'version','') ORDER BY created_at DESC))[1],max(created_at),count(*)::bigint,array_agg(DISTINCT channel ORDER BY channel) FROM update_groups GROUP BY runtime_version ORDER BY max(created_at) DESC`)
+	rows, err := s.DB.Queries.ListDashboardRuntimes(ctx)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: runtimes", err)
 	}
-	defer rows.Close()
-	out := &adminDashboardRuntimesOutput{Body: []adminDashboardRuntimeSummary{}}
-	for rows.Next() {
-		var item adminDashboardRuntimeSummary
-		if err := rows.Scan(&item.RuntimeVersion, &item.Version, &item.UpdatedAt, &item.UpdateCount, &item.Channels); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		out.Body = append(out.Body, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+	out := &adminDashboardRuntimesOutput{Body: make([]adminDashboardRuntimeSummary, 0, len(rows))}
+	for _, row := range rows {
+		out.Body = append(out.Body, adminDashboardRuntimeSummary{RuntimeVersion: row.RuntimeVersion, Version: row.Version, UpdatedAt: row.UpdatedAt.Time, UpdateCount: row.UpdateCount, Channels: row.Channels})
 	}
 	return out, nil
 }
 
 func (s *Server) dashboardRuntime(ctx context.Context, input *adminDashboardRuntimeInput) (*adminDashboardRuntimeOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT id,channel,runtime_version,COALESCE(expo_config->>'version',''),message,created_at,source,fingerprint_hash FROM update_groups WHERE runtime_version=$1 ORDER BY created_at DESC`, input.RuntimeVersion)
+	rows, err := s.DB.Queries.ListDashboardRuntimeUpdates(ctx, input.RuntimeVersion)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: runtime updates", err)
 	}
-	defer rows.Close()
 	out := &adminDashboardRuntimeOutput{}
 	out.Body.RuntimeVersion = input.RuntimeVersion
 	out.Body.Channels = []string{}
 	out.Body.Updates = []adminUpdateGroup{}
 	channelSet := map[string]struct{}{}
-	for rows.Next() {
-		var item adminUpdateGroup
-		if err := rows.Scan(&item.ID, &item.Channel, &item.RuntimeVersion, &item.AppVersion, &item.Message, &item.CreatedAt, &item.Source, &item.FingerprintHash); err != nil {
-			return nil, huma.Error500InternalServerError("database")
+	for _, row := range rows {
+		item := adminUpdateGroup{ID: uuid.UUID(row.ID.Bytes), Channel: row.Channel, RuntimeVersion: row.RuntimeVersion, AppVersion: row.AppVersion, Message: row.Message, CreatedAt: row.CreatedAt.Time, Source: row.Source}
+		if row.FingerprintHash.Valid {
+			value := row.FingerprintHash.String
+			item.FingerprintHash = &value
 		}
 		if out.Body.Version == "" {
 			out.Body.Version = item.AppVersion
@@ -179,9 +173,6 @@ func (s *Server) dashboardRuntime(ctx context.Context, input *adminDashboardRunt
 		}
 		out.Body.Updates = append(out.Body.Updates, item)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
-	}
 	if len(out.Body.Updates) == 0 {
 		return nil, huma.Error404NotFound("runtime not found")
 	}
@@ -189,50 +180,34 @@ func (s *Server) dashboardRuntime(ctx context.Context, input *adminDashboardRunt
 }
 
 func (s *Server) dashboardChannels(ctx context.Context, _ *struct{}) (*adminDashboardChannelsOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT channel, max(updated_at), count(DISTINCT runtime_version) FROM channel_heads GROUP BY channel ORDER BY channel`)
+	rows, err := s.DB.Queries.ListDashboardChannels(ctx)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: channels", err)
 	}
-	defer rows.Close()
-	out := &adminDashboardChannelsOutput{Body: []adminDashboardChannel{}}
-	for rows.Next() {
-		var row adminDashboardChannel
-		if err := rows.Scan(&row.Channel, &row.UpdatedAt, &row.RuntimeCount); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		out.Body = append(out.Body, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+	out := &adminDashboardChannelsOutput{Body: make([]adminDashboardChannel, 0, len(rows))}
+	for _, row := range rows {
+		out.Body = append(out.Body, adminDashboardChannel{Channel: row.Channel, UpdatedAt: row.UpdatedAt.Time, RuntimeCount: row.RuntimeCount})
 	}
 	return out, nil
 }
 
 func (s *Server) dashboardChannel(ctx context.Context, input *adminDashboardChannelInput) (*adminDashboardChannelOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT h.runtime_version, max(h.updated_at), (array_agg(g.expo_config->>'version' ORDER BY h.updated_at DESC))[1], (array_agg(h.group_id ORDER BY h.updated_at DESC))[1]::text, (array_agg(h.mode ORDER BY h.updated_at DESC))[1], array_agg(h.platform ORDER BY h.platform) FROM channel_heads h LEFT JOIN update_groups g ON g.id=h.group_id WHERE h.channel=$1 GROUP BY h.runtime_version ORDER BY max(h.updated_at) DESC`, input.Channel)
+	rows, err := s.DB.Queries.ListDashboardChannelRuntimes(ctx, input.Channel)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: channel runtimes", err)
 	}
-	defer rows.Close()
 	out := &adminDashboardChannelOutput{}
 	out.Body.Channel = input.Channel
 	out.Body.Runtimes = []adminDashboardRuntime{}
-	for rows.Next() {
-		var row adminDashboardRuntime
-		var id *string
-		if err := rows.Scan(&row.RuntimeVersion, &row.UpdatedAt, &row.Version, &id, &row.Mode, &row.Platforms); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		if id != nil {
-			parsed, err := uuid.Parse(*id)
+	for _, row := range rows {
+		runtime := adminDashboardRuntime{RuntimeVersion: row.RuntimeVersion, UpdatedAt: row.UpdatedAt.Time, Version: row.Version, Mode: row.Mode, Platforms: row.Platforms}
+		if row.HeadGroupID != "" {
+			parsed, err := uuid.Parse(row.HeadGroupID)
 			if err == nil {
-				row.HeadGroupID = &parsed
+				runtime.HeadGroupID = &parsed
 			}
 		}
-		out.Body.Runtimes = append(out.Body.Runtimes, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		out.Body.Runtimes = append(out.Body.Runtimes, runtime)
 	}
 	return out, nil
 }
@@ -242,29 +217,21 @@ func (s *Server) dashboardActivity(ctx context.Context, input *adminDashboardAct
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Pool.Query(ctx, `SELECT day, group_id::text, count(DISTINCT installation_hmac)::bigint FROM installation_activity_days WHERE day >= $1 AND day < $2 AND channel=$3 AND runtime_version=$4 GROUP BY day, group_id ORDER BY day, group_id`, start, end.AddDate(0, 0, 1), input.Channel, input.RuntimeVersion)
+	rows, err := s.DB.Queries.ListDashboardActivity(ctx, db.ListDashboardActivityParams{Day: pgtype.Date{Time: start, Valid: true}, Day_2: pgtype.Date{Time: end.AddDate(0, 0, 1), Valid: true}, Channel: input.Channel, RuntimeVersion: input.RuntimeVersion})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: activity", err)
 	}
-	defer rows.Close()
 	out := &adminDashboardActivityOutput{}
 	out.Body.Start, out.Body.End, out.Body.Series = start, end, []adminDashboardActivityPoint{}
-	for rows.Next() {
-		var row adminDashboardActivityPoint
-		var id *string
-		if err := rows.Scan(&row.Day, &id, &row.ActiveInstallations); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		if id != nil {
-			parsed, err := uuid.Parse(*id)
+	for _, row := range rows {
+		point := adminDashboardActivityPoint{Day: row.Day.Time, ActiveInstallations: row.ActiveInstallations}
+		if row.GroupID != "" {
+			parsed, err := uuid.Parse(row.GroupID)
 			if err == nil {
-				row.GroupID = &parsed
+				point.GroupID = &parsed
 			}
 		}
-		out.Body.Series = append(out.Body.Series, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		out.Body.Series = append(out.Body.Series, point)
 	}
 	return out, nil
 }
@@ -287,40 +254,24 @@ func (s *Server) dashboardUpdate(ctx context.Context, input *adminDashboardUpdat
 		value := group.FingerprintHash.String
 		out.Body.FingerprintHash = &value
 	}
-	rows, err := s.DB.Pool.Query(ctx, `SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,(SELECT count(*) FROM update_events e WHERE e.group_id=u.group_id AND e.platform=u.platform AND e.event_type='download_succeeded'),(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform),(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform`, input.ID)
+	rows, err := s.DB.Queries.ListDashboardUpdatePlatforms(ctx, pgtype.UUID{Bytes: [16]byte(input.ID), Valid: true})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: update platforms", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var row adminDashboardPlatformUpdate
-		if err := rows.Scan(&row.ID, &row.Platform, &row.LaunchKey, &row.LaunchHash, &row.LaunchSize, &row.Downloads, &row.KnownLaunches, &row.KnownCrashes); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		out.Body.Platforms = append(out.Body.Platforms, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+	for _, row := range rows {
+		out.Body.Platforms = append(out.Body.Platforms, adminDashboardPlatformUpdate{ID: uuid.UUID(row.ID.Bytes), Platform: row.Platform, LaunchKey: row.LaunchKey, LaunchHash: row.LaunchHash, LaunchSize: row.SizeBytes, Downloads: row.Downloads, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes})
 	}
 	return out, nil
 }
 
 func (s *Server) dashboardAssets(ctx context.Context, input *adminDashboardAssetsInput) (*adminDashboardAssetsOutput, error) {
-	rows, err := s.DB.Pool.Query(ctx, `SELECT a.id,a.asset_key,a.content_type,a.size_bytes,a.is_launch,COALESCE((SELECT count(*) FROM update_events e WHERE e.update_id=u.id AND e.event_type='download_succeeded'),0) FROM updates u JOIN assets a ON a.update_id=u.id WHERE u.group_id=$1 AND u.platform=$2 ORDER BY a.is_launch DESC,a.size_bytes DESC`, input.ID, input.Platform)
+	rows, err := s.DB.Queries.ListDashboardUpdateAssets(ctx, db.ListDashboardUpdateAssetsParams{GroupID: pgtype.UUID{Bytes: [16]byte(input.ID), Valid: true}, Platform: input.Platform})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("dashboard: assets", err)
 	}
-	defer rows.Close()
-	out := &adminDashboardAssetsOutput{Body: []adminDashboardAsset{}}
-	for rows.Next() {
-		var row adminDashboardAsset
-		if err := rows.Scan(&row.ID, &row.AssetKey, &row.ContentType, &row.SizeBytes, &row.IsLaunch, &row.Downloads); err != nil {
-			return nil, huma.Error500InternalServerError("database")
-		}
-		out.Body = append(out.Body, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, huma.Error500InternalServerError("database")
+	out := &adminDashboardAssetsOutput{Body: make([]adminDashboardAsset, 0, len(rows))}
+	for _, row := range rows {
+		out.Body = append(out.Body, adminDashboardAsset{ID: row.ID, AssetKey: row.AssetKey, ContentType: row.ContentType, SizeBytes: row.SizeBytes, IsLaunch: row.IsLaunch, Downloads: row.Downloads})
 	}
 	return out, nil
 }

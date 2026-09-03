@@ -91,8 +91,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 	}
 	tmp, err := os.CreateTemp("", "update-*.zip")
 	if err != nil {
-		s.Log.Error("publish: create temp file", "error", err)
-		return nil, huma.Error500InternalServerError("temp")
+		return nil, s.dbError("publish: create temp file", err)
 	}
 	defer os.Remove(tmp.Name())
 	if _, err = tmp.Write(archive); err != nil {
@@ -144,16 +143,14 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 	gid := uuid.New()
 	tx, e := s.DB.Pool.Begin(ctx)
 	if e != nil {
-		s.Log.Error("publish: begin transaction", "error", e, "group_id", gid.String())
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("publish: begin transaction", e, "group_id", gid.String())
 	}
 	defer tx.Rollback(ctx)
 	txq := s.DB.Queries.WithTx(tx)
 	_ = cfg // JSON validation above intentionally precedes persistence.
 	e = txq.InsertUpdateGroup(ctx, db.InsertUpdateGroupParams{ID: pgUUID(&gid), Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Message: req.Message, Source: req.Source, FingerprintHash: pgtype.Text{String: fingerprintHash, Valid: hasFingerprint}, FingerprintSources: fingerprintSources, ExpoConfig: cb, MetadataSha256: sha(mb)})
 	if e != nil {
-		s.Log.Error("publish: insert update group", "error", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion)
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("publish: insert update group", e, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion)
 	}
 	for platform, m := range meta.FileMetadata {
 		if platform != "android" && platform != "ios" {
@@ -170,8 +167,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		if errors.Is(err, pgx.ErrNoRows) {
 			previousUpdate = nil
 		} else if err != nil {
-			s.Log.Error("publish: query previous channel update", "error", err, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
-			return nil, huma.Error500InternalServerError("database")
+			return nil, s.dbError("publish: query previous channel update", err, "group_id", gid.String(), "channel", req.Channel, "runtime_version", req.RuntimeVersion, "platform", platform)
 		}
 
 		bundle, e := read(m.Bundle)
@@ -187,13 +183,11 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		}
 		e = txq.InsertUpdate(ctx, db.InsertUpdateParams{ID: pgUUID(&uid), GroupID: pgUUID(&gid), Platform: platform, LaunchKey: launchKey, LaunchHash: sha(bundle)})
 		if e != nil {
-			s.Log.Error("publish: insert update", "error", e, "group_id", gid.String(), "platform", platform)
-			return nil, huma.Error500InternalServerError("database")
+			return nil, s.dbError("publish: insert update", e, "group_id", gid.String(), "platform", platform)
 		}
 		e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: launchKey, ObjectKey: object, Sha256: sha(bundle), ContentType: "application/javascript", SizeBytes: int64(len(bundle)), IsLaunch: true})
 		if e != nil {
-			s.Log.Error("publish: insert launch asset", "error", e, "group_id", gid.String(), "platform", platform)
-			return nil, huma.Error500InternalServerError("database")
+			return nil, s.dbError("publish: insert launch asset", e, "group_id", gid.String(), "platform", platform)
 		}
 		for _, a := range m.Assets {
 			b, e := read(a.Path)
@@ -212,15 +206,13 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 			}
 			e = txq.InsertAsset(ctx, db.InsertAssetParams{UpdateID: pgUUID(&uid), AssetKey: k, ObjectKey: obj, Sha256: sha(b), ContentType: ct, SizeBytes: int64(len(b))})
 			if e != nil {
-				s.Log.Error("publish: insert asset", "error", e, "group_id", gid.String(), "platform", platform, "object", obj)
-				return nil, huma.Error500InternalServerError("database")
+				return nil, s.dbError("publish: insert asset", e, "group_id", gid.String(), "platform", platform, "object", obj)
 			}
 		}
 		if previousUpdate != nil {
 			e = txq.InsertPendingPatch(ctx, db.InsertPendingPatchParams{FromUpdateID: pgUUID(previousUpdate), ToUpdateID: pgUUID(&uid), Platform: platform})
 			if e != nil {
-				s.Log.Error("publish: insert pending patch", "error", e, "group_id", gid.String(), "platform", platform, "from", previousUpdate.String(), "to", uid.String())
-				return nil, huma.Error500InternalServerError("database")
+				return nil, s.dbError("publish: insert pending patch", e, "group_id", gid.String(), "platform", platform, "from", previousUpdate.String(), "to", uid.String())
 			}
 		}
 		e = txq.UpsertChannelHead(ctx, db.UpsertChannelHeadParams{Channel: req.Channel, RuntimeVersion: req.RuntimeVersion, Platform: platform, GroupID: pgUUID(&gid), Mode: "ota"})
@@ -232,8 +224,7 @@ func (s *Server) publish(ctx context.Context, input *adminPublishInput) (*adminP
 		}
 	}
 	if e = tx.Commit(ctx); e != nil {
-		s.Log.Error("publish: commit transaction", "error", e, "group_id", gid.String())
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("publish: commit transaction", e, "group_id", gid.String())
 	}
 	out := &adminPublishOutput{}
 	out.Body.GroupID = gid

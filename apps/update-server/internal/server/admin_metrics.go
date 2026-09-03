@@ -75,7 +75,7 @@ func (s *Server) deliveryMetrics(ctx context.Context, input *adminDeliveryMetric
 	}
 	rows, err := s.DB.Queries.GetDeliveryMetricSeries(ctx, filters)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("metrics: delivery series", err)
 	}
 	out := &adminDeliveryMetricsOutput{}
 	out.Body.Start, out.Body.End = start, end
@@ -115,7 +115,7 @@ func (s *Server) serviceMetrics(ctx context.Context, input *adminServiceMetricsI
 	}
 	rows, err := s.DB.Queries.GetServiceMetricSeries(ctx, db.GetServiceMetricSeriesParams{Minute: pgtype.Timestamptz{Time: start, Valid: true}, Minute_2: pgtype.Timestamptz{Time: end, Valid: true}, Route: pgtype.Text{String: input.Route, Valid: input.Route != ""}})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("metrics: service series", err)
 	}
 	out := &adminServiceMetricsOutput{}
 	out.Body.Start, out.Body.End = start, end

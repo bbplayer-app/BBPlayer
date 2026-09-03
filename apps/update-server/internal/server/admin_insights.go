@@ -109,15 +109,15 @@ func (s *Server) insights(ctx context.Context, input *adminInsightsInput) (*admi
 	}
 	rows, err := s.DB.Queries.ListEventInsights(ctx, filters)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: events", err)
 	}
 	summary, err := s.DB.Queries.GetEventInsightSummary(ctx, db.GetEventInsightSummaryParams(filters))
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: summary", err)
 	}
 	transport, err := s.DB.Queries.GetTransportInsightSummary(ctx, db.GetTransportInsightSummaryParams(filters))
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: transport", err)
 	}
 	out := &adminInsightsOutput{}
 	out.Body.Events = make([]adminInsightEvent, 0, len(rows))
@@ -144,11 +144,11 @@ func (s *Server) activity(ctx context.Context, input *adminActivityInput) (*admi
 	filters := db.GetChannelActivitySeriesParams{Day: pgtype.Date{Time: start, Valid: true}, Day_2: pgtype.Date{Time: end.AddDate(0, 0, 1), Valid: true}, Channel: pgtype.Text{String: input.Channel, Valid: input.Channel != ""}, Platform: pgtype.Text{String: input.Platform, Valid: input.Platform != ""}}
 	active, err := s.DB.Queries.GetChannelActivitySeries(ctx, filters)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: activity", err)
 	}
 	versions, err := s.DB.Queries.GetVersionActivitySeries(ctx, db.GetVersionActivitySeriesParams(filters))
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: versions", err)
 	}
 	out := &adminActivityOutput{}
 	out.Body.Start, out.Body.End = start, end
@@ -170,7 +170,7 @@ func (s *Server) lifecycle(ctx context.Context, input *adminLifecycleInput) (*ad
 	}
 	rows, err := s.DB.Queries.GetUpdateGroupLifecycleSeries(ctx, db.GetUpdateGroupLifecycleSeriesParams{GroupID: pgUUID(&input.GroupID), ConfirmedAt: pgtype.Timestamptz{Time: start, Valid: true}, ConfirmedAt_2: pgtype.Timestamptz{Time: end, Valid: true}})
 	if err != nil {
-		return nil, huma.Error500InternalServerError("database")
+		return nil, s.dbError("insights: lifecycle", err)
 	}
 	out := &adminLifecycleOutput{}
 	out.Body.Start, out.Body.End = start, end
