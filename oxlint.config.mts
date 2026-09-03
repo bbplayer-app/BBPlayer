@@ -58,6 +58,7 @@ export default defineConfig({
 			},
 		],
 		'no-console': 'error',
+		'import/no-unassigned-import': ['error', { allow: ['**/*.css'] }],
 		'react-hooks/exhaustive-deps': 'error',
 		'typescript/no-explicit-any': 'error',
 		'typescript/no-misused-promises': ['error', { checksVoidReturn: false }],
@@ -67,36 +68,36 @@ export default defineConfig({
 		'react/no-unstable-nested-components': 'off',
 
 		// tanstack query
-		'tanstack-query/exhaustive-deps': 'error',
-		'tanstack-query/no-rest-destructuring': 'warn',
-		'tanstack-query/stable-query-client': 'error',
-		'tanstack-query/no-unstable-deps': 'error',
-		'tanstack-query/infinite-query-property-order': 'error',
-		'tanstack-query/no-void-query-fn': 'error',
-		'tanstack-query/mutation-property-order': 'error',
+		'@tanstack/query/exhaustive-deps': 'error',
+		'@tanstack/query/no-rest-destructuring': 'warn',
+		'@tanstack/query/stable-query-client': 'error',
+		'@tanstack/query/no-unstable-deps': 'error',
+		'@tanstack/query/infinite-query-property-order': 'error',
+		'@tanstack/query/no-void-query-fn': 'error',
+		'@tanstack/query/mutation-property-order': 'error',
 
 		// react-compiler
-		'react-compiler-js/react-compiler': 'error',
+		'react-compiler/react-compiler': 'error',
 
 		// bbplayer
 		'bbplayer/no-navigate-after-modal-close': 'error',
 
 		// react-hooks-extra
-		'react-hooks-extra-js/no-direct-set-state-in-use-effect': 'off',
-		'react-hooks-extra-js/no-unnecessary-use-prefix': 'error',
-		'react-hooks-extra-js/prefer-use-state-lazy-initialization': 'error',
+		'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
+		'react-hooks-extra/no-unnecessary-use-prefix': 'error',
+		'react-hooks-extra/prefer-use-state-lazy-initialization': 'error',
 
 		// react-you-might-not-need-an-effect
-		'react-effects-js/no-empty-effect': 'warn',
-		'react-effects-js/no-adjust-state-on-prop-change': 'warn',
-		'react-effects-js/no-reset-all-state-on-prop-change': 'warn',
-		'react-effects-js/no-event-handler': 'warn',
-		'react-effects-js/no-pass-live-state-to-parent': 'warn',
-		'react-effects-js/no-pass-data-to-parent': 'warn',
-		'react-effects-js/no-manage-parent': 'warn',
-		'react-effects-js/no-initialize-state': 'warn',
-		'react-effects-js/no-chain-state-updates': 'warn',
-		'react-effects-js/no-derived-state': 'warn',
+		'react-you-might-not-need-an-effect/no-empty-effect': 'warn',
+		'react-you-might-not-need-an-effect/no-adjust-state-on-prop-change': 'warn',
+		'react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change': 'warn',
+		'react-you-might-not-need-an-effect/no-event-handler': 'warn',
+		'react-you-might-not-need-an-effect/no-pass-live-state-to-parent': 'warn',
+		'react-you-might-not-need-an-effect/no-pass-data-to-parent': 'warn',
+		'react-you-might-not-need-an-effect/no-manage-parent': 'warn',
+		'react-you-might-not-need-an-effect/no-initialize-state': 'warn',
+		'react-you-might-not-need-an-effect/no-chain-state-updates': 'warn',
+		'react-you-might-not-need-an-effect/no-derived-state': 'warn',
 
 		'eslint/no-await-in-loop': 'error',
 		'always-return': 'allow',
@@ -112,22 +113,40 @@ export default defineConfig({
 		},
 	},
 	jsPlugins: [
-		{ name: 'tanstack-query', specifier: '@tanstack/eslint-plugin-query' },
-		{ name: 'react-compiler-js', specifier: 'eslint-plugin-react-compiler' },
+		'@tanstack/eslint-plugin-query',
+		'eslint-plugin-react-compiler',
 		{ name: 'bbplayer', specifier: './packages/eslint-plugin/index.js' },
-		{
-			name: 'react-hooks-extra-js',
-			specifier: 'eslint-plugin-react-hooks-extra',
-		},
-		{
-			name: 'react-effects-js',
-			specifier: 'eslint-plugin-react-you-might-not-need-an-effect',
-		},
+		'eslint-plugin-react-hooks-extra',
+		'eslint-plugin-react-you-might-not-need-an-effect',
 		{ name: 'drizzle-js', specifier: 'eslint-plugin-drizzle' },
+		{
+			name: 'import-alias',
+			specifier: './oxlint-plugins/import-alias.mjs',
+		},
 	],
 	overrides: [
 		{
+			files: ['apps/mobile/src/**/*.{ts,tsx,mts,cts}'],
+			rules: {
+				'import-alias/prefer-alias': [
+					'error',
+					{
+						alias: {
+							'@': './apps/mobile/src',
+						},
+						aliasForSubpaths: true,
+					},
+				],
+			},
+		},
+		{
 			files: ['packages/**/*.{ts,tsx,js,jsx}'],
+			rules: {
+				'no-console': 'allow',
+			},
+		},
+		{
+			files: ['apps/hot-update-cli/**/*.{ts,js}'],
 			rules: {
 				'no-console': 'allow',
 			},

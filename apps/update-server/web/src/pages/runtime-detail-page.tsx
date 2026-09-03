@@ -4,7 +4,6 @@ import {
 	heads as fetchChannelHeads,
 	headGroupID,
 	runtime as getRuntime,
-	type Head,
 } from '@/api'
 import { AppShell } from '@/components/app-shell'
 import { PageHeader } from '@/components/page-header'
@@ -29,24 +28,21 @@ export function RuntimeDetailPage() {
 		queryFn: () => getRuntime(runtime),
 		enabled: Boolean(runtime),
 	})
-	const channelsKey = query.data?.channels.join('\u0000') ?? ''
 	const headsQuery = useQuery({
-		queryKey: ['runtimeHeads', runtime, channelsKey],
+		queryKey: ['runtimeHeads', runtime, query.data?.channels],
 		queryFn: async () => {
 			const list = query.data?.channels ?? []
 			const rows = (
 				await Promise.all(
 					list.map(async (channel) => {
 						const items = await fetchChannelHeads(channel)
-						return items.map(
-							(item) => ({ ...item, channel }) as Head & { channel: string },
-						)
+						return items.map((item) => ({ ...item, channel }))
 					}),
 				)
 			).flat()
 			return rows.filter((item) => item.runtime_version === runtime)
 		},
-		enabled: Boolean(runtime && channelsKey),
+		enabled: Boolean(runtime && query.data?.channels?.length),
 	})
 	if (!runtime)
 		return (

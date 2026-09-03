@@ -3,7 +3,6 @@ packages:
   - apps/*/web
   - packages/*
   - packages/*/example
-
 allowBuilds:
   '@firebase/util': true
   '@sentry/cli': true
@@ -19,6 +18,6 @@ minimumReleaseAgeExclude:
   - lucide-react@1.39.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
-  metro-runtime@0.84.4: patches/metro-runtime@0.84.4.patch
-  metro@0.84.4: patches/metro@0.84.4.patch
+  metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
+  metro@0.84.5: patches/metro@0.84.5.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch

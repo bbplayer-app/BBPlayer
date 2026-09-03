@@ -50,6 +50,7 @@ async function readSavedCredentials(
 		const reason = error instanceof Error ? error.message : String(error)
 		throw new Error(
 			`Unable to read saved update credentials at ${credentialsFilePath}: ${reason}`,
+			{ cause: error },
 		)
 	}
 }

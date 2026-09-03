@@ -1,10 +1,5 @@
 import { requireNativeView } from 'expo'
-import {
-	createElement,
-	forwardRef,
-	type ComponentType,
-	type RefAttributes,
-} from 'react'
+import { createElement, forwardRef } from 'react'
 import { Platform, type NativeMethods, type ViewProps } from 'react-native'
 
 const NativeBootSplashVideoView =
@@ -40,13 +35,9 @@ export const BootSplashVideoView = forwardRef<
 			'[bbplayer/native] BootSplashVideoView is only implemented on Android.',
 		)
 	}
-	return createElement(
-		NativeBootSplashVideoView as ComponentType<
-			BootSplashVideoViewProps & RefAttributes<BootSplashVideoViewRef>
-		>,
-		{
-			...props,
-			ref,
-		},
-	)
+	return createElement(NativeBootSplashVideoView, {
+		...props,
+		// @ts-expect-error -- 不想管
+		ref,
+	})
 })

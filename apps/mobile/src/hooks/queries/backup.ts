@@ -53,7 +53,7 @@ export function useWebDavBackups(config: WebDavBackupConfig, password: string) {
 		passwordRef.current = password
 	}, [password])
 
-	// oxlint-disable tanstack-query/exhaustive-deps -- Passwords must not be cached.
+	// oxlint-disable @tanstack/query/exhaustive-deps -- Passwords must not be cached.
 	const query = useQuery({
 		// Passwords must not be included in the React Query cache key.
 		queryKey: webDavBackupQueryKeys.entries(config),
@@ -62,7 +62,7 @@ export function useWebDavBackups(config: WebDavBackupConfig, password: string) {
 		retry: false,
 		placeholderData: (previousData) => previousData,
 	})
-	// oxlint-enable tanstack-query/exhaustive-deps
+	// oxlint-enable @tanstack/query/exhaustive-deps
 
 	return query
 }

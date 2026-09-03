@@ -42,6 +42,7 @@
 		"test": "expo-module test"
 	},
 	"devDependencies": {
+		"@types/jest": "^29.5.14",
 		"expo": "57.0.18",
 		"expo-module-scripts": "^56.0.2",
 		"react": "19.2.3",

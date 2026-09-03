@@ -26,7 +26,7 @@ pre-commit:
           exit 0
         fi
 
-        pnpm oxlint --type-aware "{staged_files}" && pnpm eslint "{staged_files}"
+        pnpm oxlint --type-aware "{staged_files}"
       stage_fixed: true
     format-plain-text:
       glob: '*.{md,mdx}'

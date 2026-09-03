@@ -14,6 +14,7 @@ function resolveExpoCliPath(projectDirectory: string): string {
 		const reason = error instanceof Error ? `: ${error.message}` : ''
 		throw new Error(
 			`Unable to resolve Expo from project directory ${projectDirectory}${reason}`,
+			{ cause: error },
 		)
 	}
 }

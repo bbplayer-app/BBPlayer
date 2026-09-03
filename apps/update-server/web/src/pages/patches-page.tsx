@@ -64,7 +64,7 @@ export function PatchesPage() {
 							</Badge>
 						))}
 					</div>
-					{query.data!.length === 0 ? (
+					{query.data.length === 0 ? (
 						<EmptyState
 							title='No patches'
 							description='Deltas appear here as soon as a new update can be diffed against an older one.'
@@ -84,7 +84,7 @@ export function PatchesPage() {
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{query.data!.map((patch) => (
+									{query.data.map((patch) => (
 										<PatchRow
 											key={patch.id}
 											patch={patch}

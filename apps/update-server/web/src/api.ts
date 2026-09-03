@@ -193,13 +193,13 @@ export type PatchEndpointRef = {
 }
 export const patches = () =>
 	api<PatchEndpoint[]>('/admin/patches?limit=100')
-export const heads = (channel: string) =>
-	api<Head[]>(`/admin/channels/${encodeURIComponent(channel)}`)
+export const heads = (channelName: string) =>
+	api<Head[]>(`/admin/channels/${encodeURIComponent(channelName)}`)
 export type RollbackTarget = {
 	runtime_version: string
 	platform: 'android' | 'ios'
 	mode: 'ota' | 'embedded'
 	group_id?: string
 }
-export const rollbackChannel = (channel: string, target: RollbackTarget) =>
-	apiPost(`/admin/channels/${encodeURIComponent(channel)}/rollback`, target)
+export const rollbackChannel = (channelName: string, target: RollbackTarget) =>
+	apiPost(`/admin/channels/${encodeURIComponent(channelName)}/rollback`, target)

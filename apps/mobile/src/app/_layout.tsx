@@ -171,7 +171,7 @@ function RootLayout() {
 
 	useEffect(() => {
 		runAppInit()
-		// oxlint-disable-next-line react-effects-js/no-initialize-state, set-state-in-effect
+		// oxlint-disable-next-line react-you-might-not-need-an-effect/no-initialize-state, set-state-in-effect
 		setIsReady(true)
 	}, [])
 

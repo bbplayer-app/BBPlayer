@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import { activity, channel } from '@/api'
@@ -45,11 +45,13 @@ export function ChannelDetailPage() {
 		queryFn: () => channel(name),
 		enabled: Boolean(name),
 	})
-	const [runtime, setRuntime] = useState('')
-	useEffect(() => {
-		if (!runtime && channelQuery.data?.runtimes[0])
-			setRuntime(channelQuery.data.runtimes[0].runtime_version)
-	}, [channelQuery.data, runtime])
+	const [selectedRuntime, setSelectedRuntime] = useState('')
+	const runtimes = channelQuery.data?.runtimes ?? []
+	const runtime = runtimes.some(
+		(item) => item.runtime_version === selectedRuntime,
+	)
+		? selectedRuntime
+		: (runtimes[0]?.runtime_version ?? '')
 	const activityQuery = useQuery({
 		queryKey: ['activity', name, runtime],
 		queryFn: () => activity(name, runtime),
@@ -83,7 +85,6 @@ export function ChannelDetailPage() {
 				/>
 			</AppShell>
 		)
-	const runtimes = channelQuery.data.runtimes
 	return (
 		<AppShell active='channels'>
 			<PageHeader
@@ -100,7 +101,7 @@ export function ChannelDetailPage() {
 				<>
 					<Tabs
 						className='mb-6'
-						onValueChange={setRuntime}
+						onValueChange={setSelectedRuntime}
 						value={runtime}
 					>
 						<TabsList className='h-auto max-w-full justify-start overflow-x-auto'>

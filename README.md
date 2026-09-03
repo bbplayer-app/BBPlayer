@@ -72,7 +72,7 @@
 - **[apps/update-publisher](./apps/update-publisher)**: 用于发布更新的工具。
 - **[packages/](./packages)**: 共享库与工具包。
   - **[@bbplayer/splash](./packages/splash)**: 歌词解析与转换核心库。
-  - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 ESLint 规则。
+  - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 lint 规则（通过 oxlint jsPlugins 运行）。
   - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Media3 的音频播放引擎。
   - **[@bbplayer/logs](./packages/logs)**: 日志库。
   - **[@bbplayer/image-theme-colors](./packages/image-theme-colors)**: 封面颜色提取工具。
