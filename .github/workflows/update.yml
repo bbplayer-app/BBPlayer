@@ -8,28 +8,28 @@ jobs:
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
-
-      - name: 🤖 Setup PNPM
-        uses: pnpm/action-setup@v4
-
-      - name: 🏗 Setup Node
-        uses: actions/setup-node@v6
         with:
-          node-version: 22.x
-          cache: pnpm
+          fetch-depth: 0
 
-      - name: 🏗 Setup EAS
-        uses: expo/expo-github-action@v8
+      - uses: pnpm/setup@v2
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: pnpm
+          version: 11
+          runtime: node@26
+          cache: true
 
       - name: 📦 Install dependencies
         run: pnpm install
 
-      - name: 🚀 Create update
-        run: cd apps/mobile && eas update --auto --platform=android
+      - name: 🚀 Export and publish update
+        env:
+          BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
+        run: |
+          cd apps/mobile
+          pnpm hot-update -- publish \
+            --non-interactive \
+            --channel production \
+            --message "$(git log -1 --format=%s)"
 
       - name: 🚀 Submit source map
         run: cd apps/mobile && SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} npx sentry-expo-upload-sourcemaps dist

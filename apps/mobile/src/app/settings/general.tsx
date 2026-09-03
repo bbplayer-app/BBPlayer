@@ -100,7 +100,7 @@ export default function GeneralSettingsPage() {
 				]}
 			>
 				<View style={styles.settingRow}>
-					<Text>启动时打开{startupScreen === 'home' ? '主页' : '音乐库'}</Text>
+					<Text>启动时进入</Text>
 					<FunctionalMenu
 						visible={startupScreenMenuVisible}
 						onDismiss={() => setStartupScreenMenuVisible(false)}

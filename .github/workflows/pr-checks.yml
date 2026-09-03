@@ -12,14 +12,11 @@ jobs:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
 
-      - name: 🏗 Setup PNPM
-        uses: pnpm/action-setup@v4
-
-      - name: 🏗 Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: pnpm/setup@v2
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          version: 11
+          runtime: node@26
+          cache: true
 
       - name: 📦 Install dependencies
         run: pnpm install
@@ -28,4 +25,7 @@ jobs:
         run: pnpm check:deps
 
       - name: 🚀 Run Lint
-        run: pnpm lint
+        # 需要生成 expo router 的类型来进行类型检查
+        run: |
+          cd ./apps/mobile && npx expo customize tsconfig.json && cd ../../
+          pnpm lint

@@ -8,7 +8,7 @@ BBPlayer 是一个基于 React Native 开发的 BiliBili 流媒体音乐软件�
 
 ```bash
 pnpm install                   # Only pnpm — npm/yarn breaks workspace resolution
-pnpm lint                      # oxlint + eslint
+pnpm lint                      # oxlint
 pnpm lint:fix                  # Auto-fix
 pnpm format                    # oxfmt
 pnpm type-check             # TypeScript type checking
@@ -38,7 +38,7 @@ pnpm type-check             # TypeScript type checking
 ### /packages
 
 - bottom-tabs-react-navigation — React Native 原生底部标签栏与 React Navigation 的桥接适配层
-- eslint-plugin — 项目自定义 ESLint 规则集合
+- eslint-plugin — 项目自定义 lint 规则（经 oxlint jsPlugins 运行）
 - expo-wavy-slider — Android 原生波形滑动条（Jetpack Compose）的 Expo 模块封装
 - heatmap — 基于 SVG 的日期热力图组件
 - image-theme-colors — 从图片中提取主题色的 Expo 原生模块

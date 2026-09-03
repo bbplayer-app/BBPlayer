@@ -20,6 +20,12 @@ import { version } from './package.json'
 
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
+const UPDATE_SERVER_URL = 'https://updates.bbplayer.roitium.com'
+const UPDATE_CHANNEL = IS_DEV
+	? 'development'
+	: IS_PREVIEW
+		? 'preview'
+		: 'production'
 
 // 使用 git commit 数量作为 versionCode
 const getVersionCode = (): number => {
@@ -112,7 +118,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 			package: getUniqueIdentifier(),
 			versionCode: versionCode,
-			runtimeVersion: version,
+			runtimeVersion: { policy: 'fingerprint' },
 			intentFilters: [
 				{
 					action: 'VIEW',
@@ -282,17 +288,32 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				projectId: '1cbd8d50-e322-4ead-98b6-4ee8b6f2a707',
 			},
 			updateManifestUrl: 'https://be.bbplayer.roitium.com/update.json',
+			updateServerUrl: UPDATE_SERVER_URL,
+			updateChannel: UPDATE_CHANNEL,
 		},
 		owner: 'roitium',
 		ios: {
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {
-				policy: 'appVersion',
+				policy: 'fingerprint',
 			},
 			googleServicesFile: getGoogleServicesFile(
 				googleServicesPlistPath,
 				googleServicesPlistRealPath,
 			),
+		},
+		updates: {
+			enabled: true,
+			url: `${UPDATE_SERVER_URL}/api/manifest`,
+			requestHeaders: {
+				'expo-channel-name': UPDATE_CHANNEL,
+				// 安装级稳定 id 的占位值。expo-updates 的 setUpdateRequestHeadersOverride
+				// 只能覆盖内嵌配置里已声明的 key（不能凭空新增），且空值会被部分
+				// HTTP 栈丢弃，因此这里预置一个非空占位值；客户端启动时会把真实
+				// installation uuid 写进来（见 src/lib/services/updateTelemetry.ts），
+				// 服务端对占位值直接忽略（见 apps/update-server api_insights.go）。
+				'x-bbplayer-installation-id': 'bbplayer-unset',
+			},
 		},
 	}
 }
