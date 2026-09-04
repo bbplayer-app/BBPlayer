@@ -103,11 +103,11 @@ jobs:
           install: true
 
       - name: 🏗 Setup EAS
-        uses: expo/expo-github-action@v8
+        uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
-          packager: pnpm
+          packager: npm
 
       - name: ⚙️ Prepare Variables
         id: prepare-vars
