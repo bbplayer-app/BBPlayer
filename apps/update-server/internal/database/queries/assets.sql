@@ -2,7 +2,7 @@
 SELECT mode,group_id FROM channel_heads WHERE channel=$1 AND runtime_version=$2 AND platform=$3;
 
 -- name: GetUpdateForGroupPlatform :one
-SELECT u.id,u.launch_key,u.launch_hash,g.created_at FROM updates u JOIN update_groups g ON g.id=u.group_id WHERE u.group_id=$1 AND u.platform=$2;
+SELECT u.id,u.launch_key,u.launch_hash,g.created_at,g.expo_config FROM updates u JOIN update_groups g ON g.id=u.group_id WHERE u.group_id=$1 AND u.platform=$2;
 
 -- name: ListAssetsForUpdate :many
 SELECT id,asset_key,object_key,sha256,content_type,size_bytes,is_launch FROM assets WHERE update_id=$1 ORDER BY is_launch DESC,id;

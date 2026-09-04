@@ -79,7 +79,11 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "launch asset unavailable", 404)
 		return
 	}
-	manifest := map[string]any{"id": updateID, "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339Nano), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{}}
+	// expo-constants treats a remote update manifest as the source of its
+	// public Expo config. EAS places the config in extra.expoClient; omitting
+	// it makes Constants.expoConfig null after an OTA launch and breaks callers
+	// such as expo-linking that resolve the app scheme from that config.
+	manifest := map[string]any{"id": updateID, "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339Nano), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{"expoClient": json.RawMessage(update.ExpoConfig)}}
 	w.Header().Set("expo-protocol-version", "1")
 	w.Header().Set("expo-sfv-version", "0")
 	w.Header().Set("cache-control", "private, max-age=0")

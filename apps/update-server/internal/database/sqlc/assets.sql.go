@@ -78,7 +78,7 @@ func (q *Queries) GetGroupIDForUpdate(ctx context.Context, id pgtype.UUID) (pgty
 }
 
 const getUpdateForGroupPlatform = `-- name: GetUpdateForGroupPlatform :one
-SELECT u.id,u.launch_key,u.launch_hash,g.created_at FROM updates u JOIN update_groups g ON g.id=u.group_id WHERE u.group_id=$1 AND u.platform=$2
+SELECT u.id,u.launch_key,u.launch_hash,g.created_at,g.expo_config FROM updates u JOIN update_groups g ON g.id=u.group_id WHERE u.group_id=$1 AND u.platform=$2
 `
 
 type GetUpdateForGroupPlatformParams struct {
@@ -91,6 +91,7 @@ type GetUpdateForGroupPlatformRow struct {
 	LaunchKey  string
 	LaunchHash string
 	CreatedAt  pgtype.Timestamptz
+	ExpoConfig []byte
 }
 
 func (q *Queries) GetUpdateForGroupPlatform(ctx context.Context, arg GetUpdateForGroupPlatformParams) (GetUpdateForGroupPlatformRow, error) {
@@ -101,6 +102,7 @@ func (q *Queries) GetUpdateForGroupPlatform(ctx context.Context, arg GetUpdateFo
 		&i.LaunchKey,
 		&i.LaunchHash,
 		&i.CreatedAt,
+		&i.ExpoConfig,
 	)
 	return i, err
 }

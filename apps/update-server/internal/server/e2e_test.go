@@ -103,8 +103,13 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatalf("manifest status: %s", manifest.Status)
 	}
 	var decoded struct {
-		ID          uuid.UUID `json:"id"`
-		CreatedAt   time.Time `json:"createdAt"`
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"createdAt"`
+		Extra     struct {
+			ExpoClient struct {
+				Scheme string `json:"scheme"`
+			} `json:"expoClient"`
+		} `json:"extra"`
 		LaunchAsset struct {
 			URL  string `json:"url"`
 			Hash string `json:"hash"`
@@ -114,6 +119,9 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = manifest.Body.Close()
+	if decoded.Extra.ExpoClient.Scheme != "bbplayer" {
+		t.Fatalf("manifest expo client scheme: %q", decoded.Extra.ExpoClient.Scheme)
+	}
 	current := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Expo-Current-Update-ID": decoded.ID.String()})
 	if current.StatusCode != http.StatusNoContent || current.Header.Get("expo-protocol-version") != "1" {
 		_ = current.Body.Close()
@@ -303,7 +311,7 @@ func archive(t *testing.T) []byte {
 	var b bytes.Buffer
 	z := zip.NewWriter(&b)
 	meta := `{"fileMetadata":{"android":{"bundle":"_expo/static/js/android/index.hbc","assets":[{"path":"assets/a.png","ext":"png"}]}}}`
-	for name, data := range map[string]string{"metadata.json": meta, "expoConfig.json": `{"runtimeVersion":"1"}`, "_expo/static/js/android/index.hbc": "hermes bundle", "assets/a.png": "asset"} {
+	for name, data := range map[string]string{"metadata.json": meta, "expoConfig.json": `{"runtimeVersion":"1","scheme":"bbplayer","name":"BBPlayer"}`, "_expo/static/js/android/index.hbc": "hermes bundle", "assets/a.png": "asset"} {
 		w, err := z.Create(name)
 		if err != nil {
 			t.Fatal(err)
