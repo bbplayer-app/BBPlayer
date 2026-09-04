@@ -99,6 +99,15 @@ export async function getUpdateServerCredentials(
 	if (!serverUrl || !accessToken) {
 		throw new Error('--server and --token are required')
 	}
+	const serverUrlProtocol = new URL(serverUrl).protocol
+	const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(
+		serverUrl,
+	)
+	if (serverUrlProtocol !== 'https:' && !isLocalhost) {
+		throw new Error(
+			'--server must use https:// to avoid transmitting the bearer token in plaintext',
+		)
+	}
 
 	const credentials = {
 		serverUrl: serverUrl.replace(/\/$/, ''),
