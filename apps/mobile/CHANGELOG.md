@@ -5,16 +5,16 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.6.5] - 2026-09-04
 
 ### Added
 
 - 支持通过 WebDAV 手动备份和恢复本地歌单与应用设置
+- 使用自己开发的热更新后端
 
 ### Changed
 
 - 集成 expo-observer navigation matrics
-- 移除 expo-updates
 - 使用 `react-native-nitro-fetch` 替换内置 fetch
 - 彻底移除弹幕相关代码
 - 备份格式升级至 v2；旧版本备份不再支持导入
@@ -236,7 +236,7 @@
 - 状态栏歌词
 - 导出歌曲
 
-## [2.3.2] - 2023-02-25
+## [2.3.2] - 2026-02-25
 
 ### Added
 
@@ -616,7 +616,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.4...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.5...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -645,3 +645,4 @@
 [2.6.1]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.0...v2.6.1
 [2.6.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.1...v2.6.2
 [2.6.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.2...v2.6.4
+[2.6.5]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.4...v2.6.5

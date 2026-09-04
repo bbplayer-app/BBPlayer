@@ -40,11 +40,9 @@ import {
 } from '@/lib/services/updateTelemetry'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
-import { toastAndLogError } from '@/utils/error-handling'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import { isActuallyOffline } from '@/utils/network'
-import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
 
@@ -183,17 +181,22 @@ function RootLayout() {
 			return
 		}
 
-		Updates.checkForUpdateAsync()
-			.then((result) => {
-				if (result.isAvailable) {
-					toast.show('有新的热更新，将在下次启动时应用', {
-						id: 'update',
-					})
-				}
-			})
-			.catch((error: Error) => {
-				toastAndLogError('检测更新失败', error, 'UI.RootLayout')
-			})
+		const listener = AppState.addEventListener('focus', () => {
+			Updates.checkForUpdateAsync()
+				.then((result) => {
+					if (result.isAvailable) {
+						logger.debug('有新的热更新，开始下载', result)
+						Updates.fetchUpdateAsync().catch((e) => {
+							logger.error('热更新下载失败', e)
+						})
+					}
+				})
+				.catch((error: Error) => {
+					logger.error('检查热更新失败', error)
+				})
+		})
+
+		return () => listener.remove()
 	}, [])
 
 	useEffect(() => {
