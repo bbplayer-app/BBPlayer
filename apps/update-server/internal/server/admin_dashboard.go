@@ -65,28 +65,41 @@ type adminDashboardUpdateInput struct {
 	ID uuid.UUID `path:"id"`
 }
 type adminDashboardPlatformUpdate struct {
-	ID             uuid.UUID `json:"id"`
-	Platform       string    `json:"platform"`
-	LaunchKey      string    `json:"launch_key"`
-	LaunchHash     string    `json:"launch_hash"`
-	LaunchSize     int64     `json:"launch_size"`
-	FullDownloads  int64     `json:"full_downloads"`
-	PatchDownloads int64     `json:"patch_downloads"`
-	KnownLaunches  int64     `json:"known_launches"`
-	KnownCrashes   int64     `json:"known_crashes"`
+	ID             uuid.UUID             `json:"id"`
+	Platform       string                `json:"platform"`
+	LaunchKey      string                `json:"launch_key"`
+	LaunchHash     string                `json:"launch_hash"`
+	LaunchSize     int64                 `json:"launch_size"`
+	FullDownloads  int64                 `json:"full_downloads"`
+	PatchDownloads int64                 `json:"patch_downloads"`
+	KnownLaunches  int64                 `json:"known_launches"`
+	KnownCrashes   int64                 `json:"known_crashes"`
+	Patches        []adminDashboardPatch `json:"patches"`
+}
+type adminDashboardPatch struct {
+	ID           int64     `json:"id"`
+	FromUpdateID uuid.UUID `json:"from_update_id"`
+	FromGroupID  uuid.UUID `json:"from_group_id"`
+	FromMessage  string    `json:"from_message"`
+	Status       string    `json:"status"`
+	SizeBytes    *int64    `json:"size_bytes,omitempty"`
+	Attempts     int32     `json:"attempts"`
+	Error        *string   `json:"error,omitempty"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 type adminDashboardUpdateOutput struct {
 	Body struct {
-		ID                 uuid.UUID                      `json:"id"`
-		Channel            string                         `json:"channel"`
-		RuntimeVersion     string                         `json:"runtime_version"`
-		AppVersion         string                         `json:"app_version"`
-		Message            string                         `json:"message"`
-		CreatedAt          time.Time                      `json:"created_at"`
-		Source             json.RawMessage                `json:"source"`
-		FingerprintHash    *string                        `json:"fingerprint_hash,omitempty"`
-		FingerprintSources json.RawMessage                `json:"fingerprint_sources"`
-		Platforms          []adminDashboardPlatformUpdate `json:"platforms"`
+		ID                      uuid.UUID                      `json:"id"`
+		Channel                 string                         `json:"channel"`
+		RuntimeVersion          string                         `json:"runtime_version"`
+		AppVersion              string                         `json:"app_version"`
+		Message                 string                         `json:"message"`
+		CreatedAt               time.Time                      `json:"created_at"`
+		Source                  json.RawMessage                `json:"source"`
+		FingerprintHash         *string                        `json:"fingerprint_hash,omitempty"`
+		RepublishedFromUpdateID *uuid.UUID                     `json:"republished_from_update_id,omitempty"`
+		FingerprintSources      json.RawMessage                `json:"fingerprint_sources"`
+		Platforms               []adminDashboardPlatformUpdate `json:"platforms"`
 	}
 }
 
@@ -254,12 +267,39 @@ func (s *Server) dashboardUpdate(ctx context.Context, input *adminDashboardUpdat
 		value := group.FingerprintHash.String
 		out.Body.FingerprintHash = &value
 	}
+	if group.RepublishedFromUpdateID.Valid {
+		value := uuid.UUID(group.RepublishedFromUpdateID.Bytes)
+		out.Body.RepublishedFromUpdateID = &value
+	}
 	rows, err := s.DB.Queries.ListDashboardUpdatePlatforms(ctx, pgtype.UUID{Bytes: [16]byte(input.ID), Valid: true})
 	if err != nil {
 		return nil, s.dbError("dashboard: update platforms", err)
 	}
+	platformIndex := make(map[uuid.UUID]int, len(rows))
 	for _, row := range rows {
-		out.Body.Platforms = append(out.Body.Platforms, adminDashboardPlatformUpdate{ID: uuid.UUID(row.ID.Bytes), Platform: row.Platform, LaunchKey: row.LaunchKey, LaunchHash: row.LaunchHash, LaunchSize: row.SizeBytes, FullDownloads: row.FullDownloads, PatchDownloads: row.PatchDownloads, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes})
+		updateID := uuid.UUID(row.ID.Bytes)
+		platformIndex[updateID] = len(out.Body.Platforms)
+		out.Body.Platforms = append(out.Body.Platforms, adminDashboardPlatformUpdate{ID: updateID, Platform: row.Platform, LaunchKey: row.LaunchKey, LaunchHash: row.LaunchHash, LaunchSize: row.SizeBytes, FullDownloads: row.FullDownloads, PatchDownloads: row.PatchDownloads, KnownLaunches: row.KnownLaunches, KnownCrashes: row.KnownCrashes, Patches: []adminDashboardPatch{}})
+	}
+	patches, err := s.DB.Queries.ListDashboardUpdatePatches(ctx, pgUUID(&input.ID))
+	if err != nil {
+		return nil, s.dbError("dashboard: update patches", err)
+	}
+	for _, row := range patches {
+		index, exists := platformIndex[uuid.UUID(row.ToUpdateID.Bytes)]
+		if !exists {
+			continue
+		}
+		patch := adminDashboardPatch{ID: row.ID, FromUpdateID: uuid.UUID(row.FromUpdateID.Bytes), FromGroupID: uuid.UUID(row.FromGroupID.Bytes), FromMessage: row.FromMessage, Status: row.Status, Attempts: row.Attempts, UpdatedAt: row.UpdatedAt.Time}
+		if row.SizeBytes.Valid {
+			value := row.SizeBytes.Int64
+			patch.SizeBytes = &value
+		}
+		if row.Error.Valid {
+			value := row.Error.String
+			patch.Error = &value
+		}
+		out.Body.Platforms[index].Patches = append(out.Body.Platforms[index].Patches, patch)
 	}
 	return out, nil
 }

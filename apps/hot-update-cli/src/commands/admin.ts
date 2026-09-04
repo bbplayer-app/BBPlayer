@@ -29,17 +29,24 @@ export async function runAdminCommand(
 		)
 		return writeResult(
 			argumentsMap,
-			await requestUpdateServer(argumentsMap, 'GET', `/admin/updates/${groupId}`),
+			await requestUpdateServer(
+				argumentsMap,
+				'GET',
+				`/admin/updates/${groupId}`,
+			),
 		)
 	}
 	if (commandName === 'channel') return await runChannelCommand(argumentsMap)
-	if (commandName === 'rollback') return await runRollbackCommand(argumentsMap)
+	if (commandName === 'republish')
+		return await runRepublishCommand(argumentsMap)
 	if (commandName === 'source') return await runSourceCommand(argumentsMap)
 	if (commandName === 'insights') return await runInsightsCommand(argumentsMap)
 	throw new Error(`Unknown command: ${commandName}`)
 }
 
-async function runChannelCommand(argumentsMap: CommandArguments): Promise<void> {
+async function runChannelCommand(
+	argumentsMap: CommandArguments,
+): Promise<void> {
 	const action = String(
 		argumentsMap.action ??
 			(!argumentsMap['non-interactive']
@@ -55,15 +62,22 @@ async function runChannelCommand(argumentsMap: CommandArguments): Promise<void> 
 	const channelName =
 		action === 'list'
 			? ''
-			: String(argumentsMap.channel ?? (await promptForRequiredValue('Channel')))
+			: String(
+					argumentsMap.channel ?? (await promptForRequiredValue('Channel')),
+				)
 	const path =
 		action === 'list'
 			? '/admin/channels'
 			: `/admin/channels/${encodeURIComponent(channelName)}${action === 'history' ? '/history' : ''}`
-	writeResult(argumentsMap, await requestUpdateServer(argumentsMap, 'GET', path))
+	writeResult(
+		argumentsMap,
+		await requestUpdateServer(argumentsMap, 'GET', path),
+	)
 }
 
-async function runRollbackCommand(argumentsMap: CommandArguments): Promise<void> {
+async function runRepublishCommand(
+	argumentsMap: CommandArguments,
+): Promise<void> {
 	const channelName = String(
 		argumentsMap.channel ?? (await promptForRequiredValue('Channel')),
 	)
@@ -71,21 +85,23 @@ async function runRollbackCommand(argumentsMap: CommandArguments): Promise<void>
 		argumentsMap['runtime-version'] ??
 			(await promptForRequiredValue('Runtime version')),
 	)
-	const isEmbedded = argumentsMap.embedded === true
-	const groupId = isEmbedded
-		? ''
-		: String(argumentsMap.to ?? (await promptForRequiredValue('Target group ID')))
+	const groupId = String(
+		argumentsMap.to ?? (await promptForRequiredValue('Source group ID')),
+	)
+	const message = String(
+		argumentsMap.message ?? (await promptForRequiredValue('New update name')),
+	)
 	writeResult(
 		argumentsMap,
 		await requestUpdateServer(
 			argumentsMap,
 			'POST',
-			`/admin/channels/${encodeURIComponent(channelName)}/rollback`,
+			`/admin/channels/${encodeURIComponent(channelName)}/republish`,
 			{
 				runtime_version: runtimeVersion,
 				platform: argumentsMap.platform ?? 'android',
-				mode: isEmbedded ? 'embedded' : 'ota',
 				group_id: groupId,
+				message,
 			},
 		),
 	)
@@ -106,10 +122,15 @@ async function runSourceCommand(argumentsMap: CommandArguments): Promise<void> {
 		action === 'compare'
 			? `/admin/source/compare/${argumentsMap.from ?? (await promptForRequiredValue('From group'))}/${argumentsMap.to ?? (await promptForRequiredValue('To group'))}`
 			: `/admin/source/${argumentsMap.commit ?? (await promptForRequiredValue('Commit SHA'))}`
-	writeResult(argumentsMap, await requestUpdateServer(argumentsMap, 'GET', path))
+	writeResult(
+		argumentsMap,
+		await requestUpdateServer(argumentsMap, 'GET', path),
+	)
 }
 
-async function runInsightsCommand(argumentsMap: CommandArguments): Promise<void> {
+async function runInsightsCommand(
+	argumentsMap: CommandArguments,
+): Promise<void> {
 	const query = new URLSearchParams()
 	for (const argumentName of [
 		'channel',
@@ -118,7 +139,8 @@ async function runInsightsCommand(argumentsMap: CommandArguments): Promise<void>
 		'group_id',
 	]) {
 		const argumentValue = argumentsMap[argumentName]
-		if (typeof argumentValue === 'string') query.set(argumentName, argumentValue)
+		if (typeof argumentValue === 'string')
+			query.set(argumentName, argumentValue)
 	}
 	writeResult(
 		argumentsMap,

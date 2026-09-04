@@ -79,7 +79,7 @@ func (s *Server) manifest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "launch asset unavailable", 404)
 		return
 	}
-	manifest := map[string]any{"id": updateID, "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{}}
+	manifest := map[string]any{"id": updateID, "createdAt": update.CreatedAt.Time.UTC().Format(time.RFC3339Nano), "runtimeVersion": runtime, "launchAsset": launch, "assets": assets, "metadata": map[string]string{"channel": channel}, "extra": map[string]any{}}
 	w.Header().Set("expo-protocol-version", "1")
 	w.Header().Set("expo-sfv-version", "0")
 	w.Header().Set("cache-control", "private, max-age=0")

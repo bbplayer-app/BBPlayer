@@ -50,19 +50,20 @@ func (q *Queries) InsertUpdate(ctx context.Context, arg InsertUpdateParams) erro
 }
 
 const insertUpdateGroup = `-- name: InsertUpdateGroup :exec
-INSERT INTO update_groups(id,channel,runtime_version,message,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+INSERT INTO update_groups(id,channel,runtime_version,message,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256,republished_from_update_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 `
 
 type InsertUpdateGroupParams struct {
-	ID                 pgtype.UUID
-	Channel            string
-	RuntimeVersion     string
-	Message            string
-	Source             []byte
-	FingerprintHash    pgtype.Text
-	FingerprintSources []byte
-	ExpoConfig         []byte
-	MetadataSha256     string
+	ID                      pgtype.UUID
+	Channel                 string
+	RuntimeVersion          string
+	Message                 string
+	Source                  []byte
+	FingerprintHash         pgtype.Text
+	FingerprintSources      []byte
+	ExpoConfig              []byte
+	MetadataSha256          string
+	RepublishedFromUpdateID pgtype.UUID
 }
 
 func (q *Queries) InsertUpdateGroup(ctx context.Context, arg InsertUpdateGroupParams) error {
@@ -76,6 +77,7 @@ func (q *Queries) InsertUpdateGroup(ctx context.Context, arg InsertUpdateGroupPa
 		arg.FingerprintSources,
 		arg.ExpoConfig,
 		arg.MetadataSha256,
+		arg.RepublishedFromUpdateID,
 	)
 	return err
 }

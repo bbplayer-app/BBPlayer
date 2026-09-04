@@ -12,7 +12,7 @@ const COMMAND_NAMES = [
 	'list',
 	'show',
 	'channel',
-	'rollback',
+	'republish',
 	'source',
 	'insights',
 ] as const

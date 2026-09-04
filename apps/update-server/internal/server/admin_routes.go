@@ -20,7 +20,7 @@ func configureAdminOpenAPI(api huma.API) {
 	}
 	api.OpenAPI().Tags = []*huma.Tag{
 		{Name: "Updates", Description: "Published Expo update groups."},
-		{Name: "Channels", Description: "Channel heads and rollback history."},
+		{Name: "Channels", Description: "Channel heads and republish history."},
 		{Name: "Source", Description: "Git provenance for published updates."},
 		{Name: "Insights", Description: "Client activity and update lifecycle metrics."},
 		{Name: "Metrics", Description: "Service and update-delivery metrics."},

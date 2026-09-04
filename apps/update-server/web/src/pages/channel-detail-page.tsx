@@ -227,7 +227,7 @@ export function ChannelDetailPage() {
 														value={item.head_group_id}
 													/>
 												) : (
-													'Embedded'
+													<StatusBadge value='embedded' />
 												)}
 											</TableCell>
 											<TableCell className='hidden text-muted-foreground xl:table-cell'>

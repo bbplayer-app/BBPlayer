@@ -2,10 +2,10 @@
 SELECT COALESCE(source->>'commit_sha', '')::text AS commit_sha FROM channel_heads h JOIN update_groups g ON g.id=h.group_id WHERE h.channel=$1 AND h.runtime_version=$2 AND h.mode='ota' ORDER BY h.updated_at DESC LIMIT 1;
 
 -- name: ListUpdateGroups :many
-SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash FROM update_groups ORDER BY created_at DESC LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash,republished_from_update_id FROM update_groups ORDER BY created_at DESC LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
 -- name: GetUpdateGroup :one
-SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256,status FROM update_groups WHERE id=$1;
+SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256,status,republished_from_update_id FROM update_groups WHERE id=$1;
 
 -- name: FindGroupsByCommit :many
 SELECT id,channel,runtime_version,message,created_at FROM update_groups WHERE source->>'commit_sha'=sqlc.arg(commit_sha)::text ORDER BY created_at DESC;

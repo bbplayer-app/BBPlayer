@@ -16,5 +16,14 @@ SELECT day, COALESCE(group_id::text,'')::text AS group_id, count(DISTINCT instal
 -- name: ListDashboardUpdatePlatforms :many
 SELECT u.id,u.platform,u.launch_key,u.launch_hash,a.size_bytes,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='launch_bundle') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS full_downloads,COALESCE((SELECT sum(m.request_count) FILTER (WHERE m.kind='patch') FROM delivery_metric_minutes m WHERE m.group_id=u.group_id AND m.platform=u.platform AND m.outcome='served'),0)::bigint AS patch_downloads,(SELECT count(*) FROM known_update_launches l WHERE l.group_id=u.group_id AND l.platform=u.platform) AS known_launches,(SELECT count(*) FROM known_update_crashes c WHERE c.group_id=u.group_id AND c.platform=u.platform) AS known_crashes FROM updates u JOIN assets a ON a.update_id=u.id AND a.is_launch WHERE u.group_id=$1 ORDER BY u.platform;
 
+-- name: ListDashboardUpdatePatches :many
+SELECT p.id,p.to_update_id,p.from_update_id,p.platform,p.status,p.size_bytes,p.attempts,p.error,p.updated_at,fu.group_id AS from_group_id,fug.message AS from_message
+FROM patches p
+JOIN updates tu ON tu.id=p.to_update_id
+JOIN updates fu ON fu.id=p.from_update_id
+JOIN update_groups fug ON fug.id=fu.group_id
+WHERE tu.group_id=$1
+ORDER BY p.platform,p.created_at DESC;
+
 -- name: ListDashboardUpdateAssets :many
 SELECT a.id,a.asset_key,a.content_type,a.size_bytes,a.is_launch FROM updates u JOIN assets a ON a.update_id=u.id WHERE u.group_id=$1 AND u.platform=$2 ORDER BY a.is_launch DESC,a.size_bytes DESC;

@@ -3,7 +3,7 @@ import {
 	useQueryClient,
 	type QueryClient,
 } from '@tanstack/react-query'
-import { MoreHorizontalIcon, RotateCcwIcon } from 'lucide-react'
+import { MoreHorizontalIcon, RotateCcwIcon, Undo2Icon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
@@ -13,7 +13,8 @@ import {
 	headGroupID,
 	heads,
 	lifecycle,
-	rollbackChannel,
+	republishChannel,
+	setChannelEmbedded,
 	type Detail,
 	type Head,
 } from '@/api'
@@ -52,6 +53,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import {
 	Table,
 	TableBody,
@@ -91,7 +93,8 @@ export function UpdateDetailPage() {
 		enabled: Boolean(channel),
 	})
 	const queryClient = useQueryClient()
-	const [rollbackOpen, setRollbackOpen] = useState(false)
+	const [republishOpen, setRepublishOpen] = useState(false)
+	const [embeddedOpen, setEmbeddedOpen] = useState(false)
 	const lifecycleQuery = useQuery({
 		queryKey: ['lifecycle', id],
 		queryFn: () => lifecycle(id),
@@ -142,28 +145,50 @@ export function UpdateDetailPage() {
 							<DropdownMenuItem
 								disabled={!update.channel || update.platforms.length === 0}
 								variant='destructive'
-								onSelect={() => setRollbackOpen(true)}
+								onSelect={() => setRepublishOpen(true)}
 							>
 								<RotateCcwIcon />
 								{!update.channel
-									? 'Roll back (requires a channel)'
+									? 'Republish (requires a channel)'
 									: update.platforms.length === 0
-										? 'Roll back (no platform updates)'
-										: 'Roll back to this update'}
+										? 'Republish (no platform updates)'
+										: 'Republish this update'}
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								disabled={!update.channel || update.platforms.length === 0}
+								variant='destructive'
+								onSelect={() => setEmbeddedOpen(true)}
+							>
+								<Undo2Icon />
+								{!update.channel
+									? 'Revert to embedded bundle (requires a channel)'
+									: update.platforms.length === 0
+										? 'Revert to embedded bundle (no platform updates)'
+										: 'Revert to embedded bundle'}
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				}
 			/>
 			{update.channel && (
-				<RollbackDialog
-					headsQueryData={channelHeadsQuery.data}
-					headsQueryPending={channelHeadsQuery.isPending}
-					onOpenChange={setRollbackOpen}
-					open={rollbackOpen}
-					queryClient={queryClient}
-					update={update}
-				/>
+				<>
+					<RepublishDialog
+						headsQueryData={channelHeadsQuery.data}
+						headsQueryPending={channelHeadsQuery.isPending}
+						onOpenChange={setRepublishOpen}
+						open={republishOpen}
+						queryClient={queryClient}
+						update={update}
+					/>
+					<EmbeddedDialog
+						headsQueryData={channelHeadsQuery.data}
+						headsQueryPending={channelHeadsQuery.isPending}
+						onOpenChange={setEmbeddedOpen}
+						open={embeddedOpen}
+						queryClient={queryClient}
+						update={update}
+					/>
+				</>
 			)}
 			<Card>
 				<CardHeader>
@@ -219,6 +244,22 @@ export function UpdateDetailPage() {
 							)
 						}
 					/>
+					{update.republished_from_update_id && (
+						<Info
+							label='Publication'
+							value={
+								<div className='flex flex-wrap items-center gap-2'>
+									<Badge variant='secondary'>Republished</Badge>
+									<a
+										className='text-xs font-medium text-primary underline underline-offset-4 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+										href={`/updates/detail.html?id=${encodeURIComponent(update.republished_from_update_id)}`}
+									>
+										View original update group
+									</a>
+								</div>
+							}
+						/>
+					)}
 				</CardContent>
 			</Card>
 			<section className='mt-8'>
@@ -487,9 +528,9 @@ function HeadLabel({
 	)
 }
 
-type RollbackOutcome = { platform: string; ok: boolean; message?: string }
+type RepublishOutcome = { platform: string; ok: boolean; message?: string }
 
-function RollbackDialog({
+function RepublishDialog({
 	update,
 	headsQueryData,
 	headsQueryPending,
@@ -506,7 +547,8 @@ function RollbackDialog({
 }) {
 	const channel = update.channel
 	const [running, setRunning] = useState(false)
-	const [outcomes, setOutcomes] = useState<RollbackOutcome[] | null>(null)
+	const [message, setMessage] = useState(`Republish ${update.message}`)
+	const [outcomes, setOutcomes] = useState<RepublishOutcome[] | null>(null)
 	const rows = update.platforms.map((item) => ({
 		platform: item.platform,
 		head: findHead(headsQueryData, update.runtime_version, item.platform),
@@ -520,21 +562,21 @@ function RollbackDialog({
 		if (!channel) return
 		setRunning(true)
 		setOutcomes([])
-		const result: RollbackOutcome[] = []
+		const result: RepublishOutcome[] = []
 		for (const row of actionable) {
 			try {
-				await rollbackChannel(channel, {
+				await republishChannel(channel, {
 					runtime_version: update.runtime_version,
 					platform: row.platform,
-					mode: 'ota',
 					group_id: update.id,
+					message: message.trim(),
 				})
 				result.push({ platform: row.platform, ok: true })
 			} catch (error) {
 				result.push({
 					platform: row.platform,
 					ok: false,
-					message: error instanceof Error ? error.message : 'Rollback failed',
+					message: error instanceof Error ? error.message : 'Republish failed',
 				})
 			}
 		}
@@ -557,20 +599,34 @@ function RollbackDialog({
 		>
 			<DialogContent showCloseButton={!running}>
 				<DialogHeader>
-					<DialogTitle>Roll back to this update</DialogTitle>
+					<DialogTitle>Republish this update</DialogTitle>
 					<DialogDescription>
-						Point the {channel} channel back to this update group. Clients
-						running runtime {update.runtime_version} will receive this release
-						again on their next update check. Nothing is deleted.
+						Create a new update from this historical release for the {channel}{' '}
+						channel. Clients running runtime {update.runtime_version} can then
+						apply it normally. Existing R2 objects are reused.
 					</DialogDescription>
 				</DialogHeader>
+				<div className='grid gap-2'>
+					<label
+						className='text-sm font-medium'
+						htmlFor='republish-message'
+					>
+						New update name
+					</label>
+					<Input
+						id='republish-message'
+						maxLength={200}
+						value={message}
+						onChange={(event) => setMessage(event.target.value)}
+					/>
+				</div>
 				<div className='overflow-hidden rounded-xl border'>
 					<Table>
 						<TableHeader>
 							<TableRow>
 								<TableHead>Platform</TableHead>
 								<TableHead>Current head</TableHead>
-								<TableHead>After rollback</TableHead>
+								<TableHead>After republish</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -633,7 +689,7 @@ function RollbackDialog({
 				</div>
 				{failed && failed.length > 0 && (
 					<p className='text-sm text-destructive'>
-						Rollback failed on {failed.length}{' '}
+						Republish failed on {failed.length}{' '}
 						{failed.length === 1 ? 'platform' : 'platforms'}. Other platforms
 						were updated.
 					</p>
@@ -658,7 +714,183 @@ function RollbackDialog({
 							variant='destructive'
 						>
 							<RotateCcwIcon />
-							Rolling back…
+							Republishing…
+						</Button>
+					) : outcomes === null ? (
+						<Button
+							disabled={
+								pending || actionable.length === 0 || message.trim() === ''
+							}
+							variant='destructive'
+							onClick={() => void run()}
+						>
+							<RotateCcwIcon />
+							{`Republish to ${actionable.length} platform${actionable.length === 1 ? '' : 's'}`}
+						</Button>
+					) : (
+						<Button onClick={() => onOpenChange(false)}>Done</Button>
+					)}
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
+function EmbeddedDialog({
+	update,
+	headsQueryData,
+	headsQueryPending,
+	open,
+	onOpenChange,
+	queryClient,
+}: {
+	update: Detail
+	headsQueryData: Head[] | undefined
+	headsQueryPending: boolean
+	open: boolean
+	onOpenChange: (value: boolean) => void
+	queryClient: QueryClient
+}) {
+	const channel = update.channel
+	const [running, setRunning] = useState(false)
+	const [outcomes, setOutcomes] = useState<RepublishOutcome[] | null>(null)
+	const rows = update.platforms.map((item) => ({
+		platform: item.platform,
+		head: findHead(headsQueryData, update.runtime_version, item.platform),
+	}))
+	const actionable = rows.filter((row) => row.head?.mode !== 'embedded')
+	const pending = headsQueryPending || headsQueryData === undefined
+
+	async function run() {
+		if (!channel) return
+		setRunning(true)
+		setOutcomes([])
+		const result: RepublishOutcome[] = []
+		for (const row of actionable) {
+			try {
+				await setChannelEmbedded(channel, {
+					runtime_version: update.runtime_version,
+					platform: row.platform,
+					group_id: update.id,
+				})
+				result.push({ platform: row.platform, ok: true })
+			} catch (error) {
+				result.push({
+					platform: row.platform,
+					ok: false,
+					message:
+						error instanceof Error
+							? error.message
+							: 'Revert to embedded bundle failed',
+				})
+			}
+		}
+		setOutcomes(result)
+		setRunning(false)
+		void queryClient.invalidateQueries({ queryKey: ['heads', channel] })
+		void queryClient.invalidateQueries({ queryKey: ['channel', channel] })
+	}
+
+	const failed = outcomes?.filter((outcome) => !outcome.ok)
+	return (
+		<Dialog
+			open={open}
+			onOpenChange={(value) => {
+				if (running) return
+				onOpenChange(value)
+				setOutcomes(null)
+			}}
+		>
+			<DialogContent showCloseButton={!running}>
+				<DialogHeader>
+					<DialogTitle>Revert to embedded bundle</DialogTitle>
+					<DialogDescription>
+						Stop serving this OTA update on the {channel} channel. Clients on
+						runtime {update.runtime_version} receive Expo&apos;s embedded-bundle
+						directive on their next update check.
+					</DialogDescription>
+				</DialogHeader>
+				<div className='overflow-hidden rounded-xl border'>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Platform</TableHead>
+								<TableHead>Current head</TableHead>
+								<TableHead>After revert</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{rows.map((row) => {
+								const outcome = outcomes?.find(
+									(item) => item.platform === row.platform,
+								)
+								return (
+									<TableRow key={row.platform}>
+										<TableCell>
+											<Badge
+												variant='secondary'
+												className='capitalize'
+											>
+												{row.platform}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											{pending ? (
+												<span className='text-xs text-muted-foreground'>
+													Checking…
+												</span>
+											) : (
+												<HeadLabel
+													groupId={update.id}
+													head={row.head}
+												/>
+											)}
+										</TableCell>
+										<TableCell>
+											{row.head?.mode === 'embedded' || outcome?.ok ? (
+												<StatusBadge value='embedded' />
+											) : outcome ? (
+												<span className='text-xs text-destructive'>
+													{outcome.message}
+												</span>
+											) : (
+												<StatusBadge value='embedded' />
+											)}
+										</TableCell>
+									</TableRow>
+								)
+							})}
+						</TableBody>
+					</Table>
+				</div>
+				{failed && failed.length > 0 && (
+					<p className='text-sm text-destructive'>
+						Revert failed on {failed.length}{' '}
+						{failed.length === 1 ? 'platform' : 'platforms'}. Other platforms
+						were updated.
+					</p>
+				)}
+				{!pending && actionable.length === 0 && !outcomes && (
+					<p className='text-sm text-muted-foreground'>
+						Every platform in this update group already uses its embedded
+						bundle.
+					</p>
+				)}
+				<DialogFooter>
+					<Button
+						disabled={running}
+						variant='outline'
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					{running ? (
+						<Button
+							disabled
+							variant='destructive'
+						>
+							<Undo2Icon />
+							Reverting…
 						</Button>
 					) : outcomes === null ? (
 						<Button
@@ -666,8 +898,8 @@ function RollbackDialog({
 							variant='destructive'
 							onClick={() => void run()}
 						>
-							<RotateCcwIcon />
-							{`Roll back ${actionable.length} platform${actionable.length === 1 ? '' : 's'}`}
+							<Undo2Icon />
+							{`Revert ${actionable.length} platform${actionable.length === 1 ? '' : 's'}`}
 						</Button>
 					) : (
 						<Button onClick={() => onOpenChange(false)}>Done</Button>
@@ -718,7 +950,7 @@ function AssetPanel({
 			<CardHeader>
 				<CardTitle>Assets</CardTitle>
 				<CardDescription>
-					Bundles and immutable files delivered for this update.
+					Launch bundles, bsdiff generation, and immutable static files.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -739,6 +971,7 @@ function AssetPanel({
 							key={item.platform}
 							value={item.platform}
 						>
+							<BundleList platform={item} />
 							<Assets
 								id={id}
 								platform={item.platform}
@@ -749,6 +982,110 @@ function AssetPanel({
 			</CardContent>
 		</Card>
 	)
+}
+
+function BundleList({ platform }: { platform: Detail['platforms'][number] }) {
+	return (
+		<section className='mt-4'>
+			<div className='mb-3 flex items-center gap-2'>
+				<h3 className='text-sm font-semibold'>Bundles</h3>
+				<Badge variant='secondary'>{platform.patches.length + 1}</Badge>
+			</div>
+			<div className='overflow-hidden rounded-lg border'>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Bundle</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className='text-right'>Size</TableHead>
+							<TableHead className='hidden lg:table-cell'>Result</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						<TableRow>
+							<TableCell className='max-w-48'>
+								<p className='truncate font-medium'>Launch bundle</p>
+								<p
+									className='mt-1 truncate font-mono text-xs text-muted-foreground'
+									title={platform.launch_key}
+								>
+									{platform.launch_key}
+								</p>
+							</TableCell>
+							<TableCell>
+								<Badge variant='secondary'>Full bundle</Badge>
+							</TableCell>
+							<TableCell className='text-right tabular-nums'>
+								{bytes(platform.launch_size)}
+							</TableCell>
+							<TableCell className='hidden text-muted-foreground lg:table-cell'>
+								Ready to serve
+							</TableCell>
+						</TableRow>
+						{platform.patches.map((patch) => (
+							<TableRow key={patch.id}>
+								<TableCell className='max-w-48'>
+									<p className='truncate font-medium'>bsdiff patch</p>
+									<p
+										className='mt-1 truncate text-xs text-muted-foreground'
+										title={patch.from_message || patch.from_update_id}
+									>
+										From {patch.from_message || patch.from_update_id}
+									</p>
+								</TableCell>
+								<TableCell>
+									<PatchStatusBadge status={patch.status} />
+								</TableCell>
+								<TableCell className='text-right tabular-nums'>
+									{patch.size_bytes === undefined
+										? '—'
+										: bytes(patch.size_bytes)}
+								</TableCell>
+								<TableCell className='hidden text-xs text-muted-foreground lg:table-cell'>
+									<PatchResult
+										launchSize={platform.launch_size}
+										patch={patch}
+									/>
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</section>
+	)
+}
+
+function PatchStatusBadge({
+	status,
+}: {
+	status: Detail['platforms'][number]['patches'][number]['status']
+}) {
+	const meta = {
+		pending: { label: 'Pending', variant: 'secondary' },
+		processing: { label: 'Processing', variant: 'outline' },
+		ready: { label: 'Ready', variant: 'default' },
+		failed: { label: 'Failed', variant: 'destructive' },
+		not_beneficial: { label: 'Not beneficial', variant: 'outline' },
+	} as const
+	return <Badge variant={meta[status].variant}>{meta[status].label}</Badge>
+}
+
+function PatchResult({
+	patch,
+	launchSize,
+}: {
+	patch: Detail['platforms'][number]['patches'][number]
+	launchSize: number
+}) {
+	if (patch.status === 'ready' && patch.size_bytes !== undefined) {
+		return `Saves ${percent(Math.max(0, 1 - patch.size_bytes / launchSize))}`
+	}
+	if (patch.error) return patch.error
+	if (patch.status === 'processing')
+		return `Generating · attempt ${patch.attempts}`
+	if (patch.status === 'pending') return 'Waiting for worker'
+	return 'Skipped'
 }
 
 function Assets({ id, platform }: { id: string; platform: string }) {
@@ -765,46 +1102,51 @@ function Assets({ id, platform }: { id: string; platform: string }) {
 				retry={() => void query.refetch()}
 			/>
 		)
-	if (query.data.length === 0)
+	const staticAssets = query.data.filter((asset) => !asset.is_launch)
+	if (staticAssets.length === 0)
 		return (
-			<EmptyState
-				title='No assets'
-				description='No stored assets were returned for this platform.'
-			/>
+			<section className='mt-6'>
+				<div className='mb-3 flex items-center gap-2'>
+					<h3 className='text-sm font-semibold'>Assets</h3>
+					<Badge variant='secondary'>0</Badge>
+				</div>
+				<EmptyState
+					title='No static assets'
+					description='This platform only contains its launch bundle.'
+				/>
+			</section>
 		)
 	return (
-		<div className='mt-4 max-h-64 overflow-auto rounded-lg border'>
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>Asset</TableHead>
-						<TableHead>Size</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{query.data.map((asset) => (
-						<TableRow key={asset.id}>
-							<TableCell className='max-w-48'>
-								<p
-									className='truncate font-mono text-xs'
-									title={asset.asset_key}
-								>
-									{asset.asset_key}
-								</p>
-								{asset.is_launch && (
-									<Badge
-										className='mt-1'
-										variant='outline'
-									>
-										Launch
-									</Badge>
-								)}
-							</TableCell>
-							<TableCell>{bytes(asset.size_bytes)}</TableCell>
+		<section className='mt-6'>
+			<div className='mb-3 flex items-center gap-2'>
+				<h3 className='text-sm font-semibold'>Assets</h3>
+				<Badge variant='secondary'>{staticAssets.length}</Badge>
+			</div>
+			<div className='max-h-64 overflow-auto rounded-lg border'>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Asset</TableHead>
+							<TableHead>Size</TableHead>
 						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-		</div>
+					</TableHeader>
+					<TableBody>
+						{staticAssets.map((asset) => (
+							<TableRow key={asset.id}>
+								<TableCell className='max-w-48'>
+									<p
+										className='truncate font-mono text-xs'
+										title={asset.asset_key}
+									>
+										{asset.asset_key}
+									</p>
+								</TableCell>
+								<TableCell>{bytes(asset.size_bytes)}</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</section>
 	)
 }

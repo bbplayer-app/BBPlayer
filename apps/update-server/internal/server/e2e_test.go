@@ -68,10 +68,10 @@ func TestE2EExpoProtocol(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = spec.Body.Close()
-	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 16 {
+	if openAPI.OpenAPI != "3.1.0" || len(openAPI.Paths) != 17 {
 		t.Fatalf("admin OpenAPI document: version=%q paths=%d", openAPI.OpenAPI, len(openAPI.Paths))
 	}
-	for _, path := range []string{"/admin/publish", "/admin/updates/{id}", "/admin/channels/{channel}/rollback", "/admin/source/compare/{from}/{to}", "/admin/insights/groups/{groupID}/lifecycle", "/admin/metrics/delivery"} {
+	for _, path := range []string{"/admin/publish", "/admin/updates/{id}", "/admin/channels/{channel}/republish", "/admin/channels/{channel}/embedded", "/admin/source/compare/{from}/{to}", "/admin/insights/groups/{groupID}/lifecycle", "/admin/metrics/delivery"} {
 		if _, ok := openAPI.Paths[path]; !ok {
 			t.Fatalf("admin OpenAPI missing path %q", path)
 		}
@@ -104,6 +104,7 @@ func TestE2EExpoProtocol(t *testing.T) {
 	}
 	var decoded struct {
 		ID          uuid.UUID `json:"id"`
+		CreatedAt   time.Time `json:"createdAt"`
 		LaunchAsset struct {
 			URL  string `json:"url"`
 			Hash string `json:"hash"`
@@ -231,15 +232,69 @@ func TestE2EExpoProtocol(t *testing.T) {
 	if lifecycle.StatusCode != http.StatusOK || !bytes.Contains(lifecycleBody, []byte(`"known_launches":1`)) || !bytes.Contains(lifecycleBody, []byte(`"known_crashes":1`)) {
 		t.Fatalf("lifecycle insight response: %s %s", lifecycle.Status, lifecycleBody)
 	}
-	rollback := []byte(`{"runtime_version":"1","platform":"android","mode":"embedded"}`)
-	if r := request(t, http.MethodPost, h.URL+"/admin/channels/test/rollback", rollback, map[string]string{"Authorization": "Bearer admin", "Content-Type": "application/json"}); r.StatusCode != http.StatusOK {
-		t.Fatalf("embedded rollback status: %s", r.Status)
+	republish := []byte(`{"runtime_version":"1","platform":"android","group_id":"` + firstGroup.String() + `","message":"Republish first"}`)
+	republishResponse := request(t, http.MethodPost, h.URL+"/admin/channels/test/republish", republish, map[string]string{"Authorization": "Bearer admin", "Content-Type": "application/json"})
+	var republishBody struct {
+		GroupID uuid.UUID `json:"group_id"`
 	}
-	directive := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Accept": "multipart/mixed"})
-	directiveBody, _ := io.ReadAll(directive.Body)
-	_ = directive.Body.Close()
-	if directive.StatusCode != http.StatusOK || !bytes.Contains(directiveBody, []byte("rollBackToEmbedded")) || !strings.HasPrefix(directive.Header.Get("Content-Type"), "multipart/mixed") {
-		t.Fatalf("directive response: %s %s", directive.Status, directive.Header.Get("Content-Type"))
+	if err := json.NewDecoder(republishResponse.Body).Decode(&republishBody); err != nil {
+		_ = republishResponse.Body.Close()
+		t.Fatal(err)
+	}
+	_ = republishResponse.Body.Close()
+	if republishResponse.StatusCode != http.StatusOK || republishBody.GroupID == uuid.Nil || republishBody.GroupID == firstGroup {
+		t.Fatalf("republish response: status=%s group=%s", republishResponse.Status, republishBody.GroupID)
+	}
+	republishedGroup, err := db.Queries.GetUpdateGroup(ctx, pgtype.UUID{Bytes: [16]byte(republishBody.GroupID), Valid: true})
+	if err != nil || republishedGroup.Message != "Republish first" || !republishedGroup.RepublishedFromUpdateID.Valid || uuid.UUID(republishedGroup.RepublishedFromUpdateID.Bytes) != firstUpdate {
+		t.Fatalf("republish provenance: group=%s source=%s err=%v", republishBody.GroupID, uuid.UUID(republishedGroup.RepublishedFromUpdateID.Bytes), err)
+	}
+	republishedUpdate, err := db.Queries.GetUpdateForGroupPlatform(ctx, dbq.GetUpdateForGroupPlatformParams{GroupID: pgtype.UUID{Bytes: [16]byte(republishBody.GroupID), Valid: true}, Platform: "android"})
+	if err != nil || uuid.UUID(republishedUpdate.ID.Bytes) == firstUpdate {
+		t.Fatalf("republished update identity: id=%s err=%v", uuid.UUID(republishedUpdate.ID.Bytes), err)
+	}
+	originalAssets, err := db.Queries.ListAssetsForUpdate(ctx, pgtype.UUID{Bytes: [16]byte(firstUpdate), Valid: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	republishedAssets, err := db.Queries.ListAssetsForUpdate(ctx, republishedUpdate.ID)
+	if err != nil || len(republishedAssets) != len(originalAssets) {
+		t.Fatalf("republish assets: original=%d republished=%d err=%v", len(originalAssets), len(republishedAssets), err)
+	}
+	for index, original := range originalAssets {
+		if republishedAssets[index].ObjectKey != original.ObjectKey {
+			t.Fatalf("republish copied R2 object: original=%q republished=%q", original.ObjectKey, republishedAssets[index].ObjectKey)
+		}
+	}
+	rolledManifest := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test", "Expo-Current-Update-ID": decoded.ID.String()})
+	var rolled struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+	if err := json.NewDecoder(rolledManifest.Body).Decode(&rolled); err != nil {
+		_ = rolledManifest.Body.Close()
+		t.Fatal(err)
+	}
+	_ = rolledManifest.Body.Close()
+	if rolledManifest.StatusCode != http.StatusOK || rolled.ID == firstUpdate || !rolled.CreatedAt.After(decoded.CreatedAt) {
+		t.Fatalf("republished manifest: status=%s id=%s created_at=%s", rolledManifest.Status, rolled.ID, rolled.CreatedAt)
+	}
+	embedded := []byte(`{"runtime_version":"1","platform":"android","group_id":"` + firstGroup.String() + `"}`)
+	embeddedResponse := request(t, http.MethodPost, h.URL+"/admin/channels/test/embedded", embedded, map[string]string{"Authorization": "Bearer admin", "Content-Type": "application/json"})
+	if embeddedResponse.StatusCode != http.StatusOK {
+		_ = embeddedResponse.Body.Close()
+		t.Fatalf("embedded response: %s", embeddedResponse.Status)
+	}
+	_ = embeddedResponse.Body.Close()
+	head, err := db.Queries.GetChannelHead(ctx, dbq.GetChannelHeadParams{Channel: "test", RuntimeVersion: "1", Platform: "android"})
+	if err != nil || head.Mode != "embedded" || head.GroupID.Valid {
+		t.Fatalf("embedded head: mode=%q group=%s err=%v", head.Mode, uuid.UUID(head.GroupID.Bytes), err)
+	}
+	embeddedManifest := request(t, http.MethodGet, h.URL+"/api/manifest", nil, map[string]string{"expo-platform": "android", "expo-runtime-version": "1", "expo-channel-name": "test"})
+	embeddedManifestBody, _ := io.ReadAll(embeddedManifest.Body)
+	_ = embeddedManifest.Body.Close()
+	if embeddedManifest.StatusCode != http.StatusOK || !bytes.Contains(embeddedManifestBody, []byte(`"type":"rollBackToEmbedded"`)) {
+		t.Fatalf("embedded manifest: %s %s", embeddedManifest.Status, embeddedManifestBody)
 	}
 }
 

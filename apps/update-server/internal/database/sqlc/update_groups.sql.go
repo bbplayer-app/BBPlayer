@@ -88,7 +88,7 @@ func (q *Queries) FindGroupsOrSourceCommitsByCommit(ctx context.Context, source 
 }
 
 const getUpdateGroup = `-- name: GetUpdateGroup :one
-SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256,status FROM update_groups WHERE id=$1
+SELECT id,channel,runtime_version,message,created_at,source,fingerprint_hash,fingerprint_sources,expo_config,metadata_sha256,status,republished_from_update_id FROM update_groups WHERE id=$1
 `
 
 func (q *Queries) GetUpdateGroup(ctx context.Context, id pgtype.UUID) (UpdateGroup, error) {
@@ -106,6 +106,7 @@ func (q *Queries) GetUpdateGroup(ctx context.Context, id pgtype.UUID) (UpdateGro
 		&i.ExpoConfig,
 		&i.MetadataSha256,
 		&i.Status,
+		&i.RepublishedFromUpdateID,
 	)
 	return i, err
 }
@@ -154,7 +155,7 @@ func (q *Queries) LatestSourceCommit(ctx context.Context, arg LatestSourceCommit
 }
 
 const listUpdateGroups = `-- name: ListUpdateGroups :many
-SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash FROM update_groups ORDER BY created_at DESC LIMIT $2 OFFSET $1
+SELECT id,channel,runtime_version,COALESCE(expo_config->>'version','')::text AS app_version,message,created_at,source,fingerprint_hash,republished_from_update_id FROM update_groups ORDER BY created_at DESC LIMIT $2 OFFSET $1
 `
 
 type ListUpdateGroupsParams struct {
@@ -163,14 +164,15 @@ type ListUpdateGroupsParams struct {
 }
 
 type ListUpdateGroupsRow struct {
-	ID              pgtype.UUID
-	Channel         string
-	RuntimeVersion  string
-	AppVersion      string
-	Message         string
-	CreatedAt       pgtype.Timestamptz
-	Source          []byte
-	FingerprintHash pgtype.Text
+	ID                      pgtype.UUID
+	Channel                 string
+	RuntimeVersion          string
+	AppVersion              string
+	Message                 string
+	CreatedAt               pgtype.Timestamptz
+	Source                  []byte
+	FingerprintHash         pgtype.Text
+	RepublishedFromUpdateID pgtype.UUID
 }
 
 func (q *Queries) ListUpdateGroups(ctx context.Context, arg ListUpdateGroupsParams) ([]ListUpdateGroupsRow, error) {
@@ -191,6 +193,7 @@ func (q *Queries) ListUpdateGroups(ctx context.Context, arg ListUpdateGroupsPara
 			&i.CreatedAt,
 			&i.Source,
 			&i.FingerprintHash,
+			&i.RepublishedFromUpdateID,
 		); err != nil {
 			return nil, err
 		}

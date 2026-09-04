@@ -3,7 +3,11 @@ import { Badge } from '@/components/ui/badge'
 export function StatusBadge({ value }: { value: string }) {
 	return (
 		<Badge variant={value === 'ota' ? 'default' : 'secondary'}>
-			{value === 'ota' ? 'OTA active' : value}
+			{value === 'ota'
+				? 'OTA active'
+				: value === 'embedded'
+					? 'Embedded Bundle'
+					: value}
 		</Badge>
 	)
 }

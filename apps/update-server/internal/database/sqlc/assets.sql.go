@@ -133,7 +133,7 @@ func (q *Queries) InsertAsset(ctx context.Context, arg InsertAssetParams) error 
 }
 
 const listAssetsForUpdate = `-- name: ListAssetsForUpdate :many
-SELECT id,asset_key,object_key,sha256,content_type,is_launch FROM assets WHERE update_id=$1 ORDER BY is_launch DESC,id
+SELECT id,asset_key,object_key,sha256,content_type,size_bytes,is_launch FROM assets WHERE update_id=$1 ORDER BY is_launch DESC,id
 `
 
 type ListAssetsForUpdateRow struct {
@@ -142,6 +142,7 @@ type ListAssetsForUpdateRow struct {
 	ObjectKey   string
 	Sha256      string
 	ContentType string
+	SizeBytes   int64
 	IsLaunch    bool
 }
 
@@ -160,6 +161,7 @@ func (q *Queries) ListAssetsForUpdate(ctx context.Context, updateID pgtype.UUID)
 			&i.ObjectKey,
 			&i.Sha256,
 			&i.ContentType,
+			&i.SizeBytes,
 			&i.IsLaunch,
 		); err != nil {
 			return nil, err

@@ -8,6 +8,7 @@ export type Group = {
 	message: string
 	created_at: string
 	fingerprint_hash?: string
+	republished_from_update_id?: string
 	source: unknown
 }
 export type Runtime = {
@@ -30,6 +31,17 @@ export type Detail = Group & {
 		patch_downloads: number
 		known_launches: number
 		known_crashes: number
+		patches: {
+			id: number
+			from_update_id: string
+			from_group_id: string
+			from_message: string
+			status: 'pending' | 'processing' | 'ready' | 'failed' | 'not_beneficial'
+			size_bytes?: number
+			attempts: number
+			error?: string
+			updated_at: string
+		}[]
 	}[]
 }
 export type Asset = {
@@ -190,11 +202,23 @@ export type PatchEndpointRef = {
 export const patches = () => api<PatchEndpoint[]>('/admin/patches?limit=100')
 export const heads = (channelName: string) =>
 	api<Head[]>(`/admin/channels/${encodeURIComponent(channelName)}`)
-export type RollbackTarget = {
+export type RepublishTarget = {
 	runtime_version: string
 	platform: 'android' | 'ios'
-	mode: 'ota' | 'embedded'
-	group_id?: string
+	group_id: string
+	message: string
 }
-export const rollbackChannel = (channelName: string, target: RollbackTarget) =>
-	apiPost(`/admin/channels/${encodeURIComponent(channelName)}/rollback`, target)
+export const republishChannel = (
+	channelName: string,
+	target: RepublishTarget,
+) =>
+	apiPost(
+		`/admin/channels/${encodeURIComponent(channelName)}/republish`,
+		target,
+	)
+export type EmbeddedTarget = Omit<RepublishTarget, 'message'>
+export const setChannelEmbedded = (
+	channelName: string,
+	target: EmbeddedTarget,
+) =>
+	apiPost(`/admin/channels/${encodeURIComponent(channelName)}/embedded`, target)

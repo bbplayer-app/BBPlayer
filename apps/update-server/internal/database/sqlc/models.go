@@ -153,15 +153,16 @@ type UpdateEvent struct {
 }
 
 type UpdateGroup struct {
-	ID                 pgtype.UUID
-	Channel            string
-	RuntimeVersion     string
-	Message            string
-	CreatedAt          pgtype.Timestamptz
-	Source             []byte
-	FingerprintHash    pgtype.Text
-	FingerprintSources []byte
-	ExpoConfig         []byte
-	MetadataSha256     string
-	Status             string
+	ID                      pgtype.UUID
+	Channel                 string
+	RuntimeVersion          string
+	Message                 string
+	CreatedAt               pgtype.Timestamptz
+	Source                  []byte
+	FingerprintHash         pgtype.Text
+	FingerprintSources      []byte
+	ExpoConfig              []byte
+	MetadataSha256          string
+	Status                  string
+	RepublishedFromUpdateID pgtype.UUID
 }
