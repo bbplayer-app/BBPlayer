@@ -1,0 +1,22 @@
+diff --git a/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt b/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt
+--- a/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt
++++ b/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt
+@@ -173,7 +173,17 @@ class DatabaseLauncher(
+       filteredLaunchableUpdates.add(update)
+     }
+     val manifestFilters = ManifestMetadata.getManifestFilters(database, configuration)
+-    return selectionPolicy.selectUpdateToLaunch(filteredLaunchableUpdates, manifestFilters)
++    val selectedUpdate = selectionPolicy.selectUpdateToLaunch(filteredLaunchableUpdates, manifestFilters)
++    if (selectedUpdate != null) {
++      return selectedUpdate
++    }
++
++    // Runtime request-header overrides intentionally do not rewrite the embedded update's
++    // build-time identity. If no cached update matches the effective configuration, retain the
++    // one update embedded in this binary as the anti-bricking fallback. Do not admit arbitrary
++    // cached updates that merely match an old configuration.
++    val embeddedUpdateId = embeddedUpdate?.updateEntity?.id
++    return filteredLaunchableUpdates.firstOrNull { it.id == embeddedUpdateId }
+   }
+ 
+   private fun embeddedAssetFileMap(): MutableMap<AssetEntity, String> {

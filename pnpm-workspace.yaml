@@ -20,6 +20,7 @@ minimumReleaseAgeExclude:
   - lucide-react@1.39.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
+  expo-updates@57.0.21: patches/expo-updates@57.0.21.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch
