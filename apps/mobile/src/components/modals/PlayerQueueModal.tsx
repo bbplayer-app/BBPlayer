@@ -185,7 +185,7 @@ function PlayerQueueModal() {
 
 	return (
 		<ModalBottomSheet
-			detents={[0, windowHeight * 0.75, windowHeight]}
+			detents={[0, windowHeight * 0.75]}
 			index={sheetIndex}
 			onIndexChange={setSheetIndex}
 			scrimColor='rgba(0, 0, 0, 0.5)'
