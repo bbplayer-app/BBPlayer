@@ -5,6 +5,7 @@ import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import Animated, {
 	createAnimatedComponent,
+	interpolateColor,
 	type SharedValue,
 	useAnimatedReaction,
 	useAnimatedStyle,
@@ -16,6 +17,31 @@ import { scheduleOnRN } from 'react-native-worklets'
 import { KaraokeWord } from './KaraokeWord'
 
 const AnimatedTouchable = createAnimatedComponent(Touchable)
+
+function useLyricColor(
+	isHighlighted: SharedValue<boolean>,
+	immediate: boolean,
+	activeColor: string,
+	inactiveColor: string,
+	enabled = true,
+) {
+	const progress = useDerivedValue(() => {
+		const target = isHighlighted.value && enabled ? 1 : 0
+		return immediate ? target : withTiming(target, { duration: 300 })
+	})
+
+	return useDerivedValue(() => {
+		// Keep invalid animation progress away from native color props.
+		if (!Number.isFinite(progress.value)) {
+			return isHighlighted.value && enabled ? activeColor : inactiveColor
+		}
+		return interpolateColor(
+			Math.max(0, Math.min(1, progress.value)),
+			[0, 1],
+			[inactiveColor, activeColor],
+		)
+	})
+}
 
 export interface LyricLineItemProps {
 	item: LyricLine & { isPaddingItem?: boolean }
@@ -54,18 +80,25 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 		item.spans &&
 		item.spans.length > 0
 
+	const lyricColor = useLyricColor(
+		isHighlighted,
+		isVerbatim,
+		colors.primary,
+		colors.onSurfaceDisabled,
+	)
+
 	const animatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
 		if (isHighlighted.value) {
 			return {
 				opacity: withTiming(1, { duration }),
-				color: withTiming(colors.primary, { duration }),
+				color: lyricColor.value,
 			}
 		}
 
 		return {
 			opacity: withTiming(0.7, { duration }),
-			color: withTiming(colors.onSurfaceDisabled, { duration }),
+			color: lyricColor.value,
 		}
 	})
 
@@ -176,17 +209,16 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		}
 	})
 
-	const textAnimatedStyle = useAnimatedStyle(() => {
-		const duration = isVerbatim ? 0 : 300
-		if (isHighlighted.value && isHighlightedRState) {
-			return {
-				color: withTiming(theme.colors.primary, { duration }),
-			}
-		}
-		return {
-			color: withTiming(theme.colors.onSurfaceDisabled, { duration }),
-		}
-	})
+	const lyricColor = useLyricColor(
+		isHighlighted,
+		isVerbatim,
+		theme.colors.primary,
+		theme.colors.onSurfaceDisabled,
+		isHighlightedRState,
+	)
+	const textAnimatedStyle = useAnimatedStyle(() => ({
+		color: lyricColor.value,
+	}))
 
 	const renderContent = () => {
 		if (isVerbatim) {

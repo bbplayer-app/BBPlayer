@@ -42,7 +42,12 @@ export default function useObservableStateAdapter<T>(
 			if (nextValue === undefined) return
 
 			const adapter = resolveObservableStateInWorklet(sharedValueAdapterId)
-			adapter?.setValue?.({ value: nextValue })
+			try {
+				adapter?.setValue?.({ value: nextValue })
+			} catch (error) {
+				// Unmount can release the native object between resolution and writing.
+				if (resolveObservableStateInWorklet(sharedValueAdapterId)) throw error
+			}
 		}, [value, isActive])
 
 		return () => {
