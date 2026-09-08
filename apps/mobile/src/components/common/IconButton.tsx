@@ -62,6 +62,10 @@ export interface IconButtonProps {
 	 */
 	testID?: string
 	/**
+	 * Accessible name announced for icon-only controls.
+	 */
+	accessibilityLabel?: string
+	/**
 	 * Whether to show a loading indicator.
 	 */
 	loading?: boolean

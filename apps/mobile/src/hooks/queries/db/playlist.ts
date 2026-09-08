@@ -28,6 +28,8 @@ export const playlistKeys = {
 		[...playlistKeys.all, 'playlistMetadata', playlistId] as const,
 	playlistsContainingTrack: (id: number | string | undefined) =>
 		[...playlistKeys.all, 'playlistsContainingTrack', id] as const,
+	allPlaylistsContainingTrack: (id: number | string | undefined) =>
+		[...playlistKeys.all, 'allPlaylistsContainingTrack', id] as const,
 	searchTracksInPlaylist: (playlistId: number, query: string) =>
 		[...playlistKeys.all, 'searchTracksInPlaylist', playlistId, query] as const,
 	searchPlaylists: (query: string) =>
@@ -82,6 +84,22 @@ export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
 							playlistService.getLocalPlaylistsContainingTrackByUniqueKey(
 								uniqueKey,
 							),
+						)
+				: skipToken,
+		enabled: uniqueKey !== undefined,
+	})
+}
+
+export const useAllPlaylistsContainingTrack = (
+	uniqueKey: string | undefined,
+) => {
+	return useQuery({
+		queryKey: playlistKeys.allPlaylistsContainingTrack(uniqueKey),
+		queryFn:
+			uniqueKey !== undefined
+				? () =>
+						returnOrThrowAsync(
+							playlistService.getPlaylistsContainingTrackByUniqueKey(uniqueKey),
 						)
 				: skipToken,
 		enabled: uniqueKey !== undefined,

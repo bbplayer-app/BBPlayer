@@ -1184,6 +1184,42 @@ export class PlaylistService {
 	}
 
 	/**
+	 * 通过 uniqueKey 获取包含指定歌曲的所有播放列表。
+	 * @param uniqueKey track uniqueKey
+	 */
+	public getPlaylistsContainingTrackByUniqueKey(
+		uniqueKey: string,
+	): ResultAsync<(typeof schema.playlists.$inferSelect)[], DatabaseError> {
+		return this.trackService
+			.findTrackIdsByUniqueKeys([uniqueKey])
+			.andThen((trackIds) => {
+				if (!trackIds.has(uniqueKey)) return okAsync([])
+				return ResultAsync.fromPromise(
+					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
+						this.db.query.playlists.findMany({
+							where: inArray(
+								schema.playlists.id,
+								this.db
+									.select({
+										playlistId: schema.playlistTracks.playlistId,
+									})
+									.from(schema.playlistTracks)
+									.where(
+										eq(schema.playlistTracks.trackId, trackIds.get(uniqueKey)!),
+									),
+							),
+						}),
+					),
+					(e) =>
+						new DatabaseError('获取包含该歌曲的播放列表失败', {
+							cause: e,
+						}),
+				)
+			})
+			.andThen((playlists) => okAsync(playlists))
+	}
+
+	/**
 	 * 搜索播放列表
 	 * @param query - 搜索关键词
 	 */
@@ -1515,4 +1551,7 @@ export class PlaylistService {
 	}
 }
 
-export const playlistService = new PlaylistService(defaultDb, trackServiceInstance)
+export const playlistService = new PlaylistService(
+	defaultDb,
+	trackServiceInstance,
+)

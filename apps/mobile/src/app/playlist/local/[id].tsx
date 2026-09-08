@@ -6,7 +6,14 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import {
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
@@ -18,6 +25,7 @@ import Animated, {
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
@@ -38,7 +46,9 @@ import {
 	usePlaylistSync,
 	useReorderLocalPlaylistTrack,
 } from '@/hooks/mutations/db/playlist'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
+	useAllPlaylistsContainingTrack,
 	usePlaylistContentsInfinite,
 	usePlaylistMetadata,
 	useSearchTracksInPlaylist,
@@ -174,6 +184,7 @@ export default function LocalPlaylistPage() {
 	} = useTrackSelection()
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
+	const currentTrack = useCurrentTrack()
 	const membersSheetRef = useRef<TrueSheet>(null)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 
@@ -193,6 +204,8 @@ export default function LocalPlaylistPage() {
 		hasNextPage: hasNextPagePlaylistData,
 		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
+	const { data: playlistsContainingCurrentTrack } =
+		useAllPlaylistsContainingTrack(currentTrack?.uniqueKey)
 	const allLoadedTracks =
 		(
 			playlistData?.pages as Array<{
@@ -284,12 +297,85 @@ export default function LocalPlaylistPage() {
 
 		return searchData ?? []
 	})()
+	const currentTrackKey = currentTrack?.uniqueKey
+	const currentTrackIndex = useMemo(
+		() =>
+			currentTrackKey
+				? finalPlaylistData.findIndex(
+						(track) => track.uniqueKey === currentTrackKey,
+					)
+				: -1,
+		[finalPlaylistData, currentTrackKey],
+	)
+	const [visibleTrackKeys, setVisibleTrackKeys] = useState<string[]>([])
+	const [isLocatingCurrentTrack, setIsLocatingCurrentTrack] = useState(false)
+	const lastCurrentTrackLookupPageCountRef = useRef<number | null>(null)
 
 	const {
 		data: playlistMetadata,
 		isPending: isPlaylistMetadataPending,
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
+	const isCurrentTrackInPlaylist = playlistsContainingCurrentTrack?.some(
+		(playlist) => playlist.id === Number(id),
+	)
+	const isCurrentTrackVisible =
+		!currentTrackKey || visibleTrackKeys.includes(currentTrackKey)
+
+	const handleViewableItemsChanged = useCallback(
+		({ viewableItems }: { viewableItems: { item: Track }[] }) => {
+			setVisibleTrackKeys(viewableItems.map(({ item }) => item.uniqueKey))
+		},
+		[],
+	)
+
+	const locateCurrentTrack = useCallback(() => {
+		lastCurrentTrackLookupPageCountRef.current = null
+		setIsLocatingCurrentTrack(true)
+	}, [])
+
+	useEffect(() => {
+		if (!isLocatingCurrentTrack || !currentTrackKey) return
+
+		if (currentTrackIndex !== -1) {
+			void listRef.current?.scrollToIndex({
+				index: currentTrackIndex,
+				animated: true,
+				viewPosition: 0.5,
+			})
+			setVisibleTrackKeys((keys) =>
+				keys.includes(currentTrackKey) ? keys : [...keys, currentTrackKey],
+			)
+			setIsLocatingCurrentTrack(false)
+			return
+		}
+
+		if (hasNextPagePlaylistData && !isFetchingNextPagePlaylistData) {
+			const loadedPageCount = playlistData?.pages.length ?? 0
+			if (lastCurrentTrackLookupPageCountRef.current === loadedPageCount) {
+				setIsLocatingCurrentTrack(false)
+				return
+			}
+			lastCurrentTrackLookupPageCountRef.current = loadedPageCount
+			void fetchNextPagePlaylistData().catch(() => {
+				setIsLocatingCurrentTrack(false)
+			})
+			return
+		}
+
+		if (!hasNextPagePlaylistData) {
+			setIsLocatingCurrentTrack(false)
+		}
+	}, [
+		currentTrackIndex,
+		currentTrackKey,
+		fetchNextPagePlaylistData,
+		hasNextPagePlaylistData,
+		isFetchingNextPagePlaylistData,
+		isLocatingCurrentTrack,
+		listRef,
+		playlistData?.pages.length,
+	])
 
 	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
@@ -906,6 +992,8 @@ export default function LocalPlaylistPage() {
 							: undefined
 					}
 					insertAfterIndex={dragging !== null ? insertAfterIndex : null}
+					onViewableItemsChanged={handleViewableItemsChanged}
+					viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
 					onScroll={(e) => {
 						scrollOffsetRef.current = e.nativeEvent.contentOffset.y
 					}}
@@ -956,6 +1044,19 @@ export default function LocalPlaylistPage() {
 						</>
 					}
 				/>
+				{isCurrentTrackInPlaylist && !startSearch && !isCurrentTrackVisible && (
+					<View style={styles.locateCurrentTrackButton}>
+						<IconButton
+							icon='crosshairs-gps'
+							mode='contained'
+							size={32}
+							loading={isLocatingCurrentTrack}
+							onPress={locateCurrentTrack}
+							accessibilityLabel='定位到正在播放的歌曲'
+							testID='local-playlist-scroll-to-current'
+						/>
+					</View>
+				)}
 
 				{dragging !== null && draggedTrack && (
 					<Animated.View
@@ -1003,6 +1104,11 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		left: 0,
 		right: 0,
+	},
+	locateCurrentTrackButton: {
+		position: 'absolute',
+		right: 16,
+		bottom: 86,
 	},
 	ghostContainer: {
 		position: 'absolute',

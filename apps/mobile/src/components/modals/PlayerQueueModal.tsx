@@ -3,8 +3,8 @@ import { Orpheus } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { LegendList } from '@legendapp/list/react-native'
 import { ModalBottomSheet } from '@swmansion/react-native-bottom-sheet'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useWindowDimensions, View } from 'react-native'
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { BackHandler, useWindowDimensions, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -101,7 +101,6 @@ function PlayerQueueModal() {
 	const { height: windowHeight } = useWindowDimensions()
 	const flatListRef = useRef<LegendListRef>(null)
 	const didInitialScrollRef = useRef(false)
-	const [isCurrentTrackVisible, setIsCurrentTrackVisible] = useState(true)
 	const sheetIndex = usePlayerQueueSheetStore((state) => state.index)
 	const setSheetIndex = usePlayerQueueSheetStore((state) => state.setIndex)
 
@@ -150,53 +149,39 @@ function PlayerQueueModal() {
 		[removeTrackHandler, switchTrackHandler],
 	)
 
-	const scrollToCurrent = useCallback(
-		({ animated, force = false }: { animated: boolean; force?: boolean }) => {
-			if (
-				currentIndex === -1 ||
-				!queue.length ||
-				(!force && didInitialScrollRef.current)
-			) {
-				return
-			}
-			void flatListRef.current?.scrollToIndex({
-				animated,
-				index: currentIndex,
-				viewPosition: 0.5,
-			})
-			didInitialScrollRef.current = true
-		},
-		[currentIndex, queue.length],
-	)
-
-	const handleViewableItemsChanged = useCallback(
-		({ viewableItems }: { viewableItems: { item: OrpheusTrack }[] }) => {
-			setIsCurrentTrackVisible(
-				currentIndex === -1 ||
-					viewableItems.some(({ item }) => item.id === currentTrackId),
-			)
-		},
-		[currentIndex, currentTrackId],
-	)
-
-	const handleScrollToCurrent = useCallback(() => {
-		setIsCurrentTrackVisible(true)
-		scrollToCurrent({ animated: true, force: true })
-	}, [scrollToCurrent])
-
-	useEffect(() => {
-		if (currentIndex === -1) {
-			setIsCurrentTrackVisible(true)
+	const scrollToCurrent = useCallback(() => {
+		if (currentIndex === -1 || !queue.length || didInitialScrollRef.current) {
+			return
 		}
-	}, [currentIndex])
+		void flatListRef.current?.scrollToIndex({
+			animated: false,
+			index: currentIndex,
+			viewPosition: 0.5,
+		})
+		didInitialScrollRef.current = true
+	}, [currentIndex, queue.length])
 
 	useEffect(() => {
 		if (sheetIndex === 0) {
 			didInitialScrollRef.current = false
 			return
 		}
-		scrollToCurrent({ animated: false })
+		scrollToCurrent()
 	}, [scrollToCurrent, sheetIndex])
+
+	useEffect(() => {
+		if (sheetIndex === 0) return
+
+		const subscription = BackHandler.addEventListener(
+			'hardwareBackPress',
+			() => {
+				setSheetIndex(0)
+				return true
+			},
+		)
+
+		return () => subscription.remove()
+	}, [setSheetIndex, sheetIndex])
 
 	return (
 		<ModalBottomSheet
@@ -273,26 +258,7 @@ function PlayerQueueModal() {
 							}}
 							showsVerticalScrollIndicator={false}
 							nestedScrollEnabled
-							onViewableItemsChanged={handleViewableItemsChanged}
-							viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
 						/>
-						{currentIndex !== -1 && !isCurrentTrackVisible && (
-							<View
-								style={{
-									position: 'absolute',
-									right: 16,
-									bottom: insets.bottom + 16,
-								}}
-							>
-								<IconButton
-									icon='crosshairs-gps'
-									mode='contained'
-									size={32}
-									onPress={handleScrollToCurrent}
-									testID='player-queue-scroll-to-current'
-								/>
-							</View>
-						)}
 					</View>
 				</View>
 			</View>
