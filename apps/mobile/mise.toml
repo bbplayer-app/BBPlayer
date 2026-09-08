@@ -1,15 +1,51 @@
+[tasks.android]
+description = "Run Android development app alongside production"
+env = { APP_VARIANT = "development", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+run = [
+	"pnpm exec expo prebuild --clean --platform android",
+	"pnpm exec expo run:android",
+]
+
+[tasks."android:production-debug"]
+description = "Debug the production app using local production signing credentials"
+env = { APP_VARIANT = "production", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "1" }
+run = [
+	"pnpm exec expo prebuild --clean --platform android",
+	"pnpm exec expo run:android",
+]
+
+[tasks.start]
+description = "Start Metro for the development app"
+env = { APP_VARIANT = "development", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+run = "pnpm exec expo start --dev-client"
+
+[tasks."start:production-debug"]
+description = "Start Metro for the production-package debug app"
+env = { APP_VARIANT = "production", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+run = "pnpm exec expo start --dev-client"
+
 [tasks.buildprod]
+usage = 'arg "<version>" help="Output APK filename prefix"'
 description = "Build BBPlayer production release"
 env = { NODE_ENV = "production", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile prod-v8a --platform android --local --output=./temp-builds/{{arg(name="version")}}-prod.apk'
+run = 'eas build --profile prod-v8a --platform android --local --output="./temp-builds/${usage_version}-prod.apk"'
+
 [tasks.builddev]
+usage = 'arg "<version>" help="Output APK filename prefix"'
 description = "Build BBPlayer development release"
 env = { NODE_ENV = "development", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile dev --platform android --local --output=./temp-builds/{{arg(name="version")}}-dev.apk'
+run = 'eas build --profile dev --platform android --local --output="./temp-builds/${usage_version}-dev.apk"'
+
 [tasks.buildpreview]
+usage = 'arg "<version>" help="Output APK filename prefix"'
 description = "Build BBPlayer preview release"
 env = { NODE_ENV = "development", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile preview --platform android --local --output=./temp-builds/{{arg(name="version")}}-preview.apk'
+run = 'eas build --profile preview --platform android --local --output="./temp-builds/${usage_version}-preview.apk"'
+
+[tasks.emulator]
+description = "Open Android Emulator"
+run = 'emulator -avd Medium_Phone_API_36.1'
+
 [env]
 _.file = { path = ".env.local", redact = true }
 

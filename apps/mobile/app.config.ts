@@ -147,6 +147,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			],
 		},
 		plugins: [
+			'./expo-plugins/withProductionDebugSigning',
 			'./expo-plugins/withKotlinSerialization',
 			// './expo-plugins/withAndroidPlugin',
 			'./expo-plugins/withAndroidGradleProperties',
