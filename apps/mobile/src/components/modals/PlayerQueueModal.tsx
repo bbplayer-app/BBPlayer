@@ -2,10 +2,13 @@ import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { LegendList } from '@legendapp/list/react-native'
-import { ModalBottomSheet } from '@swmansion/react-native-bottom-sheet'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BackHandler, useWindowDimensions, View } from 'react-native'
-import { Touchable } from 'react-native-gesture-handler'
+import {
+	TrueSheet,
+	type TrueSheetProps,
+} from '@lodev09/react-native-true-sheet'
+import { memo, RefObject, useCallback, useMemo, useRef, useState } from 'react'
+import { View } from 'react-native'
+import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -102,7 +105,11 @@ const TrackItem = memo(
 
 TrackItem.displayName = 'TrackItem'
 
-function PlayerQueueModal() {
+interface PlayerQueueModalProps extends TrueSheetProps {
+	sheetRef?: RefObject<TrueSheet | null>
+}
+
+function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const [clearing, setClearing] = useState(false)
 	const clearQueue = () => {
 		alert('清空播放队列', '清空播放队列并停止播放？', [
@@ -123,12 +130,8 @@ function PlayerQueueModal() {
 	}
 	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
-	const { height: windowHeight } = useWindowDimensions()
-	const sheetHeight = windowHeight * 0.75
+	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<LegendListRef>(null)
-	const didInitialScrollRef = useRef(false)
-	const sheetIndex = usePlayerQueueSheetStore((state) => state.index)
-	const setSheetIndex = usePlayerQueueSheetStore((state) => state.setIndex)
 
 	const queue = usePlayerQueueStore((state) => state.tracks)
 	const { data: shuffleMode } = useShuffleMode()
@@ -172,67 +175,50 @@ function PlayerQueueModal() {
 				index={index}
 			/>
 		),
-		[removeTrackHandler, switchTrackHandler],
+		[switchTrackHandler, removeTrackHandler],
 	)
 
 	const scrollToCurrent = useCallback(() => {
-		if (currentIndex === -1 || !queue.length || didInitialScrollRef.current) {
-			return
-		}
+		if (currentIndex === -1 || !queue.length || didInitialScroll) return
 		void flatListRef.current?.scrollToIndex({
 			animated: false,
 			index: currentIndex,
 			viewPosition: 0.5,
 		})
-		didInitialScrollRef.current = true
-	}, [currentIndex, queue.length])
+		setDidInitialScroll(true)
+	}, [currentIndex, queue.length, didInitialScroll])
 
-	useEffect(() => {
-		if (sheetIndex === 0) {
-			didInitialScrollRef.current = false
-			return
-		}
-		scrollToCurrent()
-	}, [scrollToCurrent, sheetIndex])
-
-	useEffect(() => {
-		if (sheetIndex === 0) return
-
-		const subscription = BackHandler.addEventListener(
-			'hardwareBackPress',
-			() => {
-				setSheetIndex(0)
-				return true
-			},
-		)
-
-		return () => subscription.remove()
-	}, [setSheetIndex, sheetIndex])
+	const saveQueueToPlaylistHandler = useCallback(() => {
+		if (queue.length === 0) return
+		// 先关闭 player queue，再启动保存播放列表的 modal
+		void usePlayerQueueSheetStore.getState().close()
+		useModalStore.getState().open('SaveQueueToPlaylist', {
+			trackIds: queue.map((t) => t.id),
+		})
+	}, [queue])
 
 	return (
-		<ModalBottomSheet
-			detents={[0, sheetHeight]}
-			index={sheetIndex}
-			onIndexChange={setSheetIndex}
-			scrimColor='rgba(0, 0, 0, 0.5)'
-			surface={
-				<View
-					style={{
-						position: 'absolute',
-						top: 0,
-						right: 0,
-						bottom: 0,
-						left: 0,
-						backgroundColor: theme.colors.elevation.level1,
-					}}
-				/>
-			}
+		<TrueSheet
+			name='playerQueueModal'
+			ref={sheetRef}
+			detents={[0.75, 1]}
+			cornerRadius={24}
+			backgroundColor={theme.colors.elevation.level1}
+			scrollable
+			onMount={scrollToCurrent}
+			onDidPresent={() => {
+				usePlayerQueueSheetStore.getState().setOpen(true)
+			}}
+			onDidDismiss={() => {
+				usePlayerQueueSheetStore.getState().setOpen(false)
+				setDidInitialScroll(false)
+			}}
+			{...props}
 		>
-			{/* The native content region can be taller than the open detent. */}
-			<View style={{ height: sheetHeight }}>
+			<GestureHandlerRootView style={{ flex: 1 }}>
 				<View
 					style={{
-						flex: 1,
+						height: '100%',
 					}}
 				>
 					<View
@@ -271,13 +257,7 @@ function PlayerQueueModal() {
 							/>
 							<IconButton
 								icon='content-save-outline'
-								onPress={() => {
-									if (queue.length > 0) {
-										useModalStore.getState().open('SaveQueueToPlaylist', {
-											trackIds: queue.map((t) => t.id),
-										})
-									}
-								}}
+								onPress={saveQueueToPlaylistHandler}
 								disabled={queue.length === 0}
 							/>
 						</View>
@@ -297,8 +277,8 @@ function PlayerQueueModal() {
 						/>
 					</View>
 				</View>
-			</View>
-		</ModalBottomSheet>
+			</GestureHandlerRootView>
+		</TrueSheet>
 	)
 }
 

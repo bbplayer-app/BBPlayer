@@ -72,6 +72,7 @@ import {
 	percent,
 	queryParam,
 	sourceCommit,
+	sourceCommitURL,
 } from '@/lib/utils'
 
 const lifecycleConfig = {
@@ -222,7 +223,20 @@ export function UpdateDetailPage() {
 					/>
 					<Info
 						label='Commit'
-						value={sourceCommit(update.source)}
+						value={
+							update.source && sourceCommitURL(update.source) ? (
+								<a
+									href={sourceCommitURL(update.source)}
+									target='_blank'
+									rel='noreferrer'
+									className='text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary'
+								>
+									{sourceCommit(update.source)}
+								</a>
+							) : (
+								sourceCommit(update.source)
+							)
+						}
 						mono
 					/>
 					<Info

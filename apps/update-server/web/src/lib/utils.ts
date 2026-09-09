@@ -45,9 +45,19 @@ export function percent(value: number) {
 }
 
 export function sourceCommit(source: unknown) {
-	if (!source || typeof source !== 'object') return '—'
+	const value = sourceCommitSha(source)
+	return value ? value.slice(0, 7) : '—'
+}
+
+export function sourceCommitSha(source: unknown) {
+	if (!source || typeof source !== 'object') return ''
 	const value = (source as Record<string, unknown>).commit_sha
-	return typeof value === 'string' && value ? value.slice(0, 7) : '—'
+	return typeof value === 'string' && value ? value : ''
+}
+
+export function sourceCommitURL(source: unknown) {
+	const sha = sourceCommitSha(source)
+	return sha ? `https://github.com/bbplayer-app/BBPlayer/commit/${sha}` : ''
 }
 
 export function queryParam(name: string) {

@@ -24,7 +24,7 @@ jobs:
           BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
         run: |
           cd apps/mobile
-          pnpm hot-update -- publish \
+          pnpm hot-update publish \
             --non-interactive \
             --channel production \
             --message "$(git log -1 --format=%s)"
