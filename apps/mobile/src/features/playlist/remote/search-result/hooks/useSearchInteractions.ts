@@ -62,14 +62,14 @@ export function useSearchInteractions() {
 				)
 				return
 			}
-			await addToQueue({
+			const added = await addToQueue({
 				tracks: [track],
 				playNow: !playNext,
 				clearQueue: false,
 				playNext: playNext,
 				startFromKey: track.uniqueKey,
 			})
-			if (playNext) {
+			if (added && playNext) {
 				toast.success('添加到下一首播放成功')
 			}
 		},

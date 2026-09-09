@@ -18,9 +18,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
+
+import { PlayerModeSettings } from './PlayerModeSettings'
 
 function HighFreqButton({
 	icon,
@@ -80,6 +83,7 @@ export function PlayerFunctionalMenu({
 	setMenuVisible: (visible: boolean) => void
 }) {
 	const router = useRouter()
+	const mode = usePlaybackContextStore((state) => state.context?.mode)
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
@@ -182,22 +186,26 @@ export function PlayerFunctionalMenu({
 						width: '100%',
 					}}
 				>
-					<HighFreqButton
-						icon='speedometer'
-						label='倍速'
-						onPress={() =>
-							handleAction(() => openModal('PlaybackSpeed', undefined))
-						}
-						colors={colors}
-					/>
-					<HighFreqButton
-						icon='timer-outline'
-						label='定时关闭'
-						onPress={() =>
-							handleAction(() => openModal('SleepTimer', undefined))
-						}
-						colors={colors}
-					/>
+					{mode !== 'podcast' && (
+						<>
+							<HighFreqButton
+								icon='speedometer'
+								label='倍速'
+								onPress={() =>
+									handleAction(() => openModal('PlaybackSpeed', undefined))
+								}
+								colors={colors}
+							/>
+							<HighFreqButton
+								icon='timer-outline'
+								label='定时关闭'
+								onPress={() =>
+									handleAction(() => openModal('SleepTimer', undefined))
+								}
+								colors={colors}
+							/>
+						</>
+					)}
 					<HighFreqButton
 						icon='download'
 						label={
@@ -211,6 +219,27 @@ export function PlayerFunctionalMenu({
 					/>
 				</View>
 
+				<Divider />
+				<PlayerModeSettings />
+				{mode === 'podcast' && currentTrack?.source === 'bilibili' && (
+					<List.Item
+						title='评论'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='comment-text-outline'
+							/>
+						)}
+						onPress={() =>
+							handleAction(() =>
+								router.push({
+									pathname: '/comments/[bvid]',
+									params: { bvid: currentTrack.bilibiliMetadata.bvid },
+								}),
+							)
+						}
+					/>
+				)}
 				<Divider />
 
 				<View style={{ paddingTop: 8 }}>

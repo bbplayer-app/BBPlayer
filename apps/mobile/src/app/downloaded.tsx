@@ -29,6 +29,7 @@ import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelec
 import { useRemoveDownloadsMutation } from '@/hooks/mutations/orpheus'
 import { useAllDownloads, orpheusQueryKeys } from '@/hooks/queries/orpheus'
 import { queryClient } from '@/lib/config/queryClient'
+import { enqueueTracks } from '@/lib/player/playbackSession'
 import {
 	LIST_ITEM_COVER_SIZE,
 	LIST_ITEM_BORDER_RADIUS,
@@ -288,7 +289,12 @@ export default function DownloadedPage() {
 			return
 		}
 
-		void Orpheus.addToEnd([item.track], item.track.id, false)
+		void enqueueTracks({
+			tracks: [item.track],
+			startFromKey: item.track.id,
+		}).catch((error: unknown) =>
+			toastAndLogError('播放失败', error, 'Downloaded.Page'),
+		)
 	}, [])
 
 	const resolveExportDestination = useCallback(async () => {
@@ -370,7 +376,7 @@ export default function DownloadedPage() {
 	const handlePlayNext = useCallback(async (task: DownloadTask) => {
 		if (!task.track) return
 		try {
-			await Orpheus.playNext(task.track)
+			await enqueueTracks({ tracks: [task.track], playNext: true })
 			toast.success('添加到下一首播放成功')
 		} catch (error) {
 			toastAndLogError('添加到下一首播放失败', error, 'Download')

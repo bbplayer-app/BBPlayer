@@ -25,6 +25,7 @@ import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import useAppStoreObj from '@/hooks/stores/useAppStore'
+import { initPlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
 import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
@@ -102,6 +103,7 @@ function runAppInit() {
 
 		void lyricService.migrateFromOldFormat()
 
+		initPlaybackContextStore()
 		usePlayerStore.getState().initialize()
 		playerSideEffects.initialize()
 

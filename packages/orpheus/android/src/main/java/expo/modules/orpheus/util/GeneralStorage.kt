@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.core.graphics.toColorInt
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
+import expo.modules.orpheus.model.PlaybackContext
+import expo.modules.orpheus.model.PlaybackQueueSnapshot
 import expo.modules.orpheus.model.TrackRecord
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -12,7 +14,11 @@ import kotlinx.serialization.json.Json
 object GeneralStorage {
     private var kv: MMKV? = null
     private val json = Json { ignoreUnknownKeys = true }
-    private var lastSavedQueueSnapshot: List<String>? = null
+    private var lastSavedQueueSnapshot: String? = null
+    @Volatile var pendingPlaybackRestore = false
+        private set
+
+    fun consumePendingPlaybackRestore() { pendingPlaybackRestore = false }
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
@@ -93,31 +99,48 @@ object GeneralStorage {
         }
     }
 
-    fun saveQueue(mediaItems: List<MediaItem>) {
+    fun saveQueue(mediaItems: List<MediaItem>, context: PlaybackContext?) {
+        if (pendingPlaybackRestore) return
         try {
             val jsonList = mediaItems.mapNotNull { item ->
                 item.mediaMetadata.extras?.getString("track_json")
             }
 
-            if (jsonList == lastSavedQueueSnapshot) return
-            lastSavedQueueSnapshot = jsonList
-
-            val jsonListString = json.encodeToString(jsonList)
-            safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
+            val snapshot = json.encodeToString(PlaybackQueueSnapshot(
+                tracks = jsonList,
+                context = if (jsonList.isEmpty()) null else context,
+            ))
+            if (snapshot == lastSavedQueueSnapshot) return
+            check(safeKv.encode(KEY_SAVED_QUEUE, snapshot)) { "Failed to save playback queue" }
+            lastSavedQueueSnapshot = snapshot
 
         } catch (e: Exception) {
             Log.e("MediaItemStorer", "Failed to save queue", e)
+            throw e
         }
+    }
+
+    private fun readQueueSnapshot(): PlaybackQueueSnapshot? {
+        val saved = safeKv.decodeString(KEY_SAVED_QUEUE) ?: return null
+        return try {
+            if (saved.trimStart().startsWith("[")) {
+                PlaybackQueueSnapshot(tracks = json.decodeFromString<List<String>>(saved))
+            } else {
+                json.decodeFromString<PlaybackQueueSnapshot>(saved)
+            }
+        } catch (e: Exception) {
+            Log.e("MediaItemStorer", "Failed to read playback queue snapshot", e)
+            null
+        }
+    }
+
+    fun restorePlaybackContext(): PlaybackContext? = readQueueSnapshot()?.context?.takeIf {
+        it.id.isNotEmpty() && (it.mode == "music" || it.mode == "podcast")
     }
 
     fun restoreQueue(context: Context): List<MediaItem> {
         return try {
-            val jsonListString = kv?.decodeString(KEY_SAVED_QUEUE)
-
-            if (jsonListString.isNullOrEmpty()) return emptyList()
-
-            val trackJsonList: List<String> = json.decodeFromString(jsonListString)
-            lastSavedQueueSnapshot = trackJsonList
+            val trackJsonList = readQueueSnapshot()?.tracks ?: return emptyList()
 
             trackJsonList.mapNotNull { trackJson ->
                 try {
@@ -137,12 +160,17 @@ object GeneralStorage {
     }
 
     fun savePosition(index: Int, position: Long) {
+        if (pendingPlaybackRestore) return
         safeKv.encode(KEY_SAVED_INDEX, index)
         safeKv.encode(KEY_SAVED_POSITION, position)
     }
 
-    fun saveRepeatMode(repeatMode: Int) = safeKv.encode(KEY_SAVED_REPEAT_MODE, repeatMode)
-    fun saveShuffleMode(shuffleMode: Boolean) = safeKv.encode(KEY_SAVED_SHUFFLE_MODE, shuffleMode)
+    fun saveRepeatMode(repeatMode: Int) {
+        if (!pendingPlaybackRestore) safeKv.encode(KEY_SAVED_REPEAT_MODE, repeatMode)
+    }
+    fun saveShuffleMode(shuffleMode: Boolean) {
+        if (!pendingPlaybackRestore) safeKv.encode(KEY_SAVED_SHUFFLE_MODE, shuffleMode)
+    }
     fun getShuffleMode() = kv?.decodeBool(KEY_SAVED_SHUFFLE_MODE, false) ?: false
 
     fun getSavedIndex() = kv?.decodeInt(KEY_SAVED_INDEX, 0) ?: 0
@@ -185,6 +213,11 @@ object GeneralStorage {
 
     fun exportConfig(): Map<String, Any> {
         return mapOf(
+            KEY_SAVED_QUEUE to (safeKv.decodeString(KEY_SAVED_QUEUE) ?: "[]"),
+            KEY_SAVED_INDEX to getSavedIndex(),
+            KEY_SAVED_POSITION to getSavedPosition(),
+            KEY_SAVED_REPEAT_MODE to getRepeatMode(),
+            KEY_SAVED_SHUFFLE_MODE to getShuffleMode(),
             KEY_RESTORE_POSITION_ENABLED to isRestoreEnabled(),
             KEY_LOUDNESS_NORMALIZATION_ENABLED to isLoudnessNormalizationEnabled(),
             KEY_AUTOPLAY_ON_START_ENABLED to isAutoplayOnStartEnabled(),
@@ -200,6 +233,14 @@ object GeneralStorage {
     }
 
     fun importConfig(data: Map<String, Any>) {
+        pendingPlaybackRestore = false
+        // Older backups contain preferences only; never inherit this device's queue.
+        safeKv.encode(KEY_SAVED_QUEUE, data[KEY_SAVED_QUEUE] as? String ?: "[]")
+        lastSavedQueueSnapshot = null
+        savePosition((data[KEY_SAVED_INDEX] as? Number)?.toInt() ?: -1,
+            (data[KEY_SAVED_POSITION] as? Number)?.toLong() ?: 0L)
+        saveRepeatMode((data[KEY_SAVED_REPEAT_MODE] as? Number)?.toInt() ?: 0)
+        saveShuffleMode(data[KEY_SAVED_SHUFFLE_MODE] as? Boolean ?: false)
         (data[KEY_RESTORE_POSITION_ENABLED] as? Boolean)?.let { setRestoreEnabled(it) }
         (data[KEY_LOUDNESS_NORMALIZATION_ENABLED] as? Boolean)?.let { setLoudnessNormalizationEnabled(it) }
         (data[KEY_AUTOPLAY_ON_START_ENABLED] as? Boolean)?.let { setAutoplayOnStartEnabled(it) }
@@ -211,5 +252,6 @@ object GeneralStorage {
         (data[KEY_DESKTOP_LYRICS_HIGHLIGHT_COLOR] as? Int)?.let { setDesktopLyricsHighlightColor(it) }
         (data[KEY_DESKTOP_LYRICS_TEXT_SIZE] as? Float)?.let { setDesktopLyricsTextSize(it) }
         (data[KEY_DESKTOP_LYRICS_Y] as? Int)?.let { setDesktopLyricsY(it) }
+        pendingPlaybackRestore = true
     }
 }

@@ -15,11 +15,13 @@ export default function useSmoothProgress(background = false) {
 	const duration = useSharedValue(0)
 	const buffered = useSharedValue(0)
 	const isPlaying = useSharedValue(false)
+	const playbackSpeed = useSharedValue(1)
 	const isAppActive = useSharedValue(true)
 
 	useFrameCallback(
 		useCallback(
 			(frameInfo) => {
+				'worklet'
 				if (
 					!isAppActive.value ||
 					!isPlaying.value ||
@@ -27,25 +29,39 @@ export default function useSmoothProgress(background = false) {
 				) {
 					return
 				}
-				position.set(position.value + frameInfo.timeSincePreviousFrame / 1000)
+				position.set(
+					Math.min(
+						duration.value || Infinity,
+						position.value +
+							(frameInfo.timeSincePreviousFrame / 1000) * playbackSpeed.value,
+					),
+				)
 			},
-			[isAppActive, isPlaying, position],
+			[isAppActive, isPlaying, position, duration, playbackSpeed],
 		),
 	)
 
 	useEffect(() => {
+		let disposed = false
+		let syncRevision = 0
 		const syncState = () => {
+			const revision = ++syncRevision
 			void Promise.all([
 				Orpheus.getPosition(),
 				Orpheus.getDuration(),
 				Orpheus.getBuffered(),
 				Orpheus.getIsPlaying(),
-			]).then(([pos, dur, buf, playing]) => {
-				position.set(pos)
-				duration.set(dur)
-				buffered.set(buf)
-				isPlaying.set(playing)
-			})
+				Orpheus.getPlaybackSpeed(),
+			])
+				.then(([pos, dur, buf, playing, speed]) => {
+					if (disposed || revision !== syncRevision) return
+					playbackSpeed.set(speed)
+					position.set(pos)
+					duration.set(dur)
+					buffered.set(buf)
+					isPlaying.set(playing)
+				})
+				.catch(() => undefined)
 		}
 
 		syncState()
@@ -78,6 +94,10 @@ export default function useSmoothProgress(background = false) {
 		})
 
 		const trackSub = Orpheus.addListener('onTrackStarted', syncState)
+		const speedSub = Orpheus.addListener(
+			'onPlaybackSpeedChanged',
+			({ speed }) => playbackSpeed.set(speed),
+		)
 
 		const playingSub = Orpheus.addListener(
 			'onIsPlayingChanged',
@@ -89,13 +109,23 @@ export default function useSmoothProgress(background = false) {
 		)
 
 		return () => {
+			disposed = true
+			speedSub.remove()
 			progressSub()
 			stateSub.remove()
 			appStateSub.remove()
 			trackSub.remove()
 			playingSub.remove()
 		}
-	}, [isPlaying, position, duration, buffered, isAppActive, background])
+	}, [
+		isPlaying,
+		position,
+		duration,
+		buffered,
+		isAppActive,
+		background,
+		playbackSpeed,
+	])
 
 	return { position, duration, buffered }
 }

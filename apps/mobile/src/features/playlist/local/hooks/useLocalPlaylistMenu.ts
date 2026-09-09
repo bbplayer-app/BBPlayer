@@ -9,7 +9,7 @@ import type { TrackMenuItem } from '@/features/playlist/local/components/LocalPl
 import { queryClient } from '@/lib/config/queryClient'
 import type { Playlist, Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
-import { convertToOrpheusTrack, getInternalPlayUri } from '@/utils/player'
+import { addToQueue, getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
 
 const PLAY_NEXT_ICON = Icon.select({
@@ -63,7 +63,7 @@ interface LocalPlaylistMenuProps {
 	deleteTrack: (trackId: number) => void
 	openAddToPlaylistModal: (track: Track) => void
 	openEditTrackModal: (track: Track) => void
-	playlist: Playlist
+	playlist: Playlist | null | undefined
 	isReadOnly: boolean
 }
 
@@ -75,25 +75,28 @@ export function useLocalPlaylistMenu({
 	isReadOnly,
 }: LocalPlaylistMenuProps) {
 	const router = useRouter()
+	const playlistId = playlist?.id
 
-	const playNext = useCallback(async (track: Track) => {
-		try {
-			const oTrack = convertToOrpheusTrack(track)
-			if (oTrack.isErr()) {
-				toastAndLogError('转换 Track 失败', oTrack.error, SCOPE)
-				return
-			}
-			await Orpheus.playNext(oTrack.value)
-			toast.success('添加到下一首播放成功')
-		} catch (error) {
-			toastAndLogError('添加到队列失败', error, SCOPE)
-		}
-	}, [])
+	const playNext = useCallback(
+		async (track: Track) => {
+			if (playlistId === undefined) return
+			const added = await addToQueue({
+				tracks: [track],
+				playlistId,
+				playNow: false,
+				clearQueue: false,
+				playNext: true,
+			})
+			if (added) toast.success('添加到下一首播放成功')
+		},
+		[playlistId],
+	)
 
 	const menuFunctions = (
 		item: Track,
 		downloadState?: DownloadState,
 	): TrackMenuItem[] => {
+		if (!playlist) return []
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',

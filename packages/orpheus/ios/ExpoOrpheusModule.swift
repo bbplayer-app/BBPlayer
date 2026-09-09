@@ -51,6 +51,10 @@ public class ExpoOrpheusModule: Module {
             self?.sendEvent("onIsPlayingChanged", ["status": isPlaying])
         }
 
+        manager.onPlaybackContextChanged = { [weak self] context in
+            self?.sendEvent("onPlaybackContextChanged", ["context": context?.dictionary as Any? ?? NSNull()])
+        }
+
         manager.onQueueChanged = { [weak self] in
             self?.sendEvent("onQueueChanged", [:])
         }
@@ -72,12 +76,16 @@ public class ExpoOrpheusModule: Module {
             "onHeadlessEvent",
             "onTrackStarted",
             "onTrackFinished",
-            "onQueueChanged"
+            "onQueueChanged",
+            "onPlaybackContextChanged"
         )
 
         OnCreate {
             MMKV.initialize(rootDir: nil)
-            self.setupEventListeners()
+            DispatchQueue.main.async { [weak self] in
+                OrpheusPlayerManager.shared.restoreImportedPlaybackState()
+                self?.setupEventListeners()
+            }
         }
 
         // MARK: - Preferences
@@ -176,20 +184,44 @@ public class ExpoOrpheusModule: Module {
         OrpheusPlayerManager.shared.skipTo(index: index)
     }
 
-    AsyncFunction("addToEnd") { (tracks: [Track], startFromId: String?, clearQueue: Bool) in
-        OrpheusPlayerManager.shared.addToEnd(tracks: tracks, startFromId: startFromId, clearQueue: clearQueue)
-    }
+    AsyncFunction("addToEnd") { (tracks: [Track], startFromId: String?, clearQueue: Bool?, initialMode: String?) in
+        OrpheusPlayerManager.shared.addToEnd(tracks: tracks, startFromId: startFromId, clearQueue: clearQueue ?? false, initialMode: initialMode)
+    }.runOnQueue(.main)
 
-    AsyncFunction("playNext") { (track: Track) in
-        OrpheusPlayerManager.shared.addToNext(track: track)
-    }
+    AsyncFunction("playNext") { (track: Track, initialMode: String?) in
+        OrpheusPlayerManager.shared.addToNext(track: track, initialMode: initialMode)
+    }.runOnQueue(.main)
 
     AsyncFunction("removeTrack") { (index: Int) in
         OrpheusPlayerManager.shared.removeTrack(at: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("clear") {
          OrpheusPlayerManager.shared.clearQueue()
+    }.runOnQueue(.main)
+
+    AsyncFunction("clearQueue") {
+        OrpheusPlayerManager.shared.clearQueue()
+    }.runOnQueue(.main)
+
+    AsyncFunction("getPlaybackContext") { (defaultMode: String?) -> [String: String]? in
+        OrpheusPlayerManager.shared.getPlaybackContext(defaultMode: defaultMode)?.dictionary
+    }.runOnQueue(.main)
+
+    AsyncFunction("seekWithinTrack") { (trackId: String, seconds: Double, relative: Bool) -> Double? in
+        OrpheusPlayerManager.shared.seekWithinTrack(trackId: trackId, seconds: seconds, relative: relative)
+    }.runOnQueue(.main)
+
+    AsyncFunction("setPlayerMode") { (mode: String) in
+        try OrpheusPlayerManager.shared.setPlayerMode(mode)
+    }.runOnQueue(.main)
+
+    Function("exportData") { () -> [String: Any] in
+        ["playerQueue": GeneralStorage.shared.exportConfig(), "loudness": [:]]
+    }
+
+    Function("importData") { (data: [String: Any]) in
+        GeneralStorage.shared.importConfig(data["playerQueue"] as? [String: Any] ?? [:])
     }
 
     AsyncFunction("reverseRemainingQueue") {

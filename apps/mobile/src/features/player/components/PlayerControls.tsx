@@ -8,14 +8,18 @@ import {
 import { useRouter } from 'expo-router'
 import LottieView, { type AnimationObject } from 'lottie-react-native'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useShuffleMode } from '@/hooks/queries/orpheus'
+import {
+	usePlaybackOptions,
+	setPlayerRepeatMode,
+	setPlayerShuffleMode,
+} from '@/hooks/player/usePlaybackOptions'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -244,22 +248,9 @@ export function MainPlaybackControls({
 
 export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const { colors } = useTheme()
-	const { data: shuffleMode, refetch: refetchShuffleMode } = useShuffleMode()
-	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
+	const { shuffle: shuffleMode, repeat: repeatMode } = usePlaybackOptions()
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
-
-	useEffect(() => {
-		void Orpheus.getRepeatMode().then(setRepeatMode)
-		const listener = AppState.addEventListener('change', (nextAppState) => {
-			if (nextAppState === 'active') {
-				void Orpheus.getRepeatMode().then(setRepeatMode)
-			}
-		})
-		return () => {
-			listener.remove()
-		}
-	}, [])
 
 	return (
 		<View>
@@ -273,10 +264,12 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
 					onPress={async () => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-						await (shuffleMode
-							? Orpheus.setShuffleMode(false)
-							: Orpheus.setShuffleMode(true))
-						await refetchShuffleMode()
+						try {
+							await setPlayerShuffleMode(!shuffleMode)
+						} catch (error) {
+							toastAndLogError('修改随机播放失败', error, 'Player.Controls')
+							return
+						}
 						void analyticsService.logPlayerAction('shuffle', {
 							mode: !shuffleMode,
 						})
@@ -305,8 +298,9 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 								: repeatMode === RepeatMode.TRACK
 									? RepeatMode.QUEUE
 									: RepeatMode.OFF
-						void Orpheus.setRepeatMode(nextMode)
-						setRepeatMode(nextMode)
+						void setPlayerRepeatMode(nextMode).catch((error: unknown) =>
+							toastAndLogError('修改循环模式失败', error, 'Player.Controls'),
+						)
 						void analyticsService.logPlayerAction('repeat', {
 							mode: nextMode,
 						})

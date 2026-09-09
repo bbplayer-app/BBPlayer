@@ -2,7 +2,7 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Text, useTheme } from 'react-native-paper'
+import { Appbar, RadioButton, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import UniversalSwitch from '@/components/common/UniversalSwitch'
@@ -19,6 +19,9 @@ export default function PlaybackSettingsPage() {
 
 	const allowSimultaneousPlayback = useAppStore(
 		(state) => state.settings.allowSimultaneousPlayback,
+	)
+	const defaultPlayerMode = useAppStore(
+		(state) => state.settings.defaultPlayerMode,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
 
@@ -43,6 +46,28 @@ export default function PlaybackSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
+				<View style={{ marginTop: 16 }}>
+					<Text variant='titleMedium'>默认播放器</Text>
+					<Text variant='bodySmall'>
+						仅影响之后开始的播放，歌单可单独设置偏好。
+					</Text>
+					<RadioButton.Group
+						value={defaultPlayerMode}
+						onValueChange={(value) => {
+							if (value === 'music' || value === 'podcast')
+								setSettings({ defaultPlayerMode: value })
+						}}
+					>
+						<RadioButton.Item
+							label='音乐'
+							value='music'
+						/>
+						<RadioButton.Item
+							label='播客'
+							value='podcast'
+						/>
+					</RadioButton.Group>
+				</View>
 				<View style={styles.settingRow}>
 					<Text>在应用启动时恢复上次播放进度</Text>
 					<UniversalSwitch

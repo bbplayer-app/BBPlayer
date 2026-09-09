@@ -32,6 +32,7 @@ import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlayli
 import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
+import { PlaylistPlayerPreferenceDialog } from '@/features/playlist/local/components/PlaylistPlayerPreferenceDialog'
 import { SharedPlaylistMembersSheet } from '@/features/playlist/local/components/SharedPlaylistMembersSheet'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { useLocalPlaylistMenu } from '@/features/playlist/local/hooks/useLocalPlaylistMenu'
@@ -163,6 +164,7 @@ export default function LocalPlaylistPage() {
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
 	const { colors } = theme
+	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
 	const router = useRouter()
 	const { markInteractive } = useObserve()
 
@@ -485,7 +487,7 @@ export default function LocalPlaylistPage() {
 		openAddToPlaylistModal: (track) =>
 			openModal('UpdateTrackLocalPlaylists', { track }),
 		openEditTrackModal: (track) => openModal('EditTrackMetadata', { track }),
-		playlist: playlistMetadata!,
+		playlist: playlistMetadata,
 		isReadOnly: isSharedSubscriber,
 	})
 
@@ -753,6 +755,10 @@ export default function LocalPlaylistPage() {
 
 	const playlistActionsMenu = (
 		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
+			<FunctionalMenu.Item
+				title='播放器偏好'
+				onPress={() => setPlayerPreferenceVisible(true)}
+			/>
 			{playlistMetadata.type === 'local' && !isSharedSubscriber && (
 				<FunctionalMenu.Item
 					onPress={() => {
@@ -843,6 +849,11 @@ export default function LocalPlaylistPage() {
 
 	return (
 		<View style={[styles.container, { backgroundColor }]}>
+			<PlaylistPlayerPreferenceDialog
+				playlist={playlistMetadata}
+				visible={playerPreferenceVisible}
+				onDismiss={() => setPlayerPreferenceVisible(false)}
+			/>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}

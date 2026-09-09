@@ -30,6 +30,7 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { PlayerChaptersSheet } from '@/features/player/components/PlayerChaptersSheet'
 import { PlayerFunctionalMenu } from '@/features/player/components/PlayerFunctionalMenu'
 import { PlayerHeader } from '@/features/player/components/PlayerHeader'
 import Lyrics from '@/features/player/components/PlayerLyrics'
@@ -37,6 +38,8 @@ import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
+import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
@@ -79,6 +82,8 @@ export default function PlayerPage() {
 	const insets = useSafeAreaInsets()
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
+	const playbackReady = usePlaybackContextStore((state) => state.ready)
+	const playbackContext = usePlaybackContextStore((state) => state.context)
 	const { markInteractive } = useObserve()
 
 	useEffect(() => {
@@ -111,6 +116,23 @@ export default function PlayerPage() {
 			router.back()
 		}
 	}
+
+	useEffect(() => {
+		if (playbackReady && playbackContext === null) {
+			usePlayerChaptersSheetStore.getState().close()
+			void usePlayerQueueSheetStore.getState().close()
+			setIsPreventingBack(false)
+		}
+		if (playbackContext?.mode !== 'podcast')
+			usePlayerChaptersSheetStore.getState().close()
+	}, [playbackReady, playbackContext])
+
+	useEffect(() => {
+		if (!isPreventingBack && playbackReady && playbackContext === null) {
+			if (router.canGoBack()) router.back()
+			else router.replace('/')
+		}
+	}, [isPreventingBack, playbackReady, playbackContext])
 
 	const handleDismiss = () => {
 		if (index === 1) {
@@ -202,6 +224,11 @@ export default function PlayerPage() {
 	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
 			setMenuVisible(false)
+			return
+		}
+
+		if (usePlayerChaptersSheetStore.getState().index > 0) {
+			usePlayerChaptersSheetStore.getState().close()
 			return
 		}
 
@@ -326,6 +353,7 @@ export default function PlayerPage() {
 						</AnimatedPagerView>
 					</View>
 
+					<PlayerChaptersSheet />
 					<PlayerFunctionalMenu
 						menuVisible={menuVisible}
 						setMenuVisible={setMenuVisible}
