@@ -41,7 +41,9 @@ export function PodcastControls() {
 			icon: 'book-open-page-variant-outline',
 			label: '章节',
 			accessibilityLabel: '打开章节列表',
-			onPress: () => usePlayerChaptersSheetStore.getState().open(),
+			onPress: () => {
+				void usePlayerChaptersSheetStore.getState().open()
+			},
 		},
 		{
 			icon: 'format-list-bulleted',

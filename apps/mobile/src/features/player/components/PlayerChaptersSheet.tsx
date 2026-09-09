@@ -1,7 +1,7 @@
 import { LegendList, type LegendListRef } from '@legendapp/list/react-native'
-import { ModalBottomSheet } from '@swmansion/react-native-bottom-sheet'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BackHandler, useWindowDimensions, View } from 'react-native'
+import { View } from 'react-native'
 import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -15,10 +15,8 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 
 export function PlayerChaptersSheet() {
 	const data = usePlayerChapters()
-	const index = usePlayerChaptersSheetStore((state) => state.index)
-	const setIndex = usePlayerChaptersSheetStore((state) => state.setIndex)
+	const isOpen = usePlayerChaptersSheetStore((state) => state.isOpen)
 	const { colors } = useTheme()
-	const { height } = useWindowDimensions()
 	const insets = useSafeAreaInsets()
 	const list = useRef<LegendListRef>(null)
 	const didScroll = useRef(false)
@@ -27,19 +25,10 @@ export function PlayerChaptersSheet() {
 
 	useEffect(() => {
 		didScroll.current = false
-	}, [index, data.trackId])
-
-	useEffect(() => {
-		if (index === 0) return
-		const listener = BackHandler.addEventListener('hardwareBackPress', () => {
-			setIndex(0)
-			return true
-		})
-		return () => listener.remove()
-	}, [index, setIndex])
+	}, [isOpen, data.trackId])
 
 	const scrollToCurrent = useCallback(() => {
-		if (index === 0 || didScroll.current || currentIndex < 0 || !list.current)
+		if (!isOpen || didScroll.current || currentIndex < 0 || !list.current)
 			return
 		didScroll.current = true
 		void list.current
@@ -51,7 +40,7 @@ export function PlayerChaptersSheet() {
 			.catch(() => {
 				didScroll.current = false
 			})
-	}, [currentIndex, index])
+	}, [currentIndex, isOpen])
 
 	useEffect(scrollToCurrent, [
 		scrollToCurrent,
@@ -64,7 +53,7 @@ export function PlayerChaptersSheet() {
 		setSeeking(true)
 		try {
 			const target = await seekWithinTrack(data.trackId, chapter.startSeconds)
-			if (target !== null) setIndex(0)
+			if (target !== null) void usePlayerChaptersSheetStore.getState().close()
 		} catch (error) {
 			toastAndLogError('章节跳转失败', error, 'Player.Chapters')
 		} finally {
@@ -73,117 +62,122 @@ export function PlayerChaptersSheet() {
 	}
 
 	return (
-		<ModalBottomSheet
-			detents={[0, height * 0.65]}
-			index={index}
-			onIndexChange={setIndex}
-			scrimColor='rgba(0, 0, 0, 0.5)'
-			surface={
-				<View
-					style={{
-						position: 'absolute',
-						inset: 0,
-						backgroundColor: colors.elevation.level1,
-					}}
-				/>
-			}
+		<TrueSheet
+			name='playerChaptersSheet'
+			detents={[0.65]}
+			cornerRadius={24}
+			backgroundColor={colors.elevation.level1}
+			scrollable
+			onMount={scrollToCurrent}
+			onDidPresent={() => {
+				usePlayerChaptersSheetStore.getState().setOpen(true)
+			}}
+			onDidDismiss={() => {
+				usePlayerChaptersSheetStore.getState().setOpen(false)
+			}}
 		>
-			<View style={{ flex: 1 }}>
+			<View style={{ height: '100%' }}>
 				<Text
 					variant='titleMedium'
 					style={{ padding: 20 }}
 				>
 					章节
 				</Text>
-				{data.chapters.length > 0 ? (
-					<LegendList
-						key={data.trackId}
-						ref={list}
-						data={data.chapters}
-						keyExtractor={(item) => item.id}
-						onLoad={scrollToCurrent}
-						onLayout={scrollToCurrent}
-						onScrollBeginDrag={() => {
-							didScroll.current = true
-						}}
-						extraData={currentIndex}
-						contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-						renderItem={({ item, index: chapterIndex }) => (
-							<List.Item
-								title={item.title}
-								titleNumberOfLines={3}
-								description={
-									chapterIndex === currentIndex ? '正在播放' : undefined
-								}
-								left={() => (
-									<Text
-										style={{
-											paddingLeft: 16,
-											alignSelf: 'center',
-											fontVariant: ['tabular-nums'],
+				<View style={{ flex: 1, minHeight: 2 }}>
+					{data.chapters.length > 0 ? (
+						<LegendList
+							key={data.trackId}
+							ref={list}
+							data={data.chapters}
+							keyExtractor={(item) => item.id}
+							onLoad={scrollToCurrent}
+							onLayout={scrollToCurrent}
+							onScrollBeginDrag={() => {
+								didScroll.current = true
+							}}
+							extraData={currentIndex}
+							contentContainerStyle={{
+								paddingBottom: insets.bottom + 20,
+							}}
+							renderItem={({ item, index: chapterIndex }) => (
+								<List.Item
+									title={item.title}
+									titleNumberOfLines={3}
+									description={
+										chapterIndex === currentIndex ? '正在播放' : undefined
+									}
+									left={() => (
+										<Text
+											style={{
+												paddingLeft: 16,
+												alignSelf: 'center',
+												fontVariant: ['tabular-nums'],
+											}}
+										>
+											{formatDurationToHHMMSS(item.startSeconds)}
+										</Text>
+									)}
+									right={
+										chapterIndex === currentIndex
+											? (props) => (
+													<List.Icon
+														{...props}
+														icon='equalizer'
+														color={colors.primary}
+													/>
+												)
+											: undefined
+									}
+									style={{
+										backgroundColor:
+											chapterIndex === currentIndex
+												? colors.secondaryContainer
+												: undefined,
+									}}
+									titleStyle={{
+										color:
+											chapterIndex === currentIndex
+												? colors.onSecondaryContainer
+												: colors.onSurface,
+									}}
+									accessibilityState={{
+										selected: chapterIndex === currentIndex,
+										disabled: seeking,
+									}}
+									disabled={seeking}
+									onPress={() => {
+										void selectChapter(item)
+									}}
+								/>
+							)}
+						/>
+					) : (
+						<View style={{ padding: 24, gap: 16, alignItems: 'center' }}>
+							{data.isLoading ? (
+								<>
+									<ActivityIndicator />
+									<Text>正在加载章节…</Text>
+								</>
+							) : data.isError ? (
+								<>
+									<Text>章节加载失败，播放不受影响</Text>
+									<Button
+										onPress={() => {
+											void data.retry()
 										}}
 									>
-										{formatDurationToHHMMSS(item.startSeconds)}
-									</Text>
-								)}
-								right={
-									chapterIndex === currentIndex
-										? (props) => (
-												<List.Icon
-													{...props}
-													icon='equalizer'
-													color={colors.primary}
-												/>
-											)
-										: undefined
-								}
-								style={{
-									backgroundColor:
-										chapterIndex === currentIndex
-											? colors.secondaryContainer
-											: undefined,
-								}}
-								titleStyle={{
-									color:
-										chapterIndex === currentIndex
-											? colors.onSecondaryContainer
-											: colors.onSurface,
-								}}
-								accessibilityState={{
-									selected: chapterIndex === currentIndex,
-									disabled: seeking,
-								}}
-								disabled={seeking}
-								onPress={() => {
-									void selectChapter(item)
-								}}
-							/>
-						)}
-					/>
-				) : (
-					<View style={{ padding: 24, gap: 16, alignItems: 'center' }}>
-						{data.isLoading ? (
-							<>
-								<ActivityIndicator />
-								<Text>正在加载章节…</Text>
-							</>
-						) : data.isError ? (
-							<>
-								<Text>章节加载失败，播放不受影响</Text>
-								<Button
-									onPress={() => {
-										void data.retry()
-									}}
-								>
-									重试
-								</Button>
-							</>
-						) : (
-							<Text>{data.isLocal ? '此音频暂无章节' : '此视频暂无章节'}</Text>
-						)}
-					</View>
-				)}
+										重试
+									</Button>
+								</>
+							) : (
+								<Text>
+									{data.isLocal ? '此音频暂无章节' : '此视频暂无章节'}
+								</Text>
+							)}
+						</View>
+					)}
+				</View>
 			</View>
-		</ModalBottomSheet>
+		</TrueSheet>
 	)
 }

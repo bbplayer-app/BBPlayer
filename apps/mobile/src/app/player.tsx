@@ -119,12 +119,12 @@ export default function PlayerPage() {
 
 	useEffect(() => {
 		if (playbackReady && playbackContext === null) {
-			usePlayerChaptersSheetStore.getState().close()
+			void usePlayerChaptersSheetStore.getState().close()
 			void usePlayerQueueSheetStore.getState().close()
 			setIsPreventingBack(false)
 		}
 		if (playbackContext?.mode !== 'podcast')
-			usePlayerChaptersSheetStore.getState().close()
+			void usePlayerChaptersSheetStore.getState().close()
 	}, [playbackReady, playbackContext])
 
 	useEffect(() => {
@@ -227,8 +227,8 @@ export default function PlayerPage() {
 			return
 		}
 
-		if (usePlayerChaptersSheetStore.getState().index > 0) {
-			usePlayerChaptersSheetStore.getState().close()
+		if (usePlayerChaptersSheetStore.getState().isOpen) {
+			void usePlayerChaptersSheetStore.getState().close()
 			return
 		}
 
@@ -353,7 +353,7 @@ export default function PlayerPage() {
 						</AnimatedPagerView>
 					</View>
 
-					<PlayerChaptersSheet />
+					{playbackContext?.mode === 'podcast' && <PlayerChaptersSheet />}
 					<PlayerFunctionalMenu
 						menuVisible={menuVisible}
 						setMenuVisible={setMenuVisible}
