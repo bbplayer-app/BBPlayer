@@ -5,6 +5,16 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Fixed
+
+- 修复选择「启动时打开页面」不生效的问题
+
+### Changed
+
+- 恢复正在播放列表到 TrueSheet 实现
+
 ## [2.6.5] - 2026-09-04
 
 ### Added
