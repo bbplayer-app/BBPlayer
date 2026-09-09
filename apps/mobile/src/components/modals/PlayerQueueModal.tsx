@@ -99,6 +99,7 @@ function PlayerQueueModal() {
 	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
 	const { height: windowHeight } = useWindowDimensions()
+	const sheetHeight = windowHeight * 0.75
 	const flatListRef = useRef<LegendListRef>(null)
 	const didInitialScrollRef = useRef(false)
 	const sheetIndex = usePlayerQueueSheetStore((state) => state.index)
@@ -185,7 +186,7 @@ function PlayerQueueModal() {
 
 	return (
 		<ModalBottomSheet
-			detents={[0, windowHeight * 0.75]}
+			detents={[0, sheetHeight]}
 			index={sheetIndex}
 			onIndexChange={setSheetIndex}
 			scrimColor='rgba(0, 0, 0, 0.5)'
@@ -202,10 +203,11 @@ function PlayerQueueModal() {
 				/>
 			}
 		>
-			<View style={{ flex: 1 }}>
+			{/* The native content region can be taller than the open detent. */}
+			<View style={{ height: sheetHeight }}>
 				<View
 					style={{
-						height: '100%',
+						flex: 1,
 					}}
 				>
 					<View
