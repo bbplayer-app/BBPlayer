@@ -61,7 +61,7 @@ function convertToOrpheusTrack(
 
 /**
  * 上报播放记录
- * 由于这只是一个非常边缘的功能，我们不关心他是否出错，所以发生报错时只写个 log，返回 void
+ * 由于这只是一个非常边缘的功能，我们不关心它是否出错，所以失败时只写 log，不打扰用户
  */
 async function reportPlaybackHistory(
 	uniqueKey: string,
@@ -71,7 +71,10 @@ async function reportPlaybackHistory(
 	if (!useAppStore.getState().hasBilibiliCookie()) return
 	const trackResult = await trackService.getTrackByUniqueKey(uniqueKey)
 	if (trackResult.isErr()) {
-		toastAndLogError('查询 track 失败：', trackResult.error, 'Utils.Player')
+		logger.debug('查询 track 失败，跳过播放历史上报', {
+			uniqueKey,
+			error: flatErrorMessage(trackResult.error),
+		})
 		return
 	}
 	const track = trackResult.value
@@ -84,11 +87,11 @@ async function reportPlaybackHistory(
 			bvid: track.bilibiliMetadata.bvid,
 		})
 		if (videoPageResult.isErr()) {
-			toastAndLogError(
-				'查询视频信息失败：',
-				videoPageResult.error,
-				'Utils.Player',
-			)
+			logger.debug('查询视频信息失败，跳过播放历史上报', {
+				uniqueKey,
+				bvid: track.bilibiliMetadata.bvid,
+				error: flatErrorMessage(videoPageResult.error),
+			})
 			return
 		}
 		if (videoPageResult.value.length === 0) {
