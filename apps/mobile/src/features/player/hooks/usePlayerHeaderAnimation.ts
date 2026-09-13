@@ -10,6 +10,7 @@ export function usePlayerHeaderAnimation(
 	scrollX?: SharedValue<number>,
 ) {
 	const titleStyle = useAnimatedStyle(() => {
+		'worklet'
 		if (!scrollX) return { opacity: index === 1 ? 1 : 0 }
 		return {
 			opacity: interpolate(
@@ -22,6 +23,7 @@ export function usePlayerHeaderAnimation(
 	})
 
 	const statusStyle = useAnimatedStyle(() => {
+		'worklet'
 		if (!scrollX) return { opacity: index === 0 ? 1 : 0 }
 		return {
 			opacity: interpolate(

@@ -141,6 +141,7 @@ export default function PlayerPage() {
 	}
 
 	const gradientColors = useDerivedValue(() => {
+		'worklet'
 		if (playerBackgroundStyle !== 'gradient') {
 			return [colors.background, colors.background]
 		}

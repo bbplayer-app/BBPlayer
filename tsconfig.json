@@ -3,6 +3,7 @@
 	"references": [
 		{ "path": "./apps/mobile/tsconfig.json" },
 		{ "path": "./packages/orpheus/tsconfig.json" },
+		{ "path": "./packages/dlna/tsconfig.json" },
 		{ "path": "./packages/image-theme-colors/tsconfig.json" },
 		{ "path": "./apps/docs/tsconfig.json" },
 		{ "path": "./packages/splash/tsconfig.json" },

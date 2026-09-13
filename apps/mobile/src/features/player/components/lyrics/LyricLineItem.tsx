@@ -26,11 +26,13 @@ function useLyricColor(
 	enabled = true,
 ) {
 	const progress = useDerivedValue(() => {
+		'worklet'
 		const target = isHighlighted.value && enabled ? 1 : 0
 		return immediate ? target : withTiming(target, { duration: 300 })
 	})
 
 	return useDerivedValue(() => {
+		'worklet'
 		// Keep invalid animation progress away from native color props.
 		if (!Number.isFinite(progress.value)) {
 			return isHighlighted.value && enabled ? activeColor : inactiveColor
@@ -67,10 +69,12 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	const colors = useTheme().colors
 
 	const isHighlighted = useDerivedValue(() => {
+		'worklet'
 		return currentHighlightIndex.value === index
 	})
 
 	const gatedCurrentTime = useDerivedValue(() => {
+		'worklet'
 		return isHighlighted.value ? currentTime.value : -1
 	})
 
@@ -88,6 +92,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 	)
 
 	const animatedStyle = useAnimatedStyle(() => {
+		'worklet'
 		const duration = isVerbatim ? 0 : 300
 		if (isHighlighted.value) {
 			return {
@@ -168,6 +173,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	const theme = useTheme()
 
 	const isHighlighted = useDerivedValue(() => {
+		'worklet'
 		return currentHighlightIndex.value === index
 	})
 
@@ -175,7 +181,10 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	const [isHighlightedRState, setIsHighlightedRState] = useState(false)
 
 	useAnimatedReaction(
-		() => currentHighlightIndex.value,
+		() => {
+			'worklet'
+			return currentHighlightIndex.value
+		},
 		(currentVal) => {
 			scheduleOnRN(
 				setIsVerbatim,
@@ -190,6 +199,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 	)
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
+		'worklet'
 		if (isHighlighted.value) {
 			return {
 				opacity: withTiming(1, { duration: 300 }),
@@ -216,9 +226,12 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		theme.colors.onSurfaceDisabled,
 		isHighlightedRState,
 	)
-	const textAnimatedStyle = useAnimatedStyle(() => ({
-		color: lyricColor.value,
-	}))
+	const textAnimatedStyle = useAnimatedStyle(() => {
+		'worklet'
+		return {
+			color: lyricColor.value,
+		}
+	})
 
 	const renderContent = () => {
 		if (isVerbatim) {

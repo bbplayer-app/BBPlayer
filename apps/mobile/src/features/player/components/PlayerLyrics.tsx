@@ -102,6 +102,7 @@ const Lyrics = memo(function Lyrics({
 	}, [tempOffset, offsetSharedValue])
 
 	const adjustedCurrentTime = useDerivedValue(() => {
+		'worklet'
 		return currentTime.value - offsetSharedValue.value
 	})
 
