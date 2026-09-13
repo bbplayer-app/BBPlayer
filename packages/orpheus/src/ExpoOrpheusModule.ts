@@ -20,13 +20,6 @@ export enum TransitionReason {
 	PLAYLIST_CHANGED = 3,
 }
 
-export type PlayerMode = 'music' | 'podcast'
-
-export interface PlaybackContext {
-	id: string
-	mode: PlayerMode
-}
-
 export interface Track {
 	id: string
 	url: string
@@ -80,7 +73,6 @@ export type PlaybackErrorEvent =
 	| IosPlaybackErrorEvent
 
 export type OrpheusEvents = {
-	onPlaybackContextChanged(event: { context: PlaybackContext | null }): void
 	onPlaybackStateChanged(event: { state: PlaybackState }): void
 	onTrackStarted(event: { trackId: string; reason: number }): void
 	onTrackFinished(event: {
@@ -226,11 +218,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	pause(): Promise<void>
 	/** 清空原生播放队列中的所有媒体项。 */
 	clear(): Promise<void>
-	/** Stop playback and discard the queue and its continuous playback context. */
-	clearQueue(): Promise<void>
-	/** The fallback is used only for a legacy restored queue without a context. */
-	getPlaybackContext(defaultMode?: PlayerMode): Promise<PlaybackContext | null>
-	setPlayerMode(mode: PlayerMode): Promise<void>
 	/**
 	 * 跳转到 `index` 对应曲目的开头。
 	 *
@@ -252,12 +239,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	skipToPrevious(): Promise<void>
 	/** 在当前曲目内跳转；`seconds` 会在原生端转换为毫秒。 */
 	seekTo(seconds: number): Promise<void>
-	/** Seek only if the expected track is still current. Returns its clamped target, or null. */
-	seekWithinTrack(
-		trackId: string,
-		seconds: number,
-		relative: boolean,
-	): Promise<number | null>
 	/** 设置重复模式；Android 会把未知数字值当作 `RepeatMode.OFF` 处理。 */
 	setRepeatMode(mode: RepeatMode): Promise<void>
 	/**
@@ -289,7 +270,6 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 		tracks: Track[],
 		startFromId?: string,
 		clearQueue?: boolean,
-		initialMode?: PlayerMode,
 	): Promise<void>
 	/**
 	 * 将 `track` 放到当前曲目之后。
@@ -297,7 +277,7 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 如果队列中已经存在同一曲目，会移动已有项而不是重复添加；当前正在播放的同一曲目不会被移动。
 	 * 随机播放模式下也会同步更新遍历顺序，让该曲目成为逻辑上的下一首。
 	 */
-	playNext(track: Track, initialMode?: PlayerMode): Promise<void>
+	playNext(track: Track): Promise<void>
 	/**
 	 * 按索引移除队列项。
 	 *

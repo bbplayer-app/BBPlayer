@@ -81,6 +81,22 @@ describe('video chapters', () => {
 		expect(chapterBoundaryIndex(markers, 0.4)).toBe(3)
 	})
 
+	it('does not mark the rounded final second as a chapter boundary (BV1bYY463EHT)', () => {
+		const starts = [0, 274, 564, 770, 932, 1164, 1504]
+		const points = starts.map((from, index) => ({
+			from,
+			to: starts[index + 1] ?? 1786,
+			content: `Chapter ${index + 1}`,
+		}))
+		for (const duration of [1786.474, 1787]) {
+			const chapters = normalizeChapters(points, duration)
+			expect(chapterBoundaries(chapters, duration)).toEqual(
+				starts.slice(1).map((time) => time / duration),
+			)
+			expect(chapterIndexAt(chapters, duration - 0.1)).toBe(6)
+		}
+	})
+
 	it('discards malformed, reversed, out-of-range and untitled chapter data', () => {
 		expect(
 			normalizeChapters(

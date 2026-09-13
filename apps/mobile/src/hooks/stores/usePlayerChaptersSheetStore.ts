@@ -2,6 +2,7 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { create } from 'zustand'
 
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { toastAndLogError } from '@/utils/error-handling'
 
 interface PlayerChaptersSheetState {
 	isOpen: boolean
@@ -10,23 +11,39 @@ interface PlayerChaptersSheetState {
 	setOpen: (value: boolean) => void
 }
 
+let transition = Promise.resolve()
+
 export const usePlayerChaptersSheetStore = create<PlayerChaptersSheetState>(
-	(set) => ({
+	(set, get) => ({
 		isOpen: false,
 
 		open: async () => {
-			void usePlayerQueueSheetStore.getState().close()
-			set({ isOpen: true })
-			return TrueSheet.present('playerChaptersSheet').catch(() => {
-				// Ignore error if view not found or already presented
+			transition = transition.then(async () => {
+				if (get().isOpen) return
+				if (usePlayerQueueSheetStore.getState().isOpen)
+					await usePlayerQueueSheetStore.getState().close()
+				set({ isOpen: true })
+				try {
+					await TrueSheet.present('playerChaptersSheet')
+				} catch (error) {
+					set({ isOpen: false })
+					toastAndLogError('打开章节失败', error, 'Player.Chapters')
+				}
 			})
+			return transition
 		},
 
 		close: async () => {
-			set({ isOpen: false })
-			return TrueSheet.dismiss('playerChaptersSheet').catch(() => {
-				// Ignore error if view not found or already dismissed
+			transition = transition.then(async () => {
+				if (!get().isOpen) return
+				set({ isOpen: false })
+				try {
+					await TrueSheet.dismiss('playerChaptersSheet')
+				} catch (error) {
+					toastAndLogError('关闭章节失败', error, 'Player.Chapters')
+				}
 			})
+			return transition
 		},
 
 		setOpen: (value: boolean) => set({ isOpen: value }),
@@ -34,5 +51,6 @@ export const usePlayerChaptersSheetStore = create<PlayerChaptersSheetState>(
 )
 
 usePlayerQueueSheetStore.subscribe((state) => {
-	if (state.isOpen) void usePlayerChaptersSheetStore.getState().close()
+	if (state.isOpen && usePlayerChaptersSheetStore.getState().isOpen)
+		void usePlayerChaptersSheetStore.getState().close()
 })

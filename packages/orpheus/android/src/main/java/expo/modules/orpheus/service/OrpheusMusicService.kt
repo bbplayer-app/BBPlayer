@@ -35,7 +35,6 @@ import expo.modules.orpheus.manager.SuperLyricBackend
 import expo.modules.orpheus.manager.UnifiedLyricsManager
 import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
-import expo.modules.orpheus.model.PlaybackContext
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
@@ -56,106 +55,6 @@ import kotlin.math.abs
 class OrpheusMusicService : MediaLibraryService() {
 
     var player: ExoPlayer? = null
-    var playbackContext: PlaybackContext? = null
-        private set
-    var onPlaybackContextChanged: ((PlaybackContext?) -> Unit)? = null
-    private var changingQueue = false
-    private var lastNotifiedContext: PlaybackContext? = null
-
-    private fun notifyPlaybackContext() {
-        // A legacy nonempty queue gets its default from JS during initialization.
-        if (playbackContext == null && (player?.mediaItemCount ?: 0) > 0) return
-        if (lastNotifiedContext != playbackContext) {
-            lastNotifiedContext = playbackContext
-            onPlaybackContextChanged?.invoke(playbackContext)
-        }
-    }
-
-    fun restoreImportedPlaybackState() {
-        if (!GeneralStorage.pendingPlaybackRestore) return
-        val currentPlayer = player ?: return
-        changingQueue = true
-        try {
-            currentPlayer.pause()
-            cancelSleepTimer()
-            currentPlayer.stop()
-            currentPlayer.clearMediaItems()
-            GeneralStorage.consumePendingPlaybackRestore()
-            restorePlayerState(GeneralStorage.isRestoreEnabled())
-        } finally {
-            changingQueue = false
-            finishQueueChange()
-        }
-    }
-
-    fun getOrCreatePlaybackContext(defaultMode: String?): PlaybackContext? {
-        if (player?.mediaItemCount == 0) return null
-        if (playbackContext == null && player != null) {
-            playbackContext = PlaybackContext.create(defaultMode)
-            persistPlaybackQueue()
-            notifyPlaybackContext()
-        }
-        return playbackContext
-    }
-
-    fun setPlayerMode(mode: String) {
-        require(mode == "music" || mode == "podcast") { "Invalid player mode" }
-        if (player?.mediaItemCount == 0) return
-        val current = getOrCreatePlaybackContext(mode) ?: return
-        if (current.mode == mode) return
-        val next = current.copy(mode = mode)
-        val currentPlayer = player ?: return
-        GeneralStorage.saveQueue(List(currentPlayer.mediaItemCount) { currentPlayer.getMediaItemAt(it) }, next)
-        playbackContext = next
-        notifyPlaybackContext()
-    }
-
-    /** A replacement may briefly empty the timeline; publish only its final context. */
-    fun mutateQueue(initialMode: String?, replace: Boolean = false, action: () -> Unit) {
-        val previous = playbackContext
-        val next = if (replace || player?.mediaItemCount == 0 || previous == null) {
-            PlaybackContext.create(initialMode)
-        } else previous
-        changingQueue = true
-        try {
-            action()
-            playbackContext = next
-        } finally {
-            changingQueue = false
-            finishQueueChange()
-        }
-    }
-
-    fun clearPlaybackQueue() {
-        val currentPlayer = player ?: return
-        changingQueue = true
-        try {
-            currentPlayer.pause()
-            currentPlayer.stop()
-            currentPlayer.clearMediaItems()
-        } finally {
-            changingQueue = false
-            finishQueueChange()
-        }
-    }
-
-    private fun finishQueueChange() {
-        if (changingQueue) return
-        val currentPlayer = player ?: return
-        if (currentPlayer.mediaItemCount == 0) {
-            playbackContext = null
-            cancelSleepTimer()
-            GeneralStorage.savePosition(-1, 0L)
-        }
-        persistPlaybackQueue()
-        notifyPlaybackContext()
-    }
-
-    private fun persistPlaybackQueue() {
-        val currentPlayer = player ?: return
-        GeneralStorage.saveQueue(List(currentPlayer.mediaItemCount) { currentPlayer.getMediaItemAt(it) }, playbackContext)
-    }
-
     private var mediaSession: MediaLibrarySession? = null
     private var sleepTimerManager: SleepTimeController? = null
     private var volumeFadeJob: Job? = null
@@ -502,14 +401,14 @@ class OrpheusMusicService : MediaLibraryService() {
         val player = player ?: return
 
         val restoredItems = GeneralStorage.restoreQueue(this)
-        playbackContext = if (restoredItems.isNotEmpty()) GeneralStorage.restorePlaybackContext() else null
 
         if (restoredItems.isNotEmpty()) {
+            player.setMediaItems(restoredItems)
+
             val savedIndex = GeneralStorage.getSavedIndex()
             val savedPosition = GeneralStorage.getSavedPosition()
             val savedShuffleMode = GeneralStorage.getShuffleMode()
             val savedRepeatMode = GeneralStorage.getRepeatMode()
-            player.setMediaItems(restoredItems)
 
             if (savedIndex >= 0 && savedIndex < restoredItems.size) {
                 player.seekTo(savedIndex, if (restorePosition) savedPosition else C.TIME_UNSET)
@@ -723,10 +622,10 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     private fun saveCurrentQueue() {
-        try {
-            finishQueueChange()
-        } catch (e: Exception) {
-            Log.e("OrpheusMusicService", "Failed to persist playback queue", e)
+        val player = player ?: return
+        val queue = List(player.mediaItemCount) { i -> player.getMediaItemAt(i) }
+        if (queue.isNotEmpty()) {
+            GeneralStorage.saveQueue(queue)
         }
     }
 

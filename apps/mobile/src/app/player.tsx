@@ -1,4 +1,5 @@
 import ImageThemeColors from '@bbplayer/image-theme-colors'
+import { useObserveEffect, useValue } from '@legendapp/state/react'
 import {
 	Canvas,
 	Group,
@@ -37,8 +38,8 @@ import Lyrics from '@/features/player/components/PlayerLyrics'
 import PlayerMainTab from '@/features/player/components/PlayerMainTab'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
@@ -77,13 +78,14 @@ function usePageScrollHandler(
 const logger = log.extend('App.Player')
 
 export default function PlayerPage() {
+	const podcast = useValue(
+		() => playbackContextStore$.context.mode.get() === 'podcast',
+	)
 	const theme = useTheme()
 	const colors = theme.colors
 	const insets = useSafeAreaInsets()
 	const pagerRef = useRef<PagerView>(null)
 	const currentTrack = useCurrentTrack()
-	const playbackReady = usePlaybackContextStore((state) => state.ready)
-	const playbackContext = usePlaybackContextStore((state) => state.context)
 	const { markInteractive } = useObserve()
 
 	useEffect(() => {
@@ -117,22 +119,29 @@ export default function PlayerPage() {
 		}
 	}
 
-	useEffect(() => {
-		if (playbackReady && playbackContext === null) {
+	useObserveEffect(() => {
+		if (
+			playbackContextStore$.ready.get() &&
+			!playbackContextStore$.context.sessionId.get()
+		) {
 			void usePlayerChaptersSheetStore.getState().close()
 			void usePlayerQueueSheetStore.getState().close()
 			setIsPreventingBack(false)
 		}
-		if (playbackContext?.mode !== 'podcast')
+	})
+
+	useObserveEffect(() => {
+		if (playbackContextStore$.context.mode.get() !== 'podcast')
 			void usePlayerChaptersSheetStore.getState().close()
-	}, [playbackReady, playbackContext])
+	})
 
 	useEffect(() => {
-		if (!isPreventingBack && playbackReady && playbackContext === null) {
+		const { ready, context } = playbackContextStore$.peek()
+		if (!isPreventingBack && ready && context === null) {
 			if (router.canGoBack()) router.back()
 			else router.replace('/')
 		}
-	}, [isPreventingBack, playbackReady, playbackContext])
+	}, [isPreventingBack])
 
 	const handleDismiss = () => {
 		if (index === 1) {
@@ -155,10 +164,18 @@ export default function PlayerPage() {
 	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
 
+	useEffect(() => {
+		if (podcast) {
+			pagerRef.current?.setPageWithoutAnimation(0)
+			setIndex(0)
+			scrollX.set(0)
+		}
+	}, [podcast, scrollX])
+
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	const jumpTo = (key: string) => {
-		const targetIndex = key === 'lyrics' ? 1 : 0
+		const targetIndex = key === 'lyrics' && !podcast ? 1 : 0
 		pagerRef.current?.setPage(targetIndex)
 	}
 
@@ -321,39 +338,47 @@ export default function PlayerPage() {
 						<PlayerHeader
 							onMorePress={() => setMenuVisible(true)}
 							onBack={handleDismiss}
-							index={index}
+							index={podcast ? 0 : index}
 							scrollX={scrollX}
 						/>
 						<AnimatedPagerView
+							key={podcast ? 'podcast' : 'music'}
+							scrollEnabled={!podcast}
 							ref={pagerRef}
 							style={styles.tabView}
 							initialPage={0}
 							onPageScroll={pageScrollHandler}
 							onPageSelected={(e) => setIndex(e.nativeEvent.position)}
 						>
-							<View
-								key='main'
-								style={styles.tabView}
-							>
-								<PlayerMainTab
-									jumpTo={jumpTo}
-									imageRef={coverRef}
-									onPresent={() => {}}
-								/>
-							</View>
-							<View
-								key='lyrics'
-								style={styles.tabView}
-							>
-								<Lyrics
-									currentIndex={index}
-									onPressBackground={() => jumpTo('main')}
-								/>
-							</View>
+							{[
+								<View
+									key='main'
+									style={styles.tabView}
+								>
+									<PlayerMainTab
+										jumpTo={jumpTo}
+										imageRef={coverRef}
+										onPresent={() => {}}
+									/>
+								</View>,
+								...(podcast
+									? []
+									: [
+											<View
+												key='lyrics'
+												style={styles.tabView}
+											>
+												<Lyrics
+													currentIndex={index}
+													onPressBackground={() => jumpTo('main')}
+												/>
+											</View>,
+										]),
+							]}
 						</AnimatedPagerView>
 					</View>
 
-					{playbackContext?.mode === 'podcast' && <PlayerChaptersSheet />}
+					<PlayerChaptersSheet />
 					<PlayerFunctionalMenu
 						menuVisible={menuVisible}
 						setMenuVisible={setMenuVisible}

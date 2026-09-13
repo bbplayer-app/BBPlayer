@@ -185,9 +185,7 @@ export function PlayerSlider({
 		const time = displayPosition.value
 		const chapter = chapters[chapterIndexAt(chapters, time)]
 		return {
-			text: isScrubbing.value
-				? `${formatDurationToHHMMSS(time)}${chapter ? ` · ${chapter.title}` : ''}`
-				: (chapter?.title ?? ''),
+			text: chapter?.title ?? '',
 		}
 	})
 

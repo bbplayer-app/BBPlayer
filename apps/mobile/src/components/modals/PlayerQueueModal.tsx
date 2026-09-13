@@ -21,10 +21,7 @@ import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
-import {
-	clearPlaybackQueue,
-	runPlaybackCommand,
-} from '@/lib/player/playbackSession'
+import { clearPlaybackQueue } from '@/lib/player/playbackSession'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -155,7 +152,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	)
 
 	const removeTrackHandler = useCallback(async (index: number) => {
-		await runPlaybackCommand(() => Orpheus.removeTrack(index))
+		await Orpheus.removeTrack(index)
 	}, [])
 
 	const reverseRemainingQueueHandler = useCallback(async () => {

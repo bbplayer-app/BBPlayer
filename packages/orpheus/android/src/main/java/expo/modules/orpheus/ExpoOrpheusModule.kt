@@ -221,8 +221,7 @@ class ExpoOrpheusModule : Module() {
             "onSpectrumVisualizerError",
             "onSpectrumVisualizerEnabledChanged",
             "onRequestClearLyrics",
-            "onQueueChanged",
-            "onPlaybackContextChanged"
+            "onQueueChanged"
         )
 
         RegisterActivityContracts {
@@ -251,11 +250,6 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
 
-                    service.restoreImportedPlaybackState()
-                    service.onPlaybackContextChanged = { context ->
-                        sendEvent("onPlaybackContextChanged", mapOf("context" to context?.toMap()))
-                    }
-                    // JS may have requested state before the service finished restoring.
                     sendEvent("onQueueChanged", emptyMap<String, Any>())
                     startSpectrumVisualizerIfEnabled()
 
@@ -315,7 +309,6 @@ class ExpoOrpheusModule : Module() {
                 controllerFuture?.let { MediaController.releaseFuture(it) }
                 downloadManager?.removeListener(downloadListener)
                 player?.removeListener(playerListener)
-                OrpheusMusicService.instance?.onPlaybackContextChanged = null
                 OrpheusMusicService.removeOnServiceReadyListener { }
                 player = null
                 spectrumManager.stop()
@@ -481,21 +474,11 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("clear") Coroutine { ->
-            withServiceAndPlayerOnMainThread { service, _ -> service.clearPlaybackQueue() }
-        }
-
-        AsyncFunction("clearQueue") Coroutine { ->
-            withServiceAndPlayerOnMainThread { service, _ -> service.clearPlaybackQueue() }
-        }
-
-        AsyncFunction("getPlaybackContext") Coroutine { defaultMode: String? ->
-            withServiceAndPlayerOnMainThread { service, _ ->
-                service.getOrCreatePlaybackContext(defaultMode)?.toMap()
+            withPlayerOnMainThread {
+                it.clearMediaItems()
+                GeneralStorage.saveQueue(emptyList())
+                GeneralStorage.savePosition(0, 0L)
             }
-        }
-
-        AsyncFunction("setPlayerMode") Coroutine { mode: String ->
-            withServiceAndPlayerOnMainThread { service, _ -> service.setPlayerMode(mode) }
         }
 
         AsyncFunction("skipTo") Coroutine { index: Int ->
@@ -555,19 +538,6 @@ class ExpoOrpheusModule : Module() {
                     currentPlayer.seekToPreviousMediaItem()
                     prepareIfIdle(currentPlayer)
                 }
-            }
-        }
-
-        AsyncFunction("seekWithinTrack") Coroutine { trackId: String, seconds: Double, relative: Boolean ->
-            withPlayerOnMainThread { currentPlayer ->
-                if (currentPlayer.currentMediaItem?.mediaId != trackId || !seconds.isFinite() || currentPlayer.duration <= 0) {
-                    return@withPlayerOnMainThread null
-                }
-                val currentSeconds = currentPlayer.currentPosition / 1000.0
-                val targetSeconds = (if (relative) currentSeconds + seconds else seconds)
-                    .coerceIn(0.0, (currentPlayer.duration - 1).coerceAtLeast(0) / 1000.0)
-                currentPlayer.seekTo((targetSeconds * 1000).toLong())
-                targetSeconds
             }
         }
 
@@ -722,52 +692,82 @@ class ExpoOrpheusModule : Module() {
             return@AsyncFunction null
         }
 
-        AsyncFunction("addToEnd") Coroutine { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean?, initialMode: String? ->
-            if (tracks.isEmpty()) return@Coroutine
-            val mediaItems = tracks.map { it.toMediaItem(appContext.reactContext) }
-            withServiceAndPlayerOnMainThread { service, currentPlayer ->
-                service.mutateQueue(initialMode, clearQueue == true) {
-                    val initialSize = if (clearQueue == true) 0 else currentPlayer.mediaItemCount
-                    if (clearQueue == true) currentPlayer.setMediaItems(mediaItems)
-                    else currentPlayer.addMediaItems(mediaItems)
+        AsyncFunction("addToEnd") Coroutine { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->
+            val context = appContext.reactContext
+            val mediaItems = tracks.map { track ->
+                track.toMediaItem(context)
+            }
+            withPlayerOnMainThread { currentPlayer ->
+                if (clearQueue == true) {
+                    currentPlayer.clearMediaItems()
+                }
+                val initialSize = currentPlayer.mediaItemCount
+                currentPlayer.addMediaItems(mediaItems)
+
+                if (!startFromId.isNullOrEmpty()) {
                     val relativeIndex = tracks.indexOfFirst { it.id == startFromId }
-                    if (relativeIndex >= 0) {
-                        currentPlayer.seekTo(initialSize + relativeIndex, C.TIME_UNSET)
+
+                    if (relativeIndex != -1) {
+                        val targetIndex = initialSize + relativeIndex
+
+                        currentPlayer.seekTo(targetIndex, C.TIME_UNSET)
                         currentPlayer.prepare()
                         currentPlayer.play()
-                    } else if (currentPlayer.playbackState == Player.STATE_IDLE) {
-                        currentPlayer.prepare()
+
+                        return@withPlayerOnMainThread
                     }
+                }
+
+                if (currentPlayer.playbackState == Player.STATE_IDLE) {
+                    currentPlayer.prepare()
                 }
             }
         }
 
-        AsyncFunction("playNext") Coroutine { track: TrackRecord, initialMode: String? ->
-            val mediaItem = track.toMediaItem(appContext.reactContext)
+        AsyncFunction("playNext") Coroutine { track: TrackRecord ->
+            val context = appContext.reactContext
+            val mediaItem = track.toMediaItem(context)
             withServiceAndPlayerOnMainThread { service, currentPlayer ->
-                service.mutateQueue(initialMode) {
-                    val shuffleEnabled = service.shuffleManager.isEnabled
-                    val existingIndex = (0 until currentPlayer.mediaItemCount).firstOrNull {
-                        currentPlayer.getMediaItemAt(it).mediaId == track.id
-                    } ?: -1
-                    if (existingIndex == currentPlayer.currentMediaItemIndex && existingIndex >= 0) return@mutateQueue
-                    if (existingIndex >= 0) {
-                        if (shuffleEnabled) {
-                            currentPlayer.removeMediaItem(existingIndex)
-                            val target = (currentPlayer.currentMediaItemIndex + 1).coerceIn(0, currentPlayer.mediaItemCount)
-                            currentPlayer.addMediaItem(target, mediaItem)
-                            service.shuffleManager.repositionAsNext(target)
-                        } else {
-                            val currentIndex = currentPlayer.currentMediaItemIndex
-                            val target = if (existingIndex < currentIndex) currentIndex else currentIndex + 1
-                            currentPlayer.moveMediaItem(existingIndex, target.coerceIn(0, currentPlayer.mediaItemCount - 1))
-                        }
-                    } else {
-                        val target = (currentPlayer.currentMediaItemIndex + 1).coerceIn(0, currentPlayer.mediaItemCount)
-                        currentPlayer.addMediaItem(target, mediaItem)
-                        if (shuffleEnabled) service.shuffleManager.repositionAsNext(target)
+                val shuffleEnabled = service.shuffleManager.isEnabled
+
+                var existingIndex = -1
+                for (i in 0 until currentPlayer.mediaItemCount) {
+                    if (currentPlayer.getMediaItemAt(i).mediaId == track.id) {
+                        existingIndex = i
+                        break
                     }
-                    if (currentPlayer.playbackState == Player.STATE_IDLE) currentPlayer.prepare()
+                }
+
+                if (existingIndex != -1) {
+                    if (existingIndex == currentPlayer.currentMediaItemIndex) {
+                        return@withServiceAndPlayerOnMainThread
+                    }
+                    if (shuffleEnabled) {
+                        // Remove the existing instance then re-add right after the current item.
+                        // Using remove+add (rather than moveMediaItem) keeps the physical insertion
+                        // index deterministic: after removing existingIndex, currentMediaItemIndex
+                        // is automatically adjusted, so +1 always points to the correct next slot.
+                        currentPlayer.removeMediaItem(existingIndex)
+                        val insertPhysical =
+                            (currentPlayer.currentMediaItemIndex + 1).coerceAtMost(currentPlayer.mediaItemCount)
+                        currentPlayer.addMediaItem(insertPhysical, mediaItem)
+                        service.shuffleManager.repositionAsNext(insertPhysical)
+                    } else {
+                        val targetIndex = currentPlayer.currentMediaItemIndex + 1
+                        val safeTargetIndex = targetIndex.coerceAtMost(currentPlayer.mediaItemCount)
+                        currentPlayer.moveMediaItem(existingIndex, safeTargetIndex)
+                    }
+                } else {
+                    val targetIndex = currentPlayer.currentMediaItemIndex + 1
+                    val safeTargetIndex = targetIndex.coerceAtMost(currentPlayer.mediaItemCount)
+                    currentPlayer.addMediaItem(safeTargetIndex, mediaItem)
+                    if (shuffleEnabled) {
+                        service.shuffleManager.repositionAsNext(safeTargetIndex)
+                    }
+                }
+
+                if (currentPlayer.playbackState == Player.STATE_IDLE) {
+                    currentPlayer.prepare()
                 }
             }
         }

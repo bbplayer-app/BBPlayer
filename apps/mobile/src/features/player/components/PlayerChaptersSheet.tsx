@@ -1,7 +1,6 @@
-import { LegendList, type LegendListRef } from '@legendapp/list/react-native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -18,8 +17,10 @@ export function PlayerChaptersSheet() {
 	const isOpen = usePlayerChaptersSheetStore((state) => state.isOpen)
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
-	const list = useRef<LegendListRef>(null)
+	const list = useRef<ScrollView>(null)
 	const didScroll = useRef(false)
+	const rowLayouts = useRef(new Map<string, { y: number; height: number }>())
+	const viewportHeight = useRef(0)
 	const [seeking, setSeeking] = useState(false)
 	const currentIndex = chapterIndexAt(data.chapters, data.position)
 
@@ -30,17 +31,15 @@ export function PlayerChaptersSheet() {
 	const scrollToCurrent = useCallback(() => {
 		if (!isOpen || didScroll.current || currentIndex < 0 || !list.current)
 			return
+		const chapter = data.chapters[currentIndex]
+		const layout = chapter && rowLayouts.current.get(chapter.id)
+		if (!layout || !viewportHeight.current) return
 		didScroll.current = true
-		void list.current
-			.scrollToIndex({
-				index: currentIndex,
-				animated: false,
-				viewPosition: 0.5,
-			})
-			.catch(() => {
-				didScroll.current = false
-			})
-	}, [currentIndex, isOpen])
+		list.current.scrollTo({
+			y: Math.max(0, layout.y - (viewportHeight.current - layout.height) / 2),
+			animated: false,
+		})
+	}, [currentIndex, data.chapters, isOpen])
 
 	useEffect(scrollToCurrent, [
 		scrollToCurrent,
@@ -72,6 +71,9 @@ export function PlayerChaptersSheet() {
 			onDidPresent={() => {
 				usePlayerChaptersSheetStore.getState().setOpen(true)
 			}}
+			onWillDismiss={() => {
+				usePlayerChaptersSheetStore.getState().setOpen(false)
+			}}
 			onDidDismiss={() => {
 				usePlayerChaptersSheetStore.getState().setOpen(false)
 			}}
@@ -85,22 +87,29 @@ export function PlayerChaptersSheet() {
 				</Text>
 				<View style={{ flex: 1, minHeight: 2 }}>
 					{data.chapters.length > 0 ? (
-						<LegendList
+						<ScrollView
 							key={data.trackId}
 							ref={list}
-							data={data.chapters}
-							keyExtractor={(item) => item.id}
-							onLoad={scrollToCurrent}
-							onLayout={scrollToCurrent}
+							onLayout={(event) => {
+								viewportHeight.current = event.nativeEvent.layout.height
+								scrollToCurrent()
+							}}
+							onContentSizeChange={scrollToCurrent}
+							nestedScrollEnabled
 							onScrollBeginDrag={() => {
 								didScroll.current = true
 							}}
-							extraData={currentIndex}
 							contentContainerStyle={{
 								paddingBottom: insets.bottom + 20,
 							}}
-							renderItem={({ item, index: chapterIndex }) => (
+						>
+							{data.chapters.map((item, chapterIndex) => (
 								<List.Item
+									key={item.id}
+									onLayout={(event) => {
+										rowLayouts.current.set(item.id, event.nativeEvent.layout)
+										scrollToCurrent()
+									}}
 									title={item.title}
 									titleNumberOfLines={3}
 									description={
@@ -149,8 +158,8 @@ export function PlayerChaptersSheet() {
 										void selectChapter(item)
 									}}
 								/>
-							)}
-						/>
+							))}
+						</ScrollView>
 					) : (
 						<View style={{ padding: 24, gap: 16, alignItems: 'center' }}>
 							{data.isLoading ? (

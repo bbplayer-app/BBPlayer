@@ -1,50 +1,61 @@
 import { RepeatMode } from '@bbplayer/orpheus'
+import { useValue } from '@legendapp/state/react'
 import { View } from 'react-native'
-import { List, RadioButton, Text } from 'react-native-paper'
+import { List, useTheme } from 'react-native-paper'
 
 import {
 	usePlaybackOptions,
 	setPlayerRepeatMode,
 	setPlayerShuffleMode,
 } from '@/hooks/player/usePlaybackOptions'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import { switchPlayerMode } from '@/lib/player/playbackSession'
 import { toastAndLogError } from '@/utils/error-handling'
 
 const report = (error: unknown) =>
 	toastAndLogError('更新播放设置失败', error, 'Player.Mode')
 
-export function PlayerModeSettings() {
-	const context = usePlaybackContextStore((state) => state.context)
+export function PlayerModeSettings({
+	onAction,
+}: {
+	onAction: (action: () => void) => void
+}) {
+	const currentMode = useValue(playbackContextStore$.context.mode)
 	const { shuffle, repeat } = usePlaybackOptions()
+	const { colors } = useTheme()
 	return (
 		<View>
-			<List.Subheader>当前播放器</List.Subheader>
-			<Text
-				variant='bodySmall'
-				style={{ paddingHorizontal: 16 }}
-			>
-				仅影响当前播放，不修改全局或歌单偏好。
-			</Text>
-			<RadioButton.Group
-				value={context?.mode ?? 'music'}
-				onValueChange={(mode) => {
-					if (mode === 'music' || mode === 'podcast')
-						void switchPlayerMode(mode).catch(report)
+			<List.Item
+				title='切换播放器模式'
+				left={(props) => (
+					<List.Icon
+						{...props}
+						icon='swap-horizontal'
+					/>
+				)}
+				onPress={() => {
+					if (!currentMode) return
+					const mode = currentMode === 'podcast' ? 'music' : 'podcast'
+					const label = mode === 'podcast' ? '播客' : '音乐'
+					onAction(() =>
+						useModalStore.getState().open('Alert', {
+							title: `切换到${label}模式？`,
+							message: `仅在本次播放中使用${label}模式，不会更改歌单偏好或默认设置。重新开始播放时，将按歌单偏好或默认设置选择模式。`,
+							buttons: [
+								{ text: '取消' },
+								{
+									text: '切换',
+									onPress: () => {
+										void switchPlayerMode(mode).catch(report)
+									},
+								},
+							],
+						}),
+					)
 				}}
-			>
-				<RadioButton.Item
-					label='音乐'
-					value='music'
-					disabled={!context}
-				/>
-				<RadioButton.Item
-					label='播客'
-					value='podcast'
-					disabled={!context}
-				/>
-			</RadioButton.Group>
-			{context?.mode === 'podcast' && (
+			/>
+			{currentMode === 'podcast' && (
 				<>
 					<List.Item
 						title='随机播放'
@@ -53,38 +64,49 @@ export function PlayerModeSettings() {
 							<List.Icon
 								{...props}
 								icon={shuffle ? 'shuffle-variant' : 'shuffle-disabled'}
+								color={shuffle ? colors.primary : colors.onSurfaceVariant}
 							/>
 						)}
 						onPress={() => {
 							void setPlayerShuffleMode(!shuffle).catch(report)
 						}}
 					/>
-					<List.Subheader>循环模式</List.Subheader>
-					<RadioButton.Group
-						value={String(repeat)}
-						onValueChange={(value) => {
-							const mode = [
-								RepeatMode.OFF,
-								RepeatMode.TRACK,
-								RepeatMode.QUEUE,
-							].find((candidate) => String(candidate) === value)
-							if (mode !== undefined)
-								void setPlayerRepeatMode(mode).catch(report)
+					<List.Item
+						title='循环模式'
+						description={
+							repeat === RepeatMode.OFF
+								? '关闭循环'
+								: repeat === RepeatMode.TRACK
+									? '单曲循环'
+									: '队列循环'
+						}
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon={
+									repeat === RepeatMode.OFF
+										? 'repeat-off'
+										: repeat === RepeatMode.TRACK
+											? 'repeat-once'
+											: 'repeat'
+								}
+								color={
+									repeat !== RepeatMode.OFF
+										? colors.primary
+										: colors.onSurfaceVariant
+								}
+							/>
+						)}
+						onPress={() => {
+							const next =
+								repeat === RepeatMode.OFF
+									? RepeatMode.TRACK
+									: repeat === RepeatMode.TRACK
+										? RepeatMode.QUEUE
+										: RepeatMode.OFF
+							void setPlayerRepeatMode(next).catch(report)
 						}}
-					>
-						<RadioButton.Item
-							label='关闭循环'
-							value={String(RepeatMode.OFF)}
-						/>
-						<RadioButton.Item
-							label='单曲循环'
-							value={String(RepeatMode.TRACK)}
-						/>
-						<RadioButton.Item
-							label='队列循环'
-							value={String(RepeatMode.QUEUE)}
-						/>
-					</RadioButton.Group>
+					/>
 				</>
 			)}
 		</View>

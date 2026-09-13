@@ -257,7 +257,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 			<View style={styles.mainControlsWrapper}>
 				<MainPlaybackControls />
 			</View>
-			<View style={styles.secondaryControlsContainer}>
+			<SecondaryPlaybackControls>
 				<IconButton
 					icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
 					size={24}
@@ -332,9 +332,17 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					}}
 					testID='player-open-queue'
 				/>
-			</View>
+			</SecondaryPlaybackControls>
 		</View>
 	)
+}
+
+export function SecondaryPlaybackControls({
+	children,
+}: {
+	children: React.ReactNode
+}) {
+	return <View style={styles.secondaryControlsContainer}>{children}</View>
 }
 
 const styles = StyleSheet.create({

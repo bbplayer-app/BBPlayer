@@ -1,3 +1,4 @@
+import { useValue } from '@legendapp/state/react'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
@@ -6,14 +7,14 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useTrackProgress from '@/hooks/player/useTrackProgress'
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 export function usePlayerChapters() {
 	const track = useCurrentTrack()
 	const trackId = useCurrentTrackId()
-	const mode = usePlaybackContextStore((state) => state.context?.mode)
+	const mode = useValue(playbackContextStore$.context.mode)
 	const progress = useTrackProgress()
 	const metadata =
 		track && track.uniqueKey === trackId && track.source === 'bilibili'
@@ -59,6 +60,7 @@ export function usePlayerChapters() {
 	const waitingForCid =
 		enabled && !metadata?.isMultiPage && pages.isPending && !pages.isPaused
 	return {
+		podcast: mode === 'podcast',
 		trackId,
 		chapters,
 		duration,

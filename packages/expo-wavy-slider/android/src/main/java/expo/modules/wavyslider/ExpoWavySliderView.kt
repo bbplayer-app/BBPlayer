@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup.LayoutParams
 import android.widget.Space
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -341,6 +342,12 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         onDragStateChange?.invoke(isDragged)
                     }
 
+                    val chapterMarkerGrowth by animateFloatAsState(
+                        targetValue = if (isDragged && sliderEnabled) 1f else 0f,
+                        animationSpec = tween(durationMillis = if (isDragged) 180 else 120),
+                        label = "chapterMarkerGrowth"
+                    )
+
                     var localValue by remember { mutableFloatStateOf(clampedPropsValue) }
                     var isDragging by remember { mutableStateOf(false) }
                     var dragDirection by remember { mutableFloatStateOf(0.0f) }
@@ -478,9 +485,9 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                         }
                                     }
                                 }
-                                if (chapterMarkers.isNotEmpty()) {
+                                if (chapterMarkers.isNotEmpty() && chapterMarkerGrowth > 0f) {
                                     Canvas(modifier = Modifier.matchParentSize()) {
-                                        val halfHeight = (effectiveTrackThickness.toPx() / 2).coerceAtLeast(3.dp.toPx())
+                                        val halfHeight = 6.dp.toPx() * chapterMarkerGrowth
                                         for (fraction in chapterMarkers) {
                                             val x = size.width * if (layoutDirection == LayoutDirection.Rtl) 1f - fraction else fraction
                                             drawLine(

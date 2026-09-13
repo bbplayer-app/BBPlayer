@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { Icon, Text, TouchableRipple, useTheme } from 'react-native-paper'
+import { View } from 'react-native'
+import { useTheme } from 'react-native-paper'
 
-import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
+import IconButton from '@/components/common/IconButton'
+import {
+	MainPlaybackControls,
+	SecondaryPlaybackControls,
+} from '@/features/player/components/PlayerControls'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
@@ -24,13 +28,11 @@ export function PodcastControls() {
 	const actions = [
 		{
 			icon: 'speedometer',
-			label: `${speed}×`,
 			accessibilityLabel: `倍速，当前 ${speed} 倍`,
 			onPress: () => useModalStore.getState().open('PlaybackSpeed', undefined),
 		},
 		{
 			icon: 'timer-outline',
-			label: remaining > 0 ? formatDurationToHHMMSS(remaining) : '定时关闭',
 			accessibilityLabel:
 				remaining > 0
 					? `定时关闭，剩余 ${formatDurationToHHMMSS(remaining)}`
@@ -39,7 +41,6 @@ export function PodcastControls() {
 		},
 		{
 			icon: 'book-open-page-variant-outline',
-			label: '章节',
 			accessibilityLabel: '打开章节列表',
 			onPress: () => {
 				void usePlayerChaptersSheetStore.getState().open()
@@ -47,7 +48,6 @@ export function PodcastControls() {
 		},
 		{
 			icon: 'format-list-bulleted',
-			label: '播放队列',
 			accessibilityLabel: '打开播放队列',
 			onPress: () => {
 				void usePlayerQueueSheetStore.getState().open()
@@ -59,43 +59,18 @@ export function PodcastControls() {
 			<View style={{ marginTop: 24 }}>
 				<MainPlaybackControls />
 			</View>
-			<View style={styles.actions}>
+			<SecondaryPlaybackControls>
 				{actions.map((action) => (
-					<TouchableRipple
+					<IconButton
 						key={action.icon}
+						icon={action.icon}
+						size={24}
+						iconColor={colors.onSurfaceVariant}
 						onPress={action.onPress}
 						accessibilityLabel={action.accessibilityLabel}
-						accessibilityRole='button'
-						style={styles.action}
-					>
-						<View style={styles.actionContent}>
-							<Icon
-								source={action.icon}
-								size={24}
-								color={colors.onSurfaceVariant}
-							/>
-							<Text
-								variant='labelSmall'
-								numberOfLines={1}
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								{action.label}
-							</Text>
-						</View>
-					</TouchableRipple>
+					/>
 				))}
-			</View>
+			</SecondaryPlaybackControls>
 		</View>
 	)
 }
-
-const styles = StyleSheet.create({
-	actions: { flexDirection: 'row', marginTop: 16 },
-	action: { flex: 1, borderRadius: 12, overflow: 'hidden', minHeight: 64 },
-	actionContent: {
-		alignItems: 'center',
-		justifyContent: 'center',
-		paddingVertical: 8,
-		gap: 8,
-	},
-})

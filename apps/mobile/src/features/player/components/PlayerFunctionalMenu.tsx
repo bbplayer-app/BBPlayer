@@ -1,4 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
+import { useValue } from '@legendapp/state/react'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
@@ -17,8 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
 import { toastAndLogError } from '@/utils/error-handling'
 import { getInternalPlayUri } from '@/utils/player'
 import toast from '@/utils/toast'
@@ -83,7 +84,7 @@ export function PlayerFunctionalMenu({
 	setMenuVisible: (visible: boolean) => void
 }) {
 	const router = useRouter()
-	const mode = usePlaybackContextStore((state) => state.context?.mode)
+	const mode = useValue(playbackContextStore$.context.mode)
 	const currentTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
@@ -96,6 +97,7 @@ export function PlayerFunctionalMenu({
 	const sheetRef = useRef<TrueSheet>(null)
 
 	const isPresented = useRef(false)
+	const pendingAction = useRef<(() => void) | null>(null)
 
 	useEffect(() => {
 		if (menuVisible) {
@@ -114,6 +116,9 @@ export function PlayerFunctionalMenu({
 	const onDismiss = useCallback(() => {
 		isPresented.current = false
 		setMenuVisible(false)
+		const action = pendingAction.current
+		pendingAction.current = null
+		action?.()
 	}, [setMenuVisible])
 
 	const onPresent = useCallback(() => {
@@ -127,8 +132,8 @@ export function PlayerFunctionalMenu({
 
 	const handleAction = useCallback(
 		(action: () => void) => {
+			pendingAction.current = action
 			setMenuVisible(false)
-			action()
 		},
 		[setMenuVisible],
 	)
@@ -167,15 +172,17 @@ export function PlayerFunctionalMenu({
 	return (
 		<TrueSheet
 			ref={sheetRef}
-			detents={['auto']}
+			detents={[0.75]}
 			cornerRadius={24}
 			backgroundColor={colors.elevation.level1}
 			onDidDismiss={onDismiss}
 			onDidPresent={onPresent}
+			scrollable
 		>
 			<ScrollView
 				style={{ maxHeight: '100%', marginTop: 16 }}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+				showsVerticalScrollIndicator={false}
 			>
 				<View
 					style={{
@@ -217,29 +224,26 @@ export function PlayerFunctionalMenu({
 						onPress={() => handleAction(downloadHandler)}
 						colors={colors}
 					/>
+					{mode === 'podcast' && currentTrack?.source === 'bilibili' && (
+						<HighFreqButton
+							label='评论区'
+							icon='comment-text-outline'
+							colors={colors}
+							onPress={() =>
+								handleAction(() =>
+									router.push({
+										pathname: '/comments/[bvid]',
+										params: { bvid: currentTrack.bilibiliMetadata.bvid },
+									}),
+								)
+							}
+						/>
+					)}
 				</View>
 
 				<Divider />
-				<PlayerModeSettings />
-				{mode === 'podcast' && currentTrack?.source === 'bilibili' && (
-					<List.Item
-						title='评论'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='comment-text-outline'
-							/>
-						)}
-						onPress={() =>
-							handleAction(() =>
-								router.push({
-									pathname: '/comments/[bvid]',
-									params: { bvid: currentTrack.bilibiliMetadata.bvid },
-								}),
-							)
-						}
-					/>
-				)}
+				<PlayerModeSettings onAction={handleAction} />
+
 				<Divider />
 
 				<View style={{ paddingTop: 8 }}>
@@ -333,39 +337,43 @@ export function PlayerFunctionalMenu({
 							}
 						/>
 					)}
-					<List.Item
-						title='搜索歌词'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='magnify'
+					{mode !== 'podcast' && (
+						<>
+							<List.Item
+								title='搜索歌词'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='magnify'
+									/>
+								)}
+								onPress={() =>
+									handleAction(() => {
+										if (!currentTrack) return
+										openModal('ManualSearchLyrics', {
+											uniqueKey: currentTrack.uniqueKey,
+											initialQuery: currentTrack.title,
+										})
+									})
+								}
 							/>
-						)}
-						onPress={() =>
-							handleAction(() => {
-								if (!currentTrack) return
-								openModal('ManualSearchLyrics', {
-									uniqueKey: currentTrack.uniqueKey,
-									initialQuery: currentTrack.title,
-								})
-							})
-						}
-					/>
-					<List.Item
-						title='分享歌词'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='share-variant'
+							<List.Item
+								title='分享歌词'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='share-variant'
+									/>
+								)}
+								onPress={() =>
+									handleAction(() => {
+										if (!currentTrack) return
+										openModal('LyricsSelection', undefined)
+									})
+								}
 							/>
-						)}
-						onPress={() =>
-							handleAction(() => {
-								if (!currentTrack) return
-								openModal('LyricsSelection', undefined)
-							})
-						}
-					/>
+						</>
+					)}
 					<List.Item
 						title='分享歌曲'
 						left={(props) => (

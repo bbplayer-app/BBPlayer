@@ -757,6 +757,10 @@ export default function LocalPlaylistPage() {
 		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
 			<FunctionalMenu.Item
 				title='播放器偏好'
+				leadingIcon={Icon.select({
+					ios: 'headphones',
+					android: import('@expo/material-symbols/headphones.xml'),
+				})}
 				onPress={() => setPlayerPreferenceVisible(true)}
 			/>
 			{playlistMetadata.type === 'local' && !isSharedSubscriber && (

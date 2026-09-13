@@ -1,18 +1,17 @@
-import { Orpheus, type PlayerMode, type Track } from '@bbplayer/orpheus'
+import { Orpheus, type Track } from '@bbplayer/orpheus'
 
+import {
+	createPlaybackContext,
+	playbackContextStore$,
+	reconcilePlaybackContext,
+	setPlaybackContext,
+	assertPlaybackContextAvailable,
+} from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { playlistService } from '@/lib/services/playlistService'
-
-let pending: Promise<unknown> = Promise.resolve()
-
-export function runPlaybackCommand<T>(operation: () => Promise<T>): Promise<T> {
-	const result = pending.then(operation)
-	pending = result.catch(() => undefined)
-	return result
-}
+import type { PlayerMode } from '@/types/core/playback'
 
 async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 	const fallback = useAppStore.getState().settings.defaultPlayerMode
@@ -44,45 +43,50 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 	) {
 		throw new Error('选中的音频当前无法播放')
 	}
-	const initialMode = await resolveInitialMode(options.playlistId)
+	assertPlaybackContextAvailable()
+	const queue = await Orpheus.getQueue()
+	const previous = playbackContextStore$.context.peek()
+	const context =
+		replace || !queue.length
+			? createPlaybackContext(await resolveInitialMode(options.playlistId))
+			: (previous ??
+				createPlaybackContext(
+					useAppStore.getState().settings.defaultPlayerMode,
+				))
 	if (options.playNext) {
-		await Orpheus.playNext(options.tracks[0], initialMode)
+		await Orpheus.playNext(options.tracks[0])
 	} else {
-		await Orpheus.addToEnd(
-			options.tracks,
-			options.startFromKey,
-			replace,
-			initialMode,
-		)
+		await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
 	}
+	setPlaybackContext(context)
 	if (options.playNow && (options.playNext || !options.startFromKey))
 		await Orpheus.play()
 }
 
 /** Replace the queue and begin a new continuous playback experience. */
 export function startPlayback(options: QueueOptions) {
-	return runPlaybackCommand(() => submitTracks(options, true))
+	return submitTracks(options, true)
 }
 
-/** An initial mode is only applied by native code when the queue is empty. */
+/** Appending preserves the current session; an empty queue starts a new one. */
 export function enqueueTracks(options: QueueOptions) {
-	return runPlaybackCommand(() => submitTracks(options, false))
+	return submitTracks(options, false)
 }
 
-export function switchPlayerMode(mode: PlayerMode) {
-	return runPlaybackCommand(async () => {
-		await Orpheus.setPlayerMode(mode)
-		await usePlaybackContextStore.getState().sync()
-	})
+export async function switchPlayerMode(mode: PlayerMode) {
+	await reconcilePlaybackContext()
+	if (playbackContextStore$.context.peek())
+		playbackContextStore$.context.mode.set(mode)
 }
 
-export function clearPlaybackQueue() {
-	return runPlaybackCommand(async () => {
-		await Orpheus.clearQueue()
-		await Promise.all([
-			usePlaybackContextStore.getState().sync(),
-			usePlayerQueueStore.getState().sync(),
-			usePlayerStore.getState().sync(),
-		])
-	})
+export async function clearPlaybackQueue() {
+	assertPlaybackContextAvailable()
+	await Orpheus.pause()
+	await Orpheus.cancelSleepTimer()
+	await Orpheus.clear()
+	setPlaybackContext(null)
+	await Promise.all([
+		usePlayerQueueStore.getState().sync(),
+		usePlayerStore.getState().sync(),
+	])
 }

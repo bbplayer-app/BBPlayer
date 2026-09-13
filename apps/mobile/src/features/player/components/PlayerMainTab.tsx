@@ -1,3 +1,4 @@
+import { Show, Switch } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
@@ -8,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
-import { usePlaybackContextStore } from '@/hooks/stores/usePlaybackContextStore'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
 
@@ -31,58 +32,68 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
-	const trackId = useCurrentTrackId()
-	const mode = usePlaybackContextStore((state) => state.context?.mode)
-	const ready = usePlaybackContextStore((state) => state.ready)
-	const { chapters } = usePlayerChapters()
 
-	if (!currentTrack || !ready) return null
+	if (!currentTrack) return null
 	return (
-		<ScrollView
-			contentContainerStyle={styles.container}
-			showsVerticalScrollIndicator={false}
-		>
-			<TrackInfo
-				onArtistPress={() =>
-					currentTrack.artist?.remoteId
-						? router.push({
-								pathname: '/playlist/remote/uploader/[mid]',
-								params: { mid: currentTrack.artist?.remoteId },
-							})
-						: void 0
-				}
-				onPressCover={() => {
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-					jumpTo('lyrics')
-				}}
-				coverRef={imageRef}
-			/>
-
-			<View
-				style={[
-					{ paddingBottom: Math.max(insets.bottom + 20, 20) },
-					styles.controlsContainer,
-				]}
+		<Show if={playbackContextStore$.ready}>
+			<ScrollView
+				contentContainerStyle={styles.container}
+				showsVerticalScrollIndicator={false}
 			>
-				<PlayerSlider
-					key={trackId}
-					podcast={mode === 'podcast'}
-					chapters={chapters}
+				<TrackInfo
+					onArtistPress={() =>
+						currentTrack.artist?.remoteId
+							? router.push({
+									pathname: '/playlist/remote/uploader/[mid]',
+									params: { mid: currentTrack.artist?.remoteId },
+								})
+							: void 0
+					}
+					onPressCover={() => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+						jumpTo('lyrics')
+					}}
+					coverRef={imageRef}
 				/>
-				{mode === 'podcast' ? (
-					<PodcastControls />
-				) : (
-					<PlayerControls
-						onOpenQueue={() => {
-							onPresent()
-							void usePlayerQueueSheetStore.getState().open()
+
+				<View
+					style={[
+						{ paddingBottom: Math.max(insets.bottom + 20, 20) },
+						styles.controlsContainer,
+					]}
+				>
+					<PlayerProgress />
+					<Switch value={playbackContextStore$.context.mode}>
+						{{
+							podcast: () => <PodcastControls />,
+							default: () => (
+								<PlayerControls
+									onOpenQueue={() => {
+										onPresent()
+										void usePlayerQueueSheetStore.getState().open()
+									}}
+								/>
+							),
 						}}
-					/>
-				)}
-			</View>
-		</ScrollView>
+					</Switch>
+				</View>
+			</ScrollView>
+		</Show>
 	)
 })
+
+// Keep both mode and progress subscriptions below the cover/title container.
+function PlayerProgress() {
+	const trackId = useCurrentTrackId()
+	const { chapters, podcast } = usePlayerChapters()
+	return (
+		<PlayerSlider
+			key={trackId}
+			podcast={podcast}
+			chapters={chapters}
+		/>
+	)
+}
 
 const styles = StyleSheet.create({
 	container: {

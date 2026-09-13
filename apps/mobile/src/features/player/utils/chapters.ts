@@ -32,16 +32,24 @@ export function normalizeChapters(
 		.filter(
 			(point, index, all) => index === 0 || point.from !== all[index - 1].from,
 		)
-	return sorted.map((point, index) => ({
-		id: `${point.from}:${index}`,
-		title: point.content.trim(),
-		startSeconds: point.from,
-		endSeconds: Math.min(
-			point.to,
-			duration,
-			sorted[index + 1]?.from ?? duration,
-		),
-	}))
+	return sorted.map((point, index) => {
+		// Bilibili chapter times use whole seconds; media duration can include
+		// a fractional tail (and the metadata duration can round up).
+		const terminalEnd =
+			index === sorted.length - 1 && duration - point.to <= 1
+				? duration
+				: point.to
+		return {
+			id: `${point.from}:${index}`,
+			title: point.content.trim(),
+			startSeconds: point.from,
+			endSeconds: Math.min(
+				terminalEnd,
+				duration,
+				sorted[index + 1]?.from ?? duration,
+			),
+		}
+	})
 }
 
 export function chapterIndexAt(chapters: Chapter[], seconds: number): number {

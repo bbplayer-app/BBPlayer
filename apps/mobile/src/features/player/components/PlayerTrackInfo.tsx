@@ -1,4 +1,5 @@
 import { useIsPlaying, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
+import { useValue } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -12,12 +13,14 @@ import {
 	useColorScheme,
 	View,
 } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import { Text, TouchableRipple, useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
+import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { getGradientColors } from '@/utils/color'
 
@@ -38,6 +41,9 @@ export function TrackInfo({
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
+	const podcast = useValue(
+		() => playbackContextStore$.context.mode.get() === 'podcast',
+	)
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
 
@@ -70,7 +76,8 @@ export function TrackInfo({
 			: undefined)
 
 	const coverSize = COVER_SIZE
-	const coverBorderRadius = coverSize / 2
+	const coverBorderRadius = podcast ? 0 : coverSize / 2
+	const CoverFrame = podcast ? SquircleView : View
 
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
@@ -97,9 +104,10 @@ export function TrackInfo({
 		>
 			<Pressable
 				style={styles.coverContainer}
-				onPress={onPressCover}
+				onPress={podcast ? undefined : onPressCover}
+				disabled={podcast}
 			>
-				{enableSpectrumVisualizer && (
+				{!podcast && enableSpectrumVisualizer && (
 					<View
 						style={[
 							StyleSheet.absoluteFill,
@@ -115,42 +123,51 @@ export function TrackInfo({
 				)}
 				<TouchableOpacity
 					activeOpacity={0.8}
-					onPress={onPressCover}
+					onPress={podcast ? undefined : onPressCover}
+					disabled={podcast}
 					style={{ width: coverSize, height: coverSize }}
 					testID='player-cover'
 				>
-					{!coverRef ? (
-						<LinearGradient
-							colors={[color1, color2]}
-							style={[
-								styles.coverGradient,
-								{ borderRadius: coverBorderRadius },
-							]}
-							start={{ x: 0, y: 0 }}
-							end={{ x: 1, y: 1 }}
-						>
-							<Text
+					<CoverFrame
+						style={{
+							flex: 1,
+							borderRadius: podcast ? 32 : coverBorderRadius,
+							overflow: 'hidden',
+						}}
+					>
+						{!coverRef ? (
+							<LinearGradient
+								colors={[color1, color2]}
 								style={[
-									styles.coverPlaceholderText,
-									{ fontSize: coverSize * 0.45 },
+									styles.coverGradient,
+									{ borderRadius: coverBorderRadius },
 								]}
+								start={{ x: 0, y: 0 }}
+								end={{ x: 1, y: 1 }}
 							>
-								{firstChar}
-							</Text>
-						</LinearGradient>
-					) : (
-						<Image
-							source={coverRef}
-							style={{
-								width: coverSize,
-								height: coverSize,
-								borderRadius: coverBorderRadius,
-							}}
-							recyclingKey={currentTrack.uniqueKey}
-							cachePolicy={'disk'}
-							transition={300}
-						/>
-					)}
+								<Text
+									style={[
+										styles.coverPlaceholderText,
+										{ fontSize: coverSize * 0.45 },
+									]}
+								>
+									{firstChar}
+								</Text>
+							</LinearGradient>
+						) : (
+							<Image
+								source={coverRef}
+								style={{
+									width: coverSize,
+									height: coverSize,
+									borderRadius: coverBorderRadius,
+								}}
+								recyclingKey={currentTrack.uniqueKey}
+								cachePolicy={'disk'}
+								transition={300}
+							/>
+						)}
+					</CoverFrame>
 				</TouchableOpacity>
 			</Pressable>
 
