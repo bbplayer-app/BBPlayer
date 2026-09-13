@@ -10,6 +10,7 @@ export interface BackupManifest {
 	exportedAt: string
 	mmkv: {
 		'app-storage': string
+		'playback-context-store'?: string
 		'shared-playlist-members': string
 	}
 	orpheus: OrpheusBackupData

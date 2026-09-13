@@ -14,6 +14,7 @@ export interface AppStorageSchema {
 	now_playing_bar_style: 'float' | 'bottom'
 	enable_persist_current_position: boolean
 	'app-storage': string
+	'playback-context-store': string
 	current_position: number
 	enable_loudness_normalization: boolean
 	db_schema_version: number

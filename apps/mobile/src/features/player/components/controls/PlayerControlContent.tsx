@@ -1,21 +1,16 @@
 import {
 	Orpheus,
 	PlaybackState,
-	RepeatMode,
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
-import { useRouter } from 'expo-router'
 import LottieView, { type AnimationObject } from 'lottie-react-native'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import IconButton from '@/components/common/IconButton'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -242,111 +237,15 @@ export function MainPlaybackControls({
 	)
 }
 
-export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
-	const { colors } = useTheme()
-	const { data: shuffleMode, refetch: refetchShuffleMode } = useShuffleMode()
-	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
-	const currentTrack = useCurrentTrack()
-	const router = useRouter()
-
-	useEffect(() => {
-		void Orpheus.getRepeatMode().then(setRepeatMode)
-		const listener = AppState.addEventListener('change', (nextAppState) => {
-			if (nextAppState === 'active') {
-				void Orpheus.getRepeatMode().then(setRepeatMode)
-			}
-		})
-		return () => {
-			listener.remove()
-		}
-	}, [])
-
-	return (
-		<View>
-			<View style={styles.mainControlsWrapper}>
-				<MainPlaybackControls />
-			</View>
-			<View style={styles.secondaryControlsContainer}>
-				<IconButton
-					icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
-					size={24}
-					iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
-					onPress={async () => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-						await (shuffleMode
-							? Orpheus.setShuffleMode(false)
-							: Orpheus.setShuffleMode(true))
-						await refetchShuffleMode()
-						void analyticsService.logPlayerAction('shuffle', {
-							mode: !shuffleMode,
-						})
-					}}
-					testID='player-mode-shuffle'
-				/>
-				<IconButton
-					icon={
-						repeatMode === RepeatMode.OFF
-							? 'repeat-off'
-							: repeatMode === RepeatMode.TRACK
-								? 'repeat-once'
-								: 'repeat'
-					}
-					size={24}
-					iconColor={
-						repeatMode !== RepeatMode.OFF
-							? colors.primary
-							: colors.onSurfaceVariant
-					}
-					onPress={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
-						const nextMode =
-							repeatMode === RepeatMode.OFF
-								? RepeatMode.TRACK
-								: repeatMode === RepeatMode.TRACK
-									? RepeatMode.QUEUE
-									: RepeatMode.OFF
-						void Orpheus.setRepeatMode(nextMode)
-						setRepeatMode(nextMode)
-						void analyticsService.logPlayerAction('repeat', {
-							mode: nextMode,
-						})
-					}}
-					testID='player-mode-repeat'
-				/>
-				<IconButton
-					icon='comment-text-outline'
-					size={24}
-					disabled={currentTrack?.source !== 'bilibili'}
-					onPress={() => {
-						if (currentTrack?.source === 'bilibili') {
-							router.push({
-								pathname: '/comments/[bvid]',
-								params: { bvid: currentTrack.bilibiliMetadata.bvid },
-							})
-						}
-					}}
-					testID='player-open-comments'
-				/>
-				<IconButton
-					icon='format-list-bulleted'
-					size={24}
-					iconColor={colors.onSurfaceVariant}
-					onPress={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-						onOpenQueue()
-						void analyticsService.logPlayerQueueAction('open_queue')
-					}}
-					testID='player-open-queue'
-				/>
-			</View>
-		</View>
-	)
+export function SecondaryPlaybackControls({
+	children,
+}: {
+	children: React.ReactNode
+}) {
+	return <View style={styles.secondaryControlsContainer}>{children}</View>
 }
 
 const styles = StyleSheet.create({
-	mainControlsWrapper: {
-		marginTop: 24,
-	},
 	mainControlsContainer: {
 		flexDirection: 'row',
 		alignItems: 'center',

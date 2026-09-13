@@ -1,5 +1,6 @@
 package expo.modules.wavyslider
 
+import androidx.compose.ui.unit.LayoutDirection
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Bitmap
@@ -7,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.ViewGroup.LayoutParams
 import android.widget.Space
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -227,6 +229,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
     var waveVelocity by mutableFloatStateOf(15.0f)
     var waveVelocityState by mutableStateOf<ObservableState?>(null)
     var waveDirection by mutableStateOf(WavySliderWaveDirection.HEAD)
+    var chapterMarkers by mutableStateOf<List<Float>>(emptyList())
     var thumbShape by mutableStateOf(WavySliderThumbShape.DEFAULT)
     var thumbImageUri by mutableStateOf<String?>(null)
     var thumbImageDragLeftUri by mutableStateOf<String?>(null)
@@ -339,6 +342,12 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         onDragStateChange?.invoke(isDragged)
                     }
 
+                    val chapterMarkerGrowth by animateFloatAsState(
+                        targetValue = if (isDragged && sliderEnabled) 1f else 0f,
+                        animationSpec = tween(durationMillis = if (isDragged) 180 else 120),
+                        label = "chapterMarkerGrowth"
+                    )
+
                     var localValue by remember { mutableFloatStateOf(clampedPropsValue) }
                     var isDragging by remember { mutableStateOf(false) }
                     var dragDirection by remember { mutableFloatStateOf(0.0f) }
@@ -359,6 +368,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                         inactiveTickColor = colors.inactiveTickColor.compose
                     )
                     val bufferedTrackColor = colors.bufferedTrackColor.composeOrNull
+                    val chapterMarkerColor = colors.activeTickColor.composeOrNull ?: MaterialTheme.colorScheme.onSurface
 
                     WavySlider(
                         value = localValue,
@@ -472,6 +482,20 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                                     color = color
                                                 )
                                             }
+                                        }
+                                    }
+                                }
+                                if (chapterMarkers.isNotEmpty() && chapterMarkerGrowth > 0f) {
+                                    Canvas(modifier = Modifier.matchParentSize()) {
+                                        val halfHeight = 6.dp.toPx() * chapterMarkerGrowth
+                                        for (fraction in chapterMarkers) {
+                                            val x = size.width * if (layoutDirection == LayoutDirection.Rtl) 1f - fraction else fraction
+                                            drawLine(
+                                                color = chapterMarkerColor,
+                                                start = Offset(x, center.y - halfHeight),
+                                                end = Offset(x, center.y + halfHeight),
+                                                strokeWidth = 2.dp.toPx(),
+                                            )
                                         }
                                     }
                                 }

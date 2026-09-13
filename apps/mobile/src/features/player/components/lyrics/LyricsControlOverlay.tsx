@@ -7,8 +7,8 @@ import { Touchable } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
-import { MainPlaybackControls } from '@/features/player/components/PlayerControls'
-import { PlayerSlider } from '@/features/player/components/PlayerSlider'
+import { MainPlaybackControls } from '@/features/player/components/controls/PlayerControlContent'
+import { PlayerSlider } from '@/features/player/components/main/PlayerSlider'
 
 const ALPHABETICAL_ICON = ExpoIcon.select({
 	ios: 'abc',

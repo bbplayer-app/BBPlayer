@@ -92,6 +92,10 @@ class ExpoWavySliderModule : Module() {
                 view.upperLimit = upperLimit
             }
 
+            Prop("chapterMarkers") { view: ExpoWavySliderView, markers: List<Float> ->
+                view.chapterMarkers = markers.filter { it.isFinite() && it > 0f && it < 1f }.distinct().sorted()
+            }
+
             Prop("enabled") { view: ExpoWavySliderView, enabled: Boolean ->
                 view.sliderEnabled = enabled
             }

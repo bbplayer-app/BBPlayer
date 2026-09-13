@@ -1,7 +1,7 @@
-import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
+import { useIsPlaying } from '@bbplayer/orpheus'
 import Color from 'color'
 import { WavySlider } from 'expo-wavy-slider'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import AnimateableText from 'react-native-animateable-text'
 import { useTheme } from 'react-native-paper'
@@ -15,9 +15,20 @@ import {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import IconButton from '@/components/common/IconButton'
+import {
+	chapterIndexAt,
+	chapterBoundaryIndex,
+	chapterBoundaries,
+	type Chapter,
+} from '@/features/player/utils/chapters'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import useTrackProgress from '@/hooks/player/useTrackProgress'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import { seekWithinTrack } from '@/lib/player/seek'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -37,7 +48,7 @@ function TextWithAnimation({
 		() => (sharedPosition.value ? Math.trunc(sharedPosition.value) : 0),
 		(pos, prev) => {
 			if (pos !== prev) {
-				positionText.value = formatDurationToHHMMSS(pos)
+				positionText.set(formatDurationToHHMMSS(pos))
 			}
 		},
 	)
@@ -46,7 +57,7 @@ function TextWithAnimation({
 		() => (sharedDuration.value ? Math.trunc(sharedDuration.value) : 0),
 		(dur, prev) => {
 			if (dur !== prev) {
-				durationText.value = formatDurationToHHMMSS(dur)
+				durationText.set(formatDurationToHHMMSS(dur))
 			}
 		},
 	)
@@ -91,9 +102,24 @@ function TextWithAnimation({
 
 interface PlayerSliderProps {
 	onInteraction?: () => void
+	podcast?: boolean
+	chapters?: Chapter[]
 }
 
-export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
+const NO_CHAPTERS: Chapter[] = []
+
+export function PlayerSlider({
+	onInteraction,
+	podcast = false,
+	chapters = NO_CHAPTERS,
+}: PlayerSliderProps = {}) {
+	const trackId = useCurrentTrackId()
+	const { duration: nativeDuration } = useTrackProgress()
+	const canSeek = Number.isFinite(nativeDuration) && nativeDuration > 0
+	const markers = useMemo(
+		() => (podcast ? chapterBoundaries(chapters, nativeDuration) : []),
+		[chapters, nativeDuration, podcast],
+	)
 	const { colors } = useTheme()
 	const activeSkin = useActiveSkin()
 	const skinSliderThumbSize = useSkinStore(
@@ -119,35 +145,48 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const animatedWaveVelocity = useSharedValue(isPlaying ? 15 : 0)
 	const animatedWaveThickness = useSharedValue(3)
 	const animatedTrackThickness = useSharedValue(3)
-	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const lastChapterHaptic = useSharedValue(0)
 
 	useEffect(() => {
 		isPlayingShared.set(isPlaying)
 	}, [isPlaying, isPlayingShared])
 
 	const handleSeek = useCallback(
-		(time: number) => {
-			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
-			isSeeking.set(true)
-			void Orpheus.seekTo(time)
-
-			seekTimeoutRef.current = setTimeout(() => {
-				// Sync the actual native playback position to avoid a stale paused
-				// position snapping the progress bar backward.
-				void Orpheus.getPosition().then((actualPosition) => {
-					position.set(actualPosition)
-					isSeeking.set(false)
-					seekTimeoutRef.current = null
-				})
-			}, 5000)
+		async (time: number, relative = false) => {
+			if (!trackId) return
+			try {
+				const target = await seekWithinTrack(trackId, time, relative)
+				if (target !== null) {
+					position.set(target)
+					seekPosition.set(target)
+				}
+				isSeeking.set(false)
+			} catch (error) {
+				toastAndLogError('跳转失败', error, 'Player.Slider')
+				isSeeking.set(false)
+			}
 		},
-		[isSeeking, position],
+		[trackId, position, seekPosition, isSeeking],
 	)
+
+	useEffect(() => {
+		isScrubbing.set(false)
+		isSeeking.set(false)
+		isNativeDragging.set(false)
+	}, [trackId, isScrubbing, isSeeking, isNativeDragging])
 
 	const displayPosition = useDerivedValue(() => {
 		if (isScrubbing.value) return scrubPosition.value
 		if (isSeeking.value) return seekPosition.value
 		return position.value
+	})
+
+	const chapterPreviewProps = useAnimatedProps(() => {
+		const time = displayPosition.value
+		const chapter = chapters[chapterIndexAt(chapters, time)]
+		return {
+			text: chapter?.title ?? '',
+		}
 	})
 
 	useAnimatedReaction(
@@ -214,8 +253,24 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		(value: number) => {
 			'worklet'
 			const wasScrubbing = isScrubbing.value
+			const previousFraction = scrubPosition.value / (duration.value || 1)
 			isScrubbing.set(true)
 			scrubPosition.set(value * (duration.value || 1))
+			if (
+				podcast &&
+				wasScrubbing &&
+				chapterBoundaryIndex(markers, value) !==
+					chapterBoundaryIndex(markers, previousFraction)
+			) {
+				const now = Date.now()
+				if (now - lastChapterHaptic.value >= 80) {
+					lastChapterHaptic.set(now)
+					scheduleOnRN(
+						Haptics.performHaptics,
+						Haptics.AndroidHaptics.Clock_Tick,
+					)
+				}
+			}
 
 			if (!wasScrubbing) {
 				scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Drag_Start)
@@ -224,7 +279,15 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 				scheduleOnRN(onInteraction)
 			}
 		},
-		[duration, isScrubbing, onInteraction, scrubPosition],
+		[
+			duration,
+			isScrubbing,
+			onInteraction,
+			scrubPosition,
+			markers,
+			podcast,
+			lastChapterHaptic,
+		],
 	)
 
 	const handleValueChangeFinished = useCallback(
@@ -248,8 +311,9 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		(dragging: boolean) => {
 			'worklet'
 			isNativeDragging.set(dragging)
+			if (!dragging) isScrubbing.set(false)
 		},
-		[isNativeDragging],
+		[isNativeDragging, isScrubbing],
 	)
 
 	const sliderColors = useMemo(
@@ -258,41 +322,81 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			bufferedTrackColor: Color(colors.primary).alpha(0.28).rgb().string(),
 			inactiveTrackColor: colors.surfaceVariant,
 			thumbColor: colors.primary,
+			activeTickColor: colors.onSurface,
+			inactiveTickColor: colors.onSurface,
 		}),
-		[colors.primary, colors.surfaceVariant],
+		[colors.primary, colors.surfaceVariant, colors.onSurface],
 	)
 	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
 	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
 	return (
 		<View style={styles.root}>
-			<WavySlider
-				style={styles.slider}
-				progress={progressFraction}
-				// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
-				colors={sliderColors}
-				waveLength={30}
-				waveVelocity={animatedWaveVelocity}
-				waveDirection='head'
-				waveHeight={animatedWaveHeight}
-				waveThickness={animatedWaveThickness}
-				trackThickness={animatedTrackThickness}
-				thumbImageUri={sliderThumb?.normal}
-				thumbImageDragLeftUri={sliderThumb?.dragLeft}
-				thumbImageDragRightUri={sliderThumb?.dragRight}
-				thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
-				thumbImageOffsetX={
-					hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
-				}
-				thumbImageOffsetY={
-					hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
-				}
-				incremental={false}
-				onValueChange={handleValueChange}
-				onValueChangeFinished={handleValueChangeFinished}
-				onDragStateChange={handleDragStateChange}
-			/>
+			{podcast && (
+				<AnimateableText
+					numberOfLines={1}
+					animatedProps={chapterPreviewProps}
+					style={{
+						color: colors.onSurfaceVariant,
+						height: 24,
+						textAlign: 'center',
+						marginBottom: 8,
+					}}
+				/>
+			)}
+			<View style={podcast ? styles.podcastSliderRow : undefined}>
+				{podcast && (
+					<IconButton
+						icon='rewind-15'
+						accessibilityLabel='后退 15 秒'
+						disabled={!canSeek}
+						style={styles.seekButton}
+						onPress={() => {
+							void handleSeek(-15, true)
+						}}
+					/>
+				)}
+				<WavySlider
+					style={podcast ? styles.podcastSlider : styles.slider}
+					enabled={canSeek}
+					chapterMarkers={markers}
+					progress={progressFraction}
+					// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
+					colors={sliderColors}
+					waveLength={30}
+					waveVelocity={animatedWaveVelocity}
+					waveDirection='head'
+					waveHeight={animatedWaveHeight}
+					waveThickness={animatedWaveThickness}
+					trackThickness={animatedTrackThickness}
+					thumbImageUri={sliderThumb?.normal}
+					thumbImageDragLeftUri={sliderThumb?.dragLeft}
+					thumbImageDragRightUri={sliderThumb?.dragRight}
+					thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
+					thumbImageOffsetX={
+						hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
+					}
+					thumbImageOffsetY={
+						hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
+					}
+					incremental={false}
+					onValueChange={handleValueChange}
+					onValueChangeFinished={handleValueChangeFinished}
+					onDragStateChange={handleDragStateChange}
+				/>
 
+				{podcast && (
+					<IconButton
+						icon='fast-forward-15'
+						accessibilityLabel='前进 15 秒'
+						disabled={!canSeek}
+						style={styles.seekButton}
+						onPress={() => {
+							void handleSeek(15, true)
+						}}
+					/>
+				)}
+			</View>
 			<View style={styles.timeContainer}>
 				<TextWithAnimation
 					sharedPosition={displayPosition}
@@ -304,6 +408,9 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 }
 
 const styles = StyleSheet.create({
+	podcastSliderRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+	podcastSlider: { flex: 1, height: 25 },
+	seekButton: { width: 48, height: 48, margin: 0 },
 	root: {
 		width: '100%',
 		justifyContent: 'center',

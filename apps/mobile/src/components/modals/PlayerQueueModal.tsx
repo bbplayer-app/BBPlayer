@@ -6,27 +6,24 @@ import {
 	TrueSheet,
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
-import {
-	memo,
-	useCallback,
-	useMemo,
-	useRef,
-	useState,
-	type RefObject,
-} from 'react'
+import { memo, RefObject, useCallback, useMemo, useRef, useState } from 'react'
 import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
+import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
+import { clearPlaybackQueue } from '@/lib/player/playbackSession'
 import { analyticsService } from '@/lib/services/analyticsService'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 
 const TrackItem = memo(
@@ -110,6 +107,24 @@ interface PlayerQueueModalProps extends TrueSheetProps {
 }
 
 function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
+	const [clearing, setClearing] = useState(false)
+	const clearQueue = () => {
+		alert('清空播放队列', '清空播放队列并停止播放？', [
+			{ text: '取消' },
+			{
+				text: '清空',
+				onPress: () => {
+					setClearing(true)
+					void clearPlaybackQueue()
+						.then(() => usePlayerQueueSheetStore.getState().close())
+						.catch((error: unknown) =>
+							toastAndLogError('清空播放队列失败', error, 'Player.Queue'),
+						)
+						.finally(() => setClearing(false))
+				},
+			},
+		])
+	}
 	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
@@ -215,7 +230,16 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 						}}
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
-						<View style={{ flexDirection: 'row' }}>
+						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+							<Button
+								compact
+								onPress={clearQueue}
+								disabled={clearing || queue.length === 0}
+								loading={clearing}
+								textColor={theme.colors.error}
+							>
+								清空
+							</Button>
 							<IconButton
 								icon='sort-reverse-variant'
 								onPress={() => {

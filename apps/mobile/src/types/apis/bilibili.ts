@@ -427,6 +427,7 @@ interface BilibiliSearchSuggestionItem {
 }
 
 interface BilibiliWebPlayerInfo {
+	view_points?: { type?: number; from: number; to: number; content: string }[]
 	bgm_info?: {
 		music_id: number
 		music_title: string

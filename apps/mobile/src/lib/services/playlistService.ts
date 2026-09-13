@@ -404,6 +404,24 @@ export class PlaylistService {
 	 * @param payload - 更新所需的数据。
 	 * @returns ResultAsync 包含更新后的 Playlist 或一个错误。
 	 */
+	public setPlayerPreference(
+		playlistId: number,
+		preference: Playlist['playerPreference'],
+	) {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const [updated] = await this.db
+					.update(schema.playlists)
+					.set({ playerPreference: preference })
+					.where(eq(schema.playlists.id, playlistId))
+					.returning()
+				if (!updated) throw createPlaylistNotFound(playlistId)
+				return updated
+			})(),
+			(e) => new DatabaseError('更新播放器偏好失败', { cause: e }),
+		)
+	}
+
 	public updatePlaylistMetadata(
 		playlistId: number,
 		payload: UpdatePlaylistPayload,
