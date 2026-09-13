@@ -13,6 +13,11 @@ allowBuilds:
   unrs-resolver: true
   workerd: true
   dtrace-provider: true
+  '@fails-components/webtransport-transport-http3-quiche': true
+  node-pty: true
+  tree-sitter: true
+  tree-sitter-javascript: true
+  tree-sitter-typescript: true
 
 minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
@@ -23,4 +28,5 @@ patchedDependencies:
   expo-updates@57.0.21: patches/expo-updates@57.0.21.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch
+  react-native-pager-view@9.0.4: patches/react-native-pager-view@9.0.3.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch
