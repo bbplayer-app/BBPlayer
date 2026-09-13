@@ -1,6 +1,7 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
 
 import {
+	applyResumeStrategy,
 	createPlaybackContext,
 	playbackContextStore$,
 	reconcilePlaybackContext,
@@ -54,8 +55,10 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 					useAppStore.getState().settings.defaultPlayerMode,
 				))
 	if (options.playNext) {
+		applyResumeStrategy(context.mode)
 		await Orpheus.playNext(options.tracks[0])
 	} else {
+		applyResumeStrategy(context.mode)
 		await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
 	}
 	setPlaybackContext(context)
@@ -75,6 +78,7 @@ export function enqueueTracks(options: QueueOptions) {
 
 export async function switchPlayerMode(mode: PlayerMode) {
 	await reconcilePlaybackContext()
+	applyResumeStrategy(mode)
 	if (playbackContextStore$.context.peek())
 		playbackContextStore$.context.mode.set(mode)
 }

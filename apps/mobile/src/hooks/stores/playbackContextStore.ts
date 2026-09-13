@@ -1,7 +1,7 @@
-import { Orpheus } from '@bbplayer/orpheus'
+import { Orpheus, ResumeStrategy } from '@bbplayer/orpheus'
 import { observable } from '@legendapp/state'
 import { syncObservable } from '@legendapp/state/sync'
-import { AppState } from 'react-native'
+import { AppState, Platform } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import {
@@ -51,6 +51,18 @@ export function setPlaybackContext(context: PlaybackContext | null) {
 	playbackContextStore$.set({ context, ready: true })
 }
 
+/**
+ * 把当前会话模式对应的续播策略同步给原生。
+ *
+ * 只写入原生属性，绝不主动 seek：逐首断点的采样、保存与定位全部由原生负责，
+ * 避免在初始化或恢复上下文时重复应用断点。
+ */
+export function applyResumeStrategy(mode?: PlayerMode | null) {
+	if (Platform.OS !== 'android') return
+	Orpheus.playbackResumeStrategy =
+		mode === 'podcast' ? ResumeStrategy.PODCAST : ResumeStrategy.NONE
+}
+
 /** An unready native service rejects getQueue rather than reporting an empty queue. */
 export async function reconcilePlaybackContext() {
 	assertPlaybackContextAvailable()
@@ -62,6 +74,7 @@ export async function reconcilePlaybackContext() {
 			createPlaybackContext(useAppStore.getState().settings.defaultPlayerMode),
 		)
 	} else playbackContextStore$.ready.set(true)
+	applyResumeStrategy(playbackContextStore$.context.peek()?.mode)
 }
 
 export function syncPlaybackContext() {

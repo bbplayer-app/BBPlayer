@@ -42,6 +42,7 @@ import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.GlideBitmapLoader
 import expo.modules.orpheus.util.LoudnessStorage
 import expo.modules.orpheus.util.SleepTimeController
+import expo.modules.orpheus.util.TrackResumeStorage
 import expo.modules.orpheus.util.calculateLoudnessGain
 import expo.modules.orpheus.util.fadeInTo
 import kotlinx.coroutines.Job
@@ -83,7 +84,19 @@ class OrpheusMusicService : MediaLibraryService() {
         }
     }
 
+    /**
+     * 播放中每 5 秒保存一次逐首断点。突然终止时依靠最近一次周期保存恢复。
+     */
+    private val resumeSaveRunnable = object : Runnable {
+        override fun run() {
+            saveCurrentResumeRecord()
+            serviceHandler.postDelayed(this, RESUME_SAVE_INTERVAL_MS)
+        }
+    }
+
     companion object {
+        private const val RESUME_SAVE_INTERVAL_MS = 5000L
+
         var instance: OrpheusMusicService? = null
             private set(value) {
                 field = value
@@ -128,6 +141,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
         GeneralStorage.initialize(this)
         LoudnessStorage.initialize(this)
+        TrackResumeStorage.initialize(this)
 
         setMediaNotificationProvider(object : DefaultMediaNotificationProvider(this) {
             override fun getMediaButtons(
@@ -309,6 +323,8 @@ class OrpheusMusicService : MediaLibraryService() {
 
     override fun onDestroy() {
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
+        serviceHandler.removeCallbacks(resumeSaveRunnable)
+        saveCurrentResumeRecord()
         floatingLyricsManager.hide()
         statusBarLyricsManager.onStop()
         scope.cancel()
@@ -410,8 +426,19 @@ class OrpheusMusicService : MediaLibraryService() {
             val savedShuffleMode = GeneralStorage.getShuffleMode()
             val savedRepeatMode = GeneralStorage.getRepeatMode()
 
+            // 起播位置优先级：会话恢复位置 > podcast 逐首断点 > 从头开始
+            val startPositionMs = when {
+                restorePosition -> savedPosition
+                TrackResumeStorage.getStrategy() == TrackResumeStorage.STRATEGY_PODCAST -> {
+                    restoredItems.getOrNull(savedIndex)
+                        ?.let { TrackResumeStorage.get(it.mediaId) }
+                        ?.let { (it.position * 1000).toLong() } ?: 0L
+                }
+                else -> 0L
+            }
+
             if (savedIndex >= 0 && savedIndex < restoredItems.size) {
-                player.seekTo(savedIndex, if (restorePosition) savedPosition else C.TIME_UNSET)
+                player.seekTo(savedIndex, startPositionMs)
             } else {
                 player.seekTo(0, 0L)
             }
@@ -536,9 +563,13 @@ class OrpheusMusicService : MediaLibraryService() {
                 if (isPlaying) {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.post(lyricsUpdateRunnable)
+                    serviceHandler.removeCallbacks(resumeSaveRunnable)
+                    serviceHandler.post(resumeSaveRunnable)
                     sendTrackResumedEvent()
                 } else {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
+                    serviceHandler.removeCallbacks(resumeSaveRunnable)
+                    saveCurrentResumeRecord()
                     sendTrackPausedEvent()
                 }
             }
@@ -567,6 +598,13 @@ class OrpheusMusicService : MediaLibraryService() {
                     return
                 }
                 currentMediaId = mediaId
+
+                // 自然循环到同一音频：清除该音频断点，从头播放
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                    mediaId?.let { TrackResumeStorage.clear(it) }
+                } else {
+                    applyTrackResume(mediaItem)
+                }
 
                 sendTrackStartEvent(mediaItem, reason)
 
@@ -599,12 +637,33 @@ class OrpheusMusicService : MediaLibraryService() {
             ) {
                 val isAutoTransition = reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION
                 val isIndexChanged = oldPosition.mediaItemIndex != newPosition.mediaItemIndex
+                val trackChanged = oldPosition.mediaItem?.mediaId != newPosition.mediaItem?.mediaId
                 val lastMediaItem = oldPosition.mediaItem ?: return
                 val currentTime = System.currentTimeMillis()
 
                 // Debounce
                 if ((currentTime - lastTrackFinishedAt) < 200) {
                     return
+                }
+
+                if (trackChanged) {
+                    // 离开当前音频：使用离开时的位置补存旧音频，绝不能把新音频的位置写给旧音频
+                    val oldDuration = durationCache[lastMediaItem.mediaId]
+                    if (isAutoTransition) {
+                        // 自然播放完毕：清除断点
+                        TrackResumeStorage.clear(lastMediaItem.mediaId)
+                    } else {
+                        saveResumeRecordFor(
+                            lastMediaItem.mediaId,
+                            oldPosition.positionMs,
+                            oldDuration
+                        )
+                    }
+                } else if (reason == Player.DISCONTINUITY_REASON_SEEK ||
+                    reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
+                ) {
+                    // 同一音频内手动跳转：登记一次新位置
+                    saveCurrentResumeRecord()
                 }
 
                 if (isAutoTransition || isIndexChanged) {
@@ -618,6 +677,16 @@ class OrpheusMusicService : MediaLibraryService() {
                     )
                 }
             }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    // 队列最后一首自然播放完毕：清除断点
+                    serviceHandler.removeCallbacks(resumeSaveRunnable)
+                    player?.currentMediaItem?.let { TrackResumeStorage.clear(it.mediaId) }
+                } else if (playbackState == Player.STATE_IDLE) {
+                    serviceHandler.removeCallbacks(resumeSaveRunnable)
+                }
+            }
         })
     }
 
@@ -628,6 +697,43 @@ class OrpheusMusicService : MediaLibraryService() {
             GeneralStorage.saveQueue(queue)
         }
     }
+
+    /**
+     * 保存当前音频的断点。仅在位置有效时写入，避免把初始 0 覆盖到已有记录上。
+     */
+    fun saveCurrentResumeRecord() {
+        val player = player ?: return
+        val item = player.currentMediaItem ?: return
+        val durationMs = resolveDurationMs(item) ?: return
+        TrackResumeStorage.save(item.mediaId, player.currentPosition / 1000.0, durationMs / 1000.0)
+    }
+
+    private fun saveResumeRecordFor(mediaId: String?, positionMs: Long, durationMs: Long?) {
+        if (mediaId == null || durationMs == null || durationMs <= 0) return
+        TrackResumeStorage.save(mediaId, positionMs / 1000.0, durationMs / 1000.0)
+    }
+
+    private fun resolveDurationMs(item: MediaItem): Long? {
+        val current = player?.duration ?: C.TIME_UNSET
+        if (current != C.TIME_UNSET && current > 0) return current
+        val cached = durationCache[item.mediaId]
+        return if (cached != null && cached > 0) cached else null
+    }
+
+    /**
+     * 进入新音频时按续播策略应用断点。同一音频的队列/元数据变化不会走到这里。
+     */
+    @OptIn(UnstableApi::class)
+    private fun applyTrackResume(mediaItem: MediaItem?) {
+        val player = player ?: return
+        if (mediaItem == null) return
+        if (TrackResumeStorage.getStrategy() != TrackResumeStorage.STRATEGY_PODCAST) return
+        val record = TrackResumeStorage.get(mediaItem.mediaId) ?: return
+        val targetMs = (record.position * 1000).toLong()
+        if (targetMs <= 0) return
+        player.seekTo(targetMs)
+    }
+
 
     fun createStatusBarBackend(provider: String): expo.modules.orpheus.manager.StatusBarLyricsBackend {
         return when {

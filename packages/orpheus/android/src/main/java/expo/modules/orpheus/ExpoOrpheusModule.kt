@@ -42,6 +42,7 @@ import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.ExportOptions
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.LoudnessStorage
+import expo.modules.orpheus.util.TrackResumeStorage
 import expo.modules.orpheus.util.runExportDownloads
 import expo.modules.orpheus.util.toJsMap
 import expo.modules.orpheus.util.toMediaItem
@@ -233,6 +234,7 @@ class ExpoOrpheusModule : Module() {
             cachedAppContext = context.applicationContext
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
+            TrackResumeStorage.initialize(context)
             expo.modules.orpheus.manager.CachedUriManager.initialize(context)
             val sessionToken = SessionToken(
                 context,
@@ -328,6 +330,14 @@ class ExpoOrpheusModule : Module() {
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.isAutoplayOnStartEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setAutoplayOnStartEnabled(enabled) }
+
+        /**
+         * 续播策略：0 = 不自动续播（music），1 = 逐首断点续播（podcast）。
+         * 原生持久化，供服务冷启动时无需等待 JS 即可使用。
+         */
+        Property("playbackResumeStrategy")
+            .get { TrackResumeStorage.getStrategy() }
+            .set { strategy: Int -> TrackResumeStorage.setStrategy(strategy) }
 
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.isSpectrumVisualizerEnabled() }
@@ -474,8 +484,10 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("clear") Coroutine { ->
-            withPlayerOnMainThread {
-                it.clearMediaItems()
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                // 清空队列前先保存当前音频断点，逐首记录需保留
+                service.saveCurrentResumeRecord()
+                currentPlayer.clearMediaItems()
                 GeneralStorage.saveQueue(emptyList())
                 GeneralStorage.savePosition(0, 0L)
             }
@@ -697,8 +709,10 @@ class ExpoOrpheusModule : Module() {
             val mediaItems = tracks.map { track ->
                 track.toMediaItem(context)
             }
-            withPlayerOnMainThread { currentPlayer ->
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
                 if (clearQueue == true) {
+                    // 替换队列前先保存旧音频断点
+                    service.saveCurrentResumeRecord()
                     currentPlayer.clearMediaItems()
                 }
                 val initialSize = currentPlayer.mediaItemCount
@@ -714,7 +728,7 @@ class ExpoOrpheusModule : Module() {
                         currentPlayer.prepare()
                         currentPlayer.play()
 
-                        return@withPlayerOnMainThread
+                        return@withServiceAndPlayerOnMainThread
                     }
                 }
 

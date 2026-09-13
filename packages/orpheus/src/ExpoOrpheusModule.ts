@@ -20,6 +20,14 @@ export enum TransitionReason {
 	PLAYLIST_CHANGED = 3,
 }
 
+/** 进入音频时的起播位置策略。 */
+export enum ResumeStrategy {
+	/** 始终从头开始。 */
+	NONE = 0,
+	/** 播客模式：使用该音频保存的逐首断点续播。 */
+	PODCAST = 1,
+}
+
 export interface Track {
 	id: string
 	url: string
@@ -153,6 +161,12 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	loudnessNormalizationEnabled: boolean
 	/** Android 服务恢复状态后是否自动开始播放。 */
 	autoplayOnStartEnabled: boolean
+	/**
+	 * 进入音频时的起播位置策略，取值使用导出的 `ResumeStrategy`。
+	 *
+	 * 原生端持久化该值，冷启动时无需等待 JS 即可生效。
+	 */
+	playbackResumeStrategy: ResumeStrategy
 	/** 是否显示并启用音频频谱分析。 */
 	isSpectrumVisualizerEnabled: boolean
 	/** 原生存储中桌面悬浮歌词窗口当前是否标记为显示。 */
