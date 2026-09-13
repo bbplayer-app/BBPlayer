@@ -1,4 +1,4 @@
-import { Show, Switch } from '@legendapp/state/react'
+import { Show } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo } from 'react'
@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native'
 import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
 import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
@@ -13,10 +14,8 @@ import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
 
-import { PlayerControls } from './PlayerControls'
 import { PlayerSlider } from './PlayerSlider'
 import { TrackInfo } from './PlayerTrackInfo'
-import { PodcastControls } from './PodcastControls'
 
 interface PlayerMainTabProps {
 	jumpTo: (key: string) => void
@@ -63,26 +62,18 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					]}
 				>
 					<PlayerProgress />
-					<Switch value={playbackContextStore$.context.mode}>
-						{{
-							podcast: () => <PodcastControls />,
-							default: () => (
-								<PlayerControls
-									onOpenQueue={() => {
-										onPresent()
-										void usePlayerQueueSheetStore.getState().open()
-									}}
-								/>
-							),
+					<PlayerControls
+						onOpenQueue={() => {
+							onPresent()
+							void usePlayerQueueSheetStore.getState().open()
 						}}
-					</Switch>
+					/>
 				</View>
 			</ScrollView>
 		</Show>
 	)
 })
 
-// Keep both mode and progress subscriptions below the cover/title container.
 function PlayerProgress() {
 	const trackId = useCurrentTrackId()
 	const { chapters, podcast } = usePlayerChapters()

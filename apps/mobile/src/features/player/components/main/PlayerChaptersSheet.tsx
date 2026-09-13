@@ -53,9 +53,9 @@ export function PlayerChaptersSheet() {
 		try {
 			const target = await seekWithinTrack(data.trackId, chapter.startSeconds)
 			if (target !== null) void usePlayerChaptersSheetStore.getState().close()
+			setSeeking(false)
 		} catch (error) {
 			toastAndLogError('章节跳转失败', error, 'Player.Chapters')
-		} finally {
 			setSeeking(false)
 		}
 	}

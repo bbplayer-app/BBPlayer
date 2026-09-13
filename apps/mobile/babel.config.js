@@ -15,6 +15,7 @@ export default (api) => {
 			},
 		},
 		plugins: [
+			'@legendapp/state/babel',
 			[
 				'babel-plugin-react-compiler',
 				{

@@ -48,7 +48,7 @@ function TextWithAnimation({
 		() => (sharedPosition.value ? Math.trunc(sharedPosition.value) : 0),
 		(pos, prev) => {
 			if (pos !== prev) {
-				positionText.value = formatDurationToHHMMSS(pos)
+				positionText.set(formatDurationToHHMMSS(pos))
 			}
 		},
 	)
@@ -57,7 +57,7 @@ function TextWithAnimation({
 		() => (sharedDuration.value ? Math.trunc(sharedDuration.value) : 0),
 		(dur, prev) => {
 			if (dur !== prev) {
-				durationText.value = formatDurationToHHMMSS(dur)
+				durationText.set(formatDurationToHHMMSS(dur))
 			}
 		},
 	)
@@ -160,9 +160,9 @@ export function PlayerSlider({
 					position.set(target)
 					seekPosition.set(target)
 				}
+				isSeeking.set(false)
 			} catch (error) {
 				toastAndLogError('跳转失败', error, 'Player.Slider')
-			} finally {
 				isSeeking.set(false)
 			}
 		},
@@ -409,7 +409,7 @@ export function PlayerSlider({
 
 const styles = StyleSheet.create({
 	podcastSliderRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-	podcastSlider: { flex: 1, height: 48 },
+	podcastSlider: { flex: 1, height: 25 },
 	seekButton: { width: 48, height: 48, margin: 0 },
 	root: {
 		width: '100%',

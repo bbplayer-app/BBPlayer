@@ -1,5 +1,5 @@
 import { useIsPlaying, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
-import { useValue } from '@legendapp/state/react'
+import { Computed } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -17,19 +17,23 @@ import SquircleView from 'react-native-fast-squircle'
 import { Text, TouchableRipple, useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
+import SkinThumbUpBurst from '@/features/player/components/visuals/SkinThumbUpBurst'
+import { SpectrumVisualizer } from '@/features/player/components/visuals/SpectrumVisualizer'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
+import {
+	SQUIRCLE_RADIUS_RATIO,
+	SQUIRCLE_CORNER_SMOOTHING,
+} from '@/theme/dimensions'
 import { getGradientColors } from '@/utils/color'
-
-import SkinThumbUpBurst from './SkinThumbUpBurst'
-import { SpectrumVisualizer } from './SpectrumVisualizer'
 
 const { width: screenWidth } = Dimensions.get('window')
 
-const COVER_SIZE = screenWidth - 120
+const COVER_SIZE_RECT = screenWidth - 80
+const COVER_SIZE_CIRCLE = screenWidth - 120
 
 export function TrackInfo({
 	onArtistPress,
@@ -41,9 +45,7 @@ export function TrackInfo({
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
-	const podcast = useValue(
-		() => playbackContextStore$.context.mode.get() === 'podcast',
-	)
+
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
 
@@ -75,10 +77,6 @@ export function TrackInfo({
 			? currentTrack?.title.charAt(0).toUpperCase()
 			: undefined)
 
-	const coverSize = COVER_SIZE
-	const coverBorderRadius = podcast ? 0 : coverSize / 2
-	const CoverFrame = podcast ? SquircleView : View
-
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
 		if (!isThumbUp) {
@@ -102,74 +100,87 @@ export function TrackInfo({
 				position: 'relative',
 			}}
 		>
-			<Pressable
-				style={styles.coverContainer}
-				onPress={podcast ? undefined : onPressCover}
-				disabled={podcast}
-			>
-				{!podcast && enableSpectrumVisualizer && (
-					<View
-						style={[
-							StyleSheet.absoluteFill,
-							{ alignItems: 'center', justifyContent: 'center' },
-						]}
-					>
-						<SpectrumVisualizer
-							isPlaying={isPlaying}
-							size={coverSize}
-							color={colors.primary}
-						/>
-					</View>
-				)}
-				<TouchableOpacity
-					activeOpacity={0.8}
-					onPress={podcast ? undefined : onPressCover}
-					disabled={podcast}
-					style={{ width: coverSize, height: coverSize }}
-					testID='player-cover'
-				>
-					<CoverFrame
-						style={{
-							flex: 1,
-							borderRadius: podcast ? 32 : coverBorderRadius,
-							overflow: 'hidden',
-						}}
-					>
-						{!coverRef ? (
-							<LinearGradient
-								colors={[color1, color2]}
-								style={[
-									styles.coverGradient,
-									{ borderRadius: coverBorderRadius },
-								]}
-								start={{ x: 0, y: 0 }}
-								end={{ x: 1, y: 1 }}
-							>
-								<Text
+			<Computed>
+				{() => {
+					const podcast = playbackContextStore$.context.mode.get() === 'podcast'
+					const coverSize = podcast ? COVER_SIZE_RECT : COVER_SIZE_CIRCLE
+					const coverBorderRadius = podcast
+						? COVER_SIZE_RECT * SQUIRCLE_RADIUS_RATIO
+						: coverSize / 2
+					return (
+						<Pressable
+							style={styles.coverContainer}
+							onPress={podcast ? undefined : onPressCover}
+							disabled={podcast}
+						>
+							{!podcast && enableSpectrumVisualizer && (
+								<View
 									style={[
-										styles.coverPlaceholderText,
-										{ fontSize: coverSize * 0.45 },
+										StyleSheet.absoluteFill,
+										{ alignItems: 'center', justifyContent: 'center' },
 									]}
 								>
-									{firstChar}
-								</Text>
-							</LinearGradient>
-						) : (
-							<Image
-								source={coverRef}
-								style={{
-									width: coverSize,
-									height: coverSize,
-									borderRadius: coverBorderRadius,
-								}}
-								recyclingKey={currentTrack.uniqueKey}
-								cachePolicy={'disk'}
-								transition={300}
-							/>
-						)}
-					</CoverFrame>
-				</TouchableOpacity>
-			</Pressable>
+									<SpectrumVisualizer
+										isPlaying={isPlaying}
+										size={coverSize}
+										color={colors.primary}
+									/>
+								</View>
+							)}
+							<TouchableOpacity
+								activeOpacity={0.8}
+								onPress={podcast ? undefined : onPressCover}
+								disabled={podcast}
+								style={{ width: coverSize, height: coverSize }}
+								testID='player-cover'
+							>
+								<SquircleView
+									style={{
+										width: coverSize,
+										height: coverSize,
+										borderRadius: coverBorderRadius,
+										overflow: 'hidden',
+									}}
+									cornerSmoothing={SQUIRCLE_CORNER_SMOOTHING}
+								>
+									{!coverRef ? (
+										<LinearGradient
+											colors={[color1, color2]}
+											style={[
+												styles.coverGradient,
+												{ borderRadius: coverBorderRadius },
+											]}
+											start={{ x: 0, y: 0 }}
+											end={{ x: 1, y: 1 }}
+										>
+											<Text
+												style={[
+													styles.coverPlaceholderText,
+													{ fontSize: coverSize * 0.45 },
+												]}
+											>
+												{firstChar}
+											</Text>
+										</LinearGradient>
+									) : (
+										<Image
+											source={coverRef}
+											style={{
+												width: coverSize,
+												height: coverSize,
+												borderRadius: coverBorderRadius,
+											}}
+											recyclingKey={currentTrack.uniqueKey}
+											cachePolicy={'disk'}
+											transition={300}
+										/>
+									)}
+								</SquircleView>
+							</TouchableOpacity>
+						</Pressable>
+					)
+				}}
+			</Computed>
 
 			<View style={styles.trackInfoContainer}>
 				<View style={styles.trackTitleContainer}>
@@ -222,7 +233,7 @@ const styles = StyleSheet.create({
 	coverContainer: {
 		alignItems: 'center',
 		justifyContent: 'center',
-		height: COVER_SIZE + 48,
+		height: COVER_SIZE_RECT + 48,
 		paddingHorizontal: 32,
 	},
 	coverGradient: {

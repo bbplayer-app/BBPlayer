@@ -3,15 +3,16 @@ import { View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
-import {
-	MainPlaybackControls,
-	SecondaryPlaybackControls,
-} from '@/features/player/components/PlayerControls'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { formatDurationToHHMMSS } from '@/utils/time'
+
+import {
+	MainPlaybackControls,
+	SecondaryPlaybackControls,
+} from './PlayerControlContent'
 
 export function PodcastControls() {
 	const { colors } = useTheme()

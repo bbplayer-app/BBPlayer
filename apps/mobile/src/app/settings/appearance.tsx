@@ -66,7 +66,7 @@ export default function AppearanceSettingsPage() {
 				} else {
 					alert(
 						'需要麦克风权限',
-						'音频频谱功能需要访问麦克风以分析音频数据。这不会录制任何声音。\n\n开启后，封面将变为圆形。',
+						'音频频谱功能需要访问麦克风以分析音频数据。这不会录制任何声音。',
 						[
 							{ text: '取消' },
 							{
