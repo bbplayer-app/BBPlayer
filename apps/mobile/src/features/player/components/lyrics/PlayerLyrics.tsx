@@ -18,7 +18,6 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import { LyricsControlOverlay } from '@/features/player/components/LyricsControlOverlay'
 import useLyricSync from '@/features/player/hooks/useLyricSync'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
@@ -29,11 +28,9 @@ import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 
-import {
-	ModernLyricLineItem,
-	OldSchoolLyricLineItem,
-} from './lyrics/LyricLineItem'
-import { LyricsOffsetControl } from './lyrics/LyricsOffsetControl'
+import { ModernLyricLineItem, OldSchoolLyricLineItem } from './LyricLineItem'
+import { LyricsControlOverlay } from './LyricsControlOverlay'
+import { LyricsOffsetControl } from './LyricsOffsetControl'
 
 const Lyrics = memo(function Lyrics({
 	currentIndex,

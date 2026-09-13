@@ -55,7 +55,7 @@ export const SpectrumVisualizer = ({
 	}, [size])
 
 	const path = useDerivedValue(() => {
-		const skPath = Skia.Path.Make()
+		const skPath = Skia.PathBuilder.Make()
 		const geo = geometry.value
 		const freq = frequencyData.value
 
@@ -75,7 +75,7 @@ export const SpectrumVisualizer = ({
 			skPath.lineTo(px + nx * barHeight, py + ny * barHeight)
 		}
 
-		return skPath
+		return skPath.build()
 	}, [geometry])
 
 	useEffect(() => {

@@ -64,7 +64,10 @@ export interface LocalTrack extends BaseTrack {
 
 export type Track = BilibiliTrack | LocalTrack
 
+export type PlaylistPlayerPreference = 'inherit' | 'music' | 'podcast'
+
 export interface Playlist {
+	playerPreference: PlaylistPlayerPreference
 	id: number
 	title: string
 	author: Artist | null // 本地播放列表不存在 author

@@ -1,4 +1,4 @@
-import type { DownloadState } from '@bbplayer/orpheus'
+import { DownloadState } from '@bbplayer/orpheus'
 import { Icon as ExpoIcon, Host } from '@expo/ui'
 import type {
 	LegendListProps,
@@ -9,10 +9,10 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
+import SquircleView from 'react-native-fast-squircle'
 import {
 	Divider,
 	List,
-	Surface,
 	Text,
 	TouchableRipple,
 	useTheme,
@@ -21,15 +21,18 @@ import type { MD3Theme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
 	ListRenderItemInfoWithExtraData,
 	SelectionState,
 } from '@/types/legendlist'
 import * as Haptics from '@/utils/haptics'
+import { resolveTrackCover } from '@/utils/imageUrl'
 
 import type { TrackMenuItem } from './LocalPlaylistItem'
 import { TrackListItem } from './LocalPlaylistItem'
@@ -188,7 +191,7 @@ const HighFreqButton = ({
 	const theme = useTheme()
 
 	return (
-		<Surface
+		<SquircleView
 			style={{
 				borderRadius: 16,
 				overflow: 'hidden',
@@ -196,7 +199,7 @@ const HighFreqButton = ({
 				flex: 1,
 				marginHorizontal: 4,
 			}}
-			elevation={0}
+			cornerSmoothing={0.6}
 		>
 			<TouchableRipple
 				onPress={() => {
@@ -229,7 +232,7 @@ const HighFreqButton = ({
 					</Text>
 				</View>
 			</TouchableRipple>
-		</Surface>
+		</SquircleView>
 	)
 }
 
@@ -380,33 +383,49 @@ export function LocalTrackList({
 			/>
 			<TrueSheet
 				ref={sheetRef}
-				detents={['auto']}
+				detents={[0.5]}
 				cornerRadius={24}
 				backgroundColor={theme.colors.elevation.level1}
 				onDidDismiss={() => {
 					setMenuState((prev) => ({ ...prev, visible: false }))
 				}}
+				scrollable
 			>
-				<ScrollView
-					style={{ maxHeight: '100%', marginTop: 32 }}
-					contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-				>
+				<ScrollView style={{ marginTop: 32 }}>
 					{menuState.track && (
 						<>
 							<View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-								<Text
-									variant='titleMedium'
-									numberOfLines={1}
+								<View
+									style={{
+										flexDirection: 'row',
+										gap: 8,
+										alignItems: 'center',
+									}}
 								>
-									{menuState.track.title}
-								</Text>
-								<Text
-									variant='bodySmall'
-									style={{ opacity: 0.6 }}
-									numberOfLines={1}
-								>
-									{menuState.track.artist?.name ?? '未知艺术家'}
-								</Text>
+									<CoverWithPlaceHolder
+										id={menuState.track.id}
+										cover={
+											menuState.downloadState === DownloadState.COMPLETED
+												? resolveTrackCover(
+														menuState.track.uniqueKey,
+														menuState.track.coverUrl,
+													)
+												: menuState.track.coverUrl
+										}
+										title={menuState.track.title}
+										size={LIST_ITEM_COVER_SIZE}
+									/>
+									<View style={{ flex: 1, flexDirection: 'column' }}>
+										<Text variant='titleMedium'>{menuState.track.title}</Text>
+										<Text
+											variant='bodySmall'
+											style={{ opacity: 0.6 }}
+											numberOfLines={1}
+										>
+											{menuState.track.artist?.name ?? '未知艺术家'}
+										</Text>
+									</View>
+								</View>
 								<Divider style={{ marginTop: 12 }} />
 								{highFreqItems.length > 0 && (
 									<View

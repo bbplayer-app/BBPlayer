@@ -4,7 +4,6 @@ import type { MMKV } from 'react-native-mmkv'
 import { useMMKVBoolean } from 'react-native-mmkv'
 
 import { alert } from '@/components/modals/AlertModal'
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -20,7 +19,6 @@ export function useLocalPlaylistPlayer(
 	isOffline?: boolean,
 	playableOfflineKeys?: Set<string>,
 ) {
-	const currentTrackId = useCurrentTrackId()
 	const [ignoreAlertReplacePlaylist, setIgnoreAlertReplacePlaylist] =
 		useMMKVBoolean('ignore_alert_replace_playlist', storage as MMKV)
 
@@ -84,6 +82,7 @@ export function useLocalPlaylistPlayer(
 
 			try {
 				await addToQueue({
+					playlistId,
 					tracks: tracks,
 					playNow: true,
 					clearQueue: true,
@@ -107,7 +106,6 @@ export function useLocalPlaylistPlayer(
 				toast.show('当前无网络，无法播放，请检查网络设置')
 				return
 			}
-			if (track.uniqueKey === currentTrackId) return
 			if (!ignoreAlertReplacePlaylist) {
 				alert(
 					'替换播放列表',
@@ -129,7 +127,6 @@ export function useLocalPlaylistPlayer(
 			void playAll(track.uniqueKey)
 		},
 		[
-			currentTrackId,
 			ignoreAlertReplacePlaylist,
 			playAll,
 			setIgnoreAlertReplacePlaylist,

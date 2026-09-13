@@ -1,5 +1,3 @@
-import { useEffect, useRef } from 'react'
-
 import type {
 	NativeBottomTabNavigationEventMap,
 	NativeBottomTabNavigationOptions,
@@ -11,6 +9,7 @@ import type {
 	ParamListBase,
 	TabNavigationState,
 } from 'expo-router/react-navigation'
+import { useEffect, useRef } from 'react'
 import { useTheme } from 'react-native-paper'
 
 import useAppStore from '@/hooks/stores/useAppStore'

@@ -96,6 +96,8 @@ export type WavySliderProgressValue = WavySliderAnimatedValue<number>
  *   updating Compose directly.
  */
 export type WavySliderProps = ViewProps & {
+	/** Visual chapter boundaries normalized to 0..1. These do not snap the thumb. */
+	chapterMarkers?: number[]
 	/**
 	 * Current slider value.
 	 *

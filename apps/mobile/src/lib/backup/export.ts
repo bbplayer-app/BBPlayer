@@ -35,6 +35,8 @@ export async function createBackup(): Promise<string> {
 			exportedAt: new Date().toISOString(),
 			mmkv: {
 				'app-storage': storage.getString('app-storage') ?? '',
+				'playback-context-store':
+					storage.getString('playback-context-store') ?? '',
 				'shared-playlist-members':
 					storage.getString('shared-playlist-members') ?? '',
 			},

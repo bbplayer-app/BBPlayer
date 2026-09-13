@@ -56,10 +56,10 @@ class GeneralStorage {
               let dicts = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] else {
             return []
         }
-        
+
         return dicts.compactMap { Track(dictionary: $0) }
     }
-    
+
     func savePosition(index: Int, positionSec: Double) {
         mmkv?.set(Int32(index), forKey: KEY_SAVED_INDEX)
         

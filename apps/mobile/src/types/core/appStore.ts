@@ -1,6 +1,7 @@
 import type { Result } from 'neverthrow'
 
 interface Settings {
+	defaultPlayerMode: 'music' | 'podcast'
 	sendPlayHistory: boolean
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean

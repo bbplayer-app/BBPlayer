@@ -99,6 +99,11 @@ export const playHistory = sqliteTable(
 export const playlists = sqliteTable(
 	'playlists',
 	{
+		playerPreference: text('player_preference', {
+			enum: ['inherit', 'music', 'podcast'],
+		})
+			.notNull()
+			.default('inherit'),
 		id: integer('id').primaryKey({ autoIncrement: true }), // 数据库内的唯一 id
 		title: text('title').notNull(),
 		authorId: integer('author_id').references(() => artists.id, {

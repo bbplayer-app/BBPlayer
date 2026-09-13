@@ -250,6 +250,7 @@ class ExpoOrpheusModule : Module() {
                         this@ExpoOrpheusModule.player?.addListener(playerListener)
                     }
 
+                    sendEvent("onQueueChanged", emptyMap<String, Any>())
                     startSpectrumVisualizerIfEnabled()
 
                     service.statusBarLyricsManager.setStatusChangeListener(object :
@@ -473,7 +474,11 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("clear") Coroutine { ->
-            withPlayerOnMainThread { it.clearMediaItems() }
+            withPlayerOnMainThread {
+                it.clearMediaItems()
+                GeneralStorage.saveQueue(emptyList())
+                GeneralStorage.savePosition(0, 0L)
+            }
         }
 
         AsyncFunction("skipTo") Coroutine { index: Int ->

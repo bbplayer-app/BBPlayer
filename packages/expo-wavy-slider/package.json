@@ -45,7 +45,7 @@
 		"@semantic-release/changelog": "^6.0.3",
 		"@semantic-release/git": "^10.0.1",
 		"@types/react": "19.2.15",
-		"expo": "57.0.18",
+		"expo": "57.0.20",
 		"expo-module-scripts": "^56.0.2",
 		"expo-modules-core": "56.0.11",
 		"react": "19.2.3",

@@ -155,6 +155,7 @@ class OrpheusPlayerManager: NSObject {
         }
         
         saveState()
+        onQueueChanged?()
     }
     
     func clearQueue() {

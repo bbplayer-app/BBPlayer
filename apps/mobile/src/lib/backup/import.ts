@@ -3,6 +3,7 @@ import { Directory, File, Paths } from 'expo-file-system'
 import * as SQLite from 'expo-sqlite'
 import JSZip from 'jszip'
 
+import { restorePlaybackContextState } from '@/hooks/stores/playbackContextStore'
 import { expoDb } from '@/lib/db/db'
 import { clearLegacyMigrationKeys } from '@/lib/db/migrations'
 import log from '@/utils/log'
@@ -86,6 +87,7 @@ export async function restoreBackup(filePath: string): Promise<void> {
 			manifest.mmkv['shared-playlist-members'],
 		)
 	}
+	restorePlaybackContextState(manifest.mmkv['playback-context-store'])
 	logger.info('MMKV 数据已恢复')
 
 	Orpheus.importData(manifest.orpheus)

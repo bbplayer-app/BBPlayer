@@ -100,6 +100,7 @@ export const useAppStore = create<AppState>()(
 				bilibiliCookie: null,
 				bbplayerToken: null,
 				settings: {
+					defaultPlayerMode: 'music',
 					sendPlayHistory: false,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,

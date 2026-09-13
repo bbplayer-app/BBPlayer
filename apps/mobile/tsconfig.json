@@ -13,7 +13,7 @@
 			"@/hooks/*": ["./src/hooks/*"],
 			"@/utils/*": ["./src/utils/*"],
 			"@/features/*": ["./src/features/*"],
-			"@bbplayer/orpheus": ["../../../packages/orpheus/src/index.ts"],
+			"@bbplayer/orpheus": ["../../packages/orpheus/src/index.ts"],
 			"@bbplayer/image-theme-colors": [
 				"../../../packages/image-theme-colors/src/index.ts"
 			]
