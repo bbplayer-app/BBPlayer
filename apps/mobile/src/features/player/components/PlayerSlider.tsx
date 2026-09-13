@@ -1,7 +1,8 @@
-import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
+import { seekDlnaCast } from '@bbplayer/dlna'
+import { Orpheus } from '@bbplayer/orpheus'
 import Color from 'color'
 import { WavySlider } from 'expo-wavy-slider'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import AnimateableText from 'react-native-animateable-text'
 import { useTheme } from 'react-native-paper'
@@ -16,12 +17,13 @@ import {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
+import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
-function TextWithAnimation({
+const TextWithAnimation = memo(function TextWithAnimation({
 	sharedPosition,
 	sharedDuration,
 }: {
@@ -34,8 +36,12 @@ function TextWithAnimation({
 	const durationText = useSharedValue('00:00')
 
 	useAnimatedReaction(
-		() => (sharedPosition.value ? Math.trunc(sharedPosition.value) : 0),
+		() => {
+			'worklet'
+			return sharedPosition.value ? Math.trunc(sharedPosition.value) : 0
+		},
 		(pos, prev) => {
+			'worklet'
 			if (pos !== prev) {
 				positionText.value = formatDurationToHHMMSS(pos)
 			}
@@ -43,8 +49,12 @@ function TextWithAnimation({
 	)
 
 	useAnimatedReaction(
-		() => (sharedDuration.value ? Math.trunc(sharedDuration.value) : 0),
+		() => {
+			'worklet'
+			return sharedDuration.value ? Math.trunc(sharedDuration.value) : 0
+		},
 		(dur, prev) => {
+			'worklet'
 			if (dur !== prev) {
 				durationText.value = formatDurationToHHMMSS(dur)
 			}
@@ -61,11 +71,13 @@ function TextWithAnimation({
 		[colors.onSurfaceVariant, fonts.bodySmall],
 	)
 	const positionTextProp = useAnimatedProps(() => {
+		'worklet'
 		return {
 			text: positionText.value,
 		}
 	})
 	const durationTextProp = useAnimatedProps(() => {
+		'worklet'
 		return {
 			text: durationText.value,
 		}
@@ -87,7 +99,7 @@ function TextWithAnimation({
 			/>
 		</>
 	)
-}
+})
 
 interface PlayerSliderProps {
 	onInteraction?: () => void
@@ -106,29 +118,37 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
 	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
-	const { position, duration, buffered } = useSmoothProgress()
-	const isPlaying = useIsPlaying()
+	const {
+		position,
+		duration,
+		buffered,
+		isPlaying: isPlayingShared,
+	} = useSmoothProgress()
 
 	const isScrubbing = useSharedValue(false)
 	const scrubPosition = useSharedValue(0)
 	const isSeeking = useSharedValue(false)
 	const seekPosition = useSharedValue(0)
-	const isPlayingShared = useSharedValue(isPlaying)
 	const isNativeDragging = useSharedValue(false)
-	const animatedWaveHeight = useSharedValue(isPlaying ? 6 : 0)
-	const animatedWaveVelocity = useSharedValue(isPlaying ? 15 : 0)
+	const animatedWaveHeight = useSharedValue(0)
+	const animatedWaveVelocity = useSharedValue(0)
 	const animatedWaveThickness = useSharedValue(3)
 	const animatedTrackThickness = useSharedValue(3)
 	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-	useEffect(() => {
-		isPlayingShared.set(isPlaying)
-	}, [isPlaying, isPlayingShared])
 
 	const handleSeek = useCallback(
 		(time: number) => {
 			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
 			isSeeking.set(true)
+			if (useDlnaCastStore.getState().castingDevice) {
+				useDlnaCastStore.getState().setPlayback({ position: time })
+				void seekDlnaCast(time).then(() => {
+					position.set(time)
+					isSeeking.set(false)
+					seekTimeoutRef.current = null
+				})
+				return
+			}
 			void Orpheus.seekTo(time)
 
 			seekTimeoutRef.current = setTimeout(() => {
@@ -145,14 +165,19 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	)
 
 	const displayPosition = useDerivedValue(() => {
+		'worklet'
 		if (isScrubbing.value) return scrubPosition.value
 		if (isSeeking.value) return seekPosition.value
 		return position.value
 	})
 
 	useAnimatedReaction(
-		() => position.value,
+		() => {
+			'worklet'
+			return position.value
+		},
 		(currentPosition) => {
+			'worklet'
 			if (!isSeeking.value) return
 			const target = seekPosition.value
 			const threshold = 1
@@ -165,12 +190,15 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	)
 
 	useAnimatedReaction(
-		() =>
-			[
+		() => {
+			'worklet'
+			return [
 				isPlayingShared.value,
 				isNativeDragging.value || isScrubbing.value,
-			] as const,
+			] as const
+		},
 		([playing, dragging]) => {
+			'worklet'
 			const shouldShowWave = playing && !dragging
 			const thickness = dragging ? 12 : 3
 			animatedWaveHeight.set(
@@ -194,6 +222,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	)
 
 	const progressFraction = useDerivedValue(() => {
+		'worklet'
 		const dur = duration.value || 1
 		let pos = position.value
 		if (isScrubbing.value) {
@@ -206,6 +235,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 
 	// oxlint-disable-next-line no-underscore-dangle
 	const _bufferedFraction = useDerivedValue(() => {
+		'worklet'
 		const dur = duration.value || 1
 		return Math.min(Math.max(buffered.value / dur, 0), 1)
 	})

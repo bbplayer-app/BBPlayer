@@ -20,6 +20,7 @@ import { Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
+import { skipWithDlna } from '@/features/player/dlna/castCurrentTrack'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
@@ -131,7 +132,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			const target = queue[index]
 			if (!target) return
 			if (target.id === currentTrackId) return
-			await Orpheus.skipTo(index)
+			await skipWithDlna(index)
 		},
 		[queue, currentTrackId],
 	)

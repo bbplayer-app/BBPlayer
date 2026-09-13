@@ -40,6 +40,7 @@ export const SpectrumVisualizer = ({
 	}, [])
 
 	const geometry = useDerivedValue(() => {
+		'worklet'
 		const center = size / 2 + MAX_BAR_HEIGHT
 		const radius = size / 2 + GAP
 		const result = new Float32Array(BAR_COUNT * 4)
@@ -55,6 +56,7 @@ export const SpectrumVisualizer = ({
 	}, [size])
 
 	const path = useDerivedValue(() => {
+		'worklet'
 		const skPath = Skia.Path.Make()
 		const geo = geometry.value
 		const freq = frequencyData.value

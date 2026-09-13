@@ -2,7 +2,6 @@ import {
 	Orpheus,
 	PlaybackState,
 	useAdjacentTracks,
-	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
@@ -27,10 +26,16 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import {
+	skipWithDlna,
+	toggleDlnaOrLocal,
+} from '@/features/player/dlna/castCurrentTrack'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useEffectiveIsPlaying from '@/hooks/player/useEffectiveIsPlaying'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
 import { resolveTrackCover } from '@/utils/imageUrl'
@@ -45,6 +50,7 @@ const ProgressBar = memo(function ProgressBar() {
 	const { colors } = useTheme()
 
 	const animatedStyle = useAnimatedStyle(() => {
+		'worklet'
 		const progressRatio = Math.min(
 			sharedProgress.value / Math.max(sharedDuration.value, 1),
 			1,
@@ -88,12 +94,11 @@ const ProgressBar = memo(function ProgressBar() {
 
 const playPause = async () => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-	const isPlaying = await Orpheus.getIsPlaying()
-	if (isPlaying) {
-		void Orpheus.pause()
-	} else {
-		await Orpheus.play()
-	}
+	const casting = !!useDlnaCastStore.getState().castingDevice
+	const isPlaying = casting
+		? useDlnaCastStore.getState().playing
+		: await Orpheus.getIsPlaying()
+	await toggleDlnaOrLocal(isPlaying)
 }
 
 const NowPlayingBar = memo(function NowPlayingBar({
@@ -102,17 +107,17 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	backgroundColor?: string
 }) {
 	const { colors } = useTheme()
-	const isPlaying = useIsPlaying()
+	const isPlaying = useEffectiveIsPlaying()
 	const state = usePlaybackState()
+	const transportState = useDlnaCastStore((s) => s.transportState)
+	const casting = useDlnaCastStore((s) => !!s.castingDevice)
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const isVisible = currentTrack !== null
 	const bottomBarHeight = useBottomTabBarHeight()
 
-	const nowPlayingBarStyle = useAppStore(
-		(s) => s.settings.nowPlayingBarStyle,
-	)
+	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
@@ -136,17 +141,26 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const dragOffset = useSharedValue(0)
 	const hapticFired = useSharedValue(0)
 
-	const normalOpacity = useAnimatedStyle(() => ({
-		opacity: 1 - Math.min(Math.abs(dragOffset.value) / 40, 1),
-	}))
+	const normalOpacity = useAnimatedStyle(() => {
+		'worklet'
+		return {
+			opacity: 1 - Math.min(Math.abs(dragOffset.value) / 40, 1),
+		}
+	})
 
-	const prevIndicatorOpacity = useAnimatedStyle(() => ({
-		opacity: Math.min(Math.max(dragOffset.value / 40, 0), 1),
-	}))
+	const prevIndicatorOpacity = useAnimatedStyle(() => {
+		'worklet'
+		return {
+			opacity: Math.min(Math.max(dragOffset.value / 40, 0), 1),
+		}
+	})
 
-	const nextIndicatorOpacity = useAnimatedStyle(() => ({
-		opacity: Math.min(Math.max(-dragOffset.value / 40, 0), 1),
-	}))
+	const nextIndicatorOpacity = useAnimatedStyle(() => {
+		'worklet'
+		return {
+			opacity: Math.min(Math.max(-dragOffset.value / 40, 0), 1),
+		}
+	})
 
 	const navigateOnPlayerUpFling = useFlingGesture({
 		direction: Directions.UP,
@@ -194,9 +208,9 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		onDeactivate: () => {
 			'worklet'
 			if (dragOffset.value > SWIPE_THRESHOLD && hasPrevSv.value) {
-				scheduleOnRN(() => void Orpheus.skipToPrevious())
+				scheduleOnRN(() => void skipWithDlna('prev'))
 			} else if (dragOffset.value < -SWIPE_THRESHOLD && hasNextSv.value) {
-				scheduleOnRN(() => void Orpheus.skipToNext())
+				scheduleOnRN(() => void skipWithDlna('next'))
 			}
 			dragOffset.set(withTiming(0))
 			hapticFired.set(0)
@@ -370,7 +384,11 @@ const NowPlayingBar = memo(function NowPlayingBar({
 									style={styles.nowPlayingBarControlButton}
 									onPress={() => playPause()}
 								>
-									{state === PlaybackState.BUFFERING ? (
+									{(
+										casting
+											? transportState === 'TRANSITIONING'
+											: state === PlaybackState.BUFFERING
+									) ? (
 										<ActivityIndicator size='small' />
 									) : (
 										<Icon

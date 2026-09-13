@@ -1,3 +1,4 @@
+import { seekDlnaCast } from '@bbplayer/dlna'
 import { Orpheus } from '@bbplayer/orpheus'
 import type { LyricLine } from '@bbplayer/splash'
 import { useCallback, useEffect, useRef } from 'react'
@@ -5,6 +6,7 @@ import { AppState } from 'react-native'
 import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import playerProgressEmitter from '@/lib/player/progressListener'
 
 export default function useLyricSync(
@@ -48,7 +50,13 @@ export default function useLyricSync(
 			if (lyrics.length === 0) return
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
-			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
+			const target = lyrics[index].startTime / 1000 - offset
+			if (useDlnaCastStore.getState().castingDevice) {
+				useDlnaCastStore.getState().setPlayback({ position: target })
+				await seekDlnaCast(target)
+			} else {
+				await Orpheus.seekTo(target)
+			}
 			if (latestJumpRequestRef.current !== requestId) return
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
@@ -84,7 +92,10 @@ export default function useLyricSync(
 
 	// ponytail: animated reaction to scroll on index change without React state
 	useAnimatedReaction(
-		() => currentLyricIndex.value,
+		() => {
+			'worklet'
+			return currentLyricIndex.value
+		},
 		(index, prevIndex) => {
 			if (index === prevIndex) return
 			if (!enabled) return
@@ -98,28 +109,43 @@ export default function useLyricSync(
 		const appStateSub = AppState.addEventListener('change', (nextAppState) => {
 			isActiveRef.current = nextAppState === 'active'
 		})
-		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+		const applyPosition = (raw: number) => {
 			if (!enabled) return
-
-			const offsetedPosition = data.position + offset
+			const offsetedPosition = raw + offset
 			if (!isActiveRef.current || offsetedPosition <= 0) return
-			const index = findIndexForTime(offsetedPosition)
-			currentLyricIndex.set(index)
+			currentLyricIndex.set(findIndexForTime(offsetedPosition))
+		}
+
+		const handler = playerProgressEmitter.subscribe('progress', (data) => {
+			if (useDlnaCastStore.getState().castingDevice) return
+			applyPosition(data.position)
+		})
+		const dlnaUnsub = useDlnaCastStore.subscribe((s) => {
+			if (!s.castingDevice) return
+			applyPosition(s.position)
 		})
 		return () => {
 			handler()
+			dlnaUnsub()
 			appStateSub.remove()
 		}
 	}, [enabled, findIndexForTime, offset, currentLyricIndex])
 
 	useEffect(() => {
 		if (!enabled) return
-		void Orpheus.getPosition().then((data) => {
+		const raw = useDlnaCastStore.getState().castingDevice
+			? useDlnaCastStore.getState().position
+			: undefined
+		const apply = (data: number) => {
 			const offsetedPosition = data + offset
 			if (!isActiveRef.current || offsetedPosition <= 0) return
-			const index = findIndexForTime(offsetedPosition)
-			currentLyricIndex.set(index)
-		})
+			currentLyricIndex.set(findIndexForTime(offsetedPosition))
+		}
+		if (raw !== undefined) {
+			apply(raw)
+			return
+		}
+		void Orpheus.getPosition().then(apply)
 	}, [enabled, findIndexForTime, offset, currentLyricIndex])
 
 	useEffect(() => {

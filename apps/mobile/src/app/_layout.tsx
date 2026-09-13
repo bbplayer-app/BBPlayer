@@ -18,11 +18,13 @@ import { Toaster } from 'sonner-native'
 
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
 import { alert } from '@/components/modals/AlertModal'
+import DlnaCastModal from '@/components/modals/DlnaCastModal'
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
+import { DlnaPlaybackSync } from '@/hooks/player/useDlnaPlaybackSync'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import useAppStoreObj from '@/hooks/stores/useAppStore'
 import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
@@ -384,6 +386,8 @@ function RootLayout() {
 				) : null}
 				<Toaster />
 				<PlayerQueueModal />
+				<DlnaCastModal />
+				<DlnaPlaybackSync />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>

@@ -33,7 +33,10 @@ export const KaraokeWord = memo(function KaraokeWord({
 	const layoutWidth = useSharedValue(0)
 
 	useAnimatedReaction(
-		() => currentTime.value,
+		() => {
+			'worklet'
+			return currentTime.value
+		},
 		(currentVal: number) => {
 			const timeMs = currentVal * 1000
 			if (timeMs < span.startTime) {
@@ -55,6 +58,7 @@ export const KaraokeWord = memo(function KaraokeWord({
 	)
 
 	const maskStyle = useAnimatedStyle(() => {
+		'worklet'
 		return {
 			width: layoutWidth.value * localProgress.value,
 			opacity: currentTime.value >= 0 ? 1 : 0,
@@ -62,6 +66,7 @@ export const KaraokeWord = memo(function KaraokeWord({
 	})
 
 	const activeTextStyle = useAnimatedStyle(() => {
+		'worklet'
 		return {
 			width: layoutWidth.value,
 			color: activeColor,

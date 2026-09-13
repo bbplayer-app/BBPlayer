@@ -2,7 +2,6 @@ import {
 	Orpheus,
 	PlaybackState,
 	RepeatMode,
-	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
@@ -14,8 +13,15 @@ import { useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
+import {
+	skipWithDlna,
+	toggleDlnaOrLocal,
+} from '@/features/player/dlna/castCurrentTrack'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import useEffectiveIsPlaying from '@/hooks/player/useEffectiveIsPlaying'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
+import { useDlnaCastSheetStore } from '@/hooks/stores/useDlnaCastSheetStore'
+import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -42,8 +48,10 @@ export function MainPlaybackControls({
 	onInteraction,
 }: MainPlaybackControlsProps) {
 	const { colors } = useTheme()
-	const isPlaying = useIsPlaying()
+	const isPlaying = useEffectiveIsPlaying()
 	const state = usePlaybackState()
+	const transportState = useDlnaCastStore((s) => s.transportState)
+	const casting = useDlnaCastStore((s) => !!s.castingDevice)
 
 	// 对 isPlaying 状态添加防抖，避免 seek 时短暂闪烁图标
 	const [debouncedIsPlaying, setDebouncedIsPlaying] = useState(isPlaying)
@@ -57,7 +65,10 @@ export function MainPlaybackControls({
 	const isFirstMount = useRef(true)
 
 	useEffect(() => {
-		if (state === PlaybackState.BUFFERING) {
+		const buffering = casting
+			? transportState === 'TRANSITIONING'
+			: state === PlaybackState.BUFFERING
+		if (buffering) {
 			if (bufferingTimeoutRef.current) {
 				clearTimeout(bufferingTimeoutRef.current)
 				bufferingTimeoutRef.current = null
@@ -77,7 +88,7 @@ export function MainPlaybackControls({
 				clearTimeout(bufferingTimeoutRef.current)
 			}
 		}
-	}, [state])
+	}, [casting, state, transportState])
 
 	useEffect(() => {
 		if (playingTimeoutRef.current) {
@@ -151,7 +162,7 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					prevLottieRef.current?.play(0, 60)
-					void Orpheus.skipToPrevious()
+					void skipWithDlna('prev')
 					void analyticsService.logPlayerAction('skip_prev')
 				}}
 				testID='player-prev'
@@ -182,13 +193,10 @@ export function MainPlaybackControls({
 					setDebouncedIsPlaying(nextIsPlaying)
 
 					try {
-						if (debouncedIsPlaying) {
-							await Orpheus.pause()
-							void analyticsService.logPlayerAction('pause')
-						} else {
-							await Orpheus.play()
-							void analyticsService.logPlayerAction('play')
-						}
+						await toggleDlnaOrLocal(debouncedIsPlaying)
+						void analyticsService.logPlayerAction(
+							debouncedIsPlaying ? 'pause' : 'play',
+						)
 					} catch (e) {
 						toastAndLogError('播放操作失败', e, 'UI.Player.Controls')
 					}
@@ -224,7 +232,7 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					nextLottieRef.current?.play(0, 60)
-					void Orpheus.skipToNext()
+					void skipWithDlna('next')
 					void analyticsService.logPlayerAction('skip_next')
 				}}
 				testID='player-next'
@@ -248,6 +256,7 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 	const [repeatMode, setRepeatMode] = useState(RepeatMode.OFF)
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+	const castingDevice = useDlnaCastStore((s) => s.castingDevice)
 
 	useEffect(() => {
 		void Orpheus.getRepeatMode().then(setRepeatMode)
@@ -328,6 +337,16 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					testID='player-open-comments'
 				/>
 				<IconButton
+					icon={castingDevice ? 'cast-connected' : 'cast'}
+					size={24}
+					iconColor={castingDevice ? colors.primary : colors.onSurfaceVariant}
+					onPress={() => {
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+						void useDlnaCastSheetStore.getState().open()
+					}}
+					testID='player-open-dlna'
+				/>
+				<IconButton
 					icon='format-list-bulleted'
 					size={24}
 					iconColor={colors.onSurfaceVariant}
@@ -357,6 +376,6 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
-		gap: 32,
+		gap: 20,
 	},
 })
