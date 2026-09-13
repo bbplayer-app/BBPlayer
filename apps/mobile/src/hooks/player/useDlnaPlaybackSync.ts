@@ -28,6 +28,7 @@ export default function useDlnaPlaybackSync() {
 		}
 
 		let cancelled = false
+		let inFlight = false
 
 		const trackSub = Orpheus.addListener('onTrackStarted', () => {
 			void recastCurrentTrack().catch((e) => {
@@ -36,10 +37,13 @@ export default function useDlnaPlaybackSync() {
 		})
 
 		const tick = async () => {
+			if (inFlight) return
+			inFlight = true
 			try {
 				if (isDlnaRecasting() || isDlnaDisconnecting()) return
 				const status = await getDlnaStatus()
-				if (cancelled || isDlnaDisconnecting() || !status) return
+				if (cancelled || isDlnaDisconnecting() || isDlnaRecasting() || !status)
+					return
 
 				const playing = status.state === 'PLAYING'
 				if (playing) sawPlayingRef.current = true
@@ -60,13 +64,13 @@ export default function useDlnaPlaybackSync() {
 				const ended =
 					sawPlayingRef.current &&
 					!isDlnaRecasting() &&
-					(atEnd ||
-						(stopped && lastPositionRef.current > 8 && status.position < 2)) &&
-					(stopped || status.state === 'PAUSED_PLAYBACK' || (playing && atEnd))
+					(stopped
+						? lastPositionRef.current > 8 && status.position < 2
+						: playing && atEnd)
 
 				lastPositionRef.current = status.position
 
-				if (cancelled || isDlnaDisconnecting()) return
+				if (cancelled || isDlnaDisconnecting() || isDlnaRecasting()) return
 
 				if (ended && !advancingRef.current) {
 					advancingRef.current = true
@@ -83,6 +87,8 @@ export default function useDlnaPlaybackSync() {
 				if (!cancelled) {
 					logger.debug('读取音箱状态失败', { error: e })
 				}
+			} finally {
+				inFlight = false
 			}
 		}
 

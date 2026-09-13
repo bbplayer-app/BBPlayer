@@ -1,9 +1,4 @@
-import {
-	castToDlna,
-	discoverDlnaDevices,
-	type DlnaDevice,
-} from '@bbplayer/dlna'
-import { Orpheus } from '@bbplayer/orpheus'
+import { discoverDlnaDevices, type DlnaDevice } from '@bbplayer/dlna'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useState } from 'react'
 import { Platform, View } from 'react-native'
@@ -11,7 +6,10 @@ import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
-import { disconnectDlnaCast } from '@/features/player/dlna/castCurrentTrack'
+import {
+	disconnectDlnaCast,
+	playSourceOnDevice,
+} from '@/features/player/dlna/castCurrentTrack'
 import { resolveCastSource } from '@/features/player/dlna/resolveCastSource'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useDlnaCastSheetStore } from '@/hooks/stores/useDlnaCastSheetStore'
@@ -60,17 +58,7 @@ export default function DlnaCastModal() {
 			setCasting(true)
 			try {
 				const source = await resolveCastSource(currentTrack)
-				await Orpheus.pause()
-				await castToDlna({
-					controlURL: device.controlURL,
-					renderingControlURL: device.renderingControlURL ?? undefined,
-					title: source.title,
-					mime: source.mime,
-					sourceUrl: source.sourceUrl,
-					filePath: source.filePath,
-					headers: source.headers,
-				})
-				useDlnaCastStore.getState().setCasting(device, source.title)
+				await playSourceOnDevice(device, source, true)
 				void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
 				toast.success(`已投屏到 ${device.name}`)
 				void useDlnaCastSheetStore.getState().close()

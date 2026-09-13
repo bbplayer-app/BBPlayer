@@ -91,10 +91,18 @@ class BBPlayerDlnaModule : Module() {
                 val url = currentControlURL
                 currentControlURL = null
                 detachVolume(requireContext())
-                if (url != null && runCatching { UpnpSoap.stop(url) }.isFailure) {
-                    runCatching { UpnpSoap.stop(url) }
+                var stopError: Throwable? = null
+                if (url != null) {
+                    val first = runCatching { UpnpSoap.stop(url) }
+                    if (first.isFailure) {
+                        val second = runCatching { UpnpSoap.stop(url) }
+                        if (second.isFailure) {
+                            stopError = second.exceptionOrNull() ?: first.exceptionOrNull()
+                        }
+                    }
                 }
                 proxy?.stop()
+                if (stopError != null) throw stopError
             }
         }
 
@@ -140,7 +148,10 @@ class BBPlayerDlnaModule : Module() {
         appContext.reactContext ?: throw IllegalStateException("React context is not available")
 
     private fun attachVolume(context: Context, renderingControlURL: String?) {
-        if (renderingControlURL.isNullOrBlank()) return
+        if (renderingControlURL.isNullOrBlank()) {
+            detachVolume(context)
+            return
+        }
         currentRenderingControlURL = renderingControlURL
         val app = context.applicationContext
         if (volumeReceiver == null) {

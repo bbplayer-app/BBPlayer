@@ -29,4 +29,5 @@ export interface DlnaPlaybackStatus {
 	state: string
 	position: number
 	duration: number
+	volume?: number
 }

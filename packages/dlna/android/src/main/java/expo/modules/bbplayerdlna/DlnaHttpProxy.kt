@@ -20,11 +20,9 @@ internal class DlnaHttpProxy(private val context: Context) {
         data class Content(val uri: String) : Source()
     }
 
-    @Volatile
-    private var source: Source? = null
+    private data class Session(val source: Source, val mime: String)
 
-    @Volatile
-    private var mime: String = "audio/mp4"
+    private val sessions = LinkedHashMap<String, Session>()
 
     private var server: ServerSocket? = null
     private var acceptThread: Thread? = null
@@ -32,8 +30,6 @@ internal class DlnaHttpProxy(private val context: Context) {
 
     @Synchronized
     fun start(next: Source, nextMime: String): String {
-        source = next
-        mime = nextMime
         if (server == null || !running.get()) {
             val socket = ServerSocket(0)
             server = socket
@@ -56,7 +52,12 @@ internal class DlnaHttpProxy(private val context: Context) {
             }
         }
         val ext = extensionForMime(nextMime)
-        return "http://${LanAddress.ipv4()}:${server!!.localPort}/media-${System.currentTimeMillis()}.$ext"
+        val path = "/media-${System.currentTimeMillis()}.$ext"
+        sessions[path] = Session(next, nextMime)
+        while (sessions.size > 4) {
+            sessions.remove(sessions.keys.first())
+        }
+        return "http://${LanAddress.ipv4()}:${server!!.localPort}$path"
     }
 
     @Synchronized
@@ -65,8 +66,11 @@ internal class DlnaHttpProxy(private val context: Context) {
         runCatching { server?.close() }
         server = null
         acceptThread = null
-        source = null
+        sessions.clear()
     }
+
+    @Synchronized
+    private fun sessionFor(path: String): Session? = sessions[path.substringBefore('?')]
 
     private fun handle(socket: Socket) {
         try {
@@ -88,7 +92,8 @@ internal class DlnaHttpProxy(private val context: Context) {
                     }
                 }
                 val out = client.getOutputStream()
-                if (!path.startsWith("/media")) {
+                val session = sessionFor(path)
+                if (session == null) {
                     android.util.Log.w("BBPlayerDlna", "404 $method $path")
                     writeStatus(out, 404, "Not Found", 0)
                     return
@@ -98,30 +103,42 @@ internal class DlnaHttpProxy(private val context: Context) {
                     return
                 }
                 val range = parseRange(headers["range"])
-                serve(out, method == "HEAD", range)
+                serve(out, method == "HEAD", range, session)
             }
         } catch (e: Exception) {
             android.util.Log.w("BBPlayerDlna", "client closed early: ${e.message}")
         }
     }
 
-    private fun serve(out: OutputStream, headOnly: Boolean, range: LongRange?) {
-        when (val src = source) {
-            is Source.Remote -> serveRemote(out, src, headOnly, range)
-            is Source.LocalFile -> serveFile(out, File(stripFileScheme(src.path)), headOnly, range)
-            is Source.Content -> serveContent(out, Uri.parse(src.uri), headOnly, range)
-            null -> writeStatus(out, 503, "No Source", 0)
+    private fun serve(
+        out: OutputStream,
+        headOnly: Boolean,
+        range: LongRange?,
+        session: Session,
+    ) {
+        when (val src = session.source) {
+            is Source.Remote -> serveRemote(out, src, headOnly, range, session.mime)
+            is Source.LocalFile ->
+                serveFile(out, File(stripFileScheme(src.path)), headOnly, range, session.mime)
+            is Source.Content ->
+                serveContent(out, Uri.parse(src.uri), headOnly, range, session.mime)
         }
     }
 
-    private fun serveFile(out: OutputStream, file: File, headOnly: Boolean, range: LongRange?) {
+    private fun serveFile(
+        out: OutputStream,
+        file: File,
+        headOnly: Boolean,
+        range: LongRange?,
+        mime: String,
+    ) {
         if (!file.exists() || !file.isFile) {
             writeStatus(out, 404, "Not Found", 0)
             return
         }
         val total = file.length()
         val (start, end, status) = resolveRange(total, range)
-        writeMediaHeaders(out, status, end - start + 1, total, start, end)
+        writeMediaHeaders(out, status, end - start + 1, total, start, end, mime)
         if (headOnly) return
         FileInputStream(file).use { input ->
             input.skip(start)
@@ -129,12 +146,18 @@ internal class DlnaHttpProxy(private val context: Context) {
         }
     }
 
-    private fun serveContent(out: OutputStream, uri: Uri, headOnly: Boolean, range: LongRange?) {
+    private fun serveContent(
+        out: OutputStream,
+        uri: Uri,
+        headOnly: Boolean,
+        range: LongRange?,
+        mime: String,
+    ) {
         val resolver = context.contentResolver
         val total = resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
         val (start, end, status) = if (total > 0) resolveRange(total, range) else Triple(0L, -1L, 200)
         val length = if (total > 0) end - start + 1 else -1L
-        writeMediaHeaders(out, status, length, total, start, if (total > 0) end else -1L)
+        writeMediaHeaders(out, status, length, total, start, if (total > 0) end else -1L, mime)
         if (headOnly) return
         resolver.openInputStream(uri)?.use { input ->
             if (start > 0) input.skip(start)
@@ -147,6 +170,7 @@ internal class DlnaHttpProxy(private val context: Context) {
         src: Source.Remote,
         headOnly: Boolean,
         range: LongRange?,
+        mime: String,
     ) {
         val conn = openUpstream(src, headOnly, range) ?: run {
             writeStatus(out, 502, "Bad Gateway", 0)
@@ -230,6 +254,7 @@ internal class DlnaHttpProxy(private val context: Context) {
         total: Long,
         start: Long,
         end: Long,
+        mime: String,
     ) {
         val reason = if (status == 206) "Partial Content" else "OK"
         val header = StringBuilder()

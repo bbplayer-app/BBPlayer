@@ -142,11 +142,16 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			isSeeking.set(true)
 			if (useDlnaCastStore.getState().castingDevice) {
 				useDlnaCastStore.getState().setPlayback({ position: time })
-				void seekDlnaCast(time).then(() => {
-					position.set(time)
-					isSeeking.set(false)
-					seekTimeoutRef.current = null
-				})
+				void seekDlnaCast(time)
+					.then(() => {
+						position.set(time)
+						isSeeking.set(false)
+						seekTimeoutRef.current = null
+					})
+					.catch(() => {
+						isSeeking.set(false)
+						seekTimeoutRef.current = null
+					})
 				return
 			}
 			void Orpheus.seekTo(time)
