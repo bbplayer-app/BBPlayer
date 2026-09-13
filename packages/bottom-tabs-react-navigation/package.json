@@ -55,7 +55,7 @@
 		"@react-navigation/native": "^7.2.2",
 		"@types/color": "^4.2.1",
 		"@types/react": "19.2.15",
-		"expo-router": "57.0.17",
+		"expo-router": "57.0.19",
 		"jest": "^30.2.0",
 		"react": "19.2.3",
 		"react-native": "0.86.3",
