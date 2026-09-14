@@ -85,7 +85,7 @@ export default function useSmoothProgress(background = false) {
 			buffered.set(s.duration)
 			lastPlayingRef.current = s.playing
 			isPlaying.set(s.playing)
-			const diff = Math.abs(lastPositionRef.current - s.position)
+			const diff = Math.abs(position.value - s.position)
 			if (diff > 0.8 || !s.playing) {
 				lastPositionRef.current = s.position
 				position.set(s.position)
@@ -105,7 +105,7 @@ export default function useSmoothProgress(background = false) {
 			if (AppState.currentState !== 'active' && !background) return
 			duration.set(data.duration)
 			buffered.set(data.buffered)
-			const diff = Math.abs(lastPositionRef.current - data.position)
+			const diff = Math.abs(position.value - data.position)
 			if (
 				diff > 0.05 ||
 				!lastPlayingRef.current ||

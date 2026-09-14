@@ -146,7 +146,7 @@ internal class DlnaHttpProxy(private val context: Context) {
         writeMediaHeaders(out, status, end - start + 1, total, start, end, mime)
         if (headOnly) return
         FileInputStream(file).use { input ->
-            input.skip(start)
+            skipFully(input, start)
             copyLimited(input, out, end - start + 1)
         }
     }
@@ -165,7 +165,7 @@ internal class DlnaHttpProxy(private val context: Context) {
         writeMediaHeaders(out, status, length, total, start, if (total > 0) end else -1L, mime)
         if (headOnly) return
         resolver.openInputStream(uri)?.use { input ->
-            if (start > 0) input.skip(start)
+            if (start > 0) skipFully(input, start)
             if (length > 0) copyLimited(input, out, length) else input.copyTo(out)
         }
     }
@@ -178,25 +178,36 @@ internal class DlnaHttpProxy(private val context: Context) {
         mime: String,
     ) {
         val start = range?.first?.coerceAtLeast(0) ?: 0L
-        val endInclusive = if (range == null || range.last == Long.MAX_VALUE) null else range.last
+        var headersSent = false
         try {
+            val knownTotal = expo.modules.orpheus.util.PlayerCacheSource.knownLength(context, uri)
+            if (range != null && knownTotal > 0 && start >= knownTotal) {
+                writeStatus(out, 416, "Range Not Satisfiable", 0)
+                return
+            }
+            val endInclusive = when {
+                range == null || range.last == Long.MAX_VALUE ->
+                    if (knownTotal > 0) knownTotal - 1 else null
+                knownTotal > 0 -> range.last.coerceAtMost(knownTotal - 1)
+                else -> range.last
+            }
             expo.modules.orpheus.util.PlayerCacheSource.open(context, uri, start, endInclusive)
                 .use { stream ->
-                    val total = stream.total
+                    val total = if (stream.total > 0) stream.total else knownTotal
+                    val end = when {
+                        total > 0 -> (endInclusive ?: (total - 1)).coerceAtMost(total - 1)
+                        endInclusive != null -> endInclusive
+                        stream.length > 0 -> start + stream.length - 1
+                        else -> -1L
+                    }
                     val length = when {
                         stream.length > 0 -> stream.length
-                        endInclusive != null -> endInclusive - start + 1
-                        total > 0 -> total - start
+                        total > 0 && end >= start -> end - start + 1
                         else -> -1L
                     }
-                    val end = when {
-                        endInclusive != null -> endInclusive
-                        total > 0 -> total - 1
-                        length > 0 -> start + length - 1
-                        else -> -1L
-                    }
-                    val status = if (range != null && (total > 0 || length > 0)) 206 else 200
+                    val status = if (range != null && total > 0) 206 else 200
                     writeMediaHeaders(out, status, length, total, start, end, mime)
+                    headersSent = true
                     if (headOnly) return
                     val buf = ByteArray(64 * 1024)
                     if (length > 0) {
@@ -215,9 +226,9 @@ internal class DlnaHttpProxy(private val context: Context) {
                         }
                     }
                 }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.w("BBPlayerDlna", "orpheus cache serve failed: ${e.message}")
-            writeStatus(out, 502, "Bad Gateway", 0)
+            if (!headersSent) writeStatus(out, 502, "Bad Gateway", 0)
         }
     }
 
@@ -350,6 +361,19 @@ internal class DlnaHttpProxy(private val context: Context) {
         val start = range.first.coerceAtLeast(0)
         val end = if (range.last == Long.MAX_VALUE) total - 1 else range.last.coerceAtMost(total - 1)
         return Triple(start, end, 206)
+    }
+
+    private fun skipFully(input: java.io.InputStream, count: Long) {
+        var remaining = count
+        while (remaining > 0) {
+            val skipped = input.skip(remaining)
+            if (skipped > 0) {
+                remaining -= skipped
+                continue
+            }
+            if (input.read() < 0) throw java.io.EOFException("short skip")
+            remaining -= 1
+        }
     }
 
     private fun copyLimited(input: java.io.InputStream, out: OutputStream, count: Long) {

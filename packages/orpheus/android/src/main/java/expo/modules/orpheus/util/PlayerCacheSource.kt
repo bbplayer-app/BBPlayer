@@ -30,15 +30,21 @@ object PlayerCacheSource {
     fun open(context: Context, uri: String, start: Long, endInclusive: Long?): Stream {
         val dataSource = DownloadUtil.getPlayerDataSourceFactory(context).createDataSource()
         val total = knownLength(context, uri)
+        val startOffset = start.coerceAtLeast(0)
         val specLength =
-            if (endInclusive != null) (endInclusive - start + 1).coerceAtLeast(0)
+            if (endInclusive != null) (endInclusive - startOffset + 1).coerceAtLeast(0)
             else C.LENGTH_UNSET.toLong()
         val spec = DataSpec.Builder()
             .setUri(Uri.parse(uri))
-            .setPosition(start.coerceAtLeast(0))
+            .setPosition(startOffset)
             .setLength(specLength)
             .build()
-        val opened = dataSource.open(spec)
+        val opened = try {
+            dataSource.open(spec)
+        } catch (error: Throwable) {
+            runCatching { dataSource.close() }
+            throw error
+        }
         val openedLength = if (opened == C.LENGTH_UNSET.toLong()) -1L else opened
         return Stream(openedLength, total, dataSource)
     }

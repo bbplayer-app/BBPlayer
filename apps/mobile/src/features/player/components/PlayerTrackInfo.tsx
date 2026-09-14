@@ -1,4 +1,4 @@
-import { useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
+import { useIsPlaying, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -17,8 +17,8 @@ import { Text, TouchableRipple, useTheme } from 'react-native-paper'
 import IconButton from '@/components/common/IconButton'
 import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useEffectiveIsPlaying from '@/hooks/player/useEffectiveIsPlaying'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
+import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { getGradientColors } from '@/utils/color'
 
@@ -43,7 +43,8 @@ export function TrackInfo({
 	const isDark: boolean = colorScheme === 'dark'
 
 	const currentTrack = useCurrentTrack()
-	const isPlaying = useEffectiveIsPlaying()
+	const isPlaying = useIsPlaying()
+	const casting = useDlnaCastStore((s) => !!s.castingDevice)
 	const [isTitleExpanded, setIsTitleExpanded] = useState(false)
 	const [thumbUpBurstSignal, setThumbUpBurstSignal] = useState(0)
 	const activeSkin = useActiveSkin()
@@ -100,7 +101,7 @@ export function TrackInfo({
 				style={styles.coverContainer}
 				onPress={onPressCover}
 			>
-				{enableSpectrumVisualizer && (
+				{enableSpectrumVisualizer && !casting && (
 					<View
 						style={[
 							StyleSheet.absoluteFill,

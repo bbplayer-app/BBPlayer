@@ -7,7 +7,7 @@ import {
 import { useRouter } from 'expo-router'
 import LottieView, { type AnimationObject } from 'lottie-react-native'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, StyleSheet, View } from 'react-native'
+import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 
@@ -336,16 +336,18 @@ export function PlayerControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					}}
 					testID='player-open-comments'
 				/>
-				<IconButton
-					icon={castingDevice ? 'cast-connected' : 'cast'}
-					size={24}
-					iconColor={castingDevice ? colors.primary : colors.onSurfaceVariant}
-					onPress={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-						void useDlnaCastSheetStore.getState().open()
-					}}
-					testID='player-open-dlna'
-				/>
+				{Platform.OS === 'android' && (
+					<IconButton
+						icon={castingDevice ? 'cast-connected' : 'cast'}
+						size={24}
+						iconColor={castingDevice ? colors.primary : colors.onSurfaceVariant}
+						onPress={() => {
+							void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+							void useDlnaCastSheetStore.getState().open()
+						}}
+						testID='player-open-dlna'
+					/>
+				)}
 				<IconButton
 					icon='format-list-bulleted'
 					size={24}

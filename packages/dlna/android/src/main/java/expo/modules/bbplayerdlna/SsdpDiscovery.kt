@@ -83,7 +83,15 @@ internal object SsdpDiscovery {
     }
 
     private fun fetchDevice(location: String): Map<String, String?>? {
-        val xml = URL(location).readText()
+        val conn = (URL(location).openConnection() as java.net.HttpURLConnection).apply {
+            connectTimeout = 4000
+            readTimeout = 4000
+        }
+        val xml = try {
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
         val parsed = parseDescription(xml, location) ?: return null
         if (parsed["controlURL"].isNullOrBlank()) return null
         return parsed

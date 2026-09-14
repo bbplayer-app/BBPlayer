@@ -141,6 +141,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
 			isSeeking.set(true)
 			if (useDlnaCastStore.getState().castingDevice) {
+				const previous = useDlnaCastStore.getState().position
 				useDlnaCastStore.getState().setPlayback({ position: time })
 				void seekDlnaCast(time)
 					.then(() => {
@@ -149,6 +150,8 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 						seekTimeoutRef.current = null
 					})
 					.catch(() => {
+						useDlnaCastStore.getState().setPlayback({ position: previous })
+						position.set(previous)
 						isSeeking.set(false)
 						seekTimeoutRef.current = null
 					})
