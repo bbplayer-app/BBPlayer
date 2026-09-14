@@ -11,7 +11,6 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import Button from '@/components/common/Button'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -146,7 +145,6 @@ export default function UploaderPage() {
 	)
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
@@ -317,9 +315,6 @@ export default function UploaderPage() {
 					hasNextPage={hasNextPage}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
 		</View>
 	)
 }
@@ -343,11 +338,5 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

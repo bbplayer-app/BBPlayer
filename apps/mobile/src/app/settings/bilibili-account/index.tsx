@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -264,9 +263,6 @@ export default function BilibiliAccountSettingsPage() {
 					</>
 				)}
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -338,11 +334,5 @@ const styles = StyleSheet.create({
 	},
 	loginActions: {
 		gap: 12,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

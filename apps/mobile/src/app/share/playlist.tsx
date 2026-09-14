@@ -15,7 +15,6 @@ import {
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
@@ -139,7 +138,6 @@ export default function SharedPlaylistPreviewPage() {
 	)
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonIconColor,
@@ -356,9 +354,6 @@ export default function SharedPlaylistPreviewPage() {
 					}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
 		</View>
 	)
 }
@@ -369,12 +364,6 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 	previewHint: {
 		marginHorizontal: 16,

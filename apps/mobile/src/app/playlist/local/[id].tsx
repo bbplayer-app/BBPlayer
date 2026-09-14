@@ -27,7 +27,6 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
 import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
 import { LocalTrackList } from '@/features/playlist/local/components/LocalTrackList'
@@ -396,7 +395,6 @@ export default function LocalPlaylistPage() {
 
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
@@ -1097,10 +1095,6 @@ export default function LocalPlaylistPage() {
 				)}
 			</View>
 
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
-
 			<SharedPlaylistMembersSheet
 				ref={membersSheetRef}
 				shareId={playlistMetadata?.shareId}
@@ -1116,12 +1110,6 @@ export default function LocalPlaylistPage() {
 const styles = StyleSheet.create({
 	container: { flex: 1 },
 	searchbarContainer: { overflow: 'hidden' },
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
-	},
 	locateCurrentTrackButton: {
 		position: 'absolute',
 		right: 16,

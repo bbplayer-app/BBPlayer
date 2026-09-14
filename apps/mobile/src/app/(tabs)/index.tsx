@@ -34,7 +34,6 @@ import ActivityIndicator from '@/components/common/ActivityIndicator'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import SearchSuggestions, {
 	type SearchHistoryItem,
 } from '@/features/home/SearchSuggestions'
@@ -46,6 +45,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { markPerfInteractive } from '@/lib/performance'
@@ -68,6 +68,7 @@ const getGreetingMsg = () => {
 }
 
 function HomePage() {
+	useNowPlayingBar()
 	const theme = useTheme()
 	const { colors } = theme
 	const insets = useSafeAreaInsets()
@@ -591,9 +592,6 @@ function HomePage() {
 					</Animated.ScrollView>
 				)}
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 			<SyncFailuresSheet ref={syncFailuresSheetRef} />
 		</View>
 	)
@@ -695,12 +693,6 @@ const styles = StyleSheet.create({
 	playlistTitle: {
 		fontWeight: '600',
 		marginBottom: 4,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })
 

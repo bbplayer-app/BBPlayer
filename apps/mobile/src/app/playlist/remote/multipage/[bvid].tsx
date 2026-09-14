@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -112,7 +111,6 @@ export default function MultipagePage() {
 	})
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
@@ -331,9 +329,6 @@ export default function MultipagePage() {
 					}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
 		</View>
 	)
 }
@@ -344,11 +339,5 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

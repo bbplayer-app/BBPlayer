@@ -15,7 +15,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import toast from '@/utils/toast'
 
@@ -140,9 +139,6 @@ export default function AboutSettingsPage() {
 					/>
 				</View>
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -172,11 +168,5 @@ const styles = StyleSheet.create({
 	section: {
 		borderRadius: 8,
 		overflow: 'hidden',
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

@@ -7,7 +7,6 @@ import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import DownloadHeader from '@/features/downloads/DownloadHeader'
 import DownloadTaskItem from '@/features/downloads/DownloadTaskItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -111,9 +110,6 @@ export default function DownloadPage() {
 					}}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -124,11 +120,5 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

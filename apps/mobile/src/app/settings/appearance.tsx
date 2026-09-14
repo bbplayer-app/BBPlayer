@@ -16,7 +16,6 @@ import IconButton from '@/components/common/IconButton'
 import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 
@@ -203,9 +202,6 @@ export default function AppearanceSettingsPage() {
 					</FunctionalMenu>
 				</View>
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -229,11 +225,5 @@ const styles = StyleSheet.create({
 	settingTextContainer: {
 		flex: 1,
 		marginRight: 16,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

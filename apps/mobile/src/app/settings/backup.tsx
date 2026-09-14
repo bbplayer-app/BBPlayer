@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import {
 	useCloudBackupMutation,
 	useCloudRestoreMutation,
@@ -340,9 +339,6 @@ export default function BackupSettingsPage() {
 					))
 				)}
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -392,11 +388,5 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 24,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

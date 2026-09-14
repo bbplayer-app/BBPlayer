@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
@@ -71,9 +70,6 @@ export default function DonateSettingsPage() {
 					onPress={() => openModal('DonationQR', { type: 'alipay' })}
 				/>
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -97,11 +93,5 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		lineHeight: 24,
 		opacity: 0.8,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

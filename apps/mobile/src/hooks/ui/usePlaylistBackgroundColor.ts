@@ -4,6 +4,7 @@ import type { ImageRef } from 'expo-image'
 import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
 
+import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { clampHslLightness, hexToHsl, hslToString } from '@/utils/color'
 import { reportErrorToSentry } from '@/utils/log'
 
@@ -190,6 +191,8 @@ export function usePlaylistBackgroundColor(
 			secondaryButtonIconColor,
 		}
 	}, [palette, isDarkMode, fallbackColor])
+
+	useNowPlayingBar(result.nowPlayingBarColor)
 
 	return result
 }

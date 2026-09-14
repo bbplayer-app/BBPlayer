@@ -7,7 +7,6 @@ import { Appbar, useTheme } from 'react-native-paper'
 
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -80,7 +79,6 @@ export default function ToViewPage() {
 	})
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
@@ -298,9 +296,6 @@ export default function ToViewPage() {
 					renderCustomItem={renderToViewItem as any}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
 		</View>
 	)
 }
@@ -311,11 +306,5 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

@@ -4,7 +4,6 @@ import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
@@ -200,9 +199,6 @@ export default function SearchResultsPage() {
 					}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -227,11 +223,5 @@ const styles = StyleSheet.create({
 	emptyListText: {
 		paddingVertical: 32,
 		textAlign: 'center',
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

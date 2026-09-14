@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -476,9 +475,6 @@ export default function TestPage() {
 					</View>
 				</View>
 			</ScrollView>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 
 			<Portal>
 				<AnimatedModalOverlay
@@ -543,11 +539,5 @@ const styles = StyleSheet.create({
 	},
 	button: {
 		marginBottom: 8,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

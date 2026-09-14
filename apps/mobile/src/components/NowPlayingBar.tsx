@@ -5,8 +5,9 @@ import {
 	useIsPlaying,
 	usePlaybackState,
 } from '@bbplayer/orpheus'
+import { useValue } from '@legendapp/state/react'
 import { Image } from 'expo-image'
-import { useFocusEffect, useIsFocused, useRouter } from 'expo-router'
+import { useRouter, useSegments } from 'expo-router'
 import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import {
@@ -20,6 +21,10 @@ import {
 } from 'react-native-gesture-handler'
 import { Icon, Text, useTheme } from 'react-native-paper'
 import Animated, {
+	Easing,
+	FadeIn,
+	FadeOut,
+	ReduceMotion,
 	useAnimatedStyle,
 	useSharedValue,
 	withTiming,
@@ -29,7 +34,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
-import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
+import { nowPlayingBarStore$ } from '@/hooks/stores/nowPlayingBarStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
@@ -96,19 +101,15 @@ const playPause = async () => {
 	}
 }
 
-interface NowPlayingBarProps {
-	backgroundColor?: string
+function NowPlayingBar() {
+	const segments = useSegments()
+	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
+	return segments[0] === 'player' || playerScreenActive ? null : (
+		<NowPlayingBarContent />
+	)
 }
 
-function NowPlayingBar(props: NowPlayingBarProps) {
-	const isFocused = useIsFocused()
-	// 隐藏页面不挂载内容，连同播放事件、进度动画及手势订阅一起释放。
-	return isFocused ? <NowPlayingBarContent {...props} /> : null
-}
-
-const NowPlayingBarContent = memo(function NowPlayingBarContent({
-	backgroundColor,
-}: NowPlayingBarProps) {
+const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -116,7 +117,10 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const isVisible = currentTrack !== null
-	const bottomBarHeight = useBottomTabBarHeight()
+	const segments = useSegments()
+	const backgroundColor = useValue(nowPlayingBarStore$.backgroundColor)
+	const tabBarHeight = useValue(nowPlayingBarStore$.bottomTabBarHeight)
+	const bottomBarHeight = segments[0] === '(tabs)' ? tabBarHeight : 0
 
 	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
 
@@ -127,9 +131,9 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 		refresh: refreshAdjacent,
 	} = useAdjacentTracks()
 
-	useFocusEffect(() => {
+	useEffect(() => {
 		refreshAdjacent()
-	})
+	}, [refreshAdjacent])
 
 	const hasPrevSv = useSharedValue(false)
 	const hasNextSv = useSharedValue(false)
@@ -228,34 +232,33 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 			? [styles.nowPlayingBarBottom]
 			: [styles.nowPlayingBarFloat]
 
-	let bottomMargin = 0
-	let bottomPadding = 0
-	if (Platform.OS === 'ios') {
-		if (bottomBarHeight === 0) {
-			bottomMargin = insets.bottom + 10
-		} else {
-			bottomMargin = 10 + bottomBarHeight
-		}
-	} else {
-		if (nowPlayingBarStyle === 'bottom') {
-			if (bottomBarHeight > 0) {
-				// 这样就是正常的，但是为什么是 20？？？？？？？？
-				bottomMargin = 20
-				bottomPadding = 0
-			} else {
-				// No tabs: extend background into system nav area
-				bottomMargin = 0
-				bottomPadding = insets.bottom
-			}
-		} else {
-			bottomMargin = insets.bottom + 10
-		}
-	}
+	// 根级覆盖层使用原生 Tab 栏的完整高度，安全区只补一次。
+	const isDocked = nowPlayingBarStyle === 'bottom' && Platform.OS !== 'ios'
+	const bottomMargin = isDocked
+		? bottomBarHeight
+		: Math.max(bottomBarHeight, insets.bottom) + 10
+	const bottomPadding = isDocked && bottomBarHeight === 0 ? insets.bottom : 0
+
+	const bottomOffset = useSharedValue(bottomMargin)
+	useEffect(() => {
+		bottomOffset.set(
+			withTiming(bottomMargin, {
+				duration: 240,
+				easing: Easing.out(Easing.cubic),
+				reduceMotion: ReduceMotion.System,
+			}),
+		)
+	}, [bottomMargin, bottomOffset])
+	const positionStyle = useAnimatedStyle(() => ({
+		transform: [{ translateY: -bottomOffset.value }],
+	}))
 
 	return (
-		<View
+		<Animated.View
+			entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)}
+			exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}
 			pointerEvents='box-none'
-			style={styles.nowPlayingBarContainer}
+			style={[styles.nowPlayingBarContainer, positionStyle]}
 		>
 			{isVisible && (
 				<GestureDetector gesture={combinedGesture}>
@@ -264,7 +267,6 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 							playerStyle,
 							{
 								backgroundColor: backgroundColor ?? colors.elevation.level2,
-								marginBottom: bottomMargin,
 								paddingBottom: bottomPadding,
 								height:
 									nowPlayingBarStyle === 'bottom'
@@ -403,7 +405,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 							style={[
 								styles.nowPlayingBarProgressContainer,
 								nowPlayingBarStyle === 'bottom'
-									? { left: 0, right: 0 }
+									? { left: 0, right: 0, bottom: bottomPadding }
 									: { width: '88%', left: 26, right: 0 },
 							]}
 						>
@@ -412,7 +414,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 					</View>
 				</GestureDetector>
 			)}
-		</View>
+		</Animated.View>
 	)
 })
 

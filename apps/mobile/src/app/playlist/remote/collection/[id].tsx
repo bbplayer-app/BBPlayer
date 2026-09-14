@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -94,7 +93,6 @@ export default function CollectionPage() {
 	)
 	const {
 		backgroundColor,
-		nowPlayingBarColor,
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
@@ -188,8 +186,8 @@ export default function CollectionPage() {
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
-							for (const selectedId of selected) {
-								const track = tracks.find((t) => t.id === selectedId)
+								for (const selectedId of selected) {
+									const track = tracks.find((t) => t.id === selectedId)
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -244,9 +242,6 @@ export default function CollectionPage() {
 					}
 				/>
 			</View>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar backgroundColor={nowPlayingBarColor} />
-			</View>
 		</View>
 	)
 }
@@ -257,11 +252,5 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

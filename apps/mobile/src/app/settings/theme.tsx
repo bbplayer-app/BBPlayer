@@ -15,7 +15,6 @@ import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
@@ -494,10 +493,6 @@ export default function ThemeSettingsPage() {
 				onDismiss={() => setPreviewAsset(null)}
 				onSelect={selectBootSplashAsset}
 			/>
-
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -1174,11 +1169,5 @@ const styles = StyleSheet.create({
 	previewSlider: {
 		width: '100%',
 		height: 32,
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 })

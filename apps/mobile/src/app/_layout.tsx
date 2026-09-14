@@ -19,13 +19,15 @@ import { Toaster } from 'sonner-native'
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
 import { alert } from '@/components/modals/AlertModal'
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
+import NowPlayingBar from '@/components/NowPlayingBar'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
+import { nowPlayingBarStore$ } from '@/hooks/stores/nowPlayingBarStore'
+import { initPlaybackContextStore } from '@/hooks/stores/playbackContextStore'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import useAppStoreObj from '@/hooks/stores/useAppStore'
-import { initPlaybackContextStore } from '@/hooks/stores/playbackContextStore'
 import { initPlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { initializeSentry } from '@/lib/config/sentry'
@@ -236,7 +238,29 @@ function RootLayout() {
 		<View style={styles.appContainer}>
 			<AppProviders>
 				{migrationsSuccess && isReady ? (
-					<Stack screenOptions={{ headerShown: false }}>
+					<Stack
+						screenOptions={{ headerShown: false }}
+						screenListeners={({ route, navigation }) => ({
+							focus: () => {
+								if (route.name === 'player') {
+									nowPlayingBarStore$.playerScreenActive.set(true)
+								}
+							},
+							transitionEnd: ({ data }) => {
+								const state = navigation.getState()
+								// 被 pop 的 player 已不在导航状态中，其 closing 事件会被丢弃。
+								// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
+								if (
+									!data.closing &&
+									state.routes[state.index]?.key === route.key
+								) {
+									nowPlayingBarStore$.playerScreenActive.set(
+										route.name === 'player',
+									)
+								}
+							},
+						})}
+					>
 						<Stack.Screen
 							name='(tabs)'
 							options={{ headerShown: false }}
@@ -386,6 +410,7 @@ function RootLayout() {
 				) : null}
 				<Toaster />
 				<PlayerQueueModal />
+				<NowPlayingBar />
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>

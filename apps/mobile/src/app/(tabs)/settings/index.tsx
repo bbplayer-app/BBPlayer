@@ -7,12 +7,13 @@ import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 
 export default function SettingsPage() {
+	useNowPlayingBar()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const colors = useTheme().colors
@@ -268,9 +269,6 @@ export default function SettingsPage() {
 				colors={['rgba(0,0,0,0)', colors.background]}
 				style={[styles.bottomFade, { bottom: haveTrack ? 70 : 0 }]}
 			/>
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
 		</View>
 	)
 }
@@ -298,12 +296,6 @@ const styles = StyleSheet.create({
 	divider: {
 		marginVertical: 4,
 		backgroundColor: 'transparent', // Spacer
-	},
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
 	},
 	bottomFade: {
 		position: 'absolute',

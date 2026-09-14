@@ -24,7 +24,6 @@ import IconButton from '@/components/common/IconButton'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { alert } from '@/components/modals/AlertModal'
 import ExportDownloadsProgressModal from '@/components/modals/settings/ExportDownloadsProgressModal'
-import NowPlayingBar from '@/components/NowPlayingBar'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
 import { useRemoveDownloadsMutation } from '@/hooks/mutations/orpheus'
 import { useAllDownloads, orpheusQueryKeys } from '@/hooks/queries/orpheus'
@@ -566,10 +565,6 @@ export default function DownloadedPage() {
 				/>
 			</View>
 
-			<View style={styles.nowPlayingBarContainer}>
-				<NowPlayingBar />
-			</View>
-
 			<ExportDownloadsProgressModal
 				sheetRef={exportSheetRef}
 				ids={exportConfig?.ids ?? []}
@@ -582,12 +577,6 @@ export default function DownloadedPage() {
 const styles = StyleSheet.create({
 	container: { flex: 1 },
 	listContainer: { flex: 1 },
-	nowPlayingBarContainer: {
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		right: 0,
-	},
 	searchbar: {
 		margin: 8,
 		elevation: 0,
