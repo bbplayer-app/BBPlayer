@@ -1,15 +1,5 @@
-From 2e1c00bbe9797ea4feeafdae8ace55867351730f Mon Sep 17 00:00:00 2001
-From: roitium <65794453+roitium@users.noreply.github.com>
-Date: Sun, 13 Sep 2026 16:03:08 +0800
-Subject: [PATCH] fix(android): preserve pager content during screen exit
- transitions
-
----
- .../reactnativepagerview/ComposePagerView.kt  | 68 +++++++++++++++++--
- 1 file changed, 61 insertions(+), 7 deletions(-)
-
 diff --git a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
-index 5eaa6069..0b002d9e 100644
+index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed1805188a 100644
 --- a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
 +++ b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
 @@ -57,6 +57,43 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
@@ -65,7 +55,7 @@ index 5eaa6069..0b002d9e 100644
 +    if (dropRequested) disposeNow()
      super.onDetachedFromWindow()
    }
-
+ 
    fun dispose() {
 +    dropRequested = true
 +    if (isAttachedToWindow && transitionPages.value != null) {
@@ -79,7 +69,7 @@ index 5eaa6069..0b002d9e 100644
 +    disposed = true
      composeLifecycleOwner.destroy()
    }
-
+ 
 @@ -242,15 +292,15 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
        return
      }
@@ -87,7 +77,7 @@ index 5eaa6069..0b002d9e 100644
 -    (view.parent as? ViewGroup)?.removeView(view)
 +    removePageView(view)
    }
-
+ 
    fun removeAllPages() {
      pages.forEach { view ->
 -      (view.parent as? ViewGroup)?.removeView(view)
@@ -97,11 +87,11 @@ index 5eaa6069..0b002d9e 100644
 -    resetPagerState()
 +    if (transitionPages.value == null) resetPagerState()
    }
-
+ 
    private fun resetPagerState() {
 @@ -429,6 +479,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
    }
-
+ 
    private fun dispatchPageSelected(position: Int) {
 +    if (dropRequested) return
      if (lastEmittedPageSelected == position) {
@@ -109,37 +99,40 @@ index 5eaa6069..0b002d9e 100644
      }
 @@ -439,12 +490,14 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
    }
-
+ 
    private fun dispatchPageScroll(position: Int, offset: Float) {
 +    if (dropRequested) return
      UIManagerHelper.getEventDispatcherForReactTag(reactContext, id)?.dispatchEvent(
        PageScrollEvent(id, position, offset)
      )
    }
-
+ 
    private fun dispatchScrollState(state: String) {
 +    if (dropRequested) return
      if (lastEmittedScrollState == state) {
        return
      }
-@@ -456,13 +509,14 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
-
+@@ -456,13 +509,17 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+ 
    @Composable
    private fun PagerContent() {
 -    val pageCount = pages.size
-+    val displayedPages = transitionPages.value ?: pages
++    // Lazy page content can run after RN mutates the logical child list but
++    // before this composition is replaced. Capture an immutable snapshot so
++    // an existing item provider never indexes a list that has since shrunk.
++    val displayedPages = transitionPages.value ?: pages.toList()
 +    val pageCount = displayedPages.size
      if (pageCount == 0) {
        return
      }
-
+ 
      val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, pageCount - 1)) {
 -      pages.size
-+      (transitionPages.value ?: pages).size
++      pageCount
      }
-
+ 
      LaunchedEffect(pageCount) {
-@@ -564,7 +618,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -564,7 +621,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
            reverseLayout = false,
            beyondViewportPageCount = beyondViewportPageCount
          ) { page ->
@@ -148,7 +141,7 @@ index 5eaa6069..0b002d9e 100644
          }
        } else {
          HorizontalPager(
-@@ -575,7 +629,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -575,7 +632,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
            reverseLayout = false,
            beyondViewportPageCount = beyondViewportPageCount
          ) { page ->
