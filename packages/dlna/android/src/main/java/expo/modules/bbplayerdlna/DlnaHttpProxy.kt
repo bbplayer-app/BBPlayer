@@ -11,6 +11,9 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URL
 import java.util.Locale
+import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal class DlnaHttpProxy(private val context: Context) {
@@ -27,6 +30,9 @@ internal class DlnaHttpProxy(private val context: Context) {
     private var server: ServerSocket? = null
     private var acceptThread: Thread? = null
     private val running = AtomicBoolean(false)
+    private val clients = Executors.newFixedThreadPool(4) { r ->
+        Thread(r, "dlna-proxy-client").apply { isDaemon = true }
+    }
 
     @Synchronized
     fun start(next: Source, nextMime: String): String {
@@ -35,15 +41,17 @@ internal class DlnaHttpProxy(private val context: Context) {
             server = socket
             running.set(true)
             acceptThread = Thread({
-                while (running.get()) {
+                while (running.get() && !socket.isClosed) {
                     try {
                         val client = socket.accept()
-                        Thread({ handle(client) }, "dlna-proxy-client").apply {
-                            isDaemon = true
-                            start()
+                        client.soTimeout = 15_000
+                        try {
+                            clients.execute { handle(client) }
+                        } catch (_: RejectedExecutionException) {
+                            runCatching { client.close() }
                         }
                     } catch (_: Exception) {
-                        if (!running.get()) break
+                        if (!running.get() || socket.isClosed) break
                     }
                 }
             }, "dlna-proxy").apply {
@@ -52,7 +60,7 @@ internal class DlnaHttpProxy(private val context: Context) {
             }
         }
         val ext = extensionForMime(nextMime)
-        val path = "/media-${System.currentTimeMillis()}.$ext"
+        val path = "/media-${UUID.randomUUID()}.$ext"
         sessions[path] = Session(next, nextMime)
         while (sessions.size > 4) {
             sessions.remove(sessions.keys.first())
@@ -143,6 +151,10 @@ internal class DlnaHttpProxy(private val context: Context) {
         }
         val total = file.length()
         val (start, end, status) = resolveRange(total, range)
+        if (status == 416) {
+            writeUnsatisfiable(out, total)
+            return
+        }
         writeMediaHeaders(out, status, end - start + 1, total, start, end, mime)
         if (headOnly) return
         FileInputStream(file).use { input ->
@@ -161,6 +173,10 @@ internal class DlnaHttpProxy(private val context: Context) {
         val resolver = context.contentResolver
         val total = resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
         val (start, end, status) = if (total > 0) resolveRange(total, range) else Triple(0L, -1L, 200)
+        if (status == 416) {
+            writeUnsatisfiable(out, total)
+            return
+        }
         val length = if (total > 0) end - start + 1 else -1L
         writeMediaHeaders(out, status, length, total, start, if (total > 0) end else -1L, mime)
         if (headOnly) return
@@ -182,7 +198,11 @@ internal class DlnaHttpProxy(private val context: Context) {
         try {
             val knownTotal = expo.modules.orpheus.util.PlayerCacheSource.knownLength(context, uri)
             if (range != null && knownTotal > 0 && start >= knownTotal) {
-                writeStatus(out, 416, "Range Not Satisfiable", 0)
+                writeUnsatisfiable(out, knownTotal)
+                return
+            }
+            if (range != null && range.last != Long.MAX_VALUE && range.last < start) {
+                writeUnsatisfiable(out, if (knownTotal > 0) knownTotal else 0)
                 return
             }
             val endInclusive = when {
@@ -282,13 +302,14 @@ internal class DlnaHttpProxy(private val context: Context) {
         range: LongRange?,
     ): HttpURLConnection? {
         var current = URL(src.url)
+        var headers = src.headers
         repeat(5) {
             val conn = current.openConnection() as HttpURLConnection
             conn.instanceFollowRedirects = false
             conn.connectTimeout = 8000
             conn.readTimeout = 20000
             conn.requestMethod = if (headOnly) "HEAD" else "GET"
-            src.headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+            headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
             if (range != null) {
                 val end = if (range.last == Long.MAX_VALUE) "" else range.last.toString()
                 conn.setRequestProperty("Range", "bytes=${range.first}-$end")
@@ -298,12 +319,30 @@ internal class DlnaHttpProxy(private val context: Context) {
                 val location = conn.getHeaderField("Location")
                 conn.disconnect()
                 if (location.isNullOrBlank()) return null
-                current = URL(current, location)
+                val next = URL(current, location)
+                if (!sameOrigin(current, next)) {
+                    headers = headers.filterKeys { key ->
+                        val name = key.lowercase(Locale.US)
+                        name != "authorization" && name != "cookie" && name != "cookie2"
+                    }
+                }
+                current = next
                 return@repeat
             }
             return conn
         }
         return null
+    }
+
+    private fun sameOrigin(a: URL, b: URL): Boolean {
+        return a.protocol.equals(b.protocol, ignoreCase = true) &&
+            a.host.equals(b.host, ignoreCase = true) &&
+            originPort(a) == originPort(b)
+    }
+
+    private fun originPort(url: URL): Int {
+        val port = url.port
+        return if (port == -1) url.defaultPort else port
     }
 
     private fun extensionForMime(value: String): String {
@@ -362,7 +401,19 @@ internal class DlnaHttpProxy(private val context: Context) {
         if (range == null) return Triple(0L, total - 1, 200)
         val start = range.first.coerceAtLeast(0)
         val end = if (range.last == Long.MAX_VALUE) total - 1 else range.last.coerceAtMost(total - 1)
+        if (total <= 0 || start >= total || end < start) {
+            return Triple(0L, -1L, 416)
+        }
         return Triple(start, end, 206)
+    }
+
+    private fun writeUnsatisfiable(out: OutputStream, total: Long) {
+        val header = StringBuilder()
+        header.append("HTTP/1.1 416 Range Not Satisfiable\r\n")
+        header.append("Content-Range: bytes */").append(total).append("\r\n")
+        header.append("Content-Length: 0\r\n")
+        header.append("Connection: close\r\n\r\n")
+        out.write(header.toString().toByteArray(Charsets.US_ASCII))
     }
 
     private fun skipFully(input: java.io.InputStream, count: Long) {

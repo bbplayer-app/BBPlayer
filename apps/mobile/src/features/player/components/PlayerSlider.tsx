@@ -16,6 +16,7 @@ import {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import { getDlnaCastGeneration } from '@/features/player/dlna/castCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
@@ -143,17 +144,28 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 			isSeeking.set(true)
 			if (useDlnaCastStore.getState().castingDevice) {
 				const requestId = ++seekRequestIdRef.current
+				const generation = getDlnaCastGeneration()
 				const previous = useDlnaCastStore.getState().position
 				useDlnaCastStore.getState().setPlayback({ position: time })
 				void seekDlnaCast(time)
 					.then(() => {
-						if (seekRequestIdRef.current !== requestId) return
+						if (
+							seekRequestIdRef.current !== requestId ||
+							generation !== getDlnaCastGeneration()
+						) {
+							return
+						}
 						position.set(time)
 						isSeeking.set(false)
 						seekTimeoutRef.current = null
 					})
 					.catch(() => {
-						if (seekRequestIdRef.current !== requestId) return
+						if (
+							seekRequestIdRef.current !== requestId ||
+							generation !== getDlnaCastGeneration()
+						) {
+							return
+						}
 						useDlnaCastStore.getState().setPlayback({ position: previous })
 						position.set(previous)
 						isSeeking.set(false)

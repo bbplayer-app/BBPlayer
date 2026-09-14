@@ -65,18 +65,18 @@ export default function useDlnaPlaybackSync() {
 					sawPlayingRef.current &&
 					!isDlnaRecasting() &&
 					(stopped
-						? lastPositionRef.current > 8 && status.position < 2
+						? atEnd || (lastPositionRef.current > 8 && status.position < 2)
 						: playing && atEnd)
 
-				lastPositionRef.current = status.position
+				if (playing) lastPositionRef.current = status.position
 
 				if (cancelled || isDlnaDisconnecting() || isDlnaRecasting()) return
 
 				if (ended && !advancingRef.current) {
 					advancingRef.current = true
-					sawPlayingRef.current = false
 					try {
 						await skipWithDlna('next')
+						sawPlayingRef.current = false
 					} catch (e) {
 						logger.warning('投屏自动切歌失败', { error: e })
 					} finally {

@@ -38,6 +38,7 @@ export const useDlnaCastStore = create<DlnaCastState>((set) => ({
 						castingTitle: title,
 						playing: true,
 						position: 0,
+						duration: 0,
 						transportState: 'TRANSITIONING',
 					}
 				: { castingDevice: null, castingTitle: null, ...idlePlayback },

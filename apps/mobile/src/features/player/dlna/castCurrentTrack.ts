@@ -20,6 +20,7 @@ const logger = log.extend('Player.Dlna')
 let recasting = false
 let recastQueued = false
 let disconnecting = false
+let castGeneration = 0
 
 export function isDlnaRecasting() {
 	return recasting
@@ -29,11 +30,16 @@ export function isDlnaDisconnecting() {
 	return disconnecting
 }
 
+export function getDlnaCastGeneration() {
+	return castGeneration
+}
+
 export async function disconnectDlnaCast() {
 	const { castingDevice, position, playing } = useDlnaCastStore.getState()
 	if (!castingDevice || disconnecting) return
 
 	disconnecting = true
+	castGeneration++
 	try {
 		await stopDlnaCast()
 		useDlnaCastStore.getState().setCasting(null)
@@ -57,7 +63,9 @@ export async function playSourceOnDevice(
 	source: ResolvedCastSource,
 	resumeLocalOnFail: boolean,
 ) {
+	const generation = getDlnaCastGeneration()
 	await Orpheus.pause()
+	if (generation !== getDlnaCastGeneration()) return
 	try {
 		await castToDlna({
 			controlURL: device.controlURL,
@@ -68,6 +76,7 @@ export async function playSourceOnDevice(
 			filePath: source.filePath,
 			headers: source.headers,
 		})
+		if (generation !== getDlnaCastGeneration()) return
 		useDlnaCastStore.getState().setCasting(device, source.title)
 	} catch (e) {
 		if (resumeLocalOnFail) {
@@ -93,6 +102,7 @@ export async function recastCurrentTrack() {
 		do {
 			recastQueued = false
 			try {
+				const generation = getDlnaCastGeneration()
 				const device = useDlnaCastStore.getState().castingDevice
 				if (!device || disconnecting) return
 				const uniqueKey = (await Orpheus.getCurrentTrack())?.id
@@ -100,7 +110,15 @@ export async function recastCurrentTrack() {
 				const result = await trackService.getTrackByUniqueKey(uniqueKey)
 				if (result.isErr()) throw result.error
 				const source = await resolveCastSource(result.value)
+				if (
+					generation !== getDlnaCastGeneration() ||
+					disconnecting ||
+					!useDlnaCastStore.getState().castingDevice
+				) {
+					return
+				}
 				await playSourceOnDevice(device, source, false)
+				if (generation !== getDlnaCastGeneration()) return
 				logger.info('已切到音箱', { title: source.title })
 			} catch (e) {
 				if (

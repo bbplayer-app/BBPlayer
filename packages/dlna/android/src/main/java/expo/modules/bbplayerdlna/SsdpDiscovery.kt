@@ -27,7 +27,11 @@ internal object SsdpDiscovery {
         lock.setReferenceCounted(false)
         lock.acquire()
         val locations = LinkedHashSet<String>()
-        val deadline = System.currentTimeMillis() + timeoutMs.coerceAtLeast(800)
+        val total = timeoutMs.coerceAtLeast(800)
+        val started = System.currentTimeMillis()
+        val fetchReserve = (total / 3).coerceIn(400, 1500)
+        val receiveDeadline = started + total - fetchReserve
+        val overallDeadline = started + total
         try {
             DatagramSocket().use { socket ->
                 socket.broadcast = true
@@ -39,7 +43,7 @@ internal object SsdpDiscovery {
                     socket.send(DatagramPacket(bytes, bytes.size, group, 1900))
                 }
                 val buf = ByteArray(4096)
-                while (System.currentTimeMillis() < deadline && locations.size < MAX_LOCATIONS) {
+                while (System.currentTimeMillis() < receiveDeadline && locations.size < MAX_LOCATIONS) {
                     try {
                         val packet = DatagramPacket(buf, buf.size)
                         socket.receive(packet)
@@ -56,7 +60,7 @@ internal object SsdpDiscovery {
 
         val devices = LinkedHashMap<String, Map<String, String?>>()
         for (location in locations) {
-            val remaining = (deadline - System.currentTimeMillis()).toInt()
+            val remaining = (overallDeadline - System.currentTimeMillis()).toInt()
             if (remaining <= 0) break
             val device = runCatching { fetchDevice(location, remaining) }.getOrNull() ?: continue
             val key = device["udn"] ?: device["controlURL"] ?: location
@@ -88,8 +92,11 @@ internal object SsdpDiscovery {
     }
 
     private fun fetchDevice(location: String, timeoutMs: Int): Map<String, String?>? {
+        val url = runCatching { URL(location) }.getOrNull() ?: return null
+        if (!isAllowedDescriptionUrl(url)) return null
         val budget = timeoutMs.coerceIn(1, 4000)
-        val conn = (URL(location).openConnection() as java.net.HttpURLConnection).apply {
+        val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+            instanceFollowRedirects = false
             connectTimeout = budget
             readTimeout = budget
         }
@@ -101,6 +108,17 @@ internal object SsdpDiscovery {
         val parsed = parseDescription(xml, location) ?: return null
         if (parsed["controlURL"].isNullOrBlank()) return null
         return parsed
+    }
+
+    private fun isAllowedDescriptionUrl(url: URL): Boolean {
+        val scheme = url.protocol.lowercase()
+        if (scheme != "http" && scheme != "https") return false
+        if (url.host.isNullOrBlank()) return false
+        val address = runCatching { InetAddress.getByName(url.host) }.getOrNull() ?: return false
+        return !address.isLoopbackAddress &&
+            !address.isLinkLocalAddress &&
+            !address.isMulticastAddress &&
+            !address.isAnyLocalAddress
     }
 
     private fun readLimited(input: java.io.InputStream, maxBytes: Int): String? {
