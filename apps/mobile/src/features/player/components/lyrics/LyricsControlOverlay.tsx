@@ -9,6 +9,7 @@ import { Icon, useTheme } from 'react-native-paper'
 import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { MainPlaybackControls } from '@/features/player/components/controls/PlayerControlContent'
 import { PlayerSlider } from '@/features/player/components/main/PlayerSlider'
+import useAppStore from '@/hooks/stores/useAppStore'
 
 const ALPHABETICAL_ICON = ExpoIcon.select({
 	ios: 'abc',
@@ -32,7 +33,7 @@ const OFFSET_ICON = ExpoIcon.select({
 
 const { height: windowHeight } = Dimensions.get('window')
 // 面板高度 = 底部控件（~211px）+ 顶部 60px 渐隐条，刚好延伸到菜单按钮上方
-const OVERLAY_HEIGHT = Math.min(windowHeight * 0.4, 280)
+export const LYRICS_CONTROLS_OVERLAY_HEIGHT = Math.min(windowHeight * 0.4, 280)
 
 interface LyricsControlOverlayProps {
 	offsetMenuVisible: boolean
@@ -52,6 +53,9 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	onOpenOffsetMenu,
 }: LyricsControlOverlayProps) {
 	const { colors } = useTheme()
+	const isFluidBackground = useAppStore(
+		(state) => state.settings.playerBackgroundStyle === 'fluid',
+	)
 
 	return (
 		<MaskedView
@@ -74,13 +78,15 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 				</View>
 			}
 		>
-			{/* 面板背景：底部不透明，顶部渐隐 */}
-			<View
-				style={[
-					StyleSheet.absoluteFill,
-					{ backgroundColor: colors.background },
-				]}
-			/>
+			{/* 流体模式直接透出整页背景，歌词自身的遮罩负责避让控件。 */}
+			{!isFluidBackground && (
+				<View
+					style={[
+						StyleSheet.absoluteFill,
+						{ backgroundColor: colors.background },
+					]}
+				/>
+			)}
 			<View style={styles.playerControls}>
 				{/* 功能按钮，位于 slider 上方右侧 */}
 				<View style={styles.actionMenuRow}>
@@ -143,7 +149,7 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		left: 0,
 		right: 0,
-		height: OVERLAY_HEIGHT,
+		height: LYRICS_CONTROLS_OVERLAY_HEIGHT,
 	},
 	maskElement: {
 		flex: 1,

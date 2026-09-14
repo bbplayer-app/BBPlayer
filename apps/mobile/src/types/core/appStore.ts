@@ -5,7 +5,7 @@ interface Settings {
 	sendPlayHistory: boolean
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
-	playerBackgroundStyle: 'gradient' | 'md3'
+	playerBackgroundStyle: 'gradient' | 'fluid'
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean

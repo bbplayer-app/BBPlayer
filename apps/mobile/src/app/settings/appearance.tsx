@@ -26,8 +26,8 @@ export default function AppearanceSettingsPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 
-	const playerBackgroundStyle = useAppStore(
-		(state) => state.settings.playerBackgroundStyle,
+	const playerBackgroundStyle = useAppStore((state) =>
+		state.settings.playerBackgroundStyle === 'fluid' ? 'fluid' : 'gradient',
 	)
 	const nowPlayingBarStyle = useAppStore(
 		(state) => state.settings.nowPlayingBarStyle,
@@ -46,7 +46,7 @@ export default function AppearanceSettingsPage() {
 		setNowPlayerBarMenuVisible(false)
 	}
 
-	const setPlayerBackgroundStyle = (style: 'gradient' | 'md3') => {
+	const setPlayerBackgroundStyle = (style: 'gradient' | 'fluid') => {
 		setSettings({ playerBackgroundStyle: style })
 		setPlayerBGMenuVisible(false)
 	}
@@ -186,7 +186,7 @@ export default function AppearanceSettingsPage() {
 					>
 						<UniversalCheckboxItem
 							mode='ios'
-							label='渐变'
+							label='普通渐变'
 							status={
 								playerBackgroundStyle === 'gradient' ? 'checked' : 'unchecked'
 							}
@@ -194,9 +194,11 @@ export default function AppearanceSettingsPage() {
 						/>
 						<UniversalCheckboxItem
 							mode='ios'
-							label='默认背景'
-							status={playerBackgroundStyle === 'md3' ? 'checked' : 'unchecked'}
-							onPress={() => setPlayerBackgroundStyle('md3')}
+							label='流体效果'
+							status={
+								playerBackgroundStyle === 'fluid' ? 'checked' : 'unchecked'
+							}
+							onPress={() => setPlayerBackgroundStyle('fluid')}
 						/>
 					</FunctionalMenu>
 				</View>

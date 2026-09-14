@@ -29,7 +29,10 @@ import lyricService from '@/lib/services/lyricService'
 import { toastAndLogError } from '@/utils/error-handling'
 
 import { ModernLyricLineItem, OldSchoolLyricLineItem } from './LyricLineItem'
-import { LyricsControlOverlay } from './LyricsControlOverlay'
+import {
+	LyricsControlOverlay,
+	LYRICS_CONTROLS_OVERLAY_HEIGHT,
+} from './LyricsControlOverlay'
 import { LyricsOffsetControl } from './LyricsOffsetControl'
 
 const Lyrics = memo(function Lyrics({
@@ -42,6 +45,9 @@ const Lyrics = memo(function Lyrics({
 	const dimensions = useWindowDimensions()
 	const windowHeight = dimensions.height
 	const colors = useTheme().colors
+	const isFluidBackground = useAppStore(
+		(state) => state.settings.playerBackgroundStyle === 'fluid',
+	)
 	const scrollViewRef = useRef<Animated.ScrollView>(null)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
 
@@ -362,11 +368,19 @@ const Lyrics = memo(function Lyrics({
 							/>
 
 							<LinearGradient
-								style={[styles.gradient]}
+								style={[
+									styles.gradient,
+									isFluidBackground && {
+										height: LYRICS_CONTROLS_OVERLAY_HEIGHT,
+									},
+								]}
 								start={{ x: 0, y: 0 }}
 								end={{ x: 0, y: 1 }}
 								colors={[colors.background, 'transparent']}
-								locations={[0, 1]}
+								locations={[
+									0,
+									isFluidBackground ? 60 / LYRICS_CONTROLS_OVERLAY_HEIGHT : 1,
+								]}
 							/>
 						</View>
 					}

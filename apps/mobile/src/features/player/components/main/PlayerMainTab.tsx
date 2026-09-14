@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
 import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
-import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
@@ -75,11 +74,9 @@ const PlayerMainTab = memo(function PlayerMainTab({
 })
 
 function PlayerProgress() {
-	const trackId = useCurrentTrackId()
 	const { chapters, podcast } = usePlayerChapters()
 	return (
 		<PlayerSlider
-			key={trackId}
 			podcast={podcast}
 			chapters={chapters}
 		/>

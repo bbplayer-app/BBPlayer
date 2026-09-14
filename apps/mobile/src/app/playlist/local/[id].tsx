@@ -112,6 +112,11 @@ const UNPIN_ICON = Icon.select({
 	android: import('@expo/material-symbols/keep_off.xml'),
 })
 
+const PREFERRED_ICON = Icon.select({
+	ios: 'headphones',
+	android: import('@expo/material-symbols/headphones.xml'),
+})
+
 const SEARCHBAR_HEIGHT = 72
 const SCOPE = 'UI.Playlist.Local'
 
@@ -757,10 +762,7 @@ export default function LocalPlaylistPage() {
 		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
 			<FunctionalMenu.Item
 				title='播放器偏好'
-				leadingIcon={Icon.select({
-					ios: 'headphones',
-					android: import('@expo/material-symbols/headphones.xml'),
-				})}
+				leadingIcon={PREFERRED_ICON}
 				onPress={() => setPlayerPreferenceVisible(true)}
 			/>
 			{playlistMetadata.type === 'local' && !isSharedSubscriber && (

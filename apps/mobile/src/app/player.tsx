@@ -1,15 +1,10 @@
+import type { ExtractedPalette } from '@bbplayer/image-theme-colors'
 import ImageThemeColors from '@bbplayer/image-theme-colors'
 import { Computed, useObserveEffect } from '@legendapp/state/react'
-import {
-	Canvas,
-	Group,
-	LinearGradient,
-	Rect,
-	vec,
-} from '@shopify/react-native-skia'
+import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
 import { useObserve } from 'expo-observe'
-import { router } from 'expo-router'
+import { router, useIsFocused } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
@@ -21,6 +16,7 @@ import {
 import PagerView from 'react-native-pager-view'
 import { useTheme } from 'react-native-paper'
 import {
+	cancelAnimation,
 	createAnimatedComponent,
 	Easing,
 	useDerivedValue,
@@ -36,6 +32,7 @@ import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerCha
 import { PlayerHeader } from '@/features/player/components/main/PlayerHeader'
 import PlayerMainTab from '@/features/player/components/main/PlayerMainTab'
 import { PlayerFunctionalMenu } from '@/features/player/components/menu/PlayerFunctionalMenu'
+import { FluidBackground } from '@/features/player/components/visuals/FluidBackground'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
@@ -44,7 +41,6 @@ import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersShe
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
-import toast from '@/utils/toast'
 
 const AnimatedPagerView = createAnimatedComponent(PagerView)
 
@@ -98,10 +94,12 @@ export default function PlayerPage() {
 	})
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
-	const playerBackgroundStyle = useAppStore(
-		(state) => state.settings.playerBackgroundStyle,
+	// 旧版 md3 / streamer 等存量值也回落到普通渐变。
+	const isFluidBackground = useAppStore(
+		(state) => state.settings.playerBackgroundStyle === 'fluid',
 	)
-	const setSettings = useAppStore((state) => state.setSettings)
+	const isFocused = useIsFocused()
+	const [palette, setPalette] = useState<ExtractedPalette | null>(null)
 	const [isForeground, setIsForeground] = useState(
 		AppState.currentState === 'active',
 	)
@@ -158,7 +156,6 @@ export default function PlayerPage() {
 		}
 	}, [])
 
-	const gradientMainColor = useSharedValue(colors.background)
 	const scrollX = useSharedValue(0)
 
 	useObserveEffect(() => {
@@ -180,64 +177,60 @@ export default function PlayerPage() {
 		pagerRef.current?.setPage(targetIndex)
 	}
 
-	const gradientColors = useDerivedValue(() => {
-		if (playerBackgroundStyle !== 'gradient') {
-			return [colors.background, colors.background]
-		}
-		return [gradientMainColor.value, colors.background]
-	})
-
 	useEffect(() => {
-		if (!coverRef || playerBackgroundStyle === 'md3' || !isForeground) {
-			if (playerBackgroundStyle !== 'gradient' && !isForeground) {
-				gradientMainColor.set(colors.background)
-			}
-			return
-		}
+		if (!coverRef || !isForeground) return
+
+		let cancelled = false
+		// 加载新封面时保留当前配色；新结果到达后由对应背景做过渡。
 		ImageThemeColors.extractThemeColorAsync(coverRef)
-			.then((palette) => {
-				if (!palette) return
-
-				const animationConfig = {
-					duration: 400,
-					easing: Easing.out(Easing.quad),
-				}
-
-				if (playerBackgroundStyle === 'gradient') {
-					let topColor: string
-					if (colorScheme === 'dark') {
-						topColor =
-							palette.darkMuted?.hex ?? palette.muted?.hex ?? colors.background
-					} else {
-						topColor =
-							palette.lightMuted?.hex ?? palette.muted?.hex ?? colors.background
-					}
-
-					gradientMainColor.set(withTiming(topColor, animationConfig))
-				}
+			.then((result) => {
+				if (!cancelled) setPalette(result ?? null)
 			})
 			.catch((e) => {
+				if (cancelled) return
 				logger.error('提取封面图片主题色失败', e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
+		return () => {
+			cancelled = true
+		}
+	}, [coverRef, currentTrackCover, isForeground])
+
+	const gradientMainColor = useSharedValue(colors.background)
+	const gradientColors = useDerivedValue(() => [
+		gradientMainColor.value,
+		colors.background,
+	])
+	useEffect(() => {
+		if (isFluidBackground) return
+		const topColor =
+			colorScheme === 'light'
+				? (palette?.lightMuted?.hex ?? palette?.muted?.hex ?? colors.background)
+				: (palette?.darkMuted?.hex ?? palette?.muted?.hex ?? colors.background)
+		gradientMainColor.set(
+			withTiming(topColor, {
+				duration: isForeground && isFocused ? 400 : 0,
+				easing: Easing.out(Easing.quad),
+			}),
+		)
+		return () => cancelAnimation(gradientMainColor)
 	}, [
+		palette,
 		colorScheme,
 		colors.background,
-		coverRef,
-		gradientMainColor,
+		isFluidBackground,
 		isForeground,
-		playerBackgroundStyle,
+		isFocused,
+		gradientMainColor,
 	])
 
 	const scrimColors = useMemo(() => {
-		if (playerBackgroundStyle !== 'gradient')
-			return ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)']
-		if (colorScheme === 'dark') {
+		if (colorScheme !== 'light') {
 			return ['rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0)']
 		} else {
 			return ['rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0)']
 		}
-	}, [colorScheme, playerBackgroundStyle])
+	}, [colorScheme])
 
 	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
@@ -263,16 +256,6 @@ export default function PlayerPage() {
 
 	const scrimEndVec = vec(0, height * 0.5)
 
-	useEffect(() => {
-		// @ts-expect-error -- 虽然我们项目内已经移除了 streamer 选项，但部分存量用户可能还在这个选项，需要帮他回退
-		if (playerBackgroundStyle === 'streamer') {
-			toast.show(
-				'因为会对性能造成较大影响，并且也不好看，所以我们移除了流光效果，已为您回退到渐变模式',
-			)
-			setSettings({ playerBackgroundStyle: 'gradient' })
-		}
-	}, [playerBackgroundStyle, setSettings])
-
 	const pageScrollHandler = usePageScrollHandler({
 		onPageScroll: (e) => {
 			'worklet'
@@ -283,43 +266,44 @@ export default function PlayerPage() {
 	return (
 		<View style={styles.fullScreen}>
 			<View style={styles.fullScreen}>
-				<Canvas style={StyleSheet.absoluteFill}>
+				{isFluidBackground && (
+					<FluidBackground
+						palette={palette}
+						fallbackColor={colors.background}
+						colorScheme={colorScheme === 'light' ? 'light' : 'dark'}
+						paused={!isFocused}
+					/>
+				)}
+				<Canvas
+					style={StyleSheet.absoluteFill}
+					pointerEvents='none'
+				>
+					{!isFluidBackground && (
+						<Rect
+							x={0}
+							y={0}
+							width={width}
+							height={height}
+						>
+							<LinearGradient
+								start={vec(0, 0)}
+								end={vec(0, height)}
+								colors={gradientColors}
+							/>
+						</Rect>
+					)}
 					<Rect
 						x={0}
 						y={0}
 						width={width}
 						height={height}
-						color={colors.background}
-					/>
-					{playerBackgroundStyle === 'gradient' && (
-						<Group>
-							<Rect
-								x={0}
-								y={0}
-								width={width}
-								height={height}
-							>
-								<LinearGradient
-									start={vec(0, 0)}
-									end={vec(0, height)}
-									colors={gradientColors}
-									positions={[0, 1]}
-								/>
-							</Rect>
-							<Rect
-								x={0}
-								y={0}
-								width={width}
-								height={height}
-							>
-								<LinearGradient
-									start={vec(0, 0)}
-									end={scrimEndVec}
-									colors={scrimColors}
-								/>
-							</Rect>
-						</Group>
-					)}
+					>
+						<LinearGradient
+							start={vec(0, 0)}
+							end={scrimEndVec}
+							colors={scrimColors}
+						/>
+					</Rect>
 				</Canvas>
 
 				<View
