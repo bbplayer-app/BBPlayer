@@ -162,7 +162,9 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					prevLottieRef.current?.play(0, 60)
-					void skipWithDlna('prev')
+					void skipWithDlna('prev').catch((e) => {
+						toastAndLogError('切歌失败', e, 'UI.Player.Controls')
+					})
 					void analyticsService.logPlayerAction('skip_prev')
 				}}
 				testID='player-prev'
@@ -232,7 +234,9 @@ export function MainPlaybackControls({
 					onInteraction?.()
 					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 					nextLottieRef.current?.play(0, 60)
-					void skipWithDlna('next')
+					void skipWithDlna('next').catch((e) => {
+						toastAndLogError('切歌失败', e, 'UI.Player.Controls')
+					})
 					void analyticsService.logPlayerAction('skip_next')
 				}}
 				testID='player-next'

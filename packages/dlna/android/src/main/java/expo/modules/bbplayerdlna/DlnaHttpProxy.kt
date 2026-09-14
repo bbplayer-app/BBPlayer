@@ -205,7 +205,7 @@ internal class DlnaHttpProxy(private val context: Context) {
                         total > 0 && end >= start -> end - start + 1
                         else -> -1L
                     }
-                    val status = if (range != null && total > 0) 206 else 200
+                    val status = if (range != null && end >= start) 206 else 200
                     writeMediaHeaders(out, status, length, total, start, end, mime)
                     headersSent = true
                     if (headOnly) return
@@ -329,9 +329,11 @@ internal class DlnaHttpProxy(private val context: Context) {
         header.append("Content-Type: ").append(mime).append("\r\n")
         if (length >= 0) header.append("Content-Length: ").append(length).append("\r\n")
         header.append("Accept-Ranges: bytes\r\n")
-        if (status == 206 && total > 0) {
+        if (status == 206 && end >= start) {
             header.append("Content-Range: bytes ").append(start).append('-').append(end)
-                .append('/').append(total).append("\r\n")
+                .append('/')
+                .append(if (total > 0) total.toString() else "*")
+                .append("\r\n")
         }
         header.append("Connection: close\r\n")
         header.append("transferMode.dlna.org: Streaming\r\n")

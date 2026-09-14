@@ -13,6 +13,9 @@ import java.nio.charset.StandardCharsets
 import org.xmlpull.v1.XmlPullParser
 
 internal object SsdpDiscovery {
+    private const val MAX_LOCATIONS = 32
+    private const val MAX_DESCRIPTION_BYTES = 256 * 1024
+
     private val SEARCH_TARGETS = arrayOf(
         "urn:schemas-upnp-org:device:MediaRenderer:1",
         "upnp:rootdevice",
@@ -24,6 +27,7 @@ internal object SsdpDiscovery {
         lock.setReferenceCounted(false)
         lock.acquire()
         val locations = LinkedHashSet<String>()
+        val deadline = System.currentTimeMillis() + timeoutMs.coerceAtLeast(800)
         try {
             DatagramSocket().use { socket ->
                 socket.broadcast = true
@@ -34,9 +38,8 @@ internal object SsdpDiscovery {
                     val bytes = msearch(st)
                     socket.send(DatagramPacket(bytes, bytes.size, group, 1900))
                 }
-                val deadline = System.currentTimeMillis() + timeoutMs.coerceAtLeast(800)
                 val buf = ByteArray(4096)
-                while (System.currentTimeMillis() < deadline) {
+                while (System.currentTimeMillis() < deadline && locations.size < MAX_LOCATIONS) {
                     try {
                         val packet = DatagramPacket(buf, buf.size)
                         socket.receive(packet)
@@ -53,7 +56,9 @@ internal object SsdpDiscovery {
 
         val devices = LinkedHashMap<String, Map<String, String?>>()
         for (location in locations) {
-            val device = runCatching { fetchDevice(location) }.getOrNull() ?: continue
+            val remaining = (deadline - System.currentTimeMillis()).toInt()
+            if (remaining <= 0) break
+            val device = runCatching { fetchDevice(location, remaining) }.getOrNull() ?: continue
             val key = device["udn"] ?: device["controlURL"] ?: location
             devices[key] = device
         }
@@ -82,19 +87,34 @@ internal object SsdpDiscovery {
             ?.trim()
     }
 
-    private fun fetchDevice(location: String): Map<String, String?>? {
+    private fun fetchDevice(location: String, timeoutMs: Int): Map<String, String?>? {
+        val budget = timeoutMs.coerceIn(1, 4000)
         val conn = (URL(location).openConnection() as java.net.HttpURLConnection).apply {
-            connectTimeout = 4000
-            readTimeout = 4000
+            connectTimeout = budget
+            readTimeout = budget
         }
         val xml = try {
-            conn.inputStream.bufferedReader().use { it.readText() }
+            conn.inputStream.use { readLimited(it, MAX_DESCRIPTION_BYTES) } ?: return null
         } finally {
             conn.disconnect()
         }
         val parsed = parseDescription(xml, location) ?: return null
         if (parsed["controlURL"].isNullOrBlank()) return null
         return parsed
+    }
+
+    private fun readLimited(input: java.io.InputStream, maxBytes: Int): String? {
+        val buf = ByteArray(8 * 1024)
+        val out = java.io.ByteArrayOutputStream()
+        var total = 0
+        while (true) {
+            val n = input.read(buf)
+            if (n < 0) break
+            total += n
+            if (total > maxBytes) return null
+            out.write(buf, 0, n)
+        }
+        return out.toString(StandardCharsets.UTF_8.name())
     }
 
     private fun parseDescription(xml: String, location: String): Map<String, String?>? {

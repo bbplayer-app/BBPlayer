@@ -135,21 +135,25 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const animatedWaveThickness = useSharedValue(3)
 	const animatedTrackThickness = useSharedValue(3)
 	const seekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const seekRequestIdRef = useRef(0)
 
 	const handleSeek = useCallback(
 		(time: number) => {
 			if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
 			isSeeking.set(true)
 			if (useDlnaCastStore.getState().castingDevice) {
+				const requestId = ++seekRequestIdRef.current
 				const previous = useDlnaCastStore.getState().position
 				useDlnaCastStore.getState().setPlayback({ position: time })
 				void seekDlnaCast(time)
 					.then(() => {
+						if (seekRequestIdRef.current !== requestId) return
 						position.set(time)
 						isSeeking.set(false)
 						seekTimeoutRef.current = null
 					})
 					.catch(() => {
+						if (seekRequestIdRef.current !== requestId) return
 						useDlnaCastStore.getState().setPlayback({ position: previous })
 						position.set(previous)
 						isSeeking.set(false)

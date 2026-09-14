@@ -13,6 +13,7 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 
 class CastOptions : Record {
     @Field
@@ -42,9 +43,12 @@ class BBPlayerDlnaModule : Module() {
     private var currentControlURL: String? = null
     private var currentRenderingControlURL: String? = null
     private var volumeReceiver: BroadcastReceiver? = null
-    private var syncingVolume = false
-    private var pushingVolume = false
-    private var lastSpeakerVolume: Int? = null
+    @Volatile private var syncingVolume = false
+    @Volatile private var pushingVolume = false
+    @Volatile private var lastSpeakerVolume: Int? = null
+    private val volumeExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "dlna-volume").apply { isDaemon = true }
+    }
 
     override fun definition() = ModuleDefinition {
         Name("BBPlayerDlna")
@@ -142,6 +146,14 @@ class BBPlayerDlnaModule : Module() {
         Function("isCasting") {
             currentControlURL != null
         }
+
+        OnDestroy {
+            appContext.reactContext?.let { runCatching { detachVolume(it) } }
+            runCatching { proxy?.stop() }
+            proxy = null
+            currentControlURL = null
+            volumeExecutor.shutdownNow()
+        }
     }
 
     private fun requireContext(): Context =
@@ -168,15 +180,16 @@ class BBPlayerDlnaModule : Module() {
                     if (stream != AudioManager.STREAM_MUSIC) return
                     val url = currentRenderingControlURL ?: return
                     val percent = phoneVolumePercent(ctx)
+                    if (lastSpeakerVolume == percent) return
                     pushingVolume = true
-                    Thread {
+                    volumeExecutor.execute {
                         try {
                             runCatching { UpnpSoap.setVolume(url, percent) }
                             lastSpeakerVolume = percent
                         } finally {
                             pushingVolume = false
                         }
-                    }.apply { isDaemon = true; start() }
+                    }
                 }
             }
             val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")

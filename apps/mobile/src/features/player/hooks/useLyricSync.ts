@@ -52,8 +52,14 @@ export default function useLyricSync(
 			const requestId = ++latestJumpRequestRef.current
 			const target = lyrics[index].startTime / 1000 - offset
 			if (useDlnaCastStore.getState().castingDevice) {
+				const previous = useDlnaCastStore.getState().position
 				useDlnaCastStore.getState().setPlayback({ position: target })
-				await seekDlnaCast(target)
+				try {
+					await seekDlnaCast(target)
+				} catch (e) {
+					useDlnaCastStore.getState().setPlayback({ position: previous })
+					throw e
+				}
 			} else {
 				await Orpheus.seekTo(target)
 			}

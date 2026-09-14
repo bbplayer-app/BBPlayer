@@ -37,6 +37,7 @@ import { useBottomTabBarHeight } from '@/hooks/router/useBottomTabBarHeight'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useDlnaCastStore } from '@/hooks/stores/useDlnaCastStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { resolveTrackCover } from '@/utils/imageUrl'
 
@@ -208,9 +209,17 @@ const NowPlayingBar = memo(function NowPlayingBar({
 		onDeactivate: () => {
 			'worklet'
 			if (dragOffset.value > SWIPE_THRESHOLD && hasPrevSv.value) {
-				scheduleOnRN(() => void skipWithDlna('prev'))
+				scheduleOnRN(() => {
+					void skipWithDlna('prev').catch((e) => {
+						toastAndLogError('切歌失败', e, 'UI.Player.NowPlayingBar')
+					})
+				})
 			} else if (dragOffset.value < -SWIPE_THRESHOLD && hasNextSv.value) {
-				scheduleOnRN(() => void skipWithDlna('next'))
+				scheduleOnRN(() => {
+					void skipWithDlna('next').catch((e) => {
+						toastAndLogError('切歌失败', e, 'UI.Player.NowPlayingBar')
+					})
+				})
 			}
 			dragOffset.set(withTiming(0))
 			hapticFired.set(0)
