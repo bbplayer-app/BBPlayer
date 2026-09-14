@@ -1,5 +1,6 @@
 import type { ExtractedPalette } from '@bbplayer/image-theme-colors'
 import ImageThemeColors from '@bbplayer/image-theme-colors'
+import { useIsPlaying } from '@bbplayer/orpheus'
 import { Computed, useObserveEffect } from '@legendapp/state/react'
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
@@ -99,6 +100,7 @@ export default function PlayerPage() {
 		(state) => state.settings.playerBackgroundStyle === 'fluid',
 	)
 	const isFocused = useIsFocused()
+	const isPlaying = useIsPlaying()
 	const [palette, setPalette] = useState<ExtractedPalette | null>(null)
 	const [isForeground, setIsForeground] = useState(
 		AppState.currentState === 'active',
@@ -271,7 +273,7 @@ export default function PlayerPage() {
 						palette={palette}
 						fallbackColor={colors.background}
 						colorScheme={colorScheme === 'light' ? 'light' : 'dark'}
-						paused={!isFocused}
+						paused={!isFocused || !isPlaying}
 					/>
 				)}
 				<Canvas

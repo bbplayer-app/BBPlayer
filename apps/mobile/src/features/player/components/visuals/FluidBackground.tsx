@@ -20,6 +20,7 @@ import {
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 
 /** 两组不透明渐变的起止颜色：[A 起点, A 终点, B 起点, B 终点]。 */
 export type FluidBackgroundColors = readonly [string, string, string, string]
@@ -42,10 +43,12 @@ export interface FluidBackgroundProps {
 	fallbackColor?: string
 	/** 配色依据的明暗模式；默认跟随系统。 */
 	colorScheme?: FluidBackgroundColorScheme
-	/** 页面隐藏时应传 true；暂停后保留当前画面。 */
+	/** 播放暂停或页面隐藏时传 true；流动会缓动减速停止并保留当前画面。 */
 	paused?: boolean
 	/** 配色变化时的过渡时长，单位毫秒。 */
 	transitionDuration?: number
+	/** 暂停/恢复时流动加减速的缓动时长，单位毫秒。 */
+	flowTransitionDuration?: number
 	/** 默认绝对定位填满父容器；可覆盖为固定尺寸。 */
 	style?: StyleProp<ViewStyle>
 }
@@ -214,6 +217,7 @@ export function FluidBackground({
 	colorScheme,
 	paused = false,
 	transitionDuration = 800,
+	flowTransitionDuration = 600,
 	style,
 }: FluidBackgroundProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 })
@@ -223,6 +227,9 @@ export function FluidBackground({
 	const initialReducedMotion = useReducedMotion()
 	const [reducedMotion, setReducedMotion] = useState(initialReducedMotion)
 	const elapsed = useSharedValue(0)
+	// 流动速度倍率：暂停时缓动到 0，恢复时缓动到 1。
+	const flowSpeed = useSharedValue(paused ? 0 : 1)
+	const [isFlowEasing, setIsFlowEasing] = useState(false)
 	const systemColorScheme = useColorScheme()
 	const resolvedColors =
 		colors ??
@@ -278,13 +285,34 @@ export function FluidBackground({
 
 	const frame = useFrameCallback(({ timeSincePreviousFrame }) => {
 		// 60 秒是三个周期的公倍数，回绕时三层均无视觉跳变。
-		elapsed.value = (elapsed.value + (timeSincePreviousFrame ?? 0)) % 60_000
+		elapsed.value =
+			(elapsed.value + (timeSincePreviousFrame ?? 0) * flowSpeed.value) % 60_000
 	}, false)
 
 	useEffect(() => {
-		frame.setActive(hasSize && isAppActive && !paused && !reducedMotion)
+		const config = {
+			duration: Math.max(0, flowTransitionDuration),
+			easing: Easing.inOut(Easing.quad),
+		}
+		if (paused) {
+			// 先保持帧回调运行，等速度缓动到 0 后再停，避免流动骤停。
+			setIsFlowEasing(true)
+			flowSpeed.set(
+				withTiming(0, config, (finished) => {
+					if (finished) scheduleOnRN(setIsFlowEasing, false)
+				}),
+			)
+		} else {
+			flowSpeed.set(withTiming(1, config))
+		}
+	}, [paused, flowTransitionDuration, flowSpeed])
+
+	useEffect(() => {
+		frame.setActive(
+			hasSize && isAppActive && !reducedMotion && (!paused || isFlowEasing),
+		)
 		return () => frame.setActive(false)
-	}, [frame, hasSize, isAppActive, paused, reducedMotion])
+	}, [frame, hasSize, isAppActive, paused, reducedMotion, isFlowEasing])
 
 	return (
 		<View
