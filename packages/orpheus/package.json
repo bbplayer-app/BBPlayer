@@ -42,6 +42,7 @@
 		"@types/react": "19.2.15",
 		"expo": "57.0.20",
 		"expo-module-scripts": "^56.0.2",
+		"expo-modules-core": "^57.0.18",
 		"react": "19.2.3",
 		"react-native": "0.86.3",
 		"react-native-worklets": "0.11.4"

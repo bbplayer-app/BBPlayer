@@ -6,7 +6,7 @@ import {
 	usePlaybackState,
 } from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useIsFocused, useRouter } from 'expo-router'
 import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import {
@@ -96,11 +96,19 @@ const playPause = async () => {
 	}
 }
 
-const NowPlayingBar = memo(function NowPlayingBar({
-	backgroundColor,
-}: {
+interface NowPlayingBarProps {
 	backgroundColor?: string
-}) {
+}
+
+function NowPlayingBar(props: NowPlayingBarProps) {
+	const isFocused = useIsFocused()
+	// 隐藏页面不挂载内容，连同播放事件、进度动画及手势订阅一起释放。
+	return isFocused ? <NowPlayingBarContent {...props} /> : null
+}
+
+const NowPlayingBarContent = memo(function NowPlayingBarContent({
+	backgroundColor,
+}: NowPlayingBarProps) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -110,9 +118,7 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const isVisible = currentTrack !== null
 	const bottomBarHeight = useBottomTabBarHeight()
 
-	const nowPlayingBarStyle = useAppStore(
-		(s) => s.settings.nowPlayingBarStyle,
-	)
+	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
@@ -129,8 +135,8 @@ const NowPlayingBar = memo(function NowPlayingBar({
 	const hasNextSv = useSharedValue(false)
 
 	useEffect(() => {
-		hasPrevSv.value = prevTrack != null
-		hasNextSv.value = nextTrack != null
+		hasPrevSv.set(prevTrack != null)
+		hasNextSv.set(nextTrack != null)
 	}, [hasPrevSv, hasNextSv, prevTrack, nextTrack])
 
 	const dragOffset = useSharedValue(0)
