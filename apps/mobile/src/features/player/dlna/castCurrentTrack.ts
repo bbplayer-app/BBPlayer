@@ -92,15 +92,27 @@ export async function recastCurrentTrack() {
 	try {
 		do {
 			recastQueued = false
-			const device = useDlnaCastStore.getState().castingDevice
-			if (!device || disconnecting) return
-			const uniqueKey = (await Orpheus.getCurrentTrack())?.id
-			if (!uniqueKey) throw new Error('当前没有在播的歌曲')
-			const result = await trackService.getTrackByUniqueKey(uniqueKey)
-			if (result.isErr()) throw result.error
-			const source = await resolveCastSource(result.value)
-			await playSourceOnDevice(device, source, false)
-			logger.info('已切到音箱', { title: source.title })
+			try {
+				const device = useDlnaCastStore.getState().castingDevice
+				if (!device || disconnecting) return
+				const uniqueKey = (await Orpheus.getCurrentTrack())?.id
+				if (!uniqueKey) throw new Error('当前没有在播的歌曲')
+				const result = await trackService.getTrackByUniqueKey(uniqueKey)
+				if (result.isErr()) throw result.error
+				const source = await resolveCastSource(result.value)
+				await playSourceOnDevice(device, source, false)
+				logger.info('已切到音箱', { title: source.title })
+			} catch (e) {
+				if (
+					recastQueued &&
+					useDlnaCastStore.getState().castingDevice &&
+					!disconnecting
+				) {
+					logger.warning('投屏切歌失败，继续投下一首', { error: e })
+					continue
+				}
+				throw e
+			}
 		} while (recastQueued && useDlnaCastStore.getState().castingDevice)
 	} finally {
 		recasting = false

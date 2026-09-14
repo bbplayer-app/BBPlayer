@@ -1,14 +1,7 @@
-import useAppStore, { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { Track } from '@/types/core/media'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
-
-/** 与 Orpheus 拉 B 站音频相同，音箱走本地代理时必须带上 */
-const BILIBILI_STREAM_HEADERS = {
-	Referer: 'https://www.bilibili.com/',
-	'User-Agent':
-		'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-}
+import { getInternalPlayUri } from '@/utils/player'
 
 export interface ResolvedCastSource {
 	title: string
@@ -52,37 +45,25 @@ export async function resolveCastSource(
 		throw new Error('当前曲目不支持投屏')
 	}
 
-	let cid = track.bilibiliMetadata.cid
-	if (!cid) {
+	let resolved = track
+	if (track.bilibiliMetadata.isMultiPage && !track.bilibiliMetadata.cid) {
 		const pages = await returnOrThrowAsync(
 			bilibiliApi.getPageList({ bvid: track.bilibiliMetadata.bvid }),
 		)
-		cid = pages[0]?.cid
-	}
-	if (!cid) {
-		throw new Error('无法获取音频 cid')
+		const cid = pages[0]?.cid
+		if (!cid) throw new Error('无法获取音频 cid')
+		resolved = {
+			...track,
+			bilibiliMetadata: { ...track.bilibiliMetadata, cid },
+		}
 	}
 
-	const stream = await returnOrThrowAsync(
-		bilibiliApi.getAudioStream({
-			bvid: track.bilibiliMetadata.bvid,
-			cid,
-			audioQuality: 30280,
-			enableDolby: false,
-			enableHiRes: false,
-		}),
-	)
-
-	const cookie = useAppStore.getState().bilibiliCookie
-	const cookieHeader = cookie ? serializeCookieObject(cookie) : undefined
+	const sourceUrl = getInternalPlayUri(resolved)
+	if (!sourceUrl) throw new Error('无法获取音频地址')
 
 	return {
 		title: track.title,
-		sourceUrl: stream.url,
-		headers: {
-			...BILIBILI_STREAM_HEADERS,
-			...(cookieHeader ? { Cookie: cookieHeader } : {}),
-		},
-		mime: stream.type === 'local' ? guessMime(stream.url) : 'audio/mp4',
+		sourceUrl,
+		mime: 'audio/mp4',
 	}
 }

@@ -117,7 +117,12 @@ internal class DlnaHttpProxy(private val context: Context) {
         session: Session,
     ) {
         when (val src = session.source) {
-            is Source.Remote -> serveRemote(out, src, headOnly, range, session.mime)
+            is Source.Remote ->
+                if (src.url.startsWith("orpheus://")) {
+                    serveOrpheus(out, src.url, headOnly, range, session.mime)
+                } else {
+                    serveRemote(out, src, headOnly, range, session.mime)
+                }
             is Source.LocalFile ->
                 serveFile(out, File(stripFileScheme(src.path)), headOnly, range, session.mime)
             is Source.Content ->
@@ -162,6 +167,57 @@ internal class DlnaHttpProxy(private val context: Context) {
         resolver.openInputStream(uri)?.use { input ->
             if (start > 0) input.skip(start)
             if (length > 0) copyLimited(input, out, length) else input.copyTo(out)
+        }
+    }
+
+    private fun serveOrpheus(
+        out: OutputStream,
+        uri: String,
+        headOnly: Boolean,
+        range: LongRange?,
+        mime: String,
+    ) {
+        val start = range?.first?.coerceAtLeast(0) ?: 0L
+        val endInclusive = if (range == null || range.last == Long.MAX_VALUE) null else range.last
+        try {
+            expo.modules.orpheus.util.PlayerCacheSource.open(context, uri, start, endInclusive)
+                .use { stream ->
+                    val total = stream.total
+                    val length = when {
+                        stream.length > 0 -> stream.length
+                        endInclusive != null -> endInclusive - start + 1
+                        total > 0 -> total - start
+                        else -> -1L
+                    }
+                    val end = when {
+                        endInclusive != null -> endInclusive
+                        total > 0 -> total - 1
+                        length > 0 -> start + length - 1
+                        else -> -1L
+                    }
+                    val status = if (range != null && (total > 0 || length > 0)) 206 else 200
+                    writeMediaHeaders(out, status, length, total, start, end, mime)
+                    if (headOnly) return
+                    val buf = ByteArray(64 * 1024)
+                    if (length > 0) {
+                        var remaining = length
+                        while (remaining > 0) {
+                            val n = stream.read(buf, minOf(buf.size.toLong(), remaining).toInt())
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                            remaining -= n
+                        }
+                    } else {
+                        while (true) {
+                            val n = stream.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                        }
+                    }
+                }
+        } catch (e: Exception) {
+            android.util.Log.w("BBPlayerDlna", "orpheus cache serve failed: ${e.message}")
+            writeStatus(out, 502, "Bad Gateway", 0)
         }
     }
 
