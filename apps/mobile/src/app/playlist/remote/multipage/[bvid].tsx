@@ -228,7 +228,7 @@ export default function MultipagePage() {
 	}
 
 	if (isMultipageDataPending || isVideoDataPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isMultipageDataError || isVideoDataError) {

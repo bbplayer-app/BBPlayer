@@ -91,7 +91,7 @@ export default function RecentlyPlayedPage() {
 	}, [tracks])
 
 	if (isPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isError) {

@@ -12,7 +12,7 @@ import { SearchUserHeader } from '@/features/playlist/remote/search-result/compo
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
 import {
 	PlaylistTrackListSkeleton,
-	TrackListItemSkeleton,
+	TrackListItemSkeletonGroup,
 } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
@@ -111,7 +111,7 @@ export default function SearchResultsPage() {
 	}, [searchData])
 
 	if (!isListReady) {
-		return <PlaylistTrackListSkeleton />
+		return <PlaylistTrackListSkeleton animate={isListReady} />
 	}
 
 	if (isErrorSearchData) {
@@ -214,9 +214,10 @@ export default function SearchResultsPage() {
 										style={{ marginLeft: 8 }}
 									/>
 								</View>
-								{Array.from({ length: 10 }, (_, index) => (
-									<TrackListItemSkeleton key={index} />
-								))}
+								<TrackListItemSkeletonGroup
+									count={10}
+									animate
+								/>
 							</View>
 						) : (
 							<Text

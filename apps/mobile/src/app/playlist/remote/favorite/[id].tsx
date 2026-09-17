@@ -149,7 +149,7 @@ export default function FavoritePage() {
 	}
 
 	if (isFavoriteDataPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isFavoriteDataError) {

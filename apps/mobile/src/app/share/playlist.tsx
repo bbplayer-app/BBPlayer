@@ -170,7 +170,7 @@ export default function SharedPlaylistPreviewPage() {
 	if (!parsedShareId) return null
 
 	if (isPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isError || !data) {

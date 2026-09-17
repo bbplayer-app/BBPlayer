@@ -127,6 +127,13 @@ const EDGE_ZONE = 80
 /** px scrolled per auto-scroll tick (~16 ms) */
 const SCROLL_SPEED = 8
 
+type PlaylistContentsData = NonNullable<
+	ReturnType<typeof usePlaylistContentsInfinite>['data']
+>
+type PlaylistMetadata = NonNullable<
+	ReturnType<typeof usePlaylistMetadata>['data']
+>
+
 const deletePlaylistDialogPrompt = (
 	playlistMetadata: ReturnType<typeof usePlaylistMetadata>['data'],
 	colors: MD3Theme['colors'],
@@ -168,15 +175,66 @@ const deletePlaylistDialogPrompt = (
 export default function LocalPlaylistPage() {
 	const isListReady = useScreenTransitionReady()
 	const { id } = useLocalSearchParams<{ id: string }>()
-	const theme = useTheme()
-	const { colors } = theme
-	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
-	const router = useRouter()
 	const { markInteractive } = useObserve()
 
 	useEffect(() => {
 		markInteractive()
 	}, [markInteractive])
+	const {
+		data: playlistData,
+		isPending: isPlaylistDataPending,
+		isError: isPlaylistDataError,
+		fetchNextPage: fetchNextPagePlaylistData,
+		hasNextPage: hasNextPagePlaylistData,
+		isFetchingNextPage: isFetchingNextPagePlaylistData,
+	} = usePlaylistContentsInfinite(Number(id), 30, 15)
+	const {
+		data: playlistMetadata,
+		isPending: isPlaylistMetadataPending,
+		isError: isPlaylistMetadataError,
+	} = usePlaylistMetadata(Number(id))
+
+	if (typeof id !== 'string') return null
+	if (isPlaylistDataPending || isPlaylistMetadataPending || !isListReady)
+		return <PlaylistPageSkeleton animate={isListReady} />
+	if (isPlaylistDataError || isPlaylistMetadataError)
+		return <PlaylistError text='加载播放列表内容失败' />
+	if (!playlistData || !playlistMetadata)
+		return <PlaylistError text='未找到播放列表元数据' />
+
+	return (
+		<LocalPlaylistContent
+			id={id}
+			playlistData={playlistData}
+			fetchNextPagePlaylistData={fetchNextPagePlaylistData}
+			hasNextPagePlaylistData={hasNextPagePlaylistData}
+			isFetchingNextPagePlaylistData={isFetchingNextPagePlaylistData}
+			playlistMetadata={playlistMetadata}
+		/>
+	)
+}
+
+function LocalPlaylistContent({
+	id,
+	playlistData,
+	fetchNextPagePlaylistData,
+	hasNextPagePlaylistData,
+	isFetchingNextPagePlaylistData,
+	playlistMetadata,
+}: {
+	id: string
+	playlistData: PlaylistContentsData
+	fetchNextPagePlaylistData: ReturnType<
+		typeof usePlaylistContentsInfinite
+	>['fetchNextPage']
+	hasNextPagePlaylistData: boolean
+	isFetchingNextPagePlaylistData: boolean
+	playlistMetadata: PlaylistMetadata
+}) {
+	const theme = useTheme()
+	const { colors } = theme
+	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
+	const router = useRouter()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
 	const [searchQuery, setSearchQuery] = useState('')
 	const [startSearch, setStartSearch] = useState(false)
@@ -195,6 +253,17 @@ export default function LocalPlaylistPage() {
 	const currentTrack = useCurrentTrack()
 	const membersSheetRef = useRef<TrueSheet>(null)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
+	const [membersSheetMounted, setMembersSheetMounted] = useState(false)
+	const [syncFailuresSheetMounted, setSyncFailuresSheetMounted] =
+		useState(false)
+	const setMembersSheetRef = useCallback((sheet: TrueSheet | null) => {
+		membersSheetRef.current = sheet
+		if (sheet) void sheet.present()
+	}, [])
+	const setSyncFailuresSheetRef = useCallback((sheet: TrueSheet | null) => {
+		syncFailuresSheetRef.current = sheet
+		if (sheet) void sheet.present()
+	}, [])
 
 	const selection = {
 		active: selectMode,
@@ -204,14 +273,6 @@ export default function LocalPlaylistPage() {
 	}
 	const openModal = useModalStore((state) => state.open)
 
-	const {
-		data: playlistData,
-		isPending: isPlaylistDataPending,
-		isError: isPlaylistDataError,
-		fetchNextPage: fetchNextPagePlaylistData,
-		hasNextPage: hasNextPagePlaylistData,
-		isFetchingNextPage: isFetchingNextPagePlaylistData,
-	} = usePlaylistContentsInfinite(Number(id), 30, 15)
 	const { data: playlistsContainingCurrentTrack } =
 		useAllPlaylistsContainingTrack(currentTrack?.uniqueKey)
 	const allLoadedTracks =
@@ -319,11 +380,6 @@ export default function LocalPlaylistPage() {
 	const [isLocatingCurrentTrack, setIsLocatingCurrentTrack] = useState(false)
 	const lastCurrentTrackLookupPageCountRef = useRef<number | null>(null)
 
-	const {
-		data: playlistMetadata,
-		isPending: isPlaylistMetadataPending,
-		isError: isPlaylistMetadataError,
-	} = usePlaylistMetadata(Number(id))
 	const isCurrentTrackInPlaylist = playlistsContainingCurrentTrack?.some(
 		(playlist) => playlist.id === Number(id),
 	)
@@ -412,13 +468,29 @@ export default function LocalPlaylistPage() {
 	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
 		usePullSharedPlaylist()
 
+	const presentMembersSheet = useCallback(() => {
+		if (membersSheetRef.current) {
+			void membersSheetRef.current.present()
+			return
+		}
+		setMembersSheetMounted(true)
+	}, [])
+
+	const presentSyncFailuresSheet = useCallback(() => {
+		if (syncFailuresSheetRef.current) {
+			void syncFailuresSheetRef.current.present()
+			return
+		}
+		setSyncFailuresSheetMounted(true)
+	}, [])
+
 	const handlePressShareMember = () => {
 		if (isSharedLoggedOut) {
 			toast.error('登陆 BBPlayer 账号后才能查看共享成员')
 			return
 		}
 		if (playlistMetadata?.shareId) {
-			void membersSheetRef.current?.present()
+			presentMembersSheet()
 		}
 	}
 
@@ -751,13 +823,6 @@ export default function LocalPlaylistPage() {
 	const draggedTrack =
 		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
 
-	if (typeof id !== 'string') return null
-	if (isPlaylistDataPending || isPlaylistMetadataPending || !isListReady)
-		return <PlaylistPageSkeleton />
-	if (isPlaylistDataError || isPlaylistMetadataError)
-		return <PlaylistError text='加载播放列表内容失败' />
-	if (!playlistMetadata) return <PlaylistError text='未找到播放列表元数据' />
-
 	const playlistActionsMenu = (
 		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
 			<FunctionalMenu.Item
@@ -924,9 +989,7 @@ export default function LocalPlaylistPage() {
 							<Appbar.Action
 								icon='alert-circle'
 								color={colors.error}
-								onPress={() => {
-									void syncFailuresSheetRef.current?.present()
-								}}
+								onPress={presentSyncFailuresSheet}
 								accessibilityLabel='同步失败'
 							/>
 						)}
@@ -1097,14 +1160,18 @@ export default function LocalPlaylistPage() {
 				)}
 			</View>
 
-			<SharedPlaylistMembersSheet
-				ref={membersSheetRef}
-				shareId={playlistMetadata?.shareId}
-			/>
-			<SyncFailuresSheet
-				ref={syncFailuresSheetRef}
-				playlistId={playlistMetadata?.id}
-			/>
+			{membersSheetMounted && (
+				<SharedPlaylistMembersSheet
+					ref={setMembersSheetRef}
+					shareId={playlistMetadata.shareId}
+				/>
+			)}
+			{syncFailuresSheetMounted && (
+				<SyncFailuresSheet
+					ref={setSyncFailuresSheetRef}
+					playlistId={playlistMetadata.id}
+				/>
+			)}
 		</View>
 	)
 }

@@ -98,7 +98,7 @@ export default function SearchResultsPage() {
 	const { trackMenuItems, playTrack } = useSearchInteractions()
 
 	if (isPendingSearchData || !isListReady) {
-		return <PlaylistTrackListSkeleton />
+		return <PlaylistTrackListSkeleton animate={isListReady} />
 	}
 
 	if (isErrorSearchData) {

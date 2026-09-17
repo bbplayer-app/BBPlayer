@@ -161,7 +161,7 @@ export default function ToViewPage() {
 	}, [tracksData])
 
 	if (isToViewDataPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isToViewDataError) {

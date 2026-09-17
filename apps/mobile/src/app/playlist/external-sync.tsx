@@ -428,7 +428,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	)
 
 	if (isLoading || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (error || !data) {

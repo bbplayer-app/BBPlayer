@@ -199,11 +199,11 @@ export default function UploaderPage() {
 	}
 
 	if (isUserInfoPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isUploadedVideosPending && !startSearch) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isUploadedVideosError || isUserInfoError) {

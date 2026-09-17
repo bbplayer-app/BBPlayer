@@ -1,11 +1,64 @@
-import { StyleSheet, View } from 'react-native'
-import { Shimmer } from 'react-native-fast-shimmer'
+import { type PropsWithChildren, useEffect } from 'react'
+import { type StyleProp, StyleSheet, type ViewStyle, View } from 'react-native'
 import { useTheme } from 'react-native-paper'
+import Animated, {
+	cancelAnimation,
+	Easing,
+	ReduceMotion,
+	useAnimatedStyle,
+	useSharedValue,
+	withRepeat,
+	withTiming,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { LIST_ITEM_COVER_SIZE, SQUIRCLE_RADIUS_RATIO } from '@/theme/dimensions'
 
-export function PlaylistPageSkeleton() {
+interface PlaylistSkeletonProps {
+	/** 转场期间保持静态；仅在转场结束后仍在加载时呼吸。 */
+	animate?: boolean
+}
+
+function SkeletonPulse({
+	animate,
+	children,
+	style,
+}: PropsWithChildren<
+	PlaylistSkeletonProps & { style?: StyleProp<ViewStyle> }
+>) {
+	const opacity = useSharedValue(1)
+
+	useEffect(() => {
+		if (!animate) {
+			cancelAnimation(opacity)
+			opacity.set(1)
+			return
+		}
+
+		opacity.set(0.68)
+		opacity.set(
+			withRepeat(
+				withTiming(1, {
+					duration: 900,
+					easing: Easing.inOut(Easing.quad),
+					reduceMotion: ReduceMotion.System,
+				}),
+				-1,
+				true,
+			),
+		)
+
+		return () => cancelAnimation(opacity)
+	}, [animate, opacity])
+
+	const pulseStyle = useAnimatedStyle(() => ({ opacity: opacity.value }))
+
+	return <Animated.View style={[style, pulseStyle]}>{children}</Animated.View>
+}
+
+export function PlaylistPageSkeleton({
+	animate = false,
+}: PlaylistSkeletonProps) {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 
@@ -19,19 +72,26 @@ export function PlaylistPageSkeleton() {
 				},
 			]}
 		>
-			<View style={styles.contentContainer}>
-				<PlaylistHeaderSkeleton />
-				<View style={styles.trackList}>
-					{Array.from({ length: 2 }, (_, index) => (
-						<TrackListItemSkeleton key={index} />
-					))}
+			<SkeletonPulse
+				animate={animate}
+				style={styles.pulse}
+			>
+				<View style={styles.contentContainer}>
+					<PlaylistHeaderSkeleton />
+					<View style={styles.trackList}>
+						{Array.from({ length: 2 }, (_, index) => (
+							<TrackListItemSkeleton key={index} />
+						))}
+					</View>
 				</View>
-			</View>
+			</SkeletonPulse>
 		</View>
 	)
 }
 
-export function PlaylistTrackListSkeleton() {
+export function PlaylistTrackListSkeleton({
+	animate = false,
+}: PlaylistSkeletonProps) {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 
@@ -45,13 +105,18 @@ export function PlaylistTrackListSkeleton() {
 				},
 			]}
 		>
-			<View style={styles.contentContainer}>
-				<View style={styles.trackList}>
-					{Array.from({ length: 2 }, (_, index) => (
-						<TrackListItemSkeleton key={index} />
-					))}
+			<SkeletonPulse
+				animate={animate}
+				style={styles.pulse}
+			>
+				<View style={styles.contentContainer}>
+					<View style={styles.trackList}>
+						{Array.from({ length: 2 }, (_, index) => (
+							<TrackListItemSkeleton key={index} />
+						))}
+					</View>
 				</View>
-			</View>
+			</SkeletonPulse>
 		</View>
 	)
 }
@@ -68,26 +133,20 @@ export function PlaylistHeaderSkeleton() {
 						styles.coverSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View style={styles.headerTextSection}>
 					<View
 						style={[
 							styles.titleSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 					<View
 						style={[
 							styles.subtitleSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 					<View
 						style={[
 							styles.subtitleSkeleton,
@@ -97,9 +156,7 @@ export function PlaylistHeaderSkeleton() {
 								marginTop: 4,
 							},
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 				</View>
 			</View>
 
@@ -111,34 +168,26 @@ export function PlaylistHeaderSkeleton() {
 						styles.playAllButtonSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				{/* Icon Buttons */}
 				<View
 					style={[
 						styles.actionIconSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View
 					style={[
 						styles.actionIconSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View
 					style={[
 						styles.actionIconSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 		</View>
 	)
@@ -156,9 +205,7 @@ export function TrackListItemSkeleton() {
 						styles.trackIndexSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 
 			{/* Cover */}
@@ -167,9 +214,7 @@ export function TrackListItemSkeleton() {
 					styles.trackCoverSkeleton,
 					{ backgroundColor: colors.surfaceVariant },
 				]}
-			>
-				<Shimmer />
-			</View>
+			/>
 
 			{/* Info */}
 			<View style={styles.trackInfoContainer}>
@@ -178,18 +223,14 @@ export function TrackListItemSkeleton() {
 						styles.trackTitleSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View style={styles.trackSubtitleRow}>
 					<View
 						style={[
 							styles.trackArtistSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 				</View>
 			</View>
 
@@ -200,16 +241,32 @@ export function TrackListItemSkeleton() {
 						styles.trackMenuSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 		</View>
 	)
 }
 
+export function TrackListItemSkeletonGroup({
+	count,
+	animate = false,
+}: PlaylistSkeletonProps & { count: number }) {
+	return (
+		<SkeletonPulse animate={animate}>
+			<View>
+				{Array.from({ length: count }, (_, index) => (
+					<TrackListItemSkeleton key={index} />
+				))}
+			</View>
+		</SkeletonPulse>
+	)
+}
+
 const styles = StyleSheet.create({
 	container: {
+		flex: 1,
+	},
+	pulse: {
 		flex: 1,
 	},
 	contentContainer: {

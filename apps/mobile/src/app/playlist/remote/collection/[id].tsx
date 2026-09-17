@@ -142,7 +142,7 @@ export default function CollectionPage() {
 	}
 
 	if (isCollectionDataPending || !isListReady) {
-		return <PlaylistPageSkeleton />
+		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
 	if (isCollectionDataError) {
