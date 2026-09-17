@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router'
 import { Suspense, useEffect, useState } from 'react'
 import { Keyboard, StyleSheet, View } from 'react-native'
+import { Portal } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
@@ -40,43 +41,45 @@ export default function ModalHost() {
 	if (canUnmountHost) return null
 
 	return (
-		<View
-			style={StyleSheet.absoluteFill}
-			pointerEvents='box-none'
-		>
-			{modals.map((m, idx) => {
-				const Component = modalRegistry[m.key]
-				if (!Component) return null
-				const zIndex = 1000 + idx * 100
-				return (
-					<AnimatedModalOverlay
-						key={m.key}
-						visible
-						onDismiss={() => {
-							if (
-								m.options?.dismissible === undefined ||
-								m.options?.dismissible
-							) {
-								useModalStore.getState().close(m.key)
-							}
-						}}
-						contentStyle={{ zIndex }}
-					>
-						<Suspense
-							fallback={
-								<View style={styles.loadingContainer}>
-									<ActivityIndicator size='large' />
-								</View>
-							}
+		<Portal>
+			<View
+				style={StyleSheet.absoluteFill}
+				pointerEvents='box-none'
+			>
+				{modals.map((m, idx) => {
+					const Component = modalRegistry[m.key]
+					if (!Component) return null
+					const zIndex = 1000 + idx * 100
+					return (
+						<AnimatedModalOverlay
+							key={m.key}
+							visible
+							onDismiss={() => {
+								if (
+									m.options?.dismissible === undefined ||
+									m.options?.dismissible
+								) {
+									useModalStore.getState().close(m.key)
+								}
+							}}
+							contentStyle={{ zIndex }}
 						>
-							{/*
+							<Suspense
+								fallback={
+									<View style={styles.loadingContainer}>
+										<ActivityIndicator size='large' />
+									</View>
+								}
+							>
+								{/*
             // @ts-expect-error -- 懒得管了*/}
-							<Component {...m.props} />
-						</Suspense>
-					</AnimatedModalOverlay>
-				)
-			})}
-		</View>
+								<Component {...m.props} />
+							</Suspense>
+						</AnimatedModalOverlay>
+					)
+				})}
+			</View>
+		</Portal>
 	)
 }
 

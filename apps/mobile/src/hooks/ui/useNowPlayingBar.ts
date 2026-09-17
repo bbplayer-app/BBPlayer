@@ -11,7 +11,12 @@ export function useNowPlayingBar(backgroundColor?: string) {
 	useFocusEffect(
 		useCallback(() => {
 			const owner = Symbol('now-playing-bar-page')
-			nowPlayingBarStore$.assign({ owner, backgroundColor, bottomTabBarHeight })
+			nowPlayingBarStore$.assign({
+				owner,
+				backgroundColor,
+				bottomTabBarHeight,
+				retainedBottomTabBarHeight: bottomTabBarHeight,
+			})
 			return () => {
 				// 避免旧页面延迟失焦时清掉新页面已经发布的配置。
 				if (nowPlayingBarStore$.owner.peek() === owner) {

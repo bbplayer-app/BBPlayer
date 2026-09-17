@@ -120,7 +120,15 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const segments = useSegments()
 	const backgroundColor = useValue(nowPlayingBarStore$.backgroundColor)
 	const tabBarHeight = useValue(nowPlayingBarStore$.bottomTabBarHeight)
-	const bottomBarHeight = segments[0] === '(tabs)' ? tabBarHeight : 0
+	const retainedBottomTabBarHeight = useValue(
+		nowPlayingBarStore$.retainedBottomTabBarHeight,
+	)
+	const bottomBarHeight =
+		segments[0] === '(tabs)'
+			? tabBarHeight
+			: segments[0] === 'modal'
+				? retainedBottomTabBarHeight
+				: 0
 
 	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
 

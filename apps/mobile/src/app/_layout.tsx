@@ -254,9 +254,17 @@ function RootLayout() {
 									!data.closing &&
 									state.routes[state.index]?.key === route.key
 								) {
-									nowPlayingBarStore$.playerScreenActive.set(
-										route.name === 'player',
-									)
+									if (route.name !== 'modal') {
+										nowPlayingBarStore$.playerScreenActive.set(
+											route.name === 'player',
+										)
+									}
+
+									// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
+									// 继承此前 Tab 页留下的高度。
+									if (route.name !== '(tabs)' && route.name !== 'modal') {
+										nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
+									}
 								}
 							},
 						})}
