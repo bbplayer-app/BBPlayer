@@ -56,6 +56,7 @@ import {
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import { useSharedPlaylistMembers } from '@/hooks/queries/sharedPlaylistMembers'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -165,6 +166,7 @@ const deletePlaylistDialogPrompt = (
 }
 
 export default function LocalPlaylistPage() {
+	const isListReady = useScreenTransitionReady()
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
 	const { colors } = theme
@@ -750,7 +752,7 @@ export default function LocalPlaylistPage() {
 		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
 
 	if (typeof id !== 'string') return null
-	if (isPlaylistDataPending || isPlaylistMetadataPending)
+	if (isPlaylistDataPending || isPlaylistMetadataPending || !isListReady)
 		return <PlaylistPageSkeleton />
 	if (isPlaylistDataError || isPlaylistMetadataError)
 		return <PlaylistError text='加载播放列表内容失败' />

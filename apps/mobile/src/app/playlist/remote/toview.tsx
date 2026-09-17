@@ -20,6 +20,7 @@ import {
 	useDeleteToViewVideo,
 } from '@/hooks/mutations/bilibili/video'
 import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
@@ -69,6 +70,7 @@ const mapApiItemToTrack = (
 }
 
 export default function ToViewPage() {
+	const isListReady = useScreenTransitionReady()
 	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
 	const theme = useTheme()
@@ -158,7 +160,7 @@ export default function ToViewPage() {
 		})
 	}, [tracksData])
 
-	if (isToViewDataPending) {
+	if (isToViewDataPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

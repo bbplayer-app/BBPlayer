@@ -20,6 +20,7 @@ import {
 	useGetMultiPageList,
 	useGetVideoDetails,
 } from '@/hooks/queries/bilibili/video'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
@@ -66,6 +67,7 @@ const mapApiItemToTrack = (
 }
 
 export default function MultipagePage() {
+	const isListReady = useScreenTransitionReady()
 	const router = useRouter()
 	const { bvid, cid } = useLocalSearchParams<{ bvid: string; cid?: string }>()
 	const [refreshing, setRefreshing] = useState(false)
@@ -149,7 +151,7 @@ export default function MultipagePage() {
 	}, [bvid, router, syncMultipage])
 
 	useEffect(() => {
-		if (tracksData.length > 0 && cid) {
+		if (isListReady && tracksData.length > 0 && cid) {
 			const index = tracksData.findIndex((track) => String(track.id) === cid)
 			if (index !== -1) {
 				// 给一点延时给列表渲染
@@ -165,7 +167,7 @@ export default function MultipagePage() {
 				}
 			}
 		}
-	}, [cid, tracksData])
+	}, [cid, tracksData, isListReady])
 
 	const renderCustomItem = useCallback(
 		({
@@ -225,7 +227,7 @@ export default function MultipagePage() {
 		return null
 	}
 
-	if (isMultipageDataPending || isVideoDataPending) {
+	if (isMultipageDataPending || isVideoDataPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

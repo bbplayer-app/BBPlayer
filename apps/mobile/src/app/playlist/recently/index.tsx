@@ -10,12 +10,14 @@ import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMen
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useMostPlayedTracks } from '@/hooks/queries/playHistory'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { addToQueue } from '@/utils/player'
 import toast from '@/utils/toast'
 
 export default function RecentlyPlayedPage() {
+	const isListReady = useScreenTransitionReady()
 	const router = useRouter()
 	const theme = useTheme()
 	const { colors } = theme
@@ -88,7 +90,7 @@ export default function RecentlyPlayedPage() {
 		return tracks as BilibiliTrack[]
 	}, [tracks])
 
-	if (isPending) {
+	if (isPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

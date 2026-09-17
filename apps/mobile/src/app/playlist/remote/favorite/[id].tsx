@@ -13,6 +13,7 @@ import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePla
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -54,6 +55,7 @@ const mapApiItemToTrack = (
 }
 
 export default function FavoritePage() {
+	const isListReady = useScreenTransitionReady()
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
 	const { colors } = theme
@@ -146,7 +148,7 @@ export default function FavoritePage() {
 		return null
 	}
 
-	if (isFavoriteDataPending) {
+	if (isFavoriteDataPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

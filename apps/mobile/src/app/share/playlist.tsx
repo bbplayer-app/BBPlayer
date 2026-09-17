@@ -22,6 +22,7 @@ import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkel
 import { useSubscribeToSharedPlaylist } from '@/hooks/mutations/db/playlist'
 import { usePlaylistByShareId } from '@/hooks/queries/db/playlist'
 import { useSharedPlaylistPreview } from '@/hooks/queries/sharedPlaylistPreview'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
@@ -76,6 +77,7 @@ const mapPreviewTrackToBilibiliTrack = (
 const trackMenuItems = () => []
 
 export default function SharedPlaylistPreviewPage() {
+	const isListReady = useScreenTransitionReady()
 	const { shareId, inviteCode } = useLocalSearchParams<{
 		shareId?: string
 		inviteCode?: string
@@ -167,7 +169,7 @@ export default function SharedPlaylistPreviewPage() {
 
 	if (!parsedShareId) return null
 
-	if (isPending) {
+	if (isPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

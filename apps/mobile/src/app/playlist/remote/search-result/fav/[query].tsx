@@ -14,6 +14,7 @@ import {
 	useInfiniteSearchFavoriteItems,
 } from '@/hooks/queries/bilibili/favorite'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { bv2av } from '@/lib/api/bilibili/utils'
@@ -51,6 +52,7 @@ const mapApiItemToTrack = (
 }
 
 export default function SearchResultsPage() {
+	const isListReady = useScreenTransitionReady()
 	const { colors } = useTheme()
 	const { query } = useLocalSearchParams<{ query: string }>()
 	const router = useRouter()
@@ -95,7 +97,7 @@ export default function SearchResultsPage() {
 
 	const { trackMenuItems, playTrack } = useSearchInteractions()
 
-	if (isPendingSearchData) {
+	if (isPendingSearchData || !isListReady) {
 		return <PlaylistTrackListSkeleton />
 	}
 

@@ -10,8 +10,12 @@ import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { SearchUserHeader } from '@/features/playlist/remote/search-result/components/SearchUserHeader'
 import { useSearchInteractions } from '@/features/playlist/remote/search-result/hooks/useSearchInteractions'
-import { TrackListItemSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
+import {
+	PlaylistTrackListSkeleton,
+	TrackListItemSkeleton,
+} from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { useSearchResults } from '@/hooks/queries/bilibili/search'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { analyticsService } from '@/lib/services/analyticsService'
@@ -48,6 +52,7 @@ const mapApiItemToTrack = (apiItem: BilibiliSearchVideo): BilibiliTrack => {
 }
 
 export default function SearchResultsPage() {
+	const isListReady = useScreenTransitionReady()
 	const { colors } = useTheme()
 	const { query } = useLocalSearchParams<{ query: string }>()
 	const router = useRouter()
@@ -104,6 +109,10 @@ export default function SearchResultsPage() {
 		const uniqueTracks = [...uniqueMap.values()]
 		return uniqueTracks.map(mapApiItemToTrack)
 	}, [searchData])
+
+	if (!isListReady) {
+		return <PlaylistTrackListSkeleton />
+	}
 
 	if (isErrorSearchData) {
 		return <PlaylistError text='加载失败' />

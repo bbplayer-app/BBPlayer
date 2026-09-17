@@ -14,6 +14,7 @@ import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSele
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useCollectionAllContents } from '@/hooks/queries/bilibili/favorite'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
@@ -53,6 +54,7 @@ const mapApiItemToTrack = (
 }
 
 export default function CollectionPage() {
+	const isListReady = useScreenTransitionReady()
 	const router = useRouter()
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
@@ -139,7 +141,7 @@ export default function CollectionPage() {
 		return null
 	}
 
-	if (isCollectionDataPending) {
+	if (isCollectionDataPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 

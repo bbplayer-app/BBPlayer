@@ -23,6 +23,7 @@ import {
 	useOtherUserInfo,
 } from '@/hooks/queries/bilibili/user'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
@@ -71,6 +72,7 @@ const mapApiItemToTrack = (
 }
 
 export default function UploaderPage() {
+	const isListReady = useScreenTransitionReady()
 	const { mid } = useLocalSearchParams<{ mid: string }>()
 	const theme = useTheme()
 	const { colors } = theme
@@ -196,7 +198,7 @@ export default function UploaderPage() {
 		)
 	}
 
-	if (isUserInfoPending) {
+	if (isUserInfoPending || !isListReady) {
 		return <PlaylistPageSkeleton />
 	}
 
