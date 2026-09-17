@@ -1,6 +1,6 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useObserve } from 'expo-observe'
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
@@ -52,14 +52,16 @@ export default function Library() {
 		markInteractive()
 	}, [markInteractive])
 
-	useFocusEffect(() => {
+	// 仅在路由参数变化时定位分页，返回音乐库时保留用户当前选择。
+	useEffect(() => {
 		if (tab === undefined) return
 		const numTab = Number(tab)
-		if (isNaN(numTab)) return
+		if (!Number.isInteger(numTab) || numTab < 0 || numTab >= routes.length)
+			return
 		startTransition(() => {
 			setIndex(numTab)
 		})
-	})
+	}, [tab, startTransition])
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
