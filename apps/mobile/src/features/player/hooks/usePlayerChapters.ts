@@ -1,21 +1,27 @@
+import { Orpheus } from '@bbplayer/orpheus'
 import { useValue } from '@legendapp/state/react'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { normalizeChapters } from '@/features/player/utils/chapters'
+import {
+	chapterIndexAt,
+	normalizeChapters,
+	type Chapter,
+} from '@/features/player/utils/chapters'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
-import useTrackProgress from '@/hooks/player/useTrackProgress'
+import useTrackDuration from '@/hooks/player/useTrackProgress'
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import playerProgressEmitter from '@/lib/player/progressListener'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 export function usePlayerChapters() {
 	const track = useCurrentTrack()
 	const trackId = useCurrentTrackId()
 	const mode = useValue(playbackContextStore$.context.mode)
-	const progress = useTrackProgress()
+	const nativeDuration = useTrackDuration()
 	const metadata =
 		track && track.uniqueKey === trackId && track.source === 'bilibili'
 			? track.bilibiliMetadata
@@ -51,8 +57,7 @@ export function usePlayerChapters() {
 		retry: 1,
 		meta: { silent: true },
 	})
-	const duration =
-		progress.duration > 0 ? progress.duration : (track?.duration ?? 0)
+	const duration = nativeDuration > 0 ? nativeDuration : (track?.duration ?? 0)
 	const chapters = useMemo(
 		() => (enabled ? normalizeChapters(info.data?.view_points, duration) : []),
 		[enabled, info.data?.view_points, duration],
@@ -63,8 +68,6 @@ export function usePlayerChapters() {
 		podcast: mode === 'podcast',
 		trackId,
 		chapters,
-		duration,
-		position: progress.position,
 		isLoading:
 			waitingForCid || (enabled && !!cid && info.isPending && !info.isPaused),
 		isError:
@@ -78,4 +81,42 @@ export function usePlayerChapters() {
 			else if (cid) await info.refetch()
 		},
 	}
+}
+
+/**
+ * Tracks chapter changes rather than every playback position. Keep this off
+ * while the sheet is hidden: TrueSheet retains its React subtree after dismiss.
+ */
+export function useCurrentChapterIndex(chapters: Chapter[], enabled: boolean) {
+	const [currentIndex, setCurrentIndex] = useState(-1)
+	const currentIndexRef = useRef(currentIndex)
+
+	useEffect(() => {
+		if (!enabled) return
+
+		let disposed = false
+		const updateIndex = (position: number) => {
+			if (disposed) return
+			const nextIndex = chapterIndexAt(chapters, position)
+			if (currentIndexRef.current === nextIndex) return
+			currentIndexRef.current = nextIndex
+			setCurrentIndex(nextIndex)
+		}
+		void Orpheus.getPosition()
+			.then(updateIndex)
+			.catch(() => undefined)
+		const unsubscribe = playerProgressEmitter.subscribe(
+			'progress',
+			({ position }) => {
+				updateIndex(position)
+			},
+		)
+
+		return () => {
+			disposed = true
+			unsubscribe()
+		}
+	}, [chapters, currentIndexRef, enabled])
+
+	return enabled ? currentIndex : -1
 }

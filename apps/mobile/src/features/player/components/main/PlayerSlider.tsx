@@ -16,15 +16,15 @@ import {
 import { scheduleOnRN } from 'react-native-worklets'
 
 import IconButton from '@/components/common/IconButton'
+import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import {
 	chapterIndexAt,
 	chapterBoundaryIndex,
 	chapterBoundaries,
-	type Chapter,
 } from '@/features/player/utils/chapters'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
-import useTrackProgress from '@/hooks/player/useTrackProgress'
+import useTrackDuration from '@/hooks/player/useTrackProgress'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { seekWithinTrack } from '@/lib/player/seek'
@@ -102,19 +102,12 @@ function TextWithAnimation({
 
 interface PlayerSliderProps {
 	onInteraction?: () => void
-	podcast?: boolean
-	chapters?: Chapter[]
 }
 
-const NO_CHAPTERS: Chapter[] = []
-
-export function PlayerSlider({
-	onInteraction,
-	podcast = false,
-	chapters = NO_CHAPTERS,
-}: PlayerSliderProps = {}) {
+export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const trackId = useCurrentTrackId()
-	const { duration: nativeDuration } = useTrackProgress()
+	const nativeDuration = useTrackDuration()
+	const { chapters, podcast } = usePlayerChapters()
 	const canSeek = Number.isFinite(nativeDuration) && nativeDuration > 0
 	const markers = useMemo(
 		() => (podcast ? chapterBoundaries(chapters, nativeDuration) : []),

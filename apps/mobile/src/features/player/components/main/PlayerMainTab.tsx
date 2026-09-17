@@ -7,7 +7,6 @@ import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
-import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
@@ -60,7 +59,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 						styles.controlsContainer,
 					]}
 				>
-					<PlayerProgress />
+					<PlayerSlider />
 					<PlayerControls
 						onOpenQueue={() => {
 							onPresent()
@@ -72,16 +71,6 @@ const PlayerMainTab = memo(function PlayerMainTab({
 		</Show>
 	)
 })
-
-function PlayerProgress() {
-	const { chapters, podcast } = usePlayerChapters()
-	return (
-		<PlayerSlider
-			podcast={podcast}
-			chapters={chapters}
-		/>
-	)
-}
 
 const styles = StyleSheet.create({
 	container: {

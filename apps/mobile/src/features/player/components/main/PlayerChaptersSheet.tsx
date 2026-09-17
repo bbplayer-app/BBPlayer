@@ -5,8 +5,11 @@ import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
-import { chapterIndexAt, type Chapter } from '@/features/player/utils/chapters'
+import {
+	useCurrentChapterIndex,
+	usePlayerChapters,
+} from '@/features/player/hooks/usePlayerChapters'
+import type { Chapter } from '@/features/player/utils/chapters'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { seekWithinTrack } from '@/lib/player/seek'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -15,6 +18,7 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 export function PlayerChaptersSheet() {
 	const data = usePlayerChapters()
 	const isOpen = usePlayerChaptersSheetStore((state) => state.isOpen)
+	const currentIndex = useCurrentChapterIndex(data.chapters, isOpen)
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const list = useRef<ScrollView>(null)
@@ -22,7 +26,6 @@ export function PlayerChaptersSheet() {
 	const rowLayouts = useRef(new Map<string, { y: number; height: number }>())
 	const viewportHeight = useRef(0)
 	const [seeking, setSeeking] = useState(false)
-	const currentIndex = chapterIndexAt(data.chapters, data.position)
 
 	useEffect(() => {
 		didScroll.current = false

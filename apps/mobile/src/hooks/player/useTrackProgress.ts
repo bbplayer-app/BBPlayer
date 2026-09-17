@@ -4,108 +4,58 @@ import { AppState } from 'react-native'
 
 import playerProgressEmitter from '@/lib/player/progressListener'
 
-interface Progress {
-	position: number
-	duration: number
-	buffered: number
-}
-
-const INITIAL: Progress = { position: 0, duration: 0, buffered: 0 }
-
 /**
- * 基于事件的监听音频播放进度
- * @param background: 如果为 false，应用进入后台时会停止接收事件；为 true 则一直接收。
+ * 订阅音频时长。播放位置更新不会改变返回值，因此不会把高频 position
+ * 事件扩散成 React render。
  */
-export default function useTrackProgress(background = false) {
-	const [state, setState] = useState<Progress>(INITIAL)
-	const mountedRef = useRef(true)
-	const trackSubRef = useRef<(() => void) | null>(null)
-	const appSubRef = useRef<{ remove?: () => void } | null>(null)
+export function useTrackDuration(background = false) {
+	const [duration, setDuration] = useState(0)
+	const durationRef = useRef(duration)
 
 	useEffect(() => {
-		mountedRef.current = true
-		return () => {
-			mountedRef.current = false
-		}
-	}, [])
+		let disposed = false
+		let progressSub: (() => void) | undefined
 
-	const addTrackListener = () => {
-		if (trackSubRef.current) return
-		const handler = (e: Progress) => {
-			if (!mountedRef.current) return
-			setState((prev) =>
-				prev.position === e.position &&
-				prev.duration === e.duration &&
-				prev.buffered === e.buffered
-					? prev
-					: {
-							position: e.position,
-							duration: e.duration,
-							buffered: e.buffered,
-						},
+		const updateDuration = (nextDuration: number) => {
+			if (disposed || durationRef.current === nextDuration) return
+			durationRef.current = nextDuration
+			setDuration(nextDuration)
+		}
+		const syncDuration = () => {
+			void Orpheus.getDuration()
+				.then(updateDuration)
+				.catch(() => undefined)
+		}
+		const subscribe = () => {
+			if (progressSub) return
+			progressSub = playerProgressEmitter.subscribe(
+				'progress',
+				({ duration: nextDuration }) => {
+					updateDuration(nextDuration)
+				},
 			)
+			syncDuration()
 		}
-		trackSubRef.current = playerProgressEmitter.subscribe('progress', handler)
-	}
-
-	const removeTrackListener = () => {
-		trackSubRef.current?.()
-		trackSubRef.current = null
-	}
-
-	useEffect(() => {
-		const handleAppState = (next: string) => {
-			if (next === 'active') {
-				addTrackListener()
-
-				void (async () => {
-					try {
-						const p = await Orpheus.getPosition()
-						const d = await Orpheus.getDuration()
-						const b = await Orpheus.getBuffered()
-						if (!mountedRef.current) return
-						setState((prev) =>
-							prev.position === p && prev.duration === d && prev.buffered === b
-								? prev
-								: { position: p, duration: d, buffered: prev.buffered },
-						)
-					} catch {
-						// ignore
-					}
-				})()
-			} else {
-				if (!background) removeTrackListener()
-			}
+		const unsubscribe = () => {
+			progressSub?.()
+			progressSub = undefined
 		}
 
-		const appSub = AppState.addEventListener('change', handleAppState)
-		appSubRef.current = appSub
+		const appSub = AppState.addEventListener('change', (nextState) => {
+			if (nextState === 'active') subscribe()
+			else if (!background) unsubscribe()
+		})
 
-		if (background || AppState.currentState === 'active') {
-			addTrackListener()
-
-			void (async () => {
-				try {
-					const p = await Orpheus.getPosition()
-					const d = await Orpheus.getDuration()
-					const b = await Orpheus.getBuffered()
-					if (!mountedRef.current) return
-					setState((prev) =>
-						prev.position === p && prev.duration === d && prev.buffered === b
-							? prev
-							: { position: p, duration: d, buffered: prev.buffered },
-					)
-				} catch {
-					// ignore
-				}
-			})()
-		}
+		if (background || AppState.currentState === 'active') subscribe()
 
 		return () => {
-			removeTrackListener()
-			appSubRef.current?.remove?.()
+			disposed = true
+			unsubscribe()
+			appSub.remove()
 		}
-	}, [background])
+	}, [background, durationRef])
 
-	return state
+	return duration
 }
+
+export default useTrackDuration
