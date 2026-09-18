@@ -2,6 +2,10 @@ import { startProfiling } from 'react-native-release-profiler'
 
 startProfiling()
 
+import { enableFreeze } from 'react-native-screens'
+
+enableFreeze(true)
+
 import { playerSideEffects } from './src/lib/player/PlayerSideEffects'
 
 playerSideEffects.initialize()
