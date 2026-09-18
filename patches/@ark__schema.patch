@@ -1,3 +1,5 @@
+# RN Worklets 的 Bundle Mode 会强制启用 Metro 的 inlineRequires，这会导致一些在导入时有 side-effects 的库会报错。
+# 恰好 arktype 就是这样的库，所以我们要手动调用一下，避免 metro 自动把导入优化为 inline require
 diff --git a/out/scope.js b/out/scope.js
 index ed17995b473f7742000c25184e3ce4abb518f141..5a4b0b9c17d5b9249e8dd713d8a61e98a9598e64 100644
 --- a/out/scope.js

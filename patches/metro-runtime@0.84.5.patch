@@ -1,3 +1,4 @@
+# 来自 RN Worklets Bundle Mode
 diff --git a/src/modules/HMRClient.js b/src/modules/HMRClient.js
 index 534ac872bdd4f081c21a63aeb88adf689a3af5c5..5773985c80b89907cad741fdb05b551a97320492 100644
 --- a/src/modules/HMRClient.js

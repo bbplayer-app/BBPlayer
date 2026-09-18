@@ -1,3 +1,6 @@
+# expo-updates 存在 bug，当在 embeddedBundle 状态下 override request header，第二次启动时会进入 emergency mode
+# 过程：https://chatgpt.com/s/cx_6aad5f8458848191bc8a6332d1630719
+# PR：https://github.com/expo/expo/pull/49732
 diff --git a/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt b/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt
 --- a/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt
 +++ b/android/src/main/java/expo/modules/updates/launcher/DatabaseLauncher.kt

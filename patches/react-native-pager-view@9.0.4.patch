@@ -1,3 +1,7 @@
+# 在 RN Pager View v9 中 Android 底层实现使用了 Jetpack Compose，但是生命周期管理有问题。
+# 导致一个挂载了 Pager View 组件的页面在返回时，即使动画还在播放，组件内的内容也已经变成空白
+# 过程：https://chatgpt.com/s/cx_6aad60b3ccbc81919b9d4845e956880b
+# PR：https://github.com/callstack/react-native-pager-view/pull/1145
 diff --git a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
 index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed1805188a 100644
 --- a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
