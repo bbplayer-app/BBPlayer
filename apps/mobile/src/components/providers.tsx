@@ -10,7 +10,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
-import { ShimmerProvider } from 'react-native-fast-shimmer'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from 'react-native-paper'
@@ -114,7 +113,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 								<PaperProvider theme={paperTheme}>
 									{__DEV__ ? <DevTools /> : null}
 									<ShakeProfiler />
-									<ShimmerProvider duration={1500}>{children}</ShimmerProvider>
+									{children}
 								</PaperProvider>
 							</QueryClientProvider>
 						</GestureHandlerRootView>

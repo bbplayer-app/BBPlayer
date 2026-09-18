@@ -1,8 +1,57 @@
-import { StyleSheet, View } from 'react-native'
-import { Shimmer } from 'react-native-fast-shimmer'
+import { type PropsWithChildren, useEffect } from 'react'
+import { type StyleProp, StyleSheet, type ViewStyle, View } from 'react-native'
 import { useTheme } from 'react-native-paper'
+import Animated, {
+	cancelAnimation,
+	Easing,
+	ReduceMotion,
+	useAnimatedStyle,
+	useSharedValue,
+	withRepeat,
+	withTiming,
+} from 'react-native-reanimated'
 
 import { LIST_ITEM_COVER_SIZE, SQUIRCLE_RADIUS_RATIO } from '@/theme/dimensions'
+
+interface LibrarySkeletonProps {
+	/** 转场期间保持静态；仅在转场结束后仍在加载时呼吸。 */
+	animate?: boolean
+}
+
+function SkeletonPulse({
+	animate = true,
+	children,
+	style,
+}: PropsWithChildren<LibrarySkeletonProps & { style?: StyleProp<ViewStyle> }>) {
+	const opacity = useSharedValue(1)
+
+	useEffect(() => {
+		if (!animate) {
+			cancelAnimation(opacity)
+			opacity.set(1)
+			return
+		}
+
+		opacity.set(0.68)
+		opacity.set(
+			withRepeat(
+				withTiming(1, {
+					duration: 900,
+					easing: Easing.inOut(Easing.quad),
+					reduceMotion: ReduceMotion.System,
+				}),
+				-1,
+				true,
+			),
+		)
+
+		return () => cancelAnimation(opacity)
+	}, [animate, opacity])
+
+	const pulseStyle = useAnimatedStyle(() => ({ opacity: opacity.value }))
+
+	return <Animated.View style={[style, pulseStyle]}>{children}</Animated.View>
+}
 
 /**
  * Generic item skeleton for all library lists
@@ -18,9 +67,7 @@ export function LibraryListItemSkeleton() {
 						styles.coverSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 
 				<View style={styles.itemTextContainer}>
 					<View
@@ -28,17 +75,13 @@ export function LibraryListItemSkeleton() {
 							styles.titleSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 					<View
 						style={[
 							styles.subtitleSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 				</View>
 
 				<View
@@ -46,9 +89,7 @@ export function LibraryListItemSkeleton() {
 						styles.arrowIconSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 			<View
 				style={[styles.divider, { backgroundColor: colors.surfaceVariant }]}
@@ -57,37 +98,36 @@ export function LibraryListItemSkeleton() {
 	)
 }
 
-export function LocalPlaylistListSkeleton() {
+export function LocalPlaylistListSkeleton({
+	animate = true,
+}: LibrarySkeletonProps) {
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.listContainer}>
+		<SkeletonPulse
+			animate={animate}
+			style={styles.listContainer}
+		>
 			<View style={styles.listHeaderContainer}>
 				<View
 					style={[
 						styles.headerTitleSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View style={styles.headerActionsContainer}>
 					<View
 						style={[
 							styles.headerCountSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 					<View
 						style={[
 							styles.iconButtonSkeleton,
 							{ backgroundColor: colors.surfaceVariant },
 						]}
-					>
-						<Shimmer />
-					</View>
+					/>
 				</View>
 			</View>
 
@@ -96,39 +136,38 @@ export function LocalPlaylistListSkeleton() {
 					styles.searchBarSkeleton,
 					{ backgroundColor: colors.surfaceVariant },
 				]}
-			>
-				<Shimmer />
-			</View>
+			/>
 
 			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
-		</View>
+		</SkeletonPulse>
 	)
 }
 
-export function FavoriteFolderListSkeleton() {
+export function FavoriteFolderListSkeleton({
+	animate = true,
+}: LibrarySkeletonProps) {
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.listContainer}>
+		<SkeletonPulse
+			animate={animate}
+			style={styles.listContainer}
+		>
 			<View style={styles.listHeaderContainer}>
 				<View
 					style={[
 						styles.headerTitleSkeleton,
 						{ backgroundColor: colors.surfaceVariant, width: 100 },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View
 					style={[
 						styles.headerCountSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 
 			<View
@@ -136,76 +175,76 @@ export function FavoriteFolderListSkeleton() {
 					styles.searchBarSkeleton,
 					{ backgroundColor: colors.surfaceVariant },
 				]}
-			>
-				<Shimmer />
-			</View>
+			/>
 
 			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
-		</View>
+		</SkeletonPulse>
 	)
 }
 
-export function CollectionListSkeleton() {
+export function CollectionListSkeleton({
+	animate = true,
+}: LibrarySkeletonProps) {
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.listContainer}>
+		<SkeletonPulse
+			animate={animate}
+			style={styles.listContainer}
+		>
 			<View style={styles.listHeaderContainer}>
 				<View
 					style={[
 						styles.headerTitleSkeleton,
 						{ backgroundColor: colors.surfaceVariant, width: 150 },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View
 					style={[
 						styles.headerCountSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 
 			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
-		</View>
+		</SkeletonPulse>
 	)
 }
 
-export function MultiPageVideosListSkeleton() {
+export function MultiPageVideosListSkeleton({
+	animate = true,
+}: LibrarySkeletonProps) {
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.listContainer}>
+		<SkeletonPulse
+			animate={animate}
+			style={styles.listContainer}
+		>
 			<View style={styles.listHeaderContainer}>
 				<View
 					style={[
 						styles.headerTitleSkeleton,
 						{ backgroundColor: colors.surfaceVariant, width: 120 },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 				<View
 					style={[
 						styles.headerCountSkeleton,
 						{ backgroundColor: colors.surfaceVariant },
 					]}
-				>
-					<Shimmer />
-				</View>
+				/>
 			</View>
 
 			{Array.from({ length: 2 }, (_, index) => (
 				<LibraryListItemSkeleton key={index} />
 			))}
-		</View>
+		</SkeletonPulse>
 	)
 }
 
