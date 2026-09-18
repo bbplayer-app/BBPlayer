@@ -282,7 +282,7 @@ const Lyrics = memo(function Lyrics({
 				contentContainerStyle={{
 					justifyContent: 'center',
 					pointerEvents: offsetMenuVisible ? 'none' : 'auto',
-					paddingTop: windowHeight * 0.02,
+					paddingTop: windowHeight * 0.04,
 				}}
 				showsVerticalScrollIndicator={false}
 				scrollEventThrottle={30}

@@ -1,11 +1,18 @@
 import type { ColorInfo, ExtractedPalette } from '@bbplayer/image-theme-colors'
-import { Canvas, Fill, LinearGradient, Mask } from '@shopify/react-native-skia'
+import {
+	Canvas,
+	Fill,
+	LinearGradient,
+	Shader,
+	Skia,
+} from '@shopify/react-native-skia'
 import Color from 'color'
 import { useEffect, useState } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import {
 	AccessibilityInfo,
 	AppState,
+	PixelRatio,
 	StyleSheet,
 	useColorScheme,
 	View,
@@ -21,6 +28,29 @@ import {
 	withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+
+// 在同一次着色中混合，避免 Mask 的离屏颜色/alpha 图层提前量化。
+const FLUID_SHADER = Skia.RuntimeEffect.Make(`
+  uniform shader gradientA;
+  uniform shader gradientB;
+  uniform shader maskGradient;
+  uniform float pixelRatio;
+
+  half4 main(float2 position) {
+    float4 a = gradientA.eval(position);
+    float4 b = gradientB.eval(position);
+    float mask = maskGradient.eval(position).a;
+    float4 color = mix(a, b, mask);
+
+    // 固定在物理像素上的零均值噪声；不随时间变化，避免闪烁。
+    float2 pixel = floor(position * pixelRatio);
+    float3 hash = fract(float3(pixel.x, pixel.y, pixel.x) * 0.1031);
+    hash += dot(hash, hash.yzx + 33.33);
+    float noise = fract((hash.x + hash.y) * hash.z) - 0.5;
+    color.rgb = clamp(color.rgb + (noise / 255.0) * color.a, 0.0, color.a);
+    return half4(color);
+  }
+`)
 
 /** 两组不透明渐变的起止颜色：[A 起点, A 终点, B 起点, B 终点]。 */
 export type FluidBackgroundColors = readonly [string, string, string, string]
@@ -180,7 +210,7 @@ function RotatingGradient({
 	elapsed,
 	period,
 }: RotatingGradientProps) {
-	// 只旋转着色器端点，Fill 始终覆盖画布。渐变长度与原版一样为高度。
+	// 只旋转着色器端点，渐变长度与原版一样为高度。
 	const start = useDerivedValue(() => {
 		const angle = (elapsed.value / period) * Math.PI * 2
 		return {
@@ -194,14 +224,12 @@ function RotatingGradient({
 	}))
 
 	return (
-		<Fill>
-			<LinearGradient
-				start={start}
-				end={end}
-				colors={colors}
-				mode='clamp'
-			/>
-		</Fill>
+		<LinearGradient
+			start={start}
+			end={end}
+			colors={colors}
+			mode='clamp'
+		/>
 	)
 }
 
@@ -331,31 +359,40 @@ export function FluidBackground({
 		>
 			{hasSize && (
 				<Canvas style={StyleSheet.absoluteFill}>
-					<RotatingGradient
-						{...size}
-						elapsed={elapsed}
-						period={20_000}
-						colors={colorsA}
-					/>
-					{/* 对不透明 A/B，原版 DstOut + DstAtop 等价于 A*(1-m)+B*m。 */}
-					<Mask
-						mode='alpha'
-						mask={
+					<Fill>
+						{FLUID_SHADER ? (
+							<Shader
+								source={FLUID_SHADER}
+								uniforms={{ pixelRatio: PixelRatio.get() }}
+							>
+								<RotatingGradient
+									{...size}
+									elapsed={elapsed}
+									period={20_000}
+									colors={colorsA}
+								/>
+								<RotatingGradient
+									{...size}
+									elapsed={elapsed}
+									period={-12_000}
+									colors={colorsB}
+								/>
+								<RotatingGradient
+									{...size}
+									elapsed={elapsed}
+									period={15_000}
+									colors={['#FFFFFFFF', '#FFFFFF00']}
+								/>
+							</Shader>
+						) : (
 							<RotatingGradient
 								{...size}
 								elapsed={elapsed}
-								period={15_000}
-								colors={['#FFFFFFFF', '#FFFFFF00']}
+								period={20_000}
+								colors={colorsA}
 							/>
-						}
-					>
-						<RotatingGradient
-							{...size}
-							elapsed={elapsed}
-							period={-12_000}
-							colors={colorsB}
-						/>
-					</Mask>
+						)}
+					</Fill>
 				</Canvas>
 			)}
 		</View>
