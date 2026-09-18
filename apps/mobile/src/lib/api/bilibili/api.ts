@@ -729,7 +729,7 @@ export class BilibiliApi {
 	}): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
 		const avid = bv2av(bvid)
 		return bilibiliApiClient
-			.get<{ list: BilibiliPlaylist[] | null }>({
+			.get<{ list: BilibiliPlaylist[] | null } | null>({
 				endpoint: '/x/v3/fav/folder/created/list-all',
 				params: {
 					up_mid: userMid.toString(),
@@ -738,12 +738,7 @@ export class BilibiliApi {
 				},
 				signal,
 			})
-			.map((response) => {
-				if (!response.list) {
-					return []
-				}
-				return response.list
-			})
+			.map((response) => response?.list ?? [])
 	}
 
 	/**
