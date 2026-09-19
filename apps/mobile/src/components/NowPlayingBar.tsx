@@ -8,8 +8,16 @@ import {
 import { useValue } from '@legendapp/state/react'
 import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
-import { memo, useEffect, useLayoutEffect, useRef } from 'react'
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
+import { EaseView } from 'react-native-ease'
 import {
 	Directions,
 	useTapGesture,
@@ -21,11 +29,8 @@ import {
 } from 'react-native-gesture-handler'
 import { Icon, Text, useTheme } from 'react-native-paper'
 import Animated, {
-	Easing,
-	FadeIn,
-	FadeOut,
-	ReduceMotion,
 	useAnimatedStyle,
+	useReducedMotion,
 	useSharedValue,
 	withTiming,
 } from 'react-native-reanimated'
@@ -104,12 +109,40 @@ const playPause = async () => {
 function NowPlayingBar() {
 	const segments = useSegments()
 	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
-	return segments[0] === 'player' || playerScreenActive ? null : (
-		<NowPlayingBarContent />
+	const shouldShow = segments[0] !== 'player' && !playerScreenActive
+	const [mounted, setMounted] = useState(shouldShow)
+
+	useEffect(() => {
+		if (shouldShow) {
+			setMounted(true)
+		}
+	}, [shouldShow])
+
+	const handleExitComplete = useCallback(() => {
+		setMounted(false)
+	}, [])
+
+	if (!mounted) {
+		return null
+	}
+
+	return (
+		<NowPlayingBarContent
+			visible={shouldShow}
+			onExitComplete={handleExitComplete}
+		/>
 	)
 }
 
-const NowPlayingBarContent = memo(function NowPlayingBarContent() {
+type NowPlayingBarContentProps = {
+	visible: boolean
+	onExitComplete: () => void
+}
+
+const NowPlayingBarContent = memo(function NowPlayingBarContent({
+	visible,
+	onExitComplete,
+}: NowPlayingBarContentProps) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -247,26 +280,31 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 		: Math.max(bottomBarHeight, insets.bottom) + 10
 	const bottomPadding = isDocked && bottomBarHeight === 0 ? insets.bottom : 0
 
-	const bottomOffset = useSharedValue(bottomMargin)
-	useEffect(() => {
-		bottomOffset.set(
-			withTiming(bottomMargin, {
-				duration: 240,
-				easing: Easing.out(Easing.cubic),
-				reduceMotion: ReduceMotion.System,
-			}),
-		)
-	}, [bottomMargin, bottomOffset])
-	const positionStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: -bottomOffset.value }],
-	}))
+	const reduceMotion = useReducedMotion()
 
 	return (
-		<Animated.View
-			entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)}
-			exiting={FadeOut.duration(100).reduceMotion(ReduceMotion.System)}
+		<EaseView
+			initialAnimate={{ opacity: 0, translateY: -bottomMargin }}
+			animate={{ opacity: visible ? 1 : 0, translateY: -bottomMargin }}
+			transition={
+				reduceMotion
+					? { type: 'none' }
+					: {
+							opacity: {
+								type: 'timing',
+								duration: visible ? 160 : 100,
+								easing: 'easeOut',
+							},
+							transform: { type: 'timing', duration: 240, easing: 'easeOut' },
+						}
+			}
+			onTransitionEnd={({ finished }) => {
+				if (finished && !visible) {
+					onExitComplete()
+				}
+			}}
 			pointerEvents='box-none'
-			style={[styles.nowPlayingBarContainer, positionStyle]}
+			style={styles.nowPlayingBarContainer}
 		>
 			{isVisible && (
 				<GestureDetector gesture={combinedGesture}>
@@ -422,7 +460,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 					</View>
 				</GestureDetector>
 			)}
-		</Animated.View>
+		</EaseView>
 	)
 })
 

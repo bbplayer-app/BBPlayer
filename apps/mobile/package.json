@@ -87,6 +87,7 @@
 		"react-native-boost": "^1.6.0",
 		"react-native-bootsplash": "^7.3.2",
 		"react-native-bottom-tabs": "workspace:*",
+		"react-native-ease": "^0.8.0",
 		"react-native-edge-to-edge": "^1.8.1",
 		"react-native-fast-squircle": "^1.1.5",
 		"react-native-gesture-handler": "3.3.0",
