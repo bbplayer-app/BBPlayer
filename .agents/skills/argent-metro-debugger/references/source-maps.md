@@ -14,14 +14,14 @@ If `debugger-inspect-element` returns all items with `source: null`, the React N
 
 ```js
 module.exports = function (api) {
-	api.cache(true)
-	return {
-		presets: ['babel-preset-expo'], // or 'module:@react-native/babel-preset'
-		plugins: [
-			'@babel/plugin-transform-react-jsx-source', // enables _debugSource on fibers
-		],
-	}
-}
+  api.cache(true);
+  return {
+    presets: ["babel-preset-expo"], // or 'module:@react-native/babel-preset'
+    plugins: [
+      "@babel/plugin-transform-react-jsx-source", // enables _debugSource on fibers
+    ],
+  };
+};
 ```
 
 After adding the plugin, restart Metro (`npx react-native start --reset-cache` or `npx expo start --clear`) and reload the app. The tool will then automatically pick up `_debugSource` and resolve components to their source files. No extra `npm install` needed — the plugin ships with `babel-preset-expo` and `@babel/preset-env`.

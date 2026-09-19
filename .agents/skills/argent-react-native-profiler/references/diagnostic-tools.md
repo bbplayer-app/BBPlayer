@@ -13,12 +13,7 @@ Call `react-profiler-renders`. Returns render counts and durations per component
 ## Component hierarchy
 
 ```json
-{
-	"port": 8081,
-	"device_id": "<UDID>",
-	"max_depth": 10,
-	"filter": "MyComponent"
-}
+{ "port": 8081, "device_id": "<UDID>", "max_depth": 10, "filter": "MyComponent" }
 ```
 
 Call `react-profiler-fiber-tree`. Inspect `useMemoCache` presence to confirm React Compiler is active for a given component. If `useMemoCache` is absent, the compiler bailed out for that component — memoization hints are safe to propose.
@@ -29,7 +24,7 @@ Call `react-profiler-fiber-tree`. Inspect `useMemoCache` presence to confirm Rea
 { "port": 8081, "device_id": "<UDID>" }
 ```
 
-Call `debugger-log-registry`. Returns a summary with entry counts by level, message clusters, and the log file path. Use `Grep`/`Read` on the log file to filter by level or search for specific messages.
+Call `debugger-log-registry`. When connected (`status: "connected"`) it returns a summary with entry counts by level, message clusters, and the log file path. Use `Grep`/`Read` on the log file to filter by level or search for specific messages. When the debugger is unreachable it does not fail — it returns `{ status: "not_connected", reason, detail, guidance }` with no log file; follow the `guidance` (do not retry in a loop, and do not try to grep a file in this state).
 
 ---
 
@@ -50,15 +45,17 @@ Call `profiler-cpu-query`. Modes:
 - `call_tree` — callers and callees of a specific `function_name`.
 - `component_cpu` — aggregate CPU during all commits of a `component_name`.
 
+> **Component names:** pass the name exactly as the report shows it. The report strips
+> `Forget(...)` / `Memo(...)` / `ForwardRef(...)` wrappers and marks them with a
+> `[React Compiler]` / `[React.memo] `/ `[forwardRef]` tag; both that displayed name and the
+> underlying wrapped name resolve. If a name maps to several distinct fibers the tool lists
+> the exact names to retry with rather than merging them — a combined total would not describe
+> any real component.
+
 ## Commit query
 
 ```json
-{
-	"port": 8081,
-	"device_id": "<UDID>",
-	"mode": "by_component",
-	"component_name": "AppNavigator"
-}
+{ "port": 8081, "device_id": "<UDID>", "mode": "by_component", "component_name": "AppNavigator" }
 ```
 
 Call `profiler-commit-query`. Modes:

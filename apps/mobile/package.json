@@ -128,7 +128,6 @@
 		"@rozenite/require-profiler-plugin": "^2.2.0",
 		"@rozenite/storage-plugin": "^2.2.0",
 		"@rozenite/tanstack-query-plugin": "^2.2.0",
-		"@swmansion/argent": "^0.25.0",
 		"@tanstack/eslint-plugin-query": "^5.101.4",
 		"@testing-library/react-native": "^13.3.3",
 		"@types/color": "^4.2.1",

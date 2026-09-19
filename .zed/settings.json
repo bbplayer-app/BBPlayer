@@ -59,10 +59,13 @@
 	},
 	"context_servers": {
 		"argent": {
-			"source": "custom",
-			"command": "argent",
-			"args": ["mcp"]
-		}
+      "source": "custom",
+      "command": "node",
+      "args": [
+        "node_modules/@swmansion/argent/dist/cli.js",
+        "mcp"
+      ]
+    }
 	},
 	"agent": {
 		"tool_permissions": {

@@ -7,10 +7,14 @@
 			"oauth": {}
 		},
 		"argent": {
-			"type": "local",
-			"command": ["argent", "mcp"],
-			"enabled": true
-		}
+      "type": "local",
+      "command": [
+        "node",
+        "node_modules/@swmansion/argent/dist/cli.js",
+        "mcp"
+      ],
+      "enabled": true
+    }
 	},
 	"lsp": false,
 	"instructions": ["packages/*/AGENTS.md", "apps/*/AGENTS.md"],

@@ -55,10 +55,10 @@ One abstract permission can map to several concrete Android permissions; which o
 
 ```json
 {
-	"udid": "<UDID-or-serial>",
-	"action": "grant",
-	"permission": "camera",
-	"bundleId": "com.example.app"
+  "udid": "<UDID-or-serial>",
+  "action": "grant",
+  "permission": "camera",
+  "bundleId": "com.example.app"
 }
 ```
 
@@ -99,33 +99,23 @@ The call **fails** when nothing could be applied - read the error; it names the 
 Pre-grant the camera before launching, so the app never prompts:
 
 ```json
-{
-	"udid": "<UDID>",
-	"action": "grant",
-	"permission": "camera",
-	"bundleId": "com.example.app"
-}
+{ "udid": "<UDID>", "action": "grant", "permission": "camera", "bundleId": "com.example.app" }
 ```
 
 Test the denied path - refuse location, then launch and observe the fallback:
 
 ```json
-{
-	"udid": "<serial>",
-	"action": "deny",
-	"permission": "location",
-	"bundleId": "com.example.app"
-}
+{ "udid": "<serial>", "action": "deny", "permission": "location", "bundleId": "com.example.app" }
 ```
 
 Reset notifications on Android so the first-run prompt appears again next launch:
 
 ```json
 {
-	"udid": "<serial>",
-	"action": "reset",
-	"permission": "notifications",
-	"bundleId": "com.example.app"
+  "udid": "<serial>",
+  "action": "reset",
+  "permission": "notifications",
+  "bundleId": "com.example.app"
 }
 ```
 
@@ -133,9 +123,9 @@ Grant always-on location on Android (fans out to background + foreground automat
 
 ```json
 {
-	"udid": "<serial>",
-	"action": "grant",
-	"permission": "location-always",
-	"bundleId": "com.example.app"
+  "udid": "<serial>",
+  "action": "grant",
+  "permission": "location-always",
+  "bundleId": "com.example.app"
 }
 ```
