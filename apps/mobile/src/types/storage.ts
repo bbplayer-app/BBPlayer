@@ -1,5 +1,6 @@
 export interface AppStorageSchema {
 	first_open: boolean
+	startup_screen: 'home' | 'library'
 	ignore_alert_replace_playlist: boolean
 	skip_version: string
 	enable_sentry_report: boolean

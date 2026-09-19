@@ -5,6 +5,7 @@ import JSZip from 'jszip'
 import { expoDb } from '@/lib/db/db'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
+import { getStartupScreen } from '@/utils/startup-screen'
 
 import { BACKUP_VERSION } from './types'
 import type { BackupManifest } from './types'
@@ -34,6 +35,7 @@ export async function createBackup(): Promise<string> {
 			version: BACKUP_VERSION,
 			exportedAt: new Date().toISOString(),
 			mmkv: {
+				startup_screen: getStartupScreen(),
 				'app-storage': storage.getString('app-storage') ?? '',
 				'playback-context-store':
 					storage.getString('playback-context-store') ?? '',

@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
-import { useRef, useState } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,6 +15,11 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
+import {
+	getStartupScreen,
+	setStartupScreen as persistStartupScreen,
+	subscribeStartupScreen,
+} from '@/utils/startup-screen'
 import toast from '@/utils/toast'
 
 export default function GeneralSettingsPage() {
@@ -37,15 +42,17 @@ export default function GeneralSettingsPage() {
 	const expandMultiPageOnSync = useAppStore(
 		(state) => state.settings.expandMultiPageOnSync,
 	)
-	const startupScreen = useAppStore((state) => state.settings.startupScreen)
-	const setSettings = useAppStore((state) => state.setSettings)
+	const startupScreen = useSyncExternalStore(
+		subscribeStartupScreen,
+		getStartupScreen,
+	)
 
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
 	const [startupScreenMenuVisible, setStartupScreenMenuVisible] =
 		useState(false)
 
 	const setStartupScreen = (screen: 'home' | 'library') => {
-		setSettings({ startupScreen: screen })
+		persistStartupScreen(screen)
 		setStartupScreenMenuVisible(false)
 	}
 

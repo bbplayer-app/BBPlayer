@@ -4,15 +4,13 @@ import type {
 } from '@bottom-tabs/react-navigation'
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
-import { useRouter, withLayoutContext } from 'expo-router'
+import { withLayoutContext } from 'expo-router'
 import type {
 	ParamListBase,
 	TabNavigationState,
 } from 'expo-router/react-navigation'
-import { useEffect, useRef } from 'react'
 import { useTheme } from 'react-native-paper'
 
-import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
@@ -36,8 +34,6 @@ const settingsIcon = Icon.getImageSourceSync('cog', 24) as nonNullableIcon
 
 export default function TabLayout() {
 	const themes = useTheme().colors
-	const startupScreen = useAppStore((state) => state.settings.startupScreen)
-	const router = useRouter()
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const skinIcons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
@@ -50,20 +46,6 @@ export default function TabLayout() {
 		skinIcons.settings.selected,
 	)
 
-	// 修复：expo-router 在冷启动时会用 URL 推导的初始路由覆盖「initialRouteName」，
-	// 导致「设置-通用-启动时进入-音乐库」重启后不生效。
-	// 这里改为在 tab 布局首次挂载后，按该设置定向到对应 tab。
-	const hasAppliedStartupScreen = useRef(false)
-	useEffect(() => {
-		if (hasAppliedStartupScreen.current) return
-		hasAppliedStartupScreen.current = true
-		const screen = useAppStore.getState().settings.startupScreen
-		if (screen === 'library') {
-			// 「0」对应音乐库内层的默认「播放列表」页
-			router.navigate('/library/0')
-		}
-	}, [router])
-
 	return (
 		<Tabs
 			disablePageAnimations
@@ -72,7 +54,7 @@ export default function TabLayout() {
 			tabBarActiveTintColor={themes.primary}
 			activeIndicatorColor={'transparent'}
 			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
-			initialRouteName={startupScreen === 'library' ? 'library/[tab]' : 'index'}
+			initialRouteName='index'
 		>
 			<Tabs.Screen
 				name='index'

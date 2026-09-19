@@ -10,6 +10,7 @@ export interface BackupManifest {
 	exportedAt: string
 	mmkv: {
 		'app-storage': string
+		startup_screen?: 'home' | 'library'
 		'playback-context-store'?: string
 		'shared-playlist-members': string
 	}

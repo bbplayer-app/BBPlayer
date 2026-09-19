@@ -1,4 +1,16 @@
+import { createURL } from 'expo-linking'
+
 import log from '@/utils/log'
+import { getStartupScreen } from '@/utils/startup-screen'
+
+function resolveStartupPath(path: string, initial: boolean) {
+	// 在创建初始导航状态前选择启动页，仅处理根入口，保留深链和运行中的跳转。
+	const root = path.match(/^\/(?:\(tabs\)\/?)?(?=[?#]|$)/)
+	if (initial && root && getStartupScreen() === 'library') {
+		return `/library/0${path.slice(root[0].length)}`
+	}
+	return path
+}
 
 export function redirectSystemPath({
 	path,
@@ -16,6 +28,18 @@ export function redirectSystemPath({
 			// ignore
 		}
 		if (url) {
+			if (initial) {
+				// 与 Expo Router 的默认启动 URL 使用同一来源，兼容开发包的 hostUri。
+				const rootURL = new URL(createURL('/'))
+				if (
+					url.protocol === rootURL.protocol &&
+					url.host === rootURL.host &&
+					url.pathname.replace(/\/$/, '') ===
+						rootURL.pathname.replace(/\/$/, '')
+				) {
+					return resolveStartupPath(`/${url.search}${url.hash}`, initial)
+				}
+			}
 			if (url.hostname === 'expo-sharing') {
 				return '/(tabs)'
 			}
@@ -35,10 +59,14 @@ export function redirectSystemPath({
 				}
 			}
 			if (url.protocol === 'bbplayer:') {
-				return `/${url.hostname}${url.pathname}${url.search}`
+				const pathname = `/${url.hostname}${url.pathname}`.replace(/^\/+/, '/')
+				return resolveStartupPath(
+					`${pathname}${url.search}${url.hash}`,
+					initial,
+				)
 			}
 		}
-		return path
+		return resolveStartupPath(path, initial)
 	} catch {
 		log.error('redirectSystemPath 失败', { path, initial })
 		return '/'

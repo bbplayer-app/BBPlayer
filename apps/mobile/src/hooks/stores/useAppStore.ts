@@ -13,6 +13,7 @@ import type { AppState, Settings } from '@/types/core/appStore'
 import type { StorageKey } from '@/types/storage'
 import log from '@/utils/log'
 import { storage, zustandStorage } from '@/utils/mmkv'
+import { migrateStartupScreen } from '@/utils/startup-screen'
 
 const logger = log.extend('Store.App')
 
@@ -113,7 +114,6 @@ export const useAppStore = create<AppState>()(
 					enableMinimalistMode: false,
 					allowSimultaneousPlayback: false,
 					expandMultiPageOnSync: null,
-					startupScreen: 'home',
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,
@@ -241,7 +241,7 @@ export const useAppStore = create<AppState>()(
 		{
 			name: 'app-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 4,
+			version: 5,
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
@@ -255,6 +255,7 @@ export const useAppStore = create<AppState>()(
 				const state = persistedState as Partial<Omit<AppState, 'settings'>> & {
 					settings?: Partial<Settings> & {
 						enableSpectrumVisualizer?: boolean
+						startupScreen?: unknown
 					}
 				}
 				let migratedState = state
@@ -286,6 +287,13 @@ export const useAppStore = create<AppState>()(
 						delete settings.enableSpectrumVisualizer
 						migratedState = { ...migratedState, settings }
 					}
+				}
+
+				if (version < 5) {
+					migrateStartupScreen(migratedState.settings?.startupScreen)
+					const settings = { ...migratedState.settings }
+					delete settings.startupScreen
+					migratedState = { ...migratedState, settings }
 				}
 
 				return migratedState

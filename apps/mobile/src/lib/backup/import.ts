@@ -8,6 +8,7 @@ import { expoDb } from '@/lib/db/db'
 import { clearLegacyMigrationKeys } from '@/lib/db/migrations'
 import log from '@/utils/log'
 import { storage } from '@/utils/mmkv'
+import { getStartupScreen, setStartupScreen } from '@/utils/startup-screen'
 
 import { BACKUP_VERSION } from './types'
 import type { BackupManifest } from './types'
@@ -80,6 +81,16 @@ export async function restoreBackup(filePath: string): Promise<void> {
 
 	if (manifest.mmkv['app-storage']) {
 		storage.set('app-storage', manifest.mmkv['app-storage'])
+	}
+	if (
+		manifest.mmkv.startup_screen === 'home' ||
+		manifest.mmkv.startup_screen === 'library'
+	) {
+		setStartupScreen(manifest.mmkv.startup_screen)
+	} else if (manifest.mmkv['app-storage']) {
+		// 旧备份的偏好仍在 app-storage 中，不能沿用本机已有的独立 key。
+		storage.remove('startup_screen')
+		getStartupScreen()
 	}
 	if (manifest.mmkv['shared-playlist-members']) {
 		storage.set(

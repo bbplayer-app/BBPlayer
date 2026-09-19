@@ -1,12 +1,9 @@
 import { ObservablePersistLocalStorageBase } from '@legendapp/state/persist-plugins/local-storage'
-import { createMMKV } from 'react-native-mmkv'
 import type { StateStorage } from 'zustand/middleware/persist'
 
-import type { TypedMMKVInterface } from '@/types/storage'
+import { mmkv, storage } from './mmkv-instance'
 
-const mmkv = createMMKV()
-
-export const storage = mmkv as unknown as TypedMMKVInterface
+export { storage } from './mmkv-instance'
 
 export const zustandStorage: StateStorage = {
 	setItem: (name, value) => {
