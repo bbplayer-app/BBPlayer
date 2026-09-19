@@ -23,6 +23,7 @@ minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
   - expo-updates@57.0.21
   - lucide-react@1.39.0
+  - '@lodev09/react-native-true-sheet@4.0.0-beta.16'
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@legendapp/list@3.3.9': patches/@legendapp__list@3.3.9.patch

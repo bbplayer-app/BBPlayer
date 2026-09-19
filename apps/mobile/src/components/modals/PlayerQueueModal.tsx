@@ -6,11 +6,11 @@ import {
 	TrueSheet,
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
-import { memo, RefObject, useCallback, useMemo, useRef, useState } from 'react'
+import type { RefObject } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
@@ -129,6 +129,14 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
 	const flatListRef = useRef<LegendListRef>(null)
+	const scrollableRef = useMemo(
+		() => ({
+			get current() {
+				return flatListRef.current?.getNativeScrollRef() ?? null
+			},
+		}),
+		[],
+	)
 
 	const queue = usePlayerQueueStore((state) => state.tracks)
 	const { data: shuffleMode } = useShuffleMode()
@@ -137,8 +145,6 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		if (!currentTrackId) return -1
 		return queue.findIndex((t) => t.id === currentTrackId)
 	}, [currentTrackId, queue])
-
-	const insets = useSafeAreaInsets()
 
 	const switchTrackHandler = useCallback(
 		async (index: number) => {
@@ -201,7 +207,8 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			detents={[0.75, 1]}
 			cornerRadius={24}
 			backgroundColor={theme.colors.elevation.level1}
-			scrollable
+			style={{ flex: 1 }}
+			scrollableRef={scrollableRef}
 			onMount={scrollToCurrent}
 			onDidPresent={() => {
 				usePlayerQueueSheetStore.getState().setOpen(true)
@@ -215,7 +222,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			<GestureHandlerRootView style={{ flex: 1 }}>
 				<View
 					style={{
-						height: '100%',
+						flex: 1,
 					}}
 				>
 					<View
@@ -266,9 +273,6 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 							renderItem={renderItem}
 							keyExtractor={keyExtractor}
 							recycleItems
-							contentContainerStyle={{
-								paddingBottom: insets.bottom + 20,
-							}}
 							showsVerticalScrollIndicator={false}
 							nestedScrollEnabled
 						/>

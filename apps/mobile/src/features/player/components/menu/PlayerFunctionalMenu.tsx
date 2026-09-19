@@ -18,6 +18,7 @@ export function PlayerFunctionalMenu({
 }) {
 	const { colors } = useTheme()
 	const sheetRef = useRef<TrueSheet>(null)
+	const scrollViewRef = useRef<ScrollView>(null)
 	const isPresented = useRef(false)
 	const pendingAction = useRef<(() => void) | null>(null)
 
@@ -63,16 +64,17 @@ export function PlayerFunctionalMenu({
 	return (
 		<TrueSheet
 			ref={sheetRef}
-			detents={[0.6]}
+			detents={['auto']}
 			cornerRadius={24}
 			backgroundColor={colors.elevation.level1}
+			style={{ flex: 1 }}
 			onDidDismiss={onDismiss}
 			onDidPresent={onPresent}
-			scrollable
+			scrollableRef={scrollViewRef}
 		>
 			<ScrollView
-				style={{ marginTop: 32 }}
-				// contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+				ref={scrollViewRef}
+				style={{ marginTop: 32, flex: 1 }}
 			>
 				<Computed>
 					{playbackContextStore$.context.mode.get() === 'podcast' ? (

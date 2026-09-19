@@ -265,6 +265,7 @@ export function LocalTrackList({
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)
+	const menuScrollViewRef = useRef<ScrollView>(null)
 	const [menuSheetMounted, setMenuSheetMounted] = useState(false)
 
 	const [menuState, setMenuState] = useState<{
@@ -397,15 +398,19 @@ export function LocalTrackList({
 			{menuSheetMounted && (
 				<TrueSheet
 					ref={setMenuSheetRef}
-					detents={[0.5]}
+					detents={['auto']}
 					cornerRadius={24}
 					backgroundColor={theme.colors.elevation.level1}
+					style={{ flex: 1 }}
 					onDidDismiss={() => {
 						setMenuState((prev) => ({ ...prev, visible: false }))
 					}}
-					scrollable
+					scrollableRef={menuScrollViewRef}
 				>
-					<ScrollView style={{ marginTop: 32 }}>
+					<ScrollView
+						ref={menuScrollViewRef}
+						style={{ marginTop: 32, flex: 1 }}
+					>
 						{menuState.track && (
 							<>
 								<View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>

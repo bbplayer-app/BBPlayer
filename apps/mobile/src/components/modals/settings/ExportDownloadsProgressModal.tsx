@@ -12,7 +12,6 @@ import {
 	TextInput,
 	useTheme,
 } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
@@ -66,7 +65,7 @@ const ExportDownloadsProgressModal = memo(
 		destinationUri,
 	}: ExportDownloadsProgressModalProps) {
 		const { colors } = useTheme()
-		const insets = useSafeAreaInsets()
+		const scrollViewRef = useRef<ScrollView>(null)
 
 		const [filenamePattern, setFilenamePattern] = useState('{name}')
 		const [embedLyrics, setEmbedLyrics] = useState(false)
@@ -192,10 +191,11 @@ const ExportDownloadsProgressModal = memo(
 		return (
 			<TrueSheet
 				ref={sheetRef}
-				detents={[0.75]}
+				detents={['auto']}
 				cornerRadius={24}
 				backgroundColor={colors.elevation.level1}
-				scrollable
+				style={{ flex: 1 }}
+				scrollableRef={scrollViewRef}
 				dismissible={stage === 'config' || isFinished}
 				onDidDismiss={() => {
 					setProgress({
@@ -224,11 +224,9 @@ const ExportDownloadsProgressModal = memo(
 						</Text>
 					</View>
 					<ScrollView
+						ref={scrollViewRef}
 						style={{ flex: 1 }}
-						contentContainerStyle={[
-							styles.sheetContent,
-							{ paddingBottom: insets.bottom + 16 },
-						]}
+						contentContainerStyle={styles.sheetContent}
 						nestedScrollEnabled
 					>
 						{stage === 'config' ? (

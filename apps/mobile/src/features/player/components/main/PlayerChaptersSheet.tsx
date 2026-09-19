@@ -2,7 +2,6 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
 import {
@@ -20,7 +19,6 @@ export function PlayerChaptersSheet() {
 	const isOpen = usePlayerChaptersSheetStore((state) => state.isOpen)
 	const currentIndex = useCurrentChapterIndex(data.chapters, isOpen)
 	const { colors } = useTheme()
-	const insets = useSafeAreaInsets()
 	const list = useRef<ScrollView>(null)
 	const didScroll = useRef(false)
 	const rowLayouts = useRef(new Map<string, { y: number; height: number }>())
@@ -66,10 +64,11 @@ export function PlayerChaptersSheet() {
 	return (
 		<TrueSheet
 			name='playerChaptersSheet'
-			detents={[0.65]}
+			detents={['auto']}
 			cornerRadius={24}
 			backgroundColor={colors.elevation.level1}
-			scrollable
+			style={{ flex: 1 }}
+			scrollableRef={list}
 			onMount={scrollToCurrent}
 			onDidPresent={() => {
 				usePlayerChaptersSheetStore.getState().setOpen(true)
@@ -81,7 +80,7 @@ export function PlayerChaptersSheet() {
 				usePlayerChaptersSheetStore.getState().setOpen(false)
 			}}
 		>
-			<View style={{ height: '100%' }}>
+			<View style={{ flex: 1 }}>
 				<Text
 					variant='titleMedium'
 					style={{ padding: 20 }}
@@ -101,9 +100,6 @@ export function PlayerChaptersSheet() {
 							nestedScrollEnabled
 							onScrollBeginDrag={() => {
 								didScroll.current = true
-							}}
-							contentContainerStyle={{
-								paddingBottom: insets.bottom + 20,
 							}}
 						>
 							{data.chapters.map((item, chapterIndex) => (

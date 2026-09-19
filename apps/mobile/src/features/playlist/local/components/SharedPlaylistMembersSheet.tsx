@@ -1,9 +1,8 @@
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { TrueSheet as TrueSheetComponent } from '@lodev09/react-native-true-sheet'
-import { forwardRef, useState } from 'react'
+import { forwardRef, useRef, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import { Avatar, Text, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useSharedPlaylistAllMembers } from '@/hooks/queries/sharedPlaylistAllMembers'
 import { formatRelativeTime } from '@/utils/time'
@@ -21,19 +20,20 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 			isError,
 		} = useSharedPlaylistAllMembers(isOpen ? shareId : null)
 		const theme = useTheme()
-		const insets = useSafeAreaInsets()
+		const scrollViewRef = useRef<ScrollView>(null)
 
 		return (
 			<TrueSheetComponent
 				ref={ref}
-				detents={[0.5]}
+				detents={['auto']}
 				cornerRadius={24}
 				backgroundColor={theme.colors.elevation.level1}
+				style={{ flex: 1 }}
 				onDidPresent={() => setIsOpen(true)}
 				onDidDismiss={() => setIsOpen(false)}
-				scrollable
+				scrollableRef={scrollViewRef}
 			>
-				<View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
+				<View style={styles.container}>
 					<Text
 						variant='titleLarge'
 						style={styles.title}
@@ -51,6 +51,7 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 						</View>
 					) : (
 						<ScrollView
+							ref={scrollViewRef}
 							style={styles.listContent}
 							nestedScrollEnabled
 						>
@@ -102,7 +103,7 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 
 const styles = StyleSheet.create({
 	container: {
-		maxHeight: '80%',
+		flex: 1,
 		marginTop: 24,
 	},
 	center: {
@@ -116,6 +117,7 @@ const styles = StyleSheet.create({
 		paddingBottom: 16,
 	},
 	listContent: {
+		flex: 1,
 		paddingHorizontal: 20,
 	},
 	memberRow: {
