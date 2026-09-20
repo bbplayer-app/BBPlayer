@@ -1,5 +1,6 @@
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
+import { Icon } from '@expo/ui'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { LegendList } from '@legendapp/list/react-native'
 import {
@@ -12,6 +13,7 @@ import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
@@ -25,6 +27,21 @@ import { clearPlaybackQueue } from '@/lib/player/playbackSession'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
+
+const CLEAR_QUEUE_ICON = Icon.select({
+	ios: 'trash',
+	android: import('@expo/material-symbols/delete.xml'),
+})
+
+const REVERSE_QUEUE_ICON = Icon.select({
+	ios: 'arrow.up.arrow.down',
+	android: import('@expo/material-symbols/swap_vert.xml'),
+})
+
+const SAVE_QUEUE_ICON = Icon.select({
+	ios: 'square.and.arrow.down',
+	android: import('@expo/material-symbols/save.xml'),
+})
 
 const TrackItem = memo(
 	({
@@ -250,29 +267,41 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<IconButton
-								icon='trash-can'
-								onPress={clearQueue}
-								disabled={clearing || queue.length === 0}
-								loading={clearing}
-							/>
-							<IconButton
-								icon='sort-reverse-variant'
-								onPress={() => {
-									void reverseRemainingQueueHandler()
-								}}
-								disabled={
-									queue.length === 0 ||
-									currentIndex === -1 ||
-									shuffleMode !== false
+							<FunctionalMenu
+								anchor={
+									<IconButton
+										icon='dots-vertical'
+										disabled={clearing}
+										loading={clearing}
+										testID='player-queue-menu'
+									/>
 								}
-								testID='player-queue-reverse-remaining'
-							/>
-							<IconButton
-								icon='content-save-outline'
-								onPress={saveQueueToPlaylistHandler}
-								disabled={queue.length === 0}
-							/>
+							>
+								<FunctionalMenu.Item
+									leadingIcon={REVERSE_QUEUE_ICON}
+									title='反序剩余歌曲'
+									onPress={() => {
+										void reverseRemainingQueueHandler()
+									}}
+									disabled={
+										queue.length === 0 ||
+										currentIndex === -1 ||
+										shuffleMode !== false
+									}
+								/>
+								<FunctionalMenu.Item
+									leadingIcon={SAVE_QUEUE_ICON}
+									title='保存为播放列表'
+									onPress={saveQueueToPlaylistHandler}
+									disabled={queue.length === 0}
+								/>
+								<FunctionalMenu.Item
+									leadingIcon={CLEAR_QUEUE_ICON}
+									title='清空播放队列'
+									onPress={clearQueue}
+									disabled={clearing || queue.length === 0}
+								/>
+							</FunctionalMenu>
 						</View>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>
