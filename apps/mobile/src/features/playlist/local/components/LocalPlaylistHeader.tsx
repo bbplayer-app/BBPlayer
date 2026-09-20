@@ -466,6 +466,8 @@ const styles = StyleSheet.create({
 	},
 	actionButtons: {
 		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
 		alignItems: 'center',
 	},
 	description: {

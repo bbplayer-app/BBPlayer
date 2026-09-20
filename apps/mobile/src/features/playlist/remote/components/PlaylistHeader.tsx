@@ -8,7 +8,6 @@ import type { IconSource } from 'react-native-paper/lib/typescript/components/Ic
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import IconButton from '@/components/common/IconButton'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
@@ -47,7 +46,6 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	id,
 	primaryButtonColor,
 	primaryButtonTextColor,
-	secondaryButtonContainerColor,
 	secondaryButtonIconColor,
 	...props
 }: PlaylistHeaderProps) {
@@ -96,45 +94,47 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 			{/* 操作按钮 */}
 			<View style={styles.actionsContainer}>
-				{onClickMainButton && (
+				{linkedPlaylistId ? (
 					<Button
 						mode='contained'
-						icon={mainButtonIcon}
-						onPress={() => onClickMainButton()}
-						disabled={props.disableMainButton}
-						testID='playlist-header-main-button'
-						buttonColor={primaryButtonColor}
-						textColor={primaryButtonTextColor}
-					>
-						{mainButtonText ?? (linkedPlaylistId ? '重新同步' : '同步到本地')}
-					</Button>
-				)}
-				{props.secondaryButtonText && props.onClickSecondaryButton && (
-					<Button
-						mode='outlined'
-						icon={props.secondaryButtonIcon}
-						onPress={props.onClickSecondaryButton}
-						style={{ marginLeft: 8 }}
-						disabled={props.disableSecondaryButton}
-						textColor={secondaryButtonIconColor}
-					>
-						{props.secondaryButtonText}
-					</Button>
-				)}
-				{linkedPlaylistId && (
-					<IconButton
-						mode='contained'
-						icon={'arrow-right'}
-						size={20}
+						icon='arrow-right'
 						onPress={() =>
 							router.push({
 								pathname: '/playlist/local/[id]',
 								params: { id: linkedPlaylistId.toString() },
 							})
 						}
-						containerColor={secondaryButtonContainerColor}
-						iconColor={secondaryButtonIconColor}
-					/>
+						testID='playlist-header-main-button'
+						buttonColor={primaryButtonColor}
+						textColor={primaryButtonTextColor}
+					>
+						进入播放列表
+					</Button>
+				) : (
+					onClickMainButton && (
+						<Button
+							mode='contained'
+							icon={mainButtonIcon}
+							onPress={onClickMainButton}
+							disabled={props.disableMainButton}
+							testID='playlist-header-main-button'
+							buttonColor={primaryButtonColor}
+							textColor={primaryButtonTextColor}
+						>
+							{mainButtonText ?? '同步到本地'}
+						</Button>
+					)
+				)}
+				{props.secondaryButtonText && props.onClickSecondaryButton && (
+					<Button
+						mode='outlined'
+						icon={props.secondaryButtonIcon}
+						onPress={props.onClickSecondaryButton}
+						disabled={props.disableSecondaryButton}
+						textColor={secondaryButtonIconColor}
+					>
+						{props.secondaryButtonText}
+					</Button>
 				)}
 			</View>
 
@@ -170,6 +170,8 @@ const styles = StyleSheet.create({
 	},
 	actionsContainer: {
 		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		marginHorizontal: 16,

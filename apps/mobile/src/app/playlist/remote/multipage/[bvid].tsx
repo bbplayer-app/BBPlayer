@@ -1,6 +1,7 @@
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
@@ -309,6 +310,13 @@ export default function MultipagePage() {
 							description={videoData.desc}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
+							secondaryButtonText='打开原视频'
+							secondaryButtonIcon='open-in-new'
+							onClickSecondaryButton={() =>
+								void WebBrowser.openBrowserAsync(
+									`https://www.bilibili.com/video/${bvid}`,
+								)
+							}
 							linkedPlaylistId={linkedPlaylistId}
 							id={bv2av(bvid)}
 							primaryButtonColor={primaryButtonColor}

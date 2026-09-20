@@ -390,6 +390,8 @@ const styles = StyleSheet.create({
 	},
 	actionsContainer: {
 		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
 		alignItems: 'center',
 		justifyContent: 'flex-start',
 		marginHorizontal: 16,
