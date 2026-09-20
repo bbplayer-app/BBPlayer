@@ -31,6 +31,7 @@ export default defineConfig({
 					{ text: '歌词', link: '/guides/lyrics' },
 					{ text: '下载与导出', link: '/guides/download' },
 					{ text: '播放器功能', link: '/guides/player' },
+					{ text: '播客模式', link: '/guides/podcast' },
 					{ text: '设置与个性化', link: '/guides/settings' },
 					{ text: '排行榜', link: '/guides/leaderboard' },
 					{ text: '评论区', link: '/guides/comments' },

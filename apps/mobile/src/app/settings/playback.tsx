@@ -2,9 +2,11 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, RadioButton, Text, useTheme } from 'react-native-paper'
+import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -31,6 +33,13 @@ export default function PlaybackSettingsPage() {
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
+	const [defaultPlayerModeMenuVisible, setDefaultPlayerModeMenuVisible] =
+		useState(false)
+
+	const setDefaultPlayerMode = (mode: 'music' | 'podcast') => {
+		setSettings({ defaultPlayerMode: mode })
+		setDefaultPlayerModeMenuVisible(false)
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -45,27 +54,35 @@ export default function PlaybackSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
-				<View style={{ marginTop: 16 }}>
-					<Text variant='titleMedium'>默认播放器</Text>
-					<Text variant='bodySmall'>
-						仅影响之后开始的播放，歌单可单独设置偏好。
-					</Text>
-					<RadioButton.Group
-						value={defaultPlayerMode}
-						onValueChange={(value) => {
-							if (value === 'music' || value === 'podcast')
-								setSettings({ defaultPlayerMode: value })
-						}}
+				<View style={[styles.settingRow, { marginTop: 16 }]}>
+					<View style={{ flexShrink: 1 }}>
+						<Text>默认播放器</Text>
+						<Text variant='bodySmall'>
+							仅影响之后开始的播放，歌单可单独设置偏好。
+						</Text>
+					</View>
+					<FunctionalMenu
+						visible={defaultPlayerModeMenuVisible}
+						onDismiss={() => setDefaultPlayerModeMenuVisible(false)}
+						anchor={
+							<IconButton
+								icon='chevron-down'
+								size={20}
+								onPress={() => setDefaultPlayerModeMenuVisible(true)}
+							/>
+						}
 					>
-						<RadioButton.Item
-							label='音乐'
-							value='music'
+						<FunctionalMenu.Item
+							title='音乐'
+							status={defaultPlayerMode === 'music' ? 'checked' : 'unchecked'}
+							onPress={() => setDefaultPlayerMode('music')}
 						/>
-						<RadioButton.Item
-							label='播客'
-							value='podcast'
+						<FunctionalMenu.Item
+							title='播客'
+							status={defaultPlayerMode === 'podcast' ? 'checked' : 'unchecked'}
+							onPress={() => setDefaultPlayerMode('podcast')}
 						/>
-					</RadioButton.Group>
+					</FunctionalMenu>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>在应用启动时恢复上次播放进度</Text>
