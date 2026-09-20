@@ -12,7 +12,6 @@ import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 
-import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
@@ -21,6 +20,7 @@ import { useShuffleMode } from '@/hooks/queries/orpheus'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
+import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 import { clearPlaybackQueue } from '@/lib/player/playbackSession'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -108,22 +108,33 @@ interface PlayerQueueModalProps extends TrueSheetProps {
 
 function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const [clearing, setClearing] = useState(false)
+	const { deferAction, runPendingAction } = useDeferredSheetAction()
+
+	const dismissWithAction = useCallback(
+		(action: () => void) => {
+			deferAction(action)
+			void usePlayerQueueSheetStore.getState().close()
+		},
+		[deferAction],
+	)
+
 	const clearQueue = () => {
-		alert('清空播放队列', '清空播放队列并停止播放？', [
-			{ text: '取消' },
-			{
-				text: '清空',
-				onPress: () => {
-					setClearing(true)
-					void clearPlaybackQueue()
-						.then(() => usePlayerQueueSheetStore.getState().close())
-						.catch((error: unknown) =>
-							toastAndLogError('清空播放队列失败', error, 'Player.Queue'),
-						)
-						.finally(() => setClearing(false))
+		dismissWithAction(() => {
+			alert('清空播放队列', '清空播放队列并停止播放？', [
+				{ text: '取消' },
+				{
+					text: '清空',
+					onPress: () => {
+						setClearing(true)
+						void clearPlaybackQueue()
+							.catch((error: unknown) =>
+								toastAndLogError('清空播放队列失败', error, 'Player.Queue'),
+							)
+							.finally(() => setClearing(false))
+					},
 				},
-			},
-		])
+			])
+		})
 	}
 	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
@@ -193,12 +204,12 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	const saveQueueToPlaylistHandler = useCallback(() => {
 		if (queue.length === 0) return
-		// 先关闭 player queue，再启动保存播放列表的 modal
-		void usePlayerQueueSheetStore.getState().close()
-		useModalStore.getState().open('SaveQueueToPlaylist', {
-			trackIds: queue.map((t) => t.id),
-		})
-	}, [queue])
+		dismissWithAction(() =>
+			useModalStore.getState().open('SaveQueueToPlaylist', {
+				trackIds: queue.map((t) => t.id),
+			}),
+		)
+	}, [queue, dismissWithAction])
 
 	return (
 		<TrueSheet
@@ -216,6 +227,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			onDidDismiss={() => {
 				usePlayerQueueSheetStore.getState().setOpen(false)
 				setDidInitialScroll(false)
+				runPendingAction()
 			}}
 			{...props}
 		>
@@ -231,22 +243,19 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 							justifyContent: 'space-between',
 							alignItems: 'center',
 							paddingHorizontal: 16,
-							paddingTop: 8,
+							paddingTop: 16,
 							borderBottomWidth: 1,
 							borderBottomColor: theme.colors.elevation.level2,
 						}}
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<Button
-								compact
+							<IconButton
+								icon='trash-can'
 								onPress={clearQueue}
 								disabled={clearing || queue.length === 0}
 								loading={clearing}
-								textColor={theme.colors.error}
-							>
-								清空
-							</Button>
+							/>
 							<IconButton
 								icon='sort-reverse-variant'
 								onPress={() => {

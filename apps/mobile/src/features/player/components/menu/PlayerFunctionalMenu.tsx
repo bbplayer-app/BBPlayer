@@ -5,6 +5,7 @@ import { ScrollView } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
+import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 
 import { MusicFunctionalMenu } from './MusicFunctionalMenu'
 import { PodcastFunctionalMenu } from './PodcastFunctionalMenu'
@@ -20,7 +21,7 @@ export function PlayerFunctionalMenu({
 	const sheetRef = useRef<TrueSheet>(null)
 	const scrollViewRef = useRef<ScrollView>(null)
 	const isPresented = useRef(false)
-	const pendingAction = useRef<(() => void) | null>(null)
+	const { deferAction, runPendingAction } = useDeferredSheetAction()
 
 	useEffect(() => {
 		if (menuVisible) {
@@ -39,10 +40,8 @@ export function PlayerFunctionalMenu({
 	const onDismiss = useCallback(() => {
 		isPresented.current = false
 		setMenuVisible(false)
-		const action = pendingAction.current
-		pendingAction.current = null
-		action?.()
-	}, [setMenuVisible])
+		runPendingAction()
+	}, [setMenuVisible, runPendingAction])
 
 	const onPresent = useCallback(() => {
 		isPresented.current = true
@@ -55,10 +54,10 @@ export function PlayerFunctionalMenu({
 
 	const handleAction = useCallback(
 		(action: () => void) => {
-			pendingAction.current = action
+			deferAction(action)
 			setMenuVisible(false)
 		},
-		[setMenuVisible],
+		[deferAction, setMenuVisible],
 	)
 
 	return (

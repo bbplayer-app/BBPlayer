@@ -25,6 +25,7 @@ import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
 import usePreventRemove from '@/hooks/router/usePreventRemove'
+import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
@@ -186,7 +187,7 @@ const HighFreqButton = ({
 	onDismiss,
 }: {
 	item: TrackMenuItem
-	onDismiss: () => void
+	onDismiss: (action: () => void) => void
 }) => {
 	const theme = useTheme()
 
@@ -203,8 +204,7 @@ const HighFreqButton = ({
 		>
 			<TouchableRipple
 				onPress={() => {
-					onDismiss()
-					item.onPress()
+					onDismiss(item.onPress)
 				}}
 				style={{ flex: 1 }}
 			>
@@ -267,6 +267,7 @@ export function LocalTrackList({
 	const sheetRef = useRef<TrueSheet>(null)
 	const menuScrollViewRef = useRef<ScrollView>(null)
 	const [menuSheetMounted, setMenuSheetMounted] = useState(false)
+	const { deferAction, runPendingAction } = useDeferredSheetAction()
 
 	const [menuState, setMenuState] = useState<{
 		visible: boolean
@@ -300,11 +301,15 @@ export function LocalTrackList({
 		[],
 	)
 
-	const dismissMenu = useCallback(() => {
-		sheetRef.current?.dismiss().catch(() => {
-			// ignore error
-		})
-	}, [])
+	const dismissMenu = useCallback(
+		(action?: () => void) => {
+			if (action) deferAction(action)
+			sheetRef.current?.dismiss().catch(() => {
+				// ignore error
+			})
+		},
+		[deferAction],
+	)
 
 	const { highFreqItems, normalItems } = (() => {
 		if (!menuState.track) return { highFreqItems: [], normalItems: [] }
@@ -404,6 +409,7 @@ export function LocalTrackList({
 					style={{ flex: 1 }}
 					onDidDismiss={() => {
 						setMenuState((prev) => ({ ...prev, visible: false }))
+						runPendingAction()
 					}}
 					scrollableRef={menuScrollViewRef}
 				>
@@ -504,8 +510,7 @@ export function LocalTrackList({
 											) : null
 										}
 										onPress={() => {
-											dismissMenu()
-											menuItem.onPress()
+											dismissMenu(menuItem.onPress)
 										}}
 									/>
 								))}
