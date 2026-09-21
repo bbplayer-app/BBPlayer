@@ -63,8 +63,7 @@ export default function FavoritePage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
 
-	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
-		useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -186,20 +185,6 @@ export default function FavoritePage() {
 				/>
 				{selectMode ? (
 					<>
-						<Appbar.Action
-							icon='select-all'
-							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
-						/>
-						<Appbar.Action
-							icon='select-compare'
-							onPress={() =>
-								setSelected(
-									new Set(
-										tracks.filter((t) => !selected.has(t.id)).map((t) => t.id),
-									),
-								)
-							}
-						/>
 						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {

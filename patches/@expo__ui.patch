@@ -1,0 +1,39 @@
+diff --git a/android/src/main/java/expo/modules/ui/menu/DropdownMenuItem.kt b/android/src/main/java/expo/modules/ui/menu/DropdownMenuItem.kt
+index e4654ea01b17948326637902c68ae0c6eddfbe2f..f7e2f163d7c24e8b1794f90ceed5633db4586d7d 100644
+--- a/android/src/main/java/expo/modules/ui/menu/DropdownMenuItem.kt
++++ b/android/src/main/java/expo/modules/ui/menu/DropdownMenuItem.kt
+@@ -34,7 +34,7 @@ class DropdownMenuItemColors : Record {
+ @OptimizedComposeProps
+ data class DropdownMenuItemProps(
+   val enabled: Boolean = true,
+-  val elementColors: DropdownMenuItemColors = DropdownMenuItemColors(),
++  val elementColors: DropdownMenuItemColors? = null,
+   val modifiers: ModifierList = emptyList()
+ ) : ComposeProps
+ 
+@@ -47,7 +47,7 @@ fun FunctionalComposableScope.DropdownMenuItemContent(
+   val leadingSlotView = findChildSlotView(view, "leadingIcon")
+   val trailingSlotView = findChildSlotView(view, "trailingIcon")
+ 
+-  val colors = props.elementColors
++  val colors = props.elementColors ?: DropdownMenuItemColors()
+   val defaultColors = MenuDefaults.itemColors()
+ 
+   DropdownMenuItem(
+diff --git a/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx b/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx
+index 813f366f824c0b886bc01ad5f737e4695483a46b..a7253077668660e7652e878d5fd10ad5e7b011bc 100644
+--- a/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx
++++ b/src/jetpack-compose/DropdownMenu/DropdownMenuItem.tsx
+@@ -98,10 +98,11 @@ function TextSlot(props: { children: React.ReactNode }) {
+  * @platform android
+  */
+ function DropdownMenuItemComponent(props: DropdownMenuItemProps) {
+-  const { onClick, modifiers, children, ...restProps } = props;
++  const { onClick, modifiers, children, elementColors, ...restProps } = props;
+   return (
+     <DropdownMenuItemNativeView
+       {...restProps}
++      {...(elementColors != null ? { elementColors } : undefined)}
+       modifiers={modifiers}
+       {...(modifiers ? createViewModifierEventListener(modifiers) : undefined)}
+       enabled={props.enabled ?? true}

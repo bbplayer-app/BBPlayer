@@ -652,20 +652,26 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				// 2) 批量删除关联记录，并拿到实际删除的 trackId
-				const deletedLinks = await Sentry.startSpan(
-					{ name: 'db:delete:playlistTracks', op: 'db' },
-					() =>
-						this.db
-							.delete(schema.playlistTracks)
-							.where(
-								and(
-									eq(schema.playlistTracks.playlistId, playlistId),
-									inArray(schema.playlistTracks.trackId, trackIdList),
-								),
-							)
-							.returning({ trackId: schema.playlistTracks.trackId }),
-				)
+				// 2) 分批删除关联记录，避免全选大歌单时超过 SQLite 参数上限。
+				const deletedLinks: { trackId: number }[] = []
+				const chunkSize = 500
+				for (let start = 0; start < trackIdList.length; start += chunkSize) {
+					const trackIds = trackIdList.slice(start, start + chunkSize)
+					const deletedChunk = await Sentry.startSpan(
+						{ name: 'db:delete:playlistTracks', op: 'db' },
+						() =>
+							this.db
+								.delete(schema.playlistTracks)
+								.where(
+									and(
+										eq(schema.playlistTracks.playlistId, playlistId),
+										inArray(schema.playlistTracks.trackId, trackIds),
+									),
+								)
+								.returning({ trackId: schema.playlistTracks.trackId }),
+					)
+					deletedLinks.push(...deletedChunk)
+				}
 
 				const removedTrackIds = deletedLinks.map((x) => x.trackId)
 				const removedCount = removedTrackIds.length
