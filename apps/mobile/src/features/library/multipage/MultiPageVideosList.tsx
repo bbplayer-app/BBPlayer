@@ -3,7 +3,6 @@ import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 
-import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { MultiPageVideosListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -126,20 +125,6 @@ const MultiPageVideosListComponent = memo(() => {
 					<Text style={styles.emptyList}>没有分&thinsp;P&thinsp;视频</Text>
 				}
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-				ListFooterComponent={
-					hasNextPage ? (
-						<View style={styles.footerLoadingContainer}>
-							<ActivityIndicator size='small' />
-						</View>
-					) : (
-						<Text
-							variant='titleMedium'
-							style={styles.footerReachedEnd}
-						>
-							•
-						</Text>
-					)
-				}
 			/>
 		</View>
 	)
@@ -170,16 +155,6 @@ const styles = StyleSheet.create({
 	},
 	emptyList: {
 		textAlign: 'center',
-	},
-	footerLoadingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 16,
-	},
-	footerReachedEnd: {
-		textAlign: 'center',
-		paddingTop: 10,
 	},
 })
 

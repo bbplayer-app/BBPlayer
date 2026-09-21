@@ -93,6 +93,7 @@ const renderItemDefault = ({
 				playTrack(item)
 			}}
 			menuItems={trackMenuItems(item)}
+			disabled={!item.bilibiliMetadata.videoIsValid}
 			showCoverImage={showItemCover ?? true}
 			data={{
 				cover: item.coverUrl ?? undefined,

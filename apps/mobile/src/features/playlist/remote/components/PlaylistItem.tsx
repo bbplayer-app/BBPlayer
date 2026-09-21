@@ -116,6 +116,7 @@ export const TrackListItem = memo(function TrackListItem({
 			style={[
 				styles.rectButton,
 				{
+					opacity: disabled ? 0.4 : 1,
 					backgroundColor: highlighted
 						? dark
 							? 'rgba(255, 255, 255, 0.12)'

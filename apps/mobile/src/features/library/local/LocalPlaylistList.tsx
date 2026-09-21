@@ -187,14 +187,6 @@ const LocalPlaylistListComponent = memo(() => {
 						/>
 					}
 					keyExtractor={keyExtractor}
-					ListFooterComponent={
-						<Text
-							variant='titleMedium'
-							style={styles.listFooter}
-						>
-							•
-						</Text>
-					}
 					ListEmptyComponent={
 						<Text style={styles.emptyList}>没有播放列表</Text>
 					}
@@ -233,10 +225,7 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 		marginTop: 10,
 	},
-	listFooter: {
-		textAlign: 'center',
-		paddingTop: 10,
-	},
+
 	emptyList: {
 		textAlign: 'center',
 	},

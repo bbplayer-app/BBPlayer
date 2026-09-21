@@ -49,7 +49,7 @@ const mapApiItemToTrack = (
 			bvid: apiItem.bvid,
 			cid: null,
 			isMultiPage: false,
-			videoIsValid: true,
+			videoIsValid: apiItem.attr === 0,
 		},
 	}
 }

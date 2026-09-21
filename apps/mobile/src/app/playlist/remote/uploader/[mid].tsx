@@ -80,14 +80,8 @@ export default function UploaderPage() {
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
-	const {
-		selected,
-		selectMode,
-		toggle,
-		enterSelectMode,
-		exitSelectMode,
-		setSelected,
-	} = useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
+		useTrackSelection()
 
 	const selection = useMemo(
 		() => ({
@@ -227,20 +221,6 @@ export default function UploaderPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				{selectMode ? (
 					<>
-						<Appbar.Action
-							icon='select-all'
-							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
-						/>
-						<Appbar.Action
-							icon='select-compare'
-							onPress={() =>
-								setSelected(
-									new Set(
-										tracks.filter((t) => !selected.has(t.id)).map((t) => t.id),
-									),
-								)
-							}
-						/>
 						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {

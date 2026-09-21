@@ -112,14 +112,6 @@ const FavoriteFolderListComponent = memo(() => {
 					/>
 				}
 				keyExtractor={keyExtractor}
-				ListFooterComponent={
-					<Text
-						variant='titleMedium'
-						style={styles.listFooter}
-					>
-						•
-					</Text>
-				}
 				ListEmptyComponent={<Text style={styles.emptyList}>没有收藏夹</Text>}
 			/>
 		</View>
@@ -150,10 +142,6 @@ const styles = StyleSheet.create({
 		height: 45,
 		marginBottom: 20,
 		marginTop: 10,
-	},
-	listFooter: {
-		textAlign: 'center',
-		paddingTop: 10,
 	},
 	emptyList: {
 		textAlign: 'center',

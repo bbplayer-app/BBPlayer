@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
-import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
@@ -46,7 +45,7 @@ const mapApiItemToTrack = (
 			bvid: apiItem.bvid,
 			cid: null,
 			isMultiPage: false,
-			videoIsValid: true,
+			videoIsValid: apiItem.attr === 0,
 		},
 	}
 }
@@ -57,8 +56,7 @@ export default function SearchResultsPage() {
 	const { query } = useLocalSearchParams<{ query: string }>()
 	const router = useRouter()
 
-	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
-		useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -80,6 +78,7 @@ export default function SearchResultsPage() {
 		isPending: isPendingSearchData,
 		isError: isErrorSearchData,
 		hasNextPage,
+		isFetchingNextPage,
 		fetchNextPage,
 		refetch,
 	} = useInfiniteSearchFavoriteItems(
@@ -119,20 +118,6 @@ export default function SearchResultsPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
-							icon='select-all'
-							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
-						/>
-						<Appbar.Action
-							icon='select-compare'
-							onPress={() =>
-								setSelected(
-									new Set(
-										tracks.filter((t) => !selected.has(t.id)).map((t) => t.id),
-									),
-								)
-							}
-						/>
-						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
@@ -165,21 +150,8 @@ export default function SearchResultsPage() {
 					selection={selection}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
 					hasNextPage={hasNextPage}
+					isFetchingNextPage={isFetchingNextPage}
 					ListHeaderComponent={null}
-					ListFooterComponent={
-						hasNextPage ? (
-							<View style={styles.footerLoadingContainer}>
-								<ActivityIndicator size='small' />
-							</View>
-						) : (
-							<Text
-								variant='titleMedium'
-								style={styles.footerText}
-							>
-								•
-							</Text>
-						)
-					}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
@@ -211,16 +183,6 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
-	},
-	footerLoadingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 16,
-	},
-	footerText: {
-		textAlign: 'center',
-		paddingTop: 10,
 	},
 	emptyListText: {
 		paddingVertical: 32,

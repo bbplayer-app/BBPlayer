@@ -57,8 +57,7 @@ export default function SearchResultsPage() {
 	const { query } = useLocalSearchParams<{ query: string }>()
 	const router = useRouter()
 
-	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
-		useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -131,24 +130,6 @@ export default function SearchResultsPage() {
 				/>
 				{selectMode ? (
 					<>
-						<Appbar.Action
-							icon='select-all'
-							onPress={() =>
-								setSelected(new Set(uniqueSearchData.map((t) => t.id)))
-							}
-						/>
-						<Appbar.Action
-							icon='select-compare'
-							onPress={() =>
-								setSelected(
-									new Set(
-										uniqueSearchData
-											.filter((t) => !selected.has(t.id))
-											.map((t) => t.id),
-									),
-								)
-							}
-						/>
 						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {

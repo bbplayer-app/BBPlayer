@@ -3,7 +3,6 @@ import { memo, useCallback, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 
-import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
 import { CollectionListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -94,20 +93,6 @@ const CollectionListComponent = memo(() => {
 				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-				ListFooterComponent={
-					hasNextPage ? (
-						<View style={styles.footerLoadingContainer}>
-							<ActivityIndicator size='small' />
-						</View>
-					) : (
-						<Text
-							variant='titleMedium'
-							style={styles.footerReachedEnd}
-						>
-							•
-						</Text>
-					)
-				}
 			/>
 		</View>
 	)
@@ -127,16 +112,6 @@ const styles = StyleSheet.create({
 	},
 	headerTitle: {
 		fontWeight: 'bold',
-	},
-	footerLoadingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 16,
-	},
-	footerReachedEnd: {
-		textAlign: 'center',
-		paddingTop: 10,
 	},
 })
 
