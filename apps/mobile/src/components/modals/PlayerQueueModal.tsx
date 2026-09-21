@@ -1,6 +1,7 @@
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
 import { Icon } from '@expo/ui'
+import { MenuView } from '@expo/ui/community/menu'
 import type { LegendListRef } from '@legendapp/list/react-native'
 import { LegendList } from '@legendapp/list/react-native'
 import {
@@ -13,7 +14,6 @@ import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
@@ -267,41 +267,49 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<FunctionalMenu
-								anchor={
-									<IconButton
-										icon='dots-vertical'
-										disabled={clearing}
-										loading={clearing}
-										testID='player-queue-menu'
-									/>
-								}
-							>
-								<FunctionalMenu.Item
-									leadingIcon={REVERSE_QUEUE_ICON}
-									title='反序剩余歌曲'
-									onPress={() => {
+							<MenuView
+								actions={[
+									{
+										id: 'reverse',
+										title: '反序剩余歌曲',
+										image: REVERSE_QUEUE_ICON,
+										attributes: {
+											disabled:
+												queue.length === 0 ||
+												currentIndex === -1 ||
+												shuffleMode !== false,
+										},
+									},
+									{
+										id: 'save',
+										title: '保存为播放列表',
+										image: SAVE_QUEUE_ICON,
+										attributes: { disabled: queue.length === 0 },
+									},
+									{
+										id: 'clear',
+										title: '清空播放队列',
+										image: CLEAR_QUEUE_ICON,
+										attributes: {
+											destructive: true,
+											disabled: clearing || queue.length === 0,
+										},
+									},
+								]}
+								onPressAction={({ nativeEvent }) => {
+									if (nativeEvent.event === 'reverse')
 										void reverseRemainingQueueHandler()
-									}}
-									disabled={
-										queue.length === 0 ||
-										currentIndex === -1 ||
-										shuffleMode !== false
-									}
+									if (nativeEvent.event === 'save') saveQueueToPlaylistHandler()
+									if (nativeEvent.event === 'clear') clearQueue()
+								}}
+							>
+								<IconButton
+									icon='dots-vertical'
+									disabled={clearing}
+									loading={clearing}
+									testID='player-queue-menu'
 								/>
-								<FunctionalMenu.Item
-									leadingIcon={SAVE_QUEUE_ICON}
-									title='保存为播放列表'
-									onPress={saveQueueToPlaylistHandler}
-									disabled={queue.length === 0}
-								/>
-								<FunctionalMenu.Item
-									leadingIcon={CLEAR_QUEUE_ICON}
-									title='清空播放队列'
-									onPress={clearQueue}
-									disabled={clearing || queue.length === 0}
-								/>
-							</FunctionalMenu>
+							</MenuView>
 						</View>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>

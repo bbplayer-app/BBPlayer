@@ -1,11 +1,11 @@
 import { Icon as ExpoIcon } from '@expo/ui'
+import { MenuView } from '@expo/ui/community/menu'
 import { memo } from 'react'
 import { StyleSheet, useColorScheme, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Icon, Surface, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { VariantPlainText } from '@/components/common/VariantPlainText'
 import type { ExtraData } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -182,29 +182,29 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 					{/* Context Menu */}
 					{!disabled && !selectMode && (
-						<FunctionalMenu
-							anchor={
-								<Touchable
-									androidRipple={{}}
-									style={styles.menuButton}
-								>
-									<Icon
-										source='dots-vertical'
-										size={20}
-										color={colors.primary}
-									/>
-								</Touchable>
-							}
+						<MenuView
+							actions={menuItems.map((menuItem) => ({
+								id: menuItem.title,
+								title: menuItem.title,
+								image: menuItem.leadingIcon,
+							}))}
+							onPressAction={({ nativeEvent }) => {
+								menuItems
+									.find((menuItem) => menuItem.title === nativeEvent.event)
+									?.onPress()
+							}}
 						>
-							{menuItems.map((menuItem) => (
-								<FunctionalMenu.Item
-									key={menuItem.title}
-									leadingIcon={menuItem.leadingIcon}
-									onPress={menuItem.onPress}
-									title={menuItem.title}
+							<Touchable
+								androidRipple={{}}
+								style={styles.menuButton}
+							>
+								<Icon
+									source='dots-vertical'
+									size={20}
+									color={colors.primary}
 								/>
-							))}
-						</FunctionalMenu>
+							</Touchable>
+						</MenuView>
 					)}
 				</View>
 			</Surface>

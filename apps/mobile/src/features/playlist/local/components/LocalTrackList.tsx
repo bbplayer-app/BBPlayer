@@ -479,7 +479,9 @@ export function LocalTrackList({
 										key={index}
 										title={menuItem.title}
 										titleStyle={
-											menuItem.danger ? { color: theme.colors.error } : {}
+											menuItem.attributes?.destructive
+												? { color: theme.colors.error }
+												: {}
 										}
 										left={(props) =>
 											menuItem.leadingIcon ? (
@@ -500,7 +502,7 @@ export function LocalTrackList({
 															name={menuItem.leadingIcon}
 															size={24}
 															color={
-																menuItem.danger
+																menuItem.attributes?.destructive
 																	? theme.colors.error
 																	: theme.colors.onSurface
 															}

@@ -1,5 +1,6 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { Icon } from '@expo/ui'
+import { MenuView } from '@expo/ui/community/menu'
 import { LegendList } from '@legendapp/list/react-native'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { useRouter } from 'expo-router'
@@ -19,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { alert } from '@/components/modals/AlertModal'
@@ -207,32 +207,41 @@ function DownloadedItem({
 					</View>
 
 					{!selectMode && (
-						<FunctionalMenu
-							anchor={
-								<IconButton
-									icon='dots-vertical'
-									size={20}
-									iconColor={theme.colors.onSurfaceVariant}
-								/>
-							}
+						<MenuView
+							actions={[
+								{ id: 'export', title: '导出', image: EXPORT_ICON },
+								{
+									id: 'delete',
+									title: '删除',
+									image: DELETE_ICON,
+									attributes: { destructive: true },
+								},
+								{
+									id: 'play-next',
+									title: '下一首播放',
+									image: PLAY_NEXT_ICON,
+									attributes: { disabled: !item.track },
+								},
+							]}
+							onPressAction={({ nativeEvent }) => {
+								switch (nativeEvent.event) {
+									case 'export':
+										onSingleExport(item.id)
+										break
+									case 'delete':
+										onDelete(item.id)
+										break
+									case 'play-next':
+										onPlayNext(item)
+								}
+							}}
 						>
-							<FunctionalMenu.Item
-								leadingIcon={EXPORT_ICON}
-								title='导出'
-								onPress={() => onSingleExport(item.id)}
+							<IconButton
+								icon='dots-vertical'
+								size={20}
+								iconColor={theme.colors.onSurfaceVariant}
 							/>
-							<FunctionalMenu.Item
-								leadingIcon={DELETE_ICON}
-								title='删除'
-								onPress={() => onDelete(item.id)}
-							/>
-							<FunctionalMenu.Item
-								leadingIcon={PLAY_NEXT_ICON}
-								title='下一首播放'
-								onPress={() => onPlayNext(item)}
-								disabled={!item.track}
-							/>
-						</FunctionalMenu>
+						</MenuView>
 					)}
 				</View>
 			</Surface>

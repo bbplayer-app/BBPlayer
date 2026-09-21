@@ -1,3 +1,4 @@
+import { MenuView } from '@expo/ui/community/menu'
 import * as FileSystem from 'expo-file-system'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
@@ -7,7 +8,6 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -48,14 +48,6 @@ export default function GeneralSettingsPage() {
 	)
 
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
-	const [startupScreenMenuVisible, setStartupScreenMenuVisible] =
-		useState(false)
-
-	const setStartupScreen = (screen: 'home' | 'library') => {
-		persistStartupScreen(screen)
-		setStartupScreenMenuVisible(false)
-	}
-
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
 		try {
@@ -107,28 +99,28 @@ export default function GeneralSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<Text>启动时进入</Text>
-					<FunctionalMenu
-						visible={startupScreenMenuVisible}
-						onDismiss={() => setStartupScreenMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='chevron-down'
-								size={20}
-								onPress={() => setStartupScreenMenuVisible(true)}
-							/>
+					<MenuView
+						actions={[
+							{
+								id: 'home',
+								title: '主页',
+								state: startupScreen === 'home' ? 'on' : 'off',
+							},
+							{
+								id: 'library',
+								title: '音乐库',
+								state: startupScreen === 'library' ? 'on' : 'off',
+							},
+						]}
+						onPressAction={({ nativeEvent }) =>
+							persistStartupScreen(nativeEvent.event as 'home' | 'library')
 						}
 					>
-						<FunctionalMenu.Item
-							title='主页'
-							status={startupScreen === 'home' ? 'checked' : 'unchecked'}
-							onPress={() => setStartupScreen('home')}
+						<IconButton
+							icon='chevron-down'
+							size={20}
 						/>
-						<FunctionalMenu.Item
-							title='音乐库'
-							status={startupScreen === 'library' ? 'checked' : 'unchecked'}
-							onPress={() => setStartupScreen('library')}
-						/>
-					</FunctionalMenu>
+					</MenuView>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>

@@ -1,10 +1,10 @@
 import { Icon } from '@expo/ui'
+import { MenuView } from '@expo/ui/community/menu'
 import { LegendList } from '@legendapp/list/react-native'
 import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
@@ -50,7 +50,6 @@ const LocalPlaylistListComponent = memo(() => {
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
-	const [menuVisible, setMenuVisible] = useState(false)
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
@@ -126,50 +125,45 @@ const LocalPlaylistListComponent = memo(() => {
 					<Text variant='bodyMedium'>
 						{playlists.length ?? 0}&thinsp;个播放列表
 					</Text>
-					<FunctionalMenu
-						visible={menuVisible}
-						onDismiss={() => setMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='plus'
-								size={20}
-								onPress={() => setMenuVisible(true)}
-							/>
-						}
-					>
-						<FunctionalMenu.Item
-							leadingIcon={CREATE_PLAYLIST_ICON}
-							onPress={() => {
-								setMenuVisible(false)
+					<MenuView
+						actions={[
+							{
+								id: 'create',
+								title: '新建播放列表',
+								image: CREATE_PLAYLIST_ICON,
+							},
+							{
+								id: 'import',
+								title: '导入外部歌单',
+								image: IMPORT_PLAYLIST_ICON,
+							},
+							{
+								id: 'subscribe',
+								title: '订阅共享歌单',
+								image: SUBSCRIBE_PLAYLIST_ICON,
+							},
+							{
+								id: 'merge',
+								title: '动态合并歌单',
+								image: MERGE_PLAYLIST_ICON,
+							},
+						]}
+						onPressAction={({ nativeEvent }) => {
+							if (nativeEvent.event === 'create')
 								openModal('CreatePlaylist', { redirectToNewPlaylist: true })
-							}}
-							title='新建播放列表'
-						/>
-						<FunctionalMenu.Item
-							leadingIcon={IMPORT_PLAYLIST_ICON}
-							onPress={() => {
-								setMenuVisible(false)
+							if (nativeEvent.event === 'import')
 								openModal('InputExternalPlaylistInfo', undefined)
-							}}
-							title='导入外部歌单'
-						/>
-						<FunctionalMenu.Item
-							leadingIcon={SUBSCRIBE_PLAYLIST_ICON}
-							onPress={() => {
-								setMenuVisible(false)
+							if (nativeEvent.event === 'subscribe')
 								openModal('SubscribeToSharedPlaylist', undefined)
-							}}
-							title='订阅共享歌单'
-						/>
-						<FunctionalMenu.Item
-							leadingIcon={MERGE_PLAYLIST_ICON}
-							onPress={() => {
-								setMenuVisible(false)
+							if (nativeEvent.event === 'merge')
 								openModal('MergePlaylists', undefined)
-							}}
-							title='动态合并歌单'
+						}}
+					>
+						<IconButton
+							icon='plus'
+							size={20}
 						/>
-					</FunctionalMenu>
+					</MenuView>
 				</View>
 			</View>
 			<Searchbar

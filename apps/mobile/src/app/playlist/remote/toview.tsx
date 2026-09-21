@@ -1,11 +1,11 @@
 import { Icon } from '@expo/ui'
+import { MenuView } from '@expo/ui/community/menu'
 import { useImage } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -221,19 +221,41 @@ export default function ToViewPage() {
 				) : (
 					<Appbar.BackAction onPress={() => router.back()} />
 				)}
-				<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
-					<FunctionalMenu.Item
-						onPress={() => {
-							deleteToViewVideo({
-								deleteAllViewed: true,
-								avid: undefined,
-							})
-						}}
-						title='清除所有已播放歌曲'
-						leadingIcon={DELETE_ICON}
-					/>
-					<FunctionalMenu.Item
-						onPress={() => {
+				<MenuView
+					actions={[
+						{
+							id: 'clear-viewed',
+							title: '清除所有已播放歌曲',
+							image: DELETE_ICON,
+							attributes: { destructive: true },
+						},
+						{
+							id: 'clear-all',
+							title: '清除所有歌曲',
+							image: DELETE_ICON,
+							attributes: { destructive: true },
+						},
+					]}
+					onPressAction={({ nativeEvent }) => {
+						if (nativeEvent.event === 'clear-viewed') {
+							alert(
+								'清除所有已播放歌曲',
+								'确定要清除所有已播放的稍后再看歌曲吗？',
+								[
+									{ text: '取消' },
+									{
+										text: '确定',
+										onPress: () =>
+											deleteToViewVideo({
+												deleteAllViewed: true,
+												avid: undefined,
+											}),
+									},
+								],
+								{ cancelable: true },
+							)
+						}
+						if (nativeEvent.event === 'clear-all') {
 							alert(
 								'清除所有稍后再看歌曲',
 								'确定要清除所有稍后再看的歌曲吗？',
@@ -250,12 +272,11 @@ export default function ToViewPage() {
 								],
 								{ cancelable: true },
 							)
-						}}
-						title='清除所有歌曲'
-						leadingIcon={DELETE_ICON}
-						titleStyle={{ color: colors.error }}
-					/>
-				</FunctionalMenu>
+						}
+					}}
+				>
+					<Appbar.Action icon='dots-vertical' />
+				</MenuView>
 			</Appbar.Header>
 
 			<View style={styles.listContainer}>

@@ -1,12 +1,10 @@
+import { MenuView } from '@expo/ui/community/menu'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
-import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 
@@ -27,9 +25,6 @@ export default function DownloadSettingsPage() {
 	const downloadMaxParallelTasks = useAppStore(
 		(state) => state.settings.downloadMaxParallelTasks,
 	)
-
-	const [downloadParallelMenuVisible, setDownloadParallelMenuVisible] =
-		useState(false)
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -54,34 +49,23 @@ export default function DownloadSettingsPage() {
 							当前 {downloadMaxParallelTasks} 个
 						</Text>
 					</View>
-					<FunctionalMenu
-						visible={downloadParallelMenuVisible}
-						onDismiss={() => setDownloadParallelMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='download-multiple'
-								size={20}
-								onPress={() => setDownloadParallelMenuVisible(true)}
-							/>
+					<MenuView
+						actions={DOWNLOAD_PARALLEL_OPTIONS.map((option) => ({
+							id: String(option.value),
+							title: option.label,
+							state: downloadMaxParallelTasks === option.value ? 'on' : 'off',
+						}))}
+						onPressAction={({ nativeEvent }) =>
+							setSettings({
+								downloadMaxParallelTasks: Number(nativeEvent.event),
+							})
 						}
 					>
-						{DOWNLOAD_PARALLEL_OPTIONS.map((option) => (
-							<UniversalCheckboxItem
-								key={option.value}
-								mode='ios'
-								label={option.label}
-								status={
-									downloadMaxParallelTasks === option.value
-										? 'checked'
-										: 'unchecked'
-								}
-								onPress={() => {
-									setSettings({ downloadMaxParallelTasks: option.value })
-									setDownloadParallelMenuVisible(false)
-								}}
-							/>
-						))}
-					</FunctionalMenu>
+						<IconButton
+							icon='download-multiple'
+							size={20}
+						/>
+					</MenuView>
 				</View>
 			</ScrollView>
 		</View>
