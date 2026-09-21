@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
@@ -60,6 +60,7 @@ import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionRead
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { type MenuBuilder, useMenuActions } from '@/hooks/ui/useMenuActions'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
@@ -892,120 +893,129 @@ function LocalPlaylistContent({
 	const draggedTrack =
 		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
 
-	const playlistActionsMenu = (
-		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
-			<FunctionalMenu.Item
-				title='播放器偏好'
-				leadingIcon={PREFERRED_ICON}
-				onPress={() => setPlayerPreferenceVisible(true)}
-			/>
-			{playlistMetadata.type === 'local' && !isSharedSubscriber && (
-				<FunctionalMenu.Item
-					onPress={() => {
-						enterSelectMode()
-					}}
-					title='排序'
-					leadingIcon={SORT_ICON}
-				/>
-			)}
-			{!isSharedSubscriber && (
-				<FunctionalMenu.Item
-					onPress={() => {
-						openModal('EditPlaylistMetadata', {
-							playlist: playlistMetadata,
-						})
-					}}
-					title='编辑播放列表信息'
-					leadingIcon={EDIT_ICON}
-				/>
-			)}
-			{playlistMetadata.type === 'local' &&
-				playlistMetadata.validTrackCount < playlistMetadata.itemCount &&
-				!isSharedSubscriber && (
-					<FunctionalMenu.Item
-						onPress={() => {
-							alert(
-								'清除失效视频',
-								'确定从播放列表移除所有失效视频？',
-								[
-									{ text: '取消' },
-									{ text: '确定', onPress: () => void clearInvalidVideos() },
-								],
-								{ cancelable: true },
-							)
-						}}
-						title='清除失效视频'
-						leadingIcon={DELETE_ICON}
-						titleStyle={{ color: colors.error }}
-					/>
-				)}
-			{playlistMetadata.type === 'local' &&
-				playlistMetadata.remoteSyncId === null &&
-				!isSharedSubscriber && (
-					<FunctionalMenu.Item
-						onPress={() => {
-							openModal(
-								'SyncLocalToBilibili',
-								{ playlistId: Number(id) },
-								{ dismissible: false },
-							)
-						}}
-						title='同步到 B 站'
-						leadingIcon={SYNC_ICON}
-					/>
-				)}
-			{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
-				<FunctionalMenu.Item
-					onPress={() => {
-						openModal('EnableSharing', { playlistId: Number(id) })
-					}}
-					title='设为共享歌单'
-					leadingIcon={SHARE_ICON}
-				/>
-			)}
-			{playlistMetadata.shareId && (
-				<FunctionalMenu.Item
-					onPress={() => {
-						openModal('EnableSharing', {
-							playlistId: Number(id),
-							shareId: playlistMetadata.shareId,
-							shareRole: playlistMetadata.shareRole,
-						})
-					}}
-					title='共享设置'
-					leadingIcon={LINK_ICON}
-				/>
-			)}
-			<FunctionalMenu.Item
-				onPress={() => {
-					editPlaylistMetadata({
-						playlistId: Number(id),
-						payload: {
-							isPinned: !playlistMetadata.isPinned,
-						},
-					})
-				}}
-				title={playlistMetadata.isPinned ? '取消置顶' : '置顶'}
-				leadingIcon={playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON}
-			/>
-			<FunctionalMenu.Item
-				onPress={() => {
+	const menuActions = useMenuActions(addPlaylistMenuItems)
+
+	function addPlaylistMenuItems(menu: MenuBuilder) {
+		const isLocal = playlistMetadata.type === 'local'
+
+		menu.add({
+			title: '播放器偏好',
+			image: PREFERRED_ICON,
+			onPress: () => setPlayerPreferenceVisible(true),
+		})
+
+		if (isLocal && !isSharedSubscriber) {
+			menu.add({
+				title: '排序',
+				image: SORT_ICON,
+				onPress: enterSelectMode,
+			})
+		}
+
+		if (!isSharedSubscriber) {
+			menu.add({
+				title: '编辑播放列表信息',
+				image: EDIT_ICON,
+				onPress: () => {
+					openModal('EditPlaylistMetadata', { playlist: playlistMetadata })
+				},
+			})
+		}
+
+		if (
+			isLocal &&
+			playlistMetadata.validTrackCount < playlistMetadata.itemCount &&
+			!isSharedSubscriber
+		) {
+			menu.add({
+				title: '清除失效视频',
+				image: DELETE_ICON,
+				attributes: { destructive: true },
+				onPress: () => {
 					alert(
-						'删除播放列表',
-						deletePlaylistDialogPrompt(playlistMetadata, colors),
+						'清除失效视频',
+						'确定从播放列表移除所有失效视频？',
 						[
 							{ text: '取消' },
-							{ text: '确定', onPress: onClickDeletePlaylist },
+							{ text: '确定', onPress: () => void clearInvalidVideos() },
 						],
 						{ cancelable: true },
 					)
-				}}
-				title='删除播放列表'
-				leadingIcon={DELETE_ICON}
-				titleStyle={{ color: colors.error }}
-			/>
-		</FunctionalMenu>
-	)
+				},
+			})
+		}
+
+		if (
+			isLocal &&
+			playlistMetadata.remoteSyncId === null &&
+			!isSharedSubscriber
+		) {
+			menu.add({
+				title: '同步到 B 站',
+				image: SYNC_ICON,
+				onPress: () => {
+					openModal(
+						'SyncLocalToBilibili',
+						{ playlistId: playlistMetadata.id },
+						{ dismissible: false },
+					)
+				},
+			})
+		}
+
+		if (isLocal && !playlistMetadata.shareId) {
+			menu.add({
+				title: '设为共享歌单',
+				image: SHARE_ICON,
+				onPress: () => {
+					openModal('EnableSharing', { playlistId: playlistMetadata.id })
+				},
+			})
+		}
+
+		const shareId = playlistMetadata.shareId
+
+		if (shareId) {
+			menu.add({
+				title: '共享设置',
+				image: LINK_ICON,
+				onPress: () => {
+					openModal('EnableSharing', {
+						playlistId: playlistMetadata.id,
+						shareId,
+						shareRole: playlistMetadata.shareRole,
+					})
+				},
+			})
+		}
+
+		menu.add({
+			title: playlistMetadata.isPinned ? '取消置顶' : '置顶',
+			image: playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON,
+			onPress: () => {
+				editPlaylistMetadata({
+					playlistId: playlistMetadata.id,
+					payload: {
+						isPinned: !playlistMetadata.isPinned,
+					},
+				})
+			},
+		})
+
+		menu.add({
+			title: '删除播放列表',
+			image: DELETE_ICON,
+			attributes: { destructive: true },
+			onPress: () => {
+				alert(
+					'删除播放列表',
+					deletePlaylistDialogPrompt(playlistMetadata, colors),
+					[{ text: '取消' }, { text: '确定', onPress: onClickDeletePlaylist }],
+					{ cancelable: true },
+				)
+			},
+		})
+	}
 
 	return (
 		<View style={[styles.container, { backgroundColor }]}>
@@ -1081,7 +1091,9 @@ function LocalPlaylistContent({
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
 						/>
-						{playlistActionsMenu}
+						<MenuView {...menuActions}>
+							<Appbar.Action icon='dots-vertical' />
+						</MenuView>
 					</>
 				)}
 			</Appbar.Header>

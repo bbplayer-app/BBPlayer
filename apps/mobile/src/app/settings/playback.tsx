@@ -5,11 +5,12 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { toastAndLogError } from '@/utils/error-handling'
 
 export default function PlaybackSettingsPage() {
@@ -33,13 +34,23 @@ export default function PlaybackSettingsPage() {
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
-	const [defaultPlayerModeMenuVisible, setDefaultPlayerModeMenuVisible] =
-		useState(false)
 
 	const setDefaultPlayerMode = (mode: 'music' | 'podcast') => {
 		setSettings({ defaultPlayerMode: mode })
-		setDefaultPlayerModeMenuVisible(false)
 	}
+
+	const menuActions = useMenuActions([
+		{
+			title: '音乐',
+			state: defaultPlayerMode === 'music' ? 'on' : 'off',
+			onPress: () => setDefaultPlayerMode('music'),
+		},
+		{
+			title: '播客',
+			state: defaultPlayerMode === 'podcast' ? 'on' : 'off',
+			onPress: () => setDefaultPlayerMode('podcast'),
+		},
+	])
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -61,28 +72,12 @@ export default function PlaybackSettingsPage() {
 							仅影响之后开始的播放，歌单可单独设置偏好。
 						</Text>
 					</View>
-					<FunctionalMenu
-						visible={defaultPlayerModeMenuVisible}
-						onDismiss={() => setDefaultPlayerModeMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='chevron-down'
-								size={20}
-								onPress={() => setDefaultPlayerModeMenuVisible(true)}
-							/>
-						}
-					>
-						<FunctionalMenu.Item
-							title='音乐'
-							status={defaultPlayerMode === 'music' ? 'checked' : 'unchecked'}
-							onPress={() => setDefaultPlayerMode('music')}
+					<MenuView {...menuActions}>
+						<IconButton
+							icon='chevron-down'
+							size={20}
 						/>
-						<FunctionalMenu.Item
-							title='播客'
-							status={defaultPlayerMode === 'podcast' ? 'checked' : 'unchecked'}
-							onPress={() => setDefaultPlayerMode('podcast')}
-						/>
-					</FunctionalMenu>
+					</MenuView>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>在应用启动时恢复上次播放进度</Text>

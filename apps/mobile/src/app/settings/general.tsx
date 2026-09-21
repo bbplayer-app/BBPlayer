@@ -7,12 +7,13 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
@@ -21,6 +22,10 @@ import {
 	subscribeStartupScreen,
 } from '@/utils/startup-screen'
 import toast from '@/utils/toast'
+
+function setStartupScreen(screen: 'home' | 'library') {
+	persistStartupScreen(screen)
+}
 
 export default function GeneralSettingsPage() {
 	const router = useRouter()
@@ -48,13 +53,6 @@ export default function GeneralSettingsPage() {
 	)
 
 	const [isCheckingForUpdate, setIsCheckingForUpdate] = useState(false)
-	const [startupScreenMenuVisible, setStartupScreenMenuVisible] =
-		useState(false)
-
-	const setStartupScreen = (screen: 'home' | 'library') => {
-		persistStartupScreen(screen)
-		setStartupScreenMenuVisible(false)
-	}
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
@@ -92,6 +90,19 @@ export default function GeneralSettingsPage() {
 		void performShareLog(setIsSharing, isSharingRef)
 	}
 
+	const menuActions = useMenuActions([
+		{
+			title: '主页',
+			state: startupScreen === 'home' ? 'on' : 'off',
+			onPress: () => setStartupScreen('home'),
+		},
+		{
+			title: '音乐库',
+			state: startupScreen === 'library' ? 'on' : 'off',
+			onPress: () => setStartupScreen('library'),
+		},
+	])
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
@@ -107,28 +118,12 @@ export default function GeneralSettingsPage() {
 			>
 				<View style={styles.settingRow}>
 					<Text>启动时进入</Text>
-					<FunctionalMenu
-						visible={startupScreenMenuVisible}
-						onDismiss={() => setStartupScreenMenuVisible(false)}
-						anchor={
-							<IconButton
-								icon='chevron-down'
-								size={20}
-								onPress={() => setStartupScreenMenuVisible(true)}
-							/>
-						}
-					>
-						<FunctionalMenu.Item
-							title='主页'
-							status={startupScreen === 'home' ? 'checked' : 'unchecked'}
-							onPress={() => setStartupScreen('home')}
+					<MenuView {...menuActions}>
+						<IconButton
+							icon='chevron-down'
+							size={20}
 						/>
-						<FunctionalMenu.Item
-							title='音乐库'
-							status={startupScreen === 'library' ? 'checked' : 'unchecked'}
-							onPress={() => setStartupScreen('library')}
-						/>
-					</FunctionalMenu>
+					</MenuView>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>

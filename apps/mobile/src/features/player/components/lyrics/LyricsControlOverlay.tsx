@@ -6,10 +6,11 @@ import { Dimensions, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Icon, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import { MainPlaybackControls } from '@/features/player/components/controls/PlayerControlContent'
 import { PlayerSlider } from '@/features/player/components/main/PlayerSlider'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { type MenuBuilder, useMenuActions } from '@/hooks/ui/useMenuActions'
 
 const ALPHABETICAL_ICON = ExpoIcon.select({
 	ios: 'abc',
@@ -57,6 +58,30 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 		(state) => state.settings.playerBackgroundStyle === 'fluid',
 	)
 
+	const menuActions = useMenuActions(addLyricsMenuItems)
+
+	function addLyricsMenuItems(menu: MenuBuilder) {
+		if (showTranslationToggle) {
+			const isTranslation = translationType === 'translation'
+			menu.add({
+				title: isTranslation ? '切换罗马音' : '切换翻译',
+				image: isTranslation ? ALPHABETICAL_ICON : TRANSLATE_ICON,
+				onPress: onToggleTranslation,
+			})
+		}
+
+		menu.add({
+			title: '编辑歌词',
+			image: EDIT_ICON,
+			onPress: onEditLyrics,
+		})
+		menu.add({
+			title: '时间轴偏移',
+			image: OFFSET_ICON,
+			onPress: onOpenOffsetMenu,
+		})
+	}
+
 	return (
 		<MaskedView
 			style={styles.overlayContainer}
@@ -90,49 +115,21 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 			<View style={styles.playerControls}>
 				{/* 功能按钮，位于 slider 上方右侧 */}
 				<View style={styles.actionMenuRow}>
-					<FunctionalMenu
-						anchor={
-							<Touchable
-								androidRipple={{}}
-								style={styles.actionMenuButton}
-								disabled={offsetMenuVisible}
-							>
-								<Icon
-									source='dots-vertical'
-									size={20}
-									color={
-										offsetMenuVisible
-											? colors.onSurfaceDisabled
-											: colors.primary
-									}
-								/>
-							</Touchable>
-						}
-					>
-						{showTranslationToggle && (
-							<FunctionalMenu.Item
-								title={
-									translationType === 'translation' ? '切换罗马音' : '切换翻译'
+					<MenuView {...menuActions}>
+						<Touchable
+							androidRipple={{}}
+							style={styles.actionMenuButton}
+							disabled={offsetMenuVisible}
+						>
+							<Icon
+								source='dots-vertical'
+								size={20}
+								color={
+									offsetMenuVisible ? colors.onSurfaceDisabled : colors.primary
 								}
-								leadingIcon={
-									translationType === 'translation'
-										? ALPHABETICAL_ICON
-										: TRANSLATE_ICON
-								}
-								onPress={onToggleTranslation}
 							/>
-						)}
-						<FunctionalMenu.Item
-							title='编辑歌词'
-							leadingIcon={EDIT_ICON}
-							onPress={onEditLyrics}
-						/>
-						<FunctionalMenu.Item
-							title='时间轴偏移'
-							leadingIcon={OFFSET_ICON}
-							onPress={onOpenOffsetMenu}
-						/>
-					</FunctionalMenu>
+						</Touchable>
+					</MenuView>
 				</View>
 				<PlayerSlider />
 				<View style={styles.playbackButtonsWrapper}>

@@ -5,10 +5,11 @@ import { Touchable } from 'react-native-gesture-handler'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { VariantPlainText } from '@/components/common/VariantPlainText'
 import useIsCurrentTrack from '@/hooks/player/useIsCurrentTrack'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { analyticsService } from '@/lib/services/analyticsService'
 import {
 	LIST_ITEM_BORDER_RADIUS,
@@ -98,6 +99,13 @@ export const TrackListItem = memo(function TrackListItem({
 	const { colors } = useTheme()
 	const dark = useColorScheme() === 'dark'
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
+
+	const menuActions = useMenuActions(
+		menuItems.map(({ leadingIcon, ...item }) => ({
+			...item,
+			image: leadingIcon,
+		})),
+	)
 
 	// 在非选择模式下，当前播放歌曲高亮；在选择模式下，歌曲被选中时高亮
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
@@ -211,29 +219,18 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Context Menu */}
 					{!disabled && !selectMode && (
-						<FunctionalMenu
-							anchor={
-								<Touchable
-									androidRipple={{}}
-									style={styles.menuButton}
-								>
-									<Icon
-										source='dots-vertical'
-										size={20}
-										color={colors.primary}
-									/>
-								</Touchable>
-							}
-						>
-							{menuItems.map((item) => (
-								<FunctionalMenu.Item
-									key={item.title}
-									leadingIcon={item.leadingIcon}
-									onPress={item.onPress}
-									title={item.title}
+						<MenuView {...menuActions}>
+							<Touchable
+								androidRipple={{}}
+								style={styles.menuButton}
+							>
+								<Icon
+									source='dots-vertical'
+									size={20}
+									color={colors.primary}
 								/>
-							))}
-						</FunctionalMenu>
+							</Touchable>
+						</MenuView>
 					)}
 				</View>
 			</Surface>

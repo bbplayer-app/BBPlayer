@@ -13,7 +13,7 @@ import { View } from 'react-native'
 import { GestureHandlerRootView, Touchable } from 'react-native-gesture-handler'
 import { Surface, Text, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
@@ -23,6 +23,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { clearPlaybackQueue } from '@/lib/player/playbackSession'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -228,6 +229,32 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		)
 	}, [queue, dismissWithAction])
 
+	const menuActions = useMenuActions([
+		{
+			title: '反序剩余歌曲',
+			image: REVERSE_QUEUE_ICON,
+			onPress: () => {
+				void reverseRemainingQueueHandler()
+			},
+			attributes: {
+				disabled:
+					queue.length === 0 || currentIndex === -1 || shuffleMode !== false,
+			},
+		},
+		{
+			title: '保存为播放列表',
+			image: SAVE_QUEUE_ICON,
+			onPress: saveQueueToPlaylistHandler,
+			attributes: { disabled: queue.length === 0 },
+		},
+		{
+			title: '清空播放队列',
+			image: CLEAR_QUEUE_ICON,
+			onPress: clearQueue,
+			attributes: { disabled: clearing || queue.length === 0 },
+		},
+	])
+
 	return (
 		<TrueSheet
 			name='playerQueueModal'
@@ -267,41 +294,14 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 					>
 						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<FunctionalMenu
-								anchor={
-									<IconButton
-										icon='dots-vertical'
-										disabled={clearing}
-										loading={clearing}
-										testID='player-queue-menu'
-									/>
-								}
-							>
-								<FunctionalMenu.Item
-									leadingIcon={REVERSE_QUEUE_ICON}
-									title='反序剩余歌曲'
-									onPress={() => {
-										void reverseRemainingQueueHandler()
-									}}
-									disabled={
-										queue.length === 0 ||
-										currentIndex === -1 ||
-										shuffleMode !== false
-									}
+							<MenuView {...menuActions}>
+								<IconButton
+									icon='dots-vertical'
+									disabled={clearing}
+									loading={clearing}
+									testID='player-queue-menu'
 								/>
-								<FunctionalMenu.Item
-									leadingIcon={SAVE_QUEUE_ICON}
-									title='保存为播放列表'
-									onPress={saveQueueToPlaylistHandler}
-									disabled={queue.length === 0}
-								/>
-								<FunctionalMenu.Item
-									leadingIcon={CLEAR_QUEUE_ICON}
-									title='清空播放队列'
-									onPress={clearQueue}
-									disabled={clearing || queue.length === 0}
-								/>
-							</FunctionalMenu>
+							</MenuView>
 						</View>
 					</View>
 					<View style={{ flex: 1, minHeight: 2 }}>

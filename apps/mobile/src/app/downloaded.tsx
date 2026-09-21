@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
 import { alert } from '@/components/modals/AlertModal'
@@ -27,6 +27,7 @@ import ExportDownloadsProgressModal from '@/components/modals/settings/ExportDow
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
 import { useRemoveDownloadsMutation } from '@/hooks/mutations/orpheus'
 import { useAllDownloads, orpheusQueryKeys } from '@/hooks/queries/orpheus'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { queryClient } from '@/lib/config/queryClient'
 import { enqueueTracks } from '@/lib/player/playbackSession'
 import {
@@ -116,6 +117,25 @@ function DownloadedItem({
 }) {
 	const theme = useTheme()
 	const track = item.track
+
+	const menuActions = useMenuActions([
+		{
+			title: '导出',
+			image: EXPORT_ICON,
+			onPress: () => onSingleExport(item.id),
+		},
+		{
+			title: '删除',
+			image: DELETE_ICON,
+			onPress: () => onDelete(item.id),
+		},
+		{
+			title: '下一首播放',
+			image: PLAY_NEXT_ICON,
+			onPress: () => onPlayNext(item),
+			attributes: { disabled: !item.track },
+		},
+	])
 
 	return (
 		<Touchable
@@ -207,32 +227,13 @@ function DownloadedItem({
 					</View>
 
 					{!selectMode && (
-						<FunctionalMenu
-							anchor={
-								<IconButton
-									icon='dots-vertical'
-									size={20}
-									iconColor={theme.colors.onSurfaceVariant}
-								/>
-							}
-						>
-							<FunctionalMenu.Item
-								leadingIcon={EXPORT_ICON}
-								title='导出'
-								onPress={() => onSingleExport(item.id)}
+						<MenuView {...menuActions}>
+							<IconButton
+								icon='dots-vertical'
+								size={20}
+								iconColor={theme.colors.onSurfaceVariant}
 							/>
-							<FunctionalMenu.Item
-								leadingIcon={DELETE_ICON}
-								title='删除'
-								onPress={() => onDelete(item.id)}
-							/>
-							<FunctionalMenu.Item
-								leadingIcon={PLAY_NEXT_ICON}
-								title='下一首播放'
-								onPress={() => onPlayNext(item)}
-								disabled={!item.track}
-							/>
-						</FunctionalMenu>
+						</MenuView>
 					)}
 				</View>
 			</Surface>

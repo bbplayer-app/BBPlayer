@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
-import FunctionalMenu from '@/components/common/FunctionalMenu'
+import { MenuView } from '@/components/common/FunctionalMenu'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -23,6 +23,7 @@ import { useGetToViewVideoList } from '@/hooks/queries/bilibili/video'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
@@ -160,6 +161,42 @@ export default function ToViewPage() {
 		})
 	}, [tracksData])
 
+	const menuActions = useMenuActions([
+		{
+			title: '清除所有已播放歌曲',
+			image: DELETE_ICON,
+			onPress: () => {
+				deleteToViewVideo({
+					deleteAllViewed: true,
+					avid: undefined,
+				})
+			},
+		},
+		{
+			title: '清除所有歌曲',
+			image: DELETE_ICON,
+			attributes: { destructive: true },
+			onPress: () => {
+				alert(
+					'清除所有稍后再看歌曲',
+					'确定要清除所有稍后再看的歌曲吗？',
+					[
+						{
+							text: '取消',
+						},
+						{
+							text: '确定',
+							onPress: () => {
+								clearToViewVideoList()
+							},
+						},
+					],
+					{ cancelable: true },
+				)
+			},
+		},
+	])
+
 	if (isToViewDataPending || !isListReady) {
 		return <PlaylistPageSkeleton animate={isListReady} />
 	}
@@ -221,41 +258,9 @@ export default function ToViewPage() {
 				) : (
 					<Appbar.BackAction onPress={() => router.back()} />
 				)}
-				<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
-					<FunctionalMenu.Item
-						onPress={() => {
-							deleteToViewVideo({
-								deleteAllViewed: true,
-								avid: undefined,
-							})
-						}}
-						title='清除所有已播放歌曲'
-						leadingIcon={DELETE_ICON}
-					/>
-					<FunctionalMenu.Item
-						onPress={() => {
-							alert(
-								'清除所有稍后再看歌曲',
-								'确定要清除所有稍后再看的歌曲吗？',
-								[
-									{
-										text: '取消',
-									},
-									{
-										text: '确定',
-										onPress: () => {
-											clearToViewVideoList()
-										},
-									},
-								],
-								{ cancelable: true },
-							)
-						}}
-						title='清除所有歌曲'
-						leadingIcon={DELETE_ICON}
-						titleStyle={{ color: colors.error }}
-					/>
-				</FunctionalMenu>
+				<MenuView {...menuActions}>
+					<Appbar.Action icon='dots-vertical' />
+				</MenuView>
 			</Appbar.Header>
 
 			<View style={styles.listContainer}>
