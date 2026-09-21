@@ -142,32 +142,13 @@ export function useLocalPlaylistMenu({
 						downloadState === DownloadState.COMPLETED
 							? REMOVE_CACHE_ICON
 							: DOWNLOAD_ICON,
-					attributes:
-						downloadState === DownloadState.COMPLETED
-							? { destructive: true }
-							: undefined,
 					onPress: async () => {
 						if (downloadState === DownloadState.COMPLETED) {
-							alert(
-								'删除缓存',
-								`确定要删除「${item.title}」的缓存文件吗？`,
-								[
-									{ text: '取消' },
-									{
-										text: '删除',
-										onPress: () =>
-											void Orpheus.removeDownload(item.uniqueKey).then(
-												async () => {
-													toast.success('删除缓存成功')
-													await queryClient.invalidateQueries({
-														queryKey: ['batchDownloadStatus'],
-													})
-												},
-											),
-									},
-								],
-								{ cancelable: true },
-							)
+							await Orpheus.removeDownload(item.uniqueKey)
+							toast.success('删除缓存成功')
+							await queryClient.invalidateQueries({
+								queryKey: ['batchDownloadStatus'],
+							})
 							return
 						}
 
@@ -240,7 +221,7 @@ export function useLocalPlaylistMenu({
 							cancelable: true,
 						},
 					),
-				attributes: { destructive: true },
+				danger: true,
 			})
 		}
 		return menuItems

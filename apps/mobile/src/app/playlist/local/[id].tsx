@@ -1,6 +1,5 @@
 import { DownloadState, Orpheus } from '@bbplayer/orpheus'
 import { Icon } from '@expo/ui'
-import { MenuView } from '@expo/ui/community/menu'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { and, eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
@@ -25,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
@@ -65,7 +65,6 @@ import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { CustomError } from '@/lib/errors'
-import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -235,7 +234,6 @@ function LocalPlaylistContent({
 	const theme = useTheme()
 	const { colors } = theme
 	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
-	const [isResolvingSelection, setIsResolvingSelection] = useState(false)
 	const router = useRouter()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -329,6 +327,25 @@ function LocalPlaylistContent({
 			}
 		}
 		return keys
+	})()
+
+	const batchAddTracksModalPayloads = (() => {
+		const trackMap = new Map<number, Track>(
+			allLoadedTracks.map((t) => [t.id, t]),
+		)
+		const payloads = []
+		for (const trackId of selected) {
+			const track = trackMap.get(trackId)
+			if (!track) continue
+			payloads.push({
+				track: {
+					...track,
+					artistId: track.artist?.id,
+				},
+				artist: track.artist!,
+			})
+		}
+		return payloads
 	})()
 
 	const {
@@ -558,92 +575,6 @@ function LocalPlaylistContent({
 			playlistId: Number(id),
 		})
 		exitSelectMode()
-	}
-
-	const clearInvalidVideos = async () => {
-		const tracksResult = await playlistService.getPlaylistTracks(Number(id))
-		if (tracksResult.isErr()) {
-			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
-			return
-		}
-
-		const invalidTrackIds = tracksResult.value
-			.filter(
-				(track) =>
-					track.source === 'bilibili' && !track.bilibiliMetadata.videoIsValid,
-			)
-			.map((track) => track.id)
-		if (invalidTrackIds.length === 0) {
-			toast.info('没有需要清除的失效视频')
-			return
-		}
-
-		deleteTrackFromLocalPlaylist({
-			trackIds: invalidTrackIds,
-			playlistId: Number(id),
-		})
-	}
-
-	const getSelectionScopeTracks = async () => {
-		const tracksResult =
-			startSearch && deferredQuery.trim()
-				? await playlistService.searchTrackInPlaylist(Number(id), deferredQuery)
-				: await playlistService.getPlaylistTracks(Number(id))
-		if (tracksResult.isErr()) {
-			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
-			return null
-		}
-		return tracksResult.value
-	}
-
-	const selectAllTracks = async () => {
-		setIsResolvingSelection(true)
-		try {
-			const tracks = await getSelectionScopeTracks()
-			if (!tracks) return
-			setSelected(new Set(tracks.map((track) => track.id)))
-		} finally {
-			setIsResolvingSelection(false)
-		}
-	}
-
-	const invertSelectedTracks = async () => {
-		setIsResolvingSelection(true)
-		try {
-			const tracks = await getSelectionScopeTracks()
-			if (!tracks) return
-			setSelected(
-				new Set(
-					tracks
-						.filter((track) => !selected.has(track.id))
-						.map((track) => track.id),
-				),
-			)
-		} finally {
-			setIsResolvingSelection(false)
-		}
-	}
-
-	const openBatchAddTracksModal = async () => {
-		setIsResolvingSelection(true)
-		try {
-			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
-			if (tracksResult.isErr()) {
-				toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
-				return
-			}
-			const selectedTracks = tracksResult.value.filter((track) =>
-				selected.has(track.id),
-			)
-			openModal('BatchAddTracksToLocalPlaylist', {
-				payloads: selectedTracks.map((track) => ({
-					track: { ...track, artistId: track.artist?.id },
-					artist: track.artist!,
-				})),
-			})
-		} finally {
-			setIsResolvingSelection(false)
-		}
 	}
 
 	/** 防止重复处理共享歌单被删除的场景 */
@@ -893,86 +824,83 @@ function LocalPlaylistContent({
 		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
 
 	const playlistActionsMenu = (
-		<MenuView
-			actions={[
-				{ id: 'preference', title: '播放器偏好', image: PREFERRED_ICON },
-				...(playlistMetadata.type === 'local' && !isSharedSubscriber
-					? [{ id: 'sort', title: '排序', image: SORT_ICON }]
-					: []),
-				...(!isSharedSubscriber
-					? [{ id: 'edit', title: '编辑播放列表信息', image: EDIT_ICON }]
-					: []),
-				...(playlistMetadata.type === 'local' &&
-				playlistMetadata.validTrackCount < playlistMetadata.itemCount &&
-				!isSharedSubscriber
-					? [
-							{
-								id: 'clear-invalid',
-								title: '清除失效视频',
-								image: DELETE_ICON,
-								attributes: { destructive: true },
-							},
-						]
-					: []),
-				...(playlistMetadata.type === 'local' &&
+		<FunctionalMenu anchor={<Appbar.Action icon='dots-vertical' />}>
+			<FunctionalMenu.Item
+				title='播放器偏好'
+				leadingIcon={PREFERRED_ICON}
+				onPress={() => setPlayerPreferenceVisible(true)}
+			/>
+			{playlistMetadata.type === 'local' && !isSharedSubscriber && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						enterSelectMode()
+					}}
+					title='排序'
+					leadingIcon={SORT_ICON}
+				/>
+			)}
+			{!isSharedSubscriber && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EditPlaylistMetadata', {
+							playlist: playlistMetadata,
+						})
+					}}
+					title='编辑播放列表信息'
+					leadingIcon={EDIT_ICON}
+				/>
+			)}
+			{playlistMetadata.type === 'local' &&
 				playlistMetadata.remoteSyncId === null &&
-				!isSharedSubscriber
-					? [{ id: 'sync', title: '同步到 B 站', image: SYNC_ICON }]
-					: []),
-				...(playlistMetadata.type === 'local' && !playlistMetadata.shareId
-					? [{ id: 'share', title: '设为共享歌单', image: SHARE_ICON }]
-					: []),
-				...(playlistMetadata.shareId
-					? [{ id: 'share-settings', title: '共享设置', image: LINK_ICON }]
-					: []),
-				{
-					id: 'pin',
-					title: playlistMetadata.isPinned ? '取消置顶' : '置顶',
-					image: playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON,
-				},
-				{
-					id: 'delete',
-					title: '删除播放列表',
-					image: DELETE_ICON,
-					attributes: { destructive: true },
-				},
-			]}
-			onPressAction={({ nativeEvent }) => {
-				const action = nativeEvent.event
-				if (action === 'preference') setPlayerPreferenceVisible(true)
-				if (action === 'sort') enterSelectMode()
-				if (action === 'edit')
-					openModal('EditPlaylistMetadata', { playlist: playlistMetadata })
-				if (action === 'clear-invalid')
-					alert(
-						'清除失效视频',
-						'确定从播放列表移除所有失效视频？',
-						[
-							{ text: '取消' },
-							{ text: '确定', onPress: () => void clearInvalidVideos() },
-						],
-						{ cancelable: true },
-					)
-				if (action === 'sync')
-					openModal(
-						'SyncLocalToBilibili',
-						{ playlistId: Number(id) },
-						{ dismissible: false },
-					)
-				if (action === 'share')
-					openModal('EnableSharing', { playlistId: Number(id) })
-				if (action === 'share-settings')
-					openModal('EnableSharing', {
-						playlistId: Number(id),
-						shareId: playlistMetadata.shareId,
-						shareRole: playlistMetadata.shareRole,
-					})
-				if (action === 'pin')
+				!isSharedSubscriber && (
+					<FunctionalMenu.Item
+						onPress={() => {
+							openModal(
+								'SyncLocalToBilibili',
+								{ playlistId: Number(id) },
+								{ dismissible: false },
+							)
+						}}
+						title='同步到 B 站'
+						leadingIcon={SYNC_ICON}
+					/>
+				)}
+			{playlistMetadata.type === 'local' && !playlistMetadata.shareId && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EnableSharing', { playlistId: Number(id) })
+					}}
+					title='设为共享歌单'
+					leadingIcon={SHARE_ICON}
+				/>
+			)}
+			{playlistMetadata.shareId && (
+				<FunctionalMenu.Item
+					onPress={() => {
+						openModal('EnableSharing', {
+							playlistId: Number(id),
+							shareId: playlistMetadata.shareId,
+							shareRole: playlistMetadata.shareRole,
+						})
+					}}
+					title='共享设置'
+					leadingIcon={LINK_ICON}
+				/>
+			)}
+			<FunctionalMenu.Item
+				onPress={() => {
 					editPlaylistMetadata({
 						playlistId: Number(id),
-						payload: { isPinned: !playlistMetadata.isPinned },
+						payload: {
+							isPinned: !playlistMetadata.isPinned,
+						},
 					})
-				if (action === 'delete')
+				}}
+				title={playlistMetadata.isPinned ? '取消置顶' : '置顶'}
+				leadingIcon={playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON}
+			/>
+			<FunctionalMenu.Item
+				onPress={() => {
 					alert(
 						'删除播放列表',
 						deletePlaylistDialogPrompt(playlistMetadata, colors),
@@ -982,10 +910,12 @@ function LocalPlaylistContent({
 						],
 						{ cancelable: true },
 					)
-			}}
-		>
-			<Appbar.Action icon='dots-vertical' />
-		</MenuView>
+				}}
+				title='删除播放列表'
+				leadingIcon={DELETE_ICON}
+				titleStyle={{ color: colors.error }}
+			/>
+		</FunctionalMenu>
 	)
 
 	return (
@@ -1012,13 +942,21 @@ function LocalPlaylistContent({
 					<>
 						<Appbar.Action
 							icon='select-all'
-							disabled={isResolvingSelection}
-							onPress={() => void selectAllTracks()}
+							onPress={() =>
+								setSelected(new Set(finalPlaylistData.map((t) => t.id)))
+							}
 						/>
 						<Appbar.Action
 							icon='select-compare'
-							disabled={isResolvingSelection}
-							onPress={() => void invertSelectedTracks()}
+							onPress={() =>
+								setSelected(
+									new Set(
+										finalPlaylistData
+											.filter((t) => !selected.has(t.id))
+											.map((t) => t.id),
+									),
+								)
+							}
 						/>
 						{playlistMetadata.type === 'local' && (
 							<Appbar.Action
@@ -1038,8 +976,11 @@ function LocalPlaylistContent({
 						)}
 						<Appbar.Action
 							icon='playlist-plus'
-							disabled={isResolvingSelection}
-							onPress={() => void openBatchAddTracksModal()}
+							onPress={() =>
+								openModal('BatchAddTracksToLocalPlaylist', {
+									payloads: batchAddTracksModalPayloads,
+								})
+							}
 						/>
 					</>
 				) : (

@@ -1,6 +1,6 @@
 import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
-import { MenuView } from '@expo/ui/community/menu'
 import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import {
 	PermissionsAndroid,
 	Platform,
@@ -11,7 +11,9 @@ import {
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import FunctionalMenu from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import UniversalCheckboxItem from '@/components/common/UniversalCheckboxItem'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -34,6 +36,19 @@ export default function AppearanceSettingsPage() {
 		(state) => state.settings.enableMinimalistMode,
 	)
 	const setSettings = useAppStore((state) => state.setSettings)
+
+	const [playerBGMenuVisible, setPlayerBGMenuVisible] = useState(false)
+	const [nowPlayerBarMenuVisible, setNowPlayerBarMenuVisible] = useState(false)
+
+	const setNowPlayingBarStyle = (style: 'float' | 'bottom') => {
+		setSettings({ nowPlayingBarStyle: style })
+		setNowPlayerBarMenuVisible(false)
+	}
+
+	const setPlayerBackgroundStyle = (style: 'gradient' | 'fluid') => {
+		setSettings({ playerBackgroundStyle: style })
+		setPlayerBGMenuVisible(false)
+	}
 
 	const handleSpectrumToggle = () => {
 		if (enableSpectrumVisualizer) {
@@ -125,60 +140,66 @@ export default function AppearanceSettingsPage() {
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>
 						<Text>选择底部播放条样式</Text>
-						<MenuView
-							actions={[
-								{
-									id: 'float',
-									title: '悬浮（默认）',
-									state: nowPlayingBarStyle === 'float' ? 'on' : 'off',
-								},
-								{
-									id: 'bottom',
-									title: '沉浸',
-									state: nowPlayingBarStyle === 'bottom' ? 'on' : 'off',
-								},
-							]}
-							onPressAction={({ nativeEvent }) =>
-								setSettings({
-									nowPlayingBarStyle: nativeEvent.event as 'float' | 'bottom',
-								})
+						<FunctionalMenu
+							visible={nowPlayerBarMenuVisible}
+							onDismiss={() => setNowPlayerBarMenuVisible(false)}
+							anchor={
+								<IconButton
+									icon='palette'
+									size={20}
+									onPress={() => setNowPlayerBarMenuVisible(true)}
+								/>
 							}
 						>
-							<IconButton
-								icon='palette'
-								size={20}
+							<UniversalCheckboxItem
+								mode='ios'
+								label='悬浮（默认）'
+								status={
+									nowPlayingBarStyle === 'float' ? 'checked' : 'unchecked'
+								}
+								onPress={() => setNowPlayingBarStyle('float')}
 							/>
-						</MenuView>
+							<UniversalCheckboxItem
+								mode='ios'
+								label='沉浸'
+								status={
+									nowPlayingBarStyle === 'bottom' ? 'checked' : 'unchecked'
+								}
+								onPress={() => setNowPlayingBarStyle('bottom')}
+							/>
+						</FunctionalMenu>
 					</View>
 				)}
 				<View style={styles.settingRow}>
 					<Text>选择播放器背景样式</Text>
-					<MenuView
-						actions={[
-							{
-								id: 'gradient',
-								title: '普通渐变',
-								state: playerBackgroundStyle === 'gradient' ? 'on' : 'off',
-							},
-							{
-								id: 'fluid',
-								title: '流体效果',
-								state: playerBackgroundStyle === 'fluid' ? 'on' : 'off',
-							},
-						]}
-						onPressAction={({ nativeEvent }) =>
-							setSettings({
-								playerBackgroundStyle: nativeEvent.event as
-									| 'gradient'
-									| 'fluid',
-							})
+					<FunctionalMenu
+						visible={playerBGMenuVisible}
+						onDismiss={() => setPlayerBGMenuVisible(false)}
+						anchor={
+							<IconButton
+								icon='palette'
+								size={20}
+								onPress={() => setPlayerBGMenuVisible(true)}
+							/>
 						}
 					>
-						<IconButton
-							icon='palette'
-							size={20}
+						<UniversalCheckboxItem
+							mode='ios'
+							label='普通渐变'
+							status={
+								playerBackgroundStyle === 'gradient' ? 'checked' : 'unchecked'
+							}
+							onPress={() => setPlayerBackgroundStyle('gradient')}
 						/>
-					</MenuView>
+						<UniversalCheckboxItem
+							mode='ios'
+							label='流体效果'
+							status={
+								playerBackgroundStyle === 'fluid' ? 'checked' : 'unchecked'
+							}
+							onPress={() => setPlayerBackgroundStyle('fluid')}
+						/>
+					</FunctionalMenu>
 				</View>
 			</ScrollView>
 		</View>

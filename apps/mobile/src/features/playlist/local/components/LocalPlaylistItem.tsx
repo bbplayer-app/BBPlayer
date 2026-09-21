@@ -1,6 +1,5 @@
 import { DownloadState } from '@bbplayer/orpheus'
 import { Icon as ExpoIcon } from '@expo/ui'
-import type { MenuAttributes } from '@expo/ui/community/menu'
 import { memo, useCallback } from 'react'
 import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
 import {
@@ -27,7 +26,7 @@ export interface TrackMenuItem {
 	title: string
 	leadingIcon: ReturnType<typeof ExpoIcon.select>
 	onPress: () => void
-	attributes?: MenuAttributes
+	danger?: boolean
 	isHighFreq?: boolean
 }
 
