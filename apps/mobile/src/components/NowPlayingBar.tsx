@@ -109,14 +109,19 @@ const playPause = async () => {
 function NowPlayingBar() {
 	const segments = useSegments()
 	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
+	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
 	const shouldShow = segments[0] !== 'player' && !playerScreenActive
+	// 沉浸模式（bottom）与 Tab 栏连成一体，不做退场动画，直接卸载。
+	const animateExit = nowPlayingBarStyle !== 'bottom'
 	const [mounted, setMounted] = useState(shouldShow)
 
 	useEffect(() => {
 		if (shouldShow) {
 			setMounted(true)
+		} else if (!animateExit) {
+			setMounted(false)
 		}
-	}, [shouldShow])
+	}, [shouldShow, animateExit])
 
 	const handleExitComplete = useCallback(() => {
 		setMounted(false)
@@ -281,13 +286,15 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 	const bottomPadding = isDocked && bottomBarHeight === 0 ? insets.bottom : 0
 
 	const reduceMotion = useReducedMotion()
+	// 沉浸模式下播放条瞬时显示/隐藏，不做任何过渡。
+	const disableTransition = reduceMotion || nowPlayingBarStyle === 'bottom'
 
 	return (
 		<EaseView
 			initialAnimate={{ opacity: 0, translateY: -bottomMargin }}
 			animate={{ opacity: visible ? 1 : 0, translateY: -bottomMargin }}
 			transition={
-				reduceMotion
+				disableTransition
 					? { type: 'none' }
 					: {
 							opacity: {
