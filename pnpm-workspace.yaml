@@ -26,7 +26,6 @@ minimumReleaseAgeExclude:
   - '@lodev09/react-native-true-sheet@4.0.0-beta.16'
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
-  '@expo/ui': patches/@expo__ui.patch
   '@legendapp/list@3.3.9': patches/@legendapp__list@3.3.9.patch
   expo-updates@57.0.21: patches/expo-updates@57.0.21.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
