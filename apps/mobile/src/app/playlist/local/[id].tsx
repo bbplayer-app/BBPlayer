@@ -65,6 +65,7 @@ import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { CustomError } from '@/lib/errors'
+import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -234,6 +235,7 @@ function LocalPlaylistContent({
 	const theme = useTheme()
 	const { colors } = theme
 	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
+	const [isResolvingSelection, setIsResolvingSelection] = useState(false)
 	const router = useRouter()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -327,25 +329,6 @@ function LocalPlaylistContent({
 			}
 		}
 		return keys
-	})()
-
-	const batchAddTracksModalPayloads = (() => {
-		const trackMap = new Map<number, Track>(
-			allLoadedTracks.map((t) => [t.id, t]),
-		)
-		const payloads = []
-		for (const trackId of selected) {
-			const track = trackMap.get(trackId)
-			if (!track) continue
-			payloads.push({
-				track: {
-					...track,
-					artistId: track.artist?.id,
-				},
-				artist: track.artist!,
-			})
-		}
-		return payloads
 	})()
 
 	const {
@@ -575,6 +558,92 @@ function LocalPlaylistContent({
 			playlistId: Number(id),
 		})
 		exitSelectMode()
+	}
+
+	const clearInvalidVideos = async () => {
+		const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+		if (tracksResult.isErr()) {
+			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+			return
+		}
+
+		const invalidTrackIds = tracksResult.value
+			.filter(
+				(track) =>
+					track.source === 'bilibili' && !track.bilibiliMetadata.videoIsValid,
+			)
+			.map((track) => track.id)
+		if (invalidTrackIds.length === 0) {
+			toast.info('没有需要清除的失效视频')
+			return
+		}
+
+		deleteTrackFromLocalPlaylist({
+			trackIds: invalidTrackIds,
+			playlistId: Number(id),
+		})
+	}
+
+	const getSelectionScopeTracks = async () => {
+		const tracksResult =
+			startSearch && deferredQuery.trim()
+				? await playlistService.searchTrackInPlaylist(Number(id), deferredQuery)
+				: await playlistService.getPlaylistTracks(Number(id))
+		if (tracksResult.isErr()) {
+			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+			return null
+		}
+		return tracksResult.value
+	}
+
+	const selectAllTracks = async () => {
+		setIsResolvingSelection(true)
+		try {
+			const tracks = await getSelectionScopeTracks()
+			if (!tracks) return
+			setSelected(new Set(tracks.map((track) => track.id)))
+		} finally {
+			setIsResolvingSelection(false)
+		}
+	}
+
+	const invertSelectedTracks = async () => {
+		setIsResolvingSelection(true)
+		try {
+			const tracks = await getSelectionScopeTracks()
+			if (!tracks) return
+			setSelected(
+				new Set(
+					tracks
+						.filter((track) => !selected.has(track.id))
+						.map((track) => track.id),
+				),
+			)
+		} finally {
+			setIsResolvingSelection(false)
+		}
+	}
+
+	const openBatchAddTracksModal = async () => {
+		setIsResolvingSelection(true)
+		try {
+			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+			if (tracksResult.isErr()) {
+				toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+				return
+			}
+			const selectedTracks = tracksResult.value.filter((track) =>
+				selected.has(track.id),
+			)
+			openModal('BatchAddTracksToLocalPlaylist', {
+				payloads: selectedTracks.map((track) => ({
+					track: { ...track, artistId: track.artist?.id },
+					artist: track.artist!,
+				})),
+			})
+		} finally {
+			setIsResolvingSelection(false)
+		}
 	}
 
 	/** 防止重复处理共享歌单被删除的场景 */
@@ -851,6 +920,26 @@ function LocalPlaylistContent({
 				/>
 			)}
 			{playlistMetadata.type === 'local' &&
+				playlistMetadata.validTrackCount < playlistMetadata.itemCount &&
+				!isSharedSubscriber && (
+					<FunctionalMenu.Item
+						onPress={() => {
+							alert(
+								'清除失效视频',
+								'确定从播放列表移除所有失效视频？',
+								[
+									{ text: '取消' },
+									{ text: '确定', onPress: () => void clearInvalidVideos() },
+								],
+								{ cancelable: true },
+							)
+						}}
+						title='清除失效视频'
+						leadingIcon={DELETE_ICON}
+						titleStyle={{ color: colors.error }}
+					/>
+				)}
+			{playlistMetadata.type === 'local' &&
 				playlistMetadata.remoteSyncId === null &&
 				!isSharedSubscriber && (
 					<FunctionalMenu.Item
@@ -942,21 +1031,13 @@ function LocalPlaylistContent({
 					<>
 						<Appbar.Action
 							icon='select-all'
-							onPress={() =>
-								setSelected(new Set(finalPlaylistData.map((t) => t.id)))
-							}
+							disabled={isResolvingSelection}
+							onPress={() => void selectAllTracks()}
 						/>
 						<Appbar.Action
 							icon='select-compare'
-							onPress={() =>
-								setSelected(
-									new Set(
-										finalPlaylistData
-											.filter((t) => !selected.has(t.id))
-											.map((t) => t.id),
-									),
-								)
-							}
+							disabled={isResolvingSelection}
+							onPress={() => void invertSelectedTracks()}
 						/>
 						{playlistMetadata.type === 'local' && (
 							<Appbar.Action
@@ -976,11 +1057,8 @@ function LocalPlaylistContent({
 						)}
 						<Appbar.Action
 							icon='playlist-plus'
-							onPress={() =>
-								openModal('BatchAddTracksToLocalPlaylist', {
-									payloads: batchAddTracksModalPayloads,
-								})
-							}
+							disabled={isResolvingSelection}
+							onPress={() => void openBatchAddTracksModal()}
 						/>
 					</>
 				) : (
