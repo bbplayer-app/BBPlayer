@@ -27,8 +27,8 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 
 	useEffect(() => {
 		if (visible) {
-			isAnimatingOut.value = false
-			translateX.value = withTiming(0, { duration: 250 })
+			isAnimatingOut.set(false)
+			translateX.set(withTiming(0, { duration: 250 }))
 		}
 	}, [visible, translateX, isAnimatingOut])
 

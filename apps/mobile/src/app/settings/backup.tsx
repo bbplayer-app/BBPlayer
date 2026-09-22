@@ -44,7 +44,7 @@ export default function BackupSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
-	const initialConfig = useRef(getStoredWebDavConfig()).current
+	const [initialConfig] = useState(getStoredWebDavConfig)
 	const didInitialRefresh = useRef(false)
 
 	const [baseUrl, setBaseUrl] = useState(initialConfig?.baseUrl ?? '')

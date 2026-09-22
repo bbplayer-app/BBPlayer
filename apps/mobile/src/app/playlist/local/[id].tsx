@@ -760,12 +760,12 @@ function LocalPlaylistContent({
 	/** Auto-scroll interval handle */
 	const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-	const stopAutoScroll = () => {
+	const stopAutoScroll = useCallback(() => {
 		if (autoScrollRef.current !== null) {
 			clearInterval(autoScrollRef.current)
 			autoScrollRef.current = null
 		}
-	}
+	}, [autoScrollRef])
 
 	// 组件卸载时清理自动滚动定时器
 	useEffect(() => {

@@ -68,7 +68,7 @@ export default function UpdateAppModal({
 			}
 			await downloadAndInstallApkAsync({
 				url: downloadUrl,
-				fileName: `BBPlayer-${version}-${Date.now()}.apk`,
+				fileName: buildApkFileName(version),
 				title: `BBPlayer ${version}`,
 				description: '下载完成后安装更新',
 			})
@@ -173,6 +173,9 @@ export default function UpdateAppModal({
 }
 
 const isApkUrl = (value: string) => value.toLowerCase().includes('.apk')
+
+const buildApkFileName = (version: string) =>
+	`BBPlayer-${version}-${Date.now()}.apk`
 
 const styles = StyleSheet.create({
 	forcedText: {

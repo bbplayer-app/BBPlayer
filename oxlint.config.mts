@@ -71,6 +71,7 @@ export default defineConfig({
 		'import/no-named-as-default': 'off',
 		'react/set-state-in-effect': 'off',
 		'react/exhaustive-effect-dependencies': 'off',
+		'react/capitalized-calls': 'off',
 
 		// tanstack query
 		'@tanstack/query/exhaustive-deps': 'error',
@@ -81,41 +82,14 @@ export default defineConfig({
 		'@tanstack/query/no-void-query-fn': 'error',
 		'@tanstack/query/mutation-property-order': 'error',
 
-		// react-compiler
-		'react-compiler/react-compiler': 'error',
-
 		// bbplayer
 		'bbplayer/no-navigate-after-modal-close': 'error',
 
-		// react-x (successor of eslint-plugin-react-hooks-extra)
-		'react-x/set-state-in-effect': 'off',
-		'react-x/no-unnecessary-use-prefix': 'error',
-		'react-x/use-state': [
-			'error',
-			{
-				enforceAssignment: true,
-				enforceSetterName: true,
-				enforceLazyInitialization: true,
-			},
-		],
-
-		// react-you-might-not-need-an-effect
-		'react-you-might-not-need-an-effect/no-adjust-state-on-prop-change': 'warn',
-		'react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change':
-			'warn',
-		'react-you-might-not-need-an-effect/no-event-handler': 'warn',
-		'react-you-might-not-need-an-effect/no-pass-live-state-to-parent': 'warn',
-		'react-you-might-not-need-an-effect/no-pass-data-to-parent': 'warn',
-		'react-you-might-not-need-an-effect/no-initialize-state': 'warn',
-		'react-you-might-not-need-an-effect/no-chain-state-updates': 'warn',
-		'react-you-might-not-need-an-effect/no-derived-state': 'warn',
-
-		'eslint/no-await-in-loop': 'error',
-		'always-return': 'allow',
-		'no-array-sort': 'allow',
-		'no-new-array': 'allow',
-		'style-prop-object': 'allow',
-		'no-map-spread': 'allow',
+		'promise/always-return': 'allow',
+		'unicorn/no-array-sort': 'allow',
+		'unicorn/no-new-array': 'allow',
+		'react/style-prop-object': 'allow',
+		'oxc/no-map-spread': 'allow',
 		'no-await-in-loop': 'allow',
 	},
 	settings: {
@@ -125,10 +99,7 @@ export default defineConfig({
 	},
 	jsPlugins: [
 		'@tanstack/eslint-plugin-query',
-		'eslint-plugin-react-compiler',
 		{ name: 'bbplayer', specifier: './packages/eslint-plugin/index.js' },
-		'eslint-plugin-react-x',
-		'eslint-plugin-react-you-might-not-need-an-effect',
 		{ name: 'drizzle-js', specifier: 'eslint-plugin-drizzle' },
 		{
 			name: 'import-alias',

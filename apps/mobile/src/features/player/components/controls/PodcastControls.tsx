@@ -17,7 +17,7 @@ import {
 export function PodcastControls() {
 	const { colors } = useTheme()
 	const { speed, sleepEndTime } = usePlaybackOptions()
-	const [now, setNow] = useState(Date.now())
+	const [now, setNow] = useState(() => Date.now())
 	useEffect(() => {
 		if (!sleepEndTime) return
 		const interval = setInterval(() => setNow(Date.now()), 1000)

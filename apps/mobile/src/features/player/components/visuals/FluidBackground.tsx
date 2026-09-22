@@ -313,8 +313,10 @@ export function FluidBackground({
 
 	const frame = useFrameCallback(({ timeSincePreviousFrame }) => {
 		// 60 秒是三个周期的公倍数，回绕时三层均无视觉跳变。
-		elapsed.value =
-			(elapsed.value + (timeSincePreviousFrame ?? 0) * flowSpeed.value) % 60_000
+		elapsed.set(
+			(elapsed.value + (timeSincePreviousFrame ?? 0) * flowSpeed.value) %
+				60_000,
+		)
 	}, false)
 
 	useEffect(() => {

@@ -91,24 +91,30 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		logo: logoSource,
 		ready: true,
 		animate: () => {
-			logoTranslateY.value = withTiming(height / 2 - insets.bottom - 41, {
-				duration: 620,
-				easing: Easing.out(Easing.cubic),
-			})
-			logoScale.value = withTiming(
-				0.48,
-				{
+			logoTranslateY.set(
+				withTiming(height / 2 - insets.bottom - 41, {
 					duration: 620,
 					easing: Easing.out(Easing.cubic),
-				},
-				(finished) => {
-					if (finished) scheduleOnRN(setIntroFinished, true)
-				},
+				}),
 			)
-			mediaOpacity.value = withTiming(1, {
-				duration: 420,
-				easing: Easing.out(Easing.quad),
-			})
+			logoScale.set(
+				withTiming(
+					0.48,
+					{
+						duration: 620,
+						easing: Easing.out(Easing.cubic),
+					},
+					(finished) => {
+						if (finished) scheduleOnRN(setIntroFinished, true)
+					},
+				),
+			)
+			mediaOpacity.set(
+				withTiming(1, {
+					duration: 420,
+					easing: Easing.out(Easing.quad),
+				}),
+			)
 			if (bootSplashVideo) {
 				scheduleOnRN(setVideoPlaybackRequested, true)
 			}
@@ -119,9 +125,11 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		if (!ready || !introFinished) return
 		if (playFullAnimation && bootSplashVideo && !videoEnded) return
 
-		containerOpacity.value = withTiming(0, { duration: 280 }, (finished) => {
-			if (finished) scheduleOnRN(setVisible, false)
-		})
+		containerOpacity.set(
+			withTiming(0, { duration: 280 }, (finished) => {
+				if (finished) scheduleOnRN(setVisible, false)
+			}),
+		)
 	}, [
 		bootSplashVideo,
 		containerOpacity,
