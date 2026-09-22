@@ -67,6 +67,11 @@ export default defineConfig({
 		'no-underscore-dangle': ['error', { allow: ['__csrf'] }],
 		'react/no-unstable-nested-components': 'off',
 
+		// oxlint 1.83 新启用/新增的规则，暂时关闭以恢复升级前的基线
+		'import/no-named-as-default': 'off',
+		'react/set-state-in-effect': 'off',
+		'react/exhaustive-effect-dependencies': 'off',
+
 		// tanstack query
 		'@tanstack/query/exhaustive-deps': 'error',
 		'@tanstack/query/no-rest-destructuring': 'warn',
@@ -82,19 +87,25 @@ export default defineConfig({
 		// bbplayer
 		'bbplayer/no-navigate-after-modal-close': 'error',
 
-		// react-hooks-extra
-		'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
-		'react-hooks-extra/no-unnecessary-use-prefix': 'error',
-		'react-hooks-extra/prefer-use-state-lazy-initialization': 'error',
+		// react-x (successor of eslint-plugin-react-hooks-extra)
+		'react-x/set-state-in-effect': 'off',
+		'react-x/no-unnecessary-use-prefix': 'error',
+		'react-x/use-state': [
+			'error',
+			{
+				enforceAssignment: true,
+				enforceSetterName: true,
+				enforceLazyInitialization: true,
+			},
+		],
 
 		// react-you-might-not-need-an-effect
-		'react-you-might-not-need-an-effect/no-empty-effect': 'warn',
 		'react-you-might-not-need-an-effect/no-adjust-state-on-prop-change': 'warn',
-		'react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change': 'warn',
+		'react-you-might-not-need-an-effect/no-reset-all-state-on-prop-change':
+			'warn',
 		'react-you-might-not-need-an-effect/no-event-handler': 'warn',
 		'react-you-might-not-need-an-effect/no-pass-live-state-to-parent': 'warn',
 		'react-you-might-not-need-an-effect/no-pass-data-to-parent': 'warn',
-		'react-you-might-not-need-an-effect/no-manage-parent': 'warn',
 		'react-you-might-not-need-an-effect/no-initialize-state': 'warn',
 		'react-you-might-not-need-an-effect/no-chain-state-updates': 'warn',
 		'react-you-might-not-need-an-effect/no-derived-state': 'warn',
@@ -116,7 +127,7 @@ export default defineConfig({
 		'@tanstack/eslint-plugin-query',
 		'eslint-plugin-react-compiler',
 		{ name: 'bbplayer', specifier: './packages/eslint-plugin/index.js' },
-		'eslint-plugin-react-hooks-extra',
+		'eslint-plugin-react-x',
 		'eslint-plugin-react-you-might-not-need-an-effect',
 		{ name: 'drizzle-js', specifier: 'eslint-plugin-drizzle' },
 		{

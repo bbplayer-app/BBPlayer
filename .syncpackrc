@@ -1,10 +1,21 @@
 {
-	"dependencyTypes": ["dev", "prod", "peer", "overrides"],
-	"filter": ".",
+	"$schema": "./node_modules/syncpack/schema.json",
 	"indent": "\t",
-	"semverRange": "",
 	"source": ["package.json", "apps/*/package.json", "packages/*/package.json"],
 	"versionGroups": [
+		{
+			"label": "Ignore dist-tag specifiers",
+			"dependencies": ["@react-native-community/cli"],
+			"packages": ["**"],
+			"isIgnored": true
+		},
+		{
+			"label": "Ignore intentionally loose peerDeps for bottom-tabs package",
+			"dependencies": ["react-native-bottom-tabs"],
+			"dependencyTypes": ["peer"],
+			"packages": ["**"],
+			"isIgnored": true
+		},
 		{
 			"label": "Use apps/mobile versions for core dependencies",
 			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router", "react-native-worklets", "react-native-svg"],

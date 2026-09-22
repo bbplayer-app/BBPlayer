@@ -12,6 +12,7 @@ const {
 	wrapWithReanimatedMetroConfig,
 } = require('react-native-reanimated/metro-config')
 const { getBundleModeMetroConfig } = require('react-native-worklets/bundleMode')
+const { withBoostConfig } = require('react-native-boost/metro')
 
 const sentryConfig = getSentryExpoConfig(__dirname, {
 	annotateReactComponents: true,
@@ -26,7 +27,12 @@ const withReanimated = wrapWithReanimatedMetroConfig(sentryConfig)
 
 const withWorklets = getBundleModeMetroConfig(withReanimated)
 
-const config = withRozenite(withWorklets, {
+const withBoost = withBoostConfig(withWorklets, {
+	logLevel: 'debug',
+	ignores: ['node_modules/**', '../../node_modules/**'],
+})
+
+const config = withRozenite(withBoost, {
 	enabled: process.env.WITH_ROZENITE === 'true',
 	enhanceMetroConfig: (config) =>
 		withRozeniteBundleDiscoveryPlugin(withRozeniteRequireProfiler(config)),

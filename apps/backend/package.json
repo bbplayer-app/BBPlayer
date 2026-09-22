@@ -21,13 +21,13 @@
 	"dependencies": {
 		"@hono/arktype-validator": "^2.0.1",
 		"arktype": "^2.2.3",
-		"drizzle-orm": "^0.45.2",
+		"drizzle-orm": "^0.45.3",
 		"hono": "^4.12.27",
 		"pg": "^8.19.0"
 	},
 	"devDependencies": {
 		"@types/pg": "^8.16.0",
-		"drizzle-kit": "^0.31.10",
+		"drizzle-kit": "^0.31.11",
 		"typescript": "~6.0.3",
 		"wrangler": "^4.4.0"
 	}

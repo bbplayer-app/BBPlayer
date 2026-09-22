@@ -14,9 +14,9 @@
 	"endOfLine": "lf",
 	"singleAttributePerLine": true,
 	"ignorePatterns": ["**/dm.d.ts", "**/dm.js"],
-	"experimentalSortImports": {
+	"sortImports": {
 		"groups": [
-			["side-effect"],
+			["side_effect"],
 			["builtin"],
 			["external", "type-external"],
 			["internal", "type-internal"],
@@ -25,7 +25,7 @@
 			["index", "type-index"]
 		]
 	},
-	"experimentalSortPackageJson": {
+	"sortPackageJson": {
 		"sortScripts": true
 	}
 }

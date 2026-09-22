@@ -21,14 +21,14 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
-  - expo-updates@57.0.21
+  - expo-updates@57.0.23
   - lucide-react@1.39.0
   - '@lodev09/react-native-true-sheet@4.0.0-beta.16'
+  - '@legendapp/list@3.4.0'
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@expo/ui': patches/@expo__ui.patch
-  '@legendapp/list@3.3.9': patches/@legendapp__list@3.3.9.patch
-  expo-updates@57.0.21: patches/expo-updates@57.0.21.patch
+  expo-updates@57.0.23: patches/expo-updates@57.0.23.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch
   react-native-pager-view@9.0.4: patches/react-native-pager-view@9.0.4.patch

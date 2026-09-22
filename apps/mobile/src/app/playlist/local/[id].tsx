@@ -601,9 +601,13 @@ function LocalPlaylistContent({
 		setIsResolvingSelection(true)
 		try {
 			const tracks = await getSelectionScopeTracks()
-			if (!tracks) return
+			if (!tracks) {
+				setIsResolvingSelection(false)
+				return
+			}
 			setSelected(new Set(tracks.map((track) => track.id)))
-		} finally {
+			setIsResolvingSelection(false)
+		} catch {
 			setIsResolvingSelection(false)
 		}
 	}
@@ -612,7 +616,10 @@ function LocalPlaylistContent({
 		setIsResolvingSelection(true)
 		try {
 			const tracks = await getSelectionScopeTracks()
-			if (!tracks) return
+			if (!tracks) {
+				setIsResolvingSelection(false)
+				return
+			}
 			setSelected(
 				new Set(
 					tracks
@@ -620,7 +627,8 @@ function LocalPlaylistContent({
 						.map((track) => track.id),
 				),
 			)
-		} finally {
+			setIsResolvingSelection(false)
+		} catch {
 			setIsResolvingSelection(false)
 		}
 	}
@@ -631,6 +639,7 @@ function LocalPlaylistContent({
 			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
 			if (tracksResult.isErr()) {
 				toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+				setIsResolvingSelection(false)
 				return
 			}
 			const selectedTracks = tracksResult.value.filter((track) =>
@@ -642,7 +651,8 @@ function LocalPlaylistContent({
 					artist: track.artist!,
 				})),
 			})
-		} finally {
+			setIsResolvingSelection(false)
+		} catch {
 			setIsResolvingSelection(false)
 		}
 	}
@@ -760,7 +770,7 @@ function LocalPlaylistContent({
 	// 组件卸载时清理自动滚动定时器
 	useEffect(() => {
 		return () => stopAutoScroll()
-	}, [])
+	}, [stopAutoScroll])
 
 	const startAutoScroll = (direction: 'up' | 'down') => {
 		stopAutoScroll()

@@ -23,7 +23,7 @@ type PlaylistSyncAction = 'sync_bilibili' | 'sync_external'
 class AnalyticsService {
 	private async safeLogEvent(name: string, params?: Record<string, unknown>) {
 		try {
-			await logEvent(getAnalytics(), name, params)
+			logEvent(getAnalytics(), name, params)
 			logger.debug(`[Analytics] Logged event: ${name}`, params)
 		} catch (error) {
 			logger.warning(`[Analytics] Failed to log event: ${name}`, { error })

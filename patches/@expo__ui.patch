@@ -1,3 +1,5 @@
+# 修复 https://github.com/bbplayer-app/BBPlayer/issues/336
+# 等待改 issue 对应 pr 合并并发布后即可删除该 patch
 diff --git a/android/src/main/java/expo/modules/ui/HostView.kt b/android/src/main/java/expo/modules/ui/HostView.kt
 index 40f2b08ad77eb9fe04e1d253d189f74f825fbcf7..cef586161574a8eea5dd672056f76cc43c6e8004 100644
 --- a/android/src/main/java/expo/modules/ui/HostView.kt
