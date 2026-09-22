@@ -10,7 +10,9 @@ declare class ExpoWavySliderModule {
 		setValue(value: { value: unknown }): void
 		setOnChange(callback: object | null): void
 	}
-	WorkletCallback: new (worklet: object) => NativeSharedObject
+	WorkletCallback: new (worklet: object | null) => NativeSharedObject & {
+		setWorklet(worklet: object | null): void
+	}
 }
 
 const unsupportedPlatformModule = new Proxy(

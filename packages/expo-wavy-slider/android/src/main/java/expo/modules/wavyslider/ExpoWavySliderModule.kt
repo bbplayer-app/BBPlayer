@@ -17,10 +17,21 @@ class ExpoWavySliderModule : Module() {
         Name("ExpoWavySlider")
 
         Class(WorkletCallback::class) {
-            Constructor { worklet: Worklet ->
+            Constructor { worklet: Worklet? ->
                 val callback = WorkletCallback()
                 callback.worklet = worklet
                 callback
+            }
+
+            Function("setWorklet") { callback: WorkletCallback, worklet: Worklet? ->
+                // Serialize updates with invocations on the UI thread, including removal.
+                if (Looper.getMainLooper().isCurrentThread) {
+                    callback.worklet = worklet
+                } else {
+                    appContext.mainQueue.launch {
+                        callback.worklet = worklet
+                    }
+                }
             }
 
             Property("__expo_wavy_slider_shared_object__") { _: WorkletCallback ->

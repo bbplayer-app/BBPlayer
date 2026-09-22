@@ -10,13 +10,12 @@ import expo.modules.kotlin.sharedobjects.SharedObject
  * The view resolves it and executes the worklet on the UI runtime.
  */
 class WorkletCallback : SharedObject() {
+    // Initialized on construction, then updated and invoked on the UI thread.
     var worklet: Worklet? = null
 
     fun invoke(vararg arguments: Any?) {
-        val worklet = worklet ?: run {
-            Log.w("ExpoWavySlider", "WorkletCallback.invoke: worklet is nil, the callback will not run.")
-            return
-        }
+        // A missing callback is an intentional disabled event, not an error.
+        val worklet = worklet ?: return
         val runtime = appContext?.uiRuntime ?: run {
             Log.w("ExpoWavySlider", "WorkletCallback.invoke: UI worklet runtime is not available, the callback will not run.")
             return
