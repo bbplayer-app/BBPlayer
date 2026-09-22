@@ -2,9 +2,11 @@ package expo.modules.orpheus.model
 
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.OptimizedRecord
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@OptimizedRecord
 @Serializable
 class TrackRecord : Record {
     @Field

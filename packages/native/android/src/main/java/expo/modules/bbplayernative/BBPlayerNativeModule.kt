@@ -15,6 +15,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.OptimizedRecord
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -304,6 +305,7 @@ class BBPlayerNativeModule : Module() {
     }
 }
 
+@OptimizedRecord
 class AppUpdateDownloadOptions : Record {
     @Field
     var url: String = ""
@@ -318,6 +320,7 @@ class AppUpdateDownloadOptions : Record {
     var description: String? = null
 }
 
+@OptimizedRecord
 class UnzipOptions : Record {
     @Field
     var inputUri: String = ""

@@ -14,12 +14,60 @@ import expo.modules.kotlin.exception.toCodedException
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import expo.modules.kotlin.sharedobjects.SharedRef
 import expo.modules.kotlin.types.EitherOfThree
+import expo.modules.kotlin.types.OptimizedRecord
 import expo.modules.kotlin.types.toKClass
 
 internal class ImageLoadingFailedException(cause: CodedException?) :
     CodedException(message = "Could not load the image from sharedRef", cause)
+
+@OptimizedRecord
+class SwatchRecord : Record {
+    @Field
+    var hex: String = ""
+
+    @Field
+    var titleTextColor: String = ""
+
+    @Field
+    var bodyTextColor: String = ""
+
+    @Field
+    var population: Int = 0
+}
+
+@OptimizedRecord
+class PaletteRecord : Record {
+    @Field
+    var width: Int = 0
+
+    @Field
+    var height: Int = 0
+
+    @Field
+    var dominant: SwatchRecord? = null
+
+    @Field
+    var vibrant: SwatchRecord? = null
+
+    @Field
+    var lightVibrant: SwatchRecord? = null
+
+    @Field
+    var darkVibrant: SwatchRecord? = null
+
+    @Field
+    var muted: SwatchRecord? = null
+
+    @Field
+    var lightMuted: SwatchRecord? = null
+
+    @Field
+    var darkMuted: SwatchRecord? = null
+}
 
 class ExpoImageThemeColorsModule : Module() {
     companion object {
@@ -40,17 +88,17 @@ class ExpoImageThemeColorsModule : Module() {
 
             val palette = Palette.from(bitmap).generate()
 
-            return@Coroutine mapOf(
-                "width" to bitmap.width,
-                "height" to bitmap.height,
-                "dominant" to palette.dominantSwatch.toSwatchMap(),
-                "vibrant" to palette.vibrantSwatch.toSwatchMap(),
-                "lightVibrant" to palette.lightVibrantSwatch.toSwatchMap(),
-                "darkVibrant" to palette.darkVibrantSwatch.toSwatchMap(),
-                "muted" to palette.mutedSwatch.toSwatchMap(),
-                "lightMuted" to palette.lightMutedSwatch.toSwatchMap(),
-                "darkMuted" to palette.darkMutedSwatch.toSwatchMap()
-            )
+            return@Coroutine PaletteRecord().apply {
+                width = bitmap.width
+                height = bitmap.height
+                dominant = palette.dominantSwatch.toSwatchRecord()
+                vibrant = palette.vibrantSwatch.toSwatchRecord()
+                lightVibrant = palette.lightVibrantSwatch.toSwatchRecord()
+                darkVibrant = palette.darkVibrantSwatch.toSwatchRecord()
+                muted = palette.mutedSwatch.toSwatchRecord()
+                lightMuted = palette.lightMutedSwatch.toSwatchRecord()
+                darkMuted = palette.darkMutedSwatch.toSwatchRecord()
+            }
         }
     }
 
@@ -87,16 +135,17 @@ class ExpoImageThemeColorsModule : Module() {
         return String.format("#%06X", (0xFFFFFF and this))
     }
 
-    private fun Palette.Swatch?.toSwatchMap(): Map<String, Any>? {
+    private fun Palette.Swatch?.toSwatchRecord(): SwatchRecord? {
         if (this == null) {
             return null
         }
 
-        return mapOf(
-            "hex" to this.rgb.toHexColor(),
-            "titleTextColor" to this.titleTextColor.toHexColor(),
-            "bodyTextColor" to this.bodyTextColor.toHexColor(),
-            "population" to this.population
-        )
+        val swatch = this
+        return SwatchRecord().apply {
+            hex = swatch.rgb.toHexColor()
+            titleTextColor = swatch.titleTextColor.toHexColor()
+            bodyTextColor = swatch.bodyTextColor.toHexColor()
+            population = swatch.population
+        }
     }
 }

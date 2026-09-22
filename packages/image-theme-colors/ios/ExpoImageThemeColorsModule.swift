@@ -2,11 +2,54 @@ import ExpoModulesCore
 import swift_vibrant
 import UIKit
 
+struct SwatchRecord: Record {
+  @Field
+  var hex: String = ""
+
+  @Field
+  var titleTextColor: String = ""
+
+  @Field
+  var bodyTextColor: String = ""
+
+  @Field
+  var population: Int = 0
+}
+
+struct PaletteRecord: Record {
+  @Field
+  var width: Double = 0
+
+  @Field
+  var height: Double = 0
+
+  @Field
+  var dominant: SwatchRecord?
+
+  @Field
+  var vibrant: SwatchRecord?
+
+  @Field
+  var lightVibrant: SwatchRecord?
+
+  @Field
+  var darkVibrant: SwatchRecord?
+
+  @Field
+  var muted: SwatchRecord?
+
+  @Field
+  var lightMuted: SwatchRecord?
+
+  @Field
+  var darkMuted: SwatchRecord?
+}
+
 public class ExpoImageThemeColorsModule: Module {
   public func definition() -> ModuleDefinition {
     Name("ExpoImageThemeColors")
 
-    AsyncFunction("extractThemeColorAsync") { (source: Either<URL, SharedRef<UIImage>>) -> [String: Any] in
+    AsyncFunction("extractThemeColorAsync") { (source: Either<URL, SharedRef<UIImage>>) -> PaletteRecord in
         let image: UIImage
         
         if let url: URL = source.get() {
@@ -25,29 +68,30 @@ public class ExpoImageThemeColorsModule: Module {
         // Generate palette
         let palette = Vibrant.from(image).getPalette()
         
-        return [
-            "width": image.size.width,
-            "height": image.size.height,
-            "dominant": (palette.Vibrant ?? palette.Muted)?.toDictionary() ?? [:],
-            "vibrant": palette.Vibrant?.toDictionary() ?? [:],
-            "lightVibrant": palette.LightVibrant?.toDictionary() ?? [:],
-            "darkVibrant": palette.DarkVibrant?.toDictionary() ?? [:],
-            "muted": palette.Muted?.toDictionary() ?? [:],
-            "lightMuted": palette.LightMuted?.toDictionary() ?? [:],
-            "darkMuted": palette.DarkMuted?.toDictionary() ?? [:]
-        ]
+        let record = PaletteRecord()
+        record.width = Double(image.size.width)
+        record.height = Double(image.size.height)
+        record.dominant = (palette.Vibrant ?? palette.Muted)?.toRecord()
+        record.vibrant = palette.Vibrant?.toRecord()
+        record.lightVibrant = palette.LightVibrant?.toRecord()
+        record.darkVibrant = palette.DarkVibrant?.toRecord()
+        record.muted = palette.Muted?.toRecord()
+        record.lightMuted = palette.LightMuted?.toRecord()
+        record.darkMuted = palette.DarkMuted?.toRecord()
+
+        return record
     }
   }
 }
 
 extension Swatch {
-    func toDictionary() -> [String: Any] {
-        return [
-            "hex": self.uiColor.toHexString(),
-            "titleTextColor": self.titleTextColor.toHexString(),
-            "bodyTextColor": self.bodyTextColor.toHexString(),
-            "population": self.population
-        ]
+    func toRecord() -> SwatchRecord {
+        let record = SwatchRecord()
+        record.hex = self.uiColor.toHexString()
+        record.titleTextColor = self.titleTextColor.toHexString()
+        record.bodyTextColor = self.bodyTextColor.toHexString()
+        record.population = self.population
+        return record
     }
 }
 
