@@ -178,6 +178,7 @@ export default function LocalPlaylistPage() {
 	const isListReady = useScreenTransitionReady()
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const { markInteractive } = useObserve()
+	const router = useRouter()
 
 	useEffect(() => {
 		markInteractive()
@@ -196,13 +197,27 @@ export default function LocalPlaylistPage() {
 		isError: isPlaylistMetadataError,
 	} = usePlaylistMetadata(Number(id))
 
+	// 歌单可能在打开后被删除（本地删除或远端删除），此时查询会返回 null。
+	// 自动退出该页面，避免停留在无效页面，也不要把这种情况当作错误上报
+	const isPlaylistNotFound =
+		!isPlaylistMetadataPending &&
+		!isPlaylistMetadataError &&
+		playlistMetadata === null
+
+	useEffect(() => {
+		if (!isPlaylistNotFound) return
+		toast.error('播放列表不存在或已被删除')
+		if (router.canGoBack()) router.back()
+		else router.replace('/(tabs)')
+	}, [isPlaylistNotFound, router])
+
 	if (typeof id !== 'string') return null
 	if (isPlaylistDataPending || isPlaylistMetadataPending || !isListReady)
 		return <PlaylistPageSkeleton animate={isListReady} />
 	if (isPlaylistDataError || isPlaylistMetadataError)
 		return <PlaylistError text='加载播放列表内容失败' />
 	if (!playlistData || !playlistMetadata)
-		return <PlaylistError text='未找到播放列表元数据' />
+		return <PlaylistError text='播放列表不存在或已被删除' />
 
 	return (
 		<LocalPlaylistContent

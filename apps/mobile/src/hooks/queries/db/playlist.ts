@@ -7,6 +7,7 @@ import {
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import { queryClient } from '@/lib/config/queryClient'
+import { ServiceError } from '@/lib/errors'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
@@ -69,8 +70,13 @@ export const usePlaylistContents = (playlistId: number) => {
 export const usePlaylistMetadata = (playlistId: number) => {
 	return useQuery({
 		queryKey: playlistKeys.playlistMetadata(playlistId),
-		queryFn: () =>
-			returnOrThrowAsync(playlistService.getPlaylistMetadata(playlistId)),
+		queryFn: async () => {
+			const result = await playlistService.getPlaylistMetadata(playlistId)
+			if (result.isErr()) throw result.error
+			// service 在歌单不存在时返回 undefined，而 React Query 不接受 queryFn
+			// 返回 undefined（会抛错），因此统一转成 null，交由页面按「不存在」处理
+			return result.value ?? null
+		},
 	})
 }
 
@@ -142,15 +148,26 @@ export const usePlaylistContentsInfinite = (
 			limit,
 			initialLimit,
 		),
-		queryFn: ({ pageParam }) =>
-			returnOrThrowAsync(
-				playlistService.getPlaylistTracksPaginated({
-					playlistId,
-					limit,
-					initialLimit,
-					cursor: pageParam,
-				}),
-			),
+		queryFn: async ({ pageParam }) => {
+			const result = await playlistService.getPlaylistTracksPaginated({
+				playlistId,
+				limit,
+				initialLimit,
+				cursor: pageParam,
+			})
+			if (result.isErr()) {
+				// 歌单在查询发起后被删除（例如删除后页面尚未卸载时又触发了重取）
+				// 属于预期内的竞态，这里按空歌单处理，不作为错误上报
+				if (
+					result.error instanceof ServiceError &&
+					result.error.type === 'PlaylistNotFound'
+				) {
+					return { tracks: [], sortKeys: [], nextCursor: undefined }
+				}
+				throw result.error
+			}
+			return result.value
+		},
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
 		initialPageParam: undefined as
 			| { lastSortKey: string; createdAt: number; lastId: number }
