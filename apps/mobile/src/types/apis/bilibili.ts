@@ -125,6 +125,7 @@ interface BilibiliPlaylist {
  * 搜索结果视频信息
  */
 interface BilibiliSearchVideo {
+	type: string // 搜索结果类型，视频为 video；search_type=video 时也可能返回 ketang（B站课堂）
 	aid: number
 	bvid: string
 	title: string

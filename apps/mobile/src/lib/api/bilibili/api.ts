@@ -180,6 +180,11 @@ export class BilibiliApi {
 				if (!res.result) {
 					res.result = []
 				}
+				// search_type=video 也会混入 type 为 ketang（B站课堂）的条目，
+				// 这类条目不是稿件，bvid 为空，无法作为 track 录入本地
+				res.result = res.result.filter(
+					(item) => item.type !== 'ketang' && !!item.bvid,
+				)
 				return okAsync(res)
 			})
 	}
