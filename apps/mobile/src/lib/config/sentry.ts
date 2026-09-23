@@ -49,6 +49,8 @@ export function initializeSentry() {
 		enableLogs: false,
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],
+		enableNdk: true,
+		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
 	})

@@ -176,6 +176,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					url: 'https://sentry.io/',
 					project: 'bbplayer',
 					organization: 'roitium',
+					experimental_android: {
+						enableAndroidGradlePlugin: true,
+						uploadNativeSymbols: true,
+						autoUploadNativeSymbols: true,
+						includeNativeSources: true,
+					},
 				},
 			],
 			expoBuildProperties({
