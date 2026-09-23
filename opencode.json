@@ -7,14 +7,15 @@
 			"oauth": {}
 		},
 		"argent": {
-      "type": "local",
-      "command": [
-        "node",
-        "node_modules/@swmansion/argent/dist/cli.js",
-        "mcp"
-      ],
-      "enabled": true
-    }
+			"type": "local",
+			"command": ["node", "node_modules/@swmansion/argent/dist/cli.js", "mcp"],
+			"enabled": true
+		},
+		"codedb": {
+			"type": "local",
+			"command": ["/Users/roitium/bin/codedb", "mcp"],
+			"enabled": true
+		}
 	},
 	"lsp": false,
 	"instructions": ["packages/*/AGENTS.md", "apps/*/AGENTS.md"],
