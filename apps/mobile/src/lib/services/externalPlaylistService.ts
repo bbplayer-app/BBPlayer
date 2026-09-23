@@ -100,7 +100,7 @@ export class ExternalPlaylistService {
 			})
 		} else if (source === 'qq') {
 			return qqMusicApi.getPlaylist(playlistId).map((response) => {
-				const playlist = response.data.cdlist[0]
+				const playlist = response.data?.cdlist?.[0]
 				if (!playlist)
 					return {
 						playlist: {

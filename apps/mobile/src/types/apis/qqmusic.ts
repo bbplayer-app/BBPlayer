@@ -72,8 +72,9 @@ export interface QQMusicLyricResponse {
 
 export interface QQMusicPlaylistResponse {
 	code: number
-	data: {
-		cdlist: QQMusicPlaylist[]
+	// QQ Music 在歌单不存在/失效等情况下可能不返回 data 字段
+	data?: {
+		cdlist?: QQMusicPlaylist[]
 	}
 }
 
