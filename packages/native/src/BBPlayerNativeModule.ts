@@ -9,6 +9,11 @@ import type {
 } from './BBPlayerNative.types'
 
 declare class BBPlayerNativeModule extends NativeModule {
+	/**
+	 * 当前 APK 签名证书的 SHA-256 指纹（小写十六进制），模块初始化时计算一次。
+	 * 取不到时为空字符串。
+	 */
+	readonly apkSigningCertificateSha256: string
 	getSupportedAbisAsync(): Promise<string[]>
 	canRequestPackageInstallsAsync(): Promise<boolean>
 	openPackageInstallerSettingsAsync(): Promise<void>
@@ -40,6 +45,23 @@ export const canRequestPackageInstallsAsync = () =>
 
 export const getSupportedAbisAsync = () =>
 	getNativeModule().getSupportedAbisAsync()
+
+/**
+ * 当前 APK 签名证书的 SHA-256 指纹（小写十六进制）。
+ *
+ * 仅用于判断构建来源，不构成安全保证：仓库开源，fork 可以直接改掉这段逻辑。
+ * 仅 Android 可用；iOS、Expo Go 或原生模块不可用时返回 null。
+ */
+export const getApkSigningCertificateSha256 = (): string | null => {
+	if (Platform.OS !== 'android') return null
+	try {
+		const value = getNativeModule().apkSigningCertificateSha256
+		return value ? value.toLowerCase() : null
+	} catch {
+		// 原生模块不可用（例如 Expo Go）时无法校验签名
+		return null
+	}
+}
 
 export const openPackageInstallerSettingsAsync = () =>
 	getNativeModule().openPackageInstallerSettingsAsync()

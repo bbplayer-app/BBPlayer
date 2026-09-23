@@ -1,7 +1,9 @@
+import { getApkSigningCertificateSha256 } from '@bbplayer/native'
 import * as Sentry from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
 import * as Application from 'expo-application'
 import * as Updates from 'expo-updates'
+import { Platform } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
@@ -11,6 +13,30 @@ const logger = log.extend('Utils.Sentry')
 
 const identifier = Application.applicationId
 const development = process.env.NODE_ENV === 'development'
+
+// 仅在官方应用包名上启用 Sentry，其他标识（Expo Go、第三方套壳等）一律忽略
+// 忽略最后一个字母，允许用户改包名共存（其实是我有时候要测试）
+const isOfficialApp = identifier?.startsWith('com.roitium.bbplaye') ?? false
+
+/**
+ * 官方 APK 签名证书的 SHA-256 指纹（小写十六进制）。
+ *
+ * 留空表示「尚未配置」：此时不做签名校验，避免忘记填写导致上报静默停止。
+ */
+const OFFICIAL_APK_SIGNING_CERT_SHA256: readonly string[] = [
+	'ddde56261ccb62dcf8117516499e04ffe9ddf31e59ba4cb80e1d047fd6977936',
+]
+
+const apkSigningCertificateSha256 = getApkSigningCertificateSha256()
+
+// 只在能拿到指纹的 Android 上校验；列表留空视为未配置，直接放行。
+const hasOfficialSignature =
+	Platform.OS !== 'android' ||
+	OFFICIAL_APK_SIGNING_CERT_SHA256.length === 0 ||
+	(apkSigningCertificateSha256 !== null &&
+		OFFICIAL_APK_SIGNING_CERT_SHA256.includes(apkSigningCertificateSha256))
+
+const isOfficialBuild = isOfficialApp && hasOfficialSignature
 
 const getEnv = () => {
 	if (development) {
@@ -34,7 +60,9 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 
 logger.info(
 	'Sentry 启用状态为：',
-	!development && useAppStore.getState().settings.enableDataCollection,
+	!development &&
+		isOfficialBuild &&
+		useAppStore.getState().settings.enableDataCollection,
 )
 
 export function initializeSentry() {
@@ -45,7 +73,13 @@ export function initializeSentry() {
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		enabled:
-			!development && useAppStore.getState().settings.enableDataCollection,
+			!development &&
+			isOfficialBuild &&
+			useAppStore.getState().settings.enableDataCollection,
+		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
+		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。
+		// 因此非官方签名时把原生 SDK 一并关掉。
+		enableNative: isOfficialBuild && !development,
 		enableLogs: false,
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],

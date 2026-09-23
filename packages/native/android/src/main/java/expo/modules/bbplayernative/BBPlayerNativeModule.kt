@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
@@ -19,6 +20,7 @@ import expo.modules.kotlin.types.OptimizedRecord
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,6 +29,10 @@ import kotlinx.coroutines.withContext
 class BBPlayerNativeModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("BBPlayerNative")
+
+        Constant("apkSigningCertificateSha256") {
+            apkSigningCertificateSha256
+        }
 
         AsyncFunction("canRequestPackageInstallsAsync") Coroutine { ->
             val context = requireContext()
@@ -116,6 +122,38 @@ class BBPlayerNativeModule : Module() {
 
     private fun requireContext(): Context =
         appContext.reactContext ?: throw IllegalStateException("React context is not available")
+
+    /**
+     * 当前 APK 签名证书的 SHA-256 指纹（小写十六进制）。
+     *
+     * 用于 Sentry 判断是否为官方签名构建：仓库开源、DSN 随包分发，无法阻止
+     * 别人故意滥用，但可以据此挡掉「用自己的密钥重新签名后重新构建」的包。
+     * 取不到时返回空串（例如 Expo Go），由 JS 侧决定如何处理。首次访问时
+     * 计算一次。
+     */
+    @Suppress("DEPRECATION")
+    private val apkSigningCertificateSha256: String by lazy {
+        runCatching {
+            val context = requireContext()
+            val signature = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                context.packageManager
+                    .getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                    .signingInfo
+                    ?.apkContentsSigners
+                    ?.firstOrNull()
+            } else {
+                context.packageManager
+                    .getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+                    .signatures
+                    ?.firstOrNull()
+            }
+
+            signature
+                ?.let { MessageDigest.getInstance("SHA-256").digest(it.toByteArray()) }
+                ?.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xFF) }
+                ?: ""
+        }.getOrDefault("")
+    }
 
     private fun ensureCanRequestPackageInstalls(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
