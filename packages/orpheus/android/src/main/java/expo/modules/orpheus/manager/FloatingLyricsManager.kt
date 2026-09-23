@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.ContextThemeWrapper
@@ -79,8 +78,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
         textColor = GeneralStorage.getDesktopLyricsHighlightColor()
         textSize = GeneralStorage.getDesktopLyricsTextSize()
         
-        @Suppress("DEPRECATION")
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
+        val type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
             type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,

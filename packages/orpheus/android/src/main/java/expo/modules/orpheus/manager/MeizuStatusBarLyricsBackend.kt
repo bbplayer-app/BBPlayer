@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import expo.modules.orpheus.R
 
@@ -121,11 +120,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
     private fun postTickerNotification(text: String, translation: String?) {
         ensureNotificationChannel()
 
-        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(context, CHANNEL_ID)
-        } else {
-            Notification.Builder(context)
-        }
+        val builder = Notification.Builder(context, CHANNEL_ID)
 
         val notification = builder
             .setSmallIcon(R.drawable.outline_translate_24)
@@ -141,10 +136,8 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
             .setCategory(Notification.CATEGORY_STATUS)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            notification.extras.putBoolean("ticker_icon_switch", false)
-            notification.extras.putInt("ticker_icon", R.drawable.outline_translate_24)
-        }
+        notification.extras.putBoolean("ticker_icon_switch", false)
+        notification.extras.putInt("ticker_icon", R.drawable.outline_translate_24)
 
         notification.flags = notification.flags or Notification.FLAG_NO_CLEAR
         notification.flags = notification.flags or flagAlwaysShowTicker
@@ -154,7 +147,6 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
     }
 
     private fun ensureNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (notificationManager.getNotificationChannel(CHANNEL_ID) != null) return
 
         val channel = NotificationChannel(

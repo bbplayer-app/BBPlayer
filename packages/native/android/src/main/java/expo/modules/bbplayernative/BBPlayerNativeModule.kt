@@ -35,11 +35,7 @@ class BBPlayerNativeModule : Module() {
         }
 
         AsyncFunction("canRequestPackageInstallsAsync") Coroutine { ->
-            val context = requireContext()
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-                return@Coroutine true
-            }
-            return@Coroutine context.packageManager.canRequestPackageInstalls()
+            requireContext().packageManager.canRequestPackageInstalls()
         }
 
         AsyncFunction("getSupportedAbisAsync") Coroutine { ->
@@ -156,7 +152,6 @@ class BBPlayerNativeModule : Module() {
     }
 
     private fun ensureCanRequestPackageInstalls(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (context.packageManager.canRequestPackageInstalls()) return
 
         openPackageInstallerSettings(context)
@@ -164,7 +159,6 @@ class BBPlayerNativeModule : Module() {
     }
 
     private fun openPackageInstallerSettings(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val intent = Intent(
             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
             Uri.parse("package:${context.packageName}"),
