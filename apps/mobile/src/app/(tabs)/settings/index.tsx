@@ -49,11 +49,7 @@ export default function SettingsPage() {
 				</View>
 				<ScrollView
 					style={styles.scrollView}
-					contentContainerStyle={[
-						styles.scrollContent,
-						{ paddingBottom: insets.bottom + (haveTrack ? 132 : 40) },
-					]}
-					contentInsetAdjustmentBehavior='automatic'
+					contentContainerStyle={styles.scrollContent}
 					showsVerticalScrollIndicator
 					persistentScrollbar // 我看哪个 b 还说看不见这是可滚动的？！
 				>
@@ -283,6 +279,8 @@ const styles = StyleSheet.create({
 	},
 	scrollContent: {
 		paddingHorizontal: 16,
+		// 与底部渐变高度一致，保证末项刚好落在渐变上方，不留多余空白
+		paddingBottom: 40,
 	},
 	divider: {
 		marginVertical: 4,
