@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -209,6 +210,10 @@ export default function LyricsSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
+				<SettingsSectionTitle
+					title='歌词显示'
+					first
+				/>
 				<View style={styles.settingRow}>
 					<Text>显示逐字歌词</Text>
 					<UniversalSwitch
@@ -231,6 +236,7 @@ export default function LyricsSettingsPage() {
 				</View>
 				{Platform.OS === 'android' && (
 					<>
+						<SettingsSectionTitle title='系统歌词（仅 Android）' />
 						<View style={styles.settingRow}>
 							<Text>桌面歌词</Text>
 							<UniversalSwitch
@@ -363,6 +369,7 @@ export default function LyricsSettingsPage() {
 						</View>
 					</>
 				)}
+				<SettingsSectionTitle title='歌词来源' />
 				<View style={styles.settingRow}>
 					<Text>自动匹配的歌词源（不影响手动搜索）</Text>
 					<MenuView {...lyricSourceMenu}>

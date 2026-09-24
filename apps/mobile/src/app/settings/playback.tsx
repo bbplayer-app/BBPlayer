@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -65,7 +66,11 @@ export default function PlaybackSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
-				<View style={[styles.settingRow, { marginTop: 16 }]}>
+				<SettingsSectionTitle
+					title='播放行为'
+					first
+				/>
+				<View style={styles.settingRow}>
 					<View style={{ flexShrink: 1 }}>
 						<Text>默认播放器</Text>
 						<Text variant='bodySmall'>
@@ -78,22 +83,6 @@ export default function PlaybackSettingsPage() {
 							size={20}
 						/>
 					</MenuView>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>在应用启动时恢复上次播放进度</Text>
-					<UniversalSwitch
-						value={enablePersistCurrentPosition}
-						onValueChange={() => {
-							try {
-								Orpheus.restorePlaybackPositionEnabled =
-									!enablePersistCurrentPosition
-							} catch (e) {
-								toastAndLogError('设置失败', e, 'Settings')
-								return
-							}
-							setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
-						}}
-					/>
 				</View>
 				<View style={styles.settingRow}>
 					<Text>响度均衡（实验性）</Text>
@@ -112,6 +101,33 @@ export default function PlaybackSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
+					<Text>允许与其他软件同时播放</Text>
+					<UniversalSwitch
+						value={allowSimultaneousPlayback}
+						onValueChange={(value) => {
+							setSettings({ allowSimultaneousPlayback: value })
+						}}
+					/>
+				</View>
+
+				<SettingsSectionTitle title='启动时行为' />
+				<View style={styles.settingRow}>
+					<Text>在应用启动时恢复上次播放进度</Text>
+					<UniversalSwitch
+						value={enablePersistCurrentPosition}
+						onValueChange={() => {
+							try {
+								Orpheus.restorePlaybackPositionEnabled =
+									!enablePersistCurrentPosition
+							} catch (e) {
+								toastAndLogError('设置失败', e, 'Settings')
+								return
+							}
+							setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
+						}}
+					/>
+				</View>
+				<View style={styles.settingRow}>
 					<Text>软件启动时自动播放（易社死）</Text>
 					<UniversalSwitch
 						value={enableAutostartPlayOnStart}
@@ -123,15 +139,6 @@ export default function PlaybackSettingsPage() {
 								return
 							}
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
-						}}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>允许与其他软件同时播放</Text>
-					<UniversalSwitch
-						value={allowSimultaneousPlayback}
-						onValueChange={(value) => {
-							setSettings({ allowSimultaneousPlayback: value })
 						}}
 					/>
 				</View>

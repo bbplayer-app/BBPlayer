@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import { alert } from '@/components/modals/AlertModal'
 import {
 	useCloudBackupMutation,
@@ -153,7 +154,7 @@ export default function BackupSettingsPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='备份与恢复' />
+				<Appbar.Content title='数据与备份' />
 			</Appbar.Header>
 			<ScrollView
 				style={styles.scrollView}
@@ -162,12 +163,10 @@ export default function BackupSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 110 : 40) },
 				]}
 			>
-				<Text
-					variant='titleMedium'
-					style={styles.sectionTitle}
-				>
-					本地备份
-				</Text>
+				<SettingsSectionTitle
+					title='本地备份'
+					first
+				/>
 				<View style={styles.buttonRow}>
 					<Button
 						mode='outlined'
@@ -190,12 +189,7 @@ export default function BackupSettingsPage() {
 				</View>
 
 				<Divider style={styles.divider} />
-				<Text
-					variant='titleMedium'
-					style={styles.sectionTitle}
-				>
-					WebDAV
-				</Text>
+				<SettingsSectionTitle title='WebDAV' />
 				<TextInput
 					label='服务器地址'
 					placeholder='https://example.com/dav'
@@ -374,7 +368,6 @@ const styles = StyleSheet.create({
 	container: { flex: 1 },
 	scrollView: { flex: 1 },
 	scrollContent: { paddingHorizontal: 20 },
-	sectionTitle: { marginTop: 16, marginBottom: 8 },
 	input: { marginTop: 10 },
 	buttonRow: {
 		flexDirection: 'row',

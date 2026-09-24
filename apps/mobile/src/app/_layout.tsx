@@ -379,15 +379,11 @@ function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
-							name='settings/appearance'
+							name='settings/appearance/index'
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
-							name='settings/theme'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/theme/search'
+							name='settings/appearance/theme-search'
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
@@ -396,10 +392,6 @@ function RootLayout() {
 						/>
 						<Stack.Screen
 							name='settings/lyrics'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/download'
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen

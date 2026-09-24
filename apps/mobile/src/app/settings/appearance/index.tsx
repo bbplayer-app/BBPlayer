@@ -12,8 +12,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
+import ThemeSection from '@/features/theme/ThemeSection'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
@@ -106,7 +108,7 @@ export default function AppearanceSettingsPage() {
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='外观设置' />
+				<Appbar.Content title='外观与主题' />
 			</Appbar.Header>
 			<ScrollView
 				style={styles.scrollView}
@@ -115,6 +117,10 @@ export default function AppearanceSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
+				<SettingsSectionTitle
+					title='播放器与主页'
+					first
+				/>
 				<View style={styles.settingRow}>
 					<View style={styles.settingTextContainer}>
 						<Text>显示音频频谱</Text>
@@ -130,7 +136,6 @@ export default function AppearanceSettingsPage() {
 						onValueChange={handleSpectrumToggle}
 					/>
 				</View>
-
 				<View style={styles.settingRow}>
 					<View style={styles.settingTextContainer}>
 						<Text>清爽模式</Text>
@@ -148,7 +153,6 @@ export default function AppearanceSettingsPage() {
 						}
 					/>
 				</View>
-
 				{Platform.OS === 'android' && (
 					<View style={styles.settingRow}>
 						<Text>选择底部播放条样式</Text>
@@ -169,6 +173,9 @@ export default function AppearanceSettingsPage() {
 						/>
 					</MenuView>
 				</View>
+
+				<SettingsSectionTitle title='主题' />
+				<ThemeSection />
 			</ScrollView>
 		</View>
 	)

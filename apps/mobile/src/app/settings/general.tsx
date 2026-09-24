@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system'
-import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import * as Sharing from 'expo-sharing'
 import { useRef, useState, useSyncExternalStore } from 'react'
@@ -9,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -31,8 +31,8 @@ export default function GeneralSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
-	const openModal = useModalStore((state) => state.open)
 	const haveTrack = useCurrentTrack()
+	const openModal = useModalStore((state) => state.open)
 
 	const setEnableDataCollection = useAppStore(
 		(state) => state.setEnableDataCollection,
@@ -43,10 +43,10 @@ export default function GeneralSettingsPage() {
 
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
-
 	const expandMultiPageOnSync = useAppStore(
 		(state) => state.settings.expandMultiPageOnSync,
 	)
+
 	const startupScreen = useSyncExternalStore(
 		subscribeStartupScreen,
 		getStartupScreen,
@@ -116,6 +116,10 @@ export default function GeneralSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
 				]}
 			>
+				<SettingsSectionTitle
+					title='启动'
+					first
+				/>
 				<View style={styles.settingRow}>
 					<Text>启动时进入</Text>
 					<MenuView {...menuActions}>
@@ -125,6 +129,8 @@ export default function GeneralSettingsPage() {
 						/>
 					</MenuView>
 				</View>
+
+				<SettingsSectionTitle title='隐私与数据' />
 				<View style={styles.settingRow}>
 					<Text>分享数据（崩溃报告 & 匿名统计）</Text>
 					<UniversalSwitch
@@ -132,24 +138,38 @@ export default function GeneralSettingsPage() {
 						onValueChange={setEnableDataCollection}
 					/>
 				</View>
+
+				<SettingsSectionTitle title='歌单同步' />
 				<View style={styles.settingRow}>
-					<Text>同步时展开分 P 视频</Text>
+					<View style={styles.settingTextContainer}>
+						<Text>同步时展开分 P 视频</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							同步 Bilibili 收藏夹 / 合集时，把分 P 视频展开为独立曲目
+						</Text>
+					</View>
 					<UniversalSwitch
 						value={expandMultiPageOnSync ?? false}
-						onValueChange={(v) =>
+						onValueChange={(value) =>
 							// 使用 setSettings 方法会跳转到「2025-08-05 播放」的页面？but why？只能先使用 setState
 							useAppStore.setState((state) => {
-								state.settings.expandMultiPageOnSync = v
+								state.settings.expandMultiPageOnSync = value
 								return state
 							})
 						}
 					/>
 				</View>
+
+				<SettingsSectionTitle title='更新与维护' />
 				<View style={styles.settingRow}>
-					<Text>打开{'\u2009Debug\u2009'}日志</Text>
-					<UniversalSwitch
-						value={enableDebugLog}
-						onValueChange={setEnableDebugLog}
+					<Text>检查更新</Text>
+					<IconButton
+						icon='update'
+						size={20}
+						loading={isCheckingForUpdate}
+						onPress={handleCheckForUpdate}
 					/>
 				</View>
 				<View style={styles.settingRow}>
@@ -162,37 +182,13 @@ export default function GeneralSettingsPage() {
 						disabled={isSharing}
 					/>
 				</View>
+
+				<SettingsSectionTitle title='开发者' />
 				<View style={styles.settingRow}>
-					<Text>检查更新</Text>
-					<IconButton
-						icon='update'
-						size={20}
-						loading={isCheckingForUpdate}
-						onPress={handleCheckForUpdate}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>下载缺失封面</Text>
-					<IconButton
-						icon='image-sync'
-						size={20}
-						onPress={() => openModal('CoverDownloadProgress', undefined)}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<Text>清空图片缓存</Text>
-					<IconButton
-						icon='image-remove'
-						size={20}
-						onPress={async () => {
-							try {
-								await Image.clearDiskCache()
-								await Image.clearMemoryCache()
-								toast.success('已清空图片缓存')
-							} catch (e) {
-								toastAndLogError('清空图片缓存失败', e, 'UI.Settings.General')
-							}
-						}}
+					<Text>打开{'\u2009Debug\u2009'}日志</Text>
+					<UniversalSwitch
+						value={enableDebugLog}
+						onValueChange={setEnableDebugLog}
 					/>
 				</View>
 				<View style={styles.settingRow}>
@@ -204,7 +200,7 @@ export default function GeneralSettingsPage() {
 					/>
 				</View>
 				<View style={styles.settingRow}>
-					<Text>性能指标</Text>
+					<Text>性能</Text>
 					<IconButton
 						icon='speedometer'
 						size={20}
@@ -256,5 +252,9 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'space-between',
 		marginTop: 16,
+	},
+	settingTextContainer: {
+		flex: 1,
+		marginRight: 16,
 	},
 })

@@ -14,14 +14,27 @@ import {
 } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { MenuView } from '@/components/common/FunctionalMenu'
+import IconButton from '@/components/common/IconButton'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import StorageUsageChart, {
 	type StorageSegment,
 } from '@/features/storage/StorageUsageChart'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useStorageUsage } from '@/hooks/queries/native/storage'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
+import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
+import { type MenuEntry, useMenuActions } from '@/hooks/ui/useMenuActions'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
+
+const DOWNLOAD_PARALLEL_OPTIONS = [
+	{ value: 1, label: '1 个（稳妥）' },
+	{ value: 2, label: '2 个' },
+	{ value: 3, label: '3 个' },
+	{ value: 6, label: '6 个（最快）' },
+] as const
 
 function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`
@@ -42,6 +55,16 @@ interface UsageItem extends StorageSegment {
 	onPress?: () => void
 }
 
+const clearImageCache = async () => {
+	try {
+		await Image.clearDiskCache()
+		await Image.clearMemoryCache()
+		toast.success('已清空图片缓存')
+	} catch (e) {
+		toastAndLogError('清空图片缓存失败', e, 'UI.Settings.General')
+	}
+}
+
 export default function StorageSettingsPage() {
 	const router = useRouter()
 	const colors = useTheme().colors
@@ -50,6 +73,22 @@ export default function StorageSettingsPage() {
 	const isAndroid = Platform.OS === 'android'
 	const isReady = useScreenTransitionReady()
 	const [isClearing, setIsClearing] = useState(false)
+	const openModal = useModalStore((state) => state.open)
+	const setSettings = useAppStore((state) => state.setSettings)
+
+	const downloadMaxParallelTasks = useAppStore(
+		(state) => state.settings.downloadMaxParallelTasks,
+	)
+
+	const menuActions = useMenuActions(
+		DOWNLOAD_PARALLEL_OPTIONS.map((option): MenuEntry => ({
+			title: option.label,
+			state: downloadMaxParallelTasks === option.value ? 'on' : 'off',
+			onPress: () => {
+				setSettings({ downloadMaxParallelTasks: option.value })
+			},
+		})),
+	)
 
 	// 等屏幕过渡动画结束后再开始统计，避免遍历磁盘拖慢转场。
 	const {
@@ -153,27 +192,11 @@ export default function StorageSettingsPage() {
 		)
 	}
 
-	if (!isAndroid) {
-		return (
-			<View style={[styles.container, { backgroundColor: colors.background }]}>
-				<Appbar.Header>
-					<Appbar.BackAction onPress={() => router.back()} />
-					<Appbar.Content title='存储管理' />
-				</Appbar.Header>
-				<View style={styles.unsupported}>
-					<Text style={{ color: colors.onSurfaceVariant }}>
-						存储管理目前仅支持 Android。
-					</Text>
-				</View>
-			</View>
-		)
-	}
-
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
 				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='存储管理' />
+				<Appbar.Content title='下载与存储' />
 			</Appbar.Header>
 			<ScrollView
 				contentContainerStyle={[
@@ -181,83 +204,139 @@ export default function StorageSettingsPage() {
 					{ paddingBottom: insets.bottom + (haveTrack ? 90 : 20) },
 				]}
 			>
-				{isPending ? (
-					<View style={styles.chartPlaceholder}>
+				<SettingsSectionTitle
+					title='下载'
+					first
+				/>
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>同时下载数量</Text>
 						<Text
-							variant='bodyMedium'
+							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							计算中...
+							当前 {downloadMaxParallelTasks} 个
 						</Text>
 					</View>
-				) : usage ? (
-					<StorageUsageChart
-						segments={items}
-						totalLabel={formatBytes(total)}
+					<MenuView {...menuActions}>
+						<IconButton
+							icon='download-multiple'
+							size={20}
+						/>
+					</MenuView>
+				</View>
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>下载缺失封面</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							为本地音乐补全缺失的封面图
+						</Text>
+					</View>
+					<IconButton
+						icon='image-sync'
+						size={20}
+						onPress={() => openModal('CoverDownloadProgress', undefined)}
 					/>
-				) : null}
-				{usage && (
-					<Text
-						variant='bodySmall'
-						style={[styles.caption, { color: colors.onSurfaceVariant }]}
-					>
-						可清理 {formatBytes(clearable)}
-					</Text>
-				)}
-				{isError && (
-					<Text style={[styles.error, { color: colors.error }]}>
-						存储占用读取失败，请重新进入页面。
-					</Text>
-				)}
-				<View style={styles.list}>
-					{items.map((item, index) => (
-						<View key={item.key}>
-							{index > 0 && <Divider style={styles.divider} />}
-							<List.Item
-								title={item.label}
-								description={item.description}
-								left={(props) => (
-									<List.Icon
-										{...props}
-										color={item.color}
-										icon={item.icon}
-									/>
-								)}
-								right={() => (
-									<View style={styles.rowEnd}>
-										<View style={styles.valueColumn}>
-											<Text>{formatBytes(item.value)}</Text>
-											<Text
-												variant='bodySmall'
-												style={{ color: colors.onSurfaceVariant }}
-											>
-												{total > 0
-													? `${((item.value / total) * 100).toFixed(1)}%`
-													: '0%'}
-											</Text>
-										</View>
-										{item.onPress && (
+				</View>
+
+				{isAndroid ? (
+					<>
+						<SettingsSectionTitle title='存储' />
+						{isPending ? (
+							<View style={styles.chartPlaceholder}>
+								<Text
+									variant='bodyMedium'
+									style={{ color: colors.onSurfaceVariant }}
+								>
+									计算中...
+								</Text>
+							</View>
+						) : usage ? (
+							<StorageUsageChart
+								segments={items}
+								totalLabel={formatBytes(total)}
+							/>
+						) : null}
+						{usage && (
+							<Text
+								variant='bodySmall'
+								style={[styles.caption, { color: colors.onSurfaceVariant }]}
+							>
+								可清理 {formatBytes(clearable)}
+							</Text>
+						)}
+						{isError && (
+							<Text style={[styles.error, { color: colors.error }]}>
+								存储占用读取失败，请重新进入页面。
+							</Text>
+						)}
+						<View style={styles.list}>
+							{items.map((item, index) => (
+								<View key={item.key}>
+									{index > 0 && <Divider style={styles.divider} />}
+									<List.Item
+										title={item.label}
+										description={item.description}
+										left={(props) => (
 											<List.Icon
-												icon='chevron-right'
-												color={colors.onSurfaceVariant}
+												{...props}
+												color={item.color}
+												icon={item.icon}
 											/>
 										)}
-									</View>
-								)}
-								onPress={item.onPress}
-							/>
+										right={() => (
+											<View style={styles.rowEnd}>
+												<View style={styles.valueColumn}>
+													<Text>{formatBytes(item.value)}</Text>
+													<Text
+														variant='bodySmall'
+														style={{ color: colors.onSurfaceVariant }}
+													>
+														{total > 0
+															? `${((item.value / total) * 100).toFixed(1)}%`
+															: '0%'}
+													</Text>
+												</View>
+												{item.onPress && (
+													<List.Icon
+														icon='chevron-right'
+														color={colors.onSurfaceVariant}
+													/>
+												)}
+											</View>
+										)}
+										onPress={item.onPress}
+									/>
+								</View>
+							))}
 						</View>
-					))}
-				</View>
-				<Button
-					mode='contained-tonal'
-					icon='delete-sweep'
-					loading={isClearing}
-					disabled={isClearing || isPending || !usage}
-					onPress={confirmClearCache}
-				>
-					清理缓存
-				</Button>
+						<Button
+							mode='contained-tonal'
+							icon='delete-sweep'
+							loading={isClearing}
+							disabled={isClearing || isPending || !usage}
+							onPress={confirmClearCache}
+						>
+							清理缓存
+						</Button>
+						<Button
+							mode='text'
+							icon='image-remove'
+							onPress={() => void clearImageCache()}
+						>
+							仅清空图片缓存
+						</Button>
+					</>
+				) : (
+					<Text
+						style={[styles.unsupported, { color: colors.onSurfaceVariant }]}
+					>
+						存储管理目前仅支持 Android。
+					</Text>
+				)}
 			</ScrollView>
 		</View>
 	)
@@ -277,5 +356,15 @@ const styles = StyleSheet.create({
 	rowEnd: { alignItems: 'center', flexDirection: 'row', gap: 4 },
 	valueColumn: { alignItems: 'flex-end' },
 	error: { marginTop: 8, textAlign: 'center' },
-	unsupported: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+	unsupported: { marginTop: 16, textAlign: 'center' },
+	settingRow: {
+		alignItems: 'center',
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		marginTop: 16,
+	},
+	settingTextContainer: {
+		flex: 1,
+		marginRight: 16,
+	},
 })

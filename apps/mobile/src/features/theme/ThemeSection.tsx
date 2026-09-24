@@ -7,15 +7,15 @@ import { useRouter } from 'expo-router'
 import { WavySlider } from 'expo-wavy-slider'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Dialog, Icon, Text, useTheme } from 'react-native-paper'
+import { Dialog, Icon, Portal, Text, useTheme } from 'react-native-paper'
 import { useSharedValue } from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import ActivityIndicator from '@/components/common/ActivityIndicator'
 import AnimatedModalOverlay from '@/components/common/AnimatedModalOverlay'
 import Button from '@/components/common/Button'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { loadSkinAssets } from '@/lib/theme/runtime'
@@ -62,11 +62,27 @@ const deleteSkin = (skin: InstalledSkinMeta) => {
 	)
 }
 
-export default function ThemeSettingsPage() {
+/**
+ * 主题板块。皮肤资源包的加载与解析开销较大，因此延后到页面转场动画
+ * 结束后再挂载，转场期间仅显示一个加载占位。
+ */
+export default function ThemeSection() {
+	const isReady = useScreenTransitionReady()
+
+	if (!isReady) {
+		return (
+			<View style={styles.loading}>
+				<ActivityIndicator size='small' />
+			</View>
+		)
+	}
+
+	return <ThemeSectionContent />
+}
+
+function ThemeSectionContent() {
 	const router = useRouter()
 	const colors = useTheme().colors
-	const insets = useSafeAreaInsets()
-	const haveTrack = useCurrentTrack()
 	const activeSkin = useActiveSkin()
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
@@ -135,365 +151,355 @@ export default function ThemeSettingsPage() {
 	)
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='主题设置' />
-			</Appbar.Header>
-			<ScrollView
-				style={styles.scrollView}
-				contentContainerStyle={[
-					styles.scrollContent,
-					{ paddingBottom: insets.bottom + (haveTrack ? 70 + 20 : 20) },
-				]}
-			>
-				<View style={styles.settingRow}>
-					<View style={styles.settingTextContainer}>
-						<Text>动态主题</Text>
-						<Text
-							variant='bodySmall'
-							style={{ color: colors.onSurfaceVariant }}
-						>
-							{activeSkin
-								? activeSkin.name
-								: installedSkins.length > 0
-									? '开启后使用已选择的皮肤资源包'
-									: '下载皮肤资源包后可启用'}
-						</Text>
-					</View>
-					<UniversalSwitch
-						value={activeSkinId !== null}
-						onValueChange={(value) =>
-							setSkinSettings({
-								activeAvatarFrameIndex: 0,
-								activeLoadingIndex: 0,
-								activePlayIconIndex: 0,
-								activeSkinId: value ? (installedSkins[0]?.id ?? null) : null,
-								activeSkinIndex: 0,
-								activeThumbUpIndex: 0,
-							})
-						}
-						disabled={installedSkins.length === 0}
-					/>
-				</View>
-
-				<View style={styles.section}>
-					<Button
-						mode='outlined'
-						onPress={() => router.push('/settings/theme/search')}
+		<>
+			<View style={styles.settingRow}>
+				<View style={styles.settingTextContainer}>
+					<Text>动态主题</Text>
+					<Text
+						variant='bodySmall'
+						style={{ color: colors.onSurfaceVariant }}
 					>
-						添加主题
-					</Button>
+						{activeSkin
+							? activeSkin.name
+							: installedSkins.length > 0
+								? '开启后使用已选择的皮肤资源包'
+								: '下载皮肤资源包后可启用'}
+					</Text>
 				</View>
+				<UniversalSwitch
+					value={activeSkinId !== null}
+					onValueChange={(value) =>
+						setSkinSettings({
+							activeAvatarFrameIndex: 0,
+							activeLoadingIndex: 0,
+							activePlayIconIndex: 0,
+							activeSkinId: value ? (installedSkins[0]?.id ?? null) : null,
+							activeSkinIndex: 0,
+							activeThumbUpIndex: 0,
+						})
+					}
+					disabled={installedSkins.length === 0}
+				/>
+			</View>
 
-				{installedSkins.length > 0 ? (
-					<View style={styles.section}>
-						<Text variant='titleMedium'>已安装主题</Text>
-						<View style={styles.skinList}>
-							{installedSkins.map((skin) => {
-								const coverUri = localAssetUri(skin.rootUri, skin.coverPath)
-								const selected = skin.id === activeSkinId
-								return (
-									<Pressable
-										key={skin.id}
-										style={[
-											styles.skinRow,
-											{
-												borderColor: selected
-													? colors.primary
-													: colors.outlineVariant,
-											},
-										]}
-										onPress={() =>
-											setSkinSettings({
-												activeAvatarFrameIndex: 0,
-												activeLoadingIndex: 0,
-												activePlayIconIndex: 0,
-												activeSkinId: skin.id,
-												activeSkinIndex: 0,
-												activeThumbUpIndex: 0,
-											})
-										}
-									>
-										{coverUri ? (
-											<Image
-												source={{ uri: coverUri }}
-												style={styles.skinCover}
-												contentFit='cover'
-											/>
-										) : (
-											<View
-												style={[
-													styles.skinCover,
-													{ backgroundColor: colors.surfaceVariant },
-												]}
-											/>
-										)}
-										<View style={styles.skinText}>
-											<Text numberOfLines={1}>{skin.name}</Text>
-											<Text
-												variant='bodySmall'
-												style={{ color: colors.onSurfaceVariant }}
-											>
-												{selected ? '正在使用' : '点击切换'}
-											</Text>
-										</View>
-										{selected ? (
-											<Icon
-												source='check-circle'
-												size={20}
-												color={colors.primary}
-											/>
-										) : null}
-										<Pressable
-											style={styles.iconAction}
-											onPress={(event) => {
-												event.stopPropagation()
-												deleteSkin(skin)
-											}}
-											hitSlop={8}
-										>
-											<Icon
-												source='trash-can-outline'
-												size={20}
-												color={colors.error}
-											/>
-										</Pressable>
-									</Pressable>
-								)
-							})}
-						</View>
-					</View>
-				) : null}
+			<View style={styles.section}>
+				<Button
+					mode='outlined'
+					onPress={() => router.push('/settings/appearance/theme-search')}
+				>
+					添加主题
+				</Button>
+			</View>
 
-				{activeSkinId && activeSkin ? (
-					<View style={styles.section}>
-						{activeInstalledSkin ? (
-							<InstalledAssetSections
-								activeAvatarFrameIndex={activeAvatarFrameIndex}
-								activeLoadingIndex={activeLoadingIndex}
-								activePlayIconIndex={activePlayIconIndex}
-								activeSkinIndex={activeSkinIndex}
-								activeThumbUpIndex={activeThumbUpIndex}
-								onSelectAvatarFrame={(index) =>
-									setSkinSettings({ activeAvatarFrameIndex: index })
-								}
-								onSelectLoading={(index) =>
-									setSkinSettings({ activeLoadingIndex: index })
-								}
-								onSelectPlayIcon={(index) =>
-									setSkinSettings({ activePlayIconIndex: index })
-								}
-								onSelectSkin={(index) =>
-									setSkinSettings({ activeSkinIndex: index })
-								}
-								onSelectThumbUp={(index) =>
-									setSkinSettings({ activeThumbUpIndex: index })
-								}
-								onDisableSkin={() => {
-									setSkinSettings({ activeSkinIndex: -1 })
-									alert('关闭应用主题', '需要重启软件才能应用更改', [
-										{ text: '取消' },
+			{installedSkins.length > 0 ? (
+				<View style={styles.section}>
+					<Text variant='titleMedium'>已安装主题</Text>
+					<View style={styles.skinList}>
+						{installedSkins.map((skin) => {
+							const coverUri = localAssetUri(skin.rootUri, skin.coverPath)
+							const selected = skin.id === activeSkinId
+							return (
+								<Pressable
+									key={skin.id}
+									style={[
+										styles.skinRow,
 										{
-											text: '关闭并重启',
-											onPress: () => {
-												void Expo.reloadAppAsync()
-											},
+											borderColor: selected
+												? colors.primary
+												: colors.outlineVariant,
 										},
-									])
-								}}
-								onDisablePlayIcon={() => {
-									setSkinSettings({ activePlayIconIndex: -1 })
-									toast.success('已关闭显示滑块')
-								}}
-								onDisableThumbUp={() => {
-									setSkinSettings({ activeThumbUpIndex: -1 })
-									toast.success('已关闭显示点赞动画')
-								}}
-								onDisableLoading={() => {
-									setSkinSettings({ activeLoadingIndex: -1 })
-									toast.success('已关闭显示刷新动画')
-								}}
-								onDisableAvatarFrame={() => {
-									setSkinSettings({ activeAvatarFrameIndex: -1 })
-									toast.success('已关闭显示头像框')
-								}}
-								skin={activeInstalledSkin}
-								activeSkin={activeSkin}
-							/>
-						) : null}
-						<View style={styles.sectionHeader}>
-							<View style={styles.settingTextContainer}>
-								<Text>启动动画素材</Text>
-								<Text
-									variant='bodySmall'
-									style={{ color: colors.onSurfaceVariant }}
+									]}
+									onPress={() =>
+										setSkinSettings({
+											activeAvatarFrameIndex: 0,
+											activeLoadingIndex: 0,
+											activePlayIconIndex: 0,
+											activeSkinId: skin.id,
+											activeSkinIndex: 0,
+											activeThumbUpIndex: 0,
+										})
+									}
 								>
-									{selectedBootSplashAsset
-										? `${selectedBootSplashAsset.name} · ${selectedMode}`
-										: '默认素材'}
-								</Text>
-							</View>
-						</View>
-						<View style={styles.assetGrid}>
-							{activeSkin.bootSplash.items
-								? activeSkin.bootSplash.items?.map((item) => {
-										const selected = item.id === selectedBootSplashAsset?.id
-										return (
-											<Pressable
-												key={item.id}
-												style={[
-													styles.assetCard,
-													{
-														borderColor: selected
-															? colors.primary
-															: colors.outlineVariant,
-													},
-												]}
-												onPress={() => setPreviewAsset(item)}
-											>
-												{item.card ? (
-													<Image
-														source={item.card}
-														style={styles.assetPoster}
-														contentFit='cover'
-														cachePolicy='memory-disk'
-													/>
-												) : null}
-												{item.video ? (
-													<View
-														style={[
-															styles.videoBadge,
-															{ backgroundColor: colors.inverseSurface },
-														]}
-													>
-														<Icon
-															source='play'
-															size={14}
-															color={colors.inverseOnSurface}
-														/>
-													</View>
-												) : null}
-												{selected ? (
-													<View
-														style={[
-															styles.selectedBadge,
-															{ backgroundColor: colors.primary },
-														]}
-													>
-														<Icon
-															source='check'
-															size={16}
-															color={colors.onPrimary}
-														/>
-													</View>
-												) : null}
-											</Pressable>
-										)
-									})
-								: null}
-						</View>
+									{coverUri ? (
+										<Image
+											source={{ uri: coverUri }}
+											style={styles.skinCover}
+											contentFit='cover'
+										/>
+									) : (
+										<View
+											style={[
+												styles.skinCover,
+												{ backgroundColor: colors.surfaceVariant },
+											]}
+										/>
+									)}
+									<View style={styles.skinText}>
+										<Text numberOfLines={1}>{skin.name}</Text>
+										<Text
+											variant='bodySmall'
+											style={{ color: colors.onSurfaceVariant }}
+										>
+											{selected ? '正在使用' : '点击切换'}
+										</Text>
+									</View>
+									{selected ? (
+										<Icon
+											source='check-circle'
+											size={20}
+											color={colors.primary}
+										/>
+									) : null}
+									<Pressable
+										style={styles.iconAction}
+										onPress={(event) => {
+											event.stopPropagation()
+											deleteSkin(skin)
+										}}
+										hitSlop={8}
+									>
+										<Icon
+											source='trash-can-outline'
+											size={20}
+											color={colors.error}
+										/>
+									</Pressable>
+								</Pressable>
+							)
+						})}
 					</View>
-				) : null}
+				</View>
+			) : null}
 
-				{activeSkinId ? (
-					<View style={styles.settingRow}>
+			{activeSkinId && activeSkin ? (
+				<View style={styles.section}>
+					{activeInstalledSkin ? (
+						<InstalledAssetSections
+							activeAvatarFrameIndex={activeAvatarFrameIndex}
+							activeLoadingIndex={activeLoadingIndex}
+							activePlayIconIndex={activePlayIconIndex}
+							activeSkinIndex={activeSkinIndex}
+							activeThumbUpIndex={activeThumbUpIndex}
+							onSelectAvatarFrame={(index) =>
+								setSkinSettings({ activeAvatarFrameIndex: index })
+							}
+							onSelectLoading={(index) =>
+								setSkinSettings({ activeLoadingIndex: index })
+							}
+							onSelectPlayIcon={(index) =>
+								setSkinSettings({ activePlayIconIndex: index })
+							}
+							onSelectSkin={(index) =>
+								setSkinSettings({ activeSkinIndex: index })
+							}
+							onSelectThumbUp={(index) =>
+								setSkinSettings({ activeThumbUpIndex: index })
+							}
+							onDisableSkin={() => {
+								setSkinSettings({ activeSkinIndex: -1 })
+								alert('关闭应用主题', '需要重启软件才能应用更改', [
+									{ text: '取消' },
+									{
+										text: '关闭并重启',
+										onPress: () => {
+											void Expo.reloadAppAsync()
+										},
+									},
+								])
+							}}
+							onDisablePlayIcon={() => {
+								setSkinSettings({ activePlayIconIndex: -1 })
+								toast.success('已关闭显示滑块')
+							}}
+							onDisableThumbUp={() => {
+								setSkinSettings({ activeThumbUpIndex: -1 })
+								toast.success('已关闭显示点赞动画')
+							}}
+							onDisableLoading={() => {
+								setSkinSettings({ activeLoadingIndex: -1 })
+								toast.success('已关闭显示刷新动画')
+							}}
+							onDisableAvatarFrame={() => {
+								setSkinSettings({ activeAvatarFrameIndex: -1 })
+								toast.success('已关闭显示头像框')
+							}}
+							skin={activeInstalledSkin}
+							activeSkin={activeSkin}
+						/>
+					) : null}
+					<View style={styles.sectionHeader}>
 						<View style={styles.settingTextContainer}>
-							<Text>完整播放主题启动动画</Text>
+							<Text>启动动画素材</Text>
 							<Text
 								variant='bodySmall'
 								style={{ color: colors.onSurfaceVariant }}
 							>
-								软件启动时会等待开屏动画播放完成后再进入主页（多数开屏动画时间较长，不建议开）
+								{selectedBootSplashAsset
+									? `${selectedBootSplashAsset.name} · ${selectedMode}`
+									: '默认素材'}
 							</Text>
 						</View>
-						<UniversalSwitch
-							value={playFullSkinBootSplashAnimation}
+					</View>
+					<View style={styles.assetGrid}>
+						{activeSkin.bootSplash.items
+							? activeSkin.bootSplash.items?.map((item) => {
+									const selected = item.id === selectedBootSplashAsset?.id
+									return (
+										<Pressable
+											key={item.id}
+											style={[
+												styles.assetCard,
+												{
+													borderColor: selected
+														? colors.primary
+														: colors.outlineVariant,
+												},
+											]}
+											onPress={() => setPreviewAsset(item)}
+										>
+											{item.card ? (
+												<Image
+													source={item.card}
+													style={styles.assetPoster}
+													contentFit='cover'
+													cachePolicy='memory-disk'
+												/>
+											) : null}
+											{item.video ? (
+												<View
+													style={[
+														styles.videoBadge,
+														{ backgroundColor: colors.inverseSurface },
+													]}
+												>
+													<Icon
+														source='play'
+														size={14}
+														color={colors.inverseOnSurface}
+													/>
+												</View>
+											) : null}
+											{selected ? (
+												<View
+													style={[
+														styles.selectedBadge,
+														{ backgroundColor: colors.primary },
+													]}
+												>
+													<Icon
+														source='check'
+														size={16}
+														color={colors.onPrimary}
+													/>
+												</View>
+											) : null}
+										</Pressable>
+									)
+								})
+							: null}
+					</View>
+				</View>
+			) : null}
+
+			{activeSkinId ? (
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>完整播放主题启动动画</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							软件启动时会等待开屏动画播放完成后再进入主页（多数开屏动画时间较长，不建议开）
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={playFullSkinBootSplashAnimation}
+						onValueChange={(value) =>
+							setSkinSettings({
+								playFullSkinBootSplashAnimation: value,
+							})
+						}
+					/>
+				</View>
+			) : null}
+
+			{activeSkin ? (
+				<View style={styles.section}>
+					<View
+						style={[
+							styles.sliderPanel,
+							{ backgroundColor: colors.elevation.level1 },
+						]}
+					>
+						<View style={styles.sectionHeader}>
+							<View style={styles.settingTextContainer}>
+								<Text variant='titleMedium'>播放器滑块</Text>
+								<Text
+									variant='bodySmall'
+									style={{ color: colors.onSurfaceVariant }}
+								>
+									尺寸 {skinSliderThumbSize} · X {skinSliderThumbOffsetX} · Y{' '}
+									{skinSliderThumbOffsetY}
+								</Text>
+							</View>
+						</View>
+						<SliderPreview
+							thumbUri={activeSkin.sliderThumbs[activePlayIconIndex]?.normal}
+							thumbDragLeftUri={
+								activeSkin.sliderThumbs[activePlayIconIndex]?.dragLeft
+							}
+							thumbDragRightUri={
+								activeSkin.sliderThumbs[activePlayIconIndex]?.dragRight
+							}
+							thumbSize={skinSliderThumbSize}
+							offsetX={skinSliderThumbOffsetX}
+							offsetY={skinSliderThumbOffsetY}
+						/>
+						<SliderControl
+							label='尺寸'
+							value={skinSliderThumbSize}
+							minimumValue={12}
+							maximumValue={36}
 							onValueChange={(value) =>
 								setSkinSettings({
-									playFullSkinBootSplashAnimation: value,
+									skinSliderThumbSize: Math.round(value),
+								})
+							}
+						/>
+						<SliderControl
+							label='水平'
+							value={skinSliderThumbOffsetX}
+							minimumValue={-24}
+							maximumValue={24}
+							onValueChange={(value) =>
+								setSkinSettings({
+									skinSliderThumbOffsetX: Math.round(value),
+								})
+							}
+						/>
+						<SliderControl
+							label='垂直'
+							value={skinSliderThumbOffsetY}
+							minimumValue={-24}
+							maximumValue={24}
+							onValueChange={(value) =>
+								setSkinSettings({
+									skinSliderThumbOffsetY: Math.round(value),
 								})
 							}
 						/>
 					</View>
-				) : null}
+				</View>
+			) : null}
 
-				{activeSkin ? (
-					<View style={styles.section}>
-						<View
-							style={[
-								styles.sliderPanel,
-								{ backgroundColor: colors.elevation.level1 },
-							]}
-						>
-							<View style={styles.sectionHeader}>
-								<View style={styles.settingTextContainer}>
-									<Text variant='titleMedium'>播放器滑块</Text>
-									<Text
-										variant='bodySmall'
-										style={{ color: colors.onSurfaceVariant }}
-									>
-										尺寸 {skinSliderThumbSize} · X {skinSliderThumbOffsetX} · Y{' '}
-										{skinSliderThumbOffsetY}
-									</Text>
-								</View>
-							</View>
-							<SliderPreview
-								thumbUri={activeSkin.sliderThumbs[activePlayIconIndex]?.normal}
-								thumbDragLeftUri={
-									activeSkin.sliderThumbs[activePlayIconIndex]?.dragLeft
-								}
-								thumbDragRightUri={
-									activeSkin.sliderThumbs[activePlayIconIndex]?.dragRight
-								}
-								thumbSize={skinSliderThumbSize}
-								offsetX={skinSliderThumbOffsetX}
-								offsetY={skinSliderThumbOffsetY}
-							/>
-							<SliderControl
-								label='尺寸'
-								value={skinSliderThumbSize}
-								minimumValue={12}
-								maximumValue={36}
-								onValueChange={(value) =>
-									setSkinSettings({
-										skinSliderThumbSize: Math.round(value),
-									})
-								}
-							/>
-							<SliderControl
-								label='水平'
-								value={skinSliderThumbOffsetX}
-								minimumValue={-24}
-								maximumValue={24}
-								onValueChange={(value) =>
-									setSkinSettings({
-										skinSliderThumbOffsetX: Math.round(value),
-									})
-								}
-							/>
-							<SliderControl
-								label='垂直'
-								value={skinSliderThumbOffsetY}
-								minimumValue={-24}
-								maximumValue={24}
-								onValueChange={(value) =>
-									setSkinSettings({
-										skinSliderThumbOffsetY: Math.round(value),
-									})
-								}
-							/>
-						</View>
-					</View>
-				) : null}
-			</ScrollView>
-
-			<BootSplashAssetPreview
-				asset={previewAsset}
-				onDismiss={() => setPreviewAsset(null)}
-				onSelect={selectBootSplashAsset}
-			/>
-		</View>
+			<Portal>
+				<BootSplashAssetPreview
+					asset={previewAsset}
+					onDismiss={() => setPreviewAsset(null)}
+					onSelect={selectBootSplashAsset}
+				/>
+			</Portal>
+		</>
 	)
 }
 
@@ -976,14 +982,10 @@ function BootSplashAssetPreview({
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	scrollView: {
-		flex: 1,
-	},
-	scrollContent: {
-		paddingHorizontal: 25,
+	loading: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		paddingVertical: 48,
 	},
 	settingRow: {
 		flexDirection: 'row',

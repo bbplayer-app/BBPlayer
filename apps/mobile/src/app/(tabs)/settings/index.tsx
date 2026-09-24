@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Divider, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -56,9 +57,13 @@ export default function SettingsPage() {
 					showsVerticalScrollIndicator
 					persistentScrollbar // 我看哪个 b 还说看不见这是可滚动的？！
 				>
+					<SettingsSectionTitle
+						title='个性化'
+						first
+					/>
 					<List.Item
-						title='外观'
-						description='播放器样式、显示模式'
+						title='外观与主题'
+						description='播放器样式、动态主题、启动动画'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -75,26 +80,8 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
-						title='主题'
-						description='动态皮肤、底栏、启动动画'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='palette-swatch'
-							/>
-						)}
-						right={(props) => (
-							<List.Icon
-								{...props}
-								icon='chevron-right'
-							/>
-						)}
-						onPress={() => router.push('/settings/theme')}
-					/>
-					<Divider style={styles.divider} />
-					<List.Item
 						title='播放'
-						description='播放行为、音效设置'
+						description='播放行为、启动行为、音效'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -127,43 +114,8 @@ export default function SettingsPage() {
 						)}
 						onPress={() => router.push('/settings/lyrics')}
 					/>
-					<Divider style={styles.divider} />
-					<List.Item
-						title='下载'
-						description='相关设置'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='download'
-							/>
-						)}
-						right={(props) => (
-							<List.Icon
-								{...props}
-								icon='chevron-right'
-							/>
-						)}
-						onPress={() => router.push('/settings/download')}
-					/>
-					<Divider style={styles.divider} />
-					<List.Item
-						title='存储管理'
-						description='查看占用、清理缓存'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='harddisk'
-							/>
-						)}
-						right={(props) => (
-							<List.Icon
-								{...props}
-								icon='chevron-right'
-							/>
-						)}
-						onPress={() => router.push('/settings/storage')}
-					/>
-					<Divider style={styles.divider} />
+
+					<SettingsSectionTitle title='账号' />
 					<List.Item
 						title='Bilibili 账号'
 						description={
@@ -207,9 +159,29 @@ export default function SettingsPage() {
 						)}
 						onPress={() => router.push('/settings/account')}
 					/>
-					<Divider style={styles.divider} />
+
+					<SettingsSectionTitle title='媒体库与存储' />
 					<List.Item
-						title='备份与恢复'
+						title='下载与存储'
+						description='下载并发、存储占用、缓存清理'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='harddisk'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/storage')}
+					/>
+
+					<SettingsSectionTitle title='数据' />
+					<List.Item
+						title='数据与备份'
 						description='本地备份、WebDAV 云端备份'
 						left={(props) => (
 							<List.Icon
@@ -225,7 +197,8 @@ export default function SettingsPage() {
 						)}
 						onPress={() => router.push('/settings/backup')}
 					/>
-					<Divider style={styles.divider} />
+
+					<SettingsSectionTitle title='通用与关于' />
 					<List.Item
 						title='通用'
 						description='更新、日志、调试'
@@ -246,24 +219,6 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
-						title='捐赠支持'
-						description='请开发者喝杯咖啡'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='coffee'
-							/>
-						)}
-						right={(props) => (
-							<List.Icon
-								{...props}
-								icon='chevron-right'
-							/>
-						)}
-						onPress={() => router.push('/settings/donate')}
-					/>
-					<Divider style={styles.divider} />
-					<List.Item
 						title='关于 BBPlayer'
 						description='版本、项目主页'
 						left={(props) => (
@@ -279,6 +234,24 @@ export default function SettingsPage() {
 							/>
 						)}
 						onPress={() => router.push('/settings/about')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
+						title='捐赠支持'
+						description='请开发者喝杯咖啡'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='coffee'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/donate')}
 					/>
 				</ScrollView>
 			</View>

@@ -7,6 +7,7 @@ import { Appbar, Avatar, Text, TextInput, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -255,6 +256,10 @@ export default function AccountSettingsPage() {
 			>
 				{account ? (
 					<View style={styles.section}>
+						<SettingsSectionTitle
+							title='个人资料'
+							first
+						/>
 						<View style={styles.profileHeader}>
 							<View style={styles.avatarWrapper}>
 								{account.face ? (
@@ -314,6 +319,10 @@ export default function AccountSettingsPage() {
 					</View>
 				) : (
 					<View style={styles.section}>
+						<SettingsSectionTitle
+							title='登录 / 注册'
+							first
+						/>
 						<View style={styles.descriptionBlock}>
 							<Text variant='titleMedium'>登录 BBPlayer 账号</Text>
 							<Text

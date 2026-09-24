@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -77,6 +78,10 @@ export default function BilibiliAccountSettingsPage() {
 			>
 				{hasBilibiliCookie ? (
 					<>
+						<SettingsSectionTitle
+							title='资料'
+							first
+						/>
 						<Surface
 							mode='flat'
 							style={[
@@ -122,6 +127,7 @@ export default function BilibiliAccountSettingsPage() {
 								</Text>
 							</View>
 						</Surface>
+						<SettingsSectionTitle title='隐私' />
 						<View style={styles.section}>
 							<View style={styles.settingRow}>
 								<View style={styles.settingText}>
@@ -140,7 +146,9 @@ export default function BilibiliAccountSettingsPage() {
 									}
 								/>
 							</View>
-							<Divider />
+						</View>
+						<SettingsSectionTitle title='登录方式' />
+						<View style={styles.section}>
 							<List.Item
 								title='重新扫码登录'
 								description='适合在当前 Cookie 失效后重新授权'
@@ -233,6 +241,7 @@ export default function BilibiliAccountSettingsPage() {
 								</Text>
 							</View>
 						</View>
+						<SettingsSectionTitle title='登录方式' />
 						<View style={styles.loginActions}>
 							<Button
 								mode='contained'

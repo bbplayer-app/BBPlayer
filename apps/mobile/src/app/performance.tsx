@@ -99,7 +99,7 @@ export default function PerformanceScreen() {
 					variant='titleMedium'
 					style={{ fontWeight: '600' }}
 				>
-					性能指标
+					性能
 				</Text>
 				<Button
 					mode='text'
