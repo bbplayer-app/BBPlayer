@@ -82,7 +82,6 @@ export default function TabLayout() {
 					},
 					tabBarLabel: '音乐库',
 					lazy: true,
-					freezeOnBlur: true,
 				}}
 			/>
 			<Tabs.Screen

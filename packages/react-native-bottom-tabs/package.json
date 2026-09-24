@@ -65,7 +65,7 @@
 		"use-latest-callback": "^0.2.1"
 	},
 	"devDependencies": {
-		"@expo/config-plugins": "^7.0.0 || ^8.0.0",
+		"@expo/config-plugins": ">=0.0.0",
 		"@react-native/babel-plugin-codegen": "0.81.1",
 		"@types/jest": "^29.5.14",
 		"@types/react": "19.2.15",

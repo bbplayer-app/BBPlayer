@@ -3,6 +3,8 @@ packages:
   - apps/*/web
   - packages/*
   - packages/*/example
+overrides:
+  '@expo/config-plugins@8.0.11': 57.0.9
 allowBuilds:
   '@firebase/util': true
   '@sentry/cli': true
@@ -18,7 +20,6 @@ allowBuilds:
   tree-sitter: true
   tree-sitter-javascript: true
   tree-sitter-typescript: true
-
 minimumReleaseAgeExclude:
   - expo-eas-client@57.0.3
   - expo-updates@57.0.23
