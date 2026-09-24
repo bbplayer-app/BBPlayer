@@ -148,17 +148,13 @@ export const TrackListItem = memo(function TrackListItem({
 				<View style={styles.itemContainer}>
 					{/* Index Number & Checkbox Container */}
 					<View style={styles.indexContainer}>
-						{/* 始终渲染，或许能降低一点性能开销？ */}
-						<View
-							style={[
-								styles.checkboxContainer,
-								{ opacity: selectMode ? 1 : 0 },
-							]}
-						>
-							<UniversalCheckbox
-								status={isSelected ? 'checked' : 'unchecked'}
-							/>
-						</View>
+						{selectMode && (
+							<View style={styles.checkboxContainer}>
+								<UniversalCheckbox
+									status={isSelected ? 'checked' : 'unchecked'}
+								/>
+							</View>
+						)}
 
 						{/* 序号也是 */}
 						<View style={{ opacity: selectMode ? 0 : 1 }}>

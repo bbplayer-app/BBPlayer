@@ -169,16 +169,13 @@ function DownloadedItem({
 			>
 				<View style={styles.itemContainer}>
 					<View style={styles.indexContainer}>
-						<View
-							style={[
-								styles.checkboxContainer,
-								{ opacity: selectMode ? 1 : 0 },
-							]}
-						>
-							<UniversalCheckbox
-								status={isSelected ? 'checked' : 'unchecked'}
-							/>
-						</View>
+						{selectMode && (
+							<View style={styles.checkboxContainer}>
+								<UniversalCheckbox
+									status={isSelected ? 'checked' : 'unchecked'}
+								/>
+							</View>
+						)}
 						<View style={{ opacity: selectMode ? 0 : 1 }}>
 							<Text
 								variant='bodyMedium'
