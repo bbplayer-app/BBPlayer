@@ -27,6 +27,7 @@ let metrics: StartupMetrics = { ...noMetrics }
 let fetched = false
 let startupProfilingActive = false
 let profilingActive = false
+let interactivePromise: Promise<void> | null = null
 const listeners = new Set<() => void>()
 
 export function subscribeToMetrics(fn: () => void) {
@@ -141,7 +142,7 @@ async function fetchStartupMetrics(): Promise<void> {
 	}
 }
 
-export async function markPerfInteractive(): Promise<void> {
+async function finishStartupMetrics(): Promise<void> {
 	if (startupProfilingActive) {
 		try {
 			await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -155,4 +156,13 @@ export async function markPerfInteractive(): Promise<void> {
 	}
 
 	await fetchStartupMetrics()
+}
+
+export function markPerfInteractive(): Promise<void> {
+	if (!interactivePromise) {
+		interactivePromise = finishStartupMetrics().finally(() => {
+			interactivePromise = null
+		})
+	}
+	return interactivePromise
 }

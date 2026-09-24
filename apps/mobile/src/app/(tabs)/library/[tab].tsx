@@ -15,6 +15,7 @@ import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistLi
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
+import { markPerfInteractive } from '@/lib/performance'
 
 const renderScene = SceneMap({
 	local: LocalPlaylistListComponent,
@@ -50,6 +51,7 @@ export default function Library() {
 
 	useEffect(() => {
 		markInteractive()
+		void markPerfInteractive()
 	}, [markInteractive])
 
 	// 仅在路由参数变化时定位分页，返回音乐库时保留用户当前选择。
