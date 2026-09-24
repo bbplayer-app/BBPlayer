@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { View } from 'react-native'
-import { Tooltip, useTheme } from 'react-native-paper'
+import { useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
@@ -29,13 +29,11 @@ export function PodcastControls() {
 	const actions = [
 		{
 			icon: 'speedometer',
-			title: '倍速',
 			accessibilityLabel: `倍速，当前 ${speed} 倍`,
 			onPress: () => useModalStore.getState().open('PlaybackSpeed', undefined),
 		},
 		{
 			icon: 'timer-outline',
-			title: '定时关闭',
 			accessibilityLabel:
 				remaining > 0
 					? `定时关闭，剩余 ${formatDurationToHHMMSS(remaining)}`
@@ -44,7 +42,6 @@ export function PodcastControls() {
 		},
 		{
 			icon: 'book-open-page-variant-outline',
-			title: '章节列表',
 			accessibilityLabel: '打开章节列表',
 			onPress: () => {
 				void usePlayerChaptersSheetStore.getState().open()
@@ -52,7 +49,6 @@ export function PodcastControls() {
 		},
 		{
 			icon: 'format-list-bulleted',
-			title: '播放队列',
 			accessibilityLabel: '打开播放队列',
 			onPress: () => {
 				void usePlayerQueueSheetStore.getState().open()
@@ -66,18 +62,14 @@ export function PodcastControls() {
 			</View>
 			<SecondaryPlaybackControls>
 				{actions.map((action) => (
-					<Tooltip
+					<IconButton
 						key={action.icon}
-						title={action.title}
-					>
-						<IconButton
-							icon={action.icon}
-							size={24}
-							iconColor={colors.onSurfaceVariant}
-							onPress={action.onPress}
-							accessibilityLabel={action.accessibilityLabel}
-						/>
-					</Tooltip>
+						icon={action.icon}
+						size={24}
+						iconColor={colors.onSurfaceVariant}
+						onPress={action.onPress}
+						accessibilityLabel={action.accessibilityLabel}
+					/>
 				))}
 			</SecondaryPlaybackControls>
 		</View>
