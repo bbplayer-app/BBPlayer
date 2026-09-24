@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import type {
 	AppUpdateDownloadOptions,
 	AppUpdateInstallResult,
+	StorageUsage,
 	UnzipOptions,
 	UnzipResult,
 } from './BBPlayerNative.types'
@@ -15,6 +16,16 @@ declare class BBPlayerNativeModule extends NativeModule {
 	 */
 	readonly apkSigningCertificateSha256: string
 	getSupportedAbisAsync(): Promise<string[]>
+	/**
+	 * Android 应用私有目录中的各项占用，以及安装包大小（字节）。
+	 */
+	getStorageUsageAsync(): Promise<StorageUsage>
+	/**
+	 * 清理运行数据缓存：删除 `cacheDir` 中除 Media3 LRU 缓存外的全部内容。
+	 *
+	 * 不会删除离线下载；Media3 LRU 缓存由 `@bbplayer/orpheus` 单独清理。
+	 */
+	clearCacheAsync(): Promise<void>
 	canRequestPackageInstallsAsync(): Promise<boolean>
 	openPackageInstallerSettingsAsync(): Promise<void>
 	downloadAndInstallApkAsync(
@@ -32,9 +43,7 @@ let nativeModule: BBPlayerNativeModule | null = null
 
 const getNativeModule = () => {
 	if (Platform.OS !== 'android') {
-		throw new Error(
-			'BBPlayerNative app updates are only implemented on Android',
-		)
+		throw new Error('BBPlayerNative is only implemented on Android')
 	}
 	nativeModule ??= requireNativeModule<BBPlayerNativeModule>('BBPlayerNative')
 	return nativeModule
@@ -45,6 +54,21 @@ export const canRequestPackageInstallsAsync = () =>
 
 export const getSupportedAbisAsync = () =>
 	getNativeModule().getSupportedAbisAsync()
+
+/**
+ * Android 应用私有目录中的各项占用，以及安装包大小（字节）。
+ *
+ * Media3 的下载、封面与在线播放缓存目录由 `@bbplayer/orpheus` 写入，这里只做只读统计。
+ */
+export const getStorageUsageAsync = () =>
+	getNativeModule().getStorageUsageAsync()
+
+/**
+ * 清理运行数据缓存：删除 `cacheDir` 中除 Media3 LRU 缓存外的全部内容。
+ *
+ * 不会删除离线下载；Media3 LRU 缓存由 `@bbplayer/orpheus` 单独清理。
+ */
+export const clearCacheAsync = () => getNativeModule().clearCacheAsync()
 
 /**
  * 当前 APK 签名证书的 SHA-256 指纹（小写十六进制）。

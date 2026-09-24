@@ -334,6 +334,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	setAllowSimultaneousPlayback(enabled: boolean): Promise<void>
 	/** 移除所有下载任务以及全部本地缓存封面。 */
 	removeAllDownloads(): Promise<void>
+	/** 清空 Media3 在线播放 LRU 缓存。其他缓存由 `@bbplayer/native` 负责清理。 */
+	clearPlaybackCache(): Promise<void>
 	/** 返回 Media3 DownloadManager 当前已知的全部任务。 */
 	getDownloads(): Promise<DownloadTask[]>
 	/**

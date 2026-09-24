@@ -147,6 +147,24 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='存储管理'
+						description='查看占用、清理缓存'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='harddisk'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.push('/settings/storage')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='Bilibili 账号'
 						description={
 							hasBilibiliCookie && bilibiliUserInfo

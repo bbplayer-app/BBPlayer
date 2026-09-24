@@ -42,6 +42,14 @@ class BBPlayerNativeModule : Module() {
             return@Coroutine Build.SUPPORTED_ABIS.toList()
         }
 
+        AsyncFunction("getStorageUsageAsync") Coroutine { ->
+            withContext(Dispatchers.IO) { AppStorage.getUsage(requireContext()) }
+        }
+
+        AsyncFunction("clearCacheAsync") Coroutine { ->
+            withContext(Dispatchers.IO) { AppStorage.clearCache(requireContext()) }
+        }
+
         AsyncFunction("openPackageInstallerSettingsAsync") {
             val context = requireContext()
             openPackageInstallerSettings(context)

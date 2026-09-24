@@ -403,6 +403,10 @@ function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
+							name='settings/storage'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='settings/general'
 							options={{ headerShown: false }}
 						/>
