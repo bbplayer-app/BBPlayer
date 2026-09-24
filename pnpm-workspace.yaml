@@ -24,6 +24,21 @@ minimumReleaseAgeExclude:
   - lucide-react@1.39.0
   - '@lodev09/react-native-true-sheet@4.0.0-beta.16'
   - '@legendapp/list@3.4.0'
+  - '@expo/cli@57.0.27'
+  - '@expo/router-server@57.0.11'
+  - babel-preset-expo@57.0.13
+  - expo-modules-core@57.0.19
+  - expo-modules-jsi@57.1.1
+  - expo@57.0.25
+  - '@expo/ui@57.0.20'
+  - expo-app-metrics@57.0.21
+  - expo-build-properties@57.0.22
+  - expo-glass-effect@57.0.4
+  - expo-insights@57.0.20
+  - expo-linking@57.0.11
+  - expo-observe@57.0.24
+  - expo-router@57.0.23
+  - expo-sharing@57.0.22
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@expo/ui': patches/@expo__ui.patch
