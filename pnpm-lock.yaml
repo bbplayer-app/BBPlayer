@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@expo/config-plugins@8.0.11': 57.0.9
-
 patchedDependencies:
   '@ark/schema': 89bfbe230b7151b655d8979ead0c68ced88a48f5d18ab73a51eeb5bf7d12a0b2
   '@expo/ui': 0abf7f47f4e06c38f84f6229b15217e59fb41743764bd334d1bbeefceae336b7
@@ -841,7 +838,7 @@ importers:
         version: 0.2.6(react@19.2.3)
     devDependencies:
       '@expo/config-plugins':
-        specifier: 57.0.9
+        specifier: '*'
         version: 57.0.9(supports-color@10.2.2)(typescript@6.0.3)
       '@react-native/babel-plugin-codegen':
         specifier: 0.81.1

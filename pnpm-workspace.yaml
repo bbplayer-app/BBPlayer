@@ -3,8 +3,6 @@ packages:
   - apps/*/web
   - packages/*
   - packages/*/example
-overrides:
-  '@expo/config-plugins@8.0.11': 57.0.9
 allowBuilds:
   '@firebase/util': true
   '@sentry/cli': true
