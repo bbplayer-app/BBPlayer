@@ -29,7 +29,14 @@ const withWorklets = getBundleModeMetroConfig(withReanimated)
 
 const withBoost = withBoostConfig(withWorklets, {
 	logLevel: 'debug',
-	ignores: ['node_modules/**', '../../node_modules/**'],
+	ignores: [
+		'node_modules/**',
+		'../../node_modules/**',
+		path.resolve(
+			__dirname,
+			'../../packages/react-native-bottom-tabs/src/TabView.tsx',
+		),
+	],
 })
 
 const config = withRozenite(withBoost, {
