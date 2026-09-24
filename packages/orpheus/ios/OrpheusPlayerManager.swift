@@ -157,6 +157,12 @@ class OrpheusPlayerManager: NSObject {
         saveState()
         onQueueChanged?()
     }
+
+    func moveTrack(fromIndex: Int, toIndex: Int) {
+        guard queueManager.moveTrack(fromIndex: fromIndex, toIndex: toIndex) else { return }
+        saveState()
+        onQueueChanged?()
+    }
     
     func clearQueue() {
         queueManager.clear()

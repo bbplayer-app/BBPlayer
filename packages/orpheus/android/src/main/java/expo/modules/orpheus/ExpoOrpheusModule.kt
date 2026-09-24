@@ -643,6 +643,20 @@ class ExpoOrpheusModule : Module() {
             }
         }
 
+        AsyncFunction("moveTrack") Coroutine { fromIndex: Int, toIndex: Int ->
+            withServiceAndPlayerOnMainThread { service, currentPlayer ->
+                val count = currentPlayer.mediaItemCount
+                if (fromIndex !in 0 until count || toIndex !in 0 until count || fromIndex == toIndex) {
+                    return@withServiceAndPlayerOnMainThread
+                }
+                if (service.shuffleManager.isEnabled) {
+                    service.shuffleManager.moveInTraversal(fromIndex, toIndex)
+                } else {
+                    currentPlayer.moveMediaItem(fromIndex, toIndex)
+                }
+            }
+        }
+
         AsyncFunction("getQueue") Coroutine { ->
             val items = withServiceAndPlayerOnMainThread { service, currentPlayer ->
                 // When shuffle is enabled, return items in the logical playback (shuffle traversal)

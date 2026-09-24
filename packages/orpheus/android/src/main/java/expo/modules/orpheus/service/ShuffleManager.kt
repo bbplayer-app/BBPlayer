@@ -127,4 +127,14 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         player.setShuffleOrder(DefaultShuffleOrder(order.toIntArray(), System.currentTimeMillis()))
         Log.d("ShuffleManager", "Repositioned physical[$insertedPhysicalIndex] as next in shuffle order")
     }
+
+    /** Reorder the displayed shuffle traversal without moving physical media items. */
+    fun moveInTraversal(fromIndex: Int, toIndex: Int) {
+        if (!isShuffleEnabled) return
+        val player = getPlayer() ?: return
+        val order = getTraversalOrder()?.toMutableList() ?: return
+        if (fromIndex !in order.indices || toIndex !in order.indices || fromIndex == toIndex) return
+        order.add(toIndex, order.removeAt(fromIndex))
+        player.setShuffleOrder(DefaultShuffleOrder(order.toIntArray(), System.currentTimeMillis()))
+    }
 }

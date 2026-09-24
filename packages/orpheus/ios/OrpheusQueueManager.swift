@@ -149,6 +149,26 @@ class OrpheusQueueManager {
     }
     
     // MARK: - Modification
+
+    func moveTrack(fromIndex: Int, toIndex: Int) -> Bool {
+        guard backingQueue.indices.contains(fromIndex),
+              backingQueue.indices.contains(toIndex),
+              fromIndex != toIndex else { return false }
+
+        let track = backingQueue.remove(at: fromIndex)
+        backingQueue.insert(track, at: toIndex)
+
+        func shiftedIndex(_ index: Int) -> Int {
+            if index == fromIndex { return toIndex }
+            if fromIndex < toIndex && index > fromIndex && index <= toIndex { return index - 1 }
+            if toIndex < fromIndex && index >= toIndex && index < fromIndex { return index + 1 }
+            return index
+        }
+
+        currentIndex = shiftedIndex(currentIndex)
+        shuffleIndices = shuffleIndices?.map(shiftedIndex)
+        return true
+    }
     
     func removeTrack(at backingIndex: Int) -> Bool {
         // Returns true if current track was removed (requiring player stop/next)

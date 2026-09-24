@@ -188,6 +188,10 @@ public class ExpoOrpheusModule: Module {
         OrpheusPlayerManager.shared.removeTrack(at: index)
     }
 
+    AsyncFunction("moveTrack") { (fromIndex: Int, toIndex: Int) in
+        OrpheusPlayerManager.shared.moveTrack(fromIndex: fromIndex, toIndex: toIndex)
+    }
+
     AsyncFunction("clear") {
          OrpheusPlayerManager.shared.clearQueue()
     }

@@ -298,6 +298,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 随机播放开启时，`index` 会被解释为随机播放遍历顺序中的逻辑索引。
 	 */
 	removeTrack(index: number): Promise<void>
+	/** 将队列项从 fromIndex 移到 toIndex；索引与 getQueue() 的顺序一致。 */
+	moveTrack(fromIndex: number, toIndex: number): Promise<void>
 	/**
 	 * 启动或替换睡眠定时器。
 	 *
