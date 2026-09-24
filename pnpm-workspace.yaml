@@ -27,6 +27,7 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@expo/ui': patches/@expo__ui.patch
+  expo-modules-core: patches/expo-modules-core.patch
   expo-updates@57.0.23: patches/expo-updates@57.0.23.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch

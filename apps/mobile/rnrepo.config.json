@@ -1,6 +1,7 @@
 {
 	"denyList": {
 		"android": [
+			"expo-modules-core",
 			"react-native-reanimated",
 			"react-native-worklets",
 			"react-native-pager-view"
