@@ -53,14 +53,14 @@ export default function AppearanceSettingsPage() {
 
 	const playerBackgroundStyleMenu = useMenuActions([
 		{
+			title: '流体效果（默认）',
+			state: playerBackgroundStyle === 'fluid' ? 'on' : 'off',
+			onPress: () => setSettings({ playerBackgroundStyle: 'fluid' }),
+		},
+		{
 			title: '普通渐变',
 			state: playerBackgroundStyle === 'gradient' ? 'on' : 'off',
 			onPress: () => setSettings({ playerBackgroundStyle: 'gradient' }),
-		},
-		{
-			title: '流体效果',
-			state: playerBackgroundStyle === 'fluid' ? 'on' : 'off',
-			onPress: () => setSettings({ playerBackgroundStyle: 'fluid' }),
 		},
 	])
 

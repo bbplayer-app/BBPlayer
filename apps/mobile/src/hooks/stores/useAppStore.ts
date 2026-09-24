@@ -19,6 +19,32 @@ const logger = log.extend('Store.App')
 
 import toast from '@/utils/toast'
 
+/**
+ * 旧版本的播放器背景默认是普通渐变（以及 md3 / streamer 等历史值）。
+ * 升级时统一迁移到流体效果，并提示用户可以切回。
+ *
+ * 仅当存量值明确存在且不是 fluid 时才迁移，避免给从未设置过该字段的用户误报。
+ */
+function migratePlayerBackgroundToFluid(
+	settings: Partial<Settings> | undefined,
+): { settings: Partial<Settings> | undefined; migrated: boolean } {
+	if (
+		typeof settings?.playerBackgroundStyle !== 'string' ||
+		settings.playerBackgroundStyle === 'fluid'
+	) {
+		return { settings, migrated: false }
+	}
+
+	toast.info('已自动切换播放器背景到流体效果', {
+		description: '如果不喜欢，可在「设置 → 外观与主题」中切换回普通渐变',
+	})
+
+	return {
+		settings: { ...settings, playerBackgroundStyle: 'fluid' },
+		migrated: true,
+	}
+}
+
 export const parseCookieToObject = (
 	cookie?: string,
 ): Result<Record<string, string>, Error> => {
@@ -105,7 +131,7 @@ export const useAppStore = create<AppState>()(
 					sendPlayHistory: false,
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
-					playerBackgroundStyle: 'gradient',
+					playerBackgroundStyle: 'fluid',
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
 					enableVerbatimLyrics: true,
@@ -242,7 +268,7 @@ export const useAppStore = create<AppState>()(
 		{
 			name: 'app-storage',
 			storage: createJSONStorage(() => zustandStorage),
-			version: 5,
+			version: 6,
 
 			partialize: (state) => ({
 				bilibiliCookie: state.bilibiliCookie,
@@ -294,6 +320,14 @@ export const useAppStore = create<AppState>()(
 					migrateStartupScreen(migratedState.settings?.startupScreen)
 					const settings = { ...migratedState.settings }
 					delete settings.startupScreen
+					migratedState = { ...migratedState, settings }
+				}
+
+				if (version < 6) {
+					// 旧版本默认使用普通渐变；升级后自动迁移到流体效果并提示用户。
+					const { settings } = migratePlayerBackgroundToFluid(
+						migratedState.settings,
+					)
 					migratedState = { ...migratedState, settings }
 				}
 
@@ -398,6 +432,13 @@ export const useAppStore = create<AppState>()(
 						'boolean',
 					)
 					checkAndSet(OLD_KEYS.BG_STYLE, 'playerBackgroundStyle', 'string')
+
+					const { migrated: bgStyleMigrated } =
+						migratePlayerBackgroundToFluid(migratedSettings)
+					if (bgStyleMigrated) {
+						migratedSettings.playerBackgroundStyle = 'fluid'
+						hasOldSettings = true
+					}
 				} catch (e) {
 					logger.error('迁移设置项失败', e)
 				}
