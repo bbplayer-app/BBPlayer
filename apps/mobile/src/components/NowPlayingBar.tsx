@@ -105,6 +105,9 @@ const HIDDEN_SEGMENT_ROOTS = new Set([
 	'comments',
 	'onboarding',
 	'settings',
+	'performance',
+	'test',
+	'downloaded',
 ])
 
 function NowPlayingBar() {
