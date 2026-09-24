@@ -1,6 +1,6 @@
-import { startProfiling } from 'react-native-release-profiler'
+import { startStartupProfiling } from './src/lib/performance'
 
-startProfiling()
+startStartupProfiling()
 
 import { enableFreeze } from 'react-native-screens'
 
