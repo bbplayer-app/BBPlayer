@@ -48,7 +48,8 @@ struct NewTabView: AnyTabView {
                 title: tabData.title,
                 icon: icon,
                 sfSymbol: tabData.sfSymbol,
-                labeled: props.labeled
+                labeled: props.labeled,
+                iconRenderingMode: tabData.iconRenderingMode
               )
             }
             #if !os(tvOS)
@@ -78,7 +79,7 @@ struct ConditionalBottomAccessoryModifier: ViewModifier {
   }
 
   func body(content: Content) -> some View {
-    #if os(macOS) || os(tvOS)
+    #if os(macOS) || os(tvOS) || !compiler(>=6.2)
     // tabViewBottomAccessory is not available on macOS
     content
     #else
@@ -95,7 +96,7 @@ struct ConditionalBottomAccessoryModifier: ViewModifier {
 
   @ViewBuilder
   private func renderBottomAccessoryView() -> some View {
-    #if !os(macOS) && !os(tvOS)
+    #if !os(macOS) && !os(tvOS) && compiler(>=6.2)
     if let bottomAccessoryView {
       if #available(iOS 26.0, *) {
         BottomAccessoryRepresentableView(view: bottomAccessoryView)
@@ -105,7 +106,7 @@ struct ConditionalBottomAccessoryModifier: ViewModifier {
   }
 }
 
-#if !os(macOS) && !os(tvOS)
+#if !os(macOS) && !os(tvOS) && compiler(>=6.2)
 @available(iOS 26.0, tvOS 26.0, *)
 struct BottomAccessoryRepresentableView: PlatformViewRepresentable {
   @Environment(\.tabViewBottomAccessoryPlacement) var tabViewBottomAccessoryPlacement
