@@ -54,6 +54,7 @@ export interface ModalPropsMap {
 	}
 	SubscribeToSharedPlaylist: undefined
 	MergePlaylists: undefined
+	StarPrompt: undefined
 }
 
 export type ModalKey = keyof ModalPropsMap

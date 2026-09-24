@@ -14,6 +14,7 @@ interface Settings {
 	enableMinimalistMode: boolean
 	allowSimultaneousPlayback: boolean
 	expandMultiPageOnSync: boolean | null // null = 用户尚未选择过（首次同步时询问）
+	hideStarPrompt: boolean // 用户是否在主页点击过「不再显示」Star 提示
 }
 
 interface BilibiliUserSummary {

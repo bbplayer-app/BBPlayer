@@ -42,6 +42,7 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useModalStore } from '@/hooks/stores/useModalStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
@@ -85,6 +86,8 @@ function HomePage() {
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
 	)
+	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
+	const openModal = useModalStore((state) => state.open)
 	const activeSkin = useActiveSkin()
 	const activeAvatarFrameIndex = useSkinStore(
 		(state) => state.activeAvatarFrameIndex,
@@ -305,6 +308,15 @@ function HomePage() {
 						</Text>
 					</View>
 					<View style={styles.headerRight}>
+						{!hideStarPrompt && (
+							<IconButton
+								icon='star-outline'
+								size={22}
+								iconColor={headerForegroundColor}
+								accessibilityLabel='去 GitHub 点个 Star'
+								onPress={() => openModal('StarPrompt', undefined)}
+							/>
+						)}
 						{hasSyncFailures && (
 							<IconButton
 								icon='alert-circle'

@@ -5,7 +5,7 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
-## [UNRELEASED]
+## [2.7.0] - 2026-09-24
 
 ### Added
 
@@ -16,6 +16,7 @@
 - 支持浏览并同步 B 站的「系列」视频列表
 - 增加存储管理页面
 - 播放列表页面支持拖拽排序
+- 主页右上角增加前往 GitHub 点 Star 的入口
 
 ### Fixed
 
@@ -665,7 +666,7 @@
 
 <!-- Versions -->
 
-[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.5...HEAD
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.7.0...HEAD
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
 [1.3.4]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.3...v1.3.4
@@ -695,3 +696,4 @@
 [2.6.2]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.1...v2.6.2
 [2.6.4]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.2...v2.6.4
 [2.6.5]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.4...v2.6.5
+[2.7.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.6.5...v2.7.0

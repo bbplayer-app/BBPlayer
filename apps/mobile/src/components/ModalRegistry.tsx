@@ -6,6 +6,7 @@ import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
 const UpdateAppModal = lazy(() => import('./modals/app/UpdateAppModal'))
+const StarPromptModal = lazy(() => import('./modals/app/StarPromptModal'))
 const AddToFavoriteListsModal = lazy(
 	() => import('./modals/bilibili/AddVideoToBilibiliFavModal'),
 )
@@ -106,4 +107,5 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	EnableSharing: EnableSharingModal,
 	SubscribeToSharedPlaylist: SubscribeToSharedPlaylistModal,
 	MergePlaylists: MergePlaylistsModal,
+	StarPrompt: StarPromptModal,
 }

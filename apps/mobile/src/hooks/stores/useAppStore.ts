@@ -114,6 +114,7 @@ export const useAppStore = create<AppState>()(
 					enableMinimalistMode: false,
 					allowSimultaneousPlayback: false,
 					expandMultiPageOnSync: null,
+					hideStarPrompt: false,
 				},
 				bilibiliUserInfo: null,
 				bbplayerAccount: null,
