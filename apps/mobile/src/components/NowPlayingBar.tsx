@@ -8,14 +8,7 @@ import {
 import { useValue } from '@legendapp/state/react'
 import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
-import {
-	memo,
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from 'react'
+import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { EaseView } from 'react-native-ease'
 import {
@@ -106,48 +99,27 @@ const playPause = async () => {
 	}
 }
 
+// 这些路由根节点（含其全部子路由）不展示播放条。
+const HIDDEN_SEGMENT_ROOTS = new Set([
+	'player',
+	'comments',
+	'onboarding',
+	'settings',
+])
+
 function NowPlayingBar() {
 	const segments = useSegments()
 	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
-	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
-	const shouldShow = segments[0] !== 'player' && !playerScreenActive
-	// 沉浸模式（bottom）与 Tab 栏连成一体，不做退场动画，直接卸载。
-	const animateExit = nowPlayingBarStyle !== 'bottom'
-	const [mounted, setMounted] = useState(shouldShow)
-
-	useEffect(() => {
-		if (shouldShow) {
-			setMounted(true)
-		} else if (!animateExit) {
-			setMounted(false)
-		}
-	}, [shouldShow, animateExit])
-
-	const handleExitComplete = useCallback(() => {
-		setMounted(false)
-	}, [])
-
-	if (!mounted) {
+	const shouldShow =
+		!HIDDEN_SEGMENT_ROOTS.has(segments[0]) && !playerScreenActive
+	if (!shouldShow) {
 		return null
 	}
 
-	return (
-		<NowPlayingBarContent
-			visible={shouldShow}
-			onExitComplete={handleExitComplete}
-		/>
-	)
+	return <NowPlayingBarContent />
 }
 
-type NowPlayingBarContentProps = {
-	visible: boolean
-	onExitComplete: () => void
-}
-
-const NowPlayingBarContent = memo(function NowPlayingBarContent({
-	visible,
-	onExitComplete,
-}: NowPlayingBarContentProps) {
+const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
 	const state = usePlaybackState()
@@ -287,29 +259,17 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent({
 
 	const reduceMotion = useReducedMotion()
 	// 沉浸模式下播放条瞬时显示/隐藏，不做任何过渡。
-	const disableTransition = reduceMotion || nowPlayingBarStyle === 'bottom'
+	const disableTransition = reduceMotion
 
 	return (
 		<EaseView
-			initialAnimate={{ opacity: 0, translateY: -bottomMargin }}
-			animate={{ opacity: visible ? 1 : 0, translateY: -bottomMargin }}
+			initialAnimate={{ translateY: -bottomMargin }}
+			animate={{ translateY: -bottomMargin }}
 			transition={
 				disableTransition
 					? { type: 'none' }
-					: {
-							opacity: {
-								type: 'timing',
-								duration: visible ? 160 : 100,
-								easing: 'easeOut',
-							},
-							transform: { type: 'timing', duration: 240, easing: 'easeOut' },
-						}
+					: { type: 'timing', duration: 240, easing: 'easeOut' }
 			}
-			onTransitionEnd={({ finished }) => {
-				if (finished && !visible) {
-					onExitComplete()
-				}
-			}}
 			pointerEvents='box-none'
 			style={styles.nowPlayingBarContainer}
 		>
