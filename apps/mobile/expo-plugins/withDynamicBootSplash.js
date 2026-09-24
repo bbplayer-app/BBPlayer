@@ -1,8 +1,30 @@
 const fs = require('fs/promises')
 const path = require('path')
 
-const { withFinalizedMod } = require('expo/config-plugins')
+const { AndroidConfig, withFinalizedMod } = require('expo/config-plugins')
 const bootSplashColors = require('../boot-splash-colors.json')
+
+const restoreAndroidActivityTheme = async (projectRoot) => {
+	const mainActivity =
+		await AndroidConfig.Paths.getMainActivityAsync(projectRoot)
+	if (mainActivity.language !== 'kt') {
+		throw new Error('Expected a Kotlin MainActivity for BootSplash theme setup')
+	}
+
+	const init = 'RNBootSplash.init(this, R.style.BootTheme)'
+	const themeComment =
+		'// BootSplash can skip init when an Activity is recreated. Restore the Material theme every time.'
+	if (!mainActivity.contents.includes(init)) {
+		throw new Error('Unable to find RNBootSplash.init in MainActivity')
+	}
+	if (!mainActivity.contents.includes(themeComment)) {
+		const contents = mainActivity.contents.replace(
+			init,
+			`${init}\n    ${themeComment}\n    setTheme(R.style.AppTheme)`,
+		)
+		await fs.writeFile(mainActivity.path, contents)
+	}
+}
 
 const upsertAndroidColor = (resources, name, value) => {
 	const colorPattern = new RegExp(
@@ -32,6 +54,7 @@ const withDynamicAndroidBootSplash = (config) =>
 	withFinalizedMod(config, [
 		'android',
 		async (config) => {
+			await restoreAndroidActivityTheme(config.modRequest.projectRoot)
 			const resourcesRoot = path.join(
 				config.modRequest.platformProjectRoot,
 				'app/src/main/res',
