@@ -51,6 +51,7 @@ import migrations from '../../drizzle/migrations'
 const logger = log.extend('UI.RootLayout')
 
 Observe.configure({
+	dispatchingEnabled: useAppStoreObj.getState().settings.enableDataCollection,
 	integrations: { 'expo-router': true },
 })
 

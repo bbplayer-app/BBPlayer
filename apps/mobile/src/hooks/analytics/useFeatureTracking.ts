@@ -1,4 +1,5 @@
 import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
+import { Observe } from 'expo-observe'
 import { useEffect } from 'react'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
@@ -14,6 +15,7 @@ export function useFeatureTracking() {
 	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 
 	useEffect(() => {
+		Observe.configure({ dispatchingEnabled: enableDataCollection })
 		void analyticsService.setAnalyticsCollectionEnabled(enableDataCollection)
 
 		if (!enableDataCollection) return
