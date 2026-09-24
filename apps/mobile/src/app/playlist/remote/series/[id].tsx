@@ -2,7 +2,7 @@ import { useImage } from 'expo-image'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
-import { Appbar, useTheme } from 'react-native-paper'
+import { Appbar, Button, useTheme } from 'react-native-paper'
 
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -12,58 +12,62 @@ import { usePlaylistMenu } from '@/features/playlist/remote/hooks/usePlaylistMen
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
 import { useTrackSelection } from '@/features/playlist/remote/hooks/useTrackSelection'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
-import { useInfiniteFavoriteList } from '@/hooks/queries/bilibili/favorite'
+import {
+	favoriteListQueryKeys,
+	useInfiniteSeriesArchives,
+	useSeriesMetadata,
+} from '@/hooks/queries/bilibili/favorite'
+import { useOtherUserInfo } from '@/hooks/queries/bilibili/user'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
-import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
-import { bv2av } from '@/lib/api/bilibili/utils'
-import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
+import { queryClient } from '@/lib/config/queryClient'
+import type { BilibiliSeriesArchives } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
-import toast from '@/utils/toast'
 
 const mapApiItemToTrack = (
-	apiItem: BilibiliFavoriteListContent,
+	apiItem: NonNullable<BilibiliSeriesArchives['archives']>[number],
+	artistName: string,
 ): BilibiliTrack => {
 	return {
-		id: bv2av(apiItem.bvid),
+		id: apiItem.aid,
 		uniqueKey: `bilibili::${apiItem.bvid}`,
 		source: 'bilibili',
 		title: apiItem.title,
 		artist: {
-			id: apiItem.upper.mid,
-			name: apiItem.upper.name,
-			remoteId: apiItem.upper.mid.toString(),
+			id: apiItem.upMid,
+			name: artistName,
+			remoteId: apiItem.upMid.toString(),
 			source: 'bilibili',
-			avatarUrl: apiItem.upper.face,
-			createdAt: new Date(apiItem.pubdate),
-			updatedAt: new Date(apiItem.pubdate),
+			createdAt: new Date(apiItem.pubdate * 1000),
+			updatedAt: new Date(apiItem.pubdate * 1000),
 		},
-		coverUrl: apiItem.cover,
+		coverUrl: apiItem.pic,
 		duration: apiItem.duration,
-		createdAt: new Date(apiItem.pubdate),
-		updatedAt: new Date(apiItem.pubdate),
+		createdAt: new Date(apiItem.pubdate * 1000),
+		updatedAt: new Date(apiItem.pubdate * 1000),
 		bilibiliMetadata: {
 			bvid: apiItem.bvid,
 			cid: null,
 			isMultiPage: false,
-			videoIsValid: apiItem.attr === 0,
+			videoIsValid: true,
 		},
 	}
 }
 
-export default function FavoritePage() {
+export default function SeriesPage() {
 	const isListReady = useScreenTransitionReady()
+	const router = useRouter()
 	const { id } = useLocalSearchParams<{ id: string }>()
 	const theme = useTheme()
 	const { colors } = theme
-	const router = useRouter()
 	const [refreshing, setRefreshing] = useState(false)
-	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
+	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'series')
 
-	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
+		useTrackSelection()
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -73,29 +77,40 @@ export default function FavoritePage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
-	const openModal = useModalStore((state) => state.open)
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
+	const seriesId = Number(id)
 	const {
-		data: favoriteData,
-		isPending: isFavoriteDataPending,
-		isError: isFavoriteDataError,
-		fetchNextPage,
-		refetch,
-		hasNextPage,
+		data: seriesMetadata,
+		isPending: isMetadataPending,
+		isError: isMetadataError,
+		refetch: refetchMetadata,
+	} = useSeriesMetadata(seriesId)
+	const {
+		data: archivesData,
+		isPending: isArchivesPending,
+		isError: isArchivesError,
 		isFetchingNextPage,
-	} = useInfiniteFavoriteList(Number(id))
-	const tracks = useMemo(() => {
-		return (
-			favoriteData?.pages
-				.flatMap((page) => page.medias ?? [])
-				.map(mapApiItemToTrack) ?? []
-		)
-	}, [favoriteData])
+		isFetchNextPageError,
+		hasNextPage,
+		fetchNextPage,
+		refetch: refetchArchives,
+	} = useInfiniteSeriesArchives(seriesId, seriesMetadata?.mid)
+	const { data: uploader } = useOtherUserInfo(seriesMetadata?.mid ?? 0, false)
+	const artistName = uploader?.name ?? `UP主 ${seriesMetadata?.mid ?? ''}`
+	const tracks = useMemo(
+		() =>
+			archivesData?.pages.flatMap((page) =>
+				(page.archives ?? []).map((archive) =>
+					mapApiItemToTrack(archive, artistName),
+				),
+			) ?? [],
+		[archivesData, artistName],
+	)
 
 	const coverRef = useImage(
-		resolveBilibiliImageUrl(favoriteData?.pages[0]?.info?.cover) ?? '',
+		resolveBilibiliImageUrl(archivesData?.pages[0]?.archives?.[0]?.pic) ?? '',
 		{
 			onError: () => void 0,
 		},
@@ -109,63 +124,69 @@ export default function FavoritePage() {
 	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const { playTrack } = useRemotePlaylist()
+	const openModal = useModalStore((state) => state.open)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
 
 	const handleSync = useCallback(() => {
-		if (favoriteData?.pages.flatMap((page) => page.medias).length === 0) {
-			toast.info('收藏夹为空，无需同步')
-			return
-		}
-
-		const { expandMultiPageOnSync } = useAppStore.getState().settings
-		if (expandMultiPageOnSync === null) {
-			openModal('SyncOptions', {
-				favoriteId: Number(id),
-				shouldRedirectToLocalPlaylist: true,
-			})
-			return
-		}
 		openModal(
 			'PlaylistSyncProgress',
 			{
 				remoteId: Number(id),
-				type: 'favorite',
+				type: 'series',
 				shouldRedirectToLocalPlaylist: true,
-				expandMultiPage: expandMultiPageOnSync,
 			},
 			{ dismissible: false },
 		)
-	}, [favoriteData?.pages, id, openModal])
+	}, [id, openModal])
+
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true)
+		await listRef.current?.scrollToOffset({ offset: 0, animated: false })
+		queryClient.setQueryData(
+			favoriteListQueryKeys.seriesArchives(seriesId, seriesMetadata?.mid),
+			(old: typeof archivesData) =>
+				old
+					? {
+							pages: old.pages.slice(0, 1),
+							pageParams: old.pageParams.slice(0, 1),
+						}
+					: old,
+		)
+		await Promise.all([refetchMetadata(), refetchArchives()])
+		setRefreshing(false)
+	}, [listRef, refetchArchives, refetchMetadata, seriesId, seriesMetadata?.mid])
 
 	useEffect(() => {
-		if (typeof id !== 'string') {
+		if (
+			typeof id !== 'string' ||
+			!Number.isSafeInteger(seriesId) ||
+			seriesId <= 0
+		) {
 			router.replace('/+not-found')
 		}
-	}, [id, router])
+	}, [id, router, seriesId])
 
-	if (typeof id !== 'string') {
+	if (
+		typeof id !== 'string' ||
+		!Number.isSafeInteger(seriesId) ||
+		seriesId <= 0
+	) {
 		return null
 	}
 
-	if (isFavoriteDataPending || !isListReady) {
+	if (isMetadataPending || isArchivesPending || !isListReady) {
 		return <PlaylistPageSkeleton animate={isListReady} />
 	}
 
-	if (isFavoriteDataError) {
+	if (isMetadataError || (isArchivesError && !archivesData)) {
 		return (
 			<PlaylistError
-				text='加载收藏夹内容失败'
-				onRetry={refetch}
-			/>
-		)
-	}
-
-	if (!favoriteData.pages[0].info) {
-		return (
-			<PlaylistError
-				text='收藏夹信息无效或不存在'
-				onRetry={refetch}
+				text='加载系列内容失败'
+				onRetry={() => {
+					void refetchMetadata()
+					void refetchArchives()
+				}}
 			/>
 		)
 	}
@@ -180,12 +201,26 @@ export default function FavoritePage() {
 					title={
 						selectMode
 							? `已选择\u2009${selected.size}\u2009首`
-							: favoriteData.pages[0].info.title
+							: seriesMetadata.name
 					}
 					onPress={handleDoubleTap}
 				/>
 				{selectMode ? (
 					<>
+						<Appbar.Action
+							icon='select-all'
+							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
+						/>
+						<Appbar.Action
+							icon='select-compare'
+							onPress={() =>
+								setSelected(
+									new Set(
+										tracks.filter((t) => !selected.has(t.id)).map((t) => t.id),
+									),
+								)
+							}
+						/>
 						<Appbar.Action
 							icon='playlist-plus'
 							onPress={() => {
@@ -217,12 +252,32 @@ export default function FavoritePage() {
 					playTrack={playTrack}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
+					isFetchingNextPage={isFetchingNextPage}
+					hasNextPage={hasNextPage && !isFetchNextPageError}
+					{...(isFetchNextPageError
+						? {
+								ListFooterComponent: (
+									<Button onPress={() => void fetchNextPage()}>
+										重试加载更多
+									</Button>
+								),
+							}
+						: {})}
+					onEndReached={
+						hasNextPage &&
+						!refreshing &&
+						!isFetchingNextPage &&
+						!isFetchNextPageError
+							? () => void fetchNextPage()
+							: undefined
+					}
+					onEndReachedThreshold={0.5}
 					ListHeaderComponent={
 						<PlaylistHeader
 							cover={coverRef ?? undefined}
-							title={favoriteData.pages[0].info.title}
-							subtitles={`${favoriteData.pages[0].info.upper.name}\u2009•\u2009${favoriteData.pages[0].info.media_count}\u2009首歌曲`}
-							description={favoriteData.pages[0].info.intro}
+							title={seriesMetadata.name}
+							subtitles={`${artistName}\u2009•\u2009${seriesMetadata.total}\u2009首歌曲`}
+							description={seriesMetadata.description}
 							onClickMainButton={handleSync}
 							mainButtonIcon={'sync'}
 							linkedPlaylistId={linkedPlaylistId}
@@ -236,17 +291,10 @@ export default function FavoritePage() {
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
+							onRefresh={() => void handleRefresh()}
 							colors={[colors.primary]}
-							progressViewOffset={50}
 						/>
 					}
-					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-					isFetchingNextPage={isFetchingNextPage}
 				/>
 			</View>
 		</View>

@@ -113,7 +113,14 @@ export const playlists = sqliteTable(
 		coverUrl: text('cover_url'),
 		itemCount: integer('item_count').notNull().default(0),
 		type: text('type', {
-			enum: ['favorite', 'collection', 'multi_page', 'local', 'dynamic'],
+			enum: [
+				'favorite',
+				'collection',
+				'series',
+				'multi_page',
+				'local',
+				'dynamic',
+			],
 		}).notNull(),
 		remoteSyncId: integer('remote_sync_id'), // 当存在这个值时，这个 playlist 只能从远程同步，而不能从本地直接修改（或许也可以？因为我们已经实现了大量本地有关收藏夹的操作逻辑，先不管了~）
 		lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),

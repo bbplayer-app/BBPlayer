@@ -102,10 +102,10 @@ export const useInfiniteGetUserUploadedVideos = (
 	})
 }
 
-export const useOtherUserInfo = (mid: number) => {
+export const useOtherUserInfo = (mid: number, requireCookie = true) => {
 	// 这个接口有风控校验
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
-	const enabled = !!mid && hasCookie
+	const enabled = !!mid && (!requireCookie || hasCookie)
 	return useQuery({
 		queryKey: userQueryKeys.otherUserInfo(mid),
 		queryFn: ({ signal }) =>

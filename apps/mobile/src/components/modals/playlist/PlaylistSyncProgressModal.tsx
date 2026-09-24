@@ -7,14 +7,16 @@ import Button from '@/components/common/Button'
 import LinearProgressIndicator from '@/components/common/LinearProgressIndicator'
 import { usePlaylistSync } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
-import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
+import type { PlaylistSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 
-const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
-	favoriteId,
+const PlaylistSyncProgressModal = memo(function PlaylistSyncProgressModal({
+	remoteId,
+	type,
 	shouldRedirectToLocalPlaylist,
 	expandMultiPage,
 }: {
-	favoriteId: number
+	remoteId: number
+	type: 'favorite' | 'series'
 	shouldRedirectToLocalPlaylist?: boolean
 	expandMultiPage?: boolean
 }) {
@@ -23,7 +25,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	const syncedPlaylistId = useRef<number | undefined>(undefined)
 
 	const close = useCallback(() => {
-		modalClose('FavoriteSyncProgress')
+		modalClose('PlaylistSyncProgress')
 		if (shouldRedirectToLocalPlaylist && syncedPlaylistId.current) {
 			const targetId = syncedPlaylistId.current
 			useModalStore.getState().doAfterModalHostClosed(() => {
@@ -32,8 +34,8 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 		}
 	}, [modalClose, shouldRedirectToLocalPlaylist, router])
 
-	const [progress, setProgress] = useState<FavoriteSyncProgress | null>(null)
-	const { mutate: syncFavorite, isPending } = usePlaylistSync()
+	const [progress, setProgress] = useState<PlaylistSyncProgress | null>(null)
+	const { mutate: syncPlaylist, isPending } = usePlaylistSync()
 	const hasSyncStarted = useRef(false)
 
 	// Auto-start sync on mount
@@ -41,10 +43,10 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 		if (hasSyncStarted.current) return
 		hasSyncStarted.current = true
 
-		syncFavorite(
+		syncPlaylist(
 			{
-				remoteSyncId: favoriteId,
-				type: 'favorite',
+				remoteSyncId: remoteId,
+				type,
 				onProgress: setProgress,
 				expandMultiPage,
 			},
@@ -52,7 +54,9 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 				onSuccess: (id) => {
 					syncedPlaylistId.current = id
 					setProgress((prev) =>
-						prev ? { ...prev, stage: 'completed', message: '同步完成' } : null,
+						prev
+							? { ...prev, stage: 'completed', message: '同步完成' }
+							: { stage: 'completed', message: '同步完成' },
 					)
 				},
 				onError: (error) => {
@@ -63,12 +67,12 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 									stage: 'error',
 									message: `同步失败: ${error.message}`,
 								}
-							: null,
+							: { stage: 'error', message: `同步失败: ${error.message}` },
 					)
 				},
 			},
 		)
-	}, [favoriteId, syncFavorite, expandMultiPage])
+	}, [remoteId, type, syncPlaylist, expandMultiPage])
 
 	let localProgress: number | undefined
 	if (
@@ -93,7 +97,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 					? '同步完成'
 					: progress?.stage === 'error'
 						? '同步失败'
-						: '正在同步收藏夹'}
+						: `正在同步${type === 'series' ? '系列' : '收藏夹'}`}
 			</Dialog.Title>
 			<Dialog.Content>
 				<View style={styles.content}>
@@ -122,7 +126,7 @@ const FavoriteSyncProgressModal = memo(function FavoriteSyncProgressModal({
 	)
 })
 
-FavoriteSyncProgressModal.displayName = 'FavoriteSyncProgressModal'
+PlaylistSyncProgressModal.displayName = 'PlaylistSyncProgressModal'
 
 const styles = StyleSheet.create({
 	content: {
@@ -138,4 +142,4 @@ const styles = StyleSheet.create({
 	},
 })
 
-export default FavoriteSyncProgressModal
+export default PlaylistSyncProgressModal

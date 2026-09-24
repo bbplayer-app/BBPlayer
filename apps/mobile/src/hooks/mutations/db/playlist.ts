@@ -7,7 +7,7 @@ import { queryClient } from '@/lib/config/queryClient'
 import { CustomError } from '@/lib/errors'
 import { playlistFacade } from '@/lib/facades/playlist'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
-import type { FavoriteSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
+import type { PlaylistSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -38,7 +38,7 @@ export const usePlaylistSync = () => {
 			remoteSyncId: number
 			type: Playlist['type']
 			toastId?: string
-			onProgress?: (progress: FavoriteSyncProgress) => void
+			onProgress?: (progress: PlaylistSyncProgress) => void
 			expandMultiPage?: boolean
 		}) => {
 			const result = await syncFacade.sync(

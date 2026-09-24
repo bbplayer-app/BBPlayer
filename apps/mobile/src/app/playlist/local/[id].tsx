@@ -517,10 +517,23 @@ function LocalPlaylistContent({
 				return
 			}
 			openModal(
-				'FavoriteSyncProgress',
+				'PlaylistSyncProgress',
 				{
-					favoriteId: playlistMetadata.remoteSyncId,
+					remoteId: playlistMetadata.remoteSyncId,
+					type: 'favorite',
 					expandMultiPage: expandMultiPageOnSync,
+				},
+				{ dismissible: false },
+			)
+			return
+		}
+
+		if (playlistMetadata.type === 'series') {
+			openModal(
+				'PlaylistSyncProgress',
+				{
+					remoteId: playlistMetadata.remoteSyncId,
+					type: 'series',
 				},
 				{ dismissible: false },
 			)

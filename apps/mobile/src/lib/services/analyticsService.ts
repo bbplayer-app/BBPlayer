@@ -48,7 +48,12 @@ class AnalyticsService {
 
 	public async logPlaylistSync(
 		action: PlaylistSyncAction,
-		targetType: 'collection' | 'favorite' | 'multi_page' | 'external',
+		targetType:
+			| 'collection'
+			| 'series'
+			| 'favorite'
+			| 'multi_page'
+			| 'external',
 		itemCount: number,
 	) {
 		await this.safeLogEvent('playlist_sync', {

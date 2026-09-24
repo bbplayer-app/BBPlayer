@@ -306,6 +306,10 @@ function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
+							name='playlist/remote/series/[id]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='playlist/remote/favorite/[id]'
 							options={{ headerShown: false }}
 						/>

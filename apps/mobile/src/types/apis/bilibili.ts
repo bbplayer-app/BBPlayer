@@ -325,6 +325,31 @@ interface BilibiliCollectionAllContents {
 	medias: BilibiliMediaItemInCollection[] | null
 }
 
+interface BilibiliSeriesMetadata {
+	meta: {
+		series_id: number
+		mid: number
+		name: string
+		description: string
+		total: number
+	}
+}
+
+interface BilibiliSeriesArchives {
+	page: { num: number; size: number; total: number }
+	archives:
+		| {
+				aid: number
+				bvid: string
+				title: string
+				pic: string
+				duration: number
+				pubdate: number
+				upMid: number
+		  }[]
+		| null
+}
+
 /**
  * 分 p 视频数据
  */
@@ -649,6 +674,8 @@ export type {
 	BilibiliCaptchaTokenData,
 	BilibiliCollection,
 	BilibiliCollectionAllContents,
+	BilibiliSeriesMetadata,
+	BilibiliSeriesArchives,
 	BilibiliCollectionContent,
 	BilibiliCollectionInfo,
 	BilibiliCommentContent,

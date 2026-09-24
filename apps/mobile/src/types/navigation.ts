@@ -39,8 +39,9 @@ export interface ModalPropsMap {
 		favoriteId: number
 		shouldRedirectToLocalPlaylist?: boolean
 	}
-	FavoriteSyncProgress: {
-		favoriteId: number
+	PlaylistSyncProgress: {
+		remoteId: number
+		type: 'favorite' | 'series'
 		shouldRedirectToLocalPlaylist?: boolean
 		expandMultiPage?: boolean
 	}

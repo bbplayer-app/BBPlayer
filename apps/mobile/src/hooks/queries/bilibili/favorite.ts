@@ -18,6 +18,10 @@ export const favoriteListQueryKeys = {
 			'collectionAllContents',
 			collectionId,
 		] as const,
+	seriesMetadata: (seriesId: number) =>
+		[...favoriteListQueryKeys.all, 'seriesMetadata', seriesId] as const,
+	seriesArchives: (seriesId: number, mid?: number) =>
+		[...favoriteListQueryKeys.all, 'seriesArchives', seriesId, mid] as const,
 	favoriteForOneVideo: (bvid: string, userMid?: number) =>
 		[
 			...favoriteListQueryKeys.all,
@@ -131,6 +135,39 @@ export const useCollectionAllContents = (collectionId: number) => {
 				bilibiliApi.getCollectionAllContents({ collectionId, signal }),
 			),
 		staleTime: 1,
+	})
+}
+
+export const useSeriesMetadata = (seriesId: number) => {
+	return useQuery({
+		queryKey: favoriteListQueryKeys.seriesMetadata(seriesId),
+		queryFn: ({ signal }) =>
+			returnOrThrowAsync(bilibiliApi.getSeriesMetadata({ seriesId, signal })),
+		enabled: Number.isSafeInteger(seriesId) && seriesId > 0,
+		staleTime: 5 * 60 * 1000,
+	})
+}
+
+export const useInfiniteSeriesArchives = (seriesId: number, mid?: number) => {
+	return useInfiniteQuery({
+		queryKey: favoriteListQueryKeys.seriesArchives(seriesId, mid),
+		queryFn: ({ pageParam, signal }) =>
+			returnOrThrowAsync(
+				bilibiliApi.getSeriesArchivesPage({
+					seriesId,
+					mid: mid!,
+					pageNumber: pageParam,
+					signal,
+				}),
+			),
+		enabled: Number.isSafeInteger(seriesId) && seriesId > 0 && !!mid,
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.archives?.length &&
+			lastPage.page.num * lastPage.page.size < lastPage.page.total
+				? lastPage.page.num + 1
+				: undefined,
+		staleTime: 5 * 60 * 1000,
 	})
 }
 

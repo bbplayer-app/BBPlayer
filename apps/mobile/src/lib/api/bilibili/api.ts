@@ -22,6 +22,8 @@ import {
 	type BilibiliAudioStreamResponse,
 	type BilibiliCollection,
 	type BilibiliCollectionAllContents,
+	type BilibiliSeriesMetadata,
+	type BilibiliSeriesArchives,
 	type BilibiliDealFavoriteForOneVideoResponse,
 	type BilibiliFavoriteListAllContents,
 	type BilibiliFavoriteListContents,
@@ -38,6 +40,7 @@ import {
 } from '@/types/apis/bilibili'
 import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
+import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 import { bilibiliApiClient } from './client'
 import { bv2av } from './utils'
@@ -688,6 +691,123 @@ export class BilibiliApi {
 			},
 			signal,
 		})
+	}
+
+	getSeriesMetadata({
+		seriesId,
+		signal,
+	}: {
+		seriesId: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliSeriesMetadata['meta'], BilibiliApiError> {
+		return bilibiliApiClient
+			.get<BilibiliSeriesMetadata>({
+				endpoint: '/x/series/series',
+				params: { series_id: String(seriesId) },
+				signal,
+			})
+			.map(({ meta }) => meta)
+	}
+
+	getSeriesArchivesPage({
+		seriesId,
+		mid,
+		pageNumber,
+		pageSize = 20,
+		signal,
+	}: {
+		seriesId: number
+		mid: number
+		pageNumber: number
+		pageSize?: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliSeriesArchives, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliSeriesArchives>({
+			endpoint: '/x/series/archives',
+			params: {
+				mid: String(mid),
+				series_id: String(seriesId),
+				ps: String(pageSize),
+				pn: String(pageNumber),
+			},
+			signal,
+		})
+	}
+
+	/** 仅供用户主动同步时全量读取；系列页面逐页请求。 */
+	getSeriesAllContents({
+		seriesId,
+		signal,
+		onPage,
+	}: {
+		seriesId: number
+		signal?: AbortSignal
+		onPage?: (loaded: number, total: number) => void
+	}): ResultAsync<BilibiliCollectionAllContents, BilibiliApiError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const meta = await returnOrThrowAsync(
+					this.getSeriesMetadata({ seriesId, signal }),
+				)
+				const user = await this.getOtherUserInfo({ mid: meta.mid, signal })
+				const medias: BilibiliCollectionAllContents['medias'] = []
+				const pageSize = 100
+				for (let page = 1; ; page += 1) {
+					// oxlint-disable-next-line no-await-in-loop
+					const result = await returnOrThrowAsync(
+						this.getSeriesArchivesPage({
+							seriesId,
+							mid: meta.mid,
+							pageNumber: page,
+							pageSize,
+							signal,
+						}),
+					)
+					for (const archive of result.archives ?? []) {
+						medias.push({
+							id: archive.aid,
+							bvid: archive.bvid,
+							title: archive.title,
+							cover: archive.pic,
+							duration: archive.duration,
+							pubtime: archive.pubdate * 1000,
+							upper: {
+								mid: archive.upMid,
+								name: user.isOk() ? user.value.name : `UP主 ${meta.mid}`,
+							},
+							cnt_info: { collect: 0, play: 0, danmaku: 0 },
+						})
+					}
+					onPage?.(medias.length, result.page.total)
+					if (!result.archives?.length || medias.length >= result.page.total)
+						break
+				}
+				return {
+					info: {
+						id: meta.series_id,
+						season_type: 0,
+						title: meta.name,
+						cover: medias[0]?.cover ?? '',
+						media_count: meta.total,
+						intro: meta.description,
+						upper: {
+							mid: meta.mid,
+							name: user.isOk() ? user.value.name : `UP主 ${meta.mid}`,
+						},
+						cnt_info: { collect: 0, play: 0, danmaku: 0 },
+					},
+					medias,
+				}
+			})(),
+			(error) =>
+				error instanceof BilibiliApiError
+					? error
+					: new BilibiliApiError({
+							message: `获取系列失败: ${String(error)}`,
+							type: 'RequestFailed',
+							cause: error,
+						}),
+		)
 	}
 
 	/**

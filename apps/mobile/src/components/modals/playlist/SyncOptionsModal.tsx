@@ -29,9 +29,10 @@ const SyncOptionsModal = memo(function SyncOptionsModal({
 		setSettings({ expandMultiPageOnSync: expandMultiPage })
 		close('SyncOptions')
 		open(
-			'FavoriteSyncProgress',
+			'PlaylistSyncProgress',
 			{
-				favoriteId,
+				remoteId: favoriteId,
+				type: 'favorite',
 				shouldRedirectToLocalPlaylist,
 				expandMultiPage,
 			},

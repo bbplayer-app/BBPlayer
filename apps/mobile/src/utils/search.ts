@@ -26,6 +26,7 @@ export type SearchStrategy =
 	| { type: 'BVID'; bvid: string }
 	| { type: 'FAVORITE'; id: string }
 	| { type: 'COLLECTION'; id: string }
+	| { type: 'SERIES'; id: string }
 	| { type: 'SEARCH'; query: string }
 	| { type: 'INVALID_URL_NO_CTYPE' }
 	| { type: 'B23_RESOLVE_ERROR'; query: string; error: Error }
@@ -63,14 +64,13 @@ export async function matchSearchStrategies(
 			return { type: 'FAVORITE', id: fid }
 		}
 
-		// 处理 space.bilibili.com 域名，如果后面包含 `lists`，则认为是合集，否则为个人空间
+		// 系列链接必须保留 type=series；普通 lists 链接是合集。
 		if (urlObj.hostname === 'space.bilibili.com') {
-			const sliced = urlObj.pathname.split('/')
-			sliced.shift()
+			const sliced = urlObj.pathname.split('/').filter(Boolean)
 			const mid = sliced.shift()
 			if (mid) {
-				if (sliced.includes('lists')) {
-					const collectionId = sliced.pop()
+				if (sliced[0] === 'lists') {
+					const collectionId = sliced[1]
 					if (!collectionId) {
 						logger.debug(
 							'parseUrlToStrategy: 匹配 space.bilibili.com/<mid>/lists',
@@ -86,7 +86,10 @@ export async function matchSearchStrategies(
 							collectionId,
 						},
 					)
-					return { type: 'COLLECTION', id: collectionId }
+					if (!/^\d+$/.test(collectionId)) return null
+					return urlObj.searchParams.get('type') === 'series'
+						? { type: 'SERIES', id: collectionId }
+						: { type: 'COLLECTION', id: collectionId }
 				}
 				logger.debug('parseUrlToStrategy: 匹配 space.bilibili.com/<mid>', {
 					mid,
@@ -258,6 +261,12 @@ export function navigateWithSearchStrategy(
 			logger.debug('Navigating to PlaylistCollection', { id: strategy.id })
 			router.push({
 				pathname: '/playlist/remote/collection/[id]',
+				params: { id: strategy.id },
+			})
+			return 0
+		case 'SERIES':
+			router.push({
+				pathname: '/playlist/remote/series/[id]',
 				params: { id: strategy.id },
 			})
 			return 0

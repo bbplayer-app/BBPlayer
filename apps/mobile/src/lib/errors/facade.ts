@@ -3,6 +3,7 @@ import { FacadeError as BaseFacadeError } from '.'
 export type FacadeErrorType =
 	| 'SyncTaskAlreadyRunning'
 	| 'SyncCollectionFailed'
+	| 'SyncSeriesFailed'
 	| 'SyncMultiPageFailed'
 	| 'SyncFavoriteFailed'
 	| 'fetchRemotePlaylistMetadataFailed'

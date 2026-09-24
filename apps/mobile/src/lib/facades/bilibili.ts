@@ -16,6 +16,39 @@ export class BilibiliFacade {
 		type: Playlist['type'],
 	) {
 		switch (type) {
+			case 'series': {
+				const result = await this.bilibiliApi.getSeriesMetadata({
+					seriesId: remoteId,
+				})
+				if (result.isErr()) {
+					return err(
+						createFacadeError(
+							'fetchRemotePlaylistMetadataFailed',
+							'获取系列元数据失败',
+							{ cause: result.error },
+						),
+					)
+				}
+				const firstPage = await this.bilibiliApi.getSeriesArchivesPage({
+					seriesId: remoteId,
+					mid: result.value.mid,
+					pageNumber: 1,
+				})
+				if (firstPage.isErr()) {
+					return err(
+						createFacadeError(
+							'fetchRemotePlaylistMetadataFailed',
+							'获取系列封面失败',
+							{ cause: firstPage.error },
+						),
+					)
+				}
+				return ok({
+					title: result.value.name,
+					description: result.value.description,
+					coverUrl: firstPage.value.archives?.[0]?.pic ?? '',
+				})
+			}
 			case 'collection': {
 				const result = await this.bilibiliApi.getCollectionAllContents({
 					collectionId: remoteId,
@@ -96,4 +129,4 @@ export class BilibiliFacade {
 	}
 }
 
-	export const bilibiliFacade = new BilibiliFacade(bilibiliApiInstance)
+export const bilibiliFacade = new BilibiliFacade(bilibiliApiInstance)
