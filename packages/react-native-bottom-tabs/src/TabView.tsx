@@ -28,7 +28,6 @@ import NativeTabView from './TabViewNativeComponent'
 import type {
 	AppleIcon,
 	BaseRoute,
-	IconRenderingMode,
 	LayoutDirection,
 	NavigationState,
 	TabRole,
@@ -80,7 +79,6 @@ interface Props<Route extends BaseRoute> {
 	tabBarActiveTintColor?: ColorValue
 	/**
 	 * Inactive tab color.
-	 * Has no effect on iOS 26 and above (Liquid Glass).
 	 */
 	tabBarInactiveTintColor?: ColorValue
 	/**
@@ -91,13 +89,6 @@ interface Props<Route extends BaseRoute> {
 	 * Icon size in density-independent pixels. (Android only)
 	 */
 	iconSize?: number
-	/**
-	 * Enables the experimental iOS 26 Liquid Glass tint color workaround that bakes tab labels into images.
-	 * This has many drawbacks, such as affecting icon sizing when labels have different widths, bad positioning of badges, and possibly breaking accessibility features.
-	 *
-	 * @platform ios
-	 */
-	experimental_bakedTintColors?: boolean
 	/**
 	 * State for the tab view.
 	 *
@@ -155,15 +146,6 @@ interface Props<Route extends BaseRoute> {
 		route: Route
 		focused: boolean
 	}) => ImageSource | AppleIcon | undefined | null
-
-	/**
-	 * Get the rendering mode for the tab icon, uses `route.iconRenderingMode` by default.
-	 *
-	 * Use `original` to preserve multicolor image icons instead of applying the native tab tint.
-	 */
-	getIconRenderingMode?: (props: {
-		route: Route
-	}) => IconRenderingMode | undefined
 
 	/**
 	 * Get hidden for the tab, uses `route.hidden` by default.
@@ -240,10 +222,6 @@ interface Props<Route extends BaseRoute> {
 	 * @default 'locale'
 	 */
 	layoutDirection?: LayoutDirection
-	/**
-	 * Whether to hide the native tab bar.
-	 */
-	tabBarHidden?: boolean
 }
 
 const ANDROID_MAX_TABS = 100
@@ -274,9 +252,6 @@ const TabView = <Route extends BaseRoute>({
 	getActiveTintColor = ({ route }: { route: Route }) => route.activeTintColor, // oxlint-disable-line react/no-object-type-as-default-prop
 	getTestID = ({ route }: { route: Route }) => route.testID, // oxlint-disable-line react/no-object-type-as-default-prop
 	getRole = ({ route }: { route: Route }) => route.role, // oxlint-disable-line react/no-object-type-as-default-prop
-	// oxlint-disable-next-line react/no-object-type-as-default-prop
-	getIconRenderingMode = ({ route }: { route: Route }) =>
-		route.iconRenderingMode,
 	getSceneStyle = ({ route }: { route: Route }) => route.style, // oxlint-disable-line react/no-object-type-as-default-prop
 	getPreventsDefault = ({ route }: { route: Route }) => route.preventsDefault, // oxlint-disable-line react/no-object-type-as-default-prop
 	hapticFeedbackEnabled = false,
@@ -284,12 +259,10 @@ const TabView = <Route extends BaseRoute>({
 	labeled = Platform.OS !== 'android' ? true : undefined,
 	getFreezeOnBlur = ({ route }: { route: Route }) => route.freezeOnBlur, // oxlint-disable-line react/no-object-type-as-default-prop
 	tabBar: renderCustomTabBar,
-	tabBarHidden,
 	tabBarStyle,
 	tabLabelStyle,
 	renderBottomAccessoryView,
 	layoutDirection = 'locale',
-	experimental_bakedTintColors: experimentalBakedTintColors = false,
 	...props
 }: Props<Route>) => {
 	// @ts-ignore
@@ -328,23 +301,10 @@ const TabView = <Route extends BaseRoute>({
 			trimmedRoutes.map((route) =>
 				getIcon({
 					route,
-					// iOS uses UITabBarItem.selectedImage for selected and Liquid Glass hover states.
-					// Keep the base image unfocused so a selected tab can render unfocused while another tab is hovered.
-					focused: Platform.OS === 'ios' ? false : route.key === focusedKey,
+					focused: route.key === focusedKey,
 				}),
 			),
 		[focusedKey, getIcon, trimmedRoutes],
-	)
-
-	const focusedIcons = React.useMemo(
-		() =>
-			trimmedRoutes.map((route) =>
-				getIcon({
-					route,
-					focused: true,
-				}),
-			),
-		[getIcon, trimmedRoutes],
 	)
 
 	const items: TabViewItems = React.useMemo(
@@ -352,8 +312,6 @@ const TabView = <Route extends BaseRoute>({
 			trimmedRoutes.map((route, index) => {
 				const icon = icons[index]
 				const isSfSymbol = isAppleSymbol(icon)
-				const focusedIcon = focusedIcons[index]
-				const isFocusedSfSymbol = isAppleSymbol(focusedIcon)
 
 				if (Platform.OS === 'android' && isSfSymbol) {
 					console.warn(
@@ -365,14 +323,12 @@ const TabView = <Route extends BaseRoute>({
 					key: route.key,
 					title: getLabelText({ route }) ?? route.key,
 					sfSymbol: isSfSymbol ? icon.sfSymbol : undefined,
-					focusedSfSymbol: isFocusedSfSymbol ? focusedIcon.sfSymbol : undefined,
 					badge: getBadge?.({ route }),
 					badgeBackgroundColor: processColor(
 						getBadgeBackgroundColor?.({ route }),
 					),
 					badgeTextColor: processColor(getBadgeTextColor?.({ route })),
 					activeTintColor: processColor(getActiveTintColor({ route })),
-					iconRenderingMode: getIconRenderingMode({ route }),
 					hidden: getHidden?.({ route }),
 					testID: getTestID?.({ route }),
 					role: getRole?.({ route }),
@@ -382,13 +338,11 @@ const TabView = <Route extends BaseRoute>({
 		[
 			trimmedRoutes,
 			icons,
-			focusedIcons,
 			getLabelText,
 			getBadge,
 			getBadgeBackgroundColor,
 			getBadgeTextColor,
 			getActiveTintColor,
-			getIconRenderingMode,
 			getHidden,
 			getTestID,
 			getRole,
@@ -406,18 +360,6 @@ const TabView = <Route extends BaseRoute>({
 					: { uri: '' },
 			),
 		[icons],
-	)
-
-	const resolvedFocusedIconAssets: ImageSource[] = React.useMemo(
-		() =>
-			// Pass empty object for icons that are not provided to avoid index mismatch on native side.
-			focusedIcons.map((icon) =>
-				icon && !isAppleSymbol(icon)
-					? // @ts-expect-error: TODO: Migrate of deep imports
-						Image.resolveAssetSource(icon)
-					: { uri: '' },
-			),
-		[focusedIcons],
 	)
 
 	const jumpTo = useLatestCallback((key: string) => {
@@ -473,11 +415,8 @@ const TabView = <Route extends BaseRoute>({
 				items={items}
 				// When rendering a custom tab bar, icons can be React elements, which will not be properly resolved.
 				icons={renderCustomTabBar ? undefined : resolvedIconAssets}
-				focusedIcons={
-					renderCustomTabBar ? undefined : resolvedFocusedIconAssets
-				}
 				selectedPage={focusedKey}
-				tabBarHidden={tabBarHidden ?? !!renderCustomTabBar}
+				tabBarHidden={!!renderCustomTabBar}
 				onTabLongPress={handleTabLongPress}
 				onPageSelected={handlePageSelected}
 				onTabBarMeasured={handleTabBarMeasured}
@@ -486,7 +425,6 @@ const TabView = <Route extends BaseRoute>({
 				layoutDirection={layoutDirection}
 				activeTintColor={activeTintColor}
 				inactiveTintColor={inactiveTintColor}
-				experimentalBakedTintColors={experimentalBakedTintColors}
 				barTintColor={tabBarStyle?.backgroundColor}
 				rippleColor={rippleColor}
 				labeled={labeled}

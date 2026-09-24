@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.graphics.PorterDuff
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -21,11 +20,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.Insets
-import androidx.core.view.AccessibilityDelegateCompat
-import androidx.core.view.MenuItemCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.forEachIndexed
 import coil3.ImageLoader
 import coil3.asDrawable
@@ -262,11 +258,9 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
       }
 
       menuItem.isVisible = !item.hidden
-      updateIconTintMode(menuItem, item)
       if (iconSources.containsKey(index)) {
         getDrawable(iconSources[index]!!) {
           menuItem.icon = it
-          updateIconTintMode(menuItem, item)
         }
       }
 
@@ -295,8 +289,12 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
             onTabSelected(menuItem)
           }
 
-          view.findViewById<View>(com.google.android.material.R.id.navigation_bar_item_content_container)
-            ?.setTabTestID(item.testID)
+          item.testID?.let { testId ->
+            view.findViewById<View>(com.google.android.material.R.id.navigation_bar_item_content_container)
+              ?.apply {
+                tag = testId
+              }
+          }
         }
       }
     }
@@ -309,31 +307,6 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
 
   private fun getOrCreateItem(index: Int, title: String): MenuItem {
     return bottomNavigation.menu.findItem(index) ?: bottomNavigation.menu.add(0, index, 0, title)
-  }
-
-  private fun View.setTabTestID(testId: String?) {
-    tag = testId
-    if (testId == null) {
-      ViewCompat.setAccessibilityDelegate(this, null)
-      return
-    }
-
-    ViewCompat.setAccessibilityDelegate(this, object : AccessibilityDelegateCompat() {
-      override fun onInitializeAccessibilityNodeInfo(
-        host: View,
-        info: AccessibilityNodeInfoCompat
-      ) {
-        super.onInitializeAccessibilityNodeInfo(host, info)
-        info.viewIdResourceName = testId
-      }
-    })
-  }
-
-  private fun updateIconTintMode(menuItem: MenuItem, item: TabInfo) {
-    MenuItemCompat.setIconTintMode(
-      menuItem,
-      if (item.iconRenderingMode == "original") PorterDuff.Mode.DST else null
-    )
   }
 
   fun setIcons(icons: ReadableArray?) {
@@ -355,9 +328,6 @@ class ReactBottomNavigationView(context: Context) : LinearLayout(context) {
       bottomNavigation.menu.findItem(idx)?.let { menuItem ->
         getDrawable(imageSource) {
           menuItem.icon = it
-          items.getOrNull(idx)?.let { item ->
-            updateIconTintMode(menuItem, item)
-          }
         }
       }
     }

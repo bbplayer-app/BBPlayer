@@ -15,9 +15,4 @@ export { BottomTabBarHeightContext } from './utils/BottomTabBarHeightContext'
 /**
  * Types
  */
-export type {
-	AppleIcon,
-	IconRenderingMode,
-	LayoutDirection,
-	TabRole,
-} from './types'
+export type { AppleIcon, LayoutDirection, TabRole } from './types'

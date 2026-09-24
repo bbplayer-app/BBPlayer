@@ -58,9 +58,6 @@ export default function NativeBottomTabView({
 				descriptors[route.key]?.options.tabBarButtonTestID
 			}
 			getRole={({ route }) => descriptors[route.key]?.options.role}
-			getIconRenderingMode={({ route }) =>
-				descriptors[route.key]?.options.tabBarIconRenderingMode
-			}
 			tabBar={
 				tabBar ? () => tabBar({ state, descriptors, navigation }) : undefined
 			}
@@ -114,7 +111,7 @@ export default function NativeBottomTabView({
 					return
 				} else {
 					navigation.dispatch({
-						...CommonActions.navigate(route.name, route.params),
+						...CommonActions.navigate(route),
 						target: state.key,
 					})
 				}
