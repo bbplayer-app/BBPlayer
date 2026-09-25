@@ -154,17 +154,6 @@ jobs:
           path: ${{ steps.prepare-vars.outputs.artifactDir }}
           if-no-files-found: error
 
-      # 只上传 arm64-v8a，避免每个 release 产生 4 份重复构建稀释 Sentry 配额。
-      # 需要其它 ABI 时把 matrix.arch 条件去掉即可。
-      - name: 📲 Upload Build to Sentry
-        if: ${{ env.BUILD_TYPE != 'blank-test' && matrix.arch == 'arm64-v8a' }}
-        run: |
-          npx --yes @sentry/cli@3 build upload "$APK_TEMP_PATH" \
-            --org roitium \
-            --project bbplayer \
-            --build-configuration Release \
-            --release-notes "${BUILD_TYPE} / ${{ matrix.arch }} @ ${GITHUB_SHA:0:7}"
-
   release:
     needs: [setup, build]
     if: needs.setup.outputs.buildType == 'prod' || needs.setup.outputs.buildType == 'blank-test'
