@@ -241,6 +241,25 @@ function RootLayout() {
 						screenOptions={{ headerShown: false }}
 						screenListeners={({ route, navigation }) => ({
 							focus: () => {
+								if (route.name === 'modal') {
+									// Modal 自身的焦点不改变底层页面；从其下方路由取根段，
+									// 保证被隐藏的页面在 Modal 下层仍保持隐藏。
+									const state = navigation.getState()
+									const modalIndex = state.routes.findIndex(
+										(r) => r.name === 'modal',
+									)
+									const underlying =
+										modalIndex > 0 ? state.routes[modalIndex - 1] : undefined
+									if (underlying) {
+										nowPlayingBarStore$.underlyingSegmentRoot.set(
+											underlying.name.split('/')[0],
+										)
+									}
+								} else {
+									nowPlayingBarStore$.underlyingSegmentRoot.set(
+										route.name.split('/')[0],
+									)
+								}
 								if (route.name === 'player') {
 									nowPlayingBarStore$.playerScreenActive.set(true)
 								}
@@ -256,6 +275,9 @@ function RootLayout() {
 									if (route.name !== 'modal') {
 										nowPlayingBarStore$.playerScreenActive.set(
 											route.name === 'player',
+										)
+										nowPlayingBarStore$.underlyingSegmentRoot.set(
+											route.name.split('/')[0],
 										)
 									}
 

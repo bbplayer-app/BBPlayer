@@ -113,8 +113,16 @@ const HIDDEN_SEGMENT_ROOTS = new Set([
 function NowPlayingBar() {
 	const segments = useSegments()
 	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
+	// Modal 打开时 useSegments 只会返回 'modal'，需要回退到其底层页面的根段，
+	// 否则本应隐藏播放条的页面（如设置页）会在 Modal 下层错误地显示出播放条。
+	const underlyingSegmentRoot = useValue(
+		nowPlayingBarStore$.underlyingSegmentRoot,
+	)
+	const activeSegmentRoot =
+		segments[0] === 'modal' ? underlyingSegmentRoot : segments[0]
 	const shouldShow =
-		!HIDDEN_SEGMENT_ROOTS.has(segments[0]) && !playerScreenActive
+		!playerScreenActive &&
+		!(activeSegmentRoot != null && HIDDEN_SEGMENT_ROOTS.has(activeSegmentRoot))
 	if (!shouldShow) {
 		return null
 	}
