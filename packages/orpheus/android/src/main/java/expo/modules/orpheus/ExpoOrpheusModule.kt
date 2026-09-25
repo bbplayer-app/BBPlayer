@@ -24,6 +24,7 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
@@ -54,9 +55,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
@@ -1408,20 +1412,40 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private suspend fun <T> withPlayerOnMainThread(block: (Player) -> T): T =
-        withContext(Dispatchers.Main.immediate) {
+    private suspend fun awaitController() {
+        val future = controllerFuture ?: throw ControllerNotInitializedException()
+        suspendCancellableCoroutine<Unit> { continuation ->
+            future.addListener({
+                try {
+                    future.get()
+                    if (continuation.isActive) continuation.resume(Unit)
+                } catch (error: Exception) {
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(error.cause ?: error)
+                    }
+                }
+            }, MoreExecutors.directExecutor())
+        }
+    }
+
+    private suspend fun <T> withPlayerOnMainThread(block: (Player) -> T): T {
+        awaitController()
+        return withContext(Dispatchers.Main.immediate) {
             ensurePlayer()
             val currentPlayer = player ?: throw ControllerNotInitializedException()
             block(currentPlayer)
         }
+    }
 
-    private suspend fun <T> withServiceAndPlayerOnMainThread(block: (OrpheusMusicService, Player) -> T): T =
-        withContext(Dispatchers.Main.immediate) {
+    private suspend fun <T> withServiceAndPlayerOnMainThread(block: (OrpheusMusicService, Player) -> T): T {
+        awaitController()
+        return withContext(Dispatchers.Main.immediate) {
             ensurePlayer()
             val service = OrpheusMusicService.instance ?: throw ControllerNotInitializedException()
             val currentPlayer = player ?: throw ControllerNotInitializedException()
             block(service, currentPlayer)
         }
+    }
 
     private suspend fun <T> withServiceOnMainThread(block: (OrpheusMusicService?) -> T): T =
         withContext(Dispatchers.Main.immediate) {

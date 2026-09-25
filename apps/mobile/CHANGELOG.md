@@ -35,6 +35,7 @@
 - 修复在播放列表为空时切换随机模式时报错
 - 修复 expo-ui 因竞态重入导致的崩溃问题
 - 修复 SharedObject use-after-free 导致的崩溃问题
+- 修复调用原生方法时 MediaController 还未初始化完成的问题
 
 ### Changed
 
