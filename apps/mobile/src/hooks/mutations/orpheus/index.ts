@@ -17,7 +17,7 @@ export function useRemoveDownloadsMutation() {
 		mutationKey: ['orpheus', 'removeDownloads'],
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
-				queryKey: orpheusQueryKeys.allDownloads(),
+				queryKey: orpheusQueryKeys.completedDownloads(),
 			})
 		},
 	})

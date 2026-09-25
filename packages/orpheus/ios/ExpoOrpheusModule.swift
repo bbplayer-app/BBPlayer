@@ -270,6 +270,10 @@ public class ExpoOrpheusModule: Module {
         return OrpheusDownloadManager.shared.getDownloads()
     }
 
+    Function("getCompletedDownloadTasks") { () -> [DownloadTask] in
+        return OrpheusDownloadManager.shared.getCompletedTasks()
+    }
+
     Function("getDownloadStatusByIds") { (ids: [String]) -> [String: Int] in
         return OrpheusDownloadManager.shared.getDownloadStatusByIds(ids: ids)
     }

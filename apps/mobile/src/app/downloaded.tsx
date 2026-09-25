@@ -1,4 +1,4 @@
-import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
+import { Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { Icon } from '@expo/ui'
 import { LegendList } from '@legendapp/list/react-native'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
@@ -26,7 +26,10 @@ import { alert } from '@/components/modals/AlertModal'
 import ExportDownloadsProgressModal from '@/components/modals/settings/ExportDownloadsProgressModal'
 import { useTrackSelection } from '@/features/playlist/local/hooks/useTrackSelection'
 import { useRemoveDownloadsMutation } from '@/hooks/mutations/orpheus'
-import { useAllDownloads, orpheusQueryKeys } from '@/hooks/queries/orpheus'
+import {
+	useCompletedDownloads,
+	orpheusQueryKeys,
+} from '@/hooks/queries/orpheus'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { queryClient } from '@/lib/config/queryClient'
 import { enqueueTracks } from '@/lib/player/playbackSession'
@@ -249,9 +252,10 @@ export default function DownloadedPage() {
 		destinationUri: string
 	} | null>(null)
 
-	const { data: allTasks, isPending } = useAllDownloads()
-	const completedTasks = (allTasks ?? []).filter(
-		(t) => t.state === DownloadState.COMPLETED,
+	const { data: completedDownloads, isPending } = useCompletedDownloads()
+	const completedTasks = useMemo(
+		() => completedDownloads ?? [],
+		[completedDownloads],
 	)
 
 	const [searchQuery, setSearchQuery] = useState('')
@@ -356,7 +360,7 @@ export default function DownloadedPage() {
 							try {
 								await Orpheus.removeDownload(id)
 								await queryClient.invalidateQueries({
-									queryKey: [...orpheusQueryKeys.all, 'allDownloads'],
+									queryKey: orpheusQueryKeys.completedDownloads(),
 								})
 							} catch (e) {
 								toastAndLogError('删除下载失败', e, 'Downloaded.Page')

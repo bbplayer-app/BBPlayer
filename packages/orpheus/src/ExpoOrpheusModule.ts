@@ -340,6 +340,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	clearPlaybackCache(): Promise<void>
 	/** 返回 Media3 DownloadManager 当前已知的全部任务。 */
 	getDownloads(): Promise<DownloadTask[]>
+	/** 返回所有已完成的下载任务。 */
+	getCompletedDownloadTasks(): Promise<DownloadTask[]>
 	/**
 	 * 返回指定 id 对应的下载状态。
 	 *

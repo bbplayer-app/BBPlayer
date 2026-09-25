@@ -113,6 +113,9 @@ Orpheus 使用 Media3 DownloadManager。
 - **`getDownloads(): Promise<DownloadTask[]>`**
   获取所有下载任务。
 
+- **`getCompletedDownloadTasks(): Promise<DownloadTask[]>`**
+  获取已完成的下载任务。
+
 - **`getDownloadStatusByIds(ids: string[]): Promise<Record<string, DownloadState>>`**
   批量查询下载状态。
 

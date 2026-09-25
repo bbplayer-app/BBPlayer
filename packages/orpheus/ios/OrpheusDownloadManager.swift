@@ -430,6 +430,10 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         // Safe to call getDownloads() (which syncs) then filter
         return getDownloads().filter { $0.state != .completed }
     }
+
+    func getCompletedTasks() -> [DownloadTask] {
+        return getDownloads().filter { $0.state == .completed }
+    }
     
     func getDownloadedFileUrl(id: String) -> URL? {
         let fileManager = FileManager.default

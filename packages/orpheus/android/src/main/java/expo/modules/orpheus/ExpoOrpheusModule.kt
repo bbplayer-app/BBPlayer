@@ -36,6 +36,7 @@ import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.SpectrumManager
+import expo.modules.orpheus.model.DownloadTaskRecord
 import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
@@ -59,6 +60,15 @@ import kotlinx.serialization.json.Json
 
 @UnstableApi
 class ExpoOrpheusModule : Module() {
+    private val uncompletedDownloadStates = intArrayOf(
+        Download.STATE_QUEUED,
+        Download.STATE_STOPPED,
+        Download.STATE_DOWNLOADING,
+        Download.STATE_FAILED,
+        Download.STATE_REMOVING,
+        Download.STATE_RESTARTING,
+    )
+
     // keep this controller only to make sure MediaLibraryService is init.
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
@@ -911,17 +921,34 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("getDownloads") {
             val context =
-                appContext.reactContext ?: return@AsyncFunction emptyList<Map<String, Any>>()
+                appContext.reactContext ?: return@AsyncFunction emptyList<DownloadTaskRecord>()
             val downloadManager = DownloadUtil.getDownloadManager(context)
             val downloadIndex = downloadManager.downloadIndex
 
             val cursor = downloadIndex.getDownloads()
-            val result = ArrayList<Map<String, Any>>()
+            val result = ArrayList<DownloadTaskRecord>()
 
             try {
                 while (cursor.moveToNext()) {
                     val download = cursor.download
-                    result.add(getDownloadMap(download))
+                    result.add(getDownloadRecord(download))
+                }
+            } finally {
+                cursor.close()
+            }
+            return@AsyncFunction result
+        }
+
+        AsyncFunction("getCompletedDownloadTasks") {
+            val context =
+                appContext.reactContext ?: return@AsyncFunction emptyList<DownloadTaskRecord>()
+            val downloadIndex = DownloadUtil.getDownloadManager(context).downloadIndex
+            val cursor = downloadIndex.getDownloads(Download.STATE_COMPLETED)
+            val result = ArrayList<DownloadTaskRecord>()
+
+            try {
+                while (cursor.moveToNext()) {
+                    result.add(getDownloadRecord(cursor.download))
                 }
             } finally {
                 cursor.close()
@@ -951,18 +978,16 @@ class ExpoOrpheusModule : Module() {
             val downloadManager = DownloadUtil.getDownloadManager(context)
             val downloadIndex = downloadManager.downloadIndex
 
-            val cursor = downloadIndex.getDownloads()
+            val cursor = downloadIndex.getDownloads(*uncompletedDownloadStates)
             try {
                 while (cursor.moveToNext()) {
                     val download = cursor.download
-                    if (download.state != Download.STATE_COMPLETED) {
-                        DownloadService.sendRemoveDownload(
-                            context,
-                            OrpheusDownloadService::class.java,
-                            download.request.id,
-                            false
-                        )
-                    }
+                    DownloadService.sendRemoveDownload(
+                        context,
+                        OrpheusDownloadService::class.java,
+                        download.request.id,
+                        false
+                    )
                 }
             } finally {
                 cursor.close()
@@ -1067,19 +1092,17 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("getUncompletedDownloadTasks") {
             val context =
-                appContext.reactContext ?: return@AsyncFunction emptyList<Map<String, Any>>()
+                appContext.reactContext ?: return@AsyncFunction emptyList<DownloadTaskRecord>()
             val downloadManager = DownloadUtil.getDownloadManager(context)
             val downloadIndex = downloadManager.downloadIndex
 
-            val cursor = downloadIndex.getDownloads()
-            val result = ArrayList<Map<String, Any>>()
+            val cursor = downloadIndex.getDownloads(*uncompletedDownloadStates)
+            val result = ArrayList<DownloadTaskRecord>()
 
             try {
                 while (cursor.moveToNext()) {
                     val download = cursor.download
-                    if (download.state != Download.STATE_COMPLETED) {
-                        result.add(getDownloadMap(download))
-                    }
+                    result.add(getDownloadRecord(download))
                 }
             } finally {
                 cursor.close()
@@ -1201,28 +1224,40 @@ class ExpoOrpheusModule : Module() {
         }
     }
 
-    private fun getDownloadMap(download: Download): Map<String, Any> {
+    private fun getDownloadRecord(download: Download): DownloadTaskRecord {
         val trackJson = if (download.request.data.isNotEmpty()) {
             String(download.request.data)
         } else null
 
-        val map = mutableMapOf<String, Any>(
-            "id" to download.request.id,
-            "state" to download.state,
-            "percentDownloaded" to download.percentDownloaded,
-            "bytesDownloaded" to download.bytesDownloaded,
-            "contentLength" to download.contentLength
-        )
+        val record = DownloadTaskRecord().apply {
+            id = download.request.id
+            state = download.state
+            percentDownloaded = download.percentDownloaded
+            bytesDownloaded = download.bytesDownloaded
+            contentLength = download.contentLength
+        }
 
         if (trackJson != null) {
             try {
-                val track = json.decodeFromString<TrackRecord>(trackJson)
-                map["track"] = track
+                record.track = json.decodeFromString<TrackRecord>(trackJson)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-        return map
+        return record
+    }
+
+    private fun getDownloadEventPayload(download: Download): Map<String, Any> {
+        val record = getDownloadRecord(download)
+        return mutableMapOf<String, Any>(
+            "id" to record.id,
+            "state" to record.state,
+            "percentDownloaded" to record.percentDownloaded,
+            "bytesDownloaded" to record.bytesDownloaded,
+            "contentLength" to record.contentLength,
+        ).apply {
+            record.track?.let { put("track", it) }
+        }
     }
 
     private val downloadListener = object : DownloadManager.Listener {
@@ -1231,7 +1266,7 @@ class ExpoOrpheusModule : Module() {
             download: Download,
             finalException: Exception?
         ) {
-            sendEvent("onDownloadUpdated", getDownloadMap(download))
+            sendEvent("onDownloadUpdated", getDownloadEventPayload(download))
             updateDownloadProgressRunnerState()
 
             // 歌曲下载完成后，异步下载封面
@@ -1262,7 +1297,7 @@ class ExpoOrpheusModule : Module() {
             if (manager.currentDownloads.isNotEmpty()) {
                 for (download in manager.currentDownloads) {
                     if (download.state == Download.STATE_DOWNLOADING) {
-                        sendEvent("onDownloadUpdated", getDownloadMap(download))
+                        sendEvent("onDownloadUpdated", getDownloadEventPayload(download))
                     }
                 }
                 mainHandler.postDelayed(this, 500)
