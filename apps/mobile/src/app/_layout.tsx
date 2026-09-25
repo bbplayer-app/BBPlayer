@@ -24,7 +24,11 @@ import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
-import { nowPlayingBarStore$ } from '@/hooks/stores/nowPlayingBarStore'
+import {
+	HIDDEN_SEGMENT_ROOTS,
+	nowPlayingBarStore$,
+	routeNameToSegmentRoot,
+} from '@/hooks/stores/nowPlayingBarStore'
 import { initPlaybackContextStore } from '@/hooks/stores/playbackContextStore'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
 import useAppStoreObj from '@/hooks/stores/useAppStore'
@@ -241,43 +245,29 @@ function RootLayout() {
 						screenOptions={{ headerShown: false }}
 						screenListeners={({ route, navigation }) => ({
 							focus: () => {
-								if (route.name === 'modal') {
-									// Modal 自身的焦点不改变底层页面；从其下方路由取根段，
-									// 保证被隐藏的页面在 Modal 下层仍保持隐藏。
-									const state = navigation.getState()
-									const modalIndex = state.routes.findIndex(
-										(r) => r.name === 'modal',
-									)
-									const underlying =
-										modalIndex > 0 ? state.routes[modalIndex - 1] : undefined
-									if (underlying) {
-										nowPlayingBarStore$.underlyingSegmentRoot.set(
-											underlying.name.split('/')[0],
-										)
-									}
-								} else {
-									nowPlayingBarStore$.underlyingSegmentRoot.set(
-										route.name.split('/')[0],
-									)
-								}
-								if (route.name === 'player') {
-									nowPlayingBarStore$.playerScreenActive.set(true)
+								// 进入隐藏页面时立即隐藏播放条；离开时不在这里恢复，
+								// 而是等到 transitionEnd，行为与 player 页面一致。
+								if (
+									route.name !== 'modal' &&
+									HIDDEN_SEGMENT_ROOTS.has(routeNameToSegmentRoot(route.name))
+								) {
+									nowPlayingBarStore$.hiddenScreenActive.set(true)
 								}
 							},
 							transitionEnd: ({ data }) => {
 								const state = navigation.getState()
-								// 被 pop 的 player 已不在导航状态中，其 closing 事件会被丢弃。
+								// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
 								// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
 								if (
 									!data.closing &&
 									state.routes[state.index]?.key === route.key
 								) {
+									// 返回动画结束后，才根据目标页面决定是否恢复播放条。
 									if (route.name !== 'modal') {
-										nowPlayingBarStore$.playerScreenActive.set(
-											route.name === 'player',
-										)
-										nowPlayingBarStore$.underlyingSegmentRoot.set(
-											route.name.split('/')[0],
+										nowPlayingBarStore$.hiddenScreenActive.set(
+											HIDDEN_SEGMENT_ROOTS.has(
+												routeNameToSegmentRoot(route.name),
+											),
 										)
 									}
 
