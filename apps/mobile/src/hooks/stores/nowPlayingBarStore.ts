@@ -8,7 +8,6 @@ export const HIDDEN_SEGMENT_ROOTS = new Set([
 	'settings',
 	'performance',
 	'test',
-	'downloaded',
 ])
 
 /** 由根路由名（如 `settings/general`）取首个路径段作为根段。 */
