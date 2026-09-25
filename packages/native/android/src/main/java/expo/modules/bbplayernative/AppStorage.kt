@@ -5,13 +5,23 @@ import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
 import expo.modules.kotlin.types.OptimizedRecord
 import java.io.File
+import java.io.IOException
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * 应用私有目录的磁盘占用统计，以及除 Media3 播放缓存外的可丢弃缓存清理。
  *
  * Media3 的下载目录、封面目录与在线播放 LRU 缓存目录由 `@bbplayer/orpheus` 负责写入与清理；
  * 这里只做只读统计，并在清理时跳过 orpheus 持有的 LRU 缓存目录。
+ *
+ * Android 没有「直接获取目录大小」的接口（文件系统不维护目录聚合大小），因此所有大小都靠
+ * 一次 [Files.walkFileTree] 遍历：每个条目只做一次 `readAttributes` 就能同时拿到类型与大小，
+ * 且默认不跟随符号链接。
  */
 object AppStorage {
     /** Media3 在线播放 LRU 缓存目录，由 `expo.modules.orpheus.manager.DownloadCache` 持有并清理。 */
@@ -25,27 +35,26 @@ object AppStorage {
     const val MUSIC_CACHE_MAX_BYTES = 256L * 1024 * 1024
 
     fun getUsage(context: Context): StorageUsage {
-        val dataDir = File(context.applicationInfo.dataDir)
-        val cacheDir = context.cacheDir
-        val mediaCacheDir = File(cacheDir, MEDIA_CACHE_DIR)
-        val downloadDir = File(context.filesDir, MEDIA_DOWNLOAD_DIR)
-        val downloadedCoversDir = File(context.filesDir, DOWNLOADED_COVERS_DIR)
-
         // The Media3 LRU playback cache lives inside `cacheDir`; report it separately from the
         // rest of the runtime cache so the UI can show both as distinct slices.
-        val musicCache = sizeOf(mediaCacheDir)
-        val runtimeCache = (sizeOf(cacheDir) - musicCache).coerceAtLeast(0L)
+        val mediaCacheDir = context.cacheDir.toPath().resolve(MEDIA_CACHE_DIR)
+        val cacheDir = context.cacheDir.toPath()
+        val filesDir = context.filesDir.toPath()
+        val downloadDir = filesDir.resolve(MEDIA_DOWNLOAD_DIR)
+        val downloadedCoversDir = filesDir.resolve(DOWNLOADED_COVERS_DIR)
 
-        val other = dataDir.listFiles().orEmpty().sumOf { child ->
-            when (child.absolutePath) {
-                cacheDir.absolutePath -> 0L
-                context.filesDir.absolutePath ->
-                    child.listFiles().orEmpty().sumOf { file ->
-                        if (file.absolutePath == downloadDir.absolutePath ||
-                            file.absolutePath == downloadedCoversDir.absolutePath
-                        ) 0L else sizeOf(file)
-                    }
-                else -> sizeOf(child)
+        // 一次遍历 `dataDir`，按路径归属累加到各个分类，避免对同一棵子树重复扫描。
+        var musicCache = 0L
+        var runtimeCache = 0L
+        var download = 0L
+        var other = 0L
+        walkFiles(File(context.applicationInfo.dataDir).toPath()) { path, size ->
+            when {
+                path.startsWith(mediaCacheDir) -> musicCache += size
+                path.startsWith(cacheDir) -> runtimeCache += size
+                path.startsWith(downloadDir) || path.startsWith(downloadedCoversDir) ->
+                    download += size
+                else -> other += size
             }
         }
 
@@ -53,7 +62,7 @@ object AppStorage {
             runtimeCacheBytes = runtimeCache
             musicCacheBytes = musicCache
             musicCacheMaxBytes = MUSIC_CACHE_MAX_BYTES
-            downloadBytes = sizeOf(downloadDir) + sizeOf(downloadedCoversDir)
+            downloadBytes = download
             otherBytes = other
             packageBytes = packageSizeOf(context)
         }
@@ -79,6 +88,9 @@ object AppStorage {
      *
      * 只允许访问 [Context.getApplicationInfo] 的 `dataDir` 内部；返回项的 `path` 是相对 `dataDir`
      * 的路径，供前端继续下钻。符号链接（如 `lib`）不会被视为可进入的目录。
+     *
+     * 只统计文件大小，目录的 `sizeBytes` 固定为 0（不递归统计目录），因此每个子项仅需一次
+     * `readAttributes`。
      */
     fun listDirectory(context: Context, relativePath: String): List<StorageEntry> {
         val root = File(context.applicationInfo.dataDir).canonicalFile
@@ -93,19 +105,21 @@ object AppStorage {
         }
 
         return target.listFiles().orEmpty()
-            .sortedWith(
-                compareByDescending<File> { it.isDirectory }
-                    .thenBy { it.name.lowercase() },
-            )
-            .map { file ->
-                val isSymlink = Files.isSymbolicLink(file.toPath())
+            .map { child ->
+                val attrs = attributesOrNull(child.toPath())
+                val isSymlink = attrs?.isSymbolicLink ?: false
+                val directory = (attrs?.isDirectory ?: false) && !isSymlink
                 StorageEntry().apply {
-                    name = file.name
-                    path = if (prefix.isEmpty()) file.name else "$prefix/${file.name}"
-                    isDirectory = file.isDirectory && !isSymlink
-                    sizeBytes = sizeOf(file)
+                    name = child.name
+                    path = if (prefix.isEmpty()) child.name else "$prefix/${child.name}"
+                    isDirectory = directory
+                    sizeBytes = if (directory) 0L else (attrs?.size() ?: 0L)
                 }
             }
+            .sortedWith(
+                compareByDescending<StorageEntry> { it.isDirectory }
+                    .thenBy { it.name.lowercase() },
+            )
     }
 
     /** Installed package size: the base APK plus every split APK. */
@@ -117,11 +131,47 @@ object AppStorage {
         return sourceDirs.sumOf { File(it).length() }
     }
 
-    private fun sizeOf(file: File): Long {
-        if (!file.exists() || Files.isSymbolicLink(file.toPath())) return 0L
-        if (file.isFile) return file.length()
-        return file.listFiles().orEmpty().sumOf(::sizeOf)
+    /**
+     * 遍历 [root] 下的所有普通文件，对每个文件回调其路径与大小。
+     *
+     * 默认不跟随符号链接，因此符号链接本身与其指向的内容都不会被计入；不可读的条目会被跳过。
+     */
+    private fun walkFiles(root: Path, onFile: (Path, Long) -> Unit) {
+        if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) return
+
+        try {
+            Files.walkFileTree(
+                root,
+                object : SimpleFileVisitor<Path>() {
+                    override fun visitFile(
+                        file: Path,
+                        attrs: BasicFileAttributes,
+                    ): FileVisitResult {
+                        if (!attrs.isSymbolicLink) {
+                            onFile(file, attrs.size())
+                        }
+                        return FileVisitResult.CONTINUE
+                    }
+
+                    override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult =
+                        FileVisitResult.CONTINUE
+                },
+            )
+        } catch (_: IOException) {
+            // 遍历途中目录被删除等；返回已统计的部分即可。
+        }
     }
+
+    private fun attributesOrNull(path: Path): BasicFileAttributes? =
+        try {
+            Files.readAttributes(
+                path,
+                BasicFileAttributes::class.java,
+                LinkOption.NOFOLLOW_LINKS,
+            )
+        } catch (_: IOException) {
+            null
+        }
 }
 
 @OptimizedRecord
@@ -153,7 +203,8 @@ class StorageEntry : Record {
     @Field
     var path: String = ""
 
-    @Field
+    // 显式指定 key，避免 introspection 对 `is` 前缀布尔属性改名。
+    @Field(key = "isDirectory")
     var isDirectory: Boolean = false
 
     @Field

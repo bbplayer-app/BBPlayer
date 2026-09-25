@@ -123,7 +123,7 @@ export default function AppPrivateDataPage() {
 						)}
 						right={() => (
 							<View style={styles.rowEnd}>
-								{!item.parent && (
+								{!item.isDirectory && (
 									<Text
 										variant='bodySmall'
 										style={{ color: colors.onSurfaceVariant }}

@@ -42,6 +42,6 @@ export interface StorageEntry {
 	path: string
 	/** 是否是可进入的目录（符号链接返回 `false`）。 */
 	isDirectory: boolean
-	/** 占用的字节数；目录为递归统计。 */
+	/** 文件占用的字节数；目录固定为 `0`（不统计目录大小）。 */
 	sizeBytes: number
 }
