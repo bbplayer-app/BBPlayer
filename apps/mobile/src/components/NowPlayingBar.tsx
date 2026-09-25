@@ -32,7 +32,10 @@ import { scheduleOnRN } from 'react-native-worklets'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
-import { nowPlayingBarStore$ } from '@/hooks/stores/nowPlayingBarStore'
+import {
+	HIDDEN_SEGMENT_ROOTS,
+	nowPlayingBarStore$,
+} from '@/hooks/stores/nowPlayingBarStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
@@ -99,30 +102,13 @@ const playPause = async () => {
 	}
 }
 
-// 这些路由根节点（含其全部子路由）不展示播放条。
-const HIDDEN_SEGMENT_ROOTS = new Set([
-	'player',
-	'comments',
-	'onboarding',
-	'settings',
-	'performance',
-	'test',
-	'downloaded',
-])
-
 function NowPlayingBar() {
 	const segments = useSegments()
-	const playerScreenActive = useValue(nowPlayingBarStore$.playerScreenActive)
-	// Modal 打开时 useSegments 只会返回 'modal'，需要回退到其底层页面的根段，
-	// 否则本应隐藏播放条的页面（如设置页）会在 Modal 下层错误地显示出播放条。
-	const underlyingSegmentRoot = useValue(
-		nowPlayingBarStore$.underlyingSegmentRoot,
-	)
-	const activeSegmentRoot =
-		segments[0] === 'modal' ? underlyingSegmentRoot : segments[0]
+	// hiddenScreenActive 在离开隐藏页面后会保持到返回动画结束，避免转场过程中
+	// 提前显示；segments 判断则保证进入隐藏页面时立即隐藏。
+	const hiddenScreenActive = useValue(nowPlayingBarStore$.hiddenScreenActive)
 	const shouldShow =
-		!playerScreenActive &&
-		!(activeSegmentRoot != null && HIDDEN_SEGMENT_ROOTS.has(activeSegmentRoot))
+		!hiddenScreenActive && !HIDDEN_SEGMENT_ROOTS.has(segments[0] ?? '')
 	if (!shouldShow) {
 		return null
 	}

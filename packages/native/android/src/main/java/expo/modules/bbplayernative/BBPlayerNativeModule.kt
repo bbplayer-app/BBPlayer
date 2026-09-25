@@ -50,6 +50,10 @@ class BBPlayerNativeModule : Module() {
             withContext(Dispatchers.IO) { AppStorage.clearCache(requireContext()) }
         }
 
+        AsyncFunction("listStorageDirectoryAsync") Coroutine { path: String ->
+            withContext(Dispatchers.IO) { AppStorage.listDirectory(requireContext(), path) }
+        }
+
         AsyncFunction("openPackageInstallerSettingsAsync") {
             val context = requireContext()
             openPackageInstallerSettings(context)
@@ -67,22 +71,15 @@ class BBPlayerNativeModule : Module() {
                 openApkInstaller(context, downloadedUri)
             }
 
-            return@Coroutine mapOf(
-                "downloadId" to downloadId.toDouble(),
-                "uri" to downloadedUri.toString(),
-            )
+            return@Coroutine AppUpdateInstallResult().apply {
+                this.downloadId = downloadId
+                this.uri = downloadedUri.toString()
+            }
         }
 
 
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
-            val result = withContext(Dispatchers.IO) {
-                unzip(options)
-            }
-
-            return@Coroutine mapOf(
-                "uri" to result.uri,
-                "fileCount" to result.fileCount,
-            )
+            withContext(Dispatchers.IO) { unzip(options) }
         }
 
         Function("exportBackupToDownloads") { sourceUri: String, fileName: String, mimeType: String ->
@@ -314,10 +311,10 @@ class BBPlayerNativeModule : Module() {
             }
         }
 
-        return UnzipResult(
-            uri = Uri.fromFile(outputDirectory).toString(),
-            fileCount = fileCount,
-        )
+        return UnzipResult().apply {
+            this.uri = Uri.fromFile(outputDirectory).toString()
+            this.fileCount = fileCount
+        }
     }
 
     private fun readUriBytes(context: Context, uri: String): ByteArray {
@@ -369,10 +366,23 @@ class UnzipOptions : Record {
     var outputUri: String = ""
 }
 
-private data class UnzipResult(
-    val uri: String,
-    val fileCount: Int,
-)
+@OptimizedRecord
+class AppUpdateInstallResult : Record {
+    @Field
+    var downloadId: Long = 0
+
+    @Field
+    var uri: String = ""
+}
+
+@OptimizedRecord
+class UnzipResult : Record {
+    @Field
+    var uri: String = ""
+
+    @Field
+    var fileCount: Int = 0
+}
 
 
 

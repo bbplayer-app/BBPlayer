@@ -420,6 +420,10 @@ function RootLayout() {
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen
+							name='settings/app-data'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='settings/general'
 							options={{ headerShown: false }}
 						/>

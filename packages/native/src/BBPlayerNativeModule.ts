@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import type {
 	AppUpdateDownloadOptions,
 	AppUpdateInstallResult,
+	StorageEntry,
 	StorageUsage,
 	UnzipOptions,
 	UnzipResult,
@@ -26,6 +27,12 @@ declare class BBPlayerNativeModule extends NativeModule {
 	 * 不会删除离线下载；Media3 LRU 缓存由 `@bbplayer/orpheus` 单独清理。
 	 */
 	clearCacheAsync(): Promise<void>
+	/**
+	 * 只读列出应用私有目录（`dataDir`）下 `path` 的内容。
+	 *
+	 * `path` 为相对 `dataDir` 的路径，空字符串表示根目录。
+	 */
+	listStorageDirectoryAsync(path: string): Promise<StorageEntry[]>
 	canRequestPackageInstallsAsync(): Promise<boolean>
 	openPackageInstallerSettingsAsync(): Promise<void>
 	downloadAndInstallApkAsync(
@@ -69,6 +76,14 @@ export const getStorageUsageAsync = () =>
  * 不会删除离线下载；Media3 LRU 缓存由 `@bbplayer/orpheus` 单独清理。
  */
 export const clearCacheAsync = () => getNativeModule().clearCacheAsync()
+
+/**
+ * 只读列出应用私有目录（`dataDir`）下 `path` 的内容。
+ *
+ * `path` 为相对 `dataDir` 的路径，空字符串表示根目录。
+ */
+export const listStorageDirectoryAsync = (path: string) =>
+	getNativeModule().listStorageDirectoryAsync(path)
 
 /**
  * 当前 APK 签名证书的 SHA-256 指纹（小写十六进制）。

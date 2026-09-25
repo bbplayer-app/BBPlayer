@@ -27,6 +27,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { type MenuEntry, useMenuActions } from '@/hooks/ui/useMenuActions'
 import { toastAndLogError } from '@/utils/error-handling'
+import { formatBytes } from '@/utils/format'
 import toast from '@/utils/toast'
 
 const DOWNLOAD_PARALLEL_OPTIONS = [
@@ -35,18 +36,6 @@ const DOWNLOAD_PARALLEL_OPTIONS = [
 	{ value: 3, label: '3 个' },
 	{ value: 6, label: '6 个（最快）' },
 ] as const
-
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`
-	const units = ['KB', 'MB', 'GB', 'TB']
-	let value = bytes
-	let unit = -1
-	do {
-		value /= 1024
-		unit++
-	} while (value >= 1024 && unit < units.length - 1)
-	return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`
-}
 
 interface UsageItem extends StorageSegment {
 	description: string
@@ -140,6 +129,7 @@ export default function StorageSettingsPage() {
 				icon: 'database',
 				color: colors.outline,
 				value: usage.otherBytes,
+				onPress: () => router.push('/settings/app-data'),
 			},
 			{
 				key: 'package',

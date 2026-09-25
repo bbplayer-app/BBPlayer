@@ -1,6 +1,9 @@
 package expo.modules.bbplayernative
 
 import android.content.Context
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
+import expo.modules.kotlin.types.OptimizedRecord
 import java.io.File
 import java.nio.file.Files
 
@@ -21,7 +24,7 @@ object AppStorage {
     /** Media3 在线播放 LRU 缓存上限，需与 `expo.modules.orpheus.manager.DownloadCache` 保持一致。 */
     const val MUSIC_CACHE_MAX_BYTES = 256L * 1024 * 1024
 
-    fun getUsage(context: Context): Map<String, Long> {
+    fun getUsage(context: Context): StorageUsage {
         val dataDir = File(context.applicationInfo.dataDir)
         val cacheDir = context.cacheDir
         val mediaCacheDir = File(cacheDir, MEDIA_CACHE_DIR)
@@ -30,11 +33,10 @@ object AppStorage {
 
         // The Media3 LRU playback cache lives inside `cacheDir`; report it separately from the
         // rest of the runtime cache so the UI can show both as distinct slices.
-        val musicCacheBytes = sizeOf(mediaCacheDir)
-        val runtimeCacheBytes = (sizeOf(cacheDir) - musicCacheBytes).coerceAtLeast(0L)
-        val downloadBytes = sizeOf(downloadDir) + sizeOf(downloadedCoversDir)
+        val musicCache = sizeOf(mediaCacheDir)
+        val runtimeCache = (sizeOf(cacheDir) - musicCache).coerceAtLeast(0L)
 
-        val otherBytes = dataDir.listFiles().orEmpty().sumOf { child ->
+        val other = dataDir.listFiles().orEmpty().sumOf { child ->
             when (child.absolutePath) {
                 cacheDir.absolutePath -> 0L
                 context.filesDir.absolutePath ->
@@ -47,14 +49,14 @@ object AppStorage {
             }
         }
 
-        return mapOf(
-            "runtimeCacheBytes" to runtimeCacheBytes,
-            "musicCacheBytes" to musicCacheBytes,
-            "musicCacheMaxBytes" to MUSIC_CACHE_MAX_BYTES,
-            "downloadBytes" to downloadBytes,
-            "otherBytes" to otherBytes,
-            "packageBytes" to packageSizeOf(context),
-        )
+        return StorageUsage().apply {
+            runtimeCacheBytes = runtimeCache
+            musicCacheBytes = musicCache
+            musicCacheMaxBytes = MUSIC_CACHE_MAX_BYTES
+            downloadBytes = sizeOf(downloadDir) + sizeOf(downloadedCoversDir)
+            otherBytes = other
+            packageBytes = packageSizeOf(context)
+        }
     }
 
     /**
@@ -72,6 +74,40 @@ object AppStorage {
         }
     }
 
+    /**
+     * 只读列出应用私有目录下 [relativePath] 的内容。
+     *
+     * 只允许访问 [Context.getApplicationInfo] 的 `dataDir` 内部；返回项的 `path` 是相对 `dataDir`
+     * 的路径，供前端继续下钻。符号链接（如 `lib`）不会被视为可进入的目录。
+     */
+    fun listDirectory(context: Context, relativePath: String): List<StorageEntry> {
+        val root = File(context.applicationInfo.dataDir).canonicalFile
+        val prefix = relativePath.trim().trim('/')
+        val target = (if (prefix.isEmpty()) root else File(root, prefix)).canonicalFile
+
+        if (target != root && !target.path.startsWith(root.path + File.separator)) {
+            throw IllegalArgumentException("路径不在应用私有目录内")
+        }
+        if (!target.isDirectory) {
+            throw IllegalArgumentException("目录不存在：$relativePath")
+        }
+
+        return target.listFiles().orEmpty()
+            .sortedWith(
+                compareByDescending<File> { it.isDirectory }
+                    .thenBy { it.name.lowercase() },
+            )
+            .map { file ->
+                val isSymlink = Files.isSymbolicLink(file.toPath())
+                StorageEntry().apply {
+                    name = file.name
+                    path = if (prefix.isEmpty()) file.name else "$prefix/${file.name}"
+                    isDirectory = file.isDirectory && !isSymlink
+                    sizeBytes = sizeOf(file)
+                }
+            }
+    }
+
     /** Installed package size: the base APK plus every split APK. */
     private fun packageSizeOf(context: Context): Long {
         val appInfo = context.applicationInfo
@@ -86,4 +122,40 @@ object AppStorage {
         if (file.isFile) return file.length()
         return file.listFiles().orEmpty().sumOf(::sizeOf)
     }
+}
+
+@OptimizedRecord
+class StorageUsage : Record {
+    @Field
+    var runtimeCacheBytes: Long = 0
+
+    @Field
+    var musicCacheBytes: Long = 0
+
+    @Field
+    var musicCacheMaxBytes: Long = 0
+
+    @Field
+    var downloadBytes: Long = 0
+
+    @Field
+    var otherBytes: Long = 0
+
+    @Field
+    var packageBytes: Long = 0
+}
+
+@OptimizedRecord
+class StorageEntry : Record {
+    @Field
+    var name: String = ""
+
+    @Field
+    var path: String = ""
+
+    @Field
+    var isDirectory: Boolean = false
+
+    @Field
+    var sizeBytes: Long = 0
 }

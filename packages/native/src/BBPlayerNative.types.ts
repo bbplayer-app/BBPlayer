@@ -34,3 +34,14 @@ export interface StorageUsage {
 	/** 应用包大小：基础安装包与全部 split APK 之和。 */
 	packageBytes: number
 }
+
+export interface StorageEntry {
+	/** 条目名称。 */
+	name: string
+	/** 相对应用私有目录（`dataDir`）的路径，可用于继续下钻。 */
+	path: string
+	/** 是否是可进入的目录（符号链接返回 `false`）。 */
+	isDirectory: boolean
+	/** 占用的字节数；目录为递归统计。 */
+	sizeBytes: number
+}
