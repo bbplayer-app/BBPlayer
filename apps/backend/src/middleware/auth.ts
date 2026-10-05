@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory'
 import { verify } from 'hono/jwt'
 
+import type { Env } from '../env'
 import type { JwtTokenPayload } from '../types'
 
 /**

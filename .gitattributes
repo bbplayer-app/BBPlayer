@@ -1,2 +1,3 @@
 apps/mobile/src/lib/api/bilibili/proto/*.js linguist-generated
 .agents/skills/impeccable/**/*.js linguist-generated
+*.sh text eol=lf
