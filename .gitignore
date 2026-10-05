@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+.pnpm-store/
 
 # Expo
 .expo/
@@ -12,6 +13,10 @@ expo-env.d.ts
 
 # Native
 .kotlin/
+**/android/.gradle/
+**/android/.cxx/
+**/android/build/
+**/android/local.properties
 *.orig.*
 *.jks
 *.p8
@@ -26,6 +31,15 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+
+# Local validation output and device tooling
+.tmp/
+.argent/tmp/
+.argent/logs/
+.argent/secrets.env
 
 # macOS
 .DS_Store
@@ -43,7 +57,6 @@ app-example
 /ios
 /android
 
-app-example
 temp-builds
 .yarn/install-state.gz
 **/.vscode/
@@ -62,6 +75,5 @@ apps/**/ios
 # Desloppify
 .desloppify/
 external-playlist-experiment/
-.tmp
 bilibili_skin_exp
 codedb.snapshot
