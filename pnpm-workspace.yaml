@@ -42,9 +42,12 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@expo/ui': patches/@expo__ui.patch
+  '@sentry/react-native@8.27.0': patches/@sentry__react-native@8.27.0.patch
   expo-modules-core: patches/expo-modules-core.patch
   expo-updates@57.0.23: patches/expo-updates@57.0.23.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch
+  react-native-boost@2.0.2: patches/react-native-boost@2.0.2.patch
   react-native-pager-view@9.0.4: patches/react-native-pager-view@9.0.4.patch
+  react-native-worklets@0.11.4: patches/react-native-worklets@0.11.4.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch

@@ -1,0 +1,22 @@
+diff --git a/dist/js/tools/metroconfig.js b/dist/js/tools/metroconfig.js
+index d87eceb04fda4e0d601c68734dd8653020535e81..d69f068953c4ff3570e73ae94b70d734ded215b4 100644
+--- a/dist/js/tools/metroconfig.js
++++ b/dist/js/tools/metroconfig.js
+@@ -180,7 +180,7 @@ function withSentryResolver(config, includeWebReplay) {
+  */
+ const SENTRY_BROWSER_FEEDBACK_WRAPPER_RE = /\/feedback(Sync|Async)/;
+ function isFromSentryBrowser(originModulePath) {
+-    return originModulePath.includes('@sentry/browser');
++    return originModulePath.split('\\').join('/').includes('@sentry/browser');
+ }
+ /**
+  * Includes `@sentry-internal/feedback` packages based on the `includeWebFeedback` flag and current bundle `platform`.
+@@ -202,7 +202,7 @@ function withSentryFeedbackResolver(config, includeWebFeedback) {
+  */
+ const SERVER_ONLY_MODULE_RE = /\/(mcp-server|integrations\/(http|express|postgresjs|requestdata|consola|spanStreaming)|tracing\/(vercel-ai|openai|anthropic-ai|google-genai|langchain|langgraph)|utils\/ai)(\/|\.js|$)/;
+ function isFromSentryCore(originModulePath) {
+-    return originModulePath.includes('@sentry/core');
++    return originModulePath.split('\\').join('/').includes('@sentry/core');
+ }
+ /**
+  * Excludes server-only AI/MCP modules from native (Android/iOS) bundles.

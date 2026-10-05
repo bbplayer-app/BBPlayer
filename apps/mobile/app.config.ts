@@ -170,6 +170,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				assetsOutput: 'assets/bootsplash',
 			}),
 			'./expo-plugins/withDynamicBootSplash',
+			// Mods run in reverse registration order; resolve after Sentry adds its script.
+			'./expo-plugins/withAndroidBuildCompatibility',
 			[
 				'@sentry/react-native/expo',
 				{
@@ -310,7 +312,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 		},
 		updates: {
-			enabled: true,
+			// Local native QA must keep its bundled JS paired with the tested binary.
+			enabled: process.env.BBPLAYER_DISABLE_UPDATES !== '1',
 			url: `${UPDATE_SERVER_URL}/api/manifest`,
 			requestHeaders: {
 				'expo-channel-name': UPDATE_CHANNEL,
