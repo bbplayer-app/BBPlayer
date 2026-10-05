@@ -8,6 +8,7 @@ import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { queryClient } from '@/lib/config/queryClient'
+import { applyAbLoopForTrack } from '@/lib/player/abLoop'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -77,12 +78,14 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
+				await applyAbLoopForTrack(event.trackId)
 				await lyricService.pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
 					event.trackId,
 					event.duration,
 					event.finalPosition,
+					event.playbackSummary,
 				)
 			} else if (event.eventName === 'onRequestClearLyrics') {
 				// 桌面歌词面板「清空歌词」按钮被点击时，标记该曲目跳过歌词

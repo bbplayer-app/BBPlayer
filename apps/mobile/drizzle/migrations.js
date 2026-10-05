@@ -23,6 +23,7 @@ import m0019 from './0019_icy_mandarin.sql'
 import m0020 from './0020_ambitious_sheva_callister.sql'
 import m0021 from './0021_heavy_next_avengers.sql'
 import m0022 from './0022_player_preference.sql'
+import m0023 from './0023_ab_loop.sql'
 import journal from './meta/_journal.json'
 
 export default {
@@ -51,5 +52,6 @@ export default {
 		m0020,
 		m0021,
 		m0022,
+		m0023,
 	},
 }

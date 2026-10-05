@@ -7,6 +7,18 @@ class OrpheusPlayerManager: NSObject {
     
     private let player: AVPlayer
     private let queueManager = OrpheusQueueManager()
+    private let playbackHistory = PlaybackHistoryTracker()
+    private var loadedTrackId: String?
+    private var pendingStartPosition: Double?
+    private var loadGeneration = 0
+    private var seekGeneration = 0
+    private var isSeeking = false
+    private var wantsToPlay = false
+    private var playbackRate: Float = 1
+    private var abLoopObserverToken: Any?
+    private var abLoopObserverGeneration = 0
+    private var abLoopPreviewTrackId: String?
+    private var abLoopPreview: (trackId: String, startSec: Double, endSec: Double)?
 
     
     var repeatMode: RepeatMode = .off
@@ -24,7 +36,7 @@ class OrpheusPlayerManager: NSObject {
 
     var onPlaybackStateChanged: ((PlaybackState) -> Void)?
     var onTrackStarted: ((String, TransitionReason) -> Void)?
-    var onTrackFinished: ((String, Double, Double) -> Void)?
+    var onTrackFinished: ((String, Double, Double, PlaybackHistoryTracker.Summary?) -> Void)?
     var onPositionUpdate: ((Double, Double, Double) -> Void)?
     var onIsPlayingChanged: ((Bool) -> Void)?
     var onPlayerError: ((String) -> Void)?
@@ -57,12 +69,21 @@ class OrpheusPlayerManager: NSObject {
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if keyPath == "timeControlStatus" {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in self?.handlePlayerObservation(keyPath) }
+            return
+        }
+        handlePlayerObservation(keyPath)
+    }
 
+    private func handlePlayerObservation(_ keyPath: String?) {
+        if keyPath == "timeControlStatus" {
+            samplePlaybackHistory()
             notifyPlaybackState()
         } else if keyPath == "currentItem.status" {
             let status = player.currentItem?.status ?? .unknown
 
+            if status == .readyToPlay { refreshAbLoopObserver() }
             if status == .failed {
                 let errorMsg = player.currentItem?.error?.localizedDescription ?? "unknown error"
 
@@ -74,23 +95,47 @@ class OrpheusPlayerManager: NSObject {
     }
     
     @objc private func playerDidFinishPlaying(note: NSNotification) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in self?.playerDidFinishPlaying(note: note) }
+            return
+        }
+        guard let item = note.object as? AVPlayerItem, item === player.currentItem, !isSeeking else { return }
+        let duration = getDuration()
+        // 边界 seek 已完成时，忽略同一个 item 迟到的曲尾通知。
+        if duration.isFinite && duration > 0 && getPosition() + 0.01 < duration { return }
         handleAutoAdvance()
     }
     
     private func handleAutoAdvance() {
-        if let current = queueManager.getCurrentTrack(), let duration = player.currentItem?.duration.seconds {
-             onTrackFinished?(current.id, duration, duration)
-        }
-
-        if repeatMode == .track {
-            player.seek(to: .zero)
-            player.play()
+        if getAbLoop() != nil {
+            jumpToAbLoopStart()
             return
         }
-        
+        finishCurrentPlayback()
+        if repeatMode == .track {
+            if let track = queueManager.getCurrentTrack() {
+                playbackHistory.begin(id: track.id, position: 0)
+            }
+            seek(to: 0)
+            play()
+            return
+        }
         skipToNext(reason: .auto)
     }
-    
+
+    private func samplePlaybackHistory() {
+        guard !isSeeking, loadedTrackId == playbackHistory.trackId else { return }
+        playbackHistory.sample(position: player.currentTime().seconds,
+            isPlaying: player.timeControlStatus == .playing, duration: getDuration())
+    }
+
+    private func finishCurrentPlayback() {
+        guard let trackId = playbackHistory.trackId else { return }
+        samplePlaybackHistory()
+        let summary = playbackHistory.finish()
+        onTrackFinished?(trackId, getPosition(), getDuration(), summary)
+    }
+
     // MARK: - Queue Management
     
     func getQueue() -> [Track] {
@@ -178,6 +223,14 @@ class OrpheusPlayerManager: NSObject {
     }
     
     private func stopPlayback() {
+        finishCurrentPlayback()
+        loadGeneration += 1
+        wantsToPlay = false
+        loadedTrackId = nil
+        removeAbLoopObserver()
+        GeneralStorage.shared.clearAbLoop()
+        abLoopPreviewTrackId = nil
+        abLoopPreview = nil
         player.pause()
         player.replaceCurrentItem(with: nil)
         onPlaybackStateChanged?(.idle)
@@ -225,21 +278,26 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Playback Control
     
     func play() {
+        wantsToPlay = true
         let currentIndex = queueManager.getCurrentIndex()
         if player.currentItem == nil && currentIndex >= 0 {
 
-             playTrack(at: currentIndex, reason: .auto)
+             playTrack(at: currentIndex, reason: .auto, startPosition: pendingStartPosition, preserveHistory: true)
              return
         }
         if player.status == .failed || player.currentItem?.status == .failed {
 
-             playTrack(at: currentIndex, reason: .auto)
+             playTrack(at: currentIndex, reason: .auto, startPosition: getPosition(), preserveHistory: true)
              return
         }
-        player.play()
+        if let loop = getAbLoop(), getPosition() >= loop.endSec {
+            jumpToAbLoopStart()
+        } else { player.rate = playbackRate }
     }
     
     func pause() {
+        samplePlaybackHistory()
+        wantsToPlay = false
         player.pause()
     }
     
@@ -263,12 +321,12 @@ class OrpheusPlayerManager: NSObject {
     func skipToPrevious() {
         // 跟随 Media3 逻辑（或许是行业标准？），当播放超过 3s，「上一曲」的语义变成「重新播放」
         if player.currentTime().seconds > 3.0 {
-            player.seek(to: CMTime.zero)
+            seek(to: 0)
             return
         }
         
         guard let prevIndex = queueManager.getPreviousIndex(repeatMode: repeatMode) else {
-             player.seek(to: CMTime.zero)
+             seek(to: 0)
              return
         }
         
@@ -276,28 +334,72 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func seek(to seconds: Double) {
-        let time = CMTime(seconds: seconds, preferredTimescale: 1000)
-        player.seek(to: time)
+        guard seconds.isFinite, seconds >= 0 else { return }
+        performSeek(to: seconds)
     }
-    
+
+    private func performSeek(to seconds: Double) {
+        samplePlaybackHistory()
+        let generation = loadGeneration
+        seekGeneration += 1
+        let seekRequest = seekGeneration
+        let item = player.currentItem
+        playbackHistory.jump(oldPosition: getPosition(), newPosition: seconds,
+            isPlaying: false, duration: getDuration())
+        isSeeking = true
+        player.seek(to: CMTime(seconds: seconds, preferredTimescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
+            DispatchQueue.main.async {
+                guard let self = self, self.loadGeneration == generation, self.seekGeneration == seekRequest,
+                    self.player.currentItem === item else { return }
+                self.isSeeking = false
+                // 实际落点重新设基线；加载、seek 等待时间不计入播放。
+                self.playbackHistory.jump(oldPosition: self.getPosition(), newPosition: self.getPosition(),
+                    isPlaying: self.player.timeControlStatus == .playing, duration: self.getDuration())
+                if finished && self.wantsToPlay {
+                    if let loop = self.getAbLoop(), self.getPosition() >= loop.endSec {
+                        self.jumpToAbLoopStart()
+                    } else { self.player.rate = self.playbackRate }
+                }
+            }
+        }
+    }
+
     // MARK: - Track Loading
     
-    private func playTrack(at index: Int, reason: TransitionReason, startPosition: Double? = nil) {
-        // Handle previous track finish (for manual skips)
-        if reason != .auto, let oldTrack = queueManager.getCurrentTrack() {
-             let position = player.currentTime().seconds
-             let duration = player.currentItem?.duration.seconds ?? 0
-             // Only emit if we actually have a duration (implying we were playing something)
-             // or just emit whatever state we have.
-             onTrackFinished?(oldTrack.id, position, duration)
-        }
+    private func playTrack(at index: Int, reason: TransitionReason, startPosition: Double? = nil, preserveHistory: Bool = false) {
+        let preserving = preserveHistory && playbackHistory.trackId == queueManager.getCurrentTrack()?.id
+        if !preserving { finishCurrentPlayback() }
+        else { samplePlaybackHistory() }
+        pendingStartPosition = nil
+        loadGeneration += 1
+        let generation = loadGeneration
+        isSeeking = false
+        loadedTrackId = nil
+        removeAbLoopObserver()
+        // 新曲目异步解析期间不能继续播放旧 item，也不能把旧位置上报给新曲目。
+        player.pause()
+        player.replaceCurrentItem(with: nil)
 
         // Index is BACKING index
         queueManager.skipTo(backingIndex: index)
         guard let track = queueManager.getCurrentTrack() else {
             return
         }
+
+        if !preserving { playbackHistory.begin(id: track.id, position: startPosition ?? 0) }
+        if abLoopPreviewTrackId != track.id {
+            abLoopPreviewTrackId = nil
+            abLoopPreview = nil
+        }
+        wantsToPlay = true
+        // 比较持久化设置，不能在播放器尚未加载时查询活动循环。
+        if let loop = GeneralStorage.shared.getAbLoop(), loop.trackId != track.id {
+            GeneralStorage.shared.clearAbLoop()
+        }
         
+        if let loop = getAbLoop(), loop.trackId == track.id {
+            playbackHistory.setLoop(start: loop.startSec, end: loop.endSec)
+        }
         // Optimistic update
 
         
@@ -309,18 +411,18 @@ class OrpheusPlayerManager: NSObject {
         // Check for local download first
         if let localUrl = OrpheusDownloadManager.shared.getDownloadedFileUrl(id: track.id) {
              // Use local file
-             loadAvPlayerItem(url: localUrl.absoluteString, headers: nil, startPosition: startPosition)
+             loadAvPlayerItem(url: localUrl.absoluteString, headers: nil, startPosition: startPosition, generation: generation)
              return
         }
         
         if urlString.starts(with: "orpheus://bilibili") {
-            resolveAndPlayBilibili(url: urlString, startPosition: startPosition)
+            resolveAndPlayBilibili(url: urlString, startPosition: startPosition, generation: generation)
         } else {
-            loadAvPlayerItem(url: urlString, headers: nil, startPosition: startPosition)
+            loadAvPlayerItem(url: urlString, headers: nil, startPosition: startPosition, generation: generation)
         }
     }
     
-    private func resolveAndPlayBilibili(url: String, startPosition: Double? = nil) {
+    private func resolveAndPlayBilibili(url: String, startPosition: Double? = nil, generation: Int) {
         guard let uri = URL(string: url),
               let components = URLComponents(url: uri, resolvingAgainstBaseURL: false) else {
 
@@ -340,15 +442,16 @@ class OrpheusPlayerManager: NSObject {
         }
         
         if let cid = cid {
-            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, startPosition: startPosition)
+            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, startPosition: startPosition, generation: generation)
         } else {
 
             BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
                 DispatchQueue.main.async {
+                    guard self?.loadGeneration == generation else { return }
                     switch result {
                     case .success(let cidInt):
 
-                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), startPosition: startPosition)
+                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), startPosition: startPosition, generation: generation)
                     case .failure(let error):
 
                         self?.onPlayerError?(error.localizedDescription)
@@ -359,11 +462,12 @@ class OrpheusPlayerManager: NSObject {
         }
     }
     
-    private func fetchBilibiliPlayUrl(bvid: String, cid: String, startPosition: Double? = nil) {
+    private func fetchBilibiliPlayUrl(bvid: String, cid: String, startPosition: Double? = nil, generation: Int) {
 
         
         BilibiliApi.shared.getPlayUrl(bvid: bvid, cid: cid) { [weak self] result in
             DispatchQueue.main.async {
+                guard self?.loadGeneration == generation else { return }
                 switch result {
                 case .success(let realUrl):
 
@@ -372,7 +476,7 @@ class OrpheusPlayerManager: NSObject {
                         "Referer": "https://www.bilibili.com/",
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     ]
-                    self?.loadAvPlayerItem(url: realUrl, headers: headers, startPosition: startPosition)
+                    self?.loadAvPlayerItem(url: realUrl, headers: headers, startPosition: startPosition, generation: generation)
                 case .failure(let error):
 
                     self?.onPlayerError?(error.localizedDescription)
@@ -383,8 +487,8 @@ class OrpheusPlayerManager: NSObject {
         }
     }
     
-    private func loadAvPlayerItem(url: String, headers: [String: String]?, startPosition: Double? = nil) {
-        guard let nsUrl = URL(string: url) else {
+    private func loadAvPlayerItem(url: String, headers: [String: String]?, startPosition: Double? = nil, generation: Int) {
+        guard generation == loadGeneration, let nsUrl = URL(string: url) else {
 
             return
         }
@@ -415,23 +519,24 @@ class OrpheusPlayerManager: NSObject {
             }
         }
 
+        loadedTrackId = queueManager.getCurrentTrack()?.id
         player.replaceCurrentItem(with: item)
-        if let startPos = startPosition, startPos > 0 {
-             let time = CMTime(seconds: startPos, preferredTimescale: 1000)
-             player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
-        }
-        player.play()
-        
-
+        playbackHistory.jump(oldPosition: startPosition ?? 0, newPosition: startPosition ?? 0,
+            isPlaying: false, duration: getDuration())
+        refreshAbLoopObserver()
+        if let startPos = startPosition, startPos > 0 { performSeek(to: startPos) }
+        if wantsToPlay { player.rate = playbackRate }
     }
-    
+
     // MARK: - Notification
     
     private func notifyPositionUpdate() {
         let currentTime = player.currentTime().seconds
         let duration = player.currentItem?.duration.seconds ?? 0
         let buffered = player.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0
-        
+
+        samplePlaybackHistory()
+
         onPositionUpdate?(currentTime, duration, buffered)
         
         // Update lock screen progress occasionally or on state change
@@ -617,11 +722,14 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Playback Attributes
     
     func setPlaybackSpeed(_ speed: Float) {
-        player.rate = speed
+        guard speed.isFinite, speed > 0 else { return }
+        samplePlaybackHistory()
+        playbackRate = speed
+        if wantsToPlay { player.rate = speed }
     }
     
     func getPlaybackSpeed() -> Float {
-        return player.rate
+        return playbackRate
     }
     
     // MARK: - Getters
@@ -642,6 +750,107 @@ class OrpheusPlayerManager: NSObject {
         return player.rate > 0 && player.error == nil
     }
     
+    // MARK: - AB Loop
+
+    func setAbLoop(trackId: String, startSec: Double, endSec: Double) -> Bool {
+        guard queueManager.getCurrentTrack()?.id == trackId, startSec.isFinite, endSec.isFinite,
+            startSec >= 0, endSec > startSec else { return false }
+        let duration = loadedTrackId == trackId ? getDuration() : (queueManager.getCurrentTrack()?.duration ?? 0)
+        if duration.isFinite && duration > 0 && endSec > duration { return false }
+        samplePlaybackHistory()
+        abLoopPreviewTrackId = nil
+        abLoopPreview = nil
+        GeneralStorage.shared.saveAbLoop(trackId: trackId, startSec: startSec, endSec: endSec)
+        playbackHistory.setLoop(start: startSec, end: endSec)
+        refreshAbLoopObserver()
+        return true
+    }
+
+    func clearAbLoop(trackId: String) -> Bool {
+        guard queueManager.getCurrentTrack()?.id == trackId else { return false }
+        samplePlaybackHistory()
+        abLoopPreviewTrackId = nil
+        abLoopPreview = nil
+        GeneralStorage.shared.clearAbLoop()
+        playbackHistory.setLoop(start: nil, end: nil)
+        removeAbLoopObserver()
+        return true
+    }
+
+    func getAbLoop() -> (trackId: String, startSec: Double, endSec: Double)? {
+        if abLoopPreviewTrackId == queueManager.getCurrentTrack()?.id, abLoopPreviewTrackId != nil {
+            return abLoopPreview
+        }
+        guard let loop = GeneralStorage.shared.getAbLoop(), queueManager.getCurrentTrack()?.id == loop.trackId else { return nil }
+        return loop
+    }
+
+    func setAbLoopPreview(trackId: String, range: AbLoopRange?) -> Bool {
+        guard queueManager.getCurrentTrack()?.id == trackId else { return false }
+        if let range = range {
+            let duration = loadedTrackId == trackId ? getDuration() : (queueManager.getCurrentTrack()?.duration ?? 0)
+            guard range.start.isFinite, range.end.isFinite, range.start >= 0, range.end > range.start,
+                !(duration.isFinite && duration > 0 && range.end > duration) else { return false }
+        }
+        samplePlaybackHistory()
+        abLoopPreviewTrackId = trackId
+        abLoopPreview = range.map { (trackId: trackId, startSec: $0.start, endSec: $0.end) }
+        playbackHistory.setLoop(start: range?.start, end: range?.end)
+        refreshAbLoopObserver()
+        return true
+    }
+
+    func clearAbLoopPreview(trackId: String) -> Bool {
+        guard queueManager.getCurrentTrack()?.id == trackId, abLoopPreviewTrackId == trackId else { return false }
+        samplePlaybackHistory()
+        abLoopPreviewTrackId = nil
+        abLoopPreview = nil
+        let loop = getAbLoop()
+        playbackHistory.setLoop(start: loop?.startSec, end: loop?.endSec)
+        refreshAbLoopObserver()
+        return true
+    }
+
+    private func removeAbLoopObserver() {
+        abLoopObserverGeneration += 1
+        if let token = abLoopObserverToken { player.removeTimeObserver(token) }
+        abLoopObserverToken = nil
+    }
+
+    private func refreshAbLoopObserver() {
+        removeAbLoopObserver()
+        guard let loop = getAbLoop(), loadedTrackId == loop.trackId else { return }
+        let duration = getDuration()
+        if duration.isFinite && duration > 0 && loop.endSec > duration {
+            if abLoopPreviewTrackId == loop.trackId { _ = setAbLoopPreview(trackId: loop.trackId, range: nil) }
+            else { _ = clearAbLoop(trackId: loop.trackId) }
+            return
+        }
+        let generation = loadGeneration
+        let observerGeneration = abLoopObserverGeneration
+        abLoopObserverToken = player.addBoundaryTimeObserver(
+            forTimes: [NSValue(time: CMTime(seconds: loop.endSec, preferredTimescale: 1000))], queue: .main
+        ) { [weak self] in
+            guard let self = self, self.loadGeneration == generation,
+                self.abLoopObserverGeneration == observerGeneration, self.wantsToPlay else { return }
+            self.jumpToAbLoopStart()
+        }
+        if wantsToPlay && player.currentTime().seconds >= loop.endSec { jumpToAbLoopStart() }
+    }
+
+    private func jumpToAbLoopStart() {
+        guard !isSeeking, wantsToPlay, let loop = getAbLoop(), loadedTrackId == loop.trackId else { return }
+        performSeek(to: loop.startSec)
+    }
+
+    deinit {
+        removeAbLoopObserver()
+        if let token = timeObserverToken { player.removeTimeObserver(token) }
+        player.removeObserver(self, forKeyPath: "timeControlStatus")
+        player.removeObserver(self, forKeyPath: "currentItem.status")
+        NotificationCenter.default.removeObserver(self)
+    }
+
     // MARK: - Sleep Timer
     
     func setSleepTimer(durationMs: Double) {
@@ -714,6 +923,12 @@ class OrpheusPlayerManager: NSObject {
                  } else {
                      // Prepare but paused
                      if let track = queueManager.getCurrentTrack() {
+                         playbackHistory.begin(id: track.id, position: savedPosition)
+                         pendingStartPosition = savedPosition
+                         if let loop = GeneralStorage.shared.getAbLoop() {
+                             if loop.trackId == track.id { playbackHistory.setLoop(start: loop.startSec, end: loop.endSec) }
+                             else { GeneralStorage.shared.clearAbLoop() }
+                         }
                          onTrackStarted?(track.id, .playlistChanged)
                          // Emit position update so UI is consistent
                          onPositionUpdate?(savedPosition, track.duration ?? 0, 0)

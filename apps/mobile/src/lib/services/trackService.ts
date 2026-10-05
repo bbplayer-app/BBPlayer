@@ -342,6 +342,132 @@ export class TrackService {
 		)
 	}
 
+	// ##################################
+	// AB 循环
+	// ##################################
+
+	/**
+	 * 根据 uniqueKey 查询曲目的 AB 循环设置。
+	 * @returns 循环区间（秒）；未设置时为 `null`。
+	 */
+	public getAbLoopByUniqueKey(
+		uniqueKey: string,
+	): ResultAsync<
+		{ startPoint: number; endPoint: number } | null,
+		DatabaseError
+	> {
+		return ResultAsync.fromPromise(
+			Sentry.startSpan({ name: 'db:query:ab_loop', op: 'db' }, () =>
+				this.db.query.tracks.findFirst({
+					where: eq(schema.tracks.uniqueKey, uniqueKey),
+					columns: { id: true },
+					with: { abLoop: true },
+				}),
+			),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError('查询 AB 循环设置失败', { cause: e }),
+		).map((track) => {
+			const loop = track?.abLoop
+			if (!loop) return null
+			return { startPoint: loop.startPoint, endPoint: loop.endPoint }
+		})
+	}
+
+	/**
+	 * 设置（或更新）曲目的 AB 循环。
+	 * @param uniqueKey - 曲目的 uniqueKey。
+	 * @param startPoint - A 点位置（秒）。
+	 * @param endPoint - B 点位置（秒），必须大于 startPoint。
+	 */
+	public setAbLoopByUniqueKey(
+		uniqueKey: string,
+		startPoint: number,
+		endPoint: number,
+	): ResultAsync<true, ServiceError | DatabaseError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				if (
+					!Number.isFinite(startPoint) ||
+					!Number.isFinite(endPoint) ||
+					startPoint < 0 ||
+					endPoint <= startPoint
+				) {
+					throw createValidationError('AB 循环区间无效：B 点必须大于 A 点')
+				}
+				const track = await this.findTrackIdsByUniqueKeys([uniqueKey])
+				if (track.isErr()) {
+					throw track.error
+				}
+				const trackId = track.value.get(uniqueKey)
+				if (!trackId) {
+					throw createTrackNotFound(uniqueKey)
+				}
+
+				const metadata = await this.db.query.tracks.findFirst({
+					where: eq(schema.tracks.id, trackId),
+					columns: { duration: true },
+				})
+				if (
+					metadata?.duration != null &&
+					metadata.duration > 0 &&
+					endPoint > metadata.duration
+				) {
+					throw createValidationError('AB 循环的 B 点不能超过曲目时长')
+				}
+
+				await this.db
+					.insert(schema.abLoops)
+					.values({ trackId, startPoint, endPoint })
+					.onConflictDoUpdate({
+						target: schema.abLoops.trackId,
+						set: { startPoint, endPoint, updatedAt: new Date() },
+					})
+
+				return true as const
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`设置 AB 循环失败：${uniqueKey}`, {
+							cause: e,
+						}),
+		)
+	}
+
+	/**
+	 * 清除曲目的 AB 循环设置。曲目不存在时视为已清除。
+	 */
+	public clearAbLoopByUniqueKey(
+		uniqueKey: string,
+	): ResultAsync<true, ServiceError | DatabaseError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const track = await this.findTrackIdsByUniqueKeys([uniqueKey])
+				if (track.isErr()) {
+					throw track.error
+				}
+				const trackId = track.value.get(uniqueKey)
+				if (!trackId) {
+					return true as const
+				}
+
+				await this.db
+					.delete(schema.abLoops)
+					.where(eq(schema.abLoops.trackId, trackId))
+
+				return true as const
+			})(),
+			(e) =>
+				e instanceof ServiceError
+					? e
+					: new DatabaseError(`清除 AB 循环失败：${uniqueKey}`, {
+							cause: e,
+						}),
+		)
+	}
+
 	/**
 	 * 根据 Bilibili 的元数据获取 track 。
 	 * @param bilibiliMeatadata
@@ -766,70 +892,29 @@ export class TrackService {
 		})
 	}
 
-	/**
-	 * 获取所有歌曲的总播放时长。
-	 * - 当 `onlyCompleted` 为 `true` (默认) 时, 计算方法为 `duration * playCount` (仅统计完整播放)。
-	 * - 当 `onlyCompleted` 为 `false` 时, 计算方法为每条播放记录中 `durationPlayed` 的总和。
-	 * @param options.onlyCompleted 是否仅统计完整播放（completed=true），默认 true
-	 * @returns ResultAsync 包含总播放时长（秒）或一个错误。
-	 */
+	/** 汇总实际播放秒数；onlyCompleted 只决定是否过滤未完成会话。 */
 	public getTotalPlaybackDuration(options?: {
 		onlyCompleted?: boolean
 	}): ResultAsync<number, DatabaseError> {
-		const onlyCompleted = options?.onlyCompleted ?? true
-
-		if (onlyCompleted) {
-			const playCountSql = this.db
-				.select({
-					trackId: schema.playHistory.trackId,
-					count: count().as('count'),
-				})
-				.from(schema.playHistory)
-				.where(eq(schema.playHistory.completed, true))
-				.groupBy(schema.playHistory.trackId)
-				.as('play_counts')
-
-			return ResultAsync.fromPromise(
-				Sentry.startSpan(
-					{ name: 'db:query:totalPlaybackDuration:completed', op: 'db' },
-					() =>
-						this.db
-							.select({
-								totalDuration:
-									sql<number>`sum(${schema.tracks.duration} * ${playCountSql.count})`.mapWith(
-										Number,
-									),
-							})
-							.from(schema.tracks)
-							.innerJoin(
-								playCountSql,
-								eq(schema.tracks.id, playCountSql.trackId),
+		return ResultAsync.fromPromise(
+			Sentry.startSpan(
+				{ name: 'db:query:totalPlaybackDuration', op: 'db' },
+				() =>
+					this.db
+						.select({
+							totalDuration: sum(schema.playHistory.durationPlayed).mapWith(
+								Number,
 							),
-				),
-				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
-			).andThen((rows) => {
-				const totalDuration = rows[0]?.totalDuration
-				return okAsync(totalDuration ?? 0)
-			})
-		} else {
-			return ResultAsync.fromPromise(
-				Sentry.startSpan(
-					{ name: 'db:query:totalPlaybackDuration:all', op: 'db' },
-					() =>
-						this.db
-							.select({
-								totalDuration: sum(schema.playHistory.durationPlayed).mapWith(
-									Number,
-								),
-							})
-							.from(schema.playHistory),
-				),
-				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
-			).andThen((rows) => {
-				const totalDuration = rows[0]?.totalDuration
-				return okAsync(totalDuration ?? 0)
-			})
-		}
+						})
+						.from(schema.playHistory)
+						.where(
+							(options?.onlyCompleted ?? true)
+								? eq(schema.playHistory.completed, true)
+								: undefined,
+						),
+			),
+			(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
+		).map((rows) => rows[0]?.totalDuration ?? 0)
 	}
 
 	public getTrackByUniqueKey(

@@ -36,6 +36,8 @@ import expo.modules.orpheus.manager.UnifiedLyricsManager
 import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.util.PlaybackHistoryTracker
+import expo.modules.orpheus.util.AbLoopController
 import expo.modules.orpheus.util.CustomCommands
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
@@ -58,6 +60,23 @@ class OrpheusMusicService : MediaLibraryService() {
     var player: ExoPlayer? = null
     private var mediaSession: MediaLibrarySession? = null
     private var sleepTimerManager: SleepTimeController? = null
+    private var abLoopController: AbLoopController? = null
+    private var abLoopPreviewTrackId: String? = null
+    private val playbackHistory = PlaybackHistoryTracker()
+    private var restoringPlayer = false
+    private val historyRunnable = object : Runnable {
+        override fun run() {
+            samplePlaybackHistory()
+            if (player?.isPlaying == true) serviceHandler.postDelayed(this, 100L)
+        }
+    }
+
+    private fun samplePlaybackHistory() {
+        val current = player ?: return
+        if (current.currentMediaItem?.mediaId == playbackHistory.trackId) {
+            playbackHistory.sample(current.currentPosition / 1000.0, current.isPlaying, current.duration / 1000.0)
+        }
+    }
     private var volumeFadeJob: Job? = null
     private var scope = MainScope()
 
@@ -65,7 +84,6 @@ class OrpheusMusicService : MediaLibraryService() {
     lateinit var statusBarLyricsManager: StatusBarLyricsManager
     private val serviceHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-    private var lastTrackFinishedAt: Long = 0
     private val durationCache = mutableMapOf<String, Long>()
     lateinit var shuffleManager: ShuffleManager
     lateinit var lyricsManager: UnifiedLyricsManager
@@ -250,6 +268,10 @@ class OrpheusMusicService : MediaLibraryService() {
 
         shuffleManager = ShuffleManager { player }
 
+        abLoopController = AbLoopController(player!!) { oldPosition, newPosition ->
+            playbackHistory.jump(oldPosition, newPosition, player?.isPlaying == true, (player?.duration ?: 0L) / 1000.0)
+        }
+
         floatingLyricsManager = FloatingLyricsManager(this, player)
         floatingLyricsManager.onClearLyricsRequested = { trackId ->
             lyricEventListeners.forEach { it.onLyricCleared(trackId) }
@@ -324,6 +346,8 @@ class OrpheusMusicService : MediaLibraryService() {
     override fun onDestroy() {
         serviceHandler.removeCallbacks(lyricsUpdateRunnable)
         serviceHandler.removeCallbacks(resumeSaveRunnable)
+        serviceHandler.removeCallbacks(historyRunnable)
+        abLoopController?.clear()
         saveCurrentResumeRecord()
         floatingLyricsManager.hide()
         statusBarLyricsManager.onStop()
@@ -358,6 +382,62 @@ class OrpheusMusicService : MediaLibraryService() {
     fun getSleepTimerRemaining(): Long? {
         return sleepTimerManager?.getStopTimeMs()
     }
+
+    private fun applyAbLoopRuntime(trackId: String, startSec: Double, endSec: Double): Boolean {
+        val item = player?.currentMediaItem ?: return false
+        if (item.mediaId != trackId) return false
+        val metadataDuration = item.mediaMetadata.extras?.getString("track_json")?.let { raw ->
+            runCatching { Json.decodeFromString<TrackRecord>(raw).duration }.getOrNull()
+        }
+        val knownDuration = resolveDurationMs(item)?.div(1000.0) ?: metadataDuration
+        if (knownDuration != null && knownDuration.isFinite() && knownDuration > 0 && endSec > knownDuration) return false
+        samplePlaybackHistory()
+        if (abLoopController?.set(trackId, startSec, endSec) != true) return false
+        playbackHistory.setLoop(startSec, endSec)
+        return true
+    }
+
+    private fun clearAbLoopRuntime(trackId: String): Boolean {
+        if (player?.currentMediaItem?.mediaId != trackId) return false
+        samplePlaybackHistory()
+        abLoopController?.clear()
+        playbackHistory.setLoop(null, null)
+        return true
+    }
+
+    fun setAbLoop(trackId: String, startSec: Double, endSec: Double): Boolean {
+        if (!applyAbLoopRuntime(trackId, startSec, endSec)) return false
+        abLoopPreviewTrackId = null
+        GeneralStorage.saveAbLoop(trackId, startSec, endSec)
+        return true
+    }
+
+    fun clearAbLoop(trackId: String): Boolean {
+        if (!clearAbLoopRuntime(trackId)) return false
+        abLoopPreviewTrackId = null
+        GeneralStorage.clearAbLoop()
+        return true
+    }
+
+    fun setAbLoopPreview(trackId: String, range: expo.modules.orpheus.model.AbLoopRange?): Boolean {
+        val applied = if (range == null) clearAbLoopRuntime(trackId)
+            else applyAbLoopRuntime(trackId, range.start, range.end)
+        if (applied) abLoopPreviewTrackId = trackId
+        return applied
+    }
+
+    fun clearAbLoopPreview(trackId: String): Boolean {
+        if (player?.currentMediaItem?.mediaId != trackId || abLoopPreviewTrackId != trackId) return false
+        val saved = GeneralStorage.getAbLoop()?.takeIf { it.trackId == trackId }
+        val applied = if (saved == null) clearAbLoopRuntime(trackId)
+            else applyAbLoopRuntime(trackId, saved.startSec, saved.endSec)
+        // 无效的旧区间不能让试听残留，也不能改写恢复存储。
+        if (!applied) clearAbLoopRuntime(trackId)
+        abLoopPreviewTrackId = null
+        return true
+    }
+
+    fun getAbLoop(): GeneralStorage.AbLoopRecord? = abLoopController?.get()
 
     var callback: MediaLibrarySession.Callback = @UnstableApi
     object : MediaLibrarySession.Callback {
@@ -419,6 +499,7 @@ class OrpheusMusicService : MediaLibraryService() {
         val restoredItems = GeneralStorage.restoreQueue(this)
 
         if (restoredItems.isNotEmpty()) {
+            restoringPlayer = true
             player.setMediaItems(restoredItems)
 
             val savedIndex = GeneralStorage.getSavedIndex()
@@ -448,6 +529,11 @@ class OrpheusMusicService : MediaLibraryService() {
             player.repeatMode = savedRepeatMode
 
             currentMediaId = player.currentMediaItem?.mediaId
+            restoringPlayer = false
+            currentMediaId?.let { playbackHistory.begin(it, player.currentPosition / 1000.0) }
+            GeneralStorage.getAbLoop()?.let { saved ->
+                if (!setAbLoop(saved.trackId, saved.startSec, saved.endSec)) GeneralStorage.clearAbLoop()
+            }
 
             player.playWhenReady = GeneralStorage.isAutoplayOnStartEnabled()
             player.prepare()
@@ -464,7 +550,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     interface TrackEventListener {
         fun onTrackStarted(trackId: String, reason: Int)
-        fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double)
+        fun onTrackFinished(trackId: String, finalPosition: Double, duration: Double, playbackSummary: PlaybackHistoryTracker.Summary?)
     }
 
     interface LyricEventListener {
@@ -509,8 +595,10 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     private fun sendTrackFinishedEvent(trackId: String, finalPosition: Double, duration: Double) {
+        if (playbackHistory.trackId != trackId) return
+        val summary = playbackHistory.finish()
         // Notify local listeners
-        trackEventListeners.forEach { it.onTrackFinished(trackId, finalPosition, duration) }
+        trackEventListeners.forEach { it.onTrackFinished(trackId, finalPosition, duration, summary) }
 
         try {
             val intent = Intent(this, OrpheusHeadlessTaskService::class.java)
@@ -518,6 +606,13 @@ class OrpheusMusicService : MediaLibraryService() {
             intent.putExtra("trackId", trackId)
             intent.putExtra("finalPosition", finalPosition)
             intent.putExtra("duration", duration)
+            summary?.let {
+                intent.putExtra("playbackSummary", Bundle().apply {
+                    putDouble("startedAt", it.startedAt.toDouble())
+                    putDouble("playedSeconds", it.playedSeconds)
+                    putBoolean("completed", it.completed)
+                })
+            }
             startService(intent)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -558,6 +653,13 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying && playbackHistory.trackId == null && !restoringPlayer) {
+                    player?.currentMediaItem?.let { playbackHistory.begin(it.mediaId, (player?.currentPosition ?: 0L) / 1000.0) }
+                    getAbLoop()?.let { playbackHistory.setLoop(it.startSec, it.endSec) }
+                }
+                samplePlaybackHistory()
+                serviceHandler.removeCallbacks(historyRunnable)
+                if (isPlaying) serviceHandler.post(historyRunnable)
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 lyricsManager.setPlaybackState(isPlaying)
                 if (isPlaying) {
@@ -565,10 +667,12 @@ class OrpheusMusicService : MediaLibraryService() {
                     serviceHandler.post(lyricsUpdateRunnable)
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
                     serviceHandler.post(resumeSaveRunnable)
+                    abLoopController?.startRunner()
                     sendTrackResumedEvent()
                 } else {
                     serviceHandler.removeCallbacks(lyricsUpdateRunnable)
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
+                    abLoopController?.stopRunner()
                     saveCurrentResumeRecord()
                     sendTrackPausedEvent()
                 }
@@ -579,6 +683,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 mediaItem: androidx.media3.common.MediaItem?,
                 reason: Int
             ) {
+                if (restoringPlayer) return
                 val mediaId = mediaItem?.mediaId
                 val reasonStr = when (reason) {
                     Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "AUTO"
@@ -592,12 +697,22 @@ class OrpheusMusicService : MediaLibraryService() {
                 // If the same track is still current (e.g. an item was added/removed elsewhere
                 // in the queue causing a PLAYLIST_CHANGED transition with the same media ID),
                 // we should NOT reset lyrics or notify JS as it causes a UI flash and audio stutter.
-                if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && mediaId == currentMediaId) {
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED && mediaId == currentMediaId &&
+                    playbackHistory.trackId == mediaId) {
                     Log.d("OrpheusMusicService", "Ignoring onMediaItemTransition as track hasn't changed.")
                     saveCurrentQueue()
                     return
                 }
                 currentMediaId = mediaId
+                if (mediaId != null) playbackHistory.begin(mediaId, (player?.currentPosition ?: 0L) / 1000.0)
+
+                // AB 循环只对设置它的曲目生效，切到其他曲目时自动清除
+                val loopStillValid = abLoopController?.syncTrack(mediaId) ?: false
+                if (abLoopPreviewTrackId != mediaId) abLoopPreviewTrackId = null
+                if (!loopStillValid && abLoopPreviewTrackId == null) {
+                    GeneralStorage.clearAbLoop()
+                }
+                else getAbLoop()?.let { playbackHistory.setLoop(it.startSec, it.endSec) }
 
                 // 自然循环到同一音频：清除该音频断点，从头播放
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
@@ -626,6 +741,12 @@ class OrpheusMusicService : MediaLibraryService() {
                 val duration = player.duration
                 if (duration != C.TIME_UNSET && duration > 0) {
                     durationCache[currentItem.mediaId] = duration
+                    getAbLoop()?.let { loop ->
+                        if (loop.endSec > duration / 1000.0) {
+                            if (abLoopPreviewTrackId == loop.trackId) setAbLoopPreview(loop.trackId, null)
+                            else clearAbLoop(loop.trackId)
+                        }
+                    }
                 }
             }
 
@@ -639,11 +760,12 @@ class OrpheusMusicService : MediaLibraryService() {
                 val isIndexChanged = oldPosition.mediaItemIndex != newPosition.mediaItemIndex
                 val trackChanged = oldPosition.mediaItem?.mediaId != newPosition.mediaItem?.mediaId
                 val lastMediaItem = oldPosition.mediaItem ?: return
-                val currentTime = System.currentTimeMillis()
 
-                // Debounce
-                if ((currentTime - lastTrackFinishedAt) < 200) {
-                    return
+                if (restoringPlayer) return
+                val internalLoopSeek = abLoopController?.consumeInternalSeek(oldPosition, newPosition, reason) == true
+                if (!internalLoopSeek && playbackHistory.trackId == lastMediaItem.mediaId) {
+                    playbackHistory.jump(oldPosition.positionMs / 1000.0, newPosition.positionMs / 1000.0,
+                        player?.isPlaying == true, (durationCache[lastMediaItem.mediaId] ?: 0L) / 1000.0)
                 }
 
                 if (trackChanged) {
@@ -666,10 +788,8 @@ class OrpheusMusicService : MediaLibraryService() {
                     saveCurrentResumeRecord()
                 }
 
-                if (isAutoTransition || isIndexChanged) {
-                    val duration = durationCache[lastMediaItem.mediaId] ?: return
-                    lastTrackFinishedAt = currentTime
-
+                if (!internalLoopSeek && (isAutoTransition || isIndexChanged || trackChanged)) {
+                    val duration = durationCache[lastMediaItem.mediaId] ?: 0L
                     sendTrackFinishedEvent(
                         lastMediaItem.mediaId,
                         oldPosition.positionMs / 1000.0,
@@ -678,8 +798,20 @@ class OrpheusMusicService : MediaLibraryService() {
                 }
             }
 
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+                    abLoopController?.handleEndOfItem()
+                }
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
+                    if (getAbLoop() != null) return
+                    samplePlaybackHistory()
+                    player?.currentMediaItem?.let {
+                        if (playbackHistory.trackId == it.mediaId) sendTrackFinishedEvent(it.mediaId,
+                            (player?.currentPosition ?: 0L) / 1000.0, (player?.duration ?: 0L) / 1000.0)
+                    }
                     // 队列最后一首自然播放完毕：清除断点
                     serviceHandler.removeCallbacks(resumeSaveRunnable)
                     player?.currentMediaItem?.let { TrackResumeStorage.clear(it.mediaId) }

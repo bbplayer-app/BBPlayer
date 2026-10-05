@@ -1,5 +1,6 @@
 import { Divider, List } from 'react-native-paper'
 
+import RangeLoopIcon from '@/features/player/components/controls/RangeLoopIcon'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
@@ -32,6 +33,11 @@ export function MusicFunctionalMenu({
 					icon='timer-outline'
 					label='定时关闭'
 					onPress={() => handleAction(() => openModal('SleepTimer', undefined))}
+				/>
+				<HighFreqButton
+					icon={RangeLoopIcon}
+					label='区间循环'
+					onPress={() => handleAction(() => openModal('AbLoop', undefined))}
 				/>
 				<PlayerDownloadButton onAction={handleAction} />
 			</HighFreqRow>

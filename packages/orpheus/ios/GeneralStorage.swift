@@ -11,6 +11,9 @@ class GeneralStorage {
     private let KEY_SAVED_POSITION = "saved_position"
     private let KEY_SAVED_REPEAT_MODE = "saved_repeat_mode"
     private let KEY_SAVED_SHUFFLE_MODE = "saved_shuffle_mode"
+    private let KEY_AB_LOOP_TRACK_ID = "saved_ab_loop_track_id"
+    private let KEY_AB_LOOP_START_SEC = "saved_ab_loop_start_sec"
+    private let KEY_AB_LOOP_END_SEC = "saved_ab_loop_end_sec"
     
     private let KEY_RESTORE_ENABLED = "restorePlaybackPositionEnabled"
     private let KEY_LOUDNESS_ENABLED = "loudnessNormalizationEnabled"
@@ -91,5 +94,33 @@ class GeneralStorage {
     
     func getSavedShuffleMode() -> Bool {
         return mmkv?.bool(forKey: KEY_SAVED_SHUFFLE_MODE, defaultValue: false) ?? false
+    }
+
+    // MARK: - AB Loop
+
+    func saveAbLoop(trackId: String, startSec: Double, endSec: Double) {
+        mmkv?.set(trackId, forKey: KEY_AB_LOOP_TRACK_ID)
+        mmkv?.set(startSec, forKey: KEY_AB_LOOP_START_SEC)
+        mmkv?.set(endSec, forKey: KEY_AB_LOOP_END_SEC)
+    }
+
+    func clearAbLoop() {
+        mmkv?.removeValue(forKey: KEY_AB_LOOP_TRACK_ID)
+        mmkv?.removeValue(forKey: KEY_AB_LOOP_START_SEC)
+        mmkv?.removeValue(forKey: KEY_AB_LOOP_END_SEC)
+    }
+
+    func getAbLoop() -> (trackId: String, startSec: Double, endSec: Double)? {
+        guard let trackId = mmkv?.string(forKey: KEY_AB_LOOP_TRACK_ID),
+              !trackId.isEmpty else {
+            return nil
+        }
+        let startSec = mmkv?.double(forKey: KEY_AB_LOOP_START_SEC) ?? 0
+        let endSec = mmkv?.double(forKey: KEY_AB_LOOP_END_SEC) ?? 0
+        guard startSec.isFinite, endSec.isFinite, startSec >= 0, endSec > startSec else {
+            clearAbLoop()
+            return nil
+        }
+        return (trackId, startSec, endSec)
     }
 }
