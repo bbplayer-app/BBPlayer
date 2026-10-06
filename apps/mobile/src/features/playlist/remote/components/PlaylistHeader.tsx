@@ -21,6 +21,7 @@ interface PlaylistHeaderProps {
 	id: string | number
 	mainButtonText?: string
 	disableMainButton?: boolean
+	mainButtonLoading?: boolean
 	secondaryButtonText?: string
 	secondaryButtonIcon?: string
 	onClickSecondaryButton?: () => void
@@ -117,6 +118,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							icon={mainButtonIcon}
 							onPress={onClickMainButton}
 							disabled={props.disableMainButton}
+							loading={props.mainButtonLoading}
 							testID='playlist-header-main-button'
 							buttonColor={primaryButtonColor}
 							textColor={primaryButtonTextColor}

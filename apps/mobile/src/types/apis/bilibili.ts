@@ -715,3 +715,30 @@ export type {
 export { BilibiliQrCodeLoginStatus }
 
 export type * from './garb'
+
+/** 当前登录账号与目标 UP 主的关系。 */
+export interface BilibiliUserRelation {
+	mid: number
+	attribute: number
+}
+
+export interface BilibiliFollowingProfile {
+	mid: number
+	uname: string
+	face: string
+	sign: string
+}
+
+export interface BilibiliFollowing
+	extends BilibiliUserRelation, BilibiliFollowingProfile {}
+
+export interface BilibiliFollowingsResponse {
+	list: BilibiliFollowing[] | null
+	total: number
+}
+
+export interface BilibiliFollowingGroup {
+	tagid: number
+	name: string
+	count: number
+}

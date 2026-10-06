@@ -374,6 +374,10 @@ function RootLayout() {
 							}}
 						/>
 						<Stack.Screen
+							name='following'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
 							name='playlist/remote/toview'
 							options={{ headerShown: false }}
 						/>

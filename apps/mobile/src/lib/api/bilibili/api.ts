@@ -35,6 +35,10 @@ import {
 	type BilibiliSearchVideo,
 	type BilibiliSearchUser,
 	type BilibiliUserInfo,
+	type BilibiliUserRelation,
+	type BilibiliFollowingsResponse,
+	type BilibiliFollowingProfile,
+	type BilibiliFollowingGroup,
 	type BilibiliUserUploadedVideosResponse,
 	type BilibiliVideoDetails,
 } from '@/types/apis/bilibili'
@@ -491,6 +495,114 @@ export class BilibiliApi {
 			endpoint: '/x/space/myinfo',
 			signal,
 		})
+	}
+
+	getUserRelation({
+		mid,
+		signal,
+	}: {
+		mid: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliUserRelation, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliUserRelation>({
+			endpoint: '/x/relation',
+			params: { fid: mid.toString() },
+			signal,
+		})
+	}
+
+	setUserFollowing({
+		mid,
+		following,
+	}: {
+		mid: number
+		following: boolean
+	}): ResultAsync<boolean, BilibiliApiError> {
+		return (
+			bilibiliApiClient
+				.postWithCsrf<null>({
+					endpoint: '/x/relation/modify',
+					payload: {
+						fid: mid.toString(),
+						act: following ? '1' : '2',
+						re_src: '11',
+					},
+				})
+				// 成功响应没有 data；转换为确认值，避免解包时将空值当成失败。
+				.map(() => true)
+		)
+	}
+
+	getFollowings({
+		mid,
+		pn,
+		signal,
+	}: {
+		mid: number
+		pn: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliFollowingsResponse, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliFollowingsResponse>({
+			endpoint: '/x/relation/followings',
+			params: { vmid: mid.toString(), pn: pn.toString(), ps: '50' },
+			signal,
+		})
+	}
+
+	/** 搜索当前账号的关注列表。 */
+	searchFollowings({
+		mid,
+		keyword,
+		pn,
+		signal,
+	}: {
+		mid: number
+		keyword: string
+		pn: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliFollowingsResponse, BilibiliApiError> {
+		return bilibiliApiClient.get<BilibiliFollowingsResponse>({
+			endpoint: '/x/relation/followings/search',
+			params: {
+				vmid: mid.toString(),
+				name: keyword,
+				pn: pn.toString(),
+				ps: '50',
+			},
+			signal,
+		})
+	}
+
+	/** 获取当前账号的关注分组（包括默认分组和特别关注）。 */
+	getFollowingGroups({ signal }: { signal?: AbortSignal } = {}): ResultAsync<
+		BilibiliFollowingGroup[],
+		BilibiliApiError
+	> {
+		return bilibiliApiClient
+			.get<BilibiliFollowingGroup[] | null>({
+				endpoint: '/x/relation/tags',
+				signal,
+			})
+			.map((groups) => groups ?? [])
+	}
+
+	/** 分页获取当前账号的分组成员；该接口直接返回数组。 */
+	getFollowingGroupMembers({
+		tagId,
+		pn,
+		signal,
+	}: {
+		tagId: number
+		pn: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliFollowingProfile[], BilibiliApiError> {
+		return bilibiliApiClient
+			.get<BilibiliFollowingProfile[] | null>({
+				endpoint: '/x/relation/tag',
+				params: { tagid: tagId.toString(), pn: pn.toString(), ps: '20' },
+				signal,
+			})
+			.map((members) => members ?? [])
 	}
 
 	/**
