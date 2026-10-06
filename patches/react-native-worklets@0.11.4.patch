@@ -2,13 +2,17 @@ diff --git a/android/build.gradle.kts b/android/build.gradle.kts
 index e326d97ca156b074b1f5a41a310edef191695e56..4cefb40e8225fa7e8f8e0ec60c8fadf4deb0661d 100644
 --- a/android/build.gradle.kts
 +++ b/android/build.gradle.kts
-@@ -322,7 +322,8 @@ tasks.named("preBuild") { dependsOn("assertMinimalReactNativeVersionTask") }
+@@ -322,7 +322,12 @@ tasks.named("preBuild") { dependsOn("assertMinimalReactNativeVersionTask") }
  
  // Workaround for AGP 9 + Kotlin 2.x lint K2 UAST crash on .gradle.kts build scripts.
  // See: https://issuetracker.google.com/issues/432144179
 -tasks.configureEach { if (name.startsWith("lintVital")) enabled = false }
 +// Backport https://github.com/software-mansion/react-native-reanimated/pull/10448.
-+tasks.configureEach { if (name.startsWith("lint")) enabled = false }
++// Skip K2 UAST analysis across variants, retaining lint entry/report tasks.
++// Worklets analysis coverage remains unavailable until the upstream crash is fixed.
++tasks.configureEach {
++    if (name.startsWith("lintAnalyze") || name.startsWith("lintVitalAnalyze")) enabled = false
++}
  
  tasks.register<Copy>("prepareWorkletsHeadersForPrefabs") {
      from("$projectDir/src/main/cpp")
