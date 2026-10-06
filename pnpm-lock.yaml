@@ -732,6 +732,9 @@ importers:
         specifier: ^1.11.23
         version: 1.11.23
     devDependencies:
+      '@shopify/react-native-skia':
+        specifier: ^2.12.0
+        version: 2.12.0(8ac7e30aad14e59302e7cdcf57c603f4)
       '@types/react':
         specifier: 19.2.15
         version: 19.2.15
@@ -19113,6 +19116,20 @@ snapshots:
     optionalDependencies:
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native-community/cli@20.2.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.15)(react@19.2.3)(supports-color@10.2.2)
       react-native-reanimated: 4.5.5(ec041ae14a641bedf3450fa178b946f2)
+      react-native-worklets: 0.11.4(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native-community/cli@20.2.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.15)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2)
+
+  '@shopify/react-native-skia@2.12.0(8ac7e30aad14e59302e7cdcf57c603f4)':
+    dependencies:
+      canvaskit-wasm: 0.41.0
+      react: 19.2.3
+      react-native-skia-android: 154.0.0
+      react-native-skia-apple-ios: 154.0.0
+      react-native-skia-apple-macos: 154.0.0
+      react-native-skia-apple-tvos: 154.0.0
+      react-reconciler: 0.31.0(react@19.2.3)
+    optionalDependencies:
+      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native-community/cli@20.2.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.15)(react@19.2.3)(supports-color@10.2.2)
+      react-native-reanimated: 4.6.0(ec041ae14a641bedf3450fa178b946f2)
       react-native-worklets: 0.11.4(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native-community/cli@20.2.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/jest-preset@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.15)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)(supports-color@10.2.2)
 
   '@sideway/address@4.1.5':

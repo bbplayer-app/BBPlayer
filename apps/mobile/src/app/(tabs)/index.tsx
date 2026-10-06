@@ -1,3 +1,6 @@
+// oxlint-disable-next-line import/no-unassigned-import
+import 'dayjs/locale/zh-cn'
+
 import { WeeklyHeatMap } from '@bbplayer/heatmap'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import Color from 'color'
@@ -503,29 +506,6 @@ function HomePage() {
 										最近常听
 									</Text>
 								</Touchable>
-
-								{hasBilibiliCookie() && (
-									<Touchable
-										androidRipple={{}}
-										style={[
-											styles.quickAccessCard,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-										onPress={() => router.navigate('/following')}
-									>
-										<Icon
-											source='account-heart'
-											size={32}
-											color={colors.onSurfaceVariant}
-										/>
-										<Text
-											variant='labelMedium'
-											style={styles.quickAccessText}
-										>
-											我的关注
-										</Text>
-									</Touchable>
-								)}
 
 								{/* 稍后再看 - conditional on Bilibili cookie */}
 								{hasBilibiliCookie() && (

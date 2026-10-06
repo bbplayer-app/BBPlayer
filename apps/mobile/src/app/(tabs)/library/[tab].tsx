@@ -9,6 +9,7 @@ import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
 
 import IconButton from '@/components/common/IconButton'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
+import FollowingList from '@/features/following/FollowingList'
 import CollectionListComponent from '@/features/library/collection/CollectionList'
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
 import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
@@ -22,6 +23,7 @@ const renderScene = SceneMap({
 	favorite: FavoriteFolderListComponent,
 	collection: CollectionListComponent,
 	multiPage: MultiPageVideosListComponent,
+	following: FollowingList,
 })
 
 const routes = [
@@ -29,6 +31,7 @@ const routes = [
 	{ key: 'favorite', title: '收藏夹' },
 	{ key: 'collection', title: '合集' },
 	{ key: 'multiPage', title: '分 p' },
+	{ key: 'following', title: '关注' },
 ]
 
 export enum Tabs {
@@ -36,6 +39,7 @@ export enum Tabs {
 	Favorite = 1,
 	Collection = 2,
 	MultiPage = 3,
+	Following = 4,
 }
 
 export default function Library() {
@@ -99,8 +103,11 @@ export default function Library() {
 					style={[styles.tabView, { backgroundColor: 'transparent' }]}
 					navigationState={{ index, routes }}
 					renderScene={renderScene}
+					lazy={({ route }) => route.key === 'following'}
 					renderTabBar={(props) => (
 						<TabBar
+							scrollEnabled
+							// tabStyle={{ width: 'auto' }}
 							style={{
 								backgroundColor: 'transparent',
 								marginBottom: 8,
@@ -118,6 +125,15 @@ export default function Library() {
 						})
 					}}
 					options={{
+						following: {
+							icon: ({ focused, color, size }) => (
+								<Icon
+									name={focused ? 'account-heart' : 'account-heart-outline'}
+									size={size}
+									color={color}
+								/>
+							),
+						},
 						favorite: {
 							icon: ({ focused, color, size }) => (
 								<Icon

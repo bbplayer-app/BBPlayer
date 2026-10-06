@@ -3,7 +3,7 @@ import { useTheme } from 'react-native-paper'
 
 const rows = [0, 1, 2, 3]
 
-/** 转场和首次加载期间只绘制少量静态占位，不挂载列表或启动动画。 */
+/** 首次加载和搜索等待期间只绘制少量静态占位，不挂载列表或启动动画。 */
 export function FollowingListSkeleton() {
 	const { colors } = useTheme()
 	const fill = { backgroundColor: colors.surfaceVariant }

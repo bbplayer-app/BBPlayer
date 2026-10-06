@@ -1,6 +1,6 @@
-# @bbplayer/react-native-heatmap
+# @bbplayer/heatmap
 
-A customizable heatmap component for React Native, built with `react-native-svg` and `dayjs`. Reimplemented from `react-native-heatmap`.
+A customizable heatmap component for React Native. WeeklyHeatMap uses Skia for the cells and SVG for labels; MonthlyHeatMap uses SVG.
 
 ## Features
 
@@ -14,15 +14,15 @@ A customizable heatmap component for React Native, built with `react-native-svg`
 ## Installation
 
 ```bash
-pnpm add @bbplayer/react-native-heatmap
+pnpm add @bbplayer/heatmap
 ```
 
-Note: You must also have `react-native-svg` and `dayjs` installed in your project.
+Note: You must also have `@shopify/react-native-skia`, `react-native-svg` and `dayjs` installed in your project.
 
 ## Usage
 
 ```tsx
-import { WeeklyHeatMap } from '@bbplayer/react-native-heatmap'
+import { WeeklyHeatMap } from '@bbplayer/heatmap'
 
 const data = {
 	'2024-01-01': 5,

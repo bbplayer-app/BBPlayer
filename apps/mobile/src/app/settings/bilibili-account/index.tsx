@@ -127,23 +127,6 @@ export default function BilibiliAccountSettingsPage() {
 								</Text>
 							</View>
 						</Surface>
-						<List.Item
-							title='我的关注'
-							description='查看关注的 UP 主和投稿'
-							left={(props) => (
-								<List.Icon
-									{...props}
-									icon='account-heart'
-								/>
-							)}
-							right={(props) => (
-								<List.Icon
-									{...props}
-									icon='chevron-right'
-								/>
-							)}
-							onPress={() => router.navigate('/following')}
-						/>
 						<SettingsSectionTitle title='隐私' />
 						<View style={styles.section}>
 							<View style={styles.settingRow}>

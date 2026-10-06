@@ -2,28 +2,24 @@ import { FlashList } from '@shopify/flash-list'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
-import { Appbar, Chip, Searchbar, Text, useTheme } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Chip, Searchbar, Text, useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import Button from '@/components/common/Button'
 import { FollowingListItem } from '@/features/following/components/FollowingListItem'
 import { FollowingListSkeleton } from '@/features/following/components/FollowingListSkeleton'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	useFollowingGroups,
 	useInfiniteFollowings,
 } from '@/hooks/queries/bilibili/relations'
-import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useAppStore from '@/hooks/stores/useAppStore'
-import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { useDebouncedValue } from '@/hooks/utils/useDebouncedValue'
 
-export default function FollowingPage() {
-	const isListReady = useScreenTransitionReady()
-	useNowPlayingBar()
+export default function FollowingList() {
 	const router = useRouter()
 	const { colors } = useTheme()
-	const insets = useSafeAreaInsets()
+	const haveTrack = useCurrentTrack()
 	const hasCookie = useAppStore((state) => state.hasBilibiliCookie())
 	const [refreshing, setRefreshing] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -66,19 +62,31 @@ export default function FollowingPage() {
 	const count =
 		data?.pages[0].total ?? (tagId === -20 ? undefined : selectedGroup?.count)
 	const countText =
-		count !== undefined
-			? `共 ${count} 位${keyword ? '匹配的 UP 主' : '关注'}`
-			: `${hasNextPage ? '已找到' : '共'} ${followings.length} 位${keyword ? '匹配的 UP 主' : '关注'}`
+		isPending || isSearchPending
+			? '加载中'
+			: count !== undefined
+				? `${count}\u2009位${keyword ? '匹配的 ' : ''}UP 主`
+				: `${hasNextPage ? '已加载 ' : ''}${followings.length}\u2009位 UP 主`
 
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
-				<Appbar.Content title='我的关注' />
-			</Appbar.Header>
+			{hasCookie && (
+				<View style={styles.headerContainer}>
+					<Text
+						variant='titleMedium'
+						style={styles.headerTitle}
+					>
+						我的关注
+					</Text>
+					<Text variant='bodyMedium'>{countText}</Text>
+				</View>
+			)}
 			{hasCookie && (
 				<View style={styles.filters}>
 					<Searchbar
+						mode='bar'
+						style={styles.searchbar}
+						inputStyle={styles.searchInput}
 						placeholder='搜索全部关注的 UP 主'
 						value={searchQuery}
 						onChangeText={setSearchQuery}
@@ -129,7 +137,7 @@ export default function FollowingPage() {
 						登录
 					</Button>
 				</View>
-			) : !isListReady || isPending || isSearchPending ? (
+			) : isPending || isSearchPending ? (
 				<FollowingListSkeleton />
 			) : isError && !data ? (
 				<View style={styles.state}>
@@ -146,17 +154,14 @@ export default function FollowingPage() {
 					keyboardShouldPersistTaps='handled'
 					keyboardDismissMode='on-drag'
 					keyExtractor={(item) => item.mid.toString()}
-					contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+					contentContainerStyle={{
+						paddingBottom: haveTrack ? 80 : 16,
+					}}
 					renderItem={({ item }) => <FollowingListItem user={item} />}
 					ListHeaderComponent={
-						<>
-							<Text style={styles.count}>{countText}</Text>
-							{isError && !isFetchNextPageError && (
-								<Button onPress={() => void refetch()}>
-									刷新失败，点击重试
-								</Button>
-							)}
-						</>
+						isError && !isFetchNextPageError ? (
+							<Button onPress={() => void refetch()}>刷新失败，点击重试</Button>
+						) : null
 					}
 					ListEmptyComponent={
 						<Text style={styles.count}>
@@ -203,8 +208,25 @@ export default function FollowingPage() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1 },
+	headerContainer: {
+		height: 48,
+		marginHorizontal: 16,
+		marginBottom: 4,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	headerTitle: { fontWeight: 'bold' },
+	searchbar: {
+		borderRadius: 9999,
+		textAlign: 'center',
+		height: 45,
+		marginTop: 0,
+		marginBottom: 0,
+	},
+	searchInput: { alignSelf: 'center' },
 	list: { flex: 1 },
-	filters: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+	filters: { paddingHorizontal: 16, paddingBottom: 8, gap: 4 },
 	groups: { gap: 8, paddingVertical: 4 },
 	state: {
 		flex: 1,

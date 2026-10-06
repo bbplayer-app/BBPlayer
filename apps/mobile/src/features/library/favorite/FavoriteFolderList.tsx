@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
 	},
 	headerContainer: {
 		height: 48, // 为了与 LocalPlaylistList 保持一致（LocalPlaylistList 上方存在一个 IconButton，所以会间隔更大一些）
-		marginBottom: 8,
+		marginBottom: 4,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		height: 45,
 		marginBottom: 20,
-		marginTop: 10,
+		marginTop: 0,
 	},
 	emptyList: {
 		textAlign: 'center',
