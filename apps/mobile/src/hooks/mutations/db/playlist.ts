@@ -506,7 +506,7 @@ export const useSubscribeToSharedPlaylist = () => {
 			await queryClient.invalidateQueries({
 				queryKey: playlistKeys.playlistLists(),
 			})
-			router.push({
+			router.navigate({
 				pathname: '/playlist/local/[id]',
 				params: { id: String(localPlaylistId) },
 			})

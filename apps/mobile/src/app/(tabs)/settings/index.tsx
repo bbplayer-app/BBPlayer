@@ -72,7 +72,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/appearance')}
+						onPress={() => router.navigate('/settings/appearance')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -90,7 +90,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/playback')}
+						onPress={() => router.navigate('/settings/playback')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -108,7 +108,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/lyrics')}
+						onPress={() => router.navigate('/settings/lyrics')}
 					/>
 
 					<SettingsSectionTitle title='账号' />
@@ -131,7 +131,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/bilibili-account')}
+						onPress={() => router.navigate('/settings/bilibili-account')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -153,7 +153,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/account')}
+						onPress={() => router.navigate('/settings/account')}
 					/>
 
 					<SettingsSectionTitle title='媒体库与存储' />
@@ -172,7 +172,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/storage')}
+						onPress={() => router.navigate('/settings/storage')}
 					/>
 
 					<SettingsSectionTitle title='数据' />
@@ -191,7 +191,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/backup')}
+						onPress={() => router.navigate('/settings/backup')}
 					/>
 
 					<SettingsSectionTitle title='通用与关于' />
@@ -210,7 +210,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/general')}
+						onPress={() => router.navigate('/settings/general')}
 						testID='setting-general'
 					/>
 					<Divider style={styles.divider} />
@@ -229,7 +229,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/about')}
+						onPress={() => router.navigate('/settings/about')}
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
@@ -247,7 +247,7 @@ export default function SettingsPage() {
 								icon='chevron-right'
 							/>
 						)}
-						onPress={() => router.push('/settings/donate')}
+						onPress={() => router.navigate('/settings/donate')}
 					/>
 				</ScrollView>
 			</View>

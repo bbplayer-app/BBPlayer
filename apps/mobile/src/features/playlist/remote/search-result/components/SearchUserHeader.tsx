@@ -125,7 +125,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 	const users: BilibiliSearchUser[] = data.result
 
 	const handleUserPress = (mid: number) => {
-		router.push({
+		router.navigate({
 			pathname: '/playlist/remote/uploader/[mid]',
 			params: { mid: String(mid) },
 		})

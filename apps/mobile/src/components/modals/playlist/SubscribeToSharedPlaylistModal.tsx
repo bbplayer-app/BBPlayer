@@ -46,7 +46,7 @@ export default function SubscribeToSharedPlaylistModal() {
 		if (!isValidId) return
 		close('SubscribeToSharedPlaylist')
 		useModalStore.getState().doAfterModalHostClosed(() => {
-			router.push({
+			router.navigate({
 				pathname: '/share/playlist',
 				params: {
 					shareId: shareId,

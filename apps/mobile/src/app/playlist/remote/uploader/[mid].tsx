@@ -183,7 +183,7 @@ export default function UploaderPage() {
 				<Button
 					mode='contained'
 					onPress={() => {
-						router.push('/settings/bilibili-account/qrcode-login')
+						router.navigate('/settings/bilibili-account/qrcode-login')
 					}}
 				>
 					登录

@@ -33,7 +33,7 @@ export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 						icon='comment-text-outline'
 						onPress={() =>
 							onAction(() =>
-								router.push({
+								router.navigate({
 									pathname: '/comments/[bvid]',
 									params: { bvid: currentTrack.bilibiliMetadata.bvid },
 								}),

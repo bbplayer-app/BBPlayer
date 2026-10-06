@@ -91,7 +91,7 @@ const FavoriteFolderListComponent = memo(() => {
 				style={styles.searchbar}
 				onSubmitEditing={() => {
 					setQuery('')
-					router.push({
+					router.navigate({
 						pathname: '/playlist/remote/search-result/fav/[query]',
 						params: { query },
 					})

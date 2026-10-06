@@ -117,7 +117,7 @@ export function useLocalPlaylistMenu({
 					title: '查看详细信息',
 					leadingIcon: INFO_ICON,
 					onPress: () =>
-						router.push({
+						router.navigate({
 							pathname: '/playlist/remote/multipage/[bvid]',
 							params: { bvid: item.bilibiliMetadata.bvid },
 						}),
@@ -129,7 +129,7 @@ export function useLocalPlaylistMenu({
 						if (!item.artist?.remoteId) {
 							return
 						}
-						router.push({
+						router.navigate({
 							pathname: '/playlist/remote/uploader/[mid]',
 							params: { mid: item.artist?.remoteId },
 						})

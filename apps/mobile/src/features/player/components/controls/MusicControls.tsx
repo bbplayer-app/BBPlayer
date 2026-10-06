@@ -86,7 +86,7 @@ export function MusicControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 					disabled={currentTrack?.source !== 'bilibili'}
 					onPress={() => {
 						if (currentTrack?.source === 'bilibili') {
-							router.push({
+							router.navigate({
 								pathname: '/comments/[bvid]',
 								params: { bvid: currentTrack.bilibiliMetadata.bvid },
 							})

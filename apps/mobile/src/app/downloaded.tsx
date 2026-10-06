@@ -527,7 +527,7 @@ export default function DownloadedPage() {
 						/>
 						<Appbar.Action
 							icon='progress-download'
-							onPress={() => router.push('/download')}
+							onPress={() => router.navigate('/download')}
 						/>
 						<Appbar.Action
 							icon='export-variant'

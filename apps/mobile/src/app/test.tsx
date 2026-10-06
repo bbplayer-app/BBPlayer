@@ -352,7 +352,7 @@ export default function TestPage() {
 				<View style={styles.buttonContainer}>
 					<Button
 						mode='contained'
-						onPress={() => router.push('/onboarding')}
+						onPress={() => router.navigate('/onboarding')}
 						style={styles.button}
 					>
 						Onboarding 页面测试

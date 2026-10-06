@@ -29,7 +29,7 @@ const PlaylistSyncProgressModal = memo(function PlaylistSyncProgressModal({
 		if (shouldRedirectToLocalPlaylist && syncedPlaylistId.current) {
 			const targetId = syncedPlaylistId.current
 			useModalStore.getState().doAfterModalHostClosed(() => {
-				router.push(`/playlist/local/${targetId}`)
+				router.navigate(`/playlist/local/${targetId}`)
 			})
 		}
 	}, [modalClose, shouldRedirectToLocalPlaylist, router])

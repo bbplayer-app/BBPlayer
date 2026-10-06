@@ -216,7 +216,7 @@ function RootLayout() {
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
-				router.push('/onboarding')
+				router.navigate('/onboarding')
 			}
 		}
 	}, [isReady, migrationsSuccess])

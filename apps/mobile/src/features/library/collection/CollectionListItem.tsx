@@ -18,12 +18,12 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 				disabled={item.state === 1}
 				onPress={() => {
 					if (item.attr === 0) {
-						router.push({
+						router.navigate({
 							pathname: '/playlist/remote/collection/[id]',
 							params: { id: String(item.id) },
 						})
 					} else {
-						router.push({
+						router.navigate({
 							pathname: '/playlist/remote/favorite/[id]',
 							params: { id: String(item.id) },
 						})

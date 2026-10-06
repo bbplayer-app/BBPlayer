@@ -1221,7 +1221,7 @@ function LocalPlaylistContent({
 								}
 								onPressAuthor={(author) =>
 									author.remoteId &&
-									router.push({
+									router.navigate({
 										pathname: '/playlist/remote/uploader/[mid]',
 										params: { mid: author.remoteId },
 									})
