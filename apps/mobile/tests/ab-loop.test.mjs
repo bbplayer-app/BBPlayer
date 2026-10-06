@@ -51,14 +51,19 @@ function draftStore() {
 	}).useAbLoopDraftStore
 }
 const ranges = load('apps/mobile/src/lib/player/abLoopDraft.ts', {})
-function coordinator() {
+function coordinator({ service } = {}) {
 	let currentId = 'first',
 		active = null,
 		persisted = null,
 		delayedTrack,
-		automatic = false,
-		saveError = false
+		saveError = false,
+		mutationGate,
+		nativeGate,
+		cacheError = false,
+		nativeDuration = Infinity
 	const pending = new Map(),
+		nativeFaults = [],
+		previewFaults = [],
 		calls = [],
 		cache = [],
 		dbSaved = new Map()
@@ -77,22 +82,33 @@ function coordinator() {
 				getAbLoop: async () => active,
 				setAbLoop: async (trackId, start, end) => {
 					calls.push(['set', trackId])
-					if (trackId !== currentId) return false
+					if (nativeGate) await nativeGate.promise
+					if (trackId !== currentId || end > nativeDuration) return false
+					const fault = nativeFaults.shift()
+					if (fault === 'reject') return false
 					persisted = active = { trackId, start, end }
+					if (fault === 'throw') throw new Error('native failed after applying')
 					return true
 				},
 				clearAbLoop: async (trackId) => {
 					calls.push(['clear', trackId])
+					if (nativeGate) await nativeGate.promise
 					if (trackId !== currentId) return false
+					const fault = nativeFaults.shift()
+					if (fault === 'reject') return false
 					persisted = active = null
+					if (fault === 'throw') throw new Error('native failed after applying')
 					return true
 				},
 				setAbLoopPreview: async (trackId, range) => {
 					calls.push(['preview', trackId, range])
 					if (trackId !== currentId) return false
+					const fault = previewFaults.shift()
+					if (fault === 'reject') return false
 					active = range
 						? { trackId, start: range.start, end: range.end }
 						: null
+					if (fault === 'throw') throw new Error('preview recovery failed')
 					return true
 				},
 				clearAbLoopPreview: async (trackId) => {
@@ -116,25 +132,36 @@ function coordinator() {
 		},
 		'@/lib/config/queryClient': {
 			queryClient: {
-				cancelQueries: async () => calls.push(['cancel']),
+				cancelQueries: async () => {
+					calls.push(['cancel'])
+					if (cacheError) throw new Error('cache failed')
+				},
+				invalidateQueries: async () => calls.push(['invalidate']),
 				setQueryData: (_, value) => cache.push(value),
 			},
 		},
 		'@/lib/services/trackService': {
-			trackService: {
+			trackService: service ?? {
 				getAbLoopByUniqueKey: (id) => {
-					if (automatic) return Promise.resolve(ok(dbSaved.get(id) ?? null))
-					const d = deferred()
-					pending.set(id, d)
-					return d.promise
+					calls.push(['db-read', id])
+					const d = pending.get(id)
+					if (d) {
+						pending.delete(id)
+						return d.promise
+					}
+					return Promise.resolve(ok(dbSaved.get(id) ?? null))
 				},
 				setAbLoopByUniqueKey: async (id, start, end) => {
+					if (mutationGate) await mutationGate.promise
 					if (saveError) throw new Error('storage unavailable')
 					calls.push(['db-save', id, start, end])
 					dbSaved.set(id, { startPoint: start, endPoint: end })
 					return ok(true)
 				},
 				clearAbLoopByUniqueKey: async (id) => {
+					if (mutationGate) await mutationGate.promise
+					if (saveError) throw new Error('storage unavailable')
+					calls.push(['db-clear', id])
 					dbSaved.delete(id)
 					return ok(true)
 				},
@@ -159,8 +186,21 @@ function coordinator() {
 		},
 		getActive: () => active,
 		getPersisted: () => persisted,
-		autoReads: () => {
-			automatic = true
+		autoReads() {},
+		delayRead: (id, d) => pending.set(id, d),
+		delayMutation: (d) => {
+			mutationGate = d
+		},
+		delayNative: (d) => {
+			nativeGate = d
+		},
+		faultNative: (...faults) => nativeFaults.push(...faults),
+		faultPreview: (...faults) => previewFaults.push(...faults),
+		failCache: () => {
+			cacheError = true
+		},
+		setNativeDuration: (duration) => {
+			nativeDuration = duration
 		},
 		failSave: () => {
 			saveError = true
@@ -169,29 +209,283 @@ function coordinator() {
 }
 
 const tick = () => new Promise((resolveValue) => setImmediate(resolveValue))
-test('late old-track read cannot clear a new loop or its cache', async () => {
+
+// 可控异步边界执行真实协调层；数据库、原生、试听与草稿分别断言。
+async function editedCoordinator() {
 	const c = coordinator()
+	c.dbSaved.set('first', { startPoint: 10, endPoint: 20 })
+	const editor = await c.mod.beginAbLoopEdit('first')
+	c.drafts.getState().setDraft('first', { start: 30, end: 40 })
+	await c.mod.previewAbLoop(editor.token, { start: 30, end: 40 })
+	return { ...c, token: editor.token }
+}
+for (const operation of ['save', 'clear']) {
+	const submit = (c) =>
+		operation === 'save'
+			? c.mod.saveAbLoop('first', 30, 40, c.token)
+			: c.mod.clearAbLoop('first', c.token)
+	const assertCommitted = (c) => {
+		if (operation === 'save')
+			assert.equal(c.dbSaved.get('first').startPoint, 30)
+		else assert.equal(c.dbSaved.has('first'), false)
+	}
+	for (const fault of ['reject', 'throw', 'storage']) {
+		test(`${operation}: ${fault} preserves saved settings, preview and draft`, async () => {
+			const c = await editedCoordinator()
+			if (fault === 'storage') c.failSave()
+			else c.faultNative(fault)
+			await assert.rejects(submit(c), /拒绝|native failed|storage unavailable/)
+			assert.equal(c.dbSaved.get('first').startPoint, 10)
+			assert.equal(c.getPersisted().start, 10)
+			assert.equal(c.getActive().start, 30)
+			assert.equal(c.cache.at(-1).start, 30)
+			assert.equal(c.drafts.getState().draft.start, 30)
+			assert.equal(c.mod.isAbLoopEditCurrent(c.token), true)
+			if (fault === 'reject')
+				assert.equal(
+					c.calls.some(([kind]) => kind === 'db-save' || kind === 'db-clear'),
+					false,
+				)
+		})
+	}
+	for (const fault of ['throw', 'storage']) {
+		test(`${operation}: ${fault} with failed compensation reports both errors`, async () => {
+			const c = await editedCoordinator()
+			if (fault === 'storage') {
+				c.failSave()
+				c.faultNative(undefined, 'reject')
+			} else c.faultNative('throw', 'reject')
+			await assert.rejects(submit(c), (error) => {
+				assert.equal(error.name, 'AbLoopRecoveryError')
+				assert.equal(error.message, '未保存，播放状态恢复失败')
+				assert.match(error.cause.message, /native failed|storage unavailable/)
+				assert.match(error.recoveryError.message, /恢复原生/)
+				return true
+			})
+			assert.equal(c.dbSaved.get('first').startPoint, 10)
+			assert.equal(c.drafts.getState().draft.start, 30)
+		})
+	}
+	test(`${operation}: closing during SQLite write completes and restores latest committed settings`, async () => {
+		const c = await editedCoordinator(),
+			gate = deferred()
+		c.delayMutation(gate)
+		const committing = submit(c)
+		await tick()
+		const closing = c.mod.endAbLoopEdit(c.token)
+		await tick()
+		gate.resolve()
+		const result = await committing
+		await closing
+		assert.equal(result.status, 'committed')
+		assert.equal(result.playback, 'applied')
+		assertCommitted(c)
+		assert.equal(c.getActive()?.start ?? null, operation === 'save' ? 30 : null)
+		assert.equal(
+			c.getPersisted()?.start ?? null,
+			operation === 'save' ? 30 : null,
+		)
+		assert.equal(c.drafts.getState().draft, null)
+	})
+	test(`${operation}: preview compensation failure is explicit even when formal restoration succeeded`, async () => {
+		const c = await editedCoordinator()
+		c.failSave()
+		c.faultPreview('reject')
+		await assert.rejects(
+			submit(c),
+			(error) =>
+				error.name === 'AbLoopRecoveryError' &&
+				/试听/.test(error.recoveryError.message),
+		)
+		assert.equal(c.dbSaved.get('first').startPoint, 10)
+		assert.equal(c.getPersisted().start, 10)
+		assert.equal(c.drafts.getState().draft.start, 30)
+	})
+	test(`${operation}: closing during failed SQLite write restores formal settings and keeps draft`, async () => {
+		const c = await editedCoordinator(),
+			gate = deferred()
+		c.delayMutation(gate)
+		c.failSave()
+		const committing = submit(c)
+		const rejected = assert.rejects(committing, /storage unavailable/)
+		await tick()
+		const closing = c.mod.endAbLoopEdit(c.token)
+		gate.resolve()
+		await Promise.all([rejected, closing])
+		assert.equal(c.dbSaved.get('first').startPoint, 10)
+		assert.equal(c.getActive().start, 10)
+		assert.equal(c.getPersisted().start, 10)
+		assert.equal(c.drafts.getState().draft.start, 30)
+	})
+	for (const boundary of ['native', 'storage']) {
+		test(`${operation}: track change during ${boundary} defers original-track commit`, async () => {
+			const c = await editedCoordinator(),
+				gate = deferred()
+			if (boundary === 'native') c.delayNative(gate)
+			else c.delayMutation(gate)
+			const committing = submit(c)
+			await tick()
+			c.setCurrent('second')
+			c.dbSaved.set('second', { startPoint: 50, endPoint: 60 })
+			const restore = c.mod.applyAbLoopForTrack('second')
+			gate.resolve()
+			const result = await committing
+			await restore
+			assert.equal(result.playback, 'deferred')
+			assertCommitted(c)
+			assert.equal(c.getActive().trackId, 'second')
+			assert.equal(c.getActive().start, 50)
+			assert.equal(c.cache.at(-1).trackId, 'second')
+		})
+	}
+	test(`${operation}: new edit retains its draft and reads the newly committed setting`, async () => {
+		const c = await editedCoordinator(),
+			gate = deferred()
+		c.delayMutation(gate)
+		const committing = submit(c)
+		await tick()
+		const closing = c.mod.endAbLoopEdit(c.token)
+		const opening = c.mod.beginAbLoopEdit('first')
+		await tick()
+		c.drafts.getState().setDraft('first', { start: 70, end: 80 })
+		gate.resolve()
+		await Promise.all([committing, closing])
+		const editor = await opening
+		assert.equal(
+			editor.savedLoop?.start ?? null,
+			operation === 'save' ? 30 : null,
+		)
+		assert.equal(c.mod.isAbLoopEditCurrent(editor.token), true)
+		assert.equal(c.drafts.getState().draft.start, 70)
+		assert.equal(c.getActive(), null)
+	})
+	test(`${operation}: queued restore reads SQLite after commit`, async () => {
+		const c = coordinator(),
+			gate = deferred()
+		c.dbSaved.set('first', { startPoint: 10, endPoint: 20 })
+		c.delayMutation(gate)
+		const committing =
+			operation === 'save'
+				? c.mod.saveAbLoop('first', 30, 40)
+				: c.mod.clearAbLoop('first')
+		await tick()
+		const restoring = c.mod.applyAbLoopForTrack('first')
+		await tick()
+		assert.equal(c.calls.filter(([kind]) => kind === 'db-read').length, 1)
+		gate.resolve()
+		await Promise.all([committing, restoring])
+		assertCommitted(c)
+		assert.equal(c.getActive()?.start ?? null, operation === 'save' ? 30 : null)
+	})
+	test(`${operation}: track change during failed write never compensates onto the new track`, async () => {
+		const c = await editedCoordinator(),
+			gate = deferred()
+		c.delayMutation(gate)
+		c.failSave()
+		const rejected = assert.rejects(submit(c), /storage unavailable/)
+		await tick()
+		c.setCurrent('second')
+		c.drafts.getState().setDraft('second', { start: 70, end: 80 })
+		const nativeCalls = c.calls.filter(
+			([kind]) => kind === 'set' || kind === 'clear',
+		).length
+		gate.resolve()
+		await rejected
+		assert.equal(
+			c.calls.filter(([kind]) => kind === 'set' || kind === 'clear').length,
+			nativeCalls,
+		)
+		assert.equal(c.dbSaved.get('first').startPoint, 10)
+		assert.equal(c.getActive(), null)
+		assert.equal(c.drafts.getState().draft.trackId, 'second')
+	})
+	test(`${operation}: completion only clears the original track draft`, async () => {
+		const c = await editedCoordinator(),
+			gate = deferred()
+		c.delayMutation(gate)
+		const committing = submit(c)
+		await tick()
+		c.setCurrent('second')
+		c.drafts.getState().setDraft('second', { start: 70, end: 80 })
+		gate.resolve()
+		assert.equal((await committing).playback, 'deferred')
+		assert.equal(c.drafts.getState().draft.trackId, 'second')
+	})
+	test(`${operation}: cache failure invalidates without failing durable commit`, async () => {
+		const c = await editedCoordinator()
+		c.failCache()
+		assert.equal((await submit(c)).status, 'committed')
+		assertCommitted(c)
+		assert.equal(c.calls.at(-1)[0], 'invalidate')
+		assert.equal(c.drafts.getState().draft, null)
+	})
+}
+test('real SQLite accepts decimal metadata tail, native rejection and SQLite rejection preserve it', async () => {
+	const { sqlite, service } = databaseService()
+	try {
+		sqlite.exec(
+			"INSERT INTO tracks (id, unique_key, title, duration, source) VALUES (1, 'first', 'test', 180, 'local')",
+		)
+		const c = coordinator({ service })
+		c.setNativeDuration(180.4)
+		assert.equal(
+			(await c.mod.saveAbLoop('first', 60, 180.4)).playback,
+			'applied',
+		)
+		await assert.rejects(c.mod.saveAbLoop('first', 60, 181), /拒绝/)
+		assert.equal(
+			sqlite.prepare('SELECT end_point FROM ab_loops').get().end_point,
+			180.4,
+		)
+		assert.equal(c.getActive().end, 180.4)
+		// 更长的真实音频仍不能绕过元数据上限；ResultAsync 的 Err 同样需要补偿。
+		c.setNativeDuration(200)
+		await assert.rejects(c.mod.saveAbLoop('first', 60, 181.001))
+		assert.equal(
+			sqlite.prepare('SELECT end_point FROM ab_loops').get().end_point,
+			180.4,
+		)
+		assert.equal(c.getPersisted().end, 180.4)
+		assert.equal(c.getActive().end, 180.4)
+	} finally {
+		sqlite.close()
+	}
+})
+test('session closed before acceptance ignores a delayed save', async () => {
+	const c = await editedCoordinator(),
+		gate = deferred()
+	c.delayNextTrack(gate)
+	const committing = c.mod.saveAbLoop('first', 30, 40, c.token)
+	await c.mod.endAbLoopEdit(c.token)
+	gate.resolve({ id: 'first' })
+	assert.equal((await committing).status, 'ignored')
+	assert.equal(c.dbSaved.get('first').startPoint, 10)
+})
+test('late old-track read cannot clear a new loop or its cache', async () => {
+	const c = coordinator(),
+		oldRead = deferred()
+	c.delayRead('first', oldRead)
 	const old = c.mod.applyAbLoopForTrack('first')
 	await tick()
 	c.setCurrent('second')
+	c.dbSaved.set('second', { startPoint: 10, endPoint: 20 })
 	const current = c.mod.applyAbLoopForTrack('second')
-	await tick()
-	c.pending.get('second').resolve(ok({ startPoint: 10, endPoint: 20 }))
-	await current
-	c.pending.get('first').resolve(ok(null))
-	await old
+	oldRead.resolve(ok(null))
+	await Promise.all([old, current])
 	assert.equal(c.getActive().trackId, 'second')
 	assert.equal(c.cache.at(-1).trackId, 'second')
 	assert.equal(c.calls.filter(([kind]) => kind === 'clear').length, 0)
-	assert.ok(c.calls.some(([kind]) => kind === 'cancel'))
 })
 test('a pending restore cannot overwrite a manual edit', async () => {
-	const c = coordinator()
+	const c = coordinator(),
+		read = deferred()
+	c.delayRead('first', read)
 	const restore = c.mod.applyAbLoopForTrack('first')
 	await tick()
-	assert.equal(await c.mod.saveAbLoop('first', 30, 40), true)
-	c.pending.get('first').resolve(ok({ startPoint: 1, endPoint: 2 }))
+	const saving = c.mod.saveAbLoop('first', 30, 40)
+	read.resolve(ok({ startPoint: 1, endPoint: 2 }))
 	await restore
+	assert.equal((await saving).status, 'committed')
 	assert.equal(c.getActive().start, 30)
 })
 test('a delayed current-track response cannot supersede a newer save', async () => {
@@ -202,16 +496,17 @@ test('a delayed current-track response cannot supersede a newer save', async () 
 	await c.mod.saveAbLoop('first', 30, 40)
 	track.resolve({ id: 'first' })
 	await restore
-	assert.equal(c.pending.size, 0)
 	assert.equal(c.getActive().start, 30)
 })
 test('an old-track clear cannot invalidate a pending current-track restore', async () => {
-	const c = coordinator()
+	const c = coordinator(),
+		read = deferred()
 	c.setCurrent('second')
+	c.delayRead('second', read)
 	const restore = c.mod.applyAbLoopForTrack('second')
 	await tick()
-	assert.equal(await c.mod.clearAbLoop('first'), false)
-	c.pending.get('second').resolve(ok({ startPoint: 10, endPoint: 20 }))
+	assert.equal((await c.mod.clearAbLoop('first')).status, 'ignored')
+	read.resolve(ok({ startPoint: 10, endPoint: 20 }))
 	await restore
 	assert.equal(c.getActive().trackId, 'second')
 })
@@ -219,7 +514,7 @@ test('clear for an old track does not clear the current track', async () => {
 	const c = coordinator()
 	c.setCurrent('second')
 	await c.mod.saveAbLoop('second', 10, 20)
-	assert.equal(await c.mod.clearAbLoop('first'), false)
+	assert.equal((await c.mod.clearAbLoop('first')).status, 'ignored')
 	assert.equal(c.getActive().trackId, 'second')
 })
 
@@ -598,6 +893,48 @@ test('failed save keeps the window and draft; repeated save submits once', async
 	assert.equal(successful.c.drafts.getState().draft, null)
 	successful.unmount()
 })
+for (const operation of ['save', 'clear']) {
+	for (const interruption of ['background', 'unmount', 'new-track']) {
+		test(`modal ${operation} continues after ${interruption} without closing a newer editor`, async () => {
+			const m = modal({ saved: { start: 60, end: 90 } }),
+				gate = deferred()
+			await m.flush()
+			m.c.delayMutation(gate)
+			m.find(`ab-loop-${operation}`).props.onPress()
+			await tick()
+			if (interruption === 'background') m.background()
+			else if (interruption === 'unmount') m.unmount()
+			else m.switchTrack('second')
+			await m.flush()
+			gate.resolve()
+			await m.flush()
+			assert.equal(
+				m.c.calls.filter(([kind]) => kind === `db-${operation}`).length,
+				1,
+			)
+			assert.equal(m.c.dbSaved.has('first'), operation === 'save')
+			assert.equal(m.closes.length, 0)
+			assert.equal(m.toasts.length, 0)
+			if (interruption === 'new-track')
+				assert.equal(m.c.drafts.getState().draft.trackId, 'second')
+			m.unmount()
+		})
+	}
+}
+test('modal displays recovery failure and retains the draft', async () => {
+	const m = modal({ saved: { start: 60, end: 90 } })
+	await m.flush()
+	m.c.faultNative('throw', 'reject')
+	m.find('ab-loop-save').props.onPress()
+	await m.flush()
+	assert.equal(
+		m.find('ab-loop-error').props.children,
+		'未保存，播放状态恢复失败',
+	)
+	assert.equal(m.closes.length, 0)
+	assert.ok(m.c.drafts.getState().draft)
+	m.unmount()
+})
 test('unknown duration disables controls and a late duration initializes the draft', async () => {
 	const m = modal({ duration: 0 })
 	await m.flush()
@@ -673,7 +1010,10 @@ test('track changes reject stale preview, seek, save and cleanup', async () => {
 		false,
 	)
 	assert.equal(await c.mod.seekAbLoopEdit(old.token, 10), null)
-	assert.equal(await c.mod.saveAbLoop('first', 1, 2, old.token), false)
+	assert.equal(
+		(await c.mod.saveAbLoop('first', 1, 2, old.token)).status,
+		'ignored',
+	)
 	await c.mod.endAbLoopEdit(old.token)
 	assert.equal(c.getActive().trackId, 'second')
 })
@@ -820,7 +1160,7 @@ test('total duration sums actual sessions, including multiple AB rounds', async 
 	assert.equal((await service.getTotalPlaybackDuration()).value, 0)
 	sqlite.close()
 })
-test('saved ranges reject negative, nonfinite and beyond-duration points', async () => {
+test('integer metadata permits one second of tolerance and rejects invalid ranges', async () => {
 	const { sqlite, service } = databaseService()
 	sqlite.exec(
 		"INSERT INTO tracks (id, unique_key, title, duration, source) VALUES (1, 'track', 'test', 180, 'local')",
@@ -828,8 +1168,11 @@ test('saved ranges reject negative, nonfinite and beyond-duration points', async
 	for (const [start, end] of [
 		[-1, 20],
 		[10, NaN],
-		[60, 181],
+		[Infinity, 20],
+		[10, Infinity],
+		[60, 181.001],
 		[90, 60],
+		[60, 60],
 	]) {
 		assert.equal(
 			(await service.setAbLoopByUniqueKey('track', start, end)).isErr(),
@@ -844,6 +1187,16 @@ test('saved ranges reject negative, nonfinite and beyond-duration points', async
 		sqlite.prepare('SELECT start_point FROM ab_loops').get().start_point,
 		60.5,
 	)
+	for (const end of [180, 180.4, 181]) {
+		assert.equal(
+			(await service.setAbLoopByUniqueKey('track', 60, end)).isOk(),
+			true,
+		)
+		assert.equal(
+			sqlite.prepare('SELECT end_point FROM ab_loops').get().end_point,
+			end,
+		)
+	}
 	sqlite.close()
 })
 

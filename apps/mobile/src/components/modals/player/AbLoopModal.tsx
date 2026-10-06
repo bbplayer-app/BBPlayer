@@ -17,6 +17,7 @@ import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useAbLoopDraftStore } from '@/hooks/stores/useAbLoopDraftStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import {
+	AbLoopRecoveryError,
 	beginAbLoopEdit,
 	clearAbLoop,
 	endAbLoopEdit,
@@ -202,7 +203,11 @@ function AbLoopEditor() {
 			await operation(token)
 		} catch (e) {
 			if (mounted.current && session.current === token) {
-				setError('操作失败，设置已保留，请重试')
+				setError(
+					e instanceof AbLoopRecoveryError
+						? e.message
+						: '操作失败，草稿已保留，请重试',
+				)
 				toastAndLogError('区间循环操作失败', e, 'Modal.AbLoop')
 			}
 		} finally {
@@ -251,10 +256,14 @@ function AbLoopEditor() {
 			const pos = await Orpheus.getPosition()
 			if (pos < next.start || pos >= next.end)
 				await seekAbLoopEdit(token, next.start)
-			if (!(await saveAbLoop(trackId, next.start, next.end, token)))
-				throw new Error('循环未保存')
+			const result = await saveAbLoop(trackId, next.start, next.end, token)
+			if (result.status === 'ignored') throw new Error('循环未保存')
 			if (!mounted.current || session.current !== token) return
-			toast.success('区间循环已保存并开启')
+			toast.success(
+				result.playback === 'applied'
+					? '区间循环已保存并开启'
+					: '区间循环已保存，下次播放生效',
+			)
 			close('AbLoop')
 		})
 	const togglePreview = (value: boolean) =>
@@ -524,10 +533,15 @@ function AbLoopEditor() {
 					testID='ab-loop-clear'
 					onPress={() =>
 						void run(async (token) => {
-							if (!trackId || !(await clearAbLoop(trackId, token)))
-								throw new Error('循环未清除')
+							if (!trackId) return
+							const result = await clearAbLoop(trackId, token)
+							if (result.status === 'ignored') throw new Error('循环未清除')
 							if (mounted.current && session.current === token) {
-								toast.success('已清除区间循环')
+								toast.success(
+									result.playback === 'applied'
+										? '已清除区间循环'
+										: '已清除区间循环，下次播放生效',
+								)
 								close('AbLoop')
 							}
 						})

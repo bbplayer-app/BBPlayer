@@ -412,7 +412,8 @@ export class TrackService {
 				if (
 					metadata?.duration != null &&
 					metadata.duration > 0 &&
-					endPoint > metadata.duration
+					// 元数据为整数秒；实际音频曲尾可能多出不足一秒。
+					endPoint > metadata.duration + 1
 				) {
 					throw createValidationError('AB 循环的 B 点不能超过曲目时长')
 				}
