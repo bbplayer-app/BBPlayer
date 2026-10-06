@@ -81,6 +81,7 @@
 		"mitt": "^3.0.1",
 		"neverthrow": "^8.2.0",
 		"node-forge": "1.4.0",
+		"number-flow-react-native": "^0.5.1",
 		"react": "19.2.3",
 		"react-native": "0.86.3",
 		"react-native-animateable-text": "^0.19.3",
