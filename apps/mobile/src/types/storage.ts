@@ -34,6 +34,9 @@ export interface AppStorageSchema {
 	webdav_backup_url: string
 	webdav_backup_username: string
 	webdav_backup_directory: string
+	playlistout_kugou_token: string
+	playlistout_kugou_userid: string
+	playlistout_import_mode: 'smart' | 'legacy'
 }
 
 export type StorageKey = keyof AppStorageSchema

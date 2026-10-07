@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 
+import type { ExternalPlaylistSource } from '@/lib/services/externalPlaylistService'
 import { externalPlaylistService } from '@/lib/services/externalPlaylistService'
 
 export const useExternalPlaylist = (
 	playlistId: string,
-	source: 'netease' | 'qq',
+	source: ExternalPlaylistSource,
 ) => {
 	return useQuery({
 		queryKey: ['external-playlist', source, playlistId],

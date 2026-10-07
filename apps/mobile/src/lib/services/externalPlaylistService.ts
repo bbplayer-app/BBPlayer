@@ -4,6 +4,7 @@ import { ResultAsync, errAsync } from 'neverthrow'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi } from '@/lib/api/qqmusic/api'
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { GenericPlaylist, GenericTrack } from '@/types/external_playlist'
 import log from '@/utils/log'
@@ -50,12 +51,22 @@ export interface MatchResult {
 	matchedVideo: BilibiliSearchVideo | null
 }
 
+export type ExternalPlaylistSource =
+	| 'netease'
+	| 'qq'
+	| 'playlistout'
+	| 'local_json'
+
 export class ExternalPlaylistService {
 	public fetchExternalPlaylist(
 		playlistId: string,
-		source: 'netease' | 'qq',
+		source: ExternalPlaylistSource,
 	): ResultAsync<{ playlist: GenericPlaylist; tracks: GenericTrack[] }, Error> {
-		if (source === 'netease') {
+		if (source === 'playlistout') {
+			return playlistOutService.resolvePlaylist(playlistId)
+		} else if (source === 'local_json') {
+			return playlistOutService.getCachedPlaylist(playlistId)
+		} else if (source === 'netease') {
 			return neteaseApi.getPlaylist(playlistId).map((response) => {
 				if (!response.playlist) {
 					return {
@@ -83,17 +94,42 @@ export class ExternalPlaylistService {
 					translatedTitle: track.tns?.[0],
 				}))
 
+				const createDate =
+					response.playlist.createTime > 0
+						? new Date(
+								response.playlist.createTime > 1e11
+									? response.playlist.createTime
+									: response.playlist.createTime * 1000,
+							)
+						: null
+				const createTime =
+					createDate && !isNaN(createDate.getTime())
+						? `${createDate.getFullYear()}-${String(createDate.getMonth() + 1).padStart(2, '0')}-${String(createDate.getDate()).padStart(2, '0')}`
+						: undefined
+
 				return {
 					playlist: {
 						id: response.playlist.id.toString(),
-						title: response.playlist.name,
+						title: decode(response.playlist.name),
 						coverUrl: response.playlist.coverImgUrl,
-						description: response.playlist.description ?? '',
+						description: decode(
+							(response.playlist.description ?? '').replace(
+								/<br\s*\/?>/gi,
+								'\n',
+							),
+						).trim(),
 						trackCount: response.playlist.trackCount,
 						author: {
 							name: response.playlist.creator?.nickname ?? 'Unknown',
 							id: response.playlist.creator?.userId ?? 0,
 						},
+						createTime,
+						tags:
+							Array.isArray(response.playlist.tags) &&
+							response.playlist.tags.length > 0
+								? response.playlist.tags
+								: undefined,
+						platform: 'netease',
 					},
 					tracks,
 				}
@@ -115,24 +151,46 @@ export class ExternalPlaylistService {
 					}
 
 				const tracks = playlist.songlist.map((track) => ({
-					title: track.name,
-					artists: track.singer.map((s) => s.name),
-					album: track.album.name,
+					title: decode(track.name),
+					artists: track.singer.map((s) => decode(s.name)),
+					album: decode(track.album.name),
 					duration: track.interval * 1000,
 					coverUrl: `https://y.gtimg.cn/music/photo_new/T002R300x300M000${track.album.mid}.jpg`,
-					translatedTitle: track.subtitle,
+					translatedTitle: track.subtitle ? decode(track.subtitle) : undefined,
 				}))
+
+				const createDate =
+					typeof playlist.ctime === 'number' && playlist.ctime > 0
+						? new Date(
+								playlist.ctime > 1e11 ? playlist.ctime : playlist.ctime * 1000,
+							)
+						: null
+				const createTime =
+					createDate && !isNaN(createDate.getTime())
+						? `${createDate.getFullYear()}-${String(createDate.getMonth() + 1).padStart(2, '0')}-${String(createDate.getDate()).padStart(2, '0')}`
+						: undefined
+
+				const tags = Array.isArray(playlist.tags)
+					? playlist.tags
+							.map((t) => (t?.name ? decode(t.name).trim() : ''))
+							.filter(Boolean)
+					: []
 
 				return {
 					playlist: {
 						id: playlistId,
-						title: playlist.dissname,
+						title: decode(playlist.dissname).trim(),
 						coverUrl: playlist.logo,
-						description: playlist.desc || '',
+						description: decode(
+							(playlist.desc || '').replace(/<br\s*\/?>/gi, '\n'),
+						).trim(),
 						trackCount: playlist.songnum,
 						author: {
-							name: playlist.nickname,
+							name: decode(playlist.nickname).trim(),
 						},
+						createTime,
+						tags: tags.length > 0 ? tags : undefined,
+						platform: 'qqmusic',
 					},
 					tracks,
 				}

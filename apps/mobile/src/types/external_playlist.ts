@@ -17,4 +17,9 @@ export interface GenericPlaylist {
 		name: string
 		id?: string | number
 	}
+	createTime?: string
+	updateTime?: string
+	tags?: string[]
+	playCount?: number
+	platform?: string
 }

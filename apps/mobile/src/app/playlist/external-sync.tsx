@@ -178,7 +178,7 @@ const ExternalPlaylistSyncPageInner = () => {
 	const isListReady = useScreenTransitionReady()
 	const { id, source } = useLocalSearchParams<{
 		id: string
-		source: 'netease' | 'qq'
+		source: import('@/lib/services/externalPlaylistService').ExternalPlaylistSource
 	}>()
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
@@ -485,10 +485,24 @@ const ExternalPlaylistSyncPageInner = () => {
 					<PlaylistHeader
 						id={data.playlist.id}
 						title={data.playlist.title}
-						description={data.playlist.description ?? ''}
+						description={[
+							data.playlist.tags && data.playlist.tags.length > 0
+								? `标签：${data.playlist.tags.map((t) => `#${t}`).join('  ')}`
+								: '',
+							data.playlist.description?.trim()
+								? `简介：${data.playlist.description.trim()}`
+								: '简介：暂无简介',
+						]
+							.filter(Boolean)
+							.join('\n')}
 						cover={data.playlist.coverUrl ?? ''}
 						subtitles={[
-							data.playlist.author.name,
+							`创建者：${data.playlist.author.name}`,
+							...(data.playlist.createTime
+								? [`创建于：${data.playlist.createTime}`]
+								: data.playlist.updateTime
+									? [`更新于：${data.playlist.updateTime}`]
+									: []),
 							`${data.playlist.trackCount} 首歌曲`,
 						]}
 						mainButtonIcon='check'
