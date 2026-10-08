@@ -1,4 +1,6 @@
 import * as Application from 'expo-application'
+import { File, Paths } from 'expo-file-system'
+import * as Sharing from 'expo-sharing'
 import { decode } from 'he'
 import { err, errAsync, ok, okAsync, Result, ResultAsync } from 'neverthrow'
 import { Platform } from 'react-native'
@@ -8,8 +10,17 @@ import {
 	parseKugouCredentialsInput,
 	playlistOutStorage,
 } from '@/lib/storage/playlistOutStorage'
-import type { GenericPlaylist, GenericTrack } from '@/types/external_playlist'
+import type { Playlist, Track } from '@/types/core/media'
+import type {
+	BilibiliPlaylistExtension,
+	BilibiliTrackExtension,
+	CanonicalExportPlaylist,
+	CanonicalExportTrack,
+	GenericPlaylist,
+	GenericTrack,
+} from '@/types/external_playlist'
 import log from '@/utils/log'
+import { formatDurationToText } from '@/utils/time'
 import toast from '@/utils/toast'
 
 const logger = log.extend('Services.PlaylistOut')
@@ -27,6 +38,21 @@ export interface PlaylistOutClientEnv {
 function decodeHtmlText(raw: string): string {
 	if (!raw) return ''
 	return decode(raw.replace(/<br\s*\/?>/gi, '\n')).trim()
+}
+
+function formatDateTimeString(
+	raw: Date | number | string | null | undefined,
+): string | undefined {
+	if (raw === undefined || raw === null || raw === '') return undefined
+	const d = raw instanceof Date ? raw : new Date(raw)
+	if (isNaN(d.getTime()) || d.getTime() <= 0) return undefined
+	const yyyy = d.getFullYear()
+	const mm = String(d.getMonth() + 1).padStart(2, '0')
+	const dd = String(d.getDate()).padStart(2, '0')
+	const hh = String(d.getHours()).padStart(2, '0')
+	const min = String(d.getMinutes()).padStart(2, '0')
+	const ss = String(d.getSeconds()).padStart(2, '0')
+	return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
 }
 
 function formatPlaylistDate(raw: unknown): string | undefined {
@@ -89,6 +115,20 @@ function extractTags(rawTags: unknown): string[] | undefined {
 		})
 		.filter(Boolean)
 	return tags.length > 0 ? tags : undefined
+}
+
+function normalizeBilibiliPlaylistType(
+	raw: unknown,
+): BilibiliPlaylistExtension['playlistType'] {
+	if (typeof raw !== 'string') return undefined
+	const lower = raw.trim().toLowerCase().replace(/_/g, '')
+	if (lower === 'local') return 'local'
+	if (lower === 'favorite') return 'favorite'
+	if (lower === 'collection') return 'collection'
+	if (lower === 'series') return 'series'
+	if (lower === 'multipage') return 'multiPage'
+	if (lower === 'dynamic') return 'dynamic'
+	return undefined
 }
 
 // In-memory cache for locally loaded JSON playlists
@@ -165,6 +205,18 @@ export class PlaylistOutService {
 		return null
 	}
 
+	private pendingIncomingFileUri: string | null = null
+
+	public setPendingIncomingFileUri(uri: string): void {
+		this.pendingIncomingFileUri = uri
+	}
+
+	public consumePendingIncomingFileUri(): string | null {
+		const uri = this.pendingIncomingFileUri
+		this.pendingIncomingFileUri = null
+		return uri
+	}
+
 	/**
 	 * Cache a locally parsed playlist for subsequent sync retrieval
 	 */
@@ -189,7 +241,25 @@ export class PlaylistOutService {
 	}
 
 	/**
-	 * Parse JSON playlist string (exported from Playlist Out or raw tracks list)
+	 * Check whether parsed playlist is already a Bilibili playlist with BV metadata
+	 * so it can be directly imported without re-matching.
+	 */
+	public isDirectBilibiliPlaylist(data: {
+		playlist: GenericPlaylist
+		tracks: GenericTrack[]
+	}): boolean {
+		if (!data.tracks || data.tracks.length === 0) return false
+		const hasBiliTracks = data.tracks.some((t) => Boolean(t.bilibili?.bvid))
+		if (!hasBiliTracks) return false
+		const isPlatformBilibili =
+			data.playlist.platform?.trim().toLowerCase() === 'bilibili' ||
+			Boolean(data.playlist.bilibili) ||
+			data.tracks.every((t) => Boolean(t.bilibili?.bvid))
+		return isPlatformBilibili
+	}
+
+	/**
+	 * Parse JSON playlist string (exported from PlaylistOut or raw tracks list)
 	 */
 	public parseJsonPlaylist(
 		jsonStr: string,
@@ -313,10 +383,45 @@ export class PlaylistOutService {
 				typeof playlistMeta.playCount === 'number' && playlistMeta.playCount > 0
 					? playlistMeta.playCount
 					: undefined
-			const platform =
-				typeof playlistMeta.platform === 'string' && playlistMeta.platform
-					? playlistMeta.platform
+
+			let bilibiliExt: BilibiliPlaylistExtension | undefined
+			if (
+				playlistMeta.bilibili &&
+				typeof playlistMeta.bilibili === 'object' &&
+				!Array.isArray(playlistMeta.bilibili)
+			) {
+				const rawBili = playlistMeta.bilibili as Record<string, unknown>
+				const playlistType = normalizeBilibiliPlaylistType(rawBili.playlistType)
+				const remoteSyncId =
+					typeof rawBili.remoteSyncId === 'number' &&
+					Number.isFinite(rawBili.remoteSyncId)
+						? rawBili.remoteSyncId
+						: undefined
+				const creatorMid =
+					typeof rawBili.creatorMid === 'string' && rawBili.creatorMid.trim()
+						? rawBili.creatorMid.trim()
+						: typeof rawBili.creatorMid === 'number'
+							? String(rawBili.creatorMid)
+							: undefined
+				if (playlistType || remoteSyncId !== undefined || creatorMid) {
+					bilibiliExt = {
+						...(playlistType ? { playlistType } : {}),
+						...(remoteSyncId !== undefined ? { remoteSyncId } : {}),
+						...(creatorMid ? { creatorMid } : {}),
+					}
+				}
+			}
+
+			const rawPlatform =
+				typeof playlistMeta.platform === 'string' &&
+				playlistMeta.platform.trim()
+					? playlistMeta.platform.trim().toLowerCase()
 					: undefined
+			const platform =
+				rawPlatform ??
+				(bilibiliExt || tracks.every((t) => Boolean(t.bilibili?.bvid))
+					? 'bilibili'
+					: undefined)
 
 			return ok({
 				playlist: {
@@ -327,13 +432,14 @@ export class PlaylistOutService {
 					trackCount: tracks.length,
 					author: {
 						name: authorName,
-						id: 0,
+						id: bilibiliExt?.creatorMid ?? 0,
 					},
 					createTime,
 					updateTime,
 					tags,
 					playCount,
 					platform,
+					...(bilibiliExt ? { bilibili: bilibiliExt } : {}),
 				},
 				tracks,
 			})
@@ -723,6 +829,101 @@ export class PlaylistOutService {
 						? decodeHtmlText(t.translatedTitle)
 						: undefined
 
+				const isAvailable =
+					typeof t.isAvailable === 'boolean'
+						? t.isAvailable
+						: !(
+								typeof t.status === 'string' &&
+								t.status.toLowerCase() === 'unplayable'
+							)
+
+				let bilibili: BilibiliTrackExtension | undefined
+				const rawBili =
+					t.bilibili &&
+					typeof t.bilibili === 'object' &&
+					!Array.isArray(t.bilibili)
+						? (t.bilibili as Record<string, unknown>)
+						: undefined
+
+				let bvid =
+					typeof rawBili?.bvid === 'string' && rawBili.bvid.trim()
+						? rawBili.bvid.trim()
+						: typeof t.bvid === 'string' && t.bvid.trim()
+							? t.bvid.trim()
+							: ''
+
+				let cid: number | undefined =
+					typeof rawBili?.cid === 'number' &&
+					Number.isFinite(rawBili.cid) &&
+					rawBili.cid > 0
+						? rawBili.cid
+						: typeof t.cid === 'number' && Number.isFinite(t.cid) && t.cid > 0
+							? t.cid
+							: undefined
+
+				// Tolerant fallback: extract bvid (and optional _cid) from track id or sourceUrl
+				if (!bvid && typeof t.id === 'string') {
+					const idMatch = t.id.trim().match(/^(BV[0-9A-Za-z]{10})(?:_(\d+))?$/i)
+					if (idMatch) {
+						bvid = idMatch[1]
+						if (!cid && idMatch[2]) {
+							const parsedCid = Number(idMatch[2])
+							if (Number.isFinite(parsedCid) && parsedCid > 0) {
+								cid = parsedCid
+							}
+						}
+					}
+				}
+				if (!bvid && typeof t.sourceUrl === 'string') {
+					const urlMatch = t.sourceUrl.match(
+						/bilibili\.com\/video\/(BV[0-9A-Za-z]{10})/i,
+					)
+					if (urlMatch) {
+						bvid = urlMatch[1]
+					}
+				}
+
+				if (bvid) {
+					const isMultiPage =
+						typeof rawBili?.isMultiPage === 'boolean'
+							? rawBili.isMultiPage
+							: Boolean(cid)
+					const mainTrackTitle =
+						typeof rawBili?.mainTrackTitle === 'string' &&
+						rawBili.mainTrackTitle.trim()
+							? decodeHtmlText(rawBili.mainTrackTitle)
+							: isMultiPage && album
+								? album
+								: undefined
+					const upMid =
+						typeof rawBili?.upMid === 'string' && rawBili.upMid.trim()
+							? rawBili.upMid.trim()
+							: typeof rawBili?.upMid === 'number' &&
+								  Number.isFinite(rawBili.upMid)
+								? String(rawBili.upMid)
+								: undefined
+					const upAvatarUrl =
+						typeof rawBili?.upAvatarUrl === 'string' &&
+						rawBili.upAvatarUrl.trim()
+							? rawBili.upAvatarUrl.trim()
+							: undefined
+					const upSignature =
+						typeof rawBili?.upSignature === 'string' &&
+						rawBili.upSignature.trim()
+							? rawBili.upSignature.trim()
+							: undefined
+
+					bilibili = {
+						bvid,
+						...(cid !== undefined ? { cid } : {}),
+						isMultiPage,
+						...(mainTrackTitle ? { mainTrackTitle } : {}),
+						...(upMid ? { upMid } : {}),
+						...(upAvatarUrl ? { upAvatarUrl } : {}),
+						...(upSignature ? { upSignature } : {}),
+					}
+				}
+
 				return {
 					title,
 					artists,
@@ -730,9 +931,208 @@ export class PlaylistOutService {
 					duration,
 					coverUrl,
 					translatedTitle,
+					isAvailable,
+					...(bilibili ? { bilibili } : {}),
 				}
 			})
 			.filter((t): t is GenericTrack => t !== null)
+	}
+
+	/**
+	 * Build Canonical PlaylistOut JSON object from a BBPlayer playlist and its tracks
+	 */
+	public buildBilibiliPlaylistJson(
+		playlist: Playlist,
+		tracks: Track[],
+	): Result<CanonicalExportPlaylist, Error> {
+		if (!tracks || tracks.length === 0) {
+			return err(new Error('该歌单内没有任何曲目，无法导出'))
+		}
+
+		let totalDurationMs = 0
+		const exportedTracks: CanonicalExportTrack[] = tracks.map((track, idx) => {
+			const durationMs = Math.max(0, Math.round((track.duration ?? 0) * 1000))
+			totalDurationMs += durationMs
+
+			const artistName = track.artist?.name?.trim() || '未知UP主'
+			const rawCover = track.coverUrl?.trim()
+			const validCoverUrl =
+				rawCover && /^https?:\/\//i.test(rawCover) ? rawCover : undefined
+
+			if (track.source === 'bilibili') {
+				const biliMeta = track.bilibiliMetadata
+				const bvid = biliMeta.bvid
+				const cid =
+					typeof biliMeta.cid === 'number' && biliMeta.cid > 0
+						? biliMeta.cid
+						: undefined
+				const isMultiPage = biliMeta.isMultiPage
+				const mainTrackTitle = biliMeta.mainTrackTitle?.trim() || undefined
+				const isAvailable = biliMeta.videoIsValid
+				const status = isAvailable ? 'playable' : 'unplayable'
+				const statusText = isAvailable ? '正常' : '视频已失效'
+
+				const upMid = track.artist?.remoteId?.trim() || undefined
+				const rawAvatar = track.artist?.avatarUrl?.trim()
+				const upAvatarUrl =
+					rawAvatar && /^https?:\/\//i.test(rawAvatar) ? rawAvatar : undefined
+				const upSignature = track.artist?.signature?.trim() || undefined
+
+				const bilibiliExt: BilibiliTrackExtension = {
+					bvid,
+					...(cid !== undefined ? { cid } : {}),
+					isMultiPage,
+					...(isMultiPage && mainTrackTitle ? { mainTrackTitle } : {}),
+					...(upMid ? { upMid } : {}),
+					...(upAvatarUrl ? { upAvatarUrl } : {}),
+					...(upSignature ? { upSignature } : {}),
+				}
+
+				const canonicalTrack: CanonicalExportTrack = {
+					index: idx + 1,
+					title: track.title,
+					artist: artistName,
+					...(isMultiPage && mainTrackTitle ? { album: mainTrackTitle } : {}),
+					id: isMultiPage && cid ? `${bvid}_${cid}` : bvid,
+					...(durationMs > 0 ? { durationMs } : {}),
+					sourceUrl: `https://www.bilibili.com/video/${bvid}`,
+					...(validCoverUrl ? { coverUrl: validCoverUrl } : {}),
+					isAvailable,
+					status,
+					statusText,
+					bilibili: bilibiliExt,
+				}
+				return canonicalTrack
+			}
+
+			// Fallback for local audio tracks inside the playlist
+			const canonicalLocalTrack: CanonicalExportTrack = {
+				index: idx + 1,
+				title: track.title,
+				artist: artistName,
+				id: String(track.id),
+				...(durationMs > 0 ? { durationMs } : {}),
+				...(validCoverUrl ? { coverUrl: validCoverUrl } : {}),
+				isAvailable: true,
+				status: 'playable',
+				statusText: '正常',
+			}
+			return canonicalLocalTrack
+		})
+
+		const exportedAt =
+			formatDateTimeString(new Date()) ?? new Date().toISOString()
+		const createTime = formatDateTimeString(playlist.createdAt)
+		const updateTime = formatDateTimeString(playlist.updatedAt)
+		const totalDurationSec = Math.round(totalDurationMs / 1000)
+		const totalDurationText = formatDurationToText(totalDurationSec)
+
+		const creator = playlist.author?.name?.trim() || undefined
+		const creatorMid = playlist.author?.remoteId?.trim() || undefined
+		const rawPlaylistCover = playlist.coverUrl?.trim()
+		const validPlaylistCover =
+			rawPlaylistCover && /^https?:\/\//i.test(rawPlaylistCover)
+				? rawPlaylistCover
+				: exportedTracks[0]?.coverUrl
+
+		const description = playlist.description?.trim() || undefined
+		const playlistType: BilibiliPlaylistExtension['playlistType'] =
+			playlist.type === 'multi_page' ? 'multiPage' : playlist.type
+		const remoteSyncId =
+			typeof playlist.remoteSyncId === 'number' && playlist.remoteSyncId > 0
+				? playlist.remoteSyncId
+				: undefined
+
+		let sourceUrl: string | undefined
+		if (remoteSyncId !== undefined) {
+			if (playlist.type === 'favorite') {
+				sourceUrl = creatorMid
+					? `https://space.bilibili.com/${creatorMid}/favlist?fid=${remoteSyncId}`
+					: `https://www.bilibili.com/medialist/detail/ml${remoteSyncId}`
+			} else if (playlist.type === 'collection' && creatorMid) {
+				sourceUrl = `https://space.bilibili.com/${creatorMid}/lists/${remoteSyncId}?type=season`
+			} else if (playlist.type === 'series' && creatorMid) {
+				sourceUrl = `https://space.bilibili.com/${creatorMid}/lists/${remoteSyncId}?type=series`
+			}
+		}
+
+		const bilibiliPlaylistExt: BilibiliPlaylistExtension = {
+			playlistType,
+			...(remoteSyncId !== undefined ? { remoteSyncId } : {}),
+			...(creatorMid ? { creatorMid } : {}),
+		}
+
+		const exportPayload: CanonicalExportPlaylist = {
+			generator: 'PlaylistOut',
+			generatorUrl: 'https://playlistout.lengxiqwq.com',
+			exportedFrom: 'BBPlayer',
+			exportedAt,
+			name: playlist.title,
+			...(creator ? { creator } : {}),
+			...(validPlaylistCover ? { coverUrl: validPlaylistCover } : {}),
+			platform: 'bilibili',
+			id: String(remoteSyncId ?? playlist.id),
+			...(sourceUrl ? { sourceUrl } : {}),
+			trackCount: exportedTracks.length,
+			loadedTrackCount: exportedTracks.length,
+			isPartial: false,
+			...(createTime ? { createTime } : {}),
+			...(updateTime ? { updateTime } : {}),
+			totalDuration: totalDurationText,
+			totalDurationMs,
+			loadedDuration: totalDurationText,
+			loadedDurationMs: totalDurationMs,
+			...(description ? { description } : {}),
+			bilibili: bilibiliPlaylistExt,
+			tracks: exportedTracks,
+		}
+
+		return ok(exportPayload)
+	}
+
+	/**
+	 * Export a BBPlayer playlist into a Canonical JSON file and invoke the native share sheet
+	 */
+	public async exportPlaylistToJsonFile(
+		playlist: Playlist,
+		tracks: Track[],
+	): Promise<Result<string, Error>> {
+		const buildRes = this.buildBilibiliPlaylistJson(playlist, tracks)
+		if (buildRes.isErr()) {
+			return err(buildRes.error)
+		}
+
+		try {
+			const jsonString = JSON.stringify(buildRes.value, null, 2)
+			const safeTitle =
+				playlist.title
+					.replace(/[\\/:*?"<>|\r\n]+/g, '_')
+					.trim()
+					.slice(0, 60) || 'bilibili_playlist'
+			const fileName = `${safeTitle}.json`
+			const file = new File(Paths.cache, fileName)
+			file.write(jsonString)
+
+			const canShare = await Sharing.isAvailableAsync()
+			if (!canShare) {
+				return err(new Error('当前设备不支持系统文件分享'))
+			}
+
+			await Sharing.shareAsync(file.uri, {
+				mimeType: 'application/json',
+				dialogTitle: `导出歌单：${playlist.title}`,
+				UTI: 'public.json',
+			})
+
+			return ok(file.uri)
+		} catch (e) {
+			logger.error('Export playlist to JSON failed', e)
+			return err(
+				new Error(
+					`导出 JSON 文件失败: ${e instanceof Error ? e.message : String(e)}`,
+				),
+			)
+		}
 	}
 
 	/**

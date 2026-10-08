@@ -1,5 +1,6 @@
 import { createURL } from 'expo-linking'
 
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import log from '@/utils/log'
 import { getStartupScreen } from '@/utils/startup-screen'
 
@@ -28,6 +29,10 @@ export function redirectSystemPath({
 			// ignore
 		}
 		if (url) {
+			if (url.protocol === 'content:' || url.protocol === 'file:') {
+				playlistOutService.setPendingIncomingFileUri(path)
+				return '/(tabs)'
+			}
 			if (initial) {
 				// 与 Expo Router 的默认启动 URL 使用同一来源，兼容开发包的 hostUri。
 				const rootURL = new URL(createURL('/'))

@@ -7,9 +7,10 @@ import Color from 'color'
 import dayjs from 'dayjs'
 import { eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
+import { File } from 'expo-file-system'
 import { Image } from 'expo-image'
 import { useObserve } from 'expo-observe'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useIncomingShare } from 'expo-sharing'
 import {
 	useCallback,
@@ -19,6 +20,7 @@ import {
 	useState,
 } from 'react'
 import {
+	AppState,
 	Keyboard,
 	Platform,
 	ScrollView,
@@ -42,6 +44,7 @@ import SearchSuggestions, {
 } from '@/features/home/SearchSuggestions'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
 import useAppStore from '@/hooks/stores/useAppStore'
@@ -50,14 +53,18 @@ import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
+import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
+import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
 import { markPerfInteractive } from '@/lib/performance'
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
 	matchSearchStrategies,
 	navigateWithSearchStrategy,
 } from '@/utils/search'
+import toast from '@/utils/toast'
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
@@ -83,8 +90,12 @@ function HomePage() {
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
 	const [searchFocused, setSearchFocused] = useState(false)
-	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
-		useIncomingShare()
+	const {
+		resolvedSharedPayloads,
+		isResolving,
+		clearSharedPayloads,
+		refreshSharePayloads,
+	} = useIncomingShare()
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 	const enableMinimalistMode = useAppStore(
 		(state) => state.settings.enableMinimalistMode,
@@ -234,6 +245,97 @@ function HomePage() {
 		[searchHistory, setSearchHistory],
 	)
 
+	const handleIncomingJsonContent = useCallback(
+		async (content: string, fallbackTitle = '本地导入歌单') => {
+			const jsonRes = playlistOutService.parseJsonPlaylist(
+				content,
+				fallbackTitle,
+			)
+			if (jsonRes.isErr()) {
+				toast.error(`解析歌单文件失败: ${jsonRes.error.message}`)
+				return
+			}
+
+			const parsedData = jsonRes.value
+			if (playlistOutService.isDirectBilibiliPlaylist(parsedData)) {
+				const loadingToast = toast.loading('正在导入哔哩哔哩歌单...')
+				try {
+					const saveRes =
+						await syncExternalPlaylistFacade.saveDirectBilibiliPlaylist(
+							parsedData.playlist,
+							parsedData.tracks,
+						)
+					toast.dismiss(loadingToast)
+					if (saveRes.isErr()) {
+						toast.error(`直接导入失败: ${saveRes.error.message}`)
+						return
+					}
+					await queryClient.invalidateQueries({
+						queryKey: playlistKeys.playlistLists(),
+					})
+					toast.success('哔哩哔哩歌单已直接导入到本地')
+					router.navigate(`/playlist/local/${saveRes.value}`)
+				} catch (e) {
+					toast.dismiss(loadingToast)
+					toast.error(
+						`直接导入失败: ${e instanceof Error ? e.message : String(e)}`,
+					)
+				}
+				return
+			}
+
+			const cacheId = parsedData.playlist.id
+			playlistOutService.setCachedPlaylist(cacheId, parsedData)
+			router.navigate({
+				pathname: '/playlist/external-sync',
+				params: { id: cacheId, source: 'local_json' },
+			})
+		},
+		[router],
+	)
+
+	const handleIncomingFileUri = useCallback(
+		async (uri: string, originalName?: string | null) => {
+			try {
+				const file = new File(uri)
+				const content = await file.text()
+				const fallbackTitle = originalName
+					? originalName.replace(/\.json$/i, '')
+					: '本地导入歌单'
+				await handleIncomingJsonContent(content, fallbackTitle)
+			} catch (e) {
+				toast.error(
+					`读取歌单文件失败: ${e instanceof Error ? e.message : String(e)}`,
+				)
+			}
+		},
+		[handleIncomingJsonContent],
+	)
+
+	const checkPendingFile = useCallback(() => {
+		const pendingUri = playlistOutService.consumePendingIncomingFileUri()
+		if (pendingUri) {
+			void handleIncomingFileUri(pendingUri)
+		}
+	}, [handleIncomingFileUri])
+
+	useFocusEffect(
+		useCallback(() => {
+			checkPendingFile()
+			refreshSharePayloads()
+		}, [checkPendingFile, refreshSharePayloads]),
+	)
+
+	useEffect(() => {
+		checkPendingFile()
+		const sub = AppState.addEventListener('change', (state) => {
+			if (state === 'active') {
+				checkPendingFile()
+			}
+		})
+		return () => sub.remove()
+	}, [checkPendingFile])
+
 	useEffect(() => {
 		if (resolvedSharedPayloads.length === 0) return
 		if (resolvedSharedPayloads.length > 1) {
@@ -248,6 +350,13 @@ function HomePage() {
 			}
 		}
 		const data = resolvedSharedPayloads[0]
+		if ('contentUri' in data && data.contentUri) {
+			const fileUri = data.contentUri
+			const fileName = data.originalName
+			clearSharedPayloads()
+			void handleIncomingFileUri(fileUri, fileName)
+			return
+		}
 		let query: string | undefined
 		if (data.shareType === 'text') {
 			query = data.value
@@ -258,8 +367,19 @@ function HomePage() {
 		}
 
 		clearSharedPayloads()
+		const trimmed = query.trim()
+		if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+			void handleIncomingJsonContent(trimmed)
+			return
+		}
 		void handleEnter(query)
-	}, [resolvedSharedPayloads, clearSharedPayloads, handleEnter])
+	}, [
+		resolvedSharedPayloads,
+		clearSharedPayloads,
+		handleEnter,
+		handleIncomingFileUri,
+		handleIncomingJsonContent,
+	])
 
 	if (isResolving) {
 		return (

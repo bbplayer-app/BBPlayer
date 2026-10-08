@@ -1,4 +1,5 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
+import { useQueryClient } from '@tanstack/react-query'
 import * as Clipboard from 'expo-clipboard'
 import * as DocumentPicker from 'expo-document-picker'
 import { File } from 'expo-file-system'
@@ -15,13 +16,16 @@ import {
 
 import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
+import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
 import { playlistOutService } from '@/lib/services/playlistOutService'
 import {
 	parseKugouCredentialsInput,
 	playlistOutStorage,
 } from '@/lib/storage/playlistOutStorage'
 import { parseExternalPlaylistInfo } from '@/lib/utils/playlistUrlParser'
+import type { GenericPlaylist, GenericTrack } from '@/types/external_playlist'
 import toast from '@/utils/toast'
 
 const PLATFORMS = [
@@ -56,6 +60,7 @@ const PLAYLISTOUT_WEB_URL = 'https://playlistout.lengxiqwq.com'
 const InputExternalPlaylistInfoModal = () => {
 	const theme = useTheme()
 	const router = useRouter()
+	const queryClient = useQueryClient()
 	const close = useModalStore((state) => state.close)
 
 	// Mode state: 'smart' (default) vs 'legacy'
@@ -113,6 +118,46 @@ const InputExternalPlaylistInfoModal = () => {
 		}
 	}
 
+	const handleDirectBilibiliImport = async (data: {
+		playlist: GenericPlaylist
+		tracks: GenericTrack[]
+	}): Promise<boolean> => {
+		if (!playlistOutService.isDirectBilibiliPlaylist(data)) {
+			return false
+		}
+		const loadingToast = toast.loading('检测到哔哩哔哩歌单，正在直接导入...')
+		try {
+			const saveRes =
+				await syncExternalPlaylistFacade.saveDirectBilibiliPlaylist(
+					{
+						title: data.playlist.title,
+						coverUrl: data.playlist.coverUrl ?? '',
+						description: data.playlist.description ?? '',
+					},
+					data.tracks,
+				)
+			toast.dismiss(loadingToast)
+			if (saveRes.isErr()) {
+				toast.error(`直接导入失败: ${saveRes.error.message}`)
+				return true
+			}
+			await queryClient.invalidateQueries({
+				queryKey: playlistKeys.playlistLists(),
+			})
+			toast.success('哔哩哔哩歌单已直接导入到本地')
+			const playlistId = saveRes.value
+			close('InputExternalPlaylistInfo')
+			useModalStore.getState().doAfterModalHostClosed(() => {
+				router.navigate(`/playlist/local/${playlistId}`)
+			})
+			return true
+		} catch (e) {
+			toast.dismiss(loadingToast)
+			toast.error(`直接导入失败: ${e instanceof Error ? e.message : String(e)}`)
+			return true
+		}
+	}
+
 	const handleSmartResolve = async () => {
 		const trimmed = smartInput.trim()
 		if (!trimmed) {
@@ -121,16 +166,46 @@ const InputExternalPlaylistInfoModal = () => {
 		}
 
 		setIsResolving(true)
-		// If input is raw JSON text, parse it directly and cache
+		// If input is raw JSON text, parse it directly
 		if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
 			const jsonRes = playlistOutService.parseJsonPlaylist(trimmed)
-			setIsResolving(false)
 			if (jsonRes.isErr()) {
+				setIsResolving(false)
 				toast.error(jsonRes.error.message)
 				return
 			}
+			if (await handleDirectBilibiliImport(jsonRes.value)) {
+				setIsResolving(false)
+				return
+			}
+			setIsResolving(false)
 			const cacheId = jsonRes.value.playlist.id
 			playlistOutService.setCachedPlaylist(cacheId, jsonRes.value)
+			close('InputExternalPlaylistInfo')
+			useModalStore.getState().doAfterModalHostClosed(() => {
+				router.navigate({
+					pathname: '/playlist/external-sync',
+					params: { id: cacheId, source: 'local_json' },
+				})
+			})
+			return
+		}
+
+		// If input is an online .json URL, resolve it so Bilibili JSON can be imported directly
+		if (/^https?:\/\/[^\s]+\.json(?:\?[^\s]*)?$/i.test(trimmed)) {
+			const resolveRes = await playlistOutService.resolvePlaylist(trimmed)
+			if (resolveRes.isErr()) {
+				setIsResolving(false)
+				toast.error(resolveRes.error.message)
+				return
+			}
+			if (await handleDirectBilibiliImport(resolveRes.value)) {
+				setIsResolving(false)
+				return
+			}
+			setIsResolving(false)
+			const cacheId = resolveRes.value.playlist.id
+			playlistOutService.setCachedPlaylist(cacheId, resolveRes.value)
 			close('InputExternalPlaylistInfo')
 			useModalStore.getState().doAfterModalHostClosed(() => {
 				router.navigate({
@@ -170,6 +245,10 @@ const InputExternalPlaylistInfoModal = () => {
 
 			if (jsonRes.isErr()) {
 				toast.error(jsonRes.error.message)
+				return
+			}
+
+			if (await handleDirectBilibiliImport(jsonRes.value)) {
 				return
 			}
 

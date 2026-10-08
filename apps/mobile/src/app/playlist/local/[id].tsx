@@ -15,7 +15,15 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
+import {
+	Appbar,
+	Dialog,
+	MD3Theme,
+	Portal,
+	RadioButton,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -24,6 +32,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import Button from '@/components/common/Button'
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
@@ -66,6 +75,7 @@ import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { CustomError } from '@/lib/errors'
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -92,6 +102,11 @@ const SYNC_ICON = Icon.select({
 const SHARE_ICON = Icon.select({
 	ios: 'square.and.arrow.up',
 	android: import('@expo/material-symbols/share.xml'),
+})
+
+const EXPORT_JSON_ICON = Icon.select({
+	ios: 'arrow.down.doc',
+	android: import('@expo/material-symbols/download.xml'),
 })
 
 const LINK_ICON = Icon.select({
@@ -231,6 +246,18 @@ export default function LocalPlaylistPage() {
 	)
 }
 
+type PlaylistExportFormat = 'json'
+
+const PLAYLIST_EXPORT_FORMATS: {
+	value: PlaylistExportFormat
+	label: string
+}[] = [
+	{
+		value: 'json',
+		label: 'JSON (.json)',
+	},
+]
+
 function LocalPlaylistContent({
 	id,
 	playlistData,
@@ -251,6 +278,9 @@ function LocalPlaylistContent({
 	const theme = useTheme()
 	const { colors } = theme
 	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
+	const [exportDialogVisible, setExportDialogVisible] = useState(false)
+	const [exportFormat, setExportFormat] = useState<PlaylistExportFormat>('json')
+	const [isExporting, setIsExporting] = useState(false)
 	const [isResolvingSelection, setIsResolvingSelection] = useState(false)
 	const router = useRouter()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
@@ -931,6 +961,39 @@ function LocalPlaylistContent({
 	const draggedTrack =
 		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
 
+	const handleConfirmExport = async () => {
+		if (isExporting) return
+		setIsExporting(true)
+		setExportDialogVisible(false)
+		const loadingToast = toast.loading('正在生成导出文件...')
+		try {
+			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+			if (tracksResult.isErr()) {
+				toast.dismiss(loadingToast)
+				toastAndLogError('获取歌单曲目失败', tracksResult.error, SCOPE)
+				return
+			}
+			toast.dismiss(loadingToast)
+			switch (exportFormat) {
+				case 'json': {
+					const exportRes = await playlistOutService.exportPlaylistToJsonFile(
+						playlistMetadata,
+						tracksResult.value,
+					)
+					if (exportRes.isErr()) {
+						toast.error(exportRes.error.message)
+					}
+					break
+				}
+			}
+		} catch (e) {
+			toast.dismiss(loadingToast)
+			toastAndLogError('导出歌单失败', e, SCOPE)
+		} finally {
+			setIsExporting(false)
+		}
+	}
+
 	const menuActions = useMenuActions(addPlaylistMenuItems)
 
 	function addPlaylistMenuItems(menu: MenuBuilder) {
@@ -1028,6 +1091,14 @@ function LocalPlaylistContent({
 		}
 
 		menu.add({
+			title: '导出歌单',
+			image: EXPORT_JSON_ICON,
+			onPress: () => {
+				setExportDialogVisible(true)
+			},
+		})
+
+		menu.add({
 			title: playlistMetadata.isPinned ? '取消置顶' : '置顶',
 			image: playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON,
 			onPress: () => {
@@ -1062,6 +1133,49 @@ function LocalPlaylistContent({
 				visible={playerPreferenceVisible}
 				onDismiss={() => setPlayerPreferenceVisible(false)}
 			/>
+			<Portal>
+				<Dialog
+					visible={exportDialogVisible}
+					onDismiss={() => {
+						if (!isExporting) setExportDialogVisible(false)
+					}}
+				>
+					<Dialog.Title>导出歌单</Dialog.Title>
+					<Dialog.Content>
+						<Text variant='bodyMedium'>请选择导出文件格式：</Text>
+						<RadioButton.Group
+							value={exportFormat}
+							onValueChange={(value) => {
+								setExportFormat(value as PlaylistExportFormat)
+							}}
+						>
+							{PLAYLIST_EXPORT_FORMATS.map((item) => (
+								<RadioButton.Item
+									key={item.value}
+									disabled={isExporting}
+									label={item.label}
+									value={item.value}
+								/>
+							))}
+						</RadioButton.Group>
+					</Dialog.Content>
+					<Dialog.Actions>
+						<Button
+							disabled={isExporting}
+							onPress={() => setExportDialogVisible(false)}
+						>
+							取消
+						</Button>
+						<Button
+							loading={isExporting}
+							disabled={isExporting}
+							onPress={() => void handleConfirmExport()}
+						>
+							导出
+						</Button>
+					</Dialog.Actions>
+				</Dialog>
+			</Portal>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}
