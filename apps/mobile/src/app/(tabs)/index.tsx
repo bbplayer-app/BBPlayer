@@ -541,6 +541,41 @@ function HomePage() {
 										</Text>
 									</Touchable>
 								)}
+
+								{/* 我的关注 - conditional on Bilibili cookie */}
+								{hasBilibiliCookie() && (
+									<Touchable
+										androidRipple={{}}
+										key='following'
+										style={[
+											styles.quickAccessCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => router.navigate('/following')}
+									>
+										<View
+											style={{
+												width: 48,
+												height: 48,
+												borderRadius: 24,
+												justifyContent: 'center',
+												alignItems: 'center',
+											}}
+										>
+											<Icon
+												source='account-heart'
+												size={32}
+												color={colors.onSurfaceVariant}
+											/>
+										</View>
+										<Text
+											variant='labelMedium'
+											style={styles.quickAccessText}
+										>
+											我的关注
+										</Text>
+									</Touchable>
+								)}
 							</ScrollView>
 						</View>
 

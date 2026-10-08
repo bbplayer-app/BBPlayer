@@ -358,6 +358,10 @@ function RootLayout() {
 							name='download'
 							options={{ headerShown: false }}
 						/>
+						<Stack.Screen
+							name='following'
+							options={{ headerShown: false }}
+						/>
 
 						<Stack.Screen
 							name='+not-found'
