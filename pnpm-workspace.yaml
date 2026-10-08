@@ -27,10 +27,10 @@ minimumReleaseAgeExclude:
   - '@expo/cli@57.0.27'
   - '@expo/router-server@57.0.11'
   - babel-preset-expo@57.0.13
-  - expo-modules-core@57.0.19
+  - expo-modules-core@57.0.21
   - expo-modules-jsi@57.1.1
   - expo@57.0.25
-  - '@expo/ui@57.0.20'
+  - '@expo/ui@57.0.22'
   - expo-app-metrics@57.0.21
   - expo-build-properties@57.0.22
   - expo-glass-effect@57.0.4
@@ -41,8 +41,6 @@ minimumReleaseAgeExclude:
   - expo-sharing@57.0.22
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
-  '@expo/ui': patches/@expo__ui.patch
-  expo-modules-core: patches/expo-modules-core.patch
   expo-updates@57.0.23: patches/expo-updates@57.0.23.patch
   metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
   metro@0.84.5: patches/metro@0.84.5.patch
