@@ -2,6 +2,16 @@
 
 # dependencies
 node_modules/
+.pnpm-store/
+
+# Local validation output and device tooling
+.tmp/
+.argent/tmp/
+.argent/logs/
+.argent/secrets.env
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
 
 # Expo
 .expo/

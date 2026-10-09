@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 
 import { createDb } from '../db'
 import { playlistMembers, sharedPlaylists } from '../db/schema'
+import type { Env } from '../env'
 import { authMiddleware } from '../middleware/auth'
 import type { JwtTokenPayload } from '../types'
 

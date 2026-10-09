@@ -4,6 +4,7 @@ import {
 	index,
 	integer,
 	primaryKey,
+	real,
 	sqliteTable,
 	text,
 	uniqueIndex,
@@ -221,6 +222,25 @@ export const localMetadata = sqliteTable('local_metadata', {
 	localPath: text('local_path').notNull(),
 })
 
+export const abLoops = sqliteTable(
+	'ab_loops',
+	{
+		trackId: integer('track_id')
+			.primaryKey()
+			.references(() => tracks.id, { onDelete: 'cascade' }),
+		startPoint: real('start_point').notNull(), // A 点位置（秒）
+		endPoint: real('end_point').notNull(), // B 点位置（秒）
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+	},
+	() => [check('ab_loop_range_check', sql`end_point > start_point`)],
+)
+
 export const playlistSyncQueue = sqliteTable(
 	'playlist_sync_queue',
 	{
@@ -275,6 +295,10 @@ export const trackRelations = relations(tracks, ({ one, many }) => ({
 		references: [localMetadata.trackId],
 	}),
 	playHistory: many(playHistory),
+	abLoop: one(abLoops, {
+		fields: [tracks.id],
+		references: [abLoops.trackId],
+	}),
 }))
 
 export const playHistoryRelations = relations(playHistory, ({ one }) => ({

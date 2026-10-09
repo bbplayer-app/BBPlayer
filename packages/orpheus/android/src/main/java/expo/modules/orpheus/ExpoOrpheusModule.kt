@@ -39,6 +39,7 @@ import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.SpectrumManager
 import expo.modules.orpheus.model.DownloadTaskRecord
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.model.AbLoopRange
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.util.DownloadUtil
@@ -290,14 +291,18 @@ class ExpoOrpheusModule : Module() {
                         override fun onTrackFinished(
                             trackId: String,
                             finalPosition: Double,
-                            duration: Double
+                            duration: Double,
+                            playbackSummary: expo.modules.orpheus.util.PlaybackHistoryTracker.Summary?
                         ) {
                             sendEvent(
                                 "onTrackFinished", mapOf(
                                     "trackId" to trackId,
                                     "finalPosition" to finalPosition,
-                                    "duration" to duration
-                                )
+                                    "duration" to duration,
+                                    "playbackSummary" to playbackSummary?.let {
+                                        mapOf("startedAt" to it.startedAt.toDouble(), "playedSeconds" to it.playedSeconds, "completed" to it.completed)
+                                    }
+                                ).filterValues { it != null }
                             )
                         }
                     })
@@ -731,6 +736,38 @@ class ExpoOrpheusModule : Module() {
         AsyncFunction("cancelSleepTimer") {
             OrpheusMusicService.instance?.cancelSleepTimer()
             return@AsyncFunction null
+        }
+
+        AsyncFunction("setAbLoop") Coroutine { trackId: String, startSec: Double, endSec: Double ->
+            withServiceOnMainThread { service -> service?.setAbLoop(trackId, startSec, endSec) ?: false }
+        }
+
+        AsyncFunction("clearAbLoop") Coroutine { trackId: String ->
+            withServiceOnMainThread { service -> service?.clearAbLoop(trackId) ?: false }
+        }
+
+        AsyncFunction("seekToForTrack") Coroutine { trackId: String, seconds: Double ->
+            withServiceOnMainThread { service ->
+                val current = service?.player
+                if (current == null || current.currentMediaItem?.mediaId != trackId || !seconds.isFinite() || seconds < 0) false
+                else { current.seekTo((seconds * 1000).toLong()); true }
+            }
+        }
+
+        AsyncFunction("setAbLoopPreview") Coroutine { trackId: String, range: AbLoopRange? ->
+            withServiceOnMainThread { service -> service?.setAbLoopPreview(trackId, range) ?: false }
+        }
+
+        AsyncFunction("clearAbLoopPreview") Coroutine { trackId: String ->
+            withServiceOnMainThread { service -> service?.clearAbLoopPreview(trackId) ?: false }
+        }
+
+        AsyncFunction("getAbLoop") Coroutine { ->
+            withServiceOnMainThread { service ->
+                service?.getAbLoop()?.let {
+                    mapOf("trackId" to it.trackId, "start" to it.startSec, "end" to it.endSec)
+                }
+            }
         }
 
         AsyncFunction("addToEnd") Coroutine { tracks: List<TrackRecord>, startFromId: String?, clearQueue: Boolean? ->

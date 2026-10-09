@@ -21,6 +21,9 @@ object GeneralStorage {
     private const val KEY_SAVED_POSITION = "saved_position"
     private const val KEY_SAVED_REPEAT_MODE = "saved_repeat_mode"
     private const val KEY_SAVED_SHUFFLE_MODE = "saved_shuffle_mode"
+    private const val KEY_AB_LOOP_TRACK_ID = "saved_ab_loop_track_id"
+    private const val KEY_AB_LOOP_START_SEC = "saved_ab_loop_start_sec"
+    private const val KEY_AB_LOOP_END_SEC = "saved_ab_loop_end_sec"
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
     private const val KEY_SPECTRUM_VISUALIZER_ENABLED = "config_spectrum_visualizer_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
@@ -148,6 +151,33 @@ object GeneralStorage {
     fun getSavedIndex() = kv?.decodeInt(KEY_SAVED_INDEX, 0) ?: 0
     fun getSavedPosition() = kv?.decodeLong(KEY_SAVED_POSITION, 0L) ?: 0L
     fun getRepeatMode() = kv?.decodeInt(KEY_SAVED_REPEAT_MODE, 0) ?: 0
+
+    /** 当前生效的 AB 循环区间（秒）；未设置时返回 `null`。 */
+    data class AbLoopRecord(val trackId: String, val startSec: Double, val endSec: Double)
+
+    fun saveAbLoop(trackId: String, startSec: Double, endSec: Double) {
+        safeKv.encode(KEY_AB_LOOP_TRACK_ID, trackId)
+        safeKv.encode(KEY_AB_LOOP_START_SEC, startSec)
+        safeKv.encode(KEY_AB_LOOP_END_SEC, endSec)
+    }
+
+    fun clearAbLoop() {
+        safeKv.removeValueForKey(KEY_AB_LOOP_TRACK_ID)
+        safeKv.removeValueForKey(KEY_AB_LOOP_START_SEC)
+        safeKv.removeValueForKey(KEY_AB_LOOP_END_SEC)
+    }
+
+    fun getAbLoop(): AbLoopRecord? {
+        val trackId = kv?.decodeString(KEY_AB_LOOP_TRACK_ID) ?: return null
+        if (trackId.isEmpty()) return null
+        val startSec = kv?.decodeDouble(KEY_AB_LOOP_START_SEC, 0.0) ?: return null
+        val endSec = kv?.decodeDouble(KEY_AB_LOOP_END_SEC, 0.0) ?: return null
+        if (!startSec.isFinite() || !endSec.isFinite() || startSec < 0 || endSec <= startSec) {
+            clearAbLoop()
+            return null
+        }
+        return AbLoopRecord(trackId, startSec, endSec)
+    }
 
     fun isDesktopLyricsShown() = kv?.decodeBool(KEY_DESKTOP_LYRICS_SHOWN, false) ?: false
     fun setDesktopLyricsShown(shown: Boolean) = safeKv.encode(KEY_DESKTOP_LYRICS_SHOWN, shown)

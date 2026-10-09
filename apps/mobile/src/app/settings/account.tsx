@@ -1,6 +1,6 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Image } from 'expo-image'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Avatar, Text, TextInput, useTheme } from 'react-native-paper'
@@ -71,7 +71,7 @@ export default function AccountSettingsPage() {
 		}
 		playlistSyncWorker.triggerSync()
 		if (returnTo) {
-			router.replace(returnTo as Parameters<typeof router.replace>[0])
+			router.replace(returnTo as Href)
 		}
 	}
 

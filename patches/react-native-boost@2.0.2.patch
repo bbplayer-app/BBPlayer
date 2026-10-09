@@ -1,0 +1,18 @@
+diff --git a/dist/plugin/index.js b/dist/plugin/index.js
+index 1cd5c47c92a9474fc861eb1574c497c7e07a8444..c098ff8f9f9d92c796012deafe630f95444a9441 100644
+--- a/dist/plugin/index.js
++++ b/dist/plugin/index.js
+@@ -536,11 +536,11 @@ function createFileIgnoreMatcher(ignores) {
+     const directory = "cwd" in file.opts ? file.opts.cwd : process.cwd();
+     if (directory !== cachedDirectory) {
+       matchers = ignores.map(
+-        (pattern) => new minimatch.Minimatch(path.isAbsolute(pattern) ? pattern : path.join(directory, pattern), { dot: true })
++        (pattern) => new minimatch.Minimatch((path.isAbsolute(pattern) ? pattern : path.join(directory, pattern)).split(path.sep).join("/"), { dot: true })
+       );
+       cachedDirectory = directory;
+     }
+-    return matchers.some((matcher) => matcher.match(file.opts.filename));
++    return matchers.some((matcher) => matcher.match(file.opts.filename.split(path.sep).join("/")));
+   };
+ }
+ const isForcedLine = (path) => hasDecoratorComment(path, "@boost-force");

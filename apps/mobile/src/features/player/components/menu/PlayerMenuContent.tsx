@@ -4,6 +4,7 @@ import { useCallback, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Icon, List, Text, TouchableRipple, useTheme } from 'react-native-paper'
+import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useBatchDownloadStatus } from '@/hooks/queries/orpheus'
@@ -46,7 +47,7 @@ export function HighFreqButton({
 	label,
 	onPress,
 }: {
-	icon: string
+	icon: IconSource
 	label: string
 	onPress: () => void
 }) {

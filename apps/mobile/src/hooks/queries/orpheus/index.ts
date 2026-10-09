@@ -3,6 +3,7 @@ import { Orpheus } from '@bbplayer/orpheus'
 import { useQuery } from '@tanstack/react-query'
 
 import { queryClient } from '@/lib/config/queryClient'
+import type { AbLoopState } from '@/lib/player/abLoop'
 
 export const orpheusQueryKeys = {
 	all: ['orpheus'] as const,
@@ -12,6 +13,7 @@ export const orpheusQueryKeys = {
 	downloadTasks: () => [...orpheusQueryKeys.all, 'downloadTasks'] as const,
 	playerQueue: () => [...orpheusQueryKeys.all, 'playerQueue'] as const,
 	sleepTimer: () => [...orpheusQueryKeys.all, 'sleepTimerEndAt'] as const,
+	abLoop: () => [...orpheusQueryKeys.all, 'abLoop'] as const,
 	completedDownloads: () =>
 		[...orpheusQueryKeys.all, 'completedDownloads'] as const,
 }
@@ -83,6 +85,17 @@ export function useSleepTimerEndTime() {
 			return await Orpheus.getSleepTimerEndTime()
 		},
 		queryKey: orpheusQueryKeys.sleepTimer(),
+		gcTime: 0,
+		staleTime: 0,
+	})
+}
+
+export function useAbLoop() {
+	return useQuery<AbLoopState | null>({
+		queryKey: orpheusQueryKeys.abLoop(),
+		queryFn: async () => {
+			return await Orpheus.getAbLoop()
+		},
 		gcTime: 0,
 		staleTime: 0,
 	})
