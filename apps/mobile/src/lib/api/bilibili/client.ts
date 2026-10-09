@@ -101,11 +101,19 @@ class ApiClient {
 				if (endpoint === '/x/web-interface/nav') {
 					return okAsync(data.data)
 				}
-				if (data.code !== 0) {
+				if (
+					data.code !== 0 ||
+					(data.data &&
+						typeof data.data === 'object' &&
+						'v_voucher' in data.data)
+				) {
 					return errAsync(
 						new BilibiliApiError({
-							message: data.message,
-							msgCode: data.code,
+							message:
+								data.message && data.message !== 'OK' && data.message !== '0'
+									? data.message
+									: '请求被风控拦截',
+							msgCode: data.code !== 0 ? data.code : -412,
 							rawData: data.data,
 							type: 'ResponseFailed',
 						}),

@@ -1,9 +1,18 @@
 import { decode } from 'he'
-import { ResultAsync, errAsync } from 'neverthrow'
+import { ResultAsync, errAsync, okAsync } from 'neverthrow'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { neteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi } from '@/lib/api/qqmusic/api'
+import {
+	BilibiliApiError,
+	isBilibiliRateLimitError,
+} from '@/lib/errors/thirdparty/bilibili'
+import {
+	createImportJobId,
+	externalImportJobService,
+} from '@/lib/services/externalImportJobService'
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import type { BilibiliSearchVideo } from '@/types/apis/bilibili'
 import type { GenericPlaylist, GenericTrack } from '@/types/external_playlist'
 import log from '@/utils/log'
@@ -12,17 +21,43 @@ import { parseDurationString } from '@/utils/time'
 
 const logger = log.extend('Services.ExternalPlaylist')
 
-// 全局配置
-const MIN_DELAY = 1200 // 防封号延迟 (ms)
+// 全局配置（保持单并发与保守请求间隔，优先响应明确风控信号）
+export const DEFAULT_REQUEST_DELAY_MS = 2800
 const SEARCH_TIMEOUT = 15_000
 const BLACKLIST_ZONES = new Set([26, 29, 31, 201, 238]) // 黑名单分区 (音MAD, 现场, 翻唱, 科普, 运动)
 const PRIORITY_ZONES = new Set([193, 130, 267]) // 优先分区 (MV, 音乐综合, 电台)
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const wait = (ms: number, signal?: AbortSignal) =>
+	new Promise<void>((resolve, reject) => {
+		if (signal?.aborted) {
+			reject(new Error('Aborted'))
+			return
+		}
+		if (ms <= 0) {
+			resolve()
+			return
+		}
+		const onAbort = () => {
+			clearTimeout(timer)
+			reject(new Error('Aborted'))
+		}
+		const timer = setTimeout(() => {
+			signal?.removeEventListener('abort', onAbort)
+			resolve()
+		}, ms)
+		signal?.addEventListener('abort', onAbort, { once: true })
+	})
 
-const createSearchSignal = (parentSignal?: AbortSignal) => {
+const createSearchSignal = (
+	parentSignal?: AbortSignal,
+	timeoutMs = SEARCH_TIMEOUT,
+) => {
 	const controller = new AbortController()
-	const timeoutId = setTimeout(() => controller.abort(), SEARCH_TIMEOUT)
+	let timedOut = false
+	const timeoutId = setTimeout(() => {
+		timedOut = true
+		controller.abort()
+	}, timeoutMs)
 	const abortFromParent = () => controller.abort()
 
 	if (parentSignal?.aborted) {
@@ -33,6 +68,7 @@ const createSearchSignal = (parentSignal?: AbortSignal) => {
 
 	return {
 		signal: controller.signal,
+		didTimeout: () => timedOut,
 		cleanup: () => {
 			clearTimeout(timeoutId)
 			parentSignal?.removeEventListener('abort', abortFromParent)
@@ -45,17 +81,97 @@ interface MatchCandidate {
 	score: number
 }
 
+export type MatchResultStatus =
+	| 'pending'
+	| 'matched'
+	| 'unmatched'
+	| 'error'
+	| 'rate_limited'
+
+export type MatchErrorType =
+	| 'network'
+	| 'timeout'
+	| 'api'
+	| 'rate_limited'
+	| 'unknown'
+
 export interface MatchResult {
 	track: GenericTrack
 	matchedVideo: BilibiliSearchVideo | null
+	status?: MatchResultStatus
+	trackFingerprint?: string
+	errorType?: MatchErrorType
+	errorMessage?: string
 }
+
+export function getTrackFingerprint(track: GenericTrack): string {
+	const title = track.title.trim().toLowerCase()
+	const translatedTitle = (track.translatedTitle ?? '').trim().toLowerCase()
+	const artists = track.artists
+		.map((a) => a.trim().toLowerCase())
+		.filter(Boolean)
+		.join('/')
+	const album = (track.album ?? '').trim().toLowerCase()
+	const durationSec = Math.round((track.duration ?? 0) / 1000)
+	return `${title}::${translatedTitle}::${artists}::${album}::${durationSec}`
+}
+
+export function getMatchResultFingerprint(result: MatchResult): string {
+	return result.trackFingerprint ?? getTrackFingerprint(result.track)
+}
+
+export function isMatchResultForTrack(
+	result: MatchResult | undefined,
+	track: GenericTrack | undefined,
+): result is MatchResult {
+	if (!result || !track) return false
+	return getMatchResultFingerprint(result) === getTrackFingerprint(track)
+}
+
+export function getMatchResultStatus(
+	result?: MatchResult | null,
+): MatchResultStatus {
+	if (!result) return 'pending'
+	if (result.status) return result.status
+	return result.matchedVideo ? 'matched' : 'unmatched'
+}
+
+export type ExternalPlaylistSource =
+	| 'netease'
+	| 'qq'
+	| 'playlistout'
+	| 'local_json'
 
 export class ExternalPlaylistService {
 	public fetchExternalPlaylist(
 		playlistId: string,
-		source: 'netease' | 'qq',
+		source: ExternalPlaylistSource,
 	): ResultAsync<{ playlist: GenericPlaylist; tracks: GenericTrack[] }, Error> {
-		if (source === 'netease') {
+		const fallbackToPersistedDraft = (err: Error) => {
+			try {
+				const jobId = createImportJobId(source, playlistId)
+				const snap = externalImportJobService.getJobSnapshot(jobId)
+				if (snap && snap.items.length > 0) {
+					return okAsync({
+						playlist: snap.job.playlistMetadata,
+						tracks: snap.items.map((item) => item.originalTrack),
+					})
+				}
+			} catch {
+				// Fall through to original error
+			}
+			return errAsync(err)
+		}
+
+		if (source === 'playlistout') {
+			return playlistOutService
+				.resolvePlaylist(playlistId)
+				.orElse(fallbackToPersistedDraft)
+		} else if (source === 'local_json') {
+			return playlistOutService
+				.getCachedPlaylist(playlistId)
+				.orElse(fallbackToPersistedDraft)
+		} else if (source === 'netease') {
 			return neteaseApi.getPlaylist(playlistId).map((response) => {
 				if (!response.playlist) {
 					return {
@@ -83,17 +199,42 @@ export class ExternalPlaylistService {
 					translatedTitle: track.tns?.[0],
 				}))
 
+				const createDate =
+					response.playlist.createTime > 0
+						? new Date(
+								response.playlist.createTime > 1e11
+									? response.playlist.createTime
+									: response.playlist.createTime * 1000,
+							)
+						: null
+				const createTime =
+					createDate && !isNaN(createDate.getTime())
+						? `${createDate.getFullYear()}-${String(createDate.getMonth() + 1).padStart(2, '0')}-${String(createDate.getDate()).padStart(2, '0')}`
+						: undefined
+
 				return {
 					playlist: {
 						id: response.playlist.id.toString(),
-						title: response.playlist.name,
+						title: decode(response.playlist.name),
 						coverUrl: response.playlist.coverImgUrl,
-						description: response.playlist.description ?? '',
+						description: decode(
+							(response.playlist.description ?? '').replace(
+								/<br\s*\/?>/gi,
+								'\n',
+							),
+						).trim(),
 						trackCount: response.playlist.trackCount,
 						author: {
 							name: response.playlist.creator?.nickname ?? 'Unknown',
 							id: response.playlist.creator?.userId ?? 0,
 						},
+						createTime,
+						tags:
+							Array.isArray(response.playlist.tags) &&
+							response.playlist.tags.length > 0
+								? response.playlist.tags
+								: undefined,
+						platform: 'netease',
 					},
 					tracks,
 				}
@@ -115,24 +256,46 @@ export class ExternalPlaylistService {
 					}
 
 				const tracks = playlist.songlist.map((track) => ({
-					title: track.name,
-					artists: track.singer.map((s) => s.name),
-					album: track.album.name,
+					title: decode(track.name),
+					artists: track.singer.map((s) => decode(s.name)),
+					album: decode(track.album.name),
 					duration: track.interval * 1000,
 					coverUrl: `https://y.gtimg.cn/music/photo_new/T002R300x300M000${track.album.mid}.jpg`,
-					translatedTitle: track.subtitle,
+					translatedTitle: track.subtitle ? decode(track.subtitle) : undefined,
 				}))
+
+				const createDate =
+					typeof playlist.ctime === 'number' && playlist.ctime > 0
+						? new Date(
+								playlist.ctime > 1e11 ? playlist.ctime : playlist.ctime * 1000,
+							)
+						: null
+				const createTime =
+					createDate && !isNaN(createDate.getTime())
+						? `${createDate.getFullYear()}-${String(createDate.getMonth() + 1).padStart(2, '0')}-${String(createDate.getDate()).padStart(2, '0')}`
+						: undefined
+
+				const tags = Array.isArray(playlist.tags)
+					? playlist.tags
+							.map((t) => (t?.name ? decode(t.name).trim() : ''))
+							.filter(Boolean)
+					: []
 
 				return {
 					playlist: {
 						id: playlistId,
-						title: playlist.dissname,
+						title: decode(playlist.dissname).trim(),
 						coverUrl: playlist.logo,
-						description: playlist.desc || '',
+						description: decode(
+							(playlist.desc || '').replace(/<br\s*\/?>/gi, '\n'),
+						).trim(),
 						trackCount: playlist.songnum,
 						author: {
-							name: playlist.nickname,
+							name: decode(playlist.nickname).trim(),
 						},
+						createTime,
+						tags: tags.length > 0 ? tags : undefined,
+						platform: 'qqmusic',
 					},
 					tracks,
 				}
@@ -153,6 +316,8 @@ export class ExternalPlaylistService {
 			signal?: AbortSignal
 			startIndex?: number
 			trackIndexes?: number[]
+			requestDelayMs?: number
+			searchTimeoutMs?: number
 		},
 	): ResultAsync<MatchResult[], Error> {
 		return ResultAsync.fromPromise(
@@ -167,6 +332,8 @@ export class ExternalPlaylistService {
 						(_, index) => startIndex + index,
 					)
 				const processingTotal = indexesToProcess.length
+				const delayMs = options?.requestDelayMs ?? DEFAULT_REQUEST_DELAY_MS
+				const searchTimeoutMs = options?.searchTimeoutMs ?? SEARCH_TIMEOUT
 
 				for (const [processedCount, trackIndex] of indexesToProcess.entries()) {
 					if (options?.signal?.aborted) {
@@ -177,29 +344,47 @@ export class ExternalPlaylistService {
 					if (!song) {
 						continue
 					}
-					// oxlint-disable-next-line no-await-in-loop
-					await wait(MIN_DELAY)
+					if (processedCount > 0) {
+						// oxlint-disable-next-line no-await-in-loop
+						await wait(delayMs, options?.signal)
+					}
 
 					// Double check after wait
 					if (options?.signal?.aborted) {
 						throw new Error('Aborted')
 					}
 
-					const artistNames = song.artists.join(' ')
-					const searchQuery = `${song.title} ${song.translatedTitle ?? ''} - ${artistNames}`
+					const titlePart = [song.title, song.translatedTitle]
+						.map((t) => t?.trim())
+						.filter(Boolean)
+						.join(' ')
+					const artistPart = song.artists
+						.map((a) => a.trim())
+						.filter(Boolean)
+						.join(' ')
+					const searchQuery = artistPart
+						? `${titlePart} - ${artistPart}`
+						: titlePart
+					const trackFingerprint = getTrackFingerprint(song)
 
 					let matchedVideo: BilibiliSearchVideo | null = null
+					let status: MatchResultStatus = 'unmatched'
+					let errorType: MatchErrorType | undefined
+					let errorMessage: string | undefined
+
+					const { signal, didTimeout, cleanup } = createSearchSignal(
+						options?.signal,
+						searchTimeoutMs,
+					)
 
 					try {
-						const { signal, cleanup } = createSearchSignal(options?.signal)
 						// oxlint-disable-next-line no-await-in-loop
 						const searchResult = await (async () => {
 							try {
 								return await bilibiliApi.searchVideos({
 									keyword: searchQuery,
 									page: 1,
-									// 一点小巧思：带 cookie 调用搜索是会有个性化内容的，但在匹配时我认为个性化内容反而会干扰准确度
-									skipCookie: true,
+
 									signal,
 								})
 							} finally {
@@ -207,20 +392,105 @@ export class ExternalPlaylistService {
 							}
 						})()
 
+						if (options?.signal?.aborted) {
+							throw new Error('Aborted')
+						}
+
 						if (searchResult.isOk()) {
 							const decodedResults = searchResult.value.result.map((video) => ({
 								...video,
 								title: decode(video.title),
 							}))
 							matchedVideo = this.findBestMatchSimple(decodedResults, song)
+							status = matchedVideo ? 'matched' : 'unmatched'
 						} else {
-							logger.error(
-								`Search failed for ${song.title}:`,
-								searchResult.error,
-							)
+							const err = searchResult.error
+							if (isBilibiliRateLimitError(err)) {
+								logger.warning(`Rate limit triggered on ${song.title}:`, err)
+								const rateLimitedResult: MatchResult = {
+									track: song,
+									matchedVideo: null,
+									status: 'rate_limited',
+									trackFingerprint,
+									errorType: 'rate_limited',
+									errorMessage:
+										err.message && err.message !== 'OK'
+											? err.message
+											: '请求暂时受限，进度已保存',
+								}
+								onProgress(
+									processedCount,
+									processingTotal,
+									rateLimitedResult,
+									trackIndex,
+								)
+								throw new BilibiliApiError({
+									message:
+										err.message && err.message !== 'OK'
+											? err.message
+											: '请求暂时受限，进度已保存',
+									msgCode: err.data?.msgCode || 412,
+									rawData: err.data?.rawData,
+									type: 'RateLimited',
+									cause: err,
+								})
+							}
+
+							logger.error(`Search failed for ${song.title}:`, err)
+							status = 'error'
+							const isTimeout = didTimeout() || err.type === 'RequestAborted'
+							errorType = isTimeout
+								? 'timeout'
+								: err.type === 'ResponseFailed'
+									? 'api'
+									: 'network'
+							errorMessage = isTimeout
+								? '搜索请求超时'
+								: err.message || '网络或接口异常'
 						}
 					} catch (e) {
+						if (options?.signal?.aborted) {
+							throw new Error('Aborted', { cause: e })
+						}
+						if (isBilibiliRateLimitError(e)) {
+							if (
+								!(e instanceof BilibiliApiError && e.type === 'RateLimited')
+							) {
+								const rateLimitedResult: MatchResult = {
+									track: song,
+									matchedVideo: null,
+									status: 'rate_limited',
+									trackFingerprint,
+									errorType: 'rate_limited',
+									errorMessage:
+										e instanceof Error && e.message !== 'OK'
+											? e.message
+											: '请求暂时受限，进度已保存',
+								}
+								onProgress(
+									processedCount,
+									processingTotal,
+									rateLimitedResult,
+									trackIndex,
+								)
+							}
+							throw e instanceof Error
+								? e
+								: new BilibiliApiError({
+										message: String(e),
+										msgCode: 412,
+										type: 'RateLimited',
+										cause: e,
+									})
+						}
 						logger.error(`Error processing ${song.title}:`, e)
+						status = 'error'
+						errorType = didTimeout() ? 'timeout' : 'network'
+						errorMessage = didTimeout()
+							? '搜索请求超时'
+							: e instanceof Error
+								? e.message
+								: String(e)
 					}
 
 					if (options?.signal?.aborted) {
@@ -229,7 +499,11 @@ export class ExternalPlaylistService {
 
 					const result: MatchResult = {
 						track: song,
-						matchedVideo: matchedVideo,
+						matchedVideo,
+						status,
+						trackFingerprint,
+						...(errorType ? { errorType } : {}),
+						...(errorMessage ? { errorMessage } : {}),
 					}
 					results.push(result)
 					onProgress(processedCount + 1, processingTotal, result, trackIndex)

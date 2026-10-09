@@ -1,12 +1,75 @@
 import type { ExtractedPalette } from '@bbplayer/image-theme-colors'
 import ImageThemeColors from '@bbplayer/image-theme-colors'
 import type { ImageRef } from 'expo-image'
+import md5 from 'md5'
 import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
+import { createMMKV } from 'react-native-mmkv'
 
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { clampHslLightness, hexToHsl, hslToString } from '@/utils/color'
+import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
 import { reportErrorToSentry } from '@/utils/log'
+
+let paletteStorageInstance: ReturnType<typeof createMMKV> | null = null
+
+function getPaletteStorage() {
+	if (!paletteStorageInstance) {
+		paletteStorageInstance = createMMKV({ id: 'palette-cache' })
+	}
+	return paletteStorageInstance
+}
+
+const memoryPaletteCache = new Map<string, ExtractedPalette>()
+
+function normalizePaletteCacheKey(
+	cacheKey: string | null | undefined,
+): string | undefined {
+	if (!cacheKey || !cacheKey.trim()) return undefined
+	const trimmed = cacheKey.trim()
+	return resolveBilibiliImageUrl(trimmed) ?? trimmed
+}
+
+export function getCachedPalette(
+	cacheKey: string | null | undefined,
+): ExtractedPalette | undefined {
+	const normalizedKey = normalizePaletteCacheKey(cacheKey)
+	if (!normalizedKey) return undefined
+
+	const memoryCached = memoryPaletteCache.get(normalizedKey)
+	if (memoryCached) return memoryCached
+
+	try {
+		const storage = getPaletteStorage()
+		const key = `pal_${md5(normalizedKey)}`
+		const raw = storage.getString(key)
+		if (raw) {
+			const parsed = JSON.parse(raw) as ExtractedPalette
+			memoryPaletteCache.set(normalizedKey, parsed)
+			return parsed
+		}
+	} catch {
+		// ignore MMKV or JSON errors
+	}
+	return undefined
+}
+
+export function setCachedPalette(
+	cacheKey: string | null | undefined,
+	palette: ExtractedPalette,
+): void {
+	const normalizedKey = normalizePaletteCacheKey(cacheKey)
+	if (!normalizedKey) return
+
+	memoryPaletteCache.set(normalizedKey, palette)
+	try {
+		const storage = getPaletteStorage()
+		const key = `pal_${md5(normalizedKey)}`
+		storage.set(key, JSON.stringify(palette))
+	} catch {
+		// ignore MMKV errors
+	}
+}
 
 const DARK_BACKGROUND_MIN_LIGHTNESS = 10
 const DARK_BACKGROUND_MAX_LIGHTNESS = 18
@@ -93,11 +156,28 @@ export function usePlaylistBackgroundColor(
 	imageRef: ImageRef | null | undefined,
 	isDarkMode: boolean,
 	fallbackColor: string,
+	cacheKey?: string | null,
 ): PlaylistBackgroundColorResult {
-	const [palette, setPalette] = useState<ExtractedPalette | undefined>(
-		undefined,
+	const normalizedKey = useMemo(
+		() => normalizePaletteCacheKey(cacheKey),
+		[cacheKey],
 	)
+
+	const cachedPalette = useMemo(
+		() => getCachedPalette(normalizedKey),
+		[normalizedKey],
+	)
+
+	const [extracted, setExtracted] = useState<{
+		key?: string
+		palette?: ExtractedPalette
+	} | null>(null)
+
 	const [appState, setAppState] = useState(AppState.currentState)
+
+	const palette =
+		cachedPalette ??
+		(extracted?.key === normalizedKey ? extracted?.palette : undefined)
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -109,8 +189,12 @@ export function usePlaylistBackgroundColor(
 	}, [])
 
 	useEffect(() => {
+		// 如果已有有效缓存，无需重复进行高开销的原生图片调色板计算
+		if (cachedPalette) {
+			return
+		}
+
 		if (!imageRef) {
-			setPalette(undefined)
 			return
 		}
 
@@ -119,15 +203,19 @@ export function usePlaylistBackgroundColor(
 		}
 
 		let isCancelled = false
+		const targetCacheKey = normalizedKey
 
 		const extract = async () => {
 			try {
 				const result = await ImageThemeColors.extractThemeColorAsync(imageRef)
 				if (!isCancelled) {
 					if (result) {
-						setPalette(result)
+						if (targetCacheKey) {
+							setCachedPalette(targetCacheKey, result)
+						}
+						setExtracted({ key: targetCacheKey, palette: result })
 					} else {
-						setPalette(undefined)
+						setExtracted(null)
 					}
 				}
 			} catch (e) {
@@ -142,7 +230,7 @@ export function usePlaylistBackgroundColor(
 		return () => {
 			isCancelled = true
 		}
-	}, [imageRef, appState])
+	}, [imageRef, appState, normalizedKey, cachedPalette])
 
 	const result = useMemo<PlaylistBackgroundColorResult>(() => {
 		const dominantColor = getDominantColor(palette, isDarkMode)

@@ -57,12 +57,18 @@ const DELETE_ICON = Icon.select({
 	android: import('@expo/material-symbols/delete.xml'),
 })
 
+const REMATCH_ICON = Icon.select({
+	ios: 'arrow.triangle.2.circlepath',
+	android: import('@expo/material-symbols/sync.xml'),
+})
+
 const SCOPE = 'UI.Playlist.Local.Menu'
 
 interface LocalPlaylistMenuProps {
 	deleteTrack: (trackId: number) => void
 	openAddToPlaylistModal: (track: Track) => void
 	openEditTrackModal: (track: Track) => void
+	onRematchTrack?: (track: Track) => void
 	playlist: Playlist | null | undefined
 	isReadOnly: boolean
 }
@@ -71,6 +77,7 @@ export function useLocalPlaylistMenu({
 	deleteTrack,
 	openAddToPlaylistModal,
 	openEditTrackModal,
+	onRematchTrack,
 	playlist,
 	isReadOnly,
 }: LocalPlaylistMenuProps) {
@@ -97,21 +104,43 @@ export function useLocalPlaylistMenu({
 		downloadState?: DownloadState,
 	): TrackMenuItem[] => {
 		if (!playlist) return []
-		const menuItems: TrackMenuItem[] = [
-			{
+		const hasPlayableSource =
+			item.source !== 'bilibili' || Boolean(item.bilibiliMetadata.bvid)
+		const menuItems: TrackMenuItem[] = []
+
+		if (hasPlayableSource) {
+			menuItems.push({
 				title: '下一首播放',
 				leadingIcon: PLAY_NEXT_ICON,
 				onPress: () => playNext(item),
 				isHighFreq: true,
-			},
-			{
-				title: '添加到本地歌单',
-				leadingIcon: ADD_TO_PLAYLIST_ICON,
-				onPress: () => openAddToPlaylistModal(item),
-				isHighFreq: true,
-			},
-		]
-		if (item.source === 'bilibili') {
+			})
+		}
+
+		if (
+			playlist.type === 'local' &&
+			!isReadOnly &&
+			item.source === 'bilibili' &&
+			onRematchTrack
+		) {
+			menuItems.push({
+				title: item.bilibiliMetadata.bvid
+					? '重新匹配 B 站音源'
+					: '手动匹配 B 站音源',
+				leadingIcon: REMATCH_ICON,
+				onPress: () => onRematchTrack(item),
+				isHighFreq: !item.bilibiliMetadata.bvid,
+			})
+		}
+
+		menuItems.push({
+			title: '添加到本地歌单',
+			leadingIcon: ADD_TO_PLAYLIST_ICON,
+			onPress: () => openAddToPlaylistModal(item),
+			isHighFreq: true,
+		})
+
+		if (item.source === 'bilibili' && Boolean(item.bilibiliMetadata.bvid)) {
 			menuItems.push(
 				{
 					title: '查看详细信息',
@@ -126,7 +155,10 @@ export function useLocalPlaylistMenu({
 					title: '查看 up 主作品',
 					leadingIcon: ARTIST_ICON,
 					onPress: () => {
-						if (!item.artist?.remoteId) {
+						if (
+							!item.artist?.remoteId ||
+							item.artist.remoteId.startsWith('ext_artist_')
+						) {
 							return
 						}
 						router.navigate({

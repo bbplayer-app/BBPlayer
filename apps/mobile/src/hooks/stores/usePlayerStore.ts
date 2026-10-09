@@ -1,6 +1,7 @@
 import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { create } from 'zustand'
 
+import { externalImportJobService } from '@/lib/services/externalImportJobService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -9,6 +10,7 @@ import log from '@/utils/log'
 const logger = log.extend('Store.Player')
 let syncRevision = 0
 let initialized = false
+let cachedRawTrack: Track | null = null
 
 interface PlayerState {
 	orpheusTrack: OrpheusTrack | null
@@ -35,6 +37,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 		Orpheus.addListener('onQueueChanged', async () => {
 			await get().sync()
 		})
+		externalImportJobService.subscribeChanges(() => {
+			if (cachedRawTrack) {
+				set({
+					internalTrack:
+						externalImportJobService.resolveTrackForPlayback(cachedRawTrack),
+				})
+			}
+		})
 	},
 
 	sync: async () => {
@@ -46,29 +56,36 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 			])
 
 			if (revision !== syncRevision) return
-			const currentInternalTrackId = get().internalTrack?.uniqueKey
+			const currentInternalTrackId = cachedRawTrack?.uniqueKey
 			const newTrackId = currentTrack?.id
 
 			set({ orpheusTrack: currentTrack, currentIndex })
 
 			if (!currentTrack) {
+				cachedRawTrack = null
 				set({ internalTrack: null })
 				return
 			}
 
-			if (newTrackId !== currentInternalTrackId) {
+			if (newTrackId !== currentInternalTrackId || !cachedRawTrack) {
 				const result = await trackService.getTrackByUniqueKey(currentTrack.id)
 
 				if (revision !== syncRevision || get().orpheusTrack?.id !== newTrackId)
 					return
 
 				if (result.isErr()) {
+					cachedRawTrack = null
 					set({ internalTrack: null })
 					toastAndLogError('读取当前曲目信息失败', result.error, 'Store.Player')
 					return
 				}
-				set({ internalTrack: result.value })
+				cachedRawTrack = result.value
 			}
+
+			set({
+				internalTrack:
+					externalImportJobService.resolveTrackForPlayback(cachedRawTrack),
+			})
 		} catch (e) {
 			logger.warning('Failed to sync player state', { error: e })
 		}

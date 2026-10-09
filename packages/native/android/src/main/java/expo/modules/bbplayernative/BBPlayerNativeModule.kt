@@ -1,6 +1,9 @@
 package expo.modules.bbplayernative
 
 import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -11,6 +14,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -29,6 +33,13 @@ import kotlinx.coroutines.withContext
 class BBPlayerNativeModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("BBPlayerNative")
+
+        OnCreate {
+            val context = appContext.reactContext ?: return@OnCreate
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            notificationManager?.let { ensureImportNotificationChannel(it) }
+        }
 
         Constant("apkSigningCertificateSha256") {
             apkSigningCertificateSha256
@@ -117,6 +128,22 @@ class BBPlayerNativeModule : Module() {
                     }
                 }
                 android.net.Uri.fromFile(destFile).toString()
+            }
+        }
+
+        Function("updateImportProgressNotification") { options: ImportProgressNotificationOptions ->
+            runCatching {
+                val context = requireContext()
+                showImportProgressNotification(context, options)
+            }
+        }
+
+        Function("cancelImportProgressNotification") {
+            runCatching {
+                val context = requireContext()
+                val notificationManager =
+                    context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancel(IMPORT_NOTIFICATION_ID)
             }
         }
     }
@@ -336,9 +363,88 @@ class BBPlayerNativeModule : Module() {
             else -> throw IllegalArgumentException("GIF 输出路径必须是 file URI 或本地路径")
         }
     }
+
+    private fun ensureImportNotificationChannel(notificationManager: NotificationManager) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val existing = notificationManager.getNotificationChannel(IMPORT_NOTIFICATION_CHANNEL_ID)
+            if (existing == null) {
+                val channel = NotificationChannel(
+                    IMPORT_NOTIFICATION_CHANNEL_ID,
+                    "外部歌单导入进度",
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = "展示外部歌单自动匹配 Bilibili 视频的后台进度"
+                    setShowBadge(false)
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+        }
+    }
+
+    private fun showImportProgressNotification(
+        context: Context,
+        options: ImportProgressNotificationOptions,
+    ) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        ensureImportNotificationChannel(notificationManager)
+
+        val smallIconRes = context.applicationInfo.icon.takeIf { it != 0 }
+            ?: android.R.drawable.stat_sys_download
+
+        val builder = NotificationCompat.Builder(context, IMPORT_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(smallIconRes)
+            .setContentTitle(options.title)
+            .setContentText(options.body)
+            .setOnlyAlertOnce(true)
+            .setOngoing(options.ongoing)
+            .setAutoCancel(!options.ongoing)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+
+        if (!options.subText.isNullOrBlank()) {
+            builder.setSubText(options.subText)
+            builder.setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("${options.body}\n${options.subText}"),
+            )
+        }
+
+        if (options.ongoing && options.maxProgress > 0) {
+            builder.setProgress(options.maxProgress, options.progress, false)
+        } else {
+            builder.setProgress(0, 0, false)
+        }
+
+        val contentIntent = if (!options.deepLinkUri.isNullOrBlank()) {
+            Intent(Intent.ACTION_VIEW, Uri.parse(options.deepLinkUri)).apply {
+                setPackage(context.packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        } else {
+            context.packageManager.getLaunchIntentForPackage(context.packageName)
+        }
+
+        if (contentIntent != null) {
+            val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or
+                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                IMPORT_NOTIFICATION_ID,
+                contentIntent,
+                pendingFlags,
+            )
+            builder.setContentIntent(pendingIntent)
+        }
+
+        notificationManager.notify(IMPORT_NOTIFICATION_ID, builder.build())
+    }
+
     companion object {
         private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
         private const val DOWNLOAD_POLL_INTERVAL_MS = 1_000L
+        private const val IMPORT_NOTIFICATION_CHANNEL_ID = "bbplayer_external_import_progress"
+        private const val IMPORT_NOTIFICATION_ID = 41023
     }
 }
 
@@ -383,6 +489,37 @@ class UnzipResult : Record {
     @Field
     var fileCount: Int = 0
 }
+
+@OptimizedRecord
+class ImportProgressNotificationOptions : Record {
+    @Field
+    var jobId: String = ""
+
+    @Field
+    var title: String = ""
+
+    @Field
+    var body: String = ""
+
+    @Field
+    var subText: String? = null
+
+    @Field
+    var progress: Int = 0
+
+    @Field
+    var maxProgress: Int = 0
+
+    @Field
+    var ongoing: Boolean = false
+
+    @Field
+    var deepLinkUri: String? = null
+
+    @Field
+    var status: String = "running"
+}
+
 
 
 

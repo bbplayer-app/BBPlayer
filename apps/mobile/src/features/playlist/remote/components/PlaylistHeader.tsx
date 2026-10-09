@@ -16,7 +16,7 @@ interface PlaylistHeaderProps {
 	subtitles: string | string[] | undefined // 通常格式： "Author • n Tracks"
 	description: string | undefined
 	onClickMainButton?: () => void
-	mainButtonIcon: IconSource
+	mainButtonIcon?: IconSource
 	linkedPlaylistId?: number
 	id: string | number
 	mainButtonText?: string
@@ -53,6 +53,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const router = useRouter()
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	if (!title) return null
+
+	const hasActions = Boolean(
+		linkedPlaylistId ||
+		onClickMainButton ||
+		(props.secondaryButtonText && props.onClickSecondaryButton),
+	)
 
 	return (
 		<View style={styles.container}>
@@ -94,51 +100,53 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			</View>
 
 			{/* 操作按钮 */}
-			<View style={styles.actionsContainer}>
-				{linkedPlaylistId ? (
-					<Button
-						mode='contained'
-						icon='arrow-right'
-						onPress={() =>
-							router.navigate({
-								pathname: '/playlist/local/[id]',
-								params: { id: linkedPlaylistId.toString() },
-							})
-						}
-						testID='playlist-header-main-button'
-						buttonColor={primaryButtonColor}
-						textColor={primaryButtonTextColor}
-					>
-						进入播放列表
-					</Button>
-				) : (
-					onClickMainButton && (
+			{hasActions && (
+				<View style={styles.actionsContainer}>
+					{linkedPlaylistId ? (
 						<Button
 							mode='contained'
-							icon={mainButtonIcon}
-							onPress={onClickMainButton}
-							disabled={props.disableMainButton}
-							loading={props.mainButtonLoading}
+							icon='arrow-right'
+							onPress={() =>
+								router.navigate({
+									pathname: '/playlist/local/[id]',
+									params: { id: linkedPlaylistId.toString() },
+								})
+							}
 							testID='playlist-header-main-button'
 							buttonColor={primaryButtonColor}
 							textColor={primaryButtonTextColor}
 						>
-							{mainButtonText ?? '同步到本地'}
+							进入播放列表
 						</Button>
-					)
-				)}
-				{props.secondaryButtonText && props.onClickSecondaryButton && (
-					<Button
-						mode='outlined'
-						icon={props.secondaryButtonIcon}
-						onPress={props.onClickSecondaryButton}
-						disabled={props.disableSecondaryButton}
-						textColor={secondaryButtonIconColor}
-					>
-						{props.secondaryButtonText}
-					</Button>
-				)}
-			</View>
+					) : (
+						onClickMainButton && (
+							<Button
+								mode='contained'
+								icon={mainButtonIcon}
+								onPress={onClickMainButton}
+								disabled={props.disableMainButton}
+								loading={props.mainButtonLoading}
+								testID='playlist-header-main-button'
+								buttonColor={primaryButtonColor}
+								textColor={primaryButtonTextColor}
+							>
+								{mainButtonText ?? '同步到本地'}
+							</Button>
+						)
+					)}
+					{props.secondaryButtonText && props.onClickSecondaryButton && (
+						<Button
+							mode='outlined'
+							icon={props.secondaryButtonIcon}
+							onPress={props.onClickSecondaryButton}
+							disabled={props.disableSecondaryButton}
+							textColor={secondaryButtonIconColor}
+						>
+							{props.secondaryButtonText}
+						</Button>
+					)}
+				</View>
+			)}
 
 			<Text
 				variant='bodyMedium'

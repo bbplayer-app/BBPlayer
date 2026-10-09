@@ -302,7 +302,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 										borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
 									},
 								]}
-								recyclingKey={currentTrack.uniqueKey}
+								recyclingKey={`${currentTrack.uniqueKey}:${currentTrack.coverUrl ?? ''}`}
 								cachePolicy={'disk'}
 							/>
 

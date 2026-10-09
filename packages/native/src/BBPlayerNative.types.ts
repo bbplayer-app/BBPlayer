@@ -45,3 +45,15 @@ export interface StorageEntry {
 	/** 文件占用的字节数；目录固定为 `0`（不统计目录大小）。 */
 	sizeBytes: number
 }
+
+export interface ImportProgressNotificationOptions {
+	jobId: string
+	title: string
+	body: string
+	subText?: string
+	progress: number
+	maxProgress: number
+	ongoing: boolean
+	deepLinkUri?: string
+	status: 'running' | 'paused' | 'rate_limited' | 'completed' | 'failed'
+}
