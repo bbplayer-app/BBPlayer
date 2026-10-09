@@ -164,7 +164,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	}
 
 	const onClickUser = () => {
-		router.push(`/playlist/remote/uploader/${item.mid}`)
+		router.navigate(`/playlist/remote/uploader/${item.mid}`)
 	}
 
 	return (

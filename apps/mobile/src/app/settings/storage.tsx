@@ -120,7 +120,7 @@ export default function StorageSettingsPage() {
 				icon: 'download',
 				color: colors.secondary,
 				value: usage.downloadBytes,
-				onPress: () => router.push('/downloaded'),
+				onPress: () => router.navigate('/downloaded'),
 			},
 			{
 				key: 'other',
@@ -129,7 +129,7 @@ export default function StorageSettingsPage() {
 				icon: 'database',
 				color: colors.outline,
 				value: usage.otherBytes,
-				onPress: () => router.push('/settings/app-data'),
+				onPress: () => router.navigate('/settings/app-data'),
 			},
 			{
 				key: 'package',

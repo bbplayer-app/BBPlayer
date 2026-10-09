@@ -22,7 +22,7 @@ const InputExternalPlaylistInfoModal = () => {
 
 		close('InputExternalPlaylistInfo')
 		useModalStore.getState().doAfterModalHostClosed(() => {
-			router.push({
+			router.navigate({
 				pathname: '/playlist/external-sync',
 				params: { id: finalId, source: finalSource },
 			})

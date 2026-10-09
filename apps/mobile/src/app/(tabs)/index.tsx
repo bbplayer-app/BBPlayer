@@ -1,3 +1,6 @@
+// oxlint-disable-next-line import/no-unassigned-import
+import 'dayjs/locale/zh-cn'
+
 import { WeeklyHeatMap } from '@bbplayer/heatmap'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import Color from 'color'
@@ -327,7 +330,7 @@ function HomePage() {
 						)}
 						<Touchable
 							androidRipple={{}}
-							onPress={() => router.push('/settings/bilibili-account')}
+							onPress={() => router.navigate('/settings/bilibili-account')}
 							style={styles.avatarButton}
 						>
 							<Image
@@ -403,7 +406,7 @@ function HomePage() {
 							locale='zh-cn'
 							onCellPress={({ date }) => {
 								const dateStr = dayjs(date).format('YYYY-MM-DD')
-								router.push(`/history/${dateStr}`)
+								router.navigate(`/history/${dateStr}`)
 							}}
 							scheme={theme.dark ? 'dark' : 'light'}
 							cellColor={{
@@ -445,7 +448,7 @@ function HomePage() {
 										const lastMonth = dayjs()
 											.subtract(1, 'month')
 											.format('YYYY-MM-DD')
-										router.push(`/history/${lastMonth}`)
+										router.navigate(`/history/${lastMonth}`)
 									}}
 								>
 									<View
@@ -479,7 +482,7 @@ function HomePage() {
 										styles.quickAccessCard,
 										{ backgroundColor: colors.surfaceVariant },
 									]}
-									onPress={() => router.push('/playlist/recently')}
+									onPress={() => router.navigate('/playlist/recently')}
 								>
 									<View
 										style={{
@@ -513,7 +516,7 @@ function HomePage() {
 											styles.quickAccessCard,
 											{ backgroundColor: colors.surfaceVariant },
 										]}
-										onPress={() => router.push('/playlist/remote/toview')}
+										onPress={() => router.navigate('/playlist/remote/toview')}
 									>
 										<View
 											style={{
@@ -535,6 +538,41 @@ function HomePage() {
 											style={styles.quickAccessText}
 										>
 											稍后再看
+										</Text>
+									</Touchable>
+								)}
+
+								{/* 我的关注 - conditional on Bilibili cookie */}
+								{hasBilibiliCookie() && (
+									<Touchable
+										androidRipple={{}}
+										key='following'
+										style={[
+											styles.quickAccessCard,
+											{ backgroundColor: colors.surfaceVariant },
+										]}
+										onPress={() => router.navigate('/following')}
+									>
+										<View
+											style={{
+												width: 48,
+												height: 48,
+												borderRadius: 24,
+												justifyContent: 'center',
+												alignItems: 'center',
+											}}
+										>
+											<Icon
+												source='account-heart'
+												size={32}
+												color={colors.onSurfaceVariant}
+											/>
+										</View>
+										<Text
+											variant='labelMedium'
+											style={styles.quickAccessText}
+										>
+											我的关注
 										</Text>
 									</Touchable>
 								)}
@@ -567,7 +605,7 @@ function HomePage() {
 												{ backgroundColor: colors.surfaceVariant },
 											]}
 											onPress={() => {
-												router.push(`/playlist/local/${item.id}`)
+												router.navigate(`/playlist/local/${item.id}`)
 											}}
 										>
 											<Image

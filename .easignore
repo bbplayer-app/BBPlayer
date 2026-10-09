@@ -19,8 +19,14 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native - DO NOT IGNORE android/ or ios/ folders in packages/apps
-# We intentionally omit 'android/' and 'ios/' and 'apps/**/android' etc so they are INCLUDED.
+# Native library sources are included, but generated app projects must be
+# recreated from app.config.ts for the selected build profile.
+/apps/mobile/android/
+/apps/mobile/ios/
+**/android/build/
+**/android/.gradle/
+**/android/.cxx/
+.kotlin/
 
 # Metro
 .metro-health-check*
@@ -39,12 +45,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-# generated native folders - we want to KEEP these for local builds if they exist
-# /ios
-# /android
-# apps/**/android
-# apps/**/ios
 
 temp-builds
 .yarn/install-state.gz

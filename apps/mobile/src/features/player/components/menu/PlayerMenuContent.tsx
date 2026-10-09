@@ -212,7 +212,7 @@ export function SharedTrackActions({
 						if (!uploaderMid) {
 							toast.error('获取视频详细信息失败')
 						} else {
-							router.push({
+							router.navigate({
 								pathname: '/playlist/remote/uploader/[mid]',
 								params: { mid: String(uploaderMid) },
 							})
@@ -232,7 +232,7 @@ export function SharedTrackActions({
 					onPress={() =>
 						handleAction(() => {
 							if (!currentTrack) return
-							router.push({
+							router.navigate({
 								pathname: '/playlist/remote/multipage/[bvid]',
 								params: { bvid: currentTrack.bilibiliMetadata.bvid },
 							})

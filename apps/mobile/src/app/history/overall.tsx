@@ -1,17 +1,19 @@
 import { LegendList } from '@legendapp/list/react-native'
 import { useRouter } from 'expo-router'
-import { useCallback, useMemo } from 'react'
+import { NumberFlow } from 'number-flow-react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Appbar, Surface, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { HistoryListItem } from '@/features/history/HistoryListItem'
+import { TrackListItemSkeletonGroup } from '@/features/playlist/skeletons/PlaylistSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	usePlayCountHistoryPaginated,
 	useTotalPlaybackDuration,
 } from '@/hooks/queries/db/track'
+import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import type { Track } from '@/types/core/media'
 
 interface HistoryItemData {
@@ -19,20 +21,49 @@ interface HistoryItemData {
 	playCount: number
 }
 
-const formatDurationToWords = (seconds: number) => {
-	if (isNaN(seconds) || seconds < 0) {
-		return '0\u2009秒'
+function PlaybackDurationFlow({ seconds }: { seconds: number }) {
+	const { colors, fonts } = useTheme()
+	const [displaySeconds, setDisplaySeconds] = useState(0)
+	const durationTextStyle = {
+		...fonts.headlineMedium,
+		color: colors.primary,
 	}
-	const h = Math.floor(seconds / 3600)
-	const m = Math.floor((seconds % 3600) / 60)
-	const s = Math.floor(seconds % 60)
 
-	const parts = []
-	if (h > 0) parts.push(`${h}\u2009时`)
-	if (m > 0) parts.push(`${m}\u2009分`)
-	if (s > 0 || parts.length === 0) parts.push(`${s}\u2009秒`)
+	useEffect(() => {
+		// 先显示零值，再启动首次数字滚动。
+		const timer = setTimeout(() => setDisplaySeconds(seconds), 100)
+		return () => clearTimeout(timer)
+	}, [seconds])
 
-	return parts.join('\u2009')
+	const hours = Math.floor(displaySeconds / 3600)
+	const minutes = Math.floor((displaySeconds % 3600) / 60)
+	const remainingSeconds = displaySeconds % 60
+
+	return (
+		<View
+			style={styles.totalDurationFlow}
+			accessible
+			accessibilityLabel={`${hours}小时${minutes}分${remainingSeconds}秒`}
+		>
+			<NumberFlow
+				value={hours}
+				suffix=':'
+				format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+				style={durationTextStyle}
+			/>
+			<NumberFlow
+				value={minutes}
+				suffix=':'
+				format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+				style={durationTextStyle}
+			/>
+			<NumberFlow
+				value={remainingSeconds}
+				format={{ useGrouping: false, minimumIntegerDigits: 2 }}
+				style={durationTextStyle}
+			/>
+		</View>
+	)
 }
 
 const renderItem = ({
@@ -49,6 +80,7 @@ const renderItem = ({
 )
 
 export default function OverallHistoryPage() {
+	const isListReady = useScreenTransitionReady()
 	const { colors } = useTheme()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
@@ -62,6 +94,7 @@ export default function OverallHistoryPage() {
 		hasNextPage,
 		isFetchingNextPage,
 	} = usePlayCountHistoryPaginated(30, true, 15)
+	const showSkeleton = isHistoryLoading || !isListReady
 
 	const { data: totalDurationData, isError: isTotalDurationError } =
 		useTotalPlaybackDuration(true)
@@ -70,10 +103,10 @@ export default function OverallHistoryPage() {
 		return historyData?.pages.flatMap((page) => page.items) ?? []
 	}, [historyData])
 
-	const totalDuration = useMemo(() => {
-		if (isTotalDurationError || !totalDurationData) return '0\u2009秒'
-		return formatDurationToWords(totalDurationData)
-	}, [totalDurationData, isTotalDurationError])
+	const totalDuration =
+		!isTotalDurationError && Number.isFinite(totalDurationData)
+			? Math.max(0, Math.floor(totalDurationData ?? 0))
+			: 0
 
 	const keyExtractor = useCallback(
 		(item: HistoryItemData) => item.track.uniqueKey,
@@ -87,8 +120,13 @@ export default function OverallHistoryPage() {
 	}
 
 	const renderContent = () => {
-		if (isHistoryLoading) {
-			return <ActivityIndicator style={styles.loadingIndicator} />
+		if (showSkeleton) {
+			return (
+				<TrackListItemSkeletonGroup
+					count={2}
+					animate={isListReady}
+				/>
+			)
 		}
 
 		if (isHistoryError) {
@@ -121,9 +159,10 @@ export default function OverallHistoryPage() {
 				showsVerticalScrollIndicator={false}
 				ListFooterComponent={
 					isFetchingNextPage ? (
-						<View style={styles.footerLoadingContainer}>
-							<ActivityIndicator size='small' />
-						</View>
+						<TrackListItemSkeletonGroup
+							count={1}
+							animate
+						/>
 					) : !hasNextPage ? (
 						<Text
 							variant='bodyMedium'
@@ -143,27 +182,47 @@ export default function OverallHistoryPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='全部统计' />
 			</Appbar.Header>
-			{allTracks.length > 0 && !isTotalDurationError && (
+			{(showSkeleton || (allTracks.length > 0 && !isTotalDurationError)) && (
 				<Surface
 					style={styles.totalDurationSurface}
 					elevation={2}
 				>
-					<Text variant='titleMedium'>总计听歌时长</Text>
-					<Text
-						variant='headlineMedium'
-						style={[styles.totalDurationText, { color: colors.primary }]}
-					>
-						{totalDuration}
-					</Text>
-					<Text
-						variant='bodySmall'
-						style={[
-							styles.totalDurationSubText,
-							{ color: colors.onSurfaceVariant },
-						]}
-					>
-						（仅统计完整播放的歌曲）
-					</Text>
+					{showSkeleton ? (
+						<>
+							<View
+								style={[
+									styles.summaryTitleSkeleton,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+							/>
+							<View
+								style={[
+									styles.summaryDurationSkeleton,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+							/>
+							<View
+								style={[
+									styles.summarySubtitleSkeleton,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+							/>
+						</>
+					) : (
+						<>
+							<Text variant='titleMedium'>总计听歌时长</Text>
+							<PlaybackDurationFlow seconds={totalDuration} />
+							<Text
+								variant='bodySmall'
+								style={[
+									styles.totalDurationSubText,
+									{ color: colors.onSurfaceVariant },
+								]}
+							>
+								（仅统计完整播放的歌曲）
+							</Text>
+						</>
+					)}
 				</Surface>
 			)}
 
@@ -176,19 +235,27 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	loadingIndicator: {
-		marginTop: 20,
-	},
 	centeredContainer: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
-	footerLoadingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 16,
+	summaryTitleSkeleton: {
+		width: 112,
+		height: 24,
+		borderRadius: 4,
+	},
+	summaryDurationSkeleton: {
+		width: 180,
+		height: 36,
+		marginTop: 8,
+		borderRadius: 4,
+	},
+	summarySubtitleSkeleton: {
+		width: 196,
+		height: 16,
+		marginTop: 4,
+		borderRadius: 4,
 	},
 	footerText: {
 		textAlign: 'center',
@@ -202,8 +269,11 @@ const styles = StyleSheet.create({
 		borderRadius: 12,
 		alignItems: 'center',
 	},
-	totalDurationText: {
+	totalDurationFlow: {
 		marginTop: 8,
+		flexDirection: 'row',
+		justifyContent: 'center',
+		alignItems: 'center',
 	},
 	totalDurationSubText: {
 		marginTop: 4,

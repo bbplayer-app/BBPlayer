@@ -185,7 +185,7 @@ function ThemeSectionContent() {
 			<View style={styles.section}>
 				<Button
 					mode='outlined'
-					onPress={() => router.push('/settings/appearance/theme-search')}
+					onPress={() => router.navigate('/settings/appearance/theme-search')}
 				>
 					添加主题
 				</Button>

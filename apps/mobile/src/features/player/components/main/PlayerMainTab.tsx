@@ -40,7 +40,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 				<TrackInfo
 					onArtistPress={() =>
 						currentTrack.artist?.remoteId
-							? router.push({
+							? router.navigate({
 									pathname: '/playlist/remote/uploader/[mid]',
 									params: { mid: currentTrack.artist?.remoteId },
 								})

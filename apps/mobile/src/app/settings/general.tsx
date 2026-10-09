@@ -196,7 +196,7 @@ export default function GeneralSettingsPage() {
 					<IconButton
 						icon='open-in-new'
 						size={20}
-						onPress={() => router.push('/test')}
+						onPress={() => router.navigate('/test')}
 					/>
 				</View>
 				<View style={styles.settingRow}>
@@ -204,7 +204,7 @@ export default function GeneralSettingsPage() {
 					<IconButton
 						icon='speedometer'
 						size={20}
-						onPress={() => router.push('/performance')}
+						onPress={() => router.navigate('/performance')}
 					/>
 				</View>
 			</ScrollView>

@@ -41,7 +41,7 @@ export default function CreatePlaylistModal({
 					if (redirectToNewPlaylist) {
 						closeAll()
 						useModalStore.getState().doAfterModalHostClosed(() => {
-							router.push({
+							router.navigate({
 								pathname: '/playlist/local/[id]',
 								params: { id: String(playlist.id) },
 							})

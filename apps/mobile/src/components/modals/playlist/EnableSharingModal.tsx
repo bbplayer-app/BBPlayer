@@ -55,7 +55,7 @@ export default function EnableSharingModal({
 	const handleConfirm = () => {
 		if (!hasToken) {
 			doAfterModalHostClosed(() => {
-				router.push({
+				router.navigate({
 					pathname: '/settings/account',
 					params: { returnTo: `/playlist/local/${playlistId}` },
 				})
@@ -86,7 +86,7 @@ export default function EnableSharingModal({
 		if (!hasToken) {
 			toast.error('请先登录 BBPlayer 账号')
 			doAfterModalHostClosed(() => {
-				router.push({
+				router.navigate({
 					pathname: '/settings/account',
 					params: { returnTo: `/playlist/local/${playlistId}` },
 				})

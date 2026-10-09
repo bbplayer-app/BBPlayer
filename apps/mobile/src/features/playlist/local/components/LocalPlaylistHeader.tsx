@@ -151,7 +151,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				.filter((t) => !!t),
 		)
 		useModalStore.getState().doAfterModalHostClosed(() => {
-			router.push('/download')
+			router.navigate('/download')
 		})
 	}, [playlist.id, router])
 

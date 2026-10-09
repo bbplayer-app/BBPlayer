@@ -86,12 +86,12 @@ export default function Library() {
 						<IconButton
 							icon='download-box'
 							iconColor={headerForegroundColor}
-							onPress={() => router.push('/downloaded')}
+							onPress={() => router.navigate('/downloaded')}
 						/>
 						<IconButton
 							icon='trophy'
 							iconColor={headerForegroundColor}
-							onPress={() => router.push('/history/overall')}
+							onPress={() => router.navigate('/history/overall')}
 						/>
 					</View>
 				</View>
@@ -101,6 +101,8 @@ export default function Library() {
 					renderScene={renderScene}
 					renderTabBar={(props) => (
 						<TabBar
+							scrollEnabled
+							// tabStyle={{ width: 'auto' }}
 							style={{
 								backgroundColor: 'transparent',
 								marginBottom: 8,

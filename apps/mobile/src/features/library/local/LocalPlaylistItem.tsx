@@ -21,7 +21,7 @@ const LocalPlaylistItem = memo(
 					androidRipple={{}}
 					style={styles.rectButton}
 					onPress={() => {
-						router.push({
+						router.navigate({
 							pathname: item.isToView
 								? '/playlist/remote/toview'
 								: '/playlist/local/[id]',

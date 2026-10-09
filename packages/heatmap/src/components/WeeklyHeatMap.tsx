@@ -1,13 +1,13 @@
 import dayjs from 'dayjs'
-import { JSX, useCallback, useRef } from 'react'
+import { JSX, useCallback, useMemo, useRef } from 'react'
 import { ScrollView, View } from 'react-native'
 import Svg, { G, Text as SvgText } from 'react-native-svg'
 
 import { DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME } from '../constants/theme'
 import { HeatMapProps } from '../types'
-import { countData, getWeeklyData, getColor } from '../utils/calendar'
+import { countData, getWeeklyData } from '../utils/calendar'
 
-import HeatMapCell from './HeatMapCell'
+import WeeklyHeatMapGrid from './WeeklyHeatMapGrid'
 
 export const WeeklyHeatMap = ({
 	data,
@@ -28,8 +28,6 @@ export const WeeklyHeatMap = ({
 	isCellTextVisible = false,
 	pressable = true,
 	onCellPress,
-	onMouseEnter,
-	onMouseLeave,
 	scrollable = true,
 	rtl = false,
 	initialScrollEnd = false,
@@ -48,21 +46,29 @@ export const WeeklyHeatMap = ({
 		}
 	}, [rtl, initialScrollEnd])
 
-	const resolvedStartDate = startDate || dayjs().subtract(1, 'year').toDate()
-	const resolvedEndDate = endDate || new Date()
+	const startDay = dayjs(startDate || dayjs().subtract(1, 'year'))
+		.startOf('day')
+		.valueOf()
+	const endDay = dayjs(endDate).startOf('day').valueOf()
 
 	const baseTheme =
 		scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
 	const customTheme = props[scheme] || {}
 	const theme = { ...baseTheme, ...props, ...customTheme }
 
-	const counts = countData(data)
+	const counts = useMemo(() => countData(data), [data])
 
 	const localeName = typeof locale === 'string' ? locale : locale?.name || 'en'
 
-	const weeks = getWeeklyData(resolvedStartDate, resolvedEndDate, weekStartsOn)
+	const weeks = useMemo(
+		() => getWeeklyData(new Date(startDay), new Date(endDay), weekStartsOn),
+		[startDay, endDay, weekStartsOn],
+	)
 
-	const displayedWeeks = rtl ? [...weeks].toReversed() : weeks
+	const displayedWeeks = useMemo(
+		() => (rtl ? [...weeks].toReversed() : weeks),
+		[rtl, weeks],
+	)
 
 	const sidebarWidth = isSidebarVisible ? sideBarTextFontSize * 3 : 0
 	const headerHeight = isHeaderVisible
@@ -81,7 +87,13 @@ export const WeeklyHeatMap = ({
 		displayedWeeks.forEach((week, index) => {
 			const month = dayjs(week.weekStart).month()
 			if (month !== lastMonth) {
-				const x = sidebarWidth + index * (cellSize + cellGap)
+				// A month starting in the final column can be wider than one cell.
+				// Align its trailing edge with the last cell so the SVG won't clip it.
+				const isLastColumn = index === displayedWeeks.length - 1
+				const x =
+					sidebarWidth +
+					index * (cellSize + cellGap) +
+					(isLastColumn ? cellSize : 0)
 				monthLabels.push(
 					<SvgText
 						// oxlint-disable-next-line react/no-array-index-key
@@ -90,6 +102,7 @@ export const WeeklyHeatMap = ({
 						y={headerTextFontSize}
 						fill={theme.headerTextColor}
 						fontSize={headerTextFontSize}
+						textAnchor={isLastColumn ? 'end' : 'start'}
 					>
 						{dayjs(week.weekStart).locale(localeName).format(headerTextFormat)}
 					</SvgText>,
@@ -129,59 +142,26 @@ export const WeeklyHeatMap = ({
 	}
 
 	const gridContent = (
-		<G x={-sidebarWidth}>
-			{renderHeader()}
-			<G
-				x={sidebarWidth}
-				y={headerHeight}
-			>
-				{displayedWeeks.map((week, weekIndex) => (
-					<G
-						// oxlint-disable-next-line react/no-array-index-key
-						key={`week-${weekIndex}`}
-						x={weekIndex * (cellSize + cellGap)}
-					>
-						{week.days.map((day, dayIndex) => {
-							const dateStr = dayjs(day).format('YYYY-MM-DD')
-							const count = counts[dateStr] || 0
-							const color = getColor(
-								count,
-								theme.cellColor,
-								theme.cellDefaultColor,
-							)
-
-							let text: string | undefined
-							if (isCellTextVisible) {
-								if (cellText === 'date') text = dayjs(day).format('D')
-								else if (cellText === 'count')
-									text = count > 0 ? count.toString() : undefined
-							}
-
-							return (
-								<HeatMapCell
-									// oxlint-disable-next-line react/no-array-index-key
-									key={`day-${dayIndex}`}
-									x={0}
-									y={dayIndex * (cellSize + cellGap)}
-									size={cellSize}
-									radius={cellRadius}
-									color={color}
-									count={count}
-									date={day}
-									pressable={pressable}
-									onPress={onCellPress}
-									onMouseEnter={onMouseEnter}
-									onMouseLeave={onMouseLeave}
-									cellText={text}
-									cellTextColor={theme.cellTextColor}
-									cellTextFontSize={cellTextFontSize}
-								/>
-							)
-						})}
-					</G>
-				))}
-			</G>
-		</G>
+		<WeeklyHeatMapGrid
+			weeks={displayedWeeks}
+			counts={counts}
+			width={width - sidebarWidth}
+			height={height}
+			headerHeight={headerHeight}
+			cellSize={cellSize}
+			cellGap={cellGap}
+			cellRadius={cellRadius}
+			cellColor={theme.cellColor}
+			cellDefaultColor={theme.cellDefaultColor}
+			cellTextColor={theme.cellTextColor}
+			cellTextFontSize={cellTextFontSize}
+			cellText={cellText}
+			isCellTextVisible={isCellTextVisible}
+			pressable={pressable}
+			onCellPress={onCellPress}
+		>
+			<G x={-sidebarWidth}>{renderHeader()}</G>
+		</WeeklyHeatMapGrid>
 	)
 
 	if (scrollable) {
@@ -204,12 +184,7 @@ export const WeeklyHeatMap = ({
 						rtl ? { x: width - sidebarWidth, y: 0 } : { x: 0, y: 0 }
 					}
 				>
-					<Svg
-						width={width - sidebarWidth}
-						height={height}
-					>
-						{gridContent}
-					</Svg>
+					{gridContent}
 				</ScrollView>
 			</View>
 		)
@@ -225,14 +200,7 @@ export const WeeklyHeatMap = ({
 					{renderSidebar()}
 				</Svg>
 			)}
-			<View>
-				<Svg
-					width={width - sidebarWidth}
-					height={height}
-				>
-					{gridContent}
-				</Svg>
-			</View>
+			<View>{gridContent}</View>
 		</View>
 	)
 }

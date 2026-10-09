@@ -51,7 +51,7 @@ export function usePlaylistMenu(
 						toast.info('你已经在这里了，没法更深入了！')
 						return
 					}
-					router.push({
+					router.navigate({
 						pathname: '/playlist/remote/multipage/[bvid]',
 						params: { bvid: item.bilibiliMetadata.bvid },
 					})
@@ -72,7 +72,7 @@ export function usePlaylistMenu(
 						toast.error('未找到 up 主信息')
 						return
 					}
-					router.push({
+					router.navigate({
 						pathname: '/playlist/remote/uploader/[mid]',
 						params: { mid: item.artist?.remoteId },
 					})
