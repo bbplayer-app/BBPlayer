@@ -1,6 +1,14 @@
 import { Icon } from '@expo/ui'
 import { LegendList } from '@legendapp/list/react-native'
-import { memo, useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
+import {
+	memo,
+	useCallback,
+	useDeferredValue,
+	useEffect,
+	useMemo,
+	useState,
+} from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Searchbar, Text, useTheme } from 'react-native-paper'
 
@@ -16,8 +24,14 @@ import {
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
+import {
+	externalImportJobService,
+	type ImportJob,
+} from '@/lib/services/externalImportJobService'
+import { externalPlaylistImportWorker } from '@/lib/workers/ExternalPlaylistImportWorker'
 import type { Playlist } from '@/types/core/media'
 
+import DraftImportPlaylistItem from './DraftImportPlaylistItem'
 import LocalPlaylistItem from './LocalPlaylistItem'
 
 const CREATE_PLAYLIST_ICON = Icon.select({
@@ -55,6 +69,41 @@ const LocalPlaylistListComponent = memo(() => {
 	const openModal = useModalStore((state) => state.open)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
 
+	const [draftJobs, setDraftJobs] = useState<ImportJob[]>(() => {
+		try {
+			return externalImportJobService.listActiveDraftJobs()
+		} catch {
+			return []
+		}
+	})
+	const [currentTrackByJobId, setCurrentTrackByJobId] = useState<
+		Record<string, string | null>
+	>({})
+
+	useEffect(() => {
+		const refreshDrafts = () => {
+			try {
+				setDraftJobs(externalImportJobService.listActiveDraftJobs())
+			} catch {
+				// Ignore
+			}
+		}
+		refreshDrafts()
+		const unsubChanges =
+			externalImportJobService.subscribeChanges(refreshDrafts)
+		const unsubWorker = externalPlaylistImportWorker.subscribe((event) => {
+			refreshDrafts()
+			setCurrentTrackByJobId((prev) => ({
+				...prev,
+				[event.jobId]: event.currentTrackTitle,
+			}))
+		})
+		return () => {
+			unsubChanges()
+			unsubWorker()
+		}
+	}, [])
+
 	const {
 		data: playlists,
 		isPending: playlistsIsPending,
@@ -63,7 +112,28 @@ const LocalPlaylistListComponent = memo(() => {
 		isError: playlistsIsError,
 	} = usePlaylistLists()
 
+	useFocusEffect(
+		useCallback(() => {
+			void refetch()
+			try {
+				setDraftJobs(externalImportJobService.listActiveDraftJobs())
+			} catch {
+				// Ignore
+			}
+		}, [refetch]),
+	)
+
 	const { data: searchResults } = useSearchPlaylists(deferredSearchQuery, true)
+
+	const filteredDraftJobs = useMemo(() => {
+		const q = deferredSearchQuery.trim().toLowerCase()
+		if (!q) return draftJobs
+		return draftJobs.filter((job) =>
+			(job.playlistMetadata.title || job.sourcePlaylistId)
+				.toLowerCase()
+				.includes(q),
+		)
+	}, [deferredSearchQuery, draftJobs])
 
 	const finalPlaylists = useMemo(() => {
 		if (deferredSearchQuery.trim()) {
@@ -96,6 +166,11 @@ const LocalPlaylistListComponent = memo(() => {
 
 	const onRefresh = async () => {
 		setRefreshing(true)
+		try {
+			setDraftJobs(externalImportJobService.listActiveDraftJobs())
+		} catch {
+			// Ignore
+		}
 		await refetch()
 		setRefreshing(false)
 	}
@@ -148,7 +223,7 @@ const LocalPlaylistListComponent = memo(() => {
 				</Text>
 				<View style={styles.headerActionsContainer}>
 					<Text variant='bodyMedium'>
-						{playlists.length ?? 0}&thinsp;个播放列表
+						{(playlists.length ?? 0) + draftJobs.length}&thinsp;个播放列表
 					</Text>
 					<MenuView {...menuActions}>
 						<IconButton
@@ -178,6 +253,24 @@ const LocalPlaylistListComponent = memo(() => {
 					data={finalPlaylists ?? []}
 					renderItem={renderPlaylistItem}
 					recycleItems
+					ListHeaderComponent={
+						filteredDraftJobs.length > 0 ? (
+							<View style={styles.draftsSection}>
+								{filteredDraftJobs.map((job) => (
+									<DraftImportPlaylistItem
+										key={job.jobId}
+										job={job}
+										currentTrackTitle={
+											currentTrackByJobId[job.jobId] ??
+											externalPlaylistImportWorker.getCurrentTrackTitle(
+												job.jobId,
+											)
+										}
+									/>
+								))}
+							</View>
+						) : null
+					}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing || playlistsIsRefetching}
@@ -188,7 +281,9 @@ const LocalPlaylistListComponent = memo(() => {
 					}
 					keyExtractor={keyExtractor}
 					ListEmptyComponent={
-						<Text style={styles.emptyList}>没有播放列表</Text>
+						filteredDraftJobs.length === 0 ? (
+							<Text style={styles.emptyList}>没有播放列表</Text>
+						) : null
 					}
 				/>
 			</View>
@@ -225,7 +320,9 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 		marginTop: 0,
 	},
-
+	draftsSection: {
+		marginBottom: 8,
+	},
 	emptyList: {
 		textAlign: 'center',
 	},

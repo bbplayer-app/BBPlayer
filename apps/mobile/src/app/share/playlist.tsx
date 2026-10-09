@@ -143,7 +143,12 @@ export default function SharedPlaylistPreviewPage() {
 		primaryButtonColor,
 		primaryButtonTextColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		data?.playlist.coverUrl,
+	)
 
 	const nowForTracks = new Date()
 	const previewTracks = data

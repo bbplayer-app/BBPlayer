@@ -12,12 +12,17 @@ import {
 	useTheme,
 } from 'react-native-paper'
 
+import BilibiliIcon from '@/components/common/BilibiliIcon'
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import {
+	externalImportJobService,
+	type ExternalPlaylistViewMode,
+} from '@/lib/services/externalImportJobService'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -41,6 +46,8 @@ interface PlaylistHeaderProps {
 	primaryButtonTextColor?: string
 	secondaryButtonContainerColor?: string
 	secondaryButtonIconColor?: string
+	externalViewMode?: ExternalPlaylistViewMode
+	onToggleExternalViewMode?: () => void
 }
 
 interface SubtitlePieces {
@@ -102,6 +109,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	primaryButtonTextColor,
 	secondaryButtonContainerColor,
 	secondaryButtonIconColor,
+	externalViewMode,
+	onToggleExternalViewMode,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
@@ -133,10 +142,15 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			tracksResult.value
 				.filter((item) =>
 					item.source === 'bilibili'
-						? item.bilibiliMetadata.videoIsValid
+						? Boolean(item.bilibiliMetadata.bvid) &&
+							item.bilibiliMetadata.videoIsValid
 						: true,
 				)
-				.map((t) => {
+				.map((rawTrack) => {
+					const t = externalImportJobService.resolveTrackForPlayback(
+						rawTrack,
+						playlist.id,
+					)
 					const url = getInternalPlayUri(t)
 					if (!url) return
 					return {
@@ -408,6 +422,26 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						containerColor={secondaryButtonContainerColor}
 						iconColor={secondaryButtonIconColor}
 					/>
+					{onToggleExternalViewMode && (
+						<IconButton
+							mode='contained'
+							icon={
+								externalViewMode === 'bilibili'
+									? ({ size, color }) => (
+											<BilibiliIcon
+												size={size}
+												color={color}
+											/>
+										)
+									: 'music-note'
+							}
+							size={20}
+							onPress={onToggleExternalViewMode}
+							testID='playlist-toggle-external-view-mode'
+							containerColor={secondaryButtonContainerColor}
+							iconColor={secondaryButtonIconColor}
+						/>
+					)}
 				</View>
 			</View>
 

@@ -1,14 +1,13 @@
 import { DownloadState } from '@bbplayer/orpheus'
 import { Icon as ExpoIcon } from '@expo/ui'
-import { memo, useCallback } from 'react'
-import { Easing, StyleSheet, useColorScheme, View } from 'react-native'
+import { memo, useCallback, useMemo } from 'react'
+import { StyleSheet, useColorScheme, View } from 'react-native'
 import {
 	usePanGesture,
 	GestureDetector,
 	Touchable,
 } from 'react-native-gesture-handler'
 import { Icon, Surface, useTheme } from 'react-native-paper'
-import TextTicker from 'react-native-text-ticker'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import UniversalCheckbox from '@/components/common/UniversalCheckbox'
@@ -57,6 +56,79 @@ interface TrackListItemProps {
 	downloadState?: DownloadState
 }
 
+export function resolveTrackDisplayLines(
+	data: Track,
+	playlistType: Playlist['type'],
+) {
+	const rawMainTitle =
+		data.source === 'bilibili'
+			? (data.bilibiliMetadata.mainTrackTitle?.trim() ?? '')
+			: ''
+	const isUnmatched = data.source === 'bilibili' && !data.bilibiliMetadata.bvid
+	const isExternalOriginalModeTrack =
+		isUnmatched ||
+		rawMainTitle.startsWith('音源:') ||
+		rawMainTitle.startsWith('[未匹配音源]')
+
+	if (isExternalOriginalModeTrack) {
+		const artistName = data.artist?.name?.trim()
+		const primaryLine = artistName
+			? `${data.title} - ${artistName}`
+			: data.title
+
+		if (isUnmatched) {
+			return {
+				primaryLine,
+				secondaryLine: '待匹配音源',
+				isSourceError: false,
+				upName: null,
+				hideDetailsRow: true,
+			}
+		}
+
+		let secondaryLine: string
+		let upName: string
+
+		if (rawMainTitle.startsWith('音源:')) {
+			const withoutPrefix = rawMainTitle.replace(/^音源:\s*/, '')
+			const upMarker = ' · UP: '
+			const upIdx = withoutPrefix.lastIndexOf(upMarker)
+			secondaryLine =
+				(upIdx !== -1 ? withoutPrefix.slice(0, upIdx) : withoutPrefix).trim() ||
+				data.title
+			upName =
+				(upIdx !== -1
+					? withoutPrefix.slice(upIdx + upMarker.length)
+					: ''
+				).trim() || '未知 UP 主'
+		} else {
+			secondaryLine = '未匹配音源'
+			upName = artistName ?? '未知 UP 主'
+		}
+
+		return {
+			primaryLine,
+			secondaryLine,
+			isSourceError: false,
+			upName,
+			hideDetailsRow: false,
+		}
+	}
+
+	const hasSeparateSourceTitle =
+		data.source === 'bilibili' &&
+		Boolean(rawMainTitle && rawMainTitle !== data.title) &&
+		playlistType !== 'multi_page'
+
+	return {
+		primaryLine: data.title,
+		secondaryLine: hasSeparateSourceTitle ? rawMainTitle : null,
+		isSourceError: false,
+		upName: data.artist?.name ?? null,
+		hideDetailsRow: false,
+	}
+}
+
 /**
  * 可复用的播放列表项目组件。
  */
@@ -84,6 +156,11 @@ export const TrackListItem = memo(function TrackListItem({
 	const isCurrentTrack = useIsCurrentTrack(data.uniqueKey)
 
 	const highlighted = (isCurrentTrack && !selectMode) || isSelected
+
+	const displayLines = useMemo(
+		() => resolveTrackDisplayLines(data, playlist.type),
+		[data, playlist.type],
+	)
 
 	const dragPan = usePanGesture({
 		activateAfterLongPress: 200,
@@ -190,7 +267,7 @@ export const TrackListItem = memo(function TrackListItem({
 					{/* Cover Image */}
 					{showCoverImage ? (
 						<CoverWithPlaceHolder
-							id={data.id}
+							id={`${data.id}:${data.coverUrl ?? ''}`}
 							cover={
 								downloadState === DownloadState.COMPLETED
 									? resolveTrackCover(data.uniqueKey, data.coverUrl)
@@ -203,53 +280,71 @@ export const TrackListItem = memo(function TrackListItem({
 
 					{/* Title and Details */}
 					<View style={styles.titleContainer}>
+						{/* 第一行：歌曲名称 - 歌曲作者 */}
 						<VariantPlainText
 							variant='bodySmall'
-							numberOfLines={selectMode ? 1 : 0}
+							numberOfLines={1}
 						>
-							{data.title}
+							{displayLines.primaryLine}
 						</VariantPlainText>
-						<View style={styles.detailsContainer}>
-							{/* Display Artist if available */}
-							{data.artist && (
-								<>
-									<VariantPlainText
-										variant='bodySmall'
-										numberOfLines={1}
-									>
-										{data.artist.name ?? '未知'}
-									</VariantPlainText>
-									<VariantPlainText
-										style={styles.dotSeparator}
-										variant='bodySmall'
-									>
-										•
-									</VariantPlainText>
-								</>
-							)}
-							{/* Display Duration */}
-							<VariantPlainText variant='bodySmall'>
-								{data.duration ? formatDurationToHHMMSS(data.duration) : ''}
+
+						{/* 第二行：音源名称（单行省略，不使用跑马灯；selectMode 下隐藏以固定高度） */}
+						{!selectMode && displayLines.secondaryLine ? (
+							<VariantPlainText
+								variant='bodySmall'
+								numberOfLines={1}
+								style={[
+									styles.sourceLineText,
+									{
+										color: displayLines.isSourceError
+											? theme.colors.error
+											: theme.colors.onSurfaceVariant,
+									},
+								]}
+							>
+								{displayLines.secondaryLine}
 							</VariantPlainText>
-							{/* 显示下载状态 */}
-							{renderDownloadStatus()}
-						</View>
-						{/* 显示主视频标题（如果是分 p） — selectMode 下隐藏以固定高度 */}
-						{!selectMode &&
-							data.source === 'bilibili' &&
-							data.bilibiliMetadata.mainTrackTitle &&
-							data.bilibiliMetadata.mainTrackTitle !== data.title &&
-							playlist.type !== 'multi_page' && (
-								<TextTicker
-									style={{ ...theme.fonts.bodySmall }}
-									loop
-									animationType='scroll'
-									duration={130 * data.bilibiliMetadata.mainTrackTitle.length}
-									easing={Easing.linear}
+						) : null}
+
+						{/* 第三行：UP主 · 时长（未匹配音源时隐藏第三行，保持简洁两行） */}
+						{!displayLines.hideDetailsRow || selectMode ? (
+							<View style={styles.detailsContainer}>
+								{displayLines.upName ? (
+									<>
+										<VariantPlainText
+											variant='bodySmall'
+											numberOfLines={1}
+											style={[
+												styles.upNameText,
+												{ color: theme.colors.onSurfaceVariant },
+											]}
+										>
+											{displayLines.upName}
+										</VariantPlainText>
+										{data.duration > 0 ? (
+											<VariantPlainText
+												style={[
+													styles.dotSeparator,
+													{ color: theme.colors.onSurfaceVariant },
+												]}
+												variant='bodySmall'
+											>
+												·
+											</VariantPlainText>
+										) : null}
+									</>
+								) : null}
+								{/* Display Duration */}
+								<VariantPlainText
+									variant='bodySmall'
+									style={{ color: theme.colors.onSurfaceVariant }}
 								>
-									{data.bilibiliMetadata.mainTrackTitle}
-								</TextTicker>
-							)}
+									{data.duration ? formatDurationToHHMMSS(data.duration) : ''}
+								</VariantPlainText>
+								{/* 显示下载状态 */}
+								{renderDownloadStatus()}
+							</View>
+						) : null}
 					</View>
 
 					{/* Context Menu / Drag Handle */}
@@ -318,11 +413,17 @@ const styles = StyleSheet.create({
 		flex: 1,
 		marginRight: 4,
 	},
+	sourceLineText: {
+		marginTop: 2,
+	},
 	detailsContainer: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		marginTop: 2,
-		flexWrap: 'wrap',
+		flexWrap: 'nowrap',
+	},
+	upNameText: {
+		flexShrink: 1,
 	},
 	dotSeparator: {
 		marginHorizontal: 4,

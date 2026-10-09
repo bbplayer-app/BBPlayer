@@ -19,6 +19,7 @@ import IconButton from '@/components/common/IconButton'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
+import { externalImportJobService } from '@/lib/services/externalImportJobService'
 import { playlistOutService } from '@/lib/services/playlistOutService'
 import {
 	parseKugouCredentialsInput,
@@ -56,6 +57,8 @@ const PLATFORMS = [
 ] as const
 
 const PLAYLISTOUT_WEB_URL = 'https://playlistout.lengxiqwq.com'
+const PLAYLISTOUT_KUGOU_LOGIN_URL =
+	'https://playlistout.lengxiqwq.com/?login=kugou'
 
 const InputExternalPlaylistInfoModal = () => {
 	const theme = useTheme()
@@ -113,6 +116,14 @@ const InputExternalPlaylistInfoModal = () => {
 	const handleOpenWebsite = async () => {
 		try {
 			await Linking.openURL(PLAYLISTOUT_WEB_URL)
+		} catch {
+			toast.error('无法打开外部浏览器')
+		}
+	}
+
+	const handleOpenKugouLoginWebsite = async () => {
+		try {
+			await Linking.openURL(PLAYLISTOUT_KUGOU_LOGIN_URL)
 		} catch {
 			toast.error('无法打开外部浏览器')
 		}
@@ -181,6 +192,12 @@ const InputExternalPlaylistInfoModal = () => {
 			setIsResolving(false)
 			const cacheId = jsonRes.value.playlist.id
 			playlistOutService.setCachedPlaylist(cacheId, jsonRes.value)
+			externalImportJobService.createOrResumeJob({
+				source: 'local_json',
+				sourcePlaylistId: cacheId,
+				tracks: jsonRes.value.tracks,
+				playlistMetadata: jsonRes.value.playlist,
+			})
 			close('InputExternalPlaylistInfo')
 			useModalStore.getState().doAfterModalHostClosed(() => {
 				router.navigate({
@@ -206,6 +223,12 @@ const InputExternalPlaylistInfoModal = () => {
 			setIsResolving(false)
 			const cacheId = resolveRes.value.playlist.id
 			playlistOutService.setCachedPlaylist(cacheId, resolveRes.value)
+			externalImportJobService.createOrResumeJob({
+				source: 'local_json',
+				sourcePlaylistId: cacheId,
+				tracks: resolveRes.value.tracks,
+				playlistMetadata: resolveRes.value.playlist,
+			})
 			close('InputExternalPlaylistInfo')
 			useModalStore.getState().doAfterModalHostClosed(() => {
 				router.navigate({
@@ -254,6 +277,12 @@ const InputExternalPlaylistInfoModal = () => {
 
 			const cacheId = jsonRes.value.playlist.id
 			playlistOutService.setCachedPlaylist(cacheId, jsonRes.value)
+			externalImportJobService.createOrResumeJob({
+				source: 'local_json',
+				sourcePlaylistId: cacheId,
+				tracks: jsonRes.value.tracks,
+				playlistMetadata: jsonRes.value.playlist,
+			})
 			close('InputExternalPlaylistInfo')
 			useModalStore.getState().doAfterModalHostClosed(() => {
 				router.navigate({
@@ -384,7 +413,7 @@ const InputExternalPlaylistInfoModal = () => {
 						<Button
 							mode='contained-tonal'
 							icon='open-in-new'
-							onPress={handleOpenWebsite}
+							onPress={handleOpenKugouLoginWebsite}
 							style={{ flex: 1, marginRight: 8 }}
 						>
 							网页端获取凭据

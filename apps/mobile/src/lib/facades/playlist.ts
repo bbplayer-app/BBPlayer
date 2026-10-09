@@ -6,12 +6,19 @@ import defaultDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { createFacadeError } from '@/lib/errors/facade'
 import { createValidationError } from '@/lib/errors/service'
-import { artistService as artistServiceInstance, type ArtistService } from '@/lib/services/artistService'
+import {
+	artistService as artistServiceInstance,
+	type ArtistService,
+} from '@/lib/services/artistService'
+import { externalImportJobService } from '@/lib/services/externalImportJobService'
 import {
 	playlistService as playlistServiceInstance,
 	type PlaylistService,
 } from '@/lib/services/playlistService'
-import { trackService as trackServiceInstance, type TrackService } from '@/lib/services/trackService'
+import {
+	trackService as trackServiceInstance,
+	type TrackService,
+} from '@/lib/services/trackService'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type {
@@ -679,7 +686,14 @@ export class PlaylistFacade {
 		if (!shareId) {
 			return this.playlistService
 				.deletePlaylist(playlistId)
-				.map(() => undefined)
+				.map(() => {
+					try {
+						externalImportJobService.deleteJobsForPlaylist(playlistId)
+					} catch {
+						// Ignore
+					}
+					return undefined
+				})
 				.mapErr((e) =>
 					createFacadeError('PlaylistDeleteFailed', '删除播放列表失败', {
 						cause: e,
@@ -711,6 +725,11 @@ export class PlaylistFacade {
 					const deleteRes =
 						await this.playlistService.deletePlaylist(playlistId)
 					if (deleteRes.isErr()) throw deleteRes.error
+					try {
+						externalImportJobService.deleteJobsForPlaylist(playlistId)
+					} catch {
+						// Ignore
+					}
 				} else if (shareRole === 'subscriber' || shareRole === 'editor') {
 					// subscriber/editor：服务端解除成员关系
 					const resp = await this.bbplayerApi.playlists[
@@ -742,6 +761,11 @@ export class PlaylistFacade {
 							// subscriber：删除本地副本
 							const r = await txPlaylist.deletePlaylist(playlistId)
 							if (r.isErr()) throw r.error
+							try {
+								externalImportJobService.deleteJobsForPlaylist(playlistId)
+							} catch {
+								// Ignore
+							}
 						} else {
 							// editor：保留本地数据，仅断开共享连接
 							const r = await txPlaylist.updatePlaylistMetadata(playlistId, {

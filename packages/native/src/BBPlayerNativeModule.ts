@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import type {
 	AppUpdateDownloadOptions,
 	AppUpdateInstallResult,
+	ImportProgressNotificationOptions,
 	StorageEntry,
 	StorageUsage,
 	UnzipOptions,
@@ -44,6 +45,10 @@ declare class BBPlayerNativeModule extends NativeModule {
 		fileName: string,
 		mimeType: string,
 	): string | null
+	updateImportProgressNotification?(
+		options: ImportProgressNotificationOptions,
+	): void
+	cancelImportProgressNotification?(): void
 }
 
 let nativeModule: BBPlayerNativeModule | null = null
@@ -122,3 +127,33 @@ export const exportBackupToDownloads = (
 	fileName: string,
 	mimeType: string,
 ) => getNativeModule().exportBackupToDownloads(sourceUri, fileName, mimeType)
+
+export const updateImportProgressNotification = (
+	options: ImportProgressNotificationOptions,
+): boolean => {
+	if (Platform.OS !== 'android') return false
+	try {
+		const mod = getNativeModule()
+		if (typeof mod.updateImportProgressNotification === 'function') {
+			mod.updateImportProgressNotification(options)
+			return true
+		}
+		return false
+	} catch {
+		return false
+	}
+}
+
+export const cancelImportProgressNotification = (): boolean => {
+	if (Platform.OS !== 'android') return false
+	try {
+		const mod = getNativeModule()
+		if (typeof mod.cancelImportProgressNotification === 'function') {
+			mod.cancelImportProgressNotification()
+			return true
+		}
+		return false
+	} catch {
+		return false
+	}
+}

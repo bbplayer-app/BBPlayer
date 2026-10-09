@@ -173,7 +173,12 @@ export default function UploaderPage() {
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		uploaderUserInfo?.face,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 

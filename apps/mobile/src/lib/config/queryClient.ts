@@ -5,7 +5,10 @@ import { router } from 'expo-router'
 import { type WebDavBackupConfig } from '@/hooks/queries/backup'
 import { WebDavError } from '@/lib/backup/webdav-client'
 import { ThirdPartyError } from '@/lib/errors'
-import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import {
+	BilibiliApiError,
+	isBilibiliRateLimitError,
+} from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
@@ -42,6 +45,12 @@ export const queryClient = new QueryClient({
 			if (query.meta?.silent === true) return
 			const handleOfflineError = async () => {
 				try {
+					if (isBilibiliRateLimitError(error)) {
+						toast.error('频繁操作触发了 B 站风控拦截，请稍后再试！', {
+							id: 'bilibili-rate-limit',
+						})
+						return
+					}
 					if (
 						error instanceof BilibiliApiError &&
 						error.data.msgCode === -101
