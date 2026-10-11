@@ -151,22 +151,35 @@ export default function MyPage() {
 						</View>
 						{chevron()}
 					</Touchable>
-					<List.Item
-						title='BBPlayer 账号'
-						description={
-							token
-								? `${account?.name ?? '已登录'} · 歌单共享`
-								: '登录后共享歌单与协同编辑'
-						}
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='link-variant'
-							/>
-						)}
-						right={chevron}
+					<Touchable
+						accessibilityRole='button'
+						accessibilityLabel='BBPlayer 账号'
+						style={[
+							styles.accountBar,
+							{ backgroundColor: colors.surfaceVariant },
+						]}
 						onPress={() => router.navigate('/settings/account')}
-					/>
+					>
+						<Icon
+							source='link-variant'
+							size={20}
+							color={colors.onSurfaceVariant}
+						/>
+						<Text
+							variant='titleSmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							BBPlayer 账号
+						</Text>
+						<Text
+							variant='bodySmall'
+							style={[styles.accountStatus, { color: colors.onSurfaceVariant }]}
+							numberOfLines={1}
+						>
+							{token ? (account?.name ?? '已登录') : '未登录'}
+						</Text>
+						{chevron()}
+					</Touchable>
 				</View>
 				<ListeningRecordSection />
 				<SettingsSectionTitle
@@ -177,7 +190,6 @@ export default function MyPage() {
 					{syncFailures.length > 0 && (
 						<List.Item
 							title='歌单同步失败'
-							description='查看失败记录并重试'
 							left={(props) => (
 								<List.Icon
 									{...props}
@@ -191,7 +203,6 @@ export default function MyPage() {
 					)}
 					<List.Item
 						title='最近常听'
-						description='继续播放熟悉的音乐'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -203,7 +214,6 @@ export default function MyPage() {
 					/>
 					<List.Item
 						title='我的关注'
-						description={hasCookie ? 'UP 主与分组' : '登录 Bilibili 后查看'}
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -215,7 +225,6 @@ export default function MyPage() {
 					/>
 					<List.Item
 						title='下载'
-						description='已下载的音乐与下载任务'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -227,9 +236,6 @@ export default function MyPage() {
 					/>
 					<List.Item
 						title='稍后再看'
-						description={
-							hasCookie ? '继续收听待播放的内容' : '登录 Bilibili 后查看'
-						}
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -247,7 +253,6 @@ export default function MyPage() {
 					/>
 					<List.Item
 						title='那月今日'
-						description='重温一个月前的音乐'
 						left={(props) => (
 							<List.Icon
 								{...props}
@@ -281,6 +286,16 @@ const styles = StyleSheet.create({
 	content: { paddingHorizontal: 16 },
 	bold: { fontWeight: 'bold' },
 	accounts: { paddingBottom: 8 },
+	accountBar: {
+		minHeight: 48,
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 12,
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	accountStatus: { flex: 1, textAlign: 'right' },
 	profile: {
 		paddingVertical: 16,
 		flexDirection: 'row',
