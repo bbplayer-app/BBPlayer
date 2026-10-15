@@ -16,7 +16,7 @@
 
 用于应用内检查更新。
 
-- **推荐方式**：运行 `pnpm publish:update`，在 TUI 中选择 GitHub Release，确认生成的 update metadata，并发布到 Cloudflare Workers KV。
+- **推荐方式**：运行 `mise run release:metadata`，在 TUI 中选择 GitHub Release，确认生成的 update metadata，并发布到 Cloudflare Workers KV。
 - **存储位置**：Cloudflare Workers KV 的 `update_json` key，由 backend 的 `/update.json` 路由读取。
 - **字段说明**：
   - `version`：语义化版本号（如 `1.2.3`）。
@@ -25,3 +25,16 @@
   - `notes`：更新说明（支持多行文本）。
   - `listed_notes`：更新说明列表（推荐）。当存在此字段时，`notes` 会被忽略。
   - `forced`：布尔值，是否强制用户更新。
+
+## 本地构建与热更新
+
+以下命令从仓库根目录执行：
+
+```bash
+mise run mobile:build:prod 2.7.0
+mise run mobile:build:preview preview
+mise run ota
+mise run ota:fingerprint --json
+```
+
+`release:metadata` 发布的是安装包更新元数据；`ota:publish` 发布的是热更新。当前迁移只统一现有入口，CHANGELOG 仍需按原流程维护。

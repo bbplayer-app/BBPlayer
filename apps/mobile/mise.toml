@@ -1,53 +1,136 @@
-[tasks.android]
+[env]
+_.file = { path = ".env.local" }
+
+[tasks."android"]
 description = "Run Android development app alongside production"
-env = { APP_VARIANT = "development", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+raw = true
+raw_args = true
 run = [
 	"pnpm exec expo prebuild --clean --platform android",
 	"pnpm exec expo run:android",
 ]
+alias = ["mobile:android", "android"]
+
+[tasks."android".env]
+APP_VARIANT = "development"
+NODE_ENV = "development"
+WITH_ROZENITE = "true"
+BBPLAYER_PRODUCTION_DEBUG = "0"
 
 [tasks."android:production-debug"]
 description = "Debug the production app using local production signing credentials"
-env = { APP_VARIANT = "production", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "1" }
+raw = true
+raw_args = true
 run = [
 	"pnpm exec expo prebuild --clean --platform android",
 	"pnpm exec expo run:android",
 ]
+alias = ["mobile:android:production-debug", "android:production-debug"]
 
-[tasks.start]
+[tasks."android:production-debug".env]
+APP_VARIANT = "production"
+NODE_ENV = "development"
+WITH_ROZENITE = "true"
+BBPLAYER_PRODUCTION_DEBUG = "1"
+
+[tasks."start"]
 description = "Start Metro for the development app"
-env = { APP_VARIANT = "development", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+raw = true
+raw_args = true
 run = "pnpm exec expo start --dev-client"
+alias = ["mobile:start", "start"]
+
+[tasks."start".env]
+APP_VARIANT = "development"
+NODE_ENV = "development"
+WITH_ROZENITE = "true"
+BBPLAYER_PRODUCTION_DEBUG = "0"
 
 [tasks."start:production-debug"]
 description = "Start Metro for the production-package debug app"
-env = { APP_VARIANT = "production", NODE_ENV = "development", WITH_ROZENITE = "true", BBPLAYER_PRODUCTION_DEBUG = "0" }
+raw = true
+raw_args = true
 run = "pnpm exec expo start --dev-client"
+alias = ["mobile:start:production-debug", "start:production-debug"]
 
-[tasks.buildprod]
-usage = 'arg "<version>" help="Output APK filename prefix"'
+[tasks."start:production-debug".env]
+APP_VARIANT = "production"
+NODE_ENV = "development"
+WITH_ROZENITE = "true"
+BBPLAYER_PRODUCTION_DEBUG = "0"
+
+[tasks."build:prod"]
 description = "Build BBPlayer production release"
-env = { NODE_ENV = "production", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile prod-v8a --platform android --local --output="./temp-builds/${usage_version}-prod.apk"'
+raw = true
+usage = "arg \"<prefix>\" help=\"Output APK filename prefix (does not change app version)\""
+tools = { "npm:eas-cli" = "latest" }
+run = "eas build --profile prod-v8a --platform android --local --output=\"./temp-builds/${usage_prefix}-prod.apk\""
+alias = ["mobile:build:prod", "buildprod"]
 
-[tasks.builddev]
-usage = 'arg "<version>" help="Output APK filename prefix"'
+[tasks."build:prod".env]
+NODE_ENV = "production"
+BUILD_MODE = "v8a"
+VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}"
+
+[tasks."build:dev"]
 description = "Build BBPlayer development release"
-env = { NODE_ENV = "development", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile dev --platform android --local --output="./temp-builds/${usage_version}-dev.apk"'
+raw = true
+usage = "arg \"<prefix>\" help=\"Output APK filename prefix (does not change app version)\""
+tools = { "npm:eas-cli" = "latest" }
+run = "eas build --profile dev --platform android --local --output=\"./temp-builds/${usage_prefix}-dev.apk\""
+alias = ["mobile:build:dev", "builddev"]
 
-[tasks.buildpreview]
-usage = 'arg "<version>" help="Output APK filename prefix"'
+[tasks."build:dev".env]
+NODE_ENV = "development"
+BUILD_MODE = "v8a"
+VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}"
+
+[tasks."build:preview"]
 description = "Build BBPlayer preview release"
-env = { NODE_ENV = "development", BUILD_MODE = "v8a", VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}" }
-run = 'eas build --profile preview --platform android --local --output="./temp-builds/${usage_version}-preview.apk"'
+raw = true
+usage = "arg \"<prefix>\" help=\"Output APK filename prefix (does not change app version)\""
+tools = { "npm:eas-cli" = "latest" }
+run = "eas build --profile preview --platform android --local --output=\"./temp-builds/${usage_prefix}-preview.apk\""
+alias = ["mobile:build:preview", "buildpreview"]
 
-[tasks.emulator]
+[tasks."build:preview".env]
+NODE_ENV = "development"
+BUILD_MODE = "v8a"
+VERSION_CODE = "{{exec(command='git rev-list --count HEAD')}}"
+
+[tasks."emulator"]
 description = "Open Android Emulator"
-run = 'emulator -avd Medium_Phone_API_36.1'
+raw = true
+raw_args = true
+run = "emulator -avd Medium_Phone_API_36.1"
+alias = ["mobile:emulator", "emulator"]
 
-[env]
-_.file = { path = ".env.local", redact = true }
+[tasks."build:ci"]
+description = "Build the APK selected by EAS_PROFILE and APK_TEMP_PATH in CI"
+raw = true
+run = "eas build --platform android --profile \"$EAS_PROFILE\" --local --no-wait --output=\"$APK_TEMP_PATH\""
+alias = "mobile:build:ci"
 
-[tools]
-"npm:eas-cli" = "latest"
+[tasks."build:ci".env]
+_.file = { "path" = "{{config_root}}/.env.local", "redact" = true }
+
+[tasks."router-types"]
+description = "Generate Expo Router TypeScript configuration for CI checks"
+run = "pnpm exec expo customize tsconfig.json"
+alias = "mobile:router-types"
+
+[tasks."sourcemaps"]
+description = "Upload the exported mobile source maps to Sentry"
+raw = true
+run = "pnpm exec sentry-expo-upload-sourcemaps dist"
+alias = "mobile:sourcemaps"
+
+[tasks."sourcemaps".env]
+_.file = { "path" = "{{config_root}}/.env.local", "redact" = true }
+
+[tasks."measure-cold-start"]
+description = "Measure Android cold starts using adb (defaults: 10 runs, production package)"
+run = "bash scripts/measure-cold-start.sh"
+raw = true
+raw_args = true
+alias = "mobile:measure-cold-start"

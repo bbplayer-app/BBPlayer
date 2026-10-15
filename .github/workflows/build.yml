@@ -96,6 +96,16 @@ jobs:
         with:
           node-version: 26.x
 
+      - name: 🛠 Setup mise task runner
+        uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.15
+          install: false
+          cache: false
+          env: false
+          export_path: false
+          add_shims_to_path: false
+
       - uses: pnpm/setup@v2
         with:
           # version: 11 -- use packageManager in package.json
@@ -140,7 +150,7 @@ jobs:
 
       - name: 🚀 Build APK
         if: env.BUILD_TYPE != 'blank-test'
-        run: cd apps/mobile && eas build --platform android --profile ${{ env.EAS_PROFILE }} --local --no-wait --output="$APK_TEMP_PATH"
+        run: mise run --skip-tools mobile:build:ci
 
       - name: 🧪 Create Dummy APK
         if: env.BUILD_TYPE == 'blank-test'

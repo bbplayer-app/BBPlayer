@@ -11,7 +11,7 @@ UI 不内嵌任何 token。每个页面都由登录页把关，要求输入与�
 ## 本地开发
 
 ```sh
-pnpm --filter @bbplayer/update-server-web dev
+mise run server:web:dev
 ```
 
 打开 <http://localhost:4173>。开发服务器把 `/admin/*` 代理到 `http://127.0.0.1:8080`——在本地 docker compose 栈中，该端口属于 `update-server-web` nginx 服务，它会经 internal docker 网络转发到 `api` 容器。用你 `.env` 里的 token 登录。若 API 单独部署，把 `VITE_API_BASE_URL` 设为那个 API 源。

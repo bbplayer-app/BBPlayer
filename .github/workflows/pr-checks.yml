@@ -12,6 +12,16 @@ jobs:
       - name: 🏗 Setup repo
         uses: actions/checkout@v5
 
+      - name: 🛠 Setup mise task runner
+        uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.15
+          install: false
+          cache: false
+          env: false
+          export_path: false
+          add_shims_to_path: false
+
       - uses: pnpm/setup@v2
         with:
           # version: 11 -- use packageManager in package.json
@@ -20,10 +30,10 @@ jobs:
           install: true
 
       - name: 🕵️ Check Dependencies
-        run: pnpm check:deps
+        run: mise run --skip-tools check:deps
 
       - name: 🚀 Run Lint
         # 需要生成 expo router 的类型来进行类型检查
         run: |
-          cd ./apps/mobile && npx expo customize tsconfig.json && cd ../../
-          pnpm lint
+          mise run --skip-tools mobile:router-types
+          mise run --skip-tools lint

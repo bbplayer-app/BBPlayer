@@ -1,0 +1,10 @@
+[tasks."publish"]
+description = "Edit and publish APK update metadata to remote Cloudflare KV"
+run = "pnpm run start"
+raw = true
+alias = "release:metadata"
+
+[tasks."check"]
+description = "Type-check the APK update metadata publisher"
+run = "pnpm run check"
+alias = "release:metadata:check"

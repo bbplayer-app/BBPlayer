@@ -1,0 +1,94 @@
+[tasks."default"]
+description = "Open the OTA menu or forward a CLI operation and its arguments"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\""
+alias = ["ota", "mobile:hot-update"]
+
+[tasks."default".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."publish"]
+description = "Run the OTA publish operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" publish"
+alias = "ota:publish"
+
+[tasks."publish".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local", "redact" = true }
+
+[tasks."fingerprint"]
+description = "Run the OTA fingerprint operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" fingerprint"
+alias = "ota:fingerprint"
+
+[tasks."fingerprint".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local", "redact" = true }
+
+[tasks."list"]
+description = "Run the OTA list operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" list"
+alias = "ota:list"
+
+[tasks."list".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."show"]
+description = "Run the OTA show operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" show"
+alias = "ota:show"
+
+[tasks."show".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."channel"]
+description = "Run the OTA channel operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" channel"
+alias = "ota:channel"
+
+[tasks."channel".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."republish"]
+description = "Run the OTA republish operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" republish"
+alias = "ota:republish"
+
+[tasks."republish".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."source"]
+description = "Run the OTA source operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" source"
+alias = "ota:source"
+
+[tasks."source".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."insights"]
+description = "Run the OTA insights operation"
+raw = true
+raw_args = true
+run = "pnpm exec tsx src/index.ts --project-dir \"{{config_root}}/../mobile\" insights"
+alias = "ota:insights"
+
+[tasks."insights".env]
+_.file = { "path" = "{{config_root}}/../mobile/.env.local" }
+
+[tasks."check"]
+description = "Type-check the OTA CLI"
+run = "pnpm run check"
+alias = "ota:check"

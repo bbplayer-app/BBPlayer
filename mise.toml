@@ -1,6 +1,62 @@
+min_version = "2026.9.15"
+monorepo_root = true
+
 [tools]
-go = "1.27.0"
-java = "17"
-node = "26"
+"go" = "1.27.0"
+"java" = "17"
+"node" = "26"
 "npm:agent-device" = "latest"
-pnpm = "11.25.0"
+"pnpm" = "11.25.0"
+
+[monorepo]
+config_roots = [
+	"apps/mobile",
+	"apps/backend",
+	"apps/docs",
+	"apps/hot-update-cli",
+	"apps/update-publisher",
+	"apps/update-server",
+	"apps/update-server/web",
+]
+
+[tasks."install"]
+description = "Install workspace dependencies with pnpm"
+run = "pnpm install"
+raw = true
+raw_args = true
+
+[tasks."check"]
+description = "Check dependencies, TypeScript, and lint sequentially"
+run = [
+	{ "task" = "check:deps" },
+	{ "task" = "type-check" },
+	{ "task" = "lint" },
+]
+
+[tasks."check:deps"]
+description = "Check workspace dependency versions"
+run = "pnpm exec syncpack lint --dependency-types dev,prod,peer,overrides"
+
+[tasks."fix:deps"]
+description = "Fix workspace dependency versions"
+run = "pnpm exec syncpack fix --dependency-types dev,prod,peer,overrides"
+
+[tasks."type-check"]
+description = "Check TypeScript projects referenced by the root tsconfig"
+run = "pnpm exec tsgo --build --noEmit"
+raw_args = true
+
+[tasks."lint"]
+description = "Lint the workspace with type-aware oxlint"
+run = "pnpm exec oxlint --type-aware"
+raw_args = true
+
+[tasks."lint:fix"]
+description = "Fix lint issues with type-aware oxlint"
+run = "pnpm exec oxlint --type-aware --fix"
+raw_args = true
+
+[tasks."format"]
+description = "Format the workspace"
+run = "pnpm exec oxfmt --write ."
+raw_args = true

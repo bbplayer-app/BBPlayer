@@ -8,14 +8,7 @@
 		"packages/*/example"
 	],
 	"scripts": {
-		"check:deps": "syncpack lint --dependency-types dev,prod,peer,overrides",
-		"fix:deps": "syncpack fix --dependency-types dev,prod,peer,overrides",
-		"format": "oxfmt --write .",
-		"lint": "oxlint --type-aware",
-		"lint:fix": "oxlint --type-aware --fix",
-		"postinstall": "lefthook install",
-		"publish:update": "pnpm --filter @bbplayer/update-publisher start",
-		"type-check": "tsgo --build --noEmit"
+		"postinstall": "lefthook install"
 	},
 	"devDependencies": {
 		"@bbplayer/eslint-plugin": "workspace:*",

@@ -1,0 +1,32 @@
+[tasks."api"]
+description = "Run update-server api (requires deployment environment)"
+run = "go run ./cmd/bbplayer-updates api"
+raw = true
+raw_args = true
+alias = "server:api"
+
+[tasks."worker"]
+description = "Run update-server worker (requires deployment environment)"
+run = "go run ./cmd/bbplayer-updates worker"
+raw = true
+raw_args = true
+alias = "server:worker"
+
+[tasks."migrate"]
+description = "Run update-server migrate (requires deployment environment)"
+run = "go run ./cmd/bbplayer-updates migrate"
+raw = true
+raw_args = true
+alias = "server:migrate"
+
+[tasks."test"]
+description = "Run update-server Go tests"
+run = "go test ./..."
+raw_args = true
+alias = "server:test"
+
+[tasks."images:publish"]
+description = "Build and push update-server API and WebUI images"
+run = "bash scripts/build-and-push-images.sh"
+raw = true
+alias = "server:images:publish"
