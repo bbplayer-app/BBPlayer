@@ -3,11 +3,6 @@
 	"version": "2.7.0",
 	"private": true,
 	"main": "index.js",
-	"scripts": {
-		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
-		"hot-update": "pnpm --dir ../hot-update-cli start -- --project-dir \"$PWD\"",
-		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start"
-	},
 	"dependencies": {
 		"@bbplayer/heatmap": "workspace:*",
 		"@bbplayer/image-theme-colors": "workspace:*",

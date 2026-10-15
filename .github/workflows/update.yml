@@ -11,6 +11,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🛠 Setup mise task runner
+        uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.15
+          install: false
+          cache: false
+          env: false
+          export_path: false
+          add_shims_to_path: false
+
       - uses: pnpm/setup@v2
         with:
           # version: 11 -- use packageManager in package.json
@@ -23,11 +33,12 @@ jobs:
           BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
         run: |
-          cd apps/mobile
-          pnpm hot-update publish \
+          mise run --skip-tools ota:publish \
             --non-interactive \
             --channel production \
             --message "$(git log -1 --format=%s)"
 
       - name: 🚀 Submit source map
-        run: cd apps/mobile && SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} npx sentry-expo-upload-sourcemaps dist
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: mise run --skip-tools mobile:sourcemaps

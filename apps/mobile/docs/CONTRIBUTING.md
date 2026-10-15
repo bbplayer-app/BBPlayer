@@ -8,14 +8,15 @@
 
 - **包管理器**: 必须使用 **pnpm**。
 - **Android 环境**: 配置好 Android Studio 和 SDK。
-- **mise (可选)**: 我们推荐使用 [mise](https://mise.jdx.dev/) 来管理环境变量和任务脚本。
+- **mise**: 使用 [mise](https://mise.jdx.dev/) 管理工具版本、环境变量和任务入口。所有日常任务从仓库根目录运行；执行 `mise tasks ls --all` 查看完整列表。
 
 ### 2. 安装依赖
 
 在项目根目录下运行：
 
 ```bash
-pnpm install
+mise install
+mise run install
 ```
 
 ### 3. 配置环境变量
@@ -32,10 +33,10 @@ pnpm install
 
 **方式 A: 使用 EAS (推荐)**
 
-参考 `apps/mobile/mise.toml`，运行构建命令：
+从仓库根目录运行构建命令（参数只是 APK 文件名前缀，不修改应用版本）：
 
 ```bash
-mise run builddev --version 1.0.0
+mise run mobile:build:dev 1.0.0
 ```
 
 **方式 B: 全自动**
@@ -43,8 +44,7 @@ mise run builddev --version 1.0.0
 如果你更习惯使用原生工具链：
 
 ```bash
-cd apps/mobile
-pnpm android
+mise run mobile:android
 ```
 
 ### 5. 启动开发
@@ -52,8 +52,7 @@ pnpm android
 构建并安装应用后，启动 Metro 服务器进行开发：
 
 ```bash
-cd apps/mobile
-pnpm expo start
+mise run mobile:start
 ```
 
 > [!IMPORTANT]
@@ -66,7 +65,7 @@ pnpm expo start
 > - `google-services.real.json`
 > - `GoogleService-Info.real.plist`
 >
-> 并放在 `apps/mobile/assets/config/google-services/` 目录下。使用 eas 构建时会自动优先使用真实文件。（如果不使用 eas 构建，则需要在放置真实文件后，运行 `npx expo prebuild --clean`）
+> 并放在 `apps/mobile/assets/config/google-services/` 目录下。使用 eas 构建时会自动优先使用真实文件。（如果不使用 eas 构建，则需要在放置真实文件后，运行 `mise run mobile:android`）
 
 ## 📂 文档导航
 
@@ -100,3 +99,7 @@ pnpm expo start
 ### 代码质量
 
 我们使用 lefthook 来自动执行代码检查和格式化（oxlint, oxfmt, eslint），请确保你配置好了 lefthook。
+
+## 统一命令入口
+
+完整任务与保留的底层入口见 [COMMANDS.md](./COMMANDS.md)。交互任务使用 raw 输出，保留颜色、进度条与终端输入；raw 输出不经过 mise 脱敏。

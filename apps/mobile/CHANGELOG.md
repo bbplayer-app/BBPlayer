@@ -5,6 +5,19 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+## Added
+
+- 重构软件页面，精简主页，新增「我的」页面
+- 增加「我的关注」页面
+
+## Changed
+
+- 优化热力图性能
+- 将 `router.push()` 替换为 `router.navigate()`
+- 优化播放历史页面的动画效果
+
 ## [2.7.0] - 2026-09-24
 
 ### Added

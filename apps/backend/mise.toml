@@ -1,2 +1,49 @@
 [env]
-_.file = { path = ".dev.vars", redact = true }
+_.file = { path = ".dev.vars" }
+
+[tasks."cf-typegen"]
+description = "Run backend cf-typegen"
+run = "pnpm exec wrangler types"
+raw_args = true
+alias = "backend:cf-typegen"
+
+[tasks."db:generate"]
+description = "Run backend db:generate"
+run = "pnpm exec drizzle-kit generate"
+raw_args = true
+alias = "backend:db:generate"
+
+[tasks."db:migrate"]
+description = "Run backend db:migrate"
+run = "pnpm exec drizzle-kit migrate"
+raw_args = true
+raw = true
+alias = "backend:db:migrate"
+
+[tasks."db:push"]
+description = "Run backend db:push"
+run = "pnpm exec drizzle-kit push"
+raw_args = true
+raw = true
+alias = "backend:db:push"
+
+[tasks."db:studio"]
+description = "Run backend db:studio"
+run = "pnpm exec drizzle-kit studio"
+raw_args = true
+raw = true
+alias = "backend:db:studio"
+
+[tasks."deploy"]
+description = "Run backend deploy"
+run = "pnpm exec wrangler deploy"
+raw_args = true
+raw = true
+alias = "backend:deploy"
+
+[tasks."dev"]
+description = "Run backend dev"
+run = "pnpm exec wrangler dev"
+raw_args = true
+raw = true
+alias = "backend:dev"

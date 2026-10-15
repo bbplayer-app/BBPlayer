@@ -13,10 +13,12 @@ BBPlayer 官方文档站源代码。
 
 ## 本地开发
 
+以下命令从仓库根目录执行：
+
 ```bash
 # 安装依赖
-pnpm install
+mise run install
 
 # 启动开发服务器
-pnpm docs:dev
+mise run docs:dev
 ```

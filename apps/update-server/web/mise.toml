@@ -1,0 +1,26 @@
+[tasks."build"]
+description = "Run update-server WebUI build"
+run = "pnpm run build"
+raw_args = true
+raw = true
+alias = "server:web:build"
+
+[tasks."dev"]
+description = "Run update-server WebUI dev"
+run = "pnpm run dev"
+raw_args = true
+raw = true
+alias = "server:web:dev"
+
+[tasks."preview"]
+description = "Run update-server WebUI preview"
+run = "pnpm run preview"
+raw_args = true
+raw = true
+alias = "server:web:preview"
+
+[tasks."type-check"]
+description = "Run update-server WebUI type-check"
+run = "pnpm run type-check"
+raw_args = true
+alias = "server:web:type-check"

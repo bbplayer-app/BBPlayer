@@ -59,10 +59,10 @@ location = /admin/publish {
 
 ## 发布与运维
 
-面向开发者的热更新 CLI 用 TypeScript 编写，因此它能调用 Expo 自己的 `@expo/fingerprint` 库并保留完整的源码报告。在 `apps/mobile` 下运行：
+面向开发者的热更新 CLI 用 TypeScript 编写，因此它能调用 Expo 自己的 `@expo/fingerprint` 库并保留完整的源码报告。从仓库根目录运行：
 
 ```sh
-pnpm hot-update
+mise run ota
 ```
 
 它会交互式询问 channel、发布说明和缺失的服务器凭据，在发布前警告脏工作区，运行 `expo export`，导出公开的 Expo 配置，并上传归档。它的 Git 溯源信息只有 `commit_sha` 与 `working_tree_clean`。当 Android 的 runtime version policy 是 `appVersion` 时，CLI 自动使用公开 Expo 配置的 `version` 作为 `runtimeVersion`，不上传 fingerprint；传入的 `--runtime-version` 必须与该版本一致。其他策略下，CLI 默认生成 Android fingerprint：完整的 `{ hash, sources }` 会与更新组一同保存，且其 hash 必须等于提供的 `runtimeVersion`。`--no-fingerprint` 则要求显式给出 `--runtime-version`，并且不保存 fingerprint 记录。
@@ -78,15 +78,15 @@ pnpm hot-update
 CI 以非交互方式使用完全相同的命令：
 
 ```sh
-pnpm hot-update -- publish --non-interactive --channel production --message "..."
+mise run ota:publish --non-interactive --channel production --message "..."
 ```
 
 可在发布前查看当前项目的 Android fingerprint；默认仅输出 runtime hash，传入
 `--json` 会输出完整的 `{ hash, sources }` 报告：
 
 ```sh
-pnpm hot-update -- fingerprint
-pnpm hot-update -- fingerprint --json
+mise run ota:fingerprint
+mise run ota:fingerprint --json
 ```
 
 非交互发布会拒绝脏 checkout，除非显式指定 `--allow-dirty`。每次新发布都会为每个兼容平台从上一个可见的 channel head 到新 head 创建一个异步 bsdiff 任务。在任务变为 `ready` 之前，客户端收到的是完整的不可变 bundle。
@@ -98,10 +98,10 @@ pnpm hot-update -- fingerprint --json
 所有管理操作都由交互式 TypeScript CLI 提供（并支持脚本化用的 `--json`）：
 
 ```sh
-pnpm --dir apps/hot-update-cli start -- list --server https://updates.example --token ...
-pnpm --dir apps/hot-update-cli start -- channel --action history --channel production --server https://updates.example --token ... --json
-pnpm --dir apps/hot-update-cli start -- insights --server https://updates.example --token ... --json
-pnpm --dir apps/hot-update-cli start -- source --action compare --from <from-group> --to <to-group> --server https://updates.example --token ...
+mise run ota:list --server https://updates.example --token ...
+mise run ota:channel --action history --channel production --server https://updates.example --token ... --json
+mise run ota:insights --server https://updates.example --token ... --json
+mise run ota:source --action compare --from <from-group> --to <to-group> --server https://updates.example --token ...
 ```
 
 `source compare` 保持与早期更详细的溯源信息兼容，而新发布刻意只记录单个 commit。`insights` 命令暴露客户端结果，以及完整与 bsdiff 请求的数量、字节数、节省字节数、命中率与回退情况。
@@ -146,3 +146,7 @@ E2E_DATABASE_URL='postgres://updates:updates-test@127.0.0.1:55432/updates?sslmod
 ```
 
 该套件模拟 Expo 的 manifest 与资源请求，校验不可变资源的 hash，校验带版本号的事件信封，并证明事件幂等性。
+
+## 本地任务入口
+
+从仓库根目录运行 `mise tasks ls --all` 查看任务。Go 服务使用 `mise run server:api`、`server:worker`、`server:migrate`；环境变量由调用者提供。运行 `mise run server:test` 执行 Go 测试，`mise run server:images:publish` 构建并推送镜像。管理后台使用 `mise run server:web:dev`、`server:web:build` 或 `server:web:preview`。包内标准 scripts 保留为 Docker 与 CLI 的底层入口。
