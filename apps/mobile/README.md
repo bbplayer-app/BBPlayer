@@ -68,9 +68,6 @@ mise -C apps/mobile run emulator
 先验证 preview 渠道，再发布相同 runtime 的生产更新；旧 `2.7.0` 安装包不能接收该 runtime 的更新。
 本地修改和检查不会发布更新。
 
-Worklets 补丁只跳过 `lintAnalyze*` 和 `lintVitalAnalyze*`，保留聚合及报告任务。
-这是 K2 UAST 崩溃的临时规避；报告任务成功不代表恢复了被跳过的 Worklets 分析覆盖。
-
 在仓库根目录运行协调层、弹窗与真实内存 SQLite 回归：
 
 ```bash
@@ -82,7 +79,7 @@ git diff --check
 
 异步回归用可控返回验证保存／清除的拒绝、异常、补偿失败、关闭、后台、切歌、
 新会话、迟到恢复与缓存失败。原生时长、冷启动恢复和安装包 runtime 还需 Android 设备验证；
-iOS 构建与设备验收需单独进行，不能用 Windows 静态检查替代。
+iOS 构建与设备验收需单独进行，不能用静态检查替代。
 
 ## 更多文档
 

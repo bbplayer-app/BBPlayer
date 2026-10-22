@@ -170,8 +170,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				assetsOutput: 'assets/bootsplash',
 			}),
 			'./expo-plugins/withDynamicBootSplash',
-			// Mods run in reverse registration order; resolve after Sentry adds its script.
-			'./expo-plugins/withAndroidBuildCompatibility',
 			[
 				'@sentry/react-native/expo',
 				{
