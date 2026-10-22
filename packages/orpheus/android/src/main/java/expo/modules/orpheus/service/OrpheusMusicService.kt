@@ -326,7 +326,7 @@ class OrpheusMusicService : MediaLibraryService() {
         serviceHandler.removeCallbacks(resumeSaveRunnable)
         saveCurrentResumeRecord()
         floatingLyricsManager.hide()
-        statusBarLyricsManager.onStop()
+        statusBarLyricsManager.destroy()
         scope.cancel()
         instance = null
 

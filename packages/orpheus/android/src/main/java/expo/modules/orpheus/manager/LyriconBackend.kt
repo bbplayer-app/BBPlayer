@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.media3.common.C
@@ -11,6 +12,9 @@ import expo.modules.orpheus.model.LyricsData
 import expo.modules.orpheus.model.LyricsLine
 import expo.modules.orpheus.service.OrpheusMusicService
 import io.github.proify.lyricon.provider.LyriconFactory
+import io.github.proify.lyricon.provider.LyriconProvider
+import io.github.proify.lyricon.provider.ConnectionStatus
+import io.github.proify.lyricon.provider.isDisconnected
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.LyricWord
 import io.github.proify.lyricon.lyric.model.Song
@@ -25,7 +29,7 @@ private const val TAG = "LyriconBackend"
 @RequiresApi(Build.VERSION_CODES.O_MR1)
 class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
 
-    private val provider = LyriconFactory.createProvider(context)
+    private var provider: LyriconProvider? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val frameLock = Any()
 
@@ -33,36 +37,107 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     @Volatile private var lastSong: Song? = null
     @Volatile private var lastFrame: StatusBarLyricFrame? = null
     @Volatile private var lastIsPlaying: Boolean = false
+    @Volatile private var destroyed: Boolean = false
+    private var connectionRequested = false
+    private var connectionCheck: Runnable? = null
 
     override val isAvailable: Boolean
-        get() = connected
+        get() = connected && !destroyed
 
-    init {
-        provider.service.addConnectionListener {
+    private fun connect() {
+        val current = LyriconFactory.createProvider(context)
+        provider = current
+        current.service.addConnectionListener {
             onConnected {
+                if (destroyed || provider !== current) return@onConnected
+                cancelConnectionCheck()
                 connected = true
                 Log.d(TAG, "Lyricon connected - syncing state")
                 syncState()
                 notifyStatusChanged()
             }
             onReconnected {
+                if (destroyed || provider !== current) return@onReconnected
+                cancelConnectionCheck()
                 connected = true
                 Log.d(TAG, "Lyricon reconnected - syncing state")
                 syncState()
                 notifyStatusChanged()
             }
             onDisconnected {
+                if (provider !== current) return@onDisconnected
                 connected = false
                 Log.d(TAG, "Lyricon disconnected")
-                notifyStatusChanged()
+                failConnection()
             }
             onConnectTimeout {
+                if (provider !== current) return@onConnectTimeout
                 connected = false
                 Log.w(TAG, "Lyricon connection timeout")
-                notifyStatusChanged()
+                failConnection()
             }
         }
-        provider.register()
+        val deadline = SystemClock.uptimeMillis() + CONNECTION_TIMEOUT_MS
+        val check = object : Runnable {
+            override fun run() {
+                if (provider !== current || destroyed || connected) return
+                if (current.service.connectionStatus.isDisconnected() || SystemClock.uptimeMillis() >= deadline) {
+                    failConnection()
+                } else {
+                    mainHandler.postDelayed(this, CONNECTION_CHECK_INTERVAL_MS)
+                }
+            }
+        }
+        connectionCheck = check
+        try {
+            if (!current.register() && current.service.connectionStatus != ConnectionStatus.CONNECTED) {
+                failConnection()
+                return
+            }
+            if (provider === current && !connected) mainHandler.postDelayed(check, CONNECTION_CHECK_INTERVAL_MS)
+        } catch (e: Exception) {
+            Log.e(TAG, "[connect] Failed: ${e.message}")
+            failConnection()
+        }
+    }
+
+    override fun setEnabled(enabled: Boolean) {
+        if (destroyed || connectionRequested == enabled) return
+        connectionRequested = enabled
+        if (enabled) {
+            connect()
+        } else {
+            disconnect()
+            notifyStatusChanged()
+        }
+    }
+
+    private fun cancelConnectionCheck() {
+        connectionCheck?.let { mainHandler.removeCallbacks(it) }
+        connectionCheck = null
+    }
+
+    private fun disconnect() {
+        cancelConnectionCheck()
+        connected = false
+        val current = provider
+        provider = null
+        try {
+            current?.player?.setPlaybackState(false)
+        } catch (e: Exception) {
+            Log.e(TAG, "[disconnect] Failed to send pause: ${e.message}")
+        } finally {
+            // Destroy also cancels the provider's retry scope and unregisters its connection.
+            current?.destroy()
+        }
+    }
+
+    private fun failConnection() {
+        if (destroyed || !connectionRequested) return
+        connectionRequested = false
+        disconnect()
+        onConnectionFailed?.invoke()
+        notifyStatusChanged()
     }
 
     private fun notifyStatusChanged() {
@@ -73,11 +148,12 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         val song = lastSong
         val frame = synchronized(frameLock) { lastFrame }
         mainHandler.post {
+            if (destroyed) return@post
             try {
-                provider.player.setDisplayTranslation(true)
-                song?.let { provider.player.setSong(it) }
-                frame?.let { provider.player.setPosition(it.positionMs.coerceAtLeast(0L)) }
-                provider.player.setPlaybackState(lastIsPlaying)
+                provider?.player?.setDisplayTranslation(true)
+                song?.let { provider?.player?.setSong(it) }
+                frame?.let { provider?.player?.setPosition(it.positionMs.coerceAtLeast(0L)) }
+                provider?.player?.setPlaybackState(lastIsPlaying)
                 Log.d(TAG, "[syncState] Restored song and state ($lastIsPlaying)")
             } catch (e: Exception) {
                 Log.e(TAG, "[syncState] Failed: ${e.message}")
@@ -86,6 +162,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun setLyricsData(data: LyricsData) {
+        if (destroyed) return
         if (data.lyrics.isEmpty()) {
             clearLyrics()
             return
@@ -108,8 +185,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
             lastSong = song
 
             try {
-                provider.player.setSong(song)
-                provider.player.setPlaybackState(lastIsPlaying)
+                provider?.player?.setSong(song)
+                provider?.player?.setPlaybackState(lastIsPlaying)
                 Log.d(TAG, "[setLyricsData] Sent song lines=${richLines.size} id=${song.id}")
             } catch (e: Exception) {
                 Log.e(TAG, "[setLyricsData] Failed: ${e.message}")
@@ -118,6 +195,7 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun renderLyricFrame(frame: StatusBarLyricFrame?) {
+        if (destroyed) return
         synchronized(frameLock) {
             lastFrame = frame
         }
@@ -138,8 +216,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         lastSong = null
         mainHandler.post {
             try {
-                provider.player.setSong(Song(lyrics = emptyList()))
-                provider.player.setPlaybackState(false)
+                provider?.player?.setSong(Song(lyrics = emptyList()))
+                provider?.player?.setPlaybackState(false)
                 Log.d(TAG, "[clearLyrics] Lyrics cleared")
             } catch (e: Exception) {
                 Log.e(TAG, "[clearLyrics] Failed: ${e.message}")
@@ -162,11 +240,13 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     override fun setPlaybackState(isPlaying: Boolean) {
+        if (destroyed) return
         lastIsPlaying = isPlaying
         mainHandler.post {
+            if (destroyed) return@post
             try {
-                provider.player.setPlaybackState(isPlaying)
-                Log.d(TAG, "[setPlaybackState] $isPlaying")
+                provider?.player?.setPlaybackState(lastIsPlaying)
+                Log.d(TAG, "[setPlaybackState] $lastIsPlaying")
             } catch (e: Exception) {
                 Log.e(TAG, "[setPlaybackState] Failed: ${e.message}")
             }
@@ -177,34 +257,26 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
         synchronized(frameLock) {
             lastFrame = null
         }
-        lastIsPlaying = false
-        mainHandler.post {
-            try {
-                provider.player.setPlaybackState(false)
-            } catch (e: Exception) {
-                Log.e(TAG, "[onStop] Failed: ${e.message}")
-            }
-        }
+        setPlaybackState(false)
     }
 
     override fun destroy() {
+        if (destroyed) return
+        destroyed = true
+        connectionRequested = false
+        connected = false
+        mainHandler.removeCallbacksAndMessages(null)
         synchronized(frameLock) {
             lastFrame = null
         }
         lastSong = null
         lastIsPlaying = false
-        mainHandler.post {
-            try {
-                provider.player.setPlaybackState(false)
-            } catch (e: Exception) {
-                Log.e(TAG, "[destroy] Failed: ${e.message}")
-            }
-        }
+        disconnect()
     }
 
     private fun updatePositionInternal(positionMs: Long, logFailure: Boolean = true) {
         try {
-            provider.player.setPosition(positionMs.coerceAtLeast(0L))
+            provider?.player?.setPosition(positionMs.coerceAtLeast(0L))
         } catch (e: Exception) {
             if (logFailure) {
                 Log.e(TAG, "[position] Failed: ${e.message}")
@@ -246,6 +318,8 @@ class LyriconBackend(context: Context) : StatusBarLyricsBackend(context) {
     }
 
     private companion object {
+        const val CONNECTION_TIMEOUT_MS = 4_000L
+        const val CONNECTION_CHECK_INTERVAL_MS = 100L
         const val DEFAULT_LINE_DURATION_MS = 5000L
     }
 }
