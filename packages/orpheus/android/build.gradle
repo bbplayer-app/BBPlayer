@@ -24,8 +24,8 @@ android {
     buildFeatures {
         aidl = true
     }
-    lintOptions {
-        abortOnError false
+    lint {
+        abortOnError true
     }
     kotlinOptions {
         freeCompilerArgs += [

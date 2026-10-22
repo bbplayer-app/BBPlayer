@@ -27,17 +27,23 @@ const withAbiFilters = (config, { abiFilters = ['arm64-v8a'] } = {}) => {
 	config = withAppBuildGradle(config, (config) => {
 		const abiFiltersString = abiFilters.map((abi) => `"${abi}"`).join(', ')
 
-		// Add ndk abiFilters to defaultConfig
-		if (config.modResults.contents.includes('defaultConfig {')) {
-			config.modResults.contents = config.modResults.contents.replace(
-				/(defaultConfig\s*\{[^}]*versionName\s+[^}]*)/,
-				`$1
-        
+		// Keep the block inside defaultConfig, outside interpolated BuildConfig values.
+		const contents = config.modResults.contents.replace(
+			/\n?\/\/ @generated begin bbplayer-abi-filters[\s\S]*?\/\/ @generated end bbplayer-abi-filters\n?/g,
+			'\n',
+		)
+		if (!/defaultConfig\s*\{/.test(contents)) {
+			throw new Error('Cannot locate Android defaultConfig for ABI filters')
+		}
+		config.modResults.contents = contents.replace(
+			/defaultConfig\s*\{/,
+			`$&
+        // @generated begin bbplayer-abi-filters
         ndk {
             abiFilters ${abiFiltersString}
-        }`,
-			)
-		}
+        }
+        // @generated end bbplayer-abi-filters`,
+		)
 
 		return config
 	})

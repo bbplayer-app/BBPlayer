@@ -6,6 +6,7 @@ export async function seekWithinTrack(
 	trackId: string,
 	seconds: number,
 	relative = false,
+	isCurrent: () => boolean = () => true,
 ) {
 	const [track, duration, position, buffered] = await Promise.all([
 		Orpheus.getCurrentTrack(),
@@ -14,6 +15,7 @@ export async function seekWithinTrack(
 		Orpheus.getBuffered(),
 	])
 	if (
+		!isCurrent() ||
 		track?.id !== trackId ||
 		!Number.isFinite(seconds) ||
 		!Number.isFinite(duration) ||
@@ -27,7 +29,10 @@ export async function seekWithinTrack(
 			Math.max(0, duration - 0.001),
 		),
 	)
-	await Orpheus.seekTo(target)
+	if (!isCurrent() || !(await Orpheus.seekToForTrack(trackId, target)))
+		return null
+	if (!isCurrent() || (await Orpheus.getCurrentTrack())?.id !== trackId)
+		return null
 	playerProgressEmitter.emitSticky('progress', {
 		position: target,
 		duration,
