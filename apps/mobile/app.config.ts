@@ -310,8 +310,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			),
 		},
 		updates: {
-			// Local native QA must keep its bundled JS paired with the tested binary.
-			enabled: process.env.BBPLAYER_DISABLE_UPDATES !== '1',
+			enabled: true,
 			url: `${UPDATE_SERVER_URL}/api/manifest`,
 			requestHeaders: {
 				'expo-channel-name': UPDATE_CHANNEL,
