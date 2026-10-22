@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
+import type { Env } from './env'
 import authRoute from './routes/auth'
 import meRoute from './routes/me'
 import playlistsRoute from './routes/playlists'

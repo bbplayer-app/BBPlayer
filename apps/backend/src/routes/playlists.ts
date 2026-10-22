@@ -22,6 +22,7 @@ import {
 	sharedTracks,
 	users,
 } from '../db/schema'
+import type { Env } from '../env'
 import { authMiddleware } from '../middleware/auth'
 import type { ChangeEvent, JwtTokenPayload, TrackInput } from '../types'
 import {
@@ -251,9 +252,9 @@ const playlistsRoute = new Hono<HonoEnv>()
 				(a, b) => a.operation_at - b.operation_at,
 			)
 
-		const upsertChanges = sorted.filter((ch) => ch.op === 'upsert')
-		const removeChanges = sorted.filter((ch) => ch.op === 'remove')
-		const reorderChanges = sorted.filter((ch) => ch.op === 'reorder')
+			const upsertChanges = sorted.filter((ch) => ch.op === 'upsert')
+			const removeChanges = sorted.filter((ch) => ch.op === 'remove')
+			const reorderChanges = sorted.filter((ch) => ch.op === 'reorder')
 
 			await db.transaction(async (tx) => {
 				// 1. 批量 upsert shared_tracks（资源池）
