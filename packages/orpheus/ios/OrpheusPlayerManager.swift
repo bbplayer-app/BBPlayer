@@ -755,7 +755,9 @@ class OrpheusPlayerManager: NSObject {
     func setAbLoop(trackId: String, startSec: Double, endSec: Double) -> Bool {
         guard queueManager.getCurrentTrack()?.id == trackId, startSec.isFinite, endSec.isFinite,
             startSec >= 0, endSec > startSec else { return false }
-        let duration = loadedTrackId == trackId ? getDuration() : (queueManager.getCurrentTrack()?.duration ?? 0)
+        // Integer metadata can be shorter than the audio. The ready-to-play
+        // observer validates the range once the actual duration becomes available.
+        let duration = loadedTrackId == trackId ? getDuration() : 0
         if duration.isFinite && duration > 0 && endSec > duration { return false }
         samplePlaybackHistory()
         abLoopPreviewTrackId = nil
@@ -788,7 +790,7 @@ class OrpheusPlayerManager: NSObject {
     func setAbLoopPreview(trackId: String, range: AbLoopRange?) -> Bool {
         guard queueManager.getCurrentTrack()?.id == trackId else { return false }
         if let range = range {
-            let duration = loadedTrackId == trackId ? getDuration() : (queueManager.getCurrentTrack()?.duration ?? 0)
+            let duration = loadedTrackId == trackId ? getDuration() : 0
             guard range.start.isFinite, range.end.isFinite, range.start >= 0, range.end > range.start,
                 !(duration.isFinite && duration > 0 && range.end > duration) else { return false }
         }

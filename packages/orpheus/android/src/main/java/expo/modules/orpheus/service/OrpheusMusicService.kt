@@ -386,10 +386,9 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun applyAbLoopRuntime(trackId: String, startSec: Double, endSec: Double): Boolean {
         val item = player?.currentMediaItem ?: return false
         if (item.mediaId != trackId) return false
-        val metadataDuration = item.mediaMetadata.extras?.getString("track_json")?.let { raw ->
-            runCatching { Json.decodeFromString<TrackRecord>(raw).duration }.getOrNull()
-        }
-        val knownDuration = resolveDurationMs(item)?.div(1000.0) ?: metadataDuration
+        // Integer metadata can be shorter than the audio. Accept restoration until
+        // the actual duration is known; onTimelineChanged validates it after loading.
+        val knownDuration = resolveDurationMs(item)?.div(1000.0)
         if (knownDuration != null && knownDuration.isFinite() && knownDuration > 0 && endSec > knownDuration) return false
         samplePlaybackHistory()
         if (abLoopController?.set(trackId, startSec, endSec) != true) return false
