@@ -125,7 +125,7 @@ public actor BilibiliClient: MediaSourceProvider {
         let chapters = Self.parseChapters(metadata ?? [:])
         return ResolvedAudio(track: track, url: url, backupURLs: backups.compactMap(URL.init(string:)), headers: headers(authenticated: false),
             measuredLoudness: volume["measured_i"] as? Double, targetLoudness: volume["target_i"] as? Double,
-            chapters: chapters)
+            chapters: chapters, streamInfo: AudioStreamInfo(codec: stream.string("codecs"), bitrate: stream.int("bandwidth"), sampleRate: max(stream.int("audioSampleRate"), stream.int("audio_sample_rate"))))
     }
     public static func parseChapters(_ metadata: [String: Any]) -> [Chapter] {
         let direct = metadata.array("view_points")

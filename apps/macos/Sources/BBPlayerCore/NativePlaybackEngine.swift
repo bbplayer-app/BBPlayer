@@ -13,6 +13,7 @@ import AudioRealtime
     public private(set) var position: Double = 0
     public private(set) var duration: Double = 0
     public private(set) var chapters: [Chapter] = []
+    public private(set) var streamInfo: AudioStreamInfo?
     public private(set) var errorMessage: String?
     public private(set) var spectrum: [Float] = Array(repeating: 0, count: 48)
     public private(set) var lyrics = LyricDocument()
@@ -155,8 +156,25 @@ import AudioRealtime
     public func toggleShuffle() { snapshot.shuffled.toggle(); shuffleRemaining = []; shuffleCycleStarted = false; saveCheckpoint() }
     public func enqueue(_ track: Track, next: Bool = false) {
         if snapshot.queue.isEmpty { setQueue([track]); return }
-        if next { snapshot.queue.insert(track, at: min(snapshot.index + 1, snapshot.queue.count)) } else { snapshot.queue.append(track) }
+        if next {
+            // Moving the active entry must never restart or duplicate playback.
+            guard track.id != currentTrack?.id else { return }
+            let removedBeforeCurrent = snapshot.queue.prefix(snapshot.index).filter { $0.id == track.id }.count
+            snapshot.queue.removeAll { $0.id == track.id }
+            snapshot.index -= removedBeforeCurrent
+            snapshot.queue.insert(track, at: min(snapshot.index + 1, snapshot.queue.count))
+        } else {
+            enqueue([track]); return
+        }
         saveCheckpoint()
+    }
+    @discardableResult public func enqueue(_ tracks: [Track]) -> Int {
+        var seen = Set(snapshot.queue.map(\.id))
+        let additions = tracks.filter { seen.insert($0.id).inserted }
+        guard !additions.isEmpty else { return 0 }
+        if snapshot.queue.isEmpty { setQueue(additions) }
+        else { snapshot.queue.append(contentsOf: additions); saveCheckpoint() }
+        return additions.count
     }
     public func removeFromQueue(at index: Int) {
         guard snapshot.queue.indices.contains(index) else { return }
@@ -166,9 +184,24 @@ import AudioRealtime
         } else { snapshot.queue.remove(at: index); if index < snapshot.index { snapshot.index -= 1 }; saveCheckpoint() }
     }
     public func moveQueue(from: Int, to: Int) {
-        guard snapshot.queue.indices.contains(from), snapshot.queue.indices.contains(to), let currentID = currentTrack?.id else { return }
-        let track = snapshot.queue.remove(at: from); snapshot.queue.insert(track, at: to)
-        snapshot.index = snapshot.queue.firstIndex { $0.id == currentID } ?? 0; saveCheckpoint()
+        guard snapshot.queue.indices.contains(from), snapshot.queue.indices.contains(to) else { return }
+        moveQueue(fromOffsets: IndexSet(integer: from), toOffset: from < to ? to + 1 : to)
+    }
+    /// Destination is an insertion boundary in the original queue, as in a List move.
+    public func moveQueue(fromOffsets offsets: IndexSet, toOffset destination: Int) {
+        guard !offsets.isEmpty, offsets.allSatisfy({ snapshot.queue.indices.contains($0) }),
+              (0...snapshot.queue.count).contains(destination), snapshot.queue.indices.contains(snapshot.index) else { return }
+        var order = Array(snapshot.queue.indices)
+        let moved = offsets.map { order[$0] }
+        for index in offsets.reversed() { order.remove(at: index) }
+        let insertion = destination - offsets.filter { $0 < destination }.count
+        order.insert(contentsOf: moved, at: insertion)
+        // Preserve the active occurrence even in restored queues with duplicate IDs.
+        let activeIndex = order.firstIndex(of: snapshot.index)!
+        let original = snapshot.queue
+        snapshot.queue = order.map { original[$0] }
+        snapshot.index = activeIndex
+        saveCheckpoint()
     }
     public func skip(to index: Int) { finishHistory(completed: false); load(index: index) }
     public func next(automatic: Bool = false) {
@@ -212,7 +245,7 @@ import AudioRealtime
     public func shutdown() { pause(); stop(); sleepTimer?.invalidate(); spectrumTimer?.invalidate() }
     public func stop() {
         loadTask?.cancel(); generation = UUID(); wantsPlayback = false; player.pause(); player.replaceCurrentItem(with: nil)
-        resourceLoader?.cancel(); resourceLoader = nil; visualizationTrack = nil; statusObservation = nil; loadedTrackID = nil
+        resourceLoader?.cancel(); resourceLoader = nil; visualizationTrack = nil; statusObservation = nil; loadedTrackID = nil; streamInfo = nil
         isPlaying = false; isLoading = false; updateSpectrumDemand()
     }
     private func load(index: Int, position requestedPosition: Double? = nil, refresh: Bool = false, autoplay: Bool = true) {
@@ -227,7 +260,7 @@ import AudioRealtime
                 let source: ResolvedAudio
                 if let local, FileManager.default.fileExists(atPath: local.path) {
                     let metadata = try database.state(OfflineAudioMetadata.self, key: "download-metadata:" + track.id)
-                    source = ResolvedAudio(track: metadata?.track ?? track, url: local, measuredLoudness: metadata?.measuredLoudness, targetLoudness: metadata?.targetLoudness, chapters: metadata?.chapters ?? [])
+                    source = ResolvedAudio(track: metadata?.track ?? track, url: local, measuredLoudness: metadata?.measuredLoudness, targetLoudness: metadata?.targetLoudness, chapters: metadata?.chapters ?? [], streamInfo: metadata?.streamInfo)
                 }
                 else { source = try await provider.resolve(track) }
                 try Task.checkCancellation()
@@ -243,7 +276,7 @@ import AudioRealtime
                 normalizationGain = Loudness.gain(measured: source.measuredLoudness, target: source.targetLoudness ?? -14)
                 player.volume = Float(preferences.volume) * (preferences.normalization ? normalizationGain : 1)
                 player.replaceCurrentItem(with: item)
-                loadedTrackID = source.track.id; chapters = source.chapters
+                loadedTrackID = source.track.id; chapters = source.chapters; streamInfo = source.streamInfo
                 duration = source.track.duration
                 resetListeningSession()
                 let saved = try database.resume(trackID: source.track.id)

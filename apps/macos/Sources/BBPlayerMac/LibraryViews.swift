@@ -10,6 +10,7 @@ struct QueueView: View {
             List {
                 ForEach(Array(model.player.snapshot.queue.enumerated()), id: \.offset) { index, track in
                     HStack {
+                        Image(systemName: "line.3.horizontal").foregroundStyle(.secondary).help("拖动调整播放顺序")
                         Image(systemName: index == model.player.snapshot.index ? "speaker.wave.2.fill" : "music.note").foregroundStyle(MD.accent)
                         VStack(alignment: .leading) { Text(track.title).lineLimit(1); Text(track.artist).font(.caption).foregroundStyle(.secondary) }.contentShape(Rectangle()).onTapGesture(count: 2) { model.player.skip(to: index) }
                         Spacer()
@@ -17,6 +18,8 @@ struct QueueView: View {
                         Button { model.player.moveQueue(from: index, to: min(model.player.snapshot.queue.count - 1, index + 1)) } label: { Image(systemName: "arrow.down") }.disabled(index == model.player.snapshot.queue.count - 1)
                         Button { model.player.removeFromQueue(at: index) } label: { Image(systemName: "xmark") }
                     }.buttonStyle(.borderless).padding(.vertical, 5)
+                }.onMove { offsets, destination in
+                    model.player.moveQueue(fromOffsets: offsets, toOffset: destination)
                 }
             }
         }.frame(width: 600, height: 520)
@@ -64,7 +67,7 @@ struct HistoryView: View {
                         metric("收听天数", value: "\(summary.days.count) 天")
                     }
                     Text("收听热力图 · 最近一年").font(.headline)
-                    Heatmap(days: summary.days).frame(height: 95)
+                    Heatmap(days: summary.days, selectedDate: model.historyDate) { model.selectHistoryDate($0) }.frame(height: 110)
                     if model.section == .profile {
                         Text("常听排行榜").font(.title3.bold())
                         ForEach(Array(summary.ranking.enumerated()), id: \.offset) { index, entry in
@@ -72,8 +75,26 @@ struct HistoryView: View {
                         }
                     }
                 }
-                Text("最近播放").font(.title3.bold())
-                LazyVStack { ForEach(Array(model.tracks.enumerated()), id: \.element.id) { index, track in TrackRow(model: model, track: track, index: index + 1) } }
+                HStack {
+                    Text(model.historyDate.map { $0.formatted(date: .abbreviated, time: .omitted) + " · 收听明细" } ?? "最近播放").font(.title3.bold())
+                    Spacer()
+                    DatePicker("查看日期", selection: Binding(get: { model.historyDate ?? Date() }, set: { model.selectHistoryDate($0) }), displayedComponents: .date).labelsHidden().frame(width: 140)
+                    if model.historyDate != nil { Button("返回最近播放") { model.selectHistoryDate(nil) } }
+                }
+                if model.historyDate != nil {
+                    if model.historyEvents.isEmpty && !model.busy { Text("这一天还没有收听记录。").foregroundStyle(.secondary) }
+                    LazyVStack(alignment: .leading, spacing: 12) { ForEach(model.historyEvents) { event in
+                        HStack {
+                            Text(event.started, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary).frame(width: 70)
+                            VStack(alignment: .leading) { Text(event.track.title); Text(event.track.artist).font(.caption).foregroundStyle(.secondary) }
+                            Spacer()
+                            Text("收听 \(Int(event.seconds / 60)) 分 \(Int(event.seconds) % 60) 秒").font(.caption)
+                            Button("播放") { model.player.setQueue([event.track]) }
+                        }
+                    } }
+                } else {
+                    LazyVStack { ForEach(Array(model.tracks.enumerated()), id: \.element.id) { index, track in TrackRow(model: model, track: track, index: index + 1) } }
+                }
                 if model.hasMore { Button("加载更多") { model.loadMore() }.disabled(model.busy) }
             }.padding(28)
         }
@@ -82,16 +103,38 @@ struct HistoryView: View {
 }
 struct Heatmap: View {
     let days: [String: Double]
+    var selectedDate: Date?
+    var select: (Date) -> Void = { _ in }
+    private var dayFormatter: DateFormatter {
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }
     var body: some View {
-        Canvas { context, size in
-            let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.locale = Locale(identifier: "en_US_POSIX")
-            let calendar = Calendar.current, end = calendar.startOfDay(for: Date()), width = min(12, size.width / 53)
-            for i in 0..<365 {
-                guard let date = calendar.date(byAdding: .day, value: i - 364, to: end) else { continue }
-                let seconds = days[formatter.string(from: date)] ?? 0
-                let color = seconds > 0 ? MD.accent.opacity(0.25 + min(0.75, seconds / 7200)) : Color.secondary.opacity(0.12)
-                let rect = CGRect(x: CGFloat(i / 7) * width, y: CGFloat(i % 7) * 13, width: max(2, width - 2), height: 10)
-                context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(color))
+        GeometryReader { geometry in
+            let formatter = dayFormatter
+            let calendar = Calendar.current, end = calendar.startOfDay(for: Date())
+            let start = calendar.date(byAdding: .day, value: -364, to: end)!
+            let leading = (calendar.component(.weekday, from: start) - calendar.firstWeekday + 7) % 7
+            let columns = (leading + 365 + 6) / 7
+            let width = max(2, min(12, geometry.size.width / CGFloat(columns) - 2))
+            HStack(alignment: .top, spacing: 2) {
+                ForEach(0..<columns, id: \.self) { week in
+                    VStack(spacing: 3) {
+                        ForEach(0..<7, id: \.self) { weekday in
+                            let index = week * 7 + weekday - leading
+                            if (0..<365).contains(index), let date = calendar.date(byAdding: .day, value: index, to: start) {
+                                let seconds = days[formatter.string(from: date)] ?? 0
+                                let color = seconds > 0 ? MD.accent.opacity(0.25 + min(0.75, seconds / 7200)) : Color.secondary.opacity(0.12)
+                                Button { select(date) } label: {
+                                    RoundedRectangle(cornerRadius: 2).fill(color)
+                                        .overlay { if let selectedDate, calendar.isDate(date, inSameDayAs: selectedDate) { RoundedRectangle(cornerRadius: 2).stroke(MD.accent, lineWidth: 2) } }
+                                }.buttonStyle(.plain).frame(width: width, height: 10)
+                                    .help("\(formatter.string(from: date)) · 收听 \(Int(seconds / 60)) 分钟")
+                                    .accessibilityLabel("\(formatter.string(from: date))，收听 \(Int(seconds / 60)) 分钟")
+                            } else { Color.clear.frame(width: width, height: 10) }
+                        }
+                    }
+                }
             }
         }.accessibilityLabel("最近一年收听热力图")
     }

@@ -53,6 +53,7 @@ struct PlayerView: View {
                     VStack(spacing: 18) {
                         Artwork(url: model.player.currentTrack?.coverURL, radius: 24).aspectRatio(1, contentMode: .fit).frame(maxWidth: 310).shadow(color: .black.opacity(0.12), radius: 20, y: 10)
                         VStack(spacing: 7) { Text(model.player.currentTrack?.title ?? "选择一首歌").font(.title3.bold()).lineLimit(2); Text(model.player.currentTrack?.artist ?? "BBPlayer").foregroundStyle(.secondary).lineLimit(1) }.multilineTextAlignment(.center)
+                        if let info = model.player.streamInfo { Text(info.summary).font(.caption).foregroundStyle(.secondary).help("当前实际选用的音轨规格") }
                         if model.player.preferences.spectrum {
                             Canvas { context, size in
                                 let bars = model.player.spectrum

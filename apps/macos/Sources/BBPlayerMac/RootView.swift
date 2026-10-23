@@ -8,17 +8,42 @@ struct RootView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var newTitle = ""
     @State private var renaming: Playlist?
+    @State private var deleting: Playlist?
+    @State private var selectingTracks = false
+    @State private var selectedTracks = Set<String>()
+    @AppStorage("sidebar-width") private var sidebarWidth = 224.0
+    @State private var sidebarDragStart: Double?
     @State private var splashURL: URL?
     @State private var didLoadSplash = false
     private let main: [LibrarySection] = [.search, .playlists, .favorites, .collections, .multipart]
     private let personal: [LibrarySection] = [.following, .watchLater, .downloads, .history, .profile]
     var body: some View {
         HStack(spacing: 0) {
-            sidebar.frame(width: 224)
+            sidebar.frame(width: min(300, max(180, sidebarWidth)))
+            Rectangle().fill(Color.secondary.opacity(0.15)).frame(width: 5)
+                .contentShape(Rectangle()).help("拖动调整侧栏宽度，双击还原")
+                .gesture(DragGesture(minimumDistance: 1).onChanged { value in
+                    if sidebarDragStart == nil { sidebarDragStart = sidebarWidth }
+                    sidebarWidth = min(300, max(180, (sidebarDragStart ?? 224) + value.translation.width))
+                }.onEnded { _ in sidebarDragStart = nil })
+                .onTapGesture(count: 2) { sidebarWidth = 224 }
+                .accessibilityLabel("侧栏宽度")
+                .accessibilityAdjustableAction { direction in
+                    switch direction { case .increment: sidebarWidth = min(300, sidebarWidth + 10); case .decrement: sidebarWidth = max(180, sidebarWidth - 10); @unknown default: break }
+                }
             VStack(spacing: 0) {
                 header
                 ZStack { if model.showPlayer { PlayerView(model: model) } else { content } }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 MiniPlayerBar(model: model)
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let deleted = model.deletedPlaylist {
+                HStack {
+                    Text("已删除「\(deleted.title)」").lineLimit(1).help(deleted.title)
+                    Spacer()
+                    Button("撤销删除") { model.undoPlaylistDeletion() }
+                }.padding(.horizontal, 24).padding(.vertical, 12).background(.regularMaterial)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -48,9 +73,17 @@ struct RootView: View {
                 HStack { Button("取消") { model.showNewPlaylist = false }; Spacer(); Button(renaming == nil ? "创建" : "保存", action: createPlaylist).buttonStyle(MDButtonStyle(prominent: true)).disabled(newTitle.trimmingCharacters(in: .whitespaces).isEmpty) }
             }.padding(28).frame(width: 380)
         }
+        .alert("删除歌单？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), presenting: deleting) { playlist in
+            Button("取消", role: .cancel) { deleting = nil }
+            Button("删除歌单", role: .destructive) { deleting = nil; model.deletePlaylist(playlist) }
+        } message: { playlist in
+            Text("将删除「\(playlist.title)」及其歌曲列表。可撤销最近一次删除；再次删除歌单将替换恢复记录。已下载的音频不会删除。")
+        }
         .alert("BBPlayer", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) { Button("好") { model.message = nil } } message: { Text(model.message ?? "") }
         .onAppear { let action = openWindow; model.reopenWindow = { action(id: "main") } }
         .onChange(of: model.showPlayer) { _, _ in model.updateVisibility() }
+        .onChange(of: model.section) { _, _ in selectedTracks = []; selectingTracks = false }
+        .onChange(of: model.openedPlaylist?.id) { _, _ in selectedTracks = []; selectingTracks = false }
         .onChange(of: model.player.preferences.floatingLyrics) { _, _ in model.updateVisibility() }
         .onChange(of: model.player.preferences.floatingLocked) { _, _ in model.updateVisibility() }
     }
@@ -114,6 +147,14 @@ struct RootView: View {
                     Button("搜索") { model.loadSection() }.buttonStyle(.plain).foregroundStyle(MD.accent)
                 }.padding(.horizontal, 20).padding(.vertical, 15).background(MD.surface(scheme), in: Capsule())
             }
+            if model.openedPlaylist?.kind == "local" && !model.showPlayer {
+                HStack {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("在此歌单中搜索歌名或歌手", text: $model.playlistQuery)
+                        .onChange(of: model.playlistQuery) { _, _ in selectedTracks = []; model.loadSection() }
+                    if !model.playlistQuery.isEmpty { Button("清除") { model.playlistQuery = "" } }
+                }.textFieldStyle(.roundedBorder)
+            }
         }.padding(.horizontal, 30).padding(.top, 37).padding(.bottom, 20)
             .background(alignment: .top) { if model.mainWindowVisible, let url = model.themes.active?.asset(remote: model.themes.variant?.properties[model.section == .profile ? "head_myself_mp4_bg" : "head_bg"] ?? model.themes.variant?.properties["head_bg"]) { AnimatedAsset(url: url).scaledToFill().frame(height: 145).clipped().opacity(0.55).allowsHitTesting(false) } }
     }
@@ -140,7 +181,7 @@ struct RootView: View {
                             Text(playlist.title).font(.headline).lineLimit(2)
                             Text("\(playlist.count) 首歌曲").font(.caption).foregroundStyle(.secondary)
                         }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).contextMenu { if playlist.kind == "local" { Button("重命名") { renaming = playlist; newTitle = playlist.title; model.showNewPlaylist = true }; Button("删除歌单", role: .destructive) { model.deletePlaylist(playlist) } } }
+                    }.buttonStyle(.plain).contextMenu { if playlist.kind == "local" { Button("重命名") { renaming = playlist; newTitle = playlist.title; model.showNewPlaylist = true }; Button("删除歌单", role: .destructive) { deleting = playlist } } }
                 }
             }.padding(30)
             moreButton
@@ -157,14 +198,50 @@ struct RootView: View {
         }
     }
     private var trackList: some View {
-        ScrollView {
-            LazyVStack(spacing: 2) { ForEach(Array(model.tracks.enumerated()), id: \.element.id) { index, track in TrackRow(model: model, track: track, index: index + 1) } }.padding(.horizontal, 20)
-            moreButton
+        VStack(spacing: 10) {
+            HStack {
+                let local = model.openedPlaylist?.kind == "local"
+                let filtered = local && !model.playlistQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                Button(local ? (filtered ? "播放筛选结果" : "播放全部") : "播放已加载") { model.playCollection() }
+                Menu("更多") {
+                    Button(local ? (filtered ? "筛选结果加入队列" : "全部加入队列") : "已加载歌曲加入队列") { model.enqueueCollection() }
+                    Button(local ? (filtered ? "下载筛选结果" : "下载全部离线音频") : "下载已加载歌曲") { model.downloadCollection() }
+                }
+                Spacer()
+                if selectingTracks {
+                    Button("全选已加载") { selectedTracks = Set(model.tracks.map(\.id)) }
+                    Menu("批量操作（\(selectedTracks.count)）") {
+                        Button("加入播放队列") { model.player.enqueue(selection) }
+                        Button("下载离线音频") { model.downloads.add(selection) }
+                        Menu("添加到歌单") { ForEach(model.localPlaylists) { playlist in
+                            Button(playlist.title) { model.add(selection, to: playlist) }
+                        } }
+                    }.disabled(selection.isEmpty)
+                }
+                Button(selectingTracks ? "完成选择" : "多选") { selectingTracks.toggle(); selectedTracks = [] }
+            }.buttonStyle(.borderless).padding(.horizontal, 30).disabled(model.tracks.isEmpty || model.busy)
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(Array(model.tracks.enumerated()), id: \.element.id) { index, track in
+                        HStack(spacing: 0) {
+                            if selectingTracks {
+                                Toggle("选择 \(track.title)", isOn: Binding(get: { selectedTracks.contains(track.id) }, set: { if $0 { selectedTracks.insert(track.id) } else { selectedTracks.remove(track.id) } })).toggleStyle(.checkbox).labelsHidden()
+                            }
+                            TrackRow(model: model, track: track, index: index + 1)
+                        }
+                    }
+                }.padding(.horizontal, 20)
+                moreButton
+            }
         }
     }
+    private var selection: [Track] { model.tracks.filter { selectedTracks.contains($0.id) } }
     @ViewBuilder private var moreButton: some View { if model.hasMore { Button(model.busy ? "加载中…" : "加载更多") { model.loadMore() }.buttonStyle(MDButtonStyle()).disabled(model.busy).padding(20) } }
     private var emptyContent: some View {
-        ContentUnavailableView(model.section == .search ? "从一首喜欢的歌开始" : "这里暂时没有内容", systemImage: model.section.symbol,
+        if model.openedPlaylist?.kind == "local", !model.playlistQuery.isEmpty {
+            return ContentUnavailableView("没有匹配的歌曲", systemImage: "magnifyingglass", description: Text("试试其他歌名或歌手，或清除歌单搜索。"))
+        }
+        return ContentUnavailableView(model.section == .search ? "从一首喜欢的歌开始" : "这里暂时没有内容", systemImage: model.section.symbol,
             description: Text(model.section == .search ? "搜索 B 站歌曲，或粘贴视频链接。" : model.section == .multipart ? "在歌曲菜单中选择「展开分 P」，即可记住多 P 视频。" : "登录 Bilibili、创建歌单，或刷新重试。"))
     }
     private func createPlaylist() {

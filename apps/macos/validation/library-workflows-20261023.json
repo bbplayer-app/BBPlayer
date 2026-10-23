@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-23",
+  "configuration": "Release",
+  "architecture": "arm64",
+  "bundle": "build/BBPlayer.app",
+  "binary_sha256": "32c2e0705c562ec6b678292d894a1b45b5ccd9f0fb51847f43d2a311192c6be1",
+  "bundle_bytes": 10672278,
+  "signing": "ad-hoc, local only",
+  "strict_signature_verification": "passed",
+  "tests": {
+    "core": 43,
+    "appkit": 3,
+    "failures": 0
+  },
+  "rendered_scenes": [
+    "build/qa/workflows/playlist.png",
+    "build/qa/workflows/filtered.png",
+    "build/qa/workflows/history.png",
+    "build/qa/workflows/undo.png"
+  ],
+  "evidence_limits": [
+    "Rendered native hosting views; no pointer-driven interaction acceptance",
+    "No authenticated live-provider or new performance acceptance",
+    "No installation, publication, commit or push"
+  ],
+  "previous_artifact_record": "validation/artifact.json (historical iteration; not the rebuilt bundle)"
+}

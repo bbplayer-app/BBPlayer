@@ -95,3 +95,9 @@ The user subsequently authorized retiring the original checkout and continuing t
 ## Repository boundary (2026-10-23; authoritative current rule)
 
 Use this checkout and its sole configured remote, `origin`. The remote previously named `upstream` has been removed. GitHub fork provenance from `bbplayer-app/BBPlayer` remains solely for attribution. No fetch, push, pull request, merge, comment, review request or other interaction with `bbplayer-app/BBPlayer` is authorized. This supersedes earlier workflow wording about synchronization or publication to that repository. Pull requests, merges, publication, deployment and additional external review require separate explicit authorization. Verify the target owner and repository from local Git configuration before an authorized operation.
+
+## Local library improvements (2026-10-23)
+
+Current backlog is `TODO.md`. Subsequent authorized work added deletion confirmation and persistent latest-deletion undo, deduplicated/batch queue append and native queue sorting, full local-playlist playback/filtering across pages, loaded-row multi-selection and batch downloads/playlist addition, date-specific listening sessions, resizable sidebar and available stream specification display. Automatic backups, stalled-playback recovery, mini player and source replacement remain pending; explicitly deferred features remain deferred.
+
+Latest verification: 43 core + 3 AppKit tests, isolated model workflows and four visually inspected native renders; local Release app packaging and strict signature verification passed. Evidence is in `VALIDATION.md` and `validation/library-workflows-20261023.json`. Pointer interaction, new performance measurements and authenticated acceptance remain open. Work is uncommitted on `feature/library-workflow-improvements`; no merge, push or installed-app replacement occurred.

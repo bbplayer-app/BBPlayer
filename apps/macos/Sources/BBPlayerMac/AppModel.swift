@@ -14,6 +14,9 @@ import Observation
     var section: LibrarySection = .search
     var query = ""
     var searchLocal = false
+    var playlistQuery = ""
+    var historyDate: Date?
+    var historyEvents: [ListeningEvent] = []
     var followedUploader: FollowingProfile?
     var tracks: [Track] = []
     var playlists: [Playlist] = []
@@ -21,6 +24,7 @@ import Observation
     var following: [FollowingProfile] = []
     var profile: BilibiliProfile?
     var openedPlaylist: Playlist?
+    var deletedPlaylist: Playlist?
     var page = 1
     var hasMore = false
     var busy = false
@@ -45,8 +49,8 @@ import Observation
     @ObservationIgnored private var importTask: Task<Void, Never>?
     @ObservationIgnored private var routeID = UUID()
 
-    init() throws {
-        let root = try QAOptions.dataRoot ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("com.bbplayer.macos", isDirectory: true)
+    init(dataRoot: URL? = nil) throws {
+        let root = try dataRoot ?? QAOptions.dataRoot ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("com.bbplayer.macos", isDirectory: true)
         database = try LibraryDatabase(url: root.appendingPathComponent("library.sqlite"))
         api = BilibiliClient()
         cache = try AudioCache(root: root.appendingPathComponent("stream-cache"))
@@ -55,6 +59,7 @@ import Observation
         themes = try ThemeManager(root: root.appendingPathComponent("themes"), api: api, database: database)
         if QAOptions.enabled, QAOptions.value("--qa-theme") != nil, let installed = themes.installed.first { themes.apply(installed) }
         localPlaylists = try database.playlists()
+        deletedPlaylist = try database.deletedPlaylist()
         importJob = try database.state(ImportJob.self, key: "import-job")
         player.onTrackChanged = { [weak self] track in self?.loadLyrics(track) }
         player.onError = { [weak self] error in self?.message = error.localizedDescription }
@@ -68,6 +73,7 @@ import Observation
         updateVisibility()
     }
     func navigate(_ destination: LibrarySection) {
+        playlistQuery = ""; historyDate = nil; historyEvents = []
         section = destination; followedUploader = nil; openedPlaylist = nil; page = 1; tracks = []; playlists = []; following = []
         loadSection()
     }
@@ -82,7 +88,7 @@ import Observation
                 let destination = section, requestedPage = page
                 if let followedUploader { resultTracks = try await api.uploaderTracks(userID: followedUploader.id, page: requestedPage) }
                 else if let playlist = openedPlaylist {
-                    if playlist.kind == "local" { resultTracks = try database.tracks(playlistID: playlist.id, limit: 100, offset: (requestedPage - 1) * 100) }
+                    if playlist.kind == "local" { resultTracks = try database.playlistTracks(playlistID: playlist.id, query: playlistQuery, limit: 100, offset: (requestedPage - 1) * 100) }
                     else { resultTracks = try await api.remoteTracks(playlist, page: requestedPage) }
                 } else {
                     switch destination {
@@ -95,9 +101,11 @@ import Observation
                     case .multipart: resultTracks = (try database.state([Track].self, key: "multipart")) ?? []
                     case .history, .profile:
                         let database = database
-                        let result = try await Task.detached { (try database.summary(), try database.recentTracks(limit: 100, offset: (requestedPage - 1) * 100)) }.value
+                        let date = historyDate
+                        let result = try await Task.detached { (try database.summary(), try database.recentTracks(limit: 100, offset: (requestedPage - 1) * 100), try date.map { try database.listeningEvents(on: $0, offset: (requestedPage - 1) * 100) } ?? []) }.value
                         try Task.checkCancellation(); guard routeID == token else { return }
-                        summary = result.0; resultTracks = result.1
+                        summary = result.0; resultTracks = date == nil ? result.1 : result.2.map(\.track)
+                        historyEvents = more ? historyEvents + result.2 : result.2
                     case .downloads, .settings, .themes, .localFiles: break
                     }
                 }
@@ -112,23 +120,65 @@ import Observation
             catch { if routeID == token { message = error.localizedDescription } }
         }
     }
-    func open(_ playlist: Playlist) { openedPlaylist = playlist; tracks = []; page = 1; loadSection() }
+    func open(_ playlist: Playlist) { playlistQuery = ""; openedPlaylist = playlist; tracks = []; page = 1; loadSection() }
     func loadMore() { guard hasMore, !busy else { return }; page += 1; loadSection(more: true) }
     func play(_ track: Track) {
+        if let playlist = openedPlaylist, playlist.kind == "local" {
+            do {
+                let all = try database.playlistTracks(playlistID: playlist.id, query: playlistQuery)
+                guard let index = all.firstIndex(where: { $0.id == track.id }) else { return }
+                player.setQueue(all, index: index)
+            } catch { message = error.localizedDescription }
+            return
+        }
         if let index = tracks.firstIndex(where: { $0.id == track.id }) { player.setQueue(tracks, index: index) }
         else { player.setQueue([track]) }
     }
+    func collectionTracks() throws -> [Track] {
+        if let playlist = openedPlaylist, playlist.kind == "local" { return try database.playlistTracks(playlistID: playlist.id, query: playlistQuery) }
+        return tracks
+    }
+    func playCollection() {
+        do { let all = try collectionTracks(); if !all.isEmpty { player.setQueue(all) } }
+        catch { message = error.localizedDescription }
+    }
+    func enqueueCollection() {
+        do { let added = player.enqueue(try collectionTracks()); message = "已加入队列 \(added) 首歌曲，已跳过重复项。" }
+        catch { message = error.localizedDescription }
+    }
+    func downloadCollection() {
+        do { downloads.add(try collectionTracks()) }
+        catch { message = error.localizedDescription }
+    }
+    func selectHistoryDate(_ date: Date?) { historyDate = date; historyEvents = []; tracks = []; loadSection() }
     func createPlaylist(_ title: String) {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         do { try database.savePlaylist(Playlist(title: title), tracks: []); localPlaylists = try database.playlists(); if section == .playlists { loadSection() } }
         catch { message = error.localizedDescription }
     }
     func add(_ track: Track, to playlist: Playlist) {
-        do { try database.append(track, to: playlist.id); localPlaylists = try database.playlists(); if openedPlaylist?.id == playlist.id { loadSection() } }
+        add([track], to: playlist)
+    }
+    func add(_ tracks: [Track], to playlist: Playlist) {
+        do { try database.append(tracks, to: playlist.id); localPlaylists = try database.playlists(); if openedPlaylist?.id == playlist.id { loadSection() } }
         catch { message = error.localizedDescription }
     }
     func deletePlaylist(_ playlist: Playlist) {
-        do { try database.deletePlaylist(playlist.id); localPlaylists = try database.playlists(); loadSection() }
+        do {
+            try database.deletePlaylist(playlist.id)
+            deletedPlaylist = try database.deletedPlaylist()
+            localPlaylists = try database.playlists()
+            if openedPlaylist?.id == playlist.id { navigate(.playlists) } else { loadSection() }
+        }
+        catch { message = error.localizedDescription }
+    }
+    func undoPlaylistDeletion() {
+        do {
+            try database.restoreDeletedPlaylist()
+            deletedPlaylist = nil
+            localPlaylists = try database.playlists()
+            loadSection()
+        }
         catch { message = error.localizedDescription }
     }
     func remove(_ track: Track, from playlist: Playlist) {

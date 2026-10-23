@@ -86,6 +86,23 @@ public struct Chapter: Codable, Hashable, Identifiable, Sendable {
     public init(title: String, start: Double, end: Double) { self.title = title; self.start = start; self.end = end }
 }
 
+public struct AudioStreamInfo: Codable, Equatable, Sendable {
+    public var codec: String
+    public var bitrate: Int?
+    public var sampleRate: Int?
+    public init(codec: String, bitrate: Int? = nil, sampleRate: Int? = nil) {
+        self.codec = codec
+        self.bitrate = bitrate.flatMap { $0 > 0 ? $0 : nil }
+        self.sampleRate = sampleRate.flatMap { $0 > 0 ? $0 : nil }
+    }
+    public var summary: String {
+        var parts = [codec.lowercased().hasPrefix("mp4a") ? "AAC" : codec.nonEmpty ?? "音频"]
+        if let bitrate { parts.append("\(Int((Double(bitrate) / 1000).rounded())) kbps") }
+        if let sampleRate { parts.append(String(format: "%g kHz", Double(sampleRate) / 1000)) }
+        return parts.joined(separator: " · ")
+    }
+}
+
 public struct ResolvedAudio: Sendable {
     public var track: Track
     public var url: URL
@@ -94,9 +111,11 @@ public struct ResolvedAudio: Sendable {
     public var measuredLoudness: Double?
     public var targetLoudness: Double?
     public var chapters: [Chapter]
-    public init(track: Track, url: URL, backupURLs: [URL] = [], headers: [String: String] = [:], measuredLoudness: Double? = nil, targetLoudness: Double? = nil, chapters: [Chapter] = []) {
+    public var streamInfo: AudioStreamInfo?
+    public init(track: Track, url: URL, backupURLs: [URL] = [], headers: [String: String] = [:], measuredLoudness: Double? = nil, targetLoudness: Double? = nil, chapters: [Chapter] = [], streamInfo: AudioStreamInfo? = nil) {
         self.track = track; self.url = url; self.backupURLs = backupURLs; self.headers = headers
         self.measuredLoudness = measuredLoudness; self.targetLoudness = targetLoudness; self.chapters = chapters
+        self.streamInfo = streamInfo
     }
 }
 
@@ -105,7 +124,8 @@ public struct OfflineAudioMetadata: Codable, Sendable {
     public var measuredLoudness: Double?
     public var targetLoudness: Double?
     public var chapters: [Chapter]
-    public init(source: ResolvedAudio) { track = source.track; measuredLoudness = source.measuredLoudness; targetLoudness = source.targetLoudness; chapters = source.chapters }
+    public var streamInfo: AudioStreamInfo?
+    public init(source: ResolvedAudio) { track = source.track; measuredLoudness = source.measuredLoudness; targetLoudness = source.targetLoudness; chapters = source.chapters; streamInfo = source.streamInfo }
 }
 
 public enum RepeatMode: String, Codable, CaseIterable, Sendable { case off, queue, track }

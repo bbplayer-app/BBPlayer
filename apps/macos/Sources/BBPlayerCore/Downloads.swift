@@ -41,8 +41,13 @@ public struct DownloadJob: Codable, Identifiable, Sendable {
         persist()
     }
     public func add(_ track: Track) {
-        guard !jobs.contains(where: { $0.id == track.id }) else { return }
-        jobs.append(DownloadJob(track: track)); persist(); schedule()
+        add([track])
+    }
+    public func add(_ tracks: [Track]) {
+        var seen = Set(jobs.map(\.id))
+        let additions = tracks.filter { seen.insert($0.id).inserted }
+        guard !additions.isEmpty else { return }
+        jobs.append(contentsOf: additions.map { DownloadJob(track: $0) }); persist(); schedule()
     }
     public func pause(_ id: String) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }

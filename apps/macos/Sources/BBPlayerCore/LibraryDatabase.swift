@@ -1,11 +1,24 @@
 import Foundation
 import GRDB
 
+private struct DeletedPlaylistSnapshot: Codable {
+    var playlist: Playlist
+    var tracks: [Track]
+}
+
 public struct HistorySummary: Sendable {
     public var seconds: Double
     public var completed: Int
     public var days: [String: Double]
     public var ranking: [(track: Track, seconds: Double, count: Int)]
+}
+
+public struct ListeningEvent: Identifiable, Sendable {
+    public var id: String
+    public var track: Track
+    public var started: Date
+    public var seconds: Double
+    public var completed: Bool
 }
 
 public final class LibraryDatabase: LibraryRepository, @unchecked Sendable {
@@ -45,8 +58,12 @@ public final class LibraryDatabase: LibraryRepository, @unchecked Sendable {
         }
     }
     public func tracks(playlistID: String, limit: Int = 100, offset: Int = 0) throws -> [Track] {
+        try playlistTracks(playlistID: playlistID, query: "", limit: limit, offset: offset)
+    }
+    public func playlistTracks(playlistID: String, query: String = "", limit: Int = Int.max, offset: Int = 0) throws -> [Track] {
         try pool.read { db in
-            try Row.fetchAll(db, sql: "SELECT t.payload FROM track t JOIN playlist_track pt ON pt.track_id=t.id WHERE pt.playlist_id=? ORDER BY pt.sort_order LIMIT ? OFFSET ?", arguments: [playlistID, limit, offset])
+            let pattern = "%" + query.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "%", with: "\\%").replacingOccurrences(of: "_", with: "\\_") + "%"
+            return try Row.fetchAll(db, sql: "SELECT t.payload FROM track t JOIN playlist_track pt ON pt.track_id=t.id WHERE pt.playlist_id=? AND (t.title LIKE ? ESCAPE '\\' OR t.artist LIKE ? ESCAPE '\\') ORDER BY pt.sort_order LIMIT ? OFFSET ?", arguments: [playlistID, pattern, pattern, limit, offset])
                 .map { try JSONDecoder().decode(Track.self, from: $0["payload"]) }
         }
     }
@@ -62,10 +79,16 @@ public final class LibraryDatabase: LibraryRepository, @unchecked Sendable {
         }
     }
     public func append(_ track: Track, to playlistID: String) throws {
+        try append([track], to: playlistID)
+    }
+    public func append(_ tracks: [Track], to playlistID: String) throws {
         try pool.write { db in
-            try Self.upsert(track, in: db)
-            let order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sort_order),-1)+1 FROM playlist_track WHERE playlist_id=?", arguments: [playlistID]) ?? 0
-            try db.execute(sql: "INSERT OR IGNORE INTO playlist_track VALUES(?,?,?)", arguments: [playlistID, track.id, order])
+            var order = try Int.fetchOne(db, sql: "SELECT COALESCE(MAX(sort_order),-1)+1 FROM playlist_track WHERE playlist_id=?", arguments: [playlistID]) ?? 0
+            for track in tracks {
+                try Self.upsert(track, in: db)
+                try db.execute(sql: "INSERT OR IGNORE INTO playlist_track VALUES(?,?,?)", arguments: [playlistID, track.id, order])
+                if db.changesCount > 0 { order += 1 }
+            }
         }
     }
     public func removeTrack(_ trackID: String, from playlistID: String) throws {
@@ -89,7 +112,38 @@ public final class LibraryDatabase: LibraryRepository, @unchecked Sendable {
         }
     }
     public func deletePlaylist(_ id: String) throws {
-        try pool.write { try $0.execute(sql: "DELETE FROM playlist WHERE id=?", arguments: [id]) }
+        try pool.write { db in
+            guard let data = try Data.fetchOne(db, sql: "SELECT payload FROM playlist WHERE id=?", arguments: [id]) else { return }
+            var playlist = try JSONDecoder().decode(Playlist.self, from: data)
+            guard playlist.kind == "local" else { return }
+            let tracks = try Row.fetchAll(db, sql: "SELECT t.payload FROM track t JOIN playlist_track pt ON pt.track_id=t.id WHERE pt.playlist_id=? ORDER BY pt.sort_order", arguments: [id])
+                .map { try JSONDecoder().decode(Track.self, from: $0["payload"]) }
+            playlist.count = tracks.count
+            let snapshot = try JSONEncoder().encode(DeletedPlaylistSnapshot(playlist: playlist, tracks: tracks))
+            try db.execute(sql: "INSERT INTO state VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", arguments: ["deleted-playlist", snapshot])
+            try db.execute(sql: "DELETE FROM playlist WHERE id=?", arguments: [id])
+        }
+    }
+    public func deletedPlaylist() throws -> Playlist? {
+        try state(DeletedPlaylistSnapshot.self, key: "deleted-playlist")?.playlist
+    }
+    @discardableResult public func restoreDeletedPlaylist() throws -> Playlist? {
+        try pool.write { db in
+            guard let data = try Data.fetchOne(db, sql: "SELECT value FROM state WHERE key=?", arguments: ["deleted-playlist"]) else { return nil }
+            let snapshot = try JSONDecoder().decode(DeletedPlaylistSnapshot.self, from: data)
+            let playlist = snapshot.playlist
+            guard try !Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM playlist WHERE id=?)", arguments: [playlist.id])! else {
+                throw NSError(domain: "BBPlayer.Library", code: 1, userInfo: [NSLocalizedDescriptionKey: "同一歌单已存在，未覆盖现有内容。删除恢复记录仍保留。"])
+            }
+            try db.execute(sql: "INSERT INTO playlist VALUES(?,?,?)", arguments: [playlist.id, playlist.title, try JSONEncoder().encode(playlist)])
+            for (index, track) in snapshot.tracks.enumerated() {
+                // Shared track metadata may have changed since deletion; do not overwrite it.
+                try db.execute(sql: "INSERT OR IGNORE INTO track VALUES(?,?,?,?)", arguments: [track.id, track.title, track.artist, try JSONEncoder().encode(track)])
+                try db.execute(sql: "INSERT INTO playlist_track VALUES(?,?,?)", arguments: [playlist.id, track.id, index])
+            }
+            try db.execute(sql: "DELETE FROM state WHERE key=?", arguments: ["deleted-playlist"])
+            return playlist
+        }
     }
     public func search(_ text: String, limit: Int = 100, offset: Int = 0) throws -> [Track] {
         try pool.read { db in
@@ -137,6 +191,14 @@ public final class LibraryDatabase: LibraryRepository, @unchecked Sendable {
         try pool.read { db in
             try Row.fetchAll(db, sql: "SELECT t.payload FROM track t JOIN history h ON h.track_id=t.id GROUP BY t.id ORDER BY MAX(h.started) DESC LIMIT ? OFFSET ?", arguments: [limit, offset])
                 .map { try JSONDecoder().decode(Track.self, from: $0["payload"]) }
+        }
+    }
+    public func listeningEvents(on date: Date, limit: Int = 100, offset: Int = 0, calendar: Calendar = .current) throws -> [ListeningEvent] {
+        guard let interval = calendar.dateInterval(of: .day, for: date) else { return [] }
+        return try pool.read { db in
+            try Row.fetchAll(db, sql: "SELECT h.id,t.payload,h.started,h.listened,h.completed FROM history h JOIN track t ON t.id=h.track_id WHERE h.started>=? AND h.started<? ORDER BY h.started DESC,h.id DESC LIMIT ? OFFSET ?", arguments: [interval.start.timeIntervalSince1970, interval.end.timeIntervalSince1970, limit, offset]).map { row in
+                ListeningEvent(id: row["id"], track: try JSONDecoder().decode(Track.self, from: row["payload"]), started: Date(timeIntervalSince1970: row["started"]), seconds: row["listened"], completed: row["completed"])
+            }
         }
     }
     public func saveResume(trackID: String, position: Double, rate: Double) throws {

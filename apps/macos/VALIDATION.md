@@ -68,3 +68,38 @@ Follow-up checks: **31 core + 2 AppKit tests passed**, static SVGA 10 assertions
 The performance tables above remain historical v1 measurements. New dense-danmaku resource costs and full manual interaction/multi-display acceptance have not been measured. This round does not implement pure-music recognition.
 
 验证 JSON 中的本机绝对路径已改为相对路径；测量值未改动。迁移清单中的 SHA-256 记录迁移当时的文件内容，不代表隐私清理后的文件哈希。
+
+## 2026-10-23 deletion confirmation and queue improvements
+
+- Implemented a named playlist deletion confirmation with cancel/delete actions. Actual dialog interaction has not been manually exercised; backup and undo are not implemented in this batch.
+- Queue append skips an existing content identity. Play-next moves matching entries behind the current entry while preserving the active index, position and playback intent. Different CIDs remain distinct; play-next on the active identity does nothing.
+- `swift test --package-path apps/macos`: 33 core tests and 2 AppKit tests passed. Added two queue regressions for identity, persistence, duplicates before/after the active entry, paused progress and rate. Extended the real PCM playback test to verify queue edits retain playback and do not re-resolve the source.
+- `swift build --package-path apps/macos -c release --product BBPlayerMac`: passed. This is a Release executable build, not a newly installed or repackaged application. Existing artifact hashes and performance measurements were not refreshed.
+- Restricted-environment runs were not passes: the default manifest cache was unwritable; a temporary-cache test run failed local-server/PCM checks and the scale timing threshold; a restricted Release build failed during dSYM generation. Repeating tests and the Release build in the normal local environment passed. No failing assertions were removed or thresholds relaxed.
+- `git diff --check` passed. The new backlog and changed source/test files were checked for personal identifiers and home-directory paths; none were found. No commit, push or application installation was performed.
+
+## 2026-10-23 queue drag sorting
+
+- Queue rows now expose native SwiftUI List move handling and a drag affordance. Existing up/down buttons use the same ordering logic. The core accepts single or multiple source offsets and an insertion boundary; invalid requests are ignored.
+- Active playback is tracked by the original queue occurrence during reordering, fixing index selection for legacy queues containing duplicate content identities. Reordering preserves progress, rate and playback intent, and persists the resulting order/index without reloading audio.
+- `swift test --package-path apps/macos`: 35 core tests and 2 AppKit tests passed. New regressions cover block moves, top/bottom insertion, no-op/invalid requests, arrow moves, duplicate occurrences and persistence. The real PCM playback test also reorders the playing entry without re-resolving its source.
+- `swift build --package-path apps/macos -c release --product BBPlayerMac`: passed. `git diff --check` and identifier/home-path scans of changed files passed.
+- Native pointer dragging and the earlier deletion dialog still need runtime interaction acceptance. Core tests and compilation do not establish that acceptance. No application packaging, installation, commit or push was performed.
+
+## 2026-10-23 playlist deletion undo
+
+- Local playlist deletion now writes a complete ordered recovery snapshot and deletes the playlist in the same SQLite transaction. Only the latest successful deletion is retained, including across database reopen/application restart; the next successful deletion replaces it. No schema migration is needed because the existing state table stores the record.
+- A persistent footer offers undo. Restore retains playlist identity, title, cover and complete membership beyond the 100-row UI page size, preserves current shared track metadata, and clears the recovery record only after successful restoration. Existing playlists with the same ID are not overwritten. Downloads, lyrics and listening history are not deleted by either operation.
+- `swift test --package-path apps/macos`: 38 core tests and 2 AppKit tests passed. Three new regressions cover 205 ordered tracks, database reopen, shared metadata/history/lyrics/download references, latest-only retention, empty-playlist deletion, conflict rejection, and forced SQL failures during deletion/restoration with transactional rollback and retry.
+- `swift build --package-path apps/macos -c release --product BBPlayerMac`: passed. Diff whitespace checks and identifier/home-directory path checks passed for changed files.
+- Delete/undo footer interaction still requires runtime UI acceptance. This does not implement automatic snapshots or a general backup format. No packaging, application installation, commit or push was performed.
+
+## 2026-10-23 library workflows, history and stream information
+
+- Local playlist playback and whole-list enqueue/download operations query complete membership, including unloaded pages, with the active title/artist filter. Remote/search operations explicitly say they affect loaded entries only. Multi-selection supports queue append, downloads and transactional addition to another local playlist; batch APIs deduplicate while preserving input order.
+- Heatmap cells and the date picker select paginated listening sessions, preserving repeated plays as separate events. Recent songs remain deduplicated. Day queries use calendar day boundaries and the existing timestamp index, including 23-hour DST days.
+- Sidebar width is draggable, locally persistent, clamped to 180–300 points and resettable to 224 by double-click, with accessibility adjustment. The playback page displays available stream codec/bitrate/sample rate; new offline metadata preserves this information, while old metadata without the optional field still decodes. Higher-quality format selection is not implemented.
+- `swift test --package-path apps/macos`: **43 core + 3 AppKit tests passed**, including whole-playlist/filter queries beyond 100 rows, transactional batch append, batch enqueue/download deduplication, repeated sessions and DST bounds, legacy metadata decoding, and an isolated AppModel workflow spanning playlist/filter/history/delete/restore. Test-only failures in temporary-directory cleanup and Retina pixel-size assumptions were corrected; the final full suite passed.
+- Four native NSHostingView renders at 1120×740 points were generated and visually inspected for playlist, filtered result, history and undo footer layouts. Screenshots are local at `build/qa/workflows/`. These are rendering/model checks, not pointer-driven UI automation; dialogs, drag handles, batch menus and date controls still need interaction acceptance.
+- `apps/macos/scripts/build-app.sh release` passed and rebuilt the local ARM64 `.app`; `codesign --verify --deep --strict` passed. Current bundle evidence is `validation/library-workflows-20261023.json`. The previous `validation/artifact.json` and archived ZIP describe a historical build and were not presented as new artifacts. No installed application was replaced.
+- Changes reside on the local `feature/library-workflow-improvements` branch without commits, merges, pushes or external review. No mobile/backend source changed, so mobile JS/Gradle checks do not apply. No new performance or authenticated-provider acceptance is claimed.
