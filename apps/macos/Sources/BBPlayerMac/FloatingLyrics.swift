@@ -25,6 +25,7 @@ import SwiftUI
             hosting.view.autoresizingMask = [.width, .height]
         }
         panel.ignoresMouseEvents = model.player.preferences.floatingLocked
+        panel.isMovable = !model.player.preferences.floatingLocked
         panel.isMovableByWindowBackground = !model.player.preferences.floatingLocked
         validateFrame(); panel.orderFrontRegardless(); panel.contentView?.needsDisplay = true
         NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
@@ -58,10 +59,16 @@ struct FloatingLyricsView: View {
     @Bindable var model: AppModel
     private var line: LyricLine? { let lyrics = model.player.lyrics; return lyrics.index(at: model.player.position + model.player.preferences.lyricOffset).map { lyrics.lines[$0] } }
     var body: some View {
-        FloatingLyricText(line: line, fallback: model.player.currentTrack?.title ?? "BBPlayer", position: model.player.position + model.player.preferences.lyricOffset + model.player.lyrics.offset, romanization: model.player.preferences.showRomanization, translation: model.player.preferences.showTranslation, locked: model.player.preferences.floatingLocked) { height in model.floatingController?.fitHeight(height) }
-            .padding(18)
+        FloatingLyricText(line: line, fallback: model.player.currentTrack?.title ?? "BBPlayer", position: model.player.position + model.player.preferences.lyricOffset + model.player.lyrics.offset, romanization: model.player.preferences.showRomanization, translation: model.player.preferences.showTranslation, locked: model.player.preferences.floatingLocked) { height in model.floatingController?.fitHeight(height + (model.player.preferences.floatingLocked ? 0 : 24)) }
+            .padding(.horizontal, 18).padding(.bottom, 18).padding(.top, model.player.preferences.floatingLocked ? 18 : 42)
             .background(model.player.preferences.floatingLocked ? Color.clear : Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(alignment: .topTrailing) { if !model.player.preferences.floatingLocked { Button { model.player.preferences.floatingLocked = true; model.updateVisibility() } label: { Image(systemName: "lock.fill") }.buttonStyle(.plain).padding(8).foregroundStyle(.white) } }
+            .overlay(alignment: .top) { if !model.player.preferences.floatingLocked {
+                HStack {
+                    Label("拖动歌词移动 · 滚动查看长句", systemImage: "hand.draw").font(.caption2).allowsHitTesting(false)
+                    Spacer()
+                    Button { model.player.preferences.floatingLocked = true; model.updateVisibility() } label: { Image(systemName: "lock.fill") }.buttonStyle(.plain).help("锁定歌词并开启点击穿透")
+                }.padding(8).foregroundStyle(.white)
+            } }
     }
 }
 
@@ -81,7 +88,7 @@ struct FloatingLyricText: NSViewRepresentable {
 
 /// TextKit retains all characters, wraps unbroken text and provides precise glyph scrolling.
 final class LyricScrollText: NSScrollView {
-    let lyricsText = NSTextView()
+    let lyricsText = DraggableLyricTextView()
     private var heightChanged: ((CGFloat) -> Void)?
     private var lastHeight: CGFloat = 0
     private var locked = true
@@ -103,6 +110,7 @@ final class LyricScrollText: NSScrollView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func render(line: LyricLine?, fallback: String, position: Double, romanization: Bool, translation: Bool, locked: Bool, heightChanged: @escaping (CGFloat) -> Void) {
         self.locked = locked; self.heightChanged = heightChanged
+        lyricsText.dragEnabled = !locked
         let original = line?.text ?? fallback
         manualOrigin = !locked && originalText == original ? contentView.bounds.origin : nil
         originalText = original
@@ -148,5 +156,20 @@ final class LyricScrollText: NSScrollView {
             lastHeight = height
             DispatchQueue.main.async { [weak self] in self?.heightChanged?(height) }
         }
+    }
+}
+
+/// NSTextView consumes mouse-down events even when selection is disabled.
+/// Start a native window drag explicitly; wheel events still reach the scroll view.
+final class DraggableLyricTextView: NSTextView {
+    var dragEnabled = false
+    override var mouseDownCanMoveWindow: Bool { dragEnabled }
+    override func mouseDown(with event: NSEvent) {
+        guard dragEnabled, let window, !window.ignoresMouseEvents, window.isMovable else { return }
+        window.performDrag(with: event)
+    }
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        if dragEnabled { addCursorRect(visibleRect, cursor: .openHand) }
     }
 }

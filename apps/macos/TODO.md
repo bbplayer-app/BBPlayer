@@ -29,10 +29,12 @@ Research references (README and selected source inspection only, not runtime ver
 
 ## Implemented paths awaiting dedicated acceptance
 
+- [ ] Next build: check `BBPLAYER_CODESIGN_IDENTITY` uses a persistent certificate rather than ad-hoc signing. Once certificate setup and app replacement are authorized, verify initial login, quit/relaunch, and two successive rebuilds using the same identity; record whether Keychain repeatedly requests a password. Include a fresh-machine check when available. Script support alone does not establish acceptance; do not silently create certificates or replace the installed app.
 - [ ] 9. Real QR confirmation, expired Cookie and logout flows.
 - [ ] 10. Authenticated favorites, collections, following and watch-later workflows.
 - [ ] 11. Physical media keys and Control Center controls.
 - [ ] 12. Floating lyrics: menu-bar access, unlock/drag/relock, multiple displays and position recovery after fullscreen changes.
+  - [x] Explicit native window dragging from unlocked lyric text, independent of background-event propagation, with a visible hint and open-hand cursor. Synthetic AppKit mouse-down regression verifies unlocked dispatch and locked/click-through suppression; long-text scroll regressions still pass. Actual pointer drag and multi-display acceptance remain pending.
 - [ ] 13. Danmaku: pause, seek, playback-rate synchronization, pointer pass-through and suspension while hidden.
 - [ ] 14. Current-iteration performance: dense danmaku and updated foreground/background/floating-lyric CPU and memory. Historical v1 measurements are not current-iteration evidence.
 - [ ] 15. Truly expired CDN URLs, prolonged disconnection and network recovery.

@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-23",
+  "bundle": "build/BBPlayer.app",
+  "binary_sha256": "651180ea414ace742ff81a9bd40ecf0c1287aa7adf6a06b085c6c285acdc3c91",
+  "tests": {
+    "core": 43,
+    "appkit": 4,
+    "failures": 0
+  },
+  "release_packaging": "passed",
+  "strict_signature_verification": "passed",
+  "native_drag_dispatch_regression": "passed",
+  "physical_pointer_drag_acceptance": "pending; UI automation did not reliably bind to the isolated diagnostic instance",
+  "installed_app_replaced": false,
+  "committed_or_pushed": false
+}

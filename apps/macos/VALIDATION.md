@@ -1,5 +1,25 @@
 # macOS 首版验收记录
 
+## Post-push rebuild workflow (2026-10-23)
+
+Every authorized successful push now requires a subsequent Release rebuild and signature verification. The default local updater retains its pre-push verification build, then pushes verified main, rebuilds again, and stages only the post-push result for installation. Install-only mode can verify/install a committed feature branch without pushing or merging main. Both modes stop if the branch, revision or worktree changes, and preserve the previous installed app as a backup.
+
+Both shell scripts passed `zsh -n`. Isolated stubbed update scenarios passed for push→second build→install ordering, preservation of the installed app when the second build fails, and feature-branch install-only without any push. These fixtures used temporary application directories and do not establish actual installation; actual post-push build/install outcomes are reported separately after execution. The prior lyric tests (43 core + 4 AppKit) still describe the unchanged Swift fix.
+
+## Floating lyric drag fix (2026-10-23)
+
+Unlocked lyric text now explicitly calls the native window drag operation on mouse-down; relying only on `isMovableByWindowBackground` was insufficient because the embedded NSTextView consumes mouse events. Locked windows remain immovable and click-through. An unlocked header explains dragging/scrolling and provides a lock button; reserved header space is included in adaptive height.
+
+All 43 core + 4 AppKit tests passed, including a new native mouse-down dispatch test with a tracking NSPanel and the existing long-text/manual-scroll tests. Release app packaging and strict signature verification passed. Current rebuilt-bundle hash is recorded in `validation/lyric-drag-20261023.json`; earlier bundle evidence is historical.
+
+Actual pointer dragging was not accepted as passed: the UI automation connection did not reliably bind to the intended isolated diagnostic process. No private-library interaction was used as evidence. Menu unlock, physical drag/relock, persistence and multiple displays still require end-to-end acceptance. No installed-app replacement, commit or push was performed for this fix. Concurrent signing-related edits were preserved.
+
+## Next-build checkpoint: persistent signing and Keychain (2026-10-23)
+
+The build script now accepts `BBPLAYER_CODESIGN_IDENTITY`, warns on ad-hoc signing and verifies the resulting signature. Shell syntax, Release packaging with the default ad-hoc identity, and strict signature verification passed. No persistent certificate was configured or tested, and no installed application was replaced.
+
+At the next build, check the selected signing identity first. With the required authorization, verify initial credential storage, quit/relaunch, and two successive rebuilds using the same certificate; record actual password prompts. Repeat on a fresh machine when available. Initial authorization or a locked Keychain may still require interaction. This acceptance remains pending; do not claim repeated prompts are resolved from build success alone. See `TODO.md` and the signing setup in `README.md`.
+
 2026-10-22；Apple M2 / 16GB / macOS 27.0.1 / Xcode 27。此记录区分实现、已验证结果与仍需人工完成的验收，不把“构建成功”当作全量通过。
 
 ## 已验证

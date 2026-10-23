@@ -1,22 +1,28 @@
 #!/bin/zsh
-# Test, build, push the verified main branch, then install locally.
+# Test/build, push verified main, rebuild after the push, then install locally.
 set -euo pipefail
 APP_ROOT="${0:A:h:h}"
 REPO_ROOT="${APP_ROOT:h:h}"
 MODE="${1:-update}"
 if [[ "$MODE" == --help ]]; then
   print 'Usage: update-local.sh [--install-only|--help]'
-  print 'Default: test, build Release, push main to the verified personal origin, install.'
-  print -- '--install-only: test, build and install without contacting GitHub.'
+  print 'Default: test, build Release, push main, rebuild Release after push, install.'
+  print -- '--install-only: test, build and install the current branch without contacting GitHub.'
   print 'Quit BBPlayer and commit your changes first. No commits are created automatically.'
   exit 0
 fi
 [[ $# -le 1 && ( "$MODE" == update || "$MODE" == --install-only ) ]] || exit 2
 cd "$REPO_ROOT"
 die() { print -u2 -- "$*"; exit 1; }
-[[ "$(git branch --show-current)" == main ]] || die 'Switch to main first.'
+START_BRANCH="$(git branch --show-current)"
+[[ -n "$START_BRANCH" ]] || die 'Check out a branch first.'
+[[ "$MODE" == --install-only || "$START_BRANCH" == main ]] || die 'Switch to main first, or use --install-only for an authorized local feature build.'
 [[ -z "$(git status --porcelain --untracked-files=normal)" ]] || die 'Commit or set aside changes first.'
 START_COMMIT="$(git rev-parse HEAD)"
+check_revision() {
+  [[ -z "$(git status --porcelain --untracked-files=normal)" ]] || die 'Worktree changed during the update; stopped.'
+  [[ "$(git branch --show-current)" == "$START_BRANCH" && "$(git rev-parse HEAD)" == "$START_COMMIT" ]] || die 'Branch or commit changed during the update; stopped.'
+}
 check_stopped() {
   local process_status=0
   pgrep -x BBPlayerMac >/dev/null || process_status=$?
@@ -44,6 +50,16 @@ fi
 swift test --package-path "$APP_ROOT"
 "$APP_ROOT/scripts/build-app.sh" release
 SOURCE_APP="$APP_ROOT/build/BBPlayer.app"
+check_stopped
+check_revision
+if [[ "$MODE" == update ]]; then
+  [[ "$(git remote get-url --all origin)" == "$EXPECTED_URL" && "$(git remote get-url --push --all origin)" == "$EXPECTED_URL" ]] || die 'Origin changed during the build; stopped.'
+  git -c push.followTags=false push --no-follow-tags origin refs/heads/main:refs/heads/main
+  # Build again after every successful push; install only that post-push result.
+  "$APP_ROOT/scripts/build-app.sh" release
+  check_stopped
+  check_revision
+fi
 codesign --verify --deep --strict "$SOURCE_APP"
 [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$SOURCE_APP/Contents/Info.plist")" == "$BUNDLE_ID" ]] || die 'Built app identity mismatch.'
 STAGING="$(mktemp -d /Applications/.BBPlayer-update.XXXXXX)"
@@ -58,13 +74,7 @@ trap cleanup EXIT
 ditto "$SOURCE_APP" "$STAGING/BBPlayer.app"
 codesign --verify --deep --strict "$STAGING/BBPlayer.app"
 check_stopped
-[[ -z "$(git status --porcelain --untracked-files=normal)" ]] || die 'Worktree changed during the build; stopped.'
-[[ "$(git branch --show-current)" == main && "$(git rev-parse HEAD)" == "$START_COMMIT" ]] || die 'Branch or commit changed during the build; stopped.'
-if [[ "$MODE" == update ]]; then
-  [[ "$(git remote get-url --all origin)" == "$EXPECTED_URL" && "$(git remote get-url --push --all origin)" == "$EXPECTED_URL" ]] || die 'Origin changed during the build; stopped.'
-  git -c push.followTags=false push --no-follow-tags origin refs/heads/main:refs/heads/main
-fi
-check_stopped
+check_revision
 if [[ -d "$DESTINATION" ]]; then
   mv "$DESTINATION" "$STAGING/previous.app"
 fi
