@@ -29,7 +29,7 @@ Research references (README and selected source inspection only, not runtime ver
 
 ## Implemented paths awaiting dedicated acceptance
 
-- [ ] Next build: check `BBPLAYER_CODESIGN_IDENTITY` uses a persistent certificate rather than ad-hoc signing. Once certificate setup and app replacement are authorized, verify initial login, quit/relaunch, and two successive rebuilds using the same identity; record whether Keychain repeatedly requests a password. Include a fresh-machine check when available. Script support alone does not establish acceptance; do not silently create certificates or replace the installed app.
+- [ ] Keychain acceptance: persistent machine-local signing identity has been configured and used for Release packaging. Two changed, identically signed probe binaries successfully shared a disposable credential with authentication UI prohibited; the test item was deleted. Startup now requires an explicit unlock action if existing credentials need authorization. Still verify the real account's one-time migration authorization, quit/relaunch and subsequent updates, plus a fresh machine when available; these are not established by fixture results.
 - [ ] 9. Real QR confirmation, expired Cookie and logout flows.
 - [ ] 10. Authenticated favorites, collections, following and watch-later workflows.
 - [ ] 11. Physical media keys and Control Center controls.

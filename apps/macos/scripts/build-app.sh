@@ -6,7 +6,12 @@ if [[ "$BUILD_CONFIGURATION" != release && "$BUILD_CONFIGURATION" != debug ]]; t
   print -u2 'Usage: build-app.sh [release|debug]'
   exit 2
 fi
-SIGNING_IDENTITY="${BBPLAYER_CODESIGN_IDENTITY:--}"
+SIGNING_IDENTITY="${BBPLAYER_CODESIGN_IDENTITY:-}"
+SIGNING_CONFIG="$HOME/Library/Application Support/com.bbplayer.macos-development/signing.json"
+if [[ -z "$SIGNING_IDENTITY" && -f "$SIGNING_CONFIG" ]]; then
+  SIGNING_IDENTITY="$(python3 -c 'import json,re,sys; value=json.load(open(sys.argv[1]))["identity_sha1"]; assert re.fullmatch(r"[0-9A-F]{40}",value), "Invalid saved signing identity"; print(value)' "$SIGNING_CONFIG")"
+fi
+SIGNING_IDENTITY="${SIGNING_IDENTITY:--}"
 if [[ "$SIGNING_IDENTITY" == - ]]; then
   print -u2 'Warning: ad-hoc signing is enabled. Rebuilt apps may request Keychain access again.'
   print -u2 'Set BBPLAYER_CODESIGN_IDENTITY to a persistent code-signing identity for subsequent builds and updates.'

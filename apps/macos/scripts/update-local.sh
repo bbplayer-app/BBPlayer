@@ -50,6 +50,8 @@ fi
 swift test --package-path "$APP_ROOT"
 "$APP_ROOT/scripts/build-app.sh" release
 SOURCE_APP="$APP_ROOT/build/BBPlayer.app"
+INITIAL_SIGNING_REQUIREMENT="$(codesign -d -r- "$SOURCE_APP" 2>&1)"
+[[ "$INITIAL_SIGNING_REQUIREMENT" == *'certificate '* ]] || die 'Configure persistent signing before pushing or installing; ad-hoc builds are not accepted.'
 check_stopped
 check_revision
 if [[ "$MODE" == update ]]; then
@@ -61,6 +63,8 @@ if [[ "$MODE" == update ]]; then
   check_revision
 fi
 codesign --verify --deep --strict "$SOURCE_APP"
+SIGNING_REQUIREMENT="$(codesign -d -r- "$SOURCE_APP" 2>&1)"
+[[ "$SIGNING_REQUIREMENT" == *'certificate '* ]] || die 'Configure persistent signing before installation; ad-hoc builds are not installed.'
 [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$SOURCE_APP/Contents/Info.plist")" == "$BUNDLE_ID" ]] || die 'Built app identity mismatch.'
 STAGING="$(mktemp -d /Applications/.BBPlayer-update.XXXXXX)"
 cleanup() {
@@ -82,6 +86,11 @@ if ! mv "$STAGING/BBPlayer.app" "$DESTINATION"; then
   [[ ! -d "$STAGING/previous.app" ]] || mv "$STAGING/previous.app" "$DESTINATION"
   die 'Installation failed; the previous app was restored if possible.'
 fi
+if ! codesign --verify --deep --strict "$DESTINATION"; then
+  mv "$DESTINATION" "$STAGING/failed.app"
+  [[ ! -d "$STAGING/previous.app" ]] || mv "$STAGING/previous.app" "$DESTINATION"
+  die 'Installed signature verification failed; previous app restored if available.'
+fi
 if [[ -d "$STAGING/previous.app" ]]; then
   BACKUP_ROOT="$APP_ROOT/build/local-updates.noindex"
   mkdir -p "$BACKUP_ROOT"
@@ -90,4 +99,5 @@ if [[ -d "$STAGING/previous.app" ]]; then
   print -- "Previous app: $BACKUP_FOLDER/BBPlayer.app"
 fi
 print -- "Installed: $DESTINATION"
+python3 "$APP_ROOT/scripts/cleanup-local-apps.py" --installed "$DESTINATION" --build-root "$APP_ROOT/build"
 print 'The app was not launched. Open it when ready.'

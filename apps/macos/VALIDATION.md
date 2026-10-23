@@ -1,5 +1,15 @@
 # macOS 首版验收记录
 
+## Persistent signing, explicit credential unlock and latest-package retention (2026-10-23)
+
+The prior installation still had a content-hash-based ad-hoc requirement and no usable signing identity had been configured. With explicit authorization, a persistent self-signed local code-signing identity was created: the private key was imported non-extractably with access restricted to the system signing tool, temporary import material was deleted, and no global trust settings were changed. Only its fingerprint is saved in local development configuration; it is not committed. Re-running setup retained the same identity.
+
+Two different signed binaries produced the same certificate-based designated requirement. A second test created a uniquely scoped disposable Keychain item with one build and read it with a changed build signed by the same identity while authentication UI was prohibited; it passed and the item was deleted. No existing credential or Bilibili Cookie was read for this test. Actual legacy-item migration authorization and subsequent real-account restart/update behavior remain pending.
+
+Normal startup now uses a noninteractive authentication context. Interaction-required/authentication-cancelled errors expose an explicit saved-login unlock action in the sidebar/settings instead of initiating a system prompt during startup. Cookies remain in Keychain. All **45 core + 4 AppKit tests passed**; two new tests cover authentication-query policy and error classification.
+
+Release packaging used the saved certificate identity and passed strict signature verification. The updater rejects ad-hoc installations, verifies the installed signature, and retains rollback material until installed/build manifests match. A scoped cleanup then removes obsolete managed app backups, the historical packaged ZIP and recognized temporary lyric diagnostic apps, preserving the current installed/build app, data and source history. Five cleanup tests passed for package selection, mismatch refusal, identity refusal, symlink safety and diagnostic-path restrictions. Both shell scripts passed syntax checks. Actual installation/cleanup results are recorded locally by the update run, not inferred from these tests.
+
 ## Post-push rebuild workflow (2026-10-23)
 
 Every authorized successful push now requires a subsequent Release rebuild and signature verification. The default local updater retains its pre-push verification build, then pushes verified main, rebuilds again, and stages only the post-push result for installation. Install-only mode can verify/install a committed feature branch without pushing or merging main. Both modes stop if the branch, revision or worktree changes, and preserve the previous installed app as a backup.

@@ -102,8 +102,11 @@ struct RootView: View {
             HStack(spacing: 10) {
                 Artwork(url: model.profile?.avatarURL, radius: 18).frame(width: 34, height: 34)
                     .overlay { if model.mainWindowVisible, let url = model.themes.active?.asset(role: "avatar", index: model.themes.avatarIndex) { AnimatedAsset(url: url).frame(width: 45, height: 45).allowsHitTesting(false) } }
-                VStack(alignment: .leading, spacing: 3) { Text(model.profile?.name ?? "登录 Bilibili").font(.subheadline.weight(.medium)).lineLimit(1); Text(model.profile == nil ? "读取收藏夹和关注" : "Bilibili 账号").font(.caption2).foregroundStyle(.secondary) }
-            }.padding(12).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).onTapGesture { model.showLogin = true }
+                VStack(alignment: .leading, spacing: 3) { Text(model.credentialsNeedUnlock ? "解锁已保存登录" : model.profile?.name ?? "登录 Bilibili").font(.subheadline.weight(.medium)).lineLimit(1); Text(model.credentialsNeedUnlock ? "点击后授权访问钥匙串" : model.profile == nil ? "读取收藏夹和关注" : "Bilibili 账号").font(.caption2).foregroundStyle(.secondary) }
+            }.padding(12).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).onTapGesture {
+                if model.credentialsNeedUnlock { Task { await model.restoreLogin(allowInteraction: true) } }
+                else { model.showLogin = true }
+            }
         }.padding(.horizontal, 10).padding(.bottom, 12)
             .background { if model.mainWindowVisible, let url = model.themes.active?.asset(remote: model.themes.variant?.properties["side_bg"]) { AnimatedAsset(url: url).scaledToFill().clipped().opacity(0.4).allowsHitTesting(false) } }
             .background(MD.surface(scheme).opacity(0.65))

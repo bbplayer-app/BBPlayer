@@ -30,7 +30,10 @@ struct SettingsView: View {
                 HStack { Text("已用 \(ByteCountFormatter.string(fromByteCount: cacheSize, countStyle: .file))"); Spacer(); Button("清空临时缓存") { Task { do { try await model.cache.clear(); cacheSize = try await model.cache.size() } catch { model.message = error.localizedDescription } } } }
                 Text("手动下载、装扮和播放历史单独保存，清空临时缓存不会删除这些内容。").font(.caption).foregroundStyle(.secondary)
             }
-            Section("本机数据") { Text("歌单、历史、偏好保存在本机 SQLite；凭据使用 Keychain。首版不上传统计，不启用跨设备同步。").font(.callout).foregroundStyle(.secondary) }
+            Section("本机数据") {
+                if model.credentialsNeedUnlock { Button("解锁已保存的登录") { Task { await model.restoreLogin(allowInteraction: true) } } }
+                Text("歌单、历史、偏好保存在本机 SQLite；凭据使用 Keychain。需要授权时，点击解锁入口后才会显示系统提示。首版不上传统计，不启用跨设备同步。").font(.callout).foregroundStyle(.secondary)
+            }
         }.formStyle(.grouped).task { cacheSize = (try? await model.cache.size()) ?? 0 }
     }
 }

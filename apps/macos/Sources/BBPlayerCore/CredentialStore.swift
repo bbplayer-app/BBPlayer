@@ -1,12 +1,26 @@
 import Foundation
 import Security
+import LocalAuthentication
 
 public enum CredentialStore {
     private static let service = "com.bbplayer.macos.credentials"
-    public static func read(_ account: String = "bilibili-cookie") throws -> String? {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+    static func readQuery(account: String, allowInteraction: Bool) -> [String: Any] {
+        var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service, kSecAttrAccount as String: account,
             kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+        if !allowInteraction {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
+        return query
+    }
+    public static func requiresUserInteraction(_ error: Error) -> Bool {
+        let error = error as NSError
+        return error.domain == NSOSStatusErrorDomain && [Int(errSecInteractionNotAllowed), Int(errSecAuthFailed), Int(errSecUserCanceled)].contains(error.code)
+    }
+    public static func read(_ account: String = "bilibili-cookie", allowInteraction: Bool = true) throws -> String? {
+        let query = readQuery(account: account, allowInteraction: allowInteraction)
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }

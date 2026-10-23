@@ -23,6 +23,7 @@ import Observation
     var localPlaylists: [Playlist] = []
     var following: [FollowingProfile] = []
     var profile: BilibiliProfile?
+    var credentialsNeedUnlock = false
     var openedPlaylist: Playlist?
     var deletedPlaylist: Playlist?
     var page = 1
@@ -67,10 +68,17 @@ import Observation
     }
     func start() async {
         guard !QAOptions.enabled else { updateVisibility(); return }
-        do {
-            if let cookie = try CredentialStore.read() { await api.setCookie(cookie); profile = try await api.profile() }
-        } catch { message = error.localizedDescription }
+        await restoreLogin(allowInteraction: false)
         updateVisibility()
+    }
+    func restoreLogin(allowInteraction: Bool) async {
+        do {
+            if let cookie = try CredentialStore.read(allowInteraction: allowInteraction) { await api.setCookie(cookie); profile = try await api.profile() }
+            credentialsNeedUnlock = false
+        } catch {
+            if CredentialStore.requiresUserInteraction(error) { credentialsNeedUnlock = true }
+            else { message = error.localizedDescription }
+        }
     }
     func navigate(_ destination: LibrarySection) {
         playlistQuery = ""; historyDate = nil; historyEvents = []
@@ -207,10 +215,11 @@ import Observation
             let profile = try await api.profile()
             try CredentialStore.write(cookie)
             self.profile = profile; showLogin = false; loadSection()
+            credentialsNeedUnlock = false
         } catch { await api.setCookie(previous); throw error }
     }
     func logout() async {
-        do { try CredentialStore.delete(); pauseImport(); downloads.pauseAll(); player.pause(); player.stop(); await api.setCookie(""); profile = nil; tracks = []; playlists = [] }
+        do { try CredentialStore.delete(); pauseImport(); downloads.pauseAll(); player.pause(); player.stop(); await api.setCookie(""); profile = nil; credentialsNeedUnlock = false; tracks = []; playlists = [] }
         catch { message = error.localizedDescription }
     }
     func loadLyrics(_ track: Track) {
