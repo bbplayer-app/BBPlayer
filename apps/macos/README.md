@@ -26,6 +26,18 @@ swift run --package-path apps/macos BBPlayerProbe BV1Zu411x7mc --download-offlin
 
 探针默认静音，但解码、拖动和 PCM 采样均真实执行；`--audible` 开启 20% 音量。服务探针只读取公共内容。测试中的 HTTP 服务仅绑定 `127.0.0.1`，退出测试后关闭。
 
+## 本地更新命令
+
+先退出 BBPlayer 并提交代码，再在仓库根目录运行：
+
+```sh
+apps/macos/scripts/update-local.sh
+```
+
+命令依次测试、构建 Release、校验签名、推送 `main`，最后替换 `/Applications/BBPlayer.app`。只允许推送到当前 GitHub CLI 登录账号下、与 `origin` 地址一致的 `BBPlayer-macOS` 仓库，并要求 Actions 关闭。需要已登录的 GitHub CLI 和应用程序目录的写入权限。它不自动提交，不强制推送，也不创建 PR；普通 `git push` 不会触发这个命令。
+
+应用仍运行、工作区未提交、测试或推送失败时停止。若推送后安装失败，远端提交仍然存在，可修正问题后使用 `apps/macos/scripts/update-local.sh --install-only` 重试；该模式重新测试和构建，仅安装，不连接 GitHub。旧版应用保存在忽略的 `build/local-updates.noindex/backup.*/BBPlayer.app`，替换不改动曲库、下载或 Keychain，也不自动启动应用。
+
 ## 使用
 
 - 搜索 B 站歌曲、BV / AV 号、视频链接或 b23 短链接。分 P 链接保留 `p` 参数；歌曲菜单可展开并记住全部分 P。双击歌曲播放，右侧菜单可入队、下一首播放、添加歌单或下载。
