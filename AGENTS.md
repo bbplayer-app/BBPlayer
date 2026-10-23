@@ -51,12 +51,18 @@ pnpm type-check             # TypeScript type checking
 
 ## macOS fork workflow
 
-- The canonical local checkout is `/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`; develop the native app under `apps/macos`. The old sibling `BBPlayer` checkout was retired to the macOS Trash after verified migration; do not recreate or use it for ongoing work.
-- This is Gino's personal macOS development project. The only permitted Git remote is `origin`, owned by `ginolyu3360-code`: `https://github.com/ginolyu3360-code/BBPlayer-macOS.git`. All existing branches must track this repository only. The user authorized commits and pushes here; use `codex/` feature branches.
+- Use this repository checkout and develop the native app under `apps/macos`. The retired sibling checkout must not be recreated or used for ongoing work.
+- The only permitted Git remote is the already configured `origin`. Verify its owner and repository locally before any authorized Git operation; do not change its URL or add remotes. All existing branches must track this repository only. Existing user authorization for commits and pushes applies only here; use descriptive feature branch names without AI or tool branding.
 - Do not fetch from, push to, open/reopen pull requests against, merge into, comment on, request reviews from, or otherwise contact `bbplayer-app/BBPlayer` (`https://github.com/bbplayer-app/BBPlayer`). Do not add an `upstream` remote. GitHub's fork provenance marker and source/license history may remain; they do not authorize any operational relationship.
 - Always name repositories by owner and repository name, adding the full URL when useful. Do not use ambiguous labels such as "the original repository" or "原仓库" to identify a target.
-- Pull requests, merges, publication, deployment and additional external review require their own explicit authorization. Any separately authorized PR must explicitly name `ginolyu3360-code/BBPlayer-macOS` as the base repository. Never infer authorization to contact `bbplayer-app/BBPlayer` from a request to push personal work.
-- GitHub Actions in `ginolyu3360-code/BBPlayer-macOS` are disabled for personal local development. Do not enable inherited mobile publishing, wiki, scheduled update checks or deployment automation without an explicit request.
+- Pull requests, merges, publication, deployment and additional external review require their own explicit authorization. Any separately authorized PR must target the repository verified from the configured `origin`. Never infer authorization to contact `bbplayer-app/BBPlayer` from a request to push personal work.
+- GitHub Actions in this repository are disabled for local development. Do not enable inherited mobile publishing, wiki, scheduled update checks or deployment automation without an explicit request.
 - For native macOS-only work, run `swift test --package-path apps/macos` and the relevant app build. The Android Gradle and mobile JavaScript checks apply only when those packages change.
 - Read `apps/macos/IMPLEMENTATION.md` and `apps/macos/VALIDATION.md` for scope and evidence. Danmaku, full floating lyrics and larger sidebar navigation are implemented in the follow-up iteration; consult the validation record for what was actually tested. Instrumental recognition remains deferred.
 - Local interview recovery is in `.grilling/` and is intentionally not committed. Continue the existing checkpoint without resetting its counters.
+
+## Privacy in repository files
+
+- Do not include the user's name, nickname, account handles, contact details, personal background or machine-specific absolute paths in tracked files, README files, comments, examples or validation records. Use repository-relative paths and neutral project descriptions.
+- Do not copy personal profile or conversation details into the repository. Verify repository ownership from local Git configuration when necessary without embedding the user's account in documentation.
+- Before delivery, inspect the full diff and search tracked files for personal identifiers and home-directory paths. Preserve required third-party attribution and licenses.

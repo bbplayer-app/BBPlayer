@@ -35,7 +35,7 @@
   "rss_first_mib": 169.09375,
   "rss_last_mib": 185.34375,
   "process_commands": [
-    "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+    "apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
   ],
   "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
 }

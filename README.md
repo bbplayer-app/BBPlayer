@@ -1,9 +1,7 @@
 # BBPlayer-macOS
 
-Gino（GitHub：`ginolyu3360-code`）的个人自用 macOS 音乐播放器项目。
+基于 SwiftUI / AppKit 的原生 macOS 音乐播放器，支持 Bilibili 音频播放、歌词、弹幕、歌单和离线下载。
 
-- GitHub 仓库：[ginolyu3360-code/BBPlayer-macOS](https://github.com/ginolyu3360-code/BBPlayer-macOS)
-- 本地开发目录：`/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`
 - 原生应用代码、构建和使用说明：[apps/macos/README.md](apps/macos/README.md)
 - 实现与后续需求记录：[apps/macos/IMPLEMENTATION.md](apps/macos/IMPLEMENTATION.md)
 - 验证结果及已知限制：[apps/macos/VALIDATION.md](apps/macos/VALIDATION.md)
@@ -19,10 +17,8 @@ apps/macos/scripts/build-app.sh release
 
 生成的应用位于 `apps/macos/build/BBPlayer.app`。此项目采用本机构建；GitHub Actions 自动化停用。
 
-## 仓库边界
+## 项目范围与来源
 
-唯一 Git 远程连接为 `origin`，只指向 `https://github.com/ginolyu3360-code/BBPlayer-macOS.git`。开发和 push 只在这个账号和仓库进行。
+仓库中保留的手机端、后端等目录属于继承的源文件，不参与 macOS 构建或发布。
 
-`bbplayer-app/BBPlayer` 是 GitHub 显示的 fork 来源，仅用于说明文件与项目思路来源，不作为开发、同步或发布对象。不得向 `bbplayer-app/BBPlayer` push、发起或重开 PR、合并、评论或请求审查。保留已有许可证、来源说明和历史。
-
-仓库中保留的手机端、后端等目录属于继承的源文件，不参与本项目的 macOS 构建或发布。
+本项目基于 [bbplayer-app/BBPlayer](https://github.com/bbplayer-app/BBPlayer) 开发，保留已有许可证、来源说明和历史。许可证见 [LICENSE](LICENSE)，macOS 组件的第三方声明见 [THIRD_PARTY_NOTICES.md](apps/macos/THIRD_PARTY_NOTICES.md)。

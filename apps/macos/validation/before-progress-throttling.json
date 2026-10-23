@@ -36,7 +36,7 @@
     "rss_first_mib": 136.046875,
     "rss_last_mib": 115.640625,
     "process_commands": [
-      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+      "apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
     ],
     "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
   },
@@ -77,7 +77,7 @@
     "rss_first_mib": 180.28125,
     "rss_last_mib": 189.640625,
     "process_commands": [
-      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+      "apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
     ],
     "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
   },
@@ -118,7 +118,7 @@
     "rss_first_mib": 147.609375,
     "rss_last_mib": 157.109375,
     "process_commands": [
-      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+      "apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
     ],
     "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
   }

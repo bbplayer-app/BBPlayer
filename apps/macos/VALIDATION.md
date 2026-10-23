@@ -55,14 +55,16 @@
 
 - 酷狗补充歌词服务本次遭遇 TLS 证书错误，保持正常证书校验；网易云和 QQ 作为可用来源，仍支持手动粘贴与匹配。
 - 根目录 `pnpm type-check` / `pnpm lint` 已尝试；仓库未安装 JS 依赖，命令转而触发整仓安装与网络重试，已停止。没有宣称它们通过；本次未更改手机 / 后端 TS 源码。
-- 使用了本机配置的 [Codex × DeepSeek 协作技能](/Users/lvjunhao/.codex/skills/codex-deepseek-collaboration/SKILL.md)。前置分析完成，后置源码复核经用户授权后两次超时，没有可用复核结论。后续依靠本地测试与重现纠错。
+- 使用了本机配置的 Codex × DeepSeek 协作技能。前置分析完成，后置源码复核经用户授权后两次超时，没有可用复核结论。后续依靠本地测试与重现纠错。
 - 自动审批曾拒绝把新源码发送给 DeepSeek，用户随后明确授权；也拒绝开启 unsafe-eval，该方案未执行，已用静态解码解决兼容问题。
 - 首版是供当前 Mac 本地使用的应用，尚未完成全量验收、公证、公开发行或长期稳定性承诺。
 
 ## 2026-10-23 fork migration and follow-up
 
-Canonical checkout: `/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`. Migration source files (66) and original archive were hash-verified; original 27 tests passed in the fork before changes. The old checkout was then moved to Trash after a remote migration-baseline backup.
+Canonical checkout: this repository root. Migration source files (66) and original archive were hash-verified; original 27 tests passed in the fork before changes. The old checkout was then moved to Trash after a remote migration-baseline backup.
 
 Follow-up checks: **31 core + 2 AppKit tests passed**, static SVGA 10 assertions passed, SwiftPM Release and Xcode Debug builds passed, strict app signing verified. Real public Bilibili segment: HTTP 200 / 18,663 bytes / 98 scrolling comments. Isolated muted Release playback visibly rendered real danmaku and enlarged navigation; screenshot is local under `build/qa/player.png`. Long multilingual lyric tests retain every character, produce overflow layout and preserve unlocked manual scroll. Compact evidence: `validation/iteration-20261023.json`; current package hashes: `validation/artifact.json`.
 
 The performance tables above remain historical v1 measurements. New dense-danmaku resource costs and full manual interaction/multi-display acceptance have not been measured. This round does not implement pure-music recognition.
+
+验证 JSON 中的本机绝对路径已改为相对路径；测量值未改动。迁移清单中的 SHA-256 记录迁移当时的文件内容，不代表隐私清理后的文件哈希。

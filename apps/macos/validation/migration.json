@@ -1,7 +1,7 @@
 {
   "date": "2026-10-23",
-  "source": "/Users/lvjunhao/Documents/GitHub/BBPlayer",
-  "destination": "/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS",
+  "source": "../BBPlayer",
+  "destination": ".",
   "copied_file_count": 66,
   "source_files": [
     {

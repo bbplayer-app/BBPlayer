@@ -22,7 +22,7 @@
   "rss_first_mib": 139.4375,
   "rss_last_mib": 128.890625,
   "process_commands": [
-    "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+    "apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
   ],
   "note": "RSS (not physical footprint); app and descendant processes. No SVGA pack loaded in these default-theme scenes. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
 }

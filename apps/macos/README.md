@@ -60,7 +60,3 @@ python3 apps/macos/scripts/benchmark.py --scene lyrics --seconds 60 --output /tm
 `--theme /path/to/validation-theme` 可对照真实装扮；目录须包含资源和安装探针写出的 `source-manifest.json`。启动统计在应用主界面出现时写出；播放预热前检查真实进度推进；频谱另行检查 PCM 数据，避免把未播放状态算作后台成绩。内存采用 RSS，并记录口径，不冒充 Instruments 的 physical footprint。
 
 前台或悬浮歌词的复现实验可加 `--lyrics-fixture packages/splash/src/__tests__/fixtures/bilibili--BV1Zu411x7mc.json --probe /absolute/path/to/BBPlayerProbe`。探针先将真实对应歌词写入隔离库；普通应用音乐库不受影响。
-
-## 开发仓库
-
-后续开发使用 `/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`，推送到 `ginolyu3360-code/BBPlayer-macOS`。原 `BBPlayer` 目录已移入废纸篓；本目录的实现记录与验证记录作为后续依据。
