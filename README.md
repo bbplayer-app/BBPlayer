@@ -1,152 +1,28 @@
-> 此 fork 包含原生 macOS 版：源码与构建方法见 [apps/macos](apps/macos/README.md)。手机端与桌面端独立构建。
+# BBPlayer-macOS
 
-<div align="center">
-<img src="./apps/mobile/assets/images/icon_large.png" alt="logo" width="50" />
-<h1>BBPlayer</h1>
+Gino（GitHub：`ginolyu3360-code`）的个人自用 macOS 音乐播放器项目。
 
-一款使用 React Native 构建的本地优先的 Bilibili 音频播放器。更轻量 & 舒服的听歌体验，远离臃肿卡顿的 Bilibili 客户端。
+- GitHub 仓库：[ginolyu3360-code/BBPlayer-macOS](https://github.com/ginolyu3360-code/BBPlayer-macOS)
+- 本地开发目录：`/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`
+- 原生应用代码、构建和使用说明：[apps/macos/README.md](apps/macos/README.md)
+- 实现与后续需求记录：[apps/macos/IMPLEMENTATION.md](apps/macos/IMPLEMENTATION.md)
+- 验证结果及已知限制：[apps/macos/VALIDATION.md](apps/macos/VALIDATION.md)
 
-[![GitHub Release](https://img.shields.io/github/v/release/yanyao2333/bbplayer?style=flat-square)](https://github.com/bbplayer-app/bbplayer/releases)
-![React Native](https://img.shields.io/badge/React%20Native-20232A?style=flat-square&logo=react&logoColor=sky)
-[![Website](https://img.shields.io/badge/Website-bbplayer.roitium.com-blue?style=flat-square)](https://bbplayer.roitium.com)
+## 开发方式
 
-</div>
+在此仓库根目录执行：
 
----
+```sh
+swift test --package-path apps/macos
+apps/macos/scripts/build-app.sh release
+```
 
-**[前往官网查看更多详情和上手指南 ➔](https://bbplayer.roitium.com)**
+生成的应用位于 `apps/macos/build/BBPlayer.app`。此项目采用本机构建；GitHub Actions 自动化停用。
 
-## 屏幕截图
+## 仓库边界
 
-|                  首页                  |                   播放器                   |                    播放列表                    |                    歌词页                    |                    库页面                    |
-| :------------------------------------: | :----------------------------------------: | :--------------------------------------------: | :------------------------------------------: | :------------------------------------------: |
-| ![home](./assets/screenshots/home.jpg) | ![player](./assets/screenshots/player.jpg) | ![playlist](./assets/screenshots/playlist.jpg) | ![download](./assets/screenshots/lyrics.jpg) | ![library](./assets/screenshots/library.jpg) |
+唯一 Git 远程连接为 `origin`，只指向 `https://github.com/ginolyu3360-code/BBPlayer-macOS.git`。开发和 push 只在这个账号和仓库进行。
 
-## 主要功能
+`bbplayer-app/BBPlayer` 是 GitHub 显示的 fork 来源，仅用于说明文件与项目思路来源，不作为开发、同步或发布对象。不得向 `bbplayer-app/BBPlayer` push、发起或重开 PR、合并、评论或请求审查。保留已有许可证、来源说明和历史。
 
-### 核心播放体验
-
-- **Bilibili 登录**: 支持通过**扫码**、**手机号（短信验证码）**或手动设置 Cookie 登录。
-- **播放源**: 自由添加本地播放列表，登录账号后也可直接访问账号内收藏夹、订阅合集等，兼顾快速与方便。
-- **导入外部歌单**: 支持从 **网易云音乐** 和 **QQ 音乐** 的歌单自动匹配到 B 站视频并保存为播放列表。
-- **全功能播放器**: 提供播放/暂停、循环、随机、播放队列、响度均衡、断点续播、启动自动播放等功能。
-- **搜索**: 智能搜索，支持 BV/AV 号、b23.tv 短链解析。同时提供收藏夹和本地播放列表内搜索。
-
-### 歌词系统
-
-- **支持 SPL**: 基于 [SPL 规范](https://bbplayer.roitium.com/SPL)，支持**逐字进度**、**罗马音注音**及**翻译歌词**展示。
-- **智能获取**: 支持自动匹配歌词（网易云/QQ 音乐/酷狗音乐），并支持手动搜索、粘贴 LRC/SPL 文本及偏移量调整。
-- **多样展示**: 支持桌面歌词（悬浮窗）、状态栏歌词。
-
-### 主题系统
-
-可以在软件内搜索并应用**任意**b 站主题装扮，支持：
-
-- 导航栏
-- 开屏动画
-- 进度条拖拽图标
-- 点赞动画
-- 页面头部背景
-- 头像框
-
-### 其他特性
-
-- **下载与导出**: 支持缓存歌曲并离线播放，提供简单实用的下载管理。同时支持将已缓存的歌曲导出为带封面、元数据、内嵌歌词的 `.m4a` 文件到本地存储。
-- **UI**: 支持浅色/深色模式，UI 深度适配 Material Design 3 且支持莫奈取色。
-- **实用工具**: 提供定时关闭、播放历史统计（排行榜）等功能。
-
-还有更多功能和惊喜，欢迎到[官网](https://bbplayer.roitium.com)查看喵！
-
-## 技术栈
-
-- **框架**: React Native, Expo
-- **状态管理**: Zustand
-- **数据请求**: React Query
-- **UI**: Material Design 3 (React Native Paper + ExpoUI)
-- **播放库**: [@bbplayer/orpheus](./packages/orpheus) (基于 Media3)
-- **ORM**: Drizzle ORM
-
-## 项目结构 (Monorepo)
-
-- **[apps/mobile](./apps/mobile)**: BBPlayer 移动端应用核心代码。
-- **[apps/backend](./apps/backend)**: 后端服务，提供歌单共享与软件更新查询（Cloudflare Worker）。
-- **[apps/docs](./apps/docs)**: 项目文档站点。
-- **[apps/update-publisher](./apps/update-publisher)**: 用于发布更新的工具。
-- **[packages/](./packages)**: 共享库与工具包。
-  - **[@bbplayer/splash](./packages/splash)**: 歌词解析与转换核心库。
-  - **[@bbplayer/eslint-plugin](./packages/eslint-plugin)**: BBPlayer 专用 lint 规则（通过 oxlint jsPlugins 运行）。
-  - **[@bbplayer/orpheus](./packages/orpheus)**: 基于 Media3 的音频播放引擎。
-  - **[@bbplayer/logs](./packages/logs)**: 日志库。
-  - **[@bbplayer/image-theme-colors](./packages/image-theme-colors)**: 封面颜色提取工具。
-  - **[@bbplayer/native](./packages/native)**: BBPlayer 原生能力集成模块。
-  - **[@bbplayer/heatmap](./packages/heatmap)**: 基于 SVG 的日期热力图组件。
-  - **[expo-wavy-slider](./packages/expo-wavy-slider)**: Jetpack Compose WavySlider 的 Expo 模块封装。
-
-## IOS 支持
-
-曾经对 IOS 进行了基础适配，但现在重心依旧在 Android 端上，IOS 端没有同步开发，不保证可以编译成功。
-
-## 隐私与数据统计
-
-为了持续改进 BBPlayer，应用内集成了一套轻量级的匿名数据收集系统（包含 Firebase Analytics 和 Sentry）。
-
-### 我们收集什么？
-
-1. **使用数据**：功能使用频率、播放会话时长等。
-2. **崩溃报告**：应用崩溃时的堆栈信息，帮助我们修复 Bug。
-
-### 隐私承诺
-
-- **匿名**：所有数据均**不包含个人身份信息**。
-- **透明**：我们不会收集任何与账号隐私相关的信息（如 Cookie 内容、浏览历史明细等）。所有统计代码均开源可见。
-- **控制权**：你可以随时在「设置 -> 通用设置」中关闭「分享数据（崩溃报告 & 匿名统计）」开关，完全停止数据上传。
-
-## 捐赠支持
-
-如果你觉得 BBPlayer 对你有所帮助，欢迎考虑捐赠支持，你的所有捐赠都将用于让 Roitium 吃顿疯狂星期四或是买一部 GalGame！
-
-<table>
-<tr>
-<td align="center">
-<details>
-<summary>微信支付</summary>
-<br />
-<img src="./apps/mobile/assets/images/wechat.png" alt="WeChat Donation" width="200" />
-</details>
-</td>
-<td align="center">
-<details>
-<summary>支付宝</summary>
-<br />
-<img src="./apps/mobile/assets/images/alipay.jpg" alt="Alipay Donation" width="200" />
-</details>
-</td>
-</tr>
-</table>
-
-## 感谢
-
-本项目开发过程中很多功能和设计的灵感都来自前辈们，包括但不限于：
-
-- [AzusaPlayer](https://github.com/lovegaoshi/azusa-player-mobile)
-- [BiliSound](https://github.com/bilisound/client-mobile)
-- [Salt Player](https://github.com/Moriafly/SaltPlayerSource)
-- [Spotify](https://spotify.com)
-
-以及最重要的：[Bilibili](https://www.bilibili.com/)
-
-在此表示感谢！（鞠躬）
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=bbplayer-app%2FBBPlayer&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&theme=dark&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=bbplayer-app/BBPlayer&type=date&legend=top-left&sealed_token=dX4uwZ7hHGaVsselUSXuc8sw1gVheSsQ-1WqJT_RWHZlQlGbnnxQ0tbT5Cmw8kJqwylH9pIZvI0AtnFj7rG3t3XxSUKCAuCK4AiBmKAmkksc1v9-hczB1ogKJEVVF_MrHS0DXPODyp_ZSG9fddCPA-oWZ_1zFWAGIwQSOQ6t3r-SLvzhHujJB-n7GJQ3" />
- </picture>
-</a>
-
-## 开源许可
-
-本项目采用 MIT 许可。
+仓库中保留的手机端、后端等目录属于继承的源文件，不参与本项目的 macOS 构建或发布。
