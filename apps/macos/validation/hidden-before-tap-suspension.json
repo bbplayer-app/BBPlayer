@@ -1,0 +1,28 @@
+{
+  "playback": {
+    "error": "",
+    "event": "playback",
+    "frames": 14750548,
+    "playing": true,
+    "position": 80.500433643,
+    "scene": "hidden"
+  },
+  "theme": "default",
+  "scene": "hidden",
+  "startup_seconds": [
+    0.5113589763641357,
+    0.26154303550720215,
+    0.3115401268005371
+  ],
+  "startup_median_seconds": 0.3115401268005371,
+  "measurement_seconds": 319.18995937501313,
+  "cpu_percent_single_core_100": 3.10160132210443,
+  "rss_mean_mib": 129.97479166666668,
+  "rss_peak_mib": 139.4375,
+  "rss_first_mib": 139.4375,
+  "rss_last_mib": 128.890625,
+  "process_commands": [
+    "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+  ],
+  "note": "RSS (not physical footprint); app and descendant processes. No SVGA pack loaded in these default-theme scenes. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
+}

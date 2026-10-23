@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+
+__pycache__/
+
+validation/*.trace.json
+validation/*.failed.json

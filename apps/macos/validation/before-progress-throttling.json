@@ -1,0 +1,125 @@
+{
+  "hidden": {
+    "nonplaying_samples": 0,
+    "binary_sha256": "e48edc644cb2e40d1251276c515020cb35247a12bbb4f2386171cfc8647094cf",
+    "playback": {
+      "diagnostics": {
+        "itemStatus": "1",
+        "rate": "1.0",
+        "repeat": "track",
+        "requested": "true",
+        "timeControl": "2",
+        "waiting": ""
+      },
+      "error": "",
+      "event": "playback",
+      "frames": 0,
+      "loading": false,
+      "mainWindowVisible": false,
+      "playing": true,
+      "position": 92.750353444,
+      "scene": "hidden"
+    },
+    "theme": "default",
+    "lyric_fixture": null,
+    "scene": "hidden",
+    "startup_seconds": [
+      0.39733290672302246,
+      0.3242180347442627,
+      0.3112649917602539
+    ],
+    "startup_median_seconds": 0.3242180347442627,
+    "measurement_seconds": 320.330374415993,
+    "cpu_percent_single_core_100": 3.1186552378035226,
+    "rss_mean_mib": 120.62984375,
+    "rss_peak_mib": 136.109375,
+    "rss_first_mib": 136.046875,
+    "rss_last_mib": 115.640625,
+    "process_commands": [
+      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+    ],
+    "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
+  },
+  "foreground": {
+    "nonplaying_samples": 0,
+    "binary_sha256": "e48edc644cb2e40d1251276c515020cb35247a12bbb4f2386171cfc8647094cf",
+    "playback": {
+      "diagnostics": {
+        "itemStatus": "1",
+        "rate": "1.0",
+        "repeat": "track",
+        "requested": "true",
+        "timeControl": "2",
+        "waiting": ""
+      },
+      "error": "",
+      "event": "playback",
+      "frames": 3862528,
+      "loading": false,
+      "mainWindowVisible": true,
+      "playing": true,
+      "position": 87.000256522,
+      "scene": "foreground"
+    },
+    "theme": "representative downloaded Bilibili theme",
+    "lyric_fixture": "bilibili--BV1Zu411x7mc.json",
+    "scene": "foreground",
+    "startup_seconds": [
+      0.26320600509643555,
+      0.2568178176879883,
+      0.2629828453063965
+    ],
+    "startup_median_seconds": 0.2629828453063965,
+    "measurement_seconds": 64.17536462499993,
+    "cpu_percent_single_core_100": 18.09105420411939,
+    "rss_mean_mib": 183.97890625,
+    "rss_peak_mib": 189.640625,
+    "rss_first_mib": 180.28125,
+    "rss_last_mib": 189.640625,
+    "process_commands": [
+      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+    ],
+    "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
+  },
+  "lyrics": {
+    "nonplaying_samples": 0,
+    "binary_sha256": "e48edc644cb2e40d1251276c515020cb35247a12bbb4f2386171cfc8647094cf",
+    "playback": {
+      "diagnostics": {
+        "itemStatus": "1",
+        "rate": "1.0",
+        "repeat": "track",
+        "requested": "true",
+        "timeControl": "2",
+        "waiting": ""
+      },
+      "error": "",
+      "event": "playback",
+      "frames": 0,
+      "loading": false,
+      "mainWindowVisible": false,
+      "playing": true,
+      "position": 86.500378724,
+      "scene": "lyrics"
+    },
+    "theme": "representative downloaded Bilibili theme",
+    "lyric_fixture": "bilibili--BV1Zu411x7mc.json",
+    "scene": "lyrics",
+    "startup_seconds": [
+      0.2827780246734619,
+      0.2638680934906006,
+      0.2596879005432129
+    ],
+    "startup_median_seconds": 0.2638680934906006,
+    "measurement_seconds": 64.39802875000169,
+    "cpu_percent_single_core_100": 4.658527688240645,
+    "rss_mean_mib": 153.74713541666668,
+    "rss_peak_mib": 157.109375,
+    "rss_first_mib": 147.609375,
+    "rss_last_mib": 157.109375,
+    "process_commands": [
+      "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+    ],
+    "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
+  }
+}

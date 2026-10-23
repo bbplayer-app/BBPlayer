@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; media-src 'none'; worker-src 'none'"><style>html,body,#stage{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}canvas{width:100%;height:100%}</style></head><body><div id="stage"></div><script src="jszip.min.js"></script><script src="jszip-utils.min.js"></script><script src="static-svga.js"></script><script src="svga.min.js"></script><script>
+'use strict';
+let player;
+function report(value){window.webkit.messageHandlers.status.postMessage(value);}
+window.onerror=()=>report('error');
+try {
+ player=new SVGA.Player('#stage'); player.loops=0; player.setContentMode('AspectFit');
+ const parser=new SVGA.Parser('#stage');
+ parser.load('asset.svga',item=>{player.setVideoItem(item);player.startAnimation();report('ready');
+ setTimeout(()=>{try{let c=document.querySelector('canvas');let p=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let colored=0;for(let i=3;i<p.length;i+=4){if(p[i]>0)colored++;}report('rendered:'+colored+':'+item.frames);}catch(e){report('error');}},1000);},()=>report('error'));
+} catch(e){report('error');}
+window.addEventListener('pagehide',()=>{if(player){player.stopAnimation();player.clear();player=null;}});
+</script></body></html>

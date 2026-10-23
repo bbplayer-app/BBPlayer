@@ -1,0 +1,12 @@
+{
+  "architecture": "arm64",
+  "configuration": "Release",
+  "system": "macOS 27.0.1",
+  "cpu": "Apple M2",
+  "memory_gib": 16,
+  "binary_sha256": "84c96b3310c3b4780347371d43aabcce97cfbe4888c2523e7e7b1e2fca36ed6c",
+  "archive_sha256": "4b4c2e3ba22b6c723be07db86e030fa7e689006973e3fe8bf0de5de10ee2da9b",
+  "signing": "ad-hoc, local only",
+  "bundle_bytes": 9938598,
+  "archive_bytes": 2719002
+}

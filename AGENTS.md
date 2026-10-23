@@ -47,3 +47,12 @@ pnpm type-check             # TypeScript type checking
 - orpheus — BBPlayer 核心音频播放引擎
 - react-native-bottom-tabs — 跨平台原生底部标签栏组件
 - splash — 歌词转换与解析库
+
+
+## macOS fork workflow
+
+- The canonical local checkout is `/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS`; develop the native app under `apps/macos`. The sibling `BBPlayer` checkout is retained as a migration backup.
+- `origin` is `ginolyu3360-code/BBPlayer-macOS`; `upstream` is `bbplayer-app/BBPlayer`. Use `codex/` feature branches. The user authorized committing and pushing this macOS work to the fork; merging and upstream publication remain separate actions.
+- For native macOS-only work, run `swift test --package-path apps/macos` and the relevant app build. The Android Gradle and mobile JavaScript checks apply only when those packages change.
+- Read `apps/macos/IMPLEMENTATION.md` and `apps/macos/VALIDATION.md` for scope and evidence. Next-iteration danmaku, full floating lyrics and sidebar sizing are planning items, not implemented capabilities. Instrumental recognition remains deferred.
+- Local interview recovery is in `.grilling/` and is intentionally not committed. Continue the existing checkpoint without resetting its counters.

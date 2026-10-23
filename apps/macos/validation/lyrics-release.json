@@ -1,0 +1,41 @@
+{
+  "nonplaying_samples": 0,
+  "binary_sha256": "84c96b3310c3b4780347371d43aabcce97cfbe4888c2523e7e7b1e2fca36ed6c",
+  "playback": {
+    "diagnostics": {
+      "itemStatus": "1",
+      "rate": "1.0",
+      "repeat": "track",
+      "requested": "true",
+      "timeControl": "2",
+      "waiting": ""
+    },
+    "error": "",
+    "event": "playback",
+    "frames": 0,
+    "loading": false,
+    "mainWindowVisible": false,
+    "playing": true,
+    "position": 89.250752863,
+    "scene": "lyrics"
+  },
+  "theme": "representative downloaded Bilibili theme",
+  "lyric_fixture": "bilibili--BV1Zu411x7mc.json",
+  "scene": "lyrics",
+  "startup_seconds": [
+    0.31043124198913574,
+    0.30580615997314453,
+    0.30831098556518555
+  ],
+  "startup_median_seconds": 0.30831098556518555,
+  "measurement_seconds": 64.25870462501189,
+  "cpu_percent_single_core_100": 4.544131440308286,
+  "rss_mean_mib": 159.45807291666668,
+  "rss_peak_mib": 162.546875,
+  "rss_first_mib": 153.265625,
+  "rss_last_mib": 162.546875,
+  "process_commands": [
+    "/Users/lvjunhao/Documents/GitHub/BBPlayer/apps/macos/build/BBPlayer.app/Contents/MacOS/BBPlayerMac"
+  ],
+  "note": "RSS (not physical footprint); app and descendant processes. SVGA preview is closed; theme name recorded separately. Audio muted; decode/render pipeline active. Source BVID fixed; no user credentials."
+}

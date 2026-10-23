@@ -1,0 +1,281 @@
+{
+  "date": "2026-10-23",
+  "source": "/Users/lvjunhao/Documents/GitHub/BBPlayer",
+  "destination": "/Users/lvjunhao/Documents/GitHub/BBPlayer-macOS",
+  "copied_file_count": 66,
+  "source_files": [
+    {
+      "path": ".gitignore",
+      "sha256": "10251f06fc4f0efdbca7ff6cef291531aced96a6e4cdf5715e4fe53b8b27a1c2"
+    },
+    {
+      "path": "BBPlayer.xcodeproj/project.pbxproj",
+      "sha256": "d190a15332e54ff8359f3d6aeb26a4a0989fb3e2fe00a433b7a1001973052208"
+    },
+    {
+      "path": "BBPlayer.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+      "sha256": "48fdbe7a079d4363a82766d01436fa63cb8f55ec7091b1a51b9a92ce7b0bebd9"
+    },
+    {
+      "path": "BBPlayer.xcodeproj/xcshareddata/xcschemes/BBPlayer.xcscheme",
+      "sha256": "e3ead61de3d4c0ca0144da93a3419e78c3267f741e338d3d3b5c90122837ef59"
+    },
+    {
+      "path": "IMPLEMENTATION.md",
+      "sha256": "1680006bc804b0db37ceacba4d25e59c9b270e997aaac9de2464f0d4e47da54c"
+    },
+    {
+      "path": "Info.plist",
+      "sha256": "434cf7fdcb3e8934c8ac61c210a80dd15f00f326c08f9f82d088524287e38511"
+    },
+    {
+      "path": "Package.resolved",
+      "sha256": "48fdbe7a079d4363a82766d01436fa63cb8f55ec7091b1a51b9a92ce7b0bebd9"
+    },
+    {
+      "path": "Package.swift",
+      "sha256": "993dee9c220edf47b7e86c4cbcf488d39288b94a9ef3152dac9c9c3e2bb7cdc9"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d698a647dea8dd9349ea8e1173baf414ec7e1576909b2ad31d64274a90aeff7b"
+    },
+    {
+      "path": "Sources/AudioRealtime/AudioRealtime.c",
+      "sha256": "743bcdf33a08a6f5001f9ea5540cc2f8f1827c0b285971ab932dbf641e6ff5e1"
+    },
+    {
+      "path": "Sources/AudioRealtime/include/AudioRealtime.h",
+      "sha256": "1c24a77357b0c426cfe4963d6f3b9cb123ad97221624669096ccdc05be5cade4"
+    },
+    {
+      "path": "Sources/BBPlayerCore/AudioCache.swift",
+      "sha256": "a24c9d2b1613c538525e12c0074c9e737fad50a52474c1468e60eaf1d502435d"
+    },
+    {
+      "path": "Sources/BBPlayerCore/AudioResourceLoader.swift",
+      "sha256": "b34e2527935d44ebc0f8b45accabbee75dd4cb408efbedb50a3178bb20fd115a"
+    },
+    {
+      "path": "Sources/BBPlayerCore/BilibiliClient.swift",
+      "sha256": "948d49f0080d943149009e9d2842929ca36469efaa21c8615e0801c0840626b9"
+    },
+    {
+      "path": "Sources/BBPlayerCore/CredentialStore.swift",
+      "sha256": "5338fb5998fecac34ad92948c84339c0758a78528bc249ebfbfbd977a3904ea8"
+    },
+    {
+      "path": "Sources/BBPlayerCore/Downloads.swift",
+      "sha256": "d349bf149777bf373b470d13e5e4e83a24c500ba2e8ac1d9e07b167f9f57e214"
+    },
+    {
+      "path": "Sources/BBPlayerCore/ExternalMusic.swift",
+      "sha256": "6a0e19906affb20a9e455de77131deb626a2ac143743212202322da1bb3026b7"
+    },
+    {
+      "path": "Sources/BBPlayerCore/LibraryDatabase.swift",
+      "sha256": "0c294ae445cc727e23fd5a07bbaab2d74ce711d2c2f70520e9bdfb1853664984"
+    },
+    {
+      "path": "Sources/BBPlayerCore/Lyrics.swift",
+      "sha256": "35bb144135cc7fef35981cd6904f9b86814e277ef9aaa3afb4d4b5bc405fa56c"
+    },
+    {
+      "path": "Sources/BBPlayerCore/Models.swift",
+      "sha256": "1306ca4729e804786289ea810d630eece307a1e97fe890c189fb23272d960258"
+    },
+    {
+      "path": "Sources/BBPlayerCore/NativePlaybackEngine.swift",
+      "sha256": "2f27d89dc753990eb321e09f95b1372facec3468c140143f3a5f918ca120a449"
+    },
+    {
+      "path": "Sources/BBPlayerCore/Themes.swift",
+      "sha256": "580cd07057f6394c5968a397462809230b31a6c3ec62037b0436b00c079ffaf7"
+    },
+    {
+      "path": "Sources/BBPlayerCore/WBI.swift",
+      "sha256": "c5c89d4fa567c74eaa28049c56972077b4b2f9f0dc4c505bbad8c60b3e7b485c"
+    },
+    {
+      "path": "Sources/BBPlayerMac/AnimatedAsset.swift",
+      "sha256": "7c967056e426e302418dbfd92d20136f3352f041ecd620a6c515c75695e0503a"
+    },
+    {
+      "path": "Sources/BBPlayerMac/AppModel.swift",
+      "sha256": "73ff662ab988a1aca8fe963bb9b748fdc3159be03db078ab1f77f794eac91530"
+    },
+    {
+      "path": "Sources/BBPlayerMac/BBPlayerApp.swift",
+      "sha256": "256b95c7e647d2a8ae55f49cc36eb01e6119fb8b6b685f8c2dc336f1afa5389c"
+    },
+    {
+      "path": "Sources/BBPlayerMac/FloatingLyrics.swift",
+      "sha256": "3b6399d61a98482b1bbb3cd21e9da861918d1861661fddcb86934417377164a4"
+    },
+    {
+      "path": "Sources/BBPlayerMac/LibraryViews.swift",
+      "sha256": "9b270598b70873a17d97e24a0aeb089d3754dfbbf2d58d88f7c88b38a2269d85"
+    },
+    {
+      "path": "Sources/BBPlayerMac/LoginView.swift",
+      "sha256": "acc96eb474f63b81dc52d87079c21ddd4e7840b7770ec445ea85b09373dbda33"
+    },
+    {
+      "path": "Sources/BBPlayerMac/PlayerView.swift",
+      "sha256": "c8947ef24abd5b40aa0210b8bffa03ff258d97749a1c011da8a900262e760f41"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/App.json",
+      "sha256": "d34cf76d5489d4008a0cda5526e0d2e5293211eebe1ee32d6ef723a424fcf8b0"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/GRDB-LICENSE.txt",
+      "sha256": "9853f9dce81365fcc1d9b46004633354450164b8d17904e92e80c444545f7e87"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/index.html",
+      "sha256": "410f2fc699aba8a0316fb4a421cba9c7a3d79de42bd58f15df8b0fc8afbd2db7"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/jszip-LICENSE.txt",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/jszip-utils-LICENSE.txt",
+      "sha256": "6248a1acb95fc943ccdf0a6f11fbcc0784b8e7d7e9d8a0a99c008fa84b2114f0"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/jszip-utils.min.js",
+      "sha256": "e4686a0e93c1d5ba5196e0748664bb10990c1fe115caa50fd340af14492c4d5c"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/jszip.min.js",
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/static-svga.js",
+      "sha256": "1cd3001ecc85edf1849ecd645b220365048360fc7f441a0b2d2a7e6fbbb66aef"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/svga-LICENSE.txt",
+      "sha256": "9186b7fac9c31d8fc6ae742ba1cd0c6c258c6dd49daeba25c1fae1e5cc9355db"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Resources/Renderer/svga.min.js",
+      "sha256": "5d101032b783fbe72e15633aef9de52f3ca4a6985363f373e65f727331d6fda7"
+    },
+    {
+      "path": "Sources/BBPlayerMac/RootView.swift",
+      "sha256": "2855869f0b0ca5f818c614b47d25372cf1ebba80b0fdfc2d6f1909b94759c330"
+    },
+    {
+      "path": "Sources/BBPlayerMac/SettingsView.swift",
+      "sha256": "2abd032d7977a176b8d0fcd0ea7362b2a89354b57b5a1c9409c851d95b9c81d0"
+    },
+    {
+      "path": "Sources/BBPlayerMac/Style.swift",
+      "sha256": "b7382fe1f98415575663b7ee5709b6e95da183ab8ce9c33252ecff9b91b72ab5"
+    },
+    {
+      "path": "Sources/BBPlayerMac/ThemesView.swift",
+      "sha256": "7b898742853e5d2714e6f3d9363d6a8f5d32f08f4b081829b29868c0b7d9a3de"
+    },
+    {
+      "path": "Sources/BBPlayerProbe/main.swift",
+      "sha256": "f2b488c584cec3f14ec1610871a6cc454f73fa59112c51a5e34c1e6025cc3f54"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "f4f2fc7890fd7f884e98a1351a2c01050855ef551fe95b8e4a6e10c8b3c869bf"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/CoreTests.swift",
+      "sha256": "d157cc8144b76ce5ff8db351f9a5852494478bfd9403004cb7a8ed0344b8af11"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/DownloadTests.swift",
+      "sha256": "0cd5bec325ef5bdea16b609e5fd14b8cc2207e21d3a7e789a91b826f3e2a2b92"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/ParityTests.swift",
+      "sha256": "7981406a3b677e923a5d1831b079e33348871a604f2494859ae98cd3af499344"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/PlaybackTests.swift",
+      "sha256": "de14d08a42316965b4863a394a002493f4653894ed4d490309248cfffd21ec84"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/RequestTests.swift",
+      "sha256": "148f13f064742f48c5a9f82b1c6548c7340d68d8791c315b8f0a936148d2cc60"
+    },
+    {
+      "path": "Tests/BBPlayerCoreTests/ScaleTests.swift",
+      "sha256": "fac05b1d6b981a10e2ea2dc20b73ffacf95a67ab46c2b0f76c6ae7a78da86c98"
+    },
+    {
+      "path": "VALIDATION.md",
+      "sha256": "e0a973301435b656f8aa1f61b0e33fe82cce4d8996cf37204ed9c7c874e009c3"
+    },
+    {
+      "path": "scripts/benchmark.py",
+      "sha256": "8bb0ad9f5852396fcdb4de91026fe5289d92983a182a51844f8e203251c876c9"
+    },
+    {
+      "path": "scripts/build-app.sh",
+      "sha256": "64ff04569260f47b0d84e2309d9dacf574e2a0023b00d98a0c9b009896538e9e"
+    },
+    {
+      "path": "scripts/patch-svga.py",
+      "sha256": "87ccccde6bbe892f9fd259875604ef98b61ee1c31b3f428032aae661cfe30892"
+    },
+    {
+      "path": "scripts/test-static-decoder.cjs",
+      "sha256": "19f8bafea50a56269600adae51c9ce6fe9c094a24bd3e3d7c09744ed82d6322d"
+    },
+    {
+      "path": "validation/artifact.json",
+      "sha256": "d78f0aef825804d983c6162e2d05462a4dcd087961e51c7f50208650c4716842"
+    },
+    {
+      "path": "validation/before-progress-throttling.json",
+      "sha256": "db7f8cdd00e441510022a6dfbb7d787493b4851e3b39308fa0f46457dfdc837d"
+    },
+    {
+      "path": "validation/core-source.json",
+      "sha256": "24e533e46ae1740dad239c89710b2b070c2e6f627404e92a06e2b996fce385b3"
+    },
+    {
+      "path": "validation/foreground-release.json",
+      "sha256": "36bf0ddc4f879c96fc575c2da560042e69104108adee49fbac1614baaffd7605"
+    },
+    {
+      "path": "validation/hidden-before-tap-suspension.json",
+      "sha256": "63c122ee6ecc2723bc4a53d8336cc9d99525386532d38a9359df0c59648044e4"
+    },
+    {
+      "path": "validation/hidden-release.json",
+      "sha256": "a5dcde78c30d30efeea732a7217526abc33488f9f478d4cd962fdcd64199107e"
+    },
+    {
+      "path": "validation/lyrics-release.json",
+      "sha256": "03b063fb6afbb1f120d77f11bf4cdf4a9ddbe72016b5b06bfa77123e8c0cd47f"
+    },
+    {
+      "path": "validation/renderers.json",
+      "sha256": "ef118d515f5082d1127b0e3193331f8768dd1c41c8c7490366e27ee2b1465a27"
+    },
+    {
+      "path": "validation/services.json",
+      "sha256": "50aae2add67f775fb69a1e85f0ce4e0dfdb0cd72aa67b453fbca63449e01f6d2"
+    }
+  ],
+  "archive_sha256": "4b4c2e3ba22b6c723be07db86e030fa7e689006973e3fe8bf0de5de10ee2da9b",
+  "source_byte_copy_verified": true,
+  "application_code_changed": false,
+  "verification": {
+    "swift_tests": 27,
+    "failures": 0,
+    "source_copy": "66 files hash-verified before any edits",
+    "archive": "SHA-256 verified"
+  }
+}

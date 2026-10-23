@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-22",
+  "bilibili_keyword_results": 20,
+  "public_aac": {
+    "bvid": "BV1Zu411x7mc",
+    "cid": 1137390809,
+    "range_bytes": 32768,
+    "total_bytes": 3397406,
+    "seek_seconds": 45,
+    "pcm_frames_over": 1000000
+  },
+  "netease": {
+    "lyric_candidates": 10,
+    "lyric_lines": 36,
+    "public_playlist_songs": 200
+  },
+  "qqmusic": {
+    "lyric_candidates": 10,
+    "lyric_lines": 40,
+    "public_playlist_songs": 66
+  },
+  "kugou": {
+    "status": "TLS certificate validation failed; verification not bypassed"
+  },
+  "bilibili_theme": {
+    "search_results": 10,
+    "downloaded_assets": 42
+  },
+  "native_video_decoded_frame": {
+    "width": 1080,
+    "height": 1618
+  },
+  "authenticated_account_acceptance": "pending human QR confirmation",
+  "real_offline_aac": {
+    "bytes": 3397406,
+    "position_over_seconds": 1,
+    "pcm_frames": 65536,
+    "network_resolutions": 0
+  }
+}
