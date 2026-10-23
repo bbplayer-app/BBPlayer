@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-23",
+  "core_tests": 31,
+  "app_layout_tests": 2,
+  "failures": 0,
+  "static_svga_assertions": 10,
+  "xcode_debug_build": "passed",
+  "swiftpm_release_build": "passed",
+  "strict_codesign": "passed",
+  "public_danmaku": {
+    "http_status": 200,
+    "response_bytes": 18663,
+    "decoded_scrolling_comments": 98,
+    "first_timestamp": 4.674,
+    "last_timestamp": 247.052
+  },
+  "isolated_ui_smoke": {
+    "visible_real_danmaku": "verified in targeted window capture",
+    "larger_sidebar": "verified in targeted window capture",
+    "audible_output": false,
+    "private_credentials_used": false,
+    "playback_advanced": true,
+    "screenshot": "build/qa/player.png"
+  },
+  "limits": [
+    "New danmaku CPU/memory baselines not measured",
+    "Multi-display floating-panel behavior and exhaustive seek/rate/click-through UI interactions need manual acceptance",
+    "Public danmaku may be sampled by the upstream service; this is not an exhaustive comment archive",
+    "No independent post-change DeepSeek review was performed"
+  ]
+}

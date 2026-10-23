@@ -31,6 +31,7 @@ struct PlayerView: View {
     @State private var lyricSearch = ""
     @State private var manualText = ""
     @State private var showMatch = false
+    @AppStorage("danmaku-enabled") private var danmakuEnabled = false
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         GeometryReader { geo in
@@ -82,8 +83,10 @@ struct PlayerView: View {
                         }.font(.caption).buttonStyle(.borderless)
                     }.frame(maxWidth: .infinity)
                 }.padding(30)
+                if danmakuEnabled && model.mainWindowVisible { DanmakuOverlay(model: model) }
             }
-        }.sheet(isPresented: $showMatch) { matchSheet }
+        }.overlay(alignment: .topTrailing) { DanmakuControls().padding(10) }
+        .sheet(isPresented: $showMatch) { matchSheet }
     }
     private var timeline: some View {
         VStack(spacing: 4) {

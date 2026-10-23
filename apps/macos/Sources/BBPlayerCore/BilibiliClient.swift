@@ -44,6 +44,15 @@ public actor BilibiliClient: MediaSourceProvider {
         if let list = object["data"] as? [[String: Any]] { return ["_items": list] }
         return object["result"] as? [String: Any] ?? [:]
     }
+    public func danmaku(cid: Int64, segment: Int) async throws -> [DanmakuComment] {
+        guard cid > 0, segment > 0 else { throw APIError.invalidResponse }
+        let url = URL(string: "https://api.bilibili.com/x/v2/dm/web/seg.so?type=1&oid=\(cid)&segment_index=\(segment)")!
+        var request = URLRequest(url: url)
+        for (key, value) in headers() { request.setValue(value, forHTTPHeaderField: key) }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw APIError.unavailable("弹幕暂时无法获取，音乐播放不受影响。") }
+        return try DanmakuParser.parse(data)
+    }
     private func wbiKeys() async throws -> (String, String) {
         if let keys, Date().timeIntervalSince(keys.2) < 1800 { return (keys.0, keys.1) }
         // The nav endpoint returns WBI image keys even for anonymous sessions.

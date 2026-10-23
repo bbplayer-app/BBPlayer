@@ -17,8 +17,8 @@ let package = Package(
         .target(name: "BBPlayerCore", dependencies: ["AudioRealtime", .product(name: "GRDB", package: "GRDB.swift")]),
         .executableTarget(name: "BBPlayerProbe", dependencies: ["BBPlayerCore"]),
         .executableTarget(name: "BBPlayerMac", dependencies: ["BBPlayerCore"], resources: [.process("Resources")]),
-        .testTarget(name: "BBPlayerCoreTests", dependencies: ["BBPlayerCore"])
+        .testTarget(name: "BBPlayerCoreTests", dependencies: ["BBPlayerCore"]),
+        .testTarget(name: "BBPlayerMacTests", dependencies: ["BBPlayerMac", "BBPlayerCore"])
     ],
     swiftLanguageModes: [.v5]
 )
-

@@ -23,6 +23,8 @@ import AudioRealtime
     public var onError: ((Error) -> Void)?
     public var currentTrack: Track? { snapshot.queue.indices.contains(snapshot.index) ? snapshot.queue[snapshot.index] : nil }
     public var isPlaybackRequested: Bool { wantsPlayback }
+    /// Read the media clock only while a visible animation requests a frame.
+    public var renderPosition: Double { let time = player.currentTime().seconds; return time.isFinite ? max(0, time) : position }
     public var diagnostics: [String: String] {
         ["timeControl": String(player.timeControlStatus.rawValue), "rate": String(player.rate), "waiting": player.reasonForWaitingToPlay?.rawValue ?? "", "itemStatus": String(player.currentItem?.status.rawValue ?? -1), "requested": String(wantsPlayback), "repeat": snapshot.repeatMode.rawValue]
     }

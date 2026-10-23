@@ -1,3 +1,5 @@
+> 此 fork 包含原生 macOS 版：源码与构建方法见 [apps/macos](apps/macos/README.md)。手机端与桌面端独立构建。
+
 <div align="center">
 <img src="./apps/mobile/assets/images/icon_large.png" alt="logo" width="50" />
 <h1>BBPlayer</h1>

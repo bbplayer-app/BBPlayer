@@ -14,7 +14,7 @@ struct RootView: View {
     private let personal: [LibrarySection] = [.following, .watchLater, .downloads, .history, .profile]
     var body: some View {
         HStack(spacing: 0) {
-            sidebar.frame(width: 200)
+            sidebar.frame(width: 224)
             VStack(spacing: 0) {
                 header
                 ZStack { if model.showPlayer { PlayerView(model: model) } else { content } }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -78,11 +78,11 @@ struct RootView: View {
     private func navigation(_ destination: LibrarySection) -> some View {
         Button { model.showPlayer = false; model.navigate(destination) } label: {
             HStack(spacing: 12) {
-                if model.mainWindowVisible, let url = sidebarIcon(destination) { AnimatedAsset(url: url).frame(width: 25, height: 25) }
-                else { Image(systemName: destination.symbol).font(.system(size: 17)).frame(width: 25) }
-                Text(destination.title).font(.system(size: 13, weight: model.section == destination ? .semibold : .regular))
+                if model.mainWindowVisible, let url = sidebarIcon(destination) { AnimatedAsset(url: url).frame(width: 28, height: 28) }
+                else { Image(systemName: destination.symbol).font(.system(size: 21)).frame(width: 28) }
+                Text(destination.title).font(.system(size: 15, weight: model.section == destination ? .semibold : .regular))
                 Spacer()
-            }.padding(.horizontal, 16).padding(.vertical, 10)
+            }.padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 50).contentShape(Rectangle())
                 .background(model.section == destination && !model.showPlayer ? MD.container(scheme) : .clear, in: Capsule())
         }.buttonStyle(.plain)
     }

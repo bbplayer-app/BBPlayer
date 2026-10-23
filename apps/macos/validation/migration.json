@@ -277,5 +277,10 @@
     "failures": 0,
     "source_copy": "66 files hash-verified before any edits",
     "archive": "SHA-256 verified"
+  },
+  "old_checkout": {
+    "status": "moved_to_trash",
+    "recoverable": true,
+    "folder_name": "BBPlayer-migrated-20261023-125359"
   }
 }

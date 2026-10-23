@@ -28,6 +28,11 @@ import BBPlayerCore
                 reader.cancelReading(); return
             }
             let api = BilibiliClient()
+            if let index = arguments.firstIndex(of: "--danmaku"), index + 1 < arguments.count, let cid = Int64(arguments[index + 1]) {
+                let comments = try await api.danmaku(cid: cid, segment: 1)
+                print("Public danmaku decoded: \(comments.count) scrolling comments; timestamps \(comments.first?.time ?? 0)...\(comments.last?.time ?? 0)")
+                return
+            }
             if arguments.contains("--services") {
                 let search = try await api.search("孤独摇滚", page: 1)
                 print("Bilibili keyword search: \(search.count) results")
