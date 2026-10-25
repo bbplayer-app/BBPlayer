@@ -4,7 +4,10 @@ public actor BilibiliClient: MediaSourceProvider {
     private let session: URLSession
     private var cookie: String
     private var keys: (String, String, Date)?
-    public init(cookie: String = "", session: URLSession? = nil) {
+    private let importSearchInterval: Duration
+    private var nextImportSearch = ContinuousClock.now
+    public init(cookie: String = "", session: URLSession? = nil, importSearchInterval: Duration = .seconds(4)) {
+        self.importSearchInterval = importSearchInterval
         self.cookie = cookie
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = nil
@@ -71,6 +74,9 @@ public actor BilibiliClient: MediaSourceProvider {
         return BilibiliProfile(id: body.int64("mid"), name: body.string("uname"), avatarURL: Self.imageURL(body.string("face")))
     }
     public func search(_ query: String, page: Int = 1) async throws -> [Track] {
+        try await search(query, page: page, authenticated: true)
+    }
+    public func search(_ query: String, page: Int = 1, authenticated: Bool) async throws -> [Track] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if let bvid = MediaLink.bvid(in: query) {
             let track = try await video(bvid: bvid)
@@ -88,10 +94,31 @@ public actor BilibiliClient: MediaSourceProvider {
             var request = URLRequest(url: url); request.httpMethod = "HEAD"
             let (_, response) = try await session.data(for: request)
             guard let destination = response.url?.absoluteString, MediaLink.bvid(in: destination) != nil else { throw APIError.unavailable("无法解析该 B 站短链接。") }
-            return try await search(destination, page: page)
+            return try await search(destination, page: page, authenticated: authenticated)
         }
-        let body = try await request("/x/web-interface/wbi/search/type", parameters: ["keyword": query, "search_type": "video", "page": String(page)], signed: true)
-        return body.array("result").filter { !$0.string("bvid").isEmpty }.map(Self.track)
+        let body = try await request("/x/web-interface/wbi/search/type", parameters: ["keyword": query, "search_type": "video", "page": String(page)], signed: true, authenticated: authenticated)
+        if body["result"] == nil, let count = body["numResults"] as? Int, count == 0 { return [] }
+        guard let results = body["result"] as? [[String: Any]] else { throw APIError.invalidResponse }
+        return results.filter { !$0.string("bvid").isEmpty && ($0.string("type").isEmpty || $0.string("type") == "video") }.map(Self.track)
+    }
+    public func searchForImport(_ query: String) async throws -> [Track] {
+        let clock = ContinuousClock()
+        let scheduled = max(clock.now, nextImportSearch)
+        nextImportSearch = scheduled.advanced(by: importSearchInterval)
+        try await clock.sleep(until: scheduled)
+        try Task.checkCancellation()
+        return try await search(query, authenticated: false)
+    }
+    public func importCandidates(for song: ExternalSong) async throws -> [Track] {
+        var results = try await searchForImport(song.title + " " + song.artist)
+        try Task.checkCancellation()
+        var ranked = Matching.rankedCandidates(song, results)
+        if ranked.first.map({ Matching.score(song, $0) < 0.72 }) ?? true {
+            results += try await searchForImport(song.title)
+            try Task.checkCancellation()
+            ranked = Matching.rankedCandidates(song, results)
+        }
+        return Array(ranked.prefix(8))
     }
     public func video(bvid: String) async throws -> Track {
         do { return Self.track(try await request("/x/web-interface/view", parameters: ["bvid": bvid])) }

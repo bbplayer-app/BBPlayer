@@ -28,6 +28,13 @@ import BBPlayerCore
                 reader.cancelReading(); return
             }
             let api = BilibiliClient()
+            if let index = arguments.firstIndex(of: "--match"), index + 2 < arguments.count {
+                let song = ExternalSong(id: "public-probe", title: arguments[index + 1], artist: arguments[index + 2], duration: 0, source: "probe")
+                let results = try await api.importCandidates(for: song)
+                for track in results { print("\(track.bvid) · \(Int(Matching.score(song, track) * 100))% · \(track.title)") }
+                print("Public import candidates: \(results.count)")
+                return
+            }
             if let index = arguments.firstIndex(of: "--danmaku"), index + 1 < arguments.count, let cid = Int64(arguments[index + 1]) {
                 let comments = try await api.danmaku(cid: cid, segment: 1)
                 print("Public danmaku decoded: \(comments.count) scrolling comments; timestamps \(comments.first?.time ?? 0)...\(comments.last?.time ?? 0)")

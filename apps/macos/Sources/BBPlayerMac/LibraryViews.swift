@@ -143,18 +143,23 @@ struct ImportView: View {
     @Bindable var model: AppModel
     @State private var input = ""
     @State private var source = "netease"
-    @State private var replacement = ""
     @State private var editing: Int?
-    @State private var candidates: [Track] = []
     @State private var onlyIssues = false
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack { Text("导入外部歌单").font(.title2.bold()); Spacer(); Button("完成") { model.player.endPreview(); dismiss() } }
             HStack { Picker("来源", selection: $source) { Text("网易云音乐").tag("netease"); Text("QQ 音乐").tag("qq") }.frame(width: 170); TextField("歌单链接或 ID", text: $input); Button("读取") { Task { await model.beginImport(input: input, source: source) } }.disabled(model.importRunning || model.busy || input.isEmpty) }
-            Text("自动匹配每首间隔 1.2 秒。退出后保留进度；低置信度和失败项目须逐项确认、改选或跳过。").font(.caption).foregroundStyle(.secondary)
+            Text("自动搜索请求至少间隔 4 秒；连续 5 首无结果会暂停 5 分钟。退出保留进度，重试失败项会保留已有结果。").font(.caption).foregroundStyle(.secondary)
             if let job = model.importJob {
                 HStack { Text("\(job.title) · \(job.cursor) / \(job.matches.count)").font(.headline); Spacer(); Toggle("只看待检查", isOn: $onlyIssues).toggleStyle(.checkbox); Button(model.importRunning ? "暂停" : "继续匹配") { model.importRunning ? model.pauseImport() : model.resumeImport() }.disabled(job.cursor >= job.matches.count); Button("保存歌单") { model.saveImport() }.disabled(model.importRunning || job.saved) }
+                HStack {
+                    Button("重试失败项") { model.retryFailedImport() }.disabled(model.importRunning || job.saved || !job.hasRetryableFailures)
+                    if let reason = job.pauseReason { Text(reason).font(.caption).foregroundStyle(.orange) }
+                }
+                if let until = job.cooldownUntil, job.pauseReason != nil {
+                    Text("可在 " + until.formatted(date: .omitted, time: .standard) + " 后继续或重试；不会自动重新发起请求。").font(.caption).foregroundStyle(.secondary)
+                }
                 ProgressView(value: Double(job.cursor), total: Double(max(1, job.matches.count)))
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
@@ -167,7 +172,7 @@ struct ImportView: View {
                                     HStack {
                                         if let track = match.track { Button("试听") { model.player.preview(track) } }
                                         Menu("候选结果") { ForEach(Array(match.candidates.enumerated()), id: \.offset) { selected, track in Button(track.title) { model.importJob?.matches[index].selected = selected; model.importJob?.matches[index].reviewed = true; model.persistImport() } } }
-                                        Button("重新搜索") { editing = index; replacement = match.song.title + " " + match.song.artist; candidates = [] }
+                                        Button("重新搜索") { editing = index }
                                         Button("确认") { model.importJob?.matches[index].reviewed = true; model.persistImport() }.disabled(match.track == nil)
                                         Button("跳过") { model.importJob?.matches[index].selected = nil; model.importJob?.matches[index].reviewed = true; model.persistImport() }
                                     }.font(.caption).disabled(model.importRunning && index >= job.cursor)
@@ -179,10 +184,89 @@ struct ImportView: View {
             } else { Spacer(); ContentUnavailableView("导入并检查匹配结果", systemImage: "square.and.arrow.down", description: Text("歌曲会匹配到 B 站音频，检查后保存到本地歌单。")); Spacer() }
         }.padding(24).frame(width: 790, height: 620)
             .sheet(isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
-                VStack(spacing: 14) {
-                    HStack { TextField("搜索 B 站", text: $replacement); Button("搜索") { Task { do { candidates = try await model.api.search(replacement) } catch { model.message = error.localizedDescription } } }; Button("完成") { editing = nil } }
-                    List(candidates) { track in HStack { Text(track.title).lineLimit(2); Spacer(); Button("试听") { model.player.preview(track) }; Button("选择") { if let editing { model.importJob?.matches[editing].candidates.append(track); model.importJob?.matches[editing].selected = (model.importJob?.matches[editing].candidates.count ?? 1) - 1; model.importJob?.matches[editing].reviewed = true; model.persistImport() }; editing = nil } } }
-                }.padding(24).frame(width: 650, height: 430)
+                if let editing, let job = model.importJob, job.matches.indices.contains(editing) {
+                    ImportSearchView(api: model.api, song: job.matches[editing].song) { track in
+                        model.importJob?.matches[editing].candidates.append(track)
+                        model.importJob?.matches[editing].selected = (model.importJob?.matches[editing].candidates.count ?? 1) - 1
+                        model.importJob?.matches[editing].reviewed = true
+                        model.persistImport()
+                        self.editing = nil
+                    } preview: { model.player.preview($0) }
+                    .id(editing)
+                }
             }.onDisappear { model.player.endPreview() }
+    }
+}
+
+
+struct ImportSearchView: View {
+    let api: BilibiliClient
+    let song: ExternalSong
+    var select: (Track) -> Void
+    var preview: (Track) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var submitted = ""
+    @State private var generation = 0
+    @State private var searching = false
+    @State private var searched = false
+    @State private var candidates: [Track] = []
+    @State private var error: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("重新搜索 · \(song.title)").font(.headline)
+            HStack {
+                TextField("歌名、歌手或 B 站视频链接 / BV 号", text: $query).onSubmit { search() }
+                Button("搜索") { search() }.disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("完成") { dismiss() }
+            }
+            HStack {
+                Button("只搜歌名") { query = song.title; search() }
+                Button("歌名和歌手") { query = song.title + " " + song.artist; search() }
+            }.font(.caption)
+            if searching { ProgressView("正在搜索 B 站…") }
+            if let error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
+            if searched && !searching && error == nil && candidates.isEmpty {
+                ContentUnavailableView("没有搜索结果", systemImage: "magnifyingglass", description: Text("尝试只搜歌名、减少关键词，或直接粘贴已找到的 B 站视频链接。"))
+            } else {
+                List(candidates) { track in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(track.title).lineLimit(3)
+                            Text(track.artist).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("试听") { preview(track) }
+                        Button("选择") { select(track) }
+                    }
+                }
+            }
+        }.padding(24).frame(width: 690, height: 450)
+            .onAppear { query = song.title + " " + song.artist; search() }
+            .task(id: generation) {
+                guard generation > 0 else { return }
+                do {
+                    let results = try await api.searchForImport(submitted)
+                    try Task.checkCancellation()
+                    candidates = results
+                    searched = true
+                    searching = false
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    self.error = "搜索失败：" + error.localizedDescription
+                    searched = true
+                    searching = false
+                }
+            }
+    }
+    private func search() {
+        let input = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !input.isEmpty else { return }
+        submitted = input
+        candidates = []
+        error = nil
+        searching = true
+        generation += 1
     }
 }

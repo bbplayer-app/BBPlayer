@@ -50,10 +50,10 @@ import Observation
     @ObservationIgnored private var importTask: Task<Void, Never>?
     @ObservationIgnored private var routeID = UUID()
 
-    init(dataRoot: URL? = nil) throws {
+    init(dataRoot: URL? = nil, bilibiliClient: BilibiliClient? = nil) throws {
         let root = try dataRoot ?? QAOptions.dataRoot ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("com.bbplayer.macos", isDirectory: true)
         database = try LibraryDatabase(url: root.appendingPathComponent("library.sqlite"))
-        api = BilibiliClient()
+        api = bilibiliClient ?? BilibiliClient()
         cache = try AudioCache(root: root.appendingPathComponent("stream-cache"))
         player = NativePlaybackEngine(provider: api, database: database, cache: cache)
         downloads = try DownloadManager(root: root.appendingPathComponent("downloads"), provider: api, database: database)
@@ -259,37 +259,67 @@ import Observation
         } catch { message = error.localizedDescription }
     }
     func resumeImport() {
-        guard !importRunning, importJob != nil else { return }
+        guard !importRunning, let job = importJob, !job.saved else { return }
+        if let until = job.cooldownUntil, until > Date() {
+            message = "匹配暂时冷却中，请在 " + until.formatted(date: .omitted, time: .standard) + " 后继续。"
+            return
+        }
+        importJob?.cooldownUntil = nil
+        importJob?.pauseReason = nil
         importRunning = true
         importTask = Task { [weak self] in
             guard let self else { return }; defer { importRunning = false }
+            var consecutiveEmpty = 0
             while let job = importJob, job.cursor < job.matches.count {
                 let index = job.cursor, song = job.matches[index].song
-                if job.matches[index].reviewed { importJob?.cursor = index + 1; persistImport(); continue }
+                if job.matches[index].reviewed || job.matches[index].track != nil { importJob?.cursor = index + 1; persistImport(); continue }
                 do {
-                    try await Task.sleep(for: .milliseconds(1200))
-                    let results = try await api.search(song.title + " " + song.artist, page: 1)
+                    let sorted = try await api.importCandidates(for: song)
                     try Task.checkCancellation()
-                    let sorted = results.sorted { Matching.score(song, $0) > Matching.score(song, $1) }
                     importJob?.matches[index].candidates = Array(sorted.prefix(8))
                     importJob?.matches[index].selected = sorted.isEmpty ? nil : 0
                     importJob?.matches[index].score = sorted.first.map { Matching.score(song, $0) } ?? 0
-                    importJob?.matches[index].error = sorted.isEmpty ? "没有匹配结果" : nil
+                    importJob?.matches[index].error = sorted.isEmpty ? "未找到歌名相关的结果，请重新搜索或粘贴 B 站视频链接。" : nil
+                    consecutiveEmpty = sorted.isEmpty ? consecutiveEmpty + 1 : 0
+                    if consecutiveEmpty >= 5 {
+                        pauseImportForRecovery("连续 5 首未找到相关结果，可能是搜索受限或关键词不合适。已暂停，请稍后重试失败项。", seconds: 300)
+                        return
+                    }
                 } catch is CancellationError { persistImport(); return }
                 catch {
                     if Task.isCancelled { persistImport(); return }
                     importJob?.matches[index].error = error.localizedDescription
-                    if let error = error as? APIError {
-                        switch error {
-                        case .network, .loginRequired, .cancelled: persistImport(); message = error.localizedDescription; return
-                        case .remote(let code, _) where [412, 429, -412, -352].contains(code): persistImport(); message = "匹配已暂停，请稍后继续。"; return
-                        default: break
-                        }
+                    let reason: String
+                    let rateLimited: Bool
+                    if case APIError.remote(let code, let detail) = error {
+                        reason = "搜索服务错误（\(code)）：\(detail)"
+                        rateLimited = [412, 429, -412, -352].contains(code)
+                    } else {
+                        reason = error.localizedDescription
+                        rateLimited = false
                     }
+                    pauseImportForRecovery(reason + "。当前歌曲未跳过，请稍后继续。", seconds: rateLimited ? 300 : 60)
+                    return
                 }
                 importJob?.cursor = index + 1; persistImport()
             }
         }
+    }
+    func retryFailedImport() {
+        guard !importRunning, let job = importJob else { return }
+        if let until = job.cooldownUntil, until > Date() {
+            message = "匹配暂时冷却中，请在 " + until.formatted(date: .omitted, time: .standard) + " 后重试。"
+            return
+        }
+        guard importJob?.retryFailures() == true else { return }
+        persistImport()
+        resumeImport()
+    }
+    private func pauseImportForRecovery(_ reason: String, seconds: TimeInterval) {
+        importJob?.pauseReason = reason
+        importJob?.cooldownUntil = Date().addingTimeInterval(seconds)
+        persistImport()
+        message = reason
     }
     func pauseImport() { importTask?.cancel() }
     func persistImport() { do { if let importJob { try database.saveState(importJob, key: "import-job") } } catch { message = error.localizedDescription } }

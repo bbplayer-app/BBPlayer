@@ -7,6 +7,9 @@ public struct ExternalSong: Codable, Identifiable, Sendable {
     public var artist: String
     public var duration: Double
     public var source: String
+    public init(id: String, title: String, artist: String, duration: Double, source: String) {
+        self.id = id; self.title = title; self.artist = artist; self.duration = duration; self.source = source
+    }
 }
 public struct ImportMatch: Codable, Identifiable, Sendable {
     public var id: String { song.id }
@@ -25,6 +28,17 @@ public struct ImportJob: Codable, Identifiable, Sendable {
     public var matches: [ImportMatch]
     public var cursor = 0
     public var saved = false
+    public var cooldownUntil: Date?
+    public var pauseReason: String?
+    public var hasRetryableFailures: Bool {
+        matches.prefix(cursor).contains { !$0.reviewed && $0.track == nil }
+    }
+    @discardableResult public mutating func retryFailures() -> Bool {
+        guard !saved, let first = matches.indices.first(where: { $0 < cursor && !matches[$0].reviewed && matches[$0].track == nil }) else { return false }
+        cursor = first
+        pauseReason = nil
+        return true
+    }
     public init(title: String, matches: [ImportMatch]) { self.title = title; self.matches = matches }
 }
 public struct LyricCandidate: Identifiable, Sendable {
@@ -51,12 +65,38 @@ public enum Matching {
         }
         return Double(previous[b.count]) / Double(max(a.count, b.count))
     }
+    // Measure how much of the song name is present, without penalizing video title decorations.
+    public static func titleRelevance(_ songTitle: String, _ videoTitle: String) -> Double {
+        let title = normalize(songTitle), video = normalize(videoTitle)
+        guard !title.isEmpty, !video.isEmpty else { return 0 }
+        if songTitle.unicodeScalars.allSatisfy({ $0.isASCII }) {
+            let words = songTitle.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+            let videoWords = videoTitle.lowercased().split(whereSeparator: { $0.asciiValue == nil || (!$0.isLetter && !$0.isNumber) }).map(String.init)
+            if !words.isEmpty && (" " + videoWords.joined(separator: " ") + " ").contains(" " + words.joined(separator: " ") + " ") { return 1 }
+            return similarity(songTitle, videoTitle)
+        }
+        if video.contains(title) { return 1 }
+        let characters = Array(video)
+        guard characters.count >= title.count else { return similarity(title, video) }
+        return (0...(characters.count - title.count)).map {
+            similarity(title, String(characters[$0..<($0 + title.count)]))
+        }.max() ?? 0
+    }
+    public static func rankedCandidates(_ song: ExternalSong, _ tracks: [Track]) -> [Track] {
+        var seen = Set<String>()
+        return tracks.filter { seen.insert($0.bvid).inserted && titleRelevance(song.title, $0.title) >= 0.8 }
+            .sorted { score(song, $0) > score(song, $1) }
+    }
     public static func score(_ song: ExternalSong, _ track: Track) -> Double {
-        let title = similarity(song.title, track.title)
-        let artist = similarity(song.artist, track.title + track.artist)
-        let duration = song.duration > 0 && track.duration > 0 ? exp(-pow((song.duration - track.duration) / 8, 2) / 2) : 0.5
-        let penalty = ["翻唱", "现场", "加速", "降调", "remix"].contains { track.title.localizedCaseInsensitiveContains($0) && !song.title.localizedCaseInsensitiveContains($0) } ? 0.15 : 0
-        return max(0, title * 0.6 + artist * 0.15 + duration * 0.25 - penalty)
+        let title = titleRelevance(song.title, track.title)
+        // A few shared characters or a similar runtime cannot establish song identity.
+        guard title >= 0.8 else { return 0 }
+        let artist = titleRelevance(song.artist, track.title + " " + track.artist)
+        let duration = song.duration > 0 && track.duration > 0 ? exp(-pow((song.duration - track.duration) / 12, 2) / 2) : 0.5
+        let versions = ["翻唱", "现场", "加速", "降调", "remix", "伴奏", "纯伴奏", "教程", "钢琴谱", "吉他谱", "鼓谱", "bass tab", "小提琴谱", "卡拉ok"]
+        let penalty = versions.contains { track.title.localizedCaseInsensitiveContains($0) && !song.title.localizedCaseInsensitiveContains($0) } ? 0.3 : 0
+        let value = max(0, title * 0.55 + artist * 0.25 + duration * 0.2 - penalty)
+        return artist >= 0.8 ? value : min(0.69, value)
     }
 }
 

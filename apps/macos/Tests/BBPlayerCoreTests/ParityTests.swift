@@ -24,6 +24,23 @@ final class ParityTests: XCTestCase {
         XCTAssertGreaterThan(Matching.score(song, correct), 0.85)
         XCTAssertLessThan(Matching.score(song, wrong), 0.6)
     }
+    func testDecoratedSongTitlesBeatUnrelatedArtistVideosAndAlternateVersions() {
+        let song = ExternalSong(id: "fixture", title: "Da Capo", artist: "HOYO-MiX", duration: 175, source: "netease")
+        let correct = Track(bvid: "correct", title: "【崩坏3｜毕业旅行】百万级录音棚听《Da Capo》动画短片印象曲HOYO-MIX【Hi-Res】", duration: 175)
+        let unrelated = Track(bvid: "unrelated", title: "星与舫的幽歌 Skein-Song of Stars and Sails HOYO-MIX", duration: 175)
+        let version = Track(bvid: "version", title: "Da Capo HOYO-MiX 动态鼓谱", duration: 175)
+        let sameName = Track(bvid: "same-name", title: "Beautiful World (Da Capo Version) 宇多田光", duration: 175)
+        XCTAssertGreaterThan(Matching.score(song, correct), 0.85)
+        XCTAssertEqual(Matching.score(song, unrelated), 0)
+        XCTAssertLessThan(Matching.score(song, version), 0.72)
+        XCTAssertLessThan(Matching.score(song, sameName), 0.72)
+        XCTAssertEqual(Matching.rankedCandidates(song, [unrelated, version, correct, correct]).map(\.bvid), ["correct", "version"])
+    }
+    func testSharedScatteredCharactersAndPartialEnglishWordsDoNotMatchSongNames() {
+        XCTAssertLessThan(Matching.titleRelevance("青い春と西の空", "青春故事与西方天空中的音乐合集"), 0.8)
+        XCTAssertLessThan(Matching.titleRelevance("One", "Someone shows a stone"), 0.8)
+        XCTAssertEqual(Matching.titleRelevance("青い春と西の空", "【Hi-Res】青い春と西の空（蔚蓝春日与西暮余霞）"), 1)
+    }
     func testDeletedStateDoesNotLeaveNullDecodingFailure() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
