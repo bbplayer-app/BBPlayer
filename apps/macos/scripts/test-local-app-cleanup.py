@@ -33,10 +33,20 @@ class CleanupTests(unittest.TestCase):
         archive = self.build / "BBPlayer-macOS-arm64.zip"; archive.write_bytes(b"old")
         data = self.build / "downloads"; data.mkdir(); (data / "audio.m4a").write_bytes(b"keep")
         removed = module.cleanup(self.installed, self.build, verify=False)
-        self.assertEqual(len(removed), 2)
+        self.assertEqual(len(removed), 3)
         self.assertFalse(old.exists()); self.assertFalse(archive.exists())
         self.assertTrue(unrelated.exists()); self.assertTrue((data / "audio.m4a").exists())
-        self.assertTrue(self.installed.exists()); self.assertTrue((self.build / "BBPlayer.app").exists())
+        self.assertTrue(self.installed.exists()); self.assertFalse((self.build / "BBPlayer.app").exists())
+
+    def testExternalDuplicateAndRunnableBuildAreRemoved(self):
+        duplicate = self.app(self.root / "Downloads/BBPlayer.app", "old")
+        binary = self.root / ".build/Products/Debug/BBPlayerMac"
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b"executable")
+        module.cleanup(self.installed, self.build, verify=False, duplicate_apps=[duplicate])
+        self.assertFalse(duplicate.exists())
+        self.assertFalse(binary.exists())
+        self.assertTrue(self.installed.exists())
 
     def testMismatchDoesNotDeleteBackup(self):
         old = self.app(self.build / "backup/BBPlayer.app", "old")
