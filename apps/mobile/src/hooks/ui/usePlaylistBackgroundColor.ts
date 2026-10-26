@@ -4,6 +4,7 @@ import type { ImageRef } from 'expo-image'
 import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { clampHslLightness, hexToHsl, hslToString } from '@/utils/color'
 import { reportErrorToSentry } from '@/utils/log'
@@ -94,6 +95,9 @@ export function usePlaylistBackgroundColor(
 	isDarkMode: boolean,
 	fallbackColor: string,
 ): PlaylistBackgroundColorResult {
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	const [palette, setPalette] = useState<ExtractedPalette | undefined>(
 		undefined,
 	)
@@ -109,7 +113,7 @@ export function usePlaylistBackgroundColor(
 	}, [])
 
 	useEffect(() => {
-		if (!imageRef) {
+		if (!imageRef || pureWhiteBackground) {
 			setPalette(undefined)
 			return
 		}
@@ -142,9 +146,12 @@ export function usePlaylistBackgroundColor(
 		return () => {
 			isCancelled = true
 		}
-	}, [imageRef, appState])
+	}, [imageRef, appState, pureWhiteBackground])
 
 	const result = useMemo<PlaylistBackgroundColorResult>(() => {
+		if (pureWhiteBackground) {
+			return { backgroundColor: '#FFFFFF', nowPlayingBarColor: '#FFFFFF' }
+		}
 		const dominantColor = getDominantColor(palette, isDarkMode)
 		const backgroundColor = computeBackgroundColor(
 			dominantColor,
@@ -190,7 +197,7 @@ export function usePlaylistBackgroundColor(
 			secondaryButtonContainerColor,
 			secondaryButtonIconColor,
 		}
-	}, [palette, isDarkMode, fallbackColor])
+	}, [palette, isDarkMode, fallbackColor, pureWhiteBackground])
 
 	useNowPlayingBar(result.nowPlayingBarColor)
 

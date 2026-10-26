@@ -138,6 +138,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 				: 0
 
 	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
@@ -276,7 +277,11 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 						style={[
 							playerStyle,
 							{
-								backgroundColor: backgroundColor ?? colors.elevation.level2,
+								backgroundColor: pureWhiteBackground
+									? colors.background
+									: (backgroundColor ?? colors.elevation.level2),
+								borderColor: colors.outlineVariant,
+								borderWidth: pureWhiteBackground ? StyleSheet.hairlineWidth : 0,
 								paddingBottom: bottomPadding,
 								height:
 									nowPlayingBarStyle === 'bottom'

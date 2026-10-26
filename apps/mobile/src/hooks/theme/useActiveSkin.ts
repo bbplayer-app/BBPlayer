@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import { loadActiveSkin, invalidateSkinCache } from '@/lib/theme/runtime'
 import type { AppSkin } from '@/lib/theme/types'
 
 export default function useActiveSkin(): AppSkin | null {
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
 	const installedSkins = useSkinStore((state) => state.installedSkins)
 
@@ -38,7 +42,7 @@ export default function useActiveSkin(): AppSkin | null {
 		}
 	}, [activeSkinId, installedSkins])
 
-	return appSkin
+	return pureWhiteBackground ? null : appSkin
 }
 
 export { invalidateSkinCache }

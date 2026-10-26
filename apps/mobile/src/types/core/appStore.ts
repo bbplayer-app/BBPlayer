@@ -6,6 +6,7 @@ interface Settings {
 	enableDebugLog: boolean
 	enableOldSchoolStyleLyric: boolean
 	playerBackgroundStyle: 'gradient' | 'fluid'
+	pureWhiteBackground: boolean
 	nowPlayingBarStyle: 'float' | 'bottom'
 	lyricSource: 'auto' | 'netease' | 'qqmusic' | 'kugou'
 	enableVerbatimLyrics: boolean
