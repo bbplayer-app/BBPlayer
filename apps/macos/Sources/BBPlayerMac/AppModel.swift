@@ -305,6 +305,34 @@ import Observation
             }
         }
     }
+    @discardableResult func selectImportTrack(_ track: Track, at index: Int, jobID: String) -> Bool {
+        guard var job = importJob, job.id == jobID, !job.saved, job.matches.indices.contains(index) else {
+            message = "导入任务已变化，请重新打开歌曲的搜索窗口。"
+            return false
+        }
+        // Mutate a local value before publishing it to Observation. Reading importJob
+        // during an in-place nested write violates Swift's exclusive-access rule.
+        var match = job.matches[index]
+        if let existing = match.candidates.firstIndex(where: { $0.id == track.id }) {
+            match.candidates[existing] = track
+            match.selected = existing
+        } else {
+            match.candidates.append(track)
+            match.selected = match.candidates.count - 1
+        }
+        match.score = Matching.score(match.song, track)
+        match.error = nil
+        match.reviewed = true
+        job.matches[index] = match
+        do {
+            try database.saveState(job, key: "import-job")
+            importJob = job
+            return true
+        } catch {
+            message = error.localizedDescription
+            return false
+        }
+    }
     func retryFailedImport() {
         guard !importRunning, let job = importJob else { return }
         if let until = job.cooldownUntil, until > Date() {

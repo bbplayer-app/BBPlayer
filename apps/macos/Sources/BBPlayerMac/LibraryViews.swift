@@ -186,11 +186,9 @@ struct ImportView: View {
             .sheet(isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
                 if let editing, let job = model.importJob, job.matches.indices.contains(editing) {
                     ImportSearchView(api: model.api, song: job.matches[editing].song) { track in
-                        model.importJob?.matches[editing].candidates.append(track)
-                        model.importJob?.matches[editing].selected = (model.importJob?.matches[editing].candidates.count ?? 1) - 1
-                        model.importJob?.matches[editing].reviewed = true
-                        model.persistImport()
-                        self.editing = nil
+                        if model.selectImportTrack(track, at: editing, jobID: job.id) {
+                            self.editing = nil
+                        }
                     } preview: { model.player.preview($0) }
                     .id(editing)
                 }
