@@ -33,8 +33,8 @@ import { scheduleOnRN } from 'react-native-worklets'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import {
-	HIDDEN_SEGMENT_ROOTS,
 	nowPlayingBarStore$,
+	shouldHideNowPlayingBar,
 } from '@/hooks/stores/nowPlayingBarStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
@@ -108,7 +108,7 @@ function NowPlayingBar() {
 	// 提前显示；segments 判断则保证进入隐藏页面时立即隐藏。
 	const hiddenScreenActive = useValue(nowPlayingBarStore$.hiddenScreenActive)
 	const shouldShow =
-		!hiddenScreenActive && !HIDDEN_SEGMENT_ROOTS.has(segments[0] ?? '')
+		!hiddenScreenActive && !shouldHideNowPlayingBar(segments.join('/'))
 	if (!shouldShow) {
 		return null
 	}
