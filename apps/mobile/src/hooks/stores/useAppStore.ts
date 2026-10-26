@@ -132,6 +132,7 @@ export const useAppStore = create<AppState>()(
 					enableDebugLog: false,
 					enableOldSchoolStyleLyric: false,
 					playerBackgroundStyle: 'fluid',
+					pureWhiteBackground: false,
 					nowPlayingBarStyle: 'float',
 					lyricSource: 'netease',
 					enableVerbatimLyrics: true,

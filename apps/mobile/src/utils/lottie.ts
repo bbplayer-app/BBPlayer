@@ -1,17 +1,19 @@
+import Color from 'color'
 import { type AnimationObject } from 'lottie-react-native'
 
 /**
- * 将十六进制颜色替换 Lottie JSON 中的白色占位符 [1,1,1,1]。
+ * 用主题色替换 Lottie JSON 中的白色占位符 [1,1,1,1]。
+ * Paper 默认主题使用 rgba，动态主题使用 hex，两种格式都需要支持。
  */
 export function tintLottieSource(
 	source: AnimationObject,
-	hexColor: string,
+	colorValue: string,
 ): AnimationObject {
-	const hex = hexColor.replace('#', '')
-	const r = (parseInt(hex.slice(0, 2), 16) / 255).toFixed(4)
-	const g = (parseInt(hex.slice(2, 4), 16) / 255).toFixed(4)
-	const b = (parseInt(hex.slice(4, 6), 16) / 255).toFixed(4)
 	try {
+		const color = Color(colorValue).rgb()
+		const r = (color.red() / 255).toFixed(4)
+		const g = (color.green() / 255).toFixed(4)
+		const b = (color.blue() / 255).toFixed(4)
 		return JSON.parse(
 			JSON.stringify(source).replace(/\[1,1,1,1\]/g, `[${r},${g},${b},1]`),
 		) as AnimationObject

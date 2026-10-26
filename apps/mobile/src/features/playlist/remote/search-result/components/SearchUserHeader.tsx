@@ -8,6 +8,7 @@ import { Text, useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { useUserSearchResults } from '@/hooks/queries/bilibili/search'
+import useAppStore from '@/hooks/stores/useAppStore'
 import type { BilibiliSearchUser } from '@/types/apis/bilibili'
 
 interface SearchUserHeaderProps {
@@ -28,14 +29,19 @@ const sanitizeHtmlString = (str: string): string => {
 
 export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 	const { colors } = useTheme()
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	const router = useRouter()
 	const { data, isPending, isError } = useUserSearchResults(query)
 
 	// Curated premium mixed colors for card background based on active theme
-	const singleCardBg = Color(colors.elevation.level1)
-		.mix(Color(colors.primary), 0.06)
-		.rgb()
-		.string()
+	const singleCardBg = pureWhiteBackground
+		? colors.background
+		: Color(colors.elevation.level1)
+				.mix(Color(colors.primary), 0.06)
+				.rgb()
+				.string()
 
 	const scrollCardBg = Color(colors.surfaceVariant).alpha(0.6).rgb().string()
 

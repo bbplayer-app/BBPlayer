@@ -95,9 +95,14 @@ export default function PlayerPage() {
 	})
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	// 旧版 md3 / streamer 等存量值也回落到普通渐变。
 	const isFluidBackground = useAppStore(
-		(state) => state.settings.playerBackgroundStyle === 'fluid',
+		(state) =>
+			!state.settings.pureWhiteBackground &&
+			state.settings.playerBackgroundStyle === 'fluid',
 	)
 	const isFocused = useIsFocused()
 	const isPlaying = useIsPlaying()
@@ -180,7 +185,7 @@ export default function PlayerPage() {
 	}
 
 	useEffect(() => {
-		if (!coverRef || !isForeground) return
+		if (!coverRef || !isForeground || pureWhiteBackground) return
 
 		let cancelled = false
 		// 加载新封面时保留当前配色；新结果到达后由对应背景做过渡。
@@ -196,7 +201,7 @@ export default function PlayerPage() {
 		return () => {
 			cancelled = true
 		}
-	}, [coverRef, currentTrackCover, isForeground])
+	}, [coverRef, currentTrackCover, isForeground, pureWhiteBackground])
 
 	const gradientMainColor = useSharedValue(colors.background)
 	const gradientColors = useDerivedValue(() => [
@@ -204,7 +209,7 @@ export default function PlayerPage() {
 		colors.background,
 	])
 	useEffect(() => {
-		if (isFluidBackground) return
+		if (isFluidBackground || pureWhiteBackground) return
 		const topColor =
 			colorScheme === 'light'
 				? (palette?.lightMuted?.hex ?? palette?.muted?.hex ?? colors.background)
@@ -221,6 +226,7 @@ export default function PlayerPage() {
 		colorScheme,
 		colors.background,
 		isFluidBackground,
+		pureWhiteBackground,
 		isForeground,
 		isFocused,
 		gradientMainColor,
@@ -266,7 +272,7 @@ export default function PlayerPage() {
 	})
 
 	return (
-		<View style={styles.fullScreen}>
+		<View style={[styles.fullScreen, { backgroundColor: colors.background }]}>
 			<View style={styles.fullScreen}>
 				{isFluidBackground && (
 					<FluidBackground
@@ -276,11 +282,25 @@ export default function PlayerPage() {
 						paused={!isFocused || !isPlaying}
 					/>
 				)}
-				<Canvas
-					style={StyleSheet.absoluteFill}
-					pointerEvents='none'
-				>
-					{!isFluidBackground && (
+				{!pureWhiteBackground && (
+					<Canvas
+						style={StyleSheet.absoluteFill}
+						pointerEvents='none'
+					>
+						{!isFluidBackground && (
+							<Rect
+								x={0}
+								y={0}
+								width={width}
+								height={height}
+							>
+								<LinearGradient
+									start={vec(0, 0)}
+									end={vec(0, height)}
+									colors={gradientColors}
+								/>
+							</Rect>
+						)}
 						<Rect
 							x={0}
 							y={0}
@@ -289,24 +309,12 @@ export default function PlayerPage() {
 						>
 							<LinearGradient
 								start={vec(0, 0)}
-								end={vec(0, height)}
-								colors={gradientColors}
+								end={scrimEndVec}
+								colors={scrimColors}
 							/>
 						</Rect>
-					)}
-					<Rect
-						x={0}
-						y={0}
-						width={width}
-						height={height}
-					>
-						<LinearGradient
-							start={vec(0, 0)}
-							end={scrimEndVec}
-							colors={scrimColors}
-						/>
-					</Rect>
-				</Canvas>
+					</Canvas>
+				)}
 
 				<View
 					style={[

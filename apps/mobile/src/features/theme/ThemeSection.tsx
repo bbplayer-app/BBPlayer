@@ -66,7 +66,11 @@ const deleteSkin = (skin: InstalledSkinMeta) => {
  * 主题板块。皮肤资源包的加载与解析开销较大，因此延后到页面转场动画
  * 结束后再挂载，转场期间仅显示一个加载占位。
  */
-export default function ThemeSection() {
+export default function ThemeSection({
+	disabled = false,
+}: {
+	disabled?: boolean
+}) {
 	const isReady = useScreenTransitionReady()
 
 	if (!isReady) {
@@ -77,10 +81,10 @@ export default function ThemeSection() {
 		)
 	}
 
-	return <ThemeSectionContent />
+	return <ThemeSectionContent disabled={disabled} />
 }
 
-function ThemeSectionContent() {
+function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 	const router = useRouter()
 	const colors = useTheme().colors
 	const activeSkin = useActiveSkin()
@@ -154,16 +158,22 @@ function ThemeSectionContent() {
 		<>
 			<View style={styles.settingRow}>
 				<View style={styles.settingTextContainer}>
-					<Text>动态主题</Text>
+					<Text
+						style={disabled ? { color: colors.onSurfaceDisabled } : undefined}
+					>
+						动态主题
+					</Text>
 					<Text
 						variant='bodySmall'
 						style={{ color: colors.onSurfaceVariant }}
 					>
-						{activeSkin
-							? activeSkin.name
-							: installedSkins.length > 0
-								? '开启后使用已选择的皮肤资源包'
-								: '下载皮肤资源包后可启用'}
+						{disabled
+							? '纯白背景开启时不可用'
+							: activeSkin
+								? activeSkin.name
+								: installedSkins.length > 0
+									? '开启后使用已选择的皮肤资源包'
+									: '下载皮肤资源包后可启用'}
 					</Text>
 				</View>
 				<UniversalSwitch
@@ -178,20 +188,21 @@ function ThemeSectionContent() {
 							activeThumbUpIndex: 0,
 						})
 					}
-					disabled={installedSkins.length === 0}
+					disabled={disabled || installedSkins.length === 0}
 				/>
 			</View>
 
 			<View style={styles.section}>
 				<Button
 					mode='outlined'
+					disabled={disabled}
 					onPress={() => router.navigate('/settings/appearance/theme-search')}
 				>
 					添加主题
 				</Button>
 			</View>
 
-			{installedSkins.length > 0 ? (
+			{!disabled && installedSkins.length > 0 ? (
 				<View style={styles.section}>
 					<Text variant='titleMedium'>已安装主题</Text>
 					<View style={styles.skinList}>
@@ -271,7 +282,7 @@ function ThemeSectionContent() {
 				</View>
 			) : null}
 
-			{activeSkinId && activeSkin ? (
+			{!disabled && activeSkinId && activeSkin ? (
 				<View style={styles.section}>
 					{activeInstalledSkin ? (
 						<InstalledAssetSections
@@ -494,7 +505,7 @@ function ThemeSectionContent() {
 
 			<Portal>
 				<BootSplashAssetPreview
-					asset={previewAsset}
+					asset={disabled ? null : previewAsset}
 					onDismiss={() => setPreviewAsset(null)}
 					onSelect={selectBootSplashAsset}
 				/>

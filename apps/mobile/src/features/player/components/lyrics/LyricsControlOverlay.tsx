@@ -55,7 +55,9 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 }: LyricsControlOverlayProps) {
 	const { colors } = useTheme()
 	const isFluidBackground = useAppStore(
-		(state) => state.settings.playerBackgroundStyle === 'fluid',
+		(state) =>
+			!state.settings.pureWhiteBackground &&
+			state.settings.playerBackgroundStyle === 'fluid',
 	)
 
 	const menuActions = useMenuActions(addLyricsMenuItems)
