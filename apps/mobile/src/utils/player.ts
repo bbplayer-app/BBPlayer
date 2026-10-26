@@ -1,4 +1,5 @@
 import { type Track as OrpheusTrack } from '@bbplayer/orpheus'
+import type { PlaybackSummary } from '@bbplayer/orpheus'
 import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 
@@ -189,13 +190,16 @@ async function finalizeAndRecordCurrentTrack(
 	uniqueKey: string,
 	realDuration: number,
 	position: number,
+	playbackSummary?: PlaybackSummary,
 ) {
 	try {
 		const playedSeconds = Math.max(0, Math.floor(position))
 		const duration = Math.max(1, Math.floor(realDuration))
-		const effectivePlayed = Math.min(playedSeconds, duration)
+		const effectivePlayed = playbackSummary
+			? Math.max(0, Math.floor(playbackSummary.playedSeconds))
+			: Math.min(playedSeconds, duration)
 		const threshold = Math.max(Math.floor(duration * 0.9), duration - 2)
-		const completed = effectivePlayed >= threshold
+		const completed = playbackSummary?.completed ?? effectivePlayed >= threshold
 		logger.info('完成播放', { uniqueKey })
 		logger.debug('完成播放标记', {
 			playedSeconds,
@@ -203,11 +207,13 @@ async function finalizeAndRecordCurrentTrack(
 			effectivePlayed,
 			threshold,
 			completed,
+			playbackSummary,
 			uniqueKey,
 		})
 
 		const res = await trackService.addPlayRecordFromUniqueKey(uniqueKey, {
-			startTime: Date.now() - playedSeconds * 1000,
+			startTime:
+				playbackSummary?.startedAt ?? Date.now() - playedSeconds * 1000,
 			durationPlayed: effectivePlayed,
 			completed,
 		})
@@ -227,7 +233,7 @@ async function finalizeAndRecordCurrentTrack(
 			queryKey: trackKeys.history(),
 		})
 
-		await reportPlaybackHistory(uniqueKey, effectivePlayed).catch((error) =>
+		await reportPlaybackHistory(uniqueKey, playedSeconds).catch((error) =>
 			logger.error('上报播放历史失败', error),
 		)
 	} catch (error) {

@@ -37,6 +37,24 @@ export interface Track {
 	duration?: number
 }
 
+/** 当前生效的 AB 循环区间，单位为秒。 */
+export interface AbLoopState {
+	trackId: string
+	start: number
+	end: number
+}
+
+export type AbLoopRange = Pick<AbLoopState, 'start' | 'end'>
+
+/** 原生统计的同一次播放会话；内部 AB 跳转不会结束会话。 */
+export interface PlaybackSummary {
+	/** 本次曲目会话开始的 Unix 毫秒时间戳。 */
+	startedAt: number
+	/** 连续播放的媒体秒数，包含多轮；暂停、缓冲和 seek 跳过部分不计入。 */
+	playedSeconds: number
+	completed: boolean
+}
+
 export interface LyricSpan {
 	text: string
 	startTime: number // ms
@@ -87,6 +105,7 @@ export type OrpheusEvents = {
 		trackId: string
 		finalPosition: number
 		duration: number
+		playbackSummary?: PlaybackSummary
 	}): void
 	onHeadlessEvent(event: OrpheusHeadlessEvent): void
 	onPlayerError(event: PlaybackErrorEvent): void
@@ -131,6 +150,7 @@ export interface OrpheusHeadlessTrackFinishedEvent {
 	trackId: string
 	finalPosition: number
 	duration: number
+	playbackSummary?: PlaybackSummary
 }
 
 export interface OrpheusHeadlessTrackPausedEvent {
@@ -253,6 +273,23 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	skipToPrevious(): Promise<void>
 	/** 在当前曲目内跳转；`seconds` 会在原生端转换为毫秒。 */
 	seekTo(seconds: number): Promise<void>
+	/** 检查曲目并在原生主线程内跳转，拒绝切歌后迟到的定位。 */
+	seekToForTrack(trackId: string, seconds: number): Promise<boolean>
+	/**
+	 * 为指定曲目开启 AB 循环，区间为 `[start, end)`（单位为秒）。
+	 *
+	 * 原生端会持久化该设置；当播放位置越过 `end` 时自动跳回 `start`，
+	 * 且仅对 `trackId` 对应的当前曲目生效；曲目不匹配或区间无效时返回 false。
+	 */
+	setAbLoop(trackId: string, start: number, end: number): Promise<boolean>
+	/** 仅清除预期曲目的活动循环；当前曲目不匹配时返回 false。 */
+	clearAbLoop(trackId: string): Promise<boolean>
+	/** 临时覆盖运行状态；null 暂停循环，不修改已保存设置。 */
+	setAbLoopPreview(trackId: string, range: AbLoopRange | null): Promise<boolean>
+	/** 移除临时覆盖，恢复已保存设置；切歌后返回 false。 */
+	clearAbLoopPreview(trackId: string): Promise<boolean>
+	/** 返回当前生效的 AB 循环（秒）；未设置时返回 `null`。 */
+	getAbLoop(): Promise<AbLoopState | null>
 	/** 设置重复模式；Android 会把未知数字值当作 `RepeatMode.OFF` 处理。 */
 	setRepeatMode(mode: RepeatMode): Promise<void>
 	/**

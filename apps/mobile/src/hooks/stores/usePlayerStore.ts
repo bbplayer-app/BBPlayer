@@ -1,6 +1,7 @@
 import { Orpheus, type Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { create } from 'zustand'
 
+import { useAbLoopDraftStore } from '@/hooks/stores/useAbLoopDraftStore'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -48,6 +49,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 			if (revision !== syncRevision) return
 			const currentInternalTrackId = get().internalTrack?.uniqueKey
 			const newTrackId = currentTrack?.id
+			useAbLoopDraftStore.getState().resetForTrack(newTrackId ?? null)
 
 			set({ orpheusTrack: currentTrack, currentIndex })
 

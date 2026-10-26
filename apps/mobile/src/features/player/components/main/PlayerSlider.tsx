@@ -25,6 +25,7 @@ import {
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import useTrackDuration from '@/hooks/player/useTrackProgress'
+import { useAbLoop } from '@/hooks/queries/orpheus'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { seekWithinTrack } from '@/lib/player/seek'
@@ -109,9 +110,25 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 	const nativeDuration = useTrackDuration()
 	const { chapters, podcast } = usePlayerChapters()
 	const canSeek = Number.isFinite(nativeDuration) && nativeDuration > 0
+	const { data: abLoop } = useAbLoop()
+	const abLoopMarkers = useMemo(() => {
+		if (
+			!abLoop ||
+			abLoop.trackId !== trackId ||
+			!canSeek ||
+			nativeDuration <= 0
+		) {
+			return []
+		}
+		return [abLoop.start / nativeDuration, abLoop.end / nativeDuration]
+	}, [abLoop, trackId, canSeek, nativeDuration])
 	const markers = useMemo(
-		() => (podcast ? chapterBoundaries(chapters, nativeDuration) : []),
-		[chapters, nativeDuration, podcast],
+		() =>
+			[
+				...(podcast ? chapterBoundaries(chapters, nativeDuration) : []),
+				...abLoopMarkers,
+			].sort((a, b) => a - b),
+		[chapters, nativeDuration, podcast, abLoopMarkers],
 	)
 	const { colors } = useTheme()
 	const activeSkin = useActiveSkin()
