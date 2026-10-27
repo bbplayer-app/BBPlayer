@@ -148,11 +148,14 @@ public actor BilibiliClient: MediaSourceProvider {
         guard let stream = streams.first, let url = URL(string: stream.string("baseUrl", fallback: "base_url")), url.scheme == "https" else { throw APIError.unavailable("没有可用的常规 AAC 音轨。") }
         let backups = (stream["backupUrl"] ?? stream["backup_url"]) as? [String] ?? []
         let volume = body.object("volume")
-        let metadata = try? await request("/x/player/wbi/v2", parameters: ["bvid": track.bvid, "cid": String(track.cid!)], signed: true)
-        let chapters = Self.parseChapters(metadata ?? [:])
         return ResolvedAudio(track: track, url: url, backupURLs: backups.compactMap(URL.init(string:)), headers: headers(authenticated: false),
             measuredLoudness: volume["measured_i"] as? Double, targetLoudness: volume["target_i"] as? Double,
-            chapters: chapters, streamInfo: AudioStreamInfo(codec: stream.string("codecs"), bitrate: stream.int("bandwidth"), sampleRate: max(stream.int("audioSampleRate"), stream.int("audio_sample_rate"))))
+            chapters: [], streamInfo: AudioStreamInfo(codec: stream.string("codecs"), bitrate: stream.int("bandwidth"), sampleRate: max(stream.int("audioSampleRate"), stream.int("audio_sample_rate"))))
+    }
+    public func chapters(for track: Track) async throws -> [Chapter] {
+        guard let cid = track.cid else { return [] }
+        let metadata = try await request("/x/player/wbi/v2", parameters: ["bvid": track.bvid, "cid": String(cid)], signed: true)
+        return Self.parseChapters(metadata)
     }
     public static func parseChapters(_ metadata: [String: Any]) -> [Chapter] {
         let direct = metadata.array("view_points")

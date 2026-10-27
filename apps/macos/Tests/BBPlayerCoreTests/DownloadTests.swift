@@ -8,6 +8,10 @@ private actor DownloadProvider: MediaSourceProvider {
     func resolve(_ track: Track) async throws -> ResolvedAudio {
         ResolvedAudio(track: track.withPage(cid: 42, title: nil, duration: nil), url: url, measuredLoudness: -8, targetLoudness: -14)
     }
+    func chapters(for track: Track) async throws -> [Chapter] {
+        try await Task.sleep(for: .milliseconds(100))
+        return [Chapter(title: "Downloaded chapter", start: 0, end: 10)]
+    }
 }
 final class DownloadTests: XCTestCase {
     @MainActor func testDownloadPauseResumeOfflineMetadataAndDeletion() async throws {
@@ -54,6 +58,7 @@ server.serve_forever()
         let metadata = try XCTUnwrap(try db.state(OfflineAudioMetadata.self, key: "download-metadata:" + track.id))
         XCTAssertEqual(metadata.measuredLoudness, -8)
         XCTAssertEqual(metadata.track.cid, 42)
+        XCTAssertEqual(metadata.chapters.first?.title, "Downloaded chapter")
         manager.remove(track.id)
         XCTAssertFalse(FileManager.default.fileExists(atPath: local.path))
         XCTAssertNil(try db.state(URL.self, key: "download-file:" + metadata.track.id))

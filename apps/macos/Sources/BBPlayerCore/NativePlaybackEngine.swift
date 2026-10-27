@@ -7,6 +7,8 @@ import AudioRealtime
 
 @MainActor
 @Observable public final class NativePlaybackEngine: PlaybackEngine {
+    public private(set) var startupTiming = PlaybackTiming()
+    @ObservationIgnored private var startupClock = ProcessInfo.processInfo.systemUptime
     public private(set) var snapshot = PlaybackSnapshot()
     public private(set) var isPlaying = false
     public private(set) var isLoading = false
@@ -27,7 +29,7 @@ import AudioRealtime
     /// Read the media clock only while a visible animation requests a frame.
     public var renderPosition: Double { let time = player.currentTime().seconds; return time.isFinite ? max(0, time) : position }
     public var diagnostics: [String: String] {
-        ["timeControl": String(player.timeControlStatus.rawValue), "rate": String(player.rate), "waiting": player.reasonForWaitingToPlay?.rawValue ?? "", "itemStatus": String(player.currentItem?.status.rawValue ?? -1), "requested": String(wantsPlayback), "repeat": snapshot.repeatMode.rawValue]
+        ["timeControl": String(player.timeControlStatus.rawValue), "rate": String(player.rate), "waiting": player.reasonForWaitingToPlay?.rawValue ?? "", "itemStatus": String(player.currentItem?.status.rawValue ?? -1), "requested": String(wantsPlayback), "repeat": snapshot.repeatMode.rawValue, "bufferedAhead": String(bufferedAhead), "bufferRecovery": String(waitingForBuffer), "segmented": String(resourceLoader?.isSegmented == true)]
     }
     public var capturedFrames: UInt64 { bb_pcm_frames(pcm) }
 
@@ -38,6 +40,17 @@ import AudioRealtime
     @ObservationIgnored private var playbackActivity: NSObjectProtocol?
     @ObservationIgnored private var visualizationTrack: AVAssetTrack?
     @ObservationIgnored private var resourceLoader: AudioResourceLoader?
+    @ObservationIgnored private var metadataTask: Task<Void, Never>?
+    @ObservationIgnored private var visualizationTask: Task<Void, Never>?
+    @ObservationIgnored private var prefetchTask: Task<Void, Never>?
+    @ObservationIgnored private var prefetchGeneration = UUID()
+    @ObservationIgnored private var prefetchedSource: (requestedID: String, source: ResolvedAudio, expires: Date)?
+    @ObservationIgnored private var attemptedPrefetch: String?
+    @ObservationIgnored private var stablePlaybackClock: Double?
+    @ObservationIgnored private var bufferObservation: NSKeyValueObservation?
+    @ObservationIgnored private var emptyObservation: NSKeyValueObservation?
+    @ObservationIgnored private var hasPlayedCurrent = false
+    @ObservationIgnored private var waitingForBuffer = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var observation: NSKeyValueObservation?
     @ObservationIgnored private var statusObservation: NSKeyValueObservation?
@@ -81,15 +94,23 @@ import AudioRealtime
             preferences = (try? database.state(PlayerPreferences.self, key: "preferences")) ?? PlayerPreferences()
             position = snapshot.position; duration = currentTrack?.duration ?? 0
         }
+        player.automaticallyWaitsToMinimizeStalling = false
         observation = player.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in
                 guard let self else { return }
                 if self.isPlaying { self.captureAudibleTail() }
                 self.isPlaying = self.player.timeControlStatus == .playing
-                if self.isPlaying { self.previousPosition = self.player.currentTime().seconds }
+                if self.isPlaying {
+                    self.previousPosition = self.player.currentTime().seconds
+                    self.hasPlayedCurrent = true; self.waitingForBuffer = false; self.isLoading = false
+                    if self.stablePlaybackClock == nil { self.stablePlaybackClock = ProcessInfo.processInfo.systemUptime }
+                } else {
+                    self.stablePlaybackClock = nil; self.cancelPrefetch(reset: false)
+                    if self.wantsPlayback, self.player.currentItem?.status == .readyToPlay { self.waitingForBuffer = true; self.isLoading = true }
+                }
                 _ = self.accumulator.update(clock: ProcessInfo.processInfo.systemUptime, audible: self.isPlaying)
                 if !self.isPlaying { self.previousPosition = nil }
-                self.updateSpectrumDemand(); self.updateNowPlaying()
+                self.resumeBufferedPlayback(); self.updateSpectrumDemand(); self.updateNowPlaying()
             }
         }
         endToken = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: .main) { [weak self] note in
@@ -137,7 +158,7 @@ import AudioRealtime
         if duration > 0, position >= duration - 0.25 { resetListeningSession(); seek(to: 0) }
         player.playImmediately(atRate: Float(snapshot.rate))
     }
-    public func pause() { wantsPlayback = false; if isPlaying { captureAudibleTail() }; player.pause(); isPlaying = false; updateSpectrumDemand(); updateNowPlaying(); _ = accumulator.update(clock: ProcessInfo.processInfo.systemUptime, audible: false); previousPosition = nil; saveCheckpoint() }
+    public func pause() { cancelPrefetch(reset: false); stablePlaybackClock = nil; waitingForBuffer = false; wantsPlayback = false; if isPlaying { captureAudibleTail() }; player.pause(); isPlaying = false; updateSpectrumDemand(); updateNowPlaying(); _ = accumulator.update(clock: ProcessInfo.processInfo.systemUptime, audible: false); previousPosition = nil; saveCheckpoint() }
     public func toggle() { wantsPlayback ? pause() : play() }
     public func seek(to seconds: Double) {
         guard seconds.isFinite else { return }
@@ -152,8 +173,8 @@ import AudioRealtime
         snapshot.rate = min(3, max(0.5, rate)); if isPlaying { player.rate = Float(snapshot.rate) }
         previousPosition = nil; saveCheckpoint(); updateNowPlaying()
     }
-    public func setRepeat(_ mode: RepeatMode) { snapshot.repeatMode = mode; saveCheckpoint() }
-    public func toggleShuffle() { snapshot.shuffled.toggle(); shuffleRemaining = []; shuffleCycleStarted = false; saveCheckpoint() }
+    public func setRepeat(_ mode: RepeatMode) { snapshot.repeatMode = mode; queueDidChange(); saveCheckpoint() }
+    public func toggleShuffle() { snapshot.shuffled.toggle(); shuffleRemaining = []; shuffleCycleStarted = false; queueDidChange(); saveCheckpoint() }
     public func enqueue(_ track: Track, next: Bool = false) {
         if snapshot.queue.isEmpty { setQueue([track]); return }
         if next {
@@ -166,22 +187,22 @@ import AudioRealtime
         } else {
             enqueue([track]); return
         }
-        saveCheckpoint()
+        queueDidChange(); saveCheckpoint()
     }
     @discardableResult public func enqueue(_ tracks: [Track]) -> Int {
         var seen = Set(snapshot.queue.map(\.id))
         let additions = tracks.filter { seen.insert($0.id).inserted }
         guard !additions.isEmpty else { return 0 }
         if snapshot.queue.isEmpty { setQueue(additions) }
-        else { snapshot.queue.append(contentsOf: additions); saveCheckpoint() }
+        else { snapshot.queue.append(contentsOf: additions); queueDidChange(); saveCheckpoint() }
         return additions.count
     }
     public func removeFromQueue(at index: Int) {
         guard snapshot.queue.indices.contains(index) else { return }
         if index == snapshot.index {
             finishHistory(completed: false); snapshot.queue.remove(at: index)
-            if snapshot.queue.isEmpty { stop(); snapshot.index = 0; saveCheckpoint() } else { load(index: min(index, snapshot.queue.count - 1)) }
-        } else { snapshot.queue.remove(at: index); if index < snapshot.index { snapshot.index -= 1 }; saveCheckpoint() }
+            if snapshot.queue.isEmpty { stop(); snapshot.index = 0; queueDidChange(); saveCheckpoint() } else { load(index: min(index, snapshot.queue.count - 1)) }
+        } else { snapshot.queue.remove(at: index); if index < snapshot.index { snapshot.index -= 1 }; queueDidChange(); saveCheckpoint() }
     }
     public func moveQueue(from: Int, to: Int) {
         guard snapshot.queue.indices.contains(from), snapshot.queue.indices.contains(to) else { return }
@@ -201,26 +222,30 @@ import AudioRealtime
         let original = snapshot.queue
         snapshot.queue = order.map { original[$0] }
         snapshot.index = activeIndex
-        saveCheckpoint()
+        queueDidChange(); saveCheckpoint()
     }
     public func skip(to index: Int) { finishHistory(completed: false); load(index: index) }
     public func next(automatic: Bool = false) {
         guard !snapshot.queue.isEmpty else { return }
         if !automatic { finishHistory(completed: false) }
-        let next: Int
-        if snapshot.shuffled && snapshot.queue.count > 1 {
-            if shuffleRemaining.isEmpty {
-                if automatic && snapshot.repeatMode != .queue && shuffleCycleStarted { pause(); return }
-                shuffleRemaining = snapshot.queue.filter { $0.id != currentTrack?.id }.map(\.id).shuffled()
-                shuffleCycleStarted = true
-            }
-            guard let id = shuffleRemaining.popLast(), let index = snapshot.queue.firstIndex(where: { $0.id == id }) else { pause(); return }
-            next = index
-        } else { next = snapshot.index + 1 }
-        if next >= snapshot.queue.count {
-            if snapshot.repeatMode == .queue { load(index: 0) } else { pause() }
-        } else { load(index: next) }
+        if let index = upcomingIndex(automatic: automatic, consume: true) { load(index: index) } else { pause() }
     }
+    private func upcomingIndex(automatic: Bool, consume: Bool) -> Int? {
+        guard !snapshot.queue.isEmpty else { return nil }
+        if snapshot.shuffled && snapshot.queue.count > 1 {
+            let valid = Set(snapshot.queue.filter { $0.id != currentTrack?.id }.map(\.id))
+            shuffleRemaining.removeAll { !valid.contains($0) }
+            if shuffleRemaining.isEmpty {
+                if automatic && snapshot.repeatMode != .queue && shuffleCycleStarted { return nil }
+                shuffleRemaining = Array(valid).shuffled(); shuffleCycleStarted = true
+            }
+            let id = consume ? shuffleRemaining.popLast() : shuffleRemaining.last
+            return id.flatMap { id in snapshot.queue.firstIndex { $0.id == id } }
+        }
+        let index = snapshot.index + 1
+        return index < snapshot.queue.count ? index : (snapshot.repeatMode == .queue ? 0 : nil)
+    }
+
     public func previous() {
         if position > 3 { seek(to: 0); return }
         finishHistory(completed: false); load(index: max(0, snapshot.index - 1))
@@ -244,15 +269,19 @@ import AudioRealtime
     }
     public func shutdown() { pause(); stop(); sleepTimer?.invalidate(); spectrumTimer?.invalidate() }
     public func stop() {
-        loadTask?.cancel(); generation = UUID(); wantsPlayback = false; player.pause(); player.replaceCurrentItem(with: nil)
+        loadTask?.cancel(); metadataTask?.cancel(); metadataTask = nil; visualizationTask?.cancel(); visualizationTask = nil; cancelPrefetch(reset: true)
+        bufferObservation = nil; emptyObservation = nil; hasPlayedCurrent = false; waitingForBuffer = false; stablePlaybackClock = nil
+        generation = UUID(); wantsPlayback = false; player.pause(); player.replaceCurrentItem(with: nil)
         resourceLoader?.cancel(); resourceLoader = nil; visualizationTrack = nil; statusObservation = nil; loadedTrackID = nil; streamInfo = nil
         isPlaying = false; isLoading = false; updateSpectrumDemand()
     }
     private func load(index: Int, position requestedPosition: Double? = nil, refresh: Bool = false, autoplay: Bool = true) {
         guard snapshot.queue.indices.contains(index) else { return }
         let track = snapshot.queue[index]
+        let prepared = prefetchedSource.flatMap { $0.requestedID == track.id && $0.expires > Date() && !refresh ? $0.source : nil }
         stop(); wantsPlayback = autoplay; refreshedSource = refresh; snapshot.index = index; snapshot.position = 0; position = 0; errorMessage = nil; isLoading = true
         let token = UUID(); generation = token
+        startupClock = ProcessInfo.processInfo.systemUptime; startupTiming = PlaybackTiming()
         loadTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -262,17 +291,29 @@ import AudioRealtime
                     let metadata = try database.state(OfflineAudioMetadata.self, key: "download-metadata:" + track.id)
                     source = ResolvedAudio(track: metadata?.track ?? track, url: local, measuredLoudness: metadata?.measuredLoudness, targetLoudness: metadata?.targetLoudness, chapters: metadata?.chapters ?? [], streamInfo: metadata?.streamInfo)
                 }
+                else if let prepared { source = prepared }
                 else { source = try await provider.resolve(track) }
                 try Task.checkCancellation()
-                guard token == generation else { return }
-                snapshot.queue[index] = source.track
+                guard token == generation, snapshot.queue.indices.contains(snapshot.index), currentTrack?.id == track.id else { return }
+                startupTiming.sourceReady = ProcessInfo.processInfo.systemUptime - startupClock
+                snapshot.queue[snapshot.index] = source.track
                 let asset: AVURLAsset
                 if source.url.isFileURL { asset = AVURLAsset(url: source.url) }
-                else { let loader = AudioResourceLoader(source: source, cache: cache); resourceLoader = loader; asset = loader.asset }
-                let audioTracks = try await asset.loadTracks(withMediaType: .audio)
-                try Task.checkCancellation(); guard token == generation else { return }
-                let item = AVPlayerItem(asset: asset)
-                visualizationTrack = audioTracks.first
+                else { let loader = AudioResourceLoader(source: source, cache: cache, onFirstByte: { [weak self] in
+                    Task { @MainActor in guard let self, self.generation == token, self.startupTiming.firstByte == nil else { return }; self.startupTiming.firstByte = ProcessInfo.processInfo.systemUptime - self.startupClock }
+                }, onDelivery: { [weak self] in
+                    Task { @MainActor in guard let self, self.generation == token, self.startupTiming.firstDelivery == nil else { return }; self.startupTiming.firstDelivery = ProcessInfo.processInfo.systemUptime - self.startupClock }
+                }, onForeground: { [weak self] in
+                    Task { @MainActor in guard let self, self.generation == token else { return }; self.cancelPrefetch(reset: false) }
+                }); resourceLoader = loader; try await loader.prepareForPlayback(); try Task.checkCancellation(); guard token == generation else { return }; asset = loader.asset }
+                let item = AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [])
+                item.preferredForwardBufferDuration = 5
+                if !source.url.isFileURL && source.chapters.isEmpty {
+                    metadataTask = Task { [weak self, provider] in
+                        guard let chapters = try? await provider.chapters(for: source.track), let self, !Task.isCancelled, self.generation == token else { return }
+                        self.chapters = chapters
+                    }
+                }
                 normalizationGain = Loudness.gain(measured: source.measuredLoudness, target: source.targetLoudness ?? -14)
                 player.volume = Float(preferences.volume) * (preferences.normalization ? normalizationGain : 1)
                 player.replaceCurrentItem(with: item)
@@ -291,8 +332,19 @@ import AudioRealtime
                         if item.status == .failed {
                             if !refresh { self.load(index: self.snapshot.index, position: self.position, refresh: true, autoplay: self.wantsPlayback) }
                             else { self.handleFailure(item.error ?? APIError.network("playback")) }
-                        } else if item.status == .readyToPlay { self.isLoading = false; self.consecutiveFailures = 0 }
+                        } else if item.status == .readyToPlay {
+                            self.prepareVisualization(asset: asset, token: token)
+                            self.startupTiming.itemReady = self.startupTiming.itemReady ?? (ProcessInfo.processInfo.systemUptime - self.startupClock)
+                            self.isLoading = false; self.consecutiveFailures = 0
+                            if self.wantsPlayback { self.player.playImmediately(atRate: Float(self.snapshot.rate)) }
+                        }
                     }
+                }
+                bufferObservation = item.observe(\.loadedTimeRanges, options: [.new]) { [weak self] _, _ in
+                    Task { @MainActor in guard let self, self.generation == token else { return }; self.resumeBufferedPlayback() }
+                }
+                emptyObservation = item.observe(\.isPlaybackBufferEmpty, options: [.new]) { [weak self] item, _ in
+                    Task { @MainActor in guard let self, self.generation == token else { return }; if item.isPlaybackBufferEmpty && self.wantsPlayback { self.waitingForBuffer = true; self.isLoading = true; self.cancelPrefetch(reset: false) }; self.resumeBufferedPlayback() }
                 }
                 if wantsPlayback { player.playImmediately(atRate: Float(snapshot.rate)) }; onTrackChanged?(source.track)
                 updateNowPlaying(); saveCheckpoint()
@@ -302,6 +354,62 @@ import AudioRealtime
                 if !refresh, !(error is APIError) { load(index: index, position: requestedPosition, refresh: true, autoplay: wantsPlayback) }
                 else { handleFailure(error) }
             }
+        }
+    }
+    private func prepareVisualization(asset: AVURLAsset, token: UUID) {
+        if resourceLoader?.isSegmented == true { updateSpectrumDemand(); return }
+        guard visualizationTask == nil else { return }
+        visualizationTask = Task { [weak self] in
+            guard let tracks = try? await asset.loadTracks(withMediaType: .audio), let self, !Task.isCancelled, self.generation == token else { return }
+            self.visualizationTrack = tracks.first; self.updateSpectrumDemand()
+        }
+    }
+    private var bufferedAhead: Double {
+        guard let item = player.currentItem else { return 0 }
+        let position = max(0, player.currentTime().seconds.isFinite ? player.currentTime().seconds : 0)
+        return item.loadedTimeRanges.map(\.timeRangeValue).filter { CMTimeGetSeconds($0.start) <= position + 0.05 && CMTimeGetSeconds(CMTimeRangeGetEnd($0)) >= position }
+            .map { CMTimeGetSeconds(CMTimeRangeGetEnd($0)) - position }.max() ?? 0
+    }
+    private func resumeBufferedPlayback() {
+        guard wantsPlayback, waitingForBuffer, let item = player.currentItem, item.status == .readyToPlay else { return }
+        let ahead = bufferedAhead, time = max(0, player.currentTime().seconds)
+        let threshold = hasPlayedCurrent ? 2 * snapshot.rate : 0.1
+        let atEnd = item.duration.seconds.isFinite && time + ahead >= item.duration.seconds - 0.05
+        guard ahead >= threshold || (atEnd && ahead > 0) else { return }
+        waitingForBuffer = false; isLoading = false
+        player.playImmediately(atRate: Float(snapshot.rate))
+    }
+    private func cancelPrefetch(reset: Bool) {
+        prefetchGeneration = UUID()
+        prefetchTask?.cancel(); prefetchTask = nil
+        if reset { prefetchedSource = nil; attemptedPrefetch = nil }
+    }
+    private func queueDidChange() { cancelPrefetch(reset: true) }
+    private func schedulePrefetchIfNeeded() {
+        guard prefetchTask == nil, preferences.prefetchNextTrack != false, preferences.cacheLimit > 0,
+              previewSnapshot == nil, isPlaying, wantsPlayback, !waitingForBuffer,
+              let stablePlaybackClock, ProcessInfo.processInfo.systemUptime - stablePlaybackClock >= 2,
+              snapshot.repeatMode != .track, snapshot.queue.count > 1, bufferedAhead >= 2 * snapshot.rate,
+              let index = upcomingIndex(automatic: true, consume: false) else { return }
+        let track = snapshot.queue[index]
+        let pair = (currentTrack?.id ?? "") + "->" + track.id
+        guard attemptedPrefetch != pair else { return }
+        attemptedPrefetch = pair
+        let token = generation
+        let prefetchToken = UUID(); prefetchGeneration = prefetchToken
+        prefetchTask = Task(priority: .background) { [weak self] in
+            guard let self else { return }
+            defer { if self.prefetchGeneration == prefetchToken { self.prefetchTask = nil } }
+            do {
+                if let local = try database.state(URL.self, key: "download-file:" + track.id), FileManager.default.fileExists(atPath: local.path) { return }
+                let source = try await provider.resolve(track)
+                try Task.checkCancellation()
+                guard token == generation, prefetchToken == prefetchGeneration else { return }
+                let expiry = AudioPrefetch.expiry(for: source)
+                guard expiry > Date() else { return }
+                prefetchedSource = (track.id, source, expiry)
+                _ = try await AudioPrefetch.fill(source: source, cache: cache)
+            } catch { /* Prefetch is optional and never changes playback or history. */ }
         }
     }
     private func handleFailure(_ error: Error) {
@@ -315,9 +423,11 @@ import AudioRealtime
         guard loadedTrackID != nil else { return }
         let time = player.currentTime().seconds
         if time.isFinite { position = max(0, time) }
-        if let duration = player.currentItem?.duration.seconds, duration.isFinite, duration > 0 { self.duration = duration }
+        if let item = player.currentItem, item.status == .readyToPlay, item.duration.seconds.isFinite, item.duration.seconds > 0 { self.duration = item.duration.seconds }
         let audible = player.timeControlStatus == .playing && player.rate > 0
         let clock = ProcessInfo.processInfo.systemUptime
+        resumeBufferedPlayback()
+        schedulePrefetchIfNeeded()
         if previewSnapshot == nil {
             _ = accumulator.update(clock: clock, audible: audible)
             if audible, let previousPosition { coveredMedia += max(0, min(position - previousPosition, 2 * snapshot.rate)) }
@@ -358,6 +468,7 @@ import AudioRealtime
         player.volume = Float(max(0, min(1, preferences.volume))) * (preferences.normalization ? normalizationGain : 1)
         updateSpectrumDemand()
         try? database.saveState(preferences, key: "preferences")
+        if preferences.prefetchNextTrack == false || preferences.cacheLimit == 0 { cancelPrefetch(reset: true) }
         Task { try? await cache.setLimit(preferences.cacheLimit) }
     }
     private func makeTap() -> MTAudioProcessingTap? {
@@ -376,7 +487,12 @@ import AudioRealtime
             bb_pcm_push(OpaquePointer(MTAudioProcessingTapGetStorage(tap)), data.assumingMemoryBound(to: Float.self), Int(outputFrames.pointee), max(1, Int(first.mNumberChannels)))
         })
         var tap: MTAudioProcessingTap?
-        guard MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PreEffects, &tap) == noErr else { return nil }
+        let status: OSStatus
+        if #available(macOS 27.0, *), resourceLoader?.isSegmented == true {
+            let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48000, channels: 2, interleaved: true)!
+            status = MTAudioProcessingTapCreateWithPreferredFormat(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PreEffects, format.formatDescription, &tap)
+        } else { status = MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PreEffects, &tap) }
+        guard status == noErr else { return nil }
         return tap
     }
     private func updateSpectrumDemand() {
@@ -396,8 +512,14 @@ import AudioRealtime
         let enabled = preferences.spectrum && visualizerVisible && isPlaying
         bb_pcm_enable(pcm, enabled)
         if let item = player.currentItem {
-            if enabled, item.audioMix == nil, let track = visualizationTrack, let tap = makeTap() {
-                let mix = AVMutableAudioMix(), parameter = AVMutableAudioMixInputParameters(track: track)
+            if enabled, item.audioMix == nil, let tap = makeTap() {
+                let parameter: AVMutableAudioMixInputParameters
+                if #available(macOS 27.0, *), resourceLoader?.isSegmented == true {
+                    // On macOS 27 this initializer selects the documented track-mix ID.
+                    parameter = AVMutableAudioMixInputParameters()
+                } else if let track = visualizationTrack { parameter = AVMutableAudioMixInputParameters(track: track) }
+                else { return }
+                let mix = AVMutableAudioMix()
                 parameter.audioTapProcessor = tap; mix.inputParameters = [parameter]; item.audioMix = mix
             } else if !enabled, item.audioMix != nil { item.audioMix = nil }
         }

@@ -26,6 +26,9 @@ struct SettingsView: View {
                 Text("主窗口不可见时停止绘制，已打开的桌面歌词独立更新。").font(.caption).foregroundStyle(.secondary)
             }
             Section("临时音频缓存") {
+                Toggle("预取下一首（最多 1 MiB）", isOn: Binding(get: { model.player.preferences.cacheLimit > 0 && model.player.preferences.prefetchNextTrack != false }, set: { model.player.preferences.prefetchNextTrack = $0 }))
+                    .disabled(model.player.preferences.cacheLimit == 0)
+                Text("当前播放稳定后准备下一首；缓冲不足时优先当前歌曲。设为不保留缓存时不预取。").font(.caption).foregroundStyle(.secondary)
                 Picker("容量上限", selection: $model.player.preferences.cacheLimit) { ForEach([0, 256, 512, 1024, 2048, 4096], id: \.self) { mb in Text(mb == 0 ? "不保留" : "\(mb) MB").tag(Int64(mb) * 1024 * 1024) } }
                 HStack { Text("已用 \(ByteCountFormatter.string(fromByteCount: cacheSize, countStyle: .file))"); Spacer(); Button("清空临时缓存") { Task { do { try await model.cache.clear(); cacheSize = try await model.cache.size() } catch { model.message = error.localizedDescription } } } }
                 Text("手动下载、装扮和播放历史单独保存，清空临时缓存不会删除这些内容。").font(.caption).foregroundStyle(.secondary)

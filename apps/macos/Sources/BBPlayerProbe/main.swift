@@ -28,6 +28,10 @@ import BBPlayerCore
                 reader.cancelReading(); return
             }
             let api = BilibiliClient()
+            if let index = arguments.firstIndex(of: "--startup-benchmark"), index + 1 < arguments.count {
+                try await StartupBenchmark.run(input: arguments[index + 1], api: api, arguments: arguments)
+                return
+            }
             if let index = arguments.firstIndex(of: "--match"), index + 2 < arguments.count {
                 let song = ExternalSong(id: "public-probe", title: arguments[index + 1], artist: arguments[index + 2], duration: 0, source: "probe")
                 let results = try await api.importCandidates(for: song)

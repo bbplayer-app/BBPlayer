@@ -1,0 +1,343 @@
+{
+  "date": "2026-10-26",
+  "scope": "Native macOS only; uncommitted implementation; mobile changes preserved without validation",
+  "sample": {
+    "bvid": "BV16zeK6zEnY",
+    "videoDurationSeconds": 3024,
+    "audioContentBytes": 82451937,
+    "selectedAACBitrate": 218142,
+    "exceedsOneGiB": false
+  },
+  "controlled": {
+    "sharedBytesPerSecond": 250000,
+    "roundTripSeconds": 0.1,
+    "clockCriterion": "First media time >= 0.05 s, confirmed by reaching >= 0.55 s",
+    "ordinaryColdAndUnprefetchedSwitchSeconds": [
+      0.6244387916813139,
+      0.6721667916863225,
+      0.6763341666664928,
+      0.6548963333189022,
+      0.6623453333158977,
+      0.645193875010591,
+      0.6663341249804944,
+      0.6171979583159555,
+      0.6231764999974985,
+      0.6236497499921825
+    ],
+    "indexedColdAndPrefetchedSwitchSeconds": [
+      1.011340791679686,
+      0.5195034583448432,
+      1.0070790416793898,
+      0.5103622916503809,
+      1.022693375009112,
+      0.5613866249914281,
+      1.0091737083275802,
+      0.5194800416647922,
+      1.0113543749903329,
+      0.49353454165975563
+    ],
+    "maximumAllowedSeconds": 2,
+    "slowWriterDelaySeconds": 0.2,
+    "optionalChapterDelaySeconds": 20
+  },
+  "realNetwork": {
+    "build": "Debug diagnostic probe",
+    "units": "seconds from playback operation; stage times from the associated load task",
+    "notControlled": true,
+    "cacheColdDefinition": "Fresh application chunk-cache directory and database for each run; not a cold DNS/CDN/system cache",
+    "baselineCommit": "3992397a6bd5be793a4a9cdbc1f78514f309e77c",
+    "baselineInstrumentationOnly": true,
+    "baselineSeparateProcesses": true,
+    "afterThreeRunsInOneProcess": true,
+    "switchFromBvid": "BV1Zu411x7mc",
+    "prefetchedSwitchPreparationSeconds": 4,
+    "notes": [
+      "Before cold timing uses three separate baseline processes to avoid the previously observed loader cancellation exception.",
+      "Before and after switch batches overlapped on the uncontrolled public network; these observations are diagnostic, not a controlled causal benchmark.",
+      "Failed clock-advance observations are retained. Missing firstByte on prefetched switches means playback used cached bytes, not zero network latency.",
+      "The after runs enabled the visualizer at zero output volume; frame counts are real PCM callbacks and spectrum is zero under output mute. Audible spectrum is separately verified by the generated quiet-tone regression."
+    ],
+    "beforeCold": [
+      {
+        "confirmedClockAdvance": false,
+        "firstByte": 0.21723879166529514,
+        "firstDelivery": 0.271978125005262,
+        "run": 1,
+        "sourceReady": 0.10991924999689218
+      },
+      {
+        "clockAdvance": 23.379837916669203,
+        "confirmedClockAdvance": true,
+        "firstByte": 0.19995716666744556,
+        "firstDelivery": 0.24442220832861494,
+        "itemReady": 22.62457633332815,
+        "run": 2,
+        "sourceReady": 0.14808679166890215
+      },
+      {
+        "clockAdvance": 12.680283000008785,
+        "confirmedClockAdvance": true,
+        "firstByte": 0.8370803333382355,
+        "firstDelivery": 0.903862791674328,
+        "itemReady": 12.033061875001295,
+        "run": 3,
+        "sourceReady": 0.14424829167546704
+      }
+    ],
+    "afterCold": [
+      {
+        "capturedFrames": 40320,
+        "clockAdvance": 0.7854157916735858,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.478736841900227",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstByte": 0.22440891666337848,
+        "firstDelivery": 0.28872916667023674,
+        "itemReady": 0.3046804166515358,
+        "operation": "cold",
+        "run": 1,
+        "sourceReady": 0.09525170832057483,
+        "spectrumPeak": 0
+      },
+      {
+        "capturedFrames": 41280,
+        "clockAdvance": 0.5751932916755322,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.460597380900227",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstByte": 0.1317399999825284,
+        "firstDelivery": 0.15545212497818284,
+        "itemReady": 0.16069895832333714,
+        "operation": "cold",
+        "run": 2,
+        "sourceReady": 0.0898193749890197,
+        "spectrumPeak": 0
+      },
+      {
+        "capturedFrames": 40320,
+        "clockAdvance": 0.6456519166822545,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.478057427900227",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstByte": 0.20740662500611506,
+        "firstDelivery": 0.22979345833300613,
+        "itemReady": 0.23436775000300258,
+        "operation": "cold",
+        "run": 3,
+        "sourceReady": 0.06695033333380707,
+        "spectrumPeak": 0
+      }
+    ],
+    "beforeSwitch": [
+      {
+        "capturedFrames": 0,
+        "clockAdvance": 29.363076583336806,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstByte": 0.2823048333521001,
+        "firstDelivery": 0.3330122916668188,
+        "itemReady": 29.040629083348904,
+        "operation": "switch",
+        "run": 1,
+        "sourceReady": 0.22822558335610665,
+        "spectrumPeak": 0,
+        "processExit": 0
+      },
+      {
+        "capturedFrames": 0,
+        "confirmedClockAdvance": false,
+        "diagnostics": {
+          "itemStatus": "1",
+          "rate": "0.0",
+          "repeat": "queue",
+          "requested": "false",
+          "timeControl": "0",
+          "waiting": ""
+        },
+        "firstByte": 0.22134266668581404,
+        "firstDelivery": 0.2669669583265204,
+        "itemReady": 27.265292374999262,
+        "operation": "switch",
+        "run": 2,
+        "sourceReady": 0.16993983334396034,
+        "spectrumPeak": 0,
+        "processExit": 0
+      },
+      {
+        "capturedFrames": 0,
+        "clockAdvance": 27.97680716664763,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstByte": 0.3696357916633133,
+        "firstDelivery": 0.4270760833460372,
+        "itemReady": 27.693864833330736,
+        "operation": "switch",
+        "run": 3,
+        "sourceReady": 0.22961995835066773,
+        "spectrumPeak": 0,
+        "processExit": 0
+      }
+    ],
+    "afterPrefetchedSwitch": [
+      {
+        "capturedFrames": 283200,
+        "clockAdvance": 0.5101388749899343,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.463709967900227",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstDelivery": 0.096806249988731,
+        "itemReady": 0.10051012499025092,
+        "operation": "switch",
+        "run": 1,
+        "sourceReady": 0.0003071666578762233,
+        "spectrumPeak": 0
+      },
+      {
+        "capturedFrames": 285120,
+        "clockAdvance": 0.5033443333522882,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.461692673900227",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstDelivery": 0.09360483332420699,
+        "itemReady": 0.0972816249995958,
+        "operation": "switch",
+        "run": 2,
+        "sourceReady": 0.0003374166553840041,
+        "spectrumPeak": 0
+      },
+      {
+        "capturedFrames": 278400,
+        "clockAdvance": 0.5101405416498892,
+        "confirmedClockAdvance": true,
+        "diagnostics": {
+          "bufferedAhead": "9.460476368900228",
+          "bufferRecovery": "false",
+          "itemStatus": "1",
+          "rate": "1.0",
+          "repeat": "queue",
+          "requested": "true",
+          "segmented": "true",
+          "timeControl": "2",
+          "waiting": ""
+        },
+        "firstDelivery": 0.09407704166369513,
+        "itemReady": 0.09900708333589137,
+        "operation": "switch",
+        "run": 3,
+        "sourceReady": 0.00028504166402854025,
+        "spectrumPeak": 0
+      }
+    ]
+  },
+  "verification": {
+    "coreTests": 68,
+    "appKitTests": 10,
+    "failures": 0,
+    "skips": 0,
+    "releaseBuild": true,
+    "signatureVerification": "Passed with configured persistent identity; not ad-hoc",
+    "installPerformed": false,
+    "commitPerformed": false,
+    "pushPerformed": false,
+    "largeRangeSimulation": {
+      "reportedTotalBytes": 4294967296,
+      "testedOffset": 2147483648,
+      "cacheBudgetBytes": 400000,
+      "fullMultiGiBTransferPerformed": false
+    }
+  },
+  "artifact": {
+    "bundle": "apps/macos/build/BBPlayer.app",
+    "executableSHA256": "ae5fa6830f39b51a0eef0b26ae03bdcb809b09b9419a7337bee355a35999b418",
+    "bundleBytes": 11236630,
+    "sourceFilesSHA256": {
+      "apps/macos/Sources/BBPlayerCore/AudioCache.swift": "9a22c85e7d328c015fe9f9788fec66d1dd90fc5c3389abe987a02c1bb379404a",
+      "apps/macos/Sources/BBPlayerCore/AudioPrefetch.swift": "fc82d73c32804d9d4a3d128e03bc9507bf4c63467bdb2f7097b39b813c60eb72",
+      "apps/macos/Sources/BBPlayerCore/AudioResourceLoader.swift": "bf66fd9804bae0d1b4433b3dae1fbca5b34c4b616f783ef4db343db976013149",
+      "apps/macos/Sources/BBPlayerCore/BilibiliClient.swift": "ad091149a07632862a74223b4c488e02e970124c68c70d9d13a8a238dc60943f",
+      "apps/macos/Sources/BBPlayerCore/Downloads.swift": "8314ee88a992ba77bbc101c6b79ba296e73b2a341397b32c6f54a246658724d1",
+      "apps/macos/Sources/BBPlayerCore/FragmentedAudioIndex.swift": "5e6cbb55ebf2d34c21716eed7a59892c98db5809eea4ab7a61c4f70e4e880538",
+      "apps/macos/Sources/BBPlayerCore/Models.swift": "0a0a8506b95d60645c41746691546403ac509c54cb31606dadac56e545b6e5c6",
+      "apps/macos/Sources/BBPlayerCore/NativePlaybackEngine.swift": "f18d417686dc6a3455ae75ba7f1c9491e009b4c019c938ecc2d8709b3c55a77b",
+      "apps/macos/Sources/BBPlayerCore/PlaybackTiming.swift": "63d5f103eb174ea4958de21ec0228f0aace66ddebaf4f7bdb3dc750266c01638",
+      "apps/macos/Sources/BBPlayerCore/SegmentedAudioServer.swift": "726a1ad4b6bef9b42a3fc439e333814aa3117e03d1cd626433abd21241a2f9b5",
+      "apps/macos/Sources/BBPlayerMac/SettingsView.swift": "42a6c21a5edc52d3d0b72510b057dee7d540073a92fc37e16be8699f0111a4a5",
+      "apps/macos/Sources/BBPlayerProbe/StartupBenchmark.swift": "a4da6720ba359cc10b4f429d6cd4894e351669a6440179f75badefc3c3bd13ba",
+      "apps/macos/Sources/BBPlayerProbe/main.swift": "ee7692223a5e5b9d1eb7f11c97768bc21e39b1a89899ca11e0d445e033b1e4ad"
+    }
+  },
+  "limitations": [
+    "Indexed fragmented playback requires macOS 27 to preserve the real audio tap; macOS 14-26 keep the compatible file loader. Older-system runtime acceptance was not performed.",
+    "Indexed playback requires a flat sidx in the first 256 KiB. Unindexed or unsupported fragmented MP4 can still take longer on the file path.",
+    "The public sample is approximately 79 MiB, not a real >1 GiB audio-file test. Large lengths and offsets are exercised by a virtual Range source and reduced cache budget.",
+    "No physical UI interaction, long-duration endurance, system disk-full fault, or older-system runtime pass is claimed."
+  ],
+  "evidenceSnapshot": "Pre-commit verification on 2026-10-26; subsequent local installation is recorded separately.",
+  "localInstallation20261027": {
+    "signatureVerified": true,
+    "persistentSignature": true,
+    "buildManifestMatched": true,
+    "remainingAccessibleDuplicateBundles": 0,
+    "dataDirectoriesModifiedByInstaller": false,
+    "executableSHA256": "27be25f0bdce962b3fbcb8f17898c74c2c790ea9b1b27346e51db9143a8d73bb"
+  }
+}

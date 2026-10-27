@@ -157,3 +157,40 @@ Removed the redundant LocalAuthentication dependency and query-context-only test
 - `swift test --package-path apps/macos`: **53 core + 10 AppKit tests passed**. Three added regressions cover repeated manual selection and candidate replacement, persistence of progress/cooldown/confirmed/skipped entries, stale/out-of-range callbacks, and an injected database write failure. The original exclusive-access expression has been removed from the selection callback.
 - A native button-automation attempt could not access SwiftUI button nodes in the XCTest process and did not reach the selection action. It is not counted as a pointer-driven pass; the verified regression exercises the selection/persistence path with isolated data. Physical selection and sheet dismissal require runtime acceptance.
 - Mobile source remains untouched by this correction. Installation follows the existing authorized personal feature-branch push, post-push persistent-signature build, installed/build content check and obsolete-package cleanup. Existing import data is checked for equality before and after replacement; no library migration or rematching is part of installation.
+
+
+## 2026-10-26 playback startup, next-track prefetch and rolling cache
+
+- `swift test --package-path apps/macos`: **68 core + 10 AppKit tests passed**, zero failures/skips. The 15 streaming regressions cover early incremental delivery, slow writes, delayed chapters, pending-write admission, buffer exhaustion/network recovery, pause intent, rapid switching/stale metadata, prefetch expiry/failure/cancellation, sequential/shuffle/list/single-repeat choices, real PCM and spectrum, HLS preview/position/rate/lyric restoration, local-listener shutdown and no-store responses. Download regression now verifies separately fetched chapters survive completion. Existing offline, lyrics and loudness tests passed.
+- `apps/macos/scripts/build-app.sh release`: passed with the configured persistent signing identity; strict/deep signature verification passed, and the result is not ad-hoc. The bundle is approximately 11 MiB. No installed application was replaced. Current build hash and full timing records are in `validation/startup-streaming-20261026.json`.
+
+Controlled source: one aggregate 250,000 bytes/s budget (2 Mb/s), 100 ms per-request latency. Each cold run uses a fresh database and chunk cache. The clock measurement captures the first media time >=0.05 s and confirms continued progress through >=0.55 s. Slow writer delay is 200 ms per block; optional chapters are delayed 20 seconds in the ordinary fixture. Indexed fixture generation uses optional local ffmpeg with AAC stream copy, not transcoding; a machine without that generator explicitly skips the corresponding fixture tests.
+
+| Controlled case | Runs | Clock-start range |
+| --- | ---: | ---: |
+| Ordinary AAC cold | 5 | 0.623–0.676 s |
+| Ordinary AAC switch without prefetch | 5 | 0.617–0.672 s |
+| Indexed fragmented AAC cold | 5 | 1.007–1.023 s |
+| Indexed fragmented AAC switch with prefetch | 5 | 0.494–0.561 s |
+
+All 20 measurements meet the two-second threshold. The shared server throttle prevents parallel requests from multiplying the configured bandwidth. A separate 80,000 bytes/s fixture is explicitly paused to exhaust the buffer, then resumed to verify automatic recovery and to verify that a user pause suppresses recovery. Low-volume decoded audio, not callback counts alone, establishes the new track-mix spectrum result; output-muted diagnostic runs correctly report a zero spectrum.
+
+Real-network sample: `BV16zeK6zEnY`, video duration 50:24. The selected ordinary AAC stream is 82,451,937 bytes (approximately 79 MiB), not over 1 GiB. These Debug-probe observations are uncontrolled diagnostics, not a promise of constant public-network latency or a randomized performance study. Before cold runs used separate processes because the old loader had a cancellation/session exception; after runs reused one process with fresh per-run application caches. DNS/CDN/system caches were not controlled. Before and after switch batches overlapped on the public network, so their exact numerical ratio must not be treated as a controlled causal result. Switches start from `BV1Zu411x7mc`; after runs allow four seconds of current-track playback for next-track preparation.
+
+| Real-network operation | Before, three runs | After, three runs |
+| --- | --- | --- |
+| Cold clock start | No confirmed advance in the nominal 30 s window; 23.380 s; 12.680 s | 0.785 s; 0.575 s; 0.646 s |
+| Switch to the long sample | 29.363 s; no confirmed advance in 30 s; 27.977 s | 0.510 s; 0.503 s; 0.510 s |
+
+After cold-load phases: source ready 0.067–0.095 s, first byte 0.132–0.224 s, first delivery 0.155–0.289 s, item ready 0.161–0.305 s. Prefetched switches reuse memory-only source information and cached bytes; source ready is approximately 0.0003 s and item ready 0.097–0.101 s. Missing first-byte fields in those records mean a cache hit, not a zero-latency network request. The compact JSON retains every before/after phase and failed observation. Real cold runs capture 40,320–41,280 PCM frames with the visualizer enabled and output muted.
+
+Capacity verification uses a 400,000-byte rolling budget plus a virtual HTTP resource reporting 4,294,967,296 bytes and a read at offset 2,147,483,648. It checks active-chunk retention, old-chunk eviction, cache-miss refetch, actual serialized file-size accounting, shrinking/zero budgets, pending-write overflow and failed writes without stopping delivery. This is boundary and reduced-budget simulation, not a full real-world >1 GiB audio download or long-duration endurance test.
+
+Limits: indexed playback uses macOS 27's track-mix tap; macOS 14–26 retain the compatible file loader and were not runtime-tested. The index must be flat and available in the first 256 KiB; unsupported or unindexed fragmented MP4 can still take longer to become ready. System-wide disk exhaustion, physical UI interaction, older-system runtime behavior and hours-long memory growth are not established by these tests. No mobile checks, Git writes, pushes, merges, publication or installation were performed. Local comparison builds added only timing/probe instrumentation to the baseline revision.
+
+
+## 2026-10-27 local installation and Git handoff
+
+The 2026-10-26 measurements and pre-commit state above are historical evidence. Following explicit authorization, the current Release was rebuilt and installed locally on 2026-10-27. The installer verified the persistent signature and the complete installed/build file manifest before removing managed duplicates. Accessible duplicate-bundle scan found no remaining copies. Music, downloads and credential data directories were not modified by the installer; no runtime login-retention pass is inferred from that fact. The application was left stopped.
+
+The current Mac source manifest still matches the recorded implementation. Git handoff includes only `apps/macos`; pre-existing mobile changes remain local without additional validation. A feature-branch push is followed by `update-local.sh --install-only`, which reruns Mac tests, rebuilds from that pushed revision and verifies installation before cleanup. GitHub Actions remain disabled; no release, deployment, PR, merge or external review is part of this handoff.

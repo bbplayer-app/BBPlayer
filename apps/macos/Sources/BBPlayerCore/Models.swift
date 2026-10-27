@@ -148,6 +148,7 @@ public struct PlayerPreferences: Codable, Sendable {
     public var floatingLocked = true
     public var showTranslation = true
     public var showRomanization = true
+    public var prefetchNextTrack: Bool? = nil
     public var cacheLimit: Int64 = 1_073_741_824
     public var lyricOffset: Double = 0
     public var volume: Double = 0.8
@@ -176,6 +177,10 @@ public enum APIError: Error, LocalizedError, Sendable, Equatable {
 public protocol MediaSourceProvider: Sendable {
     func search(_ query: String, page: Int) async throws -> [Track]
     func resolve(_ track: Track) async throws -> ResolvedAudio
+    func chapters(for track: Track) async throws -> [Chapter]
+}
+public extension MediaSourceProvider {
+    func chapters(for track: Track) async throws -> [Chapter] { [] }
 }
 
 @MainActor public protocol PlaybackEngine: AnyObject {
