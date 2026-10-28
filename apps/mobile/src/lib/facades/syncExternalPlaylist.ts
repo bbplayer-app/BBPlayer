@@ -381,15 +381,20 @@ export class SyncExternalPlaylistFacade {
 									? `[未匹配音源] ${match.errorMessage ?? '网络或超时异常，可重试'}`
 									: '[未匹配音源] 点击手动匹配或继续自动匹配'
 
+						const rawBvid = video?.bvid ?? track.bilibili?.bvid ?? ''
+						const rawCid = track.bilibili?.cid ?? null
+						const isMultiPage = track.bilibili?.isMultiPage ?? false
+
 						metaDataInserts.push({
 							trackId,
-							bvid: video?.bvid ?? '',
-							cid: null,
-							isMultiPage: false,
+							bvid: rawBvid,
+							cid: rawCid,
+							isMultiPage,
 							mainTrackTitle,
 							videoIsValid: true,
 						})
 
+						const isMatched = Boolean(video || rawBvid)
 						mappingInputs.push({
 							trackId,
 							playlistId: createdPlaylistId,
@@ -403,7 +408,7 @@ export class SyncExternalPlaylistFacade {
 							externalPlaylistId,
 							originalIndex: i,
 							originalTrack: track,
-							matchStatus: video
+							matchStatus: isMatched
 								? 'matched'
 								: status === 'pending'
 									? 'unmatched'

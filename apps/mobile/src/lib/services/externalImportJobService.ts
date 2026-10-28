@@ -1231,6 +1231,39 @@ export class ExternalImportJobService {
 							: {}),
 						updatedAt: legacyMigration.updatedAt,
 					})
+				} else if (track.bilibili?.bvid?.trim()) {
+					// 如果导入的歌曲本身已包含有效 Bilibili BVID，直接作为已匹配保留，仅匹配缺少音源的歌曲
+					const bvid = track.bilibili.bvid.trim()
+					const midNum = track.bilibili.upMid
+						? Number(track.bilibili.upMid)
+						: 0
+					const matchedVideo: BilibiliSearchVideo = {
+						type: 'video',
+						aid: 0,
+						bvid,
+						title: track.bilibili.mainTrackTitle || track.title,
+						author:
+							track.artists.filter(Boolean).join(' / ') || '未知歌手',
+						mid: isNaN(midNum) ? 0 : midNum,
+						pic: track.coverUrl ?? '',
+						duration: String(
+							track.duration > 0
+								? Math.round(track.duration / 1000)
+								: 0,
+						),
+						senddate: 0,
+						typeid: 0,
+					}
+					reconciledItems.push({
+						itemId,
+						jobId,
+						fingerprint,
+						originalIndex: i,
+						originalTrack: track,
+						status: 'matched',
+						matchedVideo,
+						updatedAt: existingItem?.updatedAt ?? now,
+					})
 				} else {
 					reconciledItems.push({
 						itemId,

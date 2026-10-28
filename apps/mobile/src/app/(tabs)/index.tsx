@@ -357,9 +357,17 @@ export default function SearchPage() {
 		if (data.shareType === 'text') {
 			query = data.value
 		} else if (data.shareType === 'url') {
+			const contentUri =
+				'contentUri' in data ? data.contentUri ?? undefined : undefined
+			const isBilibiliContentUri =
+				typeof contentUri === 'string' &&
+				/(^|:\/\/)(?:[\w-]+\.)?(?:bilibili\.com|b23\.tv)(?:\/|$)/i.test(
+					contentUri,
+				)
 			query =
+				(isBilibiliContentUri ? contentUri : undefined) ||
 				data.value ||
-				('contentUri' in data ? data.contentUri ?? undefined : undefined)
+				contentUri
 		} else if ('contentType' in data && data.contentType === 'website') {
 			query =
 				('contentUri' in data ? data.contentUri ?? undefined : undefined) ||
