@@ -132,19 +132,15 @@ class BBPlayerNativeModule : Module() {
         }
 
         Function("updateImportProgressNotification") { options: ImportProgressNotificationOptions ->
-            runCatching {
-                val context = requireContext()
-                showImportProgressNotification(context, options)
-            }
+            val context = requireContext()
+            showImportProgressNotification(context, options)
         }
 
         Function("cancelImportProgressNotification") {
-            runCatching {
-                val context = requireContext()
-                val notificationManager =
-                    context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                notificationManager.cancel(IMPORT_NOTIFICATION_ID)
-            }
+            val context = requireContext()
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(IMPORT_NOTIFICATION_ID)
         }
     }
 

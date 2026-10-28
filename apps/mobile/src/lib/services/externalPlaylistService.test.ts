@@ -1376,10 +1376,111 @@ describe('Stage 3: Decoupled ExternalPlaylistImportWorker & Background Execution
 		)
 		expect(afterRecovery?.job.status).toBe('paused')
 	})
+
+	it('emits paused event instead of completed when matching ends with error items', async () => {
+		const tracks = [createTrack(0)]
+		const snap = externalImportJobService.createOrResumeJob({
+			source: 'netease',
+			sourcePlaylistId: 'error_pause_event_test',
+			tracks,
+			legacyStorage: mockStateStorage,
+		})
+
+		searchVideosMock.mockReturnValue(
+			errAsync(
+				new BilibiliApiError({
+					message: 'Network connection timeout',
+					type: 'RequestFailed',
+
+				}),
+			),
+		)
+
+		const events: string[] = []
+		const unsub = externalPlaylistImportWorker.subscribe((e) => {
+			if (e.jobId === snap.job.jobId) {
+				events.push(e.type)
+			}
+		})
+
+		const outcome = await externalPlaylistImportWorker.start(snap.job.jobId, {
+			requestDelayMs: 2,
+		})
+		unsub()
+
+		expect(outcome.status).toBe('paused')
+		expect(events).toContain('paused')
+		expect(events).not.toContain('completed')
+	})
+
+	it('preserves new worker run state when a previous run is aborted and superseded', async () => {
+		const tracks = [createTrack(0), createTrack(1)]
+		const snap = externalImportJobService.createOrResumeJob({
+			source: 'netease',
+			sourcePlaylistId: 'superseded_race_test',
+			tracks,
+			legacyStorage: mockStateStorage,
+		})
+
+		let resolveFirstSearch!: () => void
+		const slowSearch = new Promise<void>((resolve) => {
+			resolveFirstSearch = resolve
+		})
+		searchVideosMock.mockImplementationOnce(({ signal }) => {
+			return ResultAsync.fromSafePromise(
+				new Promise<void>((resolve) => {
+					const onAbort = () => resolve()
+					signal?.addEventListener('abort', onAbort, { once: true })
+					void slowSearch.then(() => {
+						signal?.removeEventListener('abort', onAbort)
+						resolve()
+					})
+				}),
+			).andThen(() =>
+				okAsync({
+					result: [createBilibiliVideo(0)],
+					numPages: 1,
+				}),
+			)
+		})
+
+		// Start run 1
+		const run1 = externalPlaylistImportWorker.start(snap.job.jobId, {
+			requestDelayMs: 2,
+		})
+		await new Promise((r) => setTimeout(r, 10))
+
+		// Pause run 1
+		externalPlaylistImportWorker.pause(snap.job.jobId)
+
+		// Immediately start run 2
+		searchVideosMock.mockReturnValue(
+			okAsync({
+				result: [createBilibiliVideo(0)],
+				numPages: 1,
+			}),
+		)
+		const run2 = externalPlaylistImportWorker.start(snap.job.jobId, {
+			requestDelayMs: 2,
+		})
+
+		// Now wake up run 1 (which will be aborted)
+		resolveFirstSearch()
+		await run1
+		const outcome2 = await run2
+
+		// Run 2 must finish successfully and not be wiped by run 1's finally
+		expect(outcome2.status).toBe('completed')
+		const finalSnapshot = externalImportJobService.getJobSnapshot(
+			snap.job.jobId,
+		)
+		expect(finalSnapshot?.job.status).toBe('completed')
+	})
 })
 
 describe('Stage 4: System Background Execution & Progress Notification Adapter', () => {
 	beforeEach(() => {
+		externalPlaylistImportWorker.resetForTesting()
 		searchVideosMock.mockReset()
 		storageMap.clear()
 		externalImportJobService.clearAllJobsForTesting()

@@ -1,3 +1,4 @@
+import { cancelImportProgressNotification } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import {
 	addEventListener as addNetInfoEventListener,
@@ -68,13 +69,6 @@ initializeSentry()
 function onAppStateChange(status: AppStateStatus) {
 	if (Platform.OS !== 'web') {
 		focusManager.setFocused(status === 'active')
-	}
-	if (status === 'active') {
-		try {
-			externalPlaylistImportWorker.recoverStuckJobs()
-		} catch {
-			// Ignore before DB is ready
-		}
 	}
 }
 
@@ -224,7 +218,10 @@ function RootLayout() {
 				logger.error('恢复同步任务失败:', error)
 			})
 			try {
-				externalPlaylistImportWorker.recoverStuckJobs()
+				const recoveredCount = externalPlaylistImportWorker.recoverStuckJobs()
+				if (recoveredCount > 0) {
+					cancelImportProgressNotification()
+				}
 			} catch (error) {
 				logger.error('恢复外部歌单导入任务失败:', error)
 			}

@@ -223,9 +223,10 @@ export class ExternalPlaylistImportWorker {
 		}
 
 		if (this.activeRematchPlaylistId !== null && this.activeRematchPromise) {
+			const previousRematchPromise = this.activeRematchPromise
 			this.pausePlaylistRematch(this.activeRematchPlaylistId)
 			try {
-				await this.activeRematchPromise
+				await previousRematchPromise
 			} catch {
 				// Ignore
 			}
@@ -350,6 +351,13 @@ export class ExternalPlaylistImportWorker {
 					}
 
 					if (err.message === 'Aborted') {
+						if (this.abortController !== controller) {
+							// 当前 run 已被取代或已被 pause/cancel 处理，直接返回，避免覆写新 run 状态
+							return {
+								status: 'paused',
+								snapshot: this.jobService.getJobSnapshot(jobId),
+							}
+						}
 						const latest = this.jobService.getJobSnapshot(jobId)
 						const statusAfterAbort: ImportJobStatus =
 							latest?.job.status === 'cancelled'
@@ -368,6 +376,14 @@ export class ExternalPlaylistImportWorker {
 						return {
 							status: statusAfterAbort,
 							snapshot: updated,
+						}
+					}
+
+					if (this.abortController !== controller) {
+						return {
+							status: 'failed',
+							snapshot: this.jobService.getJobSnapshot(jobId),
+							error: err,
 						}
 					}
 
@@ -390,7 +406,7 @@ export class ExternalPlaylistImportWorker {
 							? 'paused'
 							: 'completed'
 				const updated = this.jobService.updateJobStatus(jobId, finalStatus)
-				this.notifyUpdated(jobId, 'completed')
+				this.notifyUpdated(jobId, finalStatus)
 				return {
 					status: finalStatus,
 					snapshot: updated,
@@ -398,7 +414,7 @@ export class ExternalPlaylistImportWorker {
 			} finally {
 				this.etaSecondsByJobId.delete(jobId)
 				this.currentTrackByJobId.delete(jobId)
-				if (this.activeJobId === jobId) {
+				if (this.abortController === controller) {
 					this.activeJobId = null
 					this.abortController = null
 					this.activeRunPromise = null
@@ -426,9 +442,11 @@ export class ExternalPlaylistImportWorker {
 		}
 
 		if (this.activeJobId && this.activeRunPromise) {
-			this.pause(this.activeJobId)
+			const previousJobId = this.activeJobId
+			const previousJobPromise = this.activeRunPromise
+			this.pause(previousJobId)
 			try {
-				await this.activeRunPromise
+				await previousJobPromise
 			} catch {
 				// Ignore
 			}
@@ -439,9 +457,10 @@ export class ExternalPlaylistImportWorker {
 			this.activeRematchPlaylistId !== playlistId &&
 			this.activeRematchPromise
 		) {
+			const previousRematchPromise = this.activeRematchPromise
 			this.pausePlaylistRematch(this.activeRematchPlaylistId)
 			try {
-				await this.activeRematchPromise
+				await previousRematchPromise
 			} catch {
 				// Ignore
 			}
@@ -570,7 +589,7 @@ export class ExternalPlaylistImportWorker {
 					rateLimited,
 				}
 			} finally {
-				if (this.activeRematchPlaylistId === playlistId) {
+				if (this.abortController === controller) {
 					this.activeRematchPlaylistId = null
 					this.abortController = null
 					this.activeRematchPromise = null

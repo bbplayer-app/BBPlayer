@@ -333,16 +333,29 @@ export class SyncExternalPlaylistFacade {
 						})
 					}
 
-					let insertedTracks: { id: number }[] = []
+					let insertedTracks: { id: number; uniqueKey: string }[] = []
 					if (trackInserts.length > 0) {
 						insertedTracks = await tx
 							.insert(schema.tracks)
 							.values(trackInserts)
-							.returning({ id: schema.tracks.id })
+							.returning({
+								id: schema.tracks.id,
+								uniqueKey: schema.tracks.uniqueKey,
+							})
+					}
+
+					const trackIdByKey = new Map<string, number>()
+					for (const item of insertedTracks) {
+						if (item.uniqueKey) {
+							trackIdByKey.set(item.uniqueKey, item.id)
+						}
 					}
 
 					for (let i = 0; i < matchResults.length; i++) {
-						const trackId = insertedTracks[i]?.id
+						const currentUniqueKey = trackInserts[i]?.uniqueKey
+						const trackId = currentUniqueKey
+							? trackIdByKey.get(currentUniqueKey)
+							: undefined
 						if (!trackId) continue
 						orderedTrackIds.push(trackId)
 						const match = matchResults[i]
@@ -419,9 +432,20 @@ export class SyncExternalPlaylistFacade {
 				})
 
 				// 5. 写入 external_track_mappings 并将对应的 Draft Import Job 标记为已确认
-				externalImportJobService.upsertTrackMappings(mappingInputs)
-				if (context?.jobId || context?.sourcePlaylistId) {
-					externalImportJobService.markJobConfirmed(resolvedJobId, playlistId)
+				try {
+					externalImportJobService.upsertTrackMappings(mappingInputs)
+					if (context?.jobId || context?.sourcePlaylistId) {
+						externalImportJobService.markJobConfirmed(resolvedJobId, playlistId)
+					}
+				} catch (error) {
+					logger.warning(
+						'保存歌单后同步 external_track_mappings 或确认任务失败，但本地歌单已保存',
+						{
+							playlistId,
+							resolvedJobId,
+							error,
+						},
+					)
 				}
 
 				return playlistId
