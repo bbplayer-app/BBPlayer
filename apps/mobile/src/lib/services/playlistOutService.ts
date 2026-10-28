@@ -249,13 +249,10 @@ export class PlaylistOutService {
 		tracks: GenericTrack[]
 	}): boolean {
 		if (!data.tracks || data.tracks.length === 0) return false
-		const hasBiliTracks = data.tracks.some((t) => Boolean(t.bilibili?.bvid))
-		if (!hasBiliTracks) return false
-		const isPlatformBilibili =
-			data.playlist.platform?.trim().toLowerCase() === 'bilibili' ||
-			Boolean(data.playlist.bilibili) ||
-			data.tracks.every((t) => Boolean(t.bilibili?.bvid))
-		return isPlatformBilibili
+		const allTracksHaveBvid = data.tracks.every((t) =>
+			Boolean(t.bilibili?.bvid?.trim()),
+		)
+		return allTracksHaveBvid
 	}
 
 	/**

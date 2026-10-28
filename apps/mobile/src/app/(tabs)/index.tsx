@@ -236,7 +236,14 @@ export default function SearchPage() {
 			}
 
 			const parsedData = jsonRes.value
-			if (playlistOutService.isDirectBilibiliPlaylist(parsedData)) {
+			const allTracksHaveBvid =
+				parsedData.tracks.length > 0 &&
+				parsedData.tracks.every((t) => Boolean(t.bilibili?.bvid))
+
+			if (
+				allTracksHaveBvid &&
+				playlistOutService.isDirectBilibiliPlaylist(parsedData)
+			) {
 				const loadingToast = toast.loading('正在导入哔哩哔哩歌单...')
 				try {
 					const saveRes =
@@ -329,17 +336,41 @@ export default function SearchPage() {
 			}
 		}
 		const data = resolvedSharedPayloads[0]
-		if ('contentUri' in data && data.contentUri) {
-			const fileUri = data.contentUri
+		const isLocalFile =
+			(data.shareType === 'file' ||
+				('contentType' in data && data.contentType === 'file')) &&
+			(('contentUri' in data && Boolean(data.contentUri)) ||
+				(typeof data.value === 'string' &&
+					(data.value.startsWith('file:') ||
+						data.value.startsWith('content:'))))
+
+		if (isLocalFile) {
+			const fileUri =
+				('contentUri' in data && data.contentUri) || data.value
 			const fileName = data.originalName
 			clearSharedPayloads()
 			void handleIncomingFileUri(fileUri, fileName)
 			return
 		}
+
 		let query: string | undefined
 		if (data.shareType === 'text') {
 			query = data.value
+		} else if (data.shareType === 'url') {
+			query =
+				data.value ||
+				('contentUri' in data ? data.contentUri ?? undefined : undefined)
+		} else if ('contentType' in data && data.contentType === 'website') {
+			query =
+				('contentUri' in data ? data.contentUri ?? undefined : undefined) ||
+				data.value
+		} else if (
+			typeof data.value === 'string' &&
+			data.value.trim().length > 0
+		) {
+			query = data.value
 		}
+
 		if (!query) {
 			clearSharedPayloads()
 			return
