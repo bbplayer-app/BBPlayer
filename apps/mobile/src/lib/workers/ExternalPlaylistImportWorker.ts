@@ -353,9 +353,13 @@ export class ExternalPlaylistImportWorker {
 					if (err.message === 'Aborted') {
 						if (this.abortController !== controller) {
 							// 当前 run 已被取代或已被 pause/cancel 处理，直接返回，避免覆写新 run 状态
+							const superseded = this.jobService.getJobSnapshot(jobId)
 							return {
-								status: 'paused',
-								snapshot: this.jobService.getJobSnapshot(jobId),
+								status:
+									superseded?.job.status === 'cancelled'
+										? 'cancelled'
+										: 'paused',
+								snapshot: superseded,
 							}
 						}
 						const latest = this.jobService.getJobSnapshot(jobId)
