@@ -33,10 +33,10 @@ export default function AppearanceSettingsPage() {
 		(state) => state.settings.nowPlayingBarStyle,
 	)
 	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
-	const enableMinimalistMode = useAppStore(
-		(state) => state.settings.enableMinimalistMode,
-	)
 	const setSettings = useAppStore((state) => state.setSettings)
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 
 	const nowPlayingBarStyleMenu = useMenuActions([
 		{
@@ -118,9 +118,28 @@ export default function AppearanceSettingsPage() {
 				]}
 			>
 				<SettingsSectionTitle
-					title='播放器与主页'
+					title='显示'
 					first
 				/>
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>纯白背景</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							仅用于墨水屏
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={pureWhiteBackground}
+						onValueChange={(value) =>
+							setSettings({ pureWhiteBackground: value })
+						}
+						testID='pure-white-background-switch'
+					/>
+				</View>
+				<SettingsSectionTitle title='播放器' />
 				<View style={styles.settingRow}>
 					<View style={styles.settingTextContainer}>
 						<Text>显示音频频谱</Text>
@@ -134,23 +153,6 @@ export default function AppearanceSettingsPage() {
 					<UniversalSwitch
 						value={enableSpectrumVisualizer}
 						onValueChange={handleSpectrumToggle}
-					/>
-				</View>
-				<View style={styles.settingRow}>
-					<View style={styles.settingTextContainer}>
-						<Text>清爽模式</Text>
-						<Text
-							variant='bodySmall'
-							style={{ color: colors.onSurfaceVariant }}
-						>
-							开启后主页仅显示顶部搜索框，隐藏其他推荐及历史组件
-						</Text>
-					</View>
-					<UniversalSwitch
-						value={enableMinimalistMode}
-						onValueChange={(value) =>
-							setSettings({ enableMinimalistMode: value })
-						}
 					/>
 				</View>
 				{Platform.OS === 'android' && (
@@ -175,7 +177,7 @@ export default function AppearanceSettingsPage() {
 				</View>
 
 				<SettingsSectionTitle title='主题' />
-				<ThemeSection />
+				<ThemeSection disabled={pureWhiteBackground} />
 			</ScrollView>
 		</View>
 	)

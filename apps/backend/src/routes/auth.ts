@@ -5,6 +5,7 @@ import { sign } from 'hono/jwt'
 
 import { createDb } from '../db'
 import { users } from '../db/schema'
+import type { Env } from '../env'
 import { authMiddleware } from '../middleware/auth'
 import {
 	loginRequestSchema,

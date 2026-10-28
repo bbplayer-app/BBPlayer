@@ -25,6 +25,7 @@ import {
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import useTrackDuration from '@/hooks/player/useTrackProgress'
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { seekWithinTrack } from '@/lib/player/seek'
@@ -114,6 +115,9 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		[chapters, nativeDuration, podcast],
 	)
 	const { colors } = useTheme()
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	const activeSkin = useActiveSkin()
 	const skinSliderThumbSize = useSkinStore(
 		(state) => state.skinSliderThumbSize ?? 20,
@@ -313,12 +317,20 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 		() => ({
 			activeTrackColor: colors.primary,
 			bufferedTrackColor: Color(colors.primary).alpha(0.28).rgb().string(),
-			inactiveTrackColor: colors.surfaceVariant,
+			inactiveTrackColor: pureWhiteBackground
+				? colors.outlineVariant
+				: colors.surfaceVariant,
 			thumbColor: colors.primary,
 			activeTickColor: colors.onSurface,
 			inactiveTickColor: colors.onSurface,
 		}),
-		[colors.primary, colors.surfaceVariant, colors.onSurface],
+		[
+			colors.primary,
+			colors.surfaceVariant,
+			colors.onSurface,
+			colors.outlineVariant,
+			pureWhiteBackground,
+		],
 	)
 	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
 	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)

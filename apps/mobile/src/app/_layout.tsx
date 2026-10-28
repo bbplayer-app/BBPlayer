@@ -26,9 +26,8 @@ import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
 import useCheckUpdate from '@/hooks/app/useCheckUpdate'
 import { useFastMigrations } from '@/hooks/app/useFastMigrations'
 import {
-	HIDDEN_SEGMENT_ROOTS,
 	nowPlayingBarStore$,
-	routeNameToSegmentRoot,
+	shouldHideNowPlayingBar,
 } from '@/hooks/stores/nowPlayingBarStore'
 import { initPlaybackContextStore } from '@/hooks/stores/playbackContextStore'
 import { serializeCookieObject } from '@/hooks/stores/useAppStore'
@@ -282,7 +281,7 @@ function RootLayout() {
 								// 而是等到 transitionEnd，行为与 player 页面一致。
 								if (
 									route.name !== 'modal' &&
-									HIDDEN_SEGMENT_ROOTS.has(routeNameToSegmentRoot(route.name))
+									shouldHideNowPlayingBar(route.name)
 								) {
 									nowPlayingBarStore$.hiddenScreenActive.set(true)
 								}
@@ -298,9 +297,7 @@ function RootLayout() {
 									// 返回动画结束后，才根据目标页面决定是否恢复播放条。
 									if (route.name !== 'modal') {
 										nowPlayingBarStore$.hiddenScreenActive.set(
-											HIDDEN_SEGMENT_ROOTS.has(
-												routeNameToSegmentRoot(route.name),
-											),
+											shouldHideNowPlayingBar(route.name),
 										)
 									}
 
@@ -428,6 +425,10 @@ function RootLayout() {
 						/>
 						<Stack.Screen
 							name='playlist/external-sync'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='settings/index'
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen

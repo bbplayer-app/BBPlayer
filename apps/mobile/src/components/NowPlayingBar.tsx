@@ -33,8 +33,8 @@ import { scheduleOnRN } from 'react-native-worklets'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSmoothProgress from '@/hooks/player/useSmoothProgress'
 import {
-	HIDDEN_SEGMENT_ROOTS,
 	nowPlayingBarStore$,
+	shouldHideNowPlayingBar,
 } from '@/hooks/stores/nowPlayingBarStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
@@ -108,7 +108,7 @@ function NowPlayingBar() {
 	// 提前显示；segments 判断则保证进入隐藏页面时立即隐藏。
 	const hiddenScreenActive = useValue(nowPlayingBarStore$.hiddenScreenActive)
 	const shouldShow =
-		!hiddenScreenActive && !HIDDEN_SEGMENT_ROOTS.has(segments[0] ?? '')
+		!hiddenScreenActive && !shouldHideNowPlayingBar(segments.join('/'))
 	if (!shouldShow) {
 		return null
 	}
@@ -138,6 +138,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 				: 0
 
 	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 
 	const finalPlayingIndicator = isPlaying ? 'pause' : 'play'
 
@@ -276,7 +277,11 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 						style={[
 							playerStyle,
 							{
-								backgroundColor: backgroundColor ?? colors.elevation.level2,
+								backgroundColor: pureWhiteBackground
+									? colors.background
+									: (backgroundColor ?? colors.elevation.level2),
+								borderColor: colors.outlineVariant,
+								borderWidth: pureWhiteBackground ? StyleSheet.hairlineWidth : 0,
 								paddingBottom: bottomPadding,
 								height:
 									nowPlayingBarStyle === 'bottom'

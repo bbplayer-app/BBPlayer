@@ -92,7 +92,7 @@ export default function GeneralSettingsPage() {
 
 	const menuActions = useMenuActions([
 		{
-			title: '主页',
+			title: '搜索',
 			state: startupScreen === 'home' ? 'on' : 'off',
 			onPress: () => setStartupScreen('home'),
 		},

@@ -5,6 +5,20 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Added
+
+- 新增仅用于墨水屏的纯白背景模式，开启后禁用主题功能
+
+### Fixed
+
+- 修复词幕（Lyricon）连接失败后持续在后台重试的问题
+
+### Changed
+
+- 默认不再在构建后保留 Gradle Daemon
+
 ## [2.7.0] - 2026-09-24
 
 ### Added

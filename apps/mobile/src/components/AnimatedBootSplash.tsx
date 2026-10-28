@@ -12,6 +12,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import { storage } from '@/utils/mmkv'
@@ -36,6 +37,9 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const isDarkMode = useColorScheme() === 'dark'
 	const insets = useSafeAreaInsets()
 	const activeSkin = useActiveSkin()
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 	const selectedAssetId = useSkinStore(
 		(state) => state.selectedSkinBootSplashAssetId,
 	)
@@ -59,13 +63,16 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		preloadedCard = preloadRaw.slice(pipeIdx + 1) || null
 	}
 
-	const bootSplashVideo =
-		preloadedVideo && selectedMode === 'video'
+	const bootSplashVideo = pureWhiteBackground
+		? null
+		: preloadedVideo && selectedMode === 'video'
 			? preloadedVideo
 			: selectedMode === 'video'
 				? (bootSplashAsset?.video ?? null)
 				: null
-	const bootSplashAssetCard = preloadedCard || bootSplashAsset?.card || null
+	const bootSplashAssetCard = pureWhiteBackground
+		? null
+		: preloadedCard || bootSplashAsset?.card || null
 	const [visible, setVisible] = useState(true)
 	const [introFinished, setIntroFinished] = useState(false)
 	const [videoEnded, setVideoEnded] = useState(false)
@@ -164,6 +171,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 				container.style,
 				styles.container,
 				isDarkMode && styles.containerDark,
+				pureWhiteBackground && { backgroundColor: '#FFFFFF' },
 				containerStyle,
 			]}
 		>

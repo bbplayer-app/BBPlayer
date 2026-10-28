@@ -1,18 +1,9 @@
-// oxlint-disable-next-line import/no-unassigned-import
-import 'dayjs/locale/zh-cn'
-
-import { WeeklyHeatMap } from '@bbplayer/heatmap'
-import type { TrueSheet } from '@lodev09/react-native-true-sheet'
-import Color from 'color'
-import dayjs from 'dayjs'
-import { eq } from 'drizzle-orm'
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { File } from 'expo-file-system'
-import { Image } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useIncomingShare } from 'expo-sharing'
 import {
+	type ComponentRef,
 	useCallback,
 	useDeferredValue,
 	useEffect,
@@ -21,41 +12,31 @@ import {
 } from 'react'
 import {
 	AppState,
+	BackHandler,
 	Keyboard,
+	KeyboardAvoidingView,
 	Platform,
-	ScrollView,
+	Pressable,
 	StyleSheet,
 	ToastAndroid,
 	View,
 } from 'react-native'
-import { Touchable } from 'react-native-gesture-handler'
 import { useMMKVObject } from 'react-native-mmkv'
-import { Icon, Searchbar, Text, useTheme } from 'react-native-paper'
-import { useAnimatedRef } from 'react-native-reanimated'
-import Animated from 'react-native-reanimated'
+import { Searchbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
-import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
-import SearchSuggestions, {
+import SearchHistory, {
 	type SearchHistoryItem,
-} from '@/features/home/SearchSuggestions'
-import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
-import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
+} from '@/features/search/SearchHistory'
+import SearchSuggestions from '@/features/search/SearchSuggestions'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
-import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
-import { useRecentPlaylists } from '@/hooks/queries/useRecentPlaylists'
-import useAppStore from '@/hooks/stores/useAppStore'
-import { useModalStore } from '@/hooks/stores/useModalStore'
-import useSkinStore from '@/hooks/stores/useSkinStore'
-import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { queryClient } from '@/lib/config/queryClient'
-import db from '@/lib/db/db'
-import * as schema from '@/lib/db/schema'
 import { syncExternalPlaylistFacade } from '@/lib/facades/syncExternalPlaylist'
 import { markPerfInteractive } from '@/lib/performance'
 import { playlistOutService } from '@/lib/services/playlistOutService'
@@ -69,76 +50,71 @@ import toast from '@/utils/toast'
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
 
-const getGreetingMsg = () => {
-	const hour = new Date().getHours()
-	if (hour >= 0 && hour < 6) return '凌晨好'
-	if (hour >= 6 && hour < 12) return '早上好'
-	if (hour >= 12 && hour < 18) return '下午好'
-	if (hour >= 18 && hour < 24) return '晚上好'
-	return '你好'
-}
-
-function HomePage() {
+export default function SearchPage() {
 	useNowPlayingBar()
-	const theme = useTheme()
-	const { colors } = theme
+	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
+	const haveTrack = useCurrentTrack()
+	const headerForegroundColor = useSkinForegroundColor()
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
 	const [isLoading, setIsLoading] = useState(false)
 	const [searchFocused, setSearchFocused] = useState(false)
+	const suggestionsVisible =
+		searchFocused &&
+		searchQuery.trim().length > 0 &&
+		deferredSearchQuery.trim().length > 0
+	const searchBarRef = useRef<ComponentRef<typeof Searchbar>>(null)
+	const dismissPanel = useCallback(() => {
+		setSearchFocused(false)
+		searchBarRef.current?.blur()
+		Keyboard.dismiss()
+	}, [])
+	useFocusEffect(
+		useCallback(() => {
+			const backSubscription = BackHandler.addEventListener(
+				'hardwareBackPress',
+				() => {
+					if (!searchFocused) return false
+					dismissPanel()
+					return true
+				},
+			)
+			// Android 在输入法打开时会先由系统处理返回键，此时仍需收起面板。
+			const keyboardSubscription = Keyboard.addListener(
+				'keyboardDidHide',
+				dismissPanel,
+			)
+			return () => {
+				backSubscription.remove()
+				keyboardSubscription.remove()
+			}
+		}, [dismissPanel, searchFocused]),
+	)
+	useFocusEffect(useCallback(() => () => dismissPanel(), [dismissPanel]))
+	const [contentHeight, setContentHeight] = useState(0)
+	const contentBottomPadding = haveTrack ? 86 : 24
 	const {
 		resolvedSharedPayloads,
 		isResolving,
 		clearSharedPayloads,
 		refreshSharePayloads,
 	} = useIncomingShare()
-	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie)
-	const enableMinimalistMode = useAppStore(
-		(state) => state.settings.enableMinimalistMode,
-	)
-	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
-	const openModal = useModalStore((state) => state.open)
-	const activeSkin = useActiveSkin()
-	const activeAvatarFrameIndex = useSkinStore(
-		(state) => state.activeAvatarFrameIndex,
-	)
-	const headerForegroundColor = useSkinForegroundColor()
-	const searchBarRef = useAnimatedRef<View>()
-	const syncFailuresSheetRef = useRef<TrueSheet>(null)
-
-	const { data: personalInfo } = usePersonalInformation()
-	const { data: heatmapData } = usePlayHistoryHeatmap()
-
-	const { data: syncFailures } = useLiveQuery(
-		db
-			.select({ id: schema.playlistSyncQueue.id })
-			.from(schema.playlistSyncQueue)
-			.where(eq(schema.playlistSyncQueue.status, 'failed'))
-			.limit(1),
-	)
-	const hasSyncFailures = (syncFailures?.length ?? 0) > 0
-
-	const { data: recentPlaylists } = useRecentPlaylists()
-
 	const { markInteractive } = useObserve()
-
 	useEffect(() => {
 		markInteractive()
 		void markPerfInteractive()
 	}, [markInteractive])
-
-	const greeting = getGreetingMsg()
 
 	const saveSearchHistory = useCallback(
 		(history: SearchHistoryItem[]) => {
 			try {
 				setSearchHistory(history)
 			} catch (error) {
-				toastAndLogError('保存搜索历史失败', error, 'UI.Home')
+				toastAndLogError('保存搜索历史失败', error, 'UI.Search')
 			}
 		},
 		[setSearchHistory],
@@ -184,18 +160,21 @@ function HomePage() {
 	const handleEnter = useCallback(
 		async (query: string) => {
 			if (!query.trim()) return
-			Keyboard.dismiss()
+			dismissPanel()
 			setIsLoading(true)
-			const addToHistory = await matchSearchStrategies(query)
-			const needAddToHistory = navigateWithSearchStrategy(addToHistory, router)
-			if (needAddToHistory === 1) {
-				addSearchHistory(query)
+			try {
+				const result = await matchSearchStrategies(query)
+				if (navigateWithSearchStrategy(result, router) === 1) {
+					addSearchHistory(query)
+				}
+				setSearchQuery('')
+			} catch (error) {
+				toastAndLogError('搜索失败，请重试', error, 'UI.Search')
+			} finally {
+				setIsLoading(false)
 			}
-			setIsLoading(false)
-			setSearchQuery('')
-			setSearchFocused(false)
 		},
-		[addSearchHistory, router],
+		[addSearchHistory, dismissPanel, router],
 	)
 
 	const handleSuggestionPress = useCallback(
@@ -381,489 +360,98 @@ function HomePage() {
 		handleIncomingJsonContent,
 	])
 
-	if (isResolving) {
-		return (
+	return (
+		<KeyboardAvoidingView
+			style={[styles.container, { backgroundColor: colors.background }]}
+			behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+		>
+			<SkinAppbarBackground height={insets.top + 100} />
+			{searchFocused && (
+				<Pressable
+					style={StyleSheet.absoluteFill}
+					onPress={dismissPanel}
+					accessibilityLabel='收起搜索建议'
+					testID='search-panel-backdrop'
+				/>
+			)}
 			<View
-				style={[
-					styles.container,
-					{
-						backgroundColor: colors.background,
-						justifyContent: 'center',
-						alignItems: 'center',
-					},
-				]}
+				pointerEvents='none'
+				style={[styles.header, { paddingTop: insets.top + 8 }]}
 			>
-				<ActivityIndicator
-					size='large'
-					color={colors.primary}
+				<Text
+					variant='headlineSmall'
+					style={[styles.title, { color: headerForegroundColor }]}
+				>
+					搜索
+				</Text>
+			</View>
+			<View
+				pointerEvents='box-none'
+				style={styles.searchbarContainer}
+			>
+				<Searchbar
+					ref={searchBarRef}
+					placeholder='关键词 / b23.tv / 视频链接 / av / BV'
+					value={searchQuery}
+					onChangeText={setSearchQuery}
+					onSubmitEditing={() => void handleEnter(searchQuery)}
+					onIconPress={() => void handleEnter(searchQuery)}
+					onClearIconPress={() => setSearchQuery('')}
+					onFocus={() => setSearchFocused(true)}
+					onBlur={() => setSearchFocused(false)}
+					loading={isLoading}
+					editable={!isLoading}
+					returnKeyType='search'
+					elevation={0}
+					mode='bar'
+					style={[styles.searchbar, { backgroundColor: colors.surfaceVariant }]}
+					testID='search-bar'
 				/>
 			</View>
-		)
-	}
-
-	return (
-		<View style={[styles.container, { backgroundColor: colors.background }]}>
-			<SkinAppbarBackground height={insets.top + 100} />
-			{/*顶部欢迎区域*/}
 			<View
-				style={{
-					paddingTop: insets.top,
-				}}
+				pointerEvents='box-none'
+				style={[styles.content, { paddingBottom: contentBottomPadding }]}
+				onLayout={({ nativeEvent }) =>
+					setContentHeight(nativeEvent.layout.height)
+				}
 			>
-				<View
-					style={[
-						styles.greetingContainer,
-						{ paddingHorizontal: 16, height: 56 },
-					]}
-				>
-					<View>
-						<Text
-							variant='headlineSmall'
-							style={[styles.headline, { color: headerForegroundColor }]}
-						>
-							BBPlayer
-						</Text>
-						<Text
-							variant='bodyMedium'
-							style={{ color: headerForegroundColor }}
-						>
-							{greeting}，{personalInfo?.name || '陌生人'}
-						</Text>
-					</View>
-					<View style={styles.headerRight}>
-						{!hideStarPrompt && (
-							<IconButton
-								icon='star-outline'
-								size={22}
-								iconColor={headerForegroundColor}
-								accessibilityLabel='去 GitHub 点个 Star'
-								onPress={() => openModal('StarPrompt', undefined)}
-							/>
-						)}
-						{hasSyncFailures && (
-							<IconButton
-								icon='alert-circle'
-								size={22}
-								iconColor={colors.error}
-								onPress={() => void syncFailuresSheetRef.current?.present()}
-							/>
-						)}
-						<Touchable
-							androidRipple={{}}
-							onPress={() => router.navigate('/settings/bilibili-account')}
-							style={styles.avatarButton}
-						>
-							<Image
-								style={styles.avatarImage}
-								source={
-									personalInfo?.face
-										? { uri: personalInfo.face }
-										: // oxlint-disable-next-line @typescript-eslint/no-require-imports
-											require('../../../assets/images/bilibili-default-avatar.jpg')
-								}
-								cachePolicy={'disk'}
-							/>
-							{activeSkin?.avatarFrames[activeAvatarFrameIndex] ? (
-								<Image
-									style={styles.avatarFrame}
-									source={activeSkin.avatarFrames[activeAvatarFrameIndex]}
-									contentFit='contain'
-									cachePolicy='memory-disk'
-								/>
-							) : null}
-						</Touchable>
-					</View>
-				</View>
-
-				<View style={styles.searchSection}>
-					{/* 搜索栏 */}
-					<View style={styles.searchbarContainer}>
-						<View ref={searchBarRef}>
-							<Searchbar
-								placeholder={
-									'关键词\u2009/\u2009b23.tv\u2009/\u2009完整网址\u2009/\u2009av\u2009/\u2009bv'
-								}
-								onChangeText={setSearchQuery}
-								value={searchQuery}
-								icon={isLoading ? 'loading' : 'magnify'}
-								onClearIconPress={() => setSearchQuery('')}
-								onSubmitEditing={() => handleEnter(searchQuery)}
-								onFocus={() => setSearchFocused(true)}
-								onBlur={() => setSearchFocused(false)}
-								elevation={0}
-								mode='bar'
-								style={[
-									styles.searchbar,
-									{ backgroundColor: colors.surfaceVariant },
-								]}
-								testID='search-bar'
-							/>
-						</View>
-						<SearchSuggestions
-							query={deferredSearchQuery}
-							visible={searchFocused || searchQuery.length > 0}
-							onSuggestionPress={handleSuggestionPress}
-							searchBarRef={searchBarRef}
+				{isResolving ? (
+					<ActivityIndicator style={styles.resolving} />
+				) : (
+					<>
+						<SearchHistory
 							searchHistory={searchHistory}
+							onHistoryPress={handleSuggestionPress}
 							onClearHistory={handleClearHistory}
 							onRemoveHistoryItem={handleRemoveHistoryItem}
+							onDismiss={dismissPanel}
+							panelVisible={suggestionsVisible}
 						/>
-					</View>
-				</View>
-
-				{/* 快捷操作与内容区，加上 ScrollView 让它可滚动 */}
-				{!enableMinimalistMode && (
-					<Animated.ScrollView
-						contentContainerStyle={styles.scrollContent}
-						showsVerticalScrollIndicator={false}
-					>
-						<WeeklyHeatMap
-							data={heatmapData || {}}
-							cellSize={18}
-							cellGap={4}
-							cellRadius={4}
-							initialScrollEnd={true}
-							locale='zh-cn'
-							onCellPress={({ date }) => {
-								const dateStr = dayjs(date).format('YYYY-MM-DD')
-								router.navigate(`/history/${dateStr}`)
-							}}
-							scheme={theme.dark ? 'dark' : 'light'}
-							cellColor={{
-								1: Color(colors.primary).alpha(0.2).rgb().string(),
-								2: Color(colors.primary).alpha(0.4).rgb().string(),
-								3: Color(colors.primary).alpha(0.6).rgb().string(),
-								4: colors.primary,
-							}}
-							cellDefaultColor={colors.surfaceVariant}
-							headerTextColor={colors.onSurfaceVariant}
-							sidebarTextColor={colors.onSurfaceVariant}
-							scrollStyle={{ marginHorizontal: 16, marginBottom: 16 }}
-						/>
-						{/* 快捷入口 */}
-						<View style={styles.quickAccessSection}>
-							<Text
-								variant='titleMedium'
-								style={styles.sectionTitle}
-							>
-								快捷入口
-							</Text>
-							<ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								snapToInterval={156}
-								snapToAlignment='start'
-								decelerationRate='fast'
-								contentContainerStyle={styles.quickAccessScrollContent}
-							>
-								{/* 那月今日 */}
-								<Touchable
-									androidRipple={{}}
-									key='on-this-day'
-									style={[
-										styles.quickAccessCard,
-										{ backgroundColor: colors.surfaceVariant },
-									]}
-									onPress={() => {
-										const lastMonth = dayjs()
-											.subtract(1, 'month')
-											.format('YYYY-MM-DD')
-										router.navigate(`/history/${lastMonth}`)
-									}}
-								>
-									<View
-										style={{
-											width: 48,
-											height: 48,
-											borderRadius: 24,
-											justifyContent: 'center',
-											alignItems: 'center',
-										}}
-									>
-										<Icon
-											source='calendar-month'
-											size={32}
-											color={colors.onSurfaceVariant}
-										/>
-									</View>
-									<Text
-										variant='labelMedium'
-										style={styles.quickAccessText}
-									>
-										那月今日
-									</Text>
-								</Touchable>
-
-								{/* 最近常听 */}
-								<Touchable
-									androidRipple={{}}
-									key='recently-played'
-									style={[
-										styles.quickAccessCard,
-										{ backgroundColor: colors.surfaceVariant },
-									]}
-									onPress={() => router.navigate('/playlist/recently')}
-								>
-									<View
-										style={{
-											width: 48,
-											height: 48,
-											borderRadius: 24,
-											justifyContent: 'center',
-											alignItems: 'center',
-										}}
-									>
-										<Icon
-											source='history'
-											size={32}
-											color={colors.onSurfaceVariant}
-										/>
-									</View>
-									<Text
-										variant='labelMedium'
-										style={styles.quickAccessText}
-									>
-										最近常听
-									</Text>
-								</Touchable>
-
-								{/* 稍后再看 - conditional on Bilibili cookie */}
-								{hasBilibiliCookie() && (
-									<Touchable
-										androidRipple={{}}
-										key='watch-later'
-										style={[
-											styles.quickAccessCard,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-										onPress={() => router.navigate('/playlist/remote/toview')}
-									>
-										<View
-											style={{
-												width: 48,
-												height: 48,
-												borderRadius: 24,
-												justifyContent: 'center',
-												alignItems: 'center',
-											}}
-										>
-											<Icon
-												source='clock-outline'
-												size={32}
-												color={colors.onSurfaceVariant}
-											/>
-										</View>
-										<Text
-											variant='labelMedium'
-											style={styles.quickAccessText}
-										>
-											稍后再看
-										</Text>
-									</Touchable>
-								)}
-
-								{/* 我的关注 - conditional on Bilibili cookie */}
-								{hasBilibiliCookie() && (
-									<Touchable
-										androidRipple={{}}
-										key='following'
-										style={[
-											styles.quickAccessCard,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-										onPress={() => router.navigate('/following')}
-									>
-										<View
-											style={{
-												width: 48,
-												height: 48,
-												borderRadius: 24,
-												justifyContent: 'center',
-												alignItems: 'center',
-											}}
-										>
-											<Icon
-												source='account-heart'
-												size={32}
-												color={colors.onSurfaceVariant}
-											/>
-										</View>
-										<Text
-											variant='labelMedium'
-											style={styles.quickAccessText}
-										>
-											我的关注
-										</Text>
-									</Touchable>
-								)}
-							</ScrollView>
+						<View
+							pointerEvents='box-none'
+							style={styles.suggestions}
+						>
+							<SearchSuggestions
+								query={deferredSearchQuery}
+								visible={suggestionsVisible}
+								availableHeight={contentHeight - contentBottomPadding}
+								onSuggestionPress={handleSuggestionPress}
+							/>
 						</View>
-
-						{/* 近期歌单 */}
-						{recentPlaylists && recentPlaylists.length > 0 && (
-							<View style={styles.recentPlaylistsSection}>
-								<Text
-									variant='titleMedium'
-									style={styles.sectionTitle}
-								>
-									近期歌单
-								</Text>
-								<Animated.ScrollView
-									horizontal
-									showsHorizontalScrollIndicator={false}
-									snapToInterval={156}
-									snapToAlignment='start'
-									decelerationRate='fast'
-									contentContainerStyle={styles.horizontalScrollContent}
-								>
-									{recentPlaylists.map((item) => (
-										<Touchable
-											androidRipple={{}}
-											key={item.id}
-											style={[
-												styles.playlistCard,
-												{ backgroundColor: colors.surfaceVariant },
-											]}
-											onPress={() => {
-												router.navigate(`/playlist/local/${item.id}`)
-											}}
-										>
-											<Image
-												source={
-													item.coverUrl
-														? { uri: item.coverUrl }
-														: require('../../../assets/images/bilibili-default-avatar.jpg')
-												}
-												style={styles.playlistCover}
-												contentFit='cover'
-											/>
-											<View style={styles.playlistInfo}>
-												<Text
-													variant='labelMedium'
-													numberOfLines={2}
-													style={styles.playlistTitle}
-												>
-													{item.title}
-												</Text>
-												<Text
-													variant='bodySmall'
-													style={{ color: colors.onSurfaceVariant }}
-												>
-													{item.itemCount} 首
-												</Text>
-											</View>
-										</Touchable>
-									))}
-								</Animated.ScrollView>
-							</View>
-						)}
-						{/* 底部留白给播放条 */}
-						<View style={{ height: 200 }} />
-					</Animated.ScrollView>
+					</>
 				)}
 			</View>
-			<SyncFailuresSheet ref={syncFailuresSheetRef} />
-		</View>
+		</KeyboardAvoidingView>
 	)
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	greetingContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-	},
-	headline: {
-		fontWeight: 'bold',
-	},
-	avatarButton: {
-		width: 48,
-		height: 48,
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	headerRight: {
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	avatarImage: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-	},
-	avatarFrame: {
-		position: 'absolute',
-		width: 54,
-		height: 54,
-	},
-	searchSection: {
-		marginTop: 16,
-	},
-	searchbarContainer: {
-		paddingTop: 10,
-		paddingHorizontal: 16,
-		paddingBottom: 8,
-	},
-	searchbar: {
-		borderRadius: 9999,
-	},
-	scrollContent: {
-		paddingTop: 16,
-	},
-	sectionTitle: {
-		paddingHorizontal: 16,
-		fontWeight: 'bold',
-		marginBottom: 16,
-	},
-	quickAccessSection: {
-		marginBottom: 32,
-	},
-	quickAccessCard: {
-		width: 140,
-		borderRadius: 12,
-		overflow: 'hidden',
-		paddingVertical: 16,
-		paddingHorizontal: 12,
-		alignItems: 'center',
-		justifyContent: 'center',
-		gap: 8,
-	},
-	quickAccessText: {
-		fontWeight: '600',
-	},
-	quickAccessScrollContent: {
-		paddingHorizontal: 16,
-		gap: 16,
-	},
-	recentPlaylistsSection: {
-		marginBottom: 32,
-	},
-	horizontalScrollContent: {
-		paddingHorizontal: 16,
-		gap: 16,
-	},
-	playlistCard: {
-		width: 140,
-		borderRadius: 12,
-		overflow: 'hidden',
-		paddingBottom: 12,
-	},
-	playlistCover: {
-		width: '100%',
-		aspectRatio: 1,
-		borderRadius: 12,
-	},
-	playlistInfo: {
-		paddingHorizontal: 12,
-		paddingTop: 10,
-	},
-	playlistTitle: {
-		fontWeight: '600',
-		marginBottom: 4,
-	},
+	container: { flex: 1 },
+	header: { paddingHorizontal: 16, paddingBottom: 16, minHeight: 56 },
+	title: { fontWeight: 'bold' },
+	searchbarContainer: { paddingHorizontal: 16, paddingBottom: 16 },
+	searchbar: { borderRadius: 9999 },
+	content: { flex: 1, paddingHorizontal: 16 },
+	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
+	resolving: { flex: 1 },
 })
-
-export default HomePage

@@ -1,13 +1,12 @@
 import Icon from '@react-native-vector-icons/material-design-icons'
 import { useObserve } from 'expo-observe'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import { useEffect, useState, useTransition } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
 
-import IconButton from '@/components/common/IconButton'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import CollectionListComponent from '@/features/library/collection/CollectionList'
 import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFolderList'
@@ -45,7 +44,6 @@ export default function Library() {
 	const insets = useSafeAreaInsets()
 	const colors = useTheme().colors
 	const headerForegroundColor = useSkinForegroundColor()
-	const router = useRouter()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
 	const { markInteractive } = useObserve()
 
@@ -82,18 +80,6 @@ export default function Library() {
 					>
 						音乐库
 					</Text>
-					<View style={styles.headerIcons}>
-						<IconButton
-							icon='download-box'
-							iconColor={headerForegroundColor}
-							onPress={() => router.navigate('/downloaded')}
-						/>
-						<IconButton
-							icon='trophy'
-							iconColor={headerForegroundColor}
-							onPress={() => router.navigate('/history/overall')}
-						/>
-					</View>
 				</View>
 				<TabView
 					style={[styles.tabView, { backgroundColor: 'transparent' }]}
@@ -101,8 +87,6 @@ export default function Library() {
 					renderScene={renderScene}
 					renderTabBar={(props) => (
 						<TabBar
-							scrollEnabled
-							// tabStyle={{ width: 'auto' }}
 							style={{
 								backgroundColor: 'transparent',
 								marginBottom: 8,
@@ -177,9 +161,6 @@ const styles = StyleSheet.create({
 	},
 	title: {
 		fontWeight: 'bold',
-	},
-	headerIcons: {
-		flexDirection: 'row',
 	},
 	tabView: {
 		flex: 1,

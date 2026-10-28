@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
 import { createMMKV } from 'react-native-mmkv'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { clampHslLightness, hexToHsl, hslToString } from '@/utils/color'
 import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
@@ -158,6 +159,10 @@ export function usePlaylistBackgroundColor(
 	fallbackColor: string,
 	cacheKey?: string | null,
 ): PlaylistBackgroundColorResult {
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
+
 	const normalizedKey = useMemo(
 		() => normalizePaletteCacheKey(cacheKey),
 		[cacheKey],
@@ -189,12 +194,18 @@ export function usePlaylistBackgroundColor(
 	}, [])
 
 	useEffect(() => {
+		if (pureWhiteBackground) {
+			setExtracted(null)
+			return
+		}
+
 		// 如果已有有效缓存，无需重复进行高开销的原生图片调色板计算
 		if (cachedPalette) {
 			return
 		}
 
 		if (!imageRef) {
+			setExtracted(null)
 			return
 		}
 
@@ -230,9 +241,12 @@ export function usePlaylistBackgroundColor(
 		return () => {
 			isCancelled = true
 		}
-	}, [imageRef, appState, normalizedKey, cachedPalette])
+	}, [imageRef, appState, normalizedKey, cachedPalette, pureWhiteBackground])
 
 	const result = useMemo<PlaylistBackgroundColorResult>(() => {
+		if (pureWhiteBackground) {
+			return { backgroundColor: '#FFFFFF', nowPlayingBarColor: '#FFFFFF' }
+		}
 		const dominantColor = getDominantColor(palette, isDarkMode)
 		const backgroundColor = computeBackgroundColor(
 			dominantColor,
@@ -278,7 +292,7 @@ export function usePlaylistBackgroundColor(
 			secondaryButtonContainerColor,
 			secondaryButtonIconColor,
 		}
-	}, [palette, isDarkMode, fallbackColor])
+	}, [palette, isDarkMode, fallbackColor, pureWhiteBackground])
 
 	useNowPlayingBar(result.nowPlayingBarColor)
 

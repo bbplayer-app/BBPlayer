@@ -1,7 +1,7 @@
 import { Orpheus } from '@bbplayer/orpheus'
 import { useFocusEffect, useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -35,6 +35,17 @@ export default function LyricsSettingsPage() {
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+	const lyriconConnectionToast = useRef<string | number | null>(null)
+	const finishLyriconConnectionToast = useCallback((connected = false) => {
+		const id = lyriconConnectionToast.current
+		if (id === null) return
+		lyriconConnectionToast.current = null
+		if (connected) {
+			toast.success('已连接词幕', { id, duration: 2000 })
+		} else {
+			toast.dismiss(id)
+		}
+	}, [])
 
 	const [isDesktopLyricsShown, setIsDesktopLyricsShown] = useState(
 		Orpheus.isDesktopLyricsShown,
@@ -73,15 +84,36 @@ export default function LyricsSettingsPage() {
 			: statusBarLyricsProvider === 'meizu'
 				? true
 				: isSuperLyricApiEnabled
+	const isLyriconConnecting =
+		statusBarLyricsProvider === 'lyricon' &&
+		isStatusBarLyricsEnabled &&
+		!isLyriconApiEnabled
 
 	const inactiveStatusBarLyricsProviderText =
 		statusBarLyricsProvider === 'lyricon'
-			? '（需安装词幕模块）'
+			? isLyriconConnecting
+				? '（正在连接词幕…）'
+				: '（未连接词幕模块）'
 			: statusBarLyricsProvider === 'meizu'
 				? '（仅支持 Flyme / 魅族状态栏歌词）'
 				: '（需安装 SuperLyric 模块）'
 
+	// Lyricon tries to connect when enabled; a failed attempt turns the setting off.
+	const isStatusBarLyricsSwitchDisabled =
+		statusBarLyricsProvider !== 'lyricon' && !isStatusBarLyricsProviderActive
+
 	const syncStates = useCallback(async () => {
+		if (
+			Orpheus.statusBarLyricsProvider !== 'lyricon' ||
+			!Orpheus.isStatusBarLyricsEnabled ||
+			Orpheus.isLyriconApiEnabled
+		) {
+			finishLyriconConnectionToast(
+				Orpheus.statusBarLyricsProvider === 'lyricon' &&
+					Orpheus.isStatusBarLyricsEnabled &&
+					Orpheus.isLyriconApiEnabled,
+			)
+		}
 		const hasPermission = await Orpheus.checkOverlayPermission()
 		// UI 开关仅在「设置开启」且「有权限」时显示为 ON
 		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown && hasPermission)
@@ -91,7 +123,7 @@ export default function LyricsSettingsPage() {
 		setIsSuperLyricApiEnabled(Orpheus.isSuperLyricApiEnabled)
 		setIsLyriconApiEnabled(Orpheus.isLyriconApiEnabled)
 		setStatusBarLyricsProvider(Orpheus.statusBarLyricsProvider ?? 'lyricon')
-	}, [])
+	}, [finishLyriconConnectionToast])
 
 	const providerMenu = useMenuActions([
 		{
@@ -194,7 +226,8 @@ export default function LyricsSettingsPage() {
 	useFocusEffect(
 		useCallback(() => {
 			void syncStates()
-		}, [syncStates]),
+			return () => finishLyriconConnectionToast()
+		}, [syncStates, finishLyriconConnectionToast]),
 	)
 
 	return (
@@ -317,7 +350,7 @@ export default function LyricsSettingsPage() {
 							<View style={{ flex: 1, marginRight: 16 }}>
 								<Text
 									style={
-										!isStatusBarLyricsProviderActive
+										isStatusBarLyricsSwitchDisabled
 											? { opacity: 0.4 }
 											: undefined
 									}
@@ -327,7 +360,7 @@ export default function LyricsSettingsPage() {
 										? inactiveStatusBarLyricsProviderText
 										: ''}
 								</Text>
-								{!isStatusBarLyricsProviderActive && (
+								{!isStatusBarLyricsProviderActive && !isLyriconConnecting && (
 									<Text
 										style={{
 											fontSize: 12,
@@ -342,16 +375,30 @@ export default function LyricsSettingsPage() {
 											)
 										}
 									>
-										未检测到可用环境，请点击查看配置文档
+										{statusBarLyricsProvider === 'lyricon'
+											? '开启时尝试连接，失败后自动关闭。点击查看配置文档'
+											: '未检测到可用环境，请点击查看配置文档'}
 									</Text>
 								)}
 							</View>
 							<UniversalSwitch
-								disabled={!isStatusBarLyricsProviderActive}
+								disabled={isStatusBarLyricsSwitchDisabled}
 								value={isStatusBarLyricsEnabled}
 								onValueChange={async () => {
 									try {
 										const next = !isStatusBarLyricsEnabled
+										if (statusBarLyricsProvider === 'lyricon' && next) {
+											lyriconConnectionToast.current = toast.loading(
+												'正在连接词幕…',
+												{
+													id: lyriconConnectionToast.current ?? undefined,
+													duration: Infinity,
+												},
+											)
+										} else {
+											finishLyriconConnectionToast()
+										}
+										setIsStatusBarLyricsEnabled(next)
 										Orpheus.isStatusBarLyricsEnabled = next
 										await syncStates()
 										if (next) {
@@ -362,6 +409,10 @@ export default function LyricsSettingsPage() {
 											}
 										}
 									} catch (e) {
+										finishLyriconConnectionToast()
+										setIsStatusBarLyricsEnabled(
+											Orpheus.isStatusBarLyricsEnabled,
+										)
 										toastAndLogError('设置失败', e, 'Settings')
 									}
 								}}
