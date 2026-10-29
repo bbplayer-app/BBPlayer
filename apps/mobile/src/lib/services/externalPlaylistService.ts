@@ -143,10 +143,49 @@ export type ExternalPlaylistSource =
 	| 'local_json'
 
 export class ExternalPlaylistService {
+	public getPersistedPlaylistSync(
+		playlistId: string,
+		source: ExternalPlaylistSource,
+	): { playlist: GenericPlaylist; tracks: GenericTrack[] } | null {
+		if (!playlistId) return null
+		try {
+			const jobId = createImportJobId(source, playlistId)
+			let snap = externalImportJobService.getJobSnapshot(jobId)
+			if (!snap) {
+				const draft = externalImportJobService
+					.listActiveDraftJobs()
+					.find(
+						(j) =>
+							j.source === source &&
+							(j.sourcePlaylistId === playlistId ||
+								j.sourcePlaylistId.startsWith(playlistId) ||
+								playlistId.startsWith(j.sourcePlaylistId)),
+					)
+				if (draft) {
+					snap = externalImportJobService.getJobSnapshot(draft.jobId)
+				}
+			}
+			if (snap && snap.items.length > 0 && snap.job.savedPlaylistId === null) {
+				return {
+					playlist: snap.job.playlistMetadata,
+					tracks: snap.items.map((item) => item.originalTrack),
+				}
+			}
+		} catch {
+			// Ignore and return null
+		}
+		return null
+	}
+
 	public fetchExternalPlaylist(
 		playlistId: string,
 		source: ExternalPlaylistSource,
 	): ResultAsync<{ playlist: GenericPlaylist; tracks: GenericTrack[] }, Error> {
+		const persisted = this.getPersistedPlaylistSync(playlistId, source)
+		if (persisted) {
+			return okAsync(persisted)
+		}
+
 		const fallbackToPersistedDraft = (err: Error) => {
 			try {
 				const jobId = createImportJobId(source, playlistId)

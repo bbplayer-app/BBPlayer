@@ -22,11 +22,9 @@ import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { PlaylistPageSkeleton } from '@/features/playlist/skeletons/PlaylistSkeleton'
-import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { useExternalPlaylist } from '@/hooks/queries/external-playlist/useExternalPlaylist'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
-import useAppStore from '@/hooks/stores/useAppStore'
 import {
 	ExternalPlaylistSyncStoreProvider,
 	useExternalPlaylistSyncStore,
@@ -647,13 +645,6 @@ const ExternalPlaylistSyncFooter = ({
 }) => {
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
-	const currentTrack = useCurrentTrack()
-	const nowPlayingBarStyle = useAppStore((s) => s.settings.nowPlayingBarStyle)
-	const nowPlayingOffset = currentTrack
-		? nowPlayingBarStyle === 'bottom'
-			? 70
-			: 60
-		: 0
 
 	const etaText =
 		etaSeconds !== null
@@ -668,7 +659,7 @@ const ExternalPlaylistSyncFooter = ({
 				styles.footer,
 				{
 					backgroundColor: theme.colors.elevation.level2,
-					paddingBottom: insets.bottom + 16 + nowPlayingOffset,
+					paddingBottom: insets.bottom + 16,
 				},
 			]}
 		>

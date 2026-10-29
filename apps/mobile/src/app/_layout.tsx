@@ -148,7 +148,7 @@ function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
-	useCheckUpdate()
+	useCheckUpdate(isReady && migrationsSuccess)
 	useFeatureTracking()
 
 	onlineManager.setEventListener((setOnline) => {

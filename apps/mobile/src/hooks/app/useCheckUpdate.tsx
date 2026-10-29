@@ -4,10 +4,14 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { storage } from '@/utils/mmkv'
 
-export default function useCheckUpdate() {
+export default function useCheckUpdate(enabled = true) {
 	const open = useModalStore((state) => state.open)
 	useEffect(() => {
-		if (__DEV__) {
+		if (__DEV__ || !enabled) {
+			return
+		}
+		const firstOpen = storage.getBoolean('first_open') ?? true
+		if (firstOpen) {
 			return
 		}
 		let isMounted = true
@@ -29,5 +33,5 @@ export default function useCheckUpdate() {
 		return () => {
 			isMounted = false
 		}
-	}, [open])
+	}, [enabled, open])
 }

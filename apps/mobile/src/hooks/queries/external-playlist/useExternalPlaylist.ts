@@ -20,6 +20,15 @@ export const useExternalPlaylist = (
 			}
 			return result.value
 		},
+		initialData: () =>
+			playlistId
+				? (externalPlaylistService.getPersistedPlaylistSync(
+						playlistId,
+						source,
+					) ?? undefined)
+				: undefined,
 		enabled: !!playlistId,
+		staleTime: Infinity,
+		networkMode: 'always',
 	})
 }
