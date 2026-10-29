@@ -1,6 +1,6 @@
 import type { ExtractedPalette } from '@bbplayer/image-theme-colors'
 import ImageThemeColors from '@bbplayer/image-theme-colors'
-import { useIsPlaying } from '@bbplayer/orpheus'
+import { Orpheus, useIsPlaying } from '@bbplayer/orpheus'
 import { Computed, useObserveEffect } from '@legendapp/state/react'
 import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
@@ -9,6 +9,7 @@ import { router, useIsFocused } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
+	Platform,
 	StyleSheet,
 	useColorScheme,
 	useWindowDimensions,
@@ -113,6 +114,25 @@ export default function PlayerPage() {
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
+	const suppressDesktopLyrics = isFocused && isForeground && index === 1
+
+	useEffect(() => {
+		if (Platform.OS !== 'android') return
+		void Orpheus.setDesktopLyricsSuppressed(suppressDesktopLyrics).catch(
+			(e) => {
+				logger.error('更新桌面歌词临时隐藏状态失败', e)
+			},
+		)
+	}, [suppressDesktopLyrics])
+
+	useEffect(() => {
+		return () => {
+			if (Platform.OS !== 'android') return
+			void Orpheus.setDesktopLyricsSuppressed(false).catch((e) => {
+				logger.error('恢复桌面歌词显示失败', e)
+			})
+		}
+	}, [])
 
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)

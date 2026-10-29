@@ -1,6 +1,8 @@
 package expo.modules.orpheus.bilibili
 
 import android.util.Log
+import android.net.Uri
+import expo.modules.orpheus.util.GeneralStorage
 
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -52,14 +54,14 @@ object BilibiliRepository {
     /**
      * 解析音频 URL
      */
-    fun resolveAudioUrl(
+    fun resolveAudioUrls(
         bvid: String,
         cid: Long?,
         audioQuality: Int,
         enableDolby: Boolean,
         enableHiRes: Boolean,
         cookie: String?
-    ): Pair<String, VolumeData?> {
+    ): Pair<List<String>, VolumeData?> {
         var cidInternal = cid
         val (imgKey, subKey) = getWbiKeys()
         if (cidInternal === null) {
@@ -106,17 +108,19 @@ object BilibiliRepository {
             if (durl.isNullOrEmpty()) {
                 throw IOException("AudioStreamError: 请求到的流数据不包含 dash 或 durl 任一字段")
             }
-            return durl[0].url to volume
+            return streamUrls(durl[0].url, durl[0].backupUrl) to volume
         }
 
         if (enableDolby && dash.dolby?.audio?.isNotEmpty() == true) {
             Log.d(TAG, "select dolby source")
-            return dash.dolby.audio[0].baseUrl to volume
+            val audio = dash.dolby.audio[0]
+            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
         }
 
         if (enableHiRes && dash.flac?.audio != null) {
             Log.d(TAG, "select hires source")
-            return dash.flac.audio.baseUrl to volume
+            val audio = dash.flac.audio
+            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
         }
 
         if (dash.audio.isNullOrEmpty()) {
@@ -126,11 +130,43 @@ object BilibiliRepository {
         val targetAudio = dash.audio.find { it.id == audioQuality }
 
         if (targetAudio != null) {
-            return targetAudio.baseUrl to volume
+            return streamUrls(targetAudio.baseUrl, targetAudio.backupUrl) to volume
         } else {
             val highestQualityAudio = dash.audio[0]
-            return highestQualityAudio.baseUrl to volume
+            return streamUrls(highestQualityAudio.baseUrl, highestQualityAudio.backupUrl) to volume
         }
+    }
+
+    private fun streamUrls(primary: String, backups: List<String>?): List<String> {
+        // Use only mirrors of the selected audio representation, preserving signed URLs verbatim.
+        val urls = (listOf(primary) + backups.orEmpty()).filter { it.isNotBlank() }.distinct()
+        if (urls.isEmpty()) throw IOException("AudioStreamError: 未找到有效的音频流地址")
+        val (mcdn, regular) = urls.partition(::isMcdnUrl)
+        val preference = GeneralStorage.getPreferredBilibiliCdn()
+        if (preference == "auto") return regular + mcdn
+        val (preferred, remaining) = regular.partition { url ->
+            val host = Uri.parse(url).host.orEmpty().lowercase(Locale.ROOT)
+            when (preference) {
+                "akamai" -> host == "upos-hz-mirrorakam.akamaized.net"
+                "ali" -> host.endsWith(".bilivideo.com") && host.startsWith("upos-sz-mirrorali")
+                "tencent" -> host.endsWith(".bilivideo.com") &&
+                    (host.startsWith("upos-sz-mirrorcos") || host == "upos-tf-all-tx.bilivideo.com")
+                "huawei" -> host.endsWith(".bilivideo.com") &&
+                    (host.startsWith("upos-sz-mirrorhw") || host.startsWith("upos-sz-mirror08") || host == "upos-tf-all-hw.bilivideo.com")
+                else -> false
+            }
+        }
+        return preferred + remaining + mcdn
+    }
+
+    private fun isMcdnUrl(url: String): Boolean {
+        val uri = Uri.parse(url)
+        val host = uri.host.orEmpty().lowercase(Locale.ROOT)
+        // Some normal-looking mirror URLs are also mcdn, as indicated by os=mcdn.
+        return uri.getQueryParameter("os") == "mcdn" ||
+            Regex("""(^|\.)mcdn\.bilivideo\.(com|cn|net)$""").containsMatchIn(host) ||
+            (Regex("""(?:\d{1,3}\.){3}\d{1,3}""").matches(host) &&
+                Regex("""/v\d+/resource(?:/.*)?""").matches(uri.path.orEmpty()))
     }
 
     fun getFirstCid(bvid: String, cookie: String?): Long {

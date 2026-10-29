@@ -16,8 +16,17 @@ class GeneralStorage {
     private let KEY_LOUDNESS_ENABLED = "loudnessNormalizationEnabled"
     private let KEY_AUTOPLAY_ENABLED = "autoplayOnStartEnabled"
     private let KEY_SPECTRUM_VISUALIZER_ENABLED = "spectrumVisualizerEnabled"
+    private let KEY_BILIBILI_CDN = "preferredBilibiliCdn"
     
     // MARK: - Preferences
+
+    var preferredBilibiliCdn: String {
+        get { mmkv?.string(forKey: KEY_BILIBILI_CDN) ?? "auto" }
+        set {
+            let allowed = ["auto", "ali", "tencent", "huawei", "akamai"]
+            mmkv?.set(allowed.contains(newValue) ? newValue : "auto", forKey: KEY_BILIBILI_CDN)
+        }
+    }
     
     var isRestoreEnabled: Bool {
         get { return mmkv?.bool(forKey: KEY_RESTORE_ENABLED, defaultValue: false) ?? false }

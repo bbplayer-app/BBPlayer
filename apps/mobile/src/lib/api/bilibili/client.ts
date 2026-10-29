@@ -6,6 +6,9 @@ import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 
 import { getCsrfToken } from './utils'
 
+export const BILIBILI_WEB_USER_AGENT =
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0'
+
 export interface ReqResponse<T> {
 	code: number
 	message: string
@@ -130,12 +133,14 @@ class ApiClient {
 	get<T>({
 		endpoint,
 		params,
+		headers,
 		fullUrl,
 		skipCookie,
 		signal,
 	}: {
 		endpoint: string
 		params?: Record<string, string | undefined> | string
+		headers?: Record<string, string>
 		fullUrl?: string
 		skipCookie?: boolean
 		signal?: AbortSignal
@@ -154,7 +159,7 @@ class ApiClient {
 		}
 		return this.request<T>({
 			endpoint: url,
-			options: { method: 'GET', signal },
+			options: { method: 'GET', signal, headers },
 			fullUrl,
 			skipCookie,
 		})

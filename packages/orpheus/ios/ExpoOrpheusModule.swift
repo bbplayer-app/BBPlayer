@@ -82,6 +82,10 @@ public class ExpoOrpheusModule: Module {
 
         // MARK: - Preferences
 
+        Property("preferredBilibiliCdn")
+            .get { GeneralStorage.shared.preferredBilibiliCdn }
+            .set { GeneralStorage.shared.preferredBilibiliCdn = $0 }
+
         Property("restorePlaybackPositionEnabled")
             .get { GeneralStorage.shared.isRestoreEnabled }
             .set { GeneralStorage.shared.isRestoreEnabled = $0 }
@@ -300,6 +304,10 @@ public class ExpoOrpheusModule: Module {
 
     AsyncFunction("hideDesktopLyrics") {
          throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
+    }
+
+    AsyncFunction("setDesktopLyricsSuppressed") { (_: Bool) in
+        throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
 
     AsyncFunction("clearOverlays") {
