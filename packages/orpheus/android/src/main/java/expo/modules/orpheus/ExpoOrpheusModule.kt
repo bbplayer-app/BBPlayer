@@ -338,6 +338,10 @@ class ExpoOrpheusModule : Module() {
             .get { GeneralStorage.isRestoreEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setRestoreEnabled(enabled) }
 
+        Property("preferredBilibiliCdn")
+            .get { GeneralStorage.getPreferredBilibiliCdn() }
+            .set { preference: String -> GeneralStorage.setPreferredBilibiliCdn(preference) }
+
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.isLoudnessNormalizationEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setLoudnessNormalizationEnabled(enabled) }

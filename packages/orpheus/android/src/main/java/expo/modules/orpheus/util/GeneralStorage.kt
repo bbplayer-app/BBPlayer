@@ -14,6 +14,7 @@ object GeneralStorage {
     private val json = Json { ignoreUnknownKeys = true }
     private var lastSavedQueueSnapshot: List<String>? = null
     private const val KEY_RESTORE_POSITION_ENABLED = "config_restore_position_enabled"
+    private const val KEY_BILIBILI_CDN = "config_bilibili_cdn"
 
     private const val KEY_LOUDNESS_NORMALIZATION_ENABLED = "config_loudness_normalization_enabled"
     private const val KEY_SAVED_QUEUE = "saved_queue_json_list"
@@ -63,6 +64,13 @@ object GeneralStorage {
 
     fun isRestoreEnabled(): Boolean {
         return safeKv.decodeBool(KEY_RESTORE_POSITION_ENABLED, false)
+    }
+
+    fun getPreferredBilibiliCdn() = kv?.decodeString(KEY_BILIBILI_CDN, "auto") ?: "auto"
+
+    fun setPreferredBilibiliCdn(preference: String) {
+        val value = preference.takeIf { it in setOf("auto", "ali", "tencent", "huawei", "akamai") } ?: "auto"
+        safeKv.encode(KEY_BILIBILI_CDN, value)
     }
 
     fun isLoudnessNormalizationEnabled(): Boolean {
@@ -185,6 +193,7 @@ object GeneralStorage {
 
     fun exportConfig(): Map<String, Any> {
         return mapOf(
+            KEY_BILIBILI_CDN to getPreferredBilibiliCdn(),
             KEY_RESTORE_POSITION_ENABLED to isRestoreEnabled(),
             KEY_LOUDNESS_NORMALIZATION_ENABLED to isLoudnessNormalizationEnabled(),
             KEY_AUTOPLAY_ON_START_ENABLED to isAutoplayOnStartEnabled(),
@@ -200,6 +209,7 @@ object GeneralStorage {
     }
 
     fun importConfig(data: Map<String, Any>) {
+        (data[KEY_BILIBILI_CDN] as? String)?.let { setPreferredBilibiliCdn(it) }
         (data[KEY_RESTORE_POSITION_ENABLED] as? Boolean)?.let { setRestoreEnabled(it) }
         (data[KEY_LOUDNESS_NORMALIZATION_ENABLED] as? Boolean)?.let { setLoudnessNormalizationEnabled(it) }
         (data[KEY_AUTOPLAY_ON_START_ENABLED] as? Boolean)?.let { setAutoplayOnStartEnabled(it) }

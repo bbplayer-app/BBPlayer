@@ -82,6 +82,10 @@ public class ExpoOrpheusModule: Module {
 
         // MARK: - Preferences
 
+        Property("preferredBilibiliCdn")
+            .get { GeneralStorage.shared.preferredBilibiliCdn }
+            .set { GeneralStorage.shared.preferredBilibiliCdn = $0 }
+
         Property("restorePlaybackPositionEnabled")
             .get { GeneralStorage.shared.isRestoreEnabled }
             .set { GeneralStorage.shared.isRestoreEnabled = $0 }

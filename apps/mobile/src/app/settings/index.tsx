@@ -74,6 +74,24 @@ export default function SettingsPage() {
 					/>
 					<Divider style={styles.divider} />
 					<List.Item
+						title='CDN 设置'
+						description='首选 CDN、节点测速'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='cloud-outline'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='chevron-right'
+							/>
+						)}
+						onPress={() => router.navigate('/settings/cdn')}
+					/>
+					<Divider style={styles.divider} />
+					<List.Item
 						title='歌词'
 						description='歌词源、桌面歌词、样式'
 						left={(props) => (

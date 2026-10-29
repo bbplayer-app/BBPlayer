@@ -1,6 +1,8 @@
 package expo.modules.orpheus.bilibili
 
 import android.util.Log
+import android.net.Uri
+import expo.modules.orpheus.util.GeneralStorage
 
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -139,7 +141,32 @@ object BilibiliRepository {
         // Use only mirrors of the selected audio representation, preserving signed URLs verbatim.
         val urls = (listOf(primary) + backups.orEmpty()).filter { it.isNotBlank() }.distinct()
         if (urls.isEmpty()) throw IOException("AudioStreamError: 未找到有效的音频流地址")
-        return urls
+        val (mcdn, regular) = urls.partition(::isMcdnUrl)
+        val preference = GeneralStorage.getPreferredBilibiliCdn()
+        if (preference == "auto") return regular + mcdn
+        val (preferred, remaining) = regular.partition { url ->
+            val host = Uri.parse(url).host.orEmpty().lowercase(Locale.ROOT)
+            when (preference) {
+                "akamai" -> host == "upos-hz-mirrorakam.akamaized.net"
+                "ali" -> host.endsWith(".bilivideo.com") && host.startsWith("upos-sz-mirrorali")
+                "tencent" -> host.endsWith(".bilivideo.com") &&
+                    (host.startsWith("upos-sz-mirrorcos") || host == "upos-tf-all-tx.bilivideo.com")
+                "huawei" -> host.endsWith(".bilivideo.com") &&
+                    (host.startsWith("upos-sz-mirrorhw") || host.startsWith("upos-sz-mirror08") || host == "upos-tf-all-hw.bilivideo.com")
+                else -> false
+            }
+        }
+        return preferred + remaining + mcdn
+    }
+
+    private fun isMcdnUrl(url: String): Boolean {
+        val uri = Uri.parse(url)
+        val host = uri.host.orEmpty().lowercase(Locale.ROOT)
+        // Some normal-looking mirror URLs are also mcdn, as indicated by os=mcdn.
+        return uri.getQueryParameter("os") == "mcdn" ||
+            Regex("""(^|\.)mcdn\.bilivideo\.(com|cn|net)$""").containsMatchIn(host) ||
+            (Regex("""(?:\d{1,3}\.){3}\d{1,3}""").matches(host) &&
+                Regex("""/v\d+/resource(?:/.*)?""").matches(uri.path.orEmpty()))
     }
 
     fun getFirstCid(bvid: String, cookie: String?): Long {

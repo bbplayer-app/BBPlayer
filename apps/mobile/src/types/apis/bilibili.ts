@@ -17,6 +17,14 @@ interface BilibiliAudioStreamParams {
 /**
  * 获取音频流（dash）返回值
  */
+interface BilibiliAudioStreamItem {
+	id: number
+	baseUrl: string
+	backupUrl: string[]
+	base_url?: string
+	backup_url?: string[]
+}
+
 interface BilibiliAudioStreamResponse {
 	durl?: [
 		{
@@ -26,30 +34,14 @@ interface BilibiliAudioStreamResponse {
 		},
 	]
 	dash?: {
-		audio:
-			| {
-					id: number
-					baseUrl: string
-					backupUrl: string[]
-			  }[]
-			| null
+		audio: BilibiliAudioStreamItem[] | null
 		dolby?: {
 			type: number
-			audio:
-				| {
-						id: number
-						baseUrl: string
-						backupUrl: string[]
-				  }[]
-				| null
+			audio: BilibiliAudioStreamItem[] | null
 		} | null
 		flac?: {
 			display: boolean
-			audio: {
-				id: number
-				baseUrl: string
-				backupUrl: string[]
-			} | null
+			audio: BilibiliAudioStreamItem | null
 		} | null
 	}
 	volume?:

@@ -60,6 +60,13 @@ export interface LyricsData {
 
 export type LyricConsumer = 'desktop' | 'statusBar' | 'car'
 
+export type BilibiliCdnPreference =
+	| 'auto'
+	| 'ali'
+	| 'tencent'
+	| 'huawei'
+	| 'akamai'
+
 export interface AndroidPlaybackErrorEvent {
 	platform: 'android'
 	errorCode: number
@@ -155,6 +162,8 @@ export type OrpheusHeadlessEvent =
 
 /** 内部使用的原生接口定义 */
 declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
+	/** 优先使用指定服务商的常规节点，再尝试其余常规节点，mcdn 最后兜底。 */
+	preferredBilibiliCdn: BilibiliCdnPreference
 	/** 原生服务启动时是否恢复上次保存的队列索引和播放位置。 */
 	restorePlaybackPositionEnabled: boolean
 	/** Android 创建播放器时是否应用已保存的响度标准化增益。 */
