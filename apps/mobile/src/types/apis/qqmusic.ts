@@ -85,5 +85,7 @@ export interface QQMusicPlaylist {
 	songnum: number
 	logo: string
 	nickname: string
+	ctime?: number
+	tags?: Array<{ id?: number; name?: string }>
 	songlist: QQMusicSong[]
 }

@@ -5,7 +5,8 @@ import { and, eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useImage } from 'expo-image'
 import { useObserve } from 'expo-observe'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import type { RelativePathString } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import {
 	useCallback,
 	useDeferredValue,
@@ -15,7 +16,16 @@ import {
 	useState,
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
+import {
+	Appbar,
+	Dialog,
+	MD3Theme,
+	Portal,
+	RadioButton,
+	Surface,
+	Text,
+	useTheme,
+} from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -24,6 +34,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import Button from '@/components/common/Button'
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
@@ -48,6 +59,7 @@ import {
 } from '@/hooks/mutations/db/playlist'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
+	playlistKeys,
 	useAllPlaylistsContainingTrack,
 	usePlaylistContentsInfinite,
 	usePlaylistMetadata,
@@ -59,15 +71,26 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { type MenuBuilder, useMenuActions } from '@/hooks/ui/useMenuActions'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
+import { queryClient } from '@/lib/config/queryClient'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { CustomError } from '@/lib/errors'
+import {
+	applyPlaylistViewModeToTrack,
+	type ExternalPlaylistViewMode,
+	type ExternalTrackMappingRecord,
+	externalImportJobService,
+} from '@/lib/services/externalImportJobService'
+import { playlistOutService } from '@/lib/services/playlistOutService'
 import { playlistService } from '@/lib/services/playlistService'
+import { externalPlaylistImportWorker } from '@/lib/workers/ExternalPlaylistImportWorker'
 import type { Track } from '@/types/core/media'
+import type { GenericTrack } from '@/types/external_playlist'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { resolveBilibiliImageUrl } from '@/utils/imageUrl'
@@ -89,9 +112,19 @@ const SYNC_ICON = Icon.select({
 	android: import('@expo/material-symbols/sync.xml'),
 })
 
+const LIST_ICON = Icon.select({
+	ios: 'list.bullet',
+	android: import('@expo/material-symbols/format_list_bulleted.xml'),
+})
+
 const SHARE_ICON = Icon.select({
 	ios: 'square.and.arrow.up',
 	android: import('@expo/material-symbols/share.xml'),
+})
+
+const EXPORT_JSON_ICON = Icon.select({
+	ios: 'arrow.down.doc',
+	android: import('@expo/material-symbols/download.xml'),
 })
 
 const LINK_ICON = Icon.select({
@@ -231,6 +264,18 @@ export default function LocalPlaylistPage() {
 	)
 }
 
+type PlaylistExportFormat = 'json'
+
+const PLAYLIST_EXPORT_FORMATS: {
+	value: PlaylistExportFormat
+	label: string
+}[] = [
+	{
+		value: 'json',
+		label: 'JSON (.json)',
+	},
+]
+
 function LocalPlaylistContent({
 	id,
 	playlistData,
@@ -251,6 +296,9 @@ function LocalPlaylistContent({
 	const theme = useTheme()
 	const { colors } = theme
 	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
+	const [exportDialogVisible, setExportDialogVisible] = useState(false)
+	const [exportFormat, setExportFormat] = useState<PlaylistExportFormat>('json')
+	const [isExporting, setIsExporting] = useState(false)
 	const [isResolvingSelection, setIsResolvingSelection] = useState(false)
 	const router = useRouter()
 	const bbplayerToken = useAppStore((state) => state.bbplayerToken)
@@ -282,6 +330,12 @@ function LocalPlaylistContent({
 		syncFailuresSheetRef.current = sheet
 		if (sheet) void sheet.present()
 	}, [])
+	const openUnmatchedTracksPage = useCallback(() => {
+		router.push({
+			pathname: '/playlist/local/unmatched' as RelativePathString,
+			params: { id },
+		})
+	}, [id, router])
 
 	const selection = {
 		active: selectMode,
@@ -456,7 +510,12 @@ function LocalPlaylistContent({
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		playlistMetadata?.coverUrl,
+	)
 
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
@@ -554,6 +613,295 @@ function LocalPlaylistContent({
 		isOffline,
 		playableOfflineKeys,
 	)
+
+	const numericPlaylistId = Number(id)
+	const [externalTrackMappings, setExternalTrackMappings] = useState<
+		ExternalTrackMappingRecord[]
+	>(() => {
+		try {
+			return externalImportJobService.getPlaylistTrackMappings(
+				numericPlaylistId,
+			)
+		} catch {
+			return []
+		}
+	})
+	const [externalViewMode, setExternalViewMode] =
+		useState<ExternalPlaylistViewMode>(() =>
+			externalImportJobService.getPlaylistViewMode(numericPlaylistId),
+		)
+	const [isRematchRunning, setIsRematchRunning] = useState(() =>
+		externalPlaylistImportWorker.isPlaylistRematchRunning(numericPlaylistId),
+	)
+	const [rematchProgress, setRematchProgress] = useState<{
+		completed: number
+		total: number
+	} | null>(null)
+
+	const refreshExternalMappings = useCallback(() => {
+		try {
+			setExternalTrackMappings(
+				externalImportJobService.getPlaylistTrackMappings(numericPlaylistId),
+			)
+			setExternalViewMode(
+				externalImportJobService.getPlaylistViewMode(numericPlaylistId),
+			)
+			setIsRematchRunning(
+				externalPlaylistImportWorker.isPlaylistRematchRunning(
+					numericPlaylistId,
+				),
+			)
+		} catch {
+			// Ignore if DB not ready
+		}
+	}, [numericPlaylistId])
+
+	useEffect(() => {
+		refreshExternalMappings()
+		const unsubService = externalImportJobService.subscribeChanges(() => {
+			refreshExternalMappings()
+		})
+		const unsubWorker = externalPlaylistImportWorker.subscribe(() => {
+			refreshExternalMappings()
+		})
+		return () => {
+			unsubService()
+			unsubWorker()
+		}
+	}, [refreshExternalMappings])
+
+	useFocusEffect(
+		useCallback(() => {
+			refreshExternalMappings()
+			void queryClient.invalidateQueries({
+				queryKey: playlistKeys.playlistContents(numericPlaylistId),
+			})
+		}, [numericPlaylistId, refreshExternalMappings]),
+	)
+
+	const mappingsByTrackId = useMemo(() => {
+		const map = new Map<number, ExternalTrackMappingRecord>()
+		for (const m of externalTrackMappings) {
+			map.set(m.trackId, m)
+		}
+		return map
+	}, [externalTrackMappings])
+
+	const isExternalConvertedPlaylist =
+		externalTrackMappings.length > 0 ||
+		allLoadedTracks.some(
+			(track) =>
+				track.uniqueKey.startsWith('external::') ||
+				(track.source === 'bilibili' &&
+					(track.bilibiliMetadata.mainTrackTitle?.startsWith('音源:') ||
+						track.bilibiliMetadata.mainTrackTitle?.startsWith('[未匹配音源]'))),
+		)
+
+	const displayedPlaylistData =
+		externalViewMode !== 'bilibili'
+			? finalPlaylistData
+			: finalPlaylistData.map((track) =>
+					applyPlaylistViewModeToTrack(
+						track,
+						externalViewMode,
+						mappingsByTrackId.get(track.id),
+					),
+				)
+
+	const handleToggleExternalViewMode = useCallback(() => {
+		const nextMode =
+			externalImportJobService.togglePlaylistViewMode(numericPlaylistId)
+		setExternalViewMode(nextMode)
+		void usePlayerStore.getState().sync()
+		toast.success(
+			nextMode === 'bilibili' ? '已切换为 B 站原版视图' : '已切换为原歌单视图',
+		)
+	}, [numericPlaylistId])
+
+	const externalMatchStats = useMemo(() => {
+		const loadedTracks =
+			(
+				playlistData?.pages as Array<{
+					tracks: Track[]
+				}>
+			)?.flatMap((page) => page.tracks) ?? []
+		const mappedTrackIds = new Set<number>()
+		let unmatchedCount = 0
+		let errorCount = 0
+		let rateLimitedCount = 0
+		let matchedCount = 0
+
+		for (const m of externalTrackMappings) {
+			mappedTrackIds.add(m.trackId)
+			if (m.matchStatus === 'matched' && m.matchedBvid) {
+				matchedCount++
+			} else if (m.matchStatus === 'rate_limited') {
+				rateLimitedCount++
+			} else if (m.matchStatus === 'error') {
+				errorCount++
+			} else {
+				unmatchedCount++
+			}
+		}
+
+		for (const track of loadedTracks) {
+			if (
+				track.source === 'bilibili' &&
+				!track.bilibiliMetadata.bvid &&
+				!mappedTrackIds.has(track.id)
+			) {
+				unmatchedCount++
+			}
+		}
+
+		const failedCount = errorCount + rateLimitedCount
+		const unfinishedCount = unmatchedCount + failedCount
+		return {
+			unmatchedCount,
+			errorCount,
+			rateLimitedCount,
+			matchedCount,
+			failedCount,
+			unfinishedCount,
+			totalExternalCount: externalTrackMappings.length,
+		}
+	}, [externalTrackMappings, playlistData?.pages])
+
+	const handleManualMatchLocalTrack = useCallback(
+		(track: Track) => {
+			if (isSharedSubscriber) {
+				toast.info('订阅的共享歌单不支持修改音源')
+				return
+			}
+			let mapping: ExternalTrackMappingRecord | null = null
+			try {
+				mapping = externalImportJobService.getTrackMapping(track.id)
+			} catch {
+				mapping = null
+			}
+			const originalTrack: GenericTrack = mapping?.originalTrack ?? {
+				title: track.title,
+				artists: track.artist?.name ? [track.artist.name] : [],
+				album: '',
+				duration: Math.max(0, (track.duration ?? 0) * 1000),
+				coverUrl: track.coverUrl ?? undefined,
+			}
+			const initialQuery =
+				`${originalTrack.title} ${originalTrack.artists.join(' ')}`.trim()
+			const hadExistingBvid =
+				track.source === 'bilibili' && Boolean(track.bilibiliMetadata.bvid)
+
+			openModal('ManualMatchExternalSync', {
+				track: originalTrack,
+				initialQuery,
+				onMatch: (matchResult) => {
+					externalImportJobService.updateTrackMatchInPlace(
+						track.id,
+						{
+							...matchResult,
+							track: originalTrack,
+							status: 'matched',
+						},
+						{
+							playlistId: numericPlaylistId,
+							originalTrack,
+						},
+					)
+					refreshExternalMappings()
+					void Promise.all([
+						queryClient.invalidateQueries({
+							queryKey: playlistKeys.playlistContents(numericPlaylistId),
+						}),
+						queryClient.invalidateQueries({
+							queryKey: playlistKeys.playlistMetadata(numericPlaylistId),
+						}),
+					])
+					toast.success(hadExistingBvid ? '已更新匹配音源' : '手动匹配成功')
+				},
+			})
+		},
+		[isSharedSubscriber, numericPlaylistId, openModal, refreshExternalMappings],
+	)
+
+	const handleLocalTrackPress = useCallback(
+		(track: Track) => {
+			if (track.source === 'bilibili' && !track.bilibiliMetadata.bvid) {
+				if (isSharedSubscriber) {
+					toast.info('该歌曲尚未匹配 B 站音源')
+					return
+				}
+				handleManualMatchLocalTrack(track)
+				return
+			}
+			handleTrackPress(track)
+		},
+		[handleManualMatchLocalTrack, handleTrackPress, isSharedSubscriber],
+	)
+
+	const handleBatchRematch = useCallback(
+		async (mode: 'unfinished' | 'failed') => {
+			if (
+				externalPlaylistImportWorker.isPlaylistRematchRunning(numericPlaylistId)
+			) {
+				return
+			}
+			setIsRematchRunning(true)
+			try {
+				const result = await externalPlaylistImportWorker.rematchPlaylistTracks(
+					numericPlaylistId,
+					{
+						mode,
+						onProgress: (completed, total) => {
+							setRematchProgress({ completed, total })
+							void queryClient.invalidateQueries({
+								queryKey: playlistKeys.playlistContents(numericPlaylistId),
+							})
+						},
+					},
+				)
+				setRematchProgress(null)
+				setIsRematchRunning(false)
+				refreshExternalMappings()
+				await Promise.all([
+					queryClient.invalidateQueries({
+						queryKey: playlistKeys.playlistContents(numericPlaylistId),
+					}),
+					queryClient.invalidateQueries({
+						queryKey: playlistKeys.playlistMetadata(numericPlaylistId),
+					}),
+				])
+
+				if (result.status === 'rate_limited') {
+					toast.error('遇到 Bilibili 请求受限，已自动暂停匹配，请稍后重试', {
+						id: 'bilibili-rate-limit',
+					})
+				} else if (result.total === 0) {
+					toast.info('没有需要继续匹配的歌曲')
+				} else if (result.matched === 0) {
+					toast.info(
+						`未找到新的匹配音源 (0 / ${result.total})，可点击「查看清单」手动搜索`,
+					)
+				} else {
+					toast.success(
+						`继续匹配完成：成功匹配 ${result.matched} / ${result.total} 首`,
+					)
+				}
+			} catch (e) {
+				setRematchProgress(null)
+				setIsRematchRunning(false)
+				toastAndLogError('继续匹配歌单音源失败', e, SCOPE)
+			}
+		},
+		[numericPlaylistId, refreshExternalMappings],
+	)
+
+	const handlePauseRematch = useCallback(() => {
+		externalPlaylistImportWorker.pausePlaylistRematch(numericPlaylistId)
+		setIsRematchRunning(false)
+		setRematchProgress(null)
+		toast.info('已暂停继续匹配')
+	}, [numericPlaylistId])
+
 	const pullingIcon = useMemo(
 		() => () => (
 			<ActivityIndicator
@@ -576,6 +924,7 @@ function LocalPlaylistContent({
 		openAddToPlaylistModal: (track) =>
 			openModal('UpdateTrackLocalPlaylists', { track }),
 		openEditTrackModal: (track) => openModal('EditTrackMetadata', { track }),
+		onRematchTrack: handleManualMatchLocalTrack,
 		playlist: playlistMetadata,
 		isReadOnly: isSharedSubscriber,
 	})
@@ -929,7 +1278,40 @@ function LocalPlaylistContent({
 	}))
 
 	const draggedTrack =
-		dragging !== null ? finalPlaylistData[dragging.trackIndex] : null
+		dragging !== null ? displayedPlaylistData[dragging.trackIndex] : null
+
+	const handleConfirmExport = async () => {
+		if (isExporting) return
+		setIsExporting(true)
+		setExportDialogVisible(false)
+		const loadingToast = toast.loading('正在生成导出文件...')
+		try {
+			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+			if (tracksResult.isErr()) {
+				toast.dismiss(loadingToast)
+				toastAndLogError('获取歌单曲目失败', tracksResult.error, SCOPE)
+				return
+			}
+			toast.dismiss(loadingToast)
+			switch (exportFormat) {
+				case 'json': {
+					const exportRes = await playlistOutService.exportPlaylistToJsonFile(
+						playlistMetadata,
+						tracksResult.value,
+					)
+					if (exportRes.isErr()) {
+						toast.error(exportRes.error.message)
+					}
+					break
+				}
+			}
+		} catch (e) {
+			toast.dismiss(loadingToast)
+			toastAndLogError('导出歌单失败', e, SCOPE)
+		} finally {
+			setIsExporting(false)
+		}
+	}
 
 	const menuActions = useMenuActions(addPlaylistMenuItems)
 
@@ -947,6 +1329,25 @@ function LocalPlaylistContent({
 				title: '排序',
 				image: SORT_ICON,
 				onPress: enterSelectMode,
+			})
+		}
+
+		if (
+			isLocal &&
+			!isSharedSubscriber &&
+			externalMatchStats.unfinishedCount > 0
+		) {
+			menu.add({
+				title: `未完成匹配清单 (${externalMatchStats.unfinishedCount})`,
+				image: LIST_ICON,
+				onPress: openUnmatchedTracksPage,
+			})
+			menu.add({
+				title: `继续匹配未完成歌曲 (${externalMatchStats.unfinishedCount})`,
+				image: SYNC_ICON,
+				onPress: () => {
+					void handleBatchRematch('unfinished')
+				},
 			})
 		}
 
@@ -1028,6 +1429,14 @@ function LocalPlaylistContent({
 		}
 
 		menu.add({
+			title: '导出歌单',
+			image: EXPORT_JSON_ICON,
+			onPress: () => {
+				setExportDialogVisible(true)
+			},
+		})
+
+		menu.add({
 			title: playlistMetadata.isPinned ? '取消置顶' : '置顶',
 			image: playlistMetadata.isPinned ? UNPIN_ICON : PIN_ICON,
 			onPress: () => {
@@ -1062,6 +1471,49 @@ function LocalPlaylistContent({
 				visible={playerPreferenceVisible}
 				onDismiss={() => setPlayerPreferenceVisible(false)}
 			/>
+			<Portal>
+				<Dialog
+					visible={exportDialogVisible}
+					onDismiss={() => {
+						if (!isExporting) setExportDialogVisible(false)
+					}}
+				>
+					<Dialog.Title>导出歌单</Dialog.Title>
+					<Dialog.Content>
+						<Text variant='bodyMedium'>请选择导出文件格式：</Text>
+						<RadioButton.Group
+							value={exportFormat}
+							onValueChange={(value) => {
+								setExportFormat(value as PlaylistExportFormat)
+							}}
+						>
+							{PLAYLIST_EXPORT_FORMATS.map((item) => (
+								<RadioButton.Item
+									key={item.value}
+									disabled={isExporting}
+									label={item.label}
+									value={item.value}
+								/>
+							))}
+						</RadioButton.Group>
+					</Dialog.Content>
+					<Dialog.Actions>
+						<Button
+							disabled={isExporting}
+							onPress={() => setExportDialogVisible(false)}
+						>
+							取消
+						</Button>
+						<Button
+							loading={isExporting}
+							disabled={isExporting}
+							onPress={() => void handleConfirmExport()}
+						>
+							导出
+						</Button>
+					</Dialog.Actions>
+				</Dialog>
+			</Portal>
 			<Appbar.Header
 				elevated
 				style={{ backgroundColor: 'transparent' }}
@@ -1160,9 +1612,9 @@ function LocalPlaylistContent({
 				<LocalTrackList
 					listRef={listRef}
 					isStale={searchQuery !== deferredQuery}
-					tracks={finalPlaylistData ?? []}
+					tracks={displayedPlaylistData ?? []}
 					playlist={playlistMetadata}
-					handleTrackPress={handleTrackPress}
+					handleTrackPress={handleLocalTrackPress}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					isOffline={isOffline}
@@ -1232,7 +1684,97 @@ function LocalPlaylistContent({
 								primaryButtonTextColor={primaryButtonTextColor}
 								secondaryButtonContainerColor={secondaryButtonContainerColor}
 								secondaryButtonIconColor={secondaryButtonIconColor}
+								externalViewMode={externalViewMode}
+								onToggleExternalViewMode={
+									isExternalConvertedPlaylist
+										? handleToggleExternalViewMode
+										: undefined
+								}
 							/>
+							{playlistMetadata.type === 'local' &&
+								!isSharedSubscriber &&
+								(externalMatchStats.unfinishedCount > 0 ||
+									isRematchRunning) && (
+									<Surface
+										style={[
+											styles.rematchBanner,
+											{ backgroundColor: colors.elevation.level2 },
+										]}
+										elevation={1}
+									>
+										<View style={styles.rematchBannerHeader}>
+											<View style={{ flex: 1 }}>
+												<Text
+													variant='titleSmall'
+													style={{ fontWeight: '700' }}
+												>
+													{isRematchRunning
+														? `正在继续匹配 B 站音源 (${rematchProgress?.completed ?? 0}/${rematchProgress?.total ?? externalMatchStats.unfinishedCount})...`
+														: `尚有 ${externalMatchStats.unfinishedCount} 首歌曲待匹配音源`}
+												</Text>
+												<Text
+													variant='bodySmall'
+													style={{
+														color: colors.onSurfaceVariant,
+														marginTop: 2,
+													}}
+												>
+													{externalMatchStats.rateLimitedCount > 0
+														? `其中 ${externalMatchStats.rateLimitedCount} 首因 Bilibili 请求受限暂停，可稍后继续匹配或点击单曲手动匹配`
+														: externalMatchStats.errorCount > 0
+															? `待匹配 ${externalMatchStats.unmatchedCount} 首 · 网络异常 ${externalMatchStats.errorCount} 首 · 点击单曲可手动匹配`
+															: '点击下方按钮继续自动匹配，或点击列表中任意歌曲手动匹配 / 更换音源'}
+												</Text>
+											</View>
+										</View>
+										<View style={styles.rematchBannerActions}>
+											{isRematchRunning ? (
+												<Button
+													mode='outlined'
+													compact
+													icon='pause'
+													onPress={handlePauseRematch}
+												>
+													暂停匹配
+												</Button>
+											) : (
+												<>
+													<Button
+														mode='contained-tonal'
+														compact
+														icon='format-list-bulleted'
+														onPress={openUnmatchedTracksPage}
+													>
+														{`查看未完成清单 (${externalMatchStats.unfinishedCount})`}
+													</Button>
+													<Button
+														mode='outlined'
+														compact
+														icon='sync'
+														onPress={() =>
+															void handleBatchRematch('unfinished')
+														}
+													>
+														{`继续自动匹配 (${externalMatchStats.unfinishedCount})`}
+													</Button>
+													{externalMatchStats.failedCount > 0 &&
+														externalMatchStats.unmatchedCount > 0 && (
+															<Button
+																mode='outlined'
+																compact
+																icon='refresh'
+																onPress={() =>
+																	void handleBatchRematch('failed')
+																}
+															>
+																{`仅重试失败项 (${externalMatchStats.failedCount})`}
+															</Button>
+														)}
+												</>
+											)}
+										</View>
+									</Surface>
+								)}
 							{isSharedLoggedOut && (
 								<View
 									style={[
@@ -1324,6 +1866,23 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 4 },
 		shadowOpacity: 0.3,
 		shadowRadius: 6,
+	},
+	rematchBanner: {
+		marginHorizontal: 16,
+		marginBottom: 12,
+		borderRadius: 12,
+		paddingHorizontal: 14,
+		paddingVertical: 12,
+		gap: 10,
+	},
+	rematchBannerHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+	rematchBannerActions: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 8,
 	},
 	syncPausedNotice: {
 		marginHorizontal: 16,

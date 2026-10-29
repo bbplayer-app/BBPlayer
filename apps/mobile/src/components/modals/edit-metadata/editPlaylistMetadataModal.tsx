@@ -87,13 +87,16 @@ export default function EditPlaylistMetadataModal({
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true })
 		}
-		const coverFile = new FileSystem.File(coverDir, assetFile.name)
+		const coverFile = new FileSystem.File(
+			coverDir,
+			`${playlist.id}_${Date.now()}_${assetFile.name}`,
+		)
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
 		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
-	}, [])
+	}, [playlist.id])
 
 	const handleDismiss = useCallback(() => {
 		close()

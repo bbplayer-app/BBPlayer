@@ -106,7 +106,12 @@ export default function FavoritePage() {
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		favoriteData?.pages[0]?.info?.cover,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 

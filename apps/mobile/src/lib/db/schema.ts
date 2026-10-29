@@ -252,6 +252,150 @@ export const playlistSyncQueue = sqliteTable(
 	],
 )
 
+export const externalImportJobs = sqliteTable(
+	'external_import_jobs',
+	{
+		jobId: text('job_id').primaryKey().notNull(),
+		source: text('source', {
+			enum: ['netease', 'qq', 'playlistout', 'local_json'],
+		}).notNull(),
+		sourcePlaylistId: text('source_playlist_id').notNull(),
+		playlistMetadata: text('playlist_metadata', { mode: 'json' }).notNull(),
+		totalCount: integer('total_count').notNull().default(0),
+		processedCount: integer('processed_count').notNull().default(0),
+		matchedCount: integer('matched_count').notNull().default(0),
+		unmatchedCount: integer('unmatched_count').notNull().default(0),
+		errorCount: integer('error_count').notNull().default(0),
+		status: text('status', {
+			enum: [
+				'pending',
+				'running',
+				'paused',
+				'rate_limited',
+				'completed_waiting_confirmation',
+				'completed',
+				'cancelled',
+				'failed',
+			],
+		})
+			.notNull()
+			.default('pending'),
+		savedPlaylistId: integer('saved_playlist_id'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+		lastProcessedAt: integer('last_processed_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [
+		uniqueIndex('external_import_jobs_source_playlist_unq').on(
+			table.source,
+			table.sourcePlaylistId,
+		),
+		index('external_import_jobs_status_idx').on(table.status),
+	],
+)
+
+export const externalImportItems = sqliteTable(
+	'external_import_items',
+	{
+		itemId: text('item_id').primaryKey().notNull(),
+		jobId: text('job_id')
+			.notNull()
+			.references(() => externalImportJobs.jobId, { onDelete: 'cascade' }),
+		fingerprint: text('fingerprint').notNull(),
+		originalIndex: integer('original_index').notNull(),
+		originalTrack: text('original_track', { mode: 'json' }).notNull(),
+		status: text('status', {
+			enum: ['pending', 'matched', 'unmatched', 'error', 'rate_limited'],
+		})
+			.notNull()
+			.default('pending'),
+		matchedVideo: text('matched_video', { mode: 'json' }),
+		errorType: text('error_type', {
+			enum: ['network', 'timeout', 'api', 'rate_limited', 'unknown'],
+		}),
+		errorMessage: text('error_message'),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index('external_import_items_job_idx').on(table.jobId),
+		index('external_import_items_job_index_idx').on(
+			table.jobId,
+			table.originalIndex,
+		),
+		index('external_import_items_job_fingerprint_idx').on(
+			table.jobId,
+			table.fingerprint,
+		),
+	],
+)
+
+export const externalTrackMappings = sqliteTable(
+	'external_track_mappings',
+	{
+		trackId: integer('track_id')
+			.primaryKey()
+			.notNull()
+			.references(() => tracks.id, { onDelete: 'cascade' }),
+		playlistId: integer('playlist_id')
+			.notNull()
+			.references(() => playlists.id, { onDelete: 'cascade' }),
+		jobId: text('job_id'),
+		itemId: text('item_id'),
+		source: text('source', {
+			enum: ['netease', 'qq', 'playlistout', 'local_json'],
+		}).notNull(),
+		sourcePlaylistId: text('source_playlist_id').notNull(),
+		sourceTrackId: text('source_track_id'),
+		originalIndex: integer('original_index').notNull().default(0),
+		trackFingerprint: text('track_fingerprint').notNull(),
+		originalTitle: text('original_title').notNull(),
+		originalTranslatedTitle: text('original_translated_title'),
+		originalArtistsJson: text('original_artists_json').notNull(),
+		originalAlbum: text('original_album').notNull(),
+		originalDuration: integer('original_duration').notNull().default(0),
+		originalCoverUrl: text('original_cover_url'),
+		matchStatus: text('match_status', {
+			enum: ['pending', 'matched', 'unmatched', 'error', 'rate_limited'],
+		})
+			.notNull()
+			.default('pending'),
+		matchedBvid: text('matched_bvid'),
+		matchedCid: integer('matched_cid'),
+		matchedTitle: text('matched_title'),
+		matchedAuthor: text('matched_author'),
+		matchedMid: integer('matched_mid'),
+		matchedPic: text('matched_pic'),
+		matchedDuration: text('matched_duration'),
+		matchedVideoJson: text('matched_video_json'),
+		errorType: text('error_type', {
+			enum: ['network', 'timeout', 'api', 'rate_limited', 'unknown'],
+		}),
+		errorMessage: text('error_message'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.default(sql`(unixepoch() * 1000)`)
+			.$onUpdate(() => new Date()),
+	},
+	(table) => [
+		index('external_track_mappings_playlist_idx').on(table.playlistId),
+		index('external_track_mappings_status_idx').on(
+			table.playlistId,
+			table.matchStatus,
+		),
+	],
+)
+
 // ##################################
 // RELATIONS
 // ##################################
@@ -274,6 +418,10 @@ export const trackRelations = relations(tracks, ({ one, many }) => ({
 		fields: [tracks.id],
 		references: [localMetadata.trackId],
 	}),
+	externalTrackMapping: one(externalTrackMappings, {
+		fields: [tracks.id],
+		references: [externalTrackMappings.trackId],
+	}),
 	playHistory: many(playHistory),
 }))
 
@@ -290,6 +438,7 @@ export const playlistRelations = relations(playlists, ({ one, many }) => ({
 		references: [artists.id],
 	}),
 	trackLinks: many(playlistTracks),
+	externalTrackMappings: many(externalTrackMappings),
 	dynamicSources: many(dynamicPlaylistSources, {
 		relationName: 'dynamicPlaylist',
 	}),
@@ -341,3 +490,34 @@ export const localMetadataRelations = relations(localMetadata, ({ one }) => ({
 		references: [tracks.id],
 	}),
 }))
+
+export const externalImportJobRelations = relations(
+	externalImportJobs,
+	({ many }) => ({
+		items: many(externalImportItems),
+	}),
+)
+
+export const externalImportItemRelations = relations(
+	externalImportItems,
+	({ one }) => ({
+		job: one(externalImportJobs, {
+			fields: [externalImportItems.jobId],
+			references: [externalImportJobs.jobId],
+		}),
+	}),
+)
+
+export const externalTrackMappingRelations = relations(
+	externalTrackMappings,
+	({ one }) => ({
+		track: one(tracks, {
+			fields: [externalTrackMappings.trackId],
+			references: [tracks.id],
+		}),
+		playlist: one(playlists, {
+			fields: [externalTrackMappings.playlistId],
+			references: [playlists.id],
+		}),
+	}),
+)

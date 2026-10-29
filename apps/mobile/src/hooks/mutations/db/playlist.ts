@@ -9,6 +9,7 @@ import { playlistFacade } from '@/lib/facades/playlist'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import type { PlaylistSyncProgress } from '@/lib/facades/syncBilibiliPlaylist'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
+import { externalImportJobService } from '@/lib/services/externalImportJobService'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
 import type { CreateArtistPayload } from '@/types/services/artist'
@@ -224,6 +225,11 @@ export const useDeletePlaylist = () => {
 		},
 		onSuccess: (_, { playlistId }) => {
 			toast.success('删除成功')
+			try {
+				externalImportJobService.deleteJobsForPlaylist(playlistId)
+			} catch {
+				// Ignore cleanup errors
+			}
 			// 取消被删歌单的在途查询：删除成功时详情页可能仍处于挂载状态，
 			// 若不处理，重连/重取会在歌单已不存在时再次查询（BBPLAYER-76 / BBPLAYER-AG）
 			void queryClient.cancelQueries({

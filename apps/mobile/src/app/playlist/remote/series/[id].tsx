@@ -121,7 +121,12 @@ export default function SeriesPage() {
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		archivesData?.pages[0]?.archives?.[0]?.pic,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 	const openModal = useModalStore((state) => state.open)

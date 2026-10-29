@@ -118,7 +118,12 @@ export default function MultipagePage() {
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		videoData?.pic,
+	)
 
 	const { mutate: syncMultipage } = usePlaylistSync()
 

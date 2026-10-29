@@ -10,6 +10,7 @@ import type { PlayerError } from '@/lib/errors/player'
 import { createPlayerError } from '@/lib/errors/player'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { enqueueTracks, startPlayback } from '@/lib/player/playbackSession'
+import { externalImportJobService } from '@/lib/services/externalImportJobService'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
 
@@ -25,37 +26,32 @@ const logger = log.extend('Utils.Player')
  */
 function convertToOrpheusTrack(
 	track: Track,
+	playlistId?: number,
 ): Result<OrpheusTrack, BilibiliApiError | PlayerError> {
-	// logger.debug('转换 Track 为 OrpheusTrack', {
-	// 	trackId: track.id,
-	// 	title: track.title,
-	// 	artist: track.artist,
-	// })
-
-	const url = getInternalPlayUri(track)
+	const resolvedTrack = externalImportJobService.resolveTrackForPlayback(
+		track,
+		playlistId,
+	)
+	const url = getInternalPlayUri(resolvedTrack)
 
 	// 如果没有有效的 URL，返回错误
 	if (!url) {
 		const errorMsg = '没有找到有效的音频流 URL'
-		logger.warning(errorMsg, track)
+		logger.warning(errorMsg, resolvedTrack)
 		return err(
-			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
+			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${resolvedTrack.id}`),
 		)
 	}
 
 	const orpheusTrack: OrpheusTrack = {
-		id: track.uniqueKey,
+		id: resolvedTrack.uniqueKey,
 		url,
-		title: track.title,
-		artist: track.artist?.name,
-		artwork: track.coverUrl ?? undefined,
-		duration: track.duration,
+		title: resolvedTrack.title,
+		artist: resolvedTrack.artist?.name,
+		artwork: resolvedTrack.coverUrl ?? undefined,
+		duration: resolvedTrack.duration,
 	}
 
-	// logger.debug('OrpheusTrack 转换完成', {
-	// 	title: orpheusTrack.title,
-	// 	id: orpheusTrack.id,
-	// })
 	return ok(orpheusTrack)
 }
 
@@ -78,7 +74,7 @@ async function reportPlaybackHistory(
 		return
 	}
 	const track = trackResult.value
-	if (track.source !== 'bilibili') {
+	if (track.source !== 'bilibili' || !track.bilibiliMetadata.bvid) {
 		return
 	}
 	let cid = track.bilibiliMetadata.cid
@@ -155,7 +151,7 @@ async function addToQueue({
 	try {
 		const orpheusTracks: OrpheusTrack[] = []
 		for (const track of tracks) {
-			const result = convertToOrpheusTrack(track)
+			const result = convertToOrpheusTrack(track, playlistId)
 			if (result.isOk()) orpheusTracks.push(result.value)
 		}
 		const submit = clearQueue ? startPlayback : enqueueTracks
@@ -175,6 +171,9 @@ async function addToQueue({
 
 function getInternalPlayUri(track: Track) {
 	if (track.source === 'bilibili') {
+		if (!track.bilibiliMetadata.bvid) {
+			return undefined
+		}
 		return track.bilibiliMetadata.isMultiPage
 			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=0&dolby=0`
 			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=0&dolby=0`

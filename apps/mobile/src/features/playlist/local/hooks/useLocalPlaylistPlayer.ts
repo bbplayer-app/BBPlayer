@@ -30,8 +30,16 @@ export function useLocalPlaylistPlayer(
 				return
 			}
 			let tracks = tracksResult.value.filter((item) =>
-				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
+				item.source === 'bilibili'
+					? Boolean(item.bilibiliMetadata.bvid) &&
+						item.bilibiliMetadata.videoIsValid
+					: true,
 			)
+
+			if (tracks.length === 0) {
+				toast.info('歌单中暂无已匹配音源的歌曲，请先匹配 B 站音源')
+				return
+			}
 
 			if (isOffline) {
 				const originalLength = tracks.length

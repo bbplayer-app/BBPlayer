@@ -1,3 +1,4 @@
+import { cancelImportProgressNotification } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import {
 	addEventListener as addNetInfoEventListener,
@@ -37,17 +38,20 @@ import { initializeSentry } from '@/lib/config/sentry'
 import drizzleDb from '@/lib/db/db'
 import { playerSideEffects } from '@/lib/player/PlayerSideEffects'
 import { analyticsService } from '@/lib/services/analyticsService'
+import { externalImportNotificationService } from '@/lib/services/externalImportNotificationService'
 import lyricService from '@/lib/services/lyricService'
 import { registerUpdatePrefetch } from '@/lib/services/updateService'
 import {
 	reportUpdateActivity,
 	reportUpdateLaunch,
 } from '@/lib/services/updateTelemetry'
+import { externalPlaylistImportWorker } from '@/lib/workers/ExternalPlaylistImportWorker'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import { ProjectScope } from '@/types/core/scope'
 import log, { cleanOldLogFiles, reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import { isActuallyOffline } from '@/utils/network'
+import toast from '@/utils/toast'
 
 import migrations from '../../drizzle/migrations'
 
@@ -144,7 +148,7 @@ function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
-	useCheckUpdate()
+	useCheckUpdate(isReady && migrationsSuccess)
 	useFeatureTracking()
 
 	onlineManager.setEventListener((setOnline) => {
@@ -212,6 +216,14 @@ function RootLayout() {
 			playlistSyncWorker.recoverStuckRows().catch((error) => {
 				logger.error('恢复同步任务失败:', error)
 			})
+			try {
+				const recoveredCount = externalPlaylistImportWorker.recoverStuckJobs()
+				if (recoveredCount > 0) {
+					cancelImportProgressNotification()
+				}
+			} catch (error) {
+				logger.error('恢复外部歌单导入任务失败:', error)
+			}
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
 			if (firstOpen) {
@@ -219,6 +231,27 @@ function RootLayout() {
 			}
 		}
 	}, [isReady, migrationsSuccess])
+
+	useEffect(() => {
+		const stopNotifications = externalImportNotificationService.startListening()
+		const unsubscribeWorker = externalPlaylistImportWorker.subscribe(
+			(event) => {
+				if (event.type === 'completed') {
+					toast.success('外部歌单自动匹配完成')
+				} else if (event.type === 'rate_limited') {
+					toast.error('触发 Bilibili 请求限制，匹配已自动暂停，进度已保存', {
+						id: 'bilibili-rate-limit',
+					})
+				} else if (event.type === 'failed') {
+					toast.error('外部歌单自动匹配中断，进度已保存')
+				}
+			},
+		)
+		return () => {
+			stopNotifications()
+			unsubscribeWorker()
+		}
+	}, [])
 
 	useEffect(() => {
 		if (migrationsError) {
@@ -336,6 +369,10 @@ function RootLayout() {
 
 						<Stack.Screen
 							name='playlist/local/[id]'
+							options={{ headerShown: false }}
+						/>
+						<Stack.Screen
+							name='playlist/local/unmatched'
 							options={{ headerShown: false }}
 						/>
 						<Stack.Screen

@@ -99,7 +99,12 @@ export default function CollectionPage() {
 		primaryButtonTextColor,
 		secondaryButtonContainerColor,
 		secondaryButtonIconColor,
-	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
+	} = usePlaylistBackgroundColor(
+		coverRef,
+		theme.dark,
+		colors.background,
+		collectionData?.info?.cover,
+	)
 
 	const { playTrack } = useRemotePlaylist()
 	const openModal = useModalStore((state) => state.open)

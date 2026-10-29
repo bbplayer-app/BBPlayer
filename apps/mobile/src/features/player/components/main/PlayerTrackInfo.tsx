@@ -170,7 +170,7 @@ export function TrackInfo({
 												height: coverSize,
 												borderRadius: coverBorderRadius,
 											}}
-											recyclingKey={currentTrack.uniqueKey}
+											recyclingKey={`${currentTrack.uniqueKey}:${currentTrack.coverUrl ?? ''}`}
 											cachePolicy={'disk'}
 											transition={300}
 										/>

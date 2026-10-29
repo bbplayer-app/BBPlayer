@@ -77,7 +77,10 @@ export default function CreatePlaylistModal({
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true, idempotent: true })
 		}
-		const coverFile = new FileSystem.File(coverDir, assetFile.name)
+		const coverFile = new FileSystem.File(
+			coverDir,
+			`${Date.now()}_${assetFile.name}`,
+		)
 		if (coverFile.exists) {
 			coverFile.delete()
 		}

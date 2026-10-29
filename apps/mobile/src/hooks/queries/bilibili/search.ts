@@ -1,10 +1,23 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import { bilibiliApi } from '@/lib/api/bilibili/api'
+import { isBilibiliRateLimitError } from '@/lib/errors/thirdparty/bilibili'
 import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
 const logger = log.extend('Queries.SearchQueries')
+
+const MAX_SEARCH_RETRIES = 2
+
+export const shouldRetryBilibiliSearch = (
+	failureCount: number,
+	error: unknown,
+): boolean => {
+	if (isBilibiliRateLimitError(error)) {
+		return false
+	}
+	return failureCount < MAX_SEARCH_RETRIES
+}
 
 export const searchQueryKeys = {
 	all: ['bilibili', 'search'] as const,
@@ -30,6 +43,7 @@ export const useSearchResults = (query: string) => {
 				}),
 			),
 		enabled,
+		retry: shouldRetryBilibiliSearch,
 		staleTime: 5 * 60 * 1000,
 		initialPageParam: 1,
 		getNextPageParam: (lastPage, allPages) => {
@@ -54,6 +68,7 @@ export const useUserSearchResults = (query: string) => {
 				bilibiliApi.searchUsers({ keyword: query, page: 1, signal }),
 			),
 		enabled,
+		retry: shouldRetryBilibiliSearch,
 		staleTime: 5 * 60 * 1000,
 	})
 }
@@ -64,6 +79,7 @@ export const useHotSearches = () => {
 		queryKey: searchQueryKeys.hotSearches(),
 		queryFn: ({ signal }) =>
 			returnOrThrowAsync(bilibiliApi.getHotSearches({ signal })),
+		retry: shouldRetryBilibiliSearch,
 		staleTime: 15 * 60 * 1000,
 	})
 }

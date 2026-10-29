@@ -144,6 +144,28 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 					],
 					category: ['BROWSABLE', 'DEFAULT'],
 				},
+				{
+					action: 'VIEW',
+					data: [
+						{
+							scheme: 'content',
+							mimeType: 'application/json',
+						},
+						{
+							scheme: 'file',
+							mimeType: 'application/json',
+						},
+						{
+							scheme: 'content',
+							mimeType: 'text/json',
+						},
+						{
+							scheme: 'file',
+							mimeType: 'text/json',
+						},
+					],
+					category: ['DEFAULT', 'BROWSABLE'],
+				},
 			],
 		},
 		plugins: [
@@ -279,7 +301,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				},
 				android: {
 					enabled: true,
-					singleShareMimeTypes: ['text/*'],
+					singleShareMimeTypes: [
+						'text/*',
+						'application/json',
+						'application/octet-stream',
+					],
 					multipleShareMimeTypes: ['text/*'],
 				},
 			}),
