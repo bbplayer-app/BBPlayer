@@ -142,6 +142,9 @@ Orpheus 使用 Media3 DownloadManager。
 - **`showDesktopLyrics() / hideDesktopLyrics()`**
   显示/隐藏桌面歌词。
 
+- **`setDesktopLyricsSuppressed(suppressed: boolean): Promise<void>`**
+  临时隐藏 Android 桌面歌词，传入 `false` 恢复。保留用户开关设置和歌词更新。
+
 - **`checkOverlayPermission() / requestOverlayPermission()`**
   权限检查与请求。
 

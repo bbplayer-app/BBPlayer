@@ -1141,6 +1141,10 @@ class ExpoOrpheusModule : Module() {
             withServiceOnMainThread { it?.floatingLyricsManager?.hide() }
         }
 
+        AsyncFunction("setDesktopLyricsSuppressed") Coroutine { suppressed: Boolean ->
+            withServiceOnMainThread { it?.floatingLyricsManager?.setSuppressed(suppressed) }
+        }
+
         AsyncFunction("setLyricsInternal") Coroutine { lyricsJson: String, consumerIds: List<String> ->
             submitLyricsInternal(lyricsJson, resolveLyricsConsumers(consumerIds))
         }

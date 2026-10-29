@@ -395,6 +395,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	showDesktopLyrics(): Promise<void>
 	/** 当 Android 服务可用时隐藏桌面悬浮歌词。 */
 	hideDesktopLyrics(): Promise<void>
+	/** 临时隐藏 Android 桌面歌词，不修改用户开关；传入 false 恢复显示。 */
+	setDesktopLyricsSuppressed(suppressed: boolean): Promise<void>
 	/**
 	 * 仅供原生桥接使用的歌词入口。
 	 *
