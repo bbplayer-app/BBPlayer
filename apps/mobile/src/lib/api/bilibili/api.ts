@@ -46,7 +46,7 @@ import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
-import { bilibiliApiClient } from './client'
+import { bilibiliApiClient, BILIBILI_WEB_USER_AGENT } from './client'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
@@ -333,16 +333,19 @@ export class BilibiliApi {
 	}
 
 	/**
-	 * 获取视频音频流信息
-	 * 优先级（在 dolby 和 hi-res 都开启的情况下）：dolby > hi-res > normal
+	 * 获取完整音频流信息，保留主地址和备用地址供节点测速使用。
 	 */
-	getAudioStream(
-		params: BilibiliAudioStreamParams,
-	): ResultAsync<
-		Exclude<BilibiliTrack['bilibiliMetadata']['bilibiliStreamUrl'], undefined>,
-		BilibiliApiError
-	> {
-		const { bvid, cid, audioQuality, enableDolby, enableHiRes } = params
+	getAudioStreamInfo({
+		bvid,
+		cid,
+		audioQuality = 30280,
+		signal,
+	}: {
+		bvid: string
+		cid: number
+		audioQuality?: number
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliAudioStreamResponse, BilibiliApiError> {
 		const wbiParams = getWbiEncodedParams({
 			bvid,
 			cid: String(cid),
@@ -353,116 +356,125 @@ export class BilibiliApi {
 			voice_balance: '1',
 		})
 
-		return wbiParams
-			.andThen((encodedParams) => {
-				return bilibiliApiClient.get<BilibiliAudioStreamResponse>({
-					endpoint: '/x/player/wbi/playurl',
-					params: encodedParams,
-				})
+		return wbiParams.andThen((encodedParams) => {
+			return bilibiliApiClient.get<BilibiliAudioStreamResponse>({
+				endpoint: '/x/player/wbi/playurl',
+				params: encodedParams,
+				headers: { 'User-Agent': BILIBILI_WEB_USER_AGENT },
+				signal,
 			})
-			.andThen((response) => {
-				const { dash, durl, volume } = response
+		})
+	}
 
-				if (!dash) {
-					if (!durl?.[0]) {
-						return errAsync(
-							new BilibiliApiError({
-								message: '请求到的流数据不包含 dash 或 durl 任一字段',
-								type: 'AudioStreamError',
-							}),
-						)
-					}
-					logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
-					return okAsync({
-						url: durl[0].url,
-						quality: 114514,
-						getTime: Date.now() + 60 * 1000, // Add 60s buffer
-						type: 'mp4' as const,
-						volume,
-					})
-				}
+	/** 优先级（在 dolby 和 hi-res 都开启的情况下）：dolby > hi-res > normal。 */
+	getAudioStream(
+		params: BilibiliAudioStreamParams,
+	): ResultAsync<
+		Exclude<BilibiliTrack['bilibiliMetadata']['bilibiliStreamUrl'], undefined>,
+		BilibiliApiError
+	> {
+		const { audioQuality, enableDolby, enableHiRes } = params
+		return this.getAudioStreamInfo(params).andThen((response) => {
+			const { dash, durl, volume } = response
 
-				if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
-					logger.debug('优先使用 Dolby 音频流')
-					return okAsync({
-						url: dash.dolby.audio[0].baseUrl,
-						quality: dash.dolby.audio[0].id,
-						getTime: Date.now() + 60 * 1000, // Add 60s buffer
-						type: 'dash' as const,
-						volume,
-					})
-				}
-
-				if (enableHiRes && dash?.flac?.audio) {
-					logger.debug('次级使用 Hi-Res 音频流')
-					return okAsync({
-						url: dash.flac.audio.baseUrl,
-						quality: dash.flac.audio.id,
-						getTime: Date.now() + 60 * 1000, // Add 60s buffer
-						type: 'dash' as const,
-						volume,
-					})
-				}
-
-				if (!dash?.audio || dash.audio.length === 0) {
-					logger.error('未找到有效的音频流数据', { response })
+			if (!dash) {
+				if (!durl?.[0]) {
 					return errAsync(
 						new BilibiliApiError({
-							message: '未找到有效的音频流数据',
+							message: '请求到的流数据不包含 dash 或 durl 任一字段',
 							type: 'AudioStreamError',
 						}),
 					)
 				}
+				logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
+				return okAsync({
+					url: durl[0].url,
+					quality: 114514,
+					getTime: Date.now() + 60 * 1000, // Add 60s buffer
+					type: 'mp4' as const,
+					volume,
+				})
+			}
 
-				let stream:
-					| BilibiliTrack['bilibiliMetadata']['bilibiliStreamUrl']
-					| null = null
-				const getTime = Date.now() + 60 * 1000 // 加 60s 提前量
+			if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
+				logger.debug('优先使用 Dolby 音频流')
+				return okAsync({
+					url: dash.dolby.audio[0].baseUrl,
+					quality: dash.dolby.audio[0].id,
+					getTime: Date.now() + 60 * 1000, // Add 60s buffer
+					type: 'dash' as const,
+					volume,
+				})
+			}
 
-				// 尝试找到指定质量的音频流
-				const targetAudio = dash.audio.find(
-					(audio) => audio.id === audioQuality,
+			if (enableHiRes && dash?.flac?.audio) {
+				logger.debug('次级使用 Hi-Res 音频流')
+				return okAsync({
+					url: dash.flac.audio.baseUrl,
+					quality: dash.flac.audio.id,
+					getTime: Date.now() + 60 * 1000, // Add 60s buffer
+					type: 'dash' as const,
+					volume,
+				})
+			}
+
+			if (!dash?.audio || dash.audio.length === 0) {
+				logger.error('未找到有效的音频流数据', { response })
+				return errAsync(
+					new BilibiliApiError({
+						message: '未找到有效的音频流数据',
+						type: 'AudioStreamError',
+					}),
 				)
+			}
 
-				if (targetAudio) {
+			let stream:
+				| BilibiliTrack['bilibiliMetadata']['bilibiliStreamUrl']
+				| null = null
+			const getTime = Date.now() + 60 * 1000 // 加 60s 提前量
+
+			// 尝试找到指定质量的音频流
+			const targetAudio = dash.audio.find((audio) => audio.id === audioQuality)
+
+			if (targetAudio) {
+				stream = {
+					url: targetAudio.baseUrl,
+					quality: targetAudio.id,
+					getTime,
+					type: 'dash',
+					volume,
+				}
+				logger.debug('找到指定质量音频流', { quality: audioQuality })
+			} else {
+				// Fallback: 使用最高质量如果未找到指定质量
+				logger.warning('未找到指定质量音频流，使用最高质量', {
+					requestedQuality: audioQuality,
+					availableQualities: dash.audio.map((a) => a.id),
+				})
+				const highestQualityAudio = dash.audio[0]
+				if (highestQualityAudio) {
 					stream = {
-						url: targetAudio.baseUrl,
-						quality: targetAudio.id,
+						url: highestQualityAudio.baseUrl,
+						quality: highestQualityAudio.id,
 						getTime,
 						type: 'dash',
 						volume,
 					}
-					logger.debug('找到指定质量音频流', { quality: audioQuality })
-				} else {
-					// Fallback: 使用最高质量如果未找到指定质量
-					logger.warning('未找到指定质量音频流，使用最高质量', {
-						requestedQuality: audioQuality,
-						availableQualities: dash.audio.map((a) => a.id),
-					})
-					const highestQualityAudio = dash.audio[0]
-					if (highestQualityAudio) {
-						stream = {
-							url: highestQualityAudio.baseUrl,
-							quality: highestQualityAudio.id,
-							getTime,
-							type: 'dash',
-							volume,
-						}
-					}
 				}
+			}
 
-				if (!stream) {
-					logger.error('未能确定任何可用的音频流', { response })
-					return errAsync(
-						new BilibiliApiError({
-							message: '未能确定 any 可用的音频流',
-							type: 'AudioStreamError',
-						}),
-					)
-				}
+			if (!stream) {
+				logger.error('未能确定任何可用的音频流', { response })
+				return errAsync(
+					new BilibiliApiError({
+						message: '未能确定 any 可用的音频流',
+						type: 'AudioStreamError',
+					}),
+				)
+			}
 
-				return okAsync(stream)
-			})
+			return okAsync(stream)
+		})
 	}
 
 	/**

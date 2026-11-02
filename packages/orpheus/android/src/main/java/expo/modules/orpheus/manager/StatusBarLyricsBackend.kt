@@ -20,6 +20,11 @@ abstract class StatusBarLyricsBackend(protected val context: Context) {
     /** Whether the underlying framework service is active/connected. */
     abstract val isAvailable: Boolean
 
+    var onConnectionFailed: (() -> Unit)? = null
+
+    /** Feature lifecycle, independent of playback pause or track changes. */
+    open fun setEnabled(enabled: Boolean) {}
+
     /** Called when the full status bar lyric set changes. */
     open fun setLyricsData(data: LyricsData) {}
 

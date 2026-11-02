@@ -15,6 +15,8 @@ import androidx.media3.exoplayer.scheduler.Requirements
 import expo.modules.orpheus.OrpheusConfig
 import expo.modules.orpheus.bilibili.BilibiliRepository
 import expo.modules.orpheus.manager.DownloadCache
+import expo.modules.orpheus.network.BilibiliFallbackDataSource
+import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -97,10 +99,10 @@ object DownloadUtil {
         val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             expo.modules.orpheus.network.OkHttpClientManager.okHttpClient
         )
-            .setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0")
 
         return ResolvingDataSource.Factory(
-            httpDataSourceFactory,
+            DataSource.Factory { BilibiliFallbackDataSource(httpDataSourceFactory) },
             BilibiliResolver()
         )
     }
@@ -133,7 +135,7 @@ object DownloadUtil {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
                     val quality = uri.getQueryParameter("quality")?.toIntOrNull() ?: 30280
-                    val (realUrl, volume) = BilibiliRepository.resolveAudioUrl(
+                    val (urls, volume) = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,
                         audioQuality = quality,
@@ -150,11 +152,12 @@ object DownloadUtil {
                         LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
                     }
 
-                    val headers = HashMap<String, String>()
+                    val headers = HashMap(dataSpec.httpRequestHeaders)
                     headers["Referer"] = "https://www.bilibili.com/"
 
                     return dataSpec.buildUpon()
-                        .setUri(realUrl.toUri())
+                        .setUri(urls.first().toUri())
+                        .setCustomData(BilibiliStreamUrls(urls))
                         .setHttpRequestHeaders(headers)
                         .setKey(uri.toString())
                         .build()

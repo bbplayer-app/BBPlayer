@@ -3,6 +3,24 @@ import type { ColorSchemeName } from 'react-native'
 import { MD3DarkTheme, MD3LightTheme } from 'react-native-paper'
 import type { MD3Colors } from 'react-native-paper/lib/typescript/types'
 
+// 使用固定浅色前景，避免系统深色动态颜色在纯白背景上失去对比度。
+export function buildPureWhitePaperColors(): MD3Colors {
+	return {
+		...MD3LightTheme.colors,
+		background: '#FFFFFF',
+		surface: '#FFFFFF',
+		surfaceVariant: '#FFFFFF',
+		elevation: {
+			level0: 'transparent',
+			level1: '#FFFFFF',
+			level2: '#FFFFFF',
+			level3: '#FFFFFF',
+			level4: '#FFFFFF',
+			level5: '#FFFFFF',
+		},
+	}
+}
+
 /**
  * Build a React Native Paper MD3Colors object from Expo Router's dynamic Material 3 colors.
  */

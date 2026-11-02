@@ -8,7 +8,7 @@ import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { StyleSheet, useColorScheme, View } from 'react-native'
+import { Appearance, StyleSheet, useColorScheme, View } from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
@@ -18,6 +18,7 @@ import RNShake from 'react-native-shake'
 
 import GlobalErrorFallback from '@/components/ErrorBoundary'
 import { alert } from '@/components/modals/AlertModal'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import {
@@ -25,7 +26,10 @@ import {
 	isShakeProfilingEnabled,
 	PROFILING_DURATION_MS,
 } from '@/lib/performance'
-import { buildMaterial3PaperColors } from '@/lib/theme/material3Colors'
+import {
+	buildMaterial3PaperColors,
+	buildPureWhitePaperColors,
+} from '@/lib/theme/material3Colors'
 import { storage } from '@/utils/mmkv'
 
 function DevTools() {
@@ -81,24 +85,40 @@ function ShakeProfiler() {
 
 export default function AppProviders({ children }: { children: ReactNode }) {
 	const colorScheme = useColorScheme()
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
+	useEffect(() => {
+		// 同步原生控件、系统菜单，以及仍读取 useColorScheme 的组件。
+		Appearance.setColorScheme(pureWhiteBackground ? 'light' : 'unspecified')
+		return () => Appearance.setColorScheme('unspecified')
+	}, [pureWhiteBackground])
+
 	const paperTheme = useMemo(
 		() =>
-			colorScheme === 'dark'
-				? {
-						...MD3DarkTheme,
-						colors: buildMaterial3PaperColors(colorScheme),
-					}
-				: {
-						...MD3LightTheme,
-						colors: buildMaterial3PaperColors(colorScheme),
-					},
-		[colorScheme],
+			pureWhiteBackground
+				? { ...MD3LightTheme, colors: buildPureWhitePaperColors() }
+				: colorScheme === 'dark'
+					? {
+							...MD3DarkTheme,
+							colors: buildMaterial3PaperColors(colorScheme),
+						}
+					: {
+							...MD3LightTheme,
+							colors: buildMaterial3PaperColors(colorScheme),
+						},
+		[colorScheme, pureWhiteBackground],
 	)
 
 	return (
 		<SafeAreaProvider>
 			<KeyboardProvider>
-				<View style={styles.container}>
+				<View
+					style={[
+						styles.container,
+						{ backgroundColor: paperTheme.colors.background },
+					]}
+				>
 					<Sentry.ErrorBoundary
 						// oxlint-disable-next-line @typescript-eslint/unbound-method
 						fallback={({ error, resetError }) => (
@@ -118,7 +138,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 							</QueryClientProvider>
 						</GestureHandlerRootView>
 					</Sentry.ErrorBoundary>
-					<SystemBars style='auto' />
+					<SystemBars style={pureWhiteBackground ? 'dark' : 'auto'} />
 				</View>
 			</KeyboardProvider>
 		</SafeAreaProvider>

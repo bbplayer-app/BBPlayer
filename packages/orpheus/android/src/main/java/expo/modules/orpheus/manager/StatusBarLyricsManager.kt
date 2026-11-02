@@ -2,7 +2,9 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import expo.modules.orpheus.model.LyricsData
+import expo.modules.orpheus.util.GeneralStorage
 
 private const val TAG = "StatusBarLyrics"
 
@@ -32,7 +34,9 @@ class StatusBarLyricsManager(private val context: Context) {
             field = value
             if (prev && !value) {
                 backend?.onStop()
-            } else if (!prev && value) {
+            }
+            if (prev != value) backend?.setEnabled(value)
+            if (!prev && field) {
                 reapplyCurrentState()
             }
         }
@@ -42,20 +46,35 @@ class StatusBarLyricsManager(private val context: Context) {
         set(value) {
             val previous = field
             if (previous != null) {
+                previous.onConnectionFailed = null
                 if (enabled) previous.onStop()
                 previous.destroy()
             }
             field = value
+            value?.onConnectionFailed = { onConnectionFailed(value) }
             Log.d(TAG, "[backend] switched to ${value?.javaClass?.simpleName}")
 
             if (enabled) {
-                reapplyCurrentState()
+                value?.setEnabled(true)
+                if (enabled) reapplyCurrentState()
             }
         }
 
     private var lastFrame: StatusBarLyricFrame? = null
     private var lastLyricsData: LyricsData? = null
     private var lastIsPlaying: Boolean = false
+
+    private fun onConnectionFailed(failedBackend: StatusBarLyricsBackend) {
+        if (backend !== failedBackend || !enabled) return
+        GeneralStorage.setStatusBarLyricsEnabled(false)
+        enabled = false
+        Toast.makeText(
+            context,
+            "未能连接词幕，已关闭状态栏歌词。请确认词幕模块可用后重试",
+            Toast.LENGTH_LONG,
+        ).show()
+        notifyStatusChanged()
+    }
 
     fun setLyricsData(data: LyricsData) {
         lastLyricsData = data
@@ -97,6 +116,12 @@ class StatusBarLyricsManager(private val context: Context) {
         lastLyricsData = null
         lastIsPlaying = false
         backend?.onStop()
+    }
+
+    fun destroy() {
+        onStop()
+        backend = null
+        statusChangeListener = null
     }
 
     private fun reapplyCurrentState() {

@@ -46,7 +46,9 @@ const Lyrics = memo(function Lyrics({
 	const windowHeight = dimensions.height
 	const colors = useTheme().colors
 	const isFluidBackground = useAppStore(
-		(state) => state.settings.playerBackgroundStyle === 'fluid',
+		(state) =>
+			!state.settings.pureWhiteBackground &&
+			state.settings.playerBackgroundStyle === 'fluid',
 	)
 	const scrollViewRef = useRef<Animated.ScrollView>(null)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})

@@ -23,7 +23,7 @@ data class BilibiliAudioStreamResponse(
 data class DurlItem(
     @SerialName("order") val order: Int,
     @SerialName("url") val url: String,
-    @SerialName("backup_url") val backupUrl: List<String>?
+    @SerialName("backup_url") val backupUrl: List<String>? = null
 )
 
 @Serializable
@@ -37,7 +37,7 @@ data class DashData(
 data class DashAudioItem(
     @SerialName("id") val id: Int,
     @SerialName("base_url") val baseUrl: String,
-    @SerialName("backup_url") val backupUrl: List<String>?
+    @SerialName("backup_url") val backupUrl: List<String>? = null
 )
 
 @Serializable

@@ -350,7 +350,7 @@ class OrpheusMusicService : MediaLibraryService() {
         abLoopController?.clear()
         saveCurrentResumeRecord()
         floatingLyricsManager.hide()
-        statusBarLyricsManager.onStop()
+        statusBarLyricsManager.destroy()
         scope.cancel()
         instance = null
 

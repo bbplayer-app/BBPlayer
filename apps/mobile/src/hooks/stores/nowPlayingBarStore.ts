@@ -10,9 +10,12 @@ export const HIDDEN_SEGMENT_ROOTS = new Set([
 	'test',
 ])
 
-/** 由根路由名（如 `settings/general`）取首个路径段作为根段。 */
-export function routeNameToSegmentRoot(routeName: string): string {
-	return routeName.split('/')[0]
+/** 同时用于导航事件中的路由名和 useSegments 返回的路径。 */
+export function shouldHideNowPlayingBar(routeName: string): boolean {
+	return (
+		HIDDEN_SEGMENT_ROOTS.has(routeName.split('/')[0]) ||
+		routeName === 'playlist/external-sync'
+	)
 }
 
 export interface NowPlayingBarPageState {

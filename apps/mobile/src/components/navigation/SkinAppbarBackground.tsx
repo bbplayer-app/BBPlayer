@@ -4,6 +4,7 @@ import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
@@ -17,9 +18,12 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const colors = useTheme().colors
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 
 	const head = activeSkin?.skins[activeSkinIndex]?.background.head
-	if (!head) return null
+	if (!head || pureWhiteBackground) return null
 
 	return (
 		<View

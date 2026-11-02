@@ -34,6 +34,9 @@ export default function AppearanceSettingsPage() {
 	)
 	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 	const setSettings = useAppStore((state) => state.setSettings)
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
 
 	const nowPlayingBarStyleMenu = useMenuActions([
 		{
@@ -115,9 +118,28 @@ export default function AppearanceSettingsPage() {
 				]}
 			>
 				<SettingsSectionTitle
-					title='播放器'
+					title='显示'
 					first
 				/>
+				<View style={styles.settingRow}>
+					<View style={styles.settingTextContainer}>
+						<Text>纯白背景</Text>
+						<Text
+							variant='bodySmall'
+							style={{ color: colors.onSurfaceVariant }}
+						>
+							仅用于墨水屏
+						</Text>
+					</View>
+					<UniversalSwitch
+						value={pureWhiteBackground}
+						onValueChange={(value) =>
+							setSettings({ pureWhiteBackground: value })
+						}
+						testID='pure-white-background-switch'
+					/>
+				</View>
+				<SettingsSectionTitle title='播放器' />
 				<View style={styles.settingRow}>
 					<View style={styles.settingTextContainer}>
 						<Text>显示音频频谱</Text>
@@ -155,7 +177,7 @@ export default function AppearanceSettingsPage() {
 				</View>
 
 				<SettingsSectionTitle title='主题' />
-				<ThemeSection />
+				<ThemeSection disabled={pureWhiteBackground} />
 			</ScrollView>
 		</View>
 	)

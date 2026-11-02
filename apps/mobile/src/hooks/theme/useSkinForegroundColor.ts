@@ -1,6 +1,7 @@
 import Color from 'color'
 import { useTheme } from 'react-native-paper'
 
+import useAppStore from '@/hooks/stores/useAppStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 
 import useActiveSkin from './useActiveSkin'
@@ -28,6 +29,10 @@ export default function useSkinForegroundColor(): string {
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const skinColors = activeSkin?.skins[activeSkinIndex]?.colors
+	const pureWhiteBackground = useAppStore(
+		(state) => state.settings.pureWhiteBackground,
+	)
+	if (pureWhiteBackground) return fallback
 
 	return getSkinForegroundColor(
 		skinColors?.color,

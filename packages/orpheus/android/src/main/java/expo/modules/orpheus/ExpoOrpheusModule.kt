@@ -343,6 +343,10 @@ class ExpoOrpheusModule : Module() {
             .get { GeneralStorage.isRestoreEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setRestoreEnabled(enabled) }
 
+        Property("preferredBilibiliCdn")
+            .get { GeneralStorage.getPreferredBilibiliCdn() }
+            .set { preference: String -> GeneralStorage.setPreferredBilibiliCdn(preference) }
+
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.isLoudnessNormalizationEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setLoudnessNormalizationEnabled(enabled) }
@@ -1176,6 +1180,10 @@ class ExpoOrpheusModule : Module() {
 
         AsyncFunction("hideDesktopLyrics") Coroutine { ->
             withServiceOnMainThread { it?.floatingLyricsManager?.hide() }
+        }
+
+        AsyncFunction("setDesktopLyricsSuppressed") Coroutine { suppressed: Boolean ->
+            withServiceOnMainThread { it?.floatingLyricsManager?.setSuppressed(suppressed) }
         }
 
         AsyncFunction("setLyricsInternal") Coroutine { lyricsJson: String, consumerIds: List<String> ->

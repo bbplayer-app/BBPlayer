@@ -84,6 +84,34 @@ class BilibiliApi {
     func setCookie(_ cookie: String) {
         self.cookie = cookie
     }
+
+    private func preferredUrl(primary: String, backups: [String]?) -> String {
+        let urls = [primary] + (backups ?? [])
+        let regular = urls.filter { !isMcdnUrl($0) }
+        let preference = GeneralStorage.shared.preferredBilibiliCdn
+        guard preference != "auto" else { return regular.first ?? primary }
+        return regular.first { url in
+            let host = URL(string: url)?.host?.lowercased() ?? ""
+            switch preference {
+            case "akamai": return host == "upos-hz-mirrorakam.akamaized.net"
+            case "ali": return host.hasSuffix(".bilivideo.com") && host.hasPrefix("upos-sz-mirrorali")
+            case "tencent": return host.hasSuffix(".bilivideo.com") &&
+                (host.hasPrefix("upos-sz-mirrorcos") || host == "upos-tf-all-tx.bilivideo.com")
+            case "huawei": return host.hasSuffix(".bilivideo.com") &&
+                (host.hasPrefix("upos-sz-mirrorhw") || host.hasPrefix("upos-sz-mirror08") || host == "upos-tf-all-hw.bilivideo.com")
+            default: return false
+            }
+        } ?? regular.first ?? primary
+    }
+
+    private func isMcdnUrl(_ url: String) -> Bool {
+        guard let components = URLComponents(string: url) else { return false }
+        let host = components.host?.lowercased() ?? ""
+        return components.queryItems?.contains { $0.name == "os" && $0.value == "mcdn" } == true ||
+            host.range(of: #"(^|\.)mcdn\.bilivideo\.(com|cn|net)$"#, options: .regularExpression) != nil ||
+            (host.range(of: #"^(?:\d{1,3}\.){3}\d{1,3}$"#, options: .regularExpression) != nil &&
+                components.path.range(of: #"^/v\d+/resource(?:/.*)?$"#, options: .regularExpression) != nil)
+    }
     
     func getPageList(bvid: String, completion: @escaping (Result<Int, Error>) -> Void) {
          guard var components = URLComponents(string: "https://api.bilibili.com/x/player/pagelist") else {
@@ -241,10 +269,10 @@ class BilibiliApi {
                 }
                 
                 // Prioritize Dash Audio, then Durl
-                if let audioUrl = playUrlResponse.data?.dash?.audio?.first?.baseUrl {
-                    completion(.success(audioUrl))
-                } else if let mp4Url = playUrlResponse.data?.durl?.first?.url {
-                    completion(.success(mp4Url))
+                if let audio = playUrlResponse.data?.dash?.audio?.first {
+                    completion(.success(self.preferredUrl(primary: audio.baseUrl, backups: audio.backupUrl)))
+                } else if let mp4 = playUrlResponse.data?.durl?.first {
+                    completion(.success(self.preferredUrl(primary: mp4.url, backups: mp4.backup_url)))
                 } else {
                     completion(.failure(BilibiliError.decodingFailed))
                 }

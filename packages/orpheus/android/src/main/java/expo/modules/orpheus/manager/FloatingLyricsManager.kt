@@ -48,6 +48,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
     private var textColor = "#FFC107".toColorInt()
     private var displayMode = 0 
     private var isLocked = false
+    private var isSuppressed = false
     private var cachedStatusBarHeight = 0
 
     private val colors = listOf("#FFFFFF", "#FFC107", "#FF5722", "#E91E63", "#9C27B0", "#2196F3", "#00BCD4", "#4CAF50")
@@ -88,6 +89,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             y = GeneralStorage.getDesktopLyricsY()
         }
         createView()
+        floatingView?.visibility = if (isSuppressed) View.GONE else View.VISIBLE
         updateTouchableFlags()
         try {
             windowManager.addView(floatingView, params)
@@ -110,6 +112,12 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     /** Whether the floating window is currently attached to the screen. */
     val isShowing: Boolean get() = floatingView != null
+
+    /** Keeps the user's enabled state and lyric updates while the in-app lyrics are visible. */
+    fun setSuppressed(suppressed: Boolean) {
+        isSuppressed = suppressed
+        floatingView?.visibility = if (suppressed) View.GONE else View.VISIBLE
+    }
 
     fun hide() {
         floatingView?.let {
