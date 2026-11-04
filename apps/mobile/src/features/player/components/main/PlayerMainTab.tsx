@@ -1,9 +1,8 @@
 import { Show } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { ScrollView } from 'react-native-gesture-handler'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
@@ -29,13 +28,15 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
+	const [size, setSize] = useState({ width: 0, height: 0 })
+	const compact = size.height - insets.bottom < 600 || size.width < 360
 
 	if (!currentTrack) return null
 	return (
 		<Show if={playbackContextStore$.ready}>
-			<ScrollView
-				contentContainerStyle={styles.container}
-				showsVerticalScrollIndicator={false}
+			<View
+				style={styles.container}
+				onLayout={({ nativeEvent }) => setSize(nativeEvent.layout)}
 			>
 				<TrackInfo
 					onArtistPress={() =>
@@ -55,29 +56,32 @@ const PlayerMainTab = memo(function PlayerMainTab({
 
 				<View
 					style={[
-						{ paddingBottom: Math.max(insets.bottom + 20, 20) },
+						{ paddingBottom: insets.bottom + (compact ? 8 : 20) },
 						styles.controlsContainer,
 					]}
 				>
 					<PlayerSlider />
 					<PlayerControls
+						compact={compact}
 						onOpenQueue={() => {
 							onPresent()
 							void usePlayerQueueSheetStore.getState().open()
 						}}
 					/>
 				</View>
-			</ScrollView>
+			</View>
 		</Show>
 	)
 })
 
 const styles = StyleSheet.create({
 	container: {
-		flexGrow: 1,
-		justifyContent: 'space-between',
+		flex: 1,
+		minHeight: 0,
 	},
 	controlsContainer: {
+		flexShrink: 0,
+		paddingTop: 8,
 		paddingHorizontal: 24,
 	},
 })

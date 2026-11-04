@@ -2,7 +2,7 @@ import Icon from '@react-native-vector-icons/material-design-icons'
 import { useObserve } from 'expo-observe'
 import { useLocalSearchParams } from 'expo-router'
 import { useEffect, useState, useTransition } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
@@ -42,6 +42,8 @@ export default function Library() {
 	const [index, setIndex] = useState(Tabs.Local)
 	const [_, startTransition] = useTransition()
 	const insets = useSafeAreaInsets()
+	const { width, fontScale } = useWindowDimensions()
+	const tabWidth = Math.max(width / routes.length, 80 * fontScale)
 	const colors = useTheme().colors
 	const headerForegroundColor = useSkinForegroundColor()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
@@ -87,6 +89,8 @@ export default function Library() {
 					renderScene={renderScene}
 					renderTabBar={(props) => (
 						<TabBar
+							scrollEnabled={tabWidth * routes.length > width}
+							tabStyle={{ width: tabWidth, paddingHorizontal: 4 }}
 							style={{
 								backgroundColor: 'transparent',
 								marginBottom: 8,
@@ -102,6 +106,16 @@ export default function Library() {
 						startTransition(() => {
 							setIndex(i)
 						})
+					}}
+					commonOptions={{
+						label: ({ labelText, color, style }) => (
+							<Text
+								numberOfLines={1}
+								style={[style, { color }]}
+							>
+								{labelText}
+							</Text>
+						),
 					}}
 					options={{
 						favorite: {

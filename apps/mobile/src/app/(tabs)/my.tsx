@@ -6,7 +6,7 @@ import { Image } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Icon, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -32,6 +32,8 @@ export default function MyPage() {
 	useNowPlayingBar()
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
+	const { width, height } = useWindowDimensions()
+	const compact = width < 360 || height < 700
 	const router = useRouter()
 	const haveTrack = useCurrentTrack()
 	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
@@ -71,7 +73,13 @@ export default function MyPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<SkinAppbarBackground height={insets.top + 100} />
-			<View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+			<View
+				style={[
+					styles.header,
+					compact && { paddingBottom: 4 },
+					{ paddingTop: insets.top + 8 },
+				]}
+			>
 				<Text
 					variant='headlineSmall'
 					style={[styles.bold, { color: headerForegroundColor }]}
@@ -108,12 +116,20 @@ export default function MyPage() {
 						accessibilityLabel={
 							hasCookie ? '管理 Bilibili 账号' : '登录 Bilibili 账号'
 						}
-						style={styles.profile}
+						style={[styles.profile, compact && styles.compactProfile]}
 						onPress={() => router.navigate('/settings/bilibili-account')}
 					>
-						<View style={styles.avatarWrapper}>
+						<View
+							style={[
+								styles.avatarWrapper,
+								compact && { width: 48, height: 48 },
+							]}
+						>
 							<Image
-								style={styles.avatar}
+								style={[
+									styles.avatar,
+									compact && { width: 48, height: 48, borderRadius: 24 },
+								]}
 								source={
 									profile?.face
 										? { uri: profile.face }
@@ -124,15 +140,18 @@ export default function MyPage() {
 							{avatarFrame && (
 								<Image
 									source={avatarFrame}
-									style={styles.avatarFrame}
+									style={[
+										styles.avatarFrame,
+										compact && { width: 64, height: 64 },
+									]}
 									contentFit='contain'
 									cachePolicy='memory-disk'
 								/>
 							)}
 						</View>
-						<View style={styles.profileText}>
+						<View style={[styles.profileText, compact && { gap: 2 }]}>
 							<Text
-								variant='titleLarge'
+								variant={compact ? 'titleMedium' : 'titleLarge'}
 								style={styles.bold}
 								numberOfLines={1}
 							>
@@ -181,7 +200,7 @@ export default function MyPage() {
 						{chevron()}
 					</Touchable>
 				</View>
-				<ListeningRecordSection />
+				<ListeningRecordSection compact={compact} />
 				<SettingsSectionTitle
 					title='我的内容'
 					first
@@ -296,6 +315,7 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	accountStatus: { flex: 1, textAlign: 'right' },
+	compactProfile: { minHeight: 72, paddingVertical: 8, gap: 12 },
 	profile: {
 		paddingVertical: 16,
 		flexDirection: 'row',

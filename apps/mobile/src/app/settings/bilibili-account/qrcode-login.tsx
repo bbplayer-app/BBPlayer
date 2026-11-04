@@ -3,10 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import * as Clipboard from 'expo-clipboard'
 import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { useEffect, useReducer } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { useEffect, useReducer, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme, Icon } from 'react-native-paper'
 import QRCode from 'react-native-qrcode-svg'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as setCookieParser from 'set-cookie-parser'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -88,6 +89,14 @@ export default function QrCodeLoginPage() {
 	const router = useRouter()
 	const queryClient = useQueryClient()
 	const { colors } = useTheme()
+	const insets = useSafeAreaInsets()
+	const [viewport, setViewport] = useState({ width: 0, height: 0 })
+	const compact = viewport.height < 620
+	const short = viewport.height < 420
+	const qrSize = Math.max(
+		128,
+		Math.min(short ? 144 : compact ? 176 : 200, viewport.width - 100),
+	)
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
 	const [state, dispatch] = useReducer(reducer, initialState)
 	const { status, statusText, qrcodeKey, qrcodeUrl } = state
@@ -192,23 +201,34 @@ export default function QrCodeLoginPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 				<Appbar.Content title='扫码登录 Bilibili' />
 			</Appbar.Header>
-			<View style={styles.content}>
-				<View style={styles.brandHeader}>
-					<Icon
-						source='television-play'
-						size={48}
-					/>
-					<Text
-						variant='headlineSmall'
-						style={styles.brandTitle}
-					>
-						Bilibili 扫码登录
-					</Text>
-				</View>
+			<ScrollView
+				style={styles.container}
+				onLayout={({ nativeEvent }) => setViewport(nativeEvent.layout)}
+				contentContainerStyle={[
+					styles.content,
+					compact && styles.compactContent,
+					{ paddingBottom: insets.bottom + (compact ? 8 : 16) },
+				]}
+			>
+				{!compact && (
+					<View style={styles.brandHeader}>
+						<Icon
+							source='television-play'
+							size={48}
+						/>
+						<Text
+							variant='headlineSmall'
+							style={styles.brandTitle}
+						>
+							Bilibili 扫码登录
+						</Text>
+					</View>
+				)}
 
 				<View
 					style={[
 						styles.card,
+						compact && { padding: short ? 8 : 12, gap: short ? 8 : 12 },
 						{
 							backgroundColor: colors.elevation.level1,
 							borderColor: colors.outlineVariant,
@@ -227,7 +247,12 @@ export default function QrCodeLoginPage() {
 						</Text>
 					</View>
 
-					<View style={styles.qrcodeWrapper}>
+					<View
+						style={[
+							styles.qrcodeWrapper,
+							{ width: qrSize + 20, height: qrSize + 20 },
+						]}
+					>
 						{qrcodeUrl ? (
 							<Pressable
 								onPress={handleOpenLink}
@@ -235,7 +260,7 @@ export default function QrCodeLoginPage() {
 							>
 								<QRCode
 									value={qrcodeUrl}
-									size={200}
+									size={qrSize}
 								/>
 							</Pressable>
 						) : (
@@ -256,7 +281,7 @@ export default function QrCodeLoginPage() {
 							>
 								<Icon
 									source='alert-circle-outline'
-									size={48}
+									size={compact ? 32 : 48}
 								/>
 								<Text
 									variant='titleMedium'
@@ -284,6 +309,7 @@ export default function QrCodeLoginPage() {
 						contentStyle={styles.brandButtonContent}
 						labelStyle={styles.brandButtonLabel}
 						icon='open-in-new'
+						testID='qrcode-open-client'
 					>
 						在 Bilibili 客户端打开
 					</Button>
@@ -297,7 +323,7 @@ export default function QrCodeLoginPage() {
 					{'\n'}
 					若处于同一台设备，可点击按钮直接跳转 B 站进行确认。
 				</Text>
-			</View>
+			</ScrollView>
 		</View>
 	)
 }
@@ -307,12 +333,14 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	content: {
-		flex: 1,
+		flexGrow: 1,
+		paddingTop: 16,
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingHorizontal: 24,
 		gap: 24,
 	},
+	compactContent: { gap: 12, paddingTop: 8 },
 	brandHeader: {
 		alignItems: 'center',
 		gap: 10,
@@ -346,11 +374,10 @@ const styles = StyleSheet.create({
 		borderRadius: 5,
 	},
 	statusText: {
+		flexShrink: 1,
 		fontWeight: 'bold',
 	},
 	qrcodeWrapper: {
-		width: 220,
-		height: 220,
 		borderRadius: 16,
 		overflow: 'hidden',
 		backgroundColor: '#fff',

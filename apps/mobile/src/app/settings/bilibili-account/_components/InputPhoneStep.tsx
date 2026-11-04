@@ -4,6 +4,7 @@ import { HelperText, Icon, Text, TextInput, useTheme } from 'react-native-paper'
 import Button from '@/components/common/Button'
 
 interface Props {
+	compact?: boolean
 	tel: string
 	setTel: (v: string) => void
 	phoneError: string
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function InputPhoneStep({
+	compact = false,
 	tel,
 	setTel,
 	phoneError,
@@ -24,28 +26,32 @@ export default function InputPhoneStep({
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.container}>
-			<View style={styles.header}>
-				<Icon
-					source='television-play'
-					size={56}
-					color='#FB7299'
-				/>
+		<View style={[styles.container, compact && styles.compactContainer]}>
+			<View style={[styles.header, compact && styles.compactHeader]}>
+				{!compact && (
+					<>
+						<Icon
+							source='television-play'
+							size={56}
+							color='#FB7299'
+						/>
+						<Text
+							variant='headlineLarge'
+							style={styles.title}
+						>
+							手机号登录
+						</Text>
+					</>
+				)}
 				<Text
-					variant='headlineLarge'
-					style={styles.title}
-				>
-					手机号登录
-				</Text>
-				<Text
-					variant='bodyLarge'
+					variant={compact ? 'bodyMedium' : 'bodyLarge'}
 					style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
 				>
 					未注册的手机号验证后将自动创建账号
 				</Text>
 			</View>
 
-			<View style={styles.form}>
+			<View style={[styles.form, compact && { minHeight: 0 }]}>
 				<TextInput
 					label='请输入手机号'
 					value={tel}
@@ -69,7 +75,7 @@ export default function InputPhoneStep({
 				) : null}
 			</View>
 
-			<View style={styles.actions}>
+			<View style={[styles.actions, compact && { marginTop: 8 }]}>
 				<Button
 					mode='contained'
 					onPress={onRequestCode}
@@ -87,6 +93,8 @@ export default function InputPhoneStep({
 }
 
 const styles = StyleSheet.create({
+	compactContainer: { paddingHorizontal: 24, paddingTop: 4, paddingBottom: 8 },
+	compactHeader: { marginBottom: 12 },
 	container: {
 		paddingHorizontal: 32,
 		paddingTop: 32,

@@ -23,8 +23,8 @@ importers:
         specifier: ^8.1.8
         version: 8.1.8(eslint@9.39.4(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       '@swmansion/argent':
-        specifier: ^0.25.2
-        version: 0.25.2(supports-color@10.2.2)(zod@4.6.5)
+        specifier: ^0.31.1
+        version: 0.31.1(supports-color@10.2.2)(zod@4.6.5)
       '@tanstack/eslint-plugin-query':
         specifier: ^5.103.2
         version: 5.103.2(eslint@9.39.4(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
@@ -5549,8 +5549,8 @@ packages:
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-  '@swmansion/argent@0.25.2':
-    resolution: {integrity: sha512-YeC9YBgu8uKwQLWiRES0UB4PFhmFH/0vzLH89sdAl33CMhcktPhLPe2gfjKB4pyPDoMgQ8/9gWP67lSSMneltA==}
+  '@swmansion/argent@0.31.1':
+    resolution: {integrity: sha512-TOHGzGv7QlxVLh8LG5N17b3Pu5eF60Sz5zulYFeUJe2r/Lr6uteMIWAJAl766aQNw0+HTZ7fz4wpfaVwDCIR8g==}
     engines: {node: '>=20.12.0'}
     hasBin: true
 
@@ -7696,8 +7696,8 @@ packages:
   electron-to-chromium@1.5.387:
     resolution: {integrity: sha512-TaxwufTFDufvPEoXdhwVrA3UdFWBeWGkYoJ1K8ldF1xe6gKfth6iRNS5lTQ5JPNOHdGQm8PT1QYKUqFLCiUefQ==}
 
-  electron@42.11.6:
-    resolution: {integrity: sha512-IgDsjQp+CYLnArfQbzzS2VmkRgHmSU1G9nGVOtSnFpkUYR8rkeAUSDO77qtqAPX1jgAGly1kgisUmwB9CbUHXw==}
+  electron@44.10.1:
+    resolution: {integrity: sha512-CTqxvx02P+xCR/xUxAWBexQEJ42g9Rzy1/0N+ofGAtI/atgSYZKQnTX9/juwzftocWbZtoF2ftEGMGJujJDeBw==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -18718,7 +18718,7 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@swmansion/argent@0.25.2(supports-color@10.2.2)(zod@4.6.5)':
+  '@swmansion/argent@0.31.1(supports-color@10.2.2)(zod@4.6.5)':
     dependencies:
       '@fails-components/webtransport': 1.6.8(supports-color@10.2.2)
       '@fails-components/webtransport-transport-http3-quiche': 1.6.8(supports-color@10.2.2)
@@ -18726,7 +18726,7 @@ snapshots:
       tree-sitter: 0.21.1
       tree-sitter-typescript: 0.23.2(tree-sitter@0.21.1)
     optionalDependencies:
-      electron: 42.11.6(supports-color@10.2.2)
+      electron: 44.10.1(supports-color@10.2.2)
       node-pty: 1.1.0
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -20959,7 +20959,7 @@ snapshots:
 
   electron-to-chromium@1.5.387: {}
 
-  electron@42.11.6(supports-color@10.2.2):
+  electron@44.10.1(supports-color@10.2.2):
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0(supports-color@10.2.2)

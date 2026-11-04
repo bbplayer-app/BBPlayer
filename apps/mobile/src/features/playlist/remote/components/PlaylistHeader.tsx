@@ -2,12 +2,13 @@ import * as Clipboard from 'expo-clipboard'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import { Divider, Text, TouchableRipple } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import ExpandableText from '@/components/common/ExpandableText'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
@@ -51,6 +52,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	...props
 }: PlaylistHeaderProps) {
 	const router = useRouter()
+	const { width, height } = useWindowDimensions()
+	const coverSize = width < 360 || height < 700 ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	if (!title) return null
 
@@ -62,7 +65,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					id={id}
 					cover={cover}
 					title={title}
-					size={120}
+					size={coverSize}
 				/>
 				<View style={styles.headerTextContainer}>
 					<TouchableRipple
@@ -140,12 +143,16 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				)}
 			</View>
 
-			<Text
-				variant='bodyMedium'
-				style={[styles.description, !!description && styles.descriptionMargin]}
-			>
-				{description ?? ''}
-			</Text>
+			{!!description && (
+				<View style={styles.description}>
+					<ExpandableText
+						text={description}
+						lines={3}
+						expandLabel='展开简介'
+						collapseLabel='收起简介'
+					/>
+				</View>
+			)}
 
 			<Divider />
 		</View>
@@ -179,9 +186,6 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	description: {
-		margin: 0,
-	},
-	descriptionMargin: {
 		margin: 16,
 	},
 })

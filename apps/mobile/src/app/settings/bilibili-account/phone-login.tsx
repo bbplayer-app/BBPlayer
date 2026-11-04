@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import {
 	KeyboardAvoidingView,
 	Platform,
@@ -18,6 +19,8 @@ import SuccessStep from './_components/SuccessStep'
 export default function PhoneLoginPage() {
 	const router = useRouter()
 	const { colors } = useTheme()
+	const [contentHeight, setContentHeight] = useState(0)
+	const compact = contentHeight < 480
 	const {
 		step,
 		tel,
@@ -43,6 +46,7 @@ export default function PhoneLoginPage() {
 			<SuccessStep />
 		) : step === 'input_code' ? (
 			<InputCodeStep
+				compact={compact}
 				tel={tel}
 				smsCode={smsCode}
 				setSmsCode={setSmsCode}
@@ -61,6 +65,7 @@ export default function PhoneLoginPage() {
 			/>
 		) : (
 			<InputPhoneStep
+				compact={compact}
 				tel={tel}
 				setTel={setTel}
 				phoneError={phoneError}
@@ -80,10 +85,16 @@ export default function PhoneLoginPage() {
 			<KeyboardAvoidingView
 				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
 				style={styles.keyboardView}
+				onLayout={({ nativeEvent }) =>
+					setContentHeight(nativeEvent.layout.height)
+				}
 			>
 				<ScrollView
 					style={styles.scrollView}
-					contentContainerStyle={styles.scrollContent}
+					contentContainerStyle={[
+						styles.scrollContent,
+						compact && { paddingVertical: 4 },
+					]}
 					keyboardShouldPersistTaps='handled'
 				>
 					<View style={styles.formContainer}>{content}</View>

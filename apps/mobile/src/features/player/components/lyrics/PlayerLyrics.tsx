@@ -15,6 +15,7 @@ import Animated, {
 	useSharedValue,
 	useDerivedValue,
 } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scheduleOnRN } from 'react-native-worklets'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -35,6 +36,9 @@ import {
 } from './LyricsControlOverlay'
 import { LyricsOffsetControl } from './LyricsOffsetControl'
 
+// Keep enough room for lyrics above the playback panel (all sizes are in dp).
+const MIN_HEIGHT_WITH_CONTROLS = 520
+
 const Lyrics = memo(function Lyrics({
 	currentIndex,
 	onPressBackground,
@@ -44,6 +48,9 @@ const Lyrics = memo(function Lyrics({
 }) {
 	const dimensions = useWindowDimensions()
 	const windowHeight = dimensions.height
+	const insets = useSafeAreaInsets()
+	const [pageHeight, setPageHeight] = useState(0)
+	const showControls = pageHeight - insets.bottom >= MIN_HEIGHT_WITH_CONTROLS
 	const colors = useTheme().colors
 	const isFluidBackground = useAppStore(
 		(state) =>
@@ -345,6 +352,7 @@ const Lyrics = memo(function Lyrics({
 		<View
 			style={styles.lyricsContainer}
 			testID='player-lyrics-view'
+			onLayout={({ nativeEvent }) => setPageHeight(nativeEvent.layout.height)}
 		>
 			<View style={styles.lyricsContent}>
 				<MaskedView
@@ -372,16 +380,19 @@ const Lyrics = memo(function Lyrics({
 							<LinearGradient
 								style={[
 									styles.gradient,
-									isFluidBackground && {
-										height: LYRICS_CONTROLS_OVERLAY_HEIGHT,
-									},
+									isFluidBackground &&
+										showControls && {
+											height: LYRICS_CONTROLS_OVERLAY_HEIGHT,
+										},
 								]}
 								start={{ x: 0, y: 0 }}
 								end={{ x: 0, y: 1 }}
 								colors={[colors.background, 'transparent']}
 								locations={[
 									0,
-									isFluidBackground ? 60 / LYRICS_CONTROLS_OVERLAY_HEIGHT : 1,
+									isFluidBackground && showControls
+										? 60 / LYRICS_CONTROLS_OVERLAY_HEIGHT
+										: 1,
 								]}
 							/>
 						</View>
@@ -392,18 +403,20 @@ const Lyrics = memo(function Lyrics({
 			</View>
 
 			{/* 播放器控件覆盖层 */}
-			<LyricsControlOverlay
-				offsetMenuVisible={offsetMenuVisible}
-				showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
-				translationType={preferredLyricType}
-				onToggleTranslation={() =>
-					setPreferredLyricType((prev) =>
-						prev === 'translation' ? 'romaji' : 'translation',
-					)
-				}
-				onEditLyrics={handleEditLyrics}
-				onOpenOffsetMenu={handleOpenOffsetMenu}
-			/>
+			{showControls && (
+				<LyricsControlOverlay
+					offsetMenuVisible={offsetMenuVisible}
+					showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
+					translationType={preferredLyricType}
+					onToggleTranslation={() =>
+						setPreferredLyricType((prev) =>
+							prev === 'translation' ? 'romaji' : 'translation',
+						)
+					}
+					onEditLyrics={handleEditLyrics}
+					onOpenOffsetMenu={handleOpenOffsetMenu}
+				/>
+			)}
 
 			{/* 歌词偏移量调整面板 */}
 			<LyricsOffsetControl

@@ -239,10 +239,21 @@ export function MainPlaybackControls({
 
 export function SecondaryPlaybackControls({
 	children,
+	compact = false,
 }: {
 	children: React.ReactNode
+	compact?: boolean
 }) {
-	return <View style={styles.secondaryControlsContainer}>{children}</View>
+	return (
+		<View
+			style={[
+				styles.secondaryControlsContainer,
+				compact && { gap: 12, marginTop: 4 },
+			]}
+		>
+			{children}
+		</View>
+	)
 }
 
 const styles = StyleSheet.create({

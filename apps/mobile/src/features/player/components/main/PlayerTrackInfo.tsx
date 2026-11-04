@@ -6,7 +6,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useEffect, useState } from 'react'
 import type { ColorSchemeName } from 'react-native'
 import {
-	Dimensions,
 	Pressable,
 	StyleSheet,
 	TouchableOpacity,
@@ -30,11 +29,6 @@ import {
 } from '@/theme/dimensions'
 import { getGradientColors } from '@/utils/color'
 
-const { width: screenWidth } = Dimensions.get('window')
-
-const COVER_SIZE_RECT = screenWidth - 80
-const COVER_SIZE_CIRCLE = screenWidth - 120
-
 export function TrackInfo({
 	onArtistPress,
 	onPressCover,
@@ -45,6 +39,7 @@ export function TrackInfo({
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
+	const [coverArea, setCoverArea] = useState({ width: 0, height: 0 })
 
 	const colorScheme: ColorSchemeName = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
@@ -95,25 +90,36 @@ export function TrackInfo({
 	if (!currentTrack) return null
 
 	return (
-		<View
-			style={{
-				position: 'relative',
-			}}
-		>
+		<View style={styles.container}>
 			<Computed>
 				{() => {
 					const podcast = playbackContextStore$.context.mode.get() === 'podcast'
-					const coverSize = podcast ? COVER_SIZE_RECT : COVER_SIZE_CIRCLE
+					// Reserve space for the spectrum outside the circle as well as cover padding.
+					const coverPadding = !podcast && enableSpectrumVisualizer ? 80 : 24
+					const coverSize = Math.max(
+						0,
+						Math.min(
+							coverArea.width - (podcast ? 80 : 120),
+							coverArea.height - coverPadding,
+							podcast ? 440 : 400,
+						),
+					)
+					const showCover = !podcast || coverSize >= 96
 					const coverBorderRadius = podcast
-						? COVER_SIZE_RECT * SQUIRCLE_RADIUS_RATIO
+						? coverSize * SQUIRCLE_RADIUS_RATIO
 						: coverSize / 2
 					return (
 						<Pressable
-							style={styles.coverContainer}
+							style={[
+								styles.coverContainer,
+								// Keep the original cover block height on roomy screens; shrink on small ones.
+								{ maxHeight: Math.max(0, coverArea.width - 32) },
+							]}
+							onLayout={({ nativeEvent }) => setCoverArea(nativeEvent.layout)}
 							onPress={podcast ? undefined : onPressCover}
 							disabled={podcast}
 						>
-							{!podcast && enableSpectrumVisualizer && (
+							{!podcast && enableSpectrumVisualizer && coverSize > 0 && (
 								<View
 									style={[
 										StyleSheet.absoluteFill,
@@ -127,56 +133,58 @@ export function TrackInfo({
 									/>
 								</View>
 							)}
-							<TouchableOpacity
-								activeOpacity={0.8}
-								onPress={podcast ? undefined : onPressCover}
-								disabled={podcast}
-								style={{ width: coverSize, height: coverSize }}
-								testID='player-cover'
-							>
-								<SquircleView
-									style={{
-										width: coverSize,
-										height: coverSize,
-										borderRadius: coverBorderRadius,
-										overflow: 'hidden',
-									}}
-									cornerSmoothing={SQUIRCLE_CORNER_SMOOTHING}
+							{showCover && (
+								<TouchableOpacity
+									activeOpacity={0.8}
+									onPress={podcast ? undefined : onPressCover}
+									disabled={podcast}
+									style={{ width: coverSize, height: coverSize }}
+									testID='player-cover'
 								>
-									{!coverRef ? (
-										<LinearGradient
-											colors={[color1, color2]}
-											style={[
-												styles.coverGradient,
-												{ borderRadius: coverBorderRadius },
-											]}
-											start={{ x: 0, y: 0 }}
-											end={{ x: 1, y: 1 }}
-										>
-											<Text
+									<SquircleView
+										style={{
+											width: coverSize,
+											height: coverSize,
+											borderRadius: coverBorderRadius,
+											overflow: 'hidden',
+										}}
+										cornerSmoothing={SQUIRCLE_CORNER_SMOOTHING}
+									>
+										{!coverRef ? (
+											<LinearGradient
+												colors={[color1, color2]}
 												style={[
-													styles.coverPlaceholderText,
-													{ fontSize: coverSize * 0.45 },
+													styles.coverGradient,
+													{ borderRadius: coverBorderRadius },
 												]}
+												start={{ x: 0, y: 0 }}
+												end={{ x: 1, y: 1 }}
 											>
-												{firstChar}
-											</Text>
-										</LinearGradient>
-									) : (
-										<Image
-											source={coverRef}
-											style={{
-												width: coverSize,
-												height: coverSize,
-												borderRadius: coverBorderRadius,
-											}}
-											recyclingKey={currentTrack.uniqueKey}
-											cachePolicy={'disk'}
-											transition={300}
-										/>
-									)}
-								</SquircleView>
-							</TouchableOpacity>
+												<Text
+													style={[
+														styles.coverPlaceholderText,
+														{ fontSize: Math.max(1, coverSize * 0.45) },
+													]}
+												>
+													{firstChar}
+												</Text>
+											</LinearGradient>
+										) : (
+											<Image
+												source={coverRef}
+												style={{
+													width: coverSize,
+													height: coverSize,
+													borderRadius: coverBorderRadius,
+												}}
+												recyclingKey={currentTrack.uniqueKey}
+												cachePolicy={'disk'}
+												transition={300}
+											/>
+										)}
+									</SquircleView>
+								</TouchableOpacity>
+							)}
 						</Pressable>
 					)
 				}}
@@ -191,7 +199,7 @@ export function TrackInfo({
 							<Text
 								variant='titleLarge'
 								style={styles.trackTitle}
-								numberOfLines={isTitleExpanded ? undefined : 1}
+								numberOfLines={isTitleExpanded ? 3 : 1}
 								ellipsizeMode='tail'
 							>
 								{currentTrack.title}
@@ -230,11 +238,15 @@ export function TrackInfo({
 }
 
 const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		minHeight: 0,
+	},
 	coverContainer: {
 		alignItems: 'center',
 		justifyContent: 'center',
-		height: COVER_SIZE_RECT + 48,
-		paddingHorizontal: 32,
+		flex: 1,
+		minHeight: 0,
 	},
 	coverGradient: {
 		flex: 1,
@@ -246,6 +258,7 @@ const styles = StyleSheet.create({
 		color: 'rgba(255, 255, 255, 0.7)',
 	},
 	trackInfoContainer: {
+		flexShrink: 0,
 		paddingHorizontal: 24,
 	},
 	trackTitleContainer: {

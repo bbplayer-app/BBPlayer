@@ -4,6 +4,7 @@ import { HelperText, Icon, Text, TextInput, useTheme } from 'react-native-paper'
 import Button from '@/components/common/Button'
 
 interface Props {
+	compact?: boolean
 	tel: string
 	smsCode: string
 	setSmsCode: (v: string) => void
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function InputCodeStep({
+	compact = false,
 	tel,
 	smsCode,
 	setSmsCode,
@@ -27,21 +29,25 @@ export default function InputCodeStep({
 	const { colors } = useTheme()
 
 	return (
-		<View style={styles.container}>
-			<View style={styles.header}>
-				<Icon
-					source='message-processing-outline'
-					size={56}
-					color={colors.primary}
-				/>
+		<View style={[styles.container, compact && styles.compactContainer]}>
+			<View style={[styles.header, compact && styles.compactHeader]}>
+				{!compact && (
+					<>
+						<Icon
+							source='message-processing-outline'
+							size={56}
+							color={colors.primary}
+						/>
+						<Text
+							variant='headlineLarge'
+							style={styles.title}
+						>
+							输入验证码
+						</Text>
+					</>
+				)}
 				<Text
-					variant='headlineLarge'
-					style={styles.title}
-				>
-					输入验证码
-				</Text>
-				<Text
-					variant='bodyLarge'
+					variant={compact ? 'bodyMedium' : 'bodyLarge'}
 					style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
 				>
 					验证码已发送至 +86 {tel}
@@ -55,7 +61,7 @@ export default function InputCodeStep({
 				</Text>
 			</View>
 
-			<View style={styles.form}>
+			<View style={[styles.form, compact && { minHeight: 0 }]}>
 				<TextInput
 					label='短信验证码'
 					value={smsCode}
@@ -79,7 +85,7 @@ export default function InputCodeStep({
 				) : null}
 			</View>
 
-			<View style={styles.actions}>
+			<View style={[styles.actions, compact && { marginTop: 8 }]}>
 				<Button
 					mode='contained'
 					onPress={onLogin}
@@ -97,6 +103,8 @@ export default function InputCodeStep({
 }
 
 const styles = StyleSheet.create({
+	compactContainer: { paddingHorizontal: 24, paddingTop: 4, paddingBottom: 8 },
+	compactHeader: { marginBottom: 12 },
 	container: {
 		paddingHorizontal: 32,
 		paddingTop: 32,

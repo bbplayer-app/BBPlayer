@@ -17,7 +17,11 @@ import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import db from '@/lib/db/db'
 import { playHistory, tracks } from '@/lib/db/schema'
 
-export default function ListeningRecordSection() {
+export default function ListeningRecordSection({
+	compact = false,
+}: {
+	compact?: boolean
+}) {
 	const theme = useTheme()
 	const { colors } = theme
 	const router = useRouter()
@@ -52,7 +56,7 @@ export default function ListeningRecordSection() {
 			: summary[0].playCount.toLocaleString('zh-CN')
 
 	return (
-		<View style={styles.section}>
+		<View style={[styles.section, compact && { paddingVertical: 8, gap: 8 }]}>
 			<View style={styles.header}>
 				<Text
 					variant='titleMedium'
@@ -85,7 +89,7 @@ export default function ListeningRecordSection() {
 				].map((metric) => (
 					<View
 						key={metric.label}
-						style={styles.metric}
+						style={[styles.metric, compact && { paddingVertical: 4 }]}
 					>
 						<Icon
 							source={metric.icon}

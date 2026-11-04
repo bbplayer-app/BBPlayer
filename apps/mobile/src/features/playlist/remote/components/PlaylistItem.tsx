@@ -181,8 +181,8 @@ export const TrackListItem = memo(function TrackListItem({
 					<View style={styles.titleContainer}>
 						{data.titleHtml ? (
 							<HighlightedText
-								variant='bodySmall'
 								text={data.titleHtml}
+								variant='bodySmall'
 							/>
 						) : (
 							<VariantPlainText variant='bodySmall'>

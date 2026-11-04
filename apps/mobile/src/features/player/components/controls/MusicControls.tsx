@@ -19,7 +19,13 @@ import {
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
 
-export function MusicControls({ onOpenQueue }: { onOpenQueue: () => void }) {
+export function MusicControls({
+	onOpenQueue,
+	compact = false,
+}: {
+	onOpenQueue: () => void
+	compact?: boolean
+}) {
 	const { colors } = useTheme()
 	const { shuffle: shuffleMode, repeat: repeatMode } = usePlaybackOptions()
 	const currentTrack = useCurrentTrack()
@@ -27,10 +33,10 @@ export function MusicControls({ onOpenQueue }: { onOpenQueue: () => void }) {
 
 	return (
 		<View>
-			<View style={{ marginTop: 24 }}>
-				<MainPlaybackControls />
+			<View style={{ marginTop: compact ? 8 : 24 }}>
+				<MainPlaybackControls size={compact ? 'compact' : 'normal'} />
 			</View>
-			<SecondaryPlaybackControls>
+			<SecondaryPlaybackControls compact={compact}>
 				<IconButton
 					icon={shuffleMode ? 'shuffle-variant' : 'shuffle-disabled'}
 					size={24}

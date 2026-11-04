@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, useWindowDimensions, View } from 'react-native'
 import {
 	Avatar,
 	Divider,
@@ -14,6 +14,7 @@ import {
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import ExpandableText from '@/components/common/ExpandableText'
 import IconButton from '@/components/common/IconButton'
 import { alert } from '@/components/modals/AlertModal'
 import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
@@ -105,6 +106,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
+	const { width, height } = useWindowDimensions()
+	const coverSize = width < 360 || height < 700 ? 88 : 120
 	const { colors } = useTheme()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
@@ -165,7 +168,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					id={playlist.id}
 					cover={coverRef ?? playlist.coverUrl}
 					title={playlist.title}
-					size={120}
+					size={coverSize}
 				/>
 
 				<View style={styles.headerTextContainer}>
@@ -413,12 +416,14 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 			{/* 描述 */}
 			{!!playlist.description && (
-				<Text
-					style={styles.description}
-					variant='bodyMedium'
-				>
-					{playlist.description}
-				</Text>
+				<View style={styles.description}>
+					<ExpandableText
+						text={playlist.description}
+						lines={3}
+						expandLabel='展开简介'
+						collapseLabel='收起简介'
+					/>
+				</View>
 			)}
 
 			<Divider />
