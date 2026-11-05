@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list'
+import { LegendList } from '@legendapp/list/react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
@@ -164,11 +164,13 @@ export default function FollowingPage() {
 					<Button onPress={() => void refetch()}>重试</Button>
 				</View>
 			) : (
-				<FlashList
+				<LegendList
 					key={`${tagId}:${keyword}`}
 					data={followings}
 					style={styles.list}
-					maintainVisibleContentPosition={{ disabled: true }}
+					maintainVisibleContentPosition={false}
+					recycleItems
+					estimatedItemSize={72}
 					keyboardShouldPersistTaps='handled'
 					keyboardDismissMode='on-drag'
 					keyExtractor={(item) => item.mid.toString()}

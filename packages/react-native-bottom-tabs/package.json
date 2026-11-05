@@ -68,9 +68,9 @@
 		"@expo/config-plugins": "57.0.9",
 		"@react-native/babel-plugin-codegen": "0.81.1",
 		"@types/jest": "^29.5.14",
-		"@types/react": "19.2.15",
-		"react": "19.2.3",
-		"react-native": "0.86.3",
+		"@types/react": "19.3.0",
+		"react": "19.3.0",
+		"react-native": "0.88.1",
 		"typescript": "~6.0.3"
 	},
 	"peerDependencies": {

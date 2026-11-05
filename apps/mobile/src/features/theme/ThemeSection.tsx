@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 	},
 	previewSlider: {
-		width: '100%',
+		width: '100%' as const,
 		height: 32,
 	},
 })

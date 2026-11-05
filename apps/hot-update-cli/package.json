@@ -14,8 +14,8 @@
 	},
 	"devDependencies": {
 		"@types/archiver": "^6.0.4",
-		"@types/node": "^25.2.3",
-		"tsx": "^4.21.0",
+		"@types/node": "~25.9.9",
+		"tsx": "^4.23.15",
 		"typescript": "~6.0.3"
 	}
 }

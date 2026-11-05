@@ -38,11 +38,11 @@
 	},
 	"devDependencies": {
 		"@types/jest": "^29.5.14",
-		"@types/react": "19.2.15",
-		"expo": "57.0.25",
+		"@types/react": "19.3.0",
+		"expo": "58.0.23",
 		"expo-module-scripts": "^56.0.2",
-		"react": "19.2.3",
-		"react-native": "0.86.3"
+		"react": "19.3.0",
+		"react-native": "0.88.1"
 	},
 	"peerDependencies": {
 		"expo": "56.0.4",

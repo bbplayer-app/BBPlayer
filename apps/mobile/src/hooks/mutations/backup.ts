@@ -80,7 +80,7 @@ export function useCloudRestoreMutation(onSuccess: () => void) {
 				Paths.cache,
 				'bbplayer-webdav-restore.bbplayer',
 			)
-			cacheFile.write(new Uint8Array(data))
+			await cacheFile.write(new Uint8Array(data))
 			await restoreBackup(cacheFile.uri)
 		},
 		onSuccess,

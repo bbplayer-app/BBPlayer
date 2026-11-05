@@ -8,6 +8,7 @@ import {
 	StyleSheet,
 	View,
 	type ViewStyle,
+	type ViewInstance,
 	processColor,
 	type ImageSource,
 } from 'react-native'
@@ -294,7 +295,7 @@ const TabView = <Route extends BaseRoute>({
 }: Props<Route>) => {
 	// @ts-ignore
 	const focusedKey = navigationState.routes[navigationState.index].key
-	const customTabBarWrapperRef = useRef<View>(null)
+	const customTabBarWrapperRef = useRef<ViewInstance>(null)
 	const [tabBarHeight, setTabBarHeight] = React.useState<number | undefined>(0)
 	const [measuredDimensions, setMeasuredDimensions] = React.useState<
 		{ width: DimensionValue; height: DimensionValue } | undefined
@@ -401,8 +402,7 @@ const TabView = <Route extends BaseRoute>({
 			// Pass empty object for icons that are not provided to avoid index mismatch on native side.
 			icons.map((icon) =>
 				icon && !isAppleSymbol(icon)
-					? // @ts-expect-error: TODO: Migrate of deep imports
-						Image.resolveAssetSource(icon)
+					? (Image.resolveAssetSource(icon) ?? { uri: '' })
 					: { uri: '' },
 			),
 		[icons],
@@ -413,8 +413,7 @@ const TabView = <Route extends BaseRoute>({
 			// Pass empty object for icons that are not provided to avoid index mismatch on native side.
 			focusedIcons.map((icon) =>
 				icon && !isAppleSymbol(icon)
-					? // @ts-expect-error: TODO: Migrate of deep imports
-						Image.resolveAssetSource(icon)
+					? (Image.resolveAssetSource(icon) ?? { uri: '' })
 					: { uri: '' },
 			),
 		[focusedIcons],

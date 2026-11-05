@@ -51,7 +51,7 @@ export async function createBackup(): Promise<string> {
 
 		const zipData = await zip.generateAsync({ type: 'uint8array' })
 		const zipFile = new File(cacheDir, 'bbplayer-backup.bbplayer')
-		zipFile.write(zipData)
+		await zipFile.write(zipData)
 
 		logger.info('备份创建完成', { uri: zipFile.uri })
 		return zipFile.uri

@@ -1,5 +1,6 @@
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ScrollView, View } from 'react-native'
 import { ActivityIndicator, List, Text, useTheme } from 'react-native-paper'
 
@@ -19,7 +20,7 @@ export function PlayerChaptersSheet() {
 	const isOpen = usePlayerChaptersSheetStore((state) => state.isOpen)
 	const currentIndex = useCurrentChapterIndex(data.chapters, isOpen)
 	const { colors } = useTheme()
-	const list = useRef<ScrollView>(null)
+	const list = useRef<ScrollViewInstance>(null)
 	const didScroll = useRef(false)
 	const rowLayouts = useRef(new Map<string, { y: number; height: number }>())
 	const viewportHeight = useRef(0)

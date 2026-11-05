@@ -1,6 +1,7 @@
 import { DownloadState, Orpheus, type DownloadTask } from '@bbplayer/orpheus'
 import { useRecyclingState } from '@legendapp/list/react-native'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import type { ViewInstance } from 'react-native'
 import { StyleSheet, View } from 'react-native'
 import { Icon, Surface, Text, useTheme } from 'react-native-paper'
 import Animated, {
@@ -28,7 +29,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	const [task, setTask] = useRecyclingState<DownloadTask>(initTask)
 	const sharedProgress = useSharedValue(0)
 	const progressBackgroundWidth = useSharedValue(0)
-	const containerRef = useRef<View>(null)
+	const containerRef = useRef<ViewInstance>(null)
 	const retryable = canRetryDownloadTask(task)
 	const retryTrack = task.track
 	const retryState = task.state

@@ -1,0 +1,91 @@
+# Strict TypeScript API 兼容补丁（React Native >= 0.87）。
+# Searchbar / Surface 的 ref 需要组件实例类型，不能使用函数组件本身作为类型。
+# skipLibCheck 不会忽略应用传入 ref 时的类型不匹配。
+
+diff --git a/lib/typescript/components/Searchbar.d.ts b/lib/typescript/components/Searchbar.d.ts
+index 3508d18d0af67ec3e4ac8f2271f8f309a40e2da0..99f977f56b06ff10c2a5d1607d10dab0fb078497 100644
+--- a/lib/typescript/components/Searchbar.d.ts
++++ b/lib/typescript/components/Searchbar.d.ts
+@@ -120,7 +120,7 @@ export type Props = React.ComponentPropsWithRef<typeof TextInput> & {
+      */
+     theme?: ThemeProp;
+ };
+-type TextInputHandles = Pick<TextInput, 'setNativeProps' | 'isFocused' | 'clear' | 'blur' | 'focus' | 'setSelection'>;
++type TextInputHandles = Pick<React.ComponentRef<typeof TextInput>, 'setNativeProps' | 'isFocused' | 'clear' | 'blur' | 'focus' | 'setSelection'>;
+ /**
+  * Searchbar is a simple input box where users can type search queries.
+  *
+diff --git a/lib/typescript/components/Surface.d.ts b/lib/typescript/components/Surface.d.ts
+index 92e907c0ef84d5bfd3e4a1c06f516a2aa284e1db..b46ae8283ae0bfa34d5a856fb8e0a76957f96dcf 100644
+--- a/lib/typescript/components/Surface.d.ts
++++ b/lib/typescript/components/Surface.d.ts
+@@ -34,7 +34,7 @@ export type Props = Omit<React.ComponentPropsWithRef<typeof View>, 'style'> & {
+      * TestID used for testing purposes
+      */
+     testID?: string;
+-    ref?: React.RefObject<View>;
++    ref?: React.RefObject<React.ComponentRef<typeof View>>;
+     /**
+      * @internal
+      */
+@@ -71,6 +71,6 @@ export type Props = Omit<React.ComponentPropsWithRef<typeof View>, 'style'> & {
+  * });
+  * ```
+  */
+-declare const Surface: import("../utils/forwardRef").ForwardRefComponent<View, Props>;
++declare const Surface: import("../utils/forwardRef").ForwardRefComponent<React.ComponentRef<typeof View>, Props>;
+ export default Surface;
+ //# sourceMappingURL=Surface.d.ts.map
+\ No newline at end of file
+diff --git a/src/components/Searchbar.tsx b/src/components/Searchbar.tsx
+index 891df22945f1a5e7d665e735cb294d5b3ec593d5..cd4e5e33f14e9b5f4060f2edf92386c9b027eb02 100644
+--- a/src/components/Searchbar.tsx
++++ b/src/components/Searchbar.tsx
+@@ -148,7 +148,7 @@ export type Props = React.ComponentPropsWithRef<typeof TextInput> & {
+ };
+ 
+ type TextInputHandles = Pick<
+-  TextInput,
++  React.ComponentRef<typeof TextInput>,
+   'setNativeProps' | 'isFocused' | 'clear' | 'blur' | 'focus' | 'setSelection'
+ >;
+ 
+diff --git a/src/components/Surface.tsx b/src/components/Surface.tsx
+index 3b46d099e111daf0a81856ff8ccf7986edc0a9ce..be1b2d8b74e3a39fc84f95e1c316cf33c50eda76 100644
+--- a/src/components/Surface.tsx
++++ b/src/components/Surface.tsx
+@@ -50,14 +50,14 @@ export type Props = Omit<React.ComponentPropsWithRef<typeof View>, 'style'> & {
+    * TestID used for testing purposes
+    */
+   testID?: string;
+-  ref?: React.RefObject<View>;
++  ref?: React.RefObject<React.ComponentRef<typeof View>>;
+   /**
+    * @internal
+    */
+   container?: boolean;
+ };
+ 
+-const MD2Surface = forwardRef<View, Props>(
++const MD2Surface = forwardRef<React.ComponentRef<typeof View>, Props>(
+   ({ style, theme: overrideTheme, ...rest }: Omit<Props, 'elevation'>, ref) => {
+     const { elevation = 4 } = (StyleSheet.flatten(style) || {}) as ViewStyle;
+     const { dark: isDarkTheme, mode, colors } = useInternalTheme(overrideTheme);
+@@ -151,7 +151,7 @@ function getStyleForShadowLayer(
+ }
+ 
+ const SurfaceIOS = forwardRef<
+-  View,
++  React.ComponentRef<typeof View>,
+   Omit<Props, 'elevation'> & {
+     elevation: Elevation;
+     backgroundColor?: string | Animated.AnimatedInterpolation<string | number>;
+@@ -262,7 +262,7 @@ const SurfaceIOS = forwardRef<
+  * });
+  * ```
+  */
+-const Surface = forwardRef<View, Props>(
++const Surface = forwardRef<React.ComponentRef<typeof View>, Props>(
+   (
+     {
+       elevation = 1,

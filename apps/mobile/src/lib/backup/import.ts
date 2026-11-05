@@ -54,7 +54,7 @@ export async function restoreBackup(filePath: string): Promise<void> {
 	expoDb.closeSync()
 	try {
 		const dbBytes = await dbEntry.async('uint8array')
-		dbFile.write(dbBytes)
+		await dbFile.write(dbBytes)
 
 		// 删除旧的 WAL 文件，避免重新打开时读到残留数据
 		const walFile = new File(sqliteDir, 'db.db-wal')

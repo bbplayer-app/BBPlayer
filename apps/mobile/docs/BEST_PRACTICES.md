@@ -2,9 +2,9 @@
 
 ## 🎨 UI 开发规范
 
-### FlashList 性能优化
+### LegendList 性能优化
 
-项目中大量使用了 `FlashList` 进行列表渲染。为了保证滚动性能，请严格遵守以下规范：
+项目中大量使用了 `LegendList` 进行列表渲染。为了保证滚动性能，请严格遵守以下规范：
 
 1.  **renderItem 定义**: `renderItem` 函数**必须**在组件函数外部定义（并不推荐使用 `useCallback`）
 2.  **extraData 使用**: 所有 `renderItem` 依赖的外部变量（除了 `item` 本身），都必须放入 `extraData` 属性中。

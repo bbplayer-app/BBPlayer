@@ -32,7 +32,7 @@ type EXPONEXTFS = {
 		exists: boolean
 		create: (options?: { intermediates?: boolean; overwrite?: boolean }) => void
 		open: () => {
-			writeBytes: (data: Uint8Array) => void
+			writeBytes: (data: Uint8Array) => void | Promise<void>
 			close: () => void
 			size: number | null
 			offset: number | null
@@ -151,7 +151,7 @@ const EXPONEXTFSprocessQueue = async () => {
 			const encoder = new TextEncoder()
 			const bytes = encoder.encode(item.msg)
 
-			fileHandler.writeBytes(bytes)
+			await fileHandler.writeBytes(bytes)
 		} finally {
 			try {
 				fileHandler.close()

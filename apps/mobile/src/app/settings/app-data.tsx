@@ -143,7 +143,7 @@ export default function AppPrivateDataPage() {
 					/>
 				)}
 				ListEmptyComponent={
-					isPending ? null : (
+					isPending ? undefined : (
 						<View style={styles.empty}>
 							<Text
 								variant='bodyMedium'
@@ -164,7 +164,7 @@ export default function AppPrivateDataPage() {
 								计算中...
 							</Text>
 						</View>
-					) : null
+					) : undefined
 				}
 			/>
 		</View>

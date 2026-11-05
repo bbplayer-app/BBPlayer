@@ -1,13 +1,12 @@
 import { requireNativeView } from 'expo'
-import { createElement, forwardRef } from 'react'
-import { Platform, type NativeMethods, type ViewProps } from 'react-native'
+import { createElement, forwardRef, type RefAttributes } from 'react'
+import { Platform, type ViewProps } from 'react-native'
 
 const NativeBootSplashVideoView =
 	Platform.OS === 'android'
-		? requireNativeView<BootSplashVideoViewProps>(
-				'BBPlayerBootSplashVideo',
-				'BootSplashVideoView',
-			)
+		? requireNativeView<
+				BootSplashVideoViewProps & RefAttributes<BootSplashVideoViewRef>
+			>('BBPlayerBootSplashVideo', 'BootSplashVideoView')
 		: null
 
 export interface BootSplashVideoViewProps extends ViewProps {
@@ -22,7 +21,7 @@ export interface BootSplashVideoViewProps extends ViewProps {
 	}) => void
 }
 
-export interface BootSplashVideoViewRef extends NativeMethods {
+export interface BootSplashVideoViewRef {
 	replay(): Promise<void>
 }
 
@@ -37,7 +36,6 @@ export const BootSplashVideoView = forwardRef<
 	}
 	return createElement(NativeBootSplashVideoView, {
 		...props,
-		// @ts-expect-error -- 不想管
 		ref,
 	})
 })

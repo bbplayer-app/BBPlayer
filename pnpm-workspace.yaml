@@ -39,10 +39,24 @@ minimumReleaseAgeExclude:
   - expo-observe@57.0.24
   - expo-router@57.0.23
   - expo-sharing@57.0.22
+  - '@babel/core@7.29.13'
+  - '@babel/generator@7.29.13'
+  - '@babel/helper-compilation-targets@7.29.13'
+  - '@babel/helper-module-transforms@7.29.13'
+  - '@babel/helpers@7.29.13'
+  - '@babel/parser@7.29.13'
+  - '@babel/traverse@7.29.13'
+  - '@sentry/expo-upload-sourcemaps@8.34.0'
+  - '@sentry/react-native@8.34.0'
+  - react-native-gesture-handler@3.5.0
+  - react-native-keyboard-controller@1.23.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
-  expo-updates@57.0.23: patches/expo-updates@57.0.23.patch
-  metro-runtime@0.84.5: patches/metro-runtime@0.84.5.patch
-  metro@0.84.5: patches/metro@0.84.5.patch
-  react-native-pager-view@9.0.4: patches/react-native-pager-view@9.0.4.patch
+  '@react-native-masked-view/masked-view': patches/@react-native-masked-view__masked-view.patch
+  expo-updates@58.0.21: patches/expo-updates@58.0.21.patch
+  metro-runtime@0.87.1: patches/metro-runtime@0.87.1.patch
+  metro@0.87.1: patches/metro@0.87.1.patch
+  number-flow-react-native@0.5.1: patches/number-flow-react-native@0.5.1.patch
+  react-native-pager-view@10.0.0: patches/react-native-pager-view@10.0.0.patch
+  react-native-paper@5.15.4: patches/react-native-paper@5.15.4.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch

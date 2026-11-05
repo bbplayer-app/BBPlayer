@@ -1,37 +1,8 @@
-import { useNavigation } from 'expo-router'
-import type { EventArg, NavigationAction } from 'expo-router/react-navigation'
-import { useEffect, useRef } from 'react'
+import { usePreventRemove as useRouterPreventRemove } from 'expo-router/react-navigation'
 
 export default function usePreventRemove(
 	shouldPrevent: boolean,
-	callback: (
-		e: EventArg<
-			'beforeRemove',
-			true,
-			{
-				action: NavigationAction
-			}
-		>,
-	) => void,
+	callback: NonNullable<Parameters<typeof useRouterPreventRemove>[1]>,
 ) {
-	const navigation = useNavigation()
-	const callbackRef = useRef(callback)
-	useEffect(() => {
-		callbackRef.current = callback
-	}, [callback])
-
-	const shouldPreventRef = useRef(shouldPrevent)
-	useEffect(() => {
-		shouldPreventRef.current = shouldPrevent
-	}, [shouldPrevent])
-
-	useEffect(() => {
-		const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-			if (shouldPreventRef.current) {
-				e.preventDefault()
-				callbackRef.current?.(e)
-			}
-		})
-		return unsubscribe
-	}, [navigation])
+	useRouterPreventRemove(shouldPrevent, callback)
 }

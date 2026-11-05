@@ -54,11 +54,11 @@
 	"devDependencies": {
 		"@react-navigation/native": "^7.2.2",
 		"@types/color": "^4.2.1",
-		"@types/react": "19.2.15",
-		"expo-router": "57.0.23",
+		"@types/react": "19.3.0",
+		"expo-router": "58.0.30",
 		"jest": "^30.2.0",
-		"react": "19.2.3",
-		"react-native": "0.86.3",
+		"react": "19.3.0",
+		"react-native": "0.88.1",
 		"react-native-bottom-tabs": "workspace:*",
 		"typescript": "~6.0.3"
 	},

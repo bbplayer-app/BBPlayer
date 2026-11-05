@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
 	},
 	slider: {
 		height: 25,
-		width: '90%',
+		width: '90%' as const,
 		alignSelf: 'center',
 	},
 	timeContainer: {

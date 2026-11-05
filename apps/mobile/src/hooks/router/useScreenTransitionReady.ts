@@ -1,5 +1,5 @@
 import { useNavigation } from 'expo-router'
-import type { NativeStackNavigationProp } from 'expo-router/build/react-navigation/native-stack'
+import type { NativeStackNavigationProp } from 'expo-router/native-stack'
 import type { ParamListBase } from 'expo-router/react-navigation'
 import { useLayoutEffect, useState } from 'react'
 import { Platform } from 'react-native'

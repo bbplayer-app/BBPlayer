@@ -1,4 +1,3 @@
-# 来自 RN Worklets Bundle Mode
 diff --git a/src/modules/HMRClient.js b/src/modules/HMRClient.js
 index 534ac872bdd4f081c21a63aeb88adf689a3af5c5..5773985c80b89907cad741fdb05b551a97320492 100644
 --- a/src/modules/HMRClient.js
@@ -14,7 +13,7 @@ index 534ac872bdd4f081c21a63aeb88adf689a3af5c5..5773985c80b89907cad741fdb05b551a
      global.globalEvalWithSourceUrl(code, sourceURL);
    } else {
 diff --git a/src/polyfills/require.js b/src/polyfills/require.js
-index c46fb7cf4549984674a6d625405a01fbf4238eda..2ba29ab345171ed284cc36c0c2f658de4d0c178d 100644
+index e5a11237ef5aa8bc44c19ff6eec298db6f460b55..ec0ecc4d6949b6418921cdb1699b2617bdf5ee57 100644
 --- a/src/polyfills/require.js
 +++ b/src/polyfills/require.js
 @@ -334,14 +334,14 @@ function unknownModuleError(id) {

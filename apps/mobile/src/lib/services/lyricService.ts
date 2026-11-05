@@ -323,7 +323,7 @@ class LyricService {
 				? lyrics
 				: { ...lyrics, manualSkip: false }
 			Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-				lyricFile.write(JSON.stringify(toWrite)),
+				lyricFile.writeSync(JSON.stringify(toWrite)),
 			)
 			// 自动同步到悬浮窗/状态栏
 			void this.pushLyricsToOverlays(uniqueKey)

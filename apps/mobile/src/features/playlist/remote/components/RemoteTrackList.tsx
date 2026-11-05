@@ -128,7 +128,7 @@ export function TrackList({
 	hasNextPage,
 	renderCustomItem,
 	listRef,
-	...flashListProps
+	...legendListProps
 }: TrackListProps) {
 	const { colors } = useTheme()
 	const currentTrackId = useCurrentTrackId()
@@ -182,10 +182,10 @@ export function TrackList({
 						>
 							•
 						</Text>
-					) : null) ?? flashListProps.ListFooterComponent
+					) : null) ?? legendListProps.ListFooterComponent
 				}
 				ListEmptyComponent={
-					flashListProps.ListEmptyComponent ?? (
+					legendListProps.ListEmptyComponent ?? (
 						<Text
 							style={[styles.emptyList, { color: colors.onSurfaceVariant }]}
 						>
@@ -193,7 +193,7 @@ export function TrackList({
 						</Text>
 					)
 				}
-				{...flashListProps}
+				{...legendListProps}
 			/>
 		</>
 	)

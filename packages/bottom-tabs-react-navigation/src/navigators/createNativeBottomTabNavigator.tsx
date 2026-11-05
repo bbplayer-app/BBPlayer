@@ -1,10 +1,10 @@
 import Color from 'color'
+import { appendMissingPlaceholderTabRoutes } from 'expo-router/build/standard-navigation/appendMissingPlaceholderTabRoutes'
 import {
 	createNavigatorFactory,
 	type DefaultNavigatorOptions,
 	type NavigatorTypeBagBase,
 	type ParamListBase,
-	type StaticConfig,
 	type TabActionHelpers,
 	type TabNavigationState,
 	TabRouter,
@@ -37,7 +37,6 @@ function NativeBottomTabNavigator({
 	id,
 	initialRouteName,
 	backBehavior,
-	UNSTABLE_routeNamesChangeBehavior,
 	children,
 	layout,
 	screenListeners,
@@ -58,7 +57,7 @@ function NativeBottomTabNavigator({
 			? Color(colors.text).mix(Color(colors.card), 0.5).hex()
 			: customInactiveTintColor
 
-	const { state, descriptors, navigation, NavigationContent } =
+	const { state, descriptors, describe, navigation, NavigationContent } =
 		useNavigationBuilder<
 			TabNavigationState<ParamListBase>,
 			TabRouterOptions,
@@ -69,7 +68,6 @@ function NativeBottomTabNavigator({
 			id,
 			initialRouteName,
 			backBehavior,
-			UNSTABLE_routeNamesChangeBehavior,
 			children,
 			layout,
 			screenListeners,
@@ -78,6 +76,16 @@ function NativeBottomTabNavigator({
 			UNSTABLE_router,
 		})
 
+	// Expo Router 58 only stores visited tabs in state.routes. Include its
+	// placeholder descriptors and routes so every declared tab has a button.
+	const tabDescriptors = { ...descriptors }
+	for (const name of state.routeNames) {
+		if (!state.routes.some((route) => route.name === name)) {
+			tabDescriptors[name] = describe({ key: undefined, name })
+		}
+	}
+	const tabState = appendMissingPlaceholderTabRoutes(state, tabDescriptors)
+
 	return (
 		<NavigationContent>
 			<NativeBottomTabView
@@ -85,9 +93,9 @@ function NativeBottomTabNavigator({
 				layoutDirection={layoutDirection}
 				tabBarActiveTintColor={activeTintColor}
 				tabBarInactiveTintColor={inactiveTintColor}
-				state={state}
+				state={tabState}
 				navigation={navigation}
-				descriptors={descriptors}
+				descriptors={tabDescriptors}
 			/>
 		</NavigationContent>
 	)
@@ -111,7 +119,6 @@ export default function createNativeBottomTabNavigator<
 		}
 		Navigator: typeof NativeBottomTabNavigator
 	},
-	const Config extends StaticConfig<TypeBag> = StaticConfig<TypeBag>,
->(config?: Config): TypedNavigator<TypeBag, Config> {
-	return createNavigatorFactory(NativeBottomTabNavigator)(config)
+>(): TypedNavigator<TypeBag> {
+	return createNavigatorFactory(NativeBottomTabNavigator)()
 }

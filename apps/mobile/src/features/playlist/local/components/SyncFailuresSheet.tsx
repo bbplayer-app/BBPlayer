@@ -3,6 +3,7 @@ import { TrueSheet as TrueSheetComponent } from '@lodev09/react-native-true-shee
 import { and, eq, inArray } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { forwardRef, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Icon, Text, useTheme } from 'react-native-paper'
@@ -60,7 +61,7 @@ interface Props {
 export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 	function SyncFailuresSheet({ playlistId, useMockData = false }, ref) {
 		const { colors } = useTheme()
-		const scrollViewRef = useRef<ScrollView>(null)
+		const scrollViewRef = useRef<ScrollViewInstance>(null)
 		const [loading, setLoading] = useState(false)
 
 		const { data: dbRows } = useLiveQuery(

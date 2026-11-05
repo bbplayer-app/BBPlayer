@@ -1,6 +1,7 @@
 import { Computed } from '@legendapp/state/react'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ScrollView } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
@@ -19,7 +20,7 @@ export function PlayerFunctionalMenu({
 }) {
 	const { colors } = useTheme()
 	const sheetRef = useRef<TrueSheet>(null)
-	const scrollViewRef = useRef<ScrollView>(null)
+	const scrollViewRef = useRef<ScrollViewInstance>(null)
 	const isPresented = useRef(false)
 	const { deferAction, runPendingAction } = useDeferredSheetAction()
 

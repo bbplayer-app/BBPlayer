@@ -1,12 +1,11 @@
-# 在 RN Pager View v9 中 Android 底层实现使用了 Jetpack Compose，但是生命周期管理有问题。
+# 在 RN Pager View v10 中 Android 底层实现使用了 Jetpack Compose，但是生命周期管理有问题。
 # 导致一个挂载了 Pager View 组件的页面在返回时，即使动画还在播放，组件内的内容也已经变成空白
 # 过程：https://chatgpt.com/s/cx_6aad60b3ccbc81919b9d4845e956880b
 # PR：https://github.com/callstack/react-native-pager-view/pull/1145
 diff --git a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
-index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed1805188a 100644
 --- a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
 +++ b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
-@@ -57,6 +57,43 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -68,6 +68,43 @@
    private val composeLifecycleOwner = ComposeViewLifecycleOwner()
    private var composeView: ComposeView? = null
    private val pages = mutableStateListOf<View>()
@@ -50,11 +49,10 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
    private val scrollEnabledState = mutableStateOf(true)
    private val orientationState = mutableStateOf(Orientation.Horizontal)
    private val layoutDirectionState = mutableStateOf(LayoutDirection.Ltr)
-@@ -130,10 +167,23 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -150,11 +187,23 @@
      // dispose the composition, since DisposeOnLifecycleDestroyed only acts
      // on ON_DESTROY.
      composeLifecycleOwner.detach()
-+    // Detach is the fallback when the parent does not deliver endViewTransition.
 +    finishPageTransition()
 +    if (dropRequested) disposeNow()
      super.onDetachedFromWindow()
@@ -62,6 +60,7 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
  
    fun dispose() {
 +    dropRequested = true
+     isDestroyed = true
 +    if (isAttachedToWindow && transitionPages.value != null) {
 +      return
 +    }
@@ -74,7 +73,7 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
      composeLifecycleOwner.destroy()
    }
  
-@@ -242,15 +292,15 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -303,15 +352,15 @@
        return
      }
      val view = pages.removeAt(index)
@@ -93,7 +92,7 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
    }
  
    private fun resetPagerState() {
-@@ -429,6 +479,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -496,6 +545,7 @@
    }
  
    private fun dispatchPageSelected(position: Int) {
@@ -101,13 +100,13 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
      if (lastEmittedPageSelected == position) {
        return
      }
-@@ -439,12 +490,14 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -528,12 +578,14 @@
    }
  
    private fun dispatchPageScroll(position: Int, offset: Float) {
 +    if (dropRequested) return
      UIManagerHelper.getEventDispatcherForReactTag(reactContext, id)?.dispatchEvent(
-       PageScrollEvent(id, position, offset)
+       PageScrollEvent(UIManagerHelper.getSurfaceId(this), id, position, offset)
      )
    }
  
@@ -116,14 +115,12 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
      if (lastEmittedScrollState == state) {
        return
      }
-@@ -456,13 +509,17 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
+@@ -545,13 +597,15 @@
  
    @Composable
    private fun PagerContent() {
 -    val pageCount = pages.size
-+    // Lazy page content can run after RN mutates the logical child list but
-+    // before this composition is replaced. Capture an immutable snapshot so
-+    // an existing item provider never indexes a list that has since shrunk.
++    // Keep page hosts stable while the outgoing screen is still drawing.
 +    val displayedPages = transitionPages.value ?: pages.toList()
 +    val pageCount = displayedPages.size
      if (pageCount == 0) {
@@ -136,18 +133,27 @@ index 5eaa6069324f5a0be08e5adfc24ed5f877929465..6074be4d1cd0288e16f1be9011da0bed
      }
  
      LaunchedEffect(pageCount) {
-@@ -564,7 +621,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
-           reverseLayout = false,
-           beyondViewportPageCount = beyondViewportPageCount
+@@ -634,7 +688,7 @@
+     val beyondViewportPageCount = getBeyondViewportPageCount()
+     // Key pages by their React tag, so the visible page stays put and its new index is
+     // reported when React inserts or removes pages before it.
+-    val pageKey: (Int) -> Any = { page -> pages[page].id }
++    val pageKey: (Int) -> Any = { page -> displayedPages[page].id }
+     val overscrollConfiguration = if (overScrollModeState.value == OverScrollMode.Never) {
+       null
+     } else {
+@@ -651,7 +705,7 @@
+           beyondViewportPageCount = beyondViewportPageCount,
+           key = pageKey
          ) { page ->
 -          PageHost(pages[page])
 +          PageHost(displayedPages[page])
          }
        } else {
          HorizontalPager(
-@@ -575,7 +632,7 @@ class ComposePagerView(context: Context) : FrameLayout(context) {
-           reverseLayout = false,
-           beyondViewportPageCount = beyondViewportPageCount
+@@ -662,7 +716,7 @@
+           beyondViewportPageCount = beyondViewportPageCount,
+           key = pageKey
          ) { page ->
 -          PageHost(pages[page])
 +          PageHost(displayedPages[page])

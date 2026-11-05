@@ -1,3 +1,28 @@
+# Strict TypeScript API 兼容补丁（React Native >= 0.87）。
+# 该库直接发布 TS 源码，skipLibCheck 无法跳过；使用公开 CodegenTypes / codegen 入口并修正 ref。
+# 同时保留原有 Android Maven 仓库顺序修复，与 Strict API 无关。
+
+diff --git a/SvgaPlayer.tsx b/SvgaPlayer.tsx
+index 7d1022b8211c94a5dd09fee4fd4aaf0e5821368d..75208083306d4f9c1b005c335741cd07b5dcf053 100644
+--- a/SvgaPlayer.tsx
++++ b/SvgaPlayer.tsx
+@@ -2,7 +2,6 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+ import type { ViewProps } from 'react-native';
+ import SvgaPlayerView, {
+   Commands,
+-  type ComponentType,
+ } from './src/specs/SvgaPlayerNativeComponent';
+ export interface SvgaErrorEvent {
+   error: string;
+@@ -72,7 +71,7 @@ const RNSvgaPlayer = forwardRef<SvgaPlayerRef, SvgaPlayerProps>(
+     },
+     ref
+   ) => {
+-    const nativeRef = useRef<React.ElementRef<ComponentType>>(null);
++    const nativeRef = useRef<React.ComponentRef<typeof SvgaPlayerView>>(null);
+ 
+     useImperativeHandle(ref, () => ({
+       startAnimation: () => {
 diff --git a/android/build.gradle b/android/build.gradle
 index 290f7bf55efaa66ea5a2fca4bfab154fd852b6ce..11a406dd0480c3d163e442a542f78681e7fcc9d3 100644
 --- a/android/build.gradle
@@ -19,3 +44,65 @@ index 290f7bf55efaa66ea5a2fca4bfab154fd852b6ce..11a406dd0480c3d163e442a542f78681
    }
  
    dependencies {
+diff --git a/src/specs/SvgaPlayerNativeComponent.ts b/src/specs/SvgaPlayerNativeComponent.ts
+index c50849b2ba69a70b3892287baf2dc5643165a169..11477a40c7d3ef701107b49671aefe71dcf97f7f 100644
+--- a/src/specs/SvgaPlayerNativeComponent.ts
++++ b/src/specs/SvgaPlayerNativeComponent.ts
+@@ -1,25 +1,18 @@
+-import type { HostComponent, ViewProps } from 'react-native';
+-import type {
+-  BubblingEventHandler,
+-  Double,
+-  Int32,
+-  WithDefault,
+-} from 'react-native/Libraries/Types/CodegenTypes';
+-import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
+-import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
++import type { CodegenTypes, HostComponent, ViewProps } from 'react-native';
++import { codegenNativeCommands, codegenNativeComponent } from 'react-native';
+ 
+ interface SvgaPlayerProps extends ViewProps {
+   source: string;
+   autoPlay?: boolean;
+-  loops?: Int32;
++  loops?: CodegenTypes.Int32;
+   clearsAfterStop?: boolean;
+-  align?: WithDefault<'top' | 'bottom' | 'center', 'center'>;
++  align?: CodegenTypes.WithDefault<'top' | 'bottom' | 'center', 'center'>;
+   // 事件回调
+-  onError?: BubblingEventHandler<{ error: string }>;
+-  onFinished?: BubblingEventHandler<{ finished: boolean }>;
+-  onLoaded?: BubblingEventHandler<{}>;
+-  onFrameChanged?: BubblingEventHandler<{ value: Double }>;
+-  onPercentageChanged?: BubblingEventHandler<{ value: Double }>;
++  onError?: CodegenTypes.BubblingEventHandler<{ error: string }>;
++  onFinished?: CodegenTypes.BubblingEventHandler<{ finished: boolean }>;
++  onLoaded?: CodegenTypes.BubblingEventHandler<{}>;
++  onFrameChanged?: CodegenTypes.BubblingEventHandler<{ value: CodegenTypes.Double }>;
++  onPercentageChanged?: CodegenTypes.BubblingEventHandler<{ value: CodegenTypes.Double }>;
+ }
+ 
+ export type ComponentType = HostComponent<SvgaPlayerProps>;
+@@ -30,18 +23,18 @@ interface NativeCommands {
+   pauseAnimation: (viewRef: React.ElementRef<ComponentType>) => void;
+   stepToFrame: (
+     viewRef: React.ElementRef<ComponentType>,
+-    frame: Int32,
++    frame: CodegenTypes.Int32,
+     andPlay: boolean
+   ) => void;
+   stepToPercentage: (
+     viewRef: React.ElementRef<ComponentType>,
+-    percentage: Int32,
++    percentage: CodegenTypes.Int32,
+     andPlay: boolean
+   ) => void;
+   startAnimationWithRange: (
+     viewRef: React.ElementRef<ComponentType>,
+-    location: Int32,
+-    length: Int32,
++    location: CodegenTypes.Int32,
++    length: CodegenTypes.Int32,
+     reverse: boolean
+   ) => void;
+ }

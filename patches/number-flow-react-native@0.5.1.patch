@@ -1,0 +1,27 @@
+# Strict TypeScript API 兼容补丁（React Native >= 0.87）。
+# 该库直接发布 TS 源码，skipLibCheck 无法跳过；适配 TextStyle.fontVariant 的字符串/数组类型。
+
+diff --git a/src/native/glyphMetricsShared.ts b/src/native/glyphMetricsShared.ts
+index 0932a852561098d7e2f556ed7b41bc8941d1596e..c29932c0b5a7c996e0965ea4b0afb61578209128 100644
+--- a/src/native/glyphMetricsShared.ts
++++ b/src/native/glyphMetricsShared.ts
+@@ -1,3 +1,4 @@
++import type { TextStyle } from "react-native";
+ import { MEASURABLE_CHARS } from "../core/constants";
+ 
+ // Combines MEASURABLE_CHARS with additional chars, deduplicating
+@@ -17,12 +18,12 @@ export function cacheKey(
+   style: {
+     fontFamily?: string;
+     fontSize: number;
+-    fontVariant?: string[];
++    fontVariant?: TextStyle["fontVariant"];
+     fontWeight?: string | number;
+   },
+   additionalChars?: string,
+ ): string {
+-  const variant = style.fontVariant?.join(",") ?? "";
++  const variant = (typeof style.fontVariant === "string" ? style.fontVariant : style.fontVariant?.join(",")) ?? "";
+   const weight = style.fontWeight ?? "";
+   const base = `${style.fontFamily}:${style.fontSize}:${variant}:${weight}`;
+   return additionalChars ? `${base}:${additionalChars}` : base;

@@ -4,7 +4,6 @@ import type { ImageRef } from 'expo-image'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useEffect, useState } from 'react'
-import type { ColorSchemeName } from 'react-native'
 import {
 	Pressable,
 	StyleSheet,
@@ -41,7 +40,7 @@ export function TrackInfo({
 	const { colors } = useTheme()
 	const [coverArea, setCoverArea] = useState({ width: 0, height: 0 })
 
-	const colorScheme: ColorSchemeName = useColorScheme()
+	const colorScheme = useColorScheme()
 	const isDark: boolean = colorScheme === 'dark'
 
 	const currentTrack = useCurrentTrack()
