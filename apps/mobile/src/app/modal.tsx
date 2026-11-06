@@ -62,7 +62,8 @@ export default function ModalHost() {
 									useModalStore.getState().close(m.key)
 								}
 							}}
-							contentStyle={{ zIndex }}
+							// 区间编辑器的正文需要收缩滚动，为底部保存按钮保留空间。
+							contentStyle={{ zIndex, flexShrink: m.key === 'AbLoop' ? 1 : 0 }}
 						>
 							<Suspense
 								fallback={

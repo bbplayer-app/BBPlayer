@@ -3,6 +3,9 @@ import { lazy } from 'react'
 
 import type { ModalKey, ModalPropsMap } from '@/types/navigation'
 
+// Bundle Mode 的 UI runtime 只加载初始 bundle，滑块 worklet 必须静态入图。
+import AbLoopModal from './modals/player/AbLoopModal'
+
 const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
 const UpdateAppModal = lazy(() => import('./modals/app/UpdateAppModal'))
@@ -94,6 +97,7 @@ export const modalRegistry: { [K in ModalKey]: ModalComponent<K> } = {
 	Alert: AlertModal,
 	EditLyrics: EditLyricsModal,
 	SleepTimer: SleepTimerModal,
+	AbLoop: AbLoopModal,
 	DonationQR: DonationQRModal,
 	SaveQueueToPlaylist: SaveQueueToPlaylistModal,
 	LyricsSelection: LyricsSelectionModal,

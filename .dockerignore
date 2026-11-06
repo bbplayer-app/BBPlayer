@@ -1,4 +1,12 @@
 .git
+.pnpm-store
+.tmp
+.argent/tmp
+.argent/logs
+.argent/secrets.env
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
 **/node_modules
 **/.expo
 **/dist
