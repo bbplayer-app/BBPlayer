@@ -1,0 +1,162 @@
+# 在 RN Pager View v10 中 Android 底层实现使用了 Jetpack Compose，但是生命周期管理有问题。
+# 导致一个挂载了 Pager View 组件的页面在返回时，即使动画还在播放，组件内的内容也已经变成空白
+# 过程：https://chatgpt.com/s/cx_6aad60b3ccbc81919b9d4845e956880b
+# PR：https://github.com/callstack/react-native-pager-view/pull/1145
+diff --git a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
+--- a/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
++++ b/android/src/main/java/com/reactnativepagerview/ComposePagerView.kt
+@@ -68,6 +68,43 @@
+   private val composeLifecycleOwner = ComposeViewLifecycleOwner()
+   private var composeView: ComposeView? = null
+   private val pages = mutableStateListOf<View>()
++  // RN's logical children must update immediately, but screens uses
++  // startViewTransition to keep the old native hierarchy drawing during pop.
++  // Compose must keep the same page hosts alive for that interval too.
++  private val transitionPages = mutableStateOf<List<View>?>(null)
++  private var dropRequested = false
++  private var disposed = false
++
++  override fun startViewTransition(view: View) {
++    super.startViewTransition(view)
++    if (view === composeView && transitionPages.value == null && !disposed) {
++      transitionPages.value = pages.toList()
++    }
++  }
++
++  override fun endViewTransition(view: View) {
++    super.endViewTransition(view)
++    if (view === composeView) {
++      finishPageTransition()
++    }
++  }
++
++  private fun finishPageTransition() {
++    val retained = transitionPages.value ?: return
++    if (dropRequested) {
++      disposeNow()
++    }
++    transitionPages.value = null
++    retained.filterNot { it in pages }.forEach { view ->
++      (view.parent as? ViewGroup)?.removeView(view)
++    }
++  }
++
++  private fun removePageView(view: View) {
++    if (transitionPages.value?.contains(view) != true) {
++      (view.parent as? ViewGroup)?.removeView(view)
++    }
++  }
+   private val scrollEnabledState = mutableStateOf(true)
+   private val orientationState = mutableStateOf(Orientation.Horizontal)
+   private val layoutDirectionState = mutableStateOf(LayoutDirection.Ltr)
+@@ -150,11 +187,23 @@
+     // dispose the composition, since DisposeOnLifecycleDestroyed only acts
+     // on ON_DESTROY.
+     composeLifecycleOwner.detach()
++    finishPageTransition()
++    if (dropRequested) disposeNow()
+     super.onDetachedFromWindow()
+   }
+ 
+   fun dispose() {
++    dropRequested = true
+     isDestroyed = true
++    if (isAttachedToWindow && transitionPages.value != null) {
++      return
++    }
++    disposeNow()
++  }
++
++  private fun disposeNow() {
++    if (disposed) return
++    disposed = true
+     composeLifecycleOwner.destroy()
+   }
+ 
+@@ -303,15 +352,15 @@
+       return
+     }
+     val view = pages.removeAt(index)
+-    (view.parent as? ViewGroup)?.removeView(view)
++    removePageView(view)
+   }
+ 
+   fun removeAllPages() {
+     pages.forEach { view ->
+-      (view.parent as? ViewGroup)?.removeView(view)
++      removePageView(view)
+     }
+     pages.clear()
+-    resetPagerState()
++    if (transitionPages.value == null) resetPagerState()
+   }
+ 
+   private fun resetPagerState() {
+@@ -496,6 +545,7 @@
+   }
+ 
+   private fun dispatchPageSelected(position: Int) {
++    if (dropRequested) return
+     if (lastEmittedPageSelected == position) {
+       return
+     }
+@@ -528,12 +578,14 @@
+   }
+ 
+   private fun dispatchPageScroll(position: Int, offset: Float) {
++    if (dropRequested) return
+     UIManagerHelper.getEventDispatcherForReactTag(reactContext, id)?.dispatchEvent(
+       PageScrollEvent(UIManagerHelper.getSurfaceId(this), id, position, offset)
+     )
+   }
+ 
+   private fun dispatchScrollState(state: String) {
++    if (dropRequested) return
+     if (lastEmittedScrollState == state) {
+       return
+     }
+@@ -545,13 +597,15 @@
+ 
+   @Composable
+   private fun PagerContent() {
+-    val pageCount = pages.size
++    // Keep page hosts stable while the outgoing screen is still drawing.
++    val displayedPages = transitionPages.value ?: pages.toList()
++    val pageCount = displayedPages.size
+     if (pageCount == 0) {
+       return
+     }
+ 
+     val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, pageCount - 1)) {
+-      pages.size
++      pageCount
+     }
+ 
+     LaunchedEffect(pageCount) {
+@@ -634,7 +688,7 @@
+     val beyondViewportPageCount = getBeyondViewportPageCount()
+     // Key pages by their React tag, so the visible page stays put and its new index is
+     // reported when React inserts or removes pages before it.
+-    val pageKey: (Int) -> Any = { page -> pages[page].id }
++    val pageKey: (Int) -> Any = { page -> displayedPages[page].id }
+     val overscrollConfiguration = if (overScrollModeState.value == OverScrollMode.Never) {
+       null
+     } else {
+@@ -651,7 +705,7 @@
+           beyondViewportPageCount = beyondViewportPageCount,
+           key = pageKey
+         ) { page ->
+-          PageHost(pages[page])
++          PageHost(displayedPages[page])
+         }
+       } else {
+         HorizontalPager(
+@@ -662,7 +716,7 @@
+           beyondViewportPageCount = beyondViewportPageCount,
+           key = pageKey
+         ) { page ->
+-          PageHost(pages[page])
++          PageHost(displayedPages[page])
+         }
+       }
+     }

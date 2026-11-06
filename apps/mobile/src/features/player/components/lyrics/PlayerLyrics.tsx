@@ -2,6 +2,7 @@ import { parseAndMergeLyrics, type LyricLine } from '@bbplayer/splash'
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import {
 	Pressable,
 	ScrollView,
@@ -57,7 +58,7 @@ const Lyrics = memo(function Lyrics({
 			!state.settings.pureWhiteBackground &&
 			state.settings.playerBackgroundStyle === 'fluid',
 	)
-	const scrollViewRef = useRef<Animated.ScrollView>(null)
+	const scrollViewRef = useRef<ScrollViewInstance>(null)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
 
 	const scrollToIndex = useCallback(

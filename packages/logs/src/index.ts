@@ -30,7 +30,10 @@
 /** Import preset transports */
 import { consoleTransport } from './transports/consoleTransport'
 import { crashlyticsTransport } from './transports/crashlyticsTransport'
-import { fileAsyncTransport } from './transports/fileAsyncTransport'
+import {
+	fileAsyncTransport,
+	flushFileAsyncTransport,
+} from './transports/fileAsyncTransport'
 import { mapConsoleTransport } from './transports/mapConsoleTransport'
 import { sentryTransport } from './transports/sentryTransport'
 
@@ -627,6 +630,7 @@ export {
 	consoleTransport,
 	mapConsoleTransport,
 	fileAsyncTransport,
+	flushFileAsyncTransport,
 	sentryTransport,
 	crashlyticsTransport,
 }

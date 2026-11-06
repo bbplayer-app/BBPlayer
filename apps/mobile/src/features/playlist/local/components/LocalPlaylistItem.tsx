@@ -245,7 +245,7 @@ export const TrackListItem = memo(function TrackListItem({
 									loop
 									animationType='scroll'
 									duration={130 * data.bilibiliMetadata.mainTrackTitle.length}
-									easing={Easing.linear}
+									easing={(value) => Easing.linear(value)}
 								>
 									{data.bilibiliMetadata.mainTrackTitle}
 								</TextTicker>

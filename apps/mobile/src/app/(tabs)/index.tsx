@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { alert } from '@/components/modals/AlertModal'
+import NativeTabPage from '@/components/NativeTabPage'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import SearchHistory, {
 	type SearchHistoryItem,
@@ -32,7 +33,6 @@ import SearchHistory, {
 import SearchSuggestions from '@/features/search/SearchSuggestions'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
-import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import { markPerfInteractive } from '@/lib/performance'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
@@ -43,8 +43,7 @@ import {
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
 
-export default function SearchPage() {
-	useNowPlayingBar()
+function SearchPageContent() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
@@ -335,3 +334,11 @@ const styles = StyleSheet.create({
 	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
 	resolving: { flex: 1 },
 })
+
+export default function SearchPage() {
+	return (
+		<NativeTabPage>
+			<SearchPageContent />
+		</NativeTabPage>
+	)
+}

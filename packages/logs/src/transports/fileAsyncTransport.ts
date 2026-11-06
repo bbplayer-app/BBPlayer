@@ -1,4 +1,35 @@
-import { transportFunctionType } from '../index'
+import type { transportFunctionType } from '../index'
+
+const MAX_PENDING_LOGS = 256
+const MAX_PENDING_CHARACTERS = 512 * 1024
+const pendingWrites = new Set<Promise<boolean>>()
+const drainWaiters = new Set<() => void>()
+
+// Drop new entries on overflow; retain the already queued diagnostics in order.
+function hasQueueCapacity(queue: Array<{ msg: string }>, msg: string): boolean {
+	return (
+		queue.length < MAX_PENDING_LOGS &&
+		queue.reduce((total, item) => total + item.msg.length, msg.length) <=
+			MAX_PENDING_CHARACTERS
+	)
+}
+
+function notifyDrained() {
+	if (EXPOqueue.length || EXPONEXTFSqueue.length) return
+	for (const resolve of drainWaiters) resolve()
+	drainWaiters.clear()
+}
+
+/** Wait for transport calls and queued file appends already submitted to finish. */
+export async function flushFileAsyncTransport(): Promise<void> {
+	while (pendingWrites.size || EXPOqueue.length || EXPONEXTFSqueue.length) {
+		if (pendingWrites.size) {
+			await Promise.all([...pendingWrites])
+		} else {
+			await new Promise<void>((resolve) => drainWaiters.add(resolve))
+		}
+	}
+}
 
 type RNFS = {
 	DocumentDirectoryPath: string
@@ -32,7 +63,7 @@ type EXPONEXTFS = {
 		exists: boolean
 		create: (options?: { intermediates?: boolean; overwrite?: boolean }) => void
 		open: () => {
-			writeBytes: (data: Uint8Array) => void
+			writeBytes: (data: Uint8Array) => void | Promise<void>
 			close: () => void
 			size: number | null
 			offset: number | null
@@ -75,6 +106,7 @@ const EXPOFSreadwrite = async () => {
 		if (EXPOqueue.length > 0) {
 			EXPOFSreadwrite().then()
 		}
+		notifyDrained()
 	}
 }
 
@@ -83,10 +115,12 @@ const EXPOcheckqueue = async (
 	file: string,
 	msg: string,
 ) => {
+	if (!hasQueueCapacity(EXPOqueue, msg)) return false
 	EXPOqueue.push({ FS, file, msg })
 	if (!EXPOelaborate) {
 		await EXPOFSreadwrite()
 	}
+	return true
 }
 
 const EXPOFSappend = async (
@@ -100,8 +134,7 @@ const EXPOFSappend = async (
 			await FS.writeAsStringAsync(file, msg)
 			return true
 		} else {
-			await EXPOcheckqueue(FS, file, msg)
-			return true
+			return await EXPOcheckqueue(FS, file, msg)
 		}
 	} catch (error) {
 		console.error(error)
@@ -151,7 +184,7 @@ const EXPONEXTFSprocessQueue = async () => {
 			const encoder = new TextEncoder()
 			const bytes = encoder.encode(item.msg)
 
-			fileHandler.writeBytes(bytes)
+			await fileHandler.writeBytes(bytes)
 		} finally {
 			try {
 				fileHandler.close()
@@ -167,11 +200,13 @@ const EXPONEXTFSprocessQueue = async () => {
 		if (EXPONEXTFSqueue.length > 0) {
 			EXPONEXTFSprocessQueue().then()
 		}
+		notifyDrained()
 	}
 }
 
 const EXPONEXTFSappend = async (FS: EXPONEXTFS, file: string, msg: string) => {
 	try {
+		if (!hasQueueCapacity(EXPONEXTFSqueue, msg)) return false
 		EXPONEXTFSqueue.push({ FS, file, msg })
 		if (!EXPONEXTFSelaborate) {
 			await EXPONEXTFSprocessQueue()
@@ -253,7 +288,13 @@ const fileAsyncTransport: transportFunctionType<FileAsyncTransportOptions> = (
 	const output = `${props?.msg}\n`
 	const path = `${filePath}/${fileName}`
 
-	WRITE(FSF, path, output)
+	if (pendingWrites.size >= MAX_PENDING_LOGS) return false
+	const write = WRITE(FSF, path, output)
+	pendingWrites.add(write)
+	const forgetWrite = () => {
+		pendingWrites.delete(write)
+	}
+	void write.then(forgetWrite, forgetWrite)
 }
 
 export { fileAsyncTransport }

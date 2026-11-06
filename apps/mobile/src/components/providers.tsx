@@ -101,11 +101,11 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 				: colorScheme === 'dark'
 					? {
 							...MD3DarkTheme,
-							colors: buildMaterial3PaperColors(colorScheme),
+							colors: buildMaterial3PaperColors(colorScheme ?? 'light'),
 						}
 					: {
 							...MD3LightTheme,
-							colors: buildMaterial3PaperColors(colorScheme),
+							colors: buildMaterial3PaperColors(colorScheme ?? 'light'),
 						},
 		[colorScheme, pureWhiteBackground],
 	)

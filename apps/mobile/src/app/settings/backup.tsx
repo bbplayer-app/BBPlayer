@@ -1,6 +1,7 @@
 import { exportBackupToDownloads } from '@bbplayer/native'
 import * as Expo from 'expo'
 import * as DocumentPicker from 'expo-document-picker'
+import { File } from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
@@ -115,8 +116,10 @@ export default function BackupSettingsPage() {
 		if (isExportingRef.current) return
 		isExportingRef.current = true
 		setIsExporting(true)
+		let backupFile: File | undefined
 		try {
 			const uri = await createBackup()
+			backupFile = new File(uri)
 			const downloadsUri = exportBackupToDownloads(
 				uri,
 				`backup-${Date.now()}.zip`,
@@ -129,6 +132,7 @@ export default function BackupSettingsPage() {
 		} finally {
 			setIsExporting(false)
 			isExportingRef.current = false
+			if (backupFile?.exists) backupFile.delete()
 		}
 	}
 

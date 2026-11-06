@@ -9,6 +9,7 @@ import { useValue } from '@legendapp/state/react'
 import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
 import { memo, useEffect, useLayoutEffect, useRef } from 'react'
+import type { ViewInstance } from 'react-native'
 import { Platform, StyleSheet, View } from 'react-native'
 import { EaseView } from 'react-native-ease'
 import {
@@ -47,7 +48,7 @@ const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =
 		useSmoothProgress(false)
 	const sharedTrackViewWidth = useSharedValue(0)
-	const trackViewRef = useRef<View>(null)
+	const trackViewRef = useRef<ViewInstance>(null)
 	const { colors } = useTheme()
 
 	const animatedStyle = useAnimatedStyle(() => {

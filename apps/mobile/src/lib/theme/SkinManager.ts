@@ -88,7 +88,7 @@ const writeSkinJson = async (
 	dir: FileSystem.Directory,
 ): Promise<void> => {
 	const file = new FileSystem.File(dir, 'skin.json')
-	file.write(JSON.stringify(skin, null, 2))
+	await file.write(JSON.stringify(skin, null, 2))
 }
 
 // ============================================================

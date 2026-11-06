@@ -16,6 +16,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useMenuActions } from '@/hooks/ui/useMenuActions'
 import { checkForAppUpdate } from '@/lib/services/updateService'
 import { toastAndLogError } from '@/utils/error-handling'
+import { flushLogs } from '@/utils/log'
 import {
 	getStartupScreen,
 	setStartupScreen as persistStartupScreen,
@@ -217,6 +218,7 @@ async function performShareLog(
 	isSharingRef: { current: boolean },
 ) {
 	try {
+		await flushLogs()
 		const d = new Date()
 		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
 		const file = new FileSystem.File(

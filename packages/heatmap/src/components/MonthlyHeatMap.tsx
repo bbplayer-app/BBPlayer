@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
 import React, { useCallback, useRef } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ScrollView, View } from 'react-native'
 import Svg, { G, Text as SvgText } from 'react-native-svg'
 
@@ -38,7 +39,7 @@ export const MonthlyHeatMap = ({
 	sidebarTextFormat = 'ddd',
 	...props
 }: HeatMapProps) => {
-	const scrollViewRef = useRef<ScrollView>(null)
+	const scrollViewRef = useRef<ScrollViewInstance>(null)
 	const scrolledRef = useRef(false)
 
 	const onLayout = useCallback(() => {

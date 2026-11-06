@@ -1,6 +1,7 @@
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { TrueSheet as TrueSheetComponent } from '@lodev09/react-native-true-sheet'
 import { forwardRef, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import { Avatar, Text, useTheme } from 'react-native-paper'
 
@@ -20,7 +21,7 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 			isError,
 		} = useSharedPlaylistAllMembers(isOpen ? shareId : null)
 		const theme = useTheme()
-		const scrollViewRef = useRef<ScrollView>(null)
+		const scrollViewRef = useRef<ScrollViewInstance>(null)
 
 		return (
 			<TrueSheetComponent

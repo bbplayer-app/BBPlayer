@@ -14,6 +14,7 @@ import {
 	useRef,
 	useState,
 } from 'react'
+import type { ViewInstance } from 'react-native'
 import { StyleSheet, View } from 'react-native'
 import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
@@ -780,9 +781,9 @@ function LocalPlaylistContent({
 	/** Absolute screen Y of the top of the list container (from measureInWindow) */
 	const containerTopRef = useRef(0)
 	const containerHeightRef = useRef(0)
-	const listContainerRef = useRef<View>(null)
+	const listContainerRef = useRef<ViewInstance>(null)
 
-	/** Current FlashList scroll offset */
+	/** Current list scroll offset */
 	const scrollOffsetRef = useRef(0)
 
 	/** Auto-scroll interval handle */

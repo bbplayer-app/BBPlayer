@@ -8,6 +8,7 @@ import { LegendList } from '@legendapp/list/react-native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { RefObject } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import {
@@ -255,7 +256,8 @@ export function LocalTrackList({
 	onDragUpdate,
 	onDragEnd,
 	insertAfterIndex,
-	...flashListProps
+	ListFooterComponent,
+	...legendListProps
 }: LocalTrackListProps) {
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
@@ -265,7 +267,7 @@ export function LocalTrackList({
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)
-	const menuScrollViewRef = useRef<ScrollView>(null)
+	const menuScrollViewRef = useRef<ScrollViewInstance>(null)
 	const [menuSheetMounted, setMenuSheetMounted] = useState(false)
 	const { deferAction, runPendingAction } = useDeferredSheetAction()
 
@@ -394,11 +396,11 @@ export function LocalTrackList({
 						>
 							•
 						</Text>
-					) : null) ?? flashListProps.ListFooterComponent
+					) : null) ?? ListFooterComponent
 				}
 				onEndReached={onEndReached}
 				onEndReachedThreshold={0.8}
-				{...flashListProps}
+				{...legendListProps}
 			/>
 			{menuSheetMounted && (
 				<TrueSheet

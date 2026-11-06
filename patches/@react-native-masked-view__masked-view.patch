@@ -1,0 +1,29 @@
+# Strict TypeScript API 兼容补丁（React Native >= 0.87）。
+# 替换已移除的 NativeMethods 继承，保留组件及原生实例的 ref 类型。
+# skipLibCheck 不会忽略应用使用该声明时的 JSX 类型错误。
+
+diff --git a/types/index.d.ts b/types/index.d.ts
+index 6a66a1e8415324798ec5c88a44476d2981adb98e..fc8c06f733f610d73eb5f61f57b7507ac377e186 100644
+--- a/types/index.d.ts
++++ b/types/index.d.ts
+@@ -3,8 +3,6 @@
+ import * as React from 'react';
+ import * as ReactNative from 'react-native';
+ 
+-type Constructor<T> = new (...args: any[]) => T;
+-
+ interface MaskedViewProps extends ReactNative.ViewProps {
+   maskElement: React.ReactElement;
+   androidRenderingMode?: 'software' | 'hardware';
+@@ -12,9 +10,5 @@ interface MaskedViewProps extends ReactNative.ViewProps {
+ /**
+  * @see https://github.com/react-native-masked-view/masked-view
+  */
+-declare class MaskedViewComponent extends React.Component<MaskedViewProps> {}
+-declare const MaskedViewBase: Constructor<
+-  ReactNative.NativeMethods
+-> &
+-  typeof MaskedViewComponent;
+-export default class MaskedView extends MaskedViewBase {}
++export default class MaskedView extends React.Component<MaskedViewProps> {}
++export default interface MaskedView extends React.ComponentRef<typeof ReactNative.View> {}

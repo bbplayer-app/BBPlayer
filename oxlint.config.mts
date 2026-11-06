@@ -35,8 +35,6 @@ export default defineConfig({
 		'**/*.config.mjs',
 		'**/*.js',
 		'packages/logs/**',
-		'packages/bottom-tabs-react-navigation/**',
-		'packages/react-native-bottom-tabs/**',
 		'**/worker-configuration.d.ts',
 		'**/package-lock.json',
 		'**/pnpm-lock.yaml',

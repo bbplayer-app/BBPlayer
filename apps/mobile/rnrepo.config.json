@@ -4,6 +4,7 @@
 			"expo-modules-core",
 			"react-native-reanimated",
 			"react-native-worklets",
+			"react-native-screens",
 			"react-native-pager-view"
 		]
 	}

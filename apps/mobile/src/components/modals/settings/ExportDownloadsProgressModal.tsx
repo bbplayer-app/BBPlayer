@@ -3,6 +3,7 @@ import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-shee
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import type { RefObject } from 'react'
 import { memo, useEffect, useRef, useState } from 'react'
+import type { ScrollViewInstance } from 'react-native'
 import { ScrollView, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import {
@@ -65,7 +66,7 @@ const ExportDownloadsProgressModal = memo(
 		destinationUri,
 	}: ExportDownloadsProgressModalProps) {
 		const { colors } = useTheme()
-		const scrollViewRef = useRef<ScrollView>(null)
+		const scrollViewRef = useRef<ScrollViewInstance>(null)
 
 		const [filenamePattern, setFilenamePattern] = useState('{name}')
 		const [embedLyrics, setEmbedLyrics] = useState(false)

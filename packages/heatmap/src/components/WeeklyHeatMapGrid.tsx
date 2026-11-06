@@ -1,4 +1,9 @@
-import { Canvas, Path, Skia, type SkPath } from '@shopify/react-native-skia'
+import {
+	Canvas,
+	Path,
+	Skia,
+	type SkPathBuilder,
+} from '@shopify/react-native-skia'
 import dayjs from 'dayjs'
 import { type ReactNode, useMemo } from 'react'
 import { Pressable, StyleSheet } from 'react-native'
@@ -55,7 +60,7 @@ export default function WeeklyHeatMapGrid({
 		const levels = Object.keys(palette)
 			.map(Number)
 			.sort((a, b) => b - a)
-		const grouped = new Map<string, SkPath>()
+		const grouped = new Map<string, SkPathBuilder>()
 		const textLabels: { x: number; y: number; text: string; key: string }[] = []
 		const radius = Math.max(0, Math.min(cellRadius, cellSize / 2))
 
@@ -68,7 +73,7 @@ export default function WeeklyHeatMapGrid({
 					level !== undefined && level > 0 ? palette[level] : cellDefaultColor
 				let path = grouped.get(color)
 				if (!path) {
-					path = Skia.Path.Make()
+					path = Skia.PathBuilder.Make()
 					grouped.set(color, path)
 				}
 				const x = column * stride
@@ -96,7 +101,10 @@ export default function WeeklyHeatMapGrid({
 			}
 		}
 		return {
-			paths: [...grouped].map(([color, path]) => ({ color, path })),
+			paths: [...grouped].map(([color, builder]) => ({
+				color,
+				path: builder.build(),
+			})),
 			labels: textLabels,
 		}
 	}, [

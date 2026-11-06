@@ -1,0 +1,30 @@
+diff --git a/src/node-haste/DependencyGraph.js b/src/node-haste/DependencyGraph.js
+index 3a76e63bee2e290aaec4dfc4ed160e0244441542..5ed2d195e76bae0031bfce174a6a717edeb05f16 100644
+--- a/src/node-haste/DependencyGraph.js
++++ b/src/node-haste/DependencyGraph.js
+@@ -33,6 +33,10 @@ function getOrCreateMap(map, field) {
+   }
+   return subMap;
+ }
++const workletsDirPath = _nodePath.default.join(
++  "react-native-worklets",
++  ".worklets",
++);
+ class DependencyGraph extends _nodeEvents.default {
+   #packageCache;
+   #dependencyPlugin;
+@@ -137,6 +141,14 @@ class DependencyGraph extends _nodeEvents.default {
+     return (0, _nullthrows.default)(this._fileSystem).getAllFiles();
+   }
+   async getOrComputeSha1(mixedPath) {
++    if (mixedPath.includes(workletsDirPath)) {
++      const createHash = require("crypto").createHash;
++      return {
++        sha1: createHash("sha1")
++          .update(performance.now().toString())
++          .digest("hex"),
++      };
++    }
+     const result = await this._fileSystem.getOrComputeSha1(mixedPath);
+     if (!result || !result.sha1) {
+       throw new Error(`Failed to get the SHA-1 for: ${mixedPath}.

@@ -249,12 +249,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			}),
 			expoFont(),
 			[
-				'react-native-bottom-tabs',
-				{
-					theme: 'material3-expressive',
-				},
-			],
-			[
 				'react-native-edge-to-edge',
 				{
 					android: {
