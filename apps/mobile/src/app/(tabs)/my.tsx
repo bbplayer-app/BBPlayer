@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
+import NativeTabPage from '@/components/NativeTabPage'
 import SkinAppbarBackground from '@/components/navigation/SkinAppbarBackground'
 import { SyncFailuresSheet } from '@/features/playlist/local/components/SyncFailuresSheet'
 import ListeningRecordSection from '@/features/profile/ListeningRecordSection'
@@ -23,13 +24,11 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
-import { useNowPlayingBar } from '@/hooks/ui/useNowPlayingBar'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { markPerfInteractive } from '@/lib/performance'
 
-export default function MyPage() {
-	useNowPlayingBar()
+function MyPageContent() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const { width, height } = useWindowDimensions()
@@ -333,3 +332,11 @@ const styles = StyleSheet.create({
 	avatar: { width: 64, height: 64, borderRadius: 32 },
 	avatarFrame: { position: 'absolute', width: 86, height: 86 },
 })
+
+export default function MyPage() {
+	return (
+		<NativeTabPage>
+			<MyPageContent />
+		</NativeTabPage>
+	)
+}

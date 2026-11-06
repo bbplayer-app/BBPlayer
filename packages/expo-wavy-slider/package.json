@@ -24,6 +24,7 @@
 		"src",
 		"android/src",
 		"android/build.gradle",
+		"android/third-party",
 		"expo-module.config.json"
 	],
 	"sideEffects": [

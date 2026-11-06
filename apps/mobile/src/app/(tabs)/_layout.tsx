@@ -1,107 +1,105 @@
-import type {
-	NativeBottomTabNavigationEventMap,
-	NativeBottomTabNavigationOptions,
-} from '@bottom-tabs/react-navigation'
-import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
 import Icon from '@react-native-vector-icons/material-design-icons'
-import { withLayoutContext } from 'expo-router'
-import type {
-	ParamListBase,
-	TabNavigationState,
-} from 'expo-router/react-navigation'
+import { NativeTabs } from 'expo-router/native-tabs'
+import type { NativeTabTriggerProps } from 'expo-router/native-tabs'
+import type { ImageSourcePropType } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 
-const BottomTabNavigator = createNativeBottomTabNavigator().Navigator
+const searchIcon = Icon.getImageSourceSync('magnify', 24)
+const libraryIcon = Icon.getImageSourceSync('bookshelf', 24)
+const profileIcon = Icon.getImageSourceSync('account', 24)
 
-const Tabs = withLayoutContext<
-	NativeBottomTabNavigationOptions,
-	typeof BottomTabNavigator,
-	TabNavigationState<ParamListBase>,
-	NativeBottomTabNavigationEventMap
->(BottomTabNavigator)
+type SkinIcon = { default: string | null; selected: string | null }
 
-interface nonNullableIcon {
-	uri: string
-	scale: number
+function originalAndroidIcons(
+	icon: SkinIcon | undefined,
+): NativeTabTriggerProps['unstable_nativeProps'] {
+	if (!icon?.default || !icon.selected) return undefined
+	return {
+		android: {
+			icon: {
+				type: 'imageSource',
+				imageSource: { uri: icon.default },
+				tinting: 'original',
+			},
+			selectedIcon: {
+				type: 'imageSource',
+				imageSource: { uri: icon.selected },
+				tinting: 'original',
+			},
+		},
+	}
 }
 
-const searchIcon = Icon.getImageSourceSync('magnify', 24) as nonNullableIcon
-const libraryIcon = Icon.getImageSourceSync('bookshelf', 24) as nonNullableIcon
-const profileIcon = Icon.getImageSourceSync('account', 24) as nonNullableIcon
+function iconSource(icon: SkinIcon | undefined, fallback: ImageSourcePropType) {
+	return {
+		default: icon?.default ? { uri: icon.default } : fallback,
+		selected: icon?.selected ? { uri: icon.selected } : fallback,
+	}
+}
 
 export default function TabLayout() {
-	const themes = useTheme().colors
+	const { colors } = useTheme()
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
-	const skinIcons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
+	const icons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
 	const useSkinTabs = Boolean(
-		skinIcons?.home.default &&
-		skinIcons.home.selected &&
-		skinIcons.library.default &&
-		skinIcons.library.selected &&
-		skinIcons.settings.default &&
-		skinIcons.settings.selected,
+		icons?.home.default &&
+		icons.home.selected &&
+		icons.library.default &&
+		icons.library.selected &&
+		icons.settings.default &&
+		icons.settings.selected,
 	)
 
 	return (
-		<Tabs
-			disablePageAnimations
-			disableTintColor={useSkinTabs}
-			iconSize={useSkinTabs ? 50 : undefined}
-			tabBarActiveTintColor={themes.primary}
-			activeIndicatorColor={
-				useSkinTabs ? 'transparent' : themes.secondaryContainer
-			}
-			tabBarStyle={{ backgroundColor: themes.elevation.level1 }}
-			initialRouteName='index'
+		<NativeTabs
+			tintColor={colors.primary}
+			backgroundColor={colors.elevation.level1}
+			iconColor={{ default: colors.onSurfaceVariant, selected: colors.primary }}
+			labelStyle={{
+				default: { color: colors.onSurfaceVariant },
+				selected: { color: colors.primary },
+			}}
+			indicatorColor={useSkinTabs ? 'transparent' : colors.secondaryContainer}
+			minimizeBehavior='never'
+			backBehavior='initialRoute'
 		>
-			<Tabs.Screen
+			<NativeTabs.Trigger
 				name='index'
-				options={{
-					title: '搜索',
-					tabBarIcon: ({ focused }) => {
-						// 旧皮肤仍使用 home 作为第一个标签的图标槽位。
-						const icon = focused
-							? skinIcons?.home.selected
-							: skinIcons?.home.default
-						return icon ? { uri: icon, scale: 1 } : searchIcon
-					},
-					tabBarLabel: '搜索',
-					lazy: true,
-				}}
-			/>
-			<Tabs.Screen
+				disableAutomaticContentInsets
+				unstable_nativeProps={originalAndroidIcons(icons?.home)}
+			>
+				<NativeTabs.Trigger.Label>搜索</NativeTabs.Trigger.Label>
+				<NativeTabs.Trigger.Icon
+					src={iconSource(icons?.home, searchIcon)}
+					renderingMode={icons?.home.default ? 'original' : 'template'}
+				/>
+			</NativeTabs.Trigger>
+			<NativeTabs.Trigger
 				name='library/[tab]'
-				options={{
-					title: '音乐库',
-					tabBarIcon: ({ focused }) => {
-						const icon = focused
-							? skinIcons?.library.selected
-							: skinIcons?.library.default
-						return icon ? { uri: icon, scale: 1 } : libraryIcon
-					},
-					tabBarLabel: '音乐库',
-					lazy: true,
-				}}
-			/>
-			<Tabs.Screen
+				disableAutomaticContentInsets
+				unstable_nativeProps={originalAndroidIcons(icons?.library)}
+			>
+				<NativeTabs.Trigger.Label>音乐库</NativeTabs.Trigger.Label>
+				<NativeTabs.Trigger.Icon
+					src={iconSource(icons?.library, libraryIcon)}
+					renderingMode={icons?.library.default ? 'original' : 'template'}
+				/>
+			</NativeTabs.Trigger>
+			<NativeTabs.Trigger
 				name='my'
-				options={{
-					title: '我的',
-					tabBarIcon: ({ focused }) => {
-						// 旧皮肤仍使用 settings 作为第三个标签的图标槽位。
-						const icon = focused
-							? skinIcons?.settings.selected
-							: skinIcons?.settings.default
-						return icon ? { uri: icon, scale: 1 } : profileIcon
-					},
-					tabBarLabel: '我的',
-					lazy: true,
-				}}
-			/>
-		</Tabs>
+				disableAutomaticContentInsets
+				unstable_nativeProps={originalAndroidIcons(icons?.settings)}
+			>
+				<NativeTabs.Trigger.Label>我的</NativeTabs.Trigger.Label>
+				<NativeTabs.Trigger.Icon
+					src={iconSource(icons?.settings, profileIcon)}
+					renderingMode={icons?.settings.default ? 'original' : 'template'}
+				/>
+			</NativeTabs.Trigger>
+		</NativeTabs>
 	)
 }

@@ -35,9 +35,9 @@ android {
 
 dependencies {
     implementation 'com.facebook.react:react-android'
-    implementation 'androidx.compose.foundation:foundation-android:1.10.6'
-    implementation 'androidx.compose.ui:ui-android:1.10.6'
-    implementation 'androidx.compose.material3:material3:1.5.0-alpha17'
-    implementation 'androidx.compose.material3:material3-android:1.5.0-alpha17'
-    implementation("ir.mahozad.multiplatform:wavy-slider:2.2.0")
+    // Keep Compose aligned with @expo/ui in Expo SDK 58.
+    implementation 'androidx.compose.foundation:foundation-android:1.12.1'
+    implementation 'androidx.compose.ui:ui-android:1.12.1'
+    implementation 'androidx.compose.material3:material3:1.5.0-beta01'
+    implementation 'androidx.compose.material3:material3-android:1.5.0-beta01'
 }

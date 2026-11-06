@@ -23,10 +23,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +44,8 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.layout.ContentScale
@@ -53,10 +58,9 @@ import expo.modules.kotlin.types.OptimizedRecord
 import expo.modules.kotlin.views.ExpoView
 import expo.modules.wavyslider.state.ObservableState
 import expo.modules.wavyslider.state.WorkletCallback
-import ir.mahozad.multiplatform.wavyslider.WaveDirection
-import ir.mahozad.multiplatform.wavyslider.material3.Track
-import ir.mahozad.multiplatform.wavyslider.material3.WaveAnimationSpecs
-import ir.mahozad.multiplatform.wavyslider.material3.WavySlider
+import expo.modules.wavyslider.wave.WaveDirection
+import expo.modules.wavyslider.wave.WavyTrack
+import expo.modules.wavyslider.wave.defaultWaveAnimationSpecs
 
 enum class WavySliderWaveDirection(val value: String) : Enumerable {
     LEFT("left"),
@@ -328,7 +332,7 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                     val effectiveTrackThickness =
                         (trackThicknessState?.floatValue(trackThickness) ?: trackThickness).dp
                     val animationSpecs = remember {
-                        SliderDefaults.WaveAnimationSpecs.copy(
+                        defaultWaveAnimationSpecs.copy(
                             waveHeightAnimationSpec = tween(
                                 durationMillis = 0
                             ),
@@ -370,9 +374,16 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                     val bufferedTrackColor = colors.bufferedTrackColor.composeOrNull
                     val chapterMarkerColor = colors.activeTickColor.composeOrNull ?: MaterialTheme.colorScheme.onSurface
 
-                    WavySlider(
-                        value = localValue,
-                        valueRange = min..max,
+                    // Material 3 1.5 owns gestures and accessibility. The upstream
+                    // WavySlider binary depends on removed SliderState internals.
+                    val sliderState = remember(min, max) {
+                        SliderState(value = localValue, trackRange = min..max)
+                    }
+                    sliderState.value = localValue
+                    var measuredThumbWidth by remember { mutableIntStateOf(0) }
+                    val density = LocalDensity.current
+                    Slider(
+                        state = sliderState,
                         enabled = sliderEnabled,
                         interactionSource = interactionSource,
                         onValueChange = {
@@ -390,13 +401,6 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                             onValueChangeFinished?.invoke(localValue)
                         },
                         colors = sliderColors,
-                        waveLength = effectiveWaveLength,
-                        waveHeight = effectiveWaveHeight,
-                        waveVelocity = effectiveWaveVelocity to waveDirection.toWaveDirection(),
-                        waveThickness = effectiveWaveThickness,
-                        trackThickness = effectiveTrackThickness,
-                        incremental = incremental,
-                        animationSpecs = animationSpecs,
                         thumb = {
                             val activeThumbImageUri = when {
                                 !isDragging -> thumbImageUri
@@ -404,32 +408,35 @@ class ExpoWavySliderView(context: Context, appContext: AppContext) : ExpoView(co
                                 dragDirection > 0f -> thumbImageDragRightUri ?: thumbImageUri
                                 else -> thumbImageUri
                             }
-                            WavySliderThumb(
-                                context = context,
-                                interactionSource = interactionSource,
-                                sliderColors = sliderColors,
-                                sliderEnabled = sliderEnabled,
-                                configuredColors = colors,
-                                thumbShape = thumbShape,
-                                thumbImageUri = activeThumbImageUri,
-                                thumbImageSize = thumbImageSize,
-                                thumbImageOffsetX = thumbImageOffsetX,
-                                thumbImageOffsetY = thumbImageOffsetY
-                            )
+                            Box(Modifier.onSizeChanged { measuredThumbWidth = it.width }) {
+                                WavySliderThumb(
+                                    context = context,
+                                    interactionSource = interactionSource,
+                                    sliderColors = sliderColors,
+                                    sliderEnabled = sliderEnabled,
+                                    configuredColors = colors,
+                                    thumbShape = thumbShape,
+                                    thumbImageUri = activeThumbImageUri,
+                                    thumbImageSize = thumbImageSize,
+                                    thumbImageOffsetX = thumbImageOffsetX,
+                                    thumbImageOffsetY = thumbImageOffsetY
+                                )
+                            }
                         },
                         track = { sliderState ->
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                SliderDefaults.Track(
-                                    colors = sliderColors,
-                                    enabled = sliderEnabled,
-                                    sliderState = sliderState,
+                                WavyTrack(
+                                    valueFraction = fractionInRange(min, max, sliderState.value),
+                                    thumbWidth = with(density) { measuredThumbWidth.toDp() },
+                                    activeTrackColor = if (sliderEnabled) sliderColors.activeTrackColor else sliderColors.disabledActiveTrackColor,
+                                    inactiveTrackColor = if (sliderEnabled) sliderColors.inactiveTrackColor else sliderColors.disabledInactiveTrackColor,
                                     waveLength = effectiveWaveLength,
                                     waveHeight = effectiveWaveHeight,
                                     waveVelocity = effectiveWaveVelocity to waveDirection.toWaveDirection(),
                                     waveThickness = effectiveWaveThickness,
                                     trackThickness = effectiveTrackThickness,
                                     incremental = incremental,
-                                    animationSpecs = animationSpecs
+                                    animationSpecs = animationSpecs,
                                 )
                                 bufferedTrackColor?.let { color ->
                                     Canvas(modifier = Modifier.matchParentSize()) {

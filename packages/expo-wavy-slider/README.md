@@ -1,6 +1,6 @@
 # expo-wavy-slider
 
-An Android Expo module that exposes [`ir.mahozad.multiplatform:wavy-slider`](https://github.com/mahozad/wavy-slider) as a React Native view.
+An Android Expo module with a native Material 3 slider and waveform rendering adapted from [wavy-slider](https://github.com/mahozad/wavy-slider). The waveform sources are compiled against the same Compose version as Expo UI; attribution and license are in `android/third-party/wavy-slider/`.
 
 https://github.com/user-attachments/assets/66a530fc-7e13-4dad-b1a1-f744862fe055
 

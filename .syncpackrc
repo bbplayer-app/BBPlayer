@@ -10,13 +10,6 @@
 			"isIgnored": true
 		},
 		{
-			"label": "Ignore intentionally loose peerDeps for bottom-tabs package",
-			"dependencies": ["react-native-bottom-tabs"],
-			"dependencyTypes": ["peer"],
-			"packages": ["**"],
-			"isIgnored": true
-		},
-		{
 			"label": "Use apps/mobile versions for core dependencies",
 			"dependencies": ["react", "react-native", "expo", "react-native-reanimated", "expo-router", "react-native-worklets", "react-native-svg"],
 			"dependencyTypes": ["dev", "prod"],
@@ -28,27 +21,6 @@
 			"dependencies": ["typescript", "@types/node", "eslint-plugin-*", "oxlint", "oxfmt"],
 			"packages": ["**"],
 			"snapTo": ["bbplayer-root"]
-		},
-		{
-			"label": "Pin workspace-protocol packages (exclude peerDeps)",
-			"dependencies": ["react-native-bottom-tabs", "@bottom-tabs/react-navigation"],
-			"dependencyTypes": ["dev", "prod"],
-			"packages": ["**"],
-			"pinVersion": "workspace:*"
-		},
-		{
-			"label": "Keep loose peerDep for react-navigation",
-			"dependencies": ["@react-navigation/native"],
-			"dependencyTypes": ["peer"],
-			"packages": ["@bottom-tabs/react-navigation"],
-			"pinVersion": ">=7"
-		},
-		{
-			"label": "Keep loose peerDeps for core libs in bottom-tabs",
-			"dependencies": ["react", "react-native"],
-			"dependencyTypes": ["peer"],
-			"packages": ["@bottom-tabs/react-navigation"],
-			"pinVersion": "*"
 		}
 	]
 }

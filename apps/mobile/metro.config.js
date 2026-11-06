@@ -1,5 +1,4 @@
 /* oxlint-disable @typescript-eslint/no-require-imports */
-const path = require('path')
 const { withRozenite } = require('@rozenite/metro')
 const { getSentryExpoConfig } = require('@sentry/react-native/metro')
 const {
@@ -29,14 +28,7 @@ const withWorklets = getBundleModeMetroConfig(withReanimated)
 
 const withBoost = withBoostConfig(withWorklets, {
 	logLevel: 'debug',
-	ignores: [
-		'node_modules/**',
-		'../../node_modules/**',
-		path.resolve(
-			__dirname,
-			'../../packages/react-native-bottom-tabs/src/TabView.tsx',
-		),
-	],
+	ignores: ['node_modules/**', '../../node_modules/**'],
 })
 
 const config = withRozenite(withBoost, {
