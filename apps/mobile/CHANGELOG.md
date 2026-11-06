@@ -5,6 +5,21 @@
 项目的 CHANGELOG 格式符合 [Keep a Changelog]，
 且版本号遵循 [Semantic Versioning]。 ~~(然而，事实上遵循的是 [Pride Versioning])~~
 
+## [UNRELEASED]
+
+### Changed
+
+- 优化播放器、歌单、登录等页面在小屏设备上的布局
+- 底部导航栏迁移到 Expo 原生标签栏，适配皮肤图标与页面布局
+- 升级到 Expo 58，并更新相关依赖
+
+### Fixed
+
+- 修复备份恢复的数据库处理问题，完善备份临时文件清理
+- 修复歌词保存与旧格式迁移的可靠性问题
+- 修复分享日志时可能缺少最新记录的问题，并限制日志写入队列大小
+- 修复 Android 波形进度条的 Compose 兼容性与绘制问题
+
 ## [2.8.0] - 2026-10-29
 
 ### Added
@@ -684,6 +699,7 @@
 
 <!-- Versions -->
 
+[unreleased]: https://github.com/bbplayer-app/BBPlayer/compare/v2.8.0...HEAD
 [2.8.0]: https://github.com/bbplayer-app/BBPlayer/compare/v2.7.0...v2.8.0
 [1.3.2]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.1...v1.3.2
 [1.3.3]: https://github.com/bbplayer-app/BBPlayer/compare/v1.3.2...v1.3.3
