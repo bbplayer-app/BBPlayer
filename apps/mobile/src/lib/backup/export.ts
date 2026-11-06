@@ -21,7 +21,8 @@ const logger = log.extend('backup.export')
  */
 export async function createBackup(): Promise<string> {
 	const cacheDir = new Directory(Paths.cache)
-	const dbBackupFile = new File(cacheDir, 'backup-db.db')
+	const backupId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+	const dbBackupFile = new File(cacheDir, `backup-db-${backupId}.db`)
 
 	try {
 		// 1. SQLite 快照：VACUUM INTO 保证一致性，无需关闭连接
@@ -50,7 +51,7 @@ export async function createBackup(): Promise<string> {
 		zip.file('manifest.json', JSON.stringify(manifest, null, 2))
 
 		const zipData = await zip.generateAsync({ type: 'uint8array' })
-		const zipFile = new File(cacheDir, 'bbplayer-backup.bbplayer')
+		const zipFile = new File(cacheDir, `bbplayer-backup-${backupId}.bbplayer`)
 		await zipFile.write(zipData)
 
 		logger.info('备份创建完成', { uri: zipFile.uri })

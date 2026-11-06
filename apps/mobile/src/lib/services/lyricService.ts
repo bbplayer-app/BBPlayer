@@ -41,6 +41,7 @@ type oldLyricFileType =
 	  })
 
 class LyricService {
+	private pendingLyricWrites: Promise<void> = Promise.resolve()
 	constructor(
 		readonly neteaseApi: NeteaseApi,
 		readonly qqMusicApi: QQMusicApi,
@@ -308,7 +309,7 @@ class LyricService {
 		lyrics: LyricFileData,
 		uniqueKey: string,
 	): ResultAsync<LyricFileData, FileSystemError> {
-		try {
+		const write = this.pendingLyricWrites.then(async () => {
 			const lyricFile = new FileSystem.File(
 				FileSystem.Paths.document,
 				'lyrics',
@@ -318,24 +319,25 @@ class LyricService {
 				intermediates: true,
 				idempotent: true,
 			})
-			// 当用户主动提供歌词内容时，清除 manualSkip 标记
 			const toWrite: LyricFileData = lyrics.manualSkip
 				? lyrics
 				: { ...lyrics, manualSkip: false }
-			Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
-				lyricFile.writeSync(JSON.stringify(toWrite)),
+			await Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+				lyricFile.write(JSON.stringify(toWrite)),
 			)
-			// 自动同步到悬浮窗/状态栏
 			void this.pushLyricsToOverlays(uniqueKey)
-			return okAsync(toWrite)
-		} catch (e) {
-			return errAsync(
-				new FileSystemError(`保存歌词文件失败`, {
-					cause: e,
-					data: { uniqueKey },
-				}),
-			)
-		}
+			return toWrite
+		})
+		// A failed write must not prevent later saves from running.
+		this.pendingLyricWrites = write.then(
+			() => undefined,
+			() => undefined,
+		)
+		return ResultAsync.fromPromise(
+			write,
+			(cause) =>
+				new FileSystemError('保存歌词文件失败', { cause, data: { uniqueKey } }),
+		)
 	}
 
 	public fetchLyrics(
@@ -411,6 +413,7 @@ class LyricService {
 
 			logger.info('检测到未迁移的歌词缓存，开始执行迁移...')
 			const lyricFiles = lyricsDir.list()
+			let migrationFailed = false
 
 			for (const file of lyricFiles) {
 				if (file instanceof FileSystem.Directory) continue
@@ -470,12 +473,18 @@ class LyricService {
 					}
 
 					// oxlint-disable-next-line no-await-in-loop
-					await this.saveLyricsToFile(newLyricData, uniqueKey)
+					const saved = await this.saveLyricsToFile(newLyricData, uniqueKey)
+					if (saved.isErr()) throw saved.error
 				} catch (e) {
+					migrationFailed = true
 					logger.warning(`文件 ${file.name} 迁移失败`, e)
 				}
 			}
 
+			if (migrationFailed) {
+				logger.warning('部分歌词迁移失败，下次启动将重试')
+				return
+			}
 			migrationMarker.create()
 			logger.info('歌词格式迁移完成')
 		} catch (e) {

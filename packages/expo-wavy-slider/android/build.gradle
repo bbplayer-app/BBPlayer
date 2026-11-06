@@ -28,6 +28,9 @@ android {
     buildFeatures {
         compose true
     }
+    sourceSets {
+        main.assets.srcDirs += ['third-party']
+    }
     lintOptions {
         abortOnError false
     }

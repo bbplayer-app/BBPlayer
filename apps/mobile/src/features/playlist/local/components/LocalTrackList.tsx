@@ -256,6 +256,7 @@ export function LocalTrackList({
 	onDragUpdate,
 	onDragEnd,
 	insertAfterIndex,
+	ListFooterComponent,
 	...legendListProps
 }: LocalTrackListProps) {
 	const haveTrack = useCurrentTrack()
@@ -395,7 +396,7 @@ export function LocalTrackList({
 						>
 							•
 						</Text>
-					) : null) ?? legendListProps.ListFooterComponent
+					) : null) ?? ListFooterComponent
 				}
 				onEndReached={onEndReached}
 				onEndReachedThreshold={0.8}

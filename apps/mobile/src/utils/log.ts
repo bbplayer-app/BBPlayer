@@ -1,5 +1,10 @@
 import type { transportFunctionType } from '@bbplayer/logs'
-import { fileAsyncTransport, logger, mapConsoleTransport } from '@bbplayer/logs'
+import {
+	fileAsyncTransport,
+	flushFileAsyncTransport,
+	logger,
+	mapConsoleTransport,
+} from '@bbplayer/logs'
 import * as Sentry from '@sentry/react-native'
 import * as EXPOFS from 'expo-file-system'
 import { err, ok, type Result } from 'neverthrow'
@@ -8,6 +13,12 @@ import { CustomError } from '@/lib/errors'
 import type { ProjectScope } from '@/types/core/scope'
 
 const isDev = __DEV__
+
+/** Drain scheduled logger callbacks before waiting for their file writes. */
+export async function flushLogs(): Promise<void> {
+	await new Promise<void>((resolve) => setImmediate(resolve))
+	await flushFileAsyncTransport()
+}
 
 const sentryBreadcrumbTransport: transportFunctionType<object> = (props) => {
 	Sentry.addBreadcrumb({

@@ -130,18 +130,23 @@ internal val defaultWaveAnimationSpecs = WaveAnimationSpecs(
 @Composable
 internal inline fun animateWaveShift(
     waveVelocity: WaveVelocity,
-    animationSpec: AnimationSpec<Dp>
+    animationSpec: AnimationSpec<Dp>,
+    visible: Boolean = true,
 ): State<Dp> {
     val shift = remember { mutableStateOf(0.dp) }
     val speed = waveVelocity.first.coerceAtLeast(0.dp)
     val factor = waveVelocity.second.factor(LocalLayoutDirection.current)
     val amount by animateDpAsState(speed * factor, animationSpec)
-    LaunchedEffect(waveVelocity, LocalLayoutDirection.current) {
-        val startShift = shift.value
-        val startTime = withFrameNanos { it }
+    val currentAmount = rememberUpdatedState(amount)
+    val moving = visible && amount != 0.dp
+    LaunchedEffect(moving) {
+        if (!moving) return@LaunchedEffect
+        var previousTime = withFrameNanos { it }
         while (true /* Android itself uses true instead of isActive */) {
-            val playTime = (withFrameNanos { it } - startTime) / 1_000_000_000f
-            shift.value = startShift + (amount * playTime)
+            val time = withFrameNanos { it }
+            val elapsed = (time - previousTime) / 1_000_000_000f
+            shift.value += currentAmount.value * elapsed
+            previousTime = time
         }
     }
     return shift
@@ -188,7 +193,9 @@ internal inline fun DrawScope.createWavyPath(
     moveTo(startOffset.x, startY.toFloat())
     val range = startOffset.x.toInt()..valueOffset.x.toInt()
     for (x in range) {
-        val heightFactor = if (incremental) (x - range.first).toFloat() / (range.last - range.first) else 1f
+        val heightFactor = if (incremental) {
+            if (range.first == range.last) 0f else (x - range.first).toFloat() / (range.last - range.first)
+        } else 1f
         val radians = waveSpread * (x - range.first + waveShiftPx) / waveLengthPx * (2 * PI)
         val y = (sin(radians) * heightFactor * waveHeightPx + size.height) / 2
         lineTo(x.toFloat(), y.toFloat())

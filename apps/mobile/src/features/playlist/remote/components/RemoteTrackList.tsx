@@ -128,6 +128,7 @@ export function TrackList({
 	hasNextPage,
 	renderCustomItem,
 	listRef,
+	ListFooterComponent,
 	...legendListProps
 }: TrackListProps) {
 	const { colors } = useTheme()
@@ -182,7 +183,7 @@ export function TrackList({
 						>
 							•
 						</Text>
-					) : null) ?? legendListProps.ListFooterComponent
+					) : null) ?? ListFooterComponent
 				}
 				ListEmptyComponent={
 					legendListProps.ListEmptyComponent ?? (

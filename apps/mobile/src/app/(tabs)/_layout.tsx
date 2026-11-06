@@ -65,6 +65,29 @@ function iconSource(icon: SkinIcon | undefined, fallback: ImageSourcePropType) {
 	}
 }
 
+function nativeIconProps(
+	icon: SkinIcon | undefined,
+	fallback: ImageSourcePropType,
+	colors: MD3Theme['colors'],
+): NativeTabTriggerProps['unstable_nativeProps'] {
+	const source = iconSource(icon, fallback)
+	return {
+		...originalAndroidIcons(icon, colors),
+		ios: {
+			icon: {
+				type: 'imageSource',
+				imageSource: source.default,
+				renderingMode: icon?.default ? 'original' : 'template',
+			},
+			selectedIcon: {
+				type: 'imageSource',
+				imageSource: source.selected,
+				renderingMode: icon?.selected ? 'original' : 'template',
+			},
+		},
+	}
+}
+
 export default function TabLayout() {
 	const { colors } = useTheme()
 	const activeSkin = useActiveSkin()
@@ -95,7 +118,7 @@ export default function TabLayout() {
 			<NativeTabs.Trigger
 				name='index'
 				disableAutomaticContentInsets
-				unstable_nativeProps={originalAndroidIcons(icons?.home, colors)}
+				unstable_nativeProps={nativeIconProps(icons?.home, searchIcon, colors)}
 			>
 				<NativeTabs.Trigger.Label>搜索</NativeTabs.Trigger.Label>
 				<NativeTabs.Trigger.Icon
@@ -106,7 +129,11 @@ export default function TabLayout() {
 			<NativeTabs.Trigger
 				name='library/[tab]'
 				disableAutomaticContentInsets
-				unstable_nativeProps={originalAndroidIcons(icons?.library, colors)}
+				unstable_nativeProps={nativeIconProps(
+					icons?.library,
+					libraryIcon,
+					colors,
+				)}
 			>
 				<NativeTabs.Trigger.Label>音乐库</NativeTabs.Trigger.Label>
 				<NativeTabs.Trigger.Icon
@@ -117,7 +144,11 @@ export default function TabLayout() {
 			<NativeTabs.Trigger
 				name='my'
 				disableAutomaticContentInsets
-				unstable_nativeProps={originalAndroidIcons(icons?.settings, colors)}
+				unstable_nativeProps={nativeIconProps(
+					icons?.settings,
+					profileIcon,
+					colors,
+				)}
 			>
 				<NativeTabs.Trigger.Label>我的</NativeTabs.Trigger.Label>
 				<NativeTabs.Trigger.Icon

@@ -42,7 +42,11 @@ internal fun WavyTrack(
 ) {
     val waveSpreadAnimated by animateWaveSpread(animationSpecs.waveAppearanceAnimationSpec)
     val waveHeightAnimated by animateWaveHeight(waveHeight, animationSpecs.waveHeightAnimationSpec)
-    val waveShiftAnimated by animateWaveShift(waveVelocity, animationSpecs.waveVelocityAnimationSpec)
+    val waveShiftAnimated by animateWaveShift(
+        waveVelocity,
+        animationSpecs.waveVelocityAnimationSpec,
+        visible = waveLength > 0.dp && waveHeightAnimated != 0.dp,
+    )
     Canvas(
         Modifier.fillMaxWidth()
             .height(max(waveThickness + waveHeight.value.absoluteValue.dp, 44.dp))

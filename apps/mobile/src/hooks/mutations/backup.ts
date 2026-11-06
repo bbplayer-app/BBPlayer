@@ -44,16 +44,21 @@ export function useCloudBackupMutation() {
 			const client = await createMobileWebDavClient(config, password)
 			await client.ensureDirectory(config.directory)
 			const uri = await createBackup()
-			const bytes = new File(uri).bytesSync()
-			const timestamp = new Date()
-				.toISOString()
-				.replaceAll(':', '-')
-				.replace('.', '-')
-			await client.uploadFile(
-				joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
-				Uint8Array.from(bytes).buffer,
-			)
-			await saveWebDavConfig(config, password || undefined)
+			const backupFile = new File(uri)
+			try {
+				const bytes = backupFile.bytesSync()
+				const timestamp = new Date()
+					.toISOString()
+					.replaceAll(':', '-')
+					.replace('.', '-')
+				await client.uploadFile(
+					joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
+					Uint8Array.from(bytes).buffer,
+				)
+				await saveWebDavConfig(config, password || undefined)
+			} finally {
+				if (backupFile.exists) backupFile.delete()
+			}
 		},
 		onSuccess: async () => {
 			toast.success('云端备份完成')
@@ -78,10 +83,14 @@ export function useCloudRestoreMutation(onSuccess: () => void) {
 			const data = await client.downloadFile(entry.path)
 			const cacheFile = new File(
 				Paths.cache,
-				'bbplayer-webdav-restore.bbplayer',
+				`bbplayer-webdav-restore-${Date.now()}-${Math.random().toString(36).slice(2)}.bbplayer`,
 			)
-			await cacheFile.write(new Uint8Array(data))
-			await restoreBackup(cacheFile.uri)
+			try {
+				await cacheFile.write(new Uint8Array(data))
+				await restoreBackup(cacheFile.uri)
+			} finally {
+				if (cacheFile.exists) cacheFile.delete()
+			}
 		},
 		onSuccess,
 		onError: (error) =>

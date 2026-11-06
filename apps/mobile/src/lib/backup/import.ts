@@ -1,5 +1,5 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import { Directory, File, Paths } from 'expo-file-system'
+import { File, Paths } from 'expo-file-system'
 import * as SQLite from 'expo-sqlite'
 import JSZip from 'jszip'
 
@@ -14,13 +14,24 @@ import { BACKUP_VERSION } from './types'
 import type { BackupManifest } from './types'
 
 const logger = log.extend('backup.import')
+let restoreInProgress = false
 
 /**
  * 从备份文件恢复数据。
  *
- * 恢复完成后需要重启应用才能完全生效（数据库连接需要重新打开）。
+ * 恢复完成后需要重启应用以刷新内存中的设置。
  */
 export async function restoreBackup(filePath: string): Promise<void> {
+	if (restoreInProgress) throw new Error('已有备份正在恢复，请等待完成')
+	restoreInProgress = true
+	try {
+		await performRestoreBackup(filePath)
+	} finally {
+		restoreInProgress = false
+	}
+}
+
+async function performRestoreBackup(filePath: string): Promise<void> {
 	const backupFile = new File(filePath)
 
 	const zipBytes = backupFile.bytesSync()
@@ -44,36 +55,7 @@ export async function restoreBackup(filePath: string): Promise<void> {
 		throw new Error('备份文件无效：缺少 database.db')
 	}
 
-	const docDir = new Directory(Paths.document)
-	const sqliteDir = new Directory(docDir, 'SQLite')
-	if (!sqliteDir.exists) {
-		sqliteDir.create()
-	}
-	const dbFile = new File(sqliteDir, 'db.db')
-
-	expoDb.closeSync()
-	try {
-		const dbBytes = await dbEntry.async('uint8array')
-		await dbFile.write(dbBytes)
-
-		// 删除旧的 WAL 文件，避免重新打开时读到残留数据
-		const walFile = new File(sqliteDir, 'db.db-wal')
-		const shmFile = new File(sqliteDir, 'db.db-shm')
-		if (walFile.exists) walFile.delete()
-		if (shmFile.exists) shmFile.delete()
-
-		const tempDb = SQLite.openDatabaseSync(dbFile.uri)
-		try {
-			tempDb.execSync('DELETE FROM playlist_sync_queue')
-		} finally {
-			tempDb.closeSync()
-		}
-
-		logger.info('数据库已恢复，需要重启应用以重新打开连接')
-	} catch (e) {
-		logger.error('数据库恢复失败', e)
-		throw e
-	}
+	await restoreDatabaseBytes(await dbEntry.async('uint8array'), expoDb)
 
 	// The restored database now owns migration state. Never let this device's
 	// legacy MMKV flags seed state for a different database.
@@ -103,4 +85,48 @@ export async function restoreBackup(filePath: string): Promise<void> {
 
 	Orpheus.importData(manifest.orpheus)
 	logger.info('Orpheus 配置已恢复')
+}
+
+/** Validate a staged snapshot and atomically copy it into an open database. */
+export async function restoreDatabaseBytes(
+	dbBytes: Uint8Array,
+	destination: SQLite.SQLiteDatabase,
+): Promise<void> {
+	// Stage and validate before touching the live database. SQLite's backup API
+	// replaces the destination transactionally and keeps the shared connection open.
+	const stagedFile = new File(
+		Paths.cache,
+		`restore-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+	)
+	try {
+		await stagedFile.write(dbBytes)
+		const tempDb = SQLite.openDatabaseSync(stagedFile.uri)
+		try {
+			const check = tempDb.getFirstSync<{ quick_check: string }>(
+				'PRAGMA quick_check',
+			)
+			if (check?.quick_check !== 'ok') throw new Error('备份数据库损坏')
+			tempDb.execSync('DELETE FROM playlist_sync_queue')
+			await SQLite.backupDatabaseAsync({
+				sourceDatabase: tempDb,
+				destDatabase: destination,
+			})
+		} finally {
+			tempDb.closeSync()
+		}
+
+		logger.info('数据库已恢复，需要重启应用以刷新设置')
+	} catch (e) {
+		logger.error('数据库恢复失败', e)
+		throw e
+	} finally {
+		for (const suffix of ['', '-wal', '-shm']) {
+			const file = new File(`${stagedFile.uri}${suffix}`)
+			try {
+				if (file.exists) file.delete()
+			} catch (error) {
+				logger.warning('清理恢复临时文件失败', error)
+			}
+		}
+	}
 }
