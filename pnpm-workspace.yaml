@@ -59,4 +59,5 @@ patchedDependencies:
   number-flow-react-native@0.5.1: patches/number-flow-react-native@0.5.1.patch
   react-native-pager-view@10.0.0: patches/react-native-pager-view@10.0.0.patch
   react-native-paper@5.15.4: patches/react-native-paper@5.15.4.patch
+  react-native-screens@4.30.1: patches/react-native-screens@4.30.1.patch
   rn-newarch-svga-player@1.1.16: patches/rn-newarch-svga-player@1.1.16.patch

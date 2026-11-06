@@ -1,0 +1,76 @@
+diff --git a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceApplicator.kt b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceApplicator.kt
+index cbe9b978ced6972a51bc5235b47a58dd55836351..71174e5b43c67b2869d6415d4132ce4ac21323fa 100644
+--- a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceApplicator.kt
++++ b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceApplicator.kt
+@@ -182,6 +182,15 @@ internal class TabsAppearanceApplicator(
+ 
+         bottomNavigationView.labelVisibilityMode = visibilityMode
+ 
++        // Appearance is selected-tab driven. Restore Material's padding when an
++        // override is removed, including when switching back from skin artwork.
++        bottomNavigationView.itemPaddingTop =
++            tabBarAppearance?.tabBarItemPaddingTop?.let { bottomNavigationView.dpToPx(it.coerceAtLeast(0f)).toInt() }
++                ?: bottomNavigationView.resources.getDimensionPixelSize(R.dimen.m3_bottom_nav_item_padding_top)
++        bottomNavigationView.itemPaddingBottom =
++            tabBarAppearance?.tabBarItemPaddingBottom?.let { bottomNavigationView.dpToPx(it.coerceAtLeast(0f)).toInt() }
++                ?: bottomNavigationView.resources.getDimensionPixelSize(R.dimen.m3_bottom_nav_item_padding_bottom)
++
+         // Ripple color
+         val rippleColor =
+             tabBarAppearance?.tabBarItemRippleColor
+diff --git a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceModel.kt b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceModel.kt
+index 8024b396632a317d8fcdf590309df74b59152dfa..23453067b0356947523200ca91679a8e85d8a1d3 100644
+--- a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceModel.kt
++++ b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/appearance/TabsAppearanceModel.kt
+@@ -9,6 +9,8 @@ internal data class TabsAppearance(
+     val focused: ItemStateAppearance? = null,
+     val disabled: ItemStateAppearance? = null,
+     val tabBarItemIconSize: Float? = null,
++    val tabBarItemPaddingTop: Float? = null,
++    val tabBarItemPaddingBottom: Float? = null,
+     val tabBarItemActiveIndicatorColor: Int? = null,
+     val tabBarItemActiveIndicatorEnabled: Boolean? = null,
+     val tabBarItemActiveIndicatorWidth: Float? = null,
+diff --git a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/screen/TabsScreenViewManager.kt b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/screen/TabsScreenViewManager.kt
+index f013637d1309268258740f28fa006e0485e9fcf1..d7dd06fe06f58edc4f2abd6644b2f8d7216644b7 100644
+--- a/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/screen/TabsScreenViewManager.kt
++++ b/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/screen/TabsScreenViewManager.kt
+@@ -192,6 +192,8 @@ class TabsScreenViewManager :
+             focused = if (appearance.hasKey("focused")) parseItemStateAppearance(context, appearance.getMap("focused")) else null,
+             disabled = if (appearance.hasKey("disabled")) parseItemStateAppearance(context, appearance.getMap("disabled")) else null,
+             tabBarItemIconSize = appearance.readOptionalFloat("tabBarItemIconSize"),
++            tabBarItemPaddingTop = appearance.readOptionalFloat("tabBarItemPaddingTop"),
++            tabBarItemPaddingBottom = appearance.readOptionalFloat("tabBarItemPaddingBottom"),
+             tabBarItemActiveIndicatorColor = appearance.readOptionalColor(context, "tabBarItemActiveIndicatorColor"),
+             tabBarItemActiveIndicatorEnabled = appearance.readOptionalBoolean("tabBarItemActiveIndicatorEnabled"),
+             tabBarItemActiveIndicatorWidth = appearance.readOptionalFloat("tabBarItemActiveIndicatorWidth"),
+diff --git a/lib/typescript/components/tabs/screen/TabsScreen.android.types.d.ts b/lib/typescript/components/tabs/screen/TabsScreen.android.types.d.ts
+index a6e0e7623658f0ed016de636a2d879aa93d8b830..6644df46d1b102b78d224443f94cf60952de03c6 100644
+--- a/lib/typescript/components/tabs/screen/TabsScreen.android.types.d.ts
++++ b/lib/typescript/components/tabs/screen/TabsScreen.android.types.d.ts
+@@ -86,6 +86,10 @@ export interface TabsScreenAppearanceAndroid {
+      * @platform android
+      */
+     tabBarItemIconSize?: number | undefined;
++    /** Vertical item padding in dp. Unset restores Material's default. @platform android */
++    tabBarItemPaddingTop?: number | undefined;
++    /** Vertical item padding in dp. Unset restores Material's default. @platform android */
++    tabBarItemPaddingBottom?: number | undefined;
+     /**
+      * @summary Specifies the background color of the active indicator.
+      *
+diff --git a/src/components/tabs/screen/TabsScreen.android.types.ts b/src/components/tabs/screen/TabsScreen.android.types.ts
+index 39ca3660646419fd20ad8dd9df6e7db0e42119a6..0d185339ecb1445eb1516d1f4ffd89490efaa8b6 100644
+--- a/src/components/tabs/screen/TabsScreen.android.types.ts
++++ b/src/components/tabs/screen/TabsScreen.android.types.ts
+@@ -93,6 +93,10 @@ export interface TabsScreenAppearanceAndroid {
+    * @platform android
+    */
+   tabBarItemIconSize?: number | undefined;
++  /** Vertical item padding in dp. Unset restores Material's default. @platform android */
++  tabBarItemPaddingTop?: number | undefined;
++  /** Vertical item padding in dp. Unset restores Material's default. @platform android */
++  tabBarItemPaddingBottom?: number | undefined;
+   /**
+    * @summary Specifies the background color of the active indicator.
+    *
