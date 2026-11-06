@@ -115,8 +115,7 @@ export function TrackInfo({
 								{ maxHeight: Math.max(0, coverArea.width - 32) },
 							]}
 							onLayout={({ nativeEvent }) => setCoverArea(nativeEvent.layout)}
-							onPress={podcast ? undefined : onPressCover}
-							disabled={podcast}
+							onPress={onPressCover}
 						>
 							{!podcast && enableSpectrumVisualizer && coverSize > 0 && (
 								<View
@@ -135,8 +134,9 @@ export function TrackInfo({
 							{showCover && (
 								<TouchableOpacity
 									activeOpacity={0.8}
-									onPress={podcast ? undefined : onPressCover}
-									disabled={podcast}
+									onPress={onPressCover}
+									accessibilityRole='button'
+									accessibilityLabel={podcast ? '查看字幕' : '查看歌词'}
 									style={{ width: coverSize, height: coverSize }}
 									testID='player-cover'
 								>

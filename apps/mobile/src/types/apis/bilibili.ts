@@ -444,7 +444,23 @@ interface BilibiliSearchSuggestionItem {
 	type: string
 }
 
+export interface BilibiliSubtitleTrack {
+	id: number
+	id_str?: string
+	lan: string
+	lan_doc: string
+	subtitle_url: string
+	ai_type?: number
+	ai_status?: number
+}
+
+export interface BilibiliSubtitleBody {
+	body: { from: number; to: number; content: string }[]
+}
+
 interface BilibiliWebPlayerInfo {
+	subtitle?: { subtitles?: BilibiliSubtitleTrack[]; login_mid?: number }
+
 	view_points?: { type?: number; from: number; to: number; content: string }[]
 	bgm_info?: {
 		music_id: number

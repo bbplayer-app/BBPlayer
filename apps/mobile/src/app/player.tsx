@@ -30,6 +30,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
+import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
 import { PlayerHeader } from '@/features/player/components/main/PlayerHeader'
 import PlayerMainTab from '@/features/player/components/main/PlayerMainTab'
@@ -196,11 +197,7 @@ export default function PlayerPage() {
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	const jumpTo = (key: string) => {
-		const targetIndex =
-			key === 'lyrics' &&
-			playbackContextStore$.context.mode.peek() !== 'podcast'
-				? 1
-				: 0
+		const targetIndex = key === 'lyrics' ? 1 : 0
 		pagerRef.current?.setPage(targetIndex)
 	}
 
@@ -354,11 +351,7 @@ export default function PlayerPage() {
 							<PlayerHeader
 								onMorePress={() => setMenuVisible(true)}
 								onBack={handleDismiss}
-								index={
-									playbackContextStore$.context.mode.get() === 'podcast'
-										? 0
-										: index
-								}
+								index={index}
 								scrollX={scrollX}
 							/>
 						</Computed>
@@ -368,9 +361,6 @@ export default function PlayerPage() {
 									playbackContextStore$.context.mode.get() === 'podcast'
 										? 'podcast'
 										: 'music'
-								}
-								scrollEnabled={
-									playbackContextStore$.context.mode.get() !== 'podcast'
 								}
 								ref={pagerRef}
 								style={styles.tabView}
@@ -389,19 +379,19 @@ export default function PlayerPage() {
 											onPresent={() => {}}
 										/>
 									</View>,
-									...(playbackContextStore$.context.mode.get() === 'podcast'
-										? []
-										: [
-												<View
-													key='lyrics'
-													style={styles.tabView}
-												>
-													<Lyrics
-														currentIndex={index}
-														onPressBackground={() => jumpTo('main')}
-													/>
-												</View>,
-											]),
+									<View
+										key='lyrics'
+										style={styles.tabView}
+									>
+										{playbackContextStore$.context.mode.get() === 'podcast' ? (
+											<PodcastSubtitles active={index === 1 && isFocused} />
+										) : (
+											<Lyrics
+												currentIndex={index}
+												onPressBackground={() => jumpTo('main')}
+											/>
+										)}
+									</View>,
 								]}
 							</AnimatedPagerView>
 						</Computed>

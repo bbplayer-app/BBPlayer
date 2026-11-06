@@ -1,10 +1,11 @@
-import { Show } from '@legendapp/state/react'
+import { Show, useValue } from '@legendapp/state/react'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import Button from '@/components/common/Button'
 import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
@@ -28,6 +29,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
+	const mode = useValue(playbackContextStore$.context.mode)
 	const [size, setSize] = useState({ width: 0, height: 0 })
 	const compact = size.height - insets.bottom < 600 || size.width < 360
 
@@ -60,6 +62,15 @@ const PlayerMainTab = memo(function PlayerMainTab({
 						styles.controlsContainer,
 					]}
 				>
+					{mode === 'podcast' && (
+						<Button
+							icon='subtitles-outline'
+							onPress={() => jumpTo('lyrics')}
+							compact
+						>
+							字幕
+						</Button>
+					)}
 					<PlayerSlider />
 					<PlayerControls
 						compact={compact}

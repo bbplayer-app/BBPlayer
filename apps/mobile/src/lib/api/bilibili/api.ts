@@ -14,6 +14,7 @@ import type {
 	BilibiliSearchSuggestionItem,
 	BilibiliSmsLoginData,
 	BilibiliSmsSendData,
+	BilibiliSubtitleBody,
 	BilibiliToViewVideoList,
 	BilibiliWebPlayerInfo,
 } from '@/types/apis/bilibili'
@@ -1367,6 +1368,48 @@ export class BilibiliApi {
 				signal,
 			})
 		})
+	}
+
+	/** Subtitle files are raw JSON, without the API's code/data envelope. */
+	getSubtitle({
+		url,
+		signal,
+	}: {
+		url: string
+		signal?: AbortSignal
+	}): ResultAsync<BilibiliSubtitleBody, BilibiliApiError> {
+		return ResultAsync.fromPromise(
+			(async () => {
+				const target = new URL(url.startsWith('//') ? `https:${url}` : url)
+				if (
+					target.protocol !== 'https:' ||
+					!['hdslb.com', 'bilibili.com'].some(
+						(host) =>
+							target.hostname === host || target.hostname.endsWith(`.${host}`),
+					)
+				) {
+					throw new Error('无效的 B 站字幕地址')
+				}
+				const response = await fetch(target.href, {
+					signal,
+					credentials: 'omit',
+					headers: {
+						Referer: 'https://www.bilibili.com/',
+						'User-Agent': BILIBILI_WEB_USER_AGENT,
+					},
+				})
+				if (!response.ok) throw new Error(`字幕请求失败：${response.status}`)
+				const data = (await response.json()) as BilibiliSubtitleBody
+				if (!Array.isArray(data.body)) throw new Error('字幕格式无效')
+				return data
+			})(),
+			(cause) =>
+				new BilibiliApiError({
+					message: cause instanceof Error ? cause.message : '字幕加载失败',
+					type: 'RequestFailed',
+					cause,
+				}),
+		)
 	}
 
 	/**

@@ -103,9 +103,13 @@ function TextWithAnimation({
 
 interface PlayerSliderProps {
 	onInteraction?: () => void
+	showChapterTitle?: boolean
 }
 
-export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
+export function PlayerSlider({
+	onInteraction,
+	showChapterTitle = true,
+}: PlayerSliderProps = {}) {
 	const trackId = useCurrentTrackId()
 	const nativeDuration = useTrackDuration()
 	const { chapters, podcast } = usePlayerChapters()
@@ -337,7 +341,7 @@ export function PlayerSlider({ onInteraction }: PlayerSliderProps = {}) {
 
 	return (
 		<View style={styles.root}>
-			{podcast && (
+			{podcast && showChapterTitle && (
 				<AnimateableText
 					numberOfLines={1}
 					animatedProps={chapterPreviewProps}
