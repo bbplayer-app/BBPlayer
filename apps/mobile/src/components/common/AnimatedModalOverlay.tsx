@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import { useState } from 'react'
 import type { ViewStyle } from 'react-native'
 import { Pressable, StyleSheet } from 'react-native'
@@ -38,41 +39,51 @@ export default function AnimatedModalOverlay({
 	if (!visible) return null
 
 	return (
-		<AnimatedPressable
-			style={[styles.wrapper, wrapperAvoiding]}
-			onPress={onDismiss}
-		>
-			<Pressable
-				style={[
-					styles.content,
-					{
-						marginHorizontal: Math.max(insets.left, insets.right, 26),
-						opacity: showContent ? 1 : 0,
-					},
-				]}
-				onLayout={(e) => {
-					setShowContent(
-						e.nativeEvent.layout.height > 0 && e.nativeEvent.layout.width > 0,
-					)
-				}}
-				onPress={(e) => e.stopPropagation()}
+		// 遥控器操作时焦点留在弹窗内，关闭后回到打开它的按钮。
+		<TvFocusScope style={styles.focusScope}>
+			<AnimatedPressable
+				style={[styles.wrapper, wrapperAvoiding]}
+				onPress={onDismiss}
+				// 遮罩和内容容器只为触摸服务，不能成为遥控器的焦点。
+				focusable={false}
 			>
-				<SquircleView
+				<Pressable
 					style={[
-						styles.contentInner,
-						{ backgroundColor: theme.colors.surface },
-						contentStyle,
+						styles.content,
+						{
+							marginHorizontal: Math.max(insets.left, insets.right, 26),
+							opacity: showContent ? 1 : 0,
+						},
 					]}
-					cornerSmoothing={0.6}
+					onLayout={(e) => {
+						setShowContent(
+							e.nativeEvent.layout.height > 0 && e.nativeEvent.layout.width > 0,
+						)
+					}}
+					onPress={(e) => e.stopPropagation()}
+					focusable={false}
 				>
-					{children}
-				</SquircleView>
-			</Pressable>
-		</AnimatedPressable>
+					<SquircleView
+						style={[
+							styles.contentInner,
+							{ backgroundColor: theme.colors.surface },
+							contentStyle,
+						]}
+						cornerSmoothing={0.6}
+					>
+						{children}
+					</SquircleView>
+				</Pressable>
+			</AnimatedPressable>
+		</TvFocusScope>
 	)
 }
 
 const styles = StyleSheet.create({
+	focusScope: {
+		...StyleSheet.absoluteFill,
+		zIndex: 1000,
+	},
 	wrapper: {
 		...StyleSheet.absoluteFill,
 		justifyContent: 'center',
