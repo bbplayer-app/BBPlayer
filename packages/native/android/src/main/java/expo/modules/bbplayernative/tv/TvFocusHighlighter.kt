@@ -290,7 +290,11 @@ internal class TvFocusHighlighter private constructor(private val root: View) :
     private const val HALO_COLOR = 0x73000000
 
     private val interpolator = DecelerateInterpolator(1.5f)
-    private val highlighters = WeakHashMap<View, TvFocusHighlighter>()
+
+    // Weak both ways: a highlighter holds its root, so a strong value here would keep a root that
+    // never attached (an activity finished before its window was shown) alive forever. The root
+    // keeps its highlighter alive through the listeners the highlighter registers on it.
+    private val highlighters = WeakHashMap<View, WeakReference<TvFocusHighlighter>>()
 
     @Volatile
     private var ringColor: Int = Color.WHITE
@@ -300,17 +304,17 @@ internal class TvFocusHighlighter private constructor(private val root: View) :
      * removed again when that window goes away.
      */
     fun install(root: View) {
-      if (highlighters.containsKey(root)) return
-      highlighters[root] = TvFocusHighlighter(root).also { it.attach() }
+      if (highlighters[root]?.get() != null) return
+      highlighters[root] = WeakReference(TvFocusHighlighter(root).also { it.attach() })
     }
 
     fun uninstall(root: View) {
-      highlighters.remove(root)?.detach()
+      highlighters.remove(root)?.get()?.detach()
     }
 
     fun setRingColor(color: Int) {
       ringColor = color
-      highlighters.values.forEach { it.refresh() }
+      highlighters.values.mapNotNull { it.get() }.forEach { it.refresh() }
     }
 
     private fun lerp(from: Float, to: Float, fraction: Float) = from + (to - from) * fraction

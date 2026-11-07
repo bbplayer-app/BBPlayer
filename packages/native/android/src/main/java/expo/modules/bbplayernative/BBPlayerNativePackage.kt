@@ -23,4 +23,10 @@ private object TvFocusActivityListener : ReactActivityLifecycleListener {
     override fun onResume(activity: Activity) {
         TvFocusHighlighter.install(activity.window.decorView)
     }
+
+    // A window removed while attached cleans up on detach. This covers an activity finished
+    // before its window was ever attached, which never sees a detach.
+    override fun onDestroy(activity: Activity) {
+        activity.window.peekDecorView()?.let(TvFocusHighlighter::uninstall)
+    }
 }

@@ -37,7 +37,11 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
   var restoreFocus = true
 
   private var previousFocus: WeakReference<View>? = null
-  private var focusInside = false
+
+  // Whether focus has been inside since activation. It is not cleared when focus leaves: closing
+  // can remove the focused child before this container, and the window then moves focus outside
+  // just before deactivate() runs. With the trap on, only such removals take focus out anyway.
+  private var hadFocus = false
   private var autoFocusDeadline = 0L
 
   init {
@@ -76,8 +80,8 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     scopes.remove(this)
     scopes.add(this)
     val current = rootView.findFocus()
-    focusInside = current != null && isAncestorOf(current)
-    previousFocus = current?.takeUnless { focusInside }?.let(::WeakReference)
+    hadFocus = current != null && isAncestorOf(current)
+    previousFocus = current?.takeUnless { hadFocus }?.let(::WeakReference)
     if (autoFocus) {
       autoFocusDeadline = SystemClock.uptimeMillis() + AUTO_FOCUS_TIMEOUT_MS
       removeCallbacks(autoFocusRunnable)
@@ -89,14 +93,21 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     scopes.remove(this)
     removeCallbacks(autoFocusRunnable)
     val previous = previousFocus?.get()
-    val hadFocus = focusInside
+    val restore = restoreFocus && hadFocus
     previousFocus = null
-    focusInside = false
-    if (!restoreFocus || !hadFocus || previous == null) return
+    hadFocus = false
+    if (!restore || previous == null) return
+    val root = rootView
     // Removing a focused view makes the window focus its first focusable view, usually somewhere
     // on the screen behind. Once that has happened, hand focus back to where it came from.
     mainHandler.post {
-      if (previous.isAttachedToWindow && previous.isShown && !previous.isInTouchMode) {
+      if (!previous.isAttachedToWindow || !previous.isShown || previous.isInTouchMode) {
+        return@post
+      }
+      // Another dialog or sheet that is still open owns focus now, unless the previous view is
+      // inside it (a dialog opened from a sheet).
+      val owner = scopes.lastOrNull { it.rootView === root && it.isOnScreen }
+      if (owner == null || owner.isAncestorOf(previous)) {
         previous.requestFocus()
       }
     }
@@ -137,7 +148,7 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     private val scopes = mutableListOf<TvFocusScopeView>()
 
     /**
-     * Called for every focus change in [root]'s window. Records which scopes hold focus, and
+     * Called for every focus change in [root]'s window. Records which scopes have held focus, and
      * pulls focus back into the newest visible scope when something outside it takes focus (for
      * example the window refocusing the screen behind after a view is removed).
      */
@@ -145,11 +156,11 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
       var top: TvFocusScopeView? = null
       for (scope in scopes) {
         if (scope.rootView !== root) continue
-        scope.focusInside = scope.isAncestorOf(newFocus)
+        if (scope.isAncestorOf(newFocus)) scope.hadFocus = true
         if (scope.isOnScreen) top = scope
       }
       val scope = top ?: return
-      if (scope.focusInside || !scope.trapFocus || scope.isInTouchMode) return
+      if (scope.isAncestorOf(newFocus) || !scope.trapFocus || scope.isInTouchMode) return
       scope.post {
         if (scope.active && scope.isOnScreen && !scope.isInTouchMode && scope.findFocus() == null) {
           scope.requestFocus(View.FOCUS_DOWN)
