@@ -122,6 +122,7 @@ function StartSlide({
 				</Button>
 				<Button
 					mode='outlined'
+					testID='onboarding-guest'
 					onPress={onGuest}
 					style={slideStyles.guestButton}
 					contentStyle={slideStyles.startButtonContent}
@@ -235,6 +236,7 @@ export default function OnboardingPage() {
 				{step < 2 && (
 					<Button
 						mode='contained'
+						testID={`onboarding-next-${step}`}
 						onPress={goNext}
 						style={styles.actionButton}
 						contentStyle={styles.actionButtonContent}

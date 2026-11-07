@@ -117,7 +117,9 @@ export default function UpdateAppModal({
 
 	return (
 		<>
-			<Dialog.Title>发现新版本 {version}</Dialog.Title>
+			<Dialog.Title testID='update-app-title'>
+				发现新版本 {version}
+			</Dialog.Title>
 			<Dialog.Content>
 				{forced ? (
 					<Text style={[styles.forcedText, { color: colors.error }]}>
@@ -155,6 +157,7 @@ export default function UpdateAppModal({
 				)}
 				<View style={styles.rightActionsContainer}>
 					<Button
+						testID='update-app-cancel'
 						onPress={onCancel}
 						disabled={forced || isUpdating}
 					>

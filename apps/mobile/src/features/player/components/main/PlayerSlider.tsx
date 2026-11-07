@@ -86,6 +86,7 @@ function TextWithAnimation({
 	return (
 		<>
 			<AnimateableText
+				testID='player-elapsed-time'
 				numberOfLines={1}
 				adjustsFontSizeToFit
 				style={textStyle}

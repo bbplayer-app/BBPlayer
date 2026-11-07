@@ -117,6 +117,7 @@ export default function TabLayout() {
 		>
 			<NativeTabs.Trigger
 				name='index'
+				testID='tab-search'
 				disableAutomaticContentInsets
 				unstable_nativeProps={nativeIconProps(icons?.home, searchIcon, colors)}
 			>
@@ -128,6 +129,7 @@ export default function TabLayout() {
 			</NativeTabs.Trigger>
 			<NativeTabs.Trigger
 				name='library/[tab]'
+				testID='tab-library'
 				disableAutomaticContentInsets
 				unstable_nativeProps={nativeIconProps(
 					icons?.library,
@@ -143,6 +145,7 @@ export default function TabLayout() {
 			</NativeTabs.Trigger>
 			<NativeTabs.Trigger
 				name='my'
+				testID='tab-my'
 				disableAutomaticContentInsets
 				unstable_nativeProps={nativeIconProps(
 					icons?.settings,

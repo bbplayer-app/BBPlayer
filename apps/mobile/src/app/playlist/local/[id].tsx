@@ -1131,7 +1131,11 @@ function LocalPlaylistContent({
 							onPress={() => setStartSearch((prev) => !prev)}
 						/>
 						<MenuView {...menuActions}>
-							<Appbar.Action icon='dots-vertical' />
+							<Appbar.Action
+								icon='dots-vertical'
+								testID='local-playlist-menu'
+								accessibilityLabel='播放列表操作'
+							/>
 						</MenuView>
 					</>
 				)}

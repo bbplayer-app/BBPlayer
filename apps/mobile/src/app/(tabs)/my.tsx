@@ -97,6 +97,7 @@ function MyPageContent() {
 					<IconButton
 						icon='cog-outline'
 						accessibilityLabel='设置'
+						testID='profile-settings'
 						iconColor={headerForegroundColor}
 						onPress={() => router.navigate('/settings')}
 					/>

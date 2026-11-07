@@ -1,6 +1,7 @@
 {
 	"files": [],
 	"references": [
+		{ "path": "./tests/tsconfig.json" },
 		{ "path": "./apps/mobile/tsconfig.json" },
 		{ "path": "./packages/orpheus/tsconfig.json" },
 		{ "path": "./packages/image-theme-colors/tsconfig.json" },

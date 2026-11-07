@@ -57,6 +57,7 @@ export default function SettingsPage() {
 					<Divider style={styles.divider} />
 					<List.Item
 						title='播放'
+						testID='settings-playback'
 						description='播放行为、启动行为、音效'
 						left={(props) => (
 							<List.Icon

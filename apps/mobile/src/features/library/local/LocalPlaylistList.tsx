@@ -153,6 +153,8 @@ const LocalPlaylistListComponent = memo(() => {
 					<MenuView {...menuActions}>
 						<IconButton
 							icon='plus'
+							testID='library-playlist-menu'
+							accessibilityLabel='播放列表操作'
 							size={20}
 						/>
 					</MenuView>
@@ -160,6 +162,7 @@ const LocalPlaylistListComponent = memo(() => {
 			</View>
 			<Searchbar
 				placeholder='搜索播放列表'
+				testID='library-playlist-search'
 				onChangeText={setSearchQuery}
 				value={searchQuery}
 				mode='bar'
@@ -188,7 +191,12 @@ const LocalPlaylistListComponent = memo(() => {
 					}
 					keyExtractor={keyExtractor}
 					ListEmptyComponent={
-						<Text style={styles.emptyList}>没有播放列表</Text>
+						<Text
+							testID='library-playlist-empty'
+							style={styles.emptyList}
+						>
+							没有播放列表
+						</Text>
 					}
 				/>
 			</View>

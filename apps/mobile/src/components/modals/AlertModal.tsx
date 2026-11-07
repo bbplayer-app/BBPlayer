@@ -37,6 +37,7 @@ export default function AlertModal({
 					<Button
 						key={index}
 						onPress={button.onPress ?? (() => close('Alert'))}
+						testID='alert-cancel'
 						mode='text'
 					>
 						{button.text}
@@ -58,6 +59,7 @@ export default function AlertModal({
 					<Button
 						key={index}
 						onPress={handlePress}
+						testID='alert-confirm'
 						mode='text'
 					>
 						{button.text}
@@ -69,7 +71,7 @@ export default function AlertModal({
 
 	return (
 		<>
-			<Dialog.Title>{title}</Dialog.Title>
+			<Dialog.Title testID='alert-title'>{title}</Dialog.Title>
 			<Dialog.Content>
 				{typeof message === 'string' || typeof message === 'number' ? (
 					<Text variant='bodyMedium'>{message}</Text>

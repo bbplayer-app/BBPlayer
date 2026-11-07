@@ -108,6 +108,7 @@ export default function EditPlaylistMetadataModal({
 			<Dialog.Content style={styles.content}>
 				<TextInput
 					label='标题'
+					testID='edit-playlist-title-input'
 					value={title}
 					onChangeText={setTitle}
 					mode='outlined'
@@ -149,7 +150,12 @@ export default function EditPlaylistMetadataModal({
 				)}
 				<View style={styles.rightActionsContainer}>
 					<Button onPress={handleDismiss}>取消</Button>
-					<Button onPress={handleConfirm}>确定</Button>
+					<Button
+						testID='edit-playlist-confirm-button'
+						onPress={handleConfirm}
+					>
+						确定
+					</Button>
 				</View>
 			</Dialog.Actions>
 		</>

@@ -256,6 +256,7 @@ const Button = forwardRef<ComponentRef<typeof Touchable>, ButtonProps>(
 							</View>
 						) : null}
 						<Text
+							testID={`${testID}-label`}
 							role='button'
 							variant='labelLarge'
 							numberOfLines={1}

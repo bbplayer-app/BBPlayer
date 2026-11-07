@@ -24,7 +24,7 @@ const renderScene = SceneMap({
 })
 
 const routes = [
-	{ key: 'local', title: '播放列表' },
+	{ key: 'local', title: '播放列表', testID: 'library-tab-local' },
 	{ key: 'favorite', title: '收藏夹' },
 	{ key: 'collection', title: '合集' },
 	{ key: 'multiPage', title: '分 p' },

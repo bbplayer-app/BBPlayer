@@ -188,7 +188,9 @@ export function MainPlaybackControls({
 						toastAndLogError('播放操作失败', e, 'UI.Player.Controls')
 					}
 				}}
-				testID='player-play-pause'
+				testID={debouncedIsPlaying ? 'player-pause' : 'player-play'}
+				accessibilityRole='button'
+				accessibilityLabel={debouncedIsPlaying ? '暂停' : '播放'}
 			>
 				{debouncedBuffering ? (
 					<ActivityIndicator
