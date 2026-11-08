@@ -350,6 +350,17 @@ class ExpoOrpheusModule : Module() {
             .get { GeneralStorage.isAutoplayOnStartEnabled() }
             .set { enabled: Boolean -> GeneralStorage.setAutoplayOnStartEnabled(enabled) }
 
+        Property("isNotificationArtworkEnabled")
+            .get { GeneralStorage.isNotificationArtworkEnabled() }
+            .set { enabled: Boolean ->
+                if (GeneralStorage.isNotificationArtworkEnabled() != enabled) {
+                    GeneralStorage.setNotificationArtworkEnabled(enabled)
+                    mainHandler.post {
+                        OrpheusMusicService.instance?.refreshArtworkMetadata()
+                    }
+                }
+            }
+
         /**
          * 续播策略：0 = 不自动续播（music），1 = 逐首断点续播（podcast）。
          * 原生持久化，供服务冷启动时无需等待 JS 即可使用。

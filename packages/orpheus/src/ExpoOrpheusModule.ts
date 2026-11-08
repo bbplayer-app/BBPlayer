@@ -170,6 +170,8 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	loudnessNormalizationEnabled: boolean
 	/** Android 服务恢复状态后是否自动开始播放。 */
 	autoplayOnStartEnabled: boolean
+	/** 是否向 Android 系统媒体控件提供专辑封面；原始曲目信息不受影响。 */
+	isNotificationArtworkEnabled: boolean
 	/**
 	 * 进入音频时的起播位置策略，取值使用导出的 `ResumeStrategy`。
 	 *
