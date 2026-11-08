@@ -1,17 +1,17 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import type { LyricLine } from '@bbplayer/splash'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { AppState } from 'react-native'
 
+import type { SubtitleReaderStore } from '@/features/player/stores/subtitleReaderStore'
 import { subtitleIndexAt } from '@/features/player/utils/subtitles'
 import playerProgressEmitter from '@/lib/player/progressListener'
 
 /** Update React only when the spoken cue changes, including seeks while paused. */
-export function useSubtitlePlayback(lines: LyricLine[], active: boolean) {
-	const [snapshot, setSnapshot] = useState<{
-		lines: LyricLine[]
-		index: number
-	}>()
+export function useSubtitlePlayback(
+	store: SubtitleReaderStore,
+	active: boolean,
+) {
+	const { lines } = store.content
 	useEffect(() => {
 		if (!active || !lines.length) return
 		let disposed = false
@@ -19,11 +19,7 @@ export function useSubtitlePlayback(lines: LyricLine[], active: boolean) {
 		const update = (position: number) => {
 			if (disposed) return
 			const index = subtitleIndexAt(lines, position)
-			setSnapshot((previous) =>
-				previous?.lines === lines && previous.index === index
-					? previous
-					: { lines, index },
-			)
+			store.setCurrentCue(index)
 		}
 		const sync = () => {
 			const request = ++revision
@@ -49,9 +45,5 @@ export function useSubtitlePlayback(lines: LyricLine[], active: boolean) {
 			unsubscribe()
 			subscription.remove()
 		}
-	}, [active, lines])
-	return {
-		index: snapshot?.lines === lines ? snapshot.index : 0,
-		ready: snapshot?.lines === lines,
-	}
+	}, [active, lines, store])
 }

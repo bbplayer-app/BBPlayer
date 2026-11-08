@@ -1,0 +1,28 @@
+steps:
+  - tap:
+      id: button-label
+      text: 字幕
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: subtitle-reading-list
+      timeoutMs: 15000
+  - tap:
+      id: player-forward-15
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:15
+  - tap:
+      id: player-rewind-15
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:00
+executionPrerequisite: Android main podcast player open with Maxinsights Chinese
+  automatic subtitles available; playback paused at 60 seconds.

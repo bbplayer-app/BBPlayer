@@ -11,6 +11,9 @@ import { Touchable } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
+import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
+import useTrackDuration from '@/hooks/player/useTrackProgress'
+import { seekWithinTrack } from '@/lib/player/seek'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -22,19 +25,25 @@ const skipNextSource =
 	require('@/assets/lottie/skip-next.json') as AnimationObject
 const playPauseSource =
 	require('@/assets/lottie/play-pause.json') as AnimationObject
+const rewind15Source =
+	require('@/assets/lottie/rewind-15.json') as AnimationObject
+const forward15Source =
+	require('@/assets/lottie/fast-forward-15.json') as AnimationObject
 
 interface MainPlaybackControlsProps {
 	size?: 'normal' | 'compact'
 	onInteraction?: () => void
+	podcast?: boolean
 }
 
 /**
- * 主播放控制按钮组件（上一曲/播放暂停/下一曲）
+ * 主播放控制按钮：音乐切歌，播客前后跳转 15 秒。
  * 可在主播放器和歌词页面复用
  */
 export function MainPlaybackControls({
 	size = 'normal',
 	onInteraction,
+	podcast = false,
 }: MainPlaybackControlsProps) {
 	const { colors } = useTheme()
 	const isPlaying = useIsPlaying()
@@ -133,33 +142,41 @@ export function MainPlaybackControls({
 
 	return (
 		<View style={[styles.mainControlsContainer, { gap }]}>
-			<Touchable
-				androidRipple={{}}
-				style={{
-					width: skipButtonSize,
-					height: skipButtonSize,
-					justifyContent: 'center',
-					alignItems: 'center',
-					borderRadius: 99999,
-				}}
-				onPress={() => {
-					onInteraction?.()
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-					prevLottieRef.current?.play(0, 60)
-					void Orpheus.skipToPrevious()
-					void analyticsService.logPlayerAction('skip_prev')
-				}}
-				testID='player-prev'
-			>
-				<LottieView
-					ref={prevLottieRef}
-					source={tintedSkipPrev}
-					style={{ width: '100%', height: '100%' }}
-					autoPlay={false}
-					speed={2}
-					loop={false}
+			{podcast ? (
+				<PodcastSeekButton
+					seconds={-15}
+					size={size}
+					onInteraction={onInteraction}
 				/>
-			</Touchable>
+			) : (
+				<Touchable
+					androidRipple={{}}
+					style={{
+						width: skipButtonSize,
+						height: skipButtonSize,
+						justifyContent: 'center',
+						alignItems: 'center',
+						borderRadius: 99999,
+					}}
+					onPress={() => {
+						onInteraction?.()
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+						prevLottieRef.current?.play(0, 60)
+						void Orpheus.skipToPrevious()
+						void analyticsService.logPlayerAction('skip_prev')
+					}}
+					testID='player-prev'
+				>
+					<LottieView
+						ref={prevLottieRef}
+						source={tintedSkipPrev}
+						style={{ width: '100%', height: '100%' }}
+						autoPlay={false}
+						speed={2}
+						loop={false}
+					/>
+				</Touchable>
+			)}
 			<Touchable
 				androidRipple={{}}
 				style={{
@@ -208,34 +225,108 @@ export function MainPlaybackControls({
 					/>
 				)}
 			</Touchable>
-			<Touchable
-				androidRipple={{}}
-				style={{
-					width: skipButtonSize,
-					height: skipButtonSize,
-					justifyContent: 'center',
-					alignItems: 'center',
-					borderRadius: 99999,
-				}}
-				onPress={() => {
-					onInteraction?.()
-					void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-					nextLottieRef.current?.play(0, 60)
-					void Orpheus.skipToNext()
-					void analyticsService.logPlayerAction('skip_next')
-				}}
-				testID='player-next'
-			>
-				<LottieView
-					ref={nextLottieRef}
-					source={tintedSkipNext}
-					style={{ width: '100%', height: '100%' }}
-					autoPlay={false}
-					speed={2}
-					loop={false}
+			{podcast ? (
+				<PodcastSeekButton
+					seconds={15}
+					size={size}
+					onInteraction={onInteraction}
 				/>
-			</Touchable>
+			) : (
+				<Touchable
+					androidRipple={{}}
+					style={{
+						width: skipButtonSize,
+						height: skipButtonSize,
+						justifyContent: 'center',
+						alignItems: 'center',
+						borderRadius: 99999,
+					}}
+					onPress={() => {
+						onInteraction?.()
+						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+						nextLottieRef.current?.play(0, 60)
+						void Orpheus.skipToNext()
+						void analyticsService.logPlayerAction('skip_next')
+					}}
+					testID='player-next'
+				>
+					<LottieView
+						ref={nextLottieRef}
+						source={tintedSkipNext}
+						style={{ width: '100%', height: '100%' }}
+						autoPlay={false}
+						speed={2}
+						loop={false}
+					/>
+				</Touchable>
+			)}
 		</View>
+	)
+}
+
+function PodcastSeekButton({
+	seconds,
+	size,
+	onInteraction,
+}: {
+	seconds: -15 | 15
+	size: 'normal' | 'compact'
+	onInteraction?: () => void
+}) {
+	const trackId = useCurrentTrackId()
+	const duration = useTrackDuration()
+	const { colors } = useTheme()
+	const animation = useRef<LottieView>(null)
+	const compact = size === 'compact'
+	const buttonSize = compact ? 56 : 64
+	const canSeek = !!trackId && Number.isFinite(duration) && duration > 0
+	const iconColor = canSeek ? colors.onSurfaceVariant : colors.onSurfaceDisabled
+	const source = useMemo(
+		() =>
+			tintLottieSource(
+				seconds < 0 ? rewind15Source : forward15Source,
+				iconColor,
+			),
+		[seconds, iconColor],
+	)
+	// The 32px animation canvas gives the rotating 24px icon room to move.
+	const animationSize = ((compact ? 32 : 36) * 32) / 24
+	return (
+		<Touchable
+			androidRipple={{}}
+			style={{
+				width: buttonSize,
+				height: buttonSize,
+				alignItems: 'center',
+				justifyContent: 'center',
+				borderRadius: buttonSize / 2,
+				overflow: 'hidden',
+				opacity: canSeek ? 1 : 0.38,
+			}}
+			testID={seconds < 0 ? 'player-rewind-15' : 'player-forward-15'}
+			accessibilityRole='button'
+			accessibilityLabel={seconds < 0 ? '后退 15 秒' : '前进 15 秒'}
+			accessibilityState={{ disabled: !canSeek }}
+			disabled={!canSeek}
+			onPress={() => {
+				if (!canSeek) return
+				animation.current?.reset()
+				animation.current?.play(0, 30)
+				onInteraction?.()
+				void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
+				void seekWithinTrack(trackId, seconds, true).catch((error: unknown) => {
+					toastAndLogError('跳转失败', error, 'Player.Controls')
+				})
+			}}
+		>
+			<LottieView
+				ref={animation}
+				source={source}
+				style={{ width: animationSize, height: animationSize }}
+				autoPlay={false}
+				loop={false}
+			/>
+		</Touchable>
 	)
 }
 

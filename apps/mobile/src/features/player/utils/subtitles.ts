@@ -15,6 +15,35 @@ export function subtitleLabel(track: BilibiliSubtitleTrack) {
 	return `${track.lan_doc || track.lan} · ${subtitleKind(track)}`
 }
 
+const timestamp = (milliseconds: number) => {
+	const centiseconds = Math.floor(milliseconds / 10)
+	const minutes = Math.floor(centiseconds / 6000)
+	const seconds = Math.floor((centiseconds % 6000) / 100)
+	const fraction = centiseconds % 100
+	return `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(fraction).padStart(2, '0')}]`
+}
+const singleLine = (text: string) => text.replace(/[\r\n]+/g, ' ').trim()
+
+/** Export original cues, rather than the grouped or search-filtered transcript. */
+export function subtitlesToLrc(lines: LyricLine[], title: string): string {
+	const metadataTitle = singleLine(title)
+		.replace(/\[/g, '［')
+		.replace(/\]/g, '］')
+	const output = [`[ti:${metadataTitle}]`, '[by:BBPlayer]']
+	for (const [index, line] of lines.entries()) {
+		output.push(`${timestamp(line.startTime)}${singleLine(line.content)}`)
+		const next = lines[index + 1]
+		// Blank cues preserve silence between subtitles and clear the final sentence.
+		if (
+			Math.floor(line.endTime / 10) > Math.floor(line.startTime / 10) &&
+			(!next || Math.floor(line.endTime / 10) < Math.floor(next.startTime / 10))
+		) {
+			output.push(timestamp(line.endTime))
+		}
+	}
+	return `${output.join('\n')}\n`
+}
+
 const baseLanguage = (lan: string) =>
 	lan.replace(/^ai-/, '').split('-')[0]?.toLowerCase()
 

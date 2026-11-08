@@ -1,7 +1,10 @@
+import { useValue } from '@legendapp/state/react'
 import { Fragment, memo } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useTheme } from 'react-native-paper'
 
+import { VariantPlainText } from '@/components/common/VariantPlainText'
+import type { SubtitleReaderStore } from '@/features/player/stores/subtitleReaderStore'
 import {
 	subtitleSeparator,
 	type SubtitleParagraph,
@@ -10,24 +13,38 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 
 export const SubtitleParagraphItem = memo(function SubtitleParagraphItem({
 	paragraph,
-	currentCue,
+	store,
 	query,
-	onSeek,
 }: {
 	paragraph: SubtitleParagraph
-	currentCue: number
+	store: SubtitleReaderStore
 	query: string
-	onSeek: (index: number) => void
 }) {
 	const { colors } = useTheme()
+	const currentCue = useValue(store.state$.paragraphCue[paragraph.id])
+	const focusedMatch = useValue(
+		() => !!query && store.state$.focusedParagraphId.get() === paragraph.id,
+	)
+	const onSeek = (index: number) => {
+		Keyboard.dismiss()
+		void store.seek(index)
+	}
 	return (
-		<View style={styles.paragraph}>
+		<View
+			style={[
+				styles.paragraph,
+				{
+					borderLeftWidth: 2,
+					borderLeftColor: focusedMatch ? colors.primary : 'transparent',
+				},
+			]}
+		>
 			<Pressable
 				onPress={() => onSeek(paragraph.cues[0].index)}
 				accessibilityRole='button'
 				accessibilityLabel={`跳转到 ${formatDurationToHHMMSS(Math.floor(paragraph.startTime / 1000))}`}
 			>
-				<Text
+				<VariantPlainText
 					variant='labelMedium'
 					style={{
 						color: colors.onSurfaceVariant,
@@ -36,7 +53,7 @@ export const SubtitleParagraphItem = memo(function SubtitleParagraphItem({
 					}}
 				>
 					{formatDurationToHHMMSS(Math.floor(paragraph.startTime / 1000))}
-				</Text>
+				</VariantPlainText>
 			</Pressable>
 			<Text style={[styles.body, { color: colors.onSurface }]}>
 				{paragraph.cues.map(({ line, index }, cueIndex) => {
@@ -79,6 +96,6 @@ export const SubtitleParagraphItem = memo(function SubtitleParagraphItem({
 })
 
 const styles = StyleSheet.create({
-	paragraph: { paddingHorizontal: 24, paddingBottom: 16 },
+	paragraph: { paddingLeft: 22, paddingRight: 24, paddingBottom: 16 },
 	body: { fontSize: 18, lineHeight: 30, fontWeight: '400' },
 })

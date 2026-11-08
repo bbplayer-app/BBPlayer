@@ -1,0 +1,32 @@
+steps:
+  - tap:
+      id: subtitle-search-open
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: subtitle-search-input
+  - tap:
+      id: subtitle-search-input
+  - tool: keyboard
+    args:
+      text: robot
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: subtitle-search-input
+      expectedText: robot
+  - tap:
+      id: subtitle-search-next
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: 段匹配
+      expectedText: 2 / 7
+  - tap:
+      text: 关闭字幕搜索
+executionPrerequisite: Android BBPlayer podcast subtitle reader open,
+  Maxinsights Chinese automatic track loaded, search closed, playback paused at
+  60 seconds.
