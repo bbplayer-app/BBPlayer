@@ -1,0 +1,21 @@
+steps:
+  - tap:
+      text: 01:08
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:08
+  - tap:
+      text:
+        数据采集人员的网络 而这家公司的数据采集运营团队 全职员工不到十个人 美国墨西哥 然后东南亚我们有印尼 越南和泰国 中国土耳其以及最远到南非
+        我们全球一共有接近4000人的运营团队
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:17
+executionPrerequisite: Android podcast subtitles Maxinsights Chinese automatic
+  track, paused at 60s, search closed and following current paragraph.

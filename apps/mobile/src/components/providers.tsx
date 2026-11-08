@@ -1,4 +1,5 @@
 import { setFocusRingColor } from '@bbplayer/native'
+import { Orpheus } from '@bbplayer/orpheus'
 import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
 import {
 	createMMKVStorageAdapter,
@@ -9,7 +10,13 @@ import * as Sentry from '@sentry/react-native'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { Appearance, StyleSheet, useColorScheme, View } from 'react-native'
+import {
+	Appearance,
+	Platform,
+	StyleSheet,
+	useColorScheme,
+	View,
+} from 'react-native'
 import { SystemBars } from 'react-native-edge-to-edge'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { KeyboardProvider } from 'react-native-keyboard-controller'
@@ -89,6 +96,11 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+	useEffect(() => {
+		if (Platform.OS === 'android') {
+			Orpheus.isNotificationArtworkEnabled = !pureWhiteBackground
+		}
+	}, [pureWhiteBackground])
 	useEffect(() => {
 		// 同步原生控件、系统菜单，以及仍读取 useColorScheme 的组件。
 		Appearance.setColorScheme(pureWhiteBackground ? 'light' : 'unspecified')

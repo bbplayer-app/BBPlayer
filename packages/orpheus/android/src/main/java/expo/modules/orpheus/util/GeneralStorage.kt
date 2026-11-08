@@ -23,6 +23,7 @@ object GeneralStorage {
     private const val KEY_SAVED_REPEAT_MODE = "saved_repeat_mode"
     private const val KEY_SAVED_SHUFFLE_MODE = "saved_shuffle_mode"
     private const val KEY_AUTOPLAY_ON_START_ENABLED = "config_autoplay_on_start_enabled"
+    private const val KEY_NOTIFICATION_ARTWORK_ENABLED = "config_notification_artwork_enabled"
     private const val KEY_SPECTRUM_VISUALIZER_ENABLED = "config_spectrum_visualizer_enabled"
     private const val KEY_DESKTOP_LYRICS_SHOWN = "state_desktop_lyrics_shown"
     private const val KEY_DESKTOP_LYRICS_LOCKED = "state_desktop_lyrics_locked"
@@ -80,6 +81,10 @@ object GeneralStorage {
     fun isAutoplayOnStartEnabled(): Boolean {
         return safeKv.decodeBool(KEY_AUTOPLAY_ON_START_ENABLED, false)
     }
+
+    fun isNotificationArtworkEnabled() = kv?.decodeBool(KEY_NOTIFICATION_ARTWORK_ENABLED, true) ?: true
+
+    fun setNotificationArtworkEnabled(enabled: Boolean) = safeKv.encode(KEY_NOTIFICATION_ARTWORK_ENABLED, enabled)
 
     fun setAutoplayOnStartEnabled(enabled: Boolean) {
         try {

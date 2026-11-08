@@ -15,7 +15,6 @@ import {
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 
-import IconButton from '@/components/common/IconButton'
 import { usePlayerChapters } from '@/features/player/hooks/usePlayerChapters'
 import {
 	chapterIndexAt,
@@ -354,18 +353,7 @@ export function PlayerSlider({
 					}}
 				/>
 			)}
-			<View style={podcast ? styles.podcastSliderRow : undefined}>
-				{podcast && (
-					<IconButton
-						icon='rewind-15'
-						accessibilityLabel='后退 15 秒'
-						disabled={!canSeek}
-						style={styles.seekButton}
-						onPress={() => {
-							void handleSeek(-15, true)
-						}}
-					/>
-				)}
+			<View>
 				<WavySlider
 					style={podcast ? styles.podcastSlider : styles.slider}
 					enabled={canSeek}
@@ -394,20 +382,10 @@ export function PlayerSlider({
 					onValueChangeFinished={handleValueChangeFinished}
 					onDragStateChange={handleDragStateChange}
 				/>
-
-				{podcast && (
-					<IconButton
-						icon='fast-forward-15'
-						accessibilityLabel='前进 15 秒'
-						disabled={!canSeek}
-						style={styles.seekButton}
-						onPress={() => {
-							void handleSeek(15, true)
-						}}
-					/>
-				)}
 			</View>
-			<View style={styles.timeContainer}>
+			<View
+				style={[styles.timeContainer, podcast && styles.podcastTimeContainer]}
+			>
 				<TextWithAnimation
 					sharedPosition={displayPosition}
 					sharedDuration={duration}
@@ -418,9 +396,8 @@ export function PlayerSlider({
 }
 
 const styles = StyleSheet.create({
-	podcastSliderRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-	podcastSlider: { flex: 1, height: 25 },
-	seekButton: { width: 48, height: 48, margin: 0 },
+	podcastSlider: { width: '100%', height: 25 },
+	podcastTimeContainer: { width: '100%' },
 	root: {
 		width: '100%',
 		justifyContent: 'center',

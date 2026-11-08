@@ -7,6 +7,7 @@ import { ScrollView } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useDeferredSheetAction } from '@/hooks/ui/useDeferredSheetAction'
 
 import { MusicFunctionalMenu } from './MusicFunctionalMenu'
@@ -20,6 +21,7 @@ export function PlayerFunctionalMenu({
 	setMenuVisible: (visible: boolean) => void
 }) {
 	const { colors } = useTheme()
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 	const sheetRef = useRef<TrueSheet>(null)
 	const scrollViewRef = useRef<ScrollViewInstance>(null)
 	const isPresented = useRef(false)
@@ -68,6 +70,7 @@ export function PlayerFunctionalMenu({
 			detents={['auto']}
 			cornerRadius={24}
 			backgroundColor={colors.elevation.level1}
+			dimOpacity={pureWhiteBackground ? 0 : undefined}
 			style={{ flex: 1 }}
 			onDidDismiss={onDismiss}
 			onDidPresent={onPresent}

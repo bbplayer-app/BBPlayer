@@ -58,7 +58,10 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 	return (
 		<View>
 			<View style={{ marginTop: compact ? 8 : 24 }}>
-				<MainPlaybackControls size={compact ? 'compact' : 'normal'} />
+				<MainPlaybackControls
+					podcast
+					size={compact ? 'compact' : 'normal'}
+				/>
 			</View>
 			<SecondaryPlaybackControls compact={compact}>
 				{actions.map((action) => (

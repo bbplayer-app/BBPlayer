@@ -30,6 +30,7 @@ import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrackIdHook from '@/hooks/player/useCurrentTrackId'
 import { useIsCurrentTrack } from '@/hooks/player/useIsCurrentTrack'
 import { useShuffleMode } from '@/hooks/queries/orpheus'
+import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
@@ -160,6 +161,7 @@ interface PlayerQueueModalProps extends TrueSheetProps {
 }
 
 function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 	const [clearing, setClearing] = useState(false)
 	const { deferAction, runPendingAction } = useDeferredSheetAction()
 
@@ -446,6 +448,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			detents={[0.75, 1]}
 			cornerRadius={24}
 			backgroundColor={theme.colors.elevation.level1}
+			dimOpacity={pureWhiteBackground ? 0 : undefined}
 			style={{ flex: 1 }}
 			scrollableRef={scrollableRef}
 			onMount={scrollToCurrent}

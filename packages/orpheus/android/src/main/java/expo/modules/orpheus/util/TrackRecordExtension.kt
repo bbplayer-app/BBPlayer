@@ -20,7 +20,9 @@ fun TrackRecord.toMediaItem(context: android.content.Context? = null): MediaItem
 
     val finalArtUri = downloadedCoverUri ?: this.artwork
 
-    val artUri = if (!finalArtUri.isNullOrEmpty()) finalArtUri.toUri() else null
+    val artUri = if (GeneralStorage.isNotificationArtworkEnabled() && !finalArtUri.isNullOrEmpty()) {
+        finalArtUri.toUri()
+    } else null
 
     val metadata = MediaMetadata.Builder()
         .setTitle(this.title)

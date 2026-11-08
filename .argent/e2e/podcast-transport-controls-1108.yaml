@@ -1,0 +1,33 @@
+steps:
+  - tap:
+      id: player-forward-15
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:15
+  - tap:
+      id: player-rewind-15
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: player-elapsed-time
+      expectedText: 01:00
+  - tap:
+      id: player-play
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: player-pause
+  - tap:
+      id: player-pause
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: player-play
+executionPrerequisite: Android main podcast player open with Maxinsights episode
+  loaded, playback paused at 60 seconds.

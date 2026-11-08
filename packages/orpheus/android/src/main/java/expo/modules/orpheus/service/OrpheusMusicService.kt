@@ -45,6 +45,7 @@ import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.TrackResumeStorage
 import expo.modules.orpheus.util.calculateLoudnessGain
 import expo.modules.orpheus.util.fadeInTo
+import expo.modules.orpheus.util.toMediaItem
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -132,6 +133,28 @@ class OrpheusMusicService : MediaLibraryService() {
 
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         super.onUpdateNotification(session, true)
+    }
+
+    /** Update presentation metadata without changing the source, position, or saved track artwork. */
+    fun refreshArtworkMetadata() {
+        val p = player ?: return
+        for (index in 0 until p.mediaItemCount) {
+            val item = p.getMediaItemAt(index)
+            val trackJson = item.mediaMetadata.extras?.getString("track_json") ?: continue
+            val track = try {
+                json.decodeFromString<TrackRecord>(trackJson)
+            } catch (e: Exception) {
+                Log.w("Orpheus", "Failed to refresh artwork for ${item.mediaId}", e)
+                continue
+            }
+            val artworkUri = track.toMediaItem(this).mediaMetadata.artworkUri
+            if (item.mediaMetadata.artworkUri == artworkUri && item.mediaMetadata.artworkData == null) continue
+            val metadata = item.mediaMetadata.buildUpon()
+                .setArtworkUri(artworkUri)
+                .setArtworkData(null)
+                .build()
+            p.replaceMediaItem(index, item.buildUpon().setMediaMetadata(metadata).build())
+        }
     }
 
     @OptIn(UnstableApi::class)

@@ -21,6 +21,7 @@ import { useThumbUpVideo } from '@/hooks/mutations/bilibili/video'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetVideoIsThumbUp } from '@/hooks/queries/bilibili/video'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
+import useAppStore from '@/hooks/stores/useAppStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import {
 	SQUIRCLE_RADIUS_RATIO,
@@ -48,6 +49,7 @@ export function TrackInfo({
 	const [isTitleExpanded, setIsTitleExpanded] = useState(false)
 	const [thumbUpBurstSignal, setThumbUpBurstSignal] = useState(0)
 	const activeSkin = useActiveSkin()
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 
 	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 
@@ -117,20 +119,23 @@ export function TrackInfo({
 							onLayout={({ nativeEvent }) => setCoverArea(nativeEvent.layout)}
 							onPress={onPressCover}
 						>
-							{!podcast && enableSpectrumVisualizer && coverSize > 0 && (
-								<View
-									style={[
-										StyleSheet.absoluteFill,
-										{ alignItems: 'center', justifyContent: 'center' },
-									]}
-								>
-									<SpectrumVisualizer
-										isPlaying={isPlaying}
-										size={coverSize}
-										color={colors.primary}
-									/>
-								</View>
-							)}
+							{!pureWhiteBackground &&
+								!podcast &&
+								enableSpectrumVisualizer &&
+								coverSize > 0 && (
+									<View
+										style={[
+											StyleSheet.absoluteFill,
+											{ alignItems: 'center', justifyContent: 'center' },
+										]}
+									>
+										<SpectrumVisualizer
+											isPlaying={isPlaying}
+											size={coverSize}
+											color={colors.primary}
+										/>
+									</View>
+								)}
 							{showCover && (
 								<TouchableOpacity
 									activeOpacity={0.8}
@@ -149,7 +154,17 @@ export function TrackInfo({
 										}}
 										cornerSmoothing={SQUIRCLE_CORNER_SMOOTHING}
 									>
-										{!coverRef ? (
+										{pureWhiteBackground ? (
+											<View
+												style={[
+													styles.coverGradient,
+													{ backgroundColor: colors.background },
+												]}
+												testID='player-cover-placeholder'
+											>
+												<Text>{podcast ? '查看字幕' : '查看歌词'}</Text>
+											</View>
+										) : !coverRef ? (
 											<LinearGradient
 												colors={[color1, color2]}
 												style={[
