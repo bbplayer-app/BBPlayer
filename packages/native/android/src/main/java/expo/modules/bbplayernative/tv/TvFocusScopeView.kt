@@ -28,12 +28,17 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     set(value) {
       if (field == value) return
       field = value
+      isFocusable = value && trapFocus
       if (isAttachedToWindow) {
         if (value) activate() else deactivate()
       }
     }
   var autoFocus = true
   var trapFocus = true
+    set(value) {
+      field = value
+      isFocusable = active && value
+    }
   var restoreFocus = true
 
   private var previousFocus: WeakReference<View>? = null
@@ -45,7 +50,9 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
   private var autoFocusDeadline = 0L
 
   init {
-    isFocusable = false
+    // Loading/progress dialogs may have no focusable children. Keep focus on the scope itself
+    // in that case, rather than leaving the remote able to activate the page behind it.
+    isFocusable = true
     descendantFocusability = FOCUS_AFTER_DESCENDANTS
     clipChildren = false
     clipToPadding = false
@@ -80,7 +87,7 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     scopes.remove(this)
     scopes.add(this)
     val current = rootView.findFocus()
-    hadFocus = current != null && isAncestorOf(current)
+    hadFocus = current != null && contains(current)
     previousFocus = current?.takeUnless { hadFocus }?.let(::WeakReference)
     if (autoFocus) {
       autoFocusDeadline = SystemClock.uptimeMillis() + AUTO_FOCUS_TIMEOUT_MS
@@ -88,6 +95,8 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
       post(autoFocusRunnable)
     }
   }
+
+  private fun contains(view: View): Boolean = view === this || isAncestorOf(view)
 
   private fun deactivate() {
     scopes.remove(this)
@@ -107,7 +116,7 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
       // Another dialog or sheet that is still open owns focus now, unless the previous view is
       // inside it (a dialog opened from a sheet).
       val owner = scopes.lastOrNull { it.rootView === root && it.isOnScreen }
-      if (owner == null || owner.isAncestorOf(previous)) {
+      if (owner == null || owner.contains(previous)) {
         previous.requestFocus()
       }
     }
@@ -126,7 +135,7 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
   }
 
   override fun focusSearch(focused: View?, direction: Int): View? {
-    if (!active || !trapFocus || focused == null || isInTouchMode || !isAncestorOf(focused)) {
+    if (!active || !trapFocus || focused == null || isInTouchMode || !contains(focused)) {
       return super.focusSearch(focused, direction)
     }
     val next = try {
@@ -147,6 +156,17 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     /** Active scopes, most recently activated last. Touched on the main thread only. */
     private val scopes = mutableListOf<TvFocusScopeView>()
 
+    internal fun onTouchModeChanged(root: View, isInTouchMode: Boolean) {
+      if (isInTouchMode) return
+      val scope = scopes.lastOrNull { it.rootView === root && it.isOnScreen } ?: return
+      if (!scope.autoFocus || scope.hasFocus()) return
+      // A scope opened by touch skipped its initial autofocus. Entering key navigation must
+      // hand focus to that scope even when the window's previously focused view did not change.
+      scope.autoFocusDeadline = SystemClock.uptimeMillis() + AUTO_FOCUS_TIMEOUT_MS
+      scope.removeCallbacks(scope.autoFocusRunnable)
+      scope.post(scope.autoFocusRunnable)
+    }
+
     /**
      * Called for every focus change in [root]'s window. Records which scopes have held focus, and
      * pulls focus back into the newest visible scope when something outside it takes focus (for
@@ -156,11 +176,11 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
       var top: TvFocusScopeView? = null
       for (scope in scopes) {
         if (scope.rootView !== root) continue
-        if (scope.isAncestorOf(newFocus)) scope.hadFocus = true
+        if (scope.contains(newFocus)) scope.hadFocus = true
         if (scope.isOnScreen) top = scope
       }
       val scope = top ?: return
-      if (scope.isAncestorOf(newFocus) || !scope.trapFocus || scope.isInTouchMode) return
+      if (scope.contains(newFocus) || !scope.trapFocus || scope.isInTouchMode) return
       scope.post {
         if (scope.active && scope.isOnScreen && !scope.isInTouchMode && scope.findFocus() == null) {
           scope.requestFocus(View.FOCUS_DOWN)

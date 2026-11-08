@@ -122,6 +122,7 @@ internal class TvFocusHighlighter private constructor(private val root: View) :
   }
 
   override fun onTouchModeChanged(isInTouchMode: Boolean) {
+    TvFocusScopeView.onTouchModeChanged(root, isInTouchMode)
     // Leaving touch mode re-shows the ring where focus already is, without sliding in.
     animating = false
     refresh()
