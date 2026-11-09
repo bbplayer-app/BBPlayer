@@ -244,7 +244,7 @@ def main():
     expo_plist = IOS / 'BBPlayer/Supporting/Expo.plist'
     if expo_plist.exists():
         shutil.copy2(expo_plist, OUT / 'Expo.plist')
-    hermesc = newest_match(PNPM_STORE, 'hermes-compiler@*/node_modules/hermes-compiler/hermesc/linux64-bin/hermesc')
+    hermesc = Path(b.node_resolve('hermes-compiler', b.node_resolve('react-native'))) / 'hermesc/linux64-bin/hermesc'
     subprocess.run([str(hermesc), '-emit-binary', '-O', '-w', '-out', str(OUT / 'main.jsbundle'), str(JS / 'main.jsbundle')], check=True)
     if (JS / 'assets').exists():
         b.copy_tree_entry(JS / 'assets', OUT / 'assets')

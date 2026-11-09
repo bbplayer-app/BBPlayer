@@ -691,7 +691,12 @@ class OrpheusPlayerManager: NSObject {
         nowPlayingArtwork = nil
         guard let url = URL(string: urlString) else { return }
         downloadImage(url: url) { [weak self] image in
-            guard let self, let image, self.nowPlayingArtworkUrl == urlString else { return }
+            guard let self, self.nowPlayingArtworkUrl == urlString else { return }
+            guard let image else {
+                // Forgetting the URL makes the next now-playing update try again.
+                self.nowPlayingArtworkUrl = nil
+                return
+            }
             self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
             self.updateNowPlayingInfo()
         }
@@ -699,10 +704,7 @@ class OrpheusPlayerManager: NSObject {
 
     private func downloadImage(url: URL, completion: @escaping (UIImage?) -> Void) {
         URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data, let image = UIImage(data: data) else {
-                completion(nil)
-                return
-            }
+            let image = data.flatMap { UIImage(data: $0) }
             DispatchQueue.main.async {
                 completion(image)
             }

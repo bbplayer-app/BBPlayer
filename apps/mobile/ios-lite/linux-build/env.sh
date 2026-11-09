@@ -20,7 +20,8 @@ export PATH="$BB/bin:$PATH"
 project_fingerprint() {
   (
     cd "$REPO"
-    find packages/*/ios -type f \( -name '*.swift' -o -name '*.h' -o -name '*.m' -o -name '*.mm' -o -name '*.podspec' \) | LC_ALL=C sort
+    find packages/*/ios -type f \( -name '*.swift' -o -name '*.h' -o -name '*.m' -o -name '*.mm' \) | LC_ALL=C sort
+    find packages -maxdepth 3 -type f \( -name '*.podspec' -o -name 'expo-module.config.json' \) | LC_ALL=C sort | xargs -r -d '\n' sha256sum
     sha256sum pnpm-lock.yaml apps/mobile/app.config.ts "$HERE/prepare.sh" "$HERE/patch-podfile.py" \
       "$HERE/autolink-filter.js" "$HERE/pod-install.sh" "$HERE/export-manifest.rb" "$HERE/Dockerfile"
   ) | sha256sum | cut -d' ' -f1

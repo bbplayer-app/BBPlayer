@@ -402,7 +402,7 @@ public class ExpoOrpheusModule: Module {
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
 
-    Function("updateSpectrumData") { (destination: TypedArray) in
+    Function("updateSpectrumData") { (destination: Float32Array) in
         let pointer = destination.rawPointer.assumingMemoryBound(to: Float32.self)
         AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: pointer, count: destination.length)
     }

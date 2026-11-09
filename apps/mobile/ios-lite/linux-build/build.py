@@ -45,6 +45,7 @@ LOGS = ROOT / 'logs'
 CACHE = ROOT / 'ModuleCache'
 SHIMS = SCRIPT_DIR / 'shims'
 XCFW_DIR = PROD / 'XCFrameworkIntermediates'
+PREBUILTS_DONE = ROOT / 'prebuilts.done'
 DT = '16.4'
 ALL_HEADERS = ROOT / 'all-target-headers'
 GLOBAL_IQUOTE = [PODS / 'React-Core-prebuilt/Headers/React_RCTAppDelegate', ALL_HEADERS,
@@ -61,6 +62,7 @@ OVERLAYS = {
     ],
 }
 VAR = re.compile(r'\$\(([^()$]+)\)|\$\{([^{}$]+)\}')
+XCCONFIG_SETTING = re.compile(r'^([A-Za-z0-9_]+(?:\[[^\]]*\])*)\s*=\s*(.*)$')
 print_lock = threading.Lock()
 
 
@@ -71,7 +73,7 @@ def log(msg):
 
 def node_resolve(package, base=None):
     """Find an installed package the way Node would, from `base` when it is a transitive dependency."""
-    paths = f",{{paths:['{base}']}}" if base else ''
+    paths = f',{{paths:[{json.dumps(base)}]}}' if base else ''
     return subprocess.check_output(
         ['node', '-p', f"require('path').dirname(require.resolve('{package}/package.json'{paths}))"],
         cwd=MOBILE, text=True).strip()
@@ -188,11 +190,9 @@ def parse_xcconfig(path):
     if not path or not Path(path).exists():
         return out
     for line in Path(path).read_text(errors='replace').splitlines():
-        line = line.strip()
-        if not line or line.startswith('//') or line.startswith('#') or '=' not in line:
-            continue
-        key, value = line.split('=', 1)
-        out[key.strip()] = value.strip()
+        match = XCCONFIG_SETTING.match(line.strip())
+        if match:
+            out[match.group(1)] = match.group(2)
     return out
 
 
@@ -543,10 +543,22 @@ class Builder:
             digest.update(self.swift_stamps.get(dep, '').encode())
         return digest.hexdigest()
 
+    def imported_headers(self, target):
+        """Every header and module map this target's Swift can reach, through its own module or a dependency's."""
+        paths = []
+        for name in self.swift_closure(target) | {target.name}:
+            dep = self.targets[name]
+            paths += [item['path'] for item in dep.raw.get('headers', []) if item.get('path')]
+            modulemap = dep.s.get('MODULEMAP_FILE')
+            if modulemap:
+                paths.append(str(PODS / modulemap))
+        return sorted(paths)
+
     def compile_swift(self, target):
         args = swift_args(target)
         _, header, obj = swift_outputs(target)
-        key = hashlib.sha256(json.dumps(args).encode()).hexdigest() + file_stamp(target.swift_files) + self.transitive_swift_stamp(target)
+        key = (hashlib.sha256(json.dumps(args).encode()).hexdigest() + file_stamp(target.swift_files)
+               + file_stamp(self.imported_headers(target)) + self.transitive_swift_stamp(target))
         stamp = INT / target.name / 'swift.stamp'
         self.swift_stamps[target.name] = hashlib.sha256(key.encode()).hexdigest()
         if stamp.exists() and stamp.read_text() == key and obj.exists():
@@ -750,7 +762,9 @@ def copy_bundles(targets):
         if target.kind != 'bundle':
             continue
         out = target.built / f'{target.product}.bundle'
-        out.mkdir(parents=True, exist_ok=True)
+        if out.exists():
+            force_rmtree(out)
+        out.mkdir(parents=True)
         for item in target.raw.get('resources', []):
             if item.get('path') and Path(item['path']).exists():
                 copy_tree_entry(item['path'], out / item['name'])
@@ -789,6 +803,8 @@ def main():
     if not options.skip_jsi:
         log('== ExpoModulesJSI')
         build_jsi()
+    if not options.skip_prebuilts and not options.skip_jsi:
+        PREBUILTS_DONE.touch()
     log('== target layout')
     # Stands in for Xcode's all-non-framework-target-headers header map.
     if ALL_HEADERS.exists():

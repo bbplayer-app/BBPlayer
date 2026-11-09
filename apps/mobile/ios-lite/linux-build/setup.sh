@@ -4,7 +4,7 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
-for tool in curl docker gpg node npx pnpm python3 zip unzip; do
+for tool in curl docker gpg node npx pnpm python3; do
   command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
 done
 mkdir -p "$BB/downloads" "$BB/bin"
@@ -27,8 +27,12 @@ if [ ! -x "$SWIFT_HOME/usr/bin/swift" ]; then
   trap 'rm -rf "$keyring"' EXIT
   curl -fsSL --compressed --retry 5 https://www.swift.org/keys/all-keys.asc | GNUPGHOME="$keyring" gpg --batch --quiet --import
   GNUPGHOME="$keyring" gpg --batch --quiet --verify "$tarball.sig" "$tarball"
-  mkdir -p "$SWIFT_HOME"
-  tar -xzf "$tarball" --strip-components=1 -C "$SWIFT_HOME"
+  # Extract to the side first, so an interrupted run can't pass for a finished install.
+  rm -rf "$SWIFT_HOME.partial"
+  mkdir -p "$SWIFT_HOME.partial"
+  tar -xzf "$tarball" --strip-components=1 -C "$SWIFT_HOME.partial"
+  rm -rf "$SWIFT_HOME"
+  mv "$SWIFT_HOME.partial" "$SWIFT_HOME"
 fi
 "$SWIFT_HOME/usr/bin/swift" --version 2>&1 | head -n 1
 

@@ -15,8 +15,10 @@ class AudioSpectrumAnalyzer {
     // Safe data storage ensuring thread safety (Tap runs on audio thread)
     private var frequencyData = [Float](repeating: 0, count: 512) // fftSize / 2
     private let lock = NSLock()
+    private var isEnabled: Bool // Guarded by lock, like frequencyData
     
     private init() {
+        isEnabled = GeneralStorage.shared.isSpectrumVisualizerEnabled
         fftSetup = vDSP_DFT_zop_CreateSetup(nil, vDSP_Length(fftSize), vDSP_DFT_Direction.FORWARD)
     }
     
@@ -68,6 +70,12 @@ class AudioSpectrumAnalyzer {
     
     // Called from Audio Thread - performance critical!
     private func processAudio(bufferList: UnsafeMutablePointer<AudioBufferList>, frames: CMItemCount) {
+        // The audio thread must never wait on the lock, and skipping one frame is harmless.
+        guard lock.try() else { return }
+        let enabled = isEnabled
+        lock.unlock()
+        guard enabled else { return }
+
         let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
         
         // Assume non-interleaved or take the first channel
@@ -152,6 +160,17 @@ class AudioSpectrumAnalyzer {
     }
     
     // MARK: - Public Accessor
+
+    /// The tap stays attached either way, so turning this back on works during playback.
+    func setEnabled(_ enabled: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        isEnabled = enabled
+        if !enabled {
+            frequencyData = [Float](repeating: 0, count: frequencyData.count)
+        }
+    }
     
     func fillSpectrumData(destination: UnsafeMutablePointer<Float32>, count: Int) {
         lock.lock()

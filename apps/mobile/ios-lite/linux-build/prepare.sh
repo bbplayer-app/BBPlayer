@@ -11,7 +11,7 @@ echo '== dependencies'
 (cd "$REPO" && pnpm install --frozen-lockfile)
 
 echo '== CocoaPods image'
-docker build -q -t "$PODS_IMAGE" "$HERE"
+docker build -q --build-arg NODE_VERSION="$(node -p process.versions.node)" -t "$PODS_IMAGE" "$HERE"
 
 echo '== expo prebuild'
 cd "$MOBILE"
@@ -29,16 +29,15 @@ python3 "$HERE/patch-podfile.py" "$MOBILE/ios/Podfile" "$HERE/autolink-filter.js
 printf 'http1.1\nretry = 5\nconnect-timeout = 30\n' > "$PODS_HOME/.curlrc"
 printf '[http]\n\tversion = HTTP/1.1\n\tlowSpeedLimit = 1000\n\tlowSpeedTime = 60\n[core]\n\tcompression = 0\n' > "$PODS_HOME/.gitconfig"
 
-node_root="$(dirname "$(dirname "$(readlink -f "$(command -v node)")")")"
 pods_container() {
   docker run --rm -u "$(id -u):$(id -g)" \
-    -v "$REPO:$REPO" -v "$BB:$BB" -v "$node_root:$node_root:ro" \
+    -v "$REPO:$REPO" -v "$BB:$BB" \
     -e HOME="$PODS_HOME" -e GEM_HOME="$PODS_HOME/gems" -e GEM_PATH="$PODS_HOME/gems" \
     -e CP_HOME_DIR="$PODS_HOME/cocoapods" -e CP_CACHE_DIR="$PODS_HOME/cache" \
     -e BBPLAYER_IOS_SDK="$SDK_BUNDLE" -e BBPLAYER_IOS_STUB="$BB/bin/stub.dylib" \
     -e RCT_REACT_NATIVE_MAVEN_MIRROR_ENABLED=0 -e TAR_OPTIONS=--wildcards \
     -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -e COCOAPODS_DISABLE_STATS=1 \
-    -e PATH="$HERE/pods-bin:$PODS_HOME/gems/bin:$node_root/bin:/usr/local/bin:/usr/bin:/bin" \
+    -e PATH="$HERE/pods-bin:$PODS_HOME/gems/bin:/usr/local/bin:/usr/bin:/bin" \
     -w "$MOBILE/ios" "$PODS_IMAGE" "$@"
 }
 
@@ -55,7 +54,7 @@ echo '== build graph'
 pods_container ruby "$HERE/export-manifest.rb" "$MOBILE/ios/Pods" "$BB/build/manifest.json"
 
 # These came from the previous Pods checkout, so the next build has to recreate them.
-rm -rf "$BB/build/products/Release-iphoneos/XCFrameworkIntermediates" "$BB/build/jsi-src"
+rm -rf "$BB/build/products/Release-iphoneos/XCFrameworkIntermediates" "$BB/build/jsi-src" "$BB/build/prebuilts.done"
 
 project_fingerprint > "$BB/build/prepare.stamp"
 echo 'iOS project ready.'

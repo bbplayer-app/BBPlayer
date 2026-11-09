@@ -70,10 +70,11 @@ if ! CI=1 EXPO_NO_TELEMETRY=1 NODE_ENV=production APP_VARIANT=production BBPLAYE
 fi
 
 cd "$HERE"
-prebuilts="$BB/build/products/Release-iphoneos/XCFrameworkIntermediates/ExpoModulesJSI"
-if [ "$native" = 1 ] || [ ! -d "$prebuilts" ]; then
+# build.py writes this once the prebuilt frameworks and ExpoModulesJSI are both in place.
+prebuilts_done="$BB/build/prebuilts.done"
+if [ "$native" = 1 ] || [ ! -f "$prebuilts_done" ]; then
   skip=()
-  [ ! -d "$prebuilts" ] || skip=(--skip-jsi --skip-prebuilts)
+  [ ! -f "$prebuilts_done" ] || skip=(--skip-jsi --skip-prebuilts)
   python3 -u build.py "${skip[@]}"
 fi
 python3 -u build-app.py

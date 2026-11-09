@@ -13,7 +13,7 @@
 ## 准备
 
 - x86_64 的 Ubuntu（WSL2 也可以），至少 40 GB 空闲磁盘。
-- Docker、Node.js、pnpm、Python 3、curl、gpg、zip、unzip。
+- Docker、Node.js、pnpm、Python 3、curl、gpg。
 - 从 [Apple 开发者网站](https://developer.apple.com/download/all/) 下载的 `Xcode.xip`，用来提取 iOS SDK。
 - Apple ID。免费账号也可以，但装上的 App 7 天后会过期，到时重新安装即可。
 - iPhone 打开开发者模式：设置 → 隐私与安全性 → 开发者模式。

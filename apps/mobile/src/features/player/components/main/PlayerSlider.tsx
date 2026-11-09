@@ -1,7 +1,7 @@
 import { useIsPlaying } from '@bbplayer/orpheus'
 import Color from 'color'
 import { WavySlider } from 'expo-wavy-slider'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import AnimateableText from 'react-native-animateable-text'
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler'
@@ -32,6 +32,10 @@ import { seekWithinTrack } from '@/lib/player/seek'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
 import { formatDurationToHHMMSS } from '@/utils/time'
+
+const isIOS = Platform.OS === 'ios'
+const SLIDER_WIDTH_PERCENT = 90
+const ACCESSIBILITY_SEEK_SECONDS = 10
 
 function TextWithAnimation({
 	sharedPosition,
@@ -183,6 +187,17 @@ export function PlayerSlider({
 		return position.value
 	})
 
+	// 进度在 UI 线程上，无障碍属性拿不到；iOS 上每 5 秒同步一份给 VoiceOver。
+	const [spokenPosition, setSpokenPosition] = useState('00:00')
+	useAnimatedReaction(
+		() => (isIOS ? Math.trunc(displayPosition.value / 5) * 5 : 0),
+		(seconds, previous) => {
+			if (seconds !== previous) {
+				scheduleOnRN(setSpokenPosition, formatDurationToHHMMSS(seconds))
+			}
+		},
+	)
+
 	const chapterPreviewProps = useAnimatedProps(() => {
 		const time = displayPosition.value
 		const chapter = chapters[chapterIndexAt(chapters, time)]
@@ -319,10 +334,15 @@ export function PlayerSlider({
 	)
 
 	const sliderWidth = useSharedValue(0)
+	const scrubActivated = useSharedValue(false)
+	const trackRatio = podcast ? 1 : SLIDER_WIDTH_PERCENT / 100
 	const toFraction = (x: number) => {
 		'worklet'
-		const width = sliderWidth.value
-		return width > 0 ? Math.min(Math.max(x / width, 0), 1) : 0
+		// 手势区域占满整行，非播客模式下可见轨道居中且更窄，要换算成轨道上的位置。
+		const trackWidth = sliderWidth.value * trackRatio
+		if (trackWidth <= 0) return 0
+		const trackLeft = (sliderWidth.value - trackWidth) / 2
+		return Math.min(Math.max((x - trackLeft) / trackWidth, 0), 1)
 	}
 
 	// iOS 的滑块由这个手势驱动：手指一动就激活，才能抢在原生的分页和返回手势之前。
@@ -332,8 +352,13 @@ export function PlayerSlider({
 		hitSlop: { vertical: 10 },
 		onBegin: (event) => {
 			'worklet'
+			scrubActivated.set(false)
 			handleDragStateChange(true)
 			handleValueChange(toFraction(event.x))
+		},
+		onActivate: () => {
+			'worklet'
+			scrubActivated.set(true)
 		},
 		onUpdate: (event) => {
 			'worklet'
@@ -341,7 +366,10 @@ export function PlayerSlider({
 		},
 		onFinalize: (event) => {
 			'worklet'
-			handleValueChangeFinished(toFraction(event.x))
+			// 手指没动的点按不会激活手势，结束时同样带 canceled，只有拖动中途被打断才放弃跳转。
+			if (!event.canceled || !scrubActivated.value) {
+				handleValueChangeFinished(toFraction(event.x))
+			}
 			handleDragStateChange(false)
 		},
 	})
@@ -371,7 +399,7 @@ export function PlayerSlider({
 	const slider = (
 		<WavySlider
 			style={podcast ? styles.podcastSlider : styles.slider}
-			enabled={Platform.OS !== 'ios' && canSeek}
+			enabled={!isIOS && canSeek}
 			chapterMarkers={markers}
 			progress={progressFraction}
 			// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
@@ -413,9 +441,22 @@ export function PlayerSlider({
 					}}
 				/>
 			)}
-			{Platform.OS === 'ios' ? (
+			{isIOS ? (
 				<GestureDetector gesture={scrubGesture}>
 					<View
+						accessible
+						accessibilityRole='adjustable'
+						accessibilityLabel='播放进度'
+						accessibilityValue={{ text: spokenPosition }}
+						accessibilityActions={[
+							{ name: 'increment' },
+							{ name: 'decrement' },
+						]}
+						onAccessibilityAction={(event) => {
+							const direction =
+								event.nativeEvent.actionName === 'increment' ? 1 : -1
+							void handleSeek(direction * ACCESSIBILITY_SEEK_SECONDS, true)
+						}}
 						onLayout={(event) => {
 							sliderWidth.set(event.nativeEvent.layout.width)
 						}}
@@ -447,7 +488,7 @@ const styles = StyleSheet.create({
 	},
 	slider: {
 		height: 25,
-		width: '90%' as const,
+		width: `${SLIDER_WIDTH_PERCENT}%` as const,
 		alignSelf: 'center',
 	},
 	timeContainer: {

@@ -53,7 +53,10 @@ class GeneralStorage {
 
     var isSpectrumVisualizerEnabled: Bool {
         get { return mmkv?.bool(forKey: KEY_SPECTRUM_VISUALIZER_ENABLED, defaultValue: false) ?? false }
-        set { mmkv?.set(newValue, forKey: KEY_SPECTRUM_VISUALIZER_ENABLED) }
+        set {
+            mmkv?.set(newValue, forKey: KEY_SPECTRUM_VISUALIZER_ENABLED)
+            AudioSpectrumAnalyzer.shared.setEnabled(newValue)
+        }
     }
     
     var isNotificationArtworkEnabled: Bool {

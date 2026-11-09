@@ -12,7 +12,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     private var activeTasks: [String: URLSessionDownloadTask] = [:] // Map ID to task
     private var trackMap: [String: Track] = [:] // Map ID to Track metadata
     private var pendingIds: [String] = [] // Tasks waiting for a free slot, oldest first
-    private var resolvingIds = Set<String>() // Tasks holding a slot while their URL is resolved
+    private var resolvingTokens: [String: UUID] = [:] // Tasks holding a slot while their URL is resolved, one token per attempt
     private var maxParallelTasks = 1
     var onDownloadUpdated: ((DownloadTask) -> Void)?
     
@@ -55,7 +55,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     }
 
     private func canQueueLocked(id: String) -> Bool {
-        if activeTasks[id] != nil || resolvingIds.contains(id) || pendingIds.contains(id) {
+        if activeTasks[id] != nil || resolvingTokens[id] != nil || pendingIds.contains(id) {
             return false
         }
         return downloadTasks[id] != .completed || getDownloadedFileUrl(id: id) == nil
@@ -63,24 +63,32 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
 
     /// Fills free slots in order, so a URL is resolved only when its download can start.
     private func startPendingDownloads() {
-        let tracks: [Track] = stateQueue.sync {
-            var tracks: [Track] = []
-            while activeTasks.count + resolvingIds.count < maxParallelTasks, !pendingIds.isEmpty {
+        let starts: [(track: Track, token: UUID)] = stateQueue.sync {
+            var starts: [(track: Track, token: UUID)] = []
+            while activeTasks.count + resolvingTokens.count < maxParallelTasks, !pendingIds.isEmpty {
                 let id = pendingIds.removeFirst()
                 guard let track = trackMap[id] else { continue }
-                resolvingIds.insert(id)
-                tracks.append(track)
+                let token = UUID()
+                resolvingTokens[id] = token
+                starts.append((track, token))
             }
-            return tracks
+            return starts
         }
 
-        for track in tracks {
+        for (track, token) in starts {
             if isBilibili(track) {
-                resolveAndDownload(track: track)
+                resolveAndDownload(track: track, token: token)
             } else {
-                startDownload(url: track.url, track: track)
+                startDownload(url: track.url, track: track, token: token)
             }
         }
+    }
+
+    /// Ends a resolve attempt, unless its task was removed or queued again since it began.
+    private func finishResolvingLocked(id: String, token: UUID) -> Bool {
+        guard resolvingTokens[id] == token else { return false }
+        resolvingTokens.removeValue(forKey: id)
+        return true
     }
 
     private func isBilibili(_ track: Track) -> Bool {
@@ -92,15 +100,15 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         downloadTrack(track: track)
     }
     
-    private func resolveAndDownload(track: Track) {
+    private func resolveAndDownload(track: Track, token: UUID) {
         guard let queryItems = URLComponents(string: track.url)?.queryItems,
               let bvid = queryItems.first(where: { $0.name == "bvid" })?.value else {
-            failDownload(track: track, reason: "no bvid in \(track.url)")
+            failDownload(track: track, token: token, reason: "no bvid in \(track.url)")
             return
         }
 
         if let cid = queryItems.first(where: { $0.name == "cid" })?.value {
-            resolvePlayUrl(bvid: bvid, cid: cid, track: track)
+            resolvePlayUrl(bvid: bvid, cid: cid, track: track, token: token)
             return
         }
 
@@ -108,35 +116,34 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
             switch result {
             case .success(let cid):
-                self?.resolvePlayUrl(bvid: bvid, cid: String(cid), track: track)
+                self?.resolvePlayUrl(bvid: bvid, cid: String(cid), track: track, token: token)
             case .failure(let error):
-                self?.failDownload(track: track, reason: error.localizedDescription)
+                self?.failDownload(track: track, token: token, reason: error.localizedDescription)
             }
         }
     }
 
-    private func resolvePlayUrl(bvid: String, cid: String, track: Track) {
+    private func resolvePlayUrl(bvid: String, cid: String, track: Track, token: UUID) {
         BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid) { [weak self] result in
             switch result {
             case .success(let stream):
                 guard let url = stream.urls.first else {
-                    self?.failDownload(track: track, reason: "no playable stream")
+                    self?.failDownload(track: track, token: token, reason: "no playable stream")
                     return
                 }
-                self?.startDownload(url: url, track: track)
+                self?.startDownload(url: url, track: track, token: token)
             case .failure(let error):
-                self?.failDownload(track: track, reason: error.localizedDescription)
+                self?.failDownload(track: track, token: token, reason: error.localizedDescription)
             }
         }
     }
 
     /// Fails a task that has not reached URLSession yet.
-    private func failDownload(track: Track, reason: String) {
+    private func failDownload(track: Track, token: UUID, reason: String) {
         NSLog("[OrpheusDownload] %@ failed: %@", track.id, reason)
 
         let failed: Bool = stateQueue.sync {
-            // The task may have been removed while its URL was being resolved.
-            guard resolvingIds.remove(track.id) != nil else { return false }
+            guard finishResolvingLocked(id: track.id, token: token) else { return false }
             downloadTasks[track.id] = .failed
             saveTasksLocked()
             return true
@@ -165,9 +172,9 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         onDownloadUpdated?(task)
     }
 
-    private func startDownload(url: String, track: Track) {
+    private func startDownload(url: String, track: Track, token: UUID) {
         guard let nsUrl = URL(string: url) else {
-            failDownload(track: track, reason: "invalid URL \(url)")
+            failDownload(track: track, token: token, reason: "invalid URL \(url)")
             return
         }
 
@@ -178,8 +185,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         }
 
         let started: Bool = stateQueue.sync {
-            // The task may have been removed while its URL was being resolved.
-            guard resolvingIds.remove(track.id) != nil else { return false }
+            guard finishResolvingLocked(id: track.id, token: token) else { return false }
 
             let task = urlSession.downloadTask(with: request)
             task.taskDescription = track.id
@@ -211,7 +217,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             try? fileManager.removeItem(at: dest)
             
             pendingIds.removeAll { $0 == id }
-            resolvingIds.remove(id)
+            resolvingTokens.removeValue(forKey: id)
             downloadTasks.removeValue(forKey: id)
             trackMap.removeValue(forKey: id)
 
@@ -234,7 +240,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             try? fileManager.removeItem(at: downloadsDir)
             
             pendingIds.removeAll()
-            resolvingIds.removeAll()
+            resolvingTokens.removeAll()
             downloadTasks.removeAll()
             trackMap.removeAll()
             
@@ -412,6 +418,8 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     private func markFailed(id: String) {
         var track: Track?
         stateQueue.sync {
+            // Otherwise a retry right after this notice would find the old task still active.
+            activeTasks.removeValue(forKey: id)
             downloadTasks[id] = .failed
             saveTasksLocked()
             track = trackMap[id]
@@ -521,7 +529,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             }
 
             pendingIds.removeAll()
-            resolvingIds.removeAll()
+            resolvingTokens.removeAll()
             saveTasksLocked()
         }
     }

@@ -29,8 +29,21 @@ export default function PlaybackSpeedSlider({
 		onValueChange(min + Math.round((ratio * range) / step) * step)
 	}
 
+	const adjustByStep = (direction: number) => {
+		onValueChange(Math.min(Math.max(value + direction * step, min), max))
+		onValueChangeFinished()
+	}
+
 	return (
 		<View
+			accessible
+			accessibilityRole='adjustable'
+			accessibilityLabel='播放速度'
+			accessibilityValue={{ text: `${value.toFixed(2)}x` }}
+			accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+			onAccessibilityAction={(event) =>
+				adjustByStep(event.nativeEvent.actionName === 'increment' ? 1 : -1)
+			}
 			style={styles.container}
 			onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
 			onStartShouldSetResponder={() => true}
