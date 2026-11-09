@@ -2,8 +2,9 @@ import { useIsPlaying } from '@bbplayer/orpheus'
 import Color from 'color'
 import { WavySlider } from 'expo-wavy-slider'
 import { useCallback, useEffect, useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 import AnimateableText from 'react-native-animateable-text'
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler'
 import { useTheme } from 'react-native-paper'
 import {
 	useAnimatedProps,
@@ -317,6 +318,34 @@ export function PlayerSlider({
 		[isNativeDragging, isScrubbing],
 	)
 
+	const sliderWidth = useSharedValue(0)
+	const toFraction = (x: number) => {
+		'worklet'
+		const width = sliderWidth.value
+		return width > 0 ? Math.min(Math.max(x / width, 0), 1) : 0
+	}
+
+	// iOS 的滑块由这个手势驱动：手指一动就激活，才能抢在原生的分页和返回手势之前。
+	const scrubGesture = usePanGesture({
+		enabled: canSeek,
+		minDistance: 0,
+		hitSlop: { vertical: 10 },
+		onBegin: (event) => {
+			'worklet'
+			handleDragStateChange(true)
+			handleValueChange(toFraction(event.x))
+		},
+		onUpdate: (event) => {
+			'worklet'
+			handleValueChange(toFraction(event.x))
+		},
+		onFinalize: (event) => {
+			'worklet'
+			handleValueChangeFinished(toFraction(event.x))
+			handleDragStateChange(false)
+		},
+	})
+
 	const sliderColors = useMemo(
 		() => ({
 			activeTrackColor: colors.primary,
@@ -339,6 +368,37 @@ export function PlayerSlider({
 	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
 	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
+	const slider = (
+		<WavySlider
+			style={podcast ? styles.podcastSlider : styles.slider}
+			enabled={Platform.OS !== 'ios' && canSeek}
+			chapterMarkers={markers}
+			progress={progressFraction}
+			// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
+			colors={sliderColors}
+			waveLength={30}
+			waveVelocity={animatedWaveVelocity}
+			waveDirection='head'
+			waveHeight={animatedWaveHeight}
+			waveThickness={animatedWaveThickness}
+			trackThickness={animatedTrackThickness}
+			thumbImageUri={sliderThumb?.normal}
+			thumbImageDragLeftUri={sliderThumb?.dragLeft}
+			thumbImageDragRightUri={sliderThumb?.dragRight}
+			thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
+			thumbImageOffsetX={
+				hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
+			}
+			thumbImageOffsetY={
+				hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
+			}
+			incremental={false}
+			onValueChange={handleValueChange}
+			onValueChangeFinished={handleValueChangeFinished}
+			onDragStateChange={handleDragStateChange}
+		/>
+	)
+
 	return (
 		<View style={styles.root}>
 			{podcast && showChapterTitle && (
@@ -353,36 +413,19 @@ export function PlayerSlider({
 					}}
 				/>
 			)}
-			<View>
-				<WavySlider
-					style={podcast ? styles.podcastSlider : styles.slider}
-					enabled={canSeek}
-					chapterMarkers={markers}
-					progress={progressFraction}
-					// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
-					colors={sliderColors}
-					waveLength={30}
-					waveVelocity={animatedWaveVelocity}
-					waveDirection='head'
-					waveHeight={animatedWaveHeight}
-					waveThickness={animatedWaveThickness}
-					trackThickness={animatedTrackThickness}
-					thumbImageUri={sliderThumb?.normal}
-					thumbImageDragLeftUri={sliderThumb?.dragLeft}
-					thumbImageDragRightUri={sliderThumb?.dragRight}
-					thumbImageSize={hasSkinSliderThumb ? skinSliderThumbSize : undefined}
-					thumbImageOffsetX={
-						hasSkinSliderThumb ? skinSliderThumbOffsetX : undefined
-					}
-					thumbImageOffsetY={
-						hasSkinSliderThumb ? skinSliderThumbOffsetY : undefined
-					}
-					incremental={false}
-					onValueChange={handleValueChange}
-					onValueChangeFinished={handleValueChangeFinished}
-					onDragStateChange={handleDragStateChange}
-				/>
-			</View>
+			{Platform.OS === 'ios' ? (
+				<GestureDetector gesture={scrubGesture}>
+					<View
+						onLayout={(event) => {
+							sliderWidth.set(event.nativeEvent.layout.width)
+						}}
+					>
+						{slider}
+					</View>
+				</GestureDetector>
+			) : (
+				<View>{slider}</View>
+			)}
 			<View
 				style={[styles.timeContainer, podcast && styles.podcastTimeContainer]}
 			>

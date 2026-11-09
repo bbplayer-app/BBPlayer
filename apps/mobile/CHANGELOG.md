@@ -7,6 +7,11 @@
 
 ## [UNRELEASED]
 
+### Added
+
+- 初步支持 iOS：可以在 iPhone 上登录、播放和下载
+- 新增在 Linux 上构建 iOS 版的脚本，没有 Mac 也能自己构建
+
 ### Changed
 
 - 优化墨水屏

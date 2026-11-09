@@ -11,6 +11,9 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     private var downloadTasks: [String: DownloadState] = [:] // Map taskID/url to state
     private var activeTasks: [String: URLSessionDownloadTask] = [:] // Map ID to task
     private var trackMap: [String: Track] = [:] // Map ID to Track metadata
+    private var pendingIds: [String] = [] // Tasks waiting for a free slot, oldest first
+    private var resolvingIds = Set<String>() // Tasks holding a slot while their URL is resolved
+    private var maxParallelTasks = 1
     var onDownloadUpdated: ((DownloadTask) -> Void)?
     
     override init() {
@@ -24,13 +27,64 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     }
     
     func downloadTrack(track: Track) {
-        // Resolve URL if needed (Bilibili logic)
-        let urlString = track.url
-        if urlString.starts(with: "orpheus://bilibili") {
-            resolveAndDownload(track: track)
-        } else {
-            startDownload(url: urlString, track: track)
+        multiDownload(tracks: [track])
+    }
+
+    func multiDownload(tracks: [Track]) {
+        let queued: [Track] = stateQueue.sync {
+            var queued: [Track] = []
+            for track in tracks where canQueueLocked(id: track.id) {
+                trackMap[track.id] = track
+                downloadTasks[track.id] = .queued
+                pendingIds.append(track.id)
+                queued.append(track)
+            }
+            saveTasksLocked()
+            return queued
         }
+
+        for track in queued {
+            notifyUpdate(id: track.id, state: .queued, track: track)
+        }
+        startPendingDownloads()
+    }
+
+    func setMaxParallelTasks(_ count: Int) {
+        stateQueue.sync { maxParallelTasks = max(count, 1) }
+        startPendingDownloads()
+    }
+
+    private func canQueueLocked(id: String) -> Bool {
+        if activeTasks[id] != nil || resolvingIds.contains(id) || pendingIds.contains(id) {
+            return false
+        }
+        return downloadTasks[id] != .completed || getDownloadedFileUrl(id: id) == nil
+    }
+
+    /// Fills free slots in order, so a URL is resolved only when its download can start.
+    private func startPendingDownloads() {
+        let tracks: [Track] = stateQueue.sync {
+            var tracks: [Track] = []
+            while activeTasks.count + resolvingIds.count < maxParallelTasks, !pendingIds.isEmpty {
+                let id = pendingIds.removeFirst()
+                guard let track = trackMap[id] else { continue }
+                resolvingIds.insert(id)
+                tracks.append(track)
+            }
+            return tracks
+        }
+
+        for track in tracks {
+            if isBilibili(track) {
+                resolveAndDownload(track: track)
+            } else {
+                startDownload(url: track.url, track: track)
+            }
+        }
+    }
+
+    private func isBilibili(_ track: Track) -> Bool {
+        return track.url.starts(with: "orpheus://bilibili")
     }
 
     func resumeDownload(id: String) {
@@ -39,91 +93,111 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     }
     
     private func resolveAndDownload(track: Track) {
-        guard let uri = URL(string: track.url),
-              let components = URLComponents(url: uri, resolvingAgainstBaseURL: false) else { return }
-        
-        let bvid = components.queryItems?.first(where: { $0.name == "bvid" })?.value
-        let cid = components.queryItems?.first(where: { $0.name == "cid" })?.value
-        
-        guard let bvid = bvid, let cid = cid else { return }
-        
-        BilibiliApi.shared.getPlayUrl(bvid: bvid, cid: cid) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let realUrl):
-                    self?.startDownload(url: realUrl, track: track)
-                case .failure(let error):
-                    // No ID available if we failed before starting? Actually track.id is there.
-                    self?.notifyUpdate(id: track.id, state: .failed, track: track)
-                }
+        guard let queryItems = URLComponents(string: track.url)?.queryItems,
+              let bvid = queryItems.first(where: { $0.name == "bvid" })?.value else {
+            failDownload(track: track, reason: "no bvid in \(track.url)")
+            return
+        }
+
+        if let cid = queryItems.first(where: { $0.name == "cid" })?.value {
+            resolvePlayUrl(bvid: bvid, cid: cid, track: track)
+            return
+        }
+
+        // Single-part videos are addressed by bvid alone, so their cid has to be looked up.
+        BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
+            switch result {
+            case .success(let cid):
+                self?.resolvePlayUrl(bvid: bvid, cid: String(cid), track: track)
+            case .failure(let error):
+                self?.failDownload(track: track, reason: error.localizedDescription)
             }
         }
     }
-    
-    private func notifyUpdate(id: String, state: DownloadState, track: Track?) {
+
+    private func resolvePlayUrl(bvid: String, cid: String, track: Track) {
+        BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid) { [weak self] result in
+            switch result {
+            case .success(let stream):
+                guard let url = stream.urls.first else {
+                    self?.failDownload(track: track, reason: "no playable stream")
+                    return
+                }
+                self?.startDownload(url: url, track: track)
+            case .failure(let error):
+                self?.failDownload(track: track, reason: error.localizedDescription)
+            }
+        }
+    }
+
+    /// Fails a task that has not reached URLSession yet.
+    private func failDownload(track: Track, reason: String) {
+        NSLog("[OrpheusDownload] %@ failed: %@", track.id, reason)
+
+        let failed: Bool = stateQueue.sync {
+            // The task may have been removed while its URL was being resolved.
+            guard resolvingIds.remove(track.id) != nil else { return false }
+            downloadTasks[track.id] = .failed
+            saveTasksLocked()
+            return true
+        }
+
+        if failed {
+            notifyUpdate(id: track.id, state: .failed, track: track)
+        }
+        startPendingDownloads()
+    }
+
+    private func notifyUpdate(id: String, state: DownloadState, track: Track?, bytesDownloaded: Int64 = 0, contentLength: Int64 = 0) {
         let task = DownloadTask()
         task.id = id
         task.state = state
         task.track = track
-        
+        task.bytesDownloaded = Double(bytesDownloaded)
+        task.contentLength = Double(contentLength)
+
         if state == .completed {
             task.percentDownloaded = 1.0
+        } else if contentLength > 0 {
+            task.percentDownloaded = Double(bytesDownloaded) / Double(contentLength)
         }
-        
+
         onDownloadUpdated?(task)
     }
-    
+
     private func startDownload(url: String, track: Track) {
-        guard let nsUrl = URL(string: url) else { return }
-        
-        stateQueue.sync {
-            var request = URLRequest(url: nsUrl)
-            if url.contains("bilivideo.com") {
-                 request.setValue("https://www.bilibili.com/", forHTTPHeaderField: "Referer")
-                 request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-            }
-            
+        guard let nsUrl = URL(string: url) else {
+            failDownload(track: track, reason: "invalid URL \(url)")
+            return
+        }
+
+        var request = URLRequest(url: nsUrl)
+        if isBilibili(track) {
+            request.setValue("https://www.bilibili.com/", forHTTPHeaderField: "Referer")
+            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+        }
+
+        let started: Bool = stateQueue.sync {
+            // The task may have been removed while its URL was being resolved.
+            guard resolvingIds.remove(track.id) != nil else { return false }
+
             let task = urlSession.downloadTask(with: request)
             task.taskDescription = track.id
-            
-            trackMap[track.id] = track
+
             activeTasks[track.id] = task
             downloadTasks[track.id] = .downloading
-            
+
             task.resume()
-            
+
             saveTasksLocked()
+            return true
         }
-        
-        notifyUpdate(id: track.id, state: .downloading, track: track)
-    }
-    
-    // Internal version of startDownload used by restoreTasks within lock
-    private func startDownloadLocked(url: String, track: Track) {
-        guard let nsUrl = URL(string: url) else { return }
-        
-        var request = URLRequest(url: nsUrl)
-        if url.contains("bilivideo.com") {
-             request.setValue("https://www.bilibili.com/", forHTTPHeaderField: "Referer")
-             request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        }
-        
-        let task = urlSession.downloadTask(with: request)
-        task.taskDescription = track.id
-        
-        trackMap[track.id] = track
-        activeTasks[track.id] = task
-        downloadTasks[track.id] = .downloading
-        
-        task.resume()
-        saveTasksLocked()
-        
-        // Notify outside lock? Or via async
-        DispatchQueue.main.async {
-            self.notifyUpdate(id: track.id, state: .downloading, track: track)
+
+        if started {
+            notifyUpdate(id: track.id, state: .downloading, track: track)
         }
     }
-    
+
     func removeDownload(id: String) {
         stateQueue.sync {
             if let task = activeTasks[id] {
@@ -136,12 +210,15 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             let dest = docs.appendingPathComponent("downloads/\(id).mp4")
             try? fileManager.removeItem(at: dest)
             
+            pendingIds.removeAll { $0 == id }
+            resolvingIds.remove(id)
             downloadTasks.removeValue(forKey: id)
             trackMap.removeValue(forKey: id)
-            
+
             saveTasksLocked()
         }
         notifyUpdate(id: id, state: .removing, track: nil)
+        startPendingDownloads()
     }
     
     func removeAllDownloads() {
@@ -156,6 +233,8 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             let downloadsDir = docs.appendingPathComponent("downloads")
             try? fileManager.removeItem(at: downloadsDir)
             
+            pendingIds.removeAll()
+            resolvingIds.removeAll()
             downloadTasks.removeAll()
             trackMap.removeAll()
             
@@ -262,7 +341,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
                 
                 let tasksSnapshot = self.downloadTasks
                 for (id, state) in tasksSnapshot {
-                    if state == .downloading && !runningTaskIds.contains(id) {
+                    if (state == .downloading || state == .queued) && !runningTaskIds.contains(id) {
                         let dest = downloadsDir.appendingPathComponent("\(id).mp4")
                         if fileManager.fileExists(atPath: dest.path) {
                             // File exists, mark completed
@@ -290,7 +369,15 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let id = downloadTask.taskDescription else { return }
-        
+
+        // An error response's body also arrives here, as a finished file.
+        if let response = downloadTask.response as? HTTPURLResponse,
+           !(200..<300).contains(response.statusCode) {
+            NSLog("[OrpheusDownload] %@ failed: HTTP %ld", id, response.statusCode)
+            markFailed(id: id)
+            return
+        }
+
         let fileManager = FileManager.default
         let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let downloadsDir = docs.appendingPathComponent("downloads")
@@ -317,40 +404,57 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
                 notifyUpdate(id: id, state: .completed, track: t)
             }
         } catch {
-            var track: Track?
-            stateQueue.sync {
-                downloadTasks[id] = .failed
-                saveTasksLocked()
-                track = trackMap[id]
-            }
-            notifyUpdate(id: id, state: .failed, track: track)
+            NSLog("[OrpheusDownload] %@ failed: %@", id, error.localizedDescription)
+            markFailed(id: id)
         }
     }
-    
+
+    private func markFailed(id: String) {
+        var track: Track?
+        stateQueue.sync {
+            downloadTasks[id] = .failed
+            saveTasksLocked()
+            track = trackMap[id]
+        }
+        notifyUpdate(id: id, state: .failed, track: track)
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard let id = downloadTask.taskDescription, totalBytesExpectedToWrite > 0 else { return }
+
+        // This fires for every chunk received, so only whole percentages are reported.
+        let previousPercent = (totalBytesWritten - bytesWritten) * 100 / totalBytesExpectedToWrite
+        let percent = totalBytesWritten * 100 / totalBytesExpectedToWrite
+        guard percent != previousPercent else { return }
+
+        notifyUpdate(id: id, state: .downloading, track: nil, bytesDownloaded: totalBytesWritten, contentLength: totalBytesExpectedToWrite)
+    }
+
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let id = task.taskDescription else { return }
-        
-        if let error = error {
-            var track: Track?
-            var state: DownloadState = .failed
-            
-            stateQueue.sync {
-                if (error as NSError).code == NSURLErrorCancelled {
-                    downloadTasks[id] = .stopped
-                    state = .stopped
-                } else {
-                    downloadTasks[id] = .failed
-                    state = .failed
-                }
-                activeTasks.removeValue(forKey: id)
-                saveTasksLocked()
-                track = trackMap[id]
-            }
-            
-            if state == .failed {
-                notifyUpdate(id: id, state: .failed, track: track)
+
+        var failedTrack: Track?
+        stateQueue.sync {
+            // A newer attempt may already own this id.
+            if let current = activeTasks[id], current.taskIdentifier != task.taskIdentifier { return }
+            activeTasks.removeValue(forKey: id)
+
+            // Removing a task cancels it, which leaves no state to record.
+            guard let error = error, let track = trackMap[id] else { return }
+            let cancelled = (error as NSError).code == NSURLErrorCancelled
+            downloadTasks[id] = cancelled ? .stopped : .failed
+            saveTasksLocked()
+
+            if !cancelled {
+                NSLog("[OrpheusDownload] %@ failed: %@", id, error.localizedDescription)
+                failedTrack = track
             }
         }
+
+        if let track = failedTrack {
+            notifyUpdate(id: id, state: .failed, track: track)
+        }
+        startPendingDownloads()
     }
     
     func getDownloads() -> [DownloadTask] {
@@ -380,12 +484,6 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
                 
                 return task
             }
-        }
-    }
-    
-    func multiDownload(tracks: [Track]) {
-        for track in tracks {
-            downloadTrack(track: track)
         }
     }
     
@@ -421,7 +519,9 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
                 downloadTasks.removeValue(forKey: id)
                 trackMap.removeValue(forKey: id)
             }
-            
+
+            pendingIds.removeAll()
+            resolvingIds.removeAll()
             saveTasksLocked()
         }
     }

@@ -17,6 +17,14 @@ class GeneralStorage {
     private let KEY_AUTOPLAY_ENABLED = "autoplayOnStartEnabled"
     private let KEY_SPECTRUM_VISUALIZER_ENABLED = "spectrumVisualizerEnabled"
     private let KEY_BILIBILI_CDN = "preferredBilibiliCdn"
+    private let KEY_NOTIFICATION_ARTWORK_ENABLED = "notificationArtworkEnabled"
+    private let KEY_RESUME_STRATEGY = "playbackResumeStrategy"
+
+    private let EXPORT_KEY_BILIBILI_CDN = "config_bilibili_cdn"
+    private let EXPORT_KEY_RESTORE_ENABLED = "config_restore_position_enabled"
+    private let EXPORT_KEY_LOUDNESS_ENABLED = "config_loudness_normalization_enabled"
+    private let EXPORT_KEY_AUTOPLAY_ENABLED = "config_autoplay_on_start_enabled"
+    private let EXPORT_KEY_SPECTRUM_ENABLED = "config_spectrum_visualizer_enabled"
     
     // MARK: - Preferences
 
@@ -48,8 +56,39 @@ class GeneralStorage {
         set { mmkv?.set(newValue, forKey: KEY_SPECTRUM_VISUALIZER_ENABLED) }
     }
     
+    var isNotificationArtworkEnabled: Bool {
+        get { return mmkv?.bool(forKey: KEY_NOTIFICATION_ARTWORK_ENABLED, defaultValue: true) ?? true }
+        set { mmkv?.set(newValue, forKey: KEY_NOTIFICATION_ARTWORK_ENABLED) }
+    }
+
+    var playbackResumeStrategy: Int {
+        get { return Int(mmkv?.int32(forKey: KEY_RESUME_STRATEGY, defaultValue: 0) ?? 0) }
+        set { mmkv?.set(Int32(newValue), forKey: KEY_RESUME_STRATEGY) }
+    }
+
+    // MARK: - Backup
+
+    /// Uses the same keys as the Android `exportConfig` so backups move between platforms.
+    func exportConfig() -> [String: Any] {
+        return [
+            EXPORT_KEY_BILIBILI_CDN: preferredBilibiliCdn,
+            EXPORT_KEY_RESTORE_ENABLED: isRestoreEnabled,
+            EXPORT_KEY_LOUDNESS_ENABLED: isLoudnessNormalizationEnabled,
+            EXPORT_KEY_AUTOPLAY_ENABLED: isAutoplayOnStartEnabled,
+            EXPORT_KEY_SPECTRUM_ENABLED: isSpectrumVisualizerEnabled,
+        ]
+    }
+
+    func importConfig(_ config: [String: Any]) {
+        if let value = config[EXPORT_KEY_BILIBILI_CDN] as? String { preferredBilibiliCdn = value }
+        if let value = config[EXPORT_KEY_RESTORE_ENABLED] as? Bool { isRestoreEnabled = value }
+        if let value = config[EXPORT_KEY_LOUDNESS_ENABLED] as? Bool { isLoudnessNormalizationEnabled = value }
+        if let value = config[EXPORT_KEY_AUTOPLAY_ENABLED] as? Bool { isAutoplayOnStartEnabled = value }
+        if let value = config[EXPORT_KEY_SPECTRUM_ENABLED] as? Bool { isSpectrumVisualizerEnabled = value }
+    }
+
     // MARK: - Playback State
-    
+
     func saveQueue(_ queue: [Track]) {
         let dicts = queue.map { $0.dictionaryRepresentation }
         do {

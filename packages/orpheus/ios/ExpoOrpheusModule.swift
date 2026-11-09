@@ -54,6 +54,10 @@ public class ExpoOrpheusModule: Module {
         manager.onQueueChanged = { [weak self] in
             self?.sendEvent("onQueueChanged", [:])
         }
+
+        manager.onPlaybackSpeedChanged = { [weak self] speed in
+            self?.sendEvent("onPlaybackSpeedChanged", ["speed": speed])
+        }
     }
 
     public func definition() -> ModuleDefinition {
@@ -72,7 +76,11 @@ public class ExpoOrpheusModule: Module {
             "onHeadlessEvent",
             "onTrackStarted",
             "onTrackFinished",
-            "onQueueChanged"
+            "onQueueChanged",
+            "onCoverDownloadProgress",
+            "onExportProgress",
+            "onStatusBarLyricsStatusChanged",
+            "onRequestClearLyrics"
         )
 
         OnCreate {
@@ -100,10 +108,29 @@ public class ExpoOrpheusModule: Module {
 
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
-            .set {
-                GeneralStorage.shared.isSpectrumVisualizerEnabled = $0
-                self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": $0])
+            .set { (enabled: Bool) in
+                GeneralStorage.shared.isSpectrumVisualizerEnabled = enabled
+                self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": enabled])
             }
+
+        Property("isNotificationArtworkEnabled")
+            .get { GeneralStorage.shared.isNotificationArtworkEnabled }
+            .set { GeneralStorage.shared.isNotificationArtworkEnabled = $0 }
+
+        Property("playbackResumeStrategy")
+            .get { GeneralStorage.shared.playbackResumeStrategy }
+            .set { GeneralStorage.shared.playbackResumeStrategy = $0 }
+
+        // Desktop, status bar and in-car lyrics are Android system features with no
+        // iOS counterpart. Shared settings screens still read these, so they stay off.
+        Property("isDesktopLyricsShown").get { false }.set { (_: Bool) in }
+        Property("isDesktopLyricsLocked").get { false }.set { (_: Bool) in }
+        Property("isStatusBarLyricsEnabled").get { false }.set { (_: Bool) in }
+        Property("isCarLyricsEnabled").get { false }.set { (_: Bool) in }
+        Property("statusBarLyricsProvider").get { "superlyric" }.set { (_: String) in }
+        Property("isSuperLyricApiEnabled").get { false }
+        Property("isLyriconApiEnabled").get { false }
+        Property("isMeizuStatusBarLyricsApiEnabled").get { false }
 
     // MARK: - Getters
 
@@ -252,8 +279,8 @@ public class ExpoOrpheusModule: Module {
         OrpheusDownloadManager.shared.downloadTrack(track: track)
     }
 
-    Function("setDownloadMaxParallelTasks") { (_: Int) in
-        // iOS download concurrency is currently managed by URLSession.
+    Function("setDownloadMaxParallelTasks") { (maxParallelTasks: Int) in
+        OrpheusDownloadManager.shared.setMaxParallelTasks(maxParallelTasks)
     }
 
     Function("removeDownload") { (id: String) in
@@ -288,6 +315,51 @@ public class ExpoOrpheusModule: Module {
 
     Function("getUncompletedDownloadTasks") { () -> [DownloadTask] in
          return OrpheusDownloadManager.shared.getUncompletedTasks()
+    }
+
+    AsyncFunction("setAllowSimultaneousPlayback") { (enabled: Bool) in
+        try OrpheusPlayerManager.shared.setAllowSimultaneousPlayback(enabled)
+    }
+
+    // AVPlayer streams are not kept in an on-disk LRU cache on iOS.
+    AsyncFunction("clearPlaybackCache") { () -> Void in }
+
+    Function("getLruCachedUris") { (_: [String]) -> [String] in
+        return []
+    }
+
+    // Cover art is not stored for offline use on iOS yet.
+    Function("getDownloadedCoverUri") { (_: String) -> String? in
+        return nil
+    }
+
+    AsyncFunction("downloadMissingCovers") { () -> Int in
+        return 0
+    }
+
+    AsyncFunction("exportDownloads") { (_: [String], _: String, _: String?, _: Bool, _: Bool, _: Bool) in
+        throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
+    }
+
+    AsyncFunction("selectDirectory") { () -> String? in
+        return nil
+    }
+
+    AsyncFunction("isDirectoryPickerAvailable") { () -> Bool in
+        return false
+    }
+
+    Function("exportData") { () -> [String: Any] in
+        return [
+            "playerQueue": GeneralStorage.shared.exportConfig(),
+            "loudness": [String: Double]()
+        ]
+    }
+
+    Function("importData") { (data: [String: Any]) in
+        if let config = data["playerQueue"] as? [String: Any] {
+            GeneralStorage.shared.importConfig(config)
+        }
     }
 
     AsyncFunction("checkOverlayPermission") { () -> Bool in
@@ -331,13 +403,8 @@ public class ExpoOrpheusModule: Module {
     }
 
     Function("updateSpectrumData") { (destination: TypedArray) in
-        let count = destination.length
-        // Get the unsafe pointer to valid memory
-        let pointer = destination.getUnsafeMutablePointer(Float32.self)
-
-        if let ptr = pointer {
-            AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: ptr, count: count)
-        }
+        let pointer = destination.rawPointer.assumingMemoryBound(to: Float32.self)
+        AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: pointer, count: destination.length)
     }
 
   }

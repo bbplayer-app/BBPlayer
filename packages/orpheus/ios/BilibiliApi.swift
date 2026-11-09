@@ -47,6 +47,12 @@ struct BilibiliPlayUrlResponse: Codable {
         let id: Int
         let baseUrl: String
         let backupUrl: [String]?
+        let segment_base: SegmentBase?
+    }
+
+    struct SegmentBase: Codable {
+        let initialization: String
+        let index_range: String
     }
 }
 
@@ -61,6 +67,13 @@ struct BilibiliPageListItem: Codable {
     let cid: Int
     let page: Int
     let part: String
+}
+
+/// A playable stream and its mirrors, best first.
+struct BilibiliStream {
+    let urls: [String]
+    /// Where a DASH audio file keeps its header and index; nil for a plain MP4.
+    let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
 }
 
 class BilibiliApi {
@@ -85,23 +98,30 @@ class BilibiliApi {
         self.cookie = cookie
     }
 
-    private func preferredUrl(primary: String, backups: [String]?) -> String {
-        let urls = [primary] + (backups ?? [])
+    /// Orders a stream's mirrors the same way the Android player does.
+    private func streamUrls(primary: String, backups: [String]?) -> [String] {
+        var seen = Set<String>()
+        let urls = ([primary] + (backups ?? [])).filter { !$0.isEmpty && seen.insert($0).inserted }
         let regular = urls.filter { !isMcdnUrl($0) }
+        let mcdn = urls.filter { isMcdnUrl($0) }
         let preference = GeneralStorage.shared.preferredBilibiliCdn
-        guard preference != "auto" else { return regular.first ?? primary }
-        return regular.first { url in
-            let host = URL(string: url)?.host?.lowercased() ?? ""
-            switch preference {
-            case "akamai": return host == "upos-hz-mirrorakam.akamaized.net"
-            case "ali": return host.hasSuffix(".bilivideo.com") && host.hasPrefix("upos-sz-mirrorali")
-            case "tencent": return host.hasSuffix(".bilivideo.com") &&
-                (host.hasPrefix("upos-sz-mirrorcos") || host == "upos-tf-all-tx.bilivideo.com")
-            case "huawei": return host.hasSuffix(".bilivideo.com") &&
-                (host.hasPrefix("upos-sz-mirrorhw") || host.hasPrefix("upos-sz-mirror08") || host == "upos-tf-all-hw.bilivideo.com")
-            default: return false
-            }
-        } ?? regular.first ?? primary
+        guard preference != "auto" else { return regular + mcdn }
+        let preferred = regular.filter { matchesCdn($0, preference: preference) }
+        let remaining = regular.filter { !matchesCdn($0, preference: preference) }
+        return preferred + remaining + mcdn
+    }
+
+    private func matchesCdn(_ url: String, preference: String) -> Bool {
+        let host = URL(string: url)?.host?.lowercased() ?? ""
+        switch preference {
+        case "akamai": return host == "upos-hz-mirrorakam.akamaized.net"
+        case "ali": return host.hasSuffix(".bilivideo.com") && host.hasPrefix("upos-sz-mirrorali")
+        case "tencent": return host.hasSuffix(".bilivideo.com") &&
+            (host.hasPrefix("upos-sz-mirrorcos") || host == "upos-tf-all-tx.bilivideo.com")
+        case "huawei": return host.hasSuffix(".bilivideo.com") &&
+            (host.hasPrefix("upos-sz-mirrorhw") || host.hasPrefix("upos-sz-mirror08") || host == "upos-tf-all-hw.bilivideo.com")
+        default: return false
+        }
     }
 
     private func isMcdnUrl(_ url: String) -> Bool {
@@ -202,31 +222,61 @@ class BilibiliApi {
         }.resume()
     }
     
-    func getPlayUrl(bvid: String, cid: String, completion: @escaping (Result<String, Error>) -> Void) {
+    /// Resolves a video to its audio-only stream, or to the progressive MP4 when asked or when it has none.
+    func getPlayStream(bvid: String, cid: String, audioOnly: Bool = true, completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
+        let common: [String: Any] = ["bvid": bvid, "cid": cid, "fnver": FnverDefault, "fourk": FourKEnabled]
+        guard audioOnly else {
+            requestMp4Stream(common, completion: completion)
+            return
+        }
+
+        requestPlayUrl(common.merging(["fnval": BiliFnvalDash]) { $1 }) { result in
+            switch result {
+            case .success(let data):
+                // Ids rise with quality; Hi-Res and Dolby are listed separately.
+                if let audio = data.dash?.audio?.max(by: { $0.id < $1.id }), let segmentBase = audio.segment_base {
+                    let urls = self.streamUrls(primary: audio.baseUrl, backups: audio.backupUrl)
+                    completion(.success(BilibiliStream(urls: urls, segmentBase: segmentBase)))
+                } else {
+                    self.requestMp4Stream(common, completion: completion)
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func requestMp4Stream(_ common: [String: Any], completion: @escaping (Result<BilibiliStream, Error>) -> Void) {
+        let params = common.merging(["qn": BiliQualityHigh, "fnval": FnvalMp4, "platform": PlatformHtml5]) { $1 }
+        requestPlayUrl(params) { result in
+            switch result {
+            case .success(let data):
+                if let mp4 = data.durl?.first {
+                    let urls = self.streamUrls(primary: mp4.url, backups: mp4.backup_url)
+                    completion(.success(BilibiliStream(urls: urls, segmentBase: nil)))
+                } else {
+                    completion(.failure(BilibiliError.decodingFailed))
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func requestPlayUrl(_ params: [String: Any], completion: @escaping (Result<BilibiliPlayUrlResponse.PlayUrlData, Error>) -> Void) {
         guard let imgKey = imgKey, let subKey = subKey else {
             // Refresh nav info first
             refreshNavInfo { result in
                 switch result {
                 case .success:
-                    self.getPlayUrl(bvid: bvid, cid: cid, completion: completion)
+                    self.requestPlayUrl(params, completion: completion)
                 case .failure(let error):
                     completion(.failure(error))
                 }
             }
             return
         }
-        
-        let params: [String: Any] = [
-            "bvid": bvid,
-            "cid": cid,
-            "qn": BiliQualityHigh,
-            // fnval=1 requests MP4/FLV durl list which is better for AVPlayer
-            "fnval": FnvalMp4, 
-            "fnver": FnverDefault,
-            "fourk": FourKEnabled,
-            "platform": PlatformHtml5
-        ]
-        
+
         let signedParams = WbiUtil.sign(params: params, imgKey: imgKey, subKey: subKey)
         
         guard var components = URLComponents(string: "https://api.bilibili.com/x/player/wbi/playurl") else {
@@ -267,12 +317,9 @@ class BilibiliApi {
                      completion(.failure(BilibiliError.requestFailed))
                      return
                 }
-                
-                // Prioritize Dash Audio, then Durl
-                if let audio = playUrlResponse.data?.dash?.audio?.first {
-                    completion(.success(self.preferredUrl(primary: audio.baseUrl, backups: audio.backupUrl)))
-                } else if let mp4 = playUrlResponse.data?.durl?.first {
-                    completion(.success(self.preferredUrl(primary: mp4.url, backups: mp4.backup_url)))
+
+                if let playUrlData = playUrlResponse.data {
+                    completion(.success(playUrlData))
                 } else {
                     completion(.failure(BilibiliError.decodingFailed))
                 }

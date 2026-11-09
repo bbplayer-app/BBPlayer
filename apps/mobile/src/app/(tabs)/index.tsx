@@ -1,6 +1,5 @@
 import { useObserve } from 'expo-observe'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { useIncomingShare } from 'expo-sharing'
 import {
 	type ComponentRef,
 	useCallback,
@@ -33,6 +32,7 @@ import SearchHistory, {
 import SearchSuggestions from '@/features/search/SearchSuggestions'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { useAppIncomingShare } from '@/hooks/useAppIncomingShare'
 import { markPerfInteractive } from '@/lib/performance'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
@@ -90,7 +90,7 @@ function SearchPageContent() {
 	const [contentHeight, setContentHeight] = useState(0)
 	const contentBottomPadding = haveTrack ? 86 : 24
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
-		useIncomingShare()
+		useAppIncomingShare()
 	const { markInteractive } = useObserve()
 	useEffect(() => {
 		markInteractive()

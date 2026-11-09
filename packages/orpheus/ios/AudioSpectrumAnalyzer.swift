@@ -54,11 +54,11 @@ class AudioSpectrumAnalyzer {
             }
         )
         
-        var tap: Unmanaged<MTAudioProcessingTap>?
+        var tap: MTAudioProcessingTap?
         let err = MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PreEffects, &tap)
-        
+
         if err == noErr {
-            return tap?.takeRetainedValue()
+            return tap
         }
         
         return nil
@@ -133,7 +133,11 @@ class AudioSpectrumAnalyzer {
         // We usually want 0..1 output. 
         // Applying 1/N scaling.
         var scale = 1.0 / Float(fftSize)
-        vDSP_vsmul(&magnitudes, 1, &scale, &magnitudes, 1, vDSP_Length(fftSize))
+        let sampleCount = vDSP_Length(fftSize)
+        magnitudes.withUnsafeMutableBufferPointer { buffer in
+            guard let base = buffer.baseAddress else { return }
+            vDSP_vsmul(base, 1, &scale, base, 1, sampleCount)
+        }
         
         // Save to thread-safe storage
         // We only fail half (Nyquist)

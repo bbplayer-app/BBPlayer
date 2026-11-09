@@ -101,6 +101,8 @@ export default function TabLayout() {
 		icons.settings.default &&
 		icons.settings.selected,
 	)
+	// NativeTabPage's safe area is a margin, so this shows around iOS's floating tab bar.
+	const contentStyle = { backgroundColor: colors.background }
 
 	return (
 		<NativeTabs
@@ -119,6 +121,7 @@ export default function TabLayout() {
 				name='index'
 				testID='tab-search'
 				disableAutomaticContentInsets
+				contentStyle={contentStyle}
 				unstable_nativeProps={nativeIconProps(icons?.home, searchIcon, colors)}
 			>
 				<NativeTabs.Trigger.Label>搜索</NativeTabs.Trigger.Label>
@@ -131,6 +134,7 @@ export default function TabLayout() {
 				name='library/[tab]'
 				testID='tab-library'
 				disableAutomaticContentInsets
+				contentStyle={contentStyle}
 				unstable_nativeProps={nativeIconProps(
 					icons?.library,
 					libraryIcon,
@@ -147,6 +151,7 @@ export default function TabLayout() {
 				name='my'
 				testID='tab-my'
 				disableAutomaticContentInsets
+				contentStyle={contentStyle}
 				unstable_nativeProps={nativeIconProps(
 					icons?.settings,
 					profileIcon,

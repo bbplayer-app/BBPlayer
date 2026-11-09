@@ -18,7 +18,28 @@ class OrpheusPlayerManager: NSObject {
     private var imageCache = NSCache<NSString, UIImage>()
     private var sleepTimer: Timer?
     private var sleepTimerEndTime: Date?
-    
+
+    private var playbackSpeed: Float = 1.0
+    private var nowPlayingArtworkUrl: String?
+    private var nowPlayingArtwork: MPMediaItemArtwork?
+
+    /// How the current item was loaded, so a failed stream can move on. Main thread only.
+    private struct StreamLoad {
+        let headers: [String: String]?
+        let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
+        let startPosition: Double?
+        var mirrors: [String]
+        let fallback: ((Double?) -> Void)?
+        /// Held here because AVAssetResourceLoader only keeps a weak reference to its delegate.
+        let playlistLoader: DashAudioPlaylistLoader?
+    }
+    private var currentLoad: StreamLoad?
+
+    private static let bilibiliHeaders = [
+        "Referer": "https://www.bilibili.com/",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ]
+
 
     
 
@@ -29,13 +50,18 @@ class OrpheusPlayerManager: NSObject {
     var onIsPlayingChanged: ((Bool) -> Void)?
     var onPlayerError: ((String) -> Void)?
     var onQueueChanged: (() -> Void)?
+    var onPlaybackSpeedChanged: ((Float) -> Void)?
     
     override init() {
         self.player = AVPlayer()
         super.init()
         setupPlayerObservers()
         setupAudioSession()
-        setupRemoteCommands()
+        // The manager is created on a module queue, and commands enabled off the main
+        // thread never reach the lock screen.
+        DispatchQueue.main.async { [weak self] in
+            self?.setupRemoteCommands()
+        }
         restoreState()
     }
     
@@ -64,15 +90,45 @@ class OrpheusPlayerManager: NSObject {
             let status = player.currentItem?.status ?? .unknown
 
             if status == .failed {
-                let errorMsg = player.currentItem?.error?.localizedDescription ?? "unknown error"
-
-                onPlayerError?(errorMsg)
-                onPlaybackStateChanged?(.idle)
-                onIsPlayingChanged?(false)
+                DispatchQueue.main.async { [weak self] in
+                    self?.handleItemFailed()
+                }
+            } else if status == .readyToPlay {
+                // The real duration is only known once the item is ready.
+                updateNowPlayingInfo()
             }
         }
     }
     
+    private func handleItemFailed() {
+        guard let item = player.currentItem, item.status == .failed else { return }
+        let message = item.error?.localizedDescription ?? "unknown error"
+
+        if var load = currentLoad {
+            let position = player.currentTime().seconds
+            let resumeAt = position.isFinite && position > 0 ? position : load.startPosition
+
+            if !load.mirrors.isEmpty {
+                let next = load.mirrors.removeFirst()
+                NSLog("[OrpheusPlayer] stream failed, trying the next mirror: %@", message)
+                loadAvPlayerItem(url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback)
+                return
+            }
+
+            if let fallback = load.fallback {
+                NSLog("[OrpheusPlayer] audio stream failed, falling back to MP4: %@", message)
+                currentLoad = nil
+                fallback(resumeAt)
+                return
+            }
+        }
+
+        NSLog("[OrpheusPlayer] playback failed: %@", message)
+        onPlayerError?(message)
+        onPlaybackStateChanged?(.idle)
+        onIsPlayingChanged?(false)
+    }
+
     @objc private func playerDidFinishPlaying(note: NSNotification) {
         handleAutoAdvance()
     }
@@ -263,12 +319,12 @@ class OrpheusPlayerManager: NSObject {
     func skipToPrevious() {
         // 跟随 Media3 逻辑（或许是行业标准？），当播放超过 3s，「上一曲」的语义变成「重新播放」
         if player.currentTime().seconds > 3.0 {
-            player.seek(to: CMTime.zero)
+            seek(to: 0)
             return
         }
         
         guard let prevIndex = queueManager.getPreviousIndex(repeatMode: repeatMode) else {
-             player.seek(to: CMTime.zero)
+             seek(to: 0)
              return
         }
         
@@ -277,7 +333,9 @@ class OrpheusPlayerManager: NSObject {
     
     func seek(to seconds: Double) {
         let time = CMTime(seconds: seconds, preferredTimescale: 1000)
-        player.seek(to: time)
+        player.seek(to: time) { [weak self] _ in
+            self?.updateNowPlayingInfo()
+        }
     }
     
     // MARK: - Track Loading
@@ -314,13 +372,13 @@ class OrpheusPlayerManager: NSObject {
         }
         
         if urlString.starts(with: "orpheus://bilibili") {
-            resolveAndPlayBilibili(url: urlString, startPosition: startPosition)
+            resolveAndPlayBilibili(url: urlString, trackId: track.id, startPosition: startPosition)
         } else {
             loadAvPlayerItem(url: urlString, headers: nil, startPosition: startPosition)
         }
     }
     
-    private func resolveAndPlayBilibili(url: String, startPosition: Double? = nil) {
+    private func resolveAndPlayBilibili(url: String, trackId: String, startPosition: Double? = nil) {
         guard let uri = URL(string: url),
               let components = URLComponents(url: uri, resolvingAgainstBaseURL: false) else {
 
@@ -340,79 +398,93 @@ class OrpheusPlayerManager: NSObject {
         }
         
         if let cid = cid {
-            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, startPosition: startPosition)
+            fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: startPosition)
         } else {
 
             BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
                 DispatchQueue.main.async {
+                    guard let self = self, self.isCurrentTrack(trackId) else { return }
                     switch result {
                     case .success(let cidInt):
 
-                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), startPosition: startPosition)
+                        self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition)
                     case .failure(let error):
 
-                        self?.onPlayerError?(error.localizedDescription)
-                        self?.onPlaybackStateChanged?(.idle)
+                        self.onPlayerError?(error.localizedDescription)
+                        self.onPlaybackStateChanged?(.idle)
                     }
                 }
             }
         }
     }
-    
-    private func fetchBilibiliPlayUrl(bvid: String, cid: String, startPosition: Double? = nil) {
 
-        
-        BilibiliApi.shared.getPlayUrl(bvid: bvid, cid: cid) { [weak self] result in
+    /// A lookup that finishes after the user has moved on must not replace the newer track.
+    private func isCurrentTrack(_ trackId: String) -> Bool {
+        return queueManager.getCurrentTrack()?.id == trackId
+    }
+
+    private func fetchBilibiliPlayUrl(bvid: String, cid: String, trackId: String, startPosition: Double? = nil, audioOnly: Bool = true) {
+        // The spectrum tap needs a real audio track, which an HLS asset doesn't expose.
+        let audioOnly = audioOnly && !GeneralStorage.shared.isSpectrumVisualizerEnabled
+        BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid, audioOnly: audioOnly) { [weak self] result in
             DispatchQueue.main.async {
+                guard let self = self, self.isCurrentTrack(trackId) else { return }
                 switch result {
-                case .success(let realUrl):
-
-                    // Bilibili requires Referer header
-                    let headers: [String: String] = [
-                        "Referer": "https://www.bilibili.com/",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                    ]
-                    self?.loadAvPlayerItem(url: realUrl, headers: headers, startPosition: startPosition)
+                case .success(let stream):
+                    guard let url = stream.urls.first else {
+                        self.onPlayerError?("No playable stream")
+                        self.onPlaybackStateChanged?(.idle)
+                        return
+                    }
+                    // Keep the MP4 as a last resort if the audio stream can't be played.
+                    let fallback: ((Double?) -> Void)? = stream.segmentBase == nil ? nil : { [weak self] position in
+                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: false)
+                    }
+                    self.loadAvPlayerItem(url: url, headers: Self.bilibiliHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
+                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback)
                 case .failure(let error):
 
-                    self?.onPlayerError?(error.localizedDescription)
+                    self.onPlayerError?(error.localizedDescription)
                     // Reset state so UI doesn't stick in loading
-                    self?.onPlaybackStateChanged?(.idle)
+                    self.onPlaybackStateChanged?(.idle)
                 }
             }
         }
     }
-    
-    private func loadAvPlayerItem(url: String, headers: [String: String]?, startPosition: Double? = nil) {
+
+    private func loadAvPlayerItem(url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
+                                  mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.loadAvPlayerItem(url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback)
+            }
+            return
+        }
         guard let nsUrl = URL(string: url) else {
 
             return
         }
-        
 
-        
-        let asset: AVURLAsset
+        var options: [String: Any] = [:]
         if let headers = headers {
-            let options = ["AVURLAssetHTTPHeaderFieldsKey": headers]
-            asset = AVURLAsset(url: nsUrl, options: options)
-        } else {
-            asset = AVURLAsset(url: nsUrl)
+            options["AVURLAssetHTTPHeaderFieldsKey"] = headers
         }
-        
+
+        let asset: AVURLAsset
+        var playlistLoader: DashAudioPlaylistLoader?
+        if let segmentBase = segmentBase {
+            let loader = DashAudioPlaylistLoader(mediaUrl: url, segmentBase: segmentBase, headers: headers ?? [:])
+            asset = AVURLAsset(url: DashAudioPlaylistLoader.playlistUrl, options: options)
+            asset.resourceLoader.setDelegate(loader, queue: loader.queue)
+            playlistLoader = loader
+        } else {
+            asset = AVURLAsset(url: nsUrl, options: options)
+        }
+        currentLoad = StreamLoad(headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, playlistLoader: playlistLoader)
+
         let item = AVPlayerItem(asset: asset)
-        
-        // Attach Spectrum Tap
-        if let tap = AudioSpectrumAnalyzer.shared.createTap() {
-            let audioMix = AVMutableAudioMix()
-            // Try to find audio track. Note: This assumes tracks are available synchronously or shortly. 
-            // For robust implementation with remote assets, we might need to wait for "tracks" key.
-            // But doing it synchronously here is the "simple" approach.
-            if let track = asset.tracks(withMediaType: .audio).first {
-                let inputParams = AVMutableAudioMixInputParameters(track: track)
-                inputParams.audioTapProcessor = tap
-                audioMix.inputParameters = [inputParams]
-                item.audioMix = audioMix
-            }
+        if segmentBase == nil {
+            attachSpectrumTap(to: item, asset: asset)
         }
 
         player.replaceCurrentItem(with: item)
@@ -421,10 +493,22 @@ class OrpheusPlayerManager: NSObject {
              player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
         }
         player.play()
-        
-
     }
-    
+
+    /// Loading a remote asset's tracks waits on the network, so this must stay asynchronous.
+    private func attachSpectrumTap(to item: AVPlayerItem, asset: AVAsset) {
+        asset.loadTracks(withMediaType: .audio) { [weak item] tracks, _ in
+            guard let track = tracks?.first, let tap = AudioSpectrumAnalyzer.shared.createTap() else { return }
+            let inputParams = AVMutableAudioMixInputParameters(track: track)
+            inputParams.audioTapProcessor = tap
+            let audioMix = AVMutableAudioMix()
+            audioMix.inputParameters = [inputParams]
+            DispatchQueue.main.async {
+                item?.audioMix = audioMix
+            }
+        }
+    }
+
     // MARK: - Notification
     
     private func notifyPositionUpdate() {
@@ -480,6 +564,14 @@ class OrpheusPlayerManager: NSObject {
         }
     }
     
+    func setAllowSimultaneousPlayback(_ enabled: Bool) throws {
+        try AVAudioSession.sharedInstance().setCategory(
+            .playback,
+            mode: .default,
+            options: enabled ? [.mixWithOthers] : []
+        )
+    }
+
     @objc private func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -549,53 +641,61 @@ class OrpheusPlayerManager: NSObject {
     }
     
     private func updateNowPlayingInfo() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.updateNowPlayingInfo()
+            }
+            return
+        }
+
         guard let track = getCurrentTrack() else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
-        
-        // Ensure audio session is active for lock screen controls to appear
-        
+
+        let elapsed = player.currentTime().seconds
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title ?? "Unknown Title",
             MPMediaItemPropertyArtist: track.artist ?? "Unknown Artist",
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: player.currentTime().seconds,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsed.isFinite ? elapsed : 0,
             MPNowPlayingInfoPropertyPlaybackRate: player.rate,
+            MPNowPlayingInfoPropertyDefaultPlaybackRate: playbackSpeed,
+            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
+            MPNowPlayingInfoPropertyIsLiveStream: false,
             MPNowPlayingInfoPropertyPlaybackQueueIndex: queueManager.getCurrentIndex(),
             MPNowPlayingInfoPropertyPlaybackQueueCount: queueManager.getQueueCount()
         ]
-        
-        if let duration = track.duration {
-             info[MPMediaItemPropertyPlaybackDuration] = duration
-        } else if let playerDuration = player.currentItem?.duration.seconds, !playerDuration.isNaN {
-             info[MPMediaItemPropertyPlaybackDuration] = playerDuration
+
+        let playerDuration = player.currentItem?.duration.seconds ?? .nan
+        if playerDuration.isFinite && playerDuration > 0 {
+            info[MPMediaItemPropertyPlaybackDuration] = playerDuration
+        } else if let duration = track.duration, duration > 0 {
+            info[MPMediaItemPropertyPlaybackDuration] = duration
         }
-        
-        // Artwork
-        if let artworkUrlStr = track.artwork, let artworkUrl = URL(string: artworkUrlStr) {
-            downloadImage(url: artworkUrl) { image in
-                guard let image = image else { return }
-                
-                // Verify track hasn't changed before updating artwork
-                if var currentInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-                    if currentInfo[MPMediaItemPropertyTitle] as? String == track.title {
-                         let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-                         currentInfo[MPMediaItemPropertyArtwork] = artwork
-                         MPNowPlayingInfoCenter.default().nowPlayingInfo = currentInfo
-                    }
-                } else {
-                    // If info was cleared but we just got image, maybe we should set it again?
-                    // Safe to just update info variable and set it?
-                    // We need to carry over the other fields.
-                    info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-                    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+        if let artworkUrl = track.artwork {
+            if artworkUrl == nowPlayingArtworkUrl {
+                if let artwork = nowPlayingArtwork {
+                    info[MPMediaItemPropertyArtwork] = artwork
                 }
+            } else {
+                loadNowPlayingArtwork(from: artworkUrl)
             }
         }
-        
+
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
-    
+
+    private func loadNowPlayingArtwork(from urlString: String) {
+        nowPlayingArtworkUrl = urlString
+        nowPlayingArtwork = nil
+        guard let url = URL(string: urlString) else { return }
+        downloadImage(url: url) { [weak self] image in
+            guard let self, let image, self.nowPlayingArtworkUrl == urlString else { return }
+            self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            self.updateNowPlayingInfo()
+        }
+    }
 
     private func downloadImage(url: URL, completion: @escaping (UIImage?) -> Void) {
         URLSession.shared.dataTask(with: url) { data, _, _ in
@@ -617,11 +717,18 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Playback Attributes
     
     func setPlaybackSpeed(_ speed: Float) {
-        player.rate = speed
+        playbackSpeed = speed
+        // play() starts at defaultRate, so the speed survives pauses and track changes.
+        player.defaultRate = speed
+        if player.rate > 0 {
+            player.rate = speed
+        }
+        onPlaybackSpeedChanged?(speed)
+        updateNowPlayingInfo()
     }
     
     func getPlaybackSpeed() -> Float {
-        return player.rate
+        return playbackSpeed
     }
     
     // MARK: - Getters

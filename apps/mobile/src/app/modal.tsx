@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router'
 import { Suspense, useEffect, useState } from 'react'
-import { Keyboard, StyleSheet, View } from 'react-native'
+import { Keyboard, Platform, StyleSheet, View } from 'react-native'
 import { Portal } from 'react-native-paper'
 
 import ActivityIndicator from '@/components/common/ActivityIndicator'
@@ -40,47 +40,48 @@ export default function ModalHost() {
 
 	if (canUnmountHost) return null
 
-	return (
-		<Portal>
-			<View
-				style={StyleSheet.absoluteFill}
-				pointerEvents='box-none'
-			>
-				{modals.map((m, idx) => {
-					const Component = modalRegistry[m.key]
-					if (!Component) return null
-					const zIndex = 1000 + idx * 100
-					return (
-						<AnimatedModalOverlay
-							key={m.key}
-							visible
-							onDismiss={() => {
-								if (
-									m.options?.dismissible === undefined ||
-									m.options?.dismissible
-								) {
-									useModalStore.getState().close(m.key)
-								}
-							}}
-							contentStyle={{ zIndex }}
+	const content = (
+		<View
+			style={StyleSheet.absoluteFill}
+			pointerEvents='box-none'
+		>
+			{modals.map((m, idx) => {
+				const Component = modalRegistry[m.key]
+				if (!Component) return null
+				const zIndex = 1000 + idx * 100
+				return (
+					<AnimatedModalOverlay
+						key={m.key}
+						visible
+						onDismiss={() => {
+							if (
+								m.options?.dismissible === undefined ||
+								m.options?.dismissible
+							) {
+								useModalStore.getState().close(m.key)
+							}
+						}}
+						contentStyle={{ zIndex }}
+					>
+						<Suspense
+							fallback={
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size='large' />
+								</View>
+							}
 						>
-							<Suspense
-								fallback={
-									<View style={styles.loadingContainer}>
-										<ActivityIndicator size='large' />
-									</View>
-								}
-							>
-								{/*
+							{/*
             // @ts-expect-error -- 懒得管了*/}
-								<Component {...m.props} />
-							</Suspense>
-						</AnimatedModalOverlay>
-					)
-				})}
-			</View>
-		</Portal>
+							<Component {...m.props} />
+						</Suspense>
+					</AnimatedModalOverlay>
+				)
+			})}
+		</View>
 	)
+
+	// iOS 的 transparentModal 是单独的原生窗口，Portal 会把内容渲染到窗口下面，触摸到不了。
+	return Platform.OS === 'ios' ? content : <Portal>{content}</Portal>
 }
 
 const styles = StyleSheet.create({

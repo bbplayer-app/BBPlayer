@@ -298,6 +298,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			runtimeVersion: {
 				policy: 'appVersion',
 			},
+			infoPlist: {
+				UIBackgroundModes: ['audio'],
+				// B 站封面常是 http 地址，与 Android 的 usesCleartextTraffic 保持一致。
+				// 不能同时声明 NSAllowsLocalNetworking，否则系统会忽略这一项。
+				NSAppTransportSecurity: {
+					NSAllowsArbitraryLoads: true,
+				},
+				UIAppFonts: ['MaterialDesignIcons.ttf'],
+			},
 			googleServicesFile: getGoogleServicesFile(
 				googleServicesPlistPath,
 				googleServicesPlistRealPath,

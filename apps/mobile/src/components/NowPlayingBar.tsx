@@ -40,7 +40,7 @@ import {
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import * as Haptics from '@/utils/haptics'
-import { resolveTrackCover } from '@/utils/imageUrl'
+import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 
 import ActivityIndicator from './common/ActivityIndicator'
 
@@ -92,6 +92,15 @@ const ProgressBar = memo(function ProgressBar() {
 		</View>
 	)
 })
+
+// iOS 用 CDN 缩略图：和其余封面走同一路径，也避免为 48pt 的封面下载原图。
+const resolveBarCover = (
+	uniqueKey: string | undefined,
+	coverUrl: string | null | undefined,
+) => {
+	const cover = resolveTrackCover(uniqueKey, coverUrl)
+	return Platform.OS === 'ios' ? resolveBilibiliImageUrl(cover, 200) : cover
+}
 
 const playPause = async () => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
@@ -292,11 +301,17 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 						]}
 						testID='now-playing-bar'
 					>
-						<View style={styles.nowPlayingBarContent}>
+						<View
+							style={[
+								styles.nowPlayingBarContent,
+								Platform.OS === 'ios' &&
+									styles.nowPlayingBarContentAboveProgress,
+							]}
+						>
 							<Image
 								source={{
 									uri:
-										resolveTrackCover(
+										resolveBarCover(
 											currentTrack.uniqueKey,
 											currentTrack.coverUrl,
 										) ?? undefined,
@@ -306,6 +321,9 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 									{
 										borderColor: colors.primary,
 										borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
+									},
+									Platform.OS === 'ios' && {
+										backgroundColor: colors.surfaceVariant,
 									},
 								]}
 								recyclingKey={currentTrack.uniqueKey}
@@ -487,6 +505,10 @@ const styles = StyleSheet.create({
 	nowPlayingBarContent: {
 		flexDirection: 'row',
 		alignItems: 'center',
+	},
+	// iOS 上封面的 zIndex 只在自己的父视图内生效，整块内容要提到进度条之上。
+	nowPlayingBarContentAboveProgress: {
+		zIndex: 2,
 	},
 	nowPlayingBarImage: {
 		height: 48,
