@@ -1,0 +1,3 @@
+#!/bin/bash
+src="$1"; dst="$2"
+if [ -d "$dst" ] && [ ! -d "$src" ]; then cp -L "$src" "$dst/"; else mkdir -p "$(dirname "$dst")"; rm -f "$dst"; cp -RL "$src" "$dst"; chmod u+w "$dst"; fi

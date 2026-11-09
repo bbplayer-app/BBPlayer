@@ -1,0 +1,61 @@
+#!/bin/bash
+# Installs the Linux iOS build toolchain: Swift and xtool. ios-build.sh runs this when needed.
+# Safe to run again; finished steps are skipped.
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
+
+for tool in curl docker gpg node npx pnpm python3 zip unzip; do
+  command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
+done
+mkdir -p "$BB/downloads" "$BB/bin"
+
+fetch() {
+  [ -s "$2" ] && return 0
+  curl -fL --retry 20 --retry-all-errors --retry-delay 3 -C - -o "$2.part" "$1"
+  mv "$2.part" "$2"
+}
+
+if [ ! -x "$SWIFT_HOME/usr/bin/swift" ]; then
+  echo '== Swift toolchain'
+  source /etc/os-release
+  swift_name="swift-$SWIFT_VERSION-RELEASE-ubuntu$VERSION_ID"
+  swift_url="${BBPLAYER_SWIFT_URL:-https://download.swift.org/swift-$SWIFT_VERSION-release/ubuntu${VERSION_ID/./}/swift-$SWIFT_VERSION-RELEASE/$swift_name.tar.gz}"
+  tarball="$BB/downloads/$swift_name.tar.gz"
+  fetch "$swift_url" "$tarball"
+  fetch "$swift_url.sig" "$tarball.sig"
+  keyring="$(mktemp -d)"
+  trap 'rm -rf "$keyring"' EXIT
+  curl -fsSL --compressed --retry 5 https://www.swift.org/keys/all-keys.asc | GNUPGHOME="$keyring" gpg --batch --quiet --import
+  GNUPGHOME="$keyring" gpg --batch --quiet --verify "$tarball.sig" "$tarball"
+  mkdir -p "$SWIFT_HOME"
+  tar -xzf "$tarball" --strip-components=1 -C "$SWIFT_HOME"
+fi
+"$SWIFT_HOME/usr/bin/swift" --version 2>&1 | head -n 1
+
+echo '== xtool'
+fetch "https://github.com/xtool-org/xtool/releases/download/$XTOOL_VERSION/xtool-x86_64.AppImage" "$XTOOL"
+chmod +x "$XTOOL"
+
+if [ ! -d "$SDK_BUNDLE/Developer" ]; then
+  cat >&2 <<EOF
+
+The iOS SDK is not installed yet. Download Xcode.xip from
+https://developer.apple.com/download/all/ and then run:
+
+  "$XTOOL" sdk install /path/to/Xcode.xip
+  "$XTOOL" auth login --mode password
+
+After that, run ios-build.sh again.
+EOF
+  exit 1
+fi
+
+# Expo's precompiled-module step links a small framework, which the xcrun shim stands in for.
+if [ ! -f "$BB/bin/stub.dylib" ]; then
+  echo 'void bbplayer_stub(void){}' | "$SWIFT_HOME/usr/bin/clang" -target arm64-apple-macos13 \
+    -isysroot "$SDK_BUNDLE/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk" \
+    -fuse-ld="$SDK_BUNDLE/toolset/bin/ld64.lld" -mlinker-version=1000 -x c - -dynamiclib -nostdlib \
+    -Wl,-undefined,dynamic_lookup -install_name @rpath/Stub.framework/Stub -o "$BB/bin/stub.dylib"
+fi
+
+echo 'Toolchain ready.'
