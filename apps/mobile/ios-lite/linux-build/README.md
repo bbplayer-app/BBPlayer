@@ -13,7 +13,7 @@
 ## 准备
 
 - x86_64 的 Ubuntu（WSL2 也可以），至少 30 GB 空闲磁盘，4 GB 以上内存。
-- Docker（当前用户要能直接运行 `docker`）、Node.js（22.13 或 24.3 以上，Ubuntu 软件源里的版本太旧）、pnpm、Python 3、git、curl、gpg、zip、unzip。
+- Docker（当前用户要能直接运行 `docker`）、Node.js（22.13 以上的 22.x、24.3 以上的 24.x，或 26 及更新版本；不支持 25，Ubuntu 软件源里的版本也太旧）、pnpm、Python 3、git、curl、gpg、zip、unzip。
 - Swift 需要的系统库。Ubuntu 24.04 上运行下面的命令，其他版本见 [Swift 的安装说明](https://www.swift.org/install/linux/)：
 
   ```bash

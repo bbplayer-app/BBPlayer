@@ -98,9 +98,7 @@ class OrpheusPlayerManager: NSObject {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "timeControlStatus" {
             if player.timeControlStatus == .playing {
-                DispatchQueue.main.async { [weak self] in
-                    self?.endTransitionTask()
-                }
+                endTransitionTask()
             }
             notifyPlaybackState()
         } else if keyPath == "currentItem.status" {
@@ -168,9 +166,25 @@ class OrpheusPlayerManager: NSObject {
     }
 
     private func endTransitionTask() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.endTransitionTask()
+            }
+            return
+        }
         guard transitionTask != .invalid else { return }
         UIApplication.shared.endBackgroundTask(transitionTask)
         transitionTask = .invalid
+    }
+
+    /// Reports a stream whose links couldn't be fetched, and lets pressing play retry the failed item.
+    private func failLoad(_ message: String) {
+        onPlayerError?(message)
+        onPlaybackStateChanged?(.idle)
+        DispatchQueue.main.async { [weak self] in
+            self?.failedItem = nil
+        }
+        endTransitionTask()
     }
 
     /// These notifications can arrive on any thread, and other players in the app post them too.
@@ -370,6 +384,7 @@ class OrpheusPlayerManager: NSObject {
         guard let nextIndex = queueManager.getNextIndex(repeatMode: repeatMode) else {
              // End of queue
              onPlaybackStateChanged?(.ended)
+             endTransitionTask()
              return
         }
         
@@ -442,8 +457,7 @@ class OrpheusPlayerManager: NSObject {
         guard let uri = URL(string: url),
               let components = URLComponents(url: uri, resolvingAgainstBaseURL: false) else {
 
-            onPlayerError?("Invalid Bilibili URL")
-            onPlaybackStateChanged?(.idle)
+            failLoad("Invalid Bilibili URL")
             return
         }
         
@@ -452,8 +466,7 @@ class OrpheusPlayerManager: NSObject {
         
         guard let bvid = bvid else {
 
-            onPlayerError?("Missing bvid in URL")
-            onPlaybackStateChanged?(.idle)
+            failLoad("Missing bvid in URL")
             return
         }
         
@@ -470,8 +483,7 @@ class OrpheusPlayerManager: NSObject {
                         self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition)
                     case .failure(let error):
 
-                        self.onPlayerError?(error.localizedDescription)
-                        self.onPlaybackStateChanged?(.idle)
+                        self.failLoad(error.localizedDescription)
                     }
                 }
             }
@@ -492,8 +504,7 @@ class OrpheusPlayerManager: NSObject {
                 switch result {
                 case .success(let stream):
                     guard let url = stream.urls.first else {
-                        self.onPlayerError?("No playable stream")
-                        self.onPlaybackStateChanged?(.idle)
+                        self.failLoad("No playable stream")
                         return
                     }
                     // Keep the MP4 as a last resort if the audio stream can't be played.
@@ -507,9 +518,7 @@ class OrpheusPlayerManager: NSObject {
                                           mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
                 case .failure(let error):
 
-                    self.onPlayerError?(error.localizedDescription)
-                    // Reset state so UI doesn't stick in loading
-                    self.onPlaybackStateChanged?(.idle)
+                    self.failLoad(error.localizedDescription)
                 }
             }
         }
