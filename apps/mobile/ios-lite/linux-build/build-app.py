@@ -246,8 +246,9 @@ def main():
         shutil.copy2(expo_plist, OUT / 'Expo.plist')
     hermesc = Path(b.node_resolve('hermes-compiler', b.node_resolve('react-native'))) / 'hermesc/linux64-bin/hermesc'
     subprocess.run([str(hermesc), '-emit-binary', '-O', '-w', '-out', str(OUT / 'main.jsbundle'), str(JS / 'main.jsbundle')], check=True)
-    if (JS / 'assets').exists():
-        b.copy_tree_entry(JS / 'assets', OUT / 'assets')
+    # Metro already nests its output under assets/, and the app looks for assets/ next to the bundle.
+    if (JS / 'assets' / 'assets').exists():
+        b.copy_tree_entry(JS / 'assets' / 'assets', OUT / 'assets')
     size = subprocess.check_output(['du', '-sh', str(OUT)], text=True).split()[0]
     print(f'built {OUT} ({size})')
 
