@@ -536,6 +536,9 @@ class Builder:
         self.skipped = set()
         self.swift_stamps = {}
         self.errors = []
+        # Covers the lockfile, so Swift is rebuilt when the prebuilt React frameworks change.
+        stamp = ROOT / 'prepare.stamp'
+        self.project_stamp = stamp.read_text() if stamp.exists() else ''
 
     def transitive_swift_stamp(self, target):
         digest = hashlib.sha256()
@@ -558,7 +561,7 @@ class Builder:
         args = swift_args(target)
         _, header, obj = swift_outputs(target)
         key = (hashlib.sha256(json.dumps(args).encode()).hexdigest() + file_stamp(target.swift_files)
-               + file_stamp(self.imported_headers(target)) + self.transitive_swift_stamp(target))
+               + file_stamp(self.imported_headers(target)) + self.transitive_swift_stamp(target) + self.project_stamp)
         stamp = INT / target.name / 'swift.stamp'
         self.swift_stamps[target.name] = hashlib.sha256(key.encode()).hexdigest()
         if stamp.exists() and stamp.read_text() == key and obj.exists():

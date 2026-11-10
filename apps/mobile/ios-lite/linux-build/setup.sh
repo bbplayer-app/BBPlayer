@@ -26,7 +26,11 @@ if [ ! -x "$SWIFT_HOME/usr/bin/swift" ]; then
   keyring="$(mktemp -d)"
   trap 'rm -rf "$keyring"' EXIT
   curl -fsSL --compressed --retry 5 https://www.swift.org/keys/all-keys.asc | GNUPGHOME="$keyring" gpg --batch --quiet --import
-  GNUPGHOME="$keyring" gpg --batch --quiet --verify "$tarball.sig" "$tarball"
+  if ! GNUPGHOME="$keyring" gpg --batch --quiet --verify "$tarball.sig" "$tarball"; then
+    rm -f "$tarball" "$tarball.sig"
+    echo 'The Swift download failed verification and was removed. Run this again to download it afresh.' >&2
+    exit 1
+  fi
   # Extract to the side first, so an interrupted run can't pass for a finished install.
   rm -rf "$SWIFT_HOME.partial"
   mkdir -p "$SWIFT_HOME.partial"

@@ -22,6 +22,7 @@ class OrpheusPlayerManager: NSObject {
     private var playbackSpeed: Float = 1.0
     private var nowPlayingArtworkUrl: String?
     private var nowPlayingArtwork: MPMediaItemArtwork?
+    private var nowPlayingArtworkRetryDate: Date?
 
     /// How the current item was loaded, so a failed stream can move on. Main thread only.
     private struct StreamLoad {
@@ -674,12 +675,11 @@ class OrpheusPlayerManager: NSObject {
         }
 
         if let artworkUrl = track.artwork {
-            if artworkUrl == nowPlayingArtworkUrl {
-                if let artwork = nowPlayingArtwork {
-                    info[MPMediaItemPropertyArtwork] = artwork
-                }
-            } else {
+            let retryDue = nowPlayingArtworkRetryDate.map { $0 <= Date() } ?? false
+            if artworkUrl != nowPlayingArtworkUrl || retryDue {
                 loadNowPlayingArtwork(from: artworkUrl)
+            } else if let artwork = nowPlayingArtwork {
+                info[MPMediaItemPropertyArtwork] = artwork
             }
         }
 
@@ -689,12 +689,13 @@ class OrpheusPlayerManager: NSObject {
     private func loadNowPlayingArtwork(from urlString: String) {
         nowPlayingArtworkUrl = urlString
         nowPlayingArtwork = nil
+        nowPlayingArtworkRetryDate = nil
         guard let url = URL(string: urlString) else { return }
         downloadImage(url: url) { [weak self] image in
             guard let self, self.nowPlayingArtworkUrl == urlString else { return }
             guard let image else {
-                // Forgetting the URL makes the next now-playing update try again.
-                self.nowPlayingArtworkUrl = nil
+                // Waiting keeps a URL that never decodes from costing a download per update.
+                self.nowPlayingArtworkRetryDate = Date().addingTimeInterval(60)
                 return
             }
             self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
