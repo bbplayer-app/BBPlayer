@@ -31,10 +31,21 @@ class OrpheusPlayerManager: NSObject {
         let startPosition: Double?
         var mirrors: [String]
         let fallback: ((Double?) -> Void)?
+        /// Fetches new links for the same stream; nil when it isn't resolved from Bilibili.
+        let refresh: ((Double?) -> Void)?
+        let loadedAt = Date()
         /// Held here because AVAssetResourceLoader only keeps a weak reference to its delegate.
         let playlistLoader: DashAudioPlaylistLoader?
     }
     private var currentLoad: StreamLoad?
+    /// One failure can arrive as both a failed status and a failure to play to the end.
+    private weak var failedItem: AVPlayerItem?
+
+    /// Bilibili's links last two hours, and mirrors expire with them, so a stream that
+    /// fails after playing this long gets new links before anything else is tried.
+    private static let streamRefreshAge: TimeInterval = 10 * 60
+
+    private var transitionTask: UIBackgroundTaskIdentifier = .invalid
 
     private static let bilibiliHeaders = [
         "Referer": "https://www.bilibili.com/",
@@ -81,11 +92,16 @@ class OrpheusPlayerManager: NSObject {
         
         // End of track observer
         NotificationCenter.default.addObserver(self, selector: #selector(playerDidFinishPlaying), name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(playerDidFailToPlayToEnd), name: .AVPlayerItemFailedToPlayToEndTime, object: nil)
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "timeControlStatus" {
-
+            if player.timeControlStatus == .playing {
+                DispatchQueue.main.async { [weak self] in
+                    self?.endTransitionTask()
+                }
+            }
             notifyPlaybackState()
         } else if keyPath == "currentItem.status" {
             let status = player.currentItem?.status ?? .unknown
@@ -103,16 +119,28 @@ class OrpheusPlayerManager: NSObject {
     
     private func handleItemFailed() {
         guard let item = player.currentItem, item.status == .failed else { return }
-        let message = item.error?.localizedDescription ?? "unknown error"
+        handleStreamFailure(of: item, message: item.error?.localizedDescription ?? "unknown error")
+    }
+
+    private func handleStreamFailure(of item: AVPlayerItem, message: String) {
+        guard item === player.currentItem, item !== failedItem else { return }
+        failedItem = item
+        beginTransitionTask()
 
         if var load = currentLoad {
             let position = player.currentTime().seconds
             let resumeAt = position.isFinite && position > 0 ? position : load.startPosition
 
+            if let refresh = load.refresh, Date().timeIntervalSince(load.loadedAt) >= Self.streamRefreshAge {
+                NSLog("[OrpheusPlayer] stream failed, fetching new links: %@", message)
+                refresh(resumeAt)
+                return
+            }
+
             if !load.mirrors.isEmpty {
                 let next = load.mirrors.removeFirst()
                 NSLog("[OrpheusPlayer] stream failed, trying the next mirror: %@", message)
-                loadAvPlayerItem(url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback)
+                loadAvPlayerItem(url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh)
                 return
             }
 
@@ -128,13 +156,44 @@ class OrpheusPlayerManager: NSObject {
         onPlayerError?(message)
         onPlaybackStateChanged?(.idle)
         onIsPlayingChanged?(false)
+        endTransitionTask()
     }
 
-    @objc private func playerDidFinishPlaying(note: NSNotification) {
-        handleAutoAdvance()
+    /// While the next stream loads nothing is playing, and iOS would suspend a background app.
+    private func beginTransitionTask() {
+        guard transitionTask == .invalid else { return }
+        transitionTask = UIApplication.shared.beginBackgroundTask(withName: "OrpheusTrackTransition") { [weak self] in
+            self?.endTransitionTask()
+        }
     }
-    
+
+    private func endTransitionTask() {
+        guard transitionTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(transitionTask)
+        transitionTask = .invalid
+    }
+
+    /// These notifications can arrive on any thread, and other players in the app post them too.
+    @objc private func playerDidFinishPlaying(note: NSNotification) {
+        guard let item = note.object as? AVPlayerItem else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, item === self.player.currentItem else { return }
+            self.handleAutoAdvance()
+        }
+    }
+
+    /// A failed segment request leaves the item's status as ready, so only this reports it.
+    @objc private func playerDidFailToPlayToEnd(note: NSNotification) {
+        guard let item = note.object as? AVPlayerItem else { return }
+        let error = note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+        DispatchQueue.main.async { [weak self] in
+            self?.handleStreamFailure(of: item, message: error?.localizedDescription ?? "unknown error")
+        }
+    }
+
     private func handleAutoAdvance() {
+        beginTransitionTask()
+
         if let current = queueManager.getCurrentTrack(), let duration = player.currentItem?.duration.seconds {
              onTrackFinished?(current.id, duration, duration)
         }
@@ -441,8 +500,11 @@ class OrpheusPlayerManager: NSObject {
                     let fallback: ((Double?) -> Void)? = stream.segmentBase == nil ? nil : { [weak self] position in
                         self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: false)
                     }
+                    let refresh: (Double?) -> Void = { [weak self] position in
+                        self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: audioOnly)
+                    }
                     self.loadAvPlayerItem(url: url, headers: Self.bilibiliHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
-                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback)
+                                          mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
                 case .failure(let error):
 
                     self.onPlayerError?(error.localizedDescription)
@@ -454,10 +516,10 @@ class OrpheusPlayerManager: NSObject {
     }
 
     private func loadAvPlayerItem(url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
-                                  mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil) {
+                                  mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil, refresh: ((Double?) -> Void)? = nil) {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
-                self?.loadAvPlayerItem(url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback)
+                self?.loadAvPlayerItem(url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh)
             }
             return
         }
@@ -481,7 +543,7 @@ class OrpheusPlayerManager: NSObject {
         } else {
             asset = AVURLAsset(url: nsUrl, options: options)
         }
-        currentLoad = StreamLoad(headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, playlistLoader: playlistLoader)
+        currentLoad = StreamLoad(headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh, playlistLoader: playlistLoader)
 
         let item = AVPlayerItem(asset: asset)
         if segmentBase == nil {
