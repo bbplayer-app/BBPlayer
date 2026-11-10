@@ -4,14 +4,15 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
-for tool in curl docker gpg node npx pnpm python3; do
+for tool in curl docker git gpg node npx pnpm python3 zip unzip; do
   command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
 done
 mkdir -p "$BB/downloads" "$BB/bin"
 
 fetch() {
   [ -s "$2" ] && return 0
-  curl -fL --retry 20 --retry-all-errors --retry-delay 3 -C - -o "$2.part" "$1"
+  # A connection can stall without ever failing, so treat a minute of no progress as an error.
+  curl -fL --retry 20 --retry-all-errors --retry-delay 3 --speed-limit 1024 --speed-time 60 -C - -o "$2.part" "$1"
   mv "$2.part" "$2"
 }
 
@@ -38,7 +39,12 @@ if [ ! -x "$SWIFT_HOME/usr/bin/swift" ]; then
   rm -rf "$SWIFT_HOME"
   mv "$SWIFT_HOME.partial" "$SWIFT_HOME"
 fi
-"$SWIFT_HOME/usr/bin/swift" --version 2>&1 | head -n 1
+if ! swift_version="$("$SWIFT_HOME/usr/bin/swift" --version 2>&1)"; then
+  printf '%s\n' "$swift_version" >&2
+  echo 'Swift could not start. Install the system libraries listed in README.md, then run this again.' >&2
+  exit 1
+fi
+echo "$swift_version" | head -n 1
 
 echo '== xtool'
 fetch "https://github.com/xtool-org/xtool/releases/download/$XTOOL_VERSION/xtool-x86_64.AppImage" "$XTOOL"
@@ -50,8 +56,8 @@ if [ ! -d "$SDK_BUNDLE/Developer" ]; then
 The iOS SDK is not installed yet. Download Xcode.xip from
 https://developer.apple.com/download/all/ and then run:
 
-  "$XTOOL" sdk install /path/to/Xcode.xip
-  "$XTOOL" auth login --mode password
+  PATH="$SWIFT_HOME/usr/bin:\$PATH" APPIMAGE_EXTRACT_AND_RUN=1 "$XTOOL" sdk install /path/to/Xcode.xip
+  APPIMAGE_EXTRACT_AND_RUN=1 "$XTOOL" auth login --mode password
 
 After that, run ios-build.sh again.
 EOF

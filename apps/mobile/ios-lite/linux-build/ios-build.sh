@@ -34,7 +34,7 @@ if [ "$install" = 1 ]; then
     "Logged in"*) ;;
     *)
       echo 'Sign in to your Apple ID, then run this again:' >&2
-      echo "  \"$XTOOL\" auth login --mode password" >&2
+      echo "  APPIMAGE_EXTRACT_AND_RUN=1 \"$XTOOL\" auth login --mode password" >&2
       exit 1
       ;;
   esac

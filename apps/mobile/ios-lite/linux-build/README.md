@@ -4,7 +4,7 @@
 
 脚本用 [xtool](https://github.com/xtool-org/xtool) 提供 iOS SDK 和签名，在 Docker 里运行 CocoaPods 生成工程，再代替 xcodebuild 完成编译和打包。
 
-目前只在 Ubuntu 26.04（WSL2）和 iOS 27 的 iPhone 上验证过。
+目前在 Ubuntu 26.04（WSL2）和全新的 Ubuntu 24.04 上验证过，手机是 iOS 27 的 iPhone。
 
 ## 和完整版的区别
 
@@ -12,8 +12,14 @@
 
 ## 准备
 
-- x86_64 的 Ubuntu（WSL2 也可以），至少 40 GB 空闲磁盘。
-- Docker、Node.js、pnpm、Python 3、curl、gpg。
+- x86_64 的 Ubuntu（WSL2 也可以），至少 30 GB 空闲磁盘，4 GB 以上内存。
+- Docker（当前用户要能直接运行 `docker`）、Node.js（22.13 或 24.3 以上，Ubuntu 软件源里的版本太旧）、pnpm、Python 3、git、curl、gpg、zip、unzip。
+- Swift 需要的系统库。Ubuntu 24.04 上运行下面的命令，其他版本见 [Swift 的安装说明](https://www.swift.org/install/linux/)：
+
+  ```bash
+  sudo apt install binutils libc6-dev libcurl4-openssl-dev libedit2 libgcc-13-dev libncurses-dev libpython3-dev libsqlite3-0 libstdc++-13-dev libxml2-dev libzstd-dev pkg-config tzdata zlib1g-dev
+  ```
+
 - 从 [Apple 开发者网站](https://developer.apple.com/download/all/) 下载的 `Xcode.xip`，用来提取 iOS SDK。
 - Apple ID。免费账号也可以，但装上的 App 7 天后会过期，到时重新安装即可。
 - iPhone 打开开发者模式：设置 → 隐私与安全性 → 开发者模式。
@@ -26,7 +32,7 @@
 apps/mobile/ios-lite/linux-build/ios-build.sh
 ```
 
-脚本会自己安装工具链和依赖、生成 iOS 工程、编译并安装到手机。生成工程和编译大约要 20 分钟，另外还要加上下载的时间。
+脚本会自己安装工具链和依赖、生成 iOS 工程、编译并安装到手机。生成工程和编译大约要 20 分钟，N100 这样的低功耗小主机要一个多小时，另外还要加上下载的时间。
 
 第一次运行时，缺下面这几样脚本会停下来，告诉你该运行什么命令。做完后再运行一次同样的命令就行：
 

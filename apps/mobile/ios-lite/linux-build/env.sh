@@ -15,6 +15,8 @@ PODS_HOME="$BB/pods-home"
 export BBPLAYER_IOS_HOME="$BB"
 export BBPLAYER_IOS_SWIFT="$SWIFT_HOME"
 export PATH="$BB/bin:$PATH"
+# xtool is an AppImage; running it extracted means systems without FUSE work too.
+export APPIMAGE_EXTRACT_AND_RUN=1
 
 # Changes when the generated iOS project no longer matches the repo.
 project_fingerprint() {
