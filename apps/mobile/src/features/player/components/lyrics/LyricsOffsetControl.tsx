@@ -1,5 +1,6 @@
+import { TvFocusScope } from '@bbplayer/native'
 import { memo, useCallback, useEffect } from 'react'
-import { Modal, Pressable, StyleSheet, View } from 'react-native'
+import { Modal, Pressable, StyleSheet } from 'react-native'
 import { Divider, Icon, Text, useTheme } from 'react-native-paper'
 import Animated, {
 	useAnimatedStyle,
@@ -56,10 +57,12 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 			animationType='none'
 			statusBarTranslucent
 		>
-			<View style={styles.modalRoot}>
+			{/* Modal 是单独的窗口：焦点范围负责焦点框和打开时的自动聚焦。 */}
+			<TvFocusScope style={styles.modalRoot}>
 				<Pressable
 					style={StyleSheet.absoluteFill}
 					onPress={handleDismiss}
+					focusable={false}
 				/>
 				<Animated.View
 					style={[
@@ -109,7 +112,7 @@ export const LyricsOffsetControl = memo(function LyricsOffsetControl({
 						/>
 					</Pressable>
 				</Animated.View>
-			</View>
+			</TvFocusScope>
 		</Modal>
 	)
 })

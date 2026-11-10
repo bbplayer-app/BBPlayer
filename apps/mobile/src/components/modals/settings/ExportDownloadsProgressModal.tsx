@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import type { TrueSheet as TrueSheetType } from '@lodev09/react-native-true-sheet'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
@@ -215,191 +216,193 @@ const ExportDownloadsProgressModal = memo(
 					subscriptionRef.current = null
 				}}
 			>
-				<GestureHandlerRootView style={{ flex: 1 }}>
-					<View style={styles.sheetHeader}>
-						<Text
-							variant='titleLarge'
-							style={styles.sheetTitle}
+				<TvFocusScope style={{ flex: 1 }}>
+					<GestureHandlerRootView style={{ flex: 1 }}>
+						<View style={styles.sheetHeader}>
+							<Text
+								variant='titleLarge'
+								style={styles.sheetTitle}
+							>
+								{stageTitle}
+							</Text>
+						</View>
+						<ScrollView
+							ref={scrollViewRef}
+							style={{ flex: 1 }}
+							contentContainerStyle={styles.sheetContent}
+							nestedScrollEnabled
 						>
-							{stageTitle}
-						</Text>
-					</View>
-					<ScrollView
-						ref={scrollViewRef}
-						style={{ flex: 1 }}
-						contentContainerStyle={styles.sheetContent}
-						nestedScrollEnabled
-					>
-						{stage === 'config' ? (
-							<>
-								{/* ── 文件名模板 ── */}
-								<Text
-									variant='labelLarge'
-									style={styles.sectionTitle}
-								>
-									文件名模板
-								</Text>
-								<TextInput
-									label='文件名模板'
-									value={filenamePattern}
-									onChangeText={setFilenamePattern}
-									mode='outlined'
-									placeholder='{name}'
-									autoCapitalize='none'
-									autoCorrect={false}
-									dense
-								/>
-								<HelperText
-									type={
-										!filenamePattern.trim() ||
-										patternHasVariable(filenamePattern)
-											? 'info'
-											: 'error'
-									}
-									visible
-									style={styles.helperText}
-								>
-									{!filenamePattern.trim()
-										? '为空时使用默认模板 {name}'
-										: patternHasVariable(filenamePattern)
-											? `预览：${buildPreviewFilename(filenamePattern)}`
-											: '模板中未包含任何变量，将自动替换为 {name}'}
-								</HelperText>
-								{/* 可用变量说明 */}
-								<View style={styles.variableBox}>
+							{stage === 'config' ? (
+								<>
+									{/* ── 文件名模板 ── */}
 									<Text
-										variant='labelSmall'
-										style={styles.variableTitle}
+										variant='labelLarge'
+										style={styles.sectionTitle}
 									>
-										可用变量
+										文件名模板
 									</Text>
-									{[
-										['id', '曲目唯一 ID'],
-										['name', '曲目标题'],
-										['artist', '艺术家'],
-										['bvid', 'B 站 BV 号'],
-										['cid', 'B 站 CID（如果不是分 P 视频则为空）'],
-									].map(([v, desc]) => (
+									<TextInput
+										label='文件名模板'
+										value={filenamePattern}
+										onChangeText={setFilenamePattern}
+										mode='outlined'
+										placeholder='{name}'
+										autoCapitalize='none'
+										autoCorrect={false}
+										dense
+									/>
+									<HelperText
+										type={
+											!filenamePattern.trim() ||
+											patternHasVariable(filenamePattern)
+												? 'info'
+												: 'error'
+										}
+										visible
+										style={styles.helperText}
+									>
+										{!filenamePattern.trim()
+											? '为空时使用默认模板 {name}'
+											: patternHasVariable(filenamePattern)
+												? `预览：${buildPreviewFilename(filenamePattern)}`
+												: '模板中未包含任何变量，将自动替换为 {name}'}
+									</HelperText>
+									{/* 可用变量说明 */}
+									<View style={styles.variableBox}>
 										<Text
-											key={v}
-											variant='bodySmall'
-											style={styles.variableRow}
+											variant='labelSmall'
+											style={styles.variableTitle}
 										>
-											<Text style={styles.variableTag}>{`{${v}}`}</Text>
-											{'  '}
-											{desc}
+											可用变量
 										</Text>
-									))}
-								</View>
-
-								<Divider style={styles.divider} />
-
-								{/* ── 内嵌歌词开关 ── */}
-								<View style={styles.switchRow}>
-									<View style={styles.switchLabel}>
-										<Text variant='labelLarge'>内嵌歌词</Text>
+										{[
+											['id', '曲目唯一 ID'],
+											['name', '曲目标题'],
+											['artist', '艺术家'],
+											['bvid', 'B 站 BV 号'],
+											['cid', 'B 站 CID（如果不是分 P 视频则为空）'],
+										].map(([v, desc]) => (
+											<Text
+												key={v}
+												variant='bodySmall'
+												style={styles.variableRow}
+											>
+												<Text style={styles.variableTag}>{`{${v}}`}</Text>
+												{'  '}
+												{desc}
+											</Text>
+										))}
 									</View>
-									<UniversalSwitch
-										value={embedLyrics}
-										onValueChange={setEmbedLyrics}
-									/>
-								</View>
-								<HelperText
-									type='info'
-									visible
-									style={styles.helperText}
-								>
-									只有在播放器「歌词」页面加载过歌词的曲目才会包含内嵌歌词——歌词在播放时加载并缓存到本地，未打开过歌词页面的曲目将不含内嵌歌词。
-								</HelperText>
 
-								{/* ── SPL → LRC 开关（仅 embedLyrics 开启时显示）── */}
-								{embedLyrics && (
-									<>
-										<Divider style={styles.divider} />
-										<View style={styles.switchRow}>
-											<View style={styles.switchLabel}>
-												<Text variant='labelLarge'>转换为标准 LRC</Text>
-											</View>
-											<UniversalSwitch
-												value={convertToLrc}
-												onValueChange={setConvertToLrc}
-											/>
+									<Divider style={styles.divider} />
+
+									{/* ── 内嵌歌词开关 ── */}
+									<View style={styles.switchRow}>
+										<View style={styles.switchLabel}>
+											<Text variant='labelLarge'>内嵌歌词</Text>
 										</View>
-										<HelperText
-											type='info'
-											visible
-											style={styles.helperText}
-										>
-											BBPlayer 歌词遵循 SPL 规范（LRC
-											超集），支持逐字时间戳（卡拉OK高亮效果）。但大多数播放器（除椒盐音乐外，因为这个规范就来自椒盐音乐）无法识别
-											SPL 逐字语法，开启后将转换为所有播放器均可读取的标准
-											LRC（逐字信息将被移除）。
-										</HelperText>
-									</>
-								)}
-
-								<Divider style={styles.divider} />
-
-								{/* ── 裁剪封面开关 ── */}
-								<View style={styles.switchRow}>
-									<View style={styles.switchLabel}>
-										<Text variant='labelLarge'>裁剪封面为正方形</Text>
+										<UniversalSwitch
+											value={embedLyrics}
+											onValueChange={setEmbedLyrics}
+										/>
 									</View>
-									<UniversalSwitch
-										value={cropCoverArt}
-										onValueChange={setCropCoverArt}
-									/>
-								</View>
-								<HelperText
-									type='info'
-									visible
-									style={styles.helperText}
-								>
-									Bilibili 封面通常为 16:9，开启后将按中心裁剪为 1:1
-									方形，符合主流音乐播放器的封面规范。
-								</HelperText>
-
-								<Divider style={styles.divider} />
-
-								<View style={styles.actionRow}>
-									<Button onPress={dismiss}>取消</Button>
-									<Button
-										mode='contained'
-										onPress={startExport}
+									<HelperText
+										type='info'
+										visible
+										style={styles.helperText}
 									>
-										开始导出
-									</Button>
-								</View>
-							</>
-						) : (
-							<>
-								<View style={styles.progressContent}>
-									<Text
-										variant='bodyMedium'
-										style={styles.message}
-										numberOfLines={2}
-									>
-										{progress.message}
-									</Text>
-									<LinearProgressIndicator
-										progress={isFinished ? 1 : progressValue}
-										indeterminate={!isFinished && progressValue === undefined}
-										style={styles.progressBar}
-									/>
-								</View>
+										只有在播放器「歌词」页面加载过歌词的曲目才会包含内嵌歌词——歌词在播放时加载并缓存到本地，未打开过歌词页面的曲目将不含内嵌歌词。
+									</HelperText>
 
-								<View style={styles.actionRow}>
-									<Button
-										onPress={dismiss}
-										disabled={!isFinished}
+									{/* ── SPL → LRC 开关（仅 embedLyrics 开启时显示）── */}
+									{embedLyrics && (
+										<>
+											<Divider style={styles.divider} />
+											<View style={styles.switchRow}>
+												<View style={styles.switchLabel}>
+													<Text variant='labelLarge'>转换为标准 LRC</Text>
+												</View>
+												<UniversalSwitch
+													value={convertToLrc}
+													onValueChange={setConvertToLrc}
+												/>
+											</View>
+											<HelperText
+												type='info'
+												visible
+												style={styles.helperText}
+											>
+												BBPlayer 歌词遵循 SPL 规范（LRC
+												超集），支持逐字时间戳（卡拉OK高亮效果）。但大多数播放器（除椒盐音乐外，因为这个规范就来自椒盐音乐）无法识别
+												SPL 逐字语法，开启后将转换为所有播放器均可读取的标准
+												LRC（逐字信息将被移除）。
+											</HelperText>
+										</>
+									)}
+
+									<Divider style={styles.divider} />
+
+									{/* ── 裁剪封面开关 ── */}
+									<View style={styles.switchRow}>
+										<View style={styles.switchLabel}>
+											<Text variant='labelLarge'>裁剪封面为正方形</Text>
+										</View>
+										<UniversalSwitch
+											value={cropCoverArt}
+											onValueChange={setCropCoverArt}
+										/>
+									</View>
+									<HelperText
+										type='info'
+										visible
+										style={styles.helperText}
 									>
-										{isFinished ? '关闭' : '请稍候'}
-									</Button>
-								</View>
-							</>
-						)}
-					</ScrollView>
-				</GestureHandlerRootView>
+										Bilibili 封面通常为 16:9，开启后将按中心裁剪为 1:1
+										方形，符合主流音乐播放器的封面规范。
+									</HelperText>
+
+									<Divider style={styles.divider} />
+
+									<View style={styles.actionRow}>
+										<Button onPress={dismiss}>取消</Button>
+										<Button
+											mode='contained'
+											onPress={startExport}
+										>
+											开始导出
+										</Button>
+									</View>
+								</>
+							) : (
+								<>
+									<View style={styles.progressContent}>
+										<Text
+											variant='bodyMedium'
+											style={styles.message}
+											numberOfLines={2}
+										>
+											{progress.message}
+										</Text>
+										<LinearProgressIndicator
+											progress={isFinished ? 1 : progressValue}
+											indeterminate={!isFinished && progressValue === undefined}
+											style={styles.progressBar}
+										/>
+									</View>
+
+									<View style={styles.actionRow}>
+										<Button
+											onPress={dismiss}
+											disabled={!isFinished}
+										>
+											{isFinished ? '关闭' : '请稍候'}
+										</Button>
+									</View>
+								</>
+							)}
+						</ScrollView>
+					</GestureHandlerRootView>
+				</TvFocusScope>
 			</TrueSheet>
 		)
 	},

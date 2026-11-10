@@ -251,6 +251,8 @@ function SearchPageContent() {
 					onPress={dismissPanel}
 					accessibilityLabel='收起搜索建议'
 					testID='search-panel-backdrop'
+					// 只用来点空白处收起；遥控器用返回键收起，焦点不能落在这层上。
+					focusable={false}
 				/>
 			)}
 			<View

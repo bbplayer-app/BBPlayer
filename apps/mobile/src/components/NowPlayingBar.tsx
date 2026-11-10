@@ -10,7 +10,7 @@ import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
 import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import type { ViewInstance } from 'react-native'
-import { Platform, StyleSheet, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, View } from 'react-native'
 import { EaseView } from 'react-native-ease'
 import {
 	Directions,
@@ -308,104 +308,118 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 									styles.nowPlayingBarContentAboveProgress,
 							]}
 						>
-							<Image
-								source={{
-									uri:
-										resolveBarCover(
-											currentTrack.uniqueKey,
-											currentTrack.coverUrl,
-										) ?? undefined,
-								}}
-								style={[
-									styles.nowPlayingBarImage,
-									{
-										borderColor: colors.primary,
-										borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
-									},
-									Platform.OS === 'ios' && {
-										backgroundColor: colors.surfaceVariant,
-									},
-								]}
-								recyclingKey={currentTrack.uniqueKey}
-								cachePolicy={'disk'}
-							/>
-
-							<View
-								style={[
-									styles.nowPlayingBarTextContainer,
-									{ position: 'relative' },
-								]}
+							{/* 触摸由外层手势处理（点按、上滑打开播放器，左右滑切歌）；这一层只给
+							    遥控器 / 键盘一个可以聚焦、按确认键打开播放器的位置。 */}
+							<Pressable
+								style={styles.nowPlayingBarOpener}
+								pointerEvents={Platform.isTV ? 'auto' : 'none'}
+								testID='now-playing-open-player'
+								onPress={() => router.navigate('/player')}
+								accessibilityRole='button'
+								accessibilityLabel='打开播放器'
 							>
-								{/* Normal state: displayed inline so the parent has height */}
-								<Animated.View
-									style={[normalOpacity, { flex: 1, justifyContent: 'center' }]}
-									pointerEvents='none'
-								>
-									<Text
-										variant='titleSmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurface }}
-									>
-										{currentTrack.title ?? '未知曲目'}
-									</Text>
-									<Text
-										variant='bodySmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurfaceVariant }}
-									>
-										{currentTrack.artist?.name ?? '未知'}
-									</Text>
-								</Animated.View>
-
-								{/* Prev/next indicators: absolutely positioned on top */}
-								<Animated.View
+								<Image
+									source={{
+										uri:
+											resolveBarCover(
+												currentTrack.uniqueKey,
+												currentTrack.coverUrl,
+											) ?? undefined,
+									}}
 									style={[
-										prevIndicatorOpacity,
-										StyleSheet.absoluteFill,
-										{ justifyContent: 'center' },
+										styles.nowPlayingBarImage,
+										{
+											borderColor: colors.primary,
+											borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
+										},
+										Platform.OS === 'ios' && {
+											backgroundColor: colors.surfaceVariant,
+										},
 									]}
-									pointerEvents='none'
-								>
-									<Text
-										variant='titleSmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurface, fontWeight: 'bold' }}
-									>
-										上一首
-									</Text>
-									<Text
-										variant='bodySmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurfaceVariant }}
-									>
-										{prevTrack?.title ?? ''}
-									</Text>
-								</Animated.View>
+									recyclingKey={currentTrack.uniqueKey}
+									cachePolicy={'disk'}
+								/>
 
-								<Animated.View
+								<View
 									style={[
-										nextIndicatorOpacity,
-										StyleSheet.absoluteFill,
-										{ justifyContent: 'center' },
+										styles.nowPlayingBarTextContainer,
+										{ position: 'relative' },
 									]}
-									pointerEvents='none'
 								>
-									<Text
-										variant='titleSmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurface, fontWeight: 'bold' }}
+									{/* Normal state: displayed inline so the parent has height */}
+									<Animated.View
+										style={[
+											normalOpacity,
+											{ flex: 1, justifyContent: 'center' },
+										]}
+										pointerEvents='none'
 									>
-										下一首
-									</Text>
-									<Text
-										variant='bodySmall'
-										numberOfLines={1}
-										style={{ color: colors.onSurfaceVariant }}
+										<Text
+											variant='titleSmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurface }}
+										>
+											{currentTrack.title ?? '未知曲目'}
+										</Text>
+										<Text
+											variant='bodySmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurfaceVariant }}
+										>
+											{currentTrack.artist?.name ?? '未知'}
+										</Text>
+									</Animated.View>
+
+									{/* Prev/next indicators: absolutely positioned on top */}
+									<Animated.View
+										style={[
+											prevIndicatorOpacity,
+											StyleSheet.absoluteFill,
+											{ justifyContent: 'center' },
+										]}
+										pointerEvents='none'
 									>
-										{nextTrack?.title ?? ''}
-									</Text>
-								</Animated.View>
-							</View>
+										<Text
+											variant='titleSmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurface, fontWeight: 'bold' }}
+										>
+											上一首
+										</Text>
+										<Text
+											variant='bodySmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurfaceVariant }}
+										>
+											{prevTrack?.title ?? ''}
+										</Text>
+									</Animated.View>
+
+									<Animated.View
+										style={[
+											nextIndicatorOpacity,
+											StyleSheet.absoluteFill,
+											{ justifyContent: 'center' },
+										]}
+										pointerEvents='none'
+									>
+										<Text
+											variant='titleSmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurface, fontWeight: 'bold' }}
+										>
+											下一首
+										</Text>
+										<Text
+											variant='bodySmall'
+											numberOfLines={1}
+											style={{ color: colors.onSurfaceVariant }}
+										>
+											{nextTrack?.title ?? ''}
+										</Text>
+									</Animated.View>
+								</View>
+							</Pressable>
 
 							<View style={styles.nowPlayingBarControls}>
 								<Touchable
@@ -509,6 +523,11 @@ const styles = StyleSheet.create({
 	// iOS 上封面的 zIndex 只在自己的父视图内生效，整块内容要提到进度条之上。
 	nowPlayingBarContentAboveProgress: {
 		zIndex: 2,
+	},
+	nowPlayingBarOpener: {
+		flex: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
 	},
 	nowPlayingBarImage: {
 		height: 48,

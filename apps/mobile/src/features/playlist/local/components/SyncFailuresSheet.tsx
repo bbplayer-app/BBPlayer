@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { TrueSheet as TrueSheetComponent } from '@lodev09/react-native-true-sheet'
 import { and, eq, inArray } from 'drizzle-orm'
@@ -126,78 +127,80 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 				style={{ flex: 1 }}
 				scrollableRef={scrollViewRef}
 			>
-				<GestureHandlerRootView style={{ flex: 1 }}>
-					<View style={styles.container}>
-						<Text
-							variant='titleLarge'
-							style={styles.title}
-						>
-							同步失败记录
-						</Text>
-
-						{loading ? (
-							<View style={styles.center}>
-								<ActivityIndicator size='large' />
-							</View>
-						) : rows.length === 0 ? (
-							<View style={styles.center}>
-								<Text style={{ color: colors.onSurfaceVariant }}>
-									暂无失败记录
-								</Text>
-							</View>
-						) : (
-							<ScrollView
-								ref={scrollViewRef}
-								style={styles.listContent}
-								nestedScrollEnabled
+				<TvFocusScope style={{ flex: 1 }}>
+					<GestureHandlerRootView style={{ flex: 1 }}>
+						<View style={styles.container}>
+							<Text
+								variant='titleLarge'
+								style={styles.title}
 							>
-								{rows.map((row) => {
-									const info = getOperationInfo(row.operation)
-									return (
-										<View
-											key={row.id}
-											style={styles.row}
-										>
+								同步失败记录
+							</Text>
+
+							{loading ? (
+								<View style={styles.center}>
+									<ActivityIndicator size='large' />
+								</View>
+							) : rows.length === 0 ? (
+								<View style={styles.center}>
+									<Text style={{ color: colors.onSurfaceVariant }}>
+										暂无失败记录
+									</Text>
+								</View>
+							) : (
+								<ScrollView
+									ref={scrollViewRef}
+									style={styles.listContent}
+									nestedScrollEnabled
+								>
+									{rows.map((row) => {
+										const info = getOperationInfo(row.operation)
+										return (
 											<View
-												style={[
-													styles.iconContainer,
-													{ backgroundColor: colors.elevation.level3 },
-												]}
+												key={row.id}
+												style={styles.row}
 											>
-												<Icon
-													source={info.icon}
-													size={24}
-													color={colors.onSurface}
-												/>
-											</View>
-											<View style={styles.rowInfo}>
-												<Text variant='bodyLarge'>{info.label}</Text>
-												<Text
-													variant='bodySmall'
-													style={{ color: colors.onSurfaceVariant }}
+												<View
+													style={[
+														styles.iconContainer,
+														{ backgroundColor: colors.elevation.level3 },
+													]}
 												>
-													{formatRelativeTime(row.operationAt)}
-												</Text>
+													<Icon
+														source={info.icon}
+														size={24}
+														color={colors.onSurface}
+													/>
+												</View>
+												<View style={styles.rowInfo}>
+													<Text variant='bodyLarge'>{info.label}</Text>
+													<Text
+														variant='bodySmall'
+														style={{ color: colors.onSurfaceVariant }}
+													>
+														{formatRelativeTime(row.operationAt)}
+													</Text>
+												</View>
 											</View>
-										</View>
-									)
-								})}
-							</ScrollView>
-						)}
+										)
+									})}
+								</ScrollView>
+							)}
 
-						<View style={styles.actions}>
-							<Button
-								mode='contained'
-								onPress={handleRetry}
-								loading={loading}
-								disabled={loading || rows.length === 0}
-								style={styles.retryButton}
-							>
-								全部重试
-							</Button>
+							<View style={styles.actions}>
+								<Button
+									mode='contained'
+									onPress={handleRetry}
+									loading={loading}
+									disabled={loading || rows.length === 0}
+									style={styles.retryButton}
+								>
+									全部重试
+								</Button>
+							</View>
 						</View>
-					</View>
-				</GestureHandlerRootView>
+					</GestureHandlerRootView>
+				</TvFocusScope>
 			</TrueSheetComponent>
 		)
 	},

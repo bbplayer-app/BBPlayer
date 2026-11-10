@@ -1,3 +1,4 @@
+import { setFocusRingColor } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin'
 import {
@@ -121,6 +122,11 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 						},
 		[colorScheme, pureWhiteBackground],
 	)
+
+	useEffect(() => {
+		// 遥控器 / 键盘导航时的焦点框跟随主题色。
+		setFocusRingColor(paperTheme.colors.primary)
+	}, [paperTheme.colors.primary])
 
 	return (
 		<SafeAreaProvider>
