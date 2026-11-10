@@ -26,13 +26,17 @@ public class ExpoOrpheusModule: Module {
         }
 
         OrpheusDownloadManager.shared.onDownloadUpdated = { [weak self] task in
-            self?.sendEvent("onDownloadUpdated", [
+            var payload: [String: Any] = [
                 "id": task.id,
                 "state": task.state.rawValue,
                 "percentDownloaded": task.percentDownloaded,
                 "bytesDownloaded": task.bytesDownloaded,
                 "contentLength": task.contentLength
-            ])
+            ]
+            if let track = task.track {
+                payload["track"] = track.dictionaryRepresentation
+            }
+            self?.sendEvent("onDownloadUpdated", payload)
         }
 
         manager.onTrackFinished = { [weak self] trackId, finalPosition, duration in
@@ -134,132 +138,134 @@ public class ExpoOrpheusModule: Module {
 
     // MARK: - Getters
 
+    // Everything touching the queue or player runs on main, alongside AVPlayer's own callbacks.
+
     AsyncFunction("getPosition") { () -> Double in
         return OrpheusPlayerManager.shared.getPosition()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getDuration") { () -> Double in
         return OrpheusPlayerManager.shared.getDuration()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getBuffered") { () -> Double in
         return OrpheusPlayerManager.shared.getBufferedPosition()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getIsPlaying") { () -> Bool in
         return OrpheusPlayerManager.shared.isPlaying()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getCurrentIndex") { () -> Int in
         return OrpheusPlayerManager.shared.getCurrentIndex()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getCurrentTrack") { () -> Track? in
         return OrpheusPlayerManager.shared.getCurrentTrack()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getQueue") { () -> [Track] in
         return OrpheusPlayerManager.shared.getQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getIndexTrack") { (index: Int) -> Track? in
         return OrpheusPlayerManager.shared.getTrack(at: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getPlaybackSpeed") { () -> Double in
         return Double(OrpheusPlayerManager.shared.getPlaybackSpeed())
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getRepeatMode") { () -> Int in
         return OrpheusPlayerManager.shared.repeatMode.rawValue
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getAdjacentTracks") { () -> [String: Track?] in
         return OrpheusPlayerManager.shared.getAdjacentTracks()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getShuffleMode") { () -> Bool in
         return OrpheusPlayerManager.shared.shuffleMode
-    }
+    }.runOnQueue(.main)
 
     // MARK: - Controls
 
     AsyncFunction("play") {
         OrpheusPlayerManager.shared.play()
-    }
+    }.runOnQueue(.main)
     AsyncFunction("pause") {
         OrpheusPlayerManager.shared.pause()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipToNext") {
         OrpheusPlayerManager.shared.playNext()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipToPrevious") {
         OrpheusPlayerManager.shared.skipToPrevious()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("seekTo") { (seconds: Double) in
         OrpheusPlayerManager.shared.seek(to: seconds)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipTo") { (index: Int) in
         OrpheusPlayerManager.shared.skipTo(index: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("addToEnd") { (tracks: [Track], startFromId: String?, clearQueue: Bool) in
         OrpheusPlayerManager.shared.addToEnd(tracks: tracks, startFromId: startFromId, clearQueue: clearQueue)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("playNext") { (track: Track) in
         OrpheusPlayerManager.shared.addToNext(track: track)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("removeTrack") { (index: Int) in
         OrpheusPlayerManager.shared.removeTrack(at: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("moveTrack") { (fromIndex: Int, toIndex: Int) in
         OrpheusPlayerManager.shared.moveTrack(fromIndex: fromIndex, toIndex: toIndex)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("clear") {
          OrpheusPlayerManager.shared.clearQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("reverseRemainingQueue") {
         OrpheusPlayerManager.shared.reverseRemainingQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("setPlaybackSpeed") { (speed: Double) in
         OrpheusPlayerManager.shared.setPlaybackSpeed(Float(speed))
-    }
+    }.runOnQueue(.main)
 
     Function("setBilibiliCookie") { (cookie: String) in
         BilibiliApi.shared.setCookie(cookie)
     }
 
-    Function("setShuffleMode") { (enabled: Bool) in
+    AsyncFunction("setShuffleMode") { (enabled: Bool) in
         OrpheusPlayerManager.shared.setExecuteShuffleMode(enabled)
-    }
+    }.runOnQueue(.main)
 
-    Function("setRepeatMode") { (mode: Int) in
+    AsyncFunction("setRepeatMode") { (mode: Int) in
         if let repeatMode = RepeatMode(rawValue: mode) {
             OrpheusPlayerManager.shared.setExecuteRepeatMode(repeatMode)
         }
-    }
+    }.runOnQueue(.main)
 
-    Function("setSleepTimer") { (durationMs: Double) in
+    AsyncFunction("setSleepTimer") { (durationMs: Double) in
         OrpheusPlayerManager.shared.setSleepTimer(durationMs: durationMs)
-    }
+    }.runOnQueue(.main)
 
-    Function("getSleepTimerEndTime") { () -> Double? in
+    AsyncFunction("getSleepTimerEndTime") { () -> Double? in
         return OrpheusPlayerManager.shared.getSleepTimerEndTime()
-    }
+    }.runOnQueue(.main)
 
-    Function("cancelSleepTimer") {
+    AsyncFunction("cancelSleepTimer") {
         OrpheusPlayerManager.shared.cancelSleepTimer()
-    }
+    }.runOnQueue(.main)
 
     // MARK: - Downloads
 
@@ -319,7 +325,7 @@ public class ExpoOrpheusModule: Module {
 
     AsyncFunction("setAllowSimultaneousPlayback") { (enabled: Bool) in
         try OrpheusPlayerManager.shared.setAllowSimultaneousPlayback(enabled)
-    }
+    }.runOnQueue(.main)
 
     // AVPlayer streams are not kept in an on-disk LRU cache on iOS.
     AsyncFunction("clearPlaybackCache") { () -> Void in }

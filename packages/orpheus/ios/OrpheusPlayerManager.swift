@@ -26,6 +26,7 @@ class OrpheusPlayerManager: NSObject {
 
     /// How the current item was loaded, so a failed stream can move on. Main thread only.
     private struct StreamLoad {
+        let trackId: String
         let headers: [String: String]?
         let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
         let startPosition: Double?
@@ -46,6 +47,20 @@ class OrpheusPlayerManager: NSObject {
     private static let streamRefreshAge: TimeInterval = 10 * 60
 
     private var transitionTask: UIBackgroundTaskIdentifier = .invalid
+
+    /// The track the current AVPlayerItem belongs to; nil once the queue has left it. The queue
+    /// moves first and the old item stays loaded until the next stream resolves, so the
+    /// player's time and duration can only be attributed through this. Main thread only.
+    private var loadedTrackId: String?
+    /// Set once the loaded track's listening record is written, so it is written only once.
+    private var loadedTrackFinished = false
+    /// Where the current queue entry starts while it has no ready item: a restored session
+    /// before its first play, or a track whose stream is still loading.
+    private var pendingStartPosition: Double?
+    private var lastPositionSave = Date.distantPast
+    private static let positionSaveInterval: TimeInterval = 5
+    /// The sleep timer stopped playback during an interruption, so its end must not restart it.
+    private var stayPausedAfterInterruption = false
 
     private static let bilibiliHeaders = [
         "Referer": "https://www.bilibili.com/",
@@ -121,13 +136,14 @@ class OrpheusPlayerManager: NSObject {
     }
 
     private func handleStreamFailure(of item: AVPlayerItem, message: String) {
-        guard item === player.currentItem, item !== failedItem else { return }
+        // Without a loaded track the queue has moved on, and the next stream is already on its way.
+        guard item === player.currentItem, item !== failedItem, loadedTrackId != nil else { return }
         failedItem = item
         beginTransitionTask()
 
         if var load = currentLoad {
-            let position = player.currentTime().seconds
-            let resumeAt = position.isFinite && position > 0 ? position : load.startPosition
+            let position = player.currentTime().finiteSeconds
+            let resumeAt = position > 0 ? position : load.startPosition
 
             if let refresh = load.refresh, Date().timeIntervalSince(load.loadedAt) >= Self.streamRefreshAge {
                 NSLog("[OrpheusPlayer] stream failed, fetching new links: %@", message)
@@ -138,7 +154,7 @@ class OrpheusPlayerManager: NSObject {
             if !load.mirrors.isEmpty {
                 let next = load.mirrors.removeFirst()
                 NSLog("[OrpheusPlayer] stream failed, trying the next mirror: %@", message)
-                loadAvPlayerItem(url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh)
+                loadAvPlayerItem(trackId: load.trackId, url: next, headers: load.headers, segmentBase: load.segmentBase, startPosition: resumeAt, mirrors: load.mirrors, fallback: load.fallback, refresh: load.refresh)
                 return
             }
 
@@ -179,6 +195,10 @@ class OrpheusPlayerManager: NSObject {
 
     /// Reports a stream whose links couldn't be fetched, and lets pressing play retry the failed item.
     private func failLoad(_ message: String) {
+        // The previous track's item may still be loaded, and it must not play on under this one.
+        if loadedTrackId == nil {
+            player.replaceCurrentItem(with: nil)
+        }
         onPlayerError?(message)
         onPlaybackStateChanged?(.idle)
         DispatchQueue.main.async { [weak self] in
@@ -206,13 +226,15 @@ class OrpheusPlayerManager: NSObject {
     }
 
     private func handleAutoAdvance() {
+        // Either the queue has moved on while a stream loads, or this queue already ended.
+        guard loadedTrackId != nil, !loadedTrackFinished else { return }
         beginTransitionTask()
+        finishLoadedTrack(playedToEnd: true)
 
-        if let current = queueManager.getCurrentTrack(), let duration = player.currentItem?.duration.seconds {
-             onTrackFinished?(current.id, duration, duration)
-        }
-
-        if repeatMode == .track {
+        if repeatMode == .track, let trackId = loadedTrackId {
+            // As on Android, each natural loop counts as a new start of the same track.
+            loadedTrackFinished = false
+            onTrackStarted?(trackId, .repeatMode)
             player.seek(to: .zero)
             player.play()
             return
@@ -220,11 +242,47 @@ class OrpheusPlayerManager: NSObject {
         
         skipToNext(reason: .auto)
     }
+
+    /// Writes the listening record of the track the player holds, before anything replaces it.
+    private func finishLoadedTrack(playedToEnd: Bool = false) {
+        guard let trackId = loadedTrackId, !loadedTrackFinished else { return }
+        loadedTrackFinished = true
+
+        // A track that never got a duration never played, so it leaves no record.
+        let duration = player.currentItem?.duration.finiteSeconds ?? 0
+        guard duration > 0 else { return }
+        let position = playedToEnd ? duration : player.currentTime().finiteSeconds
+
+        if playedToEnd {
+            GeneralStorage.shared.clearTrackResume(id: trackId)
+        } else {
+            GeneralStorage.shared.saveTrackResume(id: trackId, position: position, duration: duration)
+        }
+        onTrackFinished?(trackId, position, duration)
+    }
+
+    /// Whether the player's clock describes the current queue entry. It doesn't before the
+    /// entry's own item is ready, or while the queue has moved on and a stream is loading.
+    private var playerHoldsCurrentEntry: Bool {
+        guard let trackId = loadedTrackId, trackId == queueManager.getCurrentTrack()?.id else { return false }
+        return player.currentItem?.status == .readyToPlay
+    }
+
+    private func currentEntryPosition() -> Double {
+        return playerHoldsCurrentEntry ? player.currentTime().finiteSeconds : pendingStartPosition ?? 0
+    }
+
+    private func currentEntryDuration() -> Double {
+        if playerHoldsCurrentEntry, let duration = player.currentItem?.duration.finiteSeconds, duration > 0 {
+            return duration
+        }
+        return queueManager.getCurrentTrack()?.duration ?? 0
+    }
     
     // MARK: - Queue Management
     
     func getQueue() -> [Track] {
-        return queueManager.getQueue()
+        return queueManager.getPlaybackQueue()
     }
     
     func getCurrentTrack() -> Track? {
@@ -252,25 +310,30 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func setQueue(_ tracks: [Track], startIndex: Int) {
+        finishLoadedTrack()
         queueManager.setQueue(tracks, startFromIndex: startIndex, inputShuffleMode: shuffleMode)
         
         let currentIndex = queueManager.getCurrentIndex()
         if currentIndex >= 0 {
              playTrack(at: currentIndex, reason: .playlistChanged)
+        } else {
+             stopPlayback()
+             saveState()
         }
         
-        saveState()
+        onQueueChanged?()
     }
     
     private func getQueueCount() -> Int {
         return queueManager.getQueueCount()
     }
     
-    func removeTrack(at index: Int) {
-        // index is backing index
+    func removeTrack(at position: Int) {
+        guard let index = queueManager.backingIndex(forPlaybackPosition: position) else { return }
         let wasCurrent = queueManager.removeTrack(at: index)
         
         if wasCurrent {
+             finishLoadedTrack()
              if queueManager.getQueueCount() == 0 {
                   stopPlayback()
              } else {
@@ -295,10 +358,12 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func clearQueue() {
+        finishLoadedTrack()
         queueManager.clear()
         stopPlayback()
         updateNowPlayingInfo()
         saveState()
+        onQueueChanged?()
     }
 
     func reverseRemainingQueue() {
@@ -308,6 +373,8 @@ class OrpheusPlayerManager: NSObject {
     }
     
     private func stopPlayback() {
+        loadedTrackId = nil
+        pendingStartPosition = nil
         player.pause()
         player.replaceCurrentItem(with: nil)
         onPlaybackStateChanged?(.idle)
@@ -318,6 +385,7 @@ class OrpheusPlayerManager: NSObject {
     func addToNext(track: Track) {
         queueManager.insertNext(track: track)
         saveState()
+        onQueueChanged?()
     }
     
     func addToEnd(tracks: [Track], startFromId: String?, clearQueue: Bool) {
@@ -330,13 +398,15 @@ class OrpheusPlayerManager: NSObject {
             setQueue(tracks, startIndex: startIndex)
         } else {
             // Append
+            let existingCount = queueManager.getQueueCount()
             queueManager.append(tracks: tracks)
             
-            if let startId = startFromId, let index = queueManager.getQueue().firstIndex(where: { $0.id == startId }) {
-                // If startFromId is present, play the specified track
-                playTrack(at: index, reason: .playlistChanged)
+            // Only the tracks just added can be started from, so an older copy never matches.
+            if let startId = startFromId, let offset = tracks.firstIndex(where: { $0.id == startId }) {
+                playTrack(at: existingCount + offset, reason: .playlistChanged)
             }
             saveState()
+            onQueueChanged?()
         }
     }
     
@@ -345,6 +415,7 @@ class OrpheusPlayerManager: NSObject {
         shuffleMode = enabled
         queueManager.setShuffleMode(enabled)
         saveState()
+        onQueueChanged?()
     }
     
     func setExecuteRepeatMode(_ mode: RepeatMode) {
@@ -358,7 +429,7 @@ class OrpheusPlayerManager: NSObject {
         let currentIndex = queueManager.getCurrentIndex()
         if player.currentItem == nil && currentIndex >= 0 {
 
-             playTrack(at: currentIndex, reason: .auto)
+             playTrack(at: currentIndex, reason: .auto, startPosition: pendingStartPosition)
              return
         }
         if player.status == .failed || player.currentItem?.status == .failed {
@@ -384,6 +455,8 @@ class OrpheusPlayerManager: NSObject {
         guard let nextIndex = queueManager.getNextIndex(repeatMode: repeatMode) else {
              // End of queue
              onPlaybackStateChanged?(.ended)
+             // A finished queue should start over next time, not restore to its last second.
+             GeneralStorage.shared.savePosition(index: queueManager.getCurrentIndex(), positionSec: 0)
              endTransitionTask()
              return
         }
@@ -407,32 +480,41 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func seek(to seconds: Double) {
+        // Before the first play of a restored session there is no item to seek yet.
+        if player.currentItem == nil, let track = queueManager.getCurrentTrack() {
+            pendingStartPosition = seconds
+            GeneralStorage.shared.savePosition(index: queueManager.getCurrentIndex(), positionSec: seconds)
+            onPositionUpdate?(seconds, track.duration ?? 0, 0)
+            updateNowPlayingInfo()
+            return
+        }
+
         let time = CMTime(seconds: seconds, preferredTimescale: 1000)
         player.seek(to: time) { [weak self] _ in
-            self?.updateNowPlayingInfo()
+            DispatchQueue.main.async {
+                self?.savePositionState()
+                self?.updateNowPlayingInfo()
+            }
         }
     }
     
     // MARK: - Track Loading
     
     private func playTrack(at index: Int, reason: TransitionReason, startPosition: Double? = nil) {
-        // Handle previous track finish (for manual skips)
-        if reason != .auto, let oldTrack = queueManager.getCurrentTrack() {
-             let position = player.currentTime().seconds
-             let duration = player.currentItem?.duration.seconds ?? 0
-             // Only emit if we actually have a duration (implying we were playing something)
-             // or just emit whatever state we have.
-             onTrackFinished?(oldTrack.id, position, duration)
+        // Natural ends have already settled, and a retry stays on the same track.
+        if reason != .auto {
+            finishLoadedTrack()
         }
+        loadedTrackId = nil
 
         // Index is BACKING index
         queueManager.skipTo(backingIndex: index)
         guard let track = queueManager.getCurrentTrack() else {
             return
         }
-        
-        // Optimistic update
 
+        let startPosition = startPosition ?? GeneralStorage.shared.trackResumePosition(id: track.id)
+        pendingStartPosition = startPosition
         
         onTrackStarted?(track.id, reason)
         saveState()
@@ -442,14 +524,14 @@ class OrpheusPlayerManager: NSObject {
         // Check for local download first
         if let localUrl = OrpheusDownloadManager.shared.getDownloadedFileUrl(id: track.id) {
              // Use local file
-             loadAvPlayerItem(url: localUrl.absoluteString, headers: nil, startPosition: startPosition)
+             loadAvPlayerItem(trackId: track.id, url: localUrl.absoluteString, headers: nil, startPosition: startPosition)
              return
         }
         
         if urlString.starts(with: "orpheus://bilibili") {
             resolveAndPlayBilibili(url: urlString, trackId: track.id, startPosition: startPosition)
         } else {
-            loadAvPlayerItem(url: urlString, headers: nil, startPosition: startPosition)
+            loadAvPlayerItem(trackId: track.id, url: urlString, headers: nil, startPosition: startPosition)
         }
     }
     
@@ -514,7 +596,7 @@ class OrpheusPlayerManager: NSObject {
                     let refresh: (Double?) -> Void = { [weak self] position in
                         self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: audioOnly)
                     }
-                    self.loadAvPlayerItem(url: url, headers: Self.bilibiliHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
+                    self.loadAvPlayerItem(trackId: trackId, url: url, headers: Self.bilibiliHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
                                           mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
                 case .failure(let error):
 
@@ -524,11 +606,11 @@ class OrpheusPlayerManager: NSObject {
         }
     }
 
-    private func loadAvPlayerItem(url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
+    private func loadAvPlayerItem(trackId: String, url: String, headers: [String: String]?, segmentBase: BilibiliPlayUrlResponse.SegmentBase? = nil, startPosition: Double? = nil,
                                   mirrors: [String] = [], fallback: ((Double?) -> Void)? = nil, refresh: ((Double?) -> Void)? = nil) {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
-                self?.loadAvPlayerItem(url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh)
+                self?.loadAvPlayerItem(trackId: trackId, url: url, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh)
             }
             return
         }
@@ -552,7 +634,10 @@ class OrpheusPlayerManager: NSObject {
         } else {
             asset = AVURLAsset(url: nsUrl, options: options)
         }
-        currentLoad = StreamLoad(headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh, playlistLoader: playlistLoader)
+        currentLoad = StreamLoad(trackId: trackId, headers: headers, segmentBase: segmentBase, startPosition: startPosition, mirrors: mirrors, fallback: fallback, refresh: refresh, playlistLoader: playlistLoader)
+        loadedTrackId = trackId
+        loadedTrackFinished = false
+        pendingStartPosition = startPosition
 
         let item = AVPlayerItem(asset: asset)
         if segmentBase == nil {
@@ -584,14 +669,15 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Notification
     
     private func notifyPositionUpdate() {
-        let currentTime = player.currentTime().seconds
-        let duration = player.currentItem?.duration.seconds ?? 0
-        let buffered = player.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0
-        
-        onPositionUpdate?(currentTime, duration, buffered)
+        onPositionUpdate?(currentEntryPosition(), currentEntryDuration(), getBufferedPosition())
         
         // Update lock screen progress occasionally or on state change
         // MPNowPlayingInfoCenter handles 'elapsedPlaybackTime' automatically so we mainly update on rate/status changes.
+
+        // Pauses and track changes save on their own; this covers a crash or kill mid-track.
+        if player.timeControlStatus == .playing, Date().timeIntervalSince(lastPositionSave) >= Self.positionSaveInterval {
+            savePositionState()
+        }
     }
     
     private func notifyPlaybackState() {
@@ -645,18 +731,24 @@ class OrpheusPlayerManager: NSObject {
     }
 
     @objc private func handleInterruption(notification: Notification) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleInterruption(notification: notification)
+            }
+            return
+        }
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
         
         if type == .began {
             // Audio interrupted (phone call, etc.), pause player
-
+             stayPausedAfterInterruption = false
              pause()
         } else if type == .ended {
             if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                if options.contains(.shouldResume) {
+                if options.contains(.shouldResume) && !stayPausedAfterInterruption {
                     play()
                 }
             }
@@ -725,11 +817,10 @@ class OrpheusPlayerManager: NSObject {
             return
         }
 
-        let elapsed = player.currentTime().seconds
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title ?? "Unknown Title",
             MPMediaItemPropertyArtist: track.artist ?? "Unknown Artist",
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: elapsed.isFinite ? elapsed : 0,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentEntryPosition(),
             MPNowPlayingInfoPropertyPlaybackRate: player.rate,
             MPNowPlayingInfoPropertyDefaultPlaybackRate: playbackSpeed,
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
@@ -738,10 +829,8 @@ class OrpheusPlayerManager: NSObject {
             MPNowPlayingInfoPropertyPlaybackQueueCount: queueManager.getQueueCount()
         ]
 
-        let playerDuration = player.currentItem?.duration.seconds ?? .nan
-        if playerDuration.isFinite && playerDuration > 0 {
-            info[MPMediaItemPropertyPlaybackDuration] = playerDuration
-        } else if let duration = track.duration, duration > 0 {
+        let duration = currentEntryDuration()
+        if duration > 0 {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
 
@@ -784,8 +873,8 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func skipTo(index: Int) {
-        // index is backing index from UI
-        playTrack(at: index, reason: .seek)
+        guard let backingIndex = queueManager.backingIndex(forPlaybackPosition: index) else { return }
+        playTrack(at: backingIndex, reason: .seek)
     }
     
     // MARK: - Playback Attributes
@@ -808,15 +897,15 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Getters
     
     func getPosition() -> Double {
-        return player.currentTime().seconds
+        return currentEntryPosition()
     }
     
     func getBufferedPosition() -> Double {
-        return player.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.seconds ?? 0.0
+        return player.currentItem?.loadedTimeRanges.last?.timeRangeValue.end.finiteSeconds ?? 0.0
     }
     
     func getDuration() -> Double {
-        return player.currentItem?.duration.seconds ?? 0.0
+        return currentEntryDuration()
     }
     
     func isPlaying() -> Bool {
@@ -827,11 +916,13 @@ class OrpheusPlayerManager: NSObject {
     
     func setSleepTimer(durationMs: Double) {
         cancelSleepTimer()
+        guard durationMs > 0 else { return }
         
         let interval = durationMs / 1000.0
         sleepTimerEndTime = Date().addingTimeInterval(interval)
         
         sleepTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.stayPausedAfterInterruption = true
             self?.pause()
             self?.cancelSleepTimer()
         }
@@ -844,7 +935,7 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func getSleepTimerEndTime() -> Double? {
-        guard let endTime = sleepTimerEndTime else { return nil }
+        guard let endTime = sleepTimerEndTime, endTime > Date() else { return nil }
         return endTime.timeIntervalSince1970 * 1000.0
     }
     
@@ -855,7 +946,7 @@ class OrpheusPlayerManager: NSObject {
         
         GeneralStorage.shared.savePosition(
             index: queueManager.getCurrentIndex(),
-            positionSec: player.currentTime().seconds
+            positionSec: currentEntryPosition()
         )
         
         GeneralStorage.shared.saveRepeatMode(repeatMode.rawValue)
@@ -863,8 +954,11 @@ class OrpheusPlayerManager: NSObject {
     }
     
     private func savePositionState() {
-        let seconds = player.currentTime().seconds
+        guard playerHoldsCurrentEntry, !loadedTrackFinished, let trackId = loadedTrackId else { return }
+        lastPositionSave = Date()
+        let seconds = player.currentTime().finiteSeconds
         GeneralStorage.shared.savePosition(index: queueManager.getCurrentIndex(), positionSec: seconds)
+        GeneralStorage.shared.saveTrackResume(id: trackId, position: seconds, duration: currentEntryDuration())
     }
 
     private func restoreState() {
@@ -892,16 +986,20 @@ class OrpheusPlayerManager: NSObject {
              if savedIndex >= 0 && savedIndex < restoredQueue.count {
                  if GeneralStorage.shared.isAutoplayOnStartEnabled {
                      playTrack(at: savedIndex, reason: .playlistChanged, startPosition: savedPosition > 0 ? savedPosition : nil)
-                 } else {
-                     // Prepare but paused
-                     if let track = queueManager.getCurrentTrack() {
-                         onTrackStarted?(track.id, .playlistChanged)
-                         // Emit position update so UI is consistent
-                         onPositionUpdate?(savedPosition, track.duration ?? 0, 0)
-                         // Preparing UI state without creating AVPlayerItem yet
-                     }
+                 } else if let track = queueManager.getCurrentTrack() {
+                     // No item exists until the first play, so the position waits for it. JS has
+                     // no listeners this early and reads the restored state through the getters.
+                     pendingStartPosition = savedPosition > 0 ? savedPosition : GeneralStorage.shared.trackResumePosition(id: track.id)
                  }
              }
         }
+    }
+}
+
+private extension CMTime {
+    /// Unknown times come back as NaN or infinity, which neither JS nor storage can use.
+    var finiteSeconds: Double {
+        let value = seconds
+        return value.isFinite && value > 0 ? value : 0
     }
 }

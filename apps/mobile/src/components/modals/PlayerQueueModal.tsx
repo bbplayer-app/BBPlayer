@@ -375,7 +375,20 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		void analyticsService.logPlayerQueueAction('reverse_remaining')
 	}, [])
 
-	const keyExtractor = useCallback((item: OrpheusTrack) => item.id, [])
+	// Tapping a single track queues another copy of it, and LegendList draws one row per key.
+	const rowKeys = useMemo(() => {
+		const copies = new Map<string, number>()
+		return queue.map(({ id }) => {
+			const copy = (copies.get(id) ?? 0) + 1
+			copies.set(id, copy)
+			return copy === 1 ? id : `${id}#${copy}`
+		})
+	}, [queue])
+
+	const keyExtractor = useCallback(
+		(item: OrpheusTrack, index: number) => rowKeys[index] ?? item.id,
+		[rowKeys],
+	)
 
 	const renderItem = useCallback(
 		({ item, index }: { item: OrpheusTrack; index: number }) => (

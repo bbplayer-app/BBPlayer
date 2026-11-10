@@ -69,6 +69,30 @@ class GeneralStorage {
         set { mmkv?.set(Int32(newValue), forKey: KEY_RESUME_STRATEGY) }
     }
 
+    // MARK: - Per-track resume
+
+    private let STRATEGY_PODCAST = 1
+    private let KEY_RESUME_PREFIX = "resume::"
+    private let resumeStore = MMKV(mmapID: "track_resume_store")
+
+    /// Where podcast mode should pick this track up, if it stopped partway through.
+    func trackResumePosition(id: String) -> Double? {
+        guard playbackResumeStrategy == STRATEGY_PODCAST,
+              let position = resumeStore?.double(forKey: KEY_RESUME_PREFIX + id, defaultValue: 0),
+              position > 0 else { return nil }
+        return position
+    }
+
+    /// Records are kept whatever the strategy is, so switching to podcast mode finds them.
+    func saveTrackResume(id: String, position: Double, duration: Double) {
+        guard position > 0, position < duration else { return }
+        resumeStore?.set(position, forKey: KEY_RESUME_PREFIX + id)
+    }
+
+    func clearTrackResume(id: String) {
+        resumeStore?.removeValue(forKey: KEY_RESUME_PREFIX + id)
+    }
+
     // MARK: - Backup
 
     /// Uses the same keys as the Android `exportConfig` so backups move between platforms.

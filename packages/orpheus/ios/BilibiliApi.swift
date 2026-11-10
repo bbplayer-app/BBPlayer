@@ -212,6 +212,7 @@ class BilibiliApi {
                 if let wbiImg = navResponse.data?.wbi_img {
                     self?.imgKey = WbiUtil.extractKey(url: wbiImg.img_url)
                     self?.subKey = WbiUtil.extractKey(url: wbiImg.sub_url)
+                    self?.wbiKeysUpdatedAt = Date()
                     completion(.success(()))
                 } else {
                     completion(.failure(BilibiliError.navInfoMissing))
@@ -264,7 +265,9 @@ class BilibiliApi {
     }
 
     private func requestPlayUrl(_ params: [String: Any], completion: @escaping (Result<BilibiliPlayUrlResponse.PlayUrlData, Error>) -> Void) {
-        guard let imgKey = imgKey, let subKey = subKey else {
+        // As on Android, keys are only trusted on the day they were fetched.
+        guard let imgKey = imgKey, let subKey = subKey,
+              let updatedAt = wbiKeysUpdatedAt, Calendar.current.isDateInToday(updatedAt) else {
             // Refresh nav info first
             refreshNavInfo { result in
                 switch result {

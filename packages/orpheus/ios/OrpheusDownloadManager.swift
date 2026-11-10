@@ -159,7 +159,8 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         let task = DownloadTask()
         task.id = id
         task.state = state
-        task.track = track
+        // Progress updates pass no track, but JS is promised one on every event.
+        task.track = track ?? stateQueue.sync { trackMap[id] }
         task.bytesDownloaded = Double(bytesDownloaded)
         task.contentLength = Double(contentLength)
 

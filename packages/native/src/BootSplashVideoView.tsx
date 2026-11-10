@@ -2,12 +2,14 @@ import { requireNativeView } from 'expo'
 import { createElement, forwardRef, type RefAttributes } from 'react'
 import { Platform, type ViewProps } from 'react-native'
 
-const NativeBootSplashVideoView =
-	Platform.OS === 'android'
-		? requireNativeView<
-				BootSplashVideoViewProps & RefAttributes<BootSplashVideoViewRef>
-			>('BBPlayerBootSplashVideo', 'BootSplashVideoView')
-		: null
+/** Only Android has the native view; other platforms show the poster instead. */
+export const isBootSplashVideoSupported = Platform.OS === 'android'
+
+const NativeBootSplashVideoView = isBootSplashVideoSupported
+	? requireNativeView<
+			BootSplashVideoViewProps & RefAttributes<BootSplashVideoViewRef>
+		>('BBPlayerBootSplashVideo', 'BootSplashVideoView')
+	: null
 
 export interface BootSplashVideoViewProps extends ViewProps {
 	sourceUri: string | null
@@ -29,11 +31,7 @@ export const BootSplashVideoView = forwardRef<
 	BootSplashVideoViewRef,
 	BootSplashVideoViewProps
 >(function BootSplashVideoView(props, ref) {
-	if (Platform.OS !== 'android' || !NativeBootSplashVideoView) {
-		throw new Error(
-			'[bbplayer/native] BootSplashVideoView is only implemented on Android.',
-		)
-	}
+	if (!NativeBootSplashVideoView) return null
 	return createElement(NativeBootSplashVideoView, {
 		...props,
 		ref,
