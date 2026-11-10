@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import { Computed } from '@legendapp/state/react'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef } from 'react'
@@ -75,18 +76,20 @@ export function PlayerFunctionalMenu({
 			onDidPresent={onPresent}
 			scrollableRef={scrollViewRef}
 		>
-			<ScrollView
-				ref={scrollViewRef}
-				style={{ marginTop: 32, flex: 1 }}
-			>
-				<Computed>
-					{playbackContextStore$.context.mode.get() === 'podcast' ? (
-						<PodcastFunctionalMenu onAction={handleAction} />
-					) : (
-						<MusicFunctionalMenu onAction={handleAction} />
-					)}
-				</Computed>
-			</ScrollView>
+			<TvFocusScope style={{ flex: 1 }}>
+				<ScrollView
+					ref={scrollViewRef}
+					style={{ marginTop: 32, flex: 1 }}
+				>
+					<Computed>
+						{playbackContextStore$.context.mode.get() === 'podcast' ? (
+							<PodcastFunctionalMenu onAction={handleAction} />
+						) : (
+							<MusicFunctionalMenu onAction={handleAction} />
+						)}
+					</Computed>
+				</ScrollView>
+			</TvFocusScope>
 		</TrueSheet>
 	)
 }

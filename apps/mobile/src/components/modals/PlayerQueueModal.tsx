@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
 import { Icon } from '@expo/ui'
@@ -99,10 +100,16 @@ const TrackItem = memo(
 						overflow: 'hidden',
 						height: ROW_HEIGHT,
 						opacity: isDragging ? 0.35 : 1,
+						flexDirection: 'row',
+						alignItems: 'center',
 					}}
 				>
 					<Touchable
 						style={{ flex: 1 }}
+						focusable
+						accessibilityRole='button'
+						accessibilityLabel={track.title}
+						testID={`player-queue-track-${index}`}
 						androidRipple={{}}
 						onPress={() => onSwitchTrack(index)}
 					>
@@ -138,15 +145,13 @@ const TrackItem = memo(
 									{track.artist ?? '未知作者'}
 								</Text>
 							</View>
-							<IconButton
-								icon='close-circle-outline'
-								size={24}
-								onPress={() => {
-									onRemoveTrack(index)
-								}}
-							/>
 						</View>
 					</Touchable>
+					<IconButton
+						icon='close-circle-outline'
+						size={24}
+						onPress={() => onRemoveTrack(index)}
+					/>
 				</View>
 			</GestureDetector>
 		)
@@ -464,116 +469,118 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			}}
 			{...props}
 		>
-			<GestureHandlerRootView style={{ flex: 1 }}>
-				<View
-					style={{
-						flex: 1,
-					}}
-				>
+			<TvFocusScope style={{ flex: 1 }}>
+				<GestureHandlerRootView style={{ flex: 1 }}>
 					<View
 						style={{
-							flexDirection: 'row',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							paddingHorizontal: 16,
-							paddingTop: 16,
-							borderBottomWidth: 1,
-							borderBottomColor: theme.colors.elevation.level2,
+							flex: 1,
 						}}
 					>
-						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
-						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<MenuView {...menuActions}>
-								<IconButton
-									icon='dots-vertical'
-									disabled={clearing}
-									loading={clearing}
-									testID='player-queue-menu'
+						<View
+							style={{
+								flexDirection: 'row',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								paddingHorizontal: 16,
+								paddingTop: 16,
+								borderBottomWidth: 1,
+								borderBottomColor: theme.colors.elevation.level2,
+							}}
+						>
+							<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
+							<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+								<MenuView {...menuActions}>
+									<IconButton
+										icon='dots-vertical'
+										disabled={clearing}
+										loading={clearing}
+										testID='player-queue-menu'
+									/>
+								</MenuView>
+							</View>
+						</View>
+						<View
+							style={{ flex: 1, minHeight: 2, overflow: 'hidden' }}
+							onLayout={(event) => {
+								listHeightRef.current = event.nativeEvent.layout.height
+							}}
+						>
+							<LegendList
+								ref={flatListRef}
+								data={queue}
+								renderItem={renderItem}
+								keyExtractor={keyExtractor}
+								recycleItems
+								showsVerticalScrollIndicator={false}
+								nestedScrollEnabled
+								scrollEnabled={drag === null}
+								onScroll={(event) => {
+									scrollOffsetRef.current = event.nativeEvent.contentOffset.y
+									if (dragRef.current)
+										updateDropTarget(dragTranslationRef.current)
+								}}
+								onContentSizeChange={(_width, height) => {
+									contentHeightRef.current = height
+								}}
+							/>
+							{drag && (
+								<Animated.View
+									pointerEvents='none'
+									style={[
+										{
+											position: 'absolute',
+											left: 16,
+											right: 16,
+											top: 0,
+											height: 3,
+											borderRadius: 2,
+											backgroundColor: theme.colors.primary,
+											zIndex: 1,
+										},
+										lineStyle,
+									]}
 								/>
-							</MenuView>
+							)}
+							{drag && queue[drag.from] && (
+								<Animated.View
+									pointerEvents='none'
+									style={[
+										{
+											position: 'absolute',
+											left: 0,
+											right: 0,
+											top: 0,
+											height: ROW_HEIGHT,
+											justifyContent: 'center',
+											paddingHorizontal: 16,
+											backgroundColor: Color(theme.colors.elevation.level5)
+												.alpha(0.82)
+												.rgb()
+												.string(),
+											elevation: 8,
+											zIndex: 2,
+										},
+										ghostStyle,
+									]}
+								>
+									<Text
+										variant='bodyMedium'
+										numberOfLines={1}
+									>
+										{queue[drag.from].title}
+									</Text>
+									<Text
+										variant='bodySmall'
+										numberOfLines={1}
+									>
+										{queue[drag.from].artist ?? '未知作者'}
+									</Text>
+								</Animated.View>
+							)}
 						</View>
 					</View>
-					<View
-						style={{ flex: 1, minHeight: 2, overflow: 'hidden' }}
-						onLayout={(event) => {
-							listHeightRef.current = event.nativeEvent.layout.height
-						}}
-					>
-						<LegendList
-							ref={flatListRef}
-							data={queue}
-							renderItem={renderItem}
-							keyExtractor={keyExtractor}
-							recycleItems
-							showsVerticalScrollIndicator={false}
-							nestedScrollEnabled
-							scrollEnabled={drag === null}
-							onScroll={(event) => {
-								scrollOffsetRef.current = event.nativeEvent.contentOffset.y
-								if (dragRef.current)
-									updateDropTarget(dragTranslationRef.current)
-							}}
-							onContentSizeChange={(_width, height) => {
-								contentHeightRef.current = height
-							}}
-						/>
-						{drag && (
-							<Animated.View
-								pointerEvents='none'
-								style={[
-									{
-										position: 'absolute',
-										left: 16,
-										right: 16,
-										top: 0,
-										height: 3,
-										borderRadius: 2,
-										backgroundColor: theme.colors.primary,
-										zIndex: 1,
-									},
-									lineStyle,
-								]}
-							/>
-						)}
-						{drag && queue[drag.from] && (
-							<Animated.View
-								pointerEvents='none'
-								style={[
-									{
-										position: 'absolute',
-										left: 0,
-										right: 0,
-										top: 0,
-										height: ROW_HEIGHT,
-										justifyContent: 'center',
-										paddingHorizontal: 16,
-										backgroundColor: Color(theme.colors.elevation.level5)
-											.alpha(0.82)
-											.rgb()
-											.string(),
-										elevation: 8,
-										zIndex: 2,
-									},
-									ghostStyle,
-								]}
-							>
-								<Text
-									variant='bodyMedium'
-									numberOfLines={1}
-								>
-									{queue[drag.from].title}
-								</Text>
-								<Text
-									variant='bodySmall'
-									numberOfLines={1}
-								>
-									{queue[drag.from].artist ?? '未知作者'}
-								</Text>
-							</Animated.View>
-						)}
-					</View>
-				</View>
-			</GestureHandlerRootView>
+				</GestureHandlerRootView>
+			</TvFocusScope>
 		</TrueSheet>
 	)
 }

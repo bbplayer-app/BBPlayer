@@ -101,7 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		name: getAppName(),
 		slug: 'bbplayer',
 		version: version,
-		orientation: 'portrait',
+		orientation: 'default',
 		icon: './assets/images/icon.png',
 		scheme: 'bbplayer',
 		userInterfaceStyle: 'automatic',
@@ -151,6 +151,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			'./expo-plugins/withKotlinSerialization',
 			// './expo-plugins/withAndroidPlugin',
 			'./expo-plugins/withAndroidGradleProperties',
+			[
+				'./expo-plugins/withAndroidTv',
+				{ banner: './assets/images/tv-banner.png' },
+			],
 			[
 				'./expo-plugins/withAbiFilters',
 				{
