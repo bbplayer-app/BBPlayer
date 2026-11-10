@@ -109,24 +109,33 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
     val root = rootView
     // Removing a focused view makes the window focus its first focusable view, usually somewhere
     // on the screen behind. Once that has happened, hand focus back to where it came from.
-    mainHandler.post {
-      if (!previous.isAttachedToWindow || !previous.isShown || previous.isInTouchMode) {
-        return@post
+    val deadline = SystemClock.uptimeMillis() + AUTO_FOCUS_TIMEOUT_MS
+    mainHandler.post(object : Runnable {
+      override fun run() {
+        if (previous.isInTouchMode) return
+        // Another dialog or sheet that is still open owns focus now, unless the previous view is
+        // inside it (a dialog opened from a sheet).
+        val owner = scopes.lastOrNull { it.rootView === root && it.isOnScreen }
+        if (owner == null || owner.contains(previous)) {
+          if (previous.isAttachedToWindow && previous.isShown && previous.requestFocus()) return
+          if (SystemClock.uptimeMillis() < deadline) {
+            mainHandler.postDelayed(this, AUTO_FOCUS_RETRY_MS)
+          }
+        }
       }
-      // Another dialog or sheet that is still open owns focus now, unless the previous view is
-      // inside it (a dialog opened from a sheet).
-      val owner = scopes.lastOrNull { it.rootView === root && it.isOnScreen }
-      if (owner == null || owner.contains(previous)) {
-        previous.requestFocus()
-      }
-    }
+    })
   }
 
   private val autoFocusRunnable = object : Runnable {
     override fun run() {
       if (!active || isInTouchMode || !isAttachedToWindow) return
-      if (findFocus() != null) return
-      if (isOnScreen && requestFocus(View.FOCUS_DOWN)) return
+      val current = findFocus()
+      if (current != null && current !== this@TvFocusScopeView) return
+      if (isOnScreen) {
+        val child = getFocusables(View.FOCUS_FORWARD).firstOrNull { it !== this@TvFocusScopeView }
+        if (child?.requestFocus(View.FOCUS_DOWN) == true) return
+        requestFocus(View.FOCUS_DOWN)
+      }
       // Content can mount or lay out a little later (lazy modals, suspense fallbacks).
       if (SystemClock.uptimeMillis() < autoFocusDeadline) {
         postDelayed(this, AUTO_FOCUS_RETRY_MS)
@@ -137,6 +146,9 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
   override fun focusSearch(focused: View?, direction: Int): View? {
     if (!active || !trapFocus || focused == null || isInTouchMode || !contains(focused)) {
       return super.focusSearch(focused, direction)
+    }
+    if (focused === this) {
+      return getFocusables(direction).firstOrNull { it !== this } ?: this
     }
     val next = try {
       FocusFinder.getInstance().findNextFocus(this, focused, direction)
@@ -180,6 +192,11 @@ class TvFocusScopeView(context: Context, appContext: AppContext) : ExpoView(cont
         if (scope.isOnScreen) top = scope
       }
       val scope = top ?: return
+      if (newFocus === scope && scope.autoFocus && !scope.isInTouchMode) {
+        scope.autoFocusDeadline = SystemClock.uptimeMillis() + AUTO_FOCUS_TIMEOUT_MS
+        scope.removeCallbacks(scope.autoFocusRunnable)
+        scope.post(scope.autoFocusRunnable)
+      }
       if (scope.contains(newFocus) || !scope.trapFocus || scope.isInTouchMode) return
       scope.post {
         if (scope.active && scope.isOnScreen && !scope.isInTouchMode && scope.findFocus() == null) {

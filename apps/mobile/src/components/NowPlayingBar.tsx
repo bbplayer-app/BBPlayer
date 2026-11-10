@@ -297,7 +297,8 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 							    遥控器 / 键盘一个可以聚焦、按确认键打开播放器的位置。 */}
 							<Pressable
 								style={styles.nowPlayingBarOpener}
-								pointerEvents='none'
+								pointerEvents={Platform.isTV ? 'auto' : 'none'}
+								testID='now-playing-open-player'
 								onPress={() => router.navigate('/player')}
 								accessibilityRole='button'
 								accessibilityLabel='打开播放器'

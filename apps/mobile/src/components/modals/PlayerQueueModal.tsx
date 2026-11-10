@@ -100,10 +100,16 @@ const TrackItem = memo(
 						overflow: 'hidden',
 						height: ROW_HEIGHT,
 						opacity: isDragging ? 0.35 : 1,
+						flexDirection: 'row',
+						alignItems: 'center',
 					}}
 				>
 					<Touchable
 						style={{ flex: 1 }}
+						focusable
+						accessibilityRole='button'
+						accessibilityLabel={track.title}
+						testID={`player-queue-track-${index}`}
 						androidRipple={{}}
 						onPress={() => onSwitchTrack(index)}
 					>
@@ -139,15 +145,13 @@ const TrackItem = memo(
 									{track.artist ?? '未知作者'}
 								</Text>
 							</View>
-							<IconButton
-								icon='close-circle-outline'
-								size={24}
-								onPress={() => {
-									onRemoveTrack(index)
-								}}
-							/>
 						</View>
 					</Touchable>
+					<IconButton
+						icon='close-circle-outline'
+						size={24}
+						onPress={() => onRemoveTrack(index)}
+					/>
 				</View>
 			</GestureDetector>
 		)

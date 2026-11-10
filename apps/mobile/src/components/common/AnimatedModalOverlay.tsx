@@ -46,6 +46,7 @@ export default function AnimatedModalOverlay({
 				onPress={onDismiss}
 				// 遮罩和内容容器只为触摸服务，不能成为遥控器的焦点。
 				focusable={false}
+				accessible={false}
 			>
 				<Pressable
 					style={[
@@ -62,6 +63,7 @@ export default function AnimatedModalOverlay({
 					}}
 					onPress={(e) => e.stopPropagation()}
 					focusable={false}
+					accessible={false}
 				>
 					<SquircleView
 						style={[

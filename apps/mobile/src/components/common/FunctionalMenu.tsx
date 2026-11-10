@@ -10,6 +10,9 @@ import {
 	useState,
 	type Ref,
 } from 'react'
+import { Platform } from 'react-native'
+
+import TvMenuView from './TvMenuView'
 
 export type {
 	MenuAction,
@@ -27,7 +30,7 @@ export type {
  * 这里让没有自己 onPress 的触发按钮负责打开菜单。触摸时外层 Pressable 也可能同时打开，
  * MenuView 对重复打开做了去重。
  */
-export function MenuView({
+function NativeMenuView({
 	ref,
 	children,
 	...props
@@ -49,6 +52,16 @@ export function MenuView({
 		>
 			{trigger}
 		</ExpoMenuView>
+	)
+}
+
+export function MenuView(
+	props: MenuComponentProps & { ref?: Ref<MenuComponentRef> },
+) {
+	return Platform.OS === 'android' && Platform.isTV ? (
+		<TvMenuView {...props} />
+	) : (
+		<NativeMenuView {...props} />
 	)
 }
 
