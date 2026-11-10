@@ -1,4 +1,3 @@
-import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useCallback, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -12,6 +11,7 @@ import { bilibiliFacade } from '@/lib/facades/bilibili'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
 import log from '@/utils/log'
+import { pickImage } from '@/utils/pickImage'
 import toast from '@/utils/toast'
 
 const logger = log.extend('Components.EditPlaylistMetadataModal')
@@ -73,13 +73,9 @@ export default function EditPlaylistMetadataModal({
 	}, [close, coverUrl, description, editPlaylistMetadata, playlist.id, title])
 
 	const handleImagePicker = useCallback(async () => {
-		const result = await DocumentPicker.getDocumentAsync({
-			type: 'image/*',
-			copyToCacheDirectory: true,
-			multiple: false,
-		})
-		if (result.canceled || result.assets.length === 0) return
-		const assetFile = new FileSystem.File(result.assets[0].uri)
+		const imageUri = await pickImage()
+		if (!imageUri) return
+		const assetFile = new FileSystem.File(imageUri)
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',
