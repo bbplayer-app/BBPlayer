@@ -93,6 +93,35 @@ class GeneralStorage {
         resumeStore?.removeValue(forKey: KEY_RESUME_PREFIX + id)
     }
 
+    // MARK: - Loudness
+
+    private let loudnessStore = MMKV(mmapID: "loudness_normalization_store")
+
+    /// Bilibili's measured loudness for a track, or 0 when unknown. Keyed by the track's
+    /// URI, as on Android, so backups move between platforms.
+    func measuredLoudness(uri: String) -> Double {
+        return loudnessStore?.double(forKey: uri, defaultValue: 0) ?? 0
+    }
+
+    func saveLoudness(uri: String, measured: Double) {
+        loudnessStore?.set(measured, forKey: uri)
+    }
+
+    func exportLoudness() -> [String: Double] {
+        guard let store = loudnessStore else { return [:] }
+        var values: [String: Double] = [:]
+        for case let uri as String in store.allKeys() {
+            values[uri] = store.double(forKey: uri, defaultValue: 0)
+        }
+        return values
+    }
+
+    func importLoudness(_ values: [String: Any]) {
+        for (uri, value) in values {
+            if let measured = value as? Double { saveLoudness(uri: uri, measured: measured) }
+        }
+    }
+
     // MARK: - Backup
 
     /// Uses the same keys as the Android `exportConfig` so backups move between platforms.

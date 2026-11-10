@@ -257,7 +257,8 @@ export default function PlayerPage() {
 		}
 	}, [colorScheme])
 
-	usePreventRemove(isPreventingBack, () => {
+	// 这里拦截的是安卓的返回键。iOS 侧滑时 UIKit 已经先把页面移走，拦截的话页面会被加回来再关闭一次。
+	usePreventRemove(isPreventingBack && Platform.OS === 'android', () => {
 		if (menuVisible) {
 			setMenuVisible(false)
 			return

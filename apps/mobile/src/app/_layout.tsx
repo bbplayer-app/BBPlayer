@@ -9,7 +9,7 @@ import * as Application from 'expo-application'
 import { Observe, ObserveRoot } from 'expo-observe'
 import { router, Stack } from 'expo-router'
 import * as Updates from 'expo-updates'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AppStateStatus } from 'react-native'
 import { AppState, Platform, StyleSheet, View } from 'react-native'
 import { hide as hideBootSplash } from 'react-native-bootsplash'
@@ -140,7 +140,23 @@ function runAppInit() {
 	}
 }
 
+/** 转场真正结束后，根据落定的页面决定是否显示播放条及其位置。 */
+function settleNowPlayingBar(routeName: string) {
+	if (routeName !== 'modal') {
+		nowPlayingBarStore$.hiddenScreenActive.set(
+			shouldHideNowPlayingBar(routeName),
+		)
+	}
+
+	// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
+	// 继承此前 Tab 页留下的高度。
+	if (routeName !== '(tabs)' && routeName !== 'modal') {
+		nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
+	}
+}
+
 function RootLayout() {
+	const nativelyPoppingToRef = useRef<string | null>(null)
 	const [isReady, setIsReady] = useState(false)
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
@@ -252,6 +268,25 @@ function RootLayout() {
 								) {
 									nowPlayingBarStore$.hiddenScreenActive.set(true)
 								}
+								// iOS 侧滑由原生先完成，JS 在动画结束后才切到目标页，
+								// 目标页的 transitionEnd 这时已经错过了，要在这里恢复。
+								if (nativelyPoppingToRef.current === route.key) {
+									nativelyPoppingToRef.current = null
+									settleNowPlayingBar(route.name)
+								}
+							},
+							transitionStart: ({ data }) => {
+								const state = navigation.getState()
+								// 目标页开始出现时导航状态还没切过去，说明是原生发起的返回。
+								if (
+									!data.closing &&
+									state.routes[state.index]?.key !== route.key
+								) {
+									nativelyPoppingToRef.current = route.key
+								}
+							},
+							gestureCancel: () => {
+								nativelyPoppingToRef.current = null
 							},
 							transitionEnd: ({ data }) => {
 								const state = navigation.getState()
@@ -262,17 +297,7 @@ function RootLayout() {
 									state.routes[state.index]?.key === route.key
 								) {
 									// 返回动画结束后，才根据目标页面决定是否恢复播放条。
-									if (route.name !== 'modal') {
-										nowPlayingBarStore$.hiddenScreenActive.set(
-											shouldHideNowPlayingBar(route.name),
-										)
-									}
-
-									// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
-									// 继承此前 Tab 页留下的高度。
-									if (route.name !== '(tabs)' && route.name !== 'modal') {
-										nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
-									}
+									settleNowPlayingBar(route.name)
 								}
 							},
 						})}

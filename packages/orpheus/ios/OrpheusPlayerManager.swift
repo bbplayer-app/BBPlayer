@@ -132,7 +132,7 @@ class OrpheusPlayerManager: NSObject {
     
     private func handleItemFailed() {
         guard let item = player.currentItem, item.status == .failed else { return }
-        handleStreamFailure(of: item, message: item.error?.localizedDescription ?? "unknown error")
+        handleStreamFailure(of: item, message: Self.describe(item.error))
     }
 
     private func handleStreamFailure(of item: AVPlayerItem, message: String) {
@@ -171,6 +171,19 @@ class OrpheusPlayerManager: NSObject {
         onPlaybackStateChanged?(.idle)
         onIsPlayingChanged?(false)
         endTransitionTask()
+    }
+
+    /// JS matches English phrases to pick its message, and the system's own text is localized.
+    private static func describe(_ error: Error?) -> String {
+        guard let error = error else { return "unknown error" }
+        var current: NSError? = error as NSError
+        while let nsError = current {
+            if nsError.domain == NSURLErrorDomain {
+                return "Unable to connect: \(nsError.localizedDescription)"
+            }
+            current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return error.localizedDescription
     }
 
     /// While the next stream loads nothing is playing, and iOS would suspend a background app.
@@ -221,7 +234,7 @@ class OrpheusPlayerManager: NSObject {
         guard let item = note.object as? AVPlayerItem else { return }
         let error = note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
         DispatchQueue.main.async { [weak self] in
-            self?.handleStreamFailure(of: item, message: error?.localizedDescription ?? "unknown error")
+            self?.handleStreamFailure(of: item, message: Self.describe(error))
         }
     }
 
@@ -565,7 +578,7 @@ class OrpheusPlayerManager: NSObject {
                         self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition)
                     case .failure(let error):
 
-                        self.failLoad(error.localizedDescription)
+                        self.failLoad(Self.describe(error))
                     }
                 }
             }
@@ -586,8 +599,11 @@ class OrpheusPlayerManager: NSObject {
                 switch result {
                 case .success(let stream):
                     guard let url = stream.urls.first else {
-                        self.failLoad("No playable stream")
+                        self.failLoad("AudioStreamError: no playable stream")
                         return
+                    }
+                    if let measured = stream.measuredLoudness, let uri = self.queueManager.getCurrentTrack()?.url {
+                        GeneralStorage.shared.saveLoudness(uri: uri, measured: measured)
                     }
                     // Keep the MP4 as a last resort if the audio stream can't be played.
                     let fallback: ((Double?) -> Void)? = stream.segmentBase == nil ? nil : { [weak self] position in
@@ -600,9 +616,25 @@ class OrpheusPlayerManager: NSObject {
                                           mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
                 case .failure(let error):
 
-                    self.failLoad(error.localizedDescription)
+                    self.failLoad(Self.describe(error))
                 }
             }
+        }
+    }
+
+    /// Same rule as Android: only tracks louder than Bilibili's -14 LUFS target are turned down.
+    private func applyLoudness() {
+        let measured = queueManager.getCurrentTrack().map { GeneralStorage.shared.measuredLoudness(uri: $0.url) } ?? 0
+        guard GeneralStorage.shared.isLoudnessNormalizationEnabled, measured != 0 else {
+            player.volume = 1
+            return
+        }
+        player.volume = min(1, Float(pow(10, (-14 - measured) / 20)))
+    }
+
+    func refreshLoudness() {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyLoudness()
         }
     }
 
@@ -644,6 +676,7 @@ class OrpheusPlayerManager: NSObject {
             attachSpectrumTap(to: item, asset: asset)
         }
 
+        applyLoudness()
         player.replaceCurrentItem(with: item)
         if let startPos = startPosition, startPos > 0 {
              let time = CMTime(seconds: startPos, preferredTimescale: 1000)

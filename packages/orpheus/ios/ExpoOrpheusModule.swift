@@ -39,6 +39,15 @@ public class ExpoOrpheusModule: Module {
             self?.sendEvent("onDownloadUpdated", payload)
         }
 
+        OrpheusDownloadManager.shared.onCoverDownloadProgress = { [weak self] current, total, trackId, status in
+            self?.sendEvent("onCoverDownloadProgress", [
+                "current": current,
+                "total": total,
+                "trackId": trackId,
+                "status": status
+            ])
+        }
+
         manager.onTrackFinished = { [weak self] trackId, finalPosition, duration in
             self?.sendEvent("onTrackFinished", [
                 "trackId": trackId,
@@ -104,7 +113,10 @@ public class ExpoOrpheusModule: Module {
 
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.shared.isLoudnessNormalizationEnabled }
-            .set { GeneralStorage.shared.isLoudnessNormalizationEnabled = $0 }
+            .set { (enabled: Bool) in
+                GeneralStorage.shared.isLoudnessNormalizationEnabled = enabled
+                OrpheusPlayerManager.shared.refreshLoudness()
+            }
 
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.shared.isAutoplayOnStartEnabled }
@@ -269,57 +281,57 @@ public class ExpoOrpheusModule: Module {
 
     // MARK: - Downloads
 
-    Function("downloadTrack") { (track: Track) in
+    AsyncFunction("downloadTrack") { (track: Track) in
         OrpheusDownloadManager.shared.downloadTrack(track: track)
     }
 
-    Function("multiDownload") { (tracks: [Track]) in
+    AsyncFunction("multiDownload") { (tracks: [Track]) in
         OrpheusDownloadManager.shared.multiDownload(tracks: tracks)
     }
 
-    Function("resumeDownload") { (id: String) in
+    AsyncFunction("resumeDownload") { (id: String) in
         OrpheusDownloadManager.shared.resumeDownload(id: id)
     }
 
-    Function("retryDownload") { (track: Track) in
+    AsyncFunction("retryDownload") { (track: Track) in
         OrpheusDownloadManager.shared.downloadTrack(track: track)
     }
 
-    Function("setDownloadMaxParallelTasks") { (maxParallelTasks: Int) in
+    AsyncFunction("setDownloadMaxParallelTasks") { (maxParallelTasks: Int) in
         OrpheusDownloadManager.shared.setMaxParallelTasks(maxParallelTasks)
     }
 
-    Function("removeDownload") { (id: String) in
+    AsyncFunction("removeDownload") { (id: String) in
         OrpheusDownloadManager.shared.removeDownload(id: id)
     }
 
-    Function("removeDownloads") { (ids: [String]) in
+    AsyncFunction("removeDownloads") { (ids: [String]) in
         for id in ids {
             OrpheusDownloadManager.shared.removeDownload(id: id)
         }
     }
 
-    Function("removeAllDownloads") {
+    AsyncFunction("removeAllDownloads") {
         OrpheusDownloadManager.shared.removeAllDownloads()
     }
 
-    Function("getDownloads") { () -> [DownloadTask] in
+    AsyncFunction("getDownloads") { () -> [DownloadTask] in
         return OrpheusDownloadManager.shared.getDownloads()
     }
 
-    Function("getCompletedDownloadTasks") { () -> [DownloadTask] in
+    AsyncFunction("getCompletedDownloadTasks") { () -> [DownloadTask] in
         return OrpheusDownloadManager.shared.getCompletedTasks()
     }
 
-    Function("getDownloadStatusByIds") { (ids: [String]) -> [String: Int] in
+    AsyncFunction("getDownloadStatusByIds") { (ids: [String]) -> [String: Int] in
         return OrpheusDownloadManager.shared.getDownloadStatusByIds(ids: ids)
     }
 
-    Function("clearUncompletedDownloadTasks") {
+    AsyncFunction("clearUncompletedDownloadTasks") {
         OrpheusDownloadManager.shared.clearUncompletedTasks()
     }
 
-    Function("getUncompletedDownloadTasks") { () -> [DownloadTask] in
+    AsyncFunction("getUncompletedDownloadTasks") { () -> [DownloadTask] in
          return OrpheusDownloadManager.shared.getUncompletedTasks()
     }
 
@@ -334,13 +346,12 @@ public class ExpoOrpheusModule: Module {
         return []
     }
 
-    // Cover art is not stored for offline use on iOS yet.
-    Function("getDownloadedCoverUri") { (_: String) -> String? in
-        return nil
+    Function("getDownloadedCoverUri") { (id: String) -> String? in
+        return OrpheusDownloadManager.shared.getDownloadedCoverUri(id: id)
     }
 
     AsyncFunction("downloadMissingCovers") { () -> Int in
-        return 0
+        return OrpheusDownloadManager.shared.downloadMissingCovers()
     }
 
     AsyncFunction("exportDownloads") { (_: [String], _: String, _: String?, _: Bool, _: Bool, _: Bool) in
@@ -358,13 +369,16 @@ public class ExpoOrpheusModule: Module {
     Function("exportData") { () -> [String: Any] in
         return [
             "playerQueue": GeneralStorage.shared.exportConfig(),
-            "loudness": [String: Double]()
+            "loudness": GeneralStorage.shared.exportLoudness()
         ]
     }
 
     Function("importData") { (data: [String: Any]) in
         if let config = data["playerQueue"] as? [String: Any] {
             GeneralStorage.shared.importConfig(config)
+        }
+        if let loudness = data["loudness"] as? [String: Any] {
+            GeneralStorage.shared.importLoudness(loudness)
         }
     }
 

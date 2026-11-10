@@ -401,6 +401,7 @@ export function PlayerSlider({
 			style={podcast ? styles.podcastSlider : styles.slider}
 			enabled={!isIOS && canSeek}
 			chapterMarkers={markers}
+			dragging={isIOS ? isNativeDragging : undefined}
 			progress={progressFraction}
 			// bufferedProgress={bufferedFraction} 缓冲进度条在使用自定义 slider 时会出现一些样式问题，懒得修复了，反正音乐播放器不是很需要这个东西。
 			colors={sliderColors}

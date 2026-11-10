@@ -13,8 +13,10 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     private var trackMap: [String: Track] = [:] // Map ID to Track metadata
     private var pendingIds: [String] = [] // Tasks waiting for a free slot, oldest first
     private var resolvingTokens: [String: UUID] = [:] // Tasks holding a slot while their URL is resolved, one token per attempt
+    private var mirrorUrls: [String: [String]] = [:] // Mirrors of a task's stream not tried yet
     private var maxParallelTasks = 1
     var onDownloadUpdated: ((DownloadTask) -> Void)?
+    var onCoverDownloadProgress: ((_ current: Int, _ total: Int, _ trackId: String, _ status: String) -> Void)?
     
     override init() {
         super.init()
@@ -127,11 +129,16 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid) { [weak self] result in
             switch result {
             case .success(let stream):
+                guard let self = self else { return }
                 guard let url = stream.urls.first else {
-                    self?.failDownload(track: track, token: token, reason: "no playable stream")
+                    self.failDownload(track: track, token: token, reason: "no playable stream")
                     return
                 }
-                self?.startDownload(url: url, track: track, token: token)
+                if let measured = stream.measuredLoudness {
+                    GeneralStorage.shared.saveLoudness(uri: track.url, measured: measured)
+                }
+                self.stateQueue.sync { self.mirrorUrls[track.id] = Array(stream.urls.dropFirst()) }
+                self.startDownload(url: url, track: track, token: token)
             case .failure(let error):
                 self?.failDownload(track: track, token: token, reason: error.localizedDescription)
             }
@@ -153,6 +160,23 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             notifyUpdate(id: track.id, state: .failed, track: track)
         }
         startPendingDownloads()
+    }
+
+    /// Moves a failed task to its next mirror. False when there are none left to try.
+    private func startNextMirror(id: String) -> Bool {
+        let token = UUID()
+        let next: (url: String, track: Track)? = stateQueue.sync {
+            guard var mirrors = mirrorUrls[id], !mirrors.isEmpty, let track = trackMap[id] else { return nil }
+            let url = mirrors.removeFirst()
+            mirrorUrls[id] = mirrors
+            activeTasks.removeValue(forKey: id)
+            resolvingTokens[id] = token
+            return (url, track)
+        }
+        guard let next = next else { return false }
+        NSLog("[OrpheusDownload] %@ trying the next mirror", id)
+        startDownload(url: next.url, track: next.track, token: token)
+        return true
     }
 
     private func notifyUpdate(id: String, state: DownloadState, track: Track?, bytesDownloaded: Int64 = 0, contentLength: Int64 = 0) {
@@ -216,8 +240,10 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
             let dest = docs.appendingPathComponent("downloads/\(id).mp4")
             try? fileManager.removeItem(at: dest)
+            try? fileManager.removeItem(at: coverFile(id: id))
             
             pendingIds.removeAll { $0 == id }
+            mirrorUrls.removeValue(forKey: id)
             resolvingTokens.removeValue(forKey: id)
             downloadTasks.removeValue(forKey: id)
             trackMap.removeValue(forKey: id)
@@ -239,8 +265,10 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
             let downloadsDir = docs.appendingPathComponent("downloads")
             try? fileManager.removeItem(at: downloadsDir)
+            try? fileManager.removeItem(at: coversDirectory)
             
             pendingIds.removeAll()
+            mirrorUrls.removeAll()
             resolvingTokens.removeAll()
             downloadTasks.removeAll()
             trackMap.removeAll()
@@ -381,7 +409,9 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         if let response = downloadTask.response as? HTTPURLResponse,
            !(200..<300).contains(response.statusCode) {
             NSLog("[OrpheusDownload] %@ failed: HTTP %ld", id, response.statusCode)
-            markFailed(id: id)
+            if !startNextMirror(id: id) {
+                markFailed(id: id)
+            }
             return
         }
 
@@ -403,12 +433,14 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
             stateQueue.sync {
                 downloadTasks[id] = .completed
                 activeTasks.removeValue(forKey: id)
+                mirrorUrls.removeValue(forKey: id)
                 saveTasksLocked()
                 track = trackMap[id]
             }
             
             if let t = track {
                 notifyUpdate(id: id, state: .completed, track: t)
+                downloadCover(track: t)
             }
         } catch {
             NSLog("[OrpheusDownload] %@ failed: %@", id, error.localizedDescription)
@@ -461,11 +493,72 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
         }
 
         if let track = failedTrack {
+            if startNextMirror(id: id) { return }
             notifyUpdate(id: id, state: .failed, track: track)
         }
         startPendingDownloads()
     }
     
+    // MARK: - Covers
+
+    private var coversDirectory: URL {
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("covers")
+    }
+
+    /// Always `.jpg`, so a lookup needs no directory listing. Image loaders go by the content.
+    private func coverFile(id: String) -> URL {
+        let safeId = id.replacingOccurrences(of: #"[/\\:*?"<>|]"#, with: "_", options: .regularExpression)
+        return coversDirectory.appendingPathComponent("\(safeId).jpg")
+    }
+
+    func getDownloadedCoverUri(id: String) -> String? {
+        let file = coverFile(id: id)
+        return FileManager.default.fileExists(atPath: file.path) ? file.absoluteString : nil
+    }
+
+    private func downloadCover(track: Track, completion: ((Bool) -> Void)? = nil) {
+        guard let artwork = track.artwork, !artwork.isEmpty,
+              let url = URL(string: artwork.replacingOccurrences(of: "http://", with: "https://")) else {
+            completion?(false)
+            return
+        }
+        let dest = coverFile(id: track.id)
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard error == nil, let data = data,
+                  let status = (response as? HTTPURLResponse)?.statusCode, (200..<300).contains(status) else {
+                completion?(false)
+                return
+            }
+            do {
+                try FileManager.default.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: dest, options: .atomic)
+                completion?(true)
+            } catch {
+                NSLog("[OrpheusDownload] %@ cover failed: %@", track.id, error.localizedDescription)
+                completion?(false)
+            }
+        }.resume()
+    }
+
+    /// Fetches artwork for finished downloads that have none, one at a time. Returns how many.
+    func downloadMissingCovers() -> Int {
+        let finished: [Track] = stateQueue.sync {
+            downloadTasks.filter { $0.value == .completed }.compactMap { trackMap[$0.key] }
+        }
+        let missing = finished.filter { getDownloadedCoverUri(id: $0.id) == nil && !($0.artwork ?? "").isEmpty }
+        downloadCovers(missing, from: 0)
+        return missing.count
+    }
+
+    private func downloadCovers(_ tracks: [Track], from index: Int) {
+        guard index < tracks.count else { return }
+        let track = tracks[index]
+        downloadCover(track: track) { [weak self] succeeded in
+            self?.onCoverDownloadProgress?(index + 1, tracks.count, track.id, succeeded ? "success" : "failed")
+            self?.downloadCovers(tracks, from: index + 1)
+        }
+    }
+
     func getDownloads() -> [DownloadTask] {
         return stateQueue.sync {
             return trackMap.map { (id, track) -> DownloadTask in
@@ -527,6 +620,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
                 
                 downloadTasks.removeValue(forKey: id)
                 trackMap.removeValue(forKey: id)
+                mirrorUrls.removeValue(forKey: id)
             }
 
             pendingIds.removeAll()

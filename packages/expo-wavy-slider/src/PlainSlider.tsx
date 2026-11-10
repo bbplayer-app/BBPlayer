@@ -5,6 +5,7 @@ import Animated, {
 	useAnimatedStyle,
 	useDerivedValue,
 	useSharedValue,
+	withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnUI } from 'react-native-worklets'
 
@@ -12,13 +13,16 @@ import type { WavySliderProps } from './ExpoWavySlider.types'
 
 const TRACK_HEIGHT = 4
 const THUMB_SIZE = 16
+const MARKER_WIDTH = 2
+const MARKER_HEIGHT = 12
 const DEFAULT_ACTIVE_COLOR = '#fb7299'
 const DEFAULT_INACTIVE_COLOR = 'rgba(127,127,127,0.3)'
 
 /**
  * iOS has no Compose slider, so this draws a plain track and thumb.
  *
- * It accepts the Android props and ignores the wave and skin ones. Callbacks are
+ * It accepts the Android props and ignores the wave and skin ones, drawing only the
+ * chapter markers on top of the track. Callbacks are
  * worklets, so they are dispatched to the UI runtime to match Android.
  */
 export default function WavySlider({
@@ -32,6 +36,8 @@ export default function WavySlider({
 	enabled = true,
 	colors,
 	style,
+	chapterMarkers,
+	dragging: outsideDragging,
 }: WavySliderProps) {
 	const range = max - min || 1
 	const sharedProgress = isSharedValue<number>(progress) ? progress : undefined
@@ -72,6 +78,23 @@ export default function WavySlider({
 			{ scale: dragging.value ? 1.25 : 1 },
 		],
 	}))
+
+	// As on Android, the markers grow out of the track only during a drag.
+	const markersStyle = useAnimatedStyle(() => {
+		const visible = dragging.value || outsideDragging?.value === true
+		return {
+			transform: [
+				{
+					scaleY: withTiming(visible ? 1 : 0, {
+						duration: visible ? 180 : 120,
+					}),
+				},
+			],
+		}
+	})
+	const markers = [...new Set(chapterMarkers ?? [])].filter(
+		(marker) => marker > 0 && marker < 1,
+	)
 
 	const activeColor = colors?.activeTrackColor ?? DEFAULT_ACTIVE_COLOR
 
@@ -115,6 +138,25 @@ export default function WavySlider({
 					style={[styles.active, { backgroundColor: activeColor }, activeStyle]}
 				/>
 			</View>
+			{markers.length > 0 && (
+				<Animated.View
+					pointerEvents='none'
+					style={[StyleSheet.absoluteFill, markersStyle]}
+				>
+					{markers.map((marker) => (
+						<View
+							key={marker}
+							style={[
+								styles.marker,
+								{
+									left: `${marker * 100}%`,
+									backgroundColor: colors?.activeTickColor ?? activeColor,
+								},
+							]}
+						/>
+					))}
+				</Animated.View>
+			)}
 			<Animated.View
 				pointerEvents='none'
 				style={[
@@ -139,6 +181,14 @@ const styles = StyleSheet.create({
 	},
 	active: {
 		height: TRACK_HEIGHT,
+	},
+	marker: {
+		position: 'absolute',
+		top: '50%',
+		width: MARKER_WIDTH,
+		height: MARKER_HEIGHT,
+		marginLeft: -MARKER_WIDTH / 2,
+		marginTop: -MARKER_HEIGHT / 2,
 	},
 	thumb: {
 		position: 'absolute',
