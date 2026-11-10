@@ -6,7 +6,7 @@ import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { router, useIsFocused } from 'expo-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
 	Platform,
@@ -16,7 +16,7 @@ import {
 	View,
 } from 'react-native'
 import PagerView from 'react-native-pager-view'
-import { useTheme } from 'react-native-paper'
+import { SegmentedButtons, useTheme } from 'react-native-paper'
 import {
 	cancelAnimation,
 	createAnimatedComponent,
@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
 import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
+import { PlayerCommentsPane } from '@/features/player/components/main/PlayerCommentsPane'
 import { PlayerHeader } from '@/features/player/components/main/PlayerHeader'
 import PlayerMainTab from '@/features/player/components/main/PlayerMainTab'
 import { PlayerFunctionalMenu } from '@/features/player/components/menu/PlayerFunctionalMenu'
@@ -42,6 +43,8 @@ import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
+import type { BilibiliCommentItem } from '@/types/apis/bilibili'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
 
@@ -96,6 +99,7 @@ export default function PlayerPage() {
 		onError: () => void 0,
 	})
 	const { width, height } = useWindowDimensions()
+	const { isTwoPane } = useResponsiveLayout()
 	const colorScheme = useColorScheme()
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
@@ -115,7 +119,30 @@ export default function PlayerPage() {
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
-	const suppressDesktopLyrics = isFocused && isForeground && index === 1
+	const [rightPane, setRightPane] = useState('lyrics')
+	const [commentsBvid, setCommentsBvid] = useState<string | null>(null)
+	const [commentReplyId, setCommentReplyId] = useState<number | null>(null)
+	const bvid =
+		currentTrack?.source === 'bilibili'
+			? currentTrack.bilibiliMetadata.bvid
+			: undefined
+	const commentsOpen = isTwoPane && rightPane === 'comments' && !!bvid
+	const onReplyPress = useCallback(
+		(item: BilibiliCommentItem) => setCommentReplyId(item.rpid),
+		[],
+	)
+	const openComments = useCallback(() => {
+		if (!bvid) return
+		setCommentsBvid(bvid)
+		setRightPane('comments')
+	}, [bvid])
+	useEffect(() => {
+		setRightPane('lyrics')
+		setCommentsBvid(null)
+		setCommentReplyId(null)
+	}, [currentTrack?.uniqueKey])
+	const suppressDesktopLyrics =
+		isFocused && isForeground && (isTwoPane ? !commentsOpen : index === 1)
 
 	useEffect(() => {
 		if (Platform.OS !== 'android') return
@@ -167,7 +194,7 @@ export default function PlayerPage() {
 	}, [isPreventingBack])
 
 	const handleDismiss = () => {
-		if (index === 1) {
+		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
 			return
 		}
@@ -194,9 +221,17 @@ export default function PlayerPage() {
 		}
 	})
 
+	useEffect(() => {
+		if (isTwoPane) {
+			setIndex(0)
+			scrollX.set(0)
+		}
+	}, [isTwoPane, scrollX])
+
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	const jumpTo = (key: string) => {
+		if (isTwoPane) return
 		const targetIndex = key === 'lyrics' ? 1 : 0
 		pagerRef.current?.setPage(targetIndex)
 	}
@@ -272,7 +307,12 @@ export default function PlayerPage() {
 			void usePlayerQueueSheetStore.getState().close()
 			return
 		}
-		if (index === 1) {
+		if (commentsOpen) {
+			if (commentReplyId !== null) setCommentReplyId(null)
+			else setRightPane('lyrics')
+			return
+		}
+		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
 			return
 		}
@@ -356,44 +396,116 @@ export default function PlayerPage() {
 							/>
 						</Computed>
 						<Computed>
-							<AnimatedPagerView
-								key={
+							{() => {
+								const podcast =
 									playbackContextStore$.context.mode.get() === 'podcast'
-										? 'podcast'
-										: 'music'
-								}
-								ref={pagerRef}
-								style={styles.tabView}
-								initialPage={0}
-								onPageScroll={pageScrollHandler}
-								onPageSelected={(e) => setIndex(e.nativeEvent.position)}
-							>
-								{[
+								const main = (
+									<PlayerMainTab
+										embedded={isTwoPane}
+										onOpenComments={isTwoPane ? openComments : undefined}
+										jumpTo={jumpTo}
+										imageRef={coverRef}
+										onPresent={() => {}}
+									/>
+								)
+								const reader = podcast ? (
+									<PodcastSubtitles
+										active={
+											(isTwoPane ? !commentsOpen : index === 1) && isFocused
+										}
+										embedded={isTwoPane}
+									/>
+								) : (
+									<Lyrics
+										currentIndex={isTwoPane ? (commentsOpen ? 0 : 1) : index}
+										embedded={isTwoPane}
+										onPressBackground={
+											isTwoPane ? undefined : () => jumpTo('main')
+										}
+									/>
+								)
+								return isTwoPane ? (
 									<View
-										key='main'
-										style={styles.tabView}
+										style={styles.widePlayer}
+										testID='player-two-pane'
+										collapsable={false}
 									>
-										<PlayerMainTab
-											jumpTo={jumpTo}
-											imageRef={coverRef}
-											onPresent={() => {}}
-										/>
-									</View>,
-									<View
-										key='lyrics'
+										<View style={styles.playbackPane}>{main}</View>
+										<View
+											style={[
+												styles.readerPane,
+												{ borderLeftColor: colors.outlineVariant },
+											]}
+										>
+											{bvid && (
+												<SegmentedButtons
+													value={commentsOpen ? 'comments' : 'lyrics'}
+													onValueChange={(value) =>
+														value === 'comments'
+															? openComments()
+															: setRightPane('lyrics')
+													}
+													style={{ paddingVertical: 8 }}
+													buttons={[
+														{
+															value: 'lyrics',
+															label: podcast ? '字幕' : '歌词',
+															testID: 'player-pane-lyrics',
+														},
+														{
+															value: 'comments',
+															label: '评论',
+															testID: 'player-pane-comments',
+														},
+													]}
+												/>
+											)}
+											<View
+												style={[styles.tabView, commentsOpen && styles.hidden]}
+											>
+												{reader}
+											</View>
+											{bvid && commentsBvid === bvid && (
+												<View
+													style={[
+														styles.tabView,
+														!commentsOpen && styles.hidden,
+													]}
+												>
+													<PlayerCommentsPane
+														bvid={bvid}
+														replyId={commentReplyId}
+														onReplyPress={onReplyPress}
+														onBack={() => setCommentReplyId(null)}
+													/>
+												</View>
+											)}
+										</View>
+									</View>
+								) : (
+									<AnimatedPagerView
+										key={podcast ? 'podcast' : 'music'}
+										ref={pagerRef}
 										style={styles.tabView}
+										initialPage={index}
+										onPageScroll={pageScrollHandler}
+										onPageSelected={(e) => setIndex(e.nativeEvent.position)}
 									>
-										{playbackContextStore$.context.mode.get() === 'podcast' ? (
-											<PodcastSubtitles active={index === 1 && isFocused} />
-										) : (
-											<Lyrics
-												currentIndex={index}
-												onPressBackground={() => jumpTo('main')}
-											/>
-										)}
-									</View>,
-								]}
-							</AnimatedPagerView>
+										<View
+											key='main'
+											style={styles.tabView}
+										>
+											{main}
+										</View>
+										<View
+											key='lyrics'
+											style={styles.tabView}
+										>
+											{reader}
+										</View>
+									</AnimatedPagerView>
+								)
+							}}
 						</Computed>
 					</View>
 
@@ -418,6 +530,22 @@ const styles = StyleSheet.create({
 	innerContainer: {
 		flex: 1,
 	},
+	widePlayer: {
+		flex: 1,
+		minHeight: 0,
+		width: '100%',
+		alignSelf: 'center',
+		flexDirection: 'row',
+		paddingBottom: 8,
+	},
+	playbackPane: { width: '42%', minHeight: 0 },
+	readerPane: {
+		flex: 1,
+		minWidth: 0,
+		borderLeftWidth: StyleSheet.hairlineWidth,
+		paddingHorizontal: 24,
+	},
+	hidden: { display: 'none' },
 	tabView: {
 		flex: 1,
 	},

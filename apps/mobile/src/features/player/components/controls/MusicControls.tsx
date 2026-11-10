@@ -21,9 +21,11 @@ import {
 
 export function MusicControls({
 	onOpenQueue,
+	onOpenComments,
 	compact = false,
 }: {
 	onOpenQueue: () => void
+	onOpenComments?: () => void
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
@@ -91,6 +93,10 @@ export function MusicControls({
 					size={24}
 					disabled={currentTrack?.source !== 'bilibili'}
 					onPress={() => {
+						if (onOpenComments) {
+							onOpenComments()
+							return
+						}
 						if (currentTrack?.source === 'bilibili') {
 							router.navigate({
 								pathname: '/comments/[bvid]',

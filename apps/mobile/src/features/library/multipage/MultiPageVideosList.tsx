@@ -5,6 +5,7 @@ import { Text, useTheme } from 'react-native-paper'
 
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import { useLibraryGrid } from '@/features/library/shared/useLibraryGrid'
 import { MultiPageVideosListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
@@ -25,6 +26,7 @@ const renderPlaylistItem = ({
 
 const MultiPageVideosListComponent = memo(() => {
 	const { colors } = useTheme()
+	const { columns } = useLibraryGrid()
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
@@ -105,6 +107,7 @@ const MultiPageVideosListComponent = memo(() => {
 				</Text>
 			</View>
 			<LegendList
+				numColumns={columns}
 				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={favoriteData.pages.flatMap((page) => page.medias ?? []) ?? []}
@@ -136,11 +139,13 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
-		height: 48,
+		minHeight: 48,
 		marginBottom: 8,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
+		flexWrap: 'wrap',
+		columnGap: 8,
 	},
 	headerTitle: {
 		fontWeight: 'bold',

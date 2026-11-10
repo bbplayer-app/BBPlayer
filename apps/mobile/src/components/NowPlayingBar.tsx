@@ -10,7 +10,7 @@ import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
 import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 import type { ViewInstance } from 'react-native'
-import { Platform, StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { EaseView } from 'react-native-ease'
 import {
 	Directions,
@@ -124,10 +124,21 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
+	const { width: windowWidth } = useWindowDimensions()
 	const isVisible = currentTrack !== null
 	const segments = useSegments()
 	const backgroundColor = useValue(nowPlayingBarStore$.backgroundColor)
 	const tabBarHeight = useValue(nowPlayingBarStore$.bottomTabBarHeight)
+	const contentLeftInset = useValue(nowPlayingBarStore$.contentLeftInset)
+	const retainedContentLeftInset = useValue(
+		nowPlayingBarStore$.retainedContentLeftInset,
+	)
+	const railWidth =
+		segments[0] === '(tabs)'
+			? contentLeftInset
+			: segments[0] === 'modal'
+				? retainedContentLeftInset
+				: 0
 	const retainedBottomTabBarHeight = useValue(
 		nowPlayingBarStore$.retainedBottomTabBarHeight,
 	)
@@ -270,13 +281,24 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 					: { type: 'timing', duration: 240, easing: 'easeOut' }
 			}
 			pointerEvents='box-none'
-			style={styles.nowPlayingBarContainer}
+			style={[
+				styles.nowPlayingBarContainer,
+				{ paddingLeft: insets.left + railWidth, paddingRight: insets.right },
+			]}
 		>
 			{isVisible && (
 				<GestureDetector gesture={combinedGesture}>
 					<View
 						style={[
 							playerStyle,
+							{
+								width:
+									windowWidth -
+									insets.left -
+									insets.right -
+									railWidth -
+									(nowPlayingBarStyle === 'bottom' ? 0 : 40),
+							},
 							{
 								backgroundColor: pureWhiteBackground
 									? colors.background
@@ -456,6 +478,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		bottom: 0,
+		alignItems: 'center',
 	},
 	nowPlayingBarBottom: {
 		flex: 1,

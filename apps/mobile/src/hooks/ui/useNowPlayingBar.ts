@@ -7,6 +7,7 @@ import { nowPlayingBarStore$ } from '@/hooks/stores/nowPlayingBarStore'
 export function useNowPlayingBar(
 	backgroundColor?: string,
 	bottomTabBarHeight = 0,
+	contentLeftInset = 0,
 ) {
 	useFocusEffect(
 		useCallback(() => {
@@ -15,7 +16,9 @@ export function useNowPlayingBar(
 				owner,
 				backgroundColor,
 				bottomTabBarHeight,
+				contentLeftInset,
 				retainedBottomTabBarHeight: bottomTabBarHeight,
+				retainedContentLeftInset: contentLeftInset,
 			})
 			return () => {
 				// 避免旧页面延迟失焦时清掉新页面已经发布的配置。
@@ -24,9 +27,10 @@ export function useNowPlayingBar(
 						owner: null,
 						backgroundColor: undefined,
 						bottomTabBarHeight: 0,
+						contentLeftInset: 0,
 					})
 				}
 			}
-		}, [backgroundColor, bottomTabBarHeight]),
+		}, [backgroundColor, bottomTabBarHeight, contentLeftInset]),
 	)
 }

@@ -17,6 +17,7 @@ import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
+import ResponsiveScreen from '@/components/layout/ResponsiveScreen'
 import { alert } from '@/components/modals/AlertModal'
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
 import NowPlayingBar from '@/components/NowPlayingBar'
@@ -241,6 +242,11 @@ function RootLayout() {
 			<AppProviders>
 				{migrationsSuccess && isReady ? (
 					<Stack
+						screenLayout={({ children, route }) => (
+							<ResponsiveScreen routeName={route.name}>
+								{children}
+							</ResponsiveScreen>
+						)}
 						screenOptions={{ headerShown: false }}
 						screenListeners={({ route, navigation }) => ({
 							focus: () => {

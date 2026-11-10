@@ -35,7 +35,7 @@ export function TrackInfo({
 	coverRef,
 }: {
 	onArtistPress: () => void
-	onPressCover: () => void
+	onPressCover?: () => void
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
@@ -140,8 +140,15 @@ export function TrackInfo({
 								<TouchableOpacity
 									activeOpacity={0.8}
 									onPress={onPressCover}
-									accessibilityRole='button'
-									accessibilityLabel={podcast ? '查看字幕' : '查看歌词'}
+									disabled={!onPressCover}
+									accessibilityRole={onPressCover ? 'button' : 'image'}
+									accessibilityLabel={
+										onPressCover
+											? podcast
+												? '查看字幕'
+												: '查看歌词'
+											: '歌曲封面'
+									}
 									style={{ width: coverSize, height: coverSize }}
 									testID='player-cover'
 								>

@@ -18,6 +18,8 @@ import { TrackInfo } from './PlayerTrackInfo'
 interface PlayerMainTabProps {
 	jumpTo: (key: string) => void
 	imageRef: ImageRef | null
+	embedded?: boolean
+	onOpenComments?: () => void
 	onPresent: () => void
 }
 
@@ -25,6 +27,8 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	jumpTo,
 	imageRef,
 	onPresent,
+	onOpenComments,
+	embedded = false,
 }: PlayerMainTabProps) {
 	const router = useRouter()
 	const insets = useSafeAreaInsets()
@@ -49,10 +53,16 @@ const PlayerMainTab = memo(function PlayerMainTab({
 								})
 							: void 0
 					}
-					onPressCover={() => {
-						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
-						jumpTo('lyrics')
-					}}
+					onPressCover={
+						embedded
+							? undefined
+							: () => {
+									void Haptics.performHaptics(
+										Haptics.AndroidHaptics.Context_Click,
+									)
+									jumpTo('lyrics')
+								}
+					}
 					coverRef={imageRef}
 				/>
 
@@ -62,7 +72,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 						styles.controlsContainer,
 					]}
 				>
-					{mode === 'podcast' && (
+					{mode === 'podcast' && !embedded && (
 						<Button
 							icon='subtitles-outline'
 							onPress={() => jumpTo('lyrics')}
@@ -73,6 +83,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					)}
 					<PlayerSlider />
 					<PlayerControls
+						onOpenComments={onOpenComments}
 						compact={compact}
 						onOpenQueue={() => {
 							onPresent()

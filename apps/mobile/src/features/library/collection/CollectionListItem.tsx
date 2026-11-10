@@ -2,14 +2,17 @@ import { useRouter } from 'expo-router'
 import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
-import { Divider, Icon, Text } from 'react-native-paper'
+import { Divider, Icon, Text, useTheme } from 'react-native-paper'
 
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import { useLibraryGrid } from '@/features/library/shared/useLibraryGrid'
 import { LIST_ITEM_COVER_SIZE } from '@/theme/dimensions'
 import type { BilibiliCollection } from '@/types/apis/bilibili'
 
 const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
+	const { isGrid, coverSize } = useLibraryGrid()
 	const router = useRouter()
+	const { colors } = useTheme()
 
 	return (
 		<View>
@@ -29,19 +32,42 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 						})
 					}
 				}}
-				style={styles.rectButton}
+				style={[
+					styles.rectButton,
+					isGrid && {
+						margin: 6,
+						padding: 8,
+						borderRadius: 16,
+						backgroundColor: colors.elevation.level1,
+					},
+				]}
 			>
 				<View>
-					<View style={styles.itemContainer}>
+					<View
+						style={[
+							styles.itemContainer,
+							isGrid && {
+								flexDirection: 'column',
+								alignItems: 'flex-start',
+								gap: 12,
+							},
+						]}
+					>
 						<CoverWithPlaceHolder
 							id={item.id}
 							cover={item.cover}
 							title={item.title}
-							size={LIST_ITEM_COVER_SIZE}
+							size={isGrid ? coverSize : LIST_ITEM_COVER_SIZE}
 						/>
-						<View style={styles.textContainer}>
+						<View
+							style={[
+								styles.textContainer,
+								isGrid && { marginLeft: 0, width: '100%' },
+							]}
+						>
 							<Text
 								variant='titleMedium'
+								numberOfLines={isGrid ? 2 : undefined}
 								style={styles.title}
 							>
 								{item.title}
@@ -53,14 +79,16 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 								{'\u2009'}首歌曲
 							</Text>
 						</View>
-						<Icon
-							source='arrow-right'
-							size={24}
-						/>
+						{!isGrid && (
+							<Icon
+								source='arrow-right'
+								size={24}
+							/>
+						)}
 					</View>
 				</View>
 			</Touchable>
-			<Divider />
+			{!isGrid && <Divider />}
 		</View>
 	)
 })

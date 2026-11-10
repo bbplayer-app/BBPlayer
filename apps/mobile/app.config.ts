@@ -101,7 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		name: getAppName(),
 		slug: 'bbplayer',
 		version: version,
-		orientation: 'portrait',
+		orientation: 'default',
 		icon: './assets/images/icon.png',
 		scheme: 'bbplayer',
 		userInterfaceStyle: 'automatic',
@@ -294,6 +294,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		},
 		owner: 'roitium',
 		ios: {
+			supportsTablet: true,
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {
 				policy: 'appVersion',

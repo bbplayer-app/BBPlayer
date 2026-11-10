@@ -37,6 +37,7 @@ const { height: windowHeight } = Dimensions.get('window')
 export const LYRICS_CONTROLS_OVERLAY_HEIGHT = Math.min(windowHeight * 0.4, 280)
 
 interface LyricsControlOverlayProps {
+	playbackControls?: boolean
 	offsetMenuVisible: boolean
 	showTranslationToggle: boolean
 	translationType: 'translation' | 'romaji'
@@ -46,6 +47,7 @@ interface LyricsControlOverlayProps {
 }
 
 export const LyricsControlOverlay = memo(function LyricsControlOverlay({
+	playbackControls = true,
 	offsetMenuVisible,
 	showTranslationToggle,
 	translationType,
@@ -86,7 +88,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 
 	return (
 		<MaskedView
-			style={styles.overlayContainer}
+			style={[styles.overlayContainer, !playbackControls && { height: 100 }]}
 			maskElement={
 				<View
 					style={styles.maskElement}
@@ -114,7 +116,9 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 					]}
 				/>
 			)}
-			<View style={styles.playerControls}>
+			<View
+				style={[styles.playerControls, !playbackControls && { bottom: 16 }]}
+			>
 				{/* 功能按钮，位于 slider 上方右侧 */}
 				<View style={styles.actionMenuRow}>
 					<MenuView {...menuActions}>
@@ -133,10 +137,12 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 						</Touchable>
 					</MenuView>
 				</View>
-				<PlayerSlider />
-				<View style={styles.playbackButtonsWrapper}>
-					<MainPlaybackControls size='compact' />
-				</View>
+				{playbackControls && <PlayerSlider />}
+				{playbackControls && (
+					<View style={styles.playbackButtonsWrapper}>
+						<MainPlaybackControls size='compact' />
+					</View>
+				)}
 			</View>
 		</MaskedView>
 	)

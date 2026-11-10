@@ -30,7 +30,13 @@ import {
 	SubtitleTranscript,
 } from './SubtitleReader'
 
-export function PodcastSubtitles({ active }: { active: boolean }) {
+export function PodcastSubtitles({
+	active,
+	embedded = false,
+}: {
+	active: boolean
+	embedded?: boolean
+}) {
 	const data = usePlayerSubtitles(active)
 	const { lines, trackId } = data
 	const { colors } = useTheme()
@@ -47,7 +53,7 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 	)
 	useSubtitlePlayback(store, active)
 	const playbackReady = useValue(store.state$.ready)
-	const showControls = height - insets.bottom >= 520
+	const showControls = !embedded && height - insets.bottom >= 520
 	const openPicker = useCallback(() => setPickerVisible(true), [])
 
 	useEffect(() => {

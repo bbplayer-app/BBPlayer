@@ -42,6 +42,7 @@ interface PlaylistHeaderProps {
 	primaryButtonTextColor?: string
 	secondaryButtonContainerColor?: string
 	secondaryButtonIconColor?: string
+	sidebar?: boolean
 }
 
 interface SubtitlePieces {
@@ -103,11 +104,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	primaryButtonTextColor,
 	secondaryButtonContainerColor,
 	secondaryButtonIconColor,
+	sidebar = false,
 }: PlaylistHeaderProps) {
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
 	const { width, height } = useWindowDimensions()
-	const coverSize = width < 360 || height < 700 ? 88 : 120
+	const coverSize = sidebar ? 200 : width < 360 || height < 700 ? 88 : 120
 	const { colors } = useTheme()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
@@ -163,7 +165,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	return (
 		<View style={styles.container}>
 			{/* 顶部信息 */}
-			<View style={styles.headerContainer}>
+			<View
+				style={[
+					styles.headerContainer,
+					sidebar && { flexDirection: 'column', alignItems: 'flex-start' },
+				]}
+			>
 				<CoverWithPlaceHolder
 					id={playlist.id}
 					cover={coverRef ?? playlist.coverUrl}
@@ -171,7 +178,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					size={coverSize}
 				/>
 
-				<View style={styles.headerTextContainer}>
+				<View
+					style={[
+						styles.headerTextContainer,
+						sidebar && { marginLeft: 0, flex: 0 },
+					]}
+				>
 					<TouchableRipple
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {

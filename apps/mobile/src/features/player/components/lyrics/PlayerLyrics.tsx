@@ -43,15 +43,18 @@ const MIN_HEIGHT_WITH_CONTROLS = 520
 const Lyrics = memo(function Lyrics({
 	currentIndex,
 	onPressBackground,
+	embedded = false,
 }: {
 	currentIndex: number
+	embedded?: boolean
 	onPressBackground?: () => void
 }) {
 	const dimensions = useWindowDimensions()
 	const windowHeight = dimensions.height
 	const insets = useSafeAreaInsets()
 	const [pageHeight, setPageHeight] = useState(0)
-	const showControls = pageHeight - insets.bottom >= MIN_HEIGHT_WITH_CONTROLS
+	const showControls =
+		!embedded && pageHeight - insets.bottom >= MIN_HEIGHT_WITH_CONTROLS
 	const colors = useTheme().colors
 	const isFluidBackground = useAppStore(
 		(state) =>
@@ -404,8 +407,9 @@ const Lyrics = memo(function Lyrics({
 			</View>
 
 			{/* 播放器控件覆盖层 */}
-			{showControls && (
+			{(showControls || embedded) && (
 				<LyricsControlOverlay
+					playbackControls={!embedded}
 					offsetMenuVisible={offsetMenuVisible}
 					showTranslationToggle={!!lyrics?.tlyric && !!lyrics?.romalrc}
 					translationType={preferredLyricType}

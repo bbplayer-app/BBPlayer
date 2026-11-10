@@ -24,6 +24,7 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import useSkinStore from '@/hooks/stores/useSkinStore'
 import useActiveSkin from '@/hooks/theme/useActiveSkin'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { markPerfInteractive } from '@/lib/performance'
@@ -33,6 +34,7 @@ function MyPageContent() {
 	const insets = useSafeAreaInsets()
 	const { width, height } = useWindowDimensions()
 	const compact = width < 360 || height < 700
+	const { isTwoPane } = useResponsiveLayout()
 	const router = useRouter()
 	const haveTrack = useCurrentTrack()
 	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
@@ -110,181 +112,199 @@ function MyPageContent() {
 				]}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.accounts}>
-					<Touchable
-						accessibilityRole='button'
-						accessibilityLabel={
-							hasCookie ? '管理 Bilibili 账号' : '登录 Bilibili 账号'
-						}
-						style={[styles.profile, compact && styles.compactProfile]}
-						onPress={() => router.navigate('/settings/bilibili-account')}
-					>
-						<View
-							style={[
-								styles.avatarWrapper,
-								compact && { width: 48, height: 48 },
-							]}
-						>
-							<Image
-								style={[
-									styles.avatar,
-									compact && { width: 48, height: 48, borderRadius: 24 },
-								]}
-								source={
-									profile?.face
-										? { uri: profile.face }
-										: require('../../../assets/images/bilibili-default-avatar.jpg')
+				<View
+					style={{
+						flexDirection: isTwoPane ? 'row' : 'column',
+						gap: isTwoPane ? 32 : 0,
+					}}
+				>
+					<View style={isTwoPane ? { width: 300 } : undefined}>
+						<View style={styles.accounts}>
+							<Touchable
+								accessibilityRole='button'
+								accessibilityLabel={
+									hasCookie ? '管理 Bilibili 账号' : '登录 Bilibili 账号'
 								}
-								cachePolicy='disk'
-							/>
-							{avatarFrame && (
-								<Image
-									source={avatarFrame}
+								style={[styles.profile, compact && styles.compactProfile]}
+								onPress={() => router.navigate('/settings/bilibili-account')}
+							>
+								<View
 									style={[
-										styles.avatarFrame,
-										compact && { width: 64, height: 64 },
+										styles.avatarWrapper,
+										compact && { width: 48, height: 48 },
 									]}
-									contentFit='contain'
-									cachePolicy='memory-disk'
+								>
+									<Image
+										style={[
+											styles.avatar,
+											compact && { width: 48, height: 48, borderRadius: 24 },
+										]}
+										source={
+											profile?.face
+												? { uri: profile.face }
+												: require('../../../assets/images/bilibili-default-avatar.jpg')
+										}
+										cachePolicy='disk'
+									/>
+									{avatarFrame && (
+										<Image
+											source={avatarFrame}
+											style={[
+												styles.avatarFrame,
+												compact && { width: 64, height: 64 },
+											]}
+											contentFit='contain'
+											cachePolicy='memory-disk'
+										/>
+									)}
+								</View>
+								<View style={[styles.profileText, compact && { gap: 2 }]}>
+									<Text
+										variant={compact ? 'titleMedium' : 'titleLarge'}
+										style={styles.bold}
+										numberOfLines={1}
+									>
+										{hasCookie
+											? (profile?.name ?? 'Bilibili 用户')
+											: '登录 Bilibili'}
+									</Text>
+									<Text
+										variant='bodyMedium'
+										style={{ color: colors.onSurfaceVariant }}
+									>
+										{hasCookie
+											? 'Bilibili 账号'
+											: '登录后使用收藏夹、关注与稍后再看'}
+									</Text>
+								</View>
+								{chevron()}
+							</Touchable>
+							<Touchable
+								accessibilityRole='button'
+								accessibilityLabel='BBPlayer 账号'
+								style={[
+									styles.accountBar,
+									{ backgroundColor: colors.surfaceVariant },
+								]}
+								onPress={() => router.navigate('/settings/account')}
+							>
+								<Icon
+									source='link-variant'
+									size={20}
+									color={colors.onSurfaceVariant}
+								/>
+								<Text
+									variant='titleSmall'
+									style={{ color: colors.onSurfaceVariant }}
+								>
+									BBPlayer 账号
+								</Text>
+								<Text
+									variant='bodySmall'
+									style={[
+										styles.accountStatus,
+										{ color: colors.onSurfaceVariant },
+									]}
+									numberOfLines={1}
+								>
+									{token ? (account?.name ?? '已登录') : '未登录'}
+								</Text>
+								{chevron()}
+							</Touchable>
+						</View>
+
+						{!isTwoPane && <ListeningRecordSection compact={compact} />}
+						<SettingsSectionTitle
+							title='我的内容'
+							first
+						/>
+						<View>
+							{syncFailures.length > 0 && (
+								<List.Item
+									title='歌单同步失败'
+									left={(props) => (
+										<List.Icon
+											{...props}
+											icon='alert-circle-outline'
+											color={colors.error}
+										/>
+									)}
+									right={chevron}
+									onPress={() => void syncFailuresSheetRef.current?.present()}
 								/>
 							)}
+							<List.Item
+								title='最近常听'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='history'
+									/>
+								)}
+								right={chevron}
+								onPress={() => router.navigate('/playlist/recently')}
+							/>
+							<List.Item
+								title='我的关注'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='account-heart-outline'
+									/>
+								)}
+								right={chevron}
+								onPress={() => router.navigate('/following')}
+							/>
+							<List.Item
+								title='下载'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='download-box-outline'
+									/>
+								)}
+								right={chevron}
+								onPress={() => router.navigate('/downloaded')}
+							/>
+							<List.Item
+								title='稍后再看'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='clock-outline'
+									/>
+								)}
+								right={chevron}
+								onPress={() =>
+									router.navigate(
+										hasCookie
+											? '/playlist/remote/toview'
+											: '/settings/bilibili-account',
+									)
+								}
+							/>
+							<List.Item
+								title='那月今日'
+								left={(props) => (
+									<List.Icon
+										{...props}
+										icon='calendar-month-outline'
+									/>
+								)}
+								right={chevron}
+								onPress={() =>
+									router.navigate(
+										`/history/${dayjs().subtract(1, 'month').format('YYYY-MM-DD')}`,
+									)
+								}
+							/>
 						</View>
-						<View style={[styles.profileText, compact && { gap: 2 }]}>
-							<Text
-								variant={compact ? 'titleMedium' : 'titleLarge'}
-								style={styles.bold}
-								numberOfLines={1}
-							>
-								{hasCookie
-									? (profile?.name ?? 'Bilibili 用户')
-									: '登录 Bilibili'}
-							</Text>
-							<Text
-								variant='bodyMedium'
-								style={{ color: colors.onSurfaceVariant }}
-							>
-								{hasCookie
-									? 'Bilibili 账号'
-									: '登录后使用收藏夹、关注与稍后再看'}
-							</Text>
+					</View>
+					{isTwoPane && (
+						<View style={{ flex: 1, minWidth: 0 }}>
+							<ListeningRecordSection compact={compact} />
 						</View>
-						{chevron()}
-					</Touchable>
-					<Touchable
-						accessibilityRole='button'
-						accessibilityLabel='BBPlayer 账号'
-						style={[
-							styles.accountBar,
-							{ backgroundColor: colors.surfaceVariant },
-						]}
-						onPress={() => router.navigate('/settings/account')}
-					>
-						<Icon
-							source='link-variant'
-							size={20}
-							color={colors.onSurfaceVariant}
-						/>
-						<Text
-							variant='titleSmall'
-							style={{ color: colors.onSurfaceVariant }}
-						>
-							BBPlayer 账号
-						</Text>
-						<Text
-							variant='bodySmall'
-							style={[styles.accountStatus, { color: colors.onSurfaceVariant }]}
-							numberOfLines={1}
-						>
-							{token ? (account?.name ?? '已登录') : '未登录'}
-						</Text>
-						{chevron()}
-					</Touchable>
-				</View>
-				<ListeningRecordSection compact={compact} />
-				<SettingsSectionTitle
-					title='我的内容'
-					first
-				/>
-				<View>
-					{syncFailures.length > 0 && (
-						<List.Item
-							title='歌单同步失败'
-							left={(props) => (
-								<List.Icon
-									{...props}
-									icon='alert-circle-outline'
-									color={colors.error}
-								/>
-							)}
-							right={chevron}
-							onPress={() => void syncFailuresSheetRef.current?.present()}
-						/>
 					)}
-					<List.Item
-						title='最近常听'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='history'
-							/>
-						)}
-						right={chevron}
-						onPress={() => router.navigate('/playlist/recently')}
-					/>
-					<List.Item
-						title='我的关注'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='account-heart-outline'
-							/>
-						)}
-						right={chevron}
-						onPress={() => router.navigate('/following')}
-					/>
-					<List.Item
-						title='下载'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='download-box-outline'
-							/>
-						)}
-						right={chevron}
-						onPress={() => router.navigate('/downloaded')}
-					/>
-					<List.Item
-						title='稍后再看'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='clock-outline'
-							/>
-						)}
-						right={chevron}
-						onPress={() =>
-							router.navigate(
-								hasCookie
-									? '/playlist/remote/toview'
-									: '/settings/bilibili-account',
-							)
-						}
-					/>
-					<List.Item
-						title='那月今日'
-						left={(props) => (
-							<List.Icon
-								{...props}
-								icon='calendar-month-outline'
-							/>
-						)}
-						right={chevron}
-						onPress={() =>
-							router.navigate(
-								`/history/${dayjs().subtract(1, 'month').format('YYYY-MM-DD')}`,
-							)
-						}
-					/>
 				</View>
 			</ScrollView>
 			<SyncFailuresSheet ref={syncFailuresSheetRef} />

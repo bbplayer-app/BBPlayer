@@ -2,7 +2,7 @@ import Icon from '@react-native-vector-icons/material-design-icons'
 import { useObserve } from 'expo-observe'
 import { useLocalSearchParams } from 'expo-router'
 import { useEffect, useState, useTransition } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view'
@@ -14,6 +14,7 @@ import FavoriteFolderListComponent from '@/features/library/favorite/FavoriteFol
 import LocalPlaylistListComponent from '@/features/library/local/LocalPlaylistList'
 import MultiPageVideosListComponent from '@/features/library/multipage/MultiPageVideosList'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import { markPerfInteractive } from '@/lib/performance'
 
 const renderScene = SceneMap({
@@ -41,8 +42,11 @@ function LibraryContent() {
 	const [index, setIndex] = useState(Tabs.Local)
 	const [_, startTransition] = useTransition()
 	const insets = useSafeAreaInsets()
-	const { width, fontScale } = useWindowDimensions()
-	const tabWidth = Math.max(width / routes.length, 80 * fontScale)
+	const { width, fontScale } = useResponsiveLayout()
+	const tabWidth = Math.max(
+		Math.min(width / routes.length, 160 * fontScale),
+		80 * fontScale,
+	)
 	const colors = useTheme().colors
 	const headerForegroundColor = useSkinForegroundColor()
 	const { tab } = useLocalSearchParams<{ tab: string }>()

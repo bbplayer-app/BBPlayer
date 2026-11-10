@@ -7,9 +7,11 @@ import { PodcastControls } from './PodcastControls'
 
 export function PlayerControls({
 	onOpenQueue,
+	onOpenComments,
 	compact = false,
 }: {
 	onOpenQueue: () => void
+	onOpenComments?: () => void
 	compact?: boolean
 }) {
 	return (
@@ -18,6 +20,7 @@ export function PlayerControls({
 				podcast: () => <PodcastControls compact={compact} />,
 				default: () => (
 					<MusicControls
+						onOpenComments={onOpenComments}
 						onOpenQueue={onOpenQueue}
 						compact={compact}
 					/>
