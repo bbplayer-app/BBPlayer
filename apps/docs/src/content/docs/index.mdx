@@ -1,11 +1,11 @@
 ---
 title: BBPlayer
-description: 轻量、开源、不妥协。让 B 站音频回归它应有的样子。
+description: 开源的 Bilibili 音频播放器，支持本地歌单、歌词和播客模式。
 template: splash
 editUrl: false
 hero:
-  title: 更纯粹的 BiliBili 听歌方式
-  tagline: 轻量、开源、不妥协。让 B 站音频回归它应有的样子。
+  title: 使用 BBPlayer 收听 Bilibili 音频
+  tagline: 开源的 Bilibili 音频播放器，支持本地歌单、歌词和播客模式。
   image:
     file: ../../assets/icon.png
   actions:
@@ -15,7 +15,7 @@ hero:
     - text: 下载安装
       link: /guides/install/
       variant: secondary
-    - text: 去 GitHub 看看
+    - text: 查看源代码
       link: https://github.com/bbplayer-app/BBPlayer
       variant: minimal
 ---
@@ -24,15 +24,15 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 
 <CardGrid>
 	<Card
-		title='精致界面'
+		title='Material Design 3'
 		icon='star'
 	>
-		基于 Material Design 3 设计，简洁、流畅且耐看。
+		采用 Material Design 3，提供主题与播放器外观设置。
 	</Card>
 	<LinkCard
 		title='在线与本地'
 		href='/guides/playlist/'
-		description='无缝同步 B 站收藏夹与订阅合集，亦可自由构建个人本地歌单。'
+		description='浏览 Bilibili 收藏夹与订阅合集，同步到本地，或创建个人歌单。'
 	/>
 	<LinkCard
 		title='智能搜索'
@@ -40,22 +40,22 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
 		description='聚合歌曲搜索与 B 站链接解析，支持 BV/AV 号及短链自动识别。'
 	/>
 	<LinkCard
-		title='极致歌词'
+		title='歌词显示'
 		href='/guides/lyrics/'
-		description='智能匹配、逐字进度、罗马音注音及双语翻译，完美支持 SPL 规范。'
+		description='支持自动匹配、逐字进度、翻译与罗马音，并可手动编辑 LRC/SPL 歌词。'
 	/>
 	<LinkCard
 		title='下载与导出'
 		href='/guides/download/'
-		description='支持缓存单曲或整个歌单，并可导出为带封面与内嵌歌词的 m4a 文件。'
+		description='支持下载单曲或整个歌单，Android 可导出带封面与已缓存歌词的 m4a 文件。'
 	/>
 	<LinkCard
 		title='开源共建'
 		href='https://github.com/bbplayer-app/BBPlayer'
-		description='欢迎 Star 支持。如有改进建议，欢迎提交 Issue 或贡献 PR。'
+		description='查看项目源代码、提交问题反馈，或通过 Pull Request 参与开发。'
 	/>
 	<Card
-		title='btw, I use React Native'
+		title='React Native 与 Expo'
 		icon='rocket'
 	>
 		基于 React Native 与 Expo 构建。

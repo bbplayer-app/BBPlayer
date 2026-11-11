@@ -2,26 +2,25 @@
 title: 搜索
 ---
 
-## 搜索框
+## 关键词与链接
 
-打开软件，便可以看到 BBPlayer 的搜索框。它被设计为支持识别多种链接、规则的聚合搜索器，具体来说，他支持以下这几种类型：
+在「搜索」页面的搜索框中输入关键词，可搜索 Bilibili 内容。搜索框也支持识别视频编号和以下链接：
 
-1. `BV1GJ411x7h7` 或 `AV114514`：直接跳转到视频详情页
+| 输入内容                                             | 打开的页面                                        |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| BV 号或 AV 号，例如 `BV1GJ411x7h7`                   | 视频详情与分 P 列表                               |
+| Bilibili 视频链接                                    | 对应视频详情                                      |
+| `b23.tv` 短链接                                      | 联网解析后打开对应的视频、收藏夹、合集或作者页面  |
+| `space.bilibili.com/<mid>/favlist?fid=<id>&ctype=11` | 收藏夹；只有 `fid`、没有 `ctype` 时也按收藏夹处理 |
+| 带 `fid=<id>&ctype=21` 的收藏列表链接                | 合集                                              |
+| `space.bilibili.com/<mid>/lists/<id>`                | 合集                                              |
+| `space.bilibili.com/<mid>/lists/<id>?type=series`    | 系列                                              |
+| `space.bilibili.com/<mid>`                           | UP 主作品页                                       |
 
-2. 短链接（b23.tv/xxxxxx）：会在解析后根据实际链接动态跳转（会自动删除链接前后的无关文字，所以你可以把从 BiliBili 复制的分享文本直接粘贴过来）
+可直接粘贴含链接的 Bilibili 分享文本。短链接需要网络才能解析；未识别的输入会按关键词搜索。如果解析失败，请尝试复制完整链接或直接输入视频编号。
 
-3. `https://space.bilibili.com/`：会根据后面跟随的参数不同动态决定
-   - 如果链接包含`ctype=21`, 则跳转到**合集页**（e.g. `https://space.bilibili.com/114514/favlist?fid=1919810&ctype=21`）
-   - 如果链接包含`ctype=11` 或不含`ctype`，则跳转到**收藏夹页**（e.g. `https://space.bilibili.com/114514/favlist?fid=1919810`）
-   - 如果链接包含`/lists/<id>`，则跳转到**合集页**（e.g. `https://space.bilibili.com/114514/lists/1919810`）
-   - 如果什么都不包含，则跳转到用户主页（e.g. `https://space.bilibili.com/114514`）
+## 从 Bilibili 分享到 BBPlayer
 
-4. 如果什么都没解析到，就作为关键词搜索
+在 Android 的 Bilibili 客户端中打开视频分享菜单，找到系统分享入口，再选择 BBPlayer，即可打开对应视频。菜单名称和位置可能随 Bilibili 或系统版本变化。
 
-看不懂没关系！只需要知道你所复制的大部分链接都可以直接扔到搜索框里，而 BBPlayer 会尽力猜你想访问什么！（其实是我在猜...😇）
-
-## Bilibili 移动端分享
-
-在 Bilibili 移动端上，你可以点击视频的分享按钮，在弹出菜单中右滑到底点击「更多」，选择「分享到 BBPlayer」，即可自动跳转到视频详情页：
-
-![菜单](/guides/attachments/bilibili_share.jpg)
+![Bilibili 分享菜单示例](/guides/attachments/bilibili_share.jpg)
