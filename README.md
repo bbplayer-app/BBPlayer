@@ -14,11 +14,60 @@
 
 **[前往官网查看更多详情和上手指南 ➔](https://bbplayer.roitium.com)**
 
-## 屏幕截图
+## 界面预览
 
-|                  首页                  |                   播放器                   |                    播放列表                    |                    歌词页                    |                    库页面                    |
-| :------------------------------------: | :----------------------------------------: | :--------------------------------------------: | :------------------------------------------: | :------------------------------------------: |
-| ![home](./assets/screenshots/home.jpg) | ![player](./assets/screenshots/player.jpg) | ![playlist](./assets/screenshots/playlist.jpg) | ![download](./assets/screenshots/lyrics.jpg) | ![library](./assets/screenshots/library.jpg) |
+<table>
+  <tr>
+    <th align="center" width="50%">首页</th>
+    <th align="center" width="50%">音乐库</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/screenshots/home.jpg" alt="首页：搜索入口、最近搜索与底部播放栏" width="280" /></td>
+    <td align="center"><img src="./assets/screenshots/library.jpg" alt="音乐库：播放列表、收藏夹、合集和分 P 分类" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center">搜索入口 · 最近搜索 · 快捷播放</td>
+    <td align="center">本地歌单 · B 站收藏夹 · 合集管理</td>
+  </tr>
+  <tr>
+    <th align="center">我的</th>
+    <th align="center">搜索结果</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/screenshots/profile.jpg" alt="我的：账号管理、累计听歌时长与听歌记录热力图" width="280" /></td>
+    <td align="center"><img src="./assets/screenshots/search.jpg" alt="搜索结果：相关 UP 主与视频列表" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center">账号管理 · 听歌统计 · 历史热力图</td>
+    <td align="center">发现音乐 · 查找 UP 主 · 快速播放</td>
+  </tr>
+  <tr>
+    <th align="center">音乐播放</th>
+    <th align="center">逐字歌词</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/screenshots/music-player.jpg" alt="音乐播放器：封面取色背景、唱片封面与波形进度条" width="280" /></td>
+    <td align="center"><img src="./assets/screenshots/lyrics.jpg" alt="逐字歌词：日文歌词进度高亮与中文翻译对照" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center">封面取色背景 · 波形进度条</td>
+    <td align="center">逐字高亮 · 翻译对照 · 自动跟随</td>
+  </tr>
+  <tr>
+    <th align="center">播客模式</th>
+    <th align="center">字幕阅读与搜索</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/screenshots/podcast-player.jpg" alt="播客播放器：字幕预览、前后跳转、倍速和定时关闭" width="280" /></td>
+    <td align="center"><img src="./assets/screenshots/podcast-search.gif" alt="播客字幕搜索演示：搜索“数据”、高亮关键词并切换匹配结果" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center">倍速播放 · 定时关闭 · 前后跳转</td>
+    <td align="center">全文阅读 · 关键词搜索 · 结果定位</td>
+  </tr>
+</table>
+
+<p align="center"><sub>以上为 Android 端界面。歌词演示使用 BV1auGwzMEs1；播客素材来自硅谷 101《对话 Maxinsights》。<a href="https://bbplayer.roitium.com/guides/podcast/">查看播客使用指南 →</a></sub></p>
 
 ## 主要功能
 
