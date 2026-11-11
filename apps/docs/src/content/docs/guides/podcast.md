@@ -8,7 +8,9 @@ title: 播客模式
 播客模式是一次连续播放的体验，而不是某一首歌的固定属性。同一首音频既可以在音乐模式播放，也可以在播客模式播放。
 :::
 
-<img src="/guides/attachments/player_podcast.png" alt="播客模式" width="375" />
+以下界面与动图采集自 Android 开发版，以硅谷 101 的[《对话 Maxinsights》](https://www.bilibili.com/video/BV1L4xh6jEqo/)为例。
+
+<img src="/guides/attachments/player_podcast.png" alt="播客播放器：硅谷 101 节目封面、字幕入口、快退快进及章节等控制" width="375" height="833" />
 
 ## 断点续播
 
@@ -36,7 +38,30 @@ title: 播客模式
 - **定位与跳转**：点击字幕跳转到对应位置，手动滚动后可定位回当前播放内容。
 - **导出 LRC**：在字幕选择窗口中点击「导出 LRC」，通过系统分享保存或使用字幕文件。
 
-本地音频不支持 Bilibili 字幕。部分视频的字幕需要登录 Bilibili 账号；没有可用字幕或加载失败不会中断音频播放。
+### 跟随播放阅读
+
+点击播放器中的 **字幕** 按钮，或点击封面进入字幕页。播放时，当前句会高亮，正文随进度滚动；手动浏览其他位置后，点击定位按钮可回到正在播放的字幕。
+
+<img src="/guides/attachments/podcast_subtitles.gif" alt="字幕跟随演示：正文随播放滚动，当前句持续高亮" width="375" height="833" loading="lazy" />
+
+[查看字幕页静态截图](/guides/attachments/podcast_subtitles.png)
+
+### 搜索本期字幕
+
+1. 点击字幕页右上方的 **搜索** 图标，展开搜索框。
+2. 输入关键词，例如「数据」。应用会列出匹配段落、标出匹配内容，并显示当前结果与总数。
+3. 点击搜索框下方的上下箭头，切换上一段或下一段匹配结果；点击段落时间或句子，可跳转播放位置。
+4. 点击搜索框右侧的关闭按钮，返回正常字幕阅读。
+
+搜索结果按段落统计，同一段中多次出现关键词仍计为一段匹配。切换搜索结果只定位字幕，点击时间或句子才会跳转音频。
+
+<img src="/guides/attachments/podcast_search.gif" alt="字幕搜索演示：展开搜索框，输入数据，查看高亮并用上下箭头切换匹配段落" width="375" height="833" loading="lazy" />
+
+[查看字幕搜索静态截图](/guides/attachments/podcast_search.png)
+
+:::note
+本地音频不支持 Bilibili 字幕。部分视频的字幕需要登录 Bilibili 账号；没有可用字幕或加载失败不会中断音频播放。示例使用视频提供的自动生成字幕，文字准确性取决于字幕来源。
+:::
 
 ## 选择默认模式
 
