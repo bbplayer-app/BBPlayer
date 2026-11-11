@@ -1,0 +1,46 @@
+---
+import { ExternalLink } from '@lucide/astro'
+import '../styles/shared-page.css'
+
+interface Props {
+	title: string
+	showBrowserHint?: boolean
+}
+const { title, showBrowserHint = false } = Astro.props
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+		<title>{title} | BBPlayer</title>
+		<link rel="icon" href="/favicon.ico" />
+	</head>
+	<body>
+		<main class="page">
+			{showBrowserHint && (
+				<div class="browser-overlay" id="browser-hint" hidden>
+					<div class="overlay-content">
+						<ExternalLink size={40} class="overlay-icon" />
+						<h2 class="overlay-title">请在浏览器打开</h2>
+						<p class="overlay-desc">点击右上角菜单，选择在浏览器打开以继续</p>
+					</div>
+				</div>
+			)}
+			<slot />
+			<noscript><p>请启用 JavaScript 以加载分享内容并打开 BBPlayer。</p></noscript>
+			<footer class="footer">
+				<a href="/" class="footer-link">来自 BBPlayer | 由 Roitium ❤️ 构建</a>
+			</footer>
+		</main>
+	</body>
+</html>
+
+<script>
+	const hint = document.getElementById('browser-hint')
+	if (hint) {
+		hint.hidden = !/MicroMessenger|QQ\/|Weibo|AlipayClient|DingTalk|ZhihuHybrid|BaiduBoxApp/i.test(navigator.userAgent)
+	}
+</script>

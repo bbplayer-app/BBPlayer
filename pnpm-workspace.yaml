@@ -50,6 +50,15 @@ minimumReleaseAgeExclude:
   - '@sentry/react-native@8.34.0'
   - react-native-gesture-handler@3.5.0
   - react-native-keyboard-controller@1.23.0
+  - '@astrojs/internal-helpers@0.13.2'
+  - '@astrojs/markdown-remark@7.3.7'
+  - '@astrojs/markdown-satteri@0.4.8'
+  - '@astrojs/runtime@0.1.0'
+  - '@astrojs/vite-plugin-astro@0.1.1'
+  - '@lucide/astro@1.71.0'
+  - astro@7.4.10
+  - miniflare@5.20261110.0-beta
+  - wrangler@4.160.0
 patchedDependencies:
   '@ark/schema': patches/@ark__schema.patch
   '@react-native-masked-view/masked-view': patches/@react-native-masked-view__masked-view.patch

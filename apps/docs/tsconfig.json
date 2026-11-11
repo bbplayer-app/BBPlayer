@@ -1,18 +1,8 @@
 {
-	"extends": "../../tsconfig.json",
+	"extends": "astro/tsconfigs/strict",
 	"compilerOptions": {
-		"target": "ESNext",
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"strict": true,
-		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
-		"isolatedModules": true,
-		"jsx": "preserve",
-		"esModuleInterop": true,
-		"lib": ["ESNext", "DOM", "DOM.Iterable"],
-		"types": ["vitepress/client"]
+		"skipLibCheck": true
 	},
-	"include": ["env.d.ts", "docs/**/*", "docs/.vitepress/**/*"],
-	"exclude": ["node_modules", "dist"]
+	"include": [".astro/types.d.ts", "**/*"],
+	"exclude": ["dist", "node_modules", "docs"]
 }

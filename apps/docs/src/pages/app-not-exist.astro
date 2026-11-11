@@ -1,0 +1,21 @@
+---
+import { Download, ExternalLink, RefreshCw } from '@lucide/astro'
+import ShareLayout from '../layouts/ShareLayout.astro'
+import '../styles/app-not-exist.css'
+---
+
+<ShareLayout title="未检测到应用">
+	<section class="card center-card">
+		<div class="icon-wrapper"><Download size={52} /></div>
+		<h1 class="page-title">未检测到 BBPlayer</h1>
+		<p id="fallback-description" class="page-desc">似乎您还没有安装 BBPlayer，或者跳转失败了。<br />请前往 GitHub 下载最新版本。</p>
+		<div class="button-group">
+			<a id="retry-link" class="btn btn-primary" hidden><RefreshCw size={16} class="btn-icon" />重试打开</a>
+			<a id="download-link" href="https://github.com/bbplayer-app/bbplayer/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+				<ExternalLink size={18} class="btn-icon" />前往 GitHub 下载
+			</a>
+		</div>
+	</section>
+</ShareLayout>
+
+<script src="../scripts/app-not-exist.ts"></script>
