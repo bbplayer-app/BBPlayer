@@ -269,7 +269,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				savePhotosPermission: '允许 $(PRODUCT_NAME) 保存图片到您的相册',
 				isAccessMediaLocationEnabled: true,
 			}),
-			'@react-native-firebase/app',
+			// iOS 用静态链接（见下方 expoBuildProperties 的 ios.useFrameworks），
+			// 而 Firebase 的 SPM 包只能动态链接，所以强制走 CocoaPods。
+			['@react-native-firebase/app', { ios: { disableSPM: true } }],
 			expoImage(),
 			expoSharing({
 				ios: {

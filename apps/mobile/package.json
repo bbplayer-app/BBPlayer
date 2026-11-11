@@ -6,6 +6,7 @@
 	"scripts": {
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
 		"hot-update": "pnpm --dir ../hot-update-cli start -- --project-dir \"$PWD\"",
+		"ios": "expo prebuild --clean --platform ios && WITH_ROZENITE=true expo run:ios",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start"
 	},
 	"dependencies": {
