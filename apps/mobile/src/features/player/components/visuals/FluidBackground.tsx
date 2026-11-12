@@ -55,6 +55,20 @@ const FLUID_SHADER = Skia.RuntimeEffect.Make(`
 /** 两组不透明渐变的起止颜色：[A 起点, A 终点, B 起点, B 终点]。 */
 export type FluidBackgroundColors = readonly [string, string, string, string]
 
+/** 三层旋转周期（毫秒），负值表示逆时针。 */
+const FLOW_PERIOD_A_MS = 60_000
+const FLOW_PERIOD_B_MS = -36_000
+const FLOW_PERIOD_MASK_MS = 45_000
+
+/** 回绕周期：三层周期的最小公倍数，回绕时无视觉跳变。 */
+const FLOW_WRAP_MS = 180_000
+
+/**
+ * 用系统时钟取相位，而不是每个实例从 0 开始。
+ * 这样多个背景实例（播放页、歌词页、迷你条）的流动方向始终一致。
+ */
+const globalFlowElapsed = () => Date.now() % FLOW_WRAP_MS
+
 export type FluidBackgroundColorScheme = 'light' | 'dark'
 
 export interface FluidBackgroundColorOptions {
@@ -88,8 +102,8 @@ const LIGHTNESS_BANDS: Record<
 	FluidBackgroundColorScheme,
 	readonly [number, number]
 > = {
-	dark: [12, 35],
-	light: [85, 97],
+	dark: [10, 44],
+	light: [70, 96],
 }
 
 /** 饱和度下限避免灰脏，上限避免过艳。 */
@@ -97,40 +111,136 @@ const SATURATION_BANDS: Record<
 	FluidBackgroundColorScheme,
 	readonly [number, number]
 > = {
-	dark: [30, 68],
-	light: [22, 48],
+	dark: [26, 62],
+	light: [18, 46],
 }
 
-/** 单层渐变两端点的明度差占明度区间的比例。 */
-const LIGHTNESS_SPREAD = 0.32
+/**
+ * 单层渐变两端点的明度差占明度区间的比例。
+ * 太小时四色会挤在一起，流光看起来像静止的纯色块。
+ */
+const LIGHTNESS_SPREAD: Record<FluidBackgroundColorScheme, number> = {
+	dark: 0.55,
+	light: 0.5,
+}
 
 /** 派生色的最大色相偏移；保持邻近色，避免互补色混合发灰。 */
 const HUE_OFFSET = 28
 
-/** 种子色饱和度过低时色相不可靠，退回兜底色相。 */
+/** 种子色饱和度过低时色相不可靠，直接走中性灰阶。 */
 const MIN_SEED_SATURATION = 15
+
+/** 画面里真正的彩色像素占比低于该值时按无彩色处理。 */
+const ACHROMATIC_RATIO = 0.08
+
+/** 加权色相向量的相对长度低于该值时，认为多个色相相互抵消。 */
+const HUE_CANCELLATION_RATIO = 0.15
+
+/** 肤色色相区间；命中后压低饱和度，避免整片背景发红。 */
+const SKIN_HUE_MIN = 8
+const SKIN_HUE_MAX = 55
+const SKIN_SATURATION_CAP = 46
+const SKIN_MIN_VALUE = 45
 
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max)
 
-/** 从调色板选一个"最有存在感"的种子色：饱和度越高、占比越大越优先。 */
-function pickSeedColor(swatches: ColorInfo[], fallbackColor: string) {
-	let best = { color: Color(fallbackColor), score: -1 }
+interface FluidSeed {
+	hue: number
+	saturation: number
+	value: number
+}
 
-	for (const swatch of swatches) {
-		const color = Color(swatch.hex)
+/** 把色块转成 HSV，并用 s×v 近似感知色度（HSL 饱和度会把深色像素误判成高饱和）。 */
+function toSample(swatch: ColorInfo) {
+	const color = Color(swatch.hex)
+	const hue = color.hue()
+	const saturation = color.saturationv()
+	const value = color.value()
 
-		const score =
-			color.saturationl() * Math.sqrt(Math.max(swatch.population, 1))
-
-		if (score > best.score) best = { color, score }
+	return {
+		population: Math.max(swatch.population, 1),
+		hue: Number.isFinite(hue) ? hue : 0,
+		saturation,
+		value,
+		chroma: (saturation / 100) * (value / 100),
 	}
-
-	return best.color
 }
 
 /**
- * 从封面调色板取一个种子色，在邻近色域内派生出两组渐变端点，
+ * 按"占比 × 色度"求主色相：记住画面里面积最大的那种颜色，
+ * 而不是被角落的小面积高饱和色块带跑。
+ */
+function pickFluidSeed(swatches: ColorInfo[]): FluidSeed | null {
+	const samples = swatches.map(toSample)
+
+	const totalPopulation = samples.reduce(
+		(sum, sample) => sum + sample.population,
+		0,
+	)
+
+	if (totalPopulation <= 0) return null
+
+	let weightSum = 0
+	let cosSum = 0
+	let sinSum = 0
+	let saturationSum = 0
+	let valueSum = 0
+	let coloredPopulation = 0
+	let dominantWeight = 0
+	let dominantSample: (typeof samples)[number] | null = null
+
+	for (const sample of samples) {
+		if (sample.chroma < 0.02) continue
+
+		const weight = sample.population * sample.chroma
+		const radians = (sample.hue * Math.PI) / 180
+
+		weightSum += weight
+		cosSum += Math.cos(radians) * weight
+		sinSum += Math.sin(radians) * weight
+		saturationSum += sample.saturation * weight
+		valueSum += sample.value * weight
+		coloredPopulation += sample.population
+
+		if (weight > dominantWeight) {
+			dominantWeight = weight
+			dominantSample = sample
+		}
+	}
+
+	if (weightSum <= 0) return null
+
+	if (coloredPopulation / totalPopulation < ACHROMATIC_RATIO) return null
+
+	// 等面积互补色（如红 + 青）的加权方向会相互抵消，此时平均色相没有意义，
+	// 退回到权重最大的单个色块，避免凭空生成封面里不存在的颜色。
+	if (Math.hypot(cosSum, sinSum) < weightSum * HUE_CANCELLATION_RATIO) {
+		if (!dominantSample || dominantSample.saturation < MIN_SEED_SATURATION) {
+			return null
+		}
+
+		return {
+			hue: dominantSample.hue,
+			saturation: dominantSample.saturation,
+			value: dominantSample.value,
+		}
+	}
+
+	const hue = ((Math.atan2(sinSum, cosSum) * 180) / Math.PI + 360) % 360
+	const saturation = saturationSum / weightSum
+
+	if (saturation < MIN_SEED_SATURATION) return null
+
+	return {
+		hue,
+		saturation,
+		value: valueSum / weightSum,
+	}
+}
+
+/**
+ * 从封面调色板统计主色相，在邻近色域内派生出两组渐变端点，
  * 并把明度约束到主题对应的区间：色相和谐，且背景永远落在可控明暗范围内。
  */
 export function getFluidBackgroundColors(
@@ -140,46 +250,74 @@ export function getFluidBackgroundColors(
 		colorScheme = 'dark',
 	}: FluidBackgroundColorOptions = {},
 ): FluidBackgroundColors {
-	const swatches = [
-		palette?.vibrant,
-		palette?.lightVibrant,
-		palette?.darkVibrant,
-		palette?.dominant,
-		palette?.muted,
-		palette?.lightMuted,
-		palette?.darkMuted,
-	].filter(
-		(swatch): swatch is ColorInfo => swatch !== null && swatch !== undefined,
-	)
+	const swatches =
+		palette?.swatches && palette.swatches.length > 0
+			? palette.swatches
+			: [
+					palette?.vibrant,
+					palette?.lightVibrant,
+					palette?.darkVibrant,
+					palette?.dominant,
+					palette?.muted,
+					palette?.lightMuted,
+					palette?.darkMuted,
+				].filter(
+					(swatch): swatch is ColorInfo =>
+						swatch !== null && swatch !== undefined,
+				)
 
+	// 提色尚未完成：沿用外部背景色，避免先闪一帧灰阶。
 	if (swatches.length === 0) {
 		return [fallbackColor, fallbackColor, fallbackColor, fallbackColor]
 	}
 
-	const seed = pickSeedColor(swatches, fallbackColor)
-	const fallback = Color(fallbackColor)
-
-	const hue =
-		seed.saturationl() >= MIN_SEED_SATURATION ? seed.hue() : fallback.hue()
-
-	const saturation = clamp(seed.saturationl(), ...SATURATION_BANDS[colorScheme])
 	const [minLightness, maxLightness] = LIGHTNESS_BANDS[colorScheme]
 	const midLightness = (minLightness + maxLightness) / 2
-	const lightnessSpread = (maxLightness - minLightness) * LIGHTNESS_SPREAD
 
-	const at = (hueOffset: number, lightness: number) =>
+	const lightnessSpread =
+		(maxLightness - minLightness) * LIGHTNESS_SPREAD[colorScheme]
+
+	const seed = pickFluidSeed(swatches)
+
+	// 无彩色（灰 / 黑 / 白 / 饱和度太低）：只做明度层次，不凭空造色相。
+	if (!seed) {
+		const neutral = (lightness: number) =>
+			Color.hsl(0, 0, clamp(lightness, minLightness, maxLightness)).hex()
+
+		return [
+			neutral(midLightness - lightnessSpread),
+			neutral(midLightness + lightnessSpread),
+			neutral(midLightness + lightnessSpread * 1.1),
+			neutral(midLightness - lightnessSpread * 1.1),
+		]
+	}
+
+	const isSkinTone =
+		seed.hue >= SKIN_HUE_MIN &&
+		seed.hue <= SKIN_HUE_MAX &&
+		seed.value >= SKIN_MIN_VALUE &&
+		seed.saturation <= 70
+
+	const saturation = clamp(
+		isSkinTone
+			? Math.min(seed.saturation, SKIN_SATURATION_CAP)
+			: seed.saturation,
+		...SATURATION_BANDS[colorScheme],
+	)
+
+	const colorAt = (hueOffset: number, lightness: number, sat = saturation) =>
 		Color.hsl(
-			(hue + hueOffset + 360) % 360,
-			saturation,
+			(seed.hue + hueOffset + 360) % 360,
+			sat,
 			clamp(lightness, minLightness, maxLightness),
 		).hex()
 
 	// A: [H, H+Δ]，B: [H-Δ, H]，共用同一邻近色簇。
 	return [
-		at(0, midLightness - lightnessSpread),
-		at(HUE_OFFSET, midLightness + lightnessSpread),
-		at(-HUE_OFFSET, midLightness + lightnessSpread),
-		at(0, midLightness - lightnessSpread),
+		colorAt(0, midLightness - lightnessSpread),
+		colorAt(HUE_OFFSET, midLightness + lightnessSpread, saturation * 1.04),
+		colorAt(-HUE_OFFSET, midLightness + lightnessSpread * 1.1),
+		colorAt(0, midLightness - lightnessSpread * 1.1, saturation * 0.98),
 	]
 }
 
@@ -266,7 +404,7 @@ export function FluidBackground({
 
 	const initialReducedMotion = useReducedMotion()
 	const [reducedMotion, setReducedMotion] = useState(initialReducedMotion)
-	const elapsed = useSharedValue(0)
+	const elapsed = useSharedValue(globalFlowElapsed())
 	// 流动速度倍率：暂停时缓动到 0，恢复时缓动到 1。
 	const flowSpeed = useSharedValue(paused ? 0 : 1)
 	const [isFlowEasing, setIsFlowEasing] = useState(false)
@@ -333,10 +471,10 @@ export function FluidBackground({
 	}, [])
 
 	const frame = useFrameCallback(({ timeSincePreviousFrame }) => {
-		// 60 秒是三个周期的公倍数，回绕时三层均无视觉跳变。
+		// 180 秒是三个周期的公倍数，回绕时三层均无视觉跳变。
 		elapsed.set(
 			(elapsed.value + (timeSincePreviousFrame ?? 0) * flowSpeed.value) %
-				60_000,
+				FLOW_WRAP_MS,
 		)
 	}, false)
 
@@ -393,19 +531,19 @@ export function FluidBackground({
 								<RotatingGradient
 									{...size}
 									elapsed={elapsed}
-									period={20_000}
+									period={FLOW_PERIOD_A_MS}
 									colors={colorsA}
 								/>
 								<RotatingGradient
 									{...size}
 									elapsed={elapsed}
-									period={-12_000}
+									period={FLOW_PERIOD_B_MS}
 									colors={colorsB}
 								/>
 								<RotatingGradient
 									{...size}
 									elapsed={elapsed}
-									period={15_000}
+									period={FLOW_PERIOD_MASK_MS}
 									colors={['#FFFFFFFF', '#FFFFFF00']}
 								/>
 							</Shader>
@@ -413,7 +551,7 @@ export function FluidBackground({
 							<RotatingGradient
 								{...size}
 								elapsed={elapsed}
-								period={20_000}
+								period={FLOW_PERIOD_A_MS}
 								colors={colorsA}
 							/>
 						)}
