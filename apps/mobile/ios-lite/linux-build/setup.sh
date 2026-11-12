@@ -48,6 +48,11 @@ echo "$swift_version" | head -n 1
 
 echo '== xtool'
 fetch "https://github.com/xtool-org/xtool/releases/download/$XTOOL_VERSION/xtool-x86_64.AppImage" "$XTOOL"
+if ! echo "$XTOOL_SHA256  $XTOOL" | sha256sum --check --status; then
+  rm -f "$XTOOL"
+  echo 'The xtool download does not match its published checksum and was removed. Run this again to download it afresh.' >&2
+  exit 1
+fi
 chmod +x "$XTOOL"
 
 if [ ! -d "$SDK_BUNDLE/Developer" ]; then

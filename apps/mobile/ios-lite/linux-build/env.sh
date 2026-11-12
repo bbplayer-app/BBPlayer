@@ -6,6 +6,8 @@ REPO="$(cd "$MOBILE/../.." && pwd)"
 BB="${BBPLAYER_IOS_HOME:-$HOME/.local/share/bbplayer-ios}"
 SWIFT_VERSION=6.4.2
 XTOOL_VERSION=1.24.0
+# Published with the release. xtool signs in to the Apple ID, so nothing else is run in its place.
+XTOOL_SHA256=dbfd9d7216f077c84c171b688c4173c37c23ca76bf7fd185d1a9ae8a53dab59f
 SWIFT_HOME="$BB/swift-$SWIFT_VERSION"
 XTOOL="$BB/downloads/xtool-$XTOOL_VERSION-x86_64.AppImage"
 SDK_BUNDLE="$HOME/.swiftpm/swift-sdks/darwin.artifactbundle"
