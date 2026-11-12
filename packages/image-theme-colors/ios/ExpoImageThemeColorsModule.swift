@@ -43,6 +43,9 @@ struct PaletteRecord: Record {
 
   @Field
   var darkMuted: SwatchRecord?
+
+  @Field
+  var swatches: [SwatchRecord] = []
 }
 
 public class ExpoImageThemeColorsModule: Module {
@@ -65,19 +68,32 @@ public class ExpoImageThemeColorsModule: Module {
              throw Exception(name: "InvalidSource", description: "Invalid image source provided")
         }
 
-        // Generate palette
-        let palette = Vibrant.from(image).getPalette()
+        // Generate palette，并顺手拿到全部量化色块用于按占比统计主色。
+        var capturedSwatches: [Swatch] = []
+        let palette = Vibrant.from(image)
+          .useGenerator { swatches in
+            capturedSwatches = swatches
+            return Generator.defaultGenerator(swatches)
+          }
+          .getPalette()
         
         let record = PaletteRecord()
         record.width = Double(image.size.width)
         record.height = Double(image.size.height)
-        record.dominant = (palette.Vibrant ?? palette.Muted)?.toRecord()
+        // swift_vibrant 没有 dominant，用占比最大的色块补上（此前误用了 Vibrant）。
+        record.dominant = capturedSwatches
+          .max { $0.population < $1.population }?
+          .toRecord()
         record.vibrant = palette.Vibrant?.toRecord()
         record.lightVibrant = palette.LightVibrant?.toRecord()
         record.darkVibrant = palette.DarkVibrant?.toRecord()
         record.muted = palette.Muted?.toRecord()
         record.lightMuted = palette.LightMuted?.toRecord()
         record.darkMuted = palette.DarkMuted?.toRecord()
+        record.swatches = capturedSwatches
+          .sorted { $0.population > $1.population }
+          .prefix(16)
+          .map { $0.toRecord() }
 
         return record
     }
