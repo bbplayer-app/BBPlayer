@@ -5,6 +5,8 @@ export async function pickImage(): Promise<string | null> {
 	const result = await ImagePicker.launchImageLibraryAsync({
 		mediaTypes: ['images'],
 	})
+
 	if (result.canceled || result.assets.length === 0) return null
+
 	return result.assets[0].uri
 }

@@ -7,6 +7,8 @@ export async function pickImage(): Promise<string | null> {
 		copyToCacheDirectory: true,
 		multiple: false,
 	})
+
 	if (result.canceled || result.assets.length === 0) return null
+
 	return result.assets[0].uri
 }

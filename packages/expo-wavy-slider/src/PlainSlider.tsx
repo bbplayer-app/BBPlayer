@@ -52,26 +52,31 @@ export default function WavySlider({
 		const next = min + fraction * range
 		gesture.current.lastValue = next
 		dragFraction.set(fraction)
+
 		if (onValueChange) scheduleOnUI(onValueChange, next)
 	}
 
 	const finishDrag = () => {
 		dragging.set(false)
+
 		if (onValueChangeFinished) {
 			scheduleOnUI(onValueChangeFinished, gesture.current.lastValue)
 		}
+
 		if (onDragStateChange) scheduleOnUI(onDragStateChange, false)
 	}
 
 	const fraction = useDerivedValue(() => {
 		if (dragging.value) return dragFraction.value
 		const current = sharedProgress ? sharedProgress.value : value
+
 		return Math.min(Math.max((current - min) / range, 0), 1)
 	})
 
 	const activeStyle = useAnimatedStyle(() => ({
 		width: fraction.value * trackWidth.value,
 	}))
+
 	const thumbStyle = useAnimatedStyle(() => ({
 		transform: [
 			{ translateX: fraction.value * trackWidth.value - THUMB_SIZE / 2 },
@@ -82,6 +87,7 @@ export default function WavySlider({
 	// As on Android, the markers grow out of the track only during a drag.
 	const markersStyle = useAnimatedStyle(() => {
 		const visible = dragging.value || outsideDragging?.value === true
+
 		return {
 			transform: [
 				{
@@ -92,6 +98,7 @@ export default function WavySlider({
 			],
 		}
 	})
+
 	const markers = [...new Set(chapterMarkers ?? [])].filter(
 		(marker) => marker > 0 && marker < 1,
 	)
@@ -111,6 +118,7 @@ export default function WavySlider({
 				gesture.current.startX = event.nativeEvent.locationX
 				gesture.current.startPageX = event.nativeEvent.pageX
 				dragging.set(true)
+
 				if (onDragStateChange) scheduleOnUI(onDragStateChange, true)
 				updateDrag(event.nativeEvent.locationX)
 			}}
