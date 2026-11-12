@@ -21,12 +21,16 @@ import { tintLottieSource } from '@/utils/lottie'
 
 const skipPrevSource =
 	require('@/assets/lottie/skip-prev.json') as AnimationObject
+
 const skipNextSource =
 	require('@/assets/lottie/skip-next.json') as AnimationObject
+
 const playPauseSource =
 	require('@/assets/lottie/play-pause.json') as AnimationObject
+
 const rewind15Source =
 	require('@/assets/lottie/rewind-15.json') as AnimationObject
+
 const forward15Source =
 	require('@/assets/lottie/fast-forward-15.json') as AnimationObject
 
@@ -66,6 +70,7 @@ export function MainPlaybackControls({
 				clearTimeout(bufferingTimeoutRef.current)
 				bufferingTimeoutRef.current = null
 			}
+
 			bufferingTimeoutRef.current = setTimeout(() => {
 				setDebouncedBuffering(true)
 			}, 300)
@@ -74,8 +79,10 @@ export function MainPlaybackControls({
 				clearTimeout(bufferingTimeoutRef.current)
 				bufferingTimeoutRef.current = null
 			}
+
 			setDebouncedBuffering(false)
 		}
+
 		return () => {
 			if (bufferingTimeoutRef.current) {
 				clearTimeout(bufferingTimeoutRef.current)
@@ -88,6 +95,7 @@ export function MainPlaybackControls({
 			clearTimeout(playingTimeoutRef.current)
 			playingTimeoutRef.current = null
 		}
+
 		if (isPlaying) {
 			// 播放状态立即更新
 			setDebouncedIsPlaying(true)
@@ -97,6 +105,7 @@ export function MainPlaybackControls({
 				setDebouncedIsPlaying(false)
 			}, 200)
 		}
+
 		return () => {
 			if (playingTimeoutRef.current) {
 				clearTimeout(playingTimeoutRef.current)
@@ -107,11 +116,13 @@ export function MainPlaybackControls({
 	useEffect(() => {
 		if (isFirstMount.current) {
 			isFirstMount.current = false
+
 			if (debouncedIsPlaying) {
 				playPauseLottieRef.current?.play(0, 0)
 			} else {
 				playPauseLottieRef.current?.play(8, 8)
 			}
+
 			return
 		}
 
@@ -131,10 +142,12 @@ export function MainPlaybackControls({
 		() => tintLottieSource(skipPrevSource, colors.onSurfaceVariant),
 		[colors.onSurfaceVariant],
 	)
+
 	const tintedPlayPause = useMemo(
 		() => tintLottieSource(playPauseSource, colors.primary),
 		[colors.primary],
 	)
+
 	const tintedSkipNext = useMemo(
 		() => tintLottieSource(skipNextSource, colors.onSurfaceVariant),
 		[colors.onSurfaceVariant],
@@ -281,6 +294,7 @@ function PodcastSeekButton({
 	const buttonSize = compact ? 56 : 64
 	const canSeek = !!trackId && Number.isFinite(duration) && duration > 0
 	const iconColor = canSeek ? colors.onSurfaceVariant : colors.onSurfaceDisabled
+
 	const source = useMemo(
 		() =>
 			tintLottieSource(
@@ -289,8 +303,10 @@ function PodcastSeekButton({
 			),
 		[seconds, iconColor],
 	)
+
 	// The 32px animation canvas gives the rotating 24px icon room to move.
 	const animationSize = ((compact ? 32 : 36) * 32) / 24
+
 	return (
 		<Touchable
 			androidRipple={{}}

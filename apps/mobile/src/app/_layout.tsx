@@ -70,6 +70,7 @@ function onAppStateChange(status: AppStateStatus) {
 const checkOverlayPermissionOnStart = async () => {
 	if (Orpheus.isDesktopLyricsShown) {
 		const hasPermission = await Orpheus.checkOverlayPermission()
+
 		if (!hasPermission) {
 			// 延迟显示，确保 UI 已经加载
 			setTimeout(() => {
@@ -124,6 +125,7 @@ function runAppInit() {
 				settings.allowSimultaneousPlayback,
 			)
 			const cookie = useAppStoreObj.getState().bilibiliCookie
+
 			if (cookie) {
 				logger.debug('初始化 orpheus bilibili cookie')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
@@ -142,8 +144,10 @@ function runAppInit() {
 
 function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
+
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
+
 	useCheckUpdate()
 	useFeatureTracking()
 
@@ -169,10 +173,12 @@ function RootLayout() {
 				)
 			}
 		}
+
 		void logAppInfo()
 		reportUpdateActivity()
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
+
 		return () => subscription.remove()
 	}, [])
 
@@ -214,6 +220,7 @@ function RootLayout() {
 			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
+
 			if (firstOpen) {
 				router.navigate('/onboarding')
 			}
@@ -255,6 +262,7 @@ function RootLayout() {
 							},
 							transitionEnd: ({ data }) => {
 								const state = navigation.getState()
+
 								// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
 								// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
 								if (

@@ -28,16 +28,22 @@ export const phoneFormModel = {
 	tel: {
 		validate(v: string): string {
 			const trimmed = v.trim()
+
 			if (!trimmed) return '请输入手机号'
+
 			if (!/^\d{5,15}$/.test(trimmed)) return '手机号格式不正确'
+
 			return ''
 		},
 	},
 	smsCode: {
 		validate(v: string): string {
 			const trimmed = v.trim()
+
 			if (!trimmed) return '请输入验证码'
+
 			if (!/^\d{4,8}$/.test(trimmed)) return '验证码格式不正确'
+
 			return ''
 		},
 	},
@@ -136,6 +142,7 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 	const queryClient = useQueryClient()
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
 	const onClose = options?.onClose
+
 	const close = useCallback(() => {
 		onClose?.()
 	}, [onClose])
@@ -152,14 +159,18 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 
 	const handleRequestCode = async () => {
 		const telError = phoneFormModel.tel.validate(state.tel)
+
 		if (telError) {
 			dispatch({ type: 'SET_PHONE_ERROR', payload: telError })
+
 			return
 		}
 
 		dispatch({ type: 'START_REQUEST' })
+
 		try {
 			const captchaResult = await bilibiliApi.getPhoneLoginCaptchaToken()
+
 			if (captchaResult.isErr()) {
 				toastAndLogError(
 					'获取验证码失败',
@@ -167,8 +178,10 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 					'usePhoneLogin.getPhoneLoginCaptchaToken',
 				)
 				dispatch({ type: 'REQUEST_FAIL' })
+
 				return
 			}
+
 			const captcha = captchaResult.value
 			dispatch({
 				type: 'SET_CAPTCHA_PARAMS',
@@ -192,12 +205,15 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 
 	const handleLogin = async () => {
 		const codeErr = phoneFormModel.smsCode.validate(state.smsCode)
+
 		if (codeErr) {
 			dispatch({ type: 'SET_CODE_ERROR', payload: codeErr })
+
 			return
 		}
 
 		dispatch({ type: 'START_REQUEST' })
+
 		try {
 			const loginResult = await bilibiliApi.loginWithPhoneSmsCode({
 				tel: state.tel.trim(),
@@ -205,30 +221,38 @@ export function usePhoneLogin(options?: { onClose?: () => void }) {
 				code: state.smsCode.trim(),
 				captchaKey: state.captchaKey,
 			})
+
 			if (loginResult.isErr()) {
 				let errorMessage = loginResult.error.message
+
 				if (!errorMessage) {
 					errorMessage = '登录失败，请检查验证码'
 				}
+
 				dispatch({
 					type: 'LOGIN_FAIL',
 					payload: errorMessage,
 				})
+
 				return
 			}
 
 			const splitCookies = setCookieParser.splitCookiesString(loginResult.value)
 			const parsedCookie = setCookieParser.parse(splitCookies)
+
 			const finalCookieObject = Object.fromEntries(
 				parsedCookie.map((c) => [c.name, c.value]),
 			)
+
 			const result = setCookie(finalCookieObject)
+
 			if (result.isErr()) {
 				toast.error('保存 Cookie 失败：' + result.error.message)
 				Sentry.captureException(result.error, {
 					tags: { Hook: 'usePhoneLogin' },
 				})
 				dispatch({ type: 'LOGIN_FAIL', payload: '保存 Cookie 失败' })
+
 				return
 			}
 

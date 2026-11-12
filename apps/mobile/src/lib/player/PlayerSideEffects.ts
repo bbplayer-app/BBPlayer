@@ -109,6 +109,7 @@ class PlayerSideEffects {
 			('rootCauseMessage' in event ? event.rootCauseMessage : null) ||
 			('message' in event ? event.message : null) ||
 			''
+
 		const errorCode = 'errorCode' in event ? event.errorCode : null
 
 		if (rawMessage.includes('Bilibili API Error')) {
@@ -123,9 +124,11 @@ class PlayerSideEffects {
 					shouldReport: false,
 				}
 			}
+
 			if (biliCode === '-101') {
 				return { message: 'Bilibili 账号未登录', shouldReport: false }
 			}
+
 			return {
 				message: `Bilibili API 错误: ${msg} (${biliCode})`,
 				shouldReport: false,
@@ -148,6 +151,7 @@ class PlayerSideEffects {
 
 		if (rawMessage.includes('Bilibili API Http Error')) {
 			const codeMatch = rawMessage.match(/Http Error: (\d+)/)
+
 			return {
 				message: `Bilibili 网络请求失败: ${codeMatch ? codeMatch[1] : 'Unknown'}`,
 				shouldReport: false,
@@ -156,6 +160,7 @@ class PlayerSideEffects {
 
 		if (event.platform === 'android') {
 			const networkState = await NetInfoFetch()
+
 			const rootMessage = [
 				event.rootCauseClass,
 				event.rootCauseMessage,
@@ -253,6 +258,7 @@ class PlayerSideEffects {
 					'Unknown playback error',
 			)
 		}
+
 		return new Error(event.error || 'Unknown playback error')
 	}
 
@@ -300,6 +306,7 @@ class PlayerSideEffects {
 
 			void (async () => {
 				this.isHandlingSpectrumVisualizerError = true
+
 				try {
 					const hasPermission =
 						Platform.OS !== 'android' ||
@@ -309,6 +316,7 @@ class PlayerSideEffects {
 
 					if (!hasPermission) {
 						toast.info('未获得麦克风权限，已关闭频谱显示')
+
 						return
 					}
 

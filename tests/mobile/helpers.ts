@@ -9,15 +9,18 @@ export async function openHome(app: App, screen: Screen) {
 	await expect(search.or(next).or(update).first()).toBeVisible({
 		timeout: 60_000,
 	})
+
 	if (await update.isVisible()) {
 		await screen.getByTestId('update-app-cancel-label').tap()
 	}
+
 	if (await next.isVisible()) {
 		await next.tap()
 		await expect(screen.getByText('安全提示', { exact: true })).toBeVisible()
 		await screen.getByTestId('onboarding-next-1-label').tap()
 		await screen.getByTestId('onboarding-guest-label').tap()
 	}
+
 	await expect(search).toBeVisible()
 }
 

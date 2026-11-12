@@ -23,6 +23,7 @@ const UniversalCheckboxItem = memo(function UniversalCheckboxItem({
 	testID,
 }: UniversalCheckboxItemProps) {
 	const { colors } = useTheme()
+
 	const checkbox = (
 		<UniversalCheckbox
 			disabled={disabled}

@@ -23,10 +23,12 @@ export async function runAdminCommand(
 			),
 		)
 	}
+
 	if (commandName === 'show') {
 		const groupId = String(
 			argumentsMap.group ?? (await promptForRequiredValue('Group ID')),
 		)
+
 		return writeResult(
 			argumentsMap,
 			await requestUpdateServer(
@@ -36,10 +38,14 @@ export async function runAdminCommand(
 			),
 		)
 	}
+
 	if (commandName === 'channel') return await runChannelCommand(argumentsMap)
+
 	if (commandName === 'republish')
 		return await runRepublishCommand(argumentsMap)
+
 	if (commandName === 'source') return await runSourceCommand(argumentsMap)
+
 	if (commandName === 'insights') return await runInsightsCommand(argumentsMap)
 	throw new Error(`Unknown command: ${commandName}`)
 }
@@ -59,16 +65,19 @@ async function runChannelCommand(
 					})
 				: 'list'),
 	)
+
 	const channelName =
 		action === 'list'
 			? ''
 			: String(
 					argumentsMap.channel ?? (await promptForRequiredValue('Channel')),
 				)
+
 	const path =
 		action === 'list'
 			? '/admin/channels'
 			: `/admin/channels/${encodeURIComponent(channelName)}${action === 'history' ? '/history' : ''}`
+
 	writeResult(
 		argumentsMap,
 		await requestUpdateServer(argumentsMap, 'GET', path),
@@ -81,16 +90,20 @@ async function runRepublishCommand(
 	const channelName = String(
 		argumentsMap.channel ?? (await promptForRequiredValue('Channel')),
 	)
+
 	const runtimeVersion = String(
 		argumentsMap['runtime-version'] ??
 			(await promptForRequiredValue('Runtime version')),
 	)
+
 	const groupId = String(
 		argumentsMap.to ?? (await promptForRequiredValue('Source group ID')),
 	)
+
 	const message = String(
 		argumentsMap.message ?? (await promptForRequiredValue('New update name')),
 	)
+
 	writeResult(
 		argumentsMap,
 		await requestUpdateServer(
@@ -118,10 +131,12 @@ async function runSourceCommand(argumentsMap: CommandArguments): Promise<void> {
 				],
 			})),
 	)
+
 	const path =
 		action === 'compare'
 			? `/admin/source/compare/${argumentsMap.from ?? (await promptForRequiredValue('From group'))}/${argumentsMap.to ?? (await promptForRequiredValue('To group'))}`
 			: `/admin/source/${argumentsMap.commit ?? (await promptForRequiredValue('Commit SHA'))}`
+
 	writeResult(
 		argumentsMap,
 		await requestUpdateServer(argumentsMap, 'GET', path),
@@ -132,6 +147,7 @@ async function runInsightsCommand(
 	argumentsMap: CommandArguments,
 ): Promise<void> {
 	const query = new URLSearchParams()
+
 	for (const argumentName of [
 		'channel',
 		'runtime_version',
@@ -139,9 +155,11 @@ async function runInsightsCommand(
 		'group_id',
 	]) {
 		const argumentValue = argumentsMap[argumentName]
+
 		if (typeof argumentValue === 'string')
 			query.set(argumentName, argumentValue)
 	}
+
 	writeResult(
 		argumentsMap,
 		await requestUpdateServer(argumentsMap, 'GET', `/admin/insights?${query}`),

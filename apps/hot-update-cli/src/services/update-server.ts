@@ -1,11 +1,9 @@
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
+import { promptForRequiredValue, promptForSecretValue } from '../cli/prompts.js'
 import type { CommandArguments, UpdateServerCredentials } from '../types.js'
-import {
-	promptForRequiredValue,
-	promptForSecretValue,
-} from '../cli/prompts.js'
+
 import { resolveProjectDirectory } from './project.js'
 
 const CREDENTIALS_FILE_NAME = 'credentials.json'
@@ -15,6 +13,7 @@ function isUpdateServerCredentials(
 ): value is UpdateServerCredentials {
 	if (!value || typeof value !== 'object') return false
 	const credentials = value as Record<string, unknown>
+
 	return (
 		typeof credentials.serverUrl === 'string' &&
 		credentials.serverUrl.trim().length > 0 &&
@@ -29,6 +28,7 @@ async function getCredentialsFilePath(
 	const projectDirectory = await resolveProjectDirectory(
 		argumentsMap['project-dir'],
 	)
+
 	return join(projectDirectory, '.bbplayer-updates', CREDENTIALS_FILE_NAME)
 }
 
@@ -38,9 +38,11 @@ async function readSavedCredentials(
 	try {
 		const contents = await readFile(credentialsFilePath, 'utf8')
 		const credentials: unknown = JSON.parse(contents)
+
 		if (!isUpdateServerCredentials(credentials)) {
 			throw new Error('missing serverUrl or accessToken')
 		}
+
 		return {
 			serverUrl: credentials.serverUrl.trim().replace(/\/$/, ''),
 			accessToken: credentials.accessToken.trim(),
@@ -77,18 +79,21 @@ export async function getUpdateServerCredentials(
 ): Promise<UpdateServerCredentials> {
 	const credentialsFilePath = await getCredentialsFilePath(argumentsMap)
 	const savedCredentials = await readSavedCredentials(credentialsFilePath)
+
 	let serverUrl = String(
 		argumentsMap.server ??
 			process.env.BBPLAYER_UPDATE_SERVER_URL ??
 			savedCredentials?.serverUrl ??
 			'',
 	)
+
 	let accessToken = String(
 		argumentsMap.token ??
 			process.env.BBPLAYER_UPDATE_SERVER_TOKEN ??
 			savedCredentials?.accessToken ??
 			'',
 	)
+
 	serverUrl = serverUrl.trim()
 	accessToken = accessToken.trim()
 
@@ -96,6 +101,7 @@ export async function getUpdateServerCredentials(
 		serverUrl ||= await promptForRequiredValue('Update server URL')
 		accessToken ||= await promptForSecretValue('Admin token')
 	}
+
 	if (!serverUrl || !accessToken) {
 		throw new Error('--server and --token are required')
 	}
@@ -104,7 +110,9 @@ export async function getUpdateServerCredentials(
 		serverUrl: serverUrl.replace(/\/$/, ''),
 		accessToken,
 	}
+
 	await saveCredentials(credentialsFilePath, credentials)
+
 	return credentials
 }
 
@@ -115,6 +123,7 @@ export async function requestUpdateServer(
 	body?: unknown,
 ): Promise<unknown> {
 	const credentials = await getUpdateServerCredentials(argumentsMap)
+
 	const response = await fetch(credentials.serverUrl + path, {
 		method,
 		headers: {
@@ -123,7 +132,10 @@ export async function requestUpdateServer(
 		},
 		body: body ? JSON.stringify(body) : undefined,
 	})
+
 	const responseText = await response.text()
+
 	if (!response.ok) throw new Error(`${response.status}: ${responseText}`)
+
 	return responseText ? JSON.parse(responseText) : null
 }

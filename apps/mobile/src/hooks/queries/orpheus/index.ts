@@ -69,6 +69,7 @@ export function usePlayerQueue(enabled: boolean = true) {
 		queryKey: orpheusQueryKeys.playerQueue(),
 		queryFn: async () => {
 			const q = await Orpheus.getQueue()
+
 			return q
 		},
 		staleTime: 0,

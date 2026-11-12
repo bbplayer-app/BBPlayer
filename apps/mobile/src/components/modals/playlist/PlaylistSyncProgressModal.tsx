@@ -26,6 +26,7 @@ const PlaylistSyncProgressModal = memo(function PlaylistSyncProgressModal({
 
 	const close = useCallback(() => {
 		modalClose('PlaylistSyncProgress')
+
 		if (shouldRedirectToLocalPlaylist && syncedPlaylistId.current) {
 			const targetId = syncedPlaylistId.current
 			useModalStore.getState().doAfterModalHostClosed(() => {
@@ -75,6 +76,7 @@ const PlaylistSyncProgressModal = memo(function PlaylistSyncProgressModal({
 	}, [remoteId, type, syncPlaylist, expandMultiPage])
 
 	let localProgress: number | undefined
+
 	if (
 		progress?.current !== undefined &&
 		progress?.total !== undefined &&

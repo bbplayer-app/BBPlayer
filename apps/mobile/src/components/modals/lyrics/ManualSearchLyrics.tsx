@@ -32,6 +32,7 @@ const renderItem = ({
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	return (
 		<SearchItem
 			item={item}
@@ -81,7 +82,9 @@ const ManualSearchLyricsModal = ({
 		search: searchIt,
 		isLoading: isSearching,
 	} = useManualSearchLyrics(uniqueKey)
+
 	const { mutate: fetchLyrics, isPending: isFetchingLyrics } = useFetchLyrics()
+
 	const handlePressItem = useCallback(
 		(item: LyricSearchResult[0]) => {
 			fetchLyrics(
@@ -94,6 +97,7 @@ const ManualSearchLyricsModal = ({
 		},
 		[close, fetchLyrics, uniqueKey],
 	)
+
 	const extraData = useMemo(
 		() => ({ isFetchingLyrics, handlePressItem }),
 		[handlePressItem, isFetchingLyrics],

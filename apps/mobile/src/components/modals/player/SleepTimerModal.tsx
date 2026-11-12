@@ -23,6 +23,7 @@ const SleepTimerModal = () => {
 		if (sleepTimerEndAt) {
 			const interval = setInterval(() => {
 				const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+
 				if (remaining > 0) {
 					setRemainingTime(remaining)
 				} else {
@@ -30,6 +31,7 @@ const SleepTimerModal = () => {
 					clearInterval(interval)
 				}
 			}, 1000)
+
 			const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
 			setRemainingTime(remaining > 0 ? remaining : null)
 
@@ -100,6 +102,7 @@ const SleepTimerModal = () => {
 							mode='contained'
 							onPress={async () => {
 								const minutes = parseInt(customMinutes, 10)
+
 								if (!isNaN(minutes) && minutes > 0) {
 									await handleSetTimer(minutes)
 								}

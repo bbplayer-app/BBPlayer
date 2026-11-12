@@ -54,6 +54,7 @@ export class SyncExternalPlaylistFacade {
 				>()
 
 				const validMatches = matchResults.filter((r) => r.matchedVideo !== null)
+
 				if (validMatches.length === 0) {
 					throw createFacadeError(
 						'SavePlaylistFailed',
@@ -64,6 +65,7 @@ export class SyncExternalPlaylistFacade {
 				for (const match of validMatches) {
 					const video = match.matchedVideo!
 					const remoteId = String(video.mid)
+
 					if (!uniqueArtistsMap.has(remoteId)) {
 						uniqueArtistsMap.set(remoteId, {
 							name: video.author,
@@ -83,6 +85,7 @@ export class SyncExternalPlaylistFacade {
 
 				const artistsMapResult =
 					await artistSvc.findOrCreateManyRemoteArtists(artistPayloads)
+
 				if (artistsMapResult.isErr()) throw artistsMapResult.error
 				const artistsMap = artistsMapResult.value
 
@@ -112,15 +115,19 @@ export class SyncExternalPlaylistFacade {
 					trackPayloads,
 					'bilibili',
 				)
+
 				if (tracksResult.isErr()) throw tracksResult.error
 				const trackIdsMap = tracksResult.value
 
 				// 3. 按照原始 matchResults 的顺序（保持用户看到的顺序）收集 ID
 				const orderedTrackIds: number[] = []
+
 				for (const payload of trackPayloads) {
 					const keyResult = generateUniqueTrackKey(payload)
+
 					if (keyResult.isOk()) {
 						const id = trackIdsMap.get(keyResult.value)
+
 						if (id) {
 							orderedTrackIds.push(id)
 						}
@@ -135,6 +142,7 @@ export class SyncExternalPlaylistFacade {
 					type: 'local', // 另存为本地歌单
 					authorId: undefined, // 本地歌单没有 strict author
 				})
+
 				if (playlistResult.isErr()) throw playlistResult.error
 				const playlistId = playlistResult.value.id
 
@@ -143,6 +151,7 @@ export class SyncExternalPlaylistFacade {
 					playlistId,
 					orderedTrackIds,
 				)
+
 				if (addTracksResult.isErr()) throw addTracksResult.error
 
 				logger.info('Save matched playlist success', { playlistId })
@@ -151,6 +160,7 @@ export class SyncExternalPlaylistFacade {
 					'external',
 					orderedTrackIds.length,
 				)
+
 				return playlistId
 			}),
 			(e) =>

@@ -7,6 +7,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 [00:01.00]Line 1
 [00:02.00]Line 2
 `
+
 		const result = parseSpl(lrc)
 		expect(result.meta.ti).toBe('Title')
 		expect(result.lines).toHaveLength(2)
@@ -32,6 +33,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 [00:01.00]Trans 1
 [00:01.00]Trans 2
 `
+
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(1)
 		expect(result.lines[0].content).toBe('Main')
@@ -45,6 +47,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 [00:02.00]Main 2
 [00:01.00]Trans 1
 `
+
 		// Should merge Trans 1 into Main 1
 		const result = parseSpl(lrc)
 		// Result sorted by time.
@@ -61,6 +64,7 @@ describe('SPL Parser Integration (整体集成测试)', () => {
 [00:01.00]Main
 Implicit Trans
 `
+
 		const result = parseSpl(lrc)
 		expect(result.lines[0].content).toBe('Main')
 		expect(result.lines[0].translations).toContain('Implicit Trans')
@@ -75,6 +79,7 @@ Implicit Trans
 [00:01.00][00:03.00]Main
 Trans
 `
+
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(2)
 		expect(result.lines[0].startTime).toBe(1000)
@@ -107,6 +112,7 @@ Trans
       [00:01.00]Text
       
       `
+
 		const result = parseSpl(lrc)
 		expect(result.lines).toHaveLength(1)
 	})
@@ -116,6 +122,7 @@ Trans
 [by:Artist]
 [00:02.00]Line 2
 `
+
 		const result = parseSpl(lrc)
 		expect(result.meta.by).toBe('Artist')
 		expect(result.lines).toHaveLength(2)
@@ -144,9 +151,11 @@ describe('verify', () => {
 	test('应该返回 isValid: false 和 error 对于无效的歌词', () => {
 		const lrc = `Invalid Without Timestamp`
 		const result = verify(lrc)
+
 		if (result.isValid) {
 			throw new Error('Should be invalid')
 		}
+
 		expect(result.isValid).toBe(false)
 		expect(result.error.line).toBe(1)
 		expect(result.error.message).toContain('未找到时间戳')

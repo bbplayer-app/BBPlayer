@@ -19,19 +19,23 @@ const formatFansCount = (count: number): string => {
 	if (count >= 10000) {
 		return `${(count / 10000).toFixed(1)}万`
 	}
+
 	return String(count)
 }
 
 const sanitizeHtmlString = (str: string): string => {
 	if (!str) return ''
+
 	return decode(str.replace(/<em[^>]*>|<\/em>/g, ''))
 }
 
 export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 	const { colors } = useTheme()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	const router = useRouter()
 	const { data, isPending, isError } = useUserSearchResults(query)
 
@@ -139,6 +143,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 
 	if (users.length === 1) {
 		const user = users[0]
+
 		const avatarUrl = user.upic.startsWith('//')
 			? `https:${user.upic}`
 			: user.upic

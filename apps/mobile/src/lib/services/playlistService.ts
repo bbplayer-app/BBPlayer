@@ -25,7 +25,9 @@ import type { TrackService } from './trackService'
 import { trackService as trackServiceInstance } from './trackService'
 
 type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
+
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
+
 type PlaylistTrackRow = typeof schema.playlistTracks.$inferSelect & {
 	track: typeof schema.tracks.$inferSelect & {
 		artist: typeof schema.artists.$inferSelect | null
@@ -33,6 +35,7 @@ type PlaylistTrackRow = typeof schema.playlistTracks.$inferSelect & {
 		localMetadata: typeof schema.localMetadata.$inferSelect | null
 	}
 }
+
 type DynamicPlaylistTrackSqlRow = {
 	sourcePosition: number
 	trackId: number
@@ -64,6 +67,7 @@ type DynamicPlaylistTrackSqlRow = {
 	localTrackId: number | null
 	localPath: string | null
 }
+
 type DynamicPlaylistStats = {
 	itemCount: number
 	validTrackCount: number
@@ -96,10 +100,12 @@ export class PlaylistService {
 		if (!cursor) return undefined
 
 		const separatorIndex = cursor.lastSortKey.indexOf('|')
+
 		if (separatorIndex < 0) return undefined
 
 		const sourcePosition = Number(cursor.lastSortKey.slice(0, separatorIndex))
 		const sourceSortKey = cursor.lastSortKey.slice(separatorIndex + 1)
+
 		if (!Number.isFinite(sourcePosition) || !sourceSortKey) return undefined
 
 		return {
@@ -207,6 +213,7 @@ export class PlaylistService {
 		const trimmed = query?.trim().toLowerCase()
 		const likeQuery = trimmed ? `%${trimmed}%` : undefined
 		const parsedCursor = this.parseDynamicCursor(cursor)
+
 		const rows = this.db.all<DynamicPlaylistTrackSqlRow>(sql`
 			${this.dynamicPlaylistRowsCte(playlistId)}
 			SELECT
@@ -317,6 +324,7 @@ export class PlaylistService {
 
 	private async getDynamicPlaylistCounts(playlistIds: number[]) {
 		const uniqueIds = Array.from(new Set(playlistIds))
+
 		if (uniqueIds.length === 0) return new Map<number, number>()
 
 		const rows = this.db.all<{ playlistId: number; itemCount: number }>(
@@ -387,6 +395,7 @@ export class PlaylistService {
 					() =>
 						this.db.insert(schema.playlists).values(insertValues).returning(),
 				)
+
 				return result
 			})(),
 			(e) =>
@@ -415,7 +424,9 @@ export class PlaylistService {
 					.set({ playerPreference: preference })
 					.where(eq(schema.playlists.id, playlistId))
 					.returning()
+
 				if (!updated) throw createPlaylistNotFound(playlistId)
+
 				return updated
 			})(),
 			(e) => new DatabaseError('更新播放器偏好失败', { cause: e }),
@@ -442,6 +453,7 @@ export class PlaylistService {
 							),
 						}),
 				)
+
 				if (!existing) {
 					throw createPlaylistNotFound(playlistId)
 				}
@@ -498,6 +510,7 @@ export class PlaylistService {
 							columns: { id: true },
 						}),
 				)
+
 				if (!existing) {
 					throw createPlaylistNotFound(playlistId)
 				}
@@ -551,6 +564,7 @@ export class PlaylistService {
 							columns: { id: true, itemCount: true },
 						}),
 				)
+
 				if (!playlist) {
 					throw createPlaylistNotFound(playlistId)
 				}
@@ -568,12 +582,14 @@ export class PlaylistService {
 							.from(schema.playlistTracks)
 							.where(eq(schema.playlistTracks.playlistId, playlistId)),
 				)
+
 				let prevKey: string | null = maxKeyResult[0].maxKey ?? null
 
 				// 构造批量插入的行，每条用 generateKeyBetween(prevKey, null) 追加到末端
 				const values = trackIds.map((tid) => {
 					const sortKey = generateKeyBetween(prevKey, null)
 					prevKey = sortKey
+
 					return {
 						playlistId,
 						trackId: tid,
@@ -648,6 +664,7 @@ export class PlaylistService {
 							columns: { id: true },
 						}),
 				)
+
 				if (!playlist) {
 					throw createPlaylistNotFound(playlistId)
 				}
@@ -655,8 +672,10 @@ export class PlaylistService {
 				// 2) 分批删除关联记录，避免全选大歌单时超过 SQLite 参数上限。
 				const deletedLinks: { trackId: number }[] = []
 				const chunkSize = 500
+
 				for (let start = 0; start < trackIdList.length; start += chunkSize) {
 					const trackIds = trackIdList.slice(start, start + chunkSize)
+
 					const deletedChunk = await Sentry.startSpan(
 						{ name: 'db:delete:playlistTracks', op: 'db' },
 						() =>
@@ -670,6 +689,7 @@ export class PlaylistService {
 								)
 								.returning({ trackId: schema.playlistTracks.trackId }),
 					)
+
 					deletedLinks.push(...deletedChunk)
 				}
 
@@ -700,6 +720,7 @@ export class PlaylistService {
 			})(),
 			(e) => {
 				if (e instanceof ServiceError) return e
+
 				return new DatabaseError('从播放列表批量移除歌曲的事务失败', {
 					cause: e,
 				})
@@ -734,6 +755,7 @@ export class PlaylistService {
 							columns: { id: true },
 						}),
 				)
+
 				if (!playlist) {
 					throw createPlaylistNotFound(playlistId)
 				}
@@ -795,10 +817,13 @@ export class PlaylistService {
 							where: eq(schema.playlists.id, playlistId),
 						}),
 				)
+
 				if (!type) throw createPlaylistNotFound(playlistId)
+
 				if (type.type === 'dynamic') {
 					return this.queryDynamicPlaylistTrackRows({ playlistId })
 				}
+
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
 				const orderBy = desc(schema.playlistTracks.sortKey)
 
@@ -828,8 +853,10 @@ export class PlaylistService {
 						}),
 		).andThen((data) => {
 			const newTracks = []
+
 			for (const track of data) {
 				const t = this.trackService.formatTrack(track.track)
+
 				if (!t)
 					return errAsync(
 						new ServiceError(
@@ -838,6 +865,7 @@ export class PlaylistService {
 					)
 				newTracks.push(t)
 			}
+
 			return okAsync(newTracks)
 		})
 	}
@@ -875,6 +903,7 @@ export class PlaylistService {
 
 				return playlists.map((playlist) => {
 					if (playlist.type !== 'dynamic') return playlist
+
 					return {
 						...playlist,
 						itemCount: countMap.get(playlist.id) ?? 0,
@@ -970,6 +999,7 @@ export class PlaylistService {
 		DatabaseError | ServiceError
 	> {
 		const { remoteSyncId, type } = payload
+
 		if (!remoteSyncId || type === 'local' || type === 'dynamic') {
 			return errAsync(
 				createValidationError(
@@ -977,6 +1007,7 @@ export class PlaylistService {
 				),
 			)
 		}
+
 		return ResultAsync.fromPromise(
 			(async () => {
 				const existingPlaylist = await Sentry.startSpan(
@@ -1046,15 +1077,18 @@ export class PlaylistService {
 					// 与 local playlist 约定一致：位置越靠前 sort_key 越大，查询时统一使用 DESC
 					let prevKey: string | null = null
 					const sortKeys: string[] = new Array(trackIds.length)
+
 					for (let i = trackIds.length - 1; i >= 0; i--) {
 						sortKeys[i] = generateKeyBetween(prevKey, null)
 						prevKey = sortKeys[i]!
 					}
+
 					const newPlaylistTracks = trackIds.map((id, i) => ({
 						playlistId: playlistId,
 						trackId: id,
 						sortKey: sortKeys[i],
 					}))
+
 					await Sentry.startSpan(
 						{ name: 'db:insert:playlistTracks', op: 'db' },
 						() =>
@@ -1142,6 +1176,7 @@ export class PlaylistService {
 			.findTrackIdsByUniqueKeys([uniqueKey])
 			.andThen((trackIds) => {
 				if (!trackIds.has(uniqueKey)) return okAsync([])
+
 				return ResultAsync.fromPromise(
 					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
 						this.db.query.playlists.findMany({
@@ -1218,6 +1253,7 @@ export class PlaylistService {
 			.findTrackIdsByUniqueKeys([uniqueKey])
 			.andThen((trackIds) => {
 				if (!trackIds.has(uniqueKey)) return okAsync([])
+
 				return ResultAsync.fromPromise(
 					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
 						this.db.query.playlists.findMany({
@@ -1254,9 +1290,11 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		const trimmed = query.trim()
+
 		if (!trimmed) {
 			return okAsync([])
 		}
+
 		return ResultAsync.fromPromise(
 			(async () => {
 				const playlists = await Sentry.startSpan(
@@ -1282,6 +1320,7 @@ export class PlaylistService {
 
 				return playlists.map((playlist) => {
 					if (playlist.type !== 'dynamic') return playlist
+
 					return {
 						...playlist,
 						itemCount: countMap.get(playlist.id) ?? 0,
@@ -1313,22 +1352,29 @@ export class PlaylistService {
 							where: eq(schema.playlists.id, playlistId),
 						}),
 				)
+
 				if (!playlist) throw createPlaylistNotFound(playlistId)
+
 				if (playlist.type === 'dynamic') {
 					const rows = await this.queryDynamicPlaylistTrackRows({
 						playlistId,
 						query,
 					})
+
 					const tracks: Track[] = []
+
 					for (const row of rows) {
 						const track = this.trackService.formatTrack(row.track)
+
 						if (!track) {
 							throw new ServiceError(
 								`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
 							)
 						}
+
 						tracks.push(track)
 					}
+
 					return tracks
 				}
 
@@ -1363,14 +1409,17 @@ export class PlaylistService {
 				)
 
 				const newTracks = []
+
 				for (const row of rows) {
 					const t = this.trackService.formatTrack(row.track)
+
 					if (!t)
 						throw new ServiceError(
 							`在格式化歌曲：${row.track.id} 时出错，可能是原数据不存在或 source & metadata 不匹配`,
 						)
 					newTracks.push(t)
 				}
+
 				return newTracks
 			})(),
 			(e) =>
@@ -1429,7 +1478,9 @@ export class PlaylistService {
 							where: eq(schema.playlists.id, playlistId),
 						}),
 				)
+
 				if (!playlist) throw createPlaylistNotFound(playlistId)
+
 				if (playlist.type === 'dynamic') {
 					return this.queryDynamicPlaylistTrackRows({
 						playlistId,
@@ -1502,8 +1553,10 @@ export class PlaylistService {
 		).andThen((data) => {
 			const newTracks: Track[] = []
 			const sortKeys: string[] = []
+
 			for (const pt of data) {
 				const t = this.trackService.formatTrack(pt.track)
+
 				if (!t) {
 					return errAsync(
 						new ServiceError(
@@ -1511,6 +1564,7 @@ export class PlaylistService {
 						),
 					)
 				}
+
 				newTracks.push(t)
 				sortKeys.push(pt.sortKey)
 			}
@@ -1553,6 +1607,7 @@ export class PlaylistService {
 			(e) => new DatabaseError('根据 shareId 查找歌单失败', { cause: e }),
 		).andThen((playlist) => {
 			if (!playlist) return okAsync(false as const)
+
 			return okAsync(playlist)
 		})
 	}

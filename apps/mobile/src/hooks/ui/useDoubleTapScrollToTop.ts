@@ -15,6 +15,7 @@ export function useDoubleTapScrollToTop(
 		async (_e: GestureResponderEvent) => {
 			const now = Date.now()
 			const DOUBLE_TAP_DELAY = 300
+
 			if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
 				await listRef.current?.scrollToOffset({ offset: 0, animated: true })
 				lastTapRef.current = 0

@@ -1,7 +1,13 @@
 export * from './useProgress'
+
 export * from './usePlaybackState'
+
 export * from './useIsPlaying'
+
 export * from './useCurrentTrack'
+
 export * from './useAdjacentTracks'
+
 export * from './useOrpheus'
+
 export * from './useSpectrumVisualizerEnabled'

@@ -50,6 +50,7 @@ class ApiClient {
 	}): ResultAsync<T, BilibiliApiError> => {
 		const url = fullUrl ?? `${this.baseUrl}${endpoint}`
 		const cookieList = useAppStore.getState().bilibiliCookie
+
 		const cookie =
 			cookieList && !skipCookie ? serializeCookieObject(cookieList) : ''
 
@@ -89,7 +90,9 @@ class ApiClient {
 						}),
 					)
 				}
+
 				const data = response.json() as Promise<ReqResponse<T>>
+
 				return ResultAsync.fromPromise(
 					data,
 					(error) =>
@@ -104,6 +107,7 @@ class ApiClient {
 				if (endpoint === '/x/web-interface/nav') {
 					return okAsync(data.data)
 				}
+
 				if (data.code !== 0) {
 					return errAsync(
 						new BilibiliApiError({
@@ -114,6 +118,7 @@ class ApiClient {
 						}),
 					)
 				}
+
 				return okAsync(data.data)
 			})
 	}
@@ -138,17 +143,21 @@ class ApiClient {
 		signal?: AbortSignal
 	}): ResultAsync<T, BilibiliApiError> {
 		let url = endpoint
+
 		if (typeof params === 'string') {
 			url = `${endpoint}?${params}`
 		} else if (params) {
 			const searchParams = new URLSearchParams()
+
 			for (const [key, value] of Object.entries(params)) {
 				if (value !== undefined) {
 					searchParams.append(key, value)
 				}
 			}
+
 			url = `${endpoint}?${searchParams.toString()}`
 		}
+
 		return this.request<T>({
 			endpoint: url,
 			options: { method: 'GET', signal, headers },
@@ -177,19 +186,24 @@ class ApiClient {
 		signal?: AbortSignal
 	}): ResultAsync<ArrayBuffer, BilibiliApiError> {
 		let url = endpoint
+
 		if (typeof params === 'string') {
 			url = `${endpoint}?${params}`
 		} else if (params) {
 			const searchParams = new URLSearchParams()
+
 			for (const [key, value] of Object.entries(params)) {
 				if (value !== undefined) {
 					searchParams.append(key, value)
 				}
 			}
+
 			url = `${endpoint}?${searchParams.toString()}`
 		}
+
 		const requestUrl = fullUrl ?? `${this.baseUrl}${url}`
 		const cookieList = useAppStore.getState().bilibiliCookie
+
 		const cookie =
 			cookieList && !skipCookie ? serializeCookieObject(cookieList) : ''
 
@@ -220,6 +234,7 @@ class ApiClient {
 					}),
 				)
 			}
+
 			return ResultAsync.fromPromise(
 				response.arrayBuffer(),
 				(error) =>
@@ -285,4 +300,5 @@ class ApiClient {
 		})
 	}
 }
+
 export const bilibiliApiClient = new ApiClient()

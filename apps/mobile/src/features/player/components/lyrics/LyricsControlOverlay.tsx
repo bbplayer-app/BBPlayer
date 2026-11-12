@@ -33,6 +33,7 @@ const OFFSET_ICON = ExpoIcon.select({
 })
 
 const { height: windowHeight } = Dimensions.get('window')
+
 // 面板高度 = 底部控件（~211px）+ 顶部 60px 渐隐条，刚好延伸到菜单按钮上方
 export const LYRICS_CONTROLS_OVERLAY_HEIGHT = Math.min(windowHeight * 0.4, 280)
 
@@ -54,6 +55,7 @@ export const LyricsControlOverlay = memo(function LyricsControlOverlay({
 	onOpenOffsetMenu,
 }: LyricsControlOverlayProps) {
 	const { colors } = useTheme()
+
 	const isFluidBackground = useAppStore(
 		(state) =>
 			!state.settings.pureWhiteBackground &&

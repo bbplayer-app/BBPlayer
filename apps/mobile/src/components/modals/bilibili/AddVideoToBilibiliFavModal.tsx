@@ -44,6 +44,7 @@ const FavoriteListItem = memo(function FavoriteListItem({
 		/>
 	)
 })
+
 FavoriteListItem.displayName = 'FavoriteListItem'
 
 const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
@@ -56,6 +57,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 	const { data: personalInfo } = usePersonalInformation()
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 	const modalClose = useModalStore((state) => state.close)
+
 	const close = useCallback(
 		() => modalClose('AddVideoToBilibiliFavorite'),
 		[modalClose],
@@ -112,6 +114,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 
 		if (addToFavoriteIds.length === 0 && delInFavoriteIds.length === 0) {
 			close()
+
 			return
 		}
 
@@ -182,6 +185,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 				</View>
 			)
 		}
+
 		if (isPending) {
 			return (
 				<Dialog.Content style={styles.loadingContainer}>

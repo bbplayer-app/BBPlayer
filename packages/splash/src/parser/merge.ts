@@ -15,9 +15,11 @@ function isMatch(mainLines: LyricLine[], secondaryLines: LyricLine[]): boolean {
 	if (secondaryLines.length === 0) return false
 	const mainTimestamps = new Set(mainLines.map((l) => l.startTime))
 	let matchCount = 0
+
 	for (const line of secondaryLines) {
 		if (mainTimestamps.has(line.startTime)) matchCount++
 	}
+
 	return matchCount / secondaryLines.length >= 0.2
 }
 
@@ -32,9 +34,12 @@ export function parseAndMergeLyrics(input: MultiLyricsInput): LyricLine[] {
 
 	const getMappedLines = (raw?: string) => {
 		if (!raw) return null
+
 		try {
 			const parsed = parseSpl(raw).lines
+
 			if (!isMatch(mainLines, parsed)) return null
+
 			return new Map(parsed.map((l) => [l.startTime, l.content]))
 		} catch {
 			return null

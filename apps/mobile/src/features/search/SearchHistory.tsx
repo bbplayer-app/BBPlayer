@@ -25,6 +25,7 @@ export default function SearchHistory({
 	panelVisible,
 }: SearchHistoryProps) {
 	const { colors } = useTheme()
+
 	return (
 		<ScrollView
 			style={styles.historySection}

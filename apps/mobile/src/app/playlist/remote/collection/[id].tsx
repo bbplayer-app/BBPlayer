@@ -64,6 +64,7 @@ export default function CollectionPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -82,6 +83,7 @@ export default function CollectionPage() {
 		isError: isCollectionDataError,
 		refetch,
 	} = useCollectionAllContents(Number(id))
+
 	const tracks = useMemo(
 		() => collectionData?.medias?.map(mapApiItemToTrack) ?? [],
 		[collectionData],
@@ -93,6 +95,7 @@ export default function CollectionPage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -188,8 +191,10 @@ export default function CollectionPage() {
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const selectedId of selected) {
 									const track = tracks.find((t) => t.id === selectedId)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -197,6 +202,7 @@ export default function CollectionPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

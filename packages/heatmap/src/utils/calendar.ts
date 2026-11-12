@@ -5,6 +5,7 @@ import weekday from 'dayjs/plugin/weekday'
 import type { Day } from '../types'
 
 dayjs.extend(localeData)
+
 dayjs.extend(weekday)
 
 export function getDaysInRange(startDate: Date, endDate: Date): Date[] {
@@ -43,6 +44,7 @@ export function getMonthlyData(startDate: Date, endDate: Date) {
 const getStartOfWeek = (date: Dayjs, startDay: Day) => {
 	const day = date.day()
 	const diff = (day < startDay ? 7 : 0) + day - startDay
+
 	return date.subtract(diff, 'day').startOf('day')
 }
 
@@ -59,9 +61,11 @@ export function getWeeklyData(
 
 	while (current.isBefore(end)) {
 		const weekDays: Date[] = []
+
 		for (let i = 0; i < 7; i++) {
 			weekDays.push(current.add(i, 'day').toDate())
 		}
+
 		weeks.push({ weekStart: current.toDate(), days: weekDays })
 		current = current.add(1, 'week')
 	}
@@ -90,14 +94,17 @@ export function getLevel(
 	cellColor?: Record<number, string>,
 ): number {
 	if (!cellColor) return 0
+
 	const levels = Object.keys(cellColor)
 		.map(Number)
 		.sort((a, b) => b - a)
+
 	for (const level of levels) {
 		if (count >= level) {
 			return level
 		}
 	}
+
 	return 0
 }
 
@@ -107,5 +114,6 @@ export function getColor(
 	defaultColor: string,
 ): string {
 	const level = getLevel(count, cellColor)
+
 	return level > 0 ? cellColor[level] : defaultColor
 }

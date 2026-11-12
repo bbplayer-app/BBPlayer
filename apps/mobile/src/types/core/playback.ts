@@ -18,6 +18,7 @@ export function parsePlaybackContextState(
 		value && typeof value === 'object' && 'context' in value
 			? value.context
 			: null
+
 	if (
 		context &&
 		typeof context === 'object' &&
@@ -33,5 +34,6 @@ export function parsePlaybackContextState(
 			ready: false,
 		}
 	}
+
 	return { context: null, ready: false }
 }

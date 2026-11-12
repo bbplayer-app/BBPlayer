@@ -82,6 +82,7 @@ const TrackItem = memo(
 	}) => {
 		const colors = useTheme().colors
 		const isCurrentTrack = useIsCurrentTrack(track.id)
+
 		const dragPan = usePanGesture({
 			activateAfterLongPress: 300,
 			runOnJS: true,
@@ -89,6 +90,7 @@ const TrackItem = memo(
 			onUpdate: (event) => onDragUpdate(event.translationY),
 			onFinalize: onDragEnd,
 		})
+
 		return (
 			<GestureDetector gesture={dragPan}>
 				<View
@@ -195,6 +197,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			])
 		})
 	}
+
 	const currentTrackId = useCurrentTrackIdHook()
 	const theme = useTheme()
 	const [didInitialScroll, setDidInitialScroll] = useState(false)
@@ -207,29 +210,38 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const dragOriginRef = useRef(0)
 	const dragTouchOffsetRef = useRef(ROW_HEIGHT / 2)
 	const scrollDirectionRef = useRef(0)
+
 	const dragRef = useRef<{ from: number; to: number; slot: number } | null>(
 		null,
 	)
+
 	const [drag, setDrag] = useState<{
 		from: number
 		to: number
 		slot: number
 	} | null>(null)
+
 	const ghostY = useSharedValue(0)
 	const lineY = useSharedValue(0)
+
 	const ghostStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: ghostY.value }],
 	}))
+
 	const lineStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: lineY.value }],
 	}))
+
 	const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
 	const stopAutoScroll = useCallback(() => {
 		if (autoScrollRef.current !== null) clearInterval(autoScrollRef.current)
 		autoScrollRef.current = null
 		scrollDirectionRef.current = 0
 	}, [])
+
 	useEffect(() => stopAutoScroll, [stopAutoScroll])
+
 	const scrollableRef = useMemo(
 		() => ({
 			get current() {
@@ -248,6 +260,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	const currentIndex = useMemo(() => {
 		if (!currentTrackId) return -1
+
 		return queue.findIndex((t) => t.id === currentTrackId)
 	}, [currentTrackId, queue])
 
@@ -255,7 +268,9 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		async (index: number) => {
 			if (index === -1) return
 			const target = queue[index]
+
 			if (!target) return
+
 			if (target.id === currentTrackId) return
 			await Orpheus.skipTo(index)
 		},
@@ -269,10 +284,14 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 	const updateDropTarget = useCallback(
 		(translationY: number) => {
 			const active = dragRef.current
+
 			if (!active) return
+
 			const ghostTop =
 				dragOriginRef.current + translationY - dragStartTranslationRef.current
+
 			ghostY.set(ghostTop)
+
 			const slot = Math.max(
 				0,
 				Math.min(
@@ -283,8 +302,10 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 					),
 				),
 			)
+
 			lineY.set(slot * ROW_HEIGHT - scrollOffsetRef.current - 1)
 			const to = slot > active.from ? slot - 1 : slot
+
 			if (slot !== active.slot) {
 				dragRef.current = { ...active, to, slot }
 				setDrag(dragRef.current)
@@ -298,19 +319,23 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			if (!dragRef.current) return
 			dragTranslationRef.current = translationY
 			updateDropTarget(translationY)
+
 			const localY =
 				dragOriginRef.current +
 				translationY -
 				dragStartTranslationRef.current +
 				dragTouchOffsetRef.current
+
 			const direction =
 				localY < EDGE_ZONE
 					? -1
 					: localY > listHeightRef.current - EDGE_ZONE
 						? 1
 						: 0
+
 			if (direction === scrollDirectionRef.current) return
 			stopAutoScroll()
+
 			if (direction !== 0) {
 				scrollDirectionRef.current = direction
 				autoScrollRef.current = setInterval(() => {
@@ -318,6 +343,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 						0,
 						contentHeightRef.current - listHeightRef.current,
 					)
+
 					const next = Math.max(
 						0,
 						Math.min(
@@ -325,6 +351,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 							scrollOffsetRef.current + direction * SCROLL_STEP,
 						),
 					)
+
 					if (next === scrollOffsetRef.current) return
 					void flatListRef.current?.scrollToOffset({
 						offset: next,
@@ -362,6 +389,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 		const active = dragRef.current
 		dragRef.current = null
 		setDrag(null)
+
 		if (active && active.from !== active.to) {
 			void Orpheus.moveTrack(active.from, active.to).catch((error: unknown) =>
 				toastAndLogError('调整播放队列失败', error, 'Player.Queue'),
@@ -516,6 +544,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 								scrollEnabled={drag === null}
 								onScroll={(event) => {
 									scrollOffsetRef.current = event.nativeEvent.contentOffset.y
+
 									if (dragRef.current)
 										updateDropTarget(dragTranslationRef.current)
 								}}

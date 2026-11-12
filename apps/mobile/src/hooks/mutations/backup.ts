@@ -45,12 +45,15 @@ export function useCloudBackupMutation() {
 			await client.ensureDirectory(config.directory)
 			const uri = await createBackup()
 			const backupFile = new File(uri)
+
 			try {
 				const bytes = backupFile.bytesSync()
+
 				const timestamp = new Date()
 					.toISOString()
 					.replaceAll(':', '-')
 					.replace('.', '-')
+
 				await client.uploadFile(
 					joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
 					Uint8Array.from(bytes).buffer,
@@ -81,10 +84,12 @@ export function useCloudRestoreMutation(onSuccess: () => void) {
 		}: WebDavCredentials & { entry: WebDavEntry }) => {
 			const client = await createMobileWebDavClient(config, password)
 			const data = await client.downloadFile(entry.path)
+
 			const cacheFile = new File(
 				Paths.cache,
 				`bbplayer-webdav-restore-${Date.now()}-${Math.random().toString(36).slice(2)}.bbplayer`,
 			)
+
 			try {
 				await cacheFile.write(new Uint8Array(data))
 				await restoreBackup(cacheFile.uri)

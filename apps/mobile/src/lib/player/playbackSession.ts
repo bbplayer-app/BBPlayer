@@ -16,11 +16,15 @@ import type { PlayerMode } from '@/types/core/playback'
 
 async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 	const fallback = useAppStore.getState().settings.defaultPlayerMode
+
 	if (playlistId === undefined) return fallback
 	const result = await playlistService.getPlaylistMetadata(playlistId)
+
 	if (result.isErr()) throw result.error
+
 	if (!result.value) throw new Error('播放列表不存在')
 	const preference = result.value.playerPreference
+
 	return preference === 'music' || preference === 'podcast'
 		? preference
 		: fallback
@@ -36,17 +40,21 @@ interface QueueOptions {
 
 async function submitTracks(options: QueueOptions, replace: boolean) {
 	if (!options.tracks.length) throw new Error('没有可播放的内容')
+
 	if (options.playNext && options.tracks.length !== 1)
 		throw new Error('下一首播放只支持单个音频')
+
 	if (
 		options.startFromKey &&
 		!options.tracks.some((track) => track.id === options.startFromKey)
 	) {
 		throw new Error('选中的音频当前无法播放')
 	}
+
 	assertPlaybackContextAvailable()
 	const queue = await Orpheus.getQueue()
 	const previous = playbackContextStore$.context.peek()
+
 	const context =
 		replace || !queue.length
 			? createPlaybackContext(await resolveInitialMode(options.playlistId))
@@ -54,6 +62,7 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 				createPlaybackContext(
 					useAppStore.getState().settings.defaultPlayerMode,
 				))
+
 	if (options.playNext) {
 		applyResumeStrategy(context.mode)
 		await Orpheus.playNext(options.tracks[0])
@@ -61,7 +70,9 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 		applyResumeStrategy(context.mode)
 		await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
 	}
+
 	setPlaybackContext(context)
+
 	if (options.playNow && (options.playNext || !options.startFromKey))
 		await Orpheus.play()
 }
@@ -79,6 +90,7 @@ export function enqueueTracks(options: QueueOptions) {
 export async function switchPlayerMode(mode: PlayerMode) {
 	await reconcilePlaybackContext()
 	applyResumeStrategy(mode)
+
 	if (playbackContextStore$.context.peek())
 		playbackContextStore$.context.mode.set(mode)
 }

@@ -43,43 +43,54 @@ async function getRuntimeVersion(
 	argumentsMap: CommandArguments,
 ): Promise<{ runtimeVersion: string; fingerprint?: Fingerprint }> {
 	let runtimeVersion = String(argumentsMap['runtime-version'] ?? '')
+
 	const publicConfig = JSON.parse(
 		await getPublicExpoConfig(projectDirectory),
 	) as PublicExpoConfig
+
 	if (isAppVersionPolicy(publicConfig.android?.runtimeVersion)) {
 		if (typeof publicConfig.version !== 'string' || !publicConfig.version) {
 			throw new Error(
 				'Expo config appVersion policy requires a non-empty version',
 			)
 		}
+
 		if (runtimeVersion && runtimeVersion !== publicConfig.version) {
 			throw new Error(
 				`runtimeVersion must equal app version (${publicConfig.version}) for appVersion policy`,
 			)
 		}
+
 		return { runtimeVersion: publicConfig.version }
 	}
+
 	if (argumentsMap['no-fingerprint']) {
 		if (!runtimeVersion) {
 			throw new Error('--runtime-version is required with --no-fingerprint')
 		}
+
 		return { runtimeVersion }
 	}
 
 	const progress = spinner()
 	progress.start('Generating Android fingerprint')
+
 	try {
 		const fingerprint = await createFingerprintAsync(projectDirectory, {
 			platforms: ['android'],
 			silent: true,
 		})
+
 		runtimeVersion ||= fingerprint.hash
+
 		if (runtimeVersion !== fingerprint.hash) {
 			throw new Error(
 				'fingerprint hash must equal runtimeVersion when fingerprint is uploaded',
 			)
 		}
+
 		progress.stop(`Fingerprint: ${runtimeVersion}`)
+
 		return { runtimeVersion, fingerprint }
 	} catch (error) {
 		progress.stop('Fingerprint generation failed')
@@ -106,7 +117,9 @@ async function uploadUpdate(
 		headers: { Authorization: `Bearer ${credentials.accessToken}` },
 		body: formData,
 	})
+
 	const responseText = await response.text()
+
 	if (!response.ok) throw new Error(`${response.status}: ${responseText}`)
 	writeResult(argumentsMap, JSON.parse(responseText))
 }
@@ -117,6 +130,7 @@ export async function publishUpdate(
 	const projectDirectory = await resolveProjectDirectory(
 		argumentsMap['project-dir'],
 	)
+
 	const isNonInteractive = argumentsMap['non-interactive'] === true
 	const shouldSkipExport = argumentsMap['skip-export'] === true
 	let channelName = String(argumentsMap.channel ?? 'production')
@@ -134,12 +148,15 @@ export async function publishUpdate(
 			releaseMessage,
 		)
 	}
+
 	if (!releaseMessage) throw new Error('--message is required')
 
 	const commitSha = await runGitCommand(projectDirectory, ['rev-parse', 'HEAD'])
+
 	const hasUncommittedChanges = Boolean(
 		await runGitCommand(projectDirectory, ['status', '--porcelain']),
 	)
+
 	if (
 		hasUncommittedChanges &&
 		isNonInteractive &&
@@ -147,12 +164,15 @@ export async function publishUpdate(
 	) {
 		throw new Error('Dirty worktree; use --allow-dirty explicitly')
 	}
+
 	if (hasUncommittedChanges && !isNonInteractive) {
 		log.warn('This dirty state will be recorded.')
+
 		const shouldContinue = await confirm({
 			message: 'Continue?',
 			initialValue: false,
 		})
+
 		if (isCancel(shouldContinue) || !shouldContinue)
 			throw new Error('Cancelled')
 	}
@@ -161,17 +181,20 @@ export async function publishUpdate(
 		projectDirectory,
 		argumentsMap,
 	)
+
 	if (!isNonInteractive) {
 		note(
 			`channel: ${channelName}\nruntimeVersion: ${runtimeVersion}\ncommit: ${commitSha}\nworking tree: ${hasUncommittedChanges ? 'dirty' : 'clean'}\nexport: ${shouldSkipExport ? 'existing dist' : 'build Android export'}\nfingerprint: ${fingerprint ? `${fingerprint.sources.length} sources` : 'not uploaded'}`,
 			'Publish summary',
 		)
+
 		const shouldPublish = await confirm({
 			message: shouldSkipExport
 				? 'Publish existing export?'
 				: 'Export and publish?',
 			initialValue: true,
 		})
+
 		if (isCancel(shouldPublish) || !shouldPublish) throw new Error('Cancelled')
 	}
 
@@ -179,11 +202,13 @@ export async function publishUpdate(
 		projectDirectory,
 		String(argumentsMap.dist ?? 'dist'),
 	)
+
 	log.step(
 		shouldSkipExport
 			? 'Using existing Android export'
 			: 'Exporting Android update',
 	)
+
 	try {
 		if (shouldSkipExport) {
 			await ensureExpoExportExists(distributionDirectory)
@@ -192,6 +217,7 @@ export async function publishUpdate(
 			// an archive or make a network request unless this command completed.
 			await exportAndroidUpdate(projectDirectory, distributionDirectory)
 		}
+
 		await writeFile(
 			join(distributionDirectory, 'expoConfig.json'),
 			await getPublicExpoConfig(projectDirectory),
@@ -205,6 +231,7 @@ export async function publishUpdate(
 	const temporaryDirectory = await mkdtemp(
 		join(tmpdir(), 'bbplayer-hot-update-'),
 	)
+
 	try {
 		const archivePath = join(temporaryDirectory, 'update.zip')
 		await createZipArchive(distributionDirectory, archivePath)

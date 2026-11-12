@@ -26,6 +26,7 @@
 		"@bbplayer/eslint-plugin": "workspace:*",
 		"@dword-design/eslint-plugin-import-alias": "^8.1.8",
 		"@e2e-dev/mobile": "0.12.6",
+		"@oxlint/plugins": "1.83.0",
 		"@swmansion/argent": "^0.31.1",
 		"@tanstack/eslint-plugin-query": "~5.103.3",
 		"@types/node": "~25.9.9",

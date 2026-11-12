@@ -20,11 +20,14 @@ function getCauseKey(value: ExceptionValue): string | undefined {
 	if (value.type) {
 		return value.type
 	}
+
 	if (!value.value) {
 		return undefined
 	}
+
 	// 形如 kotlin.TypeCastException: ... / java.lang.SecurityException
 	const namedException = NAMED_EXCEPTION_RE.exec(value.value)?.[1]
+
 	return namedException ?? normalizeCauseText(value.value)
 }
 
@@ -32,6 +35,7 @@ function getRootCause(
 	values: ExceptionValue[] | undefined,
 ): ExceptionValue | undefined {
 	const primary = values?.[0]
+
 	if (!primary) {
 		return undefined
 	}
@@ -40,6 +44,7 @@ function getRootCause(
 	// 最后一段就是最深层根因
 	const chain = primary.value?.split(CAUSE_SEPARATOR)
 	const deepest = chain?.at(-1)
+
 	if (chain && chain.length > 1 && deepest) {
 		return { value: deepest }
 	}
@@ -50,6 +55,7 @@ function getRootCause(
 			return values?.[index]
 		}
 	}
+
 	return undefined
 }
 
@@ -65,6 +71,7 @@ export function getNativeModuleFingerprint(event: Event): string[] | undefined {
 	const values = event.exception?.values
 	const primary = values?.[0]
 	const call = NATIVE_MODULE_CALL_RE.exec(primary?.value ?? '')
+
 	if (!call) {
 		return undefined
 	}
@@ -72,8 +79,10 @@ export function getNativeModuleFingerprint(event: Event): string[] | undefined {
 	const fingerprint = ['native-module-error', call[1]]
 	const rootCause = getRootCause(values)
 	const causeKey = rootCause ? getCauseKey(rootCause) : undefined
+
 	if (causeKey) {
 		fingerprint.push(causeKey)
 	}
+
 	return fingerprint
 }

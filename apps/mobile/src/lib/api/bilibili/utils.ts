@@ -14,14 +14,18 @@ export function bv2av(bvid: string): number {
 	const BASE = 58n
 
 	const data = 'FcwAPNKTMug3GV5Lj7EJnHpWsx4tb8haYeviqBz6rkCy12mUSDQX9RdoZf'
+
 	const bvidArr = Array.from(bvid)
+
 	;[bvidArr[3], bvidArr[9]] = [bvidArr[9], bvidArr[3]]
 	;[bvidArr[4], bvidArr[7]] = [bvidArr[7], bvidArr[4]]
 	bvidArr.splice(0, 3)
+
 	const tmp = bvidArr.reduce(
 		(pre, bvidChar) => pre * BASE + BigInt(data.indexOf(bvidChar)),
 		0n,
 	)
+
 	return Number((tmp & MASK_CODE) ^ XOR_CODE)
 }
 
@@ -53,6 +57,7 @@ export function av2bv(avid: number | bigint): string {
 
 export function getCsrfToken(): Result<string, BilibiliApiError> {
 	const cookieList = useAppStore.getState().bilibiliCookie
+
 	if (!cookieList)
 		return err(
 			new BilibiliApiError({
@@ -61,6 +66,7 @@ export function getCsrfToken(): Result<string, BilibiliApiError> {
 			}),
 		)
 	const csrfToken = cookieList.bili_jct as string | undefined
+
 	if (!csrfToken) {
 		return err(
 			new BilibiliApiError({
@@ -69,5 +75,6 @@ export function getCsrfToken(): Result<string, BilibiliApiError> {
 			}),
 		)
 	}
+
 	return ok(csrfToken)
 }

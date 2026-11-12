@@ -12,9 +12,11 @@ const healthRoute = new Hono<{ Bindings: Env }>().get('/', (c) =>
 
 const updateRoute = new Hono<{ Bindings: Env }>().get('/', async (c) => {
 	const manifest = await c.env.KV.get('update_json')
+
 	if (!manifest) {
 		return c.json({ error: 'Manifest not found' }, 404)
 	}
+
 	// manifest 应该是 JSON 字符串，直接返回并设置 content-type
 	return c.text(manifest, { headers: { 'Content-Type': 'application/json' } })
 })
@@ -41,4 +43,5 @@ const app = new Hono<{ Bindings: Env }>()
 	.route('/update.json', updateRoute)
 
 export default app
+
 export type AppType = typeof app

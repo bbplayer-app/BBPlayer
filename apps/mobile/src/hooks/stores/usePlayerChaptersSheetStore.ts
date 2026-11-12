@@ -20,9 +20,11 @@ export const usePlayerChaptersSheetStore = create<PlayerChaptersSheetState>(
 		open: async () => {
 			transition = transition.then(async () => {
 				if (get().isOpen) return
+
 				if (usePlayerQueueSheetStore.getState().isOpen)
 					await usePlayerQueueSheetStore.getState().close()
 				set({ isOpen: true })
+
 				try {
 					await TrueSheet.present('playerChaptersSheet')
 				} catch (error) {
@@ -30,6 +32,7 @@ export const usePlayerChaptersSheetStore = create<PlayerChaptersSheetState>(
 					toastAndLogError('打开章节失败', error, 'Player.Chapters')
 				}
 			})
+
 			return transition
 		},
 
@@ -37,12 +40,14 @@ export const usePlayerChaptersSheetStore = create<PlayerChaptersSheetState>(
 			transition = transition.then(async () => {
 				if (!get().isOpen) return
 				set({ isOpen: false })
+
 				try {
 					await TrueSheet.dismiss('playerChaptersSheet')
 				} catch (error) {
 					toastAndLogError('关闭章节失败', error, 'Player.Chapters')
 				}
 			})
+
 			return transition
 		},
 

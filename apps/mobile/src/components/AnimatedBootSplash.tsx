@@ -19,6 +19,7 @@ import { storage } from '@/utils/mmkv'
 
 const bootSplashManifest =
 	require('../../assets/bootsplash/manifest.json') as Manifest
+
 const bootSplashColors = require('../../boot-splash-colors.json') as {
 	light: string
 	dark: string
@@ -37,16 +38,21 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const isDarkMode = useColorScheme() === 'dark'
 	const insets = useSafeAreaInsets()
 	const activeSkin = useActiveSkin()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	const selectedAssetId = useSkinStore(
 		(state) => state.selectedSkinBootSplashAssetId,
 	)
+
 	const selectedMode = useSkinStore((state) => state.selectedSkinBootSplashMode)
+
 	const playFullAnimation = useSkinStore(
 		(state) => state.playFullSkinBootSplashAnimation,
 	)
+
 	const bootSplashAsset =
 		activeSkin?.bootSplash.items?.find((item) => item.id === selectedAssetId) ??
 		activeSkin?.bootSplash.items?.[0] ??
@@ -57,6 +63,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	const preloadRaw = storage.getString('boot_splash_preload')
 	let preloadedVideo: string | null = null
 	let preloadedCard: string | null = null
+
 	if (preloadRaw) {
 		const pipeIdx = preloadRaw.indexOf('|')
 		preloadedVideo = preloadRaw.slice(0, pipeIdx) || null
@@ -70,9 +77,11 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 			: selectedMode === 'video'
 				? (bootSplashAsset?.video ?? null)
 				: null
+
 	const bootSplashAssetCard = pureWhiteBackground
 		? null
 		: preloadedCard || bootSplashAsset?.card || null
+
 	const [visible, setVisible] = useState(true)
 	const [introFinished, setIntroFinished] = useState(false)
 	const [videoEnded, setVideoEnded] = useState(false)
@@ -90,6 +99,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 	useEffect(() => {
 		if (!introFinished || !bootSplashVideo) return
 		const timer = setTimeout(() => setVideoEnded(true), 3000)
+
 		return () => clearTimeout(timer)
 	}, [introFinished, bootSplashVideo])
 
@@ -122,6 +132,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 					easing: Easing.out(Easing.quad),
 				}),
 			)
+
 			if (bootSplashVideo) {
 				scheduleOnRN(setVideoPlaybackRequested, true)
 			}
@@ -130,6 +141,7 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 
 	useEffect(() => {
 		if (!ready || !introFinished) return
+
 		if (playFullAnimation && bootSplashVideo && !videoEnded) return
 
 		containerOpacity.set(

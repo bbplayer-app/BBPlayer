@@ -37,6 +37,7 @@ export default function AccountSettingsPage() {
 	const clearAccount = useAppStore((state) => state.clearBBPlayerAccount)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
 	const activeSkin = useActiveSkin()
+
 	const activeAvatarFrameIndex = useSkinStore(
 		(state) => state.activeAvatarFrameIndex,
 	)
@@ -55,6 +56,7 @@ export default function AccountSettingsPage() {
 	const finishAuth = async () => {
 		setAuthStatusText('正在同步云端共享歌单...')
 		const restoreResult = await sharedPlaylistFacade.restoreFromCloud()
+
 		if (restoreResult.isOk() && restoreResult.value.restored > 0) {
 			await queryClient.invalidateQueries({
 				queryKey: playlistKeys.playlistLists(),
@@ -69,7 +71,9 @@ export default function AccountSettingsPage() {
 				description: restoreResult.error.message,
 			})
 		}
+
 		playlistSyncWorker.triggerSync()
+
 		if (returnTo) {
 			router.replace(returnTo as Parameters<typeof router.replace>[0])
 		}
@@ -91,6 +95,7 @@ export default function AccountSettingsPage() {
 			.then(async (resp) => {
 				if (!resp.ok) return
 				const data = await resp.json()
+
 				if (!cancelled) setAccount(data.account)
 			})
 			.catch((e) => {
@@ -99,6 +104,7 @@ export default function AccountSettingsPage() {
 			.finally(() => {
 				if (!cancelled) setIsRefreshing(false)
 			})
+
 		return () => {
 			cancelled = true
 		}
@@ -107,17 +113,23 @@ export default function AccountSettingsPage() {
 	const fillProfileFromBilibili = async () => {
 		if (!hasBilibiliCookie) {
 			toast.error('请先登录 Bilibili 账号')
+
 			return
 		}
+
 		setIsFillingProfile(true)
 		setAuthStatusText('正在读取 Bilibili 资料...')
+
 		try {
 			const info = await returnOrThrowAsync(bilibiliApi.getUserInfo())
+
 			if (info.name) setName(info.name)
+
 			if (info.face) {
 				setFace(info.face)
 				void Image.prefetch(info.face, 'disk')
 			}
+
 			setAuthStatusText('已填充 Bilibili 昵称和头像')
 			toast.success('已填充 Bilibili 资料')
 		} catch (e) {
@@ -126,21 +138,27 @@ export default function AccountSettingsPage() {
 				description: e instanceof Error ? e.message : String(e),
 			})
 		}
+
 		setIsFillingProfile(false)
 	}
 
 	const handleRegister = async () => {
 		const normalizedUsername = username.trim()
+
 		if (!normalizedUsername || password.length < 8) {
 			toast.error('用户名不能为空，密码至少 8 位')
+
 			return
 		}
+
 		setIsSubmitting(true)
 		setAuthStatusText('正在创建 BBPlayer 账号...')
 		const registerName = name.trim() || normalizedUsername
 		const registerFace = face.trim() || undefined
+
 		try {
 			setAuthStatusText('正在注册 BBPlayer 账号...')
+
 			const resp = await api.auth.register.$post({
 				json: {
 					username: normalizedUsername,
@@ -149,6 +167,7 @@ export default function AccountSettingsPage() {
 					face: registerFace,
 				},
 			})
+
 			if (!resp.ok) {
 				const errBody = await resp.json().catch(() => ({}))
 				setAuthStatusText(null)
@@ -158,8 +177,10 @@ export default function AccountSettingsPage() {
 					new Error(`注册失败：${resp.status} ${JSON.stringify(errBody)}`),
 					'Settings.Account',
 				)
+
 				return
 			}
+
 			const data = await resp.json()
 			setToken(data.token)
 			setAccount(data.account)
@@ -170,17 +191,22 @@ export default function AccountSettingsPage() {
 			setAuthStatusText(null)
 			toastAndLogError('注册失败', e, 'Settings.Account')
 		}
+
 		setIsSubmitting(false)
 	}
 
 	const handleLogin = async () => {
 		const normalizedUsername = username.trim()
+
 		if (!normalizedUsername || password.length < 8) {
 			toast.error('用户名不能为空，密码至少 8 位')
+
 			return
 		}
+
 		setIsSubmitting(true)
 		setAuthStatusText('正在登录 BBPlayer 账号...')
+
 		try {
 			const resp = await api.auth.login.$post({
 				json: {
@@ -188,6 +214,7 @@ export default function AccountSettingsPage() {
 					password,
 				},
 			})
+
 			if (!resp.ok) {
 				const errBody = await resp.json().catch(() => ({}))
 				setAuthStatusText(null)
@@ -197,8 +224,10 @@ export default function AccountSettingsPage() {
 					new Error(`登录失败：${resp.status} ${JSON.stringify(errBody)}`),
 					'Settings.Account',
 				)
+
 				return
 			}
+
 			const data = await resp.json()
 			setToken(data.token)
 			setAccount(data.account)
@@ -209,6 +238,7 @@ export default function AccountSettingsPage() {
 			setAuthStatusText(null)
 			toastAndLogError('登录失败', e, 'Settings.Account')
 		}
+
 		setIsSubmitting(false)
 	}
 
@@ -216,6 +246,7 @@ export default function AccountSettingsPage() {
 		setIsSavingProfile(true)
 		const profileName = name.trim()
 		const profileFace = face.trim() || undefined
+
 		try {
 			const resp = await api.auth.profile.$patch({
 				json: {
@@ -223,6 +254,7 @@ export default function AccountSettingsPage() {
 					face: profileFace,
 				},
 			})
+
 			if (!resp.ok) {
 				setIsSavingProfile(false)
 				toastAndLogError(
@@ -230,14 +262,17 @@ export default function AccountSettingsPage() {
 					new Error(`保存失败：${resp.status}`),
 					'Settings.Account',
 				)
+
 				return
 			}
+
 			const data = await resp.json()
 			setAccount(data.account)
 			toast.success('已保存')
 		} catch (e) {
 			toastAndLogError('保存资料失败', e, 'Settings.Account')
 		}
+
 		setIsSavingProfile(false)
 	}
 

@@ -24,6 +24,7 @@ function getDominantColor(
 	isDarkMode: boolean,
 ): string | undefined {
 	if (!palette) return undefined
+
 	if (isDarkMode) {
 		return palette.darkMuted?.hex ?? palette.muted?.hex
 	} else {
@@ -98,15 +99,18 @@ export function usePlaylistBackgroundColor(
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	const [palette, setPalette] = useState<ExtractedPalette | undefined>(
 		undefined,
 	)
+
 	const [appState, setAppState] = useState(AppState.currentState)
 
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
 			setAppState(nextAppState)
 		})
+
 		return () => {
 			subscription.remove()
 		}
@@ -115,6 +119,7 @@ export function usePlaylistBackgroundColor(
 	useEffect(() => {
 		if (!imageRef || pureWhiteBackground) {
 			setPalette(undefined)
+
 			return
 		}
 
@@ -127,6 +132,7 @@ export function usePlaylistBackgroundColor(
 		const extract = async () => {
 			try {
 				const result = await ImageThemeColors.extractThemeColorAsync(imageRef)
+
 				if (!isCancelled) {
 					if (result) {
 						setPalette(result)
@@ -152,7 +158,9 @@ export function usePlaylistBackgroundColor(
 		if (pureWhiteBackground) {
 			return { backgroundColor: '#FFFFFF', nowPlayingBarColor: '#FFFFFF' }
 		}
+
 		const dominantColor = getDominantColor(palette, isDarkMode)
+
 		const backgroundColor = computeBackgroundColor(
 			dominantColor,
 			isDarkMode,

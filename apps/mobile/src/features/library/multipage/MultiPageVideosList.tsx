@@ -30,6 +30,7 @@ const MultiPageVideosListComponent = memo(() => {
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
 	const { data: userInfo } = usePersonalInformation()
+
 	const {
 		data: playlists,
 		isPending: playlistsIsPending,
@@ -37,6 +38,7 @@ const MultiPageVideosListComponent = memo(() => {
 		isRefetching: playlistsIsRefetching,
 		refetch: refetchPlaylists,
 	} = useGetFavoritePlaylists(userInfo?.mid)
+
 	const {
 		data: favoriteData,
 		isError: isFavoriteDataError,

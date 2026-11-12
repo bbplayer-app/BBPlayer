@@ -17,6 +17,7 @@ export default function DuplicateLocalPlaylistModal({
 	const [duplicatePlaylistName, setDuplicatePlaylistName] = useState(
 		`${rawName}-副本`,
 	)
+
 	const { mutate: duplicatePlaylist } = useDuplicatePlaylist()
 	const close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)

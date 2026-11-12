@@ -52,7 +52,9 @@ const getNativeModule = () => {
 	if (Platform.OS !== 'android') {
 		throw new Error('BBPlayerNative is only implemented on Android')
 	}
+
 	nativeModule ??= requireNativeModule<BBPlayerNativeModule>('BBPlayerNative')
+
 	return nativeModule
 }
 
@@ -93,8 +95,10 @@ export const listStorageDirectoryAsync = (path: string) =>
  */
 export const getApkSigningCertificateSha256 = (): string | null => {
 	if (Platform.OS !== 'android') return null
+
 	try {
 		const value = getNativeModule().apkSigningCertificateSha256
+
 		return value ? value.toLowerCase() : null
 	} catch {
 		// 原生模块不可用（例如 Expo Go）时无法校验签名

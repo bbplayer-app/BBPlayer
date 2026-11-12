@@ -54,6 +54,7 @@ export const MonthlyHeatMap = ({
 
 	const baseTheme =
 		scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
+
 	const customTheme = props[scheme] || {}
 	const theme = { ...baseTheme, ...props, ...customTheme }
 
@@ -66,6 +67,7 @@ export const MonthlyHeatMap = ({
 	const displayedMonths = rtl ? [...months].toReversed() : months
 
 	const monthWidth = (cellSize + cellGap) * 7
+
 	const monthHeight =
 		(isHeaderVisible ? headerTextFontSize + headerBottomSpace : 0) +
 		(cellSize + cellGap) * 6
@@ -99,6 +101,7 @@ export const MonthlyHeatMap = ({
 					{monthData.days.map((day, dayIndex) => {
 						const dateStr = dayjs(day).format('YYYY-MM-DD')
 						const count = counts[dateStr] || 0
+
 						const color = getColor(
 							count,
 							theme.cellColor,
@@ -110,6 +113,7 @@ export const MonthlyHeatMap = ({
 						const row = Math.floor(gridIndex / 7)
 
 						let text: string | undefined
+
 						if (isCellTextVisible) {
 							if (cellText === 'date') text = dayjs(day).format('D')
 							else if (cellText === 'count')
@@ -155,6 +159,7 @@ export const MonthlyHeatMap = ({
 				<G y={isHeaderVisible ? headerTextFontSize + headerBottomSpace : 0}>
 					{[0, 1, 2, 3, 4, 5, 6].map((i) => {
 						const day = dayjs().day((i + weekStartsOn) % 7)
+
 						return (
 							<SvgText
 								key={`sidebar-${i}`}

@@ -19,6 +19,7 @@ export const searchQueryKeys = {
 // 搜索结果查询
 export const useSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
+
 	return useInfiniteQuery({
 		queryKey: searchQueryKeys.results(query),
 		queryFn: ({ pageParam, signal }) =>
@@ -36,9 +37,11 @@ export const useSearchResults = (query: string) => {
 			if (lastPage.numPages === 0) {
 				return undefined
 			}
+
 			if (lastPage.numPages === allPages.length) {
 				return undefined
 			}
+
 			return allPages.length + 1
 		},
 	})
@@ -47,6 +50,7 @@ export const useSearchResults = (query: string) => {
 // 搜索用户查询
 export const useUserSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
+
 	return useQuery({
 		queryKey: searchQueryKeys.users(query),
 		queryFn: ({ signal }) =>
@@ -71,6 +75,7 @@ export const useHotSearches = () => {
 // 搜索建议查询
 export const useSearchSuggestions = (query: string) => {
 	const enabled = query.trim().length > 0
+
 	return useQuery({
 		queryKey: searchQueryKeys.suggestions(query),
 		queryFn: async ({ signal }) => {
@@ -78,10 +83,13 @@ export const useSearchSuggestions = (query: string) => {
 				term: query,
 				signal,
 			})
+
 			if (result.isErr()) {
 				logger.warning('搜索建议查询失败，但无关紧要', { query })
+
 				return []
 			}
+
 			return result.value
 		},
 		enabled,

@@ -8,6 +8,7 @@ export type DbConnection = {
 	db: NodePgDatabase<typeof schema>
 	client: Client
 }
+
 export type DrizzleDb = DbConnection['db']
 
 export async function createDb(

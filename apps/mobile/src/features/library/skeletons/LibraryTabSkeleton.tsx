@@ -29,6 +29,7 @@ function SkeletonPulse({
 		if (!animate) {
 			cancelAnimation(opacity)
 			opacity.set(1)
+
 			return
 		}
 

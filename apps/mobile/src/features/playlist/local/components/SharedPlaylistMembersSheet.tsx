@@ -16,11 +16,13 @@ interface Props {
 export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 	function SharedPlaylistMembersSheet({ shareId }, ref) {
 		const [isOpen, setIsOpen] = useState(false)
+
 		const {
 			data: members,
 			isPending,
 			isError,
 		} = useSharedPlaylistAllMembers(isOpen ? shareId : null)
+
 		const theme = useTheme()
 		const scrollViewRef = useRef<ScrollViewInstance>(null)
 

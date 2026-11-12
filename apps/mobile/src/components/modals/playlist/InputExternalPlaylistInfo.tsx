@@ -39,6 +39,7 @@ const InputExternalPlaylistInfoModal = () => {
 					onChangeText={(text) => {
 						setInput(text)
 						const result = parseExternalPlaylistInfo(text)
+
 						if (result) {
 							setSource(result.source)
 						}

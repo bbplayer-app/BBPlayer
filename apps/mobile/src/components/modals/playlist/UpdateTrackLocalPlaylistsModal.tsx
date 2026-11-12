@@ -69,16 +69,19 @@ const PlaylistListItem = memo(function PlaylistListItem({
 		/>
 	)
 })
+
 PlaylistListItem.displayName = 'PlaylistListItem'
 
 const UpdateTrackLocalPlaylistsModal = memo(
 	function UpdateTrackLocalPlaylistsModal({ track }: { track: Track }) {
 		const { colors } = useTheme()
 		const modalClose = useModalStore((state) => state.close)
+
 		const close = useCallback(
 			() => modalClose('UpdateTrackLocalPlaylists'),
 			[modalClose],
 		)
+
 		const open = useModalStore((state) => state.open)
 
 		const {
@@ -87,6 +90,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			isError: isPlaylistsError,
 			refetch: refetchPlaylists,
 		} = usePlaylistLists()
+
 		const filteredPlaylists = useMemo(
 			() =>
 				allPlaylists?.filter(
@@ -96,7 +100,9 @@ const UpdateTrackLocalPlaylistsModal = memo(
 		)
 
 		const uniqueKey = generateUniqueTrackKey(track).unwrapOr(undefined)
+
 		if (!uniqueKey) toast.error('无法生成 uniqueKey')
+
 		const {
 			data: playlistsContainingTrack,
 			isPending: isContainingTrackPending,
@@ -115,8 +121,10 @@ const UpdateTrackLocalPlaylistsModal = memo(
 
 		const initialCheckedPlaylistIdSet = useMemo(() => {
 			if (!playlistsContainingTrack) return new Set<number>()
+
 			return new Set(playlistsContainingTrack.map((p) => p.id))
 		}, [playlistsContainingTrack])
+
 		const initialCheckedPlaylistIdList = useMemo(
 			() => Array.from(initialCheckedPlaylistIdSet),
 			[initialCheckedPlaylistIdSet],
@@ -125,6 +133,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 		const [prevInitialIds, setPrevInitialIds] = useState(
 			initialCheckedPlaylistIdList,
 		)
+
 		if (prevInitialIds !== initialCheckedPlaylistIdList) {
 			setPrevInitialIds(initialCheckedPlaylistIdList)
 			setCheckedPlaylistIds(initialCheckedPlaylistIdList)
@@ -133,6 +142,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 		const handleCheckboxPress = useCallback((playlistId: number) => {
 			setCheckedPlaylistIds((currentIds) => {
 				const isCurrentlyChecked = currentIds.includes(playlistId)
+
 				if (isCurrentlyChecked) {
 					return currentIds.filter((id) => id !== playlistId)
 				} else {
@@ -149,12 +159,14 @@ const UpdateTrackLocalPlaylistsModal = memo(
 			const toAddPlaylistIds = [...currentCheckedIds].filter(
 				(id) => !initialCheckedPlaylistIdSet.has(id),
 			)
+
 			const toRemovePlaylistIds = [...initialCheckedPlaylistIdSet].filter(
 				(id) => !currentCheckedIds.has(id),
 			)
 
 			if (toAddPlaylistIds.length === 0 && toRemovePlaylistIds.length === 0) {
 				close()
+
 				return
 			}
 
@@ -190,6 +202,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 
 		const handleRetry = () => {
 			if (isPlaylistsError) void refetchPlaylists()
+
 			if (isContainingTrackError) void refetchContainingTrack()
 		}
 

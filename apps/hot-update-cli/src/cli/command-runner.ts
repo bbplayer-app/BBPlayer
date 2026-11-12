@@ -24,6 +24,7 @@ export async function runCommand(
 			cwd: workingDirectory,
 			stdio: ['ignore', 'pipe', 'pipe'],
 		})
+
 		let output = ''
 		let settled = false
 
@@ -36,17 +37,20 @@ export async function runCommand(
 		childProcess.stdout.on('data', (chunk: Buffer) => {
 			const text = chunk.toString()
 			output += text
+
 			if (options.forwardOutput) process.stdout.write(text)
 		})
 		childProcess.stderr.on('data', (chunk: Buffer) => {
 			const text = chunk.toString()
 			output += text
+
 			if (options.forwardOutput) process.stderr.write(text)
 		})
 		childProcess.once('error', settleWithError)
 		childProcess.once('close', (exitCode) => {
 			if (settled) return
 			settled = true
+
 			if (exitCode === 0) resolve(output)
 			else
 				reject(

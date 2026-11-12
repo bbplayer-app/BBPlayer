@@ -50,6 +50,7 @@ export function OverviewPage() {
 			</AppShell>
 		)
 	const failed = queries.find((query) => query.error)
+
 	if (failed)
 		return (
 			<AppShell active='overview'>
@@ -62,6 +63,7 @@ export function OverviewPage() {
 
 	const summary = insightQuery.data!.summary
 	const latest = groupQuery.data!.slice(0, 5)
+
 	return (
 		<AppShell active='overview'>
 			<PageHeader

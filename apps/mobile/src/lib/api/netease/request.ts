@@ -31,6 +31,7 @@ const chooseUserAgent = (uaType: 'pc' | 'linux' | 'iphone' = 'pc'): string => {
 			'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
 		iphone: 'NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)',
 	}
+
 	return userAgentMap[uaType] || userAgentMap.pc
 }
 
@@ -58,6 +59,7 @@ const buildRequestPayload = <T extends object>(
 	options: RequestOptions,
 ): RequestPayload => {
 	const { ua, crypto = 'weapi', signal } = options
+
 	const cookie =
 		typeof options.cookie === 'string'
 			? cookieToJson(options.cookie)
@@ -65,6 +67,7 @@ const buildRequestPayload = <T extends object>(
 
 	const csrfToken = cookie.__csrf || ''
 	let url = ''
+
 	const headers: Record<string, string> = {
 		'User-Agent':
 			ua ?? chooseUserAgent(crypto === 'linuxapi' ? 'linux' : 'iphone'),
@@ -72,6 +75,7 @@ const buildRequestPayload = <T extends object>(
 		Referer: APP_CONF.domain,
 		...options.headers,
 	}
+
 	let body = {}
 	let e_r = false
 
@@ -82,6 +86,7 @@ const buildRequestPayload = <T extends object>(
 			url = `${APP_CONF.domain}/weapi/${uri.substring(5)}`
 			break
 		}
+
 		case 'linuxapi': {
 			body = Encrypt.linuxapi({
 				method: 'POST',
@@ -91,6 +96,7 @@ const buildRequestPayload = <T extends object>(
 			url = `${APP_CONF.domain}/api/linux/forward`
 			break
 		}
+
 		case 'eapi': {
 			const header = {
 				osver: cookie.osver || '',
@@ -99,17 +105,20 @@ const buildRequestPayload = <T extends object>(
 				appver: cookie.appver || '9.0.90',
 				__csrf: csrfToken,
 			}
+
 			const eapiData = {
 				...data,
 				header,
 				e_r: toBoolean(options.e_r ?? APP_CONF.encryptResponse),
 			}
+
 			e_r = eapiData.e_r
 			body = Encrypt.eapi(uri, eapiData)
 			url = `${APP_CONF.apiDomain}/eapi/${uri.substring(5)}`
 			headers.Cookie = cookieObjToString(header)
 			break
 		}
+
 		default:
 		// pass
 	}
@@ -126,6 +135,7 @@ const executeFetch = <TReturnBody>(
 	payload: RequestPayload,
 ): ResultAsync<FetchResult<TReturnBody>, NeteaseApiError> => {
 	const { url, headers, body, e_r, signal } = payload
+
 	const settings: RequestInit = {
 		method: 'POST',
 		headers,
@@ -155,6 +165,7 @@ const executeFetch = <TReturnBody>(
 				: await res.json()
 
 			const parsedCookies = setCookie.parse(res.headers.get('set-cookie') ?? '')
+
 			const cookies = parsedCookies.map(
 				(cookie) => `${cookie.name}=${cookie.value}`,
 			)

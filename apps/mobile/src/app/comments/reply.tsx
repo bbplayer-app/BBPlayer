@@ -16,6 +16,7 @@ const renderItem = ({
 }: ListRenderItemInfoWithExtraData<BilibiliCommentItem, { bvid: string }>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const { bvid } = extraData
+
 	return (
 		<CommentItem
 			item={item}
@@ -27,6 +28,7 @@ const renderItem = ({
 export default function ReplyCommentsPage() {
 	const { bvid, rpid } = useLocalSearchParams<{ bvid: string; rpid: string }>()
 	const theme = useTheme()
+
 	const {
 		data,
 		fetchNextPage,
@@ -36,6 +38,7 @@ export default function ReplyCommentsPage() {
 		refetch,
 		isRefetching,
 	} = useReplyComments(bvid, Number(rpid))
+
 	const router = useRouter()
 
 	const replies = data?.pages.flatMap((page) => page.replies ?? []) ?? []
@@ -59,6 +62,7 @@ export default function ReplyCommentsPage() {
 	}
 
 	const rpidNumber = Number(rpid)
+
 	if (isNaN(rpidNumber)) {
 		return (
 			<View style={styles.center}>

@@ -18,6 +18,7 @@ export const lyricsQueryKeys = {
 
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
+
 	// oxlint-disable-next-line @tanstack/query/exhaustive-deps -- 同一 uniqueKey 的歌词是唯一缓存实体，track 仅供缓存未命中时获取歌词。
 	return useQuery({
 		// 缓存以曲目唯一标识为准，保证编辑、清除和偏移量调整写入的
@@ -25,6 +26,7 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
 		queryFn: async () => {
 			const result = await lyricService.smartFetchLyrics(track!)
+
 			if (result.isErr()) {
 				if (result.error.type === 'LyricNotFound') {
 					return {
@@ -37,8 +39,10 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 						misc: undefined,
 					} satisfies LyricFileData
 				}
+
 				throw result.error
 			}
+
 			// manualSkip: 用户已手动跳过该曲目的歌词获取
 			if (result.value.manualSkip) {
 				return {
@@ -52,6 +56,7 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 					misc: undefined,
 				} satisfies LyricFileData
 			}
+
 			return result.value
 		},
 		enabled,
@@ -78,6 +83,7 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
+
 					const res = await neteaseApi.search(
 						{
 							keywords: searchQuery,
@@ -85,9 +91,11 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 						},
 						signal,
 					)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
@@ -98,9 +106,11 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					const res = await qqMusicApi.search(searchQuery, 20, signal)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
@@ -114,9 +124,11 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					const res = await kugouApi.search(searchQuery, 20, signal)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
@@ -146,7 +158,9 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 		}
 
 		if (neteaseData) processResult('netease', neteaseData)
+
 		if (qqData) processResult('qq', qqData)
+
 		if (kugouData) processResult('kugou', kugouData)
 	}, [neteaseData, qqData, kugouData])
 

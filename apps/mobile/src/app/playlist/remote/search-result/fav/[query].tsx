@@ -57,6 +57,7 @@ export default function SearchResultsPage() {
 	const router = useRouter()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -66,6 +67,7 @@ export default function SearchResultsPage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
@@ -73,6 +75,7 @@ export default function SearchResultsPage() {
 
 	const { data: userData } = usePersonalInformation()
 	const { data: favoriteFolderList } = useGetFavoritePlaylists(userData?.mid)
+
 	const {
 		data: searchData,
 		isPending: isPendingSearchData,
@@ -86,6 +89,7 @@ export default function SearchResultsPage() {
 		query,
 		favoriteFolderList?.at(0)?.id,
 	)
+
 	const tracks = useMemo(
 		() =>
 			searchData?.pages
@@ -121,8 +125,10 @@ export default function SearchResultsPage() {
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const id of selected) {
 									const track = tracks.find((t) => t.id === id)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -130,6 +136,7 @@ export default function SearchResultsPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

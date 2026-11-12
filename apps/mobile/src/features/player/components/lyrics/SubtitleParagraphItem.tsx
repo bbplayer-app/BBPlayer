@@ -22,13 +22,16 @@ export const SubtitleParagraphItem = memo(function SubtitleParagraphItem({
 }) {
 	const { colors } = useTheme()
 	const currentCue = useValue(store.state$.paragraphCue[paragraph.id])
+
 	const focusedMatch = useValue(
 		() => !!query && store.state$.focusedParagraphId.get() === paragraph.id,
 	)
+
 	const onSeek = (index: number) => {
 		Keyboard.dismiss()
 		void store.seek(index)
 	}
+
 	return (
 		<View
 			style={[
@@ -58,8 +61,10 @@ export const SubtitleParagraphItem = memo(function SubtitleParagraphItem({
 			<Text style={[styles.body, { color: colors.onSurface }]}>
 				{paragraph.cues.map(({ line, index }, cueIndex) => {
 					const spoken = index === currentCue
+
 					const matching =
 						!!query && line.content.toLocaleLowerCase().includes(query)
+
 					return (
 						<Fragment key={`${index}:${line.startTime}`}>
 							{cueIndex > 0

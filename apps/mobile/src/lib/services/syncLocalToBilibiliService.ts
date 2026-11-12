@@ -22,6 +22,7 @@ class SyncLocalToBilibiliService {
 	> {
 		return bilibiliApi.getFavoritePlaylists({ userMid }).map((list) => {
 			const found = list.find((p) => p.title.trim() === name.trim())
+
 			return found
 				? { id: found.id, title: found.title, media_count: found.media_count }
 				: null
@@ -109,6 +110,7 @@ class SyncLocalToBilibiliService {
 		const worker = async () => {
 			while (queue.length > 0) {
 				const bvid = queue.shift()
+
 				if (!bvid) break
 
 				// 添加到 folderId，不从任何文件夹移除
@@ -128,6 +130,7 @@ class SyncLocalToBilibiliService {
 					)
 					failCount++
 				}
+
 				onProgress?.(successCount + failCount)
 
 				// 添加延时防止风控
@@ -147,6 +150,7 @@ class SyncLocalToBilibiliService {
 				`Batch add completed with ${failCount} failures out of ${bvidsToAdd.length}`,
 			)
 		}
+
 		return ok(failCount)
 	}
 
@@ -161,17 +165,21 @@ class SyncLocalToBilibiliService {
 
 		// API 限制分块
 		const CHUNK_SIZE = 20
+
 		for (let i = 0; i < tokensToRemove.length; i += CHUNK_SIZE) {
 			const chunk = tokensToRemove.slice(i, i + CHUNK_SIZE)
+
 			// oxlint-disable-next-line no-await-in-loop
 			const res = await bilibiliApi.batchDeleteFavoriteListContents({
 				favoriteId: folderId,
 				bvids: chunk,
 			})
+
 			if (res.isErr()) {
 				return err(res.error)
 			}
 		}
+
 		return ok(void 0)
 	}
 }

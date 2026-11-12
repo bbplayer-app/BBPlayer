@@ -20,13 +20,17 @@ const formatDurationToWords = (seconds: number) => {
 	if (isNaN(seconds) || seconds < 0) {
 		return '0\u2009秒'
 	}
+
 	const h = Math.floor(seconds / 3600)
 	const m = Math.floor((seconds % 3600) / 60)
 	const s = Math.floor(seconds % 60)
 
 	const parts = []
+
 	if (h > 0) parts.push(`${h}\u2009时`)
+
 	if (m > 0) parts.push(`${m}\u2009分`)
+
 	if (s > 0 || parts.length === 0) parts.push(`${s}\u2009秒`)
 
 	return parts.join('\u2009')
@@ -66,9 +70,11 @@ export default function DateHistoryPage() {
 
 		for (const record of historyRecords) {
 			const key = record.uniqueKey
+
 			if (!trackMap.has(key)) {
 				trackMap.set(key, { track: record, playCount: 0 })
 			}
+
 			trackMap.get(key)!.playCount += 1
 			duration += record.duration ?? 0
 		}
@@ -79,12 +85,15 @@ export default function DateHistoryPage() {
 
 		return { aggregatedTracks: sortedTracks, totalDuration: duration }
 	}
+
 	const { aggregatedTracks, totalDuration } = getAggregatedHistory()
 
 	const getTotalDurationStr = () => {
 		if (isHistoryError || !historyRecords) return '0\u2009秒'
+
 		return formatDurationToWords(totalDuration)
 	}
+
 	const totalDurationStr = getTotalDurationStr()
 
 	const keyExtractor = useCallback(

@@ -91,6 +91,7 @@ async function performShare(
 	try {
 		let uri = previewUri
 		const needsCapture = !uri && viewShotRef.current !== null
+
 		if (needsCapture) {
 			try {
 				const fileName = `bbplayer-share-lyrics-${Date.now()}`
@@ -102,19 +103,23 @@ async function performShare(
 				})
 			} catch {
 				toast.error('生成图片失败')
+
 				return
 			}
 		}
 
 		if (!uri) {
 			toast.error('生成图片失败')
+
 			return
 		}
 
 		if (action === 'save' && permissionStatus !== PermissionStatus.GRANTED) {
 			const { status } = await requestPermission()
+
 			if (status !== PermissionStatus.GRANTED) {
 				toast.error('无法保存图片', { description: '请允许访问相册' })
+
 				return
 			}
 		}
@@ -124,13 +129,16 @@ async function performShare(
 			toast.success('已保存到相册')
 		} else {
 			const sharingAvailable = await Sharing.isAvailableAsync()
+
 			if (sharingAvailable) {
 				await Sharing.shareAsync(uri)
 			} else {
 				toast.error('分享不可用')
+
 				return
 			}
 		}
+
 		close('LyricsSelection')
 	} catch {
 		toast.error('操作失败')
@@ -154,9 +162,11 @@ const LyricsSelectionModal = () => {
 
 	const lyrics = useMemo(() => {
 		if (!lyricsData?.lrc) return []
+
 		try {
 			const { lines: parsedLines } = parseSpl(lyricsData.lrc)
 			const translationMap = new Map<number, string>()
+
 			if (lyricsData.tlyric) {
 				try {
 					const { lines: transLines } = parseSpl(lyricsData.tlyric)
@@ -171,12 +181,14 @@ const LyricsSelectionModal = () => {
 			if (translationMap.size > 0) {
 				parsedLines.forEach((l) => {
 					const trans = translationMap.get(l.startTime)
+
 					if (trans) {
 						if (!l.translations) l.translations = []
 						l.translations.push(trans)
 					}
 				})
 			}
+
 			return parsedLines
 		} catch {
 			return []
@@ -186,15 +198,18 @@ const LyricsSelectionModal = () => {
 	const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
 		() => new Set(),
 	)
+
 	const [permissionResponse, requestPermission] = MediaLibrary.usePermissions()
 	const [isSharing, setIsSharing] = useState(false)
 	const [showPreview, setShowPreview] = useState(false)
 	const [previewUri, setPreviewUri] = useState<string | null>(null)
 	const [isGenerating, setIsGenerating] = useState(false)
 	const [cardColor, setCardColor] = useState(theme.colors.elevation.level3)
+
 	const currentTrackCover = currentTrack
 		? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
 		: null
+
 	const imageRef = useImage(
 		{
 			uri: currentTrackCover ?? '',
@@ -210,12 +225,15 @@ const LyricsSelectionModal = () => {
 
 	const { data: pageList, isPending: isPageListQueryPending } =
 		useGetMultiPageList(bvid)
+
 	const isPageListPending = !!cid && isPageListQueryPending
 
 	// 计算 shareUrl
 	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack?.uniqueKey ?? '')}&title=${encodeURIComponent(currentTrack?.title ?? '')}&cover=${encodeURIComponent(currentTrack?.coverUrl ?? '')}`
+
 	if (cid && pageList) {
 		const page = pageList.find((p) => p.cid === cid)
+
 		if (page) {
 			shareUrl += `&p=${page.page}`
 		}
@@ -229,6 +247,7 @@ const LyricsSelectionModal = () => {
 				.then((palette) => {
 					if (!palette) {
 						setCardColor(theme.colors.elevation.level3)
+
 						return
 					}
 
@@ -255,15 +274,19 @@ const LyricsSelectionModal = () => {
 	const toggleSelection = useCallback((index: number) => {
 		setSelectedIndices((prev) => {
 			const newSelected = new Set(prev)
+
 			if (newSelected.has(index)) {
 				newSelected.delete(index)
 			} else {
 				if (newSelected.size >= 5) {
 					toast.error('最多选择 5 句歌词')
+
 					return prev
 				}
+
 				newSelected.add(index)
 			}
+
 			return newSelected
 		})
 		// 选择变化后清除旧预览
@@ -278,16 +301,19 @@ const LyricsSelectionModal = () => {
 	const generatePreview = async () => {
 		if (!viewShotRef.current) {
 			toast.error('无法生成预览')
+
 			return
 		}
 
 		if (isPageListPending) {
 			toast.info('正在获取分享链接，请稍候')
+
 			return
 		}
 
 		setIsGenerating(true)
 		const fileName = `bbplayer-share-lyrics-${sanitizeFileName(currentTrack?.uniqueKey ?? '')}-${Date.now()}`
+
 		try {
 			const uri = await captureRef(viewShotRef, {
 				format: 'png',
@@ -295,6 +321,7 @@ const LyricsSelectionModal = () => {
 				result: 'tmpfile',
 				fileName,
 			})
+
 			setPreviewUri(uri)
 			setShowPreview(true)
 			setIsGenerating(false)
@@ -309,6 +336,7 @@ const LyricsSelectionModal = () => {
 	const handleShare = (action: 'save' | 'share') => {
 		if (selectedIndices.size === 0) {
 			toast.error('请先选择歌词')
+
 			return
 		}
 

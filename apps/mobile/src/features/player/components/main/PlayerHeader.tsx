@@ -21,11 +21,13 @@ export function PlayerHeader({
 	scrollX?: SharedValue<number>
 }) {
 	const currentTrack = useCurrentTrack()
+
 	const { data: downloadStatus } = useBatchDownloadStatus(
 		currentTrack?.uniqueKey ? [currentTrack.uniqueKey] : [],
 	)
 
 	const title = currentTrack?.title ?? '正在播放'
+
 	const statusText =
 		downloadStatus?.[currentTrack?.uniqueKey ?? ''] === DownloadState.COMPLETED
 			? '正在播放 (已缓存)'

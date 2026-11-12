@@ -7,7 +7,9 @@ import type {
 
 export function subtitleKind(track: BilibiliSubtitleTrack) {
 	if (track.ai_type === 1) return '机翻'
+
 	if (track.lan.startsWith('ai-')) return '自动生成'
+
 	return '人工字幕'
 }
 
@@ -20,8 +22,10 @@ const timestamp = (milliseconds: number) => {
 	const minutes = Math.floor(centiseconds / 6000)
 	const seconds = Math.floor((centiseconds % 6000) / 100)
 	const fraction = centiseconds % 100
+
 	return `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(fraction).padStart(2, '0')}]`
 }
+
 const singleLine = (text: string) => text.replace(/[\r\n]+/g, ' ').trim()
 
 /** Export original cues, rather than the grouped or search-filtered transcript. */
@@ -29,10 +33,13 @@ export function subtitlesToLrc(lines: LyricLine[], title: string): string {
 	const metadataTitle = singleLine(title)
 		.replace(/\[/g, '［')
 		.replace(/\]/g, '］')
+
 	const output = [`[ti:${metadataTitle}]`, '[by:BBPlayer]']
+
 	for (const [index, line] of lines.entries()) {
 		output.push(`${timestamp(line.startTime)}${singleLine(line.content)}`)
 		const next = lines[index + 1]
+
 		// Blank cues preserve silence between subtitles and clear the final sentence.
 		if (
 			Math.floor(line.endTime / 10) > Math.floor(line.startTime / 10) &&
@@ -41,6 +48,7 @@ export function subtitlesToLrc(lines: LyricLine[], title: string): string {
 			output.push(timestamp(line.endTime))
 		}
 	}
+
 	return `${output.join('\n')}\n`
 }
 
@@ -57,6 +65,7 @@ export function selectSubtitle(
 				(track) => baseLanguage(track.lan) === baseLanguage(language),
 			)
 		: []
+
 	return (
 		tracks.find((track) => track.lan === language) ??
 		matchingLanguage.find(
@@ -104,9 +113,11 @@ export interface SubtitleParagraph {
 /** Group nearby cues for reading without losing their individual seek targets. */
 export function subtitleParagraphs(lines: LyricLine[]): SubtitleParagraph[] {
 	const paragraphs: SubtitleParagraph[] = []
+
 	for (const [index, line] of lines.entries()) {
 		let paragraph = paragraphs[paragraphs.length - 1]
 		const previous = paragraph?.cues[paragraph.cues.length - 1]?.line
+
 		const shouldBreak =
 			!paragraph ||
 			!previous ||
@@ -116,6 +127,7 @@ export function subtitleParagraphs(lines: LyricLine[]): SubtitleParagraph[] {
 			paragraph.cues.length >= 8 ||
 			(/[。！？.!?][”"’']?$/.test(previous.content) &&
 				paragraph.content.length >= 80)
+
 		if (shouldBreak) {
 			paragraph = {
 				id: `${index}:${line.startTime}`,
@@ -125,15 +137,18 @@ export function subtitleParagraphs(lines: LyricLine[]): SubtitleParagraph[] {
 			}
 			paragraphs.push(paragraph)
 		}
+
 		paragraph.cues.push({ line, index })
 		paragraph.content += `${paragraph.content ? subtitleSeparator(previous?.content ?? '', line.content) : ''}${line.content}`
 	}
+
 	return paragraphs
 }
 
 /** Bilibili's Chinese cues often omit punctuation; spaces preserve visible boundaries. */
 export function subtitleSeparator(previous: string, next: string) {
 	if (!previous || /^[，。！？、；：,.!?;:]/.test(next)) return ''
+
 	return ' '
 }
 
@@ -141,12 +156,15 @@ export function subtitleIndexAt(lines: LyricLine[], seconds: number) {
 	let low = 0
 	let high = lines.length - 1
 	let result = 0
+
 	while (low <= high) {
 		const mid = Math.floor((low + high) / 2)
+
 		if (lines[mid].startTime <= seconds * 1000) {
 			result = mid
 			low = mid + 1
 		} else high = mid - 1
 	}
+
 	return result
 }

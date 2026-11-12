@@ -8,6 +8,7 @@ export function useRefreshOnFocus<T>(refetch: () => Promise<T>) {
 		useCallback(() => {
 			if (firstTimeRef.current) {
 				firstTimeRef.current = false
+
 				return
 			}
 

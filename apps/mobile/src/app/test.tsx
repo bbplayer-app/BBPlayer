@@ -49,6 +49,7 @@ async function importMMKVFiles() {
 	if (result.canceled) return
 
 	const mmkvDir = new Directory(Paths.document, 'mmkv')
+
 	if (!mmkvDir.exists) {
 		mmkvDir.create()
 	}
@@ -56,9 +57,11 @@ async function importMMKVFiles() {
 	for (const asset of result.assets) {
 		const pickedFile = new File(asset.uri)
 		const targetFile = new File(mmkvDir, asset.name)
+
 		if (targetFile.exists) {
 			targetFile.delete()
 		}
+
 		pickedFile.copySync(targetFile)
 	}
 
@@ -73,12 +76,15 @@ export default function TestPage() {
 	const { colors } = useTheme()
 	const haveTrack = useCurrentTrack()
 	const [updateChannel, setUpdateChannel] = useState('')
+
 	const [updateChannelModalVisible, setUpdateChannelModalVisible] =
 		useState(false)
+
 	const [queryDate, setQueryDate] = useState('')
 
 	const testCheckUpdate = async () => {
 		setLoading(true)
+
 		try {
 			const result = await Updates.checkForUpdateAsync()
 			toast.success('检查更新结果', {
@@ -94,22 +100,27 @@ export default function TestPage() {
 
 	const testUpdatePackage = async () => {
 		setLoading(true)
+
 		try {
 			if (isUpdatePending) {
 				expoDb.closeSync()
 				await Updates.reloadAsync()
+
 				return
 			}
 
 			const result = await Updates.checkForUpdateAsync()
+
 			if (!result.isAvailable) {
 				toast.error('没有可用的更新', {
 					description: '当前已是最新版本',
 				})
+
 				return
 			}
 
 			const updateResult = await Updates.fetchUpdateAsync()
+
 			if (updateResult.isNew) {
 				toast.success('有新版本可用', {
 					description: '现在更新',
@@ -131,9 +142,11 @@ export default function TestPage() {
 		checkForUpdate: boolean,
 	) => {
 		setLoading(true)
+
 		try {
 			await setUpdateChannelOverride(channel)
 			setUpdateChannelModalVisible(false)
+
 			if (checkForUpdate) {
 				await testCheckUpdate()
 			}
@@ -156,6 +169,7 @@ export default function TestPage() {
 					text: '确定',
 					onPress: async () => {
 						setLoading(true)
+
 						try {
 							await Orpheus.removeAllDownloads()
 							logger.info('清除数据库下载记录及实际文件成功')
@@ -163,6 +177,7 @@ export default function TestPage() {
 						} catch (error) {
 							toastAndLogError('清除下载缓存失败', error, 'TestPage')
 						}
+
 						setLoading(false)
 					},
 				},
@@ -175,6 +190,7 @@ export default function TestPage() {
 		const clearAction = () => {
 			setLoading(true)
 			const result = lyricService.clearAllLyrics()
+
 			if (result.isOk()) {
 				toast.success('清除成功')
 			} else {
@@ -183,8 +199,10 @@ export default function TestPage() {
 						result.error instanceof Error ? result.error.message : '未知错误',
 				})
 			}
+
 			setLoading(false)
 		}
+
 		alert(
 			'清除所有歌词',
 			'是否清除所有已保存的歌词？下次播放时将重新从网络获取歌词',
@@ -202,29 +220,36 @@ export default function TestPage() {
 
 	const testPullSharedPlaylist = async () => {
 		setLoading(true)
+
 		try {
 			const result = await sharedPlaylistFacade.pullChanges(44)
+
 			if (result.isErr()) {
 				toastAndLogError('拉取共享歌单失败', result.error, 'TestPage')
 				setLoading(false)
+
 				return
 			}
+
 			toast.success('拉取共享歌单成功', {
 				description: `applied=${result.value.applied}`,
 			})
 		} catch (error) {
 			toastAndLogError('拉取共享歌单失败', error, 'TestPage')
 		}
+
 		setLoading(false)
 	}
 
 	const dumpSyncQueue = async () => {
 		setLoading(true)
+
 		try {
 			const rows = await db
 				.select()
 				.from(schema.playlistSyncQueue)
 				.orderBy(asc(schema.playlistSyncQueue.id))
+
 			logger.info('playlist_sync_queue', rows)
 			toast.success('队列表输出', {
 				description: `rows=${rows.length}（详见日志）`,
@@ -232,6 +257,7 @@ export default function TestPage() {
 		} catch (error) {
 			toastAndLogError('读取 playlist_sync_queue 失败', error, 'TestPage')
 		}
+
 		setLoading(false)
 	}
 
@@ -251,6 +277,7 @@ export default function TestPage() {
 					text: '确定',
 					onPress: async () => {
 						setLoading(true)
+
 						try {
 							const result = await DocumentPicker.getDocumentAsync({
 								type: '*/*',
@@ -259,6 +286,7 @@ export default function TestPage() {
 
 							if (result.canceled) {
 								setLoading(false)
+
 								return
 							}
 
@@ -271,15 +299,18 @@ export default function TestPage() {
 							}
 
 							expoDb.closeSync()
+
 							if (dbFile.exists) {
 								dbFile.delete()
 							}
+
 							pickedFile.copySync(dbFile)
 
 							toast.success('导入成功')
 						} catch (error) {
 							toastAndLogError('导入数据库失败', error, 'TestPage')
 						}
+
 						setLoading(false)
 					},
 				},
@@ -298,11 +329,13 @@ export default function TestPage() {
 					text: '确定',
 					onPress: async () => {
 						setLoading(true)
+
 						try {
 							await importMMKVFiles()
 						} catch (error) {
 							toastAndLogError('导入 MMKV 失败', error, 'TestPage')
 						}
+
 						setLoading(false)
 					},
 				},
@@ -314,12 +347,15 @@ export default function TestPage() {
 	const handleQueryPlayHistoryByDate = async () => {
 		if (!queryDate) {
 			toast.error('请输入日期')
+
 			return
 		}
 
 		const date = dayjs(queryDate, 'YYYY/MM/DD', true)
+
 		if (!date.isValid()) {
 			toast.error('日期格式不正确，请使用 YYYY/MM/DD')
+
 			return
 		}
 
@@ -327,6 +363,7 @@ export default function TestPage() {
 		const endTime = date.endOf('day').valueOf()
 
 		setLoading(true)
+
 		try {
 			const rows = await queryPlayHistoryByDateRange(startTime, endTime)
 
@@ -337,6 +374,7 @@ export default function TestPage() {
 		} catch (error) {
 			toastAndLogError('查询播放历史失败', error, 'TestPage')
 		}
+
 		setLoading(false)
 	}
 

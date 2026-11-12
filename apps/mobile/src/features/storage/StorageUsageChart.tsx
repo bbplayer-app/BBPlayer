@@ -19,6 +19,7 @@ export interface StorageSegment {
 
 const CHART_SIZE = 208
 const INNER_RADIUS = CHART_SIZE * 0.29
+
 /** Start the first slice at the 12 o'clock position. */
 const START_ANGLE = -90
 const ANIMATION_DURATION = 900
@@ -50,6 +51,7 @@ function AnimatedSlice({ slice, progress }: AnimatedSliceProps) {
 		const sweep = end - start
 
 		const builder = Skia.PathBuilder.Make()
+
 		const outer = Skia.XYWHRect(
 			centerX - radius,
 			centerY - radius,
@@ -59,6 +61,7 @@ function AnimatedSlice({ slice, progress }: AnimatedSliceProps) {
 
 		if (sweep >= 359.999) {
 			builder.addOval(outer)
+
 			if (innerRadius > 0) {
 				builder.addOval(
 					Skia.XYWHRect(
@@ -72,6 +75,7 @@ function AnimatedSlice({ slice, progress }: AnimatedSliceProps) {
 			}
 		} else if (sweep > 0.01) {
 			builder.arcToOval(outer, start, sweep, false)
+
 			if (innerRadius > 0) {
 				builder.arcToOval(
 					Skia.XYWHRect(

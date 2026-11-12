@@ -18,9 +18,11 @@ const SyncOptionsModal = memo(function SyncOptionsModal({
 	const close = useModalStore((state) => state.close)
 	const open = useModalStore((state) => state.open)
 	const setSettings = useAppStore((state) => state.setSettings)
+
 	const defaultExpandMultiPage = useAppStore(
 		(state) => state.settings.expandMultiPageOnSync,
 	)
+
 	const [expandMultiPage, setExpandMultiPage] = useState(
 		defaultExpandMultiPage ?? false,
 	)

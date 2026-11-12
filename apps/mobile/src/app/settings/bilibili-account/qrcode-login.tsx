@@ -80,6 +80,7 @@ function reducer(state: State, action: Action): State {
 				default:
 					return state
 			}
+
 		case 'LOGIN_SUCCESS':
 			return { ...state, status: 'success', statusText: '登录成功' }
 	}
@@ -93,10 +94,12 @@ export default function QrCodeLoginPage() {
 	const [viewport, setViewport] = useState({ width: 0, height: 0 })
 	const compact = viewport.height < 620
 	const short = viewport.height < 420
+
 	const qrSize = Math.max(
 		128,
 		Math.min(short ? 144 : compact ? 176 : 200, viewport.width - 100),
 	)
+
 	const setCookie = useAppStore((state) => state.updateBilibiliCookie)
 	const [state, dispatch] = useReducer(reducer, initialState)
 	const { status, statusText, qrcodeKey, qrcodeUrl } = state
@@ -106,6 +109,7 @@ export default function QrCodeLoginPage() {
 
 		const generateQrCode = async () => {
 			const response = await bilibiliApi.getLoginQrCode()
+
 			if (response.isErr()) {
 				dispatch({
 					type: 'GENERATE_FAILURE',
@@ -116,6 +120,7 @@ export default function QrCodeLoginPage() {
 				dispatch({ type: 'GENERATE_SUCCESS', payload: response.value })
 			}
 		}
+
 		void generateQrCode()
 	}, [status])
 
@@ -124,14 +129,17 @@ export default function QrCodeLoginPage() {
 
 		const interval = setInterval(async () => {
 			const response = await bilibiliApi.pollQrCodeLoginStatus({ qrcodeKey })
+
 			if (response.isErr()) {
 				toast.error('获取二维码登录状态失败', {
 					id: 'bilibili-qrcode-login-status-error',
 				})
+
 				return
 			}
 
 			const pollData = response.value
+
 			if (
 				pollData.status ===
 				BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS
@@ -142,18 +150,24 @@ export default function QrCodeLoginPage() {
 				const splitedCookie = setCookieParser.splitCookiesString(
 					pollData.cookies,
 				)
+
 				const parsedCookie = setCookieParser.parse(splitedCookie)
+
 				const finalCookieObject = Object.fromEntries(
 					parsedCookie.map((c) => [c.name, c.value]),
 				)
+
 				const result = setCookie(finalCookieObject)
+
 				if (result.isErr()) {
 					toast.error('保存 Cookie 失败：' + result.error.message)
 					Sentry.captureException(result.error, {
 						tags: { Page: 'QrCodeLoginPage' },
 					})
+
 					return
 				}
+
 				toast.success('登录成功', { id: 'bilibili-qrcode-login-success' })
 				await queryClient.cancelQueries()
 				await queryClient.invalidateQueries({

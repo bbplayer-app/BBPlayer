@@ -21,6 +21,7 @@ const resultKey = (item: GarbSkinSearchResult) =>
 
 const mapSearchItem = (item: BilibiliGarbSearchItem): GarbSkinSearchResult => {
 	const { part_id: partId, properties: props } = item
+
 	return {
 		actId: Number(props.dlc_act_id) || null,
 		coverUri:
@@ -48,6 +49,7 @@ const confirmDownload = (item: GarbSkinSearchResult) => {
 					alert('暂时无法下载', '当前只支持下载收藏集和主题装扮。', [
 						{ text: '知道了' },
 					])
+
 					return
 				}
 
@@ -66,6 +68,7 @@ const renderItem = ({
 >) => {
 	if (!extraData) throw new Error('extraData is undefined')
 	const colors = extraData.colors
+
 	return (
 		<Pressable
 			style={[styles.resultRow, { borderBottomColor: colors.outlineVariant }]}
@@ -106,6 +109,7 @@ export default function ThemeSkinSearchPage() {
 	const [query, setQuery] = useState('')
 	const [bufferedInput, setBufferedInput] = useState('')
 	const [refreshing, setRefreshing] = useState(false)
+
 	const {
 		data: searchResult,
 		isFetching,
@@ -114,6 +118,7 @@ export default function ThemeSkinSearchPage() {
 		refetch,
 		fetchNextPage,
 	} = useThemeSearch(query)
+
 	const resultsToDisplay = useMemo(() => {
 		return (
 			searchResult?.pages
@@ -121,6 +126,7 @@ export default function ThemeSkinSearchPage() {
 				.map(mapSearchItem) ?? []
 		)
 	}, [searchResult])
+
 	const extraData = useMemo(() => ({ colors }), [colors])
 
 	return (

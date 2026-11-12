@@ -4,6 +4,7 @@ export const parseExternalPlaylistInfo = (
 	// Netease Music
 	if (text.includes('music.163.com')) {
 		const result = /id=(\d+)/.exec(text)
+
 		if (result?.[1]) {
 			return { id: result[1], source: 'netease' }
 		}
@@ -12,6 +13,7 @@ export const parseExternalPlaylistInfo = (
 	// QQ Music
 	if (text.includes('.qq.com')) {
 		const result = /id=(\d+)/.exec(text)
+
 		if (result?.[1]) {
 			return { id: result[1], source: 'qq' }
 		}

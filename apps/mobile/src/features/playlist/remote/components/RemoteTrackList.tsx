@@ -78,6 +78,7 @@ const renderItemDefault = ({
 	extraData,
 }: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	const {
 		playTrack,
 		trackMenuItems,
@@ -85,6 +86,7 @@ const renderItemDefault = ({
 		showItemCover,
 		currentTrackIdRef,
 	} = extraData
+
 	return (
 		<TrackListItem
 			index={index}

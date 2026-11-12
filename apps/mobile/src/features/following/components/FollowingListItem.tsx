@@ -12,6 +12,7 @@ export function FollowingListItem({
 	user: BilibiliFollowingProfile
 }) {
 	const router = useRouter()
+
 	return (
 		<List.Item
 			title={user.uname}

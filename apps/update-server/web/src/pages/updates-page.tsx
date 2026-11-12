@@ -22,6 +22,7 @@ import { formatDate, sourceCommit } from '@/lib/utils'
 export function UpdatesPage() {
 	const query = useQuery({ queryKey: ['groups'], queryFn: groups })
 	const [search, setSearch] = useState('')
+
 	const filtered = useMemo(
 		() =>
 			query.data?.filter((item) =>
@@ -35,6 +36,7 @@ export function UpdatesPage() {
 			) ?? [],
 		[query.data, search],
 	)
+
 	return (
 		<AppShell active='updates'>
 			<PageHeader

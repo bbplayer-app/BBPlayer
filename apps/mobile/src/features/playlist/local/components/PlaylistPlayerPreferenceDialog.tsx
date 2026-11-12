@@ -19,6 +19,7 @@ export function PlaylistPlayerPreferenceDialog({
 	onDismiss: () => void
 }) {
 	const defaultMode = useAppStore((state) => state.settings.defaultPlayerMode)
+
 	const mutation = useMutation({
 		networkMode: 'always',
 		mutationFn: async (preference: Playlist['playerPreference']) => {
@@ -26,6 +27,7 @@ export function PlaylistPlayerPreferenceDialog({
 				playlist.id,
 				preference,
 			)
+
 			if (result.isErr()) throw result.error
 		},
 		onSuccess: async () => {
@@ -39,6 +41,7 @@ export function PlaylistPlayerPreferenceDialog({
 				'Playlist.PlayerPreference',
 			),
 	})
+
 	return (
 		<Portal>
 			<Dialog

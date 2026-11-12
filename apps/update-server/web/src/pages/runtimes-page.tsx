@@ -16,6 +16,7 @@ import { formatDate, number } from '@/lib/utils'
 
 export function RuntimesPage() {
 	const query = useQuery({ queryKey: ['runtimes'], queryFn: runtimes })
+
 	return (
 		<AppShell active='runtimes'>
 			<PageHeader

@@ -24,6 +24,7 @@ export const usePersonalInformation = () => {
 		queryKey: userQueryKeys.personalInformation(),
 		queryFn: async ({ signal }) => {
 			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo({ signal }))
+
 			// 缓存用户信息和头像供离线时显示
 			if (res.name) {
 				useAppStore.getState().setBilibiliUserInfo({
@@ -32,17 +33,20 @@ export const usePersonalInformation = () => {
 					face: res.face,
 					cachedAt: Date.now(),
 				})
+
 				if (res.face) {
 					Image.prefetch(res.face, 'disk').catch(() => {
 						// Ignore error
 					})
 				}
 			}
+
 			return res
 		},
 		enabled,
 		initialData: () => {
 			const storeData = useAppStore.getState().bilibiliUserInfo
+
 			if (storeData && storeData.name) {
 				return {
 					mid: storeData.mid ?? 0,
@@ -50,6 +54,7 @@ export const usePersonalInformation = () => {
 					face: storeData.face,
 				} as import('@/types/apis/bilibili').BilibiliUserInfo
 			}
+
 			return undefined
 		},
 		initialDataUpdatedAt: () => {
@@ -62,6 +67,7 @@ export const usePersonalInformation = () => {
 export const useRecentlyPlayed = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
+
 	return useQuery({
 		queryKey: userQueryKeys.recentlyPlayed(),
 		queryFn: ({ signal }) =>
@@ -78,6 +84,7 @@ export const useInfiniteGetUserUploadedVideos = (
 	// 这个接口有风控校验
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!mid && hasCookie
+
 	return useInfiniteQuery({
 		queryKey: userQueryKeys.uploadedVideos(mid, keyword),
 		queryFn: ({ pageParam, signal }) =>
@@ -92,9 +99,11 @@ export const useInfiniteGetUserUploadedVideos = (
 		enabled,
 		getNextPageParam: (lastPage) => {
 			const nowLoaded = lastPage.page.pn * lastPage.page.ps
+
 			if (nowLoaded >= lastPage.page.count) {
 				return undefined
 			}
+
 			return lastPage.page.pn + 1
 		},
 		initialPageParam: 1,
@@ -106,6 +115,7 @@ export const useOtherUserInfo = (mid: number, requireCookie = true) => {
 	// 这个接口有风控校验
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!mid && (!requireCookie || hasCookie)
+
 	return useQuery({
 		queryKey: userQueryKeys.otherUserInfo(mid),
 		queryFn: ({ signal }) =>

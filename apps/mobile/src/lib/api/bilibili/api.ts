@@ -188,11 +188,13 @@ export class BilibiliApi {
 				if (!res.result) {
 					res.result = []
 				}
+
 				// search_type=video 也会混入 type 为 ketang（B站课堂）的条目，
 				// 这类条目不是稿件，bvid 为空，无法作为 track 录入本地
 				res.result = res.result.filter(
 					(item) => item.type !== 'ketang' && !!item.bvid,
 				)
+
 				return okAsync(res)
 			})
 	}
@@ -236,6 +238,7 @@ export class BilibiliApi {
 				if (!res.result) {
 					res.result = []
 				}
+
 				return okAsync(res)
 			})
 	}
@@ -274,9 +277,11 @@ export class BilibiliApi {
 		params.append('main_ver', 'v1')
 		params.append('term', term)
 		const bilibiliCookie = useAppStore.getState().bilibiliCookie
+
 		if (bilibiliCookie?.mid) {
 			params.append('userid', bilibiliCookie.mid)
 		}
+
 		const url = `https://s.search.bilibili.com/main/suggest?${params.toString()}`
 
 		return ResultAsync.fromPromise(
@@ -291,6 +296,7 @@ export class BilibiliApi {
 						type: 'RequestAborted',
 					})
 				}
+
 				return new BilibiliApiError({
 					message: e instanceof Error ? e.message : String(e),
 					type: 'RequestFailed',
@@ -307,6 +313,7 @@ export class BilibiliApi {
 						}),
 					)
 				}
+
 				return ResultAsync.fromPromise(
 					response.json() as Promise<{
 						code: number
@@ -329,6 +336,7 @@ export class BilibiliApi {
 						}),
 					)
 				}
+
 				return okAsync(data.result.tag)
 			})
 	}
@@ -375,6 +383,7 @@ export class BilibiliApi {
 		BilibiliApiError
 	> {
 		const { audioQuality, enableDolby, enableHiRes } = params
+
 		return this.getAudioStreamInfo(params).andThen((response) => {
 			const { dash, durl, volume } = response
 
@@ -387,7 +396,9 @@ export class BilibiliApi {
 						}),
 					)
 				}
+
 				logger.debug('老视频不存在 dash，回退到使用 durl 音频流')
+
 				return okAsync({
 					url: durl[0].url,
 					quality: 114514,
@@ -399,6 +410,7 @@ export class BilibiliApi {
 
 			if (enableDolby && dash?.dolby?.audio && dash.dolby.audio.length > 0) {
 				logger.debug('优先使用 Dolby 音频流')
+
 				return okAsync({
 					url: dash.dolby.audio[0].baseUrl,
 					quality: dash.dolby.audio[0].id,
@@ -410,6 +422,7 @@ export class BilibiliApi {
 
 			if (enableHiRes && dash?.flac?.audio) {
 				logger.debug('次级使用 Hi-Res 音频流')
+
 				return okAsync({
 					url: dash.flac.audio.baseUrl,
 					quality: dash.flac.audio.id,
@@ -421,6 +434,7 @@ export class BilibiliApi {
 
 			if (!dash?.audio || dash.audio.length === 0) {
 				logger.error('未找到有效的音频流数据', { response })
+
 				return errAsync(
 					new BilibiliApiError({
 						message: '未找到有效的音频流数据',
@@ -432,6 +446,7 @@ export class BilibiliApi {
 			let stream:
 				| BilibiliTrack['bilibiliMetadata']['bilibiliStreamUrl']
 				| null = null
+
 			const getTime = Date.now() + 60 * 1000 // 加 60s 提前量
 
 			// 尝试找到指定质量的音频流
@@ -453,6 +468,7 @@ export class BilibiliApi {
 					availableQualities: dash.audio.map((a) => a.id),
 				})
 				const highestQualityAudio = dash.audio[0]
+
 				if (highestQualityAudio) {
 					stream = {
 						url: highestQualityAudio.baseUrl,
@@ -466,6 +482,7 @@ export class BilibiliApi {
 
 			if (!stream) {
 				logger.error('未能确定任何可用的音频流', { response })
+
 				return errAsync(
 					new BilibiliApiError({
 						message: '未能确定 any 可用的音频流',
@@ -631,6 +648,7 @@ export class BilibiliApi {
 		const params = getWbiEncodedParams({
 			mid: mid.toString(),
 		})
+
 		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliUserInfo>({
 				endpoint: '/x/space/wbi/acc/info',
@@ -694,6 +712,7 @@ export class BilibiliApi {
 			})
 			.andThen((res) => {
 				res.medias ??= []
+
 				return okAsync(res)
 			})
 	}
@@ -750,6 +769,7 @@ export class BilibiliApi {
 		bvids: string[]
 	}): ResultAsync<0, BilibiliApiError> {
 		const resourcesIds = bvids.map((bvid) => `${bv2av(bvid)}:2`)
+
 		return bilibiliApiClient.postWithCsrf<0>({
 			endpoint: '/x/v3/fav/resource/batch-del',
 			payload: {
@@ -874,9 +894,11 @@ export class BilibiliApi {
 				const meta = await returnOrThrowAsync(
 					this.getSeriesMetadata({ seriesId, signal }),
 				)
+
 				const user = await this.getOtherUserInfo({ mid: meta.mid, signal })
 				const medias: BilibiliCollectionAllContents['medias'] = []
 				const pageSize = 100
+
 				for (let page = 1; ; page += 1) {
 					// oxlint-disable-next-line no-await-in-loop
 					const result = await returnOrThrowAsync(
@@ -888,6 +910,7 @@ export class BilibiliApi {
 							signal,
 						}),
 					)
+
 					for (const archive of result.archives ?? []) {
 						medias.push({
 							id: archive.aid,
@@ -903,10 +926,13 @@ export class BilibiliApi {
 							cnt_info: { collect: 0, play: 0, danmaku: 0 },
 						})
 					}
+
 					onPage?.(medias.length, result.page.total)
+
 					if (!result.archives?.length || medias.length >= result.page.total)
 						break
 				}
+
 				return {
 					info: {
 						id: meta.series_id,
@@ -957,6 +983,7 @@ export class BilibiliApi {
 			del_media_ids: delInFavoriteIdsCombined,
 			type: '2',
 		}
+
 		return bilibiliApiClient.postWithCsrf<BilibiliDealFavoriteForOneVideoResponse>(
 			{
 				endpoint: '/x/v3/fav/resource/deal',
@@ -978,6 +1005,7 @@ export class BilibiliApi {
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
 		const avid = bv2av(bvid)
+
 		return bilibiliApiClient
 			.get<{ list: BilibiliPlaylist[] | null } | null>({
 				endpoint: '/x/v3/fav/folder/created/list-all',
@@ -1010,6 +1038,7 @@ export class BilibiliApi {
 			cid: String(cid),
 			progress: Math.floor(progress).toString(),
 		}
+
 		return bilibiliApiClient.postWithCsrf<0>({
 			endpoint: '/x/v2/history/report',
 			payload: data,
@@ -1037,6 +1066,7 @@ export class BilibiliApi {
 			keyword: keyword ?? '',
 			ps: '30',
 		})
+
 		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliUserUploadedVideosResponse>({
 				endpoint: '/x/space/wbi/arc/search',
@@ -1064,6 +1094,7 @@ export class BilibiliApi {
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
+
 		return bilibiliApiClient.get<BilibiliCommentsResponse>({
 			endpoint: '/x/v2/reply/main',
 			params: {
@@ -1095,6 +1126,7 @@ export class BilibiliApi {
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliReplyCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
+
 		return bilibiliApiClient.get<BilibiliReplyCommentsResponse>({
 			endpoint: '/x/v2/reply/reply',
 			params: {
@@ -1124,6 +1156,7 @@ export class BilibiliApi {
 		action: 0 | 1
 	}): ResultAsync<0, BilibiliApiError> {
 		const avid = bv2av(bvid)
+
 		return bilibiliApiClient.postWithCsrf<0>({
 			endpoint: '/x/v2/reply/action',
 			payload: {
@@ -1171,6 +1204,7 @@ export class BilibiliApi {
 					},
 				},
 			)
+
 			if (!response.ok) {
 				throw new BilibiliApiError({
 					message: `请求 bilibili API 失败: ${response.status} ${response.statusText}`,
@@ -1178,10 +1212,12 @@ export class BilibiliApi {
 					type: 'RequestFailed',
 				})
 			}
+
 			const data = (await response.json()) as {
 				data: { code: BilibiliQrCodeLoginStatus }
 				code: number
 			}
+
 			if (data.code !== 0) {
 				throw new BilibiliApiError({
 					message: `获取二维码登录状态失败: ${data.code}`,
@@ -1190,14 +1226,18 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			const code = data.data.code
+
 			if (code !== BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS) {
 				return {
 					status: code,
 					cookies: '',
 				}
 			}
+
 			const combinedCookieHeader = response.headers.get('Set-Cookie')
+
 			if (!combinedCookieHeader) {
 				throw new BilibiliApiError({
 					message: '未获取到 Set-Cookie 头信息',
@@ -1206,6 +1246,7 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			return {
 				status: BilibiliQrCodeLoginStatus.QRCODE_LOGIN_STATUS_SUCCESS,
 				cookies: combinedCookieHeader,
@@ -1216,6 +1257,7 @@ export class BilibiliApi {
 			if (error instanceof BilibiliApiError) {
 				return error
 			}
+
 			return new BilibiliApiError({
 				message: error instanceof Error ? error.message : String(error),
 				msgCode: 0,
@@ -1255,6 +1297,7 @@ export class BilibiliApi {
 					}),
 				)
 			}
+
 			const responseUrl = response.url // react native 不支持 redirect: 'manual'，所以在这里直接获取最终跳转到的 URL
 
 			return ResultAsync.fromPromise(
@@ -1269,6 +1312,7 @@ export class BilibiliApi {
 				const match = html.match(
 					/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i,
 				)
+
 				if (match && match[1]) {
 					return okAsync(match[1])
 				}
@@ -1285,6 +1329,7 @@ export class BilibiliApi {
 						}),
 					)
 				}
+
 				return okAsync(responseUrl)
 			})
 		})
@@ -1361,6 +1406,7 @@ export class BilibiliApi {
 			bvid,
 			cid: String(cid),
 		})
+
 		return params.andThen((encodedParams) => {
 			return bilibiliApiClient.get<BilibiliWebPlayerInfo>({
 				endpoint: '/x/player/wbi/v2',
@@ -1381,6 +1427,7 @@ export class BilibiliApi {
 		return ResultAsync.fromPromise(
 			(async () => {
 				const target = new URL(url.startsWith('//') ? `https:${url}` : url)
+
 				if (
 					target.protocol !== 'https:' ||
 					!['hdslb.com', 'bilibili.com'].some(
@@ -1390,6 +1437,7 @@ export class BilibiliApi {
 				) {
 					throw new Error('无效的 B 站字幕地址')
 				}
+
 				const response = await fetch(target.href, {
 					signal,
 					credentials: 'omit',
@@ -1398,9 +1446,12 @@ export class BilibiliApi {
 						'User-Agent': BILIBILI_WEB_USER_AGENT,
 					},
 				})
+
 				if (!response.ok) throw new Error(`字幕请求失败：${response.status}`)
 				const data = (await response.json()) as BilibiliSubtitleBody
+
 				if (!Array.isArray(data.body)) throw new Error('字幕格式无效')
+
 				return data
 			})(),
 			(cause) =>
@@ -1446,6 +1497,7 @@ export class BilibiliApi {
 				}),
 			)
 		}
+
 		if (!deleteAllViewed && !avid) {
 			return errAsync(
 				new BilibiliApiError({
@@ -1454,12 +1506,15 @@ export class BilibiliApi {
 				}),
 			)
 		}
+
 		const data: Record<string, string> = {}
+
 		if (deleteAllViewed) {
 			data.viewed = 'true'
 		} else if (avid) {
 			data.aid = avid.toString()
 		}
+
 		return bilibiliApiClient.postWithCsrf<undefined>({
 			endpoint: '/x/v2/history/toview/del',
 			payload: data,
@@ -1495,6 +1550,7 @@ export class BilibiliApi {
 					credentials: 'omit',
 				},
 			)
+
 			if (!response.ok) {
 				throw new BilibiliApiError({
 					message: `获取验证码 token 失败: ${response.status} ${response.statusText}`,
@@ -1502,11 +1558,13 @@ export class BilibiliApi {
 					type: 'RequestFailed',
 				})
 			}
+
 			const data = (await response.json()) as {
 				code: number
 				message?: string
 				data: BilibiliCaptchaTokenData
 			}
+
 			if (data.code !== 0) {
 				throw new BilibiliApiError({
 					message: `获取验证码 token 失败: ${data.message ?? data.code}`,
@@ -1515,11 +1573,13 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			return data.data
 		}
 
 		return ResultAsync.fromPromise(reqFunction(), (error) => {
 			if (error instanceof BilibiliApiError) return error
+
 			return new BilibiliApiError({
 				message: error instanceof Error ? error.message : String(error),
 				msgCode: 0,
@@ -1579,6 +1639,7 @@ export class BilibiliApi {
 					credentials: 'omit',
 				},
 			)
+
 			if (!response.ok) {
 				throw new BilibiliApiError({
 					message: `发送短信验证码失败: ${response.status} ${response.statusText}`,
@@ -1586,11 +1647,13 @@ export class BilibiliApi {
 					type: 'RequestFailed',
 				})
 			}
+
 			const data = (await response.json()) as {
 				code: number
 				message?: string
 				data: BilibiliSmsSendData
 			}
+
 			if (data.code !== 0) {
 				throw new BilibiliApiError({
 					message: `发送短信验证码失败: ${data.message ?? data.code}`,
@@ -1599,11 +1662,13 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			return data.data
 		}
 
 		return ResultAsync.fromPromise(reqFunction(), (error) => {
 			if (error instanceof BilibiliApiError) return error
+
 			return new BilibiliApiError({
 				message: error instanceof Error ? error.message : String(error),
 				msgCode: 0,
@@ -1657,6 +1722,7 @@ export class BilibiliApi {
 					credentials: 'omit',
 				},
 			)
+
 			if (!response.ok) {
 				throw new BilibiliApiError({
 					message: `短信验证码登录失败: ${response.status} ${response.statusText}`,
@@ -1665,11 +1731,13 @@ export class BilibiliApi {
 					cause: undefined,
 				})
 			}
+
 			const data = (await response.json()) as {
 				code: number
 				message?: string
 				data: BilibiliSmsLoginData
 			}
+
 			if (data.code !== 0) {
 				throw new BilibiliApiError({
 					message: `短信验证码登录失败: ${data.message ?? data.code}`,
@@ -1678,7 +1746,9 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			const combinedCookieHeader = response.headers.get('Set-Cookie')
+
 			if (!combinedCookieHeader) {
 				throw new BilibiliApiError({
 					message: '登录成功但未获取到 Set-Cookie 头信息',
@@ -1687,11 +1757,13 @@ export class BilibiliApi {
 					type: 'ResponseFailed',
 				})
 			}
+
 			return combinedCookieHeader
 		}
 
 		return ResultAsync.fromPromise(reqFunction(), (error) => {
 			if (error instanceof BilibiliApiError) return error
+
 			return new BilibiliApiError({
 				message: error instanceof Error ? error.message : String(error),
 				msgCode: 0,
@@ -1716,6 +1788,7 @@ export class BilibiliApi {
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbSearchResponse, BilibiliApiError> {
 		log.debug('searchGarbSkins', { keyword, page, pageSize })
+
 		return bilibiliApiClient.get<BilibiliGarbSearchResponse>({
 			endpoint: '/x/garb/v2/mall/home/search',
 			params: {

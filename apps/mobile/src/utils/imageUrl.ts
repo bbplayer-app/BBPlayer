@@ -11,11 +11,15 @@ export function resolveBilibiliImageUrl(
 	maxSize = 800,
 ): string | null | undefined {
 	if (!url) return url
+
 	const secureUrl = url.startsWith('http:')
 		? url.replace('http:', 'https:')
 		: url
+
 	if (!BILIBILI_IMAGE_CDN.test(secureUrl)) return secureUrl
+
 	if (secureUrl.includes('@')) return secureUrl
+
 	return `${secureUrl}@${maxSize}w_${maxSize}h`
 }
 
@@ -28,5 +32,6 @@ export function resolveTrackCover(
 	remoteCoverUrl: string | null | undefined,
 ): string | null | undefined {
 	if (Platform.OS !== 'android' || !uniqueKey) return remoteCoverUrl
+
 	return Orpheus.getDownloadedCoverUri(uniqueKey) ?? remoteCoverUrl
 }

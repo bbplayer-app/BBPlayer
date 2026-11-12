@@ -24,6 +24,7 @@ export function LoginScreen({
 		event.preventDefault()
 		setBusy(true)
 		setError(null)
+
 		try {
 			if (await verifyToken(token)) {
 				onAuthenticated(token)

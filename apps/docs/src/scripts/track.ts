@@ -17,12 +17,16 @@ if (source !== 'bilibili') {
 		title,
 		element('cover-placeholder'),
 	)
+
 	const bilibiliUrl = new URL(
 		`https://www.bilibili.com/video/${encodeURIComponent(bvid)}`,
 	)
+
 	const p = params.get('p')
+
 	if (p || cid) bilibiliUrl.searchParams.set('p', p || '1')
 	element<HTMLAnchorElement>('bilibili-link').href = bilibiliUrl.href
+
 	const appUrl = cid
 		? new URL(
 				`https://app.bbplayer.roitium.com/app/link-to/playlist/remote/multipage/${encodeURIComponent(bvid)}`,
@@ -30,6 +34,7 @@ if (source !== 'bilibili') {
 		: new URL(
 				`https://app.bbplayer.roitium.com/app/link-to/playlist/remote/search-result/global/${encodeURIComponent(bvid)}`,
 			)
+
 	if (cid) appUrl.searchParams.set('cid', cid)
 	element<HTMLAnchorElement>('app-link').href = appUrl.href
 	element('track-card').hidden = false

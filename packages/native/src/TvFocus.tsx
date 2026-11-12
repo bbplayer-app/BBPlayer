@@ -19,6 +19,7 @@ const tvFocusModule =
  */
 export const setFocusRingColor = (color: string) => {
 	const processed = processColor(color)
+
 	if (typeof processed !== 'number') return
 	tvFocusModule?.setFocusRingColor(processed)
 }
@@ -54,5 +55,6 @@ export function TvFocusScope(props: TvFocusScopeProps) {
 	if (!NativeTvFocusScope) {
 		return createElement(View, props)
 	}
+
 	return createElement(NativeTvFocusScope, props)
 }

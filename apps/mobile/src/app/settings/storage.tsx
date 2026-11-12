@@ -96,6 +96,7 @@ export default function StorageSettingsPage() {
 
 	const items = useMemo<UsageItem[]>(() => {
 		if (!usage) return []
+
 		return [
 			{
 				key: 'runtimeCache',
@@ -146,15 +147,18 @@ export default function StorageSettingsPage() {
 		() => items.reduce((sum, item) => sum + item.value, 0),
 		[items],
 	)
+
 	const clearable = usage ? usage.runtimeCacheBytes + usage.musicCacheBytes : 0
 
 	const clearCache = async () => {
 		if (isClearing) return
 		setIsClearing(true)
+
 		try {
 			// 图片缓存由 expo-image 自己管理；其余运行数据缓存由 native 处理；
 			// Media3 在线播放缓存由 orpheus 处理。
 			const imageCacheCleared = await Image.clearDiskCache()
+
 			if (!imageCacheCleared) throw new Error('图片磁盘缓存清理失败')
 			await clearCacheAsync()
 			await Orpheus.clearPlaybackCache()
