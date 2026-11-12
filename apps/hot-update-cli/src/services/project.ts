@@ -14,6 +14,7 @@ export async function resolveProjectDirectory(
 		if (!(await stat(projectDirectory)).isDirectory()) {
 			throw new Error('not a directory')
 		}
+
 		await access(resolve(projectDirectory, 'package.json'))
 	} catch {
 		throw new Error(`Project directory is invalid: ${projectDirectory}`)

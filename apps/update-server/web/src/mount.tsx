@@ -43,6 +43,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 			clearToken()
 			setToken(null)
 		})
+
 		return () => setUnauthorizedHandler(null)
 	}, [])
 
@@ -56,5 +57,6 @@ function AuthGate({ children }: { children: ReactNode }) {
 			/>
 		)
 	}
+
 	return children
 }

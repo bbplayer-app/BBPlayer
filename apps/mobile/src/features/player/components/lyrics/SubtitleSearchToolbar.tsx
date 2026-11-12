@@ -48,20 +48,27 @@ export function SubtitleSearchToolbar({
 				easing: Easing.bezier(0.2, 0, 0, 1),
 			}),
 		)
+
 		if (!visible) {
 			input.current?.blur()
+
 			return
 		}
+
 		const timer = setTimeout(() => input.current?.focus(), 280)
+
 		return () => clearTimeout(timer)
 	}, [visible, progress])
+
 	const languageStyle = useAnimatedStyle(() => ({
 		flexGrow: 1 - progress.value,
 	}))
+
 	const labelStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }))
 	const searchStyle = useAnimatedStyle(() => ({ flexGrow: progress.value }))
 	const fieldStyle = useAnimatedStyle(() => ({ opacity: progress.value }))
 	const hasQuery = !!search.trim()
+
 	return (
 		<View style={styles.toolbar}>
 			<View style={styles.row}>

@@ -10,11 +10,14 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 export function useBilibiliPlayerInfo(active: boolean) {
 	const track = useCurrentTrack()
 	const trackId = useCurrentTrackId()
+
 	const metadata =
 		track && track.uniqueKey === trackId && track.source === 'bilibili'
 			? track.bilibiliMetadata
 			: undefined
+
 	const enabled = active && !!metadata
+
 	// Ordinary video playback resolves its first CID in the native stream resolver too.
 	const pages = useQuery({
 		queryKey: videoDataQueryKeys.getMultiPageList(metadata?.bvid),
@@ -27,9 +30,11 @@ export function useBilibiliPlayerInfo(active: boolean) {
 		retry: 1,
 		meta: { silent: true },
 	})
+
 	const cid = metadata?.isMultiPage
 		? (metadata.cid ?? undefined)
 		: pages.data?.[0]?.cid
+
 	const info = useQuery({
 		queryKey: videoDataQueryKeys.getWebPlayerInfo(metadata?.bvid, cid),
 		queryFn: ({ signal }) =>
@@ -45,8 +50,10 @@ export function useBilibiliPlayerInfo(active: boolean) {
 		retry: 1,
 		meta: { silent: true },
 	})
+
 	const waitingForCid =
 		enabled && !metadata?.isMultiPage && pages.isPending && !pages.isPaused
+
 	return {
 		track,
 		trackId,

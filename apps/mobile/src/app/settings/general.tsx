@@ -38,12 +38,14 @@ export default function GeneralSettingsPage() {
 	const setEnableDataCollection = useAppStore(
 		(state) => state.setEnableDataCollection,
 	)
+
 	const enableDataCollection = useAppStore(
 		(state) => state.settings.enableDataCollection,
 	)
 
 	const setEnableDebugLog = useAppStore((state) => state.setEnableDebugLog)
 	const enableDebugLog = useAppStore((state) => state.settings.enableDebugLog)
+
 	const expandMultiPageOnSync = useAppStore(
 		(state) => state.settings.expandMultiPageOnSync,
 	)
@@ -57,15 +59,19 @@ export default function GeneralSettingsPage() {
 
 	const handleCheckForUpdate = async () => {
 		setIsCheckingForUpdate(true)
+
 		try {
 			const result = await checkForAppUpdate()
+
 			if (result.isErr()) {
 				toast.error('检查更新失败', { description: result.error.message })
 				setIsCheckingForUpdate(false)
+
 				return
 			}
 
 			const { update } = result.value
+
 			if (update) {
 				if (update.forced) {
 					openModal('UpdateApp', update, { dismissible: false })
@@ -78,6 +84,7 @@ export default function GeneralSettingsPage() {
 		} catch (e) {
 			toast.error('检查更新时发生未知错误', { description: String(e) })
 		}
+
 		setIsCheckingForUpdate(false)
 	}
 
@@ -157,6 +164,7 @@ export default function GeneralSettingsPage() {
 							// 使用 setSettings 方法会跳转到「2025-08-05 播放」的页面？but why？只能先使用 setState
 							useAppStore.setState((state) => {
 								state.settings.expandMultiPageOnSync = value
+
 								return state
 							})
 						}
@@ -221,11 +229,13 @@ async function performShareLog(
 		await flushLogs()
 		const d = new Date()
 		const dateString = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+
 		const file = new FileSystem.File(
 			FileSystem.Paths.document,
 			'logs',
 			`${dateString}.log`,
 		)
+
 		if (file.exists) {
 			await Sharing.shareAsync(file.uri)
 		} else {

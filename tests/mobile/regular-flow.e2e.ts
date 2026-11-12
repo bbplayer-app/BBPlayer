@@ -15,6 +15,7 @@ async function findPlaylist(app: App, screen: Screen, name: string) {
 	await expect(
 		row.or(screen.getByTestId('library-playlist-empty')).first(),
 	).toBeVisible()
+
 	return row
 }
 
@@ -92,6 +93,7 @@ test(
 			if (submitted && !deleted) {
 				await app.screenshot('playlist-before-cleanup')
 				const row = await findPlaylist(app, screen, prefix)
+
 				if (await row.isVisible()) {
 					await row.tap()
 					await deletePlaylist(screen)
@@ -118,16 +120,20 @@ test(
 		const replace = screen.getByTestId('alert-title')
 		const bar = screen.getByTestId('now-playing-bar')
 		await expect(bar.or(replace).first()).toBeVisible()
+
 		if (await replace.isVisible()) {
 			await expect(replace).toHaveText('替换播放列表')
 			await screen.getByTestId('alert-confirm-label').tap()
 		}
+
 		await bar.tap()
 		const elapsed = screen.getByTestId('player-elapsed-time')
 		const pause = screen.getByTestId('player-pause')
 		const play = screen.getByTestId('player-play')
+
 		try {
 			await expect(play.or(pause).first()).toBeVisible({ timeout: 45_000 })
+
 			// 重跑时可能选中上次已暂停的同一首歌，点击列表项不会自动恢复播放。
 			if (await play.isVisible()) await play.tap()
 			await expect(pause).toBeVisible({ timeout: 45_000 })

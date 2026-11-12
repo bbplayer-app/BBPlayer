@@ -116,12 +116,16 @@ const clamp = (value: number, min: number, max: number) =>
 /** 从调色板选一个"最有存在感"的种子色：饱和度越高、占比越大越优先。 */
 function pickSeedColor(swatches: ColorInfo[], fallbackColor: string) {
 	let best = { color: Color(fallbackColor), score: -1 }
+
 	for (const swatch of swatches) {
 		const color = Color(swatch.hex)
+
 		const score =
 			color.saturationl() * Math.sqrt(Math.max(swatch.population, 1))
+
 		if (score > best.score) best = { color, score }
 	}
+
 	return best.color
 }
 
@@ -154,12 +158,15 @@ export function getFluidBackgroundColors(
 
 	const seed = pickSeedColor(swatches, fallbackColor)
 	const fallback = Color(fallbackColor)
+
 	const hue =
 		seed.saturationl() >= MIN_SEED_SATURATION ? seed.hue() : fallback.hue()
+
 	const saturation = clamp(seed.saturationl(), ...SATURATION_BANDS[colorScheme])
 	const [minLightness, maxLightness] = LIGHTNESS_BANDS[colorScheme]
 	const midLightness = (minLightness + maxLightness) / 2
 	const lightnessSpread = (maxLightness - minLightness) * LIGHTNESS_SPREAD
+
 	const at = (hueOffset: number, lightness: number) =>
 		Color.hsl(
 			(hue + hueOffset + 360) % 360,
@@ -194,6 +201,7 @@ function useTransitionColors(first: string, second: string, duration: number) {
 		// withTiming 从当前显示颜色继续，快速切歌时也不会跳回上首歌的起点。
 		startColor.set(withTiming(first, config))
 		endColor.set(withTiming(second, config))
+
 		return () => {
 			cancelAnimation(startColor)
 			cancelAnimation(endColor)
@@ -213,11 +221,13 @@ function RotatingGradient({
 	// 只旋转着色器端点，渐变长度与原版一样为高度。
 	const start = useDerivedValue(() => {
 		const angle = (elapsed.value / period) * Math.PI * 2
+
 		return {
 			x: width / 2 + (Math.sin(angle) * height) / 2,
 			y: height / 2 - (Math.cos(angle) * height) / 2,
 		}
 	})
+
 	const end = useDerivedValue(() => ({
 		x: width - start.value.x,
 		y: height - start.value.y,
@@ -249,9 +259,11 @@ export function FluidBackground({
 	style,
 }: FluidBackgroundProps) {
 	const [size, setSize] = useState({ width: 0, height: 0 })
+
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
 	)
+
 	const initialReducedMotion = useReducedMotion()
 	const [reducedMotion, setReducedMotion] = useState(initialReducedMotion)
 	const elapsed = useSharedValue(0)
@@ -259,6 +271,7 @@ export function FluidBackground({
 	const flowSpeed = useSharedValue(paused ? 0 : 1)
 	const [isFlowEasing, setIsFlowEasing] = useState(false)
 	const systemColorScheme = useColorScheme()
+
 	const resolvedColors =
 		colors ??
 		getFluidBackgroundColors(palette, {
@@ -266,7 +279,9 @@ export function FluidBackground({
 			colorScheme:
 				colorScheme ?? (systemColorScheme === 'light' ? 'light' : 'dark'),
 		})
+
 	const hasSize = size.width > 0 && size.height > 0
+
 	const duration =
 		paused ||
 		!isAppActive ||
@@ -274,11 +289,13 @@ export function FluidBackground({
 		!Number.isFinite(transitionDuration)
 			? 0
 			: Math.max(0, transitionDuration)
+
 	const colorsA = useTransitionColors(
 		resolvedColors[0],
 		resolvedColors[1],
 		duration,
 	)
+
 	const colorsB = useTransitionColors(
 		resolvedColors[2],
 		resolvedColors[3],
@@ -287,9 +304,11 @@ export function FluidBackground({
 
 	useEffect(() => {
 		let motionChanged = false
+
 		const appSubscription = AppState.addEventListener('change', (state) => {
 			setIsAppActive(state === 'active')
 		})
+
 		const motionSubscription = AccessibilityInfo.addEventListener(
 			'reduceMotionChanged',
 			(value) => {
@@ -297,6 +316,7 @@ export function FluidBackground({
 				setReducedMotion(value)
 			},
 		)
+
 		// useReducedMotion 是应用启动时的快照；补查挂载时的实际系统设置。
 		void AccessibilityInfo.isReduceMotionEnabled().then(
 			(value) => {
@@ -304,6 +324,7 @@ export function FluidBackground({
 			},
 			() => {},
 		)
+
 		return () => {
 			motionChanged = true
 			appSubscription.remove()
@@ -324,6 +345,7 @@ export function FluidBackground({
 			duration: Math.max(0, flowTransitionDuration),
 			easing: Easing.inOut(Easing.quad),
 		}
+
 		if (paused) {
 			// 先保持帧回调运行，等速度缓动到 0 后再停，避免流动骤停。
 			setIsFlowEasing(true)
@@ -341,6 +363,7 @@ export function FluidBackground({
 		frame.setActive(
 			hasSize && isAppActive && !reducedMotion && (!paused || isFlowEasing),
 		)
+
 		return () => frame.setActive(false)
 	}, [frame, hasSize, isAppActive, paused, reducedMotion, isFlowEasing])
 

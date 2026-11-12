@@ -34,16 +34,20 @@ export class DataMigration {
 			`SELECT name FROM ${DATA_MIGRATIONS_TABLE} WHERE name = ?`,
 			[this.name],
 		)
+
 		if (applied) {
 			storage.remove(this.legacyStorageKey)
+
 			return true
 		}
 
 		const appliedInLegacyStorage =
 			storage.getBoolean(this.legacyStorageKey) === true
+
 		if (appliedInLegacyStorage) {
 			this.markAsApplied()
 		}
+
 		storage.remove(this.legacyStorageKey)
 
 		return appliedInLegacyStorage

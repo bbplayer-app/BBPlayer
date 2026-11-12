@@ -18,11 +18,13 @@ const SkinAppbarBackground = memo(function SkinAppbarBackground({
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const colors = useTheme().colors
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
 
 	const head = activeSkin?.skins[activeSkinIndex]?.background.head
+
 	if (!head || pureWhiteBackground) return null
 
 	return (

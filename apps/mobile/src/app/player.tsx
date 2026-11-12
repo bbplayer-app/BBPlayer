@@ -65,6 +65,7 @@ function usePageScrollHandler(
 		(event) => {
 			'worklet'
 			const { onPageScroll } = handlers
+
 			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
 				onPageScroll(event as unknown as PageScrollEvent, context)
 			}
@@ -87,31 +88,39 @@ export default function PlayerPage() {
 	useEffect(() => {
 		markInteractive()
 	}, [markInteractive])
+
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
 			? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
 			: null,
 	)
+
 	const coverRef = useImage(currentTrackCover ?? '', {
 		onError: () => void 0,
 	})
+
 	const { width, height } = useWindowDimensions()
 	const colorScheme = useColorScheme()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	// 旧版 md3 / streamer 等存量值也回落到普通渐变。
 	const isFluidBackground = useAppStore(
 		(state) =>
 			!state.settings.pureWhiteBackground &&
 			state.settings.playerBackgroundStyle === 'fluid',
 	)
+
 	const isFocused = useIsFocused()
 	const isPlaying = useIsPlaying()
 	const [palette, setPalette] = useState<ExtractedPalette | null>(null)
+
 	const [isForeground, setIsForeground] = useState(
 		AppState.currentState === 'active',
 	)
+
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
@@ -137,6 +146,7 @@ export default function PlayerPage() {
 
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)
+
 		if (router.canGoBack()) {
 			router.back()
 		}
@@ -160,6 +170,7 @@ export default function PlayerPage() {
 
 	useEffect(() => {
 		const { ready, context } = playbackContextStore$.peek()
+
 		if (!isPreventingBack && ready && context === null) {
 			if (router.canGoBack()) router.back()
 			else router.replace('/')
@@ -169,8 +180,10 @@ export default function PlayerPage() {
 	const handleDismiss = () => {
 		if (index === 1) {
 			pagerRef.current?.setPage(0)
+
 			return
 		}
+
 		dismissPlayer()
 	}
 
@@ -215,28 +228,34 @@ export default function PlayerPage() {
 				logger.error('提取封面图片主题色失败', e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
+
 		return () => {
 			cancelled = true
 		}
 	}, [coverRef, currentTrackCover, isForeground, pureWhiteBackground])
 
 	const gradientMainColor = useSharedValue(colors.background)
+
 	const gradientColors = useDerivedValue(() => [
 		gradientMainColor.value,
 		colors.background,
 	])
+
 	useEffect(() => {
 		if (isFluidBackground || pureWhiteBackground) return
+
 		const topColor =
 			colorScheme === 'light'
 				? (palette?.lightMuted?.hex ?? palette?.muted?.hex ?? colors.background)
 				: (palette?.darkMuted?.hex ?? palette?.muted?.hex ?? colors.background)
+
 		gradientMainColor.set(
 			withTiming(topColor, {
 				duration: isForeground && isFocused ? 400 : 0,
 				easing: Easing.out(Easing.quad),
 			}),
 		)
+
 		return () => cancelAnimation(gradientMainColor)
 	}, [
 		palette,
@@ -260,22 +279,28 @@ export default function PlayerPage() {
 	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
 			setMenuVisible(false)
+
 			return
 		}
 
 		if (usePlayerChaptersSheetStore.getState().isOpen) {
 			void usePlayerChaptersSheetStore.getState().close()
+
 			return
 		}
 
 		if (usePlayerQueueSheetStore.getState().isOpen) {
 			void usePlayerQueueSheetStore.getState().close()
+
 			return
 		}
+
 		if (index === 1) {
 			pagerRef.current?.setPage(0)
+
 			return
 		}
+
 		handleDismiss()
 	})
 

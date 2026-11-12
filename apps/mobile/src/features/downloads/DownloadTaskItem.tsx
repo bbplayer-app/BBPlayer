@@ -37,10 +37,12 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 	useEffect(() => {
 		const handler = (e: ProgressEvent['progress:uniqueKey']) => {
 			sharedProgress.value = e.percent
+
 			if (e.state !== task.state) {
 				setTask((t) => ({ ...t, state: e.state }))
 			}
 		}
+
 		eventListner.on(`progress:${task.id}`, handler)
 
 		return () => {
@@ -94,6 +96,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 
 	const icons = useMemo(() => {
 		let icon = null
+
 		switch (task.state) {
 			case DownloadState.QUEUED:
 				icon = (
@@ -146,6 +149,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 							icon='reload'
 							onPress={async () => {
 								if (!retryTrack) return
+
 								try {
 									if (retryState === DownloadState.STOPPED) {
 										await Orpheus.resumeDownload(task.id)

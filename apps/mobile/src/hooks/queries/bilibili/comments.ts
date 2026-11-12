@@ -18,11 +18,13 @@ export function useComments(bvid: string, mode = 3) {
 			const res = await returnOrThrowAsync(
 				bilibiliApi.getComments({ bvid, next: pageParam, mode, signal }),
 			)
+
 			return res
 		},
 		initialPageParam: 0,
 		getNextPageParam: (lastPage) => {
 			if (lastPage.cursor.is_end) return undefined
+
 			return lastPage.cursor.next
 		},
 	})
@@ -35,12 +37,15 @@ export function useReplyComments(bvid: string, rpid: number) {
 			const res = await returnOrThrowAsync(
 				bilibiliApi.getReplyComments({ bvid, rpid, pn: pageParam, signal }),
 			)
+
 			return res
 		},
 		initialPageParam: 1,
 		getNextPageParam: (lastPage) => {
 			const totalPages = Math.ceil(lastPage.page.count / lastPage.page.size)
+
 			if (lastPage.page.num >= totalPages) return undefined
+
 			return lastPage.page.num + 1
 		},
 	})

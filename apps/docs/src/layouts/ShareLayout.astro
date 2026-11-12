@@ -6,6 +6,7 @@ interface Props {
 	title: string
 	showBrowserHint?: boolean
 }
+
 const { title, showBrowserHint = false } = Astro.props
 ---
 
@@ -40,6 +41,7 @@ const { title, showBrowserHint = false } = Astro.props
 
 <script>
 	const hint = document.getElementById('browser-hint')
+
 	if (hint) {
 		hint.hidden = !/MicroMessenger|QQ\/|Weibo|AlipayClient|DingTalk|ZhihuHybrid|BaiduBoxApp/i.test(navigator.userAgent)
 	}

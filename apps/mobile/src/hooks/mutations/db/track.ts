@@ -32,13 +32,16 @@ export const useEditTrackMetadata = () => {
 				coverUrl,
 				source,
 			})
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (track) => {
 			if (usePlayerStore.getState().internalTrack?.id === track.id) {
 				usePlayerStore.setState({ internalTrack: track })
 			}
+
 			await queryClient.invalidateQueries({
 				queryKey: [...playlistKeys.all, 'playlistContents'],
 			})

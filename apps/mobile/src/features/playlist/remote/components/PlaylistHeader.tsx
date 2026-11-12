@@ -55,6 +55,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const { width, height } = useWindowDimensions()
 	const coverSize = width < 360 || height < 700 ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
+
 	if (!title) return null
 
 	return (
@@ -72,6 +73,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {
 							const result = await Clipboard.setStringAsync(title)
+
 							if (!result) {
 								toast.error('复制失败')
 							} else {

@@ -17,6 +17,7 @@ import {
 
 function formatMs(value: number | null): string {
 	if (value === null) return '—'
+
 	return value < 1000
 		? `${Math.round(value)}ms`
 		: `${(value / 1000).toFixed(2)}s`
@@ -32,6 +33,7 @@ function MetricRow({
 	description?: string
 }) {
 	const theme = useTheme()
+
 	return (
 		<View style={styles.metricRow}>
 			<View style={styles.metricLabel}>
@@ -60,9 +62,11 @@ export default function PerformanceScreen() {
 	const theme = useTheme()
 	const router = useRouter()
 	const [metrics, setMetrics] = useState<StartupMetrics>(getMetrics)
+
 	const [startupProfilingEnabled, setStartupProfilingEnabledState] = useState(
 		isStartupProfilingEnabled,
 	)
+
 	const [shakeProfilingEnabled, setShakeProfilingEnabledState] = useState(
 		isShakeProfilingEnabled,
 	)

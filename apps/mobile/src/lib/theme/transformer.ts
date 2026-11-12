@@ -12,6 +12,7 @@ const resource = (
 	mapping: Record<string, string>,
 ): string | null => {
 	if (!url) return null
+
 	return mapping[url] ?? url
 }
 
@@ -45,6 +46,7 @@ export const transformManifestToInstalledSkin = ({
 	source,
 }: TransformOptions): Result<InstalledSkin, ServiceError> => {
 	const result = doTransform({ manifest, mapping, rootUri, skinId, source })
+
 	if (result.isErr()) return result
 	log.debug('[transform] built InstalledSkin', {
 		cards: manifest.cards.length,
@@ -52,6 +54,7 @@ export const transformManifestToInstalledSkin = ({
 		thumbups: manifest.thumbups.length,
 		skinId,
 	})
+
 	return ok(result.value)
 }
 

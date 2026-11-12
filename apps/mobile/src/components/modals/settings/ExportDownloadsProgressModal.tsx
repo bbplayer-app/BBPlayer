@@ -49,10 +49,13 @@ const VARIABLE_KEYS = Object.keys(PREVIEW_VALUES)
 function buildPreviewFilename(pattern: string): string {
 	if (!pattern.trim()) return `${PREVIEW_VALUES.name}.m4a`
 	let result = pattern
+
 	for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
 		result = result.replaceAll(`{${key}}`, val)
 	}
+
 	result = result.replace(/[\\/:*?"<>|]/g, '_').trim()
+
 	return result ? `${result}.m4a` : `${PREVIEW_VALUES.name}.m4a`
 }
 
@@ -81,6 +84,7 @@ const ExportDownloadsProgressModal = memo(
 			stage: 'config',
 			message: '准备导出...',
 		})
+
 		const hasStarted = useRef(false)
 		const subscriptionRef = useRef<{ remove(): void } | null>(null)
 
@@ -123,6 +127,7 @@ const ExportDownloadsProgressModal = memo(
 						const isLast = current === total
 
 						let message = `正在导出 ${current}/${total}...`
+
 						if (event.status === 'error') {
 							message = `导出 ${event.currentId} 失败: ${event.message ?? '未知错误'}`
 						}
@@ -148,6 +153,7 @@ const ExportDownloadsProgressModal = memo(
 			)
 
 			let effectivePattern = filenamePattern.trim() || '{name}'
+
 			if (!patternHasVariable(effectivePattern)) {
 				effectivePattern = '{name}'
 			}
@@ -178,6 +184,7 @@ const ExportDownloadsProgressModal = memo(
 		}
 
 		const isFinished = stage === 'completed' || stage === 'error'
+
 		const progressValue =
 			progress.total > 0 ? progress.current / progress.total : undefined
 

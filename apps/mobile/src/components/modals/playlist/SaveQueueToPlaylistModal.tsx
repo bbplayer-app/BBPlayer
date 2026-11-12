@@ -34,6 +34,7 @@ export default function SaveQueueToPlaylistModal({
 				'SaveQueueToPlaylistModal',
 			)
 			setLoading(false)
+
 			return
 		}
 

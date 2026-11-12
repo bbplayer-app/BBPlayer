@@ -96,6 +96,7 @@ export const TrackListItem = memo(function TrackListItem({
 	const renderDownloadStatus = useCallback(() => {
 		if (!downloadState) return null
 		let iconConfig
+
 		switch (downloadState) {
 			case DownloadState.COMPLETED:
 				iconConfig = {
@@ -151,8 +152,10 @@ export const TrackListItem = memo(function TrackListItem({
 			onPress={() => {
 				if (selectMode) {
 					if (!isReadOnly) toggleSelected(data.id)
+
 					return
 				}
+
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}

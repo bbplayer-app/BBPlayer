@@ -16,9 +16,21 @@ import {
 } from '@/components/ui/table'
 import { bytes, formatDate } from '@/lib/utils'
 
-const statusOrder = ['pending', 'processing', 'ready', 'failed', 'not_beneficial'] as const
+const statusOrder = [
+	'pending',
+	'processing',
+	'ready',
+	'failed',
+	'not_beneficial',
+] as const
 
-const statusMeta: Record<(typeof statusOrder)[number], { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+const statusMeta: Record<
+	(typeof statusOrder)[number],
+	{
+		label: string
+		variant: 'default' | 'secondary' | 'outline' | 'destructive'
+	}
+> = {
 	pending: { label: 'Pending', variant: 'secondary' },
 	processing: { label: 'Processing', variant: 'outline' },
 	ready: { label: 'Ready', variant: 'default' },
@@ -32,11 +44,16 @@ export function PatchesPage() {
 		queryFn: patches,
 		refetchInterval: 10_000,
 	})
+
 	const counts = useMemo(() => {
 		const map: Record<string, number> = {}
-		for (const patch of query.data ?? []) map[patch.status] = (map[patch.status] ?? 0) + 1
+
+		for (const patch of query.data ?? [])
+			map[patch.status] = (map[patch.status] ?? 0) + 1
+
 		return map
 	}, [query.data])
+
 	return (
 		<AppShell active='patches'>
 			<PageHeader
@@ -59,8 +76,12 @@ export function PatchesPage() {
 								key={status}
 								variant={statusMeta[status].variant}
 							>
-								<span className='font-semibold tabular-nums'>{counts[status] ?? 0}</span>
-								<span className='font-normal opacity-80'>{statusMeta[status].label}</span>
+								<span className='font-semibold tabular-nums'>
+									{counts[status] ?? 0}
+								</span>
+								<span className='font-normal opacity-80'>
+									{statusMeta[status].label}
+								</span>
 							</Badge>
 						))}
 					</div>
@@ -77,10 +98,18 @@ export function PatchesPage() {
 										<TableHead>Update path</TableHead>
 										<TableHead>Platform</TableHead>
 										<TableHead>Delta</TableHead>
-										<TableHead className='hidden sm:table-cell'>Saving</TableHead>
-										<TableHead className='hidden md:table-cell'>Attempts</TableHead>
-										<TableHead className='hidden lg:table-cell'>Served</TableHead>
-										<TableHead className='hidden xl:table-cell'>Updated</TableHead>
+										<TableHead className='hidden sm:table-cell'>
+											Saving
+										</TableHead>
+										<TableHead className='hidden md:table-cell'>
+											Attempts
+										</TableHead>
+										<TableHead className='hidden lg:table-cell'>
+											Served
+										</TableHead>
+										<TableHead className='hidden xl:table-cell'>
+											Updated
+										</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -102,6 +131,7 @@ export function PatchesPage() {
 
 function PatchRow({ patch }: { patch: PatchEndpoint }) {
 	const meta = statusMeta[patch.status]
+
 	return (
 		<TableRow>
 			<TableCell className='max-w-xl align-top'>
@@ -166,7 +196,12 @@ function PatchRow({ patch }: { patch: PatchEndpoint }) {
 }
 
 function saving(patch: PatchEndpoint) {
-	if (patch.size_bytes === undefined || patch.target_size <= 0 || patch.status === 'failed')
+	if (
+		patch.size_bytes === undefined ||
+		patch.target_size <= 0 ||
+		patch.status === 'failed'
+	)
 		return null
+
 	return `${Math.max(0, Math.round((1 - patch.size_bytes / patch.target_size) * 1000) / 10)}%`
 }

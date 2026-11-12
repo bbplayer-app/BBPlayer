@@ -17,6 +17,7 @@ export function useNowPlayingBar(
 				bottomTabBarHeight,
 				retainedBottomTabBarHeight: bottomTabBarHeight,
 			})
+
 			return () => {
 				// 避免旧页面延迟失焦时清掉新页面已经发布的配置。
 				if (nowPlayingBarStore$.owner.peek() === owner) {

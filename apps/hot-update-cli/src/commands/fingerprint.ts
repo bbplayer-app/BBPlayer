@@ -9,6 +9,7 @@ export async function showFingerprint(
 	const projectDirectory = await resolveProjectDirectory(
 		argumentsMap['project-dir'],
 	)
+
 	const fingerprint = await createFingerprintAsync(projectDirectory, {
 		platforms: ['android'],
 		silent: true,
@@ -16,7 +17,9 @@ export async function showFingerprint(
 
 	if (argumentsMap.json) {
 		process.stdout.write(`${JSON.stringify(fingerprint)}\n`)
+
 		return
 	}
+
 	process.stdout.write(`${fingerprint.hash}\n`)
 }

@@ -14,6 +14,7 @@ function parseShareLink(input: string): {
 	inviteCode?: string
 } {
 	const trimmed = input.trim()
+
 	if (!trimmed) return {}
 
 	try {
@@ -21,6 +22,7 @@ function parseShareLink(input: string): {
 		const qpShareId = url.searchParams.get('shareId') ?? undefined
 		const qpInvite = url.searchParams.get('inviteCode') ?? undefined
 		const pathUuid = url.pathname.match(UUID_RE)?.[0]
+
 		return {
 			shareId: qpShareId ?? pathUuid ?? undefined,
 			inviteCode: qpInvite ?? undefined,
@@ -28,6 +30,7 @@ function parseShareLink(input: string): {
 	} catch (_e) {
 		// fallback to plain text / raw UUID
 		const uuid = trimmed.match(UUID_RE)?.[0]
+
 		return { shareId: uuid ?? undefined, inviteCode: undefined }
 	}
 }
@@ -60,6 +63,7 @@ export default function SubscribeToSharedPlaylistModal() {
 	const handleChangeInput = (text: string) => {
 		setInput(text)
 		const next = parseShareLink(text)
+
 		if (next.inviteCode) {
 			setInviteCode(next.inviteCode)
 		}

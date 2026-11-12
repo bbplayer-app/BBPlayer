@@ -23,6 +23,7 @@ import {
 export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+
 	return (
 		<>
 			<HighFreqRow style={{ paddingBottom: 12 }}>
@@ -57,6 +58,7 @@ const report = (error: unknown) =>
 function PodcastPlaybackSettings() {
 	const { shuffle, repeat } = usePlaybackOptions()
 	const { colors } = useTheme()
+
 	return (
 		<>
 			<List.Item
@@ -106,6 +108,7 @@ function PodcastPlaybackSettings() {
 							: repeat === RepeatMode.TRACK
 								? RepeatMode.QUEUE
 								: RepeatMode.OFF
+
 					void setPlayerRepeatMode(next).catch(report)
 				}}
 			/>

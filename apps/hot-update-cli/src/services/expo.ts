@@ -10,6 +10,7 @@ function resolveExpoCliPath(projectDirectory: string): string {
 	const projectRequire = createRequire(
 		resolve(projectDirectory, 'package.json'),
 	)
+
 	try {
 		return projectRequire.resolve('expo/bin/cli')
 	} catch (error) {
@@ -27,6 +28,7 @@ export async function runExpoCommand(
 	forwardOutput = false,
 ): Promise<string> {
 	const expoCliPath = resolveExpoCliPath(projectDirectory)
+
 	return await runCommand(
 		process.execPath,
 		[expoCliPath, ...argumentsList],

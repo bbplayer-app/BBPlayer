@@ -42,6 +42,7 @@ const authRoute = new Hono<{
 			const face = normalizeOptionalString(body.face)
 
 			const { db, client } = await createDb(c.env.DATABASE_URL)
+
 			try {
 				const existing = await db
 					.select({ id: users.id })
@@ -66,6 +67,7 @@ const authRoute = new Hono<{
 				})
 
 				const token = await signToken(accountId, c.env.JWT_SECRET)
+
 				return c.json({
 					token,
 					account: {
@@ -95,6 +97,7 @@ const authRoute = new Hono<{
 			const username = normalizeUsername(body.username)
 
 			const { db, client } = await createDb(c.env.DATABASE_URL)
+
 			try {
 				const rows = await db
 					.select({
@@ -109,6 +112,7 @@ const authRoute = new Hono<{
 					.limit(1)
 
 				const account = rows[0]
+
 				if (
 					!account ||
 					!(await verifyPassword(
@@ -126,6 +130,7 @@ const authRoute = new Hono<{
 					.where(eq(users.id, account.id))
 
 				const token = await signToken(account.id, c.env.JWT_SECRET)
+
 				return c.json({
 					token,
 					account: {
@@ -143,6 +148,7 @@ const authRoute = new Hono<{
 	.get('/me', authMiddleware, async (c) => {
 		const { sub } = c.var.jwtPayload
 		const { db, client } = await createDb(c.env.DATABASE_URL)
+
 		try {
 			const rows = await db
 				.select({
@@ -156,6 +162,7 @@ const authRoute = new Hono<{
 				.limit(1)
 
 			const account = rows[0]
+
 			if (!account) {
 				return c.json({ error: 'account_not_found' }, 404)
 			}
@@ -188,14 +195,18 @@ const authRoute = new Hono<{
 			const body = c.req.valid('json')
 			const name = normalizeOptionalString(body.name)
 			const face = normalizeOptionalString(body.face)
+
 			const profileUpdates: {
 				name?: string
 				face?: string | null
 			} = {}
+
 			if (name) profileUpdates.name = name
+
 			if (face !== undefined) profileUpdates.face = face
 
 			const { db, client } = await createDb(c.env.DATABASE_URL)
+
 			try {
 				const rows = await db
 					.update(users)
@@ -209,6 +220,7 @@ const authRoute = new Hono<{
 					})
 
 				const account = rows[0]
+
 				if (!account) {
 					return c.json({ error: 'account_not_found' }, 404)
 				}
@@ -236,6 +248,7 @@ function normalizeOptionalString(
 ): string | null | undefined {
 	if (value === undefined) return undefined
 	const trimmed = value.trim()
+
 	return trimmed ? trimmed : null
 }
 
@@ -252,6 +265,7 @@ async function signToken(accountId: string, secret: string): Promise<string> {
 async function hashPassword(password: string, pepper: string): Promise<string> {
 	const salt = crypto.getRandomValues(new Uint8Array(16))
 	const digest = await digestPassword(password, salt, pepper)
+
 	return `${PASSWORD_HASH_VERSION}$${bytesToBase64(salt)}$${bytesToBase64(digest)}`
 }
 
@@ -261,6 +275,7 @@ async function verifyPassword(
 	pepper: string,
 ): Promise<boolean> {
 	const [version, saltBase64, hashBase64] = storedHash.split('$')
+
 	if (version !== PASSWORD_HASH_VERSION || !saltBase64 || !hashBase64) {
 		return false
 	}
@@ -268,6 +283,7 @@ async function verifyPassword(
 	const salt = base64ToBytes(saltBase64)
 	const expected = base64ToBytes(hashBase64)
 	const actual = await digestPassword(password, salt, pepper)
+
 	return constantTimeEqual(actual, expected)
 }
 
@@ -277,6 +293,7 @@ async function digestPassword(
 	pepper: string,
 ): Promise<Uint8Array> {
 	const encoder = new TextEncoder()
+
 	const keyMaterial = await crypto.subtle.importKey(
 		'raw',
 		encoder.encode(`${password}:${pepper}`),
@@ -284,8 +301,10 @@ async function digestPassword(
 		false,
 		['deriveBits'],
 	)
+
 	const saltBuffer = new ArrayBuffer(salt.byteLength)
 	new Uint8Array(saltBuffer).set(salt)
+
 	const bits = await crypto.subtle.deriveBits(
 		{
 			name: 'PBKDF2',
@@ -296,30 +315,37 @@ async function digestPassword(
 		keyMaterial,
 		256,
 	)
+
 	return new Uint8Array(bits)
 }
 
 function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 	if (a.length !== b.length) return false
 	let diff = 0
+
 	for (let i = 0; i < a.length; i++) {
 		diff |= a[i] ^ b[i]
 	}
+
 	return diff === 0
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
 	let binary = ''
+
 	for (const byte of bytes) binary += String.fromCharCode(byte)
+
 	return btoa(binary)
 }
 
 function base64ToBytes(value: string): Uint8Array {
 	const binary = atob(value)
 	const bytes = new Uint8Array(binary.length)
+
 	for (let i = 0; i < binary.length; i++) {
 		bytes[i] = binary.charCodeAt(i)
 	}
+
 	return bytes
 }
 

@@ -18,6 +18,7 @@ function normalizeProgress(progress?: number, indeterminate?: boolean) {
 	if (indeterminate || progress === undefined || Number.isNaN(progress)) {
 		return null
 	}
+
 	return Math.min(1, Math.max(0, progress))
 }
 

@@ -23,6 +23,7 @@ export const videoDataQueryKeys = {
  */
 export const useGetMultiPageList = (bvid: string | undefined) => {
 	const enabled = !!bvid
+
 	return useQuery({
 		queryKey: videoDataQueryKeys.getMultiPageList(bvid),
 		queryFn: ({ signal }) =>
@@ -37,6 +38,7 @@ export const useGetMultiPageList = (bvid: string | undefined) => {
  */
 export const useGetVideoDetails = (bvid: string | undefined) => {
 	const enabled = !!bvid
+
 	return useQuery({
 		queryKey: videoDataQueryKeys.getVideoDetails(bvid),
 		queryFn: ({ signal }) =>
@@ -52,6 +54,7 @@ export const useGetVideoDetails = (bvid: string | undefined) => {
 export const useGetVideoIsThumbUp = (bvid: string | undefined) => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!bvid && hasCookie
+
 	return useQuery({
 		queryKey: videoDataQueryKeys.getVideoIsThumbUp(bvid),
 		queryFn: ({ signal }) =>
@@ -71,6 +74,7 @@ export const useGetWebPlayerInfo = (
 	cid: number | undefined,
 ) => {
 	const enabled = !!bvid && !!cid
+
 	return useQuery({
 		queryKey: videoDataQueryKeys.getWebPlayerInfo(bvid, cid),
 		queryFn: ({ signal }) =>
@@ -88,6 +92,7 @@ export const useGetWebPlayerInfo = (
 export const useGetToViewVideoList = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
+
 	return useQuery({
 		queryKey: videoDataQueryKeys.getToViewVideoList(),
 		queryFn: ({ signal }) =>

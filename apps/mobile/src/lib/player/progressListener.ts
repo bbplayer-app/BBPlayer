@@ -9,6 +9,7 @@ interface Events {
 		buffered: number
 	}
 }
+
 const playerProgressEmitter = createStickyEmitter<Events>()
 
 Orpheus.addListener('onPositionUpdate', (e) => {

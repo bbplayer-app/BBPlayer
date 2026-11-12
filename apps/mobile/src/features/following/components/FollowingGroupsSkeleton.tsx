@@ -24,8 +24,10 @@ export function FollowingGroupsSkeleton({
 		if (!animate) {
 			cancelAnimation(opacity)
 			opacity.set(1)
+
 			return
 		}
+
 		opacity.set(0.68)
 		opacity.set(
 			withRepeat(
@@ -38,9 +40,11 @@ export function FollowingGroupsSkeleton({
 				true,
 			),
 		)
+
 		return () => cancelAnimation(opacity)
 	}, [animate, opacity])
 	const pulseStyle = useAnimatedStyle(() => ({ opacity: opacity.value }))
+
 	return (
 		<Animated.View
 			style={[styles.row, pulseStyle]}

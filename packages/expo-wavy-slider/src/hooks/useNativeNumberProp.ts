@@ -22,5 +22,6 @@ export default function useNativeNumberProp(
 	)
 
 	if (typeof value === 'number') return value
+
 	return serializeObservableState(observableState)
 }

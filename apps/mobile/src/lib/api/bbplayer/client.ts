@@ -14,6 +14,7 @@ const isAuthLoginRequest = (input: Parameters<typeof globalThis.fetch>[0]) => {
 			: input instanceof URL
 				? input.href
 				: input.url
+
 	return (
 		url.endsWith('/auth/login') ||
 		url.endsWith('/auth/register') ||
@@ -25,6 +26,7 @@ export async function ensureBBPlayerToken(options?: {
 	forceRefresh?: boolean
 }): Promise<void> {
 	const store = useAppStore.getState()
+
 	if (!options?.forceRefresh && store.bbplayerToken) return
 
 	throw new Error('请先登录 BBPlayer 账号，才能使用共享功能')
@@ -32,12 +34,14 @@ export async function ensureBBPlayerToken(options?: {
 
 const fetchWithAuthRetry: typeof fetch = async (input, init) => {
 	const response = await fetch(input, init)
+
 	// @ts-expect-error
 	if (response.status !== 401 || isAuthLoginRequest(input)) {
 		return response
 	}
 
 	useAppStore.getState().clearBBPlayerAccount()
+
 	return response
 }
 
@@ -45,7 +49,9 @@ export const api = hc<AppType>(BASE_URL, {
 	headers: () => {
 		const token = useAppStore.getState().bbplayerToken
 		const headers: Record<string, string> = {}
+
 		if (token) headers['Authorization'] = `Bearer ${token}`
+
 		return headers
 	},
 	fetch: fetchWithAuthRetry,

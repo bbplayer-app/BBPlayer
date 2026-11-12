@@ -13,6 +13,7 @@ export async function seekWithinTrack(
 		Orpheus.getPosition(),
 		Orpheus.getBuffered(),
 	])
+
 	if (
 		track?.id !== trackId ||
 		!Number.isFinite(seconds) ||
@@ -20,6 +21,7 @@ export async function seekWithinTrack(
 		duration <= 0
 	)
 		return null
+
 	const target = Math.max(
 		0,
 		Math.min(
@@ -27,11 +29,13 @@ export async function seekWithinTrack(
 			Math.max(0, duration - 0.001),
 		),
 	)
+
 	await Orpheus.seekTo(target)
 	playerProgressEmitter.emitSticky('progress', {
 		position: target,
 		duration,
 		buffered,
 	})
+
 	return target
 }

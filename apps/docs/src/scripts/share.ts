@@ -2,7 +2,9 @@
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters
 export function element<T extends HTMLElement = HTMLElement>(id: string): T {
 	const node = document.getElementById(id)
+
 	if (!node) throw new Error(`Missing share page element: ${id}`)
+
 	return node as T
 }
 
@@ -18,8 +20,10 @@ export function setImage(
 	placeholder: HTMLElement,
 ) {
 	if (!value) return
+
 	try {
 		const url = new URL(value, window.location.origin)
+
 		if (url.protocol !== 'https:' && url.protocol !== 'http:') return
 		image.alt = alt
 		image.src = url.href

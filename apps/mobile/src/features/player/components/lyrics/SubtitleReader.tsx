@@ -28,9 +28,11 @@ export function SubtitleReaderToolbar({
 	const visible = useValue(store.state$.searchVisible)
 	const search = useValue(store.state$.search)
 	const resultIndex = useValue(store.state$.resultIndex)
+
 	const resultCount = useValue(
 		() => store.state$.searchResults.get().paragraphs.length,
 	)
+
 	return (
 		<SubtitleSearchToolbar
 			label={label}
@@ -70,6 +72,7 @@ function ReadingSubtitles({
 				const query = store.state$.query.get()
 				const index = store.state$.currentParagraphIndex.get()
 				store.state$.followRevision.get()
+
 				if (active && following && !query) {
 					void list.current?.scrollToIndex({
 						index,
@@ -80,6 +83,7 @@ function ReadingSubtitles({
 			}),
 		[active, store],
 	)
+
 	return (
 		<LegendList
 			ref={list}
@@ -131,6 +135,7 @@ function SearchSubtitles({ store }: { store: SubtitleReaderStore }) {
 			})
 		}
 	}, [results, resultIndex, searching])
+
 	return (
 		<LegendList
 			ref={list}
@@ -178,6 +183,7 @@ export function SubtitleTranscript({
 }) {
 	const searching = useValue(() => !!store.state$.query.get())
 	const hasSearched = useValue(() => !!store.state$.searchResults.get().query)
+
 	return (
 		<View style={styles.container}>
 			{/* Opacity preserves the reading list's native text nodes and measurements. */}
@@ -213,14 +219,19 @@ export function SubtitleLocateButton({
 }) {
 	const visible = useValue(() => {
 		if (store.state$.following.get()) return false
+
 		const paragraph =
 			store.content.paragraphs[store.state$.currentParagraphIndex.get()]
+
 		const ids = store.state$.query.get()
 			? store.state$.visibleSearchParagraphIds.get()
 			: store.state$.visibleParagraphIds.get()
+
 		return !!paragraph && !ids.includes(paragraph.id)
 	})
+
 	if (!visible) return null
+
 	return (
 		<View style={styles.locateButton}>
 			<IconButton

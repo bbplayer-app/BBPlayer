@@ -59,10 +59,12 @@ const HighlightedText = ({
 }: Omit<React.ComponentProps<typeof Text>, 'children'> & { text: string }) => {
 	const { colors } = useTheme()
 	const parts = text.split(/(<em[^>]*>.*?<\/em>)/g)
+
 	return (
 		<Text {...props}>
 			{parts.map((part, index) => {
 				const match = /<em[^>]*>(.*?)<\/em>/.exec(part)
+
 				if (match) {
 					return (
 						<Text
@@ -74,6 +76,7 @@ const HighlightedText = ({
 						</Text>
 					)
 				}
+
 				// oxlint-disable-next-line react/no-array-index-key
 				return <Text key={index}>{part}</Text>
 			})}
@@ -129,8 +132,10 @@ export const TrackListItem = memo(function TrackListItem({
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(data.id)
+
 					return
 				}
+
 				if (isCurrentTrack) return
 				void analyticsService.logPlayerQueueAction('play_item')
 				onTrackPress()

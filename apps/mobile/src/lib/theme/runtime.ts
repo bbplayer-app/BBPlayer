@@ -12,7 +12,9 @@ const appSkinCache = new Map<string, AppSkin | null>()
 
 const toAbsolute = (rootUri: string, path: string | null): string | null => {
 	if (!path) return null
+
 	if (/^(file|https?):\/\//.test(path)) return path
+
 	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
@@ -73,7 +75,9 @@ const loadInstalledSkin = (
 	return ResultAsync.fromPromise(
 		(async () => {
 			const file = new File(meta.rootUri, 'skin.json')
+
 			if (!file.exists) return null
+
 			return JSON.parse(await file.text()) as InstalledSkin
 		})(),
 		(e) => createSkinNotFound(meta.id, e),
@@ -90,14 +94,17 @@ export const loadActiveSkin = (
 	meta: InstalledSkinMeta,
 ): ResultAsync<AppSkin | null, ServiceError> => {
 	const cached = appSkinCache.get(meta.id)
+
 	if (cached !== undefined) {
 		log.debug('[runtime] cache hit', { skinId: meta.id, appSkin: !!cached })
+
 		return okAsync(cached)
 	}
 
 	return loadInstalledSkin(meta).andThen((skin) => {
 		if (!skin) {
 			appSkinCache.set(meta.id, null)
+
 			return okAsync(null)
 		}
 
@@ -105,6 +112,7 @@ export const loadActiveSkin = (
 			(async () => {
 				const resolved = resolveAppSkinUris(skin.appSkin, meta.rootUri)
 				appSkinCache.set(meta.id, resolved)
+
 				return resolved
 			})(),
 			(e) => createSkinNotFound(meta.id, e),

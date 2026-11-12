@@ -48,6 +48,7 @@ class PlaylistSyncWorker {
 				.select({ id: schema.playlistSyncQueue.id })
 				.from(schema.playlistSyncQueue)
 				.where(eq(schema.playlistSyncQueue.status, 'syncing'))
+
 			if (stuck.length > 0) {
 				await db
 					.update(schema.playlistSyncQueue)
@@ -60,6 +61,7 @@ class PlaylistSyncWorker {
 		} catch (error) {
 			logger.error('recoverStuckRows 失败', { error })
 		}
+
 		// 无论是否有 syncing 记录，都触发一次以消费所有 pending 行
 		this.triggerSync()
 	}
@@ -67,18 +69,22 @@ class PlaylistSyncWorker {
 	private async syncAllPlaylists(): Promise<void> {
 		if (!useAppStore.getState().bbplayerToken) {
 			logger.debug('未登录 BBPlayer 账号，暂停共享歌单同步')
+
 			return
 		}
 
 		if (this.isRunning) {
 			this.runAgain = true
+
 			return
 		}
 
 		this.isRunning = true
+
 		try {
 			do {
 				this.runAgain = false
+
 				const playlistRows = await db
 					.select({ playlistId: schema.playlistSyncQueue.playlistId })
 					.from(schema.playlistSyncQueue)
@@ -118,30 +124,37 @@ class PlaylistSyncWorker {
 		if (queueRows.length === 0) return
 
 		const playlistRes = await playlistService.getPlaylistById(playlistId)
+
 		if (playlistRes.isErr()) {
 			// 数据库查询异常（非歌单不存在），保留队列行等待下次重试
 			logger.error('syncSinglePlaylist: 读取歌单失败', {
 				playlistId,
 				error: playlistRes.error,
 			})
+
 			return
 		}
 
 		const playlist = playlistRes.value
+
 		if (!playlist?.shareId || !playlist.shareRole) {
 			// 歌单不存在或未开启分享，永久无效，直接清理
 			await this.deleteRows(queueRows.map((r) => r.id))
+
 			return
 		}
+
 		if (playlist.shareRole === 'subscriber') {
 			// 订阅者无写权限，永久无效，直接清理
 			await this.deleteRows(queueRows.map((r) => r.id))
+
 			return
 		}
 
 		const metadataOps = queueRows.filter(
 			(r) => r.operation === 'update_metadata',
 		)
+
 		const trackOps = queueRows.filter((r) => r.operation !== 'update_metadata')
 
 		if (trackOps.length > 0) {
@@ -168,6 +181,7 @@ class PlaylistSyncWorker {
 		if (trackIds.size === 0) {
 			// payload 损坏，无法解析出任何 trackId，永久无效，直接清理
 			await this.deleteRows(rows.map((r) => r.id))
+
 			return
 		}
 
@@ -198,10 +212,12 @@ class PlaylistSyncWorker {
 				param: { id: shareId },
 				json: { changes },
 			})
+
 			if (!resp.ok) {
 				const body = await resp.json().catch(() => ({}))
 				throw new Error(`API ${resp.status}` + (JSON.stringify(body) ?? ''))
 			}
+
 			const data = (await resp.json()) as { applied_at?: number }
 			await db.transaction(async (tx) => {
 				if (validRowIds.size > 0) {
@@ -229,8 +245,10 @@ class PlaylistSyncWorker {
 
 	private collectTrackIds(rows: QueueRow[]): Set<number> {
 		const trackIds = new Set<number>()
+
 		for (const row of rows) {
 			const payload = this.parsePayload(row.payload)
+
 			if (row.operation === 'add_tracks') {
 				;(payload.trackIds as number[] | undefined)?.forEach((id) =>
 					trackIds.add(id),
@@ -243,6 +261,7 @@ class PlaylistSyncWorker {
 				if (typeof payload.trackId === 'number') trackIds.add(payload.trackId)
 			}
 		}
+
 		return trackIds
 	}
 
@@ -289,13 +308,17 @@ class PlaylistSyncWorker {
 
 			if (row.operation === 'add_tracks') {
 				const ids = (payload.trackIds as number[]) || []
+
 				if (ids.length === 0) rowValid = false
+
 				for (const tid of ids) {
 					const meta = metaMap.get(tid)
+
 					if (!meta || !meta.sortKey || !meta.bvid) {
 						rowValid = false
 						break
 					}
+
 					rowChanges.push({
 						op: 'upsert',
 						track: {
@@ -314,13 +337,17 @@ class PlaylistSyncWorker {
 				}
 			} else if (row.operation === 'remove_tracks') {
 				const ids = (payload.removedTrackIds as number[]) || []
+
 				if (ids.length === 0) rowValid = false
+
 				for (const tid of ids) {
 					const meta = metaMap.get(tid)
+
 					if (!meta) {
 						rowValid = false
 						break
 					}
+
 					rowChanges.push({
 						op: 'remove',
 						track_unique_key: meta.uniqueKey,
@@ -330,6 +357,7 @@ class PlaylistSyncWorker {
 			} else if (row.operation === 'reorder_track') {
 				const tid = payload.trackId as number
 				const meta = metaMap.get(tid)
+
 				if (!meta || !meta.sortKey) {
 					rowValid = false
 				} else {
@@ -359,11 +387,13 @@ class PlaylistSyncWorker {
 	): Promise<void> {
 		// 只取最后一条（LWW）
 		const latest = rows[rows.length - 1]
+
 		const payload = this.parsePayload(latest.payload) as {
 			title?: string | null
 			description?: string | null
 			coverUrl?: string | null
 		}
+
 		const rowIds = rows.map((r) => r.id)
 		await this.markRows(rowIds, 'syncing')
 
@@ -376,6 +406,7 @@ class PlaylistSyncWorker {
 					cover_url: payload.coverUrl ?? undefined,
 				},
 			})
+
 			if (!resp.ok) {
 				const body = await resp.json().catch(() => ({}))
 				throw new Error(`API ${resp.status}` + (JSON.stringify(body) ?? ''))
@@ -431,11 +462,13 @@ class PlaylistSyncWorker {
 			)
 
 		const sortMap = new Map<number, string>()
+
 		for (const row of sortKeyRows) {
 			sortMap.set(row.trackId, row.sortKey)
 		}
 
 		const metaMap = new Map<number, TrackMeta>()
+
 		for (const row of metaRows) {
 			metaMap.set(row.trackId, {
 				trackId: row.trackId,
@@ -456,25 +489,33 @@ class PlaylistSyncWorker {
 
 	private parsePayload(payload: unknown): Record<string, unknown> {
 		if (payload === null || payload === undefined) return {}
+
 		if (typeof payload === 'string') {
 			try {
 				return JSON.parse(payload)
 			} catch (e) {
 				logger.error('parsePayload 失败', { payload, error: e })
+
 				return {}
 			}
 		}
+
 		if (typeof payload === 'object') return payload as Record<string, unknown>
+
 		return {}
 	}
 
 	private toMillis(value: unknown): number {
 		if (value instanceof Date) return value.getTime()
+
 		if (typeof value === 'number') return value
+
 		if (typeof value === 'string') {
 			const num = Number(value)
+
 			return Number.isNaN(num) ? Date.now() : num
 		}
+
 		return Date.now()
 	}
 

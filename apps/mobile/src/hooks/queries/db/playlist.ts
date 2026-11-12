@@ -72,7 +72,9 @@ export const usePlaylistMetadata = (playlistId: number) => {
 		queryKey: playlistKeys.playlistMetadata(playlistId),
 		queryFn: async () => {
 			const result = await playlistService.getPlaylistMetadata(playlistId)
+
 			if (result.isErr()) throw result.error
+
 			// service 在歌单不存在时返回 undefined，而 React Query 不接受 queryFn
 			// 返回 undefined（会抛错），因此统一转成 null，交由页面按「不存在」处理
 			return result.value ?? null
@@ -155,6 +157,7 @@ export const usePlaylistContentsInfinite = (
 				initialLimit,
 				cursor: pageParam,
 			})
+
 			if (result.isErr()) {
 				// 歌单在查询发起后被删除（例如删除后页面尚未卸载时又触发了重取）
 				// 属于预期内的竞态，这里按空歌单处理，不作为错误上报
@@ -164,8 +167,10 @@ export const usePlaylistContentsInfinite = (
 				) {
 					return { tracks: [], sortKeys: [], nextCursor: undefined }
 				}
+
 				throw result.error
 			}
+
 			return result.value
 		},
 		getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -189,6 +194,7 @@ export const usePlaylistByShareId = (shareId?: string) => {
 export const useEditorInviteCode = (shareId?: string | null) => {
 	const hasToken = useAppStore((state) => !!state.bbplayerToken)
 	const enabled = !!shareId && hasToken
+
 	return useQuery({
 		queryKey: playlistKeys.editorInviteCode(shareId ?? ''),
 		queryFn: enabled

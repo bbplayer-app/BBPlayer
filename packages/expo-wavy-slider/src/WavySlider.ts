@@ -77,19 +77,24 @@ export default function WavySlider({
 	}
 
 	const onValueChangeCallback = useWorkletProp(onValueChange, 'onValueChange')
+
 	const onValueChangeFinishedCallback = useWorkletProp(
 		onValueChangeFinished,
 		'onValueChangeFinished',
 	)
+
 	const onDragStateChangeCallback = useWorkletProp(
 		onDragStateChange,
 		'onDragStateChange',
 	)
+
 	const progressState = useObservableStateAdapter(progress, value)
+
 	const bufferedProgressState = useObservableStateAdapter(
 		bufferedProgress,
 		bufferedValue,
 	)
+
 	const nativeWaveLength = useNativeNumberProp(waveLength, 16)
 	const nativeWaveHeight = useNativeNumberProp(waveHeight, 16)
 	const nativeWaveVelocity = useNativeNumberProp(waveVelocity, 15)

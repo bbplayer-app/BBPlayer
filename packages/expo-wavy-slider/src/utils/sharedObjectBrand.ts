@@ -1,5 +1,6 @@
 export const WAVY_SLIDER_SHARED_OBJECT_BRAND =
 	'__expo_wavy_slider_shared_object__'
+
 export const EXPO_SHARED_OBJECT_ID_KEY = '__expo_shared_object_id__'
 
 export type WavySliderSharedObject = {
@@ -11,6 +12,7 @@ export function isWavySliderSharedObject(
 	value: unknown,
 ): value is WavySliderSharedObject {
 	'worklet'
+
 	const objectId = (value as { [EXPO_SHARED_OBJECT_ID_KEY]?: number })[
 		EXPO_SHARED_OBJECT_ID_KEY
 	]

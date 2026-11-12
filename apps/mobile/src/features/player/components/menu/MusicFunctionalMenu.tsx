@@ -18,6 +18,7 @@ export function MusicFunctionalMenu({
 }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const openModal = useModalStore((state) => state.open)
+
 	return (
 		<>
 			<HighFreqRow style={{ paddingBottom: 12 }}>

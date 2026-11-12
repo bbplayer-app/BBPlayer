@@ -52,6 +52,7 @@ export const getSharedPlaylistMembers = (
 	shareId: string | null | undefined,
 ): SharedPlaylistMember[] => {
 	if (!shareId) return EMPTY
+
 	return (
 		useSharedPlaylistMembersStore.getState().membersByShareId[shareId] ?? EMPTY
 	)

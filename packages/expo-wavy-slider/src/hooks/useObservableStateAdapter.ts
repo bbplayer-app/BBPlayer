@@ -30,18 +30,22 @@ export default function useObservableStateAdapter<T>(
 
 	useEffect(() => {
 		if (!value || isObservableState<T>(value)) return undefined
+
 		if (sharedValueAdapterId == null) return undefined
 
 		isActive.set(true)
 
 		const mapperId = startMapper(() => {
 			'worklet'
+
 			if (!isActive.value) return
 
 			const nextValue = value.value
+
 			if (nextValue === undefined) return
 
 			const adapter = resolveObservableStateInWorklet(sharedValueAdapterId)
+
 			try {
 				adapter?.setValue?.({ value: nextValue })
 			} catch (error) {
@@ -57,7 +61,9 @@ export default function useObservableStateAdapter<T>(
 	}, [sharedValueAdapterId, value, isActive])
 
 	if (!value) return undefined
+
 	if (isObservableState<T>(value)) return value
+
 	return sharedValueAdapter
 }
 
@@ -69,6 +75,7 @@ function resolveObservableStateInWorklet(
 	stateId: number,
 ): ObservableStateInWorklet | undefined {
 	'worklet'
+
 	const expo = (
 		globalThis as typeof globalThis & {
 			expo?: {
@@ -80,6 +87,7 @@ function resolveObservableStateInWorklet(
 	).expo
 
 	const sharedObject = expo?.SharedObject
+
 	try {
 		// oxlint-disable-next-line no-underscore-dangle
 		return sharedObject?.__resolveInWorklet?.(stateId)

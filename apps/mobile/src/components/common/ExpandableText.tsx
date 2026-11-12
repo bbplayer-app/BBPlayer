@@ -24,6 +24,7 @@ export default function ExpandableText({
 		setExpanded(false)
 		setCanExpand(false)
 	}, [text])
+
 	return (
 		<View>
 			<Text

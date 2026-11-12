@@ -53,6 +53,7 @@ export default function AppPrivateDataPage() {
 
 	const rows = useMemo<Row[]>(() => {
 		const list: Row[] = []
+
 		if (path) {
 			list.push({
 				key: '..',
@@ -63,6 +64,7 @@ export default function AppPrivateDataPage() {
 				sizeBytes: 0,
 			})
 		}
+
 		for (const entry of entries ?? []) {
 			list.push({
 				key: entry.path,
@@ -73,6 +75,7 @@ export default function AppPrivateDataPage() {
 				sizeBytes: entry.sizeBytes,
 			})
 		}
+
 		return list
 	}, [entries, path])
 

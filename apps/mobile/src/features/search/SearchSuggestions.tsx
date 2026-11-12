@@ -37,6 +37,7 @@ function parseEmTags(text: string | undefined) {
 	const segments: { text: string; emphasized: boolean }[] = []
 	let lastIndex = 0
 	let match: RegExpExecArray | null
+
 	while ((match = regex.exec(s)) !== null) {
 		if (match.index > lastIndex) {
 			segments.push({
@@ -44,13 +45,17 @@ function parseEmTags(text: string | undefined) {
 				emphasized: false,
 			})
 		}
+
 		segments.push({ text: match[1], emphasized: true })
 		lastIndex = regex.lastIndex
 	}
+
 	if (lastIndex < s.length) {
 		segments.push({ text: s.slice(lastIndex), emphasized: false })
 	}
+
 	if (segments.length === 0) return [{ text: s, emphasized: false }]
+
 	return segments
 }
 
@@ -72,18 +77,22 @@ export default function SearchSuggestions({
 		)
 	}, [progress, visible])
 	const panelHeight = Math.max(0, Math.min(availableHeight, windowHeight * 0.4))
+
 	const panelStyle = useAnimatedStyle(() => ({
 		height: panelHeight * progress.get(),
 		opacity: progress.get(),
 		transform: [{ translateY: -8 * (1 - progress.get()) }],
 	}))
+
 	const { data: items, isFetching } = useSearchSuggestions(query)
+
 	const parsedItems = useMemo(
 		() =>
 			items?.map((item) => ({ ...item, segments: parseEmTags(item.name) })) ??
 			[],
 		[items],
 	)
+
 	const keyExtractor = useCallback(
 		(item: BilibiliSearchSuggestionItem) => item.name,
 		[],

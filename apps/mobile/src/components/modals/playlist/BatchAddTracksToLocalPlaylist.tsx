@@ -44,10 +44,12 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 	}) {
 		const { colors } = useTheme()
 		const modalClose = useModalStore((state) => state.close)
+
 		const close = useCallback(
 			() => modalClose('BatchAddTracksToLocalPlaylist'),
 			[modalClose],
 		)
+
 		const openModal = useModalStore((state) => state.open)
 
 		const {
@@ -56,6 +58,7 @@ const BatchAddTracksToLocalPlaylistModal = memo(
 			isError: isPlaylistsError,
 			refetch: refetchPlaylists,
 		} = usePlaylistLists()
+
 		const filteredPlaylists = useMemo(
 			() =>
 				allPlaylists?.filter(

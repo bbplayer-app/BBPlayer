@@ -21,6 +21,7 @@ import { formatDate, number } from '@/lib/utils'
 export function ChannelsPage() {
 	const query = useQuery({ queryKey: ['channels'], queryFn: channels })
 	const [search, setSearch] = useState('')
+
 	const filtered = useMemo(
 		() =>
 			query.data?.filter((item) =>
@@ -28,6 +29,7 @@ export function ChannelsPage() {
 			) ?? [],
 		[query.data, search],
 	)
+
 	return (
 		<AppShell active='channels'>
 			<PageHeader

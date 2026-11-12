@@ -69,12 +69,16 @@ async function main() {
 		message: 'Publish this update.json to Cloudflare KV?',
 		initialValue: false,
 	})
+
 	if (isCancel(shouldPublish)) {
 		cancel('Cancelled')
+
 		return
 	}
+
 	if (!shouldPublish) {
 		outro(`Not published. Edited file remains at ${tempPath}`)
+
 		return
 	}
 
@@ -91,12 +95,14 @@ async function fetchRecentReleases(repo: string): Promise<GitHubRelease[]> {
 		'User-Agent': '@bbplayer/update-publisher',
 		'X-GitHub-Api-Version': '2022-11-28',
 	}
+
 	if (process.env.GITHUB_TOKEN) {
 		headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
 	}
 
 	const url = `https://api.github.com/repos/${repo}/releases?per_page=8`
 	const res = await fetch(url, { headers })
+
 	if (!res.ok) {
 		throw new Error(
 			`GitHub releases request failed: ${res.status} ${res.statusText}`,
@@ -104,6 +110,7 @@ async function fetchRecentReleases(repo: string): Promise<GitHubRelease[]> {
 	}
 
 	const json: unknown = await res.json()
+
 	if (!Array.isArray(json)) {
 		throw new Error('GitHub releases response is not an array')
 	}
@@ -115,8 +122,10 @@ function parseRelease(value: unknown): GitHubRelease {
 	if (typeof value !== 'object' || value === null) {
 		throw new Error('Invalid GitHub release item')
 	}
+
 	const item = value as Record<string, unknown>
 	const assets = Array.isArray(item.assets) ? item.assets.map(parseAsset) : []
+
 	return {
 		tag_name: requireString(item.tag_name, 'tag_name'),
 		name: typeof item.name === 'string' ? item.name : null,
@@ -134,7 +143,9 @@ function parseAsset(value: unknown): GitHubAsset {
 	if (typeof value !== 'object' || value === null) {
 		throw new Error('Invalid GitHub release asset')
 	}
+
 	const item = value as Record<string, unknown>
+
 	return {
 		name: requireString(item.name, 'asset.name'),
 		browser_download_url: requireString(
@@ -148,6 +159,7 @@ function requireString(value: unknown, field: string): string {
 	if (typeof value !== 'string') {
 		throw new Error(`Missing string field: ${field}`)
 	}
+
 	return value
 }
 
@@ -173,9 +185,11 @@ async function selectRelease(
 	}
 
 	const release = releases.find((item) => item.tag_name === selected)
+
 	if (!release) {
 		throw new Error(`Selected release not found: ${selected}`)
 	}
+
 	return release
 }
 
@@ -183,8 +197,10 @@ function formatReleaseLabel(release: GitHubRelease): string {
 	const flags = [release.draft ? 'draft' : '', release.prerelease ? 'pre' : '']
 		.filter(Boolean)
 		.join(', ')
+
 	const date = release.published_at?.slice(0, 10) ?? 'unpublished'
 	const name = release.name ? ` - ${release.name}` : ''
+
 	return `${release.tag_name}${name} (${date}${flags ? `, ${flags}` : ''})`
 }
 
@@ -207,20 +223,26 @@ function collectAndroidDownloads(
 	assets: GitHubAsset[],
 ): Record<string, string> {
 	const downloads: Record<string, string> = {}
+
 	for (const asset of assets) {
 		if (!asset.name.toLowerCase().endsWith('.apk')) continue
 		const abi = inferAndroidAbi(asset.name)
+
 		if (abi) downloads[abi] = asset.browser_download_url
 	}
+
 	return downloads
 }
 
 function inferAndroidAbi(fileName: string): string | null {
 	const normalized = fileName.toLowerCase()
+
 	for (const abi of ANDROID_ABIS) {
 		if (normalized.includes(abi)) return abi
 	}
+
 	if (normalized.includes('universal')) return 'universal'
+
 	return null
 }
 
@@ -244,12 +266,14 @@ async function writeTempManifest(manifest: UpdateManifest): Promise<string> {
 	await mkdir(dir, { recursive: true })
 	const path = resolve(dir, `update-${manifest.version}.json`)
 	await writeFile(path, `${JSON.stringify(manifest, null, '\t')}\n`)
+
 	return path
 }
 
 async function getZedCommand(): Promise<string> {
 	try {
 		await stat('/Applications/Zed.app/Contents/MacOS/cli')
+
 		return '/Applications/Zed.app/Contents/MacOS/cli'
 	} catch {
 		return 'zed'
@@ -268,6 +292,7 @@ async function readManifest(path: string): Promise<UpdateManifest> {
 	const raw = await readFile(path, 'utf8')
 	const parsed: unknown = JSON.parse(raw)
 	validateManifest(parsed)
+
 	return parsed
 }
 
@@ -275,7 +300,9 @@ function validateManifest(value: unknown): asserts value is UpdateManifest {
 	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
 		throw new Error('Edited update manifest must be a JSON object')
 	}
+
 	const manifest = value as Record<string, unknown>
+
 	for (const field of ['version', 'url', 'notes']) {
 		if (typeof manifest[field] !== 'string') {
 			throw new Error(
@@ -283,9 +310,11 @@ function validateManifest(value: unknown): asserts value is UpdateManifest {
 			)
 		}
 	}
+
 	if (typeof manifest.forced !== 'boolean') {
 		throw new Error('Edited update manifest field "forced" must be a boolean')
 	}
+
 	if (
 		manifest.listed_notes !== undefined &&
 		(!Array.isArray(manifest.listed_notes) ||
@@ -301,6 +330,7 @@ function printManifestSummary(manifest: UpdateManifest) {
 	const androidDownloads = manifest.downloads?.android
 		? Object.keys(manifest.downloads.android)
 		: []
+
 	note(
 		[
 			`Version: ${manifest.version}`,
@@ -346,12 +376,15 @@ async function run(
 			stdio: 'inherit',
 			shell: false,
 		})
+
 		child.on('error', reject)
 		child.on('exit', (code) => {
 			if (code === 0) {
 				resolveRun()
+
 				return
 			}
+
 			reject(new Error(`${command} ${args.join(' ')} exited with code ${code}`))
 		})
 	})

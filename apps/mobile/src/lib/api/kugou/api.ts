@@ -49,6 +49,7 @@ export class KugouApi {
 				if (!res.ok) {
 					throw new Error(`Kugou API error: ${res.statusText}`)
 				}
+
 				return res.json() as Promise<KugouSearchResponse>
 			}),
 			(e) => new Error('Failed to search Kugou', { cause: e }),
@@ -56,6 +57,7 @@ export class KugouApi {
 			if (res.status !== 1 || !res.data?.info) {
 				return []
 			}
+
 			return res.data.info.map((song) => ({
 				source: 'kugou' as const,
 				duration: song.duration,
@@ -75,6 +77,7 @@ export class KugouApi {
 			client: 'mobi',
 			man: 'yes',
 		})
+
 		const searchUrl = `http://krcs.kugou.com/search?${searchParams.toString()}`
 
 		return ResultAsync.fromPromise(
@@ -99,6 +102,7 @@ export class KugouApi {
 				fmt: 'lrc',
 				ver: '1',
 			})
+
 			const downloadUrl = `http://lyrics.kugou.com/download?${downloadParams.toString()}`
 
 			return ResultAsync.fromPromise(
@@ -110,6 +114,7 @@ export class KugouApi {
 				// Decode Base64 content
 				const raw = downloadRes.content
 				const word = CryptoJS.enc.Base64.parse(raw)
+
 				return CryptoJS.enc.Utf8.stringify(word)
 			})
 		})

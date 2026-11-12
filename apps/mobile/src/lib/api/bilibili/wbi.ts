@@ -34,6 +34,7 @@ function encWbi(
 	const chr_filter = /[!'()*]/g
 
 	Object.assign(params, { wts: curr_time }) // 添加 wts 字段
+
 	// 按照 key 重排参数
 	const query = Object.keys(params)
 		.sort()
@@ -41,6 +42,7 @@ function encWbi(
 			// 过滤 value 中的 "!'()*" 字符
 			// oxlint-disable-next-line @typescript-eslint/no-base-to-string
 			const value = params[key].toString().replace(chr_filter, '')
+
 			return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 		})
 		.join('&')
@@ -55,6 +57,7 @@ function isSameDayAsToday(timestamp: number) {
 
 	if (Number.isNaN(dateToCompare.getTime())) {
 		logger.error('提供的时间戳无效:', timestamp)
+
 		return false
 	}
 
@@ -75,11 +78,14 @@ interface WbiKeys {
 
 function getWbiKeysFromStorage() {
 	const keys = storage.getString('wbi_keys')
+
 	if (!keys) return null
+
 	try {
 		return JSON.parse(keys) as WbiKeys
 	} catch (error) {
 		logger.warning('从本地解析 wbi_keys 失败，尝试重新获取:', error)
+
 		return null
 	}
 }
@@ -95,20 +101,25 @@ function getWbiKeys(): ResultAsync<
 	BilibiliApiError
 > {
 	const localKeys = getWbiKeysFromStorage()
+
 	if (localKeys) {
 		if (isSameDayAsToday(localKeys.timestamp)) {
 			return okAsync(localKeys)
 		}
+
 		logger.debug('本地 wbi_keys 已过期，重新获取')
 	}
+
 	const result = bilibiliApiClient.get<{
 		wbi_img: { img_url: string; sub_url: string }
 	}>({ endpoint: '/x/web-interface/nav' })
+
 	return result.map(({ wbi_img: { img_url, sub_url } }) => {
 		const img_key = img_url.slice(
 			img_url.lastIndexOf('/') + 1,
 			img_url.lastIndexOf('.'),
 		)
+
 		const sub_key = sub_url.slice(sub_url.lastIndexOf('/') + 1)
 		storage.set(
 			'wbi_keys',
@@ -118,6 +129,7 @@ function getWbiKeys(): ResultAsync<
 				timestamp: Date.now(),
 			}),
 		)
+
 		return { img_key: img_key, sub_key: sub_key }
 	})
 }
@@ -126,5 +138,6 @@ export default function getWbiEncodedParams(
 	params: Record<string, string | number | object>,
 ) {
 	const result = getWbiKeys()
+
 	return result.map(({ img_key, sub_key }) => encWbi(params, img_key, sub_key))
 }

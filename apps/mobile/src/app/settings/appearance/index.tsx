@@ -29,11 +29,14 @@ export default function AppearanceSettingsPage() {
 	const playerBackgroundStyle = useAppStore((state) =>
 		state.settings.playerBackgroundStyle === 'fluid' ? 'fluid' : 'gradient',
 	)
+
 	const nowPlayingBarStyle = useAppStore(
 		(state) => state.settings.nowPlayingBarStyle,
 	)
+
 	const enableSpectrumVisualizer = useSpectrumVisualizerEnabled()
 	const setSettings = useAppStore((state) => state.setSettings)
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
@@ -67,6 +70,7 @@ export default function AppearanceSettingsPage() {
 	const handleSpectrumToggle = () => {
 		if (enableSpectrumVisualizer) {
 			Orpheus.isSpectrumVisualizerEnabled = false
+
 			return
 		}
 

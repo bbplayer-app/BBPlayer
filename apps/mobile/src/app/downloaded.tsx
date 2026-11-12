@@ -156,8 +156,10 @@ function DownloadedItem({
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(item.id)
+
 					return
 				}
+
 				onItemPress(item)
 			}}
 			onLongPress={() => {
@@ -247,12 +249,14 @@ export default function DownloadedPage() {
 	const insets = useSafeAreaInsets()
 
 	const exportSheetRef = useRef<TrueSheetType>(null)
+
 	const [exportConfig, setExportConfig] = useState<{
 		ids: string[]
 		destinationUri: string
 	} | null>(null)
 
 	const { data: completedDownloads, isPending } = useCompletedDownloads()
+
 	const completedTasks = useMemo(
 		() => completedDownloads ?? [],
 		[completedDownloads],
@@ -264,8 +268,10 @@ export default function DownloadedPage() {
 	const filteredTasks = (() => {
 		if (!searchQuery.trim()) return completedTasks
 		const query = searchQuery.toLowerCase()
+
 		return completedTasks.filter((t) => {
 			const track = t.track
+
 			return (
 				track?.title?.toLowerCase().includes(query) ||
 				track?.artist?.toLowerCase().includes(query)
@@ -287,6 +293,7 @@ export default function DownloadedPage() {
 	const handlePlayItem = useCallback((item: DownloadTask) => {
 		if (!item.track) {
 			toast.error('当前下载项缺少歌曲信息，无法播放')
+
 			return
 		}
 
@@ -300,6 +307,7 @@ export default function DownloadedPage() {
 
 	const resolveExportDestination = useCallback(async () => {
 		const hasDirectoryPicker = await Orpheus.isDirectoryPickerAvailable()
+
 		if (!hasDirectoryPicker) {
 			// For API < 29, we need WRITE_EXTERNAL_STORAGE permission for public music export
 			if (Platform.OS === 'android' && Platform.Version < 29) {
@@ -312,12 +320,16 @@ export default function DownloadedPage() {
 						buttonNegative: '取消',
 					},
 				)
+
 				if (permissionResult !== PermissionsAndroid.RESULTS.GRANTED) {
 					toast.error('需要存储权限才能导出到公共音乐目录')
+
 					return null
 				}
 			}
+
 			toast.info('系统不支持目录选择，回退到 Music/BBPlayer')
+
 			return PUBLIC_MUSIC_EXPORT_URI
 		}
 
@@ -326,6 +338,7 @@ export default function DownloadedPage() {
 			ToastAndroid.SHORT,
 			ToastAndroid.BOTTOM,
 		)
+
 		return await Orpheus.selectDirectory()
 	}, [])
 
@@ -333,10 +346,12 @@ export default function DownloadedPage() {
 		async (id: string) => {
 			if (Platform.OS !== 'android') {
 				Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
+
 				return
 			}
 
 			const directoryUri = await resolveExportDestination()
+
 			if (directoryUri) {
 				setExportConfig({ ids: [id], destinationUri: directoryUri })
 				void exportSheetRef.current?.present()
@@ -376,6 +391,7 @@ export default function DownloadedPage() {
 
 	const handlePlayNext = useCallback(async (task: DownloadTask) => {
 		if (!task.track) return
+
 		try {
 			await enqueueTracks({ tracks: [task.track], playNext: true })
 			toast.success('添加到下一首播放成功')
@@ -398,18 +414,22 @@ export default function DownloadedPage() {
 			} else {
 				Alert.alert('提示', '没有可导出的歌曲')
 			}
+
 			return
 		}
 
 		if (Platform.OS !== 'android') {
 			Alert.alert('提示', '音频导出功能目前仅支持 Android 系统')
+
 			return
 		}
 
 		const directoryUri = await resolveExportDestination()
+
 		if (directoryUri) {
 			setExportConfig({ ids: idsToExport, destinationUri: directoryUri })
 			void exportSheetRef.current?.present()
+
 			if (selectMode) {
 				exitSelectMode()
 			}
@@ -418,6 +438,7 @@ export default function DownloadedPage() {
 
 	const handleBatchDelete = useCallback(() => {
 		const idsToDelete = Array.from(selected)
+
 		if (idsToDelete.length === 0) return
 		alert(
 			'批量删除',

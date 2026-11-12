@@ -51,6 +51,7 @@ export function planFavoriteSync(
 			remote.orderedBvids,
 			new Set(local.tracks.map((t) => t.bilibiliMetadata.bvid)),
 		)
+
 		// 注意，这里是相反的
 		bvidsToAdd = diff.removed
 		bvidsToRemove = diff.added
@@ -66,6 +67,7 @@ export function planFavoriteSync(
 		const localIsExpanded = local.tracks.some(
 			(t) => t.bilibiliMetadata.isMultiPage,
 		)
+
 		if (localIsExpanded === expandMultiPage) {
 			return {
 				kind: 'noop',
@@ -73,6 +75,7 @@ export function planFavoriteSync(
 				stats,
 			}
 		}
+
 		// 收藏夹内容无变化，但所选同步模式与本地状态不一致（切换了展开/折叠），按所选模式重建
 		// uniqueKey 依赖 isMultiPage，重建必须按所选模式重新生成所有 track，因此把全部 bvid 视为新增
 		bvidsToAdd = new Set(remote.orderedBvids)
@@ -96,11 +99,13 @@ export function buildLocalGrouped(
 	tracks: BilibiliTrack[],
 ): Map<string, BilibiliTrack[]> {
 	const localGrouped = new Map<string, BilibiliTrack[]>()
+
 	for (const track of tracks) {
 		const list = localGrouped.get(track.bilibiliMetadata.bvid) ?? []
 		list.push(track)
 		localGrouped.set(track.bilibiliMetadata.bvid, list)
 	}
+
 	return localGrouped
 }
 
@@ -113,6 +118,7 @@ export function buildMainInfoMap(
 	localGrouped: Map<string, BilibiliTrack[]>,
 ): Map<string, FavoriteMainInfo> {
 	const mainInfoMap = new Map<string, FavoriteMainInfo>()
+
 	for (const item of addedTracksMetadata) {
 		mainInfoMap.set(item.bvid, {
 			title: item.title,
@@ -123,6 +129,7 @@ export function buildMainInfoMap(
 			upperMid: item.upper.mid,
 		})
 	}
+
 	for (const [bvid, local] of localGrouped) {
 		if (mainInfoMap.has(bvid)) continue
 		const first = local[0]
@@ -134,6 +141,7 @@ export function buildMainInfoMap(
 			artistId: first.artist?.id,
 		})
 	}
+
 	return mainInfoMap
 }
 
@@ -150,14 +158,19 @@ export function selectBvidsToQuery(
 ): string[] {
 	return allBvids.filter((bvid) => {
 		const local = localGrouped.get(bvid)
+
 		if (local?.some((t) => t.bilibiliMetadata.isMultiPage)) {
 			return false
 		}
+
 		const info = mainInfoMap.get(bvid)
+
 		if (info && !info.videoIsValid) return false
+
 		if (info && info.pageCount !== undefined && info.pageCount <= 1) {
 			return false
 		}
+
 		return true
 	})
 }
@@ -185,6 +198,7 @@ export function expandFromPages(
 			},
 		]
 	}
+
 	return pages.map((p) => ({
 		bvid,
 		title: p.part,
@@ -210,8 +224,10 @@ export function buildExpandedTracksMap(
 	pageLists: Map<string, BilibiliMultipageVideo[]>,
 ): Result<Map<string, ExpandedTrackData[]>, FacadeError> {
 	const expandedTracksMap = new Map<string, ExpandedTrackData[]>()
+
 	for (const bvid of allBvids) {
 		const local = localGrouped.get(bvid)
+
 		if (local?.some((t) => t.bilibiliMetadata.isMultiPage)) {
 			expandedTracksMap.set(
 				bvid,
@@ -229,7 +245,9 @@ export function buildExpandedTracksMap(
 			)
 			continue
 		}
+
 		const info = mainInfoMap.get(bvid)
+
 		if (!info) {
 			return err(
 				createFacadeError(
@@ -238,11 +256,13 @@ export function buildExpandedTracksMap(
 				),
 			)
 		}
+
 		expandedTracksMap.set(
 			bvid,
 			expandFromPages(bvid, pageLists.get(bvid) ?? [], info),
 		)
 	}
+
 	return ok(expandedTracksMap)
 }
 
@@ -274,6 +294,7 @@ export function buildFavoriteTrackPayloads(
 			})),
 		)
 	}
+
 	return Array.from(addedTracksMetadata).map((v) => ({
 		title: v.title,
 		source: 'bilibili' as const,
@@ -314,6 +335,7 @@ export function buildFavoriteOrderedUniqueKeys(
 			),
 		)
 	}
+
 	return Result.combine(
 		Array.from(orderedBvids).map((bvid) =>
 			generateUniqueTrackKey({

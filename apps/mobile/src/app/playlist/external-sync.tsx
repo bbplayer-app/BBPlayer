@@ -151,6 +151,7 @@ const SyncTrackItem = memo(
 		)
 	},
 )
+
 SyncTrackItem.displayName = 'SyncTrackItem'
 
 const renderItem = ({
@@ -165,6 +166,7 @@ const renderItem = ({
 	}
 >) => {
 	if (!extraData) return null
+
 	return (
 		<SyncTrackItem
 			index={index}
@@ -176,10 +178,12 @@ const renderItem = ({
 
 const ExternalPlaylistSyncPageInner = () => {
 	const isListReady = useScreenTransitionReady()
+
 	const { id, source } = useLocalSearchParams<{
 		id: string
 		source: 'netease' | 'qq'
 	}>()
+
 	const theme = useTheme()
 	const insets = useSafeAreaInsets()
 	const router = useRouter()
@@ -204,11 +208,15 @@ const ExternalPlaylistSyncPageInner = () => {
 		progress,
 		results,
 	} = useExternalPlaylistSyncStore((state) => state)
+
 	const tracks = data?.tracks ?? []
+
 	const sessionKey = useMemo(() => {
 		if (!id || !source) return null
+
 		return `${source}:${id}`
 	}, [id, source])
+
 	const abortControllerRef = useRef<AbortController | null>(null)
 	const sessionStartTimeRef = useRef<number>(0)
 
@@ -251,11 +259,14 @@ const ExternalPlaylistSyncPageInner = () => {
 
 	const handleSave = async () => {
 		if (!data?.playlist || !data?.tracks || !results) return
+
 		const matchResults = data.tracks
 			.map((_, index) => results[index])
 			.filter((result) => result !== undefined)
+
 		if (matchResults.length === 0) {
 			toast.error('没有可保存的内容')
+
 			return
 		}
 
@@ -269,6 +280,7 @@ const ExternalPlaylistSyncPageInner = () => {
 			const loadingToast = toast.loading('正在保存到本地...')
 			const coverUrl = data.playlist.coverUrl ?? ''
 			const description = data.playlist.description ?? ''
+
 			try {
 				const saveResult = await syncExternalPlaylistFacade.saveMatchedPlaylist(
 					{
@@ -297,14 +309,17 @@ const ExternalPlaylistSyncPageInner = () => {
 			} catch {
 				toast.error('保存失败')
 			}
+
 			toast.dismiss(loadingToast)
 		}
 
 		if (unmatchedCount > 0 || unprocessedCount > 0) {
 			const messages = []
+
 			if (unprocessedCount > 0) {
 				messages.push(`还有 ${unprocessedCount} 首歌曲未进行匹配`)
 			}
+
 			if (unmatchedCount > 0) {
 				messages.push(`还有 ${unmatchedCount} 首歌曲未匹配到视频`)
 			}
@@ -329,12 +344,15 @@ const ExternalPlaylistSyncPageInner = () => {
 
 	const processedIndexes = Object.keys(results).map(Number)
 	const hasProcessedAny = processedIndexes.length > 0
+
 	const failedIndexes = processedIndexes.filter(
 		(index) => results[index]?.matchedVideo === null,
 	)
+
 	const unprocessedIndexes = tracks
 		.map((_, index) => index)
 		.filter((index) => !Object.hasOwn(results, index))
+
 	const syncButtonText = syncing
 		? '暂停'
 		: !hasProcessedAny
@@ -353,6 +371,7 @@ const ExternalPlaylistSyncPageInner = () => {
 			setSyncing(false)
 			setEtaSeconds(null)
 			toast.info('已暂停匹配')
+
 			return
 		}
 
@@ -402,6 +421,7 @@ const ExternalPlaylistSyncPageInner = () => {
 
 		setSyncing(false)
 		setEtaSeconds(null)
+
 		if (result.isErr()) {
 			if (result.error.message !== 'Aborted') {
 				toast.error(`匹配出错: ${result.error.message}`)

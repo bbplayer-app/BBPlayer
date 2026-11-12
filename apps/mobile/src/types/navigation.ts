@@ -58,6 +58,7 @@ export interface ModalPropsMap {
 }
 
 export type ModalKey = keyof ModalPropsMap
+
 export interface ModalInstance<K extends ModalKey = ModalKey> {
 	key: K
 	props: ModalPropsMap[K]

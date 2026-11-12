@@ -68,6 +68,7 @@ export default function SeriesPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -81,12 +82,14 @@ export default function SeriesPage() {
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
 
 	const seriesId = Number(id)
+
 	const {
 		data: seriesMetadata,
 		isPending: isMetadataPending,
 		isError: isMetadataError,
 		refetch: refetchMetadata,
 	} = useSeriesMetadata(seriesId)
+
 	const {
 		data: archivesData,
 		isPending: isArchivesPending,
@@ -97,8 +100,10 @@ export default function SeriesPage() {
 		fetchNextPage,
 		refetch: refetchArchives,
 	} = useInfiniteSeriesArchives(seriesId, seriesMetadata?.mid)
+
 	const { data: uploader } = useOtherUserInfo(seriesMetadata?.mid ?? 0, false)
 	const artistName = uploader?.name ?? `UP主 ${seriesMetadata?.mid ?? ''}`
+
 	const tracks = useMemo(
 		() =>
 			archivesData?.pages.flatMap((page) =>
@@ -115,6 +120,7 @@ export default function SeriesPage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -225,8 +231,10 @@ export default function SeriesPage() {
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const selectedId of selected) {
 									const track = tracks.find((t) => t.id === selectedId)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -234,6 +242,7 @@ export default function SeriesPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

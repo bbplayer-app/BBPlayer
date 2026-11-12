@@ -51,6 +51,7 @@ export function HighFreqButton({
 	onPress: () => void
 }) {
 	const { colors } = useTheme()
+
 	return (
 		<SquircleView
 			style={{
@@ -93,21 +94,29 @@ export function HighFreqButton({
 export function PlayerDownloadButton({ onAction }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const trackId = currentTrack?.uniqueKey
+
 	const { data: downloadStatus } = useBatchDownloadStatus(
 		trackId ? [trackId] : [],
 	)
+
 	const downloadHandler = useCallback(async () => {
 		if (!currentTrack) {
 			toast.error('为什么 currentTrack 不存在？')
+
 			return
 		}
+
 		const url = getInternalPlayUri(currentTrack)
+
 		if (!url) {
 			toast.error('获取内部播放地址失败')
+
 			return
 		}
+
 		const artistName = currentTrack.artist?.name
 		const artworkUrl = currentTrack.coverUrl ?? undefined
+
 		try {
 			await Orpheus.downloadTrack({
 				id: currentTrack.uniqueKey,
@@ -147,6 +156,7 @@ export function SharedTrackActions({
 	const router = useRouter()
 	const openModal = useModalStore((state) => state.open)
 	const uploaderMid = Number(currentTrack?.artist?.remoteId ?? undefined)
+
 	return (
 		<>
 			{currentTrack?.source === 'bilibili' && (
@@ -248,6 +258,7 @@ export function ShareSongAction({
 }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const openModal = useModalStore((state) => state.open)
+
 	return (
 		<List.Item
 			title='分享歌曲'
@@ -279,6 +290,7 @@ export function PlayerModeSwitch({ onAction }: PlayerMenuContentProps) {
 			)}
 			onPress={() => {
 				const currentMode = playbackContextStore$.context.mode.peek()
+
 				if (!currentMode) return
 				const mode = currentMode === 'podcast' ? 'music' : 'podcast'
 				const label = mode === 'podcast' ? '播客' : '音乐'

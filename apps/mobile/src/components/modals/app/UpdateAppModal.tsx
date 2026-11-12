@@ -40,17 +40,22 @@ export default function UpdateAppModal({
 
 	const onUpdate = async () => {
 		if (isUpdating) return
+
 		if (Platform.OS !== 'android') {
 			await openReleaseUrl()
+
 			return
 		}
 
 		let toastId: string | number | undefined
+
 		try {
 			const canInstall = await canRequestPackageInstallsAsync()
+
 			if (!canInstall) {
 				await openPackageInstallerSettingsAsync()
 				toast.info('请允许 BBPlayer 安装未知来源应用后再次更新')
+
 				return
 			}
 
@@ -60,12 +65,15 @@ export default function UpdateAppModal({
 				duration: Infinity,
 			})
 			const downloadUrl = await resolveAndroidDownloadUrl()
+
 			if (!downloadUrl) {
 				toast.dismiss(toastId)
 				await openReleaseUrl()
 				setIsUpdating(false)
+
 				return
 			}
+
 			await downloadAndInstallApkAsync({
 				url: downloadUrl,
 				fileName: buildApkFileName(version),
@@ -81,6 +89,7 @@ export default function UpdateAppModal({
 			})
 			void Clipboard.setStringAsync(url)
 		}
+
 		setIsUpdating(false)
 	}
 
@@ -93,16 +102,20 @@ export default function UpdateAppModal({
 				description: String(e),
 			})
 		}
+
 		close()
 	}
 
 	const resolveAndroidDownloadUrl = async (): Promise<string | null> => {
 		if (!downloads?.android) return isApkUrl(url) ? url : null
 		const supportedAbis = await getSupportedAbisAsync()
+
 		for (const abi of supportedAbis) {
 			const abiUrl = downloads.android[abi]
+
 			if (abiUrl) return abiUrl
 		}
+
 		return downloads.android.universal ?? (isApkUrl(url) ? url : null)
 	}
 

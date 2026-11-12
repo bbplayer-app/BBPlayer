@@ -48,6 +48,7 @@ export class SyncBilibiliPlaylistFacade {
 	): ResultAsync<Track, BilibiliApiError | DatabaseError | ServiceError> {
 		logger.info('开始添加 Track（Bilibili）', { bvid, cid })
 		const apiData = this.bilibiliApi.getVideoDetails({ bvid })
+
 		return apiData.andThen((data) => {
 			const trackPayload = {
 				title: data.title,
@@ -66,6 +67,7 @@ export class SyncBilibiliPlaylistFacade {
 					source: 'bilibili' as const,
 				},
 			}
+
 			return this.trackService
 				.findOrCreateTrack(trackPayload)
 				.andTee((track) => {
@@ -84,6 +86,7 @@ export class SyncBilibiliPlaylistFacade {
 	 */
 	public addTrackToLocal(track: Track) {
 		if (!track.artist) return errAsync(createValidationError('artist 不存在'))
+
 		return this.artistService
 			.findOrCreateArtist({
 				name: track.artist.name,
@@ -105,10 +108,13 @@ export class SyncBilibiliPlaylistFacade {
 		collectionId: number,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
 		const syncKey = `collection::${collectionId}`
+
 		if (this.syncingIds.has(syncKey)) {
 			return errAsync(createSyncTaskAlreadyRunningError())
 		}
+
 		this.syncingIds.add(syncKey)
+
 		try {
 			return this.bilibiliApi
 				.getCollectionAllContents({ collectionId })
@@ -132,11 +138,14 @@ export class SyncBilibiliPlaylistFacade {
 		onProgress?: (progress: PlaylistSyncProgress) => void,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
 		const syncKey = `series::${seriesId}`
+
 		if (this.syncingIds.has(syncKey)) {
 			return errAsync(createSyncTaskAlreadyRunningError())
 		}
+
 		this.syncingIds.add(syncKey)
 		onProgress?.({ stage: 'fetching_metadata', message: '正在获取系列信息...' })
+
 		try {
 			return this.bilibiliApi
 				.getSeriesAllContents({
@@ -151,6 +160,7 @@ export class SyncBilibiliPlaylistFacade {
 				})
 				.andThen((contents) => {
 					onProgress?.({ stage: 'saving', message: '正在保存系列到本地...' })
+
 					return this.saveRemoteMediaList(contents, seriesId, 'series')
 				})
 				.andTee(() => {
@@ -175,6 +185,7 @@ export class SyncBilibiliPlaylistFacade {
 			total: contents.medias?.length ?? 0,
 		})
 		const medias = contents.medias ?? []
+
 		if (medias.length === 0) {
 			return errAsync(
 				createFacadeError(
@@ -183,6 +194,7 @@ export class SyncBilibiliPlaylistFacade {
 				),
 			)
 		}
+
 		return ResultAsync.fromPromise(
 			this.db.transaction(async (tx) => {
 				const playlistSvc = this.playlistService.withDB(tx)
@@ -194,6 +206,7 @@ export class SyncBilibiliPlaylistFacade {
 					source: 'bilibili',
 					remoteId: String(contents.info.upper.mid),
 				})
+
 				if (playlistArtistId.isErr()) throw playlistArtistId.error
 
 				const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
@@ -204,12 +217,14 @@ export class SyncBilibiliPlaylistFacade {
 					remoteSyncId: remoteId,
 					authorId: playlistArtistId.value.id,
 				})
+
 				if (playlistRes.isErr()) throw playlistRes.error
 				logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
 					id: playlistRes.value.id,
 				})
 
 				const uniqueArtists = new Map<number, { name: string }>()
+
 				for (const media of medias) {
 					if (!uniqueArtists.has(media.upper.mid)) {
 						uniqueArtists.set(media.upper.mid, {
@@ -226,6 +241,7 @@ export class SyncBilibiliPlaylistFacade {
 						avatarUrl: undefined,
 					})),
 				)
+
 				if (artistRes.isErr()) throw artistRes.error
 				const localArtistIdMap = artistRes.value
 				logger.debug('step 3: 创建 artist 完成', {
@@ -248,6 +264,7 @@ export class SyncBilibiliPlaylistFacade {
 					})),
 					'bilibili',
 				)
+
 				if (tracksCreateResult.isErr()) throw tracksCreateResult.error
 				const trackIds = Array.from(tracksCreateResult.value.values())
 				logger.debug('step 4: 创建 tracks 完成', {
@@ -259,9 +276,11 @@ export class SyncBilibiliPlaylistFacade {
 					playlistRes.value.id,
 					trackIds,
 				)
+
 				if (replaceResult.isErr()) {
 					throw replaceResult.error
 				}
+
 				logger.debug('step 5: 替换 playlist 中所有 tracks 完成')
 				logger.info('同步播放列表完成', {
 					remoteId: contents.info.id,
@@ -272,6 +291,7 @@ export class SyncBilibiliPlaylistFacade {
 					type,
 					trackIds.length,
 				)
+
 				return playlistRes.value.id
 			}),
 			(e) =>
@@ -297,12 +317,15 @@ export class SyncBilibiliPlaylistFacade {
 				type: 'multi_page',
 				bvid,
 			})
+
 			return errAsync(createSyncTaskAlreadyRunningError())
 		}
+
 		try {
 			this.syncingIds.add(`multiPage::${bvid}`)
 			logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
 			logger.info('开始同步多集视频', { bvid })
+
 			return this.bilibiliApi
 				.getVideoDetails({ bvid })
 				.andTee(() =>
@@ -313,6 +336,7 @@ export class SyncBilibiliPlaylistFacade {
 						title: data.title,
 						pages: data.pages.length,
 					})
+
 					return ResultAsync.fromPromise(
 						this.db.transaction(async () => {
 							const playlistSvc = this.playlistService.withDB(this.db)
@@ -325,6 +349,7 @@ export class SyncBilibiliPlaylistFacade {
 								remoteId: String(data.owner.mid),
 								avatarUrl: data.owner.face,
 							})
+
 							if (playlistAuthor.isErr()) throw playlistAuthor.error
 
 							const playlistRes = await playlistSvc.findOrCreateRemotePlaylist({
@@ -335,6 +360,7 @@ export class SyncBilibiliPlaylistFacade {
 								remoteSyncId: bv2av(bvid),
 								authorId: playlistAuthor.value.id,
 							})
+
 							if (playlistRes.isErr()) throw playlistRes.error
 							logger.debug('step 2: 创建 playlist 和其对应的 artist 信息完成', {
 								id: playlistRes.value.id,
@@ -357,6 +383,7 @@ export class SyncBilibiliPlaylistFacade {
 								})),
 								'bilibili',
 							)
+
 							if (trackCreateResult.isErr()) throw trackCreateResult.error
 							const trackIds = Array.from(trackCreateResult.value.values())
 							logger.debug('step 3: 创建 tracks 完成', {
@@ -368,9 +395,11 @@ export class SyncBilibiliPlaylistFacade {
 								playlistRes.value.id,
 								trackIds,
 							)
+
 							if (replaceResult.isErr()) {
 								throw replaceResult.error
 							}
+
 							logger.debug('step 4: 替换 playlist 中所有 tracks 完成')
 							logger.info('同步合集完成', {
 								remoteId: bv2av(bvid),
@@ -409,10 +438,13 @@ export class SyncBilibiliPlaylistFacade {
 		expandMultiPage = false,
 	): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
 		const syncKey = `favorite::${favoriteId}`
+
 		if (this.syncingIds.has(syncKey)) {
 			return err(createSyncTaskAlreadyRunningError())
 		}
+
 		const scopedLogger = log.extend('[Facade/SyncFavorite: ' + favoriteId + ']')
+
 		try {
 			this.syncingIds.add(syncKey)
 			onProgress?.({
@@ -469,18 +501,23 @@ export class SyncBilibiliPlaylistFacade {
 			case 'favorite': {
 				return this.syncFavorite(remoteSyncId, onProgress, expandMultiPage)
 			}
+
 			case 'collection': {
 				return this.syncCollection(remoteSyncId)
 			}
+
 			case 'series': {
 				return this.syncSeries(remoteSyncId, onProgress)
 			}
+
 			case 'multi_page': {
 				return this.syncMultiPageVideo(av2bv(remoteSyncId))
 			}
+
 			case 'local': {
 				return okAsync(undefined)
 			}
+
 			case 'dynamic': {
 				return okAsync(undefined)
 			}

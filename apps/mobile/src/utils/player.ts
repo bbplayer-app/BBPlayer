@@ -38,6 +38,7 @@ function convertToOrpheusTrack(
 	if (!url) {
 		const errorMsg = '没有找到有效的音频流 URL'
 		logger.warning(errorMsg, track)
+
 		return err(
 			createPlayerError('AudioUrlNotFound', `${errorMsg}: ${track.id}`),
 		)
@@ -68,55 +69,71 @@ async function reportPlaybackHistory(
 	position: number,
 ): Promise<void> {
 	if (!useAppStore.getState().settings.sendPlayHistory) return
+
 	if (!useAppStore.getState().hasBilibiliCookie()) return
 	const trackResult = await trackService.getTrackByUniqueKey(uniqueKey)
+
 	if (trackResult.isErr()) {
 		logger.debug('查询 track 失败，跳过播放历史上报', {
 			uniqueKey,
 			error: flatErrorMessage(trackResult.error),
 		})
+
 		return
 	}
+
 	const track = trackResult.value
+
 	if (track.source !== 'bilibili') {
 		return
 	}
+
 	let cid = track.bilibiliMetadata.cid
+
 	if (!cid && !track.bilibiliMetadata.isMultiPage) {
 		const videoPageResult = await bilibiliApi.getPageList({
 			bvid: track.bilibiliMetadata.bvid,
 		})
+
 		if (videoPageResult.isErr()) {
 			logger.debug('查询视频信息失败，跳过播放历史上报', {
 				uniqueKey,
 				bvid: track.bilibiliMetadata.bvid,
 				error: flatErrorMessage(videoPageResult.error),
 			})
+
 			return
 		}
+
 		if (videoPageResult.value.length === 0) {
 			logger.warning('视频无分 p 信息，无法上报播放记录', {
 				bvid: track.bilibiliMetadata.bvid,
 			})
+
 			return
 		}
+
 		cid = videoPageResult.value[0].cid
 	} else if (track.bilibiliMetadata.isMultiPage && !cid) {
 		logger.warning('多 p 视频无法上报播放记录，不存在 cid', {
 			bvid: track.bilibiliMetadata.bvid,
 		})
+
 		return
 	}
+
 	logger.debug('上报播放记录', {
 		bvid: track.bilibiliMetadata.bvid,
 		cid,
 		position,
 	})
+
 	const result = await bilibiliApi.reportPlaybackHistory({
 		bvid: track.bilibiliMetadata.bvid,
 		cid: cid!,
 		progress: position,
 	})
+
 	if (result.isErr()) {
 		logger.warning('上报播放记录到 bilibili 失败', {
 			params: {
@@ -126,6 +143,7 @@ async function reportPlaybackHistory(
 			error: result.error,
 		})
 	}
+
 	return
 }
 
@@ -154,10 +172,13 @@ async function addToQueue({
 }): Promise<boolean> {
 	try {
 		const orpheusTracks: OrpheusTrack[] = []
+
 		for (const track of tracks) {
 			const result = convertToOrpheusTrack(track)
+
 			if (result.isOk()) orpheusTracks.push(result.value)
 		}
+
 		const submit = clearQueue ? startPlayback : enqueueTracks
 		await submit({
 			tracks: orpheusTracks,
@@ -166,9 +187,11 @@ async function addToQueue({
 			playNext,
 			playlistId,
 		})
+
 		return true
 	} catch (error) {
 		toastAndLogError('添加到播放队列失败', error, 'Utils.Player')
+
 		return false
 	}
 }
@@ -179,9 +202,11 @@ function getInternalPlayUri(track: Track) {
 			? `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&cid=${track.bilibiliMetadata.cid}&hires=0&dolby=0`
 			: `orpheus://bilibili?bvid=${track.bilibiliMetadata.bvid}&hires=0&dolby=0`
 	}
+
 	if (track.source === 'local' && track.localMetadata) {
 		return track.localMetadata.localPath
 	}
+
 	return undefined
 }
 
@@ -217,8 +242,10 @@ async function finalizeAndRecordCurrentTrack(
 				uniqueKey,
 				message: flatErrorMessage(res.error),
 			})
+
 			return
 		}
+
 		logger.debug('增加播放记录成功', {
 			uniqueKey,
 		})

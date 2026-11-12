@@ -45,12 +45,15 @@ export const useFastMigrations = (
 			case 'migrating': {
 				return { ...initialState }
 			}
+
 			case 'migrated': {
 				return { ...initialState, success: action.payload }
 			}
+
 			case 'error': {
 				return { ...initialState, error: action.payload }
 			}
+
 			default: {
 				return state
 			}

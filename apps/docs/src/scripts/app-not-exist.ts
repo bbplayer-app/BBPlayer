@@ -3,8 +3,10 @@ import { element } from './share'
 const from = new URLSearchParams(window.location.search).get('from')
 const marker = '/link-to/'
 const index = from?.indexOf(marker) ?? -1
+
 if (from && index !== -1) {
 	const rest = from.slice(index + marker.length)
+
 	if (rest) {
 		const retry = element<HTMLAnchorElement>('retry-link')
 		retry.href = `bbplayer://${rest}`

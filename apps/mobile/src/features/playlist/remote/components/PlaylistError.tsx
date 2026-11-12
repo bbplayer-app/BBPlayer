@@ -13,6 +13,7 @@ export function PlaylistError({
 	onRetry,
 }: PlaylistErrorProps) {
 	const { colors } = useTheme()
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Text

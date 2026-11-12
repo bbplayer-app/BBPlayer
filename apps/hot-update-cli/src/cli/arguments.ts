@@ -16,15 +16,18 @@ export function parseCommandArguments(
 
 	for (let index = 0; index < rawArguments.length; index += 1) {
 		const rawArgument = rawArguments[index]
+
 		if (rawArgument === '--' || !rawArgument.startsWith('--')) continue
 
 		const argumentName = rawArgument.slice(2)
+
 		if (BOOLEAN_ARGUMENT_NAMES.has(argumentName)) {
 			parsedArguments[argumentName] = true
 			continue
 		}
 
 		const argumentValue = rawArguments[index + 1]
+
 		if (!argumentValue || argumentValue.startsWith('--')) {
 			throw new Error(`Missing value for --${argumentName}`)
 		}

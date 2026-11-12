@@ -120,6 +120,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			.filter((row) => row.track)
 			.map((row) => {
 				const t = row.track!
+
 				return {
 					unique_key: t.uniqueKey,
 					title: t.title,
@@ -208,6 +209,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 
 			// 权限校验
 			const member = await getMember(db, playlistId, userId)
+
 			if (!member || member.role !== 'owner') {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -239,6 +241,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			const { db } = await createDb(c.env.DATABASE_URL)
 
 			const member = await getMember(db, playlistId, userId)
+
 			if (!member || member.role === 'subscriber') {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -373,6 +376,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 			})
 
 			const appliedAt = Date.now()
+
 			return c.json({ applied_at: appliedAt })
 		},
 	)
@@ -396,12 +400,14 @@ const playlistsRoute = new Hono<HonoEnv>()
 						isNull(sharedPlaylists.deletedAt),
 					),
 				)
+
 			if (!playlist) {
 				return c.json({ error: 'Playlist not found' }, 404)
 			}
 
 			// 歌单存在时再校验成员关系
 			const member = await getMember(db, playlistId, userId)
+
 			if (!member) {
 				return c.json({ error: 'Forbidden' }, 403)
 			}
@@ -455,7 +461,9 @@ const playlistsRoute = new Hono<HonoEnv>()
 						deleted_at: row.deletedAt.getTime(),
 					}
 				}
+
 				const t = row.track!
+
 				return {
 					op: 'upsert',
 					track: {
@@ -515,10 +523,12 @@ const playlistsRoute = new Hono<HonoEnv>()
 			const userId = sub
 			const playlistId = c.req.param('id')
 			const body = c.req.valid('json') ?? {}
+
 			const inviteCode =
 				typeof body?.invite_code === 'string'
 					? body.invite_code.trim()
 					: undefined
+
 			const { db } = await createDb(c.env.DATABASE_URL)
 
 			// 歌单必须存在且未删除
@@ -531,16 +541,19 @@ const playlistsRoute = new Hono<HonoEnv>()
 						isNull(sharedPlaylists.deletedAt),
 					),
 				)
+
 			if (!playlist) {
 				return c.json({ error: 'Playlist not found' }, 404)
 			}
 
 			// 已是成员：owner/editor 直接返回；subscriber 在邀请码匹配时升级
 			const existing = await getMember(db, playlistId, userId)
+
 			if (existing) {
 				if (existing.role === 'subscriber') {
 					const shouldUpgrade =
 						inviteCode && playlist.editorInviteCode === inviteCode
+
 					if (shouldUpgrade) {
 						await db
 							.update(playlistMembers)
@@ -551,6 +564,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 									eq(playlistMembers.userId, userId),
 								),
 							)
+
 						return c.json({
 							role: 'editor',
 							already_member: true,
@@ -558,6 +572,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 						})
 					}
 				}
+
 				return c.json({ role: existing.role, already_member: true })
 			}
 
@@ -566,6 +581,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				inviteCode && playlist.editorInviteCode === inviteCode
 					? 'editor'
 					: 'subscriber'
+
 			await db.insert(playlistMembers).values({
 				playlistId,
 				userId,
@@ -596,6 +612,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		if (!playlist) {
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
+
 		if (playlist.ownerId !== sub) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
@@ -620,12 +637,14 @@ const playlistsRoute = new Hono<HonoEnv>()
 		if (!playlist) {
 			return c.json({ error: 'Playlist not found' }, 404)
 		}
+
 		if (playlist.ownerId !== sub) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
 
 		for (let attempt = 0; attempt < MAX_INVITE_ROTATE_ATTEMPTS; attempt++) {
 			const newCode = generateInviteCode()
+
 			try {
 				await db
 					.update(sharedPlaylists)
@@ -637,6 +656,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 				if (isUniqueConstraintViolation(err)) {
 					continue
 				}
+
 				throw err
 			}
 		}
@@ -655,6 +675,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		const { db } = await createDb(c.env.DATABASE_URL)
 
 		const member = await getMember(db, playlistId, userId)
+
 		if (!member || member.role !== 'owner') {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
@@ -683,6 +704,7 @@ const playlistsRoute = new Hono<HonoEnv>()
 		const { db } = await createDb(c.env.DATABASE_URL)
 
 		const member = await getMember(db, playlistId, userId)
+
 		if (!member || (member.role !== 'owner' && member.role !== 'editor')) {
 			return c.json({ error: 'Forbidden' }, 403)
 		}
@@ -725,10 +747,12 @@ const playlistsRoute = new Hono<HonoEnv>()
 		const { db } = await createDb(c.env.DATABASE_URL)
 
 		const member = await getMember(db, playlistId, userId)
+
 		if (!member) {
 			// 已不是成员，幂等返回成功
 			return c.json({ removed: true })
 		}
+
 		if (member.role === 'owner') {
 			return c.json(
 				{ error: 'Owner cannot leave; use DELETE /:id to delete the playlist' },
@@ -761,6 +785,7 @@ async function getMember(db: DrizzleDb, playlistId: string, userId: string) {
 				eq(playlistMembers.userId, userId),
 			),
 		)
+
 	return member ?? null
 }
 
@@ -802,6 +827,7 @@ async function upsertTracks(
 function generateInviteCode(): string {
 	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 	let out = ''
+
 	for (let i = 0; i < 12; i++) {
 		const idx = Math.floor(Math.random() * chars.length)
 		out += chars[idx]
@@ -813,6 +839,7 @@ function generateInviteCode(): string {
 function isUniqueConstraintViolation(err: unknown): boolean {
 	if (!err || typeof err !== 'object') return false
 	const code = (err as { code?: unknown }).code
+
 	return code === '23505'
 }
 

@@ -52,6 +52,7 @@ function DevTools() {
 		],
 	})
 	useRequireProfilerDevTools()
+
 	return null
 }
 
@@ -93,9 +94,11 @@ function ShakeProfiler() {
 
 export default function AppProviders({ children }: { children: ReactNode }) {
 	const colorScheme = useColorScheme()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	useEffect(() => {
 		if (Platform.OS === 'android') {
 			Orpheus.isNotificationArtworkEnabled = !pureWhiteBackground
@@ -104,6 +107,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		// 同步原生控件、系统菜单，以及仍读取 useColorScheme 的组件。
 		Appearance.setColorScheme(pureWhiteBackground ? 'light' : 'unspecified')
+
 		return () => Appearance.setColorScheme('unspecified')
 	}, [pureWhiteBackground])
 

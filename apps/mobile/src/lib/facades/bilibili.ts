@@ -20,6 +20,7 @@ export class BilibiliFacade {
 				const result = await this.bilibiliApi.getSeriesMetadata({
 					seriesId: remoteId,
 				})
+
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -29,11 +30,13 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				const firstPage = await this.bilibiliApi.getSeriesArchivesPage({
 					seriesId: remoteId,
 					mid: result.value.mid,
 					pageNumber: 1,
 				})
+
 				if (firstPage.isErr()) {
 					return err(
 						createFacadeError(
@@ -43,16 +46,19 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				return ok({
 					title: result.value.name,
 					description: result.value.description,
 					coverUrl: firstPage.value.archives?.[0]?.pic ?? '',
 				})
 			}
+
 			case 'collection': {
 				const result = await this.bilibiliApi.getCollectionAllContents({
 					collectionId: remoteId,
 				})
+
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -62,17 +68,21 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				const metadata = result.value.info
+
 				return ok({
 					title: metadata.title,
 					description: metadata.intro,
 					coverUrl: metadata.cover,
 				})
 			}
+
 			case 'multi_page': {
 				const result = await this.bilibiliApi.getVideoDetails({
 					bvid: av2bv(remoteId),
 				})
+
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -82,18 +92,22 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				const metadata = result.value
+
 				return ok({
 					title: metadata.title,
 					description: metadata.desc,
 					coverUrl: metadata.pic,
 				})
 			}
+
 			case 'favorite': {
 				const result = await this.bilibiliApi.getFavoriteListContents({
 					favoriteId: remoteId,
 					pn: 1,
 				})
+
 				if (result.isErr()) {
 					return err(
 						createFacadeError(
@@ -103,7 +117,9 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				const metadata = result.value.info
+
 				if (!metadata) {
 					return err(
 						createFacadeError(
@@ -112,12 +128,14 @@ export class BilibiliFacade {
 						),
 					)
 				}
+
 				return ok({
 					title: metadata.title,
 					description: metadata.intro,
 					coverUrl: metadata.cover,
 				})
 			}
+
 			default:
 				return err(
 					createFacadeError(

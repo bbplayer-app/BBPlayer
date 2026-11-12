@@ -62,6 +62,7 @@ const useHasCookie = () => useAppStore((s) => s.hasBilibiliCookie())
 export const useInfiniteFavoriteList = (favoriteId?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!favoriteId
+
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteFavoriteList(favoriteId),
 		queryFn: ({ pageParam, signal }) =>
@@ -88,6 +89,7 @@ export const useInfiniteFavoriteList = (favoriteId?: number) => {
 export const useGetFavoritePlaylists = (userMid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!userMid
+
 	return useQuery({
 		queryKey: favoriteListQueryKeys.allFavoriteList(userMid),
 		queryFn: ({ signal }) =>
@@ -105,6 +107,7 @@ export const useGetFavoritePlaylists = (userMid?: number) => {
 export const useInfiniteCollectionsList = (mid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!mid
+
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteCollectionList(mid),
 		queryFn: ({ pageParam, signal }) =>
@@ -177,6 +180,7 @@ export const useInfiniteSeriesArchives = (seriesId: number, mid?: number) => {
 export const useGetFavoriteForOneVideo = (bvid: string, userMid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!userMid && bvid.length > 0
+
 	return useQuery({
 		queryKey: favoriteListQueryKeys.favoriteForOneVideo(bvid, userMid),
 		queryFn: ({ signal }) =>
@@ -202,8 +206,10 @@ export const useInfiniteSearchFavoriteItems = (
 	favoriteId?: number,
 ) => {
 	const hasCookie = useHasCookie()
+
 	const enabled =
 		!!keyword && keyword.trim().length > 0 && hasCookie && !!favoriteId
+
 	return useInfiniteQuery({
 		queryKey: favoriteListQueryKeys.infiniteSearchFavoriteItems(
 			scope,

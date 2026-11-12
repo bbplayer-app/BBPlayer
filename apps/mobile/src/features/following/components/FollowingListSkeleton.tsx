@@ -7,6 +7,7 @@ const rows = [0, 1, 2, 3]
 export function FollowingListSkeleton() {
 	const { colors } = useTheme()
 	const fill = { backgroundColor: colors.surfaceVariant }
+
 	return (
 		<View
 			style={styles.container}

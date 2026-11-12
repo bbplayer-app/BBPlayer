@@ -13,6 +13,7 @@ import toast from '@/utils/toast'
 export const useSetUserFollowing = (mid: number) => {
 	const account = useBilibiliRelationAccount()
 	const queryClient = useQueryClient()
+
 	return useMutation({
 		mutationFn: (following: boolean) =>
 			returnOrThrowAsync(bilibiliApi.setUserFollowing({ mid, following })),

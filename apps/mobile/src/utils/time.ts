@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)
+
 dayjs.locale('zh-cn')
 
 /**
@@ -26,9 +27,11 @@ export const formatDurationToHHMMSS = (seconds: number): string => {
 	const hours = Math.floor(seconds / 3600)
 	const minutes = Math.floor((seconds % 3600) / 60)
 	const remainingSeconds = seconds % 60
+
 	if (hours === 0) {
 		return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
 	}
+
 	return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
 }
 
@@ -39,8 +42,10 @@ export const formatDurationToText = (seconds: number): string => {
 	const hours = Math.floor(seconds / 3600)
 	const minutes = Math.floor((seconds % 3600) / 60)
 	let text = ''
+
 	if (hours > 0) text += `${hours} 小时 `
 	text += `${minutes} 分钟`
+
 	return text.trim()
 }
 
@@ -51,11 +56,13 @@ export const formatDurationToText = (seconds: number): string => {
  */
 export function parseDurationString(durationStr: string): number {
 	const parts = durationStr.split(':').map(Number)
+
 	if (parts.length === 3) {
 		return parts[0] * 3600 + parts[1] * 60 + parts[2]
 	} else if (parts.length === 2) {
 		return parts[0] * 60 + parts[1]
 	}
+
 	return 0
 }
 

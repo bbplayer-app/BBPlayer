@@ -6,10 +6,15 @@ interface RGBColor {
 
 const hue2rgb = (p: number, q: number, t: number): number => {
 	if (t < 0) t += 1
+
 	if (t > 1) t -= 1
+
 	if (t < 1 / 6) return p + (q - p) * 6 * t
+
 	if (t < 1 / 2) return q
+
 	if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+
 	return p
 }
 
@@ -47,12 +52,15 @@ function hslToRgb(h: number, s: number, l: number): RGBColor {
  */
 function stringToHashCode(str: string): number {
 	let hash = 0
+
 	if (str.length === 0) return hash
+
 	for (let i = 0; i < str.length; i++) {
 		const char: number = str.charCodeAt(i) // charCodeAt 返回的就是 number
 		hash = (hash << 5) - hash + char
 		hash = hash & hash // 转换为32位整数
 	}
+
 	return hash
 }
 
@@ -149,6 +157,7 @@ export function clampHslLightness(
 	maxSaturation?: number,
 ): string {
 	const hsl = hexToHsl(hexColor)
+
 	return hslToString(
 		hsl.h,
 		maxSaturation === undefined ? hsl.s : Math.min(hsl.s, maxSaturation),

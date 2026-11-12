@@ -80,6 +80,7 @@ export function useLocalPlaylistMenu({
 	const playNext = useCallback(
 		async (track: Track) => {
 			if (playlistId === undefined) return
+
 			const added = await addToQueue({
 				tracks: [track],
 				playlistId,
@@ -87,6 +88,7 @@ export function useLocalPlaylistMenu({
 				clearQueue: false,
 				playNext: true,
 			})
+
 			if (added) toast.success('添加到下一首播放成功')
 		},
 		[playlistId],
@@ -97,6 +99,7 @@ export function useLocalPlaylistMenu({
 		downloadState?: DownloadState,
 	): TrackMenuItem[] => {
 		if (!playlist) return []
+
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',
@@ -111,6 +114,7 @@ export function useLocalPlaylistMenu({
 				isHighFreq: true,
 			},
 		]
+
 		if (item.source === 'bilibili') {
 			menuItems.push(
 				{
@@ -129,6 +133,7 @@ export function useLocalPlaylistMenu({
 						if (!item.artist?.remoteId) {
 							return
 						}
+
 						router.navigate({
 							pathname: '/playlist/remote/uploader/[mid]',
 							params: { mid: item.artist?.remoteId },
@@ -149,20 +154,27 @@ export function useLocalPlaylistMenu({
 							await queryClient.invalidateQueries({
 								queryKey: ['batchDownloadStatus'],
 							})
+
 							return
 						}
 
 						try {
 							const url = getInternalPlayUri(item)
+
 							if (!url) {
 								toastAndLogError('获取内部播放地址失败', '失败了！', SCOPE)
+
 								return
 							}
+
 							let artistName: string | undefined
+
 							if (item.artist) {
 								artistName = item.artist.name
 							}
+
 							let artwork: string | undefined
+
 							if (item.coverUrl) {
 								artwork = item.coverUrl
 							}
@@ -185,6 +197,7 @@ export function useLocalPlaylistMenu({
 				},
 			)
 		}
+
 		menuItems.push(
 			{
 				title: '复制封面链接',
@@ -200,6 +213,7 @@ export function useLocalPlaylistMenu({
 				onPress: () => openEditTrackModal(item),
 			},
 		)
+
 		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
@@ -224,6 +238,7 @@ export function useLocalPlaylistMenu({
 				danger: true,
 			})
 		}
+
 		return menuItems
 	}
 

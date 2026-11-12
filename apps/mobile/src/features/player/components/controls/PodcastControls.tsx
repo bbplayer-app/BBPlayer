@@ -21,11 +21,14 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 	useEffect(() => {
 		if (!sleepEndTime) return
 		const interval = setInterval(() => setNow(Date.now()), 1000)
+
 		return () => clearInterval(interval)
 	}, [sleepEndTime])
+
 	const remaining = sleepEndTime
 		? Math.max(0, Math.ceil((sleepEndTime - now) / 1000))
 		: 0
+
 	const actions = [
 		{
 			icon: 'speedometer',
@@ -55,6 +58,7 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 			},
 		},
 	]
+
 	return (
 		<View>
 			<View style={{ marginTop: compact ? 8 : 24 }}>

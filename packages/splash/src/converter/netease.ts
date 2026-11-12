@@ -25,16 +25,19 @@ export function parseYrc(yrcContent: string): string {
 
 	for (const line of lines) {
 		const trimmed = line.trim()
+
 		if (!trimmed) continue
 
 		try {
 			if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
 				const json = JSON.parse(trimmed) as YrcLine
+
 				if (json.c && Array.isArray(json.c)) {
 					const text = json.c.map((item) => item.tx).join('')
 					const time = formatSplTime(json.t || 0)
 					splLines.push(`[${time}]${text}`)
 				}
+
 				continue
 			}
 		} catch {
@@ -47,6 +50,7 @@ export function parseYrc(yrcContent: string): string {
 		const standardLrcLine = /^(?:\[\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?\])+/.test(
 			trimmed,
 		)
+
 		if (standardLrcLine || /^\[[a-zA-Z]+:/.test(trimmed)) {
 			splLines.push(
 				trimmed.replace(/\[(\d{1,2}):(\d{1,2}):(\d{1,3})\]/g, '[$1:$2.$3]'),
@@ -55,6 +59,7 @@ export function parseYrc(yrcContent: string): string {
 		}
 
 		const lineMatch = /^\[(\d+),(\d+)\](.*)/.exec(trimmed)
+
 		if (lineMatch) {
 			// 匹配 YRC 行格式: [开始时间,持续时间]内容
 			const lineStartTime = parseInt(lineMatch[1], 10)

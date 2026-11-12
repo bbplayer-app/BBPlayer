@@ -103,8 +103,10 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(data.id)
+
 					return
 				}
+
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}

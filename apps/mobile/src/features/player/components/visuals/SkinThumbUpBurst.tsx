@@ -40,6 +40,7 @@ const SkinThumbUpBurst = memo(function SkinThumbUpBurst({
 		playerRef.current?.startAnimation()
 
 		const hideTimer = setTimeout(() => setVisible(false), visibleDuration)
+
 		return () => {
 			clearTimeout(hideTimer)
 		}
