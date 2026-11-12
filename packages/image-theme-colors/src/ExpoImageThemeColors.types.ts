@@ -32,7 +32,7 @@ export type ExtractedPalette = {
 	/** 图片高度 (px) */
 	height: number
 	/**
-	 * 量化后的全部色块，按占比从大到小排列（最多 16 个）。
+	 * 量化后的全部色块，按占比从大到小排列（数量由各平台量化器决定）。
 	 * 用于按占比统计主色相，而不是只依赖 Material 的目标色。
 	 */
 	swatches?: ColorInfo[]

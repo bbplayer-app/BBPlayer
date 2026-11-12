@@ -133,6 +133,9 @@ const MIN_SEED_SATURATION = 15
 /** 画面里真正的彩色像素占比低于该值时按无彩色处理。 */
 const ACHROMATIC_RATIO = 0.08
 
+/** 加权色相向量的相对长度低于该值时，认为多个色相相互抵消。 */
+const HUE_CANCELLATION_RATIO = 0.15
+
 /** 肤色色相区间；命中后压低饱和度，避免整片背景发红。 */
 const SKIN_HUE_MIN = 8
 const SKIN_HUE_MAX = 55
@@ -184,6 +187,8 @@ function pickFluidSeed(swatches: ColorInfo[]): FluidSeed | null {
 	let saturationSum = 0
 	let valueSum = 0
 	let coloredPopulation = 0
+	let dominantWeight = 0
+	let dominantSample: (typeof samples)[number] | null = null
 
 	for (const sample of samples) {
 		if (sample.chroma < 0.02) continue
@@ -197,11 +202,30 @@ function pickFluidSeed(swatches: ColorInfo[]): FluidSeed | null {
 		saturationSum += sample.saturation * weight
 		valueSum += sample.value * weight
 		coloredPopulation += sample.population
+
+		if (weight > dominantWeight) {
+			dominantWeight = weight
+			dominantSample = sample
+		}
 	}
 
 	if (weightSum <= 0) return null
 
 	if (coloredPopulation / totalPopulation < ACHROMATIC_RATIO) return null
+
+	// 等面积互补色（如红 + 青）的加权方向会相互抵消，此时平均色相没有意义，
+	// 退回到权重最大的单个色块，避免凭空生成封面里不存在的颜色。
+	if (Math.hypot(cosSum, sinSum) < weightSum * HUE_CANCELLATION_RATIO) {
+		if (!dominantSample || dominantSample.saturation < MIN_SEED_SATURATION) {
+			return null
+		}
+
+		return {
+			hue: dominantSample.hue,
+			saturation: dominantSample.saturation,
+			value: dominantSample.value,
+		}
+	}
 
 	const hue = ((Math.atan2(sinSum, cosSum) * 180) / Math.PI + 360) % 360
 	const saturation = saturationSum / weightSum

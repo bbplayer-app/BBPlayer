@@ -92,7 +92,6 @@ public class ExpoImageThemeColorsModule: Module {
         record.darkMuted = palette.DarkMuted?.toRecord()
         record.swatches = capturedSwatches
           .sorted { $0.population > $1.population }
-          .prefix(16)
           .map { $0.toRecord() }
 
         return record

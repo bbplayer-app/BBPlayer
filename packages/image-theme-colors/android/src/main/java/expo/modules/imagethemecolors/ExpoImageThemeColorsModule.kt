@@ -103,7 +103,6 @@ class ExpoImageThemeColorsModule : Module() {
                 darkMuted = palette.darkMutedSwatch.toSwatchRecord()
                 swatches = palette.swatches
                     .sortedByDescending { it.population }
-                    .take(16)
                     .map { it.toSwatchRecord() }
                     .filterNotNull()
             }
