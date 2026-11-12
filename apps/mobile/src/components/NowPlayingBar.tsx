@@ -96,6 +96,7 @@ const ProgressBar = memo(function ProgressBar() {
 })
 
 // iOS 用 CDN 缩略图：和其余封面走同一路径，也避免为 48pt 的封面下载原图。
+// 这对 Android 同样成立，只是移植时没有做 Android 回归测试，所以先只在 iOS 上启用。
 const resolveBarCover = (
 	uniqueKey: string | undefined,
 	coverUrl: string | null | undefined,
