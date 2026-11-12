@@ -67,6 +67,9 @@ class PaletteRecord : Record {
 
     @Field
     var darkMuted: SwatchRecord? = null
+
+    @Field
+    var swatches: List<SwatchRecord> = emptyList()
 }
 
 class ExpoImageThemeColorsModule : Module() {
@@ -98,6 +101,11 @@ class ExpoImageThemeColorsModule : Module() {
                 muted = palette.mutedSwatch.toSwatchRecord()
                 lightMuted = palette.lightMutedSwatch.toSwatchRecord()
                 darkMuted = palette.darkMutedSwatch.toSwatchRecord()
+                swatches = palette.swatches
+                    .sortedByDescending { it.population }
+                    .take(16)
+                    .map { it.toSwatchRecord() }
+                    .filterNotNull()
             }
         }
     }
