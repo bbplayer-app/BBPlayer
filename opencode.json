@@ -15,6 +15,15 @@
 			"type": "local",
 			"command": ["/Users/roitium/bin/codedb", "mcp"],
 			"enabled": true
+		},
+		"analytics-mcp": {
+			"type": "local",
+			"command": ["mise", "exec", "--", "analytics-mcp"],
+			"environment": {
+				"GOOGLE_APPLICATION_CREDENTIALS": ".secrets/bbplayer-ga4-mcp-sa.json",
+				"GOOGLE_CLOUD_PROJECT": "bbplayer-dac55"
+			},
+			"enabled": true
 		}
 	},
 	"lsp": false,
