@@ -15,6 +15,11 @@ const logger = log.extend('Utils.Sentry')
 const identifier = Application.applicationId
 const development = process.env.NODE_ENV === 'development'
 
+// DSN 由构建环境注入：只有官方构建流程会带上它。
+// 公开仓库里默认没有 DSN，任何人克隆后直接构建都不会上报任何事件。
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? ''
+const hasSentryDsn = SENTRY_DSN.length > 0
+
 // 仅在官方应用包名上启用 Sentry，其他标识（Expo Go、第三方套壳等）一律忽略
 // 忽略最后一个字母，允许用户改包名共存（其实是我有时候要测试）
 const isOfficialApp = identifier?.startsWith('com.roitium.bbplaye') ?? false
@@ -30,14 +35,19 @@ const OFFICIAL_APK_SIGNING_CERT_SHA256: readonly string[] = [
 
 const apkSigningCertificateSha256 = getApkSigningCertificateSha256()
 
-// 只在能拿到指纹的 Android 上校验；列表留空视为未配置，直接放行。
-const hasOfficialSignature =
-	Platform.OS !== 'android' ||
+// Android 用 APK 签名证书校验；列表留空视为未配置，直接放行。
+const hasOfficialAndroidSignature =
 	OFFICIAL_APK_SIGNING_CERT_SHA256.length === 0 ||
 	(apkSigningCertificateSha256 !== null &&
 		OFFICIAL_APK_SIGNING_CERT_SHA256.includes(apkSigningCertificateSha256))
 
-const isOfficialBuild = isOfficialApp && hasOfficialSignature
+// Android 额外校验 APK 签名证书；iOS 无法在运行时可靠校验自身签名
+// （App Store 分发包会剥离 embedded.mobileprovision），只依赖注入的 DSN。
+const hasOfficialPlatformProof =
+	Platform.OS === 'android' ? hasOfficialAndroidSignature : true
+
+const isOfficialBuild =
+	hasSentryDsn && isOfficialApp && hasOfficialPlatformProof
 
 const getEnv = () => {
 	if (development) {
@@ -71,7 +81,7 @@ logger.info(
 
 export function initializeSentry() {
 	Sentry.init({
-		dsn: 'https://893ea8eb3743da1e065f56b3aa5e96f9@o4508985265618944.ingest.us.sentry.io/4508985267191808',
+		dsn: SENTRY_DSN || undefined,
 		debug: false,
 		tracesSampleRate: 0.3,
 		integrations: [navigationIntegration],

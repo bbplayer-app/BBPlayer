@@ -22,6 +22,7 @@ on:
 env:
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   MENTION_USER: '@roitium'
 

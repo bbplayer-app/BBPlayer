@@ -22,9 +22,12 @@ pnpm install
 
 你可以通过 `.env.local` 文件或 export 命令配置以下环境变量：
 
-- **SENTRY_AUTH_TOKEN**: (可选) Sentry 错误追踪。
+- **SENTRY_AUTH_TOKEN**: (可选) Sentry 符号表上传。
   - **dev 构建**: 不需要此 Token
   - **production / preview 构建**: 需要真实 Token 以上传符号表。
+- **EXPO_PUBLIC_SENTRY_DSN**: (可选) Sentry 事件上报地址。
+  - 不设置时 Sentry 完全关闭：不会初始化 SDK，也不会上报任何事件。
+  - 只在官方构建流程中通过 CI Secret 注入；fork 或自行构建无需配置，请勿复用官方 DSN。
 
 ### 4. 构建基座 (Development Build)
 
