@@ -160,9 +160,17 @@ class WebDavClientAdapter implements WebDavClient {
 
 	async listDirectory(path: string): Promise<WebDavEntry[]> {
 		return this.run(async (client) => {
-			const entries = await client.getDirectoryContents(normalizePath(path), {
-				includeSelf: false,
-			})
+			let entries: FileStat[]
+			try {
+				entries = await client.getDirectoryContents(normalizePath(path), {
+					includeSelf: false,
+				})
+			} catch (error) {
+				// 部分 WebDAV 服务器对空目录返回空响应体，webdav 会把它当成解析错误抛出。
+				// 这不是真正的错误，按空目录处理即可。
+				if (isEmptyDirectoryResponse(error)) return []
+				throw error
+			}
 
 			return entries.map(mapEntry)
 		})
@@ -259,6 +267,13 @@ function mapEntry(entry: FileStat): WebDavEntry {
 				? lastModified
 				: null,
 	}
+}
+
+function isEmptyDirectoryResponse(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		error.message === 'Failed parsing directory contents: Empty response'
+	)
 }
 
 function toArrayBuffer(data: ArrayBuffer | ArrayBufferView): ArrayBuffer {
