@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ScrollViewInstance } from 'react-native'
@@ -81,112 +82,114 @@ export function PlayerChaptersSheet() {
 				usePlayerChaptersSheetStore.getState().setOpen(false)
 			}}
 		>
-			<View style={{ flex: 1 }}>
-				<Text
-					variant='titleMedium'
-					style={{ padding: 20 }}
-				>
-					章节
-				</Text>
-				<View style={{ flex: 1, minHeight: 2 }}>
-					{data.chapters.length > 0 ? (
-						<ScrollView
-							key={data.trackId}
-							ref={list}
-							onLayout={(event) => {
-								viewportHeight.current = event.nativeEvent.layout.height
-								scrollToCurrent()
-							}}
-							onContentSizeChange={scrollToCurrent}
-							nestedScrollEnabled
-							onScrollBeginDrag={() => {
-								didScroll.current = true
-							}}
-						>
-							{data.chapters.map((item, chapterIndex) => (
-								<List.Item
-									key={item.id}
-									onLayout={(event) => {
-										rowLayouts.current.set(item.id, event.nativeEvent.layout)
-										scrollToCurrent()
-									}}
-									title={item.title}
-									titleNumberOfLines={3}
-									description={
-										chapterIndex === currentIndex ? '正在播放' : undefined
-									}
-									left={() => (
-										<Text
-											style={{
-												paddingLeft: 16,
-												alignSelf: 'center',
-												fontVariant: ['tabular-nums'],
+			<TvFocusScope style={{ flex: 1 }}>
+				<View style={{ flex: 1 }}>
+					<Text
+						variant='titleMedium'
+						style={{ padding: 20 }}
+					>
+						章节
+					</Text>
+					<View style={{ flex: 1, minHeight: 2 }}>
+						{data.chapters.length > 0 ? (
+							<ScrollView
+								key={data.trackId}
+								ref={list}
+								onLayout={(event) => {
+									viewportHeight.current = event.nativeEvent.layout.height
+									scrollToCurrent()
+								}}
+								onContentSizeChange={scrollToCurrent}
+								nestedScrollEnabled
+								onScrollBeginDrag={() => {
+									didScroll.current = true
+								}}
+							>
+								{data.chapters.map((item, chapterIndex) => (
+									<List.Item
+										key={item.id}
+										onLayout={(event) => {
+											rowLayouts.current.set(item.id, event.nativeEvent.layout)
+											scrollToCurrent()
+										}}
+										title={item.title}
+										titleNumberOfLines={3}
+										description={
+											chapterIndex === currentIndex ? '正在播放' : undefined
+										}
+										left={() => (
+											<Text
+												style={{
+													paddingLeft: 16,
+													alignSelf: 'center',
+													fontVariant: ['tabular-nums'],
+												}}
+											>
+												{formatDurationToHHMMSS(item.startSeconds)}
+											</Text>
+										)}
+										right={
+											chapterIndex === currentIndex
+												? (props) => (
+														<List.Icon
+															{...props}
+															icon='equalizer'
+															color={colors.primary}
+														/>
+													)
+												: undefined
+										}
+										style={{
+											backgroundColor:
+												chapterIndex === currentIndex
+													? colors.secondaryContainer
+													: undefined,
+										}}
+										titleStyle={{
+											color:
+												chapterIndex === currentIndex
+													? colors.onSecondaryContainer
+													: colors.onSurface,
+										}}
+										accessibilityState={{
+											selected: chapterIndex === currentIndex,
+											disabled: seeking,
+										}}
+										disabled={seeking}
+										onPress={() => {
+											void selectChapter(item)
+										}}
+									/>
+								))}
+							</ScrollView>
+						) : (
+							<View style={{ padding: 24, gap: 16, alignItems: 'center' }}>
+								{data.isLoading ? (
+									<>
+										<ActivityIndicator />
+										<Text>正在加载章节…</Text>
+									</>
+								) : data.isError ? (
+									<>
+										<Text>章节加载失败，播放不受影响</Text>
+										<Button
+											onPress={() => {
+												void data.retry()
 											}}
 										>
-											{formatDurationToHHMMSS(item.startSeconds)}
-										</Text>
-									)}
-									right={
-										chapterIndex === currentIndex
-											? (props) => (
-													<List.Icon
-														{...props}
-														icon='equalizer'
-														color={colors.primary}
-													/>
-												)
-											: undefined
-									}
-									style={{
-										backgroundColor:
-											chapterIndex === currentIndex
-												? colors.secondaryContainer
-												: undefined,
-									}}
-									titleStyle={{
-										color:
-											chapterIndex === currentIndex
-												? colors.onSecondaryContainer
-												: colors.onSurface,
-									}}
-									accessibilityState={{
-										selected: chapterIndex === currentIndex,
-										disabled: seeking,
-									}}
-									disabled={seeking}
-									onPress={() => {
-										void selectChapter(item)
-									}}
-								/>
-							))}
-						</ScrollView>
-					) : (
-						<View style={{ padding: 24, gap: 16, alignItems: 'center' }}>
-							{data.isLoading ? (
-								<>
-									<ActivityIndicator />
-									<Text>正在加载章节…</Text>
-								</>
-							) : data.isError ? (
-								<>
-									<Text>章节加载失败，播放不受影响</Text>
-									<Button
-										onPress={() => {
-											void data.retry()
-										}}
-									>
-										重试
-									</Button>
-								</>
-							) : (
-								<Text>
-									{data.isLocal ? '此音频暂无章节' : '此视频暂无章节'}
-								</Text>
-							)}
-						</View>
-					)}
+											重试
+										</Button>
+									</>
+								) : (
+									<Text>
+										{data.isLocal ? '此音频暂无章节' : '此视频暂无章节'}
+									</Text>
+								)}
+							</View>
+						)}
+					</View>
 				</View>
-			</View>
+			</TvFocusScope>
 		</TrueSheet>
 	)
 }

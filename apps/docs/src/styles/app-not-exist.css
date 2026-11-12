@@ -1,0 +1,47 @@
+/* ── Center card ───────────────────────────────────────────────────────── */
+.center-card {
+	max-width: 420px;
+	padding: 48px 40px 0;
+	text-align: center;
+	align-items: center;
+}
+
+.icon-wrapper {
+	margin-bottom: 28px;
+	color: var(--text-1);
+	opacity: 0.85;
+}
+
+.page-title {
+	font-size: 1.6rem;
+	font-weight: 700;
+	color: var(--text-1);
+	margin: 0 0 12px;
+	line-height: 1.3;
+}
+
+.page-desc {
+	font-size: 1rem;
+	color: var(--text-2);
+	line-height: 1.65;
+	margin: 0 0 28px;
+}
+
+/* button-group: no border-top for simple center card */
+.center-card .button-group {
+	width: 100%;
+	border-top: none;
+	padding-top: 0;
+	padding-bottom: 40px;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+	.center-card {
+		padding: 40px 28px 0;
+	}
+
+	.page-title {
+		font-size: 1.35rem;
+	}
+}

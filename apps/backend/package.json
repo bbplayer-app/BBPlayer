@@ -29,6 +29,6 @@
 		"@types/pg": "^8.16.0",
 		"drizzle-kit": "^0.31.11",
 		"typescript": "~6.0.3",
-		"wrangler": "^4.4.0"
+		"wrangler": "^4.160.0"
 	}
 }

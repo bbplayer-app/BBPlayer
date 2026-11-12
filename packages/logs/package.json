@@ -47,7 +47,7 @@
 		"react-native": "0.88.1"
 	},
 	"peerDependencies": {
-		"react": "19.2.3",
-		"react-native": "0.85.3"
+		"react": "19.3.0",
+		"react-native": "0.88.1"
 	}
 }

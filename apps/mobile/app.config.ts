@@ -152,6 +152,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 			// './expo-plugins/withAndroidPlugin',
 			'./expo-plugins/withAndroidGradleProperties',
 			[
+				'./expo-plugins/withAndroidTv',
+				{ banner: './assets/images/tv-banner.png' },
+			],
+			[
 				'./expo-plugins/withAbiFilters',
 				{
 					abiFilters:

@@ -1,3 +1,4 @@
+import { TvFocusScope } from '@bbplayer/native'
 import type { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { TrueSheet as TrueSheetComponent } from '@lodev09/react-native-true-sheet'
 import { forwardRef, useRef, useState } from 'react'
@@ -34,69 +35,71 @@ export const SharedPlaylistMembersSheet = forwardRef<TrueSheet, Props>(
 				onDidDismiss={() => setIsOpen(false)}
 				scrollableRef={scrollViewRef}
 			>
-				<View style={styles.container}>
-					<Text
-						variant='titleLarge'
-						style={styles.title}
-					>
-						协作者 {members ? `(${members.length})` : ''}
-					</Text>
-
-					{isPending ? (
-						<View style={styles.center}>
-							<ActivityIndicator size='large' />
-						</View>
-					) : isError || !members ? (
-						<View style={styles.center}>
-							<Text>加载失败</Text>
-						</View>
-					) : (
-						<ScrollView
-							ref={scrollViewRef}
-							style={styles.listContent}
-							nestedScrollEnabled
+				<TvFocusScope style={{ flex: 1 }}>
+					<View style={styles.container}>
+						<Text
+							variant='titleLarge'
+							style={styles.title}
 						>
-							{members.map((item) => (
-								<View
-									key={item.accountId}
-									style={styles.memberRow}
-								>
-									{item.avatarUrl ? (
-										<Avatar.Image
-											size={40}
-											source={{ uri: item.avatarUrl }}
-										/>
-									) : (
-										<Avatar.Text
-											size={40}
-											label={item.name.slice(0, 1)}
-										/>
-									)}
-									<View style={styles.memberInfo}>
-										<Text
-											variant='bodyLarge'
-											style={styles.memberName}
-										>
-											{item.name}
-										</Text>
-										<Text
-											variant='bodySmall'
-											style={{ color: theme.colors.onSurfaceVariant }}
-										>
-											{item.role === 'owner'
-												? '所有者'
-												: item.role === 'editor'
-													? '编辑者'
-													: '订阅者'}
-											{' • '}
-											{formatRelativeTime(item.joinedAt)}加入
-										</Text>
+							协作者 {members ? `(${members.length})` : ''}
+						</Text>
+
+						{isPending ? (
+							<View style={styles.center}>
+								<ActivityIndicator size='large' />
+							</View>
+						) : isError || !members ? (
+							<View style={styles.center}>
+								<Text>加载失败</Text>
+							</View>
+						) : (
+							<ScrollView
+								ref={scrollViewRef}
+								style={styles.listContent}
+								nestedScrollEnabled
+							>
+								{members.map((item) => (
+									<View
+										key={item.accountId}
+										style={styles.memberRow}
+									>
+										{item.avatarUrl ? (
+											<Avatar.Image
+												size={40}
+												source={{ uri: item.avatarUrl }}
+											/>
+										) : (
+											<Avatar.Text
+												size={40}
+												label={item.name.slice(0, 1)}
+											/>
+										)}
+										<View style={styles.memberInfo}>
+											<Text
+												variant='bodyLarge'
+												style={styles.memberName}
+											>
+												{item.name}
+											</Text>
+											<Text
+												variant='bodySmall'
+												style={{ color: theme.colors.onSurfaceVariant }}
+											>
+												{item.role === 'owner'
+													? '所有者'
+													: item.role === 'editor'
+														? '编辑者'
+														: '订阅者'}
+												{' • '}
+												{formatRelativeTime(item.joinedAt)}加入
+											</Text>
+										</View>
 									</View>
-								</View>
-							))}
-						</ScrollView>
-					)}
-				</View>
+								))}
+							</ScrollView>
+						)}
+					</View>
+				</TvFocusScope>
 			</TrueSheetComponent>
 		)
 	},

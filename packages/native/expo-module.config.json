@@ -3,7 +3,8 @@
 	"android": {
 		"modules": [
 			"expo.modules.bbplayernative.BBPlayerNativeModule",
-			"expo.modules.bbplayernative.BootSplashVideoViewModule"
+			"expo.modules.bbplayernative.BootSplashVideoViewModule",
+			"expo.modules.bbplayernative.TvFocusModule"
 		]
 	}
 }

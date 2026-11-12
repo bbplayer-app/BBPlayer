@@ -1,0 +1,86 @@
+# react-native-gesture-handler 3.5.0 的按钮在 Android 上不响应遥控器 / 键盘的确认键（方向键中间键、回车）：
+# setPressed 只给正在被手指按住的按钮设置按下状态，按确认键时没有手指，View.onKeyUp 就走不到 performClick，
+# onPress 永远不触发（鼠标点击走触摸流程，所以不受影响）。这个补丁让聚焦的按钮在确认键按下时进入按下状态。
+diff --git a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerButtonViewManager.kt b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerButtonViewManager.kt
+index a042563fdcae4214807d37d0ec6c552215c4933c..3c6b3f3d9390155856572dc7d9329e6b0b091c20 100644
+--- a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerButtonViewManager.kt
++++ b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerButtonViewManager.kt
+@@ -9,6 +9,7 @@ import android.content.Context
+ import android.content.res.ColorStateList
+ import android.graphics.Canvas
+ import android.graphics.Color
++import android.graphics.Rect
+ import android.graphics.drawable.Drawable
+ import android.graphics.drawable.PaintDrawable
+ import android.graphics.drawable.RippleDrawable
+@@ -611,6 +612,9 @@ class RNGestureHandlerButtonViewManager :
+     private var lastEventTime = -1L
+     private var lastAction = -1
+     private var receivedKeyEvent = false
++
++    // True between a confirm key's down and up while this button is focused.
++    private var confirmKeyPressed = false
+     private var currentAnimator: AnimatorSet? = null
+     private var underlayDrawable: PaintDrawable? = null
+     private var pressInTimestamp = 0L
+@@ -1570,9 +1574,45 @@ class RNGestureHandlerButtonViewManager :
+       return false
+     }
+ 
++    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
++      // A confirm key (D-pad center, Enter) has no touch that makes this button the responder,
++      // so `setPressed` would drop the pressed state `View.onKeyDown` sets and `View.onKeyUp`
++      // would never reach `performClick`. Let the key press the button unless a finger owns
++      // another one.
++      if (event != null && isConfirmKey(keyCode) && event.repeatCount == 0) {
++        confirmKeyPressed = touchResponder == null || touchResponder === this
++      }
++      return super.onKeyDown(keyCode, event)
++    }
++
+     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+-      receivedKeyEvent = true
+-      return super.onKeyUp(keyCode, event)
++      // Only a confirm key makes `View.onKeyUp` click, and it does so synchronously, so the flag
++      // is cleared afterwards. A stale flag would turn a later tap into a second activation.
++      receivedKeyEvent = isConfirmKey(keyCode)
++      try {
++        return super.onKeyUp(keyCode, event)
++      } finally {
++        receivedKeyEvent = false
++        confirmKeyPressed = false
++      }
++    }
++
++    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
++      if (!gainFocus) {
++        confirmKeyPressed = false
++      }
++      super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
++    }
++
++    // Same keys as the framework's hidden `KeyEvent.isConfirmKey`, which `View.onKeyDown` and
++    // `View.onKeyUp` use to decide on a click.
++    private fun isConfirmKey(keyCode: Int): Boolean = when (keyCode) {
++      KeyEvent.KEYCODE_DPAD_CENTER,
++      KeyEvent.KEYCODE_ENTER,
++      KeyEvent.KEYCODE_SPACE,
++      KeyEvent.KEYCODE_NUMPAD_ENTER,
++      -> true
++      else -> false
+     }
+ 
+     override fun performClick(): Boolean {
+@@ -1632,9 +1672,10 @@ class RNGestureHandlerButtonViewManager :
+       // any pressed children (to prevent pressing the parent when children is pressed).
+       val canBePressedAlongsideOther = !exclusive && touchResponder?.exclusive != true && !isChildTouched()
+ 
+-      if (!pressed || touchResponder === this || canBePressedAlongsideOther) {
++      if (!pressed || touchResponder === this || canBePressedAlongsideOther || confirmKeyPressed) {
+         // we set pressed state only for current responder or any non-exclusive button when responder
+-        // is null or non-exclusive, assuming it doesn't have pressed children
++        // is null or non-exclusive, assuming it doesn't have pressed children; a confirm key held on
++        // the focused button presses it too
+         isTouched = pressed
+         super.setPressed(pressed)
+ 

@@ -1,0 +1,64 @@
+/* ── Card body (cover + title) ─────────────────────────────────────────── */
+
+.card-body {
+	padding: 36px 32px 20px;
+	text-align: center;
+}
+
+.cover-wrapper {
+	width: 196px;
+	height: 196px;
+	margin: 0 auto 24px;
+	border-radius: 16px;
+	overflow: hidden;
+	background: var(--secondary-bg);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.cover-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.cover-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-3);
+}
+
+.track-title {
+	font-size: 1.2rem;
+	font-weight: 700;
+	color: var(--text-1);
+	margin: 0;
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+/* ── Error card ────────────────────────────────────────────────────────── */
+.error-card {
+	padding: 40px 32px;
+	text-align: center;
+	align-items: center;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+	.card-body {
+		padding: 28px 24px 16px;
+	}
+
+	.cover-wrapper {
+		width: 156px;
+		height: 156px;
+		margin-bottom: 18px;
+	}
+
+	.track-title {
+		font-size: 1.05rem;
+	}
+}

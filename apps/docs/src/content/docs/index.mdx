@@ -1,0 +1,63 @@
+---
+title: BBPlayer
+description: 开源的 Bilibili 音频播放器，支持本地歌单、歌词和播客模式。
+template: splash
+editUrl: false
+hero:
+  title: 使用 BBPlayer 收听 Bilibili 音频
+  tagline: 开源的 Bilibili 音频播放器，支持本地歌单、歌词和播客模式。
+  image:
+    file: ../../assets/icon.png
+  actions:
+    - text: 快速上手
+      link: /guides/
+      icon: right-arrow
+    - text: 下载安装
+      link: /guides/install/
+      variant: secondary
+    - text: 查看源代码
+      link: https://github.com/bbplayer-app/BBPlayer
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'
+
+<CardGrid>
+	<Card
+		title='Material Design 3'
+		icon='star'
+	>
+		采用 Material Design 3，提供主题与播放器外观设置。
+	</Card>
+	<LinkCard
+		title='在线与本地'
+		href='/guides/playlist/'
+		description='浏览 Bilibili 收藏夹与订阅合集，同步到本地，或创建个人歌单。'
+	/>
+	<LinkCard
+		title='智能搜索'
+		href='/guides/search/'
+		description='聚合歌曲搜索与 B 站链接解析，支持 BV/AV 号及短链自动识别。'
+	/>
+	<LinkCard
+		title='歌词显示'
+		href='/guides/lyrics/'
+		description='支持自动匹配、逐字进度、翻译与罗马音，并可手动编辑 LRC/SPL 歌词。'
+	/>
+	<LinkCard
+		title='下载与导出'
+		href='/guides/download/'
+		description='支持下载单曲或整个歌单，Android 可导出带封面与已缓存歌词的 m4a 文件。'
+	/>
+	<LinkCard
+		title='开源共建'
+		href='https://github.com/bbplayer-app/BBPlayer'
+		description='查看项目源代码、提交问题反馈，或通过 Pull Request 参与开发。'
+	/>
+	<Card
+		title='React Native 与 Expo'
+		icon='rocket'
+	>
+		基于 React Native 与 Expo 构建。
+	</Card>
+</CardGrid>
