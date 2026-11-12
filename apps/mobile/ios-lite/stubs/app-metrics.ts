@@ -1,5 +1,10 @@
+interface Metric {
+	name: string
+	value: number
+}
+
 export default {
 	getMainSession: () => ({
-		getMetrics: async () => [] as { name: string; value: number }[],
+		getMetrics: async (): Promise<Metric[]> => [],
 	}),
 }

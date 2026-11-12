@@ -1,10 +1,6 @@
 import { Component, type ReactNode } from 'react'
 
 const noop = () => undefined
-const noopObject = new Proxy({}, { get: () => noop }) as Record<
-	string,
-	(...args: unknown[]) => unknown
->
 
 export type SeverityLevel =
 	| 'fatal'
@@ -17,22 +13,31 @@ export type SeverityLevel =
 export const init = noop
 export const addBreadcrumb = noop
 export const captureException = () => ''
-export const getGlobalScope = () => noopObject
+
+// The app only sets tags on the global scope.
+const globalScope = { setTag: noop }
+
+export const getGlobalScope = () => globalScope
+
 export const reactNavigationIntegration = () => ({
 	name: 'ReactNavigation',
 	registerNavigationContainer: noop,
 })
+
 export const wrap = <T,>(component: T): T => component
 
-export function startSpan<T>(
-	_options: unknown,
-	callback: (span: typeof noopObject) => T,
-): T {
-	return callback(noopObject)
+interface SpanOptions {
+	name: string
+	op?: string
+}
+
+// The app's span callbacks never use the span they are given.
+export function startSpan<T>(_options: SpanOptions, callback: () => T): T {
+	return callback()
 }
 
 interface FallbackProps {
-	error: unknown
+	error: Error
 	componentStack: string
 	eventId: string
 	resetError: () => void
@@ -40,16 +45,20 @@ interface FallbackProps {
 
 interface ErrorBoundaryProps {
 	children?: ReactNode
-	fallback?: ReactNode | ((props: FallbackProps) => ReactNode)
+	fallback: (props: FallbackProps) => ReactNode
+}
+
+interface ErrorBoundaryState {
+	error: Error | null
 }
 
 export class ErrorBoundary extends Component<
 	ErrorBoundaryProps,
-	{ error: unknown }
+	ErrorBoundaryState
 > {
-	state = { error: null as unknown }
+	state: ErrorBoundaryState = { error: null }
 
-	static getDerivedStateFromError(error: unknown) {
+	static getDerivedStateFromError(error: Error): ErrorBoundaryState {
 		return { error }
 	}
 
@@ -59,15 +68,14 @@ export class ErrorBoundary extends Component<
 
 	render() {
 		const { error } = this.state
+
 		if (error === null) return this.props.children
-		const { fallback } = this.props
-		return typeof fallback === 'function'
-			? fallback({
-					error,
-					componentStack: '',
-					eventId: '',
-					resetError: this.resetError,
-				})
-			: (fallback ?? null)
+
+		return this.props.fallback({
+			error,
+			componentStack: '',
+			eventId: '',
+			resetError: this.resetError,
+		})
 	}
 }
