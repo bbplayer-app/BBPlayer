@@ -29,7 +29,8 @@ class OrpheusPlayerManager: NSObject {
         let trackId: String
         let headers: [String: String]?
         let segmentBase: BilibiliPlayUrlResponse.SegmentBase?
-        let startPosition: Double?
+        /// Cleared when the track starts over, so a later failure resumes where it happened.
+        var startPosition: Double?
         var mirrors: [String]
         let fallback: ((Double?) -> Void)?
         /// Fetches new links for the same stream; nil when it isn't resolved from Bilibili.
@@ -48,9 +49,9 @@ class OrpheusPlayerManager: NSObject {
 
     private var transitionTask: UIBackgroundTaskIdentifier = .invalid
 
-    /// The track the current AVPlayerItem belongs to; nil once the queue has left it. The queue
-    /// moves first and the old item stays loaded until the next stream resolves, so the
-    /// player's time and duration can only be attributed through this. Main thread only.
+    /// The track the current AVPlayerItem belongs to; nil while the queue's current entry has no
+    /// item of its own yet. The player's time and duration are only attributed to the entry
+    /// through this. Main thread only.
     private var loadedTrackId: String?
     /// Set once the loaded track's listening record is written, so it is written only once.
     private var loadedTrackFinished = false
@@ -61,14 +62,12 @@ class OrpheusPlayerManager: NSObject {
     private static let positionSaveInterval: TimeInterval = 5
     /// The sleep timer stopped playback during an interruption, so its end must not restart it.
     private var stayPausedAfterInterruption = false
-
-    private static let bilibiliHeaders = [
-        "Referer": "https://www.bilibili.com/",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ]
-
-
-    
+    /// Whether playback is meant to be running: set by play and by track changes, cleared by
+    /// pause. A stream that arrives later only starts playing if this still holds.
+    private var wantsPlayback = true
+    /// The stream lookup the current entry is waiting on, or nil when none is in flight. A
+    /// lookup that returns after the queue has moved on no longer matches, and is dropped.
+    private var pendingLookup: UUID?
 
     var onPlaybackStateChanged: ((PlaybackState) -> Void)?
     var onTrackStarted: ((String, TransitionReason) -> Void)?
@@ -246,14 +245,26 @@ class OrpheusPlayerManager: NSObject {
 
         if repeatMode == .track, let trackId = loadedTrackId {
             // As on Android, each natural loop counts as a new start of the same track.
-            loadedTrackFinished = false
-            onTrackStarted?(trackId, .repeatMode)
-            player.seek(to: .zero)
-            player.play()
+            replayLoadedTrack(trackId)
             return
         }
         
         skipToNext(reason: .auto)
+    }
+
+    /// Starts the loaded track over from the top, as a new listen of it.
+    private func replayLoadedTrack(_ trackId: String) {
+        loadedTrackFinished = false
+        // A failure from here on resumes where it happens, not where this item first started.
+        currentLoad?.startPosition = nil
+        pendingStartPosition = nil
+        onTrackStarted?(trackId, .repeatMode)
+        player.seek(to: .zero)
+        if wantsPlayback {
+            player.play()
+        } else {
+            endTransitionTask()
+        }
     }
 
     /// Writes the listening record of the track the player holds, before anything replaces it.
@@ -388,11 +399,13 @@ class OrpheusPlayerManager: NSObject {
     private func stopPlayback() {
         loadedTrackId = nil
         pendingStartPosition = nil
+        pendingLookup = nil
         player.pause()
         player.replaceCurrentItem(with: nil)
         onPlaybackStateChanged?(.idle)
         onIsPlayingChanged?(false)
         notifyPositionUpdate()
+        endTransitionTask()
     }
     
     func addToNext(track: Track) {
@@ -439,22 +452,44 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Playback Control
     
     func play() {
+        wantsPlayback = true
         let currentIndex = queueManager.getCurrentIndex()
-        if player.currentItem == nil && currentIndex >= 0 {
+        guard currentIndex >= 0 else { return }
 
-             playTrack(at: currentIndex, reason: .auto, startPosition: pendingStartPosition)
-             return
+        if pendingLookup != nil {
+            // Its stream is on the way, and starts when it arrives.
+            notifyPlaybackState()
+            return
         }
-        if player.status == .failed || player.currentItem?.status == .failed {
 
-             playTrack(at: currentIndex, reason: .auto)
-             return
+        guard let trackId = loadedTrackId else {
+            // Nothing is loaded for this entry: a restored session, or a stream that couldn't be fetched.
+            playTrack(at: currentIndex, reason: .auto, startPosition: pendingStartPosition)
+            return
+        }
+
+        guard let item = player.currentItem, player.status != .failed, item.status != .failed, item !== failedItem else {
+            // The item can't play any further, so load it again and carry on from where it stopped.
+            let position = player.currentTime().finiteSeconds
+            playTrack(at: currentIndex, reason: .auto, startPosition: position > 0 ? position : pendingStartPosition)
+            return
+        }
+
+        if loadedTrackFinished {
+            // As on Android, playing again after the queue has ended starts its last track over.
+            replayLoadedTrack(trackId)
+            return
         }
         player.play()
     }
-    
+
     func pause() {
+        wantsPlayback = false
         player.pause()
+        // The player has nothing to report while a stream is still on the way.
+        if pendingLookup != nil {
+            notifyPlaybackState()
+        }
     }
     
     func playNext() {
@@ -466,7 +501,9 @@ class OrpheusPlayerManager: NSObject {
         if count == 0 { return }
         
         guard let nextIndex = queueManager.getNextIndex(repeatMode: repeatMode) else {
-             // End of queue
+             // Only a track that played out ends the queue. As on Android, asking for the
+             // next track on the last one changes nothing.
+             guard reason == .auto else { return }
              onPlaybackStateChanged?(.ended)
              // A finished queue should start over next time, not restore to its last second.
              GeneralStorage.shared.savePosition(index: queueManager.getCurrentIndex(), positionSec: 0)
@@ -479,7 +516,7 @@ class OrpheusPlayerManager: NSObject {
     
     func skipToPrevious() {
         // 跟随 Media3 逻辑（或许是行业标准？），当播放超过 3s，「上一曲」的语义变成「重新播放」
-        if player.currentTime().seconds > 3.0 {
+        if currentEntryPosition() > 3.0 {
             seek(to: 0)
             return
         }
@@ -493,13 +530,20 @@ class OrpheusPlayerManager: NSObject {
     }
     
     func seek(to seconds: Double) {
-        // Before the first play of a restored session there is no item to seek yet.
-        if player.currentItem == nil, let track = queueManager.getCurrentTrack() {
+        // Without an item of its own the entry has nothing to seek, so it starts from here
+        // instead: a restored session before its first play, or a stream still on the way.
+        if loadedTrackId == nil, let track = queueManager.getCurrentTrack() {
             pendingStartPosition = seconds
             GeneralStorage.shared.savePosition(index: queueManager.getCurrentIndex(), positionSec: seconds)
             onPositionUpdate?(seconds, track.duration ?? 0, 0)
             updateNowPlayingInfo()
             return
+        }
+
+        // Moving back into a track that has played to its end makes this a new listen of it.
+        if loadedTrackFinished, let trackId = loadedTrackId {
+            loadedTrackFinished = false
+            onTrackStarted?(trackId, .seek)
         }
 
         let time = CMTime(seconds: seconds, preferredTimescale: 1000)
@@ -514,11 +558,15 @@ class OrpheusPlayerManager: NSObject {
     // MARK: - Track Loading
     
     private func playTrack(at index: Int, reason: TransitionReason, startPosition: Double? = nil) {
-        // Natural ends have already settled, and a retry stays on the same track.
+        // Natural ends have already settled, and a retry stays on the same track. Neither of
+        // them is a request to play, so a pause that came just before still holds.
         if reason != .auto {
             finishLoadedTrack()
+            wantsPlayback = true
         }
         loadedTrackId = nil
+        // Anything still being fetched belonged to the entry this one replaces.
+        pendingLookup = nil
 
         // Index is BACKING index
         queueManager.skipTo(backingIndex: index)
@@ -542,6 +590,11 @@ class OrpheusPlayerManager: NSObject {
         }
         
         if urlString.starts(with: "orpheus://bilibili") {
+            // The previous track must not play on, or lend its position, under this one while the
+            // stream is fetched. Nothing is audible until then, so keep the app running.
+            beginTransitionTask()
+            player.pause()
+            player.replaceCurrentItem(with: nil)
             resolveAndPlayBilibili(url: urlString, trackId: track.id, startPosition: startPosition)
         } else {
             loadAvPlayerItem(trackId: track.id, url: urlString, headers: nil, startPosition: startPosition)
@@ -568,16 +621,16 @@ class OrpheusPlayerManager: NSObject {
         if let cid = cid {
             fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: startPosition)
         } else {
-
+            let lookup = beginLookup()
             BilibiliApi.shared.getPageList(bvid: bvid) { [weak self] result in
                 DispatchQueue.main.async {
-                    guard let self = self, self.isCurrentTrack(trackId) else { return }
+                    guard let self = self, self.pendingLookup == lookup else { return }
                     switch result {
                     case .success(let cidInt):
 
                         self.fetchBilibiliPlayUrl(bvid: bvid, cid: String(cidInt), trackId: trackId, startPosition: startPosition)
                     case .failure(let error):
-
+                        self.pendingLookup = nil
                         self.failLoad(Self.describe(error))
                     }
                 }
@@ -585,17 +638,25 @@ class OrpheusPlayerManager: NSObject {
         }
     }
 
-    /// A lookup that finishes after the user has moved on must not replace the newer track.
-    private func isCurrentTrack(_ trackId: String) -> Bool {
-        return queueManager.getCurrentTrack()?.id == trackId
+    /// Marks a stream lookup for the current entry as in flight, replacing any earlier one.
+    private func beginLookup() -> UUID {
+        let lookup = UUID()
+        let wasIdle = pendingLookup == nil
+        pendingLookup = lookup
+        if wasIdle {
+            notifyPlaybackState()
+        }
+        return lookup
     }
 
     private func fetchBilibiliPlayUrl(bvid: String, cid: String, trackId: String, startPosition: Double? = nil, audioOnly: Bool = true) {
         // The spectrum tap needs a real audio track, which an HLS asset doesn't expose.
         let audioOnly = audioOnly && !GeneralStorage.shared.isSpectrumVisualizerEnabled
+        let lookup = beginLookup()
         BilibiliApi.shared.getPlayStream(bvid: bvid, cid: cid, audioOnly: audioOnly) { [weak self] result in
             DispatchQueue.main.async {
-                guard let self = self, self.isCurrentTrack(trackId) else { return }
+                guard let self = self, self.pendingLookup == lookup else { return }
+                self.pendingLookup = nil
                 switch result {
                 case .success(let stream):
                     guard let url = stream.urls.first else {
@@ -612,7 +673,9 @@ class OrpheusPlayerManager: NSObject {
                     let refresh: (Double?) -> Void = { [weak self] position in
                         self?.fetchBilibiliPlayUrl(bvid: bvid, cid: cid, trackId: trackId, startPosition: position, audioOnly: audioOnly)
                     }
-                    self.loadAvPlayerItem(trackId: trackId, url: url, headers: Self.bilibiliHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
+                    // A seek made while the first stream was on the way moved where the entry starts.
+                    let startPosition = self.loadedTrackId == nil ? self.pendingStartPosition : startPosition
+                    self.loadAvPlayerItem(trackId: trackId, url: url, headers: BilibiliApi.browserHeaders, segmentBase: stream.segmentBase, startPosition: startPosition,
                                           mirrors: Array(stream.urls.dropFirst()), fallback: fallback, refresh: refresh)
                 case .failure(let error):
 
@@ -647,7 +710,7 @@ class OrpheusPlayerManager: NSObject {
             return
         }
         guard let nsUrl = URL(string: url) else {
-
+            failLoad("Invalid stream URL")
             return
         }
 
@@ -682,7 +745,12 @@ class OrpheusPlayerManager: NSObject {
              let time = CMTime(seconds: startPos, preferredTimescale: 1000)
              player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
         }
-        player.play()
+        if wantsPlayback {
+            player.play()
+        } else {
+            // Paused while the stream was on the way. Nothing will start playing to end the task.
+            endTransitionTask()
+        }
     }
 
     /// Loading a remote asset's tracks waits on the network, so this must stay asynchronous.
@@ -728,6 +796,11 @@ class OrpheusPlayerManager: NSObject {
         @unknown default:
             state = .idle
 
+        }
+
+        // Nothing is loaded while a stream is on the way, but playback is about to start.
+        if pendingLookup != nil && wantsPlayback {
+            state = .buffering
         }
         
         onPlaybackStateChanged?(state)

@@ -306,9 +306,7 @@ public class ExpoOrpheusModule: Module {
     }
 
     AsyncFunction("removeDownloads") { (ids: [String]) in
-        for id in ids {
-            OrpheusDownloadManager.shared.removeDownload(id: id)
-        }
+        OrpheusDownloadManager.shared.removeDownloads(ids: ids)
     }
 
     AsyncFunction("removeAllDownloads") {

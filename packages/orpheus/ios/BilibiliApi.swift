@@ -104,8 +104,14 @@ struct BilibiliStream {
 class BilibiliApi {
     static let shared = BilibiliApi()
     
+    /// What Bilibili's API and CDN expect to see from a browser. Lookups, playback and
+    /// downloads all send this one copy.
+    static let browserHeaders = [
+        "Referer": "https://www.bilibili.com/",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ]
+
     private let session = URLSession.shared
-    private var cookie: String?
     
     // Constants for API parameters
     private let BiliQualityHigh = 80 // 1080P
@@ -115,12 +121,28 @@ class BilibiliApi {
     private let FourKEnabled = 1
     private let PlatformHtml5 = "html5"
 
-    private var imgKey: String?
-    private var subKey: String?
-    private var wbiKeysUpdatedAt: Date?
+    private struct WbiKeys {
+        let img: String
+        let sub: String
+        let fetchedAt: Date
+    }
+
+    private typealias NavCompletion = (Result<Void, Error>) -> Void
+
+    /// Lookups come from the player, from every download slot and from JS at the same time,
+    /// so the state below is only read or written while holding this.
+    private let stateLock = NSLock()
+    private var storedCookie: String?
+    private var storedWbiKeys: WbiKeys?
+    /// The callers waiting on the key refresh that is in flight, or nil when there is none.
+    private var navWaiters: [NavCompletion]?
+
+    private var cookie: String? {
+        return stateLock.withLock { storedCookie }
+    }
     
     func setCookie(_ cookie: String) {
-        self.cookie = cookie
+        stateLock.withLock { storedCookie = cookie }
     }
 
     /// An HTTP error's body usually isn't the JSON these responses are decoded as.
@@ -218,10 +240,21 @@ class BilibiliApi {
          }.resume()
     }
     
-    func refreshNavInfo(completion: @escaping (Result<Void, Error>) -> Void) {
+    /// Fetches today's WBI keys. Lookups that ask while a refresh is in flight share its result.
+    private func refreshNavInfo(completion: @escaping NavCompletion) {
+        let alreadyRefreshing: Bool = stateLock.withLock {
+            if navWaiters != nil {
+                navWaiters?.append(completion)
+                return true
+            }
+            navWaiters = [completion]
+            return false
+        }
+        guard !alreadyRefreshing else { return }
+
         let urlStr = "https://api.bilibili.com/x/web-interface/nav"
         guard let url = URL(string: urlStr) else {
-            completion(.failure(BilibiliError.invalidUrl))
+            finishNavRefresh(.failure(BilibiliError.invalidUrl))
             return
         }
         
@@ -229,39 +262,47 @@ class BilibiliApi {
         if let cookie = cookie {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
-        request.setValue("https://www.bilibili.com", forHTTPHeaderField: "Referer")
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        
-        session.dataTask(with: request) { [weak self] data, response, error in
+        Self.browserHeaders.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+
+        session.dataTask(with: request) { data, response, error in
             if let error = error {
-                completion(.failure(error))
+                self.finishNavRefresh(.failure(error))
                 return
             }
 
             if let failure = Self.httpFailure(response) {
-                completion(.failure(failure))
+                self.finishNavRefresh(.failure(failure))
                 return
             }
-            
+
             guard let data = data else {
-                completion(.failure(BilibiliError.requestFailed))
+                self.finishNavRefresh(.failure(BilibiliError.requestFailed))
                 return
             }
-            
+
             do {
                 let navResponse = try JSONDecoder().decode(BilibiliNavResponse.self, from: data)
                 if let wbiImg = navResponse.data?.wbi_img {
-                    self?.imgKey = WbiUtil.extractKey(url: wbiImg.img_url)
-                    self?.subKey = WbiUtil.extractKey(url: wbiImg.sub_url)
-                    self?.wbiKeysUpdatedAt = Date()
-                    completion(.success(()))
+                    let keys = WbiKeys(img: WbiUtil.extractKey(url: wbiImg.img_url), sub: WbiUtil.extractKey(url: wbiImg.sub_url), fetchedAt: Date())
+                    self.stateLock.withLock { self.storedWbiKeys = keys }
+                    self.finishNavRefresh(.success(()))
                 } else {
-                    completion(.failure(BilibiliError.navInfoMissing))
+                    self.finishNavRefresh(.failure(BilibiliError.navInfoMissing))
                 }
             } catch {
-                completion(.failure(error))
+                self.finishNavRefresh(.failure(error))
             }
         }.resume()
+    }
+
+    /// Answers everyone who waited on the refresh. They ask for the keys again, so none of
+    /// them may be called while the lock is held.
+    private func finishNavRefresh(_ result: Result<Void, Error>) {
+        let waiters: [NavCompletion] = stateLock.withLock {
+            defer { navWaiters = nil }
+            return navWaiters ?? []
+        }
+        waiters.forEach { $0(result) }
     }
     
     /// Resolves a video to its audio-only stream, or to the progressive MP4 when asked or when it has none.
@@ -308,8 +349,7 @@ class BilibiliApi {
 
     private func requestPlayUrl(_ params: [String: Any], completion: @escaping (Result<BilibiliPlayUrlResponse.PlayUrlData, Error>) -> Void) {
         // As on Android, keys are only trusted on the day they were fetched.
-        guard let imgKey = imgKey, let subKey = subKey,
-              let updatedAt = wbiKeysUpdatedAt, Calendar.current.isDateInToday(updatedAt) else {
+        guard let keys = stateLock.withLock({ storedWbiKeys }), Calendar.current.isDateInToday(keys.fetchedAt) else {
             // Refresh nav info first
             refreshNavInfo { result in
                 switch result {
@@ -322,7 +362,7 @@ class BilibiliApi {
             return
         }
 
-        let signedParams = WbiUtil.sign(params: params, imgKey: imgKey, subKey: subKey)
+        let signedParams = WbiUtil.sign(params: params, imgKey: keys.img, subKey: keys.sub)
         
         guard var components = URLComponents(string: "https://api.bilibili.com/x/player/wbi/playurl") else {
              completion(.failure(BilibiliError.invalidUrl))
@@ -340,9 +380,8 @@ class BilibiliApi {
         if let cookie = cookie {
             request.setValue(cookie, forHTTPHeaderField: "Cookie")
         }
-        request.setValue("https://www.bilibili.com", forHTTPHeaderField: "Referer")
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-        
+        Self.browserHeaders.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+
         session.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -353,13 +392,12 @@ class BilibiliApi {
                 completion(.failure(failure))
                 return
             }
-            
+
             guard let data = data else {
                 completion(.failure(BilibiliError.requestFailed))
                 return
             }
-            
-            
+
             do {
                 let playUrlResponse = try JSONDecoder().decode(BilibiliPlayUrlResponse.self, from: data)
                 

@@ -205,8 +205,7 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
 
         var request = URLRequest(url: nsUrl)
         if isBilibili(track) {
-            request.setValue("https://www.bilibili.com/", forHTTPHeaderField: "Referer")
-            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
+            BilibiliApi.browserHeaders.forEach { request.setValue($1, forHTTPHeaderField: $0) }
         }
 
         let started: Bool = stateQueue.sync {
@@ -230,27 +229,39 @@ class OrpheusDownloadManager: NSObject, URLSessionDownloadDelegate {
     }
 
     func removeDownload(id: String) {
+        removeDownloads(ids: [id])
+    }
+
+    /// Removes them in one step. One at a time, each slot that came free would start the
+    /// next task in line, only for that task to be removed a moment later.
+    func removeDownloads(ids: [String]) {
         stateQueue.sync {
-            if let task = activeTasks[id] {
-                task.cancel()
-                activeTasks.removeValue(forKey: id)
-            }
-            
             let fileManager = FileManager.default
             let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-            let dest = docs.appendingPathComponent("downloads/\(id).mp4")
-            try? fileManager.removeItem(at: dest)
-            try? fileManager.removeItem(at: coverFile(id: id))
-            
-            pendingIds.removeAll { $0 == id }
-            mirrorUrls.removeValue(forKey: id)
-            resolvingTokens.removeValue(forKey: id)
-            downloadTasks.removeValue(forKey: id)
-            trackMap.removeValue(forKey: id)
 
+            for id in ids {
+                if let task = activeTasks[id] {
+                    task.cancel()
+                    activeTasks.removeValue(forKey: id)
+                }
+
+                try? fileManager.removeItem(at: docs.appendingPathComponent("downloads/\(id).mp4"))
+                try? fileManager.removeItem(at: coverFile(id: id))
+
+                mirrorUrls.removeValue(forKey: id)
+                resolvingTokens.removeValue(forKey: id)
+                downloadTasks.removeValue(forKey: id)
+                trackMap.removeValue(forKey: id)
+            }
+
+            let removed = Set(ids)
+            pendingIds.removeAll { removed.contains($0) }
             saveTasksLocked()
         }
-        notifyUpdate(id: id, state: .removing, track: nil)
+
+        for id in ids {
+            notifyUpdate(id: id, state: .removing, track: nil)
+        }
         startPendingDownloads()
     }
     
