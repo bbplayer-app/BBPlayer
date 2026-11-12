@@ -25,10 +25,13 @@ export function useLocalPlaylistPlayer(
 	const playAll = useCallback(
 		async (startFromId?: string) => {
 			const tracksResult = await playlistService.getPlaylistTracks(playlistId)
+
 			if (tracksResult.isErr()) {
 				toastAndLogError('获取播放列表内容失败', tracksResult.error, SCOPE)
+
 				return
 			}
+
 			let tracks = tracksResult.value.filter((item) =>
 				item.source === 'bilibili' ? item.bilibiliMetadata.videoIsValid : true,
 			)
@@ -43,7 +46,9 @@ export function useLocalPlaylistPlayer(
 						keys.add(track.uniqueKey)
 						continue
 					}
+
 					const uri = getInternalPlayUri(track)
+
 					if (uri) {
 						urisToCheck.push({ uniqueKey: track.uniqueKey, uri })
 					}
@@ -52,6 +57,7 @@ export function useLocalPlaylistPlayer(
 				const validUris = new Set(
 					Orpheus.getLruCachedUris(urisToCheck.map((u) => u.uri)),
 				)
+
 				const downloadStatus = await Orpheus.getDownloadStatusByIds(
 					urisToCheck.map((u) => u.uniqueKey),
 				)
@@ -69,8 +75,10 @@ export function useLocalPlaylistPlayer(
 
 				if (tracks.length === 0) {
 					toast.show('当前离线，没有可播放的已缓存歌曲')
+
 					return
 				}
+
 				if (tracks.length < originalLength) {
 					toast.show('当前离线，仅添加可播放的已缓存歌曲到播放队列')
 				}
@@ -104,8 +112,10 @@ export function useLocalPlaylistPlayer(
 				!playableOfflineKeys.has(track.uniqueKey)
 			) {
 				toast.show('当前无网络，无法播放，请检查网络设置')
+
 				return
 			}
+
 			if (!ignoreAlertReplacePlaylist) {
 				alert(
 					'替换播放列表',
@@ -122,8 +132,10 @@ export function useLocalPlaylistPlayer(
 					],
 					{ cancelable: true },
 				)
+
 				return
 			}
+
 			void playAll(track.uniqueKey)
 		},
 		[

@@ -118,7 +118,11 @@ export const sharedPlaylistTracks = pgTable(
 )
 
 export type User = typeof users.$inferSelect
+
 export type SharedPlaylist = typeof sharedPlaylists.$inferSelect
+
 export type PlaylistMember = typeof playlistMembers.$inferSelect
+
 export type SharedTrack = typeof sharedTracks.$inferSelect
+
 export type SharedPlaylistTrack = typeof sharedPlaylistTracks.$inferSelect

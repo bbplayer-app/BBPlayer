@@ -37,6 +37,7 @@ function createStickyEmitter<Events extends Record<string, any>>() {
 			handler: Handler<Events[Key]>,
 		): void {
 			emitter.on(type, handler)
+
 			if (stickyEvents.has(type)) {
 				try {
 					handler(stickyEvents.get(type) as Events[Key])

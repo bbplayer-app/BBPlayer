@@ -20,15 +20,19 @@ export default function ModalHost() {
 		if (modals[modals.length - 1].options?.dismissible === false) {
 			return
 		}
+
 		closeTop()
 	})
 
 	useEffect(() => {
 		if (modals.length > 0) {
 			setCanUnmountHost(false)
+
 			return
 		}
+
 		Keyboard.dismiss()
+
 		if (router.canGoBack()) {
 			setCanUnmountHost(true)
 			router.back()
@@ -47,8 +51,10 @@ export default function ModalHost() {
 		>
 			{modals.map((m, idx) => {
 				const Component = modalRegistry[m.key]
+
 				if (!Component) return null
 				const zIndex = 1000 + idx * 100
+
 				return (
 					<AnimatedModalOverlay
 						key={m.key}

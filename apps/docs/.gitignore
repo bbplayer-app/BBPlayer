@@ -1,5 +1,7 @@
-.vitepress/cache
-docs/.vitepress/cache
 node_modules
 dist
+.astro
+.wrangler
+# Retired VitePress artifacts
+docs/.vitepress/cache
 docs/.vitepress/dist

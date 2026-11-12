@@ -26,6 +26,7 @@ const renderItem = ({
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	return (
 		<SearchItem
 			item={item}
@@ -42,6 +43,7 @@ const SearchItem = memo(function SearchItem({
 	onPress: (item: BilibiliSearchVideo) => void
 }) {
 	const coverUrl = item.pic.startsWith('//') ? `https:${item.pic}` : item.pic
+
 	return (
 		<TouchableRipple
 			style={styles.searchItem}
@@ -103,6 +105,7 @@ export default function ManualMatchExternalSync({
 		}
 
 		const allTracks = data.pages.flatMap((page) => page.result)
+
 		const uniqueMap = new Map(
 			allTracks.map((t) => [
 				t.bvid,
@@ -112,6 +115,7 @@ export default function ManualMatchExternalSync({
 				},
 			]),
 		)
+
 		return [...uniqueMap.values()]
 	}, [data])
 
@@ -138,6 +142,7 @@ export default function ManualMatchExternalSync({
 				</View>
 			)
 		}
+
 		if (allVideos.length > 0) {
 			return (
 				<LegendList
@@ -162,6 +167,7 @@ export default function ManualMatchExternalSync({
 				/>
 			)
 		}
+
 		return (
 			<View style={styles.centerContainer}>
 				<Text style={styles.centerText}>没有找到匹配的视频</Text>

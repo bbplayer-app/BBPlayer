@@ -43,6 +43,7 @@ export function createPlaybackContext(mode: PlayerMode): PlaybackContext {
 	const sessionId =
 		globalThis.crypto?.randomUUID?.() ??
 		`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+
 	return { sessionId, mode }
 }
 
@@ -67,6 +68,7 @@ export async function reconcilePlaybackContext() {
 	assertPlaybackContextAvailable()
 	const tracks = await Orpheus.getQueue()
 	assertPlaybackContextAvailable()
+
 	if (!tracks.length) setPlaybackContext(null)
 	else if (!playbackContextStore$.context.peek()) {
 		setPlaybackContext(
@@ -83,12 +85,14 @@ export function syncPlaybackContext() {
 export function initPlaybackContextStore() {
 	if (initialized) return
 	initialized = true
+
 	const sync = () => {
 		if (restoringBackup) return
 		void syncPlaybackContext().catch((error: unknown) => {
 			log.warning('同步当前播放上下文失败', { error })
 		})
 	}
+
 	Orpheus.addListener('onQueueChanged', sync)
 	AppState.addEventListener('change', (state) => {
 		if (state === 'active') sync()
@@ -101,6 +105,7 @@ export function restorePlaybackContextState(encoded?: string) {
 	const restored = encoded
 		? parsePlaybackContextState(JSON.parse(encoded))
 		: parsePlaybackContextState(null)
+
 	restoringBackup = true
 	playbackContextStore$.set(restored)
 }

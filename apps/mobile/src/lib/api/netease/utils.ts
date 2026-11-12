@@ -6,6 +6,7 @@ export function cookieToJson(cookie: string): Record<string, string> {
 		const arr = i.trim().split('=')
 		obj[arr[0]] = arr[1]
 	})
+
 	return obj
 }
 
@@ -13,6 +14,7 @@ export function cookieObjToString(
 	cookie: Record<string, string> | string,
 ): string {
 	if (typeof cookie !== 'object') return cookie
+
 	return Object.entries(cookie)
 		.map(([key, value]) => `${key}=${value}`)
 		.join('; ')

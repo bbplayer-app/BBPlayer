@@ -19,6 +19,7 @@ const renderItem = ({
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
 	const { bvid, onReplyPress } = extraData
+
 	return (
 		<CommentItem
 			item={item}
@@ -32,6 +33,7 @@ export default function CommentsPage() {
 	const { bvid } = useLocalSearchParams<{ bvid: string }>()
 	const theme = useTheme()
 	const router = useRouter()
+
 	const {
 		data,
 		fetchNextPage,

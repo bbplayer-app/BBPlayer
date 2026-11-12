@@ -1,10 +1,4 @@
-import {
-	Blocks,
-	Boxes,
-	FileDiff,
-	Gauge,
-	RadioTower,
-} from 'lucide-react'
+import { Blocks, Boxes, FileDiff, Gauge, RadioTower } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Separator } from '@/components/ui/separator'
@@ -33,6 +27,7 @@ export type Section =
 const primary = [
 	{ id: 'overview' as const, label: 'Overview', href: '/', icon: Gauge },
 ]
+
 const ota = [
 	{
 		id: 'channels' as const,
@@ -147,6 +142,7 @@ function NavItem({
 	item: (typeof primary)[number] | (typeof ota)[number]
 }) {
 	const Icon = item.icon
+
 	return (
 		<SidebarMenuItem>
 			<SidebarMenuButton

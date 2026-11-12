@@ -17,9 +17,11 @@ export const useFetchLyrics = () => {
 			item: LyricSearchResult[0]
 		}) => {
 			const result = await lyricService.fetchLyrics(item, uniqueKey)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: (_, { uniqueKey }) => {

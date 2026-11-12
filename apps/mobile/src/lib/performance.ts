@@ -32,6 +32,7 @@ const listeners = new Set<() => void>()
 
 export function subscribeToMetrics(fn: () => void) {
 	listeners.add(fn)
+
 	return () => {
 		listeners.delete(fn)
 	}
@@ -80,11 +81,13 @@ export async function captureProfiling(
 
 	try {
 		profilingActive = startProfiling()
+
 		if (!profilingActive) return null
 
 		await new Promise((resolve) => setTimeout(resolve, durationMs))
 		metrics.profilerTracePath = await stopProfiling(true)
 		emit()
+
 		return metrics.profilerTracePath
 	} catch {
 		return null
@@ -101,18 +104,23 @@ function persistMetrics() {
 		timeToFirstRender: metrics.timeToFirstRender,
 		timeToInteractive: metrics.timeToInteractive,
 	}
+
 	// oxlint-disable-next-line no-console
 	console.log(`__PERF_METRICS__${JSON.stringify(summary)}__PERF_END__`)
 }
 
 async function fetchStartupMetrics(): Promise<void> {
 	if (fetched) return
+
 	try {
 		const session = AppMetrics.getMainSession()
+
 		for (let attempt = 0; attempt < 20; attempt++) {
 			const entries = await session.getMetrics()
+
 			for (const entry of entries) {
 				const ms = entry.value * 1000
+
 				switch (entry.name) {
 					case 'coldLaunchTime':
 						metrics.coldLaunchTime = ms
@@ -131,10 +139,12 @@ async function fetchStartupMetrics(): Promise<void> {
 						break
 				}
 			}
+
 			// 原生侧 markInteractive 后异步持久化，TTI 可能尚未写入，重试
 			if (metrics.timeToInteractive !== null) break
 			await new Promise((resolve) => setTimeout(resolve, 250))
 		}
+
 		fetched = true
 		emit()
 	} catch {
@@ -164,5 +174,6 @@ export function markPerfInteractive(): Promise<void> {
 			interactivePromise = null
 		})
 	}
+
 	return interactivePromise
 }

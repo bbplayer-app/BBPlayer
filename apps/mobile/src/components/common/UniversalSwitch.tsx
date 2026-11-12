@@ -19,6 +19,7 @@ const UniversalSwitch = memo(function UniversalSwitch({
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	return (
 		<Host
 			matchContents

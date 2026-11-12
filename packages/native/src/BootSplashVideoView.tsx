@@ -32,6 +32,7 @@ export const BootSplashVideoView = forwardRef<
 	BootSplashVideoViewProps
 >(function BootSplashVideoView(props, ref) {
 	if (!NativeBootSplashVideoView) return null
+
 	return createElement(NativeBootSplashVideoView, {
 		...props,
 		ref,

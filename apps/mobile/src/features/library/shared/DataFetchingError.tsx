@@ -13,6 +13,7 @@ export function DataFetchingError({
 	onRetry,
 }: DataFetchingErrorProps) {
 	const { colors } = useTheme()
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Text

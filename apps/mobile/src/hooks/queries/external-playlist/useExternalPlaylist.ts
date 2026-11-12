@@ -10,13 +10,16 @@ export const useExternalPlaylist = (
 		queryKey: ['external-playlist', source, playlistId],
 		queryFn: async () => {
 			if (!playlistId) return null
+
 			const result = await externalPlaylistService.fetchExternalPlaylist(
 				playlistId,
 				source,
 			)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		enabled: !!playlistId,

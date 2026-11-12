@@ -1,0 +1,16 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bbplayer-docs",
+	"account_id": "40e2595b84d0bd8b9f0e883dfc2428e8",
+	"compatibility_date": "2026-11-11",
+	"workers_dev": true,
+	"routes": [{ "pattern": "bbplayer.roitium.com", "custom_domain": true }],
+	"build": {
+		"command": "pnpm --dir ../.. --filter @bbplayer/docs docs:build",
+	},
+	"assets": {
+		"directory": "./dist",
+		"html_handling": "auto-trailing-slash",
+		"not_found_handling": "404-page",
+	},
+}

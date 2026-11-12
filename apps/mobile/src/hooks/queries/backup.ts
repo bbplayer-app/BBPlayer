@@ -36,6 +36,7 @@ async function fetchWebDavBackups(
 ) {
 	const client = await createMobileWebDavClient(config, password)
 	const entries = await client.listDirectory(config.directory)
+
 	return entries
 		.filter(
 			(entry) => entry.type === 'file' && BACKUP_FILE_PATTERN.test(entry.name),

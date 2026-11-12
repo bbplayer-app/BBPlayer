@@ -42,15 +42,15 @@
 		"@types/react": "19.3.0",
 		"expo": "58.0.23",
 		"expo-module-scripts": "^56.0.2",
-		"expo-modules-core": "^57.0.21",
+		"expo-modules-core": "58.0.30",
 		"react": "19.3.0",
 		"react-native": "0.88.1",
 		"react-native-worklets": "0.13.1"
 	},
 	"peerDependencies": {
-		"expo": "56.0.4",
-		"react": "19.2.3",
-		"react-native": "0.85.3",
-		"react-native-worklets": "0.8.3"
+		"expo": "58.0.23",
+		"react": "19.3.0",
+		"react-native": "0.88.1",
+		"react-native-worklets": "0.13.1"
 	}
 }

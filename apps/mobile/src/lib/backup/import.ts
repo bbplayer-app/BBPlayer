@@ -24,6 +24,7 @@ let restoreInProgress = false
 export async function restoreBackup(filePath: string): Promise<void> {
 	if (restoreInProgress) throw new Error('已有备份正在恢复，请等待完成')
 	restoreInProgress = true
+
 	try {
 		await performRestoreBackup(filePath)
 	} finally {
@@ -38,9 +39,11 @@ async function performRestoreBackup(filePath: string): Promise<void> {
 	const zip = await JSZip.loadAsync(zipBytes)
 
 	const manifestEntry = zip.file('manifest.json')
+
 	if (!manifestEntry) {
 		throw new Error('备份文件无效：缺少 manifest.json')
 	}
+
 	const manifestJson = await manifestEntry.async('string')
 	const manifest: BackupManifest = JSON.parse(manifestJson)
 
@@ -51,6 +54,7 @@ async function performRestoreBackup(filePath: string): Promise<void> {
 	}
 
 	const dbEntry = zip.file('database.db')
+
 	if (!dbEntry) {
 		throw new Error('备份文件无效：缺少 database.db')
 	}
@@ -64,6 +68,7 @@ async function performRestoreBackup(filePath: string): Promise<void> {
 	if (manifest.mmkv['app-storage']) {
 		storage.set('app-storage', manifest.mmkv['app-storage'])
 	}
+
 	if (
 		manifest.mmkv.startup_screen === 'home' ||
 		manifest.mmkv.startup_screen === 'library'
@@ -74,12 +79,14 @@ async function performRestoreBackup(filePath: string): Promise<void> {
 		storage.remove('startup_screen')
 		getStartupScreen()
 	}
+
 	if (manifest.mmkv['shared-playlist-members']) {
 		storage.set(
 			'shared-playlist-members',
 			manifest.mmkv['shared-playlist-members'],
 		)
 	}
+
 	restorePlaybackContextState(manifest.mmkv['playback-context-store'])
 	logger.info('MMKV 数据已恢复')
 
@@ -98,13 +105,16 @@ export async function restoreDatabaseBytes(
 		Paths.cache,
 		`restore-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
 	)
+
 	try {
 		await stagedFile.write(dbBytes)
 		const tempDb = SQLite.openDatabaseSync(stagedFile.uri)
+
 		try {
 			const check = tempDb.getFirstSync<{ quick_check: string }>(
 				'PRAGMA quick_check',
 			)
+
 			if (check?.quick_check !== 'ok') throw new Error('备份数据库损坏')
 			tempDb.execSync('DELETE FROM playlist_sync_queue')
 			await SQLite.backupDatabaseAsync({
@@ -122,6 +132,7 @@ export async function restoreDatabaseBytes(
 	} finally {
 		for (const suffix of ['', '-wal', '-shm']) {
 			const file = new File(`${stagedFile.uri}${suffix}`)
+
 			try {
 				if (file.exists) file.delete()
 			} catch (error) {

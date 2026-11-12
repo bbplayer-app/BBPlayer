@@ -47,13 +47,16 @@ export const usePlaylistSync = () => {
 				onProgress,
 				expandMultiPage,
 			)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: async (id, { toastId }) => {
 			toast.success('同步成功', { id: toastId })
+
 			if (!id) return
 			await Promise.all([
 				queryClient.invalidateQueries({
@@ -71,6 +74,7 @@ export const usePlaylistSync = () => {
 			if (toastId) {
 				toast.dismiss(toastId)
 			}
+
 			toastAndLogError(
 				`同步播放列表失败: remoteSyncId=${remoteSyncId}, type=${type}`,
 				error,
@@ -96,7 +100,9 @@ export const useUpdateTrackLocalPlaylists = () => {
 			artistPayload?: CreateArtistPayload | null
 		}) => {
 			const res = await playlistFacade.updateTrackLocalPlaylists(args)
+
 			if (res.isErr()) throw res.error
+
 			return res.value
 		},
 		onSuccess: async (trackId, { toAddPlaylistIds, toRemovePlaylistIds }) => {
@@ -112,6 +118,7 @@ export const useUpdateTrackLocalPlaylists = () => {
 					queryKey: playlistKeys.playlistLists(),
 				}),
 			)
+
 			for (const id of [...toAddPlaylistIds, ...toRemovePlaylistIds]) {
 				promises.push(
 					queryClient.invalidateQueries({
@@ -124,6 +131,7 @@ export const useUpdateTrackLocalPlaylists = () => {
 					}),
 				)
 			}
+
 			await Promise.all(promises)
 		},
 		onError: (error, { trackPayload }) =>
@@ -146,9 +154,11 @@ export const useDuplicatePlaylist = () => {
 			name: string
 		}) => {
 			const result = await playlistFacade.duplicatePlaylist(playlistId, name)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: async () => {
@@ -177,13 +187,16 @@ export const useEditPlaylistMetadata = () => {
 			payload: UpdatePlaylistPayload
 		}) => {
 			if (playlistId === 0) return
+
 			const result = await playlistFacade.updatePlaylistMetadata(
 				playlistId,
 				payload,
 			)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: async (_, variables) => {
@@ -216,10 +229,13 @@ export const useDeletePlaylist = () => {
 			} catch {
 				// local 歌单不需要 token，继续执行
 			}
+
 			const result = await playlistFacade.deletePlaylist(playlistId)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: (_, { playlistId }) => {
@@ -261,9 +277,11 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 				playlistId,
 				trackIds,
 			)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: async (data, variables) => {
@@ -273,6 +291,7 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 						? `但缺少了: ${data.missingTrackIds.toString()} (理论来说不应该出现此错误)`
 						: undefined,
 			})
+
 			const promises = [
 				queryClient.invalidateQueries({
 					queryKey: playlistKeys.playlistLists(),
@@ -284,6 +303,7 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 					queryKey: playlistKeys.playlistMetadata(variables.playlistId),
 				}),
 			]
+
 			for (const id of data.removedTrackIds) {
 				promises.push(
 					queryClient.invalidateQueries({
@@ -291,6 +311,7 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 					}),
 				)
 			}
+
 			await Promise.all(promises)
 		},
 		onError: (error) =>
@@ -310,7 +331,9 @@ export const useCreateNewLocalPlaylist = () => {
 				...payload,
 				type: 'local',
 			})
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (playlist) => {
@@ -345,7 +368,9 @@ export const useMergePlaylists = () => {
 				sourcePlaylistIds,
 				title,
 			)
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (newPlaylistId) => {
@@ -388,7 +413,9 @@ export const useReorderLocalPlaylistTrack = () => {
 					nextSortKey,
 				},
 			)
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (_, { playlistId }) => {
@@ -420,11 +447,14 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 				playlistId,
 				payloads,
 			)
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (trackIds, { playlistId }) => {
 			toast.success('添加成功')
+
 			const promises = [
 				queryClient.invalidateQueries({
 					queryKey: playlistKeys.playlistLists(),
@@ -436,6 +466,7 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 					queryKey: playlistKeys.playlistMetadata(playlistId),
 				}),
 			]
+
 			for (const id of trackIds) {
 				promises.push(
 					queryClient.invalidateQueries({
@@ -443,6 +474,7 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 					}),
 				)
 			}
+
 			await Promise.all(promises)
 		},
 		onError: (error) =>
@@ -459,9 +491,11 @@ export const useEnableSharing = () => {
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
 			await ensureBBPlayerToken()
 			const result = await sharedPlaylistFacade.enableSharing(playlistId)
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		onSuccess: async (_, { playlistId }) => {
@@ -484,6 +518,7 @@ export const useEnableSharing = () => {
  */
 export const useSubscribeToSharedPlaylist = () => {
 	const router = useRouter()
+
 	return useMutation({
 		mutationKey: ['db', 'playlist', 'subscribeToSharedPlaylist'],
 		mutationFn: async ({
@@ -494,11 +529,14 @@ export const useSubscribeToSharedPlaylist = () => {
 			inviteCode?: string
 		}) => {
 			await ensureBBPlayerToken()
+
 			const result = await sharedPlaylistFacade.subscribeToPlaylist({
 				shareId,
 				inviteCode,
 			})
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async ({ localPlaylistId }) => {
@@ -524,7 +562,9 @@ export const usePullSharedPlaylist = () => {
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
 			await ensureBBPlayerToken()
 			const result = await sharedPlaylistFacade.pullChanges(playlistId)
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (_, { playlistId }) => {
@@ -548,6 +588,7 @@ export const usePullSharedPlaylist = () => {
 				// 交由调用方处理删除逻辑，这里静默
 				return
 			}
+
 			toastAndLogError(
 				`拉取共享歌单失败: playlistId=${playlistId}`,
 				error,
@@ -562,13 +603,16 @@ export const useRotateEditorInviteCode = () => {
 		mutationKey: ['db', 'playlist', 'editorInvite', 'rotate'],
 		mutationFn: async ({ shareId }: { shareId: string }) => {
 			const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)
+
 			if (result.isErr()) throw result.error
+
 			return result.value
 		},
 		onSuccess: async (data, { shareId }) => {
 			await queryClient.invalidateQueries({
 				queryKey: playlistKeys.editorInviteCode(shareId),
 			})
+
 			return data
 		},
 		onError: (error) => toastAndLogError('生成编辑者邀请码失败', error, SCOPE),

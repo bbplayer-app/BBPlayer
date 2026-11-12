@@ -15,23 +15,28 @@ export default function useLyricSync(
 ) {
 	const currentLyricIndex = useSharedValue(0)
 	const isManualScrollingRef = useRef(false)
+
 	const manualScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	)
+
 	const isActiveRef = useRef(true)
 	const latestJumpRequestRef = useRef(0)
 
 	const onUserScrollStart = useCallback(() => {
 		if (!lyrics.length) return
+
 		if (manualScrollTimeoutRef.current) {
 			clearTimeout(manualScrollTimeoutRef.current)
 			manualScrollTimeoutRef.current = null
 		}
+
 		isManualScrollingRef.current = true
 	}, [lyrics.length])
 
 	const onUserScrollEnd = useCallback(() => {
 		if (!lyrics.length) return
+
 		if (manualScrollTimeoutRef.current)
 			clearTimeout(manualScrollTimeoutRef.current)
 
@@ -46,17 +51,23 @@ export default function useLyricSync(
 	const handleJumpToLyric = useCallback(
 		async (index: number) => {
 			if (lyrics.length === 0) return
+
 			if (!lyrics[index]) return
 			const requestId = ++latestJumpRequestRef.current
 			await Orpheus.seekTo(lyrics[index].startTime / 1000 - offset)
+
 			if (latestJumpRequestRef.current !== requestId) return
+
 			if (manualScrollTimeoutRef.current) {
 				clearTimeout(manualScrollTimeoutRef.current)
 				manualScrollTimeoutRef.current = null
 			}
+
 			isManualScrollingRef.current = false
 			currentLyricIndex.set(index)
+
 			if (!enabled) return
+
 			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
 			scrollToIndex(index, true)
 		},
@@ -68,8 +79,10 @@ export default function useLyricSync(
 			let lo = 0,
 				hi = lyrics.length - 1,
 				ans = 0
+
 			while (lo <= hi) {
 				const mid = Math.floor((lo + hi) / 2)
+
 				if (lyrics[mid].startTime / 1000 <= timestamp) {
 					ans = mid
 					lo = mid + 1
@@ -77,6 +90,7 @@ export default function useLyricSync(
 					hi = mid - 1
 				}
 			}
+
 			return Math.max(0, Math.min(ans, lyrics.length - 1))
 		},
 		[lyrics],
@@ -87,7 +101,9 @@ export default function useLyricSync(
 		() => currentLyricIndex.value,
 		(index, prevIndex) => {
 			if (index === prevIndex) return
+
 			if (!enabled) return
+
 			if (isManualScrollingRef.current || manualScrollTimeoutRef.current) return
 			scheduleOnRN(scrollToIndex, index, true)
 		},
@@ -98,14 +114,17 @@ export default function useLyricSync(
 		const appStateSub = AppState.addEventListener('change', (nextAppState) => {
 			isActiveRef.current = nextAppState === 'active'
 		})
+
 		const handler = playerProgressEmitter.subscribe('progress', (data) => {
 			if (!enabled) return
 
 			const offsetedPosition = data.position + offset
+
 			if (!isActiveRef.current || offsetedPosition <= 0) return
 			const index = findIndexForTime(offsetedPosition)
 			currentLyricIndex.set(index)
 		})
+
 		return () => {
 			handler()
 			appStateSub.remove()
@@ -116,6 +135,7 @@ export default function useLyricSync(
 		if (!enabled) return
 		void Orpheus.getPosition().then((data) => {
 			const offsetedPosition = data + offset
+
 			if (!isActiveRef.current || offsetedPosition <= 0) return
 			const index = findIndexForTime(offsetedPosition)
 			currentLyricIndex.set(index)

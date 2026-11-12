@@ -55,6 +55,7 @@ export async function createBackup(): Promise<string> {
 		await zipFile.write(zipData)
 
 		logger.info('备份创建完成', { uri: zipFile.uri })
+
 		return zipFile.uri
 	} finally {
 		if (dbBackupFile.exists) {

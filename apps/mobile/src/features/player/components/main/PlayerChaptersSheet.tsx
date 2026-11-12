@@ -36,6 +36,7 @@ export function PlayerChaptersSheet() {
 			return
 		const chapter = data.chapters[currentIndex]
 		const layout = chapter && rowLayouts.current.get(chapter.id)
+
 		if (!layout || !viewportHeight.current) return
 		didScroll.current = true
 		list.current.scrollTo({
@@ -53,8 +54,10 @@ export function PlayerChaptersSheet() {
 	const selectChapter = async (chapter: Chapter) => {
 		if (!data.trackId || seeking) return
 		setSeeking(true)
+
 		try {
 			const target = await seekWithinTrack(data.trackId, chapter.startSeconds)
+
 			if (target !== null) void usePlayerChaptersSheetStore.getState().close()
 			setSeeking(false)
 		} catch (error) {

@@ -9,13 +9,17 @@ export async function returnOrThrowAsync<T, E>(
 	resultAsync: ResultAsync<T, E> | Promise<Result<T, E>>,
 ): Promise<Exclude<T, undefined | null>> {
 	const result = await resultAsync
+
 	if (result.isOk()) {
 		const value = result.value
+
 		if (value === undefined || value === null) {
 			throw new Error('Result is undefined')
 		}
+
 		return value as Exclude<T, undefined | null>
 	}
+
 	// oxlint-disable-next-line @typescript-eslint/only-throw-error
 	throw result.error
 }

@@ -41,10 +41,12 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 	const [height, setHeight] = useState(0)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
 	const sourceKey = `${data.key}:${data.selected?.id_str ?? data.selected?.id}`
+
 	const store = useMemo(
 		() => createSubtitleReaderStore(lines, trackId ?? undefined, sourceKey),
 		[lines, trackId, sourceKey],
 	)
+
 	useSubtitlePlayback(store, active)
 	const playbackReady = useValue(store.state$.ready)
 	const showControls = height - insets.bottom >= 520
@@ -53,10 +55,12 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 	useEffect(() => {
 		setPickerVisible(false)
 	}, [data.key, active])
+
 	const handleExport = async () => {
 		if (exportingRef.current || !data.selected || !data.lines.length) return
 		exportingRef.current = true
 		setExporting(true)
+
 		try {
 			await exportSubtitles(
 				data.lines,

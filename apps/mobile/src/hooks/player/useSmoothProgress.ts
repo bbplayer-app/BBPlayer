@@ -22,6 +22,7 @@ export default function useSmoothProgress(background = false) {
 		useCallback(
 			(frameInfo) => {
 				'worklet'
+
 				if (
 					!isAppActive.value ||
 					!isPlaying.value ||
@@ -29,6 +30,7 @@ export default function useSmoothProgress(background = false) {
 				) {
 					return
 				}
+
 				position.set(
 					Math.min(
 						duration.value || Infinity,
@@ -44,6 +46,7 @@ export default function useSmoothProgress(background = false) {
 	useEffect(() => {
 		let disposed = false
 		let syncRevision = 0
+
 		const syncState = () => {
 			const revision = ++syncRevision
 			void Promise.all([
@@ -69,6 +72,7 @@ export default function useSmoothProgress(background = false) {
 		const appStateSub = AppState.addEventListener('change', (nextAppState) => {
 			const active = nextAppState === 'active'
 			isAppActive.set(active)
+
 			if (active) {
 				syncState()
 			}
@@ -79,6 +83,7 @@ export default function useSmoothProgress(background = false) {
 			duration.set(data.duration)
 			buffered.set(data.buffered)
 			const diff = Math.abs(position.value - data.position)
+
 			if (
 				diff > 0.05 ||
 				!isPlaying.value ||
@@ -94,6 +99,7 @@ export default function useSmoothProgress(background = false) {
 		})
 
 		const trackSub = Orpheus.addListener('onTrackStarted', syncState)
+
 		const speedSub = Orpheus.addListener(
 			'onPlaybackSpeedChanged',
 			({ speed }) => playbackSpeed.set(speed),
@@ -103,6 +109,7 @@ export default function useSmoothProgress(background = false) {
 			'onIsPlayingChanged',
 			({ status }) => {
 				isPlaying.set(status)
+
 				if (AppState.currentState !== 'active' && !background) return
 				syncState()
 			},

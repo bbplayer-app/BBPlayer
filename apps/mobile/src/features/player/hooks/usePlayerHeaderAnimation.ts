@@ -11,6 +11,7 @@ export function usePlayerHeaderAnimation(
 ) {
 	const titleStyle = useAnimatedStyle(() => {
 		if (!scrollX) return { opacity: index === 1 ? 1 : 0 }
+
 		return {
 			opacity: interpolate(
 				scrollX.value,
@@ -23,6 +24,7 @@ export function usePlayerHeaderAnimation(
 
 	const statusStyle = useAnimatedStyle(() => {
 		if (!scrollX) return { opacity: index === 0 ? 1 : 0 }
+
 		return {
 			opacity: interpolate(
 				scrollX.value,

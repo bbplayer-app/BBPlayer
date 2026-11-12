@@ -21,10 +21,12 @@ export default function serializeObservableState(
 	state: ObservableState<unknown> | undefined,
 ): NativeObservableStateReference {
 	const id = getStateId(state)
+
 	if (id == null) {
 		throw new Error(
 			'Expected an ObservableState with a native SharedObject id.',
 		)
 	}
+
 	return { stateId: id }
 }

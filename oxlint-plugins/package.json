@@ -1,0 +1,5 @@
+{
+	"name": "@bbplayer/oxlint-plugins",
+	"private": true,
+	"type": "module"
+}

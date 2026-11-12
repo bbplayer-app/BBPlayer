@@ -50,10 +50,12 @@ export const WeeklyHeatMap = ({
 	const startDay = dayjs(startDate || dayjs().subtract(1, 'year'))
 		.startOf('day')
 		.valueOf()
+
 	const endDay = dayjs(endDate).startOf('day').valueOf()
 
 	const baseTheme =
 		scheme === 'light' ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME
+
 	const customTheme = props[scheme] || {}
 	const theme = { ...baseTheme, ...props, ...customTheme }
 
@@ -72,6 +74,7 @@ export const WeeklyHeatMap = ({
 	)
 
 	const sidebarWidth = isSidebarVisible ? sideBarTextFontSize * 3 : 0
+
 	const headerHeight = isHeaderVisible
 		? headerTextFontSize + headerBottomSpace
 		: 0
@@ -87,14 +90,17 @@ export const WeeklyHeatMap = ({
 
 		displayedWeeks.forEach((week, index) => {
 			const month = dayjs(week.weekStart).month()
+
 			if (month !== lastMonth) {
 				// A month starting in the final column can be wider than one cell.
 				// Align its trailing edge with the last cell so the SVG won't clip it.
 				const isLastColumn = index === displayedWeeks.length - 1
+
 				const x =
 					sidebarWidth +
 					index * (cellSize + cellGap) +
 					(isLastColumn ? cellSize : 0)
+
 				monthLabels.push(
 					<SvgText
 						// oxlint-disable-next-line react/no-array-index-key
@@ -119,6 +125,7 @@ export const WeeklyHeatMap = ({
 		if (!isSidebarVisible) return null
 
 		const dayLabels: JSX.Element[] = []
+
 		for (let i = 0; i < 7; i++) {
 			const day = dayjs().day((i + weekStartsOn) % 7)
 			dayLabels.push(
@@ -139,6 +146,7 @@ export const WeeklyHeatMap = ({
 				</SvgText>,
 			)
 		}
+
 		return dayLabels
 	}
 

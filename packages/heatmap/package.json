@@ -14,8 +14,8 @@
 	"peerDependencies": {
 		"@shopify/react-native-skia": "^2.14.0",
 		"dayjs": "^1.11.23",
-		"react": "19.2.3",
-		"react-native": "0.85.3",
-		"react-native-svg": "15.15.4"
+		"react": "19.3.0",
+		"react-native": "0.88.1",
+		"react-native-svg": "15.16.0"
 	}
 }

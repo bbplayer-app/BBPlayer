@@ -51,20 +51,26 @@ function SearchPageContent() {
 	const headerForegroundColor = useSkinForegroundColor()
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
+
 	const [searchHistory, setSearchHistory] =
 		useMMKVObject<SearchHistoryItem[]>(SEARCH_HISTORY_KEY)
+
 	const [isLoading, setIsLoading] = useState(false)
 	const [searchFocused, setSearchFocused] = useState(false)
+
 	const suggestionsVisible =
 		searchFocused &&
 		searchQuery.trim().length > 0 &&
 		deferredSearchQuery.trim().length > 0
+
 	const searchBarRef = useRef<ComponentRef<typeof Searchbar>>(null)
+
 	const dismissPanel = useCallback(() => {
 		setSearchFocused(false)
 		searchBarRef.current?.blur()
 		Keyboard.dismiss()
 	}, [])
+
 	useFocusEffect(
 		useCallback(() => {
 			const backSubscription = BackHandler.addEventListener(
@@ -72,14 +78,17 @@ function SearchPageContent() {
 				() => {
 					if (!searchFocused) return false
 					dismissPanel()
+
 					return true
 				},
 			)
+
 			// Android 在输入法打开时会先由系统处理返回键，此时仍需收起面板。
 			const keyboardSubscription = Keyboard.addListener(
 				'keyboardDidHide',
 				dismissPanel,
 			)
+
 			return () => {
 				backSubscription.remove()
 				keyboardSubscription.remove()
@@ -89,8 +98,10 @@ function SearchPageContent() {
 	useFocusEffect(useCallback(() => () => dismissPanel(), [dismissPanel]))
 	const [contentHeight, setContentHeight] = useState(0)
 	const contentBottomPadding = haveTrack ? 86 : 24
+
 	const { resolvedSharedPayloads, isResolving, clearSharedPayloads } =
 		useAppIncomingShare()
+
 	const { markInteractive } = useObserve()
 	useEffect(() => {
 		markInteractive()
@@ -119,6 +130,7 @@ function SearchPageContent() {
 			}
 
 			const currentHistory = searchHistory ?? []
+
 			const existingIndex = currentHistory.findIndex(
 				(item) => item.text.toLowerCase() === query.toLowerCase(),
 			)
@@ -150,11 +162,14 @@ function SearchPageContent() {
 			if (!query.trim()) return
 			dismissPanel()
 			setIsLoading(true)
+
 			try {
 				const result = await matchSearchStrategies(query)
+
 				if (navigateWithSearchStrategy(result, router) === 1) {
 					addSearchHistory(query)
 				}
+
 				setSearchQuery('')
 			} catch (error) {
 				toastAndLogError('搜索失败，请重试', error, 'UI.Search')
@@ -192,6 +207,7 @@ function SearchPageContent() {
 	const handleRemoveHistoryItem = useCallback(
 		(id: string) => {
 			const item = searchHistory?.find((h) => h.id === id)
+
 			if (!item) return
 			alert(
 				'删除搜索历史？',
@@ -214,6 +230,7 @@ function SearchPageContent() {
 
 	useEffect(() => {
 		if (resolvedSharedPayloads.length === 0) return
+
 		if (resolvedSharedPayloads.length > 1) {
 			if (Platform.OS === 'android') {
 				ToastAndroid.show('收到多个共享内容，已忽略', ToastAndroid.SHORT)
@@ -225,13 +242,17 @@ function SearchPageContent() {
 				)
 			}
 		}
+
 		const data = resolvedSharedPayloads[0]
 		let query: string | undefined
+
 		if (data.shareType === 'text') {
 			query = data.value
 		}
+
 		if (!query) {
 			clearSharedPayloads()
+
 			return
 		}
 

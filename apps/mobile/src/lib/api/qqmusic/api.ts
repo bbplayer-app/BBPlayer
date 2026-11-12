@@ -65,11 +65,13 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
+
 				return res.json() as Promise<QQMusicSearchResponse>
 			}),
 			(e) => new Error('Failed to search QQ Music', { cause: e }),
 		).map((res) => {
 			const list = res.req.data.body.song.list
+
 			return list.map((song) => ({
 				source: 'qqmusic' as const,
 				duration: song.interval,
@@ -101,6 +103,7 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
+
 				return res.json() as Promise<QQMusicLyricResponse>
 			}),
 			(e) => new Error('Failed to fetch lyrics from QQ Music', { cause: e }),
@@ -195,6 +198,7 @@ export class QQMusicApi {
 				if (!res.ok) {
 					throw new Error(`QQ Music API error: ${res.statusText}`)
 				}
+
 				return res.json() as Promise<QQMusicPlaylistResponse>
 			}),
 			(e) => new Error('Failed to fetch playlist from QQ Music', { cause: e }),

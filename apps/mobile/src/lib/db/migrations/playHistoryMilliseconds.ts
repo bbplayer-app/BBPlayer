@@ -4,6 +4,7 @@ import log from '@/utils/log'
 import { DataMigration } from './state'
 
 const logger = log.extend('migratePlayHistoryToMs')
+
 const migration = new DataMigration(
 	'play_history_ms_v1',
 	'play_history_ms_migrated_v1',

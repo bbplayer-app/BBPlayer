@@ -23,6 +23,7 @@ const show = (message: string, options?: Options) => {
 
 const success = (message: string, options?: Options) => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+
 	return sonner.success(message, {
 		description: options?.description,
 		duration: options?.duration,
@@ -33,6 +34,7 @@ const success = (message: string, options?: Options) => {
 
 const error = (message: string, options?: Options) => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Reject)
+
 	return sonner.error(message, {
 		description: options?.description,
 		duration: options?.duration,

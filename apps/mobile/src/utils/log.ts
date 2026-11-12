@@ -67,6 +67,7 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 
 		if (!logDir.exists) {
 			log.debug('日志目录不存在，无需清理')
+
 			return ok(0)
 		}
 
@@ -82,15 +83,19 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 		const re = /^(\d{4}-\d{1,2}-\d{1,2})\.log$/
 
 		let deleted = 0
+
 		for (const name of list) {
 			const m = re.exec(name)
+
 			if (!m) continue
 
 			const fileDate = new Date(m[1])
+
 			if (Number.isNaN(fileDate.getTime())) continue
 
 			if (fileDate < cutoffDate) {
 				const file = new EXPOFS.File(logDir, name)
+
 				try {
 					file.delete()
 					deleted += 1
@@ -102,6 +107,7 @@ export function cleanOldLogFiles(keepDays = 7): Result<number, Error> {
 				}
 			}
 		}
+
 		return ok(deleted)
 	} catch (e) {
 		return err(e instanceof Error ? e : new Error(String(e)))
@@ -124,15 +130,19 @@ export function flatErrorMessage(
 	maxDepth = 10,
 ) {
 	_temp.push(error.message)
+
 	if (_depth >= maxDepth) {
 		_temp.push('[error depth exceeded]')
+
 		return _temp.join(separator)
 	}
+
 	if (error.cause) {
 		if (error.cause instanceof Error) {
 			flatErrorMessage(error.cause, separator, _temp, _depth + 1)
 		}
 	}
+
 	return _temp.join(separator)
 }
 
@@ -145,8 +155,10 @@ export function flatErrorMessage(
 
 const stringifyError = (e: unknown): string => {
 	if (e === null) return 'null'
+
 	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
 	if (typeof e !== 'object') return String(e)
+
 	try {
 		return JSON.stringify(e)
 	} catch {
@@ -172,11 +184,13 @@ export function reportErrorToSentry(
 	const tags: Record<string, string | number | boolean | undefined> = {
 		appScope: scope,
 	}
+
 	if (isCustom && typeof normalizedError.type === 'string') {
 		tags.errorType = normalizedError.type
 	}
 
 	const extra: Record<string, unknown> = { message }
+
 	if (isCustom && normalizedError.data !== undefined) {
 		extra.errorData = normalizedError.data
 	}
@@ -191,6 +205,7 @@ try {
 		idempotent: true,
 	})
 } catch {}
+
 const log = logger.createLogger(config)
 
 export default log

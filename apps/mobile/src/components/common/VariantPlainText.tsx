@@ -14,6 +14,7 @@ type Props = Omit<PlainTextProps, 'children'> & {
  */
 export function VariantPlainText({ variant, style, ...props }: Props) {
 	const theme = useTheme()
+
 	return (
 		<PlainText
 			style={[

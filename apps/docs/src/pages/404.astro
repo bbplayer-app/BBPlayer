@@ -1,0 +1,18 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro'
+---
+
+<StarlightPage frontmatter={{
+	title: '页面未找到',
+	description: '这个页面可能已移动，或链接有误。',
+	template: 'splash',
+	editUrl: false,
+	hero: {
+		title: '页面未找到',
+		tagline: '这个页面可能已移动，或链接有误。',
+		actions: [
+			{ text: '返回首页', link: '/' },
+			{ text: '阅读指南', link: '/guides/', variant: 'secondary' },
+		],
+	},
+}} />

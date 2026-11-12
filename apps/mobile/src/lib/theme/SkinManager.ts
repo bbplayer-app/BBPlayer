@@ -50,15 +50,18 @@ const deriveSkinId = (item: GarbSkinSearchResult): string => {
 	) {
 		return `collection_${item.actId}_${item.lotteryId}`
 	}
+
 	if (item.kind === 'suit') {
 		return `suit_${item.itemId ?? 'unknown'}`
 	}
+
 	throw new Error(`不支持的皮肤类型: ${item.kind}`)
 }
 
 const deriveSkinIdFromSource = (source: InstalledSkin['source']): string => {
 	if (source.kind === 'collection')
 		return `collection_${source.actId}_${source.lotteryId}`
+
 	return `suit_${source.itemId}`
 }
 
@@ -74,9 +77,12 @@ const skinJsonFile = (skinId: string): FileSystem.File =>
 
 const readSkinJson = async (skinId: string): Promise<InstalledSkin | null> => {
 	const file = skinJsonFile(skinId)
+
 	if (!file.exists) return null
+
 	try {
 		const text = await file.text()
+
 		return JSON.parse(text) as InstalledSkin
 	} catch {
 		return null
@@ -122,6 +128,7 @@ export const installSkin = (
 				FileSystem.Paths.cache ?? FileSystem.Paths.document,
 				`skin-install-${Date.now().toString(36)}/`,
 			)
+
 			tempDir.create({ idempotent: true, intermediates: true })
 
 			return downloadManifestAssets({
@@ -141,6 +148,7 @@ export const installSkin = (
 			})
 				.andThen(({ mapping }) => {
 					const finalDir = new FileSystem.Directory(skinsDir, `${skinId}/`)
+
 					const source =
 						item.kind === 'collection'
 							? ({
@@ -160,6 +168,7 @@ export const installSkin = (
 						skinId,
 						source,
 					})
+
 					if (result.isErr()) return errAsync(result.error)
 					const installedSkin = result.value
 
@@ -181,6 +190,7 @@ export const installSkin = (
 								skinId,
 								finalDir: finalDir.uri,
 							})
+
 							return installedSkin
 						})(),
 						(e) => {
@@ -188,6 +198,7 @@ export const installSkin = (
 								skinId,
 								error: e instanceof Error ? e.message : String(e),
 							})
+
 							// best-effort cleanup
 							if (tempDir.exists) {
 								try {
@@ -196,6 +207,7 @@ export const installSkin = (
 									// ignore
 								}
 							}
+
 							return createSkinInstallFailed(
 								e instanceof Error ? e.message : String(e),
 								e,
@@ -212,6 +224,7 @@ export const installSkin = (
 							// ignore
 						}
 					}
+
 					return errAsync(error)
 				})
 		},
@@ -227,14 +240,17 @@ export const uninstallSkin = (
 ): ResultAsync<void, ServiceError> => {
 	log.debug('[skin-mgr] uninstall started', { skinId })
 	const store = useSkinStore.getState()
+
 	if (!store.installedSkins.some((e) => e.id === skinId)) {
 		log.debug('[skin-mgr] uninstall skipped: not installed', { skinId })
+
 		return okAsync(undefined)
 	}
 
 	return ResultAsync.fromPromise(
 		(async () => {
 			const dir = new FileSystem.Directory(skinsDir, `${skinId}/`)
+
 			if (dir.exists) {
 				dir.delete()
 			}
@@ -288,5 +304,6 @@ export const getInstalledSkinMeta = (
 
 export const isSkinInstalled = (item: GarbSkinSearchResult): boolean => {
 	const skinId = deriveSkinId(item)
+
 	return useSkinStore.getState().installedSkins.some((e) => e.id === skinId)
 }

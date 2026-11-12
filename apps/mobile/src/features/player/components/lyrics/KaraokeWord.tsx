@@ -36,6 +36,7 @@ export const KaraokeWord = memo(function KaraokeWord({
 		() => currentTime.value,
 		(currentVal: number) => {
 			const timeMs = currentVal * 1000
+
 			if (timeMs < span.startTime) {
 				localProgress.set(0)
 			} else if (timeMs > span.endTime) {

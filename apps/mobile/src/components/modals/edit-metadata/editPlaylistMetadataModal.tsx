@@ -26,6 +26,7 @@ export default function EditPlaylistMetadataModal({
 	const [description, setDescription] = useState(playlist.description)
 	const [coverUrl, setCoverUrl] = useState(playlist.coverUrl)
 	const modalClose = useModalStore((state) => state.close)
+
 	const close = useCallback(
 		() => modalClose('EditPlaylistMetadata'),
 		[modalClose],
@@ -34,20 +35,25 @@ export default function EditPlaylistMetadataModal({
 	const fetchRemoteMetadata = useCallback(async () => {
 		if (!playlist.remoteSyncId) {
 			toast.error('播放列表的 remoteSyncId 为空，无法获取远程数据')
+
 			return
 		}
+
 		const result = await bilibiliFacade.fetchRemotePlaylistMetadata(
 			playlist.remoteSyncId,
 			playlist.type,
 		)
+
 		if (result.isErr()) {
 			toastAndLogError(
 				'获取远程播放列表元数据失败',
 				result.error,
 				'Components.EditPlaylistMetadataModal',
 			)
+
 			return
 		}
+
 		const metadata = result.value
 		setTitle(metadata.title)
 		setDescription(metadata.description)
@@ -59,8 +65,10 @@ export default function EditPlaylistMetadataModal({
 	const handleConfirm = useCallback(() => {
 		if (title.trim().length === 0) {
 			toast.error('标题不能为空')
+
 			return
 		}
+
 		editPlaylistMetadata({
 			playlistId: playlist.id,
 			payload: {
@@ -74,19 +82,25 @@ export default function EditPlaylistMetadataModal({
 
 	const handleImagePicker = useCallback(async () => {
 		const imageUri = await pickImage()
+
 		if (!imageUri) return
 		const assetFile = new FileSystem.File(imageUri)
+
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',
 		)
+
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true })
 		}
+
 		const coverFile = new FileSystem.File(coverDir, assetFile.name)
+
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
+
 		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [])

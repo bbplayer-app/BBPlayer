@@ -76,11 +76,13 @@ function TextWithAnimation({
 		}),
 		[colors.onSurfaceVariant, fonts.bodySmall],
 	)
+
 	const positionTextProp = useAnimatedProps(() => {
 		return {
 			text: positionText.value,
 		}
 	})
+
 	const durationTextProp = useAnimatedProps(() => {
 		return {
 			text: durationText.value,
@@ -119,24 +121,32 @@ export function PlayerSlider({
 	const nativeDuration = useTrackDuration()
 	const { chapters, podcast } = usePlayerChapters()
 	const canSeek = Number.isFinite(nativeDuration) && nativeDuration > 0
+
 	const markers = useMemo(
 		() => (podcast ? chapterBoundaries(chapters, nativeDuration) : []),
 		[chapters, nativeDuration, podcast],
 	)
+
 	const { colors } = useTheme()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	const activeSkin = useActiveSkin()
+
 	const skinSliderThumbSize = useSkinStore(
 		(state) => state.skinSliderThumbSize ?? 20,
 	)
+
 	const skinSliderThumbOffsetX = useSkinStore(
 		(state) => state.skinSliderThumbOffsetX ?? 0,
 	)
+
 	const skinSliderThumbOffsetY = useSkinStore(
 		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
+
 	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
 	const { position, duration, buffered } = useSmoothProgress()
 	const isPlaying = useIsPlaying()
@@ -160,12 +170,15 @@ export function PlayerSlider({
 	const handleSeek = useCallback(
 		async (time: number, relative = false) => {
 			if (!trackId) return
+
 			try {
 				const target = await seekWithinTrack(trackId, time, relative)
+
 				if (target !== null) {
 					position.set(target)
 					seekPosition.set(target)
 				}
+
 				isSeeking.set(false)
 			} catch (error) {
 				toastAndLogError('跳转失败', error, 'Player.Slider')
@@ -183,7 +196,9 @@ export function PlayerSlider({
 
 	const displayPosition = useDerivedValue(() => {
 		if (isScrubbing.value) return scrubPosition.value
+
 		if (isSeeking.value) return seekPosition.value
+
 		return position.value
 	})
 
@@ -201,6 +216,7 @@ export function PlayerSlider({
 	const chapterPreviewProps = useAnimatedProps(() => {
 		const time = displayPosition.value
 		const chapter = chapters[chapterIndexAt(chapters, time)]
+
 		return {
 			text: chapter?.title ?? '',
 		}
@@ -213,6 +229,7 @@ export function PlayerSlider({
 			const target = seekPosition.value
 			const threshold = 1
 			const diff = Math.abs(currentPosition - target)
+
 			if (diff < threshold) {
 				isSeeking.set(false)
 			}
@@ -252,17 +269,20 @@ export function PlayerSlider({
 	const progressFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
 		let pos = position.value
+
 		if (isScrubbing.value) {
 			pos = scrubPosition.value
 		} else if (isSeeking.value) {
 			pos = seekPosition.value
 		}
+
 		return Math.min(Math.max(pos / dur, 0), 1)
 	})
 
 	// oxlint-disable-next-line no-underscore-dangle
 	const _bufferedFraction = useDerivedValue(() => {
 		const dur = duration.value || 1
+
 		return Math.min(Math.max(buffered.value / dur, 0), 1)
 	})
 
@@ -273,6 +293,7 @@ export function PlayerSlider({
 			const previousFraction = scrubPosition.value / (duration.value || 1)
 			isScrubbing.set(true)
 			scrubPosition.set(value * (duration.value || 1))
+
 			if (
 				podcast &&
 				wasScrubbing &&
@@ -280,6 +301,7 @@ export function PlayerSlider({
 					chapterBoundaryIndex(markers, previousFraction)
 			) {
 				const now = Date.now()
+
 				if (now - lastChapterHaptic.value >= 80) {
 					lastChapterHaptic.set(now)
 					scheduleOnRN(
@@ -292,6 +314,7 @@ export function PlayerSlider({
 			if (!wasScrubbing) {
 				scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Drag_Start)
 			}
+
 			if (onInteraction) {
 				scheduleOnRN(onInteraction)
 			}
@@ -317,6 +340,7 @@ export function PlayerSlider({
 			isScrubbing.set(false)
 			scheduleOnRN(handleSeek, targetTime)
 			scheduleOnRN(Haptics.performHaptics, Haptics.AndroidHaptics.Gesture_End)
+
 			if (onInteraction) {
 				scheduleOnRN(onInteraction)
 			}
@@ -328,6 +352,7 @@ export function PlayerSlider({
 		(dragging: boolean) => {
 			'worklet'
 			isNativeDragging.set(dragging)
+
 			if (!dragging) isScrubbing.set(false)
 		},
 		[isNativeDragging, isScrubbing],
@@ -336,12 +361,15 @@ export function PlayerSlider({
 	const sliderWidth = useSharedValue(0)
 	const scrubActivated = useSharedValue(false)
 	const trackRatio = podcast ? 1 : SLIDER_WIDTH_PERCENT / 100
+
 	const toFraction = (x: number) => {
 		'worklet'
 		// 手势区域占满整行，非播客模式下可见轨道居中且更窄，要换算成轨道上的位置。
 		const trackWidth = sliderWidth.value * trackRatio
+
 		if (trackWidth <= 0) return 0
 		const trackLeft = (sliderWidth.value - trackWidth) / 2
+
 		return Math.min(Math.max((x - trackLeft) / trackWidth, 0), 1)
 	}
 
@@ -366,10 +394,12 @@ export function PlayerSlider({
 		},
 		onFinalize: (event) => {
 			'worklet'
+
 			// 手指没动的点按不会激活手势，结束时同样带 canceled，只有拖动中途被打断才放弃跳转。
 			if (!event.canceled || !scrubActivated.value) {
 				handleValueChangeFinished(toFraction(event.x))
 			}
+
 			handleDragStateChange(false)
 		},
 	})
@@ -393,6 +423,7 @@ export function PlayerSlider({
 			pureWhiteBackground,
 		],
 	)
+
 	const sliderThumb = activeSkin?.sliderThumbs[activePlayIconIndex]
 	const hasSkinSliderThumb = Boolean(sliderThumb?.normal)
 
@@ -456,6 +487,7 @@ export function PlayerSlider({
 						onAccessibilityAction={(event) => {
 							const direction =
 								event.nativeEvent.actionName === 'increment' ? 1 : -1
+
 							void handleSeek(direction * ACCESSIBILITY_SEEK_SECONDS, true)
 						}}
 						onLayout={(event) => {

@@ -39,6 +39,7 @@ export default function BilibiliAccountSettingsPage() {
 	const { data: personalInfo } = usePersonalInformation()
 	const profile = personalInfo ?? cachedUserInfo
 	const activeSkin = useActiveSkin()
+
 	const activeAvatarFrameIndex = useSkinStore(
 		(state) => state.activeAvatarFrameIndex,
 	)

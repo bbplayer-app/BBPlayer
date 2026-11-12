@@ -27,6 +27,7 @@ function useLyricColor(
 ) {
 	const progress = useDerivedValue(() => {
 		const target = isHighlighted.value && enabled ? 1 : 0
+
 		return immediate ? target : withTiming(target, { duration: 300 })
 	})
 
@@ -35,6 +36,7 @@ function useLyricColor(
 		if (!Number.isFinite(progress.value)) {
 			return isHighlighted.value && enabled ? activeColor : inactiveColor
 		}
+
 		return interpolateColor(
 			Math.max(0, Math.min(1, progress.value)),
 			[0, 1],
@@ -89,6 +91,7 @@ export const OldSchoolLyricLineItem = memo(function OldSchoolLyricLineItem({
 
 	const animatedStyle = useAnimatedStyle(() => {
 		const duration = isVerbatim ? 0 : 300
+
 		if (isHighlighted.value) {
 			return {
 				opacity: withTiming(1, { duration }),
@@ -216,6 +219,7 @@ export const ModernLyricLineItem = memo(function ModernLyricLineItem({
 		theme.colors.onSurfaceDisabled,
 		isHighlightedRState,
 	)
+
 	const textAnimatedStyle = useAnimatedStyle(() => ({
 		color: lyricColor.value,
 	}))

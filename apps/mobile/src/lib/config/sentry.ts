@@ -6,6 +6,7 @@ import * as Updates from 'expo-updates'
 import { Platform } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
 import log from '@/utils/log'
 
@@ -42,15 +43,18 @@ const getEnv = () => {
 	if (development) {
 		return 'development'
 	}
+
 	// 这不可能发生，只在 web 端会是 null
 	if (!identifier) {
 		return 'development'
 	}
+
 	if (identifier === 'com.roitium.bbplayer.dev') {
 		return 'development'
 	} else if (identifier === 'com.roitium.bbplayer.preview') {
 		return 'preview'
 	}
+
 	return 'production'
 }
 
@@ -87,9 +91,19 @@ export function initializeSentry() {
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
+		beforeSend(event) {
+			const fingerprint = getNativeModuleFingerprint(event)
+
+			if (fingerprint) {
+				event.fingerprint = fingerprint
+			}
+
+			return event
+		},
 	})
 
 	const scope = Sentry.getGlobalScope()
+
 	const launchSource = Updates.isEmergencyLaunch
 		? 'emergency'
 		: Updates.isEmbeddedLaunch
@@ -106,6 +120,7 @@ export function initializeSentry() {
 	if (!development) {
 		// oxlint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const errorUtils = (global as any).ErrorUtils
+
 		if (errorUtils) {
 			// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
 			const originalErrorHandler = errorUtils.getGlobalHandler()

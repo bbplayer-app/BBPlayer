@@ -82,6 +82,7 @@ const resolveComponent = (
 				componentName,
 				error: error.message,
 			})
+
 			return createSkinFetchFailed(error.message, error)
 		})
 		.andThen((data: BilibiliGarbBenefitResponse) => {
@@ -90,6 +91,7 @@ const resolveComponent = (
 			switch (data.part_id) {
 				case 1: {
 					const props: BilibiliGarbAvatarFrameProperties = data.properties ?? {}
+
 					return okAsync({
 						data: {
 							id,
@@ -99,8 +101,10 @@ const resolveComponent = (
 						partId: 1,
 					})
 				}
+
 				case 3: {
 					const props: BilibiliGarbThumbUpProperties = data.properties ?? {}
+
 					return okAsync({
 						data: {
 							ani_cut: props.image_ani_cut ?? null,
@@ -112,8 +116,10 @@ const resolveComponent = (
 						partId: 3,
 					})
 				}
+
 				case 9: {
 					const props: BilibiliGarbThemeSkinProperties = data.properties ?? {}
+
 					return okAsync({
 						data: {
 							color: props.color ?? null,
@@ -156,8 +162,10 @@ const resolveComponent = (
 						partId: 9,
 					})
 				}
+
 				case 10: {
 					const props: BilibiliGarbLoadingProperties = data.properties ?? {}
+
 					return okAsync({
 						data: {
 							id,
@@ -169,8 +177,10 @@ const resolveComponent = (
 						partId: 10,
 					})
 				}
+
 				case 11: {
 					const props: BilibiliGarbPlayIconProperties = data.properties ?? {}
+
 					return okAsync({
 						data: {
 							drag_left_png: props.drag_left_png ?? null,
@@ -184,6 +194,7 @@ const resolveComponent = (
 						partId: 11,
 					})
 				}
+
 				default:
 					return okAsync({ data: null, partId: null })
 			}
@@ -200,6 +211,7 @@ const appendComponent = (
 	data: unknown,
 ) => {
 	if (!data) return
+
 	switch (partId) {
 		case 1:
 			table.avatar_frames.push(
@@ -234,21 +246,25 @@ const parseReward = (
 	// type=1: 卡牌奖励
 	if (itemType === 1) {
 		const card = entry.card_item?.card_asset_info?.card_item
+
 		if (card) {
 			table.cards.push(parseCollectCardItem(card, table.cards.length + index))
 		}
+
 		return okAsync(undefined)
 	}
 
 	// type=2/3/5: 组件奖励（需逐个请求 benefit API）
 	if (itemType !== 2 && itemType !== 3 && itemType !== 5)
 		return okAsync(undefined)
+
 	if (!itemId) return okAsync(undefined)
 
 	const componentIds = itemId
 		.split('&')
 		.map((id) => id.trim())
 		.filter(Boolean)
+
 	const bundled = componentIds.length > 1
 
 	return ResultAsync.combine(
@@ -313,6 +329,7 @@ const buildCollectionAssetDeclaration = (
 				actId: item.actId,
 				error: error.message,
 			})
+
 			return createSkinFetchFailed(error.message, error)
 		})
 		.andThen((data) => {
@@ -322,6 +339,7 @@ const buildCollectionAssetDeclaration = (
 				name: item.name,
 				type: 'collection',
 			})
+
 			table.coverUri = item.coverUri
 
 			// 资产包卡牌
@@ -338,12 +356,14 @@ const buildCollectionAssetDeclaration = (
 
 			return ResultAsync.combine(rewards).andThen(() => {
 				const result = parseSkinAssetDeclaration(table)
+
 				if (result.isErr()) return errAsync(result.error)
 				log.debug('[adapter] collection declaration built', {
 					cards: result.value.cards.length,
 					skins: result.value.skins.length,
 					thumbups: result.value.thumbups.length,
 				})
+
 				return okAsync(result.value)
 			})
 		})
@@ -364,6 +384,7 @@ const buildSuitAssetDeclaration = (
 				error: error.message,
 				itemId: item.itemId,
 			})
+
 			return createSkinFetchFailed(error.message, error)
 		})
 		.andThen((suitItems) => {
@@ -372,6 +393,7 @@ const buildSuitAssetDeclaration = (
 				name: item.name,
 				type: 'suit',
 			})
+
 			table.coverUri = item.coverUri
 			let nextCardId = 1
 
@@ -401,15 +423,18 @@ const buildSuitAssetDeclaration = (
 			// 空间背景（同时生成启动卡牌）
 			for (const entry of items.space_bg ?? []) {
 				const props: BilibiliGarbSuitSpaceBgProperties = entry.properties ?? {}
+
 				const images: { landscape: string | null; portrait: string | null }[] =
 					[]
 
 				for (let idx = 1; idx <= 8; idx += 1) {
 					const landscape = props[`image${idx}_landscape`]?.trim() || null
 					const portrait = props[`image${idx}_portrait`]?.trim() || null
+
 					if (!landscape && !portrait) continue
 
 					images.push({ landscape, portrait })
+
 					if (portrait) {
 						table.cards.push({
 							img: portrait,
@@ -507,12 +532,14 @@ const buildSuitAssetDeclaration = (
 			}
 
 			const result = parseSkinAssetDeclaration(table)
+
 			if (result.isErr()) return errAsync(result.error)
 			log.debug('[adapter] suit declaration built', {
 				cards: result.value.cards.length,
 				skins: result.value.skins.length,
 				thumbups: result.value.thumbups.length,
 			})
+
 			return okAsync(result.value)
 		})
 }
@@ -536,15 +563,19 @@ export const fetchGarbSkinAssetDeclaration = (
 				lotteryId: item.lotteryId,
 				name: item.name,
 			})
+
 			return buildCollectionAssetDeclaration(item, signal)
 		}
+
 		case 'suit': {
 			log.debug('[adapter] building suit asset declaration', {
 				itemId: item.itemId,
 				name: item.name,
 			})
+
 			return buildSuitAssetDeclaration(item, signal)
 		}
+
 		default:
 			return errAsync(createSkinFetchFailed('当前只支持下载收藏集和主题装扮'))
 	}

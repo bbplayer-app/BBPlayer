@@ -11,24 +11,38 @@ pre-commit:
     format-codes:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,yml,yaml,toml}'
       run: |
-        if [ -z "{staged_files}" ]; then
+        set -f
+        set -- {staged_files}
+
+        if [ "$#" -eq 0 ]; then
           echo "No staged files to format."
           exit 0
         fi
 
-        pnpm oxfmt --write --no-error-on-unmatched-pattern "{staged_files}"
+        pnpm oxfmt --write --no-error-on-unmatched-pattern "$@"
       stage_fixed: true
     lint-codes:
       glob: '*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx}'
       run: |
-        if [ -z "{staged_files}" ]; then
+        set -f
+        set -- {staged_files}
+
+        if [ "$#" -eq 0 ]; then
           echo "No staged code files to lint."
           exit 0
         fi
 
-        pnpm oxlint --type-aware "{staged_files}"
+        pnpm oxlint --type-aware --no-error-on-unmatched-pattern "$@"
       stage_fixed: true
     format-plain-text:
       glob: '*.{md,mdx}'
-      run: pnpm oxfmt --write "{staged_files}"
+      run: |
+        set -f
+        set -- {staged_files}
+
+        if [ "$#" -eq 0 ]; then
+          exit 0
+        fi
+
+        pnpm oxfmt --write --no-error-on-unmatched-pattern "$@"
       stage_fixed: true

@@ -55,11 +55,14 @@ export default function WeeklyHeatMapGrid({
 }: WeeklyHeatMapGridProps) {
 	const stride = cellSize + cellGap
 	const paletteKey = JSON.stringify(cellColor)
+
 	const { paths, labels } = useMemo(() => {
 		const palette = JSON.parse(paletteKey) as Record<number, string>
+
 		const levels = Object.keys(palette)
 			.map(Number)
 			.sort((a, b) => b - a)
+
 		const grouped = new Map<string, SkPathBuilder>()
 		const textLabels: { x: number; y: number; text: string; key: string }[] = []
 		const radius = Math.max(0, Math.min(cellRadius, cellSize / 2))
@@ -69,13 +72,17 @@ export default function WeeklyHeatMapGrid({
 				const key = dayjs(date).format('YYYY-MM-DD')
 				const count = counts[key] || 0
 				const level = levels.find((threshold) => count >= threshold)
+
 				const color =
 					level !== undefined && level > 0 ? palette[level] : cellDefaultColor
+
 				let path = grouped.get(color)
+
 				if (!path) {
 					path = Skia.PathBuilder.Make()
 					grouped.set(color, path)
 				}
+
 				const x = column * stride
 				const y = headerHeight + row * stride
 				path.addRRect({
@@ -83,6 +90,7 @@ export default function WeeklyHeatMapGrid({
 					rx: radius,
 					ry: radius,
 				})
+
 				if (isCellTextVisible) {
 					const text =
 						cellText === 'date'
@@ -90,6 +98,7 @@ export default function WeeklyHeatMapGrid({
 							: cellText === 'count' && count > 0
 								? String(count)
 								: undefined
+
 					if (text)
 						textLabels.push({
 							x: x + cellSize / 2,
@@ -100,6 +109,7 @@ export default function WeeklyHeatMapGrid({
 				}
 			}
 		}
+
 		return {
 			paths: [...grouped].map(([color, builder]) => ({
 				color,
@@ -128,12 +138,15 @@ export default function WeeklyHeatMapGrid({
 			style={{ width, height }}
 			onPress={({ nativeEvent: { locationX, locationY } }) => {
 				const y = locationY - headerHeight
+
 				if (locationX < 0 || y < 0) return
 				const column = Math.floor(locationX / stride)
 				const row = Math.floor(y / stride)
+
 				// Ignore labels and gaps; dragging is handled by the parent ScrollView.
 				if (locationX % stride >= cellSize || y % stride >= cellSize) return
 				const date = weeks[column]?.days[row]
+
 				if (date)
 					onCellPress?.({
 						date,

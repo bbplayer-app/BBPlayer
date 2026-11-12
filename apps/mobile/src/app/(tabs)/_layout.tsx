@@ -19,6 +19,7 @@ function originalAndroidIcons(
 	colors: MD3Theme['colors'],
 ): NativeTabTriggerProps['unstable_nativeProps'] {
 	if (!icon?.default || !icon.selected) return undefined
+
 	return {
 		android: {
 			// Theme artwork needs a larger canvas than Material's default 24dp icons.
@@ -71,6 +72,7 @@ function nativeIconProps(
 	colors: MD3Theme['colors'],
 ): NativeTabTriggerProps['unstable_nativeProps'] {
 	const source = iconSource(icon, fallback)
+
 	return {
 		...originalAndroidIcons(icon, colors),
 		ios: {
@@ -93,6 +95,7 @@ export default function TabLayout() {
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const icons = activeSkin?.skins[activeSkinIndex]?.tabBar.icons
+
 	const useSkinTabs = Boolean(
 		icons?.home.default &&
 		icons.home.selected &&
@@ -101,6 +104,7 @@ export default function TabLayout() {
 		icons.settings.default &&
 		icons.settings.selected,
 	)
+
 	// NativeTabPage's safe area is a margin, so this shows around iOS's floating tab bar.
 	const contentStyle = { backgroundColor: colors.background }
 

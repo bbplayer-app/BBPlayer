@@ -21,6 +21,7 @@ import type { TrackService } from './trackService'
 import { trackService as trackServiceInstance } from './trackService'
 
 type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
+
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
 
 export class ArtistService {
@@ -78,6 +79,7 @@ export class ArtistService {
 		DatabaseError | ServiceError
 	> {
 		const { source, remoteId } = payload
+
 		if (!source || !remoteId) {
 			return errAsync(
 				createValidationError('source 和 remoteId 在此方法中是必需的'),
@@ -151,6 +153,7 @@ export class ArtistService {
 							columns: { id: true },
 						}),
 				)
+
 				if (!existing) {
 					throw createArtistNotFound(artistId)
 				}
@@ -199,6 +202,7 @@ export class ArtistService {
 							columns: { id: true },
 						}),
 				)
+
 				if (!existing) {
 					throw createArtistNotFound(artistId)
 				}
@@ -248,8 +252,10 @@ export class ArtistService {
 				}),
 		).andThen((dbTracks) => {
 			const formattedTracks: Track[] = []
+
 			for (const dbTrack of dbTracks) {
 				const formatted = this.trackService.formatTrack(dbTrack)
+
 				if (!formatted) {
 					return errAsync(
 						new ServiceError(
@@ -257,8 +263,10 @@ export class ArtistService {
 						),
 					)
 				}
+
 				formattedTracks.push(formatted)
 			}
+
 			return okAsync(formattedTracks)
 		})
 	}
@@ -373,13 +381,16 @@ export class ArtistService {
 						(a) =>
 							`${a.source}::${a.remoteId}` === `${p.source}::${p.remoteId}`,
 					)
+
 					if (existing) {
 						return existing
 					}
+
 					throw new DatabaseError(
 						`批量查找或创建 artists 后数据不一致，未找到 artist: ${p.source}::${p.remoteId}`,
 					)
 				})
+
 				if (fullArtists.length !== payloads.length) {
 					throw new DatabaseError(
 						'创建或查找 artists 后数据不一致，部分 artist 未能成功写入或查询。',

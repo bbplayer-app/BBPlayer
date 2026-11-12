@@ -13,6 +13,7 @@ export const zustandStorage: StateStorage = {
 	getItem: (name) => {
 		// @ts-expect-error -- 管不了 zustand 的类型定义
 		const value = storage.getString(name)
+
 		return value ?? null
 	},
 	removeItem: (name) => {

@@ -31,6 +31,7 @@ export default function RecentlyPlayedPage() {
 	} = usePlaylistBackgroundColor(null, theme.dark, colors.background)
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -45,6 +46,7 @@ export default function RecentlyPlayedPage() {
 
 	const tracks = useMemo(() => {
 		if (!tracksData) return []
+
 		return tracksData.map((item) => item.track)
 	}, [tracksData])
 
@@ -73,8 +75,10 @@ export default function RecentlyPlayedPage() {
 	const handlePlayAll = useCallback(async () => {
 		if (!tracksData) {
 			toast.error('没有可播放的歌曲')
+
 			return
 		}
+
 		const playlistTracks = tracksData.map((item) => item.track)
 		await addToQueue({
 			tracks: playlistTracks,

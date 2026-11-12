@@ -11,6 +11,7 @@ export type Group = {
 	republished_from_update_id?: string
 	source: unknown
 }
+
 export type Runtime = {
 	runtime_version: string
 	version: string
@@ -19,6 +20,7 @@ export type Runtime = {
 	mode: string
 	platforms: string[]
 }
+
 export type Detail = Group & {
 	fingerprint_sources: unknown
 	platforms: {
@@ -44,6 +46,7 @@ export type Detail = Group & {
 		}[]
 	}[]
 }
+
 export type Asset = {
 	id: number
 	asset_key: string
@@ -51,6 +54,7 @@ export type Asset = {
 	size_bytes: number
 	is_launch: boolean
 }
+
 export type Head = {
 	runtime_version: string
 	platform: 'android' | 'ios'
@@ -58,21 +62,29 @@ export type Head = {
 	mode: 'ota' | 'embedded'
 	updated_at: string
 }
+
 const base = import.meta.env.VITE_API_BASE_URL ?? ''
+
 async function api<T>(path: string) {
 	const token = getToken()
+
 	const r = await fetch(base + path, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 	})
+
 	if (r.status === 401) {
 		reportUnauthorized()
 		throw new Error('Unauthorized')
 	}
+
 	if (!r.ok) throw new Error(`Request failed (${r.status})`)
+
 	return r.json() as Promise<T>
 }
+
 async function apiPost(path: string, body: unknown) {
 	const token = getToken()
+
 	const r = await fetch(base + path, {
 		method: 'POST',
 		headers: {
@@ -81,46 +93,59 @@ async function apiPost(path: string, body: unknown) {
 		},
 		body: JSON.stringify(body),
 	})
+
 	if (r.status === 401) {
 		reportUnauthorized()
 		throw new Error('Unauthorized')
 	}
+
 	if (!r.ok) {
 		let message = `Request failed (${r.status})`
+
 		try {
 			const payload = (await r.json()) as { detail?: string; error?: string }
 			message = payload.detail ?? payload.error ?? message
 		} catch {
 			// keep the generic message
 		}
+
 		throw new Error(message)
 	}
 }
+
 const zeroUUID = '00000000-0000-0000-0000-000000000000'
+
 export function headGroupID(head: Head): string | null {
 	return head.group_id === zeroUUID ? null : head.group_id
 }
+
 export async function verifyToken(token: string) {
 	const r = await fetch(base + '/admin/session', {
 		headers: { Authorization: `Bearer ${token}` },
 	})
+
 	return r.ok
 }
+
 export const channels = () =>
 	api<{ channel: string; updated_at: string; runtime_count: number }[]>(
 		'/admin/dashboard/channels',
 	)
+
 export const channel = (v: string) =>
 	api<{ channel: string; runtimes: Runtime[] }>(
 		`/admin/dashboard/channels/${encodeURIComponent(v)}`,
 	)
+
 export const activity = (c: string, r: string) =>
 	api<{
 		series: { day: string; group_id?: string; active_installations: number }[]
 	}>(
 		`/admin/dashboard/channels/${encodeURIComponent(c)}/activity?runtime_version=${encodeURIComponent(r)}`,
 	)
+
 export const groups = () => api<Group[]>('/admin/updates?limit=100')
+
 export type RuntimeSummary = {
 	runtime_version: string
 	version: string
@@ -128,7 +153,9 @@ export type RuntimeSummary = {
 	update_count: number
 	channels: string[]
 }
+
 export const runtimes = () => api<RuntimeSummary[]>('/admin/dashboard/runtimes')
+
 export const runtime = (value: string) =>
 	api<{
 		runtime_version: string
@@ -136,14 +163,18 @@ export const runtime = (value: string) =>
 		channels: string[]
 		updates: Group[]
 	}>(`/admin/dashboard/runtimes/${encodeURIComponent(value)}`)
+
 export const detail = (id: string) =>
 	api<Detail>(`/admin/dashboard/updates/${id}`)
+
 export const assets = (id: string, p: string) =>
 	api<Asset[]>(`/admin/dashboard/updates/${id}/platforms/${p}/assets`)
+
 export const lifecycle = (id: string) =>
 	api<{
 		series: { day: string; known_launches: number; known_crashes: number }[]
 	}>(`/admin/insights/groups/${id}/lifecycle`)
+
 export const insights = () =>
 	api<{
 		summary: {
@@ -164,6 +195,7 @@ export const insights = () =>
 			bsdiff_hit_rate: number
 		}
 	}>('/admin/insights')
+
 export const service = () =>
 	api<{
 		series: {
@@ -174,6 +206,7 @@ export const service = () =>
 			average_duration_ms: number
 		}[]
 	}>('/admin/metrics/service')
+
 export type PatchEndpoint = {
 	id: number
 	platform: 'android' | 'ios'
@@ -191,6 +224,7 @@ export type PatchEndpoint = {
 	from: PatchEndpointRef
 	to: PatchEndpointRef
 }
+
 export type PatchEndpointRef = {
 	update_id: string
 	group_id: string
@@ -199,15 +233,19 @@ export type PatchEndpointRef = {
 	message: string
 	version: string
 }
+
 export const patches = () => api<PatchEndpoint[]>('/admin/patches?limit=100')
+
 export const heads = (channelName: string) =>
 	api<Head[]>(`/admin/channels/${encodeURIComponent(channelName)}`)
+
 export type RepublishTarget = {
 	runtime_version: string
 	platform: 'android' | 'ios'
 	group_id: string
 	message: string
 }
+
 export const republishChannel = (
 	channelName: string,
 	target: RepublishTarget,
@@ -216,7 +254,9 @@ export const republishChannel = (
 		`/admin/channels/${encodeURIComponent(channelName)}/republish`,
 		target,
 	)
+
 export type EmbeddedTarget = Omit<RepublishTarget, 'message'>
+
 export const setChannelEmbedded = (
 	channelName: string,
 	target: EmbeddedTarget,

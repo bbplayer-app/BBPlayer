@@ -130,10 +130,15 @@ export const skinAssetDeclarationSchema = arkType({
 // ============================================================
 
 export type SkinAssetDeclaration = typeof skinAssetDeclarationSchema.infer
+
 export type SkinCardAsset = typeof cardAssetSchema.infer
+
 export type SkinAsset = typeof skinAssetSchema.infer
+
 export type SkinPlayIconAsset = typeof playIconAssetSchema.infer
+
 export type SkinThumbUpAsset = typeof thumbUpAssetSchema.infer
+
 export type SkinLoadingAsset = typeof loadingAssetSchema.infer
 
 // ============================================================
@@ -144,8 +149,10 @@ export const parseSkinAssetDeclaration = (
 	value: unknown,
 ): Result<SkinAssetDeclaration, ServiceError> => {
 	const result = skinAssetDeclarationSchema(value)
+
 	if (result instanceof ArkErrors) {
 		return err(createSkinValidationFailed(result.summary))
 	}
+
 	return ok(result)
 }

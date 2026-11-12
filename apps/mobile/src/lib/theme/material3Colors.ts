@@ -28,6 +28,7 @@ export function buildMaterial3PaperColors(
 	colorScheme: ColorSchemeName,
 ): MD3Colors {
 	const d = Color.android.dynamic
+
 	const fallback =
 		colorScheme === 'dark' ? MD3DarkTheme.colors : MD3LightTheme.colors
 

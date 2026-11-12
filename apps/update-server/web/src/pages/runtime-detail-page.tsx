@@ -24,39 +24,47 @@ import { formatDate, queryParam, sourceCommit } from '@/lib/utils'
 
 export function RuntimeDetailPage() {
 	const runtime = queryParam('runtime')
+
 	const query = useQuery({
 		queryKey: ['runtime', runtime],
 		queryFn: () => getRuntime(runtime),
 		enabled: Boolean(runtime),
 	})
+
 	const headsQuery = useQuery({
 		queryKey: ['runtimeHeads', runtime, query.data?.channels],
 		queryFn: async () => {
 			const list = query.data?.channels ?? []
+
 			const rows = (
 				await Promise.all(
 					list.map(async (channel) => {
 						const items = await fetchChannelHeads(channel)
+
 						return items.map((item) => ({ ...item, channel }))
 					}),
 				)
 			).flat()
+
 			return rows.filter((item) => item.runtime_version === runtime)
 		},
 		enabled: Boolean(runtime && query.data?.channels?.length),
 	})
+
 	if (!runtime)
 		return (
 			<AppShell active='runtimes'>
 				<ErrorState error={new Error('No runtime was provided.')} />
 			</AppShell>
 		)
+
 	if (query.isPending)
 		return (
 			<AppShell active='runtimes'>
 				<PageSkeleton />
 			</AppShell>
 		)
+
 	if (query.error)
 		return (
 			<AppShell active='runtimes'>
@@ -69,6 +77,7 @@ export function RuntimeDetailPage() {
 	const updates = query.data.updates
 	const channels = query.data.channels
 	const version = query.data.version
+
 	return (
 		<AppShell active='runtimes'>
 			<PageHeader
@@ -183,6 +192,7 @@ export function RuntimeDetailPage() {
 												headGroupID(head) === item.id,
 										)
 										.map((head) => head.platform)
+
 									return (
 										<TableRow key={item.id}>
 											<TableCell>

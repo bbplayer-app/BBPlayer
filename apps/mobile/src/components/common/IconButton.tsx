@@ -120,6 +120,7 @@ const getIconButtonColor = ({
 		}
 	} else if (mode === 'outlined') {
 		borderColor = theme.colors.outline
+
 		if (selected) {
 			backgroundColor = backgroundColor ?? theme.colors.inverseSurface
 			iconColor = iconColor ?? theme.colors.inverseOnSurface

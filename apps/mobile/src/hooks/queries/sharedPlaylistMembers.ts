@@ -11,6 +11,7 @@ export function useSharedPlaylistMembers(
 	const members = useSharedPlaylistMembersStore((state) =>
 		shareId ? state.membersByShareId[shareId] : undefined,
 	)
+
 	return useMemo(() => members ?? [], [members])
 }
 

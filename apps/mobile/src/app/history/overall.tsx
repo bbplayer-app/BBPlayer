@@ -24,6 +24,7 @@ interface HistoryItemData {
 function PlaybackDurationFlow({ seconds }: { seconds: number }) {
 	const { colors, fonts } = useTheme()
 	const [displaySeconds, setDisplaySeconds] = useState(0)
+
 	const durationTextStyle = {
 		...fonts.headlineMedium,
 		color: colors.primary,
@@ -32,6 +33,7 @@ function PlaybackDurationFlow({ seconds }: { seconds: number }) {
 	useEffect(() => {
 		// 先显示零值，再启动首次数字滚动。
 		const timer = setTimeout(() => setDisplaySeconds(seconds), 100)
+
 		return () => clearTimeout(timer)
 	}, [seconds])
 
@@ -94,6 +96,7 @@ export default function OverallHistoryPage() {
 		hasNextPage,
 		isFetchingNextPage,
 	} = usePlayCountHistoryPaginated(30, true, 15)
+
 	const showSkeleton = isHistoryLoading || !isListReady
 
 	const { data: totalDurationData, isError: isTotalDurationError } =

@@ -31,6 +31,7 @@ async function fetchPlayHistoryHeatmap() {
 			data[row.date] = row.count
 		}
 	})
+
 	return data
 }
 
@@ -64,6 +65,7 @@ async function fetchPlayHistoryByDate(dateStr: string) {
 		.filter((row) => row.track !== null && row.track !== undefined)
 		.map((row) => {
 			const track = row.track as unknown as Track
+
 			return {
 				...track,
 				historyId: row.id,
@@ -90,9 +92,11 @@ export const useMostPlayedTracks = (days: number, limit: number) => {
 				days,
 				limit,
 			})
+
 			if (result.isErr()) {
 				throw result.error
 			}
+
 			return result.value
 		},
 		enabled: true,

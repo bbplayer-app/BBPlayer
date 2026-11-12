@@ -24,10 +24,13 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 
 	const handleConfirm = () => {
 		const normalizedTitle = title.trim()
+
 		if (!normalizedTitle) {
 			toast.error('标题不能为空')
+
 			return
 		}
+
 		const normalizedCoverUrl = coverUrl?.trim() ? coverUrl.trim() : null
 		editTrackMetadata({
 			trackId: track.id,
@@ -40,14 +43,17 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 
 	const handleImagePicker = useCallback(async () => {
 		const imageUri = await pickImage()
+
 		if (!imageUri) return
 
 		const assetFile = new FileSystem.File(imageUri)
+
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',
 			'tracks',
 		)
+
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true })
 		}
@@ -55,10 +61,13 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 		const fileName = sanitizeFileName(
 			`${track.uniqueKey}-${Date.now()}-${assetFile.name}`,
 		)
+
 		const coverFile = new FileSystem.File(coverDir, fileName)
+
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
+
 		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [track.uniqueKey])

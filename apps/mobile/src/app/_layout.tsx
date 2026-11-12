@@ -70,6 +70,7 @@ function onAppStateChange(status: AppStateStatus) {
 const checkOverlayPermissionOnStart = async () => {
 	if (Orpheus.isDesktopLyricsShown) {
 		const hasPermission = await Orpheus.checkOverlayPermission()
+
 		if (!hasPermission) {
 			// 延迟显示，确保 UI 已经加载
 			setTimeout(() => {
@@ -124,6 +125,7 @@ function runAppInit() {
 				settings.allowSimultaneousPlayback,
 			)
 			const cookie = useAppStoreObj.getState().bilibiliCookie
+
 			if (cookie) {
 				logger.debug('初始化 orpheus bilibili cookie')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
@@ -158,8 +160,10 @@ function settleNowPlayingBar(routeName: string) {
 function RootLayout() {
 	const nativelyPoppingToRef = useRef<string | null>(null)
 	const [isReady, setIsReady] = useState(false)
+
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
+
 	useCheckUpdate()
 	useFeatureTracking()
 
@@ -185,10 +189,12 @@ function RootLayout() {
 				)
 			}
 		}
+
 		void logAppInfo()
 		reportUpdateActivity()
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
+
 		return () => subscription.remove()
 	}, [])
 
@@ -230,6 +236,7 @@ function RootLayout() {
 			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
+
 			if (firstOpen) {
 				router.navigate('/onboarding')
 			}
@@ -268,6 +275,7 @@ function RootLayout() {
 								) {
 									nowPlayingBarStore$.hiddenScreenActive.set(true)
 								}
+
 								// iOS 侧滑由原生先完成，JS 在动画结束后才切到目标页，
 								// 目标页的 transitionEnd 这时已经错过了，要在这里恢复。
 								if (nativelyPoppingToRef.current === route.key) {
@@ -277,6 +285,7 @@ function RootLayout() {
 							},
 							transitionStart: ({ data }) => {
 								const state = navigation.getState()
+
 								// 目标页开始出现时导航状态还没切过去，说明是原生发起的返回。
 								if (
 									!data.closing &&
@@ -290,6 +299,7 @@ function RootLayout() {
 							},
 							transitionEnd: ({ data }) => {
 								const state = navigation.getState()
+
 								// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
 								// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
 								if (

@@ -1,4 +1,5 @@
 import { ServiceError } from './index'
+
 export type ServiceErrorType =
 	| 'TrackNotFound'
 	| 'ArtistNotFound'

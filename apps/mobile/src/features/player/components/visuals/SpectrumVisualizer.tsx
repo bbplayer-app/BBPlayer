@@ -23,12 +23,14 @@ export const SpectrumVisualizer = ({
 	const frequencyData = useSharedValue<Float32Array>(
 		new Float32Array(BAR_COUNT).fill(0),
 	)
+
 	const bufferRef = useRef(new Float32Array(SPECTRUM_SIZE))
 	const prevDataRef = useRef(new Float32Array(BAR_COUNT))
 
 	const [isAppActive, setIsAppActive] = useState(
 		AppState.currentState === 'active',
 	)
+
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
 			setIsAppActive(nextAppState === 'active')
@@ -51,6 +53,7 @@ export const SpectrumVisualizer = ({
 			result[i * 4 + 2] = Math.cos(angle)
 			result[i * 4 + 3] = Math.sin(angle)
 		}
+
 		return result
 	}, [size])
 
@@ -61,6 +64,7 @@ export const SpectrumVisualizer = ({
 
 		for (let i = 0; i < BAR_COUNT; i++) {
 			const val = freq[i] || 0
+
 			const barHeight = Math.min(
 				Math.max(val * MAX_BAR_HEIGHT, 4),
 				MAX_BAR_HEIGHT,
@@ -110,12 +114,14 @@ export const SpectrumVisualizer = ({
 
 						let sum = 0
 						let count = 0
+
 						for (let j = startBin; j < actualEndBin && j < SPECTRUM_SIZE; j++) {
 							sum += rawData[j]
 							count++
 						}
 
 						let val = 0
+
 						if (count > 0) {
 							const magnitude = sum / count
 							const db = 20 * Math.log10(magnitude + 0.0001)
@@ -125,6 +131,7 @@ export const SpectrumVisualizer = ({
 						}
 
 						if (val < 0) val = 0
+
 						if (val > 1.0) val = 1.0
 
 						const mirrorIdx = BAR_COUNT - 1 - i
@@ -132,12 +139,14 @@ export const SpectrumVisualizer = ({
 						const smoothL =
 							prevDataRef.current[i] * SMOOTHING_FACTOR +
 							val * (1 - SMOOTHING_FACTOR)
+
 						prevDataRef.current[i] = smoothL
 						newData[i] = smoothL
 
 						const smoothR =
 							prevDataRef.current[mirrorIdx] * SMOOTHING_FACTOR +
 							val * (1 - SMOOTHING_FACTOR)
+
 						prevDataRef.current[mirrorIdx] = smoothR
 						newData[mirrorIdx] = smoothR
 
@@ -149,6 +158,7 @@ export const SpectrumVisualizer = ({
 					// Decay logic when paused
 					for (let i = 0; i < BAR_COUNT; i++) {
 						const decayed = prevDataRef.current[i] * DECAY_FACTOR
+
 						if (decayed > 0.001) {
 							prevDataRef.current[i] = decayed
 							newData[i] = decayed

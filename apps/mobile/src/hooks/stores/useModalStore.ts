@@ -37,6 +37,7 @@ export const useModalStore = create<ModalState>()(
 
 			if (exists) {
 				toast.error(`已经打开 ${key} 了`)
+
 				return
 			}
 
@@ -57,6 +58,7 @@ export const useModalStore = create<ModalState>()(
 
 		closeTop: () => {
 			const topOne = get().modals[get().modals.length - 1]
+
 			if (topOne) {
 				get().close(topOne.key)
 			}
@@ -67,6 +69,7 @@ export const useModalStore = create<ModalState>()(
 				get().eventEmitter.off('modalHostDidClose', wrapper)
 				callback()
 			}
+
 			get().eventEmitter.on('modalHostDidClose', wrapper)
 		},
 	})),

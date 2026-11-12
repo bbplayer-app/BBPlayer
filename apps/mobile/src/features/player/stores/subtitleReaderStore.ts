@@ -14,20 +14,25 @@ export function createSubtitleReaderStore(
 	const paragraphs = subtitleParagraphs(lines)
 	const cueToParagraph = new Map<number, number>()
 	const paragraphCue: Record<string, number> = {}
+
 	for (const [paragraphIndex, paragraph] of paragraphs.entries()) {
 		paragraphCue[paragraph.id] = -1
+
 		for (const { index } of paragraph.cues)
 			cueToParagraph.set(index, paragraphIndex)
 	}
+
 	const content = ObservableHint.opaque({
 		lines,
 		paragraphs,
 		cueToParagraph,
 		sourceKey,
 	})
+
 	const searchText = paragraphs.map((paragraph) =>
 		paragraph.content.toLocaleLowerCase(),
 	)
+
 	const state$ = observable({
 		content,
 		currentCue: -1,
@@ -49,7 +54,9 @@ export function createSubtitleReaderStore(
 		visibleParagraphIds: [] as string[],
 		visibleSearchParagraphIds: [] as string[],
 	})
+
 	const pauseFollowing = () => state$.following.set(false)
+
 	const resumeFollowing = () => {
 		batch(() => {
 			state$.search.set('')
@@ -59,6 +66,7 @@ export function createSubtitleReaderStore(
 			state$.followRevision.set((revision) => revision + 1)
 		})
 	}
+
 	return {
 		content,
 		state$,
@@ -70,6 +78,7 @@ export function createSubtitleReaderStore(
 			batch(() => {
 				if (previous && previous !== current)
 					state$.paragraphCue[previous.id].set(-1)
+
 				if (current) state$.paragraphCue[current.id].set(index)
 				state$.currentCue.set(index)
 				state$.currentParagraphIndex.set(paragraphIndex)
@@ -82,7 +91,9 @@ export function createSubtitleReaderStore(
 			const target = search
 				? state$.visibleSearchParagraphIds
 				: state$.visibleParagraphIds
+
 			const previous = target.peek()
+
 			if (
 				previous.length !== ids.length ||
 				previous.some((id, index) => id !== ids[index])
@@ -100,13 +111,17 @@ export function createSubtitleReaderStore(
 			const query = value.trim().toLocaleLowerCase()
 			batch(() => {
 				state$.search.set(value)
+
 				if (query === state$.query.peek()) return
 				state$.query.set(query)
 				state$.resultIndex.set(0)
+
 				if (!query) return
+
 				const results = paragraphs.filter((_, index) =>
 					searchText[index].includes(query),
 				)
+
 				state$.searchResults.set(
 					ObservableHint.opaque({ paragraphs: results, query }),
 				)
@@ -115,11 +130,14 @@ export function createSubtitleReaderStore(
 		},
 		navigateSearch: (direction: number) => {
 			const { paragraphs: results } = state$.searchResults.peek()
+
 			if (!state$.query.peek() || !results.length) return
+
 			const next = Math.max(
 				0,
 				Math.min(results.length - 1, state$.resultIndex.peek() + direction),
 			)
+
 			batch(() => {
 				state$.resultIndex.set(next)
 				state$.focusedParagraphId.set(results[next].id)
@@ -127,7 +145,9 @@ export function createSubtitleReaderStore(
 		},
 		seek: async (index: number) => {
 			const line = lines[index]
+
 			if (!line || !trackId) return
+
 			try {
 				if ((await seekWithinTrack(trackId, line.startTime / 1000)) !== null) {
 					resumeFollowing()

@@ -38,6 +38,7 @@ function MyPageContent() {
 	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
 	const openModal = useModalStore((state) => state.open)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
+
 	const { data: syncFailures } = useLiveQuery(
 		db
 			.select({ id: schema.playlistSyncQueue.id })
@@ -61,6 +62,7 @@ function MyPageContent() {
 		markInteractive()
 		void markPerfInteractive()
 	}, [markInteractive])
+
 	const chevron = () => (
 		<Icon
 			source='chevron-right'

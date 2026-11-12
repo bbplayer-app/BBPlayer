@@ -15,14 +15,17 @@ const speedKey = [...orpheusQueryKeys.all, 'playbackSpeed'] as const
 
 export function usePlaybackOptions() {
 	const { data: shuffle = false } = useShuffleMode()
+
 	const { data: repeat = RepeatMode.OFF } = useQuery({
 		queryKey: repeatKey,
 		queryFn: () => Orpheus.getRepeatMode(),
 	})
+
 	const { data: speed = 1 } = useQuery({
 		queryKey: speedKey,
 		queryFn: () => Orpheus.getPlaybackSpeed(),
 	})
+
 	const { data: sleepEndTime } = useSleepTimerEndTime()
 	useEffect(() => {
 		const speedSubscription = Orpheus.addListener(
@@ -31,15 +34,18 @@ export function usePlaybackOptions() {
 				queryClient.setQueryData(speedKey, value)
 			},
 		)
+
 		const foreground = AppState.addEventListener('change', (state) => {
 			if (state === 'active')
 				void queryClient.invalidateQueries({ queryKey: orpheusQueryKeys.all })
 		})
+
 		return () => {
 			speedSubscription.remove()
 			foreground.remove()
 		}
 	}, [])
+
 	return { shuffle, repeat, speed, sleepEndTime }
 }
 

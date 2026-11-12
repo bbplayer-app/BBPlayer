@@ -37,6 +37,7 @@ const PlaybackSpeedModal = () => {
 				setSpeed(event.speed)
 			},
 		)
+
 		return () => subscription.remove()
 	}, [])
 

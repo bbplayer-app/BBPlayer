@@ -26,14 +26,17 @@ function registerSharedObjectSerializer(): void {
 		name: 'ExpoWavySliderSharedObject',
 		determine: (value): value is WavySliderSharedObject => {
 			'worklet'
+
 			return isWavySliderSharedObject(value)
 		},
 		pack: (value) => {
 			'worklet'
+
 			return { objectId: value[EXPO_SHARED_OBJECT_ID_KEY] }
 		},
 		unpack: (packed) => {
 			'worklet'
+
 			const sharedObject = (
 				globalThis as typeof globalThis & {
 					expo: {
@@ -46,6 +49,7 @@ function registerSharedObjectSerializer(): void {
 					}
 				}
 			).expo.SharedObject
+
 			// oxlint-disable-next-line no-underscore-dangle
 			const obj = sharedObject.__resolveInWorklet(packed.objectId)
 
@@ -71,4 +75,5 @@ function registerSharedObjectSerializer(): void {
 }
 
 installOnUIRuntime(worklets.getUIRuntimeHolder())
+
 registerSharedObjectSerializer()

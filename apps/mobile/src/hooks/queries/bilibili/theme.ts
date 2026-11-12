@@ -20,13 +20,16 @@ export function useThemeSearch(keyword: string) {
 					pageSize: 5,
 				}),
 			)
+
 			return res
 		},
 		initialPageParam: 1,
 		enabled: !!keyword,
 		getNextPageParam: (lastPage) => {
 			const isEnd = lastPage.pn * lastPage.ps >= lastPage.total
+
 			if (isEnd) return undefined
+
 			return lastPage.pn + 1
 		},
 	})

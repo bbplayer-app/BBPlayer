@@ -47,12 +47,15 @@ export type ObservableState<T> = SharedObject & {
  */
 export default function useNativeState<T>(initialValue: T): ObservableState<T> {
 	const initialValueRef = useRef(initialValue)
+
 	return useReleasingSharedObject(() => {
 		const state = new ExpoWavySliderModule.ObservableState({
 			value: initialValueRef.current,
 		})
+
 		defineValueProperty(state)
 		defineOnChangeProperty(state)
+
 		return state
 	}, []) as unknown as ObservableState<T>
 }
@@ -76,6 +79,7 @@ function defineValueProperty(state: NativeObservableState): void {
 			if (__DEV__ && !warnedOnJSWrite && worklets && !worklets.isUIRuntime()) {
 				warnedOnJSWrite = true
 			}
+
 			state.setValue({ value: v })
 		},
 	})
@@ -97,8 +101,10 @@ function defineOnChangeProperty(state: NativeObservableState): void {
 			if (!fn) {
 				currentFn = null
 				state.setOnChange(null)
+
 				return
 			}
+
 			if (!worklets.isWorkletFunction(fn)) {
 				throw new Error(
 					'ObservableState.onChange must be a worklet so it can run on the UI runtime when the native value changes. ' +
@@ -106,10 +112,13 @@ function defineOnChangeProperty(state: NativeObservableState): void {
 						"state.onChange = (value) => { 'worklet'; ... };",
 				)
 			}
+
 			currentFn = fn
+
 			const callback = new ExpoWavySliderModule.WorkletCallback(
 				worklets.createSerializable(fn),
 			)
+
 			state.setOnChange(callback)
 		},
 	})

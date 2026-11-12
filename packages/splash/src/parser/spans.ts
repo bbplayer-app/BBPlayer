@@ -33,6 +33,7 @@ export function parseSpans(
 
 	for (let i = 0; i < parts.length; i++) {
 		const part = parts[i]
+
 		if (i % 2 === 0) {
 			if (part === '') continue
 			spans.push({
@@ -54,6 +55,7 @@ export function parseSpans(
 
 			if (spans.length > 0) {
 				const lastSpan = spans[spans.length - 1]
+
 				if (lastSpan.endTime === 0) {
 					lastSpan.endTime = time
 					lastSpan.duration = time - lastSpan.startTime
@@ -66,6 +68,7 @@ export function parseSpans(
 	}
 
 	const lastPart = parts[parts.length - 1]
+
 	if (lastPart && lastPart.trim() !== '') {
 		explicitLineEnd = undefined
 	}

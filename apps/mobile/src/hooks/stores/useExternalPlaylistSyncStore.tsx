@@ -48,6 +48,7 @@ const createExternalPlaylistSyncStore = () => {
 				setResult: (index, result) =>
 					set((state) => {
 						const results = { ...state.results, [index]: result }
+
 						return {
 							results,
 							sessions: state.currentSessionKey
@@ -83,8 +84,10 @@ const createExternalPlaylistSyncStore = () => {
 						if (!state.currentSessionKey) {
 							return { results: {}, progress: 0, syncing: false }
 						}
+
 						const sessions = { ...state.sessions }
 						delete sessions[state.currentSessionKey]
+
 						return {
 							sessions,
 							results: {},
@@ -109,6 +112,7 @@ const getProgressFromResults = (
 	total: number,
 ) => {
 	if (total <= 0) return 0
+
 	return Math.min(Object.keys(results).length / total, 1)
 }
 
@@ -120,6 +124,7 @@ export const ExternalPlaylistSyncStoreProvider = ({
 	children: React.ReactNode
 }) => {
 	const [store] = useState(createExternalPlaylistSyncStore)
+
 	return (
 		<ExternalPlaylistSyncStoreContext.Provider value={store}>
 			{children}
@@ -131,11 +136,13 @@ export type { SyncStore }
 
 export function useExternalPlaylistSyncStoreApi() {
 	const store = use(ExternalPlaylistSyncStoreContext)
+
 	if (!store) {
 		throw new Error(
 			'useExternalPlaylistSyncStoreApi must be used within ExternalPlaylistSyncStoreProvider',
 		)
 	}
+
 	return store
 }
 
@@ -143,5 +150,6 @@ export function useExternalPlaylistSyncStore<T>(
 	selector: (state: SyncState) => T,
 ): T {
 	const store = useExternalPlaylistSyncStoreApi()
+
 	return useStore(store, selector)
 }

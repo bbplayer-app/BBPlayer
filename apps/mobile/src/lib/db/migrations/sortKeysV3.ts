@@ -15,22 +15,27 @@ export function migrateSortKeysV3(): void {
 	try {
 		expoDb.withTransactionSync(() => {
 			type PlaylistRow = { id: number }
+
 			const playlists = expoDb.getAllSync<PlaylistRow>(
 				`SELECT id FROM playlists WHERE type != 'local'`,
 			)
+
 			let totalUpdated = 0
 
 			for (const playlist of playlists) {
 				type TrackRow = { track_id: number }
+
 				const tracks = expoDb.getAllSync<TrackRow>(
 					`SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY sort_key ASC`,
 					[playlist.id],
 				)
+
 				if (tracks.length === 0) continue
 
 				const reversed = [...tracks].toReversed()
 				let previousKey: string | null = null
 				const newKeys = new Map<number, string>()
+
 				for (const track of reversed) {
 					const sortKey = generateKeyBetween(previousKey, null)
 					previousKey = sortKey
@@ -45,6 +50,7 @@ export function migrateSortKeysV3(): void {
 					totalUpdated++
 				}
 			}
+
 			migration.markAsApplied()
 			logger.info(
 				`[v3] 非 local 播放列表 sort_key 翻转迁移完成，共处理 ${totalUpdated} 行`,

@@ -21,11 +21,13 @@ export function useTrackDuration(background = false) {
 			durationRef.current = nextDuration
 			setDuration(nextDuration)
 		}
+
 		const syncDuration = () => {
 			void Orpheus.getDuration()
 				.then(updateDuration)
 				.catch(() => undefined)
 		}
+
 		const subscribe = () => {
 			if (progressSub) return
 			progressSub = playerProgressEmitter.subscribe(
@@ -36,6 +38,7 @@ export function useTrackDuration(background = false) {
 			)
 			syncDuration()
 		}
+
 		const unsubscribe = () => {
 			progressSub?.()
 			progressSub = undefined

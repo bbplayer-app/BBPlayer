@@ -21,6 +21,7 @@ export default function PhoneLoginPage() {
 	const { colors } = useTheme()
 	const [contentHeight, setContentHeight] = useState(0)
 	const compact = contentHeight < 480
+
 	const {
 		step,
 		tel,

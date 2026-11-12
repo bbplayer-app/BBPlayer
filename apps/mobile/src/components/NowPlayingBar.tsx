@@ -47,6 +47,7 @@ import ActivityIndicator from './common/ActivityIndicator'
 const ProgressBar = memo(function ProgressBar() {
 	const { position: sharedProgress, duration: sharedDuration } =
 		useSmoothProgress(false)
+
 	const sharedTrackViewWidth = useSharedValue(0)
 	const trackViewRef = useRef<ViewInstance>(null)
 	const { colors } = useTheme()
@@ -56,6 +57,7 @@ const ProgressBar = memo(function ProgressBar() {
 			sharedProgress.value / Math.max(sharedDuration.value, 1),
 			1,
 		)
+
 		// 靠 transform 实现滑动效果，避免掉 reflow
 		return {
 			transform: [
@@ -99,12 +101,14 @@ const resolveBarCover = (
 	coverUrl: string | null | undefined,
 ) => {
 	const cover = resolveTrackCover(uniqueKey, coverUrl)
+
 	return Platform.OS === 'ios' ? resolveBilibiliImageUrl(cover, 200) : cover
 }
 
 const playPause = async () => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 	const isPlaying = await Orpheus.getIsPlaying()
+
 	if (isPlaying) {
 		void Orpheus.pause()
 	} else {
@@ -117,8 +121,10 @@ function NowPlayingBar() {
 	// hiddenScreenActive 在离开隐藏页面后会保持到返回动画结束，避免转场过程中
 	// 提前显示；segments 判断则保证进入隐藏页面时立即隐藏。
 	const hiddenScreenActive = useValue(nowPlayingBarStore$.hiddenScreenActive)
+
 	const shouldShow =
 		!hiddenScreenActive && !shouldHideNowPlayingBar(segments.join('/'))
+
 	if (!shouldShow) {
 		return null
 	}
@@ -137,9 +143,11 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const segments = useSegments()
 	const backgroundColor = useValue(nowPlayingBarStore$.backgroundColor)
 	const tabBarHeight = useValue(nowPlayingBarStore$.bottomTabBarHeight)
+
 	const retainedBottomTabBarHeight = useValue(
 		nowPlayingBarStore$.retainedBottomTabBarHeight,
 	)
+
 	const bottomBarHeight =
 		segments[0] === '(tabs)'
 			? tabBarHeight
@@ -198,13 +206,16 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 		failOffsetY: [-20, 20],
 		onUpdate: (e) => {
 			'worklet'
+
 			if (
 				(e.translationX > 0 && !hasPrevSv.value) ||
 				(e.translationX < 0 && !hasNextSv.value)
 			) {
 				return
 			}
+
 			dragOffset.set(e.translationX)
+
 			if (
 				e.translationX > SWIPE_THRESHOLD &&
 				hapticFired.value !== 1 &&
@@ -229,11 +240,13 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 		},
 		onDeactivate: () => {
 			'worklet'
+
 			if (dragOffset.value > SWIPE_THRESHOLD && hasPrevSv.value) {
 				scheduleOnRN(() => void Orpheus.skipToPrevious())
 			} else if (dragOffset.value < -SWIPE_THRESHOLD && hasNextSv.value) {
 				scheduleOnRN(() => void Orpheus.skipToNext())
 			}
+
 			dragOffset.set(withTiming(0))
 			hapticFired.set(0)
 		},
@@ -260,9 +273,11 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 
 	// 根级覆盖层使用原生 Tab 栏的完整高度，安全区只补一次。
 	const isDocked = nowPlayingBarStyle === 'bottom' && Platform.OS !== 'ios'
+
 	const bottomMargin = isDocked
 		? bottomBarHeight
 		: Math.max(bottomBarHeight, insets.bottom) + 10
+
 	const bottomPadding = isDocked && bottomBarHeight === 0 ? insets.bottom : 0
 
 	const reduceMotion = useReducedMotion()

@@ -17,7 +17,9 @@ export interface StoredWebDavConfig {
 
 export function getStoredWebDavConfig(): StoredWebDavConfig | null {
 	const baseUrl = storage.getString('webdav_backup_url')
+
 	if (!baseUrl) return null
+
 	return {
 		baseUrl,
 		username: storage.getString('webdav_backup_username') ?? '',
@@ -34,6 +36,7 @@ export async function saveWebDavConfig(
 	storage.set('webdav_backup_url', config.baseUrl.trim())
 	storage.set('webdav_backup_username', config.username.trim())
 	storage.set('webdav_backup_directory', normalizeDirectory(config.directory))
+
 	if (password) {
 		await SecureStore.setItemAsync(WEBDAV_CREDENTIAL_STORAGE_KEY, password)
 	}
@@ -49,9 +52,11 @@ export async function createMobileWebDavClient(
 ): Promise<WebDavClient> {
 	const effectivePassword = password || (await getWebDavPassword()) || undefined
 	const username = config.username.trim()
+
 	if (!username || !effectivePassword) {
 		throw new Error('WebDAV 用户名和密码不能为空')
 	}
+
 	return createWebDavClient({
 		baseUrl: config.baseUrl,
 		username,
@@ -64,6 +69,7 @@ export function normalizeDirectory(value: string): string {
 		.trim()
 		.split('/')
 		.filter((segment) => segment.length > 0)
+
 	return `/${segments.join('/') || 'BBPlayer'}`
 }
 

@@ -38,6 +38,7 @@ export class NeteaseApi {
 			os: 'ios',
 			ver: 1,
 		}
+
 		const requestOptions: RequestOptions = createOption(
 			{
 				crypto: 'eapi',
@@ -50,9 +51,11 @@ export class NeteaseApi {
 			},
 			'eapi',
 		)
+
 		if (signal) {
 			requestOptions.signal = signal
 		}
+
 		return createRequest<object, NeteaseLyricResponse>(
 			'/api/song/lyric/v1',
 			data,
@@ -65,6 +68,7 @@ export class NeteaseApi {
 		signal?: AbortSignal,
 	): ResultAsync<LyricSearchResult, NeteaseApiError> {
 		const type = params.type ?? 1
+
 		const endpoint =
 			type == '2000' ? '/api/search/voice/get' : '/api/cloudsearch/pc'
 
@@ -78,15 +82,18 @@ export class NeteaseApi {
 		}
 
 		const requestOptions: RequestOptions = createOption({}, 'weapi')
+
 		if (signal) {
 			requestOptions.signal = signal
 		}
+
 		return createRequest<object, NeteaseSearchResponse>(
 			endpoint,
 			data,
 			requestOptions,
 		).map((res) => {
 			if (!res.body.result?.songs) return []
+
 			return res.body.result.songs.map((song) => ({
 				source: 'netease' as const,
 				duration: song.dt / 1000,
@@ -102,12 +109,15 @@ export class NeteaseApi {
 	): LyricProviderResponseData {
 		const haveYrc = !!lyricsResponse.yrc?.lyric
 		const lrc = haveYrc ? lyricsResponse.yrc!.lyric : lyricsResponse.lrc.lyric
+
 		const tlrc = haveYrc
 			? lyricsResponse.ytlrc?.lyric
 			: lyricsResponse.tlyric?.lyric
+
 		const romalrc = haveYrc
 			? lyricsResponse.yromalrc?.lyric
 			: lyricsResponse.romalrc?.lyric
+
 		const lyricData: LyricProviderResponseData = {
 			// 一手防御性编程，我们不确定 tlyric 和 romalrc 会不会返回 yrc 格式，但是 parse 一下准没错
 			lrc: parseYrc(lrc),
@@ -141,6 +151,7 @@ export class NeteaseApi {
 				return this.getLyrics(bestMatch.remoteId as number, signal).andThen(
 					(lyricsResponse) => {
 						const lyricData = this.parseLyrics(lyricsResponse)
+
 						return okAsync(lyricData)
 					},
 				)
@@ -157,7 +168,9 @@ export class NeteaseApi {
 			n: '1000',
 			t: '0',
 		}
+
 		const requestOptions: RequestOptions = createOption({}, 'eapi')
+
 		return createRequest<object, NeteasePlaylistResponse>(
 			'/api/v6/playlist/detail',
 			data,

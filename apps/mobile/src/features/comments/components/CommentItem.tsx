@@ -35,6 +35,7 @@ const parseMessageSegments = (
 	const emoteKeys = Object.keys(emotes ?? {}).sort(
 		(a, b) => b.length - a.length,
 	)
+
 	if (emoteKeys.length === 0) {
 		return [{ type: 'text', key: 'text-0', text: message }]
 	}
@@ -47,6 +48,7 @@ const parseMessageSegments = (
 	for (const match of message.matchAll(pattern)) {
 		const rawText = match[0]
 		const start = match.index ?? 0
+
 		if (start > cursor) {
 			segments.push({
 				type: 'text',
@@ -54,7 +56,9 @@ const parseMessageSegments = (
 				text: message.slice(cursor, start),
 			})
 		}
+
 		const emote = emotes?.[rawText]
+
 		if (emote?.url) {
 			segments.push({
 				type: 'emote',
@@ -65,6 +69,7 @@ const parseMessageSegments = (
 		} else {
 			segments.push({ type: 'text', key: `text-${index++}`, text: rawText })
 		}
+
 		cursor = start + rawText.length
 	}
 
@@ -111,6 +116,7 @@ const CommentMessage = memo(function CommentMessage({
 				}
 
 				const size = segment.emote.meta?.size === 2 ? 48 : 24
+
 				return (
 					<Image
 						key={segment.key}
@@ -132,6 +138,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	const [liked, setLiked] = useState(item.action === 1)
 	const [likeCount, setLikeCount] = useState(item.like || 0)
 	const router = useRouter()
+
 	const [darkMode, setDarkMode] = useState(
 		Appearance.getColorScheme() === 'dark',
 	)
@@ -140,6 +147,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 		const subscription = Appearance.addChangeListener(({ colorScheme }) => {
 			setDarkMode(colorScheme === 'dark')
 		})
+
 		return () => subscription.remove()
 	}, [])
 
@@ -149,6 +157,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 		setLiked(!liked)
 		setLikeCount(liked ? likeCount - 1 : likeCount + 1)
 		const newAction = liked ? 0 : 1
+
 		try {
 			await likeComment({
 				bvid,
@@ -159,6 +168,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 			toastAndLogError('点赞失败', e, 'Comments.CommentItem')
 			setLiked(liked)
 			setLikeCount(likeCount)
+
 			return
 		}
 	}

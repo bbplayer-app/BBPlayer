@@ -64,6 +64,7 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	const computedBorderRadius = borderRadius ?? size * 0.22
 
 	const validTitle = title.trim()
+
 	const { color1, color2 } = getGradientColors(
 		validTitle ? validTitle : String(id),
 		isDark,
@@ -75,10 +76,13 @@ const CoverWithPlaceHolder = memo(function CoverWithPlaceHolder({
 	const coverSource = useMemo(() => {
 		if (typeof cover === 'string') {
 			const resolvedUri = resolveBilibiliImageUrl(cover, 400)
+
 			return resolvedUri ? { uri: resolvedUri } : cover
 		}
+
 		return cover
 	}, [cover])
+
 	const policy =
 		typeof cover === 'string' && cover.startsWith('file://')
 			? 'none'

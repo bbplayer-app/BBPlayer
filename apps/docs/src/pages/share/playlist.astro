@@ -1,0 +1,59 @@
+---
+import { ListMusic, Play, User, EighthNote, Users, Share2 } from '@lucide/astro'
+import ShareLayout from '../../layouts/ShareLayout.astro'
+import ShareError from '../../components/ShareError.astro'
+import '../../styles/playlist.css'
+---
+
+<ShareLayout title="共享歌单" showBrowserHint>
+	<div id="loading" class="card" role="status" aria-label="正在加载歌单">
+		<div class="skeleton cover-skeleton"></div>
+		<div class="skeleton title-skeleton"></div>
+		<div class="skeleton subtitle-skeleton"></div>
+		<div class="skeleton btn-skeleton"></div>
+	</div>
+	<ShareError />
+	<section id="playlist-card" class="card preview-card" hidden>
+		<div id="playlist-banner" class="banner banner-share">
+			<span id="share-icon" class="banner-icon"><Share2 size={14} /></span>
+			<span id="invite-icon" class="banner-icon" hidden><Users size={14} /></span>
+			<span id="banner-text"></span>
+		</div>
+		<div class="card-body">
+			<div class="header-row">
+				<div class="cover-wrapper">
+					<img id="playlist-cover" class="cover-image" referrerpolicy="no-referrer" hidden />
+					<div id="cover-placeholder" class="cover-placeholder"><ListMusic size={40} /></div>
+				</div>
+				<div class="meta">
+					<h1 id="playlist-title" class="playlist-title">未命名歌单</h1>
+					<p id="playlist-description" class="playlist-desc" hidden></p>
+					<div id="owner" class="owner-row" hidden>
+						<img id="owner-avatar" class="owner-avatar" referrerpolicy="no-referrer" hidden />
+						<div id="owner-placeholder" class="owner-avatar-placeholder"><User size={12} /></div>
+						<span id="owner-name" class="owner-name"></span>
+					</div>
+					<span id="track-count" class="track-count"></span>
+				</div>
+			</div>
+			<ul id="track-list" class="track-list" hidden></ul>
+			<p id="more-hint" class="more-hint" hidden></p>
+		</div>
+		<div class="button-group">
+			<a id="app-link" class="btn btn-primary"><Play size={18} fill="currentColor" class="btn-icon" /><span id="app-link-label">在 BBPlayer 中订阅</span></a>
+		</div>
+	</section>
+	<template id="track-template">
+		<li class="track-item">
+			<span class="track-index"></span>
+			<img class="track-cover" referrerpolicy="no-referrer" hidden />
+			<div class="track-cover-placeholder"><EighthNote size={13} /></div>
+			<div class="track-info">
+				<span class="track-title"></span>
+				<span class="track-artist" hidden></span>
+			</div>
+		</li>
+	</template>
+</ShareLayout>
+
+<script src="../../scripts/playlist.ts"></script>

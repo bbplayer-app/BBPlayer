@@ -1,0 +1,27 @@
+---
+import { EighthNote, Play, TvMinimal } from '@lucide/astro'
+import ShareLayout from '../../layouts/ShareLayout.astro'
+import ShareError from '../../components/ShareError.astro'
+import '../../styles/track.css'
+---
+
+<ShareLayout title="分享曲目" showBrowserHint>
+	<section id="track-card" class="card" hidden>
+		<div class="card-body">
+			<div class="cover-wrapper">
+				<img id="track-cover" class="cover-image" referrerpolicy="no-referrer" hidden />
+				<div id="cover-placeholder" class="cover-placeholder"><EighthNote size={52} /></div>
+			</div>
+			<h1 id="track-title" class="track-title">未知曲目</h1>
+		</div>
+		<div class="button-group">
+			<a id="bilibili-link" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+				<TvMinimal size={18} class="btn-icon" />在 Bilibili 打开
+			</a>
+			<a id="app-link" class="btn btn-primary"><Play size={18} fill="currentColor" class="btn-icon" />在 BBPlayer 打开</a>
+		</div>
+	</section>
+	<ShareError />
+</ShareLayout>
+
+<script src="../../scripts/track.ts"></script>

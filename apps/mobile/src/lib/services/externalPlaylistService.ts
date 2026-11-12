@@ -101,6 +101,7 @@ export class ExternalPlaylistService {
 		} else if (source === 'qq') {
 			return qqMusicApi.getPlaylist(playlistId).map((response) => {
 				const playlist = response.data?.cdlist?.[0]
+
 				if (!playlist)
 					return {
 						playlist: {
@@ -138,6 +139,7 @@ export class ExternalPlaylistService {
 				}
 			})
 		}
+
 		return errAsync(new Error('Unsupported source: ' + String(source)))
 	}
 
@@ -160,12 +162,14 @@ export class ExternalPlaylistService {
 				const results: MatchResult[] = []
 				const total = tracks.length
 				const startIndex = options?.startIndex ?? 0
+
 				const indexesToProcess =
 					options?.trackIndexes ??
 					Array.from(
 						{ length: Math.max(total - startIndex, 0) },
 						(_, index) => startIndex + index,
 					)
+
 				const processingTotal = indexesToProcess.length
 
 				for (const [processedCount, trackIndex] of indexesToProcess.entries()) {
@@ -174,9 +178,11 @@ export class ExternalPlaylistService {
 					}
 
 					const song = tracks[trackIndex]
+
 					if (!song) {
 						continue
 					}
+
 					// oxlint-disable-next-line no-await-in-loop
 					await wait(MIN_DELAY)
 
@@ -192,6 +198,7 @@ export class ExternalPlaylistService {
 
 					try {
 						const { signal, cleanup } = createSearchSignal(options?.signal)
+
 						// oxlint-disable-next-line no-await-in-loop
 						const searchResult = await (async () => {
 							try {
@@ -212,6 +219,7 @@ export class ExternalPlaylistService {
 								...video,
 								title: decode(video.title),
 							}))
+
 							matchedVideo = this.findBestMatchSimple(decodedResults, song)
 						} else {
 							logger.error(
@@ -231,6 +239,7 @@ export class ExternalPlaylistService {
 						track: song,
 						matchedVideo: matchedVideo,
 					}
+
 					results.push(result)
 					onProgress(processedCount + 1, processingTotal, result, trackIndex)
 				}
@@ -277,6 +286,7 @@ export class ExternalPlaylistService {
 
 		for (const video of results) {
 			const score = this.rankScore(video, targetSong)
+
 			if (score < 0.4) continue // 阈值过滤
 
 			candidates.push({ video, score })
@@ -285,6 +295,7 @@ export class ExternalPlaylistService {
 		if (candidates.length === 0) return null
 
 		candidates.sort((a, b) => b.score - a.score)
+
 		return candidates[0].video
 	}
 

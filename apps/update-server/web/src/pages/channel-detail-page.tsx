@@ -41,18 +41,22 @@ const config = {
 
 export function ChannelDetailPage() {
 	const name = queryParam('channel')
+
 	const channelQuery = useQuery({
 		queryKey: ['channel', name],
 		queryFn: () => channel(name),
 		enabled: Boolean(name),
 	})
+
 	const [selectedRuntime, setSelectedRuntime] = useState('')
 	const runtimes = channelQuery.data?.runtimes ?? []
+
 	const runtime = runtimes.some(
 		(item) => item.runtime_version === selectedRuntime,
 	)
 		? selectedRuntime
 		: (runtimes[0]?.runtime_version ?? '')
+
 	const activityQuery = useQuery({
 		queryKey: ['activity', name, runtime],
 		queryFn: () => activity(name, runtime),
@@ -71,12 +75,14 @@ export function ChannelDetailPage() {
 				/>
 			</AppShell>
 		)
+
 	if (channelQuery.isPending)
 		return (
 			<AppShell active='channels'>
 				<PageSkeleton />
 			</AppShell>
 		)
+
 	if (channelQuery.error)
 		return (
 			<AppShell active='channels'>
@@ -86,6 +92,7 @@ export function ChannelDetailPage() {
 				/>
 			</AppShell>
 		)
+
 	return (
 		<AppShell active='channels'>
 			<PageHeader

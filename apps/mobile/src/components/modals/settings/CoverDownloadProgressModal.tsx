@@ -18,6 +18,7 @@ interface ProgressState {
 
 const CoverDownloadProgressModal = memo(function CoverDownloadProgressModal() {
 	const close = useModalStore((state) => state.close)
+
 	const [progress, setProgress] = useState<ProgressState>({
 		current: 0,
 		total: 0,
@@ -25,6 +26,7 @@ const CoverDownloadProgressModal = memo(function CoverDownloadProgressModal() {
 		stage: 'pending',
 		message: '准备中...',
 	})
+
 	const hasStarted = useRef(false)
 
 	useEffect(() => {
@@ -37,6 +39,7 @@ const CoverDownloadProgressModal = memo(function CoverDownloadProgressModal() {
 				setProgress((prev) => {
 					const failed = prev.failed + (event.status === 'failed' ? 1 : 0)
 					const isLast = event.current === event.total
+
 					return {
 						current: event.current,
 						total: event.total,
@@ -80,6 +83,7 @@ const CoverDownloadProgressModal = memo(function CoverDownloadProgressModal() {
 
 	const isFinished =
 		progress.stage === 'completed' || progress.stage === 'error'
+
 	const progressValue =
 		progress.total > 0 ? progress.current / progress.total : undefined
 
