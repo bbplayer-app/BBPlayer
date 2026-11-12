@@ -1,6 +1,10 @@
 import { AppRegistry, Platform } from 'react-native'
 
-import { Orpheus, type OrpheusHeadlessEvent } from './ExpoOrpheusModule'
+import {
+	Orpheus,
+	TransitionReason,
+	type OrpheusHeadlessEvent,
+} from './ExpoOrpheusModule'
 
 const ORPHEUS_HEADLESS_TASK = 'OrpheusHeadlessTask'
 
@@ -15,12 +19,27 @@ export function registerOrpheusHeadlessTask(
 ) {
 	// On iOS, we bridge events from the Native Module to the headless task logic.
 	if (Platform.OS === 'ios') {
+		let receivedTrackStart = false
 		Orpheus.addListener('onTrackStarted', (event) => {
+			receivedTrackStart = true
 			task({
 				eventName: 'onTrackStarted',
 				...event,
 			}).catch((e) => console.error('[Orpheus] Headless task error:', e))
 		})
+
+		// iOS 在模块创建时已恢复队列，补发订阅前发生的开始事件，仍使用同一处理路径。
+		void Orpheus.getCurrentTrack()
+			.then(async (track) => {
+				if (!receivedTrackStart && track) {
+					await task({
+						eventName: 'onTrackStarted',
+						trackId: track.id,
+						reason: TransitionReason.PLAYLIST_CHANGED,
+					})
+				}
+			})
+			.catch((e) => console.error('[Orpheus] Headless task error:', e))
 
 		Orpheus.addListener('onTrackFinished', (event) => {
 			task({

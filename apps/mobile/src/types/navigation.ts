@@ -29,6 +29,7 @@ export interface ModalPropsMap {
 	Alert: AlertModalProps
 	EditLyrics: { uniqueKey: string; lyrics: LyricFileData }
 	SleepTimer: undefined
+	AbLoop: undefined
 	SaveQueueToPlaylist: { trackIds: string[] }
 	DonationQR: { type: 'wechat' | 'alipay' }
 	PlaybackSpeed: undefined
