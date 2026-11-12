@@ -64,6 +64,11 @@ initializeSentry()
 function onAppStateChange(status: AppStateStatus) {
 	if (Platform.OS !== 'web') {
 		focusManager.setFocused(status === 'active')
+
+		// metrics 有 5s 缓冲窗口，退到后台时确保启动数据已经发出
+		if (status !== 'active') {
+			void Sentry.flush()
+		}
 	}
 }
 

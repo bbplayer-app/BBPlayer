@@ -68,6 +68,26 @@ const getEnv = () => {
 	return 'production'
 }
 
+export type ExpoLaunchSource = 'emergency' | 'embedded' | 'ota'
+
+export function getExpoLaunchSource(): ExpoLaunchSource {
+	if (Updates.isEmergencyLaunch) {
+		return 'emergency'
+	}
+
+	return Updates.isEmbeddedLaunch ? 'embedded' : 'ota'
+}
+
+// 与 Sentry.init 的 enabled 口径保持一致，并读取当前设置：
+// 用户可能在本次会话中途关闭数据采集。
+export function isSentryTelemetryEnabled(): boolean {
+	return (
+		!development &&
+		isOfficialBuild &&
+		useAppStore.getState().settings.enableDataCollection
+	)
+}
+
 export const navigationIntegration = Sentry.reactNavigationIntegration({
 	enableTimeToInitialDisplay: !isRunningInExpoGo(),
 })
@@ -86,10 +106,7 @@ export function initializeSentry() {
 		tracesSampleRate: 0.3,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
-		enabled:
-			!development &&
-			isOfficialBuild &&
-			useAppStore.getState().settings.enableDataCollection,
+		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
 		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。
 		// 因此非官方签名时把原生 SDK 一并关掉。
@@ -114,17 +131,11 @@ export function initializeSentry() {
 
 	const scope = Sentry.getGlobalScope()
 
-	const launchSource = Updates.isEmergencyLaunch
-		? 'emergency'
-		: Updates.isEmbeddedLaunch
-			? 'embedded'
-			: 'ota'
-
 	scope.setTag('expo-update-id', Updates.updateId ?? 'none')
 	scope.setTag('expo-is-embedded-update', String(Updates.isEmbeddedLaunch))
 	scope.setTag('expo-channel', configuredChannel())
 	scope.setTag('expo-runtime-version', Updates.runtimeVersion ?? 'unknown')
-	scope.setTag('expo-launch-source', launchSource)
+	scope.setTag('expo-launch-source', getExpoLaunchSource())
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
 	if (!development) {
