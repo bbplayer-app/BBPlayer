@@ -169,7 +169,13 @@ export function TrackInfo({
 												]}
 												testID='player-cover-placeholder'
 											>
-												<Text>{podcast ? '查看字幕' : '查看歌词'}</Text>
+												<Text>
+													{onPressCover
+														? podcast
+															? '查看字幕'
+															: '查看歌词'
+														: '歌曲封面'}
+												</Text>
 											</View>
 										) : !coverRef ? (
 											<LinearGradient

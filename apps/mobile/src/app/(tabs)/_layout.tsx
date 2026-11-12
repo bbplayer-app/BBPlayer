@@ -217,7 +217,6 @@ export default function TabLayout() {
 				<NativeTabRailWidthContext value={showRail ? NAVIGATION_RAIL_WIDTH : 0}>
 					<NativeTabs
 						hidden={showRail}
-						sidebarAdaptable
 						tintColor={colors.primary}
 						backgroundColor={colors.elevation.level1}
 						iconColor={{

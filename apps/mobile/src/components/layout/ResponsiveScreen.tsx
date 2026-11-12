@@ -46,6 +46,8 @@ export default function ResponsiveScreen(
 ) {
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
+	// Transparent modals must preserve the page and bounds underneath them.
+	if (props.routeName === 'modal') return <>{props.children}</>
 	return (
 		<View
 			style={{

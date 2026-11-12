@@ -275,9 +275,10 @@ function RootLayout() {
 									}
 
 									// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
-									// 继承此前 Tab 页留下的高度。
+									// 继承此前 Tab 页留下的高度和侧栏偏移。
 									if (route.name !== '(tabs)' && route.name !== 'modal') {
 										nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
+										nowPlayingBarStore$.retainedContentLeftInset.set(0)
 									}
 								}
 							},

@@ -43,10 +43,7 @@ function LibraryContent() {
 	const [_, startTransition] = useTransition()
 	const insets = useSafeAreaInsets()
 	const { width, fontScale } = useResponsiveLayout()
-	const tabWidth = Math.max(
-		Math.min(width / routes.length, 160 * fontScale),
-		80 * fontScale,
-	)
+	const tabWidth = Math.max(width / routes.length, 80 * fontScale)
 	const colors = useTheme().colors
 	const headerForegroundColor = useSkinForegroundColor()
 	const { tab } = useLocalSearchParams<{ tab: string }>()
