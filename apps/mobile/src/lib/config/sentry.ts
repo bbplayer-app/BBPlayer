@@ -6,6 +6,7 @@ import * as Updates from 'expo-updates'
 import { Platform } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
 import log from '@/utils/log'
 
@@ -87,6 +88,13 @@ export function initializeSentry() {
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
+		beforeSend(event) {
+			const fingerprint = getNativeModuleFingerprint(event)
+			if (fingerprint) {
+				event.fingerprint = fingerprint
+			}
+			return event
+		},
 	})
 
 	const scope = Sentry.getGlobalScope()
