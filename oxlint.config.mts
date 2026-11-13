@@ -149,6 +149,33 @@ export default defineConfig({
 						aliasForSubpaths: true,
 					},
 				],
+				// 统一走带 Sentry span 的封装，见 hooks/utils/useTracedQuery.ts
+				'no-restricted-imports': [
+					'error',
+					{
+						paths: [
+							{
+								name: '@tanstack/react-query',
+								importNames: [
+									'useQuery',
+									'useInfiniteQuery',
+									'useMutation',
+									'useSuspenseQuery',
+									'useSuspenseInfiniteQuery',
+									'useQueries',
+								],
+								message:
+									'请使用 @/hooks/utils/useTracedQuery 中的 useTracedQuery / useTracedInfiniteQuery / useTracedMutation',
+							},
+						],
+					},
+				],
+			},
+		},
+		{
+			files: ['apps/mobile/src/hooks/utils/useTracedQuery.ts'],
+			rules: {
+				'no-restricted-imports': 'off',
 			},
 		},
 		{

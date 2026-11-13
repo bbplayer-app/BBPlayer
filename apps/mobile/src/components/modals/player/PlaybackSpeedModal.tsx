@@ -96,7 +96,12 @@ const PlaybackSpeedModal = () => {
 				</View>
 			</Dialog.Content>
 			<Dialog.Actions>
-				<Button onPress={handleReset}>重置</Button>
+				<Button
+					testID='playback-speed-reset'
+					onPress={handleReset}
+				>
+					重置
+				</Button>
 				<Button onPress={() => close('PlaybackSpeed')}>关闭</Button>
 			</Dialog.Actions>
 		</>

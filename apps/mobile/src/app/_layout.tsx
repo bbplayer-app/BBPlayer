@@ -458,7 +458,12 @@ function RootLayout() {
 	)
 }
 
-export default Sentry.wrap(ObserveRoot.wrap(RootLayout))
+// 用户点击追踪（ui.action.touch）与触摸面包屑以 testID 作为元素标识。
+// 同一节点上 testID 优先于 accessibilityLabel 与子节点文本；都没有时保留原始文本，
+// 点击 transaction 名即 `{路由}.{元素标识}`
+export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
+	touchEventBoundaryProps: { labelName: 'testID' },
+})
 
 const styles = StyleSheet.create({
 	appContainer: {

@@ -126,6 +126,7 @@ export default function FollowingPage() {
 									contentContainerStyle={styles.groups}
 								>
 									<Chip
+										testID='following-group-all'
 										selected={tagId === -20}
 										onPress={() => setSelectedTagId(-20)}
 									>
@@ -138,6 +139,7 @@ export default function FollowingPage() {
 										?.filter((group) => group.tagid !== -20)
 										.map((group) => (
 											<Chip
+												testID='following-group'
 												key={group.tagid}
 												selected={tagId === group.tagid}
 												onPress={() => setSelectedTagId(group.tagid)}
@@ -148,7 +150,10 @@ export default function FollowingPage() {
 								</ScrollView>
 							)}
 							{groups.isError && (
-								<Button onPress={() => void refetchGroups()}>
+								<Button
+									testID='following-groups-retry'
+									onPress={() => void refetchGroups()}
+								>
 									分组加载失败，重试
 								</Button>
 							)}
@@ -160,6 +165,7 @@ export default function FollowingPage() {
 				<View style={styles.state}>
 					<Text>登录 Bilibili 账号后查看我的关注</Text>
 					<Button
+						testID='following-login'
 						mode='contained'
 						onPress={() => router.navigate('/settings/bilibili-account')}
 					>
@@ -172,7 +178,12 @@ export default function FollowingPage() {
 				<View style={styles.state}>
 					<Text>加载关注列表失败</Text>
 					<Text style={styles.error}>{error.message}</Text>
-					<Button onPress={() => void refetch()}>重试</Button>
+					<Button
+						testID='following-retry'
+						onPress={() => void refetch()}
+					>
+						重试
+					</Button>
 				</View>
 			) : (
 				<LegendList
@@ -191,7 +202,12 @@ export default function FollowingPage() {
 					renderItem={({ item }) => <FollowingListItem user={item} />}
 					ListHeaderComponent={
 						isError && !isFetchNextPageError ? (
-							<Button onPress={() => void refetch()}>刷新失败，点击重试</Button>
+							<Button
+								testID='following-refresh-retry'
+								onPress={() => void refetch()}
+							>
+								刷新失败，点击重试
+							</Button>
 						) : null
 					}
 					ListEmptyComponent={
@@ -207,7 +223,10 @@ export default function FollowingPage() {
 						isFetchingNextPage ? (
 							<ActivityIndicator style={styles.count} />
 						) : isFetchNextPageError ? (
-							<Button onPress={() => void fetchNextPage()}>
+							<Button
+								testID='following-load-more-retry'
+								onPress={() => void fetchNextPage()}
+							>
 								加载更多失败，重试
 							</Button>
 						) : null

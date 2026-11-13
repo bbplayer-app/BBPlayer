@@ -208,6 +208,7 @@ const HighFreqButton = ({
 			cornerSmoothing={0.6}
 		>
 			<TouchableRipple
+				testID={item.testID}
 				onPress={() => {
 					onDismiss(item.onPress)
 				}}
@@ -492,6 +493,7 @@ export function LocalTrackList({
 
 									{normalItems.map((menuItem, index) => (
 										<List.Item
+											testID={menuItem.testID}
 											// oxlint-disable-next-line react/no-array-index-key
 											key={index}
 											title={menuItem.title}

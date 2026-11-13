@@ -110,6 +110,7 @@ export function PlayerChaptersSheet() {
 							>
 								{data.chapters.map((item, chapterIndex) => (
 									<List.Item
+										testID='player-chapter-item'
 										key={item.id}
 										onLayout={(event) => {
 											rowLayouts.current.set(item.id, event.nativeEvent.layout)
@@ -176,6 +177,7 @@ export function PlayerChaptersSheet() {
 									<>
 										<Text>章节加载失败，播放不受影响</Text>
 										<Button
+											testID='player-chapters-retry'
 											onPress={() => {
 												void data.retry()
 											}}

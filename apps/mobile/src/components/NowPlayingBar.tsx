@@ -419,6 +419,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 
 							<View style={styles.nowPlayingBarControls}>
 								<Touchable
+									testID='now-playing-play-pause'
 									style={styles.nowPlayingBarControlButton}
 									onPress={() => playPause()}
 								>
@@ -434,6 +435,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 								</Touchable>
 
 								<Touchable
+									testID='now-playing-open-queue'
 									style={styles.nowPlayingBarControlButton}
 									onPress={() => usePlayerQueueSheetStore.getState().open()}
 								>

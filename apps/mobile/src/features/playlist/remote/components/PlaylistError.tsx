@@ -24,6 +24,7 @@ export function PlaylistError({
 			</Text>
 			{onRetry && (
 				<Button
+					testID='playlist-retry'
 					onPress={onRetry}
 					mode='contained'
 				>

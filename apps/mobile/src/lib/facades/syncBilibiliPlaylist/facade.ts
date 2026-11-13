@@ -107,6 +107,7 @@ export class SyncBilibiliPlaylistFacade {
 	/** 合集单次读取，系列逐页读取，两者只共享入库事务。 */
 	public syncCollection(
 		collectionId: number,
+		parent?: TraceParent,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
 		const syncKey = `collection::${collectionId}`
 
@@ -131,6 +132,7 @@ export class SyncBilibiliPlaylistFacade {
 								span,
 							),
 						),
+				parent,
 			)
 				.andTee(() => {
 					this.syncingIds.delete(syncKey)
@@ -147,6 +149,7 @@ export class SyncBilibiliPlaylistFacade {
 	public syncSeries(
 		seriesId: number,
 		onProgress?: (progress: PlaylistSyncProgress) => void,
+		parent?: TraceParent,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
 		const syncKey = `series::${seriesId}`
 
@@ -186,6 +189,7 @@ export class SyncBilibiliPlaylistFacade {
 								span,
 							)
 						}),
+				parent,
 			)
 				.andTee(() => {
 					this.syncingIds.delete(syncKey)
@@ -337,6 +341,7 @@ export class SyncBilibiliPlaylistFacade {
 	 */
 	public syncMultiPageVideo(
 		bvid: string,
+		parent?: TraceParent,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
 		const syncKey = `multiPage::${bvid}`
 
@@ -359,6 +364,7 @@ export class SyncBilibiliPlaylistFacade {
 			return traceOperationResult(
 				{ name: 'sync.bilibili_multi_page', op: 'task' },
 				(span) => this.syncMultiPageVideoImpl(bvid, span),
+				parent,
 			)
 				.andTee(() => {
 					this.syncingIds.delete(syncKey)
@@ -488,6 +494,7 @@ export class SyncBilibiliPlaylistFacade {
 		favoriteId: number,
 		onProgress?: (progress: PlaylistSyncProgress) => void,
 		expandMultiPage = false,
+		parent?: TraceParent,
 	): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
 		const syncKey = `favorite::${favoriteId}`
 
@@ -541,6 +548,7 @@ export class SyncBilibiliPlaylistFacade {
 							span,
 						),
 					),
+				parent,
 			)
 		} finally {
 			this.syncingIds.delete(syncKey)
@@ -559,22 +567,28 @@ export class SyncBilibiliPlaylistFacade {
 		type: Playlist['type'],
 		onProgress?: (progress: PlaylistSyncProgress) => void,
 		expandMultiPage = false,
+		parent?: TraceParent,
 	) {
 		switch (type) {
 			case 'favorite': {
-				return this.syncFavorite(remoteSyncId, onProgress, expandMultiPage)
+				return this.syncFavorite(
+					remoteSyncId,
+					onProgress,
+					expandMultiPage,
+					parent,
+				)
 			}
 
 			case 'collection': {
-				return this.syncCollection(remoteSyncId)
+				return this.syncCollection(remoteSyncId, parent)
 			}
 
 			case 'series': {
-				return this.syncSeries(remoteSyncId, onProgress)
+				return this.syncSeries(remoteSyncId, onProgress, parent)
 			}
 
 			case 'multi_page': {
-				return this.syncMultiPageVideo(av2bv(remoteSyncId))
+				return this.syncMultiPageVideo(av2bv(remoteSyncId), parent)
 			}
 
 			case 'local': {

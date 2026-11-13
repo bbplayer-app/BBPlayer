@@ -227,7 +227,12 @@ const UpdateTrackLocalPlaylistsModal = memo(
 						</Dialog.Content>
 						<Dialog.Actions>
 							<Button onPress={handleDismiss}>关闭</Button>
-							<Button onPress={handleRetry}>重试</Button>
+							<Button
+								testID='update-track-playlists-retry'
+								onPress={handleRetry}
+							>
+								重试
+							</Button>
 						</Dialog.Actions>
 					</>
 				)
@@ -256,6 +261,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 					</Dialog.Content>
 					<Dialog.Actions style={styles.actionsContainer}>
 						<Button
+							testID='update-track-playlists-create'
 							onPress={() =>
 								open('CreatePlaylist', { redirectToNewPlaylist: false })
 							}
@@ -270,6 +276,7 @@ const UpdateTrackLocalPlaylistsModal = memo(
 								取消
 							</Button>
 							<Button
+								testID='update-track-playlists-confirm'
 								onPress={handleConfirm}
 								loading={isMutating}
 								disabled={isMutating}

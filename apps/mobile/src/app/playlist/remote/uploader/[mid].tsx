@@ -219,6 +219,7 @@ export default function UploaderPage() {
 					对访问用户个人空间和上传的视频接口有莫名其妙的风控校验
 				</Text>
 				<Button
+					testID='uploader-login'
 					mode='contained'
 					onPress={() => {
 						router.navigate('/settings/bilibili-account/qrcode-login')
@@ -260,6 +261,7 @@ export default function UploaderPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
@@ -283,6 +285,7 @@ export default function UploaderPage() {
 					</>
 				) : (
 					<Appbar.Action
+						testID='remote-playlist-search'
 						icon={startSearch ? 'close' : 'magnify'}
 						onPress={() => setStartSearch((prev) => !prev)}
 					/>

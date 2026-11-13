@@ -13,7 +13,7 @@ import {
 	createTrackNotInPlaylist,
 	createValidationError,
 } from '@/lib/errors/service'
-import { type TraceParent, traceSpan } from '@/lib/tracing'
+import { dbSpan, type TraceParent, traceSpan } from '@/lib/tracing'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
 	CreatePlaylistPayload,
@@ -410,7 +410,7 @@ export class PlaylistService {
 
 				const [result] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:playlist', op: 'db' },
+					dbSpan('INSERT', 'playlists', 'playlist'),
 					() =>
 						this.db.insert(schema.playlists).values(insertValues).returning(),
 				)
@@ -464,7 +464,7 @@ export class PlaylistService {
 				// 验证播放列表是否存在
 				const existing = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:exist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.exist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(
@@ -480,7 +480,7 @@ export class PlaylistService {
 
 				const [updated] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:playlist', op: 'db' },
+					dbSpan('UPDATE', 'playlists', 'playlist'),
 					() =>
 						this.db
 							.update(schema.playlists)
@@ -525,7 +525,7 @@ export class PlaylistService {
 				// 验证播放列表是否存在
 				const existing = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:exist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.exist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(eq(schema.playlists.id, playlistId)),
@@ -539,7 +539,7 @@ export class PlaylistService {
 
 				const [deleted] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:delete:playlist', op: 'db' },
+					dbSpan('DELETE', 'playlists', 'playlist'),
 					() =>
 						this.db
 							.delete(schema.playlists)
@@ -578,7 +578,7 @@ export class PlaylistService {
 				// 验证播放列表是否存在且为 local
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:exist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.exist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(
@@ -596,7 +596,7 @@ export class PlaylistService {
 				// 获取当前最大 sort_key（DESC 排序下，最大值对应最新加入的歌曲）
 				const maxKeyResult = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:max_sort_key', op: 'db' },
+					dbSpan('SELECT', 'playlist_tracks', 'max_sort_key'),
 					() =>
 						this.db
 							.select({
@@ -625,7 +625,7 @@ export class PlaylistService {
 				// 批量插入（忽略已存在的）
 				const inserted = await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:playlistTracks', op: 'db' },
+					dbSpan('INSERT', 'playlist_tracks', 'playlist_tracks'),
 					() =>
 						this.db
 							.insert(schema.playlistTracks)
@@ -643,7 +643,7 @@ export class PlaylistService {
 				if (inserted.length > 0) {
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:update:playlist:itemCount', op: 'db' },
+						dbSpan('UPDATE', 'playlists', 'playlist.item_count'),
 						() =>
 							this.db
 								.update(schema.playlists)
@@ -682,7 +682,7 @@ export class PlaylistService {
 				// 验证播放列表是否存在且为 'local'
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:exist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.exist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(
@@ -706,7 +706,7 @@ export class PlaylistService {
 
 					const deletedChunk = await traceSpan(
 						this.traceParent,
-						{ name: 'db:delete:playlistTracks', op: 'db' },
+						dbSpan('DELETE', 'playlist_tracks', 'playlist_tracks'),
 						() =>
 							this.db
 								.delete(schema.playlistTracks)
@@ -732,7 +732,7 @@ export class PlaylistService {
 				// 更新 itemCount（不小于 0）
 				await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:playlist:itemCount', op: 'db' },
+					dbSpan('UPDATE', 'playlists', 'playlist.item_count'),
 					() =>
 						this.db
 							.update(schema.playlists)
@@ -776,7 +776,7 @@ export class PlaylistService {
 			(async () => {
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:exist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.exist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(
@@ -807,7 +807,7 @@ export class PlaylistService {
 
 				await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:playlistTrack:sortKey', op: 'db' },
+					dbSpan('UPDATE', 'playlist_tracks', 'playlist_track.sort_key'),
 					() =>
 						this.db
 							.update(schema.playlistTracks)
@@ -843,7 +843,7 @@ export class PlaylistService {
 			(async () => {
 				const type = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:type', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.type'),
 					() =>
 						this.db.query.playlists.findFirst({
 							columns: { type: true },
@@ -862,7 +862,7 @@ export class PlaylistService {
 
 				return traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlistTracks', op: 'db' },
+					dbSpan('SELECT', 'playlist_tracks', 'playlist_tracks'),
 					() =>
 						this.db.query.playlistTracks.findMany({
 							where: eq(schema.playlistTracks.playlistId, playlistId),
@@ -917,7 +917,7 @@ export class PlaylistService {
 			(async () => {
 				const playlists = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlists', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlists'),
 					() =>
 						this.db.query.playlists.findMany({
 							orderBy: [
@@ -969,7 +969,7 @@ export class PlaylistService {
 			(async () => {
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: eq(schema.playlists.id, playlistId),
@@ -982,7 +982,7 @@ export class PlaylistService {
 				if (!playlist || playlist.type !== 'dynamic') {
 					return traceSpan(
 						this.traceParent,
-						{ name: 'db:query:playlist', op: 'db' },
+						dbSpan('SELECT', 'playlists', 'playlist'),
 						() =>
 							this.db.query.playlists.findFirst({
 								where: eq(schema.playlists.id, playlistId),
@@ -1051,7 +1051,7 @@ export class PlaylistService {
 			(async () => {
 				const existingPlaylist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist'),
 					() =>
 						this.db.query.playlists.findFirst({
 							where: and(
@@ -1067,7 +1067,7 @@ export class PlaylistService {
 
 				const [newPlaylist] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:playlist', op: 'db' },
+					dbSpan('INSERT', 'playlists', 'playlist'),
 					() =>
 						this.db
 							.insert(schema.playlists)
@@ -1107,7 +1107,7 @@ export class PlaylistService {
 			(async () => {
 				await traceSpan(
 					this.traceParent,
-					{ name: 'db:delete:playlistTracks', op: 'db' },
+					dbSpan('DELETE', 'playlist_tracks', 'playlist_tracks'),
 					() =>
 						this.db
 							.delete(schema.playlistTracks)
@@ -1133,7 +1133,7 @@ export class PlaylistService {
 
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:insert:playlistTracks', op: 'db' },
+						dbSpan('INSERT', 'playlist_tracks', 'playlist_tracks'),
 						() =>
 							this.db.insert(schema.playlistTracks).values(newPlaylistTracks),
 					)
@@ -1141,7 +1141,7 @@ export class PlaylistService {
 
 				await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:playlist', op: 'db' },
+					dbSpan('UPDATE', 'playlists', 'playlist'),
 					() =>
 						this.db
 							.update(schema.playlists)
@@ -1177,16 +1177,19 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:playlist', op: 'db' }, () =>
-				this.db.query.playlists.findFirst({
-					where: and(
-						eq(schema.playlists.type, type),
-						eq(schema.playlists.remoteSyncId, remoteId),
-					),
-					with: {
-						trackLinks: true,
-					},
-				}),
+			traceSpan(
+				this.traceParent,
+				dbSpan('SELECT', 'playlists', 'playlist'),
+				() =>
+					this.db.query.playlists.findFirst({
+						where: and(
+							eq(schema.playlists.type, type),
+							eq(schema.playlists.remoteSyncId, remoteId),
+						),
+						with: {
+							trackLinks: true,
+						},
+					}),
 			),
 			(e) => new DatabaseError('查询播放列表失败', { cause: e }),
 		)
@@ -1198,14 +1201,17 @@ export class PlaylistService {
 	 */
 	public getPlaylistById(playlistId: number) {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:playlist', op: 'db' }, () =>
-				this.db.query.playlists.findFirst({
-					where: eq(schema.playlists.id, playlistId),
-					with: {
-						author: true,
-						trackLinks: true,
-					},
-				}),
+			traceSpan(
+				this.traceParent,
+				dbSpan('SELECT', 'playlists', 'playlist'),
+				() =>
+					this.db.query.playlists.findFirst({
+						where: eq(schema.playlists.id, playlistId),
+						with: {
+							author: true,
+							trackLinks: true,
+						},
+					}),
 			),
 			(e) => new DatabaseError('查询播放列表失败', { cause: e }),
 		)
@@ -1226,7 +1232,7 @@ export class PlaylistService {
 				return ResultAsync.fromPromise(
 					traceSpan(
 						this.traceParent,
-						{ name: 'db:query:playlists', op: 'db' },
+						dbSpan('SELECT', 'playlists', 'playlists'),
 						() =>
 							this.db.query.playlists.findMany({
 								where: and(
@@ -1268,7 +1274,7 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			traceSpan(
 				this.traceParent,
-				{ name: 'db:query:playlists', op: 'db' },
+				dbSpan('SELECT', 'playlists', 'playlists'),
 				() =>
 					this.db.query.playlists.findMany({
 						where: and(
@@ -1309,7 +1315,7 @@ export class PlaylistService {
 				return ResultAsync.fromPromise(
 					traceSpan(
 						this.traceParent,
-						{ name: 'db:query:playlists', op: 'db' },
+						dbSpan('SELECT', 'playlists', 'playlists'),
 						() =>
 							this.db.query.playlists.findMany({
 								where: inArray(
@@ -1357,7 +1363,7 @@ export class PlaylistService {
 			(async () => {
 				const playlists = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:searchPlaylists', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'search_playlists'),
 					() =>
 						this.db.query.playlists.findMany({
 							where: like(schema.playlists.title, `%${trimmed}%`),
@@ -1405,7 +1411,7 @@ export class PlaylistService {
 			(async () => {
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:type', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.type'),
 					() =>
 						this.db.query.playlists.findFirst({
 							columns: { type: true },
@@ -1449,7 +1455,7 @@ export class PlaylistService {
 
 				const rows = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlistTracks', op: 'db' },
+					dbSpan('SELECT', 'playlist_tracks', 'playlist_tracks'),
 					() =>
 						defaultDb.query.playlistTracks.findMany({
 							where: and(
@@ -1533,7 +1539,7 @@ export class PlaylistService {
 			(async () => {
 				const playlist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlist:type', op: 'db' },
+					dbSpan('SELECT', 'playlists', 'playlist.type'),
 					() =>
 						this.db.query.playlists.findFirst({
 							columns: { type: true },
@@ -1587,7 +1593,7 @@ export class PlaylistService {
 
 				const data = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:playlistTracks:paginated', op: 'db' },
+					dbSpan('SELECT', 'playlist_tracks', 'playlist_tracks.paginated'),
 					() =>
 						this.db.query.playlistTracks.findMany({
 							where: and(...whereClauses),
@@ -1664,7 +1670,7 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			traceSpan(
 				this.traceParent,
-				{ name: 'db:query:playlist:byShareId', op: 'db' },
+				dbSpan('SELECT', 'playlists', 'playlist.by_share_id'),
 				() =>
 					this.db.query.playlists.findFirst({
 						where: eq(schema.playlists.shareId, shareId),
@@ -1688,7 +1694,7 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			traceSpan(
 				this.traceParent,
-				{ name: 'db:query:playlists:shared', op: 'db' },
+				dbSpan('SELECT', 'playlists', 'playlists.shared'),
 				() =>
 					this.db.query.playlists.findMany({
 						where: (p, { isNotNull }) => isNotNull(p.shareId),

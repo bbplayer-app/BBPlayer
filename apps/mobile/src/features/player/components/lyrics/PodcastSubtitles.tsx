@@ -98,6 +98,7 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 					<View style={styles.message}>
 						<Text>字幕加载失败，播放不受影响</Text>
 						<Button
+							testID='subtitles-retry'
 							onPress={() => {
 								void data.retry()
 							}}
@@ -185,6 +186,7 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 						<ScrollView>
 							{data.tracks.map((track) => (
 								<List.Item
+									testID='subtitles-track-option'
 									key={track.id_str ?? String(track.id)}
 									title={subtitleLabel(track)}
 									titleNumberOfLines={3}

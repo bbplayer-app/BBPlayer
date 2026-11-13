@@ -1,6 +1,8 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-
 import useAppStore from '@/hooks/stores/useAppStore'
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { BilibiliFollowingProfile } from '@/types/apis/bilibili'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
@@ -42,10 +44,13 @@ export const useUserRelation = (mid: number) => {
 	const account = useBilibiliRelationAccount()
 	const hasCookie = useAppStore((state) => state.hasBilibiliCookie())
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.relation.get' },
 		queryKey: relationQueryKeys.relation(account, mid),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getUserRelation({ mid, signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getUserRelation({ mid, signal }),
+			),
 		enabled: hasCookie && Number.isSafeInteger(mid) && mid > 0,
 		staleTime: 0,
 	})
@@ -55,10 +60,13 @@ export const useFollowingGroups = () => {
 	const account = useBilibiliRelationAccount()
 	const hasCookie = useAppStore((state) => state.hasBilibiliCookie())
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.relation.following_groups' },
 		queryKey: relationQueryKeys.groups(account),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getFollowingGroups({ signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getFollowingGroups({ signal }),
+			),
 		enabled: hasCookie,
 		staleTime: 0,
 	})
@@ -80,12 +88,17 @@ export const useInfiniteFollowings = (
 	const search = keyword.trim()
 	const activeTagId = search ? -20 : tagId
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.relation.followings' },
 		queryKey: relationQueryKeys.list(account, activeTagId, search),
-		queryFn: async ({ pageParam, signal }): Promise<FollowingPageData> => {
+		queryFn: async ({
+			pageParam,
+			signal,
+			span,
+		}): Promise<FollowingPageData> => {
 			if (activeTagId !== -20) {
 				const list = await returnOrThrowAsync(
-					bilibiliApi.getFollowingGroupMembers({
+					bilibiliApi.withTrace(span).getFollowingGroupMembers({
 						tagId: activeTagId,
 						pn: pageParam,
 						signal,
@@ -102,17 +115,23 @@ export const useInfiniteFollowings = (
 
 			const mid = uid
 				? Number(uid)
-				: (await returnOrThrowAsync(bilibiliApi.getUserInfo({ signal }))).mid
+				: (
+						await returnOrThrowAsync(
+							bilibiliApi.withTrace(span).getUserInfo({ signal }),
+						)
+					).mid
 
 			const response = await returnOrThrowAsync(
 				search
-					? bilibiliApi.searchFollowings({
+					? bilibiliApi.withTrace(span).searchFollowings({
 							mid,
 							keyword: search,
 							pn: pageParam,
 							signal,
 						})
-					: bilibiliApi.getFollowings({ mid, pn: pageParam, signal }),
+					: bilibiliApi
+							.withTrace(span)
+							.getFollowings({ mid, pn: pageParam, signal }),
 			)
 
 			return {

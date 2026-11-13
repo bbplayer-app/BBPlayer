@@ -66,7 +66,12 @@ export default function DuplicateLocalPlaylistModal({
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => close('DuplicateLocalPlaylist')}>取消</Button>
-				<Button onPress={handleDuplicatePlaylist}>确定</Button>
+				<Button
+					testID='duplicate-playlist-confirm'
+					onPress={handleDuplicatePlaylist}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

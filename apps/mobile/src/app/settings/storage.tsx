@@ -230,6 +230,7 @@ export default function StorageSettingsPage() {
 						</Text>
 					</View>
 					<IconButton
+						testID='storage-download-covers'
 						icon='image-sync'
 						size={20}
 						onPress={() => openModal('CoverDownloadProgress', undefined)}
@@ -308,6 +309,7 @@ export default function StorageSettingsPage() {
 							))}
 						</View>
 						<Button
+							testID='storage-clear-cache'
 							mode='contained-tonal'
 							icon='delete-sweep'
 							loading={isClearing}
@@ -317,6 +319,7 @@ export default function StorageSettingsPage() {
 							清理缓存
 						</Button>
 						<Button
+							testID='storage-clear-image-cache'
 							mode='text'
 							icon='image-remove'
 							onPress={() => void clearImageCache()}

@@ -1,7 +1,10 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Image } from 'expo-image'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -20,10 +23,13 @@ export const usePersonalInformation = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.user.self_info' },
 		queryKey: userQueryKeys.personalInformation(),
-		queryFn: async ({ signal }) => {
-			const res = await returnOrThrowAsync(bilibiliApi.getUserInfo({ signal }))
+		queryFn: async ({ signal, span }) => {
+			const res = await returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getUserInfo({ signal }),
+			)
 
 			// 缓存用户信息和头像供离线时显示
 			if (res.name) {
@@ -68,10 +74,11 @@ export const useRecentlyPlayed = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.user.recently_played' },
 		queryKey: userQueryKeys.recentlyPlayed(),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getHistory({ signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(bilibiliApi.withTrace(span).getHistory({ signal })),
 		enabled,
 		staleTime: 1 * 60 * 1000,
 	})
@@ -85,11 +92,12 @@ export const useInfiniteGetUserUploadedVideos = (
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!mid && hasCookie
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.user.uploaded_videos' },
 		queryKey: userQueryKeys.uploadedVideos(mid, keyword),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getUserUploadedVideos({
+				bilibiliApi.withTrace(span).getUserUploadedVideos({
 					mid,
 					pn: pageParam,
 					keyword,
@@ -116,10 +124,13 @@ export const useOtherUserInfo = (mid: number, requireCookie = true) => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!mid && (!requireCookie || hasCookie)
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.user.info' },
 		queryKey: userQueryKeys.otherUserInfo(mid),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getOtherUserInfo({ mid, signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getOtherUserInfo({ mid, signal }),
+			),
 		enabled,
 		staleTime: 24 * 60 * 1000, // 不需要刷新太频繁
 	})

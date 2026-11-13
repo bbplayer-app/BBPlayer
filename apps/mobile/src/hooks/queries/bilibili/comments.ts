@@ -1,5 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
-
+import { useTracedInfiniteQuery } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -12,11 +11,14 @@ export const commentQueryKeys = {
 } as const
 
 export function useComments(bvid: string, mode = 3) {
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.comment.list' },
 		queryKey: commentQueryKeys.results(bvid, mode),
-		queryFn: async ({ pageParam, signal }) => {
+		queryFn: async ({ pageParam, signal, span }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getComments({ bvid, next: pageParam, mode, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getComments({ bvid, next: pageParam, mode, signal }),
 			)
 
 			return res
@@ -31,11 +33,14 @@ export function useComments(bvid: string, mode = 3) {
 }
 
 export function useReplyComments(bvid: string, rpid: number) {
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.comment.replies' },
 		queryKey: commentQueryKeys.reply(bvid, rpid),
-		queryFn: async ({ pageParam, signal }) => {
+		queryFn: async ({ pageParam, signal, span }) => {
 			const res = await returnOrThrowAsync(
-				bilibiliApi.getReplyComments({ bvid, rpid, pn: pageParam, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getReplyComments({ bvid, rpid, pn: pageParam, signal }),
 			)
 
 			return res

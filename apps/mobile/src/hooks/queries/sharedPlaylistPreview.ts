@@ -1,5 +1,6 @@
-import { skipToken, useQuery } from '@tanstack/react-query'
+import { skipToken } from '@tanstack/react-query'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -9,7 +10,8 @@ export const sharedPlaylistPreviewKeys = {
 }
 
 export const useSharedPlaylistPreview = (shareId?: string) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'shared_playlist.preview' },
 		queryKey: sharedPlaylistPreviewKeys.preview(shareId),
 		queryFn: shareId
 			? () => returnOrThrowAsync(sharedPlaylistFacade.getPreview(shareId))

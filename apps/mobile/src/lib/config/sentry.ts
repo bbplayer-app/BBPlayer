@@ -104,42 +104,13 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		tracesSampler(samplingContext) {
-			const name = samplingContext.name ?? ''
-			const parentSampled = samplingContext.parentSampled
-
-			// 继承父 transaction 的采样决定（同一 trace 要么全采要么全不采）
-			if (parentSampled !== undefined) {
-				return parentSampled ? 1 : 0
-			}
-
-			// 业务 transaction：高采样率
-			if (
-				name === 'playback.start' ||
-				name.startsWith('sync.') ||
-				name === 'update.check'
-			) {
-				return 0.8
-			}
-
-			// 每次切歌都会触发，且大多命中本地缓存，信息密度低
-			if (name === 'lyrics.smart_fetch') {
-				return 0.2
-			}
-
-			// 导航 transaction：低采样率（量大，信息密度低）
-			if (
-				samplingContext.attributes?.['sentry.op'] === 'navigation' ||
-				samplingContext.attributes?.['sentry.op'] === 'pageload'
-			) {
-				return 0.1
-			}
-
-			// 其余 transaction（app 启动、自动检测等）保持适中采样率
-			return 0.3
-		},
+		// 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
+		tracesSampleRate: 0.5,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
+		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
+		// 没有子 span 的点击 transaction 会被 SDK 丢弃
+		enableUserInteractionTracing: true,
 		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
 		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。

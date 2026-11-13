@@ -229,6 +229,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 								{/* 作者名 */}
 								{'创建者：'}
 								<Text
+									testID='playlist-author'
 									variant='bodySmall'
 									onPress={
 										authorClickable && playlist.author
@@ -251,6 +252,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 					{playlist.shareId && shareMembers && shareMembers.length > 0 && (
 						<TouchableRipple
+							testID='playlist-share-members'
 							onPress={
 								onPressShareMember && playlist.shareRole !== 'subscriber'
 									? onPressShareMember

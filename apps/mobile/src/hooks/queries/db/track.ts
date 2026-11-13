@@ -1,5 +1,7 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
@@ -34,16 +36,17 @@ export function usePlayCountHistoryPaginated(
 	onlyCompleted: boolean,
 	initialLimit?: number,
 ) {
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'play_history.play_count_paginated' },
 		queryKey: trackKeys.historyContentPaginated(
 			limit,
 			onlyCompleted,
 			initialLimit,
 		),
 
-		queryFn: async ({ pageParam }) =>
+		queryFn: async ({ pageParam, span }) =>
 			returnOrThrowAsync(
-				trackService.getPlayCountHistoryPaginated({
+				trackService.withTrace(span).getPlayCountHistoryPaginated({
 					limit,
 					onlyCompleted,
 					initialLimit,
@@ -62,11 +65,14 @@ export function usePlayCountHistoryPaginated(
 }
 
 export function useTotalPlaybackDuration(onlyCompleted = true) {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'play_history.total_duration' },
 		queryKey: trackKeys.totalPlaybackDuration(onlyCompleted),
-		queryFn: () =>
+		queryFn: ({ span }) =>
 			returnOrThrowAsync(
-				trackService.getTotalPlaybackDuration({ onlyCompleted }),
+				trackService
+					.withTrace(span)
+					.getTotalPlaybackDuration({ onlyCompleted }),
 			),
 	})
 }

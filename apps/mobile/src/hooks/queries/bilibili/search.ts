@@ -1,5 +1,7 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
@@ -20,11 +22,12 @@ export const searchQueryKeys = {
 export const useSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.search.videos' },
 		queryKey: searchQueryKeys.results(query),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.searchVideos({
+				bilibiliApi.withTrace(span).searchVideos({
 					keyword: query,
 					page: pageParam,
 					signal,
@@ -51,11 +54,14 @@ export const useSearchResults = (query: string) => {
 export const useUserSearchResults = (query: string) => {
 	const enabled = query.trim().length > 0
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.search.users' },
 		queryKey: searchQueryKeys.users(query),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.searchUsers({ keyword: query, page: 1, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.searchUsers({ keyword: query, page: 1, signal }),
 			),
 		enabled,
 		staleTime: 5 * 60 * 1000,
@@ -64,10 +70,13 @@ export const useUserSearchResults = (query: string) => {
 
 // 热门搜索查询
 export const useHotSearches = () => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.search.hot' },
 		queryKey: searchQueryKeys.hotSearches(),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getHotSearches({ signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getHotSearches({ signal }),
+			),
 		staleTime: 15 * 60 * 1000,
 	})
 }
@@ -76,10 +85,11 @@ export const useHotSearches = () => {
 export const useSearchSuggestions = (query: string) => {
 	const enabled = query.trim().length > 0
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.search.suggestions' },
 		queryKey: searchQueryKeys.suggestions(query),
-		queryFn: async ({ signal }) => {
-			const result = await bilibiliApi.getSearchSuggestions({
+		queryFn: async ({ signal, span }) => {
+			const result = await bilibiliApi.withTrace(span).getSearchSuggestions({
 				term: query,
 				signal,
 			})

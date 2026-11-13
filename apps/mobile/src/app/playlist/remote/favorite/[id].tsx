@@ -195,6 +195,7 @@ export default function FavoritePage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []

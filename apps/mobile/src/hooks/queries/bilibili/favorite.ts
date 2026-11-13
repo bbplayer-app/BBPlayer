@@ -1,6 +1,8 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-
 import useAppStore from '@/hooks/stores/useAppStore'
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -63,11 +65,12 @@ export const useInfiniteFavoriteList = (favoriteId?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!favoriteId
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.favorite.contents' },
 		queryKey: favoriteListQueryKeys.infiniteFavoriteList(favoriteId),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getFavoriteListContents({
+				bilibiliApi.withTrace(span).getFavoriteListContents({
 					favoriteId: favoriteId!,
 					pn: pageParam,
 					signal,
@@ -90,11 +93,14 @@ export const useGetFavoritePlaylists = (userMid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!userMid
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.favorite.list' },
 		queryKey: favoriteListQueryKeys.allFavoriteList(userMid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getFavoritePlaylists({ userMid: userMid!, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getFavoritePlaylists({ userMid: userMid!, signal }),
 			),
 		enabled,
 		staleTime: 5 * 60 * 1000, // 5 minutes
@@ -108,11 +114,12 @@ export const useInfiniteCollectionsList = (mid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!mid
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.collection.subscribed_list' },
 		queryKey: favoriteListQueryKeys.infiniteCollectionList(mid),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getCollectionsList({
+				bilibiliApi.withTrace(span).getCollectionsList({
 					pageNumber: pageParam,
 					mid: mid!,
 					signal,
@@ -131,32 +138,39 @@ export const useInfiniteCollectionsList = (mid?: number) => {
  * (非登录可访问)
  */
 export const useCollectionAllContents = (collectionId: number) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.collection.all_contents' },
 		queryKey: favoriteListQueryKeys.collectionAllContents(collectionId),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getCollectionAllContents({ collectionId, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getCollectionAllContents({ collectionId, signal }),
 			),
 		staleTime: 1,
 	})
 }
 
 export const useSeriesMetadata = (seriesId: number) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.series.metadata' },
 		queryKey: favoriteListQueryKeys.seriesMetadata(seriesId),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getSeriesMetadata({ seriesId, signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getSeriesMetadata({ seriesId, signal }),
+			),
 		enabled: Number.isSafeInteger(seriesId) && seriesId > 0,
 		staleTime: 5 * 60 * 1000,
 	})
 }
 
 export const useInfiniteSeriesArchives = (seriesId: number, mid?: number) => {
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.series.archives' },
 		queryKey: favoriteListQueryKeys.seriesArchives(seriesId, mid),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getSeriesArchivesPage({
+				bilibiliApi.withTrace(span).getSeriesArchivesPage({
 					seriesId,
 					mid: mid!,
 					pageNumber: pageParam,
@@ -181,11 +195,12 @@ export const useGetFavoriteForOneVideo = (bvid: string, userMid?: number) => {
 	const hasCookie = useHasCookie()
 	const enabled = hasCookie && !!userMid && bvid.length > 0
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'bilibili.favorite.for_video' },
 		queryKey: favoriteListQueryKeys.favoriteForOneVideo(bvid, userMid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getTargetVideoFavoriteStatus({
+				bilibiliApi.withTrace(span).getTargetVideoFavoriteStatus({
 					userMid: userMid!,
 					bvid,
 					signal,
@@ -210,15 +225,16 @@ export const useInfiniteSearchFavoriteItems = (
 	const enabled =
 		!!keyword && keyword.trim().length > 0 && hasCookie && !!favoriteId
 
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'bilibili.favorite.search_items' },
 		queryKey: favoriteListQueryKeys.infiniteSearchFavoriteItems(
 			scope,
 			keyword,
 			favoriteId,
 		),
-		queryFn: ({ pageParam, signal }) =>
+		queryFn: ({ pageParam, signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.searchFavoriteListContents({
+				bilibiliApi.withTrace(span).searchFavoriteListContents({
 					favoriteId: favoriteId!,
 					scope,
 					pn: pageParam,

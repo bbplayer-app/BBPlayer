@@ -75,6 +75,7 @@ export default function SaveQueueToPlaylistModal({
 					取消
 				</Button>
 				<Button
+					testID='save-queue-confirm'
 					onPress={handleSave}
 					loading={loading}
 					disabled={loading}

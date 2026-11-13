@@ -188,10 +188,12 @@ class LyricService {
 	/**
 	 * 优先从本地缓存中获取歌词，如果没有则从多个数据源并行查找，返回最匹配的歌词并进行缓存。
 	 * @param track
+	 * @param parent - 由 query 等上层流程触发时传入，作为其子 span；不传则开启新的 trace
 	 * @returns
 	 */
 	public smartFetchLyrics(
 		track: Track,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, CustomError> {
 		return traceOperationResult(
 			{
@@ -200,6 +202,7 @@ class LyricService {
 				attributes: { 'track.source': track.source },
 			},
 			(span) => this.smartFetchLyricsImpl(track, span),
+			parent,
 		)
 	}
 
@@ -386,6 +389,7 @@ class LyricService {
 	public fetchLyrics(
 		item: LyricSearchResult[0],
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, Error> {
 		switch (item.source) {
 			case 'netease':
@@ -400,7 +404,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'qqmusic':
 				return this.qqMusicApi
@@ -414,7 +418,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'kugou':
 				return this.kugouApi
@@ -428,7 +432,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			default:
 				return errAsync(new Error('未知歌曲源'))

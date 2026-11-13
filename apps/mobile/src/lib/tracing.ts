@@ -43,18 +43,36 @@ function randomHex(length: number): string {
 	return out
 }
 
-// 把 'db:query:playlist' 这类名字拆成 OTel 语义属性，便于在 Sentry 中按表 / 操作聚合
-function deriveAttributes(spec: TraceSpec): TraceAttributes {
-	if (spec.op !== 'db') {
-		return {}
-	}
+export type DbOperation = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE'
 
-	const [, operation, ...rest] = spec.name.split(':')
+/**
+ * 按 OTel 数据库语义约定构造 DB span：
+ * - span 名 = `db.query.summary` = `{operation} {collection...}`，低基数，便于在 Sentry 中按表 / 操作聚合
+ * - 只涉及一张表时才记录 `db.collection.name`（多表 join 不记录）
+ * - `queryName` 标识具体是哪条查询（同一张表上可能有多种查询），记在应用自定义属性里
+ */
+export function dbSpan(
+	operation: DbOperation,
+	collections: string | readonly string[],
+	queryName: string,
+): TraceSpec {
+	const collectionList = Array.isArray(collections)
+		? collections
+		: [collections]
+
+	const summary = [operation, ...collectionList].join(' ')
 
 	return {
-		'db.system.name': 'sqlite',
-		'db.operation.name': operation,
-		'db.collection.name': rest[0],
+		name: summary,
+		op: 'db',
+		attributes: {
+			'db.system.name': 'sqlite',
+			'db.operation.name': operation,
+			'db.query.summary': summary,
+			'db.collection.name':
+				collectionList.length === 1 ? collectionList[0] : undefined,
+			'bbplayer.db.query_name': queryName,
+		},
 	}
 }
 
@@ -62,7 +80,7 @@ function toStartOptions(spec: TraceSpec) {
 	return {
 		name: spec.name,
 		op: spec.op,
-		attributes: { ...deriveAttributes(spec), ...spec.attributes },
+		attributes: spec.attributes,
 	}
 }
 
@@ -92,6 +110,12 @@ export function markSpanError(span: TraceParent, error: Error): void {
 	if (!errorSpans.has(error)) {
 		errorSpans.set(error, span)
 	}
+}
+
+/** 把 span 标记为已取消（如组件卸载导致请求中止），不计为失败 */
+export function markSpanCancelled(span: Span): void {
+	span.setStatus({ code: SPAN_STATUS_ERROR, message: 'cancelled' })
+	span.setAttribute('bbplayer.cancelled', true)
 }
 
 /** 把 span 标记为超时失败 */
@@ -153,10 +177,26 @@ function runResultInSpan<T, E extends Error>(
 }
 
 /**
- * 创建一个业务根 span（transaction），并开启新的 trace。
+ * 创建一个业务根 span（transaction）。
+ *
+ * 当前有进行中的 UI root（导航 / 点击）时，作为它的子 span 挂在同一条 trace 下，
+ * 这样「点击 → 业务」在 Sentry 里是一棵树；没有 UI root 时才开启新的 trace。
+ *
+ * 注意不能在这里用 `forceTransaction`：子事务不会被算作父 span 的 descendant，
+ * 父事务仍会被 SDK 以「no child spans」为由丢弃，树就断了。
+ *
  * 适合事件驱动、无法用回调包裹的流程；调用方负责 `end()`。
  */
 export function startOperation(spec: TraceSpec): Span {
+	const uiParent = getActiveUiSpan()
+
+	if (uiParent) {
+		return Sentry.startInactiveSpan({
+			...toStartOptions(spec),
+			parentSpan: uiParent,
+		})
+	}
+
 	const scope = Sentry.getCurrentScope().clone()
 	scope.setPropagationContext({
 		traceId: randomHex(32),
@@ -171,20 +211,61 @@ export function startOperation(spec: TraceSpec): Span {
 	})
 }
 
-/** 在一个新的业务根 span（transaction）中执行 fn，fn 拿到的 span 用作后续步骤的 parent */
+/**
+ * 在一个业务 span 中执行 fn，fn 拿到的 span 用作后续步骤的 parent。
+ * 默认开启新的 trace（transaction）；传入 `parent` 时作为它的子 span（如由 query / mutation 触发）。
+ */
 export function traceOperation<T>(
 	spec: TraceSpec,
 	fn: (span: Span) => PromiseLike<T>,
+	parent?: TraceParent,
 ): Promise<T> {
-	return runInSpan(startOperation(spec), fn)
+	return runInSpan(startSpanOrOperation(parent, spec), fn)
 }
 
 /** `traceOperation` 的 neverthrow 版本：Err 会把 span 标记为失败 */
 export function traceOperationResult<T, E extends Error>(
 	spec: TraceSpec,
 	fn: (span: Span) => ResultAsync<T, E>,
+	parent?: TraceParent,
 ): ResultAsync<T, E> {
-	return runResultInSpan(startOperation(spec), fn)
+	return runResultInSpan(startSpanOrOperation(parent, spec), fn)
+}
+
+/**
+ * 当前正在进行的 UI 根 span（导航、页面加载、用户点击产生的 idle transaction）。
+ * 这些 span 由 Sentry 自动创建并放在全局 scope 上，生命周期短，期间发起的请求基本都由它触发。
+ */
+const UI_ROOT_OPS = new Set(['navigation', 'ui.load'])
+
+export function getActiveUiSpan(): Span | undefined {
+	const active = Sentry.getActiveSpan()
+
+	if (!active) return undefined
+
+	const root = Sentry.getRootSpan(active)
+	const { op, timestamp } = Sentry.spanToJSON(root)
+
+	// timestamp 存在说明已经结束
+	if (!op || timestamp !== undefined) return undefined
+
+	return UI_ROOT_OPS.has(op) || op.startsWith('ui.action') ? root : undefined
+}
+
+/**
+ * 有 parent 时开子 span；没有时开一个新的业务根 span（transaction）。
+ * 调用方负责 `end()`。
+ */
+export function startSpanOrOperation(
+	parent: TraceParent,
+	spec: TraceSpec,
+): Span {
+	if (!parent) return startOperation(spec)
+
+	return Sentry.startInactiveSpan({
+		...toStartOptions(spec),
+		parentSpan: parent,
+	})
 }
 
 /**

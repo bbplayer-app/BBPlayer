@@ -173,6 +173,7 @@ export default function EnableSharingModal({
 									</Text>
 								)}
 								<Button
+									testID='sharing-rotate-invite'
 									onPress={handleRotateInvite}
 									loading={isRotating}
 									disabled={isRotating || inviteFetching}
@@ -251,6 +252,7 @@ export default function EnableSharingModal({
 					取消
 				</Button>
 				<Button
+					testID='sharing-enable-confirm'
 					onPress={handleConfirm}
 					loading={isPending}
 					disabled={isPending}

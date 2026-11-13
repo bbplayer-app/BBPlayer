@@ -1,8 +1,7 @@
-import { useMutation } from '@tanstack/react-query'
-
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import { trackKeys } from '@/hooks/queries/db/track'
 import { usePlayerStore } from '@/hooks/stores/usePlayerStore'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 import { trackService } from '@/lib/services/trackService'
 import type { Track } from '@/types/core/media'
@@ -13,20 +12,24 @@ queryClient.setMutationDefaults(['db', 'track'], {
 })
 
 export const useEditTrackMetadata = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'track.edit_metadata' },
 		mutationKey: ['db', 'track', 'editMetadata'],
-		mutationFn: async ({
-			trackId,
-			title,
-			coverUrl,
-			source,
-		}: {
-			trackId: number
-			title: string
-			coverUrl?: string | null
-			source: Track['source']
-		}) => {
-			const result = await trackService.updateTrack({
+		mutationFn: async (
+			{
+				trackId,
+				title,
+				coverUrl,
+				source,
+			}: {
+				trackId: number
+				title: string
+				coverUrl?: string | null
+				source: Track['source']
+			},
+			{ span },
+		) => {
+			const result = await trackService.withTrace(span).updateTrack({
 				id: trackId,
 				title,
 				coverUrl,

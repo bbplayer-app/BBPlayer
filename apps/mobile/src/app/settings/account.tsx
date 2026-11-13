@@ -336,6 +336,7 @@ export default function AccountSettingsPage() {
 							autoCapitalize='none'
 						/>
 						<Button
+							testID='account-save-profile'
 							mode='contained'
 							onPress={handleSaveProfile}
 							loading={isSavingProfile}
@@ -344,6 +345,7 @@ export default function AccountSettingsPage() {
 							保存资料
 						</Button>
 						<Button
+							testID='account-logout'
 							onPress={() => {
 								clearAccount()
 								toast.success('已退出 BBPlayer 账号')
@@ -408,6 +410,7 @@ export default function AccountSettingsPage() {
 						)}
 						{mode === 'register' && (
 							<Button
+								testID='account-fill-from-bilibili'
 								onPress={fillProfileFromBilibili}
 								loading={isFillingProfile}
 								disabled={isSubmitting || isFillingProfile}
@@ -416,6 +419,7 @@ export default function AccountSettingsPage() {
 							</Button>
 						)}
 						<Button
+							testID='account-submit'
 							mode='contained'
 							onPress={mode === 'login' ? handleLogin : handleRegister}
 							loading={isSubmitting}
