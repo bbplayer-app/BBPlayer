@@ -13,8 +13,20 @@ import {
 	MainPlaybackControls,
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
+import type { PlayerSidePane } from './PlayerControls'
 
-export function PodcastControls({ compact = false }: { compact?: boolean }) {
+export function PodcastControls({
+	onOpenQueue,
+	onOpenComments,
+	activePane = null,
+	compact = false,
+}: {
+	onOpenQueue?: () => void
+	/** 仅宽屏双栏播放器提供：在右栏打开评论。 */
+	onOpenComments?: () => void
+	activePane?: PlayerSidePane
+	compact?: boolean
+}) {
 	const { colors } = useTheme()
 	const { speed, sleepEndTime } = usePlaybackOptions()
 	const [now, setNow] = useState(() => Date.now())
@@ -47,12 +59,24 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 				void usePlayerChaptersSheetStore.getState().open()
 			},
 		},
+		...(onOpenComments
+			? [
+					{
+						icon: 'comment-text-outline',
+						accessibilityLabel: '打开评论',
+						onPress: onOpenComments,
+						selected: activePane === 'comments',
+					},
+				]
+			: []),
 		{
 			icon: 'format-list-bulleted',
 			accessibilityLabel: '打开播放队列',
 			onPress: () => {
-				void usePlayerQueueSheetStore.getState().open()
+				if (onOpenQueue) onOpenQueue()
+				else void usePlayerQueueSheetStore.getState().open()
 			},
+			selected: activePane === 'queue',
 		},
 	]
 	return (
@@ -69,7 +93,11 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 						key={action.icon}
 						icon={action.icon}
 						size={24}
-						iconColor={colors.onSurfaceVariant}
+						iconColor={
+							'selected' in action && action.selected
+								? colors.primary
+								: colors.onSurfaceVariant
+						}
 						onPress={action.onPress}
 						accessibilityLabel={action.accessibilityLabel}
 					/>

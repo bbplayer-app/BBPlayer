@@ -18,14 +18,17 @@ import {
 	MainPlaybackControls,
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
+import type { PlayerSidePane } from './PlayerControls'
 
 export function MusicControls({
 	onOpenQueue,
 	onOpenComments,
+	activePane = null,
 	compact = false,
 }: {
 	onOpenQueue: () => void
 	onOpenComments?: () => void
+	activePane?: PlayerSidePane
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
@@ -91,6 +94,9 @@ export function MusicControls({
 				<IconButton
 					icon='comment-text-outline'
 					size={24}
+					iconColor={
+						activePane === 'comments' ? colors.primary : colors.onSurfaceVariant
+					}
 					disabled={currentTrack?.source !== 'bilibili'}
 					onPress={() => {
 						if (onOpenComments) {
@@ -109,7 +115,9 @@ export function MusicControls({
 				<IconButton
 					icon='format-list-bulleted'
 					size={24}
-					iconColor={colors.onSurfaceVariant}
+					iconColor={
+						activePane === 'queue' ? colors.primary : colors.onSurfaceVariant
+					}
 					onPress={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 						onOpenQueue()

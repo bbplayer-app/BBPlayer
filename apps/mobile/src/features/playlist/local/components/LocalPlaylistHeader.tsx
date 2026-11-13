@@ -16,6 +16,7 @@ import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import ExpandableText from '@/components/common/ExpandableText'
 import IconButton from '@/components/common/IconButton'
+import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
 import { alert } from '@/components/modals/AlertModal'
 import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
 import { useModalStore } from '@/hooks/stores/useModalStore'
@@ -42,7 +43,6 @@ interface PlaylistHeaderProps {
 	primaryButtonTextColor?: string
 	secondaryButtonContainerColor?: string
 	secondaryButtonIconColor?: string
-	sidebar?: boolean
 }
 
 interface SubtitlePieces {
@@ -104,12 +104,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	primaryButtonTextColor,
 	secondaryButtonContainerColor,
 	secondaryButtonIconColor,
-	sidebar = false,
 }: PlaylistHeaderProps) {
+	const sidebar = usePlaylistSidebar()
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
 	const { width, height } = useWindowDimensions()
-	const coverSize = sidebar ? 200 : width < 360 || height < 700 ? 88 : 120
+	const coverSize = sidebar ? 220 : width < 360 || height < 700 ? 88 : 120
 	const { colors } = useTheme()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(
@@ -168,7 +168,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<View
 				style={[
 					styles.headerContainer,
-					sidebar && { flexDirection: 'column', alignItems: 'flex-start' },
+					sidebar && styles.sidebarHeaderContainer,
 				]}
 			>
 				<CoverWithPlaceHolder
@@ -181,7 +181,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				<View
 					style={[
 						styles.headerTextContainer,
-						sidebar && { marginLeft: 0, flex: 0 },
+						sidebar && styles.sidebarHeaderTextContainer,
 					]}
 				>
 					<TouchableRipple
@@ -197,7 +197,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					>
 						<Text
 							variant='titleLarge'
-							style={styles.title}
+							style={[styles.title, sidebar && styles.centeredText]}
 							numberOfLines={showFullTitle ? undefined : 2}
 						>
 							{playlist.title}
@@ -206,7 +206,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 					<Text
 						variant='bodySmall'
-						style={styles.subtitle}
+						style={[styles.subtitle, sidebar && styles.centeredText]}
 						numberOfLines={3}
 					>
 						{isLocal ? (
@@ -259,7 +259,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 							}
 							style={{
 								marginTop: 8,
-								alignSelf: 'flex-start',
+								alignSelf: sidebar ? 'center' : 'flex-start',
 								borderRadius: 16,
 							}}
 						>
@@ -363,13 +363,17 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			<View
 				style={[
 					styles.actionsContainer,
+					sidebar && styles.sidebarActionsContainer,
 					{ marginBottom: playlist.description ? 0 : 16 },
 				]}
 			>
-				<View style={styles.actionButtons}>
+				<View
+					style={[styles.actionButtons, sidebar && styles.sidebarActionButtons]}
+				>
 					<Button
 						mode='contained'
 						icon='play'
+						style={sidebar && styles.sidebarPlayAll}
 						onPress={() => onClickPlayAll()}
 						testID='playlist-play-all'
 						buttonColor={primaryButtonColor}
@@ -428,7 +432,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 			{/* 描述 */}
 			{!!playlist.description && (
-				<View style={styles.description}>
+				<View style={sidebar ? styles.sidebarDescription : styles.description}>
 					<ExpandableText
 						text={playlist.description}
 						lines={3}
@@ -438,7 +442,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				</View>
 			)}
 
-			<Divider />
+			{!sidebar && <Divider />}
 		</View>
 	)
 })
@@ -453,11 +457,26 @@ const styles = StyleSheet.create({
 		margin: 16,
 		alignItems: 'center',
 	},
+	sidebarHeaderContainer: {
+		flexDirection: 'column',
+		marginHorizontal: 24,
+		marginTop: 24,
+		gap: 8,
+	},
 	headerTextContainer: {
 		marginLeft: 16,
 		flex: 1,
 		justifyContent: 'center',
 		marginVertical: 8,
+	},
+	sidebarHeaderTextContainer: {
+		marginLeft: 0,
+		flex: 0,
+		alignSelf: 'stretch',
+		alignItems: 'center',
+	},
+	centeredText: {
+		textAlign: 'center',
 	},
 	title: {
 		fontWeight: 'bold',
@@ -487,7 +506,21 @@ const styles = StyleSheet.create({
 		gap: 8,
 		alignItems: 'center',
 	},
+	sidebarActionsContainer: {
+		marginHorizontal: 24,
+	},
+	sidebarActionButtons: {
+		flex: 1,
+		justifyContent: 'center',
+	},
+	sidebarPlayAll: {
+		width: '100%',
+	},
 	description: {
 		margin: 16,
+	},
+	sidebarDescription: {
+		marginHorizontal: 24,
+		marginVertical: 16,
 	},
 })

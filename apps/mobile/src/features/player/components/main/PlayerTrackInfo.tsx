@@ -102,7 +102,7 @@ export function TrackInfo({
 						Math.min(
 							coverArea.width - (podcast ? 80 : 120),
 							coverArea.height - coverPadding,
-							podcast ? 440 : 400,
+							480,
 						),
 					)
 					const showCover = !podcast || coverSize >= 96
@@ -268,6 +268,8 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		minHeight: 0,
+		// 封面被 maxHeight 限制时，把封面与标题整体居中，而不是在标题下方留出大片空白。
+		justifyContent: 'center',
 	},
 	coverContainer: {
 		alignItems: 'center',

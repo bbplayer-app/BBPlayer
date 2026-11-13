@@ -16,7 +16,7 @@ import {
 	View,
 } from 'react-native'
 import PagerView from 'react-native-pager-view'
-import { SegmentedButtons, useTheme } from 'react-native-paper'
+import { useTheme } from 'react-native-paper'
 import {
 	cancelAnimation,
 	createAnimatedComponent,
@@ -29,6 +29,7 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { PlayerQueueContent } from '@/components/modals/PlayerQueueModal'
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
 import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
@@ -44,6 +45,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
+import { analyticsService } from '@/lib/services/analyticsService'
 import type { BilibiliCommentItem } from '@/types/apis/bilibili'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
@@ -119,7 +121,9 @@ export default function PlayerPage() {
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
-	const [rightPane, setRightPane] = useState('lyrics')
+	const [rightPane, setRightPane] = useState<'lyrics' | 'comments' | 'queue'>(
+		'lyrics',
+	)
 	const [commentsBvid, setCommentsBvid] = useState<string | null>(null)
 	const [commentReplyId, setCommentReplyId] = useState<number | null>(null)
 	const bvid =
@@ -127,6 +131,10 @@ export default function PlayerPage() {
 			? currentTrack.bilibiliMetadata.bvid
 			: undefined
 	const commentsOpen = isTwoPane && rightPane === 'comments' && !!bvid
+	const queueOpen = isTwoPane && rightPane === 'queue'
+	// 宽屏右栏默认展示歌词/字幕；评论与队列由控制区按钮切换。
+	const readerOpen = !commentsOpen && !queueOpen
+	const activePane = commentsOpen ? 'comments' : queueOpen ? 'queue' : null
 	const onReplyPress = useCallback(
 		(item: BilibiliCommentItem) => setCommentReplyId(item.rpid),
 		[],
@@ -134,15 +142,20 @@ export default function PlayerPage() {
 	const openComments = useCallback(() => {
 		if (!bvid) return
 		setCommentsBvid(bvid)
-		setRightPane('comments')
+		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : 'comments'))
 	}, [bvid])
+	const toggleQueue = useCallback(() => {
+		void analyticsService.logPlayerQueueAction('open_queue')
+		setRightPane((pane) => (pane === 'queue' ? 'lyrics' : 'queue'))
+	}, [])
 	useEffect(() => {
-		setRightPane('lyrics')
+		// 评论跟随曲目，换歌后收起；队列面板里切歌时保持打开。
+		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : pane))
 		setCommentsBvid(null)
 		setCommentReplyId(null)
 	}, [currentTrack?.uniqueKey])
 	const suppressDesktopLyrics =
-		isFocused && isForeground && (isTwoPane ? !commentsOpen : index === 1)
+		isFocused && isForeground && (isTwoPane ? readerOpen : index === 1)
 
 	useEffect(() => {
 		if (Platform.OS !== 'android') return
@@ -312,6 +325,10 @@ export default function PlayerPage() {
 			else setRightPane('lyrics')
 			return
 		}
+		if (queueOpen) {
+			setRightPane('lyrics')
+			return
+		}
 		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
 			return
@@ -403,6 +420,8 @@ export default function PlayerPage() {
 									<PlayerMainTab
 										embedded={isTwoPane}
 										onOpenComments={isTwoPane ? openComments : undefined}
+										onOpenQueue={isTwoPane ? toggleQueue : undefined}
+										activePane={activePane}
 										jumpTo={jumpTo}
 										imageRef={coverRef}
 										onPresent={() => {}}
@@ -410,14 +429,12 @@ export default function PlayerPage() {
 								)
 								const reader = podcast ? (
 									<PodcastSubtitles
-										active={
-											(isTwoPane ? !commentsOpen : index === 1) && isFocused
-										}
+										active={(isTwoPane ? readerOpen : index === 1) && isFocused}
 										embedded={isTwoPane}
 									/>
 								) : (
 									<Lyrics
-										currentIndex={isTwoPane ? (commentsOpen ? 0 : 1) : index}
+										currentIndex={isTwoPane ? (readerOpen ? 1 : 0) : index}
 										embedded={isTwoPane}
 										onPressBackground={
 											isTwoPane ? undefined : () => jumpTo('main')
@@ -437,31 +454,8 @@ export default function PlayerPage() {
 												{ borderLeftColor: colors.outlineVariant },
 											]}
 										>
-											{bvid && (
-												<SegmentedButtons
-													value={commentsOpen ? 'comments' : 'lyrics'}
-													onValueChange={(value) =>
-														value === 'comments'
-															? openComments()
-															: setRightPane('lyrics')
-													}
-													style={{ paddingVertical: 8 }}
-													buttons={[
-														{
-															value: 'lyrics',
-															label: podcast ? '字幕' : '歌词',
-															testID: 'player-pane-lyrics',
-														},
-														{
-															value: 'comments',
-															label: '评论',
-															testID: 'player-pane-comments',
-														},
-													]}
-												/>
-											)}
 											<View
-												style={[styles.tabView, commentsOpen && styles.hidden]}
+												style={[styles.tabView, !readerOpen && styles.hidden]}
 											>
 												{reader}
 											</View>
@@ -477,6 +471,16 @@ export default function PlayerPage() {
 														replyId={commentReplyId}
 														onReplyPress={onReplyPress}
 														onBack={() => setCommentReplyId(null)}
+														onClose={() => setRightPane('lyrics')}
+													/>
+												</View>
+											)}
+											{queueOpen && (
+												<View style={styles.tabView}>
+													<PlayerQueueContent
+														embedded
+														runAction={(action) => action()}
+														onClose={() => setRightPane('lyrics')}
 													/>
 												</View>
 											)}

@@ -78,7 +78,11 @@ function MyPageContent() {
 				style={[
 					styles.header,
 					compact && { paddingBottom: 4 },
-					{ paddingTop: insets.top + 8 },
+					{
+						paddingTop: insets.top + 8,
+						// 标题行固定 56dp，与其他 Tab 页标题位置一致。
+						minHeight: insets.top + 8 + 56 + (compact ? 4 : 12),
+					},
 				]}
 			>
 				<Text

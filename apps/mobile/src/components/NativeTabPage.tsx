@@ -32,7 +32,7 @@ export default function NativeTabPage({ children }: PropsWithChildren) {
 	)
 	// A side rail has no bottom tab bar. Let the docked player's background
 	// cover the gesture area and apply its safe inset inside the player itself.
-	useNowPlayingBar(undefined, railWidth > 0 ? 0 : bottomTabBarHeight, railWidth)
+	useNowPlayingBar(undefined, railWidth > 0 ? 0 : bottomTabBarHeight)
 
 	return (
 		<SafeAreaView

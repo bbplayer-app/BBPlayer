@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -208,51 +209,52 @@ export default function CollectionPage() {
 				)}
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={tracks}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={collectionData.info.title}
-							subtitles={`${collectionData.info.upper.name}\u2009•\u2009${collectionData.info.media_count}\u2009首歌曲`}
-							description={collectionData.info.intro}
-							onClickMainButton={handleSync}
-							mainButtonIcon={'sync'}
-							linkedPlaylistId={linkedPlaylistId}
-							id={id}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-						/>
-					}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={collectionData.info.title}
+						subtitles={`${collectionData.info.upper.name}\u2009•\u2009${collectionData.info.media_count}\u2009首歌曲`}
+						description={collectionData.info.intro}
+						onClickMainButton={handleSync}
+						mainButtonIcon={'sync'}
+						linkedPlaylistId={linkedPlaylistId}
+						id={id}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={tracks}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await refetch()
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+							/>
+						}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 })

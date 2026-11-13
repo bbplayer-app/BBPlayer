@@ -170,6 +170,7 @@ const styles = StyleSheet.create({
 	header: {
 		flexDirection: 'row',
 		alignItems: 'center',
+		minHeight: 56,
 		marginHorizontal: 16,
 		justifyContent: 'space-between',
 	},

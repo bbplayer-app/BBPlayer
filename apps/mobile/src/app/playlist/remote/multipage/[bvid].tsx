@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { FlashingTrackListItem } from '@/features/playlist/remote/components/FlashingTrackListItem'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -293,61 +294,62 @@ export default function MultipagePage() {
 				)}
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					renderCustomItem={renderCustomItem}
-					tracks={tracksData}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					showItemCover={false}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={videoData.title}
-							subtitles={`${videoData.owner.name}\u2009•\u2009${tracksData.length}\u2009首歌曲`}
-							description={videoData.desc}
-							onClickMainButton={handleSync}
-							mainButtonIcon={'sync'}
-							secondaryButtonText='打开原视频'
-							secondaryButtonIcon='open-in-new'
-							onClickSecondaryButton={() =>
-								void WebBrowser.openBrowserAsync(
-									`https://www.bilibili.com/video/${bvid}`,
-								)
-							}
-							linkedPlaylistId={linkedPlaylistId}
-							id={bv2av(bvid)}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-							progressViewOffset={50}
-						/>
-					}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={videoData.title}
+						subtitles={`${videoData.owner.name}\u2009•\u2009${tracksData.length}\u2009首歌曲`}
+						description={videoData.desc}
+						onClickMainButton={handleSync}
+						mainButtonIcon={'sync'}
+						secondaryButtonText='打开原视频'
+						secondaryButtonIcon='open-in-new'
+						onClickSecondaryButton={() =>
+							void WebBrowser.openBrowserAsync(
+								`https://www.bilibili.com/video/${bvid}`,
+							)
+						}
+						linkedPlaylistId={linkedPlaylistId}
+						id={bv2av(bvid)}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						renderCustomItem={renderCustomItem}
+						tracks={tracksData}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						showItemCover={false}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await refetch()
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+								progressViewOffset={50}
+							/>
+						}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 })

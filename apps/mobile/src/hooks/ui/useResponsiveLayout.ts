@@ -3,6 +3,8 @@ import { useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export const NAVIGATION_RAIL_WIDTH = 96
+/** 单列列表页在宽屏下的最大内容宽度。 */
+export const CONTENT_MAX_WIDTH = 960
 export const NativeTabRailWidthContext = createContext(0)
 
 export const ResponsiveLayoutContext = createContext<{

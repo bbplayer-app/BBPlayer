@@ -6,7 +6,10 @@ import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
-import { PlayerControls } from '@/features/player/components/controls/PlayerControls'
+import {
+	PlayerControls,
+	type PlayerSidePane,
+} from '@/features/player/components/controls/PlayerControls'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
@@ -20,6 +23,9 @@ interface PlayerMainTabProps {
 	imageRef: ImageRef | null
 	embedded?: boolean
 	onOpenComments?: () => void
+	/** 宽屏双栏时在右栏打开队列；不传则打开底部弹层。 */
+	onOpenQueue?: () => void
+	activePane?: PlayerSidePane
 	onPresent: () => void
 }
 
@@ -28,6 +34,8 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	imageRef,
 	onPresent,
 	onOpenComments,
+	onOpenQueue,
+	activePane = null,
 	embedded = false,
 }: PlayerMainTabProps) {
 	const router = useRouter()
@@ -84,11 +92,15 @@ const PlayerMainTab = memo(function PlayerMainTab({
 					<PlayerSlider />
 					<PlayerControls
 						onOpenComments={onOpenComments}
+						activePane={activePane}
 						compact={compact}
-						onOpenQueue={() => {
-							onPresent()
-							void usePlayerQueueSheetStore.getState().open()
-						}}
+						onOpenQueue={
+							onOpenQueue ??
+							(() => {
+								onPresent()
+								void usePlayerQueueSheetStore.getState().open()
+							})
+						}
 					/>
 				</View>
 			</View>
@@ -100,6 +112,10 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		minHeight: 0,
+		// 平板竖屏下保持播放区域的阅读宽度，避免控件散布到屏幕两端。
+		width: '100%',
+		maxWidth: 600,
+		alignSelf: 'center',
 	},
 	controlsContainer: {
 		flexShrink: 0,

@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Button from '@/components/common/Button'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import toast from '@/utils/toast'
 
@@ -35,6 +36,7 @@ const updateTime = Updates.createdAt
 
 export default function AboutSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
@@ -47,7 +49,7 @@ export default function AboutSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='关于 BBPlayer' />
 			</Appbar.Header>
 			<ScrollView

@@ -8,7 +8,7 @@ import {
 import { useValue } from '@legendapp/state/react'
 import { Image } from 'expo-image'
 import { useRouter, useSegments } from 'expo-router'
-import { memo, useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useContext, useEffect, useLayoutEffect, useRef } from 'react'
 import type { ViewInstance } from 'react-native'
 import {
 	Platform,
@@ -45,6 +45,7 @@ import {
 } from '@/hooks/stores/nowPlayingBarStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { NativeTabRailWidthContext } from '@/hooks/ui/useResponsiveLayout'
 import * as Haptics from '@/utils/haptics'
 import { resolveTrackCover } from '@/utils/imageUrl'
 
@@ -135,16 +136,8 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 	const segments = useSegments()
 	const backgroundColor = useValue(nowPlayingBarStore$.backgroundColor)
 	const tabBarHeight = useValue(nowPlayingBarStore$.bottomTabBarHeight)
-	const contentLeftInset = useValue(nowPlayingBarStore$.contentLeftInset)
-	const retainedContentLeftInset = useValue(
-		nowPlayingBarStore$.retainedContentLeftInset,
-	)
-	const railWidth =
-		segments[0] === '(tabs)'
-			? contentLeftInset
-			: segments[0] === 'modal'
-				? retainedContentLeftInset
-				: 0
+	// 宽屏导航栏常驻根布局，所有显示播放条的页面都给它让出同样的宽度。
+	const railWidth = useContext(NativeTabRailWidthContext)
 	const retainedBottomTabBarHeight = useValue(
 		nowPlayingBarStore$.retainedBottomTabBarHeight,
 	)

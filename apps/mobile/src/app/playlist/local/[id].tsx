@@ -15,7 +15,7 @@ import {
 	useState,
 } from 'react'
 import type { ViewInstance } from 'react-native'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Appbar, MD3Theme, Text, useTheme } from 'react-native-paper'
 import { Searchbar as SearchBar } from 'react-native-paper'
 import Animated, {
@@ -27,6 +27,7 @@ import Animated, {
 import ActivityIndicator from '@/components/common/ActivityIndicator'
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistHeader } from '@/features/playlist/local/components/LocalPlaylistHeader'
 import { TrackListItem } from '@/features/playlist/local/components/LocalPlaylistItem'
@@ -63,7 +64,6 @@ import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
 import { type MenuBuilder, useMenuActions } from '@/hooks/ui/useMenuActions'
 import { usePlaylistBackgroundColor } from '@/hooks/ui/usePlaylistBackgroundColor'
-import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import { useIsActuallyOffline } from '@/hooks/utils/useIsActuallyOffline'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
@@ -252,7 +252,6 @@ function LocalPlaylistContent({
 }) {
 	const theme = useTheme()
 	const { colors } = theme
-	const { isTwoPane } = useResponsiveLayout()
 	const [playerPreferenceVisible, setPlayerPreferenceVisible] = useState(false)
 	const [isResolvingSelection, setIsResolvingSelection] = useState(false)
 	const router = useRouter()
@@ -1060,7 +1059,6 @@ function LocalPlaylistContent({
 
 	const playlistHeader = (
 		<PlaylistHeader
-			sidebar={isTwoPane}
 			coverRef={coverRef}
 			playlist={playlistMetadata}
 			totalDuration={playlistMetadata.totalDuration}
@@ -1184,134 +1182,127 @@ function LocalPlaylistContent({
 				/>
 			</Animated.View>
 
-			<View style={{ flex: 1, flexDirection: isTwoPane ? 'row' : 'column' }}>
-				{isTwoPane && (
-					<ScrollView
-						style={{ width: 320, flexGrow: 0 }}
-						contentContainerStyle={{ paddingBottom: 100 }}
-						testID='playlist-detail-pane'
-					>
-						{playlistHeader}
-					</ScrollView>
-				)}
-				<View
-					ref={listContainerRef}
-					style={{ flex: 1 }}
-					onLayout={() => {
-						listContainerRef.current?.measureInWindow((_x, y, _w, h) => {
-							containerTopRef.current = y
-							containerHeightRef.current = h
-						})
-					}}
-				>
-					<LocalTrackList
-						listRef={listRef}
-						isStale={searchQuery !== deferredQuery}
-						tracks={finalPlaylistData ?? []}
-						playlist={playlistMetadata}
-						handleTrackPress={handleTrackPress}
-						trackMenuItems={trackMenuItems}
-						selection={selection}
-						isOffline={isOffline}
-						isSearching={startSearch}
-						playableOfflineKeys={playableOfflineKeys}
-						onEndReached={
-							hasNextPagePlaylistData &&
-							!startSearch &&
-							!isFetchingNextPagePlaylistData
-								? () => fetchNextPagePlaylistData()
-								: undefined
-						}
-						onDragStart={
-							selectMode &&
-							playlistMetadata.type === 'local' &&
-							!startSearch &&
-							!isSharedSubscriber
-								? handleDragStart
-								: undefined
-						}
-						onDragUpdate={
-							selectMode &&
-							playlistMetadata.type === 'local' &&
-							!startSearch &&
-							!isSharedSubscriber
-								? handleDragUpdate
-								: undefined
-						}
-						onDragEnd={
-							selectMode &&
-							playlistMetadata.type === 'local' &&
-							!startSearch &&
-							!isSharedSubscriber
-								? handleDragEnd
-								: undefined
-						}
-						insertAfterIndex={dragging !== null ? insertAfterIndex : null}
-						onViewableItemsChanged={handleViewableItemsChanged}
-						viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-						onScroll={(e) => {
-							scrollOffsetRef.current = e.nativeEvent.contentOffset.y
+			<PlaylistDetailLayout header={playlistHeader}>
+				{(listHeader) => (
+					<View
+						ref={listContainerRef}
+						style={{ flex: 1 }}
+						onLayout={() => {
+							listContainerRef.current?.measureInWindow((_x, y, _w, h) => {
+								containerTopRef.current = y
+								containerHeightRef.current = h
+							})
 						}}
-						ListHeaderComponent={
-							<>
-								{!isTwoPane && playlistHeader}
-								{isSharedLoggedOut && (
-									<View
-										style={[
-											styles.syncPausedNotice,
-											{ backgroundColor: colors.surfaceVariant },
-										]}
-									>
-										<Text
-											variant='bodyMedium'
-											style={{ color: colors.onSurfaceVariant }}
+					>
+						<LocalTrackList
+							listRef={listRef}
+							isStale={searchQuery !== deferredQuery}
+							tracks={finalPlaylistData ?? []}
+							playlist={playlistMetadata}
+							handleTrackPress={handleTrackPress}
+							trackMenuItems={trackMenuItems}
+							selection={selection}
+							isOffline={isOffline}
+							isSearching={startSearch}
+							playableOfflineKeys={playableOfflineKeys}
+							onEndReached={
+								hasNextPagePlaylistData &&
+								!startSearch &&
+								!isFetchingNextPagePlaylistData
+									? () => fetchNextPagePlaylistData()
+									: undefined
+							}
+							onDragStart={
+								selectMode &&
+								playlistMetadata.type === 'local' &&
+								!startSearch &&
+								!isSharedSubscriber
+									? handleDragStart
+									: undefined
+							}
+							onDragUpdate={
+								selectMode &&
+								playlistMetadata.type === 'local' &&
+								!startSearch &&
+								!isSharedSubscriber
+									? handleDragUpdate
+									: undefined
+							}
+							onDragEnd={
+								selectMode &&
+								playlistMetadata.type === 'local' &&
+								!startSearch &&
+								!isSharedSubscriber
+									? handleDragEnd
+									: undefined
+							}
+							insertAfterIndex={dragging !== null ? insertAfterIndex : null}
+							onViewableItemsChanged={handleViewableItemsChanged}
+							viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+							onScroll={(e) => {
+								scrollOffsetRef.current = e.nativeEvent.contentOffset.y
+							}}
+							ListHeaderComponent={
+								<>
+									{listHeader}
+									{isSharedLoggedOut && (
+										<View
+											style={[
+												styles.syncPausedNotice,
+												{ backgroundColor: colors.surfaceVariant },
+											]}
 										>
-											登录 BBPlayer
-											账号后才能使用共享同步功能。当前修改会保存在本地，并在下次登录后继续同步。
-										</Text>
-									</View>
-								)}
-							</>
-						}
-					/>
-					{isCurrentTrackInPlaylist &&
-						!startSearch &&
-						!isCurrentTrackVisible && (
-							<View style={styles.locateCurrentTrackButton}>
-								<IconButton
-									icon='crosshairs-gps'
-									mode='contained'
-									size={32}
-									loading={isLocatingCurrentTrack}
-									onPress={locateCurrentTrack}
-									accessibilityLabel='定位到正在播放的歌曲'
-									testID='local-playlist-scroll-to-current'
-								/>
-							</View>
-						)}
+											<Text
+												variant='bodyMedium'
+												style={{ color: colors.onSurfaceVariant }}
+											>
+												登录 BBPlayer
+												账号后才能使用共享同步功能。当前修改会保存在本地，并在下次登录后继续同步。
+											</Text>
+										</View>
+									)}
+								</>
+							}
+						/>
+						{isCurrentTrackInPlaylist &&
+							!startSearch &&
+							!isCurrentTrackVisible && (
+								<View style={styles.locateCurrentTrackButton}>
+									<IconButton
+										icon='crosshairs-gps'
+										mode='contained'
+										size={32}
+										loading={isLocatingCurrentTrack}
+										onPress={locateCurrentTrack}
+										accessibilityLabel='定位到正在播放的歌曲'
+										testID='local-playlist-scroll-to-current'
+									/>
+								</View>
+							)}
 
-					{dragging !== null && draggedTrack && (
-						<Animated.View
-							pointerEvents='none'
-							style={[styles.ghostContainer, ghostAnimatedStyle]}
-						>
-							<View style={styles.ghostInner}>
-								<TrackListItem
-									index={dragging.trackIndex}
-									data={draggedTrack}
-									playlist={playlistMetadata}
-									selectMode={true}
-									isSelected={false}
-									toggleSelected={() => void 0}
-									enterSelectMode={() => void 0}
-									onTrackPress={() => void 0}
-									onMenuPress={() => void 0}
-								/>
-							</View>
-						</Animated.View>
-					)}
-				</View>
-			</View>
+						{dragging !== null && draggedTrack && (
+							<Animated.View
+								pointerEvents='none'
+								style={[styles.ghostContainer, ghostAnimatedStyle]}
+							>
+								<View style={styles.ghostInner}>
+									<TrackListItem
+										index={dragging.trackIndex}
+										data={draggedTrack}
+										playlist={playlistMetadata}
+										selectMode={true}
+										isSelected={false}
+										toggleSelected={() => void 0}
+										enterSelectMode={() => void 0}
+										onTrackPress={() => void 0}
+										onMenuPress={() => void 0}
+									/>
+								</View>
+							</Animated.View>
+						)}
+					</View>
+				)}
+			</PlaylistDetailLayout>
 
 			{membersSheetMounted && (
 				<SharedPlaylistMembersSheet

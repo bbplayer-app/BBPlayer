@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
 	BILIBILI_CDN_OPTIONS,
@@ -30,6 +31,7 @@ interface NodeResult {
 
 export default function CdnSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const currentTrack = useCurrentTrack()
@@ -132,7 +134,7 @@ export default function CdnSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='CDN 设置' />
 			</Appbar.Header>
 			<ScrollView

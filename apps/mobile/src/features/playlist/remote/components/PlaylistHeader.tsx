@@ -9,6 +9,7 @@ import type { IconSource } from 'react-native-paper/lib/typescript/components/Ic
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import ExpandableText from '@/components/common/ExpandableText'
+import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
@@ -53,21 +54,32 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 }: PlaylistHeaderProps) {
 	const router = useRouter()
 	const { width, height } = useWindowDimensions()
-	const coverSize = width < 360 || height < 700 ? 88 : 120
+	const sidebar = usePlaylistSidebar()
+	const coverSize = sidebar ? 220 : width < 360 || height < 700 ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	if (!title) return null
 
 	return (
 		<View style={styles.container}>
 			{/* 收藏夹信息 */}
-			<View style={styles.headerContainer}>
+			<View
+				style={[
+					styles.headerContainer,
+					sidebar && styles.sidebarHeaderContainer,
+				]}
+			>
 				<CoverWithPlaceHolder
 					id={id}
 					cover={cover}
 					title={title}
 					size={coverSize}
 				/>
-				<View style={styles.headerTextContainer}>
+				<View
+					style={[
+						styles.headerTextContainer,
+						sidebar && styles.sidebarHeaderTextContainer,
+					]}
+				>
 					<TouchableRipple
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {
@@ -81,7 +93,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					>
 						<Text
 							variant='titleLarge'
-							style={styles.title}
+							style={[styles.title, sidebar && styles.centeredText]}
 							numberOfLines={showFullTitle ? undefined : 2}
 						>
 							{title}
@@ -89,6 +101,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 					</TouchableRipple>
 					<Text
 						variant='bodyMedium'
+						style={sidebar && styles.centeredText}
 						numberOfLines={Array.isArray(subtitles) ? subtitles.length : 1}
 					>
 						{Array.isArray(subtitles) ? subtitles.join('\n') : subtitles}
@@ -97,7 +110,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			</View>
 
 			{/* 操作按钮 */}
-			<View style={styles.actionsContainer}>
+			<View
+				style={[
+					styles.actionsContainer,
+					sidebar && styles.sidebarActionsContainer,
+				]}
+			>
 				{linkedPlaylistId ? (
 					<Button
 						mode='contained'
@@ -144,7 +162,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 			</View>
 
 			{!!description && (
-				<View style={styles.description}>
+				<View style={sidebar ? styles.sidebarDescription : styles.description}>
 					<ExpandableText
 						text={description}
 						lines={3}
@@ -154,7 +172,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				</View>
 			)}
 
-			<Divider />
+			{!sidebar && <Divider />}
 		</View>
 	)
 })
@@ -169,10 +187,30 @@ const styles = StyleSheet.create({
 		padding: 16,
 		alignItems: 'center',
 	},
+	sidebarHeaderContainer: {
+		flexDirection: 'column',
+		paddingHorizontal: 24,
+		paddingTop: 24,
+		gap: 16,
+	},
 	headerTextContainer: {
 		marginLeft: 16,
 		flex: 1,
 		justifyContent: 'center',
+	},
+	sidebarHeaderTextContainer: {
+		marginLeft: 0,
+		flex: 0,
+		alignSelf: 'stretch',
+		alignItems: 'center',
+		gap: 4,
+	},
+	centeredText: {
+		textAlign: 'center',
+	},
+	sidebarActionsContainer: {
+		justifyContent: 'center',
+		marginHorizontal: 24,
 	},
 	title: {
 		fontWeight: 'bold',
@@ -187,5 +225,9 @@ const styles = StyleSheet.create({
 	},
 	description: {
 		margin: 16,
+	},
+	sidebarDescription: {
+		marginHorizontal: 24,
+		marginVertical: 16,
 	},
 })

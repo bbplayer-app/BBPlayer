@@ -42,6 +42,8 @@ import {
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
+// 宽屏下搜索框与左侧标题对齐，但不横跨整屏。
+const SEARCH_MAX_WIDTH = 720
 
 function SearchPageContent() {
 	const { colors } = useTheme()
@@ -257,7 +259,11 @@ function SearchPageContent() {
 			)}
 			<View
 				pointerEvents='none'
-				style={[styles.header, { paddingTop: insets.top + 8 }]}
+				style={[
+					styles.header,
+					// 标题行固定 56dp，与其他 Tab 页标题位置一致。
+					{ paddingTop: insets.top + 8, minHeight: insets.top + 8 + 56 + 16 },
+				]}
 			>
 				<Text
 					variant='headlineSmall'
@@ -328,11 +334,19 @@ function SearchPageContent() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1 },
-	header: { paddingHorizontal: 16, paddingBottom: 16, minHeight: 56 },
+	header: {
+		paddingHorizontal: 16,
+		paddingBottom: 16,
+		justifyContent: 'center',
+	},
 	title: { fontWeight: 'bold' },
-	searchbarContainer: { paddingHorizontal: 16, paddingBottom: 16 },
+	searchbarContainer: {
+		paddingHorizontal: 16,
+		paddingBottom: 16,
+		maxWidth: SEARCH_MAX_WIDTH,
+	},
 	searchbar: { borderRadius: 9999 },
-	content: { flex: 1, paddingHorizontal: 16 },
+	content: { flex: 1, paddingHorizontal: 16, maxWidth: SEARCH_MAX_WIDTH },
 	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
 	resolving: { flex: 1 },
 })

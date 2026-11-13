@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import StorageUsageChart, {
 	type StorageSegment,
 } from '@/features/storage/StorageUsageChart'
@@ -56,6 +57,7 @@ const clearImageCache = async () => {
 
 export default function StorageSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
@@ -185,7 +187,7 @@ export default function StorageSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='下载与存储' />
 			</Appbar.Header>
 			<ScrollView
