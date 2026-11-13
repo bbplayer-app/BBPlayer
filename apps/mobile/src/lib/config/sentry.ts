@@ -100,30 +100,6 @@ logger.info(
 		useAppStore.getState().settings.enableDataCollection,
 )
 
-// 项目 testID 的命名约定：小写英文 / 数字，至少一段 `-` 分隔，如 playlist-sync。
-// 只放行符合约定的标识，其余（accessibilityLabel 等，可能是用户内容）一律替换为占位符
-const INTERACTION_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)+$/
-
-// 标识末尾的动态部分（数字下标 / id），如 track-item-12
-const INTERACTION_DYNAMIC_SUFFIX = /-\d+$/
-
-/**
- * 用户点击 transaction 的名字是 `{route}.{元素标识}`。元素标识可能来自带下标 / id 的 testID，
- * 或者来自 accessibilityLabel（可能包含歌名、评论等用户内容），这里统一收敛成低基数、不含用户内容的名字。
- */
-function normalizeInteractionName(name: string): string {
-	const separator = name.indexOf('.')
-
-	if (separator === -1) return name
-
-	const route = name.slice(0, separator)
-	const label = name.slice(separator + 1)
-
-	if (!INTERACTION_ID_PATTERN.test(label)) return `${route}.<a11y_label>`
-
-	return `${route}.${label.replace(INTERACTION_DYNAMIC_SUFFIX, '')}`
-}
-
 export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
@@ -170,16 +146,6 @@ export function initializeSentry() {
 
 			return event
 		},
-	})
-
-	// 点击 transaction 一创建就改名：名字会被复制进 dynamic sampling context（envelope 头），
-	// 交互期间的错误事件也会带上它，等到 beforeSendTransaction 再改已经来不及
-	Sentry.getClient()?.on('spanStart', (span) => {
-		const { op, description } = Sentry.spanToJSON(span)
-
-		if (op?.startsWith('ui.action') && description) {
-			span.updateName(normalizeInteractionName(description))
-		}
 	})
 
 	const scope = Sentry.getGlobalScope()
