@@ -7,7 +7,19 @@ import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { getCsrfToken } from './utils'
 
 export const BILIBILI_WEB_USER_AGENT =
-	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0'
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36'
+
+/**
+ * API 请求默认携带的浏览器请求头，与桌面端网页保持一致
+ * 注意：passport 登录相关接口仍需使用 App UA，见 api.ts 中 PASSPORT_UA
+ */
+export const BILIBILI_DEFAULT_HEADERS = {
+	'User-Agent': BILIBILI_WEB_USER_AGENT,
+	Accept: 'application/json, text/plain, */*',
+	'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+	Referer: 'https://www.bilibili.com/',
+	Origin: 'https://www.bilibili.com',
+} as const
 
 export interface ReqResponse<T> {
 	code: number
@@ -55,11 +67,8 @@ class ApiClient {
 			cookieList && !skipCookie ? serializeCookieObject(cookieList) : ''
 
 		const defaultHeaders = {
+			...BILIBILI_DEFAULT_HEADERS,
 			Cookie: cookie,
-			'User-Agent':
-				'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-			Referer: 'https://www.bilibili.com/',
-			Origin: 'https://www.bilibili.com',
 		}
 
 		const headers = new Headers(defaultHeaders)
@@ -208,11 +217,8 @@ class ApiClient {
 			cookieList && !skipCookie ? serializeCookieObject(cookieList) : ''
 
 		const requestHeaders = {
+			...BILIBILI_DEFAULT_HEADERS,
 			Cookie: cookie,
-			'User-Agent':
-				'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 BiliApp/6.66.0',
-			Referer: 'https://www.bilibili.com/',
-			Origin: 'https://www.bilibili.com',
 			...headers,
 		}
 
