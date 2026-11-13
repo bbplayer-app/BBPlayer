@@ -39,6 +39,7 @@ export function PlayerHeader({
 		<View style={styles.container}>
 			{
 				<IconButton
+					testID='player-close'
 					icon={index === 0 ? 'chevron-down' : 'chevron-left'}
 					size={24}
 					onPress={onBack}
@@ -71,6 +72,7 @@ export function PlayerHeader({
 				</Animated.View>
 			</View>
 			<IconButton
+				testID='player-more'
 				icon='dots-vertical'
 				size={24}
 				onPress={onMorePress}

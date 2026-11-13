@@ -194,6 +194,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 
 							<View style={styles.actions}>
 								<Button
+									testID='sync-failures-retry-all'
 									mode='contained'
 									onPress={handleRetry}
 									loading={loading}

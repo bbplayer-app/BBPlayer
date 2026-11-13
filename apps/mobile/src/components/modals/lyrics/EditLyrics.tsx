@@ -231,9 +231,19 @@ export default function EditLyricsModal({
 				/>
 			</Dialog.Content>
 			<Dialog.Actions>
-				<Button onPress={clearLyrics}>清除歌词</Button>
+				<Button
+					testID='edit-lyrics-clear'
+					onPress={clearLyrics}
+				>
+					清除歌词
+				</Button>
 				<Button onPress={() => close('EditLyrics')}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					testID='edit-lyrics-confirm'
+					onPress={handleConfirm}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

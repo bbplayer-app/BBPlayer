@@ -169,6 +169,7 @@ export default function MergePlaylistsModal() {
 					取消
 				</Button>
 				<Button
+					testID='merge-playlists-confirm'
 					mode='contained'
 					onPress={handleConfirm}
 					disabled={isMerging || selectedIds.size < 2 || newTitle.trim() === ''}

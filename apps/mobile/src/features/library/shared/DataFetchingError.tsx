@@ -24,6 +24,7 @@ export function DataFetchingError({
 			</Text>
 			{onRetry && (
 				<Button
+					testID='library-retry'
 					onPress={onRetry}
 					mode='contained'
 				>

@@ -33,6 +33,7 @@ export default function DownloadHeader({
 			</Text>
 			<View style={styles.buttonContainer}>
 				<Button
+					testID='download-retry-all'
 					mode='outlined'
 					onPress={onRetryAll}
 					disabled={retryableCount === 0}
@@ -40,6 +41,7 @@ export default function DownloadHeader({
 					重试失败
 				</Button>
 				<Button
+					testID='download-clear-all'
 					mode='outlined'
 					onPress={onClearAll}
 					disabled={taskCount === 0}

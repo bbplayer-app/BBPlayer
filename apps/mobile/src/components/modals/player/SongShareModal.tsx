@@ -311,6 +311,7 @@ const SongShareModal = () => {
 							预览加载失败
 						</Text>
 						<Button
+							testID='song-share-retry'
 							mode='outlined'
 							onPress={() => generatePreview()}
 							icon='refresh'
@@ -322,6 +323,7 @@ const SongShareModal = () => {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button
+					testID='song-share-save'
 					mode='outlined'
 					onPress={() => handleShare('save')}
 					loading={isSharing}
@@ -331,6 +333,7 @@ const SongShareModal = () => {
 					保存
 				</Button>
 				<Button
+					testID='song-share-share'
 					mode='contained'
 					onPress={() => handleShare('share')}
 					loading={isSharing}

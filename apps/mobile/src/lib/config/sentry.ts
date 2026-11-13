@@ -127,50 +127,8 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		tracesSampler(samplingContext) {
-			const name = samplingContext.name ?? ''
-			const parentSampled = samplingContext.parentSampled
-
-			// 继承父 transaction 的采样决定（同一 trace 要么全采要么全不采）
-			if (parentSampled !== undefined) {
-				return parentSampled ? 1 : 0
-			}
-
-			// 业务 transaction：高采样率
-			if (
-				name === 'playback.start' ||
-				name.startsWith('sync.') ||
-				name === 'update.check'
-			) {
-				return 0.8
-			}
-
-			// 每次切歌都会触发，且大多命中本地缓存，信息密度低
-			if (name === 'lyrics.smart_fetch') {
-				return 0.2
-			}
-
-			// 用户主动发起的 mutation（UI 操作期间的会继承 UI transaction 的采样决定）
-			if (samplingContext.attributes?.['sentry.op'] === 'mutation') {
-				return 0.3
-			}
-
-			// 后台 refetch、分页等单独成 transaction 的 query：量大，低采样
-			if (samplingContext.attributes?.['sentry.op'] === 'query') {
-				return 0.1
-			}
-
-			// 导航 transaction：低采样率（量大，信息密度低）
-			if (
-				samplingContext.attributes?.['sentry.op'] === 'navigation' ||
-				samplingContext.attributes?.['sentry.op'] === 'pageload'
-			) {
-				return 0.1
-			}
-
-			// 其余 transaction（app 启动、自动检测等）保持适中采样率
-			return 0.3
-		},
+		// 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
+		tracesSampleRate: 0.5,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；

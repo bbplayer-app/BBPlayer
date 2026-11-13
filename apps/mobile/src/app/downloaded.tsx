@@ -142,6 +142,7 @@ function DownloadedItem({
 
 	return (
 		<Touchable
+			testID='downloaded-item'
 			androidRipple={{}}
 			style={[
 				styles.rectButton,
@@ -520,21 +521,25 @@ export default function DownloadedPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='downloaded-select-all'
 							icon='select-all'
 							onPress={() =>
 								setSelected(new Set(filteredTasks.map((t) => t.id)))
 							}
 						/>
 						<Appbar.Action
+							testID='downloaded-invert-selection'
 							icon='select-compare'
 							onPress={invertSelection}
 						/>
 						<Appbar.Action
+							testID='downloaded-delete-selected'
 							icon='trash-can-outline'
 							onPress={handleBatchDelete}
 							disabled={selected.size === 0}
 						/>
 						<Appbar.Action
+							testID='downloaded-export-selected'
 							icon='export-variant'
 							onPress={handleExport}
 							disabled={selected.size === 0}
@@ -543,14 +548,17 @@ export default function DownloadedPage() {
 				) : (
 					<>
 						<Appbar.Action
+							testID='downloaded-search'
 							icon='magnify'
 							onPress={() => setIsSearching(!isSearching)}
 						/>
 						<Appbar.Action
+							testID='downloaded-open-tasks'
 							icon='progress-download'
 							onPress={() => router.navigate('/download')}
 						/>
 						<Appbar.Action
+							testID='downloaded-export'
 							icon='export-variant'
 							onPress={handleExport}
 							disabled={completedTasks.length === 0}

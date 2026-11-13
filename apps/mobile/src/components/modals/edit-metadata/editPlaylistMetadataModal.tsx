@@ -158,7 +158,12 @@ export default function EditPlaylistMetadataModal({
 			</Dialog.Content>
 			<Dialog.Actions style={styles.actionsContainer}>
 				{playlist.type !== 'local' && playlist.type !== 'dynamic' ? (
-					<Button onPress={fetchRemoteMetadata}>获取远程数据</Button>
+					<Button
+						testID='edit-playlist-fetch-remote'
+						onPress={fetchRemoteMetadata}
+					>
+						获取远程数据
+					</Button>
 				) : (
 					<View />
 				)}

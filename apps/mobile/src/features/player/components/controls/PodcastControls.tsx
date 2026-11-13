@@ -70,6 +70,7 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 			<SecondaryPlaybackControls compact={compact}>
 				{actions.map((action) => (
 					<IconButton
+						testID={`podcast-control-${action.icon}`}
 						key={action.icon}
 						icon={action.icon}
 						size={24}

@@ -46,6 +46,7 @@ const SearchItem = memo(function SearchItem({
 
 	return (
 		<TouchableRipple
+			testID='external-sync-match-result'
 			style={styles.searchItem}
 			onPress={() => onPress(item)}
 		>

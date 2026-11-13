@@ -134,6 +134,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				)}
 				{props.secondaryButtonText && props.onClickSecondaryButton && (
 					<Button
+						testID='playlist-header-secondary-button'
 						mode='outlined'
 						icon={props.secondaryButtonIcon}
 						onPress={props.onClickSecondaryButton}

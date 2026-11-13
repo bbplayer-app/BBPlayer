@@ -279,6 +279,7 @@ export default function SyncLocalToBilibiliModal({
 						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
+								testID='sync-to-bilibili-create'
 								mode='contained'
 								onPress={handleCreate}
 							>
@@ -352,6 +353,7 @@ export default function SyncLocalToBilibiliModal({
 						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
+								testID='sync-to-bilibili-start'
 								mode='contained'
 								onPress={handleSync}
 							>

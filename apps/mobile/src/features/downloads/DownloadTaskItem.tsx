@@ -146,6 +146,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 				<View style={styles.iconsContainer}>
 					{retryable && (
 						<IconButton
+							testID='download-task-retry'
 							icon='reload'
 							onPress={async () => {
 								if (!retryTrack) return
@@ -168,6 +169,7 @@ const DownloadTaskItem = memo(function DownloadTaskItem({
 					)}
 					<View>{icon}</View>
 					<IconButton
+						testID='download-task-cancel'
 						icon='close'
 						onPress={async () => {
 							try {

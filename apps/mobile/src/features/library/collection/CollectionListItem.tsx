@@ -14,6 +14,7 @@ const CollectionListItem = memo(({ item }: { item: BilibiliCollection }) => {
 	return (
 		<View>
 			<Touchable
+				testID='collection-item'
 				androidRipple={{}}
 				disabled={item.state === 1}
 				onPress={() => {

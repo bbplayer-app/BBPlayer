@@ -124,6 +124,7 @@ const SyncTrackItem = memo(
 									iconColor={theme.colors.error}
 								/>
 								<IconButton
+									testID='external-sync-edit-match'
 									icon='pencil'
 									size={20}
 									onPress={onPress}
@@ -138,6 +139,7 @@ const SyncTrackItem = memo(
 									iconColor={theme.colors.primary}
 								/>
 								<IconButton
+									testID='external-sync-edit-match'
 									icon='pencil'
 									size={20}
 									onPress={onPress}
@@ -470,6 +472,7 @@ const ExternalPlaylistSyncPageInner = () => {
 					onPress={handleDoubleTap}
 				/>
 				<Appbar.Action
+					testID='external-sync-save'
 					icon='check'
 					onPress={handleSave}
 					disabled={!hasResults}
@@ -585,6 +588,7 @@ const ExternalPlaylistSyncFooter = ({
 							</View>
 						</View>
 						<Button
+							testID='external-sync-pause'
 							icon='pause'
 							mode='contained-tonal'
 							onPress={onSync}
@@ -594,6 +598,7 @@ const ExternalPlaylistSyncFooter = ({
 					</View>
 				) : (
 					<TouchableRipple
+						testID='external-sync-start'
 						onPress={onSync}
 						style={[
 							styles.button,

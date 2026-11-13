@@ -103,12 +103,14 @@ export function useLocalPlaylistMenu({
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',
+				testID: 'track-menu-play-next',
 				leadingIcon: PLAY_NEXT_ICON,
 				onPress: () => playNext(item),
 				isHighFreq: true,
 			},
 			{
 				title: '添加到本地歌单',
+				testID: 'track-menu-add-to-playlist',
 				leadingIcon: ADD_TO_PLAYLIST_ICON,
 				onPress: () => openAddToPlaylistModal(item),
 				isHighFreq: true,
@@ -119,6 +121,7 @@ export function useLocalPlaylistMenu({
 			menuItems.push(
 				{
 					title: '查看详细信息',
+					testID: 'track-menu-view-details',
 					leadingIcon: INFO_ICON,
 					onPress: () =>
 						router.navigate({
@@ -128,6 +131,7 @@ export function useLocalPlaylistMenu({
 				},
 				{
 					title: '查看 up 主作品',
+					testID: 'track-menu-view-uploader',
 					leadingIcon: ARTIST_ICON,
 					onPress: () => {
 						if (!item.artist?.remoteId) {
@@ -143,6 +147,7 @@ export function useLocalPlaylistMenu({
 				{
 					title:
 						downloadState === DownloadState.COMPLETED ? '删除缓存' : '缓存音频',
+					testID: 'track-menu-download',
 					leadingIcon:
 						downloadState === DownloadState.COMPLETED
 							? REMOVE_CACHE_ICON
@@ -201,6 +206,7 @@ export function useLocalPlaylistMenu({
 		menuItems.push(
 			{
 				title: '复制封面链接',
+				testID: 'track-menu-copy-cover',
 				leadingIcon: LINK_ICON,
 				onPress: () => {
 					void Clipboard.setStringAsync(item.coverUrl ?? '')
@@ -209,6 +215,7 @@ export function useLocalPlaylistMenu({
 			},
 			{
 				title: '编辑信息',
+				testID: 'track-menu-edit-metadata',
 				leadingIcon: EDIT_ICON,
 				onPress: () => openEditTrackModal(item),
 			},
@@ -217,6 +224,7 @@ export function useLocalPlaylistMenu({
 		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
+				testID: 'track-menu-delete',
 				leadingIcon: DELETE_ICON,
 				onPress: () =>
 					alert(

@@ -77,6 +77,7 @@ export default function InputPhoneStep({
 
 			<View style={[styles.actions, compact && { marginTop: 8 }]}>
 				<Button
+					testID='phone-login-request-code'
 					mode='contained'
 					onPress={onRequestCode}
 					loading={isSendingCode}

@@ -227,7 +227,10 @@ export function TrackInfo({
 							</Text>
 						</TouchableRipple>
 						{currentTrack.artist?.name && (
-							<TouchableRipple onPress={onArtistPress}>
+							<TouchableRipple
+								testID='player-artist'
+								onPress={onArtistPress}
+							>
 								<Text
 									variant='bodyMedium'
 									style={{ color: colors.onSurfaceVariant }}
@@ -245,6 +248,7 @@ export function TrackInfo({
 								playSignal={thumbUpBurstSignal}
 							/>
 							<IconButton
+								testID='player-thumb-up'
 								icon={isThumbUp ? 'heart' : 'heart-outline'}
 								size={24}
 								iconColor={isThumbUp ? colors.error : colors.onSurfaceVariant}
