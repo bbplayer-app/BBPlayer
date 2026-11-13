@@ -458,10 +458,14 @@ function RootLayout() {
 	)
 }
 
-// 用户点击追踪（ui.action.touch）以 testID 作为元素标识：testID 基本是稳定的英文标识，
-// 动态部分由 sentry.ts 中的 normalizeInteractionName 去掉
+// 用户点击追踪（ui.action.touch）与触摸面包屑以 testID 作为元素标识，动态部分由
+// sentry.ts 中的 normalizeInteractionName 收敛。关闭从子节点提取文本：
+// 否则点到的歌名、评论等文字会成为标识，进入 transaction 名与面包屑
 export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
-	touchEventBoundaryProps: { labelName: 'testID' },
+	touchEventBoundaryProps: {
+		labelName: 'testID',
+		extractTextFromChildren: false,
+	},
 })
 
 const styles = StyleSheet.create({

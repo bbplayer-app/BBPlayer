@@ -33,15 +33,19 @@ export const useThumbUpVideo = () => {
 export const useDeleteToViewVideo = () => {
 	return useTracedMutation({
 		span: { name: 'bilibili.to_view.delete' },
-		mutationFn: ({
-			deleteAllViewed,
-			avid,
-		}: {
-			deleteAllViewed?: boolean
-			avid?: number
-		}) =>
+		mutationFn: (
+			{
+				deleteAllViewed,
+				avid,
+			}: {
+				deleteAllViewed?: boolean
+				avid?: number
+			},
+			{ span },
+		) =>
 			returnOrThrowAsync(
 				bilibiliApi
+					.withTrace(span)
 					.deleteToViewVideo({ deleteAllViewed, avid })
 					.map(() => true),
 			),

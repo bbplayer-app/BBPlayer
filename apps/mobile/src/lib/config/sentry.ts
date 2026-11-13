@@ -100,8 +100,9 @@ logger.info(
 		useAppStore.getState().settings.enableDataCollection,
 )
 
-// testID 风格的标识：英文、数字、`-`、`_`
-const INTERACTION_ID_PATTERN = /^[\w-]+$/
+// 项目 testID 的命名约定：小写英文 / 数字，至少一段 `-` 分隔，如 playlist-sync。
+// 只放行符合约定的标识，其余（accessibilityLabel 等，可能是用户内容）一律替换为占位符
+const INTERACTION_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)+$/
 
 // 标识末尾的动态部分（数字下标 / id），如 track-item-12
 const INTERACTION_DYNAMIC_SUFFIX = /-\d+$/
@@ -134,16 +135,6 @@ export function initializeSentry() {
 		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
 		// 没有子 span 的点击 transaction 会被 SDK 丢弃
 		enableUserInteractionTracing: true,
-		beforeSendTransaction(event) {
-			if (
-				event.contexts?.trace?.op?.startsWith('ui.action') &&
-				event.transaction
-			) {
-				event.transaction = normalizeInteractionName(event.transaction)
-			}
-
-			return event
-		},
 		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
 		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。
@@ -179,6 +170,16 @@ export function initializeSentry() {
 
 			return event
 		},
+	})
+
+	// 点击 transaction 一创建就改名：名字会被复制进 dynamic sampling context（envelope 头），
+	// 交互期间的错误事件也会带上它，等到 beforeSendTransaction 再改已经来不及
+	Sentry.getClient()?.on('spanStart', (span) => {
+		const { op, description } = Sentry.spanToJSON(span)
+
+		if (op?.startsWith('ui.action') && description) {
+			span.updateName(normalizeInteractionName(description))
+		}
 	})
 
 	const scope = Sentry.getGlobalScope()

@@ -18,6 +18,7 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 
 const renderItem = ({
 	item,
+	index,
 	extraData,
 }: ListRenderItemInfoWithExtraData<
 	BilibiliSearchVideo,
@@ -30,6 +31,7 @@ const renderItem = ({
 	return (
 		<SearchItem
 			item={item}
+			index={index}
 			onPress={extraData.handlePressItem}
 		/>
 	)
@@ -37,16 +39,18 @@ const renderItem = ({
 
 const SearchItem = memo(function SearchItem({
 	item,
+	index,
 	onPress,
 }: {
 	item: BilibiliSearchVideo
+	index: number
 	onPress: (item: BilibiliSearchVideo) => void
 }) {
 	const coverUrl = item.pic.startsWith('//') ? `https:${item.pic}` : item.pic
 
 	return (
 		<TouchableRipple
-			testID='external-sync-match-result'
+			testID={`external-sync-match-result-${index}`}
 			style={styles.searchItem}
 			onPress={() => onPress(item)}
 		>

@@ -150,7 +150,7 @@ const TrackItem = memo(
 						</View>
 					</Touchable>
 					<IconButton
-						testID='player-queue-remove-track'
+						testID={`player-queue-remove-track-${index}`}
 						icon='close-circle-outline'
 						size={24}
 						onPress={() => onRemoveTrack(index)}
