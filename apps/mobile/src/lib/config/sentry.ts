@@ -100,6 +100,29 @@ logger.info(
 		useAppStore.getState().settings.enableDataCollection,
 )
 
+// testID 风格的标识：英文、数字、`-`、`_`
+const INTERACTION_ID_PATTERN = /^[\w-]+$/
+
+// 标识末尾的动态部分（数字下标 / id），如 track-item-12
+const INTERACTION_DYNAMIC_SUFFIX = /-\d+$/
+
+/**
+ * 用户点击 transaction 的名字是 `{route}.{元素标识}`。元素标识可能来自带下标 / id 的 testID，
+ * 或者来自 accessibilityLabel（可能包含歌名、评论等用户内容），这里统一收敛成低基数、不含用户内容的名字。
+ */
+function normalizeInteractionName(name: string): string {
+	const separator = name.indexOf('.')
+
+	if (separator === -1) return name
+
+	const route = name.slice(0, separator)
+	const label = name.slice(separator + 1)
+
+	if (!INTERACTION_ID_PATTERN.test(label)) return `${route}.<a11y_label>`
+
+	return `${route}.${label.replace(INTERACTION_DYNAMIC_SUFFIX, '')}`
+}
+
 export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
@@ -150,6 +173,19 @@ export function initializeSentry() {
 		},
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
+		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
+		// 没有子 span 的点击 transaction 会被 SDK 丢弃
+		enableUserInteractionTracing: true,
+		beforeSendTransaction(event) {
+			if (
+				event.contexts?.trace?.op?.startsWith('ui.action') &&
+				event.transaction
+			) {
+				event.transaction = normalizeInteractionName(event.transaction)
+			}
+
+			return event
+		},
 		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
 		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。

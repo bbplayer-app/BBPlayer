@@ -458,7 +458,11 @@ function RootLayout() {
 	)
 }
 
-export default Sentry.wrap(ObserveRoot.wrap(RootLayout))
+// 用户点击追踪（ui.action.touch）以 testID 作为元素标识：testID 基本是稳定的英文标识，
+// 动态部分由 sentry.ts 中的 normalizeInteractionName 去掉
+export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
+	touchEventBoundaryProps: { labelName: 'testID' },
+})
 
 const styles = StyleSheet.create({
 	appContainer: {
