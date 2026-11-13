@@ -41,7 +41,6 @@ import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.util.GlideBitmapLoader
 import expo.modules.orpheus.util.LoudnessStorage
-import expo.modules.orpheus.util.stripSentryTraceParam
 import expo.modules.orpheus.util.SleepTimeController
 import expo.modules.orpheus.util.TrackResumeStorage
 import expo.modules.orpheus.util.calculateLoudnessGain
@@ -639,7 +638,7 @@ class OrpheusMusicService : MediaLibraryService() {
                 saveCurrentQueue()
                 val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
 
-                val volumeData = LoudnessStorage.getLoudnessData(stripSentryTraceParam(uri))
+                val volumeData = LoudnessStorage.getLoudnessData(uri)
                 applyVolumeForCurrentItem(volumeData)
             }
 

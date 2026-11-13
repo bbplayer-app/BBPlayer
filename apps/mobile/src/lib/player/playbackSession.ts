@@ -1,6 +1,5 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
 import type { Span } from '@sentry/react-native'
-import { spanIsSampled, spanToJSON } from '@sentry/react-native'
 
 import {
 	applyResumeStrategy,
@@ -14,15 +13,16 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { playlistService } from '@/lib/services/playlistService'
-import { startOperation } from '@/lib/tracing'
+import { markSpanError, startOperation } from '@/lib/tracing'
 import type { PlayerMode } from '@/types/core/playback'
 
 /**
  * 进行中的 playback.start transaction。
  *
  * 生命周期：
- * - `startPlayback` 播放时创建（replace=true + 触发实际播放）
- * - `PlayerSideEffects.onTrackStarted` 在第一个 `onTrackStarted` 事件时结束
+ * - `submitTracks` 在能确定哪首歌会开始播放时创建（见 `resolveStartingTrackId`）
+ * - `PlayerSideEffects` 在对应的 `onTrackStarted` 事件时结束；`onPlayerError` 时标记失败并结束
+ * - `submitTracks` 自身抛错时标记失败并结束
  *
  * 只保留最后一次：用户快速切歌时，前一个 span 被新的替换并立即结束（标记 cancelled）。
  */
@@ -56,31 +56,13 @@ async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 		: fallback
 }
 
-/**
- * 把 Sentry trace header 注入到 bilibili 轨道 URL 的 `st` 查询参数中，
- * 让原生层（BilibiliResolver）可以在同一 trace 下创建子 span。
- * 非 bilibili 轨道保持原样返回。
- *
- * Header 格式（W3C traceparent）：{traceId}-{spanId}-{sampled}
- */
-function injectTraceHeader(tracks: Track[], span: Span): Track[] {
-	const json = spanToJSON(span)
-	const traceId = json.trace_id
-	const spanId = json.span_id
-	const sampled = spanIsSampled(span) ? '1' : '0'
+/** 结束当前 pending 的 playback span 并标记为失败 */
+export function failPendingPlaybackSpan(error: Error) {
+	const span = takePendingPlaybackSpan()
 
-	if (!traceId || !spanId) return tracks
-
-	const header = `${traceId}-${spanId}-${sampled}`
-
-	return tracks.map((track) => {
-		if (!track.url.startsWith('orpheus://bilibili')) return track
-
-		return {
-			...track,
-			url: `${track.url}&st=${encodeURIComponent(header)}`,
-		}
-	})
+	if (!span) return
+	markSpanError(span, error)
+	span.end()
 }
 
 interface QueueOptions {
@@ -89,6 +71,28 @@ interface QueueOptions {
 	playNow?: boolean
 	startFromKey?: string
 	playNext?: boolean
+}
+
+/**
+ * 推断这次提交后会开始播放的 track，无法确定（或不会触发播放）时返回 undefined。
+ *
+ * - 指定 `startFromKey`（非 playNext）：原生 addToEnd 会直接 seek 并播放该 track，无视 playNow
+ * - playNow 且新队列的第一首就是 tracks[0]：替换队列，或原队列为空
+ * - 其余情况（如向非空队列追加后 play）只是恢复当前曲目，不算一次新的起播
+ */
+function resolveStartingTrackId(
+	options: QueueOptions,
+	replace: boolean,
+	queueEmpty: boolean,
+): string | undefined {
+	if (!options.playNext && options.startFromKey) return options.startFromKey
+
+	if (!options.playNow) return undefined
+
+	// playNext 只插入到当前曲目之后，不会清空队列
+	if (queueEmpty || (replace && !options.playNext)) return options.tracks[0]?.id
+
+	return undefined
 }
 
 async function submitTracks(options: QueueOptions, replace: boolean) {
@@ -119,8 +123,14 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 	const willPlay =
 		options.playNow && (options.playNext || !options.startFromKey)
 
-	// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
-	if (willPlay) {
+	const startingTrackId = resolveStartingTrackId(
+		options,
+		replace,
+		!queue.length,
+	)
+
+	if (startingTrackId) {
+		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
 		if (pendingPlaybackSpan) {
 			pendingPlaybackSpan.setAttribute('playback.cancelled', true)
 			pendingPlaybackSpan.end()
@@ -133,31 +143,35 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 				'playback.track_count': options.tracks.length,
 				'playback.mode': context.mode,
 				'playback.replace': replace,
+				'playback.play_next': options.playNext ?? false,
 				// 记录期望的第一个 track ID，用于在 onTrackStarted 中校验事件归属
-				'playback.expected_first_track_id': options.playNext
-					? options.tracks[0]?.id
-					: (options.startFromKey ?? options.tracks[0]?.id),
+				'playback.expected_first_track_id': startingTrackId,
 			},
 		})
 	}
 
-	// 把 Sentry trace header 注入到 bilibili 轨道 URL，让原生层可以挂在同一 trace 下
-	const trackedTracks = pendingPlaybackSpan
-		? injectTraceHeader(options.tracks, pendingPlaybackSpan)
-		: options.tracks
+	try {
+		if (options.playNext) {
+			applyResumeStrategy(context.mode)
+			await Orpheus.playNext(options.tracks[0])
+		} else {
+			applyResumeStrategy(context.mode)
+			await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
+		}
 
-	if (options.playNext) {
-		applyResumeStrategy(context.mode)
-		await Orpheus.playNext(trackedTracks[0])
-	} else {
-		applyResumeStrategy(context.mode)
-		await Orpheus.addToEnd(trackedTracks, options.startFromKey, replace)
-	}
+		setPlaybackContext(context)
 
-	setPlaybackContext(context)
+		if (willPlay) {
+			await Orpheus.play()
+		}
+	} catch (error) {
+		if (startingTrackId) {
+			failPendingPlaybackSpan(
+				error instanceof Error ? error : new Error(String(error)),
+			)
+		}
 
-	if (willPlay) {
-		await Orpheus.play()
+		throw error
 	}
 }
 

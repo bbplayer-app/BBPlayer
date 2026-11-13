@@ -3,8 +3,6 @@ package expo.modules.orpheus.bilibili
 import android.util.Log
 import android.net.Uri
 import expo.modules.orpheus.util.GeneralStorage
-import io.sentry.ISpan
-import io.sentry.SpanStatus
 
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -28,46 +26,33 @@ object BilibiliRepository {
     }
 
     @Synchronized
-    private fun getWbiKeys(parentSpan: ISpan?): Pair<String, String> {
+    private fun getWbiKeys(): Pair<String, String> {
         val today = getTodayDateStr()
 
         if (cachedImgKey != null && cachedSubKey != null && today == cachedDateStr) {
             return cachedImgKey!! to cachedSubKey!!
         }
 
-        val span = parentSpan?.startChild("http.client", "bilibili.wbi_keys")
+        val response = api.getNavInfo().execute()
+        val wbiData = response.body()?.data?.wbiImg
 
-        try {
-            val response = api.getNavInfo().execute()
-            val wbiData = response.body()?.data?.wbiImg
-
-            if (!response.isSuccessful || wbiData == null) {
-                span?.status = SpanStatus.INTERNAL_ERROR
-                val msg = response.body()?.message ?: "Unknown Error"
-                throw IOException("Bilibili API Error: code=${response.code()} msg=$msg")
-            }
-
-            val imgKey = WbiUtil.extractKey(wbiData.imgUrl)
-            val subKey = WbiUtil.extractKey(wbiData.subUrl)
-
-            cachedImgKey = imgKey
-            cachedSubKey = subKey
-            cachedDateStr = today
-
-            span?.status = SpanStatus.OK
-            return imgKey to subKey
-        } catch (e: Exception) {
-            span?.status = SpanStatus.INTERNAL_ERROR
-            throw e
-        } finally {
-            span?.finish()
+        if (!response.isSuccessful || wbiData == null) {
+            val msg = response.body()?.message ?: "Unknown Error"
+            throw IOException("Bilibili API Error: code=${response.code()} msg=$msg")
         }
+
+        val imgKey = WbiUtil.extractKey(wbiData.imgUrl)
+        val subKey = WbiUtil.extractKey(wbiData.subUrl)
+
+        cachedImgKey = imgKey
+        cachedSubKey = subKey
+        cachedDateStr = today
+
+        return imgKey to subKey
     }
 
     /**
      * 解析音频 URL
-     *
-     * @param parentSpan 来自 JS 侧的 Sentry span（通过 trace header 传入），为 null 时不创建子 span
      */
     fun resolveAudioUrls(
         bvid: String,
@@ -75,11 +60,10 @@ object BilibiliRepository {
         audioQuality: Int,
         enableDolby: Boolean,
         enableHiRes: Boolean,
-        cookie: String?,
-        parentSpan: ISpan? = null
+        cookie: String?
     ): Pair<List<String>, VolumeData?> {
         var cidInternal = cid
-        val (imgKey, subKey) = getWbiKeys(parentSpan)
+        val (imgKey, subKey) = getWbiKeys()
         if (cidInternal === null) {
             cidInternal = getFirstCid(bvid, cookie)
         }
@@ -98,72 +82,58 @@ object BilibiliRepository {
 
         val signedParams = WbiUtil.sign(rawParams, imgKey, subKey)
 
-        val playUrlSpan = parentSpan?.startChild("http.client", "bilibili.play_url")
+        val call = api.getPlayUrl(cookie, signedParams)
+        val response = call.execute()
 
-        try {
-            val call = api.getPlayUrl(cookie, signedParams)
-            val response = call.execute()
+        if (!response.isSuccessful) {
+            throw IOException("Bilibili API Http Error: ${response.code()}")
+        }
 
-            if (!response.isSuccessful) {
-                playUrlSpan?.status = SpanStatus.fromHttpStatusCode(response.code())
-                throw IOException("Bilibili API Http Error: ${response.code()}")
+        val apiResponse = response.body()
+        if (apiResponse?.code != 0) {
+            val msg = apiResponse?.message ?: "Unknown Error"
+            throw IOException("Bilibili API Error: code=${apiResponse?.code} msg=$msg")
+        }
+
+        if (apiResponse.data == null) {
+            throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
+        }
+
+        val data = apiResponse.data
+        val dash = data.dash
+        val durl = data.durl
+        val volume = data.volume
+
+        if (dash == null) {
+            if (durl.isNullOrEmpty()) {
+                throw IOException("AudioStreamError: 请求到的流数据不包含 dash 或 durl 任一字段")
             }
+            return streamUrls(durl[0].url, durl[0].backupUrl) to volume
+        }
 
-            val apiResponse = response.body()
-            if (apiResponse?.code != 0) {
-                playUrlSpan?.status = SpanStatus.INTERNAL_ERROR
-                val msg = apiResponse?.message ?: "Unknown Error"
-                throw IOException("Bilibili API Error: code=${apiResponse?.code} msg=$msg")
-            }
+        if (enableDolby && dash.dolby?.audio?.isNotEmpty() == true) {
+            Log.d(TAG, "select dolby source")
+            val audio = dash.dolby.audio[0]
+            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
+        }
 
-            if (apiResponse.data == null) {
-                playUrlSpan?.status = SpanStatus.INTERNAL_ERROR
-                throw IOException("Bilibili API Logic Error: code=0 msg=${apiResponse.message} but data is missing")
-            }
+        if (enableHiRes && dash.flac?.audio != null) {
+            Log.d(TAG, "select hires source")
+            val audio = dash.flac.audio
+            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
+        }
 
-            playUrlSpan?.status = SpanStatus.OK
+        if (dash.audio.isNullOrEmpty()) {
+            throw IOException("AudioStreamError: 未找到有效的音频流数据")
+        }
 
-            val data = apiResponse.data
-            val dash = data.dash
-            val durl = data.durl
-            val volume = data.volume
+        val targetAudio = dash.audio.find { it.id == audioQuality }
 
-            if (dash == null) {
-                if (durl.isNullOrEmpty()) {
-                    throw IOException("AudioStreamError: 请求到的流数据不包含 dash 或 durl 任一字段")
-                }
-                return streamUrls(durl[0].url, durl[0].backupUrl) to volume
-            }
-
-            if (enableDolby && dash.dolby?.audio?.isNotEmpty() == true) {
-                Log.d(TAG, "select dolby source")
-                val audio = dash.dolby.audio[0]
-                return streamUrls(audio.baseUrl, audio.backupUrl) to volume
-            }
-
-            if (enableHiRes && dash.flac?.audio != null) {
-                Log.d(TAG, "select hires source")
-                val audio = dash.flac.audio
-                return streamUrls(audio.baseUrl, audio.backupUrl) to volume
-            }
-
-            if (dash.audio.isNullOrEmpty()) {
-                throw IOException("AudioStreamError: 未找到有效的音频流数据")
-            }
-
-            val targetAudio = dash.audio.find { it.id == audioQuality }
-
-            if (targetAudio != null) {
-                return streamUrls(targetAudio.baseUrl, targetAudio.backupUrl) to volume
-            } else {
-                val highestQualityAudio = dash.audio[0]
-                return streamUrls(highestQualityAudio.baseUrl, highestQualityAudio.backupUrl) to volume
-            }
-        } catch (e: Exception) {
-            playUrlSpan?.status = SpanStatus.INTERNAL_ERROR
-            throw e
-        } finally {
-            playUrlSpan?.finish()
+        if (targetAudio != null) {
+            return streamUrls(targetAudio.baseUrl, targetAudio.backupUrl) to volume
+        } else {
+            val highestQualityAudio = dash.audio[0]
+            return streamUrls(highestQualityAudio.baseUrl, highestQualityAudio.backupUrl) to volume
         }
     }
 

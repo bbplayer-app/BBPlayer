@@ -9,7 +9,10 @@ import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { queryClient } from '@/lib/config/queryClient'
-import { takePendingPlaybackSpan } from '@/lib/player/playbackSession'
+import {
+	failPendingPlaybackSpan,
+	takePendingPlaybackSpan,
+} from '@/lib/player/playbackSession'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -288,6 +291,9 @@ class PlayerSideEffects {
 	private setupErrorHandler() {
 		Orpheus.addListener('onPlayerError', async (event) => {
 			logger.error('播放器错误事件：', { event })
+
+			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败
+			failPendingPlaybackSpan(this.toSentryError(event))
 
 			let playerErrorInfo = {
 				message:

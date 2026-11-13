@@ -47,21 +47,3 @@ object LoudnessStorage {
         data.forEach { (key, value) -> setLoudnessData(key, value) }
     }
 }
-
-/**
- * 从 orpheus:// URI 字符串中移除 Sentry trace 参数（`st`），
- * 确保 LoudnessStorage / ExoPlayer cache 使用稳定的 key。
- */
-fun stripSentryTraceParam(uri: String): String {
-    return if (uri.contains("&st=") || uri.contains("?st=")) {
-        android.net.Uri.parse(uri).buildUpon().clearQuery().also { builder ->
-            android.net.Uri.parse(uri).queryParameterNames
-                .filter { it != "st" }
-                .forEach { key ->
-                    builder.appendQueryParameter(key, android.net.Uri.parse(uri).getQueryParameter(key))
-                }
-        }.build().toString()
-    } else {
-        uri
-    }
-}
