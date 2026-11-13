@@ -177,10 +177,26 @@ function runResultInSpan<T, E extends Error>(
 }
 
 /**
- * 创建一个业务根 span（transaction），并开启新的 trace。
+ * 创建一个业务根 span（transaction）。
+ *
+ * 当前有进行中的 UI root（导航 / 点击）时，作为它的子 span 挂在同一条 trace 下，
+ * 这样「点击 → 业务」在 Sentry 里是一棵树；没有 UI root 时才开启新的 trace。
+ *
+ * 注意不能在这里用 `forceTransaction`：子事务不会被算作父 span 的 descendant，
+ * 父事务仍会被 SDK 以「no child spans」为由丢弃，树就断了。
+ *
  * 适合事件驱动、无法用回调包裹的流程；调用方负责 `end()`。
  */
 export function startOperation(spec: TraceSpec): Span {
+	const uiParent = getActiveUiSpan()
+
+	if (uiParent) {
+		return Sentry.startInactiveSpan({
+			...toStartOptions(spec),
+			parentSpan: uiParent,
+		})
+	}
+
 	const scope = Sentry.getCurrentScope().clone()
 	scope.setPropagationContext({
 		traceId: randomHex(32),
