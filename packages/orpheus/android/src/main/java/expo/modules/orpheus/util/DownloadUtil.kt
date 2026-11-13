@@ -18,6 +18,10 @@ import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.service.OrpheusDownloadService
+import io.sentry.Sentry
+import io.sentry.SpanStatus
+import io.sentry.TracesSamplingDecision
+import io.sentry.TransactionContext
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -135,22 +139,60 @@ object DownloadUtil {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
                     val quality = uri.getQueryParameter("quality")?.toIntOrNull() ?: 30280
-                    val (urls, volume) = BilibiliRepository.resolveAudioUrls(
-                        bvid = bvid!!,
-                        cid = cid,
-                        audioQuality = quality,
-                        enableDolby = uri.getQueryParameter("dolby") == "1",
-                        enableHiRes = uri.getQueryParameter("hires") == "1",
-                        cookie = OrpheusConfig.bilibiliCookie
-                    )
+
+                    // 读取 JS 侧注入的 Sentry trace header（格式：traceId-spanId-{0|1}）
+                    // 用 runCatching 吞掉所有解析失败：trace 是可选的，不影响播放
+                    val sentrySpan = uri.getQueryParameter("st")?.let { encodedHeader ->
+                        runCatching {
+                            val header = java.net.URLDecoder.decode(encodedHeader, "UTF-8")
+                            val parts = header.split("-")
+                            if (parts.size >= 3) {
+                                val sampled = parts[2] == "1"
+                                val ctx = TransactionContext.fromSentryTrace(
+                                    "bilibili.cdn_resolve",
+                                    "bilibili.resolve",
+                                    io.sentry.SentryTraceHeader(header)
+                                )
+                                ctx.samplingDecision = TracesSamplingDecision(sampled)
+                                Sentry.startTransaction(ctx)
+                            } else null
+                        }.getOrNull()
+                    }
+
+                    // 去掉 st 参数，让 LoudnessStorage / ExoPlayer cache 使用稳定的 key
+                    val stableUri = uri.buildUpon().clearQuery().also { builder ->
+                        uri.queryParameterNames
+                            .filter { it != "st" }
+                            .forEach { key -> builder.appendQueryParameter(key, uri.getQueryParameter(key)) }
+                    }.build()
+
+                    val (urls, volume) = try {
+                        BilibiliRepository.resolveAudioUrls(
+                            bvid = bvid!!,
+                            cid = cid,
+                            audioQuality = quality,
+                            enableDolby = uri.getQueryParameter("dolby") == "1",
+                            enableHiRes = uri.getQueryParameter("hires") == "1",
+                            cookie = OrpheusConfig.bilibiliCookie,
+                            parentSpan = sentrySpan
+                        )
+                    } catch (e: Exception) {
+                        sentrySpan?.status = SpanStatus.INTERNAL_ERROR
+                        sentrySpan?.finish()
+                        throw e
+                    }
+
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
                     if (volume !== null) {
                         Log.d(
                             "LoudnessNormalization",
-                            "uri: ${dataSpec.uri}, measuredI: ${volume.measuredI}"
+                            "uri: $stableUri, measuredI: ${volume.measuredI}"
                         )
-                        LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
+                        LoudnessStorage.setLoudnessData(stableUri.toString(), volume.measuredI)
                     }
+
+                    sentrySpan?.status = SpanStatus.OK
+                    sentrySpan?.finish()
 
                     val headers = HashMap(dataSpec.httpRequestHeaders)
                     headers["Referer"] = "https://www.bilibili.com/"
@@ -159,7 +201,7 @@ object DownloadUtil {
                         .setUri(urls.first().toUri())
                         .setCustomData(BilibiliStreamUrls(urls))
                         .setHttpRequestHeaders(headers)
-                        .setKey(uri.toString())
+                        .setKey(stableUri.toString())
                         .build()
                 } catch (e: Exception) {
                     throw IOException("Resolve Url Failed: ${e.message}", e)

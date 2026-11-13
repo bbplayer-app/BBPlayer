@@ -1,5 +1,6 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
 import type { Span } from '@sentry/react-native'
+import { spanIsSampled, spanToJSON } from '@sentry/react-native'
 
 import {
 	applyResumeStrategy,
@@ -55,6 +56,33 @@ async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 		: fallback
 }
 
+/**
+ * 把 Sentry trace header 注入到 bilibili 轨道 URL 的 `st` 查询参数中，
+ * 让原生层（BilibiliResolver）可以在同一 trace 下创建子 span。
+ * 非 bilibili 轨道保持原样返回。
+ *
+ * Header 格式（W3C traceparent）：{traceId}-{spanId}-{sampled}
+ */
+function injectTraceHeader(tracks: Track[], span: Span): Track[] {
+	const json = spanToJSON(span)
+	const traceId = json.trace_id
+	const spanId = json.span_id
+	const sampled = spanIsSampled(span) ? '1' : '0'
+
+	if (!traceId || !spanId) return tracks
+
+	const header = `${traceId}-${spanId}-${sampled}`
+
+	return tracks.map((track) => {
+		if (!track.url.startsWith('orpheus://bilibili')) return track
+
+		return {
+			...track,
+			url: `${track.url}&st=${encodeURIComponent(header)}`,
+		}
+	})
+}
+
 interface QueueOptions {
 	tracks: Track[]
 	playlistId?: number
@@ -88,21 +116,11 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 					useAppStore.getState().settings.defaultPlayerMode,
 				))
 
-	if (options.playNext) {
-		applyResumeStrategy(context.mode)
-		await Orpheus.playNext(options.tracks[0])
-	} else {
-		applyResumeStrategy(context.mode)
-		await Orpheus.addToEnd(options.tracks, options.startFromKey, replace)
-	}
-
-	setPlaybackContext(context)
-
 	const willPlay =
 		options.playNow && (options.playNext || !options.startFromKey)
 
+	// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
 	if (willPlay) {
-		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
 		if (pendingPlaybackSpan) {
 			pendingPlaybackSpan.setAttribute('playback.cancelled', true)
 			pendingPlaybackSpan.end()
@@ -117,7 +135,24 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 				'playback.replace': replace,
 			},
 		})
+	}
 
+	// 把 Sentry trace header 注入到 bilibili 轨道 URL，让原生层可以挂在同一 trace 下
+	const trackedTracks = pendingPlaybackSpan
+		? injectTraceHeader(options.tracks, pendingPlaybackSpan)
+		: options.tracks
+
+	if (options.playNext) {
+		applyResumeStrategy(context.mode)
+		await Orpheus.playNext(trackedTracks[0])
+	} else {
+		applyResumeStrategy(context.mode)
+		await Orpheus.addToEnd(trackedTracks, options.startFromKey, replace)
+	}
+
+	setPlaybackContext(context)
+
+	if (willPlay) {
 		await Orpheus.play()
 	}
 }
