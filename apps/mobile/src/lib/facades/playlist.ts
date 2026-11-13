@@ -18,6 +18,7 @@ import {
 	trackService as trackServiceInstance,
 	type TrackService,
 } from '@/lib/services/trackService'
+import type { TraceParent } from '@/lib/tracing'
 import { playlistSyncWorker } from '@/lib/workers/PlaylistSyncWorker'
 import type { CreateArtistPayload } from '@/types/services/artist'
 import type {
@@ -39,6 +40,21 @@ export class PlaylistFacade {
 		private readonly db: ExpoSQLiteDatabase<typeof schema>,
 		private readonly bbplayerApi: BbplayerApiClient,
 	) {}
+
+	/**
+	 * 返回一个把数据库 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @returns 一个新的实例。
+	 */
+	withTrace(parent: TraceParent) {
+		return new PlaylistFacade(
+			this.trackService.withTrace(parent),
+			this.playlistService.withTrace(parent),
+			this.artistService.withTrace(parent),
+			this.db,
+			this.bbplayerApi,
+		)
+	}
 
 	/**
 	 * 复制一份 playlist，新复制的 playlist 类型为 local，且 author&remoteSyncId 为 null

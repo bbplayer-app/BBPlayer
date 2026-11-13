@@ -99,13 +99,18 @@ export const useUpdateTrackLocalPlaylists = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.update_track_playlists' },
 		mutationKey: ['db', 'playlist', 'updateTrackLocalPlaylists'],
-		mutationFn: async (args: {
-			toAddPlaylistIds: number[]
-			toRemovePlaylistIds: number[]
-			trackPayload: CreateTrackPayload
-			artistPayload?: CreateArtistPayload | null
-		}) => {
-			const res = await playlistFacade.updateTrackLocalPlaylists(args)
+		mutationFn: async (
+			args: {
+				toAddPlaylistIds: number[]
+				toRemovePlaylistIds: number[]
+				trackPayload: CreateTrackPayload
+				artistPayload?: CreateArtistPayload | null
+			},
+			{ span },
+		) => {
+			const res = await playlistFacade
+				.withTrace(span)
+				.updateTrackLocalPlaylists(args)
 
 			if (res.isErr()) throw res.error
 
@@ -153,14 +158,19 @@ export const useDuplicatePlaylist = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.duplicate' },
 		mutationKey: ['db', 'playlist', 'duplicatePlaylist'],
-		mutationFn: async ({
-			playlistId,
-			name,
-		}: {
-			playlistId: number
-			name: string
-		}) => {
-			const result = await playlistFacade.duplicatePlaylist(playlistId, name)
+		mutationFn: async (
+			{
+				playlistId,
+				name,
+			}: {
+				playlistId: number
+				name: string
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.duplicatePlaylist(playlistId, name)
 
 			if (result.isErr()) {
 				throw result.error
@@ -187,19 +197,21 @@ export const useEditPlaylistMetadata = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.edit_metadata' },
 		mutationKey: ['db', 'playlist', 'editPlaylistMetadata'],
-		mutationFn: async ({
-			playlistId,
-			payload,
-		}: {
-			playlistId: number
-			payload: UpdatePlaylistPayload
-		}) => {
-			if (playlistId === 0) return
-
-			const result = await playlistFacade.updatePlaylistMetadata(
+		mutationFn: async (
+			{
 				playlistId,
 				payload,
-			)
+			}: {
+				playlistId: number
+				payload: UpdatePlaylistPayload
+			},
+			{ span },
+		) => {
+			if (playlistId === 0) return
+
+			const result = await playlistFacade
+				.withTrace(span)
+				.updatePlaylistMetadata(playlistId, payload)
 
 			if (result.isErr()) {
 				throw result.error
@@ -231,7 +243,7 @@ export const useDeletePlaylist = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.delete' },
 		mutationKey: ['db', 'playlist', 'deletePlaylist'],
-		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+		mutationFn: async ({ playlistId }: { playlistId: number }, { span }) => {
 			// 共享歌单需要有效 token；本地歌单无需，若获取失败静默忽略
 			try {
 				await ensureBBPlayerToken()
@@ -239,7 +251,9 @@ export const useDeletePlaylist = () => {
 				// local 歌单不需要 token，继续执行
 			}
 
-			const result = await playlistFacade.deletePlaylist(playlistId)
+			const result = await playlistFacade
+				.withTrace(span)
+				.deletePlaylist(playlistId)
 
 			if (result.isErr()) {
 				throw result.error
@@ -276,17 +290,19 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.batch_remove_tracks' },
 		mutationKey: ['db', 'playlist', 'batchDeleteTracksFromLocalPlaylist'],
-		mutationFn: async ({
-			trackIds,
-			playlistId,
-		}: {
-			trackIds: number[]
-			playlistId: number
-		}) => {
-			const result = await playlistFacade.removeTracksFromPlaylist(
-				playlistId,
+		mutationFn: async (
+			{
 				trackIds,
-			)
+				playlistId,
+			}: {
+				trackIds: number[]
+				playlistId: number
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.removeTracksFromPlaylist(playlistId, trackIds)
 
 			if (result.isErr()) {
 				throw result.error
@@ -372,17 +388,19 @@ export const useMergePlaylists = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.merge' },
 		mutationKey: ['db', 'playlist', 'mergePlaylists'],
-		mutationFn: async ({
-			sourcePlaylistIds,
-			title,
-		}: {
-			sourcePlaylistIds: number[]
-			title: string
-		}) => {
-			const result = await playlistFacade.mergePlaylists(
+		mutationFn: async (
+			{
 				sourcePlaylistIds,
 				title,
-			)
+			}: {
+				sourcePlaylistIds: number[]
+				title: string
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.mergePlaylists(sourcePlaylistIds, title)
 
 			if (result.isErr()) throw result.error
 
@@ -410,25 +428,27 @@ export const useReorderLocalPlaylistTrack = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.reorder_track' },
 		mutationKey: ['db', 'playlist', 'reorderLocalPlaylistTrack'],
-		mutationFn: async ({
-			playlistId,
-			trackId,
-			prevSortKey,
-			nextSortKey,
-		}: {
-			playlistId: number
-			trackId: number
-			prevSortKey: string | null
-			nextSortKey: string | null
-		}) => {
-			const result = await playlistFacade.reorderLocalPlaylistTrack(
+		mutationFn: async (
+			{
 				playlistId,
-				{
+				trackId,
+				prevSortKey,
+				nextSortKey,
+			}: {
+				playlistId: number
+				trackId: number
+				prevSortKey: string | null
+				nextSortKey: string | null
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.reorderLocalPlaylistTrack(playlistId, {
 					trackId,
 					prevSortKey,
 					nextSortKey,
-				},
-			)
+				})
 
 			if (result.isErr()) throw result.error
 
@@ -453,17 +473,19 @@ export const useBatchAddTracksToLocalPlaylist = () => {
 	return useTracedMutation({
 		span: { name: 'playlist.batch_add_tracks' },
 		mutationKey: ['db', 'playlist', 'batchAddTracksToLocalPlaylist'],
-		mutationFn: async ({
-			playlistId,
-			payloads,
-		}: {
-			playlistId: number
-			payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
-		}) => {
-			const result = await playlistFacade.batchAddTracksToLocalPlaylist(
+		mutationFn: async (
+			{
 				playlistId,
 				payloads,
-			)
+			}: {
+				playlistId: number
+				payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.batchAddTracksToLocalPlaylist(playlistId, payloads)
 
 			if (result.isErr()) throw result.error
 

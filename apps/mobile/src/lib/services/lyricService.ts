@@ -389,6 +389,7 @@ class LyricService {
 	public fetchLyrics(
 		item: LyricSearchResult[0],
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, Error> {
 		switch (item.source) {
 			case 'netease':
@@ -403,7 +404,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'qqmusic':
 				return this.qqMusicApi
@@ -417,7 +418,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'kugou':
 				return this.kugouApi
@@ -431,7 +432,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			default:
 				return errAsync(new Error('未知歌曲源'))

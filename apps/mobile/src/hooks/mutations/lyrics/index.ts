@@ -9,14 +9,17 @@ export const useFetchLyrics = () => {
 	return useTracedMutation({
 		span: { name: 'lyrics.fetch' },
 		mutationKey: ['lyrics', 'fetchLyrics'],
-		mutationFn: async ({
-			uniqueKey,
-			item,
-		}: {
-			uniqueKey: string
-			item: LyricSearchResult[0]
-		}) => {
-			const result = await lyricService.fetchLyrics(item, uniqueKey)
+		mutationFn: async (
+			{
+				uniqueKey,
+				item,
+			}: {
+				uniqueKey: string
+				item: LyricSearchResult[0]
+			},
+			{ span },
+		) => {
+			const result = await lyricService.fetchLyrics(item, uniqueKey, span)
 
 			if (result.isErr()) {
 				throw result.error
