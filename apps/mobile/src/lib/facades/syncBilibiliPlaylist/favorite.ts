@@ -2,7 +2,7 @@ import { err, ok, Result, ResultAsync } from 'neverthrow'
 
 import { createFacadeError, type FacadeError } from '@/lib/errors/facade'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
-import { type TraceParent, traceSpan } from '@/lib/tracing'
+import { type TraceParent, traceResult } from '@/lib/tracing'
 import type {
 	BilibiliFavoriteListContent,
 	BilibiliMultipageVideo,
@@ -334,7 +334,7 @@ export async function buildExpandedTracks(
 	})
 
 	const pageListsResult = await fetchPageLists(
-		api.getPageList,
+		(args) => api.getPageList(args),
 		toQueryBvids,
 		logger,
 	)
@@ -395,12 +395,14 @@ export async function runFavoriteSync(
 	trace?: TraceParent,
 ): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
 	// 每个阶段一个子 span，阶段内的数据库 / 网络 span 挂在对应阶段下
-	const step = <T>(
+	const step = <T, E extends Error>(
 		name: string,
-		fn: (stepDeps: FavoriteSyncDeps) => Promise<T>,
-	): Promise<T> =>
-		traceSpan(trace, { name, op: 'function' }, (span) =>
-			fn(withTraceDeps(deps, span)),
+		fn: (stepDeps: FavoriteSyncDeps) => Promise<Result<T, E>>,
+	): ResultAsync<T, E> =>
+		traceResult(
+			trace,
+			{ name, op: 'function' },
+			(span) => new ResultAsync(fn(withTraceDeps(deps, span))),
 		)
 
 	const remote = await step('favorite_sync.fetch_remote', (d) =>

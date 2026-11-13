@@ -129,8 +129,8 @@ export function initializeSentry() {
 
 			// 导航 transaction：低采样率（量大，信息密度低）
 			if (
-				samplingContext.op === 'navigation' ||
-				samplingContext.op === 'pageload'
+				samplingContext.attributes?.['sentry.op'] === 'navigation' ||
+				samplingContext.attributes?.['sentry.op'] === 'pageload'
 			) {
 				return 0.1
 			}

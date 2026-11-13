@@ -9,8 +9,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.exoplayer.offline.DownloadManager
-import androidx.media3.exoplayer.offline.DownloadNotificationHelper
+import androidx.media3.exoplayer.offline.DownloadManagerimport androidx.media3.exoplayer.offline.DownloadNotificationHelper
 import androidx.media3.exoplayer.scheduler.Requirements
 import expo.modules.orpheus.OrpheusConfig
 import expo.modules.orpheus.bilibili.BilibiliRepository
@@ -20,8 +19,6 @@ import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.service.OrpheusDownloadService
 import io.sentry.Sentry
 import io.sentry.SpanStatus
-import io.sentry.TracesSamplingDecision
-import io.sentry.TransactionContext
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -78,12 +75,14 @@ object DownloadUtil {
                 .setCache(lruCache)
                 .setUpstreamDataSourceFactory(upstreamFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                .setCacheKeyFactory { dataSpec -> stripSentryTraceParam(dataSpec.uri.toString()) }
 
             val downloadFactory = CacheDataSource.Factory()
                 .setCache(downloadCache)
                 .setUpstreamDataSourceFactory(cacheFactory)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                 .setCacheWriteDataSinkFactory(null)
+                .setCacheKeyFactory { dataSpec -> stripSentryTraceParam(dataSpec.uri.toString()) }
 
             playerDataSourceFactory = downloadFactory
         }
@@ -147,13 +146,9 @@ object DownloadUtil {
                             val header = java.net.URLDecoder.decode(encodedHeader, "UTF-8")
                             val parts = header.split("-")
                             if (parts.size >= 3) {
-                                val sampled = parts[2] == "1"
-                                val ctx = TransactionContext.fromSentryTrace(
-                                    "bilibili.cdn_resolve",
-                                    "bilibili.resolve",
-                                    io.sentry.SentryTraceHeader(header)
-                                )
-                                ctx.samplingDecision = TracesSamplingDecision(sampled)
+                                // Sentry Android SDK 8.62.0: continueTrace 解析 W3C traceparent，
+                                // 返回的 TransactionContext 已携带 traceId/spanId/samplingDecision。
+                                val ctx = Sentry.continueTrace(header, null)
                                 Sentry.startTransaction(ctx)
                             } else null
                         }.getOrNull()

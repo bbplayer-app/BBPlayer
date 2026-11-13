@@ -54,7 +54,7 @@ function deriveAttributes(spec: TraceSpec): TraceAttributes {
 	return {
 		'db.system.name': 'sqlite',
 		'db.operation.name': operation,
-		'db.collection.name': rest.at(-1),
+		'db.collection.name': rest[0],
 	}
 }
 

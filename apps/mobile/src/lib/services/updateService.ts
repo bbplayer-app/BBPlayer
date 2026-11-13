@@ -1,10 +1,10 @@
 import type { Span } from '@sentry/react-native'
 import * as Application from 'expo-application'
 import Constants from 'expo-constants'
-import { err, ok, type Result } from 'neverthrow'
+import { err, ok, ResultAsync, type Result } from 'neverthrow'
 import { fetch, prefetchOnAppStart } from 'react-native-nitro-fetch'
 
-import { traceOperation, traceSpan } from '@/lib/tracing'
+import { traceOperationResult, traceSpan } from '@/lib/tracing'
 
 const UPDATE_PREFETCH_KEY = 'update-manifest'
 
@@ -75,9 +75,10 @@ export const compareSemver = (a: string, b: string): number => {
 	return 0
 }
 
-export function fetchLatestRelease(): Promise<Result<ReleaseInfo, Error>> {
-	return traceOperation({ name: 'update.check', op: 'task' }, (span) =>
-		fetchLatestReleaseImpl(span),
+export function fetchLatestRelease(): ResultAsync<ReleaseInfo, Error> {
+	return traceOperationResult(
+		{ name: 'update.check', op: 'task' },
+		(span) => new ResultAsync(fetchLatestReleaseImpl(span)),
 	)
 }
 

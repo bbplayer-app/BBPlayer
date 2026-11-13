@@ -133,6 +133,10 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 				'playback.track_count': options.tracks.length,
 				'playback.mode': context.mode,
 				'playback.replace': replace,
+				// 记录期望的第一个 track ID，用于在 onTrackStarted 中校验事件归属
+				'playback.expected_first_track_id': options.playNext
+					? options.tracks[0]?.id
+					: (options.startFromKey ?? options.tracks[0]?.id),
 			},
 		})
 	}

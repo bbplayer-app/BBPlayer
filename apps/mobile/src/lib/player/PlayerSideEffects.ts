@@ -4,6 +4,7 @@ import {
 	type PlaybackErrorEvent,
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
+import { spanToJSON } from '@sentry/react-native'
 import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
@@ -82,8 +83,18 @@ class PlayerSideEffects {
 				const playbackSpan = takePendingPlaybackSpan()
 
 				if (playbackSpan) {
-					playbackSpan.setAttribute('playback.first_track_id', event.trackId)
-					playbackSpan.end()
+					const expectedTrackId =
+						spanToJSON(playbackSpan).data?.['playback.expected_first_track_id']
+
+					// 校验事件归属：防止用户快速切歌时，A 的事件消耗 B 的 span
+					if (!expectedTrackId || expectedTrackId === event.trackId) {
+						playbackSpan.setAttribute('playback.first_track_id', event.trackId)
+						playbackSpan.end()
+					} else {
+						// 事件不属于此 span，丢弃 span
+						playbackSpan.setAttribute('playback.cancelled', true)
+						playbackSpan.end()
+					}
 				}
 
 				await lyricService.pushLyricsToOverlays(event.trackId)
