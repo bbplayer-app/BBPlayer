@@ -13,11 +13,25 @@ export type SeverityLevel =
 export const init = noop
 export const addBreadcrumb = noop
 export const captureException = () => ''
+export const appLoaded = noop
+export const flush = async () => true
+export const metrics = { distribution: noop }
 
-// The app only sets tags on the global scope.
-const globalScope = { setTag: noop }
+// The app sets tags on the global scope, and clones the current scope to start a
+// span with its own trace. Nothing is kept, so one scope serves both.
+class Scope {
+	setTag = noop
+	setPropagationContext = noop
 
-export const getGlobalScope = () => globalScope
+	clone() {
+		return this
+	}
+}
+
+const scope = new Scope()
+
+export const getGlobalScope = () => scope
+export const getCurrentScope = () => scope
 
 export const reactNavigationIntegration = () => ({
 	name: 'ReactNavigation',
@@ -26,15 +40,23 @@ export const reactNavigationIntegration = () => ({
 
 export const wrap = <T,>(component: T): T => component
 
-interface SpanOptions {
-	name: string
-	op?: string
+// Like the span Sentry returns when tracing is off, it records nothing. Each call
+// returns a new span, because the playback code compares spans to tell them apart.
+class NonRecordingSpan {
+	setAttribute = () => this
+	setAttributes = () => this
+	setStatus = () => this
+	end = noop
 }
 
-// The app's span callbacks never use the span they are given.
-export function startSpan<T>(_options: SpanOptions, callback: () => T): T {
-	return callback()
-}
+export const startInactiveSpan = () => new NonRecordingSpan()
+
+// No span is ever active. A span without a parent is its own root.
+export const getActiveSpan = noop
+export const getRootSpan = (span: NonRecordingSpan) => span
+
+// For a span that records nothing, Sentry reports no op, no end time and no data.
+export const spanToJSON = () => ({ data: {} })
 
 interface FallbackProps {
 	error: Error
