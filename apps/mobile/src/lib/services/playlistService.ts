@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
 import { and, desc, eq, inArray, like, lt, or, sql } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
@@ -14,6 +13,7 @@ import {
 	createTrackNotInPlaylist,
 	createValidationError,
 } from '@/lib/errors/service'
+import { type TraceParent, traceSpan } from '@/lib/tracing'
 import type { Playlist, Track } from '@/types/core/media'
 import type {
 	CreatePlaylistPayload,
@@ -81,6 +81,7 @@ export class PlaylistService {
 	constructor(
 		private readonly db: DBLike,
 		private readonly trackService: TrackService,
+		private readonly traceParent?: TraceParent,
 	) {}
 
 	/**
@@ -89,7 +90,24 @@ export class PlaylistService {
 	 * @returns 一个新的实例。
 	 */
 	withDB(conn: DBLike) {
-		return new PlaylistService(conn, this.trackService.withDB(conn))
+		return new PlaylistService(
+			conn,
+			this.trackService.withDB(conn),
+			this.traceParent,
+		)
+	}
+
+	/**
+	 * 返回一个把数据库 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @returns 一个新的实例。
+	 */
+	withTrace(parent: TraceParent) {
+		return new PlaylistService(
+			this.db,
+			this.trackService.withTrace(parent),
+			parent,
+		)
 	}
 
 	private parseDynamicCursor(cursor?: {
@@ -390,7 +408,8 @@ export class PlaylistService {
 								: new Date(payload.lastShareSyncAt),
 				}
 
-				const [result] = await Sentry.startSpan(
+				const [result] = await traceSpan(
+					this.traceParent,
 					{ name: 'db:insert:playlist', op: 'db' },
 					() =>
 						this.db.insert(schema.playlists).values(insertValues).returning(),
@@ -443,7 +462,8 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 验证播放列表是否存在
-				const existing = await Sentry.startSpan(
+				const existing = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:exist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -458,7 +478,8 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				const [updated] = await Sentry.startSpan(
+				const [updated] = await traceSpan(
+					this.traceParent,
 					{ name: 'db:update:playlist', op: 'db' },
 					() =>
 						this.db
@@ -502,7 +523,8 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 验证播放列表是否存在
-				const existing = await Sentry.startSpan(
+				const existing = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:exist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -515,7 +537,8 @@ export class PlaylistService {
 					throw createPlaylistNotFound(playlistId)
 				}
 
-				const [deleted] = await Sentry.startSpan(
+				const [deleted] = await traceSpan(
+					this.traceParent,
 					{ name: 'db:delete:playlist', op: 'db' },
 					() =>
 						this.db
@@ -553,7 +576,8 @@ export class PlaylistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 验证播放列表是否存在且为 local
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:exist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -570,7 +594,8 @@ export class PlaylistService {
 				}
 
 				// 获取当前最大 sort_key（DESC 排序下，最大值对应最新加入的歌曲）
-				const maxKeyResult = await Sentry.startSpan(
+				const maxKeyResult = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:max_sort_key', op: 'db' },
 					() =>
 						this.db
@@ -598,7 +623,8 @@ export class PlaylistService {
 				})
 
 				// 批量插入（忽略已存在的）
-				const inserted = await Sentry.startSpan(
+				const inserted = await traceSpan(
+					this.traceParent,
 					{ name: 'db:insert:playlistTracks', op: 'db' },
 					() =>
 						this.db
@@ -615,7 +641,8 @@ export class PlaylistService {
 
 				// 更新播放列表的 itemCount（+ 成功插入的数量）
 				if (inserted.length > 0) {
-					await Sentry.startSpan(
+					await traceSpan(
+						this.traceParent,
 						{ name: 'db:update:playlist:itemCount', op: 'db' },
 						() =>
 							this.db
@@ -653,7 +680,8 @@ export class PlaylistService {
 				}
 
 				// 验证播放列表是否存在且为 'local'
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:exist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -676,7 +704,8 @@ export class PlaylistService {
 				for (let start = 0; start < trackIdList.length; start += chunkSize) {
 					const trackIds = trackIdList.slice(start, start + chunkSize)
 
-					const deletedChunk = await Sentry.startSpan(
+					const deletedChunk = await traceSpan(
+						this.traceParent,
 						{ name: 'db:delete:playlistTracks', op: 'db' },
 						() =>
 							this.db
@@ -701,7 +730,8 @@ export class PlaylistService {
 				}
 
 				// 更新 itemCount（不小于 0）
-				await Sentry.startSpan(
+				await traceSpan(
+					this.traceParent,
 					{ name: 'db:update:playlist:itemCount', op: 'db' },
 					() =>
 						this.db
@@ -744,7 +774,8 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:exist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -774,7 +805,8 @@ export class PlaylistService {
 				// 生成新的 sort_key（在 prevSortKey 和 nextSortKey 之间）
 				const newSortKey = generateKeyBetween(prevSortKey, nextSortKey)
 
-				await Sentry.startSpan(
+				await traceSpan(
+					this.traceParent,
 					{ name: 'db:update:playlistTrack:sortKey', op: 'db' },
 					() =>
 						this.db
@@ -809,7 +841,8 @@ export class PlaylistService {
 	): ResultAsync<Track[], DatabaseError | ServiceError> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				const type = await Sentry.startSpan(
+				const type = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:type', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -827,7 +860,8 @@ export class PlaylistService {
 				// 所有播放列表类型统一使用 DESC：位置越靠前的曲目 sort_key 越大
 				const orderBy = desc(schema.playlistTracks.sortKey)
 
-				return Sentry.startSpan(
+				return traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlistTracks', op: 'db' },
 					() =>
 						this.db.query.playlistTracks.findMany({
@@ -881,7 +915,8 @@ export class PlaylistService {
 	> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlists = await Sentry.startSpan(
+				const playlists = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlists', op: 'db' },
 					() =>
 						this.db.query.playlists.findMany({
@@ -932,7 +967,8 @@ export class PlaylistService {
 	> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -944,14 +980,17 @@ export class PlaylistService {
 				)
 
 				if (!playlist || playlist.type !== 'dynamic') {
-					return Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
-						this.db.query.playlists.findFirst({
-							where: eq(schema.playlists.id, playlistId),
-							with: {
-								author: true,
-							},
-							extras: {
-								validTrackCount: sql<number>`(
+					return traceSpan(
+						this.traceParent,
+						{ name: 'db:query:playlist', op: 'db' },
+						() =>
+							this.db.query.playlists.findFirst({
+								where: eq(schema.playlists.id, playlistId),
+								with: {
+									author: true,
+								},
+								extras: {
+									validTrackCount: sql<number>`(
             SELECT COUNT(pt.track_id)
             FROM ${schema.playlistTracks} AS pt
             LEFT JOIN ${schema.bilibiliMetadata} AS bm
@@ -959,7 +998,7 @@ export class PlaylistService {
             WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
           )`.as('valid_track_count'),
-								totalDuration: sql<number>`(
+									totalDuration: sql<number>`(
             SELECT COALESCE(SUM(t.duration), 0)
             FROM ${schema.playlistTracks} AS pt
             JOIN ${schema.tracks} AS t
@@ -969,8 +1008,8 @@ export class PlaylistService {
             WHERE pt.playlist_id = ${playlistId}
               AND (bm.video_is_valid IS NOT false)
 						)`.as('total_duration'),
-							},
-						}),
+								},
+							}),
 					)
 				}
 
@@ -1010,7 +1049,8 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const existingPlaylist = await Sentry.startSpan(
+				const existingPlaylist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -1025,7 +1065,8 @@ export class PlaylistService {
 					return existingPlaylist
 				}
 
-				const [newPlaylist] = await Sentry.startSpan(
+				const [newPlaylist] = await traceSpan(
+					this.traceParent,
 					{ name: 'db:insert:playlist', op: 'db' },
 					() =>
 						this.db
@@ -1064,7 +1105,8 @@ export class PlaylistService {
 	): ResultAsync<true, DatabaseError> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				await Sentry.startSpan(
+				await traceSpan(
+					this.traceParent,
 					{ name: 'db:delete:playlistTracks', op: 'db' },
 					() =>
 						this.db
@@ -1089,21 +1131,25 @@ export class PlaylistService {
 						sortKey: sortKeys[i],
 					}))
 
-					await Sentry.startSpan(
+					await traceSpan(
+						this.traceParent,
 						{ name: 'db:insert:playlistTracks', op: 'db' },
 						() =>
 							this.db.insert(schema.playlistTracks).values(newPlaylistTracks),
 					)
 				}
 
-				await Sentry.startSpan({ name: 'db:update:playlist', op: 'db' }, () =>
-					this.db
-						.update(schema.playlists)
-						.set({
-							itemCount: trackIds.length,
-							lastSyncedAt: new Date(),
-						})
-						.where(eq(schema.playlists.id, playlistId)),
+				await traceSpan(
+					this.traceParent,
+					{ name: 'db:update:playlist', op: 'db' },
+					() =>
+						this.db
+							.update(schema.playlists)
+							.set({
+								itemCount: trackIds.length,
+								lastSyncedAt: new Date(),
+							})
+							.where(eq(schema.playlists.id, playlistId)),
 				)
 
 				return true as const
@@ -1131,7 +1177,7 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:playlist', op: 'db' }, () =>
 				this.db.query.playlists.findFirst({
 					where: and(
 						eq(schema.playlists.type, type),
@@ -1152,7 +1198,7 @@ export class PlaylistService {
 	 */
 	public getPlaylistById(playlistId: number) {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlist', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:playlist', op: 'db' }, () =>
 				this.db.query.playlists.findFirst({
 					where: eq(schema.playlists.id, playlistId),
 					with: {
@@ -1178,26 +1224,29 @@ export class PlaylistService {
 				if (!trackIds.has(uniqueKey)) return okAsync([])
 
 				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
-						this.db.query.playlists.findMany({
-							where: and(
-								eq(schema.playlists.type, 'local'),
-								inArray(
-									schema.playlists.id,
-									this.db
-										.select({
-											playlistId: schema.playlistTracks.playlistId,
-										})
-										.from(schema.playlistTracks)
-										.where(
-											eq(
-												schema.playlistTracks.trackId,
-												trackIds.get(uniqueKey)!,
+					traceSpan(
+						this.traceParent,
+						{ name: 'db:query:playlists', op: 'db' },
+						() =>
+							this.db.query.playlists.findMany({
+								where: and(
+									eq(schema.playlists.type, 'local'),
+									inArray(
+										schema.playlists.id,
+										this.db
+											.select({
+												playlistId: schema.playlistTracks.playlistId,
+											})
+											.from(schema.playlistTracks)
+											.where(
+												eq(
+													schema.playlistTracks.trackId,
+													trackIds.get(uniqueKey)!,
+												),
 											),
-										),
+									),
 								),
-							),
-						}),
+							}),
 					),
 					(e) =>
 						new DatabaseError('获取包含该歌曲的本地播放列表失败', {
@@ -1217,21 +1266,24 @@ export class PlaylistService {
 		trackId: number,
 	): ResultAsync<(typeof schema.playlists.$inferSelect)[], DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
-				this.db.query.playlists.findMany({
-					where: and(
-						eq(schema.playlists.type, 'local'),
-						inArray(
-							schema.playlists.id,
-							this.db
-								.select({
-									playlistId: schema.playlistTracks.playlistId,
-								})
-								.from(schema.playlistTracks)
-								.where(eq(schema.playlistTracks.trackId, trackId)),
+			traceSpan(
+				this.traceParent,
+				{ name: 'db:query:playlists', op: 'db' },
+				() =>
+					this.db.query.playlists.findMany({
+						where: and(
+							eq(schema.playlists.type, 'local'),
+							inArray(
+								schema.playlists.id,
+								this.db
+									.select({
+										playlistId: schema.playlistTracks.playlistId,
+									})
+									.from(schema.playlistTracks)
+									.where(eq(schema.playlistTracks.trackId, trackId)),
+							),
 						),
-					),
-				}),
+					}),
 			),
 			(e) =>
 				new DatabaseError('获取包含该歌曲的本地播放列表失败', {
@@ -1255,20 +1307,26 @@ export class PlaylistService {
 				if (!trackIds.has(uniqueKey)) return okAsync([])
 
 				return ResultAsync.fromPromise(
-					Sentry.startSpan({ name: 'db:query:playlists', op: 'db' }, () =>
-						this.db.query.playlists.findMany({
-							where: inArray(
-								schema.playlists.id,
-								this.db
-									.select({
-										playlistId: schema.playlistTracks.playlistId,
-									})
-									.from(schema.playlistTracks)
-									.where(
-										eq(schema.playlistTracks.trackId, trackIds.get(uniqueKey)!),
-									),
-							),
-						}),
+					traceSpan(
+						this.traceParent,
+						{ name: 'db:query:playlists', op: 'db' },
+						() =>
+							this.db.query.playlists.findMany({
+								where: inArray(
+									schema.playlists.id,
+									this.db
+										.select({
+											playlistId: schema.playlistTracks.playlistId,
+										})
+										.from(schema.playlistTracks)
+										.where(
+											eq(
+												schema.playlistTracks.trackId,
+												trackIds.get(uniqueKey)!,
+											),
+										),
+								),
+							}),
 					),
 					(e) =>
 						new DatabaseError('获取包含该歌曲的播放列表失败', {
@@ -1297,7 +1355,8 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlists = await Sentry.startSpan(
+				const playlists = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:searchPlaylists', op: 'db' },
 					() =>
 						this.db.query.playlists.findMany({
@@ -1344,7 +1403,8 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:type', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -1387,7 +1447,8 @@ export class PlaylistService {
 					)
 					.where(like(sql`lower(${schema.tracks.title})`, q))
 
-				const rows = await Sentry.startSpan(
+				const rows = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlistTracks', op: 'db' },
 					() =>
 						defaultDb.query.playlistTracks.findMany({
@@ -1470,7 +1531,8 @@ export class PlaylistService {
 
 		return ResultAsync.fromPromise(
 			(async () => {
-				const playlist = await Sentry.startSpan(
+				const playlist = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlist:type', op: 'db' },
 					() =>
 						this.db.query.playlists.findFirst({
@@ -1523,7 +1585,8 @@ export class PlaylistService {
 					)
 				}
 
-				const data = await Sentry.startSpan(
+				const data = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:playlistTracks:paginated', op: 'db' },
 					() =>
 						this.db.query.playlistTracks.findMany({
@@ -1599,10 +1662,13 @@ export class PlaylistService {
 		shareId: string,
 	): ResultAsync<typeof schema.playlists.$inferSelect | false, DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlist:byShareId', op: 'db' }, () =>
-				this.db.query.playlists.findFirst({
-					where: eq(schema.playlists.shareId, shareId),
-				}),
+			traceSpan(
+				this.traceParent,
+				{ name: 'db:query:playlist:byShareId', op: 'db' },
+				() =>
+					this.db.query.playlists.findFirst({
+						where: eq(schema.playlists.shareId, shareId),
+					}),
 			),
 			(e) => new DatabaseError('根据 shareId 查找歌单失败', { cause: e }),
 		).andThen((playlist) => {
@@ -1620,10 +1686,13 @@ export class PlaylistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:playlists:shared', op: 'db' }, () =>
-				this.db.query.playlists.findMany({
-					where: (p, { isNotNull }) => isNotNull(p.shareId),
-				}),
+			traceSpan(
+				this.traceParent,
+				{ name: 'db:query:playlists:shared', op: 'db' },
+				() =>
+					this.db.query.playlists.findMany({
+						where: (p, { isNotNull }) => isNotNull(p.shareId),
+					}),
 			),
 			(e) => new DatabaseError('获取共享歌单列表失败', { cause: e }),
 		)

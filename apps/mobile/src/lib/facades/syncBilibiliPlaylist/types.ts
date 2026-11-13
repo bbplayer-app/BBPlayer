@@ -112,7 +112,10 @@ export interface FavoriteMainInfo {
 /** 收藏夹同步只依赖 bilibili api 的这三个方法 */
 export type FavoriteRemoteApi = Pick<
 	typeof BilibiliApiService,
-	'getFavoriteListAllContents' | 'getFavoriteListContents' | 'getPageList'
+	| 'getFavoriteListAllContents'
+	| 'getFavoriteListContents'
+	| 'getPageList'
+	| 'withTrace'
 >
 
 /** 收藏夹同步各阶段函数共享的依赖集合 */

@@ -8,6 +8,7 @@ import { Platform } from 'react-native'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
+import { findErrorSpan } from '@/lib/tracing'
 import log from '@/utils/log'
 
 const logger = log.extend('Utils.Sentry')
@@ -103,7 +104,40 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		tracesSampleRate: 0.3,
+		tracesSampler(samplingContext) {
+			const name = samplingContext.name ?? ''
+			const parentSampled = samplingContext.parentSampled
+
+			// 继承父 transaction 的采样决定（同一 trace 要么全采要么全不采）
+			if (parentSampled !== undefined) {
+				return parentSampled ? 1 : 0
+			}
+
+			// 业务 transaction：高采样率
+			if (
+				name === 'playback.start' ||
+				name.startsWith('sync.') ||
+				name === 'update.check'
+			) {
+				return 0.8
+			}
+
+			// 每次切歌都会触发，且大多命中本地缓存，信息密度低
+			if (name === 'lyrics.smart_fetch') {
+				return 0.2
+			}
+
+			// 导航 transaction：低采样率（量大，信息密度低）
+			if (
+				samplingContext.attributes?.['sentry.op'] === 'navigation' ||
+				samplingContext.attributes?.['sentry.op'] === 'pageload'
+			) {
+				return 0.1
+			}
+
+			// 其余 transaction（app 启动、自动检测等）保持适中采样率
+			return 0.3
+		},
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		enabled: isSentryTelemetryEnabled(),
@@ -118,11 +152,25 @@ export function initializeSentry() {
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
-		beforeSend(event) {
+		beforeSend(event, hint) {
 			const fingerprint = getNativeModuleFingerprint(event)
 
 			if (fingerprint) {
 				event.fingerprint = fingerprint
+			}
+
+			// 显式传递的 span 不在全局 scope 里，这里把错误关联回它失败时所在的 trace
+			const span =
+				hint.originalException instanceof Error
+					? findErrorSpan(hint.originalException)
+					: undefined
+
+			if (span) {
+				const { trace_id, span_id } = Sentry.spanToJSON(span)
+				event.contexts = {
+					...event.contexts,
+					trace: { ...event.contexts?.trace, trace_id, span_id },
+				}
 			}
 
 			return event
