@@ -12,7 +12,7 @@ import {
 	createTrackNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
-import { type TraceParent, traceSpan } from '@/lib/tracing'
+import { dbSpan, type TraceParent, traceSpan } from '@/lib/tracing'
 import type {
 	BilibiliTrack,
 	LocalTrack,
@@ -148,7 +148,7 @@ export class TrackService {
 				// 创建 track
 				const [newTrack] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:track', op: 'db' },
+					dbSpan('INSERT', 'tracks', 'track'),
 					() =>
 						this.db
 							.insert(schema.tracks)
@@ -169,7 +169,7 @@ export class TrackService {
 				if (payload.source === 'bilibili') {
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:insert:bilibiliMetadata', op: 'db' },
+						dbSpan('INSERT', 'bilibili_metadata', 'bilibili_metadata'),
 						() =>
 							this.db.insert(schema.bilibiliMetadata).values({
 								trackId,
@@ -185,7 +185,7 @@ export class TrackService {
 				} else if (payload.source === 'local') {
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:insert:localMetadata', op: 'db' },
+						dbSpan('INSERT', 'local_metadata', 'local_metadata'),
 						() =>
 							this.db.insert(schema.localMetadata).values({
 								trackId,
@@ -221,7 +221,7 @@ export class TrackService {
 			(async () => {
 				return await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:track', op: 'db' },
+					dbSpan('UPDATE', 'tracks', 'track'),
 					() =>
 						this.db
 							.update(schema.tracks)
@@ -252,7 +252,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.id, id),
 					with: {
@@ -286,7 +286,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<{ deletedId: number }, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:delete:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('DELETE', 'tracks', 'track'), () =>
 				this.db
 					.delete(schema.tracks)
 					.where(eq(schema.tracks.id, id))
@@ -321,7 +321,7 @@ export class TrackService {
 			(async () => {
 				await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:play_history', op: 'db' },
+					dbSpan('INSERT', 'play_history', 'play_history'),
 					() =>
 						this.db.insert(schema.playHistory).values({
 							trackId,
@@ -391,7 +391,7 @@ export class TrackService {
 		}
 
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) =>
 						eqFn(track.uniqueKey, identifier.value),
@@ -445,7 +445,7 @@ export class TrackService {
 		const uniqueKey = uniqueKeyResult.value
 
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) => eqFn(track.uniqueKey, uniqueKey),
 					with: {
@@ -554,7 +554,7 @@ export class TrackService {
 				if (trackValuesToInsert.length > 0) {
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:insert:many:tracks', op: 'db' },
+						dbSpan('INSERT', 'tracks', 'many.tracks'),
 						() =>
 							this.db
 								.insert(schema.tracks)
@@ -565,7 +565,7 @@ export class TrackService {
 
 				const allTracks = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:many:tracks', op: 'db' },
+					dbSpan('SELECT', 'tracks', 'many.tracks'),
 					() =>
 						this.db.query.tracks.findMany({
 							where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
@@ -608,10 +608,7 @@ export class TrackService {
 						if (bilibiliMetadataValues.length > 0) {
 							await traceSpan(
 								this.traceParent,
-								{
-									name: 'db:insert:many:bilibiliMetadata',
-									op: 'db',
-								},
+								dbSpan('INSERT', 'bilibili_metadata', 'many.bilibili_metadata'),
 								() =>
 									this.db
 										.insert(schema.bilibiliMetadata)
@@ -661,7 +658,7 @@ export class TrackService {
 		return ResultAsync.fromPromise(
 			traceSpan(
 				this.traceParent,
-				{ name: 'db:query:many:tracks', op: 'db' },
+				dbSpan('SELECT', 'tracks', 'many.tracks'),
 				() =>
 					this.db.query.tracks.findMany({
 						where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
@@ -752,7 +749,7 @@ export class TrackService {
 
 		const historyQuery = traceSpan(
 			this.traceParent,
-			{ name: 'db:query:playHistory', op: 'db' },
+			dbSpan('SELECT', ['tracks', 'play_history'], 'play_history'),
 			() =>
 				this.db
 					.select({
@@ -853,7 +850,11 @@ export class TrackService {
 			return ResultAsync.fromPromise(
 				traceSpan(
 					this.traceParent,
-					{ name: 'db:query:totalPlaybackDuration:completed', op: 'db' },
+					dbSpan(
+						'SELECT',
+						['tracks', 'play_history'],
+						'total_playback_duration.completed',
+					),
 					() =>
 						this.db
 							.select({
@@ -878,7 +879,7 @@ export class TrackService {
 			return ResultAsync.fromPromise(
 				traceSpan(
 					this.traceParent,
-					{ name: 'db:query:totalPlaybackDuration:all', op: 'db' },
+					dbSpan('SELECT', 'play_history', 'total_playback_duration.all'),
 					() =>
 						this.db
 							.select({
@@ -901,7 +902,7 @@ export class TrackService {
 		uniqueKey: string,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.uniqueKey, uniqueKey),
 					with: {
@@ -965,7 +966,11 @@ export class TrackService {
 
 		const historyQuery = traceSpan(
 			this.traceParent,
-			{ name: 'db:query:mostPlayedTracksByDuration', op: 'db' },
+			dbSpan(
+				'SELECT',
+				['tracks', 'play_history'],
+				'most_played_tracks_by_duration',
+			),
 			() =>
 				this.db
 					.select({

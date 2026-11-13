@@ -10,7 +10,7 @@ import {
 	createArtistNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
-import { type TraceParent, traceSpan } from '@/lib/tracing'
+import { dbSpan, type TraceParent, traceSpan } from '@/lib/tracing'
 import type { Track } from '@/types/core/media'
 import type {
 	CreateArtistPayload,
@@ -66,7 +66,7 @@ export class ArtistService {
 		payload: CreateArtistPayload,
 	): ResultAsync<typeof schema.artists.$inferSelect, DatabaseError> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:insert:artist', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('INSERT', 'artists', 'artist'), () =>
 				this.db
 					.insert(schema.artists)
 					.values({
@@ -109,7 +109,7 @@ export class ArtistService {
 				// 尝试查找已存在的artist
 				const existingArtist = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:artist', op: 'db' },
+					dbSpan('SELECT', 'artists', 'artist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: and(
@@ -126,7 +126,7 @@ export class ArtistService {
 				// 如果不存在，则创建新的artist
 				const [newArtist] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:insert:artist', op: 'db' },
+					dbSpan('INSERT', 'artists', 'artist'),
 					() =>
 						this.db
 							.insert(schema.artists)
@@ -167,7 +167,7 @@ export class ArtistService {
 				// 首先验证artist是否存在
 				const existing = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:artist:exist', op: 'db' },
+					dbSpan('SELECT', 'artists', 'artist.exist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: eq(schema.artists.id, artistId),
@@ -181,7 +181,7 @@ export class ArtistService {
 
 				const [updated] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:update:artist', op: 'db' },
+					dbSpan('UPDATE', 'artists', 'artist'),
 					() =>
 						this.db
 							.update(schema.artists)
@@ -218,7 +218,7 @@ export class ArtistService {
 				// 验证artist是否存在
 				const existing = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:artist:exist', op: 'db' },
+					dbSpan('SELECT', 'artists', 'artist.exist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: eq(schema.artists.id, artistId),
@@ -232,7 +232,7 @@ export class ArtistService {
 
 				const [deleted] = await traceSpan(
 					this.traceParent,
-					{ name: 'db:delete:artist', op: 'db' },
+					dbSpan('DELETE', 'artists', 'artist'),
 					() =>
 						this.db
 							.delete(schema.artists)
@@ -260,7 +260,7 @@ export class ArtistService {
 		artistId: number,
 	): ResultAsync<Track[], DatabaseError | ServiceError> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:tracks', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'tracks'), () =>
 				this.db.query.tracks.findMany({
 					where: eq(schema.tracks.artistId, artistId),
 					with: {
@@ -304,7 +304,7 @@ export class ArtistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:artists', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'artists', 'artists'), () =>
 				this.db.query.artists.findMany(),
 			),
 			(e) => new DatabaseError('获取所有artist列表失败', { cause: e }),
@@ -323,7 +323,7 @@ export class ArtistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			traceSpan(this.traceParent, { name: 'db:query:artist', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'artists', 'artist'), () =>
 				this.db.query.artists.findFirst({
 					where: eq(schema.artists.id, artistId),
 				}),
@@ -366,7 +366,7 @@ export class ArtistService {
 				if (payloads.length > 0) {
 					await traceSpan(
 						this.traceParent,
-						{ name: 'db:insert:many:artists', op: 'db' },
+						dbSpan('INSERT', 'artists', 'many.artists'),
 						() =>
 							this.db
 								.insert(schema.artists)
@@ -395,7 +395,7 @@ export class ArtistService {
 
 				const allArtists = await traceSpan(
 					this.traceParent,
-					{ name: 'db:query:many:artists', op: 'db' },
+					dbSpan('SELECT', 'artists', 'many.artists'),
 					() =>
 						this.db.query.artists.findMany({
 							where: or(...findConditions),

@@ -127,6 +127,16 @@ export function initializeSentry() {
 				return 0.2
 			}
 
+			// 用户主动发起的 mutation（UI 操作期间的会继承 UI transaction 的采样决定）
+			if (samplingContext.attributes?.['sentry.op'] === 'mutation') {
+				return 0.3
+			}
+
+			// 后台 refetch、分页等单独成 transaction 的 query：量大，低采样
+			if (samplingContext.attributes?.['sentry.op'] === 'query') {
+				return 0.1
+			}
+
 			// 导航 transaction：低采样率（量大，信息密度低）
 			if (
 				samplingContext.attributes?.['sentry.op'] === 'navigation' ||
