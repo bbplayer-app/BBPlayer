@@ -2,6 +2,7 @@ import { err, ok, Result, ResultAsync } from 'neverthrow'
 
 import { createFacadeError, type FacadeError } from '@/lib/errors/facade'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import { type TraceParent, traceSpan } from '@/lib/tracing'
 import type {
 	BilibiliFavoriteListContent,
 	BilibiliMultipageVideo,
@@ -368,6 +369,21 @@ export async function buildExpandedTracks(
 	return ok({ expandedTracksMap: expandedTracksMapResult.value })
 }
 
+function withTraceDeps(
+	deps: FavoriteSyncDeps,
+	span: TraceParent,
+): FavoriteSyncDeps {
+	if (!span) return deps
+
+	return {
+		...deps,
+		api: deps.api.withTrace(span),
+		playlistService: deps.playlistService.withTrace(span),
+		trackService: deps.trackService.withTrace(span),
+		artistService: deps.artistService.withTrace(span),
+	}
+}
+
 /**
  * 收藏夹同步总编排：把各阶段函数组合起来，只保留唯一的 noop 早退分支。
  * 流程：远端快照 → 本地快照 → 计算计划 → (noop 早退) → 补详情 → 展开分 P → 落库。
@@ -376,20 +392,39 @@ export async function runFavoriteSync(
 	deps: FavoriteSyncDeps,
 	favoriteId: number,
 	expandMultiPage = false,
+	trace?: TraceParent,
 ): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
-	const remote = await fetchRemoteFavoriteSnapshot(deps, favoriteId)
+	// 每个阶段一个子 span，阶段内的数据库 / 网络 span 挂在对应阶段下
+	const step = <T>(
+		name: string,
+		fn: (stepDeps: FavoriteSyncDeps) => Promise<T>,
+	): Promise<T> =>
+		traceSpan(trace, { name, op: 'function' }, (span) =>
+			fn(withTraceDeps(deps, span)),
+		)
+
+	const remote = await step('favorite_sync.fetch_remote', (d) =>
+		fetchRemoteFavoriteSnapshot(d, favoriteId),
+	)
 
 	if (remote.isErr()) {
 		return err(remote.error)
 	}
 
-	const local = await loadLocalFavoriteState(deps, favoriteId)
+	const local = await step('favorite_sync.load_local', (d) =>
+		loadLocalFavoriteState(d, favoriteId),
+	)
 
 	if (local.isErr()) {
 		return err(local.error)
 	}
 
 	const plan = planFavoriteSync(remote.value, local.value, expandMultiPage)
+	trace?.setAttributes({
+		'sync.plan': plan.kind,
+		'sync.added': plan.stats.added,
+		'sync.removed': plan.stats.removed,
+	})
 	deps.logger.debug('step 3: 对远程和本地的 tracks 进行 diff 完成', {
 		added: plan.stats.added,
 		removed: plan.stats.removed,
@@ -411,7 +446,9 @@ export async function runFavoriteSync(
 		)
 	}
 
-	const details = await fetchFavoriteTrackDetails(deps, favoriteId, plan)
+	const details = await step('favorite_sync.fetch_details', (d) =>
+		fetchFavoriteTrackDetails(d, favoriteId, plan),
+	)
 
 	if (details.isErr()) {
 		return err(details.error)
@@ -421,11 +458,8 @@ export async function runFavoriteSync(
 		deps.onHiddenVideos?.(details.value.hiddenBvids)
 	}
 
-	const expansion = await buildExpandedTracks(
-		deps,
-		local.value,
-		details.value,
-		expandMultiPage,
+	const expansion = await step('favorite_sync.expand_pages', (d) =>
+		buildExpandedTracks(d, local.value, details.value, expandMultiPage),
 	)
 
 	if (expansion.isErr()) {
@@ -437,12 +471,14 @@ export async function runFavoriteSync(
 		stage: 'saving',
 	})
 
-	const persisted = await persistFavoriteSync(deps, {
-		favoriteId,
-		metadata: remote.value.metadata,
-		details: details.value,
-		expansion: expansion.value,
-	})
+	const persisted = await step('favorite_sync.persist', (d) =>
+		persistFavoriteSync(d, {
+			favoriteId,
+			metadata: remote.value.metadata,
+			details: details.value,
+			expansion: expansion.value,
+		}),
+	)
 
 	if (persisted.isErr()) {
 		return err(persisted.error)

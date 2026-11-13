@@ -3,6 +3,7 @@ import { fetch } from 'react-native-nitro-fetch'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import type { TraceParent } from '@/lib/tracing'
 import type {
 	BilibiliCaptchaTokenData,
 	BilibiliCommentsResponse,
@@ -47,7 +48,11 @@ import type { BilibiliTrack } from '@/types/core/media'
 import log from '@/utils/log'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
-import { bilibiliApiClient, BILIBILI_WEB_USER_AGENT } from './client'
+import {
+	type ApiClient,
+	bilibiliApiClient,
+	BILIBILI_WEB_USER_AGENT,
+} from './client'
 import { bv2av } from './utils'
 import getWbiEncodedParams from './wbi'
 
@@ -63,6 +68,16 @@ const PASSPORT_UA =
  * B站 API 客户端类
  */
 export class BilibiliApi {
+	constructor(private readonly client: ApiClient = bilibiliApiClient) {}
+
+	/**
+	 * 返回一个把请求 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 */
+	withTrace(parent: TraceParent) {
+		return new BilibiliApi(this.client.withTrace(parent))
+	}
+
 	/**
 	 * 获取用户观看历史记录
 	 */
@@ -70,7 +85,7 @@ export class BilibiliApi {
 		BilibiliHistoryVideo[],
 		BilibiliApiError
 	> {
-		return bilibiliApiClient.get<BilibiliHistoryVideo[]>({
+		return this.client.get<BilibiliHistoryVideo[]>({
 			endpoint: '/x/v2/history',
 			signal,
 		})
@@ -86,7 +101,7 @@ export class BilibiliApi {
 		partition: string
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliVideoDetails[], BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<{
 				list: BilibiliVideoDetails[]
 			} | null>({
@@ -106,7 +121,7 @@ export class BilibiliApi {
 		userMid: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<{
 				list: BilibiliPlaylist[] | null
 			} | null>({
@@ -133,7 +148,7 @@ export class BilibiliApi {
 		{ id: number; title: string; mid: number; fid: number },
 		BilibiliApiError
 	> {
-		return bilibiliApiClient.postWithCsrf<{
+		return this.client.postWithCsrf<{
 			id: number
 			fid: number
 			mid: number
@@ -174,7 +189,7 @@ export class BilibiliApi {
 
 		return params
 			.andThen((encodedParams) => {
-				return bilibiliApiClient.get<{
+				return this.client.get<{
 					result: BilibiliSearchVideo[]
 					numPages: number
 				}>({
@@ -224,7 +239,7 @@ export class BilibiliApi {
 
 		return params
 			.andThen((encodedParams) => {
-				return bilibiliApiClient.get<{
+				return this.client.get<{
 					result: BilibiliSearchUser[]
 					numPages: number
 				}>({
@@ -250,7 +265,7 @@ export class BilibiliApi {
 		BilibiliHotSearch[],
 		BilibiliApiError
 	> {
-		return bilibiliApiClient
+		return this.client
 			.get<{
 				trending: { list: BilibiliHotSearch[] }
 			} | null>({
@@ -366,7 +381,7 @@ export class BilibiliApi {
 		})
 
 		return wbiParams.andThen((encodedParams) => {
-			return bilibiliApiClient.get<BilibiliAudioStreamResponse>({
+			return this.client.get<BilibiliAudioStreamResponse>({
 				endpoint: '/x/player/wbi/playurl',
 				params: encodedParams,
 				headers: { 'User-Agent': BILIBILI_WEB_USER_AGENT },
@@ -505,7 +520,7 @@ export class BilibiliApi {
 		bvid: string
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliMultipageVideo[], BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliMultipageVideo[]>({
+		return this.client.get<BilibiliMultipageVideo[]>({
 			endpoint: '/x/player/pagelist',
 			params: {
 				bvid,
@@ -521,7 +536,7 @@ export class BilibiliApi {
 		BilibiliUserInfo,
 		BilibiliApiError
 	> {
-		return bilibiliApiClient.get<BilibiliUserInfo>({
+		return this.client.get<BilibiliUserInfo>({
 			endpoint: '/x/space/myinfo',
 			signal,
 		})
@@ -534,7 +549,7 @@ export class BilibiliApi {
 		mid: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliUserRelation, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliUserRelation>({
+		return this.client.get<BilibiliUserRelation>({
 			endpoint: '/x/relation',
 			params: { fid: mid.toString() },
 			signal,
@@ -549,7 +564,7 @@ export class BilibiliApi {
 		following: boolean
 	}): ResultAsync<boolean, BilibiliApiError> {
 		return (
-			bilibiliApiClient
+			this.client
 				.postWithCsrf<null>({
 					endpoint: '/x/relation/modify',
 					payload: {
@@ -572,7 +587,7 @@ export class BilibiliApi {
 		pn: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFollowingsResponse, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliFollowingsResponse>({
+		return this.client.get<BilibiliFollowingsResponse>({
 			endpoint: '/x/relation/followings',
 			params: { vmid: mid.toString(), pn: pn.toString(), ps: '50' },
 			signal,
@@ -591,7 +606,7 @@ export class BilibiliApi {
 		pn: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFollowingsResponse, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliFollowingsResponse>({
+		return this.client.get<BilibiliFollowingsResponse>({
 			endpoint: '/x/relation/followings/search',
 			params: {
 				vmid: mid.toString(),
@@ -608,7 +623,7 @@ export class BilibiliApi {
 		BilibiliFollowingGroup[],
 		BilibiliApiError
 	> {
-		return bilibiliApiClient
+		return this.client
 			.get<BilibiliFollowingGroup[] | null>({
 				endpoint: '/x/relation/tags',
 				signal,
@@ -626,7 +641,7 @@ export class BilibiliApi {
 		pn: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFollowingProfile[], BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<BilibiliFollowingProfile[] | null>({
 				endpoint: '/x/relation/tag',
 				params: { tagid: tagId.toString(), pn: pn.toString(), ps: '20' },
@@ -650,7 +665,7 @@ export class BilibiliApi {
 		})
 
 		return params.andThen((encodedParams) => {
-			return bilibiliApiClient.get<BilibiliUserInfo>({
+			return this.client.get<BilibiliUserInfo>({
 				endpoint: '/x/space/wbi/acc/info',
 				params: encodedParams,
 				signal,
@@ -670,7 +685,7 @@ export class BilibiliApi {
 		pn: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFavoriteListContents, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliFavoriteListContents>({
+		return this.client.get<BilibiliFavoriteListContents>({
 			endpoint: '/x/v3/fav/resource/list',
 			params: {
 				media_id: favoriteId.toString(),
@@ -698,7 +713,7 @@ export class BilibiliApi {
 		keyword: string
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFavoriteListContents, BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<BilibiliFavoriteListContents>({
 				endpoint: '/x/v3/fav/resource/list',
 				params: {
@@ -728,7 +743,7 @@ export class BilibiliApi {
 		favoriteId: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliFavoriteListAllContents, BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<BilibiliFavoriteListAllContents>({
 				endpoint: '/x/v3/fav/resource/ids',
 				params: {
@@ -749,7 +764,7 @@ export class BilibiliApi {
 		bvid: string
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliVideoDetails, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliVideoDetails>({
+		return this.client.get<BilibiliVideoDetails>({
 			endpoint: '/x/web-interface/view',
 			params: {
 				bvid,
@@ -770,7 +785,7 @@ export class BilibiliApi {
 	}): ResultAsync<0, BilibiliApiError> {
 		const resourcesIds = bvids.map((bvid) => `${bv2av(bvid)}:2`)
 
-		return bilibiliApiClient.postWithCsrf<0>({
+		return this.client.postWithCsrf<0>({
 			endpoint: '/x/v3/fav/resource/batch-del',
 			payload: {
 				resources: resourcesIds.join(','),
@@ -795,7 +810,7 @@ export class BilibiliApi {
 		{ list: BilibiliCollection[]; count: number; hasMore: boolean },
 		BilibiliApiError
 	> {
-		return bilibiliApiClient
+		return this.client
 			.get<{
 				list: BilibiliCollection[]
 				count: number
@@ -827,7 +842,7 @@ export class BilibiliApi {
 		collectionId: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliCollectionAllContents, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliCollectionAllContents>({
+		return this.client.get<BilibiliCollectionAllContents>({
 			endpoint: '/x/space/fav/season/list',
 			params: {
 				season_id: collectionId.toString(),
@@ -845,7 +860,7 @@ export class BilibiliApi {
 		seriesId: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliSeriesMetadata['meta'], BilibiliApiError> {
-		return bilibiliApiClient
+		return this.client
 			.get<BilibiliSeriesMetadata>({
 				endpoint: '/x/series/series',
 				params: { series_id: String(seriesId) },
@@ -867,7 +882,7 @@ export class BilibiliApi {
 		pageSize?: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliSeriesArchives, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliSeriesArchives>({
+		return this.client.get<BilibiliSeriesArchives>({
 			endpoint: '/x/series/archives',
 			params: {
 				mid: String(mid),
@@ -984,12 +999,10 @@ export class BilibiliApi {
 			type: '2',
 		}
 
-		return bilibiliApiClient.postWithCsrf<BilibiliDealFavoriteForOneVideoResponse>(
-			{
-				endpoint: '/x/v3/fav/resource/deal',
-				payload: data,
-			},
-		)
+		return this.client.postWithCsrf<BilibiliDealFavoriteForOneVideoResponse>({
+			endpoint: '/x/v3/fav/resource/deal',
+			payload: data,
+		})
 	}
 
 	/**
@@ -1006,7 +1019,7 @@ export class BilibiliApi {
 	}): ResultAsync<BilibiliPlaylist[], BilibiliApiError> {
 		const avid = bv2av(bvid)
 
-		return bilibiliApiClient
+		return this.client
 			.get<{ list: BilibiliPlaylist[] | null } | null>({
 				endpoint: '/x/v3/fav/folder/created/list-all',
 				params: {
@@ -1039,7 +1052,7 @@ export class BilibiliApi {
 			progress: Math.floor(progress).toString(),
 		}
 
-		return bilibiliApiClient.postWithCsrf<0>({
+		return this.client.postWithCsrf<0>({
 			endpoint: '/x/v2/history/report',
 			payload: data,
 		})
@@ -1068,7 +1081,7 @@ export class BilibiliApi {
 		})
 
 		return params.andThen((encodedParams) => {
-			return bilibiliApiClient.get<BilibiliUserUploadedVideosResponse>({
+			return this.client.get<BilibiliUserUploadedVideosResponse>({
 				endpoint: '/x/space/wbi/arc/search',
 				params: encodedParams,
 				signal,
@@ -1095,7 +1108,7 @@ export class BilibiliApi {
 	}): ResultAsync<BilibiliCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
 
-		return bilibiliApiClient.get<BilibiliCommentsResponse>({
+		return this.client.get<BilibiliCommentsResponse>({
 			endpoint: '/x/v2/reply/main',
 			params: {
 				oid: String(avid),
@@ -1127,7 +1140,7 @@ export class BilibiliApi {
 	}): ResultAsync<BilibiliReplyCommentsResponse, BilibiliApiError> {
 		const avid = bv2av(bvid)
 
-		return bilibiliApiClient.get<BilibiliReplyCommentsResponse>({
+		return this.client.get<BilibiliReplyCommentsResponse>({
 			endpoint: '/x/v2/reply/reply',
 			params: {
 				oid: String(avid),
@@ -1157,7 +1170,7 @@ export class BilibiliApi {
 	}): ResultAsync<0, BilibiliApiError> {
 		const avid = bv2av(bvid)
 
-		return bilibiliApiClient.postWithCsrf<0>({
+		return this.client.postWithCsrf<0>({
 			endpoint: '/x/v2/reply/action',
 			payload: {
 				oid: String(avid),
@@ -1175,7 +1188,7 @@ export class BilibiliApi {
 		{ url: string; qrcode_key: string },
 		BilibiliApiError
 	> {
-		return bilibiliApiClient.get<{ url: string; qrcode_key: string }>({
+		return this.client.get<{ url: string; qrcode_key: string }>({
 			endpoint: '',
 			fullUrl:
 				'https://passport.bilibili.com/x/passport-login/web/qrcode/generate',
@@ -1346,7 +1359,7 @@ export class BilibiliApi {
 		bvid: string
 		signal?: AbortSignal
 	}): ResultAsync<0 | 1, BilibiliApiError> {
-		return bilibiliApiClient.get<0 | 1>({
+		return this.client.get<0 | 1>({
 			endpoint: '/x/web-interface/archive/has/like',
 			params: {
 				bvid,
@@ -1371,7 +1384,7 @@ export class BilibiliApi {
 			like: like ? '1' : '2',
 		}
 
-		return bilibiliApiClient
+		return this.client
 			.postWithCsrf<undefined>({
 				endpoint: '/x/web-interface/archive/like',
 				payload: data,
@@ -1408,7 +1421,7 @@ export class BilibiliApi {
 		})
 
 		return params.andThen((encodedParams) => {
-			return bilibiliApiClient.get<BilibiliWebPlayerInfo>({
+			return this.client.get<BilibiliWebPlayerInfo>({
 				endpoint: '/x/player/wbi/v2',
 				params: encodedParams,
 				signal,
@@ -1470,7 +1483,7 @@ export class BilibiliApi {
 		BilibiliToViewVideoList,
 		BilibiliApiError
 	> {
-		return bilibiliApiClient.get<BilibiliToViewVideoList>({
+		return this.client.get<BilibiliToViewVideoList>({
 			endpoint: '/x/v2/history/toview',
 			signal,
 		})
@@ -1515,7 +1528,7 @@ export class BilibiliApi {
 			data.aid = avid.toString()
 		}
 
-		return bilibiliApiClient.postWithCsrf<undefined>({
+		return this.client.postWithCsrf<undefined>({
 			endpoint: '/x/v2/history/toview/del',
 			payload: data,
 		})
@@ -1525,7 +1538,7 @@ export class BilibiliApi {
 	 * 清除稍后再看列表中的所有视频
 	 */
 	clearToViewVideoList(): ResultAsync<undefined, BilibiliApiError> {
-		return bilibiliApiClient.postWithCsrf<undefined>({
+		return this.client.postWithCsrf<undefined>({
 			endpoint: '/x/v2/history/toview/clear',
 		})
 	}
@@ -1789,7 +1802,7 @@ export class BilibiliApi {
 	}): ResultAsync<BilibiliGarbSearchResponse, BilibiliApiError> {
 		log.debug('searchGarbSkins', { keyword, page, pageSize })
 
-		return bilibiliApiClient.get<BilibiliGarbSearchResponse>({
+		return this.client.get<BilibiliGarbSearchResponse>({
 			endpoint: '/x/garb/v2/mall/home/search',
 			params: {
 				key_word: keyword,
@@ -1812,7 +1825,7 @@ export class BilibiliApi {
 		lotteryId: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbAssetBagResponse, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliGarbAssetBagResponse>({
+		return this.client.get<BilibiliGarbAssetBagResponse>({
 			endpoint: '/x/vas/dlc_act/asset_bag',
 			params: {
 				act_id: String(actId),
@@ -1832,7 +1845,7 @@ export class BilibiliApi {
 		itemId: number
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbSuitDetailResponse, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliGarbSuitDetailResponse>({
+		return this.client.get<BilibiliGarbSuitDetailResponse>({
 			endpoint: '/x/garb/v2/mall/suit/detail',
 			params: { item_id: String(itemId) },
 			signal,
@@ -1849,7 +1862,7 @@ export class BilibiliApi {
 		itemId: number | string
 		signal?: AbortSignal
 	}): ResultAsync<BilibiliGarbBenefitResponse, BilibiliApiError> {
-		return bilibiliApiClient.get<BilibiliGarbBenefitResponse>({
+		return this.client.get<BilibiliGarbBenefitResponse>({
 			endpoint: '/x/garb/v2/user/suit/benefit',
 			params: {
 				item_id: String(itemId),

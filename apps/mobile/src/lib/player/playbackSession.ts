@@ -1,4 +1,5 @@
 import { Orpheus, type Track } from '@bbplayer/orpheus'
+import type { Span } from '@sentry/react-native'
 
 import {
 	applyResumeStrategy,
@@ -12,7 +13,31 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { playlistService } from '@/lib/services/playlistService'
+import { startOperation } from '@/lib/tracing'
 import type { PlayerMode } from '@/types/core/playback'
+
+/**
+ * 进行中的 playback.start transaction。
+ *
+ * 生命周期：
+ * - `startPlayback` 播放时创建（replace=true + 触发实际播放）
+ * - `PlayerSideEffects.onTrackStarted` 在第一个 `onTrackStarted` 事件时结束
+ *
+ * 只保留最后一次：用户快速切歌时，前一个 span 被新的替换并立即结束（标记 cancelled）。
+ */
+let pendingPlaybackSpan: Span | null = null
+
+/**
+ * 取走并返回当前 pending 的 playback span，清空持有。
+ * 供 PlayerSideEffects 在首次 onTrackStarted 时调用。
+ */
+export function takePendingPlaybackSpan(): Span | null {
+	const span = pendingPlaybackSpan
+
+	pendingPlaybackSpan = null
+
+	return span
+}
 
 async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 	const fallback = useAppStore.getState().settings.defaultPlayerMode
@@ -73,8 +98,28 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 
 	setPlaybackContext(context)
 
-	if (options.playNow && (options.playNext || !options.startFromKey))
+	const willPlay =
+		options.playNow && (options.playNext || !options.startFromKey)
+
+	if (willPlay) {
+		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
+		if (pendingPlaybackSpan) {
+			pendingPlaybackSpan.setAttribute('playback.cancelled', true)
+			pendingPlaybackSpan.end()
+		}
+
+		pendingPlaybackSpan = startOperation({
+			name: 'playback.start',
+			op: 'playback',
+			attributes: {
+				'playback.track_count': options.tracks.length,
+				'playback.mode': context.mode,
+				'playback.replace': replace,
+			},
+		})
+
 		await Orpheus.play()
+	}
 }
 
 /** Replace the queue and begin a new continuous playback experience. */

@@ -16,6 +16,7 @@ import { analyticsService } from '@/lib/services/analyticsService'
 import type { ArtistService } from '@/lib/services/artistService'
 import type { PlaylistService } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
+import { traceOperation } from '@/lib/tracing'
 import type { BilibiliCollectionAllContents } from '@/types/apis/bilibili'
 import type { Playlist, Track } from '@/types/core/media'
 import log from '@/utils/log'
@@ -454,30 +455,39 @@ export class SyncBilibiliPlaylistFacade {
 			scopedLogger.info('开始同步收藏夹', { favoriteId })
 			scopedLogger.debug('syncFavorite', { favoriteId })
 
-			return await runFavoriteSync(
+			return await traceOperation(
 				{
-					api: this.bilibiliApi,
-					playlistService: this.playlistService,
-					trackService: this.trackService,
-					artistService: this.artistService,
-					db: this.db,
-					logger: scopedLogger,
-					onProgress,
-					onHiddenVideos: (bvids) => {
-						const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${bvids.join(',')}`
-						scopedLogger.warning(tip)
-						toast.info(tip)
-					},
-					onSynced: (trackCount) => {
-						void analyticsService.logPlaylistSync(
-							'sync_bilibili',
-							'favorite',
-							trackCount,
-						)
-					},
+					name: 'sync.bilibili_favorite',
+					op: 'task',
+					attributes: { 'sync.expand_multi_page': expandMultiPage },
 				},
-				favoriteId,
-				expandMultiPage,
+				(span) =>
+					runFavoriteSync(
+						{
+							api: this.bilibiliApi,
+							playlistService: this.playlistService,
+							trackService: this.trackService,
+							artistService: this.artistService,
+							db: this.db,
+							logger: scopedLogger,
+							onProgress,
+							onHiddenVideos: (bvids) => {
+								const tip = `Bilibili 隐藏了被 up 设置为仅自己可见的稿件，却没有更新索引，所以你会看到同步到的歌曲数量少于收藏夹实际显示的数量，具体隐藏稿件：${bvids.join(',')}`
+								scopedLogger.warning(tip)
+								toast.info(tip)
+							},
+							onSynced: (trackCount) => {
+								void analyticsService.logPlaylistSync(
+									'sync_bilibili',
+									'favorite',
+									trackCount,
+								)
+							},
+						},
+						favoriteId,
+						expandMultiPage,
+						span,
+					),
 			)
 		} finally {
 			this.syncingIds.delete(syncKey)

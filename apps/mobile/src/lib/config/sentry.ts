@@ -103,7 +103,41 @@ export function initializeSentry() {
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		tracesSampleRate: 0.3,
+		tracesSampler(samplingContext) {
+			const name = samplingContext.name ?? ''
+			const parentSampled = samplingContext.parentSampled
+
+			// 继承父 transaction 的采样决定（同一 trace 要么全采要么全不采）
+			if (parentSampled !== undefined) {
+				return parentSampled ? 1 : 0
+			}
+
+			// 有错误状态的 transaction 尽量保留
+			if (samplingContext.attributes?.['sentry.status'] === 'error') {
+				return 1
+			}
+
+			// 业务 transaction：高采样率
+			if (
+				name === 'playback.start' ||
+				name.startsWith('sync.') ||
+				name === 'update.check' ||
+				name === 'lyrics.smart_fetch'
+			) {
+				return 0.8
+			}
+
+			// 导航 transaction：低采样率（量大，信息密度低）
+			if (
+				samplingContext.op === 'navigation' ||
+				samplingContext.op === 'pageload'
+			) {
+				return 0.1
+			}
+
+			// 其余 transaction（app 启动、自动检测等）保持适中采样率
+			return 0.3
+		},
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
 		enabled: isSentryTelemetryEnabled(),

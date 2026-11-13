@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
 import { and, count, desc, eq, inArray, lt, or, sql, sum } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
@@ -13,6 +12,7 @@ import {
 	createTrackNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
+import { type TraceParent, traceSpan } from '@/lib/tracing'
 import type {
 	BilibiliTrack,
 	LocalTrack,
@@ -46,7 +46,10 @@ type SelectTrackWithMetadata = SelectTrackBase & {
 }
 
 export class TrackService {
-	constructor(private readonly db: DBLike) {}
+	constructor(
+		private readonly db: DBLike,
+		private readonly traceParent?: TraceParent,
+	) {}
 
 	/**
 	 * 返回一个使用新数据库连接（例如事务）的新实例。
@@ -54,7 +57,16 @@ export class TrackService {
 	 * @returns 一个新的实例。
 	 */
 	withDB(conn: DBLike) {
-		return new TrackService(conn)
+		return new TrackService(conn, this.traceParent)
+	}
+
+	/**
+	 * 返回一个把数据库 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @returns 一个新的实例。
+	 */
+	withTrace(parent: TraceParent) {
+		return new TrackService(this.db, parent)
 	}
 
 	/**
@@ -134,7 +146,8 @@ export class TrackService {
 		const transactionResult = ResultAsync.fromPromise(
 			(async () => {
 				// 创建 track
-				const [newTrack] = await Sentry.startSpan(
+				const [newTrack] = await traceSpan(
+					this.traceParent,
 					{ name: 'db:insert:track', op: 'db' },
 					() =>
 						this.db
@@ -154,7 +167,8 @@ export class TrackService {
 
 				// 创建元数据
 				if (payload.source === 'bilibili') {
-					await Sentry.startSpan(
+					await traceSpan(
+						this.traceParent,
 						{ name: 'db:insert:bilibiliMetadata', op: 'db' },
 						() =>
 							this.db.insert(schema.bilibiliMetadata).values({
@@ -169,7 +183,8 @@ export class TrackService {
 							}),
 					)
 				} else if (payload.source === 'local') {
-					await Sentry.startSpan(
+					await traceSpan(
+						this.traceParent,
 						{ name: 'db:insert:localMetadata', op: 'db' },
 						() =>
 							this.db.insert(schema.localMetadata).values({
@@ -204,7 +219,8 @@ export class TrackService {
 
 		const updateResult = ResultAsync.fromPromise(
 			(async () => {
-				return await Sentry.startSpan(
+				return await traceSpan(
+					this.traceParent,
 					{ name: 'db:update:track', op: 'db' },
 					() =>
 						this.db
@@ -236,7 +252,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.id, id),
 					with: {
@@ -270,7 +286,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<{ deletedId: number }, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:delete:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:delete:track', op: 'db' }, () =>
 				this.db
 					.delete(schema.tracks)
 					.where(eq(schema.tracks.id, id))
@@ -303,7 +319,8 @@ export class TrackService {
 	): ResultAsync<true, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				await Sentry.startSpan(
+				await traceSpan(
+					this.traceParent,
 					{ name: 'db:insert:play_history', op: 'db' },
 					() =>
 						this.db.insert(schema.playHistory).values({
@@ -374,7 +391,7 @@ export class TrackService {
 		}
 
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) =>
 						eqFn(track.uniqueKey, identifier.value),
@@ -428,7 +445,7 @@ export class TrackService {
 		const uniqueKey = uniqueKeyResult.value
 
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) => eqFn(track.uniqueKey, uniqueKey),
 					with: {
@@ -535,7 +552,8 @@ export class TrackService {
 				)
 
 				if (trackValuesToInsert.length > 0) {
-					await Sentry.startSpan(
+					await traceSpan(
+						this.traceParent,
 						{ name: 'db:insert:many:tracks', op: 'db' },
 						() =>
 							this.db
@@ -545,7 +563,8 @@ export class TrackService {
 					)
 				}
 
-				const allTracks = await Sentry.startSpan(
+				const allTracks = await traceSpan(
+					this.traceParent,
 					{ name: 'db:query:many:tracks', op: 'db' },
 					() =>
 						this.db.query.tracks.findMany({
@@ -587,7 +606,8 @@ export class TrackService {
 						)
 
 						if (bilibiliMetadataValues.length > 0) {
-							await Sentry.startSpan(
+							await traceSpan(
+								this.traceParent,
 								{
 									name: 'db:insert:many:bilibiliMetadata',
 									op: 'db',
@@ -639,14 +659,17 @@ export class TrackService {
 		}
 
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:many:tracks', op: 'db' }, () =>
-				this.db.query.tracks.findMany({
-					where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
-					columns: {
-						id: true,
-						uniqueKey: true,
-					},
-				}),
+			traceSpan(
+				this.traceParent,
+				{ name: 'db:query:many:tracks', op: 'db' },
+				() =>
+					this.db.query.tracks.findMany({
+						where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
+						columns: {
+							id: true,
+							uniqueKey: true,
+						},
+					}),
 			),
 			(e) =>
 				e instanceof ServiceError
@@ -727,7 +750,8 @@ export class TrackService {
 			)
 		}
 
-		const historyQuery = Sentry.startSpan(
+		const historyQuery = traceSpan(
+			this.traceParent,
 			{ name: 'db:query:playHistory', op: 'db' },
 			() =>
 				this.db
@@ -827,7 +851,8 @@ export class TrackService {
 				.as('play_counts')
 
 			return ResultAsync.fromPromise(
-				Sentry.startSpan(
+				traceSpan(
+					this.traceParent,
 					{ name: 'db:query:totalPlaybackDuration:completed', op: 'db' },
 					() =>
 						this.db
@@ -851,7 +876,8 @@ export class TrackService {
 			})
 		} else {
 			return ResultAsync.fromPromise(
-				Sentry.startSpan(
+				traceSpan(
+					this.traceParent,
 					{ name: 'db:query:totalPlaybackDuration:all', op: 'db' },
 					() =>
 						this.db
@@ -875,7 +901,7 @@ export class TrackService {
 		uniqueKey: string,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, { name: 'db:query:track', op: 'db' }, () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.uniqueKey, uniqueKey),
 					with: {
@@ -937,7 +963,8 @@ export class TrackService {
 			.groupBy(schema.playHistory.trackId)
 			.as('duration_sums')
 
-		const historyQuery = Sentry.startSpan(
+		const historyQuery = traceSpan(
+			this.traceParent,
 			{ name: 'db:query:mostPlayedTracksByDuration', op: 'db' },
 			() =>
 				this.db

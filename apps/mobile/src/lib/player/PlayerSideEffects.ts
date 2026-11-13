@@ -8,6 +8,7 @@ import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { queryClient } from '@/lib/config/queryClient'
+import { takePendingPlaybackSpan } from '@/lib/player/playbackSession'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -77,6 +78,14 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
+				// 结束由 startPlayback 创建的 playback.start transaction
+				const playbackSpan = takePendingPlaybackSpan()
+
+				if (playbackSpan) {
+					playbackSpan.setAttribute('playback.first_track_id', event.trackId)
+					playbackSpan.end()
+				}
+
 				await lyricService.pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
