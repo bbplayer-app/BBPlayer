@@ -28,8 +28,10 @@ export default function CreatePlaylistModal({
 	const handleConfirm = useCallback(() => {
 		if (title.trim().length === 0) {
 			toast.error('标题不能为空')
+
 			return
 		}
+
 		createNewPlaylist(
 			{
 				title,
@@ -68,19 +70,25 @@ export default function CreatePlaylistModal({
 			copyToCacheDirectory: true,
 			multiple: false,
 		})
+
 		if (result.canceled || result.assets.length === 0) return
 		const assetFile = new FileSystem.File(result.assets[0].uri)
+
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',
 		)
+
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true, idempotent: true })
 		}
+
 		const coverFile = new FileSystem.File(coverDir, assetFile.name)
+
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
+
 		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [])

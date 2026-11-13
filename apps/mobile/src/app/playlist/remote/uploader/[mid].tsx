@@ -89,17 +89,24 @@ export default function UploaderPage() {
 	const relation = useUserRelation(Number(mid))
 	const setFollowing = useSetUserFollowing(Number(mid))
 	const followingBusy = useRef(false)
+
 	const isFollowing =
 		relation.data?.attribute === 2 || relation.data?.attribute === 6
+
 	const isBlocked = relation.data?.attribute === 128
+
 	const handleFollowing = async () => {
 		if (followingBusy.current) return
+
 		if (relation.isError) {
 			void relation.refetch()
+
 			return
 		}
+
 		if (!relation.data || isSelf || isBlocked) return
 		followingBusy.current = true
+
 		try {
 			await setFollowing.mutateAsync(!isFollowing)
 		} catch {
@@ -157,6 +164,7 @@ export default function UploaderPage() {
 
 	const tracks = useMemo(() => {
 		if (!uploadedVideos || !uploaderUserInfo) return []
+
 		return uploadedVideos.pages
 			.flatMap((page) => page.list.vlist)
 			.map((item) => mapApiItemToTrack(item, uploaderUserInfo))
@@ -168,6 +176,7 @@ export default function UploaderPage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -188,6 +197,7 @@ export default function UploaderPage() {
 
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
+
 		if (selectMode) exitSelectMode()
 	})
 
@@ -210,6 +220,7 @@ export default function UploaderPage() {
 					对访问用户个人空间和上传的视频接口有莫名其妙的风控校验
 				</Text>
 				<Button
+					testID='uploader-login'
 					mode='contained'
 					onPress={() => {
 						router.navigate('/settings/bilibili-account/qrcode-login')
@@ -251,11 +262,14 @@ export default function UploaderPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const id of selected) {
 									const track = tracks.find((t) => t.id === id)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -263,6 +277,7 @@ export default function UploaderPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})
@@ -271,6 +286,7 @@ export default function UploaderPage() {
 					</>
 				) : (
 					<Appbar.Action
+						testID='remote-playlist-search'
 						icon={startSearch ? 'close' : 'magnify'}
 						onPress={() => setStartSearch((prev) => !prev)}
 					/>

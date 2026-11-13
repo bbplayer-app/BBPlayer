@@ -5,6 +5,7 @@ import { storage } from '@/utils/mmkv'
 import { DataMigration } from './state'
 
 const logger = log.extend('migrateIndependentAccountReset')
+
 const migration = new DataMigration(
 	'independent_account_v1',
 	'independent_account_migrated_v1',

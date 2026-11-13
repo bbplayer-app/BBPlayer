@@ -40,6 +40,7 @@ function MyPageContent() {
 	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)
 	const openModal = useModalStore((state) => state.open)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
+
 	const { data: syncFailures } = useLiveQuery(
 		db
 			.select({ id: schema.playlistSyncQueue.id })
@@ -63,6 +64,7 @@ function MyPageContent() {
 		markInteractive()
 		void markPerfInteractive()
 	}, [markInteractive])
+
 	const chevron = () => (
 		<Icon
 			source='chevron-right'
@@ -125,6 +127,7 @@ function MyPageContent() {
 					<View style={isTwoPane ? { width: 300 } : undefined}>
 						<View style={styles.accounts}>
 							<Touchable
+								testID='my-bilibili-account'
 								accessibilityRole='button'
 								accessibilityLabel={
 									hasCookie ? '管理 Bilibili 账号' : '登录 Bilibili 账号'
@@ -184,6 +187,7 @@ function MyPageContent() {
 								{chevron()}
 							</Touchable>
 							<Touchable
+								testID='my-bbplayer-account'
 								accessibilityRole='button'
 								accessibilityLabel='BBPlayer 账号'
 								style={[
@@ -225,6 +229,7 @@ function MyPageContent() {
 						<View>
 							{syncFailures.length > 0 && (
 								<List.Item
+									testID='my-sync-failures'
 									title='歌单同步失败'
 									left={(props) => (
 										<List.Icon
@@ -238,6 +243,7 @@ function MyPageContent() {
 								/>
 							)}
 							<List.Item
+								testID='my-recently-played'
 								title='最近常听'
 								left={(props) => (
 									<List.Icon
@@ -249,6 +255,7 @@ function MyPageContent() {
 								onPress={() => router.navigate('/playlist/recently')}
 							/>
 							<List.Item
+								testID='my-following'
 								title='我的关注'
 								left={(props) => (
 									<List.Icon
@@ -260,6 +267,7 @@ function MyPageContent() {
 								onPress={() => router.navigate('/following')}
 							/>
 							<List.Item
+								testID='my-downloads'
 								title='下载'
 								left={(props) => (
 									<List.Icon
@@ -271,6 +279,7 @@ function MyPageContent() {
 								onPress={() => router.navigate('/downloaded')}
 							/>
 							<List.Item
+								testID='my-to-view'
 								title='稍后再看'
 								left={(props) => (
 									<List.Icon
@@ -288,6 +297,7 @@ function MyPageContent() {
 								}
 							/>
 							<List.Item
+								testID='my-on-this-day'
 								title='那月今日'
 								left={(props) => (
 									<List.Icon

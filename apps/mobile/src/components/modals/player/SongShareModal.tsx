@@ -37,8 +37,10 @@ async function performShare(
 	try {
 		let uri = previewUri
 		const needsCapture = !uri && viewShotRef.current !== null
+
 		if (needsCapture) {
 			const fileName = `bbplayer-share-song-${sanitizeFileName(uniqueKey)}-${Date.now()}`
+
 			try {
 				uri = await captureRef(viewShotRef, {
 					format: 'png',
@@ -48,20 +50,25 @@ async function performShare(
 				})
 			} catch {
 				toast.error('生成图片失败')
+
 				return
 			}
 		}
 
 		if (!uri) {
 			toast.error('生成图片失败')
+
 			return
 		}
 
 		const permissionStatus = permissionResponse?.status
+
 		if (action === 'save' && permissionStatus !== PermissionStatus.GRANTED) {
 			const { status } = await requestPermission()
+
 			if (status !== PermissionStatus.GRANTED) {
 				toast.error('无法保存图片', { description: '请允许访问相册' })
+
 				return
 			}
 		}
@@ -71,13 +78,16 @@ async function performShare(
 			toast.success('已保存到相册')
 		} else {
 			const sharingAvailable = await Sharing.isAvailableAsync()
+
 			if (sharingAvailable) {
 				await Sharing.shareAsync(uri)
 			} else {
 				toast.error('分享不可用')
+
 				return
 			}
 		}
+
 		closeModal()
 	} catch {
 		toast.error('操作失败')
@@ -139,6 +149,7 @@ const SongShareModal = () => {
 				.catch((e) => {
 					log.error('提取图片主题色失败', e)
 					reportErrorToSentry(e, '提取图片主题色失败', 'SongShareModal')
+
 					return undefined
 				})
 		}
@@ -146,6 +157,7 @@ const SongShareModal = () => {
 
 	const generatePreview = useCallback(async () => {
 		let retryCount = 0
+
 		while (!viewShotRef.current && retryCount < 5) {
 			// oxlint-disable-next-line no-await-in-loop
 			await new Promise((resolve) => setTimeout(resolve, 200))
@@ -154,6 +166,7 @@ const SongShareModal = () => {
 
 		if (!viewShotRef.current) {
 			setIsGenerating(false)
+
 			return
 		}
 
@@ -162,20 +175,24 @@ const SongShareModal = () => {
 			// 如果图片还没好，就继续等待，不设置 false
 			return
 		}
+
 		// 等待分 P 列表加载完成
 		if (isPageListPending) {
 			return
 		}
 
 		setIsGenerating(true)
+
 		try {
 			const fileName = `bbplayer-share-song-${Date.now()}`
+
 			const uri = await captureRef(viewShotRef, {
 				format: 'png',
 				quality: 1,
 				result: 'tmpfile',
 				fileName,
 			})
+
 			setPreviewUri(uri)
 			setIsGenerating(false)
 		} catch {
@@ -191,6 +208,7 @@ const SongShareModal = () => {
 			const timer = setTimeout(() => {
 				void generatePreview()
 			}, 100)
+
 			return () => clearTimeout(timer)
 		} else if (!resolvedCoverUrl) {
 			// 没有封面，直接生成
@@ -255,8 +273,10 @@ const SongShareModal = () => {
 
 	// 计算 shareUrl
 	let shareUrl = `https://bbplayer.roitium.com/share/track?id=${encodeURIComponent(currentTrack.uniqueKey)}&title=${encodeURIComponent(currentTrack.title)}&cover=${encodeURIComponent(currentTrack.coverUrl ?? '')}`
+
 	if (cid && pageList) {
 		const page = pageList.find((p) => p.cid === cid)
+
 		if (page) {
 			shareUrl += `&p=${page.page}`
 		}
@@ -291,6 +311,7 @@ const SongShareModal = () => {
 							预览加载失败
 						</Text>
 						<Button
+							testID='song-share-retry'
 							mode='outlined'
 							onPress={() => generatePreview()}
 							icon='refresh'
@@ -302,6 +323,7 @@ const SongShareModal = () => {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button
+					testID='song-share-save'
 					mode='outlined'
 					onPress={() => handleShare('save')}
 					loading={isSharing}
@@ -311,6 +333,7 @@ const SongShareModal = () => {
 					保存
 				</Button>
 				<Button
+					testID='song-share-share'
 					mode='contained'
 					onPress={() => handleShare('share')}
 					loading={isSharing}

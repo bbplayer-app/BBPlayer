@@ -38,10 +38,13 @@ export default function LyricsSettingsPage() {
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
 	const lyriconConnectionToast = useRef<string | number | null>(null)
+
 	const finishLyriconConnectionToast = useCallback((connected = false) => {
 		const id = lyriconConnectionToast.current
+
 		if (id === null) return
 		lyriconConnectionToast.current = null
+
 		if (connected) {
 			toast.success('已连接词幕', { id, duration: 2000 })
 		} else {
@@ -52,32 +55,41 @@ export default function LyricsSettingsPage() {
 	const [isDesktopLyricsShown, setIsDesktopLyricsShown] = useState(
 		Orpheus.isDesktopLyricsShown,
 	)
+
 	const [isDesktopLyricsLocked, setIsDesktopLyricsLocked] = useState(
 		Orpheus.isDesktopLyricsLocked,
 	)
+
 	const [isStatusBarLyricsEnabled, setIsStatusBarLyricsEnabled] = useState(
 		Orpheus.isStatusBarLyricsEnabled,
 	)
+
 	const [isCarLyricsEnabled, setIsCarLyricsEnabled] = useState(
 		Orpheus.isCarLyricsEnabled,
 	)
+
 	const [isSuperLyricApiEnabled, setIsSuperLyricApiEnabled] = useState(
 		Orpheus.isSuperLyricApiEnabled,
 	)
+
 	const [isLyriconApiEnabled, setIsLyriconApiEnabled] = useState(
 		Orpheus.isLyriconApiEnabled,
 	)
+
 	const [statusBarLyricsProvider, setStatusBarLyricsProvider] = useState(
 		Orpheus.statusBarLyricsProvider ?? 'lyricon',
 	)
 
 	const lyricSource = useAppStore((state) => state.settings.lyricSource)
+
 	const enableVerbatimLyrics = useAppStore(
 		(state) => state.settings.enableVerbatimLyrics,
 	)
+
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
+
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const isStatusBarLyricsProviderActive =
@@ -86,6 +98,7 @@ export default function LyricsSettingsPage() {
 			: statusBarLyricsProvider === 'meizu'
 				? true
 				: isSuperLyricApiEnabled
+
 	const isLyriconConnecting =
 		statusBarLyricsProvider === 'lyricon' &&
 		isStatusBarLyricsEnabled &&
@@ -116,6 +129,7 @@ export default function LyricsSettingsPage() {
 					Orpheus.isLyriconApiEnabled,
 			)
 		}
+
 		const hasPermission = await Orpheus.checkOverlayPermission()
 		// UI 开关仅在「设置开启」且「有权限」时显示为 ON
 		setIsDesktopLyricsShown(Orpheus.isDesktopLyricsShown && hasPermission)
@@ -176,16 +190,20 @@ export default function LyricsSettingsPage() {
 	const enableDesktopLyrics = async () => {
 		try {
 			const hasPermission = await Orpheus.checkOverlayPermission()
+
 			if (hasPermission) {
 				await Orpheus.showDesktopLyrics()
 				void syncStates()
 				// 立即推送当前正在播放的歌词，不等下一首
 				const currentTrack = await Orpheus.getCurrentTrack()
+
 				if (currentTrack) {
 					void lyricService.pushLyricsToOverlays(currentTrack.id)
 				}
+
 				return
 			}
+
 			alert(
 				'桌面歌词',
 				'启用桌面歌词需要启用悬浮窗权限。跳转到设置后，请找到 BBPlayer，并允许显示悬浮窗',
@@ -228,6 +246,7 @@ export default function LyricsSettingsPage() {
 	useFocusEffect(
 		useCallback(() => {
 			void syncStates()
+
 			return () => finishLyriconConnectionToast()
 		}, [syncStates, finishLyriconConnectionToast]),
 	)
@@ -327,8 +346,10 @@ export default function LyricsSettingsPage() {
 										const next = !isCarLyricsEnabled
 										Orpheus.isCarLyricsEnabled = next
 										await syncStates()
+
 										if (next) {
 											const currentTrack = await Orpheus.getCurrentTrack()
+
 											if (currentTrack) {
 												void lyricService.pushLyricsToOverlays(currentTrack.id)
 											}
@@ -389,6 +410,7 @@ export default function LyricsSettingsPage() {
 								onValueChange={async () => {
 									try {
 										const next = !isStatusBarLyricsEnabled
+
 										if (statusBarLyricsProvider === 'lyricon' && next) {
 											lyriconConnectionToast.current = toast.loading(
 												'正在连接词幕…',
@@ -400,12 +422,15 @@ export default function LyricsSettingsPage() {
 										} else {
 											finishLyriconConnectionToast()
 										}
+
 										setIsStatusBarLyricsEnabled(next)
 										Orpheus.isStatusBarLyricsEnabled = next
 										await syncStates()
+
 										if (next) {
 											// 立即推送当前歌词
 											const currentTrack = await Orpheus.getCurrentTrack()
+
 											if (currentTrack) {
 												void lyricService.pushLyricsToOverlays(currentTrack.id)
 											}

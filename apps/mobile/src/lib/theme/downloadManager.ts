@@ -40,9 +40,11 @@ const isRemoteUrl = (value: string | null | undefined): value is string =>
 const extensionFromUrl = (url: string): string => {
 	try {
 		const pathname = new URL(url).pathname
+
 		const match = pathname.match(
 			/\.(png|jpe?g|webp|gif|bin|zip|mp4|json|svga)(?=$|[.@])/i,
 		)
+
 		return match?.[0].toLowerCase() ?? '.bin'
 	} catch {
 		return '.bin'
@@ -54,6 +56,7 @@ const collectRemoteUrls = (manifest: SkinAssetDeclaration): string[] => {
 
 	for (const card of manifest.cards) {
 		urls.push(card.img)
+
 		if (card.video_list) urls.push(card.video_list[0])
 	}
 
@@ -163,6 +166,7 @@ export const downloadManifestAssets = ({
 	}))
 
 	const mapping: Record<string, string> = {}
+
 	for (const item of plan) {
 		mapping[item.url] = item.localPath
 	}
@@ -216,6 +220,7 @@ export const downloadManifestAssets = ({
 		),
 	).map(() => {
 		log.debug('[download] all assets downloaded', { count: completed, total })
+
 		return { mapping }
 	})
 }

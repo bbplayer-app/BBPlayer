@@ -6,9 +6,11 @@ export function formatBytes(bytes: number): string {
 	const units = ['KB', 'MB', 'GB', 'TB']
 	let value = bytes
 	let unit = -1
+
 	do {
 		value /= 1024
 		unit++
 	} while (value >= 1024 && unit < units.length - 1)
+
 	return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`
 }

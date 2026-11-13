@@ -27,6 +27,7 @@ const CollectionListComponent = memo(() => {
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
 	const { data: userInfo } = usePersonalInformation()
+
 	const {
 		data: collections,
 		isPending: collectionsIsPending,

@@ -24,16 +24,20 @@ export default function useCheckLinkedToPlaylist(
 				type,
 				remoteId,
 			)
+
 			if (playlist.isErr()) {
 				toastAndLogError(
 					`查询 ${type}-${remoteId} 是否在本地存在失败`,
 					playlist.error,
 					'UI.Playlist.Remote',
 				)
+
 				return
 			}
+
 			setLinkedPlaylistId(playlist.value ? playlist.value.id : undefined)
 		}
+
 		void check()
 	}, [remoteId, type])
 

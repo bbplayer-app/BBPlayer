@@ -24,10 +24,13 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 
 	const handleConfirm = () => {
 		const normalizedTitle = title.trim()
+
 		if (!normalizedTitle) {
 			toast.error('标题不能为空')
+
 			return
 		}
+
 		const normalizedCoverUrl = coverUrl?.trim() ? coverUrl.trim() : null
 		editTrackMetadata({
 			trackId: track.id,
@@ -44,15 +47,18 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 			copyToCacheDirectory: true,
 			multiple: false,
 		})
+
 		if (result.canceled || result.assets.length === 0) return
 
 		const asset = result.assets[0]
 		const assetFile = new FileSystem.File(asset.uri)
+
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,
 			'covers',
 			'tracks',
 		)
+
 		if (!coverDir.exists) {
 			coverDir.create({ intermediates: true })
 		}
@@ -60,10 +66,13 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 		const fileName = sanitizeFileName(
 			`${track.uniqueKey}-${Date.now()}-${assetFile.name}`,
 		)
+
 		const coverFile = new FileSystem.File(coverDir, fileName)
+
 		if (coverFile.exists) {
 			coverFile.delete()
 		}
+
 		await assetFile.copy(coverFile)
 		setCoverUrl(coverFile.uri)
 	}, [track.uniqueKey])
@@ -106,7 +115,12 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					testID='edit-track-confirm'
+					onPress={handleConfirm}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

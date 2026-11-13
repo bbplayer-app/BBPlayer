@@ -9,6 +9,7 @@ export default function useActiveSkin(): AppSkin | null {
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	const activeSkinId = useSkinStore((state) => state.activeSkinId)
 	const installedSkins = useSkinStore((state) => state.installedSkins)
 
@@ -17,12 +18,15 @@ export default function useActiveSkin(): AppSkin | null {
 	useEffect(() => {
 		if (!activeSkinId) {
 			setAppSkin(null)
+
 			return
 		}
 
 		const meta = installedSkins.find((skin) => skin.id === activeSkinId)
+
 		if (!meta) {
 			setAppSkin(null)
+
 			return
 		}
 

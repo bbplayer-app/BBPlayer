@@ -47,12 +47,14 @@ describe('网易云 YRC 转换器', () => {
 
 	it('应该能解析真实文件数据', () => {
 		const filePath = path.join(__dirname, '../__tests__/fixtures/687506.json')
+
 		if (fs.existsSync(filePath)) {
 			const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as {
 				yrc: {
 					lyric: string
 				}
 			}
+
 			if (data.yrc?.lyric) {
 				const result = parseYrc(data.yrc.lyric)
 				// 期望包含间奏的时间戳 <00:58.020>

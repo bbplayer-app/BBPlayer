@@ -39,6 +39,7 @@ const InputExternalPlaylistInfoModal = () => {
 					onChangeText={(text) => {
 						setInput(text)
 						const result = parseExternalPlaylistInfo(text)
+
 						if (result) {
 							setSource(result.source)
 						}
@@ -62,6 +63,7 @@ const InputExternalPlaylistInfoModal = () => {
 			<Dialog.Actions>
 				<Button onPress={() => close('InputExternalPlaylistInfo')}>取消</Button>
 				<Button
+					testID='external-playlist-input-confirm'
 					onPress={handleConfirm}
 					disabled={!input.trim()}
 				>

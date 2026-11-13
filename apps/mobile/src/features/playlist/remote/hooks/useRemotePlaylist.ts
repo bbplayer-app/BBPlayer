@@ -10,6 +10,7 @@ export function useRemotePlaylist() {
 	const playTrack = useCallback(
 		async (track: BilibiliTrack, playNext = false) => {
 			const createIt = await syncFacade.addTrackToLocal(track)
+
 			if (createIt.isErr()) {
 				toastAndLogError(
 					'将 track 录入本地失败',
@@ -21,8 +22,10 @@ export function useRemotePlaylist() {
 					'将 track 录入本地失败',
 					'UI.Playlist.Remote',
 				)
+
 				return
 			}
+
 			void addToQueue({
 				tracks: [track],
 				playNow: !playNext,

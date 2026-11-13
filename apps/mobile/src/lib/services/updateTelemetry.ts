@@ -32,7 +32,9 @@ const randomUUID = (): string => {
 	if (typeof globalThis.crypto?.randomUUID === 'function') {
 		return globalThis.crypto.randomUUID()
 	}
+
 	const bytes = new Uint8Array(16)
+
 	if (typeof globalThis.crypto?.getRandomValues === 'function') {
 		globalThis.crypto.getRandomValues(bytes)
 	} else {
@@ -40,11 +42,14 @@ const randomUUID = (): string => {
 			bytes[index] = Math.floor(Math.random() * 256)
 		}
 	}
+
 	bytes[6] = (bytes[6] & 0x0f) | 0x40
 	bytes[8] = (bytes[8] & 0x3f) | 0x80
+
 	const hex = [...bytes]
 		.map((value) => value.toString(16).padStart(2, '0'))
 		.join('')
+
 	return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
@@ -52,6 +57,7 @@ const serverURL = (): string | null => {
 	const extra = Constants.expoConfig?.extra as
 		| { updateServerUrl?: string }
 		| undefined
+
 	return extra?.updateServerUrl ?? null
 }
 
@@ -59,14 +65,17 @@ export const configuredChannel = (): string => {
 	const extra = Constants.expoConfig?.extra as
 		| { updateChannel?: string }
 		| undefined
+
 	return Updates.channel ?? extra?.updateChannel ?? 'unknown'
 }
 
 const installationID = async (): Promise<string> => {
 	const current = await SecureStore.getItemAsync(INSTALLATION_KEY)
+
 	if (current) return current
 	const created = randomUUID()
 	await SecureStore.setItemAsync(INSTALLATION_KEY, created)
+
 	return created
 }
 
@@ -87,6 +96,7 @@ export const setUpdateChannelOverride = async (
 	if (!Updates.isEnabled) {
 		throw new Error('expo-updates 未启用')
 	}
+
 	await SecureStore.setItemAsync(UPDATE_CHANNEL_OVERRIDE_KEY, channel)
 	await applyUpdateRequestHeaders(channel)
 }
@@ -105,10 +115,12 @@ export const setUpdateChannelOverride = async (
  */
 export const initializeUpdateRequestHeaders = async (): Promise<void> => {
 	if (requestHeadersOverridden || !Updates.isEnabled) return
+
 	try {
 		const channel =
 			(await SecureStore.getItemAsync(UPDATE_CHANNEL_OVERRIDE_KEY)) ??
 			configuredChannel()
+
 		await applyUpdateRequestHeaders(channel)
 	} catch (error: unknown) {
 		logger.warning('设置 update request headers 失败', { error })
@@ -117,12 +129,15 @@ export const initializeUpdateRequestHeaders = async (): Promise<void> => {
 
 const report = async (eventType: EventType): Promise<void> => {
 	const baseURL = serverURL()
+
 	if (!baseURL || !Updates.isEnabled || !Updates.updateId) return
+
 	const source = Updates.isEmergencyLaunch
 		? 'emergency'
 		: Updates.isEmbeddedLaunch
 			? 'embedded'
 			: 'ota'
+
 	const payload = {
 		event_id: randomUUID(),
 		schema_version: 1,
@@ -143,11 +158,13 @@ const report = async (eventType: EventType): Promise<void> => {
 			? { emergency_launch_reason: Updates.emergencyLaunchReason ?? 'unknown' }
 			: {},
 	}
+
 	const response = await fetch(`${baseURL}/api/events`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(payload),
 	})
+
 	if (!response.ok) {
 		throw new Error(`update telemetry: ${response.status}`)
 	}

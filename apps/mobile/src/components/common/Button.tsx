@@ -103,6 +103,7 @@ const getButtonColors = ({
 				borderWidth: 1,
 			}
 		}
+
 		if (isMode('text')) {
 			return {
 				backgroundColor: 'transparent',
@@ -111,6 +112,7 @@ const getButtonColors = ({
 				borderWidth: 0,
 			}
 		}
+
 		// contained, elevated, contained-tonal
 		return {
 			backgroundColor: theme.colors.surfaceDisabled,
@@ -175,6 +177,7 @@ const Button = forwardRef<ComponentRef<typeof Touchable>, ButtonProps>(
 		ref,
 	) => {
 		const theme = useTheme()
+
 		const { backgroundColor, borderColor, textColor, borderWidth } =
 			getButtonColors({
 				theme,

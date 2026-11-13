@@ -13,7 +13,22 @@
 	"arrowParens": "always",
 	"endOfLine": "lf",
 	"singleAttributePerLine": true,
-	"ignorePatterns": ["**/dm.d.ts", "**/dm.js"],
+	"ignorePatterns": [
+		"**/dm.d.ts",
+		"**/dm.js",
+		".agents/**",
+		".claude/**",
+		".codex/**",
+		".continue/**",
+		".cursor/**",
+		".gemini/**",
+		".opencode/**",
+		".pi/**",
+		".roo/**",
+		".windsurf/**",
+		"oxlint-plugins/anti-slop/**",
+		"oxlint-suppressions.json"
+	],
 	"sortImports": {
 		"groups": [
 			["side_effect"],

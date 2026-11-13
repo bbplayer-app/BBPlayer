@@ -7,6 +7,7 @@ import { trackService as trackServiceInstance } from '@/lib/services/trackServic
 import { SyncBilibiliPlaylistFacade } from './facade'
 
 export { SyncBilibiliPlaylistFacade } from './facade'
+
 export type { PlaylistSyncProgress } from './types'
 
 export const syncFacade = new SyncBilibiliPlaylistFacade(

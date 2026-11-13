@@ -17,6 +17,7 @@ export function gaussian(x: number, sigma: number): number {
 export function lcs(s1: string, s2: string): number {
 	const m = s1.length
 	const n = s2.length
+
 	const dp: number[][] = Array.from({ length: m + 1 }, (): number[] =>
 		new Array<number>(n + 1).fill(0),
 	)
@@ -43,6 +44,7 @@ export function lcs(s1: string, s2: string): number {
 export function lcsScore(s1: string, s2: string): number {
 	if (s1.length === 0 || s2.length === 0) return 0
 	const lcsLen = lcs(s1, s2)
+
 	// Use max length to penalize length mismatches
 	return lcsLen / Math.max(s1.length, s2.length)
 }

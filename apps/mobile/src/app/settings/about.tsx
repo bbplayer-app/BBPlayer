@@ -40,6 +40,7 @@ export default function AboutSettingsPage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+
 	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}${
 		Updates.updateId
 			? ` hotfix-${Updates.updateId.slice(0, 7)}-${updateTime}`

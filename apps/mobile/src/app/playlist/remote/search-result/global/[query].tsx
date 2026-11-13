@@ -59,6 +59,7 @@ export default function SearchResultsPage() {
 	const router = useRouter()
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -68,6 +69,7 @@ export default function SearchResultsPage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
 	const [refreshing, setRefreshing] = useState(false)
 	const openModal = useModalStore((state) => state.open)
 
@@ -97,6 +99,7 @@ export default function SearchResultsPage() {
 		}
 
 		const allTracks = searchData.pages.flatMap((page) => page.result)
+
 		const uniqueMap = new Map(
 			allTracks.map((track) => [
 				track.bvid,
@@ -106,7 +109,9 @@ export default function SearchResultsPage() {
 				},
 			]),
 		)
+
 		const uniqueTracks = [...uniqueMap.values()]
+
 		return uniqueTracks.map(mapApiItemToTrack)
 	}, [searchData])
 
@@ -132,11 +137,14 @@ export default function SearchResultsPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const id of selected) {
 									const track = uniqueSearchData.find((t) => t.id === id)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -144,6 +152,7 @@ export default function SearchResultsPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

@@ -65,6 +65,7 @@ export default function FavoritePage() {
 	const linkedPlaylistId = useCheckLinkedToPlaylist(Number(id), 'favorite')
 
 	const { selected, selectMode, toggle, enterSelectMode } = useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -74,6 +75,7 @@ export default function FavoritePage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
 	const openModal = useModalStore((state) => state.open)
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
@@ -87,6 +89,7 @@ export default function FavoritePage() {
 		hasNextPage,
 		isFetchingNextPage,
 	} = useInfiniteFavoriteList(Number(id))
+
 	const tracks = useMemo(() => {
 		return (
 			favoriteData?.pages
@@ -101,6 +104,7 @@ export default function FavoritePage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -116,17 +120,21 @@ export default function FavoritePage() {
 	const handleSync = useCallback(() => {
 		if (favoriteData?.pages.flatMap((page) => page.medias).length === 0) {
 			toast.info('收藏夹为空，无需同步')
+
 			return
 		}
 
 		const { expandMultiPageOnSync } = useAppStore.getState().settings
+
 		if (expandMultiPageOnSync === null) {
 			openModal('SyncOptions', {
 				favoriteId: Number(id),
 				shouldRedirectToLocalPlaylist: true,
 			})
+
 			return
 		}
+
 		openModal(
 			'PlaylistSyncProgress',
 			{
@@ -188,11 +196,14 @@ export default function FavoritePage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const selectedId of selected) {
 									const track = tracks.find((t) => t.id === selectedId)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -200,6 +211,7 @@ export default function FavoritePage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

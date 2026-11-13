@@ -12,6 +12,7 @@ export type ProgressEvent = Record<
 		state: DownloadState
 	}
 >
+
 export const eventListner = createStickyEmitter<ProgressEvent>()
 
 // Dispatch event to each task

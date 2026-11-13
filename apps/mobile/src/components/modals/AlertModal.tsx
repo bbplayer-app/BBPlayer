@@ -31,6 +31,7 @@ export default function AlertModal({
 
 	const renderButton = (button: AlertButton | undefined, index: number) => {
 		if (!button) return null
+
 		switch (index) {
 			case 0: {
 				return (
@@ -44,17 +45,22 @@ export default function AlertModal({
 					</Button>
 				)
 			}
+
 			case 1: {
 				const handlePress = () => {
 					close('Alert')
+
 					if (button.afterModalHostClosed === false) {
 						button.onPress?.()
+
 						return
 					}
+
 					useModalStore.getState().doAfterModalHostClosed(() => {
 						button.onPress?.()
 					})
 				}
+
 				return (
 					<Button
 						key={index}

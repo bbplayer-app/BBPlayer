@@ -75,6 +75,7 @@ export interface BilibiliGarbSuitCardBgProperties {
 
 /** suit 个人空间背景 properties (支持 image1_landscape/portrait 到 image8_landscape/portrait 等动态 key) */
 type SpaceBgDynamicKeys = `image${number}_${'landscape' | 'portrait'}`
+
 export type BilibiliGarbSuitSpaceBgProperties = Partial<
 	Record<SpaceBgDynamicKeys, string>
 >

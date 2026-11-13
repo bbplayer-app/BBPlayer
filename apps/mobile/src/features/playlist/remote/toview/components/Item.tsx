@@ -87,6 +87,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 	return (
 		<Touchable
+			testID='toview-item'
 			androidRipple={{}}
 			style={[
 				styles.rectButton,
@@ -103,8 +104,10 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 			onPress={() => {
 				if (selectMode) {
 					toggleSelected(data.id)
+
 					return
 				}
+
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}

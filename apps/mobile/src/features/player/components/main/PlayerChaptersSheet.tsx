@@ -36,6 +36,7 @@ export function PlayerChaptersSheet() {
 			return
 		const chapter = data.chapters[currentIndex]
 		const layout = chapter && rowLayouts.current.get(chapter.id)
+
 		if (!layout || !viewportHeight.current) return
 		didScroll.current = true
 		list.current.scrollTo({
@@ -53,8 +54,10 @@ export function PlayerChaptersSheet() {
 	const selectChapter = async (chapter: Chapter) => {
 		if (!data.trackId || seeking) return
 		setSeeking(true)
+
 		try {
 			const target = await seekWithinTrack(data.trackId, chapter.startSeconds)
+
 			if (target !== null) void usePlayerChaptersSheetStore.getState().close()
 			setSeeking(false)
 		} catch (error) {
@@ -107,6 +110,7 @@ export function PlayerChaptersSheet() {
 							>
 								{data.chapters.map((item, chapterIndex) => (
 									<List.Item
+										testID='player-chapter-item'
 										key={item.id}
 										onLayout={(event) => {
 											rowLayouts.current.set(item.id, event.nativeEvent.layout)
@@ -173,6 +177,7 @@ export function PlayerChaptersSheet() {
 									<>
 										<Text>章节加载失败，播放不受影响</Text>
 										<Button
+											testID='player-chapters-retry'
 											onPress={() => {
 												void data.retry()
 											}}

@@ -128,12 +128,14 @@ const SELECT_MODE_ITEM_HEIGHT = 69
 
 /** px from top/bottom edge of list container that triggers auto-scroll */
 const EDGE_ZONE = 80
+
 /** px scrolled per auto-scroll tick (~16 ms) */
 const SCROLL_SPEED = 8
 
 type PlaylistContentsData = NonNullable<
 	ReturnType<typeof usePlaylistContentsInfinite>['data']
 >
+
 type PlaylistMetadata = NonNullable<
 	ReturnType<typeof usePlaylistMetadata>['data']
 >
@@ -144,6 +146,7 @@ const deletePlaylistDialogPrompt = (
 ) => {
 	if (!playlistMetadata || playlistMetadata.shareId === null)
 		return '确定要删除此播放列表吗？'
+
 	switch (playlistMetadata?.shareRole) {
 		case 'owner':
 			return (
@@ -173,6 +176,7 @@ const deletePlaylistDialogPrompt = (
 				</>
 			)
 	}
+
 	return <Text>确定要删除此播放列表吗？</Text>
 }
 
@@ -185,6 +189,7 @@ export default function LocalPlaylistPage() {
 	useEffect(() => {
 		markInteractive()
 	}, [markInteractive])
+
 	const {
 		data: playlistData,
 		isPending: isPlaylistDataPending,
@@ -193,6 +198,7 @@ export default function LocalPlaylistPage() {
 		hasNextPage: hasNextPagePlaylistData,
 		isFetchingNextPage: isFetchingNextPagePlaylistData,
 	} = usePlaylistContentsInfinite(Number(id), 30, 15)
+
 	const {
 		data: playlistMetadata,
 		isPending: isPlaylistMetadataPending,
@@ -209,15 +215,19 @@ export default function LocalPlaylistPage() {
 	useEffect(() => {
 		if (!isPlaylistNotFound) return
 		toast.error('播放列表不存在或已被删除')
+
 		if (router.canGoBack()) router.back()
 		else router.replace('/(tabs)')
 	}, [isPlaylistNotFound, router])
 
 	if (typeof id !== 'string') return null
+
 	if (isPlaylistDataPending || isPlaylistMetadataPending || !isListReady)
 		return <PlaylistPageSkeleton animate={isListReady} />
+
 	if (isPlaylistDataError || isPlaylistMetadataError)
 		return <PlaylistError text='加载播放列表内容失败' />
+
 	if (!playlistData || !playlistMetadata)
 		return <PlaylistError text='播放列表不存在或已被删除' />
 
@@ -260,6 +270,7 @@ function LocalPlaylistContent({
 	const [startSearch, setStartSearch] = useState(false)
 	const searchbarHeight = useSharedValue(0)
 	const deferredQuery = useDeferredValue(searchQuery)
+
 	const {
 		selected,
 		selectMode,
@@ -274,14 +285,19 @@ function LocalPlaylistContent({
 	const membersSheetRef = useRef<TrueSheet>(null)
 	const syncFailuresSheetRef = useRef<TrueSheet>(null)
 	const [membersSheetMounted, setMembersSheetMounted] = useState(false)
+
 	const [syncFailuresSheetMounted, setSyncFailuresSheetMounted] =
 		useState(false)
+
 	const setMembersSheetRef = useCallback((sheet: TrueSheet | null) => {
 		membersSheetRef.current = sheet
+
 		if (sheet) void sheet.present()
 	}, [])
+
 	const setSyncFailuresSheetRef = useCallback((sheet: TrueSheet | null) => {
 		syncFailuresSheetRef.current = sheet
+
 		if (sheet) void sheet.present()
 	}, [])
 
@@ -291,10 +307,12 @@ function LocalPlaylistContent({
 		toggle,
 		enter: enterSelectMode,
 	}
+
 	const openModal = useModalStore((state) => state.open)
 
 	const { data: playlistsContainingCurrentTrack } =
 		useAllPlaylistsContainingTrack(currentTrack?.uniqueKey)
+
 	const allLoadedTracks =
 		(
 			playlistData?.pages as Array<{
@@ -303,6 +321,7 @@ function LocalPlaylistContent({
 				nextPageFirstSortKey?: string
 			}>
 		)?.flatMap((page) => page.tracks) ?? []
+
 	/** DB `sort_key` values parallel to allLoadedTracks (needed for reorder mutation) */
 	const allLoadedSortKeys =
 		(
@@ -329,7 +348,9 @@ function LocalPlaylistContent({
 				keys.add(track.uniqueKey)
 				continue
 			}
+
 			const uri = getInternalPlayUri(track)
+
 			if (uri) {
 				urisToCheck.push({ uniqueKey: track.uniqueKey, uri })
 			}
@@ -338,6 +359,7 @@ function LocalPlaylistContent({
 		const validUris = new Set(
 			Orpheus.getLruCachedUris(urisToCheck.map((u) => u.uri)),
 		)
+
 		for (const item of urisToCheck) {
 			if (
 				validUris.has(item.uri) ||
@@ -346,6 +368,7 @@ function LocalPlaylistContent({
 				keys.add(item.uniqueKey)
 			}
 		}
+
 		return keys
 	})()
 
@@ -362,12 +385,15 @@ function LocalPlaylistContent({
 
 		if (isSearchError) {
 			toastAndLogError('搜索失败', searchError, SCOPE)
+
 			return []
 		}
 
 		return searchData ?? []
 	})()
+
 	const currentTrackKey = currentTrack?.uniqueKey
+
 	const currentTrackIndex = useMemo(
 		() =>
 			currentTrackKey
@@ -377,6 +403,7 @@ function LocalPlaylistContent({
 				: -1,
 		[finalPlaylistData, currentTrackKey],
 	)
+
 	const [visibleTrackKeys, setVisibleTrackKeys] = useState<string[]>([])
 	const [isLocatingCurrentTrack, setIsLocatingCurrentTrack] = useState(false)
 	const lastCurrentTrackLookupPageCountRef = useRef<number | null>(null)
@@ -384,6 +411,7 @@ function LocalPlaylistContent({
 	const isCurrentTrackInPlaylist = playlistsContainingCurrentTrack?.some(
 		(playlist) => playlist.id === Number(id),
 	)
+
 	const isCurrentTrackVisible =
 		!currentTrackKey || visibleTrackKeys.includes(currentTrackKey)
 
@@ -412,19 +440,24 @@ function LocalPlaylistContent({
 				keys.includes(currentTrackKey) ? keys : [...keys, currentTrackKey],
 			)
 			setIsLocatingCurrentTrack(false)
+
 			return
 		}
 
 		if (hasNextPagePlaylistData && !isFetchingNextPagePlaylistData) {
 			const loadedPageCount = playlistData?.pages.length ?? 0
+
 			if (lastCurrentTrackLookupPageCountRef.current === loadedPageCount) {
 				setIsLocatingCurrentTrack(false)
+
 				return
 			}
+
 			lastCurrentTrackLookupPageCountRef.current = loadedPageCount
 			void fetchNextPagePlaylistData().catch(() => {
 				setIsLocatingCurrentTrack(false)
 			})
+
 			return
 		}
 
@@ -445,6 +478,7 @@ function LocalPlaylistContent({
 	const shareMembers = useSharedPlaylistMembers(playlistMetadata?.shareId)
 	const isSharedSubscriber = playlistMetadata?.shareRole === 'subscriber'
 	const isSharedLoggedOut = !!playlistMetadata?.shareId && !bbplayerToken
+
 	const coverRef = useImage(
 		resolveBilibiliImageUrl(playlistMetadata?.coverUrl) ?? '',
 		{
@@ -463,33 +497,42 @@ function LocalPlaylistContent({
 	const { mutate: syncPlaylist } = usePlaylistSync()
 	const { mutate: deletePlaylist } = useDeletePlaylist()
 	const { mutate: editPlaylistMetadata } = useEditPlaylistMetadata()
+
 	const { mutate: deleteTrackFromLocalPlaylist } =
 		useBatchDeleteTracksFromLocalPlaylist()
+
 	const { mutate: reorderTrack } = useReorderLocalPlaylistTrack()
+
 	const { mutate: pullSharedPlaylist, isPending: isPullingShared } =
 		usePullSharedPlaylist()
 
 	const presentMembersSheet = useCallback(() => {
 		if (membersSheetRef.current) {
 			void membersSheetRef.current.present()
+
 			return
 		}
+
 		setMembersSheetMounted(true)
 	}, [])
 
 	const presentSyncFailuresSheet = useCallback(() => {
 		if (syncFailuresSheetRef.current) {
 			void syncFailuresSheetRef.current.present()
+
 			return
 		}
+
 		setSyncFailuresSheetMounted(true)
 	}, [])
 
 	const handlePressShareMember = () => {
 		if (isSharedLoggedOut) {
 			toast.error('登陆 BBPlayer 账号后才能查看共享成员')
+
 			return
 		}
+
 		if (playlistMetadata?.shareId) {
 			presentMembersSheet()
 		}
@@ -507,17 +550,21 @@ function LocalPlaylistContent({
 			toast.error(
 				'无法同步，因为未找到播放列表元数据或\u2009remoteSyncId\u2009为空',
 			)
+
 			return
 		}
 
 		if (playlistMetadata.type === 'favorite') {
 			const { expandMultiPageOnSync } = useAppStore.getState().settings
+
 			if (expandMultiPageOnSync === null) {
 				openModal('SyncOptions', {
 					favoriteId: playlistMetadata.remoteSyncId,
 				})
+
 				return
 			}
+
 			openModal(
 				'PlaylistSyncProgress',
 				{
@@ -527,6 +574,7 @@ function LocalPlaylistContent({
 				},
 				{ dismissible: false },
 			)
+
 			return
 		}
 
@@ -539,6 +587,7 @@ function LocalPlaylistContent({
 				},
 				{ dismissible: false },
 			)
+
 			return
 		}
 
@@ -556,6 +605,7 @@ function LocalPlaylistContent({
 		isOffline,
 		playableOfflineKeys,
 	)
+
 	const pullingIcon = useMemo(
 		() => () => (
 			<ActivityIndicator
@@ -593,8 +643,10 @@ function LocalPlaylistContent({
 
 	const clearInvalidVideos = async () => {
 		const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+
 		if (tracksResult.isErr()) {
 			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+
 			return
 		}
 
@@ -604,8 +656,10 @@ function LocalPlaylistContent({
 					track.source === 'bilibili' && !track.bilibiliMetadata.videoIsValid,
 			)
 			.map((track) => track.id)
+
 		if (invalidTrackIds.length === 0) {
 			toast.info('没有需要清除的失效视频')
+
 			return
 		}
 
@@ -620,21 +674,28 @@ function LocalPlaylistContent({
 			startSearch && deferredQuery.trim()
 				? await playlistService.searchTrackInPlaylist(Number(id), deferredQuery)
 				: await playlistService.getPlaylistTracks(Number(id))
+
 		if (tracksResult.isErr()) {
 			toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
+
 			return null
 		}
+
 		return tracksResult.value
 	}
 
 	const selectAllTracks = async () => {
 		setIsResolvingSelection(true)
+
 		try {
 			const tracks = await getSelectionScopeTracks()
+
 			if (!tracks) {
 				setIsResolvingSelection(false)
+
 				return
 			}
+
 			setSelected(new Set(tracks.map((track) => track.id)))
 			setIsResolvingSelection(false)
 		} catch {
@@ -644,12 +705,16 @@ function LocalPlaylistContent({
 
 	const invertSelectedTracks = async () => {
 		setIsResolvingSelection(true)
+
 		try {
 			const tracks = await getSelectionScopeTracks()
+
 			if (!tracks) {
 				setIsResolvingSelection(false)
+
 				return
 			}
+
 			setSelected(
 				new Set(
 					tracks
@@ -665,16 +730,21 @@ function LocalPlaylistContent({
 
 	const openBatchAddTracksModal = async () => {
 		setIsResolvingSelection(true)
+
 		try {
 			const tracksResult = await playlistService.getPlaylistTracks(Number(id))
+
 			if (tracksResult.isErr()) {
 				toastAndLogError('获取播放列表歌曲失败', tracksResult.error, SCOPE)
 				setIsResolvingSelection(false)
+
 				return
 			}
+
 			const selectedTracks = tracksResult.value.filter((track) =>
 				selected.has(track.id),
 			)
+
 			openModal('BatchAddTracksToLocalPlaylist', {
 				payloads: selectedTracks.map((track) => ({
 					track: { ...track, artistId: track.artist?.id },
@@ -702,6 +772,7 @@ function LocalPlaylistContent({
 
 	usePreventRemove(startSearch || selectMode, () => {
 		if (startSearch) setStartSearch(false)
+
 		if (selectMode) exitSelectMode()
 	})
 
@@ -713,8 +784,11 @@ function LocalPlaylistContent({
 
 	useEffect(() => {
 		if (typeof id !== 'string') return
+
 		if (!playlistMetadata?.shareId || !playlistMetadata.shareRole) return
+
 		if (isOffline) return
+
 		if (!bbplayerToken) return
 		pullSharedPlaylist(
 			{ playlistId: Number(id) },
@@ -727,6 +801,7 @@ function LocalPlaylistContent({
 					) {
 						return
 					}
+
 					handledRemoteDeletionRef.current = true
 					toast.error('共享者已删除该歌单，已为你移除本地副本')
 					deletePlaylist(
@@ -760,6 +835,7 @@ function LocalPlaylistContent({
 			)
 			.limit(1),
 	)
+
 	const hasSyncFailures =
 		!!playlistMetadata?.shareId && (syncFailures?.length ?? 0) > 0
 
@@ -821,9 +897,11 @@ function LocalPlaylistContent({
 		// Insert index: use calibration so that item-0 touches the origin correctly
 		const hoverRel = absoluteY + scrollOffsetRef.current - dragOriginRef.current
 		const k = Math.floor(hoverRel / SELECT_MODE_ITEM_HEIGHT)
+
 		// Upper/lower half of item k determines whether to insert before or after
 		const inItemFrac =
 			(hoverRel - k * SELECT_MODE_ITEM_HEIGHT) / SELECT_MODE_ITEM_HEIGHT
+
 		const insertIdx = inItemFrac >= 0.5 ? k : k - 1
 		setInsertAfterIndex(
 			Math.max(-1, Math.min(insertIdx, finalPlaylistData.length - 1)),
@@ -831,6 +909,7 @@ function LocalPlaylistContent({
 
 		// Edge auto-scroll
 		const containerRelY = absoluteY - containerTopRef.current
+
 		if (containerRelY < EDGE_ZONE) {
 			startAutoScroll('up')
 		} else if (containerRelY > containerHeightRef.current - EDGE_ZONE) {
@@ -876,6 +955,7 @@ function LocalPlaylistContent({
 		if (!currentDragging || currentInsertAfterIndex === null) {
 			setDragging(null)
 			setInsertAfterIndex(null)
+
 			return
 		}
 
@@ -892,18 +972,22 @@ function LocalPlaylistContent({
 				0,
 				Math.min(targetVisualIndex, finalPlaylistData.length - 1),
 			)
+
 			// 显示为 DESC 排序：index 0 = 最高 sort_key，index N-1 = 最低 sort_key
 			// 向下拖（clamped > trackIndex）：新位置夹在 [clamped] 和 [clamped+1] 之间
 			// 向上拖（clamped < trackIndex）：新位置夹在 [clamped-1] 和 [clamped] 之间
 			let prevSortKey: string | null
 			let nextSortKey: string | null
+
 			if (targetVisualIndex > trackIndex) {
 				// 向列表底部方向移动（sort_key 降低）
 				// 如果已经到了加载的末尾，且还有下一页，那么 prevSortKey 应该是下一页的第一条的 key
 				const isAtEnd = clamped === allLoadedSortKeys.length - 1
+
 				const nextPageFirstSortKey =
 					playlistData?.pages[playlistData.pages.length - 1]
 						?.nextPageFirstSortKey
+
 				prevSortKey =
 					allLoadedSortKeys[clamped + 1] ??
 					(isAtEnd && hasNextPagePlaylistData ? nextPageFirstSortKey : null) ??
@@ -914,6 +998,7 @@ function LocalPlaylistContent({
 				prevSortKey = allLoadedSortKeys[clamped] ?? null
 				nextSortKey = allLoadedSortKeys[clamped - 1] ?? null
 			}
+
 			reorderTrack({
 				playlistId: Number(id),
 				trackId,
@@ -1109,17 +1194,20 @@ function LocalPlaylistContent({
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='local-playlist-select-all'
 							icon='select-all'
 							disabled={isResolvingSelection}
 							onPress={() => void selectAllTracks()}
 						/>
 						<Appbar.Action
+							testID='local-playlist-invert-selection'
 							icon='select-compare'
 							disabled={isResolvingSelection}
 							onPress={() => void invertSelectedTracks()}
 						/>
 						{playlistMetadata.type === 'local' && (
 							<Appbar.Action
+								testID='local-playlist-delete-selected'
 								icon='trash-can'
 								onPress={() =>
 									alert(
@@ -1135,6 +1223,7 @@ function LocalPlaylistContent({
 							/>
 						)}
 						<Appbar.Action
+							testID='local-playlist-batch-add'
 							icon='playlist-plus'
 							disabled={isResolvingSelection}
 							onPress={() => void openBatchAddTracksModal()}
@@ -1144,6 +1233,7 @@ function LocalPlaylistContent({
 					<>
 						{playlistMetadata.shareId && hasSyncFailures && (
 							<Appbar.Action
+								testID='local-playlist-sync-failures'
 								icon='alert-circle'
 								color={colors.error}
 								onPress={presentSyncFailuresSheet}
@@ -1157,6 +1247,7 @@ function LocalPlaylistContent({
 							/>
 						)}
 						<Appbar.Action
+							testID='local-playlist-search'
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
 						/>

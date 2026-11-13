@@ -25,6 +25,7 @@ export default function SearchHistory({
 	panelVisible,
 }: SearchHistoryProps) {
 	const { colors } = useTheme()
+
 	return (
 		<ScrollView
 			style={styles.historySection}
@@ -41,6 +42,7 @@ export default function SearchHistory({
 				</Text>
 				{searchHistory && searchHistory.length > 0 && onClearHistory && (
 					<IconButton
+						testID='search-history-clear'
 						icon='trash-can-outline'
 						accessibilityLabel='清空搜索历史'
 						size={20}
@@ -52,6 +54,7 @@ export default function SearchHistory({
 				{searchHistory && searchHistory.length > 0 ? (
 					searchHistory.map((item) => (
 						<Chip
+							testID='search-history-item'
 							key={item.id}
 							onPress={() => {
 								Keyboard.dismiss()

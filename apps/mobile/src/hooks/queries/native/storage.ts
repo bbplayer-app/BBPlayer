@@ -2,8 +2,8 @@ import {
 	getStorageUsageAsync,
 	listStorageDirectoryAsync,
 } from '@bbplayer/native'
-import { useQuery } from '@tanstack/react-query'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 
 export const storageQueryKeys = {
@@ -27,7 +27,8 @@ queryClient.setQueryDefaults(storageQueryKeys.all, {
  * 避免拖慢转场。
  */
 export function useStorageUsage(enabled = true) {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'storage.usage' },
 		queryKey: storageQueryKeys.usage(),
 		queryFn: () => getStorageUsageAsync(),
 		enabled,
@@ -41,7 +42,8 @@ export function useStorageUsage(enabled = true) {
  * `path` 为相对 `dataDir` 的路径，空字符串表示根目录。
  */
 export function useStorageDirectory(path: string, enabled = true) {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'storage.directory' },
 		queryKey: storageQueryKeys.directory(path),
 		queryFn: () => listStorageDirectoryAsync(path),
 		enabled,

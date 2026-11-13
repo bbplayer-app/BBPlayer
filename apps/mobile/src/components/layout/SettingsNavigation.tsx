@@ -88,6 +88,7 @@ export default function SettingsNavigation() {
 			</View>
 			{SETTINGS_SECTIONS.map((section) => {
 				const selected = pathname.startsWith(section.path)
+
 				return (
 					<List.Item
 						key={section.path}

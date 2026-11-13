@@ -46,9 +46,12 @@ export function useSearchInteractions() {
 					pathname: '/playlist/remote/multipage/[bvid]',
 					params: { bvid: track.bilibiliMetadata.bvid },
 				})
+
 				return
 			}
+
 			const createIt = await syncFacade.addTrackToLocal(track)
+
 			if (createIt.isErr()) {
 				toastAndLogError(
 					'将 track 录入本地失败',
@@ -60,8 +63,10 @@ export function useSearchInteractions() {
 					'将 track 录入本地失败',
 					'UI.Playlist.Remote',
 				)
+
 				return
 			}
+
 			const added = await addToQueue({
 				tracks: [track],
 				playNow: !playNext,
@@ -69,6 +74,7 @@ export function useSearchInteractions() {
 				playNext: playNext,
 				startFromKey: track.uniqueKey,
 			})
+
 			if (added && playNext) {
 				toast.success('添加到下一首播放成功')
 			}
@@ -107,6 +113,7 @@ export function useSearchInteractions() {
 					if (!item.artist?.remoteId) {
 						return
 					}
+
 					router.navigate({
 						pathname: '/playlist/remote/uploader/[mid]',
 						params: { mid: item.artist?.remoteId },

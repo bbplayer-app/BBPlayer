@@ -58,6 +58,7 @@ function LibraryContent() {
 	useEffect(() => {
 		if (tab === undefined) return
 		const numTab = Number(tab)
+
 		if (!Number.isInteger(numTab) || numTab < 0 || numTab >= routes.length)
 			return
 		startTransition(() => {

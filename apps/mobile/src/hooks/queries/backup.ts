@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import {
 	createMobileWebDavClient,
 	normalizeDirectory,
@@ -36,6 +36,7 @@ async function fetchWebDavBackups(
 ) {
 	const client = await createMobileWebDavClient(config, password)
 	const entries = await client.listDirectory(config.directory)
+
 	return entries
 		.filter(
 			(entry) => entry.type === 'file' && BACKUP_FILE_PATTERN.test(entry.name),
@@ -54,7 +55,8 @@ export function useWebDavBackups(config: WebDavBackupConfig, password: string) {
 	}, [password])
 
 	// oxlint-disable @tanstack/query/exhaustive-deps -- Passwords must not be cached.
-	const query = useQuery({
+	const query = useTracedQuery({
+		span: { name: 'backup.webdav.list' },
 		// Passwords must not be included in the React Query cache key.
 		queryKey: webDavBackupQueryKeys.entries(config),
 		queryFn: () => fetchWebDavBackups(config, passwordRef.current),

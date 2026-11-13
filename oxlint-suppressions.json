@@ -1,0 +1,870 @@
+{
+  "apps/backend/src/middleware/auth.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/backend/src/routes/auth.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  },
+  "apps/backend/src/routes/playlists.ts": {
+    "anti-slop/no-conditional-empty-object-spread": {
+      "count": 3
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/docs/src/scripts/playlist.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/docs/src/scripts/share.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/hot-update-cli/src/commands/admin.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/hot-update-cli/src/commands/publish.ts": {
+    "anti-slop/no-conditional-empty-object-spread": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 2
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/hot-update-cli/src/index.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/hot-update-cli/src/services/project.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/hot-update-cli/src/services/update-server.ts": {
+    "anti-slop/no-conditional-empty-object-spread": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 3
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-returns": {
+      "count": 1
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/app.config.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/download.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/downloaded.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/player.tsx": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/app/playlist/local/[id].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 3
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/app/playlist/recently/index.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/collection/[id].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/favorite/[id].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/multipage/[bvid].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/search-result/fav/[query].tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/search-result/global/[query].tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/series/[id].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/toview.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/app/playlist/remote/uploader/[mid].tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/settings/account.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/app/share/playlist.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/components/AnimatedBootSplash.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/components/ModalRegistry.tsx": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/common/CoverWithPlaceHolder.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/components/common/TvMenuView.tsx": {
+    "anti-slop/no-array-filter-map": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/modals/AlertModal.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/components/modals/PlayerQueueModal.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/components/modals/player/LyricsSelectionModal.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/modals/playlist/SubscribeToSharedPlaylistModal.tsx": {
+    "anti-slop/no-known-value-widening": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/components/modals/settings/CoverDownloadProgressModal.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/modals/settings/ExportDownloadsProgressModal.tsx": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/components/modals/settings/SkinDownloadProgressModal.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/library/local/LocalPlaylistList.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/player/components/controls/MusicControls.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/player/components/controls/PlayerControlContent.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 5
+    }
+  },
+  "apps/mobile/src/features/player/components/lyrics/PlayerLyrics.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/features/player/components/menu/PlayerMenuContent.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/player/components/menu/PodcastFunctionalMenu.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/player/stores/subtitleReaderStore.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/features/player/utils/chapters.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/player/utils/subtitles.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/playlist/local/components/SyncFailuresSheet.tsx": {
+    "anti-slop/no-object-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/features/playlist/local/hooks/useLocalPlaylistPlayer.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/app/useFastMigrations.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/auth/useGeetest.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/queries/bilibili/user.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/queries/db/playlist.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/queries/db/track.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/queries/playHistory.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/hooks/stores/playbackContextStore.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/hooks/stores/useAppStore.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 3
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/hooks/stores/useSkinStore.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/hooks/ui/useMenuActions.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/bbplayer/client.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/bilibili/api.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 7
+    }
+  },
+  "apps/mobile/src/lib/api/bilibili/client.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/bilibili/utils.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/bilibili/wbi.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/kugou/api.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 4
+    }
+  },
+  "apps/mobile/src/lib/api/netease/api.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/netease/crypto.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 3
+    },
+    "anti-slop/no-object-parameters": {
+      "count": 3
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/netease/request.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 2
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/lib/api/netease/utils.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/api/qqmusic/api.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 4
+    }
+  },
+  "apps/mobile/src/lib/backup/webdav-client.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 5
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-returns": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 4
+    }
+  },
+  "apps/mobile/src/lib/config/queryClient.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 4
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/config/sentry.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/facades/playlist.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/facades/sharedPlaylist.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 9
+    }
+  },
+  "apps/mobile/src/lib/facades/syncBilibiliPlaylist/favorite.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/lib/services/analyticsService.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/lib/services/genKey.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/services/lyricService.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 6
+    }
+  },
+  "apps/mobile/src/lib/services/trackService.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/lib/services/updateService.ts": {
+    "anti-slop/no-object-parameters": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 9
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 2
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/mobile/src/lib/services/updateTelemetry.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/lib/theme/SkinManager.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/theme/adapter.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 5
+    }
+  },
+  "apps/mobile/src/lib/theme/downloadManager.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/theme/material3Colors.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 27
+    }
+  },
+  "apps/mobile/src/lib/theme/runtime.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/theme/schema.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/lib/workers/PlaylistSyncWorker.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 6
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 2
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 2
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 8
+    }
+  },
+  "apps/mobile/src/types/apis/bilibili.ts": {
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/types/core/playback.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 3
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/color.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/error-handling.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/log.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 2
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 2
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/lottie.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/mmkv-instance.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/mobile/src/utils/neverthrow-utils.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/set.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/startup-screen.ts": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/mobile/src/utils/sticky-mitt.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "apps/update-publisher/src/index.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 2
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 10
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 4
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 3
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "apps/update-server/web/src/api.ts": {
+    "anti-slop/no-conditional-empty-object-spread": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "apps/update-server/web/src/components/fingerprint-metadata-dialog.tsx": {
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    }
+  },
+  "apps/update-server/web/src/lib/utils.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 3
+    },
+    "anti-slop/no-unsafe-dictionary-type": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/expo-wavy-slider/src/ExpoWavySlider.types.ts": {
+    "anti-slop/no-shape-in-symbol-names": {
+      "count": 3
+    }
+  },
+  "packages/expo-wavy-slider/src/ExpoWavySliderModule.ts": {
+    "anti-slop/no-object-parameters": {
+      "count": 3
+    },
+    "anti-slop/no-unknown-returns": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/expo-wavy-slider/src/WavySlider.ts": {
+    "anti-slop/no-shape-in-symbol-names": {
+      "count": 4
+    }
+  },
+  "packages/expo-wavy-slider/src/hooks/useNativeNumberProp.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "packages/expo-wavy-slider/src/hooks/useNativeState.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/no-object-parameters": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 3
+    },
+    "anti-slop/no-unknown-returns": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "packages/expo-wavy-slider/src/hooks/useObservableStateAdapter.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/expo-wavy-slider/src/index.ts": {
+    "anti-slop/no-shape-in-symbol-names": {
+      "count": 2
+    }
+  },
+  "packages/expo-wavy-slider/src/utils/getStateId.ts": {
+    "anti-slop/no-object-parameters": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/expo-wavy-slider/src/utils/sharedObjectBrand.ts": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "packages/expo-wavy-slider/src/worklets.fx.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/no-runtime-typeof": {
+      "count": 2
+    },
+    "anti-slop/no-unknown-parameters": {
+      "count": 1
+    },
+    "anti-slop/no-unknown-returns": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 3
+    }
+  },
+  "packages/heatmap/src/components/MonthlyHeatMap.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "packages/heatmap/src/components/WeeklyHeatMap.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "packages/heatmap/src/components/WeeklyHeatMapGrid.tsx": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/heatmap/src/utils/calendar.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  },
+  "packages/native/src/TvFocus.tsx": {
+    "anti-slop/no-runtime-typeof": {
+      "count": 1
+    }
+  },
+  "packages/orpheus/src/ExpoOrpheusModule.ts": {
+    "anti-slop/no-chained-type-assertions": {
+      "count": 1
+    },
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 2
+    }
+  },
+  "packages/splash/src/converter/netease.test.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/splash/src/converter/netease.ts": {
+    "anti-slop/require-safety-comment-for-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/splash/src/parser/spans.ts": {
+    "anti-slop/no-known-value-widening": {
+      "count": 1
+    }
+  }
+}

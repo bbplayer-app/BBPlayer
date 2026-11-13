@@ -1,7 +1,7 @@
 import type { Track as OrpheusTrack } from '@bbplayer/orpheus'
 import { Orpheus } from '@bbplayer/orpheus'
-import { useQuery } from '@tanstack/react-query'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 
 export const orpheusQueryKeys = {
@@ -24,7 +24,8 @@ queryClient.setQueryDefaults(orpheusQueryKeys.all, {
 })
 
 export function useBatchDownloadStatus(ids: string[]) {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'download.batch_status' },
 		queryKey: orpheusQueryKeys.batchDownloadStatus(ids),
 		queryFn: async () => {
 			return await Orpheus.getDownloadStatusByIds(ids)
@@ -36,7 +37,8 @@ export function useBatchDownloadStatus(ids: string[]) {
 }
 
 export function useShuffleMode() {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'player.shuffle_mode' },
 		queryKey: orpheusQueryKeys.shuffleMode(),
 		queryFn: () => Orpheus.getShuffleMode(),
 		gcTime: 0,
@@ -45,7 +47,8 @@ export function useShuffleMode() {
 }
 
 export function useDownloadTasks() {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'download.tasks' },
 		queryKey: orpheusQueryKeys.downloadTasks(),
 		queryFn: async () => {
 			return await Orpheus.getUncompletedDownloadTasks()
@@ -55,7 +58,8 @@ export function useDownloadTasks() {
 }
 
 export function useCompletedDownloads() {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'download.completed' },
 		queryKey: orpheusQueryKeys.completedDownloads(),
 		queryFn: async () => {
 			return await Orpheus.getCompletedDownloadTasks()
@@ -65,10 +69,12 @@ export function useCompletedDownloads() {
 }
 
 export function usePlayerQueue(enabled: boolean = true) {
-	return useQuery<OrpheusTrack[]>({
+	return useTracedQuery<OrpheusTrack[]>({
+		span: { name: 'player.queue' },
 		queryKey: orpheusQueryKeys.playerQueue(),
 		queryFn: async () => {
 			const q = await Orpheus.getQueue()
+
 			return q
 		},
 		staleTime: 0,
@@ -78,7 +84,8 @@ export function usePlayerQueue(enabled: boolean = true) {
 }
 
 export function useSleepTimerEndTime() {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'player.sleep_timer' },
 		queryFn: async () => {
 			return await Orpheus.getSleepTimerEndTime()
 		},

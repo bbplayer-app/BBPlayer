@@ -21,6 +21,7 @@ export default function CookieLoginModal() {
 
 	const displayCookieString = useMemo(() => {
 		if (!cookieObjectFromStore) return ''
+
 		return serializeCookieObject(cookieObjectFromStore)
 	}, [cookieObjectFromStore])
 
@@ -30,6 +31,7 @@ export default function CookieLoginModal() {
 	const handleConfirm = async () => {
 		setIsLoading(true)
 		const cookie = inputCookie?.trim()
+
 		try {
 			if (!cookie) {
 				clearBilibiliCookie()
@@ -38,21 +40,26 @@ export default function CookieLoginModal() {
 				toast.success('Cookie 已清除')
 				close()
 				setIsLoading(false)
+
 				return
 			}
 
 			if (inputCookie === displayCookieString) {
 				close()
 				setIsLoading(false)
+
 				return
 			}
 
 			const result = setBilibiliCookie(inputCookie)
+
 			if (result.isErr()) {
 				toast.error(result.error.message)
 				setIsLoading(false)
+
 				return
 			}
+
 			toast.success('Cookie 已更新')
 			await queryClient.cancelQueries()
 			await queryClient.invalidateQueries({
@@ -63,6 +70,7 @@ export default function CookieLoginModal() {
 		} catch (error) {
 			toastAndLogError('操作失败', error, 'Components.CookieLoginModal')
 		}
+
 		setIsLoading(false)
 	}
 

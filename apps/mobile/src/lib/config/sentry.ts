@@ -6,13 +6,20 @@ import * as Updates from 'expo-updates'
 import { Platform } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
+import { findErrorSpan } from '@/lib/tracing'
 import log from '@/utils/log'
 
 const logger = log.extend('Utils.Sentry')
 
 const identifier = Application.applicationId
 const development = process.env.NODE_ENV === 'development'
+
+// DSN 由构建环境注入：只有官方构建流程会带上它。
+// 公开仓库里默认没有 DSN，任何人克隆后直接构建都不会上报任何事件。
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() ?? ''
+const hasSentryDsn = SENTRY_DSN.length > 0
 
 // 仅在官方应用包名上启用 Sentry，其他标识（Expo Go、第三方套壳等）一律忽略
 // 忽略最后一个字母，允许用户改包名共存（其实是我有时候要测试）
@@ -29,29 +36,57 @@ const OFFICIAL_APK_SIGNING_CERT_SHA256: readonly string[] = [
 
 const apkSigningCertificateSha256 = getApkSigningCertificateSha256()
 
-// 只在能拿到指纹的 Android 上校验；列表留空视为未配置，直接放行。
-const hasOfficialSignature =
-	Platform.OS !== 'android' ||
+// Android 用 APK 签名证书校验；列表留空视为未配置，直接放行。
+const hasOfficialAndroidSignature =
 	OFFICIAL_APK_SIGNING_CERT_SHA256.length === 0 ||
 	(apkSigningCertificateSha256 !== null &&
 		OFFICIAL_APK_SIGNING_CERT_SHA256.includes(apkSigningCertificateSha256))
 
-const isOfficialBuild = isOfficialApp && hasOfficialSignature
+// Android 额外校验 APK 签名证书；iOS 无法在运行时可靠校验自身签名
+// （App Store 分发包会剥离 embedded.mobileprovision），只依赖注入的 DSN。
+const hasOfficialPlatformProof =
+	Platform.OS === 'android' ? hasOfficialAndroidSignature : true
+
+const isOfficialBuild =
+	hasSentryDsn && isOfficialApp && hasOfficialPlatformProof
 
 const getEnv = () => {
 	if (development) {
 		return 'development'
 	}
+
 	// 这不可能发生，只在 web 端会是 null
 	if (!identifier) {
 		return 'development'
 	}
+
 	if (identifier === 'com.roitium.bbplayer.dev') {
 		return 'development'
 	} else if (identifier === 'com.roitium.bbplayer.preview') {
 		return 'preview'
 	}
+
 	return 'production'
+}
+
+export type ExpoLaunchSource = 'emergency' | 'embedded' | 'ota'
+
+export function getExpoLaunchSource(): ExpoLaunchSource {
+	if (Updates.isEmergencyLaunch) {
+		return 'emergency'
+	}
+
+	return Updates.isEmbeddedLaunch ? 'embedded' : 'ota'
+}
+
+// 与 Sentry.init 的 enabled 口径保持一致，并读取当前设置：
+// 用户可能在本次会话中途关闭数据采集。
+export function isSentryTelemetryEnabled(): boolean {
+	return (
+		!development &&
+		isOfficialBuild &&
+		useAppStore.getState().settings.enableDataCollection
+	)
 }
 
 export const navigationIntegration = Sentry.reactNavigationIntegration({
@@ -67,15 +102,16 @@ logger.info(
 
 export function initializeSentry() {
 	Sentry.init({
-		dsn: 'https://893ea8eb3743da1e065f56b3aa5e96f9@o4508985265618944.ingest.us.sentry.io/4508985267191808',
+		dsn: SENTRY_DSN || undefined,
 		debug: false,
-		tracesSampleRate: 0.3,
+		// 统一采样率；子 span 自动继承 parent 的采样决定，同一条 trace 要么全采要么全不采
+		tracesSampleRate: 0.5,
 		integrations: [navigationIntegration],
 		enableNativeFramesTracking: !isRunningInExpoGo(),
-		enabled:
-			!development &&
-			isOfficialBuild &&
-			useAppStore.getState().settings.enableDataCollection,
+		// 点击带 testID 的元素会开启 ui.action.touch transaction，期间发起的 query / mutation 挂在它下面；
+		// 没有子 span 的点击 transaction 会被 SDK 丢弃
+		enableUserInteractionTracing: true,
+		enabled: isSentryTelemetryEnabled(),
 		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
 		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。
 		// 因此非官方签名时把原生 SDK 一并关掉。
@@ -87,25 +123,44 @@ export function initializeSentry() {
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
+		beforeSend(event, hint) {
+			const fingerprint = getNativeModuleFingerprint(event)
+
+			if (fingerprint) {
+				event.fingerprint = fingerprint
+			}
+
+			// 显式传递的 span 不在全局 scope 里，这里把错误关联回它失败时所在的 trace
+			const span =
+				hint.originalException instanceof Error
+					? findErrorSpan(hint.originalException)
+					: undefined
+
+			if (span) {
+				const { trace_id, span_id } = Sentry.spanToJSON(span)
+				event.contexts = {
+					...event.contexts,
+					trace: { ...event.contexts?.trace, trace_id, span_id },
+				}
+			}
+
+			return event
+		},
 	})
 
 	const scope = Sentry.getGlobalScope()
-	const launchSource = Updates.isEmergencyLaunch
-		? 'emergency'
-		: Updates.isEmbeddedLaunch
-			? 'embedded'
-			: 'ota'
 
 	scope.setTag('expo-update-id', Updates.updateId ?? 'none')
 	scope.setTag('expo-is-embedded-update', String(Updates.isEmbeddedLaunch))
 	scope.setTag('expo-channel', configuredChannel())
 	scope.setTag('expo-runtime-version', Updates.runtimeVersion ?? 'unknown')
-	scope.setTag('expo-launch-source', launchSource)
+	scope.setTag('expo-launch-source', getExpoLaunchSource())
 
 	// 设置全局错误处理器，捕获未被处理的 JS 错误
 	if (!development) {
 		// oxlint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const errorUtils = (global as any).ErrorUtils
+
 		if (errorUtils) {
 			// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
 			const originalErrorHandler = errorUtils.getGlobalHandler()

@@ -1,6 +1,10 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+	tracedQueryOptions,
+	useTracedQueries,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { kugouApi } from '@/lib/api/kugou/api'
 import { neteaseApi } from '@/lib/api/netease/api'
 import { qqMusicApi } from '@/lib/api/qqmusic/api'
@@ -18,13 +22,16 @@ export const lyricsQueryKeys = {
 
 export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 	const enabled = !!track && enable
+
 	// oxlint-disable-next-line @tanstack/query/exhaustive-deps -- 同一 uniqueKey 的歌词是唯一缓存实体，track 仅供缓存未命中时获取歌词。
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'lyrics.get' },
 		// 缓存以曲目唯一标识为准，保证编辑、清除和偏移量调整写入的
 		// lyricsQueryKeys.smartFetchLyrics(uniqueKey) 能立即更新当前歌词页。
 		queryKey: lyricsQueryKeys.smartFetchLyrics(track?.uniqueKey),
-		queryFn: async () => {
-			const result = await lyricService.smartFetchLyrics(track!)
+		queryFn: async ({ span }) => {
+			const result = await lyricService.smartFetchLyrics(track!, span)
+
 			if (result.isErr()) {
 				if (result.error.type === 'LyricNotFound') {
 					return {
@@ -37,8 +44,10 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 						misc: undefined,
 					} satisfies LyricFileData
 				}
+
 				throw result.error
 			}
+
 			// manualSkip: 用户已手动跳过该曲目的歌词获取
 			if (result.value.manualSkip) {
 				return {
@@ -52,6 +61,7 @@ export const useSmartFetchLyrics = (enable: boolean, track?: Track) => {
 					misc: undefined,
 				} satisfies LyricFileData
 			}
+
 			return result.value
 		},
 		enabled,
@@ -69,15 +79,20 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 	// Effect to reset results when query changes - REMOVED
 	// Moved to triggerSearch
 
-	const queries = useQueries({
+	const queries = useTracedQueries({
 		queries: [
-			{
+			tracedQueryOptions({
+				span: {
+					name: 'lyrics.search',
+					attributes: { 'bbplayer.lyrics.provider': 'netease' },
+				},
 				queryKey: lyricsQueryKeys.manualSearch(
 					uniqueKey,
 					`netease-${searchQuery}`,
 				),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
+
 					const res = await neteaseApi.search(
 						{
 							keywords: searchQuery,
@@ -85,28 +100,40 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 						},
 						signal,
 					)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
 				staleTime: 0,
-			},
-			{
+			}),
+			tracedQueryOptions({
+				span: {
+					name: 'lyrics.search',
+					attributes: { 'bbplayer.lyrics.provider': 'qq' },
+				},
 				queryKey: lyricsQueryKeys.manualSearch(uniqueKey, `qq-${searchQuery}`),
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					const res = await qqMusicApi.search(searchQuery, 20, signal)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
 				staleTime: 0,
-			},
-			{
+			}),
+			tracedQueryOptions({
+				span: {
+					name: 'lyrics.search',
+					attributes: { 'bbplayer.lyrics.provider': 'kugou' },
+				},
 				queryKey: lyricsQueryKeys.manualSearch(
 					uniqueKey,
 					`kugou-${searchQuery}`,
@@ -114,14 +141,16 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 				queryFn: async ({ signal }) => {
 					if (!searchQuery) return []
 					const res = await kugouApi.search(searchQuery, 20, signal)
+
 					if (res.isOk()) {
 						return res.value
 					}
+
 					throw res.error
 				},
 				enabled: !!searchQuery,
 				staleTime: 0,
-			},
+			}),
 		],
 	})
 
@@ -146,7 +175,9 @@ export const useManualSearchLyrics = (uniqueKey?: string) => {
 		}
 
 		if (neteaseData) processResult('netease', neteaseData)
+
 		if (qqData) processResult('qq', qqData)
+
 		if (kugouData) processResult('kugou', kugouData)
 	}, [neteaseData, qqData, kugouData])
 

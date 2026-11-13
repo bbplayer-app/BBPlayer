@@ -27,8 +27,10 @@ export const FULLSCREEN_ROUTES = new Set([
 /** 根据窗口宽度决定是否启用导航栏，并把它的宽度提供给页面与播放条。 */
 export function NavigationRailProvider({ children }: PropsWithChildren) {
 	const { isTablet } = useResponsiveLayout()
+
 	const railWidth =
 		Platform.OS === 'android' && isTablet ? NAVIGATION_RAIL_WIDTH : 0
+
 	return (
 		<NativeTabRailWidthContext value={railWidth}>
 			{children}
@@ -40,7 +42,9 @@ export function NavigationRailProvider({ children }: PropsWithChildren) {
 export function NavigationRailOverlay() {
 	const railWidth = useContext(NativeTabRailWidthContext)
 	const segments = useSegments()
+
 	if (railWidth === 0 || FULLSCREEN_ROUTES.has(segments[0] ?? '')) return null
+
 	return <NavigationRail style={styles.overlay} />
 }
 
@@ -56,6 +60,7 @@ export default function NavigationRail({
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const pathname = usePathname()
+
 	const tabFromPath =
 		pathname === '/'
 			? 'search'
@@ -64,8 +69,10 @@ export default function NavigationRail({
 				: pathname === '/my'
 					? 'my'
 					: null
+
 	// 进入二级页面后仍高亮最后所在的 Tab。
 	const [lastTab, setLastTab] = useState('search')
+
 	if (tabFromPath && tabFromPath !== lastTab) setLastTab(tabFromPath)
 	const activeTab = tabFromPath ?? lastTab
 	const router = useRouter()

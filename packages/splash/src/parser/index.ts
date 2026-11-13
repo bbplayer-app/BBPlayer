@@ -20,9 +20,11 @@ export function parseSpl(lrcContent: string): SplLyricData {
 
 	for (let i = 0; i < lines.length; i++) {
 		const originalLine = lines[i].trim()
+
 		if (!originalLine) continue
 
 		const metaMatch = /^\[([a-zA-Z]+):(.*)\]$/.exec(originalLine)
+
 		if (metaMatch) {
 			meta[metaMatch[1].trim()] = metaMatch[2].trim()
 			continue
@@ -58,6 +60,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		let tMatch
 
 		const extractedTimes: number[] = []
+
 		while ((tMatch = singleTimeRegex.exec(fullTimePart)) !== null) {
 			extractedTimes.push(parseTimeTag(tMatch[0]))
 		}
@@ -69,6 +72,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 			if (!rawLinesMap.has(time)) {
 				rawLinesMap.set(time, [])
 			}
+
 			rawLinesMap.get(time)!.push({
 				lineNumber: i + 1,
 				timestamps: extractedTimes,
@@ -98,6 +102,7 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		} = parseSpans(mainRaw.content, startTime, mainRaw.lineNumber)
 
 		let endTime = explicitEnd
+
 		if (endTime === undefined) {
 			// 若没显式结束标签，则取下一行起始时间或默认为 10s
 			if (i < sortedTimes.length - 1) {
@@ -110,11 +115,13 @@ export function parseSpl(lrcContent: string): SplLyricData {
 		const fixedSpans = spans.map((s) => {
 			if (s.endTime === 0 || isNaN(s.endTime)) {
 				const validEndTime = endTime
+
 				return Object.assign(s, {
 					endTime: validEndTime,
 					duration: validEndTime - s.startTime,
 				})
 			}
+
 			return s
 		})
 
@@ -145,11 +152,13 @@ export function verify(
 ): { isValid: true } | { isValid: false; error: SplParseError } {
 	try {
 		parseSpl(lrcContent)
+
 		return { isValid: true }
 	} catch (e) {
 		if (e instanceof SplParseError) {
 			return { isValid: false, error: e }
 		}
+
 		throw e
 	}
 }

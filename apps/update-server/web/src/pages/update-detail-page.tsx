@@ -82,37 +82,45 @@ const lifecycleConfig = {
 
 export function UpdateDetailPage() {
 	const id = queryParam('id')
+
 	const detailQuery = useQuery({
 		queryKey: ['update', id],
 		queryFn: () => detail(id),
 		enabled: Boolean(id),
 	})
+
 	const channel = detailQuery.data?.channel
+
 	const channelHeadsQuery = useQuery({
 		queryKey: ['heads', channel],
 		queryFn: () => heads(channel ?? ''),
 		enabled: Boolean(channel),
 	})
+
 	const queryClient = useQueryClient()
 	const [republishOpen, setRepublishOpen] = useState(false)
 	const [embeddedOpen, setEmbeddedOpen] = useState(false)
+
 	const lifecycleQuery = useQuery({
 		queryKey: ['lifecycle', id],
 		queryFn: () => lifecycle(id),
 		enabled: Boolean(id),
 	})
+
 	if (!id)
 		return (
 			<AppShell active='updates'>
 				<ErrorState error={new Error('No update group ID was provided.')} />
 			</AppShell>
 		)
+
 	if (detailQuery.isPending)
 		return (
 			<AppShell active='updates'>
 				<PageSkeleton />
 			</AppShell>
 		)
+
 	if (detailQuery.error)
 		return (
 			<AppShell active='updates'>
@@ -123,6 +131,7 @@ export function UpdateDetailPage() {
 			</AppShell>
 		)
 	const update = detailQuery.data
+
 	return (
 		<AppShell active='updates'>
 			<PageHeader
@@ -310,6 +319,7 @@ export function UpdateDetailPage() {
 										update.runtime_version,
 										item.platform,
 									)
+
 									return (
 										<TableRow key={item.id}>
 											<TableCell>
@@ -528,12 +538,16 @@ function HeadLabel({
 }) {
 	if (!head)
 		return <span className='text-xs text-muted-foreground'>No head</span>
+
 	if (head.mode === 'embedded') return <StatusBadge value='embedded' />
 	const current = headGroupID(head)
+
 	if (current === groupId)
 		return <Badge className='whitespace-nowrap'>Current head</Badge>
+
 	if (!current)
 		return <span className='text-xs text-muted-foreground'>No head</span>
+
 	return (
 		<Identifier
 			label='current head group ID'
@@ -563,13 +577,16 @@ function RepublishDialog({
 	const [running, setRunning] = useState(false)
 	const [message, setMessage] = useState(`Republish ${update.message}`)
 	const [outcomes, setOutcomes] = useState<RepublishOutcome[] | null>(null)
+
 	const rows = update.platforms.map((item) => ({
 		platform: item.platform,
 		head: findHead(headsQueryData, update.runtime_version, item.platform),
 	}))
+
 	const actionable = rows.filter(
 		(row) => !(row.head?.mode === 'ota' && headGroupID(row.head) === update.id),
 	)
+
 	const pending = headsQueryPending || headsQueryData === undefined
 
 	async function run() {
@@ -577,6 +594,7 @@ function RepublishDialog({
 		setRunning(true)
 		setOutcomes([])
 		const result: RepublishOutcome[] = []
+
 		for (const row of actionable) {
 			try {
 				await republishChannel(channel, {
@@ -594,6 +612,7 @@ function RepublishDialog({
 				})
 			}
 		}
+
 		setOutcomes(result)
 		setRunning(false)
 		void queryClient.invalidateQueries({ queryKey: ['heads', channel] })
@@ -648,9 +667,11 @@ function RepublishDialog({
 								const isCurrent =
 									row.head?.mode === 'ota' &&
 									headGroupID(row.head) === update.id
+
 								const outcome = outcomes?.find(
 									(item) => item.platform === row.platform,
 								)
+
 								return (
 									<TableRow key={row.platform}>
 										<TableCell>
@@ -768,10 +789,12 @@ function EmbeddedDialog({
 	const channel = update.channel
 	const [running, setRunning] = useState(false)
 	const [outcomes, setOutcomes] = useState<RepublishOutcome[] | null>(null)
+
 	const rows = update.platforms.map((item) => ({
 		platform: item.platform,
 		head: findHead(headsQueryData, update.runtime_version, item.platform),
 	}))
+
 	const actionable = rows.filter((row) => row.head?.mode !== 'embedded')
 	const pending = headsQueryPending || headsQueryData === undefined
 
@@ -780,6 +803,7 @@ function EmbeddedDialog({
 		setRunning(true)
 		setOutcomes([])
 		const result: RepublishOutcome[] = []
+
 		for (const row of actionable) {
 			try {
 				await setChannelEmbedded(channel, {
@@ -799,6 +823,7 @@ function EmbeddedDialog({
 				})
 			}
 		}
+
 		setOutcomes(result)
 		setRunning(false)
 		void queryClient.invalidateQueries({ queryKey: ['heads', channel] })
@@ -806,6 +831,7 @@ function EmbeddedDialog({
 	}
 
 	const failed = outcomes?.filter((outcome) => !outcome.ok)
+
 	return (
 		<Dialog
 			open={open}
@@ -838,6 +864,7 @@ function EmbeddedDialog({
 								const outcome = outcomes?.find(
 									(item) => item.platform === row.platform,
 								)
+
 								return (
 									<TableRow key={row.platform}>
 										<TableCell>
@@ -959,6 +986,7 @@ function AssetPanel({
 				</CardHeader>
 			</Card>
 		)
+
 	return (
 		<Card>
 			<CardHeader>
@@ -1082,6 +1110,7 @@ function PatchStatusBadge({
 		failed: { label: 'Failed', variant: 'destructive' },
 		not_beneficial: { label: 'Not beneficial', variant: 'outline' },
 	} as const
+
 	return <Badge variant={meta[status].variant}>{meta[status].label}</Badge>
 }
 
@@ -1095,10 +1124,14 @@ function PatchResult({
 	if (patch.status === 'ready' && patch.size_bytes !== undefined) {
 		return `Saves ${percent(Math.max(0, 1 - patch.size_bytes / launchSize))}`
 	}
+
 	if (patch.error) return patch.error
+
 	if (patch.status === 'processing')
 		return `Generating · attempt ${patch.attempts}`
+
 	if (patch.status === 'pending') return 'Waiting for worker'
+
 	return 'Skipped'
 }
 
@@ -1107,8 +1140,10 @@ function Assets({ id, platform }: { id: string; platform: string }) {
 		queryKey: ['assets', id, platform],
 		queryFn: () => assets(id, platform),
 	})
+
 	if (query.isPending)
 		return <div className='mt-4 h-32 animate-pulse rounded-lg bg-muted' />
+
 	if (query.error)
 		return (
 			<ErrorState
@@ -1117,6 +1152,7 @@ function Assets({ id, platform }: { id: string; platform: string }) {
 			/>
 		)
 	const staticAssets = query.data.filter((asset) => !asset.is_launch)
+
 	if (staticAssets.length === 0)
 		return (
 			<section className='mt-6'>
@@ -1130,6 +1166,7 @@ function Assets({ id, platform }: { id: string; platform: string }) {
 				/>
 			</section>
 		)
+
 	return (
 		<section className='mt-6'>
 			<div className='mb-3 flex items-center gap-2'>

@@ -80,12 +80,15 @@ export default function DownloadPage() {
 							if (task.state === DownloadState.STOPPED) {
 								return Orpheus.resumeDownload(task.id)
 							}
+
 							if (task.track) {
 								return Orpheus.retryDownload(task.track)
 							}
+
 							return undefined
 						})
 						.filter(Boolean) as Promise<void>[]
+
 					await Promise.all(promises)
 					await queryClient.invalidateQueries({
 						queryKey: orpheusQueryKeys.downloadTasks(),

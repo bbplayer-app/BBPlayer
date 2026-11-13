@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-native'
 import type { SQL } from 'drizzle-orm'
 import { and, count, desc, eq, inArray, lt, or, sql, sum } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
@@ -13,6 +12,7 @@ import {
 	createTrackNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
+import { dbSpan, type TraceParent, traceSpan } from '@/lib/tracing'
 import type {
 	BilibiliTrack,
 	LocalTrack,
@@ -32,9 +32,13 @@ import log from '@/utils/log'
 import generateUniqueTrackKey from './genKey'
 
 const logger = log.extend('Service.Track')
+
 type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
+
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
+
 type SelectTrackBase = typeof schema.tracks.$inferSelect
+
 type SelectTrackWithMetadata = SelectTrackBase & {
 	artist: typeof schema.artists.$inferSelect | null
 	bilibiliMetadata: typeof schema.bilibiliMetadata.$inferSelect | null
@@ -42,7 +46,10 @@ type SelectTrackWithMetadata = SelectTrackBase & {
 }
 
 export class TrackService {
-	constructor(private readonly db: DBLike) {}
+	constructor(
+		private readonly db: DBLike,
+		private readonly traceParent?: TraceParent,
+	) {}
 
 	/**
 	 * 返回一个使用新数据库连接（例如事务）的新实例。
@@ -50,7 +57,16 @@ export class TrackService {
 	 * @returns 一个新的实例。
 	 */
 	withDB(conn: DBLike) {
-		return new TrackService(conn)
+		return new TrackService(conn, this.traceParent)
+	}
+
+	/**
+	 * 返回一个把数据库 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @returns 一个新的实例。
+	 */
+	withTrace(parent: TraceParent) {
+		return new TrackService(this.db, parent)
 	}
 
 	/**
@@ -92,6 +108,7 @@ export class TrackService {
 		}
 
 		logger.warning(`track ${dbTrack.id} 存在不一致的 source 和 metadata。`)
+
 		return null
 	}
 
@@ -111,6 +128,7 @@ export class TrackService {
 				),
 			)
 		}
+
 		if (payload.source === 'local' && !payload.localMetadata) {
 			return errAsync(
 				createValidationError(
@@ -120,6 +138,7 @@ export class TrackService {
 		}
 
 		const uniqueKey = generateUniqueTrackKey(payload)
+
 		if (uniqueKey.isErr()) {
 			return errAsync(uniqueKey.error)
 		}
@@ -127,8 +146,9 @@ export class TrackService {
 		const transactionResult = ResultAsync.fromPromise(
 			(async () => {
 				// 创建 track
-				const [newTrack] = await Sentry.startSpan(
-					{ name: 'db:insert:track', op: 'db' },
+				const [newTrack] = await traceSpan(
+					this.traceParent,
+					dbSpan('INSERT', 'tracks', 'track'),
 					() =>
 						this.db
 							.insert(schema.tracks)
@@ -147,8 +167,9 @@ export class TrackService {
 
 				// 创建元数据
 				if (payload.source === 'bilibili') {
-					await Sentry.startSpan(
-						{ name: 'db:insert:bilibiliMetadata', op: 'db' },
+					await traceSpan(
+						this.traceParent,
+						dbSpan('INSERT', 'bilibili_metadata', 'bilibili_metadata'),
 						() =>
 							this.db.insert(schema.bilibiliMetadata).values({
 								trackId,
@@ -162,8 +183,9 @@ export class TrackService {
 							}),
 					)
 				} else if (payload.source === 'local') {
-					await Sentry.startSpan(
-						{ name: 'db:insert:localMetadata', op: 'db' },
+					await traceSpan(
+						this.traceParent,
+						dbSpan('INSERT', 'local_metadata', 'local_metadata'),
 						() =>
 							this.db.insert(schema.localMetadata).values({
 								trackId,
@@ -197,8 +219,9 @@ export class TrackService {
 
 		const updateResult = ResultAsync.fromPromise(
 			(async () => {
-				return await Sentry.startSpan(
-					{ name: 'db:update:track', op: 'db' },
+				return await traceSpan(
+					this.traceParent,
+					dbSpan('UPDATE', 'tracks', 'track'),
 					() =>
 						this.db
 							.update(schema.tracks)
@@ -229,7 +252,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.id, id),
 					with: {
@@ -245,9 +268,11 @@ export class TrackService {
 					: new DatabaseError(`查找 track 失败：${id}`, { cause: e }),
 		).andThen((dbTrack) => {
 			const result = this.formatTrack(dbTrack)
+
 			if (!result) {
 				return errAsync(createTrackNotFound(id))
 			}
+
 			return okAsync(result)
 		})
 	}
@@ -261,7 +286,7 @@ export class TrackService {
 		id: number,
 	): ResultAsync<{ deletedId: number }, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:delete:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('DELETE', 'tracks', 'track'), () =>
 				this.db
 					.delete(schema.tracks)
 					.where(eq(schema.tracks.id, id))
@@ -273,9 +298,11 @@ export class TrackService {
 					: new DatabaseError(`删除 track 失败：${id}`, { cause: e }),
 		).andThen((results) => {
 			const result = results[0]
+
 			if (!result) {
 				return errAsync(createTrackNotFound(id))
 			}
+
 			return okAsync(result)
 		})
 	}
@@ -292,8 +319,9 @@ export class TrackService {
 	): ResultAsync<true, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
 			(async () => {
-				await Sentry.startSpan(
-					{ name: 'db:insert:play_history', op: 'db' },
+				await traceSpan(
+					this.traceParent,
+					dbSpan('INSERT', 'play_history', 'play_history'),
 					() =>
 						this.db.insert(schema.playHistory).values({
 							trackId,
@@ -321,10 +349,13 @@ export class TrackService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				const track = await this.findTrackIdsByUniqueKeys([uniqueKey])
+
 				if (track.isErr()) {
 					throw track.error
 				}
+
 				const trackId = track.value.get(uniqueKey)
+
 				if (!trackId) {
 					throw createTrackNotFound(uniqueKey)
 				}
@@ -354,11 +385,13 @@ export class TrackService {
 			source: 'bilibili',
 			bilibiliMetadata: bilibiliMetadata,
 		})
+
 		if (identifier.isErr()) {
 			return errAsync(identifier.error)
 		}
+
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) =>
 						eqFn(track.uniqueKey, identifier.value),
@@ -381,6 +414,7 @@ export class TrackService {
 			}
 
 			const formattedTrack = this.formatTrack(track)
+
 			if (!formattedTrack) {
 				return errAsync(
 					createValidationError(
@@ -403,13 +437,15 @@ export class TrackService {
 		payload: CreateTrackPayload,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		const uniqueKeyResult = generateUniqueTrackKey(payload)
+
 		if (uniqueKeyResult.isErr()) {
 			return errAsync(uniqueKeyResult.error)
 		}
+
 		const uniqueKey = uniqueKeyResult.value
 
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: (track, { eq: eqFn }) => eqFn(track.uniqueKey, uniqueKey),
 					with: {
@@ -429,21 +465,25 @@ export class TrackService {
 			.andThen((dbTrack) => {
 				if (dbTrack) {
 					const formattedTrack = this.formatTrack(dbTrack)
+
 					if (formattedTrack) {
 						return okAsync(formattedTrack)
 					}
+
 					return errAsync(
 						createValidationError(
 							`已存在的 track ${dbTrack.id} source 与 metadata 不匹配`,
 						),
 					)
 				}
+
 				return errAsync(createTrackNotFound(uniqueKey))
 			})
 			.orElse((error) => {
 				if (error instanceof ServiceError && error.type === 'TrackNotFound') {
 					return this.createTrack(payload)
 				}
+
 				return errAsync(error)
 			})
 	}
@@ -467,6 +507,7 @@ export class TrackService {
 			payloads.map((p) => {
 				if (p.source !== source)
 					return err(createValidationError('source 不一致'))
+
 				return generateUniqueTrackKey(p).map((uniqueKey) => ({
 					uniqueKey,
 					payload: p,
@@ -483,11 +524,13 @@ export class TrackService {
 			string,
 			{ uniqueKey: string; payload: CreateTrackPayload }
 		>()
+
 		for (const p of processedPayloadsResult.value) {
 			if (!uniquePayloadsMap.has(p.uniqueKey)) {
 				uniquePayloadsMap.set(p.uniqueKey, p)
 			}
 		}
+
 		const processedPayloads = Array.from(uniquePayloadsMap.values())
 		const uniqueKeys = processedPayloads.map((p) => p.uniqueKey)
 
@@ -509,8 +552,9 @@ export class TrackService {
 				)
 
 				if (trackValuesToInsert.length > 0) {
-					await Sentry.startSpan(
-						{ name: 'db:insert:many:tracks', op: 'db' },
+					await traceSpan(
+						this.traceParent,
+						dbSpan('INSERT', 'tracks', 'many.tracks'),
 						() =>
 							this.db
 								.insert(schema.tracks)
@@ -519,8 +563,9 @@ export class TrackService {
 					)
 				}
 
-				const allTracks = await Sentry.startSpan(
-					{ name: 'db:query:many:tracks', op: 'db' },
+				const allTracks = await traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'tracks', 'many.tracks'),
 					() =>
 						this.db.query.tracks.findMany({
 							where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
@@ -546,11 +591,13 @@ export class TrackService {
 						const bilibiliMetadataValues = processedPayloads.map(
 							({ uniqueKey, payload }) => {
 								const trackId = finalUniqueKeyToIdMap.get(uniqueKey)
+
 								if (!trackId) {
 									throw new ServiceError(
 										`该错误不应该出现，无法为 ${uniqueKey} 找到 trackId`,
 									)
 								}
+
 								return {
 									trackId,
 									...(payload as CreateBilibiliTrackPayload).bilibiliMetadata,
@@ -559,11 +606,9 @@ export class TrackService {
 						)
 
 						if (bilibiliMetadataValues.length > 0) {
-							await Sentry.startSpan(
-								{
-									name: 'db:insert:many:bilibiliMetadata',
-									op: 'db',
-								},
+							await traceSpan(
+								this.traceParent,
+								dbSpan('INSERT', 'bilibili_metadata', 'many.bilibili_metadata'),
 								() =>
 									this.db
 										.insert(schema.bilibiliMetadata)
@@ -571,8 +616,10 @@ export class TrackService {
 										.onConflictDoNothing(),
 							)
 						}
+
 						break
 					}
+
 					case 'local': {
 						throw createNotImplementedError('处理 local source 的逻辑尚未实现')
 					}
@@ -607,15 +654,19 @@ export class TrackService {
 		if (uniqueKeys.length === 0) {
 			return okAsync(new Map<string, number>())
 		}
+
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:many:tracks', op: 'db' }, () =>
-				this.db.query.tracks.findMany({
-					where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
-					columns: {
-						id: true,
-						uniqueKey: true,
-					},
-				}),
+			traceSpan(
+				this.traceParent,
+				dbSpan('SELECT', 'tracks', 'many.tracks'),
+				() =>
+					this.db.query.tracks.findMany({
+						where: and(inArray(schema.tracks.uniqueKey, uniqueKeys)),
+						columns: {
+							id: true,
+							uniqueKey: true,
+						},
+					}),
 			),
 			(e) =>
 				e instanceof ServiceError
@@ -623,9 +674,11 @@ export class TrackService {
 					: new DatabaseError('批量查找 tracks 失败', { cause: e }),
 		).andThen((existingTracks) => {
 			const uniqueKeyToIdMap = new Map<string, number>()
+
 			for (const track of existingTracks) {
 				uniqueKeyToIdMap.set(track.uniqueKey, track.id)
 			}
+
 			return okAsync(uniqueKeyToIdMap)
 		})
 	}
@@ -694,8 +747,9 @@ export class TrackService {
 			)
 		}
 
-		const historyQuery = Sentry.startSpan(
-			{ name: 'db:query:playHistory', op: 'db' },
+		const historyQuery = traceSpan(
+			this.traceParent,
+			dbSpan('SELECT', ['tracks', 'play_history'], 'play_history'),
 			() =>
 				this.db
 					.select({
@@ -736,6 +790,7 @@ export class TrackService {
 			const resultItems = hasNextPage ? rows.slice(0, effectiveLimit) : rows
 
 			const items: { track: Track; playCount: number }[] = []
+
 			for (const row of resultItems) {
 				const track = this.formatTrack({
 					...row.track,
@@ -743,13 +798,16 @@ export class TrackService {
 					bilibiliMetadata: row.bilibiliMetadata,
 					localMetadata: row.localMetadata,
 				})
+
 				if (!track) continue
 				items.push({ track, playCount: row.playCount ?? 0 })
 			}
 
 			let nextCursor
+
 			if (hasNextPage) {
 				const lastRow = resultItems[resultItems.length - 1]
+
 				if (lastRow) {
 					nextCursor = {
 						lastPlayCount: lastRow.playCount ?? 0,
@@ -790,8 +848,13 @@ export class TrackService {
 				.as('play_counts')
 
 			return ResultAsync.fromPromise(
-				Sentry.startSpan(
-					{ name: 'db:query:totalPlaybackDuration:completed', op: 'db' },
+				traceSpan(
+					this.traceParent,
+					dbSpan(
+						'SELECT',
+						['tracks', 'play_history'],
+						'total_playback_duration.completed',
+					),
 					() =>
 						this.db
 							.select({
@@ -809,12 +872,14 @@ export class TrackService {
 				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
 			).andThen((rows) => {
 				const totalDuration = rows[0]?.totalDuration
+
 				return okAsync(totalDuration ?? 0)
 			})
 		} else {
 			return ResultAsync.fromPromise(
-				Sentry.startSpan(
-					{ name: 'db:query:totalPlaybackDuration:all', op: 'db' },
+				traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'play_history', 'total_playback_duration.all'),
 					() =>
 						this.db
 							.select({
@@ -827,6 +892,7 @@ export class TrackService {
 				(e) => new DatabaseError('获取总播放时长失败', { cause: e }),
 			).andThen((rows) => {
 				const totalDuration = rows[0]?.totalDuration
+
 				return okAsync(totalDuration ?? 0)
 			})
 		}
@@ -836,7 +902,7 @@ export class TrackService {
 		uniqueKey: string,
 	): ResultAsync<Track, ServiceError | DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:track', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'track'), () =>
 				this.db.query.tracks.findFirst({
 					where: eq(schema.tracks.uniqueKey, uniqueKey),
 					with: {
@@ -852,9 +918,11 @@ export class TrackService {
 					: new DatabaseError('查找 track 失败', { cause: e }),
 		).andThen((dbTrack) => {
 			const formattedTrack = this.formatTrack(dbTrack)
+
 			if (!formattedTrack) {
 				return errAsync(createTrackNotFound(uniqueKey))
 			}
+
 			return okAsync(formattedTrack)
 		})
 	}
@@ -896,8 +964,13 @@ export class TrackService {
 			.groupBy(schema.playHistory.trackId)
 			.as('duration_sums')
 
-		const historyQuery = Sentry.startSpan(
-			{ name: 'db:query:mostPlayedTracksByDuration', op: 'db' },
+		const historyQuery = traceSpan(
+			this.traceParent,
+			dbSpan(
+				'SELECT',
+				['tracks', 'play_history'],
+				'most_played_tracks_by_duration',
+			),
 			() =>
 				this.db
 					.select({
@@ -933,6 +1006,7 @@ export class TrackService {
 			(e) => new DatabaseError('获取最近播放时长排行失败', { cause: e }),
 		).andThen((rows) => {
 			const results: Array<{ track: Track; totalDuration: number }> = []
+
 			for (const row of rows) {
 				const track = this.formatTrack({
 					...row.track,
@@ -940,12 +1014,14 @@ export class TrackService {
 					bilibiliMetadata: row.bilibiliMetadata,
 					localMetadata: row.localMetadata,
 				})
+
 				if (!track) continue
 				results.push({
 					track,
 					totalDuration: Number(row.totalDuration ?? 0),
 				})
 			}
+
 			return okAsync(results)
 		})
 	}

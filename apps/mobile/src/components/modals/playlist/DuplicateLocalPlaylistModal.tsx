@@ -17,6 +17,7 @@ export default function DuplicateLocalPlaylistModal({
 	const [duplicatePlaylistName, setDuplicatePlaylistName] = useState(
 		`${rawName}-副本`,
 	)
+
 	const { mutate: duplicatePlaylist } = useDuplicatePlaylist()
 	const close = useModalStore((state) => state.close)
 	const closeAll = useModalStore((state) => state.closeAll)
@@ -65,7 +66,12 @@ export default function DuplicateLocalPlaylistModal({
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={() => close('DuplicateLocalPlaylist')}>取消</Button>
-				<Button onPress={handleDuplicatePlaylist}>确定</Button>
+				<Button
+					testID='duplicate-playlist-confirm'
+					onPress={handleDuplicatePlaylist}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

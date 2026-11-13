@@ -1,6 +1,11 @@
+import * as Sentry from '@sentry/react-native'
 import AppMetrics from 'expo-app-metrics'
 import { startProfiling, stopProfiling } from 'react-native-release-profiler'
 
+import {
+	getExpoLaunchSource,
+	isSentryTelemetryEnabled,
+} from '@/lib/config/sentry'
 import { storage } from '@/utils/mmkv'
 
 export const PROFILING_DURATION_MS = 10_000
@@ -32,6 +37,7 @@ const listeners = new Set<() => void>()
 
 export function subscribeToMetrics(fn: () => void) {
 	listeners.add(fn)
+
 	return () => {
 		listeners.delete(fn)
 	}
@@ -80,11 +86,13 @@ export async function captureProfiling(
 
 	try {
 		profilingActive = startProfiling()
+
 		if (!profilingActive) return null
 
 		await new Promise((resolve) => setTimeout(resolve, durationMs))
 		metrics.profilerTracePath = await stopProfiling(true)
 		emit()
+
 		return metrics.profilerTracePath
 	} catch {
 		return null
@@ -101,18 +109,64 @@ function persistMetrics() {
 		timeToFirstRender: metrics.timeToFirstRender,
 		timeToInteractive: metrics.timeToInteractive,
 	}
+
 	// oxlint-disable-next-line no-console
 	console.log(`__PERF_METRICS__${JSON.stringify(summary)}__PERF_END__`)
 }
 
+function reportStartupMetrics() {
+	if (!isSentryTelemetryEnabled()) return
+
+	const attributes = { launch_source: getExpoLaunchSource() }
+	const launchTime = metrics.coldLaunchTime ?? metrics.warmLaunchTime
+
+	if (launchTime !== null) {
+		Sentry.metrics.distribution('app.startup.duration', launchTime, {
+			unit: 'millisecond',
+			attributes: {
+				...attributes,
+				launch_type: metrics.coldLaunchTime !== null ? 'cold' : 'warm',
+			},
+		})
+	}
+
+	if (metrics.bundleLoadTime !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.bundle_load',
+			metrics.bundleLoadTime,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+
+	if (metrics.timeToFirstRender !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.time_to_first_render',
+			metrics.timeToFirstRender,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+
+	if (metrics.timeToInteractive !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.time_to_interactive',
+			metrics.timeToInteractive,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+}
+
 async function fetchStartupMetrics(): Promise<void> {
 	if (fetched) return
+
 	try {
 		const session = AppMetrics.getMainSession()
+
 		for (let attempt = 0; attempt < 20; attempt++) {
 			const entries = await session.getMetrics()
+
 			for (const entry of entries) {
 				const ms = entry.value * 1000
+
 				switch (entry.name) {
 					case 'coldLaunchTime':
 						metrics.coldLaunchTime = ms
@@ -131,10 +185,12 @@ async function fetchStartupMetrics(): Promise<void> {
 						break
 				}
 			}
+
 			// 原生侧 markInteractive 后异步持久化，TTI 可能尚未写入，重试
 			if (metrics.timeToInteractive !== null) break
 			await new Promise((resolve) => setTimeout(resolve, 250))
 		}
+
 		fetched = true
 		emit()
 	} catch {
@@ -143,6 +199,11 @@ async function fetchStartupMetrics(): Promise<void> {
 }
 
 async function finishStartupMetrics(): Promise<void> {
+	// app start span 以「可交互」为终点，先结算，避免被下面的 profiling / 重试拉长
+	if (isSentryTelemetryEnabled()) {
+		Sentry.appLoaded()
+	}
+
 	if (startupProfilingActive) {
 		try {
 			await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -156,6 +217,7 @@ async function finishStartupMetrics(): Promise<void> {
 	}
 
 	await fetchStartupMetrics()
+	reportStartupMetrics()
 }
 
 export function markPerfInteractive(): Promise<void> {
@@ -164,5 +226,6 @@ export function markPerfInteractive(): Promise<void> {
 			interactivePromise = null
 		})
 	}
+
 	return interactivePromise
 }

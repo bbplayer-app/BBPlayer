@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -23,10 +22,14 @@ export const videoDataQueryKeys = {
  */
 export const useGetMultiPageList = (bvid: string | undefined) => {
 	const enabled = !!bvid
-	return useQuery({
+
+	return useTracedQuery({
+		span: { name: 'bilibili.video.multi_page_list' },
 		queryKey: videoDataQueryKeys.getMultiPageList(bvid),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getPageList({ bvid: bvid!, signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getPageList({ bvid: bvid!, signal }),
+			),
 		enabled,
 		staleTime: 1,
 	})
@@ -37,10 +40,14 @@ export const useGetMultiPageList = (bvid: string | undefined) => {
  */
 export const useGetVideoDetails = (bvid: string | undefined) => {
 	const enabled = !!bvid
-	return useQuery({
+
+	return useTracedQuery({
+		span: { name: 'bilibili.video.details' },
 		queryKey: videoDataQueryKeys.getVideoDetails(bvid),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getVideoDetails({ bvid: bvid!, signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getVideoDetails({ bvid: bvid!, signal }),
+			),
 		enabled,
 		staleTime: 60 * 60 * 1000, // 我们不需要获取实时的视频详细信息
 	})
@@ -52,11 +59,15 @@ export const useGetVideoDetails = (bvid: string | undefined) => {
 export const useGetVideoIsThumbUp = (bvid: string | undefined) => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = !!bvid && hasCookie
-	return useQuery({
+
+	return useTracedQuery({
+		span: { name: 'bilibili.video.is_thumb_up' },
 		queryKey: videoDataQueryKeys.getVideoIsThumbUp(bvid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.checkVideoIsThumbUp({ bvid: bvid!, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.checkVideoIsThumbUp({ bvid: bvid!, signal }),
 			),
 		enabled,
 		staleTime: 0,
@@ -71,11 +82,15 @@ export const useGetWebPlayerInfo = (
 	cid: number | undefined,
 ) => {
 	const enabled = !!bvid && !!cid
-	return useQuery({
+
+	return useTracedQuery({
+		span: { name: 'bilibili.video.web_player_info' },
 		queryKey: videoDataQueryKeys.getWebPlayerInfo(bvid, cid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getWebPlayerInfo({ bvid: bvid!, cid: cid!, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getWebPlayerInfo({ bvid: bvid!, cid: cid!, signal }),
 			),
 		enabled,
 		staleTime: 5 * 60 * 1000,
@@ -88,10 +103,14 @@ export const useGetWebPlayerInfo = (
 export const useGetToViewVideoList = () => {
 	const hasCookie = useAppStore((s) => s.hasBilibiliCookie())
 	const enabled = hasCookie
-	return useQuery({
+
+	return useTracedQuery({
+		span: { name: 'bilibili.to_view.list' },
 		queryKey: videoDataQueryKeys.getToViewVideoList(),
-		queryFn: ({ signal }) =>
-			returnOrThrowAsync(bilibiliApi.getToViewVideoList({ signal })),
+		queryFn: ({ signal, span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).getToViewVideoList({ signal }),
+			),
 		enabled,
 		staleTime: 0,
 	})

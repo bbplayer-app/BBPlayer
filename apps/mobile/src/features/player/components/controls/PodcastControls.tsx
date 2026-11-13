@@ -33,11 +33,14 @@ export function PodcastControls({
 	useEffect(() => {
 		if (!sleepEndTime) return
 		const interval = setInterval(() => setNow(Date.now()), 1000)
+
 		return () => clearInterval(interval)
 	}, [sleepEndTime])
+
 	const remaining = sleepEndTime
 		? Math.max(0, Math.ceil((sleepEndTime - now) / 1000))
 		: 0
+
 	const actions = [
 		{
 			icon: 'speedometer',
@@ -79,6 +82,7 @@ export function PodcastControls({
 			selected: activePane === 'queue',
 		},
 	]
+
 	return (
 		<View>
 			<View style={{ marginTop: compact ? 8 : 24 }}>
@@ -90,6 +94,7 @@ export function PodcastControls({
 			<SecondaryPlaybackControls compact={compact}>
 				{actions.map((action) => (
 					<IconButton
+						testID={`podcast-control-${action.icon}`}
 						key={action.icon}
 						icon={action.icon}
 						size={24}

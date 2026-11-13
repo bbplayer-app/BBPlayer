@@ -20,7 +20,9 @@ const getSkinForegroundColor = (
 	}
 
 	if (colorMode === 'dark') return '#FFFFFF'
+
 	if (colorMode === 'light') return '#212121'
+
 	return fallback
 }
 
@@ -29,9 +31,11 @@ export default function useSkinForegroundColor(): string {
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
 	const skinColors = activeSkin?.skins[activeSkinIndex]?.colors
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	if (pureWhiteBackground) return fallback
 
 	return getSkinForegroundColor(

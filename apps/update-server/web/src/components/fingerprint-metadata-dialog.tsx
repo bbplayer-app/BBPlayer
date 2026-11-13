@@ -28,6 +28,7 @@ export function FingerprintMetadataDialog({
 	sources: unknown
 }) {
 	const dark = useDarkMode()
+
 	return (
 		<Dialog>
 			<DialogTrigger asChild>
@@ -82,10 +83,13 @@ function useDarkMode() {
 
 	useEffect(() => {
 		const root = document.documentElement
+
 		const observer = new MutationObserver(() =>
 			setDark(root.classList.contains('dark')),
 		)
+
 		observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+
 		return () => observer.disconnect()
 	}, [])
 
@@ -95,5 +99,6 @@ function useDarkMode() {
 function formatMetadata(value: unknown) {
 	if (value === null || value === undefined)
 		return 'No fingerprint metadata was recorded.'
+
 	return JSON.stringify(value, null, 2)
 }

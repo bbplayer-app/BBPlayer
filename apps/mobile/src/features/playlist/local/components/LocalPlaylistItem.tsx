@@ -28,6 +28,8 @@ export interface TrackMenuItem {
 	onPress: () => void
 	danger?: boolean
 	isHighFreq?: boolean
+	/** 用于 e2e 与 Sentry 点击追踪的固定标识 */
+	testID?: string
 }
 
 interface TrackListItemProps {
@@ -96,6 +98,7 @@ export const TrackListItem = memo(function TrackListItem({
 	const renderDownloadStatus = useCallback(() => {
 		if (!downloadState) return null
 		let iconConfig
+
 		switch (downloadState) {
 			case DownloadState.COMPLETED:
 				iconConfig = {
@@ -151,8 +154,10 @@ export const TrackListItem = memo(function TrackListItem({
 			onPress={() => {
 				if (selectMode) {
 					if (!isReadOnly) toggleSelected(data.id)
+
 					return
 				}
+
 				if (isCurrentTrack) return
 				onTrackPress()
 			}}
@@ -269,6 +274,7 @@ export const TrackListItem = memo(function TrackListItem({
 								) : null
 							) : (
 								<Touchable
+									testID='track-item-menu'
 									androidRipple={{}}
 									style={styles.menuButton}
 									disabled={!onMenuPress}

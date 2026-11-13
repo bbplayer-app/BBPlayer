@@ -22,6 +22,9 @@ jobs:
         env:
           BBPLAYER_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           BBPLAYER_UPDATE_SERVER_TOKEN: ${{ secrets.UPDATE_SERVER_TOKEN }}
+          # expo export 会把 EXPO_PUBLIC_* 内联进 JS bundle，热更新包也必须带上
+          # DSN，否则热更新后的应用会静默停止上报。
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
         run: |
           cd apps/mobile
           pnpm hot-update publish \

@@ -36,10 +36,13 @@ export default function FollowingPage() {
 	const isSearching = searchQuery.trim().length > 0 || keyword.length > 0
 	const [selectedTagId, setSelectedTagId] = useState(-20)
 	const groups = useFollowingGroups()
+
 	const selectedGroup = groups.data?.find(
 		(group) => group.tagid === selectedTagId,
 	)
+
 	const tagId = keyword ? -20 : (selectedGroup?.tagid ?? -20)
+
 	const {
 		data,
 		isPending,
@@ -52,14 +55,18 @@ export default function FollowingPage() {
 		isFetchingNextPage,
 		isFetchNextPageError,
 	} = useInfiniteFollowings(keyword, tagId, !isSearchPending)
+
 	const account = useBilibiliRelationAccount()
+
 	const [followingCount, setFollowingCount] = useState<{
 		account: string | null
 		total: number
 	} | null>(null)
+
 	// 切换分组后仍显示全部关注数量，不把分组人数当成总人数。
 	useEffect(() => {
 		const total = data?.pages[0].total
+
 		if (keyword || tagId !== -20 || total === undefined) return
 		setFollowingCount((previous) =>
 			previous?.account === account && previous.total === total
@@ -67,12 +74,14 @@ export default function FollowingPage() {
 				: { account, total },
 		)
 	}, [account, data, keyword, tagId])
+
 	const totalFollowings =
 		tagId === -20 && !keyword
 			? data?.pages[0].total
 			: followingCount?.account === account
 				? followingCount.total
 				: undefined
+
 	const refetchGroups = groups.refetch
 	useFocusEffect(
 		useCallback(() => {
@@ -84,8 +93,10 @@ export default function FollowingPage() {
 			if (hasCookie) void refetchGroups()
 		}, [hasCookie, refetchGroups]),
 	)
+
 	const followings = useMemo(() => {
 		const users = data?.pages.flatMap((page) => page.list ?? []) ?? []
+
 		return [...new Map(users.map((user) => [user.mid, user])).values()]
 	}, [data])
 
@@ -115,6 +126,7 @@ export default function FollowingPage() {
 									contentContainerStyle={styles.groups}
 								>
 									<Chip
+										testID='following-group-all'
 										selected={tagId === -20}
 										onPress={() => setSelectedTagId(-20)}
 									>
@@ -127,6 +139,7 @@ export default function FollowingPage() {
 										?.filter((group) => group.tagid !== -20)
 										.map((group) => (
 											<Chip
+												testID='following-group'
 												key={group.tagid}
 												selected={tagId === group.tagid}
 												onPress={() => setSelectedTagId(group.tagid)}
@@ -137,7 +150,10 @@ export default function FollowingPage() {
 								</ScrollView>
 							)}
 							{groups.isError && (
-								<Button onPress={() => void refetchGroups()}>
+								<Button
+									testID='following-groups-retry'
+									onPress={() => void refetchGroups()}
+								>
 									分组加载失败，重试
 								</Button>
 							)}
@@ -149,6 +165,7 @@ export default function FollowingPage() {
 				<View style={styles.state}>
 					<Text>登录 Bilibili 账号后查看我的关注</Text>
 					<Button
+						testID='following-login'
 						mode='contained'
 						onPress={() => router.navigate('/settings/bilibili-account')}
 					>
@@ -161,7 +178,12 @@ export default function FollowingPage() {
 				<View style={styles.state}>
 					<Text>加载关注列表失败</Text>
 					<Text style={styles.error}>{error.message}</Text>
-					<Button onPress={() => void refetch()}>重试</Button>
+					<Button
+						testID='following-retry'
+						onPress={() => void refetch()}
+					>
+						重试
+					</Button>
 				</View>
 			) : (
 				<LegendList
@@ -180,7 +202,12 @@ export default function FollowingPage() {
 					renderItem={({ item }) => <FollowingListItem user={item} />}
 					ListHeaderComponent={
 						isError && !isFetchNextPageError ? (
-							<Button onPress={() => void refetch()}>刷新失败，点击重试</Button>
+							<Button
+								testID='following-refresh-retry'
+								onPress={() => void refetch()}
+							>
+								刷新失败，点击重试
+							</Button>
 						) : null
 					}
 					ListEmptyComponent={
@@ -196,7 +223,10 @@ export default function FollowingPage() {
 						isFetchingNextPage ? (
 							<ActivityIndicator style={styles.count} />
 						) : isFetchNextPageError ? (
-							<Button onPress={() => void fetchNextPage()}>
+							<Button
+								testID='following-load-more-retry'
+								onPress={() => void fetchNextPage()}
+							>
 								加载更多失败，重试
 							</Button>
 						) : null
@@ -212,6 +242,7 @@ export default function FollowingPage() {
 							colors={[colors.primary]}
 							onRefresh={async () => {
 								setRefreshing(true)
+
 								try {
 									await Promise.all([refetch(), refetchGroups()])
 								} finally {

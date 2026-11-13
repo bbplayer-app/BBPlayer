@@ -20,6 +20,7 @@ const MultiPageVideosItem = memo(
 			<>
 				<View>
 					<Touchable
+						testID='multipage-item'
 						androidRipple={{}}
 						onPress={() => {
 							router.navigate({

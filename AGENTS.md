@@ -26,6 +26,10 @@ pnpm type-check             # TypeScript type checking
 
 我们推荐使用 `codedb` mcp 搜索，而非使用 grep 手动搜索
 
+### 提交信息
+
+提交信息格式为 `scope: description`，scope 用受影响的模块或目录（如 `mobile`、`backend`、`root`），不要加 `feat` / `fix` / `chore` / `docs` 之类的 action 前缀。
+
 ## 仓库结构
 
 ### /apps

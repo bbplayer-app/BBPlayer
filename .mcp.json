@@ -1,12 +1,18 @@
 {
 	"mcpServers": {
 		"argent": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "node_modules/@swmansion/argent/dist/cli.js",
-        "mcp"
-      ]
-    }
+			"type": "stdio",
+			"command": "node",
+			"args": ["node_modules/@swmansion/argent/dist/cli.js", "mcp"]
+		},
+		"analytics-mcp": {
+			"type": "stdio",
+			"command": "mise",
+			"args": ["exec", "--", "analytics-mcp"],
+			"env": {
+				"GOOGLE_APPLICATION_CREDENTIALS": ".secrets/bbplayer-ga4-mcp-sa.json",
+				"GOOGLE_CLOUD_PROJECT": "bbplayer-dac55"
+			}
+		}
 	}
 }

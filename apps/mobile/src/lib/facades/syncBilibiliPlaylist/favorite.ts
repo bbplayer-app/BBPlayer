@@ -2,6 +2,7 @@ import { err, ok, Result, ResultAsync } from 'neverthrow'
 
 import { createFacadeError, type FacadeError } from '@/lib/errors/facade'
 import type { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
+import { type TraceParent, traceResult } from '@/lib/tracing'
 import type {
 	BilibiliFavoriteListContent,
 	BilibiliMultipageVideo,
@@ -51,12 +52,14 @@ async function fetchPageLists(
 	const skippedBvids: string[] = []
 	let index = 0
 	let firstError: BilibiliApiError | null = null
+
 	const worker = async () => {
 		while (index < bvids.length && !firstError) {
 			const bvid = bvids[index]
 			index += 1
 			// oxlint-disable-next-line no-await-in-loop
 			const res = await getPageList({ bvid })
+
 			if (res.isErr()) {
 				if (res.error.type === 'ResponseFailed') {
 					logger.warning('获取分 P 列表失败，折叠为单条', {
@@ -66,25 +69,31 @@ async function fetchPageLists(
 					skippedBvids.push(bvid)
 					continue
 				}
+
 				firstError = res.error
 				logger.error('展开分 P：分 P 列表查询失败', {
 					bvid,
 					type: res.error.type,
 					message: res.error.message,
 				})
+
 				return
 			}
+
 			results.set(bvid, res.value)
 		}
 	}
+
 	await Promise.all(
 		Array.from({ length: Math.min(PAGE_LIST_CONCURRENCY, bvids.length) }, () =>
 			worker(),
 		),
 	)
+
 	if (firstError) {
 		return err(firstError)
 	}
+
 	return ok({ pageLists: results, skippedBvids })
 }
 
@@ -99,14 +108,18 @@ export async function fetchRemoteFavoriteSnapshot(
 		message: '正在获取收藏夹元数据...',
 		stage: 'fetching_metadata',
 	})
+
 	const bilibiliResult = await ResultAsync.combine([
 		deps.api.getFavoriteListAllContents({ favoriteId }),
 		deps.api.getFavoriteListContents({ favoriteId, pn: 1 }),
 	])
+
 	if (bilibiliResult.isErr()) {
 		return err(bilibiliResult.error)
 	}
+
 	const [allContents, firstPage] = bilibiliResult.value
+
 	if (!firstPage.info) {
 		return err(
 			createFacadeError(
@@ -115,15 +128,18 @@ export async function fetchRemoteFavoriteSnapshot(
 			),
 		)
 	}
+
 	const allBvids = allContents.filter(
 		(item) => item.type === 2, // 过滤非视频稿件 (type 2 is video)
 	)
+
 	deps.logger.debug(
 		'step 1: 调用 bilibiliapi getFavoriteListAllContents 完成',
 		{
 			total: allBvids.length,
 		},
 	)
+
 	return ok({
 		metadata: firstPage.info,
 		orderedBvids: new Set(allBvids.map((item) => item.bvid)),
@@ -142,9 +158,11 @@ export async function loadLocalFavoriteState(
 			'favorite',
 			favoriteId,
 		)
+
 	if (localPlaylist.isErr()) {
 		return err(localPlaylist.error)
 	}
+
 	deps.logger.debug('step 2: 查询本地收藏夹元数据完成', {
 		localPlaylistId: localPlaylist.value?.id ?? '不存在',
 	})
@@ -152,18 +170,22 @@ export async function loadLocalFavoriteState(
 		message: '正在比对本地数据...',
 		stage: 'calculating_diff',
 	})
+
 	if (!localPlaylist.value || localPlaylist.value.itemCount === 0) {
 		return ok({
 			playlistId: localPlaylist.value?.id ?? null,
 			tracks: [] as BilibiliTrack[],
 		})
 	}
+
 	const existTracks = await deps.playlistService.getPlaylistTracks(
 		localPlaylist.value.id,
 	)
+
 	if (existTracks.isErr()) {
 		return err(existTracks.error)
 	}
+
 	if (existTracks.value.find((item) => item.source !== 'bilibili')) {
 		return err(
 			createFacadeError(
@@ -172,6 +194,7 @@ export async function loadLocalFavoriteState(
 			),
 		)
 	}
+
 	return ok({
 		playlistId: localPlaylist.value.id,
 		tracks: existTracks.value as BilibiliTrack[],
@@ -206,6 +229,7 @@ export async function fetchFavoriteTrackDetails(
 		if (bvidsToAddSet.size === 0) {
 			break
 		}
+
 		nowPageNumber += 1
 		onProgress?.({
 			message: `正在获取第 ${nowPageNumber} 页详情...`,
@@ -214,15 +238,19 @@ export async function fetchFavoriteTrackDetails(
 			stage: 'fetching_details',
 		})
 		logger.debug('开始获取第 ' + nowPageNumber + ' 页收藏夹内容')
+
 		// oxlint-disable-next-line no-await-in-loop
 		const pageResult = await api.getFavoriteListContents({
 			favoriteId,
 			pn: nowPageNumber,
 		})
+
 		if (pageResult.isErr()) {
 			return err(pageResult.error)
 		}
+
 		const page = pageResult.value
+
 		if (!page.medias) {
 			return err(
 				createFacadeError(
@@ -231,8 +259,10 @@ export async function fetchFavoriteTrackDetails(
 				),
 			)
 		}
+
 		logger.debug(page.medias.length)
 		hasMore = page.has_more
+
 		for (const item of page.medias) {
 			if (bvidsToAddSet.has(item.bvid)) {
 				addedTracksMetadata.add(item)
@@ -240,6 +270,7 @@ export async function fetchFavoriteTrackDetails(
 				fetchedCount++
 			}
 		}
+
 		onProgress?.({
 			message: `已获取 ${fetchedCount}/${totalToAdd} 个视频详情...`,
 			current: fetchedCount,
@@ -247,15 +278,18 @@ export async function fetchFavoriteTrackDetails(
 			stage: 'fetching_details',
 		})
 	}
+
 	logger.debug('step 4: 获取要添加的 tracks 元数据完成', {
 		added: addedTracksMetadata.size,
 		requestApiTimes: nowPageNumber,
 	})
 
 	const orderedBvids = new Set(plan.orderedBvids)
+
 	for (const bvid of bvidsToAddSet) {
 		orderedBvids.delete(bvid)
 	}
+
 	return ok({
 		metadata: addedTracksMetadata,
 		orderedBvids,
@@ -277,6 +311,7 @@ export async function buildExpandedTracks(
 	if (!expandMultiPage) {
 		return ok({ expandedTracksMap: null })
 	}
+
 	const { api, logger, onProgress } = deps
 	onProgress?.({
 		message: '正在获取分 P 信息...',
@@ -297,33 +332,56 @@ export async function buildExpandedTracks(
 			(v) => !v.videoIsValid,
 		).length,
 	})
+
 	const pageListsResult = await fetchPageLists(
-		api.getPageList,
+		(args) => api.getPageList(args),
 		toQueryBvids,
 		logger,
 	)
+
 	if (pageListsResult.isErr()) {
 		return err(pageListsResult.error)
 	}
+
 	const { pageLists, skippedBvids } = pageListsResult.value
+
 	if (skippedBvids.length > 0) {
 		logger.warning('展开分 P：以下视频查询失败，已折叠为单条', {
 			bvids: skippedBvids,
 		})
 	}
+
 	const expandedTracksMapResult = buildExpandedTracksMap(
 		allBvids,
 		localGrouped,
 		mainInfoMap,
 		pageLists,
 	)
+
 	if (expandedTracksMapResult.isErr()) {
 		return err(expandedTracksMapResult.error)
 	}
+
 	logger.debug('step 5: 展开分 P 视频完成', {
 		total: allBvids.length,
 	})
+
 	return ok({ expandedTracksMap: expandedTracksMapResult.value })
+}
+
+function withTraceDeps(
+	deps: FavoriteSyncDeps,
+	span: TraceParent,
+): FavoriteSyncDeps {
+	if (!span) return deps
+
+	return {
+		...deps,
+		api: deps.api.withTrace(span),
+		playlistService: deps.playlistService.withTrace(span),
+		trackService: deps.trackService.withTrace(span),
+		artistService: deps.artistService.withTrace(span),
+	}
 }
 
 /**
@@ -334,17 +392,41 @@ export async function runFavoriteSync(
 	deps: FavoriteSyncDeps,
 	favoriteId: number,
 	expandMultiPage = false,
+	trace?: TraceParent,
 ): Promise<Result<number | undefined, FacadeError | BilibiliApiError>> {
-	const remote = await fetchRemoteFavoriteSnapshot(deps, favoriteId)
+	// 每个阶段一个子 span，阶段内的数据库 / 网络 span 挂在对应阶段下
+	const step = <T, E extends Error>(
+		name: string,
+		fn: (stepDeps: FavoriteSyncDeps) => Promise<Result<T, E>>,
+	): ResultAsync<T, E> =>
+		traceResult(
+			trace,
+			{ name, op: 'function' },
+			(span) => new ResultAsync(fn(withTraceDeps(deps, span))),
+		)
+
+	const remote = await step('favorite_sync.fetch_remote', (d) =>
+		fetchRemoteFavoriteSnapshot(d, favoriteId),
+	)
+
 	if (remote.isErr()) {
 		return err(remote.error)
 	}
-	const local = await loadLocalFavoriteState(deps, favoriteId)
+
+	const local = await step('favorite_sync.load_local', (d) =>
+		loadLocalFavoriteState(d, favoriteId),
+	)
+
 	if (local.isErr()) {
 		return err(local.error)
 	}
 
 	const plan = planFavoriteSync(remote.value, local.value, expandMultiPage)
+	trace?.setAttributes({
+		'sync.plan': plan.kind,
+		'sync.added': plan.stats.added,
+		'sync.removed': plan.stats.removed,
+	})
 	deps.logger.debug('step 3: 对远程和本地的 tracks 进行 diff 完成', {
 		added: plan.stats.added,
 		removed: plan.stats.removed,
@@ -353,30 +435,35 @@ export async function runFavoriteSync(
 		added: plan.stats.added,
 		removed: plan.stats.removed,
 	})
+
 	if (plan.kind === 'noop') {
 		deps.logger.info('收藏夹为空或与上次相比无变化，无需同步')
+
 		return ok(plan.playlistId)
 	}
+
 	if (plan.stats.rebuild) {
 		deps.logger.info(
 			'收藏夹内容无变化，但同步模式与本地状态不一致，按所选模式重建',
 		)
 	}
 
-	const details = await fetchFavoriteTrackDetails(deps, favoriteId, plan)
+	const details = await step('favorite_sync.fetch_details', (d) =>
+		fetchFavoriteTrackDetails(d, favoriteId, plan),
+	)
+
 	if (details.isErr()) {
 		return err(details.error)
 	}
+
 	if (details.value.hiddenBvids.length > 0) {
 		deps.onHiddenVideos?.(details.value.hiddenBvids)
 	}
 
-	const expansion = await buildExpandedTracks(
-		deps,
-		local.value,
-		details.value,
-		expandMultiPage,
+	const expansion = await step('favorite_sync.expand_pages', (d) =>
+		buildExpandedTracks(d, local.value, details.value, expandMultiPage),
 	)
+
 	if (expansion.isErr()) {
 		return err(expansion.error)
 	}
@@ -385,14 +472,19 @@ export async function runFavoriteSync(
 		message: '正在保存数据到数据库...',
 		stage: 'saving',
 	})
-	const persisted = await persistFavoriteSync(deps, {
-		favoriteId,
-		metadata: remote.value.metadata,
-		details: details.value,
-		expansion: expansion.value,
-	})
+
+	const persisted = await step('favorite_sync.persist', (d) =>
+		persistFavoriteSync(d, {
+			favoriteId,
+			metadata: remote.value.metadata,
+			details: details.value,
+			expansion: expansion.value,
+		}),
+	)
+
 	if (persisted.isErr()) {
 		return err(persisted.error)
 	}
+
 	return ok(persisted.value)
 }

@@ -11,9 +11,11 @@ export default function ResponsiveContent({
 	...props
 }: PropsWithChildren<ViewProps>) {
 	const window = useWindowDimensions()
+
 	const [size, setSize] = useState<{ width: number; height: number } | null>(
 		null,
 	)
+
 	return (
 		<View
 			{...props}

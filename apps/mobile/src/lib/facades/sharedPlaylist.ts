@@ -93,11 +93,14 @@ export class SharedPlaylistFacade {
 				// 1. 读取本地歌单元数据
 				const playlistResult =
 					await this.playlistService.getPlaylistById(localPlaylistId)
+
 				if (playlistResult.isErr()) throw playlistResult.error
 				const playlist = playlistResult.value
+
 				if (!playlist) {
 					throw createValidationError(`找不到歌单：${localPlaylistId}`)
 				}
+
 				if (playlist.shareId) {
 					// 已经是共享歌单，直接返回
 					return { shareId: playlist.shareId }
@@ -135,6 +138,7 @@ export class SharedPlaylistFacade {
 							eq(schema.tracks.source, 'bilibili'),
 						),
 					)
+
 				logger.debug('enableSharing: 读取曲目', trackLinks.length)
 
 				// 3. 构造初始曲目上传格式
@@ -163,6 +167,7 @@ export class SharedPlaylistFacade {
 						tracks: initialTracks,
 					},
 				})
+
 				if (!resp.ok) {
 					const errBody = await resp.json().catch(() => ({}))
 					throw createFacadeError(
@@ -171,12 +176,14 @@ export class SharedPlaylistFacade {
 						{ cause: errBody },
 					)
 				}
+
 				const { playlist: remotePlaylist } = await resp.json()
 				const shareId: string = remotePlaylist.id
 				const parsed = new Date(remotePlaylist.updatedAt).getTime()
 				const serverTime = Number.isFinite(parsed) ? parsed : Date.now()
 				await this.db.transaction(async (tx) => {
 					const txPlaylist = this.playlistService.withDB(tx)
+
 					const updateResult = await txPlaylist.updatePlaylistMetadata(
 						localPlaylistId,
 						{
@@ -185,10 +192,12 @@ export class SharedPlaylistFacade {
 							lastShareSyncAt: serverTime,
 						},
 					)
+
 					if (updateResult.isErr()) throw updateResult.error
 				})
 
 				logger.info('enableSharing 完成', { localPlaylistId, shareId })
+
 				return { shareId }
 			})(),
 			(e) =>
@@ -216,15 +225,19 @@ export class SharedPlaylistFacade {
 		return ResultAsync.fromPromise(
 			(async () => {
 				const { shareId, inviteCode } = params
+
 				// 1. 检查是否已有本地副本
 				const existing =
 					await this.playlistService.findPlaylistByShareId(shareId)
+
 				if (existing.isErr()) throw existing.error
+
 				if (existing.isOk() && existing.value) {
 					logger.info('subscribeToPlaylist: 已存在本地副本', {
 						shareId,
 						id: existing.value.id,
 					})
+
 					return { localPlaylistId: existing.value.id }
 				}
 
@@ -233,6 +246,7 @@ export class SharedPlaylistFacade {
 					param: { id: shareId },
 					json: inviteCode ? { invite_code: inviteCode } : {},
 				})
+
 				if (!subResp.ok && subResp.status !== 201) {
 					const errBody = await subResp.json().catch(() => ({}))
 					throw createFacadeError(
@@ -241,7 +255,9 @@ export class SharedPlaylistFacade {
 						{ cause: errBody },
 					)
 				}
+
 				const subData = await subResp.json()
+
 				const role = (subData as { role: string }).role as
 					| 'owner'
 					| 'editor'
@@ -252,6 +268,7 @@ export class SharedPlaylistFacade {
 					param: { id: shareId },
 					query: { since: '0' },
 				})
+
 				if (!changesResp.ok) {
 					throw createFacadeError(
 						'SharedPlaylistSubscribeFailed',
@@ -259,7 +276,9 @@ export class SharedPlaylistFacade {
 						{ cause: await changesResp.json().catch(() => ({})) },
 					)
 				}
+
 				const changesData = await changesResp.json()
+
 				const meta = (
 					changesData as {
 						metadata: {
@@ -287,6 +306,7 @@ export class SharedPlaylistFacade {
 						shareRole: role,
 						lastShareSyncAt: 0,
 					})
+
 					if (createResult.isErr()) throw createResult.error
 					const id = createResult.value.id
 
@@ -299,12 +319,14 @@ export class SharedPlaylistFacade {
 					const syncResult = await txPlaylist.updatePlaylistMetadata(id, {
 						lastShareSyncAt: serverTime,
 					})
+
 					if (syncResult.isErr()) throw syncResult.error
 
 					return id
 				})
 
 				logger.info('subscribeToPlaylist 完成', { shareId, localPlaylistId })
+
 				return { localPlaylistId }
 			})(),
 			(e) =>
@@ -322,12 +344,14 @@ export class SharedPlaylistFacade {
 				const resp = await this.api.playlists[':id'].preview.$get({
 					param: { id: shareId },
 				})
+
 				if (resp.status === 404) {
 					throw createFacadeError(
 						'SharedPlaylistNotFound',
 						'共享歌单不存在或已删除',
 					)
 				}
+
 				if (!resp.ok) {
 					const errBody = await resp.json().catch(() => ({}))
 					throw createFacadeError(
@@ -400,12 +424,14 @@ export class SharedPlaylistFacade {
 			(async () => {
 				// 1. 获取云端歌单列表
 				const resp = await this.api.me.playlists.$get()
+
 				if (!resp.ok) {
 					throw createFacadeError(
 						'SharedPlaylistRestoreFailed',
 						`获取云端歌单列表失败：${resp.status}`,
 					)
 				}
+
 				const { playlists: remotePlaylists } = (await resp.json()) as {
 					playlists: Array<{
 						id: string
@@ -419,7 +445,9 @@ export class SharedPlaylistFacade {
 				// 2. 获取本地已存在的 shareId 集合
 				const localSharedResult =
 					await this.playlistService.getSharedPlaylists()
+
 				if (localSharedResult.isErr()) throw localSharedResult.error
+
 				const localShareIds = new Set(
 					localSharedResult.value.map((p) => p.shareId).filter(Boolean),
 				)
@@ -428,20 +456,25 @@ export class SharedPlaylistFacade {
 				const missing = remotePlaylists.filter(
 					(rp) => !localShareIds.has(rp.id),
 				)
+
 				logger.info('restoreFromCloud: 需恢复的歌单数', missing.length)
 
 				let restored = 0
+
 				for (const remote of missing) {
 					// 全量拉取（since=0）— API 调用在事务外
 					const changesResp = await this.api.playlists[':id'].changes.$get({
 						param: { id: remote.id },
 						query: { since: '0' },
 					})
+
 					if (!changesResp.ok) {
 						logger.error('恢复歌单：拉取初始数据失败', { shareId: remote.id })
 						continue
 					}
+
 					let changesData
+
 					try {
 						changesData = await changesResp.json()
 					} catch (e) {
@@ -451,6 +484,7 @@ export class SharedPlaylistFacade {
 						})
 						continue
 					}
+
 					const serverTime =
 						(changesData as { server_time?: number }).server_time ?? Date.now()
 
@@ -470,6 +504,7 @@ export class SharedPlaylistFacade {
 								shareRole: remote.role,
 								lastShareSyncAt: 0,
 							})
+
 							if (createResult.isErr()) throw createResult.error
 							const localId = createResult.value.id
 
@@ -491,6 +526,7 @@ export class SharedPlaylistFacade {
 									lastShareSyncAt: serverTime,
 								},
 							)
+
 							if (syncResult.isErr()) throw syncResult.error
 						})
 						restored++
@@ -500,6 +536,7 @@ export class SharedPlaylistFacade {
 				}
 
 				logger.info('restoreFromCloud 完成', { restored })
+
 				return { restored }
 			})(),
 			(e) =>
@@ -525,8 +562,10 @@ export class SharedPlaylistFacade {
 				// 1. 获取本地歌单的 shareId 和 lastShareSyncAt
 				const playlistResult =
 					await this.playlistService.getPlaylistById(localPlaylistId)
+
 				if (playlistResult.isErr()) throw playlistResult.error
 				const playlist = playlistResult.value
+
 				if (!playlist?.shareId) {
 					throw createValidationError(
 						`歌单 ${localPlaylistId} 没有 shareId，无法拉取`,
@@ -542,6 +581,7 @@ export class SharedPlaylistFacade {
 					param: { id: playlist.shareId },
 					query: { since: String(since) },
 				})
+
 				if (resp.status === 404 || resp.status === 403) {
 					throw createFacadeError(
 						'SharedPlaylistDeleted',
@@ -555,12 +595,14 @@ export class SharedPlaylistFacade {
 						},
 					)
 				}
+
 				if (!resp.ok) {
 					throw createFacadeError(
 						'SharedPlaylistPullFailed',
 						`拉取变更失败：${resp.status}`,
 					)
 				}
+
 				const data = await resp.json()
 
 				const serverTime = (data as { server_time: number }).server_time
@@ -587,6 +629,7 @@ export class SharedPlaylistFacade {
 						localPlaylistId,
 						{ lastShareSyncAt: serverTime },
 					)
+
 					if (updateResult.isErr()) throw updateResult.error
 
 					return n
@@ -597,12 +640,14 @@ export class SharedPlaylistFacade {
 					applied,
 					serverTime,
 				})
+
 				return { applied }
 			})(),
 			(e) => {
 				if (e instanceof FacadeError && e.type === 'SharedPlaylistDeleted') {
 					throw e
 				}
+
 				return createFacadeError(
 					'SharedPlaylistPullFailed',
 					'增量拉取歌单变更失败',
@@ -630,11 +675,14 @@ export class SharedPlaylistFacade {
 			(async () => {
 				const playlistResult =
 					await this.playlistService.getPlaylistById(localPlaylistId)
+
 				if (playlistResult.isErr()) throw playlistResult.error
 				const playlist = playlistResult.value
+
 				if (!playlist) {
 					throw createValidationError(`找不到歌单：${localPlaylistId}`)
 				}
+
 				if (!playlist.shareId) {
 					// 纯本地歌单，无需操作
 					return
@@ -649,8 +697,10 @@ export class SharedPlaylistFacade {
 						logger.info('unsubscribeFromPlaylist: 删除订阅副本', {
 							localPlaylistId,
 						})
+
 						const deleteResult =
 							await txPlaylist.deletePlaylist(localPlaylistId)
+
 						if (deleteResult.isErr()) throw deleteResult.error
 					} else {
 						// owner/editor：断开连接但保留本地数据
@@ -661,6 +711,7 @@ export class SharedPlaylistFacade {
 								role: playlist.shareRole,
 							},
 						)
+
 						const updateResult = await txPlaylist.updatePlaylistMetadata(
 							localPlaylistId,
 							{
@@ -669,6 +720,7 @@ export class SharedPlaylistFacade {
 								lastShareSyncAt: null,
 							},
 						)
+
 						if (updateResult.isErr()) throw updateResult.error
 					}
 				})
@@ -695,13 +747,16 @@ export class SharedPlaylistFacade {
 				const resp = await this.api.playlists[':id'].invite.rotate.$post({
 					param: { id: shareId },
 				})
+
 				if (!resp.ok) {
 					throw createFacadeError(
 						'InviteCodeRotateFailed',
 						`生成编辑者邀请码失败：${resp.status}`,
 					)
 				}
+
 				const data = await resp.json()
+
 				return { editorInviteCode: data.editor_invite_code }
 			})(),
 			(e) =>
@@ -722,15 +777,18 @@ export class SharedPlaylistFacade {
 				const resp = await this.api.playlists[':id'].invite.$get({
 					param: { id: shareId },
 				})
+
 				if (!resp.ok) {
 					throw createFacadeError(
 						'InviteCodeFetchFailed',
 						`获取编辑者邀请码失败：${resp.status}`,
 					)
 				}
+
 				const data = (await resp.json()) as {
 					editor_invite_code?: string | null
 				}
+
 				// null 表示尚未生成邀请码，属于合法状态，不视为错误
 				return { editorInviteCode: data.editor_invite_code ?? null }
 			})(),
@@ -792,21 +850,27 @@ export class SharedPlaylistFacade {
 			trackService: trkSvc,
 			artistService: artSvc,
 		} = services
+
 		let applied = 0
 
 		// ---- 应用元数据更新 ----
 		if (data.metadata) {
 			const metaUpdate: Parameters<typeof plSvc.updatePlaylistMetadata>[1] = {}
+
 			if (data.metadata.title != null) metaUpdate.title = data.metadata.title
+
 			if (data.metadata.description !== undefined)
 				metaUpdate.description = data.metadata.description
+
 			if (data.metadata.cover_url !== undefined)
 				metaUpdate.coverUrl = data.metadata.cover_url
+
 			if (Object.keys(metaUpdate).length > 0) {
 				const metaResult = await plSvc.updatePlaylistMetadata(
 					localPlaylistId,
 					metaUpdate,
 				)
+
 				if (metaResult.isErr()) throw metaResult.error
 			}
 		}
@@ -815,6 +879,7 @@ export class SharedPlaylistFacade {
 			type ServerEditableMember = (typeof data.members)[number] & {
 				role: 'owner' | 'editor'
 			}
+
 			const members = data.members
 				.filter(
 					(m): m is ServerEditableMember =>
@@ -841,6 +906,7 @@ export class SharedPlaylistFacade {
 			(t): t is Extract<(typeof data.tracks)[number], { op: 'upsert' }> =>
 				t.op === 'upsert',
 		)
+
 		const deleteChanges = data.tracks.filter(
 			(t): t is Extract<(typeof data.tracks)[number], { op: 'delete' }> =>
 				t.op === 'delete',
@@ -850,6 +916,7 @@ export class SharedPlaylistFacade {
 		if (upsertChanges.length > 0) {
 			// 批量找或创建 artist
 			const artistMap = new Map<string, number>() // artistId(mid str) → local artist DB id
+
 			const artistsToCreate = upsertChanges
 				.filter((c) => c.track.artist_name && c.track.artist_id)
 				.map((c) => ({
@@ -857,9 +924,11 @@ export class SharedPlaylistFacade {
 					source: 'bilibili' as const,
 					remoteId: c.track.artist_id!,
 				}))
+
 			if (artistsToCreate.length > 0) {
 				const artistResult =
 					await artSvc.findOrCreateManyRemoteArtists(artistsToCreate)
+
 				if (artistResult.isOk()) {
 					for (const [remoteId, artist] of artistResult.value.entries()) {
 						artistMap.set(remoteId, artist.id)
@@ -874,7 +943,9 @@ export class SharedPlaylistFacade {
 				const cidNum = c.track.bilibili_cid
 					? Number(c.track.bilibili_cid)
 					: undefined
+
 				const isMultiPage = !!c.track.bilibili_cid
+
 				return {
 					title: c.track.title,
 					coverUrl: c.track.cover_url,
@@ -896,15 +967,20 @@ export class SharedPlaylistFacade {
 				trackPayloads,
 				'bilibili',
 			)
+
 			if (trackIdsResult.isErr()) {
 				throw trackIdsResult.error
 			}
+
 			// 用服务端 sort_key 直接 upsert playlist_tracks（conn 已是 tx 作用域）
 			const trackIdMap = trackIdsResult.value
+
 			const rows = upsertChanges
 				.map((c) => {
 					const trackId = trackIdMap.get(c.track.unique_key)
+
 					if (!trackId) return null
+
 					return {
 						playlistId: localPlaylistId,
 						trackId,
@@ -933,10 +1009,13 @@ export class SharedPlaylistFacade {
 		if (deleteChanges.length > 0) {
 			const uniqueKeys = deleteChanges.map((c) => c.track_unique_key)
 			const trackIdsResult = await trkSvc.findTrackIdsByUniqueKeys(uniqueKeys)
+
 			if (trackIdsResult.isErr()) {
 				throw trackIdsResult.error
 			}
+
 			const trackIds = Array.from(trackIdsResult.value.values())
+
 			if (trackIds.length > 0) {
 				await conn
 					.delete(schema.playlistTracks)
@@ -956,6 +1035,7 @@ export class SharedPlaylistFacade {
 				.select({ count: sql<number>`count(*)` })
 				.from(schema.playlistTracks)
 				.where(eq(schema.playlistTracks.playlistId, localPlaylistId))
+
 			await conn
 				.update(schema.playlists)
 				.set({ itemCount: count })

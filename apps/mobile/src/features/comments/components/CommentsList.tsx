@@ -24,6 +24,7 @@ const renderComment = ({
 	extraData,
 }: ListRenderItemInfoWithExtraData<BilibiliCommentItem, CommentActions>) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	return (
 		<CommentItem
 			item={item}
@@ -48,6 +49,7 @@ function CommentListContent({
 	replies?: boolean
 }) {
 	const { colors } = useTheme()
+
 	const {
 		data,
 		isLoading,
@@ -58,20 +60,24 @@ function CommentListContent({
 		fetchNextPage,
 		isFetchingNextPage,
 	} = query
+
 	const extraData = useMemo(
 		() => ({ bvid, onReplyPress }),
 		[bvid, onReplyPress],
 	)
+
 	const comments = useMemo(
 		() => data?.pages.flatMap((page) => page.replies ?? []) ?? [],
 		[data],
 	)
+
 	if (isLoading)
 		return (
 			<View style={styles.center}>
 				<ActivityIndicator size='large' />
 			</View>
 		)
+
 	if (isError && !data)
 		return (
 			<View style={styles.center}>
@@ -79,6 +85,7 @@ function CommentListContent({
 				<Button onPress={() => void refetch()}>重试</Button>
 			</View>
 		)
+
 	return (
 		<LegendList
 			testID={replies ? 'comment-replies-list' : 'comments-list'}
@@ -128,6 +135,7 @@ function CommentListContent({
 
 export function CommentsList(props: CommentActions) {
 	const query = useComments(props.bvid)
+
 	return (
 		<CommentListContent
 			{...props}
@@ -144,6 +152,7 @@ export function CommentRepliesList({
 	rpid: number
 }) {
 	const query = useReplyComments(bvid, rpid)
+
 	return (
 		<CommentListContent
 			bvid={bvid}

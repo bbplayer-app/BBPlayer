@@ -14,6 +14,7 @@ export function tintLottieSource(
 		const r = (color.red() / 255).toFixed(4)
 		const g = (color.green() / 255).toFixed(4)
 		const b = (color.blue() / 255).toFixed(4)
+
 		return JSON.parse(
 			JSON.stringify(source).replace(/\[1,1,1,1\]/g, `[${r},${g},${b},1]`),
 		) as AnimationObject

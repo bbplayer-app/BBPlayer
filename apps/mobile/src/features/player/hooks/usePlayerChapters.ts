@@ -18,10 +18,12 @@ export function usePlayerChapters() {
 	const player = useBilibiliPlayerInfo(mode === 'podcast')
 	const { track, trackId, enabled, info } = player
 	const duration = nativeDuration > 0 ? nativeDuration : (track?.duration ?? 0)
+
 	const chapters = useMemo(
 		() => (enabled ? normalizeChapters(info.data?.view_points, duration) : []),
 		[enabled, info.data?.view_points, duration],
 	)
+
 	return {
 		podcast: mode === 'podcast',
 		trackId,
@@ -45,16 +47,20 @@ export function useCurrentChapterIndex(chapters: Chapter[], enabled: boolean) {
 		if (!enabled) return
 
 		let disposed = false
+
 		const updateIndex = (position: number) => {
 			if (disposed) return
 			const nextIndex = chapterIndexAt(chapters, position)
+
 			if (currentIndexRef.current === nextIndex) return
 			currentIndexRef.current = nextIndex
 			setCurrentIndex(nextIndex)
 		}
+
 		void Orpheus.getPosition()
 			.then(updateIndex)
 			.catch(() => undefined)
+
 		const unsubscribe = playerProgressEmitter.subscribe(
 			'progress',
 			({ position }) => {

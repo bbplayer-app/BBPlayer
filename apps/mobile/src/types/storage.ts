@@ -43,8 +43,11 @@ type KeysForType<Schema, T> = {
 }[keyof Schema]
 
 type BooleanKeys<Schema> = KeysForType<Schema, boolean>
+
 type StringKeys<Schema> = KeysForType<Schema, string>
+
 type NumberKeys<Schema> = KeysForType<Schema, number>
+
 type BufferKeys<Schema> = KeysForType<Schema, ArrayBuffer | ArrayBufferLike>
 
 /**

@@ -30,6 +30,7 @@ export default function StarPromptModal() {
 				description: String(e),
 			})
 		}
+
 		close('StarPrompt')
 	}
 

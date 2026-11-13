@@ -86,10 +86,13 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 				if (ref && 'current' in ref && ref.current) {
 					void ref.current.dismiss()
 				}
+
 				return
 			}
+
 			setLoading(true)
 			let success = false
+
 			try {
 				await db
 					.update(schema.playlistSyncQueue)
@@ -106,6 +109,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 			} catch (error) {
 				toastAndLogError('重试同步失败', error, SCOPE)
 			}
+
 			setLoading(false)
 
 			if (success) {
@@ -155,6 +159,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 								>
 									{rows.map((row) => {
 										const info = getOperationInfo(row.operation)
+
 										return (
 											<View
 												key={row.id}
@@ -189,6 +194,7 @@ export const SyncFailuresSheet = forwardRef<TrueSheet, Props>(
 
 							<View style={styles.actions}>
 								<Button
+									testID='sync-failures-retry-all'
 									mode='contained'
 									onPress={handleRetry}
 									loading={loading}

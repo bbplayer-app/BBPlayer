@@ -17,6 +17,7 @@ interface Props {
 function buildGeetestHtml(gt: string, challenge: string): string {
 	const gtJson = JSON.stringify(gt)
 	const challengeJson = JSON.stringify(challenge)
+
 	return `<!DOCTYPE html>
 <html>
 <head>

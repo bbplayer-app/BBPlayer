@@ -57,6 +57,7 @@ const renderPlaylistItem = ({
 	extraData,
 }: ListRenderItemInfoWithExtraData<Playlist, RenderExtraData>) => {
 	if (!extraData) return null
+
 	return (
 		<SelectablePlaylistItem
 			item={item}
@@ -72,8 +73,10 @@ export default function MergePlaylistsModal() {
 	const [newTitle, setNewTitle] = useState('')
 
 	const { data: playlists, isPending, isError } = usePlaylistLists()
+
 	const { mutateAsync: mergePlaylists, isPending: isMerging } =
 		useMergePlaylists()
+
 	const availablePlaylists = useMemo(
 		() => playlists?.filter((playlist) => playlist.type !== 'dynamic') ?? [],
 		[playlists],
@@ -82,17 +85,20 @@ export default function MergePlaylistsModal() {
 	const toggleSelection = useCallback((id: number) => {
 		setSelectedIds((prev) => {
 			const next = new Set(prev)
+
 			if (next.has(id)) {
 				next.delete(id)
 			} else {
 				next.add(id)
 			}
+
 			return next
 		})
 	}, [])
 
 	const handleConfirm = async () => {
 		if (selectedIds.size < 2) return
+
 		if (!newTitle.trim()) return
 
 		try {
@@ -163,6 +169,7 @@ export default function MergePlaylistsModal() {
 					取消
 				</Button>
 				<Button
+					testID='merge-playlists-confirm'
 					mode='contained'
 					onPress={handleConfirm}
 					disabled={isMerging || selectedIds.size < 2 || newTitle.trim() === ''}

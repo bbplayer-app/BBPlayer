@@ -51,6 +51,7 @@ export const parseCookieToObject = (
 	if (!cookie?.trim()) {
 		return ok({})
 	}
+
 	try {
 		const cookieObj = parseCookie.parseCookie(cookie)
 		const sanitizedObj: Record<string, string> = {}
@@ -60,6 +61,7 @@ export const parseCookieToObject = (
 			if (value === undefined) {
 				return err(new Error(`无效的 cookie 字符串：值为 undefined：${value}`))
 			}
+
 			const trimmedKey = key.trim()
 			const trimmedValue = value.trim()
 
@@ -148,11 +150,13 @@ export const useAppStore = create<AppState>()(
 
 				hasBilibiliCookie: () => {
 					const { bilibiliCookie } = get()
+
 					return !!bilibiliCookie && Object.keys(bilibiliCookie).length > 0
 				},
 
 				setBilibiliCookie: (cookieString) => {
 					const result = parseCookieToObject(cookieString)
+
 					if (result.isErr()) {
 						return err(result.error)
 					}
@@ -176,6 +180,7 @@ export const useAppStore = create<AppState>()(
 					})
 					Orpheus.setBilibiliCookie(serializeCookieObject(newCookie))
 					logger.info('更新 cookie 到 orpheus')
+
 					return ok(undefined)
 				},
 
@@ -227,6 +232,7 @@ export const useAppStore = create<AppState>()(
 							updates.downloadMaxParallelTasks,
 						)
 					}
+
 					if (updates.allowSimultaneousPlayback !== undefined) {
 						void Orpheus.setAllowSimultaneousPlayback(
 							updates.allowSimultaneousPlayback,
@@ -286,6 +292,7 @@ export const useAppStore = create<AppState>()(
 						startupScreen?: unknown
 					}
 				}
+
 				let migratedState = state
 
 				if (version < 2) {
@@ -295,6 +302,7 @@ export const useAppStore = create<AppState>()(
 						bbplayerAccount: null,
 					}
 				}
+
 				if (version < 3) {
 					migratedState = {
 						...migratedState,
@@ -305,6 +313,7 @@ export const useAppStore = create<AppState>()(
 						},
 					}
 				}
+
 				if (version < 4) {
 					const legacySettings = migratedState.settings
 					Orpheus.isSpectrumVisualizerEnabled =
@@ -329,6 +338,7 @@ export const useAppStore = create<AppState>()(
 					const { settings } = migratePlayerBackgroundToFluid(
 						migratedState.settings,
 					)
+
 					migratedState = { ...migratedState, settings }
 				}
 
@@ -358,6 +368,7 @@ export const useAppStore = create<AppState>()(
 					if (oldSentry === false || oldAnalytics === false) {
 						mergedState.settings.enableDataCollection = false
 					}
+
 					// @ts-expect-error -- cleanup
 					delete mergedState.settings.enableSentryReport
 					// @ts-expect-error -- cleanup
@@ -374,8 +385,10 @@ export const useAppStore = create<AppState>()(
 
 				try {
 					const oldCookieStr = storage.getString('bilibili_cookie')
+
 					if (oldCookieStr) {
 						const cookieResult = parseCookieToObject(oldCookieStr)
+
 						if (cookieResult.isOk()) {
 							migratedState.bilibiliCookie = cookieResult.value
 							hasOldData = true
@@ -383,6 +396,7 @@ export const useAppStore = create<AppState>()(
 					}
 
 					const oldToken = storage.getString('bbplayer_jwt')
+
 					if (oldToken) {
 						migratedState.bbplayerToken = oldToken
 						hasOldData = true
@@ -402,6 +416,7 @@ export const useAppStore = create<AppState>()(
 						type: 'boolean' | 'string' | 'number',
 					) => {
 						let value
+
 						switch (type) {
 							case 'boolean':
 								// @ts-expect-error -- ts 无法理解这里
@@ -418,6 +433,7 @@ export const useAppStore = create<AppState>()(
 							default:
 								break
 						}
+
 						if (value !== undefined && value !== null) {
 							// @ts-expect-error -- ts 无法理解这里
 							migratedSettings[settingName] = value
@@ -436,6 +452,7 @@ export const useAppStore = create<AppState>()(
 
 					const { migrated: bgStyleMigrated } =
 						migratePlayerBackgroundToFluid(migratedSettings)
+
 					if (bgStyleMigrated) {
 						migratedSettings.playerBackgroundStyle = 'fluid'
 						hasOldSettings = true
@@ -451,10 +468,12 @@ export const useAppStore = create<AppState>()(
 
 				if (!hasOldData) {
 					logger.info('没有旧数据，使用默认值')
+
 					return currentState
 				}
 
 				logger.info('迁移旧数据成功！')
+
 				return migratedState
 			},
 		},

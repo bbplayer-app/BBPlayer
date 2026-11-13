@@ -30,6 +30,7 @@ export default function EditLyricsModal({
 	const [romalrc, setRomalrc] = useState(lyrics.romalrc ?? '')
 
 	const [index, setIndex] = useState(0)
+
 	const [routes] = useState([
 		{ key: 'lrc', title: '主歌词' },
 		{ key: 'tlyric', title: '翻译' },
@@ -107,6 +108,7 @@ export default function EditLyricsModal({
 				result.error,
 				'Components.EditLyricsModal',
 			)
+
 			return
 		}
 
@@ -120,6 +122,7 @@ export default function EditLyricsModal({
 
 	const handleConfirm = async () => {
 		const result = verify(lrc)
+
 		if (result.isValid) {
 			await saveLyrics()
 		} else {
@@ -154,12 +157,14 @@ export default function EditLyricsModal({
 					afterModalHostClosed: false,
 					onPress: async () => {
 						const result = await lyricService.skipLyric(uniqueKey)
+
 						if (result.isErr()) {
 							toastAndLogError(
 								'清除歌词失败',
 								result.error,
 								'Components.EditLyricsModal',
 							)
+
 							return
 						}
 
@@ -226,9 +231,19 @@ export default function EditLyricsModal({
 				/>
 			</Dialog.Content>
 			<Dialog.Actions>
-				<Button onPress={clearLyrics}>清除歌词</Button>
+				<Button
+					testID='edit-lyrics-clear'
+					onPress={clearLyrics}
+				>
+					清除歌词
+				</Button>
 				<Button onPress={() => close('EditLyrics')}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					testID='edit-lyrics-confirm'
+					onPress={handleConfirm}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

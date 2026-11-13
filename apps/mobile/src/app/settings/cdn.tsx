@@ -52,7 +52,9 @@ export default function CdnSettingsPage() {
 
 	const selectCdn = (value: string) => {
 		const option = BILIBILI_CDN_OPTIONS.find((item) => item.id === value)
+
 		if (!option) return
+
 		try {
 			setPreferredBilibiliCdn(option.id)
 			setPreferred(option.id)
@@ -81,20 +83,26 @@ export default function CdnSettingsPage() {
 		if (operation.current) return
 		const controller = new AbortController()
 		operation.current = controller
+
 		const active = () =>
 			operation.current === controller && !controller.signal.aborted
+
 		setRunning(true)
 		setPreparing(true)
 		setResults([])
 		const track = currentTrack?.source === 'bilibili' ? currentTrack : null
 		setSampleName(track?.title ?? '预设视频 BV1fK4y1t7hj')
+
 		try {
 			const nodes = await getCdnTestNodes(track, controller.signal)
+
 			if (!active()) return
 			setPreparing(false)
 			setResults(nodes.map((node) => ({ node, status: '等待测速' })))
+
 			for (const node of nodes) {
 				if (!active()) break
+
 				const update = (status: string) => {
 					if (!active()) return
 					setResults((items) =>
@@ -103,7 +111,9 @@ export default function CdnSettingsPage() {
 						),
 					)
 				}
+
 				update('测速中…')
+
 				try {
 					const result = await measureCdnSpeed(node.url, controller.signal)
 					update(
@@ -126,6 +136,7 @@ export default function CdnSettingsPage() {
 
 	const availability = (id: BilibiliCdnPreference) => {
 		if (id === 'auto' || !results.length) return undefined
+
 		return results.some(({ node }) => node.provider === id)
 			? undefined
 			: '本次未返回该 CDN 节点'

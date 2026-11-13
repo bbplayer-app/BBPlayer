@@ -39,6 +39,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
 	sync: async () => {
 		const revision = ++syncRevision
+
 		try {
 			const [currentTrack, currentIndex] = await Promise.all([
 				Orpheus.getCurrentTrack(),
@@ -53,6 +54,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
 			if (!currentTrack) {
 				set({ internalTrack: null })
+
 				return
 			}
 
@@ -65,8 +67,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 				if (result.isErr()) {
 					set({ internalTrack: null })
 					toastAndLogError('读取当前曲目信息失败', result.error, 'Store.Player')
+
 					return
 				}
+
 				set({ internalTrack: result.value })
 			}
 		} catch (e) {

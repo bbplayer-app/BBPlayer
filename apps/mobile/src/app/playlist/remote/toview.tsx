@@ -81,6 +81,7 @@ export default function ToViewPage() {
 	const coverRef = useImage('', {
 		onError: () => void 0,
 	})
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -91,6 +92,7 @@ export default function ToViewPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -100,6 +102,7 @@ export default function ToViewPage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
 	const openModal = useModalStore((state) => state.open)
 
 	const { listRef, handleDoubleTap } = useDoubleTapScrollToTop()
@@ -110,6 +113,7 @@ export default function ToViewPage() {
 		isError: isToViewDataError,
 		refetch,
 	} = useGetToViewVideoList()
+
 	const { mutate: deleteToViewVideo } = useDeleteToViewVideo()
 	const { mutate: clearToViewVideoList } = useClearToViewVideoList()
 
@@ -117,6 +121,7 @@ export default function ToViewPage() {
 		if (!rawToViewData) {
 			return []
 		}
+
 		return rawToViewData.list.map((item) => mapApiItemToTrack(item))
 	}, [rawToViewData])
 
@@ -126,6 +131,7 @@ export default function ToViewPage() {
 
 	const handlePlay = useCallback(async (track: BilibiliTrack) => {
 		const createIt = await syncFacade.addTrackToLocal(track)
+
 		if (createIt.isErr()) {
 			toastAndLogError(
 				'将 track 录入本地失败',
@@ -137,8 +143,10 @@ export default function ToViewPage() {
 				'将 track 录入本地失败',
 				'UI.Playlist.Remote',
 			)
+
 			return
 		}
+
 		void addToQueue({
 			tracks: [track],
 			playNow: true,
@@ -151,6 +159,7 @@ export default function ToViewPage() {
 	const handlePlayAll = useCallback(async () => {
 		if (!tracksData || tracksData.length === 0) {
 			toast.error('没有可播放的歌曲')
+
 			return
 		}
 
@@ -221,10 +230,12 @@ export default function ToViewPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-select-all'
 							icon='select-all'
 							onPress={() => setSelected(new Set(tracksData.map((t) => t.id)))}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-invert-selection'
 							icon='select-compare'
 							onPress={() =>
 								setSelected(
@@ -237,12 +248,15 @@ export default function ToViewPage() {
 							}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const trackMap = new Map(tracksData.map((t) => [t.id, t]))
 								const payloads = []
+
 								for (const id of selected) {
 									const track = trackMap.get(id)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -250,6 +264,7 @@ export default function ToViewPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

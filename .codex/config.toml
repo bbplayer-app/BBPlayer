@@ -2,7 +2,7 @@ developer_instructions = "# --- argent rules (managed by argent init — do not 
 
 [mcp_servers.argent]
 command = "node"
-args = [ "node_modules/@swmansion/argent/dist/cli.js", "mcp" ]
+args = ["node_modules/@swmansion/argent/dist/cli.js", "mcp"]
 
 [mcp_servers.argent.tools.list-devices]
 approval_mode = "approve"
@@ -238,3 +238,9 @@ approval_mode = "approve"
 [mcp_servers.argent.tools.await_user_selection]
 approval_mode = "approve"
 
+# Google Analytics MCP (read-only). Tool version is managed by mise.toml.
+# Auth uses a service account key with Viewer access on GA4 property 497097537.
+[mcp_servers.analytics-mcp]
+command = "mise"
+args = ["exec", "--", "analytics-mcp"]
+env = { GOOGLE_APPLICATION_CREDENTIALS = ".secrets/bbplayer-ga4-mcp-sa.json", GOOGLE_CLOUD_PROJECT = "bbplayer-dac55" }

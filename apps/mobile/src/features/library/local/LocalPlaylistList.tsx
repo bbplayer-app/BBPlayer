@@ -75,6 +75,7 @@ const LocalPlaylistListComponent = memo(() => {
 		if (!playlists) return []
 
 		if (!hasBilibiliCookie()) return playlists
+
 		return [
 			{
 				id: 1145141919810,

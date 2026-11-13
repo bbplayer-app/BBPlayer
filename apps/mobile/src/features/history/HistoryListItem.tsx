@@ -29,6 +29,7 @@ export const HistoryListItem = memo(function HistoryListItem({
 
 	return (
 		<Touchable
+			testID='history-item'
 			androidRipple={{}}
 			style={{
 				backgroundColor: isCurrentTrack

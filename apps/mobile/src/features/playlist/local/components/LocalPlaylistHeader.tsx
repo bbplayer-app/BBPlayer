@@ -66,6 +66,7 @@ function buildSubtitlePieces(
 			: `${playlist.itemCount}\u2009首`
 
 	let countText = `${countRaw}歌曲`
+
 	if (totalDuration !== undefined) {
 		countText += `\u2009•\u2009共\u2009${formatDurationToText(totalDuration)}`
 	}
@@ -73,6 +74,7 @@ function buildSubtitlePieces(
 	const authorName = !isLocal
 		? (playlist.author?.name ?? '未知作者')
 		: undefined
+
 	const authorClickable =
 		!!authorName && !isLocal && playlist.author?.source === 'bilibili'
 
@@ -116,9 +118,12 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 		() => buildSubtitlePieces(playlist, totalDuration),
 		[playlist, totalDuration],
 	)
+
 	let subscriberOwner: SharedPlaylistMember | undefined
+
 	if (shareMembers) {
 		subscriberOwner = shareMembers.find((m) => m.role === 'owner')
+
 		if (!subscriberOwner) {
 			subscriberOwner = shareMembers[0]
 		}
@@ -126,14 +131,17 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 	const onClickDownloadAll = useCallback(async () => {
 		const tracksResult = await playlistService.getPlaylistTracks(playlist.id)
+
 		if (tracksResult.isErr()) {
 			toastAndLogError(
 				'获取播放列表内容失败',
 				tracksResult.error,
 				'UI.Playlist.Local.Header',
 			)
+
 			return
 		}
+
 		void Orpheus.multiDownload(
 			tracksResult.value
 				.filter((item) =>
@@ -143,7 +151,9 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				)
 				.map((t) => {
 					const url = getInternalPlayUri(t)
+
 					if (!url) return
+
 					return {
 						id: t.uniqueKey,
 						title: t.title,
@@ -188,6 +198,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {
 							const result = await Clipboard.setStringAsync(playlist.title)
+
 							if (!result) {
 								toast.error('复制失败')
 							} else {
@@ -230,6 +241,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 								{/* 作者名 */}
 								{'创建者：'}
 								<Text
+									testID='playlist-author'
 									variant='bodySmall'
 									onPress={
 										authorClickable && playlist.author
@@ -252,6 +264,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 
 					{playlist.shareId && shareMembers && shareMembers.length > 0 && (
 						<TouchableRipple
+							testID='playlist-share-members'
 							onPress={
 								onPressShareMember && playlist.shareRole !== 'subscriber'
 									? onPressShareMember

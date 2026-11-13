@@ -18,6 +18,7 @@ export default function NativeTabPage({ children }: PropsWithChildren) {
 	const contentRef = useRef<ViewInstance>(null)
 	const { height: windowHeight } = useWindowDimensions()
 	const [bottomTabBarHeight, setBottomTabBarHeight] = useState(0)
+
 	const measureContent = useCallback(() => {
 		contentRef.current?.measureInWindow((_x, y, _width, height) => {
 			if (height > 0)

@@ -9,6 +9,7 @@ export function useDebouncedValue<T>(value: T, delay = 300) {
 		timerRef.current = setTimeout(() => {
 			setDebounced(value)
 		}, delay)
+
 		return () => {
 			if (timerRef.current) clearTimeout(timerRef.current)
 		}

@@ -93,31 +93,41 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 	const activePlayIconIndex = useSkinStore((state) => state.activePlayIconIndex)
 	const activeThumbUpIndex = useSkinStore((state) => state.activeThumbUpIndex)
 	const activeLoadingIndex = useSkinStore((state) => state.activeLoadingIndex)
+
 	const activeAvatarFrameIndex = useSkinStore(
 		(state) => state.activeAvatarFrameIndex,
 	)
+
 	const installedSkins = useSkinStore(
 		(state) => state.installedSkins ?? EMPTY_INSTALLED_SKINS,
 	)
+
 	const playFullSkinBootSplashAnimation = useSkinStore(
 		(state) => state.playFullSkinBootSplashAnimation,
 	)
+
 	const selectedSkinBootSplashAssetId = useSkinStore(
 		(state) => state.selectedSkinBootSplashAssetId,
 	)
+
 	const selectedSkinBootSplashMode = useSkinStore(
 		(state) => state.selectedSkinBootSplashMode,
 	)
+
 	const skinSliderThumbSize = useSkinStore(
 		(state) => state.skinSliderThumbSize ?? 20,
 	)
+
 	const skinSliderThumbOffsetX = useSkinStore(
 		(state) => state.skinSliderThumbOffsetX ?? 0,
 	)
+
 	const skinSliderThumbOffsetY = useSkinStore(
 		(state) => state.skinSliderThumbOffsetY ?? 0,
 	)
+
 	const setSkinSettings = useSkinStore((state) => state.setSkinSettings)
+
 	const [previewAsset, setPreviewAsset] = useState<SkinBootSplashAsset | null>(
 		null,
 	)
@@ -126,6 +136,7 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 		activeSkin?.bootSplash.items?.find(
 			(item) => item.id === selectedSkinBootSplashAssetId,
 		) ?? activeSkin?.bootSplash.items?.[0]
+
 	const selectedMode =
 		selectedBootSplashAsset?.video && selectedSkinBootSplashMode === 'video'
 			? '动图'
@@ -144,9 +155,12 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 		const resolvedAsset = activeSkin?.bootSplash.items?.find(
 			(i) => i.id === item.id,
 		)
+
 		const cardPath = resolvedAsset?.card ?? ''
+
 		const videoPath =
 			item.video && mode === 'video' ? (resolvedAsset?.video ?? '') : ''
+
 		storage.set('boot_splash_preload', `${videoPath}|${cardPath}`)
 	}
 
@@ -209,6 +223,7 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 						{installedSkins.map((skin) => {
 							const coverUri = localAssetUri(skin.rootUri, skin.coverPath)
 							const selected = skin.id === activeSkinId
+
 							return (
 								<Pressable
 									key={skin.id}
@@ -355,6 +370,7 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 						{activeSkin.bootSplash.items
 							? activeSkin.bootSplash.items?.map((item) => {
 									const selected = item.id === selectedBootSplashAsset?.id
+
 									return (
 										<Pressable
 											key={item.id}
@@ -577,6 +593,7 @@ function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
 			<View style={styles.featureGrid}>
 				{SKIN_FEATURE_LABELS.map(([key, label]) => {
 					const available = features[key]
+
 					return (
 						<View
 							key={key}
@@ -618,7 +635,9 @@ function AssetFeaturePanel({ features }: { features: SkinAssetFeatures }) {
 
 function localAssetUri(rootUri: string, path: string | null | undefined) {
 	if (!path) return null
+
 	if (/^(file|https?):\/\//.test(path)) return path
+
 	return `${rootUri.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
@@ -677,6 +696,7 @@ function InstalledAssetSections({
 				if (!cancelled) setAssets(null)
 			},
 		)
+
 		return () => {
 			cancelled = true
 		}
@@ -777,6 +797,7 @@ function AssetStrip({
 	title: string
 }) {
 	const colors = useTheme().colors
+
 	if (items.length === 0) return null
 
 	return (
@@ -913,10 +934,12 @@ function BootSplashAssetPreview({
 	onSelect: (asset: SkinBootSplashAsset, mode: 'poster' | 'video') => void
 }) {
 	const colors = useTheme().colors
+
 	const [selectedMode, setSelectedMode] = useState<{
 		assetId: string
 		mode: 'poster' | 'video'
 	} | null>(null)
+
 	const mode =
 		asset && selectedMode?.assetId === asset.id
 			? selectedMode.mode

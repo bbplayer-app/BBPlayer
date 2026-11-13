@@ -65,6 +65,7 @@ export default function CollectionPage() {
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -83,6 +84,7 @@ export default function CollectionPage() {
 		isError: isCollectionDataError,
 		refetch,
 	} = useCollectionAllContents(Number(id))
+
 	const tracks = useMemo(
 		() => collectionData?.medias?.map(mapApiItemToTrack) ?? [],
 		[collectionData],
@@ -94,6 +96,7 @@ export default function CollectionPage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -172,10 +175,12 @@ export default function CollectionPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-select-all'
 							icon='select-all'
 							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-invert-selection'
 							icon='select-compare'
 							onPress={() =>
 								setSelected(
@@ -186,11 +191,14 @@ export default function CollectionPage() {
 							}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
+
 								for (const selectedId of selected) {
 									const track = tracks.find((t) => t.id === selectedId)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -198,6 +206,7 @@ export default function CollectionPage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

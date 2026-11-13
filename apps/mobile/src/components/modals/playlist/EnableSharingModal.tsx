@@ -28,12 +28,16 @@ export default function EnableSharingModal({
 }) {
 	const router = useRouter()
 	const close = useModalStore((state) => state.close)
+
 	const doAfterModalHostClosed = useModalStore(
 		(state) => state.doAfterModalHostClosed,
 	)
+
 	const { mutate: enableSharing, isPending } = useEnableSharing()
+
 	const { mutateAsync: rotateInvite, isPending: isRotating } =
 		useRotateEditorInviteCode()
+
 	const [shareId, setShareId] = useState<string | null>(initialShareId ?? null)
 	const [inviteCode, setInviteCode] = useState<string | null>(null)
 	const hasToken = useAppStore((state) => !!state.bbplayerToken)
@@ -44,6 +48,7 @@ export default function EnableSharingModal({
 	const subscribeUrl = shareId
 		? `${SHARE_BASE_URL}?shareId=${encodeURIComponent(shareId)}`
 		: ''
+
 	const editorUrl = shareId
 		? `${subscribeUrl}${inviteCode ? `&inviteCode=${encodeURIComponent(inviteCode)}` : ''}`
 		: ''
@@ -61,8 +66,10 @@ export default function EnableSharingModal({
 				})
 			})
 			close('EnableSharing')
+
 			return
 		}
+
 		enableSharing(
 			{ playlistId },
 			{ onSuccess: ({ shareId: id }) => setShareId(id) },
@@ -83,6 +90,7 @@ export default function EnableSharingModal({
 
 	const handleRotateInvite = async () => {
 		if (!shareId) return
+
 		if (!hasToken) {
 			toast.error('请先登录 BBPlayer 账号')
 			doAfterModalHostClosed(() => {
@@ -92,8 +100,10 @@ export default function EnableSharingModal({
 				})
 			})
 			close('EnableSharing')
+
 			return
 		}
+
 		const result = await rotateInvite({ shareId })
 		setInviteCode(result.editorInviteCode)
 		toast.success('已生成新的编辑者邀请码')
@@ -163,6 +173,7 @@ export default function EnableSharingModal({
 									</Text>
 								)}
 								<Button
+									testID='sharing-rotate-invite'
 									onPress={handleRotateInvite}
 									loading={isRotating}
 									disabled={isRotating || inviteFetching}
@@ -241,6 +252,7 @@ export default function EnableSharingModal({
 					取消
 				</Button>
 				<Button
+					testID='sharing-enable-confirm'
 					onPress={handleConfirm}
 					loading={isPending}
 					disabled={isPending}

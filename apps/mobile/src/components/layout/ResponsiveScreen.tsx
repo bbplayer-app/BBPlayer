@@ -14,10 +14,12 @@ function ResponsiveScreenContent({
 	routeName,
 }: PropsWithChildren<{ routeName: string }>) {
 	const { colors } = useTheme()
+
 	// Fullscreen and overlay routes own their bounds; native tabs constrain each page.
 	if (['(tabs)', 'player', 'modal', 'onboarding', 'test'].includes(routeName)) {
 		return <>{children}</>
 	}
+
 	return (
 		<View style={[styles.screen, { backgroundColor: colors.background }]}>
 			<View style={[styles.screen, styles.row]}>
@@ -38,10 +40,12 @@ export default function ResponsiveScreen(
 	const insets = useSafeAreaInsets()
 	const { colors } = useTheme()
 	const railWidth = useContext(NativeTabRailWidthContext)
+
 	// Transparent modals must preserve the page and bounds underneath them.
 	if (props.routeName === 'modal') return <>{props.children}</>
 	// 根布局的导航栏覆盖在左侧；普通页面给它让出位置，全屏页面（播放器等）铺满。
 	const reservedRail = FULLSCREEN_ROUTES.has(props.routeName) ? 0 : railWidth
+
 	return (
 		<View
 			style={{

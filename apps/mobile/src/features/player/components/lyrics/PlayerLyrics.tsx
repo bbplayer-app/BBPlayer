@@ -53,20 +53,25 @@ const Lyrics = memo(function Lyrics({
 	const windowHeight = dimensions.height
 	const insets = useSafeAreaInsets()
 	const [pageHeight, setPageHeight] = useState(0)
+
 	const showControls =
 		!embedded && pageHeight - insets.bottom >= MIN_HEIGHT_WITH_CONTROLS
+
 	const colors = useTheme().colors
+
 	const isFluidBackground = useAppStore(
 		(state) =>
 			!state.settings.pureWhiteBackground &&
 			state.settings.playerBackgroundStyle === 'fluid',
 	)
+
 	const scrollViewRef = useRef<ScrollViewInstance>(null)
 	const itemLayoutsRef = useRef<{ [index: number]: number }>({})
 
 	const scrollToIndex = useCallback(
 		(index: number, animated = true) => {
 			const y = itemLayoutsRef.current[index]
+
 			if (y !== undefined && scrollViewRef.current) {
 				scrollViewRef.current.scrollTo({
 					y: Math.max(0, y - windowHeight * 0.15),
@@ -79,9 +84,11 @@ const Lyrics = memo(function Lyrics({
 
 	const [offsetMenuVisible, setOffsetMenuVisible] = useState(false)
 	const track = useCurrentTrack()
+
 	const enableOldSchoolStyleLyric = useAppStore(
 		(state) => state.settings.enableOldSchoolStyleLyric,
 	)
+
 	const enableVerbatimLyrics = useAppStore(
 		(state) => state.settings.enableVerbatimLyrics,
 	)
@@ -98,6 +105,7 @@ const Lyrics = memo(function Lyrics({
 		isError,
 		error,
 	} = useSmartFetchLyrics(currentIndex === 1, track ?? undefined)
+
 	const [preferredLyricType, setPreferredLyricType] = useState<
 		'translation' | 'romaji'
 	>('translation')
@@ -125,6 +133,7 @@ const Lyrics = memo(function Lyrics({
 		if (!lyrics?.lrc) return []
 
 		let parsedLines
+
 		try {
 			parsedLines = parseAndMergeLyrics({
 				lrc: lyrics.lrc,
@@ -138,8 +147,10 @@ const Lyrics = memo(function Lyrics({
 		if (parsedLines.length === 0) return null
 
 		const lastLine = parsedLines.at(-1)
+
 		const paddingTimestamp =
 			(lastLine ? lastLine.startTime : 0) + Number.EPSILON
+
 		return [
 			...parsedLines,
 			{
@@ -183,10 +194,12 @@ const Lyrics = memo(function Lyrics({
 
 	const handleCloseOffsetMenu = () => {
 		setOffsetMenuVisible(false)
+
 		if (!lyrics || !track) return
 
 		requestAnimationFrame(async () => {
 			const currentLyrics = lyrics
+
 			const newLyrics = {
 				...currentLyrics,
 				misc: {
@@ -194,6 +207,7 @@ const Lyrics = memo(function Lyrics({
 					userOffset: tempOffset,
 				},
 			}
+
 			queryClient.setQueryData(
 				lyricsQueryKeys.smartFetchLyrics(track.uniqueKey),
 				newLyrics,
@@ -203,6 +217,7 @@ const Lyrics = memo(function Lyrics({
 				newLyrics,
 				track.uniqueKey,
 			)
+
 			if (saveResult.isErr()) {
 				toastAndLogError('保存歌词偏移量失败', saveResult.error, 'Lyrics')
 			}
@@ -288,6 +303,7 @@ const Lyrics = memo(function Lyrics({
 				</Animated.ScrollView>
 			)
 		}
+
 		return (
 			<Animated.ScrollView
 				nestedScrollEnabled

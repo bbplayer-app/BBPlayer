@@ -17,6 +17,7 @@ const ICON_SIZE = 72
 
 function WelcomeSlide() {
 	const { colors } = useTheme()
+
 	return (
 		<View style={slideStyles.content}>
 			<Animated.Image
@@ -48,6 +49,7 @@ function WelcomeSlide() {
 
 function DisclaimerSlide() {
 	const { colors } = useTheme()
+
 	return (
 		<View style={slideStyles.content}>
 			<Icon
@@ -88,6 +90,7 @@ function StartSlide({
 	onGuest: () => void
 }) {
 	const { colors } = useTheme()
+
 	return (
 		<View style={slideStyles.content}>
 			<Icon
@@ -103,6 +106,7 @@ function StartSlide({
 			</Text>
 			<View style={slideStyles.startOptions}>
 				<Button
+					testID='onboarding-qrcode-login'
 					mode='contained'
 					onPress={onQRCode}
 					icon='qrcode-scan'
@@ -112,6 +116,7 @@ function StartSlide({
 					扫码登录
 				</Button>
 				<Button
+					testID='onboarding-phone-login'
 					mode='outlined'
 					onPress={onPhone}
 					icon='cellphone'
@@ -161,6 +166,7 @@ export default function OnboardingPage() {
 	const complete = useCallback(() => {
 		storage.set('first_open', false)
 		setIsClickFinalButton(true)
+
 		if (router.canGoBack()) {
 			router.back()
 		} else {

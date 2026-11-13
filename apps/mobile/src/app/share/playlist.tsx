@@ -39,9 +39,11 @@ const mapPreviewTrackToBilibiliTrack = (
 ): BilibiliTrack => {
 	const baseId = bv2av(track.bilibili_bvid)
 	const cidNum = track.bilibili_cid ? Number(track.bilibili_cid) : undefined
+
 	const id = Number.isFinite(baseId)
 		? baseId * 1000 + (cidNum ?? 0) + index
 		: index + 1
+
 	const artistRemoteId = track.artist_id ?? null
 	const artistNumericId = artistRemoteId ? Number(artistRemoteId) : undefined
 
@@ -79,15 +81,18 @@ const trackMenuItems = () => []
 
 export default function SharedPlaylistPreviewPage() {
 	const isListReady = useScreenTransitionReady()
+
 	const { shareId, inviteCode } = useLocalSearchParams<{
 		shareId?: string
 		inviteCode?: string
 	}>()
+
 	const router = useRouter()
 	const theme = useTheme()
 	const { colors } = theme
 	const [refreshing, setRefreshing] = useState(false)
 	const parsedShareId = typeof shareId === 'string' ? shareId : undefined
+
 	const parsedInviteCode =
 		typeof inviteCode === 'string' ? inviteCode : undefined
 
@@ -112,11 +117,15 @@ export default function SharedPlaylistPreviewPage() {
 	// 引导提示：说明点击按钮后的权限
 	const getActionHint = () => {
 		if (isFullMember) return null // 已是成员，无需提示
+
 		if (canUpgradeToEditor) return '升级后你将可以添加、删除和排序曲目'
+
 		if (parsedInviteCode)
 			return '你将以协作编辑者身份加入，可以添加、删除和排序曲目'
+
 		return '订阅后你只能查看此歌单的最新内容，无法修改'
 	}
+
 	const actionHint = getActionHint()
 
 	const { mutate: subscribe, isPending: isSubscribing } =
@@ -139,6 +148,7 @@ export default function SharedPlaylistPreviewPage() {
 			onError: () => void 0,
 		},
 	)
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -147,6 +157,7 @@ export default function SharedPlaylistPreviewPage() {
 	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
 	const nowForTracks = new Date()
+
 	const previewTracks = data
 		? data.tracks.map((t, idx) =>
 				mapPreviewTrackToBilibiliTrack(t, idx, nowForTracks),
@@ -154,6 +165,7 @@ export default function SharedPlaylistPreviewPage() {
 		: []
 
 	const subtitleParts: string[] = []
+
 	if (data) {
 		subtitleParts.push(`${data.playlist.trackCount} 首歌曲`)
 	}
@@ -215,6 +227,7 @@ export default function SharedPlaylistPreviewPage() {
 											const ok = await Clipboard.setStringAsync(
 												data.playlist.title,
 											)
+
 											if (!ok) toast.error('复制失败')
 											else toast.success('已复制标题到剪贴板')
 										}}

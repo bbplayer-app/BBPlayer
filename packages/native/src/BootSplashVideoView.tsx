@@ -34,6 +34,7 @@ export const BootSplashVideoView = forwardRef<
 			'[bbplayer/native] BootSplashVideoView is only implemented on Android.',
 		)
 	}
+
 	return createElement(NativeBootSplashVideoView, {
 		...props,
 		ref,

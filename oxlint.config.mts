@@ -39,6 +39,16 @@ export default defineConfig({
 		'**/package-lock.json',
 		'**/pnpm-lock.yaml',
 		'.agents/**',
+		'.claude/**',
+		'.codex/**',
+		'.continue/**',
+		'.cursor/**',
+		'.gemini/**',
+		'.opencode/**',
+		'.pi/**',
+		'.roo/**',
+		'.windsurf/**',
+		'oxlint-plugins/anti-slop/**',
 		'apps/update-server/web/src/components/ui/**', // shadcn/ui 组件，不考虑它的报错
 	],
 	rules: {
@@ -83,6 +93,27 @@ export default defineConfig({
 		// bbplayer
 		'bbplayer/no-navigate-after-modal-close': 'error',
 
+		// anti-slop
+		'oxc/no-accumulating-spread': 'error',
+		'anti-slop/no-array-filter-map': 'error',
+		'anti-slop/no-reduce-accumulator-copy': 'error',
+		'anti-slop/no-chained-type-assertions': 'error',
+		'anti-slop/no-conditional-empty-object-spread': 'error',
+		'anti-slop/no-known-value-widening': 'error',
+		'anti-slop/no-module-mocking': 'error',
+		'anti-slop/no-object-parameters': 'error',
+		'anti-slop/no-reflect-apply': 'error',
+		'anti-slop/no-reflect-get': 'error',
+		'anti-slop/no-runtime-typeof': 'error',
+		'anti-slop/no-shape-in-symbol-names': 'error',
+		'anti-slop/no-unknown-parameters': 'error',
+		'anti-slop/no-unknown-returns': 'error',
+		'anti-slop/no-unknown-type-aliases': 'error',
+		'anti-slop/no-unsafe-dictionary-type': 'error',
+		'anti-slop/no-widen-then-assert': 'error',
+		'anti-slop/require-readable-spacing': 'error',
+		'anti-slop/require-safety-comment-for-type-assertion': 'error',
+
 		'promise/always-return': 'allow',
 		'unicorn/no-array-sort': 'allow',
 		'unicorn/no-new-array': 'allow',
@@ -103,6 +134,7 @@ export default defineConfig({
 			name: 'import-alias',
 			specifier: './oxlint-plugins/import-alias.mjs',
 		},
+		{ name: 'anti-slop', specifier: './oxlint-plugins/anti-slop/index.ts' },
 	],
 	overrides: [
 		{
@@ -117,6 +149,33 @@ export default defineConfig({
 						aliasForSubpaths: true,
 					},
 				],
+				// 统一走带 Sentry span 的封装，见 hooks/utils/useTracedQuery.ts
+				'no-restricted-imports': [
+					'error',
+					{
+						paths: [
+							{
+								name: '@tanstack/react-query',
+								importNames: [
+									'useQuery',
+									'useInfiniteQuery',
+									'useMutation',
+									'useSuspenseQuery',
+									'useSuspenseInfiniteQuery',
+									'useQueries',
+								],
+								message:
+									'请使用 @/hooks/utils/useTracedQuery 中的 useTracedQuery / useTracedInfiniteQuery / useTracedMutation',
+							},
+						],
+					},
+				],
+			},
+		},
+		{
+			files: ['apps/mobile/src/hooks/utils/useTracedQuery.ts'],
+			rules: {
+				'no-restricted-imports': 'off',
 			},
 		},
 		{

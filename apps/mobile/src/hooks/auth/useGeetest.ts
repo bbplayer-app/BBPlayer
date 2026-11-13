@@ -31,6 +31,7 @@ export function useGeetest({
 			if (!captchaParams) return
 
 			let parsed: { validate?: string; seccode?: string; challenge?: string }
+
 			try {
 				parsed = JSON.parse(event.nativeEvent.data) as typeof parsed
 			} catch {
@@ -38,9 +39,11 @@ export function useGeetest({
 			}
 
 			const { validate, seccode, challenge } = parsed
+
 			if (!validate || !seccode || !challenge) return
 
 			onStartRequest()
+
 			try {
 				const smsResult = await bilibiliApi.sendPhoneLoginSms({
 					tel: captchaParams.tel,
@@ -50,23 +53,31 @@ export function useGeetest({
 					validate,
 					seccode,
 				})
+
 				if (smsResult.isErr()) {
 					const errCode = smsResult.error.data.msgCode
 					let errorMsg = smsResult.error.message
+
 					if (!errorMsg) {
 						errorMsg = '发送验证码失败，请稍后重试'
 					}
+
 					let isExpiredCaptcha = false
+
 					if (errCode === 86211) {
 						isExpiredCaptcha = true
 					}
+
 					if (errCode === -105) {
 						isExpiredCaptcha = true
 					}
+
 					if (isExpiredCaptcha) {
 						errorMsg = '图形验证已过期，请重新获取验证码'
 					}
+
 					onFail(errorMsg)
+
 					return
 				}
 

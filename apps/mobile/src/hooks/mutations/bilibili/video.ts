@@ -1,6 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
-
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
@@ -9,10 +8,14 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import toast from '@/utils/toast'
 
 export const useThumbUpVideo = () => {
-	return useMutation({
-		mutationFn: ({ bvid, like }: { bvid: string; like: boolean }) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.video.thumb_up' },
+		mutationFn: ({ bvid, like }: { bvid: string; like: boolean }, { span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.thumbUpVideo({ bvid, like }).map((res) => res ?? undefined),
+				bilibiliApi
+					.withTrace(span)
+					.thumbUpVideo({ bvid, like })
+					.map((res) => res ?? undefined),
 			),
 		onSuccess: (_, { bvid, like }) => {
 			queryClient.setQueryData(
@@ -28,16 +31,21 @@ export const useThumbUpVideo = () => {
 }
 
 export const useDeleteToViewVideo = () => {
-	return useMutation({
-		mutationFn: ({
-			deleteAllViewed,
-			avid,
-		}: {
-			deleteAllViewed?: boolean
-			avid?: number
-		}) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.to_view.delete' },
+		mutationFn: (
+			{
+				deleteAllViewed,
+				avid,
+			}: {
+				deleteAllViewed?: boolean
+				avid?: number
+			},
+			{ span },
+		) =>
 			returnOrThrowAsync(
 				bilibiliApi
+					.withTrace(span)
 					.deleteToViewVideo({ deleteAllViewed, avid })
 					.map(() => true),
 			),
@@ -45,21 +53,26 @@ export const useDeleteToViewVideo = () => {
 			await context.client.cancelQueries({
 				queryKey: videoDataQueryKeys.getToViewVideoList(),
 			})
+
 			const previousData = context.client.getQueryData(
 				videoDataQueryKeys.getToViewVideoList(),
 			)
+
 			context.client.setQueryData(
 				videoDataQueryKeys.getToViewVideoList(),
 				(oldData: BilibiliToViewVideoList) => {
 					if (!oldData) return undefined
+
 					if (deleteAllViewed) {
 						const newItems = oldData.list.filter((item) => item.progress !== -1)
+
 						return {
 							count: newItems.length,
 							list: newItems,
 						}
 					} else {
 						const newItems = oldData.list.filter((item) => item.aid !== avid)
+
 						return {
 							count: newItems.length,
 							list: newItems,
@@ -67,6 +80,7 @@ export const useDeleteToViewVideo = () => {
 					}
 				},
 			)
+
 			return { previousData }
 		},
 		onSettled: async (
@@ -89,6 +103,7 @@ export const useDeleteToViewVideo = () => {
 			} else {
 				toast.success(deleteAllViewed ? '清除稍后再看列表成功' : '删除成功')
 			}
+
 			await context.client.invalidateQueries({
 				queryKey: videoDataQueryKeys.getToViewVideoList(),
 			})
@@ -97,9 +112,15 @@ export const useDeleteToViewVideo = () => {
 }
 
 export const useClearToViewVideoList = () => {
-	return useMutation({
-		mutationFn: () =>
-			returnOrThrowAsync(bilibiliApi.clearToViewVideoList().map(() => true)),
+	return useTracedMutation({
+		span: { name: 'bilibili.to_view.clear' },
+		mutationFn: (_variables, { span }) =>
+			returnOrThrowAsync(
+				bilibiliApi
+					.withTrace(span)
+					.clearToViewVideoList()
+					.map(() => true),
+			),
 		// onSuccess: () => {
 		// 	queryClient.setQueryData(videoDataQueryKeys.getToViewVideoList(), {
 		// 		count: 0,
@@ -114,13 +135,16 @@ export const useClearToViewVideoList = () => {
 			await context.client.cancelQueries({
 				queryKey: videoDataQueryKeys.getToViewVideoList(),
 			})
+
 			const previousData = context.client.getQueryData(
 				videoDataQueryKeys.getToViewVideoList(),
 			)
+
 			context.client.setQueryData(videoDataQueryKeys.getToViewVideoList(), {
 				count: 0,
 				list: [],
 			})
+
 			return { previousData }
 		},
 		onSettled: async (_d, error, _v, onMutateResult, context) => {
@@ -137,6 +161,7 @@ export const useClearToViewVideoList = () => {
 			} else {
 				toast.success('清除稍后再看列表成功')
 			}
+
 			await context.client.invalidateQueries({
 				queryKey: videoDataQueryKeys.getToViewVideoList(),
 			})

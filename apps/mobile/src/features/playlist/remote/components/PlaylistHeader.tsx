@@ -57,6 +57,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const sidebar = usePlaylistSidebar()
 	const coverSize = sidebar ? 220 : width < 360 || height < 700 ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
+
 	if (!title) return null
 
 	return (
@@ -84,6 +85,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 						onPress={() => setShowFullTitle(!showFullTitle)}
 						onLongPress={async () => {
 							const result = await Clipboard.setStringAsync(title)
+
 							if (!result) {
 								toast.error('复制失败')
 							} else {
@@ -150,6 +152,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				)}
 				{props.secondaryButtonText && props.onClickSecondaryButton && (
 					<Button
+						testID='playlist-header-secondary-button'
 						mode='outlined'
 						icon={props.secondaryButtonIcon}
 						onPress={props.onClickSecondaryButton}

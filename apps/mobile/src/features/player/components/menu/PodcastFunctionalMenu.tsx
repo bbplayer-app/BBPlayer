@@ -23,12 +23,14 @@ import {
 export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+
 	return (
 		<>
 			<HighFreqRow style={{ paddingBottom: 12 }}>
 				<PlayerDownloadButton onAction={onAction} />
 				{currentTrack?.source === 'bilibili' && (
 					<HighFreqButton
+						testID='player-menu-comments'
 						label='评论区'
 						icon='comment-text-outline'
 						onPress={() =>
@@ -57,9 +59,11 @@ const report = (error: unknown) =>
 function PodcastPlaybackSettings() {
 	const { shuffle, repeat } = usePlaybackOptions()
 	const { colors } = useTheme()
+
 	return (
 		<>
 			<List.Item
+				testID='player-menu-shuffle'
 				title='随机播放'
 				description={shuffle ? '开启' : '关闭'}
 				left={(props) => (
@@ -74,6 +78,7 @@ function PodcastPlaybackSettings() {
 				}}
 			/>
 			<List.Item
+				testID='player-menu-repeat'
 				title='循环模式'
 				description={
 					repeat === RepeatMode.OFF
@@ -106,6 +111,7 @@ function PodcastPlaybackSettings() {
 							: repeat === RepeatMode.TRACK
 								? RepeatMode.QUEUE
 								: RepeatMode.OFF
+
 					void setPlayerRepeatMode(next).catch(report)
 				}}
 			/>

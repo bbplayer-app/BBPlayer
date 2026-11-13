@@ -4,10 +4,15 @@ import {
 	type PlaybackErrorEvent,
 } from '@bbplayer/orpheus'
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
+import { spanToJSON } from '@sentry/react-native'
 import { PermissionsAndroid, Platform } from 'react-native'
 
 import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
 import { queryClient } from '@/lib/config/queryClient'
+import {
+	failPendingPlaybackSpan,
+	takePendingPlaybackSpan,
+} from '@/lib/player/playbackSession'
 import lyricService from '@/lib/services/lyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
@@ -77,6 +82,24 @@ class PlayerSideEffects {
 	private registerHeadlessTask() {
 		registerOrpheusHeadlessTask(async (event) => {
 			if (event.eventName === 'onTrackStarted') {
+				// 结束由 startPlayback 创建的 playback.start transaction
+				const playbackSpan = takePendingPlaybackSpan()
+
+				if (playbackSpan) {
+					const expectedTrackId =
+						spanToJSON(playbackSpan).data?.['playback.expected_first_track_id']
+
+					// 校验事件归属：防止用户快速切歌时，A 的事件消耗 B 的 span
+					if (!expectedTrackId || expectedTrackId === event.trackId) {
+						playbackSpan.setAttribute('playback.first_track_id', event.trackId)
+						playbackSpan.end()
+					} else {
+						// 事件不属于此 span，丢弃 span
+						playbackSpan.setAttribute('playback.cancelled', true)
+						playbackSpan.end()
+					}
+				}
+
 				await lyricService.pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
@@ -109,6 +132,7 @@ class PlayerSideEffects {
 			('rootCauseMessage' in event ? event.rootCauseMessage : null) ||
 			('message' in event ? event.message : null) ||
 			''
+
 		const errorCode = 'errorCode' in event ? event.errorCode : null
 
 		if (rawMessage.includes('Bilibili API Error')) {
@@ -123,9 +147,11 @@ class PlayerSideEffects {
 					shouldReport: false,
 				}
 			}
+
 			if (biliCode === '-101') {
 				return { message: 'Bilibili 账号未登录', shouldReport: false }
 			}
+
 			return {
 				message: `Bilibili API 错误: ${msg} (${biliCode})`,
 				shouldReport: false,
@@ -148,6 +174,7 @@ class PlayerSideEffects {
 
 		if (rawMessage.includes('Bilibili API Http Error')) {
 			const codeMatch = rawMessage.match(/Http Error: (\d+)/)
+
 			return {
 				message: `Bilibili 网络请求失败: ${codeMatch ? codeMatch[1] : 'Unknown'}`,
 				shouldReport: false,
@@ -156,6 +183,7 @@ class PlayerSideEffects {
 
 		if (event.platform === 'android') {
 			const networkState = await NetInfoFetch()
+
 			const rootMessage = [
 				event.rootCauseClass,
 				event.rootCauseMessage,
@@ -253,6 +281,7 @@ class PlayerSideEffects {
 					'Unknown playback error',
 			)
 		}
+
 		return new Error(event.error || 'Unknown playback error')
 	}
 
@@ -262,6 +291,11 @@ class PlayerSideEffects {
 	private setupErrorHandler() {
 		Orpheus.addListener('onPlayerError', async (event) => {
 			logger.error('播放器错误事件：', { event })
+
+			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
+			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace
+			const sentryError = this.toSentryError(event)
+			failPendingPlaybackSpan(sentryError)
 
 			let playerErrorInfo = {
 				message:
@@ -282,11 +316,7 @@ class PlayerSideEffects {
 				})
 
 				if (playerErrorInfo.shouldReport) {
-					reportErrorToSentry(
-						this.toSentryError(event),
-						'播放器错误事件',
-						'Native.Player',
-					)
+					reportErrorToSentry(sentryError, '播放器错误事件', 'Native.Player')
 				}
 			} catch (error) {
 				logger.error('处理播放器错误事件失败：', { error, event })
@@ -300,6 +330,7 @@ class PlayerSideEffects {
 
 			void (async () => {
 				this.isHandlingSpectrumVisualizerError = true
+
 				try {
 					const hasPermission =
 						Platform.OS !== 'android' ||
@@ -309,6 +340,7 @@ class PlayerSideEffects {
 
 					if (!hasPermission) {
 						toast.info('未获得麦克风权限，已关闭频谱显示')
+
 						return
 					}
 

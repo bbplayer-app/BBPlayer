@@ -79,6 +79,7 @@ export default function MultipagePage() {
 
 	const { selected, selectMode, toggle, enterSelectMode, setSelected } =
 		useTrackSelection()
+
 	const selection = useMemo(
 		() => ({
 			active: selectMode,
@@ -88,6 +89,7 @@ export default function MultipagePage() {
 		}),
 		[selectMode, selected, toggle, enterSelectMode],
 	)
+
 	const openModal = useModalStore((state) => state.open)
 
 	const {
@@ -107,12 +109,14 @@ export default function MultipagePage() {
 		if (!rawMultipageData || !videoData) {
 			return []
 		}
+
 		return rawMultipageData.map((item) => mapApiItemToTrack(item, videoData))
 	}, [rawMultipageData, videoData])
 
 	const coverRef = useImage(resolveBilibiliImageUrl(videoData?.pic) ?? '', {
 		onError: () => void 0,
 	})
+
 	const {
 		backgroundColor,
 		primaryButtonColor,
@@ -155,6 +159,7 @@ export default function MultipagePage() {
 	useEffect(() => {
 		if (isListReady && tracksData.length > 0 && cid) {
 			const index = tracksData.findIndex((track) => String(track.id) === cid)
+
 			if (index !== -1) {
 				// 给一点延时给列表渲染
 				const timer = setTimeout(() => {
@@ -164,6 +169,7 @@ export default function MultipagePage() {
 						viewPosition: 0.5,
 					})
 				}, 500)
+
 				return () => {
 					clearTimeout(timer)
 				}
@@ -178,6 +184,7 @@ export default function MultipagePage() {
 			extraData,
 		}: ListRenderItemInfoWithExtraData<BilibiliTrack, ExtraData>) => {
 			if (!extraData) throw new Error('Extradata 不存在')
+
 			const {
 				playTrack: play,
 				trackMenuItems: _trackMenuItems,
@@ -254,10 +261,12 @@ export default function MultipagePage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-select-all'
 							icon='select-all'
 							onPress={() => setSelected(new Set(tracksData.map((t) => t.id)))}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-invert-selection'
 							icon='select-compare'
 							onPress={() =>
 								setSelected(
@@ -270,12 +279,15 @@ export default function MultipagePage() {
 							}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const trackMap = new Map(tracksData.map((t) => [t.id, t]))
 								const payloads = []
+
 								for (const id of selected) {
 									const track = trackMap.get(id)
+
 									if (track) {
 										payloads.push({
 											track: track as Track,
@@ -283,6 +295,7 @@ export default function MultipagePage() {
 										})
 									}
 								}
+
 								openModal('BatchAddTracksToLocalPlaylist', {
 									payloads,
 								})

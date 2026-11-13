@@ -46,6 +46,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 	const compact = size.height - insets.bottom < 600 || size.width < 360
 
 	if (!currentTrack) return null
+
 	return (
 		<Show if={playbackContextStore$.ready}>
 			<View
@@ -82,6 +83,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 				>
 					{mode === 'podcast' && !embedded && (
 						<Button
+							testID='player-open-subtitles'
 							icon='subtitles-outline'
 							onPress={() => jumpTo('lyrics')}
 							compact
@@ -125,4 +127,5 @@ const styles = StyleSheet.create({
 })
 
 PlayerMainTab.displayName = 'PlayerMainTab'
+
 export default PlayerMainTab

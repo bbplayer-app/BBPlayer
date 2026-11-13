@@ -57,8 +57,10 @@ export const performHaptics = async (
 	} catch (e) {
 		if (e instanceof Error && e.message.includes('is not available')) {
 			hapticsSupported = false
+
 			return
 		}
+
 		// On iOS, we might want to suppress errors or log them differently,
 		// but sticking to the existing pattern is fine.
 		reportErrorToSentry(e, 'performHaptics 出错', 'Utils.Haptics')

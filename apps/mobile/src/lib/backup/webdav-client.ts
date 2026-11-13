@@ -86,9 +86,11 @@ export function createWebDavClient(config: WebDavClientConfig): WebDavClient {
 	}
 
 	const baseUrl = validateBaseUrl(config.baseUrl)
+
 	const xmlEntityExpansionLimits = validateXmlEntityExpansionLimits(
 		config.xmlEntityExpansionLimits,
 	)
+
 	const createUpstream = (authType: AuthType) =>
 		createUpstreamClient(baseUrl, {
 			authType,
@@ -98,6 +100,7 @@ export function createWebDavClient(config: WebDavClientConfig): WebDavClient {
 				limit: xmlEntityExpansionLimits,
 			},
 		})
+
 	const hasCredentials = Boolean(config.username || config.password)
 
 	return new WebDavClientAdapter(
@@ -113,6 +116,7 @@ function validateXmlEntityExpansionLimits(
 		maxTotalExpansions: 1000,
 		maxExpandedLength: 50_000,
 	}
+
 	if (
 		!Number.isSafeInteger(value.maxTotalExpansions) ||
 		value.maxTotalExpansions <= 0 ||
@@ -124,6 +128,7 @@ function validateXmlEntityExpansionLimits(
 			'WebDAV XML entity expansion 限制必须是正整数',
 		)
 	}
+
 	return value
 }
 
@@ -136,9 +141,11 @@ class WebDavClientAdapter implements WebDavClient {
 	async checkConnection(path = '/'): Promise<void> {
 		await this.run(async (client) => {
 			const stat = await client.stat(normalizePath(path))
+
 			if ('data' in stat) {
 				throw new WebDavError('protocol', 'WebDAV 返回了无效的目录信息')
 			}
+
 			if (stat.type !== 'directory') {
 				throw new WebDavError('protocol', 'WebDAV 路径不是目录')
 			}
@@ -153,9 +160,25 @@ class WebDavClientAdapter implements WebDavClient {
 
 	async listDirectory(path: string): Promise<WebDavEntry[]> {
 		return this.run(async (client) => {
-			const entries = await client.getDirectoryContents(normalizePath(path), {
-				includeSelf: false,
-			})
+			let entries: FileStat[]
+
+			try {
+				entries = await client.getDirectoryContents(normalizePath(path), {
+					includeSelf: false,
+				})
+			} catch (error) {
+				// 部分 WebDAV 服务器对空目录返回空响应体，webdav 会把它当成解析错误抛出。
+				// 这不是真正的错误，按空目录处理即可。
+				if (
+					error instanceof Error &&
+					error.message === 'Failed parsing directory contents: Empty response'
+				) {
+					return []
+				}
+
+				throw error
+			}
+
 			return entries.map(mapEntry)
 		})
 	}
@@ -166,6 +189,7 @@ class WebDavClientAdapter implements WebDavClient {
 				contentLength: data.byteLength,
 				overwrite: true,
 			})
+
 			if (!uploaded) throw new WebDavError('protocol', 'WebDAV 文件上传失败')
 		})
 	}
@@ -175,12 +199,14 @@ class WebDavClientAdapter implements WebDavClient {
 			const data = await client.getFileContents(normalizePath(path), {
 				format: 'binary',
 			})
+
 			if (
 				typeof data === 'string' ||
 				(!ArrayBuffer.isView(data) && !(data instanceof ArrayBuffer))
 			) {
 				throw new WebDavError('protocol', 'WebDAV 返回了无效的二进制内容')
 			}
+
 			return toArrayBuffer(data)
 		})
 	}
@@ -192,6 +218,7 @@ class WebDavClientAdapter implements WebDavClient {
 			return await operation(this.client)
 		} catch (error) {
 			if (error instanceof WebDavError) throw error
+
 			if (
 				findStatus(error as WebDAVClientError) === 401 &&
 				this.digestFallback
@@ -203,6 +230,7 @@ class WebDavClientAdapter implements WebDavClient {
 					throw normalizeError(digestError)
 				}
 			}
+
 			throw normalizeError(error)
 		}
 	}
@@ -211,7 +239,9 @@ class WebDavClientAdapter implements WebDavClient {
 function validateBaseUrl(value: string): string {
 	try {
 		const url = new URL(value.trim())
+
 		if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error()
+
 		return url.href.replace(/\/$/, '')
 	} catch (error) {
 		throw new WebDavError('protocol', 'WebDAV 服务器地址无效', { cause: error })
@@ -223,14 +253,17 @@ function normalizePath(value: string): string {
 		.trim()
 		.split('/')
 		.filter((segment) => segment.length > 0 && segment !== '.')
+
 	if (segments.some((segment) => segment === '..')) {
 		throw new WebDavError('protocol', 'WebDAV 路径不能包含 ..')
 	}
+
 	return `/${segments.join('/')}`
 }
 
 function mapEntry(entry: FileStat): WebDavEntry {
 	const lastModified = entry.lastmod ? new Date(entry.lastmod) : null
+
 	return {
 		path: entry.filename,
 		name: entry.basename,
@@ -247,6 +280,7 @@ function toArrayBuffer(data: ArrayBuffer | ArrayBufferView): ArrayBuffer {
 	if (data instanceof ArrayBuffer) return data
 	const copy = new Uint8Array(data.byteLength)
 	copy.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength))
+
 	return copy.buffer
 }
 
@@ -261,37 +295,45 @@ function normalizeError(error: unknown): WebDavError {
 			status,
 		})
 	}
+
 	if (status === 403) {
 		return new WebDavError('permission', '没有访问 WebDAV 路径的权限', {
 			cause: error,
 			status,
 		})
 	}
+
 	if (status === 404) {
 		return new WebDavError('not-found', 'WebDAV 路径不存在', {
 			cause: error,
 			status,
 		})
 	}
+
 	if (typeof status === 'number') {
 		return new WebDavError('protocol', `WebDAV 请求失败（HTTP ${status}）`, {
 			cause: error,
 			status,
 		})
 	}
+
 	if (error instanceof TypeError) {
 		return new WebDavError('network', '无法连接到 WebDAV 服务器', {
 			cause: error,
 		})
 	}
+
 	return new WebDavError('unknown', message, { cause: error })
 }
 
 function findStatus(error: WebDAVClientError | undefined): number | undefined {
 	if (typeof error?.status === 'number') return error.status
+
 	if (typeof error?.response?.status === 'number') return error.response.status
+
 	if (error?.cause && typeof error.cause === 'object') {
 		return findStatus(error.cause as WebDAVClientError)
 	}
+
 	return undefined
 }

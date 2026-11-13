@@ -15,16 +15,19 @@ export function migrateSortKeysV2(): void {
 		const tableInfo = expoDb.getAllSync<{ name: string }>(
 			`PRAGMA table_info(playlist_tracks)`,
 		)
+
 		const hasOrderColumn = tableInfo.some((col) => col.name === 'order')
 
 		if (!hasOrderColumn) {
 			logger.info('[v2] 物理表中已无 order 字段，无需执行数据迁移与删除操作')
 			migration.markAsApplied()
+
 			return
 		}
 
 		expoDb.withTransactionSync(() => {
 			type Row = { playlist_id: number; track_id: number }
+
 			const rows = expoDb.getAllSync<Row>(
 				`SELECT playlist_id, track_id
                  FROM playlist_tracks
@@ -34,6 +37,7 @@ export function migrateSortKeysV2(): void {
 
 			if (rows.length > 0) {
 				type MaxKeyRow = { playlist_id: number; max_key: string }
+
 				const maxKeys = expoDb.getAllSync<MaxKeyRow>(
 					`SELECT playlist_id, MAX(sort_key) as max_key
                      FROM playlist_tracks
@@ -42,9 +46,11 @@ export function migrateSortKeysV2(): void {
 				)
 
 				const maxKeyMap = new Map<number, string>()
+
 				for (const row of maxKeys) maxKeyMap.set(row.playlist_id, row.max_key)
 
 				const grouped = new Map<number, number[]>()
+
 				for (const row of rows) {
 					const trackIds = grouped.get(row.playlist_id) ?? []
 					trackIds.push(row.track_id)
@@ -53,6 +59,7 @@ export function migrateSortKeysV2(): void {
 
 				for (const [playlistId, trackIds] of grouped) {
 					let previousKey: string | null = maxKeyMap.get(playlistId) || null
+
 					for (const trackId of trackIds) {
 						const sortKey = generateKeyBetween(previousKey, null)
 						previousKey = sortKey
@@ -62,6 +69,7 @@ export function migrateSortKeysV2(): void {
 						)
 					}
 				}
+
 				logger.info(`[v2] sort_key 数据迁移接力完成，共处理 ${rows.length} 行`)
 			}
 

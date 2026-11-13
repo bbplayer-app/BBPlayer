@@ -48,12 +48,15 @@ export function MusicControls({
 					iconColor={shuffleMode ? colors.primary : colors.onSurfaceVariant}
 					onPress={async () => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+
 						try {
 							await setPlayerShuffleMode(!shuffleMode)
 						} catch (error) {
 							toastAndLogError('修改随机播放失败', error, 'Player.Controls')
+
 							return
 						}
+
 						void analyticsService.logPlayerAction('shuffle', {
 							mode: !shuffleMode,
 						})
@@ -76,12 +79,14 @@ export function MusicControls({
 					}
 					onPress={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Confirm)
+
 						const nextMode =
 							repeatMode === RepeatMode.OFF
 								? RepeatMode.TRACK
 								: repeatMode === RepeatMode.TRACK
 									? RepeatMode.QUEUE
 									: RepeatMode.OFF
+
 						void setPlayerRepeatMode(nextMode).catch((error: unknown) =>
 							toastAndLogError('修改循环模式失败', error, 'Player.Controls'),
 						)
@@ -101,8 +106,10 @@ export function MusicControls({
 					onPress={() => {
 						if (onOpenComments) {
 							onOpenComments()
+
 							return
 						}
+
 						if (currentTrack?.source === 'bilibili') {
 							router.navigate({
 								pathname: '/comments/[bvid]',

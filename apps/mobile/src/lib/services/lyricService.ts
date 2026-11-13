@@ -1,7 +1,7 @@
 import { Orpheus, type LyricConsumer, type LyricsData } from '@bbplayer/orpheus'
 import { parseAndMergeLyrics } from '@bbplayer/splash'
 import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
-import * as Sentry from '@sentry/react-native'
+import type { Span } from '@sentry/react-native'
 import * as FileSystem from 'expo-file-system'
 import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
@@ -22,6 +22,11 @@ import {
 import type { CustomError } from '@/lib/errors'
 import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
 import { trackService } from '@/lib/services/trackService'
+import {
+	type TraceParent,
+	traceOperationResult,
+	traceSpan,
+} from '@/lib/tracing'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type {
 	LyricFileData,
@@ -34,6 +39,7 @@ import log from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
 
 const logger = log.extend('Service.Lyric')
+
 type oldLyricFileType =
 	| ParsedLrc
 	| (Omit<ParsedLrc, 'rawOriginalLyrics' | 'rawTranslatedLyrics'> & {
@@ -63,6 +69,7 @@ class LyricService {
 				priorityMatch[1],
 				priorityMatch[2],
 			)
+
 			return priorityMatch[1] || priorityMatch[2]
 		}
 
@@ -108,6 +115,7 @@ class LyricService {
 							c.abort()
 						}
 					})
+
 					return res
 				})
 				.match(
@@ -163,6 +171,7 @@ class LyricService {
 			// e will be an AggregateError if using Promise.any
 			const aggregateError = e as AggregateError
 			const errors = Array.from(aggregateError.errors || [])
+
 			const errorMessages = errors
 				.map((err) => {
 					return err instanceof Error ? err.message : String(err)
@@ -179,10 +188,27 @@ class LyricService {
 	/**
 	 * 优先从本地缓存中获取歌词，如果没有则从多个数据源并行查找，返回最匹配的歌词并进行缓存。
 	 * @param track
+	 * @param parent - 由 query 等上层流程触发时传入，作为其子 span；不传则开启新的 trace
 	 * @returns
 	 */
 	public smartFetchLyrics(
 		track: Track,
+		parent?: TraceParent,
+	): ResultAsync<LyricFileData, CustomError> {
+		return traceOperationResult(
+			{
+				name: 'lyrics.smart_fetch',
+				op: 'task',
+				attributes: { 'track.source': track.source },
+			},
+			(span) => this.smartFetchLyricsImpl(track, span),
+			parent,
+		)
+	}
+
+	private smartFetchLyricsImpl(
+		track: Track,
+		span: Span,
 	): ResultAsync<LyricFileData, CustomError> {
 		const lyricFile = new FileSystem.File(
 			FileSystem.Paths.document,
@@ -203,15 +229,17 @@ class LyricService {
 					.andThen((musicName) => {
 						const lyricSource =
 							useAppStore.getState().settings.lyricSource ?? 'auto'
+
 						return this.getBestMatchedLyrics(track, musicName, lyricSource)
 					})
-					.andThen((lyrics) => this.processAndSaveLyrics(lyrics, track))
+					.andThen((lyrics) => this.processAndSaveLyrics(lyrics, track, span))
 			}
 
 			// 标准源处理
 			const lyricSource = useAppStore.getState().settings.lyricSource ?? 'auto'
+
 			return this.getBestMatchedLyrics(track, undefined, lyricSource).andThen(
-				(lyrics) => this.processAndSaveLyrics(lyrics, track),
+				(lyrics) => this.processAndSaveLyrics(lyrics, track, span),
 			)
 		}
 
@@ -222,8 +250,9 @@ class LyricService {
 					throw new Error('Cache miss')
 				}
 
-				const content = await Sentry.startSpan(
-					{ name: 'io:file:read', op: 'io' },
+				const content = await traceSpan(
+					span,
+					{ name: 'io:file:read', op: 'file.read' },
 					() => lyricFile.text(),
 				)
 
@@ -244,6 +273,8 @@ class LyricService {
 					})
 				}
 
+				span.setAttribute('lyrics.cache', 'hit')
+
 				// manualSkip 为 true 时直接返回缓存，不走网络
 				if (parsed.manualSkip) {
 					return parsed
@@ -262,6 +293,8 @@ class LyricService {
 				return e
 			},
 		).orElse(() => {
+			span.setAttribute('lyrics.cache', 'miss')
+
 			return ResultAsync.fromSafePromise(fetchNetInfo()).andThen(
 				(networkState) => {
 					if (isActuallyOffline(networkState)) {
@@ -269,6 +302,7 @@ class LyricService {
 							new LyricNotFoundError('当前处于离线状态，无法获取网络歌词'),
 						)
 					}
+
 					return fetchFromNetwork()
 				},
 			)
@@ -287,7 +321,9 @@ class LyricService {
 			updateTime: Date.now(),
 			manualSkip: true,
 		}
+
 		logger.info('用户跳过歌词获取', { uniqueKey })
+
 		return this.saveLyricsToFile(payload, uniqueKey)
 	}
 
@@ -295,19 +331,23 @@ class LyricService {
 	private processAndSaveLyrics(
 		lyrics: LyricProviderResponseData,
 		track: Track,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, CustomError> {
 		const lyricFileData: LyricFileData = {
 			...lyrics,
 			id: track.uniqueKey,
 			updateTime: Date.now(),
 		}
+
 		logger.info('网络搜索歌词完成，正在写入缓存')
-		return this.saveLyricsToFile(lyricFileData, track.uniqueKey)
+
+		return this.saveLyricsToFile(lyricFileData, track.uniqueKey, parent)
 	}
 
 	public saveLyricsToFile(
 		lyrics: LyricFileData,
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, FileSystemError> {
 		const write = this.pendingLyricWrites.then(async () => {
 			const lyricFile = new FileSystem.File(
@@ -315,24 +355,30 @@ class LyricService {
 				'lyrics',
 				`${uniqueKey.replaceAll('::', '--')}.json`,
 			)
+
 			lyricFile.parentDirectory.create({
 				intermediates: true,
 				idempotent: true,
 			})
+
 			const toWrite: LyricFileData = lyrics.manualSkip
 				? lyrics
 				: { ...lyrics, manualSkip: false }
-			await Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+
+			await traceSpan(parent, { name: 'io:file:write', op: 'file.write' }, () =>
 				lyricFile.write(JSON.stringify(toWrite)),
 			)
 			void this.pushLyricsToOverlays(uniqueKey)
+
 			return toWrite
 		})
+
 		// A failed write must not prevent later saves from running.
 		this.pendingLyricWrites = write.then(
 			() => undefined,
 			() => undefined,
 		)
+
 		return ResultAsync.fromPromise(
 			write,
 			(cause) =>
@@ -343,6 +389,7 @@ class LyricService {
 	public fetchLyrics(
 		item: LyricSearchResult[0],
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, Error> {
 		switch (item.source) {
 			case 'netease':
@@ -357,7 +404,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'qqmusic':
 				return this.qqMusicApi
@@ -371,7 +418,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'kugou':
 				return this.kugouApi
@@ -385,7 +432,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			default:
 				return errAsync(new Error('未知歌曲源'))
@@ -401,6 +448,7 @@ class LyricService {
 			FileSystem.Paths.document,
 			'lyrics',
 		)
+
 		const migrationMarker = new FileSystem.File(lyricsDir, '.migration_v2_done')
 
 		try {
@@ -417,14 +465,17 @@ class LyricService {
 
 			for (const file of lyricFiles) {
 				if (file instanceof FileSystem.Directory) continue
+
 				// 跳过标记文件本身
 				if (file.name.startsWith('.')) continue
+
 				if (!file.name.endsWith('.json')) continue
 
 				try {
 					// oxlint-disable-next-line no-await-in-loop
 					const content = await file.text()
 					let parsed: oldLyricFileType | LyricFileData | ParsedLrc
+
 					try {
 						parsed = JSON.parse(content) as
 							| oldLyricFileType
@@ -474,6 +525,7 @@ class LyricService {
 
 					// oxlint-disable-next-line no-await-in-loop
 					const saved = await this.saveLyricsToFile(newLyricData, uniqueKey)
+
 					if (saved.isErr()) throw saved.error
 				} catch (e) {
 					migrationFailed = true
@@ -483,8 +535,10 @@ class LyricService {
 
 			if (migrationFailed) {
 				logger.warning('部分歌词迁移失败，下次启动将重试')
+
 				return
 			}
+
 			migrationMarker.create()
 			logger.info('歌词格式迁移完成')
 		} catch (e) {
@@ -496,24 +550,30 @@ class LyricService {
 		metadata: BilibiliTrack['bilibiliMetadata'],
 	) {
 		if (!metadata.cid || !metadata.bvid) return undefined
+
 		const result = await bilibiliApi
 			.getWebPlayerInfo({ bvid: metadata.bvid, cid: metadata.cid })
 			.andThen((res) => {
 				if (!res.bgm_info) {
 					return errAsync(new Error('没有获取到歌曲信息'))
 				}
+
 				const filteredResult = /《(.+?)》/.exec(res.bgm_info.music_title)
 				logger.debug('从 bilibili 获取到的该视频中识别到的歌曲名', {
 					music_title: res.bgm_info.music_title,
 				})
+
 				if (filteredResult?.[1]) {
 					return okAsync(filteredResult[1])
 				}
+
 				return okAsync(res.bgm_info.music_title)
 			})
+
 		if (result.isErr()) {
 			return undefined
 		}
+
 		return result.value
 	}
 
@@ -530,14 +590,17 @@ class LyricService {
 		return Result.fromThrowable(() => {
 			if (!lyricsDir.exists) {
 				logger.debug('歌词目录不存在，无需清理')
+
 				return true as const
 			}
+
 			lyricsDir.delete()
 			lyricsDir.create({
 				intermediates: true,
 				idempotent: true,
 			})
 			logger.info('歌词缓存已清理')
+
 			return true as const
 		})()
 	}
@@ -549,6 +612,7 @@ class LyricService {
 		const wantDesktop = Orpheus.isDesktopLyricsShown
 		const wantStatusBar = Orpheus.isStatusBarLyricsEnabled
 		const wantCar = Orpheus.isCarLyricsEnabled
+
 		if (!wantDesktop && !wantStatusBar && !wantCar) return Promise.resolve()
 
 		this.pushLyricsToOverlaysRevision += 1
@@ -574,6 +638,7 @@ class LyricService {
 					0,
 					this.pushLyricsToOverlaysRequestedAt + 300 - Date.now(),
 				)
+
 				if (remainingDelay > 0) {
 					await new Promise<void>((resolve) =>
 						setTimeout(resolve, remainingDelay),
@@ -598,27 +663,33 @@ class LyricService {
 
 		try {
 			const currentOrpheusTrack = await Orpheus.getCurrentTrack()
+
 			if (currentOrpheusTrack && currentOrpheusTrack.id !== trackId) {
 				logger.debug('pushLyricsToOverlays: trackId 不再是当前曲目，跳过', {
 					trackId,
 					currentId: currentOrpheusTrack.id,
 				})
+
 				return
 			}
 
 			if (revision !== this.pushLyricsToOverlaysRevision) return
 
 			const trackResult = await trackService.getTrackByUniqueKey(trackId)
+
 			if (trackResult.isErr()) throw trackResult.error
 
 			if (revision !== this.pushLyricsToOverlaysRevision) return
 			const lyricsResult = await this.smartFetchLyrics(trackResult.value)
+
 			if (lyricsResult.isErr()) throw lyricsResult.error
 
 			const lyrics = lyricsResult.value
+
 			if (!lyrics.lrc) {
 				// 歌词为空（如 manualSkip 或搜索失败），隐藏所有 overlay
 				await Orpheus.clearOverlays()
+
 				return
 			}
 
@@ -652,12 +723,15 @@ class LyricService {
 			}
 
 			const consumers: LyricConsumer[] = []
+
 			if (Orpheus.isDesktopLyricsShown) {
 				consumers.push('desktop')
 			}
+
 			if (Orpheus.isStatusBarLyricsEnabled) {
 				consumers.push('statusBar')
 			}
+
 			if (Orpheus.isCarLyricsEnabled) {
 				consumers.push('car')
 			}
@@ -682,10 +756,12 @@ class LyricService {
 
 			if (currentIndex !== -1 && currentIndex + 1 < queue.length) {
 				const nextOrpheusTrack = queue[currentIndex + 1]
+
 				if (nextOrpheusTrack?.id) {
 					const nextTrackResult = await trackService.getTrackByUniqueKey(
 						nextOrpheusTrack.id,
 					)
+
 					if (nextTrackResult.isOk() && nextTrackResult.value) {
 						logger.debug('预加载下一首歌词', {
 							title: nextTrackResult.value.title,
@@ -705,4 +781,5 @@ const lyricService = new LyricService(
 	qqMusicApiInstance,
 	kugouApiInstance,
 )
+
 export default lyricService

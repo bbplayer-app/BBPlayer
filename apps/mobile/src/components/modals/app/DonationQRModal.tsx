@@ -14,6 +14,7 @@ import toast from '@/utils/toast'
 
 // oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const WECHAT_QR = require('../../../../assets/images/wechat.png')
+
 // oxlint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
 const ALIPAY_QR = require('../../../../assets/images/alipay.jpg')
 
@@ -34,30 +35,37 @@ export default function DonationQRModal({
 		try {
 			if (needsPermission) {
 				const { granted } = await requestPermission()
+
 				if (!granted) {
 					toast.error('无法保存图片', {
 						description: '请在设置中允许访问相册',
 					})
+
 					return
 				}
 			}
 
 			let qrAsset = ALIPAY_QR
+
 			if (currentType === 'wechat') {
 				qrAsset = WECHAT_QR
 			}
+
 			const asset = Asset.fromModule(qrAsset)
+
 			if (!asset.downloaded) {
 				await asset.downloadAsync()
 			}
 
 			let uri = asset.localUri
+
 			if (!uri) {
 				uri = asset.uri
 			}
 
 			if (!uri) {
 				toast.error('保存失败', { description: '无法获取图片路径' })
+
 				return
 			}
 

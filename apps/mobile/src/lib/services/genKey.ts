@@ -14,13 +14,16 @@ export default function generateUniqueTrackKey(
 	switch (payload.source) {
 		case 'bilibili': {
 			const biliMeta = payload.bilibiliMetadata
+
 			if (!biliMeta.bvid) {
 				return err(createValidationError('bvid 不存在'))
 			}
+
 			return biliMeta.isMultiPage
 				? ok(`${payload.source}::${biliMeta.bvid}::${biliMeta.cid}`)
 				: ok(`${payload.source}::${biliMeta.bvid}`)
 		}
+
 		case 'local': {
 			// const localMeta = payload.localMetadata
 			// return ok(`${payload.source}::${localMeta.localPath}`)
@@ -29,6 +32,7 @@ export default function generateUniqueTrackKey(
 				createNotImplementedError(`未实现 local source 的 uniqueKey 生成`),
 			)
 		}
+
 		default:
 			return err(
 				createValidationError(

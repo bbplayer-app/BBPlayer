@@ -17,6 +17,7 @@ export function normalizeChapters(
 	duration: number,
 ): Chapter[] {
 	if (!Number.isFinite(duration) || duration <= 0) return []
+
 	const sorted = (Array.isArray(points) ? points : [])
 		.filter(
 			(point) =>
@@ -32,6 +33,7 @@ export function normalizeChapters(
 		.filter(
 			(point, index, all) => index === 0 || point.from !== all[index - 1].from,
 		)
+
 	return sorted.map((point, index) => {
 		// Bilibili chapter times use whole seconds; media duration can include
 		// a fractional tail (and the metadata duration can round up).
@@ -39,6 +41,7 @@ export function normalizeChapters(
 			index === sorted.length - 1 && duration - point.to <= 1
 				? duration
 				: point.to
+
 		return {
 			id: `${point.from}:${index}`,
 			title: point.content.trim(),
@@ -57,14 +60,18 @@ export function chapterIndexAt(chapters: Chapter[], seconds: number): number {
 	let low = 0
 	let high = chapters.length - 1
 	let result = -1
+
 	while (low <= high) {
 		const middle = (low + high) >>> 1
+
 		if (chapters[middle].startSeconds <= seconds) {
 			result = middle
 			low = middle + 1
 		} else high = middle - 1
 	}
+
 	if (result < 0) return -1
+
 	return seconds < chapters[result].endSeconds ? result : -1
 }
 
@@ -73,6 +80,7 @@ export function chapterBoundaries(
 	duration: number,
 ): number[] {
 	if (!Number.isFinite(duration) || duration <= 0) return []
+
 	return [
 		...new Set(
 			chapters.flatMap((chapter) => [chapter.startSeconds, chapter.endSeconds]),
@@ -91,10 +99,13 @@ export function chapterBoundaryIndex(
 	'worklet'
 	let low = 0
 	let high = markers.length
+
 	while (low < high) {
 		const middle = (low + high) >>> 1
+
 		if (markers[middle] <= fraction) low = middle + 1
 		else high = middle
 	}
+
 	return low
 }

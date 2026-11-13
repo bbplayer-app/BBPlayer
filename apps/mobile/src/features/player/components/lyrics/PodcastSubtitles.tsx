@@ -47,10 +47,12 @@ export function PodcastSubtitles({
 	const [height, setHeight] = useState(0)
 	const hasBilibiliCookie = useAppStore((state) => state.hasBilibiliCookie())
 	const sourceKey = `${data.key}:${data.selected?.id_str ?? data.selected?.id}`
+
 	const store = useMemo(
 		() => createSubtitleReaderStore(lines, trackId ?? undefined, sourceKey),
 		[lines, trackId, sourceKey],
 	)
+
 	useSubtitlePlayback(store, active)
 	const playbackReady = useValue(store.state$.ready)
 	const showControls = !embedded && height - insets.bottom >= 520
@@ -59,10 +61,12 @@ export function PodcastSubtitles({
 	useEffect(() => {
 		setPickerVisible(false)
 	}, [data.key, active])
+
 	const handleExport = async () => {
 		if (exportingRef.current || !data.selected || !data.lines.length) return
 		exportingRef.current = true
 		setExporting(true)
+
 		try {
 			await exportSubtitles(
 				data.lines,
@@ -100,6 +104,7 @@ export function PodcastSubtitles({
 					<View style={styles.message}>
 						<Text>字幕加载失败，播放不受影响</Text>
 						<Button
+							testID='subtitles-retry'
 							onPress={() => {
 								void data.retry()
 							}}
@@ -187,6 +192,7 @@ export function PodcastSubtitles({
 						<ScrollView>
 							{data.tracks.map((track) => (
 								<List.Item
+									testID='subtitles-track-option'
 									key={track.id_str ?? String(track.id)}
 									title={subtitleLabel(track)}
 									titleNumberOfLines={3}

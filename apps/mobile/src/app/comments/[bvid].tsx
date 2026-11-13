@@ -10,6 +10,7 @@ export default function CommentsPage() {
 	const { bvid } = useLocalSearchParams<{ bvid: string }>()
 	const { colors } = useTheme()
 	const router = useRouter()
+
 	const onReplyPress = useCallback(
 		(item: BilibiliCommentItem) => {
 			router.navigate({
@@ -19,6 +20,7 @@ export default function CommentsPage() {
 		},
 		[bvid, router],
 	)
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>

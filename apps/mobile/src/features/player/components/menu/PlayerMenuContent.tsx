@@ -45,12 +45,15 @@ export function HighFreqButton({
 	icon,
 	label,
 	onPress,
+	testID,
 }: {
 	icon: string
 	label: string
 	onPress: () => void
+	testID?: string
 }) {
 	const { colors } = useTheme()
+
 	return (
 		<SquircleView
 			style={{
@@ -65,6 +68,7 @@ export function HighFreqButton({
 			<TouchableRipple
 				onPress={onPress}
 				style={{ flex: 1 }}
+				testID={testID}
 			>
 				<View
 					style={{
@@ -93,21 +97,29 @@ export function HighFreqButton({
 export function PlayerDownloadButton({ onAction }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const trackId = currentTrack?.uniqueKey
+
 	const { data: downloadStatus } = useBatchDownloadStatus(
 		trackId ? [trackId] : [],
 	)
+
 	const downloadHandler = useCallback(async () => {
 		if (!currentTrack) {
 			toast.error('为什么 currentTrack 不存在？')
+
 			return
 		}
+
 		const url = getInternalPlayUri(currentTrack)
+
 		if (!url) {
 			toast.error('获取内部播放地址失败')
+
 			return
 		}
+
 		const artistName = currentTrack.artist?.name
 		const artworkUrl = currentTrack.coverUrl ?? undefined
+
 		try {
 			await Orpheus.downloadTrack({
 				id: currentTrack.uniqueKey,
@@ -129,6 +141,7 @@ export function PlayerDownloadButton({ onAction }: PlayerMenuContentProps) {
 
 	return (
 		<HighFreqButton
+			testID='player-menu-download'
 			icon='download'
 			label={
 				downloadStatus?.[trackId ?? ''] === DownloadState.COMPLETED
@@ -147,10 +160,12 @@ export function SharedTrackActions({
 	const router = useRouter()
 	const openModal = useModalStore((state) => state.open)
 	const uploaderMid = Number(currentTrack?.artist?.remoteId ?? undefined)
+
 	return (
 		<>
 			{currentTrack?.source === 'bilibili' && (
 				<List.Item
+					testID='player-menu-add-to-bilibili-fav'
 					title='添加到 bilibili 收藏夹'
 					left={(props) => (
 						<List.Icon
@@ -169,6 +184,7 @@ export function SharedTrackActions({
 				/>
 			)}
 			<List.Item
+				testID='player-menu-add-to-local-playlist'
 				title='添加到本地歌单'
 				left={(props) => (
 					<List.Icon
@@ -184,6 +200,7 @@ export function SharedTrackActions({
 				}
 			/>
 			<List.Item
+				testID='player-menu-edit-metadata'
 				title='编辑信息'
 				left={(props) => (
 					<List.Icon
@@ -199,6 +216,7 @@ export function SharedTrackActions({
 				}
 			/>
 			<List.Item
+				testID='player-menu-view-artist'
 				title='查看作者'
 				left={(props) => (
 					<List.Icon
@@ -221,6 +239,7 @@ export function SharedTrackActions({
 			/>
 			{currentTrack?.source === 'bilibili' && (
 				<List.Item
+					testID='player-menu-view-video'
 					title='查看视频详情'
 					left={(props) => (
 						<List.Icon
@@ -248,8 +267,10 @@ export function ShareSongAction({
 }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const openModal = useModalStore((state) => state.open)
+
 	return (
 		<List.Item
+			testID='player-menu-share'
 			title='分享歌曲'
 			left={(props) => (
 				<List.Icon
@@ -270,6 +291,7 @@ export function ShareSongAction({
 export function PlayerModeSwitch({ onAction }: PlayerMenuContentProps) {
 	return (
 		<List.Item
+			testID='player-menu-switch-mode'
 			title='切换播放器模式'
 			left={(props) => (
 				<List.Icon
@@ -279,6 +301,7 @@ export function PlayerModeSwitch({ onAction }: PlayerMenuContentProps) {
 			)}
 			onPress={() => {
 				const currentMode = playbackContextStore$.context.mode.peek()
+
 				if (!currentMode) return
 				const mode = currentMode === 'podcast' ? 'music' : 'podcast'
 				const label = mode === 'podcast' ? '播客' : '音乐'

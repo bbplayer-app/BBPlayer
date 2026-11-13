@@ -69,12 +69,18 @@ initializeSentry()
 function onAppStateChange(status: AppStateStatus) {
 	if (Platform.OS !== 'web') {
 		focusManager.setFocused(status === 'active')
+
+		// metrics 有 5s 缓冲窗口，退到后台时确保启动数据已经发出
+		if (status !== 'active') {
+			void Sentry.flush()
+		}
 	}
 }
 
 const checkOverlayPermissionOnStart = async () => {
 	if (Orpheus.isDesktopLyricsShown) {
 		const hasPermission = await Orpheus.checkOverlayPermission()
+
 		if (!hasPermission) {
 			// 延迟显示，确保 UI 已经加载
 			setTimeout(() => {
@@ -129,6 +135,7 @@ function runAppInit() {
 				settings.allowSimultaneousPlayback,
 			)
 			const cookie = useAppStoreObj.getState().bilibiliCookie
+
 			if (cookie) {
 				logger.debug('初始化 orpheus bilibili cookie')
 				Orpheus.setBilibiliCookie(serializeCookieObject(cookie))
@@ -147,8 +154,10 @@ function runAppInit() {
 
 function RootLayout() {
 	const [isReady, setIsReady] = useState(false)
+
 	const { success: migrationsSuccess, error: migrationsError } =
 		useFastMigrations(drizzleDb, migrations)
+
 	useCheckUpdate()
 	useFeatureTracking()
 
@@ -174,10 +183,12 @@ function RootLayout() {
 				)
 			}
 		}
+
 		void logAppInfo()
 		reportUpdateActivity()
 
 		const subscription = AppState.addEventListener('change', onAppStateChange)
+
 		return () => subscription.remove()
 	}, [])
 
@@ -219,6 +230,7 @@ function RootLayout() {
 			})
 
 			const firstOpen = storage.getBoolean('first_open') ?? true
+
 			if (firstOpen) {
 				router.navigate('/onboarding')
 			}
@@ -266,6 +278,7 @@ function RootLayout() {
 								},
 								transitionEnd: ({ data }) => {
 									const state = navigation.getState()
+
 									// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
 									// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
 									if (
@@ -418,7 +431,12 @@ function RootLayout() {
 	)
 }
 
-export default Sentry.wrap(ObserveRoot.wrap(RootLayout))
+// 用户点击追踪（ui.action.touch）与触摸面包屑以 testID 作为元素标识。
+// 同一节点上 testID 优先于 accessibilityLabel 与子节点文本；都没有时保留原始文本，
+// 点击 transaction 名即 `{路由}.{元素标识}`
+export default Sentry.wrap(ObserveRoot.wrap(RootLayout), {
+	touchEventBoundaryProps: { labelName: 'testID' },
+})
 
 const styles = StyleSheet.create({
 	appContainer: {

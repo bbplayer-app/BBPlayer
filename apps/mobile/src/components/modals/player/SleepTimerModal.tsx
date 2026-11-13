@@ -23,6 +23,7 @@ const SleepTimerModal = () => {
 		if (sleepTimerEndAt) {
 			const interval = setInterval(() => {
 				const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
+
 				if (remaining > 0) {
 					setRemainingTime(remaining)
 				} else {
@@ -30,6 +31,7 @@ const SleepTimerModal = () => {
 					clearInterval(interval)
 				}
 			}, 1000)
+
 			const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000)
 			setRemainingTime(remaining > 0 ? remaining : null)
 
@@ -75,6 +77,7 @@ const SleepTimerModal = () => {
 				<View style={styles.presetContainer}>
 					{PRESET_DURATIONS.map((minutes) => (
 						<Button
+							testID='sleep-timer-preset'
 							key={minutes}
 							mode='contained-tonal'
 							onPress={() => handleSetTimer(minutes)}
@@ -97,9 +100,11 @@ const SleepTimerModal = () => {
 							style={styles.customInput}
 						/>
 						<Button
+							testID='sleep-timer-custom-confirm'
 							mode='contained'
 							onPress={async () => {
 								const minutes = parseInt(customMinutes, 10)
+
 								if (!isNaN(minutes) && minutes > 0) {
 									await handleSetTimer(minutes)
 								}
@@ -120,6 +125,7 @@ const SleepTimerModal = () => {
 			<Dialog.Actions>
 				{sleepTimerEndAt && (
 					<Button
+						testID='sleep-timer-cancel'
 						onPress={handleCancelTimer}
 						textColor='red'
 					>

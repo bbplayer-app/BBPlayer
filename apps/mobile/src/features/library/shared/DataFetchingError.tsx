@@ -13,6 +13,7 @@ export function DataFetchingError({
 	onRetry,
 }: DataFetchingErrorProps) {
 	const { colors } = useTheme()
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Text
@@ -23,6 +24,7 @@ export function DataFetchingError({
 			</Text>
 			{onRetry && (
 				<Button
+					testID='library-retry'
 					onPress={onRetry}
 					mode='contained'
 				>

@@ -29,6 +29,7 @@ export function number(value: number) {
 
 export function bytes(value: number) {
 	const megabytes = value >= 1024 * 1024
+
 	return new Intl.NumberFormat('en-US', {
 		style: 'unit',
 		unit: megabytes ? 'megabyte' : 'kilobyte',
@@ -46,17 +47,20 @@ export function percent(value: number) {
 
 export function sourceCommit(source: unknown) {
 	const value = sourceCommitSha(source)
+
 	return value ? value.slice(0, 7) : '—'
 }
 
 export function sourceCommitSha(source: unknown) {
 	if (!source || typeof source !== 'object') return ''
 	const value = (source as Record<string, unknown>).commit_sha
+
 	return typeof value === 'string' && value ? value : ''
 }
 
 export function sourceCommitURL(source: unknown) {
 	const sha = sourceCommitSha(source)
+
 	return sha ? `https://github.com/bbplayer-app/BBPlayer/commit/${sha}` : ''
 }
 

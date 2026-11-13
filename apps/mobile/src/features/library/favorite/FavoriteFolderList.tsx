@@ -31,6 +31,7 @@ const FavoriteFolderListComponent = memo(() => {
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 
 	const { data: userInfo } = usePersonalInformation()
+
 	const {
 		data: playlists,
 		isPending: playlistsIsPending,

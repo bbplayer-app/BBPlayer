@@ -18,6 +18,7 @@ import { formatDurationToHHMMSS } from '@/utils/time'
 
 const renderItem = ({
 	item,
+	index,
 	extraData,
 }: ListRenderItemInfoWithExtraData<
 	BilibiliSearchVideo,
@@ -26,9 +27,11 @@ const renderItem = ({
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	return (
 		<SearchItem
 			item={item}
+			index={index}
 			onPress={extraData.handlePressItem}
 		/>
 	)
@@ -36,14 +39,18 @@ const renderItem = ({
 
 const SearchItem = memo(function SearchItem({
 	item,
+	index,
 	onPress,
 }: {
 	item: BilibiliSearchVideo
+	index: number
 	onPress: (item: BilibiliSearchVideo) => void
 }) {
 	const coverUrl = item.pic.startsWith('//') ? `https:${item.pic}` : item.pic
+
 	return (
 		<TouchableRipple
+			testID={`external-sync-match-result-${index}`}
 			style={styles.searchItem}
 			onPress={() => onPress(item)}
 		>
@@ -103,6 +110,7 @@ export default function ManualMatchExternalSync({
 		}
 
 		const allTracks = data.pages.flatMap((page) => page.result)
+
 		const uniqueMap = new Map(
 			allTracks.map((t) => [
 				t.bvid,
@@ -112,6 +120,7 @@ export default function ManualMatchExternalSync({
 				},
 			]),
 		)
+
 		return [...uniqueMap.values()]
 	}, [data])
 
@@ -138,6 +147,7 @@ export default function ManualMatchExternalSync({
 				</View>
 			)
 		}
+
 		if (allVideos.length > 0) {
 			return (
 				<LegendList
@@ -162,6 +172,7 @@ export default function ManualMatchExternalSync({
 				/>
 			)
 		}
+
 		return (
 			<View style={styles.centerContainer}>
 				<Text style={styles.centerText}>没有找到匹配的视频</Text>

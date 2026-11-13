@@ -9,8 +9,10 @@ export default function ReplyCommentsPage() {
 	const { colors } = useTheme()
 	const router = useRouter()
 	const rpidNumber = Number(rpid)
+
 	const valid =
 		!!bvid && !!rpid && Number.isFinite(rpidNumber) && rpidNumber > 0
+
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header elevated>

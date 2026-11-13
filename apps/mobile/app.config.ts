@@ -21,6 +21,7 @@ import { version } from './package.json'
 const IS_DEV = process.env.APP_VARIANT === 'development'
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview'
 const UPDATE_SERVER_URL = 'https://updates.bbplayer.roitium.com'
+
 const UPDATE_CHANNEL = IS_DEV
 	? 'development'
 	: IS_PREVIEW
@@ -32,11 +33,14 @@ const getVersionCode = (): number => {
 	const versionCodeEnv =
 		// env 获取到的不可能是 string，我们这么做只是为了让 eslint 开心
 		(process.env.VERSION_CODE as string | undefined | number) ?? undefined
+
 	const pwd = process.cwd()
 	// EAS 环境的行为很奇怪，似乎不会复制 .git 目录，所以需要特殊强制外部提供 versionCode
 	const isInEAS = pwd.includes('eas-build-local-nodejs')
+
 	if (typeof versionCodeEnv === 'string') {
 		const versionCode = parseInt(versionCodeEnv, 10)
+
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
 		}
@@ -44,7 +48,9 @@ const getVersionCode = (): number => {
 		const versionCodeString = execSync('git rev-list --count HEAD')
 			.toString()
 			.trim()
+
 		const versionCode = parseInt(versionCodeString, 10)
+
 		if (!isNaN(versionCode) && versionCode > 0) {
 			return versionCode
 		}
@@ -83,6 +89,7 @@ const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
 	if (fs.existsSync(path.resolve(process.cwd(), realPath))) {
 		return realPath
 	}
+
 	return defaultPath
 }
 
@@ -90,10 +97,13 @@ const getGoogleServicesFile = (defaultPath: string, realPath: string) => {
 export default ({ config }: ConfigContext): ExpoConfig => {
 	const googleServicesJsonPath =
 		'./assets/config/google-services/google-services.json'
+
 	const googleServicesJsonRealPath =
 		'./assets/config/google-services/google-services.real.json'
+
 	const googleServicesPlistPath =
 		'./assets/config/google-services/GoogleService-Info.plist'
+
 	const googleServicesPlistRealPath =
 		'./assets/config/google-services/GoogleService-Info.real.plist'
 

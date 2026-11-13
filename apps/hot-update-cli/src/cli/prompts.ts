@@ -11,11 +11,14 @@ export async function promptForRequiredValue(
 	})
 
 	if (isCancel(response) || !response.trim()) throw new Error('Cancelled')
+
 	return response.trim()
 }
 
 export async function promptForSecretValue(message: string): Promise<string> {
 	const response = await password({ message })
+
 	if (isCancel(response) || !response.trim()) throw new Error('Cancelled')
+
 	return response.trim()
 }

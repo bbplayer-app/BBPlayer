@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-native'
 import { and, eq, or } from 'drizzle-orm'
 import { type ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import { ResultAsync, errAsync, okAsync } from 'neverthrow'
@@ -11,6 +10,7 @@ import {
 	createArtistNotFound,
 	createValidationError,
 } from '@/lib/errors/service'
+import { dbSpan, type TraceParent, traceSpan } from '@/lib/tracing'
 import type { Track } from '@/types/core/media'
 import type {
 	CreateArtistPayload,
@@ -21,12 +21,14 @@ import type { TrackService } from './trackService'
 import { trackService as trackServiceInstance } from './trackService'
 
 type Tx = Parameters<Parameters<typeof defaultDb.transaction>[0]>[0]
+
 type DBLike = ExpoSQLiteDatabase<typeof schema> | Tx
 
 export class ArtistService {
 	constructor(
 		private readonly db: DBLike,
 		private readonly trackService: TrackService,
+		private readonly traceParent?: TraceParent,
 	) {}
 
 	/**
@@ -35,7 +37,24 @@ export class ArtistService {
 	 * @returns 一个新的实例。
 	 */
 	public withDB(conn: DBLike) {
-		return new ArtistService(conn, this.trackService.withDB(conn))
+		return new ArtistService(
+			conn,
+			this.trackService.withDB(conn),
+			this.traceParent,
+		)
+	}
+
+	/**
+	 * 返回一个把数据库 span 挂到指定 parent 下的新实例。
+	 * @param parent - 当前业务流程的 span，为空时不产生 span。
+	 * @returns 一个新的实例。
+	 */
+	public withTrace(parent: TraceParent) {
+		return new ArtistService(
+			this.db,
+			this.trackService.withTrace(parent),
+			parent,
+		)
 	}
 
 	/**
@@ -47,7 +66,7 @@ export class ArtistService {
 		payload: CreateArtistPayload,
 	): ResultAsync<typeof schema.artists.$inferSelect, DatabaseError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:insert:artist', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('INSERT', 'artists', 'artist'), () =>
 				this.db
 					.insert(schema.artists)
 					.values({
@@ -78,6 +97,7 @@ export class ArtistService {
 		DatabaseError | ServiceError
 	> {
 		const { source, remoteId } = payload
+
 		if (!source || !remoteId) {
 			return errAsync(
 				createValidationError('source 和 remoteId 在此方法中是必需的'),
@@ -87,8 +107,9 @@ export class ArtistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 尝试查找已存在的artist
-				const existingArtist = await Sentry.startSpan(
-					{ name: 'db:query:artist', op: 'db' },
+				const existingArtist = await traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'artists', 'artist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: and(
@@ -103,8 +124,9 @@ export class ArtistService {
 				}
 
 				// 如果不存在，则创建新的artist
-				const [newArtist] = await Sentry.startSpan(
-					{ name: 'db:insert:artist', op: 'db' },
+				const [newArtist] = await traceSpan(
+					this.traceParent,
+					dbSpan('INSERT', 'artists', 'artist'),
 					() =>
 						this.db
 							.insert(schema.artists)
@@ -143,20 +165,23 @@ export class ArtistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 首先验证artist是否存在
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:artist:exist', op: 'db' },
+				const existing = await traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'artists', 'artist.exist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: eq(schema.artists.id, artistId),
 							columns: { id: true },
 						}),
 				)
+
 				if (!existing) {
 					throw createArtistNotFound(artistId)
 				}
 
-				const [updated] = await Sentry.startSpan(
-					{ name: 'db:update:artist', op: 'db' },
+				const [updated] = await traceSpan(
+					this.traceParent,
+					dbSpan('UPDATE', 'artists', 'artist'),
 					() =>
 						this.db
 							.update(schema.artists)
@@ -191,20 +216,23 @@ export class ArtistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				// 验证artist是否存在
-				const existing = await Sentry.startSpan(
-					{ name: 'db:query:artist:exist', op: 'db' },
+				const existing = await traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'artists', 'artist.exist'),
 					() =>
 						this.db.query.artists.findFirst({
 							where: eq(schema.artists.id, artistId),
 							columns: { id: true },
 						}),
 				)
+
 				if (!existing) {
 					throw createArtistNotFound(artistId)
 				}
 
-				const [deleted] = await Sentry.startSpan(
-					{ name: 'db:delete:artist', op: 'db' },
+				const [deleted] = await traceSpan(
+					this.traceParent,
+					dbSpan('DELETE', 'artists', 'artist'),
 					() =>
 						this.db
 							.delete(schema.artists)
@@ -232,7 +260,7 @@ export class ArtistService {
 		artistId: number,
 	): ResultAsync<Track[], DatabaseError | ServiceError> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:tracks', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'tracks', 'tracks'), () =>
 				this.db.query.tracks.findMany({
 					where: eq(schema.tracks.artistId, artistId),
 					with: {
@@ -248,8 +276,10 @@ export class ArtistService {
 				}),
 		).andThen((dbTracks) => {
 			const formattedTracks: Track[] = []
+
 			for (const dbTrack of dbTracks) {
 				const formatted = this.trackService.formatTrack(dbTrack)
+
 				if (!formatted) {
 					return errAsync(
 						new ServiceError(
@@ -257,8 +287,10 @@ export class ArtistService {
 						),
 					)
 				}
+
 				formattedTracks.push(formatted)
 			}
+
 			return okAsync(formattedTracks)
 		})
 	}
@@ -272,7 +304,7 @@ export class ArtistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:artists', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'artists', 'artists'), () =>
 				this.db.query.artists.findMany(),
 			),
 			(e) => new DatabaseError('获取所有artist列表失败', { cause: e }),
@@ -291,7 +323,7 @@ export class ArtistService {
 		DatabaseError
 	> {
 		return ResultAsync.fromPromise(
-			Sentry.startSpan({ name: 'db:query:artist', op: 'db' }, () =>
+			traceSpan(this.traceParent, dbSpan('SELECT', 'artists', 'artist'), () =>
 				this.db.query.artists.findFirst({
 					where: eq(schema.artists.id, artistId),
 				}),
@@ -332,8 +364,9 @@ export class ArtistService {
 		return ResultAsync.fromPromise(
 			(async () => {
 				if (payloads.length > 0) {
-					await Sentry.startSpan(
-						{ name: 'db:insert:many:artists', op: 'db' },
+					await traceSpan(
+						this.traceParent,
+						dbSpan('INSERT', 'artists', 'many.artists'),
 						() =>
 							this.db
 								.insert(schema.artists)
@@ -360,8 +393,9 @@ export class ArtistService {
 					),
 				)
 
-				const allArtists = await Sentry.startSpan(
-					{ name: 'db:query:many:artists', op: 'db' },
+				const allArtists = await traceSpan(
+					this.traceParent,
+					dbSpan('SELECT', 'artists', 'many.artists'),
 					() =>
 						this.db.query.artists.findMany({
 							where: or(...findConditions),
@@ -373,13 +407,16 @@ export class ArtistService {
 						(a) =>
 							`${a.source}::${a.remoteId}` === `${p.source}::${p.remoteId}`,
 					)
+
 					if (existing) {
 						return existing
 					}
+
 					throw new DatabaseError(
 						`批量查找或创建 artists 后数据不一致，未找到 artist: ${p.source}::${p.remoteId}`,
 					)
 				})
+
 				if (fullArtists.length !== payloads.length) {
 					throw new DatabaseError(
 						'创建或查找 artists 后数据不一致，部分 artist 未能成功写入或查询。',

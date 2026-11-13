@@ -7,52 +7,70 @@ const AlertModal = lazy(() => import('./modals/AlertModal'))
 const DonationQRModal = lazy(() => import('./modals/app/DonationQRModal'))
 const UpdateAppModal = lazy(() => import('./modals/app/UpdateAppModal'))
 const StarPromptModal = lazy(() => import('./modals/app/StarPromptModal'))
+
 const AddToFavoriteListsModal = lazy(
 	() => import('./modals/bilibili/AddVideoToBilibiliFavModal'),
 )
+
 const EditPlaylistMetadataModal = lazy(
 	() => import('./modals/edit-metadata/editPlaylistMetadataModal'),
 )
+
 const EditTrackMetadataModal = lazy(
 	() => import('./modals/edit-metadata/editTrackMetadataModal'),
 )
+
 const CookieLoginModal = lazy(() => import('./modals/login/CookieLoginModal'))
 const EditLyricsModal = lazy(() => import('./modals/lyrics/EditLyrics'))
+
 const ManualSearchLyricsModal = lazy(
 	() => import('./modals/lyrics/ManualSearchLyrics'),
 )
+
 const SleepTimerModal = lazy(() => import('./modals/player/SleepTimerModal'))
+
 const BatchAddTracksToLocalPlaylistModal = lazy(
 	() => import('./modals/playlist/BatchAddTracksToLocalPlaylist'),
 )
+
 const CreatePlaylistModal = lazy(
 	() => import('./modals/playlist/CreatePlaylistModal'),
 )
+
 const DuplicateLocalPlaylistModal = lazy(
 	() => import('./modals/playlist/DuplicateLocalPlaylistModal'),
 )
+
 const UpdateTrackLocalPlaylistsModal = lazy(
 	() => import('./modals/playlist/UpdateTrackLocalPlaylistsModal'),
 )
+
 const SaveQueueToPlaylistModal = lazy(
 	() => import('./modals/playlist/SaveQueueToPlaylistModal'),
 )
+
 const PlaybackSpeedModal = lazy(
 	() => import('./modals/player/PlaybackSpeedModal'),
 )
+
 const LyricsSelectionModal = lazy(
 	() => import('./modals/player/LyricsSelectionModal'),
 )
+
 const SongShareModal = lazy(() => import('./modals/player/SongShareModal'))
+
 const SyncLocalToBilibiliModal = lazy(
 	() => import('./modals/playlist/SyncLocalToBilibiliModal'),
 )
+
 const PlaylistSyncProgressModal = lazy(
 	() => import('./modals/playlist/PlaylistSyncProgressModal'),
 )
+
 const SyncOptionsModal = lazy(
 	() => import('./modals/playlist/SyncOptionsModal'),
 )
+
 const ManualMatchExternalSyncModal = lazy(
 	() => import('./modals/playlist/ManualMatchExternalSync'),
 )
@@ -60,18 +78,23 @@ const ManualMatchExternalSyncModal = lazy(
 const InputExternalPlaylistInfoModal = lazy(
 	() => import('./modals/playlist/InputExternalPlaylistInfo'),
 )
+
 const CoverDownloadProgressModal = lazy(
 	() => import('./modals/settings/CoverDownloadProgressModal'),
 )
+
 const SkinDownloadProgressModal = lazy(
 	() => import('./modals/settings/SkinDownloadProgressModal'),
 )
+
 const EnableSharingModal = lazy(
 	() => import('./modals/playlist/EnableSharingModal'),
 )
+
 const SubscribeToSharedPlaylistModal = lazy(
 	() => import('./modals/playlist/SubscribeToSharedPlaylistModal'),
 )
+
 const MergePlaylistsModal = lazy(
 	() => import('./modals/playlist/MergePlaylistsModal'),
 )

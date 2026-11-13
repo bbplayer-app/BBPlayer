@@ -25,15 +25,19 @@ export default function PlaybackSettingsPage() {
 	const allowSimultaneousPlayback = useAppStore(
 		(state) => state.settings.allowSimultaneousPlayback,
 	)
+
 	const defaultPlayerMode = useAppStore(
 		(state) => state.settings.defaultPlayerMode,
 	)
+
 	const setSettings = useAppStore((state) => state.setSettings)
 
 	const [enablePersistCurrentPosition, setEnablePersistCurrentPosition] =
 		useState(Orpheus.restorePlaybackPositionEnabled)
+
 	const [enableLoudnessNormalization, setEnableLoudnessNormalization] =
 		useState(Orpheus.loudnessNormalizationEnabled)
+
 	const [enableAutostartPlayOnStart, setEnableAutostartPlayOnStart] = useState(
 		Orpheus.autoplayOnStartEnabled,
 	)
@@ -96,8 +100,10 @@ export default function PlaybackSettingsPage() {
 									!enableLoudnessNormalization
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
+
 								return
 							}
+
 							setEnableLoudnessNormalization(!enableLoudnessNormalization)
 						}}
 					/>
@@ -123,8 +129,10 @@ export default function PlaybackSettingsPage() {
 									!enablePersistCurrentPosition
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
+
 								return
 							}
+
 							setEnablePersistCurrentPosition(!enablePersistCurrentPosition)
 						}}
 					/>
@@ -138,8 +146,10 @@ export default function PlaybackSettingsPage() {
 								Orpheus.autoplayOnStartEnabled = !enableAutostartPlayOnStart
 							} catch (e) {
 								toastAndLogError('设置失败', e, 'Settings')
+
 								return
 							}
+
 							setEnableAutostartPlayOnStart(!enableAutostartPlayOnStart)
 						}}
 					/>

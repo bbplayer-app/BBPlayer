@@ -40,6 +40,7 @@ export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error, query) => {
 			if (query.meta?.silent === true) return
+
 			const handleOfflineError = async () => {
 				try {
 					if (
@@ -48,6 +49,7 @@ export const queryClient = new QueryClient({
 					) {
 						toast.error('登录状态失效，请重新登录')
 						router.navigate('/settings/bilibili-account/qrcode-login')
+
 						return
 					}
 
@@ -80,8 +82,10 @@ export const queryClient = new QueryClient({
 				if (error.kind !== 'unknown') {
 					return
 				}
+
 				const redactedQueryKey = [...queryKey]
 				const configObject = queryKey.at(-1)
+
 				if (isWebDavBackupConfig(configObject)) {
 					redactedQueryKey[redactedQueryKey.length - 1] = {
 						...configObject,
@@ -90,6 +94,7 @@ export const queryClient = new QueryClient({
 						directory: '[redacted]',
 					}
 				}
+
 				queryKey = redactedQueryKey
 			}
 

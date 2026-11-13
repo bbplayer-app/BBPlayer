@@ -58,6 +58,7 @@ export function TrackInfo({
 			? currentTrack?.bilibiliMetadata.bvid
 			: undefined,
 	)
+
 	const { mutate: doThumbUpAction } = useThumbUpVideo()
 
 	const isBilibiliVideo = currentTrack?.source === 'bilibili'
@@ -75,9 +76,11 @@ export function TrackInfo({
 
 	const onThumbUpPress = () => {
 		if (isThumbUpPending || !isBilibiliVideo || !currentTrack) return
+
 		if (!isThumbUp) {
 			setThumbUpBurstSignal((signal) => signal + 1)
 		}
+
 		doThumbUpAction({
 			bvid: currentTrack.bilibiliMetadata.bvid,
 			like: !isThumbUp,
@@ -97,6 +100,7 @@ export function TrackInfo({
 					const podcast = playbackContextStore$.context.mode.get() === 'podcast'
 					// Reserve space for the spectrum outside the circle as well as cover padding.
 					const coverPadding = !podcast && enableSpectrumVisualizer ? 80 : 24
+
 					const coverSize = Math.max(
 						0,
 						Math.min(
@@ -105,10 +109,13 @@ export function TrackInfo({
 							480,
 						),
 					)
+
 					const showCover = !podcast || coverSize >= 96
+
 					const coverBorderRadius = podcast
 						? coverSize * SQUIRCLE_RADIUS_RATIO
 						: coverSize / 2
+
 					return (
 						<Pressable
 							style={[
@@ -233,7 +240,10 @@ export function TrackInfo({
 							</Text>
 						</TouchableRipple>
 						{currentTrack.artist?.name && (
-							<TouchableRipple onPress={onArtistPress}>
+							<TouchableRipple
+								testID='player-artist'
+								onPress={onArtistPress}
+							>
 								<Text
 									variant='bodyMedium'
 									style={{ color: colors.onSurfaceVariant }}
@@ -251,6 +261,7 @@ export function TrackInfo({
 								playSignal={thumbUpBurstSignal}
 							/>
 							<IconButton
+								testID='player-thumb-up'
 								icon={isThumbUp ? 'heart' : 'heart-outline'}
 								size={24}
 								iconColor={isThumbUp ? colors.error : colors.onSurfaceVariant}

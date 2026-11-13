@@ -70,6 +70,7 @@ function usePageScrollHandler(
 		(event) => {
 			'worklet'
 			const { onPageScroll } = handlers
+
 			if (onPageScroll && event.eventName.endsWith('onPageScroll')) {
 				onPageScroll(event as unknown as PageScrollEvent, context)
 			}
@@ -80,6 +81,36 @@ function usePageScrollHandler(
 }
 
 const logger = log.extend('App.Player')
+
+const PALETTE_CACHE_LIMIT = 8
+const paletteCache = new Map<string, ExtractedPalette>()
+
+function readCachedPalette(key: string) {
+	if (!key) return undefined
+
+	const cached = paletteCache.get(key)
+
+	if (!cached) return undefined
+
+	// 重新插入，维持 LRU 顺序。
+	paletteCache.delete(key)
+	paletteCache.set(key, cached)
+
+	return cached
+}
+
+function writeCachedPalette(key: string, palette: ExtractedPalette) {
+	if (!key) return
+
+	paletteCache.delete(key)
+	paletteCache.set(key, palette)
+
+	const oldest = paletteCache.keys().next()
+
+	if (paletteCache.size > PALETTE_CACHE_LIMIT && !oldest.done) {
+		paletteCache.delete(oldest.value)
+	}
+}
 
 export default function PlayerPage() {
 	const theme = useTheme()
@@ -92,68 +123,96 @@ export default function PlayerPage() {
 	useEffect(() => {
 		markInteractive()
 	}, [markInteractive])
+
 	const currentTrackCover = resolveBilibiliImageUrl(
 		currentTrack
 			? resolveTrackCover(currentTrack.uniqueKey, currentTrack.coverUrl)
 			: null,
 	)
+
 	const coverRef = useImage(currentTrackCover ?? '', {
 		onError: () => void 0,
 	})
+
 	const { width, height } = useWindowDimensions()
 	const { isTwoPane } = useResponsiveLayout()
 	const colorScheme = useColorScheme()
+
 	const pureWhiteBackground = useAppStore(
 		(state) => state.settings.pureWhiteBackground,
 	)
+
 	// 旧版 md3 / streamer 等存量值也回落到普通渐变。
 	const isFluidBackground = useAppStore(
 		(state) =>
 			!state.settings.pureWhiteBackground &&
 			state.settings.playerBackgroundStyle === 'fluid',
 	)
+
 	const isFocused = useIsFocused()
 	const isPlaying = useIsPlaying()
 	const [palette, setPalette] = useState<ExtractedPalette | null>(null)
+
+	// 当前 ImageRef 对应的封面 URL。expo-image 在新图解码完成前会继续返回上一张图，
+	// 只有 ref 真正替换后才能认为新 URL 的封面已就绪。
+	const [loadedCoverUrl, setLoadedCoverUrl] = useState<string | null>(null)
+
+	useEffect(() => {
+		setLoadedCoverUrl(coverRef ? (currentTrackCover ?? null) : null)
+		// currentTrackCover 是有意省略的：它变化时 ImageRef 仍指向上一张封面，
+		// 若此时记录成新 URL，就会把上一首的提色结果缓存到新封面上。
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
+	}, [coverRef])
+
 	const [isForeground, setIsForeground] = useState(
 		AppState.currentState === 'active',
 	)
+
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
+
 	const [rightPane, setRightPane] = useState<'lyrics' | 'comments' | 'queue'>(
 		'lyrics',
 	)
+
 	const [commentsBvid, setCommentsBvid] = useState<string | null>(null)
 	const [commentReplyId, setCommentReplyId] = useState<number | null>(null)
+
 	const bvid =
 		currentTrack?.source === 'bilibili'
 			? currentTrack.bilibiliMetadata.bvid
 			: undefined
+
 	const commentsOpen = isTwoPane && rightPane === 'comments' && !!bvid
 	const queueOpen = isTwoPane && rightPane === 'queue'
 	// 宽屏右栏默认展示歌词/字幕；评论与队列由控制区按钮切换。
 	const readerOpen = !commentsOpen && !queueOpen
 	const activePane = commentsOpen ? 'comments' : queueOpen ? 'queue' : null
+
 	const onReplyPress = useCallback(
 		(item: BilibiliCommentItem) => setCommentReplyId(item.rpid),
 		[],
 	)
+
 	const openComments = useCallback(() => {
 		if (!bvid) return
 		setCommentsBvid(bvid)
 		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : 'comments'))
 	}, [bvid])
+
 	const toggleQueue = useCallback(() => {
 		void analyticsService.logPlayerQueueAction('open_queue')
 		setRightPane((pane) => (pane === 'queue' ? 'lyrics' : 'queue'))
 	}, [])
+
 	useEffect(() => {
 		// 评论跟随曲目，换歌后收起；队列面板里切歌时保持打开。
 		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : pane))
 		setCommentsBvid(null)
 		setCommentReplyId(null)
 	}, [currentTrack?.uniqueKey])
+
 	const suppressDesktopLyrics =
 		isFocused && isForeground && (isTwoPane ? readerOpen : index === 1)
 
@@ -177,6 +236,7 @@ export default function PlayerPage() {
 
 	const dismissPlayer = () => {
 		setIsPreventingBack(false)
+
 		if (router.canGoBack()) {
 			router.back()
 		}
@@ -200,6 +260,7 @@ export default function PlayerPage() {
 
 	useEffect(() => {
 		const { ready, context } = playbackContextStore$.peek()
+
 		if (!isPreventingBack && ready && context === null) {
 			if (router.canGoBack()) router.back()
 			else router.replace('/')
@@ -209,8 +270,10 @@ export default function PlayerPage() {
 	const handleDismiss = () => {
 		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
+
 			return
 		}
+
 		dismissPlayer()
 	}
 
@@ -250,41 +313,61 @@ export default function PlayerPage() {
 	}
 
 	useEffect(() => {
-		if (!coverRef || !isForeground || pureWhiteBackground) return
+		if (!loadedCoverUrl || pureWhiteBackground) return
+
+		const cached = readCachedPalette(loadedCoverUrl)
+
+		if (cached) {
+			setPalette(cached)
+
+			return
+		}
+
+		if (!coverRef || !isForeground) return
 
 		let cancelled = false
 		// 加载新封面时保留当前配色；新结果到达后由对应背景做过渡。
 		ImageThemeColors.extractThemeColorAsync(coverRef)
 			.then((result) => {
-				if (!cancelled) setPalette(result ?? null)
+				if (cancelled) return
+
+				setPalette(result ?? null)
+
+				if (result) writeCachedPalette(loadedCoverUrl, result)
 			})
 			.catch((e) => {
 				if (cancelled) return
 				logger.error('提取封面图片主题色失败', e)
 				reportErrorToSentry(e, '提取封面图片主题色失败', 'App.Player')
 			})
+
 		return () => {
 			cancelled = true
 		}
-	}, [coverRef, currentTrackCover, isForeground, pureWhiteBackground])
+	}, [coverRef, loadedCoverUrl, isForeground, pureWhiteBackground])
 
 	const gradientMainColor = useSharedValue(colors.background)
+
 	const gradientColors = useDerivedValue(() => [
 		gradientMainColor.value,
 		colors.background,
 	])
+
 	useEffect(() => {
 		if (isFluidBackground || pureWhiteBackground) return
+
 		const topColor =
 			colorScheme === 'light'
 				? (palette?.lightMuted?.hex ?? palette?.muted?.hex ?? colors.background)
 				: (palette?.darkMuted?.hex ?? palette?.muted?.hex ?? colors.background)
+
 		gradientMainColor.set(
 			withTiming(topColor, {
 				duration: isForeground && isFocused ? 400 : 0,
 				easing: Easing.out(Easing.quad),
 			}),
 		)
+
 		return () => cancelAnimation(gradientMainColor)
 	}, [
 		palette,
@@ -308,31 +391,41 @@ export default function PlayerPage() {
 	usePreventRemove(isPreventingBack, () => {
 		if (menuVisible) {
 			setMenuVisible(false)
+
 			return
 		}
 
 		if (usePlayerChaptersSheetStore.getState().isOpen) {
 			void usePlayerChaptersSheetStore.getState().close()
+
 			return
 		}
 
 		if (usePlayerQueueSheetStore.getState().isOpen) {
 			void usePlayerQueueSheetStore.getState().close()
+
 			return
 		}
+
 		if (commentsOpen) {
 			if (commentReplyId !== null) setCommentReplyId(null)
 			else setRightPane('lyrics')
+
 			return
 		}
+
 		if (queueOpen) {
 			setRightPane('lyrics')
+
 			return
 		}
+
 		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
+
 			return
 		}
+
 		handleDismiss()
 	})
 
@@ -416,6 +509,7 @@ export default function PlayerPage() {
 							{() => {
 								const podcast =
 									playbackContextStore$.context.mode.get() === 'podcast'
+
 								const main = (
 									<PlayerMainTab
 										embedded={isTwoPane}
@@ -427,6 +521,7 @@ export default function PlayerPage() {
 										onPresent={() => {}}
 									/>
 								)
+
 								const reader = podcast ? (
 									<PodcastSubtitles
 										active={(isTwoPane ? readerOpen : index === 1) && isFocused}
@@ -441,6 +536,7 @@ export default function PlayerPage() {
 										}
 									/>
 								)
+
 								return isTwoPane ? (
 									<View
 										style={styles.widePlayer}

@@ -110,6 +110,7 @@ const renderItem = ({
 	}
 >) => {
 	if (!extraData) throw new Error('Extradata 不存在')
+
 	const {
 		handleTrackPress,
 		handleMenuPress,
@@ -126,12 +127,14 @@ const renderItem = ({
 		insertAfterIndex,
 		colors,
 	} = extraData
+
 	const downloadState = downloadStatus
 		? downloadStatus[item.uniqueKey]
 		: undefined
 
 	const isUnplayableOffline =
 		isOffline && playableOfflineKeys && !playableOfflineKeys.has(item.uniqueKey)
+
 	const isReadOnly = extraData.isReadOnly === true
 
 	return (
@@ -205,6 +208,7 @@ const HighFreqButton = ({
 			cornerSmoothing={0.6}
 		>
 			<TouchableRipple
+				testID={item.testID}
 				onPress={() => {
 					onDismiss(item.onPress)
 				}}
@@ -263,8 +267,10 @@ export function LocalTrackList({
 	const haveTrack = useCurrentTrack()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+
 	const isReadOnly =
 		playlist.shareRole === 'subscriber' || playlist.type === 'dynamic'
+
 	const ids = tracks.map((t) => t.uniqueKey)
 	const { data: downloadStatus } = useBatchDownloadStatus(ids)
 	const sheetRef = useRef<TrueSheet>(null)
@@ -281,8 +287,10 @@ export function LocalTrackList({
 		track: null,
 		downloadState: undefined,
 	})
+
 	const setMenuSheetRef = useCallback((sheet: TrueSheet | null) => {
 		sheetRef.current = sheet
+
 		if (sheet) {
 			sheet.present().catch(() => {
 				setMenuState((prev) => ({ ...prev, visible: false }))
@@ -293,12 +301,15 @@ export function LocalTrackList({
 	const handleMenuPress = useCallback(
 		(track: Track, downloadState?: DownloadState) => {
 			setMenuState({ visible: true, track, downloadState })
+
 			if (sheetRef.current) {
 				sheetRef.current?.present().catch(() => {
 					setMenuState((prev) => ({ ...prev, visible: false }))
 				})
+
 				return
 			}
+
 			setMenuSheetMounted(true)
 		},
 		[],
@@ -317,6 +328,7 @@ export function LocalTrackList({
 	const { highFreqItems, normalItems } = (() => {
 		if (!menuState.track) return { highFreqItems: [], normalItems: [] }
 		const allItems = trackMenuItems(menuState.track, menuState.downloadState)
+
 		return {
 			highFreqItems: allItems.filter((i) => i.isHighFreq),
 			normalItems: allItems.filter((i) => !i.isHighFreq),
@@ -481,6 +493,7 @@ export function LocalTrackList({
 
 									{normalItems.map((menuItem, index) => (
 										<List.Item
+											testID={menuItem.testID}
 											// oxlint-disable-next-line react/no-array-index-key
 											key={index}
 											title={menuItem.title}

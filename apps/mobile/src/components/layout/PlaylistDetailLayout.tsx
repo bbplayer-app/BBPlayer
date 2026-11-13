@@ -35,6 +35,7 @@ export default function PlaylistDetailLayout({
 	}
 
 	const paneWidth = Math.min(400, Math.max(300, width * 0.3))
+
 	return (
 		<View style={[styles.fill, styles.row]}>
 			<ScrollView

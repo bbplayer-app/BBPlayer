@@ -27,17 +27,21 @@ export default function TvMenuView({
 }: MenuComponentProps & { ref?: Ref<MenuComponentRef> }) {
 	const theme = useTheme()
 	const [path, setPath] = useState<MenuAction[][]>([])
+
 	const open = () => {
 		if (path.length > 0) return
 		setPath([actions])
 		onOpenMenu?.()
 	}
+
 	const dismiss = () => {
 		if (path.length === 0) return
 		setPath([])
 		onCloseMenu?.()
 	}
+
 	useImperativeHandle(ref, () => ({ show: open }))
+
 	const trigger = isValidElement<{
 		onPress?: () => void
 		onLongPress?: () => void
@@ -49,6 +53,7 @@ export default function TvMenuView({
 					: { onPress: () => open() },
 			)
 		: children
+
 	const renderActions = (items: MenuAction[]): React.ReactNode =>
 		items
 			.filter((action) => !action.attributes?.hidden)
@@ -67,8 +72,10 @@ export default function TvMenuView({
 						onPress={() => {
 							if (action.subactions?.length) {
 								setPath([...path, action.subactions])
+
 								return
 							}
+
 							dismiss()
 							onPressAction?.({
 								nativeEvent: { event: action.id ?? action.title },
@@ -94,6 +101,7 @@ export default function TvMenuView({
 					</Pressable>
 				),
 			)
+
 	return (
 		<View
 			style={style}

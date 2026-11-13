@@ -25,6 +25,7 @@ export default function ListeningRecordSection({
 	const theme = useTheme()
 	const { colors } = theme
 	const router = useRouter()
+
 	// 与「全部统计」一致：完整播放次数 × 曲目时长，不把部分播放算入摘要。
 	const { data: summary, error: summaryError } = useLiveQuery(
 		db
@@ -38,18 +39,21 @@ export default function ListeningRecordSection({
 			.innerJoin(tracks, eq(playHistory.trackId, tracks.id))
 			.where(eq(playHistory.completed, true)),
 	)
+
 	const { data, isPending, isError, refetch } = usePlayHistoryHeatmap()
 	useFocusEffect(
 		useCallback(() => {
 			void refetch()
 		}, [refetch]),
 	)
+
 	const hours =
 		summaryError || !summary[0]
 			? '—'
 			: (Math.max(0, summary[0].duration) / 3600).toLocaleString('zh-CN', {
 					maximumFractionDigits: 1,
 				})
+
 	const plays =
 		summaryError || !summary[0]
 			? '—'
@@ -65,6 +69,7 @@ export default function ListeningRecordSection({
 					听歌记录
 				</Text>
 				<Touchable
+					testID='listening-record-overall'
 					accessibilityRole='button'
 					onPress={() => router.navigate('/history/overall')}
 					style={styles.statisticsLink}
@@ -123,7 +128,12 @@ export default function ListeningRecordSection({
 				</Text>
 			)}
 			{isError ? (
-				<Button onPress={() => void refetch()}>听歌记录加载失败，重试</Button>
+				<Button
+					testID='listening-record-retry'
+					onPress={() => void refetch()}
+				>
+					听歌记录加载失败，重试
+				</Button>
 			) : isPending ? (
 				<View
 					style={[

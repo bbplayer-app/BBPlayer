@@ -80,6 +80,7 @@ export function useLocalPlaylistMenu({
 	const playNext = useCallback(
 		async (track: Track) => {
 			if (playlistId === undefined) return
+
 			const added = await addToQueue({
 				tracks: [track],
 				playlistId,
@@ -87,6 +88,7 @@ export function useLocalPlaylistMenu({
 				clearQueue: false,
 				playNext: true,
 			})
+
 			if (added) toast.success('添加到下一首播放成功')
 		},
 		[playlistId],
@@ -97,24 +99,29 @@ export function useLocalPlaylistMenu({
 		downloadState?: DownloadState,
 	): TrackMenuItem[] => {
 		if (!playlist) return []
+
 		const menuItems: TrackMenuItem[] = [
 			{
 				title: '下一首播放',
+				testID: 'track-menu-play-next',
 				leadingIcon: PLAY_NEXT_ICON,
 				onPress: () => playNext(item),
 				isHighFreq: true,
 			},
 			{
 				title: '添加到本地歌单',
+				testID: 'track-menu-add-to-playlist',
 				leadingIcon: ADD_TO_PLAYLIST_ICON,
 				onPress: () => openAddToPlaylistModal(item),
 				isHighFreq: true,
 			},
 		]
+
 		if (item.source === 'bilibili') {
 			menuItems.push(
 				{
 					title: '查看详细信息',
+					testID: 'track-menu-view-details',
 					leadingIcon: INFO_ICON,
 					onPress: () =>
 						router.navigate({
@@ -124,11 +131,13 @@ export function useLocalPlaylistMenu({
 				},
 				{
 					title: '查看 up 主作品',
+					testID: 'track-menu-view-uploader',
 					leadingIcon: ARTIST_ICON,
 					onPress: () => {
 						if (!item.artist?.remoteId) {
 							return
 						}
+
 						router.navigate({
 							pathname: '/playlist/remote/uploader/[mid]',
 							params: { mid: item.artist?.remoteId },
@@ -138,6 +147,7 @@ export function useLocalPlaylistMenu({
 				{
 					title:
 						downloadState === DownloadState.COMPLETED ? '删除缓存' : '缓存音频',
+					testID: 'track-menu-download',
 					leadingIcon:
 						downloadState === DownloadState.COMPLETED
 							? REMOVE_CACHE_ICON
@@ -149,20 +159,27 @@ export function useLocalPlaylistMenu({
 							await queryClient.invalidateQueries({
 								queryKey: ['batchDownloadStatus'],
 							})
+
 							return
 						}
 
 						try {
 							const url = getInternalPlayUri(item)
+
 							if (!url) {
 								toastAndLogError('获取内部播放地址失败', '失败了！', SCOPE)
+
 								return
 							}
+
 							let artistName: string | undefined
+
 							if (item.artist) {
 								artistName = item.artist.name
 							}
+
 							let artwork: string | undefined
+
 							if (item.coverUrl) {
 								artwork = item.coverUrl
 							}
@@ -185,9 +202,11 @@ export function useLocalPlaylistMenu({
 				},
 			)
 		}
+
 		menuItems.push(
 			{
 				title: '复制封面链接',
+				testID: 'track-menu-copy-cover',
 				leadingIcon: LINK_ICON,
 				onPress: () => {
 					void Clipboard.setStringAsync(item.coverUrl ?? '')
@@ -196,13 +215,16 @@ export function useLocalPlaylistMenu({
 			},
 			{
 				title: '编辑信息',
+				testID: 'track-menu-edit-metadata',
 				leadingIcon: EDIT_ICON,
 				onPress: () => openEditTrackModal(item),
 			},
 		)
+
 		if (playlist?.type === 'local' && !isReadOnly) {
 			menuItems.push({
 				title: '删除歌曲',
+				testID: 'track-menu-delete',
 				leadingIcon: DELETE_ICON,
 				onPress: () =>
 					alert(
@@ -224,6 +246,7 @@ export function useLocalPlaylistMenu({
 				danger: true,
 			})
 		}
+
 		return menuItems
 	}
 

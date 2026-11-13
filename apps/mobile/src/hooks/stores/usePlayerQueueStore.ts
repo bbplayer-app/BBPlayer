@@ -18,8 +18,10 @@ export const usePlayerQueueStore = create<PlayerQueueState>((set) => ({
 
 	sync: async () => {
 		const revision = ++syncRevision
+
 		try {
 			const tracks = await Orpheus.getQueue()
+
 			if (revision === syncRevision) set({ tracks })
 		} catch (e) {
 			logger.warning('Failed to sync player queue', { error: e })

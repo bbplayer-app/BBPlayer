@@ -44,6 +44,7 @@ const FavoriteListItem = memo(function FavoriteListItem({
 		/>
 	)
 })
+
 FavoriteListItem.displayName = 'FavoriteListItem'
 
 const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
@@ -56,6 +57,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 	const { data: personalInfo } = usePersonalInformation()
 	const enable = useAppStore((state) => state.hasBilibiliCookie())
 	const modalClose = useModalStore((state) => state.close)
+
 	const close = useCallback(
 		() => modalClose('AddVideoToBilibiliFavorite'),
 		[modalClose],
@@ -112,6 +114,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 
 		if (addToFavoriteIds.length === 0 && delInFavoriteIds.length === 0) {
 			close()
+
 			return
 		}
 
@@ -171,6 +174,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 						登录{'\u2009bilibili\u2009'}账号后才能查看收藏夹
 					</Text>
 					<Button
+						testID='add-to-fav-login'
 						mode='contained'
 						onPress={() => {
 							router.navigate('/settings/bilibili-account/qrcode-login')
@@ -182,6 +186,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 				</View>
 			)
 		}
+
 		if (isPending) {
 			return (
 				<Dialog.Content style={styles.loadingContainer}>
@@ -205,7 +210,12 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 						>
 							关闭
 						</Button>
-						<Button onPress={() => refetch()}>重试</Button>
+						<Button
+							testID='add-to-fav-retry'
+							onPress={() => refetch()}
+						>
+							重试
+						</Button>
 					</Dialog.Actions>
 				</>
 			)
@@ -234,6 +244,7 @@ const AddToFavoriteListsModal = memo(function AddToFavoriteListsModal({
 						取消
 					</Button>
 					<Button
+						testID='add-to-fav-confirm'
 						onPress={handleConfirm}
 						loading={isMutating}
 						disabled={isMutating}

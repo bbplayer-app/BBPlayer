@@ -16,11 +16,13 @@ export function useSubtitlePlayback(
 		if (!active || !lines.length) return
 		let disposed = false
 		let revision = 0
+
 		const update = (position: number) => {
 			if (disposed) return
 			const index = subtitleIndexAt(lines, position)
 			store.setCurrentCue(index)
 		}
+
 		const sync = () => {
 			const request = ++revision
 			void Orpheus.getPosition()
@@ -29,17 +31,22 @@ export function useSubtitlePlayback(
 				})
 				.catch(() => undefined)
 		}
+
 		const unsubscribe = playerProgressEmitter.subscribe(
 			'progress',
 			({ position }) => {
 				++revision
+
 				if (AppState.currentState === 'active') update(position)
 			},
 		)
+
 		const subscription = AppState.addEventListener('change', (state) => {
 			if (state === 'active') sync()
 		})
+
 		sync()
+
 		return () => {
 			disposed = true
 			unsubscribe()

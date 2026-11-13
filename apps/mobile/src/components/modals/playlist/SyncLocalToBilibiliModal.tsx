@@ -93,6 +93,7 @@ export default function SyncLocalToBilibiliModal({
 }: SyncLocalToBilibiliModalProps) {
 	const close = useModalStore((state) => state.close)
 	const [state, dispatch] = useReducer(reducer, initialState)
+
 	const {
 		step,
 		remoteFolder,
@@ -112,8 +113,10 @@ export default function SyncLocalToBilibiliModal({
 
 		if (!userInfo?.mid) {
 			dispatch({ type: 'SET_ERROR', payload: '未登录 B 站，请先登录' })
+
 			return
 		}
+
 		if (!playlist) return // 等待加载
 
 		const check = async () => {
@@ -121,8 +124,10 @@ export default function SyncLocalToBilibiliModal({
 				userInfo.mid,
 				playlist.title,
 			)
+
 			if (res.isErr()) {
 				dispatch({ type: 'SET_ERROR', payload: res.error.message })
+
 				return
 			}
 
@@ -133,19 +138,24 @@ export default function SyncLocalToBilibiliModal({
 				dispatch({ type: 'SET_STEP', payload: 'confirm_create' })
 			}
 		}
+
 		void check()
 	}, [step, playlist, userInfo?.mid])
 
 	// 创建远程收藏夹
 	const handleCreate = async () => {
 		if (!playlist) return
+
 		const res = await syncLocalToBilibiliService.createRemotePlaylist(
 			playlist.title,
 		)
+
 		if (res.isErr()) {
 			dispatch({ type: 'SET_ERROR', payload: res.error.message })
+
 			return
 		}
+
 		dispatch({
 			type: 'SET_REMOTE_FOLDER',
 			payload: { id: res.value.id, title: playlist.title },
@@ -160,8 +170,10 @@ export default function SyncLocalToBilibiliModal({
 		const diff = async () => {
 			// 获取本地歌单
 			const tracksRes = await playlistService.getPlaylistTracks(playlistId)
+
 			if (tracksRes.isErr()) {
 				dispatch({ type: 'SET_ERROR', payload: '获取本地歌单失败' })
+
 				return
 			}
 
@@ -169,14 +181,17 @@ export default function SyncLocalToBilibiliModal({
 				tracksRes.value,
 				remoteFolder.id,
 			)
+
 			if (res.isErr()) {
 				dispatch({ type: 'SET_ERROR', payload: res.error.message })
+
 				return
 			}
 
 			dispatch({ type: 'SET_DIFF_RESULT', payload: res.value })
 			dispatch({ type: 'SET_STEP', payload: 'confirm_sync' })
 		}
+
 		void diff()
 	}, [step, remoteFolder, playlistId])
 
@@ -191,17 +206,20 @@ export default function SyncLocalToBilibiliModal({
 
 		if (total === 0) {
 			dispatch({ type: 'SET_STEP', payload: 'success' })
+
 			return
 		}
 
 		// 添加
 		let addsFailed = 0
+
 		if (diffResult.toAdd.length > 0) {
 			const res = await syncLocalToBilibiliService.executeBatchAdd(
 				remoteFolder.id,
 				diffResult.toAdd,
 				(p) => dispatch({ type: 'SET_PROGRESS', payload: p }),
 			)
+
 			if (res.isErr()) {
 				toast.error('部分歌曲添加失败，请查看日志')
 			} else {
@@ -215,6 +233,7 @@ export default function SyncLocalToBilibiliModal({
 				remoteFolder.id,
 				diffResult.toRemove,
 			)
+
 			if (res.isErr()) {
 				toast.error('部分歌曲删除失败')
 			}
@@ -260,6 +279,7 @@ export default function SyncLocalToBilibiliModal({
 						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
+								testID='sync-to-bilibili-create'
 								mode='contained'
 								onPress={handleCreate}
 							>
@@ -305,6 +325,7 @@ export default function SyncLocalToBilibiliModal({
 						</>
 					)
 				}
+
 				return (
 					<>
 						<Dialog.Title>同步确认</Dialog.Title>
@@ -332,6 +353,7 @@ export default function SyncLocalToBilibiliModal({
 						<Dialog.Actions>
 							<Button onPress={() => close('SyncLocalToBilibili')}>取消</Button>
 							<Button
+								testID='sync-to-bilibili-start'
 								mode='contained'
 								onPress={handleSync}
 							>
@@ -341,6 +363,7 @@ export default function SyncLocalToBilibiliModal({
 					</>
 				)
 			}
+
 			case 'syncing':
 				return (
 					<>

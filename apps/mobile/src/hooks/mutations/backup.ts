@@ -1,10 +1,10 @@
-import { useMutation } from '@tanstack/react-query'
 import { File, Paths } from 'expo-file-system'
 
 import {
 	webDavBackupQueryKeys,
 	type WebDavBackupConfig,
 } from '@/hooks/queries/backup'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { createBackup } from '@/lib/backup/export'
 import { restoreBackup } from '@/lib/backup/import'
 import {
@@ -23,7 +23,8 @@ interface WebDavCredentials {
 }
 
 export function useTestWebDavConnectionMutation() {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.test_connection' },
 		mutationKey: ['webDavBackups', 'testConnection'],
 		mutationFn: async ({ config, password }: WebDavCredentials) => {
 			const client = await createMobileWebDavClient(config, password)
@@ -38,19 +39,23 @@ export function useTestWebDavConnectionMutation() {
 }
 
 export function useCloudBackupMutation() {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.upload' },
 		mutationKey: ['webDavBackups', 'upload'],
 		mutationFn: async ({ config, password }: WebDavCredentials) => {
 			const client = await createMobileWebDavClient(config, password)
 			await client.ensureDirectory(config.directory)
 			const uri = await createBackup()
 			const backupFile = new File(uri)
+
 			try {
 				const bytes = backupFile.bytesSync()
+
 				const timestamp = new Date()
 					.toISOString()
 					.replaceAll(':', '-')
 					.replace('.', '-')
+
 				await client.uploadFile(
 					joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
 					Uint8Array.from(bytes).buffer,
@@ -72,7 +77,8 @@ export function useCloudBackupMutation() {
 }
 
 export function useCloudRestoreMutation(onSuccess: () => void) {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.restore' },
 		mutationKey: ['webDavBackups', 'restore'],
 		mutationFn: async ({
 			config,
@@ -81,10 +87,12 @@ export function useCloudRestoreMutation(onSuccess: () => void) {
 		}: WebDavCredentials & { entry: WebDavEntry }) => {
 			const client = await createMobileWebDavClient(config, password)
 			const data = await client.downloadFile(entry.path)
+
 			const cacheFile = new File(
 				Paths.cache,
 				`bbplayer-webdav-restore-${Date.now()}-${Math.random().toString(36).slice(2)}.bbplayer`,
 			)
+
 			try {
 				await cacheFile.write(new Uint8Array(data))
 				await restoreBackup(cacheFile.uri)
