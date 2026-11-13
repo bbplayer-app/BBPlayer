@@ -1,9 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 
 import {
 	relationQueryKeys,
 	useBilibiliRelationAccount,
 } from '@/hooks/queries/bilibili/relations'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import type { BilibiliUserRelation } from '@/types/apis/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -14,9 +15,12 @@ export const useSetUserFollowing = (mid: number) => {
 	const account = useBilibiliRelationAccount()
 	const queryClient = useQueryClient()
 
-	return useMutation({
-		mutationFn: (following: boolean) =>
-			returnOrThrowAsync(bilibiliApi.setUserFollowing({ mid, following })),
+	return useTracedMutation({
+		span: { name: 'bilibili.relation.set_following' },
+		mutationFn: (following: boolean, { span }) =>
+			returnOrThrowAsync(
+				bilibiliApi.withTrace(span).setUserFollowing({ mid, following }),
+			),
 		onSuccess: async (_, following) => {
 			const queryKey = relationQueryKeys.relation(account, mid)
 			await queryClient.cancelQueries({ queryKey })

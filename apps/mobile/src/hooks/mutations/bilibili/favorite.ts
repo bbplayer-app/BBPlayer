@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { favoriteListQueryKeys } from '@/hooks/queries/bilibili/favorite'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { BilibiliApiError } from '@/lib/errors/thirdparty/bilibili'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -16,14 +17,18 @@ const logger = log.extend('Mutation.Bilibili.Favorite')
 export const useDealFavoriteForOneVideo = () => {
 	const queryClient = useQueryClient()
 
-	return useMutation({
-		mutationFn: async (params: {
-			bvid: string
-			addToFavoriteIds: string[]
-			delInFavoriteIds: string[]
-		}) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.favorite.toggle_video' },
+		mutationFn: async (
+			params: {
+				bvid: string
+				addToFavoriteIds: string[]
+				delInFavoriteIds: string[]
+			},
+			{ span },
+		) =>
 			await returnOrThrowAsync(
-				bilibiliApi.dealFavoriteForOneVideo({
+				bilibiliApi.withTrace(span).dealFavoriteForOneVideo({
 					bvid: params.bvid,
 					addToFavoriteIds: params.addToFavoriteIds,
 					delInFavoriteIds: params.delInFavoriteIds,
@@ -68,10 +73,11 @@ export const useDealFavoriteForOneVideo = () => {
 export const useBatchDeleteFavoriteListContents = () => {
 	const queryClient = useQueryClient()
 
-	return useMutation({
-		mutationFn: (params: { bvids: string[]; favoriteId: number }) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.favorite.batch_delete_items' },
+		mutationFn: (params: { bvids: string[]; favoriteId: number }, { span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.batchDeleteFavoriteListContents({
+				bilibiliApi.withTrace(span).batchDeleteFavoriteListContents({
 					favoriteId: params.favoriteId,
 					bvids: params.bvids,
 				}),

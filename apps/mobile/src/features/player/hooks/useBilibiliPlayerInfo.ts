@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useCurrentTrackId from '@/hooks/player/useCurrentTrackId'
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 
@@ -19,11 +18,14 @@ export function useBilibiliPlayerInfo(active: boolean) {
 	const enabled = active && !!metadata
 
 	// Ordinary video playback resolves its first CID in the native stream resolver too.
-	const pages = useQuery({
+	const pages = useTracedQuery({
+		span: { name: 'bilibili.video.multi_page_list' },
 		queryKey: videoDataQueryKeys.getMultiPageList(metadata?.bvid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getPageList({ bvid: metadata!.bvid, signal }),
+				bilibiliApi
+					.withTrace(span)
+					.getPageList({ bvid: metadata!.bvid, signal }),
 			),
 		enabled: enabled && !metadata?.isMultiPage,
 		staleTime: 60 * 60 * 1000,
@@ -35,11 +37,12 @@ export function useBilibiliPlayerInfo(active: boolean) {
 		? (metadata.cid ?? undefined)
 		: pages.data?.[0]?.cid
 
-	const info = useQuery({
+	const info = useTracedQuery({
+		span: { name: 'bilibili.video.web_player_info' },
 		queryKey: videoDataQueryKeys.getWebPlayerInfo(metadata?.bvid, cid),
-		queryFn: ({ signal }) =>
+		queryFn: ({ signal, span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.getWebPlayerInfo({
+				bilibiliApi.withTrace(span).getWebPlayerInfo({
 					bvid: metadata!.bvid,
 					cid: cid!,
 					signal,

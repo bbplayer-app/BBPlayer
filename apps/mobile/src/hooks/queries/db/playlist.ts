@@ -1,11 +1,10 @@
-import {
-	keepPreviousData,
-	skipToken,
-	useInfiniteQuery,
-	useQuery,
-} from '@tanstack/react-query'
+import { keepPreviousData, skipToken } from '@tanstack/react-query'
 
 import useAppStore from '@/hooks/stores/useAppStore'
+import {
+	useTracedInfiniteQuery,
+	useTracedQuery,
+} from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 import { ServiceError } from '@/lib/errors'
 import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
@@ -53,25 +52,33 @@ export const playlistKeys = {
 }
 
 export const usePlaylistLists = () => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.list' },
 		queryKey: playlistKeys.playlistLists(),
-		queryFn: () => returnOrThrowAsync(playlistService.getAllPlaylists()),
+		queryFn: ({ span }) =>
+			returnOrThrowAsync(playlistService.withTrace(span).getAllPlaylists()),
 	})
 }
 
 export const usePlaylistContents = (playlistId: number) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.contents' },
 		queryKey: playlistKeys.playlistAllContents(playlistId),
-		queryFn: () =>
-			returnOrThrowAsync(playlistService.getPlaylistTracks(playlistId)),
+		queryFn: ({ span }) =>
+			returnOrThrowAsync(
+				playlistService.withTrace(span).getPlaylistTracks(playlistId),
+			),
 	})
 }
 
 export const usePlaylistMetadata = (playlistId: number) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.metadata' },
 		queryKey: playlistKeys.playlistMetadata(playlistId),
-		queryFn: async () => {
-			const result = await playlistService.getPlaylistMetadata(playlistId)
+		queryFn: async ({ span }) => {
+			const result = await playlistService
+				.withTrace(span)
+				.getPlaylistMetadata(playlistId)
 
 			if (result.isErr()) throw result.error
 
@@ -83,15 +90,16 @@ export const usePlaylistMetadata = (playlistId: number) => {
 }
 
 export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.local_containing_track' },
 		queryKey: playlistKeys.playlistsContainingTrack(uniqueKey),
 		queryFn:
 			uniqueKey !== undefined
-				? () =>
+				? ({ span }) =>
 						returnOrThrowAsync(
-							playlistService.getLocalPlaylistsContainingTrackByUniqueKey(
-								uniqueKey,
-							),
+							playlistService
+								.withTrace(span)
+								.getLocalPlaylistsContainingTrackByUniqueKey(uniqueKey),
 						)
 				: skipToken,
 		enabled: uniqueKey !== undefined,
@@ -101,13 +109,16 @@ export const usePlaylistsContainingTrack = (uniqueKey: string | undefined) => {
 export const useAllPlaylistsContainingTrack = (
 	uniqueKey: string | undefined,
 ) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.all_containing_track' },
 		queryKey: playlistKeys.allPlaylistsContainingTrack(uniqueKey),
 		queryFn:
 			uniqueKey !== undefined
-				? () =>
+				? ({ span }) =>
 						returnOrThrowAsync(
-							playlistService.getPlaylistsContainingTrackByUniqueKey(uniqueKey),
+							playlistService
+								.withTrace(span)
+								.getPlaylistsContainingTrackByUniqueKey(uniqueKey),
 						)
 				: skipToken,
 		enabled: uniqueKey !== undefined,
@@ -119,11 +130,14 @@ export const useSearchTracksInPlaylist = (
 	query: string,
 	startSearch: boolean,
 ) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.search_tracks' },
 		queryKey: playlistKeys.searchTracksInPlaylist(playlistId, query),
-		queryFn: () =>
+		queryFn: ({ span }) =>
 			returnOrThrowAsync(
-				playlistService.searchTrackInPlaylist(playlistId, query),
+				playlistService
+					.withTrace(span)
+					.searchTrackInPlaylist(playlistId, query),
 			),
 		enabled: !!query.trim() && startSearch,
 		placeholderData: keepPreviousData,
@@ -131,9 +145,13 @@ export const useSearchTracksInPlaylist = (
 }
 
 export const useSearchPlaylists = (query: string, enabled: boolean) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.search' },
 		queryKey: playlistKeys.searchPlaylists(query),
-		queryFn: () => returnOrThrowAsync(playlistService.searchPlaylists(query)),
+		queryFn: ({ span }) =>
+			returnOrThrowAsync(
+				playlistService.withTrace(span).searchPlaylists(query),
+			),
 		enabled: enabled && !!query.trim(),
 		placeholderData: keepPreviousData,
 	})
@@ -144,19 +162,22 @@ export const usePlaylistContentsInfinite = (
 	limit: number,
 	initialLimit?: number,
 ) => {
-	return useInfiniteQuery({
+	return useTracedInfiniteQuery({
+		span: { name: 'playlist.contents_paginated' },
 		queryKey: playlistKeys.playlistContentsInfinite(
 			playlistId,
 			limit,
 			initialLimit,
 		),
-		queryFn: async ({ pageParam }) => {
-			const result = await playlistService.getPlaylistTracksPaginated({
-				playlistId,
-				limit,
-				initialLimit,
-				cursor: pageParam,
-			})
+		queryFn: async ({ pageParam, span }) => {
+			const result = await playlistService
+				.withTrace(span)
+				.getPlaylistTracksPaginated({
+					playlistId,
+					limit,
+					initialLimit,
+					cursor: pageParam,
+				})
 
 			if (result.isErr()) {
 				// 歌单在查询发起后被删除（例如删除后页面尚未卸载时又触发了重取）
@@ -182,10 +203,14 @@ export const usePlaylistContentsInfinite = (
 }
 
 export const usePlaylistByShareId = (shareId?: string) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.by_share_id' },
 		queryKey: playlistKeys.playlistByShareId(shareId ?? ''),
 		queryFn: shareId
-			? () => returnOrThrowAsync(playlistService.findPlaylistByShareId(shareId))
+			? ({ span }) =>
+					returnOrThrowAsync(
+						playlistService.withTrace(span).findPlaylistByShareId(shareId),
+					)
 			: skipToken,
 		enabled: !!shareId,
 	})
@@ -195,7 +220,8 @@ export const useEditorInviteCode = (shareId?: string | null) => {
 	const hasToken = useAppStore((state) => !!state.bbplayerToken)
 	const enabled = !!shareId && hasToken
 
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'shared_playlist.editor_invite_code' },
 		queryKey: playlistKeys.editorInviteCode(shareId ?? ''),
 		queryFn: enabled
 			? () =>

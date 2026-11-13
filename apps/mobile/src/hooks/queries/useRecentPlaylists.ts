@@ -1,11 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
 import { desc, ne } from 'drizzle-orm'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import db from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 
 export function useRecentPlaylists() {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'playlist.recent' },
 		queryKey: ['recentPlaylists'],
 		queryFn: async () => {
 			return db

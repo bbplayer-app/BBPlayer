@@ -1,9 +1,9 @@
-import { useMutation } from '@tanstack/react-query'
 import { Dialog, Portal, RadioButton, Text } from 'react-native-paper'
 
 import Button from '@/components/common/Button'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
@@ -20,13 +20,13 @@ export function PlaylistPlayerPreferenceDialog({
 }) {
 	const defaultMode = useAppStore((state) => state.settings.defaultPlayerMode)
 
-	const mutation = useMutation({
+	const mutation = useTracedMutation({
+		span: { name: 'playlist.update_player_preference' },
 		networkMode: 'always',
-		mutationFn: async (preference: Playlist['playerPreference']) => {
-			const result = await playlistService.setPlayerPreference(
-				playlist.id,
-				preference,
-			)
+		mutationFn: async (preference: Playlist['playerPreference'], { span }) => {
+			const result = await playlistService
+				.withTrace(span)
+				.setPlayerPreference(playlist.id, preference)
 
 			if (result.isErr()) throw result.error
 		},
