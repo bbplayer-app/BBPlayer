@@ -9,8 +9,8 @@ import { CustomError } from '@/lib/errors'
  *
  * 为什么不直接用 `Sentry.startSpan` 的隐式嵌套：
  * 1. Hermes 没有 AsyncLocalStorage，Sentry 在 RN 上用的是一个全局 scope 栈。
- *    一个 span 跨 await 处于 active 状态时，同时在跑的其他异步任务也会把它当成 parent，
- *    并发任务之间的 span 会互相串台。
+ *    `startSpan(cb)` 只在回调的同步部分保证 active span 正确；跨 await 之后上下文不可靠，
+ *    子 span 可能丢失 parent，也可能挂到当时恰好 active 的其他流程的 span 上。
  * 2. RN SDK 默认开启 `parentSpanIsAlwaysRootSpan`，隐式 parent 一律被拍平到 root span 上，
  *    trace 里看不到层级。
  *

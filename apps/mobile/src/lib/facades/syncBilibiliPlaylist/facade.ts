@@ -338,7 +338,9 @@ export class SyncBilibiliPlaylistFacade {
 	public syncMultiPageVideo(
 		bvid: string,
 	): ResultAsync<number, BilibiliApiError | FacadeError> {
-		if (this.syncingIds.has(`multiPage::${bvid}`)) {
+		const syncKey = `multiPage::${bvid}`
+
+		if (this.syncingIds.has(syncKey)) {
 			logger.info('已有同步任务在进行，跳过', {
 				type: 'multi_page',
 				bvid,
@@ -347,17 +349,26 @@ export class SyncBilibiliPlaylistFacade {
 			return errAsync(createSyncTaskAlreadyRunningError())
 		}
 
+		this.syncingIds.add(syncKey)
+
 		try {
-			this.syncingIds.add(`multiPage::${bvid}`)
 			logger = log.extend('[Facade/SyncMultiPageVideo: ' + bvid + ']')
 			logger.info('开始同步多集视频', { bvid })
 
+			// 锁要等异步任务结束才释放，不能放在同步的 finally 里
 			return traceOperationResult(
 				{ name: 'sync.bilibili_multi_page', op: 'task' },
 				(span) => this.syncMultiPageVideoImpl(bvid, span),
 			)
-		} finally {
-			this.syncingIds.delete(`multiPage::${bvid}`)
+				.andTee(() => {
+					this.syncingIds.delete(syncKey)
+				})
+				.orTee(() => {
+					this.syncingIds.delete(syncKey)
+				})
+		} catch (error) {
+			this.syncingIds.delete(syncKey)
+			throw error
 		}
 	}
 

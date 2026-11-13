@@ -78,8 +78,13 @@ async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
 		: fallback
 }
 
-/** 结束当前 pending 的 playback span 并标记为失败 */
-export function failPendingPlaybackSpan(error: Error) {
+/**
+ * 结束当前 pending 的 playback span 并标记为失败。
+ * 传入 `expected` 时，只有 pending span 仍是它才处理，避免误伤之后提交创建的 span。
+ */
+export function failPendingPlaybackSpan(error: Error, expected?: Span) {
+	if (expected && pendingPlaybackSpan !== expected) return
+
 	const span = takePendingPlaybackSpan()
 
 	if (!span) return
@@ -151,6 +156,8 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 		!queue.length,
 	)
 
+	let playbackSpan: Span | undefined
+
 	if (startingTrackId) {
 		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
 		const previousSpan = takePendingPlaybackSpan()
@@ -160,7 +167,7 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 			previousSpan.end()
 		}
 
-		const span = startOperation({
+		playbackSpan = startOperation({
 			name: 'playback.start',
 			op: 'playback',
 			attributes: {
@@ -173,7 +180,7 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 			},
 		})
 
-		setPendingPlaybackSpan(span)
+		setPendingPlaybackSpan(playbackSpan)
 	}
 
 	try {
@@ -191,9 +198,10 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 			await Orpheus.play()
 		}
 	} catch (error) {
-		if (startingTrackId) {
+		if (playbackSpan) {
 			failPendingPlaybackSpan(
 				error instanceof Error ? error : new Error(String(error)),
+				playbackSpan,
 			)
 		}
 
