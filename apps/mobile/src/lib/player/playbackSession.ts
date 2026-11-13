@@ -13,7 +13,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueStore } from '@/hooks/stores/usePlayerQueueStore'
 import usePlayerStore from '@/hooks/stores/usePlayerStore'
 import { playlistService } from '@/lib/services/playlistService'
-import { markSpanError, startOperation } from '@/lib/tracing'
+import { markSpanError, markSpanTimeout, startOperation } from '@/lib/tracing'
 import type { PlayerMode } from '@/types/core/playback'
 
 /**
@@ -27,6 +27,10 @@ import type { PlayerMode } from '@/types/core/playback'
  * 只保留最后一次：用户快速切歌时，前一个 span 被新的替换并立即结束（标记 cancelled）。
  */
 let pendingPlaybackSpan: Span | null = null
+let pendingPlaybackTimeout: ReturnType<typeof setTimeout> | null = null
+
+/** 超过这个时间仍未收到 onTrackStarted，视为起播超时（缓冲卡住、用户暂停、切到后台等） */
+const PLAYBACK_START_TIMEOUT_MS = 30_000
 
 /**
  * 取走并返回当前 pending 的 playback span，清空持有。
@@ -37,7 +41,25 @@ export function takePendingPlaybackSpan(): Span | null {
 
 	pendingPlaybackSpan = null
 
+	if (pendingPlaybackTimeout) {
+		clearTimeout(pendingPlaybackTimeout)
+		pendingPlaybackTimeout = null
+	}
+
 	return span
+}
+
+function setPendingPlaybackSpan(span: Span) {
+	takePendingPlaybackSpan()
+	pendingPlaybackSpan = span
+	pendingPlaybackTimeout = setTimeout(() => {
+		const timedOut = takePendingPlaybackSpan()
+
+		if (!timedOut) return
+		markSpanTimeout(timedOut)
+		timedOut.setAttribute('playback.timed_out', true)
+		timedOut.end()
+	}, PLAYBACK_START_TIMEOUT_MS)
 }
 
 async function resolveInitialMode(playlistId?: number): Promise<PlayerMode> {
@@ -131,12 +153,14 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 
 	if (startingTrackId) {
 		// 取消上一个还未到达 onTrackStarted 的 span（用户快速切歌）
-		if (pendingPlaybackSpan) {
-			pendingPlaybackSpan.setAttribute('playback.cancelled', true)
-			pendingPlaybackSpan.end()
+		const previousSpan = takePendingPlaybackSpan()
+
+		if (previousSpan) {
+			previousSpan.setAttribute('playback.cancelled', true)
+			previousSpan.end()
 		}
 
-		pendingPlaybackSpan = startOperation({
+		const span = startOperation({
 			name: 'playback.start',
 			op: 'playback',
 			attributes: {
@@ -148,6 +172,8 @@ async function submitTracks(options: QueueOptions, replace: boolean) {
 				'playback.expected_first_track_id': startingTrackId,
 			},
 		})
+
+		setPendingPlaybackSpan(span)
 	}
 
 	try {

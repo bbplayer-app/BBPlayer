@@ -44,11 +44,17 @@ const toRequestError = (error: unknown) => {
 	})
 }
 
-// span 只记录路径，不记录 query：wbi 签名、csrf 等参数不应进入遥测
-const toUrlPath = (url: string) => {
+// span 只记录 host 与路径，不记录 query：wbi 签名、csrf 等参数不应进入遥测
+const toUrlParts = (url: string) => {
 	const queryStart = url.indexOf('?')
+	const withoutQuery = queryStart === -1 ? url : url.slice(0, queryStart)
+	const match = /^https?:\/\/([^/]+)(\/.*)?$/.exec(withoutQuery)
 
-	return queryStart === -1 ? url : url.slice(0, queryStart)
+	return {
+		withoutQuery,
+		host: match?.[1],
+		path: match ? (match[2] ?? '/') : withoutQuery,
+	}
 }
 
 export class ApiClient {
@@ -98,16 +104,17 @@ export class ApiClient {
 		}
 
 		const method = options.method ?? 'GET'
-		const path = toUrlPath(url)
+		const { withoutQuery, host, path } = toUrlParts(url)
 
 		return traceResult(
 			this.traceParent,
 			{
-				name: `${method} ${path}`,
+				name: `${method} ${withoutQuery}`,
 				op: 'http.client',
 				attributes: {
 					'http.request.method': method,
-					'url.full': path,
+					'server.address': host,
+					'url.path': path,
 				},
 			},
 			(span) =>

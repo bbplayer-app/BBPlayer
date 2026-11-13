@@ -71,6 +71,15 @@ function setSpanError(span: Span, type: string): void {
 	span.setAttribute('error.type', type)
 }
 
+/**
+ * 错误 → 最先记录它的 span（即最内层失败的 span）。
+ * 我们的 span 不进入全局 scope，上报错误时 Sentry 拿不到 trace 上下文，
+ * 由 `findErrorSpan` 在 beforeSend 中反查，把 issue 关联回对应的 trace。
+ */
+const errorSpans = new WeakMap<Error, Span>()
+
+const MAX_CAUSE_DEPTH = 5
+
 /** 把错误记录到 span 上：状态置为 error，并附带错误类型 */
 export function markSpanError(span: TraceParent, error: Error): void {
 	if (!span) return
@@ -79,6 +88,31 @@ export function markSpanError(span: TraceParent, error: Error): void {
 		span,
 		error instanceof CustomError && error.type ? error.type : error.name,
 	)
+
+	if (!errorSpans.has(error)) {
+		errorSpans.set(error, span)
+	}
+}
+
+/** 把 span 标记为超时失败 */
+export function markSpanTimeout(span: Span): void {
+	setSpanError(span, 'deadline_exceeded')
+}
+
+/** 查找错误（或其 cause 链上的错误）失败时所在的 span */
+export function findErrorSpan(error: Error): Span | undefined {
+	let current: Error = error
+
+	for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
+		const span = errorSpans.get(current)
+
+		if (span) return span
+
+		if (!(current.cause instanceof Error)) return undefined
+		current = current.cause
+	}
+
+	return undefined
 }
 
 async function runInSpan<T>(

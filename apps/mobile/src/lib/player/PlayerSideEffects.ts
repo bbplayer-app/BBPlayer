@@ -292,8 +292,10 @@ class PlayerSideEffects {
 		Orpheus.addListener('onPlayerError', async (event) => {
 			logger.error('播放器错误事件：', { event })
 
-			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败
-			failPendingPlaybackSpan(this.toSentryError(event))
+			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
+			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace
+			const sentryError = this.toSentryError(event)
+			failPendingPlaybackSpan(sentryError)
 
 			let playerErrorInfo = {
 				message:
@@ -314,11 +316,7 @@ class PlayerSideEffects {
 				})
 
 				if (playerErrorInfo.shouldReport) {
-					reportErrorToSentry(
-						this.toSentryError(event),
-						'播放器错误事件',
-						'Native.Player',
-					)
+					reportErrorToSentry(sentryError, '播放器错误事件', 'Native.Player')
 				}
 			} catch (error) {
 				logger.error('处理播放器错误事件失败：', { error, event })
