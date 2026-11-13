@@ -69,6 +69,7 @@ export default function ListeningRecordSection({
 					听歌记录
 				</Text>
 				<Touchable
+					testID='listening-record-overall'
 					accessibilityRole='button'
 					onPress={() => router.navigate('/history/overall')}
 					style={styles.statisticsLink}
@@ -127,7 +128,12 @@ export default function ListeningRecordSection({
 				</Text>
 			)}
 			{isError ? (
-				<Button onPress={() => void refetch()}>听歌记录加载失败，重试</Button>
+				<Button
+					testID='listening-record-retry'
+					onPress={() => void refetch()}
+				>
+					听歌记录加载失败，重试
+				</Button>
 			) : isPending ? (
 				<View
 					style={[

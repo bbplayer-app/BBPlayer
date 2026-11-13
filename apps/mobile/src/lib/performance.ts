@@ -1,6 +1,11 @@
+import * as Sentry from '@sentry/react-native'
 import AppMetrics from 'expo-app-metrics'
 import { startProfiling, stopProfiling } from 'react-native-release-profiler'
 
+import {
+	getExpoLaunchSource,
+	isSentryTelemetryEnabled,
+} from '@/lib/config/sentry'
 import { storage } from '@/utils/mmkv'
 
 export const PROFILING_DURATION_MS = 10_000
@@ -109,6 +114,47 @@ function persistMetrics() {
 	console.log(`__PERF_METRICS__${JSON.stringify(summary)}__PERF_END__`)
 }
 
+function reportStartupMetrics() {
+	if (!isSentryTelemetryEnabled()) return
+
+	const attributes = { launch_source: getExpoLaunchSource() }
+	const launchTime = metrics.coldLaunchTime ?? metrics.warmLaunchTime
+
+	if (launchTime !== null) {
+		Sentry.metrics.distribution('app.startup.duration', launchTime, {
+			unit: 'millisecond',
+			attributes: {
+				...attributes,
+				launch_type: metrics.coldLaunchTime !== null ? 'cold' : 'warm',
+			},
+		})
+	}
+
+	if (metrics.bundleLoadTime !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.bundle_load',
+			metrics.bundleLoadTime,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+
+	if (metrics.timeToFirstRender !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.time_to_first_render',
+			metrics.timeToFirstRender,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+
+	if (metrics.timeToInteractive !== null) {
+		Sentry.metrics.distribution(
+			'app.startup.time_to_interactive',
+			metrics.timeToInteractive,
+			{ unit: 'millisecond', attributes },
+		)
+	}
+}
+
 async function fetchStartupMetrics(): Promise<void> {
 	if (fetched) return
 
@@ -153,6 +199,11 @@ async function fetchStartupMetrics(): Promise<void> {
 }
 
 async function finishStartupMetrics(): Promise<void> {
+	// app start span 以「可交互」为终点，先结算，避免被下面的 profiling / 重试拉长
+	if (isSentryTelemetryEnabled()) {
+		Sentry.appLoaded()
+	}
+
 	if (startupProfilingActive) {
 		try {
 			await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -166,6 +217,7 @@ async function finishStartupMetrics(): Promise<void> {
 	}
 
 	await fetchStartupMetrics()
+	reportStartupMetrics()
 }
 
 export function markPerfInteractive(): Promise<void> {

@@ -151,6 +151,7 @@ export default function BilibiliAccountSettingsPage() {
 						<SettingsSectionTitle title='登录方式' />
 						<View style={styles.section}>
 							<List.Item
+								testID='bilibili-account-qrcode-login'
 								title='重新扫码登录'
 								description='适合在当前 Cookie 失效后重新授权'
 								left={(props) => (
@@ -171,6 +172,7 @@ export default function BilibiliAccountSettingsPage() {
 							/>
 							<Divider />
 							<List.Item
+								testID='bilibili-account-phone-login'
 								title='手机号登录'
 								description='使用短信验证码登录 Bilibili'
 								left={(props) => (
@@ -191,6 +193,7 @@ export default function BilibiliAccountSettingsPage() {
 							/>
 							<Divider />
 							<List.Item
+								testID='bilibili-account-cookie'
 								title='修改 Cookie'
 								description='手动粘贴或清空 Bilibili Cookie'
 								left={(props) => (
@@ -209,6 +212,7 @@ export default function BilibiliAccountSettingsPage() {
 							/>
 						</View>
 						<Button
+							testID='bilibili-account-logout'
 							mode='outlined'
 							onPress={clearAccount}
 						>
@@ -245,6 +249,7 @@ export default function BilibiliAccountSettingsPage() {
 						<SettingsSectionTitle title='登录方式' />
 						<View style={styles.loginActions}>
 							<Button
+								testID='bilibili-account-qrcode-login'
 								mode='contained'
 								icon='qrcode-scan'
 								onPress={() =>
@@ -254,6 +259,7 @@ export default function BilibiliAccountSettingsPage() {
 								扫码登录
 							</Button>
 							<Button
+								testID='bilibili-account-phone-login'
 								mode='outlined'
 								icon='cellphone-key'
 								onPress={() =>
@@ -263,6 +269,7 @@ export default function BilibiliAccountSettingsPage() {
 								手机号登录
 							</Button>
 							<Button
+								testID='bilibili-account-cookie'
 								mode='outlined'
 								icon='cookie'
 								onPress={() => openModal('CookieLogin', undefined)}

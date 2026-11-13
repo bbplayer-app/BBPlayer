@@ -373,6 +373,7 @@ const ExportDownloadsProgressModal = memo(
 									<View style={styles.actionRow}>
 										<Button onPress={dismiss}>取消</Button>
 										<Button
+											testID='export-downloads-start'
 											mode='contained'
 											onPress={startExport}
 										>

@@ -87,6 +87,7 @@ export default function InputCodeStep({
 
 			<View style={[styles.actions, compact && { marginTop: 8 }]}>
 				<Button
+					testID='phone-login-submit'
 					mode='contained'
 					onPress={onLogin}
 					loading={isLoggingIn}

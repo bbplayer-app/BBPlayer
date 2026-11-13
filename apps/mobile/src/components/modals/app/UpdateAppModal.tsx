@@ -160,6 +160,7 @@ export default function UpdateAppModal({
 			<Dialog.Actions style={styles.actionsContainer}>
 				{!forced ? (
 					<Button
+						testID='update-app-skip'
 						onPress={onSkip}
 						disabled={isUpdating}
 					>
@@ -177,6 +178,7 @@ export default function UpdateAppModal({
 						取消
 					</Button>
 					<Button
+						testID='update-app-confirm'
 						onPress={onUpdate}
 						disabled={isUpdating}
 					>

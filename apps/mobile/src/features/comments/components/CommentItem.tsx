@@ -190,6 +190,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 				<View style={styles.contentContainer}>
 					<View style={styles.header}>
 						<Text
+							testID='comment-user'
 							style={[styles.username, { color: theme.colors.secondary }]}
 							numberOfLines={1}
 							onPress={onClickUser}
@@ -241,6 +242,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 
 					<View style={styles.actions}>
 						<TouchableOpacity
+							testID='comment-like'
 							style={styles.actionButton}
 							onPress={handleLike}
 						>
@@ -257,6 +259,7 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 
 						{item.rcount > 0 && (
 							<TouchableOpacity
+								testID='comment-reply'
 								style={styles.actionButton}
 								onPress={() => onReplyPress?.(item)}
 							>
@@ -274,7 +277,10 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 					</View>
 
 					{item.replies && item.replies.length > 0 && (
-						<TouchableOpacity onPress={() => onReplyPress?.(item)}>
+						<TouchableOpacity
+							testID='comment-view-replies'
+							onPress={() => onReplyPress?.(item)}
+						>
 							<SquircleView
 								style={[
 									styles.repliesPreview,

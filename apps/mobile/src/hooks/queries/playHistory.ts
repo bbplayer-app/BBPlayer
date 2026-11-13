@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { count, desc, sql } from 'drizzle-orm'
 
+import { useTracedQuery } from '@/hooks/utils/useTracedQuery'
 import drizzleDb from '@/lib/db/db'
 import * as schema from '@/lib/db/schema'
 import { trackService } from '@/lib/services/trackService'
@@ -36,7 +36,8 @@ async function fetchPlayHistoryHeatmap() {
 }
 
 export const usePlayHistoryHeatmap = () => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'play_history.heatmap' },
 		queryKey: playHistoryKeys.heatmap(),
 		queryFn: fetchPlayHistoryHeatmap,
 		networkMode: 'always',
@@ -75,7 +76,8 @@ async function fetchPlayHistoryByDate(dateStr: string) {
 }
 
 export const usePlayHistoryByDate = (dateStr: string) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'play_history.by_date' },
 		queryKey: playHistoryKeys.byDate(dateStr),
 		queryFn: () => fetchPlayHistoryByDate(dateStr),
 		enabled: !!dateStr,
@@ -85,13 +87,16 @@ export const usePlayHistoryByDate = (dateStr: string) => {
 }
 
 export const useMostPlayedTracks = (days: number, limit: number) => {
-	return useQuery({
+	return useTracedQuery({
+		span: { name: 'play_history.most_played' },
 		queryKey: playHistoryKeys.topPlayed(days, limit),
-		queryFn: async () => {
-			const result = await trackService.getMostPlayedTracksInLastDays({
-				days,
-				limit,
-			})
+		queryFn: async ({ span }) => {
+			const result = await trackService
+				.withTrace(span)
+				.getMostPlayedTracksInLastDays({
+					days,
+					limit,
+				})
 
 			if (result.isErr()) {
 				throw result.error

@@ -1,8 +1,10 @@
-import * as Sentry from '@sentry/react-native'
+import type { Span } from '@sentry/react-native'
 import * as Application from 'expo-application'
 import Constants from 'expo-constants'
-import { err, ok, type Result } from 'neverthrow'
+import { err, ok, ResultAsync, type Result } from 'neverthrow'
 import { fetch, prefetchOnAppStart } from 'react-native-nitro-fetch'
+
+import { traceOperationResult, traceSpan } from '@/lib/tracing'
 
 const UPDATE_PREFETCH_KEY = 'update-manifest'
 
@@ -73,9 +75,16 @@ export const compareSemver = (a: string, b: string): number => {
 	return 0
 }
 
-export async function fetchLatestRelease(): Promise<
-	Result<ReleaseInfo, Error>
-> {
+export function fetchLatestRelease(): ResultAsync<ReleaseInfo, Error> {
+	return traceOperationResult(
+		{ name: 'update.check', op: 'task' },
+		(span) => new ResultAsync(fetchLatestReleaseImpl(span)),
+	)
+}
+
+async function fetchLatestReleaseImpl(
+	span: Span,
+): Promise<Result<ReleaseInfo, Error>> {
 	try {
 		const manifestUrl = getManifestUrl()
 
@@ -83,8 +92,9 @@ export async function fetchLatestRelease(): Promise<
 			return err(new Error('未在 app.config 中配置更新渠道 updateManifestUrl'))
 		}
 
-		const res = await Sentry.startSpan(
-			{ name: 'http:fetch:update-manifest', op: 'http' },
+		const res = await traceSpan(
+			span,
+			{ name: 'GET update-manifest', op: 'http.client' },
 			() =>
 				fetch(manifestUrl, {
 					cache: 'no-store',

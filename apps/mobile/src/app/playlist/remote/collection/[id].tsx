@@ -174,10 +174,12 @@ export default function CollectionPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-select-all'
 							icon='select-all'
 							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-invert-selection'
 							icon='select-compare'
 							onPress={() =>
 								setSelected(
@@ -188,6 +190,7 @@ export default function CollectionPage() {
 							}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []

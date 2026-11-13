@@ -1,10 +1,10 @@
-import { useMutation } from '@tanstack/react-query'
 import { File, Paths } from 'expo-file-system'
 
 import {
 	webDavBackupQueryKeys,
 	type WebDavBackupConfig,
 } from '@/hooks/queries/backup'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { createBackup } from '@/lib/backup/export'
 import { restoreBackup } from '@/lib/backup/import'
 import {
@@ -23,7 +23,8 @@ interface WebDavCredentials {
 }
 
 export function useTestWebDavConnectionMutation() {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.test_connection' },
 		mutationKey: ['webDavBackups', 'testConnection'],
 		mutationFn: async ({ config, password }: WebDavCredentials) => {
 			const client = await createMobileWebDavClient(config, password)
@@ -38,7 +39,8 @@ export function useTestWebDavConnectionMutation() {
 }
 
 export function useCloudBackupMutation() {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.upload' },
 		mutationKey: ['webDavBackups', 'upload'],
 		mutationFn: async ({ config, password }: WebDavCredentials) => {
 			const client = await createMobileWebDavClient(config, password)
@@ -75,7 +77,8 @@ export function useCloudBackupMutation() {
 }
 
 export function useCloudRestoreMutation(onSuccess: () => void) {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'backup.webdav.restore' },
 		mutationKey: ['webDavBackups', 'restore'],
 		mutationFn: async ({
 			config,

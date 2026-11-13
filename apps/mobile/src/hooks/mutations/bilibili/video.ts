@@ -1,6 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
-
 import { videoDataQueryKeys } from '@/hooks/queries/bilibili/video'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { bilibiliApi } from '@/lib/api/bilibili/api'
 import { queryClient } from '@/lib/config/queryClient'
 import type { BilibiliToViewVideoList } from '@/types/apis/bilibili'
@@ -9,10 +8,14 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 import toast from '@/utils/toast'
 
 export const useThumbUpVideo = () => {
-	return useMutation({
-		mutationFn: ({ bvid, like }: { bvid: string; like: boolean }) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.video.thumb_up' },
+		mutationFn: ({ bvid, like }: { bvid: string; like: boolean }, { span }) =>
 			returnOrThrowAsync(
-				bilibiliApi.thumbUpVideo({ bvid, like }).map((res) => res ?? undefined),
+				bilibiliApi
+					.withTrace(span)
+					.thumbUpVideo({ bvid, like })
+					.map((res) => res ?? undefined),
 			),
 		onSuccess: (_, { bvid, like }) => {
 			queryClient.setQueryData(
@@ -28,16 +31,21 @@ export const useThumbUpVideo = () => {
 }
 
 export const useDeleteToViewVideo = () => {
-	return useMutation({
-		mutationFn: ({
-			deleteAllViewed,
-			avid,
-		}: {
-			deleteAllViewed?: boolean
-			avid?: number
-		}) =>
+	return useTracedMutation({
+		span: { name: 'bilibili.to_view.delete' },
+		mutationFn: (
+			{
+				deleteAllViewed,
+				avid,
+			}: {
+				deleteAllViewed?: boolean
+				avid?: number
+			},
+			{ span },
+		) =>
 			returnOrThrowAsync(
 				bilibiliApi
+					.withTrace(span)
 					.deleteToViewVideo({ deleteAllViewed, avid })
 					.map(() => true),
 			),
@@ -104,9 +112,15 @@ export const useDeleteToViewVideo = () => {
 }
 
 export const useClearToViewVideoList = () => {
-	return useMutation({
-		mutationFn: () =>
-			returnOrThrowAsync(bilibiliApi.clearToViewVideoList().map(() => true)),
+	return useTracedMutation({
+		span: { name: 'bilibili.to_view.clear' },
+		mutationFn: (_variables, { span }) =>
+			returnOrThrowAsync(
+				bilibiliApi
+					.withTrace(span)
+					.clearToViewVideoList()
+					.map(() => true),
+			),
 		// onSuccess: () => {
 		// 	queryClient.setQueryData(videoDataQueryKeys.getToViewVideoList(), {
 		// 		count: 0,

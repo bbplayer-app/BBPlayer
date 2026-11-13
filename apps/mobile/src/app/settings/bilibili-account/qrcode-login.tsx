@@ -304,6 +304,7 @@ export default function QrCodeLoginPage() {
 									{status === 'expired' ? '二维码已失效' : '获取失败'}
 								</Text>
 								<Button
+									testID='qrcode-refresh'
 									mode='contained'
 									onPress={() => dispatch({ type: 'RESET' })}
 									style={styles.refreshButton}

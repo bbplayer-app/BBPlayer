@@ -118,6 +118,7 @@ export default function SubscribeToSharedPlaylistModal() {
 					取消
 				</Button>
 				<Button
+					testID='subscribe-shared-confirm'
 					onPress={handleSubscribe}
 					disabled={!isValidId}
 					mode='text'

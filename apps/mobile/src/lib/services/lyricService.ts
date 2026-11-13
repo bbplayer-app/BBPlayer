@@ -1,7 +1,7 @@
 import { Orpheus, type LyricConsumer, type LyricsData } from '@bbplayer/orpheus'
 import { parseAndMergeLyrics } from '@bbplayer/splash'
 import { fetch as fetchNetInfo } from '@react-native-community/netinfo'
-import * as Sentry from '@sentry/react-native'
+import type { Span } from '@sentry/react-native'
 import * as FileSystem from 'expo-file-system'
 import { errAsync, okAsync, Result, ResultAsync } from 'neverthrow'
 
@@ -22,6 +22,11 @@ import {
 import type { CustomError } from '@/lib/errors'
 import { FileSystemError, LyricNotFoundError } from '@/lib/errors'
 import { trackService } from '@/lib/services/trackService'
+import {
+	type TraceParent,
+	traceOperationResult,
+	traceSpan,
+} from '@/lib/tracing'
 import type { BilibiliTrack, Track } from '@/types/core/media'
 import type {
 	LyricFileData,
@@ -183,10 +188,27 @@ class LyricService {
 	/**
 	 * 优先从本地缓存中获取歌词，如果没有则从多个数据源并行查找，返回最匹配的歌词并进行缓存。
 	 * @param track
+	 * @param parent - 由 query 等上层流程触发时传入，作为其子 span；不传则开启新的 trace
 	 * @returns
 	 */
 	public smartFetchLyrics(
 		track: Track,
+		parent?: TraceParent,
+	): ResultAsync<LyricFileData, CustomError> {
+		return traceOperationResult(
+			{
+				name: 'lyrics.smart_fetch',
+				op: 'task',
+				attributes: { 'track.source': track.source },
+			},
+			(span) => this.smartFetchLyricsImpl(track, span),
+			parent,
+		)
+	}
+
+	private smartFetchLyricsImpl(
+		track: Track,
+		span: Span,
 	): ResultAsync<LyricFileData, CustomError> {
 		const lyricFile = new FileSystem.File(
 			FileSystem.Paths.document,
@@ -210,14 +232,14 @@ class LyricService {
 
 						return this.getBestMatchedLyrics(track, musicName, lyricSource)
 					})
-					.andThen((lyrics) => this.processAndSaveLyrics(lyrics, track))
+					.andThen((lyrics) => this.processAndSaveLyrics(lyrics, track, span))
 			}
 
 			// 标准源处理
 			const lyricSource = useAppStore.getState().settings.lyricSource ?? 'auto'
 
 			return this.getBestMatchedLyrics(track, undefined, lyricSource).andThen(
-				(lyrics) => this.processAndSaveLyrics(lyrics, track),
+				(lyrics) => this.processAndSaveLyrics(lyrics, track, span),
 			)
 		}
 
@@ -228,8 +250,9 @@ class LyricService {
 					throw new Error('Cache miss')
 				}
 
-				const content = await Sentry.startSpan(
-					{ name: 'io:file:read', op: 'io' },
+				const content = await traceSpan(
+					span,
+					{ name: 'io:file:read', op: 'file.read' },
 					() => lyricFile.text(),
 				)
 
@@ -250,6 +273,8 @@ class LyricService {
 					})
 				}
 
+				span.setAttribute('lyrics.cache', 'hit')
+
 				// manualSkip 为 true 时直接返回缓存，不走网络
 				if (parsed.manualSkip) {
 					return parsed
@@ -268,6 +293,8 @@ class LyricService {
 				return e
 			},
 		).orElse(() => {
+			span.setAttribute('lyrics.cache', 'miss')
+
 			return ResultAsync.fromSafePromise(fetchNetInfo()).andThen(
 				(networkState) => {
 					if (isActuallyOffline(networkState)) {
@@ -304,6 +331,7 @@ class LyricService {
 	private processAndSaveLyrics(
 		lyrics: LyricProviderResponseData,
 		track: Track,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, CustomError> {
 		const lyricFileData: LyricFileData = {
 			...lyrics,
@@ -313,12 +341,13 @@ class LyricService {
 
 		logger.info('网络搜索歌词完成，正在写入缓存')
 
-		return this.saveLyricsToFile(lyricFileData, track.uniqueKey)
+		return this.saveLyricsToFile(lyricFileData, track.uniqueKey, parent)
 	}
 
 	public saveLyricsToFile(
 		lyrics: LyricFileData,
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, FileSystemError> {
 		const write = this.pendingLyricWrites.then(async () => {
 			const lyricFile = new FileSystem.File(
@@ -336,7 +365,7 @@ class LyricService {
 				? lyrics
 				: { ...lyrics, manualSkip: false }
 
-			await Sentry.startSpan({ name: 'io:file:write', op: 'io' }, () =>
+			await traceSpan(parent, { name: 'io:file:write', op: 'file.write' }, () =>
 				lyricFile.write(JSON.stringify(toWrite)),
 			)
 			void this.pushLyricsToOverlays(uniqueKey)
@@ -360,6 +389,7 @@ class LyricService {
 	public fetchLyrics(
 		item: LyricSearchResult[0],
 		uniqueKey: string,
+		parent?: TraceParent,
 	): ResultAsync<LyricFileData, Error> {
 		switch (item.source) {
 			case 'netease':
@@ -374,7 +404,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'qqmusic':
 				return this.qqMusicApi
@@ -388,7 +418,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			case 'kugou':
 				return this.kugouApi
@@ -402,7 +432,7 @@ class LyricService {
 						} as LyricFileData)
 					})
 					.andThen((lyrics) => {
-						return this.saveLyricsToFile(lyrics, uniqueKey)
+						return this.saveLyricsToFile(lyrics, uniqueKey, parent)
 					})
 			default:
 				return errAsync(new Error('未知歌曲源'))

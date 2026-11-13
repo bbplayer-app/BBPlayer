@@ -190,6 +190,7 @@ export default function BackupSettingsPage() {
 				/>
 				<View style={styles.buttonRow}>
 					<Button
+						testID='backup-local-export'
 						mode='outlined'
 						icon='export-variant'
 						loading={isExporting}
@@ -199,6 +200,7 @@ export default function BackupSettingsPage() {
 						导出数据
 					</Button>
 					<Button
+						testID='backup-local-import'
 						mode='outlined'
 						icon='import'
 						loading={isImporting}
@@ -255,6 +257,7 @@ export default function BackupSettingsPage() {
 				/>
 				<View style={styles.buttonRow}>
 					<Button
+						testID='backup-webdav-test'
 						mode='outlined'
 						loading={testConnectionMutation.isPending}
 						disabled={!baseUrl.trim() || testConnectionMutation.isPending}
@@ -268,6 +271,7 @@ export default function BackupSettingsPage() {
 						测试连接
 					</Button>
 					<Button
+						testID='backup-webdav-save-config'
 						mode='contained-tonal'
 						disabled={!baseUrl.trim()}
 						onPress={() => void handleSaveConfig()}
@@ -276,6 +280,7 @@ export default function BackupSettingsPage() {
 					</Button>
 				</View>
 				<Button
+					testID='backup-webdav-upload'
 					mode='contained'
 					icon='cloud-upload'
 					loading={cloudBackupMutation.isPending}
@@ -304,6 +309,7 @@ export default function BackupSettingsPage() {
 				<View style={styles.listHeader}>
 					<Text variant='titleMedium'>云端备份</Text>
 					<IconButton
+						testID='backup-webdav-refresh'
 						icon='refresh'
 						size={20}
 						loading={isRefreshing}
@@ -321,6 +327,7 @@ export default function BackupSettingsPage() {
 				) : (
 					entries?.map((entry) => (
 						<List.Item
+							testID='backup-webdav-entry'
 							key={entry.path}
 							title={formatBackupDate(entry)}
 							description={`${formatBytes(entry.size)} · ${entry.name}`}
@@ -332,6 +339,7 @@ export default function BackupSettingsPage() {
 							)}
 							right={() => (
 								<IconButton
+									testID='backup-webdav-restore'
 									icon='cloud-download'
 									size={20}
 									loading={

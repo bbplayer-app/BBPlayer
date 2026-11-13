@@ -63,6 +63,7 @@ const InputExternalPlaylistInfoModal = () => {
 			<Dialog.Actions>
 				<Button onPress={() => close('InputExternalPlaylistInfo')}>取消</Button>
 				<Button
+					testID='external-playlist-input-confirm'
 					onPress={handleConfirm}
 					disabled={!input.trim()}
 				>

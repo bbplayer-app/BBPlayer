@@ -23,6 +23,7 @@ export function MusicFunctionalMenu({
 		<>
 			<HighFreqRow style={{ paddingBottom: 12 }}>
 				<HighFreqButton
+					testID='player-menu-speed'
 					icon='speedometer'
 					label='倍速'
 					onPress={() =>
@@ -30,6 +31,7 @@ export function MusicFunctionalMenu({
 					}
 				/>
 				<HighFreqButton
+					testID='player-menu-sleep-timer'
 					icon='timer-outline'
 					label='定时关闭'
 					onPress={() => handleAction(() => openModal('SleepTimer', undefined))}
@@ -40,6 +42,7 @@ export function MusicFunctionalMenu({
 			<Divider />
 			<SharedTrackActions onAction={handleAction} />
 			<List.Item
+				testID='player-menu-search-lyrics'
 				title='搜索歌词'
 				left={(props) => (
 					<List.Icon
@@ -58,6 +61,7 @@ export function MusicFunctionalMenu({
 				}
 			/>
 			<List.Item
+				testID='player-menu-share-lyrics'
 				title='分享歌词'
 				left={(props) => (
 					<List.Icon

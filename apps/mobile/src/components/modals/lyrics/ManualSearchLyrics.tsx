@@ -53,6 +53,7 @@ const SearchItem = memo(function SearchItem({
 }) {
 	return (
 		<TouchableRipple
+			testID='lyrics-search-result'
 			style={styles.searchItem}
 			onPress={() => onPress(item)}
 			disabled={disabled}

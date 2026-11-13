@@ -30,6 +30,7 @@ export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 				<PlayerDownloadButton onAction={onAction} />
 				{currentTrack?.source === 'bilibili' && (
 					<HighFreqButton
+						testID='player-menu-comments'
 						label='评论区'
 						icon='comment-text-outline'
 						onPress={() =>
@@ -62,6 +63,7 @@ function PodcastPlaybackSettings() {
 	return (
 		<>
 			<List.Item
+				testID='player-menu-shuffle'
 				title='随机播放'
 				description={shuffle ? '开启' : '关闭'}
 				left={(props) => (
@@ -76,6 +78,7 @@ function PodcastPlaybackSettings() {
 				}}
 			/>
 			<List.Item
+				testID='player-menu-repeat'
 				title='循环模式'
 				description={
 					repeat === RepeatMode.OFF

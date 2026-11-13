@@ -65,6 +65,7 @@ const PlayerMainTab = memo(function PlayerMainTab({
 				>
 					{mode === 'podcast' && (
 						<Button
+							testID='player-open-subtitles'
 							icon='subtitles-outline'
 							onPress={() => jumpTo('lyrics')}
 							compact

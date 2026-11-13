@@ -1164,17 +1164,20 @@ function LocalPlaylistContent({
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='local-playlist-select-all'
 							icon='select-all'
 							disabled={isResolvingSelection}
 							onPress={() => void selectAllTracks()}
 						/>
 						<Appbar.Action
+							testID='local-playlist-invert-selection'
 							icon='select-compare'
 							disabled={isResolvingSelection}
 							onPress={() => void invertSelectedTracks()}
 						/>
 						{playlistMetadata.type === 'local' && (
 							<Appbar.Action
+								testID='local-playlist-delete-selected'
 								icon='trash-can'
 								onPress={() =>
 									alert(
@@ -1190,6 +1193,7 @@ function LocalPlaylistContent({
 							/>
 						)}
 						<Appbar.Action
+							testID='local-playlist-batch-add'
 							icon='playlist-plus'
 							disabled={isResolvingSelection}
 							onPress={() => void openBatchAddTracksModal()}
@@ -1199,6 +1203,7 @@ function LocalPlaylistContent({
 					<>
 						{playlistMetadata.shareId && hasSyncFailures && (
 							<Appbar.Action
+								testID='local-playlist-sync-failures'
 								icon='alert-circle'
 								color={colors.error}
 								onPress={presentSyncFailuresSheet}
@@ -1212,6 +1217,7 @@ function LocalPlaylistContent({
 							/>
 						)}
 						<Appbar.Action
+							testID='local-playlist-search'
 							icon={startSearch ? 'close' : 'magnify'}
 							onPress={() => setStartSearch((prev) => !prev)}
 						/>

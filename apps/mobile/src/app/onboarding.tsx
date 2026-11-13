@@ -106,6 +106,7 @@ function StartSlide({
 			</Text>
 			<View style={slideStyles.startOptions}>
 				<Button
+					testID='onboarding-qrcode-login'
 					mode='contained'
 					onPress={onQRCode}
 					icon='qrcode-scan'
@@ -115,6 +116,7 @@ function StartSlide({
 					扫码登录
 				</Button>
 				<Button
+					testID='onboarding-phone-login'
 					mode='outlined'
 					onPress={onPhone}
 					icon='cellphone'

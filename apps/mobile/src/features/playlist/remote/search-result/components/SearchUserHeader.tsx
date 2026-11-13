@@ -167,6 +167,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 					]}
 				>
 					<Touchable
+						testID='search-user-result'
 						androidRipple={{}}
 						onPress={() => handleUserPress(user.mid)}
 						style={styles.singleCardButton}
@@ -286,6 +287,7 @@ export function SearchUserHeader({ query }: SearchUserHeaderProps) {
 							]}
 						>
 							<Touchable
+								testID='search-user-result'
 								androidRipple={{}}
 								onPress={() => handleUserPress(user.mid)}
 								style={styles.cardButton}

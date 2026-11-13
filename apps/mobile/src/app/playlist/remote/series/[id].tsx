@@ -214,10 +214,12 @@ export default function SeriesPage() {
 				{selectMode ? (
 					<>
 						<Appbar.Action
+							testID='remote-playlist-select-all'
 							icon='select-all'
 							onPress={() => setSelected(new Set(tracks.map((t) => t.id)))}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-invert-selection'
 							icon='select-compare'
 							onPress={() =>
 								setSelected(
@@ -228,6 +230,7 @@ export default function SeriesPage() {
 							}
 						/>
 						<Appbar.Action
+							testID='remote-playlist-batch-add'
 							icon='playlist-plus'
 							onPress={() => {
 								const payloads = []
@@ -266,7 +269,10 @@ export default function SeriesPage() {
 					{...(isFetchNextPageError
 						? {
 								ListFooterComponent: (
-									<Button onPress={() => void fetchNextPage()}>
+									<Button
+										testID='remote-playlist-load-more-retry'
+										onPress={() => void fetchNextPage()}
+									>
 										重试加载更多
 									</Button>
 								),

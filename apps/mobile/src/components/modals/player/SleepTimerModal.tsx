@@ -83,6 +83,7 @@ const SleepTimerModal = () => {
 							style={styles.presetButton}
 						>
 							<Button
+								testID='sleep-timer-preset'
 								mode='contained-tonal'
 								onPress={() => handleSetTimer(minutes)}
 							>
@@ -104,6 +105,7 @@ const SleepTimerModal = () => {
 							style={styles.customInput}
 						/>
 						<Button
+							testID='sleep-timer-custom-confirm'
 							mode='contained'
 							onPress={async () => {
 								const minutes = parseInt(customMinutes, 10)
@@ -128,6 +130,7 @@ const SleepTimerModal = () => {
 			<Dialog.Actions>
 				{sleepTimerEndAt && (
 					<Button
+						testID='sleep-timer-cancel'
 						onPress={handleCancelTimer}
 						textColor='red'
 					>

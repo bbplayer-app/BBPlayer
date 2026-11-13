@@ -1,7 +1,7 @@
-import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'expo-router'
 
 import { playlistKeys } from '@/hooks/queries/db/playlist'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { ensureBBPlayerToken } from '@/lib/api/bbplayer/client'
 import { queryClient } from '@/lib/config/queryClient'
 import { CustomError } from '@/lib/errors'
@@ -27,25 +27,30 @@ queryClient.setMutationDefaults(['db', 'playlist'], {
 // React Query 的 invalidateQueries 会直接在后台刷新当前页面活跃的查询，能满足咱们的需求。
 // 只有当我们需要在 mutate 之后要跳转到另一个页面时，才需要去 invalidateQueries
 export const usePlaylistSync = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.sync' },
 		mutationKey: ['db', 'playlist', 'sync'],
-		mutationFn: async ({
-			remoteSyncId,
-			type,
-			onProgress,
-			expandMultiPage,
-		}: {
-			remoteSyncId: number
-			type: Playlist['type']
-			toastId?: string
-			onProgress?: (progress: PlaylistSyncProgress) => void
-			expandMultiPage?: boolean
-		}) => {
+		mutationFn: async (
+			{
+				remoteSyncId,
+				type,
+				onProgress,
+				expandMultiPage,
+			}: {
+				remoteSyncId: number
+				type: Playlist['type']
+				toastId?: string
+				onProgress?: (progress: PlaylistSyncProgress) => void
+				expandMultiPage?: boolean
+			},
+			{ span },
+		) => {
 			const result = await syncFacade.sync(
 				remoteSyncId,
 				type,
 				onProgress,
 				expandMultiPage,
+				span,
 			)
 
 			if (result.isErr()) {
@@ -91,15 +96,21 @@ export const usePlaylistSync = () => {
  * @returns
  */
 export const useUpdateTrackLocalPlaylists = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.update_track_playlists' },
 		mutationKey: ['db', 'playlist', 'updateTrackLocalPlaylists'],
-		mutationFn: async (args: {
-			toAddPlaylistIds: number[]
-			toRemovePlaylistIds: number[]
-			trackPayload: CreateTrackPayload
-			artistPayload?: CreateArtistPayload | null
-		}) => {
-			const res = await playlistFacade.updateTrackLocalPlaylists(args)
+		mutationFn: async (
+			args: {
+				toAddPlaylistIds: number[]
+				toRemovePlaylistIds: number[]
+				trackPayload: CreateTrackPayload
+				artistPayload?: CreateArtistPayload | null
+			},
+			{ span },
+		) => {
+			const res = await playlistFacade
+				.withTrace(span)
+				.updateTrackLocalPlaylists(args)
 
 			if (res.isErr()) throw res.error
 
@@ -144,16 +155,22 @@ export const useUpdateTrackLocalPlaylists = () => {
 }
 
 export const useDuplicatePlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.duplicate' },
 		mutationKey: ['db', 'playlist', 'duplicatePlaylist'],
-		mutationFn: async ({
-			playlistId,
-			name,
-		}: {
-			playlistId: number
-			name: string
-		}) => {
-			const result = await playlistFacade.duplicatePlaylist(playlistId, name)
+		mutationFn: async (
+			{
+				playlistId,
+				name,
+			}: {
+				playlistId: number
+				name: string
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.duplicatePlaylist(playlistId, name)
 
 			if (result.isErr()) {
 				throw result.error
@@ -177,21 +194,24 @@ export const useDuplicatePlaylist = () => {
 }
 
 export const useEditPlaylistMetadata = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.edit_metadata' },
 		mutationKey: ['db', 'playlist', 'editPlaylistMetadata'],
-		mutationFn: async ({
-			playlistId,
-			payload,
-		}: {
-			playlistId: number
-			payload: UpdatePlaylistPayload
-		}) => {
-			if (playlistId === 0) return
-
-			const result = await playlistFacade.updatePlaylistMetadata(
+		mutationFn: async (
+			{
 				playlistId,
 				payload,
-			)
+			}: {
+				playlistId: number
+				payload: UpdatePlaylistPayload
+			},
+			{ span },
+		) => {
+			if (playlistId === 0) return
+
+			const result = await playlistFacade
+				.withTrace(span)
+				.updatePlaylistMetadata(playlistId, payload)
 
 			if (result.isErr()) {
 				throw result.error
@@ -220,9 +240,10 @@ export const useEditPlaylistMetadata = () => {
 }
 
 export const useDeletePlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.delete' },
 		mutationKey: ['db', 'playlist', 'deletePlaylist'],
-		mutationFn: async ({ playlistId }: { playlistId: number }) => {
+		mutationFn: async ({ playlistId }: { playlistId: number }, { span }) => {
 			// 共享歌单需要有效 token；本地歌单无需，若获取失败静默忽略
 			try {
 				await ensureBBPlayerToken()
@@ -230,7 +251,9 @@ export const useDeletePlaylist = () => {
 				// local 歌单不需要 token，继续执行
 			}
 
-			const result = await playlistFacade.deletePlaylist(playlistId)
+			const result = await playlistFacade
+				.withTrace(span)
+				.deletePlaylist(playlistId)
 
 			if (result.isErr()) {
 				throw result.error
@@ -264,19 +287,22 @@ export const useDeletePlaylist = () => {
 }
 
 export const useBatchDeleteTracksFromLocalPlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.batch_remove_tracks' },
 		mutationKey: ['db', 'playlist', 'batchDeleteTracksFromLocalPlaylist'],
-		mutationFn: async ({
-			trackIds,
-			playlistId,
-		}: {
-			trackIds: number[]
-			playlistId: number
-		}) => {
-			const result = await playlistFacade.removeTracksFromPlaylist(
-				playlistId,
+		mutationFn: async (
+			{
 				trackIds,
-			)
+				playlistId,
+			}: {
+				trackIds: number[]
+				playlistId: number
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.removeTracksFromPlaylist(playlistId, trackIds)
 
 			if (result.isErr()) {
 				throw result.error
@@ -320,14 +346,18 @@ export const useBatchDeleteTracksFromLocalPlaylist = () => {
 }
 
 export const useCreateNewLocalPlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.create' },
 		mutationKey: ['db', 'playlist', 'createNewLocalPlaylist'],
-		mutationFn: async (payload: {
-			title: string
-			description?: string
-			coverUrl?: string
-		}) => {
-			const result = await playlistService.createPlaylist({
+		mutationFn: async (
+			payload: {
+				title: string
+				description?: string
+				coverUrl?: string
+			},
+			{ span },
+		) => {
+			const result = await playlistService.withTrace(span).createPlaylist({
 				...payload,
 				type: 'local',
 			})
@@ -355,19 +385,22 @@ export const useCreateNewLocalPlaylist = () => {
 }
 
 export const useMergePlaylists = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.merge' },
 		mutationKey: ['db', 'playlist', 'mergePlaylists'],
-		mutationFn: async ({
-			sourcePlaylistIds,
-			title,
-		}: {
-			sourcePlaylistIds: number[]
-			title: string
-		}) => {
-			const result = await playlistFacade.mergePlaylists(
+		mutationFn: async (
+			{
 				sourcePlaylistIds,
 				title,
-			)
+			}: {
+				sourcePlaylistIds: number[]
+				title: string
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.mergePlaylists(sourcePlaylistIds, title)
 
 			if (result.isErr()) throw result.error
 
@@ -392,27 +425,30 @@ export const useMergePlaylists = () => {
 }
 
 export const useReorderLocalPlaylistTrack = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.reorder_track' },
 		mutationKey: ['db', 'playlist', 'reorderLocalPlaylistTrack'],
-		mutationFn: async ({
-			playlistId,
-			trackId,
-			prevSortKey,
-			nextSortKey,
-		}: {
-			playlistId: number
-			trackId: number
-			prevSortKey: string | null
-			nextSortKey: string | null
-		}) => {
-			const result = await playlistFacade.reorderLocalPlaylistTrack(
+		mutationFn: async (
+			{
 				playlistId,
-				{
+				trackId,
+				prevSortKey,
+				nextSortKey,
+			}: {
+				playlistId: number
+				trackId: number
+				prevSortKey: string | null
+				nextSortKey: string | null
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.reorderLocalPlaylistTrack(playlistId, {
 					trackId,
 					prevSortKey,
 					nextSortKey,
-				},
-			)
+				})
 
 			if (result.isErr()) throw result.error
 
@@ -434,19 +470,22 @@ export const useReorderLocalPlaylistTrack = () => {
  * @returns
  */
 export const useBatchAddTracksToLocalPlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'playlist.batch_add_tracks' },
 		mutationKey: ['db', 'playlist', 'batchAddTracksToLocalPlaylist'],
-		mutationFn: async ({
-			playlistId,
-			payloads,
-		}: {
-			playlistId: number
-			payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
-		}) => {
-			const result = await playlistFacade.batchAddTracksToLocalPlaylist(
+		mutationFn: async (
+			{
 				playlistId,
 				payloads,
-			)
+			}: {
+				playlistId: number
+				payloads: { track: CreateTrackPayload; artist: CreateArtistPayload }[]
+			},
+			{ span },
+		) => {
+			const result = await playlistFacade
+				.withTrace(span)
+				.batchAddTracksToLocalPlaylist(playlistId, payloads)
 
 			if (result.isErr()) throw result.error
 
@@ -486,7 +525,8 @@ export const useBatchAddTracksToLocalPlaylist = () => {
  * 将本地歌单升级为共享歌单（启用分享）
  */
 export const useEnableSharing = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'shared_playlist.enable' },
 		mutationKey: ['db', 'playlist', 'enableSharing'],
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
 			await ensureBBPlayerToken()
@@ -519,7 +559,8 @@ export const useEnableSharing = () => {
 export const useSubscribeToSharedPlaylist = () => {
 	const router = useRouter()
 
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'shared_playlist.subscribe' },
 		mutationKey: ['db', 'playlist', 'subscribeToSharedPlaylist'],
 		mutationFn: async ({
 			shareId,
@@ -557,7 +598,8 @@ export const useSubscribeToSharedPlaylist = () => {
  * 拉取共享歌单的增量变更
  */
 export const usePullSharedPlaylist = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'shared_playlist.pull' },
 		mutationKey: ['db', 'playlist', 'pullSharedPlaylist'],
 		mutationFn: async ({ playlistId }: { playlistId: number }) => {
 			await ensureBBPlayerToken()
@@ -599,7 +641,8 @@ export const usePullSharedPlaylist = () => {
 }
 
 export const useRotateEditorInviteCode = () => {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'shared_playlist.rotate_editor_invite' },
 		mutationKey: ['db', 'playlist', 'editorInvite', 'rotate'],
 		mutationFn: async ({ shareId }: { shareId: string }) => {
 			const result = await sharedPlaylistFacade.rotateEditorInviteCode(shareId)

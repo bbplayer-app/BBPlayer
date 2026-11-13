@@ -1,7 +1,7 @@
 import { Orpheus } from '@bbplayer/orpheus'
-import { useMutation } from '@tanstack/react-query'
 
 import { orpheusQueryKeys } from '@/hooks/queries/orpheus'
+import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 
 queryClient.setMutationDefaults(['orpheus'], {
@@ -10,7 +10,8 @@ queryClient.setMutationDefaults(['orpheus'], {
 })
 
 export function useRemoveDownloadsMutation() {
-	return useMutation({
+	return useTracedMutation({
+		span: { name: 'download.remove' },
 		mutationFn: async (ids: string[]) => {
 			await Orpheus.removeDownloads(ids)
 		},

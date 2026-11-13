@@ -110,7 +110,12 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 			</Dialog.Content>
 			<Dialog.Actions>
 				<Button onPress={handleDismiss}>取消</Button>
-				<Button onPress={handleConfirm}>确定</Button>
+				<Button
+					testID='edit-track-confirm'
+					onPress={handleConfirm}
+				>
+					确定
+				</Button>
 			</Dialog.Actions>
 		</>
 	)

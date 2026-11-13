@@ -87,6 +87,7 @@ export const ToViewTrackListItem = memo(function ToViewTrackListItem({
 
 	return (
 		<Touchable
+			testID='toview-item'
 			androidRipple={{}}
 			style={[
 				styles.rectButton,

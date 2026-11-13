@@ -72,6 +72,7 @@ const SyncOptionsModal = memo(function SyncOptionsModal({
 			<Dialog.Actions>
 				<Button onPress={() => close('SyncOptions')}>取消</Button>
 				<Button
+					testID='sync-options-start'
 					mode='contained'
 					onPress={handleStart}
 				>

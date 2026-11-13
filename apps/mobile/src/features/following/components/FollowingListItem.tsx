@@ -15,6 +15,7 @@ export function FollowingListItem({
 
 	return (
 		<List.Item
+			testID='following-user'
 			title={user.uname}
 			titleNumberOfLines={1}
 			description={user.sign || '查看投稿'}
