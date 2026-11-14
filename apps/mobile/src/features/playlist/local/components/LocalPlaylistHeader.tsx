@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useCallback, useMemo, useState } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
 	Avatar,
 	Divider,
@@ -20,6 +20,7 @@ import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
 import { alert } from '@/components/modals/AlertModal'
 import type { SharedPlaylistMember } from '@/hooks/queries/sharedPlaylistMembers'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import { playlistService } from '@/lib/services/playlistService'
 import type { Playlist } from '@/types/core/media'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -110,8 +111,8 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	const sidebar = usePlaylistSidebar()
 	const [showFullTitle, setShowFullTitle] = useState(false)
 	const router = useRouter()
-	const { width, height } = useWindowDimensions()
-	const coverSize = sidebar ? 220 : width < 360 || height < 700 ? 88 : 120
+	const { isCompact } = useResponsiveLayout()
+	const coverSize = sidebar ? 220 : isCompact ? 88 : 120
 	const { colors } = useTheme()
 
 	const { isLocal, authorName, authorClickable, countText, syncLine } = useMemo(

@@ -22,6 +22,7 @@ import { createSubtitleReaderStore } from '@/features/player/stores/subtitleRead
 import { exportSubtitles } from '@/features/player/utils/exportSubtitles'
 import { subtitleLabel } from '@/features/player/utils/subtitles'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useDialogHorizontalMargin } from '@/hooks/ui/useResponsiveLayout'
 import { toastAndLogError } from '@/utils/error-handling'
 
 import {
@@ -41,6 +42,7 @@ export function PodcastSubtitles({
 	const { lines, trackId } = data
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
+	const dialogMargin = useDialogHorizontalMargin()
 	const [pickerVisible, setPickerVisible] = useState(false)
 	const [exporting, setExporting] = useState(false)
 	const exportingRef = useRef(false)
@@ -181,6 +183,7 @@ export function PodcastSubtitles({
 				<Dialog
 					visible={pickerVisible && active}
 					onDismiss={() => setPickerVisible(false)}
+					style={{ marginHorizontal: dialogMargin }}
 				>
 					<Dialog.Title>选择字幕</Dialog.Title>
 					<Dialog.Content>

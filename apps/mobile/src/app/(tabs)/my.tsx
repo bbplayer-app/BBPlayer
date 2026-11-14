@@ -6,7 +6,7 @@ import { Image } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
+import { ScrollView, StyleSheet, View } from 'react-native'
 import { Touchable } from 'react-native-gesture-handler'
 import { Icon, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -32,9 +32,7 @@ import { markPerfInteractive } from '@/lib/performance'
 function MyPageContent() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
-	const { width, height } = useWindowDimensions()
-	const compact = width < 360 || height < 700
-	const { isTwoPane } = useResponsiveLayout()
+	const { isTwoPane, isCompact: compact } = useResponsiveLayout()
 	const router = useRouter()
 	const haveTrack = useCurrentTrack()
 	const hideStarPrompt = useAppStore((state) => state.settings.hideStarPrompt)

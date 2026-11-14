@@ -33,6 +33,7 @@ import SearchHistory, {
 import SearchSuggestions from '@/features/search/SearchSuggestions'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { MAX_WIDTH } from '@/hooks/ui/useResponsiveLayout'
 import { markPerfInteractive } from '@/lib/performance'
 import { toastAndLogError } from '@/utils/error-handling'
 import {
@@ -42,9 +43,6 @@ import {
 
 const SEARCH_HISTORY_KEY = 'bilibili_search_history'
 const MAX_SEARCH_HISTORY = 10
-
-// 宽屏下搜索框与左侧标题对齐，但不横跨整屏。
-const SEARCH_MAX_WIDTH = 720
 
 function SearchPageContent() {
 	const { colors } = useTheme()
@@ -365,10 +363,10 @@ const styles = StyleSheet.create({
 	searchbarContainer: {
 		paddingHorizontal: 16,
 		paddingBottom: 16,
-		maxWidth: SEARCH_MAX_WIDTH,
+		maxWidth: MAX_WIDTH.search,
 	},
 	searchbar: { borderRadius: 9999 },
-	content: { flex: 1, paddingHorizontal: 16, maxWidth: SEARCH_MAX_WIDTH },
+	content: { flex: 1, paddingHorizontal: 16, maxWidth: MAX_WIDTH.search },
 	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
 	resolving: { flex: 1 },
 })

@@ -9,16 +9,8 @@ import {
 	type TrueSheetProps,
 } from '@lodev09/react-native-true-sheet'
 import Color from 'color'
-import type { Ref, RefObject } from 'react'
-import {
-	memo,
-	useCallback,
-	useEffect,
-	useImperativeHandle,
-	useMemo,
-	useRef,
-	useState,
-} from 'react'
+import type { RefObject } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View } from 'react-native'
 import {
 	GestureDetector,
@@ -171,30 +163,22 @@ const TrackItem = memo(
 
 TrackItem.displayName = 'TrackItem'
 
-export interface PlayerQueueController {
-	scrollToCurrent: () => void
-	reset: () => void
-	getScrollRef: () => ReturnType<LegendListRef['getNativeScrollRef']>
+interface PlayerQueueModalProps extends TrueSheetProps {
+	sheetRef?: RefObject<TrueSheet | null>
 }
 
-interface PlayerQueueContentProps {
-	/** 执行会打开其他弹窗的操作；底部弹层需要先收起自己再执行。 */
-	runAction: (action: () => void) => void
-	/** 嵌入页面时挂载后立即定位到当前曲目；底部弹层由 onMount 触发。 */
-	embedded?: boolean
-	controllerRef?: Ref<PlayerQueueController>
-	/** 嵌入页面时关闭队列面板。 */
-	onClose?: () => void
-}
-
-/** 播放队列列表本体，既用于底部弹层，也用于宽屏播放器的右栏。 */
-export function PlayerQueueContent({
-	runAction: dismissWithAction,
-	embedded = false,
-	controllerRef,
-	onClose,
-}: PlayerQueueContentProps) {
+function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
+	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
 	const [clearing, setClearing] = useState(false)
+	const { deferAction, runPendingAction } = useDeferredSheetAction()
+
+	const dismissWithAction = useCallback(
+		(action: () => void) => {
+			deferAction(action)
+			void usePlayerQueueSheetStore.getState().close()
+		},
+		[deferAction],
+	)
 
 	const clearQueue = () => {
 		dismissWithAction(() => {
@@ -258,6 +242,15 @@ export function PlayerQueueContent({
 	}, [])
 
 	useEffect(() => stopAutoScroll, [stopAutoScroll])
+
+	const scrollableRef = useMemo(
+		() => ({
+			get current() {
+				return flatListRef.current?.getNativeScrollRef() ?? null
+			},
+		}),
+		[],
+	)
 
 	const queue = usePlayerQueueStore((state) => state.tracks)
 	const queueRef = useRef(queue)
@@ -446,25 +439,6 @@ export function PlayerQueueContent({
 		setDidInitialScroll(true)
 	}, [currentIndex, queue.length, didInitialScroll])
 
-	useEffect(() => {
-		if (embedded) scrollToCurrent()
-	}, [embedded, scrollToCurrent])
-
-	useImperativeHandle(
-		controllerRef,
-		() => ({
-			scrollToCurrent,
-			reset: () => {
-				stopAutoScroll()
-				dragRef.current = null
-				setDrag(null)
-				setDidInitialScroll(false)
-			},
-			getScrollRef: () => flatListRef.current?.getNativeScrollRef() ?? null,
-		}),
-		[scrollToCurrent, stopAutoScroll],
-	)
-
 	const saveQueueToPlaylistHandler = useCallback(() => {
 		if (queue.length === 0) return
 		dismissWithAction(() =>
@@ -501,158 +475,6 @@ export function PlayerQueueContent({
 	])
 
 	return (
-		<TvFocusScope style={{ flex: 1 }}>
-			<GestureHandlerRootView style={{ flex: 1 }}>
-				<View
-					style={{
-						flex: 1,
-					}}
-				>
-					<View
-						style={{
-							flexDirection: 'row',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							paddingHorizontal: 16,
-							paddingTop: embedded ? 4 : 16,
-							borderBottomWidth: 1,
-							borderBottomColor: theme.colors.elevation.level2,
-						}}
-					>
-						<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
-						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
-							<MenuView {...menuActions}>
-								<IconButton
-									icon='dots-vertical'
-									disabled={clearing}
-									loading={clearing}
-									testID='player-queue-menu'
-								/>
-							</MenuView>
-							{onClose && (
-								<IconButton
-									icon='close'
-									onPress={onClose}
-									accessibilityLabel='关闭播放队列'
-									testID='player-queue-close'
-								/>
-							)}
-						</View>
-					</View>
-					<View
-						style={{ flex: 1, minHeight: 2, overflow: 'hidden' }}
-						onLayout={(event) => {
-							listHeightRef.current = event.nativeEvent.layout.height
-						}}
-					>
-						<LegendList
-							ref={flatListRef}
-							data={queue}
-							renderItem={renderItem}
-							keyExtractor={keyExtractor}
-							recycleItems
-							showsVerticalScrollIndicator={false}
-							nestedScrollEnabled
-							scrollEnabled={drag === null}
-							onScroll={(event) => {
-								scrollOffsetRef.current = event.nativeEvent.contentOffset.y
-
-								if (dragRef.current)
-									updateDropTarget(dragTranslationRef.current)
-							}}
-							onContentSizeChange={(_width, height) => {
-								contentHeightRef.current = height
-							}}
-						/>
-						{drag && (
-							<Animated.View
-								pointerEvents='none'
-								style={[
-									{
-										position: 'absolute',
-										left: 16,
-										right: 16,
-										top: 0,
-										height: 3,
-										borderRadius: 2,
-										backgroundColor: theme.colors.primary,
-										zIndex: 1,
-									},
-									lineStyle,
-								]}
-							/>
-						)}
-						{drag && queue[drag.from] && (
-							<Animated.View
-								pointerEvents='none'
-								style={[
-									{
-										position: 'absolute',
-										left: 0,
-										right: 0,
-										top: 0,
-										height: ROW_HEIGHT,
-										justifyContent: 'center',
-										paddingHorizontal: 16,
-										backgroundColor: Color(theme.colors.elevation.level5)
-											.alpha(0.82)
-											.rgb()
-											.string(),
-										elevation: 8,
-										zIndex: 2,
-									},
-									ghostStyle,
-								]}
-							>
-								<Text
-									variant='bodyMedium'
-									numberOfLines={1}
-								>
-									{queue[drag.from].title}
-								</Text>
-								<Text
-									variant='bodySmall'
-									numberOfLines={1}
-								>
-									{queue[drag.from].artist ?? '未知作者'}
-								</Text>
-							</Animated.View>
-						)}
-					</View>
-				</View>
-			</GestureHandlerRootView>
-		</TvFocusScope>
-	)
-}
-
-interface PlayerQueueModalProps extends TrueSheetProps {
-	sheetRef?: RefObject<TrueSheet | null>
-}
-
-function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
-	const pureWhiteBackground = useAppStore((s) => s.settings.pureWhiteBackground)
-	const theme = useTheme()
-	const { deferAction, runPendingAction } = useDeferredSheetAction()
-	const controller = useRef<PlayerQueueController>(null)
-
-	const dismissWithAction = useCallback(
-		(action: () => void) => {
-			deferAction(action)
-			void usePlayerQueueSheetStore.getState().close()
-		},
-		[deferAction],
-	)
-
-	const scrollableRef = useMemo(
-		() => ({
-			get current() {
-				return controller.current?.getScrollRef() ?? null
-			},
-		}),
-		[],
-	)
-
-	return (
 		<TrueSheet
 			name='playerQueueModal'
 			ref={sheetRef}
@@ -662,21 +484,133 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			dimOpacity={pureWhiteBackground ? 0 : undefined}
 			style={{ flex: 1 }}
 			scrollableRef={scrollableRef}
-			onMount={() => controller.current?.scrollToCurrent()}
+			onMount={scrollToCurrent}
 			onDidPresent={() => {
 				usePlayerQueueSheetStore.getState().setOpen(true)
 			}}
 			onDidDismiss={() => {
-				controller.current?.reset()
+				stopAutoScroll()
+				dragRef.current = null
+				setDrag(null)
 				usePlayerQueueSheetStore.getState().setOpen(false)
+				setDidInitialScroll(false)
 				runPendingAction()
 			}}
 			{...props}
 		>
-			<PlayerQueueContent
-				runAction={dismissWithAction}
-				controllerRef={controller}
-			/>
+			<TvFocusScope style={{ flex: 1 }}>
+				<GestureHandlerRootView style={{ flex: 1 }}>
+					<View
+						style={{
+							flex: 1,
+						}}
+					>
+						<View
+							style={{
+								flexDirection: 'row',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								paddingHorizontal: 16,
+								paddingTop: 16,
+								borderBottomWidth: 1,
+								borderBottomColor: theme.colors.elevation.level2,
+							}}
+						>
+							<Text variant='titleMedium'>播放队列 ({queue.length})</Text>
+							<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+								<MenuView {...menuActions}>
+									<IconButton
+										icon='dots-vertical'
+										disabled={clearing}
+										loading={clearing}
+										testID='player-queue-menu'
+									/>
+								</MenuView>
+							</View>
+						</View>
+						<View
+							style={{ flex: 1, minHeight: 2, overflow: 'hidden' }}
+							onLayout={(event) => {
+								listHeightRef.current = event.nativeEvent.layout.height
+							}}
+						>
+							<LegendList
+								ref={flatListRef}
+								data={queue}
+								renderItem={renderItem}
+								keyExtractor={keyExtractor}
+								recycleItems
+								showsVerticalScrollIndicator={false}
+								nestedScrollEnabled
+								scrollEnabled={drag === null}
+								onScroll={(event) => {
+									scrollOffsetRef.current = event.nativeEvent.contentOffset.y
+
+									if (dragRef.current)
+										updateDropTarget(dragTranslationRef.current)
+								}}
+								onContentSizeChange={(_width, height) => {
+									contentHeightRef.current = height
+								}}
+							/>
+							{drag && (
+								<Animated.View
+									pointerEvents='none'
+									style={[
+										{
+											position: 'absolute',
+											left: 16,
+											right: 16,
+											top: 0,
+											height: 3,
+											borderRadius: 2,
+											backgroundColor: theme.colors.primary,
+											zIndex: 1,
+										},
+										lineStyle,
+									]}
+								/>
+							)}
+							{drag && queue[drag.from] && (
+								<Animated.View
+									pointerEvents='none'
+									style={[
+										{
+											position: 'absolute',
+											left: 0,
+											right: 0,
+											top: 0,
+											height: ROW_HEIGHT,
+											justifyContent: 'center',
+											paddingHorizontal: 16,
+											backgroundColor: Color(theme.colors.elevation.level5)
+												.alpha(0.82)
+												.rgb()
+												.string(),
+											elevation: 8,
+											zIndex: 2,
+										},
+										ghostStyle,
+									]}
+								>
+									<Text
+										variant='bodyMedium'
+										numberOfLines={1}
+									>
+										{queue[drag.from].title}
+									</Text>
+									<Text
+										variant='bodySmall'
+										numberOfLines={1}
+									>
+										{queue[drag.from].artist ?? '未知作者'}
+									</Text>
+								</Animated.View>
+							)}
+						</View>
+					</View>
+				</GestureHandlerRootView>
+			</TvFocusScope>
 		</TrueSheet>
 	)
 }

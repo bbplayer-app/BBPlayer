@@ -3,8 +3,7 @@ import { usePathname, useRouter, useSegments } from 'expo-router'
 import type { PropsWithChildren } from 'react'
 import { useContext, useState } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
-import { Platform, StyleSheet, View } from 'react-native'
-import { Touchable } from 'react-native-gesture-handler'
+import { Platform, Pressable, StyleSheet, View } from 'react-native'
 import { Icon, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -41,9 +40,13 @@ export function NavigationRailProvider({ children }: PropsWithChildren) {
 /** 覆盖在根导航栈之上的导航栏；全屏页面（如播放器）打开时隐藏。 */
 export function NavigationRailOverlay() {
 	const railWidth = useContext(NativeTabRailWidthContext)
-	const segments = useSegments()
+	const route = useSegments()[0] ?? ''
+	// 弹窗路由叠在当前页面之上，导航栏沿用下面那个页面的显示状态。
+	const [baseRoute, setBaseRoute] = useState(route)
 
-	if (railWidth === 0 || FULLSCREEN_ROUTES.has(segments[0] ?? '')) return null
+	if (route !== 'modal' && route !== baseRoute) setBaseRoute(route)
+
+	if (railWidth === 0 || FULLSCREEN_ROUTES.has(baseRoute)) return null
 
 	return <NavigationRail style={styles.overlay} />
 }
@@ -82,6 +85,7 @@ export default function NavigationRail({
 
 	return (
 		<View
+			accessibilityRole='tablist'
 			style={[
 				styles.rail,
 				style,
@@ -117,7 +121,7 @@ export default function NavigationRail({
 					selected: activeTab === 'my',
 				},
 			].map((tab) => (
-				<Touchable
+				<Pressable
 					key={tab.id}
 					onPress={() => {
 						// 从二级页面切 Tab 时先回到 Tab 页，而不是在当前页面之上再压一层。
@@ -130,48 +134,68 @@ export default function NavigationRail({
 					testID={`tablet-tab-${tab.id}`}
 					style={styles.railTab}
 				>
-					<View
-						collapsable={false}
-						style={[
-							styles.railIcon,
-							{
-								backgroundColor: tab.selected
-									? colors.secondaryContainer
-									: 'transparent',
-							},
-						]}
-					>
-						{tab.skin?.default ? (
-							<Image
-								source={{
-									uri: tab.selected
-										? (tab.skin.selected ?? tab.skin.default)
-										: tab.skin.default,
+					{({ pressed }) => (
+						<>
+							<View
+								collapsable={false}
+								style={[
+									styles.railIcon,
+									{
+										backgroundColor: tab.selected
+											? colors.secondaryContainer
+											: 'transparent',
+									},
+								]}
+							>
+								{tab.skin?.default ? (
+									<Image
+										source={{
+											uri: tab.selected
+												? (tab.skin.selected ?? tab.skin.default)
+												: tab.skin.default,
+										}}
+										style={{ width: 48, height: 48 }}
+										contentFit='contain'
+									/>
+								) : (
+									<Icon
+										source={tab.icon}
+										size={24}
+										color={
+											tab.selected
+												? colors.onSecondaryContainer
+												: colors.onSurfaceVariant
+										}
+									/>
+								)}
+								{/* Material 3 的状态层：按下时叠一层半透明的前景色；遥控器焦点由原生焦点框绘制。 */}
+								{pressed && (
+									<View
+										pointerEvents='none'
+										style={[
+											styles.stateLayer,
+											{
+												backgroundColor: tab.selected
+													? colors.onSecondaryContainer
+													: colors.onSurface,
+											},
+										]}
+									/>
+								)}
+							</View>
+							<Text
+								variant='labelMedium'
+								style={{
+									color: tab.selected
+										? colors.onSurface
+										: colors.onSurfaceVariant,
 								}}
-								style={{ width: 48, height: 48 }}
-								contentFit='contain'
-							/>
-						) : (
-							<Icon
-								source={tab.icon}
-								size={24}
-								color={
-									tab.selected
-										? colors.onSecondaryContainer
-										: colors.onSurfaceVariant
-								}
-							/>
-						)}
-					</View>
-					<Text
-						variant='labelMedium'
-						style={{
-							color: tab.selected ? colors.onSurface : colors.onSurfaceVariant,
-						}}
-					>
-						{tab.label}
-					</Text>
-				</Touchable>
+							>
+								{tab.label}
+							</Text>
+						</>
+					)}
+				</Pressable>
 			))}
 		</View>
 	)
@@ -189,4 +213,5 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
+	stateLayer: { ...StyleSheet.absoluteFill, opacity: 0.12 },
 })

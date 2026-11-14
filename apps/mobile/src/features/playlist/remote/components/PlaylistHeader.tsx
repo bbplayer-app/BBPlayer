@@ -2,7 +2,7 @@ import * as Clipboard from 'expo-clipboard'
 import type { ImageRef } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { memo, useState } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { Divider, Text, TouchableRipple } from 'react-native-paper'
 import type { IconSource } from 'react-native-paper/lib/typescript/components/Icon'
 
@@ -10,6 +10,7 @@ import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
 import ExpandableText from '@/components/common/ExpandableText'
 import { usePlaylistSidebar } from '@/components/layout/PlaylistDetailLayout'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import toast from '@/utils/toast'
 
 interface PlaylistHeaderProps {
@@ -53,9 +54,9 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 	...props
 }: PlaylistHeaderProps) {
 	const router = useRouter()
-	const { width, height } = useWindowDimensions()
+	const { isCompact } = useResponsiveLayout()
 	const sidebar = usePlaylistSidebar()
-	const coverSize = sidebar ? 220 : width < 360 || height < 700 ? 88 : 120
+	const coverSize = sidebar ? 220 : isCompact ? 88 : 120
 	const [showFullTitle, setShowFullTitle] = useState(false)
 
 	if (!title) return null

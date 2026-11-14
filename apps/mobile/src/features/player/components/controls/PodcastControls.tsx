@@ -6,6 +6,7 @@ import IconButton from '@/components/common/IconButton'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -13,21 +14,21 @@ import {
 	MainPlaybackControls,
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
-import type { PlayerSidePane } from './PlayerControls'
 
 export function PodcastControls({
-	onOpenQueue,
-	onOpenComments,
-	activePane = null,
+	commentsPane = false,
 	compact = false,
 }: {
-	onOpenQueue?: () => void
-	/** 仅宽屏双栏播放器提供：在右栏打开评论。 */
-	onOpenComments?: () => void
-	activePane?: PlayerSidePane
+	/** 仅宽屏播放器提供：以侧边面板展示评论。 */
+	commentsPane?: boolean
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
+
+	const commentsOpen = usePlayerCommentsPaneStore(
+		(state) => commentsPane && state.isOpen,
+	)
+
 	const { speed, sleepEndTime } = usePlaybackOptions()
 	const [now, setNow] = useState(() => Date.now())
 	useEffect(() => {
@@ -62,13 +63,13 @@ export function PodcastControls({
 				void usePlayerChaptersSheetStore.getState().open()
 			},
 		},
-		...(onOpenComments
+		...(commentsPane
 			? [
 					{
 						icon: 'comment-text-outline',
 						accessibilityLabel: '打开评论',
-						onPress: onOpenComments,
-						selected: activePane === 'comments',
+						onPress: () => usePlayerCommentsPaneStore.getState().toggle(),
+						selected: commentsOpen,
 					},
 				]
 			: []),
@@ -76,10 +77,8 @@ export function PodcastControls({
 			icon: 'format-list-bulleted',
 			accessibilityLabel: '打开播放队列',
 			onPress: () => {
-				if (onOpenQueue) onOpenQueue()
-				else void usePlayerQueueSheetStore.getState().open()
+				void usePlayerQueueSheetStore.getState().open()
 			},
-			selected: activePane === 'queue',
 		},
 	]
 

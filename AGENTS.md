@@ -37,11 +37,12 @@ pnpm type-check             # TypeScript type checking
 - mobile - React Native 移动应用（技术栈：Expo + Drizzle ORM + Material Design 3 + Zustand + TanStack Query）
 - backend - 后端服务，主要提供歌单共享与软件更新查询（技术栈：Hono + ArkType + Drizzle ORM + CloudFlare Worker）
 - docs - VuePress 文档网站
-- update-publisher - 用于发布更新的工具
+- update-publisher - 用于发布 App 版本更新信息的 TUI 工具
+- update-server - 自托管的 Expo Updates（热更新）服务（技术栈：Go + PostgreSQL + Cloudflare R2）
+- hot-update-cli - 发布与管理热更新的命令行工具
 
 ### /packages
 
-- bottom-tabs-react-navigation — React Native 原生底部标签栏与 React Navigation 的桥接适配层
 - eslint-plugin — 项目自定义 lint 规则（经 oxlint jsPlugins 运行）
 - expo-wavy-slider — Android 原生波形滑动条（Jetpack Compose）的 Expo 模块封装
 - heatmap — 基于 SVG 的日期热力图组件
@@ -49,5 +50,11 @@ pnpm type-check             # TypeScript type checking
 - logs — React Native 日志库
 - native — BBPlayer 原生能力集成模块
 - orpheus — BBPlayer 核心音频播放引擎
-- react-native-bottom-tabs — 跨平台原生底部标签栏组件
 - splash — 歌词转换与解析库
+
+## 导航与平板适配
+
+- 底部标签栏使用 `expo-router/native-tabs`。它在 Android 上只有底部导航栏，没有 Navigation Rail，所以平板宽度（≥600dp）下隐藏原生标签栏，改用手写的 `apps/mobile/src/components/navigation/NavigationRail.tsx` 覆盖在根布局左侧
+- 断点与布局尺寸统一定义在 `apps/mobile/src/hooks/ui/useResponsiveLayout.ts`（`BREAKPOINTS`、`MAX_WIDTH`），页面里不要自己比较宽高：
+  - `useResponsiveLayout()` 返回 `isCompact`（宽 <360 或可用高度 <600）、`isTablet`（宽 ≥600）、`isExpanded`（宽 ≥840）、`isTwoPane`（宽 ≥840 且高 ≥600）
+  - 页面内拿到的是 `ResponsiveContent` 测量的内容区尺寸，已扣除左右安全区和侧边导航栏；组件需要按自身尺寸判断时用 `isCompactSize()`

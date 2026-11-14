@@ -58,7 +58,9 @@ export default function ResponsiveScreen(
 			}}
 		>
 			<View style={[styles.screen, { backgroundColor: colors.background }]}>
-				<ResponsiveContent>
+				<ResponsiveContent
+					reservedWidth={insets.left + insets.right + reservedRail}
+				>
 					<ResponsiveScreenContent {...props} />
 				</ResponsiveContent>
 			</View>

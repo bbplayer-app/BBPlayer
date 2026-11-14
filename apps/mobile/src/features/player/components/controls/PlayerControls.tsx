@@ -5,18 +5,13 @@ import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import { MusicControls } from './MusicControls'
 import { PodcastControls } from './PodcastControls'
 
-/** 宽屏播放器右栏当前展示的面板，用于高亮对应的入口按钮。 */
-export type PlayerSidePane = 'comments' | 'queue' | null
-
 export function PlayerControls({
 	onOpenQueue,
-	onOpenComments,
-	activePane = null,
+	commentsPane = false,
 	compact = false,
 }: {
 	onOpenQueue: () => void
-	onOpenComments?: () => void
-	activePane?: PlayerSidePane
+	commentsPane?: boolean
 	compact?: boolean
 }) {
 	return (
@@ -24,17 +19,14 @@ export function PlayerControls({
 			{{
 				podcast: () => (
 					<PodcastControls
-						onOpenComments={onOpenComments}
-						onOpenQueue={onOpenQueue}
-						activePane={activePane}
+						commentsPane={commentsPane}
 						compact={compact}
 					/>
 				),
 				default: () => (
 					<MusicControls
-						onOpenComments={onOpenComments}
 						onOpenQueue={onOpenQueue}
-						activePane={activePane}
+						commentsPane={commentsPane}
 						compact={compact}
 					/>
 				),

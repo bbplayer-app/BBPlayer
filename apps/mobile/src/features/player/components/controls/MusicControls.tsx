@@ -10,6 +10,7 @@ import {
 	setPlayerRepeatMode,
 	setPlayerShuffleMode,
 } from '@/hooks/player/usePlaybackOptions'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -18,23 +19,25 @@ import {
 	MainPlaybackControls,
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
-import type { PlayerSidePane } from './PlayerControls'
 
 export function MusicControls({
 	onOpenQueue,
-	onOpenComments,
-	activePane = null,
+	commentsPane = false,
 	compact = false,
 }: {
 	onOpenQueue: () => void
-	onOpenComments?: () => void
-	activePane?: PlayerSidePane
+	/** 宽屏播放器中评论以侧边面板展示，而不是跳转到评论页。 */
+	commentsPane?: boolean
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
 	const { shuffle: shuffleMode, repeat: repeatMode } = usePlaybackOptions()
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+
+	const commentsOpen = usePlayerCommentsPaneStore(
+		(state) => commentsPane && state.isOpen,
+	)
 
 	return (
 		<View>
@@ -99,13 +102,11 @@ export function MusicControls({
 				<IconButton
 					icon='comment-text-outline'
 					size={24}
-					iconColor={
-						activePane === 'comments' ? colors.primary : colors.onSurfaceVariant
-					}
+					iconColor={commentsOpen ? colors.primary : colors.onSurfaceVariant}
 					disabled={currentTrack?.source !== 'bilibili'}
 					onPress={() => {
-						if (onOpenComments) {
-							onOpenComments()
+						if (commentsPane) {
+							usePlayerCommentsPaneStore.getState().toggle()
 
 							return
 						}
@@ -122,9 +123,7 @@ export function MusicControls({
 				<IconButton
 					icon='format-list-bulleted'
 					size={24}
-					iconColor={
-						activePane === 'queue' ? colors.primary : colors.onSurfaceVariant
-					}
+					iconColor={colors.onSurfaceVariant}
 					onPress={() => {
 						void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
 						onOpenQueue()

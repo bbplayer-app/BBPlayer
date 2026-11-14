@@ -6,7 +6,7 @@ import { Canvas, LinearGradient, Rect, vec } from '@shopify/react-native-skia'
 import { useImage } from 'expo-image'
 import { useObserve } from 'expo-observe'
 import { router, useIsFocused } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	AppState,
 	Platform,
@@ -29,7 +29,6 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { PlayerQueueContent } from '@/components/modals/PlayerQueueModal'
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
 import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
@@ -43,10 +42,9 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
-import { analyticsService } from '@/lib/services/analyticsService'
-import type { BilibiliCommentItem } from '@/types/apis/bilibili'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
 
@@ -172,49 +170,14 @@ export default function PlayerPage() {
 
 	const [index, setIndex] = useState(0)
 
-	const [rightPane, setRightPane] = useState<'lyrics' | 'comments' | 'queue'>(
-		'lyrics',
-	)
-
-	const [commentsBvid, setCommentsBvid] = useState<string | null>(null)
-	const [commentReplyId, setCommentReplyId] = useState<number | null>(null)
-
 	const bvid =
 		currentTrack?.source === 'bilibili'
 			? currentTrack.bilibiliMetadata.bvid
 			: undefined
 
-	const commentsOpen = isTwoPane && rightPane === 'comments' && !!bvid
-	const queueOpen = isTwoPane && rightPane === 'queue'
-	// 宽屏右栏默认展示歌词/字幕；评论与队列由控制区按钮切换。
-	const readerOpen = !commentsOpen && !queueOpen
-	const activePane = commentsOpen ? 'comments' : queueOpen ? 'queue' : null
-
-	const onReplyPress = useCallback(
-		(item: BilibiliCommentItem) => setCommentReplyId(item.rpid),
-		[],
-	)
-
-	const openComments = useCallback(() => {
-		if (!bvid) return
-		setCommentsBvid(bvid)
-		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : 'comments'))
-	}, [bvid])
-
-	const toggleQueue = useCallback(() => {
-		void analyticsService.logPlayerQueueAction('open_queue')
-		setRightPane((pane) => (pane === 'queue' ? 'lyrics' : 'queue'))
-	}, [])
-
-	useEffect(() => {
-		// 评论跟随曲目，换歌后收起；队列面板里切歌时保持打开。
-		setRightPane((pane) => (pane === 'comments' ? 'lyrics' : pane))
-		setCommentsBvid(null)
-		setCommentReplyId(null)
-	}, [currentTrack?.uniqueKey])
-
+	// 宽屏右栏常驻歌词/字幕，评论面板只是临时覆盖在上面。
 	const suppressDesktopLyrics =
-		isFocused && isForeground && (isTwoPane ? readerOpen : index === 1)
+		isFocused && isForeground && (isTwoPane || index === 1)
 
 	useEffect(() => {
 		if (Platform.OS !== 'android') return
@@ -407,15 +370,11 @@ export default function PlayerPage() {
 			return
 		}
 
-		if (commentsOpen) {
-			if (commentReplyId !== null) setCommentReplyId(null)
-			else setRightPane('lyrics')
+		const comments = usePlayerCommentsPaneStore.getState()
 
-			return
-		}
-
-		if (queueOpen) {
-			setRightPane('lyrics')
+		if (isTwoPane && comments.isOpen) {
+			if (comments.replyId !== null) comments.closeReply()
+			else comments.close()
 
 			return
 		}
@@ -513,9 +472,6 @@ export default function PlayerPage() {
 								const main = (
 									<PlayerMainTab
 										embedded={isTwoPane}
-										onOpenComments={isTwoPane ? openComments : undefined}
-										onOpenQueue={isTwoPane ? toggleQueue : undefined}
-										activePane={activePane}
 										jumpTo={jumpTo}
 										imageRef={coverRef}
 										onPresent={() => {}}
@@ -524,12 +480,12 @@ export default function PlayerPage() {
 
 								const reader = podcast ? (
 									<PodcastSubtitles
-										active={(isTwoPane ? readerOpen : index === 1) && isFocused}
+										active={(isTwoPane || index === 1) && isFocused}
 										embedded={isTwoPane}
 									/>
 								) : (
 									<Lyrics
-										currentIndex={isTwoPane ? (readerOpen ? 1 : 0) : index}
+										currentIndex={isTwoPane ? 1 : index}
 										embedded={isTwoPane}
 										onPressBackground={
 											isTwoPane ? undefined : () => jumpTo('main')
@@ -550,36 +506,8 @@ export default function PlayerPage() {
 												{ borderLeftColor: colors.outlineVariant },
 											]}
 										>
-											<View
-												style={[styles.tabView, !readerOpen && styles.hidden]}
-											>
-												{reader}
-											</View>
-											{bvid && commentsBvid === bvid && (
-												<View
-													style={[
-														styles.tabView,
-														!commentsOpen && styles.hidden,
-													]}
-												>
-													<PlayerCommentsPane
-														bvid={bvid}
-														replyId={commentReplyId}
-														onReplyPress={onReplyPress}
-														onBack={() => setCommentReplyId(null)}
-														onClose={() => setRightPane('lyrics')}
-													/>
-												</View>
-											)}
-											{queueOpen && (
-												<View style={styles.tabView}>
-													<PlayerQueueContent
-														embedded
-														runAction={(action) => action()}
-														onClose={() => setRightPane('lyrics')}
-													/>
-												</View>
-											)}
+											<View style={styles.tabView}>{reader}</View>
+											<PlayerCommentsPane bvid={bvid} />
 										</View>
 									</View>
 								) : (
@@ -645,7 +573,6 @@ const styles = StyleSheet.create({
 		borderLeftWidth: StyleSheet.hairlineWidth,
 		paddingHorizontal: 24,
 	},
-	hidden: { display: 'none' },
 	tabView: {
 		flex: 1,
 	},
