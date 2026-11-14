@@ -13,6 +13,17 @@ class OrpheusQueueManager {
         return backingQueue
     }
     
+    /// The queue in the order it will play, which is the order JS shows and indexes into.
+    func getPlaybackQueue() -> [Track] {
+        guard let indices = shuffleIndices else { return backingQueue }
+        return indices.map { backingQueue[$0] }
+    }
+
+    /// Converts a position in `getPlaybackQueue()` to a backing index.
+    func backingIndex(forPlaybackPosition position: Int) -> Int? {
+        return getBackingIndex(from: position)
+    }
+    
     func getCurrentTrack() -> Track? {
         guard currentIndex >= 0 && currentIndex < backingQueue.count else { return nil }
         return backingQueue[currentIndex]
@@ -34,27 +45,20 @@ class OrpheusQueueManager {
     
     func setQueue(_ tracks: [Track], startFromIndex: Int, inputShuffleMode: Bool) {
         backingQueue = tracks
+        shuffleIndices = nil
+        pendingShuffleInit = inputShuffleMode && tracks.isEmpty
+
+        if tracks.isEmpty {
+            currentIndex = -1
+        } else if tracks.indices.contains(startFromIndex) {
+            currentIndex = startFromIndex
+        } else {
+            currentIndex = inputShuffleMode ? Int.random(in: tracks.indices) : 0
+        }
         
         if inputShuffleMode {
-            shuffleIndices = Array(0..<tracks.count).shuffled()
-            
-            if startFromIndex >= 0 && startFromIndex < tracks.count {
-                currentIndex = startFromIndex
-            } else {
-            currentIndex = shuffleIndices?.first ?? -1 // Start with first in shuffle if no specific start
-                 if currentIndex == -1 && !tracks.isEmpty { currentIndex = tracks.indices.contains(0) ? shuffleIndices?.first ?? 0 : 0 }
-            }
-            
-        } else {
-            shuffleIndices = nil
-            pendingShuffleInit = false
-            if tracks.isEmpty {
-                currentIndex = -1
-            } else if startFromIndex >= 0 && startFromIndex < tracks.count {
-                currentIndex = startFromIndex
-            } else {
-                currentIndex = 0 // Safe default
-            }
+            // Puts the starting track first, so that no other track falls before it and is skipped.
+            generateShuffleIndices()
         }
     }
     
@@ -155,6 +159,13 @@ class OrpheusQueueManager {
               backingQueue.indices.contains(toIndex),
               fromIndex != toIndex else { return false }
 
+        // While shuffled these are playback positions, so only the playback order changes.
+        if var indices = shuffleIndices {
+            indices.insert(indices.remove(at: fromIndex), at: toIndex)
+            shuffleIndices = indices
+            return true
+        }
+
         let track = backingQueue.remove(at: fromIndex)
         backingQueue.insert(track, at: toIndex)
 
@@ -166,7 +177,6 @@ class OrpheusQueueManager {
         }
 
         currentIndex = shiftedIndex(currentIndex)
-        shuffleIndices = shuffleIndices?.map(shiftedIndex)
         return true
     }
     
@@ -220,12 +230,20 @@ class OrpheusQueueManager {
     }
     
     func append(tracks: [Track]) {
+        guard !tracks.isEmpty else { return }
+        let wasEmpty = backingQueue.isEmpty
         let startIndex = backingQueue.count
         backingQueue.append(contentsOf: tracks)
         
-        if pendingShuffleInit {
-            generateShuffleIndices()
+        if wasEmpty {
+            // As on Android, tracks arriving in an empty queue get a current track straight away.
+            let shuffled = pendingShuffleInit || shuffleIndices != nil
+            currentIndex = shuffled ? Int.random(in: backingQueue.indices) : 0
+            shuffleIndices = nil
             pendingShuffleInit = false
+            if shuffled {
+                generateShuffleIndices()
+            }
         } else if var indices = shuffleIndices {
             // Add new items to end of shuffle order (standard "Add to Queue" behavior)
              let newIndices = (startIndex..<(startIndex + tracks.count))
@@ -235,9 +253,14 @@ class OrpheusQueueManager {
     }
 
     func insertNext(track: Track) {
+        // As on Android, a track already in the queue moves instead of appearing twice.
+        if let existing = backingQueue.firstIndex(where: { $0.id == track.id }) {
+            guard existing != currentIndex else { return }
+            _ = removeTrack(at: existing)
+        }
+
         if backingQueue.isEmpty {
-             backingQueue = [track]
-             currentIndex = 0
+             append(tracks: [track])
              return
         }
         
@@ -264,6 +287,8 @@ class OrpheusQueueManager {
     }
     
     func clear() {
+        // The shuffle setting outlives the queue, so whatever is added next is shuffled too.
+        pendingShuffleInit = pendingShuffleInit || shuffleIndices != nil
         backingQueue.removeAll()
         shuffleIndices = nil
         currentIndex = -1

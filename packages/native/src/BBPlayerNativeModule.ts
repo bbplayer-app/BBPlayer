@@ -77,7 +77,11 @@ export const getStorageUsageAsync = () =>
  *
  * 不会删除离线下载；Media3 LRU 缓存由 `@bbplayer/orpheus` 单独清理。
  */
-export const clearCacheAsync = () => getNativeModule().clearCacheAsync()
+export const clearCacheAsync = async () => {
+	// iOS 的图片缓存由 expo-image 清理，没有额外的运行数据缓存。
+	if (Platform.OS !== 'android') return
+	await getNativeModule().clearCacheAsync()
+}
 
 /**
  * 只读列出应用私有目录（`dataDir`）下 `path` 的内容。

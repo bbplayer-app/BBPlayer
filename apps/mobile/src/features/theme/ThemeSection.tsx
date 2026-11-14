@@ -1,4 +1,7 @@
-import { BootSplashVideoView } from '@bbplayer/native'
+import {
+	BootSplashVideoView,
+	isBootSplashVideoSupported,
+} from '@bbplayer/native'
 import { SegmentedControl } from '@expo/ui/community/segmented-control'
 import { Slider } from '@expo/ui/community/slider'
 import * as Expo from 'expo'
@@ -138,7 +141,9 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 		) ?? activeSkin?.bootSplash.items?.[0]
 
 	const selectedMode =
-		selectedBootSplashAsset?.video && selectedSkinBootSplashMode === 'video'
+		isBootSplashVideoSupported &&
+		selectedBootSplashAsset?.video &&
+		selectedSkinBootSplashMode === 'video'
 			? '动图'
 			: '静态海报'
 
@@ -392,7 +397,7 @@ function ThemeSectionContent({ disabled }: { disabled: boolean }) {
 													cachePolicy='memory-disk'
 												/>
 											) : null}
-											{item.video ? (
+											{item.video && isBootSplashVideoSupported ? (
 												<View
 													style={[
 														styles.videoBadge,
@@ -940,10 +945,12 @@ function BootSplashAssetPreview({
 		mode: 'poster' | 'video'
 	} | null>(null)
 
+	const hasVideo = isBootSplashVideoSupported && Boolean(asset?.video)
+
 	const mode =
 		asset && selectedMode?.assetId === asset.id
 			? selectedMode.mode
-			: asset?.video
+			: hasVideo
 				? 'video'
 				: 'poster'
 
@@ -956,7 +963,7 @@ function BootSplashAssetPreview({
 				<>
 					<Dialog.Title>{asset.name}</Dialog.Title>
 					<Dialog.Content>
-						{asset.video ? (
+						{hasVideo ? (
 							<View style={styles.segmentedControlContainer}>
 								<SegmentedControl
 									selectedIndex={mode === 'poster' ? 0 : 1}

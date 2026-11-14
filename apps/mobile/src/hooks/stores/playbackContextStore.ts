@@ -1,7 +1,7 @@
 import { Orpheus, ResumeStrategy } from '@bbplayer/orpheus'
 import { observable } from '@legendapp/state'
 import { syncObservable } from '@legendapp/state/sync'
-import { AppState, Platform } from 'react-native'
+import { AppState } from 'react-native'
 
 import useAppStore from '@/hooks/stores/useAppStore'
 import {
@@ -59,7 +59,6 @@ export function setPlaybackContext(context: PlaybackContext | null) {
  * 避免在初始化或恢复上下文时重复应用断点。
  */
 export function applyResumeStrategy(mode?: PlayerMode | null) {
-	if (Platform.OS !== 'android') return
 	Orpheus.playbackResumeStrategy =
 		mode === 'podcast' ? ResumeStrategy.PODCAST : ResumeStrategy.NONE
 }

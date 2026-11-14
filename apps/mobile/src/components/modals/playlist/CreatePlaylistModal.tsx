@@ -1,4 +1,3 @@
-import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
@@ -9,6 +8,7 @@ import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import { useCreateNewLocalPlaylist } from '@/hooks/mutations/db/playlist'
 import { useModalStore } from '@/hooks/stores/useModalStore'
+import { pickImage } from '@/utils/pickImage'
 import toast from '@/utils/toast'
 
 export default function CreatePlaylistModal({
@@ -65,14 +65,10 @@ export default function CreatePlaylistModal({
 	])
 
 	const handleImagePicker = useCallback(async () => {
-		const result = await DocumentPicker.getDocumentAsync({
-			type: 'image/*',
-			copyToCacheDirectory: true,
-			multiple: false,
-		})
+		const imageUri = await pickImage()
 
-		if (result.canceled || result.assets.length === 0) return
-		const assetFile = new FileSystem.File(result.assets[0].uri)
+		if (!imageUri) return
+		const assetFile = new FileSystem.File(imageUri)
 
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,

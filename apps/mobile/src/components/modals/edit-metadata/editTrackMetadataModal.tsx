@@ -1,4 +1,3 @@
-import * as DocumentPicker from 'expo-document-picker'
 import * as FileSystem from 'expo-file-system'
 import { useCallback, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -9,6 +8,7 @@ import IconButton from '@/components/common/IconButton'
 import { useEditTrackMetadata } from '@/hooks/mutations/db/track'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import type { Track } from '@/types/core/media'
+import { pickImage } from '@/utils/pickImage'
 import toast from '@/utils/toast'
 
 const sanitizeFileName = (name: string) =>
@@ -42,16 +42,11 @@ export default function EditTrackMetadataModal({ track }: { track: Track }) {
 	}
 
 	const handleImagePicker = useCallback(async () => {
-		const result = await DocumentPicker.getDocumentAsync({
-			type: 'image/*',
-			copyToCacheDirectory: true,
-			multiple: false,
-		})
+		const imageUri = await pickImage()
 
-		if (result.canceled || result.assets.length === 0) return
+		if (!imageUri) return
 
-		const asset = result.assets[0]
-		const assetFile = new FileSystem.File(asset.uri)
+		const assetFile = new FileSystem.File(imageUri)
 
 		const coverDir = new FileSystem.Directory(
 			FileSystem.Paths.document,

@@ -2,7 +2,7 @@ import { Checkbox, Host } from '@expo/ui'
 import { memo } from 'react'
 import { View } from 'react-native'
 
-type UniversalCheckboxProps = {
+export type UniversalCheckboxProps = {
 	status: 'checked' | 'unchecked' | 'indeterminate'
 	onPress?: () => void
 	disabled?: boolean

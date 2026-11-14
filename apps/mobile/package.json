@@ -6,6 +6,7 @@
 	"scripts": {
 		"android": "expo prebuild --clean --platform android && WITH_ROZENITE=true expo run:android",
 		"hot-update": "pnpm --dir ../hot-update-cli start -- --project-dir \"$PWD\"",
+		"ios": "expo prebuild --clean --platform ios && WITH_ROZENITE=true expo run:ios",
 		"start": "WITH_ROZENITE=true APP_VARIANT=development expo start"
 	},
 	"dependencies": {
@@ -54,6 +55,7 @@
 		"expo-font": "~58.0.11",
 		"expo-haptics": "~58.0.7",
 		"expo-image": "~58.0.18",
+		"expo-image-picker": "~58.0.10",
 		"expo-insights": "~58.0.11",
 		"expo-linear-gradient": "~58.0.3",
 		"expo-linking": "~58.0.16",
@@ -150,6 +152,13 @@
 		"typescript": "~6.0.3"
 	},
 	"expo": {
+		"autolinking": {
+			"android": {
+				"exclude": [
+					"expo-image-picker"
+				]
+			}
+		},
 		"install": {
 			"exclude": [
 				"@sentry/react-native",

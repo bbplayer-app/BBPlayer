@@ -26,12 +26,25 @@ public class ExpoOrpheusModule: Module {
         }
 
         OrpheusDownloadManager.shared.onDownloadUpdated = { [weak self] task in
-            self?.sendEvent("onDownloadUpdated", [
+            var payload: [String: Any] = [
                 "id": task.id,
                 "state": task.state.rawValue,
                 "percentDownloaded": task.percentDownloaded,
                 "bytesDownloaded": task.bytesDownloaded,
                 "contentLength": task.contentLength
+            ]
+            if let track = task.track {
+                payload["track"] = track.dictionaryRepresentation
+            }
+            self?.sendEvent("onDownloadUpdated", payload)
+        }
+
+        OrpheusDownloadManager.shared.onCoverDownloadProgress = { [weak self] current, total, trackId, status in
+            self?.sendEvent("onCoverDownloadProgress", [
+                "current": current,
+                "total": total,
+                "trackId": trackId,
+                "status": status
             ])
         }
 
@@ -54,6 +67,10 @@ public class ExpoOrpheusModule: Module {
         manager.onQueueChanged = { [weak self] in
             self?.sendEvent("onQueueChanged", [:])
         }
+
+        manager.onPlaybackSpeedChanged = { [weak self] speed in
+            self?.sendEvent("onPlaybackSpeedChanged", ["speed": speed])
+        }
     }
 
     public func definition() -> ModuleDefinition {
@@ -72,7 +89,11 @@ public class ExpoOrpheusModule: Module {
             "onHeadlessEvent",
             "onTrackStarted",
             "onTrackFinished",
-            "onQueueChanged"
+            "onQueueChanged",
+            "onCoverDownloadProgress",
+            "onExportProgress",
+            "onStatusBarLyricsStatusChanged",
+            "onRequestClearLyrics"
         )
 
         OnCreate {
@@ -92,7 +113,10 @@ public class ExpoOrpheusModule: Module {
 
         Property("loudnessNormalizationEnabled")
             .get { GeneralStorage.shared.isLoudnessNormalizationEnabled }
-            .set { GeneralStorage.shared.isLoudnessNormalizationEnabled = $0 }
+            .set { (enabled: Bool) in
+                GeneralStorage.shared.isLoudnessNormalizationEnabled = enabled
+                OrpheusPlayerManager.shared.refreshLoudness()
+            }
 
         Property("autoplayOnStartEnabled")
             .get { GeneralStorage.shared.isAutoplayOnStartEnabled }
@@ -100,194 +124,260 @@ public class ExpoOrpheusModule: Module {
 
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.shared.isSpectrumVisualizerEnabled }
-            .set {
-                GeneralStorage.shared.isSpectrumVisualizerEnabled = $0
-                self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": $0])
+            .set { (enabled: Bool) in
+                GeneralStorage.shared.isSpectrumVisualizerEnabled = enabled
+                self.sendEvent("onSpectrumVisualizerEnabledChanged", ["enabled": enabled])
             }
+
+        Property("isNotificationArtworkEnabled")
+            .get { GeneralStorage.shared.isNotificationArtworkEnabled }
+            .set { GeneralStorage.shared.isNotificationArtworkEnabled = $0 }
+
+        Property("playbackResumeStrategy")
+            .get { GeneralStorage.shared.playbackResumeStrategy }
+            .set { GeneralStorage.shared.playbackResumeStrategy = $0 }
+
+        // Desktop, status bar and in-car lyrics are Android system features with no
+        // iOS counterpart. Shared settings screens still read these, so they stay off.
+        Property("isDesktopLyricsShown").get { false }.set { (_: Bool) in }
+        Property("isDesktopLyricsLocked").get { false }.set { (_: Bool) in }
+        Property("isStatusBarLyricsEnabled").get { false }.set { (_: Bool) in }
+        Property("isCarLyricsEnabled").get { false }.set { (_: Bool) in }
+        Property("statusBarLyricsProvider").get { "superlyric" }.set { (_: String) in }
+        Property("isSuperLyricApiEnabled").get { false }
+        Property("isLyriconApiEnabled").get { false }
+        Property("isMeizuStatusBarLyricsApiEnabled").get { false }
 
     // MARK: - Getters
 
+    // Everything touching the queue or player runs on main, alongside AVPlayer's own callbacks.
+
     AsyncFunction("getPosition") { () -> Double in
         return OrpheusPlayerManager.shared.getPosition()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getDuration") { () -> Double in
         return OrpheusPlayerManager.shared.getDuration()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getBuffered") { () -> Double in
         return OrpheusPlayerManager.shared.getBufferedPosition()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getIsPlaying") { () -> Bool in
         return OrpheusPlayerManager.shared.isPlaying()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getCurrentIndex") { () -> Int in
         return OrpheusPlayerManager.shared.getCurrentIndex()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getCurrentTrack") { () -> Track? in
         return OrpheusPlayerManager.shared.getCurrentTrack()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getQueue") { () -> [Track] in
         return OrpheusPlayerManager.shared.getQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getIndexTrack") { (index: Int) -> Track? in
         return OrpheusPlayerManager.shared.getTrack(at: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getPlaybackSpeed") { () -> Double in
         return Double(OrpheusPlayerManager.shared.getPlaybackSpeed())
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getRepeatMode") { () -> Int in
         return OrpheusPlayerManager.shared.repeatMode.rawValue
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getAdjacentTracks") { () -> [String: Track?] in
         return OrpheusPlayerManager.shared.getAdjacentTracks()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("getShuffleMode") { () -> Bool in
         return OrpheusPlayerManager.shared.shuffleMode
-    }
+    }.runOnQueue(.main)
 
     // MARK: - Controls
 
     AsyncFunction("play") {
         OrpheusPlayerManager.shared.play()
-    }
+    }.runOnQueue(.main)
     AsyncFunction("pause") {
         OrpheusPlayerManager.shared.pause()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipToNext") {
         OrpheusPlayerManager.shared.playNext()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipToPrevious") {
         OrpheusPlayerManager.shared.skipToPrevious()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("seekTo") { (seconds: Double) in
         OrpheusPlayerManager.shared.seek(to: seconds)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("skipTo") { (index: Int) in
         OrpheusPlayerManager.shared.skipTo(index: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("addToEnd") { (tracks: [Track], startFromId: String?, clearQueue: Bool) in
         OrpheusPlayerManager.shared.addToEnd(tracks: tracks, startFromId: startFromId, clearQueue: clearQueue)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("playNext") { (track: Track) in
         OrpheusPlayerManager.shared.addToNext(track: track)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("removeTrack") { (index: Int) in
         OrpheusPlayerManager.shared.removeTrack(at: index)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("moveTrack") { (fromIndex: Int, toIndex: Int) in
         OrpheusPlayerManager.shared.moveTrack(fromIndex: fromIndex, toIndex: toIndex)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("clear") {
          OrpheusPlayerManager.shared.clearQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("reverseRemainingQueue") {
         OrpheusPlayerManager.shared.reverseRemainingQueue()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("setPlaybackSpeed") { (speed: Double) in
         OrpheusPlayerManager.shared.setPlaybackSpeed(Float(speed))
-    }
+    }.runOnQueue(.main)
 
     Function("setBilibiliCookie") { (cookie: String) in
         BilibiliApi.shared.setCookie(cookie)
     }
 
-    Function("setShuffleMode") { (enabled: Bool) in
+    AsyncFunction("setShuffleMode") { (enabled: Bool) in
         OrpheusPlayerManager.shared.setExecuteShuffleMode(enabled)
-    }
+    }.runOnQueue(.main)
 
-    Function("setRepeatMode") { (mode: Int) in
+    AsyncFunction("setRepeatMode") { (mode: Int) in
         if let repeatMode = RepeatMode(rawValue: mode) {
             OrpheusPlayerManager.shared.setExecuteRepeatMode(repeatMode)
         }
-    }
+    }.runOnQueue(.main)
 
-    Function("setSleepTimer") { (durationMs: Double) in
+    AsyncFunction("setSleepTimer") { (durationMs: Double) in
         OrpheusPlayerManager.shared.setSleepTimer(durationMs: durationMs)
-    }
+    }.runOnQueue(.main)
 
-    Function("getSleepTimerEndTime") { () -> Double? in
+    AsyncFunction("getSleepTimerEndTime") { () -> Double? in
         return OrpheusPlayerManager.shared.getSleepTimerEndTime()
-    }
+    }.runOnQueue(.main)
 
-    Function("cancelSleepTimer") {
+    AsyncFunction("cancelSleepTimer") {
         OrpheusPlayerManager.shared.cancelSleepTimer()
-    }
+    }.runOnQueue(.main)
 
     // MARK: - Downloads
 
-    Function("downloadTrack") { (track: Track) in
+    AsyncFunction("downloadTrack") { (track: Track) in
         OrpheusDownloadManager.shared.downloadTrack(track: track)
     }
 
-    Function("multiDownload") { (tracks: [Track]) in
+    AsyncFunction("multiDownload") { (tracks: [Track]) in
         OrpheusDownloadManager.shared.multiDownload(tracks: tracks)
     }
 
-    Function("resumeDownload") { (id: String) in
+    AsyncFunction("resumeDownload") { (id: String) in
         OrpheusDownloadManager.shared.resumeDownload(id: id)
     }
 
-    Function("retryDownload") { (track: Track) in
+    AsyncFunction("retryDownload") { (track: Track) in
         OrpheusDownloadManager.shared.downloadTrack(track: track)
     }
 
-    Function("setDownloadMaxParallelTasks") { (_: Int) in
-        // iOS download concurrency is currently managed by URLSession.
+    AsyncFunction("setDownloadMaxParallelTasks") { (maxParallelTasks: Int) in
+        OrpheusDownloadManager.shared.setMaxParallelTasks(maxParallelTasks)
     }
 
-    Function("removeDownload") { (id: String) in
+    AsyncFunction("removeDownload") { (id: String) in
         OrpheusDownloadManager.shared.removeDownload(id: id)
     }
 
-    Function("removeDownloads") { (ids: [String]) in
-        for id in ids {
-            OrpheusDownloadManager.shared.removeDownload(id: id)
-        }
+    AsyncFunction("removeDownloads") { (ids: [String]) in
+        OrpheusDownloadManager.shared.removeDownloads(ids: ids)
     }
 
-    Function("removeAllDownloads") {
+    AsyncFunction("removeAllDownloads") {
         OrpheusDownloadManager.shared.removeAllDownloads()
     }
 
-    Function("getDownloads") { () -> [DownloadTask] in
+    AsyncFunction("getDownloads") { () -> [DownloadTask] in
         return OrpheusDownloadManager.shared.getDownloads()
     }
 
-    Function("getCompletedDownloadTasks") { () -> [DownloadTask] in
+    AsyncFunction("getCompletedDownloadTasks") { () -> [DownloadTask] in
         return OrpheusDownloadManager.shared.getCompletedTasks()
     }
 
-    Function("getDownloadStatusByIds") { (ids: [String]) -> [String: Int] in
+    AsyncFunction("getDownloadStatusByIds") { (ids: [String]) -> [String: Int] in
         return OrpheusDownloadManager.shared.getDownloadStatusByIds(ids: ids)
     }
 
-    Function("clearUncompletedDownloadTasks") {
+    AsyncFunction("clearUncompletedDownloadTasks") {
         OrpheusDownloadManager.shared.clearUncompletedTasks()
     }
 
-    Function("getUncompletedDownloadTasks") { () -> [DownloadTask] in
+    AsyncFunction("getUncompletedDownloadTasks") { () -> [DownloadTask] in
          return OrpheusDownloadManager.shared.getUncompletedTasks()
+    }
+
+    AsyncFunction("setAllowSimultaneousPlayback") { (enabled: Bool) in
+        try OrpheusPlayerManager.shared.setAllowSimultaneousPlayback(enabled)
+    }.runOnQueue(.main)
+
+    // AVPlayer streams are not kept in an on-disk LRU cache on iOS.
+    AsyncFunction("clearPlaybackCache") { () -> Void in }
+
+    Function("getLruCachedUris") { (_: [String]) -> [String] in
+        return []
+    }
+
+    Function("getDownloadedCoverUri") { (id: String) -> String? in
+        return OrpheusDownloadManager.shared.getDownloadedCoverUri(id: id)
+    }
+
+    AsyncFunction("downloadMissingCovers") { () -> Int in
+        return OrpheusDownloadManager.shared.downloadMissingCovers()
+    }
+
+    AsyncFunction("exportDownloads") { (_: [String], _: String, _: String?, _: Bool, _: Bool, _: Bool) in
+        throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
+    }
+
+    AsyncFunction("selectDirectory") { () -> String? in
+        return nil
+    }
+
+    AsyncFunction("isDirectoryPickerAvailable") { () -> Bool in
+        return false
+    }
+
+    Function("exportData") { () -> [String: Any] in
+        return [
+            "playerQueue": GeneralStorage.shared.exportConfig(),
+            "loudness": GeneralStorage.shared.exportLoudness()
+        ]
+    }
+
+    Function("importData") { (data: [String: Any]) in
+        if let config = data["playerQueue"] as? [String: Any] {
+            GeneralStorage.shared.importConfig(config)
+        }
+        if let loudness = data["loudness"] as? [String: Any] {
+            GeneralStorage.shared.importLoudness(loudness)
+        }
     }
 
     AsyncFunction("checkOverlayPermission") { () -> Bool in
@@ -330,14 +420,9 @@ public class ExpoOrpheusModule: Module {
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
 
-    Function("updateSpectrumData") { (destination: TypedArray) in
-        let count = destination.length
-        // Get the unsafe pointer to valid memory
-        let pointer = destination.getUnsafeMutablePointer(Float32.self)
-
-        if let ptr = pointer {
-            AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: ptr, count: count)
-        }
+    Function("updateSpectrumData") { (destination: Float32Array) in
+        let pointer = destination.rawPointer.assumingMemoryBound(to: Float32.self)
+        AudioSpectrumAnalyzer.shared.fillSpectrumData(destination: pointer, count: destination.length)
     }
 
   }

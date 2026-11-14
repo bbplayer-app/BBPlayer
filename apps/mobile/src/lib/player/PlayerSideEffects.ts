@@ -131,6 +131,7 @@ class PlayerSideEffects {
 		const rawMessage =
 			('rootCauseMessage' in event ? event.rootCauseMessage : null) ||
 			('message' in event ? event.message : null) ||
+			('error' in event ? event.error : null) ||
 			''
 
 		const errorCode = 'errorCode' in event ? event.errorCode : null
@@ -264,7 +265,9 @@ class PlayerSideEffects {
 
 		return {
 			message:
-				('message' in event ? event.message : null) || '播放器发生未知错误',
+				('message' in event ? event.message : null) ||
+				('error' in event ? event.error : null) ||
+				'播放器发生未知错误',
 			shouldReport: true,
 		}
 	}

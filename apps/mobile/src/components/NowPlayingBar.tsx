@@ -47,7 +47,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { NativeTabRailWidthContext } from '@/hooks/ui/useResponsiveLayout'
 import * as Haptics from '@/utils/haptics'
-import { resolveTrackCover } from '@/utils/imageUrl'
+import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 
 import ActivityIndicator from './common/ActivityIndicator'
 
@@ -101,6 +101,17 @@ const ProgressBar = memo(function ProgressBar() {
 		</View>
 	)
 })
+
+// iOS 用 CDN 缩略图：和其余封面走同一路径，也避免为 48pt 的封面下载原图。
+// 这对 Android 同样成立，只是移植时没有做 Android 回归测试，所以先只在 iOS 上启用。
+const resolveBarCover = (
+	uniqueKey: string | undefined,
+	coverUrl: string | null | undefined,
+) => {
+	const cover = resolveTrackCover(uniqueKey, coverUrl)
+
+	return Platform.OS === 'ios' ? resolveBilibiliImageUrl(cover, 200) : cover
+}
 
 const playPause = async () => {
 	void Haptics.performHaptics(Haptics.AndroidHaptics.Context_Click)
@@ -327,7 +338,13 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 						]}
 						testID='now-playing-bar'
 					>
-						<View style={styles.nowPlayingBarContent}>
+						<View
+							style={[
+								styles.nowPlayingBarContent,
+								Platform.OS === 'ios' &&
+									styles.nowPlayingBarContentAboveProgress,
+							]}
+						>
 							{/* 触摸由外层手势处理（点按、上滑打开播放器，左右滑切歌）；这一层只给
 							    遥控器 / 键盘一个可以聚焦、按确认键打开播放器的位置。 */}
 							<Pressable
@@ -341,7 +358,7 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 								<Image
 									source={{
 										uri:
-											resolveTrackCover(
+											resolveBarCover(
 												currentTrack.uniqueKey,
 												currentTrack.coverUrl,
 											) ?? undefined,
@@ -351,6 +368,9 @@ const NowPlayingBarContent = memo(function NowPlayingBarContent() {
 										{
 											borderColor: colors.primary,
 											borderRadius: nowPlayingBarStyle === 'bottom' ? 12 : 24,
+										},
+										Platform.OS === 'ios' && {
+											backgroundColor: colors.surfaceVariant,
 										},
 									]}
 									recyclingKey={currentTrack.uniqueKey}
@@ -539,6 +559,10 @@ const styles = StyleSheet.create({
 	nowPlayingBarContent: {
 		flexDirection: 'row',
 		alignItems: 'center',
+	},
+	// iOS 上封面的 zIndex 只在自己的父视图内生效，整块内容要提到进度条之上。
+	nowPlayingBarContentAboveProgress: {
+		zIndex: 2,
 	},
 	nowPlayingBarOpener: {
 		flex: 1,

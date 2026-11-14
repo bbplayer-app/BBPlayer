@@ -1,4 +1,7 @@
-import { BootSplashVideoView } from '@bbplayer/native'
+import {
+	BootSplashVideoView,
+	isBootSplashVideoSupported,
+} from '@bbplayer/native'
 import { Image } from 'expo-image'
 import { memo, useEffect, useState } from 'react'
 import { StyleSheet, useColorScheme, useWindowDimensions } from 'react-native'
@@ -70,13 +73,15 @@ const AnimatedBootSplash = memo(function AnimatedBootSplash({
 		preloadedCard = preloadRaw.slice(pipeIdx + 1) || null
 	}
 
-	const bootSplashVideo = pureWhiteBackground
-		? null
-		: preloadedVideo && selectedMode === 'video'
-			? preloadedVideo
-			: selectedMode === 'video'
-				? (bootSplashAsset?.video ?? null)
-				: null
+	// A video choice can arrive through a backup from Android; the poster stands in for it.
+	const bootSplashVideo =
+		pureWhiteBackground || !isBootSplashVideoSupported
+			? null
+			: preloadedVideo && selectedMode === 'video'
+				? preloadedVideo
+				: selectedMode === 'video'
+					? (bootSplashAsset?.video ?? null)
+					: null
 
 	const bootSplashAssetCard = pureWhiteBackground
 		? null

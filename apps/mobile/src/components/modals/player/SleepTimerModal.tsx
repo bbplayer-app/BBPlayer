@@ -76,16 +76,21 @@ const SleepTimerModal = () => {
 				)}
 				<View style={styles.presetContainer}>
 					{PRESET_DURATIONS.map((minutes) => (
-						<Button
-							testID='sleep-timer-preset'
+						// On iOS, Paper's Surface moves flexBasis to its inner column,
+						// where the percentage would set the button's height instead.
+						<View
 							key={minutes}
-							mode='contained-tonal'
-							onPress={() => handleSetTimer(minutes)}
 							style={styles.presetButton}
 						>
-							{minutes}
-							{'\u2009'}分钟
-						</Button>
+							<Button
+								testID='sleep-timer-preset'
+								mode='contained-tonal'
+								onPress={() => handleSetTimer(minutes)}
+							>
+								{minutes}
+								{'\u2009'}分钟
+							</Button>
+						</View>
 					))}
 				</View>
 				{customInputVisible ? (
