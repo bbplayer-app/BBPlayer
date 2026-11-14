@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Button from '@/components/common/Button'
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import { alert } from '@/components/modals/AlertModal'
 import {
 	useCloudBackupMutation,
@@ -44,6 +45,7 @@ import toast from '@/utils/toast'
 
 export default function BackupSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
@@ -174,7 +176,7 @@ export default function BackupSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='数据与备份' />
 			</Appbar.Header>
 			<ScrollView

@@ -310,6 +310,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 		},
 		owner: 'roitium',
 		ios: {
+			supportsTablet: true,
 			bundleIdentifier: 'com.roitium.bbplayer',
 			runtimeVersion: {
 				policy: 'appVersion',

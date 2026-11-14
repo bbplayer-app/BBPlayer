@@ -3,11 +3,13 @@ import { ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 
 export default function DonateSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const openModal = useModalStore((state) => state.open)
@@ -16,7 +18,7 @@ export default function DonateSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='捐赠支持' />
 			</Appbar.Header>
 			<ScrollView

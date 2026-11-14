@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, Button, useTheme } from 'react-native-paper'
 
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -257,70 +258,71 @@ export default function SeriesPage() {
 				)}
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={tracks}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					isFetchingNextPage={isFetchingNextPage}
-					hasNextPage={hasNextPage && !isFetchNextPageError}
-					{...(isFetchNextPageError
-						? {
-								ListFooterComponent: (
-									<Button
-										testID='remote-playlist-load-more-retry'
-										onPress={() => void fetchNextPage()}
-									>
-										重试加载更多
-									</Button>
-								),
-							}
-						: {})}
-					onEndReached={
-						hasNextPage &&
-						!refreshing &&
-						!isFetchingNextPage &&
-						!isFetchNextPageError
-							? () => void fetchNextPage()
-							: undefined
-					}
-					onEndReachedThreshold={0.5}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={seriesMetadata.name}
-							subtitles={`${artistName}\u2009•\u2009${seriesMetadata.total}\u2009首歌曲`}
-							description={seriesMetadata.description}
-							onClickMainButton={handleSync}
-							mainButtonIcon={'sync'}
-							linkedPlaylistId={linkedPlaylistId}
-							id={id}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={() => void handleRefresh()}
-							colors={[colors.primary]}
-						/>
-					}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={seriesMetadata.name}
+						subtitles={`${artistName}\u2009•\u2009${seriesMetadata.total}\u2009首歌曲`}
+						description={seriesMetadata.description}
+						onClickMainButton={handleSync}
+						mainButtonIcon={'sync'}
+						linkedPlaylistId={linkedPlaylistId}
+						id={id}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={tracks}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						isFetchingNextPage={isFetchingNextPage}
+						hasNextPage={hasNextPage && !isFetchNextPageError}
+						{...(isFetchNextPageError
+							? {
+									ListFooterComponent: (
+										<Button
+											testID='remote-playlist-load-more-retry'
+											onPress={() => void fetchNextPage()}
+										>
+											重试加载更多
+										</Button>
+									),
+								}
+							: {})}
+						onEndReached={
+							hasNextPage &&
+							!refreshing &&
+							!isFetchingNextPage &&
+							!isFetchNextPageError
+								? () => void fetchNextPage()
+								: undefined
+						}
+						onEndReachedThreshold={0.5}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={() => void handleRefresh()}
+								colors={[colors.primary]}
+							/>
+						}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 })

@@ -3,9 +3,11 @@ import { View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
 import { formatDurationToHHMMSS } from '@/utils/time'
 
@@ -14,8 +16,23 @@ import {
 	SecondaryPlaybackControls,
 } from './PlayerControlContent'
 
-export function PodcastControls({ compact = false }: { compact?: boolean }) {
+export function PodcastControls({
+	commentsPane = false,
+	compact = false,
+}: {
+	/** 仅宽屏播放器提供：以侧边面板展示评论。 */
+	commentsPane?: boolean
+	compact?: boolean
+}) {
 	const { colors } = useTheme()
+	const currentTrack = useCurrentTrack()
+	// 只有 B 站曲目有评论区，本地曲目不显示入口。
+	const showComments = commentsPane && currentTrack?.source === 'bilibili'
+
+	const commentsOpen = usePlayerCommentsPaneStore(
+		(state) => showComments && state.isOpen,
+	)
+
 	const { speed, sleepEndTime } = usePlaybackOptions()
 	const [now, setNow] = useState(() => Date.now())
 	useEffect(() => {
@@ -50,6 +67,16 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 				void usePlayerChaptersSheetStore.getState().open()
 			},
 		},
+		...(showComments
+			? [
+					{
+						icon: 'comment-text-outline',
+						accessibilityLabel: '打开评论',
+						onPress: () => usePlayerCommentsPaneStore.getState().toggle(),
+						selected: commentsOpen,
+					},
+				]
+			: []),
 		{
 			icon: 'format-list-bulleted',
 			accessibilityLabel: '打开播放队列',
@@ -74,7 +101,11 @@ export function PodcastControls({ compact = false }: { compact?: boolean }) {
 						key={action.icon}
 						icon={action.icon}
 						size={24}
-						iconColor={colors.onSurfaceVariant}
+						iconColor={
+							'selected' in action && action.selected
+								? colors.primary
+								: colors.onSurfaceVariant
+						}
 						onPress={action.onPress}
 						accessibilityLabel={action.accessibilityLabel}
 					/>

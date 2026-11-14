@@ -6,6 +6,7 @@ import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
 import { MenuView } from '@/components/common/FunctionalMenu'
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { alert } from '@/components/modals/AlertModal'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
@@ -278,55 +279,56 @@ export default function ToViewPage() {
 				</MenuView>
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={tracksData}
-					playTrack={handlePlay}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={'稍后再看'}
-							subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
-							description={undefined}
-							onClickMainButton={handlePlayAll}
-							mainButtonIcon={'play'}
-							linkedPlaylistId={undefined}
-							mainButtonText='播放全部'
-							id={'稍后再看'}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-							progressViewOffset={50}
-						/>
-					}
-					// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- renderToViewItem 需要一个特化属性 progress，就用 any hack 一下
-					renderCustomItem={renderToViewItem as any}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={'稍后再看'}
+						subtitles={`有\u2009${tracksData.length}\u2009首待播放的歌曲`}
+						description={undefined}
+						onClickMainButton={handlePlayAll}
+						mainButtonIcon={'play'}
+						linkedPlaylistId={undefined}
+						mainButtonText='播放全部'
+						id={'稍后再看'}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={tracksData}
+						playTrack={handlePlay}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await refetch()
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+								progressViewOffset={50}
+							/>
+						}
+						// oxlint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- renderToViewItem 需要一个特化属性 progress，就用 any hack 一下
+						renderCustomItem={renderToViewItem as any}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 })

@@ -32,6 +32,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
 import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
+import {
+	PlayerCommentsCovered,
+	PlayerCommentsPane,
+} from '@/features/player/components/main/PlayerCommentsPane'
 import { PlayerHeader } from '@/features/player/components/main/PlayerHeader'
 import PlayerMainTab from '@/features/player/components/main/PlayerMainTab'
 import { PlayerFunctionalMenu } from '@/features/player/components/menu/PlayerFunctionalMenu'
@@ -41,7 +45,9 @@ import usePreventRemove from '@/hooks/router/usePreventRemove'
 import { playbackContextStore$ } from '@/hooks/stores/playbackContextStore'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { usePlayerQueueSheetStore } from '@/hooks/stores/usePlayerQueueSheetStore'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import { resolveBilibiliImageUrl, resolveTrackCover } from '@/utils/imageUrl'
 import log, { reportErrorToSentry } from '@/utils/log'
 
@@ -130,6 +136,7 @@ export default function PlayerPage() {
 	})
 
 	const { width, height } = useWindowDimensions()
+	const { isTwoPane } = useResponsiveLayout()
 	const colorScheme = useColorScheme()
 
 	const pureWhiteBackground = useAppStore(
@@ -165,7 +172,15 @@ export default function PlayerPage() {
 	const [isPreventingBack, setIsPreventingBack] = useState(true)
 
 	const [index, setIndex] = useState(0)
-	const suppressDesktopLyrics = isFocused && isForeground && index === 1
+
+	const bvid =
+		currentTrack?.source === 'bilibili'
+			? currentTrack.bilibiliMetadata.bvid
+			: undefined
+
+	// 宽屏右栏常驻歌词/字幕，评论面板只是临时覆盖在上面。
+	const suppressDesktopLyrics =
+		isFocused && isForeground && (isTwoPane || index === 1)
 
 	useEffect(() => {
 		if (Platform.OS !== 'android') return
@@ -219,7 +234,7 @@ export default function PlayerPage() {
 	}, [isPreventingBack])
 
 	const handleDismiss = () => {
-		if (index === 1) {
+		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
 
 			return
@@ -248,9 +263,17 @@ export default function PlayerPage() {
 		}
 	})
 
+	useEffect(() => {
+		if (isTwoPane) {
+			setIndex(0)
+			scrollX.set(0)
+		}
+	}, [isTwoPane, scrollX])
+
 	const [menuVisible, setMenuVisible] = useState(false)
 
 	const jumpTo = (key: string) => {
+		if (isTwoPane) return
 		const targetIndex = key === 'lyrics' ? 1 : 0
 		pagerRef.current?.setPage(targetIndex)
 	}
@@ -351,7 +374,16 @@ export default function PlayerPage() {
 			return
 		}
 
-		if (index === 1) {
+		const comments = usePlayerCommentsPaneStore.getState()
+
+		if (isTwoPane && comments.isOpen) {
+			if (comments.replyId !== null) comments.closeReply()
+			else comments.close()
+
+			return
+		}
+
+		if (!isTwoPane && index === 1) {
 			pagerRef.current?.setPage(0)
 
 			return
@@ -437,44 +469,75 @@ export default function PlayerPage() {
 							/>
 						</Computed>
 						<Computed>
-							<AnimatedPagerView
-								key={
+							{() => {
+								const podcast =
 									playbackContextStore$.context.mode.get() === 'podcast'
-										? 'podcast'
-										: 'music'
-								}
-								ref={pagerRef}
-								style={styles.tabView}
-								initialPage={0}
-								onPageScroll={pageScrollHandler}
-								onPageSelected={(e) => setIndex(e.nativeEvent.position)}
-							>
-								{[
+
+								const main = (
+									<PlayerMainTab
+										embedded={isTwoPane}
+										jumpTo={jumpTo}
+										imageRef={coverRef}
+										onPresent={() => {}}
+									/>
+								)
+
+								const reader = podcast ? (
+									<PodcastSubtitles
+										active={(isTwoPane || index === 1) && isFocused}
+										embedded={isTwoPane}
+									/>
+								) : (
+									<Lyrics
+										currentIndex={isTwoPane ? 1 : index}
+										embedded={isTwoPane}
+										onPressBackground={
+											isTwoPane ? undefined : () => jumpTo('main')
+										}
+									/>
+								)
+
+								return isTwoPane ? (
 									<View
-										key='main'
-										style={styles.tabView}
+										style={styles.widePlayer}
+										testID='player-two-pane'
+										collapsable={false}
 									>
-										<PlayerMainTab
-											jumpTo={jumpTo}
-											imageRef={coverRef}
-											onPresent={() => {}}
-										/>
-									</View>,
-									<View
-										key='lyrics'
+										<View style={styles.playbackPane}>{main}</View>
+										<View
+											style={[
+												styles.readerPane,
+												{ borderLeftColor: colors.outlineVariant },
+											]}
+										>
+											<PlayerCommentsCovered>{reader}</PlayerCommentsCovered>
+											<PlayerCommentsPane bvid={bvid} />
+										</View>
+									</View>
+								) : (
+									<AnimatedPagerView
+										key={podcast ? 'podcast' : 'music'}
+										ref={pagerRef}
 										style={styles.tabView}
+										initialPage={index}
+										onPageScroll={pageScrollHandler}
+										onPageSelected={(e) => setIndex(e.nativeEvent.position)}
 									>
-										{playbackContextStore$.context.mode.get() === 'podcast' ? (
-											<PodcastSubtitles active={index === 1 && isFocused} />
-										) : (
-											<Lyrics
-												currentIndex={index}
-												onPressBackground={() => jumpTo('main')}
-											/>
-										)}
-									</View>,
-								]}
-							</AnimatedPagerView>
+										<View
+											key='main'
+											style={styles.tabView}
+										>
+											{main}
+										</View>
+										<View
+											key='lyrics'
+											style={styles.tabView}
+										>
+											{reader}
+										</View>
+									</AnimatedPagerView>
+								)
+							}}
 						</Computed>
 					</View>
 
@@ -498,6 +561,21 @@ const styles = StyleSheet.create({
 	},
 	innerContainer: {
 		flex: 1,
+	},
+	widePlayer: {
+		flex: 1,
+		minHeight: 0,
+		width: '100%',
+		alignSelf: 'center',
+		flexDirection: 'row',
+		paddingBottom: 8,
+	},
+	playbackPane: { width: '42%', minHeight: 0 },
+	readerPane: {
+		flex: 1,
+		minWidth: 0,
+		borderLeftWidth: StyleSheet.hairlineWidth,
+		paddingHorizontal: 24,
 	},
 	tabView: {
 		flex: 1,

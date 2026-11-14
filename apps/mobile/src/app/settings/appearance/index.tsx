@@ -14,6 +14,7 @@ import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import { alert } from '@/components/modals/AlertModal'
 import ThemeSection from '@/features/theme/ThemeSection'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
@@ -22,6 +23,7 @@ import { useMenuActions } from '@/hooks/ui/useMenuActions'
 
 export default function AppearanceSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
@@ -111,7 +113,7 @@ export default function AppearanceSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='外观与主题' />
 			</Appbar.Header>
 			<ScrollView

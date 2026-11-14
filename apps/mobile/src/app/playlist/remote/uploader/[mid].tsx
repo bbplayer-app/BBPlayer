@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated'
 
 import Button from '@/components/common/Button'
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -303,61 +304,65 @@ export default function UploaderPage() {
 				/>
 			</Animated.View>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={tracks ?? []}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={uploaderUserInfo.name}
-							subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
-							description={uploaderUserInfo.sign}
-							onClickMainButton={isSelf ? undefined : handleFollowing}
-							mainButtonIcon={isFollowing ? 'account-check' : 'account-plus'}
-							mainButtonText={
-								setFollowing.isPending
-									? '处理中'
-									: relation.isError
-										? '关注状态加载失败，重试'
-										: isBlocked
-											? '已拉黑'
-											: relation.isPending
-												? '加载关注状态'
-												: isFollowing
-													? '取消关注'
-													: '关注 UP 主'
-							}
-							mainButtonLoading={setFollowing.isPending || relation.isFetching}
-							disableMainButton={
-								setFollowing.isPending || relation.isFetching || isBlocked
-							}
-							id={Number(mid)}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await Promise.all([refetch(), relation.refetch()])
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-							progressViewOffset={50}
-						/>
-					}
-					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-					hasNextPage={hasNextPage}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={uploaderUserInfo.name}
+						subtitles={`${uploadedVideos?.pages[0].page.count ?? 0}\u2009首歌曲`}
+						description={uploaderUserInfo.sign}
+						onClickMainButton={isSelf ? undefined : handleFollowing}
+						mainButtonIcon={isFollowing ? 'account-check' : 'account-plus'}
+						mainButtonText={
+							setFollowing.isPending
+								? '处理中'
+								: relation.isError
+									? '关注状态加载失败，重试'
+									: isBlocked
+										? '已拉黑'
+										: relation.isPending
+											? '加载关注状态'
+											: isFollowing
+												? '取消关注'
+												: '关注 UP 主'
+						}
+						mainButtonLoading={setFollowing.isPending || relation.isFetching}
+						disableMainButton={
+							setFollowing.isPending || relation.isFetching || isBlocked
+						}
+						id={Number(mid)}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={tracks ?? []}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await Promise.all([refetch(), relation.refetch()])
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+								progressViewOffset={50}
+							/>
+						}
+						onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
+						hasNextPage={hasNextPage}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
@@ -378,8 +383,5 @@ const styles = StyleSheet.create({
 	},
 	searchbarContainer: {
 		overflow: 'hidden',
-	},
-	listContainer: {
-		flex: 1,
 	},
 })

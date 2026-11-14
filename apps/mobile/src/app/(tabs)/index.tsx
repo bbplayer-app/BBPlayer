@@ -32,6 +32,7 @@ import SearchHistory, {
 import SearchSuggestions from '@/features/search/SearchSuggestions'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import useSkinForegroundColor from '@/hooks/theme/useSkinForegroundColor'
+import { MAX_WIDTH } from '@/hooks/ui/useResponsiveLayout'
 import { useAppIncomingShare } from '@/hooks/useAppIncomingShare'
 import { markPerfInteractive } from '@/lib/performance'
 import { toastAndLogError } from '@/utils/error-handling'
@@ -278,7 +279,11 @@ function SearchPageContent() {
 			)}
 			<View
 				pointerEvents='none'
-				style={[styles.header, { paddingTop: insets.top + 8 }]}
+				style={[
+					styles.header,
+					// 标题行固定 56dp，与其他 Tab 页标题位置一致。
+					{ paddingTop: insets.top + 8, minHeight: insets.top + 8 + 56 + 16 },
+				]}
 			>
 				<Text
 					variant='headlineSmall'
@@ -349,11 +354,19 @@ function SearchPageContent() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1 },
-	header: { paddingHorizontal: 16, paddingBottom: 16, minHeight: 56 },
+	header: {
+		paddingHorizontal: 16,
+		paddingBottom: 16,
+		justifyContent: 'center',
+	},
 	title: { fontWeight: 'bold' },
-	searchbarContainer: { paddingHorizontal: 16, paddingBottom: 16 },
+	searchbarContainer: {
+		paddingHorizontal: 16,
+		paddingBottom: 16,
+		maxWidth: MAX_WIDTH.search,
+	},
 	searchbar: { borderRadius: 9999 },
-	content: { flex: 1, paddingHorizontal: 16 },
+	content: { flex: 1, paddingHorizontal: 16, maxWidth: MAX_WIDTH.search },
 	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
 	resolving: { flex: 1 },
 })

@@ -22,6 +22,7 @@ import { createSubtitleReaderStore } from '@/features/player/stores/subtitleRead
 import { exportSubtitles } from '@/features/player/utils/exportSubtitles'
 import { subtitleLabel } from '@/features/player/utils/subtitles'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useDialogHorizontalMargin } from '@/hooks/ui/useResponsiveLayout'
 import { toastAndLogError } from '@/utils/error-handling'
 
 import {
@@ -30,11 +31,18 @@ import {
 	SubtitleTranscript,
 } from './SubtitleReader'
 
-export function PodcastSubtitles({ active }: { active: boolean }) {
+export function PodcastSubtitles({
+	active,
+	embedded = false,
+}: {
+	active: boolean
+	embedded?: boolean
+}) {
 	const data = usePlayerSubtitles(active)
 	const { lines, trackId } = data
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
+	const dialogMargin = useDialogHorizontalMargin()
 	const [pickerVisible, setPickerVisible] = useState(false)
 	const [exporting, setExporting] = useState(false)
 	const exportingRef = useRef(false)
@@ -49,7 +57,7 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 
 	useSubtitlePlayback(store, active)
 	const playbackReady = useValue(store.state$.ready)
-	const showControls = height - insets.bottom >= 520
+	const showControls = !embedded && height - insets.bottom >= 520
 	const openPicker = useCallback(() => setPickerVisible(true), [])
 
 	useEffect(() => {
@@ -175,6 +183,7 @@ export function PodcastSubtitles({ active }: { active: boolean }) {
 				<Dialog
 					visible={pickerVisible && active}
 					onDismiss={() => setPickerVisible(false)}
+					style={{ marginHorizontal: dialogMargin }}
 				>
 					<Dialog.Title>选择字幕</Dialog.Title>
 					<Dialog.Content>

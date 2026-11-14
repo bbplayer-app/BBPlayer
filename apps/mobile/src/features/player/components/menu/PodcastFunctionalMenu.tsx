@@ -8,6 +8,8 @@ import {
 	setPlayerRepeatMode,
 	setPlayerShuffleMode,
 } from '@/hooks/player/usePlaybackOptions'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
+import { useResponsiveLayout } from '@/hooks/ui/useResponsiveLayout'
 import { toastAndLogError } from '@/utils/error-handling'
 
 import {
@@ -23,6 +25,7 @@ import {
 export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+	const { isTwoPane } = useResponsiveLayout()
 
 	return (
 		<>
@@ -34,12 +37,19 @@ export function PodcastFunctionalMenu({ onAction }: PlayerMenuContentProps) {
 						label='评论区'
 						icon='comment-text-outline'
 						onPress={() =>
-							onAction(() =>
+							onAction(() => {
+								// 宽屏播放器里评论以侧边面板展示，不另开页面。
+								if (isTwoPane) {
+									usePlayerCommentsPaneStore.setState({ isOpen: true })
+
+									return
+								}
+
 								router.navigate({
 									pathname: '/comments/[bvid]',
 									params: { bvid: currentTrack.bilibiliMetadata.bvid },
-								}),
-							)
+								})
+							})
 						}
 					/>
 				)}
