@@ -354,19 +354,31 @@ function SearchPageContent() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1 },
+	// 宽屏下标题、搜索框和内容作为一列居中，与搜索结果等单列页面一致。
 	header: {
+		width: '100%',
+		maxWidth: MAX_WIDTH.search,
+		alignSelf: 'center',
 		paddingHorizontal: 16,
 		paddingBottom: 16,
 		justifyContent: 'center',
 	},
 	title: { fontWeight: 'bold' },
 	searchbarContainer: {
+		width: '100%',
+		maxWidth: MAX_WIDTH.search,
+		alignSelf: 'center',
 		paddingHorizontal: 16,
 		paddingBottom: 16,
-		maxWidth: MAX_WIDTH.search,
 	},
 	searchbar: { borderRadius: 9999 },
-	content: { flex: 1, paddingHorizontal: 16, maxWidth: MAX_WIDTH.search },
+	content: {
+		flex: 1,
+		width: '100%',
+		maxWidth: MAX_WIDTH.search,
+		alignSelf: 'center',
+		paddingHorizontal: 16,
+	},
 	suggestions: { position: 'absolute', top: 0, left: 16, right: 16, zIndex: 1 },
 	resolving: { flex: 1 },
 })
