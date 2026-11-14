@@ -1,10 +1,10 @@
 # 在 Linux 上构建 iOS 版
 
-这组脚本用来在没有 Mac 的情况下构建 BBPlayer 的 iOS 版，并安装到自己的 iPhone 上。有 Mac 的话用 Xcode 更直接，不需要它们。
+这组脚本用来在没有 Mac 的情况下构建 BBPlayer 的 iOS 版，并安装到自己的 iPhone 或 iPad 上。有 Mac 的话用 Xcode 更直接，不需要它们。
 
 脚本用 [xtool](https://github.com/xtool-org/xtool) 提供 iOS SDK 和签名，在 Docker 里运行 CocoaPods 生成工程，再代替 xcodebuild 完成编译和打包。
 
-目前在 Ubuntu 26.04（WSL2）和全新的 Ubuntu 24.04 上验证过，手机是 iOS 27 的 iPhone。
+目前在 Ubuntu 26.04（WSL2）和全新的 Ubuntu 24.04 上验证过，设备是 iOS 27 的 iPhone 和 iPadOS 27 的 iPad Pro。iPad 的步骤和 iPhone 相同，下文说的手机也包括 iPad。
 
 ## 和完整版的区别
 

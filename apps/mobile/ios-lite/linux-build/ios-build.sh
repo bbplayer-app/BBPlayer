@@ -41,7 +41,7 @@ if [ "$install" = 1 ]; then
 
   devices="$(timeout 20 "$XTOOL" devices 2>/dev/null || true)"
   if [ -z "$devices" ]; then
-    echo 'No iPhone found. Connect it with a cable, unlock it and trust this computer, then run this again.' >&2
+    echo 'No iPhone or iPad found. Connect it with a cable, unlock it and trust this computer, then run this again.' >&2
     if [ -n "$wsl_gateway" ]; then
       cat >&2 <<EOF
 

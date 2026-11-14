@@ -169,15 +169,30 @@ def write_app_config():
                    cwd=MOBILE, env=env, check=True, stdout=subprocess.DEVNULL)
 
 
-def make_icons():
+IPAD = 2
+IPHONE_ICONS = [('AppIcon60x60@2x.png', 120), ('AppIcon60x60@3x.png', 180)]
+IPAD_ICONS = [('AppIcon76x76@2x~ipad.png', 152), ('AppIcon83.5x83.5@2x~ipad.png', 167)]
+
+
+def device_families():
+    # expo prebuild turns ios.supportsTablet in app.config.ts into TARGETED_DEVICE_FAMILY: 1 is iPhone, 2 is iPad.
+    project = (IOS / 'BBPlayer.xcodeproj/project.pbxproj').read_text()
+    values = set(re.findall(r'TARGETED_DEVICE_FAMILY = "?([0-9,]+)"?;', project))
+    if len(values) != 1:
+        sys.exit(f'expected one TARGETED_DEVICE_FAMILY in the Xcode project, found {sorted(values)}')
+    return [int(family) for family in values.pop().split(',')]
+
+
+def make_icons(families):
     icons = MOBILE / 'assets/images/icon.png'
     jimp = newest_match(PNPM_STORE, 'jimp-compact@*/node_modules/jimp-compact')
+    sizes = IPHONE_ICONS + (IPAD_ICONS if IPAD in families else [])
     script = (
         "const J=require(process.argv[1]);(async()=>{const i=await J.read(process.argv[2]);"
-        "for(const [n,s] of [['AppIcon60x60@2x.png',120],['AppIcon60x60@3x.png',180]])"
+        "for(const [n,s] of JSON.parse(process.argv[4]))"
         "await i.clone().resize(s,s).writeAsync(process.argv[3]+'/'+n)})()"
     )
-    subprocess.run(['node', '-e', script, str(jimp), str(icons), str(OUT)], check=True)
+    subprocess.run(['node', '-e', script, str(jimp), str(icons), str(OUT), json.dumps(sizes)], check=True)
 
 
 def substitute(value, table):
@@ -190,7 +205,7 @@ def substitute(value, table):
     return value
 
 
-def write_info_plist():
+def write_info_plist(families):
     with open(IOS / 'BBPlayer/Info.plist', 'rb') as handle:
         info = plistlib.load(handle)
     version = json.loads((MOBILE / 'package.json').read_text())['version']
@@ -209,12 +224,15 @@ def write_info_plist():
         'UIAppFonts': sorted(path.name for path in OUT.iterdir() if path.suffix.lower() in ('.ttf', '.otf')),
         'CFBundleSupportedPlatforms': ['iPhoneOS'],
         'MinimumOSVersion': b.DT,
-        'UIDeviceFamily': [1],
+        'UIDeviceFamily': families,
         'DTPlatformName': 'iphoneos',
         'DTPlatformVersion': b.SDK_VERSION,
         'DTSDKName': f'iphoneos{b.SDK_VERSION}',
         'CFBundleIcons': {'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['AppIcon60x60'], 'CFBundleIconName': 'AppIcon'}},
     })
+    if IPAD in families:
+        info['CFBundleIcons~ipad'] = {'CFBundlePrimaryIcon': {
+            'CFBundleIconFiles': ['AppIcon60x60', 'AppIcon76x76', 'AppIcon83.5x83.5'], 'CFBundleIconName': 'AppIcon'}}
     with open(OUT / 'Info.plist', 'wb') as handle:
         plistlib.dump(info, handle)
 
@@ -239,8 +257,9 @@ def main():
     install_frameworks(target)
     install_resources(target)
     write_app_config()
-    make_icons()
-    write_info_plist()
+    families = device_families()
+    make_icons(families)
+    write_info_plist(families)
     expo_plist = IOS / 'BBPlayer/Supporting/Expo.plist'
     if expo_plist.exists():
         shutil.copy2(expo_plist, OUT / 'Expo.plist')
