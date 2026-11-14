@@ -3,6 +3,7 @@ import { Dialog, Portal, RadioButton, Text } from 'react-native-paper'
 import Button from '@/components/common/Button'
 import { playlistKeys } from '@/hooks/queries/db/playlist'
 import useAppStore from '@/hooks/stores/useAppStore'
+import { useDialogHorizontalMargin } from '@/hooks/ui/useResponsiveLayout'
 import { useTracedMutation } from '@/hooks/utils/useTracedQuery'
 import { queryClient } from '@/lib/config/queryClient'
 import { playlistService } from '@/lib/services/playlistService'
@@ -19,6 +20,7 @@ export function PlaylistPlayerPreferenceDialog({
 	onDismiss: () => void
 }) {
 	const defaultMode = useAppStore((state) => state.settings.defaultPlayerMode)
+	const dialogMargin = useDialogHorizontalMargin()
 
 	const mutation = useTracedMutation({
 		span: { name: 'playlist.update_player_preference' },
@@ -47,6 +49,7 @@ export function PlaylistPlayerPreferenceDialog({
 			<Dialog
 				visible={visible}
 				onDismiss={onDismiss}
+				style={{ marginHorizontal: dialogMargin }}
 			>
 				<Dialog.Title>播放器偏好</Dialog.Title>
 				<Dialog.Content>

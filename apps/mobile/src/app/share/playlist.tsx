@@ -15,6 +15,7 @@ import {
 
 import Button from '@/components/common/Button'
 import CoverWithPlaceHolder from '@/components/common/CoverWithPlaceHolder'
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
 import { useRemotePlaylist } from '@/features/playlist/remote/hooks/useRemotePlaylist'
@@ -207,177 +208,176 @@ export default function SharedPlaylistPreviewPage() {
 				<Appbar.BackAction onPress={() => router.back()} />
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={previewTracks}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					ListHeaderComponent={
-						<>
-							<View style={styles.playlistHeader}>
-								{/* 封面 + 文字列 */}
-								<View style={styles.headerContainer}>
-									<CoverWithPlaceHolder
-										id={data.playlist.id}
-										cover={coverRef ?? undefined}
-										title={data.playlist.title}
-										size={120}
-									/>
-									<View style={styles.headerTextContainer}>
-										<TouchableRipple
-											onPress={() => setShowFullTitle(!showFullTitle)}
-											onLongPress={async () => {
-												const ok = await Clipboard.setStringAsync(
-													data.playlist.title,
-												)
+			<PlaylistDetailLayout
+				header={
+					<>
+						<View style={styles.playlistHeader}>
+							{/* 封面 + 文字列 */}
+							<View style={styles.headerContainer}>
+								<CoverWithPlaceHolder
+									id={data.playlist.id}
+									cover={coverRef ?? undefined}
+									title={data.playlist.title}
+									size={120}
+								/>
+								<View style={styles.headerTextContainer}>
+									<TouchableRipple
+										onPress={() => setShowFullTitle(!showFullTitle)}
+										onLongPress={async () => {
+											const ok = await Clipboard.setStringAsync(
+												data.playlist.title,
+											)
 
-												if (!ok) toast.error('复制失败')
-												else toast.success('已复制标题到剪贴板')
-											}}
+											if (!ok) toast.error('复制失败')
+											else toast.success('已复制标题到剪贴板')
+										}}
+									>
+										<Text
+											variant='titleLarge'
+											style={styles.headerTitle}
+											numberOfLines={showFullTitle ? undefined : 2}
 										>
-											<Text
-												variant='titleLarge'
-												style={styles.headerTitle}
-												numberOfLines={showFullTitle ? undefined : 2}
-											>
-												{data.playlist.title}
-											</Text>
-										</TouchableRipple>
-										<Text variant='bodyMedium'>
-											{subtitleParts.join(' • ')}
+											{data.playlist.title}
 										</Text>
-										{data.owner && (
-											<View style={styles.shareInfoRow}>
-												{data.owner.avatarUrl ? (
-													<Avatar.Image
-														size={24}
-														source={{ uri: data.owner.avatarUrl }}
-													/>
-												) : (
-													<Avatar.Text
-														size={24}
-														label={data.owner.name.slice(0, 1)}
-													/>
-												)}
-												<Text
-													variant='bodySmall'
-													numberOfLines={1}
-													style={styles.shareOwnerName}
-												>
-													{data.owner.name}
-												</Text>
-											</View>
-										)}
-									</View>
-								</View>
-								{/* 订阅/升级/进入 按钮 */}
-								<View style={styles.actionsContainer}>
-									{isFullMember ? (
-										<Button
-											mode='contained'
-											icon='playlist-music'
-											onPress={handleGoToPlaylist}
-											testID='playlist-header-main-button'
-											buttonColor={primaryButtonColor}
-											textColor={primaryButtonTextColor}
-										>
-											前往歌单
-										</Button>
-									) : canUpgradeToEditor ? (
-										<Button
-											mode='contained'
-											icon='account-arrow-up'
-											onPress={handleSubscribe}
-											loading={isSubscribing}
-											disabled={isSubscribing}
-											testID='playlist-header-main-button'
-											buttonColor={primaryButtonColor}
-											textColor={primaryButtonTextColor}
-										>
-											升级为协作编辑者
-										</Button>
-									) : isAlreadyJoined ? (
-										<Button
-											mode='outlined'
-											icon='playlist-music'
-											onPress={handleGoToPlaylist}
-											testID='playlist-header-main-button'
-											textColor={secondaryButtonIconColor}
-										>
-											已订阅，前往查看
-										</Button>
-									) : (
-										<Button
-											mode='contained'
-											icon={parsedInviteCode ? 'account-plus' : 'rss'}
-											onPress={handleSubscribe}
-											loading={isSubscribing}
-											disabled={isSubscribing}
-											testID='playlist-header-main-button'
-											buttonColor={primaryButtonColor}
-											textColor={primaryButtonTextColor}
-										>
-											{parsedInviteCode ? '加入协作编辑' : '订阅共享歌单'}
-										</Button>
+									</TouchableRipple>
+									<Text variant='bodyMedium'>{subtitleParts.join(' • ')}</Text>
+									{data.owner && (
+										<View style={styles.shareInfoRow}>
+											{data.owner.avatarUrl ? (
+												<Avatar.Image
+													size={24}
+													source={{ uri: data.owner.avatarUrl }}
+												/>
+											) : (
+												<Avatar.Text
+													size={24}
+													label={data.owner.name.slice(0, 1)}
+												/>
+											)}
+											<Text
+												variant='bodySmall'
+												numberOfLines={1}
+												style={styles.shareOwnerName}
+											>
+												{data.owner.name}
+											</Text>
+										</View>
 									)}
 								</View>
-								{/* 权限说明提示 */}
-								{actionHint && (
-									<Banner
-										visible
-										icon='information-outline'
-										style={styles.hintBanner}
-									>
-										{actionHint}
-									</Banner>
-								)}
-								{/* 描述 */}
-								<Text
-									variant='bodyMedium'
-									style={[
-										styles.description,
-										!!data.playlist.description && styles.descriptionMargin,
-									]}
-								>
-									{data.playlist.description ?? ''}
-								</Text>
-								<Divider />
 							</View>
-							{data.playlist.trackCount > data.previewLimit && (
-								<Text
-									variant='bodySmall'
-									style={styles.previewHint}
+							{/* 订阅/升级/进入 按钮 */}
+							<View style={styles.actionsContainer}>
+								{isFullMember ? (
+									<Button
+										mode='contained'
+										icon='playlist-music'
+										onPress={handleGoToPlaylist}
+										testID='playlist-header-main-button'
+										buttonColor={primaryButtonColor}
+										textColor={primaryButtonTextColor}
+									>
+										前往歌单
+									</Button>
+								) : canUpgradeToEditor ? (
+									<Button
+										mode='contained'
+										icon='account-arrow-up'
+										onPress={handleSubscribe}
+										loading={isSubscribing}
+										disabled={isSubscribing}
+										testID='playlist-header-main-button'
+										buttonColor={primaryButtonColor}
+										textColor={primaryButtonTextColor}
+									>
+										升级为协作编辑者
+									</Button>
+								) : isAlreadyJoined ? (
+									<Button
+										mode='outlined'
+										icon='playlist-music'
+										onPress={handleGoToPlaylist}
+										testID='playlist-header-main-button'
+										textColor={secondaryButtonIconColor}
+									>
+										已订阅，前往查看
+									</Button>
+								) : (
+									<Button
+										mode='contained'
+										icon={parsedInviteCode ? 'account-plus' : 'rss'}
+										onPress={handleSubscribe}
+										loading={isSubscribing}
+										disabled={isSubscribing}
+										testID='playlist-header-main-button'
+										buttonColor={primaryButtonColor}
+										textColor={primaryButtonTextColor}
+									>
+										{parsedInviteCode ? '加入协作编辑' : '订阅共享歌单'}
+									</Button>
+								)}
+							</View>
+							{/* 权限说明提示 */}
+							{actionHint && (
+								<Banner
+									visible
+									icon='information-outline'
+									style={styles.hintBanner}
 								>
-									仅展示前 {data.previewLimit} 首，订阅后会自动拉取完整曲目。
-								</Text>
+									{actionHint}
+								</Banner>
 							)}
-						</>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-							progressViewOffset={50}
-						/>
-					}
-				/>
-			</View>
+							{/* 描述 */}
+							<Text
+								variant='bodyMedium'
+								style={[
+									styles.description,
+									!!data.playlist.description && styles.descriptionMargin,
+								]}
+							>
+								{data.playlist.description ?? ''}
+							</Text>
+							<Divider />
+						</View>
+						{data.playlist.trackCount > data.previewLimit && (
+							<Text
+								variant='bodySmall'
+								style={styles.previewHint}
+							>
+								仅展示前 {data.previewLimit} 首，订阅后会自动拉取完整曲目。
+							</Text>
+						)}
+					</>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={previewTracks}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await refetch()
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+								progressViewOffset={50}
+							/>
+						}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 	previewHint: {

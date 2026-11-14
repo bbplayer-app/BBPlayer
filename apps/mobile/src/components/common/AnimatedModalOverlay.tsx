@@ -11,6 +11,8 @@ import {
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { useDialogHorizontalMargin } from '@/hooks/ui/useResponsiveLayout'
+
 interface Props {
 	visible: boolean
 	onDismiss: () => void
@@ -29,6 +31,11 @@ export default function AnimatedModalOverlay({
 	const insets = useSafeAreaInsets()
 	const { height } = useReanimatedKeyboardAnimation()
 	const theme = useTheme()
+
+	const marginHorizontal = useDialogHorizontalMargin(
+		Math.max(insets.left, insets.right, 26),
+	)
+
 	const [showContent, setShowContent] = useState(false)
 
 	const wrapperAvoiding = useAnimatedStyle(() => {
@@ -53,7 +60,7 @@ export default function AnimatedModalOverlay({
 					style={[
 						styles.content,
 						{
-							marginHorizontal: Math.max(insets.left, insets.right, 26),
+							marginHorizontal,
 							opacity: showContent ? 1 : 0,
 						},
 					]}

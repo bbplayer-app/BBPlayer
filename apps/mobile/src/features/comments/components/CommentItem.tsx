@@ -137,6 +137,15 @@ export function CommentItem({ item, onReplyPress, bvid }: CommentItemProps) {
 	const theme = useTheme()
 	const [liked, setLiked] = useState(item.action === 1)
 	const [likeCount, setLikeCount] = useState(item.like || 0)
+	// 列表开启了 recycleItems，组件会被复用给别的评论，换评论时重置点赞状态。
+	const [rpid, setRpid] = useState(item.rpid)
+
+	if (rpid !== item.rpid) {
+		setRpid(item.rpid)
+		setLiked(item.action === 1)
+		setLikeCount(item.like || 0)
+	}
+
 	const router = useRouter()
 
 	const [darkMode, setDarkMode] = useState(

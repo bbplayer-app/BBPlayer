@@ -16,6 +16,7 @@ import { usePersonalInformation } from '@/hooks/queries/bilibili/user'
 import { useScreenTransitionReady } from '@/hooks/router/useScreenTransitionReady'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { useDoubleTapScrollToTop } from '@/hooks/ui/useDoubleTapScrollToTop'
+import { MAX_WIDTH } from '@/hooks/ui/useResponsiveLayout'
 import { bv2av } from '@/lib/api/bilibili/utils'
 import type { BilibiliFavoriteListContent } from '@/types/apis/bilibili'
 import type { BilibiliTrack, Track } from '@/types/core/media'
@@ -191,6 +192,9 @@ const styles = StyleSheet.create({
 	},
 	listContainer: {
 		flex: 1,
+		width: '100%',
+		maxWidth: MAX_WIDTH.content,
+		alignSelf: 'center',
 	},
 	emptyListText: {
 		paddingVertical: 32,

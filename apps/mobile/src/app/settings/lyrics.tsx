@@ -10,6 +10,7 @@ import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import SettingsSectionTitle from '@/components/common/SettingsSectionTitle'
 import UniversalSwitch from '@/components/common/UniversalSwitch'
+import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import { alert } from '@/components/modals/AlertModal'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useAppStore } from '@/hooks/stores/useAppStore'
@@ -32,6 +33,7 @@ function applyStatusBarLyricsProvider(
 
 export default function LyricsSettingsPage() {
 	const router = useRouter()
+	const split = useSettingsSplit()
 	const colors = useTheme().colors
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
@@ -252,7 +254,7 @@ export default function LyricsSettingsPage() {
 	return (
 		<View style={[styles.container, { backgroundColor: colors.background }]}>
 			<Appbar.Header>
-				<Appbar.BackAction onPress={() => router.back()} />
+				{!split && <Appbar.BackAction onPress={() => router.back()} />}
 				<Appbar.Content title='歌词设置' />
 			</Appbar.Header>
 			<ScrollView

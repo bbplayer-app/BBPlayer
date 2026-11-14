@@ -10,6 +10,7 @@ import {
 	setPlayerRepeatMode,
 	setPlayerShuffleMode,
 } from '@/hooks/player/usePlaybackOptions'
+import { usePlayerCommentsPaneStore } from '@/hooks/stores/usePlayerCommentsPaneStore'
 import { analyticsService } from '@/lib/services/analyticsService'
 import { toastAndLogError } from '@/utils/error-handling'
 import * as Haptics from '@/utils/haptics'
@@ -21,15 +22,22 @@ import {
 
 export function MusicControls({
 	onOpenQueue,
+	commentsPane = false,
 	compact = false,
 }: {
 	onOpenQueue: () => void
+	/** 宽屏播放器中评论以侧边面板展示，而不是跳转到评论页。 */
+	commentsPane?: boolean
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
 	const { shuffle: shuffleMode, repeat: repeatMode } = usePlaybackOptions()
 	const currentTrack = useCurrentTrack()
 	const router = useRouter()
+
+	const commentsOpen = usePlayerCommentsPaneStore(
+		(state) => commentsPane && state.isOpen,
+	)
 
 	return (
 		<View>
@@ -94,8 +102,15 @@ export function MusicControls({
 				<IconButton
 					icon='comment-text-outline'
 					size={24}
+					iconColor={commentsOpen ? colors.primary : colors.onSurfaceVariant}
 					disabled={currentTrack?.source !== 'bilibili'}
 					onPress={() => {
+						if (commentsPane) {
+							usePlayerCommentsPaneStore.getState().toggle()
+
+							return
+						}
+
 						if (currentTrack?.source === 'bilibili') {
 							router.navigate({
 								pathname: '/comments/[bvid]',

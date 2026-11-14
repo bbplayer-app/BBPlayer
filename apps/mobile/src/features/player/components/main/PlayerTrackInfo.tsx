@@ -35,7 +35,7 @@ export function TrackInfo({
 	coverRef,
 }: {
 	onArtistPress: () => void
-	onPressCover: () => void
+	onPressCover?: () => void
 	coverRef: ImageRef | null
 }) {
 	const { colors } = useTheme()
@@ -106,7 +106,7 @@ export function TrackInfo({
 						Math.min(
 							coverArea.width - (podcast ? 80 : 120),
 							coverArea.height - coverPadding,
-							podcast ? 440 : 400,
+							480,
 						),
 					)
 
@@ -147,8 +147,15 @@ export function TrackInfo({
 								<TouchableOpacity
 									activeOpacity={0.8}
 									onPress={onPressCover}
-									accessibilityRole='button'
-									accessibilityLabel={podcast ? '查看字幕' : '查看歌词'}
+									disabled={!onPressCover}
+									accessibilityRole={onPressCover ? 'button' : 'image'}
+									accessibilityLabel={
+										onPressCover
+											? podcast
+												? '查看字幕'
+												: '查看歌词'
+											: '歌曲封面'
+									}
 									style={{ width: coverSize, height: coverSize }}
 									testID='player-cover'
 								>
@@ -169,7 +176,13 @@ export function TrackInfo({
 												]}
 												testID='player-cover-placeholder'
 											>
-												<Text>{podcast ? '查看字幕' : '查看歌词'}</Text>
+												<Text>
+													{onPressCover
+														? podcast
+															? '查看字幕'
+															: '查看歌词'
+														: '歌曲封面'}
+												</Text>
 											</View>
 										) : !coverRef ? (
 											<LinearGradient
@@ -266,6 +279,8 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		minHeight: 0,
+		// 封面被 maxHeight 限制时，把封面与标题整体居中，而不是在标题下方留出大片空白。
+		justifyContent: 'center',
 	},
 	coverContainer: {
 		alignItems: 'center',

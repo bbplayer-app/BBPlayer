@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/local/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -114,35 +115,42 @@ export default function RecentlyPlayedPage() {
 				<Appbar.Content title='最近常听' />
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				{isEmpty ? (
-					<View style={styles.emptyContainer}>
-						<Text variant='bodyLarge'>暂无播放记录</Text>
-					</View>
-				) : (
-					<TrackList
-						tracks={bilibiliTracks}
-						playTrack={handlePlay}
-						trackMenuItems={trackMenuItems}
-						selection={selection}
-						ListHeaderComponent={
-							<PlaylistHeader
-								title='最近常听'
-								subtitles='最近14天最常播放的歌曲'
-								description={undefined}
-								mainButtonIcon='play'
-								mainButtonText='播放全部'
-								id='recently-played'
-								onClickMainButton={handlePlayAll}
-								primaryButtonColor={primaryButtonColor}
-								primaryButtonTextColor={primaryButtonTextColor}
-								secondaryButtonContainerColor={secondaryButtonContainerColor}
-								secondaryButtonIconColor={secondaryButtonIconColor}
-							/>
-						}
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						title='最近常听'
+						subtitles='最近14天最常播放的歌曲'
+						description={undefined}
+						mainButtonIcon='play'
+						mainButtonText='播放全部'
+						id='recently-played'
+						onClickMainButton={handlePlayAll}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
 					/>
-				)}
-			</View>
+				}
+			>
+				{(listHeader) =>
+					isEmpty ? (
+						<View style={styles.empty}>
+							{listHeader}
+							<View style={styles.emptyContainer}>
+								<Text variant='bodyLarge'>暂无播放记录</Text>
+							</View>
+						</View>
+					) : (
+						<TrackList
+							tracks={bilibiliTracks}
+							playTrack={handlePlay}
+							trackMenuItems={trackMenuItems}
+							selection={selection}
+							ListHeaderComponent={listHeader}
+						/>
+					)
+				}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
@@ -151,7 +159,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	listContainer: {
+	empty: {
 		flex: 1,
 	},
 	emptyContainer: {

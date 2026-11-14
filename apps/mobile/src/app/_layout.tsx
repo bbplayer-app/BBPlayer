@@ -17,8 +17,13 @@ import { Text } from 'react-native-paper'
 import { Toaster } from 'sonner-native'
 
 import AnimatedBootSplash from '@/components/AnimatedBootSplash'
+import ResponsiveScreen from '@/components/layout/ResponsiveScreen'
 import { alert } from '@/components/modals/AlertModal'
 import PlayerQueueModal from '@/components/modals/PlayerQueueModal'
+import {
+	NavigationRailOverlay,
+	NavigationRailProvider,
+} from '@/components/navigation/NavigationRail'
 import NowPlayingBar from '@/components/NowPlayingBar'
 import AppProviders from '@/components/providers'
 import { useFeatureTracking } from '@/hooks/analytics/useFeatureTracking'
@@ -251,207 +256,175 @@ function RootLayout() {
 	return (
 		<View style={styles.appContainer}>
 			<AppProviders>
-				{migrationsSuccess && isReady ? (
-					<Stack
-						screenOptions={{ headerShown: false }}
-						screenListeners={({ route, navigation }) => ({
-							focus: () => {
-								// 进入隐藏页面时立即隐藏播放条；离开时不在这里恢复，
-								// 而是等到 transitionEnd，行为与 player 页面一致。
-								if (
-									route.name !== 'modal' &&
-									shouldHideNowPlayingBar(route.name)
-								) {
-									nowPlayingBarStore$.hiddenScreenActive.set(true)
-								}
-							},
-							transitionEnd: ({ data }) => {
-								const state = navigation.getState()
-
-								// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
-								// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
-								if (
-									!data.closing &&
-									state.routes[state.index]?.key === route.key
-								) {
-									// 返回动画结束后，才根据目标页面决定是否恢复播放条。
-									if (route.name !== 'modal') {
-										nowPlayingBarStore$.hiddenScreenActive.set(
-											shouldHideNowPlayingBar(route.name),
-										)
+				<NavigationRailProvider>
+					{migrationsSuccess && isReady ? (
+						<Stack
+							screenLayout={({ children, route }) => (
+								<ResponsiveScreen routeName={route.name}>
+									{children}
+								</ResponsiveScreen>
+							)}
+							screenOptions={{ headerShown: false }}
+							screenListeners={({ route, navigation }) => ({
+								focus: () => {
+									// 进入隐藏页面时立即隐藏播放条；离开时不在这里恢复，
+									// 而是等到 transitionEnd，行为与 player 页面一致。
+									if (
+										route.name !== 'modal' &&
+										shouldHideNowPlayingBar(route.name)
+									) {
+										nowPlayingBarStore$.hiddenScreenActive.set(true)
 									}
+								},
+								transitionEnd: ({ data }) => {
+									const state = navigation.getState()
 
-									// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
-									// 继承此前 Tab 页留下的高度。
-									if (route.name !== '(tabs)' && route.name !== 'modal') {
-										nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
+									// 被 pop 的页面已不在导航状态中，其 closing 事件会被丢弃。
+									// 等当前目标页面 onAppear，且忽略旧页面迟到的转场事件。
+									if (
+										!data.closing &&
+										state.routes[state.index]?.key === route.key
+									) {
+										// 返回动画结束后，才根据目标页面决定是否恢复播放条。
+										if (route.name !== 'modal') {
+											nowPlayingBarStore$.hiddenScreenActive.set(
+												shouldHideNowPlayingBar(route.name),
+											)
+										}
+
+										// Modal 需要沿用其底层页面的位置；其余非 Tab 页面不能
+										// 继承此前 Tab 页留下的高度。
+										if (route.name !== '(tabs)' && route.name !== 'modal') {
+											nowPlayingBarStore$.retainedBottomTabBarHeight.set(0)
+										}
 									}
-								}
-							},
-						})}
-					>
-						<Stack.Screen
-							name='(tabs)'
-							options={{ headerShown: false }}
-						/>
+								},
+							})}
+						>
+							<Stack.Screen
+								name='(tabs)'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='performance'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='performance'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='player'
-							options={{
-								animation: 'slide_from_bottom',
-								headerShown: false,
-							}}
-						/>
+							<Stack.Screen
+								name='player'
+								options={{
+									animation: 'slide_from_bottom',
+									headerShown: false,
+								}}
+							/>
 
-						<Stack.Screen
-							name='test'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='test'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='onboarding'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='onboarding'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='playlist/remote/search-result/global/[query]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/collection/[id]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/series/[id]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/favorite/[id]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/multipage/[bvid]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/uploader/[mid]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/remote/search-result/fav/[query]'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='playlist/remote/search-result/global/[query]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/collection/[id]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/series/[id]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/favorite/[id]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/multipage/[bvid]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/uploader/[mid]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/remote/search-result/fav/[query]'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='playlist/local/[id]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='share/playlist'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='playlist/local/[id]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='share/playlist'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='history/overall'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='history/[date]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='download'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='following'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='history/overall'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='history/[date]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='download'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='following'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='+not-found'
-							options={{ headerShown: false }}
-						/>
+							<Stack.Screen
+								name='+not-found'
+								options={{ headerShown: false }}
+							/>
 
-						<Stack.Screen
-							name='modal'
-							options={{
-								presentation: 'transparentModal',
-								gestureEnabled: false,
-								animation: 'fade',
-								headerShown: false,
-							}}
-						/>
-						<Stack.Screen
-							name='playlist/remote/toview'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='comments/[bvid]'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='comments/reply'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='playlist/external-sync'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/index'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/appearance/index'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/appearance/theme-search'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/playback'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/lyrics'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/storage'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/app-data'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/general'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/backup'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/account'
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name='settings/donate'
-							options={{ headerShown: false }}
-						/>
-					</Stack>
-				) : null}
-				<Toaster />
-				<PlayerQueueModal />
-				<NowPlayingBar />
+							<Stack.Screen
+								name='modal'
+								options={{
+									presentation: 'transparentModal',
+									gestureEnabled: false,
+									animation: 'fade',
+									headerShown: false,
+								}}
+							/>
+							<Stack.Screen
+								name='playlist/remote/toview'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='comments/[bvid]'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='comments/reply'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='playlist/external-sync'
+								options={{ headerShown: false }}
+							/>
+							<Stack.Screen
+								name='settings'
+								options={{ headerShown: false }}
+							/>
+						</Stack>
+					) : null}
+					{migrationsSuccess && isReady && <NavigationRailOverlay />}
+					<Toaster />
+					<PlayerQueueModal />
+					<NowPlayingBar />
+				</NavigationRailProvider>
 			</AppProviders>
 			<AnimatedBootSplash ready={isReady && migrationsSuccess} />
 		</View>

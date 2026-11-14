@@ -7,6 +7,7 @@ import { Searchbar, Text, useTheme } from 'react-native-paper'
 import { MenuView } from '@/components/common/FunctionalMenu'
 import IconButton from '@/components/common/IconButton'
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
+import { useLibraryGrid } from '@/features/library/shared/useLibraryGrid'
 import { LocalPlaylistListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import {
@@ -48,6 +49,7 @@ const renderPlaylistItem = ({
 
 const LocalPlaylistListComponent = memo(() => {
 	const { colors } = useTheme()
+	const { columns } = useLibraryGrid()
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
@@ -177,6 +179,7 @@ const LocalPlaylistListComponent = memo(() => {
 				}}
 			>
 				<LegendList
+					numColumns={columns}
 					contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 					showsVerticalScrollIndicator={false}
 					data={finalPlaylists ?? []}
@@ -211,11 +214,13 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
-		height: 48,
+		minHeight: 48,
 		marginBottom: 4,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
+		flexWrap: 'wrap',
+		columnGap: 8,
 	},
 	headerTitle: {
 		fontWeight: 'bold',

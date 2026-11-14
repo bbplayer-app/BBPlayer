@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshControl, StyleSheet, View } from 'react-native'
 import { Appbar, useTheme } from 'react-native-paper'
 
+import PlaylistDetailLayout from '@/components/layout/PlaylistDetailLayout'
 import { PlaylistError } from '@/features/playlist/remote/components/PlaylistError'
 import { PlaylistHeader } from '@/features/playlist/remote/components/PlaylistHeader'
 import { TrackList } from '@/features/playlist/remote/components/RemoteTrackList'
@@ -222,54 +223,55 @@ export default function FavoritePage() {
 				)}
 			</Appbar.Header>
 
-			<View style={styles.listContainer}>
-				<TrackList
-					listRef={listRef}
-					tracks={tracks}
-					playTrack={playTrack}
-					trackMenuItems={trackMenuItems}
-					selection={selection}
-					ListHeaderComponent={
-						<PlaylistHeader
-							cover={coverRef ?? undefined}
-							title={favoriteData.pages[0].info.title}
-							subtitles={`${favoriteData.pages[0].info.upper.name}\u2009•\u2009${favoriteData.pages[0].info.media_count}\u2009首歌曲`}
-							description={favoriteData.pages[0].info.intro}
-							onClickMainButton={handleSync}
-							mainButtonIcon={'sync'}
-							linkedPlaylistId={linkedPlaylistId}
-							id={id}
-							primaryButtonColor={primaryButtonColor}
-							primaryButtonTextColor={primaryButtonTextColor}
-							secondaryButtonContainerColor={secondaryButtonContainerColor}
-							secondaryButtonIconColor={secondaryButtonIconColor}
-						/>
-					}
-					refreshControl={
-						<RefreshControl
-							refreshing={refreshing}
-							onRefresh={async () => {
-								setRefreshing(true)
-								await refetch()
-								setRefreshing(false)
-							}}
-							colors={[colors.primary]}
-							progressViewOffset={50}
-						/>
-					}
-					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
-					isFetchingNextPage={isFetchingNextPage}
-				/>
-			</View>
+			<PlaylistDetailLayout
+				header={
+					<PlaylistHeader
+						cover={coverRef ?? undefined}
+						title={favoriteData.pages[0].info.title}
+						subtitles={`${favoriteData.pages[0].info.upper.name}\u2009•\u2009${favoriteData.pages[0].info.media_count}\u2009首歌曲`}
+						description={favoriteData.pages[0].info.intro}
+						onClickMainButton={handleSync}
+						mainButtonIcon={'sync'}
+						linkedPlaylistId={linkedPlaylistId}
+						id={id}
+						primaryButtonColor={primaryButtonColor}
+						primaryButtonTextColor={primaryButtonTextColor}
+						secondaryButtonContainerColor={secondaryButtonContainerColor}
+						secondaryButtonIconColor={secondaryButtonIconColor}
+					/>
+				}
+			>
+				{(listHeader) => (
+					<TrackList
+						listRef={listRef}
+						tracks={tracks}
+						playTrack={playTrack}
+						trackMenuItems={trackMenuItems}
+						selection={selection}
+						ListHeaderComponent={listHeader}
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={async () => {
+									setRefreshing(true)
+									await refetch()
+									setRefreshing(false)
+								}}
+								colors={[colors.primary]}
+								progressViewOffset={50}
+							/>
+						}
+						onEndReached={hasNextPage ? () => fetchNextPage() : undefined}
+						isFetchingNextPage={isFetchingNextPage}
+					/>
+				)}
+			</PlaylistDetailLayout>
 		</View>
 	)
 }
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-	},
-	listContainer: {
 		flex: 1,
 	},
 })

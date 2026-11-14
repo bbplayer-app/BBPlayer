@@ -7,6 +7,7 @@ import { Searchbar as SearchBar } from 'react-native-paper'
 
 import { DataFetchingError } from '@/features/library/shared/DataFetchingError'
 import TabDisable from '@/features/library/shared/TabDisabled'
+import { useLibraryGrid } from '@/features/library/shared/useLibraryGrid'
 import { FavoriteFolderListSkeleton } from '@/features/library/skeletons/LibraryTabSkeleton'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { useGetFavoritePlaylists } from '@/hooks/queries/bilibili/favorite'
@@ -23,6 +24,7 @@ const renderPlaylistItem = ({ item }: { item: BilibiliPlaylist }) => (
 const FavoriteFolderListComponent = memo(() => {
 	const router = useRouter()
 	const { colors } = useTheme()
+	const { columns } = useLibraryGrid()
 	const haveTrack = useCurrentTrack()
 	const [refreshing, setRefreshing] = useState(false)
 	const [query, setQuery] = useState('')
@@ -99,6 +101,7 @@ const FavoriteFolderListComponent = memo(() => {
 				}}
 			/>
 			<LegendList
+				numColumns={columns}
 				contentContainerStyle={{ paddingBottom: haveTrack ? 90 : 10 }}
 				showsVerticalScrollIndicator={false}
 				data={filteredPlaylists}
@@ -125,11 +128,13 @@ const styles = StyleSheet.create({
 		marginHorizontal: 16,
 	},
 	headerContainer: {
-		height: 48, // 为了与 LocalPlaylistList 保持一致（LocalPlaylistList 上方存在一个 IconButton，所以会间隔更大一些）
+		minHeight: 48, // 为了与 LocalPlaylistList 保持一致（LocalPlaylistList 上方存在一个 IconButton，所以会间隔更大一些）
 		marginBottom: 4,
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
+		flexWrap: 'wrap',
+		columnGap: 8,
 	},
 	headerTitle: {
 		fontWeight: 'bold',
