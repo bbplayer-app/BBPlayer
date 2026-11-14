@@ -134,8 +134,11 @@ export default function RecentlyPlayedPage() {
 			>
 				{(listHeader) =>
 					isEmpty ? (
-						<View style={styles.emptyContainer}>
-							<Text variant='bodyLarge'>暂无播放记录</Text>
+						<View style={styles.empty}>
+							{listHeader}
+							<View style={styles.emptyContainer}>
+								<Text variant='bodyLarge'>暂无播放记录</Text>
+							</View>
 						</View>
 					) : (
 						<TrackList
@@ -154,6 +157,9 @@ export default function RecentlyPlayedPage() {
 
 const styles = StyleSheet.create({
 	container: {
+		flex: 1,
+	},
+	empty: {
 		flex: 1,
 	},
 	emptyContainer: {

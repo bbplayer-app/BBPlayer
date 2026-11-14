@@ -78,6 +78,13 @@ export default function NavigationRail({
 
 	if (tabFromPath && tabFromPath !== lastTab) setLastTab(tabFromPath)
 	const activeTab = tabFromPath ?? lastTab
+	// 记住音乐库所在的分页，切回音乐库时不把分页重置成第一个。
+	const [libraryTab, setLibraryTab] = useState('0')
+	const libraryTabFromPath = /^\/library\/([^/]+)$/.exec(pathname)?.[1]
+
+	if (libraryTabFromPath && libraryTabFromPath !== libraryTab)
+		setLibraryTab(libraryTabFromPath)
+
 	const router = useRouter()
 	const activeSkin = useActiveSkin()
 	const activeSkinIndex = useSkinStore((state) => state.activeSkinIndex)
@@ -106,7 +113,7 @@ export default function NavigationRail({
 				},
 				{
 					label: '音乐库',
-					path: '/library/0' as const,
+					path: `/library/${libraryTab}` as const,
 					icon: 'bookshelf',
 					skin: icons?.library,
 					id: 'library',

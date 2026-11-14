@@ -126,7 +126,7 @@ function CommentListContent({
 			ListEmptyComponent={
 				<Text style={styles.empty}>{replies ? '暂无回复' : '暂无评论'}</Text>
 			}
-			refreshing={isRefetching}
+			refreshing={isRefetching && !isFetchingNextPage}
 			onRefresh={() => void refetch()}
 			contentContainerStyle={{ paddingBottom: 24 }}
 		/>

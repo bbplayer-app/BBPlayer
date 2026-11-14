@@ -32,7 +32,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Lyrics from '@/features/player/components/lyrics/PlayerLyrics'
 import { PodcastSubtitles } from '@/features/player/components/lyrics/PodcastSubtitles'
 import { PlayerChaptersSheet } from '@/features/player/components/main/PlayerChaptersSheet'
-import { PlayerCommentsPane } from '@/features/player/components/main/PlayerCommentsPane'
+import {
+	PlayerCommentsCovered,
+	PlayerCommentsPane,
+} from '@/features/player/components/main/PlayerCommentsPane'
 import { PlayerHeader } from '@/features/player/components/main/PlayerHeader'
 import PlayerMainTab from '@/features/player/components/main/PlayerMainTab'
 import { PlayerFunctionalMenu } from '@/features/player/components/menu/PlayerFunctionalMenu'
@@ -506,7 +509,7 @@ export default function PlayerPage() {
 												{ borderLeftColor: colors.outlineVariant },
 											]}
 										>
-											<View style={styles.tabView}>{reader}</View>
+											<PlayerCommentsCovered>{reader}</PlayerCommentsCovered>
 											<PlayerCommentsPane bvid={bvid} />
 										</View>
 									</View>

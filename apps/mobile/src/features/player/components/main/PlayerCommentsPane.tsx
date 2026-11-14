@@ -1,3 +1,4 @@
+import type { PropsWithChildren } from 'react'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
@@ -116,6 +117,21 @@ export function PlayerCommentsPane({ bvid }: { bvid: string | undefined }) {
 				</>
 			)}
 		</Animated.View>
+	)
+}
+
+/** 被评论面板覆盖的区域：面板打开时移出无障碍树，读屏不会遍历到被遮住的歌词。 */
+export function PlayerCommentsCovered({ children }: PropsWithChildren) {
+	const covered = usePlayerCommentsPaneStore((state) => state.isOpen)
+
+	return (
+		<View
+			style={styles.fill}
+			accessibilityElementsHidden={covered}
+			importantForAccessibility={covered ? 'no-hide-descendants' : 'auto'}
+		>
+			{children}
+		</View>
 	)
 }
 

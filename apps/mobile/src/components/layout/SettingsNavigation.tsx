@@ -1,7 +1,7 @@
-import { usePathname, useRouter } from 'expo-router'
+import { useNavigation, usePathname, useRouter } from 'expo-router'
 import { createContext, useContext } from 'react'
 import { ScrollView, StyleSheet, View } from 'react-native'
-import { List, Text, useTheme } from 'react-native-paper'
+import { Appbar, List, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export const SETTINGS_SECTIONS = [
@@ -61,7 +61,7 @@ export const SettingsSplitProvider = SettingsSplitContext
 
 /**
  * 设置页是否以「侧栏 + 详情」分栏展示。分栏时各分区页面本身就是根页面，
- * 不应再显示返回按钮（返回由侧栏所在的整个设置页处理）。
+ * 不应再显示返回按钮，由侧栏标题的返回按钮离开整个设置页。
  */
 export function useSettingsSplit() {
 	return useContext(SettingsSplitContext)
@@ -71,6 +71,8 @@ export const SETTINGS_NAVIGATION_WIDTH = 280
 
 export default function SettingsNavigation() {
 	const router = useRouter()
+	// 侧栏渲染在设置页的布局里，这里拿到的是根导航栈，返回会直接离开设置页。
+	const navigation = useNavigation()
 	const pathname = usePathname()
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
@@ -84,6 +86,11 @@ export default function SettingsNavigation() {
 			}}
 		>
 			<View style={styles.header}>
+				<Appbar.BackAction
+					onPress={() => navigation.goBack()}
+					accessibilityLabel='返回'
+					testID='settings-navigation-back'
+				/>
 				<Text variant='titleLarge'>设置</Text>
 			</View>
 			{SETTINGS_SECTIONS.map((section) => {
@@ -138,8 +145,10 @@ const styles = StyleSheet.create({
 	},
 	header: {
 		height: 64,
-		justifyContent: 'center',
-		paddingHorizontal: 24,
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+		paddingHorizontal: 8,
 	},
 	item: {
 		marginHorizontal: 12,

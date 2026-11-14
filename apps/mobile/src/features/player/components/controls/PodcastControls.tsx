@@ -3,6 +3,7 @@ import { View } from 'react-native'
 import { useTheme } from 'react-native-paper'
 
 import IconButton from '@/components/common/IconButton'
+import useCurrentTrack from '@/hooks/player/useCurrentTrack'
 import { usePlaybackOptions } from '@/hooks/player/usePlaybackOptions'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { usePlayerChaptersSheetStore } from '@/hooks/stores/usePlayerChaptersSheetStore'
@@ -24,9 +25,12 @@ export function PodcastControls({
 	compact?: boolean
 }) {
 	const { colors } = useTheme()
+	const currentTrack = useCurrentTrack()
+	// 只有 B 站曲目有评论区，本地曲目不显示入口。
+	const showComments = commentsPane && currentTrack?.source === 'bilibili'
 
 	const commentsOpen = usePlayerCommentsPaneStore(
-		(state) => commentsPane && state.isOpen,
+		(state) => showComments && state.isOpen,
 	)
 
 	const { speed, sleepEndTime } = usePlaybackOptions()
@@ -63,7 +67,7 @@ export function PodcastControls({
 				void usePlayerChaptersSheetStore.getState().open()
 			},
 		},
-		...(commentsPane
+		...(showComments
 			? [
 					{
 						icon: 'comment-text-outline',
