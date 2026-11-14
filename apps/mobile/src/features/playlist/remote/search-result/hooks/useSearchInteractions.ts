@@ -2,6 +2,7 @@ import { Icon } from '@expo/ui'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 
+import { usePlayFromList } from '@/features/playlist/remote/hooks/usePlayFromList'
 import { MULTIPAGE_VIDEO_KEYWORDS } from '@/features/playlist/remote/search-result/constants'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { syncFacade } from '@/lib/facades/syncBilibiliPlaylist'
@@ -31,17 +32,20 @@ const ARTIST_ICON = Icon.select({
 	android: import('@expo/material-symbols/person.xml'),
 })
 
-export function useSearchInteractions() {
+const isLikelyMultipageVideo = (track: BilibiliTrack) =>
+	MULTIPAGE_VIDEO_KEYWORDS.some((keyword) => track.title?.includes(keyword))
+
+/**
+ * @param tracks 搜索结果中当前已加载的曲目，点击单曲时会从这首开始一起加入播放队列
+ */
+export function useSearchInteractions(tracks?: BilibiliTrack[]) {
 	const router = useRouter()
 	const openModal = useModalStore((state) => state.open)
+	const playFromListBase = usePlayFromList()
 
 	const playTrack = useCallback(
 		async (track: BilibiliTrack, playNext = false) => {
-			if (
-				MULTIPAGE_VIDEO_KEYWORDS.some((keyword) =>
-					track.title?.includes(keyword),
-				)
-			) {
+			if (isLikelyMultipageVideo(track)) {
 				router.navigate({
 					pathname: '/playlist/remote/multipage/[bvid]',
 					params: { bvid: track.bilibiliMetadata.bvid },
@@ -80,6 +84,23 @@ export function useSearchInteractions() {
 			}
 		},
 		[router],
+	)
+
+	const playFromList = useCallback(
+		(track: BilibiliTrack) => {
+			// 疑似分 P 的视频仍然跳转到分 P 页面，也不放进连续播放的队列
+			if (isLikelyMultipageVideo(track)) {
+				void playTrack(track)
+
+				return
+			}
+
+			playFromListBase(
+				track,
+				(tracks ?? [track]).filter((item) => !isLikelyMultipageVideo(item)),
+			)
+		},
+		[playFromListBase, playTrack, tracks],
 	)
 
 	const trackMenuItems = useCallback(
@@ -127,5 +148,6 @@ export function useSearchInteractions() {
 	return {
 		playTrack,
 		trackMenuItems,
+		playFromList,
 	}
 }

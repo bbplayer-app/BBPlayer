@@ -130,7 +130,7 @@ export default function SeriesPage() {
 		secondaryButtonIconColor,
 	} = usePlaylistBackgroundColor(coverRef, theme.dark, colors.background)
 
-	const { playTrack } = useRemotePlaylist()
+	const { playTrack, playFromList } = useRemotePlaylist(tracks)
 	const openModal = useModalStore((state) => state.open)
 
 	const trackMenuItems = usePlaylistMenu(playTrack)
@@ -280,7 +280,7 @@ export default function SeriesPage() {
 					<TrackList
 						listRef={listRef}
 						tracks={tracks}
-						playTrack={playTrack}
+						playTrack={playFromList}
 						trackMenuItems={trackMenuItems}
 						selection={selection}
 						isFetchingNextPage={isFetchingNextPage}

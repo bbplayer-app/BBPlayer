@@ -91,8 +91,6 @@ export default function SearchResultsPage() {
 		}
 	}, [query])
 
-	const { trackMenuItems, playTrack } = useSearchInteractions()
-
 	const uniqueSearchData = useMemo(() => {
 		if (!searchData?.pages) {
 			return []
@@ -114,6 +112,9 @@ export default function SearchResultsPage() {
 
 		return uniqueTracks.map(mapApiItemToTrack)
 	}, [searchData])
+
+	const { trackMenuItems, playFromList } =
+		useSearchInteractions(uniqueSearchData)
 
 	if (!isListReady) {
 		return <PlaylistTrackListSkeleton animate={isListReady} />
@@ -168,7 +169,7 @@ export default function SearchResultsPage() {
 				<TrackList
 					listRef={listRef}
 					tracks={uniqueSearchData ?? []}
-					playTrack={playTrack}
+					playTrack={playFromList}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}

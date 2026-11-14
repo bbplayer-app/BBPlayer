@@ -99,7 +99,7 @@ export default function SearchResultsPage() {
 		[searchData],
 	)
 
-	const { trackMenuItems, playTrack } = useSearchInteractions()
+	const { trackMenuItems, playFromList } = useSearchInteractions(tracks)
 
 	if (isPendingSearchData || !isListReady) {
 		return <PlaylistTrackListSkeleton animate={isListReady} />
@@ -154,7 +154,7 @@ export default function SearchResultsPage() {
 				<TrackList
 					listRef={listRef}
 					tracks={tracks}
-					playTrack={playTrack}
+					playTrack={playFromList}
 					trackMenuItems={trackMenuItems}
 					selection={selection}
 					onEndReached={hasNextPage ? () => fetchNextPage() : undefined}

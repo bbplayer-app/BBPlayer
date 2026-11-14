@@ -18,7 +18,8 @@ import type { PlaylistService } from '@/lib/services/playlistService'
 import type { TrackService } from '@/lib/services/trackService'
 import { type TraceParent, traceOperationResult } from '@/lib/tracing'
 import type { BilibiliCollectionAllContents } from '@/types/apis/bilibili'
-import type { Playlist, Track } from '@/types/core/media'
+import type { BilibiliTrack, Playlist, Track } from '@/types/core/media'
+import type { CreateArtistPayload } from '@/types/services/artist'
 import log from '@/utils/log'
 import toast from '@/utils/toast'
 
@@ -102,6 +103,41 @@ export class SyncBilibiliPlaylistFacade {
 					artistId: artist.id,
 				})
 			})
+	}
+
+	/**
+	 * 将多个 bilibili track 批量录入到本地数据库
+	 * @param tracks BilibiliTrack 对象数组
+	 * @returns uniqueKey -> trackId 的映射
+	 */
+	public addTracksToLocal(tracks: BilibiliTrack[]) {
+		const artistPayloads = new Map<string, CreateArtistPayload>()
+
+		for (const { artist } of tracks) {
+			if (!artist?.remoteId || artistPayloads.has(artist.remoteId)) continue
+
+			artistPayloads.set(artist.remoteId, {
+				name: artist.name,
+				source: artist.source,
+				remoteId: artist.remoteId,
+				avatarUrl: artist.avatarUrl,
+				signature: artist.signature,
+			})
+		}
+
+		return this.artistService
+			.findOrCreateManyRemoteArtists(Array.from(artistPayloads.values()))
+			.andThen((artists) =>
+				this.trackService.findOrCreateManyTracks(
+					tracks.map((track) => ({
+						...track,
+						artistId: track.artist?.remoteId
+							? artists.get(track.artist.remoteId)?.id
+							: undefined,
+					})),
+					'bilibili',
+				),
+			)
 	}
 
 	/** 合集单次读取，系列逐页读取，两者只共享入库事务。 */
