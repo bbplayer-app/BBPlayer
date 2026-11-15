@@ -12,6 +12,7 @@ set -euo pipefail
 #   ./scripts/power/measure-background-power.sh collect           拉取数据并生成报告
 #   ./scripts/power/measure-background-power.sh stop              提前结束（之后再 collect）
 #   ./scripts/power/measure-background-power.sh analyze <目录>    对已拉取的数据重新生成报告
+#   ./scripts/power/measure-background-power.sh restore           恢复 --normalize 改过的设置（collect 会自动做）
 #
 # start 选项:
 #   -m <分钟>        测量时长，默认 30
@@ -21,8 +22,10 @@ set -euo pipefail
 #   -d <秒>          每个快照时长，默认 20
 #   --keep-screen    不自动回桌面并熄屏
 #   --wait           不拔线，主机端等待结束后自动 collect（只适合无线 adb）
+#   --normalize      统一测试条件：开飞行模式、关 Wi-Fi 和蓝牙、媒体音量设为 0、清理后台进程，
+#                    然后等 30 秒再开始。collect 时恢复原来的设置。歌单需要提前完整缓存
 #
-# 设备用 ANDROID_SERIAL 指定。
+# 测量流程和注意事项见同目录的 README.md。设备用 ANDROID_SERIAL 指定。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -137,8 +140,78 @@ duration_ms: __DUR__
 EOF
 }
 
+is_playing() {
+	adb_sh "dumpsys media_session" | grep -A20 "package=$1" | grep -qE "state=PLAYING|state=3[ ,)]"
+}
+
+setting() { adb_sh "settings get global $1"; }
+
+music_volume() {
+	{ adb_sh "cmd media_session volume --stream 3 --get" 2>/dev/null || true; } | sed -n 's/.*volume is \([0-9]*\).*/\1/p'
+}
+
+# 测量前检查会影响结果的条件，只警告不阻止（报告里也会列出）
+precheck() {
+	local pkg=$1 battery level temp speed
+	battery=$(adb_sh "dumpsys battery" || true)
+	level=$(echo "$battery" | sed -n 's/^ *level: *//p' | head -1)
+	temp=$(echo "$battery" | sed -n 's/^ *temperature: *//p' | head -1)
+	if [ -n "$level" ] && { [ "$level" -lt 50 ] || [ "$level" -gt 90 ]; }; then
+		echo "警告: 电量 ${level}%，建议在 50%~90% 之间测量，且几次测量的起始电量相差不超过 10%"
+	fi
+	if [ -n "$temp" ] && [ "$temp" -gt 320 ]; then
+		echo "警告: 电池温度 $((temp / 10)).$((temp % 10))°C，偏高，建议放凉到 32°C 以下再测"
+	fi
+	[ "$(setting low_power)" = 1 ] && echo "警告: 省电模式开着"
+	speed=$(adb_sh "dumpsys media_session" | grep -A20 "package=$pkg" | grep -o 'speed=[0-9.]*' | head -1 | cut -d= -f2 || true)
+	# 暂停时 speed=0.0
+	if [ -n "$speed" ] && [ "$speed" != 1.0 ] && [ "$speed" != 0.0 ]; then
+		echo "警告: 播放倍速是 ${speed}x"
+	fi
+	return 0
+}
+
+# 记下原来的设置（存在设备上，换一台电脑也能 restore），再统一成离线、静音的状态
+normalize_conditions() {
+	echo "统一测试条件..."
+	adb_sh "printf 'airplane_mode_on=%s\nwifi_on=%s\nbluetooth_on=%s\nmusic_volume=%s\n' \
+		'$(setting airplane_mode_on)' '$(setting wifi_on)' '$(setting bluetooth_on)' '$(music_volume)' > $DEV_DIR/restore.txt"
+	adb_sh "cmd connectivity airplane-mode enable" >/dev/null || echo "警告: 开启飞行模式失败"
+	# 有些机型会记住"飞行模式下保持 Wi-Fi/蓝牙"，所以再单独关一次
+	adb_sh "cmd wifi set-wifi-enabled disabled" >/dev/null 2>&1 || true
+	adb_sh "cmd bluetooth_manager disable" >/dev/null 2>&1 || true
+	adb_sh "cmd media_session volume --stream 3 --set 0" >/dev/null 2>&1 || true
+	[ "$(music_volume)" = 0 ] || echo "警告: 没能把媒体音量设为 0，请手动调低"
+	# 只杀后台缓存进程，正在前台服务里播放的 app 不受影响
+	adb_sh "am kill-all" >/dev/null || true
+	echo "等待 30 秒，让无线模块关闭、系统安静下来..."
+	sleep 30
+}
+
+restore_conditions() {
+	local saved
+	saved=$(adb_sh "cat $DEV_DIR/restore.txt 2>/dev/null" || true)
+	[ -n "$saved" ] || return 0
+	get() { echo "$saved" | sed -n "s/^$1=//p"; }
+	echo "恢复测量前的设置..."
+	if [ "$(get airplane_mode_on)" = 0 ]; then
+		adb_sh "cmd connectivity airplane-mode disable" >/dev/null || echo "警告: 关闭飞行模式失败，请手动关闭"
+	fi
+	if [ -n "$(get wifi_on)" ] && [ "$(get wifi_on)" != 0 ]; then
+		adb_sh "cmd wifi set-wifi-enabled enabled" >/dev/null 2>&1 || echo "警告: 打开 Wi-Fi 失败，请手动打开"
+	fi
+	if [ "$(get bluetooth_on)" = 1 ]; then
+		adb_sh "cmd bluetooth_manager enable" >/dev/null 2>&1 || echo "警告: 打开蓝牙失败，请手动打开"
+	fi
+	if [ -n "$(get music_volume)" ]; then
+		adb_sh "cmd media_session volume --stream 3 --set $(get music_volume)" >/dev/null 2>&1 || true
+	fi
+	adb_sh "mv $DEV_DIR/restore.txt $DEV_DIR/restore.done" || true
+	return 0
+}
+
 cmd_start() {
-	local minutes=30 interval=10 pkg=com.roitium.bbplayer snaps=3 snapdur=20 screen_off=1 wait=0
+	local minutes=30 interval=10 pkg=com.roitium.bbplayer snaps=3 snapdur=20 screen_off=1 wait=0 normalize=0
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			-m) minutes=$2; shift 2 ;;
@@ -148,9 +221,13 @@ cmd_start() {
 			-d) snapdur=$2; shift 2 ;;
 			--keep-screen) screen_off=0; shift ;;
 			--wait) wait=1; shift ;;
+			--normalize) normalize=1; shift ;;
 			*) die "未知参数 $1" ;;
 		esac
 	done
+
+	# 飞行模式会断开无线 adb
+	[ "$wait" = 1 ] && [ "$normalize" = 1 ] && die "--wait 依赖无线 adb，不能和 --normalize 一起用"
 
 	check_device
 
@@ -162,11 +239,18 @@ cmd_start() {
 		fi
 	fi
 
+	# 下面会清空 $DEV_DIR，上一次测量结束了但还没 collect 的话数据就没了
+	if [ -n "$(adb_sh "ls $DEV_DIR/DONE 2>/dev/null")" ] && [ -z "$(adb_sh "ls $DEV_DIR/COLLECTED 2>/dev/null")" ]; then
+		echo "警告: 上一次测量还没有 collect，继续会删掉它的数据"
+		read -r -p "继续？[y/N] " ans
+		[ "$ans" = y ] || exit 1
+	fi
+
 	local pid
 	pid=$(adb_sh "pidof $pkg" || true)
 	[ -n "$pid" ] || die "$pkg 没有在运行，请先打开 app 并开始播放"
 
-	if ! adb_sh "dumpsys media_session" | grep -A20 "package=$pkg" | grep -qE "state=PLAYING|state=3[ ,)]"; then
+	if ! is_playing "$pkg"; then
 		echo "警告: 没检测到 $pkg 处于播放状态，请确认已经在播放"
 		read -r -p "继续？[y/N] " ans
 		[ "$ans" = y ] || exit 1
@@ -191,11 +275,19 @@ cmd_start() {
 	tmp=$(mktemp -d)
 	write_configs "$tmp" "$pkg" $(((duration + 120) * 1000))
 
+	# 上一次 --normalize 的设置还没恢复的话先恢复，下面会清空 $DEV_DIR
+	restore_conditions
 	echo "准备设备..."
 	adb_sh "rm -rf $DEV_DIR; mkdir -p $DEV_DIR; rm -f $TRACE_DIR/bbpower_*.pftrace" >/dev/null
 	adb push "$SCRIPT_DIR/device-sampler.sh" "$tmp/long.cfg" "$tmp/snapshot.cfg.tpl" "$DEV_DIR/" >/dev/null
 	rm -rf "$tmp"
 	adb_sh "chmod 755 $DEV_DIR/device-sampler.sh"
+
+	precheck "$pkg"
+	if [ "$normalize" = 1 ]; then
+		normalize_conditions
+		is_playing "$pkg" || echo "警告: 统一条件后 $pkg 不在播放状态了（歌单是否已完整缓存？），测量会照常开始"
+	fi
 
 	# 清空电池统计并开启完整 wakelock 历史，之后 batterystats 只包含本次测量
 	adb_sh "dumpsys batterystats --reset" >/dev/null
@@ -267,13 +359,16 @@ cmd_stop() {
 }
 
 ensure_perfetto_py() {
-	if python3 -c "import perfetto" 2>/dev/null; then
+	# 分析器用 -I 运行，不会加载用户 site-packages，探测时也要用 -I
+	local probe="from perfetto.trace_processor import TraceProcessor"
+	if python3 -I -c "$probe" 2>/dev/null; then
 		PY=python3
 		return
 	fi
-	if [ ! -x "$VENV/bin/python" ]; then
-		echo "首次运行：在 $VENV 安装 perfetto trace processor（用于解析电池/功耗 trace）..."
-		python3 -m venv "$VENV" && "$VENV/bin/pip" install -q perfetto || {
+	# 只看 venv 在不在不够：上次 pip install 失败的话 venv 里没有 perfetto
+	if ! "$VENV/bin/python" -I -c "$probe" 2>/dev/null; then
+		echo "在 $VENV 安装 perfetto trace processor（用于解析电池/功耗 trace）..."
+		{ [ -x "$VENV/bin/python" ] || python3 -m venv "$VENV"; } && "$VENV/bin/pip" install -q perfetto || {
 			echo "安装失败，将跳过 trace 分析，只生成基于 /proc 的报告"
 			PY=python3
 			return
@@ -294,6 +389,8 @@ cmd_collect() {
 		adb pull "$TRACE_DIR/$f" "$out/traces/" >/dev/null
 	done
 	echo "数据已拉取到 $out"
+	adb_sh "touch $DEV_DIR/COLLECTED" || true
+	restore_conditions
 
 	cmd_analyze "$out"
 }
@@ -312,5 +409,6 @@ case "${1:-}" in
 	stop) cmd_stop ;;
 	collect) cmd_collect ;;
 	analyze) shift; cmd_analyze "$@" ;;
-	*) sed -n '3,25p' "$0"; exit 1 ;;
+	restore) check_device; restore_conditions ;;
+	*) sed -n '3,29p' "$0"; exit 1 ;;
 esac

@@ -72,7 +72,7 @@ class Sample:
     def __init__(self, t, up):
         self.t = t
         self.up = up
-        self.pstat = {}  # pid -> (comm, utime+stime ticks)
+        self.pstat = {}  # (pid, starttime) -> (comm, utime+stime ticks)
         self.threads = {}  # (pid, tid, starttime) -> dict
         self.by_tid = {}  # (pid, tid) -> dict，供 schedstat / status 按 tid 回填
         self.mem = {}  # pid -> dict
@@ -106,7 +106,8 @@ for line in read("samples.txt").splitlines():
     try:
         if section == "PSTAT":
             _, comm, r = parse_stat(line)
-            cur.pstat[section_pid] = (comm, int(r[11]) + int(r[12]))
+            # 带上 starttime：app 重启后 PID 可能被复用，不能和旧实例的累计值相减
+            cur.pstat[(section_pid, int(r[19]))] = (comm, int(r[11]) + int(r[12]))
         elif section == "TSTAT":
             tid, comm, r = parse_stat(line)
             key = (section_pid, tid, int(r[19]))
@@ -190,6 +191,206 @@ for block in read("battery.txt").split("=== T ")[1:]:
             k, v = l.split(":", 1)
             d[k.strip()] = v.strip()
     bat.append((t, d))
+
+# ---------------------------------------------------------------- 测试条件
+
+AF_FORMATS = {
+    "00000001": "PCM 16 位",
+    "00000003": "PCM 24 位",
+    "00000004": "PCM 8.24 位",
+    "00000005": "PCM float",
+    "01000000": "MP3",
+    "04000002": "AAC LC",
+    "04000010": "HE-AAC",
+    "04000100": "HE-AACv2",
+    "08000000": "Opus",
+    "1b000000": "FLAC",
+}
+
+
+def kv(text):
+    return dict(l.split("=", 1) for l in text.splitlines() if "=" in l)
+
+
+def parse_audio_path(text, uid):
+    """从 dumpsys media.audio_flinger 找出 app 的 AudioTrack 所在的输出线程"""
+    found = []
+    # Android 14 及更早的 track 表里 Client 列只有 pid，靠开头的 pid / uid 对照表找出 app 的 pid
+    pids = set(re.findall(rf"^\s*(\d+)\s+{uid}\s+\S+\s*$", text, re.M))
+    for block in text.split("Output thread ")[1:]:
+        m = re.search(r"AudioStreamOut: \S+ flags \S+ \(([^)]*)\)", block)
+        flags = m.group(1).replace("AUDIO_OUTPUT_FLAG_", "") if m else "?"
+        m = re.search(r"Output devices: \S+ \(([^)]*)\)", block)
+        devices = m.group(1).replace("AUDIO_DEVICE_OUT_", "") if m else "?"
+        # Local log 里也有形如 track 行的记录，只看它之前的 track 表
+        for line in block.split("Local log:")[0].splitlines():
+            toks = line.split()
+            for i in range(len(toks) - 10):
+                if toks[i] not in ("yes", "no"):
+                    continue
+                if toks[i + 1].endswith("/") and toks[i + 2] == uid:
+                    o = 0  # Android 15+：Client 列是 "pid/ uid"
+                elif toks[i + 1] in pids:
+                    o = -1
+                else:
+                    continue
+                srate = int(toks[i + 9 + o]) if toks[i + 9 + o].isdigit() else 0
+                frames = None
+                for j in range(i + 10 + o, len(toks) - 1):
+                    if re.fullmatch(r"[0-9A-F]{8}", toks[j]):
+                        frames = int(toks[j + 1]) if toks[j + 1].isdigit() else None
+                        break
+                found.append(
+                    {
+                        "active": toks[i] == "yes",
+                        "flags": flags,
+                        "devices": devices,
+                        "format": AF_FORMATS.get(toks[i + 7 + o], toks[i + 7 + o]),
+                        "srate": srate,
+                        "frames": frames,
+                    }
+                )
+                break
+    active = [t for t in found if t["active"]]
+    return active or found
+
+
+def describe_audio_path(tracks):
+    if not tracks:
+        return "—"
+    out = []
+    for t in tracks:
+        desc = f"{t['flags']}，{t['devices']}，{t['format']} {t['srate']} Hz"
+        if "COMPRESS_OFFLOAD" in t["flags"]:
+            desc += "（offload）"
+        elif t["frames"] and t["srate"]:
+            desc += f"，缓冲 {t['frames'] / t['srate']:.2f}s"
+        if not t["active"]:
+            desc += "（未在播放）"
+        out.append(desc)
+    return "；".join(out)
+
+
+def parse_session(text, pkg):
+    """媒体会话的播放状态和倍速"""
+    i = text.find(f"package={pkg}")
+    if i < 0:
+        return None, None
+    m = re.search(r"state=PlaybackState \{state=(\w+)[^}]*?speed=([0-9.]+)", text[i : i + 3000])
+    return (m.group(1), float(m.group(2))) if m else (None, None)
+
+
+def parse_duration_s(text):
+    total = 0.0
+    for num, unit in re.findall(r"(\d+)(ms|h|m|s)", text):
+        total += int(num) * {"h": 3600, "m": 60, "s": 1, "ms": 0.001}[unit]
+    return total
+
+
+cond = {"start": kv(read("conditions_start.txt")), "end": kv(read("conditions_end.txt"))}
+if cond["start"]:
+    uid_num = meta.get("uid", "")
+    if not uid_num and APP_UID:
+        # 旧数据的 meta 里没有 uid，从 u0a430 换算回 10430
+        m = re.fullmatch(r"u(\d+)a(\d+)", APP_UID)
+        uid_num = str(int(m.group(1)) * 100000 + 10000 + int(m.group(2))) if m else ""
+    paths = {k: parse_audio_path(read(f"conditions_{k}_audio_flinger.txt"), uid_num) for k in cond}
+    sessions = {k: parse_session(read(f"conditions_{k}_media_session.txt"), PKG) for k in cond}
+    normalized = os.path.exists(os.path.join(OUT, "restore.txt")) or os.path.exists(
+        os.path.join(OUT, "restore.done")
+    )
+
+    def onoff(v):
+        return {"0": "关", "1": "开", "2": "开"}.get(v, v or "—")
+
+    def volume(c):
+        if not c.get("music_volume"):
+            return "—"
+        return f"{c['music_volume']} / {c.get('music_volume_max') or '?'}"
+
+    def session(k):
+        state, speed = sessions[k]
+        return f"{state}，{speed}x" if state else "—"
+
+    rows = [
+        ["飞行模式", onoff(cond["start"].get("airplane_mode_on")), onoff(cond["end"].get("airplane_mode_on"))],
+        ["Wi-Fi", onoff(cond["start"].get("wifi_on")), onoff(cond["end"].get("wifi_on"))],
+        ["蓝牙", onoff(cond["start"].get("bluetooth_on")), onoff(cond["end"].get("bluetooth_on"))],
+        ["移动数据", onoff(cond["start"].get("mobile_data")), onoff(cond["end"].get("mobile_data"))],
+        ["省电模式", onoff(cond["start"].get("low_power")), onoff(cond["end"].get("low_power"))],
+        ["媒体音量", volume(cond["start"]), volume(cond["end"])],
+        ["后台 app 进程数", cond["start"].get("user_app_procs", "—"), cond["end"].get("user_app_procs", "—")],
+        ["播放状态 / 倍速", session("start"), session("end")],
+        ["音频通路", describe_audio_path(paths["start"]), describe_audio_path(paths["end"])],
+    ]
+
+    warns = []
+    b_first = bat[0][1] if bat else {}
+    level = int(b_first.get("level", 0) or 0)
+    temp = int(b_first.get("temperature", 0) or 0) / 10
+    if level >= 95:
+        warns.append(f"起始电量 {level}%：接近满电时电池会在充满和放电之间切换，电流读数可能不准")
+    elif level and (level < 50 or level > 90):
+        warns.append(f"起始电量 {level}%，不在 50%~90% 之间")
+    if temp > 32:
+        warns.append(f"起始电池温度 {temp:.1f}°C，偏高")
+    for key, name in [("airplane_mode_on", "飞行模式"), ("wifi_on", "Wi-Fi"), ("bluetooth_on", "蓝牙"),
+                      ("mobile_data", "移动数据"), ("low_power", "省电模式"), ("music_volume", "媒体音量")]:
+        a, b = cond["start"].get(key), cond["end"].get(key)
+        if cond["end"] and a != b:
+            warns.append(f"{name}在测量中途变了（{a} → {b}）")
+    if cond["start"].get("low_power") == "1":
+        warns.append("省电模式开着")
+    if cond["start"].get("music_volume") not in (None, "", "0"):
+        warns.append(f"媒体音量是 {cond['start']['music_volume']}，只能和同音量的测量比较电流")
+    devices = " ".join(t["devices"] for t in paths["start"])
+    if cond["start"].get("bluetooth_on") == "1" and "BLUETOOTH" not in devices:
+        warns.append("蓝牙开着但音频没走蓝牙：系统可能在持续扫描，会抬高电流")
+    for k, label in [("start", "开始"), ("end", "结束")]:
+        state, speed = sessions[k]
+        if state and not state.startswith("PLAYING"):
+            warns.append(f"{label}时没有在播放（{state}）")
+        elif speed and speed != 1.0:
+            warns.append(f"{label}时倍速是 {speed}x")
+        if cond[k] and not paths[k]:
+            warns.append(f"{label}时在 AudioFlinger 里没找到 app 的 AudioTrack")
+    if paths["start"] and paths["end"]:
+        if describe_audio_path(paths["start"]).split("，")[0] != describe_audio_path(paths["end"]).split("，")[0]:
+            warns.append("音频输出通路在测量中途变了")
+
+    # 无线模块的内核唤醒锁：两次测量差距大时，电流不能直接比
+    full = read("batterystats_full.txt")
+    radio = []
+    span = wall or 1
+    for label, pat in [("蓝牙 HAL", r"hal_bluetooth_lock"), ("蓝牙串口", r"[\w.,]*uart"), ("蜂窝网络", r"rmnet_ctl")]:
+        m = re.search(rf"Kernel Wake lock ({pat}): (.+?) \((\d+) times\)", full)
+        if m:
+            secs = parse_duration_s(m.group(2))
+            radio.append([label, m.group(1), f"{secs:.0f}s（{secs / span * 100:.0f}%）", m.group(3)])
+            if label == "蓝牙 HAL" and secs / span > 0.05:
+                warns.append(f"蓝牙活动明显（{label} 唤醒锁占 {secs / span * 100:.0f}% 的时间）")
+            if label == "蜂窝网络" and secs / span > 0.10:
+                warns.append(f"蜂窝网络活动明显（唤醒锁占 {secs / span * 100:.0f}% 的时间）")
+
+    p("## 0. 测试条件")
+    p()
+    p(f"- 统一条件（--normalize）：{'是' if normalized else '否'}")
+    if bat:
+        p(f"- 起始电量 {level}%，温度 {temp:.1f}°C")
+    p()
+    table(["条件", "开始", "结束"], rows)
+    if radio:
+        p("无线模块的内核唤醒锁（占测量时长的比例）：")
+        p()
+        table(["模块", "唤醒锁", "累计持有", "次数"], radio)
+    if warns:
+        p("**以下条件会影响电流数据的可比性**（CPU / 线程 / 唤醒数据基本不受影响）：")
+        p()
+        for w in warns:
+            p(f"- {w}")
+    else:
+        p("没有发现影响可比性的条件。")
+    p()
 
 p("## 1. 电量与电流")
 p()
@@ -370,16 +571,17 @@ def ticks_delta(first, last):
 
 rows = []
 app_total = 0.0
-for pid in set(samples[0].pstat) | set(samples[-1].pstat):
-    present = [s for s in samples if pid in s.pstat]
+# 遍历所有样本里出现过的进程实例，测量中途重启过的也算进来
+for key in {k for s in samples for k in s.pstat}:
+    present = [s for s in samples if key in s.pstat]
     if len(present) < 2:
         continue
-    secs = ticks_delta(present[0].pstat[pid][1], present[-1].pstat[pid][1])
+    secs = ticks_delta(present[0].pstat[key][1], present[-1].pstat[key][1])
     span = present[-1].t - present[0].t or 1
     app_total += secs
     rows.append(
         [
-            present[0].pstat[pid][0] + f" ({pid})",
+            present[0].pstat[key][0] + f" ({key[0]})",
             f"{secs:.1f}",
             f"{secs / span * 100:.2f}%",
         ]
@@ -420,11 +622,27 @@ threads = {}  # key -> accumulated
 timeline = []  # rows for CSV
 minute_cpu = defaultdict(Counter)  # minute -> name -> cpu sec
 minute_wake = defaultdict(Counter)
+minute_cover = Counter()  # minute -> 被采样区间覆盖的秒数
 born = []
+
+
+def minute_shares(t0, t1):
+    """把区间 [t0, t1)（相对 T0 的秒）按与每一分钟的重叠拆开，返回 [(分钟, 占比)]"""
+    shares = []
+    a = t0
+    while a < t1:
+        m = int(a // 60)
+        b = min(t1, (m + 1) * 60)
+        shares.append((m, (b - a) / (t1 - t0)))
+        a = b
+    return shares
+
 
 for prev, s in zip(samples, samples[1:]):
     dt = s.t - prev.t or 1
-    minute = int((s.t - T0) // 60)
+    shares = minute_shares(prev.t - T0, s.t - T0) or [(int((s.t - T0) // 60), 1.0)]
+    for m, share in shares:
+        minute_cover[m] += share * (s.t - prev.t)
     for key, th in s.threads.items():
         old = prev.threads.get(key)
         if old is None:
@@ -461,13 +679,15 @@ for prev, s in zip(samples, samples[1:]):
         acc["cpu"] += cpu
         acc["user"] += (th["utime"] - old["utime"]) / CLK
         acc["sys"] += (th["stime"] - old["stime"]) / CLK
-        dv = th.get("vcsw", 0) - old.get("vcsw", 0)
-        di = th.get("ivcsw", 0) - old.get("ivcsw", 0)
+        # 线程在读 stat 和 status 之间退出时会缺计数，缺了就不算这个区间，不能当 0 相减
+        dv = th["vcsw"] - old["vcsw"] if "vcsw" in th and "vcsw" in old else 0
+        di = th["ivcsw"] - old["ivcsw"] if "ivcsw" in th and "ivcsw" in old else 0
         acc["vcsw"] += dv
         acc["ivcsw"] += di
         acc["peak"] = max(acc["peak"], cpu / dt * 100)
-        minute_cpu[minute][th["name"]] += cpu
-        minute_wake[minute][th["name"]] += dv
+        for m, share in shares:
+            minute_cpu[m][th["name"]] += cpu * share
+            minute_wake[m][th["name"]] += dv * share
         if cpu > 0 or dv > 0:
             timeline.append([s.t - T0, key[0], key[1], th["name"], round(cpu * 1000, 2), dv, di])
 
@@ -576,10 +796,12 @@ with open(os.path.join(OUT, "per_minute.csv"), "w") as f:
     w.writerow(["minute", "app_cpu_sec", "app_cpu_pct", "wakeups", "top_threads"])
     for m in mins:
         top = ", ".join(f"{n} {v:.2f}s" for n, v in minute_cpu[m].most_common(3))
-        wakes = sum(minute_wake[m].values())
+        wakes = round(sum(minute_wake[m].values()))
+        # 按实际覆盖的秒数算，第 0 分钟和最后一分钟通常不满 60 秒
+        pct = totals[m] / (minute_cover[m] or 60) * 100
         flag = " ⚠" if median and totals[m] > median * 2 and totals[m] > 0.5 else ""
-        rows.append([f"{m}{flag}", f"{totals[m]:.2f}", f"{totals[m] / 60 * 100:.1f}%", wakes, top])
-        w.writerow([m, round(totals[m], 3), round(totals[m] / 60 * 100, 2), wakes, top])
+        rows.append([f"{m}{flag}", f"{totals[m]:.2f}", f"{pct:.1f}%", wakes, top])
+        w.writerow([m, round(totals[m], 3), round(pct, 2), wakes, top])
 table(["分钟", "app CPU 秒", "CPU%", "唤醒数", "最忙的线程"], rows)
 snap_events = [l for l in events.splitlines() if "SNAPSHOT_START" in l]
 if snap_events:

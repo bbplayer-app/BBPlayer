@@ -52,6 +52,22 @@ start_snapshot() {
 	fi
 }
 
+# 测试条件：开始和结束各记一次，报告里据此判断几次测量能不能互相比较
+record_conditions() {
+	{
+		for k in airplane_mode_on wifi_on bluetooth_on mobile_data low_power; do
+			echo "$k=$(settings get global $k)"
+		done
+		# 形如 "volume is 0 in range [0..15]"
+		v=$(cmd media_session volume --stream 3 --get 2>/dev/null | grep -o 'volume is [0-9]* in range \[[0-9]*\.\.[0-9]*\]')
+		echo "music_volume=$(echo "$v" | sed 's/volume is \([0-9]*\).*/\1/')"
+		echo "music_volume_max=$(echo "$v" | sed 's/.*\.\.\([0-9]*\)\]/\1/')"
+		echo "user_app_procs=$(ps -A -o USER | grep -c '^u0_a')"
+	} > "$1.txt"
+	dumpsys media.audio_flinger > "$1_audio_flinger.txt" 2>&1
+	dumpsys media_session > "$1_media_session.txt" 2>&1
+}
+
 {
 	echo "start_epoch=$START"
 	echo "duration=$DUR"
@@ -67,9 +83,11 @@ start_snapshot() {
 		echo "cpu_max_freq_$(basename "$c")=$(cat "$c/cpufreq/cpuinfo_max_freq" 2>/dev/null)"
 	done
 	echo "app_version=$(dumpsys package "$PKG" | grep -m1 versionName | tr -d ' ')"
-	echo "uid=$(dumpsys package "$PKG" | grep -m1 -o 'userId=[0-9]*' | cut -d= -f2)"
+	# 新版 dumpsys package 只有 appId=，没有 userId=，用 pm 查最稳
+	echo "uid=$(pm list packages -U "$PKG" | grep "^package:$PKG uid:" | sed 's/.*uid://')"
 } > meta.txt
 
+record_conditions conditions_start
 refresh_pids
 log "START app_pids=$app_pids"
 
@@ -156,6 +174,7 @@ while :; do
 done
 
 log "SAMPLING_END"
+record_conditions conditions_end
 
 # 结束时（此时通常仍未插线）立即导出系统统计，避免插线后数据被充电状态污染
 {
@@ -176,6 +195,18 @@ dumpsys power > power_final.txt 2>&1
 # long trace 的 duration 比采样多留了余量，这里主动结束让它落盘
 # （--background 的输出被重定向时 perfetto 不会打印 pid，所以按参数找）
 pkill -TERM -f 'bbpower_l[o]ng' 2>/dev/null
-sleep 3
+# 快照的录制时长超出测量窗口时（比如 -d 很长）可能还在录，最多等一个快照时长，再同样主动结束
+waited=0
+while pgrep -f 'bbpower_s[n]ap' > /dev/null && [ "$waited" -lt "$SNAPDUR" ]; do
+	sleep 1
+	waited=$((waited + 1))
+done
+pkill -TERM -f 'bbpower_s[n]ap' 2>/dev/null
+# 等 perfetto 把 trace 写完退出，collect 才不会拉到写了一半的文件
+waited=0
+while pgrep -f 'bbpower_(l[o]ng|s[n]ap)' > /dev/null && [ "$waited" -lt 30 ]; do
+	sleep 1
+	waited=$((waited + 1))
+done
 log "DONE"
 date +%s > DONE
