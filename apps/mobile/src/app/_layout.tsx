@@ -312,6 +312,11 @@ function RootLayout() {
 							/>
 
 							<Stack.Screen
+								name='audio-debug'
+								options={{ headerShown: false }}
+							/>
+
+							<Stack.Screen
 								name='player'
 								options={{
 									animation: 'slide_from_bottom',

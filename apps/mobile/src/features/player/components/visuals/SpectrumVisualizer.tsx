@@ -1,5 +1,6 @@
 import { Orpheus, SPECTRUM_SIZE } from '@bbplayer/orpheus'
 import { Canvas, Path, Skia } from '@shopify/react-native-skia'
+import { useIsFocused } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { AppState, View } from 'react-native'
 import { useDerivedValue, useSharedValue } from 'react-native-reanimated'
@@ -31,6 +32,10 @@ export const SpectrumVisualizer = ({
 		AppState.currentState === 'active',
 	)
 
+	// 播放页被其他页面盖住时也要停下采集和动画
+	const isFocused = useIsFocused()
+	const isVisible = isAppActive && isFocused
+
 	useEffect(() => {
 		const subscription = AppState.addEventListener('change', (nextAppState) => {
 			setIsAppActive(nextAppState === 'active')
@@ -40,6 +45,17 @@ export const SpectrumVisualizer = ({
 			subscription.remove()
 		}
 	}, [])
+
+	// 原生端只在频谱可见时运行 Visualizer：它会持续唤醒主线程，还会阻止音频 offload
+	useEffect(() => {
+		if (!isVisible) return
+
+		Orpheus.setSpectrumCaptureActive(true)
+
+		return () => {
+			Orpheus.setSpectrumCaptureActive(false)
+		}
+	}, [isVisible])
 
 	const geometry = useDerivedValue(() => {
 		const center = size / 2 + MAX_BAR_HEIGHT
@@ -90,7 +106,7 @@ export const SpectrumVisualizer = ({
 		const DECAY_FACTOR = 0.9
 
 		const animate = (timestamp: number) => {
-			if (!isAppActive) return
+			if (!isVisible) return
 
 			const elapsed = timestamp - lastFrameTime
 
@@ -181,7 +197,7 @@ export const SpectrumVisualizer = ({
 			animationFrameId = requestAnimationFrame(animate)
 		}
 
-		if (isAppActive) {
+		if (isVisible) {
 			animationFrameId = requestAnimationFrame(animate)
 		}
 
@@ -190,7 +206,7 @@ export const SpectrumVisualizer = ({
 				cancelAnimationFrame(animationFrameId)
 			}
 		}
-	}, [frequencyData, isPlaying, isAppActive])
+	}, [frequencyData, isPlaying, isVisible])
 
 	const containerSize = size + MAX_BAR_HEIGHT * 2
 

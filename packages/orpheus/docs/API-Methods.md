@@ -158,3 +158,11 @@ Orpheus 使用 Media3 DownloadManager。
 
 - **`updateSpectrumData(destination: Float32Array): void`**
   同步更新提供的 `Float32Array` 为最新的频谱频率数据。建议在 JS 端创建一次并在动画循环中重复使用。
+
+- **`getAudioDebugInfo(): Promise<AudioDebugSection[]>`**
+  返回音频播放的调试信息（播放状态、格式、解码器、AudioTrack、offload、网络、输出设备等），每项都是可直接展示的字符串。仅 Android 实现，iOS 返回空数组。
+
+- **`setSpectrumCaptureActive(active: boolean): void`**
+  告诉原生端当前是否有可见的频谱组件。Android 上只有为 `true` 时才会从播放器采集 PCM 计算频谱，组件可见时设为 `true`，卸载或 App 退到后台时设回 `false`；不调用的话 `updateSpectrumData` 只会得到全 0。iOS 上为空操作。
+
+  Android 上开启频谱（`isSpectrumVisualizerEnabled`）会关闭音频 offload，因为 offload 时播放器拿不到 PCM；切换开关时播放会短暂停顿。

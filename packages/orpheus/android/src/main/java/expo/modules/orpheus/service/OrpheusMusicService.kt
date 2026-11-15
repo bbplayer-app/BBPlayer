@@ -1,6 +1,7 @@
 package expo.modules.orpheus.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -12,9 +13,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -26,10 +29,12 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
+import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
+import expo.modules.orpheus.manager.SpectrumCaptureAudioSink
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
 import expo.modules.orpheus.manager.UnifiedLyricsManager
@@ -57,6 +62,10 @@ import kotlin.math.abs
 class OrpheusMusicService : MediaLibraryService() {
 
     var player: ExoPlayer? = null
+
+    /** 音频调试页的数据来源，随 player 一起重建 */
+    var audioDebugTracker: AudioDebugTracker? = null
+        private set
     private var mediaSession: MediaLibrarySession? = null
     private var sleepTimerManager: SleepTimeController? = null
     private var volumeFadeJob: Job? = null
@@ -81,7 +90,10 @@ class OrpheusMusicService : MediaLibraryService() {
                     lyricsManager.updateTime(seconds)
                 }
             }
-            serviceHandler.postDelayed(this, 200)
+            // 没有任何歌词输出（桌面/状态栏/车机）时降频，减少后台唤醒；
+            // 仍保留低频轮询，这样任一输出被打开后 1 秒内就会恢复正常刷新
+            val interval = if (lyricsManager.hasActiveConsumers()) 200L else 1000L
+            serviceHandler.postDelayed(this, interval)
         }
     }
 
@@ -107,6 +119,11 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
         private val listeners = CopyOnWriteArrayList<(OrpheusMusicService) -> Unit>()
+
+        /** 频谱开关变化后调用，只能在主线程调用 */
+        fun refreshAudioOffloadPreferences() {
+            instance?.applyAudioOffloadPreferences()
+        }
 
         fun addOnServiceReadyListener(listener: (OrpheusMusicService) -> Unit) {
             instance?.let { listener(it) }
@@ -256,10 +273,21 @@ class OrpheusMusicService : MediaLibraryService() {
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
+        val renderersFactory = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioOutputPlaybackParams: Boolean
+            ): AudioSink? {
+                // 包一层，让频谱可以直接拿到播放器自己的 PCM
+                return super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)
+                    ?.let(::SpectrumCaptureAudioSink)
+            }
+        }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 
         player = ExoPlayer.Builder(this, renderersFactory)
+            // 按渲染器实际需要安排 doSomeWork，而不是固定每 10ms 唤醒一次
+            .experimentalSetDynamicSchedulingEnabled(true)
             .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -270,6 +298,12 @@ class OrpheusMusicService : MediaLibraryService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+
+        applyAudioOffloadPreferences()
+        audioDebugTracker = AudioDebugTracker().also { tracker ->
+            player?.addAnalyticsListener(tracker)
+            player?.addAudioOffloadListener(tracker)
+        }
 
         shuffleManager = ShuffleManager { player }
 
@@ -833,6 +867,30 @@ class OrpheusMusicService : MediaLibraryService() {
         } catch (_: Exception) {
             null
         }
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun applyAudioOffloadPreferences() {
+        val player = player ?: return
+        // offload（解码交给音频 DSP）时 CPU 可以长时间休眠，但播放器拿不到 PCM，
+        // 所以只在频谱关闭时启用
+        val mode = if (!GeneralStorage.isSpectrumVisualizerEnabled()) {
+            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+        } else {
+            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+        }
+        if (player.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode == mode) return
+
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setAudioOffloadPreferences(
+                AudioOffloadPreferences.Builder()
+                    .setAudioOffloadMode(mode)
+                    // 设备不支持无缝切歌或 offload 下变速时不启用，ExoPlayer 会自动回退到普通解码
+                    .setIsGaplessSupportRequired(true)
+                    .setIsSpeedChangeSupportRequired(true)
+                    .build()
+            )
+            .build()
     }
 
     @OptIn(UnstableApi::class)

@@ -97,10 +97,6 @@ export type OrpheusEvents = {
 	}): void
 	onHeadlessEvent(event: OrpheusHeadlessEvent): void
 	onPlayerError(event: PlaybackErrorEvent): void
-	onSpectrumVisualizerError(event: {
-		audioSessionId: number
-		message: string
-	}): void
 	onSpectrumVisualizerEnabledChanged(event: { enabled: boolean }): void
 	onPositionUpdate(event: {
 		position: number
@@ -443,6 +439,19 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 */
 	updateSpectrumData(destination: Float32Array): void
 	/**
+	 * 告诉原生端当前是否有可见的频谱组件。
+	 *
+	 * Android 上只有为 `true` 时才会从播放器采集 PCM 并计算频谱，不显示时没有额外开销。
+	 * 组件可见时设为 `true`，卸载或 App 退到后台时设回 `false`。
+	 */
+	setSpectrumCaptureActive(active: boolean): void
+	/**
+	 * 获取音频播放的调试信息（格式、解码器、AudioTrack、offload、网络等），用于调试页展示。
+	 *
+	 * 返回按分组整理好的字符串；iOS 暂未实现，返回空数组。
+	 */
+	getAudioDebugInfo(): Promise<AudioDebugSection[]>
+	/**
 	 * 从 `uris` 中筛出原生 LRU 缓存当前已知的完整缓存 URI。
 	 *
 	 * 缓存状态由 Android 缓存监听器异步维护。
@@ -494,6 +503,11 @@ Orpheus.setLyrics = async (
 		JSON.stringify(data),
 		consumers,
 	)
+}
+
+export interface AudioDebugSection {
+	title: string
+	items: { label: string; value: string }[]
 }
 
 export const SPECTRUM_SIZE = 512

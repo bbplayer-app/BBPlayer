@@ -67,7 +67,6 @@ public class ExpoOrpheusModule: Module {
             "onIsPlayingChanged",
             "onDownloadUpdated",
             "onPlaybackSpeedChanged",
-            "onSpectrumVisualizerError",
             "onSpectrumVisualizerEnabledChanged",
             "onHeadlessEvent",
             "onTrackStarted",
@@ -329,6 +328,14 @@ public class ExpoOrpheusModule: Module {
     AsyncFunction("debugTriggerError") {
         throw NSError(domain: "Orpheus", code: 1, userInfo: [NSLocalizedDescriptionKey: "Platform not supported"])
     }
+
+    // 音频调试页目前只实现了 Android
+    AsyncFunction("getAudioDebugInfo") { () -> [[String: Any]] in
+      return []
+    }
+
+    // Android 用它控制是否采集 PCM 计算频谱；iOS 的频谱分析不需要
+    Function("setSpectrumCaptureActive") { (_: Bool) in }
 
     Function("updateSpectrumData") { (destination: TypedArray) in
         let count = destination.length
