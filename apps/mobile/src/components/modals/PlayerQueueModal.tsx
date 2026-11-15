@@ -243,15 +243,6 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 
 	useEffect(() => stopAutoScroll, [stopAutoScroll])
 
-	const scrollableRef = useMemo(
-		() => ({
-			get current() {
-				return flatListRef.current?.getNativeScrollRef() ?? null
-			},
-		}),
-		[],
-	)
-
 	const queue = usePlayerQueueStore((state) => state.tracks)
 	const queueRef = useRef(queue)
 	useEffect(() => {
@@ -483,7 +474,7 @@ function PlayerQueueModal({ sheetRef, ...props }: PlayerQueueModalProps) {
 			backgroundColor={theme.colors.elevation.level1}
 			dimOpacity={pureWhiteBackground ? 0 : undefined}
 			style={{ flex: 1 }}
-			scrollableRef={scrollableRef}
+			scrollableRef={flatListRef}
 			onMount={scrollToCurrent}
 			onDidPresent={() => {
 				usePlayerQueueSheetStore.getState().setOpen(true)

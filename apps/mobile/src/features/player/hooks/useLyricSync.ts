@@ -32,7 +32,7 @@ export default function useLyricSync(
 		}
 
 		isManualScrollingRef.current = true
-	}, [lyrics.length])
+	}, [lyrics])
 
 	const onUserScrollEnd = useCallback(() => {
 		if (!lyrics.length) return
@@ -46,7 +46,7 @@ export default function useLyricSync(
 
 			scrollToIndex(currentLyricIndex.get(), true)
 		}, 2000)
-	}, [lyrics.length, scrollToIndex, currentLyricIndex])
+	}, [lyrics, scrollToIndex, currentLyricIndex])
 
 	const handleJumpToLyric = useCallback(
 		async (index: number) => {

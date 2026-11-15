@@ -77,10 +77,10 @@ export function PodcastSubtitles({
 			)
 		} catch (error) {
 			toastAndLogError('字幕导出失败', error, 'Player.Subtitles')
-		} finally {
-			exportingRef.current = false
-			setExporting(false)
 		}
+
+		exportingRef.current = false
+		setExporting(false)
 	}
 
 	return (

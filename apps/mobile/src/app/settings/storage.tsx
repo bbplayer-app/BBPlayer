@@ -2,7 +2,7 @@ import { clearCacheAsync } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import {
 	Appbar,
@@ -55,6 +55,16 @@ const clearImageCache = async () => {
 	}
 }
 
+// 图片缓存由 expo-image 自己管理；其余运行数据缓存由 native 处理；
+// Media3 在线播放缓存由 orpheus 处理。
+async function clearAllCaches() {
+	const imageCacheCleared = await Image.clearDiskCache()
+
+	if (!imageCacheCleared) throw new Error('图片磁盘缓存清理失败')
+	await clearCacheAsync()
+	await Orpheus.clearPlaybackCache()
+}
+
 export default function StorageSettingsPage() {
 	const router = useRouter()
 	const split = useSettingsSplit()
@@ -96,7 +106,7 @@ export default function StorageSettingsPage() {
 		}
 	}, [isError, usageError])
 
-	const items = useMemo<UsageItem[]>(() => {
+	const items = ((): UsageItem[] => {
 		if (!usage) return []
 
 		return [
@@ -143,12 +153,9 @@ export default function StorageSettingsPage() {
 				value: usage.packageBytes,
 			},
 		]
-	}, [usage, colors, router])
+	})()
 
-	const total = useMemo(
-		() => items.reduce((sum, item) => sum + item.value, 0),
-		[items],
-	)
+	const total = items.reduce((sum, item) => sum + item.value, 0)
 
 	const clearable = usage ? usage.runtimeCacheBytes + usage.musicCacheBytes : 0
 
@@ -157,20 +164,14 @@ export default function StorageSettingsPage() {
 		setIsClearing(true)
 
 		try {
-			// 图片缓存由 expo-image 自己管理；其余运行数据缓存由 native 处理；
-			// Media3 在线播放缓存由 orpheus 处理。
-			const imageCacheCleared = await Image.clearDiskCache()
-
-			if (!imageCacheCleared) throw new Error('图片磁盘缓存清理失败')
-			await clearCacheAsync()
-			await Orpheus.clearPlaybackCache()
+			await clearAllCaches()
 			await refetch()
 			toast.success('缓存已清理')
 		} catch (error) {
 			toastAndLogError('清理缓存失败', error, 'StorageSettings')
-		} finally {
-			setIsClearing(false)
 		}
+
+		setIsClearing(false)
 	}
 
 	const confirmClearCache = () => {

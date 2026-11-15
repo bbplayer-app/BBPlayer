@@ -22,6 +22,51 @@ interface WebDavCredentials {
 	password: string
 }
 
+async function uploadCloudBackup({ config, password }: WebDavCredentials) {
+	const client = await createMobileWebDavClient(config, password)
+	await client.ensureDirectory(config.directory)
+	const uri = await createBackup()
+	const backupFile = new File(uri)
+
+	try {
+		const bytes = backupFile.bytesSync()
+
+		const timestamp = new Date()
+			.toISOString()
+			.replaceAll(':', '-')
+			.replace('.', '-')
+
+		await client.uploadFile(
+			joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
+			Uint8Array.from(bytes).buffer,
+		)
+		await saveWebDavConfig(config, password || undefined)
+	} finally {
+		if (backupFile.exists) backupFile.delete()
+	}
+}
+
+async function restoreCloudBackup({
+	config,
+	password,
+	entry,
+}: WebDavCredentials & { entry: WebDavEntry }) {
+	const client = await createMobileWebDavClient(config, password)
+	const data = await client.downloadFile(entry.path)
+
+	const cacheFile = new File(
+		Paths.cache,
+		`bbplayer-webdav-restore-${Date.now()}-${Math.random().toString(36).slice(2)}.bbplayer`,
+	)
+
+	try {
+		await cacheFile.write(new Uint8Array(data))
+		await restoreBackup(cacheFile.uri)
+	} finally {
+		if (cacheFile.exists) cacheFile.delete()
+	}
+}
+
 export function useTestWebDavConnectionMutation() {
 	return useTracedMutation({
 		span: { name: 'backup.webdav.test_connection' },
@@ -42,29 +87,7 @@ export function useCloudBackupMutation() {
 	return useTracedMutation({
 		span: { name: 'backup.webdav.upload' },
 		mutationKey: ['webDavBackups', 'upload'],
-		mutationFn: async ({ config, password }: WebDavCredentials) => {
-			const client = await createMobileWebDavClient(config, password)
-			await client.ensureDirectory(config.directory)
-			const uri = await createBackup()
-			const backupFile = new File(uri)
-
-			try {
-				const bytes = backupFile.bytesSync()
-
-				const timestamp = new Date()
-					.toISOString()
-					.replaceAll(':', '-')
-					.replace('.', '-')
-
-				await client.uploadFile(
-					joinWebDavPath(config.directory, `backup-${timestamp}.bbplayer`),
-					Uint8Array.from(bytes).buffer,
-				)
-				await saveWebDavConfig(config, password || undefined)
-			} finally {
-				if (backupFile.exists) backupFile.delete()
-			}
-		},
+		mutationFn: uploadCloudBackup,
 		onSuccess: async () => {
 			toast.success('云端备份完成')
 			await queryClient.invalidateQueries({
@@ -80,26 +103,7 @@ export function useCloudRestoreMutation(onSuccess: () => void) {
 	return useTracedMutation({
 		span: { name: 'backup.webdav.restore' },
 		mutationKey: ['webDavBackups', 'restore'],
-		mutationFn: async ({
-			config,
-			password,
-			entry,
-		}: WebDavCredentials & { entry: WebDavEntry }) => {
-			const client = await createMobileWebDavClient(config, password)
-			const data = await client.downloadFile(entry.path)
-
-			const cacheFile = new File(
-				Paths.cache,
-				`bbplayer-webdav-restore-${Date.now()}-${Math.random().toString(36).slice(2)}.bbplayer`,
-			)
-
-			try {
-				await cacheFile.write(new Uint8Array(data))
-				await restoreBackup(cacheFile.uri)
-			} finally {
-				if (cacheFile.exists) cacheFile.delete()
-			}
-		},
+		mutationFn: restoreCloudBackup,
 		onSuccess,
 		onError: (error) =>
 			toastAndLogError('恢复云端备份失败', error, 'UI.Settings.Backup'),

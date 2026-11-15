@@ -408,16 +408,18 @@ export default function LyricsSettingsPage() {
 								disabled={isStatusBarLyricsSwitchDisabled}
 								value={isStatusBarLyricsEnabled}
 								onValueChange={async () => {
-									try {
-										const next = !isStatusBarLyricsEnabled
+									const next = !isStatusBarLyricsEnabled
 
-										if (statusBarLyricsProvider === 'lyricon' && next) {
+									const connectLyricon =
+										statusBarLyricsProvider === 'lyricon' && next
+
+									const toastId = lyriconConnectionToast.current ?? undefined
+
+									try {
+										if (connectLyricon) {
 											lyriconConnectionToast.current = toast.loading(
 												'正在连接词幕…',
-												{
-													id: lyriconConnectionToast.current ?? undefined,
-													duration: Infinity,
-												},
+												{ id: toastId, duration: Infinity },
 											)
 										} else {
 											finishLyriconConnectionToast()

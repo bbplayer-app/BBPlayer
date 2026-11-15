@@ -42,6 +42,29 @@ import type { WebDavEntry } from '@/lib/backup/webdav-client'
 import { toastAndLogError } from '@/utils/error-handling'
 import toast from '@/utils/toast'
 
+async function pickBackupFile() {
+	const result = await DocumentPicker.getDocumentAsync()
+
+	return result.canceled ? undefined : result.assets?.[0]?.uri
+}
+
+async function exportLocalBackup() {
+	const uri = await createBackup()
+	const backupFile = new File(uri)
+
+	try {
+		const downloadsUri = exportBackupToDownloads(
+			uri,
+			`backup-${Date.now()}.zip`,
+			'application/zip',
+		)
+
+		if (!downloadsUri) throw new Error('无法写入文件')
+	} finally {
+		if (backupFile.exists) backupFile.delete()
+	}
+}
+
 export default function BackupSettingsPage() {
 	const router = useRouter()
 	const split = useSettingsSplit()
@@ -98,10 +121,12 @@ export default function BackupSettingsPage() {
 	}, [])
 
 	const handleSaveConfig = async () => {
+		const savedPassword = password || undefined
+
 		try {
 			const config = currentConfig()
 			await createMobileWebDavClient(config, password)
-			await saveWebDavConfig(config, password || undefined)
+			await saveWebDavConfig(config, savedPassword)
 			toast.success('WebDAV 配置已保存')
 		} catch (error) {
 			toastAndLogError('保存 WebDAV 配置失败', error, 'UI.Settings.Backup')
@@ -121,28 +146,16 @@ export default function BackupSettingsPage() {
 		if (isExportingRef.current) return
 		isExportingRef.current = true
 		setIsExporting(true)
-		let backupFile: File | undefined
 
 		try {
-			const uri = await createBackup()
-			backupFile = new File(uri)
-
-			const downloadsUri = exportBackupToDownloads(
-				uri,
-				`backup-${Date.now()}.zip`,
-				'application/zip',
-			)
-
-			if (!downloadsUri) throw new Error('无法写入文件')
+			await exportLocalBackup()
 			toast.success('已导出到下载目录/bbplayer-backup')
 		} catch (error) {
 			toastAndLogError('导出失败', error, 'UI.Settings.Backup')
-		} finally {
-			setIsExporting(false)
-			isExportingRef.current = false
-
-			if (backupFile?.exists) backupFile.delete()
 		}
+
+		setIsExporting(false)
+		isExportingRef.current = false
 	}
 
 	const handleLocalImport = async () => {
@@ -151,18 +164,18 @@ export default function BackupSettingsPage() {
 		setIsImporting(true)
 
 		try {
-			const result = await DocumentPicker.getDocumentAsync()
-			const file = result.canceled ? undefined : result.assets?.[0]
+			const uri = await pickBackupFile()
 
-			if (!file) return
-			await restoreBackup(file.uri)
-			showRestartPrompt()
+			if (uri) {
+				await restoreBackup(uri)
+				showRestartPrompt()
+			}
 		} catch (error) {
 			toastAndLogError('导入失败', error, 'UI.Settings.Backup')
-		} finally {
-			setIsImporting(false)
-			isImportingRef.current = false
 		}
+
+		setIsImporting(false)
+		isImportingRef.current = false
 	}
 
 	return (

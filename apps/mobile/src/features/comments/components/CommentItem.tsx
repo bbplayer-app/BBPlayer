@@ -1,7 +1,7 @@
 import { Galeria } from '@nandorojo/galeria'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Appearance, StyleSheet, TouchableOpacity, View } from 'react-native'
 import SquircleView from 'react-native-fast-squircle'
 import { Text, useTheme } from 'react-native-paper'
@@ -95,10 +95,7 @@ const CommentMessage = memo(function CommentMessage({
 	emotes?: Record<string, BilibiliCommentEmote>
 	color: string
 }) {
-	const segments = useMemo(
-		() => parseMessageSegments(message, emotes),
-		[emotes, message],
-	)
+	const segments = parseMessageSegments(message, emotes)
 
 	return (
 		<View style={styles.messageContainer}>

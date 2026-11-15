@@ -242,12 +242,9 @@ export default function FollowingPage() {
 							colors={[colors.primary]}
 							onRefresh={async () => {
 								setRefreshing(true)
-
-								try {
-									await Promise.all([refetch(), refetchGroups()])
-								} finally {
-									setRefreshing(false)
-								}
+								await Promise.all([refetch(), refetchGroups()]).finally(() =>
+									setRefreshing(false),
+								)
 							}}
 						/>
 					}

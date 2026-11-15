@@ -11,23 +11,23 @@ import { returnOrThrowAsync } from '@/utils/neverthrow-utils'
 const sessionIds = new WeakMap<Record<string, string>, string>()
 let nextSessionId = 0
 
+function getRelationAccount(cookie: Record<string, string> | null) {
+	if (!cookie) return null
+
+	if (cookie.DedeUserID) return cookie.DedeUserID
+	// 用户手动设置 cookie 时可能不包含 uid，我们采用一个 in-memory 的自增 id
+	let sessionId = sessionIds.get(cookie)
+
+	if (!sessionId) {
+		sessionId = `session:${++nextSessionId}`
+		sessionIds.set(cookie, sessionId)
+	}
+
+	return sessionId
+}
+
 export const useBilibiliRelationAccount = () =>
-	useAppStore((state) => {
-		const cookie = state.bilibiliCookie
-
-		if (!cookie) return null
-
-		if (cookie.DedeUserID) return cookie.DedeUserID
-		// 用户手动设置 cookie 时可能不包含 uid，我们采用一个 in-memory 的自增 id
-		let sessionId = sessionIds.get(cookie)
-
-		if (!sessionId) {
-			sessionId = `session:${++nextSessionId}`
-			sessionIds.set(cookie, sessionId)
-		}
-
-		return sessionId
-	})
+	useAppStore((state) => getRelationAccount(state.bilibiliCookie))
 
 export const relationQueryKeys = {
 	relation: (account: string | null, mid: number) =>

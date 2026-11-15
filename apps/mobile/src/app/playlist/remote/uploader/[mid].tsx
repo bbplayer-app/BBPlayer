@@ -111,9 +111,9 @@ export default function UploaderPage() {
 			await setFollowing.mutateAsync(!isFollowing)
 		} catch {
 			// The mutation reports the error without changing the displayed relationship.
-		} finally {
-			followingBusy.current = false
 		}
+
+		followingBusy.current = false
 	}
 
 	const { selected, selectMode, toggle, enterSelectMode, exitSelectMode } =
