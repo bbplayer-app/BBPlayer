@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
@@ -17,12 +18,16 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -39,6 +44,7 @@ import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
+import expo.modules.orpheus.manager.OffloadAwareMediaCodecAudioRenderer
 import expo.modules.orpheus.manager.SpectrumCaptureAudioSink
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
@@ -72,6 +78,9 @@ class OrpheusMusicService : MediaLibraryService() {
     var audioDebugTracker: AudioDebugTracker? = null
         private set
     private var mediaSession: MediaLibrarySession? = null
+
+    @Volatile
+    private var audioOffloadPreferences: AudioOffloadPreferences? = null
     private var sleepTimerManager: SleepTimeController? = null
     private var volumeFadeJob: Job? = null
     private var scope = MainScope()
@@ -302,6 +311,31 @@ class OrpheusMusicService : MediaLibraryService() {
                     .build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
                 return SpectrumCaptureAudioSink(audioSink)
+            }
+
+            override fun buildAudioRenderers(
+                context: Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                audioSink: AudioSink,
+                eventHandler: Handler,
+                eventListener: AudioRendererEventListener,
+                out: ArrayList<Renderer>
+            ) {
+                // 会走 offload 时用 MediaCodec，否则由 FFmpeg 在进程内解码，见 OffloadAwareMediaCodecAudioRenderer
+                out.add(
+                    OffloadAwareMediaCodecAudioRenderer(
+                        context,
+                        getCodecAdapterFactory(),
+                        mediaCodecSelector,
+                        enableDecoderFallback,
+                        eventHandler,
+                        eventListener,
+                        audioSink,
+                    ) { audioOffloadPreferences }
+                )
+                out.add(FfmpegAudioRenderer(eventHandler, eventListener, audioSink))
             }
         }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 
@@ -923,6 +957,8 @@ class OrpheusMusicService : MediaLibraryService() {
             // 所以只在倍速不是 1x 时才要求设备支持
             .setIsSpeedChangeSupportRequired((speed ?: player.playbackParameters.speed) != 1f)
             .build()
+        // 先于轨道重选更新：渲染器在播放线程上按它判断由 MediaCodec 还是 FFmpeg 解码
+        audioOffloadPreferences = preferences
         if (player.trackSelectionParameters.audioOffloadPreferences == preferences) return
 
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()

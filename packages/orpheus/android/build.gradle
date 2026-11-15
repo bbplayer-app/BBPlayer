@@ -48,6 +48,8 @@ dependencies {
     implementation 'com.github.HChenX:SuperLyricApi:2.4'
     implementation "androidx.media3:media3-exoplayer:1.9.0"
     implementation "androidx.media3:media3-session:1.9.0"
+    // 进程内的 FFmpeg 音频解码器（Media3 官方没有发布预编译版本，用 Jellyfin 编译的）
+    implementation "org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1"
     implementation "androidx.media3:media3-transformer:1.9.0"
     implementation("androidx.media3:media3-exoplayer-dash:1.9.0")
     implementation "net.jthink:jaudiotagger:3.0.1"
