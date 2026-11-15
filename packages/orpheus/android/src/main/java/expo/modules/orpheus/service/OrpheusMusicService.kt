@@ -614,6 +614,11 @@ class OrpheusMusicService : MediaLibraryService() {
 
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
+            override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
+                // 兜底：倍速可能从系统媒体控件等别处修改，保持 offload 偏好与倍速一致
+                applyAudioOffloadPreferences()
+            }
+
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 lyricsManager.setPlaybackState(isPlaying)
@@ -870,7 +875,7 @@ class OrpheusMusicService : MediaLibraryService() {
     }
 
     @OptIn(UnstableApi::class)
-    private fun applyAudioOffloadPreferences() {
+    private fun applyAudioOffloadPreferences(speed: Float? = null) {
         val player = player ?: return
         // offload（解码交给音频 DSP）时 CPU 可以长时间休眠，但播放器拿不到 PCM，
         // 所以只在频谱关闭时启用
@@ -879,18 +884,37 @@ class OrpheusMusicService : MediaLibraryService() {
         } else {
             AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
         }
-        if (player.trackSelectionParameters.audioOffloadPreferences.audioOffloadMode == mode) return
+        val preferences = AudioOffloadPreferences.Builder()
+            .setAudioOffloadMode(mode)
+            // 设备不支持无缝切歌时不启用，ExoPlayer 会自动回退到普通解码
+            .setIsGaplessSupportRequired(true)
+            // 很多设备不支持 offload 下变速（倍速会被悄悄重置为 1x），
+            // 所以只在倍速不是 1x 时才要求设备支持
+            .setIsSpeedChangeSupportRequired((speed ?: player.playbackParameters.speed) != 1f)
+            .build()
+        if (player.trackSelectionParameters.audioOffloadPreferences == preferences) return
 
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setAudioOffloadPreferences(
-                AudioOffloadPreferences.Builder()
-                    .setAudioOffloadMode(mode)
-                    // 设备不支持无缝切歌或 offload 下变速时不启用，ExoPlayer 会自动回退到普通解码
-                    .setIsGaplessSupportRequired(true)
-                    .setIsSpeedChangeSupportRequired(true)
-                    .build()
-            )
+            .setAudioOffloadPreferences(preferences)
             .build()
+    }
+
+    /**
+     * 设置倍速并同步 offload 偏好，只能在主线程调用。
+     *
+     * 切到非 1x 时必须先更新偏好再设倍速：偏好变化会让播放器先释放 offload 的 AudioTrack，
+     * 新倍速随后作用在重建的普通输出上。顺序反过来的话，倍速会先作用在不支持变速的
+     * offload 输出上而失败，被重置为 1x。切回 1x 时则先设倍速，再放宽要求。
+     */
+    fun setPlaybackSpeed(speed: Float) {
+        val player = player ?: return
+        if (speed != 1f) {
+            applyAudioOffloadPreferences(speed)
+            player.setPlaybackSpeed(speed)
+        } else {
+            player.setPlaybackSpeed(speed)
+            applyAudioOffloadPreferences(speed)
+        }
     }
 
     @OptIn(UnstableApi::class)

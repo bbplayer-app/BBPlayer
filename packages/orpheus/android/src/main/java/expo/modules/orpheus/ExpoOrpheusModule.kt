@@ -1155,7 +1155,8 @@ class ExpoOrpheusModule : Module() {
         }
 
         AsyncFunction("setPlaybackSpeed") Coroutine { speed: Float ->
-            withPlayerOnMainThread { it.setPlaybackSpeed(speed) }
+            // 由服务处理，保证倍速与 offload 偏好的切换顺序正确
+            withServiceAndPlayerOnMainThread { service, _ -> service.setPlaybackSpeed(speed) }
         }
 
         AsyncFunction("selectDirectory") Coroutine { ->
