@@ -34,6 +34,7 @@ export interface AppStorageSchema {
 	webdav_backup_url: string
 	webdav_backup_username: string
 	webdav_backup_directory: string
+	podcast_subtitles_hint_shown: boolean
 }
 
 export type StorageKey = keyof AppStorageSchema
