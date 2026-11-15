@@ -147,7 +147,7 @@ export default function SeriesPage() {
 		)
 	}, [id, openModal])
 
-	const handleRefresh = useCallback(async () => {
+	const handleRefresh = async () => {
 		setRefreshing(true)
 		await listRef.current?.scrollToOffset({ offset: 0, animated: false })
 		queryClient.setQueryData(
@@ -162,7 +162,7 @@ export default function SeriesPage() {
 		)
 		await Promise.all([refetchMetadata(), refetchArchives()])
 		setRefreshing(false)
-	}, [listRef, refetchArchives, refetchMetadata, seriesId, seriesMetadata?.mid])
+	}
 
 	useEffect(() => {
 		if (

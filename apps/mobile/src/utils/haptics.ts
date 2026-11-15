@@ -3,9 +3,16 @@ import { Platform } from 'react-native'
 
 import { reportErrorToSentry } from './log'
 
-let hapticsSupported = true
+const unsupportedHapticTypes = new Set<ExpoHaptics.AndroidHaptics>()
 
 export const AndroidHaptics = ExpoHaptics.AndroidHaptics
+
+function isUnsupportedHapticsError(error: Error): boolean {
+	return (
+		error.message.includes('is not available') ||
+		error.message.includes("doesn't support the selected haptic type")
+	)
+}
 
 /**
  * Platform-agnostic haptics function.
@@ -15,7 +22,7 @@ export const AndroidHaptics = ExpoHaptics.AndroidHaptics
 export const performHaptics = async (
 	type: ExpoHaptics.AndroidHaptics,
 ): Promise<void> => {
-	if (!hapticsSupported) return
+	if (unsupportedHapticTypes.has(type)) return
 
 	try {
 		if (Platform.OS === 'android') {
@@ -55,8 +62,8 @@ export const performHaptics = async (
 			}
 		}
 	} catch (e) {
-		if (e instanceof Error && e.message.includes('is not available')) {
-			hapticsSupported = false
+		if (e instanceof Error && isUnsupportedHapticsError(e)) {
+			unsupportedHapticTypes.add(type)
 
 			return
 		}

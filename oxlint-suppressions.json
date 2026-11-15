@@ -279,7 +279,7 @@
   },
   "apps/mobile/src/features/player/components/lyrics/PlayerLyrics.tsx": {
     "anti-slop/require-safety-comment-for-type-assertion": {
-      "count": 3
+      "count": 1
     }
   },
   "apps/mobile/src/features/player/components/menu/PlayerMenuContent.tsx": {

@@ -21,14 +21,9 @@ export function usePlayerSubtitles(active: boolean) {
 	const [selection, setSelection] = useState<{ key: string; id: string }>()
 	const key = `${player.metadata?.bvid}:${player.cid}`
 
-	const tracks = useMemo(
-		() =>
-			(player.metadata
-				? (player.info.data?.subtitle?.subtitles ?? [])
-				: []
-			).filter((track) => !!track.subtitle_url),
-		[player.metadata, player.info.data],
-	)
+	const tracks = (
+		player.metadata ? (player.info.data?.subtitle?.subtitles ?? []) : []
+	).filter((track) => !!track.subtitle_url)
 
 	const selected =
 		(selection?.key === key

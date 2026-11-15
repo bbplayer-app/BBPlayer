@@ -117,6 +117,7 @@ export const PlaylistHeader = memo(function PlaylistHeader({
 				style={[
 					styles.actionsContainer,
 					sidebar && styles.sidebarActionsContainer,
+					{ marginBottom: description ? 0 : 16 },
 				]}
 			>
 				{linkedPlaylistId ? (

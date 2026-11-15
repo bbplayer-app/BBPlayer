@@ -17,6 +17,16 @@ import { usePlayHistoryHeatmap } from '@/hooks/queries/playHistory'
 import db from '@/lib/db/db'
 import { playHistory, tracks } from '@/lib/db/schema'
 
+// 与「全部统计」一致：完整播放次数 × 曲目时长，不把部分播放算入摘要。
+const listeningSummaryQuery = db
+	.select({
+		playCount: count(),
+		duration: sql<number>`coalesce(sum(${tracks.duration}), 0)`.mapWith(Number),
+	})
+	.from(playHistory)
+	.innerJoin(tracks, eq(playHistory.trackId, tracks.id))
+	.where(eq(playHistory.completed, true))
+
 export default function ListeningRecordSection({
 	compact = false,
 }: {
@@ -26,18 +36,8 @@ export default function ListeningRecordSection({
 	const { colors } = theme
 	const router = useRouter()
 
-	// 与「全部统计」一致：完整播放次数 × 曲目时长，不把部分播放算入摘要。
 	const { data: summary, error: summaryError } = useLiveQuery(
-		db
-			.select({
-				playCount: count(),
-				duration: sql<number>`coalesce(sum(${tracks.duration}), 0)`.mapWith(
-					Number,
-				),
-			})
-			.from(playHistory)
-			.innerJoin(tracks, eq(playHistory.trackId, tracks.id))
-			.where(eq(playHistory.completed, true)),
+		listeningSummaryQuery,
 	)
 
 	const { data, isPending, isError, refetch } = usePlayHistoryHeatmap()
