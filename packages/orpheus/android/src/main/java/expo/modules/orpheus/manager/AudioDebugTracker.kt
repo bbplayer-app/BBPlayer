@@ -6,7 +6,6 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
 import android.os.SystemClock
-import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaLibraryInfo
@@ -47,7 +46,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     private var codecErrorCount = 0
     private var lastAudioError: String? = null
 
-    private var isOffloaded = false
     private var isSleepingForOffload = false
     private var offloadSleepCount = 0
     private var offloadSleepStartMs = 0L
@@ -165,11 +163,6 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastLoadAtMs = SystemClock.elapsedRealtime()
     }
 
-    override fun onOffloadedPlayback(isOffloadedPlayback: Boolean) {
-        isOffloaded = isOffloadedPlayback
-        Log.d("Orpheus", "Audio offload playback: $isOffloadedPlayback")
-    }
-
     override fun onSleepingForOffloadChanged(isSleepingForOffload: Boolean) {
         val now = SystemClock.elapsedRealtime()
         if (isSleepingForOffload && !this.isSleepingForOffload) {
@@ -219,6 +212,9 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
             "编码器延迟 / 填充" to format?.let { "${it.encoderDelay} / ${it.encoderPadding} 帧" },
         )
 
+        // onOffloadedPlayback 只会回调给 DefaultAudioSink.Builder 里设置的监听器，
+        // 通过 player.addAudioOffloadListener 注册的收不到，所以直接看 AudioTrack 配置
+        val isOffloaded = audioTrackConfig?.offload == true
         val counters = player.audioDecoderCounters
         section(
             "解码器",
