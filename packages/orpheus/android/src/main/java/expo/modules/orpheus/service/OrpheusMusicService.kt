@@ -9,8 +9,10 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
@@ -18,6 +20,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -109,6 +114,7 @@ class OrpheusMusicService : MediaLibraryService() {
 
     companion object {
         private const val RESUME_SAVE_INTERVAL_MS = 5000L
+        private const val PCM_BUFFER_DURATION_US = 2_000_000
 
         var instance: OrpheusMusicService? = null
             private set(value) {
@@ -279,9 +285,23 @@ class OrpheusMusicService : MediaLibraryService() {
                 enableFloatOutput: Boolean,
                 enableAudioOutputPlaybackParams: Boolean
             ): AudioSink? {
+                // PCM 模式下加大 AudioTrack 缓冲（默认 250~750ms），播放线程可以一次多写、睡得更久。
+                // 代价是倍速、响度均衡等 App 内处理的效果要等已缓冲的音频播完才生效
+                val bufferSizeProvider = DefaultAudioTrackBufferSizeProvider.Builder()
+                    .setMinPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
+                    .setMaxPcmBufferDurationUs(PCM_BUFFER_DURATION_US)
+                    .build()
+                val audioSink = DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                    .setAudioOutputProvider(
+                        AudioTrackAudioOutputProvider.Builder(context)
+                            .setAudioTrackBufferSizeProvider(bufferSizeProvider)
+                            .build()
+                    )
+                    .build()
                 // 包一层，让频谱可以直接拿到播放器自己的 PCM
-                return super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)
-                    ?.let(::SpectrumCaptureAudioSink)
+                return SpectrumCaptureAudioSink(audioSink)
             }
         }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 
@@ -351,7 +371,18 @@ class OrpheusMusicService : MediaLibraryService() {
             )
         }
 
-        mediaSession = MediaLibrarySession.Builder(this, player!!, callback)
+        // 系统媒体控件、车机等外部控制器的变速请求也要走 setPlaybackParameters，
+        // 保证 offload 偏好在倍速之前更新
+        val sessionPlayer = object : ForwardingPlayer(player!!) {
+            override fun setPlaybackSpeed(speed: Float) {
+                this@OrpheusMusicService.setPlaybackSpeed(speed)
+            }
+
+            override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+                this@OrpheusMusicService.setPlaybackParameters(playbackParameters)
+            }
+        }
+        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, callback)
             .setId("OrpheusSession")
             .setSessionActivity(contentIntent)
             .setBitmapLoader(GlideBitmapLoader(this))
@@ -615,7 +646,7 @@ class OrpheusMusicService : MediaLibraryService() {
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
             override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
-                // 兜底：倍速可能从系统媒体控件等别处修改，保持 offload 偏好与倍速一致
+                // 兜底：倍速可能从别处直接修改（不经过 setPlaybackParameters），保持 offload 偏好与倍速一致
                 applyAudioOffloadPreferences()
             }
 
@@ -908,11 +939,17 @@ class OrpheusMusicService : MediaLibraryService() {
      */
     fun setPlaybackSpeed(speed: Float) {
         val player = player ?: return
+        setPlaybackParameters(player.playbackParameters.withSpeed(speed))
+    }
+
+    private fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+        val player = player ?: return
+        val speed = playbackParameters.speed
         if (speed != 1f) {
             applyAudioOffloadPreferences(speed)
-            player.setPlaybackSpeed(speed)
+            player.playbackParameters = playbackParameters
         } else {
-            player.setPlaybackSpeed(speed)
+            player.playbackParameters = playbackParameters
             applyAudioOffloadPreferences(speed)
         }
     }

@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.facebook.react.bridge.ReactContext
+import com.facebook.react.common.LifecycleState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
@@ -218,6 +220,8 @@ class ExpoOrpheusModule : Module() {
         OnCreate {
             val context = appContext.reactContext ?: return@OnCreate
             cachedAppContext = context.applicationContext
+            // 模块可能在 Activity 已经退到后台时才创建，这时不会再补发后台事件
+            isAppInForeground = (context as? ReactContext)?.let { it.lifecycleState == LifecycleState.RESUMED } ?: true
             GeneralStorage.initialize(context)
             LoudnessStorage.initialize(context)
             TrackResumeStorage.initialize(context)

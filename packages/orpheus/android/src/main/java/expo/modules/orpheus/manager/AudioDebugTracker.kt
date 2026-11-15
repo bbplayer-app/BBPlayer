@@ -35,6 +35,9 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     private var inputFormat: Format? = null
 
     private var audioTrackConfig: AudioSink.AudioTrackConfig? = null
+    // 旧 AudioTrack 的释放回调可能晚于新 AudioTrack 创建，所以按数量判断还有没有输出，
+    // 不能一收到释放就清空配置
+    private var liveAudioTrackCount = 0
     private var audioTrackInitAtMs = 0L
 
     private var underrunCount = 0
@@ -87,6 +90,15 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     ) {
         this.audioTrackConfig = audioTrackConfig
         audioTrackInitAtMs = SystemClock.elapsedRealtime()
+        liveAudioTrackCount++
+    }
+
+    override fun onAudioTrackReleased(
+        eventTime: AnalyticsListener.EventTime,
+        audioTrackConfig: AudioSink.AudioTrackConfig
+    ) {
+        liveAudioTrackCount = maxOf(0, liveAudioTrackCount - 1)
+        if (liveAudioTrackCount == 0) this.audioTrackConfig = null
     }
 
     override fun onAudioUnderrun(

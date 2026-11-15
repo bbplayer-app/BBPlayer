@@ -27,7 +27,7 @@ import kotlin.math.sin
 object SpectrumAnalyzer {
     const val FFT_SIZE = 1024
 
-    private const val RING_SIZE = 1 shl 17 // 48kHz 下约 2.7 秒，足够覆盖 AudioTrack 缓冲
+    private const val RING_SIZE = 1 shl 18 // 48kHz 下约 5.5 秒，要大于 AudioTrack 缓冲（2 秒）加上输出延迟
     private const val RING_MASK = RING_SIZE - 1
     private const val ANCHOR_COUNT = 256
 
@@ -101,9 +101,11 @@ object SpectrumAnalyzer {
 
     /** 播放线程调用：把一块 PCM 混成单声道写入环形缓冲 */
     internal fun write(buffer: ByteBuffer, presentationTimeUs: Long, encoding: Int, channelCount: Int) {
+        // 解码器输出 24/32 位时（如 Hi-Res FLAC），DefaultAudioSink 要到内部才转换，这里拿到的还是原始编码
         val bytesPerSample = when (encoding) {
             C.ENCODING_PCM_16BIT -> 2
-            C.ENCODING_PCM_FLOAT -> 4
+            C.ENCODING_PCM_24BIT -> 3
+            C.ENCODING_PCM_32BIT, C.ENCODING_PCM_FLOAT -> 4
             else -> return
         }
         if (channelCount <= 0) return
@@ -121,13 +123,25 @@ object SpectrumAnalyzer {
             for (frame in 0 until frames) {
                 var sum = 0f
                 for (channel in 0 until channelCount) {
-                    sum += if (bytesPerSample == 2) data.short / 32768f else data.float
+                    sum += readSample(data, encoding)
                 }
                 ring[index] = sum / channelCount
                 index = (index + 1) and RING_MASK
             }
             framesWritten += frames
         }
+    }
+
+    private fun readSample(data: ByteBuffer, encoding: Int): Float = when (encoding) {
+        C.ENCODING_PCM_16BIT -> data.short / 32768f
+        C.ENCODING_PCM_24BIT -> {
+            val low = data.get().toInt() and 0xFF
+            val mid = data.get().toInt() and 0xFF
+            val high = data.get().toInt() // 最高字节带符号
+            ((high shl 16) or (mid shl 8) or low) / 8388608f
+        }
+        C.ENCODING_PCM_32BIT -> data.int / 2147483648f
+        else -> data.float
     }
 
     /**
