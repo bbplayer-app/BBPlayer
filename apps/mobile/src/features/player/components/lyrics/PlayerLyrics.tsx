@@ -28,6 +28,7 @@ import useAppStore from '@/hooks/stores/useAppStore'
 import { useModalStore } from '@/hooks/stores/useModalStore'
 import { queryClient } from '@/lib/config/queryClient'
 import lyricService from '@/lib/services/lyricService'
+import type { LyricFileData } from '@/types/player/lyrics'
 import { toastAndLogError } from '@/utils/error-handling'
 
 import { ModernLyricLineItem, OldSchoolLyricLineItem } from './LyricLineItem'
@@ -39,6 +40,52 @@ import { LyricsOffsetControl } from './LyricsOffsetControl'
 
 // Keep enough room for lyrics above the playback panel (all sizes are in dp).
 const MIN_HEIGHT_WITH_CONTROLS = 520
+
+type DisplayLyricLine = LyricLine & { isPaddingItem?: boolean }
+
+interface DisplayLyrics {
+	// 末尾带一个占位行，解析失败或为空时为 null
+	lines: DisplayLyricLine[] | null
+	// 不含占位行，用于播放进度同步
+	syncLines: LyricLine[]
+}
+
+function buildDisplayLyrics(lyrics: LyricFileData | undefined): DisplayLyrics {
+	if (!lyrics?.lrc) return { lines: [], syncLines: [] }
+
+	let parsedLines
+
+	try {
+		parsedLines = parseAndMergeLyrics({
+			lrc: lyrics.lrc,
+			tlyric: lyrics.tlyric,
+			romalrc: lyrics.romalrc,
+		})
+	} catch (_e) {
+		return { lines: null, syncLines: [] }
+	}
+
+	if (parsedLines.length === 0) return { lines: null, syncLines: [] }
+
+	const lastLine = parsedLines.at(-1)
+
+	const paddingTimestamp = (lastLine ? lastLine.startTime : 0) + Number.EPSILON
+
+	const lines: DisplayLyricLine[] = [
+		...parsedLines,
+		{
+			startTime: paddingTimestamp,
+			endTime: paddingTimestamp,
+			content: '',
+			translations: [],
+			isDynamic: false,
+			spans: [],
+			isPaddingItem: true,
+		},
+	]
+
+	return { lines, syncLines: parsedLines }
+}
 
 const Lyrics = memo(function Lyrics({
 	currentIndex,
@@ -129,55 +176,17 @@ const Lyrics = memo(function Lyrics({
 		return currentTime.value - offsetSharedValue.value
 	})
 
-	const finalLyrics = useMemo(() => {
-		if (!lyrics?.lrc) return []
-
-		let parsedLines
-
-		try {
-			parsedLines = parseAndMergeLyrics({
-				lrc: lyrics.lrc,
-				tlyric: lyrics.tlyric,
-				romalrc: lyrics.romalrc,
-			})
-		} catch (_e) {
-			return null
-		}
-
-		if (parsedLines.length === 0) return null
-
-		const lastLine = parsedLines.at(-1)
-
-		const paddingTimestamp =
-			(lastLine ? lastLine.startTime : 0) + Number.EPSILON
-
-		return [
-			...parsedLines,
-			{
-				startTime: paddingTimestamp,
-				endTime: paddingTimestamp,
-				content: '',
-				translations: [],
-				isDynamic: false,
-				spans: [],
-				isPaddingItem: true,
-			} as LyricLine & { isPaddingItem?: boolean },
-		]
-	}, [lyrics])
+	const { lines: finalLyrics, syncLines } = useMemo(
+		() => buildDisplayLyrics(lyrics),
+		[lyrics],
+	)
 
 	const {
 		currentLyricIndex,
 		onUserScrollEnd,
 		onUserScrollStart,
 		handleJumpToLyric,
-	} = useLyricSync(
-		((finalLyrics ?? []) as (LyricLine & { isPaddingItem?: boolean })[]).filter(
-			(l) => !l.isPaddingItem,
-		),
-		scrollToIndex,
-		-tempOffset,
-		currentIndex === 1,
-	)
+	} = useLyricSync(syncLines, scrollToIndex, -tempOffset, currentIndex === 1)
 
 	const scrollHandler = useAnimatedScrollHandler({
 		onBeginDrag: () => {

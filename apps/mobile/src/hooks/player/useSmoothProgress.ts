@@ -48,7 +48,8 @@ export default function useSmoothProgress(background = false) {
 		let syncRevision = 0
 
 		const syncState = () => {
-			const revision = ++syncRevision
+			syncRevision += 1
+			const revision = syncRevision
 			void Promise.all([
 				Orpheus.getPosition(),
 				Orpheus.getDuration(),

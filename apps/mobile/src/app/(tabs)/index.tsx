@@ -174,9 +174,9 @@ function SearchPageContent() {
 				setSearchQuery('')
 			} catch (error) {
 				toastAndLogError('搜索失败，请重试', error, 'UI.Search')
-			} finally {
-				setIsLoading(false)
 			}
+
+			setIsLoading(false)
 		},
 		[addSearchHistory, dismissPanel, router],
 	)

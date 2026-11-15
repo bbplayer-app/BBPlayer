@@ -24,7 +24,8 @@ export function useSubtitlePlayback(
 		}
 
 		const sync = () => {
-			const request = ++revision
+			revision += 1
+			const request = revision
 			void Orpheus.getPosition()
 				.then((position) => {
 					if (request === revision) update(position)
@@ -35,7 +36,7 @@ export function useSubtitlePlayback(
 		const unsubscribe = playerProgressEmitter.subscribe(
 			'progress',
 			({ position }) => {
-				++revision
+				revision += 1
 
 				if (AppState.currentState === 'active') update(position)
 			},
