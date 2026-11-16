@@ -23,6 +23,7 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.util.GeneralStorage
 import java.util.Locale
@@ -145,9 +146,14 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         lastUnderrunAtMs = SystemClock.elapsedRealtime()
         lastUnderrunBufferMs = bufferSizeMs
         lastUnderrunSinceFeedMs = elapsedSinceLastFeedMs
-        Log.w(
+        NativeLog.warning(
             LogTags.AUDIO,
-            "audioUnderrun count=$underrunCount bufferMs=$bufferSizeMs sinceLastFeedMs=$elapsedSinceLastFeedMs",
+            "audioUnderrun",
+            logAttributes() + mapOf(
+                "audio.error_count" to underrunCount,
+                "audio.buffer_ms" to bufferSizeMs,
+                "audio.since_last_feed_ms" to elapsedSinceLastFeedMs,
+            ),
         )
         OrpheusTelemetry.update("underrunCount" to underrunCount)
     }
@@ -156,7 +162,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         sinkErrorCount++
         lastAudioError = audioSinkError.toString()
         // 可恢复的错误：播放器会重建 AudioTrack 继续播放，致命错误另由 onPlayerError 报告
-        Log.w(LogTags.AUDIO, "audioSinkError count=$sinkErrorCount ${describeAudioState()}", audioSinkError)
+        NativeLog.warning(
+            LogTags.AUDIO, "audioSinkError",
+            logAttributes() + mapOf("audio.error_count" to sinkErrorCount), audioSinkError,
+        )
         OrpheusTelemetry.update("sinkErrorCount" to sinkErrorCount, "lastAudioError" to lastAudioError)
     }
 
@@ -164,7 +173,10 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         codecErrorCount++
         lastAudioError = audioCodecError.toString()
         // 可恢复的错误，但它常常是随后致命错误的真正原因（例如 FLAC 帧超过解码器输入缓冲）
-        Log.w(LogTags.AUDIO, "audioCodecError count=$codecErrorCount ${describeAudioState()}", audioCodecError)
+        NativeLog.warning(
+            LogTags.AUDIO, "audioCodecError",
+            logAttributes() + mapOf("audio.error_count" to codecErrorCount), audioCodecError,
+        )
         OrpheusTelemetry.update("codecErrorCount" to codecErrorCount, "lastAudioError" to lastAudioError)
     }
 
@@ -205,10 +217,15 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
     ) {
         activeLoads = (activeLoads - 1).coerceAtLeast(0)
         // 播放器会重试，重试耗尽才会变成 onPlayerError
-        Log.w(
+        NativeLog.warning(
             LogTags.STREAM,
-            "loadError host=${loadEventInfo.uri.host} bytes=${loadEventInfo.bytesLoaded} " +
-                "canceled=$wasCanceled error=${error.javaClass.simpleName}: ${error.message}",
+            "loadError",
+            logAttributes() + mapOf(
+                "stream.host" to loadEventInfo.uri.host,
+                "stream.bytes_loaded" to loadEventInfo.bytesLoaded,
+                "stream.canceled" to wasCanceled,
+            ),
+            error,
         )
     }
 
@@ -236,6 +253,16 @@ class AudioDebugTracker : AnalyticsListener, ExoPlayer.AudioOffloadListener {
         }
         this.isSleepingForOffload = isSleepingForOffload
     }
+
+    /** 显式选择诊断字段，避免把 Format 或播放器对象整体上传。 */
+    fun logAttributes(): Map<String, Any?> = mapOf(
+        "audio.media_id" to audioMediaId,
+        "audio.decoder" to decoderName,
+        "audio.mime" to inputFormat?.sampleMimeType,
+        "audio.sample_rate" to inputFormat?.sampleRate,
+        "audio.channel_count" to inputFormat?.channelCount,
+        "audio.output" to audioTrackConfig?.let(::outputMode),
+    )
 
     /** 报错时附上的音频状态，用于在日志里直接看出是哪种格式、哪个解码器出的问题 */
     fun describeAudioState(): String {

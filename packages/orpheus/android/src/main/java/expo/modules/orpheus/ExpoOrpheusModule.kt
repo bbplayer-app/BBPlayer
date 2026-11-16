@@ -44,6 +44,7 @@ import expo.modules.orpheus.model.TrackRecord
 import expo.modules.orpheus.service.OrpheusDownloadService
 import expo.modules.orpheus.service.OrpheusMusicService
 import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.util.DownloadUtil
 import expo.modules.orpheus.util.ExportOptions
@@ -173,9 +174,14 @@ class ExpoOrpheusModule : Module() {
                     "audio" to (audioState ?: "unknown"),
                 ),
             )
-            Log.e(
+            NativeLog.error(
                 LogTags.PLAYER,
-                "playerError code=${error.errorCodeName} mediaId=$mediaId positionMs=${player?.currentPosition} $audioState",
+                "playerError",
+                (service?.audioDebugTracker?.logAttributes().orEmpty()) + mapOf(
+                    "player.error_code" to error.errorCodeName,
+                    "player.media_id" to mediaId,
+                    "player.position_ms" to player?.currentPosition,
+                ),
                 error,
             )
             val map = error.toJsMap().toMutableMap()

@@ -1,7 +1,6 @@
 package expo.modules.orpheus.network
 
 import android.net.Uri
-import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
@@ -9,6 +8,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.NativeLog
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
@@ -55,10 +55,14 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 lastError = error
                 closeFailedSource(error)
                 val retry = canRetry(error)
-                Log.w(
+                NativeLog.warning(
                     LogTags.STREAM,
-                    "mirrorOpenFailed host=${nextSpec.uri.host} mirror=$nextCandidate/${candidates.size} " +
-                        "retry=$retry error=${describe(error)}",
+                    "mirrorOpenFailed",
+                    failureAttributes(error) + mapOf(
+                        "stream.host" to nextSpec.uri.host,
+                        "stream.retry" to retry,
+                    ),
+                    error,
                 )
                 if (!retry) throw error
             }
@@ -78,12 +82,17 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 if (count > 0) bytesRead += count
                 return count
             } catch (error: IOException) {
-                if (!canRetry(error)) throw error
-                Log.w(
+                val retry = canRetry(error)
+                NativeLog.warning(
                     LogTags.STREAM,
-                    "mirrorReadFailed host=${upstream?.uri?.host} bytesRead=$bytesRead " +
-                        "mirror=$nextCandidate/${candidates.size} error=${describe(error)}",
+                    "mirrorReadFailed",
+                    failureAttributes(error) + mapOf(
+                        "stream.host" to upstream?.uri?.host,
+                        "stream.retry" to retry,
+                    ),
+                    error,
                 )
+                if (!retry) throw error
                 closeFailedSource(error)
                 // Keep the original byte range and cache key when switching mirrors mid-stream.
                 openNext(error)
@@ -101,12 +110,12 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
         return true
     }
 
-    private fun describe(error: IOException) =
-        if (error is HttpDataSource.InvalidResponseCodeException) {
-            "HTTP ${error.responseCode}"
-        } else {
-            "${error.javaClass.simpleName}: ${error.message}"
-        }
+    private fun failureAttributes(error: IOException): Map<String, Any?> = mapOf(
+        "stream.mirror_index" to nextCandidate,
+        "stream.mirror_count" to candidates.size,
+        "stream.bytes_loaded" to bytesRead,
+        "stream.http_status" to (error as? HttpDataSource.InvalidResponseCodeException)?.responseCode,
+    )
 
     private fun closeFailedSource(error: IOException) {
         val source = upstream

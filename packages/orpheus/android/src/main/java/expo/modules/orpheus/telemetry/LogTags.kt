@@ -12,7 +12,8 @@ package expo.modules.orpheus.telemetry
  * I 及以上会经 Sentry 的 Logcat 插桩进入 Sentry Logs，W 及以上同时记为 breadcrumb，
  * 所以 I 级日志也不能在播放过程中持续输出。
  *
- * 消息格式为 `事件 key=value key=value`，方便在 Sentry 和 logcat 里按字段搜索。
+ * 普通消息格式为 `事件 key=value key=value`。关键播放故障使用 NativeLog，
+ * 显式上报 log.tag 和诊断属性，同时输出本地日志，不再经 Logcat 插桩重复采集。
  */
 internal object LogTags {
     /** JS 调用的播放控制与播放错误 */

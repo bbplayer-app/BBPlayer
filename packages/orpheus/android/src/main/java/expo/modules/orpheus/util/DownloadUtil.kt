@@ -18,6 +18,7 @@ import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
 import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.NativeLog
 import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
@@ -174,7 +175,10 @@ object DownloadUtil {
                         .build()
                 } catch (e: Exception) {
                     // 播放器会重试，重试耗尽才会变成 onPlayerError
-                    Log.w(LogTags.STREAM, "resolveAudio failed bvid=${uri.getQueryParameter("bvid")}", e)
+                    NativeLog.warning(
+                        LogTags.STREAM, "resolveAudioFailed",
+                        mapOf("stream.bvid" to uri.getQueryParameter("bvid")), e,
+                    )
                     throw IOException("Resolve Url Failed: ${e.message}", e)
                 }
             }
