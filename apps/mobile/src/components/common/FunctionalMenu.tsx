@@ -31,9 +31,10 @@ export type {
  * 这里让没有自己 onPress 的触发按钮负责打开菜单。触摸时外层 Pressable 也可能同时打开，
  * MenuView 对重复打开做了去重。
  *
- * MenuView 即使没打开也会创建 Compose 宿主并渲染全部菜单项，首次挂载很重（冷启动时单个菜单
- * 可达数十毫秒），列表里每一行都有一个时更明显。所以第一次请求打开之前只渲染触发按钮，
+ * Android 上 MenuView 即使没打开也会创建 Compose 宿主并渲染全部菜单项，首次挂载很重（冷启动时
+ * 单个菜单可达数十毫秒），列表里每一行都有一个时更明显。所以第一次请求打开之前只渲染触发按钮，
  * 请求打开时才挂载 MenuView，等拿到它的 ref 后再打开；挂载后不再卸载。
+ * iOS 的 show() 是空操作（SwiftUI Menu 没有程序化打开的 API），只能从一开始就挂载、由原生手势打开。
  */
 function NativeMenuView({
 	ref,
@@ -41,7 +42,7 @@ function NativeMenuView({
 	...props
 }: MenuComponentProps & { ref?: Ref<MenuComponentRef> }) {
 	const [menu, setMenu] = useState<MenuComponentRef | null>(null)
-	const [mounted, setMounted] = useState(false)
+	const [mounted, setMounted] = useState(Platform.OS !== 'android')
 
 	const show = () => {
 		if (menu) {
