@@ -303,6 +303,10 @@ declare class NativeOrpheusModule extends NativeModule<OrpheusEvents> {
 	 * 如果队列中已经存在同一曲目，会移动已有项而不是重复添加；当前正在播放的同一曲目不会被移动。
 	 * 随机播放模式下也会同步更新遍历顺序，让该曲目成为逻辑上的下一首。
 	 */
+	/**
+	 * 原生 Sentry SDK 初始化完成后调用：把 SDK 初始化之前产生的播放器状态（context、tag）补写到原生 scope。
+	 */
+	syncTelemetry(): void
 	playNext(track: Track): Promise<void>
 	/**
 	 * 按索引移除队列项。

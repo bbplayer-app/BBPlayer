@@ -20,12 +20,95 @@ export async function flushLogs(): Promise<void> {
 	await flushFileAsyncTransport()
 }
 
+const stringifyError = (e: unknown): string => {
+	if (e === null) return 'null'
+
+	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
+	if (typeof e !== 'object') return String(e)
+
+	try {
+		return JSON.stringify(e)
+	} catch {
+		// Circular reference or other stringify error
+		return Object.prototype.toString.call(e)
+	}
+}
+
+/**
+ * 把 `log.info('消息', { key: value }, error)` 拆成正文和结构化属性：
+ * 字符串和数字拼成正文，对象的字段展开成属性，Error 记为 error.type / error.message。
+ * 这样在 Sentry 里可以按字段筛选，而不是只能全文搜索。
+ */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- logger 收到的就是任意参数，这里是把它们解析成结构的地方
+function toStructuredLog(rawMsg: unknown, extension?: string | null) {
+	const parts: string[] = []
+
+	const attributes = new Map<
+		string,
+		string | number | boolean | object | null
+	>()
+
+	if (extension) attributes.set('log.scope', extension)
+
+	for (const item of Array.isArray(rawMsg) ? rawMsg : [rawMsg]) {
+		if (item instanceof Error) {
+			attributes.set(
+				'error.type',
+				item instanceof CustomError && item.type ? item.type : item.name,
+			)
+			attributes.set('error.message', flatErrorMessage(item))
+		} else if (
+			// 只展开 `{ key: value }` 这种字面量对象，数组、Date 等按整体记录
+			item != null &&
+			Object.getPrototypeOf(item) === Object.prototype
+		) {
+			for (const [key, value] of Object.entries(item)) {
+				if (value === undefined) continue
+
+				// Sentry 会把非基本类型的属性序列化成 JSON，但 Error 序列化后是空对象
+				attributes.set(
+					key,
+					value instanceof Error ? flatErrorMessage(value) : value,
+				)
+			}
+		} else if (item !== undefined) {
+			parts.push(Array.isArray(item) ? stringifyError(item) : String(item))
+		}
+	}
+
+	return {
+		message: parts.join(' '),
+		attributes: Object.fromEntries(attributes),
+	}
+}
+
 const sentryBreadcrumbTransport: transportFunctionType<object> = (props) => {
+	const { message, attributes } = toStructuredLog(props.rawMsg, props.extension)
+
 	Sentry.addBreadcrumb({
-		category: 'log',
+		category: props.extension ? `log.${props.extension}` : 'log',
 		level: props.level.text as Sentry.SeverityLevel,
-		message: props.msg,
+		message,
+		data: attributes,
 	})
+}
+
+const sentryLogTransport: transportFunctionType<object> = (props) => {
+	const { message, attributes } = toStructuredLog(props.rawMsg, props.extension)
+
+	switch (props.level.text) {
+		case 'debug':
+			Sentry.logger.debug(message, attributes)
+			break
+		case 'info':
+			Sentry.logger.info(message, attributes)
+			break
+		case 'warning':
+			Sentry.logger.warn(message, attributes)
+			break
+		default:
+			Sentry.logger.error(message, attributes)
+	}
 }
 
 // 创建 Logger 实例
@@ -33,7 +116,7 @@ const config = {
 	severity: isDev ? 'debug' : 'info',
 	transport: isDev
 		? [mapConsoleTransport, fileAsyncTransport]
-		: [sentryBreadcrumbTransport, fileAsyncTransport],
+		: [sentryBreadcrumbTransport, sentryLogTransport, fileAsyncTransport],
 	levels: {
 		debug: 0,
 		info: 1,
@@ -152,21 +235,6 @@ export function flatErrorMessage(
  * @param scope 项目不同分区
  * @param message 附加信息
  */
-
-const stringifyError = (e: unknown): string => {
-	if (e === null) return 'null'
-
-	// oxlint-disable-next-line @typescript-eslint/no-base-to-string
-	if (typeof e !== 'object') return String(e)
-
-	try {
-		return JSON.stringify(e)
-	} catch {
-		// Circular reference or other stringify error
-		return Object.prototype.toString.call(e)
-	}
-}
-
 export function reportErrorToSentry(
 	error: unknown,
 	message?: string,

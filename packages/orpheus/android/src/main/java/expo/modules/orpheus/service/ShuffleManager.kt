@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.media3.exoplayer.ExoPlayer
+import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
 
 /**
@@ -56,7 +57,7 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         }
 
         player.shuffleModeEnabled = enabled
-        Log.d("ShuffleManager", "Shuffle mode set to: $enabled")
+        Log.d(LogTags.QUEUE, "Shuffle mode set to: $enabled")
     }
 
     /**
@@ -90,7 +91,7 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
 
         // Safety: if traversal doesn't cover all items, fall back to physical order.
         if (result.size != count) {
-            Log.w("ShuffleManager", "Traversal size mismatch: got ${result.size}, expected $count")
+            Log.w(LogTags.QUEUE, "Traversal size mismatch: got ${result.size}, expected $count")
             return (0 until count).toList().toIntArray()
         }
 
@@ -119,13 +120,13 @@ class ShuffleManager(private val getPlayer: () -> ExoPlayer?) {
         if (currentPos == -1) {
             // The current item should always appear in the traversal. If it doesn't,
             // the shuffle state is inconsistent — bail out rather than silently appending.
-            Log.e("ShuffleManager", "Current physical[$currentPhysical] not found in traversal; skipping repositionAsNext")
+            Log.e(LogTags.QUEUE, "Current physical[$currentPhysical] not found in traversal; skipping repositionAsNext")
             return
         }
         order.add(currentPos + 1, insertedPhysicalIndex)
 
         player.setShuffleOrder(DefaultShuffleOrder(order.toIntArray(), System.currentTimeMillis()))
-        Log.d("ShuffleManager", "Repositioned physical[$insertedPhysicalIndex] as next in shuffle order")
+        Log.d(LogTags.QUEUE, "Repositioned physical[$insertedPhysicalIndex] as next in shuffle order")
     }
 
     /** Reorder the displayed shuffle traversal without moving physical media items. */

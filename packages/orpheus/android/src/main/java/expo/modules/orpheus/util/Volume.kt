@@ -1,6 +1,7 @@
 package expo.modules.orpheus.util
 
 import android.util.Log
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -48,7 +49,7 @@ fun androidx.media3.common.Player.fadeInTo(
         for (i in 1..steps) {
             val newVol = volumeStep * i
             val finalVol = newVol.coerceAtMost(targetVolume)
-            Log.d("Loudness", "finalVol $finalVol")
+            Log.d(LogTags.LOUDNESS, "fadeVolume target=$finalVol")
             volume = finalVol
             delay(stepInterval)
         }

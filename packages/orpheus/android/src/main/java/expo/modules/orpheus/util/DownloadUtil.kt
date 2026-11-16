@@ -17,6 +17,8 @@ import expo.modules.orpheus.bilibili.BilibiliRepository
 import expo.modules.orpheus.manager.DownloadCache
 import expo.modules.orpheus.network.BilibiliFallbackDataSource
 import expo.modules.orpheus.network.BilibiliStreamUrls
+import expo.modules.orpheus.telemetry.LogTags
+import expo.modules.orpheus.telemetry.OrpheusTelemetry
 import expo.modules.orpheus.service.OrpheusDownloadService
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -135,7 +137,7 @@ object DownloadUtil {
                     val bvid = uri.getQueryParameter("bvid")
                     val cid = uri.getQueryParameter("cid")?.toLongOrNull()
                     val quality = uri.getQueryParameter("quality")?.toIntOrNull() ?: 30280
-                    val (urls, volume) = BilibiliRepository.resolveAudioUrls(
+                    val resolved = BilibiliRepository.resolveAudioUrls(
                         bvid = bvid!!,
                         cid = cid,
                         audioQuality = quality,
@@ -143,12 +145,21 @@ object DownloadUtil {
                         enableHiRes = uri.getQueryParameter("hires") == "1",
                         cookie = OrpheusConfig.bilibiliCookie
                     )
+                    val urls = resolved.urls
+                    OrpheusTelemetry.recordStream(
+                        uri.toString(),
+                        buildMap {
+                            put("kind", resolved.kind)
+                            resolved.streamId?.let { put("id", it) }
+                            resolved.codecs?.let { put("codecs", it) }
+                            resolved.bandwidth?.let { put("bandwidth", it) }
+                            put("mirrors", urls.size)
+                        },
+                    )
                     // 在这里保存响度均衡数据，并且直接发一个事件，在 OrpheusMusicService 监听
+                    val volume = resolved.volume
                     if (volume !== null) {
-                        Log.d(
-                            "LoudnessNormalization",
-                            "uri: ${dataSpec.uri}, measuredI: ${volume.measuredI}"
-                        )
+                        Log.d(LogTags.LOUDNESS, "loudnessResolved bvid=$bvid measuredI=${volume.measuredI}")
                         LoudnessStorage.setLoudnessData(dataSpec.uri.toString(), volume.measuredI)
                     }
 
@@ -162,6 +173,8 @@ object DownloadUtil {
                         .setKey(uri.toString())
                         .build()
                 } catch (e: Exception) {
+                    // 播放器会重试，重试耗尽才会变成 onPlayerError
+                    Log.w(LogTags.STREAM, "resolveAudio failed bvid=${uri.getQueryParameter("bvid")}", e)
                     throw IOException("Resolve Url Failed: ${e.message}", e)
                 }
             }

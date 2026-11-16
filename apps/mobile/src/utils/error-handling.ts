@@ -19,15 +19,16 @@ export function toastAndLogError(
 			description: flatErrorMessage(error),
 			duration: Number.POSITIVE_INFINITY,
 		})
+		// 末尾传入 error：Sentry Logs 会把它记成可筛选的 error.type / error.message 属性
 		log
 			.extend(scope)
-			.error(`${message} -- ${error.type}: ${flatErrorMessage(error)}`)
+			.error(`${message} -- ${error.type}: ${flatErrorMessage(error)}`, error)
 	} else if (error instanceof Error) {
 		toast.error(message, {
 			description: flatErrorMessage(error),
 			duration: Number.POSITIVE_INFINITY,
 		})
-		log.extend(scope).error(`${message}: ${flatErrorMessage(error)}`)
+		log.extend(scope).error(`${message}: ${flatErrorMessage(error)}`, error)
 	} else if (error === undefined) {
 		toast.error(message, {
 			duration: Number.POSITIVE_INFINITY,

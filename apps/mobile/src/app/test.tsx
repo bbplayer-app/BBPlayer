@@ -1,5 +1,7 @@
+import { debugTriggerNativeError } from '@bbplayer/native'
 import { Orpheus } from '@bbplayer/orpheus'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import * as Sentry from '@sentry/react-native'
 import dayjs from 'dayjs'
 import { asc, sql } from 'drizzle-orm'
 import * as DocumentPicker from 'expo-document-picker'
@@ -23,7 +25,7 @@ import { sharedPlaylistFacade } from '@/lib/facades/sharedPlaylist'
 import lyricService from '@/lib/services/lyricService'
 import { setUpdateChannelOverride } from '@/lib/services/updateTelemetry'
 import { toastAndLogError } from '@/utils/error-handling'
-import log from '@/utils/log'
+import log, { reportErrorToSentry } from '@/utils/log'
 import { storage } from '@/utils/mmkv'
 import toast from '@/utils/toast'
 
@@ -37,6 +39,57 @@ async function queryPlayHistoryByDateRange(startTime: number, endTime: number) {
 			sql`${schema.playHistory.startTime} BETWEEN ${startTime} AND ${endTime}
                         OR (${schema.playHistory.startTime} * 1000) BETWEEN ${startTime} AND ${endTime}`,
 		)
+}
+
+const telemetryLogger = log.extend('UI.Test.Telemetry')
+
+// 以下用于验证 Sentry 上报：敏感字段都是假数据，上报后应当被脱敏
+
+/** 播放一个不是音频的地址，原生播放器解析失败，走完整的 onPlayerError 流程 */
+async function triggerPlayerError() {
+	await Orpheus.addToEnd(
+		[
+			{
+				id: 'debug::player-error',
+				url: 'https://www.bilibili.com/robots.txt',
+				title: '测试播放错误',
+				artist: 'BBPlayer',
+			},
+		],
+		'debug::player-error',
+	)
+	toast.info('已开始播放一个无效音频，稍后会触发播放错误')
+}
+
+function triggerJsLogs() {
+	telemetryLogger.info('测试 JS 日志', {
+		url: 'https://api.bilibili.com/x/v3/fav/folder/created/list-all?up_mid=12345678&type=2',
+		bvid: 'BV1TWBvBMExU',
+	})
+	telemetryLogger.warning('测试 JS 警告 Cookie: SESSDATA=abc; bili_jct=def', {
+		mid: 12345678,
+	})
+	toast.success('已输出 JS 日志')
+}
+
+function triggerJsError() {
+	reportErrorToSentry(
+		new Error('BBPlayer 测试 JS 错误 access_key=abcdef'),
+		'测试页手动触发',
+		'UI.Test',
+	)
+	toast.success('已上报 JS 错误')
+}
+
+function triggerUnhandledJsError() {
+	setTimeout(() => {
+		throw new Error('BBPlayer 测试未捕获的 JS 错误')
+	}, 0)
+}
+
+function triggerNativeError() {
+	debugTriggerNativeError()
+	toast.success('已输出原生日志并上报原生异常')
 }
 
 async function importMMKVFiles() {
@@ -388,6 +441,43 @@ export default function TestPage() {
 				contentInsetAdjustmentBehavior='automatic'
 			>
 				<View style={styles.buttonContainer}>
+					<Text variant='titleSmall'>Sentry 上报测试</Text>
+					<Button
+						onPress={() => void triggerPlayerError()}
+						style={styles.button}
+					>
+						触发播放器错误（PlayerError）
+					</Button>
+					<Button
+						onPress={triggerNativeError}
+						style={styles.button}
+					>
+						触发原生日志与原生异常
+					</Button>
+					<Button
+						onPress={triggerJsLogs}
+						style={styles.button}
+					>
+						输出 JS 日志（含敏感字段）
+					</Button>
+					<Button
+						onPress={triggerJsError}
+						style={styles.button}
+					>
+						上报 JS 错误
+					</Button>
+					<Button
+						onPress={triggerUnhandledJsError}
+						style={styles.button}
+					>
+						抛出未捕获的 JS 错误
+					</Button>
+					<Button
+						onPress={() => Sentry.nativeCrash()}
+						style={styles.button}
+					>
+						触发原生崩溃（会闪退）
+					</Button>
 					<Button
 						mode='contained'
 						onPress={() => router.navigate('/onboarding')}

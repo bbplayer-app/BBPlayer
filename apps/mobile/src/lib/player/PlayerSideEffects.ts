@@ -287,7 +287,8 @@ class PlayerSideEffects {
 	 */
 	private setupErrorHandler() {
 		Orpheus.addListener('onPlayerError', async (event) => {
-			logger.error('播放器错误事件：', { event })
+			// 直接展开事件：errorCodeName、rootCauseClass 等字段成为可在 Sentry 里筛选的日志属性
+			logger.error('播放器错误事件', event)
 
 			// 起播过程中出错（CDN 解析、缓冲等）：结束 playback.start 并标记失败。
 			// 上报时复用同一个 Error 实例，beforeSend 才能把 issue 关联回这条 trace

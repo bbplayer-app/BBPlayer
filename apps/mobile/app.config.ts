@@ -184,6 +184,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 				assetsOutput: 'assets/bootsplash',
 			}),
 			'./expo-plugins/withDynamicBootSplash',
+			// 必须排在 Sentry 插件之前，见插件内注释
+			'./expo-plugins/withSentryLogcat',
 			[
 				'@sentry/react-native/expo',
 				{

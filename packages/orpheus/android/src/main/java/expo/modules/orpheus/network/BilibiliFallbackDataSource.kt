@@ -1,12 +1,14 @@
 package expo.modules.orpheus.network
 
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
+import expo.modules.orpheus.telemetry.LogTags
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
@@ -52,7 +54,13 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 lastError?.let(error::addSuppressed)
                 lastError = error
                 closeFailedSource(error)
-                if (!canRetry(error)) throw error
+                val retry = canRetry(error)
+                Log.w(
+                    LogTags.STREAM,
+                    "mirrorOpenFailed host=${nextSpec.uri.host} mirror=$nextCandidate/${candidates.size} " +
+                        "retry=$retry error=${describe(error)}",
+                )
+                if (!retry) throw error
             }
         } while (nextCandidate < candidates.size)
         throw checkNotNull(lastError)
@@ -71,6 +79,11 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
                 return count
             } catch (error: IOException) {
                 if (!canRetry(error)) throw error
+                Log.w(
+                    LogTags.STREAM,
+                    "mirrorReadFailed host=${upstream?.uri?.host} bytesRead=$bytesRead " +
+                        "mirror=$nextCandidate/${candidates.size} error=${describe(error)}",
+                )
                 closeFailedSource(error)
                 // Keep the original byte range and cache key when switching mirrors mid-stream.
                 openNext(error)
@@ -87,6 +100,13 @@ internal class BilibiliFallbackDataSource(private val factory: DataSource.Factor
         }
         return true
     }
+
+    private fun describe(error: IOException) =
+        if (error is HttpDataSource.InvalidResponseCodeException) {
+            "HTTP ${error.responseCode}"
+        } else {
+            "${error.javaClass.simpleName}: ${error.message}"
+        }
 
     private fun closeFailedSource(error: IOException) {
         val source = upstream

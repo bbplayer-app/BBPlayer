@@ -2,6 +2,7 @@ package expo.modules.orpheus.bilibili
 
 import android.util.Log
 import android.net.Uri
+import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
 
 import java.io.IOException
@@ -9,8 +10,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** 解析出的音频流：同一音轨的所有镜像地址，以及选中的是哪一种流（用于日志和 Sentry context） */
+data class ResolvedAudio(
+    val urls: List<String>,
+    val volume: VolumeData?,
+    /** dolby / hires / normal / durl */
+    val kind: String,
+    val streamId: Int?,
+    val codecs: String?,
+    val bandwidth: Long?,
+)
+
 object BilibiliRepository {
-    val TAG = "Orpheus/BilibiliRepo"
 
     private val api: BilibiliApi by lazy {
         NetworkModule.retrofit.create(BilibiliApi::class.java)
@@ -32,6 +43,7 @@ object BilibiliRepository {
         if (cachedImgKey != null && cachedSubKey != null && today == cachedDateStr) {
             return cachedImgKey!! to cachedSubKey!!
         }
+        Log.i(LogTags.STREAM, "refreshWbiKeys")
 
         val response = api.getNavInfo().execute()
         val wbiData = response.body()?.data?.wbiImg
@@ -61,14 +73,17 @@ object BilibiliRepository {
         enableDolby: Boolean,
         enableHiRes: Boolean,
         cookie: String?
-    ): Pair<List<String>, VolumeData?> {
+    ): ResolvedAudio {
         var cidInternal = cid
         val (imgKey, subKey) = getWbiKeys()
         if (cidInternal === null) {
             cidInternal = getFirstCid(bvid, cookie)
         }
 
-        Log.e(TAG, "resolve url: bvid: $bvid, cid: $cid, enableDolby: ")
+        Log.i(
+            LogTags.STREAM,
+            "resolveAudio bvid=$bvid cid=$cidInternal quality=$audioQuality hires=$enableHiRes dolby=$enableDolby",
+        )
 
         val rawParams = mapOf(
             "bvid" to bvid,
@@ -108,19 +123,16 @@ object BilibiliRepository {
             if (durl.isNullOrEmpty()) {
                 throw IOException("AudioStreamError: 请求到的流数据不包含 dash 或 durl 任一字段")
             }
-            return streamUrls(durl[0].url, durl[0].backupUrl) to volume
+            Log.i(LogTags.STREAM, "selectStream bvid=$bvid kind=durl")
+            return ResolvedAudio(streamUrls(durl[0].url, durl[0].backupUrl), volume, "durl", null, null, null)
         }
 
         if (enableDolby && dash.dolby?.audio?.isNotEmpty() == true) {
-            Log.d(TAG, "select dolby source")
-            val audio = dash.dolby.audio[0]
-            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
+            return selected(bvid, "dolby", dash.dolby.audio[0], volume)
         }
 
         if (enableHiRes && dash.flac?.audio != null) {
-            Log.d(TAG, "select hires source")
-            val audio = dash.flac.audio
-            return streamUrls(audio.baseUrl, audio.backupUrl) to volume
+            return selected(bvid, "hires", dash.flac.audio, volume)
         }
 
         if (dash.audio.isNullOrEmpty()) {
@@ -128,13 +140,23 @@ object BilibiliRepository {
         }
 
         val targetAudio = dash.audio.find { it.id == audioQuality }
-
-        if (targetAudio != null) {
-            return streamUrls(targetAudio.baseUrl, targetAudio.backupUrl) to volume
-        } else {
-            val highestQualityAudio = dash.audio[0]
-            return streamUrls(highestQualityAudio.baseUrl, highestQualityAudio.backupUrl) to volume
+        if (targetAudio == null) {
+            Log.w(
+                LogTags.STREAM,
+                "requestedQualityUnavailable bvid=$bvid quality=$audioQuality available=${dash.audio.map { it.id }}",
+            )
         }
+        return selected(bvid, "normal", targetAudio ?: dash.audio[0], volume)
+    }
+
+    private fun selected(bvid: String, kind: String, audio: DashAudioItem, volume: VolumeData?): ResolvedAudio {
+        val urls = streamUrls(audio.baseUrl, audio.backupUrl)
+        Log.i(
+            LogTags.STREAM,
+            "selectStream bvid=$bvid kind=$kind id=${audio.id} codecs=${audio.codecs} " +
+                "bandwidth=${audio.bandwidth} hosts=${urls.map { Uri.parse(it).host }}",
+        )
+        return ResolvedAudio(urls, volume, kind, audio.id, audio.codecs, audio.bandwidth)
     }
 
     private fun streamUrls(primary: String, backups: List<String>?): List<String> {

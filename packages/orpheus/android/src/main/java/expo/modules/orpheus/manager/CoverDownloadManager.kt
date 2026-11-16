@@ -2,6 +2,7 @@ package expo.modules.orpheus.manager
 
 import android.content.Context
 import android.util.Log
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,7 +14,7 @@ import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 
 object CoverDownloadManager {
-    private const val TAG = "CoverDownloadManager"
+    private const val TAG = LogTags.COVER
     private const val COVERS_DIR = "downloaded_covers"
 
     private val okHttpClient = OkHttpClient()
@@ -133,10 +134,7 @@ object CoverDownloadManager {
                         throw Exception("Failed to rename temp file to target file")
                     }
                 } catch (e: Exception) {
-                    Log.e(
-                        TAG,
-                        "Failed to download cover for $trackId, url=$artworkUrl: ${e.message}"
-                    )
+                    Log.w(TAG, "downloadCover failed trackId=$trackId host=${android.net.Uri.parse(artworkUrl).host}", e)
                     // 清理可能的部分文件
                     tempFile.delete()
                     targetFile.delete() // Also try to delete target file just in case

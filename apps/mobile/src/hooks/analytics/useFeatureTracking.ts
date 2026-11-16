@@ -1,8 +1,10 @@
+import { setNativeTelemetryEnabled } from '@bbplayer/native'
 import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import { Observe } from 'expo-observe'
 import { useEffect } from 'react'
 
 import { useAppStore } from '@/hooks/stores/useAppStore'
+import { isSentryTelemetryEnabled } from '@/lib/config/sentry'
 import { runAfterStartup } from '@/lib/performance'
 import { analyticsService } from '@/lib/services/analyticsService'
 
@@ -18,6 +20,8 @@ export function useFeatureTracking() {
 	useEffect(() => {
 		Observe.configure({ dispatchingEnabled: enableDataCollection })
 		void analyticsService.setAnalyticsCollectionEnabled(enableDataCollection)
+		// JS 侧的 Sentry 在 beforeSend 里读取开关，原生侧需要单独同步
+		setNativeTelemetryEnabled(isSentryTelemetryEnabled())
 
 		if (!enableDataCollection) return
 

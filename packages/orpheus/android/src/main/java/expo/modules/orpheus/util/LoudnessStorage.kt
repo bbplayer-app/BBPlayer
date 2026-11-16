@@ -3,6 +3,7 @@ package expo.modules.orpheus.util
 import android.content.Context
 import android.util.Log
 import com.tencent.mmkv.MMKV
+import expo.modules.orpheus.telemetry.LogTags
 
 object LoudnessStorage {
     private var kv: MMKV? = null
@@ -21,19 +22,19 @@ object LoudnessStorage {
 
     fun setLoudnessData(key: String, measuredI: Double) {
         try {
-            Log.d("LoudnessNormalization", "setLoudnessData: $key, $measuredI")
+            Log.d(LogTags.LOUDNESS, "setLoudnessData: $key, $measuredI")
             safeKv.encode(key, measuredI)
         } catch (e: Exception) {
-            Log.e("LoudnessStorage", "Failed to set loudness data", e)
+            Log.e(LogTags.STORAGE, "Failed to set loudness data", e)
         }
     }
 
     fun getLoudnessData(key: String): Double {
         try {
-            Log.d("LoudnessNormalization", "getLoudnessData: $key")
+            Log.d(LogTags.LOUDNESS, "getLoudnessData: $key")
             return safeKv.decodeDouble(key)
         } catch (e: Exception) {
-            Log.e("LoudnessStorage", "Failed to get loudness data", e)
+            Log.e(LogTags.STORAGE, "Failed to get loudness data", e)
             return 0.0
         }
     }

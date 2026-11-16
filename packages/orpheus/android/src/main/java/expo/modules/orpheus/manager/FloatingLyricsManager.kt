@@ -6,6 +6,7 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.MotionEvent
@@ -23,6 +24,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import expo.modules.orpheus.R
 import expo.modules.orpheus.model.LyricsLine
+import expo.modules.orpheus.telemetry.LogTags
 import expo.modules.orpheus.util.GeneralStorage
 import expo.modules.orpheus.view.LyricView
 import kotlin.math.abs
@@ -100,7 +102,9 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
             applyCurrentLyricState()
             GeneralStorage.setDesktopLyricsShown(true)
             syncTrackInfo()
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            Log.w(LogTags.LYRICS, "[Floating][show] addView failed", e)
+        }
     }
 
     fun syncTrackInfo() {
@@ -121,7 +125,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
 
     fun hide() {
         floatingView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
+            try { windowManager.removeView(it) } catch (e: Exception) { Log.w(LogTags.LYRICS, "[Floating] removeView failed", e) }
             player?.removeListener(playerListener)
             floatingView = null
             lyricView = null
@@ -139,7 +143,7 @@ class FloatingLyricsManager(private val context: Context, private val player: Ex
      */
     fun softHide() {
         floatingView?.let {
-            try { windowManager.removeView(it) } catch (e: Exception) { e.printStackTrace() }
+            try { windowManager.removeView(it) } catch (e: Exception) { Log.w(LogTags.LYRICS, "[Floating] removeView failed", e) }
             player?.removeListener(playerListener)
             floatingView = null
             lyricView = null

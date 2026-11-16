@@ -74,7 +74,7 @@ class PaletteRecord : Record {
 
 class ExpoImageThemeColorsModule : Module() {
     companion object {
-        private const val TAG = "ExpoImageThemeColor"
+        private const val TAG = "ImageThemeColors"
     }
 
     override fun definition() = ModuleDefinition {
@@ -87,7 +87,7 @@ class ExpoImageThemeColorsModule : Module() {
                 imageSource.`is`(toKClass<SharedRef<Bitmap>>()) -> imageSource.get(toKClass<SharedRef<Bitmap>>()).ref
                 else -> drawableToBitmap(imageSource.get(toKClass<SharedRef<Drawable>>()).ref)
             }
-            android.util.Log.d(TAG, "get bitmap")
+            android.util.Log.d(TAG, "bitmapLoaded size=${bitmap.width}x${bitmap.height}")
 
             val palette = Palette.from(bitmap).generate()
 
@@ -114,6 +114,7 @@ class ExpoImageThemeColorsModule : Module() {
             val url = java.net.URL(urlString)
             return android.graphics.BitmapFactory.decodeStream(url.openStream())
         } catch (e: Exception) {
+            android.util.Log.w(TAG, "loadImage failed host=${android.net.Uri.parse(urlString).host}", e)
             throw ImageLoadingFailedException(e.toCodedException())
         }
     }
@@ -130,6 +131,7 @@ class ExpoImageThemeColorsModule : Module() {
             drawable.draw(canvas)
             return bitmap
         } catch (e: Exception) {
+            android.util.Log.w(TAG, "drawableToBitmap failed", e)
             throw CodedException(
                 message = "Failed to convert drawable to bitmap: ${e.message}",
                 cause = null

@@ -5,8 +5,9 @@ import android.util.Log
 import com.hchen.superlyricapi.SuperLyricData
 import com.hchen.superlyricapi.SuperLyricPush
 import com.hchen.superlyricapi.SuperLyricTool
+import expo.modules.orpheus.telemetry.LogTags
 
-private const val TAG = "SuperLyricBackend"
+private const val TAG = LogTags.LYRICS
 
 /**
  * SuperLyric implementation for status bar lyrics.
@@ -49,9 +50,9 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
 
         try {
             SuperLyricPush.onSuperLyric(data)
-            Log.d(TAG, "[render] text=\"${line.text}\" delay=${frame.delayMs}")
+            Log.d(TAG, "[SuperLyric][render] text=\"${line.text}\" delay=${frame.delayMs}")
         } catch (e: Exception) {
-            Log.e(TAG, "[render] Failed: ${e.message}")
+            Log.w(TAG, "[SuperLyric][render] failed", e)
         }
     }
 
@@ -77,7 +78,7 @@ class SuperLyricBackend(context: Context) : StatusBarLyricsBackend(context) {
         try {
             SuperLyricPush.onStop(SuperLyricData().setPackageName(context.packageName))
         } catch (e: Exception) {
-            Log.e(TAG, "[onStop] Failed: ${e.message}")
+            Log.w(TAG, "[SuperLyric][onStop] failed", e)
         }
     }
 }

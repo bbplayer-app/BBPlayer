@@ -11,6 +11,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.google.common.util.concurrent.MoreExecutors
+import expo.modules.orpheus.telemetry.LogTags
 import java.util.concurrent.Executors
 
 @androidx.media3.common.util.UnstableApi
@@ -37,7 +38,7 @@ class GlideBitmapLoader(private val context: Context) : BitmapLoader {
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         return executorService.submit<Bitmap> {
-            Log.d("GlideBitmapLoader", "load image $uri")
+            Log.d(LogTags.COVER, "load image $uri")
             val glideBitmap = Glide.with(context)
                 .asBitmap()
                 .load(uri)

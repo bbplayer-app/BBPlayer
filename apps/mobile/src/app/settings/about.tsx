@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Button from '@/components/common/Button'
 import { useSettingsSplit } from '@/components/layout/SettingsNavigation'
 import useCurrentTrack from '@/hooks/player/useCurrentTrack'
+import { getDiagnosticId } from '@/lib/config/sentry'
 import toast from '@/utils/toast'
 
 const openExternalLink = async (url: string) => {
@@ -30,6 +31,14 @@ const openExternalLink = async (url: string) => {
 	}
 }
 
+// 匿名 ID，只有用户主动提供时才能用它在 Sentry 里找到对应的日志
+const copyDiagnosticId = async (id: string) => {
+	await Clipboard.setStringAsync(id)
+	toast.success('已复制诊断 ID', {
+		description: '反馈问题时附上它，方便定位日志',
+	})
+}
+
 const updateTime = Updates.createdAt
 	? `${Updates.createdAt.getFullYear()}-${Updates.createdAt.getMonth() + 1}-${Updates.createdAt.getDate()}`
 	: ''
@@ -40,6 +49,8 @@ export default function AboutSettingsPage() {
 	const { colors } = useTheme()
 	const insets = useSafeAreaInsets()
 	const haveTrack = useCurrentTrack()
+
+	const diagnosticId = getDiagnosticId()
 
 	const versionText = `v${Application.nativeApplicationVersion}:${Application.nativeBuildVersion}${
 		Updates.updateId
@@ -101,6 +112,32 @@ export default function AboutSettingsPage() {
 					</View>
 				</Surface>
 				<View style={styles.section}>
+					<List.Item
+						title='诊断 ID'
+						description={
+							diagnosticId ?? '未开启数据分享（设置 → 通用 → 隐私与数据）'
+						}
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='identifier'
+							/>
+						)}
+						right={(props) =>
+							diagnosticId ? (
+								<List.Icon
+									{...props}
+									icon='content-copy'
+								/>
+							) : null
+						}
+						onPress={
+							diagnosticId
+								? () => void copyDiagnosticId(diagnosticId)
+								: undefined
+						}
+					/>
+					<Divider />
 					<List.Item
 						title='项目主页'
 						description='github.com/bbplayer-app/BBPlayer'

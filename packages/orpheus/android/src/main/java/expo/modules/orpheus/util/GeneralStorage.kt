@@ -6,6 +6,7 @@ import androidx.core.graphics.toColorInt
 import androidx.media3.common.MediaItem
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackRecord
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -55,7 +56,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_RESTORE_POSITION_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set restore position enabled", e)
+            Log.e(LogTags.STORAGE, "Failed to set restore position enabled", e)
         }
     }
 
@@ -63,7 +64,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_LOUDNESS_NORMALIZATION_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set loudness normalization enabled", e)
+            Log.e(LogTags.STORAGE, "Failed to set loudness normalization enabled", e)
         }
     }
 
@@ -94,7 +95,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_AUTOPLAY_ON_START_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set autoplay on start enabled", e)
+            Log.e(LogTags.STORAGE, "Failed to set autoplay on start enabled", e)
         }
     }
 
@@ -106,7 +107,7 @@ object GeneralStorage {
         try {
             safeKv.encode(KEY_SPECTRUM_VISUALIZER_ENABLED, enabled)
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to set spectrum visualizer enabled", e)
+            Log.e(LogTags.STORAGE, "Failed to set spectrum visualizer enabled", e)
         }
     }
 
@@ -137,7 +138,7 @@ object GeneralStorage {
             safeKv.encode(KEY_SAVED_QUEUE, jsonListString)
 
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to save queue", e)
+            Log.e(LogTags.STORAGE, "Failed to save queue", e)
         }
     }
 
@@ -157,12 +158,12 @@ object GeneralStorage {
                     track.toMediaItem(context)
 
                 } catch (e: Exception) {
-                    Log.e("MediaItemStorer", "Failed to parse track json: $trackJson", e)
+                    Log.e(LogTags.STORAGE, "Failed to parse track json: $trackJson", e)
                     null
                 }
             }
         } catch (e: Exception) {
-            Log.e("MediaItemStorer", "Failed to restore queue", e)
+            Log.e(LogTags.STORAGE, "Failed to restore queue", e)
             emptyList()
         }
     }

@@ -17,7 +17,7 @@ class WorkletCallback : SharedObject() {
         // A missing callback is an intentional disabled event, not an error.
         val worklet = worklet ?: return
         val runtime = appContext?.uiRuntime ?: run {
-            Log.w("ExpoWavySlider", "WorkletCallback.invoke: UI worklet runtime is not available, the callback will not run.")
+            Log.w("WavySlider", "WorkletCallback.invoke: UI worklet runtime is not available, the callback will not run.")
             return
         }
         worklet.execute(runtime, *arguments)

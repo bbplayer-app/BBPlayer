@@ -1,5 +1,11 @@
-import { getApkSigningCertificateSha256 } from '@bbplayer/native'
+import {
+	getApkSigningCertificateSha256,
+	getSentryInstallationId,
+	installNativeTelemetry,
+} from '@bbplayer/native'
+import { Orpheus } from '@bbplayer/orpheus'
 import * as Sentry from '@sentry/react-native'
+import type { ErrorEvent } from '@sentry/react-native'
 import { isRunningInExpoGo } from 'expo'
 import * as Application from 'expo-application'
 import * as Updates from 'expo-updates'
@@ -8,6 +14,7 @@ import { Platform } from 'react-native'
 import useAppStore from '@/hooks/stores/useAppStore'
 import { getNativeModuleFingerprint } from '@/lib/config/sentryFingerprint'
 import { configuredChannel } from '@/lib/services/updateTelemetry'
+import { scrubText, scrubValue } from '@/lib/telemetry/scrub'
 import { findErrorSpan } from '@/lib/tracing'
 import log from '@/utils/log'
 
@@ -89,6 +96,30 @@ export function isSentryTelemetryEnabled(): boolean {
 	)
 }
 
+/** Sentry 的匿名安装 ID，用户反馈问题时用它在 Sentry 里查日志 */
+let diagnosticId: string | null = null
+
+export function getDiagnosticId(): string | null {
+	return diagnosticId
+}
+
+function scrubEvent(event: ErrorEvent): ErrorEvent {
+	if (event.message) event.message = scrubText(event.message)
+
+	for (const exception of event.exception?.values ?? []) {
+		if (exception.value) exception.value = scrubText(exception.value)
+	}
+
+	event.breadcrumbs = scrubValue(event.breadcrumbs)
+	event.extra = scrubValue(event.extra)
+	event.tags = scrubValue(event.tags)
+	// trace 里的 trace_id / span_id 要和 span 对得上，不能改
+	const trace = event.contexts?.trace
+	event.contexts = { ...scrubValue(event.contexts), trace }
+
+	return event
+}
+
 export const navigationIntegration = Sentry.reactNavigationIntegration({
 	enableTimeToInitialDisplay: !isRunningInExpoGo(),
 })
@@ -101,6 +132,9 @@ logger.info(
 )
 
 export function initializeSentry() {
+	// 在 init 之前取得：放进 initialScope，启动阶段的 JS 事件和日志也能带上 user.id
+	diagnosticId = isSentryTelemetryEnabled() ? getSentryInstallationId() : null
+
 	Sentry.init({
 		dsn: SENTRY_DSN || undefined,
 		debug: false,
@@ -112,18 +146,57 @@ export function initializeSentry() {
 		// 没有子 span 的点击 transaction 会被 SDK 丢弃
 		enableUserInteractionTracing: true,
 		enabled: isSentryTelemetryEnabled(),
-		// enabled=false 只拦得住 JS 事件：ReactNativeClient.init() 仍会无条件
-		// 初始化原生 SDK，NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。
-		// 因此非官方签名时把原生 SDK 一并关掉。
-		enableNative: isOfficialBuild && !development,
-		enableLogs: false,
+		// enabled=false 只拦得住 JS 事件：只要 enableNative 为 true，原生 SDK 仍会初始化，
+		// NDK/ANR/tombstone 等原生崩溃会直接由原生侧上报。所以用户关闭数据采集或非官方签名时，
+		// 把原生 SDK 一并关掉；会话中途关闭由 beforeSend 和原生侧的开关拦截。
+		enableNative: isSentryTelemetryEnabled(),
+		enableLogs: isSentryTelemetryEnabled(),
+		// 原生日志由 installNativeTelemetry 在挂好脱敏和限流回调后再开启，
+		// 避免初始化到挂接之间的日志未经处理就发出去
+		logsOrigin: 'js',
+		// console.* 不进 Sentry Logs，只上报 @bbplayer/logs 的日志
+		enableAutoConsoleLogs: false,
 		environment: getEnv(),
 		ignoreErrors: ['ExpoHaptics', 'PlaylistAlreadyExists'],
 		enableNdk: true,
 		enableNdkScopeSync: true,
 		enableTombstone: true,
 		enableHistoricalTombstoneReporting: true,
+		// 原生事件由原生 SDK 自动带上同一个 ID
+		initialScope: diagnosticId ? { user: { id: diagnosticId } } : undefined,
+		onReady({ didCallNativeInit }) {
+			if (!didCallNativeInit) return
+
+			const installationId = installNativeTelemetry(isSentryTelemetryEnabled())
+
+			// 播放服务通常比原生 SDK 先启动，补写那之前产生的播放器 context 和 tag
+			if (Platform.OS === 'android') Orpheus.syncTelemetry()
+
+			// 提前读取失败时的兜底
+			if (!diagnosticId && installationId) {
+				diagnosticId = installationId
+				Sentry.setUser({ id: installationId })
+			}
+		},
+		beforeBreadcrumb(breadcrumb) {
+			return scrubValue(breadcrumb)
+		},
+		beforeSendLog(sentryLog) {
+			if (!isSentryTelemetryEnabled()) return null
+
+			// 模板参数会出现在 attributes 里，一起脱敏
+			sentryLog.message = scrubText(String(sentryLog.message))
+			sentryLog.attributes = scrubValue(sentryLog.attributes)
+
+			return sentryLog
+		},
+		beforeSendTransaction(event) {
+			return isSentryTelemetryEnabled() ? event : null
+		},
 		beforeSend(event, hint) {
+			// 用户可能在本次会话中途关闭数据采集
+			if (!isSentryTelemetryEnabled()) return null
+
 			const fingerprint = getNativeModuleFingerprint(event)
 
 			if (fingerprint) {
@@ -144,7 +217,7 @@ export function initializeSentry() {
 				}
 			}
 
-			return event
+			return scrubEvent(event)
 		},
 	})
 

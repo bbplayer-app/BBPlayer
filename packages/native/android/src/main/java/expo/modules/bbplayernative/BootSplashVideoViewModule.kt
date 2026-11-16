@@ -5,6 +5,7 @@ import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.net.Uri
+import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
@@ -161,6 +162,7 @@ class BootSplashVideoView(context: Context, appContext: AppContext) : ExpoView(c
             if (!loop) onPlaybackEnd(emptyMap<String, Any>())
         }
         mediaPlayer.setOnErrorListener { _, what, extra ->
+            Log.w(LogTags.BOOT_SPLASH, "playbackError what=$what extra=$extra")
             onPlaybackError(mapOf("what" to what, "extra" to extra))
             true
         }
@@ -174,6 +176,7 @@ class BootSplashVideoView(context: Context, appContext: AppContext) : ExpoView(c
             }
             mediaPlayer.prepareAsync()
         } catch (error: Exception) {
+            Log.w(LogTags.BOOT_SPLASH, "loadFailed", error)
             onPlaybackError(mapOf("message" to (error.message ?: "Unable to load video")))
             releasePlayer()
         }

@@ -7,8 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import expo.modules.orpheus.R
+import expo.modules.orpheus.telemetry.LogTags
 
-private const val TAG = "MeizuStatusBarLyrics"
+private const val TAG = LogTags.LYRICS
 
 /**
  * Flyme/Meizu status-bar lyric implementation.
@@ -60,9 +61,9 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
         try {
             sendLyricBroadcast(text)
             postTickerNotification(text, translation)
-            Log.d(TAG, "[render] text=\"$text\"")
+            Log.d(TAG, "[Meizu][render] text=\"$text\"")
         } catch (e: Exception) {
-            Log.e(TAG, "[render] Failed: ${e.message}")
+            Log.w(TAG, "[Meizu][render] failed", e)
         }
     }
 
@@ -76,7 +77,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 sendLyricBroadcast(text)
                 postTickerNotification(text, null)
             }.onFailure { e ->
-                Log.e(TAG, "[setPlaybackState] Failed: ${e.message}")
+                Log.w(TAG, "[Meizu][setPlaybackState] failed", e)
             }
         }
     }
@@ -92,7 +93,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
             sendFlymeBroadcast(intent)
             notificationManager.cancel(NOTIFICATION_ID)
         } catch (e: Exception) {
-            Log.e(TAG, "[onStop] Failed: ${e.message}")
+            Log.w(TAG, "[Meizu][onStop] failed", e)
         }
     }
 
@@ -186,7 +187,7 @@ class MeizuStatusBarLyricsBackend(context: Context) : StatusBarLyricsBackend(con
                 field.isAccessible = true
                 field.getInt(null)
             }.getOrElse {
-                Log.w(TAG, "Flyme ticker flag not found: $name, fallback=$fallback")
+                Log.w(TAG, "[Meizu] Flyme ticker flag not found: $name, fallback=$fallback")
                 fallback
             }
         }

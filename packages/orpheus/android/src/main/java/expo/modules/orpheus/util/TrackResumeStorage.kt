@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.tencent.mmkv.MMKV
 import expo.modules.orpheus.model.TrackResumeRecord
+import expo.modules.orpheus.telemetry.LogTags
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -37,7 +38,7 @@ object TrackResumeStorage {
         try {
             safeKv.encode(KEY_STRATEGY, strategy)
         } catch (e: Exception) {
-            Log.e("TrackResumeStorage", "Failed to set resume strategy", e)
+            Log.e(LogTags.STORAGE, "Failed to set resume strategy", e)
         }
     }
 
@@ -60,7 +61,7 @@ object TrackResumeStorage {
             )
             safeKv.encode(KEY_RECORD_PREFIX + id, json.encodeToString(record))
         } catch (e: Exception) {
-            Log.e("TrackResumeStorage", "Failed to save resume record for $id", e)
+            Log.e(LogTags.STORAGE, "Failed to save resume record for $id", e)
         }
     }
 
@@ -74,7 +75,7 @@ object TrackResumeStorage {
             if (record.duration <= 0.0 || record.position >= record.duration) return null
             record
         } catch (e: Exception) {
-            Log.e("TrackResumeStorage", "Failed to read resume record for $id", e)
+            Log.e(LogTags.STORAGE, "Failed to read resume record for $id", e)
             null
         }
     }
@@ -84,7 +85,7 @@ object TrackResumeStorage {
         try {
             kv?.removeValueForKey(KEY_RECORD_PREFIX + id)
         } catch (e: Exception) {
-            Log.e("TrackResumeStorage", "Failed to clear resume record for $id", e)
+            Log.e(LogTags.STORAGE, "Failed to clear resume record for $id", e)
         }
     }
 }
