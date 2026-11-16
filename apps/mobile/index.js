@@ -1,6 +1,5 @@
-import { startStartupProfiling } from './src/lib/performance'
-
-startStartupProfiling()
+// 必须是第一个 import：import 会被提升到入口代码之前按顺序求值，profiler 要在其他模块之前启动
+import './src/lib/startupProfiling'
 
 import { enableFreeze } from 'react-native-screens'
 

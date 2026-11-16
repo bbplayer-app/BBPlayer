@@ -183,6 +183,16 @@ type OptionsWithConsoleFunc = {
 }
 
 /** Logger Main Class */
+
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+
+/**
+ * HH:mm:ss。不用 toLocaleTimeString：Hermes 上它要走 Intl，每条日志都要几毫秒，
+ * 冷启动时日志一多就很明显。
+ */
+const formatTime = (date: Date): string =>
+	`${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
+
 class logs<
 	T extends
 		| transportFunctionType<OptionsWithConsoleFunc>
@@ -343,7 +353,7 @@ class logs<
 			if (typeof this._dateFormat === 'string') {
 				switch (this._dateFormat) {
 					case 'time':
-						dateTxt = `${new Date().toLocaleTimeString()} | `
+						dateTxt = `${formatTime(new Date())} | `
 						break
 					case 'local':
 						dateTxt = `${new Date().toLocaleString()} | `

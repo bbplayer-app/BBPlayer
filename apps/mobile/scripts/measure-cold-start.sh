@@ -25,7 +25,7 @@ echo ""
 
 mkdir -p "$OUTDIR"
 SUMMARY_FILE="$OUTDIR/summary.csv"
-echo "run,coldLaunchTime,warmLaunchTime,bundleLoadTime,timeToFirstRender,timeToInteractive" > "$SUMMARY_FILE"
+echo "run,coldLaunchTime,warmLaunchTime,bundleLoadTime,timeToFirstRender,timeToInteractive,splashHiddenTime" > "$SUMMARY_FILE"
 
 for ((i = 1; i <= N; i++)); do
 	echo "--- Run $i/$N ---"
@@ -73,10 +73,11 @@ for ((i = 1; i <= N; i++)); do
 	bundleLoadTime=$(echo "$metrics" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('bundleLoadTime',''))" 2>/dev/null || echo "")
 	timeToFirstRender=$(echo "$metrics" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('timeToFirstRender',''))" 2>/dev/null || echo "")
 	timeToInteractive=$(echo "$metrics" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('timeToInteractive',''))" 2>/dev/null || echo "")
+	splashHiddenTime=$(echo "$metrics" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('splashHiddenTime',''))" 2>/dev/null || echo "")
 
-	echo "$i,$coldLaunchTime,$warmLaunchTime,$bundleLoadTime,$timeToFirstRender,$timeToInteractive" >> "$SUMMARY_FILE"
+	echo "$i,$coldLaunchTime,$warmLaunchTime,$bundleLoadTime,$timeToFirstRender,$timeToInteractive,$splashHiddenTime" >> "$SUMMARY_FILE"
 
-	echo "  coldLaunchTime=$coldLaunchTime warmLaunchTime=$warmLaunchTime bundleLoadTime=$bundleLoadTime timeToFirstRender=$timeToFirstRender timeToInteractive=$timeToInteractive"
+	echo "  coldLaunchTime=$coldLaunchTime warmLaunchTime=$warmLaunchTime bundleLoadTime=$bundleLoadTime timeToFirstRender=$timeToFirstRender timeToInteractive=$timeToInteractive splashHiddenTime=$splashHiddenTime"
 done
 
 echo ""
@@ -100,7 +101,7 @@ if not rows:
     print("No valid runs.")
     sys.exit(0)
 
-metrics_keys = ["coldLaunchTime", "warmLaunchTime", "bundleLoadTime", "timeToFirstRender", "timeToInteractive"]
+metrics_keys = ["coldLaunchTime", "warmLaunchTime", "bundleLoadTime", "timeToFirstRender", "timeToInteractive", "splashHiddenTime"]
 
 print("\n=== Averages (ms) ===")
 for key in metrics_keys:

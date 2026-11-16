@@ -6,6 +6,7 @@ settings:
 
 patchedDependencies:
   '@ark/schema': 89bfbe230b7151b655d8979ead0c68ced88a48f5d18ab73a51eeb5bf7d12a0b2
+  '@nandorojo/galeria@3.1.0': ee30da8dad5221898132c30f995ac405833867464557c55fb97b95318f66c8d2
   '@react-native-masked-view/masked-view': b1567c58d6c467647dc295caa57fd2c168940827e013d3e2f53ad0a31f023d68
   expo-updates@58.0.21: 9804833654625ff9a26c037bafd8083e06eb62d877663e7cc874d2d7186f45cf
   metro-runtime@0.87.1: f71656f37f8ad0e2e914c7a29a9e1f9aab00e7111d91f5772575981f8b73ea4c
@@ -193,7 +194,7 @@ importers:
         version: 4.0.1(069db475bbbad0aa146aa6ea18203db6)
       '@nandorojo/galeria':
         specifier: ^3.1.0
-        version: 3.1.0(expo@58.0.23)(react-dom@19.2.3(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(@react-native-community/cli@21.0.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
+        version: 3.1.0(patch_hash=ee30da8dad5221898132c30f995ac405833867464557c55fb97b95318f66c8d2)(expo@58.0.23)(react-dom@19.2.3(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(@react-native-community/cli@21.0.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
       '@react-native-community/netinfo':
         specifier: ^12.0.1
         version: 12.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(@react-native-community/cli@21.0.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
@@ -19033,7 +19034,7 @@ snapshots:
       '@modelcontextprotocol/core': 2.4.0
       zod: 4.6.5
 
-  '@nandorojo/galeria@3.1.0(expo@58.0.23)(react-dom@19.2.3(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(@react-native-community/cli@21.0.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)':
+  '@nandorojo/galeria@3.1.0(patch_hash=ee30da8dad5221898132c30f995ac405833867464557c55fb97b95318f66c8d2)(expo@58.0.23)(react-dom@19.2.3(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(@react-native-community/cli@21.0.0(supports-color@10.2.2)(typescript@6.0.3))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)':
     dependencies:
       expo: 58.0.23(d63e66f7e09b09ee68780f0655a2748a)
       framer-motion: 10.18.0(react-dom@19.2.3(react@19.3.0))(react@19.3.0)
@@ -26773,7 +26774,7 @@ snapshots:
       '@jest/environment': 29.7.0
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 25.9.9
+      '@types/node': 25.9.5
       jest-mock: 29.7.0
       jest-util: 29.7.0
 

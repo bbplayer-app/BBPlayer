@@ -181,6 +181,12 @@ export default function PerformanceScreen() {
 					value={metrics.timeToInteractive}
 					description='markLoaded → markInteractive'
 				/>
+				<Divider />
+				<MetricRow
+					label='启动图消失'
+					value={metrics.splashHiddenTime}
+					description='markLoaded → 启动图淡出完成（仅冷启动）'
+				/>
 
 				{metrics.profilerTracePath ? (
 					<>

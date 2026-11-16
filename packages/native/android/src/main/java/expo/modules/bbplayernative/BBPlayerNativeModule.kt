@@ -9,6 +9,8 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.Process
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
 import expo.modules.kotlin.functions.Coroutine
@@ -80,6 +82,11 @@ class BBPlayerNativeModule : Module() {
 
         AsyncFunction("unzipAsync") Coroutine { options: UnzipOptions ->
             withContext(Dispatchers.IO) { unzip(options) }
+        }
+
+        // 与 expo-app-metrics 同一时钟（uptimeMillis），便于和它的启动指标对齐
+        Function("getMillisSinceProcessStart") {
+            SystemClock.uptimeMillis() - Process.getStartUptimeMillis()
         }
 
         Function("exportBackupToDownloads") { sourceUri: String, fileName: String, mimeType: String ->

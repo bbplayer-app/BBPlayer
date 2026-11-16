@@ -6,13 +6,13 @@ import {
 import { fetch as NetInfoFetch } from '@react-native-community/netinfo'
 import { spanToJSON } from '@sentry/react-native'
 
-import { lyricsQueryKeys } from '@/hooks/queries/lyrics'
+import { lyricsQueryKeys } from '@/hooks/queries/lyrics/keys'
 import { queryClient } from '@/lib/config/queryClient'
 import {
 	failPendingPlaybackSpan,
 	takePendingPlaybackSpan,
 } from '@/lib/player/playbackSession'
-import lyricService from '@/lib/services/lyricService'
+import { getLyricService } from '@/lib/services/getLyricService'
 import log, { reportErrorToSentry } from '@/utils/log'
 import { isActuallyOffline } from '@/utils/network'
 import { finalizeAndRecordCurrentTrack } from '@/utils/player'
@@ -97,7 +97,7 @@ class PlayerSideEffects {
 					}
 				}
 
-				await lyricService.pushLyricsToOverlays(event.trackId)
+				await getLyricService().pushLyricsToOverlays(event.trackId)
 			} else if (event.eventName === 'onTrackFinished') {
 				await finalizeAndRecordCurrentTrack(
 					event.trackId,
@@ -107,7 +107,7 @@ class PlayerSideEffects {
 			} else if (event.eventName === 'onRequestClearLyrics') {
 				// 桌面歌词面板「清空歌词」按钮被点击时，标记该曲目跳过歌词
 				logger.info('收到清空歌词请求', { trackId: event.trackId })
-				await lyricService.skipLyric(event.trackId)
+				await getLyricService().skipLyric(event.trackId)
 				// 使 React Query 缓存失效，让歌词面板立即显示跳过提示
 				// 使用 void 是因为软件在后台时不需要这个强制完成，可以等待到前台后再完成
 				void queryClient.invalidateQueries({
