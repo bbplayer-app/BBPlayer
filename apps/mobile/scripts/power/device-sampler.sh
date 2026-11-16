@@ -2,8 +2,9 @@
 # 在设备上运行（shell 用户），与 adb 会话脱离，拔掉 USB 后仍继续采样。
 # 由 measure-background-power.sh 推送并启动，不要手动调用。
 #
-# 用法: device-sampler.sh <PKG> <DURATION_SEC> <INTERVAL_SEC> <OUTDIR> <SNAP_OFFSETS> <SNAP_DUR_SEC>
+# 用法: device-sampler.sh <PKG> <DURATION_SEC> <INTERVAL_SEC> <OUTDIR> <SNAP_OFFSETS> <SNAP_DUR_SEC> <WARMUP_SEC> <WAIT_UNPLUG>
 #   SNAP_OFFSETS: 逗号分隔的秒数（相对开始时间），在这些时间点录制详细 sched trace；空字符串表示不录
+#   WAIT_UNPLUG: 1 表示先等拔线再预热，0 表示直接预热
 
 PKG=$1
 DUR=$2
@@ -11,6 +12,10 @@ INT=$3
 OUT=$4
 SNAPS=$5
 SNAPDUR=$6
+WARMUP=${7:-0}
+WAIT_UNPLUG=${8:-0}
+# 一直没拔线的话最多等这么久，然后照常开始（报告里会显示充电中的采样）
+UNPLUG_TIMEOUT=1800
 TRACEDIR=/data/misc/perfetto-traces
 
 mkdir -p "$OUT"
@@ -18,10 +23,38 @@ cd "$OUT" || exit 1
 echo $$ > sampler.pid
 rm -f DONE
 
+log() { echo "$(date +%s) $*" >> events.log; }
+
+is_powered() {
+	dumpsys battery | grep -qE '(AC|USB|Wireless|Dock) powered: true'
+}
+
+# 等拔线，再预热一段时间：刚拔线时电池还在从充电状态切换，熄屏后系统也还在收尾，
+# 这段时间的电流和 CPU 都不代表稳定的后台播放
+if [ "$WAIT_UNPLUG" = 1 ]; then
+	log "WAIT_UNPLUG"
+	waited=0
+	while is_powered && [ "$waited" -lt "$UNPLUG_TIMEOUT" ]; do
+		sleep 2
+		waited=$((waited + 2))
+	done
+	if is_powered; then
+		log "UNPLUG_TIMEOUT"
+	else
+		log "UNPLUGGED"
+	fi
+fi
+if [ "$WARMUP" -gt 0 ]; then
+	log "WARMUP ${WARMUP}s"
+	sleep "$WARMUP"
+fi
+
+# 清空电池统计并开启完整 wakelock 历史，之后 batterystats 只包含本次测量（不含插线和预热阶段）
+dumpsys batterystats --reset > /dev/null 2>&1
+dumpsys batterystats --enable full-wake-history > /dev/null 2>&1
+
 START=$(date +%s)
 END=$((START + DUR))
-
-log() { echo "$(date +%s) $*" >> events.log; }
 
 app_pids=""
 other_pids=""
@@ -72,6 +105,7 @@ record_conditions() {
 	echo "start_epoch=$START"
 	echo "duration=$DUR"
 	echo "interval=$INT"
+	echo "warmup=$WARMUP"
 	echo "pkg=$PKG"
 	echo "clk_tck=$(getconf CLK_TCK)"
 	echo "model=$(getprop ro.product.model)"

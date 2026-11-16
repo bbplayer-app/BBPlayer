@@ -196,9 +196,10 @@ for block in read("battery.txt").split("=== T ")[1:]:
 
 AF_FORMATS = {
     "00000001": "PCM 16 位",
-    "00000003": "PCM 24 位",
+    "00000003": "PCM 32 位",
     "00000004": "PCM 8.24 位",
     "00000005": "PCM float",
+    "00000006": "PCM 24 位",
     "01000000": "MP3",
     "04000002": "AAC LC",
     "04000010": "HE-AAC",
@@ -277,7 +278,24 @@ def parse_session(text, pkg):
     if i < 0:
         return None, None
     m = re.search(r"state=PlaybackState \{state=(\w+)[^}]*?speed=([0-9.]+)", text[i : i + 3000])
-    return (m.group(1), float(m.group(2))) if m else (None, None)
+    if not m:
+        return None, None
+    # Android 12 及更早只输出数字，较新的版本输出 "PLAYING(3)"
+    state = PLAYBACK_STATES.get(m.group(1), m.group(1))
+    return state, float(m.group(2))
+
+
+PLAYBACK_STATES = {
+    "0": "NONE",
+    "1": "STOPPED",
+    "2": "PAUSED",
+    "3": "PLAYING",
+    "4": "FAST_FORWARDING",
+    "5": "REWINDING",
+    "6": "BUFFERING",
+    "7": "ERROR",
+    "8": "CONNECTING",
+}
 
 
 def parse_duration_s(text):
@@ -355,7 +373,10 @@ if cond["start"]:
         if cond[k] and not paths[k]:
             warns.append(f"{label}时在 AudioFlinger 里没找到 app 的 AudioTrack")
     if paths["start"] and paths["end"]:
-        if describe_audio_path(paths["start"]).split("，")[0] != describe_audio_path(paths["end"]).split("，")[0]:
+        def route(tracks):
+            return sorted((t["flags"], t["devices"]) for t in tracks)
+
+        if route(paths["start"]) != route(paths["end"]):
             warns.append("音频输出通路在测量中途变了")
 
     # 无线模块的内核唤醒锁：两次测量差距大时，电流不能直接比
@@ -375,6 +396,8 @@ if cond["start"]:
     p("## 0. 测试条件")
     p()
     p(f"- 统一条件（--normalize）：{'是' if normalized else '否'}")
+    if meta.get("warmup"):
+        p(f"- 拔线后预热：{meta['warmup']}s（预热期间不计入测量）")
     if bat:
         p(f"- 起始电量 {level}%，温度 {temp:.1f}°C")
     p()

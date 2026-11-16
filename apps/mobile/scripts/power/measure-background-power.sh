@@ -4,7 +4,8 @@ set -euo pipefail
 # 测量 BBPlayer 后台播放时的真实功耗与逐线程数据。
 #
 # 采样器推到设备上脱离 adb 运行，所以 start 之后可以（也应该）拔掉 USB：
-# 插着线时手机在充电，电流/电量数据都没有意义。到时间后插回再 collect。
+# 插着线时手机在充电，电流/电量数据都没有意义。采样器会等到拔线、再预热一段时间才开始计时，
+# 到时间后插回再 collect。
 #
 # 用法:
 #   ./scripts/power/measure-background-power.sh start   [选项]   开始测量
@@ -20,6 +21,8 @@ set -euo pipefail
 #   -p <包名>        默认 com.roitium.bbplayer
 #   -n <个数>        详细 sched trace 快照个数（均匀分布），默认 3，0 关闭
 #   -d <秒>          每个快照时长，默认 20
+#   -w <秒>          拔线后先预热多久再开始测量，默认 120，0 关闭
+#   --no-wait-unplug 不等拔线，start 后直接预热（模拟器和 --wait 模式下自动如此）
 #   --keep-screen    不自动回桌面并熄屏
 #   --wait           不拔线，主机端等待结束后自动 collect（只适合无线 adb）
 #   --normalize      统一测试条件：开飞行模式、关 Wi-Fi 和蓝牙、媒体音量设为 0、清理后台进程，
@@ -189,22 +192,27 @@ normalize_conditions() {
 }
 
 restore_conditions() {
-	local saved
+	local saved failed=0
 	saved=$(adb_sh "cat $DEV_DIR/restore.txt 2>/dev/null" || true)
 	[ -n "$saved" ] || return 0
 	get() { echo "$saved" | sed -n "s/^$1=//p"; }
 	echo "恢复测量前的设置..."
 	if [ "$(get airplane_mode_on)" = 0 ]; then
-		adb_sh "cmd connectivity airplane-mode disable" >/dev/null || echo "警告: 关闭飞行模式失败，请手动关闭"
+		adb_sh "cmd connectivity airplane-mode disable" >/dev/null || { echo "警告: 关闭飞行模式失败"; failed=1; }
 	fi
 	if [ -n "$(get wifi_on)" ] && [ "$(get wifi_on)" != 0 ]; then
-		adb_sh "cmd wifi set-wifi-enabled enabled" >/dev/null 2>&1 || echo "警告: 打开 Wi-Fi 失败，请手动打开"
+		adb_sh "cmd wifi set-wifi-enabled enabled" >/dev/null 2>&1 || { echo "警告: 打开 Wi-Fi 失败"; failed=1; }
 	fi
 	if [ "$(get bluetooth_on)" = 1 ]; then
-		adb_sh "cmd bluetooth_manager enable" >/dev/null 2>&1 || echo "警告: 打开蓝牙失败，请手动打开"
+		adb_sh "cmd bluetooth_manager enable" >/dev/null 2>&1 || { echo "警告: 打开蓝牙失败"; failed=1; }
 	fi
 	if [ -n "$(get music_volume)" ]; then
 		adb_sh "cmd media_session volume --stream 3 --set $(get music_volume)" >/dev/null 2>&1 || true
+	fi
+	# 有失败的就留着 restore.txt，之后可以再运行 restore 重试
+	if [ "$failed" = 1 ]; then
+		echo "部分设置没有恢复，可以手动改回，或者稍后再运行 $0 restore"
+		return 0
 	fi
 	adb_sh "mv $DEV_DIR/restore.txt $DEV_DIR/restore.done" || true
 	return 0
@@ -212,6 +220,7 @@ restore_conditions() {
 
 cmd_start() {
 	local minutes=30 interval=10 pkg=com.roitium.bbplayer snaps=3 snapdur=20 screen_off=1 wait=0 normalize=0
+	local warmup=120 wait_unplug=1
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			-m) minutes=$2; shift 2 ;;
@@ -219,6 +228,8 @@ cmd_start() {
 			-p) pkg=$2; shift 2 ;;
 			-n) snaps=$2; shift 2 ;;
 			-d) snapdur=$2; shift 2 ;;
+			-w) warmup=$2; shift 2 ;;
+			--no-wait-unplug) wait_unplug=0; shift ;;
 			--keep-screen) screen_off=0; shift ;;
 			--wait) wait=1; shift ;;
 			--normalize) normalize=1; shift ;;
@@ -260,6 +271,8 @@ cmd_start() {
 	qemu=$(adb_sh "getprop ro.boot.qemu")$(adb_sh "getprop ro.kernel.qemu")
 	if [ -n "$qemu" ] && [ "$qemu" != "0" ] && [ "$qemu" != "00" ]; then
 		echo "警告: 这是模拟器，电池/功耗数据是假的，只有 CPU / 线程 / 唤醒数据有参考价值"
+		# 模拟器一直显示在充电，等不到拔线
+		wait_unplug=0
 	fi
 
 	local duration=$((minutes * 60))
@@ -289,12 +302,11 @@ cmd_start() {
 		is_playing "$pkg" || echo "警告: 统一条件后 $pkg 不在播放状态了（歌单是否已完整缓存？），测量会照常开始"
 	fi
 
-	# 清空电池统计并开启完整 wakelock 历史，之后 batterystats 只包含本次测量
-	adb_sh "dumpsys batterystats --reset" >/dev/null
-	adb_sh "dumpsys batterystats --enable full-wake-history" >/dev/null || true
+	# 无线 adb 时不会拔线
+	[ "$wait" = 1 ] && wait_unplug=0
 
 	# 只后台化单条命令并重定向全部 fd，否则后台子 shell 会占着 adb 的输出管道，adb shell 要等测量结束才返回
-	adb_sh "nohup setsid $DEV_DIR/device-sampler.sh '$pkg' $duration $interval $DEV_DIR '$snap_offsets' $snapdur > $DEV_DIR/sampler.log 2>&1 < /dev/null &"
+	adb_sh "nohup setsid $DEV_DIR/device-sampler.sh '$pkg' $duration $interval $DEV_DIR '$snap_offsets' $snapdur $warmup $wait_unplug > $DEV_DIR/sampler.log 2>&1 < /dev/null &"
 	sleep 2
 	adb_sh "cat $DEV_DIR/events.log 2>/dev/null" || true
 	[ -n "$(adb_sh "cat $DEV_DIR/sampler.pid 2>/dev/null")" ] || die "采样器没有启动，见 adb shell cat $DEV_DIR/sampler.log"
@@ -305,10 +317,10 @@ cmd_start() {
 		adb_sh "input keyevent KEYCODE_SLEEP" >/dev/null
 	fi
 
-	local end_at
-	end_at=$(date -v+"${minutes}"M +%H:%M 2>/dev/null || date -d "+$minutes min" +%H:%M)
+	local warmup_text="预热 ${warmup}s 后"
+	[ "$wait_unplug" = 1 ] && warmup_text="拔线后预热 ${warmup}s 再"
 	echo ""
-	echo "=== 测量已开始：${minutes} 分钟，每 ${interval}s 采样一次，预计 $end_at 结束 ==="
+	echo "=== 采样器已启动：${warmup_text}开始测量 ${minutes} 分钟，每 ${interval}s 采样一次 ==="
 	[ -n "$snap_offsets" ] && echo "    详细 sched trace 快照时间点（秒）: $snap_offsets，每个 ${snapdur}s"
 
 	if [ "$wait" = 1 ]; then
@@ -323,9 +335,9 @@ cmd_start() {
 	cat <<EOF
 
 现在请：
-  1. 拔掉 USB 线（插着线会充电，功耗数据无效）
+  1. 拔掉 USB 线（插着线会充电，功耗数据无效）。采样器检测到拔线后先预热 ${warmup}s，再开始计时
   2. 保持手机锁屏、不要操作，让它在后台播放
-  3. $end_at 之后插回 USB，运行：
+  3. 拔线 $(((warmup + minutes * 60 + 59) / 60)) 分钟之后插回 USB，运行：
        $0 collect
 
 中途想看进度可以插线运行 $0 status（会短暂充电，尽量少用）
@@ -336,10 +348,14 @@ cmd_status() {
 	check_device
 	adb_sh "cat $DEV_DIR/events.log 2>/dev/null" || true
 	local start dur now
-	start=$(adb_sh "grep start_epoch $DEV_DIR/meta.txt | cut -d= -f2")
-	dur=$(adb_sh "grep ^duration $DEV_DIR/meta.txt | cut -d= -f2")
+	start=$(adb_sh "grep start_epoch $DEV_DIR/meta.txt 2>/dev/null | cut -d= -f2" || true)
+	dur=$(adb_sh "grep ^duration $DEV_DIR/meta.txt 2>/dev/null | cut -d= -f2" || true)
 	now=$(adb_sh "date +%s")
-	[ -n "$start" ] || die "设备上没有测量数据"
+	if [ -z "$start" ]; then
+		[ -n "$(adb_sh "cat $DEV_DIR/sampler.pid 2>/dev/null")" ] || die "设备上没有测量数据"
+		echo "还没开始计时：在等拔线或者预热中（插着线时不会开始）"
+		return
+	fi
 	echo "已进行 $(((now - start) / 60)) / $((dur / 60)) 分钟，样本数 $(adb_sh "grep -c '^=== T' $DEV_DIR/samples.txt 2>/dev/null")"
 	if [ -n "$(adb_sh "ls $DEV_DIR/DONE 2>/dev/null")" ]; then
 		echo "已完成，可以 collect"
@@ -410,5 +426,5 @@ case "${1:-}" in
 	collect) cmd_collect ;;
 	analyze) shift; cmd_analyze "$@" ;;
 	restore) check_device; restore_conditions ;;
-	*) sed -n '3,29p' "$0"; exit 1 ;;
+	*) sed -n '3,31p' "$0"; exit 1 ;;
 esac
