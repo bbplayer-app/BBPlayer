@@ -18,10 +18,20 @@ object CachedUriManager : Cache.Listener {
     private var isInitialized = false
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    @Synchronized
+    /**
+     * 在 IO 线程上初始化。SimpleCache 扫描缓存目录期间 addListener 会一直等锁，
+     * 而调用方是模块的 OnCreate，跑在 JS 线程上，会直接拖慢冷启动。
+     * 初始化完成前 isFullyCached 返回 false，和之前异步扫描 key 期间的行为一致。
+     */
     fun initialize(context: Context) {
+        val appContext = context.applicationContext
+        scope.launch { initializeBlocking(appContext) }
+    }
+
+    @Synchronized
+    private fun initializeBlocking(context: Context) {
         if (isInitialized) return
-        
+
         val lruCache = DownloadCache.getLruCache(context)
         lruCache.addListener(CachedUriManager.javaClass.simpleName, this)
         
