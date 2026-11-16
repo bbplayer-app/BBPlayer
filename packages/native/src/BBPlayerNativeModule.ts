@@ -44,6 +44,7 @@ declare class BBPlayerNativeModule extends NativeModule {
 		fileName: string,
 		mimeType: string,
 	): string | null
+	getMillisSinceProcessStart(): number
 }
 
 let nativeModule: BBPlayerNativeModule | null = null
@@ -126,3 +127,11 @@ export const exportBackupToDownloads = (
 	fileName: string,
 	mimeType: string,
 ) => getNativeModule().exportBackupToDownloads(sourceUri, fileName, mimeType)
+
+/**
+ * 距进程启动的毫秒数（`SystemClock.uptimeMillis() - Process.getStartUptimeMillis()`）。
+ *
+ * 与 expo-app-metrics 的启动指标使用同一时钟，可以直接和 `coldLaunchTime` 等指标换算。
+ */
+export const getMillisSinceProcessStart = () =>
+	getNativeModule().getMillisSinceProcessStart()
