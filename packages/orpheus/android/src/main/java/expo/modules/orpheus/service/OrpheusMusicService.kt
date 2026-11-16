@@ -289,11 +289,16 @@ class OrpheusMusicService : MediaLibraryService() {
             .setDataSourceFactory(dataSourceFactory)
 
         val renderersFactory = object : DefaultRenderersFactory(this) {
+            private var enableFloatOutput = false
+            private var enableAudioOutputPlaybackParams = false
+
             override fun buildAudioSink(
                 context: Context,
                 enableFloatOutput: Boolean,
                 enableAudioOutputPlaybackParams: Boolean
             ): AudioSink? {
+                this.enableFloatOutput = enableFloatOutput
+                this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
                 // PCM 模式下加大 AudioTrack 缓冲（默认 250~750ms），播放线程可以一次多写、睡得更久。
                 // 代价是倍速、响度均衡等 App 内处理的效果要等已缓冲的音频播完才生效
                 val bufferSizeProvider = DefaultAudioTrackBufferSizeProvider.Builder()
@@ -335,7 +340,11 @@ class OrpheusMusicService : MediaLibraryService() {
                         audioSink,
                     ) { audioOffloadPreferences }
                 )
-                out.add(FfmpegAudioRenderer(eventHandler, eventListener, audioSink))
+                // FFmpeg 渲染器要用单独的 sink：sink 只保存一个 listener，共用的话后构造的 FFmpeg 渲染器
+                // 会顶掉 MediaCodec 渲染器的，offload 的缓冲满/空回调就到不了它那里，播放线程无法为 offload 休眠。
+                // 两个渲染器同一时间只会启用一个，所以也只会有一个 AudioTrack
+                val ffmpegAudioSink = buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)!!
+                out.add(FfmpegAudioRenderer(eventHandler, eventListener, ffmpegAudioSink))
             }
         }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 

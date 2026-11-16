@@ -27,8 +27,8 @@ import kotlin.math.sin
 object SpectrumAnalyzer {
     const val FFT_SIZE = 1024
 
-    private const val RING_SIZE = 1 shl 18 // 48kHz 下约 5.5 秒，要大于 AudioTrack 缓冲（2 秒）加上输出延迟
-    private const val RING_MASK = RING_SIZE - 1
+    // 环形缓冲至少要装下这么久的 PCM：AudioTrack 缓冲（2 秒）加上输出延迟，再留出 FFT 窗口的余量
+    private const val RING_MIN_SECONDS = 4
     private const val ANCHOR_COUNT = 256
 
     @Volatile
@@ -41,7 +41,9 @@ object SpectrumAnalyzer {
     private val lock = Any()
 
     // 以下字段由 lock 保护
-    private val ring = FloatArray(RING_SIZE)
+    // 按采样率分配（取 2 的幂，方便取模），48kHz 下约 5.5 秒
+    private var ring = FloatArray(0)
+    private var ringMask = -1
     private var framesWritten = 0L
     private var sampleRate = 0
 
@@ -67,6 +69,12 @@ object SpectrumAnalyzer {
 
     internal fun onConfigure(sampleRate: Int) = synchronized(lock) {
         this.sampleRate = sampleRate
+        val ringSize = Integer.highestOneBit(maxOf(sampleRate, 1) * RING_MIN_SECONDS - 1) shl 1
+        if (ring.size != ringSize) {
+            ring = FloatArray(ringSize)
+            ringMask = ringSize - 1
+            framesWritten = 0
+        }
         resetLocked()
     }
 
@@ -114,19 +122,20 @@ object SpectrumAnalyzer {
         if (frames == 0) return
 
         synchronized(lock) {
+            if (ring.isEmpty()) return // 还没 configure
             anchorFrames[anchorHead] = framesWritten
             anchorTimesUs[anchorHead] = presentationTimeUs
             anchorHead = (anchorHead + 1) % ANCHOR_COUNT
             if (anchorCount < ANCHOR_COUNT) anchorCount++
 
-            var index = (framesWritten and RING_MASK.toLong()).toInt()
+            var index = (framesWritten and ringMask.toLong()).toInt()
             for (frame in 0 until frames) {
                 var sum = 0f
                 for (channel in 0 until channelCount) {
                     sum += readSample(data, encoding)
                 }
                 ring[index] = sum / channelCount
-                index = (index + 1) and RING_MASK
+                index = (index + 1) and ringMask
             }
             framesWritten += frames
         }
@@ -186,13 +195,13 @@ object SpectrumAnalyzer {
         val offsetFrames = (nowUs - anchorTimesUs[anchor]) * sampleRate / 1_000_000L
         val endFrame = minOf(anchorFrames[anchor] + offsetFrames, framesWritten)
         val startFrame = endFrame - FFT_SIZE
-        if (startFrame < 0 || startFrame < framesWritten - RING_SIZE) return false
+        if (startFrame < 0 || startFrame < framesWritten - ring.size) return false
 
-        var index = (startFrame and RING_MASK.toLong()).toInt()
+        var index = (startFrame and ringMask.toLong()).toInt()
         for (i in 0 until FFT_SIZE) {
             re[i] = ring[index] * window[i]
             im[i] = 0f
-            index = (index + 1) and RING_MASK
+            index = (index + 1) and ringMask
         }
         true
     }
