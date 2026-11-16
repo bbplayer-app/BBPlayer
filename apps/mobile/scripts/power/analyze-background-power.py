@@ -52,6 +52,11 @@ meta = dict(
 CLK = int(meta.get("clk_tck", "100") or 100)
 
 
+# app 同时装在其他用户空间（双开、安全文件夹）时 pm 会列出多个 uid，只要主用户的
+if meta.get("uid"):
+    meta["uid"] = meta["uid"].split(",")[0]
+
+
 def find_app_uid():
     # 形如 u0a430；新版采样器直接记录在 meta 里，旧数据从 jobscheduler dump 中找
     if meta.get("uid"):

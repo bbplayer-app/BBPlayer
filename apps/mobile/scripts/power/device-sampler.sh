@@ -117,8 +117,9 @@ record_conditions() {
 		echo "cpu_max_freq_$(basename "$c")=$(cat "$c/cpufreq/cpuinfo_max_freq" 2>/dev/null)"
 	done
 	echo "app_version=$(dumpsys package "$PKG" | grep -m1 versionName | tr -d ' ')"
-	# 新版 dumpsys package 只有 appId=，没有 userId=，用 pm 查最稳
-	echo "uid=$(pm list packages -U "$PKG" | grep "^package:$PKG uid:" | sed 's/.*uid://')"
+	# 新版 dumpsys package 只有 appId=，没有 userId=，用 pm 查最稳。
+	# app 同时装在其他用户空间（双开、安全文件夹）时会列出多个 uid，只要主用户的
+	echo "uid=$(pm list packages -U "$PKG" | grep "^package:$PKG uid:" | sed 's/.*uid://' | cut -d, -f1)"
 } > meta.txt
 
 record_conditions conditions_start
