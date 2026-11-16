@@ -95,7 +95,6 @@ object SpectrumAnalyzer {
         if (isPlaying && !playing) {
             // 暂停时把外推的位置固定下来
             positionUs = currentPositionLocked()
-            positionRealtimeNs = SystemClock.elapsedRealtimeNanos()
         }
         isPlaying = playing
         positionRealtimeNs = SystemClock.elapsedRealtimeNanos()

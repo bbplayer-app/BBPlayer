@@ -24,16 +24,20 @@ const TEST_OPTIONS: {
 	key: TestOptionKey
 	label: string
 	description: string
+	// 解码器在创建播放器时就定下来了，要重启才生效；offload 偏好可以随时重新应用
+	needsRestart: boolean
 }[] = [
 	{
 		key: 'testForceMediaCodec',
 		label: '强制 MediaCodec',
-		description: 'PCM 也用系统解码器，不用 FFmpeg',
+		description: 'PCM 也用系统解码器，不用 FFmpeg（重启 App 后生效）',
+		needsRestart: true,
 	},
 	{
 		key: 'testForcePcm',
 		label: '强制 PCM',
-		description: '不开频谱也不走 offload',
+		description: '不开频谱也不走 offload（立即生效）',
+		needsRestart: false,
 	},
 ]
 
@@ -62,11 +66,16 @@ export default function AudioDebugScreen() {
 	const [error, setError] = useState<string | null>(null)
 	const [testOptions, setTestOptions] = useState(readTestOptions)
 
-	const toggleTestOption = useCallback((key: TestOptionKey) => {
-		Orpheus[key] = !Orpheus[key]
-		setTestOptions(readTestOptions())
-		toast.success('已保存，彻底关闭并重新打开 App 后生效')
-	}, [])
+	const toggleTestOption = useCallback(
+		(key: TestOptionKey, needsRestart: boolean) => {
+			Orpheus[key] = !Orpheus[key]
+			setTestOptions(readTestOptions())
+			toast.success(
+				needsRestart ? '已保存，彻底关闭并重新打开 App 后生效' : '已生效',
+			)
+		},
+		[],
+	)
 
 	// 只在页面可见且 App 位于前台时轮询
 	useFocusEffect(
@@ -164,7 +173,7 @@ export default function AudioDebugScreen() {
 							variant='titleSmall'
 							style={[styles.sectionTitle, { color: theme.colors.primary }]}
 						>
-							测量开关（重启 App 后生效）
+							测量开关
 						</Text>
 						{TEST_OPTIONS.map((option, index) => (
 							<View key={option.key}>
@@ -181,7 +190,11 @@ export default function AudioDebugScreen() {
 									</View>
 									<Switch
 										value={testOptions[option.key]}
-										onValueChange={() => toggleTestOption(option.key)}
+										onValueChange={() =>
+											toggleTestOption(option.key, option.needsRestart)
+										}
+										accessibilityLabel={option.label}
+										accessibilityHint={option.description}
 									/>
 								</View>
 							</View>

@@ -366,7 +366,11 @@ class ExpoOrpheusModule : Module() {
 
         Property("testForcePcm")
             .get { GeneralStorage.isTestForcePcm() }
-            .set { enabled: Boolean -> GeneralStorage.setTestForcePcm(enabled) }
+            .set { enabled: Boolean ->
+                GeneralStorage.setTestForcePcm(enabled)
+                // offload 偏好随时可以重新应用，不用等重启
+                mainHandler.post { OrpheusMusicService.refreshAudioOffloadPreferences() }
+            }
 
         Property("isSpectrumVisualizerEnabled")
             .get { GeneralStorage.isSpectrumVisualizerEnabled() }

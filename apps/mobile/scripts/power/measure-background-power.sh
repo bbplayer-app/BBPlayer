@@ -156,9 +156,9 @@ music_volume() {
 	{ adb_sh "cmd media_session volume --stream 3 --get" 2>/dev/null || true; } | sed -n 's/.*volume is \([0-9]*\).*/\1/p'
 }
 
-# 别名只用作目录名后缀：空白和路径分隔符换成 -
+# 别名只用作目录名后缀：空白和路径分隔符换成 -，去掉引号和 shell 特殊字符（会拼进设备上的命令）
 sanitize_label() {
-	printf '%s' "$1" | tr -s ' \t/\\:' '-'
+	printf '%s' "$1" | tr -d "'\"\`\$;&|<>()" | tr -s ' \t/\\:' '-'
 }
 
 # 测量前检查会影响结果的条件，只警告不阻止（报告里也会列出）
@@ -223,8 +223,11 @@ restore_conditions() {
 	if [ -n "$(get wifi_on)" ] && [ "$(get wifi_on)" != 0 ]; then
 		adb_sh "cmd wifi set-wifi-enabled enabled" >/dev/null 2>&1 || { echo "警告: 打开 Wi-Fi 失败"; failed=1; }
 	fi
+	# --keep-bt 会在测量时打开蓝牙，所以原来关着的也要关回去
 	if [ "$(get bluetooth_on)" = 1 ]; then
 		adb_sh "cmd bluetooth_manager enable" >/dev/null 2>&1 || { echo "警告: 打开蓝牙失败"; failed=1; }
+	elif [ "$(get bluetooth_on)" = 0 ]; then
+		adb_sh "cmd bluetooth_manager disable" >/dev/null 2>&1 || { echo "警告: 关闭蓝牙失败"; failed=1; }
 	fi
 	if [ -n "$(get music_volume)" ]; then
 		adb_sh "cmd media_session volume --stream 3 --set $(get music_volume)" >/dev/null 2>&1 || true
