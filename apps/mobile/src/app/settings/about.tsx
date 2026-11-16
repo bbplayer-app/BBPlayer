@@ -140,6 +140,28 @@ export default function AboutSettingsPage() {
 							void openExternalLink('https://bbplayer.roitium.com')
 						}
 					/>
+					<Divider />
+					<List.Item
+						title='第三方组件许可'
+						description='FFmpeg（LGPL 2.1+）等'
+						left={(props) => (
+							<List.Icon
+								{...props}
+								icon='license'
+							/>
+						)}
+						right={(props) => (
+							<List.Icon
+								{...props}
+								icon='open-in-new'
+							/>
+						)}
+						onPress={() =>
+							void openExternalLink(
+								'https://github.com/bbplayer-app/BBPlayer/blob/dev/THIRD_PARTY_NOTICES.md',
+							)
+						}
+					/>
 				</View>
 			</ScrollView>
 		</View>

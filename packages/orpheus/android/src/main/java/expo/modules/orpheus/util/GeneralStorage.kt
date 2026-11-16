@@ -35,6 +35,10 @@ object GeneralStorage {
     private const val KEY_DESKTOP_LYRICS_TEXT_SIZE = "config_desktop_lyrics_text_size"
     private const val KEY_DESKTOP_LYRICS_Y = "config_desktop_lyrics_y"
 
+    // 功耗测量用的开关，在音频调试页设置，重启 App 后生效
+    private const val KEY_TEST_FORCE_MEDIA_CODEC = "debug_test_force_media_codec"
+    private const val KEY_TEST_FORCE_PCM = "debug_test_force_pcm"
+
 
     @Synchronized
     fun initialize(context: Context) {
@@ -104,6 +108,20 @@ object GeneralStorage {
         } catch (e: Exception) {
             Log.e("MediaItemStorer", "Failed to set spectrum visualizer enabled", e)
         }
+    }
+
+    /** 测量用：不用 FFmpeg，PCM 也交给 MediaCodec 解码 */
+    fun isTestForceMediaCodec(): Boolean = safeKv.decodeBool(KEY_TEST_FORCE_MEDIA_CODEC, false)
+
+    fun setTestForceMediaCodec(enabled: Boolean) {
+        safeKv.encode(KEY_TEST_FORCE_MEDIA_CODEC, enabled)
+    }
+
+    /** 测量用：不开频谱也不走 offload */
+    fun isTestForcePcm(): Boolean = safeKv.decodeBool(KEY_TEST_FORCE_PCM, false)
+
+    fun setTestForcePcm(enabled: Boolean) {
+        safeKv.encode(KEY_TEST_FORCE_PCM, enabled)
     }
 
     fun saveQueue(mediaItems: List<MediaItem>) {

@@ -1,20 +1,31 @@
 package expo.modules.orpheus.service
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioRendererEventListener
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -26,10 +37,13 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import expo.modules.orpheus.R
+import expo.modules.orpheus.manager.AudioDebugTracker
 import expo.modules.orpheus.manager.FloatingLyricsManager
 import expo.modules.orpheus.manager.LyricsConsumer
 import expo.modules.orpheus.manager.LyriconBackend
 import expo.modules.orpheus.manager.MeizuStatusBarLyricsBackend
+import expo.modules.orpheus.manager.OffloadAwareMediaCodecAudioRenderer
+import expo.modules.orpheus.manager.SpectrumCaptureAudioSink
 import expo.modules.orpheus.manager.StatusBarLyricsManager
 import expo.modules.orpheus.manager.SuperLyricBackend
 import expo.modules.orpheus.manager.UnifiedLyricsManager
@@ -57,7 +71,14 @@ import kotlin.math.abs
 class OrpheusMusicService : MediaLibraryService() {
 
     var player: ExoPlayer? = null
+
+    /** 音频调试页的数据来源，随 player 一起重建 */
+    var audioDebugTracker: AudioDebugTracker? = null
+        private set
     private var mediaSession: MediaLibrarySession? = null
+
+    @Volatile
+    private var audioOffloadPreferences: AudioOffloadPreferences? = null
     private var sleepTimerManager: SleepTimeController? = null
     private var volumeFadeJob: Job? = null
     private var scope = MainScope()
@@ -81,7 +102,10 @@ class OrpheusMusicService : MediaLibraryService() {
                     lyricsManager.updateTime(seconds)
                 }
             }
-            serviceHandler.postDelayed(this, 200)
+            // 没有任何歌词输出（桌面/状态栏/车机）时降频，减少后台唤醒；
+            // 仍保留低频轮询，这样任一输出被打开后 1 秒内就会恢复正常刷新
+            val interval = if (lyricsManager.hasActiveConsumers()) 200L else 1000L
+            serviceHandler.postDelayed(this, interval)
         }
     }
 
@@ -107,6 +131,11 @@ class OrpheusMusicService : MediaLibraryService() {
             }
 
         private val listeners = CopyOnWriteArrayList<(OrpheusMusicService) -> Unit>()
+
+        /** 频谱开关变化后调用，只能在主线程调用 */
+        fun refreshAudioOffloadPreferences() {
+            instance?.applyAudioOffloadPreferences()
+        }
 
         fun addOnServiceReadyListener(listener: (OrpheusMusicService) -> Unit) {
             instance?.let { listener(it) }
@@ -256,10 +285,62 @@ class OrpheusMusicService : MediaLibraryService() {
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
+        // 功耗测量用的开关，只在创建播放器时读取
+        val testForceMediaCodec = GeneralStorage.isTestForceMediaCodec()
+
+        val renderersFactory = object : DefaultRenderersFactory(this) {
+            private var enableFloatOutput = false
+            private var enableAudioOutputPlaybackParams = false
+
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioOutputPlaybackParams: Boolean
+            ): AudioSink? {
+                this.enableFloatOutput = enableFloatOutput
+                this.enableAudioOutputPlaybackParams = enableAudioOutputPlaybackParams
+                val audioSink = DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                    .build()
+                // 包一层，让频谱可以直接拿到播放器自己的 PCM
+                return SpectrumCaptureAudioSink(audioSink)
+            }
+
+            override fun buildAudioRenderers(
+                context: Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                audioSink: AudioSink,
+                eventHandler: Handler,
+                eventListener: AudioRendererEventListener,
+                out: ArrayList<Renderer>
+            ) {
+                // 会走 offload 时用 MediaCodec，否则由 FFmpeg 在进程内解码，见 OffloadAwareMediaCodecAudioRenderer
+                out.add(
+                    OffloadAwareMediaCodecAudioRenderer(
+                        context,
+                        getCodecAdapterFactory(),
+                        mediaCodecSelector,
+                        enableDecoderFallback,
+                        eventHandler,
+                        eventListener,
+                        audioSink,
+                    ) { if (testForceMediaCodec) null else audioOffloadPreferences }
+                )
+                if (testForceMediaCodec) return
+                // FFmpeg 渲染器要用单独的 sink：sink 只保存一个 listener，共用的话后构造的 FFmpeg 渲染器
+                // 会顶掉 MediaCodec 渲染器的，offload 的缓冲满/空回调就到不了它那里，播放线程无法为 offload 休眠。
+                // 两个渲染器同一时间只会启用一个，所以也只会有一个 AudioTrack
+                val ffmpegAudioSink = buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)!!
+                out.add(FfmpegAudioRenderer(eventHandler, eventListener, ffmpegAudioSink))
+            }
+        }.experimentalSetMediaCodecAsyncCryptoFlagEnabled(false)
 
         player = ExoPlayer.Builder(this, renderersFactory)
+            // 按渲染器实际需要安排 doSomeWork，而不是固定每 10ms 唤醒一次
+            .experimentalSetDynamicSchedulingEnabled(true)
             .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -270,6 +351,12 @@ class OrpheusMusicService : MediaLibraryService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+
+        applyAudioOffloadPreferences()
+        audioDebugTracker = AudioDebugTracker().also { tracker ->
+            player?.addAnalyticsListener(tracker)
+            player?.addAudioOffloadListener(tracker)
+        }
 
         shuffleManager = ShuffleManager { player }
 
@@ -317,7 +404,18 @@ class OrpheusMusicService : MediaLibraryService() {
             )
         }
 
-        mediaSession = MediaLibrarySession.Builder(this, player!!, callback)
+        // 系统媒体控件、车机等外部控制器的变速请求也要走 setPlaybackParameters，
+        // 保证 offload 偏好在倍速之前更新
+        val sessionPlayer = object : ForwardingPlayer(player!!) {
+            override fun setPlaybackSpeed(speed: Float) {
+                this@OrpheusMusicService.setPlaybackSpeed(speed)
+            }
+
+            override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+                this@OrpheusMusicService.setPlaybackParameters(playbackParameters)
+            }
+        }
+        mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, callback)
             .setId("OrpheusSession")
             .setSessionActivity(contentIntent)
             .setBitmapLoader(GlideBitmapLoader(this))
@@ -580,6 +678,11 @@ class OrpheusMusicService : MediaLibraryService() {
 
     private fun setupListeners() {
         player?.addListener(object : Player.Listener {
+            override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
+                // 兜底：倍速可能从别处直接修改（不经过 setPlaybackParameters），保持 offload 偏好与倍速一致
+                applyAudioOffloadPreferences()
+            }
+
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 android.util.Log.d("StatusBarLyrics", "[Service] onIsPlayingChanged: $isPlaying | state=${player?.playbackState} mediaId=${player?.currentMediaItem?.mediaId}")
                 lyricsManager.setPlaybackState(isPlaying)
@@ -832,6 +935,57 @@ class OrpheusMusicService : MediaLibraryService() {
             json.decodeFromString<TrackRecord>(trackJson)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun applyAudioOffloadPreferences(speed: Float? = null) {
+        val player = player ?: return
+        // offload（解码交给音频 DSP）时 CPU 可以长时间休眠，但播放器拿不到 PCM，
+        // 所以只在频谱关闭时启用
+        val mode = if (!GeneralStorage.isSpectrumVisualizerEnabled() && !GeneralStorage.isTestForcePcm()) {
+            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
+        } else {
+            AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+        }
+        val preferences = AudioOffloadPreferences.Builder()
+            .setAudioOffloadMode(mode)
+            // 设备不支持无缝切歌时不启用，ExoPlayer 会自动回退到普通解码
+            .setIsGaplessSupportRequired(true)
+            // 很多设备不支持 offload 下变速（倍速会被悄悄重置为 1x），
+            // 所以只在倍速不是 1x 时才要求设备支持
+            .setIsSpeedChangeSupportRequired((speed ?: player.playbackParameters.speed) != 1f)
+            .build()
+        // 先于轨道重选更新：渲染器在播放线程上按它判断由 MediaCodec 还是 FFmpeg 解码
+        audioOffloadPreferences = preferences
+        if (player.trackSelectionParameters.audioOffloadPreferences == preferences) return
+
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setAudioOffloadPreferences(preferences)
+            .build()
+    }
+
+    /**
+     * 设置倍速并同步 offload 偏好，只能在主线程调用。
+     *
+     * 切到非 1x 时必须先更新偏好再设倍速：偏好变化会让播放器先释放 offload 的 AudioTrack，
+     * 新倍速随后作用在重建的普通输出上。顺序反过来的话，倍速会先作用在不支持变速的
+     * offload 输出上而失败，被重置为 1x。切回 1x 时则先设倍速，再放宽要求。
+     */
+    fun setPlaybackSpeed(speed: Float) {
+        val player = player ?: return
+        setPlaybackParameters(player.playbackParameters.withSpeed(speed))
+    }
+
+    private fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+        val player = player ?: return
+        val speed = playbackParameters.speed
+        if (speed != 1f) {
+            applyAudioOffloadPreferences(speed)
+            player.playbackParameters = playbackParameters
+        } else {
+            player.playbackParameters = playbackParameters
+            applyAudioOffloadPreferences(speed)
         }
     }
 

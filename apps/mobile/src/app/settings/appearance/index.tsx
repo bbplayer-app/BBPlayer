@@ -1,12 +1,6 @@
 import { Orpheus, useSpectrumVisualizerEnabled } from '@bbplayer/orpheus'
 import { useRouter } from 'expo-router'
-import {
-	PermissionsAndroid,
-	Platform,
-	ScrollView,
-	StyleSheet,
-	View,
-} from 'react-native'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { Appbar, Text, useTheme } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -76,38 +70,26 @@ export default function AppearanceSettingsPage() {
 			return
 		}
 
-		if (Platform.OS === 'android') {
-			void PermissionsAndroid.check(
-				PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-			).then((hasPermission) => {
-				if (hasPermission) {
-					Orpheus.isSpectrumVisualizerEnabled = true
-				} else {
-					alert(
-						'需要麦克风权限',
-						'音频频谱功能需要访问麦克风以分析音频数据。这不会录制任何声音。',
-						[
-							{ text: '取消' },
-							{
-								text: '确认',
-								onPress: () => {
-									void PermissionsAndroid.request(
-										PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-									).then((granted) => {
-										if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-											Orpheus.isSpectrumVisualizerEnabled = true
-										}
-									})
-								},
-							},
-						],
-						{ cancelable: true },
-					)
-				}
-			})
-		} else {
+		if (Platform.OS !== 'android') {
 			Orpheus.isSpectrumVisualizerEnabled = true
+
+			return
 		}
+
+		alert(
+			'开启音频频谱',
+			'频谱需要读取解码后的音频数据，开启后播放器无法再把解码交给手机的音频芯片（音频 offload），后台播放时会更耗电一些。\n\n切换时播放会短暂停顿一下。',
+			[
+				{ text: '取消' },
+				{
+					text: '开启',
+					onPress: () => {
+						Orpheus.isSpectrumVisualizerEnabled = true
+					},
+				},
+			],
+			{ cancelable: true },
+		)
 	}
 
 	return (
@@ -153,7 +135,7 @@ export default function AppearanceSettingsPage() {
 							variant='bodySmall'
 							style={{ color: colors.onSurfaceVariant }}
 						>
-							在播放器封面周围显示实时音频频谱
+							在播放器封面周围显示实时音频频谱。开启后后台播放会更耗电
 						</Text>
 					</View>
 					<UniversalSwitch

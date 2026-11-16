@@ -18,6 +18,8 @@
 
 **注意**: `onTrackStarted` 事件在 v0.9.0+ 已移除，请使用 Headless Task。
 
+**注意**: Android 上 App 退到后台后不再发送 `onPositionUpdate`，回到前台时立即恢复。需要后台进度请用 `getPosition()` 主动查询。
+
 ## 后台任务 (Headless Task)
 
 为了在 App 后台或被杀掉进程时仍能处理切歌等逻辑（如更新通知栏或以前的 `onTrackStarted` 逻辑），你需要注册 Headless Task。

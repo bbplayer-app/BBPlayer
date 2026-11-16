@@ -218,6 +218,14 @@ export default function GeneralSettingsPage() {
 						onPress={() => router.navigate('/performance')}
 					/>
 				</View>
+				<View style={styles.settingRow}>
+					<Text>音频调试</Text>
+					<IconButton
+						icon='waveform'
+						size={20}
+						onPress={() => router.navigate('/audio-debug')}
+					/>
+				</View>
 			</ScrollView>
 		</View>
 	)

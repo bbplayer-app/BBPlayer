@@ -88,12 +88,14 @@ export function setStartupProfilingEnabled(enabled: boolean): void {
 	storage.set(STARTUP_PROFILING_KEY, enabled)
 }
 
+export const SHAKE_PROFILING_KEY = 'enable_shake_profiling'
+
 export function isShakeProfilingEnabled(): boolean {
-	return storage.getBoolean('enable_shake_profiling') ?? false
+	return storage.getBoolean(SHAKE_PROFILING_KEY) ?? false
 }
 
 export function setShakeProfilingEnabled(enabled: boolean): void {
-	storage.set('enable_shake_profiling', enabled)
+	storage.set(SHAKE_PROFILING_KEY, enabled)
 }
 
 export async function captureProfiling(
